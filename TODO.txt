@@ -1,0 +1,49 @@
+TODO
+- create GUI off JSON schema
+
+- JSON schema
+
+- convert to YML
+
+-
+
+====
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="script-src 'self' 'unsafe-inline'"
+    />
+    <title>Hello Electron React!</title>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
+
+===
+
+
+
+Required
+"institution",
+		"experiment_description",
+		"session_description",
+		"session_id",
+		"subject",
+		"data_acq_device",
+		"associated_files",
+		"units",
+		"times_period_multiplier",
+		"raw_data_to_volts",
+		"default_header_file_path",
+		"cameras",
+		"tasks",
+		"associated_video_files",
+		"behavioral_events",
+		"device",
+		"electrode_groups",
+		"ntrode_electrode_group_channel_map"

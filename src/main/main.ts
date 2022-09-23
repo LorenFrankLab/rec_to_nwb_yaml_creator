@@ -15,6 +15,8 @@ import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 
+const fs = require('fs');
+
 class AppUpdater {
   constructor() {
     log.transports.file.level = 'info';
@@ -30,6 +32,30 @@ ipcMain.on('ipc-example', async (event, arg) => {
   console.log(msgTemplate(arg));
   event.reply('ipc-example', msgTemplate('pong'));
 });
+
+// Event handler for asynchronous incoming messages
+ipcMain.on('asynchronous-message', (event, arg) => {
+  console.log(arg);
+
+  const file = require('path').resolve(__dirname, '../jsonSchema.json');
+  fs.readFile(file, 'utf8', (error, data) => {
+    console.log('sdffsdfsfsfds')
+    console.log(error)
+    console.log(data)
+    event.sender.send('asynchronous-reply', data);
+  });
+});
+
+//////////
+// ipcMain.on("toMain", (event, args) => {
+//   fs.readFile('../jsonSchema.json', (error, data) => {
+//     // Do something with file contents
+
+//     // Send result back to renderer process
+//     window.webContents.send("fromMain", responseObj);
+//   });
+// });
+////////
 
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
