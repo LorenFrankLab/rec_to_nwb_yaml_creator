@@ -28,7 +28,7 @@
 			"examples": [
 				"Loren Frank"
 			],
-			"pattern": "^.*$"
+			"pattern": "^.*\\S.*$"
 		},
 		"institution": {
 			"$id": "#root/institution",
@@ -38,7 +38,7 @@
 			"examples": [
 				"University of California, San Francisco"
 			],
-			"pattern": "^.*$"
+			"pattern": "^.*\\S.*$"
 		}
 	}
 }

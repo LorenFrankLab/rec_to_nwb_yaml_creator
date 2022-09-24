@@ -16,6 +16,7 @@ import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 
 const fs = require('fs');
+const YAML = require('yaml');
 
 class AppUpdater {
   constructor() {
@@ -41,6 +42,13 @@ ipcMain.on('asynchronous-message', (event, arg) => {
   fs.readFile(file, 'utf8', (error, data) => {
     event.sender.send('asynchronous-reply', data);
   });
+});
+
+ipcMain.on('save user data', async (event, userData) => {
+  const doc = new YAML.Document();
+  doc.contents = userData;
+
+  console.log(doc.toString());
 });
 
 if (process.env.NODE_ENV === 'production') {

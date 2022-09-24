@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 
 const Ajv = require('ajv');
 
+let schema;
+
 export function ValidationForm() {
   const [formData, setFormData] = useState({});
-  let schema;
 
   // Async message handler
   window.electron.ipcRenderer.on('asynchronous-reply', (data) => {
@@ -13,7 +14,12 @@ export function ValidationForm() {
   });
 
   // Async message sender
-  window.electron.ipcRenderer.sendMessage('asynchronous-message', 'async ping');
+  if (!schema) {
+    window.electron.ipcRenderer.sendMessage(
+      'asynchronous-message',
+      'async ping'
+    );
+  }
 
   const JsonValidationMessages = (jsonData) => {
     if (!jsonData) {
@@ -49,6 +55,10 @@ export function ValidationForm() {
         : 'Data is valid';
 
     window.alert(message); // eslint-disable-line no-alert
+
+    if (!validationMessages || validationMessages.length === 0) {
+      window.electron.ipcRenderer.sendMessage('save user data', jsonData);
+    }
   };
 
   return (
@@ -66,6 +76,7 @@ export function ValidationForm() {
                 type="text"
                 id={property.title}
                 name={property.title}
+                value={property?.examples[0]}
                 required1
               />
             </label>
