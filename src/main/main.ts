@@ -17,6 +17,7 @@ import { resolveHtmlPath } from './util';
 
 const fs = require('fs');
 const YAML = require('yaml');
+const { dialog } = require('electron');
 
 class AppUpdater {
   constructor() {
@@ -44,11 +45,27 @@ ipcMain.on('asynchronous-message', (event, arg) => {
   });
 });
 
-ipcMain.on('save user data', async (event, userData) => {
+ipcMain.on('SAVE_USER_DATA', async (event, userData) => {
   const doc = new YAML.Document();
   doc.contents = userData;
 
-  console.log(doc.toString());
+  const saveWinOptions = {
+    title: 'Save YAML File',
+    defaultPath: 'C:/Document',
+    buttonLabel: 'Save As',
+    filters: [{ name: 'YAML' }, { extension: ['yaml', 'yml'] }],
+    properties: ['openFile'],
+  };
+
+  const filePath = dialog.showSaveDialogSync(saveWinOptions);
+
+  try {
+    fs.writeFileSync(filePath, doc.toString());
+  } catch (error) {
+    dialog.showMessageBoxSync({
+      message: `Could not create file with path: ${filePath}`
+    });
+  }
 });
 
 if (process.env.NODE_ENV === 'production') {

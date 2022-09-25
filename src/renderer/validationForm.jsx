@@ -57,7 +57,7 @@ export function ValidationForm() {
     window.alert(message); // eslint-disable-line no-alert
 
     if (!validationMessages || validationMessages.length === 0) {
-      window.electron.ipcRenderer.sendMessage('save user data', jsonData);
+      window.electron.ipcRenderer.sendMessage('SAVE_USER_DATA', jsonData);
     }
   };
 
@@ -68,26 +68,28 @@ export function ValidationForm() {
       }}
     >
       {Object.values(formData).map((property) => {
-        return (
-          <>
-            <label htmlFor={property.title}>
-              <span>{property.title.replaceAll('_', ' ')}: &nbsp; </span>
-              <input
-                type="text"
-                id={property.title}
-                name={property.title}
-                value={property?.examples[0]}
-                required1
-              />
-            </label>
-            <br />
-            <br />
-          </>
-        );
+        if (property.type === 'string') {
+          return (
+            <>
+              <label htmlFor={property.title}>
+                <span>{property.title.replaceAll('_', ' ')}: &nbsp; </span>
+                <input
+                  type="text"
+                  id={property.title}
+                  name={property.title}
+                  value={property?.examples[0]}
+                  required1
+                />
+              </label>
+              <br />
+              <br />
+            </>
+          );
+        }
       })}
       <input type="submit" value="Submit" />
     </form>
   );
 }
 
-export default ValidationForm;
+export default ValidationForm

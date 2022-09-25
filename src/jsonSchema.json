@@ -39,6 +39,36 @@
 				"University of California, San Francisco"
 			],
 			"pattern": "^.*\\S.*$"
-		}
+		},
+    "experiment_description": {
+			"$id": "#root/experiment_description",
+			"title": "Experiment_description",
+			"type": "string",
+			"default": "",
+			"examples": [
+				"spatial alternation memory task"
+			],
+			"pattern": "^.*\\S.*$"
+		},
+    "session_description": {
+			"$id": "#root/session_description",
+			"title": "Session_description",
+			"type": "string",
+			"default": "",
+			"examples": [
+				"spatial alternation memory task"
+			],
+			"pattern": "^.*\\S.*$"
+		},
+    "session_id": {
+			"$id": "#root/session_id",
+			"title": "Session_id",
+			"type": "string",
+			"default": "",
+			"examples": [
+				"J16_20210606"
+			],
+			"pattern": "^.*\\S.*$"
+		},
 	}
 }
