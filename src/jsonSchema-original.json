@@ -17,7 +17,7 @@
 			"examples": [
 				"Jennifer Guidera"
 			],
-			"pattern": "^.*$",
+			"pattern": "^.*\\S.*$",
       "description": "Name of experimenter"
 		},
 		"lab": {
@@ -28,7 +28,7 @@
 			"examples": [
 				"Loren Frank"
 			],
-			"pattern": "^.*$"
+			"pattern": "^.*\\S.*$"
 		},
 		"institution": {
 			"$id": "#root/institution",
@@ -38,7 +38,7 @@
 			"examples": [
 				"University of California, San Francisco"
 			],
-			"pattern": "^.*$"
+			"pattern": "^.*\\S.*$"
 		},
 		"experiment_description": {
 			"$id": "#root/experiment_description",
@@ -48,7 +48,7 @@
 			"examples": [
 				"spatial alternation memory task"
 			],
-			"pattern": "^.*$"
+			"pattern": "^.*\\S.*$"
 		},
 		"session_description": {
 			"$id": "#root/session_description",
@@ -58,7 +58,7 @@
 			"examples": [
 				"spatial alternation memory task"
 			],
-			"pattern": "^.*$"
+			"pattern": "^.*\\S.*$"
 		},
 		"session_id": {
 			"$id": "#root/session_id",
@@ -68,7 +68,7 @@
 			"examples": [
 				"J16_20210606"
 			],
-			"pattern": "^.*$"
+			"pattern": "^.*\\S.*$"
 		},
 		"subject": {
 			"$id": "#root/subject",
@@ -91,7 +91,7 @@
 					"examples": [
 						"Long Evans Rat"
 					],
-					"pattern": "^.*$"
+					"pattern": "^.*\\S.*$"
 				},
 				"genotype": {
 					"$id": "#root/subject/genotype",
@@ -101,7 +101,7 @@
 					"examples": [
 						"Wild Type"
 					],
-					"pattern": "^.*$"
+					"pattern": "^.*\\S.*$"
 				},
 				"sex": {
 					"$id": "#root/subject/sex",
@@ -111,7 +111,7 @@
 					"examples": [
 						"Male"
 					],
-					"pattern": "^.*$"
+					"pattern": "^.*\\S.*$"
 				},
 				"species": {
 					"$id": "#root/subject/species",
@@ -121,7 +121,7 @@
 					"examples": [
 						"Rat"
 					],
-					"pattern": "^.*$"
+					"pattern": "^.*\\S.*$"
 				},
 				"subject_id": {
 					"$id": "#root/subject/subject_id",
@@ -131,7 +131,7 @@
 					"examples": [
 						"J16"
 					],
-					"pattern": "^.*$"
+					"pattern": "^.*\\S.*$"
 				},
 				"weight": {
 					"$id": "#root/subject/weight",
@@ -166,7 +166,7 @@
 						"examples": [
 							"SpikeGadgets"
 						],
-						"pattern": "^.*$"
+						"pattern": "^.*\\S.*$"
 					},
 					"system": {
 						"$id": "#root/data_acq_device/items/system",
@@ -176,7 +176,7 @@
 						"examples": [
 							"MCU"
 						],
-						"pattern": "^.*$"
+						"pattern": "^.*\\S.*$"
 					},
 					"amplifier": {
 						"$id": "#root/data_acq_device/items/amplifier",
@@ -186,7 +186,7 @@
 						"examples": [
 							"intan"
 						],
-						"pattern": "^.*$"
+						"pattern": "^.*\\S.*$"
 					},
 					"adc_circuit": {
 						"$id": "#root/data_acq_device/items/adc_circuit",
@@ -196,7 +196,7 @@
 						"examples": [
 							"intan"
 						],
-						"pattern": "^.*$"
+						"pattern": "^.*\\S.*$"
 					}
 				}
 			}
@@ -226,7 +226,7 @@
 						"examples": [
 							"stateScriptLog_r1"
 						],
-						"pattern": "^.*$"
+						"pattern": "^.*\\S.*$"
 					},
 					"description": {
 						"$id": "#root/associated_files/items/description",
@@ -236,7 +236,7 @@
 						"examples": [
 							"stateScriptLog epoch r1"
 						],
-						"pattern": "^.*$"
+						"pattern": "^.*\\S.*$"
 					},
 					"path": {
 						"$id": "#root/associated_files/items/path",
@@ -246,7 +246,7 @@
 						"examples": [
 							"/nimbus/jguidera/J16/raw/20210606/20210606_J16_02_r1.stateScriptLog"
 						],
-						"pattern": "^.*$"
+						"pattern": "^.*\\S.*$"
 					},
 					"task_epochs": {
 						"$id": "#root/associated_files/items/task_epochs",
@@ -284,7 +284,7 @@
 					"examples": [
 						"unspecified"
 					],
-					"pattern": "^.*$"
+					"pattern": "^.*\\S.*$"
 				},
 				"behavioral_events": {
 					"$id": "#root/units/behavioral_events",
@@ -294,7 +294,7 @@
 					"examples": [
 						"unspecified"
 					],
-					"pattern": "^.*$"
+					"pattern": "^.*\\S.*$"
 				}
 			}
 		}
@@ -325,7 +325,7 @@
 			"examples": [
 				"default_header.xml"
 			],
-			"pattern": "^.*$"
+			"pattern": "^.*\\S.*$"
 		},
 		"cameras": {
 			"$id": "#root/cameras",
@@ -371,7 +371,7 @@
 						"examples": [
 							"Manta"
 						],
-						"pattern": "^.*$"
+						"pattern": "^.*\\S.*$"
 					},
 					"model": {
 						"$id": "#root/cameras/items/model",
@@ -381,7 +381,7 @@
 						"examples": [
 							"unknown"
 						],
-						"pattern": "^.*$"
+						"pattern": "^.*\\S.*$"
 					},
 					"lens": {
 						"$id": "#root/cameras/items/lens",
@@ -391,7 +391,7 @@
 						"examples": [
 							"unknown"
 						],
-						"pattern": "^.*$"
+						"pattern": "^.*\\S.*$"
 					},
 					"camera_name": {
 						"$id": "#root/cameras/items/camera_name",
@@ -401,7 +401,7 @@
 						"examples": [
 							"HomeBox_camera"
 						],
-						"pattern": "^.*$"
+						"pattern": "^.*\\S.*$"
 					}
 				}
 			}
@@ -432,7 +432,7 @@
 						"examples": [
 							"home"
 						],
-						"pattern": "^.*$"
+						"pattern": "^.*\\S.*$"
 					},
 					"task_description": {
 						"$id": "#root/tasks/items/task_description",
@@ -442,7 +442,7 @@
 						"examples": [
 							"The animal rests in a box"
 						],
-						"pattern": "^.*$"
+						"pattern": "^.*\\S.*$"
 					},
 					"task_environment": {
 						"$id": "#root/tasks/items/task_environment",
@@ -452,7 +452,7 @@
 						"examples": [
 							"HomeBox"
 						],
-						"pattern": "^.*$"
+						"pattern": "^.*\\S.*$"
 					},
 					"camera_id": {
 						"$id": "#root/tasks/items/camera_id",
@@ -510,7 +510,7 @@
 						"examples": [
 							"20210606_J16_01_s1.1.h264"
 						],
-						"pattern": "^.*$"
+						"pattern": "^.*\\S.*$"
 					},
 					"camera_id": {
 						"$id": "#root/associated_video_files/items/camera_id",
@@ -547,7 +547,7 @@
 						"examples": [
 							"Din13"
 						],
-						"pattern": "^.*$"
+						"pattern": "^.*\\S.*$"
 					},
 					"name": {
 						"$id": "#root/behavioral_events/items/name",
@@ -557,7 +557,7 @@
 						"examples": [
 							"HomeBox_camera"
 						],
-						"pattern": "^.*$"
+						"pattern": "^.*\\S.*$"
 					}
 				}
 			}
@@ -584,7 +584,7 @@
 						"examples": [
 							"Trodes"
 						],
-						"pattern": "^.*$"
+						"pattern": "^.*\\S.*$"
 					}
 				}
 			}
@@ -628,7 +628,7 @@
 						"examples": [
 							"hippocampus"
 						],
-						"pattern": "^.*$"
+						"pattern": "^.*\\S.*$"
 					},
 					"device_type": {
 						"$id": "#root/electrode_groups/items/device_type",
@@ -638,7 +638,7 @@
 						"examples": [
 							"tetrode_12.5"
 						],
-						"pattern": "^.*$"
+						"pattern": "^.*\\S.*$"
 					},
 					"description": {
 						"$id": "#root/electrode_groups/items/description",
@@ -648,7 +648,7 @@
 						"examples": [
 							"tetrode"
 						],
-						"pattern": "^.*$"
+						"pattern": "^.*\\S.*$"
 					},
 					"targeted_location": {
 						"$id": "#root/electrode_groups/items/targeted_location",
@@ -658,7 +658,7 @@
 						"examples": [
 							"CA1"
 						],
-						"pattern": "^.*$"
+						"pattern": "^.*\\S.*$"
 					},
 					"targeted_x": {
 						"$id": "#root/electrode_groups/items/targeted_x",
@@ -695,7 +695,7 @@
 						"examples": [
 							"mm"
 						],
-						"pattern": "^.*$"
+						"pattern": "^.*\\S.*$"
 					}
 				}
 			}
