@@ -19,6 +19,10 @@ body {
   align-items: center;
 }
 
+.header-text {
+  text-align: center;
+}
+
 button {
   background-color: white;
   padding: 10px 20px;
@@ -59,4 +63,27 @@ a:hover {
   justify-content: center;
   align-items: center;
   margin: 20px 0;
+}
+
+.hide {
+  display: none;
+}
+
+.align-input-form {
+  display:grid;
+  grid-template-columns: max-content max-content;
+  grid-gap:5px;
+}
+
+.align-input-form label
+{
+  text-align:right;
+}
+
+.align-input-form span {
+  text-align: left;
+}
+
+label input {
+  width: 330px;
 }

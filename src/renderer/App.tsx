@@ -6,7 +6,7 @@ import { ValidationForm } from './validationForm';
 const ValidationPage = () => {
   return (
     <div>
-      <h3>YAML Data</h3>
+      <h2 className="header-text">YAML Data</h2>
       <ValidationForm />
     </div>
   );

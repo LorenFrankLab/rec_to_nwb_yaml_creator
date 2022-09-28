@@ -132,6 +132,7 @@ export function ValidationForm() {
   return (
     <form
       encType="multipart/form-data"
+      className="align-input-form"
       name="nwbData"
       onSubmit={(e) => {
         handleSubmit(e);
@@ -167,7 +168,7 @@ export function ValidationForm() {
           return (
             <>
               <fieldset
-                className="js-parent-container-object"
+                className="js-parent-container-object align-input-form"
                 name={property.title}
               >
                 <legend>{property.title.replaceAll('_', ' ')}: &nbsp; </legend>
@@ -202,7 +203,7 @@ export function ValidationForm() {
           return (
             <>
               <fieldset
-                className="js-parent-container-array"
+                className="js-parent-container-array align-input-form"
                 name={property.title}
               >
                 <legend>{property.title.replaceAll('_', ' ')}: &nbsp; </legend>
@@ -259,6 +260,9 @@ export function ValidationForm() {
                 <button
                   type="button"
                   onClick={(e) => removeLastDataItem(e, title, [...formData])}
+                  className={
+                    property?.DataItems?.properties.length > 0 ? '' : 'hide'
+                  }
                 >
                   Remove
                 </button>
