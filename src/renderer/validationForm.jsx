@@ -132,49 +132,100 @@ export function ValidationForm() {
   return (
     <form
       encType="multipart/form-data"
-      className="align-input-form"
+      className="form-control"
       name="nwbData"
       onSubmit={(e) => {
         handleSubmit(e);
       }}
     >
       {formData?.map((property) => {
+        const parentProperyTitle = property.title.toLowerCase();
         if (['string', 'number'].includes(property.type)) {
+          if (property.examples && property.examples.length <= 1) {
+            return (
+              <React.Fragment key={property.id}>
+                <label
+                  htmlFor={property.title}
+                  className="js-parent-container-item"
+                >
+                  <span>{property.title.replaceAll('_', ' ')}: &nbsp; </span>
+                  <input
+                    type={
+                      ['integer', 'number'].includes(property.type)
+                        ? 'number'
+                        : 'text'
+                    }
+                    id={property.title}
+                    name={property.title}
+                    defaultValue={property?.examples[0]}
+                    required={property.required?.includes(parentProperyTitle)}
+                  />
+                </label>
+                <br />
+                <br />
+              </React.Fragment>
+            );
+          }
           return (
-            <>
+            <React.Fragment key={property.id}>
               <label
                 htmlFor={property.title}
                 className="js-parent-container-item"
               >
                 <span>{property.title.replaceAll('_', ' ')}: &nbsp; </span>
                 <input
-                  type={
-                    ['integer', 'number'].includes(property.type)
-                      ? 'number'
-                      : 'text'
-                  }
-                  id={property.title}
+                  className=""
+                  list="datalistOptions"
+                  id="exampleDataList"
                   name={property.title}
-                  value={property?.examples[0]}
-                  required1
+                  placeholder={`Type to search for ${property.title} ...`}
                 />
+                <datalist id="datalistOptions">
+                  {property.examples.map((example) => (
+                    <option value={example}>{example}</option>
+                  ))}
+                </datalist>
               </label>
               <br />
               <br />
-            </>
+            </React.Fragment>
           );
         }
         if (property.type === 'object') {
           return (
-            <>
+            <React.Fragment key={property.id}>
               <fieldset
-                className="js-parent-container-object align-input-form"
+                className="js-parent-container-object form-control"
                 name={property.title}
               >
                 <legend>{property.title.replaceAll('_', ' ')}: &nbsp; </legend>
                 {Object.values(property?.properties)?.map((p) => {
+                  if (p.examples && p.examples.length > 1) {
+                    const options = p.examples;
+                    return (
+                      <React.Fragment key={p.key}>
+                        <label htmlFor={p?.title}>
+                          <span>{p.title?.replaceAll('_', ' ')}: &nbsp; </span>
+                          <input
+                            className=""
+                            list="datalistOptions2"
+                            id="exampleDataList2"
+                            name={p.title}
+                            placeholder={`Type to search for ${p.title} ...`}
+                          />
+                          <datalist id="datalistOptions2">
+                            {options.map((example) => (
+                              <option value={example}>{example}</option>
+                            ))}
+                          </datalist>
+                        </label>
+                        <br />
+                        <br />
+                      </React.Fragment>
+                    );
+                  }
                   return (
-                    <>
+                    <React.Fragment key={p.key}>
                       <label htmlFor={p?.title}>
                         <span>{p.title?.replaceAll('_', ' ')}: &nbsp; </span>
                         <input
@@ -190,32 +241,35 @@ export function ValidationForm() {
                       </label>
                       <br />
                       <br />
-                    </>
+                    </React.Fragment>
                   );
                 })}
               </fieldset>
               <br />
-            </>
+            </React.Fragment>
           );
         }
         if (property.type === 'array') {
           const { title } = property;
           return (
-            <>
+            <React.Fragment key={property.key}>
               <fieldset
-                className="js-parent-container-array align-input-form"
+                className="js-parent-container-array form-control"
                 name={property.title}
               >
                 <legend>{property.title.replaceAll('_', ' ')}: &nbsp; </legend>
                 {property?.DataItems?.properties?.map((py, pyIndex) => {
                   return (
                     <>
-                      <fieldset className="js-parent-container-array-item">
+                      <fieldset
+                        className="js-parent-container-array-item form-control"
+                        key={property.key}
+                      >
                         {' '}
                         <legend>Item #{pyIndex + 1}</legend>
                         {py.map((p) => {
                           return (
-                            <>
+                            <React.Fragment key={`${property.key}-${p.title}`}>
                               <label htmlFor={p?.title}>
                                 <span>
                                   {p.title?.replaceAll('_', ' ')}: &nbsp;{' '}
@@ -233,7 +287,7 @@ export function ValidationForm() {
                               </label>
                               <br />
                               <br />
-                            </>
+                            </React.Fragment>
                           );
                         })}
                       </fieldset>
@@ -241,40 +295,45 @@ export function ValidationForm() {
                     </>
                   );
                 })}
-                <button
-                  type="button"
-                  onClick={(e) =>
-                    addDataItem(
-                      e,
-                      title,
-                      {
-                        property: property.items.properties,
-                        required: property.items.required1,
-                      },
-                      [...formData]
-                    )
-                  }
-                >
-                  Add
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => removeLastDataItem(e, title, [...formData])}
-                  className={
-                    property?.DataItems?.properties.length > 0 ? '' : 'hide'
-                  }
-                >
-                  Remove
-                </button>
+                <div>
+                  <button
+                    type="button"
+                    onClick={(e) =>
+                      addDataItem(
+                        e,
+                        title,
+                        {
+                          property: property.items.properties,
+                          required: property.items.required1,
+                        },
+                        [...formData]
+                      )
+                    }
+                  >
+                    Add
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => removeLastDataItem(e, title, [...formData])}
+                    className={
+                      property?.DataItems?.properties.length > 0 ? '' : 'hide'
+                    }
+                  >
+                    Remove
+                  </button>
+                </div>
               </fieldset>
               <br />
               <br />
-            </>
+            </React.Fragment>
           );
         }
+        return <></>;
       })}
       <br />
-      <input type="submit" value="Submit" />
+      <div className="submit-button-parent">
+        <input type="submit" value="Submit" className="submit-button" />
+      </div>
     </form>
   );
 }

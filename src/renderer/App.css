@@ -9,8 +9,8 @@ body {
   background: linear-gradient(
     200.96deg,
     #fedc2a -29.09%,
-    #dd5789 51.77%,
-    #7a2c9e 129.35%
+    #FF8000 1.77%,
+    #E64C30 129.35%
   );
   font-family: sans-serif;
   overflow-y: scroll;
@@ -21,25 +21,6 @@ body {
 
 .header-text {
   text-align: center;
-}
-
-button {
-  background-color: white;
-  padding: 10px 20px;
-  border-radius: 10px;
-  border: none;
-  appearance: none;
-  font-size: 1.3rem;
-  box-shadow: 0px 8px 28px -6px rgba(24, 39, 75, 0.12),
-    0px 18px 88px -4px rgba(24, 39, 75, 0.14);
-  transition: all ease-in 0.1s;
-  cursor: pointer;
-  opacity: 0.9;
-}
-
-button:hover {
-  transform: scale(1.05);
-  opacity: 1;
 }
 
 li {
@@ -69,21 +50,62 @@ a:hover {
   display: none;
 }
 
-.align-input-form {
+.form-control {
   display:grid;
   grid-template-columns: max-content max-content;
   grid-gap:5px;
 }
 
-.align-input-form label
+.form-control label
 {
   text-align:right;
 }
 
-.align-input-form span {
+.form-control span {
   text-align: left;
 }
 
-label input {
-  width: 330px;
+.form-control label input {
+  width: 24rem;
+}
+
+.form-control label select {
+  width: 24.5rem;
+}
+
+.form-control button {
+  background-color: white;
+  margin: 5px;
+  padding: 5px;
+  border-radius: 5px;
+  appearance: none;
+  font-size: 1.0rem;
+  box-shadow: 0px 8px 28px -6px rgb(24 39 75 / 12%), 0px 18px 88px -4px rgb(24 39 75 / 14%);
+  transition: all ease-in 0.1s;
+  cursor: pointer;
+  opacity: 0.9;
+  width: 80px;
+}
+
+.form-control button:hover {
+  transform: scale(1.05);
+  opacity: 1;
+}
+
+.form-control .submit-button-parent {
+  text-align: center
+}
+
+.form-control .submit-button-parent .submit-button {
+  background-color: white;
+  margin: 5px;
+  padding: 5px;
+  border-radius: 5px;
+  appearance: none;
+  font-size: 1.0rem;
+  box-shadow: 0px 8px 28px -6px rgb(24 39 75 / 12%), 0px 18px 88px -4px rgb(24 39 75 / 14%);
+  transition: all ease-in 0.1s;
+  cursor: pointer;
+  opacity: 0.9;
+  width: 80px;
 }
