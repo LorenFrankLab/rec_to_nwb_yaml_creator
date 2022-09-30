@@ -158,7 +158,7 @@ export function ValidationForm() {
                     id={property.title}
                     name={property.title}
                     defaultValue={property?.examples[0]}
-                    required={property.required?.includes(parentProperyTitle)}
+                    required={schema.required?.includes(parentProperyTitle)}
                   />
                 </label>
                 <br />
@@ -212,6 +212,9 @@ export function ValidationForm() {
                             id="exampleDataList2"
                             name={p.title}
                             placeholder={`Type to search for ${p.title} ...`}
+                            required={property?.required?.includes(
+                              p.title.toLowerCase()
+                            )}
                           />
                           <datalist id="datalistOptions2">
                             {options.map((example) => (
@@ -236,7 +239,9 @@ export function ValidationForm() {
                           }
                           id={p?.title}
                           name={p?.title}
-                          required1
+                          required={property?.required?.includes(
+                            p.title.toLowerCase()
+                          )}
                         />
                       </label>
                       <br />

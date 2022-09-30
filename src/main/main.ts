@@ -62,9 +62,7 @@ ipcMain.on('SAVE_USER_DATA', async (event, userData) => {
   try {
     fs.writeFileSync(filePath, doc.toString());
   } catch (error) {
-    dialog.showMessageBoxSync({
-      message: `Could not create file with path: ${filePath}`,
-    });
+    console.log(`${error} Could not create file with path: ${filePath}`);
   }
 });
 
