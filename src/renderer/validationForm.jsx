@@ -49,7 +49,7 @@ export function ValidationForm() {
     const items = target.querySelectorAll('.js-parent-container-item input');
 
     items.forEach((item) => {
-      const value = item.value?.trim();
+      const value = item?.value?.trim();
       jsonData[item.name?.toLowerCase() || 'unknown'] =
         item.type === 'number' ? Number(value) : value;
     });
@@ -178,6 +178,7 @@ export function ValidationForm() {
                   list="datalistOptions"
                   id="exampleDataList"
                   name={property.title}
+                  defaultValue="University of California, San Francisco"
                   placeholder={`Type to search for ${property.title} ...`}
                 />
                 <datalist id="datalistOptions">
@@ -211,6 +212,7 @@ export function ValidationForm() {
                             list="datalistOptions2"
                             id="exampleDataList2"
                             name={p.title}
+                            defaultValue="Male"
                             placeholder={`Type to search for ${p.title} ...`}
                             required={property?.required?.includes(
                               p.title.toLowerCase()

@@ -73,6 +73,10 @@ a:hover {
   width: 24.5rem;
 }
 
+.form-control input::-webkit-calendar-picker-indicator {
+  opacity: 100;
+}
+
 .form-control button {
   background-color: white;
   margin: 5px;
