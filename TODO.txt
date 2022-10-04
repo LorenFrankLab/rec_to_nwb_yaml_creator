@@ -1,0 +1,23 @@
+
+TODO
+
+
+- file save pop up
+- spceies should be drop dow
+- gender missing
+- elctrode group id
+- hide electrode_group_id in ntrode
+- path
+- associated file name as path
+- rec_to_nwb_yaml_creator
+
+
+- Ensure array are written to file (except electrodeGroup and ntrode)
+- (pending) fix ntrodes
+- fix array numbering...
+- fix removal of arrays
+- fix required
+- cameraId
+- validation
+- upload file
+- technical debt

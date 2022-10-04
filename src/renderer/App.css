@@ -1,0 +1,276 @@
+/*
+ * @NOTE: Prepend a `~` to css file paths that are in your node_modules
+ *        See https://github.com/webpack-contrib/sass-loader#imports
+ */
+body {
+  color: black;
+
+  background: linear-gradient(
+    200.96deg,
+    #ffffff -29.09%,
+    #ffffff 1.77%,
+    #ffffff 129.35%
+  );
+  font-family: sans-serif;
+  overflow-y: scroll;
+  margin-left: 10%;
+  margin-right: 10%;
+}
+
+.header-text {
+  text-align: center;
+}
+
+.form-container {
+  display: flex;
+  flex-direction: column;
+  row-gap: 10px;
+}
+
+.container {
+  display: flex;
+  column-gap: 20px;
+}
+
+.item1 {
+  flex: 0 0 30%;
+  text-align: right;
+  font-weight: bold;
+}
+
+.item2 {
+  flex: 0 0 70%;
+  text-align: left;
+}
+
+.select-base-width {
+  width: 91%;
+}
+
+.base-width {
+  width: 90%;
+}
+
+.upload-file-text {
+  border: white;
+  background-color: #ffffff;
+  font-size: 0.8rem;
+  text-decoration: underline;
+  vertical-align: super;
+  cursor: pointer;
+}
+
+li {
+  list-style: none;
+}
+
+a {
+  text-decoration: none;
+  height: fit-content;
+  width: fit-content;
+  margin: 10px;
+}
+
+a:hover {
+  opacity: 1;
+  text-decoration: none;
+}
+
+.Hello {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 20px 0;
+}
+
+.hide {
+  display: none;
+}
+
+.form-control {
+  display: grid;
+  grid-gap: 10px;
+}
+
+.form-control label
+{
+  text-align:right;
+}
+
+
+.form-control legend {
+  font-weight: 600;
+}
+
+.form-control span {
+  text-align: left;
+  font-weight: bold;
+}
+
+.form-control label input {
+  /* width: 24rem; */
+}
+
+.form-control label select {
+  /* width: 24.5rem; */
+}
+
+.form-control input::-webkit-calendar-picker-indicator {
+  opacity: 100;
+}
+
+/* hide file button text */
+.form-control input[type='file'] {
+  color: transparent;
+  width: 5.5rem;
+}
+
+.form-control .file-box {
+  width: 18.5rem;
+}
+
+.form-control button {
+  background-color: white;
+  margin: 5px;
+  padding: 5px;
+  border-radius: 5px;
+  appearance: none;
+  font-size: 1.0rem;
+  box-shadow: 0px 8px 28px -6px rgb(24 39 75 / 12%), 0px 18px 88px -4px rgb(24 39 75 / 14%);
+  transition: all ease-in 0.1s;
+  cursor: pointer;
+  opacity: 0.9;
+  width: 10rem;
+  background-color: darkgrey;
+}
+
+.form-control button:hover {
+  transform: scale(1.05);
+  opacity: 1;
+}
+
+.form-control .submit-button-parent {
+  text-align: center
+}
+
+.form-control .submit-button-parent .submit-button {
+  background-color: white;
+  margin: 5px;
+  padding: 5px;
+  border-radius: 5px;
+  appearance: none;
+  font-size: 1.0rem;
+  box-shadow: 0px 8px 28px -6px rgb(24 39 75 / 12%), 0px 18px 88px -4px rgb(24 39 75 / 14%);
+  transition: all ease-in 0.1s;
+  cursor: pointer;
+  opacity: 0.9;
+  width: 8rem;
+  background-color: darkgrey;
+}
+
+.form-control .behavioral_events-description {
+  display: flex;
+  column-gap: 20px;
+}
+
+.form-control .behavioral_events-description select {
+  height: 1.5rem;
+  margin-left: 10px;
+}
+
+.form-control .behavioral_events-description input {
+  height: 1.5rem;
+  margin-left: 10px;
+}
+
+.form-control .form-ntrode-data {
+  margin-top: 10px;
+}
+
+.select-input-pair {
+  display: flex;
+}
+
+.select-input-pair__item1 {
+  flex: 1 0 0;
+  margin-right: 10px;
+}
+
+.select-input-pair__item2 {
+  flex: 5 0 0;
+}
+
+.left-align {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.data-list input {
+  width: 90%;
+}
+
+.file-upload input[type="text"] {
+  width: 75%;
+}
+
+.center-align {
+  display: flex;
+    justify-content: center;
+}
+
+.array-update-area {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.array-item {
+  margin-top: 10px;
+}
+
+.nTrode-container {
+  display: flex;
+  flex-wrap: wrap;
+  width: 95%;
+  margin-top: 10px;
+}
+
+.ntrode-maps {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.ntrode-map {
+  display: flex;
+    margin: 5px;
+    padding: 5px;
+    border: 2px solid darkgray;
+    width: 85px;
+}
+
+.ntrode-map label {
+  margin-right: 5px;
+}
+
+.ntrode-map select {
+  width: 3.5rem;
+}
+
+.shank {
+  margin-bottom: 10px;
+}
+
+.checkbox-list {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.checkbox-list--no-data {
+  font-weight: normal !important;
+}
+
+.checkbox-list-item {
+  border: 2px solid darkgray;
+  margin: 5px;
+  padding: 0 5px 0 2px;
+}

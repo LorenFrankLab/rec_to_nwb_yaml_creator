@@ -1,0 +1,17 @@
+{
+  "name": "rec_to_nwb_yaml_creator",
+  "version": "0.8.0",
+  "description": "YML Generator for NWB",
+  "license": "MIT",
+  "author": {
+    "name": "Frank Lab",
+    "url": "https://github.com/LorenFrankLab"
+  },
+  "main": "./dist/main/main.js",
+  "scripts": {
+    "electron-rebuild": "node -r ts-node/register ../../.erb/scripts/electron-rebuild.js",
+    "postinstall": "npm run electron-rebuild && npm run link-modules",
+    "link-modules": "node -r ts-node/register ../../.erb/scripts/link-modules.ts"
+  },
+  "dependencies": {}
+}
