@@ -1,0 +1,9 @@
+- Ensure array are written to file (except electrodeGroup and ntrode)
+- (pending) fix ntrodes
+- fix array numbering...
+- fix removal of arrays
+- fix required
+- cameraId
+- validation
+- upload file
+- technical debt
