@@ -1,4 +1,66 @@
 TODO
+
+X- Device name - default to "Trode"
+
+- import from existing yaml
+
+- Add favicon
+
+*****
+- pre-populate camera..?
+*****
+
+- update readme with deployment info
+
+- placeholders in all fields
+
+X- Electode group
+	um default unit
+
+****
+- Electrodes group (very important)
+	Xtarget location is brain areas
+	restricted
+	Xplaceholder (x = ML, y = AP, z = DV)
+	Xunits prepouate with um.
+	Xid: item number - 1, always a number
+*****
+
+*****
+- Electrode group channel mapping
+	[label] [input box]
+	[label] [input box]
+	[label] [input box]
+
+	no dups on the right
+	relate to device type
+*****
+
+- enforce electrode group and ntrode count
+
+
+- Behavioral events
+	Din#
+	[Light#, reward pump] (set of name)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+====
+
+TODO
 - create GUI off JSON schema
 
 - JSON schema
@@ -17,7 +79,97 @@ TODO
       http-equiv="Content-Security-Policy"
       content="script-src 'self' 'unsafe-inline'"
     />
-    <title>Hello Electron React!</title>
+    <title>Hello Electron ReTODO
+
+- Device name - default to "Trode"
+
+- import from existing yaml
+
+- Add favicon
+
+*****
+- pre-populate camera..?
+*****
+
+- update readme with deployment info
+
+- placeholders in all fields
+
+- Electode group
+	um default unit
+
+****
+- Electrodes group (very important)
+	target location is brain areas
+	restricted
+	placeholder (x = ML, y = AP, z = DV)
+	units prepouate with um.
+	id: item number - 1, always a number
+*****
+
+*****
+- Electrode group channel mapping
+	[label] [input box]
+	[label] [inpTODO
+
+- Device name - default to "Trode"
+
+- import from existing yaml
+
+- Add favicon
+
+*****
+- pre-populate camera..?
+*****
+
+- update readme with deployment info
+
+- placeholders in all fields
+
+- Electode group
+	um default unit
+
+****
+- Electrodes group (very important)
+	target location is brain areas
+	restricted
+	placeholder (x = ML, y = AP, z = DV)
+	units prepouate with um.
+	id: item number - 1, always a number
+*****
+
+*****
+- Electrode group channel mapping
+	[label] [input box]
+	[label] [input box]
+	[label] [input box]
+
+	no dups on the right
+	relate to device type
+*****
+
+- enforce electrode group and ntrode count
+
+
+- Behavioral events
+	Din#
+	[Light#, reward pump] (set of name)
+
+ut box]
+	[label] [input box]
+
+	no dups on the right
+	relate to device type
+*****
+
+- enforce electrode group and ntrode count
+
+
+- Behavioral events
+	Din#
+	[Light#, reward pump] (set of name)
+
+act!</title>
   </head>
   <body>
     <div id="root"></div>

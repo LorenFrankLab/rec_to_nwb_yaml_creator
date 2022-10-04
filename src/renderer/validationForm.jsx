@@ -2,6 +2,11 @@ import React, { useState } from 'react';
 
 const Ajv = require('ajv');
 
+const PROPERY_IDS_TO_CHANGE_TO_NUMBERS_AS_INPUT_DEFAULTVALUE = [
+  '#root/electrode_groups/items/id',
+  '#root/cameras/items/id',
+];
+
 let schema;
 
 export function ValidationForm() {
@@ -129,6 +134,14 @@ export function ValidationForm() {
     setFormData(formDataSet);
   };
 
+  const changeValueToIndexIfApplicable = (property, index) => {
+    return PROPERY_IDS_TO_CHANGE_TO_NUMBERS_AS_INPUT_DEFAULTVALUE.includes(
+      property?.$id
+    )
+      ? index + 1
+      : property.default || '';
+  };
+
   return (
     <form
       encType="multipart/form-data"
@@ -147,8 +160,9 @@ export function ValidationForm() {
                 <label
                   htmlFor={property.title}
                   className="js-parent-container-item"
+                  placeholder={property?.description}
                 >
-                  <span>{property.title.replaceAll('_', ' ')}: &nbsp; </span>
+                  <span>{property.title.replaceAll('_', ' ')} &nbsp; </span>
                   <input
                     type={
                       ['integer', 'number'].includes(property.type)
@@ -157,8 +171,9 @@ export function ValidationForm() {
                     }
                     id={property.title}
                     name={property.title}
-                    defaultValue={property?.examples[0]}
+                    defaultValue={property?.default}
                     required={schema.required?.includes(parentProperyTitle)}
+                    placeholder={property?.description}
                   />
                 </label>
                 <br />
@@ -172,17 +187,17 @@ export function ValidationForm() {
                 htmlFor={property.title}
                 className="js-parent-container-item"
               >
-                <span>{property.title.replaceAll('_', ' ')}: &nbsp; </span>
+                <span>{property.title.replaceAll('_', ' ')} &nbsp; </span>
                 <input
                   className=""
-                  list="datalistOptions"
-                  id="exampleDataList"
+                  list={`${property.title}-datalist-options`}
+                  id={`${property.title}-datalist`}
                   name={property.title}
-                  defaultValue="University of California, San Francisco"
-                  placeholder={`Type to search for ${property.title} ...`}
+                  defaultValue={property?.default}
+                  placeholder={property?.description}
                 />
-                <datalist id="datalistOptions">
-                  {property.examples.map((example) => (
+                <datalist id={`${property.title}-datalist-options`}>
+                  {property.examples?.map((example) => (
                     <option value={example}>{example}</option>
                   ))}
                 </datalist>
@@ -199,27 +214,28 @@ export function ValidationForm() {
                 className="js-parent-container-object form-control"
                 name={property.title}
               >
-                <legend>{property.title.replaceAll('_', ' ')}: &nbsp; </legend>
+                <legend>{property.title.replaceAll('_', ' ')} &nbsp; </legend>
                 {Object.values(property?.properties)?.map((p) => {
+                  // Multiple examples mean show a list of options
                   if (p.examples && p.examples.length > 1) {
                     const options = p.examples;
                     return (
                       <React.Fragment key={p.key}>
                         <label htmlFor={p?.title}>
-                          <span>{p.title?.replaceAll('_', ' ')}: &nbsp; </span>
+                          <span>{p.title?.replaceAll('_', ' ')} &nbsp; </span>
                           <input
                             className=""
                             list="datalistOptions2"
                             id="exampleDataList2"
                             name={p.title}
-                            defaultValue="Male"
-                            placeholder={`Type to search for ${p.title} ...`}
+                            defaultValue={[p?.default]}
+                            placeholder={property?.description}
                             required={property?.required?.includes(
                               p.title.toLowerCase()
                             )}
                           />
                           <datalist id="datalistOptions2">
-                            {options.map((example) => (
+                            {options?.map((example) => (
                               <option value={example}>{example}</option>
                             ))}
                           </datalist>
@@ -230,9 +246,10 @@ export function ValidationForm() {
                     );
                   }
                   return (
+                    // Single object
                     <React.Fragment key={p.key}>
                       <label htmlFor={p?.title}>
-                        <span>{p.title?.replaceAll('_', ' ')}: &nbsp; </span>
+                        <span>{p.title?.replaceAll('_', ' ')} &nbsp; </span>
                         <input
                           type={
                             ['integer', 'number'].includes(p.type)
@@ -241,6 +258,7 @@ export function ValidationForm() {
                           }
                           id={p?.title}
                           name={p?.title}
+                          placeholder={p?.description}
                           required={property?.required?.includes(
                             p.title.toLowerCase()
                           )}
@@ -264,7 +282,7 @@ export function ValidationForm() {
                 className="js-parent-container-array form-control"
                 name={property.title}
               >
-                <legend>{property.title.replaceAll('_', ' ')}: &nbsp; </legend>
+                <legend>{property.title.replaceAll('_', ' ')} &nbsp; </legend>
                 {property?.DataItems?.properties?.map((py, pyIndex) => {
                   return (
                     <>
@@ -274,23 +292,55 @@ export function ValidationForm() {
                       >
                         {' '}
                         <legend>Item #{pyIndex + 1}</legend>
-                        {py.map((p) => {
+                        {py?.map((p) => {
+                          if (p.examples && p.examples.length <= 1) {
+                            return (
+                              <React.Fragment
+                                key={`${property.key}-${p.title}`}
+                              >
+                                <label htmlFor={p?.title}>
+                                  <span>
+                                    {p.title?.replaceAll('_', ' ')} &nbsp;{' '}
+                                  </span>
+                                  <input
+                                    type={
+                                      ['integer', 'number'].includes(p.type)
+                                        ? 'number'
+                                        : 'text'
+                                    }
+                                    id={p?.title}
+                                    name={p?.title}
+                                    defaultValue={changeValueToIndexIfApplicable(
+                                      p,
+                                      pyIndex
+                                    )}
+                                    placeholder={p?.description}
+                                  />
+                                </label>
+                                <br />
+                                <br />
+                              </React.Fragment>
+                            );
+                          }
                           return (
                             <React.Fragment key={`${property.key}-${p.title}`}>
                               <label htmlFor={p?.title}>
                                 <span>
-                                  {p.title?.replaceAll('_', ' ')}: &nbsp;{' '}
+                                  {p.title?.replaceAll('_', ' ')} &nbsp;{' '}
                                 </span>
                                 <input
-                                  type={
-                                    ['integer', 'number'].includes(p.type)
-                                      ? 'number'
-                                      : 'text'
-                                  }
-                                  id={p?.title}
-                                  name={p?.title}
-                                  required1
+                                  className=""
+                                  list={`${p.title}-datalist-options`}
+                                  id={`${p.title}-datalist`}
+                                  name={p.title}
+                                  defaultValue={p?.default}
+                                  placeholder={p?.description}
                                 />
+                                <datalist id={`${p.title}-datalist-options`}>
+                                  {p.examples?.map((example) => (
+                                    <option value={example}>{example}</option>
+                                  ))}
+                                </datalist>
                               </label>
                               <br />
                               <br />
