@@ -40,7 +40,19 @@ ipcMain.on('ipc-example', async (event, arg) => {
 ipcMain.on('asynchronous-message', (event, arg) => {
   console.log(arg);
 
-  const file = require('path').resolve(__dirname, '../jsonSchema.json');
+  // TODO: Move this into a function. It is a quick hack
+  const RESOURCES_PATH = app.isPackaged
+    ? path.join(process.resourcesPath, 'assets')
+    : path.join(__dirname, '../../assets');
+
+  const getAssetPath = (...paths: string[]): string => {
+    return path.join(RESOURCES_PATH, ...paths);
+  };
+
+  const file = require('path').resolve(
+    __dirname,
+    getAssetPath('jsonSchema.json')
+  );
   fs.readFile(file, 'utf8', (error, data) => {
     event.sender.send('RESPONSE_AFTER_READING_OF_JSON_SCHEMA_FILE', data);
   });
