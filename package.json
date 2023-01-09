@@ -15,13 +15,13 @@
     "science",
     "neuron"
   ],
-  "homepage": "https://github.com/LorenFrankLab/Spyglass-yaml-creator",
+  "homepage": "https://github.com/LorenFrankLab/rec_to_nwb_yaml_creator",
   "bugs": {
-    "url": "https://github.com/electron-react-boilerplate/electron-react-boilerplate/issues"
+    "url": "https://github.com/LorenFrankLab/rec_to_nwb_yaml_creator/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/LorenFrankLab/Spyglass-yaml-creator.git"
+    "url": "git+https://github.com/LorenFrankLab/rec_to_nwb_yaml_creator.git"
   },
   "license": "MIT",
   "author": {
@@ -31,7 +31,6 @@
   "contributors": [
     {
       "name": "Philip Adenekan",
-      "twitterl": "https://twitter.com/zoldello1",
       "url": "https://github.com/zoldello"
     }
   ],
@@ -254,12 +253,9 @@
     ],
     "publish": {
       "provider": "github",
-      "owner": "electron-react-boilerplate",
-      "repo": "electron-react-boilerplate"
+      "owner": "LorenFrankLab",
+      "repo": "LorenFrankLab"
     }
-  },
-  "collective": {
-    "url": "https://opencollective.com/electron-react-boilerplate-594"
   },
   "devEngines": {
     "node": ">=14.x",
