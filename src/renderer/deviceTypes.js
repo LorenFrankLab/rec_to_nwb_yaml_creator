@@ -296,7 +296,7 @@ const deviceTypeMap = {
         },
         24: {
           $id: '#root/ntrode_electrode_group_channel_map/items/map/A1x32_6mm_50_177_H32_21mm/24',
-          title: '24',
+          title: 24,
           type: 'integer',
           examples: [
             0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
@@ -306,7 +306,7 @@ const deviceTypeMap = {
         },
         25: {
           $id: '#root/ntrode_electrode_group_channel_map/items/map/A1x32_6mm_50_177_H32_21mm/25',
-          title: '25',
+          title: 25,
           type: 'integer',
           examples: [
             0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
@@ -630,7 +630,7 @@ const deviceTypeMap = {
         },
         24: {
           $id: '#root/ntrode_electrode_group_channel_map/items/map/128c-4s8mm6cm-20um-40um-sl/24',
-          title: '24',
+          title: 24,
           type: 'integer',
           examples: [
             0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
@@ -640,7 +640,7 @@ const deviceTypeMap = {
         },
         25: {
           $id: '#root/ntrode_electrode_group_channel_map/items/map/128c-4s8mm6cm-20um-40um-sl/25',
-          title: '25',
+          title: 25,
           type: 'integer',
           examples: [
             0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
@@ -964,7 +964,7 @@ const deviceTypeMap = {
         },
         24: {
           $id: '#root/ntrode_electrode_group_channel_map/items/map/128c-4s6mm6cm-15um-26um-sl24',
-          title: '24',
+          title: 24,
           type: 'integer',
           examples: [
             0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
@@ -974,7 +974,7 @@ const deviceTypeMap = {
         },
         25: {
           $id: '#root/ntrode_electrode_group_channel_map/items/map/128c-4s6mm6cm-15um-26um-sl25',
-          title: '25',
+          title: 25,
           type: 'integer',
           examples: [
             0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,

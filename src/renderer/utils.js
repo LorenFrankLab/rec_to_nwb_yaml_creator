@@ -1,3 +1,52 @@
+import { useEffect } from 'react';
+
+/**
+ * Makes a useEffect hook be called only once
+ *
+ * @param {object} fn function
+ * @returns function wrapped around useEffect
+ */
+// eslint-disable-next-line react-hooks/exhaustive-deps
+export const useMount = (fn) => useEffect(fn, []);
+
+/**
+ * Form data content when empty; used to clear out form
+ */
+export const emptyFormData = {
+  experimenter_name: '',
+  lab: '',
+  institution: '',
+  experiment_description: '',
+  session_description: '',
+  session_id: '',
+  subject: {
+    description: '',
+    genotype: '',
+    sex: 'Male',
+    species: '',
+    subject_id: '',
+    weight: 0,
+  },
+  data_acq_device: [],
+  associated_files: [],
+  units: {
+    analog: '',
+    behavioral_events: '',
+  },
+  times_period_multiplier: 0.0,
+  raw_data_to_volts: 0.0,
+  default_header_file_path: '',
+  cameras: [],
+  tasks: [],
+  behavioral_events: [],
+  associated_video_files: [],
+  device: {
+    name: [],
+  },
+  electrode_groups: [],
+  ntrode_electrode_group_channel_map: [],
+};
+
 /**
  * Object storing event topics' names
  */
@@ -46,6 +95,22 @@ export const commaSeparatedStringToNumber = (stringSet) => {
 };
 
 /**
+ * Convert a comma-separated string to an array
+ *
+ * @param {string} stringSet A string with comma-separated strings
+ */
+export const formatCommaSeparatedString = (stringSet) => {
+  return [
+    ...new Set(
+      stringSet
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s) => s !== '')
+    ),
+  ];
+};
+
+/**
  * Displays an error message in input tag. It does nothing if the tag in not input
  *
  * @param {element} element Javascript element
@@ -78,7 +143,7 @@ export const stringToInteger = (stringValue) => {
 };
 
 /**
- * Takes in a string consting of text and a number, like abc5, and returns
+ * Takes in a string consisting of text and a number, like abc5, and returns
  * an array with the text and number split, like- { text: 'abc', number: 5, }
  *
  * @param {string} textNumber String consisting of text and number, like Din1

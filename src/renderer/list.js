@@ -4,7 +4,7 @@
  * @returns Devices
  */
 export const device = () => {
-  return [...['Tetrode', 'Trodes', 'Blackrock']];
+  return [...['Trodes', 'Tetrode', 'Blackrock']];
 };
 
 /**
@@ -659,7 +659,6 @@ export const locations = () => {
 export const deviceTypes = () => {
   return [
     ...[
-      '',
       'tetrode_12.5',
       'A1x32-6mm-50-177-H32_21mm',
       '128c-4s8mm6cm-20um-40um-sl',

@@ -20,9 +20,7 @@ const ChannelMap = (prop) => {
       <div className="item1"> </div>
       <div className="item2">
         {nTrodeItems.map((item, index) => {
-          const mapKeys = Object.keys(item.map)
-            .map((i) => parseInt(i, 10))
-            .sort((a, b) => a > b);
+          const mapKeys = Object.keys(item.map).map((i) => parseInt(i, 10));
           const options = [...mapKeys];
           const keyBase = 'nTrode-container';
 
@@ -50,6 +48,7 @@ const ChannelMap = (prop) => {
                     name="bad_channels"
                     title="Bad Channels"
                     placeholder="Bad Channels"
+                    defaultValue={item.bad_channels}
                     dataItems={[...new Set(Object.values(item.map || []))].sort(
                       (a, b) => a - b
                     )}
@@ -78,6 +77,7 @@ const ChannelMap = (prop) => {
                               <label htmlFor={mapId}>{nTrodeKey}</label>
                               <select
                                 id={mapId}
+                                defaultValue={item.map[nTrodeKey]}
                                 onChange={(e) =>
                                   onMapInput(e, {
                                     key: 'ntrode_electrode_group_channel_map',
@@ -94,9 +94,8 @@ const ChannelMap = (prop) => {
                                       key={`${mapId}-${keyBase}-${sanitizeTitle(
                                         option
                                       )}${nTrodeKey}`}
-                                      selected={option === item.map[nTrodeKey]}
                                     >
-                                      {option}
+                                      {item.map[option]}
                                     </option>
                                   );
                                 })}

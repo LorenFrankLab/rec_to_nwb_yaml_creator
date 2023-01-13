@@ -773,7 +773,6 @@
       "$id": "#root/behavioral_events",
       "title": "behavioral_events",
       "type": "array",
-      "maxItems": 1,
       "default": [],
       "items": {
         "$id": "#root/behavioral_events/items",
@@ -811,11 +810,19 @@
     "device": {
       "$id": "#root/device",
       "title": "device",
-      "type": "string",
-      "default": "Trode",
-      "examples": ["Trodes", "Blackrock"],
-      "description": "Select recording device",
-      "pattern": "^.*$"
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+          "name": {
+            "$id": "#root/device/items/name",
+            "title": "name",
+            "type": "array",
+            "minItems": 1,
+            "default": "Trodes",
+            "description": "Selected recording device",
+            "pattern": "^.*$"
+          }
+      }
     },
     "electrode_groups": {
       "$id": "#root/electrode_groups",
@@ -1524,7 +1531,7 @@
           "targeted_z": {
             "$id": "#root/electrode_groups/items/targeted_z",
             "title": "targeted_z",
-            "type": "integer",
+            "type": "number",
             "description": "Ventral/Dorsal",
             "examples": [0],
             "default": 0

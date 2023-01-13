@@ -34,11 +34,12 @@ const InputElement = (prop) => {
             name={name}
             className="base-width"
             placeholder={placeholder}
-            defaultValue={defaultValue}
+            value={defaultValue}
             required={required}
             readOnly={readOnly}
             step={step}
             onBlur={(e) => onBlur(e)}
+            onChange={() => {}} // done to quiet a react warning in the console
           />
         </div>
       </label>

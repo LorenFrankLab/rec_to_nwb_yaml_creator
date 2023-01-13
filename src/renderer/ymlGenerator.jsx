@@ -12,9 +12,12 @@ import CheckboxList from './CheckboxList';
 import {
   ASYNC_TOPICS,
   commaSeparatedStringToNumber,
+  formatCommaSeparatedString,
   sanitizeTitle,
   titleCase,
   showCustomValidityError,
+  useMount,
+  emptyFormData,
 } from './utils';
 import {
   labs,
@@ -44,6 +47,7 @@ export function YMLGenerator() {
     institution: 'University of California, San Francisco',
     experiment_description: '',
     session_description: '',
+    session_id: '',
     subject: {
       description: '',
       genotype: '',
@@ -65,7 +69,9 @@ export function YMLGenerator() {
     tasks: [],
     behavioral_events: [],
     associated_video_files: [],
-    device: 'Tetrode',
+    device: {
+      name: [],
+    },
     electrode_groups: [],
     ntrode_electrode_group_channel_map: [],
   });
@@ -88,9 +94,6 @@ export function YMLGenerator() {
     } else if (index === undefined) {
       form[key][name] = value; // object (as defined in json schema)
     } else {
-      // if (typeof value === 'string' && value?.trim() === '') {
-      //   return;
-      // }
       form[key][index] = form[key][index] || {};
       form[key][index][name] = value; // array (as defined in json schema)
     }
@@ -100,13 +103,20 @@ export function YMLGenerator() {
   const onBlur = (e, metaData) => {
     const { target } = e;
     const { name, value, type } = target;
-    const { key, index, isCommaSeparatedStringToNumber } = metaData || {};
+    const {
+      key,
+      index,
+      isCommaSeparatedStringToNumber,
+      isCommaSeparatedString,
+    } = metaData || {};
     let inputValue = '';
 
-    if (!isCommaSeparatedStringToNumber) {
-      inputValue = type === 'number' ? parseFloat(value, 10) : value;
-    } else {
+    if (isCommaSeparatedString) {
+      inputValue = formatCommaSeparatedString(value);
+    } else if (isCommaSeparatedStringToNumber) {
       inputValue = commaSeparatedStringToNumber(value);
+    } else {
+      inputValue = type === 'number' ? parseFloat(value, 10) : value;
     }
 
     updateFormData(name, inputValue, key, index);
@@ -152,11 +162,7 @@ export function YMLGenerator() {
     const { key, index } = metaData;
     const electrodeGroupId = form.electrode_groups[index].id;
     const deviceTypeMapping = structuredClone(deviceTypeMap[value]);
-    const nTrode = {
-      ...arrayDefaultValues.ntrode_electrode_group_channel_map,
-    };
     const shankCount = deviceTypeMapping?.items?.shankCount || 0;
-    const nTrodes = structuredClone(Array(shankCount).fill(nTrode));
     const map = {};
 
     form[key][index].device_type = value;
@@ -168,13 +174,30 @@ export function YMLGenerator() {
       }
     );
 
-    nTrodes.forEach((n, nIndex) => {
-      n.ntrode_id = nIndex + 1 + electrodeGroupId;
-      n.electrode_group_id = electrodeGroupId;
-      n.map = { ...map };
-    });
+    const nTrodes = [];
 
-    const nTrodeMapFormData = form.ntrode_electrode_group_channel_map.filter(
+    // set nTrodes data except for bad_channel as the default suffices for now
+    for (let nIndex = 0; nIndex < shankCount; nIndex += 1) {
+      const nTrodeBase = structuredClone(
+        arrayDefaultValues.ntrode_electrode_group_channel_map
+      );
+
+      const nTrodeMap = { ...map };
+      const nTrodeMapKeys = Object.keys(nTrodeMap).map((k) => parseInt(k, 10));
+      const nTrodeMapLength = nTrodeMapKeys.length;
+
+      nTrodeMapKeys.forEach((nKey) => {
+        nTrodeMap[nKey] += nTrodeMapLength * nIndex;
+      });
+
+      nTrodeBase.ntrode_id = nIndex + 1 + electrodeGroupId;
+      nTrodeBase.electrode_group_id = electrodeGroupId;
+      nTrodeBase.map = nTrodeMap;
+
+      nTrodes.push(nTrodeBase);
+    }
+
+    const nTrodeMapFormData = form?.ntrode_electrode_group_channel_map?.filter(
       (n) => n.electrode_group_id !== electrodeGroupId
     );
 
@@ -182,7 +205,7 @@ export function YMLGenerator() {
       structuredClone(nTrodeMapFormData);
 
     nTrodes.forEach((n) => {
-      form.ntrode_electrode_group_channel_map.push(n);
+      form?.ntrode_electrode_group_channel_map?.push(n);
     });
 
     setFormData(form);
@@ -201,7 +224,7 @@ export function YMLGenerator() {
     // -1 means no id field, else there it exist and get max
     let maxId = -1;
 
-    if (arrayDefaultValue.id !== undefined) {
+    if (arrayDefaultValue?.id !== undefined) {
       maxId = idValues.length > 0 ? Math.max(...idValues) + 1 : 0;
     }
 
@@ -320,17 +343,17 @@ export function YMLGenerator() {
     }
   };
 
-  useEffect(() => {
+  useMount(() => {
     ipcRenderer.sendMessage('asynchronous-message', 'async ping');
-  }, []);
+  });
 
-  useEffect(() => {
+  useMount(() => {
     ipcRenderer.on(ASYNC_TOPICS.jsonFileRead, (data) => {
       schema.current = JSON.parse(data);
     });
-  }, []);
+  });
 
-  useEffect(() => {
+  useMount(() => {
     ipcRenderer.on(ASYNC_TOPICS.templateFileRead, (jsonFileContent) => {
       const JSONschema = schema.current;
       const validation = validateJSON(jsonFileContent, JSONschema);
@@ -344,10 +367,11 @@ export function YMLGenerator() {
         return null;
       }
 
+      setFormData(emptyFormData); // clear out form
       setFormData(jsonFileContent);
       return null;
     });
-  }, []);
+  });
 
   useEffect(() => {
     // updated tracked camera ids
@@ -415,7 +439,7 @@ export function YMLGenerator() {
             defaultValue={formData.institution}
             required
             dataItems={labs()}
-            onChange={(e) => itemSelected(e)}
+            onBlur={(e) => itemSelected(e)}
           />
         </div>
         <InputElement
@@ -424,6 +448,7 @@ export function YMLGenerator() {
           name="experiment_description"
           title="Experiment Description"
           placeholder="Description of experiment"
+          required
           defaultValue={formData.experiment_description}
           onBlur={(e) => onBlur(e)}
         />
@@ -432,8 +457,20 @@ export function YMLGenerator() {
           type="text"
           name="session_description"
           title="Session Description"
+          required
           placeholder="Description of current session"
           defaultValue={formData.session_description}
+          onBlur={(e) => onBlur(e)}
+        />
+
+        <InputElement
+          id="session_id"
+          type="text"
+          name="session_id"
+          title="Session Id"
+          required
+          placeholder="Session Id"
+          defaultValue={formData.session_id}
           onBlur={(e) => onBlur(e)}
         />
 
@@ -475,7 +512,7 @@ export function YMLGenerator() {
                 title="Species"
                 defaultValue={formData.subject.species}
                 dataItems={species()}
-                onChange={(e) => itemSelected(e, { key: 'subject' })}
+                onBlur={(e) => itemSelected(e, { key: 'subject' })}
               />
               <InputElement
                 id="subject-subjectId"
@@ -613,6 +650,7 @@ export function YMLGenerator() {
                         title="Task Name"
                         defaultValue={tasks.task_name}
                         placeholder="Task Name"
+                        required
                         onBlur={(e) =>
                           onBlur(e, {
                             key,
@@ -627,6 +665,7 @@ export function YMLGenerator() {
                         title="Task Description"
                         defaultValue={tasks.task_description}
                         placeholder="Task Description"
+                        required
                         onBlur={(e) =>
                           onBlur(e, {
                             key,
@@ -641,6 +680,7 @@ export function YMLGenerator() {
                         title="Task Environment"
                         defaultValue={tasks.task_environment}
                         placeholder="Task Environment"
+                        required
                         onBlur={(e) =>
                           onBlur(e, {
                             key,
@@ -718,6 +758,7 @@ export function YMLGenerator() {
                         title="Name"
                         defaultValue={associatedFilesName.name}
                         placeholder="File name"
+                        required
                         onBlur={(e) =>
                           onBlur(e, {
                             key,
@@ -732,6 +773,7 @@ export function YMLGenerator() {
                         title="Description"
                         defaultValue={associatedFilesName.description}
                         placeholder="description"
+                        required
                         onBlur={(e) =>
                           onBlur(e, {
                             key,
@@ -745,6 +787,7 @@ export function YMLGenerator() {
                         name="path"
                         placeholder="path"
                         defaultValue={associatedFilesName.path}
+                        required
                         metaData={{
                           key,
                           index,
@@ -798,6 +841,7 @@ export function YMLGenerator() {
                 name="analog"
                 title="Analog"
                 placeholder="Analog"
+                required
                 defaultValue={formData.units.analog}
                 onBlur={(e) => onBlur(e, { key: 'units' })}
               />
@@ -820,6 +864,8 @@ export function YMLGenerator() {
           name="times_period_multiplier"
           title="Times Period Multiplier"
           placeholder="Times Period Multiplier"
+          step="any"
+          required
           defaultValue={formData.times_period_multiplier}
           onBlur={(e) => onBlur(e)}
         />
@@ -830,6 +876,7 @@ export function YMLGenerator() {
           name="raw_data_to_volts"
           title="Raw Data to Volts"
           placeholder="raw data to volts"
+          step="any"
           defaultValue={formData.raw_data_to_volts}
           onBlur={(e) => onBlur(e)}
         />
@@ -864,6 +911,7 @@ export function YMLGenerator() {
                         title="Id"
                         defaultValue={cameras.id}
                         placeholder="Id"
+                        required
                         onBlur={(e) =>
                           onBlur(e, {
                             key,
@@ -878,6 +926,7 @@ export function YMLGenerator() {
                         title="Meters Per Pixel"
                         defaultValue={cameras.meters_per_pixel}
                         placeholder="Meters Per Pixel"
+                        required
                         onBlur={(e) =>
                           onBlur(e, {
                             key,
@@ -892,6 +941,7 @@ export function YMLGenerator() {
                         title="Manufacturer"
                         defaultValue={cameras.manufacturer}
                         placeholder="Manufacturer"
+                        required
                         onBlur={(e) =>
                           onBlur(e, {
                             key,
@@ -906,6 +956,7 @@ export function YMLGenerator() {
                         title="model"
                         defaultValue={cameras.model}
                         placeholder="model"
+                        required
                         onBlur={(e) =>
                           onBlur(e, {
                             key,
@@ -920,6 +971,7 @@ export function YMLGenerator() {
                         title="lens"
                         defaultValue={cameras.lens}
                         placeholder="Lens"
+                        required
                         onBlur={(e) =>
                           onBlur(e, {
                             key,
@@ -934,6 +986,7 @@ export function YMLGenerator() {
                         title="Camera Name"
                         defaultValue={cameras.camera_name}
                         placeholder="Camera Name"
+                        required
                         onBlur={(e) =>
                           onBlur(e, {
                             key,
@@ -992,7 +1045,6 @@ export function YMLGenerator() {
                           name="camera_id"
                           title="Camera Id"
                           placeholder="Camera Id"
-                          required
                           defaultValue={associatedVideoFiles.camera_id}
                           dataItems={cameraIdsDefined}
                           onChange={(e) =>
@@ -1042,6 +1094,7 @@ export function YMLGenerator() {
                         items={behavioralEventsDescription()}
                         defaultValue={behavioralEvents.description}
                         placeholder="description"
+                        required
                         metaData={{
                           key,
                           index,
@@ -1054,7 +1107,7 @@ export function YMLGenerator() {
                         title="Name"
                         dataItems={behavioralEventsNames()}
                         defaultValue={behavioralEvents.name}
-                        onChange={(e) =>
+                        onBlur={(e) =>
                           itemSelected(e, {
                             key,
                             index,
@@ -1075,20 +1128,31 @@ export function YMLGenerator() {
           </fieldset>
         </div>
 
-        <SelectElement
-          id="device"
-          name="device"
-          title="Device"
-          dataItems={device()}
-          defaultValue={formData.device}
-          onChange={(e) => itemSelected(e)}
-        />
+        <div>
+          <fieldset>
+            <legend>Device</legend>
+            <div className="form-container">
+              <InputElement
+                id="device-name"
+                type="text"
+                name="name"
+                title="Name"
+                defaultValue={formData.device.name}
+                required
+                placeholder="Comma-separated list of devices"
+                onBlur={(e) =>
+                  onBlur(e, { key: 'device', isCommaSeparatedString: true })
+                }
+              />
+            </div>
+          </fieldset>
+        </div>
 
         <div>
           <fieldset>
             <legend>Electrode Groups</legend>
             <div className="form-container">
-              {formData.electrode_groups.map((electrodeGroup, index) => {
+              {formData?.electrode_groups?.map((electrodeGroup, index) => {
                 const electrodeGroupId = electrodeGroup.id;
                 const nTrodeItems =
                   formData?.ntrode_electrode_group_channel_map?.filter(
@@ -1107,6 +1171,7 @@ export function YMLGenerator() {
                         title="Id"
                         defaultValue={electrodeGroup.id}
                         placeholder="Id"
+                        required
                         onBlur={(e) =>
                           onBlur(e, {
                             key,
@@ -1120,7 +1185,7 @@ export function YMLGenerator() {
                         title="Location"
                         defaultValue={electrodeGroup.location}
                         dataItems={locations()}
-                        onChange={(e) =>
+                        onBlur={(e) =>
                           itemSelected(e, {
                             key,
                             index,
@@ -1131,8 +1196,9 @@ export function YMLGenerator() {
                         id={`electrode_groups-device_type-${index}`}
                         name="device_type"
                         title="Device Type"
+                        addBlankOption
                         dataItems={deviceTypes()}
-                        defaultValue={electrodeGroup.deviceType}
+                        defaultValue={electrodeGroup.device_type}
                         onChange={(e) =>
                           nTrodeMapSelected(e, {
                             key,
@@ -1147,6 +1213,7 @@ export function YMLGenerator() {
                         title="Description"
                         defaultValue={electrodeGroup.description}
                         placeholder="Description"
+                        required
                         onBlur={(e) =>
                           onBlur(e, {
                             key,
@@ -1160,7 +1227,7 @@ export function YMLGenerator() {
                         title="Targeted Location"
                         dataItems={locations()}
                         defaultValue={electrodeGroup.targeted_location}
-                        onChange={(e) =>
+                        onBlur={(e) =>
                           itemSelected(e, {
                             key,
                             index,
@@ -1174,6 +1241,8 @@ export function YMLGenerator() {
                         title="Targeted x"
                         defaultValue={electrodeGroup.targeted_x}
                         placeholder="Targeted x"
+                        step="any"
+                        required
                         onBlur={(e) =>
                           onBlur(e, {
                             key,
@@ -1188,6 +1257,8 @@ export function YMLGenerator() {
                         title="Targeted y"
                         defaultValue={electrodeGroup.targeted_y}
                         placeholder="Targeted y"
+                        step="any"
+                        required
                         onBlur={(e) =>
                           onBlur(e, {
                             key,
@@ -1202,6 +1273,8 @@ export function YMLGenerator() {
                         title="Targeted z"
                         defaultValue={electrodeGroup.targeted_z}
                         placeholder="Targeted z"
+                        step="any"
+                        required
                         onBlur={(e) =>
                           onBlur(e, {
                             key,

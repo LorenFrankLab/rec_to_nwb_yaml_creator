@@ -15,6 +15,7 @@ const FileUpload = (fileProperty) => {
     required,
     placeholder,
     id,
+    defaultValue,
     onTextFieldInput,
     onBlur,
     metaData,
@@ -41,6 +42,7 @@ const FileUpload = (fileProperty) => {
           ref={fileInputElement}
           id={id}
           name={name}
+          defaultValue={defaultValue}
           required={required}
           placeholder={placeholder}
           onBlur={(e) => onTextFieldInput(e)}

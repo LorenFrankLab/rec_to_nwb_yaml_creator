@@ -25,13 +25,13 @@ const SelectElement = (prop) => {
     <label className="container" htmlFor={id}>
       <div className="item1">{title}</div>
       <div className="item2">
-        <select id={id} name={name} onChange={onChange}>
+        <select id={id} name={name} onChange={onChange} value={defaultValue}>
           {addBlankOption ? (
             <option value="" name={name}>
               &nbsp;
             </option>
           ) : null}
-          {['', dataItems].flat().map((dataItem, dataItemIndex) => {
+          {[dataItems].flat().map((dataItem, dataItemIndex) => {
             const dataItemValue =
               type === 'number' && dataItem !== ''
                 ? parseInt(dataItem, 10)
@@ -42,12 +42,7 @@ const SelectElement = (prop) => {
                 : `${title}-0-selectItem-${dataItemIndex}`;
 
             return (
-              <option
-                key={keyOption}
-                value={dataItem}
-                name={name}
-                selected={dataItem === defaultValue}
-              >
+              <option key={keyOption} value={dataItem} name={name}>
                 {dataItemValue}
               </option>
             );
