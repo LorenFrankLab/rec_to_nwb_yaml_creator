@@ -16,17 +16,18 @@ import {
   sanitizeTitle,
   titleCase,
   showCustomValidityError,
+  isNumeric,
   useMount,
   emptyFormData,
 } from './utils';
 import {
   labs,
-  genders,
-  device,
+  genderAcronym,
   locations,
   deviceTypes,
   units,
   species,
+  genotypes,
   behavioralEventsNames,
   behavioralEventsDescription,
 } from './list';
@@ -50,11 +51,11 @@ export function YMLGenerator() {
     session_id: '',
     subject: {
       description: '',
-      genotype: '',
-      sex: 'Male',
-      species: 'Long-Evans Rat',
+      genotype: 'Long-Evans Rat',
+      sex: 'M',
+      species: 'Rattus norvegicus',
       subject_id: '',
-      weight: 0,
+      weight: 100,
     },
     data_acq_device: [],
     associated_files: [],
@@ -84,6 +85,7 @@ export function YMLGenerator() {
 
   const downloadExistingFile = (e) => {
     e.preventDefault();
+    setFormData(emptyFormData); // clear out form
     ipcRenderer.sendMessage('REQUEST_OPEN_TEMPLATE_FILE_BOX');
   };
 
@@ -358,16 +360,31 @@ export function YMLGenerator() {
       const JSONschema = schema.current;
       const validation = validateJSON(jsonFileContent, JSONschema);
       const { isValid, message } = validation;
+      const possibleGenders = genderAcronym();
 
       if (!isValid) {
+        let messageText = '';
+
+        if (!message?.join) {
+          messageText = message;
+        } else {
+          messageText = message.join('');
+        }
         // eslint-disable-next-line no-alert
-        window.alert(
-          `There were validation errors: ${(message.join || [])('')}`
-        );
+        window.alert(`There were validation errors: ${messageText}`);
         return null;
       }
 
-      setFormData(emptyFormData); // clear out form
+      // consider moving this to Json schema file
+      if (!possibleGenders.includes(jsonFileContent.subject.sex)) {
+        // eslint-disable-next-line no-alert
+        window.alert(
+          `Subject's gender is limited to one from - ${possibleGenders}. Your value is ${jsonFileContent.subject.sex}`
+        );
+
+        return null;
+      }
+
       setFormData(jsonFileContent);
       return null;
     });
@@ -375,8 +392,10 @@ export function YMLGenerator() {
 
   useEffect(() => {
     // updated tracked camera ids
-    const cameraIds = formData.cameras.map((camera) => camera.id);
-    setCameraIdsDefined([...[...new Set(cameraIds)]]);
+    if (formData.cameras) {
+      const cameraIds = formData.cameras.map((camera) => camera.id);
+      setCameraIdsDefined([...[...new Set(cameraIds)]]);
+    }
 
     // update tracked task epochs
     const taskEpochs = [
@@ -418,7 +437,9 @@ export function YMLGenerator() {
             name="experimenter_name"
             defaultValue={formData.experimenter_name}
             title="Experimenter Name"
-            placeholder="Name of experimenter performing current session"
+            placeholder={
+              '"LastName, Firstname" or "LastName", FirstName MiddleInitial." or "LastName, FirstName MiddleName"'
+            }
             required
             onBlur={(e) => onBlur(e)}
           />
@@ -447,7 +468,7 @@ export function YMLGenerator() {
           type="text"
           name="experiment_description"
           title="Experiment Description"
-          placeholder="Description of experiment"
+          placeholder="Context for understanding the contents of this file"
           required
           defaultValue={formData.experiment_description}
           onBlur={(e) => onBlur(e)}
@@ -488,23 +509,15 @@ export function YMLGenerator() {
                 placeholder="Summary of animal model/patient/specimen being examined"
                 onBlur={(e) => onBlur(e, { key: 'subject' })}
               />
-              <InputElement
+              <DataListElement
                 id="subject-genotype"
-                type="text"
                 name="genotype"
                 title="Genotype"
-                required
                 defaultValue={formData.subject.genotype}
+                required
                 placeholder="Genetic summary of animal model/patient/specimen"
-                onBlur={(e) => onBlur(e, { key: 'subject' })}
-              />
-              <SelectElement
-                id="subject-sex"
-                name="sex"
-                title="Sex"
-                dataItems={genders()}
-                defaultValue={formData.subject.sex}
-                onChange={(e) => itemSelected(e, { key: 'subject' })}
+                dataItems={genotypes()}
+                onBlur={(e) => itemSelected(e, { key: 'subject' })}
               />
               <DataListElement
                 id="subject-species"
@@ -513,6 +526,14 @@ export function YMLGenerator() {
                 defaultValue={formData.subject.species}
                 dataItems={species()}
                 onBlur={(e) => itemSelected(e, { key: 'subject' })}
+              />
+              <SelectElement
+                id="subject-sex"
+                name="sex"
+                title="Sex"
+                dataItems={genderAcronym()}
+                defaultValue={formData.subject.sex}
+                onChange={(e) => itemSelected(e, { key: 'subject' })}
               />
               <InputElement
                 id="subject-subjectId"
@@ -895,7 +916,7 @@ export function YMLGenerator() {
           <fieldset>
             <legend>Cameras</legend>
             <div className="form-container">
-              {formData.cameras.map((cameras, index) => {
+              {formData?.cameras?.map((cameras, index) => {
                 const key = 'cameras';
                 return (
                   <fieldset
@@ -1012,7 +1033,7 @@ export function YMLGenerator() {
           <fieldset>
             <legend>Associated Video Files</legend>
             <div className="form-container">
-              {formData.associated_video_files.map(
+              {formData?.associated_video_files?.map(
                 (associatedVideoFiles, index) => {
                   const key = 'associated_video_files';
                   return (
@@ -1074,7 +1095,7 @@ export function YMLGenerator() {
           <fieldset>
             <legend>Behavioral Events</legend>
             <div className="form-container">
-              {formData.behavioral_events.map((behavioralEvents, index) => {
+              {formData?.behavioral_events.map((behavioralEvents, index) => {
                 const key = 'behavioral_events';
 
                 return (

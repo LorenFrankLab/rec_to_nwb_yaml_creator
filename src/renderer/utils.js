@@ -62,6 +62,15 @@ export const isInteger = (value) => {
 };
 
 /**
+ * Checks if value is a numeric
+ *
+ * @param {object} num Value to verify if numeric
+ *
+ * @returns true if numeric, false otherwise
+ */
+export const isNumeric = (num) => /^-?[0-9]+(?:\.[0-9]+)?$/.test(`${num}`);
+
+/**
  * Converts a string to title case
  *
  * @param {string} str Makes text title case

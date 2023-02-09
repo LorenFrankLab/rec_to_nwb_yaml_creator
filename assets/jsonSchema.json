@@ -397,8 +397,8 @@
           "$id": "#root/subject/sex",
           "title": "sex",
           "type": "string",
-          "default": "Male",
-          "examples": ["Male", "Female", "Unspecified"],
+          "default": "M",
+          "examples": ["M", "F", "U", "O"],
           "pattern": "^.+$",
           "description": "Gender of animal model/patient"
         },

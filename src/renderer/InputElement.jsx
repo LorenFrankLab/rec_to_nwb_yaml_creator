@@ -26,7 +26,9 @@ const InputElement = (prop) => {
   return (
     <div>
       <label className="container" htmlFor={id}>
-        <div className="item1">{title}</div>
+        <div className="item1" title={placeholder}>
+          {title}
+        </div>
         <div className="item2">
           <input
             id={id}

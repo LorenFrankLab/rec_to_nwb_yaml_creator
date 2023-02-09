@@ -16,6 +16,7 @@ const SelectElement = (prop) => {
     type,
     title,
     dataItems,
+    dataItemsInfo,
     defaultValue,
     onChange,
     addBlankOption,
@@ -23,7 +24,9 @@ const SelectElement = (prop) => {
 
   return (
     <label className="container" htmlFor={id}>
-      <div className="item1">{title}</div>
+      <div className="item1" title={title}>
+        {title}
+      </div>
       <div className="item2">
         <select id={id} name={name} onChange={onChange} value={defaultValue}>
           {addBlankOption ? (
@@ -36,14 +39,20 @@ const SelectElement = (prop) => {
               type === 'number' && dataItem !== ''
                 ? parseInt(dataItem, 10)
                 : dataItem;
+
             const keyOption =
               dataItemValue !== ''
                 ? `${dataItem}-${sanitizeTitle(dataItem)}`
                 : `${title}-0-selectItem-${dataItemIndex}`;
 
+            const TitleOption =
+              dataItemsInfo?.length > 0
+                ? `${dataItemValue} (${dataItemsInfo[dataItemIndex] || ''})`
+                : dataItem;
+
             return (
               <option key={keyOption} value={dataItem} name={name}>
-                {dataItemValue}
+                {TitleOption}
               </option>
             );
           })}
@@ -56,7 +65,8 @@ const SelectElement = (prop) => {
 SelectElement.propType = {
   title: PropTypes.string.isRequired,
   defaultValue: PropTypes.oneOf([PropTypes.string, PropTypes.number]),
-  dataItems: PropTypes.arrayOf(PropTypes.string),
+  dataItems: PropTypes.arrayOf(PropTypes.string).isRequired,
+  dataItemsInfo: PropTypes.arrayOf(PropTypes.string),
   addBlankOption: PropTypes.bool,
   id: PropTypes.string.isRequired,
   type: PropTypes.string.isRequired,
@@ -66,6 +76,7 @@ SelectElement.propType = {
 
 SelectElement.defaultProps = {
   defaultValue: '',
+  dataItemsInfo: [],
   addBlankOption: false,
   type: 'text',
   onChange: () => {},

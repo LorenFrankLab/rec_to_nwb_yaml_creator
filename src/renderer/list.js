@@ -12,8 +12,17 @@ export const device = () => {
  *
  * @returns Genders
  */
+export const genderAcronym = () => {
+  return [...['M', 'F', 'U', 'O']];
+};
+
+/**
+ * Full meaning of acronym
+ *
+ * @returns  Provides the full meaning of gender
+ */
 export const genders = () => {
-  return [...['Male', 'Female', 'Unspecified']];
+  return [...['Male', 'Female', 'Unspecified', '0ther']];
 };
 
 /**
@@ -679,16 +688,9 @@ export const units = () => {
   return [...['pm', 'nm', 'μm', 'mm', 'cm', 'in', 'yd', 'ft']];
 };
 
-/**
- * List of species
- *
- * @returns Species
- */
-export const species = () => {
-  // from Charles River
+export const genotypes = () => {
   return [
     ...[
-      // rats
       'Brown Norway Rat',
       'Buffalo Rat',
       'CD (SD) IGS SOPF Rat',
@@ -720,6 +722,7 @@ export const species = () => {
       'Wistar IGS Rat',
       'Wistar Kyoto (WKY) Rat',
       'Wistar WU Rat',
+      'Wild Type',
       'ZDF Rat (Lean +/?)',
       'ZDF Rat (Lean fa/+)',
       'ZDF Rat (Obese fa/fa)',
@@ -804,6 +807,90 @@ export const species = () => {
 
       // GerbilMongolian Gerbil
       'Mongolian Gerbil',
+    ],
+  ];
+};
+
+/**
+ * List of species
+ *
+ * @returns Species
+ */
+export const species = () => {
+  // from Charles River
+  return [
+    ...[
+      // rat
+      'Rattus andamanensis',
+      'Rattus annandalei',
+      'Rattus argentiventer',
+      'Rattus baluensis',
+      'Rattus cf. moluccarius TJG-2015',
+      'Rattus colletti',
+      'Rattus detentus',
+      'Rattus everetti',
+      'Rattus exulans',
+      'Rattus facetus',
+      'Rattus flavipectus',
+      'Rattus fuscipes',
+      'Rattus giluwensis',
+      'Rattus hoffmanni',
+      'Rattus hoogerwerfi',
+      'Rattus korinchi',
+      'Rattus leucopus',
+      'Rattus losea',
+      'Rattus lutreolus',
+      'Rattus macleari',
+      'Rattus mindorensis',
+      'Rattus moluccarius',
+      'Rattus montanus',
+      'Rattus mordax',
+      'Rattus morotaiensis',
+      'Rattus nativitatis',
+      'Rattus niobe',
+      'Rattus nitidus',
+      'Rattus norvegicus',
+      'Rattus novaeguineae',
+      'Rattus praetor',
+      'Rattus pyctoris',
+      'Rattus ranjiniae',
+      'Rattus rattus',
+      'Rattus sakeratensis',
+      'Rattus satarae',
+      'Rattus sordidus',
+      'Rattus steini',
+      'Rattus tanezumi',
+      'Rattus timorensis',
+      'Rattus tiomanicus',
+      'Rattus tunneyi',
+      'Rattus verecundus',
+      'Rattus villosissimus',
+      'Rattus xanthurus',
+      'unclassified Rattus',
+
+      // mouse
+      'Mus abbotti',
+      'Mus booduga',
+      'Mus caroli',
+      'Mus cervicolor',
+      'Mus cookii',
+      'Mus cypriacus',
+      'Mus famulus',
+      'Mus fragilicauda',
+      'Mus gratus',
+      'Mus lepidoides',
+      'Mus macedonicus',
+      'Mus musculus',
+      'Mus musculus domesticus x Mus spretus',
+      'Mus musculus musculus x Mus musculus molossinus',
+      'Mus musculus x Mus caroli',
+      'Mus musculus x Mus spretus',
+      'Mus nitidulus',
+      'Mus poschiavinus',
+      'Mus spicilegus',
+      'Mus spretus',
+      'Mus terricolor',
+      'Mus triton',
     ],
   ];
 };
