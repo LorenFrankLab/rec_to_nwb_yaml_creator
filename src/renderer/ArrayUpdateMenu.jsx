@@ -61,7 +61,7 @@ const ArrayUpdateMenu = (prop) => {
       )}
       <button
         type="button"
-        className={`${items === 0 ? 'hide' : ''}`}
+        className={`${items?.length === 0 || !items ? 'hide' : ''}`}
         title={`Remove ${itemsKey}`}
         onClick={remove}
       >

@@ -95,7 +95,8 @@ const ChannelMap = (prop) => {
                                         option
                                       )}${nTrodeKey}`}
                                     >
-                                      {item.map[option]}
+                                      {option}
+                                      {/* {item.map[option]} */}
                                     </option>
                                   );
                                 })}
