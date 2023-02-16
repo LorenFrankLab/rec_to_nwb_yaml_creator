@@ -29,9 +29,8 @@ const DataListElement = (prop) => {
             return (
               <option
                 key={sanitizeTitle(dataItem)}
-                defaultValue={defaultValue}
-                name={name}
                 value={dataItem}
+                name={name}
               >
                 {dataItem}
               </option>

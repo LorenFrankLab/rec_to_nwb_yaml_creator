@@ -50,8 +50,8 @@ export function YMLGenerator() {
     session_description: '',
     session_id: '',
     subject: {
-      description: '',
-      genotype: 'Long-Evans Rat',
+      description: 'Long-Evans Rat',
+      genotype: 'Wild Type',
       sex: 'M',
       species: 'Rattus norvegicus',
       subject_id: '',
