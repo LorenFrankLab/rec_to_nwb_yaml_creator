@@ -1,6 +1,6 @@
 {
   "name": "rec_to_nwb_yaml_creator",
-  "version": "1.3.0",
+  "version": "1.5.0",
   "description": "YML Generator for Rec to NWB",
   "license": "MIT",
   "author": {
