@@ -85,7 +85,7 @@ export function YMLGenerator() {
 
   const downloadExistingFile = (e) => {
     e.preventDefault();
-    setFormData(emptyFormData); // clear out form
+    setFormData(structuredClone(emptyFormData)); // clear out form
     ipcRenderer.sendMessage('REQUEST_OPEN_TEMPLATE_FILE_BOX');
   };
 
@@ -375,7 +375,7 @@ export function YMLGenerator() {
         return null;
       }
 
-      // consider moving this to Json schema file
+      // check if gender is from the available options
       if (!possibleGenders.includes(jsonFileContent.subject.sex)) {
         // eslint-disable-next-line no-alert
         window.alert(
@@ -385,7 +385,28 @@ export function YMLGenerator() {
         return null;
       }
 
-      setFormData(jsonFileContent);
+      // check if tasks have a camera but no camera is set
+      if (!jsonFileContent.cameras && jsonFileContent.tasks?.length > 0) {
+        // eslint-disable-next-line no-alert
+        window.alert(
+          `There is tasks camera_id, but no camera object with ids. No data is loaded`
+        );
+        return null;
+      }
+
+      // check if associated_video_files have a camera but no camera is set
+      if (
+        !jsonFileContent.cameras &&
+        jsonFileContent.associated_video_files?.length > 0
+      ) {
+        // eslint-disable-next-line no-alert
+        window.alert(
+          `There is associated_video_files camera_id, but no camera object with ids. No data is loaded`
+        );
+        return null;
+      }
+
+      setFormData(structuredClone(jsonFileContent));
       return null;
     });
   });

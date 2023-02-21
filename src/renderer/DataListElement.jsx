@@ -22,6 +22,7 @@ const DataListElement = (prop) => {
           list={`${id}-list`}
           name={name}
           defaultValue={defaultValue}
+          key={defaultValue}
           onBlur={onBlur}
         />
         <datalist id={`${id}-list`} name={name}>
