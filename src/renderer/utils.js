@@ -152,24 +152,6 @@ export const stringToInteger = (stringValue) => {
 };
 
 /**
- * Takes in a string consisting of text and a number, like abc5, and returns
- * an array with the text and number split, like- { text: 'abc', number: 5, }
- *
- * @param {string} textNumber String consisting of text and number, like Din1
- * @returns Array with text and number separated
- */
-export const splitTextNumber = (textNumber) => {
-  if (!textNumber || textNumber.trim() === '') {
-    return ['', ''];
-  }
-
-  const numericPart = textNumber.match(/\d+/g);
-  const textPart = textNumber.match(/[a-zA-Z]+/g);
-
-  return { text: textPart, number: numericPart };
-};
-
-/**
  * Remove special characters from text
  * @param {string} title  Title
  */

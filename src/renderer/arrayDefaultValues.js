@@ -35,14 +35,14 @@ const arrayDefaultValues = {
   },
   behavioral_events: {
     description: 'Din1',
-    name: 'Home box camera',
+    name: '', // 'Home box camera',
   },
   electrode_groups: {
     id: 0,
-    location: 'Cornu ammonis 1 (CA1)',
+    location: '', // 'Cornu ammonis 1 (CA1)',
     device_type: '',
     description: '',
-    targeted_location: 'Cornu ammonis 1 (CA1)',
+    targeted_location: '', // 'Cornu ammonis 1 (CA1)',
     targeted_x: '',
     targeted_y: '',
     targeted_z: '',

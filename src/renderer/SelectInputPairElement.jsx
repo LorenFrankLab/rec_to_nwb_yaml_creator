@@ -1,6 +1,41 @@
 import React, { useRef } from 'react';
 import PropTypes from 'prop-types';
-import { splitTextNumber, sanitizeTitle } from './utils';
+import { sanitizeTitle } from './utils';
+import { behavioralEventsDescription } from './list';
+
+/**
+ * Takes in a string consisting of text and a number, like abc5, and returns
+ * an array with the text and number split, like- { text: 'abc', number: 5, }
+ *
+ * @param {string} textNumber String consisting of text and number, like Din1
+ * @returns Array with text and number separated
+ */
+export const splitTextNumber = (textNumber) => {
+  if (!textNumber || textNumber.trim() === '') {
+    return { text: 'Din', number: 1 };
+  }
+
+  const numericPart = textNumber.match(/\d+/g);
+  const textPart = textNumber.match(/[a-zA-Z]+/g);
+  const eventsDescription = behavioralEventsDescription();
+
+  let number = 1;
+  let text = '';
+
+  // if true, description may be valid
+  if (
+    numericPart.length === 1 &&
+    textPart.length === 1 &&
+    eventsDescription.includes(textPart[0])
+  ) {
+    const parsedInt = parseInt(numericPart[0], 10);
+
+    number = Number.isNaN(parsedInt) ? 1 : parsedInt;
+    [text] = textPart;
+  }
+
+  return { text, number };
+};
 
 /**
  * Provides a means to get user data from a combination of select tag and input tag
@@ -16,6 +51,7 @@ const SelectInputPairElement = (prop) => {
     title,
     name,
     items,
+    step,
     placeholder,
     defaultValue,
     required,
@@ -25,18 +61,14 @@ const SelectInputPairElement = (prop) => {
   } = prop;
 
   const selectRef = useRef(null);
-
   const inputRef = useRef(null);
-
-  const splittedTextNumber = splitTextNumber(defaultValue);
-
   const onSelectPairInput = () => {
     const value = `${selectRef.current.value}${inputRef.current.value}`;
     const eventData = {
       target: {
         name,
         value,
-        type,
+        type: 'text',
       },
     };
 
@@ -60,7 +92,7 @@ const SelectInputPairElement = (prop) => {
                   return (
                     <option
                       key={sanitizeTitle(item)}
-                      defaultValue={splittedTextNumber.text}
+                      defaultValue={splitTextNumber(defaultValue).text}
                       value={item}
                     >
                       {item}
@@ -75,9 +107,10 @@ const SelectInputPairElement = (prop) => {
                 ref={inputRef}
                 type={type}
                 name={name}
+                step={step}
                 className="select-input-pair__item2"
                 placeholder={placeholder}
-                defaultValue={splittedTextNumber.number}
+                defaultValue={splitTextNumber(defaultValue).number}
                 required={required}
                 readOnly={readOnly}
                 onBlur={onSelectPairInput}

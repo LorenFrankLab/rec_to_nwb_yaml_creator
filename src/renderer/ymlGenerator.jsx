@@ -9,6 +9,7 @@ import ChannelMap from './ChannelMap';
 import SelectInputPairElement from './SelectInputPairElement';
 import ArrayUpdateMenu from './ArrayUpdateMenu';
 import CheckboxList from './CheckboxList';
+import RadioList from './RadioList';
 import {
   ASYNC_TOPICS,
   commaSeparatedStringToNumber,
@@ -45,15 +46,15 @@ export function YMLGenerator() {
   const [formData, setFormData] = useState({
     experimenter_name: '',
     lab: 'Frank Lab',
-    institution: 'University of California, San Francisco',
+    institution: '',
     experiment_description: '',
     session_description: '',
     session_id: '',
     subject: {
       description: 'Long-Evans Rat',
-      genotype: 'Wild Type',
+      genotype: '',
       sex: 'M',
-      species: 'Rattus norvegicus',
+      species: '',
       subject_id: '',
       weight: 100,
     },
@@ -459,7 +460,7 @@ export function YMLGenerator() {
             defaultValue={formData.experimenter_name}
             title="Experimenter Name"
             placeholder={
-              '"LastName, Firstname" or "LastName", FirstName MiddleInitial." or "LastName, FirstName MiddleName"'
+              '"LastName, FirstName" or "LastName", FirstName MiddleInitial." or "LastName, FirstName MiddleName"'
             }
             required
             onBlur={(e) => onBlur(e)}
@@ -479,6 +480,7 @@ export function YMLGenerator() {
             name="institution"
             title="Institution"
             defaultValue={formData.institution}
+            placeholder="Affiliated University or Research center"
             required
             dataItems={labs()}
             onBlur={(e) => itemSelected(e)}
@@ -489,7 +491,7 @@ export function YMLGenerator() {
           type="text"
           name="experiment_description"
           title="Experiment Description"
-          placeholder="Context for understanding the contents of this file"
+          placeholder="Name of the Project, e.g. - Optogenetic Stimulation"
           required
           defaultValue={formData.experiment_description}
           onBlur={(e) => onBlur(e)}
@@ -500,7 +502,7 @@ export function YMLGenerator() {
           name="session_description"
           title="Session Description"
           required
-          placeholder="Description of current session"
+          placeholder="Description of current session, e.g - w-track task"
           defaultValue={formData.session_description}
           onBlur={(e) => onBlur(e)}
         />
@@ -511,7 +513,7 @@ export function YMLGenerator() {
           name="session_id"
           title="Session Id"
           required
-          placeholder="Session Id"
+          placeholder="Session id, e.g - 1"
           defaultValue={formData.session_id}
           onBlur={(e) => onBlur(e)}
         />
@@ -545,6 +547,7 @@ export function YMLGenerator() {
                 name="species"
                 title="Species"
                 defaultValue={formData.subject.species}
+                placeholder="Species"
                 dataItems={species()}
                 onBlur={(e) => itemSelected(e, { key: 'subject' })}
               />
@@ -604,7 +607,7 @@ export function YMLGenerator() {
                         title="Name"
                         required
                         defaultValue={dataAcqDevice.name}
-                        placeholder="name"
+                        placeholder="Name of the data acquisition device, e.g - Main Control Unit"
                         onBlur={(e) =>
                           onBlur(e, {
                             key,
@@ -670,268 +673,6 @@ export function YMLGenerator() {
             />
           </fieldset>
         </div>
-
-        <div>
-          <fieldset>
-            <legend>Tasks</legend>
-            <div className="form-container">
-              {formData.tasks.map((tasks, index) => {
-                const key = 'tasks';
-
-                return (
-                  <fieldset
-                    key={sanitizeTitle(`${tasks.task_name}-ts-${index}`)}
-                    className="array-item"
-                  >
-                    <legend> Item #{index + 1} </legend>
-                    <div className="form-container">
-                      <InputElement
-                        id={`tasks-task_name-${index}`}
-                        type="text"
-                        name="task_name"
-                        title="Task Name"
-                        defaultValue={tasks.task_name}
-                        placeholder="Task Name"
-                        required
-                        onBlur={(e) =>
-                          onBlur(e, {
-                            key,
-                            index,
-                          })
-                        }
-                      />
-                      <InputElement
-                        id={`tasks-task_description-${index}`}
-                        type="text"
-                        name="task_description"
-                        title="Task Description"
-                        defaultValue={tasks.task_description}
-                        placeholder="Task Description"
-                        required
-                        onBlur={(e) =>
-                          onBlur(e, {
-                            key,
-                            index,
-                          })
-                        }
-                      />
-                      <InputElement
-                        id={`tasks-task_environment-${index}`}
-                        type="text"
-                        name="task_environment"
-                        title="Task Environment"
-                        defaultValue={tasks.task_environment}
-                        placeholder="Task Environment"
-                        required
-                        onBlur={(e) =>
-                          onBlur(e, {
-                            key,
-                            index,
-                          })
-                        }
-                      />
-                      <CheckboxList
-                        id={`tasks-camera_id-${index}`}
-                        type="number"
-                        name="camera_id"
-                        title="Camera Id"
-                        objectKind="Camera"
-                        defaultValue={tasks.camera_id}
-                        placeholder="Camera ids"
-                        dataItems={cameraIdsDefined}
-                        updateFormData={updateFormData}
-                        metaData={{
-                          nameValue: 'camera_id',
-                          keyValue: 'tasks',
-                          index,
-                        }}
-                        onChange={updateFormData}
-                      />
-
-                      <InputElement
-                        id={`tasks-task_epochs-${index}`}
-                        type="text"
-                        name="task_epochs"
-                        title="Task Epochs"
-                        defaultValue={tasks.task_epochs}
-                        placeholder="Task Epochs"
-                        onBlur={(e) =>
-                          onBlur(e, {
-                            key,
-                            index,
-                            isCommaSeparatedStringToNumber: true,
-                          })
-                        }
-                      />
-                    </div>
-                  </fieldset>
-                );
-              })}
-            </div>
-            <ArrayUpdateMenu
-              itemsKey="tasks"
-              items={formData.tasks}
-              addArrayItem={addArrayItem}
-              removeArrayItem={removeArrayItem}
-            />
-          </fieldset>
-        </div>
-
-        <div>
-          <fieldset>
-            <legend>Associated Files</legend>
-            <div className="form-container">
-              {formData.associated_files.map((associatedFilesName, index) => {
-                const key = 'associated_files';
-
-                return (
-                  <fieldset
-                    key={sanitizeTitle(
-                      `${associatedFilesName.name}-afn-${index}`
-                    )}
-                    className="array-item"
-                  >
-                    <legend> Item #{index + 1} </legend>
-                    <div className="form-container">
-                      <InputElement
-                        id={`associated_files-name-${index}`}
-                        type="text"
-                        name="name"
-                        title="Name"
-                        defaultValue={associatedFilesName.name}
-                        placeholder="File name"
-                        required
-                        onBlur={(e) =>
-                          onBlur(e, {
-                            key,
-                            index,
-                          })
-                        }
-                      />
-                      <InputElement
-                        id={`associated_files-description-${index}`}
-                        type="text"
-                        name="description"
-                        title="Description"
-                        defaultValue={associatedFilesName.description}
-                        placeholder="description"
-                        required
-                        onBlur={(e) =>
-                          onBlur(e, {
-                            key,
-                            index,
-                          })
-                        }
-                      />
-                      <FileUpload
-                        id={`associated_files-path-${index}`}
-                        title="Path"
-                        name="path"
-                        placeholder="path"
-                        defaultValue={associatedFilesName.path}
-                        required
-                        metaData={{
-                          key,
-                          index,
-                        }}
-                        onTextFieldInput={(e) =>
-                          onBlur(e, {
-                            key,
-                            index,
-                          })
-                        }
-                        onBlur={itemFileUpload}
-                      />
-                      <CheckboxList
-                        id={`associated_files-taskEpochs-${index}`}
-                        type="number"
-                        name="task_epochs"
-                        title="Task Epochs"
-                        objectKind="Task"
-                        defaultValue={associatedFilesName.task_epochs}
-                        placeholder="Task Epochs"
-                        dataItems={taskEpochsDefined}
-                        updateFormData={updateFormData}
-                        metaData={{
-                          nameValue: 'task_epochs',
-                          keyValue: 'associated_files',
-                          index,
-                        }}
-                        onChange={updateFormData}
-                      />
-                    </div>
-                  </fieldset>
-                );
-              })}
-            </div>
-            <ArrayUpdateMenu
-              itemsKey="associated_files"
-              items={formData.associated_files}
-              addArrayItem={addArrayItem}
-              removeArrayItem={removeArrayItem}
-            />
-          </fieldset>
-        </div>
-
-        <div>
-          <fieldset>
-            <legend>Units</legend>
-            <div className="form-container">
-              <InputElement
-                id="analog"
-                type="text"
-                name="analog"
-                title="Analog"
-                placeholder="Analog"
-                required
-                defaultValue={formData.units.analog}
-                onBlur={(e) => onBlur(e, { key: 'units' })}
-              />
-              <InputElement
-                id="behavioralEvents"
-                type="text"
-                name="behavioral_events"
-                title="Behavioral Events"
-                placeholder="Behavioral Events"
-                defaultValue={formData.units.behavioral_events}
-                onBlur={(e) => onBlur(e, { key: 'units' })}
-              />
-            </div>
-          </fieldset>
-        </div>
-
-        <InputElement
-          id="times_period_multiplier"
-          type="number"
-          name="times_period_multiplier"
-          title="Times Period Multiplier"
-          placeholder="Times Period Multiplier"
-          step="any"
-          required
-          defaultValue={formData.times_period_multiplier}
-          onBlur={(e) => onBlur(e)}
-        />
-
-        <InputElement
-          id="raw_data_to_volts"
-          type="number"
-          name="raw_data_to_volts"
-          title="Raw Data to Volts"
-          placeholder="raw data to volts"
-          step="any"
-          defaultValue={formData.raw_data_to_volts}
-          onBlur={(e) => onBlur(e)}
-        />
-
-        <FileUpload
-          id="defaultHeaderFilePath"
-          title="Default Header File Path"
-          name="default_header_file_path"
-          placeholder="Default Header File Path"
-          onTextFieldInput={(e) => onBlur(e)}
-          defaultValue={formData.default_header_file_path}
-          onBlur={itemFileUpload}
-        />
 
         <div>
           <fieldset>
@@ -1052,6 +793,208 @@ export function YMLGenerator() {
 
         <div>
           <fieldset>
+            <legend>Tasks</legend>
+            <div className="form-container">
+              {formData.tasks.map((tasks, index) => {
+                const key = 'tasks';
+
+                return (
+                  <fieldset
+                    key={sanitizeTitle(`${tasks.task_name}-ts-${index}`)}
+                    className="array-item"
+                  >
+                    <legend> Item #{index + 1} </legend>
+                    <div className="form-container">
+                      <InputElement
+                        id={`tasks-task_name-${index}`}
+                        type="text"
+                        name="task_name"
+                        title="Task Name"
+                        defaultValue={tasks.task_name}
+                        placeholder="Task Name"
+                        required
+                        onBlur={(e) =>
+                          onBlur(e, {
+                            key,
+                            index,
+                          })
+                        }
+                      />
+                      <InputElement
+                        id={`tasks-task_description-${index}`}
+                        type="text"
+                        name="task_description"
+                        title="Task Description"
+                        defaultValue={tasks.task_description}
+                        placeholder="Task Description"
+                        required
+                        onBlur={(e) =>
+                          onBlur(e, {
+                            key,
+                            index,
+                          })
+                        }
+                      />
+                      <InputElement
+                        id={`tasks-task_environment-${index}`}
+                        type="text"
+                        name="task_environment"
+                        title="Task Environment"
+                        defaultValue={tasks.task_environment}
+                        placeholder="Task Environment"
+                        required
+                        onBlur={(e) =>
+                          onBlur(e, {
+                            key,
+                            index,
+                          })
+                        }
+                      />
+                      <CheckboxList
+                        id={`tasks-camera_id-${index}`}
+                        type="number"
+                        name="camera_id"
+                        title="Camera Id"
+                        objectKind="Camera"
+                        defaultValue={tasks.camera_id}
+                        placeholder="Camera ids"
+                        dataItems={cameraIdsDefined}
+                        updateFormData={updateFormData}
+                        metaData={{
+                          nameValue: 'camera_id',
+                          keyValue: 'tasks',
+                          index,
+                        }}
+                        onChange={updateFormData}
+                      />
+
+                      <InputElement
+                        id={`tasks-task_epochs-${index}`}
+                        type="text"
+                        name="task_epochs"
+                        title="Task Epochs"
+                        defaultValue={tasks.task_epochs}
+                        placeholder="Comma-separated Task Epochs-values"
+                        onBlur={(e) =>
+                          onBlur(e, {
+                            key,
+                            index,
+                            isCommaSeparatedStringToNumber: true,
+                          })
+                        }
+                      />
+                    </div>
+                  </fieldset>
+                );
+              })}
+            </div>
+            <ArrayUpdateMenu
+              itemsKey="tasks"
+              items={formData.tasks}
+              addArrayItem={addArrayItem}
+              removeArrayItem={removeArrayItem}
+            />
+          </fieldset>
+        </div>
+
+        <div>
+          <fieldset>
+            <legend>Associated Files</legend>
+            <div className="form-container">
+              {formData.associated_files.map((associatedFilesName, index) => {
+                const key = 'associated_files';
+
+                return (
+                  <fieldset
+                    key={sanitizeTitle(
+                      `${associatedFilesName.name}-afn-${index}`
+                    )}
+                    className="array-item"
+                  >
+                    <legend> Item #{index + 1} </legend>
+                    <div className="form-container">
+                      <InputElement
+                        id={`associated_files-name-${index}`}
+                        type="text"
+                        name="name"
+                        title="Name"
+                        defaultValue={associatedFilesName.name}
+                        placeholder="File name"
+                        required
+                        onBlur={(e) =>
+                          onBlur(e, {
+                            key,
+                            index,
+                          })
+                        }
+                      />
+                      <InputElement
+                        id={`associated_files-description-${index}`}
+                        type="text"
+                        name="description"
+                        title="Description"
+                        defaultValue={associatedFilesName.description}
+                        placeholder="description"
+                        required
+                        onBlur={(e) =>
+                          onBlur(e, {
+                            key,
+                            index,
+                          })
+                        }
+                      />
+                      <FileUpload
+                        id={`associated_files-path-${index}`}
+                        title="Path"
+                        name="path"
+                        placeholder="path"
+                        defaultValue={associatedFilesName.path}
+                        required
+                        metaData={{
+                          key,
+                          index,
+                        }}
+                        onTextFieldInput={(e) =>
+                          onBlur(e, {
+                            key,
+                            index,
+                          })
+                        }
+                        onBlur={itemFileUpload}
+                      />
+                      <RadioList
+                        id={`associated_files-taskEpochs-${index}`}
+                        type="number"
+                        name="task_epochs"
+                        title="Task Epochs"
+                        objectKind="Task"
+                        defaultValue={associatedFilesName.task_epochs}
+                        placeholder="Task Epochs"
+                        dataItems={taskEpochsDefined}
+                        updateFormData={updateFormData}
+                        metaData={{
+                          nameValue: 'task_epochs',
+                          keyValue: 'associated_files',
+                          index,
+                        }}
+                        onChange={updateFormData}
+                      />
+                    </div>
+                  </fieldset>
+                );
+              })}
+            </div>
+            <ArrayUpdateMenu
+              itemsKey="associated_files"
+              items={formData.associated_files}
+              addArrayItem={addArrayItem}
+              removeArrayItem={removeArrayItem}
+            />
+          </fieldset>
+        </div>
+
+        <div>
+          <fieldset>
             <legend>Associated Video Files</legend>
             <div className="form-container">
               {formData?.associated_video_files?.map(
@@ -1114,6 +1057,66 @@ export function YMLGenerator() {
 
         <div>
           <fieldset>
+            <legend>Units</legend>
+            <div className="form-container">
+              <InputElement
+                id="analog"
+                type="text"
+                name="analog"
+                title="Analog"
+                placeholder="Analog"
+                required
+                defaultValue={formData.units.analog}
+                onBlur={(e) => onBlur(e, { key: 'units' })}
+              />
+              <InputElement
+                id="behavioralEvents"
+                type="text"
+                name="behavioral_events"
+                title="Behavioral Events"
+                placeholder="Behavioral Events"
+                defaultValue={formData.units.behavioral_events}
+                onBlur={(e) => onBlur(e, { key: 'units' })}
+              />
+            </div>
+          </fieldset>
+        </div>
+
+        <InputElement
+          id="times_period_multiplier"
+          type="number"
+          name="times_period_multiplier"
+          title="Times Period Multiplier"
+          placeholder="Times Period Multiplier"
+          step="any"
+          required
+          defaultValue={formData.times_period_multiplier}
+          onBlur={(e) => onBlur(e)}
+        />
+
+        <InputElement
+          id="raw_data_to_volts"
+          type="number"
+          name="raw_data_to_volts"
+          title="Raw Data to Volts"
+          placeholder="raw data to volts"
+          step="any"
+          defaultValue={formData.raw_data_to_volts}
+          onBlur={(e) => onBlur(e)}
+        />
+
+        <FileUpload
+          id="defaultHeaderFilePath"
+          title="Default Header File Path"
+          name="default_header_file_path"
+          placeholder="Default Header File Path"
+          onTextFieldInput={(e) => onBlur(e)}
+          defaultValue={formData.default_header_file_path}
+          onBlur={itemFileUpload}
+        />
+
+        <div>
+          <fieldset>
             <legend>Behavioral Events</legend>
             <div className="form-container">
               {formData?.behavioral_events.map((behavioralEvents, index) => {
@@ -1133,9 +1136,10 @@ export function YMLGenerator() {
                         type="number"
                         name="description"
                         title="Description"
+                        step="1"
                         items={behavioralEventsDescription()}
                         defaultValue={behavioralEvents.description}
-                        placeholder="description"
+                        placeholder="ECU Port #"
                         required
                         metaData={{
                           key,
@@ -1149,6 +1153,7 @@ export function YMLGenerator() {
                         title="Name"
                         dataItems={behavioralEventsNames()}
                         defaultValue={behavioralEvents.name}
+                        placeholder="Behavioral event name"
                         onBlur={(e) =>
                           itemSelected(e, {
                             key,
@@ -1181,7 +1186,7 @@ export function YMLGenerator() {
                 title="Name"
                 defaultValue={formData.device.name}
                 required
-                placeholder="Comma-separated list of devices"
+                placeholder="Comma-separated list of devices, e.g - trode, open-ephys"
                 onBlur={(e) =>
                   onBlur(e, { key: 'device', isCommaSeparatedString: true })
                 }

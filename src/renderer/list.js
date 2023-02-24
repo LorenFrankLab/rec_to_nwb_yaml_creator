@@ -807,6 +807,9 @@ export const genotypes = () => {
 
       // GerbilMongolian Gerbil
       'Mongolian Gerbil',
+
+      // General
+      'PV Cre',
     ],
   ];
 };

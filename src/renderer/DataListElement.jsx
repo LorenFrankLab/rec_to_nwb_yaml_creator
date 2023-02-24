@@ -10,7 +10,16 @@ import { sanitizeTitle } from './utils';
  * @returns Virtual DOM contain an HTML Datalist with supporting HTML tags and code
  */
 const DataListElement = (prop) => {
-  const { id, name, title, dataItems, defaultValue, type, onBlur } = prop;
+  const {
+    id,
+    name,
+    title,
+    dataItems,
+    defaultValue,
+    placeholder,
+    type,
+    onBlur,
+  } = prop;
 
   return (
     <label className="container" htmlFor={id}>
@@ -21,6 +30,7 @@ const DataListElement = (prop) => {
           type={type}
           list={`${id}-list`}
           name={name}
+          placeholder={placeholder}
           defaultValue={defaultValue}
           key={defaultValue}
           onBlur={onBlur}
@@ -48,6 +58,7 @@ DataListElement.propType = {
   type: PropTypes.oneOf([PropTypes.string, PropTypes.number]),
   defaultValue: PropTypes.oneOf([PropTypes.string, PropTypes.number]),
   dataItems: PropTypes.arrayOf(PropTypes.string),
+  placeholder: PropTypes.string,
   id: PropTypes.string.isRequired,
   name: PropTypes.string.isRequired,
   onBlur: PropTypes.func,
@@ -56,6 +67,7 @@ DataListElement.propType = {
 DataListElement.defaultProps = {
   type: 'text',
   defaultValue: '',
+  placeholder: '',
   onBlur: () => {},
 };
 
