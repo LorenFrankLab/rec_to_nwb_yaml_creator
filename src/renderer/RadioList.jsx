@@ -45,7 +45,7 @@ const RadioList = (prop) => {
                 <input
                   type="radio"
                   id={`${id}-${dataItemIndex}`}
-                  name={name}
+                  name={`${name}-${id}`}
                   value={dataItem}
                   defaultChecked={defaultValue.includes(dataItem)}
                   onClick={onChecked}

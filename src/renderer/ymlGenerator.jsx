@@ -533,6 +533,15 @@ export function YMLGenerator() {
                 onBlur={(e) => onBlur(e, { key: 'subject' })}
               />
               <DataListElement
+                id="subject-species"
+                name="species"
+                title="Species"
+                defaultValue={formData.subject.species}
+                placeholder="Species"
+                dataItems={species()}
+                onBlur={(e) => itemSelected(e, { key: 'subject' })}
+              />
+              <DataListElement
                 id="subject-genotype"
                 name="genotype"
                 title="Genotype"
@@ -540,15 +549,6 @@ export function YMLGenerator() {
                 required
                 placeholder="Genetic summary of animal model/patient/specimen"
                 dataItems={genotypes()}
-                onBlur={(e) => itemSelected(e, { key: 'subject' })}
-              />
-              <DataListElement
-                id="subject-species"
-                name="species"
-                title="Species"
-                defaultValue={formData.subject.species}
-                placeholder="Species"
-                dataItems={species()}
                 onBlur={(e) => itemSelected(e, { key: 'subject' })}
               />
               <SelectElement
@@ -1030,6 +1030,7 @@ export function YMLGenerator() {
                           name="camera_id"
                           title="Camera Id"
                           placeholder="Camera Id"
+                          addBlankOption
                           defaultValue={associatedVideoFiles.camera_id}
                           dataItems={cameraIdsDefined}
                           onChange={(e) =>
@@ -1048,7 +1049,7 @@ export function YMLGenerator() {
             </div>
             <ArrayUpdateMenu
               itemsKey="associated_video_files"
-              items={formData.associated_video_filestasks}
+              items={formData.associated_video_files}
               addArrayItem={addArrayItem}
               removeArrayItem={removeArrayItem}
             />

@@ -157,14 +157,16 @@ export default class MenuBuilder {
         {
           label: 'Learn More',
           click() {
-            shell.openExternal('https://electronjs.org');
+            shell.openExternal(
+              'https://github.com/LorenFrankLab/rec_to_nwb_yaml_creator/blob/main/README.md'
+            );
           },
         },
         {
           label: 'Documentation',
           click() {
             shell.openExternal(
-              'https://github.com/electron/electron/tree/main/docs#readme'
+              'https://github.com/LorenFrankLab/rec_to_nwb_yaml_creator/tree/main/docs'
             );
           },
         },
@@ -175,9 +177,17 @@ export default class MenuBuilder {
           },
         },
         {
+          label: 'Frank Lab @ UCSF',
+          click() {
+            shell.openExternal('https://franklab.ucsf.edu/');
+          },
+        },
+        {
           label: 'Search Issues',
           click() {
-            shell.openExternal('https://github.com/electron/electron/issues');
+            shell.openExternal(
+              'https://github.com/LorenFrankLab/rec_to_nwb_yaml_creator/issues'
+            );
           },
         },
       ],
@@ -258,27 +268,31 @@ export default class MenuBuilder {
           {
             label: 'Learn More',
             click() {
-              shell.openExternal('https://electronjs.org');
+              shell.openExternal(
+                'https://github.com/LorenFrankLab/rec_to_nwb_yaml_creator/blob/main/README.md'
+              );
             },
           },
           {
             label: 'Documentation',
             click() {
               shell.openExternal(
-                'https://github.com/electron/electron/tree/main/docs#readme'
+                'https://github.com/LorenFrankLab/rec_to_nwb_yaml_creator/tree/main/docs'
               );
             },
           },
           {
-            label: 'Community Discussions',
+            label: 'Frank Lab @ UCSF',
             click() {
-              shell.openExternal('https://www.electronjs.org/community');
+              shell.openExternal('https://franklab.ucsf.edu/');
             },
           },
           {
             label: 'Search Issues',
             click() {
-              shell.openExternal('https://github.com/electron/electron/issues');
+              shell.openExternal(
+                'https://github.com/LorenFrankLab/rec_to_nwb_yaml_creator/issues'
+              );
             },
           },
         ],

@@ -45,7 +45,7 @@ const CheckboxList = (prop) => {
                 <input
                   type="checkbox"
                   id={`${id}-${dataItemIndex}`}
-                  name={name}
+                  name={`${name}-${id}`}
                   value={dataItem}
                   defaultChecked={defaultValue.includes(dataItem)}
                   onClick={onChecked}
