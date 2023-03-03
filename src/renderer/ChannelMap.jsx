@@ -49,9 +49,7 @@ const ChannelMap = (prop) => {
                     title="Bad Channels"
                     placeholder="Bad Channels"
                     defaultValue={item.bad_channels}
-                    dataItems={[...new Set(Object.values(item.map || []))]
-                      .sort((a, b) => a - b)
-                      .map((i) => i % Object.keys(item.map).length)}
+                    dataItems={Object.keys(item.map)}
                     updateFormArray={updateFormArray}
                     metaData={{
                       nameValue: 'bad_channels',
