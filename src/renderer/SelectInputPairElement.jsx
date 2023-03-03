@@ -52,6 +52,7 @@ const SelectInputPairElement = (prop) => {
     name,
     items,
     step,
+    min,
     placeholder,
     defaultValue,
     required,
@@ -75,6 +76,9 @@ const SelectInputPairElement = (prop) => {
     onBlur(eventData, metaData);
   };
 
+  const splitTextNumberText = splitTextNumber(defaultValue).text;
+  const splitTextNumberNumber = splitTextNumber(defaultValue).number;
+
   return (
     <div>
       <label className="container" htmlFor={id}>
@@ -87,14 +91,11 @@ const SelectInputPairElement = (prop) => {
                 id={`${id}-list`}
                 onBlur={onSelectPairInput}
                 ref={selectRef}
+                defaultValue={splitTextNumberText}
               >
                 {items.map((item) => {
                   return (
-                    <option
-                      key={sanitizeTitle(item)}
-                      defaultValue={splitTextNumber(defaultValue).text}
-                      value={item}
-                    >
+                    <option key={sanitizeTitle(item)} value={item}>
                       {item}
                     </option>
                   );
@@ -108,9 +109,10 @@ const SelectInputPairElement = (prop) => {
                 type={type}
                 name={name}
                 step={step}
+                min={min}
                 className="select-input-pair__item2"
                 placeholder={placeholder}
-                defaultValue={splitTextNumber(defaultValue).number}
+                defaultValue={splitTextNumberNumber}
                 required={required}
                 readOnly={readOnly}
                 onBlur={onSelectPairInput}
@@ -130,6 +132,7 @@ SelectInputPairElement.propType = {
   type: PropTypes.string.isRequired,
   name: PropTypes.string.isRequired,
   placeholder: PropTypes.string,
+  min: PropTypes.string,
   readOnly: PropTypes.bool,
   required: PropTypes.bool,
   step: PropTypes.string,
@@ -143,6 +146,7 @@ SelectInputPairElement.defaultProps = {
   required: false,
   placeholder: '',
   defaultValue: '',
+  min: '',
   readOnly: false,
   step: 'any',
   type: 'text',

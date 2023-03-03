@@ -17,18 +17,19 @@ const CheckboxList = (prop) => {
     dataItems,
     objectKind,
     defaultValue,
-    updateFormData,
+    updateFormArray,
     metaData,
   } = prop;
 
   const onChecked = (e) => {
     const { target } = e;
-    const values = Array.from(
-      target.parentElement.querySelectorAll('input[type="checkbox"]:checked')
-    ).map((a) => parseInt(a.value, 10));
+    const value = parseInt(target.value, 10);
+    // const values = Array.from(
+    //   target.parentElement.querySelectorAll('input[type="checkbox"]:checked')
+    // ).map((a) => parseInt(a.value, 10));
 
     const { nameValue, keyValue, index } = metaData;
-    updateFormData(nameValue, values, keyValue, index);
+    updateFormArray(nameValue, value, keyValue, index, e.target.checked);
   };
 
   return (
@@ -73,7 +74,7 @@ CheckboxList.propType = {
   objectKind: PropTypes.string,
   type: PropTypes.string.isRequired,
   name: PropTypes.string.isRequired,
-  updateFormData: PropTypes.func,
+  updateFormArray: PropTypes.func,
   metaData: PropTypes.instanceOf(Object),
 };
 

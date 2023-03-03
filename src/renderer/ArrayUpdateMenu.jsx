@@ -35,6 +35,8 @@ const ArrayUpdateMenu = (prop) => {
     removeArrayItem(itemsKey);
   };
 
+  const displayStatus = items?.length === 0 || !items ? 'hide' : '';
+
   return (
     <div className="array-update-area">
       {!allowMultiple ? (
@@ -61,7 +63,7 @@ const ArrayUpdateMenu = (prop) => {
       )}
       <button
         type="button"
-        className={`${items?.length === 0 || !items ? 'hide' : ''}`}
+        className={displayStatus}
         title={`Remove ${itemsKey}`}
         onClick={remove}
       >

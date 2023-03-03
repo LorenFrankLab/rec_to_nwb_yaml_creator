@@ -12,7 +12,7 @@ import { sanitizeTitle } from './utils';
  * @returns Virtual DOM of the map for ntrode_electrode_group_channel_map
  */
 const ChannelMap = (prop) => {
-  const { nTrodeItems, onBlur, onMapInput, electrodeGroupId, updateFormData } =
+  const { nTrodeItems, onBlur, onMapInput, electrodeGroupId, updateFormArray } =
     prop;
 
   return (
@@ -49,16 +49,16 @@ const ChannelMap = (prop) => {
                     title="Bad Channels"
                     placeholder="Bad Channels"
                     defaultValue={item.bad_channels}
-                    dataItems={[...new Set(Object.values(item.map || []))].sort(
-                      (a, b) => a - b
-                    )}
-                    updateFormData={updateFormData}
+                    dataItems={[...new Set(Object.values(item.map || []))]
+                      .sort((a, b) => a - b)
+                      .map((i) => i % Object.keys(item.map).length)}
+                    updateFormArray={updateFormArray}
                     metaData={{
                       nameValue: 'bad_channels',
-                      index: 0,
+                      index,
                       keyValue: 'ntrode_electrode_group_channel_map',
                     }}
-                    onChange={updateFormData}
+                    onChange={updateFormArray}
                   />
                   <div className="container">
                     <div className="item1">Map</div>
@@ -95,7 +95,7 @@ const ChannelMap = (prop) => {
                                         option
                                       )}${nTrodeKey}`}
                                     >
-                                      {option}
+                                      {option + optionsLength * index}
                                       {/* {item.map[option]} */}
                                     </option>
                                   );
@@ -121,7 +121,7 @@ ChannelMap.propType = {
   electrodeGroupId: PropTypes.number,
   nTrodeItems: PropTypes.instanceOf(Object),
   onBlur: PropTypes.func,
-  updateFormData: PropTypes.func,
+  updateFormArray: PropTypes.func,
   onMapInput: PropTypes.func,
 };
 

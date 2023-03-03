@@ -103,6 +103,30 @@ export function YMLGenerator() {
     setFormData(form);
   };
 
+  const updateFormArray = (name, value, key, index, checked = true) => {
+    if (!name || !key) {
+      return null;
+    }
+
+    const form = structuredClone(formData);
+
+    form[key][index] = form[key][index] || {};
+    form[key][index][name] = form[key][index][name] || [];
+    if (checked) {
+      form[key][index][name].push(value);
+    } else {
+      form[key][index][name] = form[key][index][name].filter(
+        (v) => v !== value
+      );
+    }
+
+    form[key][index][name] = [...new Set(form[key][index][name])];
+    form[key][index][name].sort();
+
+    setFormData(form);
+    return null;
+  };
+
   const onBlur = (e, metaData) => {
     const { target } = e;
     const { name, value, type } = target;
@@ -427,6 +451,18 @@ export function YMLGenerator() {
         ),
       ],
     ];
+
+    // remove deleted task epochs
+    let i = 0;
+
+    for (i = 0; i < formData.associated_files.length; i += 1) {
+      formData.associated_files[i].task_epochs = formData.associated_files[
+        i
+      ].task_epochs.filter((a) => taskEpochs.includes(a));
+    }
+
+    setFormData(formData);
+
     setTaskEpochsDefined(taskEpochs);
   }, [formData]);
 
@@ -1138,6 +1174,7 @@ export function YMLGenerator() {
                         name="description"
                         title="Description"
                         step="1"
+                        min="0"
                         items={behavioralEventsDescription()}
                         defaultValue={behavioralEvents.description}
                         placeholder="ECU Port #"
@@ -1350,7 +1387,7 @@ export function YMLGenerator() {
                           title="Ntrode"
                           electrodeGroupId={electrodeGroupId}
                           nTrodeItems={nTrodeItems}
-                          updateFormData={updateFormData}
+                          updateFormArray={updateFormArray}
                           onBlur={(e) =>
                             onBlur(e, {
                               key: 'ntrode_electrode_group_channel_map',
