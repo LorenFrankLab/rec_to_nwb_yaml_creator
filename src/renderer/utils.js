@@ -10,44 +10,6 @@ import { useEffect } from 'react';
 export const useMount = (fn) => useEffect(fn, []);
 
 /**
- * Form data content when empty; used to clear out form
- */
-export const emptyFormData = {
-  experimenter_name: '',
-  lab: '',
-  institution: '',
-  experiment_description: '',
-  session_description: '',
-  session_id: '',
-  subject: {
-    description: '',
-    genotype: '',
-    sex: 'Male',
-    species: '',
-    subject_id: '',
-    weight: 0,
-  },
-  data_acq_device: [],
-  associated_files: [],
-  units: {
-    analog: '',
-    behavioral_events: '',
-  },
-  times_period_multiplier: 0.0,
-  raw_data_to_volts: 0.0,
-  default_header_file_path: '',
-  cameras: [],
-  tasks: [],
-  behavioral_events: [],
-  associated_video_files: [],
-  device: {
-    name: [],
-  },
-  electrode_groups: [],
-  ntrode_electrode_group_channel_map: [],
-};
-
-/**
  * Object storing event topics' names
  */
 export const ASYNC_TOPICS = {

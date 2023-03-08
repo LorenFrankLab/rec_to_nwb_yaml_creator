@@ -17,7 +17,6 @@ This sub-section will focus only on `renderer` and only files of importance to a
 
 - **_App.css_**: Contains [CSS](<https://en.wikipedia.org/wiki/CSS>) for the entire `rec_to_nwb_yaml_creator`.
 
--**_arrayDefaultValues_**: Contains default values for arrays. Sometimes things like ids are increased by `rec_to_nwb_yaml_creator`. But most times, the values are the same across all new array entries.
 
 -**_ArrayUpdateMenu.jsx_**: Custom tag code for add and remove buttons for arrays. It was created to help reduce [code duplication](<https://en.wikipedia.org/wiki/Duplicate_code>.)
 
@@ -35,7 +34,7 @@ This sub-section will focus only on `renderer` and only files of importance to a
 
 -**_InputElement.jsx_**: Wrapper around [HTML input with type being string or number] (<https://www.w3schools.com/tags/tag_input.asp>.) [HTML input with type being string or number] (<https://www.w3schools.com/tags/tag_input.asp>) did not satisfy all of `rec_to_nwb_yaml_creator`'s needs, so this custom tag to extend it was made. Use only string or number with it. It is recommended you make a new custom tag if you need any other option [HTML input with type being string or number](<https://www.w3schools.com/tags/tag_input.asp>) supports, as illustrate with **_FileUpload.jsx_**. This helps keeps this custom tag focused on text or numbers.
 
--**_list.js_**: Data to be used by drop downs like _DataListElement.jsx and any other item that needs a data set.
+-**_valueList.js_**: Data to be used by drop downs like _DataListElement.jsx and any other item that needs a data set.
 
 -**_SelectElement.jsx_**: Wrapper around [HTML select](<https://developer.mozilla.org/en-US/docs/web/html/element/select>.) The attribute `multiple`(<https://www.w3schools.com/TAGS/att_select_multiple.asp#:~:text=HTML%20%3Cselect%3E%20multiple%20Attribute%201%20Definition%20and%20Usage,3%20Syntax%20%3Cselect%20multiple%3E%20%E2%9D%AE%20HTML%20%3Cselect%3E%20tag>) is not supported. This custom tag extends the functionality of [HTML select](<https://developer.mozilla.org/en-US/docs/web/html/element/select>) to suit `rec_to_nwb_yaml_creator`'s needs and help reduce [code duplication](<https://en.wikipedia.org/wiki/Duplicate_code>.)
 

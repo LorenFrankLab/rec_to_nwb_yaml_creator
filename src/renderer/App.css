@@ -125,8 +125,19 @@ a:hover {
   opacity: 0.9;
   height: 3rem;
   width: 14rem;
-  background-color: darkgrey;
 }
+
+.generate-button {
+  background-color: blue;
+  color: white;
+}
+
+.reset-button {
+  background-color: red;
+  color:white;
+  width: 80px !important;
+}
+
 
 .form-control .behavioral_events-description {
   display: flex;

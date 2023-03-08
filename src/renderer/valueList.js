@@ -1,4 +1,80 @@
 /**
+ * Default YML values
+ */
+export const defaultYMLValues = {
+  experimenter_name: '',
+  lab: 'Frank Lab',
+  institution: '',
+  experiment_description: '',
+  session_description: '',
+  session_id: '',
+  subject: {
+    description: 'Long-Evans Rat',
+    genotype: '',
+    sex: 'M',
+    species: '',
+    subject_id: '',
+    weight: 100,
+  },
+  data_acq_device: [],
+  associated_files: [],
+  units: {
+    analog: '',
+    behavioral_events: '',
+  },
+  times_period_multiplier: 1.0,
+  raw_data_to_volts: 1.0,
+  default_header_file_path: '',
+  cameras: [],
+  tasks: [],
+  behavioral_events: [],
+  associated_video_files: [],
+  device: {
+    name: [],
+  },
+  electrode_groups: [],
+  ntrode_electrode_group_channel_map: [],
+};
+
+/**
+ * Form data content when empty; used to clear out form
+ */
+export const emptyFormData = {
+  experimenter_name: '',
+  lab: '',
+  institution: '',
+  experiment_description: '',
+  session_description: '',
+  session_id: '',
+  subject: {
+    description: '',
+    genotype: '',
+    sex: 'Male',
+    species: '',
+    subject_id: '',
+    weight: 0,
+  },
+  data_acq_device: [],
+  associated_files: [],
+  units: {
+    analog: '',
+    behavioral_events: '',
+  },
+  times_period_multiplier: 0.0,
+  raw_data_to_volts: 0.0,
+  default_header_file_path: '',
+  cameras: [],
+  tasks: [],
+  behavioral_events: [],
+  associated_video_files: [],
+  device: {
+    name: [],
+  },
+  electrode_groups: [],
+  ntrode_electrode_group_channel_map: [],
+};
+
+/**
  * List of device-
  *
  * @returns Devices
@@ -923,4 +999,62 @@ export const behavioralEventsNames = () => {
  */
 export const behavioralEventsDescription = () => {
   return [...['Din', 'Dout', 'Accel', 'Gyro', 'Mag']];
+};
+
+/**
+ * Default values for arrays entries
+ */
+export const arrayDefaultValues = {
+  data_acq_device: {
+    name: '',
+    system: '',
+    amplifier: '',
+    adc_circuit: '',
+  },
+  associated_files: {
+    name: '',
+    description: '',
+    path: '',
+    task_epochs: [],
+  },
+  cameras: {
+    id: 0,
+    meters_per_pixel: 0,
+    manufacturer: '',
+    model: '',
+    lens: '',
+    camera_name: '',
+  },
+  tasks: {
+    task_name: '',
+    task_description: '',
+    task_environment: '',
+    camera_id: [],
+    task_epochs: [],
+  },
+  associated_video_files: {
+    name: '',
+    camera_id: '',
+  },
+  behavioral_events: {
+    description: 'Din1',
+    name: '', // 'Home box camera',
+  },
+  electrode_groups: {
+    id: 0,
+    location: '', // 'Cornu ammonis 1 (CA1)',
+    device_type: '',
+    description: '',
+    targeted_location: '', // 'Cornu ammonis 1 (CA1)',
+    targeted_x: '',
+    targeted_y: '',
+    targeted_z: '',
+    units: 'mm',
+  },
+  ntrode_electrode_group_channel_map: {
+    ntrode_id: 1,
+    electrode_group_id: '',
+    bad_channels: [],
+    map: {},
+  },
 };

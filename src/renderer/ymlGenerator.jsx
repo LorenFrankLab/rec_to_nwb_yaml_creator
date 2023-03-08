@@ -3,7 +3,6 @@ import InputElement from './InputElement';
 import SelectElement from './SelectElement';
 import FileUpload from './FileUpload';
 import DataListElement from './DataListElement';
-import arrayDefaultValues from './arrayDefaultValues';
 import deviceTypeMap from './deviceTypes';
 import ChannelMap from './ChannelMap';
 import SelectInputPairElement from './SelectInputPairElement';
@@ -17,9 +16,7 @@ import {
   sanitizeTitle,
   titleCase,
   showCustomValidityError,
-  isNumeric,
   useMount,
-  emptyFormData,
 } from './utils';
 import {
   labs,
@@ -31,7 +28,10 @@ import {
   genotypes,
   behavioralEventsNames,
   behavioralEventsDescription,
-} from './list';
+  emptyFormData,
+  defaultYMLValues,
+  arrayDefaultValues,
+} from './valueList';
 
 const Ajv = require('ajv');
 
@@ -43,46 +43,15 @@ const { ipcRenderer } = window.electron;
  * @returns Virtual DOM
  */
 export function YMLGenerator() {
-  const [formData, setFormData] = useState({
-    experimenter_name: '',
-    lab: 'Frank Lab',
-    institution: '',
-    experiment_description: '',
-    session_description: '',
-    session_id: '',
-    subject: {
-      description: 'Long-Evans Rat',
-      genotype: '',
-      sex: 'M',
-      species: '',
-      subject_id: '',
-      weight: 100,
-    },
-    data_acq_device: [],
-    associated_files: [],
-    units: {
-      analog: '',
-      behavioral_events: '',
-    },
-    times_period_multiplier: 1.0,
-    raw_data_to_volts: 1.0,
-    default_header_file_path: '',
-    cameras: [],
-    tasks: [],
-    behavioral_events: [],
-    associated_video_files: [],
-    device: {
-      name: [],
-    },
-    electrode_groups: [],
-    ntrode_electrode_group_channel_map: [],
-  });
+  const [formData, setFormData] = useState(defaultYMLValues);
 
   const [cameraIdsDefined, setCameraIdsDefined] = useState([]);
 
   const [taskEpochsDefined, setTaskEpochsDefined] = useState([]);
 
   const schema = useRef({});
+
+  const ntrodeId = useRef(0);
 
   const downloadExistingFile = (e) => {
     e.preventDefault();
@@ -217,7 +186,8 @@ export function YMLGenerator() {
         nTrodeMap[nKey] += nTrodeMapLength * nIndex;
       });
 
-      nTrodeBase.ntrode_id = nIndex + 1 + electrodeGroupId;
+      nTrodeBase.ntrode_id = ntrodeId.current; // nIndex + 1 + electrodeGroupId;
+      ntrodeId.current += 1;
       nTrodeBase.electrode_group_id = electrodeGroupId;
       nTrodeBase.map = nTrodeMap;
 
@@ -358,6 +328,11 @@ export function YMLGenerator() {
     };
   };
 
+  /**
+   * Create the YML file
+   *
+   * @param {object} e event parameter
+   */
   const generateYMLFile = (e) => {
     e.preventDefault();
     const form = structuredClone(formData);
@@ -367,6 +342,22 @@ export function YMLGenerator() {
 
     if (isValid) {
       ipcRenderer.sendMessage('SAVE_USER_DATA', form);
+    }
+  };
+
+  /**
+   * Reset YML file
+   *
+   * @param {object} e event parameter
+   */
+  const clearYMLFile = (e) => {
+    e.preventDefault();
+
+    // eslint-disable-next-line no-alert
+    const shouldReset = window.confirm('Are you sure you want to reset?');
+
+    if (shouldReset) {
+      setFormData(structuredClone(defaultYMLValues)); // clear out form
     }
   };
 
@@ -484,6 +475,7 @@ export function YMLGenerator() {
         encType="multipart/form-data"
         className="form-control"
         name="nwbData"
+        onReset={(e) => clearYMLFile(e)}
         onSubmit={(e) => {
           generateYMLFile(e);
         }}
@@ -1416,10 +1408,17 @@ export function YMLGenerator() {
         <div className="submit-button-parent">
           <button
             type="submit"
-            className="submit-button"
+            className="submit-button generate-button"
             title="Generate a YML file based on values in fields"
           >
             <span>Generate YML File</span>
+          </button>
+          <button
+            type="reset"
+            className="submit-button reset-button"
+            title="Generate a YML file based on values in fields"
+          >
+            <span>Reset</span>
           </button>
         </div>
       </form>
