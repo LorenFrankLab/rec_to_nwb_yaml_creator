@@ -34,7 +34,7 @@ const InputElement = (prop) => {
             id={id}
             type={type}
             name={name}
-            className="base-width"
+            className={`base-width ${readOnly ? 'gray-out' : ''}`}
             placeholder={placeholder}
             defaultValue={defaultValue}
             key={defaultValue}
