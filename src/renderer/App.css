@@ -85,7 +85,6 @@ a:hover {
   text-align:right;
 }
 
-
 .form-control legend {
   font-weight: 600;
 }
@@ -136,6 +135,10 @@ a:hover {
   background-color: red;
   color:white;
   width: 80px !important;
+}
+
+.gray-out {
+  background-color: lightgray;
 }
 
 

@@ -51,8 +51,6 @@ export function YMLGenerator() {
 
   const schema = useRef({});
 
-  const ntrodeId = useRef(0);
-
   const downloadExistingFile = (e) => {
     e.preventDefault();
     setFormData(structuredClone(emptyFormData)); // clear out form
@@ -186,8 +184,6 @@ export function YMLGenerator() {
         nTrodeMap[nKey] += nTrodeMapLength * nIndex;
       });
 
-      nTrodeBase.ntrode_id = ntrodeId.current; // nIndex + 1 + electrodeGroupId;
-      ntrodeId.current += 1;
       nTrodeBase.electrode_group_id = electrodeGroupId;
       nTrodeBase.map = nTrodeMap;
 
@@ -204,6 +200,16 @@ export function YMLGenerator() {
     nTrodes.forEach((n) => {
       form?.ntrode_electrode_group_channel_map?.push(n);
     });
+
+    // ntrode_id should be in increments of 1 starting at 1. This code resets
+    // ntrode_id if necessary to ensure this this.
+    //
+    // sorted by electrode_group so the UI is sorted by electrode_group and ntrode is displayed under electrode_group
+    form?.ntrode_electrode_group_channel_map
+      ?.sort((a, b) => (a.electrode_group_id > b.electrode_group_id ? 1 : -1))
+      ?.forEach((n, nIndex) => {
+        n.ntrode_id = nIndex + 1;
+      });
 
     setFormData(form);
 

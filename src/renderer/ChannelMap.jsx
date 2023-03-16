@@ -40,6 +40,7 @@ const ChannelMap = (prop) => {
                     required
                     defaultValue={item.ntrode_id}
                     placeholder="Ntrode Id"
+                    readOnly
                     onBlur={onBlur}
                   />
                   <CheckboxList
