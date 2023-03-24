@@ -361,6 +361,20 @@
       "pattern": "^.+$",
       "description": "Current session's identification code/number"
     },
+    "keywords": {
+      "$id": "#root/keywords",
+      "title": "keywords",
+      "type": "array",
+      "default": [],
+      "examples": ["J16_20210606"],
+      "pattern": "^.+$",
+      "description": "keywords",
+      "items": {
+        "$id": "#root/keywords/items",
+        "title": "items",
+        "type": "string"
+      }
+    },
     "subject": {
       "$id": "#root/subject",
       "title": "subject",
@@ -426,6 +440,20 @@
           "type": "number",
           "default": "",
           "description": "Mass of animal model/patient in grams"
+        },
+        "age": {
+          "$id": "#root/subject/age",
+          "title": "age",
+          "type": "string",
+          "default": "",
+          "description": "age"
+        },
+        "date_of_birth": {
+          "$id": "#root/subject/date_of_birth",
+          "title": "date_of_birth",
+          "type": "string",
+          "default": "",
+          "description": "Identification code/number of animal model/patient"
         }
       }
     },

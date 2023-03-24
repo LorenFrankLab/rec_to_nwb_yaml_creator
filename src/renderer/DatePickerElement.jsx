@@ -1,5 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 /**
  * Provides a text box
@@ -9,19 +11,16 @@ import PropTypes from 'prop-types';
  * @returns Virtual DOM for creating an input[type="string|number"] with
  * supporting HTML tags and code
  */
-const InputElement = (prop) => {
+const DatePickerElement = (prop) => {
   const {
     id,
-    type,
     title,
     name,
     placeholder,
     defaultValue,
+    onChange,
+    dateFormat,
     required,
-    onBlur,
-    readOnly,
-    pattern,
-    step,
   } = prop;
 
   return (
@@ -31,20 +30,15 @@ const InputElement = (prop) => {
           {title}
         </div>
         <div className="item2">
-          <input
+          <DatePicker
             id={id}
-            type={type}
+            selected={!defaultValue ? '' : new Date(defaultValue)}
             name={name}
-            className={`base-width ${readOnly ? 'gray-out' : ''}`}
             placeholder={placeholder}
-            defaultValue={defaultValue}
+            onChange={onChange}
             key={defaultValue}
+            dateFormat={dateFormat}
             required={required}
-            readOnly={readOnly}
-            step={step}
-            onBlur={(e) => onBlur(e)}
-            pattern={pattern}
-            onChange={() => {}} // done to quiet a react warning in the console
           />
         </div>
       </label>
@@ -52,7 +46,7 @@ const InputElement = (prop) => {
   );
 };
 
-InputElement.propType = {
+DatePickerElement.propType = {
   title: PropTypes.string.isRequired,
   id: PropTypes.string.isRequired,
   type: PropTypes.string.isRequired,
@@ -60,20 +54,18 @@ InputElement.propType = {
   placeholder: PropTypes.string,
   readOnly: PropTypes.bool,
   required: PropTypes.bool,
-  step: PropTypes.string,
+  dateFormat: PropTypes.string,
   defaultValue: PropTypes.oneOf([PropTypes.string, PropTypes.number]),
-  pattern: PropTypes.string,
-  onBlur: PropTypes.func,
+  onChange: PropTypes.func,
 };
 
-InputElement.defaultProps = {
+DatePickerElement.defaultProps = {
   required: false,
   placeholder: '',
   defaultValue: '',
   readOnly: false,
-  step: 'any',
-  pattern: '^.+$',
-  onBlur: () => {},
+  dateFormat: 'yyyy/MM/dd',
+  onChange: () => {},
 };
 
-export default InputElement;
+export default DatePickerElement;

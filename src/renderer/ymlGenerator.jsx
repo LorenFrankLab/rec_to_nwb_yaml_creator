@@ -3,6 +3,7 @@ import InputElement from './InputElement';
 import SelectElement from './SelectElement';
 import FileUpload from './FileUpload';
 import DataListElement from './DataListElement';
+import DatePickerElement from './DatePickerElement';
 import deviceTypeMap from './deviceTypes';
 import ChannelMap from './ChannelMap';
 import SelectInputPairElement from './SelectInputPairElement';
@@ -114,6 +115,17 @@ export function YMLGenerator() {
     }
 
     updateFormData(name, inputValue, key, index);
+  };
+
+  const onChangeDate = (date, metaData) => {
+    const e = {};
+    e.target = {
+      name: metaData.name,
+      value: !date ? '' : date?.toISOString(),
+      type: metaData.type,
+    };
+
+    onBlur(e, metaData);
   };
 
   const onMapInput = (e, metaData) => {
@@ -248,7 +260,19 @@ export function YMLGenerator() {
 
   const removeArrayItem = (key) => {
     const form = structuredClone(formData);
-    const items = form[key].pop();
+    form[key].pop();
+
+    setFormData(form);
+  };
+
+  const removeElectrodeGroupItem = () => {
+    const form = structuredClone(formData);
+    const item = form.electrode_groups.pop();
+
+    form.ntrode_electrode_group_channel_map =
+      form.ntrode_electrode_group_channel_map.filter(
+        (nTrode) => nTrode.electro_group_id === item.id
+      );
 
     setFormData(form);
   };
@@ -303,7 +327,7 @@ export function YMLGenerator() {
     window.alert(`${itemName} - ${userFriendlyMessage}`);
   };
 
-  const validateJSON = (formContent) => {
+  const validateBasedOnJSONSchema = (formContent) => {
     const ajv = new Ajv();
     const validate = ajv.compile(schema.current);
 
@@ -334,6 +358,92 @@ export function YMLGenerator() {
     };
   };
 
+  const isJSONValidBasedOnInbuiltRules = (jsonFileContent) => {
+    const errorMessages = [];
+    let errorMessage = '';
+    let isFormValid = true;
+    const possibleGenders = genderAcronym();
+    const displayErrorOnUI = (id, message) => {
+      const element = document.querySelector(`#${id}`);
+
+      if (element?.focus) {
+        element.focus();
+      }
+
+      // setCustomValidity is only supported on input tags
+      if (element?.tagName === 'INPUT') {
+        showCustomValidityError(element, message);
+        return;
+      }
+
+      // eslint-disable-next-line no-alert
+      window.alert(message);
+    };
+
+    // check if gender is from the available options
+    if (!possibleGenders.includes(jsonFileContent.subject.sex)) {
+      errorMessage = `Subject's gender is limited to one from - ${possibleGenders}. Your value is ${jsonFileContent.subject.sex}`;
+      errorMessages.push(errorMessage);
+      displayErrorOnUI('subject-sex', errorMessage);
+      isFormValid = false;
+    }
+
+    // check if tasks have a camera but no camera is set
+    if (!jsonFileContent.cameras && jsonFileContent.tasks?.length > 0) {
+      errorMessage =
+        'There is tasks camera_id, but no camera object with ids. No data is loaded';
+      errorMessages.push(errorMessage);
+      displayErrorOnUI('tasks-field', errorMessage);
+      isFormValid = false;
+    }
+
+    // check if associated_video_files have a camera but no camera is set
+    if (
+      !jsonFileContent.cameras &&
+      jsonFileContent.associated_video_files?.length > 0
+    ) {
+      errorMessage = `There is associated_video_files camera_id, but no camera object with ids. No data is loaded`;
+      errorMessages.push(errorMessage);
+      displayErrorOnUI('associated_video_files-field', errorMessage);
+      isFormValid = false;
+    }
+
+    const { subject } = jsonFileContent;
+    if (!subject?.age?.trim() && !subject?.date_of_birth?.trim()) {
+      errorMessage = 'At least one of "Age" or "Date of Birth" must be set';
+      errorMessages.push(errorMessage);
+      displayErrorOnUI('subject-field', errorMessage);
+      isFormValid = false;
+    }
+
+    if (
+      subject.age?.trim() &&
+      !/^P(?!$)(\\d+(?:\\.\\d+)?Y)?(\\d+(?:\\.\\d+)?M)?(\\d+(?:\\.\\d+)?W)?(\\d+(?:\\.\\d+)?D)?(T(?=\\d)(\\d+(?:\\.\\d+)?H)?(\\d+(?:\\.\\d+)?M)?(\\d+(?:\\.\\d+)?S)?)?$/.test(
+        subject.age
+      )
+    ) {
+      errorMessage = 'Age must be a valid ISO 8601 Duration format';
+      errorMessages.push(errorMessage);
+      displayErrorOnUI('subject-age', errorMessage);
+      isFormValid = false;
+    }
+
+    const dateOfBirth = subject?.date_of_birth;
+    if (
+      dateOfBirth?.trim() &&
+      !/(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+)|(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d)|(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d)/.test(
+        dateOfBirth
+      )
+    ) {
+      errorMessage = 'Date of Birth must be a valid ISO 8601 format';
+      errorMessages.push(errorMessage);
+      displayErrorOnUI('subject-date-of-birth', errorMessage);
+      isFormValid = false;
+    }
+
+    return { isFormValid, errorMessages };
+  };
+
   /**
    * Create the YML file
    *
@@ -343,10 +453,11 @@ export function YMLGenerator() {
     e.preventDefault();
     const form = structuredClone(formData);
 
-    const validation = validateJSON(form);
+    const validation = validateBasedOnJSONSchema(form);
     const { isValid } = validation;
+    const { isFormValid } = isJSONValidBasedOnInbuiltRules(form);
 
-    if (isValid) {
+    if (isValid && isFormValid) {
       ipcRenderer.sendMessage('SAVE_USER_DATA', form);
     }
   };
@@ -380,55 +491,34 @@ export function YMLGenerator() {
   useMount(() => {
     ipcRenderer.on(ASYNC_TOPICS.templateFileRead, (jsonFileContent) => {
       const JSONschema = schema.current;
-      const validation = validateJSON(jsonFileContent, JSONschema);
+      const validation = validateBasedOnJSONSchema(jsonFileContent, JSONschema);
       const { isValid, message } = validation;
-      const possibleGenders = genderAcronym();
+      const { isFormValid, errorMessages } =
+        isJSONValidBasedOnInbuiltRules(jsonFileContent);
 
-      if (!isValid) {
-        let messageText = '';
+      // if (!isValid || !isFormValid) {
+      //   let messageText = '';
 
-        if (!message?.join) {
-          messageText = message;
-        } else {
-          messageText = message.join('');
-        }
-        // eslint-disable-next-line no-alert
-        window.alert(`There were validation errors: ${messageText}`);
-        return null;
+      //   if (!isValid) {
+      //     if (!message?.join) {
+      //       messageText = message;
+      //     } else {
+      //       messageText = message.join('\n');
+      //     }
+      //   }
+
+      //   if (!isFormValid) {
+      //     messageText = `${messageText} \n ${errorMessages.join('\n')}`;
+      //   }
+      //   // eslint-disable-next-line no-alert
+      //   window.alert(`There were validation errors: ${messageText}`);
+      //   return null;
+      // }
+
+      if (isValid && isFormValid) {
+        setFormData(structuredClone(jsonFileContent));
       }
 
-      // check if gender is from the available options
-      if (!possibleGenders.includes(jsonFileContent.subject.sex)) {
-        // eslint-disable-next-line no-alert
-        window.alert(
-          `Subject's gender is limited to one from - ${possibleGenders}. Your value is ${jsonFileContent.subject.sex}`
-        );
-
-        return null;
-      }
-
-      // check if tasks have a camera but no camera is set
-      if (!jsonFileContent.cameras && jsonFileContent.tasks?.length > 0) {
-        // eslint-disable-next-line no-alert
-        window.alert(
-          `There is tasks camera_id, but no camera object with ids. No data is loaded`
-        );
-        return null;
-      }
-
-      // check if associated_video_files have a camera but no camera is set
-      if (
-        !jsonFileContent.cameras &&
-        jsonFileContent.associated_video_files?.length > 0
-      ) {
-        // eslint-disable-next-line no-alert
-        window.alert(
-          `There is associated_video_files camera_id, but no camera object with ids. No data is loaded`
-        );
-        return null;
-      }
-
-      setFormData(structuredClone(jsonFileContent));
       return null;
     });
   });
@@ -552,10 +642,23 @@ export function YMLGenerator() {
           onBlur={(e) => onBlur(e)}
         />
 
+        <div className="form-container">
+          <InputElement
+            id="keywords"
+            type="text"
+            name="keywords"
+            title="Keywords"
+            defaultValue={formData.keywords}
+            required
+            placeholder="Comma-separated list of keywords, e.g - CA1, Long-Evans"
+            onBlur={(e) => onBlur(e, { isCommaSeparatedString: true })}
+          />
+        </div>
+
         <div>
           <fieldset>
             <legend>Subject</legend>
-            <div className="form-container">
+            <div id="subject-field" className="form-container">
               <InputElement
                 id="subject-description"
                 type="text"
@@ -602,6 +705,33 @@ export function YMLGenerator() {
                 defaultValue={formData.subject.subject_id}
                 placeholder="Identification code/number of animal model/patient"
                 onBlur={(e) => onBlur(e, { key: 'subject' })}
+              />
+              <InputElement
+                id="subject-age"
+                type="text"
+                name="subject_age"
+                title="Age"
+                required={false}
+                defaultValue={formData.subject.age}
+                placeholder="Age in ISO 8601 Duration"
+                pattern="^P(?!$)(\d+(?:\.\d+)?Y)?(\d+(?:\.\d+)?M)?(\d+(?:\.\d+)?W)?(\d+(?:\.\d+)?D)?(T(?=\d)(\d+(?:\.\d+)?H)?(\d+(?:\.\d+)?M)?(\d+(?:\.\d+)?S)?)?$"
+                onBlur={(e) => onBlur(e, { key: 'subject' })}
+              />
+              <DatePickerElement
+                id="subject-date-of-birth"
+                name="subject_date-of-birth"
+                title="Date of Birth"
+                defaultValue={formData.subject.date_of_birth}
+                placeholder="Select age or Date of Birth"
+                dateFormat="yyyy-MM-dd"
+                required={false}
+                onChange={(date) =>
+                  onChangeDate(date, {
+                    key: 'subject',
+                    name: 'date_of_birth',
+                    type: 'text',
+                  })
+                }
               />
               <InputElement
                 id="subject-weight"
@@ -828,7 +958,7 @@ export function YMLGenerator() {
         <div>
           <fieldset>
             <legend>Tasks</legend>
-            <div className="form-container">
+            <div id="tasks-field" className="form-container">
               {formData.tasks.map((tasks, index) => {
                 const key = 'tasks';
 
@@ -1030,7 +1160,7 @@ export function YMLGenerator() {
         <div>
           <fieldset>
             <legend>Associated Video Files</legend>
-            <div className="form-container">
+            <div id="associated_video_files-field" className="form-container">
               {formData?.associated_video_files?.map(
                 (associatedVideoFiles, index) => {
                   const key = 'associated_video_files';
@@ -1306,7 +1436,7 @@ export function YMLGenerator() {
                       />
                       <DataListElement
                         id={`electrode_groups-targeted_location-${index}`}
-                        name={`targeted_location-${index}`}
+                        name="targeted_location"
                         title="Targeted Location"
                         dataItems={locations()}
                         defaultValue={electrodeGroup.targeted_location}
@@ -1406,7 +1536,7 @@ export function YMLGenerator() {
               allowMultiple
               items={formData.electrode_groups}
               addArrayItem={addArrayItem}
-              removeArrayItem={removeArrayItem}
+              removeArrayItem={removeElectrodeGroupItem}
             />
           </fieldset>
         </div>
