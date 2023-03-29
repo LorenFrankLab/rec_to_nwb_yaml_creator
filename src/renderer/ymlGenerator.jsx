@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import addFormats from 'ajv-formats';
 import InputElement from './InputElement';
 import SelectElement from './SelectElement';
 import FileUpload from './FileUpload';
@@ -329,6 +330,7 @@ export function YMLGenerator() {
 
   const validateBasedOnJSONSchema = (formContent) => {
     const ajv = new Ajv();
+    addFormats(ajv);
     const validate = ajv.compile(schema.current);
 
     validate(formContent);
@@ -417,8 +419,9 @@ export function YMLGenerator() {
     }
 
     if (
+      subject.age !== '' &&
       subject.age?.trim() &&
-      !/^P(?!$)(\\d+(?:\\.\\d+)?Y)?(\\d+(?:\\.\\d+)?M)?(\\d+(?:\\.\\d+)?W)?(\\d+(?:\\.\\d+)?D)?(T(?=\\d)(\\d+(?:\\.\\d+)?H)?(\\d+(?:\\.\\d+)?M)?(\\d+(?:\\.\\d+)?S)?)?$/.test(
+      !/^P(?!$)(\d+(?:\.\d+)?Y)?(\d+(?:\.\d+)?M)?(\d+(?:\.\d+)?W)?(\d+(?:\.\d+)?D)?(T(?=\d)(\d+(?:\.\d+)?H)?(\d+(?:\.\d+)?M)?(\d+(?:\.\d+)?S)?)?$/.test(
         subject.age
       )
     ) {
@@ -430,9 +433,10 @@ export function YMLGenerator() {
 
     const dateOfBirth = subject?.date_of_birth;
     if (
-      dateOfBirth?.trim() &&
+      dateOfBirth !== '' &&
+      dateOfBirth?.trim &&
       !/(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+)|(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d)|(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d)/.test(
-        dateOfBirth
+        dateOfBirth.trim()
       )
     ) {
       errorMessage = 'Date of Birth must be a valid ISO 8601 format';
@@ -709,7 +713,7 @@ export function YMLGenerator() {
               <InputElement
                 id="subject-age"
                 type="text"
-                name="subject_age"
+                name="age"
                 title="Age"
                 required={false}
                 defaultValue={formData.subject.age}

@@ -80,7 +80,7 @@ ipcMain.on('SAVE_USER_DATA', async (event, userData) => {
     .catch(() => {
       dialog.showMessageBox({
         buttons: ['OK'],
-        message: 'File download unsucessful',
+        message: 'File download unsuccessful',
       });
     });
 });
@@ -100,9 +100,10 @@ ipcMain.on('REQUEST_OPEN_TEMPLATE_FILE_BOX', async (event) => {
 
       try {
         fs.readFile(filePath, 'utf8', (error, data) => {
+          const schema = jsYaml.CORE_SCHEMA;
           event.sender.send(
             'RESPONSE_OPEN_TEMPLATE_FILE_BOX',
-            jsYaml.load(data)
+            jsYaml.load(data, { schema })
           );
         });
       } catch (error) {
