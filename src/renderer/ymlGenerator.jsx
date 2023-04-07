@@ -4,7 +4,6 @@ import InputElement from './InputElement';
 import SelectElement from './SelectElement';
 import FileUpload from './FileUpload';
 import DataListElement from './DataListElement';
-import DatePickerElement from './DatePickerElement';
 import deviceTypeMap from './deviceTypes';
 import ChannelMap from './ChannelMap';
 import SelectInputPairElement from './SelectInputPairElement';
@@ -18,6 +17,7 @@ import {
   sanitizeTitle,
   titleCase,
   showCustomValidityError,
+  stringToInteger,
   useMount,
 } from './utils';
 import {
@@ -33,6 +33,11 @@ import {
   emptyFormData,
   defaultYMLValues,
   arrayDefaultValues,
+  dataAcqDeviceName,
+  dataAcqDeviceSystem,
+  dataAcqDeviceAmplifier,
+  dataAcqDeviceADCCircuit,
+  cameraManufacturers,
 } from './valueList';
 
 const Ajv = require('ajv');
@@ -142,7 +147,7 @@ export function YMLGenerator() {
       return null;
     }
 
-    nTrodes[shankNumber].map[index] = value;
+    nTrodes[shankNumber].map[index] = stringToInteger(value);
     setFormData(form);
     return null;
   };
@@ -411,26 +416,6 @@ export function YMLGenerator() {
     }
 
     const { subject } = jsonFileContent;
-    if (!subject?.age?.trim() && !subject?.date_of_birth?.trim()) {
-      errorMessage = 'At least one of "Age" or "Date of Birth" must be set';
-      errorMessages.push(errorMessage);
-      displayErrorOnUI('subject-field', errorMessage);
-      isFormValid = false;
-    }
-
-    if (
-      subject.age !== '' &&
-      subject.age?.trim() &&
-      !/^P(?!$)(\d+(?:\.\d+)?Y)?(\d+(?:\.\d+)?M)?(\d+(?:\.\d+)?W)?(\d+(?:\.\d+)?D)?(T(?=\d)(\d+(?:\.\d+)?H)?(\d+(?:\.\d+)?M)?(\d+(?:\.\d+)?S)?)?$/.test(
-        subject.age
-      )
-    ) {
-      errorMessage = 'Age must be a valid ISO 8601 Duration format';
-      errorMessages.push(errorMessage);
-      displayErrorOnUI('subject-age', errorMessage);
-      isFormValid = false;
-    }
-
     const dateOfBirth = subject?.date_of_birth;
     if (
       dateOfBirth !== '' &&
@@ -499,25 +484,6 @@ export function YMLGenerator() {
       const { isValid, message } = validation;
       const { isFormValid, errorMessages } =
         isJSONValidBasedOnInbuiltRules(jsonFileContent);
-
-      // if (!isValid || !isFormValid) {
-      //   let messageText = '';
-
-      //   if (!isValid) {
-      //     if (!message?.join) {
-      //       messageText = message;
-      //     } else {
-      //       messageText = message.join('\n');
-      //     }
-      //   }
-
-      //   if (!isFormValid) {
-      //     messageText = `${messageText} \n ${errorMessages.join('\n')}`;
-      //   }
-      //   // eslint-disable-next-line no-alert
-      //   window.alert(`There were validation errors: ${messageText}`);
-      //   return null;
-      // }
 
       if (isValid && isFormValid) {
         setFormData(structuredClone(jsonFileContent));
@@ -711,31 +677,23 @@ export function YMLGenerator() {
                 onBlur={(e) => onBlur(e, { key: 'subject' })}
               />
               <InputElement
-                id="subject-age"
-                type="text"
-                name="age"
-                title="Age"
-                required={false}
-                defaultValue={formData.subject.age}
-                placeholder="Age in ISO 8601 Duration"
-                pattern="^P(?!$)(\d+(?:\.\d+)?Y)?(\d+(?:\.\d+)?M)?(\d+(?:\.\d+)?W)?(\d+(?:\.\d+)?D)?(T(?=\d)(\d+(?:\.\d+)?H)?(\d+(?:\.\d+)?M)?(\d+(?:\.\d+)?S)?)?$"
-                onBlur={(e) => onBlur(e, { key: 'subject' })}
-              />
-              <DatePickerElement
-                id="subject-date-of-birth"
-                name="subject_date-of-birth"
+                id="subject-dateOfBirth"
+                type="date"
+                name="date_of_birth"
                 title="Date of Birth"
                 defaultValue={formData.subject.date_of_birth}
-                placeholder="Select age or Date of Birth"
-                dateFormat="yyyy-MM-dd"
-                required={false}
-                onChange={(date) =>
-                  onChangeDate(date, {
-                    key: 'subject',
-                    name: 'date_of_birth',
-                    type: 'text',
-                  })
-                }
+                placeholder="Select Date of Birth"
+                required
+                onBlur={(e) => {
+                  const { value, name, type } = e.target;
+                  const date = !value ? '' : new Date(value).toISOString();
+                  const target = {
+                    name,
+                    value: date,
+                    type,
+                  };
+                  onBlur({ target }, { key: 'subject' });
+                }}
               />
               <InputElement
                 id="subject-weight"
@@ -768,10 +726,10 @@ export function YMLGenerator() {
                       id={`dataAcqDevice-${index + 1}`}
                       className="form-container"
                     >
-                      <InputElement
+                      <DataListElement
                         id={`data_acq_device-name-${index}`}
-                        type="text"
                         name="name"
+                        type="text"
                         title="Name"
                         required
                         defaultValue={dataAcqDevice.name}
@@ -782,8 +740,9 @@ export function YMLGenerator() {
                             index,
                           })
                         }
+                        dataItems={dataAcqDeviceName()}
                       />
-                      <InputElement
+                      <DataListElement
                         id={`data_acq_device-system-${index}`}
                         type="text"
                         name="system"
@@ -797,8 +756,9 @@ export function YMLGenerator() {
                             index,
                           })
                         }
+                        dataItems={dataAcqDeviceSystem()}
                       />
-                      <InputElement
+                      <DataListElement
                         id={`data_acq_device-amplifier-${index}`}
                         type="text"
                         name="amplifier"
@@ -812,11 +772,12 @@ export function YMLGenerator() {
                             index,
                           })
                         }
+                        dataItems={dataAcqDeviceAmplifier()}
                       />
-                      <InputElement
+                      <DataListElement
                         id={`data_acq_device-adc_circuit-${index}`}
-                        type="text"
                         name="adc_circuit"
+                        type="text"
                         title="ADC circuit"
                         required
                         defaultValue={dataAcqDevice.adc_circuit}
@@ -827,6 +788,7 @@ export function YMLGenerator() {
                             index,
                           })
                         }
+                        dataItems={dataAcqDeviceADCCircuit()}
                       />
                     </div>
                   </fieldset>
@@ -859,7 +821,7 @@ export function YMLGenerator() {
                         id={`cameras-id-${index}`}
                         type="number"
                         name="id"
-                        title="Id"
+                        title="Camera Id"
                         defaultValue={cameras.id}
                         placeholder="Id"
                         required
@@ -885,7 +847,7 @@ export function YMLGenerator() {
                           })
                         }
                       />
-                      <InputElement
+                      <DataListElement
                         id={`cameras-manufacturer-${index}`}
                         type="text"
                         name="manufacturer"
@@ -893,6 +855,7 @@ export function YMLGenerator() {
                         defaultValue={cameras.manufacturer}
                         placeholder="Manufacturer"
                         required
+                        dataItems={cameraManufacturers()}
                         onBlur={(e) =>
                           onBlur(e, {
                             key,
@@ -1027,7 +990,7 @@ export function YMLGenerator() {
                         defaultValue={tasks.camera_id}
                         placeholder="Camera ids"
                         dataItems={cameraIdsDefined}
-                        updateFormData={updateFormData}
+                        updateFormArray={updateFormArray}
                         metaData={{
                           nameValue: 'camera_id',
                           keyValue: 'tasks',

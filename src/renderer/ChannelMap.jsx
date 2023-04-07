@@ -76,7 +76,9 @@ const ChannelMap = (prop) => {
                               <label htmlFor={mapId}>{nTrodeKey}</label>
                               <select
                                 id={mapId}
-                                defaultValue={item.map[nTrodeKey]}
+                                defaultValue={
+                                  nTrodeKey + mapKeys.length * index
+                                }
                                 onChange={(e) =>
                                   onMapInput(e, {
                                     key: 'ntrode_electrode_group_channel_map',

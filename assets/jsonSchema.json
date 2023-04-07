@@ -386,7 +386,8 @@
         "sex",
         "species",
         "subject_id",
-        "weight"
+        "weight",
+        "date_of_birth"
       ],
       "properties": {
         "description": {
@@ -440,13 +441,6 @@
           "type": "number",
           "default": "",
           "description": "Mass of animal model/patient in grams"
-        },
-        "age": {
-          "$id": "#root/subject/age",
-          "title": "age",
-          "type": "string",
-          "default": "",
-          "description": "age"
         },
         "date_of_birth": {
           "$id": "#root/subject/date_of_birth",

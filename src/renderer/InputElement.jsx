@@ -24,6 +24,23 @@ const InputElement = (prop) => {
     step,
   } = prop;
 
+  const getDefaultDateValue = () => {
+    if (!defaultValue) {
+      return '';
+    }
+
+    const dateObj = new Date(defaultValue);
+
+    // get the month in this format of 04, the same for months
+    const month = `0${dateObj.getMonth() + 1}`.slice(-2);
+    const day = `0${dateObj.getDate() + 1}`.slice(-2);
+    const year = dateObj.getFullYear();
+
+    const shortDate = `${year}-${month}-${day}`;
+
+    return shortDate;
+  };
+
   return (
     <div>
       <label className="container" htmlFor={id}>
@@ -37,7 +54,9 @@ const InputElement = (prop) => {
             name={name}
             className={`base-width ${readOnly ? 'gray-out' : ''}`}
             placeholder={placeholder}
-            defaultValue={defaultValue}
+            defaultValue={
+              type !== 'date' ? defaultValue : getDefaultDateValue()
+            }
             key={defaultValue}
             required={required}
             readOnly={readOnly}

@@ -15,7 +15,6 @@ export const defaultYMLValues = {
     sex: 'M',
     species: '',
     subject_id: '',
-    age: '',
     date_of_birth: '',
     weight: 100,
   },
@@ -56,7 +55,6 @@ export const emptyFormData = {
     sex: 'Male',
     species: '',
     subject_id: '',
-    age: '',
     date_of_birth: '',
     weight: 0,
   },
@@ -105,6 +103,79 @@ export const genderAcronym = () => {
  */
 export const genders = () => {
   return [...['Male', 'Female', 'Unspecified', '0ther']];
+};
+
+/**
+ * Data Acquisition Device Name
+ *
+ * @returns New name object
+ */
+export const dataAcqDeviceName = () => {
+  return [
+    ...[
+      'Pegasus',
+      'Trode',
+      'OmniPlex',
+      'Synapse',
+      'Nano2',
+      'Nano2+Stim',
+      'Pico2',
+      'Pico2+Stim',
+    ],
+  ];
+};
+
+/**
+ * Data Acquisition Device System
+ *
+ * @returns New system object
+ */
+export const dataAcqDeviceSystem = () => {
+  return [
+    ...['spikegadget', 'plexon', 'Tucker-Davis Technologies', 'Ripple Neuro'],
+  ];
+};
+
+/**
+ * Data Acquisition Device Amplifier
+ *
+ * @returns New amplifier object
+ */
+export const dataAcqDeviceAmplifier = () => {
+  return [...['Sutter Instrument', 'Intan', 'A-M Systems']];
+};
+
+/**
+ * Data Acquisition Device ADC circuit
+ *
+ * @returns New ADC Circuit object
+ */
+export const dataAcqDeviceADCCircuit = () => {
+  return [...['Intan', 'A-M Systems']];
+};
+
+/**
+ * Camera manufacturers
+ *
+ * @returns list of camera manufacturers
+ */
+export const cameraManufacturers = () => {
+  return [
+    ...[
+      'Allied Vision',
+      'Ximea',
+      'Hamamatsu Photonics',
+      'JENOPTIK AG',
+      'PCO AG',
+      'Photometrics',
+      'QImaging Corporation',
+      'SPOT Imaging Solutions',
+      'Thorlabs',
+      'Photonic Science',
+      'Diffraction Limited',
+      'Teledyne Technologies',
+    ],
+  ];
 };
 
 /**
