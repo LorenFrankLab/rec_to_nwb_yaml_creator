@@ -19,19 +19,29 @@ export const splitTextNumber = (textNumber) => {
   const textPart = textNumber.match(/[a-zA-Z]+/g);
   const eventsDescription = behavioralEventsDescription();
 
-  let number = 1;
+  let number = '';
   let text = '';
 
   // if true, description may be valid
-  if (
-    numericPart.length === 1 &&
-    textPart.length === 1 &&
-    eventsDescription.includes(textPart[0])
-  ) {
+  // if (
+  //   numericPart &&
+  //   numericPart.length === 1 &&
+  //   textPart.length === 1 &&
+  //   eventsDescription.includes(textPart[0])
+  // ) {
+  //   const parsedInt = parseInt(numericPart[0], 10);
+
+  //   number = Number.isNaN(parsedInt) ? 1 : parsedInt;
+  //   [text] = textPart;
+  // }
+  if (textPart.length === 1 && eventsDescription.includes(textPart[0])) {
+    [text] = textPart;
+  }
+
+  if (numericPart && numericPart.length === 1) {
     const parsedInt = parseInt(numericPart[0], 10);
 
     number = Number.isNaN(parsedInt) ? 1 : parsedInt;
-    [text] = textPart;
   }
 
   return { text, number };

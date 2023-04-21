@@ -470,7 +470,7 @@
             "type": "string",
             "default": "",
             "description": "Data acquisition device name",
-            "examples": ["SpikeGadgets"],
+            "examples": ["Spike Gadgets"],
             "pattern": "^.*$"
           },
           "system": {

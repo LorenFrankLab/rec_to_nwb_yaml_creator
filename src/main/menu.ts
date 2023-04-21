@@ -4,6 +4,7 @@ import {
   shell,
   BrowserWindow,
   MenuItemConstructorOptions,
+  remote,
 } from 'electron';
 
 interface DarwinMenuItemConstructorOptions extends MenuItemConstructorOptions {
@@ -210,6 +211,9 @@ export default class MenuBuilder {
           {
             label: '&Open',
             accelerator: 'Ctrl+O',
+            click: () => {
+              this.mainWindow.webContents.send('FILE_OPEN');
+            },
           },
           {
             label: '&Close',
@@ -293,6 +297,13 @@ export default class MenuBuilder {
               shell.openExternal(
                 'https://github.com/LorenFrankLab/rec_to_nwb_yaml_creator/issues'
               );
+            },
+          },
+          {
+            label: 'About',
+            accelerator: 'Ctrl+A',
+            click: () => {
+              this.mainWindow.webContents.send('ABOUT');
             },
           },
         ],

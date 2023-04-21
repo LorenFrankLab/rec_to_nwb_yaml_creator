@@ -3,7 +3,7 @@
  */
 export const defaultYMLValues = {
   experimenter_name: '',
-  lab: 'Frank Lab',
+  lab: 'Loren Frank Lab',
   institution: '',
   experiment_description: '',
   session_description: '',
@@ -113,14 +113,11 @@ export const genders = () => {
 export const dataAcqDeviceName = () => {
   return [
     ...[
-      'Pegasus',
-      'Trode',
-      'OmniPlex',
-      'Synapse',
-      'Nano2',
-      'Nano2+Stim',
-      'Pico2',
-      'Pico2+Stim',
+      'SpikeGadgets',
+      'Plexon',
+      'Tucker-Davis Technologies',
+      'Ripple Neuro',
+      'BlackRock',
     ],
   ];
 };
@@ -132,7 +129,16 @@ export const dataAcqDeviceName = () => {
  */
 export const dataAcqDeviceSystem = () => {
   return [
-    ...['spikegadget', 'plexon', 'Tucker-Davis Technologies', 'Ripple Neuro'],
+    ...[
+      'Main Control Unit',
+      'Pegasus',
+      'OmniPlex',
+      'Synapse',
+      'Nano2',
+      'Nano2+Stim',
+      'Pico2',
+      'Pico2+Stim',
+    ],
   ];
 };
 
@@ -1083,10 +1089,10 @@ export const behavioralEventsDescription = () => {
  */
 export const arrayDefaultValues = {
   data_acq_device: {
-    name: '',
-    system: '',
-    amplifier: '',
-    adc_circuit: '',
+    name: 'SpikeGadgets',
+    system: 'Main Control Unit',
+    amplifier: 'Intan',
+    adc_circuit: 'Intan',
   },
   associated_files: {
     name: '',

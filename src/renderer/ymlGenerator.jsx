@@ -59,7 +59,7 @@ export function YMLGenerator() {
   const schema = useRef({});
 
   const downloadExistingFile = (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     setFormData(structuredClone(emptyFormData)); // clear out form
     ipcRenderer.sendMessage('REQUEST_OPEN_TEMPLATE_FILE_BOX');
   };
@@ -121,17 +121,6 @@ export function YMLGenerator() {
     }
 
     updateFormData(name, inputValue, key, index);
-  };
-
-  const onChangeDate = (date, metaData) => {
-    const e = {};
-    e.target = {
-      name: metaData.name,
-      value: !date ? '' : date?.toISOString(),
-      type: metaData.type,
-    };
-
-    onBlur(e, metaData);
   };
 
   const onMapInput = (e, metaData) => {
@@ -224,7 +213,7 @@ export function YMLGenerator() {
     //
     // sorted by electrode_group so the UI is sorted by electrode_group and ntrode is displayed under electrode_group
     form?.ntrode_electrode_group_channel_map
-      ?.sort((a, b) => (a.electrode_group_id > b.electrode_group_id ? 1 : -1))
+      // ?.sort((a, b) => (a.electrode_group_id > b.electrode_group_id ? 1 : -1))
       ?.forEach((n, nIndex) => {
         n.ntrode_id = nIndex + 1;
       });
@@ -389,7 +378,7 @@ export function YMLGenerator() {
 
     // check if gender is from the available options
     if (!possibleGenders.includes(jsonFileContent.subject.sex)) {
-      errorMessage = `Subject's gender is limited to one from - ${possibleGenders}. Your value is ${jsonFileContent.subject.sex}`;
+      errorMessage = `Subject's sex is limited to one from - ${possibleGenders} (must be capitalized). Your value is: ${jsonFileContent.subject.sex}`;
       errorMessages.push(errorMessage);
       displayErrorOnUI('subject-sex', errorMessage);
       isFormValid = false;
@@ -478,6 +467,26 @@ export function YMLGenerator() {
   });
 
   useMount(() => {
+    ipcRenderer.on('FILE_OPEN', () => {
+      downloadExistingFile();
+    });
+  });
+
+  useMount(() => {
+    ipcRenderer.on('ABOUT', () => {
+      // eslint-disable-next-line global-require
+      const packageFile = require('../../release/app/package.json');
+      const appVersion = packageFile.version;
+      // eslint-disable-next-line no-alert
+      window.alert(`
+      Rec to NWB File Generator
+      ©Loren Frank Lab
+      Version - ${appVersion}
+      `);
+    });
+  });
+
+  useMount(() => {
     ipcRenderer.on(ASYNC_TOPICS.templateFileRead, (jsonFileContent) => {
       const JSONschema = schema.current;
       const validation = validateBasedOnJSONSchema(jsonFileContent, JSONschema);
@@ -553,9 +562,7 @@ export function YMLGenerator() {
             name="experimenter_name"
             defaultValue={formData.experimenter_name}
             title="Experimenter Name"
-            placeholder={
-              '"LastName, FirstName" or "LastName", FirstName MiddleInitial." or "LastName, FirstName MiddleName"'
-            }
+            placeholder="LastName, FirstName or LastName, FirstName MiddleInitial. or LastName, FirstName MiddleName"
             required
             onBlur={(e) => onBlur(e)}
           />
@@ -733,7 +740,7 @@ export function YMLGenerator() {
                         title="Name"
                         required
                         defaultValue={dataAcqDevice.name}
-                        placeholder="Name of the data acquisition device, e.g - Main Control Unit"
+                        placeholder="Name of the data acquisition company, e.g - SpikeGadgets"
                         onBlur={(e) =>
                           onBlur(e, {
                             key,
@@ -1273,7 +1280,6 @@ export function YMLGenerator() {
                         items={behavioralEventsDescription()}
                         defaultValue={behavioralEvents.description}
                         placeholder="ECU Port #"
-                        required
                         metaData={{
                           key,
                           index,
@@ -1418,9 +1424,9 @@ export function YMLGenerator() {
                         id={`electrode_groups-targeted_x-${index}`}
                         type="number"
                         name="targeted_x"
-                        title="Targeted x"
+                        title="ML from Bregma"
                         defaultValue={electrodeGroup.targeted_x}
-                        placeholder="Targeted x"
+                        placeholder="Medial-Lateral from Bregma (Targeted x)"
                         step="any"
                         required
                         onBlur={(e) =>
@@ -1434,9 +1440,9 @@ export function YMLGenerator() {
                         id={`electrode_groups-targeted_y-${index}`}
                         type="number"
                         name="targeted_y"
-                        title="Targeted y"
+                        title="AP to Bregma"
                         defaultValue={electrodeGroup.targeted_y}
-                        placeholder="Targeted y"
+                        placeholder="Anterior-Posterior to Bregma (Targeted y)"
                         step="any"
                         required
                         onBlur={(e) =>
@@ -1450,9 +1456,9 @@ export function YMLGenerator() {
                         id={`electrode_groups-targeted_z-${index}`}
                         type="number"
                         name="targeted_z"
-                        title="Targeted z"
+                        title="DV to Cortical Surface"
                         defaultValue={electrodeGroup.targeted_z}
-                        placeholder="Targeted z"
+                        placeholder="Dorsal-Ventral to Cortical Surface (Targeted z)"
                         step="any"
                         required
                         onBlur={(e) =>
