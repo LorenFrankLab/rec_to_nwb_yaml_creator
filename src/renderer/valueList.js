@@ -19,7 +19,10 @@ export const defaultYMLValues = {
     weight: 100,
   },
   data_acq_device: [],
+  cameras: [],
+  tasks: [],
   associated_files: [],
+  associated_video_files: [],
   units: {
     analog: '',
     behavioral_events: '',
@@ -27,10 +30,7 @@ export const defaultYMLValues = {
   times_period_multiplier: 1.0,
   raw_data_to_volts: 1.0,
   default_header_file_path: '',
-  cameras: [],
-  tasks: [],
   behavioral_events: [],
-  associated_video_files: [],
   device: {
     name: [],
   },
@@ -59,7 +59,10 @@ export const emptyFormData = {
     weight: 0,
   },
   data_acq_device: [],
+  cameras: [],
+  tasks: [],
   associated_files: [],
+  associated_video_files: [],
   units: {
     analog: '',
     behavioral_events: '',
@@ -67,10 +70,7 @@ export const emptyFormData = {
   times_period_multiplier: 0.0,
   raw_data_to_volts: 0.0,
   default_header_file_path: '',
-  cameras: [],
-  tasks: [],
   behavioral_events: [],
-  associated_video_files: [],
   device: {
     name: [],
   },
@@ -1118,6 +1118,7 @@ export const arrayDefaultValues = {
   associated_video_files: {
     name: '',
     camera_id: '',
+    task_epochs: [],
   },
   behavioral_events: {
     description: 'Din1',

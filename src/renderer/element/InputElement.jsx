@@ -42,32 +42,28 @@ const InputElement = (prop) => {
   };
 
   return (
-    <div>
-      <label className="container" htmlFor={id}>
-        <div className="item1" title={placeholder}>
-          {title}
-        </div>
-        <div className="item2">
-          <input
-            id={id}
-            type={type}
-            name={name}
-            className={`base-width ${readOnly ? 'gray-out' : ''}`}
-            placeholder={placeholder}
-            defaultValue={
-              type !== 'date' ? defaultValue : getDefaultDateValue()
-            }
-            key={defaultValue}
-            required={required}
-            readOnly={readOnly}
-            step={step}
-            onBlur={(e) => onBlur(e)}
-            pattern={pattern}
-            onChange={() => {}} // done to quiet a react warning in the console
-          />
-        </div>
-      </label>
-    </div>
+    <label className="container" htmlFor={id}>
+      <div className="item1" title={placeholder}>
+        {title}
+      </div>
+      <div className="item2">
+        <input
+          id={id}
+          type={type}
+          name={name}
+          className={`base-width ${readOnly ? 'gray-out' : ''}`}
+          placeholder={placeholder}
+          defaultValue={type !== 'date' ? defaultValue : getDefaultDateValue()}
+          key={defaultValue}
+          required={required}
+          readOnly={readOnly}
+          step={step}
+          onBlur={(e) => onBlur(e)}
+          pattern={pattern}
+          onChange={() => {}} // done to quiet a react warning in the console
+        />
+      </div>
+    </label>
   );
 };
 

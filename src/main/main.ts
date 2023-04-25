@@ -90,10 +90,10 @@ ipcMain.on('REQUEST_OPEN_TEMPLATE_FILE_BOX', async (event) => {
     .showOpenDialog({ properties: ['openFile'] })
     .then((result) => {
       if (result.canceled) {
-        dialog.showMessageBox({
-          buttons: ['OK'],
-          message: 'File upload canceled',
-        });
+        // dialog.showMessageBox({
+        //   buttons: ['OK'],
+        //   message: 'File upload canceled',
+        // });
       }
 
       const filePath = result.filePaths[0];

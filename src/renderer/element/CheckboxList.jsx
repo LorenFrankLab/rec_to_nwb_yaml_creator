@@ -1,15 +1,15 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { sanitizeTitle } from './utils';
+import { sanitizeTitle } from '../utils';
 
 /**
- * Radio collection where multiple items can be selected
+ * Checkbox collection where multiple items can be selected
  *
  * @param {Object} prop Custom element's properties
  *
- * @returns Virtual DOM collection for multi-select Radios
+ * @returns Virtual DOM collection for multi-select checkboxes
  */
-const RadioList = (prop) => {
+const CheckboxList = (prop) => {
   const {
     id,
     name,
@@ -17,18 +17,19 @@ const RadioList = (prop) => {
     dataItems,
     objectKind,
     defaultValue,
-    updateFormData,
+    updateFormArray,
     metaData,
   } = prop;
 
   const onChecked = (e) => {
     const { target } = e;
-    const values = Array.from(
-      target.parentElement.querySelectorAll('input[type="Radio"]:checked')
-    ).map((a) => parseInt(a.value, 10));
+    const value = parseInt(target.value, 10);
+    // const values = Array.from(
+    //   target.parentElement.querySelectorAll('input[type="checkbox"]:checked')
+    // ).map((a) => parseInt(a.value, 10));
 
     const { nameValue, keyValue, index } = metaData;
-    updateFormData(nameValue, values, keyValue, index);
+    updateFormArray(nameValue, value, keyValue, index, e.target.checked);
   };
 
   return (
@@ -43,7 +44,7 @@ const RadioList = (prop) => {
                 key={`${id}-${sanitizeTitle(dataItem)}`}
               >
                 <input
-                  type="radio"
+                  type="checkbox"
                   id={`${id}-${dataItemIndex}`}
                   name={`${name}-${id}`}
                   value={dataItem}
@@ -65,7 +66,7 @@ const RadioList = (prop) => {
   );
 };
 
-RadioList.propType = {
+CheckboxList.propType = {
   title: PropTypes.string.isRequired,
   defaultValue: PropTypes.instanceOf(Array),
   dataItems: PropTypes.arrayOf(PropTypes.string),
@@ -73,13 +74,13 @@ RadioList.propType = {
   objectKind: PropTypes.string,
   type: PropTypes.string.isRequired,
   name: PropTypes.string.isRequired,
-  updateFormData: PropTypes.func,
+  updateFormArray: PropTypes.func,
   metaData: PropTypes.instanceOf(Object),
 };
 
-RadioList.defaultProps = {
+CheckboxList.defaultProps = {
   defaultValue: '',
   objectKind: '',
 };
 
-export default RadioList;
+export default CheckboxList;

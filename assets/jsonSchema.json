@@ -787,6 +787,21 @@
             "description": "camera id from camera list",
             "examples": [1],
             "default": 0
+          },
+          "task_epochs": {
+            "$id": "#root/associated_video_files/items/task_epochs",
+            "title": "task_epochs",
+            "type": "array",
+            "default": [],
+            "examples": [],
+            "description": "Comma separated numbers of task epochs",
+            "items": {
+              "$id": "#root/associated_video_files/items/task_epochs/items",
+              "title": "Items",
+              "type": "integer",
+              "examples": [2],
+              "default": 0
+            }
           }
         }
       }

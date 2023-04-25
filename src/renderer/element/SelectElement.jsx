@@ -1,6 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { sanitizeTitle } from './utils';
+import { sanitizeTitle } from '../utils';
 
 /**
  * Provides an extended select tag for selection one option from a list

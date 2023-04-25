@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import PropTypes from 'prop-types';
-import { sanitizeTitle } from './utils';
-import { behavioralEventsDescription } from './valueList';
+import { sanitizeTitle } from '../utils';
+import { behavioralEventsDescription } from '../valueList';
 
 /**
  * Takes in a string consisting of text and a number, like abc5, and returns

@@ -1,6 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { sanitizeTitle } from './utils';
+import { sanitizeTitle } from '../utils';
 
 /**
  * Data list providing users options to select from and allowing them to write their own selection

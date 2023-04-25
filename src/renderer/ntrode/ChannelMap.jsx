@@ -1,8 +1,8 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import InputElement from './InputElement';
-import CheckboxList from './CheckboxList';
-import { sanitizeTitle } from './utils';
+import InputElement from '../element/InputElement';
+import CheckboxList from '../element/CheckboxList';
+import { sanitizeTitle } from '../utils';
 
 /**
  * Generates a custom element for ntrode_electrode_group_channel_map's map
