@@ -753,8 +753,8 @@ export function YMLGenerator() {
       const pageContentKeys = Object.keys(pageContent);
 
       pageContentKeys.forEach((key) => {
-        if (!allErrorIds.includes(key)) {
-          pageContent[key] = jsonFileContent[key];
+        if (!allErrorIds.includes(key) && Object.hasOwn(jsonFileContent, key)) {
+          pageContent[key] = structuredClone(jsonFileContent[key]);
         }
       });
 
@@ -826,7 +826,7 @@ export function YMLGenerator() {
                     >
                       {titleCase(key.replaceAll('_', ' '))}
                     </a>
-                    {formData.electrode_groups.map((fd, fdIndex) => {
+                    {formData.electrode_groups?.map((fd, fdIndex) => {
                       return key !== 'electrode_groups' ? (
                         <></>
                       ) : (
@@ -1053,7 +1053,7 @@ export function YMLGenerator() {
               <fieldset>
                 <legend>Data Acq Device</legend>
                 <div>
-                  {formData.data_acq_device.map((dataAcqDevice, index) => {
+                  {formData?.data_acq_device.map((dataAcqDevice, index) => {
                     const key = 'data_acq_device';
 
                     return (
