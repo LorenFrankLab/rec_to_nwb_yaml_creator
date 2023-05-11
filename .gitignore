@@ -125,3 +125,5 @@ npm-debug.log.*
 *.scss.d.ts
 
 docs/_build/
+
+/build
