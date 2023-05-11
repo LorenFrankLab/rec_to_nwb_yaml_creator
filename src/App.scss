@@ -1,0 +1,449 @@
+/*
+ * @NOTE: Prepend a `~` to scss file paths that are in your node_modules
+ *        See https://github.com/webpack-contrib/sass-loader#imports
+ */
+body {
+  color: black;
+
+  background: linear-gradient(
+    200.96deg,
+    #ffffff -29.09%,
+    #ffffff 1.77%,
+    #ffffff 129.35%
+  );
+  font-family: sans-serif;
+  overflow-y: scroll;
+  margin-left: 2%;
+  margin-right: 2%;
+}
+
+.home-region {
+  margin: 5px 0 5px 10px;
+  padding: 0;
+  position: relative;
+
+  a {
+    padding: 0;
+    margin: 0;
+  }
+
+  img {
+    width: 2rem;
+  }
+}
+
+.header-text {
+  text-align: center;
+  margin-top: 0;
+}
+
+.duplicate-item {
+  margin: 0 0 7px 0;
+  text-align: right;
+
+  button {
+    background-color: #a6a6a6;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+}
+
+.page-container {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 10px;
+}
+
+.page-container__nav {
+  flex: 1 0 10%;
+  margin-top: 3rem;
+
+  ul {
+    font-size: 0.88rem;
+    padding-left: 10px;
+    margin: 0;
+  }
+
+  li {
+    margin: 0 0 3px 0;
+  }
+}
+
+.page-container__nav--content {
+  height: 100%;
+  margin-top: 20px;
+  overflow: auto;
+}
+
+.page-container__nav--content__header {
+  text-align: center;
+  margin-bottom: 5px;
+  font-weight: 600;
+  margin-top: 0;
+}
+
+.page-container__nav--content ul {
+  margin-top: 5px;
+  padding: 0;
+}
+
+.page-container__content {
+  flex: 1 0 70%;
+  margin-top: 0.1rem;
+}
+
+.form-container {
+  display: flex;
+  flex-direction: column;
+  row-gap: 10px;
+}
+
+.container {
+  display: flex;
+  column-gap: 20px;
+}
+
+.item1 {
+  flex: 0 0 30%;
+  text-align: right;
+  font-weight: bold;
+}
+
+.item2 {
+  flex: 0 0 70%;
+  text-align: left;
+}
+
+.base-width {
+  width: 90%;
+}
+
+li {
+  list-style: none;
+}
+
+a {
+  text-decoration: none;
+  height: fit-content;
+  width: fit-content;
+  margin: 10px;
+}
+
+a:hover {
+  opacity: 1;
+  text-decoration: none;
+}
+
+.hide {
+  display: none;
+}
+
+.file-upload-region {
+  cursor: pointer;
+  display: inline;
+
+  span {
+    cursor: pointer;
+  }
+
+  .download-existing-file {
+    border: white;
+    background-color: #ffffff;
+    font-size: 1.3rem;
+    vertical-align: super;
+    cursor: pointer;
+    color: transparent;
+  }
+
+  input[type="file"] {
+    display: none;
+  }
+}
+
+.form-control {
+  display: grid;
+  grid-gap: 10px;
+
+  label {
+    text-align: right;
+  }
+
+  legend {
+    font-weight: 600;
+  }
+
+  span {
+    text-align: left;
+  }
+
+  input::-webkit-calendar-picker-indicator {
+    opacity: 100;
+  }
+
+  /* hide file button text */
+  input[type="file"] {
+    color: transparent;
+    width: 5.5rem;
+  }
+
+  .file-box {
+    width: 18.5rem;
+  }
+
+  .submit-button-parent {
+    text-align: center;
+
+    .submit-button {
+      margin: 5px;
+      padding: 5px;
+      border-radius: 5px;
+      appearance: none;
+      font-size: 1rem;
+      box-shadow: 0px 8px 28px -6px rgb(24 39 75 / 12%),
+        0px 18px 88px -4px rgb(24 39 75 / 14%);
+      transition: all ease-in 0.1s;
+      cursor: pointer;
+      opacity: 0.9;
+      height: 3rem;
+      width: 14rem;
+    }
+  }
+
+  .behavioral_events-description {
+    display: flex;
+    column-gap: 20px;
+
+    select {
+      height: 1.5rem;
+      margin-left: 10px;
+    }
+
+    input {
+      height: 1.5rem;
+      margin-left: 10px;
+    }
+  }
+
+  .form-ntrode-data {
+    margin-top: 10px;
+  }
+}
+
+.generate-button {
+  background-color: blue;
+  color: white;
+}
+
+.reset-button {
+  background-color: red;
+  color: white;
+  width: 80px !important;
+}
+
+.gray-out {
+  background-color: lightgray;
+}
+
+.select-input-pair {
+  display: flex;
+}
+
+.select-input-pair__item1 {
+  flex: 1 0 0;
+  margin-right: 10px;
+}
+
+.select-input-pair__item2 {
+  flex: 5 0 0;
+}
+
+.left-align {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.data-list input {
+  width: 90%;
+}
+
+.file-upload input[type="text"] {
+  width: 75%;
+}
+
+.center-align {
+  display: flex;
+  justify-content: center;
+}
+
+.array-update-area {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+
+  button {
+    background-color: white;
+    margin: 5px;
+    padding: 5px;
+    border-radius: 5px;
+    appearance: none;
+    font-size: 1rem;
+    box-shadow: 0px 8px 28px -6px rgb(24 39 75 / 12%),
+      0px 18px 88px -4px rgb(24 39 75 / 14%);
+    transition: all ease-in 0.1s;
+    cursor: pointer;
+    opacity: 0.9;
+    width: 6rem;
+    background-color: darkgrey;
+  }
+
+  button:hover {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+
+  .multi-area {
+    border: 1px solid black;
+    padding: 0 2px 0 6px;
+
+    input {
+      width: 45px;
+    }
+  }
+}
+
+.array-item {
+  margin-top: 10px;
+}
+
+.nTrode-container {
+  display: flex;
+  flex-wrap: wrap;
+  width: 95%;
+  margin-top: 10px;
+}
+
+.ntrode-maps {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.ntrode-map {
+  display: flex;
+  margin: 5px;
+  padding: 5px;
+  border: 2px solid darkgray;
+  width: 85px;
+
+  label {
+    margin-right: 5px;
+  }
+
+  select {
+    width: 3.5rem;
+  }
+}
+
+.shank {
+  margin-bottom: 10px;
+}
+
+.checkbox-list {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.checkbox-list--no-data {
+  font-weight: normal !important;
+}
+
+.checkbox-list-item {
+  border: 2px solid darkgray;
+  margin: 5px;
+  padding: 0 5px 0 2px;
+}
+
+.nav-item {
+  padding: 0;
+
+  a {
+    margin: 0;
+  }
+}
+
+.nav-link {
+  color: black;
+}
+
+a.nav-link:hover {
+  text-decoration-line: underline;
+}
+
+.sub-nav-item {
+  margin-left: 10px !important;
+}
+
+.active-nav-link {
+  background-color: darkgray;
+}
+
+.highlight-region {
+  background-color: lightgrey;
+}
+
+.area-region {
+  padding: 2px;
+}
+
+.footer {
+  font-size: 0.8rem;
+  margin-top: 20px;
+  margin-bottom: 10px;
+
+  a {
+    margin: 0;
+  }
+}
+
+/* List of items */
+.list-of-items {
+  border: 1px solid #ccc;
+  padding: 3px;
+
+  & > span {
+    border: 1px solid #ccc;
+    padding-left: 3px;
+  }
+
+  & button {
+    border: 0 solid #fff;
+    background-color: white;
+    cursor: pointer;
+    height: 5px !important;
+  }
+
+  & .add-button {
+    background-color: darkgray;
+    height: 100% !important;
+    margin: 0;
+    border: 3px solid black !important;
+  }
+
+  & > span:hover {
+    opacity: 0.7;
+  }
+
+  & > input {
+    background: #eee;
+  }
+}
+/***** List of items *****/
+
+@media (min-width: 750px) {
+  .page-container__nav__content {
+    position: fixed;
+  }
+
+  .home-region {
+    position: fixed;
+  }
+}

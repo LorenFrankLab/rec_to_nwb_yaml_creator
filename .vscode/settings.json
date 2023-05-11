@@ -2,7 +2,8 @@
   "files.associations": {
     ".eslintrc": "jsonc",
     ".prettierrc": "jsonc",
-    ".eslintignore": "ignore"
+    ".eslintignore": "ignore",
+    "*.js": "javascriptreact"
   },
 
   "eslint.validate": [
@@ -28,7 +29,6 @@
     "*.{css,sass,scss}.d.ts": true
   },
   "cSpell.words": [
-    "ammonis",
     "ntrode"
   ]
 }
