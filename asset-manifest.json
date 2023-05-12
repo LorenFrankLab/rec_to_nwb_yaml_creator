@@ -1,10 +1,10 @@
 {
   "files": {
-    "main.css": "/LorenFrankLab/rec_to_nwb_yaml_creator/static/css/main.f19a2b53.css",
-    "main.js": "/LorenFrankLab/rec_to_nwb_yaml_creator/static/js/main.d574894e.js",
-    "index.html": "/LorenFrankLab/rec_to_nwb_yaml_creator/index.html",
-    "main.f19a2b53.css.map": "/LorenFrankLab/rec_to_nwb_yaml_creator/static/css/main.f19a2b53.css.map",
-    "main.d574894e.js.map": "/LorenFrankLab/rec_to_nwb_yaml_creator/static/js/main.d574894e.js.map"
+    "main.css": "/rec_to_nwb_yaml_creator/static/css/main.f19a2b53.css",
+    "main.js": "/rec_to_nwb_yaml_creator/static/js/main.d574894e.js",
+    "index.html": "/rec_to_nwb_yaml_creator/index.html",
+    "main.f19a2b53.css.map": "/rec_to_nwb_yaml_creator/static/css/main.f19a2b53.css.map",
+    "main.d574894e.js.map": "/rec_to_nwb_yaml_creator/static/js/main.d574894e.js.map"
   },
   "entrypoints": [
     "static/css/main.f19a2b53.css",
