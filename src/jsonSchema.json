@@ -13,6 +13,7 @@
       "default": [],
       "examples": ["Jennifer Guidera"],
       "pattern": "^.+$",
+      "minItems": 1,
       "description": "Name of experimenter performing current session",
       "items": {
         "$id": "#root/experimenter_name/items",
@@ -373,6 +374,7 @@
       "default": [],
       "examples": ["J16_20210606"],
       "pattern": "^.+$",
+      "minItems": 1,
       "description": "keywords",
       "items": {
         "$id": "#root/keywords/items",

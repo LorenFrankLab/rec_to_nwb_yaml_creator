@@ -77,7 +77,6 @@ const ListElement = (prop) => {
               type={type}
               placeholder={`Type ${title}`}
               ref={valueToAdd}
-              required={required}
               step={step}
               onKeyPress={e => addListItemViaEnterKey(e, valueToAdd)}
             />

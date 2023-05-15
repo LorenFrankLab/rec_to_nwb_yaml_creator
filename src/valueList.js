@@ -52,7 +52,7 @@ export const emptyFormData = {
   subject: {
     description: '',
     genotype: '',
-    sex: 'Male',
+    sex: 'M',
     species: '',
     subject_id: '',
     date_of_birth: '',

@@ -120,6 +120,16 @@ export function App() {
               }
             });
 
+            // sex needs to be populated
+            if (!formContent.subject) {
+              formContent.subject = structuredClone(emptyFormData.subject);
+            }
+
+            const genders = genderAcronym();
+            if (!genders.includes(formContent.subject.sex)) {
+              formContent.subject.sex = 'U';
+            }
+
             const allErrorMessages = [
               ...new Set([...formErrorMessages, ...jsonSchemaErrorMessages]),
             ];
@@ -601,7 +611,7 @@ const rulesValidation = (jsonFileContent) => {
   return {
     isFormValid,
     formErrorMessages: errorMessages,
-    formErrors: errors,
+    formErrors: errorMessages,
     formErrorIds: errorIds,
   };
 };
@@ -1448,24 +1458,19 @@ useEffect(() => {
                           })
                         }
                       />
-                      <FileUpload
+                      <InputElement
                         id={`associated_files-path-${index}`}
                         title="Path"
                         name="path"
                         placeholder="path"
                         defaultValue={associatedFilesName.path}
                         required
-                        metaData={{
-                          key,
-                          index,
-                        }}
-                        onTextFieldInput={(e) =>
+                        onBlur={(e) =>
                           onBlur(e, {
                             key,
                             index,
                           })
                         }
-                        onBlur={itemFileUpload}
                       />
                       <RadioList
                         id={`associated_files-taskEpochs-${index}`}
@@ -1640,14 +1645,14 @@ useEffect(() => {
         />
       </div>
       <div id="default_header_file_path-area" className="area-region">
-        <FileUpload
+      <InputElement
           id="defaultHeaderFilePath"
+	        type="text"
           title="Default Header File Path"
           name="default_header_file_path"
           placeholder="Default Header File Path"
-          onTextFieldInput={(e) => onBlur(e)}
           defaultValue={formData.default_header_file_path}
-          onBlur={itemFileUpload}
+          onBlur={(e) => onBlur(e)}
         />
       </div>
       <div id="behavioral_events-area" className="area-region">
