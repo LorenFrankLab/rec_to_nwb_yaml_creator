@@ -971,7 +971,7 @@ useEffect(() => {
           defaultValue={formData.keywords}
           required
           inputPlaceholder="No keyword"
-          placeholder="Comma-separated list"
+          placeholder="Keywords"
           updateFormData={updateFormData}
           metaData={{
             nameValue: 'keywords',
@@ -1735,7 +1735,7 @@ useEffect(() => {
             title="Name"
             inputPlaceholder="No Device"
             defaultValue={formData.device.name}
-            placeholder="Comma-separated list"
+            placeholder="Device names"
             updateFormData={updateFormData}
             metaData={{
               nameValue: 'name',
