@@ -13,14 +13,13 @@ body {
   );
   font-family: sans-serif;
   overflow-y: scroll;
-  margin-left: 2%;
-  margin-right: 2%;
+  margin-left: 3%;
+  margin-right: 3%;
 }
 
 .home-region {
   margin: 5px 0 5px 10px;
   padding: 0;
-  position: relative;
 
   a {
     padding: 0;
@@ -40,12 +39,12 @@ body {
 .duplicate-item {
   margin: 0 0 7px 0;
   text-align: right;
+}
 
-  button {
-    background-color: #a6a6a6;
-    border-radius: 5px;
-    cursor: pointer;
-  }
+.duplicate-item button {
+  background-color: #a6a6a6;
+  border-radius: 5px;
+  cursor: pointer;
 }
 
 .page-container {
@@ -56,17 +55,16 @@ body {
 
 .page-container__nav {
   flex: 1 0 10%;
-  margin-top: 3rem;
+}
 
-  ul {
-    font-size: 0.88rem;
-    padding-left: 10px;
-    margin: 0;
-  }
+.page-container__nav ul {
+  font-size: 0.81rem;
+  padding-left: 10px;
+  margin: 0;
+}
 
-  li {
-    margin: 0 0 3px 0;
-  }
+.page-container__nav li {
+  margin: 0 0 3px 0;
 }
 
 .page-container__nav--content {
@@ -89,7 +87,6 @@ body {
 
 .page-container__content {
   flex: 1 0 70%;
-  margin-top: 0.1rem;
 }
 
 .form-container {
@@ -279,36 +276,36 @@ a:hover {
   display: flex;
   justify-content: center;
   margin-top: 10px;
+}
 
-  button {
-    background-color: white;
-    margin: 5px;
-    padding: 5px;
-    border-radius: 5px;
-    appearance: none;
-    font-size: 1rem;
-    box-shadow: 0px 8px 28px -6px rgb(24 39 75 / 12%),
-      0px 18px 88px -4px rgb(24 39 75 / 14%);
-    transition: all ease-in 0.1s;
-    cursor: pointer;
-    opacity: 0.9;
-    width: 6rem;
-    background-color: darkgrey;
-  }
+.array-update-area button {
+  background-color: white;
+  margin: 5px;
+  padding: 5px;
+  border-radius: 5px;
+  appearance: none;
+  font-size: 1rem;
+  box-shadow: 0px 8px 28px -6px rgb(24 39 75 / 12%),
+    0px 18px 88px -4px rgb(24 39 75 / 14%);
+  transition: all ease-in 0.1s;
+  cursor: pointer;
+  opacity: 0.9;
+  width: 6rem;
+  background-color: darkgrey;
+}
 
-  button:hover {
-    transform: scale(1.05);
-    opacity: 1;
-  }
+.array-update-area .multi-area {
+  border: 1px solid black;
+  padding: 0 2px 0 6px;
+}
 
-  .multi-area {
-    border: 1px solid black;
-    padding: 0 2px 0 6px;
+.array-update-area .multi-area input {
+  width: 45px;
+}
 
-    input {
-      width: 45px;
-    }
-  }
+.array-update-area button:hover {
+  transform: scale(1.05);
+  opacity: 1;
 }
 
 .array-item {
@@ -333,14 +330,14 @@ a:hover {
   padding: 5px;
   border: 2px solid darkgray;
   width: 85px;
+}
 
-  label {
-    margin-right: 5px;
-  }
+.ntrode-map label {
+  margin-right: 5px;
+}
 
-  select {
-    width: 3.5rem;
-  }
+.ntrode-map select {
+  width: 3.5rem;
 }
 
 .shank {
@@ -439,11 +436,8 @@ a.nav-link:hover {
 /***** List of items *****/
 
 @media (min-width: 750px) {
-  .page-container__nav__content {
+  .page-container__nav--content {
     position: fixed;
-  }
-
-  .home-region {
-    position: fixed;
+    top: 0;
   }
 }
