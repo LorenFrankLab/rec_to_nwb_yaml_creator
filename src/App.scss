@@ -441,6 +441,8 @@ a.nav-link:hover {
 @media (min-width: 750px) {
   .page-container__nav__content {
     position: fixed;
+    height: 90%;
+    overflow: auto;
   }
 
   .home-region {
