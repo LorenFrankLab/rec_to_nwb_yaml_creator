@@ -1375,16 +1375,16 @@ useEffect(() => {
                       onChange={updateFormData}
                     />
                     <ListElement
-                    id={`tasks-task_epochs-${index}`}
-                                type="number"
-                                step="1"
-                                name="task_epochs"
-                                title="Task Epochs"
-                                defaultValue={tasks.task_epochs}
-                                placeholder="Task Epochs-values"
-                                  inputPlaceholder="No task epoch"
-                    updateFormData={updateFormData}
-                    metaData={{
+                      id={`tasks-task_epochs-${index}`}
+                      type="number"
+                      step="1"
+                      name="task_epochs"
+                      title="Task Epochs"
+                      defaultValue={tasks.task_epochs}
+                      placeholder="Task Epochs-values"
+                      inputPlaceholder="No task epoch"
+                      updateFormData={updateFormData}
+                      metaData={{
                         nameValue: 'task_epochs',
                         keyValue: key,
                         index: index,

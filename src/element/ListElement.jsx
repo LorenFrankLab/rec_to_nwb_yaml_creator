@@ -1,5 +1,6 @@
 import React, { useRef }  from 'react';
 import PropTypes from 'prop-types';
+import { stringToInteger } from './..//utils';
 
 /**
  * Provides a text box
@@ -26,11 +27,16 @@ const ListElement = (prop) => {
   } = prop;
 
   const addListItem = (e, valueToAddObject) => {
-   const value = valueToAddObject.current.value?.trim();
+    let value = valueToAddObject.current.value?.trim();
+
+    if (type === 'number') {
+      value = stringToInteger(value);
+    }
 
     if (value) {
-      const items = structuredClone(defaultValue || []);
-      items.push(value);
+      let items = structuredClone(defaultValue || []);
+      items.push(value); // add value to items
+      items = [...new Set(items)]; // remove duplicates
       updateFormData(metaData.nameValue, items, metaData.keyValue, metaData.index)
       valueToAddObject.current.value = '';
     }
