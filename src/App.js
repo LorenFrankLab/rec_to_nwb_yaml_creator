@@ -1574,7 +1574,7 @@ useEffect(() => {
                         updateFormData={updateFormData}
                         metaData={{
                           nameValue: 'task_epochs',
-                          keyValue: 'associated_files',
+                          keyValue: 'associated_video_files',
                           index,
                         }}
                         onChange={updateFormData}
