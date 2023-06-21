@@ -1,6 +1,6 @@
 {
   "name": "Rec-to-NWB YAML Generator",
-  "version": "2.0.6",
+  "version": "2.1.0",
   "description": "Create YAML File for Spyglass",
   "keywords": [
     "electron",
@@ -40,6 +40,10 @@
   ],
   "private": true,
   "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^6.4.0",
+    "@fortawesome/free-regular-svg-icons": "^6.4.0",
+    "@fortawesome/free-solid-svg-icons": "^6.4.0",
+    "@fortawesome/react-fontawesome": "^0.2.0",
     "ajv": "^8.12.0",
     "prop-types": "^15.8.1",
     "react": "^18.2.0",

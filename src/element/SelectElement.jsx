@@ -1,6 +1,8 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { sanitizeTitle } from '../utils';
+import InfoIcon from './InfoIcon';
+
 
 /**
  * Provides an extended select tag for selection one option from a list
@@ -16,6 +18,7 @@ const SelectElement = (prop) => {
     type,
     title,
     dataItems,
+    placeholder,
     dataItemsInfo,
     defaultValue,
     onChange,
@@ -25,7 +28,7 @@ const SelectElement = (prop) => {
   return (
     <label className="container" htmlFor={id}>
       <div className="item1" title={title}>
-        {title}
+        {title} <InfoIcon infoText={placeholder} />
       </div>
       <div className="item2">
         <select id={id} name={name} onChange={onChange} value={defaultValue}>
@@ -71,11 +74,13 @@ SelectElement.propType = {
   id: PropTypes.string.isRequired,
   type: PropTypes.string.isRequired,
   name: PropTypes.string.isRequired,
+  placeholder: PropTypes.string,
   onChange: PropTypes.func,
 };
 
 SelectElement.defaultProps = {
   defaultValue: '',
+  placeholder: '',
   dataItemsInfo: [],
   addBlankOption: false,
   type: 'text',

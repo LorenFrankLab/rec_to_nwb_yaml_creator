@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import PropTypes from 'prop-types';
 import { sanitizeTitle } from '../utils';
 import { behavioralEventsDescription } from '../valueList';
+import InfoIcon from './InfoIcon';
 
 /**
  * Takes in a string consisting of text and a number, like abc5, and returns
@@ -92,41 +93,49 @@ const SelectInputPairElement = (prop) => {
   return (
     <div>
       <label className="container" htmlFor={id}>
-        <div className="item1">{title}</div>
+        <div className="item1">
+          {title} <InfoIcon infoText={placeholder} />
+        </div>
         <div className="item2">
           <div className="select-input-pair">
             <div className="select-input-pair__item1">
-              <select
-                name={name}
-                id={`${id}-list`}
-                onBlur={onSelectPairInput}
-                ref={selectRef}
-                defaultValue={splitTextNumberText}
-              >
-                {items.map((item) => {
-                  return (
-                    <option key={sanitizeTitle(item)} value={item}>
-                      {item}
-                    </option>
-                  );
-                })}
-              </select>
+              <>
+                Type:&nbsp;
+                <select
+                  name={name}
+                  id={`${id}-list`}
+                  onBlur={onSelectPairInput}
+                  ref={selectRef}
+                  defaultValue={splitTextNumberText}
+                >
+                  {items.map((item) => {
+                    return (
+                      <option key={sanitizeTitle(item)} value={item}>
+                        {item}
+                      </option>
+                    );
+                  })}
+                </select>
+              </>
             </div>
             <div className="select-input-pair__item2">
-              <input
-                id={id}
-                ref={inputRef}
-                type={type}
-                name={name}
-                step={step}
-                min={min}
-                className="select-input-pair__item2"
-                placeholder={placeholder}
-                defaultValue={splitTextNumberNumber}
-                required={required}
-                readOnly={readOnly}
-                onBlur={onSelectPairInput}
-              />
+              <>
+                &nbsp;&nbsp;Index:&nbsp;
+                <input
+                  id={id}
+                  ref={inputRef}
+                  type={type}
+                  name={name}
+                  step={step}
+                  min={min}
+                  className="select-input-pair__item2"
+                  placeholder={placeholder}
+                  defaultValue={splitTextNumberNumber}
+                  required={required}
+                  readOnly={readOnly}
+                  onBlur={onSelectPairInput}
+                />
+              </>
             </div>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { sanitizeTitle } from '../utils';
+import { sanitizeTitle, stringToInteger } from '../utils';
+import InfoIcon from './InfoIcon';
 
 /**
  * Checkbox collection where multiple items can be selected
@@ -16,6 +17,7 @@ const CheckboxList = (prop) => {
     title,
     dataItems,
     objectKind,
+    placeholder,
     defaultValue,
     updateFormArray,
     metaData,
@@ -34,7 +36,9 @@ const CheckboxList = (prop) => {
 
   return (
     <label className="container" htmlFor={id}>
-      <div className="item1">{title}</div>
+      <div className="item1">
+        {title} <InfoIcon infoText={placeholder} />
+      </div>
       <div className="item2">
         <div className={`checkbox-list ${dataItems.length > 0 ? '' : 'hide'}`}>
           {dataItems.map((dataItem, dataItemIndex) => {
@@ -48,7 +52,7 @@ const CheckboxList = (prop) => {
                   id={`${id}-${dataItemIndex}`}
                   name={`${name}-${id}`}
                   value={dataItem}
-                  defaultChecked={defaultValue.includes(dataItem)}
+                  defaultChecked={defaultValue.includes(stringToInteger(dataItem))}
                   onClick={onChecked}
                 />
                 <label htmlFor={`${id}-${dataItemIndex}`}> {dataItem}</label>
@@ -74,12 +78,14 @@ CheckboxList.propType = {
   objectKind: PropTypes.string,
   type: PropTypes.string.isRequired,
   name: PropTypes.string.isRequired,
+  placeholder: PropTypes.string,
   updateFormArray: PropTypes.func,
   metaData: PropTypes.instanceOf(Object),
 };
 
 CheckboxList.defaultProps = {
   defaultValue: '',
+  placeholder: '',
   objectKind: '',
 };
 
