@@ -1,6 +1,8 @@
 import React, { useRef }  from 'react';
 import PropTypes from 'prop-types';
 import { stringToInteger } from './..//utils';
+import InfoIcon from './InfoIcon';
+
 
 /**
  * Provides a text box
@@ -66,7 +68,7 @@ const ListElement = (prop) => {
   return (
     <label className="container" htmlFor={id}>
       <div className="item1" title={placeholder}>
-        {title}
+      {title} <InfoIcon infoText={placeholder} />
       </div>
       <div className="item2">
         <div className={`list-of-items base-width ${readOnly ? 'gray-out' : ''}`} ref={listData}>

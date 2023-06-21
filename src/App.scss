@@ -37,6 +37,10 @@
   margin-top: 0;
 }
 
+.pointer {
+  cursor: pointer;
+}
+
 .duplicate-item {
   margin: 0 0 7px 0;
   text-align: right;
@@ -180,11 +184,31 @@ a:hover {
     opacity: 100;
   }
 
+  // Fix issue with Firefox and IE where caret does not appear on Datalist input field
+  // Based on - https://stackoverflow.com/a/39555400/178550
+  input::-webkit-calendar-picker-indicator {
+    opacity: 500;
+  }
+
+  .data-list:after {
+    content: url(https://i.stack.imgur.com/i9WFO.png);
+    margin-left: -20px;
+    padding: .1em;
+    pointer-events:none;
+  }
+
   /* hide file button text */
   input[type="file"] {
     color: transparent;
     width: 5.5rem;
   }
+
+  // info icon
+  .info-icon {
+    cursor: pointer;
+    vertical-align: super;
+  }
+  //
 
   .file-box {
     width: 18.5rem;
@@ -269,6 +293,7 @@ a:hover {
 .file-upload input[type="text"] {
   width: 75%;
 }
+
 
 .center-align {
   display: flex;

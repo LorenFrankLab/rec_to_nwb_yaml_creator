@@ -1,6 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { sanitizeTitle } from '../utils';
+import InfoIcon from './InfoIcon';
 
 /**
  * Data list providing users options to select from and allowing them to write their own selection
@@ -23,7 +24,9 @@ const DataListElement = (prop) => {
 
   return (
     <label className="container" htmlFor={id}>
-      <div className="item1">{title}</div>
+      <div className="item1">
+        {title} <InfoIcon infoText={placeholder} />
+      </div>
       <div className="item2 data-list">
         <input
           id={id}

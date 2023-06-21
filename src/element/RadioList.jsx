@@ -1,6 +1,9 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { sanitizeTitle } from '../utils';
+import InfoIcon from './InfoIcon';
+
+
 
 /**
  * Radio collection where multiple items can be selected
@@ -16,6 +19,7 @@ const RadioList = (prop) => {
     title,
     dataItems,
     objectKind,
+    placeholder,
     defaultValue,
     updateFormData,
     metaData,
@@ -23,17 +27,18 @@ const RadioList = (prop) => {
 
   const onChecked = (e) => {
     const { target } = e;
-    const values = Array.from(
-      target.parentElement.querySelectorAll('input[type="Radio"]:checked')
-    ).map((a) => parseInt(a.value, 10));
-
+    const { value } = target;
+    const radioValue = parseInt(value, 10);
     const { nameValue, keyValue, index } = metaData;
-    updateFormData(nameValue, values, keyValue, index);
+
+    updateFormData(nameValue, radioValue, keyValue, index);
   };
 
   return (
     <label className="container" htmlFor={id}>
-      <div className="item1">{title}</div>
+      <div className="item1">
+      {title} <InfoIcon infoText={placeholder} />
+      </div>
       <div className="item2">
         <div className={`checkbox-list ${dataItems.length > 0 ? '' : 'hide'}`}>
           {dataItems.map((dataItem, dataItemIndex) => {
@@ -47,7 +52,7 @@ const RadioList = (prop) => {
                   id={`${id}-${dataItemIndex}`}
                   name={`${name}-${id}`}
                   value={dataItem}
-                  defaultChecked={defaultValue.includes(dataItem)}
+                  defaultChecked={defaultValue === dataItem}
                   onClick={onChecked}
                 />
                 <label htmlFor={`${id}-${dataItemIndex}`}> {dataItem}</label>
@@ -73,12 +78,14 @@ RadioList.propType = {
   objectKind: PropTypes.string,
   type: PropTypes.string.isRequired,
   name: PropTypes.string.isRequired,
+  placeholder: PropTypes.string,
   updateFormData: PropTypes.func,
   metaData: PropTypes.instanceOf(Object),
 };
 
 RadioList.defaultProps = {
   defaultValue: '',
+  placeholder: '',
   objectKind: '',
 };
 

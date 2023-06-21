@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import YAML from 'yaml';
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import logo from './logo.png';
 import packageJson from '../package.json';
@@ -8,7 +9,6 @@ import './App.scss';
 import addFormats from 'ajv-formats';
 import InputElement from './element/InputElement';
 import SelectElement from './element/SelectElement';
-import FileUpload from './element/FileUpload';
 import DataListElement from './element/DataListElement';
 import deviceTypeMap from './ntrode/deviceTypes';
 import ChannelMap from './ntrode/ChannelMap';
@@ -100,6 +100,13 @@ export function App() {
               rulesValidation(jsonFileContent);
 
             if (isValid && isFormValid) {
+              // ensure relevant keys exist
+              Object.keys(emptyFormData).forEach((key) => {
+                if (!Object.hasOwn(jsonFileContent, key)) {
+                  jsonFileContent[key] = emptyFormData[key];
+                }
+              });
+
               setFormData(structuredClone(jsonFileContent));
               return null;
             }
@@ -805,9 +812,15 @@ useEffect(() => {
   let i = 0;
 
   for (i = 0; i < formData.associated_files.length; i += 1) {
-    formData.associated_files[i].task_epochs = formData.associated_files[
-      i
-    ].task_epochs.filter((a) => taskEpochs.includes(a));
+    if (!taskEpochs.includes(formData.associated_files[i].task_epoch)) {
+      formData.associated_files[i].task_epoch = '';
+    }
+  }
+
+  for (i = 0; i < formData.associated_video_files.length; i += 1) {
+    if (!taskEpochs.includes(formData.associated_video_files[i].task_epoch)) {
+      formData.associated_video_files[i].task_epoch = '';
+    }
   }
 
   setFormData(formData);
@@ -868,11 +881,23 @@ useEffect(() => {
       <div className="page-container__content">
       <h2 className="header-text">
       Rec-to-NWB YAML Creator
-      <div className="file-upload-region">
+      <div className="file-upload-region" placeholder="Download a Yaml file to populate fields">
         <label htmlFor="importYAMLFile">
-          <span> &#128194;</span>
+          &nbsp;&nbsp;
+          <FontAwesomeIcon icon="download" className="pointer" size="2xs" />
         </label>
-        <input type="file" id="importYAMLFile" accept=".yml, .yaml" className="download-existing-file" onChange={(e) => importFile(e)}>
+        {/*
+          input type="file" onClick sets e.target.value to null, so the same file can be imported multiple times.
+          See - https://stackoverflow.com/a/68480263/178550
+        */}
+        <input
+          type="file"
+          id="importYAMLFile"
+          accept=".yml, .yaml"
+          className="download-existing-file"
+          onChange={(e) => importFile(e)}
+          onClick={(e) => e.target.value = null}
+        >
         </input>
       </div>
     </h2>
@@ -888,17 +913,17 @@ useEffect(() => {
       <div className="form-container">
         <div id="experimenter_name-area" className="area-region">
         <ListElement
-        id="experimenter_name"
-        type="text"
-        name="experimenter_name"
-        inputPlaceholder="No experimenter"
-        defaultValue={formData.experimenter_name}
-        title="Experimenter Name"
-        placeholder="LastName, FirstName or LastName, FirstName MiddleInitial. or LastName, FirstName MiddleName"
-      updateFormData={updateFormData}
-      metaData={{
-        nameValue: 'experimenter_name',
-      }}
+          id="experimenter_name"
+          type="text"
+          name="experimenter_name"
+          inputPlaceholder="No experimenter"
+          defaultValue={formData.experimenter_name}
+          title="Experimenter Name"
+          placeholder="LastName, FirstName or LastName, FirstName MiddleInitial. or LastName, FirstName MiddleName"
+          updateFormData={updateFormData}
+          metaData={{
+            nameValue: 'experimenter_name',
+          }}
     />
         </div>
         <div id="lab-area" className="area-region">
@@ -1015,6 +1040,7 @@ useEffect(() => {
               id="subject-sex"
               name="sex"
               title="Sex"
+              placeholder="Select a Sex - M (Male), F (Female), U (Unknown), O (Other)"
               dataItems={genderAcronym()}
               defaultValue={formData.subject.sex}
               onChange={(e) => itemSelected(e, { key: 'subject' })}
@@ -1052,7 +1078,7 @@ useEffect(() => {
               id="subject-weight"
               type="number"
               name="weight"
-              title="Weight"
+              title="Weight (grams)"
               required
               defaultValue={formData.subject.weight}
               placeholder="Mass of animal model/patient in grams"
@@ -1208,11 +1234,12 @@ useEffect(() => {
                       title="Meters Per Pixel"
                       defaultValue={cameras.meters_per_pixel}
                       placeholder="Meters Per Pixel"
+                      step="0.1"
                       required
                       onBlur={(e) =>
                         onBlur(e, {
                           key,
-                          indexCount: index,
+                          index,
                         })
                       }
                     />
@@ -1473,17 +1500,17 @@ useEffect(() => {
                         }
                       />
                       <RadioList
-                        id={`associated_files-taskEpochs-${index}`}
+                        id={`associated_files-taskEpoch-${index}`}
                         type="number"
-                        name="task_epochs"
-                        title="Task Epochs"
+                        name="task_epoch"
+                        title="Task Epoch"
                         objectKind="Task"
-                        defaultValue={associatedFilesName.task_epochs}
-                        placeholder="Task Epochs"
+                        defaultValue={associatedFilesName.task_epoch}
+                        placeholder="Task Epoch"
                         dataItems={taskEpochsDefined}
                         updateFormData={updateFormData}
                         metaData={{
-                          nameValue: 'task_epochs',
+                          nameValue: 'task_epoch',
                           keyValue: 'associated_files',
                           index,
                         }}
@@ -1545,35 +1572,35 @@ useEffect(() => {
                           })
                         }
                       />
-                      <SelectElement
-                        id={`associated_video_files-camera_id-${index}`}
-                        type="number"
-                        name="camera_id"
-                        title="Camera Id"
-                        placeholder="Camera Id"
-                        addBlankOption
-                        defaultValue={associatedVideoFiles.camera_id}
-                        dataItems={cameraIdsDefined}
-                        onChange={(e) =>
-                          itemSelected(e, {
-                            type: 'number',
-                            key,
-                            index,
-                          })
-                        }
-                      />
+                      <RadioList
+                      id={`associated_video_files-camera_id-${index}`}
+                      type="number"
+                      name="camera_id"
+                      title="Camera Id"
+                      objectKind="Camera"
+                      defaultValue={associatedVideoFiles.camera_id}
+                      placeholder="Camera Id"
+                      dataItems={cameraIdsDefined}
+                      updateFormData={updateFormData}
+                      metaData={{
+                        nameValue: 'camera_id',
+                        keyValue: 'associated_video_files',
+                        index,
+                      }}
+                      onChange={updateFormData}
+                    />
                       <RadioList
                         id={`associated_video_files-taskEpochs-${index}`}
                         type="number"
-                        name="task_epochs"
-                        title="Task Epochs"
+                        name="task_epoch"
+                        title="Task Epoch"
                         objectKind="Task"
-                        defaultValue={associatedVideoFiles.task_epochs}
+                        defaultValue={associatedVideoFiles.task_epoch}
                         placeholder="Task Epochs"
                         dataItems={taskEpochsDefined}
                         updateFormData={updateFormData}
                         metaData={{
-                          nameValue: 'task_epochs',
+                          nameValue: 'task_epoch',
                           keyValue: 'associated_video_files',
                           index,
                         }}
@@ -1637,8 +1664,8 @@ useEffect(() => {
           id="raw_data_to_volts"
           type="number"
           name="raw_data_to_volts"
-          title="Raw Data to Volts"
-          placeholder="raw data to volts"
+          title="Ephys-to-Volt Conversion Factor"
+          placeholder="Ephys conversion factor to convert ephys data to volts"
           step="any"
           defaultValue={formData.raw_data_to_volts}
           onBlur={(e) => onBlur(e)}
@@ -1680,8 +1707,8 @@ useEffect(() => {
                       </button>
                     </div>
                     <div className="form-container">
-                      <SelectInputPairElement
-                        id={`behavioral_events-description-${index}`}
+                        <SelectInputPairElement
+                          id={`behavioral_events-description-${index}`}
                         type="number"
                         name="description"
                         title="Description"
@@ -1694,15 +1721,15 @@ useEffect(() => {
                           key,
                           index,
                         }}
-                        onBlur={onBlur}
-                      />
+                          onBlur={onBlur}
+                        />
                       <DataListElement
                         id={`behavioral_events-name-${index}`}
                         name="name"
                         title="Name"
                         dataItems={behavioralEventsNames()}
                         defaultValue={behavioralEvents.name}
-                        placeholder="Type to find a behavioral event name"
+                        placeholder="Type to find a behavioral event name or add a custom name"
                         onBlur={(e) =>
                           itemSelected(e, {
                             key,
@@ -1734,7 +1761,7 @@ useEffect(() => {
             name="name"
             title="Name"
             inputPlaceholder="No Device"
-            defaultValue={formData.device.name}
+            defaultValue={formData?.device?.name}
             placeholder="Device names"
             updateFormData={updateFormData}
             metaData={{
@@ -1742,9 +1769,9 @@ useEffect(() => {
               keyValue: 'device',
             }}
           />
-          </div>
-        </fieldset>
-      </div>
+        </div>
+      </fieldset>
+    </div>
       <div id="electrode_groups-area" className="area-region">
         <fieldset>
           <legend>Electrode Groups</legend>
@@ -1810,6 +1837,7 @@ useEffect(() => {
                       title="Device Type"
                       addBlankOption
                       dataItems={deviceTypes()}
+                      placeholder="Click to find a device type"
                       defaultValue={electrodeGroup.device_type}
                       onChange={(e) =>
                         nTrodeMapSelected(e, {
@@ -1900,6 +1928,7 @@ useEffect(() => {
                       name="units"
                       title="Units"
                       defaultValue={electrodeGroup.units}
+                      placeholder="Click to select a unit"
                       dataItems={units()}
                       onChange={(e) =>
                         itemSelected(e, {

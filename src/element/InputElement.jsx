@@ -1,5 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import InfoIcon from './InfoIcon';
 
 /**
  * Provides a text box
@@ -43,8 +44,8 @@ const InputElement = (prop) => {
 
   return (
     <label className="container" htmlFor={id}>
-      <div className="item1" title={placeholder}>
-        {title}
+      <div className="item1">
+        {title} <InfoIcon infoText={placeholder} />
       </div>
       <div className="item2">
         <input
