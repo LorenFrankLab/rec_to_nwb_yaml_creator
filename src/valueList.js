@@ -32,7 +32,7 @@ export const defaultYMLValues = {
   default_header_file_path: '',
   behavioral_events: [],
   device: {
-    name: ['Trode'],
+    name: ['Trodes'],
   },
   electrode_groups: [],
   ntrode_electrode_group_channel_map: [],
@@ -131,6 +131,7 @@ export const dataAcqDeviceSystem = () => {
   return [
     ...[
       'Main Control Unit',
+      'SpikeGadgets',
       'Pegasus',
       'OmniPlex',
       'Synapse',
@@ -913,7 +914,7 @@ export const behavioralEventsDescription = () => {
 export const arrayDefaultValues = {
   data_acq_device: {
     name: 'SpikeGadgets',
-    system: 'Main Control Unit',
+    system: 'SpikeGadgets',
     amplifier: 'Intan',
     adc_circuit: 'Intan',
   },
