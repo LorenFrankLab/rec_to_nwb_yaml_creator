@@ -957,7 +957,7 @@ useEffect(() => {
           type="text"
           name="experiment_description"
           title="Experiment Description"
-          placeholder="Name of the Project, e.g. - Optogenetic Stimulation"
+          placeholder="Description of subject and where subject came from (e.g., breeder, if animal)"
           required
           defaultValue={formData.experiment_description}
           onBlur={(e) => onBlur(e)}
@@ -1032,7 +1032,7 @@ useEffect(() => {
               title="Genotype"
               defaultValue={formData.subject.genotype}
               required
-              placeholder="Type to find a genetic summary of animal model/patient/specimen"
+              placeholder="Genetic strain. If absent, assume Wild Type (WT)"
               dataItems={genotypes()}
               onBlur={(e) => itemSelected(e, { key: 'subject' })}
             />
@@ -1040,7 +1040,7 @@ useEffect(() => {
               id="subject-sex"
               name="sex"
               title="Sex"
-              placeholder="Select a Sex - M (Male), F (Female), U (Unknown), O (Other)"
+              placeholder="Sex of subject, single letter identifier	"
               dataItems={genderAcronym()}
               defaultValue={formData.subject.sex}
               onChange={(e) => itemSelected(e, { key: 'subject' })}
@@ -1052,7 +1052,7 @@ useEffect(() => {
               title="Subject Id"
               required
               defaultValue={formData.subject.subject_id}
-              placeholder="Identification code/number of animal model/patient"
+              placeholder="ID of animal/person used/participating in experiment (lab convention)"
               onBlur={(e) => onBlur(e, { key: 'subject' })}
             />
             <InputElement
@@ -1061,7 +1061,7 @@ useEffect(() => {
               name="date_of_birth"
               title="Date of Birth"
               defaultValue={formData.subject.date_of_birth}
-              placeholder="Select Date of Birth"
+              placeholder="Date of birth of subject"
               required
               onBlur={(e) => {
                 const { value, name, type } = e.target;
@@ -1081,7 +1081,7 @@ useEffect(() => {
               title="Weight (grams)"
               required
               defaultValue={formData.subject.weight}
-              placeholder="Mass of animal model/patient in grams"
+              placeholder="Weight at time of experiment, at time of surgery and at other important times (in grams)"
               onBlur={(e) => onBlur(e, { key: 'subject' })}
             />
           </div>
@@ -1121,7 +1121,7 @@ useEffect(() => {
                       title="Name"
                       required
                       defaultValue={dataAcqDevice.name}
-                      placeholder="Type to find a name of the data acquisition company, e.g - SpikeGadgets"
+                      placeholder="Typically a number"
                       onBlur={(e) =>
                         onBlur(e, {
                           key,
@@ -1137,7 +1137,7 @@ useEffect(() => {
                       title="System"
                       required
                       defaultValue={dataAcqDevice.system}
-                      placeholder="Type to find a system"
+                      placeholder="System of device"
                       onBlur={(e) =>
                         onBlur(e, {
                           key,
@@ -1218,7 +1218,7 @@ useEffect(() => {
                       name="id"
                       title="Camera Id"
                       defaultValue={cameras.id}
-                      placeholder="Id"
+                      placeholder="Typically a number	"
                       required
                       onBlur={(e) =>
                         onBlur(e, {
@@ -1265,7 +1265,7 @@ useEffect(() => {
                       name="model"
                       title="model"
                       defaultValue={cameras.model}
-                      placeholder="model"
+                      placeholder="Model of this camera"
                       required
                       onBlur={(e) =>
                         onBlur(e, {
@@ -1280,7 +1280,7 @@ useEffect(() => {
                       name="lens"
                       title="lens"
                       defaultValue={cameras.lens}
-                      placeholder="Lens"
+                      placeholder="Info about lens in this camera"
                       required
                       onBlur={(e) =>
                         onBlur(e, {
@@ -1295,7 +1295,7 @@ useEffect(() => {
                       name="camera_name"
                       title="Camera Name"
                       defaultValue={cameras.camera_name}
-                      placeholder="Camera Name"
+                      placeholder="Name of this camera"
                       required
                       onBlur={(e) =>
                         onBlur(e, {
@@ -1345,7 +1345,7 @@ useEffect(() => {
                       name="task_name"
                       title="Task Name"
                       defaultValue={tasks.task_name}
-                      placeholder="Task Name"
+                      placeholder="E.g. linear track, sleep"
                       required
                       onBlur={(e) =>
                         onBlur(e, {
@@ -1375,7 +1375,7 @@ useEffect(() => {
                       name="task_environment"
                       title="Task Environment"
                       defaultValue={tasks.task_environment}
-                      placeholder="Task Environment"
+                      placeholder="Where the task occurs (e.g. sleep box)"
                       required
                       onBlur={(e) =>
                         onBlur(e, {
@@ -1391,7 +1391,7 @@ useEffect(() => {
                       title="Camera Id"
                       objectKind="Camera"
                       defaultValue={tasks.camera_id}
-                      placeholder="Camera ids"
+                      placeholder="Camera(s) recording this task"
                       dataItems={cameraIdsDefined}
                       updateFormArray={updateFormArray}
                       metaData={{
@@ -1408,7 +1408,7 @@ useEffect(() => {
                       name="task_epochs"
                       title="Task Epochs"
                       defaultValue={tasks.task_epochs}
-                      placeholder="Task Epochs-values"
+                      placeholder="What epochs this task is applied	"
                       inputPlaceholder="No task epoch"
                       updateFormData={updateFormData}
                       metaData={{
@@ -1476,7 +1476,7 @@ useEffect(() => {
                         name="description"
                         title="Description"
                         defaultValue={associatedFilesName.description}
-                        placeholder="description"
+                        placeholder="Description of the file"
                         required
                         onBlur={(e) =>
                           onBlur(e, {
@@ -1506,7 +1506,7 @@ useEffect(() => {
                         title="Task Epoch"
                         objectKind="Task"
                         defaultValue={associatedFilesName.task_epoch}
-                        placeholder="Task Epoch"
+                        placeholder="What tasks/epochs was this code run for"
                         dataItems={taskEpochsDefined}
                         updateFormData={updateFormData}
                         metaData={{
@@ -1579,7 +1579,7 @@ useEffect(() => {
                       title="Camera Id"
                       objectKind="Camera"
                       defaultValue={associatedVideoFiles.camera_id}
-                      placeholder="Camera Id"
+                      placeholder="What camera recorded this video	"
                       dataItems={cameraIdsDefined}
                       updateFormData={updateFormData}
                       metaData={{
@@ -1596,7 +1596,7 @@ useEffect(() => {
                         title="Task Epoch"
                         objectKind="Task"
                         defaultValue={associatedVideoFiles.task_epoch}
-                        placeholder="Task Epochs"
+                        placeholder="What epoch was recorded in this video"
                         dataItems={taskEpochsDefined}
                         updateFormData={updateFormData}
                         metaData={{
@@ -1665,7 +1665,7 @@ useEffect(() => {
           type="number"
           name="raw_data_to_volts"
           title="Ephys-to-Volt Conversion Factor"
-          placeholder="Ephys conversion factor to convert ephys data to volts"
+          placeholder="Scalar to multiply each element in data to convert it to the specified 'unit'. If the data are stored in acquisition system units or other units that require a conversion to be interpretable, multiply the data by 'conversion' to convert the data to the specified 'unit'."
           step="any"
           defaultValue={formData.raw_data_to_volts}
           onBlur={(e) => onBlur(e)}
@@ -1716,7 +1716,7 @@ useEffect(() => {
                         min="0"
                         items={behavioralEventsDescription()}
                         defaultValue={behavioralEvents.description}
-                        placeholder="ECU Port #"
+                        placeholder="DIO info (eg. Din01)"
                         metaData={{
                           key,
                           index,
@@ -1729,7 +1729,7 @@ useEffect(() => {
                         title="Name"
                         dataItems={behavioralEventsNames()}
                         defaultValue={behavioralEvents.name}
-                        placeholder="Type to find a behavioral event name or add a custom name"
+                        placeholder="E.g. light1"
                         onBlur={(e) =>
                           itemSelected(e, {
                             key,
@@ -1808,7 +1808,7 @@ useEffect(() => {
                       name="id"
                       title="Id"
                       defaultValue={electrodeGroup.id}
-                      placeholder="Id"
+                      placeholder="Typically a number"
                       required
                       onBlur={(e) =>
                         onBlur(e, {
@@ -1837,7 +1837,7 @@ useEffect(() => {
                       title="Device Type"
                       addBlankOption
                       dataItems={deviceTypes()}
-                      placeholder="Click to find a device type"
+                      placeholder="Used to match to probe yaml data"
                       defaultValue={electrodeGroup.device_type}
                       onChange={(e) =>
                         nTrodeMapSelected(e, {
@@ -1867,7 +1867,7 @@ useEffect(() => {
                       title="Targeted Location"
                       dataItems={locations()}
                       defaultValue={electrodeGroup.targeted_location}
-                      placeholder="Type to find a targeted location"
+                      placeholder="Where device is implanted"
                       onBlur={(e) =>
                         itemSelected(e, {
                           key,
@@ -1928,7 +1928,7 @@ useEffect(() => {
                       name="units"
                       title="Units"
                       defaultValue={electrodeGroup.units}
-                      placeholder="Click to select a unit"
+                      placeholder="Distance units defining positioning"
                       dataItems={units()}
                       onChange={(e) =>
                         itemSelected(e, {

@@ -3,6 +3,8 @@ import PropTypes from 'prop-types';
 import InputElement from '../element/InputElement';
 import CheckboxList from '../element/CheckboxList';
 import { sanitizeTitle } from '../utils';
+import InfoIcon from './../element/InfoIcon';
+
 
 /**
  * Generates a custom element for ntrode_electrode_group_channel_map's map
@@ -60,7 +62,9 @@ const ChannelMap = (prop) => {
                     onChange={updateFormArray}
                   />
                   <div className="container">
-                    <div className="item1">Map</div>
+                    <div className="item1">
+                      Map  <InfoIcon infoText="Electrode Map. Right Hand Side is expected mapping. Left Hand Side is actual mapping"/>
+                    </div>
                     <div className="item2">
                       <div className="ntrode-maps">
                         {mapKeys.map((nTrodeKey, nTrodeKeyIndex) => {
