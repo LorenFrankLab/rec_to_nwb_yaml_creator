@@ -17,6 +17,7 @@ import ArrayUpdateMenu from './ArrayUpdateMenu';
 import CheckboxList from './element/CheckboxList';
 import RadioList from './element/RadioList';
 import ListElement from './element/ListElement';
+import ArrayItemControl from './element/ArrayItemControl';
 import {
   commaSeparatedStringToNumber,
   formatCommaSeparatedString,
@@ -61,14 +62,6 @@ export function App() {
    * Stores JSON schema
    */
   const schema = useRef({});
-
-  /**
-   * Sets form to default values
-   */
-  const resetForm = (e) => {
-    e?.preventDefault();
-    setFormData(structuredClone(defaultYMLValues)); // set form to default values
-  };
 
   /**
    * Initiates importing an existing YAML file
@@ -242,9 +235,14 @@ export function App() {
    * @returns null
    */
   const onMapInput = (e, metaData) => {
+    const { key, index, shankNumber, electrodeGroupId, emptyOption } = metaData;
     const { target } = e;
-    const { value } = target;
-    const { key, index, shankNumber, electrodeGroupId } = metaData;
+    let { value } = target;
+
+    if ([emptyOption, -1, ''].includes(value?.trim())) {
+      value = -1;
+    }
+
     const form = structuredClone(formData);
     const nTrodes = form[key].filter(
       (item) => item.electrode_group_id === electrodeGroupId
@@ -274,18 +272,6 @@ export function App() {
     updateFormData(name, inputValue, key, index);
   };
 
-  /**
-   * Updates a file path after selection
-   *
-   * @param {object} e Event object
-   * @param {object} metaData Supporting Data
-   */
-  const itemFileUpload = (e, value, metaData) => {
-    const { name } = e.target;
-    const { key, index } = metaData || {};
-
-    updateFormData(name, value, key, index);
-  };
 
 /**
    * Controls selection of ntrode
@@ -396,23 +382,48 @@ const addArrayItem = (key, count = 1) => {
   setFormData(form);
 };
 
-const removeArrayItem = (key) => {
-  const form = structuredClone(formData);
-  form[key].pop();
+const removeArrayItem = (index, key) => {
+  // eslint-disable-next-line no-restricted-globals
+  if (window.confirm(`Remove index ${index} from ${key}?`)) {
+    const form = structuredClone(formData);
+    const items = structuredClone(form[key]);
 
-  setFormData(form);
+    if (!items || items.length === 0) {
+      return null;
+    }
+
+    items.splice(index, 1);
+    form[key] = items
+    setFormData(form);
+  }
 };
 
-const removeElectrodeGroupItem = () => {
-  const form = structuredClone(formData);
-  const item = form.electrode_groups.pop();
+const removeElectrodeGroupItem = (index, key) => {
+  if (window.confirm(`Remove index ${index} from ${key}?`)) {
+    const form = structuredClone(formData);
+    const items = structuredClone(form[key]);
 
-  form.ntrode_electrode_group_channel_map =
-    form.ntrode_electrode_group_channel_map.filter(
-      (nTrode) => nTrode.electro_group_id === item.id
-    );
+    if (!items || items.length === 0) {
+      return null;
+    }
 
-  setFormData(form);
+    const item = structuredClone(items[index]);
+
+    if (!item) {
+      return null;
+    }
+
+    // remove ntrode related to electrode_groups
+    form.ntrode_electrode_group_channel_map =
+      form.ntrode_electrode_group_channel_map.filter(
+        (nTrode) => nTrode.electro_group_id === item.id
+      );
+
+    // remove electrode_groups item
+    items.splice(index, 1);
+    form[key] = items
+    setFormData(form);
+  }
 };
 
 /**
@@ -624,6 +635,27 @@ const rulesValidation = (jsonFileContent) => {
 };
 
 /**
+ * Open all Detail elements
+ */
+const openDetailsElement = () => {
+  const details = document.querySelectorAll('details');
+
+  details.forEach((detail) => {
+    detail.open = true;
+  });
+}
+
+/**
+ * submit form. This is this way as there is no official beforeSubmit method
+ *
+ * @param {object} e Javascript object
+ */
+const submitForm = (e) => {
+  openDetailsElement();
+  document.querySelector('form').requestSubmit();
+}
+
+/**
  * Create the YML file
  *
  * @param {object} e event parameter
@@ -654,7 +686,7 @@ const generateYMLFile = (e) => {
   }
 };
 
-const duplicateItem = (index, key) => {
+const duplicateArrayItem = (index, key) => {
   const form = structuredClone(formData);
   const item = structuredClone(form[key][index]);
 
@@ -904,7 +936,7 @@ useEffect(() => {
     <form
       encType="multipart/form-data"
       className="form-control"
-      name="nwbData"
+      name="js-nwbData"
       onReset={(e) => clearYMLFile(e)}
       onSubmit={(e) => {
         generateYMLFile(e);
@@ -1004,8 +1036,8 @@ useEffect(() => {
         />
       </div>
       <div id="subject-area" className="area-region">
-        <fieldset>
-          <legend>Subject</legend>
+        <details open>
+          <summary>Subject</summary>
           <div id="subject-field" className="form-container">
             <InputElement
               id="subject-description"
@@ -1085,31 +1117,29 @@ useEffect(() => {
               onBlur={(e) => onBlur(e, { key: 'subject' })}
             />
           </div>
-        </fieldset>
+        </details>
       </div>
       <div id="data_acq_device-area" className="area-region">
-        <fieldset>
-          <legend>Data Acq Device</legend>
+        <details open>
+          <summary>Data Acq Device</summary>
           <div>
             {formData?.data_acq_device.map((dataAcqDevice, index) => {
               const key = 'data_acq_device';
 
               return (
-                <fieldset
+                <details open
                   key={sanitizeTitle(
                     `${dataAcqDevice.name}-dad-${index}`
                   )}
                   className="array-item"
                 >
-                  <legend> Item #{index + 1} </legend>
-                  <div className="duplicate-item">
-                    <button
-                      type="button"
-                      onClick={() => duplicateItem(index, key)}
-                    >
-                      Duplicate
-                    </button>
-                  </div>
+                  <summary> Item #{index + 1} </summary>
+                  <ArrayItemControl
+                    index={index}
+                    keyValue={key}
+                    duplicateArrayItem={duplicateArrayItem}
+                    removeArrayItem={removeArrayItem}
+                  />
                   <div
                     id={`dataAcqDevice-${index + 1}`}
                     className="form-container"
@@ -1179,7 +1209,7 @@ useEffect(() => {
                       dataItems={dataAcqDeviceADCCircuit()}
                     />
                   </div>
-                </fieldset>
+                </details>
               );
             })}
           </div>
@@ -1187,30 +1217,28 @@ useEffect(() => {
             itemsKey="data_acq_device"
             items={formData.data_acq_device}
             addArrayItem={addArrayItem}
-            removeArrayItem={removeArrayItem}
           />
-        </fieldset>
+        </details>
       </div>
       <div id="cameras-area" className="area-region">
-        <fieldset>
-          <legend>Cameras</legend>
+        <details open>
+          <summary>Cameras</summary>
           <div className="form-container">
             {formData?.cameras?.map((cameras, index) => {
               const key = 'cameras';
               return (
-                <fieldset
+                <details
+                  open
                   key={`cameras-${sanitizeTitle(cameras.id)}`}
                   className="array-item"
                 >
-                  <legend> Item #{index + 1} </legend>
-                  <div className="duplicate-item">
-                    <button
-                      type="button"
-                      onClick={() => duplicateItem(index, key)}
-                    >
-                      Duplicate
-                    </button>
-                  </div>
+                  <summary> Item #{index + 1} </summary>
+                  <ArrayItemControl
+                    index={index}
+                    keyValue={key}
+                    duplicateArrayItem={duplicateArrayItem}
+                    removeArrayItem={removeArrayItem}
+                  />
                   <div className="form-container">
                     <InputElement
                       id={`cameras-id-${index}`}
@@ -1305,7 +1333,7 @@ useEffect(() => {
                       }
                     />
                   </div>
-                </fieldset>
+                </details>
               );
             })}
           </div>
@@ -1313,31 +1341,29 @@ useEffect(() => {
             itemsKey="cameras"
             items={formData.cameras}
             addArrayItem={addArrayItem}
-            removeArrayItem={removeArrayItem}
           />
-        </fieldset>
+        </details>
       </div>
       <div id="tasks-area" className="area-region">
-        <fieldset>
-          <legend>Tasks</legend>
+        <details open>
+          <summary>Tasks</summary>
           <div id="tasks-field" className="form-container">
             {formData.tasks.map((tasks, index) => {
               const key = 'tasks';
 
               return (
-                <fieldset
+                <details
+                  open
                   key={sanitizeTitle(`${tasks.task_name}-ts-${index}`)}
                   className="array-item"
                 >
-                  <legend> Item #{index + 1} </legend>
-                  <div className="duplicate-item">
-                    <button
-                      type="button"
-                      onClick={() => duplicateItem(index, key)}
-                    >
-                      Duplicate
-                    </button>
-                  </div>
+                  <summary> Item #{index + 1} </summary>
+                  <ArrayItemControl
+                    index={index}
+                    keyValue={key}
+                    duplicateArrayItem={duplicateArrayItem}
+                    removeArrayItem={removeArrayItem}
+                  />
                   <div className="form-container">
                     <InputElement
                       id={`tasks-task_name-${index}`}
@@ -1418,7 +1444,7 @@ useEffect(() => {
                       }}
                   />
                   </div>
-                </fieldset>
+                </details>
               );
             })}
           </div>
@@ -1426,34 +1452,32 @@ useEffect(() => {
             itemsKey="tasks"
             items={formData.tasks}
             addArrayItem={addArrayItem}
-            removeArrayItem={removeArrayItem}
           />
-        </fieldset>
+        </details>
       </div>
       <div id="associated_files-area" className="area-region">
-        <fieldset>
-          <legend>Associated Files</legend>
+        <details open>
+          <summary>Associated Files</summary>
           <div className="form-container">
             {formData.associated_files.map(
               (associatedFilesName, index) => {
                 const key = 'associated_files';
 
                 return (
-                  <fieldset
+                  <details
+                    open
                     key={sanitizeTitle(
                       `${associatedFilesName.name}-afn-${index}`
                     )}
                     className="array-item"
                   >
-                    <legend> Item #{index + 1} </legend>
-                    <div className="duplicate-item">
-                      <button
-                        type="button"
-                        onClick={() => duplicateItem(index, key)}
-                      >
-                        Duplicate
-                      </button>
-                    </div>
+                    <summary> Item #{index + 1} </summary>
+                    <ArrayItemControl
+                      index={index}
+                      keyValue={key}
+                      duplicateArrayItem={duplicateArrayItem}
+                      removeArrayItem={removeArrayItem}
+                    />
                     <div className="form-container">
                       <InputElement
                         id={`associated_files-name-${index}`}
@@ -1517,7 +1541,7 @@ useEffect(() => {
                         onChange={updateFormData}
                       />
                     </div>
-                  </fieldset>
+                  </details>
                 );
               }
             )}
@@ -1526,13 +1550,12 @@ useEffect(() => {
             itemsKey="associated_files"
             items={formData.associated_files}
             addArrayItem={addArrayItem}
-            removeArrayItem={removeArrayItem}
           />
-        </fieldset>
+        </details>
       </div>
       <div id="associated_video_files-area" className="area-region">
-        <fieldset>
-          <legend>Associated Video Files</legend>
+        <details open>
+          <summary>Associated Video Files</summary>
           <div
             id="associated_video_files-field"
             className="form-container"
@@ -1541,21 +1564,20 @@ useEffect(() => {
               (associatedVideoFiles, index) => {
                 const key = 'associated_video_files';
                 return (
-                  <fieldset
+                  <details
+                    open
                     key={sanitizeTitle(
                       `${associatedVideoFiles.name}-avf-${index}`
                     )}
                     className="array-item"
                   >
-                    <legend> Item #{index + 1} </legend>
-                    <div className="duplicate-item">
-                      <button
-                        type="button"
-                        onClick={() => duplicateItem(index, key)}
-                      >
-                        Duplicate
-                      </button>
-                    </div>
+                    <summary> Item #{index + 1} </summary>
+                    <ArrayItemControl
+                      index={index}
+                      keyValue={key}
+                      duplicateArrayItem={duplicateArrayItem}
+                      removeArrayItem={removeArrayItem}
+                    />
                     <div className="form-container">
                       <InputElement
                         id={`associated_video_files-name-${index}`}
@@ -1607,7 +1629,7 @@ useEffect(() => {
                         onChange={updateFormData}
                       />
                     </div>
-                  </fieldset>
+                  </details>
                 );
               }
             )}
@@ -1616,13 +1638,12 @@ useEffect(() => {
             itemsKey="associated_video_files"
             items={formData.associated_video_files}
             addArrayItem={addArrayItem}
-            removeArrayItem={removeArrayItem}
           />
-        </fieldset>
+        </details>
       </div>
       <div id="units-area" className="area-region">
-        <fieldset>
-          <legend>Units</legend>
+        <details open>
+          <summary>Units</summary>
           <div className="form-container">
             <InputElement
               id="analog"
@@ -1644,7 +1665,7 @@ useEffect(() => {
               onBlur={(e) => onBlur(e, { key: 'units' })}
             />
           </div>
-        </fieldset>
+        </details>
       </div>
       <div id="times_period_multiplier-area" className="area-region">
         <InputElement
@@ -1683,29 +1704,28 @@ useEffect(() => {
         />
       </div>
       <div id="behavioral_events-area" className="area-region">
-        <fieldset>
-          <legend>Behavioral Events</legend>
+        <details open>
+          <summary>Behavioral Events</summary>
           <div className="form-container">
             {formData?.behavioral_events.map(
               (behavioralEvents, index) => {
                 const key = 'behavioral_events';
 
                 return (
-                  <fieldset
+                  <details
+                    open
                     key={sanitizeTitle(
                       `${behavioralEvents.description}-be-${index}`
                     )}
                     className="array-item"
                   >
-                    <legend> Item #{index + 1} </legend>
-                    <div className="duplicate-item">
-                      <button
-                        type="button"
-                        onClick={() => duplicateItem(index, key)}
-                      >
-                        Duplicate
-                      </button>
-                    </div>
+                    <summary> Item #{index + 1} </summary>
+                    <ArrayItemControl
+                      index={index}
+                      keyValue={key}
+                      duplicateArrayItem={duplicateArrayItem}
+                      removeArrayItem={removeArrayItem}
+                    />
                     <div className="form-container">
                         <SelectInputPairElement
                           id={`behavioral_events-description-${index}`}
@@ -1738,7 +1758,7 @@ useEffect(() => {
                         }
                       />
                     </div>
-                  </fieldset>
+                  </details>
                 );
               }
             )}
@@ -1747,13 +1767,12 @@ useEffect(() => {
             itemsKey="behavioral_events"
             items={formData.behavioral_events}
             addArrayItem={addArrayItem}
-            removeArrayItem={removeArrayItem}
           />
-        </fieldset>
+        </details>
       </div>
       <div id="device-area" className="area-region">
-        <fieldset>
-          <legend>Device</legend>
+        <details open>
+          <summary>Device</summary>
           <div className="form-container">
           <ListElement
             id="device-name"
@@ -1770,11 +1789,11 @@ useEffect(() => {
             }}
           />
         </div>
-      </fieldset>
+      </details>
     </div>
       <div id="electrode_groups-area" className="area-region">
-        <fieldset>
-          <legend>Electrode Groups</legend>
+        <details open>
+          <summary>Electrode Groups</summary>
           <div className="form-container">
             {formData?.electrode_groups?.map((electrodeGroup, index) => {
               const electrodeGroupId = electrodeGroup.id;
@@ -1785,22 +1804,19 @@ useEffect(() => {
               const key = 'electrode_groups';
 
               return (
-                <fieldset
+                <details
+                  open
                   id={`electrode_group_item_${electrodeGroupId}-area`}
                   key={electrodeGroupId}
                   className="array-item"
                 >
-                  <legend> Item #{index + 1} </legend>
-                  <div className="duplicate-item">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        duplicateElectrodeGroupItem(index, key)
-                      }
-                    >
-                      Duplicate
-                    </button>
-                  </div>
+                  <summary> Item #{index + 1} </summary>
+                  <ArrayItemControl
+                    index={index}
+                    keyValue={key}
+                    duplicateArrayItem={duplicateElectrodeGroupItem}
+                    removeArrayItem={removeElectrodeGroupItem}
+                  />
                   <div className="form-container">
                     <InputElement
                       id={`electrode_groups-id-${index}`}
@@ -1958,7 +1974,7 @@ useEffect(() => {
                       />
                     </div>
                   </div>
-                </fieldset>
+                </details>
               );
             })}
           </div>
@@ -1967,23 +1983,22 @@ useEffect(() => {
             allowMultiple
             items={formData.electrode_groups}
             addArrayItem={addArrayItem}
-            removeArrayItem={removeElectrodeGroupItem}
           />
-        </fieldset>
+        </details>
       </div>
       <div className="submit-button-parent">
         <button
-          type="submit"
+          type="button"
           className="submit-button generate-button"
           title="Generate a YML file based on values in fields"
+          onClick={(e) => submitForm(e)}
         >
           <span>Generate YML File</span>
         </button>
         <button
-          type="button"
+          type="reset"
           className="submit-button reset-button"
           title="Generate a YML file based on values in fields"
-          onClick={(e) => resetForm(e)}
         >
           <span>Reset</span>
         </button>

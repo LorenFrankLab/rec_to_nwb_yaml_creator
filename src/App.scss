@@ -336,8 +336,23 @@ a:hover {
   }
 }
 
+.button-danger {
+  color: #fff;
+  background-color: #dc3545;
+  border-color: #dc3545;
+}
+
 .array-item {
   margin-top: 10px;
+
+  &__controls {
+    display: flex;
+    justify-content: right;
+
+    button {
+      margin-left: 5px;
+    }
+  }
 }
 
 .nTrode-container {
@@ -357,14 +372,14 @@ a:hover {
   margin: 5px;
   padding: 5px;
   border: 2px solid darkgray;
-  width: 85px;
+  width: 60px;
 
   label {
     margin-right: 5px;
   }
 
   select {
-    width: 3.5rem;
+    width: 46px;
   }
 }
 
@@ -462,6 +477,54 @@ a.nav-link:hover {
   }
 }
 /***** List of items *****/
+
+//--- Details/Summary settings
+details {
+  border: 1px solid black;
+  border-radius: 4px;
+  padding: 0.5em 0.5em 0;
+
+  &:hover,
+  &:focus {
+    background: #FAFAFA;
+  }
+
+  &[open] {
+    padding: 0.5em;
+
+    summary {
+      border-bottom: 1px solid black;
+      margin-bottom: 0.5em;
+    }
+  }
+
+  &[closed] {
+    border-bottom: 0;
+    margin-bottom: 0;
+  }
+
+  & summary {
+    font-weight: bold;
+    margin: -0.5em -0.5em 0;
+    padding: 0.5em;
+    cursor: pointer;
+  }
+
+  & .array-item {
+    summary {
+      margin-bottom: 0 !important;
+      border-bottom: 0 solid black !important;
+    }
+
+    &[open] summary {
+      margin-bottom: 5px !important;
+      border-bottom: 1px solid black !important;
+    }
+  }
+}
+
+//-----------------------------
+
 
 @media (min-width: 750px) {
   .page-container__nav__content {
