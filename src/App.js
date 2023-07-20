@@ -17,6 +17,7 @@ import ArrayUpdateMenu from './ArrayUpdateMenu';
 import CheckboxList from './element/CheckboxList';
 import RadioList from './element/RadioList';
 import ListElement from './element/ListElement';
+import ArrayItemControl from './element/ArrayItemControl';
 import {
   commaSeparatedStringToNumber,
   formatCommaSeparatedString,
@@ -61,14 +62,6 @@ export function App() {
    * Stores JSON schema
    */
   const schema = useRef({});
-
-  /**
-   * Sets form to default values
-   */
-  const resetForm = (e) => {
-    e?.preventDefault();
-    setFormData(structuredClone(defaultYMLValues)); // set form to default values
-  };
 
   /**
    * Initiates importing an existing YAML file
@@ -242,9 +235,14 @@ export function App() {
    * @returns null
    */
   const onMapInput = (e, metaData) => {
+    const { key, index, shankNumber, electrodeGroupId, emptyOption } = metaData;
     const { target } = e;
-    const { value } = target;
-    const { key, index, shankNumber, electrodeGroupId } = metaData;
+    let { value } = target;
+
+    if ([emptyOption, -1, ''].includes(value?.trim())) {
+      value = -1;
+    }
+
     const form = structuredClone(formData);
     const nTrodes = form[key].filter(
       (item) => item.electrode_group_id === electrodeGroupId
@@ -274,18 +272,6 @@ export function App() {
     updateFormData(name, inputValue, key, index);
   };
 
-  /**
-   * Updates a file path after selection
-   *
-   * @param {object} e Event object
-   * @param {object} metaData Supporting Data
-   */
-  const itemFileUpload = (e, value, metaData) => {
-    const { name } = e.target;
-    const { key, index } = metaData || {};
-
-    updateFormData(name, value, key, index);
-  };
 
 /**
    * Controls selection of ntrode
@@ -396,23 +382,48 @@ const addArrayItem = (key, count = 1) => {
   setFormData(form);
 };
 
-const removeArrayItem = (key) => {
-  const form = structuredClone(formData);
-  form[key].pop();
+const removeArrayItem = (index, key) => {
+  // eslint-disable-next-line no-restricted-globals
+  if (window.confirm(`Remove index ${index} from ${key}?`)) {
+    const form = structuredClone(formData);
+    const items = structuredClone(form[key]);
 
-  setFormData(form);
+    if (!items || items.length === 0) {
+      return null;
+    }
+
+    items.splice(index, 1);
+    form[key] = items
+    setFormData(form);
+  }
 };
 
-const removeElectrodeGroupItem = () => {
-  const form = structuredClone(formData);
-  const item = form.electrode_groups.pop();
+const removeElectrodeGroupItem = (index, key) => {
+  if (window.confirm(`Remove index ${index} from ${key}?`)) {
+    const form = structuredClone(formData);
+    const items = structuredClone(form[key]);
 
-  form.ntrode_electrode_group_channel_map =
-    form.ntrode_electrode_group_channel_map.filter(
-      (nTrode) => nTrode.electro_group_id === item.id
-    );
+    if (!items || items.length === 0) {
+      return null;
+    }
 
-  setFormData(form);
+    const item = structuredClone(items[index]);
+
+    if (!item) {
+      return null;
+    }
+
+    // remove ntrode related to electrode_groups
+    form.ntrode_electrode_group_channel_map =
+      form.ntrode_electrode_group_channel_map.filter(
+        (nTrode) => nTrode.electro_group_id === item.id
+      );
+
+    // remove electrode_groups item
+    items.splice(index, 1);
+    form[key] = items
+    setFormData(form);
+  }
 };
 
 /**
@@ -624,6 +635,27 @@ const rulesValidation = (jsonFileContent) => {
 };
 
 /**
+ * Open all Detail elements
+ */
+const openDetailsElement = () => {
+  const details = document.querySelectorAll('details');
+
+  details.forEach((detail) => {
+    detail.open = true;
+  });
+}
+
+/**
+ * submit form. This is this way as there is no official beforeSubmit method
+ *
+ * @param {object} e Javascript object
+ */
+const submitForm = (e) => {
+  openDetailsElement();
+  document.querySelector('form').requestSubmit();
+}
+
+/**
  * Create the YML file
  *
  * @param {object} e event parameter
@@ -654,7 +686,7 @@ const generateYMLFile = (e) => {
   }
 };
 
-const duplicateItem = (index, key) => {
+const duplicateArrayItem = (index, key) => {
   const form = structuredClone(formData);
   const item = structuredClone(form[key][index]);
 
@@ -904,7 +936,7 @@ useEffect(() => {
     <form
       encType="multipart/form-data"
       className="form-control"
-      name="nwbData"
+      name="js-nwbData"
       onReset={(e) => clearYMLFile(e)}
       onSubmit={(e) => {
         generateYMLFile(e);
@@ -957,7 +989,7 @@ useEffect(() => {
           type="text"
           name="experiment_description"
           title="Experiment Description"
-          placeholder="Name of the Project, e.g. - Optogenetic Stimulation"
+          placeholder="Description of subject and where subject came from (e.g., breeder, if animal)"
           required
           defaultValue={formData.experiment_description}
           onBlur={(e) => onBlur(e)}
@@ -1004,8 +1036,8 @@ useEffect(() => {
         />
       </div>
       <div id="subject-area" className="area-region">
-        <fieldset>
-          <legend>Subject</legend>
+        <details open>
+          <summary>Subject</summary>
           <div id="subject-field" className="form-container">
             <InputElement
               id="subject-description"
@@ -1032,7 +1064,7 @@ useEffect(() => {
               title="Genotype"
               defaultValue={formData.subject.genotype}
               required
-              placeholder="Type to find a genetic summary of animal model/patient/specimen"
+              placeholder="Genetic strain. If absent, assume Wild Type (WT)"
               dataItems={genotypes()}
               onBlur={(e) => itemSelected(e, { key: 'subject' })}
             />
@@ -1040,7 +1072,7 @@ useEffect(() => {
               id="subject-sex"
               name="sex"
               title="Sex"
-              placeholder="Select a Sex - M (Male), F (Female), U (Unknown), O (Other)"
+              placeholder="Sex of subject, single letter identifier	"
               dataItems={genderAcronym()}
               defaultValue={formData.subject.sex}
               onChange={(e) => itemSelected(e, { key: 'subject' })}
@@ -1052,7 +1084,7 @@ useEffect(() => {
               title="Subject Id"
               required
               defaultValue={formData.subject.subject_id}
-              placeholder="Identification code/number of animal model/patient"
+              placeholder="ID of animal/person used/participating in experiment (lab convention)"
               onBlur={(e) => onBlur(e, { key: 'subject' })}
             />
             <InputElement
@@ -1061,7 +1093,7 @@ useEffect(() => {
               name="date_of_birth"
               title="Date of Birth"
               defaultValue={formData.subject.date_of_birth}
-              placeholder="Select Date of Birth"
+              placeholder="Date of birth of subject"
               required
               onBlur={(e) => {
                 const { value, name, type } = e.target;
@@ -1081,35 +1113,33 @@ useEffect(() => {
               title="Weight (grams)"
               required
               defaultValue={formData.subject.weight}
-              placeholder="Mass of animal model/patient in grams"
+              placeholder="Weight at time of experiment, at time of surgery and at other important times (in grams)"
               onBlur={(e) => onBlur(e, { key: 'subject' })}
             />
           </div>
-        </fieldset>
+        </details>
       </div>
       <div id="data_acq_device-area" className="area-region">
-        <fieldset>
-          <legend>Data Acq Device</legend>
+        <details open>
+          <summary>Data Acq Device</summary>
           <div>
             {formData?.data_acq_device.map((dataAcqDevice, index) => {
               const key = 'data_acq_device';
 
               return (
-                <fieldset
+                <details open
                   key={sanitizeTitle(
                     `${dataAcqDevice.name}-dad-${index}`
                   )}
                   className="array-item"
                 >
-                  <legend> Item #{index + 1} </legend>
-                  <div className="duplicate-item">
-                    <button
-                      type="button"
-                      onClick={() => duplicateItem(index, key)}
-                    >
-                      Duplicate
-                    </button>
-                  </div>
+                  <summary> Item #{index + 1} </summary>
+                  <ArrayItemControl
+                    index={index}
+                    keyValue={key}
+                    duplicateArrayItem={duplicateArrayItem}
+                    removeArrayItem={removeArrayItem}
+                  />
                   <div
                     id={`dataAcqDevice-${index + 1}`}
                     className="form-container"
@@ -1121,7 +1151,7 @@ useEffect(() => {
                       title="Name"
                       required
                       defaultValue={dataAcqDevice.name}
-                      placeholder="Type to find a name of the data acquisition company, e.g - SpikeGadgets"
+                      placeholder="Typically a number"
                       onBlur={(e) =>
                         onBlur(e, {
                           key,
@@ -1137,7 +1167,7 @@ useEffect(() => {
                       title="System"
                       required
                       defaultValue={dataAcqDevice.system}
-                      placeholder="Type to find a system"
+                      placeholder="System of device"
                       onBlur={(e) =>
                         onBlur(e, {
                           key,
@@ -1179,7 +1209,7 @@ useEffect(() => {
                       dataItems={dataAcqDeviceADCCircuit()}
                     />
                   </div>
-                </fieldset>
+                </details>
               );
             })}
           </div>
@@ -1187,30 +1217,28 @@ useEffect(() => {
             itemsKey="data_acq_device"
             items={formData.data_acq_device}
             addArrayItem={addArrayItem}
-            removeArrayItem={removeArrayItem}
           />
-        </fieldset>
+        </details>
       </div>
       <div id="cameras-area" className="area-region">
-        <fieldset>
-          <legend>Cameras</legend>
+        <details open>
+          <summary>Cameras</summary>
           <div className="form-container">
             {formData?.cameras?.map((cameras, index) => {
               const key = 'cameras';
               return (
-                <fieldset
+                <details
+                  open
                   key={`cameras-${sanitizeTitle(cameras.id)}`}
                   className="array-item"
                 >
-                  <legend> Item #{index + 1} </legend>
-                  <div className="duplicate-item">
-                    <button
-                      type="button"
-                      onClick={() => duplicateItem(index, key)}
-                    >
-                      Duplicate
-                    </button>
-                  </div>
+                  <summary> Item #{index + 1} </summary>
+                  <ArrayItemControl
+                    index={index}
+                    keyValue={key}
+                    duplicateArrayItem={duplicateArrayItem}
+                    removeArrayItem={removeArrayItem}
+                  />
                   <div className="form-container">
                     <InputElement
                       id={`cameras-id-${index}`}
@@ -1218,7 +1246,7 @@ useEffect(() => {
                       name="id"
                       title="Camera Id"
                       defaultValue={cameras.id}
-                      placeholder="Id"
+                      placeholder="Typically a number	"
                       required
                       onBlur={(e) =>
                         onBlur(e, {
@@ -1265,7 +1293,7 @@ useEffect(() => {
                       name="model"
                       title="model"
                       defaultValue={cameras.model}
-                      placeholder="model"
+                      placeholder="Model of this camera"
                       required
                       onBlur={(e) =>
                         onBlur(e, {
@@ -1280,7 +1308,7 @@ useEffect(() => {
                       name="lens"
                       title="lens"
                       defaultValue={cameras.lens}
-                      placeholder="Lens"
+                      placeholder="Info about lens in this camera"
                       required
                       onBlur={(e) =>
                         onBlur(e, {
@@ -1295,7 +1323,7 @@ useEffect(() => {
                       name="camera_name"
                       title="Camera Name"
                       defaultValue={cameras.camera_name}
-                      placeholder="Camera Name"
+                      placeholder="Name of this camera"
                       required
                       onBlur={(e) =>
                         onBlur(e, {
@@ -1305,7 +1333,7 @@ useEffect(() => {
                       }
                     />
                   </div>
-                </fieldset>
+                </details>
               );
             })}
           </div>
@@ -1313,31 +1341,29 @@ useEffect(() => {
             itemsKey="cameras"
             items={formData.cameras}
             addArrayItem={addArrayItem}
-            removeArrayItem={removeArrayItem}
           />
-        </fieldset>
+        </details>
       </div>
       <div id="tasks-area" className="area-region">
-        <fieldset>
-          <legend>Tasks</legend>
+        <details open>
+          <summary>Tasks</summary>
           <div id="tasks-field" className="form-container">
             {formData.tasks.map((tasks, index) => {
               const key = 'tasks';
 
               return (
-                <fieldset
+                <details
+                  open
                   key={sanitizeTitle(`${tasks.task_name}-ts-${index}`)}
                   className="array-item"
                 >
-                  <legend> Item #{index + 1} </legend>
-                  <div className="duplicate-item">
-                    <button
-                      type="button"
-                      onClick={() => duplicateItem(index, key)}
-                    >
-                      Duplicate
-                    </button>
-                  </div>
+                  <summary> Item #{index + 1} </summary>
+                  <ArrayItemControl
+                    index={index}
+                    keyValue={key}
+                    duplicateArrayItem={duplicateArrayItem}
+                    removeArrayItem={removeArrayItem}
+                  />
                   <div className="form-container">
                     <InputElement
                       id={`tasks-task_name-${index}`}
@@ -1345,7 +1371,7 @@ useEffect(() => {
                       name="task_name"
                       title="Task Name"
                       defaultValue={tasks.task_name}
-                      placeholder="Task Name"
+                      placeholder="E.g. linear track, sleep"
                       required
                       onBlur={(e) =>
                         onBlur(e, {
@@ -1375,7 +1401,7 @@ useEffect(() => {
                       name="task_environment"
                       title="Task Environment"
                       defaultValue={tasks.task_environment}
-                      placeholder="Task Environment"
+                      placeholder="Where the task occurs (e.g. sleep box)"
                       required
                       onBlur={(e) =>
                         onBlur(e, {
@@ -1391,7 +1417,7 @@ useEffect(() => {
                       title="Camera Id"
                       objectKind="Camera"
                       defaultValue={tasks.camera_id}
-                      placeholder="Camera ids"
+                      placeholder="Camera(s) recording this task"
                       dataItems={cameraIdsDefined}
                       updateFormArray={updateFormArray}
                       metaData={{
@@ -1408,7 +1434,7 @@ useEffect(() => {
                       name="task_epochs"
                       title="Task Epochs"
                       defaultValue={tasks.task_epochs}
-                      placeholder="Task Epochs-values"
+                      placeholder="What epochs this task is applied	"
                       inputPlaceholder="No task epoch"
                       updateFormData={updateFormData}
                       metaData={{
@@ -1418,7 +1444,7 @@ useEffect(() => {
                       }}
                   />
                   </div>
-                </fieldset>
+                </details>
               );
             })}
           </div>
@@ -1426,34 +1452,32 @@ useEffect(() => {
             itemsKey="tasks"
             items={formData.tasks}
             addArrayItem={addArrayItem}
-            removeArrayItem={removeArrayItem}
           />
-        </fieldset>
+        </details>
       </div>
       <div id="associated_files-area" className="area-region">
-        <fieldset>
-          <legend>Associated Files</legend>
+        <details open>
+          <summary>Associated Files</summary>
           <div className="form-container">
             {formData.associated_files.map(
               (associatedFilesName, index) => {
                 const key = 'associated_files';
 
                 return (
-                  <fieldset
+                  <details
+                    open
                     key={sanitizeTitle(
                       `${associatedFilesName.name}-afn-${index}`
                     )}
                     className="array-item"
                   >
-                    <legend> Item #{index + 1} </legend>
-                    <div className="duplicate-item">
-                      <button
-                        type="button"
-                        onClick={() => duplicateItem(index, key)}
-                      >
-                        Duplicate
-                      </button>
-                    </div>
+                    <summary> Item #{index + 1} </summary>
+                    <ArrayItemControl
+                      index={index}
+                      keyValue={key}
+                      duplicateArrayItem={duplicateArrayItem}
+                      removeArrayItem={removeArrayItem}
+                    />
                     <div className="form-container">
                       <InputElement
                         id={`associated_files-name-${index}`}
@@ -1476,7 +1500,7 @@ useEffect(() => {
                         name="description"
                         title="Description"
                         defaultValue={associatedFilesName.description}
-                        placeholder="description"
+                        placeholder="Description of the file"
                         required
                         onBlur={(e) =>
                           onBlur(e, {
@@ -1506,7 +1530,7 @@ useEffect(() => {
                         title="Task Epoch"
                         objectKind="Task"
                         defaultValue={associatedFilesName.task_epoch}
-                        placeholder="Task Epoch"
+                        placeholder="What tasks/epochs was this code run for"
                         dataItems={taskEpochsDefined}
                         updateFormData={updateFormData}
                         metaData={{
@@ -1517,7 +1541,7 @@ useEffect(() => {
                         onChange={updateFormData}
                       />
                     </div>
-                  </fieldset>
+                  </details>
                 );
               }
             )}
@@ -1526,13 +1550,12 @@ useEffect(() => {
             itemsKey="associated_files"
             items={formData.associated_files}
             addArrayItem={addArrayItem}
-            removeArrayItem={removeArrayItem}
           />
-        </fieldset>
+        </details>
       </div>
       <div id="associated_video_files-area" className="area-region">
-        <fieldset>
-          <legend>Associated Video Files</legend>
+        <details open>
+          <summary>Associated Video Files</summary>
           <div
             id="associated_video_files-field"
             className="form-container"
@@ -1541,21 +1564,20 @@ useEffect(() => {
               (associatedVideoFiles, index) => {
                 const key = 'associated_video_files';
                 return (
-                  <fieldset
+                  <details
+                    open
                     key={sanitizeTitle(
                       `${associatedVideoFiles.name}-avf-${index}`
                     )}
                     className="array-item"
                   >
-                    <legend> Item #{index + 1} </legend>
-                    <div className="duplicate-item">
-                      <button
-                        type="button"
-                        onClick={() => duplicateItem(index, key)}
-                      >
-                        Duplicate
-                      </button>
-                    </div>
+                    <summary> Item #{index + 1} </summary>
+                    <ArrayItemControl
+                      index={index}
+                      keyValue={key}
+                      duplicateArrayItem={duplicateArrayItem}
+                      removeArrayItem={removeArrayItem}
+                    />
                     <div className="form-container">
                       <InputElement
                         id={`associated_video_files-name-${index}`}
@@ -1579,7 +1601,7 @@ useEffect(() => {
                       title="Camera Id"
                       objectKind="Camera"
                       defaultValue={associatedVideoFiles.camera_id}
-                      placeholder="Camera Id"
+                      placeholder="What camera recorded this video	"
                       dataItems={cameraIdsDefined}
                       updateFormData={updateFormData}
                       metaData={{
@@ -1596,7 +1618,7 @@ useEffect(() => {
                         title="Task Epoch"
                         objectKind="Task"
                         defaultValue={associatedVideoFiles.task_epoch}
-                        placeholder="Task Epochs"
+                        placeholder="What epoch was recorded in this video"
                         dataItems={taskEpochsDefined}
                         updateFormData={updateFormData}
                         metaData={{
@@ -1607,7 +1629,7 @@ useEffect(() => {
                         onChange={updateFormData}
                       />
                     </div>
-                  </fieldset>
+                  </details>
                 );
               }
             )}
@@ -1616,13 +1638,12 @@ useEffect(() => {
             itemsKey="associated_video_files"
             items={formData.associated_video_files}
             addArrayItem={addArrayItem}
-            removeArrayItem={removeArrayItem}
           />
-        </fieldset>
+        </details>
       </div>
       <div id="units-area" className="area-region">
-        <fieldset>
-          <legend>Units</legend>
+        <details open>
+          <summary>Units</summary>
           <div className="form-container">
             <InputElement
               id="analog"
@@ -1644,7 +1665,7 @@ useEffect(() => {
               onBlur={(e) => onBlur(e, { key: 'units' })}
             />
           </div>
-        </fieldset>
+        </details>
       </div>
       <div id="times_period_multiplier-area" className="area-region">
         <InputElement
@@ -1665,7 +1686,7 @@ useEffect(() => {
           type="number"
           name="raw_data_to_volts"
           title="Ephys-to-Volt Conversion Factor"
-          placeholder="Ephys conversion factor to convert ephys data to volts"
+          placeholder="Scalar to multiply each element in data to convert it to the specified 'unit'. If the data are stored in acquisition system units or other units that require a conversion to be interpretable, multiply the data by 'conversion' to convert the data to the specified 'unit'."
           step="any"
           defaultValue={formData.raw_data_to_volts}
           onBlur={(e) => onBlur(e)}
@@ -1683,29 +1704,28 @@ useEffect(() => {
         />
       </div>
       <div id="behavioral_events-area" className="area-region">
-        <fieldset>
-          <legend>Behavioral Events</legend>
+        <details open>
+          <summary>Behavioral Events</summary>
           <div className="form-container">
             {formData?.behavioral_events.map(
               (behavioralEvents, index) => {
                 const key = 'behavioral_events';
 
                 return (
-                  <fieldset
+                  <details
+                    open
                     key={sanitizeTitle(
                       `${behavioralEvents.description}-be-${index}`
                     )}
                     className="array-item"
                   >
-                    <legend> Item #{index + 1} </legend>
-                    <div className="duplicate-item">
-                      <button
-                        type="button"
-                        onClick={() => duplicateItem(index, key)}
-                      >
-                        Duplicate
-                      </button>
-                    </div>
+                    <summary> Item #{index + 1} </summary>
+                    <ArrayItemControl
+                      index={index}
+                      keyValue={key}
+                      duplicateArrayItem={duplicateArrayItem}
+                      removeArrayItem={removeArrayItem}
+                    />
                     <div className="form-container">
                         <SelectInputPairElement
                           id={`behavioral_events-description-${index}`}
@@ -1716,7 +1736,7 @@ useEffect(() => {
                         min="0"
                         items={behavioralEventsDescription()}
                         defaultValue={behavioralEvents.description}
-                        placeholder="ECU Port #"
+                        placeholder="DIO info (eg. Din01)"
                         metaData={{
                           key,
                           index,
@@ -1729,7 +1749,7 @@ useEffect(() => {
                         title="Name"
                         dataItems={behavioralEventsNames()}
                         defaultValue={behavioralEvents.name}
-                        placeholder="Type to find a behavioral event name or add a custom name"
+                        placeholder="E.g. light1"
                         onBlur={(e) =>
                           itemSelected(e, {
                             key,
@@ -1738,7 +1758,7 @@ useEffect(() => {
                         }
                       />
                     </div>
-                  </fieldset>
+                  </details>
                 );
               }
             )}
@@ -1747,13 +1767,12 @@ useEffect(() => {
             itemsKey="behavioral_events"
             items={formData.behavioral_events}
             addArrayItem={addArrayItem}
-            removeArrayItem={removeArrayItem}
           />
-        </fieldset>
+        </details>
       </div>
       <div id="device-area" className="area-region">
-        <fieldset>
-          <legend>Device</legend>
+        <details open>
+          <summary>Device</summary>
           <div className="form-container">
           <ListElement
             id="device-name"
@@ -1770,11 +1789,11 @@ useEffect(() => {
             }}
           />
         </div>
-      </fieldset>
+      </details>
     </div>
       <div id="electrode_groups-area" className="area-region">
-        <fieldset>
-          <legend>Electrode Groups</legend>
+        <details open>
+          <summary>Electrode Groups</summary>
           <div className="form-container">
             {formData?.electrode_groups?.map((electrodeGroup, index) => {
               const electrodeGroupId = electrodeGroup.id;
@@ -1785,22 +1804,19 @@ useEffect(() => {
               const key = 'electrode_groups';
 
               return (
-                <fieldset
+                <details
+                  open
                   id={`electrode_group_item_${electrodeGroupId}-area`}
                   key={electrodeGroupId}
                   className="array-item"
                 >
-                  <legend> Item #{index + 1} </legend>
-                  <div className="duplicate-item">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        duplicateElectrodeGroupItem(index, key)
-                      }
-                    >
-                      Duplicate
-                    </button>
-                  </div>
+                  <summary> Item #{index + 1} </summary>
+                  <ArrayItemControl
+                    index={index}
+                    keyValue={key}
+                    duplicateArrayItem={duplicateElectrodeGroupItem}
+                    removeArrayItem={removeElectrodeGroupItem}
+                  />
                   <div className="form-container">
                     <InputElement
                       id={`electrode_groups-id-${index}`}
@@ -1808,7 +1824,7 @@ useEffect(() => {
                       name="id"
                       title="Id"
                       defaultValue={electrodeGroup.id}
-                      placeholder="Id"
+                      placeholder="Typically a number"
                       required
                       onBlur={(e) =>
                         onBlur(e, {
@@ -1837,7 +1853,7 @@ useEffect(() => {
                       title="Device Type"
                       addBlankOption
                       dataItems={deviceTypes()}
-                      placeholder="Click to find a device type"
+                      placeholder="Used to match to probe yaml data"
                       defaultValue={electrodeGroup.device_type}
                       onChange={(e) =>
                         nTrodeMapSelected(e, {
@@ -1867,7 +1883,7 @@ useEffect(() => {
                       title="Targeted Location"
                       dataItems={locations()}
                       defaultValue={electrodeGroup.targeted_location}
-                      placeholder="Type to find a targeted location"
+                      placeholder="Where device is implanted"
                       onBlur={(e) =>
                         itemSelected(e, {
                           key,
@@ -1928,7 +1944,7 @@ useEffect(() => {
                       name="units"
                       title="Units"
                       defaultValue={electrodeGroup.units}
-                      placeholder="Click to select a unit"
+                      placeholder="Distance units defining positioning"
                       dataItems={units()}
                       onChange={(e) =>
                         itemSelected(e, {
@@ -1958,7 +1974,7 @@ useEffect(() => {
                       />
                     </div>
                   </div>
-                </fieldset>
+                </details>
               );
             })}
           </div>
@@ -1967,23 +1983,22 @@ useEffect(() => {
             allowMultiple
             items={formData.electrode_groups}
             addArrayItem={addArrayItem}
-            removeArrayItem={removeElectrodeGroupItem}
           />
-        </fieldset>
+        </details>
       </div>
       <div className="submit-button-parent">
         <button
-          type="submit"
+          type="button"
           className="submit-button generate-button"
           title="Generate a YML file based on values in fields"
+          onClick={(e) => submitForm(e)}
         >
           <span>Generate YML File</span>
         </button>
         <button
-          type="button"
+          type="reset"
           className="submit-button reset-button"
           title="Generate a YML file based on values in fields"
-          onClick={(e) => resetForm(e)}
         >
           <span>Reset</span>
         </button>

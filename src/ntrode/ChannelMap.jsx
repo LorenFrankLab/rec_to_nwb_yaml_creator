@@ -2,7 +2,9 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import InputElement from '../element/InputElement';
 import CheckboxList from '../element/CheckboxList';
-import { sanitizeTitle } from '../utils';
+import { isNumeric, sanitizeTitle } from '../utils';
+import InfoIcon from './../element/InfoIcon';
+
 
 /**
  * Generates a custom element for ntrode_electrode_group_channel_map's map
@@ -15,12 +17,23 @@ const ChannelMap = (prop) => {
   const { nTrodeItems, onBlur, onMapInput, electrodeGroupId, updateFormArray } =
     prop;
 
+  const getOptions = (options, mapValue, mapValues) => {
+    const items = [...new Set([
+      -1,
+      ...options.filter((i) => !mapValues.includes(i)),
+      mapValue,
+    ])].sort()
+
+    return items;
+  }
+
   return (
     <div className="container">
       <div className="item1"> </div>
       <div className="item2">
         {nTrodeItems.map((item, index) => {
           const mapKeys = Object.keys(item.map).map((i) => parseInt(i, 10));
+          const mapValues = Object.values(item.map).filter((i) => isNumeric(i));
           const options = [...mapKeys];
           const keyBase = 'nTrode-container';
 
@@ -60,12 +73,15 @@ const ChannelMap = (prop) => {
                     onChange={updateFormArray}
                   />
                   <div className="container">
-                    <div className="item1">Map</div>
+                    <div className="item1">
+                      Map  <InfoIcon infoText="Electrode Map. Right Hand Side is expected mapping. Left Hand Side is actual mapping"/>
+                    </div>
                     <div className="item2">
                       <div className="ntrode-maps">
                         {mapKeys.map((nTrodeKey, nTrodeKeyIndex) => {
                           const itemMapId = `${nTrodeKeyIndex}`;
                           const optionsLength = options.length;
+                          const mapValue = mapValues[nTrodeKeyIndex];
                           const mapId = `ntrode_electrode_group_channel_map-map-${itemMapId}`;
 
                           return (
@@ -76,6 +92,7 @@ const ChannelMap = (prop) => {
                               <label htmlFor={mapId}>{nTrodeKey}</label>
                               <select
                                 id={mapId}
+                                required
                                 defaultValue={
                                   nTrodeKey + mapKeys.length * index
                                 }
@@ -89,14 +106,14 @@ const ChannelMap = (prop) => {
                                   })
                                 }
                               >
-                                {options.map((option) => {
+                                {getOptions(options, mapValue, mapValues).map((option) => {
                                   return (
                                     <option
                                       key={`${mapId}-${keyBase}-${sanitizeTitle(
                                         option
                                       )}${nTrodeKey}`}
                                     >
-                                      {option + optionsLength * index}
+                                      {option !== -1 ? option + optionsLength * index: ''}
                                       {/* {item.map[option]} */}
                                     </option>
                                   );

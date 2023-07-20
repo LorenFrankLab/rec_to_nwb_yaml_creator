@@ -10,7 +10,7 @@ import { showCustomValidityError } from './utils';
  * @returns Virtual DOM for updating an array entry of the resultant YML File
  */
 const ArrayUpdateMenu = (prop) => {
-  const { itemsKey, items, addArrayItem, removeArrayItem, allowMultiple } =
+  const { itemsKey, items, addArrayItem, allowMultiple } =
     prop;
 
   const itemCountRef = useRef();
@@ -31,9 +31,6 @@ const ArrayUpdateMenu = (prop) => {
     }
   };
 
-  const remove = () => {
-    removeArrayItem(itemsKey);
-  };
 
   const displayStatus = items?.length === 0 || !items ? 'hide' : '';
 
@@ -61,14 +58,6 @@ const ArrayUpdateMenu = (prop) => {
           </button>
         </div>
       )}
-      <button
-        type="button"
-        className={displayStatus}
-        title={`Remove ${itemsKey}`}
-        onClick={remove}
-      >
-        <span className="bold">&#65293;</span>
-      </button>
     </div>
   );
 };
