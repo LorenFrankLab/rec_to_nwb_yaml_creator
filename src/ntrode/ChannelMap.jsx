@@ -106,14 +106,14 @@ const ChannelMap = (prop) => {
                                   })
                                 }
                               >
-                                {getOptions(options, mapValue, mapValues).map((option) => {
+                                {getOptions(options.map((o) => o + optionsLength * index), mapValue, mapValues).map((option) => {
                                   return (
                                     <option
                                       key={`${mapId}-${keyBase}-${sanitizeTitle(
                                         option
                                       )}${nTrodeKey}`}
                                     >
-                                      {option !== -1 ? option + optionsLength * index: ''}
+                                      {option !== -1 ? option : ''}
                                       {/* {item.map[option]} */}
                                     </option>
                                   );

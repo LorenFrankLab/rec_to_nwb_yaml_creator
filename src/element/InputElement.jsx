@@ -18,6 +18,7 @@ const InputElement = (prop) => {
     name,
     placeholder,
     defaultValue,
+    min,
     required,
     onBlur,
     readOnly,
@@ -59,6 +60,7 @@ const InputElement = (prop) => {
           required={required}
           readOnly={readOnly}
           step={step}
+          min={min}
           onBlur={(e) => onBlur(e)}
           pattern={pattern}
           onChange={() => {}} // done to quiet a react warning in the console
@@ -77,6 +79,7 @@ InputElement.propType = {
   readOnly: PropTypes.bool,
   required: PropTypes.bool,
   step: PropTypes.string,
+  min: PropTypes.string,
   defaultValue: PropTypes.oneOf([PropTypes.string, PropTypes.number]),
   pattern: PropTypes.string,
   onBlur: PropTypes.func,
@@ -89,6 +92,7 @@ InputElement.defaultProps = {
   readOnly: false,
   step: 'any',
   pattern: '^.+$',
+  min: '',
   onBlur: () => {},
 };
 
