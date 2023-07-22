@@ -4,13 +4,16 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import logo from './logo.png';
 import packageJson from '../package.json';
-import JsonSchemaFile from './jsonSchema.json'
+import JsonSchemaFile from './franklabnwb-git-subtree/json_schema_files/jsonSchema.json'
 import './App.scss';
 import addFormats from 'ajv-formats';
 import InputElement from './element/InputElement';
 import SelectElement from './element/SelectElement';
 import DataListElement from './element/DataListElement';
-import deviceTypeMap from './ntrode/deviceTypes';
+import {
+  deviceTypeMap,
+  getShankCount,
+} from './ntrode/deviceTypes';
 import ChannelMap from './ntrode/ChannelMap';
 import SelectInputPairElement from './element/SelectInputPairElement';
 import ArrayUpdateMenu from './ArrayUpdateMenu';
@@ -285,8 +288,8 @@ const nTrodeMapSelected = (e, metaData) => {
   const { value } = e.target;
   const { key, index } = metaData;
   const electrodeGroupId = form.electrode_groups[index].id;
-  const deviceTypeMapping = structuredClone(deviceTypeMap[value]);
-  const shankCount = deviceTypeMapping?.items?.shankCount || 0;
+  const deviceTypeMapping = deviceTypeMap(value);
+  const shankCount = getShankCount(value);
   const map = {};
 
   form[key][index].device_type = value;
@@ -490,11 +493,17 @@ const showErrorMessage = (error) => {
   // If here, element not found or cannot show validation message with
   // setCustomValidity/reportValidity; so show a pop-up message
   const itemName = titleCase(
-    instancePath.replaceAll('/', '').replaceAll('_', ' ')
+    instancePath.replaceAll('/', ' ').replaceAll('_', ' ')
   );
 
+  let errorMessage = userFriendlyMessage;
+
+  if (instancePath === '/subject/date_of_birth') {
+    errorMessage = 'Date of birth needs to comply with ISO 8061 format (https://en.wikipedia.org/wiki/ISO_8601)';
+  }
+
   // eslint-disable-next-line no-alert
-  window.alert(`${itemName} - ${userFriendlyMessage}`);
+  window.alert(`${itemName} - ${errorMessage}`);
 };
 
 /**
@@ -577,17 +586,7 @@ const rulesValidation = (jsonFileContent) => {
   const errorIds = [];
   const errorMessages = [];
   let isFormValid = true;
-  const possibleGenders = genderAcronym();
   const errors = [];
-
-  // check if gender is from the available options
-  if (!possibleGenders.includes(jsonFileContent.subject.sex)) {
-    errorMessages.push(
-      `Key: Subject.sex | Error: Subject's sex is limited to one from - ${possibleGenders} (must be capitalized). Your value is: ${jsonFileContent.subject.sex}`
-    );
-    errorIds.push('subject');
-    isFormValid = false;
-  }
 
   // check if tasks have a camera but no camera is set
   if (!jsonFileContent.cameras && jsonFileContent.tasks?.length > 0) {
@@ -607,22 +606,6 @@ const rulesValidation = (jsonFileContent) => {
       `Key: associated_video_files.camera_id. | Error: There is associated_video_files camera_id, but no camera object with ids. No data is loaded`
     );
     errorIds.push('associated_video_files');
-    isFormValid = false;
-  }
-
-  const { subject } = jsonFileContent;
-  const dateOfBirth = subject?.date_of_birth;
-  if (
-    dateOfBirth !== '' &&
-    dateOfBirth?.trim &&
-    !/(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+)|(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d)|(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d)/.test(
-      dateOfBirth.trim()
-    )
-  ) {
-    errorMessages.push(
-      'Key: subject.date_of_birth. | Error: Date of Birth must be a valid ISO 8601 format'
-    );
-    errors.push('subject');
     isFormValid = false;
   }
 
@@ -1112,6 +1095,7 @@ useEffect(() => {
               name="weight"
               title="Weight (grams)"
               required
+              min="0"
               defaultValue={formData.subject.weight}
               placeholder="Weight at time of experiment, at time of surgery and at other important times (in grams)"
               onBlur={(e) => onBlur(e, { key: 'subject' })}
@@ -1826,6 +1810,7 @@ useEffect(() => {
                       defaultValue={electrodeGroup.id}
                       placeholder="Typically a number"
                       required
+                      min={0}
                       onBlur={(e) =>
                         onBlur(e, {
                           key,
@@ -1939,14 +1924,14 @@ useEffect(() => {
                         })
                       }
                     />
-                    <SelectElement
+                    <DataListElement
                       id={`electrode_groups-units-${index}`}
                       name="units"
                       title="Units"
                       defaultValue={electrodeGroup.units}
                       placeholder="Distance units defining positioning"
                       dataItems={units()}
-                      onChange={(e) =>
+                      onBlur={(e) =>
                         itemSelected(e, {
                           key,
                           index,

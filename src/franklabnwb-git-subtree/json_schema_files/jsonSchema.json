@@ -419,6 +419,7 @@
           "$id": "#root/subject/sex",
           "title": "sex",
           "type": "string",
+          "enum": ["M", "F", "U", "O"],
           "default": "M",
           "examples": ["M", "F", "U", "O"],
           "pattern": "^.+$",
@@ -446,7 +447,8 @@
           "$id": "#root/subject/weight",
           "title": "weight",
           "type": "number",
-          "default": "",
+          "default": "100",
+          "minimum": 0,
           "description": "Mass of animal model/patient in grams"
         },
         "date_of_birth": {
@@ -454,7 +456,8 @@
           "title": "date_of_birth",
           "type": "string",
           "default": "",
-          "description": "Identification code/number of animal model/patient"
+          "pattern": "(\\d{4}-[01]\\d-[0-3]\\dT[0-2]\\d:[0-5]\\d:[0-5]\\d\\.\\d+)|(\\d{4}-[01]\\d-[0-3]\\dT[0-2]\\d:[0-5]\\d:[0-5]\\d)|(\\d{4}-[01]\\d-[0-3]\\dT[0-2]\\d:[0-5]\\d)",
+          "description": "date of birth of animal model/patient, in ISO 8061 format"
         }
       }
     },
@@ -878,6 +881,7 @@
             "type": "integer",
             "examples": [0],
             "default": 0,
+            "minimum": 0,
             "description": "electrode/probe identification code/number"
           },
           "location": {
@@ -1207,7 +1211,8 @@
             "type": "string",
             "default": "",
             "examples": ["", "tetrode_12.5", "A1x32-6mm-50-177-H32_21mm", "128c-4s8mm6cm-20um-40um-sl", "128c-4s6mm6cm-15um-26um-sl", "32c-2s8mm6cm-20um-40um-dl", "64c-4s6mm6cm-20um-40um-dl", "64c-3s6mm6cm-20um-40um-sl"],
-            "pattern": "^.*$"
+            "pattern": "^.*$",
+            "enum": ["tetrode_12.5", "A1x32-6mm-50-177-H32_21mm", "128c-4s8mm6cm-20um-40um-sl", "128c-4s6mm6cm-15um-26um-sl", "32c-2s8mm6cm-20um-40um-dl", "64c-4s6mm6cm-20um-40um-dl", "64c-3s6mm6cm-20um-40um-sl"]
           },
           "description": {
             "$id": "#root/electrode_groups/items/description",
