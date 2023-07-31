@@ -1,12 +1,3 @@
-import JsonTetrode_12_5 from './../franklabnwb-git-subtree/json_schema_files/tetrode_12_5.json';
-import JsonA1x32_6mm_50_177_H32_21mm from './../franklabnwb-git-subtree/json_schema_files/A1x32-6mm-50-177-H32_21mm.json';
-import Json128c_4s8mm6cm_20um_40um_sl from './../franklabnwb-git-subtree/json_schema_files/128c-4s8mm6cm-20um-40um-sl.json';
-import Json128c_4s6mm6cm_15um_26um_sl from './../franklabnwb-git-subtree/json_schema_files/128c-4s6mm6cm-15um-26um-sl.json';
-import Json32c_2s8mm6cm_20um_40um_dl from './../franklabnwb-git-subtree/json_schema_files/32c-2s8mm6cm-20um-40um-dl.json';
-import Json64c_4s6mm6cm_20um_40um_dl from './../franklabnwb-git-subtree/json_schema_files/64c-4s6mm6cm-20um-40um-dl.json';
-import Json64c_3s6mm6cm_20um_40um_sl from './../franklabnwb-git-subtree/json_schema_files/64c-3s6mm6cm-20um-40um-sl.json';
-
-
 /**
  * maps device type to device json schema file
  *
@@ -14,35 +5,47 @@ import Json64c_3s6mm6cm_20um_40um_sl from './../franklabnwb-git-subtree/json_sch
  * @returns
  */
 export const deviceTypeMap = (deviceType) => {
-  let mapJsonSchema = {};
+  let defaults = [0, 1, 2, 3];
 
   switch (deviceType) {
     case 'tetrode_12.5':
-      mapJsonSchema = structuredClone(JsonTetrode_12_5);
+      defaults = [0, 1, 2, 3];
       break;
     case 'A1x32-6mm-50-177-H32_21mm':
-      mapJsonSchema = structuredClone(JsonA1x32_6mm_50_177_H32_21mm);
+      defaults = [
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+        19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+      ];
       break;
     case '128c-4s8mm6cm-20um-40um-sl':
-      mapJsonSchema = structuredClone(Json128c_4s8mm6cm_20um_40um_sl);
+      defaults = [
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+        19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+      ];
       break;
     case '128c-4s6mm6cm-15um-26um-sl':
-      mapJsonSchema = structuredClone(Json128c_4s6mm6cm_15um_26um_sl);
+      defaults = [
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+        19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+      ];
       break;
     case '32c-2s8mm6cm-20um-40um-dl':
-      mapJsonSchema = structuredClone(Json32c_2s8mm6cm_20um_40um_dl);
+      defaults = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
       break;
     case '64c-4s6mm6cm-20um-40um-dl':
-      mapJsonSchema = structuredClone(Json64c_4s6mm6cm_20um_40um_dl);
+      defaults = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
       break;
     case '64c-3s6mm6cm-20um-40um-sl':
-      mapJsonSchema = structuredClone(Json64c_3s6mm6cm_20um_40um_sl);
+      defaults = [
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+        19
+      ];
       break;
     default:
       break;
   }
 
-  return mapJsonSchema;
+  return defaults;
 };
 
 

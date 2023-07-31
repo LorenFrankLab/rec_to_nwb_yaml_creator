@@ -79,10 +79,10 @@ const ChannelMap = (prop) => {
                     <div className="item2">
                       <div className="ntrode-maps">
                         {mapKeys.map((nTrodeKey, nTrodeKeyIndex) => {
-                          const itemMapId = `${nTrodeKeyIndex}`;
                           const optionsLength = options.length;
                           const mapValue = mapValues[nTrodeKeyIndex];
-                          const mapId = `ntrode_electrode_group_channel_map-map-${itemMapId}`;
+                          const nTrodeKeyId = nTrodeKey + mapKeys.length * index;
+                          const mapId = `ntrode_electrode_group_channel_map-map-${nTrodeKeyId}-${index}-${nTrodeKeyIndex}`;
 
                           return (
                             <div
@@ -93,9 +93,7 @@ const ChannelMap = (prop) => {
                               <select
                                 id={mapId}
                                 required
-                                defaultValue={
-                                  nTrodeKey + mapKeys.length * index
-                                }
+                                defaultValue={nTrodeKeyId}
                                 onChange={(e) =>
                                   onMapInput(e, {
                                     key: 'ntrode_electrode_group_channel_map',
