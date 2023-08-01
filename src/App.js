@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import logo from './logo.png';
 import packageJson from '../package.json';
-import JsonSchemaFile from './franklabnwb-git-subtree/json_schema_files/jsonSchema.json'
+import JsonSchemaFile from './nwb_schema.json'
 import './App.scss';
 import addFormats from 'ajv-formats';
 import InputElement from './element/InputElement';
@@ -288,16 +288,16 @@ const nTrodeMapSelected = (e, metaData) => {
   const { value } = e.target;
   const { key, index } = metaData;
   const electrodeGroupId = form.electrode_groups[index].id;
-  const deviceTypeMapping = deviceTypeMap(value);
+  const deviceTypeValues = deviceTypeMap(value);
   const shankCount = getShankCount(value);
   const map = {};
 
   form[key][index].device_type = value;
 
   // set map with default values
-  Object.values(deviceTypeMapping?.items?.properties || []).forEach(
-    (property) => {
-      map[parseInt(property.title, 10)] = property.default;
+  deviceTypeValues.forEach(
+    (deviceTypeValue) => {
+      map[deviceTypeValue] = deviceTypeValue;
     }
   );
 
