@@ -827,14 +827,14 @@ useEffect(() => {
   let i = 0;
 
   for (i = 0; i < formData.associated_files.length; i += 1) {
-    if (!taskEpochs.includes(formData.associated_files[i].task_epoch)) {
-      formData.associated_files[i].task_epoch = '';
+    if (!taskEpochs.includes(formData.associated_files[i].task_epochs)) {
+      formData.associated_files[i].task_epochs = '';
     }
   }
 
   for (i = 0; i < formData.associated_video_files.length; i += 1) {
-    if (!taskEpochs.includes(formData.associated_video_files[i].task_epoch)) {
-      formData.associated_video_files[i].task_epoch = '';
+    if (!taskEpochs.includes(formData.associated_video_files[i].task_epochs)) {
+      formData.associated_video_files[i].task_epochs = '';
     }
   }
 
@@ -1510,15 +1510,15 @@ useEffect(() => {
                       <RadioList
                         id={`associated_files-taskEpoch-${index}`}
                         type="number"
-                        name="task_epoch"
-                        title="Task Epoch"
+                        name="task_epochs"
+                        title="Task Epochs"
                         objectKind="Task"
-                        defaultValue={associatedFilesName.task_epoch}
+                        defaultValue={associatedFilesName.task_epochs}
                         placeholder="What tasks/epochs was this code run for"
                         dataItems={taskEpochsDefined}
                         updateFormData={updateFormData}
                         metaData={{
-                          nameValue: 'task_epoch',
+                          nameValue: 'task_epochs',
                           keyValue: 'associated_files',
                           index,
                         }}
@@ -1598,15 +1598,15 @@ useEffect(() => {
                       <RadioList
                         id={`associated_video_files-taskEpochs-${index}`}
                         type="number"
-                        name="task_epoch"
-                        title="Task Epoch"
+                        name="task_epochs"
+                        title="Task Epochs"
                         objectKind="Task"
-                        defaultValue={associatedVideoFiles.task_epoch}
+                        defaultValue={associatedVideoFiles.task_epochs}
                         placeholder="What epoch was recorded in this video"
                         dataItems={taskEpochsDefined}
                         updateFormData={updateFormData}
                         metaData={{
-                          nameValue: 'task_epoch',
+                          nameValue: 'task_epochs',
                           keyValue: 'associated_video_files',
                           index,
                         }}

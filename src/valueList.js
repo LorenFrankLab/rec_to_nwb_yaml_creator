@@ -922,7 +922,7 @@ export const arrayDefaultValues = {
     name: '',
     description: '',
     path: '',
-    task_epoch: '',
+    task_epochs: '',
   },
   cameras: {
     id: 0,
@@ -942,7 +942,7 @@ export const arrayDefaultValues = {
   associated_video_files: {
     name: '',
     camera_id: '',
-    task_epoch: '',
+    task_epochs: '',
   },
   behavioral_events: {
     description: 'Din1',
