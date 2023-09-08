@@ -419,7 +419,7 @@ const removeElectrodeGroupItem = (index, key) => {
     // remove ntrode related to electrode_groups
     form.ntrode_electrode_group_channel_map =
       form.ntrode_electrode_group_channel_map.filter(
-        (nTrode) => nTrode.electro_group_id === item.id
+        (nTrode) => nTrode.electrode_group_id !== item.id
       );
 
     // remove electrode_groups item
