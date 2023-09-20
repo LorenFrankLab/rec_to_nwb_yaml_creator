@@ -23,6 +23,7 @@ const ListElement = (prop) => {
     metaData,
     required,
     inputPlaceholder,
+    listPlaceHolder,
     updateFormData,
     step,
     readOnly,
@@ -64,6 +65,7 @@ const ListElement = (prop) => {
   const listData = useRef();
 
   const valueToAdd = useRef('');
+  const textPlaceHolder = listPlaceHolder ? listPlaceHolder : `Type ${title}`;
 
   return (
     <label className="container" htmlFor={id}>
@@ -83,7 +85,7 @@ const ListElement = (prop) => {
             <input
               name={name}
               type={type}
-              placeholder={`Type ${title}`}
+              placeholder={textPlaceHolder}
               ref={valueToAdd}
               step={step}
               onKeyPress={e => addListItemViaEnterKey(e, valueToAdd)}
@@ -102,6 +104,7 @@ ListElement.propType = {
   type: PropTypes.string.isRequired,
   name: PropTypes.string.isRequired,
   placeholder: PropTypes.string,
+  listPlaceHolder: PropTypes.string,
   required: PropTypes.bool,
   readOnly: PropTypes.bool,
   inputPlaceholder: PropTypes.string,
@@ -119,6 +122,7 @@ ListElement.defaultProps = {
   readOnly: false,
   metaData: {},
   inputPlaceholder: '',
+  listPlaceHolder: null,
   step: 'any',
   required: false,
 };
