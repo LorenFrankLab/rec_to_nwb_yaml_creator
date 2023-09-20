@@ -652,7 +652,9 @@ const generateYMLFile = (e) => {
 
   if (isValid && isFormValid) {
     const yAMLForm = convertObjectToYAMLString(form);
-    createYAMLFile('metaData.yml', yAMLForm);
+    const fileNameDate = form.subject.date_of_birth.substring(0,10).replaceAll('-', '');
+    const subjectId = formData.subject.subject_id.toLocaleLowerCase();
+    createYAMLFile(`${fileNameDate}_${subjectId}_metadata.yml`, yAMLForm);
     return;
   }
 
@@ -934,7 +936,8 @@ useEffect(() => {
           inputPlaceholder="No experimenter"
           defaultValue={formData.experimenter_name}
           title="Experimenter Name"
-          placeholder="LastName, FirstName or LastName, FirstName MiddleInitial. or LastName, FirstName MiddleName"
+          placeholder="LastName, FirstName"
+          listPlaceHolder="LastName, FirstName"
           updateFormData={updateFormData}
           metaData={{
             nameValue: 'experimenter_name',
@@ -1955,6 +1958,9 @@ useEffect(() => {
                             index,
                           })
                         }
+                        metaData={{
+                          index,
+                        }}
                         onMapInput={onMapInput}
                       />
                     </div>
