@@ -117,3 +117,16 @@ export const sanitizeTitle = (title) => {
     .trim()
     .replace(/[^a-z0-9]/gi, '');
 };
+
+
+/**
+ * Checks if running in Production
+ *
+ * @returns True if running in Production, false otherwise
+ */
+export const isProduction = () => {
+  // It is better to use node.js. But that requires adding a package.
+  // See - https://stackoverflow.com/a/70989566/178550. This is sufficient for
+  // now but can be updated if the need arises
+  return window.location.href.includes('https://lorenfranklab.github.io');
+};
