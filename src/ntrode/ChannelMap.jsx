@@ -14,7 +14,7 @@ import InfoIcon from './../element/InfoIcon';
  * @returns Virtual DOM of the map for ntrode_electrode_group_channel_map
  */
 const ChannelMap = (prop) => {
-  const { nTrodeItems, onBlur, onMapInput, electrodeGroupId, updateFormArray } =
+  const { nTrodeItems, onBlur, onMapInput, electrodeGroupId, updateFormArray, metaData } =
     prop;
 
   const getOptions = (options, mapValue, mapValues) => {
@@ -67,7 +67,7 @@ const ChannelMap = (prop) => {
                     updateFormArray={updateFormArray}
                     metaData={{
                       nameValue: 'bad_channels',
-                      index,
+                      index: metaData.index,
                       keyValue: 'ntrode_electrode_group_channel_map',
                     }}
                     onChange={updateFormArray}
@@ -139,6 +139,7 @@ ChannelMap.propType = {
   onBlur: PropTypes.func,
   updateFormArray: PropTypes.func,
   onMapInput: PropTypes.func,
+  metaData: PropTypes.instanceOf(Object),
 };
 
 export default ChannelMap;
