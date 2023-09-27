@@ -1,16 +1,16 @@
-# YML Generator File
+# App File
 
-The file `./../src/renderer/ymlGenerator.jsx` is the main application in `rec_to_nwb_yaml_creator`. It is so important that is deserves its own page. Literally everything in `rec_to_nwb_yaml_creator` revolves around it. It has been kept lean by moving things like `./../src/renderer/InputElement.jsx` and many others functionality into separate. Yet, it still over 1000 lines of code.
+The file `./../src/renderer/app.js` is the main application in `rec_to_nwb_yaml_creator`. It is so important that is deserves its own page. Literally everything in `rec_to_nwb_yaml_creator` revolves around it. It has been kept lean by moving things like `./../src/renderer/InputElement.jsx` and many others functionality into separate. Yet, it still over 1000 lines of code.
 
-Most of the maintenance and updates to `rec_to_nwb_yaml_creator` will touch `./../src/renderer/ymlGenerator.jsx`. Therefore, keep part of it will be discussed.
+Most of the maintenance and updates to `rec_to_nwb_yaml_creator` will touch `./../src/renderer/app.js`. Therefore, keep part of it will be discussed.
 
 ## The Beginning
 
-`rec_to_nwb_yaml_creator` is brought into the application via `./../src/renderer/App.tsx`. The details of the file is beyond the scope of this work. You can read it on more [advance React tutorials](<https://www.w3schools.com/react/react_router.asp>) and you need an understanding of [Single page applications](<https://en.wikipedia.org/wiki/Single-page_application>.) For the purposes of `rec_to_nwb_yaml_creator`, all you need to know is that it bring in `./../src/renderer/ymlGenerator.jsx`.
+`rec_to_nwb_yaml_creator` is brought into the application via `./../src/renderer/App.tsx`. The details of the file is beyond the scope of this work. You can read it on more [advance React tutorials](<https://www.w3schools.com/react/react_router.asp>) and you need an understanding of [Single page applications](<https://en.wikipedia.org/wiki/Single-page_application>.) For the purposes of `rec_to_nwb_yaml_creator`, all you need to know is that it bring in `./../src/renderer/app.js`.
 
 ## Composition
 
-`./../src/renderer/ymlGenerator.jsx` contain a function called `YMLGenerator`. This function consist of other functions, constants and a return markup. The markup it will is what is displayed in `rec_to_nwb_yaml_creator`. Here are a description of the main supporting functionality -
+`./../src/renderer/app.js` contain a function called `app`. This function consist of other functions, constants and a return markup. The markup it will is what is displayed in `rec_to_nwb_yaml_creator`. Here are a description of the main supporting functionality -
 
 - **_formData_**:
 `formData` is a [state](<https://www.w3schools.com/react/react_usestate.asp>). It is essentially an in-memory storage of the YAML to be generated for the yml file. `setFormData` is a part of [state](<https://www.w3schools.com/react/react_usestate.asp>). It is a function need to update `formData`. The Javascript object in the declaration of `formData` is the initial value minus the array-type values. The array type values are added on creation of array entry.

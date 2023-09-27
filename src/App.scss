@@ -193,8 +193,8 @@ a:hover {
   .data-list:after {
     content: url(https://i.stack.imgur.com/i9WFO.png);
     margin-left: -20px;
-    padding: .1em;
-    pointer-events:none;
+    padding: 0.1em;
+    pointer-events: none;
   }
 
   /* hide file button text */
@@ -293,7 +293,6 @@ a:hover {
 .file-upload input[type="text"] {
   width: 75%;
 }
-
 
 .center-align {
   display: flex;
@@ -488,7 +487,7 @@ details {
 
   &:hover,
   &:focus {
-    background: #FFFFFF;
+    background: #ffffff;
   }
 
   &[open] {
@@ -526,7 +525,6 @@ details {
 }
 
 //-----------------------------
-
 
 @media (min-width: 750px) {
   .page-container__nav__content {
