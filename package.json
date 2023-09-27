@@ -1,6 +1,6 @@
 {
   "name": "Rec-to-NWB YAML Generator",
-  "version": "2.2.6",
+  "version": "2.2.7",
   "description": "Create YAML File for Spyglass",
   "keywords": [
     "electron",
@@ -63,7 +63,8 @@
     "deploy": "gh-pages -d build",
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "lint": "eslint --fix --ext .js,.jsx ."
   },
   "browserslist": {
     "production": [
