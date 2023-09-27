@@ -653,9 +653,12 @@ const generateYMLFile = (e) => {
 
   if (isValid && isFormValid) {
     const yAMLForm = convertObjectToYAMLString(form);
-    const fileNameDate = form.subject.date_of_birth.substring(0,10).replaceAll('-', '');
+    const fileDate = new Date();
+    const fileNameYear = `${fileDate.getFullYear()}`;
+    const fileNameMonth = `${fileDate.getMonth() + 1}`.padStart(2, '0');
+    const fileNameDay = `${fileDate.getDate()}`.padStart(2, '0');
     const subjectId = formData.subject.subject_id.toLocaleLowerCase();
-    createYAMLFile(`${fileNameDate}_${subjectId}_metadata.yml`, yAMLForm);
+    createYAMLFile(`${fileNameYear}${fileNameMonth}${fileNameDay}_${subjectId}_metadata.yml`, yAMLForm);
     return;
   }
 
