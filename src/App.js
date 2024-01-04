@@ -654,8 +654,7 @@ const generateYMLFile = (e) => {
   if (isValid && isFormValid) {
     const yAMLForm = convertObjectToYAMLString(form);
     const subjectId = formData.subject.subject_id.toLocaleLowerCase();
-    // TODO: figure out why underscore is added automagically, after subjectId
-    const fileName = `<EXPERIMENT_DATE_in_format_mmddYYYY>${subjectId}_metadata.yml`;
+    const fileName = `{EXPERIMENT_DATE_in_format_mmddYYYY}_${subjectId}_metadata.yml`;
     createYAMLFile(fileName, yAMLForm);
     return;
   }
