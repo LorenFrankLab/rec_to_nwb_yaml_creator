@@ -86,7 +86,7 @@ export function App() {
       reader.onload = (evt) => {
         const jsonFileContent = YAML.parse(evt.target.result);
         const JSONschema = schema.current;
-        const validation = jsonchemaValidation(jsonFileContent, JSONschema);
+        const validation = jsonschemaValidation(jsonFileContent, JSONschema);
         const {
               isValid,
               jsonSchemaErrorMessages,
@@ -536,7 +536,7 @@ const displayErrorOnUI = (id, message) => {
  * @param {object} formContent Form object
  * @returns Validation information
  */
-const jsonchemaValidation = (formContent) => {
+const jsonschemaValidation = (formContent) => {
   const ajv = new Ajv({ allErrors: true });
   addFormats(ajv);
   const validate = ajv.compile(schema.current);
@@ -647,18 +647,16 @@ const submitForm = (e) => {
 const generateYMLFile = (e) => {
   e.preventDefault();
   const form = structuredClone(formData);
-  const validation = jsonchemaValidation(form);
+  const validation = jsonschemaValidation(form);
   const { isValid, jsonSchemaErrors } = validation;
   const { isFormValid, formErrors } = rulesValidation(form);
 
   if (isValid && isFormValid) {
     const yAMLForm = convertObjectToYAMLString(form);
-    const fileDate = new Date();
-    const fileNameYear = `${fileDate.getFullYear()}`;
-    const fileNameMonth = `${fileDate.getMonth() + 1}`.padStart(2, '0');
-    const fileNameDay = `${fileDate.getDate()}`.padStart(2, '0');
     const subjectId = formData.subject.subject_id.toLocaleLowerCase();
-    createYAMLFile(`${fileNameYear}${fileNameMonth}${fileNameDay}_${subjectId}_metadata.yml`, yAMLForm);
+    // TODO: figure out why underscore is added automagically, after subjectId
+    const fileName = `<EXPERIMENT_DATE_in_format_mmddYYYY>${subjectId}_metadata.yml`;
+    createYAMLFile(fileName, yAMLForm);
     return;
   }
 
@@ -902,10 +900,13 @@ useEffect(() => {
       <div className="page-container__content">
       <h2 className="header-text">
       Rec-to-NWB YAML Creator
-      <div className="file-upload-region" placeholder="Download a Yaml file to populate fields">
+      <span>
+        &nbsp;&nbsp;&nbsp;
+      </span>
+      <div className="file-upload-region">
         <label htmlFor="importYAMLFile">
           &nbsp;&nbsp;
-          <FontAwesomeIcon icon="download" className="pointer" size="2xs" />
+          <FontAwesomeIcon icon="download" className="pointer" size="2xs" title="Download a Yaml file to populate fields" />
         </label>
         {/*
           input type="file" onClick sets e.target.value to null, so the same file can be imported multiple times.
@@ -916,11 +917,27 @@ useEffect(() => {
           id="importYAMLFile"
           accept=".yml, .yaml"
           className="download-existing-file"
+          placeholder="Download a Yaml file to populate fields"
           onChange={(e) => importFile(e)}
           onClick={(e) => e.target.value = null}
         >
         </input>
       </div>
+      <span>
+        &nbsp;&nbsp;&nbsp;
+      </span>
+      <span>
+      |
+      </span>
+      <span className="sample-link">
+        <a
+          href="https://raw.githubusercontent.com/LorenFrankLab/franklabnwb/master/yaml/yaml-generator-sample-file.yml"
+          target="_blank"
+          title="Click to get sample Yaml file"
+          rel="noreferrer">
+            Sample YAML
+        </a>
+      </span>
     </h2>
     <form
       encType="multipart/form-data"
