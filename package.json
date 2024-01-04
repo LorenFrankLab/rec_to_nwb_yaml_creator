@@ -1,6 +1,6 @@
 {
   "name": "Rec-to-NWB YAML Generator",
-  "version": "2.2.8",
+  "version": "2.2.9",
   "description": "Create YAML File for Spyglass",
   "keywords": [
     "electron",
@@ -20,7 +20,7 @@
     "hippocampus",
     "neuron",
     "ca1",
-    "lore frank",
+    "loren frank",
     "rec_to_nwb_yaml_creator",
     "rec_to_nwb_yaml",
     "yaml"
