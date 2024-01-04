@@ -1,6 +1,6 @@
 {
   "name": "Rec-to-NWB YAML Generator",
-  "version": "2.2.9",
+  "version": "2.2.10",
   "description": "Create YAML File for Spyglass",
   "keywords": [
     "electron",
