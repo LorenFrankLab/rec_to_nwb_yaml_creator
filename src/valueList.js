@@ -835,6 +835,7 @@ export const deviceTypes = () => {
       '32c-2s8mm6cm-20um-40um-dl',
       '64c-4s6mm6cm-20um-40um-dl',
       '64c-3s6mm6cm-20um-40um-sl',
+      'NET-EBL-128ch-single-shank',
     ],
   ];
 };
