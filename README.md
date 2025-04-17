@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The purpose of this application is to provide a guided means to generate the YML file needed for [Rec to NWB](https://github.com/LorenFrankLab/rec_to_nwb) and [Spikegadgets to NWB](https://github.com/LorenFrankLab/spikegadgets_to_nwb). It spends up and simplifies creation of YAML files for generation of NWB files.
+The purpose of this application is to provide a guided means to generate the YML file needed for [Rec to NWB](https://github.com/LorenFrankLab/rec_to_nwb) and [trodes to NWB](https://github.com/LorenFrankLab/trodes_to_nwb). It spends up and simplifies creation of YAML files for generation of NWB files.
 
 All users have to do is fill out the required fields and then press the generate button at the bottom. The process is straightforward. Alternately, users can upload a yml file to serve as a template.
 
