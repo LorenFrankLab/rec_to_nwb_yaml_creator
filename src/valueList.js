@@ -80,11 +80,6 @@ export const emptyFormData = {
   },
   electrode_groups: [],
   ntrode_electrode_group_channel_map: [],
-  // optogenetics: {
-  //   "device": '',
-  //   "wavelength": '',
-  // }
-  optogenetics: [],
   excitation_source: [],
 };
 
@@ -1009,11 +1004,6 @@ export const arrayDefaultValues = {
     electrode_group_id: '',
     bad_channels: [],
     map: {},
-  },
-
-  optogenetics: {
-    device: '',
-    wavelength: '',
   },
 
   opto_excitation_source: {
