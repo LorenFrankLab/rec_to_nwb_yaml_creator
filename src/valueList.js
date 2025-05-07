@@ -38,6 +38,7 @@ export const defaultYMLValues = {
   ntrode_electrode_group_channel_map: [],
   optogenetics: [],
   opto_excitation_source: [],
+  virus_injection: [],
 };
 
 /**
@@ -909,6 +910,15 @@ export const behavioralEventsNames = () => {
 };
 
 /**
+ * List of Behavioral events descriptions
+ *
+ * @returns Behavioral events descriptions
+ */
+export const behavioralEventsDescription = () => {
+  return [...['Din', 'Dout', 'Accel', 'Gyro', 'Mag']];
+};
+
+/**
  * List of Optogenetic Excitation Source model name
  *
  * @returns Hardware
@@ -923,13 +933,13 @@ export const optoExcitationModelNames = () => {
   ];
 };
 
-/**
- * List of Behavioral events descriptions
- *
- * @returns Behavioral events descriptions
- */
-export const behavioralEventsDescription = () => {
-  return [...['Din', 'Dout', 'Accel', 'Gyro', 'Mag']];
+export const virusNames = () => {
+  return [
+    ... [
+      "AAV-EF1a-DIO-hChR2(H134R)-EYFP",
+      "AAV-EF1a-DIO-hChR2(H134R)-mCherry",
+    ],
+  ];
 };
 
 /**
@@ -1003,4 +1013,21 @@ export const arrayDefaultValues = {
     power_in_W : 0.077,
     intensity_in_W_per_m2 : 1e10,
   },
+
+  virus_injection: {
+    name: 'Injection 1',
+    description : 'Viral injection for optogenetic stimulation',
+    hemisphere : '',
+    location : '',
+    ap_in_mm : 0.0,
+    ml_in_mm : 0.0,
+    dv_in_mm : 0.0,
+    roll_in_deg : 0.0,
+    pitch_in_deg : 0.0,
+    yaw_in_deg : 0.0,
+    reference : 'Bregma at the cortical surface',
+    virus: '',
+    titer_in_vg_per_ml : 1e12,
+    volume_in_uL : 0.45,
+  }
 };

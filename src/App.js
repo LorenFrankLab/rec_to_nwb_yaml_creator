@@ -50,6 +50,7 @@ import {
   dataAcqDeviceADCCircuit,
   cameraManufacturers,
   optoExcitationModelNames,
+  virusNames,
 } from './valueList';
 
 const Ajv = require('ajv');
@@ -1988,6 +1989,222 @@ useEffect(() => {
 
 
 
+
+
+
+      <div id="virus_injection-area" className="area-region">
+        <details open>
+          <summary>Virus Injection</summary>
+          <div className="form-container">
+            {formData.virus_injection.map((item, index) => {
+              const key = 'virus';
+              return (
+                <details
+                  open
+                  key={`virus_injection-${index}`}
+                  className="array-item"
+                >
+                  <summary>Injection #{index + 1}</summary>
+                  <ArrayItemControl
+                    index={index}
+                    keyValue={key}
+                    duplicateArrayItem={duplicateArrayItem}
+                    removeArrayItem={removeArrayItem}
+                  />
+                  <div className="form-container">
+                    <InputElement
+                      id={`virus_injection-name-${index}`}
+                      type="text"
+                      name="name"
+                      title="Injection Name"
+                      defaultValue={item.name}
+                      placeholder="Name of your injection (e.g. CA1 injection)"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    <InputElement
+                      id={`virus_injection-description-${index}`}
+                      type="text"
+                      name="description"
+                      title="Description"
+                      defaultValue={item.description}
+                      placeholder="Description of the injection"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    <SelectElement
+                        id={`virus_injection-virus_name-${index}`}
+                        name="virus_name"
+                        title="Virus Name"
+                        dataItems={virusNames()}
+                        defaultValue={'Virus 1'}
+                        placeholder="Model of the hardware"
+                        onBlur={(e) =>
+                          itemSelected(e, {
+                            key,
+                            index,
+                          })
+                        }
+                      />
+                     <InputElement
+                      id={`virus_injection-volume_in_ul-${index}`}
+                      type="number"
+                      name="volume_in_ul"
+                      title="Volume (ul)"
+                      defaultValue={item.volume_in_ul}
+                      placeholder="Volume in ul"
+                      step="any"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    <InputElement
+                      id={`virus_injection-titer_in_vg_per_ml-${index}`}
+                      type="number"
+                      name="titer_in_vg_per_ml"
+                      title="Titer (viral genomes/ml)"
+                      defaultValue={item.titer_in_vg_per_ml}
+                      placeholder="Titer in vg/ml"
+                      step="any"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    {/* # TODO: Hemisphere from list */}
+                    <RadioList
+                      id={`virus_injection-hemisphere-${index}`}
+                      type="text"
+                      name="hemisphere"
+                      title="Hemisphere"
+                      objectKind="Hemisphere"
+                      defaultValue={item.hemisphere}
+                      placeholder="Hemisphere of the injection"
+                      dataItems={[
+                        ...[
+                          'left',
+                          'right',
+                        ],
+                      ]
+                    }
+                      updateFormData={updateFormData}
+                      metaData={{
+                        nameValue: 'hemisphere',
+                        keyValue: 'virus_injection',
+                        index,
+                      }}
+                      onChange={updateFormData}
+                    />
+
+                    <InputElement
+                      id={`virus_injection-location-${index}`}
+                      type="text"
+                      name="location"
+                      title="Location"
+                      defaultValue={item.location}
+                      placeholder="Location of the injection"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    <InputElement
+                      id={`virus_injection-ap_in_mm-${index}`}
+                      type="number"
+                      name="ap_in_mm"
+                      title="AP (mm)"
+                      defaultValue={item.ap_in_mm}
+                      placeholder="Anterior-Posterior (AP) in mm"
+                      step="any"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    <InputElement
+                      id={`virus_injection-ml_in_mm-${index}`}
+                      type="number"
+                      name="ml_in_mm"
+                      title="ML (mm)"
+                      defaultValue={item.ml_in_mm}
+                      placeholder="Medial-Lateral (ML) in mm"
+                      step="any"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    <InputElement
+                      id={`virus_injection-dv_in_mm-${index}`}
+                      type="number"
+                      name="dv_in_mm"
+                      title="DV (mm)"
+                      defaultValue={item.dv_in_mm}
+                      placeholder="Dorsal-Ventral (DV) in mm"
+                      step="any"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    <InputElement
+                      id={`virus_injection-roll_in_deg-${index}`}
+                      type="number"
+                      name="roll_in_deg"
+                      title="Roll (degrees)"
+                      defaultValue={item.roll_in_deg}
+                      placeholder="Roll in degrees"
+                      step="any"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    <InputElement
+                      id={`virus_injection-pitch_in_deg-${index}`}
+                      type="number"
+                      name="pitch_in_deg"
+                      title="Pitch (degrees)"
+                      defaultValue={item.pitch_in_deg}
+                      placeholder="Pitch in degrees"
+                      step="any"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    <InputElement
+                      id={`virus_injection-yaw_in_deg-${index}`}
+                      type="number"
+                      name="yaw_in_deg"
+                      title="Yaw (degrees)"
+                      defaultValue={item.yaw_in_deg}
+                      placeholder="Yaw in degrees"
+                      step="any"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+
+
+                  </div>
+                </details>
+              );
+            })}
+          </div>
+          <ArrayUpdateMenu
+            itemsKey="virus_injection"
+            items={formData.virus_injection}
+            addArrayItem={addArrayItem}
+          />
+        </details>
+      </div>
 
 
 
