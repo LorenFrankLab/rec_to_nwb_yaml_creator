@@ -1925,9 +1925,6 @@ useEffect(() => {
                           })
                         }
                       />
-
-
-
                     <InputElement
                       id={`opto_excitation_source-description-${index}`}
                       type="text"
@@ -1976,9 +1973,6 @@ useEffect(() => {
                         onBlur(e, { key, index })
                       }
                     />
-
-
-
                   </div>
                 </details>
               );
@@ -1991,7 +1985,6 @@ useEffect(() => {
           />
         </details>
       </div>
-
 
 
 
