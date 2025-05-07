@@ -49,6 +49,7 @@ import {
   dataAcqDeviceAmplifier,
   dataAcqDeviceADCCircuit,
   cameraManufacturers,
+  optoExcitationModelNames,
 } from './valueList';
 
 const Ajv = require('ajv');
@@ -1795,9 +1796,215 @@ useEffect(() => {
               keyValue: 'device',
             }}
           />
+          </div>
+          </details>
         </div>
-      </details>
-    </div>
+
+
+      <div id="optogenetics-area" className="area-region">
+        <details open>
+          <summary>Optogenetics</summary>
+          <div className="form-container">
+            {formData.optogenetics.map((item, index) => {
+              const key = 'optogenetics';
+              return (
+                <details
+                  open
+                  key={`Optogenetics-${index}`}
+                  className="array-item"
+                >
+                  <summary>Item #{index + 1}</summary>
+                  <ArrayItemControl
+                    index={index}
+                    keyValue={key}
+                    duplicateArrayItem={duplicateArrayItem}
+                    removeArrayItem={removeArrayItem}
+                  />
+                  <div className="form-container">
+                    <InputElement
+                      id={`new_option-name-${index}`}
+                      type="text"
+                      name="device"
+                      title="Device"
+                      defaultValue={item.device}
+                      placeholder="Your Device"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    <InputElement
+                      id={`new_option-value-${index}`}
+                      type="text"
+                      name="wavelength"
+                      title="Wavelength (nm)"
+                      defaultValue={item.wavelength}
+                      placeholder="xxx nm"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                  </div>
+                </details>
+              );
+            })}
+          </div>
+          <ArrayUpdateMenu
+            itemsKey="optogenetics"
+            items={formData.optogenetics}
+            addArrayItem={addArrayItem}
+          />
+        </details>
+      </div>
+
+
+
+
+
+
+
+
+
+
+      <div id="opto_excitation_source-area" className="area-region">
+        <details open>
+          <summary>Opto Excitation Source</summary>
+          <div className="form-container">
+            {formData.opto_excitation_source.map((item, index) => {
+              const key = 'opto_excitation_source';
+              return (
+                <details
+                  open
+                  key={`OptoExcitationSource-${index}`}
+                  className="array-item"
+                >
+                  <summary>Source #{index + 1}</summary>
+                  <ArrayItemControl
+                    index={index}
+                    keyValue={key}
+                    duplicateArrayItem={duplicateArrayItem}
+                    removeArrayItem={removeArrayItem}
+                  />
+                  <div className="form-container">
+                    <InputElement
+                      id={`opto_excitation_source-name-${index}`}
+                      type="text"
+                      name="name"
+                      title="Setup Name"
+                      defaultValue={item.name}
+                      placeholder="Name of your setup"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    {/* <InputElement
+                      id={`opto_excitation_source-model_name-${index}`}
+                      type="text"
+                      name="model_name"
+                      title="Hardware Model Name"
+                      defaultValue={item.model_name}
+                      placeholder="Model of the hardware"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    /> */}
+                    <SelectElement
+                        id={`opto_excitation_source-model_name-${index}`}
+                        name="model_name"
+                        title="Hardware Model Name"
+                        dataItems={optoExcitationModelNames()}
+                        defaultValue={'model 1'}
+                        placeholder="Model of the hardware"
+                        onBlur={(e) =>
+                          itemSelected(e, {
+                            key,
+                            index,
+                          })
+                        }
+                      />
+
+
+
+                    <InputElement
+                      id={`opto_excitation_source-description-${index}`}
+                      type="text"
+                      name="description"
+                      title="Description"
+                      defaultValue={item.description}
+                      placeholder="Description of the setup"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    <InputElement
+                      id={`opto_excitation_source-wavelength_in_nm-${index}`}
+                      type="number"
+                      name="wavelength_in_nm"
+                      title="Wavelength (nm)"
+                      defaultValue={item.wavelength_in_nm}
+                      placeholder="xxx nm"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    <InputElement
+                      id={`opto_excitation_source-power_in_W-${index}`}
+                      type="number"
+                      name="power_in_W"
+                      title="Source Power (W)"
+                      defaultValue={item.power_in_w}
+                      placeholder="xxx W"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    <InputElement
+                     id = {`opto_excitation_source-intensity_in_W_per_m2-${index}`}
+                      type="number"
+                      name="intensity_in_W_per_m2"
+                      title="Intensity (W/m2)"
+                      defaultValue={item.intensity_in_W_per_m2}
+                      placeholder="xxx W/m2"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+
+
+
+                  </div>
+                </details>
+              );
+            })}
+          </div>
+          <ArrayUpdateMenu
+            itemsKey="opto_excitation_source"
+            items={formData.optogenetics_source}
+            addArrayItem={addArrayItem}
+          />
+        </details>
+      </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       <div id="electrode_groups-area" className="area-region">
         <details open>
           <summary>Electrode Groups</summary>

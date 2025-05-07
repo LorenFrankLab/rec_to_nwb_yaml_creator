@@ -36,6 +36,8 @@ export const defaultYMLValues = {
   },
   electrode_groups: [],
   ntrode_electrode_group_channel_map: [],
+  optogenetics: [],
+  opto_excitation_source: [],
 };
 
 /**
@@ -76,6 +78,12 @@ export const emptyFormData = {
   },
   electrode_groups: [],
   ntrode_electrode_group_channel_map: [],
+  // optogenetics: {
+  //   "device": '',
+  //   "wavelength": '',
+  // }
+  optogenetics: [],
+  excitation_source: [],
 };
 
 /**
@@ -901,6 +909,21 @@ export const behavioralEventsNames = () => {
 };
 
 /**
+ * List of Optogenetic Excitation Source model name
+ *
+ * @returns Hardware
+ */
+export const optoExcitationModelNames = () => {
+  return [
+    ...[
+      'model 1',
+      'model 2',
+      'model 3',
+    ],
+  ];
+};
+
+/**
  * List of Behavioral events descriptions
  *
  * @returns Behavioral events descriptions
@@ -965,5 +988,19 @@ export const arrayDefaultValues = {
     electrode_group_id: '',
     bad_channels: [],
     map: {},
+  },
+
+  optogenetics: {
+    device: '',
+    wavelength: '',
+  },
+
+  opto_excitation_source: {
+    name : 'Omicron LuxX+ Blue',
+    model_name:  'Omicron LuxX+ 488-100',
+    description : 'Laser for optogenetic stimulation',
+    wavelength_in_nm : 488.0,
+    power_in_W : 0.077,
+    intensity_in_W_per_m2 : 1e10,
   },
 };
