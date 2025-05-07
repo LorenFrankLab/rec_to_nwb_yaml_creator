@@ -38,6 +38,7 @@ export const defaultYMLValues = {
   ntrode_electrode_group_channel_map: [],
   optogenetics: [],
   opto_excitation_source: [],
+  optical_fiber: [],
   virus_injection: [],
 };
 
@@ -933,6 +934,16 @@ export const optoExcitationModelNames = () => {
   ];
 };
 
+export const opticalFiberModelNames = () => {
+  return [
+    ...[
+      'model 1',
+      'model 2',
+      'model 3',
+    ],
+  ];
+}
+
 export const virusNames = () => {
   return [
     ... [
@@ -1012,6 +1023,20 @@ export const arrayDefaultValues = {
     wavelength_in_nm : 488.0,
     power_in_W : 0.077,
     intensity_in_W_per_m2 : 1e10,
+  },
+
+  optical_fiber: {
+    hardware_name : '',
+    implanted_fiber_description: '',
+    location : '',
+    hemisphere : '',
+    ap_in_mm : 0.0,
+    ml_in_mm : 0.0,
+    dv_in_mm : 0.0,
+    roll_in_deg :0.0,
+    pitch_in_deg : 0.0,
+    yaw_in_deg : 0.0,
+    excitation_source   : '',
   },
 
   virus_injection: {

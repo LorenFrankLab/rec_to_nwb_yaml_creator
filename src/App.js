@@ -9,6 +9,7 @@ import './App.scss';
 import addFormats from 'ajv-formats';
 import InputElement from './element/InputElement';
 import SelectElement from './element/SelectElement';
+import SelectElementHybrid from './element/SelectElementHybrid';
 import DataListElement from './element/DataListElement';
 import {
   deviceTypeMap,
@@ -50,6 +51,7 @@ import {
   dataAcqDeviceADCCircuit,
   cameraManufacturers,
   optoExcitationModelNames,
+  opticalFiberModelNames,
   virusNames,
 } from './valueList';
 
@@ -1987,6 +1989,193 @@ useEffect(() => {
         </details>
       </div>
 
+      <div id="optical_fiber-area" className="area-region">
+        <details open>
+          <summary>Optical Fiber</summary>
+          <div className="form-container">
+          {formData.optical_fiber.map((item, index) => {
+            const key = 'optical_fiber';
+            return (
+              <details
+                open
+                key={`optical_fiber-${index}`}
+                className="array-item"
+              >
+                <summary>Fiber Implant #{index + 1}</summary>
+                <ArrayItemControl
+                  index={index}
+                  keyValue={key}
+                  duplicateArrayItem={duplicateArrayItem}
+                  removeArrayItem={removeArrayItem}
+                />
+                <div className="form-container">
+                  <SelectElement
+                    id = {`optical_fiber-hardware_name-${index}`}
+                    name="hardware_name"
+                    title="Fiber Hardware Model Name"
+                    dataItems={opticalFiberModelNames()}
+                    defaultValue={''}
+                    placeholder="Model of the fiber hardware device"
+                    onBlur={(e) =>
+                      itemSelected(e, {
+                        key,
+                        index,
+                      })
+                    }
+                  />
+
+                  <InputElement
+                    id={`optical_fiber-implanted_fiber_description-${index}`}
+                    type="text"
+                    name="implanted_fiber_description"
+                    title="Implant Description"
+                    defaultValue={item.implanted_fiber_description}
+                    placeholder="Description of the fiber implant"
+                    required
+                    onBlur={(e) =>
+                      onBlur(e, { key, index })
+                    }
+                  />
+                  <InputElement
+                    id={`optical_fiber-location-${index}`}
+                    type="text"
+                    name="location"
+                    title="Location"
+                    defaultValue={item.location}
+                    placeholder="Location of the fiber implant"
+                    required
+                    onBlur={(e) =>
+                      onBlur(e, { key, index })
+                    }
+                  />
+                  <RadioList
+                   id={`optical_fiber-hemisphere-${index}`}
+                    type="text"
+                    name="hemisphere"
+                    title="Hemisphere"
+                    objectKind="Hemisphere"
+                    defaultValue={item.hemisphere}
+                    placeholder="Hemisphere of the fiber implant"
+                    dataItems={[
+                      ...[
+                        'left',
+                        'right',
+                      ],
+                    ]}
+                    updateFormData={updateFormData}
+                    metaData={{
+                      nameValue: 'hemisphere',
+                      keyValue: 'optical_fiber',
+                      index,
+                    }}
+                    onChange={updateFormData}
+                  />
+                  <InputElement
+                   id = {`optical_fiber-location-${index}`}
+                    type="text"
+                    name="location"
+                    title="Location"
+                    defaultValue={item.location}
+                    placeholder="Location of the fiber implant"
+                    required
+                    onBlur={(e) =>
+                      onBlur(e, { key, index })
+                    }
+                  />
+                  <InputElement
+                    id={`optical_fiber-ap_in_mm-${index}`}
+                    type="number"
+                    name="ap_in_mm"
+                    title="AP (mm)"
+                    defaultValue={item.ap_in_mm}
+                    placeholder="Anterior-Posterior (AP) in mm"
+                    step="any"
+                    required
+                    onBlur={(e) =>
+                      onBlur(e, { key, index })
+                    }
+                  />
+                  <InputElement
+                    id={`optical_fiber-ml_in_mm-${index}`}
+                    type="number"
+                    name="ml_in_mm"
+                    title="ML (mm)"
+                    defaultValue={item.ml_in_mm}
+                    placeholder="Medial-Lateral (ML) in mm"
+                    step="any"
+                    required
+                    onBlur={(e) =>
+                      onBlur(e, { key, index })
+                    }
+                  />
+                  <InputElement
+                    id={`optical_fiber-dv_in_mm-${index}`}
+                    type="number"
+                    name="dv_in_mm"
+                    title="DV (mm)"
+                    defaultValue={item.dv_in_mm}
+                    placeholder="Dorsal-Ventral (DV) in mm"
+                    step="any"
+                    required
+                    onBlur={(e) =>
+                      onBlur(e, { key, index })
+                    }
+                  />
+                  <InputElement
+                    id={`optical_fiber-roll_in_deg-${index}`}
+                    type="number"
+                    name="roll_in_deg"
+                    title="Roll (degrees)"
+                    defaultValue={item.roll_in_deg}
+                    placeholder="Roll in degrees"
+                    step="any"
+                    required
+                    onBlur={(e) =>
+                      onBlur(e, { key, index })
+                    }
+                  />
+                  <InputElement
+                    id={`optical_fiber-pitch_in_deg-${index}`}
+                    type="number"
+                    name="pitch_in_deg"
+                    title="Pitch (degrees)"
+                    defaultValue={item.pitch_in_deg}
+                    placeholder="Pitch in degrees"
+                    step="any"
+                    required
+                    onBlur={(e) =>
+                      onBlur(e, { key, index })
+                    }
+                  />
+                  <InputElement
+                    id={`optical_fiber-yaw_in_deg-${index}`}
+                    type="number"
+                    name="yaw_in_deg"
+                    title="Yaw (degrees)"
+                    defaultValue={item.yaw_in_deg}
+                    placeholder="Yaw in degrees"
+                    step="any"
+                    required
+                    onBlur={(e) =>
+                      onBlur(e, { key, index })
+                    }
+                  />
+
+
+
+
+                </div>
+                </details>
+             );
+            })}
+          </div>
+          <ArrayUpdateMenu
+            itemsKey="optical_fiber"
+            items={formData.optical_fiber}
+            addArrayItem={addArrayItem}
+          />
+        </details>
+      </div>
 
 
 
@@ -1997,7 +2186,7 @@ useEffect(() => {
           <summary>Virus Injection</summary>
           <div className="form-container">
             {formData.virus_injection.map((item, index) => {
-              const key = 'virus';
+              const key = 'virus_injection';
               return (
                 <details
                   open
@@ -2041,7 +2230,7 @@ useEffect(() => {
                         name="virus_name"
                         title="Virus Name"
                         dataItems={virusNames()}
-                        defaultValue={'Virus 1'}
+                        defaultValue={''}
                         placeholder="Model of the hardware"
                         onBlur={(e) =>
                           itemSelected(e, {
