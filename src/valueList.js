@@ -34,12 +34,12 @@ export const defaultYMLValues = {
   device: {
     name: ['Trodes'],
   },
-  electrode_groups: [],
-  ntrode_electrode_group_channel_map: [],
-  optogenetics: [],
   opto_excitation_source: [],
   optical_fiber: [],
   virus_injection: [],
+  electrode_groups: [],
+  ntrode_electrode_group_channel_map: [],
+
 };
 
 /**
@@ -80,7 +80,9 @@ export const emptyFormData = {
   },
   electrode_groups: [],
   ntrode_electrode_group_channel_map: [],
-  excitation_source: [],
+  opto_excitation_source: [],
+  virus_injection: [],
+  optical_fiber: [],
 };
 
 /**
