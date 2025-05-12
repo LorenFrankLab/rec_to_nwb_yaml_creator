@@ -37,6 +37,7 @@ export const defaultYMLValues = {
   opto_excitation_source: [],
   optical_fiber: [],
   virus_injection: [],
+  optogenetic_stimulation_software: "",
   electrode_groups: [],
   ntrode_electrode_group_channel_map: [],
 
@@ -1018,6 +1019,7 @@ export const arrayDefaultValues = {
   },
 
   optical_fiber: {
+    name : 'Optical fiber 1',
     hardware_name : '',
     implanted_fiber_description: '',
     location : '',

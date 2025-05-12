@@ -1944,6 +1944,18 @@ useEffect(() => {
                   removeArrayItem={removeArrayItem}
                 />
                 <div className="form-container">
+                  <InputElement
+                    id={`optical_fiber-name-${index}`}
+                    name="name"
+                    type="text"
+                    title="Fiber Implant Name"
+                    defaultValue={item.name}
+                    placeholder="Name of the fiber implant"
+                    required
+                    onBlur={(e) =>
+                      onBlur(e, { key, index })
+                    }
+                  />
                   <SelectElement
                     id = {`optical_fiber-hardware_name-${index}`}
                     name="hardware_name"
@@ -1966,18 +1978,6 @@ useEffect(() => {
                     title="Implant Description"
                     defaultValue={item.implanted_fiber_description}
                     placeholder="Description of the fiber implant"
-                    required
-                    onBlur={(e) =>
-                      onBlur(e, { key, index })
-                    }
-                  />
-                  <InputElement
-                    id={`optical_fiber-location-${index}`}
-                    type="text"
-                    name="location"
-                    title="Location"
-                    defaultValue={item.location}
-                    placeholder="Location of the fiber implant"
                     required
                     onBlur={(e) =>
                       onBlur(e, { key, index })
@@ -2111,10 +2111,6 @@ useEffect(() => {
           />
         </details>
       </div>
-
-
-
-
 
       <div id="virus_injection-area" className="area-region">
         <details open>
