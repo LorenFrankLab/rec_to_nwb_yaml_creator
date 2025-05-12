@@ -1043,7 +1043,7 @@ export const arrayDefaultValues = {
     pitch_in_deg : 0.0,
     yaw_in_deg : 0.0,
     reference : 'Bregma at the cortical surface',
-    virus: '',
+    virus_name: '',
     titer_in_vg_per_ml : 1e12,
     volume_in_uL : 0.45,
   }
