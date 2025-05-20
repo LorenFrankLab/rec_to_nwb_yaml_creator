@@ -2325,7 +2325,86 @@ useEffect(() => {
           />
         </details>
       </div>
-
+      <div id="fs_gui_yamls" className="area-region">
+        <details open>
+          <summary>FS Gui Yaml Files</summary>
+          <div className="form-container">
+            {formData.fs_gui_yamls.map((fsGuiYamls, index) => {
+              const key = 'fs_gui_yamls';
+              return (
+                <details
+                  open
+                  key={sanitizeTitle(
+                    `${fsGuiYamls.name}-fsg-${index}`
+                  )}
+                  className="array-item"
+                >
+                  <summary> Item #{index + 1} </summary>
+                  <ArrayItemControl
+                    index={index}
+                    keyValue={key}
+                    duplicateArrayItem={duplicateArrayItem}
+                    removeArrayItem={removeArrayItem}
+                  />
+                  <div className="form-container">
+                    <InputElement
+                      id={`fs_gui_yamls-name-${index}`}
+                      type="text"
+                      name="name"
+                      title="Name"
+                      defaultValue={fsGuiYamls.name}
+                      placeholder="path to yaml file"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, {
+                          key,
+                          index,
+                        })
+                      }
+                    />
+                    <InputElement
+                      id = {`fs_gui_yamls-power_in_mW-${index}`}
+                      type="float"
+                      name="power_in_mW"
+                      title="Power in mW"
+                      defaultValue={fsGuiYamls.power_in_mW}
+                      placeholder="Power of laser in these epochs"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, {
+                          key,
+                          index,
+                        })
+                      }
+                    />
+                    <ListElement
+                      id={`fs_gui_yamls-epochs-${index}`}
+                      type="number"
+                      step="1"
+                      name="epochs"
+                      title="Epochs"
+                      defaultValue={fsGuiYamls.epochs}
+                      placeholder="What epochs this optogenetics is applied	"
+                      inputPlaceholder="No task epoch"
+                      updateFormData={updateFormData}
+                      metaData={{
+                        nameValue: 'epochs',
+                        keyValue: key,
+                        index: index,
+                      }}
+                  />
+                  </div>
+                </details>
+              );
+            })}
+          </div>
+          <ArrayUpdateMenu
+            itemsKey="fs_gui_yamls"
+            items={formData.fs_gui_yamls}
+            addArrayItem={addArrayItem}
+          />
+        </details>
+      </div>
 
 
 

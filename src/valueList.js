@@ -37,6 +37,7 @@ export const defaultYMLValues = {
   opto_excitation_source: [],
   optical_fiber: [],
   virus_injection: [],
+  fs_gui_yamls: [],
   optogenetic_stimulation_software: "",
   electrode_groups: [],
   ntrode_electrode_group_channel_map: [],
@@ -84,6 +85,7 @@ export const emptyFormData = {
   opto_excitation_source: [],
   virus_injection: [],
   optical_fiber: [],
+  fs_gui_yamls: [],
 };
 
 /**
@@ -1048,5 +1050,11 @@ export const arrayDefaultValues = {
     virus_name: '',
     titer_in_vg_per_ml : 1e12,
     volume_in_uL : 0.45,
-  }
+  },
+
+  fs_gui_yamls: {
+    name: '/path/to/fs_gui.yaml',
+    epochs: [],
+    power_in_mW: 0.0,
+  },
 };
