@@ -2364,7 +2364,7 @@ useEffect(() => {
                     />
                     <InputElement
                       id = {`fs_gui_yamls-power_in_mW-${index}`}
-                      type="float"
+                      type="number"
                       name="power_in_mW"
                       title="Power in mW"
                       defaultValue={fsGuiYamls.power_in_mW}
