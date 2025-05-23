@@ -1056,5 +1056,6 @@ export const arrayDefaultValues = {
     name: '/path/to/fs_gui.yaml',
     epochs: [],
     power_in_mW: 0.0,
+    dio_output_name: "",
   },
 };

@@ -2392,7 +2392,23 @@ useEffect(() => {
                         keyValue: key,
                         index: index,
                       }}
-                  />
+                    />
+                    <InputElement
+                      id={`fs_gui_yamls-dio_output_name-${index}`}
+                      type="text"
+                      name="dio_output_name"
+                      title="DIO Output Name"
+                      defaultValue={fsGuiYamls.dio_output_name}
+                      placeholder="Name of the dio the trigger is sent through (e.g. Light_1)"
+                      inputPlaceholder="Opto_1"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, {
+                          key,
+                          index,
+                        })
+                      }
+                    />
                   </div>
                 </details>
               );
