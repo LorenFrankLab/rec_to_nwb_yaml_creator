@@ -2409,6 +2409,23 @@ useEffect(() => {
                         })
                       }
                     />
+                    <RadioList
+                      id={`fs_gui_yamls-camera_id-${index}`}
+                      type="number"
+                      name="camera_id"
+                      title="Spatial Filters Camera Id"
+                      objectKind="Camera"
+                      defaultValue={fsGuiYamls.camera_id}
+                      placeholder="Camera(s) used to define spatial filters"
+                      dataItems={cameraIdsDefined}
+                      updateFormArray={updateFormArray}
+                      metaData={{
+                        nameValue: 'camera_id',
+                        keyValue: 'fs_gui_yamls',
+                        index,
+                      }}
+                      onChange={updateFormData}
+                    />
                   </div>
                 </details>
               );

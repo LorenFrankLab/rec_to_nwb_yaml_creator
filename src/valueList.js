@@ -1057,5 +1057,6 @@ export const arrayDefaultValues = {
     epochs: [],
     power_in_mW: 0.0,
     dio_output_name: "",
+    fs_gui_yamls: [],
   },
 };
