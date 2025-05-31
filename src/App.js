@@ -64,6 +64,8 @@ export function App() {
 
   const [taskEpochsDefined, setTaskEpochsDefined] = useState([]);
 
+  const [dioEventsDefined, setDioEventsDefined] = useState([]);
+
   const [appVersion, setAppVersion] = useState('');
 
   /**
@@ -820,6 +822,13 @@ useEffect(() => {
     const cameraIds = formData.cameras.map((camera) => camera.id);
     setCameraIdsDefined([...[...new Set(cameraIds)]].filter((c) => !Number.isNaN(c)));
   }
+
+  // update tracked dio events
+  if (formData.behavioral_events) {
+    const dioEvents = formData.behavioral_events.map((dioEvent) => dioEvent.name);
+    setDioEventsDefined(dioEvents);
+  }
+
 
   // update tracked task epochs
   const taskEpochs = [
@@ -2377,37 +2386,40 @@ useEffect(() => {
                         })
                       }
                     />
-                    <ListElement
-                      id={`fs_gui_yamls-epochs-${index}`}
-                      type="number"
-                      step="1"
-                      name="epochs"
-                      title="Epochs"
-                      defaultValue={fsGuiYamls.epochs}
-                      placeholder="What epochs this optogenetics is applied	"
-                      inputPlaceholder="No task epoch"
-                      updateFormData={updateFormData}
-                      metaData={{
-                        nameValue: 'epochs',
-                        keyValue: key,
-                        index: index,
-                      }}
+                    <CheckboxList
+                        id={`fs_gui_yamls-epochs-${index}`}
+                        type="number"
+                        name="epochs"
+                        title="Epochs"
+                        objectKind="Task"
+                        defaultValue={fsGuiYamls.epochs}
+                        placeholder="What epochs this optogenetics is applied	"
+                        dataItems={taskEpochsDefined}
+                        updateFormArray={updateFormArray}
+                        updateFormData={updateFormData}
+                        metaData={{
+                          nameValue: 'epochs',
+                          keyValue: 'fs_gui_yamls',
+                          index,
+                        }}
+                        onChange={updateFormData}
                     />
-                    <InputElement
+                    <RadioList
                       id={`fs_gui_yamls-dio_output_name-${index}`}
                       type="text"
                       name="dio_output_name"
                       title="DIO Output Name"
+                      objectKind="DIO"
                       defaultValue={fsGuiYamls.dio_output_name}
                       placeholder="Name of the dio the trigger is sent through (e.g. Light_1)"
-                      inputPlaceholder="Opto_1"
-                      required
-                      onBlur={(e) =>
-                        onBlur(e, {
-                          key,
-                          index,
-                        })
-                      }
+                      dataItems={dioEventsDefined}
+                      updateFormData={updateFormData}
+                      metaData={{
+                        nameValue: 'dio_output_name',
+                        keyValue: 'fs_gui_yamls',
+                        index,
+                      }}
+                      updateFormArray={updateFormArray}
                     />
                     <RadioList
                       id={`fs_gui_yamls-camera_id-${index}`}
@@ -2424,7 +2436,7 @@ useEffect(() => {
                         keyValue: 'fs_gui_yamls',
                         index,
                       }}
-                      onChange={updateFormData}
+                      updateFormData={updateFormData}
                     />
                   </div>
                 </details>
