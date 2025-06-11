@@ -1032,6 +1032,7 @@ export const arrayDefaultValues = {
     roll_in_deg :0.0,
     pitch_in_deg : 0.0,
     yaw_in_deg : 0.0,
+    reference : 'Bregma at the cortical surface',
     excitation_source   : '',
   },
 
@@ -1057,6 +1058,5 @@ export const arrayDefaultValues = {
     epochs: [],
     power_in_mW: 0.0,
     dio_output_name: "",
-    fs_gui_yamls: [],
   },
 };
