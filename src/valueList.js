@@ -1058,5 +1058,9 @@ export const arrayDefaultValues = {
     epochs: [],
     power_in_mW: 0.0,
     dio_output_name: "",
+    state_script_parameters: false,
+    pulseLength: NaN,
   },
+
+  optogenetic_stimulation_software: "fsgui",
 };
