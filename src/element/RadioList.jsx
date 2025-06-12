@@ -29,7 +29,6 @@ const RadioList = (prop) => {
   const onChecked = (e) => {
     const { target } = e;
     const { value } = target;
-    // const radioValue = parseInt(value, 10);
     let radioValue;
     if (type === 'number') {
       radioValue = parseInt(value, 10);
