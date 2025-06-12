@@ -927,9 +927,7 @@ export const behavioralEventsDescription = () => {
 export const optoExcitationModelNames = () => {
   return [
     ...[
-      'model 1',
-      'model 2',
-      'model 3',
+      'Lux+ 638-200',
     ],
   ];
 };
@@ -937,9 +935,7 @@ export const optoExcitationModelNames = () => {
 export const opticalFiberModelNames = () => {
   return [
     ...[
-      'model 1',
-      'model 2',
-      'model 3',
+      'optogenix_lambda_fiber',
     ],
   ];
 }
@@ -947,8 +943,8 @@ export const opticalFiberModelNames = () => {
 export const virusNames = () => {
   return [
     ... [
-      "AAV-EF1a-DIO-hChR2(H134R)-EYFP",
-      "AAV-EF1a-DIO-hChR2(H134R)-mCherry",
+      "AAV-1-EF1a-DIO-ChRmine-mScarlet-WPRE",
+      "AAV-8-EF1a-DIO-ChRmine-mScarlet-WPRE",
     ],
   ];
 };
