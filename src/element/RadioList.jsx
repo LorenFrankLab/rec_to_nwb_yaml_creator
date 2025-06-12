@@ -23,12 +23,17 @@ const RadioList = (prop) => {
     defaultValue,
     updateFormData,
     metaData,
+    type = 'number',
   } = prop;
 
   const onChecked = (e) => {
     const { target } = e;
     const { value } = target;
-    const radioValue = parseInt(value, 10);
+    let radioValue;
+    if (type === 'number') {
+      radioValue = parseInt(value, 10);
+    }
+    else {radioValue = value;}
     const { nameValue, keyValue, index } = metaData;
 
     updateFormData(nameValue, radioValue, keyValue, index);
