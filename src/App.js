@@ -2098,10 +2098,6 @@ useEffect(() => {
                       onBlur(e, { key, index })
                     }
                   />
-
-
-
-
                 </div>
                 </details>
              );
