@@ -9,7 +9,6 @@ import './App.scss';
 import addFormats from 'ajv-formats';
 import InputElement from './element/InputElement';
 import SelectElement from './element/SelectElement';
-import SelectElementHybrid from './element/SelectElementHybrid';
 import DataListElement from './element/DataListElement';
 import {
   deviceTypeMap,
