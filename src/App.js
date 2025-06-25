@@ -49,6 +49,9 @@ import {
   dataAcqDeviceAmplifier,
   dataAcqDeviceADCCircuit,
   cameraManufacturers,
+  optoExcitationModelNames,
+  opticalFiberModelNames,
+  virusNames,
 } from './valueList';
 
 const Ajv = require('ajv');
@@ -59,6 +62,8 @@ export function App() {
   const [cameraIdsDefined, setCameraIdsDefined] = useState([]);
 
   const [taskEpochsDefined, setTaskEpochsDefined] = useState([]);
+
+  const [dioEventsDefined, setDioEventsDefined] = useState([]);
 
   const [appVersion, setAppVersion] = useState('');
 
@@ -816,6 +821,13 @@ useEffect(() => {
     const cameraIds = formData.cameras.map((camera) => camera.id);
     setCameraIdsDefined([...[...new Set(cameraIds)]].filter((c) => !Number.isNaN(c)));
   }
+
+  // update tracked dio events
+  if (formData.behavioral_events) {
+    const dioEvents = formData.behavioral_events.map((dioEvent) => dioEvent.name);
+    setDioEventsDefined(dioEvents);
+  }
+
 
   // update tracked task epochs
   const taskEpochs = [
@@ -1795,9 +1807,734 @@ useEffect(() => {
               keyValue: 'device',
             }}
           />
+          </div>
+          </details>
         </div>
-      </details>
-    </div>
+
+
+
+      <div id="opto_excitation_source-area" className="area-region">
+        <details open>
+          <summary>Opto Excitation Source</summary>
+          <div className="form-container">
+            {formData.opto_excitation_source.map((item, index) => {
+              const key = 'opto_excitation_source';
+              return (
+                <details
+                  open
+                  key={`OptoExcitationSource-${index}`}
+                  className="array-item"
+                >
+                  <summary>Source #{index + 1}</summary>
+                  <ArrayItemControl
+                    index={index}
+                    keyValue={key}
+                    duplicateArrayItem={duplicateArrayItem}
+                    removeArrayItem={removeArrayItem}
+                  />
+                  <div className="form-container">
+                    <InputElement
+                      id={`opto_excitation_source-name-${index}`}
+                      type="text"
+                      name="name"
+                      title="Setup Name"
+                      defaultValue={item.name}
+                      placeholder="Name of your setup"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    {/* <InputElement
+                      id={`opto_excitation_source-model_name-${index}`}
+                      type="text"
+                      name="model_name"
+                      title="Hardware Model Name"
+                      defaultValue={item.model_name}
+                      placeholder="Model of the hardware"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    /> */}
+                    <SelectElement
+                        id={`opto_excitation_source-model_name-${index}`}
+                        name="model_name"
+                        title="Hardware Model Name"
+                        dataItems={optoExcitationModelNames()}
+                        defaultValue={'model 1'}
+                        placeholder="Model of the hardware"
+                        onBlur={(e) =>
+                          itemSelected(e, {
+                            key,
+                            index,
+                          })
+                        }
+                      />
+                    <InputElement
+                      id={`opto_excitation_source-description-${index}`}
+                      type="text"
+                      name="description"
+                      title="Description"
+                      defaultValue={item.description}
+                      placeholder="Description of the setup"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    <InputElement
+                      id={`opto_excitation_source-wavelength_in_nm-${index}`}
+                      type="number"
+                      name="wavelength_in_nm"
+                      title="Wavelength (nm)"
+                      defaultValue={item.wavelength_in_nm}
+                      placeholder="xxx nm"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    <InputElement
+                      id={`opto_excitation_source-power_in_W-${index}`}
+                      type="number"
+                      name="power_in_W"
+                      title="Source Power (W)"
+                      defaultValue={item.power_in_w}
+                      placeholder="xxx W"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    <InputElement
+                     id = {`opto_excitation_source-intensity_in_W_per_m2-${index}`}
+                      type="number"
+                      name="intensity_in_W_per_m2"
+                      title="Intensity (W/m2)"
+                      defaultValue={item.intensity_in_W_per_m2}
+                      placeholder="xxx W/m2"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                  </div>
+                </details>
+              );
+            })}
+          </div>
+          <ArrayUpdateMenu
+            itemsKey="opto_excitation_source"
+            items={formData.optogenetics_source}
+            addArrayItem={addArrayItem}
+          />
+        </details>
+      </div>
+
+      <div id="optical_fiber-area" className="area-region">
+        <details open>
+          <summary>Optical Fiber</summary>
+          <div className="form-container">
+          {formData.optical_fiber.map((item, index) => {
+            const key = 'optical_fiber';
+            return (
+              <details
+                open
+                key={`optical_fiber-${index}`}
+                className="array-item"
+              >
+                <summary>Fiber Implant #{index + 1}</summary>
+                <ArrayItemControl
+                  index={index}
+                  keyValue={key}
+                  duplicateArrayItem={duplicateArrayItem}
+                  removeArrayItem={removeArrayItem}
+                />
+                <div className="form-container">
+                  <InputElement
+                    id={`optical_fiber-name-${index}`}
+                    name="name"
+                    type="text"
+                    title="Fiber Implant Name"
+                    defaultValue={item.name}
+                    placeholder="Name of the fiber implant"
+                    required
+                    onBlur={(e) =>
+                      onBlur(e, { key, index })
+                    }
+                  />
+                  <SelectElement
+                    id = {`optical_fiber-hardware_name-${index}`}
+                    name="hardware_name"
+                    title="Fiber Hardware Model Name"
+                    dataItems={opticalFiberModelNames()}
+                    defaultValue={''}
+                    placeholder="Model of the fiber hardware device"
+                    onBlur={(e) =>
+                      itemSelected(e, {
+                        key,
+                        index,
+                      })
+                    }
+                  />
+
+                  <InputElement
+                    id={`optical_fiber-implanted_fiber_description-${index}`}
+                    type="text"
+                    name="implanted_fiber_description"
+                    title="Implant Description"
+                    defaultValue={item.implanted_fiber_description}
+                    placeholder="Description of the fiber implant"
+                    required
+                    onBlur={(e) =>
+                      onBlur(e, { key, index })
+                    }
+                  />
+                  <RadioList
+                   id={`optical_fiber-hemisphere-${index}`}
+                    type="text"
+                    name="hemisphere"
+                    title="Hemisphere"
+                    objectKind="Hemisphere"
+                    defaultValue={item.hemisphere}
+                    placeholder="Hemisphere of the fiber implant"
+                    dataItems={['left','right',]}
+                    updateFormData={updateFormData}
+                    metaData={{
+                      nameValue: 'hemisphere',
+                      keyValue: 'optical_fiber',
+                      index,
+                    }}
+                    onChange={updateFormData}
+                  />
+                  <InputElement
+                   id = {`optical_fiber-location-${index}`}
+                    type="text"
+                    name="location"
+                    title="Location"
+                    defaultValue={item.location}
+                    placeholder="Location of the fiber implant"
+                    required
+                    onBlur={(e) =>
+                      onBlur(e, { key, index })
+                    }
+                  />
+                  <InputElement
+                    id={`optical_fiber-ap_in_mm-${index}`}
+                    type="number"
+                    name="ap_in_mm"
+                    title="AP (mm)"
+                    defaultValue={item.ap_in_mm}
+                    placeholder="Anterior-Posterior (AP) in mm"
+                    step="any"
+                    required
+                    onBlur={(e) =>
+                      onBlur(e, { key, index })
+                    }
+                  />
+                  <InputElement
+                    id={`optical_fiber-ml_in_mm-${index}`}
+                    type="number"
+                    name="ml_in_mm"
+                    title="ML (mm)"
+                    defaultValue={item.ml_in_mm}
+                    placeholder="Medial-Lateral (ML) in mm"
+                    step="any"
+                    required
+                    onBlur={(e) =>
+                      onBlur(e, { key, index })
+                    }
+                  />
+                  <InputElement
+                    id={`optical_fiber-dv_in_mm-${index}`}
+                    type="number"
+                    name="dv_in_mm"
+                    title="DV (mm)"
+                    defaultValue={item.dv_in_mm}
+                    placeholder="Dorsal-Ventral (DV) in mm"
+                    step="any"
+                    required
+                    onBlur={(e) =>
+                      onBlur(e, { key, index })
+                    }
+                  />
+                  <InputElement
+                    id={`optical_fiber-roll_in_deg-${index}`}
+                    type="number"
+                    name="roll_in_deg"
+                    title="Roll (degrees)"
+                    defaultValue={item.roll_in_deg}
+                    placeholder="Roll in degrees"
+                    step="any"
+                    required
+                    onBlur={(e) =>
+                      onBlur(e, { key, index })
+                    }
+                  />
+                  <InputElement
+                    id={`optical_fiber-pitch_in_deg-${index}`}
+                    type="number"
+                    name="pitch_in_deg"
+                    title="Pitch (degrees)"
+                    defaultValue={item.pitch_in_deg}
+                    placeholder="Pitch in degrees"
+                    step="any"
+                    required
+                    onBlur={(e) =>
+                      onBlur(e, { key, index })
+                    }
+                  />
+                  <InputElement
+                    id={`optical_fiber-yaw_in_deg-${index}`}
+                    type="number"
+                    name="yaw_in_deg"
+                    title="Yaw (degrees)"
+                    defaultValue={item.yaw_in_deg}
+                    placeholder="Yaw in degrees"
+                    step="any"
+                    required
+                    onBlur={(e) =>
+                      onBlur(e, { key, index })
+                    }
+                  />
+                </div>
+                </details>
+             );
+            })}
+          </div>
+          <ArrayUpdateMenu
+            itemsKey="optical_fiber"
+            items={formData.optical_fiber}
+            addArrayItem={addArrayItem}
+          />
+        </details>
+      </div>
+
+      <div id="virus_injection-area" className="area-region">
+        <details open>
+          <summary>Virus Injection</summary>
+          <div className="form-container">
+            {formData.virus_injection.map((item, index) => {
+              const key = 'virus_injection';
+              return (
+                <details
+                  open
+                  key={`virus_injection-${index}`}
+                  className="array-item"
+                >
+                  <summary>Injection #{index + 1}</summary>
+                  <ArrayItemControl
+                    index={index}
+                    keyValue={key}
+                    duplicateArrayItem={duplicateArrayItem}
+                    removeArrayItem={removeArrayItem}
+                  />
+                  <div className="form-container">
+                    <InputElement
+                      id={`virus_injection-name-${index}`}
+                      type="text"
+                      name="name"
+                      title="Injection Name"
+                      defaultValue={item.name}
+                      placeholder="Name of your injection (e.g. CA1 injection)"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    <InputElement
+                      id={`virus_injection-description-${index}`}
+                      type="text"
+                      name="description"
+                      title="Description"
+                      defaultValue={item.description}
+                      placeholder="Description of the injection"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    <SelectElement
+                        id={`virus_injection-virus_name-${index}`}
+                        name="virus_name"
+                        title="Virus Name"
+                        dataItems={virusNames()}
+                        defaultValue={''}
+                        placeholder="Model of the hardware"
+                        onBlur={(e) =>
+                          itemSelected(e, {
+                            key,
+                            index,
+                          })
+                        }
+                      />
+                     <InputElement
+                      id={`virus_injection-volume_in_ul-${index}`}
+                      type="number"
+                      name="volume_in_ul"
+                      title="Volume (ul)"
+                      defaultValue={item.volume_in_ul}
+                      placeholder="Volume in ul"
+                      step="any"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    <InputElement
+                      id={`virus_injection-titer_in_vg_per_ml-${index}`}
+                      type="number"
+                      name="titer_in_vg_per_ml"
+                      title="Titer (viral genomes/ml)"
+                      defaultValue={item.titer_in_vg_per_ml}
+                      placeholder="Titer in vg/ml"
+                      step="any"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    <RadioList
+                      id={`virus_injection-hemisphere-${index}`}
+                      type="text"
+                      name="hemisphere"
+                      title="Hemisphere"
+                      objectKind="text"
+                      defaultValue={"left"}
+                      placeholder="Hemisphere of the injection"
+                      dataItems={['left', 'right']}
+                      updateFormData={updateFormData}
+                      metaData={{
+                        nameValue: 'hemisphere',
+                        keyValue: 'virus_injection',
+                        index,
+                      }}
+                      onChange={updateFormData}
+                    />
+                    <InputElement
+                      id={`virus_injection-location-${index}`}
+                      type="text"
+                      name="location"
+                      title="Location"
+                      defaultValue={item.location}
+                      placeholder="Location of the injection"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    <InputElement
+                      id={`virus_injection-ap_in_mm-${index}`}
+                      type="number"
+                      name="ap_in_mm"
+                      title="AP (mm)"
+                      defaultValue={item.ap_in_mm}
+                      placeholder="Anterior-Posterior (AP) in mm"
+                      step="any"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    <InputElement
+                      id={`virus_injection-ml_in_mm-${index}`}
+                      type="number"
+                      name="ml_in_mm"
+                      title="ML (mm)"
+                      defaultValue={item.ml_in_mm}
+                      placeholder="Medial-Lateral (ML) in mm"
+                      step="any"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    <InputElement
+                      id={`virus_injection-dv_in_mm-${index}`}
+                      type="number"
+                      name="dv_in_mm"
+                      title="DV (mm)"
+                      defaultValue={item.dv_in_mm}
+                      placeholder="Dorsal-Ventral (DV) in mm"
+                      step="any"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    <InputElement
+                      id={`virus_injection-roll_in_deg-${index}`}
+                      type="number"
+                      name="roll_in_deg"
+                      title="Roll (degrees)"
+                      defaultValue={item.roll_in_deg}
+                      placeholder="Roll in degrees"
+                      step="any"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    <InputElement
+                      id={`virus_injection-pitch_in_deg-${index}`}
+                      type="number"
+                      name="pitch_in_deg"
+                      title="Pitch (degrees)"
+                      defaultValue={item.pitch_in_deg}
+                      placeholder="Pitch in degrees"
+                      step="any"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+                    <InputElement
+                      id={`virus_injection-yaw_in_deg-${index}`}
+                      type="number"
+                      name="yaw_in_deg"
+                      title="Yaw (degrees)"
+                      defaultValue={item.yaw_in_deg}
+                      placeholder="Yaw in degrees"
+                      step="any"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, { key, index })
+                      }
+                    />
+
+
+                  </div>
+                </details>
+              );
+            })}
+          </div>
+          <ArrayUpdateMenu
+            itemsKey="virus_injection"
+            items={formData.virus_injection}
+            addArrayItem={addArrayItem}
+          />
+        </details>
+      </div>
+      <div id="fs_gui_yamls" className="area-region">
+        <details open>
+          <summary>FS Gui Yamls</summary>
+          <div className="form-container">
+            {formData.fs_gui_yamls.map((fsGuiYamls, index) => {
+              const key = 'fs_gui_yamls';
+              return (
+                <details
+                  open
+                  key={sanitizeTitle(
+                    `${fsGuiYamls.name}-fsg-${index}`
+                  )}
+                  className="array-item"
+                >
+                  <summary> Item #{index + 1} </summary>
+                  <ArrayItemControl
+                    index={index}
+                    keyValue={key}
+                    duplicateArrayItem={duplicateArrayItem}
+                    removeArrayItem={removeArrayItem}
+                  />
+                  <div className="form-container">
+                    <InputElement
+                      id={`fs_gui_yamls-name-${index}`}
+                      type="text"
+                      name="name"
+                      title="Name"
+                      defaultValue={fsGuiYamls.name}
+                      placeholder="path to yaml file"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, {
+                          key,
+                          index,
+                        })
+                      }
+                    />
+                    <InputElement
+                      id = {`fs_gui_yamls-power_in_mW-${index}`}
+                      type="number"
+                      name="power_in_mW"
+                      title="Power in mW"
+                      defaultValue={fsGuiYamls.power_in_mW}
+                      placeholder="Power of laser in these epochs"
+                      required
+                      onBlur={(e) =>
+                        onBlur(e, {
+                          key,
+                          index,
+                        })
+                      }
+                    />
+                    <CheckboxList
+                        id={`fs_gui_yamls-epochs-${index}`}
+                        type="number"
+                        name="epochs"
+                        title="Epochs"
+                        objectKind="Task"
+                        defaultValue={fsGuiYamls.epochs}
+                        placeholder="What epochs this optogenetics is applied	"
+                        dataItems={taskEpochsDefined}
+                        updateFormArray={updateFormArray}
+                        updateFormData={updateFormData}
+                        metaData={{
+                          nameValue: 'epochs',
+                          keyValue: 'fs_gui_yamls',
+                          index,
+                        }}
+                        onChange={updateFormData}
+                    />
+                    <RadioList
+                      id={`fs_gui_yamls-dio_output_name-${index}`}
+                      type="text"
+                      name="dio_output_name"
+                      title="DIO Output Name"
+                      objectKind="DIO"
+                      defaultValue={fsGuiYamls.dio_output_name}
+                      placeholder="Name of the dio the trigger is sent through (e.g. Light_1)"
+                      dataItems={dioEventsDefined}
+                      updateFormData={updateFormData}
+                      metaData={{
+                        nameValue: 'dio_output_name',
+                        keyValue: 'fs_gui_yamls',
+                        index,
+                      }}
+                      updateFormArray={updateFormArray}
+                    />
+                    <RadioList
+                      id={`fs_gui_yamls-camera_id-${index}`}
+                      type="number"
+                      name="camera_id"
+                      title="Spatial Filters Camera Id"
+                      objectKind="Camera"
+                      defaultValue={fsGuiYamls.camera_id}
+                      placeholder="Camera(s) used to define spatial filters"
+                      dataItems={cameraIdsDefined}
+                      updateFormArray={updateFormArray}
+                      metaData={{
+                        nameValue: 'camera_id',
+                        keyValue: 'fs_gui_yamls',
+                        index,
+                      }}
+                      updateFormData={updateFormData}
+                    />
+                    <div style={{ margin: '10px 0', color: '#333', fontWeight: 'bold' }}>
+                      <p style={{ margin: 0 }}>Check this box to enable advanced state script parameters for this item:</p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      id={`fs_gui_yamls-state_script_parameters-${index}`}
+                      name="state_script_parameters"
+                      checked={fsGuiYamls.state_script_parameters}
+                      onChange={(e) =>
+                        updateFormData(
+                          e.target.name,
+                          e.target.checked,
+                          key,
+                          index
+                        )
+                      }
+
+                    />
+                  <label htmlFor={`fs_gui_yamls-state_script_parameters-${index}`}>Enable Advanced Settings</label>
+                  {fsGuiYamls.state_script_parameters && (
+                    <>
+                      <InputElement
+                        id={`fs_gui_yamls-pulseLength-${index}`}
+                        type="number"
+                        name="pulseLength"
+                        title="Length of Pulse (ms)"
+                        defaultValue={NaN}
+                        placeholder="Only used if protocol not generated by fsgui"
+                        onBlur={(e) =>
+                          onBlur(e, {
+                            key,
+                            index,
+                          })
+                        }
+                      />
+                      <InputElement
+                      id = {`fs_gui_yamls-nPulses-${index}`}
+                      type="number"
+                      name="nPulses"
+                      title="Number of Pulses per Train"
+                      defaultValue={NaN}
+                      placeholder="Only used if protocol not generated by fsgui"
+                      onBlur={(e) =>
+                        onBlur(e, {
+                          key,
+                          index,
+                        })
+                      }
+                      />
+                      <InputElement
+                      id = {`fs_gui_yamls-sequencePeriod-${index}`}
+                      type="number"
+                      name="sequencePeriod"
+                      title="Sequence Period (ms)"
+                      defaultValue={NaN}
+                      placeholder="Only used if protocol not generated by fsgui"
+                      onBlur={(e) =>
+                        onBlur(e, {
+                          key,
+                          index,
+                        })
+                      }
+                      />
+                      <InputElement
+                        id={`fs_gui_yamls-nOutputTrains-${index}`}
+                        type="number"
+                        name="nOutputTrains"
+                        title="Number of Output Trains"
+                        defaultValue={NaN}
+                        placeholder="Only used if protocol not generated by fsgui"
+                        onBlur={(e) =>
+                          onBlur(e, {
+                            key,
+                            index,
+                          })
+                        }
+                      />
+                      <InputElement
+                        id={`fs_gui_yamls-train_interval-${index}`}
+                        type="number"
+                        name="train_interval"
+                        title="Train Interval (ms)"
+                        defaultValue={NaN}
+                        placeholder="Only used if protocol not generated by fsgui"
+                        onBlur={(e) =>
+                          onBlur(e, {
+                            key,
+                            index,
+                          })
+                        }
+                      />
+                    </>
+                  )}
+                  </div>
+                </details>
+              );
+            })}
+          </div>
+          <ArrayUpdateMenu
+            itemsKey="fs_gui_yamls"
+            items={formData.fs_gui_yamls}
+            addArrayItem={addArrayItem}
+          />
+        </details>
+      </div>
+      <div id="opto_software-area" className="area-region">
+          <InputElement
+            id="optogenetic_stimulation_software"
+            name="optogenetic_stimulation_software"
+            title="Optogenetic Stimulation Software"
+            defaultValue="fsgui"
+            placeholder="Software used for optogenetic stimulation"
+            onBlur={(e) => onBlur(e)}
+          />
+      </div>
       <div id="electrode_groups-area" className="area-region">
         <details open>
           <summary>Electrode Groups</summary>

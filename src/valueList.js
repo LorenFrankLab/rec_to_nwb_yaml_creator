@@ -34,8 +34,14 @@ export const defaultYMLValues = {
   device: {
     name: ['Trodes'],
   },
+  opto_excitation_source: [],
+  optical_fiber: [],
+  virus_injection: [],
+  fs_gui_yamls: [],
+  optogenetic_stimulation_software: "",
   electrode_groups: [],
   ntrode_electrode_group_channel_map: [],
+
 };
 
 /**
@@ -76,6 +82,10 @@ export const emptyFormData = {
   },
   electrode_groups: [],
   ntrode_electrode_group_channel_map: [],
+  opto_excitation_source: [],
+  virus_injection: [],
+  optical_fiber: [],
+  fs_gui_yamls: [],
 };
 
 /**
@@ -910,6 +920,36 @@ export const behavioralEventsDescription = () => {
 };
 
 /**
+ * List of Optogenetic Excitation Source model name
+ *
+ * @returns Hardware
+ */
+export const optoExcitationModelNames = () => {
+  return [
+    ...[
+      'Lux+ 638-200',
+    ],
+  ];
+};
+
+export const opticalFiberModelNames = () => {
+  return [
+    ...[
+      'optogenix_lambda_fiber',
+    ],
+  ];
+}
+
+export const virusNames = () => {
+  return [
+    ... [
+      "AAV-1-EF1a-DIO-ChRmine-mScarlet-WPRE",
+      "AAV-8-EF1a-DIO-ChRmine-mScarlet-WPRE",
+    ],
+  ];
+};
+
+/**
  * Default values for arrays entries
  */
 export const arrayDefaultValues = {
@@ -966,4 +1006,57 @@ export const arrayDefaultValues = {
     bad_channels: [],
     map: {},
   },
+
+  opto_excitation_source: {
+    name: 'Omicron LuxX+ Blue',
+    model_name: 'Omicron LuxX+ 488-100',
+    description: 'Laser for optogenetic stimulation',
+    wavelength_in_nm: 488.0,
+    power_in_W: 0.077,
+    intensity_in_W_per_m2: 1e10,
+  },
+
+  optical_fiber: {
+    name: 'Optical fiber 1',
+    hardware_name : '',
+    implanted_fiber_description: '',
+    location : '',
+    hemisphere : '',
+    ap_in_mm : 0.0,
+    ml_in_mm : 0.0,
+    dv_in_mm : 0.0,
+    roll_in_deg :0.0,
+    pitch_in_deg : 0.0,
+    yaw_in_deg : 0.0,
+    reference : 'Bregma at the cortical surface',
+    excitation_source   : '',
+  },
+
+  virus_injection: {
+    name: 'Injection 1',
+    description : 'Viral injection for optogenetic stimulation',
+    hemisphere : '',
+    location : '',
+    ap_in_mm : 0.0,
+    ml_in_mm : 0.0,
+    dv_in_mm : 0.0,
+    roll_in_deg : 0.0,
+    pitch_in_deg : 0.0,
+    yaw_in_deg : 0.0,
+    reference : 'Bregma at the cortical surface',
+    virus_name: '',
+    titer_in_vg_per_ml : 1e12,
+    volume_in_uL : 0.45,
+  },
+
+  fs_gui_yamls: {
+    name: '/path/to/fs_gui.yaml',
+    epochs: [],
+    power_in_mW: 0.0,
+    dio_output_name: "",
+    state_script_parameters: false,
+    pulseLength: 0,
+  },
+
+  optogenetic_stimulation_software: "fsgui",
 };
