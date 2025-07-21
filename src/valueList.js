@@ -944,7 +944,7 @@ export const opticalFiberModelNames = () => {
 
 export const virusNames = () => {
   return [
-    ... [
+    ...[
       '',
       "AAV-1-EF1a-DIO-ChRmine-mScarlet-WPRE",
       "AAV-8-EF1a-DIO-ChRmine-mScarlet-WPRE",
