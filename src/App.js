@@ -1862,9 +1862,9 @@ useEffect(() => {
                         name="model_name"
                         title="Hardware Model Name"
                         dataItems={optoExcitationModelNames()}
-                        defaultValue={'model 1'}
+                        defaultValue={item.model_name || ''}
                         placeholder="Model of the hardware"
-                        onBlur={(e) =>
+                        onChange={(e) =>
                           itemSelected(e, {
                             key,
                             index,
@@ -1969,16 +1969,15 @@ useEffect(() => {
                     name="hardware_name"
                     title="Fiber Hardware Model Name"
                     dataItems={opticalFiberModelNames()}
-                    defaultValue={''}
+                    defaultValue={item.hardware_name || ''}
                     placeholder="Model of the fiber hardware device"
-                    onBlur={(e) =>
+                    onChange={(e) =>
                       itemSelected(e, {
                         key,
                         index,
                       })
                     }
                   />
-
                   <InputElement
                     id={`optical_fiber-implanted_fiber_description-${index}`}
                     type="text"
@@ -2160,9 +2159,9 @@ useEffect(() => {
                         name="virus_name"
                         title="Virus Name"
                         dataItems={virusNames()}
-                        defaultValue={''}
+                        defaultValue={item.virus_name || ''}
                         placeholder="Model of the hardware"
-                        onBlur={(e) =>
+                        onChange={(e) =>
                           itemSelected(e, {
                             key,
                             index,
