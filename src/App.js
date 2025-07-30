@@ -615,6 +615,19 @@ const rulesValidation = (jsonFileContent) => {
     isFormValid = false;
   }
 
+  // check if there is an optogenetic source but no optogenetic stimulation software
+  if (
+    jsonFileContent.opto_excitation_source?.length > 0 &&
+    (!jsonFileContent.optogenetic_stimulation_software ||
+     jsonFileContent.optogenetic_stimulation_software.trim() === '')
+  ) {
+    errorMessages.push(
+      'Key: optogenetic_stimulation_software | Error: Optogenetic stimulation software cannot be empty when optogenetic sources are defined'
+    );
+    errorIds.push('optogenetic_stimulation_software');
+    isFormValid = false;
+  }
+
   return {
     isFormValid,
     formErrorMessages: errorMessages,
@@ -654,7 +667,7 @@ const generateYMLFile = (e) => {
   const form = structuredClone(formData);
   const validation = jsonschemaValidation(form);
   const { isValid, jsonSchemaErrors } = validation;
-  const { isFormValid, formErrors } = rulesValidation(form);
+  const { isFormValid, formErrorMessages, formErrorIds } = rulesValidation(form);
 
   if (isValid && isFormValid) {
     const yAMLForm = convertObjectToYAMLString(form);
@@ -670,9 +683,10 @@ const generateYMLFile = (e) => {
     });
   }
 
-  if (isFormValid) {
-    formErrors?.forEach((error) => {
-      displayErrorOnUI(error.id, error.message);
+  if (!isFormValid) {
+    formErrorIds?.forEach((errorId, index) => {
+      const message = formErrorMessages[index];
+      displayErrorOnUI(errorId, message);
     });
   }
 };
@@ -2529,7 +2543,7 @@ useEffect(() => {
             id="optogenetic_stimulation_software"
             name="optogenetic_stimulation_software"
             title="Optogenetic Stimulation Software"
-            defaultValue="fsgui"
+            defaultValue=""
             placeholder="Software used for optogenetic stimulation"
             onBlur={(e) => onBlur(e)}
           />
