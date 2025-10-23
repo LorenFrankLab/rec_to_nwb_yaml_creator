@@ -258,3 +258,21 @@ Based on current performance, these are the regression-detection thresholds:
 1. Tag: `git tag v3.0.0-phase0-complete && git push --tags`
 2. PR: `gh pr create --base main --title "Phase 0: Baseline & Infrastructure"`
 3. Begin Phase 1: Testing Foundation
+
+## Phase 1 Discoveries
+
+### 2025-10-23 - State Initialization Testing
+
+**Bug Found:** Data structure inconsistency between `defaultYMLValues` and `emptyFormData`
+
+- `defaultYMLValues` has 26 keys
+- `emptyFormData` has 25 keys
+- Missing key: `optogenetic_stimulation_software`
+
+**Impact:** When users import a file and it fails validation, the form is cleared using `emptyFormData`. This inconsistency means the `optogenetic_stimulation_software` field won't be properly cleared.
+
+**Location:** `src/valueList.js`
+- Line 41: `defaultYMLValues` has `optogenetic_stimulation_software: ""`
+- Line 89: `emptyFormData` ends without this field
+
+**Fix:** Add `optogenetic_stimulation_software: ""` to `emptyFormData` in Phase 2
