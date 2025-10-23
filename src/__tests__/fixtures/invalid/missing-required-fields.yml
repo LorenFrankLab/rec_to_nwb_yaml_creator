@@ -1,0 +1,6 @@
+# Invalid fixture - missing required fields
+# Should fail validation due to missing: lab, institution, data_acq_device,
+# times_period_multiplier, raw_data_to_volts
+
+experimenter_name:
+  - Doe, John

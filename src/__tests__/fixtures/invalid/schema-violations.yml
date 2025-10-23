@@ -1,0 +1,49 @@
+# Invalid fixture - schema constraint violations
+# Contains valid types but violates schema rules
+
+experimenter_name: []  # Violates minItems: 1
+lab: ""  # Violates pattern (requires non-whitespace)
+institution: "   "  # Violates pattern (only whitespace)
+data_acq_device:
+  - name: ""  # Empty string violates pattern
+    system: SpikeGadgets
+    amplifier: Intan
+    adc_circuit: Intan
+times_period_multiplier: 1.5
+raw_data_to_volts: 0.195
+
+cameras:
+  - id: 0
+    meters_per_pixel: -0.001  # Should be positive
+    manufacturer: "Test"
+    model: "Test"
+    lens: "Test"
+    camera_name: "test"
+
+electrode_groups:
+  - id: 0
+    location: ""  # Empty location
+    device_type: tetrode_12.5
+    description: test
+    targeted_location: ""
+    targeted_x: 3.0
+    targeted_y: 2.5
+    targeted_z: 2.0
+    units: mm
+
+ntrode_electrode_group_channel_map:
+  - ntrode_id: 1
+    electrode_group_id: 99  # References non-existent electrode_group
+    bad_channels: []
+    map:
+      0: 0
+      1: 1
+      2: 2
+      3: 3
+
+tasks:
+  - task_name: sleep
+    task_description: Sleep session
+    task_environment: home cage
+    camera_id: [99]  # References non-existent camera
+    task_epochs: [1]

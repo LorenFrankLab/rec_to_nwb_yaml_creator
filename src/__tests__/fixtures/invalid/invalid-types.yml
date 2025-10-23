@@ -1,0 +1,33 @@
+# Invalid fixture - correct fields but wrong types
+# Should fail validation due to type mismatches
+
+experimenter_name:
+  - Doe, John
+lab: Frank
+institution: University of California, San Francisco
+data_acq_device:
+  - name: SpikeGadgets
+    system: SpikeGadgets
+    amplifier: Intan
+    adc_circuit: Intan
+times_period_multiplier: "not_a_number"  # Should be number
+raw_data_to_volts: "also_not_a_number"   # Should be number
+
+cameras:
+  - id: 1.5  # Should be integer
+    meters_per_pixel: "not_a_number"  # Should be number
+    manufacturer: "Test"
+    model: "Test"
+    lens: "Test"
+    camera_name: "test"
+
+electrode_groups:
+  - id: "zero"  # Should be integer
+    location: CA1
+    device_type: tetrode_12.5
+    description: test electrode
+    targeted_location: CA1
+    targeted_x: 3.0
+    targeted_y: 2.5
+    targeted_z: 2.0
+    units: mm
