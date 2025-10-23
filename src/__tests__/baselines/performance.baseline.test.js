@@ -94,11 +94,11 @@ describe('BASELINE: Performance Metrics', () => {
         `📊 Validation (minimal): avg=${result.avg.toFixed(2)}ms, min=${result.min.toFixed(2)}ms, max=${result.max.toFixed(2)}ms`
       );
 
-      // Threshold: Minimal YAML should validate in < 250ms on average
+      // Threshold: Minimal YAML should validate in < 350ms on average
       // Note: Includes AJV schema compilation overhead on first run
-      // CI environments are slower than local (local: ~100ms, CI: ~200ms)
-      expect(result.avg).toBeLessThan(250);
-      expect(result.max).toBeLessThan(500); // No single run should exceed 500ms
+      // CI environments can be slow and variable (local: ~100ms, CI: 200-320ms)
+      expect(result.avg).toBeLessThan(350);
+      expect(result.max).toBeLessThan(600); // No single run should exceed 600ms
     });
 
     it('validates realistic YAML with 8 electrode groups', () => {
