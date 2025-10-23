@@ -88,6 +88,9 @@ This application is **critical scientific infrastructure** used by neuroscientis
 ### When Making Any Change
 
 ```bash
+# 0. FIRST: Verify environment is set up
+/setup  # Run this command to verify Node version and dependencies
+
 # 1. Read existing code first
 Read the file you're about to modify
 
