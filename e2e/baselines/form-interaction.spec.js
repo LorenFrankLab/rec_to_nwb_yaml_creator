@@ -236,30 +236,32 @@ test.describe('BASELINE: Form Interactions', () => {
     await page.goto('/');
     await expect(page.locator('input:not([type="file"]), textarea, select').first()).toBeVisible({ timeout: 10000 });
 
-    // Find all <details> elements
+    // Find first <details> element
     const details = page.locator('details').first();
+
     if (await details.isVisible()) {
-      const isOpen = await details.getAttribute('open');
-
-      // If closed, open it
-      if (!isOpen) {
-        const summary = details.locator('summary').first();
-        await summary.click();
-        await page.waitForTimeout(200);
-
-        // Verify it opened
-        const nowOpen = await details.getAttribute('open');
-        expect(nowOpen).not.toBeNull();
-      }
-
-      // Close it
       const summary = details.locator('summary').first();
-      await summary.click();
-      await page.waitForTimeout(200);
 
-      // Verify it closed
-      const nowClosed = await details.getAttribute('open');
-      expect(nowClosed).toBeNull();
+      // Get initial state
+      const initialState = await details.getAttribute('open');
+
+      // Click to toggle
+      await summary.click();
+
+      // Wait a bit for DOM update (small fixed delay is acceptable for simple DOM attribute changes)
+      await page.waitForTimeout(100);
+
+      // Verify state changed
+      const afterFirstClick = await details.getAttribute('open');
+      expect(afterFirstClick).not.toBe(initialState);
+
+      // Click again to toggle back
+      await summary.click();
+      await page.waitForTimeout(100);
+
+      // Verify state changed back
+      const afterSecondClick = await details.getAttribute('open');
+      expect(afterSecondClick).toBe(initialState);
     }
   });
 

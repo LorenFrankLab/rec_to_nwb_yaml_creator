@@ -20,8 +20,12 @@ test.use({
 
 // Helper to wait for app to load
 const waitForAppLoad = async (page) => {
+  // Wait for any visible form input as evidence the app loaded
+  // Exclude file inputs which may be hidden
+  await expect(page.locator('input:not([type="file"]), textarea, select').first()).toBeVisible({ timeout: 10000 });
+
   await page.waitForLoadState('networkidle');
-  await page.waitForTimeout(1000); // Give React time to render
+  await page.waitForTimeout(500); // Give React time to fully render
 
   // Disable animations for consistent screenshots
   await page.addStyleTag({
