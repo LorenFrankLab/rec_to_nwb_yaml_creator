@@ -17,7 +17,7 @@ test.describe('BASELINE: Form Interactions', () => {
 
   test('can fill basic metadata fields', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('input, textarea, select').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('input:not([type="file"]), textarea, select').first()).toBeVisible({ timeout: 10000 });
 
     // Fill experimenter field
     const experimenterInput = page.locator('input[name*="experimenter"], input[placeholder*="experimenter"]').first();
@@ -46,7 +46,7 @@ test.describe('BASELINE: Form Interactions', () => {
 
   test('can navigate between form sections using sidebar', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('input, textarea, select').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('input:not([type="file"]), textarea, select').first()).toBeVisible({ timeout: 10000 });
 
     // Click through different sections and verify navigation
     const sections = [
@@ -74,7 +74,7 @@ test.describe('BASELINE: Form Interactions', () => {
 
   test('can add and remove camera items', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('input, textarea, select').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('input:not([type="file"]), textarea, select').first()).toBeVisible({ timeout: 10000 });
 
     // Navigate to cameras section
     const cameraLink = page.locator('a:has-text("Cameras")').first();
@@ -114,7 +114,7 @@ test.describe('BASELINE: Form Interactions', () => {
 
   test('can add and duplicate electrode groups', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('input, textarea, select').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('input:not([type="file"]), textarea, select').first()).toBeVisible({ timeout: 10000 });
 
     // Navigate to electrode groups
     const electrodeLink = page.locator('a:has-text("Electrode Groups")').first();
@@ -160,7 +160,7 @@ test.describe('BASELINE: Form Interactions', () => {
 
   test('can add task and verify epoch fields', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('input, textarea, select').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('input:not([type="file"]), textarea, select').first()).toBeVisible({ timeout: 10000 });
 
     // Navigate to tasks
     const taskLink = page.locator('a:has-text("Tasks")').first();
@@ -202,7 +202,7 @@ test.describe('BASELINE: Form Interactions', () => {
 
   test('can select device type in electrode group', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('input, textarea, select').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('input:not([type="file"]), textarea, select').first()).toBeVisible({ timeout: 10000 });
 
     // Navigate to electrode groups
     const electrodeLink = page.locator('a:has-text("Electrode Groups")').first();
@@ -234,7 +234,7 @@ test.describe('BASELINE: Form Interactions', () => {
 
   test('can open and close collapsible sections (details elements)', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('input, textarea, select').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('input:not([type="file"]), textarea, select').first()).toBeVisible({ timeout: 10000 });
 
     // Find all <details> elements
     const details = page.locator('details').first();
@@ -265,7 +265,7 @@ test.describe('BASELINE: Form Interactions', () => {
 
   test('documents current form reset behavior', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('input, textarea, select').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('input:not([type="file"]), textarea, select').first()).toBeVisible({ timeout: 10000 });
 
     // Fill some fields
     const sessionIdInput = page.locator('input[name*="session_id"]').first();
@@ -292,7 +292,7 @@ test.describe('BASELINE: Form Interactions', () => {
 
   test('documents dynamic camera ID dependency in tasks', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('input, textarea, select').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('input:not([type="file"]), textarea, select').first()).toBeVisible({ timeout: 10000 });
 
     // Add a camera
     const cameraLink = page.locator('a:has-text("Cameras")').first();

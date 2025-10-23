@@ -32,7 +32,7 @@ test.describe('BASELINE: Import/Export Workflow', () => {
 
   test('can import valid minimal YAML file', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('input, textarea, select').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('input:not([type="file"]), textarea, select').first()).toBeVisible({ timeout: 10000 });
 
     // Find import/upload button
     const importButton = page.locator('input[type="file"], button:has-text("Import"), button:has-text("Upload")').first();
@@ -59,7 +59,7 @@ test.describe('BASELINE: Import/Export Workflow', () => {
 
   test('can import complete YAML file', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('input, textarea, select').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('input:not([type="file"]), textarea, select').first()).toBeVisible({ timeout: 10000 });
 
     const importButton = page.locator('input[type="file"]').first();
 
@@ -89,7 +89,7 @@ test.describe('BASELINE: Import/Export Workflow', () => {
 
   test('can import realistic session YAML', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('input, textarea, select').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('input:not([type="file"]), textarea, select').first()).toBeVisible({ timeout: 10000 });
 
     const importButton = page.locator('input[type="file"]').first();
 
@@ -119,7 +119,7 @@ test.describe('BASELINE: Import/Export Workflow', () => {
 
   test('can export YAML file after filling form', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('input, textarea, select').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('input:not([type="file"]), textarea, select').first()).toBeVisible({ timeout: 10000 });
 
     // Fill minimum required fields
     const experimenterInput = page.locator('input[name*="experimenter"]').first();
@@ -203,7 +203,7 @@ test.describe('BASELINE: Import/Export Workflow', () => {
 
   test('documents round-trip: import -> modify -> export', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('input, textarea, select').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('input:not([type="file"]), textarea, select').first()).toBeVisible({ timeout: 10000 });
 
     // Import a file
     const importButton = page.locator('input[type="file"]').first();
@@ -244,7 +244,7 @@ test.describe('BASELINE: Import/Export Workflow', () => {
 
   test('documents validation errors during export attempt', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('input, textarea, select').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('input:not([type="file"]), textarea, select').first()).toBeVisible({ timeout: 10000 });
 
     // Try to export without filling required fields
     const downloadButton = page.locator('button:has-text("Download"), button:has-text("Generate")').first();
@@ -272,7 +272,7 @@ test.describe('BASELINE: Import/Export Workflow', () => {
 
   test('documents filename format of exported YAML', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('input, textarea, select').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('input:not([type="file"]), textarea, select').first()).toBeVisible({ timeout: 10000 });
 
     // Import a complete file to ensure we can export
     const importButton = page.locator('input[type="file"]').first();
@@ -303,7 +303,7 @@ test.describe('BASELINE: Import/Export Workflow', () => {
 
   test('documents behavior when importing invalid YAML', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('input, textarea, select').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('input:not([type="file"]), textarea, select').first()).toBeVisible({ timeout: 10000 });
 
     const importButton = page.locator('input[type="file"]').first();
 
@@ -345,7 +345,7 @@ test.describe('BASELINE: Import/Export Workflow', () => {
 
   test('documents behavior when importing YAML with missing required fields', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('input, textarea, select').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('input:not([type="file"]), textarea, select').first()).toBeVisible({ timeout: 10000 });
 
     const importButton = page.locator('input[type="file"]').first();
 
