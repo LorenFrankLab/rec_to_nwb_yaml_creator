@@ -148,11 +148,11 @@
 - [x] Test electrode group and ntrode map synchronization (covered in array management tests)
 
 #### Validation System Tests
-- [ ] Test jsonschemaValidation with valid inputs
-- [ ] Test jsonschemaValidation with invalid inputs
-- [ ] Test rulesValidation custom constraints
-- [ ] Test validation error handling and display
-- [ ] Test validation with complex nested structures
+- [x] Test jsonschemaValidation with valid inputs (15 tests covering all major input types)
+- [x] Test jsonschemaValidation with invalid inputs (13 tests for required fields and type violations)
+- [x] Test rulesValidation custom constraints (7 tests for camera/task relationship validation)
+- [x] Test validation error handling and display (9 tests for return value structure)
+- [x] Test validation with complex nested structures (19 tests including integration scenarios)
 
 #### State Management Tests
 - [ ] Test immutability of state updates
