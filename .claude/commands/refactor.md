@@ -6,10 +6,10 @@ Your workflow MUST be:
 
     First, read these files IN ORDER:
         CLAUDE.md (implementation guide)
-        COMPREHENSIVE_REFACTORING_PLAN.md (the plan)
-        SCRATCHPAD.md (notes and baselines)
-        REFACTOR_CHANGELOG.md (changes made so far)
-        TASKS.md (current tasks)
+        docs/plans/COMPREHENSIVE_REFACTORING_PLAN.md (the plan)
+        docs/SCRATCHPAD.md (notes and baselines)
+        docs/REFACTOR_CHANGELOG.md (changes made so far)
+        docs/TASKS.md (current tasks)
 
     Find the FIRST unchecked [ ] task in TASKS.md
 
