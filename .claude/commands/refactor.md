@@ -10,24 +10,26 @@ description: Quick access to refactoring project status, documentation, and comm
 
 ## 📊 Current Status
 
-**Phase:** Phase 0 - Baseline & Infrastructure
-**Branch:** `refactor/phase-0-baselines`
-**Working Directory:** `.worktrees/phase-0-baselines/`
+**Phase:** Phase 1 - Testing Foundation
+**Branch:** `main` (Phase 0 merged and approved)
+**Working Directory:** `/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator`
 
 ---
 
 ## 📚 Key Documentation
 
-Read these files to understand context:
+You MUST READ these files IN ORDER to understand context:
 
 ### Critical Reading Order
+
 1. **CLAUDE.md** - Project overview, zero-tolerance policy, critical workflows
-2. **docs/plans/2025-10-23-phase-0-baselines.md** - Phase 0 detailed implementation plan
-3. **docs/TASKS.md** - Current task checklist with completion status
+2. **docs/TASKS.md** - Current task checklist with completion status (PHASE 1 tasks)
+3. **docs/plans/COMPREHENSIVE_REFACTORING_PLAN.md** - Overall refactoring strategy
 4. **docs/SCRATCHPAD.md** - Session notes and performance baselines
 5. **docs/REFACTOR_CHANGELOG.md** - All changes made during refactoring
 
 ### Supporting Documentation
+
 - **docs/ENVIRONMENT_SETUP.md** - Node.js environment details
 - **docs/CI_CD_PIPELINE.md** - GitHub Actions workflow documentation
 - **docs/GIT_HOOKS.md** - Pre-commit/pre-push hook details
@@ -65,18 +67,20 @@ npm run test:e2e -- --update-snapshots
 ## 🔧 Quick Actions
 
 ### Check Project Status
+
 ```bash
 # View current phase tasks
-cat docs/TASKS.md | grep -A 50 "## Phase 0"
+cat docs/TASKS.md | grep -A 100 "## Phase 1"
 
 # Check what's been completed
-git log --oneline --grep="phase0" -20
+git log --oneline -20
 
 # View performance baselines
 cat docs/SCRATCHPAD.md
 ```
 
 ### Run Verification Suite
+
 ```bash
 # Full verification (what CI runs)
 npm run lint && npm run test:baseline -- --run && npm run test:coverage -- --run
@@ -86,19 +90,20 @@ npm test -- --run --passWithNoTests
 ```
 
 ### Git Workflow
+
 ```bash
 # Current branch and status
 git status
 
 # Commit with phase prefix
 git add <files>
-git commit -m "phase0(category): description"
+git commit -m "phase1(category): description"
 
 # View recent commits
 git log --oneline -10
 
 # Push to remote
-git push -u origin refactor/phase-0-baselines
+git push origin main
 ```
 
 ---
@@ -106,6 +111,7 @@ git push -u origin refactor/phase-0-baselines
 ## ⚠️ Critical Rules
 
 ### Test-Driven Development (TDD)
+
 1. **ALWAYS write test FIRST**
 2. **Run test and verify it FAILS** (or establishes baseline)
 3. **Only then create implementation**
@@ -113,12 +119,14 @@ git push -u origin refactor/phase-0-baselines
 5. **Run full regression suite**
 
 ### Phase Gate Rules
+
 - ❌ **DO NOT move to next phase** until ALL current phase tasks are checked
 - ❌ **DO NOT skip tests** to match broken code
 - ❌ **DO NOT change baselines** without explicit approval
 - ✅ **ASK permission** if you need to change requirements
 
 ### Zero-Tolerance Policy
+
 - This is **critical scientific infrastructure**
 - Any regression can **corrupt irreplaceable data**
 - Always use **verification-before-completion** skill
@@ -126,25 +134,25 @@ git push -u origin refactor/phase-0-baselines
 
 ---
 
-## 📋 Phase 0 Exit Criteria
+## 📋 Phase 1 Exit Criteria
 
-Before moving to Phase 1, ALL must be ✅:
+Before moving to Phase 2, ALL must be ✅:
 
-- [ ] All baseline tests documented and passing
-- [ ] CI/CD pipeline operational and green
-- [ ] Performance baselines documented
-- [ ] Visual regression baselines captured
-- [ ] Schema sync check working
+- [ ] Unit test coverage ≥ 60%
+- [ ] Integration test coverage ≥ 50%
+- [ ] All tests passing (baseline + new unit tests)
+- [ ] No new ESLint errors introduced
+- [ ] Documentation updated
 - [ ] Human review and approval
-- [ ] Tag created: `git tag v3.0.0-phase0-complete`
 
-**Check current status:** `cat docs/TASKS.md | grep -A 5 "Phase 0 Exit Gate"`
+**Check current status:** `cat docs/TASKS.md | grep -A 10 "Phase 1 Exit Gate"`
 
 ---
 
 ## 🆘 Troubleshooting
 
 ### Tests Failing
+
 ```bash
 # Check console output for errors
 npm test -- <test-file> --run --no-coverage
@@ -157,6 +165,7 @@ rm -rf node_modules && npm install
 ```
 
 ### Snapshots Need Updating
+
 ```bash
 # Update Vitest snapshots
 npm test -- --run --update
@@ -166,6 +175,7 @@ npm run test:e2e -- --update-snapshots
 ```
 
 ### Hooks Not Running
+
 ```bash
 # Reinstall hooks
 npx husky install
@@ -175,6 +185,7 @@ ls -la .husky/
 ```
 
 ### Environment Issues
+
 ```bash
 # Run environment setup
 /setup
@@ -187,19 +198,18 @@ nvm use && npm install
 
 ## 🎯 Your Next Steps
 
-1. **Read docs/TASKS.md** to find the next unchecked [ ] task
-2. **Read the task specification** in docs/plans/2025-10-23-phase-0-baselines.md
+1. **Read docs/TASKS.md** to find the next unchecked [ ] task in Phase 1
+2. **Read existing production code** that you'll be testing
 3. **Follow TDD workflow** for the task:
-   - Write test first
-   - Verify it fails/establishes baseline
-   - Implement
-   - Verify it passes
+   - Write test first (covering existing behavior)
+   - Verify test passes (we're testing existing code, not fixing bugs)
+   - Add additional test cases for edge cases
    - Run full regression suite
 4. **Update documentation**:
    - Check off [x] in TASKS.md
-   - Add notes to SCRATCHPAD.md
+   - Add notes to SCRATCHPAD.md if you discover important behaviors
    - Update REFACTOR_CHANGELOG.md
-5. **Commit with phase prefix**: `phase0(category): description`
+5. **Commit with phase prefix**: `phase1(tests): description`
 
 ---
 
