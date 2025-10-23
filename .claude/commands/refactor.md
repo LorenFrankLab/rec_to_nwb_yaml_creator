@@ -13,7 +13,7 @@ Your workflow MUST be:
 
     Find the FIRST unchecked [ ] task in TASKS.md
 
-    For EVERY feature, follow TDD: a. Create the TEST file first b. Run the test and verify it FAILS c. Only then create the implementation d. Run test until it PASSES e. Apply review agents (code-reviewer, ux-reviewer) f. Refactor for clarity and efficiency based on feedback g. Add/Update docstrings and types.
+    For EVERY feature, follow TDD: a. Create the TEST file first b. Run the test and verify it FAILS c. Only then create the implementation d. Run test until it PASSES e. Apply review agents (code-reviewer, other relevant agents) f. Refactor for clarity and efficiency based on feedback g. Add/Update docstrings and types.
 
     Update TASKS.md checkboxes as you complete items.
 
