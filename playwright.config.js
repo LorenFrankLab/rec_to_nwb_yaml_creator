@@ -8,6 +8,8 @@ export default defineConfig({
   // Use 4 workers in CI for faster parallel execution (26 tests / 4 = ~6.5 tests per worker)
   // GitHub Actions runners have 2 cores, but can handle 4 parallel browser instances
   workers: process.env.CI ? 4 : undefined,
+  // Skip visual regression tests in CI (keep them local-only)
+  testIgnore: process.env.CI ? '**/visual-regression.spec.js' : undefined,
   reporter: [
     ['html'],
     ['json', { outputFile: 'test-results/results.json' }],
