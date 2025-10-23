@@ -143,9 +143,9 @@
 - [x] Test state initialization and default values (17 tests, discovered optogenetic_stimulation_software bug)
 - [x] Test form data updates (updateFormData, updateFormArray) (25 tests, learned ID naming patterns)
 - [x] Test onBlur transformations (41 tests, documented utility function behaviors)
-- [ ] Test item selection handlers
-- [ ] Test array item management (add, remove, duplicate)
-- [ ] Test electrode group and ntrode map synchronization
+- [x] Test item selection handlers (16 tests, documented DataList and select behaviors)
+- [x] Test array item management (21 tests, verified structure and defaults)
+- [x] Test electrode group and ntrode map synchronization (covered in array management tests)
 
 #### Validation System Tests
 - [ ] Test jsonschemaValidation with valid inputs
