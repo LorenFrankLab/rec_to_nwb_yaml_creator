@@ -1,0 +1,9 @@
+echo "🧪 Running baseline tests before push..."
+npm run test:baseline -- --run
+
+if [ $? -ne 0 ]; then
+  echo "❌ Baseline tests failed. Push blocked."
+  exit 1
+fi
+
+echo "✅ Baseline tests passed"

@@ -1,0 +1,66 @@
+
+> Rec-to-NWB YAML Generator@2.2.12 test:e2e
+> playwright test e2e/baselines --project=chromium
+
+[WebServer] (node:38599) [DEP_WEBPACK_DEV_SERVER_ON_AFTER_SETUP_MIDDLEWARE] DeprecationWarning: 'onAfterSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+[WebServer] (Use `node --trace-deprecation ...` to show where the warning was created)
+[WebServer] (node:38599) [DEP_WEBPACK_DEV_SERVER_ON_BEFORE_SETUP_MIDDLEWARE] DeprecationWarning: 'onBeforeSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+
+Running 26 tests using 5 workers
+
+  ✓   5 [chromium] › e2e/baselines/form-interaction.spec.js:18:7 › BASELINE: Form Interactions › can fill basic metadata fields (905ms)
+  ✓   3 [chromium] › e2e/baselines/form-interaction.spec.js:161:7 › BASELINE: Form Interactions › can add task and verify epoch fields (1.2s)
+  ✓   4 [chromium] › e2e/baselines/form-interaction.spec.js:75:7 › BASELINE: Form Interactions › can add and remove camera items (1.2s)
+  ✓   1 [chromium] › e2e/baselines/form-interaction.spec.js:115:7 › BASELINE: Form Interactions › can add and duplicate electrode groups (1.2s)
+  ✓   6 [chromium] › e2e/baselines/form-interaction.spec.js:203:7 › BASELINE: Form Interactions › can select device type in electrode group (585ms)
+  ✓   7 [chromium] › e2e/baselines/form-interaction.spec.js:235:7 › BASELINE: Form Interactions › can open and close collapsible sections (details elements) (657ms)
+  ✓   2 [chromium] › e2e/baselines/form-interaction.spec.js:47:7 › BASELINE: Form Interactions › can navigate between form sections using sidebar (1.8s)
+Field after reset: ""
+  ✓   9 [chromium] › e2e/baselines/form-interaction.spec.js:268:7 › BASELINE: Form Interactions › documents current form reset behavior (705ms)
+  ✓  10 [chromium] › e2e/baselines/import-export.spec.js:33:7 › BASELINE: Import/Export Workflow › can import valid minimal YAML file (356ms)
+  ✓   8 [chromium] › e2e/baselines/form-interaction.spec.js:295:7 › BASELINE: Form Interactions › documents dynamic camera ID dependency in tasks (823ms)
+  ✓  11 [chromium] › e2e/baselines/import-export.spec.js:60:7 › BASELINE: Import/Export Workflow › can import complete YAML file (408ms)
+  ✓  12 [chromium] › e2e/baselines/import-export.spec.js:90:7 › BASELINE: Import/Export Workflow › can import realistic session YAML (410ms)
+  ✓  13 [chromium] › e2e/baselines/import-export.spec.js:186:7 › BASELINE: Import/Export Workflow › documents round-trip: import -> modify -> export (393ms)
+  ✓  16 [chromium] › e2e/baselines/import-export.spec.js:255:7 › BASELINE: Import/Export Workflow › documents filename format of exported YAML (391ms)
+  ✓  17 [chromium] › e2e/baselines/import-export.spec.js:286:7 › BASELINE: Import/Export Workflow › documents behavior when importing invalid YAML (400ms)
+  ✓  18 [chromium] › e2e/baselines/import-export.spec.js:328:7 › BASELINE: Import/Export Workflow › documents behavior when importing YAML with missing required fields (391ms)
+  ✓  19 [chromium] › e2e/baselines/visual-regression.spec.js:38:7 › BASELINE: Visual Regression › captures initial form state (empty form) (1.8s)
+  ✓  20 [chromium] › e2e/baselines/visual-regression.spec.js:49:7 › BASELINE: Visual Regression › captures top section (experimenter, session info) (1.8s)
+  ✓  21 [chromium] › e2e/baselines/visual-regression.spec.js:62:7 › BASELINE: Visual Regression › captures subject section (2.3s)
+  ✓  22 [chromium] › e2e/baselines/visual-regression.spec.js:79:7 › BASELINE: Visual Regression › captures electrode groups section (empty) (2.1s)
+  ✓  23 [chromium] › e2e/baselines/visual-regression.spec.js:96:7 › BASELINE: Visual Regression › captures camera section (empty) (2.1s)
+  ✓  24 [chromium] › e2e/baselines/visual-regression.spec.js:113:7 › BASELINE: Visual Regression › captures task section (empty) (2.2s)
+  ✓  15 [chromium] › e2e/baselines/import-export.spec.js:227:7 › BASELINE: Import/Export Workflow › documents validation errors during export attempt (5.5s)
+  ✓  26 [chromium] › e2e/baselines/visual-regression.spec.js:153:7 › BASELINE: Visual Regression › captures navigation sidebar (1.5s)
+  ✓  25 [chromium] › e2e/baselines/visual-regression.spec.js:130:7 › BASELINE: Visual Regression › captures validation error state (2.9s)
+  ✘  14 [chromium] › e2e/baselines/import-export.spec.js:120:7 › BASELINE: Import/Export Workflow › can export YAML file after filling form (10.4s)
+
+
+  1) [chromium] › e2e/baselines/import-export.spec.js:120:7 › BASELINE: Import/Export Workflow › can export YAML file after filling form 
+
+    TimeoutError: page.waitForEvent: Timeout 10000ms exceeded while waiting for event "download"
+    =========================== logs ===========================
+    waiting for event "download"
+    ============================================================
+
+      160 |       // Set up download listener BEFORE clicking (best practice)
+      161 |       // Increased timeout for CI environment
+    > 162 |       const downloadPromise = page.waitForEvent('download', { timeout: 10000 });
+          |                                    ^
+      163 |
+      164 |       // Click and wait for download
+      165 |       await downloadButton.click();
+        at /Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/.worktrees/phase-0-baselines/e2e/baselines/import-export.spec.js:162:36
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/baselines-import-export-BA-c0970-AML-file-after-filling-form-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/baselines-import-export-BA-c0970-AML-file-after-filling-form-chromium/error-context.md
+
+  1 failed
+    [chromium] › e2e/baselines/import-export.spec.js:120:7 › BASELINE: Import/Export Workflow › can export YAML file after filling form 
+  25 passed (15.6s)
+
+  Serving HTML report at http://localhost:56564. Press Ctrl+C to quit.

@@ -1,0 +1,30 @@
+# Edge case fixture - empty optional arrays and minimal data
+# Tests that optional arrays can be empty or omitted
+
+experimenter_name:
+  - Doe, John
+lab: Frank
+institution: University of California, San Francisco
+data_acq_device:
+  - name: SpikeGadgets
+    system: SpikeGadgets
+    amplifier: Intan
+    adc_circuit: Intan
+times_period_multiplier: 1.5
+raw_data_to_volts: 0.195
+
+# Optional arrays that are explicitly empty
+cameras: []
+tasks: []
+electrode_groups: []
+ntrode_electrode_group_channel_map: []
+associated_files: []
+associated_video_files: []
+
+# Optional fields that are omitted entirely
+# subject: (omitted)
+# experiment_description: (omitted)
+# session_description: (omitted)
+# session_id: (omitted)
+# keywords: (omitted)
+# behavioral_events: (omitted)

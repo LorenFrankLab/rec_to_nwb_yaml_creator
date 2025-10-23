@@ -28,6 +28,13 @@ npm-debug.log.*
 *.sass.d.ts
 *.scss.d.ts
 
+# Build directories
+build
+
+# Config files
+vitest.config.js
+playwright.config.js
+
 # eslint ignores hidden directories by default:
 # https://github.com/eslint/eslint/issues/8429
 !.erb
