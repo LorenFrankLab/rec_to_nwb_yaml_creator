@@ -67,6 +67,8 @@
     "test:coverage": "vitest --coverage",
     "test:baseline": "vitest run --testPathPattern=baselines",
     "test:integration": "vitest run --testPathPattern=integration",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "eject": "react-scripts eject",
     "lint": "eslint --fix --ext .js,.jsx ."
   },
@@ -83,6 +85,7 @@
     ]
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
