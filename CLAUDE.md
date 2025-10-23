@@ -277,6 +277,21 @@ When making changes to this app that affect YAML output:
 
 ## Common Commands
 
+### Environment Setup
+
+```bash
+/setup                 # Automated environment verification (recommended)
+nvm use                # Switch to Node version from .nvmrc
+node --version         # Check current Node version (should match .nvmrc: v20.19.5)
+npm install            # Install exact dependency versions from package-lock.json
+```
+
+**When to run:**
+- Start of every Claude Code session
+- After pulling changes that update .nvmrc or package.json
+- When switching between projects
+- If you see module import errors or version mismatches
+
 ### Development
 
 ```bash
