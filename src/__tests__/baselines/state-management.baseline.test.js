@@ -101,8 +101,7 @@ describe('BASELINE: structuredClone Usage and Immutability', () => {
       // Baseline: Should be reasonably fast
       expect(avgTime).toBeLessThan(50);
 
-      // Store exact timing for future comparison
-      expect(avgTime).toMatchSnapshot('structuredclone-medium-performance');
+      // Baseline performance: ~0.08ms avg (snapshot removed due to timing variance)
     });
 
     it('documents current performance with large state objects', () => {
@@ -137,8 +136,7 @@ describe('BASELINE: structuredClone Usage and Immutability', () => {
       // May be slower with large objects
       expect(avgTime).toBeLessThan(100);
 
-      // Store exact timing for future comparison
-      expect(avgTime).toMatchSnapshot('structuredclone-large-performance');
+      // Baseline performance: ~0.17ms avg (snapshot removed due to timing variance)
     });
   });
 
@@ -922,8 +920,7 @@ describe('BASELINE: Edge Cases and Quirks', () => {
       expect(duration).toBeLessThan(500);
       expect(cloned).not.toBe(veryLargeState);
 
-      // Document performance characteristics
-      expect(duration).toMatchSnapshot('very-large-clone-performance');
+      // Baseline performance: ~0.32ms (snapshot removed due to timing variance)
     });
   });
 });

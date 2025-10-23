@@ -80,8 +80,6 @@ exports[`BASELINE: Dynamic Dependencies Tracking > Task Epochs Collection > BASE
 ]
 `;
 
-exports[`BASELINE: Edge Cases and Quirks > Performance: Deep Cloning Large Objects > BASELINE: documents performance degradation with very large arrays > very-large-clone-performance 1`] = `0.32845800000006875`;
-
 exports[`BASELINE: Edge Cases and Quirks > Quirk: ID Collision Scenarios > BASELINE: documents what happens if IDs are manually set to collide > id-collision-quirk 1`] = `
 {
   "cameras": [
@@ -283,7 +281,3 @@ exports[`BASELINE: State Consistency After Operations > Multiple Sequential Oper
   },
 ]
 `;
-
-exports[`BASELINE: structuredClone Usage and Immutability > structuredClone Performance Characteristics > documents current performance with large state objects > structuredclone-large-performance 1`] = `0.1518166599999995`;
-
-exports[`BASELINE: structuredClone Usage and Immutability > structuredClone Performance Characteristics > documents current performance with medium state objects > structuredclone-medium-performance 1`] = `0.07596250000000054`;
