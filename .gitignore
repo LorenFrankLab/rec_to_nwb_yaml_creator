@@ -127,3 +127,6 @@ npm-debug.log.*
 docs/_build/
 
 /build
+
+# Git worktrees (isolated workspaces)
+.worktrees/

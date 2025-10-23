@@ -1,0 +1,66 @@
+# Edge case fixture - Unicode and special characters
+# Tests handling of international characters, emoji, etc.
+
+experimenter_name:
+  - "Müller, François"
+  - "García, María José"
+  - "Søren, Ørsted"
+lab: "Frank 研究室"
+institution: "université Paris-Saclay"
+experiment_description: "Étude de navigation spatiale avec récompenses 🧠"
+session_description: "Test with émoji and spécial çharacters • bullets ★"
+session_id: "test_αβγ_001"
+
+subject:
+  description: "Long Evans Rat • bred in-house"
+  genotype: "Wild Type WT+/+"
+  species: "Rattus norvegicus"
+  sex: M
+  subject_id: "rat_αλφα"
+  weight: 450
+  date_of_birth: 2023-01-15T00:00:00
+
+data_acq_device:
+  - name: SpikeGadgets
+    system: SpikeGadgets
+    amplifier: Intan
+    adc_circuit: Intan
+
+times_period_multiplier: 1.5
+raw_data_to_volts: 0.195
+
+cameras:
+  - id: 0
+    meters_per_pixel: 0.001
+    manufacturer: "製造者"
+    model: "Model™ 2000"
+    lens: "Lens® Pro"
+    camera_name: "overhead_カメラ"
+
+tasks:
+  - task_name: "tâche_一"
+    task_description: "Description avec accents: à é ï ô ü"
+    task_environment: "environnement • spécial"
+    camera_id: [0]
+    task_epochs: [1]
+
+electrode_groups:
+  - id: 0
+    location: "CA1 • hippocampus"
+    device_type: tetrode_12.5
+    description: "Tetrode №1 in CA1"
+    targeted_location: "CA1 • hippocampus"
+    targeted_x: 3.0
+    targeted_y: 2.5
+    targeted_z: 2.0
+    units: mm
+
+ntrode_electrode_group_channel_map:
+  - ntrode_id: 1
+    electrode_group_id: 0
+    bad_channels: []
+    map:
+      0: 0
+      1: 1
+      2: 2
+      3: 3

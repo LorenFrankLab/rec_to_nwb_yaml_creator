@@ -1,0 +1,283 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`BASELINE: Array Operations > Array Filtering Operations > BASELINE: documents filtering pattern used for ntrode removal > filter-ntrodes-by-electrode-group 1`] = `
+[
+  {
+    "electrode_group_id": 1,
+    "ntrode_id": 2,
+  },
+  {
+    "electrode_group_id": 2,
+    "ntrode_id": 3,
+  },
+]
+`;
+
+exports[`BASELINE: Array Operations > Array ID Management > BASELINE: documents how IDs are auto-incremented when adding items > id-auto-increment 1`] = `
+{
+  "formItems": [
+    {
+      "id": 0,
+      "name": "item0",
+    },
+    {
+      "id": 1,
+      "name": "item1",
+    },
+    {
+      "id": 5,
+      "name": "item5",
+    },
+  ],
+  "nextId": 6,
+}
+`;
+
+exports[`BASELINE: Array Operations > Array Splice Operations > BASELINE: documents duplicate operation (insert after original) > duplicate-array-item 1`] = `
+[
+  {
+    "camera_name": "camera0",
+    "id": 0,
+  },
+  {
+    "camera_name": "camera1",
+    "id": 1,
+  },
+  {
+    "camera_name": "camera1",
+    "id": 3,
+  },
+  {
+    "camera_name": "camera2",
+    "id": 2,
+  },
+]
+`;
+
+exports[`BASELINE: Dynamic Dependencies Tracking > Camera IDs Collection > BASELINE: documents how camera IDs are collected from cameras array > camera-ids-collection 1`] = `
+[
+  0,
+  1,
+  5,
+]
+`;
+
+exports[`BASELINE: Dynamic Dependencies Tracking > DIO Events Collection > BASELINE: documents how behavioral event names are collected > dio-events-collection 1`] = `
+[
+  "reward_event",
+  "stim_event",
+]
+`;
+
+exports[`BASELINE: Dynamic Dependencies Tracking > Task Epochs Collection > BASELINE: documents how task epochs are collected > task-epochs-collection 1`] = `
+[
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+]
+`;
+
+exports[`BASELINE: Edge Cases and Quirks > Quirk: ID Collision Scenarios > BASELINE: documents what happens if IDs are manually set to collide > id-collision-quirk 1`] = `
+{
+  "cameras": [
+    {
+      "camera_name": "camera_0",
+      "id": 0,
+    },
+    {
+      "camera_name": "camera_0_duplicate",
+      "id": 0,
+    },
+  ],
+}
+`;
+
+exports[`BASELINE: Electrode Group & Ntrode Channel Map Synchronization > Device Type Selection and Ntrode Auto-Generation > BASELINE: documents ntrode generation for multi-shank probe > ntrode-multi-shank-probe 1`] = `
+[
+  {
+    "bad_channels": [],
+    "electrode_group_id": 1,
+    "map": {
+      "0": 0,
+      "1": 1,
+      "10": 10,
+      "11": 11,
+      "12": 12,
+      "13": 13,
+      "14": 14,
+      "15": 15,
+      "2": 2,
+      "3": 3,
+      "4": 4,
+      "5": 5,
+      "6": 6,
+      "7": 7,
+      "8": 8,
+      "9": 9,
+    },
+    "ntrode_id": 1,
+  },
+  {
+    "bad_channels": [],
+    "electrode_group_id": 1,
+    "map": {
+      "0": 16,
+      "1": 17,
+      "10": 26,
+      "11": 27,
+      "12": 28,
+      "13": 29,
+      "14": 30,
+      "15": 31,
+      "2": 18,
+      "3": 19,
+      "4": 20,
+      "5": 21,
+      "6": 22,
+      "7": 23,
+      "8": 24,
+      "9": 25,
+    },
+    "ntrode_id": 2,
+  },
+]
+`;
+
+exports[`BASELINE: Electrode Group & Ntrode Channel Map Synchronization > Device Type Selection and Ntrode Auto-Generation > BASELINE: documents ntrode generation for tetrode_12.5 > ntrode-tetrode-12.5 1`] = `
+[
+  {
+    "bad_channels": [],
+    "electrode_group_id": 0,
+    "map": {
+      "0": 0,
+      "1": 1,
+      "2": 2,
+      "3": 3,
+    },
+    "ntrode_id": 1,
+  },
+]
+`;
+
+exports[`BASELINE: Electrode Group & Ntrode Channel Map Synchronization > Electrode Group Duplication with Ntrodes > BASELINE: documents complete duplication logic > electrode-group-duplication-with-ntrodes 1`] = `
+{
+  "electrode_groups": [
+    {
+      "device_type": "tetrode_12.5",
+      "id": 0,
+      "location": "CA1",
+    },
+    {
+      "device_type": "tetrode_12.5",
+      "id": 1,
+      "location": "CA1",
+    },
+  ],
+  "ntrode_electrode_group_channel_map": [
+    {
+      "bad_channels": [
+        2,
+      ],
+      "electrode_group_id": 0,
+      "map": {
+        "0": 0,
+        "1": 1,
+        "2": 2,
+        "3": 3,
+      },
+      "ntrode_id": 1,
+    },
+    {
+      "bad_channels": [
+        2,
+      ],
+      "electrode_group_id": 1,
+      "map": {
+        "0": 0,
+        "1": 1,
+        "2": 2,
+        "3": 3,
+      },
+      "ntrode_id": 2,
+    },
+  ],
+}
+`;
+
+exports[`BASELINE: Electrode Group & Ntrode Channel Map Synchronization > Electrode Group Removal Cascade > BASELINE: documents cascade deletion of ntrodes when electrode group removed > electrode-group-removal-cascade 1`] = `
+{
+  "electrode_groups": [
+    {
+      "device_type": "tetrode_12.5",
+      "id": 1,
+      "location": "CA3",
+    },
+  ],
+  "ntrode_electrode_group_channel_map": [
+    {
+      "electrode_group_id": 1,
+      "map": {},
+      "ntrode_id": 2,
+    },
+  ],
+}
+`;
+
+exports[`BASELINE: State Consistency After Operations > Complex Electrode Group Operations > BASELINE: documents state after electrode group add, duplicate, remove sequence > complex-electrode-group-sequence 1`] = `
+{
+  "cameras": [],
+  "data_acq_device": [
+    {
+      "adc_circuit": "TestADC",
+      "amplifier": "TestAmp",
+      "name": "TestDevice",
+      "system": "TestSystem",
+    },
+  ],
+  "electrode_groups": [
+    {
+      "device_type": "tetrode_12.5",
+      "id": 1,
+      "location": "CA1",
+    },
+  ],
+  "experimenter_name": [
+    "Doe, John",
+  ],
+  "institution": "Test Institution",
+  "lab": "Test Lab",
+  "ntrode_electrode_group_channel_map": [
+    {
+      "electrode_group_id": 1,
+      "map": {},
+      "ntrode_id": 2,
+    },
+  ],
+  "raw_data_to_volts": 0.195,
+  "tasks": [],
+  "times_period_multiplier": 1.5,
+}
+`;
+
+exports[`BASELINE: State Consistency After Operations > Multiple Sequential Operations > BASELINE: documents state after multiple array additions > multiple-camera-additions 1`] = `
+[
+  {
+    "camera_name": "camera_0",
+    "id": 0,
+    "meters_per_pixel": 0.001,
+  },
+  {
+    "camera_name": "camera_1",
+    "id": 1,
+    "meters_per_pixel": 0.001,
+  },
+  {
+    "camera_name": "camera_2",
+    "id": 2,
+    "meters_per_pixel": 0.001,
+  },
+]
+`;

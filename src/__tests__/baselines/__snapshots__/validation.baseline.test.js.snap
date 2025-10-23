@@ -1,0 +1,567 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`BASELINE: Custom Rules Validation > Tasks-Camera Relationship > BASELINE: validates tasks with no cameras defined > tasks-no-cameras 1`] = `
+{
+  "errors": [],
+  "formErrors": [
+    "Key: task.camera | Error: There is tasks camera_id, but no camera object with ids. No data is loaded",
+  ],
+  "isFormValid": false,
+}
+`;
+
+exports[`BASELINE: JSON Schema Validation > Array Validation > BASELINE: documents behavior for empty experimenter_name array > empty-experimenter-array 1`] = `
+{
+  "errors": [
+    {
+      "instancePath": "/experimenter_name",
+      "keyword": "minItems",
+      "message": "must NOT have fewer than 1 items",
+      "params": {
+        "limit": 1,
+      },
+      "schemaPath": "#/properties/experimenter_name/minItems",
+    },
+  ],
+  "isValid": false,
+  "jsonSchemaErrorIds": [
+    "experimenter_name",
+  ],
+  "jsonSchemaErrorMessages": [
+    "Key: experimenter_name. | Error: must NOT have fewer than 1 items",
+  ],
+  "jsonSchemaErrors": [
+    {
+      "instancePath": "/experimenter_name",
+      "keyword": "minItems",
+      "message": "must NOT have fewer than 1 items",
+      "params": {
+        "limit": 1,
+      },
+      "schemaPath": "#/properties/experimenter_name/minItems",
+    },
+  ],
+  "valid": false,
+}
+`;
+
+exports[`BASELINE: JSON Schema Validation > Edge Cases and Boundary Values > BASELINE: handles boundary values > boundary-values 1`] = `
+{
+  "errors": null,
+  "isValid": true,
+  "jsonSchemaErrorIds": [],
+  "jsonSchemaErrorMessages": [],
+  "jsonSchemaErrors": null,
+  "valid": true,
+}
+`;
+
+exports[`BASELINE: JSON Schema Validation > Edge Cases and Boundary Values > BASELINE: handles empty optional arrays > empty-optional-arrays 1`] = `
+{
+  "errors": null,
+  "isValid": true,
+  "jsonSchemaErrorIds": [],
+  "jsonSchemaErrorMessages": [],
+  "jsonSchemaErrors": null,
+  "valid": true,
+}
+`;
+
+exports[`BASELINE: JSON Schema Validation > Edge Cases and Boundary Values > BASELINE: handles unicode strings > unicode-strings 1`] = `
+{
+  "errors": null,
+  "isValid": true,
+  "jsonSchemaErrorIds": [],
+  "jsonSchemaErrorMessages": [],
+  "jsonSchemaErrors": null,
+  "valid": true,
+}
+`;
+
+exports[`BASELINE: JSON Schema Validation > Pattern Validation (non-empty strings) > BASELINE: documents current behavior for empty institution > empty-institution 1`] = `
+{
+  "errors": [
+    {
+      "instancePath": "/institution",
+      "keyword": "pattern",
+      "message": "must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
+      "params": {
+        "pattern": "^(.|\\s)*\\S(.|\\s)*$",
+      },
+      "schemaPath": "#/properties/institution/pattern",
+    },
+  ],
+  "isValid": false,
+  "jsonSchemaErrorIds": [
+    "institution",
+  ],
+  "jsonSchemaErrorMessages": [
+    "Key: institution. | Error: must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
+  ],
+  "jsonSchemaErrors": [
+    {
+      "instancePath": "/institution",
+      "keyword": "pattern",
+      "message": "must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
+      "params": {
+        "pattern": "^(.|\\s)*\\S(.|\\s)*$",
+      },
+      "schemaPath": "#/properties/institution/pattern",
+    },
+  ],
+  "valid": false,
+}
+`;
+
+exports[`BASELINE: JSON Schema Validation > Pattern Validation (non-empty strings) > BASELINE: documents current behavior for empty lab string > empty-lab-string 1`] = `
+{
+  "errors": [
+    {
+      "instancePath": "/lab",
+      "keyword": "pattern",
+      "message": "must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
+      "params": {
+        "pattern": "^(.|\\s)*\\S(.|\\s)*$",
+      },
+      "schemaPath": "#/properties/lab/pattern",
+    },
+  ],
+  "isValid": false,
+  "jsonSchemaErrorIds": [
+    "lab",
+  ],
+  "jsonSchemaErrorMessages": [
+    "Key: lab. | Error: must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
+  ],
+  "jsonSchemaErrors": [
+    {
+      "instancePath": "/lab",
+      "keyword": "pattern",
+      "message": "must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
+      "params": {
+        "pattern": "^(.|\\s)*\\S(.|\\s)*$",
+      },
+      "schemaPath": "#/properties/lab/pattern",
+    },
+  ],
+  "valid": false,
+}
+`;
+
+exports[`BASELINE: JSON Schema Validation > Pattern Validation (non-empty strings) > BASELINE: documents current behavior for whitespace-only lab string > whitespace-only-lab 1`] = `
+{
+  "errors": [
+    {
+      "instancePath": "/lab",
+      "keyword": "pattern",
+      "message": "must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
+      "params": {
+        "pattern": "^(.|\\s)*\\S(.|\\s)*$",
+      },
+      "schemaPath": "#/properties/lab/pattern",
+    },
+  ],
+  "isValid": false,
+  "jsonSchemaErrorIds": [
+    "lab",
+  ],
+  "jsonSchemaErrorMessages": [
+    "Key: lab. | Error: must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
+  ],
+  "jsonSchemaErrors": [
+    {
+      "instancePath": "/lab",
+      "keyword": "pattern",
+      "message": "must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
+      "params": {
+        "pattern": "^(.|\\s)*\\S(.|\\s)*$",
+      },
+      "schemaPath": "#/properties/lab/pattern",
+    },
+  ],
+  "valid": false,
+}
+`;
+
+exports[`BASELINE: Known Bugs Documentation > BUG: Array Uniqueness Constraints > BASELINE: documents duplicate experimenter names > duplicate-experimenter-names 1`] = `
+{
+  "errors": [
+    {
+      "instancePath": "/experimenter_name",
+      "keyword": "uniqueItems",
+      "message": "must NOT have duplicate items (items ## 1 and 0 are identical)",
+      "params": {
+        "i": 0,
+        "j": 1,
+      },
+      "schemaPath": "#/properties/experimenter_name/uniqueItems",
+    },
+  ],
+  "isValid": false,
+  "jsonSchemaErrorIds": [
+    "experimenter_name",
+  ],
+  "jsonSchemaErrorMessages": [
+    "Key: experimenter_name. | Error: must NOT have duplicate items (items ## 1 and 0 are identical)",
+  ],
+  "jsonSchemaErrors": [
+    {
+      "instancePath": "/experimenter_name",
+      "keyword": "uniqueItems",
+      "message": "must NOT have duplicate items (items ## 1 and 0 are identical)",
+      "params": {
+        "i": 0,
+        "j": 1,
+      },
+      "schemaPath": "#/properties/experimenter_name/uniqueItems",
+    },
+  ],
+  "valid": false,
+}
+`;
+
+exports[`BASELINE: Known Bugs Documentation > BUG: Camera ID Type Issues > BASELINE: documents camera id as float (should be integer) > camera-id-float-bug 1`] = `
+{
+  "errors": [
+    {
+      "instancePath": "/cameras/0",
+      "keyword": "required",
+      "message": "must have required property 'manufacturer'",
+      "params": {
+        "missingProperty": "manufacturer",
+      },
+      "schemaPath": "#/properties/cameras/items/required",
+    },
+    {
+      "instancePath": "/cameras/0",
+      "keyword": "required",
+      "message": "must have required property 'model'",
+      "params": {
+        "missingProperty": "model",
+      },
+      "schemaPath": "#/properties/cameras/items/required",
+    },
+    {
+      "instancePath": "/cameras/0",
+      "keyword": "required",
+      "message": "must have required property 'lens'",
+      "params": {
+        "missingProperty": "lens",
+      },
+      "schemaPath": "#/properties/cameras/items/required",
+    },
+    {
+      "instancePath": "/cameras/0/id",
+      "keyword": "type",
+      "message": "must be integer",
+      "params": {
+        "type": "integer",
+      },
+      "schemaPath": "#/properties/cameras/items/properties/id/type",
+    },
+  ],
+  "isValid": false,
+  "jsonSchemaErrorIds": [
+    "cameras",
+  ],
+  "jsonSchemaErrorMessages": [
+    "Key: cameras, 0. | Error: must have required property 'manufacturer'",
+    "Key: cameras, 0. | Error: must have required property 'model'",
+    "Key: cameras, 0. | Error: must have required property 'lens'",
+    "Key: cameras, 0, id. | Error: must be integer",
+  ],
+  "jsonSchemaErrors": [
+    {
+      "instancePath": "/cameras/0",
+      "keyword": "required",
+      "message": "must have required property 'manufacturer'",
+      "params": {
+        "missingProperty": "manufacturer",
+      },
+      "schemaPath": "#/properties/cameras/items/required",
+    },
+    {
+      "instancePath": "/cameras/0",
+      "keyword": "required",
+      "message": "must have required property 'model'",
+      "params": {
+        "missingProperty": "model",
+      },
+      "schemaPath": "#/properties/cameras/items/required",
+    },
+    {
+      "instancePath": "/cameras/0",
+      "keyword": "required",
+      "message": "must have required property 'lens'",
+      "params": {
+        "missingProperty": "lens",
+      },
+      "schemaPath": "#/properties/cameras/items/required",
+    },
+    {
+      "instancePath": "/cameras/0/id",
+      "keyword": "type",
+      "message": "must be integer",
+      "params": {
+        "type": "integer",
+      },
+      "schemaPath": "#/properties/cameras/items/properties/id/type",
+    },
+  ],
+  "valid": false,
+}
+`;
+
+exports[`BASELINE: Known Bugs Documentation > BUG: Camera ID Type Issues > BASELINE: documents negative camera id > camera-id-negative 1`] = `
+{
+  "errors": [
+    {
+      "instancePath": "/cameras/0",
+      "keyword": "required",
+      "message": "must have required property 'manufacturer'",
+      "params": {
+        "missingProperty": "manufacturer",
+      },
+      "schemaPath": "#/properties/cameras/items/required",
+    },
+    {
+      "instancePath": "/cameras/0",
+      "keyword": "required",
+      "message": "must have required property 'model'",
+      "params": {
+        "missingProperty": "model",
+      },
+      "schemaPath": "#/properties/cameras/items/required",
+    },
+    {
+      "instancePath": "/cameras/0",
+      "keyword": "required",
+      "message": "must have required property 'lens'",
+      "params": {
+        "missingProperty": "lens",
+      },
+      "schemaPath": "#/properties/cameras/items/required",
+    },
+  ],
+  "isValid": false,
+  "jsonSchemaErrorIds": [
+    "cameras",
+  ],
+  "jsonSchemaErrorMessages": [
+    "Key: cameras, 0. | Error: must have required property 'manufacturer'",
+    "Key: cameras, 0. | Error: must have required property 'model'",
+    "Key: cameras, 0. | Error: must have required property 'lens'",
+  ],
+  "jsonSchemaErrors": [
+    {
+      "instancePath": "/cameras/0",
+      "keyword": "required",
+      "message": "must have required property 'manufacturer'",
+      "params": {
+        "missingProperty": "manufacturer",
+      },
+      "schemaPath": "#/properties/cameras/items/required",
+    },
+    {
+      "instancePath": "/cameras/0",
+      "keyword": "required",
+      "message": "must have required property 'model'",
+      "params": {
+        "missingProperty": "model",
+      },
+      "schemaPath": "#/properties/cameras/items/required",
+    },
+    {
+      "instancePath": "/cameras/0",
+      "keyword": "required",
+      "message": "must have required property 'lens'",
+      "params": {
+        "missingProperty": "lens",
+      },
+      "schemaPath": "#/properties/cameras/items/required",
+    },
+  ],
+  "valid": false,
+}
+`;
+
+exports[`BASELINE: Known Bugs Documentation > BUG: Empty String Validation Gaps > BASELINE: documents empty string in optional fields > empty-experiment-description 1`] = `
+{
+  "errors": [
+    {
+      "instancePath": "/experiment_description",
+      "keyword": "pattern",
+      "message": "must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
+      "params": {
+        "pattern": "^(.|\\s)*\\S(.|\\s)*$",
+      },
+      "schemaPath": "#/properties/experiment_description/pattern",
+    },
+  ],
+  "isValid": false,
+  "jsonSchemaErrorIds": [
+    "experiment_description",
+  ],
+  "jsonSchemaErrorMessages": [
+    "Key: experiment_description. | Error: must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
+  ],
+  "jsonSchemaErrors": [
+    {
+      "instancePath": "/experiment_description",
+      "keyword": "pattern",
+      "message": "must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
+      "params": {
+        "pattern": "^(.|\\s)*\\S(.|\\s)*$",
+      },
+      "schemaPath": "#/properties/experiment_description/pattern",
+    },
+  ],
+  "valid": false,
+}
+`;
+
+exports[`BASELINE: Known Bugs Documentation > BUG: Empty String Validation Gaps > BASELINE: documents whitespace-only in optional fields > whitespace-only-session-description 1`] = `
+{
+  "errors": [
+    {
+      "instancePath": "/session_description",
+      "keyword": "pattern",
+      "message": "must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
+      "params": {
+        "pattern": "^(.|\\s)*\\S(.|\\s)*$",
+      },
+      "schemaPath": "#/properties/session_description/pattern",
+    },
+  ],
+  "isValid": false,
+  "jsonSchemaErrorIds": [
+    "session_description",
+  ],
+  "jsonSchemaErrorMessages": [
+    "Key: session_description. | Error: must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
+  ],
+  "jsonSchemaErrors": [
+    {
+      "instancePath": "/session_description",
+      "keyword": "pattern",
+      "message": "must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
+      "params": {
+        "pattern": "^(.|\\s)*\\S(.|\\s)*$",
+      },
+      "schemaPath": "#/properties/session_description/pattern",
+    },
+  ],
+  "valid": false,
+}
+`;
+
+exports[`BASELINE: Known Bugs Documentation > BUG: Hardware Channel Mapping Validation > BASELINE: documents duplicate channel mappings not detected > duplicate-channel-mapping-bug 1`] = `
+{
+  "errors": [
+    {
+      "instancePath": "/electrode_groups/0",
+      "keyword": "required",
+      "message": "must have required property 'targeted_location'",
+      "params": {
+        "missingProperty": "targeted_location",
+      },
+      "schemaPath": "#/properties/electrode_groups/items/required",
+    },
+    {
+      "instancePath": "/electrode_groups/0",
+      "keyword": "required",
+      "message": "must have required property 'targeted_x'",
+      "params": {
+        "missingProperty": "targeted_x",
+      },
+      "schemaPath": "#/properties/electrode_groups/items/required",
+    },
+    {
+      "instancePath": "/electrode_groups/0",
+      "keyword": "required",
+      "message": "must have required property 'targeted_y'",
+      "params": {
+        "missingProperty": "targeted_y",
+      },
+      "schemaPath": "#/properties/electrode_groups/items/required",
+    },
+    {
+      "instancePath": "/electrode_groups/0",
+      "keyword": "required",
+      "message": "must have required property 'targeted_z'",
+      "params": {
+        "missingProperty": "targeted_z",
+      },
+      "schemaPath": "#/properties/electrode_groups/items/required",
+    },
+    {
+      "instancePath": "/electrode_groups/0",
+      "keyword": "required",
+      "message": "must have required property 'units'",
+      "params": {
+        "missingProperty": "units",
+      },
+      "schemaPath": "#/properties/electrode_groups/items/required",
+    },
+  ],
+  "isValid": false,
+  "jsonSchemaErrorIds": [
+    "electrode_groups",
+  ],
+  "jsonSchemaErrorMessages": [
+    "Key: electrode_groups, 0. | Error: must have required property 'targeted_location'",
+    "Key: electrode_groups, 0. | Error: must have required property 'targeted_x'",
+    "Key: electrode_groups, 0. | Error: must have required property 'targeted_y'",
+    "Key: electrode_groups, 0. | Error: must have required property 'targeted_z'",
+    "Key: electrode_groups, 0. | Error: must have required property 'units'",
+  ],
+  "jsonSchemaErrors": [
+    {
+      "instancePath": "/electrode_groups/0",
+      "keyword": "required",
+      "message": "must have required property 'targeted_location'",
+      "params": {
+        "missingProperty": "targeted_location",
+      },
+      "schemaPath": "#/properties/electrode_groups/items/required",
+    },
+    {
+      "instancePath": "/electrode_groups/0",
+      "keyword": "required",
+      "message": "must have required property 'targeted_x'",
+      "params": {
+        "missingProperty": "targeted_x",
+      },
+      "schemaPath": "#/properties/electrode_groups/items/required",
+    },
+    {
+      "instancePath": "/electrode_groups/0",
+      "keyword": "required",
+      "message": "must have required property 'targeted_y'",
+      "params": {
+        "missingProperty": "targeted_y",
+      },
+      "schemaPath": "#/properties/electrode_groups/items/required",
+    },
+    {
+      "instancePath": "/electrode_groups/0",
+      "keyword": "required",
+      "message": "must have required property 'targeted_z'",
+      "params": {
+        "missingProperty": "targeted_z",
+      },
+      "schemaPath": "#/properties/electrode_groups/items/required",
+    },
+    {
+      "instancePath": "/electrode_groups/0",
+      "keyword": "required",
+      "message": "must have required property 'units'",
+      "params": {
+        "missingProperty": "units",
+      },
+      "schemaPath": "#/properties/electrode_groups/items/required",
+    },
+  ],
+  "valid": false,
+}
+`;
