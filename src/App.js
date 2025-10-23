@@ -2764,3 +2764,70 @@ useEffect(() => {
   </>;
 }
 export default App;
+
+// Export validation functions for testing
+// These are standalone versions that don't depend on React state
+export const jsonschemaValidation = (formContent) => {
+  const ajv = new Ajv({ allErrors: true });
+  addFormats(ajv);
+  const validate = ajv.compile(JsonSchemaFile);
+
+  validate(formContent);
+
+  const validationMessages =
+    validate.errors?.map((error) => {
+      return `Key: ${error.instancePath
+        .split('/')
+        .filter((x) => x !== '')
+        .join(', ')}. | Error: ${error.message}`;
+    }) || [];
+
+  const errorIds = [
+    ...new Set(
+      validate.errors?.map((v) => {
+        const validationEntries = v.instancePath
+          .split('/')
+          .filter((x) => x !== '');
+
+        return validationEntries[0];
+      })
+    ),
+  ];
+
+  const isValid = validate.errors === null;
+
+  const message = isValid
+    ? 'Data is valid'
+    : `Data is not valid - \n ${validationMessages.join('\n \n')}`;
+
+  return {
+    valid: isValid,
+    isValid,
+    jsonSchemaErrorMessages: validationMessages,
+    jsonSchemaErrors: validate.errors,
+    jsonSchemaErrorIds: errorIds,
+    errors: validate.errors,
+  };
+};
+
+export const rulesValidation = (jsonFileContent) => {
+  const errorIds = [];
+  const errorMessages = [];
+  let isFormValid = true;
+  const errors = [];
+
+  // check if tasks have a camera but no camera is set
+  if (!jsonFileContent.cameras && jsonFileContent.tasks?.length > 0) {
+    errorMessages.push(
+      'Key: task.camera | Error: There is tasks camera_id, but no camera object with ids. No data is loaded'
+    );
+    errorIds.push('tasks');
+    isFormValid = false;
+  }
+
+  return {
+    isFormValid,
+    formErrors: errorMessages,
+    errors,
+  };
+};
