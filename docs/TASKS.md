@@ -1,7 +1,7 @@
 # Refactoring Tasks
 
-**Current Phase:** Phase 0 - Baseline & Infrastructure
-**Phase Status:** ✅ COMPLETE - Awaiting Human Approval
+**Current Phase:** Phase 1 - Testing Foundation
+**Phase Status:** 🟡 IN PROGRESS
 **Last Updated:** 2025-10-23
 
 ---
@@ -10,7 +10,7 @@
 
 **Goal:** Establish comprehensive baselines WITHOUT changing production code
 **Exit Criteria:** All baselines passing, CI operational, human approval
-**Status:** ✅ ALL TASKS COMPLETE
+**Status:** ✅ APPROVED AND MERGED TO MAIN (2025-10-23)
 
 ### Week 1: Infrastructure Setup
 
@@ -120,32 +120,29 @@
 - [x] Float camera ID bug (BUG #3)
 - [x] Whitespace-only string acceptance
 
-**Awaiting Human Actions:**
-- [ ] **HUMAN REVIEW:** Review all baseline tests and approve documented behavior
-- [ ] **HUMAN REVIEW:** Review known bugs - OK to fix in Phase 2?
-- [ ] **HUMAN REVIEW:** Review schema mismatch - investigate before Phase 1?
-- [ ] **HUMAN REVIEW:** Review missing device types - add when?
-- [ ] **HUMAN APPROVAL:** Approve moving to Phase 1
-
-**Post-Approval Actions:**
-- [ ] Tag release: `git tag v3.0.0-phase0-complete`
-- [ ] Push tag: `git push --tags`
-- [ ] Create PR: `gh pr create --base main --title "Phase 0: Baseline & Infrastructure"`
+**Human Actions Completed:**
+- [x] **HUMAN REVIEW:** Approved all baseline tests and documented behavior
+- [x] **HUMAN REVIEW:** Approved known bugs to be fixed in Phase 2
+- [x] **HUMAN REVIEW:** Approved schema mismatch investigation during Phase 1/2
+- [x] **HUMAN REVIEW:** Approved missing device types to be added in Phase 2
+- [x] **HUMAN APPROVAL:** Approved moving to Phase 1
+- [x] **MERGED TO MAIN:** Phase 0 merged into main branch (2025-10-23)
 
 ---
 
 ## Phase 1: Testing Foundation (Weeks 3-5)
 
 **Goal:** Build comprehensive test suite WITHOUT changing production code
-**Status:** 🔴 BLOCKED - Waiting for Phase 0 approval
+**Status:** 🟡 IN PROGRESS - Started 2025-10-23
 **Coverage Target:** 60-70% by end of phase
+**Current Coverage:** ~15% (baseline tests only)
 
 ### Week 3: Core Module Tests
 
 #### App.js Core Functionality
-- [ ] Test state initialization and default values
-- [ ] Test form data updates (updateFormData, updateFormArray)
-- [ ] Test onBlur transformations
+- [x] Test state initialization and default values (17 tests, discovered optogenetic_stimulation_software bug)
+- [x] Test form data updates (updateFormData, updateFormArray) (25 tests, learned ID naming patterns)
+- [x] Test onBlur transformations (41 tests, documented utility function behaviors)
 - [ ] Test item selection handlers
 - [ ] Test array item management (add, remove, duplicate)
 - [ ] Test electrode group and ntrode map synchronization
