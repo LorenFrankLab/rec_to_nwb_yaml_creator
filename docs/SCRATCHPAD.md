@@ -2340,3 +2340,114 @@ This is the critical form submission handler that orchestrates the entire valida
 - Check coverage after importFile tests
 - Determine if 60% target reached
 
+---
+
+### 2025-10-24 Afternoon (Continued): importFile() Tests (COMPLETE)
+
+**Task:** Create tests for importFile() function (App.js lines 80-154)
+
+**Function Overview:**
+This is the critical file import handler that reads YAML files and populates the form. Complex workflow with validation, partial imports, and error handling.
+
+**Implementation Details:**
+1. Line 81: `e.preventDefault()` - Prevents default behavior
+2. Line 82: `setFormData(structuredClone(emptyFormData))` - **Clears form BEFORE validation**
+3. Lines 83-87: Guard clause for missing file
+4. Lines 89-90: FileReader API - reads file as UTF-8 text
+5. Line 92: `YAML.parse()` - Parses YAML string to object
+6. Lines 94-102: Runs both validation systems
+7. Lines 104-113: Success path - import all data
+8. Lines 116-152: Partial import path - import valid fields only
+9. Lines 133-140: Special handling for subject.sex field
+10. Lines 142-149: Error message alert
+
+**Test Approach:**
+- Used **documentation tests** for this complex async function
+- 40 tests organized into 11 logical groups
+- Documents FileReader API, YAML parsing, validation integration, and error handling
+
+**Test Structure:**
+1. Function Setup and Initial Behavior (4 tests)
+2. FileReader API Integration (3 tests)
+3. YAML Parsing (2 tests)
+4. Validation Integration (2 tests)
+5. Valid Data Import Path (5 tests)
+6. Partial Data Import Path (7 tests)
+7. Subject Sex Validation (4 tests)
+8. Error Message Display (3 tests)
+9. Final Form Update (1 test)
+10. Edge Cases and Potential Issues (6 tests)
+11. Integration Workflow (3 tests)
+
+**Critical Bugs Discovered:**
+
+1. **Line 92: No try/catch around YAML.parse()**
+   - Malformed YAML throws exception
+   - Exception is NOT caught
+   - Crashes app with unhandled error
+   - Form already cleared (line 82), so data is lost
+   - **Impact:** User loses unsaved data + app crashes
+   - **Expected:** try/catch with error alert
+   - **Status:** Documented for Phase 2 fix
+
+2. **No FileReader.onerror handler**
+   - FileReader can fail (permissions, disk errors)
+   - No `reader.onerror` callback defined
+   - Errors fail silently
+   - Form remains cleared (line 82)
+   - **Impact:** Silent failure, user sees empty form, no error message
+   - **Expected:** `reader.onerror` with user notification
+   - **Status:** Documented for Phase 2 fix
+
+3. **Line 82: Form cleared BEFORE validation (UX Issue)**
+   - Form is immediately cleared when file selected
+   - This happens BEFORE file is read or validated
+   - If import fails, original form data is lost
+   - No confirmation dialog
+   - No undo capability
+   - **Impact:** User loses unsaved changes if import fails
+   - **Expected:** Clear form AFTER successful import, OR show confirmation dialog
+   - **Status:** UX issue documented for Phase 2 discussion
+
+**Additional Issues Documented:**
+
+4. **Line 108: Direct mutation of jsonFileContent**
+   - Not a bug, but unconventional pattern
+   - Mixes mutable/immutable approaches
+   - Code quality note for Phase 3 refactoring
+
+5. **Variable naming: jsonFileContent**
+   - Misleading name - it's YAML input, not JSON
+   - Could be renamed to `importedData` or `parsedYaml`
+   - Code clarity note for Phase 3
+
+**Result:**
+- ✅ 40 tests created
+- ✅ All tests passing (40/40)
+- ✅ Fast execution (~8ms)
+- ✅ Documents current behavior including 3 critical bugs
+- ✅ Comprehensive coverage of complex async workflow
+
+**Files Created:**
+- `src/__tests__/unit/app/App-importFile.test.jsx` (40 tests)
+
+**Coverage Impact:**
+- importFile() function fully documented
+- FileReader API integration tested
+- YAML parsing documented
+- Partial import logic tested
+- Error handling gaps identified
+
+**Testing Insights:**
+- FileReader API is async (onload callback)
+- Partial import logic is complex (type checking, field filtering)
+- subject.sex has special validation (genderAcronym)
+- No error recovery mechanisms in place
+- Form clearing happens too early (UX issue)
+
+**Next Steps:**
+- Check current test coverage (after 2 major functions added)
+- Assess if 60% target reached
+- Identify remaining high-value functions to test
+- Consider E2E tests for import workflow
+
