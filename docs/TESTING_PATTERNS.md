@@ -20,11 +20,13 @@
 ### Why This Happens
 
 AI models focus on:
+
 - JSON schema validation (what the backend requires)
 - Visible UI elements
 - Fields explicitly mentioned in test descriptions
 
 AI models often miss:
+
 - HTML5 `required` attributes on inputs
 - HTML5 `pattern` validation (e.g., non-whitespace regex)
 - Browser-level validation that blocks form submission
@@ -136,6 +138,7 @@ await waitFor(() => {
 **Problem**: New array items come with default values from `valueList.js`
 
 **Example**: Adding a data_acq_device creates:
+
 ```javascript
 {
   name: 'SpikeGadgets',
@@ -146,12 +149,14 @@ await waitFor(() => {
 ```
 
 **If you type over defaults without clearing first**:
+
 ```javascript
 await user.type(deviceNameInput, 'SpikeGadgets');
 // Result: 'SpikeGadgetsSpikeGadgets' ❌
 ```
 
 **Solution**: Either clear first OR verify defaults are correct:
+
 ```javascript
 // Option 1: Clear first
 await user.clear(deviceNameInput);
@@ -272,6 +277,7 @@ expect(exportedData.lab).toBe('Test Lab');
 **Problem**: HTML date inputs get converted to ISO timestamps in exported YAML
 
 **Example**:
+
 ```javascript
 // User types
 await user.type(dobInput, '2024-01-01');
@@ -297,27 +303,32 @@ expect(exportedData.subject.date_of_birth).toBe('2024-01-01T00:00:00.000Z');
 When a test fails to export YAML:
 
 1. **Check for invalid inputs** (most common):
+
    ```javascript
    const invalidInputs = document.querySelectorAll('input:invalid');
    console.log('Invalid:', invalidInputs.length);
    ```
 
 2. **Check for validation errors**:
+
    ```javascript
    console.log('Alerts called:', global.window.alert.mock.calls);
    ```
 
 3. **Check if Blob was created**:
+
    ```javascript
    console.log('mockBlob:', mockBlob ? 'SET' : 'NULL');
    ```
 
 4. **Check if onSubmitHandler was called**:
+
    ```javascript
    console.log('preventDefault calls:', mockEvent.preventDefault.mock.calls.length);
    ```
 
 5. **Check React fiber exists**:
+
    ```javascript
    console.log('Fiber found:', !!fiber);
    console.log('onSubmit found:', !!onSubmitHandler);

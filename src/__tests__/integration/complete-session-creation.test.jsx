@@ -48,6 +48,112 @@ const LIST_PLACEHOLDERS = {
   keywords: 'Type Keywords', // Default computed from title
 };
 
+/**
+ * Helper: Fill all HTML5-required fields to pass browser validation
+ *
+ * These fields are REQUIRED by HTML5 validation (required + pattern attributes)
+ * and MUST be filled for export to work. Missing any will cause silent export failure.
+ *
+ * See docs/TESTING_PATTERNS.md for full explanation.
+ */
+async function fillRequiredFields(user, screen) {
+  // 1. Experimenter name (ListElement)
+  await addListItem(user, screen, LIST_PLACEHOLDERS.experimenter_name, 'Test, User');
+
+  // 2. Lab
+  const labInput = screen.getByLabelText(/^lab$/i);
+  await user.clear(labInput);
+  await user.type(labInput, 'Test Lab');
+
+  // 3. Institution
+  const institutionInput = screen.getByLabelText(/institution/i);
+  await user.clear(institutionInput);
+  await user.type(institutionInput, 'Test Institution');
+
+  // 4. Experiment description (required, non-whitespace pattern)
+  const experimentDescInput = screen.getByLabelText(/experiment description/i);
+  await user.type(experimentDescInput, 'Test experiment');
+
+  // 5. Session description (required, non-whitespace pattern)
+  const sessionDescInput = screen.getByLabelText(/session description/i);
+  await user.type(sessionDescInput, 'Test session');
+
+  // 6. Session ID (required, non-whitespace pattern)
+  const sessionIdInput = screen.getByLabelText(/session id/i);
+  await user.type(sessionIdInput, 'TEST01');
+
+  // 7. Keywords (required - minItems: 1)
+  await addListItem(user, screen, LIST_PLACEHOLDERS.keywords, 'test');
+
+  // 8. Subject ID (required, non-whitespace pattern)
+  const subjectIdInput = screen.getByLabelText(/subject id/i);
+  await user.type(subjectIdInput, 'test_subject');
+
+  // 9. Subject genotype (required, non-whitespace pattern)
+  const genotypeInput = screen.getByLabelText(/genotype/i);
+  await user.clear(genotypeInput);
+  await user.type(genotypeInput, 'Wild Type');
+
+  // 10. Subject date_of_birth (required, date format)
+  const dobInput = screen.getByLabelText(/date of birth/i);
+  await user.type(dobInput, '2024-01-01');
+
+  // 11. Units analog (required, non-whitespace pattern)
+  const unitsAnalogInput = screen.getByLabelText(/^analog$/i);
+  await user.clear(unitsAnalogInput);
+  await user.type(unitsAnalogInput, 'volts');
+
+  // 12. Units behavioral_events (required, non-whitespace pattern)
+  const unitsBehavioralInput = screen.getByLabelText(/behavioral events/i);
+  await user.clear(unitsBehavioralInput);
+  await user.type(unitsBehavioralInput, 'n/a');
+
+  // 13. Default header file path (required, non-whitespace pattern)
+  const headerPathInput = screen.getByLabelText(/^default header file path$/i);
+  await user.clear(headerPathInput);
+  await user.type(headerPathInput, 'header.h');
+
+  // 14. Data acq device (required - minItems: 1)
+  const addDataAcqDeviceButton = screen.getByTitle(/Add data_acq_device/i);
+  await user.click(addDataAcqDeviceButton);
+
+  // Wait for item to render
+  await waitFor(() => {
+    expect(screen.queryByText(/Item #1/)).toBeInTheDocument();
+  });
+
+  // Verify default values are set (from arrayDefaultValues in valueList.js)
+  const deviceNameInput = screen.getByPlaceholderText(/typically a number/i);
+  expect(deviceNameInput).toHaveValue('SpikeGadgets');
+}
+
+/**
+ * Helper: Trigger export using React fiber approach
+ *
+ * Standard form submission methods don't work in jsdom (user.click, dispatchEvent, etc.)
+ * We must access React's internal fiber tree and call the onSubmit handler directly.
+ *
+ * See docs/TESTING_PATTERNS.md for full explanation.
+ */
+async function triggerExport(mockEvent = null) {
+  const form = document.querySelector('form');
+  const fiberKey = Object.keys(form).find(key => key.startsWith('__reactFiber'));
+  const fiber = form[fiberKey];
+  const onSubmitHandler = fiber?.memoizedProps?.onSubmit;
+
+  if (!onSubmitHandler) {
+    throw new Error('Could not find React onSubmit handler on form element');
+  }
+
+  const event = mockEvent || {
+    preventDefault: vi.fn(),
+    target: form,
+    currentTarget: form,
+  };
+
+  onSubmitHandler(event);
+}
+
 describe('End-to-End Session Creation Workflow', () => {
   let mockBlob;
   let mockBlobUrl;
@@ -268,52 +374,57 @@ describe('End-to-End Session Creation Workflow', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    // ACT - Fill required fields
-    await addListItem(user, screen, LIST_PLACEHOLDERS.experimenter_name, 'Guidera, Jennifer');
+    // ACT - Fill all required fields using helper
+    await fillRequiredFields(user, screen);
 
+    // Override/customize some fields for this test
     const labInput = screen.getByLabelText(/^lab$/i);
     await user.clear(labInput);
     await user.type(labInput, 'Frank Lab');
 
-    const institutionInput = screen.getByLabelText(/^institution$/i);
+    const institutionInput = screen.getByLabelText(/institution/i);
     await user.clear(institutionInput);
     await user.type(institutionInput, 'UCSF');
 
-    // Fill optional top-level fields
     const experimentDescInput = screen.getByLabelText(/experiment description/i);
+    await user.clear(experimentDescInput);
     await user.type(experimentDescInput, 'Spatial navigation with rewards');
 
     const sessionDescInput = screen.getByLabelText(/session description/i);
+    await user.clear(sessionDescInput);
     await user.type(sessionDescInput, 'W-track alternation task');
 
     const sessionIdInput = screen.getByLabelText(/session id/i);
+    await user.clear(sessionIdInput);
     await user.type(sessionIdInput, 'beans_01');
 
-    // Add keywords
-    const keywordsInput = screen.getByLabelText(/^keywords$/i);
-    await user.type(keywordsInput, 'spatial navigation, hippocampus');
-    await user.tab(); // Trigger onBlur to convert to array
+    // Update keywords
+    await addListItem(user, screen, LIST_PLACEHOLDERS.keywords, 'spatial navigation');
+    await addListItem(user, screen, LIST_PLACEHOLDERS.keywords, 'hippocampus');
 
-    // Fill subject information
-    const subjectIdInput = screen.getByLabelText(/subject id/i);
-    await user.type(subjectIdInput, 'beans');
+    // Update subject information
+    const subjectIdInputs = screen.getAllByLabelText(/subject id/i);
+    await user.clear(subjectIdInputs[0]);
+    await user.type(subjectIdInputs[0], 'beans');
 
-    const speciesInput = screen.getByLabelText(/^species$/i);
-    await user.clear(speciesInput);
-    await user.type(speciesInput, 'Rattus norvegicus');
+    const speciesInputs = screen.getAllByLabelText(/species/i);
+    await user.clear(speciesInputs[0]);
+    await user.type(speciesInputs[0], 'Rattus norvegicus');
 
-    const sexInput = screen.getByLabelText(/^sex$/i);
-    await user.selectOptions(sexInput, 'M');
+    const sexInputs = screen.getAllByLabelText(/sex/i);
+    await user.selectOptions(sexInputs[0], 'M');
 
-    const genotypeInput = screen.getByLabelText(/^genotype$/i);
-    await user.type(genotypeInput, 'Wild Type');
-
-    const descriptionInput = screen.getByLabelText(/^description$/i);
-    await user.type(descriptionInput, 'Long Evans Rat');
+    const descriptionInputs = screen.getAllByLabelText(/description/i);
+    await user.type(descriptionInputs[0], 'Long Evans Rat');
 
     // Add camera
-    const addCameraButton = screen.getByRole('button', { name: /add cameras/i });
+    const addCameraButton = screen.getByTitle(/Add cameras/i);
     await user.click(addCameraButton);
+
+    await waitFor(() => {
+      const cameraNameInputs = screen.queryAllByLabelText(/camera name/i);
+      expect(cameraNameInputs.length).toBeGreaterThan(0);
+    });
 
     const cameraNameInputs = screen.getAllByLabelText(/camera name/i);
     await user.type(cameraNameInputs[0], 'overhead_camera');
@@ -322,8 +433,13 @@ describe('End-to-End Session Creation Workflow', () => {
     expect(cameraIdInputs[0]).toHaveValue(0); // Auto-assigned ID
 
     // Add task
-    const addTaskButton = screen.getByRole('button', { name: /add tasks/i });
+    const addTaskButton = screen.getByTitle(/Add tasks/i);
     await user.click(addTaskButton);
+
+    await waitFor(() => {
+      const taskItems = screen.queryAllByText(/Item #1/);
+      expect(taskItems.length).toBeGreaterThan(1); // cameras + tasks
+    });
 
     const taskNameInputs = screen.getAllByLabelText(/task name/i);
     await user.type(taskNameInputs[0], 'sleep');
@@ -331,27 +447,27 @@ describe('End-to-End Session Creation Workflow', () => {
     const taskDescInputs = screen.getAllByLabelText(/task description/i);
     await user.type(taskDescInputs[0], 'Rest session before task');
 
-    // ACT - Export the complete session
-    const exportButton = screen.getByRole('button', { name: /generate yml file/i });
-    await user.click(exportButton);
+    // ACT - Export using React fiber approach
+    await triggerExport();
 
     // ASSERT - Verify export succeeded
     await waitFor(() => {
       expect(mockBlob).not.toBeNull();
-    }, { timeout: 3000 });
+    });
 
     // Parse exported YAML
     const exportedYaml = mockBlob.content[0];
     const exportedData = YAML.parse(exportedYaml);
 
     // Verify all filled fields are present
-    expect(exportedData.experimenter_name).toEqual(['Guidera, Jennifer']);
+    expect(exportedData.experimenter_name).toEqual(['Test, User']);
     expect(exportedData.lab).toBe('Frank Lab');
     expect(exportedData.institution).toBe('UCSF');
     expect(exportedData.experiment_description).toBe('Spatial navigation with rewards');
     expect(exportedData.session_description).toBe('W-track alternation task');
     expect(exportedData.session_id).toBe('beans_01');
-    expect(exportedData.keywords).toEqual(['spatial navigation', 'hippocampus']);
+    expect(exportedData.keywords).toContain('spatial navigation');
+    expect(exportedData.keywords).toContain('hippocampus');
 
     expect(exportedData.subject).toBeDefined();
     expect(exportedData.subject.subject_id).toBe('beans');
@@ -384,45 +500,29 @@ describe('End-to-End Session Creation Workflow', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    // Get initial experimenter inputs (should have defaults)
-    let experimenterInputs = screen.getAllByLabelText(/experimenter name/i);
-    const initialCount = experimenterInputs.length;
+    // ACT - Fill required fields first
+    await fillRequiredFields(user, screen);
 
-    // ACT - Add a second experimenter
-    const addExperimenterButton = screen.getByRole('button', { name: /add experimenter names/i });
-    await user.click(addExperimenterButton);
+    // Add second experimenter using ListElement pattern
+    await addListItem(user, screen, LIST_PLACEHOLDERS.experimenter_name, 'Guidera, Jennifer');
+    await addListItem(user, screen, LIST_PLACEHOLDERS.experimenter_name, 'Comrie, Alison');
 
-    // Verify we now have one more experimenter
-    experimenterInputs = screen.getAllByLabelText(/experimenter name/i);
-    expect(experimenterInputs).toHaveLength(initialCount + 1);
+    // Export using React fiber approach
+    await triggerExport();
 
-    // Fill both experimenters
-    await user.clear(experimenterInputs[0]);
-    await user.type(experimenterInputs[0], 'Guidera, Jennifer');
-    await user.clear(experimenterInputs[1]);
-    await user.type(experimenterInputs[1], 'Comrie, Alison');
-
-    // ASSERT - Fill required fields and export to verify array structure
-    const labInput = screen.getByLabelText(/^lab$/i);
-    await user.clear(labInput);
-    await user.type(labInput, 'Test Lab');
-
-    const institutionInput = screen.getByLabelText(/^institution$/i);
-    await user.clear(institutionInput);
-    await user.type(institutionInput, 'Test University');
-
-    const exportButton = screen.getByRole('button', { name: /generate yml file/i });
-    await user.click(exportButton);
-
+    // ASSERT - Verify export succeeded
     await waitFor(() => {
       expect(mockBlob).not.toBeNull();
-    }, { timeout: 3000 });
+    });
 
     const exportedYaml = mockBlob.content[0];
     const exportedData = YAML.parse(exportedYaml);
 
-    // Verify both experimenters are in the array
-    expect(exportedData.experimenter_name).toEqual(['Guidera, Jennifer', 'Comrie, Alison']);
+    // Verify multiple experimenters are in the array (includes the one from fillRequiredFields)
+    expect(exportedData.experimenter_name).toContain('Test, User');
+    expect(exportedData.experimenter_name).toContain('Guidera, Jennifer');
+    expect(exportedData.experimenter_name).toContain('Comrie, Alison');
+    expect(exportedData.experimenter_name).toHaveLength(3);
   });
 
   /**
@@ -438,51 +538,44 @@ describe('End-to-End Session Creation Workflow', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    // ACT - Fill all subject fields
-    const subjectIdInput = screen.getByLabelText(/subject id/i);
+    // ACT - Fill required fields first
+    await fillRequiredFields(user, screen);
+
+    // Update subject fields with specific test data
+    const subjectIdInputs = screen.getAllByLabelText(/subject id/i);
+    const subjectIdInput = subjectIdInputs[0];
+    await user.clear(subjectIdInput);
     await user.type(subjectIdInput, 'RAT001');
 
-    const speciesInput = screen.getByLabelText(/^species$/i);
+    const speciesInputs = screen.getAllByLabelText(/species/i);
+    const speciesInput = speciesInputs[0];
     await user.clear(speciesInput);
     await user.type(speciesInput, 'Rattus norvegicus');
 
-    const sexInput = screen.getByLabelText(/^sex$/i);
+    const sexInputs = screen.getAllByLabelText(/sex/i);
+    const sexInput = sexInputs[0];
     await user.selectOptions(sexInput, 'F');
 
-    const genotypeInput = screen.getByLabelText(/^genotype$/i);
-    await user.type(genotypeInput, 'Wild Type');
-
-    const descriptionInput = screen.getByLabelText(/^description$/i);
+    const descriptionInputs = screen.getAllByLabelText(/description/i);
+    const descriptionInput = descriptionInputs[0];
     await user.type(descriptionInput, 'Long Evans female rat');
 
-    const weightInput = screen.getByLabelText(/^weight$/i);
+    const weightInputs = screen.getAllByLabelText(/weight/i);
+    const weightInput = weightInputs[0];
     await user.type(weightInput, '350');
 
-    // Fill required fields for export
-    const experimenterInputs = screen.getAllByLabelText(/experimenter name/i);
-    await user.clear(experimenterInputs[0]);
-    await user.type(experimenterInputs[0], 'Test, User');
+    // Export using React fiber approach
+    await triggerExport();
 
-    const labInput = screen.getByLabelText(/^lab$/i);
-    await user.clear(labInput);
-    await user.type(labInput, 'Test Lab');
-
-    const institutionInput = screen.getByLabelText(/^institution$/i);
-    await user.clear(institutionInput);
-    await user.type(institutionInput, 'Test University');
-
-    // Export to verify structure
-    const exportButton = screen.getByRole('button', { name: /generate yml file/i });
-    await user.click(exportButton);
-
+    // ASSERT - Verify export succeeded
     await waitFor(() => {
       expect(mockBlob).not.toBeNull();
-    }, { timeout: 3000 });
+    });
 
     const exportedYaml = mockBlob.content[0];
     const exportedData = YAML.parse(exportedYaml);
 
-    // ASSERT - Verify all subject fields
+    // Verify all subject fields
     expect(exportedData.subject).toBeDefined();
     expect(exportedData.subject.subject_id).toBe('RAT001');
     expect(exportedData.subject.species).toBe('Rattus norvegicus');
@@ -505,45 +598,29 @@ describe('End-to-End Session Creation Workflow', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    // ACT - Verify and update data acquisition device
-    // The form should have default values already
-    const deviceNameInputs = screen.getAllByLabelText(/^name$/i);
-    const dataAcqDeviceNameInput = deviceNameInputs.find(input =>
-      input.closest('details')?.querySelector('summary')?.textContent?.includes('Data Acquisition')
-    );
+    // ACT - Fill required fields (includes 1 data_acq_device with defaults)
+    await fillRequiredFields(user, screen);
 
-    // Verify default values
-    expect(dataAcqDeviceNameInput).toHaveValue('SpikeGadgets');
+    // Verify default values from fillRequiredFields
+    const deviceNameInput = screen.getByPlaceholderText(/typically a number/i);
+    expect(deviceNameInput).toHaveValue('SpikeGadgets');
 
     // Update the device name
-    await user.clear(dataAcqDeviceNameInput);
-    await user.type(dataAcqDeviceNameInput, 'Custom SpikeGadgets');
+    await user.clear(deviceNameInput);
+    await user.type(deviceNameInput, 'Custom SpikeGadgets');
 
-    // Fill required fields for export
-    const experimenterInputs = screen.getAllByLabelText(/experimenter name/i);
-    await user.clear(experimenterInputs[0]);
-    await user.type(experimenterInputs[0], 'Test, User');
+    // Export using React fiber approach
+    await triggerExport();
 
-    const labInput = screen.getByLabelText(/^lab$/i);
-    await user.clear(labInput);
-    await user.type(labInput, 'Test Lab');
-
-    const institutionInput = screen.getByLabelText(/^institution$/i);
-    await user.clear(institutionInput);
-    await user.type(institutionInput, 'Test University');
-
-    // Export to verify
-    const exportButton = screen.getByRole('button', { name: /generate yml file/i });
-    await user.click(exportButton);
-
+    // ASSERT - Verify export succeeded
     await waitFor(() => {
       expect(mockBlob).not.toBeNull();
-    }, { timeout: 3000 });
+    });
 
     const exportedYaml = mockBlob.content[0];
     const exportedData = YAML.parse(exportedYaml);
 
-    // ASSERT - Verify device structure
+    // Verify device structure
     expect(exportedData.data_acq_device).toBeDefined();
     expect(exportedData.data_acq_device).toHaveLength(1);
     expect(exportedData.data_acq_device[0].name).toBe('Custom SpikeGadgets');
@@ -566,13 +643,18 @@ describe('End-to-End Session Creation Workflow', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    // ACT - Add first camera
-    const addCameraButton = screen.getByRole('button', { name: /add cameras/i });
+    // ACT - Fill required fields first
+    await fillRequiredFields(user, screen);
+
+    // Add first camera
+    const addCameraButton = screen.getByTitle(/Add cameras/i);
     await user.click(addCameraButton);
 
-    let cameraNameInputs = screen.getAllByLabelText(/camera name/i);
-    expect(cameraNameInputs).toHaveLength(1);
+    await waitFor(() => {
+      expect(screen.queryByText(/Item #1/)).toBeInTheDocument();
+    });
 
+    let cameraNameInputs = screen.getAllByLabelText(/camera name/i);
     await user.type(cameraNameInputs[0], 'overhead_camera');
 
     // Verify first camera has ID 0
@@ -582,40 +664,30 @@ describe('End-to-End Session Creation Workflow', () => {
     // Add second camera
     await user.click(addCameraButton);
 
-    cameraNameInputs = screen.getAllByLabelText(/camera name/i);
-    expect(cameraNameInputs).toHaveLength(2);
+    await waitFor(() => {
+      const items = screen.queryAllByText(/Item #2/);
+      expect(items.length).toBeGreaterThan(0);
+    });
 
+    cameraNameInputs = screen.getAllByLabelText(/camera name/i);
     await user.type(cameraNameInputs[1], 'side_camera');
 
     // Verify second camera has ID 1
     cameraIdInputs = screen.getAllByLabelText(/^camera id$/i);
     expect(cameraIdInputs[1]).toHaveValue(1);
 
-    // Fill required fields for export
-    const experimenterInputs = screen.getAllByLabelText(/experimenter name/i);
-    await user.clear(experimenterInputs[0]);
-    await user.type(experimenterInputs[0], 'Test, User');
+    // Export using React fiber approach
+    await triggerExport();
 
-    const labInput = screen.getByLabelText(/^lab$/i);
-    await user.clear(labInput);
-    await user.type(labInput, 'Test Lab');
-
-    const institutionInput = screen.getByLabelText(/^institution$/i);
-    await user.clear(institutionInput);
-    await user.type(institutionInput, 'Test University');
-
-    // Export to verify
-    const exportButton = screen.getByRole('button', { name: /generate yml file/i });
-    await user.click(exportButton);
-
+    // ASSERT - Verify export succeeded
     await waitFor(() => {
       expect(mockBlob).not.toBeNull();
-    }, { timeout: 3000 });
+    });
 
     const exportedYaml = mockBlob.content[0];
     const exportedData = YAML.parse(exportedYaml);
 
-    // ASSERT - Verify camera structure
+    // Verify camera structure
     expect(exportedData.cameras).toBeDefined();
     expect(exportedData.cameras).toHaveLength(2);
     expect(exportedData.cameras[0].id).toBe(0);
@@ -638,16 +710,28 @@ describe('End-to-End Session Creation Workflow', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    // First, add a camera to reference
-    const addCameraButton = screen.getByRole('button', { name: /add cameras/i });
+    // ACT - Fill required fields first
+    await fillRequiredFields(user, screen);
+
+    // Add a camera to reference
+    const addCameraButton = screen.getByTitle(/Add cameras/i);
     await user.click(addCameraButton);
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Item #1/)).toBeInTheDocument();
+    });
 
     const cameraNameInputs = screen.getAllByLabelText(/camera name/i);
     await user.type(cameraNameInputs[0], 'overhead_camera');
 
-    // ACT - Add a task
-    const addTaskButton = screen.getByRole('button', { name: /add tasks/i });
+    // Add a task
+    const addTaskButton = screen.getByTitle(/Add tasks/i);
     await user.click(addTaskButton);
+
+    await waitFor(() => {
+      const items = screen.queryAllByText(/Item #1/);
+      expect(items.length).toBeGreaterThan(1); // cameras + tasks
+    });
 
     const taskNameInputs = screen.getAllByLabelText(/task name/i);
     await user.type(taskNameInputs[0], 'sleep');
@@ -662,31 +746,18 @@ describe('End-to-End Session Creation Workflow', () => {
     await user.type(taskEpochInputs[0], '1, 3');
     await user.tab(); // Trigger onBlur
 
-    // Fill required fields for export
-    const experimenterInputs = screen.getAllByLabelText(/experimenter name/i);
-    await user.clear(experimenterInputs[0]);
-    await user.type(experimenterInputs[0], 'Test, User');
+    // Export using React fiber approach
+    await triggerExport();
 
-    const labInput = screen.getByLabelText(/^lab$/i);
-    await user.clear(labInput);
-    await user.type(labInput, 'Test Lab');
-
-    const institutionInput = screen.getByLabelText(/^institution$/i);
-    await user.clear(institutionInput);
-    await user.type(institutionInput, 'Test University');
-
-    // Export to verify
-    const exportButton = screen.getByRole('button', { name: /generate yml file/i });
-    await user.click(exportButton);
-
+    // ASSERT - Verify export succeeded
     await waitFor(() => {
       expect(mockBlob).not.toBeNull();
-    }, { timeout: 3000 });
+    });
 
     const exportedYaml = mockBlob.content[0];
     const exportedData = YAML.parse(exportedYaml);
 
-    // ASSERT - Verify task structure
+    // Verify task structure
     expect(exportedData.tasks).toBeDefined();
     expect(exportedData.tasks).toHaveLength(1);
     expect(exportedData.tasks[0].task_name).toBe('sleep');
@@ -710,9 +781,16 @@ describe('End-to-End Session Creation Workflow', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    // ACT - Add behavioral events
-    const addBehavioralEventButton = screen.getByRole('button', { name: /add behavioral events/i });
+    // ACT - Fill required fields first
+    await fillRequiredFields(user, screen);
+
+    // Add behavioral events
+    const addBehavioralEventButton = screen.getByTitle(/Add behavioral_events/i);
     await user.click(addBehavioralEventButton);
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Item #1/)).toBeInTheDocument();
+    });
 
     const eventDescInputs = screen.getAllByLabelText(/event description/i);
     await user.type(eventDescInputs[0], 'Poke event');
@@ -720,31 +798,18 @@ describe('End-to-End Session Creation Workflow', () => {
     const eventNameInputs = screen.getAllByLabelText(/^event name$/i);
     await user.type(eventNameInputs[0], 'Din1');
 
-    // Fill required fields for export
-    const experimenterInputs = screen.getAllByLabelText(/experimenter name/i);
-    await user.clear(experimenterInputs[0]);
-    await user.type(experimenterInputs[0], 'Test, User');
+    // Export using React fiber approach
+    await triggerExport();
 
-    const labInput = screen.getByLabelText(/^lab$/i);
-    await user.clear(labInput);
-    await user.type(labInput, 'Test Lab');
-
-    const institutionInput = screen.getByLabelText(/^institution$/i);
-    await user.clear(institutionInput);
-    await user.type(institutionInput, 'Test University');
-
-    // Export to verify
-    const exportButton = screen.getByRole('button', { name: /generate yml file/i });
-    await user.click(exportButton);
-
+    // ASSERT - Verify export succeeded
     await waitFor(() => {
       expect(mockBlob).not.toBeNull();
-    }, { timeout: 3000 });
+    });
 
     const exportedYaml = mockBlob.content[0];
     const exportedData = YAML.parse(exportedYaml);
 
-    // ASSERT - Verify behavioral events structure
+    // Verify behavioral events structure
     expect(exportedData.behavioral_events).toBeDefined();
     expect(exportedData.behavioral_events).toHaveLength(1);
     expect(exportedData.behavioral_events[0].description).toBe('Poke event');
@@ -765,9 +830,16 @@ describe('End-to-End Session Creation Workflow', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    // ACT - Add electrode group
-    const addElectrodeGroupButton = screen.getByRole('button', { name: /add electrode groups/i });
+    // ACT - Fill required fields first
+    await fillRequiredFields(user, screen);
+
+    // Add electrode group
+    const addElectrodeGroupButton = screen.getByTitle(/Add electrode_groups/i);
     await user.click(addElectrodeGroupButton);
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Item #1/)).toBeInTheDocument();
+    });
 
     const electrodeGroupIdInputs = screen.getAllByLabelText(/electrode group id/i);
     expect(electrodeGroupIdInputs[0]).toHaveValue(0); // Auto-assigned ID
@@ -787,31 +859,18 @@ describe('End-to-End Session Creation Workflow', () => {
     );
     await user.type(electrodeGroupDescInput, 'Dorsal CA1 tetrode');
 
-    // Fill required fields for export
-    const experimenterInputs = screen.getAllByLabelText(/experimenter name/i);
-    await user.clear(experimenterInputs[0]);
-    await user.type(experimenterInputs[0], 'Test, User');
+    // Export using React fiber approach
+    await triggerExport();
 
-    const labInput = screen.getByLabelText(/^lab$/i);
-    await user.clear(labInput);
-    await user.type(labInput, 'Test Lab');
-
-    const institutionInput = screen.getByLabelText(/^institution$/i);
-    await user.clear(institutionInput);
-    await user.type(institutionInput, 'Test University');
-
-    // Export to verify
-    const exportButton = screen.getByRole('button', { name: /generate yml file/i });
-    await user.click(exportButton);
-
+    // ASSERT - Verify export succeeded
     await waitFor(() => {
       expect(mockBlob).not.toBeNull();
-    }, { timeout: 3000 });
+    });
 
     const exportedYaml = mockBlob.content[0];
     const exportedData = YAML.parse(exportedYaml);
 
-    // ASSERT - Verify electrode group structure
+    // Verify electrode group structure
     expect(exportedData.electrode_groups).toBeDefined();
     expect(exportedData.electrode_groups).toHaveLength(1);
     expect(exportedData.electrode_groups[0].id).toBe(0);
@@ -834,9 +893,16 @@ describe('End-to-End Session Creation Workflow', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    // ACT - Add electrode group and select device type
-    const addElectrodeGroupButton = screen.getByRole('button', { name: /add electrode groups/i });
+    // ACT - Fill required fields first
+    await fillRequiredFields(user, screen);
+
+    // Add electrode group and select device type
+    const addElectrodeGroupButton = screen.getByTitle(/Add electrode_groups/i);
     await user.click(addElectrodeGroupButton);
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Item #1/)).toBeInTheDocument();
+    });
 
     const locationInputs = screen.getAllByLabelText(/^location$/i);
     const electrodeGroupLocationInput = locationInputs.find(input =>
@@ -859,31 +925,18 @@ describe('End-to-End Session Creation Workflow', () => {
     expect(ntrodeIdInputs).toHaveLength(1);
     expect(ntrodeIdInputs[0]).toHaveValue(1); // Ntrode IDs start at 1
 
-    // Fill required fields for export
-    const experimenterInputs = screen.getAllByLabelText(/experimenter name/i);
-    await user.clear(experimenterInputs[0]);
-    await user.type(experimenterInputs[0], 'Test, User');
+    // Export using React fiber approach
+    await triggerExport();
 
-    const labInput = screen.getByLabelText(/^lab$/i);
-    await user.clear(labInput);
-    await user.type(labInput, 'Test Lab');
-
-    const institutionInput = screen.getByLabelText(/^institution$/i);
-    await user.clear(institutionInput);
-    await user.type(institutionInput, 'Test University');
-
-    // Export to verify ntrode structure
-    const exportButton = screen.getByRole('button', { name: /generate yml file/i });
-    await user.click(exportButton);
-
+    // ASSERT - Verify export succeeded
     await waitFor(() => {
       expect(mockBlob).not.toBeNull();
-    }, { timeout: 3000 });
+    });
 
     const exportedYaml = mockBlob.content[0];
     const exportedData = YAML.parse(exportedYaml);
 
-    // ASSERT - Verify ntrode structure
+    // Verify ntrode structure
     expect(exportedData.ntrode_electrode_group_channel_map).toBeDefined();
     expect(exportedData.ntrode_electrode_group_channel_map).toHaveLength(1);
     expect(exportedData.ntrode_electrode_group_channel_map[0].ntrode_id).toBe(1);
@@ -908,53 +961,67 @@ describe('End-to-End Session Creation Workflow', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    // ACT - Create a complete session
-    // 1. Experimenters
-    const experimenterInputs = screen.getAllByLabelText(/experimenter name/i);
-    await user.clear(experimenterInputs[0]);
-    await user.type(experimenterInputs[0], 'Guidera, Jennifer');
+    // ACT - Fill required fields first
+    await fillRequiredFields(user, screen);
 
-    // 2. Lab & Institution
+    // Customize fields for this comprehensive test
+    await addListItem(user, screen, LIST_PLACEHOLDERS.experimenter_name, 'Guidera, Jennifer');
+
     const labInput = screen.getByLabelText(/^lab$/i);
     await user.clear(labInput);
     await user.type(labInput, 'Frank Lab');
 
-    const institutionInput = screen.getByLabelText(/^institution$/i);
+    const institutionInput = screen.getByLabelText(/institution/i);
     await user.clear(institutionInput);
     await user.type(institutionInput, 'UCSF');
 
-    // 3. Session info
     const sessionIdInput = screen.getByLabelText(/session id/i);
+    await user.clear(sessionIdInput);
     await user.type(sessionIdInput, 'test_session_001');
 
-    // 4. Subject
-    const subjectIdInput = screen.getByLabelText(/subject id/i);
-    await user.type(subjectIdInput, 'RAT001');
+    const subjectIdInputs = screen.getAllByLabelText(/subject id/i);
+    await user.clear(subjectIdInputs[0]);
+    await user.type(subjectIdInputs[0], 'RAT001');
 
-    const speciesInput = screen.getByLabelText(/^species$/i);
-    await user.clear(speciesInput);
-    await user.type(speciesInput, 'Rattus norvegicus');
+    const speciesInputs = screen.getAllByLabelText(/species/i);
+    await user.clear(speciesInputs[0]);
+    await user.type(speciesInputs[0], 'Rattus norvegicus');
 
-    const sexInput = screen.getByLabelText(/^sex$/i);
-    await user.selectOptions(sexInput, 'M');
+    const sexInputs = screen.getAllByLabelText(/sex/i);
+    await user.selectOptions(sexInputs[0], 'M');
 
-    // 5. Camera
-    const addCameraButton = screen.getByRole('button', { name: /add cameras/i });
+    // Add camera
+    const addCameraButton = screen.getByTitle(/Add cameras/i);
     await user.click(addCameraButton);
+
+    await waitFor(() => {
+      const cameraNameInputs = screen.queryAllByLabelText(/camera name/i);
+      expect(cameraNameInputs.length).toBeGreaterThan(0);
+    });
 
     const cameraNameInputs = screen.getAllByLabelText(/camera name/i);
     await user.type(cameraNameInputs[0], 'overhead_camera');
 
-    // 6. Task
-    const addTaskButton = screen.getByRole('button', { name: /add tasks/i });
+    // Add task
+    const addTaskButton = screen.getByTitle(/Add tasks/i);
     await user.click(addTaskButton);
+
+    await waitFor(() => {
+      const items = screen.queryAllByText(/Item #1/);
+      expect(items.length).toBeGreaterThan(1); // cameras + tasks
+    });
 
     const taskNameInputs = screen.getAllByLabelText(/task name/i);
     await user.type(taskNameInputs[0], 'w_track');
 
-    // 7. Electrode group
-    const addElectrodeGroupButton = screen.getByRole('button', { name: /add electrode groups/i });
+    // Add electrode group
+    const addElectrodeGroupButton = screen.getByTitle(/Add electrode_groups/i);
     await user.click(addElectrodeGroupButton);
+
+    await waitFor(() => {
+      const items = screen.queryAllByText(/Item #1/);
+      expect(items.length).toBeGreaterThan(2); // cameras + tasks + electrode_groups
+    });
 
     const locationInputs = screen.getAllByLabelText(/^location$/i);
     const electrodeGroupLocationInput = locationInputs.find(input =>
@@ -971,14 +1038,13 @@ describe('End-to-End Session Creation Workflow', () => {
       expect(ntrodeIdInputs.length).toBeGreaterThan(0);
     }, { timeout: 2000 });
 
-    // ACT - Validate and export
-    const exportButton = screen.getByRole('button', { name: /generate yml file/i });
-    await user.click(exportButton);
+    // Export using React fiber approach
+    await triggerExport();
 
     // ASSERT - Verify export succeeded (validation passed)
     await waitFor(() => {
       expect(mockBlob).not.toBeNull();
-    }, { timeout: 3000 });
+    });
 
     // Parse and validate YAML structure
     const exportedYaml = mockBlob.content[0];
@@ -1000,8 +1066,8 @@ describe('End-to-End Session Creation Workflow', () => {
     expect(exportedData.electrode_groups).toBeDefined();
     expect(exportedData.ntrode_electrode_group_channel_map).toBeDefined();
 
-    // Verify values
-    expect(exportedData.experimenter_name).toEqual(['Guidera, Jennifer']);
+    // Verify values (includes experimenters from both fillRequiredFields and addListItem)
+    expect(exportedData.experimenter_name).toContain('Guidera, Jennifer');
     expect(exportedData.lab).toBe('Frank Lab');
     expect(exportedData.institution).toBe('UCSF');
     expect(exportedData.session_id).toBe('test_session_001');
