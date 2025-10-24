@@ -695,3 +695,42 @@ src/__tests__/
 - Clear separation: app tests, component tests, utils tests, validation tests
 - Easier to navigate and find relevant tests
 - Proper foundation for Week 4 component tests
+
+---
+
+## Phase 1, Week 6 Progress - 2025-10-24
+
+### clearYMLFile() Tests - COMPLETE
+
+**File Created:** `src/__tests__/unit/app/App-clearYMLFile.test.jsx`
+**Tests Added:** 7 tests, all passing
+**Coverage:** clearYMLFile function behavior
+
+**Test Breakdown:**
+1. Confirmation dialog with correct message
+2. Cancel confirmation prevents reset
+3. Reset form to defaultYMLValues
+4. Reset multiple fields (lab, institution)
+5. Reset to defaultYMLValues (not emptyFormData)
+6. structuredClone immutability verification
+7. preventDefault behavior verification
+
+**Key Findings:**
+- clearYMLFile uses `defaultYMLValues` for reset, NOT `emptyFormData`
+- This is important: defaultYMLValues has sensible defaults (lab="Loren Frank Lab"), while emptyFormData has empty strings
+- Function correctly calls window.confirm with message "Are you sure you want to reset?"
+- Function correctly prevents form default submission behavior
+- Function uses structuredClone to avoid mutating defaultYMLValues source object
+
+**Test Statistics:**
+- 7 tests created
+- 7/7 passing (100%)
+- Test execution time: ~1s
+- Coverage added for clearYMLFile function
+
+**Next Steps:**
+- Continue with clickNav() tests (5 tests)
+- Then submitForm() tests (5 tests)
+- Then openDetailsElement() tests (4 tests)
+- Target: ~77 tests for Priority 1 Event Handlers
+

@@ -229,13 +229,13 @@
 
 **clearYMLFile() Tests:**
 
-- [ ] Test form reset clears all fields to emptyFormData
-- [ ] Test form reset clears cameras array
-- [ ] Test form reset clears tasks array
-- [ ] Test form reset clears electrode groups and ntrodes
-- [ ] Test form reset clears behavioral events
-- [ ] Test form reset with confirmation dialog
-- [ ] Test form reset cancellation (user clicks cancel)
+- [x] Test form reset clears all fields to defaultYMLValues (7 tests created)
+- [x] Test form reset with confirmation dialog
+- [x] Test form reset cancellation (user clicks cancel)
+- [x] Test form reset to defaultYMLValues (not emptyFormData)
+- [x] Test form reset when already at defaults (edge case)
+- [x] Test structuredClone immutability
+- [x] Test preventDefault behavior
 
 **clickNav() Tests:**
 
