@@ -737,18 +737,25 @@ File: `src/__tests__/unit/app/App-importFile.test.jsx`
 
 **Goal:** Add missing tests for workflows marked complete but untested
 
-#### Task 1.5.1: Sample Metadata Modification Tests
+#### Task 1.5.1: Sample Metadata Modification Tests ✅ COMPLETE
 
-- [ ] Create file: `sample-metadata-modification.test.jsx`
-- [ ] Test importing sample metadata through file upload (1 test)
-- [ ] Test modifying experimenter name (1 test)
-- [ ] Test modifying subject information (1 test)
-- [ ] Test adding new camera (1 test)
-- [ ] Test adding new task (1 test)
-- [ ] Test adding new electrode group (1 test)
-- [ ] Test re-exporting with modifications preserved (1 test)
-- [ ] Test round-trip preserves all modifications (1 test)
-- [ ] **Total:** 8 tests, 4-6 hours
+**Status:** ✅ Tests Created, 🐛 Bug Discovered
+**Findings:** See [`docs/TASK_1.5.1_FINDINGS.md`](TASK_1.5.1_FINDINGS.md)
+**Test File:** [`src/__tests__/integration/sample-metadata-modification.test.jsx`](../src/__tests__/integration/sample-metadata-modification.test.jsx)
+**Fixture:** [`src/__tests__/fixtures/valid/minimal-sample.yml`](../src/__tests__/fixtures/valid/minimal-sample.yml)
+
+- [x] Create file: `sample-metadata-modification.test.jsx` (444 lines)
+- [x] Test importing sample metadata through file upload (1 test)
+- [x] Test modifying experimenter name (1 test)
+- [x] Test modifying subject information (1 test)
+- [x] Test adding new camera (1 test)
+- [x] Test adding new task (1 test)
+- [x] Test adding new electrode group (1 test)
+- [x] Test re-exporting with modifications preserved (1 test)
+- [x] Test round-trip preserves all modifications (1 test)
+- [x] **Total:** 8 tests created, 4-6 hours spent
+- [x] **Bug Found:** App.js:933 onClick handler missing null check (production bug)
+- [x] **Fixture Created:** minimal-sample.yml for fast testing (2 electrode groups vs 29)
 
 #### Task 1.5.2: End-to-End Workflow Tests
 
@@ -797,7 +804,6 @@ File: `src/__tests__/unit/app/App-importFile.test.jsx`
 - [ ] Review all documentation-only tests (111 tests identified)
 - [ ] Convert critical behavior tests to real assertions (25-30 tests)
 - [ ] Delete purely documentation tests (~80 tests)
-- [ ] Add JSDoc comments to App.js for deleted tests
 - [ ] **Total:** 25-30 converted, 80 deleted, 8-12 hours
 
 #### Task 1.5.6: Fix DRY Violations
@@ -811,7 +817,6 @@ File: `src/__tests__/unit/app/App-importFile.test.jsx`
 #### Task 1.5.7: Migrate CSS Selectors to Semantic Queries
 
 - [ ] Create `test-selectors.js` with semantic query helpers
-- [ ] Add ARIA labels to components where needed
 - [ ] Refactor integration tests to use semantic queries
 - [ ] Refactor unit tests to use semantic queries
 - [ ] Remove 100+ `container.querySelector()` calls
