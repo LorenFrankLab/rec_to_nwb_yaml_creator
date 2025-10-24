@@ -168,7 +168,7 @@
 - [x] Test SelectElement (dropdown selection) - 32 tests, discovered duplicate key bug
 - [x] Test DataListElement (autocomplete) - 36 tests, same duplicate key bug, PropTypes typo
 - [x] Test CheckboxList (multi-select) - 31 tests, discovered duplicate key bug, PropTypes typo, defaultProps mismatch
-- [ ] Test RadioList (single-select)
+- [x] Test RadioList (single-select) - 39 tests, discovered duplicate key bug, PropTypes typo, defaultProps mismatch, misleading JSDoc
 - [ ] Test ListElement (dynamic string lists)
 - [ ] Test ArrayItemControl (duplicate/remove buttons)
 
