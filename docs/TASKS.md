@@ -217,7 +217,111 @@
 - [ ] Test with malformed input data - covered in validation tests
 - [ ] Test browser compatibility (validation APIs) - N/A for Phase 1
 
+### Week 6: Coverage Push to 60% Target
+
+**Current Coverage:** 39.19%
+**Target Coverage:** 60%
+**Gap:** ~21% (approximately 250-300 more tests needed)
+
+#### Priority 1: App.js Core Functions (Target: +15% coverage)
+
+##### Event Handlers (Currently Untested)
+
+- [ ] Test clearYMLFile() - form reset functionality
+- [ ] Test clickNav() - navigation highlighting
+- [ ] Test submitForm() - form submission flow
+- [ ] Test openDetailsElement() - expand all details elements
+
+##### Error Display Functions (Currently Untested)
+
+- [ ] Test showErrorMessage() - Ajv error display
+- [ ] Test displayErrorOnUI() - custom validity error display
+- [ ] Test error message formatting and element selection
+
+##### Array Management Functions (Partially Tested)
+
+- [ ] Test addArrayItem() with various array types
+- [ ] Test removeArrayItem() with confirmation dialog
+- [ ] Test duplicateArrayItem() for non-electrode arrays
+- [ ] Test edge cases: empty arrays, invalid indices
+
+##### YAML Conversion (Partially Tested)
+
+- [ ] Test convertObjectToYAMLString() with edge cases
+- [ ] Test createYAMLFile() blob creation and download
+- [ ] Test YAML Document API usage
+
+#### Priority 2: Missing Component Tests (Target: +3% coverage)
+
+##### ArrayUpdateMenu.jsx (53.33% coverage)
+
+- [ ] Test add button click handlers
+- [ ] Test count input validation
+- [ ] Test dropdown selection
+- [ ] Test interaction with different array types
+
+##### SelectInputPairElement.jsx (14.28% coverage)
+
+- [ ] Test select and input coordination
+- [ ] Test value updates
+- [ ] Test validation
+- [ ] Test edge cases
+
+##### ChannelMap.jsx (8.69% coverage)
+
+- [ ] Test channel mapping UI
+- [ ] Test map updates
+- [ ] Test bad_channels selection
+- [ ] Test multi-shank device handling
+
+#### Priority 3: Integration Tests (Target: +3% coverage)
+
+##### Sample Metadata Reproduction
+
+- [x] Test loading 20230622_sample_metadata.yml (21 tests - COMPLETE)
+- [ ] Test modifying and re-exporting sample metadata
+- [ ] Test all device types present in sample
+- [ ] Test camera/task/epoch dependencies in sample
+
+##### End-to-End Workflows
+
+- [ ] Test complete session creation workflow
+- [ ] Test adding electrode groups with ntrode generation
+- [ ] Test complex form interactions
+- [ ] Test validation error recovery
+
+##### Error Recovery Scenarios
+
+- [ ] Test recovering from validation failures
+- [ ] Test handling malformed YAML import
+- [ ] Test undoing changes (form reset)
+- [ ] Test browser back/forward navigation
+
+#### Test Implementation Strategy
+
+##### Phase A: High-Impact Functions (Est. 100 tests)
+
+1. clearYMLFile and form reset
+2. Error display functions
+3. Array management edge cases
+4. YAML conversion edge cases
+
+##### Phase B: Missing Components (Est. 80 tests)
+
+1. ArrayUpdateMenu comprehensive tests
+2. SelectInputPairElement tests
+3. ChannelMap UI interaction tests
+
+##### Phase C: Integration Scenarios (Est. 70 tests)
+
+1. Complete workflows
+2. Error recovery
+3. Complex interactions
+
+**Total New Tests Needed:** ~250 tests to reach 60% coverage
+
 ### Phase 1 Exit Gate
+
 - [ ] Unit test coverage ≥ 60%
 - [ ] Integration test coverage ≥ 50%
 - [ ] All tests passing
