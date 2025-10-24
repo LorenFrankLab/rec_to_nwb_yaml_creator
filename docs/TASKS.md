@@ -181,13 +181,14 @@
 - [x] Test showCustomValidityError error display
 - [x] Test type coercion functions (isInteger, isNumeric, stringToInteger, titleCase)
 - [x] Test isProduction environment detection (discovered security bug)
-- [ ] Test ID auto-increment logic (needs investigation - not a standalone function)
+- [x] Test ID auto-increment logic (already covered in App-array-management.test.jsx)
 
 #### Dynamic Dependencies
-- [ ] Test camera ID tracking and updates
-- [ ] Test task epoch tracking and cleanup
-- [ ] Test DIO event tracking
-- [ ] Test dependent field clearing on deletions
+- [x] Test camera ID tracking and updates (33 tests - App-dynamic-dependencies.test.jsx)
+- [x] Test task epoch tracking and cleanup
+- [x] Test DIO event tracking
+- [x] Test dependent field clearing on deletions
+- [x] Test useEffect reactive updates for all three dependency types
 
 ### Week 5: Integration and Edge Cases
 
