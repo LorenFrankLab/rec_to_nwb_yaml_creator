@@ -513,9 +513,10 @@ return window.location.hostname === 'lorenfranklab.github.io';
 ### Current Status
 
 **Branch:** `modern`
-**Commits ahead of origin:** 10 unpushed commits (latest: 3d51e76)
-**Test Coverage:** 39.19% overall (target: 60-70%)
-**Phase Status:** 🟢 WEEK 4-5 COMPLETE - Ready for Phase 1 Exit Review
+**Commits ahead of origin:** 13 unpushed commits (latest: b1beda8)
+**Test Coverage:** 39.19% overall (target: 60%)
+**Test Count:** 846 tests (845 passing + 1 flaky performance)
+**Phase Status:** 🟡 WEEK 6 PLANNING COMPLETE - Ready to implement 227 tests to reach 60%
 
 ### Completed So Far
 
@@ -545,13 +546,20 @@ return window.location.hostname === 'lorenfranklab.github.io';
 **Week 5 - Integration Tests:**
 - ✅ Import/Export workflow (34 tests) - import-export-workflow.test.jsx - YAML import/export, round-trip consistency
 - ✅ Electrode/Ntrode management (35 tests) - electrode-ntrode-management.test.jsx - device types, shank counts, ntrode generation
+- ✅ Sample metadata reproduction (21 tests) - sample-metadata-reproduction.test.jsx - validates 20230622_sample_metadata.yml
 
-**Total Tests Now:** 825 tests across 27 test files
+**Week 6 - Test Planning:**
+- ✅ Created comprehensive test plan (~227 tests to reach 60% coverage)
+- ✅ Priority 1: App.js core functions (~77 tests, +15% coverage)
+- ✅ Priority 2: Missing components (~80 tests, +3% coverage)
+- ✅ Priority 3: Integration tests (~70 tests, +3% coverage)
+
+**Total Tests Now:** 846 tests across 28 test files
 **Test Breakdown:**
 - Week 0 (Baselines): 114 tests
 - Week 3 (Core): 183 tests
 - Week 4 (Components + Utils): 379 tests (260 components + 86 utils + 33 dependencies)
-- Week 5 (Integration): 69 tests (34 import/export + 35 electrode/ntrode)
+- Week 5 (Integration): 90 tests (34 import/export + 35 electrode/ntrode + 21 sample metadata)
 - Infrastructure: 80 tests
 
 **Completion Status:**
@@ -560,6 +568,8 @@ return window.location.hostname === 'lorenfranklab.github.io';
 - ✅ Dynamic Dependencies: COMPLETE
 - ✅ Import/Export Workflow: COMPLETE
 - ✅ Electrode/Ntrode Management: COMPLETE
+- ✅ Sample Metadata Integration: COMPLETE
+- ✅ Week 6 Test Plan: COMPLETE
 
 ### Coverage Progress
 
