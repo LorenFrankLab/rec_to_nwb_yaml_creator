@@ -862,32 +862,46 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // Add electrode group
     const addElectrodeGroupButton = screen.getByTitle(/Add electrode_groups/i);
-    let electrodeGroupIdInputs = screen.queryAllByLabelText(/electrode group id/i);
+
+    // Count existing electrode groups using placeholder text (unique to electrode groups)
+    let electrodeGroupIdInputs = screen.queryAllByPlaceholderText(/typically a number/i);
+    // Filter to only electrode group IDs (exclude data_acq_device which also has this placeholder)
+    electrodeGroupIdInputs = electrodeGroupIdInputs.filter(input =>
+      input.id && input.id.startsWith('electrode_groups-id-')
+    );
     const initialElectrodeGroupCount = electrodeGroupIdInputs.length;
 
     await user.click(addElectrodeGroupButton);
 
+    // Wait for new electrode group to be added
     await waitFor(() => {
-      electrodeGroupIdInputs = screen.queryAllByLabelText(/electrode group id/i);
-      expect(electrodeGroupIdInputs.length).toBe(initialElectrodeGroupCount + 1);
+      let updatedInputs = screen.queryAllByPlaceholderText(/typically a number/i);
+      updatedInputs = updatedInputs.filter(input =>
+        input.id && input.id.startsWith('electrode_groups-id-')
+      );
+      expect(updatedInputs.length).toBe(initialElectrodeGroupCount + 1);
     });
 
-    electrodeGroupIdInputs = screen.getAllByLabelText(/electrode group id/i);
-    expect(electrodeGroupIdInputs[0]).toHaveValue(0); // Auto-assigned ID
-
-    const locationInputs = screen.getAllByLabelText(/^location$/i);
-    const electrodeGroupLocationInput = locationInputs.find(input =>
-      input.closest('details')?.querySelector('summary')?.textContent?.includes('Electrode Groups')
+    // Get the first electrode group ID input (should have auto-assigned ID of 0)
+    electrodeGroupIdInputs = screen.queryAllByPlaceholderText(/typically a number/i);
+    const electrodeGroupIdInput = electrodeGroupIdInputs.find(input =>
+      input.id && input.id.startsWith('electrode_groups-id-')
     );
+    expect(electrodeGroupIdInput).toHaveValue(0); // Auto-assigned ID
+
+    // Use placeholder text to find location field (more specific than label)
+    const locationInputs = screen.queryAllByPlaceholderText(/type to find a location/i);
+    // Get the last one added (most recent electrode group)
+    const electrodeGroupLocationInput = locationInputs[locationInputs.length - 1];
     await user.type(electrodeGroupLocationInput, 'CA1');
 
-    const deviceTypeInputs = screen.getAllByLabelText(/device type/i);
-    await user.selectOptions(deviceTypeInputs[0], 'tetrode_12.5');
+    // Device type select - get all and use the last one (most recent electrode group)
+    const deviceTypeInputs = screen.queryAllByLabelText(/device type/i);
+    await user.selectOptions(deviceTypeInputs[deviceTypeInputs.length - 1], 'tetrode_12.5');
 
-    const descriptionInputs = screen.getAllByLabelText(/^description$/i);
-    const electrodeGroupDescInput = descriptionInputs.find(input =>
-      input.closest('details')?.querySelector('summary')?.textContent?.includes('Electrode Groups')
-    );
+    // Description field - get all and use the last one (most recent electrode group)
+    const descriptionInputs = screen.queryAllByLabelText(/^description$/i);
+    const electrodeGroupDescInput = descriptionInputs[descriptionInputs.length - 1];
     await user.type(electrodeGroupDescInput, 'Dorsal CA1 tetrode');
 
     // Export using React fiber approach
@@ -939,15 +953,16 @@ describe('End-to-End Session Creation Workflow', () => {
       expect(electrodeGroupIdInputs.length).toBe(initialElectrodeGroupCount + 1);
     });
 
-    const locationInputs = screen.getAllByLabelText(/^location$/i);
-    const electrodeGroupLocationInput = locationInputs.find(input =>
-      input.closest('details')?.querySelector('summary')?.textContent?.includes('Electrode Groups')
-    );
+    // Use placeholder text to find location field (more specific than label)
+    const locationInputs = screen.queryAllByPlaceholderText(/type to find a location/i);
+    // Get the last one added (most recent electrode group)
+    const electrodeGroupLocationInput = locationInputs[locationInputs.length - 1];
     await user.type(electrodeGroupLocationInput, 'CA1');
 
     // Select device type to trigger ntrode generation
-    const deviceTypeInputs = screen.getAllByLabelText(/device type/i);
-    await user.selectOptions(deviceTypeInputs[0], 'tetrode_12.5');
+    // Device type select - get all and use the last one (most recent electrode group)
+    const deviceTypeInputs = screen.queryAllByLabelText(/device type/i);
+    await user.selectOptions(deviceTypeInputs[deviceTypeInputs.length - 1], 'tetrode_12.5');
 
     // Wait for ntrode generation (async operation)
     await waitFor(() => {
@@ -1057,24 +1072,35 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // Add electrode group
     const addElectrodeGroupButton = screen.getByTitle(/Add electrode_groups/i);
-    let electrodeGroupIdInputs = screen.queryAllByLabelText(/electrode group id/i);
+
+    // Count existing electrode groups using placeholder text (unique to electrode groups)
+    let electrodeGroupIdInputs = screen.queryAllByPlaceholderText(/typically a number/i);
+    // Filter to only electrode group IDs (exclude data_acq_device which also has this placeholder)
+    electrodeGroupIdInputs = electrodeGroupIdInputs.filter(input =>
+      input.id && input.id.startsWith('electrode_groups-id-')
+    );
     const initialElectrodeGroupCount = electrodeGroupIdInputs.length;
 
     await user.click(addElectrodeGroupButton);
 
+    // Wait for new electrode group to be added
     await waitFor(() => {
-      electrodeGroupIdInputs = screen.queryAllByLabelText(/electrode group id/i);
-      expect(electrodeGroupIdInputs.length).toBe(initialElectrodeGroupCount + 1);
+      let updatedInputs = screen.queryAllByPlaceholderText(/typically a number/i);
+      updatedInputs = updatedInputs.filter(input =>
+        input.id && input.id.startsWith('electrode_groups-id-')
+      );
+      expect(updatedInputs.length).toBe(initialElectrodeGroupCount + 1);
     });
 
-    const locationInputs = screen.getAllByLabelText(/^location$/i);
-    const electrodeGroupLocationInput = locationInputs.find(input =>
-      input.closest('details')?.querySelector('summary')?.textContent?.includes('Electrode Groups')
-    );
+    // Use placeholder text to find location field (more specific than label)
+    const locationInputs = screen.queryAllByPlaceholderText(/type to find a location/i);
+    // Get the last one added (most recent electrode group)
+    const electrodeGroupLocationInput = locationInputs[locationInputs.length - 1];
     await user.type(electrodeGroupLocationInput, 'CA1');
 
-    const deviceTypeInputs = screen.getAllByLabelText(/device type/i);
-    await user.selectOptions(deviceTypeInputs[0], 'tetrode_12.5');
+    // Device type select - get all and use the last one (most recent electrode group)
+    const deviceTypeInputs = screen.queryAllByLabelText(/device type/i);
+    await user.selectOptions(deviceTypeInputs[deviceTypeInputs.length - 1], 'tetrode_12.5');
 
     // Wait for ntrode generation
     await waitFor(() => {
