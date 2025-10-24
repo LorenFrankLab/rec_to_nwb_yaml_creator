@@ -14,6 +14,7 @@
 **Decision:** Skip Task 1.5.3 (Error Recovery Scenarios), proceed directly to Task 1.5.4 (Fix Import/Export Integration Tests)
 
 **Rationale:**
+
 - Task 1.5.3 would encounter same field selector issues as Task 1.5.2 (est. 10-15 hours debugging)
 - Task 1.5.4 has higher value: fixes 97 broken integration tests that don't actually test
 - Import/export tests are lower complexity (YAML data vs complex form interactions)
@@ -21,6 +22,7 @@
 - Better ROI for refactoring preparation
 
 **Adjusted Phase 1.5 Plan:**
+
 1. ✅ Task 1.5.1: Sample Metadata Modification (COMPLETE - 8 tests)
 2. ⚠️ Task 1.5.2: End-to-End Workflows (PARTIAL - 2/11 tests, patterns documented)
 3. ⏭️ Task 1.5.3: Error Recovery Scenarios (DEFERRED - not blocking Phase 2)
@@ -31,6 +33,7 @@
 8. ⏳ Task 1.5.8: Create known bug fixtures (nice to have)
 
 **Expected Outcome:**
+
 - ~30 new/rewritten meaningful tests (vs 54 original target)
 - Clean test codebase ready for Phase 2
 - Refactoring-ready selectors for Phase 3
@@ -41,6 +44,7 @@
 ### Completed This Session
 
 ✅ **Task 1.5.1: Sample Metadata Modification Tests** (8 tests)
+
 - Created `sample-metadata-modification.test.jsx` (444 LOC)
 - Created `minimal-sample.yml` fixture for fast testing
 - **Bug Found:** App.js:933 onClick handler missing null check (production bug)
@@ -48,6 +52,7 @@
 - Time: 4-6 hours
 
 ⚠️ **Task 1.5.2: End-to-End Workflow Tests** (2/11 tests passing - PARTIAL COMPLETE)
+
 - Created `complete-session-creation.test.jsx` (1,128 LOC, 11 tests written)
 - ✅ Test 1: Minimal valid session (PASSING)
 - ✅ Test 3: Multiple experimenter names (PASSING)
