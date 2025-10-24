@@ -268,18 +268,21 @@
 
 **submitForm() Tests:**
 
-- [ ] Test form submission prevents default behavior
-- [ ] Test submitForm calls generateYMLFile
-- [ ] Test submitForm with valid form data
-- [ ] Test submitForm with invalid form data
-- [ ] Test submitForm validation flow
+- [x] Test openDetailsElement called before submission (6 tests created)
+- [x] Test form.requestSubmit() triggered
+- [x] Test integration with generateYMLFile via onSubmit
+- [x] Test all details elements opened before submission
+- [x] Test button type="button" prevents default
+- [x] Test onClick handler instead of native form submit
 
 **openDetailsElement() Tests:**
 
-- [ ] Test all details elements opened
-- [ ] Test no errors if details elements missing
-- [ ] Test querySelector finds all details elements
-- [ ] Test open attribute set on each element
+- [x] Test all details elements opened when called (6 tests created)
+- [x] Test open attribute set to true on each element
+- [x] Test handles already-open details correctly
+- [x] Test querySelector finds multiple details elements
+- [x] Test no errors thrown
+- [x] Test purpose: reveal all fields before validation
 
 ##### Error Display Functions (Currently Untested)
 
@@ -579,29 +582,6 @@
 - [ ] Test form state persists during session
 - [ ] Test unsaved changes warning (if implemented)
 - [ ] Test page reload behavior
-
-#### Test Implementation Strategy
-
-##### Phase A: High-Impact Functions (Est. 100 tests)
-
-1. clearYMLFile and form reset
-2. Error display functions
-3. Array management edge cases
-4. YAML conversion edge cases
-
-##### Phase B: Missing Components (Est. 80 tests)
-
-1. ArrayUpdateMenu comprehensive tests
-2. SelectInputPairElement tests
-3. ChannelMap UI interaction tests
-
-##### Phase C: Integration Scenarios (Est. 70 tests)
-
-1. Complete workflows
-2. Error recovery
-3. Complex interactions
-
-**Total New Tests Needed:** ~250 tests to reach 60% coverage
 
 ### Phase 1 Exit Gate
 

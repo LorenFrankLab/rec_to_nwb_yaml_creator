@@ -768,3 +768,57 @@ src/__tests__/
 - Continue with submitForm() tests (5 tests)
 - Then openDetailsElement() tests (4 tests)
 - Then error display functions
+
+### submitForm() Tests - COMPLETE
+
+**File Created:** `src/__tests__/unit/app/App-submitForm.test.jsx`
+**Tests Added:** 6 tests, all passing
+**Coverage:** submitForm function behavior
+
+**Test Breakdown:**
+1. openDetailsElement called when Generate YML File button clicked
+2. form.requestSubmit() triggered
+3. Integration with generateYMLFile via form onSubmit handler
+4. All details elements opened before submission
+5. Button has type="button" (prevents default form behavior)
+6. Uses onClick handler instead of native submit event
+
+**Key Findings:**
+- submitForm is a pre-submission hook that runs BEFORE form submission
+- Calls openDetailsElement() to ensure all form sections are visible
+- Then calls form.requestSubmit() which triggers the onSubmit handler
+- The onSubmit handler calls generateYMLFile()
+- Button is type="button" to prevent page reload
+- Flow: onClick → submitForm → openDetailsElement → requestSubmit → onSubmit → generateYMLFile
+
+### openDetailsElement() Tests - COMPLETE
+
+**File Created:** `src/__tests__/unit/app/App-openDetailsElement.test.jsx`
+**Tests Added:** 6 tests, all passing
+**Coverage:** openDetailsElement function behavior
+
+**Test Breakdown:**
+1. Opens all details elements when called
+2. Sets open attribute to true on each element
+3. Handles already-open details correctly (no errors)
+4. querySelector finds multiple details elements
+5. No errors thrown during execution
+6. Purpose verification: reveals all fields before validation
+
+**Key Findings:**
+- openDetailsElement finds ALL `<details>` elements via querySelectorAll
+- Sets `detail.open = true` on each element
+- Purpose: Ensure validation errors in collapsed sections are visible to user
+- Safely handles edge cases (already open, empty list)
+- Called by submitForm before validation runs
+
+**Test Statistics:**
+- 12 tests created (6 submitForm + 6 openDetailsElement)
+- 12/12 passing (100%)
+- Test execution time: ~1.8s
+- Both functions work together to prepare form for validation
+
+**Next Steps:**
+- Continue with error display functions (showErrorMessage, displayErrorOnUI)
+- Then array management functions
+- Then YAML conversion functions
