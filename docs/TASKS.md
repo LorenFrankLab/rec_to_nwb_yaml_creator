@@ -310,15 +310,15 @@
 
 **addArrayItem() Tests:**
 
-- [ ] Test adding single item to cameras array
-- [ ] Test adding single item to tasks array
-- [ ] Test adding single item to behavioral_events array
-- [ ] Test adding multiple items at once (count parameter)
-- [ ] Test adding items with auto-incrementing IDs
-- [ ] Test adding items to empty array
-- [ ] Test adding items with existing items
-- [ ] Test adding items updates formData state
-- [ ] Test structuredClone used for immutability
+- [x] Test adding single item to cameras array (24 tests created)
+- [x] Test adding single item to tasks array
+- [x] Test adding single item to behavioral_events array
+- [x] Test adding multiple items at once (count parameter)
+- [x] Test adding items with auto-incrementing IDs
+- [x] Test adding items to empty array
+- [x] Test adding items with existing items
+- [x] Test adding items updates formData state
+- [x] Test structuredClone used for immutability
 
 **removeArrayItem() Tests:**
 

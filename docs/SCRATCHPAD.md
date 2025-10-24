@@ -900,6 +900,76 @@ src/__tests__/
 - Coverage added for showErrorMessage function logic
 
 **Next Steps:**
-- Continue with displayErrorOnUI() tests (6 tests)
-- Then array management functions
+- ✅ displayErrorOnUI() tests COMPLETE (13 tests)
+- ✅ addArrayItem() tests COMPLETE (24 tests)
+- Continue with removeArrayItem() tests (10 tests)
+- Then duplicateArrayItem() tests (8 tests)
 - Then YAML conversion functions
+
+### addArrayItem() Tests - COMPLETE
+
+**File Created:** `src/__tests__/unit/app/App-addArrayItem.test.jsx`
+**Tests Added:** 24 tests, all passing
+**Coverage:** addArrayItem function behavior
+
+**Test Breakdown:**
+1. Basic Functionality (4 tests):
+   - Add single item to cameras, tasks, behavioral_events, electrode_groups
+2. Multiple Item Addition (3 tests):
+   - Add multiple items using count parameter
+   - Add 5 tasks at once
+   - Default count to 1
+3. ID Auto-Increment Logic (5 tests):
+   - Auto-increment from max existing ID
+   - Start from 0 when empty
+   - Handle arrays without id field
+   - Increment IDs for electrode_groups
+4. State Management (2 tests):
+   - Use structuredClone for immutability
+   - Update formData state
+5. Array Default Values (3 tests):
+   - Correct template for cameras, tasks, electrode_groups
+6. Edge Cases (4 tests):
+   - Add to populated array
+   - Handle count = 0
+   - Handle large count values (100)
+   - Don't mutate arrayDefaultValues template
+7. Integration with Form State (2 tests):
+   - Add items to correct array key
+   - Preserve other array data
+8. ID Field Detection (2 tests):
+   - Detect id field in arrayDefaultValue
+   - Only auto-increment for arrays with id field
+
+**Key Findings:**
+- addArrayItem uses structuredClone for immutability (line 365)
+- Gets template from arrayDefaultValues[key] (line 366)
+- Creates count number of items using Array(count).fill() (line 367)
+- Auto-increments IDs only if arrayDefaultValue has id field (line 375-377)
+- ID calculation: maxId = existing max ID + 1, or 0 if empty (line 376)
+- For each item: maxId += 1, then assigns maxId - 1 to make it 0-indexed (line 384-385)
+- Pushes items to form[key] array (line 388)
+- Updates state with setFormData(form) (line 391)
+
+**ID Increment Logic (Important!):**
+```javascript
+if (arrayDefaultValue?.id !== undefined) {
+  maxId = idValues.length > 0 ? Math.max(...idValues) + 1 : 0;
+}
+
+items.forEach((item) => {
+  if (maxId !== -1) {
+    maxId += 1;
+    selectedItem.id = maxId - 1; // -1 makes this start from 0
+  }
+});
+```
+
+**Arrays with id field:** cameras, electrode_groups
+**Arrays without id field:** tasks, behavioral_events, associated_files, etc.
+
+**Test Statistics:**
+- 24 tests created
+- 24/24 passing (100%)
+- Test execution time: ~28ms
+- Coverage added for addArrayItem function logic
