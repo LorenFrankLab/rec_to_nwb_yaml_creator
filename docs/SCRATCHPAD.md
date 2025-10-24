@@ -277,6 +277,36 @@ Based on current performance, these are the regression-detection thresholds:
 
 **Fix:** Add `optogenetic_stimulation_software: ""` to `emptyFormData` in Phase 2
 
+### 2025-10-23 - SelectElement Duplicate Key Warning
+
+**Bug Found:** SelectElement generates duplicate React keys when dataItems contains duplicate values
+
+**Root Cause:** Key generation in SelectElement.jsx (lines 46-49):
+```javascript
+const keyOption =
+  dataItemValue !== ''
+    ? `${dataItem}-${sanitizeTitle(dataItem)}`
+    : `${title}-0-selectItem-${dataItemIndex}`;
+```
+
+**Impact:**
+- When dataItems has duplicates like `['option1', 'option2', 'option1']`, both option1 elements get key `option1-option1`
+- React warning: "Encountered two children with the same key"
+- Could cause rendering issues if options are reordered/updated
+- Low severity: Unlikely to have duplicate options in real usage
+
+**Fix for Phase 2:**
+Include `dataItemIndex` in key generation to ensure uniqueness:
+```javascript
+const keyOption = `${title}-${dataItem}-${dataItemIndex}`;
+```
+
+**Test Coverage:** 32 tests in `src/__tests__/unit/components/SelectElement.test.jsx` document this behavior
+
+**Location:** `src/element/SelectElement.jsx:46-49`
+
+---
+
 ### 2025-10-23 - InputElement Date Formatting Bug
 
 **Bug Found:** Date inputs with end-of-month dates show empty values

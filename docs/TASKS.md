@@ -165,7 +165,7 @@
 
 #### Form Element Components
 - [x] Test InputElement (text, number, date inputs) - 39 tests, discovered date formatting bug
-- [ ] Test SelectElement (dropdown selection)
+- [x] Test SelectElement (dropdown selection) - 32 tests, discovered duplicate key bug
 - [ ] Test DataListElement (autocomplete)
 - [ ] Test CheckboxList (multi-select)
 - [ ] Test RadioList (single-select)
