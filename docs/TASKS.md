@@ -480,25 +480,28 @@ File: `src/__tests__/unit/app/App-nTrodeMapSelected.test.jsx`
 - [x] Integration: test with all supported device types (1 test + edge cases)
 
 **Rewrite Notes:**
+
 - Original tests (26 tests, 21 failing) - incorrect expectations for `deviceTypeMap()`
 - Deleted and rewrote with focus on integration testing (21 tests, all passing)
 - Tests verify UI behavior, not implementation details
 - Organized into 7 describe blocks for clarity
 
-**removeElectrodeGroupItem() Tests (lines 706-765):**
+**removeElectrodeGroupItem() Tests (lines 410-436) - ✅ COMPLETE (15 tests)**
 
-- [ ] Test confirmation dialog shown
-- [ ] Test removal when user confirms
-- [ ] Test cancellation when user declines
-- [ ] Test electrode group removed from array
-- [ ] Test associated ntrode maps removed
-- [ ] Test other electrode groups unaffected
-- [ ] Test formData state updated
-- [ ] Test structuredClone immutability
-- [ ] Test removing last electrode group
-- [ ] Test removing first electrode group
-- [ ] Test removing middle electrode group
-- [ ] Integration: verify ntrode cleanup complete
+File: `src/__tests__/unit/app/App-removeElectrodeGroupItem.test.jsx`
+
+- [x] Test confirmation dialog shown (2 tests - basic + index/key message)
+- [x] Test removal when user confirms (4 tests - basic + first/middle/last)
+- [x] Test cancellation when user declines (2 tests - no removal + state preserved)
+- [x] Test electrode group removed from array (covered in removal tests)
+- [x] Test associated ntrode maps removed (3 tests - single/multiple/multi-shank)
+- [x] Test other electrode groups unaffected (1 test)
+- [x] Test formData state updated (2 tests - state management)
+- [x] Test structuredClone immutability (1 test)
+- [x] Test removing last electrode group (1 test)
+- [x] Test removing first electrode group (1 test)
+- [x] Test removing middle electrode group (1 test)
+- [x] Integration: verify ntrode cleanup complete (covered in ntrode removal tests)
 
 **duplicateElectrodeGroupItem() Tests (lines 677-704):**
 
