@@ -454,6 +454,35 @@ const keyOption = `${title}-${dataItem}-${dataItemIndex}`;
 
 ---
 
+### 2025-10-23 - ArrayItemControl Component Bugs
+
+**Bugs Found:** Three issues in ArrayItemControl component
+
+**1. PropTypes Typo (Same as ALL other components)**
+- **Line 43:** Uses `propType` instead of `propTypes`
+- **Impact:** PropTypes validation is completely disabled
+- **Severity:** Low (consistent pattern across ALL 7 form components)
+
+**2. Misleading JSDoc Comment**
+- **Line 10:** Comment says "@returns Virtual DOM for File upload"
+- **Reality:** This component is for array item controls (Duplicate/Remove buttons)
+- **Impact:** Misleading documentation - not related to file upload at all
+- **Cause:** Likely copy-paste error from another component
+- **Severity:** Low (documentation only)
+
+**3. Empty Import Destructuring**
+- **Lines 1-2:** `import React, { } from 'react';`
+- **Issue:** Empty curly braces in destructuring
+- **Should be:** `import React from 'react';`
+- **Impact:** None (functionally equivalent, but messy)
+- **Severity:** Very low (cosmetic)
+
+**Test Coverage:** 31 tests in `src/__tests__/unit/components/ArrayItemControl.test.jsx`
+
+**Location:** `src/element/ArrayItemControl.jsx`
+
+---
+
 ## Phase 1 Progress Update - 2025-10-23
 
 ### Current Status
@@ -482,8 +511,10 @@ const keyOption = `${title}-${dataItem}-${dataItemIndex}`;
 - ✅ CheckboxList component (31 tests) - discovered duplicate key bug, PropTypes typo, defaultProps mismatch
 - ✅ RadioList component (39 tests) - discovered duplicate key bug, PropTypes typo, defaultProps mismatch, misleading JSDoc
 - ✅ ListElement component (52 tests) - discovered PropTypes typo, defaultProps mismatch, missing key prop, incorrect PropTypes syntax
+- ✅ ArrayItemControl component (31 tests) - discovered PropTypes typo, misleading JSDoc, empty import
 
-**Total Tests Now:** 412 tests (183 from Week 3 + 229 from Week 4)
+**Total Tests Now:** 443 tests (183 from Week 3 + 260 from Week 4)
+**Form Element Components:** 7/7 COMPLETE ✅
 
 ### Coverage Progress
 

@@ -170,7 +170,9 @@
 - [x] Test CheckboxList (multi-select) - 31 tests, discovered duplicate key bug, PropTypes typo, defaultProps mismatch
 - [x] Test RadioList (single-select) - 39 tests, discovered duplicate key bug, PropTypes typo, defaultProps mismatch, misleading JSDoc
 - [x] Test ListElement (dynamic string lists) - 52 tests, discovered PropTypes typo, defaultProps mismatch, missing key prop, incorrect PropTypes syntax
-- [ ] Test ArrayItemControl (duplicate/remove buttons)
+- [x] Test ArrayItemControl (duplicate/remove buttons) - 31 tests, discovered PropTypes typo, misleading JSDoc, empty import
+
+**✅ ALL FORM ELEMENT COMPONENTS COMPLETE (7/7)**
 
 #### Utility Functions
 - [ ] Test sanitizeTitle string cleaning
