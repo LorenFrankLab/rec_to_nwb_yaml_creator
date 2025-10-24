@@ -189,17 +189,31 @@ expect(ntrodes).toHaveLength(8)  // 8 ntrodes generated
 ## Session Notes - 2025-10-24
 
 ### Morning Session (COMPLETE)
+
 - ArrayUpdateMenu: 25 tests ✅
 - SelectInputPairElement: 49 tests ✅
 - ChannelMap: 48 tests ✅
 - **Total:** 122 tests added
 
-### Evening Session (COMPLETE)
+### Evening Session Part 1 (COMPLETE)
+
 - nTrodeMapSelected: 21 tests (rewritten) ✅
 - removeElectrodeGroupItem: 15 tests ✅
 - **Total:** 36 tests added
 
-**Daily Total:** 158 tests added | **Coverage:** +6-8%
+### Evening Session Part 2 (COMPLETE)
+
+- duplicateElectrodeGroupItem: 18 tests ✅
+  - Applied systematic-debugging skill to fix selector issues
+  - Fixed button selectors (title attribute vs accessible name)
+  - Fixed electrode group counting (testid vs class selector)
+  - Fixed device type selectors (ID-based)
+  - Fixed ntrode counting (input[name] selector)
+  - Fixed location input selectors (ID-based)
+  - Corrected device expectations (shankCount = ntrode count)
+- **Total:** 18 tests added
+
+**Daily Total:** 176 tests added | **Coverage:** 48.36% → 60.55% (+12.19%)
 
 ---
 

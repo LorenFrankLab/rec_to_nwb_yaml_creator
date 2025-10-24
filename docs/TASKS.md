@@ -503,18 +503,23 @@ File: `src/__tests__/unit/app/App-removeElectrodeGroupItem.test.jsx`
 - [x] Test removing middle electrode group (1 test)
 - [x] Integration: verify ntrode cleanup complete (covered in ntrode removal tests)
 
-**duplicateElectrodeGroupItem() Tests (lines 677-704):**
+**duplicateElectrodeGroupItem() Tests (lines 707-756):**
 
-- [ ] Test electrode group duplicated with new ID
-- [ ] Test cloned electrode group preserves fields
-- [ ] Test new ID is max existing ID + 1
-- [ ] Test associated ntrode maps duplicated
-- [ ] Test ntrode IDs incremented for duplicates
-- [ ] Test ntrode electrode_group_id updated to new ID
-- [ ] Test map objects preserved in duplicated ntrodes
-- [ ] Test formData state updated
-- [ ] Test structuredClone immutability
-- [ ] Integration: verify full electrode group + ntrode duplication
+- [x] Test electrode group duplicated with new ID (18 tests created)
+- [x] Test cloned electrode group preserves fields
+- [x] Test new ID is max existing ID + 1
+- [x] Test insert duplicated group immediately after original
+- [x] Test associated ntrode maps duplicated
+- [x] Test ntrode IDs incremented for duplicates
+- [x] Test ntrode electrode_group_id updated to new ID
+- [x] Test map objects preserved in duplicated ntrodes
+- [x] Test formData state updated
+- [x] Test structuredClone immutability
+- [x] Test multiple ntrode maps for multi-shank devices
+- [x] Test guard clauses (falsy checks)
+- [x] Integration: verify full electrode group + ntrode duplication
+- [x] Integration: preserve other electrode groups unaffected
+- [x] Integration: complex scenario with different devices
 
 **onMapInput() Tests (lines 246-273):**
 
