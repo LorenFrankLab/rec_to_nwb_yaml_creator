@@ -1,124 +1,209 @@
-# Refactoring Scratchpad
+# Phase 1 Scratchpad
 
-## Performance Baselines
-
-### Measured on: 2025-10-23
-
-Baseline performance metrics for critical operations, measured using the performance.baseline.test.js test suite.
-
-#### Validation Performance
-
-| Operation | Average (ms) | Min (ms) | Max (ms) | Threshold (ms) |
-|-----------|--------------|----------|----------|----------------|
-| Minimal YAML | 100.53 | 95.01 | 128.50 | < 150 |
-| Realistic (8 electrode groups) | 96.17 | 90.59 | 112.14 | < 200 |
-| Complete YAML | 96.83 | 91.99 | 109.67 | < 300 |
-| 50 electrode groups | 100.19 | 90.85 | 132.07 | < 500 |
-| 100 electrode groups | 99.15 | 95.25 | 109.98 | < 1000 |
-| 200 electrode groups | 96.69 | 94.17 | 99.99 | < 2000 |
-
-**Key Observations:**
-
-- Validation time is remarkably consistent across different data sizes (~95-100ms average)
-- AJV schema validation has relatively constant overhead regardless of data size
-- Current performance well below all thresholds (safety margin of 2-20x)
-
-#### YAML Operations Performance
-
-| Operation | Average (ms) | Min (ms) | Max (ms) | Threshold (ms) |
-|-----------|--------------|----------|----------|----------------|
-| Parse (minimal) | 0.23 | 0.14 | 1.79 | < 50 |
-| Parse (realistic) | 1.77 | 1.40 | 3.20 | < 100 |
-| Parse (complete) | 0.64 | 0.56 | 1.22 | < 150 |
-| Stringify (minimal) | 0.18 | 0.13 | 0.59 | < 50 |
-| Stringify (realistic) | 2.36 | 1.89 | 3.96 | < 100 |
-| Stringify (complete) | 0.89 | 0.74 | 2.21 | < 150 |
-| Stringify (100 electrode groups) | 6.11 | 2.71 | 17.44 | < 500 |
-
-**Key Observations:**
-
-- YAML parsing/stringification is very fast (< 10ms for realistic data)
-- Even large datasets (100 electrode groups) stringify in < 20ms
-- Performance has large safety margins
-
-#### Component Rendering Performance
-
-| Operation | Average (ms) | Min (ms) | Max (ms) | Threshold (ms) |
-|-----------|--------------|----------|----------|----------------|
-| Initial App render | 32.67 | 20.20 | 64.43 | < 5000 |
-
-**Key Observations:**
-
-- Initial render is fast (~30ms average)
-- Well below the generous 5-second threshold
-- Actual user-perceived load time is much better than threshold
-
-#### State Management Performance
-
-| Operation | Average (ms) | Min (ms) | Max (ms) | Threshold (ms) |
-|-----------|--------------|----------|----------|----------------|
-| Create 100 electrode groups | 0.02 | 0.01 | 0.09 | < 100 |
-| structuredClone (100 electrode groups) | 0.15 | 0.14 | 0.27 | < 50 |
-| Duplicate single electrode group | 0.00 | 0.00 | 0.00 | < 5 |
-| Generate 50 ntrode maps | 0.01 | 0.01 | 0.03 | n/a |
-| Filter arrays (100 items) | 0.01 | 0.01 | 0.01 | < 10 |
-
-**Key Observations:**
-
-- structuredClone is extremely fast (< 0.2ms for 100 electrode groups)
-- Array operations are essentially instantaneous
-- State immutability has negligible performance cost
-- Current implementation is highly efficient
-
-#### Complex Operations Performance
-
-| Operation | Average (ms) | Min (ms) | Max (ms) | Threshold (ms) |
-|-----------|--------------|----------|----------|----------------|
-| Full import/export cycle | 98.28 | 95.96 | 103.59 | < 500 |
-
-**Key Observations:**
-
-- Full cycle (parse → validate → stringify) averages ~98ms
-- Validation dominates the cycle time (~95% of total)
-- Well below 500ms threshold
-- Users experience fast load/save operations
-
-### Performance Summary
-
-**Overall Assessment:**
-
-- Current performance is **excellent** across all operations
-- All operations are 2-20x faster than their thresholds
-- No performance bottlenecks identified
-- Large safety margins protect against regressions
-
-**Critical Operations (User-Facing):**
-
-1. File Load (import): ~100ms (validation dominates)
-2. File Save (export): ~100ms (validation dominates)
-3. Initial Render: ~30ms
-4. State Updates: < 1ms
-
-**Refactoring Safety:**
-
-- Tests will catch any performance regressions > 2x slowdown
-- Current implementation provides excellent baseline to maintain
-- Focus refactoring efforts on correctness and maintainability, not performance
-
-### Targets
-
-Based on current performance, these are the regression-detection thresholds:
-
-- Initial render: < 5000ms (165x current avg)
-- Validation: < 150-2000ms depending on size (1.5-20x current avg)
-- State updates: < 50ms for large operations (330x current avg)
-- Full import/export cycle: < 500ms (5x current avg)
-
-**Note:** These generous thresholds ensure tests don't fail from normal variance while still catching real performance problems.
+**Current Task:** duplicateElectrodeGroupItem() tests (~12 tests)
+**Next Status Check:** After completing duplicateElectrodeGroupItem() tests, reassess coverage
 
 ---
 
-## Phase 0 Completion - 2025-10-23
+## Performance Baselines (Phase 0)
+
+**Measured:** 2025-10-23 | **Status:** ✅ DOCUMENTED - No optimization needed
+
+### Summary
+
+Current performance is **excellent** across all operations (2-333x faster than thresholds):
+
+| Operation | Average | Threshold | Status |
+|-----------|---------|-----------|--------|
+| Validation (realistic) | ~96ms | < 200ms | ✅ 2x margin |
+| YAML parse/stringify | < 10ms | < 100ms | ✅ 10x margin |
+| Initial render | ~33ms | < 5000ms | ✅ 150x margin |
+| structuredClone (100 EG) | 0.15ms | < 50ms | ✅ 333x margin |
+| Full import/export cycle | ~98ms | < 500ms | ✅ 5x margin |
+
+**Conclusion:** Focus refactoring on correctness/maintainability, not performance.
+
+---
+
+## Known Bugs Discovered (Phase 1)
+
+**Total Bugs:** 11+ documented | **Status:** Fix in Phase 2
+
+### Critical (P0)
+
+1. **SelectInputPairElement.jsx:38** - NULL check missing
+   - Input: number-only string (e.g., "42")
+   - Error: `Cannot read properties of null (reading 'length')`
+   - Impact: Component crashes
+
+### High Priority (P1)
+
+2. **InputElement.jsx:38** - Date formatting bug
+   - Line adds +1 to `getDate()` (already 1-indexed)
+   - Example: Dec 1 UTC → Nov 30 local → Nov 31 (+1) → INVALID → empty display
+   - Impact: End-of-month dates show empty
+
+3. **isProduction() security bug (utils.js:131)**
+   - Uses `includes()` instead of hostname check
+   - Risk: `https://evil.com/https://lorenfranklab.github.io` returns true
+
+4. **PropTypes typo in ALL 7 form components**
+   - Line pattern: `Component.propType = {...}`
+   - Should be: `Component.propTypes = {...}`
+   - Impact: PropTypes validation disabled
+
+### Medium Priority (P2)
+
+5. **Duplicate React keys** - SelectElement, CheckboxList, RadioList, DataListElement, ChannelMap
+6. **defaultProps type mismatches** - CheckboxList, RadioList, ListElement (array vs string)
+7. **emptyFormData missing field** - `optogenetic_stimulation_software` (valueList.js)
+
+### Low Priority (Code Quality)
+
+8. **Misleading JSDoc comments** - RadioList, ArrayItemControl
+9. **Incorrect PropTypes syntax** - ListElement.oneOf([object]), SelectInputPairElement.oneOf([types])
+10. **Dead code** - ArrayUpdateMenu.displayStatus never used
+11. **Empty import** - ArrayItemControl: `import React, { } from 'react';`
+
+---
+
+## Phase 1 Progress (Week 6)
+
+**Last Updated:** 2025-10-24 | **Status:** 🟡 IN PROGRESS
+
+### Test Statistics
+
+| Metric | Current | Target | Gap |
+|--------|---------|--------|-----|
+| **Coverage** | 48.36% | 60% | **-11.64%** |
+| **Total Tests** | ~1,151 | ~1,300 | ~150 tests |
+| **Test Files** | 43 files | ~50 files | ~7 files |
+
+### Completed Tasks (Week 6)
+
+**Priority 1 - App.js Core Functions (✅ COMPLETE - 147 tests):**
+- clearYMLFile() - 7 tests
+- clickNav() - 8 tests
+- submitForm() - 6 tests
+- openDetailsElement() - 6 tests
+- showErrorMessage() - 13 tests
+- displayErrorOnUI() - 13 tests
+- addArrayItem() - 24 tests
+- removeArrayItem() - 26 tests
+- duplicateArrayItem() - 29 tests
+- convertObjectToYAMLString() - 8 tests
+- createYAMLFile() - 7 tests
+
+**Priority 2 - Missing Components (✅ COMPLETE - 122 tests):**
+- ArrayUpdateMenu.jsx - 25 tests (53% → 100% coverage)
+- SelectInputPairElement.jsx - 49 tests (14% → 100% coverage)
+- ChannelMap.jsx - 48 tests (9% → 100% coverage)
+
+**Electrode Group Management (✅ COMPLETE - 36 tests):**
+- nTrodeMapSelected() - 21 tests (rewritten for integration focus)
+- removeElectrodeGroupItem() - 15 tests
+
+### Remaining Tasks (Week 6)
+
+**Next Task:** duplicateElectrodeGroupItem() - ~12 tests needed
+
+**High-Impact Uncovered Functions:**
+- onMapInput() - channel mapping updates
+- generateYMLFile() - form submission + validation workflow
+- importFile() - YAML file parsing + validation
+
+### Coverage Gap Analysis
+
+**Current: 48.36% | Target: 60% | Need: +11.64%**
+
+**High-Impact Areas Still Uncovered:**
+1. **App.js** - 25.65% coverage
+   - Lines 1684-2711 untested (~1000 lines)
+   - Functions: duplicateElectrodeGroupItem, onMapInput, generateYMLFile, importFile
+2. **valueList.js** - 36.58% coverage
+   - Default value generators
+3. **deviceTypes.js** - 73.8% coverage
+   - Device-specific logic
+
+**Strategy:**
+- Complete duplicateElectrodeGroupItem() tests (~12 tests)
+- Reassess coverage after completion
+- If < 60%, add generateYMLFile() and importFile() tests
+- Consider integration tests if still short
+
+---
+
+## Testing Patterns & Selectors
+
+**Lessons Learned from Week 6:**
+
+### Reliable Selectors
+
+```javascript
+// ✅ GOOD - Use actual classes/attributes
+.array-item__controls  // Count electrode groups
+button.button-danger   // Remove button
+input[name="ntrode_id"]  // Count ntrodes
+#electrode_groups-device_type-0  // Device select (NO -list suffix)
+
+// ❌ BAD - Avoid these
+button[title="..."]  // ArrayItemControl has no title
+#id-list  // Only for DataListElement, not SelectElement
+.ntrode-maps fieldset  // Timing issues with React rendering
+```
+
+### Common Pitfalls
+
+1. **SelectElement vs DataListElement IDs**
+   - SelectElement: `#${id}` (no suffix)
+   - DataListElement: `#${id}-list` (has suffix)
+
+2. **ArrayItemControl Buttons**
+   - No title attributes
+   - Use class: `.button-danger` for remove
+   - Use text content: "Duplicate" for duplicate
+
+3. **Counting Elements**
+   - Don't query by non-existent IDs
+   - Use class selectors: `.array-item__controls`
+   - Use attribute selectors: `input[name="field"]`
+
+### Testing Best Practices
+
+```javascript
+// Mock window.confirm()
+vi.spyOn(window, 'confirm').mockReturnValue(true)
+
+// Wait for state updates after interactions
+await waitFor(() => {
+  expect(screen.getAllByTestId('item')).toHaveLength(2)
+})
+
+// Count UI elements, don't assume structure
+const ntrodes = screen.getAllByRole('spinbutton', { name: /ntrode_id/i })
+expect(ntrodes).toHaveLength(8)  // 8 ntrodes generated
+```
+
+---
+
+## Session Notes - 2025-10-24
+
+### Morning Session (COMPLETE)
+- ArrayUpdateMenu: 25 tests ✅
+- SelectInputPairElement: 49 tests ✅
+- ChannelMap: 48 tests ✅
+- **Total:** 122 tests added
+
+### Evening Session (COMPLETE)
+- nTrodeMapSelected: 21 tests (rewritten) ✅
+- removeElectrodeGroupItem: 15 tests ✅
+- **Total:** 36 tests added
+
+**Daily Total:** 158 tests added | **Coverage:** +6-8%
+
+---
+
+## Phase 0 Completion - 2025-10-23 (ARCHIVED)
 
 ### Completion Summary
 
