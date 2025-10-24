@@ -164,7 +164,7 @@
 ### Week 4: Component and Utility Tests
 
 #### Form Element Components
-- [ ] Test InputElement (text, number, date inputs)
+- [x] Test InputElement (text, number, date inputs) - 39 tests, discovered date formatting bug
 - [ ] Test SelectElement (dropdown selection)
 - [ ] Test DataListElement (autocomplete)
 - [ ] Test CheckboxList (multi-select)

@@ -277,6 +277,36 @@ Based on current performance, these are the regression-detection thresholds:
 
 **Fix:** Add `optogenetic_stimulation_software: ""` to `emptyFormData` in Phase 2
 
+### 2025-10-23 - InputElement Date Formatting Bug
+
+**Bug Found:** Date inputs with end-of-month dates show empty values
+
+**Root Cause:** Triple bug in `getDefaultDateValue()` function (InputElement.jsx:29-44):
+1. **Timezone conversion**: UTC dates convert to local timezone (e.g., "2023-12-01T00:00:00.000Z" → Nov 30 in PST/PDT)
+2. **Incorrect day offset**: Line 38 adds 1 to `getDate()`, which is already 1-indexed
+   - `const day = \`0${dateObj.getDate() + 1}\`.slice(-2);`
+   - Should be: `const day = \`0${dateObj.getDate()}\`.slice(-2);`
+3. **Invalid dates**: Nov 30 + 1 = Nov 31 (invalid) → browser shows empty
+
+**Impact:**
+- Users cannot set dates at end of months (30th, 31st)
+- December 1st dates in UTC timezone show as empty
+- Any date that becomes invalid after +1 day offset will be empty
+
+**Example:**
+- Input: "2023-12-01T00:00:00.000Z"
+- Converts to: Nov 30, 2023 (local timezone)
+- After +1: Nov 31, 2023 (invalid)
+- Display: Empty string
+
+**Fix for Phase 2:**
+1. Remove the `+ 1` from `getDate()` call
+2. Better: Use `toISOString().split('T')[0]` instead of manual formatting to avoid timezone issues
+
+**Location:** `src/element/InputElement.jsx:38`
+
+**Test Coverage:** 39 tests in `src/__tests__/unit/components/InputElement.test.jsx` document this behavior
+
 ---
 
 ## Phase 1 Progress Update - 2025-10-23
