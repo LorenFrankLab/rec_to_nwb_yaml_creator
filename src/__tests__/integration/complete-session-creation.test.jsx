@@ -267,8 +267,9 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // Wait for the new data acq device item to render
     // Look for the "Item #1" summary text that appears when item is added
+    // Wait for async rendering to complete
     await waitFor(() => {
-      expect(screen.queryByText(/Item #1/)).toBeInTheDocument();
+      expect(screen.queryByText(/Item #1/)).not.toBeNull();
     });
 
     // Fill required fields for the data acq device
@@ -415,18 +416,22 @@ describe('End-to-End Session Creation Workflow', () => {
     await user.selectOptions(sexInputs[0], 'M');
 
     const descriptionInputs = screen.getAllByLabelText(/description/i);
+    await user.clear(descriptionInputs[0]);
     await user.type(descriptionInputs[0], 'Long Evans Rat');
 
     // Add camera
     const addCameraButton = screen.getByTitle(/Add cameras/i);
+    let cameraNameInputs = screen.queryAllByLabelText(/camera name/i);
+    const initialCameraCount = cameraNameInputs.length;
+
     await user.click(addCameraButton);
 
     await waitFor(() => {
-      const cameraNameInputs = screen.queryAllByLabelText(/camera name/i);
-      expect(cameraNameInputs.length).toBeGreaterThan(0);
+      cameraNameInputs = screen.queryAllByLabelText(/camera name/i);
+      expect(cameraNameInputs.length).toBe(initialCameraCount + 1);
     });
 
-    const cameraNameInputs = screen.getAllByLabelText(/camera name/i);
+    cameraNameInputs = screen.getAllByLabelText(/camera name/i);
     await user.type(cameraNameInputs[0], 'overhead_camera');
 
     const cameraIdInputs = screen.getAllByLabelText(/^camera id$/i);
@@ -434,14 +439,17 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // Add task
     const addTaskButton = screen.getByTitle(/Add tasks/i);
+    let taskNameInputs = screen.queryAllByLabelText(/task name/i);
+    const initialTaskCount = taskNameInputs.length;
+
     await user.click(addTaskButton);
 
     await waitFor(() => {
-      const taskItems = screen.queryAllByText(/Item #1/);
-      expect(taskItems.length).toBeGreaterThan(1); // cameras + tasks
+      taskNameInputs = screen.queryAllByLabelText(/task name/i);
+      expect(taskNameInputs.length).toBe(initialTaskCount + 1);
     });
 
-    const taskNameInputs = screen.getAllByLabelText(/task name/i);
+    taskNameInputs = screen.getAllByLabelText(/task name/i);
     await user.type(taskNameInputs[0], 'sleep');
 
     const taskDescInputs = screen.getAllByLabelText(/task description/i);
@@ -558,6 +566,7 @@ describe('End-to-End Session Creation Workflow', () => {
 
     const descriptionInputs = screen.getAllByLabelText(/description/i);
     const descriptionInput = descriptionInputs[0];
+    await user.clear(descriptionInput);
     await user.type(descriptionInput, 'Long Evans female rat');
 
     const weightInputs = screen.getAllByLabelText(/weight/i);
@@ -648,13 +657,20 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // Add first camera
     const addCameraButton = screen.getByTitle(/Add cameras/i);
+
+    // Get initial count before adding
+    let cameraNameInputs = screen.queryAllByLabelText(/camera name/i);
+    const initialCameraCount = cameraNameInputs.length;
+
     await user.click(addCameraButton);
 
+    // Wait for new camera to be added
     await waitFor(() => {
-      expect(screen.queryByText(/Item #1/)).toBeInTheDocument();
+      cameraNameInputs = screen.queryAllByLabelText(/camera name/i);
+      expect(cameraNameInputs.length).toBe(initialCameraCount + 1);
     });
 
-    let cameraNameInputs = screen.getAllByLabelText(/camera name/i);
+    cameraNameInputs = screen.getAllByLabelText(/camera name/i);
     await user.type(cameraNameInputs[0], 'overhead_camera');
 
     // Verify first camera has ID 0
@@ -715,25 +731,32 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // Add a camera to reference
     const addCameraButton = screen.getByTitle(/Add cameras/i);
+    let cameraNameInputs = screen.queryAllByLabelText(/camera name/i);
+    const initialCameraCount = cameraNameInputs.length;
+
     await user.click(addCameraButton);
 
     await waitFor(() => {
-      expect(screen.queryByText(/Item #1/)).toBeInTheDocument();
+      cameraNameInputs = screen.queryAllByLabelText(/camera name/i);
+      expect(cameraNameInputs.length).toBe(initialCameraCount + 1);
     });
 
-    const cameraNameInputs = screen.getAllByLabelText(/camera name/i);
+    cameraNameInputs = screen.getAllByLabelText(/camera name/i);
     await user.type(cameraNameInputs[0], 'overhead_camera');
 
     // Add a task
     const addTaskButton = screen.getByTitle(/Add tasks/i);
+    let taskNameInputs = screen.queryAllByLabelText(/task name/i);
+    const initialTaskCount = taskNameInputs.length;
+
     await user.click(addTaskButton);
 
     await waitFor(() => {
-      const items = screen.queryAllByText(/Item #1/);
-      expect(items.length).toBeGreaterThan(1); // cameras + tasks
+      taskNameInputs = screen.queryAllByLabelText(/task name/i);
+      expect(taskNameInputs.length).toBe(initialTaskCount + 1);
     });
 
-    const taskNameInputs = screen.getAllByLabelText(/task name/i);
+    taskNameInputs = screen.getAllByLabelText(/task name/i);
     await user.type(taskNameInputs[0], 'sleep');
 
     const taskDescInputs = screen.getAllByLabelText(/task description/i);
@@ -786,13 +809,17 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // Add behavioral events
     const addBehavioralEventButton = screen.getByTitle(/Add behavioral_events/i);
+    let eventDescInputs = screen.queryAllByLabelText(/event description/i);
+    const initialEventCount = eventDescInputs.length;
+
     await user.click(addBehavioralEventButton);
 
     await waitFor(() => {
-      expect(screen.queryByText(/Item #1/)).toBeInTheDocument();
+      eventDescInputs = screen.queryAllByLabelText(/event description/i);
+      expect(eventDescInputs.length).toBe(initialEventCount + 1);
     });
 
-    const eventDescInputs = screen.getAllByLabelText(/event description/i);
+    eventDescInputs = screen.getAllByLabelText(/event description/i);
     await user.type(eventDescInputs[0], 'Poke event');
 
     const eventNameInputs = screen.getAllByLabelText(/^event name$/i);
@@ -835,13 +862,17 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // Add electrode group
     const addElectrodeGroupButton = screen.getByTitle(/Add electrode_groups/i);
+    let electrodeGroupIdInputs = screen.queryAllByLabelText(/electrode group id/i);
+    const initialElectrodeGroupCount = electrodeGroupIdInputs.length;
+
     await user.click(addElectrodeGroupButton);
 
     await waitFor(() => {
-      expect(screen.queryByText(/Item #1/)).toBeInTheDocument();
+      electrodeGroupIdInputs = screen.queryAllByLabelText(/electrode group id/i);
+      expect(electrodeGroupIdInputs.length).toBe(initialElectrodeGroupCount + 1);
     });
 
-    const electrodeGroupIdInputs = screen.getAllByLabelText(/electrode group id/i);
+    electrodeGroupIdInputs = screen.getAllByLabelText(/electrode group id/i);
     expect(electrodeGroupIdInputs[0]).toHaveValue(0); // Auto-assigned ID
 
     const locationInputs = screen.getAllByLabelText(/^location$/i);
@@ -898,10 +929,14 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // Add electrode group and select device type
     const addElectrodeGroupButton = screen.getByTitle(/Add electrode_groups/i);
+    let electrodeGroupIdInputs = screen.queryAllByLabelText(/electrode group id/i);
+    const initialElectrodeGroupCount = electrodeGroupIdInputs.length;
+
     await user.click(addElectrodeGroupButton);
 
     await waitFor(() => {
-      expect(screen.queryByText(/Item #1/)).toBeInTheDocument();
+      electrodeGroupIdInputs = screen.queryAllByLabelText(/electrode group id/i);
+      expect(electrodeGroupIdInputs.length).toBe(initialElectrodeGroupCount + 1);
     });
 
     const locationInputs = screen.getAllByLabelText(/^location$/i);
@@ -992,35 +1027,44 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // Add camera
     const addCameraButton = screen.getByTitle(/Add cameras/i);
+    let cameraNameInputs = screen.queryAllByLabelText(/camera name/i);
+    const initialCameraCount = cameraNameInputs.length;
+
     await user.click(addCameraButton);
 
     await waitFor(() => {
-      const cameraNameInputs = screen.queryAllByLabelText(/camera name/i);
-      expect(cameraNameInputs.length).toBeGreaterThan(0);
+      cameraNameInputs = screen.queryAllByLabelText(/camera name/i);
+      expect(cameraNameInputs.length).toBe(initialCameraCount + 1);
     });
 
-    const cameraNameInputs = screen.getAllByLabelText(/camera name/i);
+    cameraNameInputs = screen.getAllByLabelText(/camera name/i);
     await user.type(cameraNameInputs[0], 'overhead_camera');
 
     // Add task
     const addTaskButton = screen.getByTitle(/Add tasks/i);
+    let taskNameInputs = screen.queryAllByLabelText(/task name/i);
+    const initialTaskCount = taskNameInputs.length;
+
     await user.click(addTaskButton);
 
     await waitFor(() => {
-      const items = screen.queryAllByText(/Item #1/);
-      expect(items.length).toBeGreaterThan(1); // cameras + tasks
+      taskNameInputs = screen.queryAllByLabelText(/task name/i);
+      expect(taskNameInputs.length).toBe(initialTaskCount + 1);
     });
 
-    const taskNameInputs = screen.getAllByLabelText(/task name/i);
+    taskNameInputs = screen.getAllByLabelText(/task name/i);
     await user.type(taskNameInputs[0], 'w_track');
 
     // Add electrode group
     const addElectrodeGroupButton = screen.getByTitle(/Add electrode_groups/i);
+    let electrodeGroupIdInputs = screen.queryAllByLabelText(/electrode group id/i);
+    const initialElectrodeGroupCount = electrodeGroupIdInputs.length;
+
     await user.click(addElectrodeGroupButton);
 
     await waitFor(() => {
-      const items = screen.queryAllByText(/Item #1/);
-      expect(items.length).toBeGreaterThan(2); // cameras + tasks + electrode_groups
+      electrodeGroupIdInputs = screen.queryAllByLabelText(/electrode group id/i);
+      expect(electrodeGroupIdInputs.length).toBe(initialElectrodeGroupCount + 1);
     });
 
     const locationInputs = screen.getAllByLabelText(/^location$/i);
