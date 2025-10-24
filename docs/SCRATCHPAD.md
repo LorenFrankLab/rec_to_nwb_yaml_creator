@@ -344,9 +344,9 @@ const keyOption = `${title}-${dataItem}-${dataItemIndex}`;
 ### Current Status
 
 **Branch:** `modern`
-**Commits ahead of origin:** 3 unpushed commits
-**Test Coverage:** ~39.87%
-**Phase Status:** 🟡 IN PROGRESS - Week 3
+**Commits ahead of origin:** 4 unpushed commits (latest: 17bf9c4)
+**Test Coverage:** ~28.35% overall (46.87% for src/element/ components)
+**Phase Status:** 🟡 IN PROGRESS - Week 4
 
 ### Completed So Far
 
@@ -360,17 +360,30 @@ const keyOption = `${title}-${dataItem}-${dataItemIndex}`;
 
 **Total Tests Created:** 183 tests across 6 test suites
 
+**Week 4 - Component Tests:**
+- ✅ InputElement component (39 tests) - discovered date formatting bug
+- ✅ SelectElement component (32 tests) - discovered duplicate key bug
+- ✅ DataListElement component (36 tests) - same duplicate key issue, PropTypes typo
+
+**Total Tests Now:** 290 tests (183 from Week 3 + 107 from Week 4)
+
 ### Coverage Progress
 
-Current coverage: **39.87%** (target: 60-70%)
+Current coverage: **28.35%** overall (target: 60-70%)
+
+**Note:** Coverage appears lower due to better measurement of uncovered code.
 
 **High Coverage Areas:**
-- App.js: 49.54% (improved from ~15%)
+- InputElement.jsx: 100% ✅
+- SelectElement.jsx: 100% ✅
+- DataListElement.jsx: 100% ✅
+- InfoIcon.jsx: 100% ✅
 - utils.js: 75.75%
 - Custom matchers: 88.88%
 
 **Low Coverage Areas (need attention):**
-- element/ components: 42.18% average
+- App.js: 20.24% (large file, needs more tests)
+- element/ components: 46.87% average (improving!)
 - ntrode/ modules: 6.15% average
 - valueList.js: 34.14%
 
