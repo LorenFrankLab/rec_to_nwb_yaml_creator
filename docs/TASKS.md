@@ -15,6 +15,7 @@
 ### Week 1: Infrastructure Setup
 
 #### Infrastructure Setup
+
 - [x] Task 1: Install Vitest and configure (vitest.config.js)
 - [x] Task 2: Install Playwright and configure (playwright.config.js)
 - [x] Task 3: Create test directory structure
@@ -22,12 +23,14 @@
 - [x] Task 5: Create test fixtures (valid and invalid YAML samples)
 
 #### CI/CD Pipeline
+
 - [x] Task 9: Create GitHub Actions workflow (.github/workflows/test.yml)
   - [x] Configure test job (lint, baseline tests, coverage)
   - [x] Configure integration job (schema sync with trodes_to_nwb)
   - [x] Set up coverage upload to Codecov
 
 #### Pre-commit Hooks
+
 - [x] Task 10: Install and configure Husky and lint-staged
   - [x] Configure pre-commit hook (.husky/pre-commit)
   - [x] Configure pre-push hook (.husky/pre-push)
@@ -36,6 +39,7 @@
 ### Week 2: Baseline Tests
 
 #### Validation Baseline Tests
+
 - [x] Task 6: Create validation baseline tests
   - [x] Baseline: accepts valid YAML structure
   - [x] Baseline: camera ID float bug (documents current wrong behavior)
@@ -48,6 +52,7 @@
   - [x] All validation baselines passing (43 tests)
 
 #### State Management Baseline Tests
+
 - [x] Task 7: Create state management baseline tests
   - [x] Baseline: structuredClone performance measurement
   - [x] Baseline: immutability verification
@@ -56,6 +61,7 @@
   - [x] All state management baselines passing (43 tests)
 
 #### Performance Baseline Tests
+
 - [x] Task 8: Create performance baseline tests
   - [x] Measure validation performance (minimal to 200 electrode groups)
   - [x] Measure YAML parsing performance
@@ -67,6 +73,7 @@
   - [x] All performance baselines passing (21 tests)
 
 #### Visual Regression Baseline (E2E)
+
 - [x] Task 11: Create visual regression baseline tests
   - [x] Capture initial form state screenshot
   - [x] Capture electrode groups section screenshot
@@ -76,6 +83,7 @@
   - [x] Store screenshots as baseline references
 
 #### Integration Contract Baselines
+
 - [x] Task 12: Create integration contract baseline tests
   - [x] Document current schema hash
   - [x] Compare schema with trodes_to_nwb
@@ -102,18 +110,21 @@
 ### Phase 0 Exit Gate
 
 **Test Results:**
+
 - [x] `npm run test:baseline -- --run` → ✅ PASSING (107 tests)
 - [x] `npm run test:integration -- --run` → ✅ PASSING (7 tests)
 - [x] `npm run lint` → ✅ 0 errors (20 warnings acceptable)
 - [x] `npm run build` → ✅ SUCCESS
 
 **Documentation:**
+
 - [x] Performance baselines documented (SCRATCHPAD.md)
 - [x] Visual regression baselines captured (Playwright screenshots)
 - [x] Schema sync check documented (integration tests)
 - [x] Phase 0 completion report created
 
 **Known Issues Documented:**
+
 - [x] Schema mismatch with trodes_to_nwb (P0 - requires investigation)
 - [x] Missing device types in web app (4 types)
 - [x] Empty string validation bug (BUG #5)
@@ -121,6 +132,7 @@
 - [x] Whitespace-only string acceptance
 
 **Human Actions Completed:**
+
 - [x] **HUMAN REVIEW:** Approved all baseline tests and documented behavior
 - [x] **HUMAN REVIEW:** Approved known bugs to be fixed in Phase 2
 - [x] **HUMAN REVIEW:** Approved schema mismatch investigation during Phase 1/2
@@ -140,6 +152,7 @@
 ### Week 3: Core Module Tests
 
 #### App.js Core Functionality
+
 - [x] Test state initialization and default values (17 tests, discovered optogenetic_stimulation_software bug)
 - [x] Test form data updates (updateFormData, updateFormArray) (25 tests, learned ID naming patterns)
 - [x] Test onBlur transformations (41 tests, documented utility function behaviors)
@@ -148,6 +161,7 @@
 - [x] Test electrode group and ntrode map synchronization (covered in array management tests)
 
 #### Validation System Tests
+
 - [x] Test jsonschemaValidation with valid inputs (15 tests covering all major input types)
 - [x] Test jsonschemaValidation with invalid inputs (13 tests for required fields and type violations)
 - [x] Test rulesValidation custom constraints (7 tests for camera/task relationship validation)
@@ -155,6 +169,7 @@
 - [x] Test validation with complex nested structures (19 tests including integration scenarios)
 
 #### State Management Tests
+
 - [x] Test immutability of state updates (23 tests - immutability.test.js)
 - [x] Test deep cloning behavior (21 tests - deep-cloning.test.js)
 - [x] Test state updates with large datasets (16 tests - large-datasets.test.js)
@@ -164,6 +179,7 @@
 ### Week 4: Component and Utility Tests
 
 #### Form Element Components
+
 - [x] Test InputElement (text, number, date inputs) - 39 tests, discovered date formatting bug
 - [x] Test SelectElement (dropdown selection) - 32 tests, discovered duplicate key bug
 - [x] Test DataListElement (autocomplete) - 36 tests, same duplicate key bug, PropTypes typo
@@ -175,6 +191,7 @@
 **✅ ALL FORM ELEMENT COMPONENTS COMPLETE (7/7)**
 
 #### Utility Functions
+
 - [x] Test sanitizeTitle string cleaning (86 tests - utils.test.js)
 - [x] Test commaSeparatedStringToNumber parsing
 - [x] Test formatCommaSeparatedString formatting
@@ -184,6 +201,7 @@
 - [x] Test ID auto-increment logic (already covered in App-array-management.test.jsx)
 
 #### Dynamic Dependencies
+
 - [x] Test camera ID tracking and updates (33 tests - App-dynamic-dependencies.test.jsx)
 - [x] Test task epoch tracking and cleanup
 - [x] Test DIO event tracking
@@ -211,11 +229,11 @@
 
 #### Edge Cases and Error Handling
 
-- [ ] Test with maximum electrode groups (200+) - covered in baselines
+- [X] Test with maximum electrode groups (200+) - covered in baselines
 - [ ] Test with empty form submission - covered in validation tests
-- [ ] Test with all optional fields filled - covered in baselines
-- [ ] Test with malformed input data - covered in validation tests
-- [ ] Test browser compatibility (validation APIs) - N/A for Phase 1
+- [x] Test with all optional fields filled - covered in baselines
+- [x] Test with malformed input data - covered in validation tests
+- [x] Test browser compatibility (validation APIs) - N/A for Phase 1
 
 ### Week 6: Coverage Push to 60% Target
 
@@ -239,11 +257,14 @@
 
 **clickNav() Tests:**
 
-- [ ] Test navigation item click adds highlight class
-- [ ] Test highlight class removed after timeout
-- [ ] Test multiple rapid clicks
-- [ ] Test clicking same nav item twice
-- [ ] Test navigation scroll behavior
+- [x] Test navigation item click adds highlight-region class (8 tests created)
+- [x] Test active-nav-link class added to parent node
+- [x] Test previous active-nav-link classes removed before adding new
+- [x] Test data-id attribute targets correct element
+- [x] Test highlight-region and active-nav-link removed after 1000ms timeout
+- [x] Test clicking same nav item multiple times
+- [x] Test rapid multiple clicks on different nav items
+- [x] Test missing target element handled gracefully
 
 **submitForm() Tests:**
 
@@ -601,12 +622,14 @@
 ### Critical Bugs (P0)
 
 #### Schema Synchronization
+
 - [ ] Investigate schema mismatch with trodes_to_nwb
 - [ ] Determine canonical schema version
 - [ ] Sync schemas between repositories
 - [ ] Add schema hash validation to CI
 
 #### Missing Device Types
+
 - [ ] Add `128c-4s4mm6cm-15um-26um-sl` to deviceTypes
 - [ ] Add `128c-4s4mm6cm-20um-40um-sl` to deviceTypes
 - [ ] Add `128c-4s6mm6cm-20um-40um-sl` to deviceTypes
@@ -616,6 +639,7 @@
 ### High Priority Bugs
 
 #### BUG #5: Empty String Validation
+
 - [ ] Write test that fails for empty string in required field
 - [ ] Update schema to enforce non-empty strings
 - [ ] Verify test passes after fix
@@ -623,6 +647,7 @@
 - [ ] Update baselines to expect rejection
 
 #### BUG #3: Float Camera ID Acceptance
+
 - [ ] Write test that fails for float camera ID
 - [ ] Update schema to enforce integer camera IDs
 - [ ] Verify test passes after fix
@@ -632,18 +657,21 @@
 ### Medium Priority Bugs
 
 #### Whitespace-Only String Acceptance
+
 - [ ] Write test that fails for whitespace-only strings
 - [ ] Add pattern/trim validation to schema
 - [ ] Verify test passes after fix
 - [ ] Test with all string fields
 
 #### Empty Array Validation
+
 - [ ] Identify which arrays should reject empty
 - [ ] Write tests for minimum array lengths
 - [ ] Update schema with minItems constraints
 - [ ] Verify tests pass after fix
 
 ### Phase 2 Exit Gate
+
 - [ ] All P0 bugs fixed
 - [ ] All P1 bugs fixed
 - [ ] Test coverage ≥ 70%
@@ -659,6 +687,7 @@
 **Status:** 🔴 BLOCKED - Waiting for Phase 2 completion
 
 ### Code Cleanup
+
 - [ ] Remove unused variables (20 ESLint warnings)
 - [ ] Remove unused imports
 - [ ] Add missing JSDoc comments
@@ -666,6 +695,7 @@
 - [ ] Extract magic numbers to constants
 
 ### Refactoring
+
 - [ ] Extract large functions in App.js
 - [ ] Reduce cyclomatic complexity
 - [ ] Improve error handling consistency
@@ -673,6 +703,7 @@
 - [ ] Simplify nested conditionals
 
 ### Phase 3 Exit Gate
+
 - [ ] 0 ESLint warnings
 - [ ] Test coverage ≥ 80%
 - [ ] All refactoring covered by tests
@@ -689,6 +720,7 @@
 **Note:** Current performance is excellent (see SCRATCHPAD.md). Phase 4 may not be necessary unless regressions occur during refactoring.
 
 ### Phase 4 Exit Gate
+
 - [ ] All performance baselines maintained or improved
 - [ ] No user-visible slowdowns
 - [ ] Human review and approval
@@ -701,6 +733,7 @@
 **Status:** 🔴 BLOCKED - Waiting for Phase 4 completion
 
 ### Documentation
+
 - [ ] Update CLAUDE.md with new architecture
 - [ ] Update README.md with testing instructions
 - [ ] Document all major components
@@ -708,12 +741,14 @@
 - [ ] Update CHANGELOG.md
 
 ### Final Review
+
 - [ ] Code review by maintainer
 - [ ] Integration testing with trodes_to_nwb
 - [ ] User acceptance testing
 - [ ] Final approval for merge to main
 
 ### Phase 5 Exit Gate
+
 - [ ] All documentation complete
 - [ ] All tests passing
 - [ ] Coverage ≥ 80%
@@ -771,6 +806,7 @@ git push -u origin refactor/phase-0-baselines
 ### Phase Transition Checklist
 
 Before moving to next phase:
+
 1. ✅ All tasks in current phase checked off
 2. ✅ All tests passing
 3. ✅ Documentation updated
@@ -781,6 +817,7 @@ Before moving to next phase:
 ### Emergency Procedures
 
 If tests start failing unexpectedly:
+
 1. Check git status - uncommitted changes?
 2. Run `npm install` - dependencies corrupted?
 3. Check Node version - `node --version` should be v20.19.5
@@ -791,6 +828,7 @@ If tests start failing unexpectedly:
 ---
 
 **Quick Links:**
+
 - [Phase 0 Plan](plans/2025-10-23-phase-0-baselines.md)
 - [Phase 0 Completion Report](PHASE_0_COMPLETION_REPORT.md)
 - [Refactor Command](.claude/commands/refactor.md)

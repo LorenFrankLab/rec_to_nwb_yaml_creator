@@ -734,3 +734,37 @@ src/__tests__/
 - Then openDetailsElement() tests (4 tests)
 - Target: ~77 tests for Priority 1 Event Handlers
 
+
+### clickNav() Tests - COMPLETE
+
+**File Created:** `src/__tests__/unit/app/App-clickNav.test.jsx`
+**Tests Added:** 8 tests, all passing
+**Coverage:** clickNav function behavior
+
+**Test Breakdown:**
+1. Add highlight-region class to target element
+2. Add active-nav-link class to parent node
+3. Remove previous active-nav-link before adding new
+4. Find and target correct element based on data-id attribute
+5. Remove classes after 1000ms timeout (using fake timers)
+6. Handle clicking same nav item multiple times
+7. Handle rapid multiple clicks on different nav items
+8. Handle missing target element gracefully
+
+**Key Findings:**
+- clickNav manages two CSS classes: `active-nav-link` (on parent `<li>`) and `highlight-region` (on target section)
+- Both classes are automatically removed after 1000ms timeout using setTimeout
+- Function removes all previous `active-nav-link` classes before adding new one (ensures only one active at a time)
+- Function gracefully handles missing target elements by checking if element exists before adding highlight
+- Uses `data-id` attribute from link to find target element via `document.querySelector`
+
+**Test Statistics:**
+- 8 tests created
+- 8/8 passing (100%)
+- Test execution time: ~2s (includes 1.1s real timer wait for one test)
+- Successfully used both real timers and fake timers (vi.useFakeTimers) appropriately
+
+**Next Steps:**
+- Continue with submitForm() tests (5 tests)
+- Then openDetailsElement() tests (4 tests)
+- Then error display functions
