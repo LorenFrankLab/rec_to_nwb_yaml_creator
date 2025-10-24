@@ -322,16 +322,16 @@
 
 **removeArrayItem() Tests:**
 
-- [ ] Test removing item shows confirmation dialog
-- [ ] Test removing item when confirmed
-- [ ] Test removing item when cancelled
-- [ ] Test removing first item in array
-- [ ] Test removing last item in array
-- [ ] Test removing middle item in array
-- [ ] Test removing from empty array (guard clause)
-- [ ] Test removing from single-item array
-- [ ] Test array splice used correctly
-- [ ] Test formData state updated after removal
+- [x] Test removing item shows confirmation dialog (26 tests created)
+- [x] Test removing item when confirmed
+- [x] Test removing item when cancelled
+- [x] Test removing first item in array
+- [x] Test removing last item in array
+- [x] Test removing middle item in array
+- [x] Test removing from empty array (guard clause)
+- [x] Test removing from single-item array
+- [x] Test array splice used correctly
+- [x] Test formData state updated after removal
 
 **duplicateArrayItem() Tests:**
 

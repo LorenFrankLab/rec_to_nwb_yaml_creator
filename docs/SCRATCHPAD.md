@@ -902,9 +902,85 @@ src/__tests__/
 **Next Steps:**
 - ✅ displayErrorOnUI() tests COMPLETE (13 tests)
 - ✅ addArrayItem() tests COMPLETE (24 tests)
-- Continue with removeArrayItem() tests (10 tests)
-- Then duplicateArrayItem() tests (8 tests)
+- ✅ removeArrayItem() tests COMPLETE (26 tests)
+- Continue with duplicateArrayItem() tests (8 tests)
 - Then YAML conversion functions
+
+### removeArrayItem() Tests - COMPLETE
+
+**File Created:** `src/__tests__/unit/app/App-removeArrayItem.test.jsx`
+**Tests Added:** 26 tests, all passing
+**Coverage:** removeArrayItem function behavior
+
+**Test Breakdown:**
+1. Confirmation Dialog (3 tests):
+   - Show confirmation with correct message
+   - Correct message for different array types
+   - Correct index in message
+2. User Confirms Removal (5 tests):
+   - Remove when confirmed
+   - Remove first/middle/last item
+   - Remove from single-item array
+3. User Cancels Removal (2 tests):
+   - Don't remove when cancelled
+   - Don't update state when cancelled
+4. Array Splice Usage (2 tests):
+   - Use splice at correct index
+   - Preserve array order after removal
+5. Guard Clause: Empty Array (3 tests):
+   - Return null when array is empty
+   - Handle non-existent array
+   - Don't throw error on empty array
+6. State Management (3 tests):
+   - Use structuredClone for immutability
+   - Update formData state after removal
+   - Clone array twice (form and items)
+7. Integration with Form State (2 tests):
+   - Remove from correct array key
+   - Preserve other arrays
+8. Edge Cases (3 tests):
+   - Multiple sequential removals
+   - Out-of-bounds index (gracefully does nothing)
+   - Negative indices (splice handles correctly)
+9. Different Array Types (3 tests):
+   - Remove from cameras, tasks, electrode_groups
+
+**Key Findings:**
+- removeArrayItem shows confirmation dialog: `window.confirm(\`Remove index ${index} from ${key}?\`)`
+- If user cancels → no changes, function exits early
+- If user confirms:
+  - Clones formData using structuredClone (line 397)
+  - Clones form[key] array again (line 398) - double cloning for safety
+  - Guard clause: returns null if !items or items.length === 0 (line 400-402)
+  - Uses array.splice(index, 1) to remove item (line 404)
+  - Updates form[key] with modified array (line 405)
+  - Updates state with setFormData(form) (line 406)
+
+**Guard Clause Important:**
+```javascript
+if (!items || items.length === 0) {
+  return null;
+}
+```
+This prevents errors when trying to remove from empty/non-existent arrays.
+
+**Splice Behavior:**
+- `splice(index, 1)` removes 1 element at position `index`
+- Out-of-bounds index: does nothing (no error)
+- Negative index: `-1` removes last item, `-2` removes second-to-last, etc.
+
+**Double Cloning:**
+The function does `structuredClone` TWICE:
+1. `const form = structuredClone(formData);`
+2. `const items = structuredClone(form[key]);`
+
+This is defensive programming - ensures deep immutability even though form[key] reference would already be fresh from first clone.
+
+**Test Statistics:**
+- 26 tests created
+- 26/26 passing (100%)
+- Test execution time: ~29ms
+- Coverage added for removeArrayItem function logic
 
 ### addArrayItem() Tests - COMPLETE
 
