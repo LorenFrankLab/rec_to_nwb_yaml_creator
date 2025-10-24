@@ -13,13 +13,13 @@
 
 import { render, fireEvent } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
-import { App } from '../App';
+import { App } from '../../../App';
 import {
   commaSeparatedStringToNumber,
   formatCommaSeparatedString,
   isInteger,
   isNumeric
-} from '../utils';
+} from '../../../utils';
 
 describe('App onBlur Transformations', () => {
   describe('Utility Functions - commaSeparatedStringToNumber', () => {

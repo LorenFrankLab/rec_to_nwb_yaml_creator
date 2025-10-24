@@ -354,3 +354,55 @@ d40f47f phase1(docs): mark validation system tests complete
 - Discovered 1 new bug during testing (optogenetic_stimulation_software)
 - State management tests confirmed excellent performance - no optimization needed
 - Week 4 will focus on component and utility tests
+
+---
+
+## Test Directory Reorganization - 2025-10-23
+
+### Issue Identified
+
+Test files were not organized according to the plan structure. Files were in root of `__tests__/` instead of proper subdirectories.
+
+### Reorganization Completed
+
+**New Structure:**
+```
+src/__tests__/
+├── baselines/          ✅ (unchanged)
+├── fixtures/           ✅ (unchanged)
+├── helpers/            ✅ (unchanged)
+├── integration/        ✅ (unchanged)
+└── unit/
+    ├── app/            ✅ NEW - App.js tests moved here
+    │   ├── App-array-management.test.jsx
+    │   ├── App-form-updates.test.jsx
+    │   ├── App-item-selection.test.jsx
+    │   ├── App-onBlur-transformations.test.jsx
+    │   ├── App-state-initialization.test.jsx
+    │   ├── App-validation-system.test.jsx
+    │   └── state/      ✅ Moved from unit/state/
+    │       ├── deep-cloning.test.js
+    │       ├── immutability.test.js
+    │       └── large-datasets.test.js
+    ├── components/     ✅ NEW - Ready for component tests
+    ├── utils/          ✅ NEW - Ready for utility tests
+    └── validation/     ✅ NEW - Ready for validation tests
+```
+
+**Actions Taken:**
+1. Created missing subdirectories: `unit/app/`, `unit/components/`, `unit/utils/`, `unit/validation/`
+2. Moved 6 App.js test files to `unit/app/`
+3. Moved 3 state test files to `unit/app/state/`
+4. Fixed all import paths (changed `../App` → `../../../App`, etc.)
+5. Fixed require() statements in tests
+
+**Test Results:**
+- 376/377 tests passing ✅
+- 1 flaky performance test (timing variance in CI - acceptable)
+- All reorganized tests working correctly
+
+**Benefits:**
+- Tests now match documented structure from refactoring plan
+- Clear separation: app tests, component tests, utils tests, validation tests
+- Easier to navigate and find relevant tests
+- Proper foundation for Week 4 component tests

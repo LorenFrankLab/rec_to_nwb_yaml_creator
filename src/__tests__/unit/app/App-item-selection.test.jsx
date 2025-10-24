@@ -9,8 +9,8 @@
 
 import { render, fireEvent } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
-import { App } from '../App';
-import { defaultYMLValues } from '../valueList';
+import { App } from '../../../App';
+import { defaultYMLValues } from '../../../valueList';
 
 describe('App Item Selection Handlers', () => {
   describe('itemSelected - Simple Selection', () => {

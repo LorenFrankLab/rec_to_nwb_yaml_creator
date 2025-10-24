@@ -9,8 +9,8 @@
 
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from 'vitest';
-import { App } from '../App';
-import { defaultYMLValues } from '../valueList';
+import { App } from '../../../App';
+import { defaultYMLValues } from '../../../valueList';
 
 describe('App Form Data Updates', () => {
   describe('updateFormData - Simple Key-Value Updates', () => {

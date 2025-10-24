@@ -15,8 +15,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { jsonschemaValidation, rulesValidation } from '../App';
-import { createTestYaml } from './helpers/test-utils';
+import { jsonschemaValidation, rulesValidation } from '../../../App';
+import { createTestYaml } from '../../helpers/test-utils';
 
 describe('App Validation System', () => {
   describe('jsonschemaValidation()', () => {
