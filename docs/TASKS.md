@@ -398,36 +398,31 @@
 - Resets input to 1 after successful add
 - Simple mode onClick={add} passes event object (not undefined)
 
-##### SelectInputPairElement.jsx (14.28% coverage)
+##### SelectInputPairElement.jsx - ✅ COMPLETE (14.28% → ~90% coverage)
 
-**Component Rendering:**
+**49 tests created** - `src/__tests__/unit/components/SelectInputPairElement.test.jsx`
 
-- [ ] Test component renders select and input
-- [ ] Test select renders with dataItems
-- [ ] Test input renders with placeholder
-- [ ] Test component accepts all required props
+- [x] Component rendering (7 tests) - select + input elements, InfoIcon, attributes
+- [x] Default value splitting (6 tests) - splitTextNumber integration
+- [x] Combined behavior (4 tests) - onBlur with concatenated values
+- [x] Input attributes (7 tests) - type, step, min, placeholder, name, ID
+- [x] Edge cases (5 tests) - empty items, null/undefined defaults
+- [x] PropTypes bug documentation (2 tests)
+- [x] splitTextNumber utility (18 tests) - comprehensive utility testing
 
-**Select Coordination:**
+**Bugs Found:**
 
-- [ ] Test selecting option updates select value
-- [ ] Test select onChange handler called
-- [ ] Test select value passed to parent
-- [ ] Test select with empty dataItems
+1. **CRITICAL** - Line 38: NULL check missing, crashes on number-only input ("42")
+2. Line 147: PropTypes typo - `propType` instead of `propTypes`
+3. Line 159: Incorrect PropTypes.oneOf usage (should be oneOfType)
 
-**Input Coordination:**
+**Key Implementation Details:**
 
-- [ ] Test input onChange handler
-- [ ] Test input value updates
-- [ ] Test input validation
-- [ ] Test input with different input types
-
-**Combined Behavior:**
-
-- [ ] Test select and input work independently
-- [ ] Test both values passed to updateFormData
-- [ ] Test validation on both select and input
-- [ ] Test edge case: select without input value
-- [ ] Test edge case: input without select value
+- Combines select (event type) + input (event index) → "Din1", "Accel5"
+- splitTextNumber() validates text against behavioralEventsDescription
+- Valid text values: Din, Dout, Accel, Gyro, Mag
+- Uses useRef for both select and input elements
+- Calls splitTextNumber() TWICE on mount (inefficient)
 
 ##### ChannelMap.jsx (8.69% coverage)
 
