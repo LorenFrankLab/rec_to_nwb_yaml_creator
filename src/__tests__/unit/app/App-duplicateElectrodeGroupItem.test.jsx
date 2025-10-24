@@ -6,6 +6,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../../../App';
+import { countArrayItems, countNtrodeMaps, getDuplicateButton, queryByName } from '../../helpers/test-hooks';
 
 /**
  * Tests for duplicateElectrodeGroupItem() function
@@ -44,21 +45,15 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       await user.click(addButton);
 
       // Initially should have 1 electrode group
-      let controls = container.querySelectorAll('.array-item__controls');
-      expect(controls).toHaveLength(1);
+      expect(countArrayItems(container)).toBe(1);
 
-      // Find duplicate button (button without .button-danger class)
-      const firstGroupButtons = controls[0].querySelectorAll('button');
-      const duplicateButton = Array.from(firstGroupButtons).find(
-        btn => !btn.classList.contains('button-danger')
-      );
-
+      // Find duplicate button
+      const duplicateButton = getDuplicateButton(container, 0);
       await user.click(duplicateButton);
 
       // Wait for state update
       await waitFor(() => {
-        controls = container.querySelectorAll('.array-item__controls');
-        expect(controls).toHaveLength(2);
+        expect(countArrayItems(container)).toBe(2);
       });
     });
 

@@ -10,15 +10,13 @@
  */
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { App } from '../../../App';
 import { defaultYMLValues } from '../../../valueList';
+import { useWindowConfirmMock } from '../../helpers/test-hooks';
 
 describe('App Array Item Management', () => {
-  // Mock window.confirm for remove operations
-  beforeEach(() => {
-    vi.spyOn(window, 'confirm').mockImplementation(() => true);
-  });
+  const mocks = useWindowConfirmMock(beforeEach, afterEach, true);
 
   describe('Array Item Structure - Default Values', () => {
     it('should initialize with empty arrays', () => {

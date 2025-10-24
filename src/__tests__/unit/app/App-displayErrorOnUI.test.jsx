@@ -14,7 +14,7 @@
  * 4. For non-INPUT elements: shows window.alert()
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import App from '../../../App';
 
@@ -86,18 +86,15 @@ describe('displayErrorOnUI', () => {
     });
 
     it('should show window.alert for non-INPUT elements', () => {
-      // Mock window.alert
-      const originalAlert = window.alert;
-      window.alert = vi.fn();
+      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
       // Simulate displayErrorOnUI behavior for non-INPUT element
       const message = 'Error on non-input element';
       window.alert(message);
 
-      expect(window.alert).toHaveBeenCalledWith(message);
+      expect(alertSpy).toHaveBeenCalledWith(message);
 
-      // Restore original alert
-      window.alert = originalAlert;
+      vi.restoreAllMocks();
     });
 
     it('should handle missing element gracefully (no crash)', () => {
@@ -180,37 +177,34 @@ describe('displayErrorOnUI', () => {
     });
 
     it('handles empty error message', () => {
-      const originalAlert = window.alert;
-      window.alert = vi.fn();
+      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
       // Empty message
       window.alert('');
 
-      expect(window.alert).toHaveBeenCalledWith('');
+      expect(alertSpy).toHaveBeenCalledWith('');
 
-      window.alert = originalAlert;
+      vi.restoreAllMocks();
     });
 
     it('handles very long error messages', () => {
-      const originalAlert = window.alert;
-      window.alert = vi.fn();
+      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
       const longMessage = 'Error: ' + 'x'.repeat(1000);
       window.alert(longMessage);
 
-      expect(window.alert).toHaveBeenCalledWith(longMessage);
+      expect(alertSpy).toHaveBeenCalledWith(longMessage);
       expect(longMessage.length).toBeGreaterThan(1000);
 
-      window.alert = originalAlert;
+      vi.restoreAllMocks();
     });
   });
 
   describe('Function Characteristics', () => {
     it('shows alert is synchronous (blocks execution)', () => {
-      const originalAlert = window.alert;
       let callbackCalled = false;
 
-      window.alert = vi.fn(() => {
+      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {
         // Alert is synchronous - this executes before returning
         callbackCalled = true;
       });
@@ -220,7 +214,7 @@ describe('displayErrorOnUI', () => {
       // Callback should have been called synchronously
       expect(callbackCalled).toBe(true);
 
-      window.alert = originalAlert;
+      vi.restoreAllMocks();
     });
 
     it('returns early for INPUT elements (does not show alert)', () => {
