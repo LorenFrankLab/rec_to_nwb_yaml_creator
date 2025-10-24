@@ -227,75 +227,337 @@
 
 ##### Event Handlers (Currently Untested)
 
-- [ ] Test clearYMLFile() - form reset functionality
-- [ ] Test clickNav() - navigation highlighting
-- [ ] Test submitForm() - form submission flow
-- [ ] Test openDetailsElement() - expand all details elements
+**clearYMLFile() Tests:**
+
+- [ ] Test form reset clears all fields to emptyFormData
+- [ ] Test form reset clears cameras array
+- [ ] Test form reset clears tasks array
+- [ ] Test form reset clears electrode groups and ntrodes
+- [ ] Test form reset clears behavioral events
+- [ ] Test form reset with confirmation dialog
+- [ ] Test form reset cancellation (user clicks cancel)
+
+**clickNav() Tests:**
+
+- [ ] Test navigation item click adds highlight class
+- [ ] Test highlight class removed after timeout
+- [ ] Test multiple rapid clicks
+- [ ] Test clicking same nav item twice
+- [ ] Test navigation scroll behavior
+
+**submitForm() Tests:**
+
+- [ ] Test form submission prevents default behavior
+- [ ] Test submitForm calls generateYMLFile
+- [ ] Test submitForm with valid form data
+- [ ] Test submitForm with invalid form data
+- [ ] Test submitForm validation flow
+
+**openDetailsElement() Tests:**
+
+- [ ] Test all details elements opened
+- [ ] Test no errors if details elements missing
+- [ ] Test querySelector finds all details elements
+- [ ] Test open attribute set on each element
 
 ##### Error Display Functions (Currently Untested)
 
-- [ ] Test showErrorMessage() - Ajv error display
-- [ ] Test displayErrorOnUI() - custom validity error display
-- [ ] Test error message formatting and element selection
+**showErrorMessage() Tests:**
+
+- [ ] Test Ajv error message display
+- [ ] Test error message with instancePath
+- [ ] Test error message formatting
+- [ ] Test element selection by instancePath
+- [ ] Test error display when element not found
+- [ ] Test error display with nested paths
+- [ ] Test error display with array indices
+- [ ] Test multiple error messages
+
+**displayErrorOnUI() Tests:**
+
+- [ ] Test custom validity error on input element
+- [ ] Test error display with element ID
+- [ ] Test error display with message
+- [ ] Test error display timeout (2 seconds)
+- [ ] Test error display when element not found
+- [ ] Test showCustomValidityError integration
 
 ##### Array Management Functions (Partially Tested)
 
-- [ ] Test addArrayItem() with various array types
-- [ ] Test removeArrayItem() with confirmation dialog
-- [ ] Test duplicateArrayItem() for non-electrode arrays
-- [ ] Test edge cases: empty arrays, invalid indices
+**addArrayItem() Tests:**
+
+- [ ] Test adding single item to cameras array
+- [ ] Test adding single item to tasks array
+- [ ] Test adding single item to behavioral_events array
+- [ ] Test adding multiple items at once (count parameter)
+- [ ] Test adding items with auto-incrementing IDs
+- [ ] Test adding items to empty array
+- [ ] Test adding items with existing items
+- [ ] Test adding items updates formData state
+- [ ] Test structuredClone used for immutability
+
+**removeArrayItem() Tests:**
+
+- [ ] Test removing item shows confirmation dialog
+- [ ] Test removing item when confirmed
+- [ ] Test removing item when cancelled
+- [ ] Test removing first item in array
+- [ ] Test removing last item in array
+- [ ] Test removing middle item in array
+- [ ] Test removing from empty array (guard clause)
+- [ ] Test removing from single-item array
+- [ ] Test array splice used correctly
+- [ ] Test formData state updated after removal
+
+**duplicateArrayItem() Tests:**
+
+- [ ] Test duplicating camera item
+- [ ] Test duplicating task item with camera_id references
+- [ ] Test duplicating behavioral_event item
+- [ ] Test duplicating item increments ID
+- [ ] Test duplicated item has unique ID
+- [ ] Test duplicated item preserves other fields
+- [ ] Test duplicating with items containing id field
+- [ ] Test duplicating updates formData state
 
 ##### YAML Conversion (Partially Tested)
 
-- [ ] Test convertObjectToYAMLString() with edge cases
-- [ ] Test createYAMLFile() blob creation and download
-- [ ] Test YAML Document API usage
+**convertObjectToYAMLString() Tests:**
+
+- [ ] Test converting simple object
+- [ ] Test converting nested object
+- [ ] Test converting object with arrays
+- [ ] Test converting empty object
+- [ ] Test converting null values
+- [ ] Test converting undefined values (filtered out)
+- [ ] Test YAML.Document API usage
+- [ ] Test toString() output format
+
+**createYAMLFile() Tests:**
+
+- [ ] Test Blob creation with text/plain type
+- [ ] Test anchor element creation
+- [ ] Test download attribute set
+- [ ] Test href set to blob URL
+- [ ] Test click() triggers download
+- [ ] Test webkitURL.createObjectURL called
+- [ ] Test filename parameter used
 
 #### Priority 2: Missing Component Tests (Target: +3% coverage)
 
 ##### ArrayUpdateMenu.jsx (53.33% coverage)
 
-- [ ] Test add button click handlers
-- [ ] Test count input validation
-- [ ] Test dropdown selection
-- [ ] Test interaction with different array types
+**Basic Functionality:**
+
+- [ ] Test component renders with title prop
+- [ ] Test dropdown renders with array types
+- [ ] Test count input renders with default value 1
+- [ ] Test add button renders with text
+- [ ] Test component accepts updateFormArray prop
+
+**Add Button Interaction:**
+
+- [ ] Test clicking add button with default count (1)
+- [ ] Test clicking add button with count > 1
+- [ ] Test clicking add button calls updateFormArray
+- [ ] Test add button passes correct array key
+- [ ] Test add button passes count parameter
+
+**Count Input Validation:**
+
+- [ ] Test count input accepts numbers
+- [ ] Test count input minimum value 1
+- [ ] Test count input maximum value (reasonable limit)
+- [ ] Test count input with invalid input
+- [ ] Test count input onChange handler
+
+**Dropdown Selection:**
+
+- [ ] Test dropdown shows all array types
+- [ ] Test selecting different array type
+- [ ] Test selected value persists
+- [ ] Test dropdown change updates state
+- [ ] Test adding items for different array types
+
+**Integration:**
+
+- [ ] Test ArrayUpdateMenu with cameras array
+- [ ] Test ArrayUpdateMenu with tasks array
+- [ ] Test ArrayUpdateMenu with behavioral_events array
+- [ ] Test ArrayUpdateMenu with electrode_groups array
 
 ##### SelectInputPairElement.jsx (14.28% coverage)
 
-- [ ] Test select and input coordination
-- [ ] Test value updates
-- [ ] Test validation
-- [ ] Test edge cases
+**Component Rendering:**
+
+- [ ] Test component renders select and input
+- [ ] Test select renders with dataItems
+- [ ] Test input renders with placeholder
+- [ ] Test component accepts all required props
+
+**Select Coordination:**
+
+- [ ] Test selecting option updates select value
+- [ ] Test select onChange handler called
+- [ ] Test select value passed to parent
+- [ ] Test select with empty dataItems
+
+**Input Coordination:**
+
+- [ ] Test input onChange handler
+- [ ] Test input value updates
+- [ ] Test input validation
+- [ ] Test input with different input types
+
+**Combined Behavior:**
+
+- [ ] Test select and input work independently
+- [ ] Test both values passed to updateFormData
+- [ ] Test validation on both select and input
+- [ ] Test edge case: select without input value
+- [ ] Test edge case: input without select value
 
 ##### ChannelMap.jsx (8.69% coverage)
 
-- [ ] Test channel mapping UI
-- [ ] Test map updates
-- [ ] Test bad_channels selection
-- [ ] Test multi-shank device handling
+**Component Rendering:**
+
+- [ ] Test component renders with ntrode data
+- [ ] Test renders channel mapping inputs
+- [ ] Test renders bad_channels selection
+- [ ] Test renders for each ntrode in group
+
+**Channel Mapping:**
+
+- [ ] Test default channel map displays (0→0, 1→1, etc.)
+- [ ] Test custom channel mapping
+- [ ] Test changing channel map values
+- [ ] Test map updates call onChange handler
+- [ ] Test map validation (no duplicate mappings)
+
+**Bad Channels Selection:**
+
+- [ ] Test bad_channels checkbox rendering
+- [ ] Test selecting bad channel
+- [ ] Test deselecting bad channel
+- [ ] Test bad_channels array updates
+- [ ] Test multiple bad channels selected
+
+**Multi-Shank Device Handling:**
+
+- [ ] Test rendering for single-shank device
+- [ ] Test rendering for 4-shank device
+- [ ] Test each shank has independent map
+- [ ] Test ntrode_id displayed for each shank
+- [ ] Test updates to one shank don't affect others
+
+**Integration:**
+
+- [ ] Test ChannelMap with tetrode device (4 channels)
+- [ ] Test ChannelMap with 32-channel device
+- [ ] Test ChannelMap with 128-channel device
+- [ ] Test electrode_group_id association
 
 #### Priority 3: Integration Tests (Target: +3% coverage)
 
 ##### Sample Metadata Reproduction
 
 - [x] Test loading 20230622_sample_metadata.yml (21 tests - COMPLETE)
-- [ ] Test modifying and re-exporting sample metadata
-- [ ] Test all device types present in sample
-- [ ] Test camera/task/epoch dependencies in sample
+
+**Modification and Re-export:**
+
+- [ ] Test importing sample metadata
+- [ ] Test modifying experimenter name
+- [ ] Test modifying subject information
+- [ ] Test adding a new camera
+- [ ] Test adding a new task
+- [ ] Test adding a new electrode group
+- [ ] Test re-exporting modified metadata
+- [ ] Test round-trip preserves modifications
+
+**Device Type Coverage:**
+
+- [ ] Test all device types in sample are supported
+- [ ] Test each device type has correct channel count
+- [ ] Test each device type has correct shank count
+- [ ] Test ntrode generation for each device type
+
+**Dynamic Dependencies:**
+
+- [ ] Test camera references in tasks are valid
+- [ ] Test electrode group IDs in ntrodes are valid
+- [ ] Test adding camera updates task dropdown
+- [ ] Test removing camera clears task references
+- [ ] Test adding task updates epoch lists
 
 ##### End-to-End Workflows
 
-- [ ] Test complete session creation workflow
-- [ ] Test adding electrode groups with ntrode generation
-- [ ] Test complex form interactions
-- [ ] Test validation error recovery
+**Complete Session Creation:**
+
+- [ ] Test creating new session from scratch
+- [ ] Test adding experimenter names
+- [ ] Test adding subject information
+- [ ] Test adding data acquisition device
+- [ ] Test adding cameras (2)
+- [ ] Test adding tasks with camera references
+- [ ] Test adding behavioral events
+- [ ] Test adding electrode groups
+- [ ] Test ntrode generation triggered
+- [ ] Test validation passes
+- [ ] Test export generates valid YAML
+
+**Adding Electrode Groups:**
+
+- [ ] Test adding first electrode group
+- [ ] Test selecting device type
+- [ ] Test ntrode maps auto-generated
+- [ ] Test adding second electrode group (different type)
+- [ ] Test ntrode maps independent
+- [ ] Test duplicating electrode group
+- [ ] Test removing electrode group
+- [ ] Test ntrodes cleaned up on removal
+
+**Complex Form Interactions:**
+
+- [ ] Test filling all optional fields
+- [ ] Test adding optogenetics sections
+- [ ] Test adding associated files
+- [ ] Test adding associated video files
+- [ ] Test fs_gui_yamls section
+- [ ] Test validation with complete form
 
 ##### Error Recovery Scenarios
 
-- [ ] Test recovering from validation failures
-- [ ] Test handling malformed YAML import
-- [ ] Test undoing changes (form reset)
-- [ ] Test browser back/forward navigation
+**Validation Failure Recovery:**
+
+- [ ] Test submitting form with missing required fields
+- [ ] Test error messages displayed
+- [ ] Test user can see which fields are invalid
+- [ ] Test filling missing fields
+- [ ] Test resubmitting after fixes
+- [ ] Test validation passes after fixes
+
+**Malformed YAML Import:**
+
+- [ ] Test importing YAML with syntax errors
+- [ ] Test importing YAML with wrong types
+- [ ] Test importing YAML with invalid references
+- [ ] Test form shows error message
+- [ ] Test form not corrupted by bad import
+- [ ] Test user can try again
+
+**Undoing Changes:**
+
+- [ ] Test form reset after partial edits
+- [ ] Test confirmation dialog shown
+- [ ] Test reset clears all changes
+- [ ] Test reset restores default values
+- [ ] Test canceling reset preserves changes
+
+**Browser Navigation:**
+
+- [ ] Test form state persists during session
+- [ ] Test unsaved changes warning (if implemented)
+- [ ] Test page reload behavior
 
 #### Test Implementation Strategy
 
