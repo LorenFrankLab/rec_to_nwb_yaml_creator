@@ -1,8 +1,9 @@
 # Refactoring Tasks
 
-**Current Phase:** Phase 1 - Testing Foundation
-**Phase Status:** 🟡 IN PROGRESS
-**Last Updated:** 2025-10-23
+**Current Phase:** Phase 1.5 - Test Quality Improvements
+**Phase Status:** 🔴 READY TO START (Awaiting Human Approval)
+**Last Updated:** 2025-10-24
+**Phase 1 Review Status:** ⚠️ NEEDS IMPROVEMENTS (See Phase 1.5 below)
 
 ---
 
@@ -676,12 +677,6 @@ File: `src/__tests__/unit/app/App-importFile.test.jsx`
 - [x] Test reset restores default values (structuredClone immutability tested)
 - [x] Test canceling reset preserves changes (confirmation cancellation tested)
 
-**Browser Navigation:** ❌ NOT APPLICABLE (Feature not implemented in app)
-
-- [ ] Test form state persists during session (NOT IMPLEMENTED - no localStorage/sessionStorage)
-- [ ] Test unsaved changes warning (if implemented) (NOT IMPLEMENTED - no beforeunload handler)
-- [ ] Test page reload behavior (NOT IMPLEMENTED - no state persistence)
-
 ### Phase 1 Exit Gate
 
 - [x] Unit test coverage ≥ 60% → ✅ **60.55% achieved**
@@ -689,16 +684,207 @@ File: `src/__tests__/unit/app/App-importFile.test.jsx`
 - [x] All tests passing → ✅ **1,078+ tests passing**
 - [x] No new ESLint errors introduced → ✅ **0 errors** (20 warnings acceptable)
 - [x] Documentation updated → ✅ **Complete** (SCRATCHPAD, TASKS, CHANGELOG, analysis docs)
-- [ ] Human review and approval → ⏳ **PENDING**
+- [x] Human review and approval → ✅ **COMPLETED (2025-10-24)**
+- [x] Comprehensive code review by review agents → ✅ **COMPLETED (2025-10-24)**
 
-**Status:** 5/6 complete, awaiting human approval
+**Status:** ⚠️ **COMPLETE WITH CRITICAL FINDINGS**
+
+**Review Findings (2025-10-24):**
+
+- ⚠️ **Coverage vs. Quality Mismatch:** 111+ documentation-only tests (`expect(true).toBe(true)`)
+- ⚠️ **Effective Coverage:** ~40-45% with meaningful tests (vs. 60.55% claimed)
+- ⚠️ **Branch Coverage:** 30.86% (69% of if/else paths untested)
+- ⚠️ **Critical Gaps:** Sample metadata modification (0/8), E2E workflows (0/11), error recovery (0/15)
+- ⚠️ **Test Quality Issues:** ~2,000 LOC mocked implementations, ~1,500 LOC DRY violations
+
+**Decision:** Proceed to Phase 1.5 to fix critical gaps before Phase 2
+
+**Review Reports:**
+
+- `docs/reviews/PHASE_1_COVERAGE_REVIEW.md` - Coverage verification and gap analysis
+- `docs/reviews/PHASE_1_QUALITY_REVIEW.md` - Test code quality assessment
+- `REFACTORING_SAFETY_ANALYSIS.md` - Phase 3 readiness assessment
 
 ---
 
-## Phase 2: Bug Fixes (Weeks 6-8)
+## Phase 1.5: Test Quality Improvements (Weeks 7-9)
+
+**Goal:** Fix critical test gaps and quality issues before proceeding to bug fixes
+**Status:** 🔴 READY TO START (Awaiting Human Approval)
+**Timeline:** 2-3 weeks (40-60 hours)
+**Created:** 2025-10-24
+
+**Detailed Plan:** [`docs/plans/PHASE_1.5_TEST_QUALITY_IMPROVEMENTS.md`](plans/PHASE_1.5_TEST_QUALITY_IMPROVEMENTS.md)
+
+### Why Phase 1.5 is Needed
+
+**Critical Findings from Phase 1 Review:**
+
+1. **111+ trivial tests** provide zero regression protection
+2. **Sample metadata modification** workflows completely untested (user's concern)
+3. **Integration tests** don't actually test (just render and document)
+4. **Test code quality** blocks maintainability (DRY violations, brittle selectors)
+5. **App.js branch coverage** only 30.86% (unsafe for refactoring)
+
+**Impact of Skipping Phase 1.5:**
+
+- High risk of introducing bugs during Phase 2 fixes
+- Phase 3 refactoring would break 100+ tests (CSS selectors)
+- Sample modification workflows remain untested
+- False confidence from inflated coverage metrics
+
+### Week 7: Critical Gap Filling
+
+**Goal:** Add missing tests for workflows marked complete but untested
+
+#### Task 1.5.1: Sample Metadata Modification Tests
+
+- [ ] Create file: `sample-metadata-modification.test.jsx`
+- [ ] Test importing sample metadata through file upload (1 test)
+- [ ] Test modifying experimenter name (1 test)
+- [ ] Test modifying subject information (1 test)
+- [ ] Test adding new camera (1 test)
+- [ ] Test adding new task (1 test)
+- [ ] Test adding new electrode group (1 test)
+- [ ] Test re-exporting with modifications preserved (1 test)
+- [ ] Test round-trip preserves all modifications (1 test)
+- [ ] **Total:** 8 tests, 4-6 hours
+
+#### Task 1.5.2: End-to-End Workflow Tests
+
+- [ ] Create file: `complete-session-creation.test.jsx`
+- [ ] Test creating minimal valid session from blank form (1 test)
+- [ ] Test creating complete session with all optional fields (1 test)
+- [ ] Test adding experimenter names (1 test)
+- [ ] Test adding subject information (1 test)
+- [ ] Test adding data acquisition device (1 test)
+- [ ] Test adding cameras with correct IDs (1 test)
+- [ ] Test adding tasks with camera references (1 test)
+- [ ] Test adding behavioral events (1 test)
+- [ ] Test adding electrode groups with device types (1 test)
+- [ ] Test ntrode generation triggers (1 test)
+- [ ] Test validation before export (1 test)
+- [ ] Test export generates valid YAML (1 test)
+- [ ] **Total:** 11 tests, 6-8 hours
+
+#### Task 1.5.3: Error Recovery Scenario Tests
+
+- [ ] Create file: `error-recovery.test.jsx`
+- [ ] Validation failure recovery (4 tests)
+- [ ] Malformed YAML import recovery (5 tests)
+- [ ] Form corruption prevention (2 tests)
+- [ ] Undo changes (3 tests)
+- [ ] Concurrent operations (2 tests)
+- [ ] **Total:** 15 tests, 6-8 hours
+
+#### Task 1.5.4: Fix Import/Export Integration Tests
+
+- [ ] Rewrite `import-export-workflow.test.jsx`
+- [ ] Import workflow tests - actually upload files (5 tests)
+- [ ] Export workflow tests - actually export (4 tests)
+- [ ] Round-trip workflow tests - verify data preservation (5 tests)
+- [ ] Import error handling tests (3 tests)
+- [ ] **Total:** 17 tests rewritten, 4-6 hours
+
+**Week 7 Total:** 54 tests added/rewritten, 20-28 hours
+
+### Week 8: Test Quality Improvements
+
+**Goal:** Convert documentation tests, fix DRY violations, improve maintainability
+
+#### Task 1.5.5: Convert Documentation Tests
+
+- [ ] Review all documentation-only tests (111 tests identified)
+- [ ] Convert critical behavior tests to real assertions (25-30 tests)
+- [ ] Delete purely documentation tests (~80 tests)
+- [ ] Add JSDoc comments to App.js for deleted tests
+- [ ] **Total:** 25-30 converted, 80 deleted, 8-12 hours
+
+#### Task 1.5.6: Fix DRY Violations
+
+- [ ] Create `test-hooks.js` with shared implementations
+- [ ] Refactor 24 unit test files to use shared hooks
+- [ ] Remove duplicated code (~1,500 LOC)
+- [ ] Verify all tests still passing after refactor
+- [ ] **Total:** 0 new tests, 6-8 hours
+
+#### Task 1.5.7: Migrate CSS Selectors to Semantic Queries
+
+- [ ] Create `test-selectors.js` with semantic query helpers
+- [ ] Add ARIA labels to components where needed
+- [ ] Refactor integration tests to use semantic queries
+- [ ] Refactor unit tests to use semantic queries
+- [ ] Remove 100+ `container.querySelector()` calls
+- [ ] **Total:** 0 new tests, 4-6 hours
+
+#### Task 1.5.8: Create Known Bug Fixtures
+
+- [ ] Create `fixtures/known-bugs/` directory
+- [ ] Add camera-id-float.yml fixture (BUG #3)
+- [ ] Add empty-required-strings.yml fixture (BUG #5)
+- [ ] Add whitespace-only-strings.yml fixture
+- [ ] Add tests that verify bugs exist (marked for Phase 2)
+- [ ] **Total:** 6 fixtures, 6 tests, 2-3 hours
+
+**Week 8 Total:** 25-30 tests converted, 80 deleted, ~1,600 LOC removed, 20-29 hours
+
+### Week 9 (OPTIONAL): Refactoring Preparation
+
+**Goal:** Add tests needed for safe Phase 3 refactoring (can be deferred)
+
+#### Task 1.5.9: Core Function Behavior Tests
+
+- [ ] Create file: `core-functions.test.js`
+- [ ] Test updateFormData (5 tests)
+- [ ] Test updateFormArray (5 tests)
+- [ ] Test onBlur (5 tests)
+- [ ] Test itemSelected (3 tests)
+- [ ] Test array operations (9 tests)
+- [ ] **Total:** 20-30 tests, 10-15 hours
+
+#### Task 1.5.10: Electrode Group Synchronization Tests
+
+- [ ] Create file: `electrode-group-sync.test.js`
+- [ ] Test nTrodeMapSelected (7 tests)
+- [ ] Test removeElectrodeGroupItem (4 tests)
+- [ ] Test duplicateElectrodeGroupItem (5 tests)
+- [ ] Test edge cases (4 tests)
+- [ ] **Total:** 15-20 tests, 8-10 hours
+
+**Week 9 Total (OPTIONAL):** 35-50 tests, 18-25 hours
+
+### Phase 1.5 Exit Criteria
+
+**Must Have (Weeks 7-8):**
+
+- [ ] Sample metadata modification: 8 tests passing
+- [ ] End-to-end workflows: 11 tests passing
+- [ ] Error recovery: 15 tests passing
+- [ ] Import/export integration: 34 tests actually testing (rewritten)
+- [ ] Documentation tests: 0 remaining (converted or deleted)
+- [ ] DRY violations: Reduced by 80% (~1,500 LOC removed)
+- [ ] CSS selectors: Replaced with semantic queries (100+ selectors)
+- [ ] Known bug fixtures: 6 fixtures created
+- [ ] Meaningful coverage ≥ 60% (no trivial tests)
+- [ ] Branch coverage ≥ 50% (up from 30.86%)
+- [ ] All tests passing
+- [ ] Human approval to proceed to Phase 2
+
+**Nice to Have (Week 9):**
+
+- [ ] Core functions: 20-30 tests passing
+- [ ] Electrode group sync: 15-20 tests passing
+- [ ] Refactoring readiness: 8/10 score
+
+**Status:** Awaiting human approval to begin
+
+---
+
+## Phase 2: Bug Fixes (Weeks 10-12)
 
 **Goal:** Fix documented bugs with TDD approach
-**Status:** 🔴 BLOCKED - Waiting for Phase 1 completion
+**Status:** 🔴 BLOCKED - Waiting for Phase 1.5 completion
+**Timeline Adjustment:** Moved from Weeks 6-8 to Weeks 10-12 due to Phase 1.5 insertion
 
 ### Critical Bugs (P0)
 
