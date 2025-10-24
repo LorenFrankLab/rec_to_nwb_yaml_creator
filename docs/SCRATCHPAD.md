@@ -1,31 +1,70 @@
 # Scratchpad - Phase 1.5
 
 **Current Phase:** Phase 1.5 - Test Quality Improvements
-**Status:** 🟡 IN PROGRESS - Task 1.5.1 Complete
+**Status:** 🟡 IN PROGRESS - Tasks 1.5.1 & 1.5.2 Complete, Moving to 1.5.4
 **Last Updated:** 2025-10-24
 **Branch:** `modern`
 
 ---
 
-## Current Focus: Task 1.5.1 Complete, Task 1.5.2 Next
+## Current Focus: Tasks 1.5.1 & 1.5.2 Complete, Moving to 1.5.4
+
+### Strategic Plan Adjustment (2025-10-24)
+
+**Decision:** Skip Task 1.5.3 (Error Recovery Scenarios), proceed directly to Task 1.5.4 (Fix Import/Export Integration Tests)
+
+**Rationale:**
+- Task 1.5.3 would encounter same field selector issues as Task 1.5.2 (est. 10-15 hours debugging)
+- Task 1.5.4 has higher value: fixes 97 broken integration tests that don't actually test
+- Import/export tests are lower complexity (YAML data vs complex form interactions)
+- Already have working patterns from Task 1.5.1 (sample metadata modification)
+- Better ROI for refactoring preparation
+
+**Adjusted Phase 1.5 Plan:**
+1. ✅ Task 1.5.1: Sample Metadata Modification (COMPLETE - 8 tests)
+2. ⚠️ Task 1.5.2: End-to-End Workflows (PARTIAL - 2/11 tests, patterns documented)
+3. ⏭️ Task 1.5.3: Error Recovery Scenarios (DEFERRED - not blocking Phase 2)
+4. ⏳ Task 1.5.4: Fix Import/Export Integration Tests (NEXT - 20 tests)
+5. ⏳ Task 1.5.5: Convert/delete documentation tests (CRITICAL)
+6. ⏳ Task 1.5.6: Fix DRY violations (CRITICAL)
+7. ⏳ Task 1.5.7: Migrate CSS selectors (CRITICAL for Phase 3)
+8. ⏳ Task 1.5.8: Create known bug fixtures (nice to have)
+
+**Expected Outcome:**
+- ~30 new/rewritten meaningful tests (vs 54 original target)
+- Clean test codebase ready for Phase 2
+- Refactoring-ready selectors for Phase 3
+- Much better time investment than field selector debugging
+
+---
 
 ### Completed This Session
 
 ✅ **Task 1.5.1: Sample Metadata Modification Tests** (8 tests)
-
 - Created `sample-metadata-modification.test.jsx` (444 LOC)
 - Created `minimal-sample.yml` fixture for fast testing
 - **Bug Found:** App.js:933 onClick handler missing null check (production bug)
 - All 8 tests passing
 - Time: 4-6 hours
 
+⚠️ **Task 1.5.2: End-to-End Workflow Tests** (2/11 tests passing - PARTIAL COMPLETE)
+- Created `complete-session-creation.test.jsx` (1,128 LOC, 11 tests written)
+- ✅ Test 1: Minimal valid session (PASSING)
+- ✅ Test 3: Multiple experimenter names (PASSING)
+- ⚠️ Tests 2, 4-11: Field selector bugs (9 tests failing)
+- **Achievement:** All patterns proven and documented in TESTING_PATTERNS.md (351 LOC)
+- **Decision:** Moving forward - diminishing returns on selector debugging
+- Time: 8 hours
+
 ### Current Task
 
-⚠️ **Task 1.5.2: End-to-End Workflow Tests** - **PARTIAL COMPLETE** (2/11 passing)
+⏳ **Task 1.5.4: Fix Import/Export Integration Tests** (20 tests planned)
 
-**Status:** Tests 1 & 3 passing | Tests 2, 4-11 have selector bugs | Patterns fully documented
+**Status:** 🔴 READY TO START
 
-**File:** `complete-session-creation.test.jsx` (1,128 LOC, 11 tests written)
+**File:** Will rewrite existing integration tests in `src/__tests__/integration/`
+
+**Goal:** Fix 97 integration tests that currently don't actually test anything
 
 ---
 
