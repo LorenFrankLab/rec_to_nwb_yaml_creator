@@ -757,22 +757,36 @@ File: `src/__tests__/unit/app/App-importFile.test.jsx`
 - [x] **Bug Found:** App.js:933 onClick handler missing null check (production bug)
 - [x] **Fixture Created:** minimal-sample.yml for fast testing (2 electrode groups vs 29)
 
-#### Task 1.5.2: End-to-End Workflow Tests
+#### Task 1.5.2: End-to-End Workflow Tests ⚠️ BLOCKED
 
-- [ ] Create file: `complete-session-creation.test.jsx`
-- [ ] Test creating minimal valid session from blank form (1 test)
-- [ ] Test creating complete session with all optional fields (1 test)
-- [ ] Test adding experimenter names (1 test)
-- [ ] Test adding subject information (1 test)
-- [ ] Test adding data acquisition device (1 test)
-- [ ] Test adding cameras with correct IDs (1 test)
-- [ ] Test adding tasks with camera references (1 test)
-- [ ] Test adding behavioral events (1 test)
-- [ ] Test adding electrode groups with device types (1 test)
-- [ ] Test ntrode generation triggers (1 test)
-- [ ] Test validation before export (1 test)
-- [ ] Test export generates valid YAML (1 test)
-- [ ] **Total:** 11 tests, 6-8 hours
+**Status:** Work-in-progress, encountering technical complexity with ListElement interactions
+
+- [x] Create file: `complete-session-creation.test.jsx` (created, 11 tests written, 0 passing)
+- [ ] ~~Test creating minimal valid session from blank form (1 test)~~ - BLOCKED by ListElement selector issue
+- [ ] ~~Test creating complete session with all optional fields (1 test)~~ - BLOCKED
+- [ ] ~~Test adding experimenter names (1 test)~~ - BLOCKED
+- [ ] ~~Test adding subject information (1 test)~~ - BLOCKED
+- [ ] ~~Test adding data acquisition device (1 test)~~ - BLOCKED
+- [ ] ~~Test adding cameras with correct IDs (1 test)~~ - BLOCKED
+- [ ] ~~Test adding tasks with camera references (1 test)~~ - BLOCKED
+- [ ] ~~Test adding behavioral events (1 test)~~ - BLOCKED
+- [ ] ~~Test adding electrode groups with device types (1 test)~~ - BLOCKED
+- [ ] ~~Test ntrode generation triggers (1 test)~~ - BLOCKED
+- [ ] ~~Test validation before export (1 test)~~ - BLOCKED
+- [ ] **Total:** 11 tests written, 0 passing, 12-16 hours required (vs 6-8 estimated)
+
+**Blocker:** ListElement fields (experimenter_name, keywords) don't have accessible inputs in blank forms. `getAllByLabelText()` fails because input lacks `id` attribute matching label's `htmlFor`. Requires `container.querySelector('input[name="..."]')` + Enter key interaction pattern.
+
+**Options:**
+
+1. Skip blank form tests (import-modify already covered in Task 1.5.1)
+2. Simplify to 2-3 critical workflows
+3. Fix ListElement.jsx to add `id={id}` to input (production code change)
+4. Continue with querySelector approach (12-16 hours)
+
+**Recommendation:** Awaiting human decision on path forward before continuing.
+
+**See:** `docs/SCRATCHPAD.md` for detailed findings and technical analysis.
 
 #### Task 1.5.3: Error Recovery Scenario Tests
 
