@@ -193,26 +193,29 @@
 ### Week 5: Integration and Edge Cases
 
 #### Import/Export Workflow
-- [ ] Test YAML file import with valid data
-- [ ] Test YAML file import with invalid data
-- [ ] Test YAML file import with partial data
-- [ ] Test YAML file export generation
-- [ ] Test filename generation (date format)
-- [ ] Test error handling during import/export
+
+- [x] Test YAML file import with valid data (34 tests - import-export-workflow.test.jsx)
+- [x] Test YAML file import with invalid data
+- [x] Test YAML file import with partial data
+- [x] Test YAML file export generation
+- [x] Test filename generation (date format)
+- [x] Test error handling during import/export
 
 #### Electrode Group and Ntrode Management
-- [ ] Test device type selection triggers ntrode generation
-- [ ] Test ntrode channel map updates
-- [ ] Test electrode group duplication with ntrode maps
-- [ ] Test electrode group removal with ntrode cleanup
-- [ ] Test shank count calculation for multi-shank devices
+
+- [x] Test device type selection triggers ntrode generation (35 tests - electrode-ntrode-management.test.jsx)
+- [x] Test ntrode channel map updates
+- [x] Test electrode group duplication with ntrode maps
+- [x] Test electrode group removal with ntrode cleanup
+- [x] Test shank count calculation for multi-shank devices
 
 #### Edge Cases and Error Handling
-- [ ] Test with maximum electrode groups (200+)
-- [ ] Test with empty form submission
-- [ ] Test with all optional fields filled
-- [ ] Test with malformed input data
-- [ ] Test browser compatibility (validation APIs)
+
+- [ ] Test with maximum electrode groups (200+) - covered in baselines
+- [ ] Test with empty form submission - covered in validation tests
+- [ ] Test with all optional fields filled - covered in baselines
+- [ ] Test with malformed input data - covered in validation tests
+- [ ] Test browser compatibility (validation APIs) - N/A for Phase 1
 
 ### Phase 1 Exit Gate
 - [ ] Unit test coverage ≥ 60%

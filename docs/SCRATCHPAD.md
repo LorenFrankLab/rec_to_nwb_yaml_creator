@@ -513,9 +513,9 @@ return window.location.hostname === 'lorenfranklab.github.io';
 ### Current Status
 
 **Branch:** `modern`
-**Commits ahead of origin:** 6 unpushed commits (latest: ba22d56)
-**Test Coverage:** ~30% overall (estimated, need to run full coverage)
-**Phase Status:** 🟡 IN PROGRESS - Week 4 (nearing completion)
+**Commits ahead of origin:** 10 unpushed commits (latest: 3d51e76)
+**Test Coverage:** 39.19% overall (target: 60-70%)
+**Phase Status:** 🟢 WEEK 4-5 COMPLETE - Ready for Phase 1 Exit Review
 
 ### Completed So Far
 
@@ -542,30 +542,56 @@ return window.location.hostname === 'lorenfranklab.github.io';
 - ✅ Utility functions (86 tests) - utils.test.js - discovered isProduction() security bug
 - ✅ Dynamic dependencies (33 tests) - App-dynamic-dependencies.test.jsx - camera IDs, task epochs, DIO events
 
-**Total Tests Now:** 562 tests (183 Week 3 + 260 Week 4 components + 86 utils + 33 dependencies)
-**Form Element Components:** 7/7 COMPLETE ✅
-**Utility Functions:** COMPLETE ✅
-**Dynamic Dependencies:** COMPLETE ✅
+**Week 5 - Integration Tests:**
+- ✅ Import/Export workflow (34 tests) - import-export-workflow.test.jsx - YAML import/export, round-trip consistency
+- ✅ Electrode/Ntrode management (35 tests) - electrode-ntrode-management.test.jsx - device types, shank counts, ntrode generation
+
+**Total Tests Now:** 825 tests across 27 test files
+**Test Breakdown:**
+- Week 0 (Baselines): 114 tests
+- Week 3 (Core): 183 tests
+- Week 4 (Components + Utils): 379 tests (260 components + 86 utils + 33 dependencies)
+- Week 5 (Integration): 69 tests (34 import/export + 35 electrode/ntrode)
+- Infrastructure: 80 tests
+
+**Completion Status:**
+- ✅ Form Element Components: 7/7 COMPLETE
+- ✅ Utility Functions: COMPLETE
+- ✅ Dynamic Dependencies: COMPLETE
+- ✅ Import/Export Workflow: COMPLETE
+- ✅ Electrode/Ntrode Management: COMPLETE
 
 ### Coverage Progress
 
-Current coverage: **28.35%** overall (target: 60-70%)
-
-**Note:** Coverage appears lower due to better measurement of uncovered code.
+**Current Coverage:** 39.19% overall (target: 60-70%)
 
 **High Coverage Areas:**
+- utils.js: 100% ✅ (all 9 utility functions)
 - InputElement.jsx: 100% ✅
 - SelectElement.jsx: 100% ✅
 - DataListElement.jsx: 100% ✅
+- CheckboxList.jsx: 100% ✅
+- RadioList.jsx: 100% ✅
+- ListElement.jsx: 100% ✅
+- ArrayItemControl.jsx: 100% ✅
 - InfoIcon.jsx: 100% ✅
-- utils.js: 75.75%
-- Custom matchers: 88.88%
+- deviceTypes.js: 90.47% (excellent)
+- Test helpers: 80%+
 
-**Low Coverage Areas (need attention):**
-- App.js: 20.24% (large file, needs more tests)
-- element/ components: 46.87% average (improving!)
-- ntrode/ modules: 6.15% average
+**Areas Needing Coverage:**
+- App.js: 20.24% (large file, complex logic)
+- ArrayUpdateMenu.jsx: 53.33%
+- SelectInputPairElement.jsx: 14.28%
+- ChannelMap.jsx: 8.69%
 - valueList.js: 34.14%
+
+**Coverage Analysis:**
+- Achieved excellent coverage on all form components (100%)
+- Utility functions fully covered (100%)
+- Integration tests cover critical workflows
+- Main gaps are in App.js component logic and ntrode channel map UI
+- 39% is good progress from 24% baseline, but short of 60% target
+
 
 ### Week 3 Status: COMPLETE ✅
 
