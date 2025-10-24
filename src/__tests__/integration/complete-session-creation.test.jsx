@@ -18,24 +18,35 @@ import YAML from 'yaml';
  * These workflows were marked as complete in Phase 1 but were not actually tested.
  * This fills a critical gap in test coverage for real user workflows.
  *
- * NOTE: ListElement fields (like experimenter_name) use a different structure:
- * - They have an input with name attribute but no matching id for the label
- * - Cannot use getByLabelText, must use container.querySelector('input[name="..."]')
- * - After typing, must press Enter to add item to list
+ * SOLUTION: ListElement fields CAN be queried by placeholder text!
+ * - Cannot use getAllByLabelText() because input lacks id attribute
+ * - CAN use screen.getByPlaceholderText() - each field has unique placeholder
+ * - After typing, press Enter to add item to list
+ *
+ * Verified with test_listelement_query.test.jsx ✓
  */
 
 /**
- * Helper: Add item to ListElement (like experimenter_name)
+ * Helper: Add item to ListElement (like experimenter_name, keywords)
+ *
  * @param {Object} user - userEvent instance
- * @param {HTMLElement} container - DOM container
- * @param {string} name - Name attribute of the input
- * @param {string} value - Value to add
+ * @param {Object} screen - Testing Library screen object
+ * @param {string} placeholder - Unique placeholder text (e.g., 'LastName, FirstName')
+ * @param {string} value - Value to add to the list
  */
-async function addListItem(user, container, name, value) {
-  const input = container.querySelector(`input[name="${name}"]`);
+async function addListItem(user, screen, placeholder, value) {
+  const input = screen.getByPlaceholderText(placeholder);
   await user.type(input, value);
   await user.keyboard('{Enter}'); // Add to list
 }
+
+/**
+ * ListElement placeholder mappings (for easy reference)
+ */
+const LIST_PLACEHOLDERS = {
+  experimenter_name: 'LastName, FirstName',
+  keywords: 'Type Keywords', // Default computed from title
+};
 
 describe('End-to-End Session Creation Workflow', () => {
   let mockBlob;
@@ -77,24 +88,22 @@ describe('End-to-End Session Creation Workflow', () => {
   it('creates minimal valid session from blank form', async () => {
     // ARRANGE
     const user = userEvent.setup();
-    const { container } = render(<App />);
+    render(<App />);
 
     // Verify we start with default values (not empty)
     const labInput = screen.getByLabelText(/^lab$/i);
     expect(labInput).toHaveValue('Loren Frank Lab'); // Default value from valueList.js
 
     // ACT - Fill required fields
-    // 1. Experimenter name - use name selector for ListElement input
-    const experimenterInput = container.querySelector('input[name="experimenter_name"]');
-    await user.type(experimenterInput, 'Doe, John');
-    await user.keyboard('{Enter}'); // Add to list
+    // 1. Experimenter name - use helper with placeholder
+    await addListItem(user, screen, LIST_PLACEHOLDERS.experimenter_name, 'Doe, John');
 
     // 2. Lab (update from default)
     await user.clear(labInput);
     await user.type(labInput, 'Test Lab');
 
-    // 3. Institution
-    const institutionInput = screen.getByLabelText(/^institution$/i);
+    // 3. Institution (DataListElement - has proper id/label)
+    const institutionInput = screen.getByLabelText(/institution/i);
     await user.clear(institutionInput);
     await user.type(institutionInput, 'Test University');
 
@@ -152,9 +161,7 @@ describe('End-to-End Session Creation Workflow', () => {
     render(<App />);
 
     // ACT - Fill required fields
-    const experimenterInputs = screen.getAllByLabelText(/experimenter name/i);
-    await user.clear(experimenterInputs[0]);
-    await user.type(experimenterInputs[0], 'Guidera, Jennifer');
+    await addListItem(user, screen, LIST_PLACEHOLDERS.experimenter_name, 'Guidera, Jennifer');
 
     const labInput = screen.getByLabelText(/^lab$/i);
     await user.clear(labInput);

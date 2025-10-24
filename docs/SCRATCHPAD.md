@@ -21,36 +21,56 @@
 
 ### Next Task
 
-⚠️ **Task 1.5.2: End-to-End Workflow Tests** - BLOCKED (Technical Complexity)
+✅ **Task 1.5.2: End-to-End Workflow Tests** - BLOCKER SOLVED! (Systematic Debugging Success)
 
-**Status:** Work-in-progress, encountered significant technical challenges
+**Status:** Blocker resolved through systematic debugging, tests partially working
 
-**File Created:** `complete-session-creation.test.jsx` (11 tests written, 0 passing)
+**File Created:** `complete-session-creation.test.jsx` (11 tests written, in progress)
 
-**Findings:**
-1. **ListElement interaction complexity discovered:**
-   - ListElement (used for experimenter_name, keywords) doesn't render accessible inputs in blank forms
-   - Label points to `id` via `htmlFor`, but input inside doesn't have matching `id` attribute
-   - `getAllByLabelText()` fails for ListElement fields
-   - Must use `container.querySelector('input[name="..."]')` + Enter key to add items
+**SOLUTION FOUND:** ✨ **Use `screen.getByPlaceholderText()` for ListElement fields!**
 
-2. **Test approach mismatch:**
-   - Task 1.5.1 tests work because they IMPORT file first (populates form)
-   - Task 1.5.2 tests need to work with BLANK form (much harder)
-   - Different interaction patterns needed for blank vs populated forms
+**What Was the Problem:**
 
-3. **Time investment required:**
-   - Each test needs custom selectors for List Element fields
-   - Estimated 11 tests × complex interactions = 12-16 hours (vs 6-8 estimated)
-   - May need to refactor ListElement.jsx to add proper `id` to input (production code change)
+- ListElement fields (experimenter_name, keywords) couldn't be queried with `getAllByLabelText()`
+- Root cause: Label has `htmlFor={id}` but input doesn't have matching `id` attribute
+- This blocked all 11 end-to-end tests
 
-**Options:**
-1. **Skip blank form tests** - Focus on import-modify workflows only (already covered in 1.5.1)
-2. **Simplify scope** - Test only 2-3 critical workflows instead of 11
-3. **Fix ListElement** - Add `id={id}` to input in ListElement.jsx (requires production code change in Phase 1.5)
-4. **Continue with querySelector approach** - Complete all 11 tests with container queries (12-16 hours)
+**How We Solved It (Systematic Debugging):**
 
-**Recommendation:** Option 2 (Simplify) or Option 1 (Skip) - focus efforts on other Phase 1.5 tasks with higher ROI
+1. **Phase 1: Root Cause** - Read ListElement.test.jsx to see how IT queries inputs
+2. **Phase 2: Pattern Analysis** - Found they use `screen.getByRole('textbox')`
+3. **Phase 3: Hypothesis** - Can we use placeholder text? Each field has unique placeholder!
+4. **Phase 4: Verification** - Created test_listelement_query.test.jsx → ✅ **PASSED!**
+
+**Working Pattern:**
+
+```javascript
+// experimenter_name has listPlaceHolder="LastName, FirstName"
+const input = screen.getByPlaceholderText('LastName, FirstName');
+await user.type(input, 'Doe, John');
+await user.keyboard('{Enter}');
+```
+
+**Test Progress:**
+
+- ✅ Verification test passes (test_listelement_query.test.jsx)
+- ✅ Test 1 gets past experimenter field (ListElement)
+- ✅ Test 1 gets past institution field (DataListElement)
+- ⚠️ Test 1 now failing on device name query (different issue, not ListElement blocker)
+
+**Time Estimate Updated:**
+
+- Original with blocker: 12-16 hours (querySelector workarounds)
+- With solution: 6-8 hours (as originally estimated!)
+- Blocker resolution time: 2 hours (systematic debugging)
+
+**Next Steps:**
+
+1. Fix remaining field-specific query issues (device name, etc.)
+2. Complete all 11 tests with proper semantic queries
+3. Full test suite should be achievable in remaining 4-6 hours
+
+**Key Takeaway:** Systematic debugging > guessing. Found elegant solution without changing production code!
 
 See [`docs/TASKS.md`](TASKS.md) for full checklist.
 
