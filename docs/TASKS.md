@@ -335,14 +335,14 @@
 
 **duplicateArrayItem() Tests:**
 
-- [ ] Test duplicating camera item
-- [ ] Test duplicating task item with camera_id references
-- [ ] Test duplicating behavioral_event item
-- [ ] Test duplicating item increments ID
-- [ ] Test duplicated item has unique ID
-- [ ] Test duplicated item preserves other fields
-- [ ] Test duplicating with items containing id field
-- [ ] Test duplicating updates formData state
+- [x] Test duplicating camera item (29 tests created)
+- [x] Test duplicating task item with camera_id references
+- [x] Test duplicating behavioral_event item
+- [x] Test duplicating item increments ID
+- [x] Test duplicated item has unique ID
+- [x] Test duplicated item preserves other fields
+- [x] Test duplicating with items containing id field
+- [x] Test duplicating updates formData state
 
 ##### YAML Conversion (Partially Tested)
 

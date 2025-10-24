@@ -903,8 +903,89 @@ src/__tests__/
 - ✅ displayErrorOnUI() tests COMPLETE (13 tests)
 - ✅ addArrayItem() tests COMPLETE (24 tests)
 - ✅ removeArrayItem() tests COMPLETE (26 tests)
-- Continue with duplicateArrayItem() tests (8 tests)
-- Then YAML conversion functions
+- ✅ duplicateArrayItem() tests COMPLETE (29 tests)
+- Continue with YAML conversion functions
+- Then component tests (ArrayUpdateMenu, SelectInputPairElement, ChannelMap)
+
+### duplicateArrayItem() Tests - COMPLETE
+
+**File Created:** `src/__tests__/unit/app/App-duplicateArrayItem.test.jsx`
+**Tests Added:** 29 tests, all passing
+**Coverage:** duplicateArrayItem function behavior
+
+**Test Breakdown:**
+1. Basic Functionality (4 tests):
+   - Duplicate cameras, tasks, behavioral_events, electrode_groups
+2. ID Increment Logic (5 tests):
+   - Increment ID for duplicated item
+   - Calculate max ID from all items
+   - Handle items without ID field
+   - Case-insensitive ID detection
+   - Preserve original key casing
+3. Splice Insertion Position (4 tests):
+   - Insert immediately after original (index + 1)
+   - Duplicate first/last items
+   - splice(index + 1, 0, item) pattern
+4. Field Preservation (3 tests):
+   - Preserve all fields except ID
+   - Deep clone nested objects/arrays
+   - Clone all properties
+5. Guard Clause: Invalid Index (3 tests):
+   - Return early on undefined item
+   - Handle negative index
+   - No error on invalid index
+6. State Management (3 tests):
+   - Use structuredClone for immutability
+   - Clone item separately from form
+   - Update formData state
+7. Integration (2 tests):
+   - Duplicate from correct array key
+   - Preserve other arrays
+8. Edge Cases (3 tests):
+   - Multiple sequential duplications
+   - Duplicate a duplicate
+   - Single-item array
+9. Different Array Types (2 tests):
+   - Arrays with ID field
+   - Arrays without ID field
+
+**Key Findings:**
+- duplicateArrayItem clones formData AND item separately (line 681-682)
+- Guard clause: returns early if !item (line 685-687)
+- ID detection is case-insensitive: checks for 'id' or ' id' (line 693)
+- ID calculation: maxId = Math.max(...ids), newId = maxId + 1 (line 698-699)
+- Uses splice(index + 1, 0, item) to insert after original (line 703)
+- Preserves original key casing when setting ID (line 699: item[keyItem])
+- Updates state with setFormData(form) (line 704)
+
+**ID Detection Logic (Important!):**
+```javascript
+const keys = Object.keys(item);
+keys.forEach((keyItem) => {
+  const keyLowerCase = keyItem.toLowerCase();
+  if (['id', ' id'].includes(keyLowerCase)) {
+    const ids = form[key].map((formKey) => formKey[keyLowerCase]);
+    const maxId = Math.max(...ids);
+    item[keyItem] = maxId + 1; // Preserves original casing
+  }
+});
+```
+
+**Splice Insertion:**
+- `splice(index + 1, 0, item)` means:
+  - Position: index + 1 (right after original)
+  - Delete: 0 items
+  - Insert: item
+- Example: duplicating index 1 inserts at index 2
+
+**Arrays with ID field:** cameras, electrode_groups
+**Arrays without ID field:** tasks, behavioral_events, associated_files, etc.
+
+**Test Statistics:**
+- 29 tests created (3 documentation-only)
+- 29/29 passing (100%)
+- Test execution time: ~29ms
+- Coverage added for duplicateArrayItem function logic
 
 ### removeArrayItem() Tests - COMPLETE
 
