@@ -481,6 +481,31 @@ const keyOption = `${title}-${dataItem}-${dataItemIndex}`;
 
 **Location:** `src/element/ArrayItemControl.jsx`
 
+### 2025-10-23 - Security Issue in isProduction()
+
+**Bug Found:** Potential security vulnerability in production environment detection
+
+**Root Cause:** `isProduction()` uses `includes()` instead of checking the actual hostname (utils.js:131):
+```javascript
+return window.location.href.includes('https://lorenfranklab.github.io');
+```
+
+**Impact:**
+- **Security Risk:** ANY URL containing the string 'https://lorenfranklab.github.io' will match
+- **Example:** `https://evil.com/https://lorenfranklab.github.io` returns `true`
+- **Severity:** Low-Medium - depends on what production-specific code does
+
+**Better Approach:**
+```javascript
+return window.location.hostname === 'lorenfranklab.github.io';
+```
+
+**Fix for Phase 2:** Use hostname comparison instead of URL substring matching
+
+**Test Coverage:** 86 tests in `src/__tests__/unit/utils/utils.test.js` - security issue documented
+
+**Location:** `src/utils.js:131`
+
 ---
 
 ## Phase 1 Progress Update - 2025-10-23
