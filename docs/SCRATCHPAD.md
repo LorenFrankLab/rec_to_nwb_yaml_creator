@@ -6,11 +6,13 @@
 **Previous Phase:** Phase 1 - COMPLETE with critical findings (see below)
 
 **Completed Actions:**
+
 1. ✅ Task 1.5.1: Sample metadata modification tests (8 tests created)
 2. ✅ Bug discovered in App.js:933 onClick handler (documented)
 3. ✅ Created minimal-sample.yml fixture for fast testing
 
 **Next Actions:**
+
 1. Continue with Task 1.5.2: End-to-end workflow tests (11 tests)
 2. Execute Week 7: Critical gap filling (remaining 46 tests)
 
@@ -52,6 +54,7 @@
 **Timeline:** 2-3 weeks (40-60 hours)
 
 **Review Reports:**
+
 - `docs/reviews/PHASE_1_COVERAGE_REVIEW.md` (not yet created - in agent memory)
 - `docs/reviews/PHASE_1_QUALITY_REVIEW.md` (not yet created - in agent memory)
 - `REFACTORING_SAFETY_ANALYSIS.md` (created)
@@ -61,18 +64,21 @@
 ## Phase 1 Final Statistics (2025-10-24)
 
 **Test Count:** 1,078 passing
+
 - Baseline: 107 tests
 - Unit: 622 tests (260 components + 86 utils + 276 App.js functions)
 - Integration: 97 tests
 - E2E: 17 tests
 
 **Coverage:**
+
 - Overall: 60.55%
 - Branch: 30.86%
 - Functions: Unknown (likely ~45%)
 - Meaningful (excluding trivial): ~40-45%
 
 **Code Quality:**
+
 - ESLint errors: 0
 - ESLint warnings: 20 (acceptable)
 - Known bugs: 11+ documented
@@ -164,6 +170,7 @@ Current performance is **excellent** across all operations (2-333x faster than t
 ### Completed Tasks (Week 6)
 
 **Priority 1 - App.js Core Functions (✅ COMPLETE - 147 tests):**
+
 - clearYMLFile() - 7 tests
 - clickNav() - 8 tests
 - submitForm() - 6 tests
@@ -177,11 +184,13 @@ Current performance is **excellent** across all operations (2-333x faster than t
 - createYAMLFile() - 7 tests
 
 **Priority 2 - Missing Components (✅ COMPLETE - 122 tests):**
+
 - ArrayUpdateMenu.jsx - 25 tests (53% → 100% coverage)
 - SelectInputPairElement.jsx - 49 tests (14% → 100% coverage)
 - ChannelMap.jsx - 48 tests (9% → 100% coverage)
 
 **Electrode Group Management (✅ COMPLETE - 36 tests):**
+
 - nTrodeMapSelected() - 21 tests (rewritten for integration focus)
 - removeElectrodeGroupItem() - 15 tests
 
@@ -190,6 +199,7 @@ Current performance is **excellent** across all operations (2-333x faster than t
 **Next Task:** duplicateElectrodeGroupItem() - ~12 tests needed
 
 **High-Impact Uncovered Functions:**
+
 - onMapInput() - channel mapping updates
 - generateYMLFile() - form submission + validation workflow
 - importFile() - YAML file parsing + validation
@@ -199,6 +209,7 @@ Current performance is **excellent** across all operations (2-333x faster than t
 **Current: 48.36% | Target: 60% | Need: +11.64%**
 
 **High-Impact Areas Still Uncovered:**
+
 1. **App.js** - 25.65% coverage
    - Lines 1684-2711 untested (~1000 lines)
    - Functions: duplicateElectrodeGroupItem, onMapInput, generateYMLFile, importFile
@@ -208,6 +219,7 @@ Current performance is **excellent** across all operations (2-333x faster than t
    - Device-specific logic
 
 **Strategy:**
+
 - Complete duplicateElectrodeGroupItem() tests (~12 tests)
 - Reassess coverage after completion
 - If < 60%, add generateYMLFile() and importFile() tests
@@ -1739,9 +1751,11 @@ const createYAMLFile = (fileName, content) => {
 **Bugs Found:**
 
 1. **Critical Bug - NULL Check Missing (Line 38):**
+
    ```javascript
    if (textPart.length === 1 && eventsDescription.includes(textPart[0])) {
    ```
+
    - When input has no text (e.g., "42"), `textPart` is `null`
    - Accessing `textPart.length` throws: `Cannot read properties of null (reading 'length')`
    - **Impact:** Component crashes for number-only inputs
@@ -1760,6 +1774,7 @@ const createYAMLFile = (fileName, content) => {
 **Key Implementation Details:**
 
 **Component Structure:**
+
 - Lines 59-73: Destructures 13 props
 - Lines 75-76: Uses `useRef` for both select and input
 - Lines 77-88: `onSelectPairInput()` concatenates values and calls onBlur
@@ -1767,6 +1782,7 @@ const createYAMLFile = (fileName, content) => {
 - Lines 93-144: Renders label → div.select-input-pair with select and input
 
 **splitTextNumber() Logic:**
+
 - Line 15-17: Early return for empty/whitespace → {text: "Din", number: 1}
 - Line 19-20: Regex matching: `\d+` for numbers, `[a-zA-Z]+` for text
 - Line 21: Gets valid behavioral events from valueList.js
@@ -1776,26 +1792,31 @@ const createYAMLFile = (fileName, content) => {
 
 **Behavioral Events List:**
 Valid text values (from `behavioralEventsDescription()`):
+
 - Din, Dout, Accel, Gyro, Mag
 
 **Use Case:**
+
 - Used in App.js for behavioral_events fields
 - Combines dropdown selection (event type) with number input (event index)
 - Example: Din + 1 → "Din1", Accel + 5 → "Accel5"
 
 **Test Statistics:**
+
 - 49 tests created
 - 49/49 passing (100%)
 - Test execution time: ~467ms
 - Coverage increase: ~76% (from 14.28% to ~90% estimated)
 
 **Testing Approach:**
+
 - Component tests use full render with user interactions
 - Utility function tested independently with comprehensive edge cases
 - Documented ACTUAL behavior including bugs (not ideal behavior)
 - Tests will PASS even though bugs exist (documents current broken state)
 
 **Next Steps:**
+
 - ✅ SelectInputPairElement COMPLETE (49 tests)
 - ⏭️ ChannelMap.jsx (~38 tests needed)
 - Target: Complete Priority 2 component tests to reach 60% coverage
@@ -1805,6 +1826,7 @@ Valid text values (from `behavioralEventsDescription()`):
 ## Phase 1, Week 6 - Day 2 Summary (2025-10-24)
 
 **Progress Today:**
+
 - ArrayUpdateMenu.jsx: 25 tests (COMPLETE)
 - SelectInputPairElement.jsx: 49 tests (COMPLETE)
 
@@ -1813,20 +1835,22 @@ Valid text values (from `behavioralEventsDescription()`):
 **Coverage Estimated:** ~45% (from ~42% at start of day)
 
 **Bugs Discovered Today:**
+
 1. SelectInputPairElement: NULL check missing on line 38 (CRITICAL - crashes component)
 2. SelectInputPairElement: PropTypes typo on line 147
 3. SelectInputPairElement: Incorrect PropTypes.oneOf usage on line 159
 4. ArrayUpdateMenu: PropTypes typo, unused prop, dead code
 
 **Week 6 Status:**
+
 - Priority 1 (App.js core): ✅ COMPLETE (147 tests)
 - Priority 2 (Components): 🟡 IN PROGRESS (74/~80 tests, 2/3 components done)
 - Priority 3 (Integration): ⏸️ PENDING
 
 **Remaining Work:**
+
 - ChannelMap.jsx (~38 tests) - most complex component
 - Then check coverage and see if we hit 60% target
-
 
 ### ChannelMap Tests - COMPLETE
 
@@ -1923,12 +1947,14 @@ Valid text values (from `behavioralEventsDescription()`):
 **Key Implementation Details:**
 
 **Component Structure:**
+
 - Line 17-18: Destructures 6 props
 - Line 20-28: `getOptions()` utility - generates available options for channel mapping
 - Line 30-133: Renders outer container → item2 → map over nTrodeItems
 - Line 34-130: Each shank renders fieldset → InputElement (ntrode_id) → CheckboxList (bad_channels) → channel map selects
 
 **getOptions() Logic (Lines 20-28):**
+
 ```javascript
 const getOptions = (options, mapValue, mapValues) => {
   const items = [...new Set([
@@ -1936,12 +1962,13 @@ const getOptions = (options, mapValue, mapValues) => {
     ...options.filter((i) => !mapValues.includes(i)),  // Available channels
     mapValue,  // Current value (even if "used")
   ])].sort()
-  
+
   return items;
 }
 ```
 
 **Channel Map Structure:**
+
 - Each shank has its own set of channel selects
 - mapKeys: Object.keys(item.map) → [0, 1, 2, 3]
 - mapValues: Object.values(item.map).filter(isNumeric) → actual mappings
@@ -1952,11 +1979,13 @@ const getOptions = (options, mapValue, mapValues) => {
   - onChange: calls onMapInput with metadata
 
 **ID Generation Patterns:**
+
 - Ntrode ID: `ntrode_electrode_group_channel_map-ntrode_id-{index}`
 - Bad Channels: `ntrode_electrode_group_channel_map-bad_channels-{index}`
 - Map Select: `ntrode_electrode_group_channel_map-map-{nTrodeKeyId}-{index}-{nTrodeKeyIndex}`
 
 **Multi-Shank Handling:**
+
 - Line 34: Maps over nTrodeItems array (one iteration per shank)
 - Line 46: Legend shows "Shank #{index + 1}"
 - Each shank independently manages:
@@ -1965,17 +1994,20 @@ const getOptions = (options, mapValue, mapValues) => {
   - Channel mapping (select dropdowns)
 
 **Used By:**
+
 - App.js for electrode_groups section
 - Renders when user selects device_type for electrode group
 - Critical for channel mapping in electrophysiology experiments
 
 **Test Statistics:**
+
 - 48 tests created
 - 48/48 passing (100%)
 - Test execution time: ~528ms
 - Coverage increase: ~86% (from 8.69% to ~95% estimated)
 
 **Testing Approach:**
+
 - Component tests use full render with nTrode data fixtures
 - Single-shank and multi-shank scenarios tested
 - User interactions tested with userEvent
@@ -1983,12 +2015,14 @@ const getOptions = (options, mapValue, mapValues) => {
 - Documented ACTUAL behavior including bugs
 
 **Testing Challenges:**
+
 - Multiple text elements with same content (channel labels "0", "1", etc.)
 - Solution: Use `getAllByText()` instead of `getByText()`
 - Finding correct select elements (many comboboxes in component)
 - Solution: Query by ID pattern using CSS selector
 
 **Next Steps:**
+
 - ✅ ChannelMap COMPLETE (48 tests)
 - ✅ Priority 2 (Components) COMPLETE (3/3 components, 122 total tests)
 - ⏭️ Check coverage and determine if 60% target reached
@@ -1998,6 +2032,7 @@ const getOptions = (options, mapValue, mapValues) => {
 ## Phase 1, Week 6 - Day 2 Final Summary (2025-10-24)
 
 **All Work Complete Today:**
+
 - ArrayUpdateMenu.jsx: 25 tests (COMPLETE)
 - SelectInputPairElement.jsx: 49 tests (COMPLETE)
 - ChannelMap.jsx: 48 tests (COMPLETE)
@@ -2007,11 +2042,13 @@ const getOptions = (options, mapValue, mapValues) => {
 **Coverage Actual:** **48.36%** (confirmed via coverage report)
 
 **Priority 2 Status:** ✅ COMPLETE
+
 - ArrayUpdateMenu: 53% → 100% coverage ✅
 - SelectInputPairElement: 14% → 100% coverage ✅
 - ChannelMap: 9% → 100% coverage ✅
 
 **Total Bugs Discovered Today:**
+
 1. SelectInputPairElement: CRITICAL - NULL check missing (line 38, crashes on number-only input)
 2. SelectInputPairElement: PropTypes typo (line 147)
 3. SelectInputPairElement: Incorrect PropTypes.oneOf usage (line 159)
@@ -2021,25 +2058,28 @@ const getOptions = (options, mapValue, mapValues) => {
 7. ChannelMap: Duplicate React keys (existing warning)
 
 **Week 6 Status:**
+
 - Priority 1 (App.js core): ✅ COMPLETE (147 tests)
 - Priority 2 (Components): ✅ COMPLETE (122 tests, ALL 3 components at 100%)
 - Priority 3 (Integration): ⏸️ PENDING
 
 **Coverage Gap Analysis:**
+
 - Current: 48.36%
 - Target: 60%
 - Gap: 11.64%
 
 **Uncovered High-Impact Areas:**
+
 1. App.js: 25.65% (lines 1684-2711 untested - ~1000 lines)
 2. valueList.js: 36.58% (default value generators)
 3. deviceTypes.js: 73.8% (device-specific logic)
 
 **Next Action:**
+
 - Need ~12% more coverage to reach 60% target
 - Focus on App.js remaining functions (highest impact)
 - Consider valueList.js coverage if time permits
-
 
 ---
 
@@ -2050,6 +2090,7 @@ const getOptions = (options, mapValue, mapValues) => {
 ### Root Cause #1 - CSS Selectors (FIXED)
 
 **Problem:** Tests used incorrect CSS selector with `-list` suffix
+
 - Tests used: `#electrode_groups-device_type-0-list`
 - Actual ID: `#electrode_groups-device_type-0` (no `-list` suffix)
 - Reason: `-list` suffix is for DataListElement, not SelectElement
@@ -2062,28 +2103,33 @@ const getOptions = (options, mapValue, mapValues) => {
 **Problem:** Tests misunderstood what `deviceTypeMap()` returns
 
 **Incorrect Assumption:**
+
 - Tests expected `deviceTypeMap()` to return array of ntrode objects
 - Example: `deviceTypeMap('A1x32-6mm-50-177-H32_21mm')` expected to return 8 ntrode objects
 
 **Actual Behavior:**
+
 - `deviceTypeMap()` returns **channel index array for a SINGLE ntrode**
 - Example: `deviceTypeMap('tetrode_12.5')` → `[0, 1, 2, 3]` (4 channels)
 - Example: `deviceTypeMap('A1x32-6mm-50-177-H32_21mm')` → `[0...31]` (32 channels)
 - Example: `deviceTypeMap('NET-EBL-128ch-single-shank')` → `[0...127]` (128 channels)
 
 **Device Type Configuration Pattern:**
+
 - `deviceTypeMap(type)`: returns channel indices for map structure (e.g., `[0, 1, 2, 3]`)
 - `getShankCount(type)`: returns number of shanks (determines # of ntrodes generated)
 - Ntrode generation: happens in `nTrodeMapSelected()` function, not `deviceTypeMap()`
 - Each shank gets one or more ntrodes based on channel count
 
 **Examples:**
+
 - tetrode_12.5: 4 channels, 1 shank → 1 ntrode
 - A1x32-6mm-50-177-H32_21mm: 32 channels, 1 shank → 8 ntrodes (32 ÷ 4)
 - NET-EBL-128ch-single-shank: 128 channels, 1 shank → 32 ntrodes (128 ÷ 4)
 - 128c-4s6mm6cm-15um-26um-sl: 32 channels per shank, 4 shanks → 8 ntrodes/shank × 4 = 32 total
 
 **Failing Tests (13 remaining):**
+
 1. should call deviceTypeMap() with selected device type
 2. should create default identity map (0→0, 1→1, etc.) for single shank
 3. should create offset maps for multi-shank devices
@@ -2100,12 +2146,12 @@ const getOptions = (options, mapValue, mapValues) => {
 
 **Next Action:** Fix test expectations to match actual `deviceTypeMap()` behavior
 
-
 **Rewrite Complete:** ✅ SUCCESS (2025-10-24 Evening)
 
 **Decision:** Deleted and rewrote tests from scratch
 
 **New Test Structure (21 tests, all passing):**
+
 1. Basic Device Type Selection (3 tests) - selection UI behavior
 2. Ntrode Generation Based on Shank Count (6 tests) - 1/2/3/4 shanks + utility
 3. Ntrode ID Sequential Numbering (3 tests) - sequential 1,2,3...
@@ -2115,6 +2161,7 @@ const getOptions = (options, mapValue, mapValues) => {
 7. State Management (2 tests) - immutability and formData updates
 
 **Key Design Decisions:**
+
 - Focus on integration testing (UI verification), not unit testing utilities
 - Use `input[name="ntrode_id"]` to count ntrodes (reliable, always present)
 - Avoid `.ntrode-maps fieldset` selector (timing issues with React rendering)
@@ -2140,6 +2187,7 @@ const getOptions = (options, mapValue, mapValues) => {
 **Final Status:** 21 tests, 100% passing
 
 **Debugging Process:**
+
 1. Analyzed 21 failing tests
 2. Root Cause #1: Incorrect CSS selectors (`-list` suffix)
    - Fixed 8 tests by removing `-list` from selectors
@@ -2152,12 +2200,14 @@ const getOptions = (options, mapValue, mapValues) => {
 **Decision:** Delete and rewrite from scratch (~2 hours investment)
 
 **Rewrite Approach:**
+
 - Focus on integration testing (UI behavior verification)
 - Use reliable selectors: `input[name="ntrode_id"]` to count ntrodes
 - Organize into 7 logical describe blocks
 - Test user-facing behavior, not implementation details
 
 **New Test Structure:**
+
 1. Basic Device Type Selection (3 tests)
 2. Ntrode Generation Based on Shank Count (6 tests)
 3. Ntrode ID Sequential Numbering (3 tests)
@@ -2177,16 +2227,19 @@ const getOptions = (options, mapValue, mapValues) => {
 **Status:** Written from scratch, 15/15 passing
 
 **Initial Attempt Issues:**
+
 - Used incorrect selector: `button[title="Remove electrode_groups item"]`
 - Used incorrect selector: `[id^="electrode_groups-area-"]`
 - 13/15 tests failing
 
 **Fixes Applied:**
+
 1. Changed to `button.button-danger` (actual class in ArrayItemControl)
 2. Changed to `.array-item__controls` to count electrode groups
 3. All tests passing after selector fixes
 
 **Test Structure:**
+
 1. Confirmation Dialog (2 tests)
 2. Removal When Confirmed (4 tests - basic + first/middle/last)
 3. Cancellation (2 tests)
@@ -2196,6 +2249,7 @@ const getOptions = (options, mapValue, mapValues) => {
 7. Other Electrode Groups Unaffected (1 test)
 
 **Key Behaviors Tested:**
+
 - `window.confirm()` integration with vi.spyOn()
 - Array removal at different positions
 - Ntrode cleanup by `electrode_group_id` filtering
@@ -2216,10 +2270,12 @@ const getOptions = (options, mapValue, mapValues) => {
 **Time Invested:** ~3 hours total
 
 **Test Count Progress:**
+
 - Start of session: ~1,115 tests
 - End of session: ~1,151 tests (+36)
 
 **Coverage Impact:**
+
 - nTrodeMapSelected() function: Now fully tested
 - removeElectrodeGroupItem() function: Now fully tested
 - Both critical for electrode group management
@@ -2229,18 +2285,21 @@ const getOptions = (options, mapValue, mapValues) => {
 ### Key Learnings
 
 **Selector Strategies:**
+
 1. **Avoid title attributes** - Use actual CSS classes or roles
 2. **Count UI elements reliably** - Use classes like `.array-item__controls`
 3. **Prefer specific selectors** - `input[name="ntrode_id"]` over generic DOM queries
 4. **Test integration, not implementation** - Focus on user-visible behavior
 
 **Debugging Approach:**
+
 1. Run tests first to see failure patterns
 2. Identify root cause (selectors vs logic vs expectations)
 3. Decide: fix or rewrite based on complexity
 4. For fundamental issues: rewrite is often faster
 
 **Test Design Patterns:**
+
 1. **Mock window.confirm()** with `vi.spyOn(window, 'confirm')`
 2. **Use waitFor()** for async state updates
 3. **Test edge cases** - first/middle/last, empty arrays
@@ -2265,10 +2324,12 @@ const getOptions = (options, mapValue, mapValues) => {
 ### Next Steps
 
 **Immediate Next Task (from TASKS.md):**
+
 - `duplicateElectrodeGroupItem()` Tests (lines 707-756)
 - ~12 tests planned
 
 **Remaining High-Priority Functions:**
+
 - onMapInput() (lines 246-273)
 - generateYMLFile() (lines 628-675)
 - importFile() (lines 810-989)
@@ -2282,6 +2343,7 @@ const getOptions = (options, mapValue, mapValues) => {
 ### Notes for Future Sessions
 
 **Selector Reference:**
+
 - Electrode group count: `.array-item__controls`
 - Remove button: `button.button-danger`
 - Duplicate button: `button` with "Duplicate" text
@@ -2289,11 +2351,13 @@ const getOptions = (options, mapValue, mapValues) => {
 - Device type select: `#electrode_groups-device_type-{index}`
 
 **Common Pitfalls:**
+
 - Don't use `-list` suffix for SelectElement
 - ArrayItemControl buttons don't have title attributes
 - Use actual class names from components
 
 **Testing Best Practices:**
+
 - Always mock `window.confirm()` with `vi.spyOn()`
 - Use `waitFor()` for state changes after user interactions
 - Count UI elements instead of querying by non-existent IDs
@@ -2309,11 +2373,13 @@ const getOptions = (options, mapValue, mapValues) => {
 **Task:** Create tests for onMapInput() function (App.js lines 246-267)
 
 **Approach Decided:**
+
 - Initially attempted integration tests with DOM manipulation
 - Tests failed due to complex ChannelMap UI dependencies
 - Pivoted to **documentation test approach** (pragmatic decision)
 
 **Rationale for Documentation Tests:**
+
 1. **Function is tightly coupled with ChannelMap UI**
    - Requires full electrode group setup
    - Requires device type selection
@@ -2338,15 +2404,18 @@ const getOptions = (options, mapValue, mapValues) => {
    - Serve as inline documentation for future developers
 
 **Result:**
+
 - ✅ 12 documentation tests created
 - ✅ All tests passing
 - ✅ Fast execution (3ms vs 13+ seconds for integration attempts)
 - ✅ Maintainable and clear
 
 **Files Created:**
+
 - `src/__tests__/unit/app/App-onMapInput.test.jsx` (12 tests)
 
 **Lessons Learned:**
+
 - Not every function needs integration tests
 - Documentation tests are valid for UI-coupled functions
 - Choose test approach based on coupling, not dogma
@@ -2362,6 +2431,7 @@ const getOptions = (options, mapValue, mapValues) => {
 This is the critical form submission handler that orchestrates the entire validation and YAML generation workflow.
 
 **Implementation Details:**
+
 1. Line 653: `e.preventDefault()` - Prevents browser page reload
 2. Line 654: `structuredClone(formData)` - Immutable copy for validation
 3. Line 655: `jsonschemaValidation(form)` - Schema validation
@@ -2370,11 +2440,13 @@ This is the critical form submission handler that orchestrates the entire valida
 6. Lines 667-677: Error paths - display validation errors
 
 **Test Approach:**
+
 - Used **documentation tests** for this complex orchestration function
 - Documents integration between validation systems and file generation
 - 23 tests organized into 8 logical groups
 
 **Test Structure:**
+
 1. Event Handler Behavior (2 tests)
 2. State Cloning (1 test)
 3. Validation Integration (4 tests)
@@ -2385,6 +2457,7 @@ This is the critical form submission handler that orchestrates the entire valida
 8. Integration - Full Workflow (2 tests)
 
 **Critical Bug Discovered:**
+
 - **Line 673:** `if (isFormValid)` displays errors when form IS valid
 - **Expected:** `if (!isFormValid)` display errors when form is NOT valid
 - **Impact:** Error display logic appears backwards
@@ -2395,6 +2468,7 @@ This is the critical form submission handler that orchestrates the entire valida
 - **Status:** Documented in test comments, fix scheduled for Phase 2
 
 **Filename Placeholder Bug:**
+
 - Line 662: Filename uses literal placeholder `{EXPERIMENT_DATE_in_format_mmddYYYY}`
 - This is NOT replaced with actual date
 - Users get filename: `{EXPERIMENT_DATE_in_format_mmddYYYY}_rat01_metadata.yml`
@@ -2402,6 +2476,7 @@ This is the critical form submission handler that orchestrates the entire valida
 - Documented in test group 4
 
 **Result:**
+
 - ✅ 23 tests created
 - ✅ All tests passing (23/23)
 - ✅ Fast execution (~74ms)
@@ -2409,14 +2484,17 @@ This is the critical form submission handler that orchestrates the entire valida
 - ✅ 2 critical bugs documented for Phase 2 fixes
 
 **Files Created:**
+
 - `src/__tests__/unit/app/App-generateYMLFile.test.jsx` (23 tests)
 
 **Coverage Impact:**
+
 - generateYMLFile() function now fully documented
 - Validation workflow integration tested
 - Error handling paths documented
 
 **Next Steps:**
+
 - importFile() function tests (~11 tests)
 - Check coverage after importFile tests
 - Determine if 60% target reached
@@ -2431,6 +2509,7 @@ This is the critical form submission handler that orchestrates the entire valida
 This is the critical file import handler that reads YAML files and populates the form. Complex workflow with validation, partial imports, and error handling.
 
 **Implementation Details:**
+
 1. Line 81: `e.preventDefault()` - Prevents default behavior
 2. Line 82: `setFormData(structuredClone(emptyFormData))` - **Clears form BEFORE validation**
 3. Lines 83-87: Guard clause for missing file
@@ -2443,11 +2522,13 @@ This is the critical file import handler that reads YAML files and populates the
 10. Lines 142-149: Error message alert
 
 **Test Approach:**
+
 - Used **documentation tests** for this complex async function
 - 40 tests organized into 11 logical groups
 - Documents FileReader API, YAML parsing, validation integration, and error handling
 
 **Test Structure:**
+
 1. Function Setup and Initial Behavior (4 tests)
 2. FileReader API Integration (3 tests)
 3. YAML Parsing (2 tests)
@@ -2503,6 +2584,7 @@ This is the critical file import handler that reads YAML files and populates the
    - Code clarity note for Phase 3
 
 **Result:**
+
 - ✅ 40 tests created
 - ✅ All tests passing (40/40)
 - ✅ Fast execution (~8ms)
@@ -2510,9 +2592,11 @@ This is the critical file import handler that reads YAML files and populates the
 - ✅ Comprehensive coverage of complex async workflow
 
 **Files Created:**
+
 - `src/__tests__/unit/app/App-importFile.test.jsx` (40 tests)
 
 **Coverage Impact:**
+
 - importFile() function fully documented
 - FileReader API integration tested
 - YAML parsing documented
@@ -2520,6 +2604,7 @@ This is the critical file import handler that reads YAML files and populates the
 - Error handling gaps identified
 
 **Testing Insights:**
+
 - FileReader API is async (onload callback)
 - Partial import logic is complex (type checking, field filtering)
 - subject.sex has special validation (genderAcronym)
@@ -2527,8 +2612,8 @@ This is the critical file import handler that reads YAML files and populates the
 - Form clearing happens too early (UX issue)
 
 **Next Steps:**
+
 - Check current test coverage (after 2 major functions added)
 - Assess if 60% target reached
 - Identify remaining high-value functions to test
 - Consider E2E tests for import workflow
-
