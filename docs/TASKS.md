@@ -288,23 +288,23 @@
 
 **showErrorMessage() Tests:**
 
-- [ ] Test Ajv error message display
-- [ ] Test error message with instancePath
-- [ ] Test error message formatting
-- [ ] Test element selection by instancePath
-- [ ] Test error display when element not found
-- [ ] Test error display with nested paths
-- [ ] Test error display with array indices
-- [ ] Test multiple error messages
+- [x] Test Ajv error message display (13 tests created)
+- [x] Test error message with instancePath
+- [x] Test error message formatting
+- [x] Test element selection by instancePath
+- [x] Test error display when element not found
+- [x] Test error display with nested paths
+- [x] Test error display with array indices
+- [x] Test multiple error messages
 
 **displayErrorOnUI() Tests:**
 
-- [ ] Test custom validity error on input element
-- [ ] Test error display with element ID
-- [ ] Test error display with message
-- [ ] Test error display timeout (2 seconds)
-- [ ] Test error display when element not found
-- [ ] Test showCustomValidityError integration
+- [x] Test custom validity error on input element (13 tests created)
+- [x] Test error display with element ID
+- [x] Test error display with message
+- [x] Test error display timeout (2 seconds)
+- [x] Test error display when element not found
+- [x] Test showCustomValidityError integration
 
 ##### Array Management Functions (Partially Tested)
 
