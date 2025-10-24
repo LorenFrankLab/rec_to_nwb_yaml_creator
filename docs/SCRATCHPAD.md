@@ -1929,3 +1929,177 @@ const getOptions = (options, mapValue, mapValues) => {
 **Time Spent:** ~2 hours (debugging: 30min, rewrite: 1.5hrs)
 
 ---
+
+---
+
+## Phase 1, Week 6 - Evening Session (2025-10-24)
+
+**Session Goal:** Complete nTrodeMapSelected() tests and continue with additional App.js functions
+
+### Tasks Completed
+
+**1. nTrodeMapSelected() Tests - REWRITTEN (21 tests) ✅**
+
+**Initial Status:** 26 tests existing, 21 failing
+**Final Status:** 21 tests, 100% passing
+
+**Debugging Process:**
+1. Analyzed 21 failing tests
+2. Root Cause #1: Incorrect CSS selectors (`-list` suffix)
+   - Fixed 8 tests by removing `-list` from selectors
+   - Changed `#electrode_groups-device_type-0-list` → `#electrode_groups-device_type-0`
+3. Root Cause #2: Fundamental misunderstanding of `deviceTypeMap()`
+   - Tests expected it to return ntrode objects
+   - Actually returns channel index arrays: `[0, 1, 2, 3]`
+   - 13 tests still failing after selector fix
+
+**Decision:** Delete and rewrite from scratch (~2 hours investment)
+
+**Rewrite Approach:**
+- Focus on integration testing (UI behavior verification)
+- Use reliable selectors: `input[name="ntrode_id"]` to count ntrodes
+- Organize into 7 logical describe blocks
+- Test user-facing behavior, not implementation details
+
+**New Test Structure:**
+1. Basic Device Type Selection (3 tests)
+2. Ntrode Generation Based on Shank Count (6 tests)
+3. Ntrode ID Sequential Numbering (3 tests)
+4. Replacing Existing Ntrode Maps (3 tests)
+5. Channel Map Generation (2 tests)
+6. Edge Cases and Error Handling (3 tests)
+7. State Management (2 tests)
+
+**File:** `src/__tests__/unit/app/App-nTrodeMapSelected.test.jsx`
+
+**Time:** ~2 hours (debugging 30min, rewrite 1.5hrs)
+
+---
+
+**2. removeElectrodeGroupItem() Tests - NEW (15 tests) ✅**
+
+**Status:** Written from scratch, 15/15 passing
+
+**Initial Attempt Issues:**
+- Used incorrect selector: `button[title="Remove electrode_groups item"]`
+- Used incorrect selector: `[id^="electrode_groups-area-"]`
+- 13/15 tests failing
+
+**Fixes Applied:**
+1. Changed to `button.button-danger` (actual class in ArrayItemControl)
+2. Changed to `.array-item__controls` to count electrode groups
+3. All tests passing after selector fixes
+
+**Test Structure:**
+1. Confirmation Dialog (2 tests)
+2. Removal When Confirmed (4 tests - basic + first/middle/last)
+3. Cancellation (2 tests)
+4. Associated Ntrode Map Removal (3 tests - single/multiple/multi-shank)
+5. State Management (2 tests)
+6. Guard Clauses (1 test)
+7. Other Electrode Groups Unaffected (1 test)
+
+**Key Behaviors Tested:**
+- `window.confirm()` integration with vi.spyOn()
+- Array removal at different positions
+- Ntrode cleanup by `electrode_group_id` filtering
+- State immutability with structuredClone
+- Form state preservation on cancellation
+
+**File:** `src/__tests__/unit/app/App-removeElectrodeGroupItem.test.jsx`
+
+**Time:** ~1 hour (implementation 40min, debugging 20min)
+
+---
+
+### Session Statistics
+
+**Tests Added:** 36 tests (21 + 15)
+**Tests Passing:** 36/36 (100%)
+**Functions Tested:** 2 (nTrodeMapSelected, removeElectrodeGroupItem)
+**Time Invested:** ~3 hours total
+
+**Test Count Progress:**
+- Start of session: ~1,115 tests
+- End of session: ~1,151 tests (+36)
+
+**Coverage Impact:**
+- nTrodeMapSelected() function: Now fully tested
+- removeElectrodeGroupItem() function: Now fully tested
+- Both critical for electrode group management
+
+---
+
+### Key Learnings
+
+**Selector Strategies:**
+1. **Avoid title attributes** - Use actual CSS classes or roles
+2. **Count UI elements reliably** - Use classes like `.array-item__controls`
+3. **Prefer specific selectors** - `input[name="ntrode_id"]` over generic DOM queries
+4. **Test integration, not implementation** - Focus on user-visible behavior
+
+**Debugging Approach:**
+1. Run tests first to see failure patterns
+2. Identify root cause (selectors vs logic vs expectations)
+3. Decide: fix or rewrite based on complexity
+4. For fundamental issues: rewrite is often faster
+
+**Test Design Patterns:**
+1. **Mock window.confirm()** with `vi.spyOn(window, 'confirm')`
+2. **Use waitFor()** for async state updates
+3. **Test edge cases** - first/middle/last, empty arrays
+4. **Verify cleanup** - ntrode maps removed with electrode groups
+
+---
+
+### Commits Made
+
+1. **phase1(tests): rewrite nTrodeMapSelected() tests - 21 tests passing**
+   - Deleted broken tests
+   - Rewrote with integration focus
+   - All tests passing
+
+2. **phase1(tests): add removeElectrodeGroupItem() tests - 15 tests passing**
+   - New test file
+   - Comprehensive coverage
+   - All tests passing
+
+---
+
+### Next Steps
+
+**Immediate Next Task (from TASKS.md):**
+- `duplicateElectrodeGroupItem()` Tests (lines 707-756)
+- ~12 tests planned
+
+**Remaining High-Priority Functions:**
+- onMapInput() (lines 246-273)
+- generateYMLFile() (lines 628-675)
+- importFile() (lines 810-989)
+
+**Coverage Goal:** 60% by end of Week 6
+**Current Coverage:** ~48-50% (estimated)
+**Gap:** ~10-12% needed
+
+---
+
+### Notes for Future Sessions
+
+**Selector Reference:**
+- Electrode group count: `.array-item__controls`
+- Remove button: `button.button-danger`
+- Duplicate button: `button` with "Duplicate" text
+- Ntrode count: `input[name="ntrode_id"]`
+- Device type select: `#electrode_groups-device_type-{index}`
+
+**Common Pitfalls:**
+- Don't use `-list` suffix for SelectElement
+- ArrayItemControl buttons don't have title attributes
+- Use actual class names from components
+
+**Testing Best Practices:**
+- Always mock `window.confirm()` with `vi.spyOn()`
+- Use `waitFor()` for state changes after user interactions
+- Count UI elements instead of querying by non-existent IDs
+- Test behavior, not implementation details
+
