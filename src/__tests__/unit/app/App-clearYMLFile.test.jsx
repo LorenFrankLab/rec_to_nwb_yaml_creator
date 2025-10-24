@@ -13,29 +13,20 @@
  * to visible form state changes.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../../App';
 import { defaultYMLValues } from '../../../valueList';
+import { useWindowConfirmMock } from '../../helpers/test-hooks';
 
 describe('App.js - clearYMLFile()', () => {
-  let confirmSpy;
-
-  beforeEach(() => {
-    // Mock window.confirm
-    confirmSpy = vi.spyOn(window, 'confirm');
-  });
-
-  afterEach(() => {
-    // Restore original window.confirm
-    confirmSpy.mockRestore();
-  });
+  const mocks = useWindowConfirmMock(beforeEach, afterEach, false);
 
   describe('Confirmation Dialog', () => {
     it('should show confirmation dialog with correct message when reset button clicked', async () => {
       const user = userEvent.setup();
-      confirmSpy.mockReturnValue(false); // Prevent actual reset
+      mocks.confirm.mockReturnValue(false); // Prevent actual reset
 
       render(<App />);
 
@@ -43,13 +34,13 @@ describe('App.js - clearYMLFile()', () => {
       await user.click(resetButton);
 
       // Verify window.confirm was called with exact message
-      expect(confirmSpy).toHaveBeenCalledTimes(1);
-      expect(confirmSpy).toHaveBeenCalledWith('Are you sure you want to reset?');
+      expect(mocks.confirm).toHaveBeenCalledTimes(1);
+      expect(mocks.confirm).toHaveBeenCalledWith('Are you sure you want to reset?');
     });
 
     it('should NOT reset form data if user cancels confirmation dialog', async () => {
       const user = userEvent.setup();
-      confirmSpy.mockReturnValue(false); // User clicks Cancel
+      mocks.confirm.mockReturnValue(false); // User clicks Cancel
 
       render(<App />);
 
@@ -63,7 +54,7 @@ describe('App.js - clearYMLFile()', () => {
       await user.click(resetButton);
 
       // Verify confirm was called
-      expect(confirmSpy).toHaveBeenCalled();
+      expect(mocks.confirm).toHaveBeenCalled();
 
       // Verify form was NOT reset (value should remain unchanged)
       expect(sessionIdInput.value).toBe('test_session_001');
@@ -73,7 +64,7 @@ describe('App.js - clearYMLFile()', () => {
   describe('Form Reset Behavior', () => {
     it('should reset form to defaultYMLValues by clearing arrays', async () => {
       const user = userEvent.setup();
-      confirmSpy.mockReturnValue(true);
+      mocks.confirm.mockReturnValue(true);
 
       render(<App />);
 
@@ -98,7 +89,7 @@ describe('App.js - clearYMLFile()', () => {
 
     it('should clear all fields when reset confirmed', async () => {
       const user = userEvent.setup();
-      confirmSpy.mockReturnValue(true);
+      mocks.confirm.mockReturnValue(true);
 
       render(<App />);
 
@@ -121,7 +112,7 @@ describe('App.js - clearYMLFile()', () => {
   describe('Edge Cases', () => {
     it('should handle reset when form is already at default values', async () => {
       const user = userEvent.setup();
-      confirmSpy.mockReturnValue(true);
+      mocks.confirm.mockReturnValue(true);
 
       render(<App />);
 
@@ -134,7 +125,7 @@ describe('App.js - clearYMLFile()', () => {
       await user.click(resetButton);
 
       // Verify confirm was called
-      expect(confirmSpy).toHaveBeenCalled();
+      expect(mocks.confirm).toHaveBeenCalled();
 
       // Form should still be at default values (no error thrown)
       await waitFor(() => {
@@ -144,7 +135,7 @@ describe('App.js - clearYMLFile()', () => {
 
     it('should use structuredClone to avoid mutating defaultYMLValues', async () => {
       const user = userEvent.setup();
-      confirmSpy.mockReturnValue(true);
+      mocks.confirm.mockReturnValue(true);
 
       render(<App />);
 
@@ -159,20 +150,20 @@ describe('App.js - clearYMLFile()', () => {
       });
 
       // Second reset - should still work (proves defaultYMLValues wasn't mutated)
-      confirmSpy.mockClear();
-      confirmSpy.mockReturnValue(true);
+      mocks.confirm.mockClear();
+      mocks.confirm.mockReturnValue(true);
       await user.click(resetButton);
 
       await waitFor(() => {
         const labInputs = screen.getAllByDisplayValue(defaultYMLValues.lab);
         expect(labInputs.length).toBeGreaterThan(0);
       });
-      expect(confirmSpy).toHaveBeenCalledTimes(1);
+      expect(mocks.confirm).toHaveBeenCalledTimes(1);
     });
 
     it('should prevent default form submission behavior', async () => {
       const user = userEvent.setup();
-      confirmSpy.mockReturnValue(true);
+      mocks.confirm.mockReturnValue(true);
 
       render(<App />);
 
@@ -182,7 +173,7 @@ describe('App.js - clearYMLFile()', () => {
       await user.click(resetButton);
 
       // Test continuing to execute proves preventDefault was called
-      expect(confirmSpy).toHaveBeenCalled();
+      expect(mocks.confirm).toHaveBeenCalled();
     });
   });
 });

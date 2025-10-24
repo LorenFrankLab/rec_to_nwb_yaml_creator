@@ -23,9 +23,10 @@
  * - Prevents errors when trying to remove from empty array
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useState } from 'react';
+import { useWindowConfirmMock } from '../../helpers/test-hooks';
 
 /**
  * Mock implementation of removeArrayItem function
@@ -71,57 +72,47 @@ function useRemoveArrayItemHook() {
 }
 
 describe('removeArrayItem', () => {
-  let confirmSpy;
-
-  beforeEach(() => {
-    // Mock window.confirm
-    confirmSpy = vi.spyOn(window, 'confirm');
-  });
-
-  afterEach(() => {
-    // Restore original window.confirm
-    confirmSpy.mockRestore();
-  });
+  const mocks = useWindowConfirmMock(beforeEach, afterEach, true);
 
   describe('Confirmation Dialog', () => {
     it('should show confirmation dialog with correct message', () => {
       const { result } = renderHook(() => useRemoveArrayItemHook());
-      confirmSpy.mockReturnValue(false); // User clicks cancel
+      mocks.confirm.mockReturnValue(false); // User clicks cancel
 
       act(() => {
         result.current.removeArrayItem(1, 'cameras');
       });
 
-      expect(confirmSpy).toHaveBeenCalledWith('Remove index 1 from cameras?');
+      expect(mocks.confirm).toHaveBeenCalledWith('Remove index 1 from cameras?');
     });
 
     it('should show correct message for different array types', () => {
       const { result } = renderHook(() => useRemoveArrayItemHook());
-      confirmSpy.mockReturnValue(false);
+      mocks.confirm.mockReturnValue(false);
 
       act(() => {
         result.current.removeArrayItem(0, 'tasks');
       });
 
-      expect(confirmSpy).toHaveBeenCalledWith('Remove index 0 from tasks?');
+      expect(mocks.confirm).toHaveBeenCalledWith('Remove index 0 from tasks?');
     });
 
     it('should show correct index in message', () => {
       const { result } = renderHook(() => useRemoveArrayItemHook());
-      confirmSpy.mockReturnValue(false);
+      mocks.confirm.mockReturnValue(false);
 
       act(() => {
         result.current.removeArrayItem(2, 'cameras');
       });
 
-      expect(confirmSpy).toHaveBeenCalledWith('Remove index 2 from cameras?');
+      expect(mocks.confirm).toHaveBeenCalledWith('Remove index 2 from cameras?');
     });
   });
 
   describe('User Confirms Removal', () => {
     it('should remove item when user confirms', () => {
       const { result } = renderHook(() => useRemoveArrayItemHook());
-      confirmSpy.mockReturnValue(true); // User clicks OK
+      mocks.confirm.mockReturnValue(true); // User clicks OK
 
       const initialLength = result.current.formData.cameras.length;
       expect(initialLength).toBe(3);
@@ -137,7 +128,7 @@ describe('removeArrayItem', () => {
 
     it('should remove first item in array', () => {
       const { result } = renderHook(() => useRemoveArrayItemHook());
-      confirmSpy.mockReturnValue(true);
+      mocks.confirm.mockReturnValue(true);
 
       act(() => {
         result.current.removeArrayItem(0, 'cameras');
@@ -150,7 +141,7 @@ describe('removeArrayItem', () => {
 
     it('should remove last item in array', () => {
       const { result } = renderHook(() => useRemoveArrayItemHook());
-      confirmSpy.mockReturnValue(true);
+      mocks.confirm.mockReturnValue(true);
 
       act(() => {
         result.current.removeArrayItem(2, 'cameras');
@@ -163,7 +154,7 @@ describe('removeArrayItem', () => {
 
     it('should remove middle item in array', () => {
       const { result } = renderHook(() => useRemoveArrayItemHook());
-      confirmSpy.mockReturnValue(true);
+      mocks.confirm.mockReturnValue(true);
 
       act(() => {
         result.current.removeArrayItem(1, 'cameras');
@@ -176,7 +167,7 @@ describe('removeArrayItem', () => {
 
     it('should remove from single-item array', () => {
       const { result } = renderHook(() => useRemoveArrayItemHook());
-      confirmSpy.mockReturnValue(true);
+      mocks.confirm.mockReturnValue(true);
 
       // First reduce to single item
       act(() => {
@@ -200,7 +191,7 @@ describe('removeArrayItem', () => {
   describe('User Cancels Removal', () => {
     it('should not remove item when user cancels', () => {
       const { result } = renderHook(() => useRemoveArrayItemHook());
-      confirmSpy.mockReturnValue(false); // User clicks cancel
+      mocks.confirm.mockReturnValue(false); // User clicks cancel
 
       const originalData = structuredClone(result.current.formData.cameras);
 
@@ -215,7 +206,7 @@ describe('removeArrayItem', () => {
 
     it('should not update state when cancelled', () => {
       const { result } = renderHook(() => useRemoveArrayItemHook());
-      confirmSpy.mockReturnValue(false);
+      mocks.confirm.mockReturnValue(false);
 
       const beforeState = result.current.formData;
 
@@ -231,7 +222,7 @@ describe('removeArrayItem', () => {
   describe('Array Splice Usage', () => {
     it('should use splice to remove item at correct index', () => {
       const { result } = renderHook(() => useRemoveArrayItemHook());
-      confirmSpy.mockReturnValue(true);
+      mocks.confirm.mockReturnValue(true);
 
       // Verify splice behavior: removes 1 item at index 1
       expect(result.current.formData.cameras[1].manufacturer).toBe('Camera 1');
@@ -246,7 +237,7 @@ describe('removeArrayItem', () => {
 
     it('should preserve array order after removal', () => {
       const { result } = renderHook(() => useRemoveArrayItemHook());
-      confirmSpy.mockReturnValue(true);
+      mocks.confirm.mockReturnValue(true);
 
       act(() => {
         result.current.removeArrayItem(0, 'tasks');
@@ -261,7 +252,7 @@ describe('removeArrayItem', () => {
   describe('Guard Clause: Empty Array', () => {
     it('should return null when array is empty', () => {
       const { result } = renderHook(() => useRemoveArrayItemHook());
-      confirmSpy.mockReturnValue(true);
+      mocks.confirm.mockReturnValue(true);
 
       // behavioral_events is empty in initial state
       const beforeState = result.current.formData;
@@ -280,7 +271,7 @@ describe('removeArrayItem', () => {
 
     it('should handle removing from non-existent array', () => {
       const { result } = renderHook(() => useRemoveArrayItemHook());
-      confirmSpy.mockReturnValue(true);
+      mocks.confirm.mockReturnValue(true);
 
       // Manually set a key to undefined
       result.current.formData.nonExistentArray = undefined;
@@ -297,7 +288,7 @@ describe('removeArrayItem', () => {
 
     it('should not throw error when removing from empty array', () => {
       const { result } = renderHook(() => useRemoveArrayItemHook());
-      confirmSpy.mockReturnValue(true);
+      mocks.confirm.mockReturnValue(true);
 
       // Should not throw error
       expect(() => {
@@ -311,7 +302,7 @@ describe('removeArrayItem', () => {
   describe('State Management', () => {
     it('should use structuredClone for immutability', () => {
       const { result } = renderHook(() => useRemoveArrayItemHook());
-      confirmSpy.mockReturnValue(true);
+      mocks.confirm.mockReturnValue(true);
 
       const originalData = result.current.formData;
       const originalCameras = result.current.formData.cameras;
@@ -327,7 +318,7 @@ describe('removeArrayItem', () => {
 
     it('should update formData state after removal', () => {
       const { result } = renderHook(() => useRemoveArrayItemHook());
-      confirmSpy.mockReturnValue(true);
+      mocks.confirm.mockReturnValue(true);
 
       expect(result.current.formData.cameras).toHaveLength(3);
 
@@ -341,7 +332,7 @@ describe('removeArrayItem', () => {
 
     it('should clone array twice (form and items)', () => {
       const { result } = renderHook(() => useRemoveArrayItemHook());
-      confirmSpy.mockReturnValue(true);
+      mocks.confirm.mockReturnValue(true);
 
       // Implementation does:
       // const form = structuredClone(formData);
@@ -362,7 +353,7 @@ describe('removeArrayItem', () => {
   describe('Integration with Form State', () => {
     it('should remove from correct array key', () => {
       const { result } = renderHook(() => useRemoveArrayItemHook());
-      confirmSpy.mockReturnValue(true);
+      mocks.confirm.mockReturnValue(true);
 
       const camerasLength = result.current.formData.cameras.length;
       const tasksLength = result.current.formData.tasks.length;
@@ -378,7 +369,7 @@ describe('removeArrayItem', () => {
 
     it('should preserve other arrays when removing from one', () => {
       const { result } = renderHook(() => useRemoveArrayItemHook());
-      confirmSpy.mockReturnValue(true);
+      mocks.confirm.mockReturnValue(true);
 
       const originalTasks = structuredClone(result.current.formData.tasks);
       const originalElectrodeGroups = structuredClone(result.current.formData.electrode_groups);
@@ -396,7 +387,7 @@ describe('removeArrayItem', () => {
   describe('Edge Cases', () => {
     it('should handle multiple sequential removals', () => {
       const { result } = renderHook(() => useRemoveArrayItemHook());
-      confirmSpy.mockReturnValue(true);
+      mocks.confirm.mockReturnValue(true);
 
       expect(result.current.formData.cameras).toHaveLength(3);
 
@@ -418,7 +409,7 @@ describe('removeArrayItem', () => {
 
     it('should handle removing out-of-bounds index gracefully', () => {
       const { result } = renderHook(() => useRemoveArrayItemHook());
-      confirmSpy.mockReturnValue(true);
+      mocks.confirm.mockReturnValue(true);
 
       const originalLength = result.current.formData.cameras.length;
 
@@ -433,7 +424,7 @@ describe('removeArrayItem', () => {
 
     it('should handle negative indices', () => {
       const { result } = renderHook(() => useRemoveArrayItemHook());
-      confirmSpy.mockReturnValue(true);
+      mocks.confirm.mockReturnValue(true);
 
       // splice with negative index: -1 means last item
       act(() => {
@@ -451,7 +442,7 @@ describe('removeArrayItem', () => {
   describe('Different Array Types', () => {
     it('should remove from cameras array', () => {
       const { result } = renderHook(() => useRemoveArrayItemHook());
-      confirmSpy.mockReturnValue(true);
+      mocks.confirm.mockReturnValue(true);
 
       act(() => {
         result.current.removeArrayItem(0, 'cameras');
@@ -462,7 +453,7 @@ describe('removeArrayItem', () => {
 
     it('should remove from tasks array', () => {
       const { result } = renderHook(() => useRemoveArrayItemHook());
-      confirmSpy.mockReturnValue(true);
+      mocks.confirm.mockReturnValue(true);
 
       act(() => {
         result.current.removeArrayItem(1, 'tasks');
@@ -475,7 +466,7 @@ describe('removeArrayItem', () => {
 
     it('should remove from electrode_groups array', () => {
       const { result } = renderHook(() => useRemoveArrayItemHook());
-      confirmSpy.mockReturnValue(true);
+      mocks.confirm.mockReturnValue(true);
 
       act(() => {
         result.current.removeArrayItem(0, 'electrode_groups');

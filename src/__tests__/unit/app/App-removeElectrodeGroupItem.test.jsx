@@ -14,19 +14,21 @@
  * 6. Guard clauses: returns null if items empty or item not found
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../../../App';
+import { useWindowConfirmMock } from '../../helpers/test-hooks';
 
 describe('App.js - removeElectrodeGroupItem()', () => {
+  const mocks = useWindowConfirmMock(beforeEach, afterEach, true);
   describe('Confirmation Dialog', () => {
     it('should show confirmation dialog when remove button clicked', async () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
       // Mock window.confirm
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+      // Confirm mock set up by useWindowConfirmMock hook
 
       // Add electrode group
       const addButton = container.querySelector('button[title="Add electrode_groups"]');
@@ -37,16 +39,15 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       await user.click(removeButton);
 
       // Verify confirmation was shown
-      expect(confirmSpy).toHaveBeenCalledWith('Remove index 0 from electrode_groups?');
+      expect(mocks.confirm).toHaveBeenCalledWith('Remove index 0 from electrode_groups?');
 
-      confirmSpy.mockRestore();
     });
 
     it('should include correct index and key in confirmation message', async () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+      // Confirm mock set up by useWindowConfirmMock hook
 
       // Add two electrode groups
       const addButton = container.querySelector('button[title="Add electrode_groups"]');
@@ -57,9 +58,8 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       const removeButtons = container.querySelectorAll('button.button-danger');
       await user.click(removeButtons[1]);
 
-      expect(confirmSpy).toHaveBeenCalledWith('Remove index 1 from electrode_groups?');
+      expect(mocks.confirm).toHaveBeenCalledWith('Remove index 1 from electrode_groups?');
 
-      confirmSpy.mockRestore();
     });
   });
 
@@ -68,7 +68,7 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+      // Confirm mock set up by useWindowConfirmMock hook
 
       // Add electrode group
       const addButton = container.querySelector('button[title="Add electrode_groups"]');
@@ -88,14 +88,13 @@ describe('App.js - removeElectrodeGroupItem()', () => {
         expect(electrodeGroupSections.length).toBe(0);
       });
 
-      confirmSpy.mockRestore();
     });
 
     it('should remove first electrode group correctly', async () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+      // Confirm mock set up by useWindowConfirmMock hook
 
       // Add three electrode groups
       const addButton = container.querySelector('button[title="Add electrode_groups"]');
@@ -112,14 +111,13 @@ describe('App.js - removeElectrodeGroupItem()', () => {
         expect(electrodeGroupSections.length).toBe(2);
       });
 
-      confirmSpy.mockRestore();
     });
 
     it('should remove middle electrode group correctly', async () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+      // Confirm mock set up by useWindowConfirmMock hook
 
       // Add three electrode groups
       const addButton = container.querySelector('button[title="Add electrode_groups"]');
@@ -136,14 +134,13 @@ describe('App.js - removeElectrodeGroupItem()', () => {
         expect(electrodeGroupSections.length).toBe(2);
       });
 
-      confirmSpy.mockRestore();
     });
 
     it('should remove last electrode group correctly', async () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+      // Confirm mock set up by useWindowConfirmMock hook
 
       // Add three electrode groups
       const addButton = container.querySelector('button[title="Add electrode_groups"]');
@@ -160,7 +157,6 @@ describe('App.js - removeElectrodeGroupItem()', () => {
         expect(electrodeGroupSections.length).toBe(2);
       });
 
-      confirmSpy.mockRestore();
     });
   });
 
@@ -169,7 +165,7 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+      mocks.confirm.mockReturnValue(false);
 
       // Add electrode group
       const addButton = container.querySelector('button[title="Add electrode_groups"]');
@@ -183,14 +179,13 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       const electrodeGroupSections = container.querySelectorAll('.array-item__controls');
       expect(electrodeGroupSections.length).toBe(1);
 
-      confirmSpy.mockRestore();
     });
 
     it('should maintain form state when removal cancelled', async () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+      mocks.confirm.mockReturnValue(false);
 
       // Add electrode group and set device type
       const addButton = container.querySelector('button[title="Add electrode_groups"]');
@@ -206,7 +201,6 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       // Verify device type still set
       expect(deviceTypeSelect.value).toBe('tetrode_12.5');
 
-      confirmSpy.mockRestore();
     });
   });
 
@@ -215,7 +209,7 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+      // Confirm mock set up by useWindowConfirmMock hook
 
       // Add electrode group and select device type to generate ntrodes
       const addButton = container.querySelector('button[title="Add electrode_groups"]');
@@ -240,14 +234,13 @@ describe('App.js - removeElectrodeGroupItem()', () => {
         expect(ntrodeInputs.length).toBe(0);
       });
 
-      confirmSpy.mockRestore();
     });
 
     it('should only remove ntrodes for removed electrode group', async () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+      // Confirm mock set up by useWindowConfirmMock hook
 
       // Add two electrode groups with device types
       const addButton = container.querySelector('button[title="Add electrode_groups"]');
@@ -273,14 +266,13 @@ describe('App.js - removeElectrodeGroupItem()', () => {
         expect(ntrodeInputs.length).toBe(2);
       });
 
-      confirmSpy.mockRestore();
     });
 
     it('should remove all ntrodes for multi-shank device', async () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+      // Confirm mock set up by useWindowConfirmMock hook
 
       // Add electrode group with 4-shank device (4 ntrodes)
       const addButton = container.querySelector('button[title="Add electrode_groups"]');
@@ -304,7 +296,6 @@ describe('App.js - removeElectrodeGroupItem()', () => {
         expect(ntrodeInputs.length).toBe(0);
       });
 
-      confirmSpy.mockRestore();
     });
   });
 
@@ -313,7 +304,7 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+      // Confirm mock set up by useWindowConfirmMock hook
 
       // Add electrode group
       const addButton = container.querySelector('button[title="Add electrode_groups"]');
@@ -333,7 +324,6 @@ describe('App.js - removeElectrodeGroupItem()', () => {
         expect(electrodeGroupSections.length).toBe(0);
       });
 
-      confirmSpy.mockRestore();
     });
 
     it('should maintain immutability using structuredClone', async () => {
@@ -342,7 +332,7 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+      // Confirm mock set up by useWindowConfirmMock hook
 
       const addButton = container.querySelector('button[title="Add electrode_groups"]');
       await user.click(addButton);
@@ -363,7 +353,6 @@ describe('App.js - removeElectrodeGroupItem()', () => {
         expect(electrodeGroupSections.length).not.toBe(initialCount);
       });
 
-      confirmSpy.mockRestore();
     });
   });
 
@@ -389,7 +378,7 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+      // Confirm mock set up by useWindowConfirmMock hook
 
       // Add three electrode groups with different device types
       const addButton = container.querySelector('button[title="Add electrode_groups"]');
@@ -415,7 +404,6 @@ describe('App.js - removeElectrodeGroupItem()', () => {
         expect(remainingSelects[1].value).toBe('32c-2s8mm6cm-20um-40um-dl');
       });
 
-      confirmSpy.mockRestore();
     });
   });
 });

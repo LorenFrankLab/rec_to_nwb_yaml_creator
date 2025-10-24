@@ -2,11 +2,11 @@
  * @vitest-environment jsdom
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../../../App';
-import { createTestYaml } from '../../helpers/test-utils';
+import { useWindowAlertMock } from '../../helpers/test-hooks';
 
 /**
  * Tests for generateYMLFile() function (App.js lines 652-678)
@@ -26,17 +26,7 @@ import { createTestYaml } from '../../helpers/test-utils';
  */
 
 describe('App - generateYMLFile()', () => {
-  let user;
-
-  beforeEach(() => {
-    user = userEvent.setup();
-    // Mock window.alert for error messages
-    vi.spyOn(window, 'alert').mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+  useWindowAlertMock(beforeEach, afterEach);
 
   /**
    * Test Group 1: Event Handler Behavior
@@ -48,8 +38,6 @@ describe('App - generateYMLFile()', () => {
       // generateYMLFile is called with event object (line 652)
       // First action: e.preventDefault() (line 653)
       // This prevents browser from reloading page on form submit
-
-      const mockEvent = { preventDefault: vi.fn() };
 
       // Function signature would be: generateYMLFile(mockEvent)
       // We document that preventDefault is called first

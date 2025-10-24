@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../../../App';
+import { useWindowAlertMock } from '../../helpers/test-hooks';
 
 /**
  * Tests for showErrorMessage function
@@ -25,16 +26,10 @@ import App from '../../../App';
 
 describe('App.js > showErrorMessage()', () => {
   let user;
-  let alertSpy;
+  const mocks = useWindowAlertMock(beforeEach, afterEach);
 
   beforeEach(() => {
     user = userEvent.setup();
-    // Mock window.alert to capture calls
-    alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    alertSpy.mockRestore();
   });
 
   describe('Error Message Display via window.alert', () => {

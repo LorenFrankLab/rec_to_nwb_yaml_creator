@@ -2,11 +2,12 @@
  * @vitest-environment jsdom
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../../../App';
 import { createTestYaml } from '../../helpers/test-utils';
+import { useWindowAlertMock } from '../../helpers/test-hooks';
 
 /**
  * Tests for importFile() function (App.js lines 80-154)
@@ -30,15 +31,10 @@ import { createTestYaml } from '../../helpers/test-utils';
 
 describe('App - importFile()', () => {
   let user;
+  const mocks = useWindowAlertMock(beforeEach, afterEach);
 
   beforeEach(() => {
     user = userEvent.setup();
-    // Mock window.alert for error messages
-    vi.spyOn(window, 'alert').mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
   });
 
   /**
