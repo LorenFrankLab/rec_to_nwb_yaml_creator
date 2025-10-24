@@ -452,7 +452,107 @@
 - Multi-shank support: independent state per shank
 - Used in App.js for electrode_groups section
 
-#### Priority 3: Integration Tests (Target: +3% coverage)
+#### Priority 3: Additional App.js Functions (Target: +12% coverage to reach 60%)
+
+**Status:** 🟡 IN PROGRESS (2025-10-24)
+
+**Current Coverage:** 48.36% → **Target:** 60% (need +11.64%)
+
+**High-Impact Uncovered Functions:**
+
+##### Electrode Group & Ntrode Management Functions
+
+**nTrodeMapSelected() Tests (lines 291-356) - ✅ COMPLETE (21 tests, REWRITTEN)**
+
+File: `src/__tests__/unit/app/App-nTrodeMapSelected.test.jsx`
+
+- [x] Test device type selection triggers ntrode generation (3 tests)
+- [x] Test electrode group ID passed correctly (implicit in integration tests)
+- [x] Test shank count calculation for device type (6 tests - 1-4 shanks + utility test)
+- [x] Test ntrode channel map structure generation (2 tests)
+- [x] Test ntrode IDs auto-increment correctly (3 tests - sequential numbering)
+- [x] Test map object structure for each ntrode (covered in channel map tests)
+- [x] Test multi-shank device generates separate ntrodes per shank (4 tests)
+- [x] Test single-shank device generates single ntrode set (1 test)
+- [x] Test replaces existing ntrode maps for electrode group (3 tests)
+- [x] Test formData updated with new ntrode maps (2 tests - state management)
+- [x] Test structuredClone immutability (1 test)
+- [x] Integration: test with all supported device types (1 test + edge cases)
+
+**Rewrite Notes:**
+- Original tests (26 tests, 21 failing) - incorrect expectations for `deviceTypeMap()`
+- Deleted and rewrote with focus on integration testing (21 tests, all passing)
+- Tests verify UI behavior, not implementation details
+- Organized into 7 describe blocks for clarity
+
+**removeElectrodeGroupItem() Tests (lines 706-765):**
+
+- [ ] Test confirmation dialog shown
+- [ ] Test removal when user confirms
+- [ ] Test cancellation when user declines
+- [ ] Test electrode group removed from array
+- [ ] Test associated ntrode maps removed
+- [ ] Test other electrode groups unaffected
+- [ ] Test formData state updated
+- [ ] Test structuredClone immutability
+- [ ] Test removing last electrode group
+- [ ] Test removing first electrode group
+- [ ] Test removing middle electrode group
+- [ ] Integration: verify ntrode cleanup complete
+
+**duplicateElectrodeGroupItem() Tests (lines 677-704):**
+
+- [ ] Test electrode group duplicated with new ID
+- [ ] Test cloned electrode group preserves fields
+- [ ] Test new ID is max existing ID + 1
+- [ ] Test associated ntrode maps duplicated
+- [ ] Test ntrode IDs incremented for duplicates
+- [ ] Test ntrode electrode_group_id updated to new ID
+- [ ] Test map objects preserved in duplicated ntrodes
+- [ ] Test formData state updated
+- [ ] Test structuredClone immutability
+- [ ] Integration: verify full electrode group + ntrode duplication
+
+**onMapInput() Tests (lines 246-273):**
+
+- [ ] Test channel mapping value updated
+- [ ] Test metadata contains correct keys (key, index, electrodeGroupId, etc.)
+- [ ] Test finds correct ntrode by index
+- [ ] Test updates map object at correct channel key
+- [ ] Test formData state updated
+- [ ] Test structuredClone immutability
+- [ ] Test handles invalid index gracefully
+- [ ] Integration: verify map changes persist
+
+##### YAML Generation & Import Functions
+
+**generateYMLFile() Tests (lines 628-675):**
+
+- [ ] Test opens all details elements before validation
+- [ ] Test runs jsonschemaValidation on formData
+- [ ] Test runs rulesValidation on formData
+- [ ] Test validation errors prevent file generation
+- [ ] Test validation errors displayed to user
+- [ ] Test valid data generates YAML file
+- [ ] Test calls convertObjectToYAMLString
+- [ ] Test calls createYAMLFile with filename
+- [ ] Test filename format correct (YYYYMMDD_subject.metadata.yml)
+- [ ] Test prevents default form submission
+- [ ] Integration: test full validation → export workflow
+
+**importFile() Tests (lines 810-989):**
+
+- [ ] Test FileReader reads uploaded file
+- [ ] Test YAML parsing with yaml.parse()
+- [ ] Test parsed data validated against schema
+- [ ] Test valid data populates formData
+- [ ] Test invalid data shows error message
+- [ ] Test partial data import (valid fields only)
+- [ ] Test malformed YAML shows error
+- [ ] Test file read error handled gracefully
+- [ ] Test formData state updated on success
+- [ ] Test form NOT corrupted on failed import
+- [ ] Integration: test import → modify → export round-trip
 
 ##### Sample Metadata Reproduction
 

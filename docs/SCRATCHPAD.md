@@ -1808,12 +1808,12 @@ const getOptions = (options, mapValue, mapValues) => {
 
 **Total Tests Now:** 1,115 tests (up from 1,018 at start of day)
 **Tests Added Today:** 97 tests
-**Coverage Estimated:** ~48-50% (need to run coverage report to confirm)
+**Coverage Actual:** **48.36%** (confirmed via coverage report)
 
 **Priority 2 Status:** ✅ COMPLETE
-- ArrayUpdateMenu: 53% → ~85% coverage (+32%)
-- SelectInputPairElement: 14% → ~90% coverage (+76%)
-- ChannelMap: 9% → ~95% coverage (+86%)
+- ArrayUpdateMenu: 53% → 100% coverage ✅
+- SelectInputPairElement: 14% → 100% coverage ✅
+- ChannelMap: 9% → 100% coverage ✅
 
 **Total Bugs Discovered Today:**
 1. SelectInputPairElement: CRITICAL - NULL check missing (line 38, crashes on number-only input)
@@ -1824,13 +1824,108 @@ const getOptions = (options, mapValue, mapValues) => {
 6. ChannelMap: Incorrect PropTypes for nTrodeItems (line 138)
 7. ChannelMap: Duplicate React keys (existing warning)
 
-**Week 6 Final Status:**
+**Week 6 Status:**
 - Priority 1 (App.js core): ✅ COMPLETE (147 tests)
-- Priority 2 (Components): ✅ COMPLETE (122 tests, 3/3 components done)
-- Priority 3 (Integration): ⏸️ PENDING (may not be needed if coverage target met)
+- Priority 2 (Components): ✅ COMPLETE (122 tests, ALL 3 components at 100%)
+- Priority 3 (Integration): ⏸️ PENDING
+
+**Coverage Gap Analysis:**
+- Current: 48.36%
+- Target: 60%
+- Gap: 11.64%
+
+**Uncovered High-Impact Areas:**
+1. App.js: 25.65% (lines 1684-2711 untested - ~1000 lines)
+2. valueList.js: 36.58% (default value generators)
+3. deviceTypes.js: 73.8% (device-specific logic)
 
 **Next Action:**
-- Run coverage report to check if 60% target reached
-- If yes: Phase 1 COMPLETE, move to Phase 2
-- If no: Determine remaining high-impact areas for testing
+- Need ~12% more coverage to reach 60% target
+- Focus on App.js remaining functions (highest impact)
+- Consider valueList.js coverage if time permits
 
+
+---
+
+## nTrodeMapSelected() Test Debugging (2025-10-24 Evening)
+
+**Issue Found:** Test file `App-nTrodeMapSelected.test.jsx` exists but had 21/26 tests failing
+
+### Root Cause #1 - CSS Selectors (FIXED)
+
+**Problem:** Tests used incorrect CSS selector with `-list` suffix
+- Tests used: `#electrode_groups-device_type-0-list`
+- Actual ID: `#electrode_groups-device_type-0` (no `-list` suffix)
+- Reason: `-list` suffix is for DataListElement, not SelectElement
+
+**Fix:** Find-replace to remove `-list` from 17 occurrences
+**Result:** 21 failures → 13 failures (8 tests fixed ✅)
+
+### Root Cause #2 - Incorrect Test Expectations (IN PROGRESS)
+
+**Problem:** Tests misunderstood what `deviceTypeMap()` returns
+
+**Incorrect Assumption:**
+- Tests expected `deviceTypeMap()` to return array of ntrode objects
+- Example: `deviceTypeMap('A1x32-6mm-50-177-H32_21mm')` expected to return 8 ntrode objects
+
+**Actual Behavior:**
+- `deviceTypeMap()` returns **channel index array for a SINGLE ntrode**
+- Example: `deviceTypeMap('tetrode_12.5')` → `[0, 1, 2, 3]` (4 channels)
+- Example: `deviceTypeMap('A1x32-6mm-50-177-H32_21mm')` → `[0...31]` (32 channels)
+- Example: `deviceTypeMap('NET-EBL-128ch-single-shank')` → `[0...127]` (128 channels)
+
+**Device Type Configuration Pattern:**
+- `deviceTypeMap(type)`: returns channel indices for map structure (e.g., `[0, 1, 2, 3]`)
+- `getShankCount(type)`: returns number of shanks (determines # of ntrodes generated)
+- Ntrode generation: happens in `nTrodeMapSelected()` function, not `deviceTypeMap()`
+- Each shank gets one or more ntrodes based on channel count
+
+**Examples:**
+- tetrode_12.5: 4 channels, 1 shank → 1 ntrode
+- A1x32-6mm-50-177-H32_21mm: 32 channels, 1 shank → 8 ntrodes (32 ÷ 4)
+- NET-EBL-128ch-single-shank: 128 channels, 1 shank → 32 ntrodes (128 ÷ 4)
+- 128c-4s6mm6cm-15um-26um-sl: 32 channels per shank, 4 shanks → 8 ntrodes/shank × 4 = 32 total
+
+**Failing Tests (13 remaining):**
+1. should call deviceTypeMap() with selected device type
+2. should create default identity map (0→0, 1→1, etc.) for single shank
+3. should create offset maps for multi-shank devices
+4. should set electrode_group_id on each generated ntrode
+5. should generate correct number of ntrodes for device type
+6. should increment ntrode_id for each ntrode
+7. should remove existing ntrode maps for electrode group before adding new ones
+8. should preserve ntrode maps for other electrode groups
+9. should generate 1 ntrodes for tetrode_12.5 (1 shanks)
+10. should generate 8 ntrodes for A1x32-6mm-50-177-H32_21mm (1 shanks)
+11. should generate 8 ntrodes for 32c-2s8mm6cm-20um-40um-dl (2 shanks)
+12. should generate 16 ntrodes for 64c-3s6mm6cm-20um-40um-sl (3 shanks)
+13. should generate 32 ntrodes for NET-EBL-128ch-single-shank (1 shanks)
+
+**Next Action:** Fix test expectations to match actual `deviceTypeMap()` behavior
+
+
+**Rewrite Complete:** ✅ SUCCESS (2025-10-24 Evening)
+
+**Decision:** Deleted and rewrote tests from scratch
+
+**New Test Structure (21 tests, all passing):**
+1. Basic Device Type Selection (3 tests) - selection UI behavior
+2. Ntrode Generation Based on Shank Count (6 tests) - 1/2/3/4 shanks + utility
+3. Ntrode ID Sequential Numbering (3 tests) - sequential 1,2,3...
+4. Replacing Existing Ntrode Maps (3 tests) - replacement and preservation
+5. Channel Map Generation (2 tests) - UI elements and bad_channels
+6. Edge Cases and Error Handling (3 tests) - rapid changes, all device types
+7. State Management (2 tests) - immutability and formData updates
+
+**Key Design Decisions:**
+- Focus on integration testing (UI verification), not unit testing utilities
+- Use `input[name="ntrode_id"]` to count ntrodes (reliable, always present)
+- Avoid `.ntrode-maps fieldset` selector (timing issues with React rendering)
+- Test actual user-facing behavior, not implementation details
+
+**Coverage Impact:** +21 tests, nTrodeMapSelected() function now fully tested
+
+**Time Spent:** ~2 hours (debugging: 30min, rewrite: 1.5hrs)
+
+---
