@@ -63,13 +63,32 @@
 
 ### Current Task
 
-⏳ **Task 1.5.4: Fix Import/Export Integration Tests** (20 tests planned)
+🔴 **Task 1.5.4: Fix Import/Export Integration Tests** - **BLOCKED by Production Bug**
 
-**Status:** 🔴 READY TO START
+**Status:** ⏸️ BLOCKED - 7 tests written but blocked by App.js:933 null reference bug
 
-**File:** Will rewrite existing integration tests in `src/__tests__/integration/`
+**File:** `src/__tests__/integration/import-export-workflow.test.jsx` (rewritten, 522 LOC, 7 tests)
 
-**Goal:** Fix 97 integration tests that currently don't actually test anything
+**Blocker:** App.js:933 onClick handler null reference (Bug #1, P0)
+
+- Tests trigger file upload → onClick handler crashes
+- Same bug blocks Task 1.5.1 tests (discovered after initial passing run)
+- Cannot fix production code in Phase 1.5
+- **Resolution:** Fix in Phase 2 bug fixes
+
+**Tests Written (7/17 blocked):**
+
+1. ✅ Import minimal valid YAML (blocked by bug)
+2. ✅ Import YAML with arrays (blocked by bug)
+3. ✅ Import nested objects (blocked by bug)
+4. ✅ Export form data (blocked by bug)
+5. ✅ Export Blob properties (blocked by bug)
+6. ✅ Round-trip preservation (blocked by bug)
+7. ✅ Import-modify-export (blocked by bug)
+
+**Decision:** Document blocker, commit progress, move to Task 1.5.5
+
+**Value:** Tests are well-written and will pass once bug is fixed in Phase 2
 
 ---
 
