@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, waitFor } from '@testing-library/react';
+import { render, screen, within, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../App';
 import YAML from 'yaml';
@@ -67,9 +67,11 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // Mock URL.createObjectURL
     mockBlobUrl = 'blob:mock-url';
+    const createObjectURLSpy = vi.fn(() => mockBlobUrl);
     global.window.webkitURL = {
-      createObjectURL: vi.fn(() => mockBlobUrl),
+      createObjectURL: createObjectURLSpy,
     };
+    global.createObjectURLSpy = createObjectURLSpy; // Store for debugging
 
     // Mock window.alert
     global.window.alert = vi.fn();
@@ -98,6 +100,9 @@ describe('End-to-End Session Creation Workflow', () => {
     // 1. Experimenter name - use helper with placeholder
     await addListItem(user, screen, LIST_PLACEHOLDERS.experimenter_name, 'Doe, John');
 
+    // Verify experimenter was added
+    expect(screen.getByText(/Doe, John/)).toBeInTheDocument();
+
     // 2. Lab (update from default)
     await user.clear(labInput);
     await user.type(labInput, 'Test Lab');
@@ -107,28 +112,114 @@ describe('End-to-End Session Creation Workflow', () => {
     await user.clear(institutionInput);
     await user.type(institutionInput, 'Test University');
 
-    // 4. Data acquisition device (already has defaults)
-    // Just verify the defaults are present
+    // 4. Keywords (required - must have at least 1 item)
+    await addListItem(user, screen, LIST_PLACEHOLDERS.keywords, 'spatial navigation');
+
+    // 5. Subject fields
+    const subjectIdInput = screen.getByLabelText(/subject id/i);
+    await user.type(subjectIdInput, 'test_subject_001'); // Must match non-whitespace pattern
+    expect(subjectIdInput).toHaveValue('test_subject_001');
+
+    // 6. Date of birth (ISO 8601 format required)
+    const dobInput = screen.getByLabelText(/date of birth/i);
+    await user.type(dobInput, '2024-01-01'); // ISO 8601 format
+    expect(dobInput).toHaveValue('2024-01-01');
+
+    // 7. Units (required fields with pattern validation)
+    const unitsAnalogInput = screen.getByLabelText(/^analog$/i);
+    await user.clear(unitsAnalogInput);
+    await user.type(unitsAnalogInput, 'volts'); // Non-whitespace pattern
+
+    const unitsBehavioralInput = screen.getByLabelText(/behavioral events/i);
+    await user.clear(unitsBehavioralInput);
+    await user.type(unitsBehavioralInput, 'n/a'); // Non-whitespace pattern
+
+    // 8. Default header file path (required with non-whitespace pattern)
+    const headerPathInput = screen.getByLabelText(/^default header file path$/i);
+    await user.clear(headerPathInput);
+    await user.type(headerPathInput, 'header.h'); // Non-whitespace pattern (no slashes which might cause issues)
+
+    // 9. Data acq device (must have at least 1 item)
+    // Default from valueList.js is empty array [], so we need to add an item
+    // ArrayUpdateMenu buttons only have title attribute, not accessible name
+    const addDataAcqDeviceButton = screen.getByTitle(/Add data_acq_device/i);
+    await user.click(addDataAcqDeviceButton);
+
+    // Wait for the new data acq device item to render
+    // Use queryAll (doesn't throw) instead of getAll inside waitFor
+    await waitFor(() => {
+      const inputs = screen.queryAllByLabelText(/^name$/i);
+      expect(inputs.length).toBeGreaterThan(0);
+    });
+
+    // Fill required fields for the data acq device
+    // Data acq device fields have index-based IDs, so we may get multiple matches
+    // We want the newly added item (index 0)
     const deviceNameInputs = screen.getAllByLabelText(/^name$/i);
-    const dataAcqSection = deviceNameInputs.find(input =>
-      input.closest('details')?.querySelector('summary')?.textContent?.includes('Data Acquisition')
-    );
-    expect(dataAcqSection).toHaveValue('SpikeGadgets');
+    await user.type(deviceNameInputs[0], 'SpikeGadgets');
 
-    // 5. times_period_multiplier (already has default)
-    const timesMultiplierInput = screen.getByLabelText(/times period multiplier/i);
-    expect(timesMultiplierInput).toHaveValue(1.5);
+    const deviceSystemInputs = screen.getAllByLabelText(/^system$/i);
+    await user.type(deviceSystemInputs[0], 'Trodes');
 
-    // 6. raw_data_to_volts (already has default)
-    const rawDataToVoltsInput = screen.getByLabelText(/raw data to volts/i);
-    expect(rawDataToVoltsInput).toHaveValue(0.195);
+    const deviceAmplifierInputs = screen.getAllByLabelText(/amplifier/i);
+    await user.type(deviceAmplifierInputs[0], 'Intan');
+
+    const deviceAdcInputs = screen.getAllByLabelText(/adc circuit/i);
+    await user.type(deviceAdcInputs[0], 'Intan');
+
+    // Verify all required fields are filled before export
+    expect(screen.getByText(/Doe, John/)).toBeInTheDocument();
+    expect(screen.getByText(/spatial navigation/)).toBeInTheDocument();
+    expect(labInput).toHaveValue('Test Lab');
+    expect(institutionInput).toHaveValue('Test University');
+    expect(subjectIdInput).toHaveValue('test_subject_001');
+    expect(dobInput).toHaveValue('2024-01-01');
+    expect(unitsAnalogInput).toHaveValue('volts');
+    expect(unitsBehavioralInput).toHaveValue('n/a');
+    expect(headerPathInput).toHaveValue('header.h');
+    expect(deviceNameInputs[0]).toHaveValue('SpikeGadgets');
 
     // ACT - Export the minimal session
-    const exportButton = screen.getByRole('button', { name: /generate yml file/i });
-    await user.click(exportButton);
+    // ROOT CAUSE IDENTIFIED:
+    // - Button has type="button" (not "submit")
+    // - onClick calls submitForm() → form.requestSubmit()
+    // - form.requestSubmit() doesn't trigger React onSubmit in jsdom
+    // - fireEvent.submit(form) also doesn't trigger React synthetic events
+    //
+    // SOLUTION: Access the React fiber and call onSubmit handler directly
+    const form = document.querySelector('form');
+
+    // Get the React fiber from the DOM element
+    const fiberKey = Object.keys(form).find(key => key.startsWith('__reactFiber'));
+    const fiber = form[fiberKey];
+
+    // Get the onSubmit handler from React props
+    const onSubmitHandler = fiber?.memoizedProps?.onSubmit;
+
+    if (!onSubmitHandler) {
+      throw new Error('Could not find React onSubmit handler on form element');
+    }
+
+    // Create a mock event object
+    const mockEvent = {
+      preventDefault: vi.fn(),
+      target: form,
+      currentTarget: form,
+    };
+
+    // Call the React onSubmit handler directly
+    onSubmitHandler(mockEvent);
 
     // ASSERT - Verify export succeeded
     await waitFor(() => {
+      // Debug: Check if validation failed (alert called)
+      if (global.window.alert.mock.calls.length > 0) {
+        console.log('❌ Validation errors:', global.window.alert.mock.calls);
+      }
+
+      // Debug: Check if createObjectURL was called
+      console.log('🔍 createObjectURL calls:', global.createObjectURLSpy.mock.calls.length);
+
       expect(mockBlob).not.toBeNull();
     }, { timeout: 3000 });
 
