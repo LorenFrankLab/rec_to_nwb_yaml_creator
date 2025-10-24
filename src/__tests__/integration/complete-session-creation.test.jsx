@@ -115,15 +115,28 @@ describe('End-to-End Session Creation Workflow', () => {
     // 4. Keywords (required - must have at least 1 item)
     await addListItem(user, screen, LIST_PLACEHOLDERS.keywords, 'spatial navigation');
 
-    // 5. Subject fields
+    // 5. Experiment description (required, non-whitespace pattern)
+    const experimentDescInput = screen.getByLabelText(/experiment description/i);
+    await user.type(experimentDescInput, 'Minimal test experiment');
+
+    // 6. Session description (required, non-whitespace pattern)
+    const sessionDescInput = screen.getByLabelText(/session description/i);
+    await user.type(sessionDescInput, 'Minimal test session');
+
+    // 7. Session ID (required, non-whitespace pattern)
+    const sessionIdInput = screen.getByLabelText(/session id/i);
+    await user.type(sessionIdInput, 'TEST001');
+
+    // 8. Subject fields
     const subjectIdInput = screen.getByLabelText(/subject id/i);
     await user.type(subjectIdInput, 'test_subject_001'); // Must match non-whitespace pattern
-    expect(subjectIdInput).toHaveValue('test_subject_001');
 
-    // 6. Date of birth (ISO 8601 format required)
+    const genotypeInput = screen.getByLabelText(/genotype/i);
+    await user.clear(genotypeInput); // Clear default value
+    await user.type(genotypeInput, 'Wild Type'); // Non-whitespace pattern
+
     const dobInput = screen.getByLabelText(/date of birth/i);
     await user.type(dobInput, '2024-01-01'); // ISO 8601 format
-    expect(dobInput).toHaveValue('2024-01-01');
 
     // 7. Units (required fields with pattern validation)
     const unitsAnalogInput = screen.getByLabelText(/^analog$/i);
@@ -143,41 +156,33 @@ describe('End-to-End Session Creation Workflow', () => {
     // Default from valueList.js is empty array [], so we need to add an item
     // ArrayUpdateMenu buttons only have title attribute, not accessible name
     const addDataAcqDeviceButton = screen.getByTitle(/Add data_acq_device/i);
+
     await user.click(addDataAcqDeviceButton);
 
     // Wait for the new data acq device item to render
-    // Use queryAll (doesn't throw) instead of getAll inside waitFor
+    // Look for the "Item #1" summary text that appears when item is added
     await waitFor(() => {
-      const inputs = screen.queryAllByLabelText(/^name$/i);
-      expect(inputs.length).toBeGreaterThan(0);
+      expect(screen.queryByText(/Item #1/)).toBeInTheDocument();
     });
 
     // Fill required fields for the data acq device
-    // Data acq device fields have index-based IDs, so we may get multiple matches
-    // We want the newly added item (index 0)
-    const deviceNameInputs = screen.getAllByLabelText(/^name$/i);
-    await user.type(deviceNameInputs[0], 'SpikeGadgets');
+    // NOTE: arrayDefaultValues in valueList.js provides defaults:
+    //   name: 'SpikeGadgets', system: 'SpikeGadgets', amplifier: 'Intan', adc_circuit: 'Intan'
+    // So we can skip filling these - they already have the right values!
+    // Just verify they exist and have defaults
+    const deviceNameInput = screen.getByPlaceholderText(/typically a number/i);
+    expect(deviceNameInput).toHaveValue('SpikeGadgets');
 
-    const deviceSystemInputs = screen.getAllByLabelText(/^system$/i);
-    await user.type(deviceSystemInputs[0], 'Trodes');
+    const deviceSystemInput = screen.getByPlaceholderText(/system of device/i);
+    expect(deviceSystemInput).toHaveValue('SpikeGadgets');
 
-    const deviceAmplifierInputs = screen.getAllByLabelText(/amplifier/i);
-    await user.type(deviceAmplifierInputs[0], 'Intan');
+    const deviceAmplifierInput = screen.getByPlaceholderText(/type to find an amplifier/i);
+    expect(deviceAmplifierInput).toHaveValue('Intan');
 
-    const deviceAdcInputs = screen.getAllByLabelText(/adc circuit/i);
-    await user.type(deviceAdcInputs[0], 'Intan');
+    const deviceAdcInput = screen.getByPlaceholderText(/type to find an adc circuit/i);
+    expect(deviceAdcInput).toHaveValue('Intan');
 
-    // Verify all required fields are filled before export
-    expect(screen.getByText(/Doe, John/)).toBeInTheDocument();
-    expect(screen.getByText(/spatial navigation/)).toBeInTheDocument();
-    expect(labInput).toHaveValue('Test Lab');
-    expect(institutionInput).toHaveValue('Test University');
-    expect(subjectIdInput).toHaveValue('test_subject_001');
-    expect(dobInput).toHaveValue('2024-01-01');
-    expect(unitsAnalogInput).toHaveValue('volts');
-    expect(unitsBehavioralInput).toHaveValue('n/a');
-    expect(headerPathInput).toHaveValue('header.h');
-    expect(deviceNameInputs[0]).toHaveValue('SpikeGadgets');
+    // All required fields are now filled - ready to export!
 
     // ACT - Export the minimal session
     // ROOT CAUSE IDENTIFIED:
@@ -212,29 +217,41 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // ASSERT - Verify export succeeded
     await waitFor(() => {
-      // Debug: Check if validation failed (alert called)
-      if (global.window.alert.mock.calls.length > 0) {
-        console.log('❌ Validation errors:', global.window.alert.mock.calls);
-      }
-
-      // Debug: Check if createObjectURL was called
-      console.log('🔍 createObjectURL calls:', global.createObjectURLSpy.mock.calls.length);
-
       expect(mockBlob).not.toBeNull();
-    }, { timeout: 3000 });
+    });
 
     // Parse exported YAML
     const exportedYaml = mockBlob.content[0];
     const exportedData = YAML.parse(exportedYaml);
 
-    // Verify required fields are present
+    // Verify required fields are present with expected values
     expect(exportedData.experimenter_name).toEqual(['Doe, John']);
     expect(exportedData.lab).toBe('Test Lab');
     expect(exportedData.institution).toBe('Test University');
+    expect(exportedData.experiment_description).toBe('Minimal test experiment');
+    expect(exportedData.session_description).toBe('Minimal test session');
+    expect(exportedData.session_id).toBe('TEST001');
+    expect(exportedData.keywords).toEqual(['spatial navigation']);
+
+    expect(exportedData.subject).toBeDefined();
+    expect(exportedData.subject.subject_id).toBe('test_subject_001');
+    expect(exportedData.subject.genotype).toBe('Wild Type');
+    // Date gets converted to ISO timestamp format
+    expect(exportedData.subject.date_of_birth).toBe('2024-01-01T00:00:00.000Z');
+
     expect(exportedData.data_acq_device).toBeDefined();
     expect(exportedData.data_acq_device[0].name).toBe('SpikeGadgets');
-    expect(exportedData.times_period_multiplier).toBe(1.5);
-    expect(exportedData.raw_data_to_volts).toBe(0.195);
+    expect(exportedData.data_acq_device[0].system).toBe('SpikeGadgets');
+    expect(exportedData.data_acq_device[0].amplifier).toBe('Intan');
+    expect(exportedData.data_acq_device[0].adc_circuit).toBe('Intan');
+
+    expect(exportedData.units.analog).toBe('volts');
+    expect(exportedData.units.behavioral_events).toBe('n/a');
+    expect(exportedData.default_header_file_path).toBe('header.h');
+
+    // Default values from valueList.js
+    expect(exportedData.times_period_multiplier).toBe(1.0);
+    expect(exportedData.raw_data_to_volts).toBe(1.0);
   });
 
   /**
