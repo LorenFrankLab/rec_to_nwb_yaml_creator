@@ -1130,3 +1130,236 @@ items.forEach((item) => {
 - 24/24 passing (100%)
 - Test execution time: ~28ms
 - Coverage added for addArrayItem function logic
+
+### convertObjectToYAMLString() Tests - COMPLETE
+
+**File Created:** `src/__tests__/unit/app/App-convertObjectToYAMLString.test.jsx`
+**Tests Added:** 8 tests, all passing
+**Coverage:** convertObjectToYAMLString function behavior
+
+**Test Breakdown:**
+1. Basic Conversions (4 tests):
+   - Convert simple object to YAML string
+   - Convert nested object to YAML string
+   - Convert object with arrays to YAML string
+   - Convert empty object to YAML string
+2. Edge Cases (2 tests):
+   - Handle null values in object
+   - Filter out undefined values (YAML.Document behavior)
+3. YAML.Document API Usage (2 tests):
+   - Use YAML.Document constructor
+   - Use toString() to get YAML string output
+
+**Key Findings:**
+- convertObjectToYAMLString is a thin wrapper around YAML.Document API (lines 444-449)
+- Creates new YAML.Document instance
+- Sets doc.contents to input object (or {} if falsy)
+- Returns doc.toString() which produces YAML string
+- Simple wrapper - delegates all YAML formatting to YAML library
+- Default safety check: `content || {}` handles undefined/null input
+
+**Implementation:**
+```javascript
+const convertObjectToYAMLString = (content) => {
+  const doc = new YAML.Document();
+  doc.contents = content || {};
+  return doc.toString();
+};
+```
+
+**Test Statistics:**
+- 8 tests created
+- 8/8 passing (100%)
+- Test execution time: ~8ms
+- Coverage added for convertObjectToYAMLString function
+
+### createYAMLFile() Tests - COMPLETE
+
+**File Created:** `src/__tests__/unit/app/App-createYAMLFile.test.jsx`
+**Tests Added:** 7 tests, all passing
+**Coverage:** createYAMLFile function behavior
+
+**Test Breakdown:**
+1. Blob Creation (2 tests):
+   - Create Blob with text/plain type
+   - Wrap content in array for Blob constructor
+2. Anchor Element Creation (3 tests):
+   - Create anchor element using createElement
+   - Set download attribute to filename
+   - Set href to blob URL from webkitURL.createObjectURL
+3. Download Trigger (2 tests):
+   - Call click() on anchor element to trigger download
+   - Filename parameter used for download attribute
+
+**Key Findings:**
+- createYAMLFile triggers browser file download (lines 451-457)
+- Uses Blob API to create file from content
+- Uses DOM createElement to create anchor element
+- Uses webkitURL.createObjectURL to create blob URL (older API, modern is URL.createObjectURL)
+- Triggers download with click()
+- No return value (void function)
+- Side effect: triggers browser file download
+- Uses `var` instead of `const` (older code style)
+- Blob URL is never revoked (minor memory leak for repeated downloads)
+
+**Implementation:**
+```javascript
+const createYAMLFile = (fileName, content) => {
+  var textFileAsBlob = new Blob([content], {type: 'text/plain'});
+  const downloadLink = document.createElement("a");
+  downloadLink.download = fileName;
+  downloadLink.href = window.webkitURL.createObjectURL(textFileAsBlob);
+  downloadLink.click();
+};
+```
+
+**Browser APIs Used:**
+- Blob constructor - Creates file blob
+- document.createElement - Creates DOM element
+- window.webkitURL.createObjectURL - Creates blob URL
+- HTMLAnchorElement.click() - Triggers download
+
+**Test Statistics:**
+- 7 tests created
+- 7/7 passing (100%)
+- Test execution time: ~4ms
+- Coverage added for createYAMLFile function
+
+**Next Steps:**
+- ✅ YAML conversion functions COMPLETE (15 tests total)
+- Continue with Priority 2: Missing Component Tests
+- Target: ArrayUpdateMenu.jsx, SelectInputPairElement.jsx, ChannelMap.jsx
+
+---
+
+## Phase 1, Week 6 - Day 2 Progress (2025-10-24)
+
+### ArrayUpdateMenu Component Tests - COMPLETE
+
+**File Created:** `src/__tests__/unit/components/ArrayUpdateMenu.test.jsx`
+**Tests Added:** 25 tests, all passing
+**Coverage:** ArrayUpdateMenu component behavior (53.33% → ~85% estimated)
+
+**Test Breakdown:**
+
+1. **Basic Rendering (5 tests):**
+   - Renders with required props
+   - Renders add button with + symbol (&#65291; Unicode FULLWIDTH PLUS SIGN)
+   - Button has title attribute based on itemsKey
+   - Button type="button" prevents form submission
+   - Renders in array-update-area container
+
+2. **Simple Mode - allowMultiple=false (3 tests):**
+   - Renders only button (no input)
+   - Uses allowMultiple=false by default (defaultProps)
+   - Clicking button calls add() with event object (passes event as count param)
+
+3. **Multiple Mode - allowMultiple=true (5 tests):**
+   - Renders number input with type="number"
+   - Input has defaultValue={1}
+   - Input has step="1" attribute
+   - Input has min="1" attribute
+   - Renders in multi-area container
+
+4. **Add Button Interaction in Multiple Mode (5 tests):**
+   - Calls addArrayItem with default count (1)
+   - Calls addArrayItem with custom count from input
+   - Resets input to 1 after successful add
+   - Passes itemsKey parameter correctly
+   - Parses input as integer with parseInt(value, 10)
+
+5. **Count Validation (4 tests):**
+   - Shows validation error when count < 1
+   - Does NOT call addArrayItem when count < 1
+   - Accepts count = 1 (minimum valid)
+   - Accepts large counts (e.g., 100)
+
+6. **Props and PropTypes (3 tests):**
+   - Accepts itemsKey prop (string)
+   - Accepts items prop (array)
+   - Accepts addArrayItem prop (function)
+
+**Key Findings:**
+
+**Component Structure:**
+- Line 12-14: Destructures props (itemsKey, items, addArrayItem, allowMultiple)
+- Line 16: Uses useRef for itemCountRef (number input)
+- Line 18-32: add(count) function handles validation and calling addArrayItem
+- Line 38-62: Conditional rendering based on allowMultiple prop
+
+**add() Function Logic:**
+1. Validates count >= 1 (line 19-25)
+2. If invalid, calls showCustomValidityError and early returns
+3. If valid, calls addArrayItem(itemsKey, count) (line 27)
+4. Resets input value to 1 (line 29-31)
+
+**Two Modes:**
+- **Simple mode (allowMultiple=false):** Button with onClick={add}
+  - No input field
+  - onClick={add} means event object is passed as count parameter
+  - addArrayItem receives (itemsKey, clickEvent)
+- **Multiple mode (allowMultiple=true):** Input + Button
+  - Number input with ref
+  - Button onClick={() => add(parseInt(itemCountRef.current.value, 10))}
+  - addArrayItem receives (itemsKey, parsedCount)
+
+**Bugs Found:**
+
+1. **PropTypes Typo (Line 65):**
+   - Written: `ArrayUpdateMenu.propType`
+   - Should be: `ArrayUpdateMenu.propTypes`
+   - Impact: PropTypes validation not running (same bug as all other components)
+
+2. **Unused Prop in PropTypes (Line 67):**
+   - `removeArrayItem: PropTypes.func` declared but never used in component
+   - Component only uses addArrayItem
+   - Dead code in PropTypes
+
+3. **Dead Code - displayStatus (Line 35):**
+   ```javascript
+   const displayStatus = items?.length === 0 || !items ? 'hide' : '';
+   ```
+   - Variable calculated but never used in render
+   - Looks like incomplete feature for hiding component when no items
+   - Should either be removed or implemented
+
+**Implementation Notes:**
+
+**Validation Strategy:**
+- Uses showCustomValidityError() utility for user-facing errors
+- Early return prevents addArrayItem call when invalid
+- Error message includes itemsKey: `${itemsKey} must be 1 or higher`
+
+**Input Reset Behavior:**
+- Line 29-31: Resets input to 1 (not empty) after add
+- Uses optional chaining: `itemCountRef?.current?.value`
+- Better UX than clearing (user likely wants to add 1 again)
+
+**parseInt Usage:**
+- Line 55: `parseInt(itemCountRef.current.value, 10)`
+- Explicit radix 10 ensures decimal parsing
+- Handles decimal inputs (e.g., 3.7 → 3)
+
+**Used By:**
+- App.js throughout the form for adding array items
+- Provides consistent UI for cameras, tasks, electrode_groups, etc.
+- allowMultiple=true used for sections where users commonly add multiple items
+
+**Test Statistics:**
+- 25 tests created
+- 25/25 passing (100%)
+- Test execution time: ~1.86s (user interaction tests are slower)
+- Coverage increase: ~32% (from 53.33% to ~85% estimated)
+
+**Testing Approach:**
+- Used @testing-library/user-event for realistic interactions
+- Mocked addArrayItem function to verify calls
+- Tested both modes independently
+- Validated count input with various values (0, -1, 1, 100)
+- Verified input reset behavior after successful add
+
+**Next Steps:**
+- ✅ ArrayUpdateMenu COMPLETE (25 tests)
+- ⏭️ SelectInputPairElement.jsx (~18 tests needed)
+- ⏭️ ChannelMap.jsx (~38 tests needed)
+- Target: Complete Priority 2 component tests to reach 60% coverage

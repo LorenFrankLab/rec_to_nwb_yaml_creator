@@ -345,9 +345,48 @@ All measured values documented in `docs/SCRATCHPAD.md`:
 - SCRATCHPAD.md - Progress notes and performance baselines
 - REFACTOR_CHANGELOG.md - This file
 
-### Expected Outcomes (After Week 6 Implementation)
-- Test coverage: 60% (current 39.19%)
-- 1073 total tests (current 846)
+### Week 6 Progress - IN PROGRESS (2025-10-24)
+
+**Status:** 🟡 ACTIVE - Priority 1 YAML functions complete, Priority 2 components started
+
+#### YAML Conversion Functions - COMPLETE (15 tests)
+
+**convertObjectToYAMLString() - 8 tests:**
+- File: `src/__tests__/unit/app/App-convertObjectToYAMLString.test.jsx`
+- Tests: Basic conversions, edge cases (null/undefined), YAML.Document API usage
+- All 8 tests passing
+
+**createYAMLFile() - 7 tests:**
+- File: `src/__tests__/unit/app/App-createYAMLFile.test.jsx`
+- Tests: Blob creation, anchor element, download triggering
+- All 7 tests passing
+
+#### Priority 2: Missing Component Tests - STARTED
+
+**ArrayUpdateMenu.jsx - COMPLETE (25 tests):**
+- File: `src/__tests__/unit/components/ArrayUpdateMenu.test.jsx`
+- Coverage: 53.33% → ~85% (estimated +32%)
+- Tests: Basic rendering (5), simple mode (3), multiple mode (5), add interaction (5), validation (4), props (3)
+- All 25 tests passing
+- **Bugs Found:**
+  - PropTypes typo: `propType` instead of `propTypes` (line 65)
+  - Unused removeArrayItem in PropTypes (line 67)
+  - Dead code: displayStatus variable never used (line 35)
+
+**Current Statistics (2025-10-24):**
+- **Total Tests:** 1,015 passing (up from 845 at start of Week 6)
+- **Tests Added This Week:** 170 tests (40 today: 8 + 7 + 25)
+- **Test Files:** 40 files
+- **Coverage:** ~42-45% (estimated, official report pending)
+
+**Remaining Week 6 Tasks:**
+- SelectInputPairElement.jsx (~18 tests)
+- ChannelMap.jsx (~38 tests)
+- Additional integration tests if time permits
+
+### Expected Outcomes (After Week 6 Completion)
+- Test coverage: 60% (current ~42-45%, target gap: ~15-18%)
+- ~1,070 total tests (current 1,015, need ~55 more)
 - All critical paths tested
 - Edge cases documented
 - No production code changes (test-only)

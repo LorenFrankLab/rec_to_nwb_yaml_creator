@@ -348,67 +348,55 @@
 
 **convertObjectToYAMLString() Tests:**
 
-- [ ] Test converting simple object
-- [ ] Test converting nested object
-- [ ] Test converting object with arrays
-- [ ] Test converting empty object
-- [ ] Test converting null values
-- [ ] Test converting undefined values (filtered out)
-- [ ] Test YAML.Document API usage
-- [ ] Test toString() output format
+- [x] Test converting simple object (8 tests created - App-convertObjectToYAMLString.test.jsx)
+- [x] Test converting nested object
+- [x] Test converting object with arrays
+- [x] Test converting empty object
+- [x] Test converting null values
+- [x] Test converting undefined values (filtered out)
+- [x] Test YAML.Document API usage
+- [x] Test toString() output format
 
 **createYAMLFile() Tests:**
 
-- [ ] Test Blob creation with text/plain type
-- [ ] Test anchor element creation
-- [ ] Test download attribute set
-- [ ] Test href set to blob URL
-- [ ] Test click() triggers download
-- [ ] Test webkitURL.createObjectURL called
-- [ ] Test filename parameter used
+- [x] Test Blob creation with text/plain type (7 tests created - App-createYAMLFile.test.jsx)
+- [x] Test anchor element creation
+- [x] Test download attribute set
+- [x] Test href set to blob URL
+- [x] Test click() triggers download
+- [x] Test webkitURL.createObjectURL called
+- [x] Test filename parameter used
 
 #### Priority 2: Missing Component Tests (Target: +3% coverage)
 
-##### ArrayUpdateMenu.jsx (53.33% coverage)
+##### ArrayUpdateMenu.jsx - ✅ COMPLETE (53.33% → ~85% coverage)
 
-**Basic Functionality:**
+**25 tests created** - `src/__tests__/unit/components/ArrayUpdateMenu.test.jsx`
 
-- [ ] Test component renders with title prop
-- [ ] Test dropdown renders with array types
-- [ ] Test count input renders with default value 1
-- [ ] Test add button renders with text
-- [ ] Test component accepts updateFormArray prop
+- [x] Test component renders with required props (5 tests - Basic Rendering)
+- [x] Test add button renders with + symbol (&#65291;)
+- [x] Test button with title attribute
+- [x] Test button type="button" prevents form submission
+- [x] Test renders in array-update-area container
+- [x] Test simple mode (allowMultiple=false) - 3 tests
+- [x] Test multiple mode (allowMultiple=true) - 5 tests
+- [x] Test add button interaction with count input - 5 tests
+- [x] Test count validation (< 1 rejected, >= 1 accepted) - 4 tests
+- [x] Test props and PropTypes - 3 tests
 
-**Add Button Interaction:**
+**Bugs Found:**
 
-- [ ] Test clicking add button with default count (1)
-- [ ] Test clicking add button with count > 1
-- [ ] Test clicking add button calls updateFormArray
-- [ ] Test add button passes correct array key
-- [ ] Test add button passes count parameter
+1. Line 65: PropTypes typo - `propType` instead of `propTypes`
+2. Line 67: removeArrayItem in PropTypes but not used
+3. Line 35: displayStatus calculated but never used (dead code)
 
-**Count Input Validation:**
+**Key Implementation Details:**
 
-- [ ] Test count input accepts numbers
-- [ ] Test count input minimum value 1
-- [ ] Test count input maximum value (reasonable limit)
-- [ ] Test count input with invalid input
-- [ ] Test count input onChange handler
-
-**Dropdown Selection:**
-
-- [ ] Test dropdown shows all array types
-- [ ] Test selecting different array type
-- [ ] Test selected value persists
-- [ ] Test dropdown change updates state
-- [ ] Test adding items for different array types
-
-**Integration:**
-
-- [ ] Test ArrayUpdateMenu with cameras array
-- [ ] Test ArrayUpdateMenu with tasks array
-- [ ] Test ArrayUpdateMenu with behavioral_events array
-- [ ] Test ArrayUpdateMenu with electrode_groups array
+- Two modes: Simple (just button) vs Multiple (input + button)
+- Uses useRef for input reference
+- Validates count >= 1 with showCustomValidityError
+- Resets input to 1 after successful add
+- Simple mode onClick={add} passes event object (not undefined)
 
 ##### SelectInputPairElement.jsx (14.28% coverage)
 
