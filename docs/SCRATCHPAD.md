@@ -513,9 +513,9 @@ return window.location.hostname === 'lorenfranklab.github.io';
 ### Current Status
 
 **Branch:** `modern`
-**Commits ahead of origin:** 4 unpushed commits (latest: 17bf9c4)
-**Test Coverage:** ~28.35% overall (46.87% for src/element/ components)
-**Phase Status:** 🟡 IN PROGRESS - Week 4
+**Commits ahead of origin:** 6 unpushed commits (latest: ba22d56)
+**Test Coverage:** ~30% overall (estimated, need to run full coverage)
+**Phase Status:** 🟡 IN PROGRESS - Week 4 (nearing completion)
 
 ### Completed So Far
 
@@ -538,8 +538,14 @@ return window.location.hostname === 'lorenfranklab.github.io';
 - ✅ ListElement component (52 tests) - discovered PropTypes typo, defaultProps mismatch, missing key prop, incorrect PropTypes syntax
 - ✅ ArrayItemControl component (31 tests) - discovered PropTypes typo, misleading JSDoc, empty import
 
-**Total Tests Now:** 443 tests (183 from Week 3 + 260 from Week 4)
+**Week 4 - Utility & Dependency Tests:**
+- ✅ Utility functions (86 tests) - utils.test.js - discovered isProduction() security bug
+- ✅ Dynamic dependencies (33 tests) - App-dynamic-dependencies.test.jsx - camera IDs, task epochs, DIO events
+
+**Total Tests Now:** 562 tests (183 Week 3 + 260 Week 4 components + 86 utils + 33 dependencies)
 **Form Element Components:** 7/7 COMPLETE ✅
+**Utility Functions:** COMPLETE ✅
+**Dynamic Dependencies:** COMPLETE ✅
 
 ### Coverage Progress
 
