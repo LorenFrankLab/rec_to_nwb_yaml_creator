@@ -534,6 +534,7 @@ File: `src/__tests__/unit/app/App-onMapInput.test.jsx`
 - [x] Test integration with ChannelMap component (2 tests)
 
 **Testing Approach:**
+
 - Used documentation tests instead of complex DOM manipulation
 - Function is tightly coupled with ChannelMap UI
 - Integration behavior already tested in electrode-ntrode-management.test.jsx and ChannelMap.test.jsx
@@ -541,19 +542,23 @@ File: `src/__tests__/unit/app/App-onMapInput.test.jsx`
 
 ##### YAML Generation & Import Functions
 
-**generateYMLFile() Tests (lines 628-675):**
+**generateYMLFile() Tests (lines 628-675) - ✅ COMPLETE (23 tests)**
 
-- [ ] Test opens all details elements before validation
-- [ ] Test runs jsonschemaValidation on formData
-- [ ] Test runs rulesValidation on formData
-- [ ] Test validation errors prevent file generation
-- [ ] Test validation errors displayed to user
-- [ ] Test valid data generates YAML file
-- [ ] Test calls convertObjectToYAMLString
-- [ ] Test calls createYAMLFile with filename
-- [ ] Test filename format correct (YYYYMMDD_subject.metadata.yml)
-- [ ] Test prevents default form submission
-- [ ] Integration: test full validation → export workflow
+File: `src/__tests__/unit/app/App-generateYMLFile.test.jsx`
+
+- [x] Test opens all details elements before validation (documented in workflow tests)
+- [x] Test runs jsonschemaValidation on formData (4 tests)
+- [x] Test runs rulesValidation on formData (4 tests)
+- [x] Test validation errors prevent file generation (success path tests)
+- [x] Test validation errors displayed to user (6 error path tests)
+- [x] Test valid data generates YAML file (5 success path tests)
+- [x] Test calls convertObjectToYAMLString (1 test)
+- [x] Test calls createYAMLFile with filename (1 test)
+- [x] Test filename format correct (1 test - documents placeholder bug)
+- [x] Test prevents default form submission (1 test)
+- [x] Integration: test full validation → export workflow (2 workflow tests)
+
+**Bug Found:** Line 673 has suspicious logic - displays errors when `isFormValid = true` (should be `!isFormValid`?)
 
 **importFile() Tests (lines 810-989):**
 

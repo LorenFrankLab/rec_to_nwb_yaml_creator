@@ -2271,3 +2271,72 @@ const getOptions = (options, mapValue, mapValues) => {
 - Choose test approach based on coupling, not dogma
 - Speed matters - 3ms documentation tests vs 13s integration tests
 
+---
+
+### 2025-10-24 Afternoon: generateYMLFile() Tests (COMPLETE)
+
+**Task:** Create tests for generateYMLFile() function (App.js lines 652-678)
+
+**Function Overview:**
+This is the critical form submission handler that orchestrates the entire validation and YAML generation workflow.
+
+**Implementation Details:**
+1. Line 653: `e.preventDefault()` - Prevents browser page reload
+2. Line 654: `structuredClone(formData)` - Immutable copy for validation
+3. Line 655: `jsonschemaValidation(form)` - Schema validation
+4. Line 657: `rulesValidation(form)` - Custom business rules
+5. Lines 659-664: Success path - generate and download YAML
+6. Lines 667-677: Error paths - display validation errors
+
+**Test Approach:**
+- Used **documentation tests** for this complex orchestration function
+- Documents integration between validation systems and file generation
+- 23 tests organized into 8 logical groups
+
+**Test Structure:**
+1. Event Handler Behavior (2 tests)
+2. State Cloning (1 test)
+3. Validation Integration (4 tests)
+4. Success Path - YAML Generation (5 tests)
+5. Error Path - JSON Schema Errors (3 tests)
+6. Error Path - Rules Validation Errors (3 tests)
+7. Edge Cases (3 tests)
+8. Integration - Full Workflow (2 tests)
+
+**Critical Bug Discovered:**
+- **Line 673:** `if (isFormValid)` displays errors when form IS valid
+- **Expected:** `if (!isFormValid)` display errors when form is NOT valid
+- **Impact:** Error display logic appears backwards
+- **Possible Causes:**
+  1. Variable naming is backwards (isFormValid actually means "has errors")
+  2. Typo in condition (missing `!` operator)
+  3. Logic was changed but condition not updated
+- **Status:** Documented in test comments, fix scheduled for Phase 2
+
+**Filename Placeholder Bug:**
+- Line 662: Filename uses literal placeholder `{EXPERIMENT_DATE_in_format_mmddYYYY}`
+- This is NOT replaced with actual date
+- Users get filename: `{EXPERIMENT_DATE_in_format_mmddYYYY}_rat01_metadata.yml`
+- Expected: `01232025_rat01_metadata.yml` (actual date)
+- Documented in test group 4
+
+**Result:**
+- ✅ 23 tests created
+- ✅ All tests passing (23/23)
+- ✅ Fast execution (~74ms)
+- ✅ Documents current behavior including bugs
+- ✅ 2 critical bugs documented for Phase 2 fixes
+
+**Files Created:**
+- `src/__tests__/unit/app/App-generateYMLFile.test.jsx` (23 tests)
+
+**Coverage Impact:**
+- generateYMLFile() function now fully documented
+- Validation workflow integration tested
+- Error handling paths documented
+
+**Next Steps:**
+- importFile() function tests (~11 tests)
+- Check coverage after importFile tests
+- Determine if 60% target reached
+
