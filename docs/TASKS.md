@@ -167,7 +167,7 @@
 - [x] Test InputElement (text, number, date inputs) - 39 tests, discovered date formatting bug
 - [x] Test SelectElement (dropdown selection) - 32 tests, discovered duplicate key bug
 - [x] Test DataListElement (autocomplete) - 36 tests, same duplicate key bug, PropTypes typo
-- [ ] Test CheckboxList (multi-select)
+- [x] Test CheckboxList (multi-select) - 31 tests, discovered duplicate key bug, PropTypes typo, defaultProps mismatch
 - [ ] Test RadioList (single-select)
 - [ ] Test ListElement (dynamic string lists)
 - [ ] Test ArrayItemControl (duplicate/remove buttons)

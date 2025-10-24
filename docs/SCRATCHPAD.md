@@ -339,6 +339,39 @@ const keyOption = `${title}-${dataItem}-${dataItemIndex}`;
 
 ---
 
+### 2025-10-23 - CheckboxList Component Bugs
+
+**Bugs Found:** Three issues in CheckboxList component
+
+**1. PropTypes Typo (Same as SelectElement and DataListElement)**
+- **Line 73:** Uses `propType` instead of `propTypes`
+- **Impact:** PropTypes validation is completely disabled
+- **Severity:** Low (same pattern as other components)
+
+**2. defaultProps Type Mismatch**
+- **Line 87:** `defaultValue: '',` (empty string)
+- **Line 75:** PropTypes expects `defaultValue: PropTypes.instanceOf(Array)`
+- **Impact:** Type mismatch between PropTypes and defaults - should be `[]` not `''`
+- **Severity:** Low (component still works, but inconsistent)
+
+**3. Duplicate React Keys (Same as SelectElement and DataListElement)**
+- **Line 48:** Key generation: `` `${id}-${sanitizeTitle(dataItem)}` ``
+- **Impact:** When dataItems contains duplicates, React keys are duplicated
+- **Example:** `['Camera 1', 'Camera 2', 'Camera 1']` creates two elements with key `cameras-Camera1`
+- **Severity:** Low (unlikely in real usage)
+
+**4. Commented-Out Code**
+- **Lines 29-31:** Contains commented code for collecting all checked values
+- **Current:** Passes single value + checked status to updateFormArray
+- **Commented:** Would collect array of all checked values
+- **Impact:** None (just documentation of abandoned approach)
+
+**Test Coverage:** 31 tests in `src/__tests__/unit/components/CheckboxList.test.jsx`
+
+**Location:** `src/element/CheckboxList.jsx`
+
+---
+
 ## Phase 1 Progress Update - 2025-10-23
 
 ### Current Status
@@ -364,8 +397,9 @@ const keyOption = `${title}-${dataItem}-${dataItemIndex}`;
 - ✅ InputElement component (39 tests) - discovered date formatting bug
 - ✅ SelectElement component (32 tests) - discovered duplicate key bug
 - ✅ DataListElement component (36 tests) - same duplicate key issue, PropTypes typo
+- ✅ CheckboxList component (31 tests) - discovered duplicate key bug, PropTypes typo, defaultProps mismatch
 
-**Total Tests Now:** 290 tests (183 from Week 3 + 107 from Week 4)
+**Total Tests Now:** 321 tests (183 from Week 3 + 138 from Week 4)
 
 ### Coverage Progress
 
