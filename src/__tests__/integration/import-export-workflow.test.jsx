@@ -96,7 +96,7 @@ describe('Import/Export Workflow Integration', () => {
 
       const sexInputs = screen.getAllByLabelText(/sex/i);
       expect(sexInputs[0]).toHaveValue('M');
-    });
+    }, 15000); // 15 second timeout - imports YAML file
 
     /**
      * Test 2: Import YAML with arrays and verify array population

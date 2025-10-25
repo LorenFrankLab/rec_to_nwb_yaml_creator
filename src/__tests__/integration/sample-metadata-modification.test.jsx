@@ -114,7 +114,7 @@ describe('Sample Metadata Modification Workflow', () => {
     expect(taskNameInputs).toHaveLength(2);
     expect(taskNameInputs[0]).toHaveValue('Sleep');
     expect(taskNameInputs[1]).toHaveValue('Run');
-  });
+  }, 15000); // 15 second timeout - imports YAML file
 
   /**
    * Test 2: Modify experimenter name
@@ -147,6 +147,9 @@ describe('Sample Metadata Modification Workflow', () => {
    * Validates that:
    * - User can modify subject fields
    * - Multiple subject fields can be changed
+   *
+   * Note: This test types long strings and may take 8-10 seconds
+   * Timeout increased to 15s to prevent flakes when running with full suite
    */
   it('modifies subject information after import', async () => {
     // ARRANGE
@@ -168,7 +171,9 @@ describe('Sample Metadata Modification Workflow', () => {
     await user.type(subjectIdInput, '99999');
 
     await user.clear(descriptionInput);
-    await user.type(descriptionInput, 'Modified Rat Description');
+    // Use paste for long strings to avoid typing timeout issues
+    await user.click(descriptionInput);
+    await user.paste('Modified Rat Description');
 
     // ASSERT - Verify modifications
     expect(subjectIdInput).toHaveValue('99999');
@@ -178,7 +183,7 @@ describe('Sample Metadata Modification Workflow', () => {
     expect(speciesInputs[0]).toHaveValue('Rattus norvegicus');
     const sexInputs = screen.getAllByLabelText(/sex/i);
     expect(sexInputs[0]).toHaveValue('M');
-  });
+  }, 15000); // 15 second timeout to prevent flakes in full test suite
 
   /**
    * Test 4: Add new camera
@@ -212,7 +217,7 @@ describe('Sample Metadata Modification Workflow', () => {
     const cameraIdInputs = screen.getAllByLabelText(/^camera id$/i);
     expect(cameraIdInputs).toHaveLength(3);
     expect(cameraIdInputs[2]).toHaveValue(2); // IDs: 0, 1, 2
-  });
+  }, 15000); // 15 second timeout - imports YAML file
 
   /**
    * Test 5: Add new task
