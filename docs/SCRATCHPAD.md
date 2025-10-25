@@ -1124,3 +1124,38 @@ For detailed Phase 0 and Phase 1 progress notes, see:
 ---
 
 **Remember:** This is critical scientific infrastructure. Test quality matters more than speed.
+
+## 2025-10-24 22:40 - Integration Test Fixing Session (Continued)
+
+### Progress Update
+
+**Test Status:** 1,263/1,279 passing (+7 from start), 16 failing (-7)
+
+**Fixed (7 tests):**
+- sample-metadata-modification: 6/8 passing (tests 1-6)
+- import-export-workflow: 3/7 passing (tests 1-3)
+
+**Remaining Failures (16 tests):**
+- All are export-related tests where mockBlob stays null
+
+### Root Cause Analysis - Export Validation Failures
+
+**Investigation findings:**
+
+1. **Import tests pass** - minimal-complete.yml imports successfully
+2. **Export tests fail** - After import, clicking export button results in no Blob creation
+3. **No alert called** - window.alert mock never called, meaning validation errors aren't being displayed
+4. **Bug on line 673** - `if (isFormValid)` should be `if (!isFormValid)` - prevents error display
+
+**Hypothesis:** 
+- Validation IS failing (either jsonschemaValidation or rulesValidation returns false)
+- Bug on line 673 prevents error messages from displaying
+- Tests timeout waiting for mockBlob which never gets created
+
+**Next Steps:**
+1. Fix bug on line 673: `if (isFormValid)` → `if (!isFormValid)`
+2. Add debug logging to see which validation is failing
+3. Fix the validation issue causing export to fail
+4. Re-run export tests
+
+**Blocked:** Need to identify why minimal-complete.yml fails validation after import-export cycle.
