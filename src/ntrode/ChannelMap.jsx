@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import InputElement from '../element/InputElement';
 import CheckboxList from '../element/CheckboxList';
-import { isNumeric, sanitizeTitle } from '../utils';
+import { isNumeric } from '../utils';
 import InfoIcon from './../element/InfoIcon';
 
 

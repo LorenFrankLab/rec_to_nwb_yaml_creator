@@ -31,9 +31,6 @@ const ArrayUpdateMenu = (prop) => {
     }
   };
 
-
-  const displayStatus = items?.length === 0 || !items ? 'hide' : '';
-
   return (
     <div className="array-update-area">
       {!allowMultiple ? (
@@ -64,9 +61,9 @@ const ArrayUpdateMenu = (prop) => {
 
 ArrayUpdateMenu.propTypes = {
   addArrayItem: PropTypes.func,
-  removeArrayItem: PropTypes.func,
   items: PropTypes.instanceOf(Array),
   itemsKey: PropTypes.string,
+  allowMultiple: PropTypes.bool,
 };
 
 ArrayUpdateMenu.defaultProps = {

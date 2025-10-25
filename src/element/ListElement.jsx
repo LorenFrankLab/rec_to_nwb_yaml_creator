@@ -21,7 +21,6 @@ const ListElement = (prop) => {
     placeholder,
     defaultValue,
     metaData,
-    required,
     inputPlaceholder,
     listPlaceHolder,
     updateFormData,

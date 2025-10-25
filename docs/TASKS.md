@@ -1265,11 +1265,11 @@ was incorrect. The schema has always enforced integer types correctly.
 - [x] Use correct PropTypes methods
 - [x] **Actual Time:** 30 minutes
 
-#### Dead Code
+#### Dead Code ✅ COMPLETE
 
-- [ ] Remove ArrayUpdateMenu.displayStatus (line 35)
-- [ ] Remove unused imports/variables
-- [ ] **Estimated Time:** 1 hour
+- [x] Remove ArrayUpdateMenu.displayStatus (line 35)
+- [x] Remove unused imports/variables
+- [x] **Actual Time:** 20 minutes
 
 #### emptyFormData Missing Field
 
