@@ -18,7 +18,7 @@ Your workflow MUST be:
     Find the FIRST unchecked [ ] task in TASKS.md
 
     For EVERY feature, follow TDD:
-      a. Create the TEST file first
+      a. Create the TEST file first (read TESTING_PATTERNS.md)
       b. Run the test and verify it FAILS
       c. Only then create the implementation
       d. Run test until it PASSES
