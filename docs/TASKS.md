@@ -1175,17 +1175,20 @@ File: `src/__tests__/unit/app/App-importFile.test.jsx`
 
 ### Schema Validation Bugs (P1)
 
-#### BUG #6: Empty string validation (Schema BUG #5)
+#### BUG #7: Empty string validation (Schema BUG #5) - ✅ COMPLETE
 
-- [ ] Write test that fails for empty string in required field
-- [ ] Update schema pattern: `"pattern": "^(?!\\s*$).+"`
-- [ ] Verify test passes after fix
-- [ ] Test with all required string fields
-- [ ] Update validation baselines to expect rejection
-- [ ] Commit: `phase2(bug-6): enforce non-empty strings in schema`
-- [ ] **Estimated Time:** 2-3 hours
+- [x] Identified 2 string fields missing pattern constraints
+  - virus_injection[].hemisphere
+  - opto_software
+- [x] Wrote 6 failing tests (TDD RED phase)
+- [x] Added pattern `^(.|\\s)*\\S(.|\\s)*$` to both fields
+- [x] Verified all tests pass (TDD GREEN phase)
+- [x] Updated schema contract snapshot
+- [x] Cleaned up 9 obsolete PropTypes documentation tests
+- [x] Commit: `phase2(bug-7): enforce non-empty strings in schema`
+- [x] **Actual Time:** 2 hours
 
-#### BUG #7: Float camera ID acceptance (Schema BUG #3)
+#### BUG #8: Float camera ID acceptance (Schema BUG #3)
 
 - [ ] Write test that fails for float camera ID
 - [ ] Update schema: `"type": "integer"` (if not already)

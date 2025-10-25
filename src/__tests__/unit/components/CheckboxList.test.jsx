@@ -490,13 +490,6 @@ describe('CheckboxList Component', () => {
       expect(container.querySelector('.checkbox-list')).toBeInTheDocument();
     });
 
-    it('should have correct PropTypes definition (TYPO DOCUMENTED)', () => {
-      // KNOWN ISSUE: Line 73 uses `propType` instead of `propTypes`
-      // This means PropTypes validation is completely disabled
-      expect(CheckboxList.propType).toBeDefined();
-      expect(CheckboxList.propTypes).toBeUndefined(); // Should be defined but isn't
-    });
-
     it('should use empty string defaults for optional props', () => {
       render(
         <CheckboxList

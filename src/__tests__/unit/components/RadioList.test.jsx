@@ -627,13 +627,6 @@ describe('RadioList Component', () => {
       expect(container.querySelector('.checkbox-list')).toBeInTheDocument();
     });
 
-    it('should have correct PropTypes definition (TYPO DOCUMENTED)', () => {
-      // KNOWN ISSUE: Line 78 uses `propType` instead of `propTypes`
-      // This means PropTypes validation is completely disabled
-      expect(RadioList.propType).toBeDefined();
-      expect(RadioList.propTypes).toBeUndefined(); // Should be defined but isn't
-    });
-
     it('DOCUMENTED: PropTypes defaultValue mismatch (line 80 vs 92)', () => {
       // Line 80: PropTypes expects Array (instanceOf(Array))
       // Line 92: defaultProps sets empty string ''

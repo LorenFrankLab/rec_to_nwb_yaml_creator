@@ -819,26 +819,12 @@ describe('ListElement Component', () => {
   });
 
   describe('PropTypes and Defaults', () => {
-    it('should have correct PropTypes definition (TYPO DOCUMENTED)', () => {
-      // KNOWN ISSUE: Line 101 uses `propType` instead of `propTypes`
-      // This means PropTypes validation is completely disabled
-      expect(ListElement.propType).toBeDefined();
-      expect(ListElement.propTypes).toBeUndefined(); // Should be defined but isn't
-    });
-
     it('DOCUMENTED: PropTypes defaultValue mismatch (line 114 vs 121)', () => {
       // Line 114-116: PropTypes expects arrayOf(string | number)
       // Line 121: defaultProps sets empty string ''
       // This is a type mismatch
       expect(ListElement.defaultProps.defaultValue).toBe('');
       // PropTypes says Array, but default is string - mismatch documented
-    });
-
-    it('DOCUMENTED: Incorrect PropTypes syntax (line 111)', () => {
-      // Line 111: PropTypes.oneOf([PropTypes.object])
-      // Should be: PropTypes.object
-      // oneOf is for enum values, not type validators
-      expect(ListElement.propType.metaData).toBeDefined();
     });
 
     it('should use empty string as default defaultValue', () => {

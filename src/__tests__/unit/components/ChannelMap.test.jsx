@@ -448,23 +448,6 @@ describe('ChannelMap', () => {
     });
   });
 
-  describe('PropTypes Bug', () => {
-    it('documents PropTypes typo on line 136', () => {
-      // BUG: Line 136 uses `propType` instead of `propTypes`
-      // This disables PropTypes validation entirely (same as all other components)
-      expect(ChannelMap.propType).toBeDefined();
-      expect(ChannelMap.propTypes).toBeUndefined();
-    });
-
-    it('documents incorrect PropTypes for nTrodeItems', () => {
-      // BUG: Line 138 uses PropTypes.instanceOf(Object)
-      // Should be: PropTypes.arrayOf(PropTypes.shape({...}))
-      // nTrodeItems is an ARRAY of objects, not an instance of Object
-      const propTypesDef = ChannelMap.propType?.nTrodeItems;
-      expect(propTypesDef).toBeDefined();
-    });
-  });
-
   describe('ID Generation', () => {
     it('generates unique ntrode ID input IDs', () => {
       render(<ChannelMap {...defaultProps} nTrodeItems={multiShankData} />);

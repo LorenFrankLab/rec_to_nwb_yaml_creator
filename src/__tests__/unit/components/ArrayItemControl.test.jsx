@@ -421,13 +421,6 @@ describe('ArrayItemControl Component', () => {
   });
 
   describe('PropTypes and Defaults', () => {
-    it('should have correct PropTypes definition (TYPO DOCUMENTED)', () => {
-      // KNOWN ISSUE: Line 43 uses `propType` instead of `propTypes`
-      // This means PropTypes validation is completely disabled
-      expect(ArrayItemControl.propType).toBeDefined();
-      expect(ArrayItemControl.propTypes).toBeUndefined(); // Should be defined but isn't
-    });
-
     it('should define default empty functions for callbacks', () => {
       expect(ArrayItemControl.defaultProps.duplicateArrayItem).toBeDefined();
       expect(ArrayItemControl.defaultProps.removeArrayItem).toBeDefined();

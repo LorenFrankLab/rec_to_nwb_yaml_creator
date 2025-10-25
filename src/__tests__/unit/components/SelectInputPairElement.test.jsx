@@ -319,22 +319,6 @@ describe('SelectInputPairElement', () => {
     });
   });
 
-  describe('PropTypes Bug', () => {
-    it('documents PropTypes typo on line 147', () => {
-      // BUG: Line 147 uses `propType` instead of `propTypes`
-      // This disables PropTypes validation entirely
-      expect(SelectInputPairElement.propType).toBeDefined();
-      expect(SelectInputPairElement.propTypes).toBeUndefined();
-    });
-
-    it('documents incorrect PropTypes syntax for defaultValue', () => {
-      // BUG: Line 159 uses PropTypes.oneOf with array of PropTypes
-      // Should be: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
-      const propTypesDef = SelectInputPairElement.propType?.defaultValue;
-      expect(propTypesDef).toBeDefined();
-      // This would fail validation if PropTypes were working
-    });
-  });
 });
 
 describe('splitTextNumber utility function', () => {
