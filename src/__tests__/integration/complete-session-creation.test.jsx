@@ -601,9 +601,12 @@ describe('End-to-End Session Creation Workflow', () => {
     const sexInputs = screen.getAllByLabelText(/sex/i);
     await user.selectOptions(sexInputs[0], 'F');
 
+    // Note: Multiple description fields exist (experiment, session, subject)
+    // We need the subject description which is index 2
     const descriptionInputs = screen.getAllByLabelText(/description/i);
-    await user.clear(descriptionInputs[0]);
-    await user.type(descriptionInputs[0], 'Long Evans female rat');
+    const subjectDescriptionInput = descriptionInputs.find(input => input.name === 'description');
+    await user.clear(subjectDescriptionInput);
+    await user.type(subjectDescriptionInput, 'Long Evans female rat');
 
     const weightInputs = screen.getAllByLabelText(/weight/i);
     await user.clear(weightInputs[0]);
