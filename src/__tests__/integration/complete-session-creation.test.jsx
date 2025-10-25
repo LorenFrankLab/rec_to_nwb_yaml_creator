@@ -163,7 +163,16 @@ async function triggerExport(mockEvent = null) {
     currentTarget: form,
   };
 
-  onSubmitHandler(event);
+  console.error('DEBUG: About to call onSubmitHandler');
+  const result = onSubmitHandler(event);
+  console.error('DEBUG: onSubmitHandler returned:', result);
+
+  // If the handler returns a Promise, await it
+  if (result && typeof result.then === 'function') {
+    console.error('DEBUG: Waiting for async handler');
+    await result;
+    console.error('DEBUG: Async handler complete');
+  }
 }
 
 describe('End-to-End Session Creation Workflow', () => {
@@ -191,8 +200,12 @@ describe('End-to-End Session Creation Workflow', () => {
     };
     global.createObjectURLSpy = createObjectURLSpy; // Store for debugging
 
-    // Mock window.alert
-    global.window.alert = vi.fn();
+    // Mock window.alert with diagnostic logging
+    global.window.alert = vi.fn((message) => {
+      console.error('=== VALIDATION ERROR ===');
+      console.error(message ? message.substring(0, 500) : 'No message');
+      console.error('=======================');
+    });
   });
 
   /**
@@ -584,12 +597,14 @@ describe('End-to-End Session Creation Workflow', () => {
     await user.clear(subjectIdInput);
     await user.type(subjectIdInput, 'RAT001');
     await user.tab(); // Trigger onBlur to update React state
+    await waitFor(() => expect(subjectIdInput).toHaveValue('RAT001'), { timeout: 1000 });
 
     const speciesInputs = screen.getAllByLabelText(/species/i);
     const speciesInput = speciesInputs[0];
     await user.clear(speciesInput);
     await user.type(speciesInput, 'Rattus norvegicus');
     await user.tab(); // Trigger onBlur to update React state
+    await waitFor(() => expect(speciesInput).toHaveValue('Rattus norvegicus'), { timeout: 1000 });
 
     const sexInputs = screen.getAllByLabelText(/sex/i);
     const sexInput = sexInputs[0];
@@ -600,19 +615,13 @@ describe('End-to-End Session Creation Workflow', () => {
     await user.clear(descriptionInput);
     await user.type(descriptionInput, 'Long Evans female rat');
     await user.tab(); // Trigger onBlur to update React state
+    await waitFor(() => expect(descriptionInput).toHaveValue('Long Evans female rat'), { timeout: 1000 });
 
     const weightInputs = screen.getAllByLabelText(/weight/i);
     const weightInput = weightInputs[0];
     await user.type(weightInput, '350');
     await user.tab(); // Trigger onBlur to update React state
-
-    // Wait for all state updates to complete before exporting
-    await waitFor(() => {
-      expect(subjectIdInput).toHaveValue('RAT001');
-      expect(speciesInput).toHaveValue('Rattus norvegicus');
-      expect(descriptionInput).toHaveValue('Long Evans female rat');
-      expect(weightInput).toHaveValue(350);
-    }, { timeout: 2000 });
+    await waitFor(() => expect(weightInput).toHaveValue(350), { timeout: 1000 });
 
     // Export using React fiber approach
     await triggerExport();
@@ -697,6 +706,12 @@ describe('End-to-End Session Creation Workflow', () => {
     // ACT - Fill required fields first
     await fillRequiredFields(user, screen);
 
+    // HYPOTHESIS TEST: Wait for React state to fully settle after fillRequiredFields
+    await waitFor(() => {
+      const labInput = screen.getByLabelText(/^lab$/i);
+      expect(labInput).toHaveValue('Test Lab');
+    }, { timeout: 2000 });
+
     // Add first camera
     const addCameraButton = screen.getByTitle(/Add cameras/i);
 
@@ -712,9 +727,27 @@ describe('End-to-End Session Creation Workflow', () => {
       expect(cameraNameInputs.length).toBe(initialCameraCount + 1);
     });
 
+    // Fill ALL required camera fields (not just name!)
     cameraNameInputs = screen.getAllByLabelText(/camera name/i);
     await user.type(cameraNameInputs[0], 'overhead_camera');
-    await user.tab(); // Trigger onBlur to update React state
+    await user.tab();
+
+    let manufacturerInputs = screen.getAllByLabelText(/manufacturer/i);
+    await user.type(manufacturerInputs[0], 'Logitech');
+    await user.tab();
+
+    let modelInputs = screen.getAllByLabelText(/model/i);
+    await user.type(modelInputs[0], 'C920');
+    await user.tab();
+
+    let lensInputs = screen.getAllByLabelText(/lens/i);
+    await user.type(lensInputs[0], 'Standard');
+    await user.tab();
+
+    let metersPerPixelInputs = screen.getAllByLabelText(/meters per pixel/i);
+    await user.clear(metersPerPixelInputs[0]);
+    await user.type(metersPerPixelInputs[0], '0.001');
+    await user.tab();
 
     // Verify first camera has ID 0
     let cameraIdInputs = screen.getAllByLabelText(/^camera id$/i);
@@ -728,9 +761,27 @@ describe('End-to-End Session Creation Workflow', () => {
       expect(items.length).toBeGreaterThan(0);
     });
 
+    // Fill ALL required fields for second camera too
     cameraNameInputs = screen.getAllByLabelText(/camera name/i);
     await user.type(cameraNameInputs[1], 'side_camera');
-    await user.tab(); // Trigger onBlur to update React state
+    await user.tab();
+
+    manufacturerInputs = screen.getAllByLabelText(/manufacturer/i);
+    await user.type(manufacturerInputs[1], 'Microsoft');
+    await user.tab();
+
+    modelInputs = screen.getAllByLabelText(/model/i);
+    await user.type(modelInputs[1], 'LifeCam');
+    await user.tab();
+
+    lensInputs = screen.getAllByLabelText(/lens/i);
+    await user.type(lensInputs[1], 'Wide Angle');
+    await user.tab();
+
+    metersPerPixelInputs = screen.getAllByLabelText(/meters per pixel/i);
+    await user.clear(metersPerPixelInputs[1]);
+    await user.type(metersPerPixelInputs[1], '0.0015');
+    await user.tab();
 
     // Verify second camera has ID 1
     cameraIdInputs = screen.getAllByLabelText(/^camera id$/i);
