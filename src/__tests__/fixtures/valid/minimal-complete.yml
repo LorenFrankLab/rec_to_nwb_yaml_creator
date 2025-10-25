@@ -24,6 +24,9 @@ data_acq_device:
     system: SpikeGadgets
     amplifier: Intan
     adc_circuit: Intan
+device:
+  name:
+    - Trodes
 cameras:
   - id: 0
     meters_per_pixel: 0.001

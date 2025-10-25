@@ -8,6 +8,31 @@ import fs from 'fs';
 import path from 'path';
 
 /**
+ * Helper to trigger export using React fiber (bypasses requestSubmit limitation)
+ *
+ * The form.requestSubmit() DOM API doesn't trigger React synthetic event handlers
+ * in test environments. This helper directly calls the React onSubmit handler.
+ */
+async function triggerExport(mockEvent = null) {
+  const form = document.querySelector('form');
+  const fiberKey = Object.keys(form).find(key => key.startsWith('__reactFiber'));
+  const fiber = form[fiberKey];
+  const onSubmitHandler = fiber?.memoizedProps?.onSubmit;
+
+  if (!onSubmitHandler) {
+    throw new Error('Could not find React onSubmit handler on form element');
+  }
+
+  const event = mockEvent || {
+    preventDefault: vi.fn(),
+    target: form,
+    currentTarget: form,
+  };
+
+  onSubmitHandler(event);
+}
+
+/**
  * Phase 1.5 Task 1.5.1: Sample Metadata Modification Tests
  *
  * This test suite validates the critical workflow that users actually perform:
@@ -361,8 +386,8 @@ describe('Sample Metadata Modification Workflow', () => {
     await user.type(experimenterInput, 'Modified, Name');
 
     // ACT - Export the modified data
-    const exportButton = screen.getByRole('button', { name: /generate yml file/i });
-    await user.click(exportButton);
+    // Use triggerExport instead of button click (requestSubmit doesn't work in tests)
+    await triggerExport();
 
     // ASSERT - Verify export was triggered
     await vi.waitFor(() => {
@@ -414,8 +439,8 @@ describe('Sample Metadata Modification Workflow', () => {
     await user.type(subjectIdInputs[0], '88888');
 
     // Export
-    const exportButton = screen.getByRole('button', { name: /generate yml file/i });
-    await user.click(exportButton);
+    // Use triggerExport instead of button click (requestSubmit doesn't work in tests)
+    await triggerExport();
 
     await vi.waitFor(() => {
       expect(mockBlob).not.toBeNull();

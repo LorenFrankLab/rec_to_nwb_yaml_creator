@@ -6,6 +6,31 @@ import YAML from 'yaml';
 import { getMinimalCompleteYaml, getCustomizedYaml } from '../helpers/test-fixtures';
 
 /**
+ * Helper to trigger export using React fiber (bypasses requestSubmit limitation)
+ *
+ * The form.requestSubmit() DOM API doesn't trigger React synthetic event handlers
+ * in test environments. This helper directly calls the React onSubmit handler.
+ */
+async function triggerExport(mockEvent = null) {
+  const form = document.querySelector('form');
+  const fiberKey = Object.keys(form).find(key => key.startsWith('__reactFiber'));
+  const fiber = form[fiberKey];
+  const onSubmitHandler = fiber?.memoizedProps?.onSubmit;
+
+  if (!onSubmitHandler) {
+    throw new Error('Could not find React onSubmit handler on form element');
+  }
+
+  const event = mockEvent || {
+    preventDefault: vi.fn(),
+    target: form,
+    currentTarget: form,
+  };
+
+  onSubmitHandler(event);
+}
+
+/**
  * Phase 1.5 Task 1.5.4: Import/Export Workflow Integration Tests
  *
  * REWRITTEN to actually test import/export functionality (was documentation-only).
@@ -206,9 +231,15 @@ describe('Import/Export Workflow Integration', () => {
         expect(labInput).toHaveValue('Test Lab');
       });
 
+      // Wait for all fields to populate (cameras indicate full import)
+      await waitFor(() => {
+        const cameraInputs = screen.getAllByLabelText(/camera name/i);
+        expect(cameraInputs).toHaveLength(2);
+      });
+
       // ACT - Export
-      const exportButton = screen.getByRole('button', { name: /generate yml file/i });
-      await user.click(exportButton);
+      // Use triggerExport instead of button click (requestSubmit doesn't work in tests)
+      await triggerExport();
 
       // ASSERT - Verify export succeeded
       await waitFor(() => {
@@ -248,8 +279,8 @@ describe('Import/Export Workflow Integration', () => {
       });
 
       // ACT
-      const exportButton = screen.getByRole('button', { name: /generate yml file/i });
-      await user.click(exportButton);
+      // Use triggerExport instead of button click (requestSubmit doesn't work in tests)
+      await triggerExport();
 
       // ASSERT
       await waitFor(() => {
@@ -287,8 +318,8 @@ describe('Import/Export Workflow Integration', () => {
       });
 
       // ACT - Export
-      const exportButton = screen.getByRole('button', { name: /generate yml file/i });
-      await user.click(exportButton);
+      // Use triggerExport instead of button click (requestSubmit doesn't work in tests)
+      await triggerExport();
 
       await waitFor(() => {
         expect(mockBlob).not.toBeNull();
@@ -337,8 +368,8 @@ describe('Import/Export Workflow Integration', () => {
       await user.type(labInput, 'Modified Lab');
 
       // ACT - Export
-      const exportButton = screen.getByRole('button', { name: /generate yml file/i });
-      await user.click(exportButton);
+      // Use triggerExport instead of button click (requestSubmit doesn't work in tests)
+      await triggerExport();
 
       await waitFor(() => {
         expect(mockBlob).not.toBeNull();

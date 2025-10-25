@@ -449,7 +449,7 @@ const convertObjectToYAMLString = (content) => {
 };
 
 const createYAMLFile = (fileName, content) => {
-  var textFileAsBlob = new Blob([content], {type: 'text/plain'});
+  var textFileAsBlob = new Blob([content], {type: 'text/yaml;charset=utf-8;'});
   const downloadLink = document.createElement("a");
   downloadLink.download = fileName;
   downloadLink.href = window.webkitURL.createObjectURL(textFileAsBlob);
@@ -670,7 +670,7 @@ const generateYMLFile = (e) => {
     });
   }
 
-  if (isFormValid) {
+  if (!isFormValid) {
     formErrors?.forEach((error) => {
       displayErrorOnUI(error.id, error.message);
     });
