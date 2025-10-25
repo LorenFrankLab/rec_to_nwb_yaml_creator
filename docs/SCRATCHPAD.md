@@ -9,6 +9,69 @@
 
 ## Phase 2 Week 10 Progress (Continued)
 
+### ✅ EMPTYFORMDATA MISSING FIELD (P3) - FIXED
+
+**Duration:** 15 minutes
+**Status:** ✅ COMPLETE
+**Date:** 2025-10-25
+**Impact:** Fixed form reset to include optogenetic_stimulation_software field
+
+#### Bug Description
+
+**File:** `src/valueList.js` (line 89)
+
+**Symptom:** `emptyFormData` was missing `optogenetic_stimulation_software` field, causing it to not be reset when user clicks "Clear Form" or resets the application state.
+
+**Root Cause:** The field was added to `defaultYMLValues` (line 41) but never added to `emptyFormData`.
+
+**Business Logic:** When users reset the form, ALL fields should be cleared including optogenetics-related fields.
+
+#### Fix Applied
+
+**src/valueList.js (line 89):**
+```javascript
+// BEFORE (emptyFormData ended at line 88)
+  fs_gui_yamls: [],
+};
+
+// AFTER (added missing field at line 89)
+  fs_gui_yamls: [],
+  optogenetic_stimulation_software: '',
+};
+```
+
+#### Test Update
+
+**src/__tests__/unit/app/App-state-initialization.test.jsx:**
+
+Updated test that was documenting the bug:
+```javascript
+// BEFORE
+it('should document key mismatch between defaultYMLValues and emptyFormData', () => {
+  // KNOWN BUG: emptyFormData is missing 'optogenetic_stimulation_software'
+  expect(defaultKeys.length).toBe(26);
+  expect(emptyKeys.length).toBe(25);
+  expect(emptyKeys).not.toContain('optogenetic_stimulation_software');
+});
+
+// AFTER
+it('should have matching keys between defaultYMLValues and emptyFormData', () => {
+  // FIXED: emptyFormData now includes 'optogenetic_stimulation_software'
+  expect(defaultKeys.length).toBe(26);
+  expect(emptyKeys.length).toBe(26);
+  expect(emptyKeys).toContain('optogenetic_stimulation_software');
+});
+```
+
+#### Verification
+
+**Tests Run:**
+- `App-state-initialization.test.jsx`: ✅ 17/17 passing
+
+**Result:** Form reset now properly clears all 26 fields including optogenetic_stimulation_software.
+
+---
+
 ### ✅ DEAD CODE (P3) - FIXED
 
 **Duration:** 20 minutes

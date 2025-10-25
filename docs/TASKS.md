@@ -1271,11 +1271,11 @@ was incorrect. The schema has always enforced integer types correctly.
 - [x] Remove unused imports/variables
 - [x] **Actual Time:** 20 minutes
 
-#### emptyFormData Missing Field
+#### emptyFormData Missing Field ✅ COMPLETE
 
-- [ ] Add `optogenetic_stimulation_software` to emptyFormData
-- [ ] Verify form reset includes this field
-- [ ] **Estimated Time:** 30 minutes
+- [x] Add `optogenetic_stimulation_software` to emptyFormData
+- [x] Verify form reset includes this field
+- [x] **Actual Time:** 15 minutes
 
 ### Additional Critical Bug Fixes
 

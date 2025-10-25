@@ -86,6 +86,7 @@ export const emptyFormData = {
   virus_injection: [],
   optical_fiber: [],
   fs_gui_yamls: [],
+  optogenetic_stimulation_software: '',
 };
 
 /**
