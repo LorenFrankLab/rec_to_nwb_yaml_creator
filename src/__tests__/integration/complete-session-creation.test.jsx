@@ -1134,45 +1134,83 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // Add electrode group and select device type
     const addElectrodeGroupButton = screen.getByTitle(/Add electrode_groups/i);
-    let electrodeGroupIdInputs = screen.queryAllByLabelText(/electrode group id/i);
+
+    // Count using placeholder (same pattern as test 9)
+    let electrodeGroupIdInputs = screen.queryAllByPlaceholderText(/typically a number/i);
+    electrodeGroupIdInputs = electrodeGroupIdInputs.filter(input =>
+      input.id && input.id.startsWith('electrode_groups-id-')
+    );
     const initialElectrodeGroupCount = electrodeGroupIdInputs.length;
 
     await user.click(addElectrodeGroupButton);
 
     await waitFor(() => {
-      electrodeGroupIdInputs = screen.queryAllByLabelText(/electrode group id/i);
-      expect(electrodeGroupIdInputs.length).toBe(initialElectrodeGroupCount + 1);
+      let updatedInputs = screen.queryAllByPlaceholderText(/typically a number/i);
+      updatedInputs = updatedInputs.filter(input =>
+        input.id && input.id.startsWith('electrode_groups-id-')
+      );
+      expect(updatedInputs.length).toBe(initialElectrodeGroupCount + 1);
     });
 
-    // Use placeholder text to find location field (more specific than label)
-    const locationInputs = screen.queryAllByPlaceholderText(/type to find a location/i);
-    // Get the last one added (most recent electrode group)
+    // Fill electrode group fields with blur() + delay pattern (same as test 9)
+    let locationInputs = screen.queryAllByPlaceholderText(/type to find a location/i);
     const electrodeGroupLocationInput = locationInputs[locationInputs.length - 1];
     await user.type(electrodeGroupLocationInput, 'CA1');
+    electrodeGroupLocationInput.blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
-    // Fill remaining required electrode group fields
-    const descriptionInputs = screen.queryAllByLabelText(/^description$/i);
+    let descriptionInputs = screen.queryAllByLabelText(/^description$/i);
     await user.type(descriptionInputs[descriptionInputs.length - 1], 'Test tetrode');
+    descriptionInputs[descriptionInputs.length - 1].blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
-    const targetedLocationInputs = screen.queryAllByLabelText(/targeted location/i);
+    let targetedLocationInputs = screen.queryAllByLabelText(/targeted location/i);
     await user.type(targetedLocationInputs[targetedLocationInputs.length - 1], 'CA1');
+    targetedLocationInputs[targetedLocationInputs.length - 1].blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
-    const targetedXInputs = screen.queryAllByLabelText(/targeted x/i);
+    // Use correct label text (same as test 9)
+    let targetedXInputs = screen.queryAllByLabelText(/ML from Bregma/i);
     await user.type(targetedXInputs[targetedXInputs.length - 1], '1.0');
+    targetedXInputs[targetedXInputs.length - 1].blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
-    const targetedYInputs = screen.queryAllByLabelText(/targeted y/i);
+    let targetedYInputs = screen.queryAllByLabelText(/AP to Bregma/i);
     await user.type(targetedYInputs[targetedYInputs.length - 1], '2.0');
+    targetedYInputs[targetedYInputs.length - 1].blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
-    const targetedZInputs = screen.queryAllByLabelText(/targeted z/i);
+    let targetedZInputs = screen.queryAllByLabelText(/DV to Cortical Surface/i);
     await user.type(targetedZInputs[targetedZInputs.length - 1], '3.0');
+    targetedZInputs[targetedZInputs.length - 1].blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
-    const unitsInputs = screen.queryAllByLabelText(/^units$/i);
+    let unitsInputs = screen.queryAllByPlaceholderText(/Distance units defining positioning/i);
     await user.type(unitsInputs[unitsInputs.length - 1], 'mm');
+    unitsInputs[unitsInputs.length - 1].blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
     // Select device type to trigger ntrode generation
-    // Device type select - get all and use the last one (most recent electrode group)
-    const deviceTypeInputs = screen.queryAllByLabelText(/device type/i);
+    let deviceTypeInputs = screen.queryAllByLabelText(/device type/i);
     await user.selectOptions(deviceTypeInputs[deviceTypeInputs.length - 1], 'tetrode_12.5');
+    deviceTypeInputs[deviceTypeInputs.length - 1].blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
     // Wait for ntrode generation (async operation)
     await waitFor(() => {
@@ -1291,18 +1329,32 @@ describe('End-to-End Session Creation Workflow', () => {
       expect(taskNameInputs.length).toBe(initialTaskCount + 1);
     });
 
-    // Fill ALL required task fields
+    // Fill ALL required task fields with blur() + delay pattern
     taskNameInputs = screen.getAllByLabelText(/task name/i);
     await user.type(taskNameInputs[0], 'w_track');
+    taskNameInputs[0].blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
-    const taskDescInputs = screen.getAllByLabelText(/task description/i);
+    let taskDescInputs = screen.getAllByLabelText(/task description/i);
     await user.type(taskDescInputs[0], 'W-track task');
+    taskDescInputs[0].blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
     const taskEnvInputs = screen.getAllByLabelText(/task environment/i);
     await user.type(taskEnvInputs[0], 'W-track maze');
+    taskEnvInputs[0].blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
-    const taskEpochInputs = screen.getAllByLabelText(/task epochs/i);
-    await user.type(taskEpochInputs[0], '1');
+    // task_epochs is a ListElement - use placeholder instead of label
+    const taskEpochInput = screen.getByPlaceholderText(/Type Task Epochs/i);
+    await user.type(taskEpochInput, '1');
+    await user.keyboard('{Enter}');
 
     // Add electrode group
     const addElectrodeGroupButton = screen.getByTitle(/Add electrode_groups/i);
@@ -1326,31 +1378,64 @@ describe('End-to-End Session Creation Workflow', () => {
       expect(updatedInputs.length).toBe(initialElectrodeGroupCount + 1);
     });
 
-    // Fill ALL required electrode group fields
-    const locationInputs = screen.queryAllByPlaceholderText(/type to find a location/i);
+    // Fill ALL required electrode group fields with blur() + delay pattern
+    let locationInputs = screen.queryAllByPlaceholderText(/type to find a location/i);
     await user.type(locationInputs[locationInputs.length - 1], 'CA1');
+    locationInputs[locationInputs.length - 1].blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
-    const descriptionInputs = screen.queryAllByLabelText(/^description$/i);
+    let descriptionInputs = screen.queryAllByLabelText(/^description$/i);
     await user.type(descriptionInputs[descriptionInputs.length - 1], 'CA1 tetrode');
+    descriptionInputs[descriptionInputs.length - 1].blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
-    const targetedLocationInputs = screen.queryAllByLabelText(/targeted location/i);
+    let targetedLocationInputs = screen.queryAllByLabelText(/targeted location/i);
     await user.type(targetedLocationInputs[targetedLocationInputs.length - 1], 'CA1');
+    targetedLocationInputs[targetedLocationInputs.length - 1].blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
-    const targetedXInputs = screen.queryAllByLabelText(/targeted x/i);
+    // Use correct label text
+    let targetedXInputs = screen.queryAllByLabelText(/ML from Bregma/i);
     await user.type(targetedXInputs[targetedXInputs.length - 1], '1.0');
+    targetedXInputs[targetedXInputs.length - 1].blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
-    const targetedYInputs = screen.queryAllByLabelText(/targeted y/i);
+    let targetedYInputs = screen.queryAllByLabelText(/AP to Bregma/i);
     await user.type(targetedYInputs[targetedYInputs.length - 1], '2.0');
+    targetedYInputs[targetedYInputs.length - 1].blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
-    const targetedZInputs = screen.queryAllByLabelText(/targeted z/i);
+    let targetedZInputs = screen.queryAllByLabelText(/DV to Cortical Surface/i);
     await user.type(targetedZInputs[targetedZInputs.length - 1], '3.0');
+    targetedZInputs[targetedZInputs.length - 1].blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
-    const unitsInputs = screen.queryAllByLabelText(/^units$/i);
+    let unitsInputs = screen.queryAllByPlaceholderText(/Distance units defining positioning/i);
     await user.type(unitsInputs[unitsInputs.length - 1], 'mm');
+    unitsInputs[unitsInputs.length - 1].blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
     // Device type select - get all and use the last one (most recent electrode group)
-    const deviceTypeInputs = screen.queryAllByLabelText(/device type/i);
+    let deviceTypeInputs = screen.queryAllByLabelText(/device type/i);
     await user.selectOptions(deviceTypeInputs[deviceTypeInputs.length - 1], 'tetrode_12.5');
+    deviceTypeInputs[deviceTypeInputs.length - 1].blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
     // Wait for ntrode generation
     await waitFor(() => {
