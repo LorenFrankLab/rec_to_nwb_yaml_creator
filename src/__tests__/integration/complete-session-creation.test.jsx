@@ -432,9 +432,12 @@ describe('End-to-End Session Creation Workflow', () => {
     const sexInputs = screen.getAllByLabelText(/sex/i);
     await user.selectOptions(sexInputs[0], 'M');
 
+    // Note: Multiple description fields exist (experiment, session, subject)
+    // We need the subject description which has name='description'
     const descriptionInputs = screen.getAllByLabelText(/description/i);
-    await user.clear(descriptionInputs[0]);
-    await user.type(descriptionInputs[0], 'Long Evans Rat');
+    const subjectDescriptionInput = descriptionInputs.find(input => input.name === 'description');
+    await user.clear(subjectDescriptionInput);
+    await user.type(subjectDescriptionInput, 'Long Evans Rat');
 
     // Add camera
     const addCameraButton = screen.getByTitle(/Add cameras/i);
@@ -481,17 +484,34 @@ describe('End-to-End Session Creation Workflow', () => {
     });
 
     // Fill ALL required task fields: task_name, task_description, task_environment, camera_id, task_epochs
+    // IMPORTANT: Must trigger blur + wait for React re-render before querying next field
     taskNameInputs = screen.getAllByLabelText(/task name/i);
     await user.type(taskNameInputs[0], 'sleep');
 
-    const taskDescInputs = screen.getAllByLabelText(/task description/i);
+    // Manually trigger blur to force React re-render NOW
+    taskNameInputs[0].blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
+
+    // Now query for fresh elements AFTER React has re-rendered
+    let taskDescInputs = screen.getAllByLabelText(/task description/i);
     await user.type(taskDescInputs[0], 'Rest session before task');
+
+    taskDescInputs[0].blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
     const taskEnvInputs = screen.getAllByLabelText(/task environment/i);
     await user.type(taskEnvInputs[0], 'home cage');
 
-    const taskEpochInputs = screen.getAllByLabelText(/task epochs/i);
-    await user.type(taskEpochInputs[0], '1');
+    // task_epochs is a ListElement - must use placeholder, not label
+    // ListElement inputs don't have id attributes, so getAllByLabelText() fails
+    // Placeholder is computed as "Type ${title}" = "Type Task Epochs"
+    const taskEpochInput = screen.getByPlaceholderText(/Type Task Epochs/i);
+    await user.type(taskEpochInput, '1');
+    await user.keyboard('{Enter}'); // Add to list
 
     // camera_id should default to [0] since we have camera with id=0
 
