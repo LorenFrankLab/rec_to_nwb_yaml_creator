@@ -5,6 +5,7 @@ import { App } from '../../App';
 import YAML from 'yaml';
 import { getMinimalCompleteYaml, getCustomizedYaml } from '../helpers/test-fixtures';
 import { triggerExport } from '../helpers/integration-test-helpers';
+import { getFileInput } from '../helpers/test-selectors';
 
 /**
  * Phase 1.5 Task 1.5.4: Import/Export Workflow Integration Tests
@@ -67,7 +68,7 @@ describe('Import/Export Workflow Integration', () => {
 
       // ACT - Upload file
       // Note: The file input doesn't have a text label, only an icon, so we query by ID
-      const fileInput = container.querySelector('#importYAMLFile');
+      const fileInput = getFileInput();
       await user.upload(fileInput, yamlFile);
 
       // Wait for import to complete - wait for lab to be populated
@@ -112,7 +113,7 @@ describe('Import/Export Workflow Integration', () => {
 
       // ACT - Upload file
       // Note: The file input doesn't have a text label, only an icon, so we query by ID
-      const fileInput = container.querySelector('#importYAMLFile');
+      const fileInput = getFileInput();
       await user.upload(fileInput, yamlFile);
 
       // Wait for import to complete
@@ -158,7 +159,7 @@ describe('Import/Export Workflow Integration', () => {
       const yamlFile = new File([yamlContent], 'test.yml', { type: 'text/yaml' });
 
       // ACT
-      const fileInput = container.querySelector('#importYAMLFile');
+      const fileInput = getFileInput();
       await user.upload(fileInput, yamlFile);
 
       await waitFor(() => {
@@ -176,9 +177,9 @@ describe('Import/Export Workflow Integration', () => {
       const sexInputs = screen.getAllByLabelText(/sex/i);
       expect(sexInputs[0]).toHaveValue("M");
 
-      // Query for subject description by specific ID
-      const subjectDescriptionInput = container.querySelector('#subject-description');
-      expect(subjectDescriptionInput).toHaveValue("Test Rat");
+      // Query for subject description (first one is subject, not session)
+      const descriptionInputs = screen.getAllByLabelText(/^description$/i);
+      expect(descriptionInputs[0]).toHaveValue("Test Rat");
     });
   });
 
@@ -199,7 +200,7 @@ describe('Import/Export Workflow Integration', () => {
       const yamlContent = getMinimalCompleteYaml();
 
       const yamlFile = new File([yamlContent], 'test.yml', { type: 'text/yaml' });
-      const fileInput = container.querySelector('#importYAMLFile');
+      const fileInput = getFileInput();
       await user.upload(fileInput, yamlFile);
 
       await waitFor(() => {
@@ -246,7 +247,7 @@ describe('Import/Export Workflow Integration', () => {
       const yamlContent = getMinimalCompleteYaml();
 
       const yamlFile = new File([yamlContent], 'test.yml', { type: 'text/yaml' });
-      const fileInput = container.querySelector('#importYAMLFile');
+      const fileInput = getFileInput();
       await user.upload(fileInput, yamlFile);
 
       await waitFor(() => {
@@ -285,7 +286,7 @@ describe('Import/Export Workflow Integration', () => {
       const yamlFile = new File([yamlContent], 'test.yml', { type: 'text/yaml' });
 
       // ACT - Import
-      const fileInput = container.querySelector('#importYAMLFile');
+      const fileInput = getFileInput();
       await user.upload(fileInput, yamlFile);
 
       await waitFor(() => {
@@ -331,7 +332,7 @@ describe('Import/Export Workflow Integration', () => {
       const yamlFile = new File([yamlContent], 'test.yml', { type: 'text/yaml' });
 
       // ACT - Import
-      const fileInput = container.querySelector('#importYAMLFile');
+      const fileInput = getFileInput();
       await user.upload(fileInput, yamlFile);
 
       await waitFor(() => {

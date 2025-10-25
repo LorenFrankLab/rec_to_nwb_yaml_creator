@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { App } from '../../App';
 import YAML from 'yaml';
 import { getMinimalCompleteYaml } from '../helpers/test-fixtures';
+import { getMainForm } from '../helpers/test-selectors';
 import {
   addListItem,
   fillRequiredFields,
@@ -192,7 +193,7 @@ describe('End-to-End Session Creation Workflow', () => {
     // - fireEvent.submit(form) also doesn't trigger React synthetic events
     //
     // SOLUTION: Access the React fiber and call onSubmit handler directly
-    const form = document.querySelector('form');
+    const form = getMainForm();
 
     // Get the React fiber from the DOM element
     const fiberKey = Object.keys(form).find(key => key.startsWith('__reactFiber'));

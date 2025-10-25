@@ -5,6 +5,7 @@ import { App } from '../../App';
 import YAML from 'yaml';
 import { getMinimalCompleteYaml } from '../helpers/test-fixtures';
 import { triggerExport, importYamlFile } from '../helpers/integration-test-helpers';
+import { getInputByLabel, getAddButton, getFileInput, getRemoveButtons } from '../helpers/test-selectors';
 import fs from 'fs';
 import path from 'path';
 
@@ -159,8 +160,9 @@ describe('Sample Metadata Modification Workflow', () => {
     const subjectIdInputs = screen.getAllByLabelText(/subject id/i);
     const subjectIdInput = subjectIdInputs[0];
 
-    // Description appears multiple times, use specific ID for subject description
-    const descriptionInput = container.querySelector('#subject-description');
+    // Description field in subject section (test-selectors.js would help, but getAllByLabelText works)
+    const descriptionInputs = screen.getAllByLabelText(/^description$/i);
+    const descriptionInput = descriptionInputs[0]; // First one is subject description
 
     await user.clear(subjectIdInput);
     await user.type(subjectIdInput, '99999');
@@ -199,7 +201,7 @@ describe('Sample Metadata Modification Workflow', () => {
     expect(cameraNameInputs).toHaveLength(2);
 
     // ACT - Add a new camera
-    const addCameraButton = container.querySelector('button[title="Add cameras"]');
+    const addCameraButton = getAddButton('cameras');
     await user.click(addCameraButton);
 
     // ASSERT - Verify we now have 3 cameras
@@ -233,7 +235,7 @@ describe('Sample Metadata Modification Workflow', () => {
     expect(taskNameInputs).toHaveLength(2);
 
     // ACT - Add a new task
-    const addTaskButton = container.querySelector('button[title="Add tasks"]');
+    const addTaskButton = getAddButton('tasks');
     await user.click(addTaskButton);
 
     // ASSERT - Verify we now have 3 tasks
@@ -267,7 +269,7 @@ describe('Sample Metadata Modification Workflow', () => {
     expect(initialCount).toBe(2);
 
     // ACT - Add a new electrode group
-    const addElectrodeGroupButton = container.querySelector('button[title="Add electrode_groups"]');
+    const addElectrodeGroupButton = getAddButton('electrode_groups');
     await user.click(addElectrodeGroupButton);
 
     // ASSERT - Verify we have one more electrode group
@@ -293,7 +295,8 @@ describe('Sample Metadata Modification Workflow', () => {
 
     // Modify experimenter name
     // First, remove the existing experimenter "Doe, John"
-    const removeButton = screen.getByText('Doe, John').parentElement.querySelector('button');
+    const experimenterItem = screen.getByText('Doe, John').parentElement;
+    const removeButton = within(experimenterItem).getByRole('button', { name: '✘' });
     await user.click(removeButton);
 
     // Then add the new experimenter name
@@ -343,7 +346,7 @@ describe('Sample Metadata Modification Workflow', () => {
     });
 
     // Import original
-    const fileInput = container.querySelector('#importYAMLFile');
+    const fileInput = getFileInput();
     await user.upload(fileInput, yamlFile);
 
     await vi.waitFor(() => {
@@ -352,7 +355,8 @@ describe('Sample Metadata Modification Workflow', () => {
 
     // Modify multiple fields
     // First, remove the existing experimenter "Doe, John"
-    const removeButton = screen.getByText('Doe, John').parentElement.querySelector('button');
+    const experimenterItem = screen.getByText('Doe, John').parentElement;
+    const removeButton = within(experimenterItem).getByRole('button', { name: '✘' });
     await user.click(removeButton);
 
     // Then add the new experimenter name

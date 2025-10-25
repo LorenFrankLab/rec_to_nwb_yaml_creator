@@ -1359,7 +1359,116 @@ Each logical channel must map to a unique physical channel to avoid hardware con
 - [ ] No regressions in existing functionality
 - [ ] Human review and approval
 
-**Summary:** 3 critical data corruption bugs fixed in Week 10. Ready to continue with remaining P0/P1 bugs.
+**Summary:** All Phase 2 bugs fixed! Ready for Phase 2.5 (Refactoring Preparation).
+
+---
+
+## Phase 2.5: Refactoring Preparation (Week 11-12)
+
+**Goal:** Prepare test suite for safe Phase 3 refactoring
+**Status:** 🟡 READY TO START
+**Timeline:** 22-31 hours
+**Decision:** Complete Option 2 (Maximum Safety) before Phase 3
+
+**Rationale:**
+
+- Task 1.5.7 (CSS selectors): Saves 15-20 hours fixing broken tests during Phase 3
+- Task 1.5.9 (Core functions): Prevents subtle bugs when extracting to hooks
+- Task 1.5.10 (Electrode sync): Prevents data corruption in complex logic extraction
+- Task 1.5.3 (Error recovery): E2E confidence in error workflows
+
+### Task 2.5.1: CSS Selector Migration (4-6 hours) 🔴 CRITICAL
+
+**Why:** Prevents 100+ broken tests when HTML structure changes in Phase 3
+
+- [ ] Create `src/__tests__/helpers/test-selectors.js` with semantic query helpers
+- [ ] Audit all test files for `container.querySelector()` usage
+- [ ] Create helper functions for common patterns
+- [ ] Refactor integration tests (3 files)
+- [ ] Refactor unit tests (24+ files with CSS selectors)
+- [ ] Remove 100+ brittle CSS selector calls
+- [ ] Verify all tests still pass
+- [ ] Commit: `test(refactor-prep): migrate CSS selectors to semantic queries`
+- [ ] **Expected Time:** 4-6 hours
+
+### Task 2.5.2: Core Function Behavior Tests (10-15 hours) 🟡 IMPORTANT
+
+**Why:** Proves exact behavior contracts for safe hook extraction
+
+- [ ] Create file: `src/__tests__/unit/app/App-core-functions.test.jsx`
+- [ ] Test updateFormData (10 tests)
+  - [ ] Falsy value handling (index=0, value=0, value="")
+  - [ ] Immutability verification
+  - [ ] Nested path updates
+  - [ ] Array vs object handling
+- [ ] Test updateFormArray (8 tests)
+  - [ ] Adding values
+  - [ ] Removing values
+  - [ ] State immutability
+- [ ] Test onBlur (7 tests)
+  - [ ] Comma-separated string parsing
+  - [ ] Number coercion
+  - [ ] Empty value handling
+- [ ] Test itemSelected (5 tests)
+  - [ ] DataList selection
+  - [ ] Select element selection
+- [ ] Commit: `test(refactor-prep): add core function behavior tests`
+- [ ] **Expected Time:** 10-15 hours
+
+### Task 2.5.3: Electrode Group Synchronization Tests (8-10 hours) 🟡 IMPORTANT
+
+**Why:** Prevents data corruption when extracting complex electrode logic
+
+- [ ] Create file: `src/__tests__/unit/app/App-electrode-sync.test.jsx`
+- [ ] Test nTrodeMapSelected (8 tests)
+  - [ ] Device type to channel count mapping
+  - [ ] Shank count calculation
+  - [ ] Ntrode ID generation
+  - [ ] Map structure creation
+- [ ] Test removeElectrodeGroupItem (6 tests)
+  - [ ] Ntrode cleanup on removal
+  - [ ] ID preservation for remaining groups
+  - [ ] Multi-shank cleanup
+- [ ] Test duplicateElectrodeGroupItem (8 tests)
+  - [ ] ID renumbering logic
+  - [ ] Ntrode duplication with new IDs
+  - [ ] Map preservation
+  - [ ] Multi-shank duplication
+- [ ] Commit: `test(refactor-prep): add electrode group sync tests`
+- [ ] **Expected Time:** 8-10 hours
+
+### Task 2.5.4: Error Recovery Scenarios (6-8 hours) 🟢 NICE-TO-HAVE
+
+**Why:** E2E confidence that error workflows survive refactoring
+
+- [ ] Create file: `src/__tests__/integration/error-recovery.test.jsx`
+- [ ] Test validation failure recovery (4 tests)
+  - [ ] Missing required field → fill → retry → success
+  - [ ] Multiple errors → fix all → success
+- [ ] Test malformed YAML import recovery (5 tests)
+  - [ ] Syntax error → error message → retry with valid file
+  - [ ] Type error → partial import → correct → export
+- [ ] Test form corruption prevention (2 tests)
+  - [ ] Failed import preserves existing form data
+  - [ ] Failed validation doesn't clear form
+- [ ] Test undo changes (3 tests)
+  - [ ] Make changes → reset → defaults restored
+- [ ] Commit: `test(refactor-prep): add error recovery scenarios`
+- [ ] **Expected Time:** 6-8 hours
+
+### Phase 2.5 Exit Criteria
+
+- [ ] Task 2.5.1 complete (CSS selectors migrated)
+- [ ] Task 2.5.2 complete (Core functions tested)
+- [ ] Task 2.5.3 complete (Electrode sync tested)
+- [ ] Task 2.5.4 complete (Error recovery tested)
+- [ ] All tests passing (1284+)
+- [ ] Test coverage ≥ 65%
+- [ ] Branch coverage ≥ 50%
+- [ ] Human approval to proceed to Phase 3
+
+**Total Time:** 28-39 hours
+**Outcome:** Safe, confident Phase 3 refactoring with comprehensive test coverage
 
 ---
 
