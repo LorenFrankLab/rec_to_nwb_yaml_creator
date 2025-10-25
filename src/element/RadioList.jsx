@@ -50,7 +50,7 @@ const RadioList = (prop) => {
             return (
               <div
                 className="checkbox-list-item"
-                key={`${id}-${sanitizeTitle(dataItem)}`}
+                key={`${id}-${dataItemIndex}-${sanitizeTitle(dataItem)}`}
               >
                 <input
                   type="radio"

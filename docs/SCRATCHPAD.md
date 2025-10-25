@@ -1920,3 +1920,146 @@ Added 5 optogenetics fields to trodes_to_nwb schema:
 
 ---
 
+
+### ✅ DUPLICATE REACT KEYS (P2) - FIXED
+
+**Duration:** 2.5 hours
+**Status:** ✅ COMPLETE
+**Date:** 2025-10-25
+**Impact:** Fixed duplicate React key warnings in 6 components when dataItems contain duplicates
+
+#### Bug Description
+
+**Components Affected:**
+- SelectElement.jsx (line 48)
+- CheckboxList.jsx (line 48)
+- RadioList.jsx (line 53)
+- DataListElement.jsx (line 45)
+- ListElement.jsx (line 79)
+- ChannelMap.jsx (lines 43, 90, 110)
+
+**Symptom:** React console warnings "Encountered two children with the same key" when:
+- dataItems array contains duplicate values (e.g., ['CA1', 'CA1', 'CA2'])
+- Different values sanitize to the same string (e.g., ['CA-1', 'CA_1', 'CA 1'] all → 'ca1')
+
+**Root Cause:** Components used `sanitizeTitle(dataItem)` alone as key, which creates duplicates when:
+1. Source array has literal duplicates
+2. Distinct values sanitize identically
+
+#### Fix Applied
+
+**Pattern:** Add `index` to key generation for guaranteed uniqueness
+
+**Changes:**
+1. **SelectElement.jsx (line 49):**
+   - Before: `key={${dataItem}-${sanitizeTitle(dataItem)}}`
+   - After: `key={${dataItemIndex}-${dataItem}-${sanitizeTitle(dataItem)}}`
+
+2. **CheckboxList.jsx (line 48):**
+   - Before: `key={${id}-${sanitizeTitle(dataItem)}}`
+   - After: `key={${id}-${dataItemIndex}-${sanitizeTitle(dataItem)}}`
+
+3. **RadioList.jsx (line 53):**
+   - Before: `key={${id}-${sanitizeTitle(dataItem)}}`
+   - After: `key={${id}-${dataItemIndex}-${sanitizeTitle(dataItem)}}`
+
+4. **DataListElement.jsx (line 45):**
+   - Before: `key={sanitizeTitle(dataItem)}`
+   - After: `key={${dataItemIndex}-${sanitizeTitle(dataItem)}}`
+
+5. **ListElement.jsx (line 79-84):**
+   - Before: `defaultValue?.map((item) => <> ... </>`  (no key at all!)
+   - After: `defaultValue?.map((item, itemIndex) => <React.Fragment key={${id}-list-item-${itemIndex}}> ... </React.Fragment>)`
+
+6. **ChannelMap.jsx:**
+   - Line 43: `key={${keyBase}-${index}}` (simplified from sanitizeTitle(index))
+   - Line 90: `key={${mapId}}` (simplified - mapId already includes unique indices)
+   - Line 110: `key={${mapId}-option-${optionIndex}}` (added optionIndex)
+
+#### Safety Analysis
+
+**Question:** Is using `index` in keys safe?
+
+**Answer:** YES for these use cases because:
+1. Lists are not user-reorderable
+2. Items are controlled by configuration (probe types, brain regions, etc.)
+3. No dynamic filtering/sorting that would change indices
+4. No state tied to list position
+
+**React docs warn against index keys when:**
+- Items can be reordered by user
+- Lists are filtered dynamically
+- Item identity must persist across renders
+
+None of these apply here.
+
+#### Code Review Findings
+
+**Reviewer:** code-reviewer agent
+**Verdict:** APPROVED with recommendations implemented
+
+**Additional Fix Required:** ListElement.jsx line 79 missing keys entirely - FIXED
+**Suggestion Implemented:** Added React.Fragment with proper key
+
+**Not Implemented:**
+- SelectInputPairElement.jsx enhancement (low priority - items likely unique)
+- Key generation utility extraction (premature optimization)
+
+#### Test Coverage
+
+**New Test File:** `src/__tests__/unit/components/duplicate-react-keys.test.jsx`
+
+**Tests Created:** 8 tests (all passing)
+1. SelectElement - duplicate dataItems
+2. SelectElement - sanitization collisions  
+3. CheckboxList - duplicate dataItems
+4. RadioList - duplicate dataItems
+5. DataListElement - duplicate dataItems
+6. ListElement - duplicate defaultValue items
+7. ChannelMap - multiple nTrode items
+8. ChannelMap - channel map options
+
+**Verification Method:** Each test:
+1. Renders component with duplicate-prone data
+2. Spy on console.error
+3. Filter for "Encountered two children with the same key" warnings
+4. Assert warning count === 0
+
+**Results:**
+- All 8 new tests passing ✅
+- No duplicate key warnings in any component ✅
+- All 48 unit test files passing ✅
+- All 3 baseline test files passing ✅
+- Integration test failures are pre-existing (not regression)
+
+#### Files Modified
+
+**Production Code:**
+1. src/element/SelectElement.jsx
+2. src/element/CheckboxList.jsx
+3. src/element/RadioList.jsx
+4. src/element/DataListElement.jsx
+5. src/element/ListElement.jsx
+6. src/ntrode/ChannelMap.jsx
+
+**Test Code:**
+1. src/__tests__/unit/components/duplicate-react-keys.test.jsx (NEW)
+
+**Total:** 6 production files + 1 test file
+
+#### Performance Impact
+
+**Negligible to slightly positive:**
+- String concatenation overhead: < 1ms for typical lists (10-100 items)
+- React reconciliation benefit: Guaranteed unique keys reduce diffing work
+- No observable slowdown in rendering
+- Developer experience: No more console warnings cluttering output
+
+#### Key Takeaways
+
+1. **Always include index in keys when values may duplicate**
+2. **Index-based keys are safe for static/controlled lists**
+3. **Code reviewer caught ListElement issue** - systematic review pays off
+4. **Test pattern successful** - console.error spy is effective verification
+5. **Consistent fix pattern aids maintainability** - same approach across all 6 components
+

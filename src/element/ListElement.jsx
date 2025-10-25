@@ -76,10 +76,13 @@ const ListElement = (prop) => {
         <div className={`list-of-items base-width ${readOnly ? 'gray-out' : ''}`} ref={listData}>
           { defaultValue?.length === 0
             ? <span>{`${inputPlaceholder}`}</span>
-            : defaultValue?.map((item) => <>
-              <span>
-                {item} <button type="button" onClick={(e)=> removeListItem(e, item)}>&#x2718;</button>
-              </span>&nbsp;</>)}
+            : defaultValue?.map((item, itemIndex) => (
+              <React.Fragment key={`${id}-list-item-${itemIndex}`}>
+                <span>
+                  {item} <button type="button" onClick={(e)=> removeListItem(e, item)}>&#x2718;</button>
+                </span>&nbsp;
+              </React.Fragment>
+            ))}
           <>
             {' '}
             <input

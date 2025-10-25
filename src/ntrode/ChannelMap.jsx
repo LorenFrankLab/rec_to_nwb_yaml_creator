@@ -40,7 +40,7 @@ const ChannelMap = (prop) => {
           return (
             <div
               className="nTrode-container"
-              key={`${keyBase}-${sanitizeTitle(index)}`}
+              key={`${keyBase}-${index}`}
             >
               <fieldset>
                 <legend>Shank #{index + 1}</legend>
@@ -87,7 +87,7 @@ const ChannelMap = (prop) => {
                           return (
                             <div
                               className="ntrode-map"
-                              key={`${mapId}-${sanitizeTitle(nTrodeKeyIndex)}`}
+                              key={`${mapId}`}
                             >
                               <label htmlFor={mapId}>{nTrodeKey}</label>
                               <select
@@ -104,12 +104,10 @@ const ChannelMap = (prop) => {
                                   })
                                 }
                               >
-                                {getOptions(options.map((o) => o + optionsLength * index), mapValue, mapValues).map((option) => {
+                                {getOptions(options.map((o) => o + optionsLength * index), mapValue, mapValues).map((option, optionIndex) => {
                                   return (
                                     <option
-                                      key={`${mapId}-${keyBase}-${sanitizeTitle(
-                                        option
-                                      )}${nTrodeKey}`}
+                                      key={`${mapId}-option-${optionIndex}`}
                                     >
                                       {option !== -1 ? option : ''}
                                       {/* {item.map[option]} */}

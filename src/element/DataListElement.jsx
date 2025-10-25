@@ -39,10 +39,10 @@ const DataListElement = (prop) => {
           onBlur={onBlur}
         />
         <datalist id={`${id}-list`} name={name}>
-          {dataItems.map((dataItem) => {
+          {dataItems.map((dataItem, dataItemIndex) => {
             return (
               <option
-                key={sanitizeTitle(dataItem)}
+                key={`${dataItemIndex}-${sanitizeTitle(dataItem)}`}
                 value={dataItem}
                 name={name}
               >

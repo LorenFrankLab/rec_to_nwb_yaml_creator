@@ -43,9 +43,10 @@ const SelectElement = (prop) => {
                 ? parseInt(dataItem, 10)
                 : dataItem;
 
+            // Include index in key to ensure uniqueness even with duplicate values
             const keyOption =
               dataItemValue !== ''
-                ? `${dataItem}-${sanitizeTitle(dataItem)}`
+                ? `${dataItemIndex}-${dataItem}-${sanitizeTitle(dataItem)}`
                 : `${title}-0-selectItem-${dataItemIndex}`;
 
             const TitleOption =
