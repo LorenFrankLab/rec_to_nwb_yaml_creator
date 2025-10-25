@@ -65,28 +65,23 @@ async function fillRequiredFields(user, screen) {
   const labInput = screen.getByLabelText(/^lab$/i);
   await user.clear(labInput);
   await user.type(labInput, 'Test Lab');
-  await user.tab(); // Trigger onBlur to update React state
 
   // 3. Institution
   const institutionInput = screen.getByLabelText(/institution/i);
   await user.clear(institutionInput);
   await user.type(institutionInput, 'Test Institution');
-  await user.tab(); // Trigger onBlur to update React state
 
   // 4. Experiment description (required, non-whitespace pattern)
   const experimentDescInput = screen.getByLabelText(/experiment description/i);
   await user.type(experimentDescInput, 'Test experiment');
-  await user.tab(); // Trigger onBlur to update React state
 
   // 5. Session description (required, non-whitespace pattern)
   const sessionDescInput = screen.getByLabelText(/session description/i);
   await user.type(sessionDescInput, 'Test session');
-  await user.tab(); // Trigger onBlur to update React state
 
   // 6. Session ID (required, non-whitespace pattern)
   const sessionIdInput = screen.getByLabelText(/session id/i);
   await user.type(sessionIdInput, 'TEST01');
-  await user.tab(); // Trigger onBlur to update React state
 
   // 7. Keywords (required - minItems: 1)
   await addListItem(user, screen, LIST_PLACEHOLDERS.keywords, 'test');
@@ -94,36 +89,31 @@ async function fillRequiredFields(user, screen) {
   // 8. Subject ID (required, non-whitespace pattern)
   const subjectIdInput = screen.getByLabelText(/subject id/i);
   await user.type(subjectIdInput, 'test_subject');
-  await user.tab(); // Trigger onBlur to update React state
 
   // 9. Subject genotype (required, non-whitespace pattern)
   const genotypeInput = screen.getByLabelText(/genotype/i);
   await user.clear(genotypeInput);
   await user.type(genotypeInput, 'Wild Type');
-  await user.tab(); // Trigger onBlur to update React state
 
-  // 10. Subject date_of_birth (required, date format)
+  // 10. Subject date_of_birth (required, type="date" input, onBlur converts to ISO 8601)
   const dobInput = screen.getByLabelText(/date of birth/i);
   await user.type(dobInput, '2024-01-01');
-  await user.tab(); // Trigger onBlur to update React state
+  await user.click(document.body); // Click away to trigger blur via user interaction
 
   // 11. Units analog (required, non-whitespace pattern)
   const unitsAnalogInput = screen.getByLabelText(/^analog$/i);
   await user.clear(unitsAnalogInput);
   await user.type(unitsAnalogInput, 'volts');
-  await user.tab(); // Trigger onBlur to update React state
 
   // 12. Units behavioral_events (required, non-whitespace pattern)
   const unitsBehavioralInput = screen.getByLabelText(/behavioral events/i);
   await user.clear(unitsBehavioralInput);
   await user.type(unitsBehavioralInput, 'n/a');
-  await user.tab(); // Trigger onBlur to update React state
 
   // 13. Default header file path (required, non-whitespace pattern)
   const headerPathInput = screen.getByLabelText(/^default header file path$/i);
   await user.clear(headerPathInput);
   await user.type(headerPathInput, 'header.h');
-  await user.tab(); // Trigger onBlur to update React state
 
   // 14. Data acq device (required - minItems: 1)
   const addDataAcqDeviceButton = screen.getByTitle(/Add data_acq_device/i);
@@ -163,16 +153,7 @@ async function triggerExport(mockEvent = null) {
     currentTarget: form,
   };
 
-  console.error('DEBUG: About to call onSubmitHandler');
-  const result = onSubmitHandler(event);
-  console.error('DEBUG: onSubmitHandler returned:', result);
-
-  // If the handler returns a Promise, await it
-  if (result && typeof result.then === 'function') {
-    console.error('DEBUG: Waiting for async handler');
-    await result;
-    console.error('DEBUG: Async handler complete');
-  }
+  onSubmitHandler(event);
 }
 
 describe('End-to-End Session Creation Workflow', () => {
@@ -200,12 +181,8 @@ describe('End-to-End Session Creation Workflow', () => {
     };
     global.createObjectURLSpy = createObjectURLSpy; // Store for debugging
 
-    // Mock window.alert with diagnostic logging
-    global.window.alert = vi.fn((message) => {
-      console.error('=== VALIDATION ERROR ===');
-      console.error(message ? message.substring(0, 500) : 'No message');
-      console.error('=======================');
-    });
+    // Mock window.alert
+    global.window.alert = vi.fn();
   });
 
   /**
@@ -470,9 +447,27 @@ describe('End-to-End Session Creation Workflow', () => {
       expect(cameraNameInputs.length).toBe(initialCameraCount + 1);
     });
 
+    // Fill ALL required camera fields
     cameraNameInputs = screen.getAllByLabelText(/camera name/i);
     await user.type(cameraNameInputs[0], 'overhead_camera');
-    await user.tab(); // Trigger onBlur to update React state
+    await user.tab();
+
+    let manufacturerInputs = screen.getAllByLabelText(/manufacturer/i);
+    await user.type(manufacturerInputs[0], 'Logitech');
+    await user.tab();
+
+    let modelInputs = screen.getAllByLabelText(/model/i);
+    await user.type(modelInputs[0], 'C920');
+    await user.tab();
+
+    let lensInputs = screen.getAllByLabelText(/lens/i);
+    await user.type(lensInputs[0], 'Standard');
+    await user.tab();
+
+    let metersPerPixelInputs = screen.getAllByLabelText(/meters per pixel/i);
+    await user.clear(metersPerPixelInputs[0]);
+    await user.type(metersPerPixelInputs[0], '0.001');
+    await user.tab();
 
     const cameraIdInputs = screen.getAllByLabelText(/^camera id$/i);
     expect(cameraIdInputs[0]).toHaveValue(0); // Auto-assigned ID
@@ -489,13 +484,24 @@ describe('End-to-End Session Creation Workflow', () => {
       expect(taskNameInputs.length).toBe(initialTaskCount + 1);
     });
 
+    // Fill ALL required task fields: task_name, task_description, task_environment, camera_id, task_epochs
     taskNameInputs = screen.getAllByLabelText(/task name/i);
     await user.type(taskNameInputs[0], 'sleep');
-    await user.tab(); // Trigger onBlur to update React state
+    await user.tab();
 
     const taskDescInputs = screen.getAllByLabelText(/task description/i);
     await user.type(taskDescInputs[0], 'Rest session before task');
-    await user.tab(); // Trigger onBlur to update React state
+    await user.tab();
+
+    const taskEnvInputs = screen.getAllByLabelText(/task environment/i);
+    await user.type(taskEnvInputs[0], 'home cage');
+    await user.tab();
+
+    const taskEpochInputs = screen.getAllByLabelText(/task epochs/i);
+    await user.type(taskEpochInputs[0], '1');
+    await user.tab();
+
+    // camera_id should default to [0] since we have camera with id=0
 
     // ACT - Export using React fiber approach
     await triggerExport();
@@ -593,35 +599,26 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // Update subject fields with specific test data
     const subjectIdInputs = screen.getAllByLabelText(/subject id/i);
-    const subjectIdInput = subjectIdInputs[0];
-    await user.clear(subjectIdInput);
-    await user.type(subjectIdInput, 'RAT001');
-    await user.tab(); // Trigger onBlur to update React state
-    await waitFor(() => expect(subjectIdInput).toHaveValue('RAT001'), { timeout: 1000 });
+    await user.clear(subjectIdInputs[0]);
+    await user.type(subjectIdInputs[0], 'RAT001');
+    await user.tab();
 
     const speciesInputs = screen.getAllByLabelText(/species/i);
-    const speciesInput = speciesInputs[0];
-    await user.clear(speciesInput);
-    await user.type(speciesInput, 'Rattus norvegicus');
-    await user.tab(); // Trigger onBlur to update React state
-    await waitFor(() => expect(speciesInput).toHaveValue('Rattus norvegicus'), { timeout: 1000 });
+    await user.clear(speciesInputs[0]);
+    await user.type(speciesInputs[0], 'Rattus norvegicus');
+    await user.tab();
 
     const sexInputs = screen.getAllByLabelText(/sex/i);
-    const sexInput = sexInputs[0];
-    await user.selectOptions(sexInput, 'F');
+    await user.selectOptions(sexInputs[0], 'F');
 
     const descriptionInputs = screen.getAllByLabelText(/description/i);
-    const descriptionInput = descriptionInputs[0];
-    await user.clear(descriptionInput);
-    await user.type(descriptionInput, 'Long Evans female rat');
-    await user.tab(); // Trigger onBlur to update React state
-    await waitFor(() => expect(descriptionInput).toHaveValue('Long Evans female rat'), { timeout: 1000 });
+    await user.clear(descriptionInputs[0]);
+    await user.type(descriptionInputs[0], 'Long Evans female rat');
+    await user.tab();
 
     const weightInputs = screen.getAllByLabelText(/weight/i);
-    const weightInput = weightInputs[0];
-    await user.type(weightInput, '350');
-    await user.tab(); // Trigger onBlur to update React state
-    await waitFor(() => expect(weightInput).toHaveValue(350), { timeout: 1000 });
+    await user.type(weightInputs[0], '350');
+    await user.tab();
 
     // Export using React fiber approach
     await triggerExport();
@@ -836,9 +833,27 @@ describe('End-to-End Session Creation Workflow', () => {
       expect(cameraNameInputs.length).toBe(initialCameraCount + 1);
     });
 
+    // Fill ALL required camera fields
     cameraNameInputs = screen.getAllByLabelText(/camera name/i);
     await user.type(cameraNameInputs[0], 'overhead_camera');
-    await user.tab(); // Trigger onBlur to update React state
+    await user.tab();
+
+    let manufacturerInputs = screen.getAllByLabelText(/manufacturer/i);
+    await user.type(manufacturerInputs[0], 'Logitech');
+    await user.tab();
+
+    let modelInputs = screen.getAllByLabelText(/model/i);
+    await user.type(modelInputs[0], 'C920');
+    await user.tab();
+
+    let lensInputs = screen.getAllByLabelText(/lens/i);
+    await user.type(lensInputs[0], 'Standard');
+    await user.tab();
+
+    let metersPerPixelInputs = screen.getAllByLabelText(/meters per pixel/i);
+    await user.clear(metersPerPixelInputs[0]);
+    await user.type(metersPerPixelInputs[0], '0.001');
+    await user.tab();
 
     // Add a task
     const addTaskButton = screen.getByTitle(/Add tasks/i);
@@ -1005,7 +1020,28 @@ describe('End-to-End Session Creation Workflow', () => {
     const descriptionInputs = screen.queryAllByLabelText(/^description$/i);
     const electrodeGroupDescInput = descriptionInputs[descriptionInputs.length - 1];
     await user.type(electrodeGroupDescInput, 'Dorsal CA1 tetrode');
-    await user.tab(); // Trigger onBlur to update React state
+    await user.tab();
+
+    // Fill remaining required fields for electrode group
+    const targetedLocationInputs = screen.queryAllByLabelText(/targeted location/i);
+    await user.type(targetedLocationInputs[targetedLocationInputs.length - 1], 'CA1');
+    await user.tab();
+
+    const targetedXInputs = screen.queryAllByLabelText(/targeted x/i);
+    await user.type(targetedXInputs[targetedXInputs.length - 1], '1.5');
+    await user.tab();
+
+    const targetedYInputs = screen.queryAllByLabelText(/targeted y/i);
+    await user.type(targetedYInputs[targetedYInputs.length - 1], '2.0');
+    await user.tab();
+
+    const targetedZInputs = screen.queryAllByLabelText(/targeted z/i);
+    await user.type(targetedZInputs[targetedZInputs.length - 1], '3.0');
+    await user.tab();
+
+    const unitsInputs = screen.queryAllByLabelText(/^units$/i);
+    await user.type(unitsInputs[unitsInputs.length - 1], 'mm');
+    await user.tab();
 
     // Export using React fiber approach
     await triggerExport();
@@ -1062,6 +1098,31 @@ describe('End-to-End Session Creation Workflow', () => {
     const electrodeGroupLocationInput = locationInputs[locationInputs.length - 1];
     await user.type(electrodeGroupLocationInput, 'CA1');
     await user.tab(); // Trigger onBlur to update React state
+
+    // Fill remaining required electrode group fields
+    const descriptionInputs = screen.queryAllByLabelText(/^description$/i);
+    await user.type(descriptionInputs[descriptionInputs.length - 1], 'Test tetrode');
+    await user.tab();
+
+    const targetedLocationInputs = screen.queryAllByLabelText(/targeted location/i);
+    await user.type(targetedLocationInputs[targetedLocationInputs.length - 1], 'CA1');
+    await user.tab();
+
+    const targetedXInputs = screen.queryAllByLabelText(/targeted x/i);
+    await user.type(targetedXInputs[targetedXInputs.length - 1], '1.0');
+    await user.tab();
+
+    const targetedYInputs = screen.queryAllByLabelText(/targeted y/i);
+    await user.type(targetedYInputs[targetedYInputs.length - 1], '2.0');
+    await user.tab();
+
+    const targetedZInputs = screen.queryAllByLabelText(/targeted z/i);
+    await user.type(targetedZInputs[targetedZInputs.length - 1], '3.0');
+    await user.tab();
+
+    const unitsInputs = screen.queryAllByLabelText(/^units$/i);
+    await user.type(unitsInputs[unitsInputs.length - 1], 'mm');
+    await user.tab();
 
     // Select device type to trigger ntrode generation
     // Device type select - get all and use the last one (most recent electrode group)
@@ -1161,9 +1222,27 @@ describe('End-to-End Session Creation Workflow', () => {
       expect(cameraNameInputs.length).toBe(initialCameraCount + 1);
     });
 
+    // Fill ALL required camera fields
     cameraNameInputs = screen.getAllByLabelText(/camera name/i);
     await user.type(cameraNameInputs[0], 'overhead_camera');
-    await user.tab(); // Trigger onBlur to update React state
+    await user.tab();
+
+    let manufacturerInputs = screen.getAllByLabelText(/manufacturer/i);
+    await user.type(manufacturerInputs[0], 'Logitech');
+    await user.tab();
+
+    let modelInputs = screen.getAllByLabelText(/model/i);
+    await user.type(modelInputs[0], 'C920');
+    await user.tab();
+
+    let lensInputs = screen.getAllByLabelText(/lens/i);
+    await user.type(lensInputs[0], 'Standard');
+    await user.tab();
+
+    let metersPerPixelInputs = screen.getAllByLabelText(/meters per pixel/i);
+    await user.clear(metersPerPixelInputs[0]);
+    await user.type(metersPerPixelInputs[0], '0.001');
+    await user.tab();
 
     // Add task
     const addTaskButton = screen.getByTitle(/Add tasks/i);
@@ -1177,9 +1256,22 @@ describe('End-to-End Session Creation Workflow', () => {
       expect(taskNameInputs.length).toBe(initialTaskCount + 1);
     });
 
+    // Fill ALL required task fields
     taskNameInputs = screen.getAllByLabelText(/task name/i);
     await user.type(taskNameInputs[0], 'w_track');
-    await user.tab(); // Trigger onBlur to update React state
+    await user.tab();
+
+    const taskDescInputs = screen.getAllByLabelText(/task description/i);
+    await user.type(taskDescInputs[0], 'W-track task');
+    await user.tab();
+
+    const taskEnvInputs = screen.getAllByLabelText(/task environment/i);
+    await user.type(taskEnvInputs[0], 'W-track maze');
+    await user.tab();
+
+    const taskEpochInputs = screen.getAllByLabelText(/task epochs/i);
+    await user.type(taskEpochInputs[0], '1');
+    await user.tab();
 
     // Add electrode group
     const addElectrodeGroupButton = screen.getByTitle(/Add electrode_groups/i);
@@ -1203,12 +1295,34 @@ describe('End-to-End Session Creation Workflow', () => {
       expect(updatedInputs.length).toBe(initialElectrodeGroupCount + 1);
     });
 
-    // Use placeholder text to find location field (more specific than label)
+    // Fill ALL required electrode group fields
     const locationInputs = screen.queryAllByPlaceholderText(/type to find a location/i);
-    // Get the last one added (most recent electrode group)
-    const electrodeGroupLocationInput = locationInputs[locationInputs.length - 1];
-    await user.type(electrodeGroupLocationInput, 'CA1');
-    await user.tab(); // Trigger onBlur to update React state
+    await user.type(locationInputs[locationInputs.length - 1], 'CA1');
+    await user.tab();
+
+    const descriptionInputs = screen.queryAllByLabelText(/^description$/i);
+    await user.type(descriptionInputs[descriptionInputs.length - 1], 'CA1 tetrode');
+    await user.tab();
+
+    const targetedLocationInputs = screen.queryAllByLabelText(/targeted location/i);
+    await user.type(targetedLocationInputs[targetedLocationInputs.length - 1], 'CA1');
+    await user.tab();
+
+    const targetedXInputs = screen.queryAllByLabelText(/targeted x/i);
+    await user.type(targetedXInputs[targetedXInputs.length - 1], '1.0');
+    await user.tab();
+
+    const targetedYInputs = screen.queryAllByLabelText(/targeted y/i);
+    await user.type(targetedYInputs[targetedYInputs.length - 1], '2.0');
+    await user.tab();
+
+    const targetedZInputs = screen.queryAllByLabelText(/targeted z/i);
+    await user.type(targetedZInputs[targetedZInputs.length - 1], '3.0');
+    await user.tab();
+
+    const unitsInputs = screen.queryAllByLabelText(/^units$/i);
+    await user.type(unitsInputs[unitsInputs.length - 1], 'mm');
+    await user.tab();
 
     // Device type select - get all and use the last one (most recent electrode group)
     const deviceTypeInputs = screen.queryAllByLabelText(/device type/i);
