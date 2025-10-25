@@ -9,6 +9,77 @@
 
 ## Phase 2 Week 10 Progress (Continued)
 
+### ✅ BUG #6 FIXED: PropTypes typo in 12 components
+
+**Duration:** 30 minutes
+**Status:** ✅ COMPLETE
+**Approach:** Systematic find-and-replace across codebase
+**Impact:** Enabled PropTypes validation for all components
+
+#### Bug Description
+
+**Files:** 12 component files across the codebase
+
+**Symptom:** PropTypes validation was completely disabled due to typo
+
+**Affected Components:**
+1. `src/ArrayUpdateMenu.jsx`
+2. `src/element/ArrayItemControl.jsx`
+3. `src/element/CheckboxList.jsx`
+4. `src/element/DataListElement.jsx`
+5. `src/element/FileUpload.jsx`
+6. `src/element/InfoIcon.jsx`
+7. `src/element/InputElement.jsx`
+8. `src/element/ListElement.jsx`
+9. `src/element/RadioList.jsx`
+10. `src/element/SelectElement.jsx`
+11. `src/element/SelectInputPairElement.jsx`
+12. `src/ntrode/ChannelMap.jsx`
+
+**Root Cause:** All components used `Component.propType = {...}` instead of `Component.propTypes = {...}`
+- React only recognizes the plural form: `propTypes`
+- The typo caused React to completely ignore PropTypes definitions
+- No runtime validation occurred for component props
+- Invalid props silently accepted, potentially causing bugs
+
+#### Fix Applied
+
+```javascript
+// BEFORE (BROKEN)
+SelectInputPairElement.propType = {
+  items: PropTypes.instanceOf(Array),
+  title: PropTypes.string.isRequired,
+  // ...
+};
+
+// AFTER (WORKING)
+SelectInputPairElement.propTypes = {
+  items: PropTypes.instanceOf(Array),
+  title: PropTypes.string.isRequired,
+  // ...
+};
+```
+
+**Fix Method:**
+- Used `find` + `sed` to replace `.propType = {` with `.propTypes = {` across all files
+- Verified all 12 files were corrected
+- No manual edits required
+
+#### Verification
+
+**Tests:** All 134 tests pass, no regressions
+- PropTypes validation now active in development mode
+- React will warn when invalid props are passed
+- Helps catch bugs during development
+
+**Impact:** PropTypes will now:
+- Validate prop types at runtime (development mode)
+- Warn when required props are missing
+- Warn when props have wrong type
+- Improve code quality and catch bugs earlier
+
+---
+
 ### ✅ BUG #5 FIXED: isProduction() security vulnerability
 
 **Duration:** 1 hour

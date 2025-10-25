@@ -65,7 +65,7 @@ const SelectElement = (prop) => {
   );
 };
 
-SelectElement.propType = {
+SelectElement.propTypes = {
   title: PropTypes.string.isRequired,
   defaultValue: PropTypes.oneOf([PropTypes.string, PropTypes.number]),
   dataItems: PropTypes.arrayOf(PropTypes.string).isRequired,

@@ -133,7 +133,7 @@ const ChannelMap = (prop) => {
   );
 };
 
-ChannelMap.propType = {
+ChannelMap.propTypes = {
   electrodeGroupId: PropTypes.number,
   nTrodeItems: PropTypes.instanceOf(Object),
   onBlur: PropTypes.func,

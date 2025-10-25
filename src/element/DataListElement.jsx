@@ -56,7 +56,7 @@ const DataListElement = (prop) => {
   );
 };
 
-DataListElement.propType = {
+DataListElement.propTypes = {
   title: PropTypes.string.isRequired,
   type: PropTypes.oneOf([PropTypes.string, PropTypes.number]),
   defaultValue: PropTypes.oneOf([PropTypes.string, PropTypes.number]),

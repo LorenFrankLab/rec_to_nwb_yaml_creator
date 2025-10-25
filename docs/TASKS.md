@@ -1167,11 +1167,11 @@ File: `src/__tests__/unit/app/App-importFile.test.jsx`
 
 #### BUG #6: PropTypes typo in ALL components
 
-- [ ] Fix all 10 components: `Component.propType = {...}` → `Component.propTypes = {...}`
-- [ ] Verify PropTypes validation now works
-- [ ] Run tests to verify no regressions
-- [ ] Commit: `phase2(bug-5): fix PropTypes typo in 10 components`
-- [ ] **Estimated Time:** 30 minutes
+- [x] Fix all 12 components: `Component.propType = {...}` → `Component.propTypes = {...}`
+- [x] Verify PropTypes validation now works
+- [x] Run tests to verify no regressions
+- [x] Commit: `phase2(bug-6): fix PropTypes typo in 12 components`
+- [x] **Actual Time:** 30 minutes
 
 ### Schema Validation Bugs (P1)
 

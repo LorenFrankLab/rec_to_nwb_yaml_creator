@@ -98,7 +98,7 @@ const ListElement = (prop) => {
   );
 };
 
-ListElement.propType = {
+ListElement.propTypes = {
   title: PropTypes.string.isRequired,
   id: PropTypes.string.isRequired,
   type: PropTypes.string.isRequired,

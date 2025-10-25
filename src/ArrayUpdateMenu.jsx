@@ -62,7 +62,7 @@ const ArrayUpdateMenu = (prop) => {
   );
 };
 
-ArrayUpdateMenu.propType = {
+ArrayUpdateMenu.propTypes = {
   addArrayItem: PropTypes.func,
   removeArrayItem: PropTypes.func,
   items: PropTypes.instanceOf(Array),

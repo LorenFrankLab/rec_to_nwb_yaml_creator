@@ -144,7 +144,7 @@ const SelectInputPairElement = (prop) => {
   );
 };
 
-SelectInputPairElement.propType = {
+SelectInputPairElement.propTypes = {
   items: PropTypes.instanceOf(Array),
   title: PropTypes.string.isRequired,
   id: PropTypes.string.isRequired,

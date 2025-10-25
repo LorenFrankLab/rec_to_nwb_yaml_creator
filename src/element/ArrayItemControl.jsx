@@ -40,7 +40,7 @@ const ArrayItemControl = (prop) => {
   );
 };
 
-ArrayItemControl.propType = {
+ArrayItemControl.propTypes = {
   index: PropTypes.number.isRequired,
   keyValue: PropTypes.string.isRequired,
   duplicateArrayItem: PropTypes.func,

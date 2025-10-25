@@ -75,7 +75,7 @@ const RadioList = (prop) => {
   );
 };
 
-RadioList.propType = {
+RadioList.propTypes = {
   title: PropTypes.string.isRequired,
   defaultValue: PropTypes.instanceOf(Array),
   dataItems: PropTypes.arrayOf(PropTypes.string),

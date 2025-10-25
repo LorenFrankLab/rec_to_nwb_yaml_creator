@@ -70,7 +70,7 @@ const CheckboxList = (prop) => {
   );
 };
 
-CheckboxList.propType = {
+CheckboxList.propTypes = {
   title: PropTypes.string.isRequired,
   defaultValue: PropTypes.instanceOf(Array),
   dataItems: PropTypes.arrayOf(PropTypes.string),

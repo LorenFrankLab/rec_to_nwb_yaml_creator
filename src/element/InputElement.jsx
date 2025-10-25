@@ -81,7 +81,7 @@ const InputElement = (prop) => {
   );
 };
 
-InputElement.propType = {
+InputElement.propTypes = {
   title: PropTypes.string.isRequired,
   id: PropTypes.string.isRequired,
   type: PropTypes.string.isRequired,

@@ -65,7 +65,7 @@ const FileUpload = (fileProperty) => {
   );
 };
 
-FileUpload.propType = {
+FileUpload.propTypes = {
   title: PropTypes.string.isRequired,
   name: PropTypes.string.isRequired,
   defaultValue: PropTypes.string,

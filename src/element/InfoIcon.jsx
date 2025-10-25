@@ -19,7 +19,7 @@ const InfoIcon = (prop) => {
   );
 };
 
-InfoIcon.propType = {
+InfoIcon.propTypes = {
   infoText: PropTypes.string.isRequired,
   size: PropTypes.string,
 };
