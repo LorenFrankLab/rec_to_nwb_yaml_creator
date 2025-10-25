@@ -1,9 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, waitFor, fireEvent, act } from '@testing-library/react';
+import { render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../App';
 import YAML from 'yaml';
 import { getMinimalCompleteYaml } from '../helpers/test-fixtures';
+import {
+  addListItem,
+  fillRequiredFields,
+  triggerExport,
+  typeAndWait,
+  blurAndWait,
+  selectAndWait,
+  getLast,
+  addCamera,
+  addTask,
+  addElectrodeGroup,
+} from '../helpers/integration-test-helpers';
 
 /**
  * Phase 1.5 Task 1.5.2: End-to-End Workflow Tests
@@ -28,142 +40,12 @@ import { getMinimalCompleteYaml } from '../helpers/test-fixtures';
  */
 
 /**
- * Helper: Add item to ListElement (like experimenter_name, keywords)
- *
- * @param {Object} user - userEvent instance
- * @param {Object} screen - Testing Library screen object
- * @param {string} placeholder - Unique placeholder text (e.g., 'LastName, FirstName')
- * @param {string} value - Value to add to the list
- */
-async function addListItem(user, screen, placeholder, value) {
-  const input = screen.getByPlaceholderText(placeholder);
-  await user.type(input, value);
-  await user.keyboard('{Enter}'); // Add to list
-}
-
-/**
  * ListElement placeholder mappings (for easy reference)
  */
 const LIST_PLACEHOLDERS = {
   experimenter_name: 'LastName, FirstName',
   keywords: 'Type Keywords', // Default computed from title
 };
-
-/**
- * Helper: Fill all HTML5-required fields to pass browser validation
- *
- * These fields are REQUIRED by HTML5 validation (required + pattern attributes)
- * and MUST be filled for export to work. Missing any will cause silent export failure.
- *
- * See docs/TESTING_PATTERNS.md for full explanation.
- */
-async function fillRequiredFields(user, screen) {
-  // 1. Experimenter name (ListElement)
-  await addListItem(user, screen, LIST_PLACEHOLDERS.experimenter_name, 'Test, User');
-
-  // 2. Lab
-  const labInput = screen.getByLabelText(/^lab$/i);
-  await user.clear(labInput);
-  await user.type(labInput, 'Test Lab');
-
-  // 3. Institution
-  const institutionInput = screen.getByLabelText(/institution/i);
-  await user.clear(institutionInput);
-  await user.type(institutionInput, 'Test Institution');
-
-  // 4. Experiment description (required, non-whitespace pattern)
-  const experimentDescInput = screen.getByLabelText(/experiment description/i);
-  await user.type(experimentDescInput, 'Test experiment');
-
-  // 5. Session description (required, non-whitespace pattern)
-  const sessionDescInput = screen.getByLabelText(/session description/i);
-  await user.type(sessionDescInput, 'Test session');
-
-  // 6. Session ID (required, non-whitespace pattern)
-  const sessionIdInput = screen.getByLabelText(/session id/i);
-  await user.type(sessionIdInput, 'TEST01');
-
-  // 7. Keywords (required - minItems: 1)
-  await addListItem(user, screen, LIST_PLACEHOLDERS.keywords, 'test');
-
-  // 8. Subject ID (required, non-whitespace pattern)
-  const subjectIdInput = screen.getByLabelText(/subject id/i);
-  await user.type(subjectIdInput, 'test_subject');
-
-  // 9. Subject genotype (required, non-whitespace pattern)
-  const genotypeInput = screen.getByLabelText(/genotype/i);
-  await user.clear(genotypeInput);
-  await user.type(genotypeInput, 'Wild Type');
-
-  // 10. Subject date_of_birth (required, type="date" input, onBlur converts to ISO 8601)
-  const dobInput = screen.getByLabelText(/date of birth/i);
-  await user.type(dobInput, '2024-01-01');
-
-  // 11. Units analog (required, non-whitespace pattern)
-  const unitsAnalogInput = screen.getByLabelText(/^analog$/i);
-  await user.clear(unitsAnalogInput);
-  await user.type(unitsAnalogInput, 'volts');
-
-  // 12. Units behavioral_events (required, non-whitespace pattern)
-  const unitsBehavioralInput = screen.getByLabelText(/behavioral events/i);
-  await user.clear(unitsBehavioralInput);
-  await user.type(unitsBehavioralInput, 'n/a');
-
-  // 13. Default header file path (required, non-whitespace pattern)
-  const headerPathInput = screen.getByLabelText(/^default header file path$/i);
-  await user.clear(headerPathInput);
-  await user.type(headerPathInput, 'header.h');
-
-  // 14. Data acq device (required - minItems: 1)
-  const addDataAcqDeviceButton = screen.getByTitle(/Add data_acq_device/i);
-  await user.click(addDataAcqDeviceButton);
-
-  // Wait for item to render
-  await waitFor(() => {
-    expect(screen.queryByText(/Item #1/)).toBeInTheDocument();
-  });
-
-  // Verify default values are set (from arrayDefaultValues in valueList.js)
-  const deviceNameInput = screen.getByPlaceholderText(/typically a number/i);
-  expect(deviceNameInput).toHaveValue('SpikeGadgets');
-}
-
-/**
- * Helper: Trigger export using React fiber approach
- *
- * Standard form submission methods don't work in jsdom (user.click, dispatchEvent, etc.)
- * We must access React's internal fiber tree and call the onSubmit handler directly.
- *
- * See docs/TESTING_PATTERNS.md for full explanation.
- */
-async function triggerExport(mockEvent = null) {
-  // Blur the currently focused element to ensure onBlur fires
-  // This simulates what happens when a user clicks the export button in real usage
-  if (document.activeElement && document.activeElement !== document.body) {
-    await act(async () => {
-      fireEvent.blur(document.activeElement);
-      // Small delay to ensure onBlur handlers complete
-      await new Promise(resolve => setTimeout(resolve, 50));
-    });
-  }
-
-  const form = document.querySelector('form');
-  const fiberKey = Object.keys(form).find(key => key.startsWith('__reactFiber'));
-  const fiber = form[fiberKey];
-  const onSubmitHandler = fiber?.memoizedProps?.onSubmit;
-
-  if (!onSubmitHandler) {
-    throw new Error('Could not find React onSubmit handler on form element');
-  }
-
-  const event = mockEvent || {
-    preventDefault: vi.fn(),
-    target: form,
-    currentTarget: form,
-  };
-
-  onSubmitHandler(event);
-}
 
 describe('End-to-End Session Creation Workflow', () => {
   let mockBlob;
@@ -439,79 +321,26 @@ describe('End-to-End Session Creation Workflow', () => {
     await user.clear(subjectDescriptionInput);
     await user.type(subjectDescriptionInput, 'Long Evans Rat');
 
-    // Add camera
-    const addCameraButton = screen.getByTitle(/Add cameras/i);
-    let cameraNameInputs = screen.queryAllByLabelText(/camera name/i);
-    const initialCameraCount = cameraNameInputs.length;
-
-    await user.click(addCameraButton);
-
-    await waitFor(() => {
-      cameraNameInputs = screen.queryAllByLabelText(/camera name/i);
-      expect(cameraNameInputs.length).toBe(initialCameraCount + 1);
+    // Add camera using helper
+    await addCamera(user, screen, {
+      name: 'overhead_camera',
+      manufacturer: 'Logitech',
+      model: 'C920',
+      lens: 'Standard',
+      metersPerPixel: '0.001'
     });
 
-    // Fill ALL required camera fields
-    cameraNameInputs = screen.getAllByLabelText(/camera name/i);
-    await user.type(cameraNameInputs[0], 'overhead_camera');
-
-    let manufacturerInputs = screen.getAllByLabelText(/manufacturer/i);
-    await user.type(manufacturerInputs[0], 'Logitech');
-
-    let modelInputs = screen.getAllByLabelText(/model/i);
-    await user.type(modelInputs[0], 'C920');
-
-    let lensInputs = screen.getAllByLabelText(/lens/i);
-    await user.type(lensInputs[0], 'Standard');
-
-    let metersPerPixelInputs = screen.getAllByLabelText(/meters per pixel/i);
-    await user.clear(metersPerPixelInputs[0]);
-    await user.type(metersPerPixelInputs[0], '0.001');
-
+    // Verify camera ID was auto-assigned
     const cameraIdInputs = screen.getAllByLabelText(/^camera id$/i);
-    expect(cameraIdInputs[0]).toHaveValue(0); // Auto-assigned ID
+    expect(cameraIdInputs[0]).toHaveValue(0);
 
-    // Add task
-    const addTaskButton = screen.getByTitle(/Add tasks/i);
-    let taskNameInputs = screen.queryAllByLabelText(/task name/i);
-    const initialTaskCount = taskNameInputs.length;
-
-    await user.click(addTaskButton);
-
-    await waitFor(() => {
-      taskNameInputs = screen.queryAllByLabelText(/task name/i);
-      expect(taskNameInputs.length).toBe(initialTaskCount + 1);
+    // Add task using helper
+    await addTask(user, screen, {
+      name: 'sleep',
+      description: 'Rest session before task',
+      environment: 'home cage',
+      epochs: [1]
     });
-
-    // Fill ALL required task fields: task_name, task_description, task_environment, camera_id, task_epochs
-    // IMPORTANT: Must trigger blur + wait for React re-render before querying next field
-    taskNameInputs = screen.getAllByLabelText(/task name/i);
-    await user.type(taskNameInputs[0], 'sleep');
-
-    // Manually trigger blur to force React re-render NOW
-    taskNameInputs[0].blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    // Now query for fresh elements AFTER React has re-rendered
-    let taskDescInputs = screen.getAllByLabelText(/task description/i);
-    await user.type(taskDescInputs[0], 'Rest session before task');
-
-    taskDescInputs[0].blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    const taskEnvInputs = screen.getAllByLabelText(/task environment/i);
-    await user.type(taskEnvInputs[0], 'home cage');
-
-    // task_epochs is a ListElement - must use placeholder, not label
-    // ListElement inputs don't have id attributes, so getAllByLabelText() fails
-    // Placeholder is computed as "Type ${title}" = "Type Task Epochs"
-    const taskEpochInput = screen.getByPlaceholderText(/Type Task Epochs/i);
-    await user.type(taskEpochInput, '1');
-    await user.keyboard('{Enter}'); // Add to list
 
     // camera_id should default to [0] since we have camera with id=0
 
@@ -720,66 +549,27 @@ describe('End-to-End Session Creation Workflow', () => {
       expect(labInput).toHaveValue('Test Lab');
     }, { timeout: 2000 });
 
-    // Add first camera
-    const addCameraButton = screen.getByTitle(/Add cameras/i);
-
-    // Get initial count before adding
-    let cameraNameInputs = screen.queryAllByLabelText(/camera name/i);
-    const initialCameraCount = cameraNameInputs.length;
-
-    await user.click(addCameraButton);
-
-    // Wait for new camera to be added
-    await waitFor(() => {
-      cameraNameInputs = screen.queryAllByLabelText(/camera name/i);
-      expect(cameraNameInputs.length).toBe(initialCameraCount + 1);
+    // Add first camera using helper
+    await addCamera(user, screen, {
+      name: 'overhead_camera',
+      manufacturer: 'Logitech',
+      model: 'C920',
+      lens: 'Standard',
+      metersPerPixel: '0.001'
     });
-
-    // Fill ALL required camera fields (not just name!)
-    cameraNameInputs = screen.getAllByLabelText(/camera name/i);
-    await user.type(cameraNameInputs[0], 'overhead_camera');
-
-    let manufacturerInputs = screen.getAllByLabelText(/manufacturer/i);
-    await user.type(manufacturerInputs[0], 'Logitech');
-
-    let modelInputs = screen.getAllByLabelText(/model/i);
-    await user.type(modelInputs[0], 'C920');
-
-    let lensInputs = screen.getAllByLabelText(/lens/i);
-    await user.type(lensInputs[0], 'Standard');
-
-    let metersPerPixelInputs = screen.getAllByLabelText(/meters per pixel/i);
-    await user.clear(metersPerPixelInputs[0]);
-    await user.type(metersPerPixelInputs[0], '0.001');
 
     // Verify first camera has ID 0
     let cameraIdInputs = screen.getAllByLabelText(/^camera id$/i);
     expect(cameraIdInputs[0]).toHaveValue(0);
 
-    // Add second camera
-    await user.click(addCameraButton);
-
-    await waitFor(() => {
-      const items = screen.queryAllByText(/Item #2/);
-      expect(items.length).toBeGreaterThan(0);
+    // Add second camera using helper
+    await addCamera(user, screen, {
+      name: 'side_camera',
+      manufacturer: 'Microsoft',
+      model: 'LifeCam',
+      lens: 'Wide Angle',
+      metersPerPixel: '0.0015'
     });
-
-    // Fill ALL required fields for second camera too
-    cameraNameInputs = screen.getAllByLabelText(/camera name/i);
-    await user.type(cameraNameInputs[1], 'side_camera');
-
-    manufacturerInputs = screen.getAllByLabelText(/manufacturer/i);
-    await user.type(manufacturerInputs[1], 'Microsoft');
-
-    modelInputs = screen.getAllByLabelText(/model/i);
-    await user.type(modelInputs[1], 'LifeCam');
-
-    lensInputs = screen.getAllByLabelText(/lens/i);
-    await user.type(lensInputs[1], 'Wide Angle');
-
-    metersPerPixelInputs = screen.getAllByLabelText(/meters per pixel/i);
-    await user.clear(metersPerPixelInputs[1]);
-    await user.type(metersPerPixelInputs[1], '0.0015');
 
     // Verify second camera has ID 1
     cameraIdInputs = screen.getAllByLabelText(/^camera id$/i);
@@ -822,75 +612,22 @@ describe('End-to-End Session Creation Workflow', () => {
     // ACT - Fill required fields first
     await fillRequiredFields(user, screen);
 
-    // Add a camera to reference
-    const addCameraButton = screen.getByTitle(/Add cameras/i);
-    let cameraNameInputs = screen.queryAllByLabelText(/camera name/i);
-    const initialCameraCount = cameraNameInputs.length;
-
-    await user.click(addCameraButton);
-
-    await waitFor(() => {
-      cameraNameInputs = screen.queryAllByLabelText(/camera name/i);
-      expect(cameraNameInputs.length).toBe(initialCameraCount + 1);
+    // Add a camera to reference using helper
+    await addCamera(user, screen, {
+      name: 'overhead_camera',
+      manufacturer: 'Logitech',
+      model: 'C920',
+      lens: 'Standard',
+      metersPerPixel: '0.001'
     });
 
-    // Fill ALL required camera fields
-    cameraNameInputs = screen.getAllByLabelText(/camera name/i);
-    await user.type(cameraNameInputs[0], 'overhead_camera');
-
-    let manufacturerInputs = screen.getAllByLabelText(/manufacturer/i);
-    await user.type(manufacturerInputs[0], 'Logitech');
-
-    let modelInputs = screen.getAllByLabelText(/model/i);
-    await user.type(modelInputs[0], 'C920');
-
-    let lensInputs = screen.getAllByLabelText(/lens/i);
-    await user.type(lensInputs[0], 'Standard');
-
-    let metersPerPixelInputs = screen.getAllByLabelText(/meters per pixel/i);
-    await user.clear(metersPerPixelInputs[0]);
-    await user.type(metersPerPixelInputs[0], '0.001');
-
-    // Add a task
-    const addTaskButton = screen.getByTitle(/Add tasks/i);
-    let taskNameInputs = screen.queryAllByLabelText(/task name/i);
-    const initialTaskCount = taskNameInputs.length;
-
-    await user.click(addTaskButton);
-
-    await waitFor(() => {
-      taskNameInputs = screen.queryAllByLabelText(/task name/i);
-      expect(taskNameInputs.length).toBe(initialTaskCount + 1);
+    // Add a task using helper
+    await addTask(user, screen, {
+      name: 'sleep',
+      description: 'Rest session',
+      environment: 'home cage',
+      epochs: [1, 3]
     });
-
-    // Fill task fields with blur() + delay pattern to avoid stale element references
-    taskNameInputs = screen.getAllByLabelText(/task name/i);
-    await user.type(taskNameInputs[0], 'sleep');
-    taskNameInputs[0].blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    let taskDescInputs = screen.getAllByLabelText(/task description/i);
-    await user.type(taskDescInputs[0], 'Rest session');
-    taskDescInputs[0].blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    const taskEnvInputs = screen.getAllByLabelText(/task environment/i);
-    await user.type(taskEnvInputs[0], 'home cage');
-    taskEnvInputs[0].blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    // task_epochs is a ListElement - use placeholder instead of label
-    const taskEpochInput = screen.getByPlaceholderText(/Type Task Epochs/i);
-    await user.type(taskEpochInput, '1');
-    await user.keyboard('{Enter}');
-    await user.type(taskEpochInput, '3');
-    await user.keyboard('{Enter}');
 
     // Export using React fiber approach
     await triggerExport();
@@ -950,20 +687,12 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // Select from dropdown (Din, Dout, Accel, Gyro, Mag)
     const eventDescSelect = document.getElementById('behavioral_events-description-0-list');
-    await user.selectOptions(eventDescSelect, 'Dout');
-    eventDescSelect.blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
+    await selectAndWait(user, eventDescSelect, 'Dout');
 
     // Fill the number input part - query fresh after React re-render
     let eventDescInput = screen.getByPlaceholderText(/DIO info/i);
     await user.clear(eventDescInput);
-    await user.type(eventDescInput, '2');
-    eventDescInput.blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
+    await typeAndWait(user, eventDescInput, '2');
 
     // behavioral_events-name is a DataListElement - query fresh
     const eventNameInput = screen.getByPlaceholderText(/E\.g\. light1/i);
@@ -1005,95 +734,24 @@ describe('End-to-End Session Creation Workflow', () => {
     // ACT - Fill required fields first
     await fillRequiredFields(user, screen);
 
-    // Add electrode group
-    const addElectrodeGroupButton = screen.getByTitle(/Add electrode_groups/i);
-
-    // Count existing electrode groups using placeholder text (unique to electrode groups)
-    let electrodeGroupIdInputs = screen.queryAllByPlaceholderText(/typically a number/i);
-    // Filter to only electrode group IDs (exclude data_acq_device which also has this placeholder)
-    electrodeGroupIdInputs = electrodeGroupIdInputs.filter(input =>
-      input.id && input.id.startsWith('electrode_groups-id-')
-    );
-    const initialElectrodeGroupCount = electrodeGroupIdInputs.length;
-
-    await user.click(addElectrodeGroupButton);
-
-    // Wait for new electrode group to be added
-    await waitFor(() => {
-      let updatedInputs = screen.queryAllByPlaceholderText(/typically a number/i);
-      updatedInputs = updatedInputs.filter(input =>
-        input.id && input.id.startsWith('electrode_groups-id-')
-      );
-      expect(updatedInputs.length).toBe(initialElectrodeGroupCount + 1);
+    // Add electrode group using helper
+    await addElectrodeGroup(user, screen, {
+      location: 'CA1',
+      deviceType: 'tetrode_12.5',
+      description: 'Dorsal CA1 tetrode',
+      targetedLocation: 'CA1',
+      targetedX: '1.5',
+      targetedY: '2.0',
+      targetedZ: '3.0',
+      units: 'mm'
     });
 
-    // Get the first electrode group ID input (should have auto-assigned ID of 0)
-    electrodeGroupIdInputs = screen.queryAllByPlaceholderText(/typically a number/i);
+    // Verify auto-assigned ID
+    let electrodeGroupIdInputs = screen.queryAllByPlaceholderText(/typically a number/i);
     const electrodeGroupIdInput = electrodeGroupIdInputs.find(input =>
       input.id && input.id.startsWith('electrode_groups-id-')
     );
-    expect(electrodeGroupIdInput).toHaveValue(0); // Auto-assigned ID
-
-    // Fill electrode group fields with blur() + delay to prevent stale references
-    // Use placeholder text to find location field (more specific than label)
-    let locationInputs = screen.queryAllByPlaceholderText(/type to find a location/i);
-    const electrodeGroupLocationInput = locationInputs[locationInputs.length - 1];
-    await user.type(electrodeGroupLocationInput, 'CA1');
-    electrodeGroupLocationInput.blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    // Device type select - get all and use the last one (most recent electrode group)
-    let deviceTypeInputs = screen.queryAllByLabelText(/device type/i);
-    await user.selectOptions(deviceTypeInputs[deviceTypeInputs.length - 1], 'tetrode_12.5');
-    deviceTypeInputs[deviceTypeInputs.length - 1].blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    // Description field - get all and use the last one (most recent electrode group)
-    let descriptionInputs = screen.queryAllByLabelText(/^description$/i);
-    const electrodeGroupDescInput = descriptionInputs[descriptionInputs.length - 1];
-    await user.type(electrodeGroupDescInput, 'Dorsal CA1 tetrode');
-    electrodeGroupDescInput.blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    // Fill remaining required fields for electrode group
-    let targetedLocationInputs = screen.queryAllByLabelText(/targeted location/i);
-    await user.type(targetedLocationInputs[targetedLocationInputs.length - 1], 'CA1');
-    targetedLocationInputs[targetedLocationInputs.length - 1].blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    // Use correct label text from App.js
-    let targetedXInputs = screen.queryAllByLabelText(/ML from Bregma/i);
-    await user.type(targetedXInputs[targetedXInputs.length - 1], '1.5');
-    targetedXInputs[targetedXInputs.length - 1].blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    let targetedYInputs = screen.queryAllByLabelText(/AP to Bregma/i);
-    await user.type(targetedYInputs[targetedYInputs.length - 1], '2.0');
-    targetedYInputs[targetedYInputs.length - 1].blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    let targetedZInputs = screen.queryAllByLabelText(/DV to Cortical Surface/i);
-    await user.type(targetedZInputs[targetedZInputs.length - 1], '3.0');
-    targetedZInputs[targetedZInputs.length - 1].blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    // Units field is DataListElement with unique placeholder
-    let unitsInputs = screen.queryAllByPlaceholderText(/Distance units defining positioning/i);
-    await user.type(unitsInputs[unitsInputs.length - 1], 'mm');
+    expect(electrodeGroupIdInput).toHaveValue(0);
 
     // Export using React fiber approach
     await triggerExport();
@@ -1132,84 +790,16 @@ describe('End-to-End Session Creation Workflow', () => {
     // ACT - Fill required fields first
     await fillRequiredFields(user, screen);
 
-    // Add electrode group and select device type
-    const addElectrodeGroupButton = screen.getByTitle(/Add electrode_groups/i);
-
-    // Count using placeholder (same pattern as test 9)
-    let electrodeGroupIdInputs = screen.queryAllByPlaceholderText(/typically a number/i);
-    electrodeGroupIdInputs = electrodeGroupIdInputs.filter(input =>
-      input.id && input.id.startsWith('electrode_groups-id-')
-    );
-    const initialElectrodeGroupCount = electrodeGroupIdInputs.length;
-
-    await user.click(addElectrodeGroupButton);
-
-    await waitFor(() => {
-      let updatedInputs = screen.queryAllByPlaceholderText(/typically a number/i);
-      updatedInputs = updatedInputs.filter(input =>
-        input.id && input.id.startsWith('electrode_groups-id-')
-      );
-      expect(updatedInputs.length).toBe(initialElectrodeGroupCount + 1);
-    });
-
-    // Fill electrode group fields with blur() + delay pattern (same as test 9)
-    let locationInputs = screen.queryAllByPlaceholderText(/type to find a location/i);
-    const electrodeGroupLocationInput = locationInputs[locationInputs.length - 1];
-    await user.type(electrodeGroupLocationInput, 'CA1');
-    electrodeGroupLocationInput.blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    let descriptionInputs = screen.queryAllByLabelText(/^description$/i);
-    await user.type(descriptionInputs[descriptionInputs.length - 1], 'Test tetrode');
-    descriptionInputs[descriptionInputs.length - 1].blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    let targetedLocationInputs = screen.queryAllByLabelText(/targeted location/i);
-    await user.type(targetedLocationInputs[targetedLocationInputs.length - 1], 'CA1');
-    targetedLocationInputs[targetedLocationInputs.length - 1].blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    // Use correct label text (same as test 9)
-    let targetedXInputs = screen.queryAllByLabelText(/ML from Bregma/i);
-    await user.type(targetedXInputs[targetedXInputs.length - 1], '1.0');
-    targetedXInputs[targetedXInputs.length - 1].blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    let targetedYInputs = screen.queryAllByLabelText(/AP to Bregma/i);
-    await user.type(targetedYInputs[targetedYInputs.length - 1], '2.0');
-    targetedYInputs[targetedYInputs.length - 1].blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    let targetedZInputs = screen.queryAllByLabelText(/DV to Cortical Surface/i);
-    await user.type(targetedZInputs[targetedZInputs.length - 1], '3.0');
-    targetedZInputs[targetedZInputs.length - 1].blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    let unitsInputs = screen.queryAllByPlaceholderText(/Distance units defining positioning/i);
-    await user.type(unitsInputs[unitsInputs.length - 1], 'mm');
-    unitsInputs[unitsInputs.length - 1].blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    // Select device type to trigger ntrode generation
-    let deviceTypeInputs = screen.queryAllByLabelText(/device type/i);
-    await user.selectOptions(deviceTypeInputs[deviceTypeInputs.length - 1], 'tetrode_12.5');
-    deviceTypeInputs[deviceTypeInputs.length - 1].blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
+    // Add electrode group using helper (device type triggers ntrode generation)
+    await addElectrodeGroup(user, screen, {
+      location: 'CA1',
+      deviceType: 'tetrode_12.5',
+      description: 'Test tetrode',
+      targetedLocation: 'CA1',
+      targetedX: '1.0',
+      targetedY: '2.0',
+      targetedZ: '3.0',
+      units: 'mm'
     });
 
     // Wait for ntrode generation (async operation)
@@ -1288,153 +878,33 @@ describe('End-to-End Session Creation Workflow', () => {
     const sexInputs = screen.getAllByLabelText(/sex/i);
     await user.selectOptions(sexInputs[0], 'M');
 
-    // Add camera
-    const addCameraButton = screen.getByTitle(/Add cameras/i);
-    let cameraNameInputs = screen.queryAllByLabelText(/camera name/i);
-    const initialCameraCount = cameraNameInputs.length;
-
-    await user.click(addCameraButton);
-
-    await waitFor(() => {
-      cameraNameInputs = screen.queryAllByLabelText(/camera name/i);
-      expect(cameraNameInputs.length).toBe(initialCameraCount + 1);
+    // Add camera using helper
+    await addCamera(user, screen, {
+      name: 'overhead_camera',
+      manufacturer: 'Logitech',
+      model: 'C920',
+      lens: 'Standard',
+      metersPerPixel: '0.001'
     });
 
-    // Fill ALL required camera fields
-    cameraNameInputs = screen.getAllByLabelText(/camera name/i);
-    await user.type(cameraNameInputs[0], 'overhead_camera');
-
-    let manufacturerInputs = screen.getAllByLabelText(/manufacturer/i);
-    await user.type(manufacturerInputs[0], 'Logitech');
-
-    let modelInputs = screen.getAllByLabelText(/model/i);
-    await user.type(modelInputs[0], 'C920');
-
-    let lensInputs = screen.getAllByLabelText(/lens/i);
-    await user.type(lensInputs[0], 'Standard');
-
-    let metersPerPixelInputs = screen.getAllByLabelText(/meters per pixel/i);
-    await user.clear(metersPerPixelInputs[0]);
-    await user.type(metersPerPixelInputs[0], '0.001');
-
-    // Add task
-    const addTaskButton = screen.getByTitle(/Add tasks/i);
-    let taskNameInputs = screen.queryAllByLabelText(/task name/i);
-    const initialTaskCount = taskNameInputs.length;
-
-    await user.click(addTaskButton);
-
-    await waitFor(() => {
-      taskNameInputs = screen.queryAllByLabelText(/task name/i);
-      expect(taskNameInputs.length).toBe(initialTaskCount + 1);
+    // Add task using helper
+    await addTask(user, screen, {
+      name: 'w_track',
+      description: 'W-track task',
+      environment: 'W-track maze',
+      epochs: [1]
     });
 
-    // Fill ALL required task fields with blur() + delay pattern
-    taskNameInputs = screen.getAllByLabelText(/task name/i);
-    await user.type(taskNameInputs[0], 'w_track');
-    taskNameInputs[0].blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    let taskDescInputs = screen.getAllByLabelText(/task description/i);
-    await user.type(taskDescInputs[0], 'W-track task');
-    taskDescInputs[0].blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    const taskEnvInputs = screen.getAllByLabelText(/task environment/i);
-    await user.type(taskEnvInputs[0], 'W-track maze');
-    taskEnvInputs[0].blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    // task_epochs is a ListElement - use placeholder instead of label
-    const taskEpochInput = screen.getByPlaceholderText(/Type Task Epochs/i);
-    await user.type(taskEpochInput, '1');
-    await user.keyboard('{Enter}');
-
-    // Add electrode group
-    const addElectrodeGroupButton = screen.getByTitle(/Add electrode_groups/i);
-
-    // Count existing electrode groups using placeholder text (unique to electrode groups)
-    let electrodeGroupIdInputs = screen.queryAllByPlaceholderText(/typically a number/i);
-    // Filter to only electrode group IDs (exclude data_acq_device which also has this placeholder)
-    electrodeGroupIdInputs = electrodeGroupIdInputs.filter(input =>
-      input.id && input.id.startsWith('electrode_groups-id-')
-    );
-    const initialElectrodeGroupCount = electrodeGroupIdInputs.length;
-
-    await user.click(addElectrodeGroupButton);
-
-    // Wait for new electrode group to be added
-    await waitFor(() => {
-      let updatedInputs = screen.queryAllByPlaceholderText(/typically a number/i);
-      updatedInputs = updatedInputs.filter(input =>
-        input.id && input.id.startsWith('electrode_groups-id-')
-      );
-      expect(updatedInputs.length).toBe(initialElectrodeGroupCount + 1);
-    });
-
-    // Fill ALL required electrode group fields with blur() + delay pattern
-    let locationInputs = screen.queryAllByPlaceholderText(/type to find a location/i);
-    await user.type(locationInputs[locationInputs.length - 1], 'CA1');
-    locationInputs[locationInputs.length - 1].blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    let descriptionInputs = screen.queryAllByLabelText(/^description$/i);
-    await user.type(descriptionInputs[descriptionInputs.length - 1], 'CA1 tetrode');
-    descriptionInputs[descriptionInputs.length - 1].blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    let targetedLocationInputs = screen.queryAllByLabelText(/targeted location/i);
-    await user.type(targetedLocationInputs[targetedLocationInputs.length - 1], 'CA1');
-    targetedLocationInputs[targetedLocationInputs.length - 1].blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    // Use correct label text
-    let targetedXInputs = screen.queryAllByLabelText(/ML from Bregma/i);
-    await user.type(targetedXInputs[targetedXInputs.length - 1], '1.0');
-    targetedXInputs[targetedXInputs.length - 1].blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    let targetedYInputs = screen.queryAllByLabelText(/AP to Bregma/i);
-    await user.type(targetedYInputs[targetedYInputs.length - 1], '2.0');
-    targetedYInputs[targetedYInputs.length - 1].blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    let targetedZInputs = screen.queryAllByLabelText(/DV to Cortical Surface/i);
-    await user.type(targetedZInputs[targetedZInputs.length - 1], '3.0');
-    targetedZInputs[targetedZInputs.length - 1].blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    let unitsInputs = screen.queryAllByPlaceholderText(/Distance units defining positioning/i);
-    await user.type(unitsInputs[unitsInputs.length - 1], 'mm');
-    unitsInputs[unitsInputs.length - 1].blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    // Device type select - get all and use the last one (most recent electrode group)
-    let deviceTypeInputs = screen.queryAllByLabelText(/device type/i);
-    await user.selectOptions(deviceTypeInputs[deviceTypeInputs.length - 1], 'tetrode_12.5');
-    deviceTypeInputs[deviceTypeInputs.length - 1].blur();
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
+    // Add electrode group using helper
+    await addElectrodeGroup(user, screen, {
+      location: 'CA1',
+      deviceType: 'tetrode_12.5',
+      description: 'CA1 tetrode',
+      targetedLocation: 'CA1',
+      targetedX: '1.0',
+      targetedY: '2.0',
+      targetedZ: '3.0',
+      units: 'mm'
     });
 
     // Wait for ntrode generation

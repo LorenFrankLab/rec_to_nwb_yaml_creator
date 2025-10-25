@@ -4,33 +4,9 @@ import userEvent from '@testing-library/user-event';
 import { App } from '../../App';
 import YAML from 'yaml';
 import { getMinimalCompleteYaml } from '../helpers/test-fixtures';
+import { triggerExport, importYamlFile } from '../helpers/integration-test-helpers';
 import fs from 'fs';
 import path from 'path';
-
-/**
- * Helper to trigger export using React fiber (bypasses requestSubmit limitation)
- *
- * The form.requestSubmit() DOM API doesn't trigger React synthetic event handlers
- * in test environments. This helper directly calls the React onSubmit handler.
- */
-async function triggerExport(mockEvent = null) {
-  const form = document.querySelector('form');
-  const fiberKey = Object.keys(form).find(key => key.startsWith('__reactFiber'));
-  const fiber = form[fiberKey];
-  const onSubmitHandler = fiber?.memoizedProps?.onSubmit;
-
-  if (!onSubmitHandler) {
-    throw new Error('Could not find React onSubmit handler on form element');
-  }
-
-  const event = mockEvent || {
-    preventDefault: vi.fn(),
-    target: form,
-    currentTarget: form,
-  };
-
-  onSubmitHandler(event);
-}
 
 /**
  * Phase 1.5 Task 1.5.1: Sample Metadata Modification Tests
@@ -102,22 +78,11 @@ describe('Sample Metadata Modification Workflow', () => {
     const user = userEvent.setup();
     const { container } = render(<App />);
 
-    // Create a File object from the sample YAML content
-    const yamlFile = new File([sampleYamlContent], 'minimal-complete.yml', {
-      type: 'text/yaml',
-    });
-
-    // ACT - Upload the file
-    // Note: The file input doesn't have a text label, only an icon, so we query by ID
-    const fileInput = container.querySelector('#importYAMLFile');
-    await user.upload(fileInput, yamlFile);
+    // ACT - Upload the file using helper
+    await importYamlFile(user, screen, container, sampleYamlContent, 'minimal-complete.yml');
 
     // ASSERT - Verify critical fields are populated
-    // Wait for FileReader to complete (async operation)
-    await vi.waitFor(() => {
-      const labInput = screen.getByLabelText(/^lab$/i);
-      expect(labInput).toHaveValue('Test Lab');
-    }, { timeout: 5000 });
+    expect(screen.getByLabelText(/^lab$/i)).toHaveValue('Test Lab');
 
     // Verify other top-level fields
     expect(screen.getByLabelText(/institution/i)).toHaveValue('Test University');
@@ -162,17 +127,8 @@ describe('Sample Metadata Modification Workflow', () => {
     const user = userEvent.setup();
     const { container } = render(<App />);
 
-    const yamlFile = new File([sampleYamlContent], 'minimal-complete.yml', {
-      type: 'text/yaml',
-    });
-
-    // Import first
-    const fileInput = container.querySelector('#importYAMLFile');
-    await user.upload(fileInput, yamlFile);
-
-    await vi.waitFor(() => {
-      expect(screen.getByLabelText(/^lab$/i)).toHaveValue('Test Lab');
-    }, { timeout: 5000 });
+    // Import first using helper
+    await importYamlFile(user, screen, container, sampleYamlContent, 'minimal-complete.yml');
 
     // ACT - Modify the first experimenter name
     // ListElement uses placeholder text, not labels
@@ -196,17 +152,8 @@ describe('Sample Metadata Modification Workflow', () => {
     const user = userEvent.setup();
     const { container } = render(<App />);
 
-    const yamlFile = new File([sampleYamlContent], 'minimal-complete.yml', {
-      type: 'text/yaml',
-    });
-
-    // Import first
-    const fileInput = container.querySelector('#importYAMLFile');
-    await user.upload(fileInput, yamlFile);
-
-    await vi.waitFor(() => {
-      expect(screen.getByLabelText(/^lab$/i)).toHaveValue('Test Lab');
-    }, { timeout: 5000 });
+    // Import first using helper
+    await importYamlFile(user, screen, container, sampleYamlContent, 'minimal-complete.yml');
 
     // ACT - Modify subject ID and description
     const subjectIdInputs = screen.getAllByLabelText(/subject id/i);
@@ -244,17 +191,8 @@ describe('Sample Metadata Modification Workflow', () => {
     const user = userEvent.setup();
     const { container } = render(<App />);
 
-    const yamlFile = new File([sampleYamlContent], 'minimal-complete.yml', {
-      type: 'text/yaml',
-    });
-
-    // Import first
-    const fileInput = container.querySelector('#importYAMLFile');
-    await user.upload(fileInput, yamlFile);
-
-    await vi.waitFor(() => {
-      expect(screen.getByLabelText(/^lab$/i)).toHaveValue('Test Lab');
-    }, { timeout: 5000 });
+    // Import first using helper
+    await importYamlFile(user, screen, container, sampleYamlContent, 'minimal-complete.yml');
 
     // Verify we start with 2 cameras
     let cameraNameInputs = screen.getAllByLabelText(/camera name/i);
@@ -287,17 +225,8 @@ describe('Sample Metadata Modification Workflow', () => {
     const user = userEvent.setup();
     const { container } = render(<App />);
 
-    const yamlFile = new File([sampleYamlContent], 'minimal-complete.yml', {
-      type: 'text/yaml',
-    });
-
-    // Import first
-    const fileInput = container.querySelector('#importYAMLFile');
-    await user.upload(fileInput, yamlFile);
-
-    await vi.waitFor(() => {
-      expect(screen.getByLabelText(/^lab$/i)).toHaveValue('Test Lab');
-    }, { timeout: 5000 });
+    // Import first using helper
+    await importYamlFile(user, screen, container, sampleYamlContent, 'minimal-complete.yml');
 
     // Verify we start with 2 tasks
     let taskNameInputs = screen.getAllByLabelText(/task name/i);
@@ -329,17 +258,8 @@ describe('Sample Metadata Modification Workflow', () => {
     const user = userEvent.setup();
     const { container } = render(<App />);
 
-    const yamlFile = new File([sampleYamlContent], 'minimal-complete.yml', {
-      type: 'text/yaml',
-    });
-
-    // Import first
-    const fileInput = container.querySelector('#importYAMLFile');
-    await user.upload(fileInput, yamlFile);
-
-    await vi.waitFor(() => {
-      expect(screen.getByLabelText(/^lab$/i)).toHaveValue('Test Lab');
-    }, { timeout: 5000 });
+    // Import first using helper
+    await importYamlFile(user, screen, container, sampleYamlContent, 'minimal-complete.yml');
 
     // Count initial electrode groups (minimal-complete has 2 electrode groups)
     const initialDeviceTypeSelects = screen.getAllByLabelText(/device type/i);
@@ -368,17 +288,8 @@ describe('Sample Metadata Modification Workflow', () => {
     const user = userEvent.setup();
     const { container } = render(<App />);
 
-    const yamlFile = new File([sampleYamlContent], 'minimal-complete.yml', {
-      type: 'text/yaml',
-    });
-
-    // Import first
-    const fileInput = container.querySelector('#importYAMLFile');
-    await user.upload(fileInput, yamlFile);
-
-    await vi.waitFor(() => {
-      expect(screen.getByLabelText(/^lab$/i)).toHaveValue('Test Lab');
-    }, { timeout: 5000 });
+    // Import first using helper
+    await importYamlFile(user, screen, container, sampleYamlContent, 'minimal-complete.yml');
 
     // Modify experimenter name
     // First, remove the existing experimenter "Doe, John"

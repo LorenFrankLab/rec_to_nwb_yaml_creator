@@ -4,31 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { App } from '../../App';
 import YAML from 'yaml';
 import { getMinimalCompleteYaml, getCustomizedYaml } from '../helpers/test-fixtures';
-
-/**
- * Helper to trigger export using React fiber (bypasses requestSubmit limitation)
- *
- * The form.requestSubmit() DOM API doesn't trigger React synthetic event handlers
- * in test environments. This helper directly calls the React onSubmit handler.
- */
-async function triggerExport(mockEvent = null) {
-  const form = document.querySelector('form');
-  const fiberKey = Object.keys(form).find(key => key.startsWith('__reactFiber'));
-  const fiber = form[fiberKey];
-  const onSubmitHandler = fiber?.memoizedProps?.onSubmit;
-
-  if (!onSubmitHandler) {
-    throw new Error('Could not find React onSubmit handler on form element');
-  }
-
-  const event = mockEvent || {
-    preventDefault: vi.fn(),
-    target: form,
-    currentTarget: form,
-  };
-
-  onSubmitHandler(event);
-}
+import { triggerExport } from '../helpers/integration-test-helpers';
 
 /**
  * Phase 1.5 Task 1.5.4: Import/Export Workflow Integration Tests
