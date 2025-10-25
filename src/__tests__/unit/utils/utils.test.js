@@ -481,6 +481,7 @@ describe('Utils: Environment Detection', () => {
     it('returns true for GitHub Pages URL', () => {
       window.location = {
         href: 'https://lorenfranklab.github.io/rec_to_nwb_yaml_creator/',
+        hostname: 'lorenfranklab.github.io',
       };
 
       expect(isProduction()).toBe(true);
@@ -489,6 +490,7 @@ describe('Utils: Environment Detection', () => {
     it('returns true for any GitHub Pages subdomain', () => {
       window.location = {
         href: 'https://lorenfranklab.github.io/other-project/',
+        hostname: 'lorenfranklab.github.io',
       };
 
       expect(isProduction()).toBe(true);
@@ -497,6 +499,7 @@ describe('Utils: Environment Detection', () => {
     it('returns false for localhost', () => {
       window.location = {
         href: 'http://localhost:3000/',
+        hostname: 'localhost',
       };
 
       expect(isProduction()).toBe(false);
@@ -505,6 +508,7 @@ describe('Utils: Environment Detection', () => {
     it('returns false for development server', () => {
       window.location = {
         href: 'http://localhost:5173/',
+        hostname: 'localhost',
       };
 
       expect(isProduction()).toBe(false);
@@ -513,6 +517,7 @@ describe('Utils: Environment Detection', () => {
     it('returns false for file:// protocol', () => {
       window.location = {
         href: 'file:///Users/test/project/index.html',
+        hostname: '',
       };
 
       expect(isProduction()).toBe(false);
@@ -521,20 +526,41 @@ describe('Utils: Environment Detection', () => {
     it('returns false for other domains', () => {
       window.location = {
         href: 'https://example.com/',
+        hostname: 'example.com',
       };
 
       expect(isProduction()).toBe(false);
     });
 
-    it('checks with substring match (potential security issue)', () => {
-      // Baseline: documents that it uses includes() not exact match
-      // This could be a security issue - ANY URL containing 'https://lorenfranklab.github.io' matches
+    it('rejects malicious URLs with substring injection', () => {
+      // Security test: URL contains 'https://lorenfranklab.github.io' as substring
+      // but is NOT actually hosted on GitHub Pages
+      // After fix: Should check hostname, not substring of full URL
       window.location = {
         href: 'https://evil.com/https://lorenfranklab.github.io',
+        hostname: 'evil.com',
       };
 
-      // BUG: includes() will match this even though it's not the actual GitHub Pages domain
-      expect(isProduction()).toBe(true); // Potentially dangerous behavior
+      // Should return false for malicious URL
+      expect(isProduction()).toBe(false);
+    });
+
+    it('rejects URLs with GitHub Pages in path', () => {
+      window.location = {
+        href: 'https://malicious.com/lorenfranklab.github.io/fake',
+        hostname: 'malicious.com',
+      };
+
+      expect(isProduction()).toBe(false);
+    });
+
+    it('rejects URLs with GitHub Pages in query string', () => {
+      window.location = {
+        href: 'https://phishing.com/?redirect=https://lorenfranklab.github.io',
+        hostname: 'phishing.com',
+      };
+
+      expect(isProduction()).toBe(false);
     });
   });
 });

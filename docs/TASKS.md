@@ -1157,13 +1157,13 @@ File: `src/__tests__/unit/app/App-importFile.test.jsx`
 
 #### BUG #5: isProduction() security bug (utils.js:131)
 
-- [ ] Read utils.js lines 125-135
-- [ ] Write test with malicious URL: `https://evil.com/https://lorenfranklab.github.io`
-- [ ] Verify test shows security vulnerability (returns true)
-- [ ] Replace `includes()` with `window.location.hostname === 'lorenfranklab.github.io'`
-- [ ] Verify test passes (returns false for malicious URL)
-- [ ] Commit: `phase2(bug-5): fix isProduction security vulnerability`
-- [ ] **Estimated Time:** 1 hour
+- [x] Read utils.js lines 125-135
+- [x] Write test with malicious URL: `https://evil.com/https://lorenfranklab.github.io`
+- [x] Verify test shows security vulnerability (returns true)
+- [x] Replace `includes()` with `window.location.hostname === 'lorenfranklab.github.io'`
+- [x] Verify test passes (returns false for malicious URL)
+- [x] Commit: `phase2(bug-5): fix isProduction security vulnerability`
+- [x] **Actual Time:** 1 hour
 
 #### BUG #6: PropTypes typo in ALL components
 

@@ -9,6 +9,74 @@
 
 ## Phase 2 Week 10 Progress (Continued)
 
+### ✅ BUG #5 FIXED: isProduction() security vulnerability
+
+**Duration:** 1 hour
+**Status:** ✅ COMPLETE
+**Approach:** Test-Driven Development (TDD)
+**Impact:** Fixed security vulnerability preventing URL substring injection attacks
+
+#### Bug Description
+
+**File:** `src/utils.js:131`
+
+**Symptom:** Security vulnerability allowing malicious URLs to bypass production detection
+
+**Attack Vectors:**
+1. `https://evil.com/https://lorenfranklab.github.io` - Substring in path
+2. `https://malicious.com/lorenfranklab.github.io/fake` - Substring in path
+3. `https://phishing.com/?redirect=https://lorenfranklab.github.io` - Substring in query string
+
+**Root Cause:** Line 131 used `window.location.href.includes()` which matches substring anywhere in URL:
+```javascript
+// VULNERABLE CODE
+return window.location.href.includes('https://lorenfranklab.github.io');
+
+// Any URL containing this string would return true, including:
+// - https://evil.com/https://lorenfranklab.github.io ← ATTACK!
+// - https://phishing.com/?url=https://lorenfranklab.github.io ← ATTACK!
+```
+
+#### TDD Process
+
+**RED Phase:**
+1. Test already existed documenting the vulnerability (line 529-538)
+2. Updated test to expect correct behavior (false for malicious URLs)
+3. Added 2 additional security tests (path injection, query string injection)
+4. Verified 2 tests failed with security vulnerability
+
+**GREEN Phase:**
+1. Replaced `window.location.href.includes()` with `window.location.hostname ===`
+2. All 88 tests now pass, including 3 security tests
+
+#### Fix Applied
+
+```javascript
+// BEFORE (VULNERABLE)
+return window.location.href.includes('https://lorenfranklab.github.io');
+
+// AFTER (SECURE)
+return window.location.hostname === 'lorenfranklab.github.io';
+```
+
+**Security Improvement:**
+- `hostname` checks only the domain portion: `lorenfranklab.github.io`
+- Cannot be bypassed by path, query string, or fragment injection
+- Strict equality prevents partial matches
+
+#### Test Coverage
+
+**File:** `src/__tests__/unit/utils/utils.test.js`
+
+**Tests Added/Updated:**
+1. `rejects malicious URLs with substring injection` - `https://evil.com/https://lorenfranklab.github.io`
+2. `rejects URLs with GitHub Pages in path` - `https://malicious.com/lorenfranklab.github.io/fake`
+3. `rejects URLs with GitHub Pages in query string` - `https://phishing.com/?redirect=https://...`
+
+**Total Tests:** 88 tests, all passing
+
+---
+
 ### ✅ BUG #4 FIXED: SelectInputPairElement null check
 
 **Duration:** 1 hour

@@ -125,8 +125,10 @@ export const sanitizeTitle = (title) => {
  * @returns True if running in Production, false otherwise
  */
 export const isProduction = () => {
-  // It is better to use node.js. But that requires adding a package.
-  // See - https://stackoverflow.com/a/70989566/178550. This is sufficient for
-  // now but can be updated if the need arises
-  return window.location.href.includes('https://lorenfranklab.github.io');
+  // Security: Check hostname directly to prevent substring injection attacks
+  // BEFORE: window.location.href.includes('https://lorenfranklab.github.io')
+  //   - Vulnerable: https://evil.com/https://lorenfranklab.github.io would match
+  // AFTER: window.location.hostname === 'lorenfranklab.github.io'
+  //   - Secure: Only matches actual GitHub Pages domain
+  return window.location.hostname === 'lorenfranklab.github.io';
 };
