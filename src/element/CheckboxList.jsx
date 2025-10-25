@@ -84,7 +84,7 @@ CheckboxList.propTypes = {
 };
 
 CheckboxList.defaultProps = {
-  defaultValue: '',
+  defaultValue: [],
   placeholder: '',
   objectKind: '',
 };

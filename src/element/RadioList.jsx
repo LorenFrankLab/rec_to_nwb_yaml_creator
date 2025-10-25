@@ -89,7 +89,7 @@ RadioList.propTypes = {
 };
 
 RadioList.defaultProps = {
-  defaultValue: '',
+  defaultValue: [],
   placeholder: '',
   objectKind: '',
 };

@@ -121,7 +121,7 @@ ListElement.propTypes = {
 
 ListElement.defaultProps = {
   placeholder: '',
-  defaultValue: '',
+  defaultValue: [],
   readOnly: false,
   metaData: {},
   inputPlaceholder: '',

@@ -627,13 +627,13 @@ describe('RadioList Component', () => {
       expect(container.querySelector('.checkbox-list')).toBeInTheDocument();
     });
 
-    it('DOCUMENTED: PropTypes defaultValue mismatch (line 80 vs 92)', () => {
+    it('FIXED: PropTypes defaultValue now matches (line 80 vs 92)', () => {
       // Line 80: PropTypes expects Array (instanceOf(Array))
-      // Line 92: defaultProps sets empty string ''
-      // This is a type mismatch between declaration and default
-      // We can't easily test the PropTypes definition itself, so we just document it
-      expect(RadioList.defaultProps.defaultValue).toBe('');
-      // PropTypes says Array, but default is string - mismatch documented
+      // Line 92: defaultProps now sets empty array []
+      // This type mismatch has been FIXED
+      expect(Array.isArray(RadioList.defaultProps.defaultValue)).toBe(true);
+      expect(RadioList.defaultProps.defaultValue).toEqual([]);
+      // PropTypes and defaultProps now match - bug fixed!
     });
 
     it('should use empty string defaults for optional props', () => {

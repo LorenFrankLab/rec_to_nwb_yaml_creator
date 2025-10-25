@@ -819,16 +819,18 @@ describe('ListElement Component', () => {
   });
 
   describe('PropTypes and Defaults', () => {
-    it('DOCUMENTED: PropTypes defaultValue mismatch (line 114 vs 121)', () => {
-      // Line 114-116: PropTypes expects arrayOf(string | number)
-      // Line 121: defaultProps sets empty string ''
-      // This is a type mismatch
-      expect(ListElement.defaultProps.defaultValue).toBe('');
-      // PropTypes says Array, but default is string - mismatch documented
+    it('FIXED: PropTypes defaultValue now matches (line 117 vs 124)', () => {
+      // Line 117-119: PropTypes expects arrayOf(string | number)
+      // Line 124: defaultProps now sets empty array []
+      // This type mismatch has been FIXED
+      expect(Array.isArray(ListElement.defaultProps.defaultValue)).toBe(true);
+      expect(ListElement.defaultProps.defaultValue).toEqual([]);
+      // PropTypes and defaultProps now match - bug fixed!
     });
 
-    it('should use empty string as default defaultValue', () => {
-      expect(ListElement.defaultProps.defaultValue).toBe('');
+    it('should use empty array as default defaultValue', () => {
+      expect(Array.isArray(ListElement.defaultProps.defaultValue)).toBe(true);
+      expect(ListElement.defaultProps.defaultValue).toEqual([]);
     });
 
     it('should use empty string as default placeholder', () => {
