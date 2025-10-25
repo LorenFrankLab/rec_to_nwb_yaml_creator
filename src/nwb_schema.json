@@ -1096,7 +1096,8 @@
         "type": "string",
         "default": "",
         "examples":["left","right"],
-        "description":"Hemisphere of the brain where the virus is injected"
+        "description":"Hemisphere of the brain where the virus is injected",
+        "pattern": "^(.|\\s)*\\S(.|\\s)*$"
       },
       "ap_in_mm":{
         "$id" : "#root/virus_injection/items/ap_in_mm",
@@ -1257,7 +1258,8 @@
     "title": "opto_software",
     "type": "string",
     "default": "fsgui",
-    "description": "Software used for optogenetic stimulation"
+    "description": "Software used for optogenetic stimulation",
+    "pattern": "^(.|\\s)*\\S(.|\\s)*$"
    },
    "electrode_groups": {
     "$id": "#root/electrode_groups",
