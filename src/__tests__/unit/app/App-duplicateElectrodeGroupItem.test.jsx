@@ -6,7 +6,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../../../App';
-import { countArrayItems, countNtrodeMaps, getDuplicateButton, queryByName } from '../../helpers/test-hooks';
+import { countArrayItems, countNtrodeMaps, getDuplicateButton, queryByName, clickAddButton } from '../../helpers/test-hooks';
 
 /**
  * Tests for duplicateElectrodeGroupItem() function
@@ -41,8 +41,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       const { container } = render(<App />);
 
       // Add first electrode group
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       // Initially should have 1 electrode group
       expect(countArrayItems(container)).toBe(1);
@@ -61,10 +60,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       const { container } = render(<App />);
 
       // Add 3 electrode groups
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
-      await user.click(addButton);
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups", 3);
 
       // Duplicate the FIRST electrode group (index 0)
       const controls = container.querySelectorAll('.array-item__controls');
@@ -92,8 +88,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       // In App.js, it's called with key="electrode_groups"
       // This test verifies the function uses the correct key
 
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       const controls = container.querySelectorAll('.array-item__controls');
       const firstGroupButtons = controls[0].querySelectorAll('button');
@@ -117,8 +112,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       const { container } = render(<App />);
 
       // Add first electrode group (will have id: 0)
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       // Duplicate it (should get id: 1)
       const controls = container.querySelectorAll('.array-item__controls');
@@ -142,10 +136,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       const { container } = render(<App />);
 
       // Add 3 electrode groups (ids: 0, 1, 2)
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
-      await user.click(addButton);
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups", 3);
 
       // Duplicate the FIRST one (index 0, id: 0)
       const controls = container.querySelectorAll('.array-item__controls');
@@ -169,8 +160,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       const { container } = render(<App />);
 
       // Add electrode group and set some fields
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       // Set location field
       const locationInput = container.querySelector('#electrode_groups-location-0');
@@ -203,8 +193,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       const { container } = render(<App />);
 
       // Add electrode group
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       // Select device type to generate ntrode maps
       const deviceSelect = container.querySelector('#electrode_groups-device_type-0');
@@ -238,8 +227,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       const { container } = render(<App />);
 
       // Add electrode group with tetrode device (generates 1 ntrode with ntrode_id: 1)
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       const deviceSelect = container.querySelector('#electrode_groups-device_type-0');
       await user.selectOptions(deviceSelect, 'tetrode_12.5');
@@ -271,8 +259,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       const { container } = render(<App />);
 
       // Add electrode group with device
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       const deviceSelect = container.querySelector('#electrode_groups-device_type-0');
       await user.selectOptions(deviceSelect, 'tetrode_12.5');
@@ -307,8 +294,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       const { container } = render(<App />);
 
       // Add electrode group with 2-shank device
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       const deviceSelect = container.querySelector('#electrode_groups-device_type-0');
       await user.selectOptions(deviceSelect, '32c-2s8mm6cm-20um-40um-dl');
@@ -338,8 +324,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       const { container } = render(<App />);
 
       // Add electrode group with device
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       const deviceSelect = container.querySelector('#electrode_groups-device_type-0');
       await user.selectOptions(deviceSelect, 'tetrode_12.5');
@@ -382,8 +367,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       // This ensures original formData is not mutated
       // React re-renders only because setFormData(form) is called with new reference
 
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       const controls = container.querySelectorAll('.array-item__controls');
       const firstGroupButtons = controls[0].querySelectorAll('button');
@@ -406,8 +390,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       // The function calls setFormData(form) at the end
       // Line 755: setFormData(form);
 
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       const controls = container.querySelectorAll('.array-item__controls');
       const firstGroupButtons = controls[0].querySelectorAll('button');
@@ -429,10 +412,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       const { container } = render(<App />);
 
       // Add 3 electrode groups
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
-      await user.click(addButton);
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups", 3);
 
       // Set locations to distinguish them
       const location0 = container.querySelector('#electrode_groups-location-0');
@@ -475,9 +455,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       const { container } = render(<App />);
 
       // Add 2 electrode groups with different devices
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups", 2);
 
       const deviceSelect0 = container.querySelector('#electrode_groups-device_type-0');
       const deviceSelect1 = container.querySelector('#electrode_groups-device_type-1');

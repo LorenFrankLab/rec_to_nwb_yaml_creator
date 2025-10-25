@@ -25,6 +25,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../../../App';
 import { getShankCount } from '../../../ntrode/deviceTypes';
+import { clickAddButton } from '../../helpers/test-hooks';
 
 describe('App.js - nTrodeMapSelected()', () => {
   describe('Basic Device Type Selection', () => {
@@ -33,8 +34,7 @@ describe('App.js - nTrodeMapSelected()', () => {
       const user = userEvent.setup();
 
       // Add electrode group
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       // Select device type
       const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
@@ -49,8 +49,7 @@ describe('App.js - nTrodeMapSelected()', () => {
       const user = userEvent.setup();
 
       // Add electrode group
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       // Before selection - no ntrodes
       let ntrodeIdInputs = container.querySelectorAll('input[name="ntrode_id"]');
@@ -71,8 +70,7 @@ describe('App.js - nTrodeMapSelected()', () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
 
@@ -91,8 +89,7 @@ describe('App.js - nTrodeMapSelected()', () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect, 'tetrode_12.5');
@@ -109,8 +106,7 @@ describe('App.js - nTrodeMapSelected()', () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect, '32c-2s8mm6cm-20um-40um-dl');
@@ -126,8 +122,7 @@ describe('App.js - nTrodeMapSelected()', () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect, '64c-3s6mm6cm-20um-40um-sl');
@@ -142,8 +137,7 @@ describe('App.js - nTrodeMapSelected()', () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect, '128c-4s6mm6cm-15um-26um-sl');
@@ -172,8 +166,7 @@ describe('App.js - nTrodeMapSelected()', () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect, 'tetrode_12.5');
@@ -188,8 +181,7 @@ describe('App.js - nTrodeMapSelected()', () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect, '128c-4s6mm6cm-15um-26um-sl'); // 4 shanks
@@ -208,15 +200,13 @@ describe('App.js - nTrodeMapSelected()', () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-
       // Add first electrode group with tetrode (1 ntrode)
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
       const deviceTypeSelect1 = container.querySelector('#electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect1, 'tetrode_12.5');
 
       // Add second electrode group with 2-shank device (2 ntrodes)
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
       const deviceTypeSelect2 = container.querySelector('#electrode_groups-device_type-1');
       await user.selectOptions(deviceTypeSelect2, '32c-2s8mm6cm-20um-40um-dl');
 
@@ -235,8 +225,7 @@ describe('App.js - nTrodeMapSelected()', () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
 
@@ -261,15 +250,13 @@ describe('App.js - nTrodeMapSelected()', () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-
       // Add first electrode group with tetrode (1 ntrode)
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
       const deviceTypeSelect1 = container.querySelector('#electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect1, 'tetrode_12.5');
 
       // Add second electrode group with 2-shank (2 ntrodes)
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
       const deviceTypeSelect2 = container.querySelector('#electrode_groups-device_type-1');
       await user.selectOptions(deviceTypeSelect2, '32c-2s8mm6cm-20um-40um-dl');
 
@@ -291,8 +278,7 @@ describe('App.js - nTrodeMapSelected()', () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
 
@@ -322,8 +308,7 @@ describe('App.js - nTrodeMapSelected()', () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect, 'tetrode_12.5');
@@ -339,8 +324,7 @@ describe('App.js - nTrodeMapSelected()', () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect, 'tetrode_12.5');
@@ -358,8 +342,7 @@ describe('App.js - nTrodeMapSelected()', () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
 
@@ -379,8 +362,7 @@ describe('App.js - nTrodeMapSelected()', () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       // First electrode group should have id = 0
       const electrodeGroupIdInput = container.querySelector('#electrode_groups-id-0');
@@ -400,8 +382,7 @@ describe('App.js - nTrodeMapSelected()', () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
 
@@ -431,8 +412,7 @@ describe('App.js - nTrodeMapSelected()', () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
 
@@ -455,8 +435,7 @@ describe('App.js - nTrodeMapSelected()', () => {
       const { container } = render(<App />);
       const user = userEvent.setup();
 
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
 

@@ -18,7 +18,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../../../App';
-import { useWindowConfirmMock } from '../../helpers/test-hooks';
+import { useWindowConfirmMock, clickAddButton } from '../../helpers/test-hooks';
 
 describe('App.js - removeElectrodeGroupItem()', () => {
   const mocks = useWindowConfirmMock(beforeEach, afterEach, true);
@@ -31,8 +31,7 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       // Confirm mock set up by useWindowConfirmMock hook
 
       // Add electrode group
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       // Click remove button
       const removeButton = container.querySelector('button.button-danger');
@@ -50,9 +49,7 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       // Confirm mock set up by useWindowConfirmMock hook
 
       // Add two electrode groups
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups", 2);
 
       // Remove second electrode group (index 1)
       const removeButtons = container.querySelectorAll('button.button-danger');
@@ -71,8 +68,7 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       // Confirm mock set up by useWindowConfirmMock hook
 
       // Add electrode group
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       // Verify electrode group exists
       let electrodeGroupSections = container.querySelectorAll('.array-item__controls');
@@ -97,10 +93,7 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       // Confirm mock set up by useWindowConfirmMock hook
 
       // Add three electrode groups
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
-      await user.click(addButton);
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups", 3);
 
       // Remove first (index 0)
       const removeButtons = container.querySelectorAll('button.button-danger');
@@ -120,10 +113,7 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       // Confirm mock set up by useWindowConfirmMock hook
 
       // Add three electrode groups
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
-      await user.click(addButton);
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups", 3);
 
       // Remove middle (index 1)
       const removeButtons = container.querySelectorAll('button.button-danger');
@@ -143,10 +133,7 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       // Confirm mock set up by useWindowConfirmMock hook
 
       // Add three electrode groups
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
-      await user.click(addButton);
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups", 3);
 
       // Remove last (index 2)
       const removeButtons = container.querySelectorAll('button.button-danger');
@@ -168,8 +155,7 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       mocks.confirm.mockReturnValue(false);
 
       // Add electrode group
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       // Try to remove but cancel
       const removeButton = container.querySelector('button.button-danger');
@@ -188,8 +174,7 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       mocks.confirm.mockReturnValue(false);
 
       // Add electrode group and set device type
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect, 'tetrode_12.5');
@@ -212,8 +197,7 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       // Confirm mock set up by useWindowConfirmMock hook
 
       // Add electrode group and select device type to generate ntrodes
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect, 'tetrode_12.5');
@@ -243,9 +227,7 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       // Confirm mock set up by useWindowConfirmMock hook
 
       // Add two electrode groups with device types
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups", 2);
 
       const deviceTypeSelects = container.querySelectorAll('select[name="device_type"]');
       await user.selectOptions(deviceTypeSelects[0], 'tetrode_12.5'); // 1 ntrode
@@ -275,8 +257,7 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       // Confirm mock set up by useWindowConfirmMock hook
 
       // Add electrode group with 4-shank device (4 ntrodes)
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect, '128c-4s6mm6cm-15um-26um-sl');
@@ -307,8 +288,7 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       // Confirm mock set up by useWindowConfirmMock hook
 
       // Add electrode group
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups");
 
       // Verify exists
       let electrodeGroupSections = container.querySelectorAll('.array-item__controls');
@@ -334,9 +314,7 @@ describe('App.js - removeElectrodeGroupItem()', () => {
 
       // Confirm mock set up by useWindowConfirmMock hook
 
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups", 2);
 
       // Store initial count
       let electrodeGroupSections = container.querySelectorAll('.array-item__controls');
@@ -381,10 +359,7 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       // Confirm mock set up by useWindowConfirmMock hook
 
       // Add three electrode groups with different device types
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
-      await user.click(addButton);
-      await user.click(addButton);
-      await user.click(addButton);
+      await clickAddButton(user, container, "Add electrode_groups", 3);
 
       const deviceTypeSelects = container.querySelectorAll('select[name="device_type"]');
       await user.selectOptions(deviceTypeSelects[0], 'tetrode_12.5');

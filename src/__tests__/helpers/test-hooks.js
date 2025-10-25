@@ -448,6 +448,33 @@ export async function waitForElement(queryFn, timeout = 1000) {
  */
 
 /**
+ * Click "Add" button for array sections
+ *
+ * Reduces duplication in unit tests that add array items repeatedly.
+ * Found in 69 locations across App-duplicateElectrodeGroupItem, App-nTrodeMapSelected,
+ * and App-removeElectrodeGroupItem tests.
+ *
+ * @param {Object} user - userEvent instance
+ * @param {HTMLElement} container - Container with the add button
+ * @param {string} title - Button title attribute (e.g., "Add electrode_groups")
+ * @param {number} count - Number of times to click (default: 1)
+ * @returns {Promise<void>}
+ *
+ * @example
+ * await clickAddButton(user, container, "Add electrode_groups", 3);
+ */
+export async function clickAddButton(user, container, title, count = 1) {
+  const addButton = container.querySelector(`button[title="${title}"]`);
+  if (!addButton) {
+    throw new Error(`Add button with title "${title}" not found`);
+  }
+
+  for (let i = 0; i < count; i++) {
+    await user.click(addButton);
+  }
+}
+
+/**
  * Get device type select for electrode group
  *
  * @param {HTMLElement} container - Container to query within
