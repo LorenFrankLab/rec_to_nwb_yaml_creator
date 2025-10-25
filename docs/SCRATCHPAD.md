@@ -9,6 +9,73 @@
 
 ## Phase 2 Week 10 Progress (Continued)
 
+### ✅ EMPTY ARRAY VALIDATION (P2) - FIXED
+
+**Duration:** 2 hours
+**Status:** ✅ COMPLETE
+**Date:** 2025-10-25
+**Impact:** Fixed fs_gui_yamls[].epochs to require at least one epoch
+
+#### Bug Description
+
+**Field:** `fs_gui_yamls[].epochs` (line 1181 in nwb_schema.json)
+
+**Symptom:** Field marked as REQUIRED but allowed empty arrays `[]`
+
+**Root Cause:** Schema had `"required": ["epochs"]` but no `minItems` constraint
+
+**Business Logic:** If a fs_gui YAML file is defined for optogenetic stimulation, it must apply to at least ONE epoch. An empty epochs array makes no sense.
+
+#### Array Analysis Results
+
+**Total array fields in schema:** 19
+- **With minItems:** 4 (before fix)
+- **Without minItems:** 15
+
+**Arrays correctly requiring minItems:**
+1. ✅ `experimenter_name` - minItems: 1 (already exists)
+2. ✅ `data_acq_device` - minItems: 1 (already exists)
+3. ✅ `device.name` - minItems: 1 (already exists)
+4. ✅ `fs_gui_yamls[].epochs` - minItems: 1 (ADDED in this fix)
+
+**Arrays correctly allowing empty:**
+1. ✅ `tasks[].camera_id` - Tasks can have NO cameras (user confirmed)
+2. ✅ `tasks[].task_epochs` - Tasks can span entire session (no specific epochs)
+3. ✅ `ntrode_electrode_group_channel_map[].bad_channels` - All channels can be good (zero bad)
+
+#### Fix Applied
+
+**File:** `src/nwb_schema.json` (line 1186)
+
+```json
+"epochs": {
+  "type": "array",
+  "default": [],
+  "minItems": 1,  // <-- ADDED
+  "items": { ... }
+}
+```
+
+#### Tests Created
+
+**File:** `src/__tests__/unit/schema/schema-empty-array-bug.test.js`
+
+**Tests:** 7/7 passing
+1. Rejects fs_gui_yamls with empty epochs array
+2. Accepts fs_gui_yamls with one epoch
+3. Accepts fs_gui_yamls with multiple epochs
+4. Accepts tasks with empty camera_id array
+5. Accepts tasks with empty task_epochs array
+6. Rejects empty experimenter_name array (verification)
+7. Rejects empty data_acq_device array (verification)
+
+#### Snapshot Updates
+
+Updated schema contract snapshots due to schema hash change:
+- `schema-contracts.test.js` - 2 snapshots updated
+
+---
+
 ### ✅ WHITESPACE-ONLY STRING ACCEPTANCE (P2) - VERIFIED ALREADY FIXED
 
 **Duration:** 1 hour

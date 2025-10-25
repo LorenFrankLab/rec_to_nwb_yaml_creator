@@ -1218,13 +1218,16 @@ was incorrect. The schema has always enforced integer types correctly.
 - [x] **Test File:** `schema-whitespace-only-verification.test.js` (14/14 passing)
 - [x] **Finding:** All 54 string fields already protected (BUG #7 fixed this)
 
-#### Empty Array Validation
+#### Empty Array Validation ✅ COMPLETE
 
-- [ ] Identify which arrays should reject empty
-- [ ] Write tests for minimum array lengths
-- [ ] Update schema with minItems constraints
-- [ ] Verify tests pass after fix
-- [ ] **Estimated Time:** 2-3 hours
+- [x] Identify which arrays should reject empty (fs_gui_yamls[].epochs)
+- [x] Write tests for minimum array lengths (7 tests)
+- [x] Update schema with minItems constraints (added minItems: 1)
+- [x] Verify tests pass after fix (7/7 passing)
+- [x] **Actual Time:** 2 hours
+- [x] **Test File:** `schema-empty-array-bug.test.js` (7/7 passing)
+- [x] **Schema Change:** Added `minItems: 1` to `fs_gui_yamls[].epochs`
+- [x] **Finding:** tasks can have no cameras (confirmed by user), bad_channels can be empty
 
 #### Duplicate React Keys
 

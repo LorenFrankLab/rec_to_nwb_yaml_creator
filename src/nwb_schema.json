@@ -1183,6 +1183,7 @@
        "title": "epochs",
        "type": "array",
        "default": [],
+       "minItems": 1,
        "items": {
         "$id": "#root/fs_gui_yamls/items/epochs/items",
         "title": "Items",
