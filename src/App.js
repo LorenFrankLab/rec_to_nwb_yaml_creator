@@ -930,7 +930,13 @@ useEffect(() => {
           className="download-existing-file"
           placeholder="Download a Yaml file to populate fields"
           onChange={(e) => importFile(e)}
-          onClick={(e) => e.target.value = null}
+          onClick={(e) => {
+            // Reset file input to allow re-uploading the same file
+            // See: https://stackoverflow.com/a/68480263/178550
+            if (e && e.target) {
+              e.target.value = '';
+            }
+          }}
         >
         </input>
       </div>
