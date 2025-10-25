@@ -1116,7 +1116,7 @@ useEffect(() => {
               type="date"
               name="date_of_birth"
               title="Date of Birth"
-              defaultValue={formData.subject.date_of_birth}
+              defaultValue={formData.subject.date_of_birth ? formData.subject.date_of_birth.split('T')[0] : ''}
               placeholder="Date of birth of subject"
               required
               onBlur={(e) => {
