@@ -863,17 +863,34 @@ describe('End-to-End Session Creation Workflow', () => {
       expect(taskNameInputs.length).toBe(initialTaskCount + 1);
     });
 
+    // Fill task fields with blur() + delay pattern to avoid stale element references
     taskNameInputs = screen.getAllByLabelText(/task name/i);
     await user.type(taskNameInputs[0], 'sleep');
+    taskNameInputs[0].blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
-    const taskDescInputs = screen.getAllByLabelText(/task description/i);
+    let taskDescInputs = screen.getAllByLabelText(/task description/i);
     await user.type(taskDescInputs[0], 'Rest session');
+    taskDescInputs[0].blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
     const taskEnvInputs = screen.getAllByLabelText(/task environment/i);
     await user.type(taskEnvInputs[0], 'home cage');
+    taskEnvInputs[0].blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
-    const taskEpochInputs = screen.getAllByLabelText(/task epochs/i);
-    await user.type(taskEpochInputs[0], '1, 3');
+    // task_epochs is a ListElement - use placeholder instead of label
+    const taskEpochInput = screen.getByPlaceholderText(/Type Task Epochs/i);
+    await user.type(taskEpochInput, '1');
+    await user.keyboard('{Enter}');
+    await user.type(taskEpochInput, '3');
+    await user.keyboard('{Enter}');
 
     // Export using React fiber approach
     await triggerExport();
@@ -915,21 +932,40 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // Add behavioral events
     const addBehavioralEventButton = screen.getByTitle(/Add behavioral_events/i);
-    let eventDescInputs = screen.queryAllByLabelText(/event description/i);
-    const initialEventCount = eventDescInputs.length;
+
+    // DEBUG: Check what happens when we click Add
+    console.log(`DEBUG test8: BEFORE click - checking for "Add behavioral_events" button`);
+    console.log(`DEBUG test8: Button found: ${addBehavioralEventButton ? 'YES' : 'NO'}`);
+
+    // Check initial behavioral events count using a different selector
+    // behavioral_events has SelectInputPairElement with name="description"
+    let behavioralEventItems = screen.queryAllByText(/Item #/i);
+    console.log(`DEBUG test8: Initial "Item #" count: ${behavioralEventItems.length}`);
+
+    const initialEventCount = behavioralEventItems.length;
 
     await user.click(addBehavioralEventButton);
 
+    console.log(`DEBUG test8: Clicked Add button, waiting for item to appear...`);
+
     await waitFor(() => {
-      eventDescInputs = screen.queryAllByLabelText(/event description/i);
-      expect(eventDescInputs.length).toBe(initialEventCount + 1);
+      behavioralEventItems = screen.queryAllByText(/Item #/i);
+      console.log(`DEBUG test8: After click, "Item #" count: ${behavioralEventItems.length}`);
+      expect(behavioralEventItems.length).toBe(initialEventCount + 1);
     });
 
-    eventDescInputs = screen.getAllByLabelText(/event description/i);
-    await user.type(eventDescInputs[0], 'Poke event');
+    // Fill behavioral event fields
+    // behavioral_events-description is a SelectInputPairElement with unique placeholder
+    const eventDescInput = screen.getByPlaceholderText(/DIO info/i);
+    await user.type(eventDescInput, 'Poke event');
+    eventDescInput.blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
-    const eventNameInputs = screen.getAllByLabelText(/^event name$/i);
-    await user.type(eventNameInputs[0], 'Din1');
+    // behavioral_events-name is a DataListElement with unique placeholder
+    const eventNameInput = screen.getByPlaceholderText(/E\.g\. light1/i);
+    await user.type(eventNameInput, 'Din1');
 
     // Export using React fiber approach
     await triggerExport();
