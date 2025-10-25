@@ -84,7 +84,6 @@ describe('App.js - submitForm()', () => {
 
       // Note: We expect this to fail validation due to missing required fields,
       // but the submitForm → requestSubmit → onSubmit chain should still execute
-      expect(true).toBe(true); // submitForm executed without error
 
       createObjectURLSpy.mockRestore();
       anchorClickSpy.mockRestore();
@@ -148,7 +147,7 @@ describe('App.js - submitForm()', () => {
       await user.click(generateButton);
 
       // Test continues executing = no page reload occurred
-      expect(true).toBe(true);
+      expect(generateButton).toBeInTheDocument();
     });
   });
 });

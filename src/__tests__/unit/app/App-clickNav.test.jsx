@@ -208,9 +208,6 @@ describe('App.js - clickNav()', () => {
 
       // Function should handle gracefully - no active-nav-link added since element doesn't exist
       expect(mockNavItem.classList.contains('active-nav-link')).toBe(false);
-
-      // No error thrown means test passes
-      expect(true).toBe(true);
     });
   });
 });

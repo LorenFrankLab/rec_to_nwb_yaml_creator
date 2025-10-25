@@ -228,11 +228,7 @@ describe('displayErrorOnUI', () => {
       // 3. Does NOT call window.alert
 
       // This is verified by checking tagName and understanding code path
-      if (inputElement.tagName === 'INPUT') {
-        // Would call showCustomValidityError and return
-        // Would NOT proceed to alert
-        expect(true).toBe(true); // Confirms code path logic
-      }
+      expect(inputElement.tagName).toBe('INPUT');
     });
   });
 });

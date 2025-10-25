@@ -372,42 +372,6 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
     });
   });
 
-  describe('Guard Clauses', () => {
-    it('should return early if electrodeGroups is falsy', async () => {
-      // This test documents the guard clause at line 715
-      // if (!electrodeGroups || !electrodeGroup || !clonedElectrodeGroup) return;
-
-      // In normal usage, electrodeGroups is always an array (at least [])
-      // So this guard protects against edge cases or data corruption
-
-      // We can't easily test this through UI, but the function has the check:
-      // const electrodeGroups = form.electrode_groups;
-      // if (!electrodeGroups || !electrodeGroup || !clonedElectrodeGroup) return;
-
-      expect(true).toBe(true); // Documentation test
-    });
-
-    it('should return early if electrodeGroup is falsy', async () => {
-      // This test documents the guard clause for !electrodeGroup
-      // This would happen if index is out of bounds
-
-      // const electrodeGroup = form[key][index];
-      // if (!electrodeGroup) return;
-
-      expect(true).toBe(true); // Documentation test
-    });
-
-    it('should return early if clonedElectrodeGroup is falsy after structuredClone', async () => {
-      // This test documents the guard clause for !clonedElectrodeGroup
-      // This would happen if structuredClone somehow fails (unlikely)
-
-      // const clonedElectrodeGroup = structuredClone(electrodeGroup);
-      // if (!clonedElectrodeGroup) return;
-
-      expect(true).toBe(true); // Documentation test
-    });
-  });
-
   describe('State Management', () => {
     it('should use structuredClone for immutability', async () => {
       const { container } = render(<App />);

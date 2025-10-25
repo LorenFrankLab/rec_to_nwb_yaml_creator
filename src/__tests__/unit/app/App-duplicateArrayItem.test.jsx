@@ -189,25 +189,6 @@ describe('duplicateArrayItem', () => {
       expect(result.current.formData.tasks[1]).not.toHaveProperty('id');
     });
 
-    it('should detect id field case-insensitively', () => {
-      const { result } = renderHook(() => useDuplicateArrayItemHook());
-
-      // Manually add item with 'ID' (uppercase)
-      const customData = {
-        ...result.current.formData,
-        custom: [
-          { ID: 0, name: 'Item 0' },
-          { ID: 1, name: 'Item 1' },
-        ],
-      };
-
-      // Can't easily test this without modifying hook, but document the behavior:
-      // The function checks: keyLowerCase = keyItem.toLowerCase()
-      // Then: if (['id', ' id'].includes(keyLowerCase))
-      // So 'ID', 'Id', 'iD' all match
-      expect(true).toBe(true); // Documentation test
-    });
-
     it('should preserve original key casing when setting ID', () => {
       const { result } = renderHook(() => useDuplicateArrayItemHook());
 
@@ -485,19 +466,6 @@ describe('duplicateArrayItem', () => {
       expect(result.current.formData.cameras[2].id).toBe(4);
     });
 
-    it('should handle single-item array', () => {
-      const { result } = renderHook(() => useDuplicateArrayItemHook());
-
-      // Reduce to single item
-      const singleItemData = {
-        ...result.current.formData,
-        custom: [{ id: 0, name: 'Only Item' }],
-      };
-
-      // Can't easily modify state, but document behavior:
-      // Duplicating single item: maxId = 0, newId = 1
-      expect(true).toBe(true); // Documentation test
-    });
   });
 
   describe('Different Array Types', () => {
