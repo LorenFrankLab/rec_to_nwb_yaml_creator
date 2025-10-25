@@ -336,8 +336,9 @@ describe('Import/Export Workflow Integration', () => {
       expect(exportedData.session_id).toBe(originalData.session_id);
       expect(exportedData.subject.subject_id).toBe(originalData.subject.subject_id);
       expect(exportedData.subject.weight).toBe(originalData.subject.weight);
-      expect(exportedData.cameras).toHaveLength(1);
+      expect(exportedData.cameras).toHaveLength(2); // minimal-complete.yml has 2 cameras
       expect(exportedData.cameras[0].camera_name).toBe("test camera 1");
+      expect(exportedData.cameras[1].camera_name).toBe("test camera 2");
     });
 
     /**
@@ -366,6 +367,7 @@ describe('Import/Export Workflow Integration', () => {
       const labInput = screen.getByLabelText(/^lab$/i);
       await user.clear(labInput); await waitFor(() => expect(labInput).toHaveValue(""));
       await user.type(labInput, 'Modified Lab');
+      await user.tab(); // REQUIRED: Trigger blur to update React state (uses onBlur)
 
       // ACT - Export
       // Use triggerExport instead of button click (requestSubmit doesn't work in tests)

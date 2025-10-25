@@ -381,9 +381,19 @@ describe('Sample Metadata Modification Workflow', () => {
     }, { timeout: 5000 });
 
     // Modify experimenter name
+    // First, remove the existing experimenter "Doe, John"
+    const removeButton = screen.getByText('Doe, John').parentElement.querySelector('button');
+    await user.click(removeButton);
+
+    // Then add the new experimenter name
     const experimenterInput = screen.getByPlaceholderText(/LastName, FirstName/i);
-    await user.clear(experimenterInput);
     await user.type(experimenterInput, 'Modified, Name');
+    await user.keyboard('{Enter}'); // REQUIRED: Press Enter to add to list and update React state
+
+    // Wait for React state to update
+    await vi.waitFor(() => {
+      expect(screen.getByText('Modified, Name')).toBeInTheDocument();
+    }, { timeout: 2000 });
 
     // ACT - Export the modified data
     // Use triggerExport instead of button click (requestSubmit doesn't work in tests)
@@ -430,13 +440,24 @@ describe('Sample Metadata Modification Workflow', () => {
     }, { timeout: 5000 });
 
     // Modify multiple fields
+    // First, remove the existing experimenter "Doe, John"
+    const removeButton = screen.getByText('Doe, John').parentElement.querySelector('button');
+    await user.click(removeButton);
+
+    // Then add the new experimenter name
     const experimenterInput = screen.getByPlaceholderText(/LastName, FirstName/i);
-    await user.clear(experimenterInput);
     await user.type(experimenterInput, 'RoundTrip, Test');
+    await user.keyboard('{Enter}'); // REQUIRED: Press Enter to add to list
 
     const subjectIdInputs = screen.getAllByLabelText(/subject id/i);
     await user.clear(subjectIdInputs[0]);
     await user.type(subjectIdInputs[0], '88888');
+    await user.tab(); // REQUIRED: Trigger blur event to update React state (InputElement uses onBlur)
+
+    // Wait for React state to update
+    await vi.waitFor(() => {
+      expect(subjectIdInputs[0]).toHaveValue('88888');
+    }, { timeout: 2000 });
 
     // Export
     // Use triggerExport instead of button click (requestSubmit doesn't work in tests)
