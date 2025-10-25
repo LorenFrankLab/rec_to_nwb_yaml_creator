@@ -1229,12 +1229,17 @@ was incorrect. The schema has always enforced integer types correctly.
 - [x] **Schema Change:** Added `minItems: 1` to `fs_gui_yamls[].epochs`
 - [x] **Finding:** tasks can have no cameras (confirmed by user), bad_channels can be empty
 
-#### Duplicate React Keys
+#### Duplicate React Keys ✅ COMPLETE
 
-- [ ] Fix SelectElement, CheckboxList, RadioList, DataListElement, ChannelMap
-- [ ] Use unique keys instead of index
-- [ ] Verify no console warnings
-- [ ] **Estimated Time:** 2-3 hours
+- [x] Fix SelectElement, CheckboxList, RadioList, DataListElement, ListElement, ChannelMap
+- [x] Use unique keys (index + value) for guaranteed uniqueness
+- [x] Verify no console warnings (8 tests, all passing)
+- [x] **Actual Time:** 2.5 hours
+- [x] **Test File:** `src/__tests__/unit/components/duplicate-react-keys.test.jsx` (8 tests)
+- [x] **Files Modified:** 6 production files, 1 test file
+- [x] **Test Results:** 1275/1275 passing (100%)
+- [x] **Code Review:** Approved by code-reviewer agent
+- [x] **Additional Fix:** ListElement.jsx (found during code review)
 
 #### defaultProps Type Mismatches
 
