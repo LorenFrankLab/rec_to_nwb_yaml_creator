@@ -933,39 +933,41 @@ describe('End-to-End Session Creation Workflow', () => {
     // Add behavioral events
     const addBehavioralEventButton = screen.getByTitle(/Add behavioral_events/i);
 
-    // DEBUG: Check what happens when we click Add
-    console.log(`DEBUG test8: BEFORE click - checking for "Add behavioral_events" button`);
-    console.log(`DEBUG test8: Button found: ${addBehavioralEventButton ? 'YES' : 'NO'}`);
-
-    // Check initial behavioral events count using a different selector
-    // behavioral_events has SelectInputPairElement with name="description"
+    // Count behavioral events using "Item #" text
     let behavioralEventItems = screen.queryAllByText(/Item #/i);
-    console.log(`DEBUG test8: Initial "Item #" count: ${behavioralEventItems.length}`);
-
     const initialEventCount = behavioralEventItems.length;
 
     await user.click(addBehavioralEventButton);
 
-    console.log(`DEBUG test8: Clicked Add button, waiting for item to appear...`);
-
     await waitFor(() => {
       behavioralEventItems = screen.queryAllByText(/Item #/i);
-      console.log(`DEBUG test8: After click, "Item #" count: ${behavioralEventItems.length}`);
       expect(behavioralEventItems.length).toBe(initialEventCount + 1);
     });
 
     // Fill behavioral event fields
-    // behavioral_events-description is a SelectInputPairElement with unique placeholder
-    const eventDescInput = screen.getByPlaceholderText(/DIO info/i);
-    await user.type(eventDescInput, 'Poke event');
+    // behavioral_events-description is a SelectInputPairElement: select dropdown + number input
+    // Component concatenates select value + input value (e.g., "Din" + "1" = "Din1")
+
+    // Select from dropdown (Din, Dout, Accel, Gyro, Mag)
+    const eventDescSelect = document.getElementById('behavioral_events-description-0-list');
+    await user.selectOptions(eventDescSelect, 'Dout');
+    eventDescSelect.blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
+
+    // Fill the number input part - query fresh after React re-render
+    let eventDescInput = screen.getByPlaceholderText(/DIO info/i);
+    await user.clear(eventDescInput);
+    await user.type(eventDescInput, '2');
     eventDescInput.blur();
     await act(async () => {
       await new Promise(resolve => setTimeout(resolve, 100));
     });
 
-    // behavioral_events-name is a DataListElement with unique placeholder
+    // behavioral_events-name is a DataListElement - query fresh
     const eventNameInput = screen.getByPlaceholderText(/E\.g\. light1/i);
-    await user.type(eventNameInput, 'Din1');
+    await user.type(eventNameInput, 'poke_sensor');
 
     // Export using React fiber approach
     await triggerExport();
@@ -981,8 +983,9 @@ describe('End-to-End Session Creation Workflow', () => {
     // Verify behavioral events structure
     expect(exportedData.behavioral_events).toBeDefined();
     expect(exportedData.behavioral_events).toHaveLength(1);
-    expect(exportedData.behavioral_events[0].description).toBe('Poke event');
-    expect(exportedData.behavioral_events[0].name).toBe('Din1');
+    // Description is concatenation of select ("Dout") + input ("2") = "Dout2"
+    expect(exportedData.behavioral_events[0].description).toBe('Dout2');
+    expect(exportedData.behavioral_events[0].name).toBe('poke_sensor');
   });
 
   /**
