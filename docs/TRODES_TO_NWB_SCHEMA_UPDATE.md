@@ -280,3 +280,67 @@ For questions or clarifications:
 - [ ] Update schema hash in integration tests
 
 **Expected Time:** 4-6 hours for complete implementation + testing
+
+---
+
+## ✅ UPDATE: Schema Synchronization Complete (2025-10-25)
+
+**Status:** ✅ COMPLETE - All 5 optogenetics fields added to trodes_to_nwb schema
+
+### Changes Made
+
+**File Modified:** `/Users/edeno/Documents/GitHub/trodes_to_nwb/src/trodes_to_nwb/nwb_schema.json`
+
+**Lines Added:** 532 new lines (35,980 → 36,512 lines)
+
+**Fields Added:**
+1. ✅ `opto_excitation_source` (lines 35980-36063)
+2. ✅ `optical_fiber` (lines 36064-36207) 
+3. ✅ `virus_injection` (lines 36208-36373)
+4. ✅ `fs_gui_yamls` (lines 36374-36504)
+5. ✅ `opto_software` (lines 36505-36511)
+
+### Verification Results
+
+```
+✓ JSON syntax is valid!
+✓ Schema properties: 21 → 26 (added 5)
+✓ Web App properties: 26
+✓ trodes properties: 26
+✓ ✓ ✓ ALL PROPERTIES SYNCHRONIZED! ✓ ✓ ✓
+```
+
+### Schema Comparison
+
+**Before:**
+- Web App: 26 properties (including 5 opto fields)
+- trodes: 21 properties (missing 5 opto fields)
+- ❌ Mismatch: 5 fields
+
+**After:**
+- Web App: 26 properties
+- trodes: 26 properties
+- ✅ **Fully Synchronized!**
+
+### Next Steps for trodes_to_nwb Maintainer
+
+**Remaining Work (NOT done yet):**
+
+1. **Python Data Models** - Add opto field classes/dataclasses
+2. **Validation Logic** - Implement all-or-nothing rule for opto fields
+3. **NWB Conversion** - Add `OptogeneticStimulusSite` and `OptogeneticSeries` conversion
+4. **Testing** - Test with web app-generated YAML files
+5. **Spyglass Integration** - Verify database ingestion works
+6. **Documentation** - Update Python package docs
+7. **Git Commit** - Commit schema changes (NOT done automatically)
+
+**Estimated Time for Remaining Work:** 2-4 hours (Python + validation + testing)
+
+---
+
+## Summary
+
+✅ **Schema synchronization complete** - All fields present in both repositories  
+⚠️ **Python implementation needed** - Schema alone is not sufficient  
+📝 **Do not commit yet** - Test thoroughly first  
+

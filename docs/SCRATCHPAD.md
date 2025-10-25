@@ -1544,3 +1544,55 @@ Created comprehensive guide: [`docs/TRODES_TO_NWB_SCHEMA_UPDATE.md`](TRODES_TO_N
 
 ---
 
+
+### ✅ CRITICAL: Added Optogenetics Fields to trodes_to_nwb (2025-10-25)
+
+**Duration:** 30 minutes
+**Status:** ✅ SCHEMA COMPLETE (Python implementation pending)
+**Impact:** Schema fully synchronized - 26 properties in both repositories
+
+#### What Was Done
+
+Added 5 optogenetics fields to trodes_to_nwb schema:
+
+1. **opto_excitation_source** (84 lines) - Light source specifications
+2. **optical_fiber** (144 lines) - Fiber implant details with coordinates
+3. **virus_injection** (166 lines) - Viral vector injection specs
+4. **fs_gui_yamls** (130 lines) - FsGUI protocol configurations  
+5. **opto_software** (7 lines) - Stimulation control software
+
+**Total:** 532 lines added (35,980 → 36,512 lines)
+
+#### Verification Results
+
+```bash
+✓ JSON syntax is valid!
+✓ Schema properties: 21 → 26 (added 5)
+✓ Web App properties: 26
+✓ trodes properties: 26
+✓ ✓ ✓ ALL PROPERTIES SYNCHRONIZED! ✓ ✓ ✓
+```
+
+**Properties now match exactly** - no more schema drift!
+
+#### Remaining Work (For Python Maintainer)
+
+⚠️ **Schema alone is not enough** - Still need:
+
+1. Python data models (classes/dataclasses for each field)
+2. Validation logic (all-or-nothing rule for opto fields)
+3. NWB conversion code (`OptogeneticStimulusSite`, `OptogeneticSeries`)
+4. Integration testing with web app YAML files
+5. Spyglass database compatibility verification
+
+**Estimated:** 2-4 hours for Python implementation + testing
+
+#### Important Notes
+
+- ⚠️ **Changes NOT committed to trodes_to_nwb** (per user request)
+- Schema file modified: `/Users/edeno/Documents/GitHub/trodes_to_nwb/src/trodes_to_nwb/nwb_schema.json`
+- Maintainer should test thoroughly before committing
+- Web app already generates YAML with opto fields - just needs Python to accept them
+
+---
+
