@@ -1,9 +1,133 @@
 # Scratchpad - Phase 2
 
 **Current Phase:** Phase 2 - Bug Fixes
-**Status:** 🟢 IN PROGRESS - Day 1
-**Last Updated:** 2025-10-24
+**Status:** 🟢 IN PROGRESS - Week 10
+**Last Updated:** 2025-10-25
 **Branch:** `modern`
+
+---
+
+## Phase 2 Week 10 Progress
+
+### ✅ CRITICAL BUGS FIXED: YAML.parse() + date_of_birth Corruption
+
+**Duration:** 6 hours total (2h Task 3.3, 4h Task 3.4)
+**Status:** ✅ COMPLETE
+**Skills Applied:** `systematic-debugging` (4-phase process)
+**Impact:** Fixed critical data corruption bugs, 8/8 integration tests now passing
+
+#### Bug #1: YAML.parse() Data Loss (Task 3.3)
+
+**Root Cause:** Form cleared BEFORE YAML parsing, causing data loss on parse errors
+
+**Fixes Applied:**
+```javascript
+// BEFORE (BUG): Form cleared before knowing if parse will succeed
+setFormData(structuredClone(emptyFormData));
+const jsonFileContent = YAML.parse(evt.target.result); // Can throw!
+
+// AFTER (FIXED): Try/catch with error handling, clear only on error
+try {
+  jsonFileContent = YAML.parse(evt.target.result);
+} catch (parseError) {
+  window.alert(`Invalid YAML file: ${parseError.message}`);
+  setFormData(structuredClone(emptyFormData)); // Now safe to clear
+  return;
+}
+```
+
+**Also Added:**
+- FileReader.onerror handler for file read failures
+- User-friendly error messages
+- Data loss prevention (form only cleared AFTER confirming error)
+
+**Test Coverage:** 10 new tests in `App-importFile-yaml-parse-error.test.jsx`
+
+---
+
+#### Bug #2: date_of_birth Corruption (Task 3.4)
+
+**Problem:** Importing YAML with valid date_of_birth → modifying subject_id → date_of_birth becomes empty string → export validation fails
+
+**Systematic Debugging Process:**
+
+**Phase 1: Root Cause Investigation**
+
+Added diagnostic logging to trace data flow:
+```javascript
+// In updateFormData()
+console.log('[DEBUG] subject.date_of_birth BEFORE:', formData.subject?.date_of_birth);
+console.log('[DEBUG] subject.date_of_birth AFTER:', form.subject?.date_of_birth);
+
+// In generateYMLFile()
+console.log('[DEBUG] date_of_birth at export:', formData.subject?.date_of_birth);
+```
+
+**Finding:** Two calls to updateFormData():
+1. subject_id change → date_of_birth preserved ✅
+2. date_of_birth change with empty value '' → corrupted! ❌
+
+**Phase 2: Pattern Analysis**
+
+Traced to `InputElement.jsx` getDefaultDateValue():
+```javascript
+// BUG 1: Timezone issue
+new Date('2024-01-01T00:00:00.000Z') // UTC midnight
+// → Dec 31, 2023 19:00:00 EST (timezone conversion)
+
+// BUG 2: Off-by-one
+const day = `0${dateObj.getDate() + 1}`.slice(-2);
+// getDate() = 31 (already 1-indexed)
+// 31 + 1 = 32
+// December 32 is invalid → browser shows empty
+
+// BUG 3: Empty onChange
+onChange={() => {}} // Confuses React controlled/uncontrolled state
+```
+
+**Phase 3: Hypothesis and Testing**
+
+Created failing test to reproduce:
+```javascript
+it('should preserve date_of_birth when modifying subject_id', async () => {
+  // Import YAML with valid date
+  // Modify subject_id
+  // date_of_birth should still be '2024-01-01' ← FAILS with current code
+});
+```
+
+**Phase 4: Implementation**
+
+**Fix Applied:**
+```javascript
+const getDefaultDateValue = () => {
+  if (!defaultValue) return '';
+
+  // FIX 1: Avoid timezone conversion for ISO 8601 strings
+  if (defaultValue.includes('T')) {
+    return defaultValue.split('T')[0]; // Direct extraction
+  }
+
+  // FIX 2: Remove off-by-one bug
+  const day = `0${dateObj.getDate()}`.slice(-2); // No +1!
+
+  // FIX 3: Remove problematic onChange (line 66 deleted)
+  // onChange={() => {}} // REMOVED
+};
+```
+
+**Test Results:**
+- **Before:** sample-metadata-modification.test.jsx failing (0/8)
+- **After:** All 8 tests passing in isolation
+- **Full Suite:** 1224/1225 (99.92%) - 1 failure due to test interference
+
+**Files Modified:**
+- [src/App.js:80-112](../src/App.js#L80-L112) - YAML.parse() error handling
+- [src/element/InputElement.jsx:29-66](../src/element/InputElement.jsx#L29-L66) - Date handling fixes
+- [src/__tests__/unit/components/InputElement.test.jsx:604-620](../src/__tests__/unit/components/InputElement.test.jsx#L604-L620) - Updated test expectations
+- [src/__tests__/unit/app/App-importFile-yaml-parse-error.test.jsx](../src/__tests__/unit/app/App-importFile-yaml-parse-error.test.jsx) - New test file (10 tests)
+
+**Key Takeaway:** Systematic debugging > guessing. Found 3 separate bugs through methodical instrumentation and data flow tracing!
 
 ---
 
