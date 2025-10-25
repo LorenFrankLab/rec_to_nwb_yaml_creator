@@ -1277,6 +1277,22 @@ was incorrect. The schema has always enforced integer types correctly.
 - [x] Verify form reset includes this field
 - [x] **Actual Time:** 15 minutes
 
+#### Hardware Channel Mapping Duplicate Validation ⚠️ REAL BUG FOUND
+
+**Status:** 🔴 NEEDS FIX
+**Priority:** P2 (Medium - Data Quality)
+**Impact:** Could allow invalid hardware configurations that crash trodes_to_nwb
+
+- [ ] Add schema validation to reject duplicate channel values in `map` object
+- [ ] Example: `map: { '0': 5, '1': 5 }` should fail (both map to channel 5)
+- [ ] Update `nwb_schema.json` with custom validation or additionalProperties constraint
+- [ ] Verify with baseline test `validation.baseline.test.js:458-492`
+- [ ] **Estimated Time:** 2-3 hours (requires schema research)
+
+**Business Logic:** Hardware channels cannot be mapped to the same physical channel. Each value in the `map` object must be unique to prevent hardware conflicts.
+
+**Test Evidence:** Baseline test shows YAML with duplicate mapping passes validation but should fail.
+
 ### Additional Critical Bug Fixes
 
 #### Complete rulesValidation() Test Coverage ✅ COMPLETE

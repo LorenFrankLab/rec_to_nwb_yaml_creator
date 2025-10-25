@@ -416,16 +416,16 @@ describe('BASELINE: Custom Rules Validation', () => {
   });
 });
 
-describe('BASELINE: Known Bugs Documentation', () => {
-  describe('BUG: Camera ID Type Issues', () => {
-    it('BASELINE: documents camera id as float (should be integer)', () => {
-      // BUG: Schema may not properly validate camera IDs are integers
-      // Float camera IDs (1.5) should be rejected but may pass
+describe('BASELINE: Validation Behavior Documentation', () => {
+  describe('VALIDATION: Camera ID Type Enforcement (Working Correctly)', () => {
+    it('BASELINE: verifies camera id float rejection', () => {
+      // VERIFIED: Schema correctly rejects float camera IDs with "must be integer" error
+      // This is NOT a bug - validation working as expected
       const yaml = {
         ...loadFixture('valid', 'minimal-valid.yml'),
         cameras: [
           {
-            id: 1.5, // Should fail - camera IDs must be integers
+            id: 1.5, // Correctly rejected - camera IDs must be integers
             meters_per_pixel: 0.001,
             camera_name: 'test_camera'
           }
@@ -434,16 +434,16 @@ describe('BASELINE: Known Bugs Documentation', () => {
 
       const result = jsonschemaValidation(yaml);
 
-      // Document current behavior (likely incorrectly accepts float)
+      // Validates that float IDs are rejected
       expect(result).toMatchSnapshot('camera-id-float-bug');
     });
 
-    it('BASELINE: documents negative camera id', () => {
+    it('BASELINE: documents negative camera id (allowed by schema)', () => {
       const yaml = {
         ...loadFixture('valid', 'minimal-valid.yml'),
         cameras: [
           {
-            id: -1, // Should fail - negative IDs don't make sense
+            id: -1, // Schema has no minimum constraint, so negative IDs are allowed
             meters_per_pixel: 0.001,
             camera_name: 'test_camera'
           }
@@ -491,22 +491,24 @@ describe('BASELINE: Known Bugs Documentation', () => {
     });
   });
 
-  describe('BUG: Empty String Validation Gaps', () => {
-    it('BASELINE: documents empty string in optional fields', () => {
-      // BUG: Empty strings in optional fields may not be properly validated
+  describe('VALIDATION: Empty String Pattern Enforcement (Working Correctly)', () => {
+    it('BASELINE: verifies empty string rejection', () => {
+      // VERIFIED: Schema correctly rejects empty strings via pattern validation
+      // This is NOT a bug - validation working as expected
       const yaml = {
         ...loadFixture('valid', 'minimal-valid.yml'),
-        experiment_description: '', // Should this be allowed?
+        experiment_description: '', // Correctly rejected by pattern ^(.|\s)*\S(.|\s)*$
       };
 
       const result = jsonschemaValidation(yaml);
       expect(result).toMatchSnapshot('empty-experiment-description');
     });
 
-    it('BASELINE: documents whitespace-only in optional fields', () => {
+    it('BASELINE: verifies whitespace-only string rejection', () => {
+      // VERIFIED: Schema correctly rejects whitespace-only strings
       const yaml = {
         ...loadFixture('valid', 'minimal-valid.yml'),
-        session_description: '   ', // Only whitespace
+        session_description: '   ', // Correctly rejected by pattern validation
       };
 
       const result = jsonschemaValidation(yaml);
@@ -514,15 +516,16 @@ describe('BASELINE: Known Bugs Documentation', () => {
     });
   });
 
-  describe('BUG: Array Uniqueness Constraints', () => {
-    it('BASELINE: documents duplicate experimenter names', () => {
-      // uniqueItems constraint should prevent duplicates
+  describe('VALIDATION: Array Uniqueness Enforcement (Working Correctly)', () => {
+    it('BASELINE: verifies duplicate experimenter name rejection', () => {
+      // VERIFIED: uniqueItems constraint correctly prevents duplicates
+      // This is NOT a bug - validation working as expected
       const yaml = loadFixture('valid', 'minimal-valid.yml');
-      yaml.experimenter_name = ['Doe, John', 'Doe, John']; // Duplicate
+      yaml.experimenter_name = ['Doe, John', 'Doe, John']; // Correctly rejected as duplicate
 
       const result = jsonschemaValidation(yaml);
 
-      // Should fail due to uniqueItems, but let's document actual behavior
+      // Validates that duplicates are rejected
       expect(result).toMatchSnapshot('duplicate-experimenter-names');
     });
   });

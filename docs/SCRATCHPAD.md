@@ -9,6 +9,61 @@
 
 ## Phase 2 Week 10 Progress (Continued)
 
+### 🔍 BASELINE BUG INVESTIGATION - COMPLETE
+
+**Duration:** 30 minutes
+**Status:** ✅ COMPLETE
+**Date:** 2025-10-25
+**Impact:** Clarified that 3/4 baseline "bugs" are actually WORKING CORRECTLY
+
+#### Investigation Summary
+
+Investigated 4 bugs documented in `validation.baseline.test.js` to determine if they're real bugs or false alarms.
+
+#### Results
+
+**1. BUG: Camera ID Type Issues** ❌ FALSE ALARM - **ALREADY WORKING**
+- **Test:** Lines 420-456
+- **Snapshot:** Lines 226-316
+- **Finding:** Schema **correctly rejects** float camera IDs (1.5)
+- **Evidence:** Error at line 259: `"message": "must be integer"`
+- **Status:** Schema validation working as expected, no bug exists
+- **Action:** Update baseline test to remove "BUG" label
+
+**2. BUG: Hardware Channel Mapping Validation** ✅ **REAL BUG - NEEDS FIX**
+- **Test:** Lines 458-492
+- **Snapshot:** Lines 461-510
+- **Finding:** Duplicate channel mappings **NOT detected** by schema
+- **Evidence:** Test has `map: { '0': 5, '1': 5 }` (duplicate value 5) but no validation error about duplicates
+- **Business Logic:** Hardware channels can't be mapped to the same physical channel
+- **Impact:** Could allow invalid hardware configurations that crash trodes_to_nwb
+- **Status:** **CONFIRMED BUG - needs schema fix**
+- **Action:** Add to Phase 2 bug list as P2 priority
+
+**3. BUG: Empty String Validation Gaps** ❌ FALSE ALARM - **ALREADY WORKING**
+- **Test:** Lines 494-514
+- **Snapshot:** Lines 391-459
+- **Finding:** Schema **correctly rejects** empty strings and whitespace-only strings
+- **Evidence:** Error at line 397: `"must match pattern "^(.|\\s)*\\S(.|\\s)*$""`
+- **Status:** Pattern validation working correctly, no bug exists
+- **Action:** Update baseline test to remove "BUG" label
+
+**4. BUG: Array Uniqueness Constraints** ❌ FALSE ALARM - **ALREADY WORKING**
+- **Test:** Lines 517-534
+- **Snapshot:** Lines 189-224
+- **Finding:** Schema **correctly rejects** duplicate experimenter names
+- **Evidence:** Error at line 195: `"must NOT have duplicate items (items ## 1 and 0 are identical)"`
+- **Status:** uniqueItems constraint working correctly, no bug exists
+- **Action:** Update baseline test to remove "BUG" label
+
+#### Recommendations
+
+1. **Update Baseline Tests** - Change "BUG:" labels to "VALIDATION:" for the 3 working cases
+2. **Fix Hardware Channel Mapping Bug** - Add schema validation for duplicate channel values
+3. **Document Working Validation** - Tests should document CORRECT behavior, not bugs
+
+---
+
 ### ✅ EMPTYFORMDATA MISSING FIELD (P3) - FIXED
 
 **Duration:** 15 minutes
