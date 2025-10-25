@@ -175,8 +175,9 @@ describe('Import/Export Workflow Integration', () => {
       const sexInputs = screen.getAllByLabelText(/sex/i);
       expect(sexInputs[0]).toHaveValue("M");
 
-      const descriptionInputs = screen.getAllByLabelText(/description/i);
-      expect(descriptionInputs[0]).toHaveValue("Test Rat");
+      // Query for subject description by specific ID
+      const subjectDescriptionInput = container.querySelector('#subject-description');
+      expect(subjectDescriptionInput).toHaveValue("Test Rat");
     });
   });
 

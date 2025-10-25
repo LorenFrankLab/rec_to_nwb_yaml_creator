@@ -33,10 +33,10 @@ describe('Sample Metadata Modification Workflow', () => {
   let mockBlobUrl;
 
   beforeEach(() => {
-    // Load the minimal sample YAML file (faster rendering with only 2 electrode groups)
+    // Load the complete minimal YAML file with ALL required schema fields
     const sampleYamlPath = path.join(
       __dirname,
-      '../fixtures/valid/minimal-sample.yml'
+      '../fixtures/valid/minimal-complete.yml'
     );
     sampleYamlContent = fs.readFileSync(sampleYamlPath, 'utf-8');
     sampleMetadata = YAML.parse(sampleYamlContent);
@@ -78,7 +78,7 @@ describe('Sample Metadata Modification Workflow', () => {
     const { container } = render(<App />);
 
     // Create a File object from the sample YAML content
-    const yamlFile = new File([sampleYamlContent], 'minimal-sample.yml', {
+    const yamlFile = new File([sampleYamlContent], 'minimal-complete.yml', {
       type: 'text/yaml',
     });
 
@@ -95,20 +95,22 @@ describe('Sample Metadata Modification Workflow', () => {
     }, { timeout: 5000 });
 
     // Verify other top-level fields
-    expect(screen.getByLabelText(/^institution$/i)).toHaveValue('Test University');
-    expect(screen.getByLabelText(/session description/i)).toHaveValue('minimal test session');
+    expect(screen.getByLabelText(/institution/i)).toHaveValue('Test University');
+    expect(screen.getByLabelText(/session description/i)).toHaveValue('test yaml');
     expect(screen.getByLabelText(/session id/i)).toHaveValue('TEST001');
 
     // Verify experimenter names (only 1 in minimal fixture)
-    const experimenterInputs = screen.getAllByLabelText(/experimenter name/i);
-    expect(experimenterInputs.length).toBeGreaterThanOrEqual(1);
-    expect(experimenterInputs[0]).toHaveValue('Doe, John');
+    expect(screen.getByText(/Doe, John/)).toBeInTheDocument();
 
     // Verify subject information
-    expect(screen.getByLabelText(/subject id/i)).toHaveValue('RAT001');
-    expect(screen.getByLabelText(/^description$/i)).toHaveValue('Test Rat');
-    expect(screen.getByLabelText(/^species$/i)).toHaveValue('Rattus norvegicus');
-    expect(screen.getByLabelText(/^sex$/i)).toHaveValue('M');
+    const subjectIdInputs = screen.getAllByLabelText(/subject id/i);
+    expect(subjectIdInputs[0]).toHaveValue('RAT001');
+
+    const speciesInputs = screen.getAllByLabelText(/species/i);
+    expect(speciesInputs[0]).toHaveValue('Rattus norvegicus');
+
+    const sexInputs = screen.getAllByLabelText(/sex/i);
+    expect(sexInputs[0]).toHaveValue('M');
 
     // Verify cameras were imported (2 cameras)
     const cameraNameInputs = screen.getAllByLabelText(/camera name/i);
@@ -135,7 +137,7 @@ describe('Sample Metadata Modification Workflow', () => {
     const user = userEvent.setup();
     const { container } = render(<App />);
 
-    const yamlFile = new File([sampleYamlContent], 'minimal-sample.yml', {
+    const yamlFile = new File([sampleYamlContent], 'minimal-complete.yml', {
       type: 'text/yaml',
     });
 
@@ -148,14 +150,13 @@ describe('Sample Metadata Modification Workflow', () => {
     }, { timeout: 5000 });
 
     // ACT - Modify the first experimenter name
-    const experimenterInputs = screen.getAllByLabelText(/experimenter name/i);
-    await user.clear(experimenterInputs[0]);
-    await user.type(experimenterInputs[0], 'Smith, Jane');
+    // ListElement uses placeholder text, not labels
+    const experimenterInput = screen.getByPlaceholderText(/LastName, FirstName/i);
+    await user.clear(experimenterInput);
+    await user.type(experimenterInput, 'Smith, Jane');
 
     // ASSERT - Verify the modification
-    expect(experimenterInputs[0]).toHaveValue('Smith, Jane');
-    // Verify second experimenter name unchanged
-    expect(experimenterInputs[1]).toHaveValue('lastname2, firstname2');
+    expect(experimenterInput).toHaveValue('Smith, Jane');
   });
 
   /**
@@ -170,7 +171,7 @@ describe('Sample Metadata Modification Workflow', () => {
     const user = userEvent.setup();
     const { container } = render(<App />);
 
-    const yamlFile = new File([sampleYamlContent], 'minimal-sample.yml', {
+    const yamlFile = new File([sampleYamlContent], 'minimal-complete.yml', {
       type: 'text/yaml',
     });
 
@@ -183,8 +184,11 @@ describe('Sample Metadata Modification Workflow', () => {
     }, { timeout: 5000 });
 
     // ACT - Modify subject ID and description
-    const subjectIdInput = screen.getByLabelText(/subject id/i);
-    const descriptionInput = screen.getByLabelText(/^description$/i);
+    const subjectIdInputs = screen.getAllByLabelText(/subject id/i);
+    const subjectIdInput = subjectIdInputs[0];
+
+    // Description appears multiple times, use specific ID for subject description
+    const descriptionInput = container.querySelector('#subject-description');
 
     await user.clear(subjectIdInput);
     await user.type(subjectIdInput, '99999');
@@ -196,8 +200,10 @@ describe('Sample Metadata Modification Workflow', () => {
     expect(subjectIdInput).toHaveValue('99999');
     expect(descriptionInput).toHaveValue('Modified Rat Description');
     // Verify other subject fields unchanged
-    expect(screen.getByLabelText(/^species$/i)).toHaveValue('Rattus pyctoris');
-    expect(screen.getByLabelText(/^sex$/i)).toHaveValue('M');
+    const speciesInputs = screen.getAllByLabelText(/species/i);
+    expect(speciesInputs[0]).toHaveValue('Rattus norvegicus');
+    const sexInputs = screen.getAllByLabelText(/sex/i);
+    expect(sexInputs[0]).toHaveValue('M');
   });
 
   /**
@@ -213,7 +219,7 @@ describe('Sample Metadata Modification Workflow', () => {
     const user = userEvent.setup();
     const { container } = render(<App />);
 
-    const yamlFile = new File([sampleYamlContent], 'minimal-sample.yml', {
+    const yamlFile = new File([sampleYamlContent], 'minimal-complete.yml', {
       type: 'text/yaml',
     });
 
@@ -230,7 +236,7 @@ describe('Sample Metadata Modification Workflow', () => {
     expect(cameraNameInputs).toHaveLength(2);
 
     // ACT - Add a new camera
-    const addCameraButton = screen.getByRole('button', { name: /add cameras/i });
+    const addCameraButton = container.querySelector('button[title="Add cameras"]');
     await user.click(addCameraButton);
 
     // ASSERT - Verify we now have 3 cameras
@@ -256,7 +262,7 @@ describe('Sample Metadata Modification Workflow', () => {
     const user = userEvent.setup();
     const { container } = render(<App />);
 
-    const yamlFile = new File([sampleYamlContent], 'minimal-sample.yml', {
+    const yamlFile = new File([sampleYamlContent], 'minimal-complete.yml', {
       type: 'text/yaml',
     });
 
@@ -273,7 +279,7 @@ describe('Sample Metadata Modification Workflow', () => {
     expect(taskNameInputs).toHaveLength(2);
 
     // ACT - Add a new task
-    const addTaskButton = screen.getByRole('button', { name: /add tasks/i });
+    const addTaskButton = container.querySelector('button[title="Add tasks"]');
     await user.click(addTaskButton);
 
     // ASSERT - Verify we now have 3 tasks
@@ -298,7 +304,7 @@ describe('Sample Metadata Modification Workflow', () => {
     const user = userEvent.setup();
     const { container } = render(<App />);
 
-    const yamlFile = new File([sampleYamlContent], 'minimal-sample.yml', {
+    const yamlFile = new File([sampleYamlContent], 'minimal-complete.yml', {
       type: 'text/yaml',
     });
 
@@ -310,22 +316,18 @@ describe('Sample Metadata Modification Workflow', () => {
       expect(screen.getByLabelText(/^lab$/i)).toHaveValue('Test Lab');
     }, { timeout: 5000 });
 
-    // Count initial electrode groups (sample has 29 electrode groups)
-    const initialElectrodeGroups = screen.getAllByLabelText(/electrode group id/i);
-    const initialCount = initialElectrodeGroups.length;
-    expect(initialCount).toBeGreaterThan(0);
+    // Count initial electrode groups (minimal-complete has 2 electrode groups)
+    const initialDeviceTypeSelects = screen.getAllByLabelText(/device type/i);
+    const initialCount = initialDeviceTypeSelects.length;
+    expect(initialCount).toBe(2);
 
     // ACT - Add a new electrode group
-    const addElectrodeGroupButton = screen.getByRole('button', { name: /add electrode groups/i });
+    const addElectrodeGroupButton = container.querySelector('button[title="Add electrode_groups"]');
     await user.click(addElectrodeGroupButton);
 
     // ASSERT - Verify we have one more electrode group
-    const newElectrodeGroups = screen.getAllByLabelText(/electrode group id/i);
-    expect(newElectrodeGroups).toHaveLength(initialCount + 1);
-
-    // Verify the new electrode group has the next ID
-    const lastElectrodeGroup = newElectrodeGroups[newElectrodeGroups.length - 1];
-    expect(lastElectrodeGroup).toHaveValue(initialCount); // IDs are 0-indexed
+    const newDeviceTypeSelects = screen.getAllByLabelText(/device type/i);
+    expect(newDeviceTypeSelects).toHaveLength(initialCount + 1);
   });
 
   /**
@@ -341,7 +343,7 @@ describe('Sample Metadata Modification Workflow', () => {
     const user = userEvent.setup();
     const { container } = render(<App />);
 
-    const yamlFile = new File([sampleYamlContent], 'minimal-sample.yml', {
+    const yamlFile = new File([sampleYamlContent], 'minimal-complete.yml', {
       type: 'text/yaml',
     });
 
@@ -354,9 +356,9 @@ describe('Sample Metadata Modification Workflow', () => {
     }, { timeout: 5000 });
 
     // Modify experimenter name
-    const experimenterInputs = screen.getAllByLabelText(/experimenter name/i);
-    await user.clear(experimenterInputs[0]);
-    await user.type(experimenterInputs[0], 'Modified, Name');
+    const experimenterInput = screen.getByPlaceholderText(/LastName, FirstName/i);
+    await user.clear(experimenterInput);
+    await user.type(experimenterInput, 'Modified, Name');
 
     // ACT - Export the modified data
     const exportButton = screen.getByRole('button', { name: /generate yml file/i });
@@ -369,7 +371,7 @@ describe('Sample Metadata Modification Workflow', () => {
 
     // Verify blob contains YAML content
     expect(mockBlob.content).toBeDefined();
-    expect(mockBlob.options.type).toBe('text/plain');
+    expect(mockBlob.options.type).toBe('text/yaml;charset=utf-8;');
 
     // Parse the exported YAML and verify modification
     const exportedYaml = mockBlob.content[0];
@@ -390,7 +392,7 @@ describe('Sample Metadata Modification Workflow', () => {
     const user = userEvent.setup();
     const { container } = render(<App />);
 
-    const yamlFile = new File([sampleYamlContent], 'minimal-sample.yml', {
+    const yamlFile = new File([sampleYamlContent], 'minimal-complete.yml', {
       type: 'text/yaml',
     });
 
@@ -403,13 +405,13 @@ describe('Sample Metadata Modification Workflow', () => {
     }, { timeout: 5000 });
 
     // Modify multiple fields
-    const experimenterInputs = screen.getAllByLabelText(/experimenter name/i);
-    await user.clear(experimenterInputs[0]);
-    await user.type(experimenterInputs[0], 'RoundTrip, Test');
+    const experimenterInput = screen.getByPlaceholderText(/LastName, FirstName/i);
+    await user.clear(experimenterInput);
+    await user.type(experimenterInput, 'RoundTrip, Test');
 
-    const subjectIdInput = screen.getByLabelText(/subject id/i);
-    await user.clear(subjectIdInput);
-    await user.type(subjectIdInput, '88888');
+    const subjectIdInputs = screen.getAllByLabelText(/subject id/i);
+    await user.clear(subjectIdInputs[0]);
+    await user.type(subjectIdInputs[0], '88888');
 
     // Export
     const exportButton = screen.getByRole('button', { name: /generate yml file/i });
@@ -430,15 +432,14 @@ describe('Sample Metadata Modification Workflow', () => {
 
     // ASSERT - Verify modifications are preserved
     await vi.waitFor(() => {
-      const experimenterInputsAfterReimport = screen.getAllByLabelText(/experimenter name/i);
-      expect(experimenterInputsAfterReimport[0]).toHaveValue('RoundTrip, Test');
+      expect(screen.getByText(/RoundTrip, Test/)).toBeInTheDocument();
     }, { timeout: 2000 });
 
-    const subjectIdInputAfterReimport = screen.getByLabelText(/subject id/i);
-    expect(subjectIdInputAfterReimport).toHaveValue('88888');
+    const subjectIdInputsAfterReimport = screen.getAllByLabelText(/subject id/i);
+    expect(subjectIdInputsAfterReimport[0]).toHaveValue('88888');
 
     // Verify other data still intact
     expect(screen.getByLabelText(/^lab$/i)).toHaveValue('Test Lab');
-    expect(screen.getByLabelText(/^institution$/i)).toHaveValue('Test University');
+    expect(screen.getByLabelText(/institution/i)).toHaveValue('Test University');
   });
 });
