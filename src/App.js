@@ -637,6 +637,28 @@ const rulesValidation = (jsonFileContent) => {
     isFormValid = false;
   }
 
+  // check for partial optogenetics configuration
+  // If ANY optogenetics field is present, ALL must be present
+  // This is required by trodes_to_nwb Python package
+  const hasOptoSource = jsonFileContent.opto_excitation_source?.length > 0;
+  const hasOpticalFiber = jsonFileContent.optical_fiber?.length > 0;
+  const hasVirusInjection = jsonFileContent.virus_injection?.length > 0;
+
+  const optoFieldsPresent = [hasOptoSource, hasOpticalFiber, hasVirusInjection].filter(Boolean).length;
+
+  // Partial configuration detected (some but not all fields present)
+  if (optoFieldsPresent > 0 && optoFieldsPresent < 3) {
+    errorMessages.push(
+      `Key: optogenetics | Error: Partial optogenetics configuration detected. ` +
+      `If using optogenetics, ALL fields must be defined: ` +
+      `opto_excitation_source${hasOptoSource ? ' ✓' : ' ✗'}, ` +
+      `optical_fiber${hasOpticalFiber ? ' ✓' : ' ✗'}, ` +
+      `virus_injection${hasVirusInjection ? ' ✓' : ' ✗'}`
+    );
+    errorIds.push('opto_excitation_source');
+    isFormValid = false;
+  }
+
   return {
     isFormValid,
     formErrorMessages: errorMessages,
@@ -673,7 +695,9 @@ const submitForm = (e) => {
  */
 const generateYMLFile = (e) => {
   e.preventDefault();
+
   const form = structuredClone(formData);
+
   const validation = jsonschemaValidation(form);
   const { isValid, jsonSchemaErrors } = validation;
   const { isFormValid, formErrors } = rulesValidation(form);
@@ -2853,9 +2877,32 @@ export const rulesValidation = (jsonFileContent) => {
     isFormValid = false;
   }
 
+  // check for partial optogenetics configuration
+  // If ANY optogenetics field is present, ALL must be present
+  // This is required by trodes_to_nwb Python package
+  const hasOptoSource = jsonFileContent.opto_excitation_source?.length > 0;
+  const hasOpticalFiber = jsonFileContent.optical_fiber?.length > 0;
+  const hasVirusInjection = jsonFileContent.virus_injection?.length > 0;
+
+  const optoFieldsPresent = [hasOptoSource, hasOpticalFiber, hasVirusInjection].filter(Boolean).length;
+
+  // Partial configuration detected (some but not all fields present)
+  if (optoFieldsPresent > 0 && optoFieldsPresent < 3) {
+    errorMessages.push(
+      `Key: optogenetics | Error: Partial optogenetics configuration detected. ` +
+      `If using optogenetics, ALL fields must be defined: ` +
+      `opto_excitation_source${hasOptoSource ? ' ✓' : ' ✗'}, ` +
+      `optical_fiber${hasOpticalFiber ? ' ✓' : ' ✗'}, ` +
+      `virus_injection${hasVirusInjection ? ' ✓' : ' ✗'}`
+    );
+    errorIds.push('opto_excitation_source');
+    isFormValid = false;
+  }
+
   return {
     isFormValid,
     formErrors: errorMessages,
+    formErrorIds: errorIds,
     errors,
   };
 };
