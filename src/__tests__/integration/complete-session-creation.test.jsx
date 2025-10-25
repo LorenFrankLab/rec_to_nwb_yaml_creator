@@ -65,23 +65,28 @@ async function fillRequiredFields(user, screen) {
   const labInput = screen.getByLabelText(/^lab$/i);
   await user.clear(labInput);
   await user.type(labInput, 'Test Lab');
+  await user.tab(); // Trigger onBlur to update React state
 
   // 3. Institution
   const institutionInput = screen.getByLabelText(/institution/i);
   await user.clear(institutionInput);
   await user.type(institutionInput, 'Test Institution');
+  await user.tab(); // Trigger onBlur to update React state
 
   // 4. Experiment description (required, non-whitespace pattern)
   const experimentDescInput = screen.getByLabelText(/experiment description/i);
   await user.type(experimentDescInput, 'Test experiment');
+  await user.tab(); // Trigger onBlur to update React state
 
   // 5. Session description (required, non-whitespace pattern)
   const sessionDescInput = screen.getByLabelText(/session description/i);
   await user.type(sessionDescInput, 'Test session');
+  await user.tab(); // Trigger onBlur to update React state
 
   // 6. Session ID (required, non-whitespace pattern)
   const sessionIdInput = screen.getByLabelText(/session id/i);
   await user.type(sessionIdInput, 'TEST01');
+  await user.tab(); // Trigger onBlur to update React state
 
   // 7. Keywords (required - minItems: 1)
   await addListItem(user, screen, LIST_PLACEHOLDERS.keywords, 'test');
@@ -89,30 +94,36 @@ async function fillRequiredFields(user, screen) {
   // 8. Subject ID (required, non-whitespace pattern)
   const subjectIdInput = screen.getByLabelText(/subject id/i);
   await user.type(subjectIdInput, 'test_subject');
+  await user.tab(); // Trigger onBlur to update React state
 
   // 9. Subject genotype (required, non-whitespace pattern)
   const genotypeInput = screen.getByLabelText(/genotype/i);
   await user.clear(genotypeInput);
   await user.type(genotypeInput, 'Wild Type');
+  await user.tab(); // Trigger onBlur to update React state
 
   // 10. Subject date_of_birth (required, date format)
   const dobInput = screen.getByLabelText(/date of birth/i);
   await user.type(dobInput, '2024-01-01');
+  await user.tab(); // Trigger onBlur to update React state
 
   // 11. Units analog (required, non-whitespace pattern)
   const unitsAnalogInput = screen.getByLabelText(/^analog$/i);
   await user.clear(unitsAnalogInput);
   await user.type(unitsAnalogInput, 'volts');
+  await user.tab(); // Trigger onBlur to update React state
 
   // 12. Units behavioral_events (required, non-whitespace pattern)
   const unitsBehavioralInput = screen.getByLabelText(/behavioral events/i);
   await user.clear(unitsBehavioralInput);
   await user.type(unitsBehavioralInput, 'n/a');
+  await user.tab(); // Trigger onBlur to update React state
 
   // 13. Default header file path (required, non-whitespace pattern)
   const headerPathInput = screen.getByLabelText(/^default header file path$/i);
   await user.clear(headerPathInput);
   await user.type(headerPathInput, 'header.h');
+  await user.tab(); // Trigger onBlur to update React state
 
   // 14. Data acq device (required - minItems: 1)
   const addDataAcqDeviceButton = screen.getByTitle(/Add data_acq_device/i);
@@ -201,7 +212,7 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // Verify we start with default values (not empty)
     const labInput = screen.getByLabelText(/^lab$/i);
-    expect(labInput).toHaveValue('Loren Test Lab'); // Default value from valueList.js
+    expect(labInput).toHaveValue('Loren Frank Lab'); // Default value from valueList.js
 
     // ACT - Fill required fields
     // 1. Experimenter name - use helper with placeholder
@@ -379,26 +390,37 @@ describe('End-to-End Session Creation Workflow', () => {
     // ACT - Fill all required fields using helper
     await fillRequiredFields(user, screen);
 
+    // Wait for React state to settle after filling required fields
+    await waitFor(() => {
+      const labInput = screen.getByLabelText(/^lab$/i);
+      expect(labInput).toHaveValue('Test Lab');
+    }, { timeout: 2000 });
+
     // Override/customize some fields for this test
     const labInput = screen.getByLabelText(/^lab$/i);
     await user.clear(labInput);
     await user.type(labInput, 'Test Lab');
+    await user.tab(); // Trigger onBlur to update React state
 
     const institutionInput = screen.getByLabelText(/institution/i);
     await user.clear(institutionInput);
     await user.type(institutionInput, 'Test University');
+    await user.tab(); // Trigger onBlur to update React state
 
     const experimentDescInput = screen.getByLabelText(/experiment description/i);
     await user.clear(experimentDescInput);
     await user.type(experimentDescInput, 'Spatial navigation with rewards');
+    await user.tab(); // Trigger onBlur to update React state
 
     const sessionDescInput = screen.getByLabelText(/session description/i);
     await user.clear(sessionDescInput);
     await user.type(sessionDescInput, 'W-track alternation task');
+    await user.tab(); // Trigger onBlur to update React state
 
     const sessionIdInput = screen.getByLabelText(/session id/i);
     await user.clear(sessionIdInput);
     await user.type(sessionIdInput, 'beans_01');
+    await user.tab(); // Trigger onBlur to update React state
 
     // Update keywords
     await addListItem(user, screen, LIST_PLACEHOLDERS.keywords, 'spatial navigation');
@@ -408,10 +430,12 @@ describe('End-to-End Session Creation Workflow', () => {
     const subjectIdInputs = screen.getAllByLabelText(/subject id/i);
     await user.clear(subjectIdInputs[0]);
     await user.type(subjectIdInputs[0], 'beans');
+    await user.tab(); // Trigger onBlur to update React state
 
     const speciesInputs = screen.getAllByLabelText(/species/i);
     await user.clear(speciesInputs[0]);
     await user.type(speciesInputs[0], 'Rattus norvegicus');
+    await user.tab(); // Trigger onBlur to update React state
 
     const sexInputs = screen.getAllByLabelText(/sex/i);
     await user.selectOptions(sexInputs[0], 'M');
@@ -419,6 +443,7 @@ describe('End-to-End Session Creation Workflow', () => {
     const descriptionInputs = screen.getAllByLabelText(/description/i);
     await user.clear(descriptionInputs[0]);
     await user.type(descriptionInputs[0], 'Long Evans Rat');
+    await user.tab(); // Trigger onBlur to update React state
 
     // Add camera
     const addCameraButton = screen.getByTitle(/Add cameras/i);
@@ -434,6 +459,7 @@ describe('End-to-End Session Creation Workflow', () => {
 
     cameraNameInputs = screen.getAllByLabelText(/camera name/i);
     await user.type(cameraNameInputs[0], 'overhead_camera');
+    await user.tab(); // Trigger onBlur to update React state
 
     const cameraIdInputs = screen.getAllByLabelText(/^camera id$/i);
     expect(cameraIdInputs[0]).toHaveValue(0); // Auto-assigned ID
@@ -452,9 +478,11 @@ describe('End-to-End Session Creation Workflow', () => {
 
     taskNameInputs = screen.getAllByLabelText(/task name/i);
     await user.type(taskNameInputs[0], 'sleep');
+    await user.tab(); // Trigger onBlur to update React state
 
     const taskDescInputs = screen.getAllByLabelText(/task description/i);
     await user.type(taskDescInputs[0], 'Rest session before task');
+    await user.tab(); // Trigger onBlur to update React state
 
     // ACT - Export using React fiber approach
     await triggerExport();
@@ -555,11 +583,13 @@ describe('End-to-End Session Creation Workflow', () => {
     const subjectIdInput = subjectIdInputs[0];
     await user.clear(subjectIdInput);
     await user.type(subjectIdInput, 'RAT001');
+    await user.tab(); // Trigger onBlur to update React state
 
     const speciesInputs = screen.getAllByLabelText(/species/i);
     const speciesInput = speciesInputs[0];
     await user.clear(speciesInput);
     await user.type(speciesInput, 'Rattus norvegicus');
+    await user.tab(); // Trigger onBlur to update React state
 
     const sexInputs = screen.getAllByLabelText(/sex/i);
     const sexInput = sexInputs[0];
@@ -569,10 +599,20 @@ describe('End-to-End Session Creation Workflow', () => {
     const descriptionInput = descriptionInputs[0];
     await user.clear(descriptionInput);
     await user.type(descriptionInput, 'Long Evans female rat');
+    await user.tab(); // Trigger onBlur to update React state
 
     const weightInputs = screen.getAllByLabelText(/weight/i);
     const weightInput = weightInputs[0];
     await user.type(weightInput, '350');
+    await user.tab(); // Trigger onBlur to update React state
+
+    // Wait for all state updates to complete before exporting
+    await waitFor(() => {
+      expect(subjectIdInput).toHaveValue('RAT001');
+      expect(speciesInput).toHaveValue('Rattus norvegicus');
+      expect(descriptionInput).toHaveValue('Long Evans female rat');
+      expect(weightInput).toHaveValue(350);
+    }, { timeout: 2000 });
 
     // Export using React fiber approach
     await triggerExport();
@@ -618,6 +658,7 @@ describe('End-to-End Session Creation Workflow', () => {
     // Update the device name
     await user.clear(deviceNameInput);
     await user.type(deviceNameInput, 'Custom SpikeGadgets');
+    await user.tab(); // Trigger onBlur to update React state
 
     // Export using React fiber approach
     await triggerExport();
@@ -673,6 +714,7 @@ describe('End-to-End Session Creation Workflow', () => {
 
     cameraNameInputs = screen.getAllByLabelText(/camera name/i);
     await user.type(cameraNameInputs[0], 'overhead_camera');
+    await user.tab(); // Trigger onBlur to update React state
 
     // Verify first camera has ID 0
     let cameraIdInputs = screen.getAllByLabelText(/^camera id$/i);
@@ -688,6 +730,7 @@ describe('End-to-End Session Creation Workflow', () => {
 
     cameraNameInputs = screen.getAllByLabelText(/camera name/i);
     await user.type(cameraNameInputs[1], 'side_camera');
+    await user.tab(); // Trigger onBlur to update React state
 
     // Verify second camera has ID 1
     cameraIdInputs = screen.getAllByLabelText(/^camera id$/i);
@@ -744,6 +787,7 @@ describe('End-to-End Session Creation Workflow', () => {
 
     cameraNameInputs = screen.getAllByLabelText(/camera name/i);
     await user.type(cameraNameInputs[0], 'overhead_camera');
+    await user.tab(); // Trigger onBlur to update React state
 
     // Add a task
     const addTaskButton = screen.getByTitle(/Add tasks/i);
@@ -759,16 +803,19 @@ describe('End-to-End Session Creation Workflow', () => {
 
     taskNameInputs = screen.getAllByLabelText(/task name/i);
     await user.type(taskNameInputs[0], 'sleep');
+    await user.tab(); // Trigger onBlur to update React state
 
     const taskDescInputs = screen.getAllByLabelText(/task description/i);
     await user.type(taskDescInputs[0], 'Rest session');
+    await user.tab(); // Trigger onBlur to update React state
 
     const taskEnvInputs = screen.getAllByLabelText(/task environment/i);
     await user.type(taskEnvInputs[0], 'home cage');
+    await user.tab(); // Trigger onBlur to update React state
 
     const taskEpochInputs = screen.getAllByLabelText(/task epochs/i);
     await user.type(taskEpochInputs[0], '1, 3');
-    await user.tab(); // Trigger onBlur
+    await user.tab(); // Trigger onBlur to update React state
 
     // Export using React fiber approach
     await triggerExport();
@@ -822,9 +869,11 @@ describe('End-to-End Session Creation Workflow', () => {
 
     eventDescInputs = screen.getAllByLabelText(/event description/i);
     await user.type(eventDescInputs[0], 'Poke event');
+    await user.tab(); // Trigger onBlur to update React state
 
     const eventNameInputs = screen.getAllByLabelText(/^event name$/i);
     await user.type(eventNameInputs[0], 'Din1');
+    await user.tab(); // Trigger onBlur to update React state
 
     // Export using React fiber approach
     await triggerExport();
@@ -895,6 +944,7 @@ describe('End-to-End Session Creation Workflow', () => {
     // Get the last one added (most recent electrode group)
     const electrodeGroupLocationInput = locationInputs[locationInputs.length - 1];
     await user.type(electrodeGroupLocationInput, 'CA1');
+    await user.tab(); // Trigger onBlur to update React state
 
     // Device type select - get all and use the last one (most recent electrode group)
     const deviceTypeInputs = screen.queryAllByLabelText(/device type/i);
@@ -904,6 +954,7 @@ describe('End-to-End Session Creation Workflow', () => {
     const descriptionInputs = screen.queryAllByLabelText(/^description$/i);
     const electrodeGroupDescInput = descriptionInputs[descriptionInputs.length - 1];
     await user.type(electrodeGroupDescInput, 'Dorsal CA1 tetrode');
+    await user.tab(); // Trigger onBlur to update React state
 
     // Export using React fiber approach
     await triggerExport();
@@ -959,6 +1010,7 @@ describe('End-to-End Session Creation Workflow', () => {
     // Get the last one added (most recent electrode group)
     const electrodeGroupLocationInput = locationInputs[locationInputs.length - 1];
     await user.type(electrodeGroupLocationInput, 'CA1');
+    await user.tab(); // Trigger onBlur to update React state
 
     // Select device type to trigger ntrode generation
     // Device type select - get all and use the last one (most recent electrode group)
@@ -1021,22 +1073,27 @@ describe('End-to-End Session Creation Workflow', () => {
     const labInput = screen.getByLabelText(/^lab$/i);
     await user.clear(labInput);
     await user.type(labInput, 'Test Lab');
+    await user.tab(); // Trigger onBlur to update React state
 
     const institutionInput = screen.getByLabelText(/institution/i);
     await user.clear(institutionInput);
     await user.type(institutionInput, 'Test University');
+    await user.tab(); // Trigger onBlur to update React state
 
     const sessionIdInput = screen.getByLabelText(/session id/i);
     await user.clear(sessionIdInput);
     await user.type(sessionIdInput, 'test_session_001');
+    await user.tab(); // Trigger onBlur to update React state
 
     const subjectIdInputs = screen.getAllByLabelText(/subject id/i);
     await user.clear(subjectIdInputs[0]);
     await user.type(subjectIdInputs[0], 'RAT001');
+    await user.tab(); // Trigger onBlur to update React state
 
     const speciesInputs = screen.getAllByLabelText(/species/i);
     await user.clear(speciesInputs[0]);
     await user.type(speciesInputs[0], 'Rattus norvegicus');
+    await user.tab(); // Trigger onBlur to update React state
 
     const sexInputs = screen.getAllByLabelText(/sex/i);
     await user.selectOptions(sexInputs[0], 'M');
@@ -1055,6 +1112,7 @@ describe('End-to-End Session Creation Workflow', () => {
 
     cameraNameInputs = screen.getAllByLabelText(/camera name/i);
     await user.type(cameraNameInputs[0], 'overhead_camera');
+    await user.tab(); // Trigger onBlur to update React state
 
     // Add task
     const addTaskButton = screen.getByTitle(/Add tasks/i);
@@ -1070,6 +1128,7 @@ describe('End-to-End Session Creation Workflow', () => {
 
     taskNameInputs = screen.getAllByLabelText(/task name/i);
     await user.type(taskNameInputs[0], 'w_track');
+    await user.tab(); // Trigger onBlur to update React state
 
     // Add electrode group
     const addElectrodeGroupButton = screen.getByTitle(/Add electrode_groups/i);
@@ -1098,6 +1157,7 @@ describe('End-to-End Session Creation Workflow', () => {
     // Get the last one added (most recent electrode group)
     const electrodeGroupLocationInput = locationInputs[locationInputs.length - 1];
     await user.type(electrodeGroupLocationInput, 'CA1');
+    await user.tab(); // Trigger onBlur to update React state
 
     // Device type select - get all and use the last one (most recent electrode group)
     const deviceTypeInputs = screen.queryAllByLabelText(/device type/i);
