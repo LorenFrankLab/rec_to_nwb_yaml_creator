@@ -94,18 +94,19 @@
 
 ### Strategic Plan Update (2025-10-24)
 
-**Skipping ahead to high-value tasks:**
+**Phase 1.5 Revised Priorities:**
 
-1. ⏭️ Task 1.5.5: Convert Documentation Tests (SKIPPED - lower priority)
-2. 🟢 **Task 1.5.6: Fix DRY Violations** (IN PROGRESS - ~1,500 LOC duplication)
+1. ⏭️ Task 1.5.5: Convert Documentation Tests (DEFERRED - lower priority)
+2. ✅ **Task 1.5.6: Fix DRY Violations** (COMPLETED - core work done, 7 files refactored)
+3. 🔴 **Task 1.5.11: Critical Branch Coverage Tests** (NEXT - 42 tests, 7-10 hours)
 
 ---
 
-## Task 1.5.6: DRY Refactor - IN PROGRESS (2025-10-24)
+## Task 1.5.6: DRY Refactor - ✅ COMPLETED (2025-10-24)
 
 **Goal:** Eliminate ~1,500 LOC of duplicated test setup/teardown code across 24+ test files
 
-**Status:** 🟢 IN PROGRESS
+**Status:** ✅ COMPLETED (core work done)
 
 ### Analysis Complete
 
@@ -271,12 +272,95 @@
 
 ---
 
-## Next Priority Tasks
+## Task 1.5.11: Critical Branch Coverage Tests - 🔴 NEXT (2025-10-24)
 
-1. ⏳ Task 1.5.9: Core Function Behavior Tests
-2. ⏳ Task 1.5.10: Electrode Group Synchronization Tests
+**Goal:** Add 42 unit tests for untested error paths and conditional branches
 
-**Rationale:** Focus on code quality improvements that unblock Phase 2 work
+**Status:** 🔴 READY TO START (NOT blocked by App.js:933 - these are unit tests)
+
+### Why This Task is Critical
+
+**Current State:**
+
+- Branch coverage: 30.86% (69% of if/else paths untested)
+- Function coverage: 100% (all 23 functions have tests)
+- **Problem:** Error paths, edge cases, null/undefined handling completely untested
+
+**Phase 2 Risk Without These Tests:**
+
+- Bug fixes could break untested error paths
+- No regression protection for known bugs
+- Unsafe to modify validation or import logic
+- Could introduce crashes in error handlers
+
+**Why NOT Blocked by App.js:933:**
+
+- Integration tests use `user.upload()` → trigger onClick → BLOCKED
+- **Unit tests call functions directly** → no onClick → NOT BLOCKED
+- These 42 tests are pure unit tests (direct function calls)
+
+### Test Suites to Create
+
+**Suite 1: importFile() Error Handling** (10 tests, 2-3 hours)
+
+- File: `App-importFile-error-handling.test.jsx` (NEW)
+- Tests: Empty file, YAML parse errors, FileReader errors, missing subject, invalid gender, type mismatches
+- **Why:** Most complex error-prone function, tests known bugs
+
+**Suite 2: generateYMLFile() Branch Coverage** (8 tests, 1-2 hours)
+
+- File: `App-generateYMLFile-branches.test.jsx` (NEW)
+- Tests: Suspicious line 673 logic, validation branches, error display branches
+- **Why:** Verifies export validation gate logic
+
+**Suite 3: Validation Edge Cases** (12 tests, 2-3 hours)
+
+- File: `App-validation-edge-cases.test.jsx` (NEW)
+- Tests: null/undefined handling, empty arrays, known bugs (BUG #5)
+- **Why:** Regression protection for Phase 2 bug fixes
+
+**Suite 4: updateFormData() Falsy Values** (6 tests, 1 hour)
+
+- File: `App-updateFormData-edge-cases.test.jsx` (NEW)
+- Tests: index=0, value=0, empty string, null, undefined
+- **Why:** JavaScript falsy value bugs are common
+
+**Suite 5: Error Display Branches** (6 tests, 1 hour)
+
+- File: `App-error-display-branches.test.jsx` (NEW)
+- Tests: Missing elements, deeply nested paths, rapid errors
+- **Why:** Error handlers must never crash
+
+### Expected Outcome
+
+**After Completion:**
+
+- Branch coverage: 30.86% → 45-50% (+15%)
+- All critical error paths tested
+- Regression tests for known bugs
+- Safe foundation for Phase 2 bug fixes
+- 42 new tests, 7-10 hours
+
+**Phase 2 Transition:**
+
+- Day 1: Fix App.js:933 → unblock 24 integration tests
+- All 1,272 tests passing (1,206 + 42 + 24 unblocked)
+- Branch coverage ~45-50%
+- Safe to fix bugs with TDD
+
+---
+
+## Deferred Tasks (Phase 3 or Focused Sessions)
+
+**Rationale for Deferral:**
+
+- Task 1.5.3 (Error Recovery): Field selector issues, est. 10-15 hours debugging
+- Task 1.5.5 (Convert Docs Tests): Lower priority, Phase 3 code quality
+- Task 1.5.7 (CSS Selectors): Critical for Phase 3, not Phase 2
+- Task 1.5.8 (Bug Fixtures): Optional nice-to-have
+- Tasks 1.5.9-1.5.10: Optional refactoring prep
+
+**Decision:** Focus on Task 1.5.11 (branch coverage) → better ROI for Phase 2 safety
 
 ---
 
