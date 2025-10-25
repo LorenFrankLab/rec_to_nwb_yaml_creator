@@ -79,7 +79,6 @@ export function App() {
    */
     const importFile = (e) => {
       e.preventDefault();
-      setFormData(structuredClone(emptyFormData)); // clear out form
       const file = e.target.files[0];
 
       if (!file) {
@@ -88,8 +87,29 @@ export function App() {
 
       const reader = new FileReader();
       reader.readAsText(e.target.files[0], 'UTF-8');
+
+      // Handle file read errors
+      reader.onerror = () => {
+        // eslint-disable-next-line no-alert
+        window.alert('Error reading file. Please try again.');
+        setFormData(structuredClone(emptyFormData));
+      };
+
       reader.onload = (evt) => {
-        const jsonFileContent = YAML.parse(evt.target.result);
+        // Parse YAML with error handling to prevent data loss
+        let jsonFileContent;
+        try {
+          jsonFileContent = YAML.parse(evt.target.result);
+        } catch (parseError) {
+          // eslint-disable-next-line no-alert
+          window.alert(
+            `Invalid YAML file: ${parseError.message}\n\n` +
+            `The file could not be parsed. Please check the YAML syntax and try again.`
+          );
+          // Restore form to defaults after parse error
+          setFormData(structuredClone(emptyFormData));
+          return;
+        }
         const JSONschema = schema.current;
         const validation = jsonschemaValidation(jsonFileContent, JSONschema);
         const {
@@ -163,6 +183,7 @@ export function App() {
    */
     const updateFormData = (name, value, key, index) => {
       const form = structuredClone(formData);
+
       if (key === undefined) {
         form[name] = value; // key value pair
       } else if (index === undefined) {
@@ -171,6 +192,7 @@ export function App() {
         form[key][index] = form[key][index] || {};
         form[key][index][name] = value; // array (as defined in json schema)
       }
+
       setFormData(form);
     };
 
