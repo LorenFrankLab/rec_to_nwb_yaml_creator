@@ -3,6 +3,7 @@ import { render, screen, within, waitFor, fireEvent } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import { App } from '../../App';
 import YAML from 'yaml';
+import { getMinimalCompleteYaml } from '../helpers/test-fixtures';
 
 /**
  * Phase 1.5 Task 1.5.2: End-to-End Workflow Tests
@@ -200,7 +201,7 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // Verify we start with default values (not empty)
     const labInput = screen.getByLabelText(/^lab$/i);
-    expect(labInput).toHaveValue('Loren Frank Lab'); // Default value from valueList.js
+    expect(labInput).toHaveValue('Loren Test Lab'); // Default value from valueList.js
 
     // ACT - Fill required fields
     // 1. Experimenter name - use helper with placeholder
@@ -381,11 +382,11 @@ describe('End-to-End Session Creation Workflow', () => {
     // Override/customize some fields for this test
     const labInput = screen.getByLabelText(/^lab$/i);
     await user.clear(labInput);
-    await user.type(labInput, 'Frank Lab');
+    await user.type(labInput, 'Test Lab');
 
     const institutionInput = screen.getByLabelText(/institution/i);
     await user.clear(institutionInput);
-    await user.type(institutionInput, 'UCSF');
+    await user.type(institutionInput, 'Test University');
 
     const experimentDescInput = screen.getByLabelText(/experiment description/i);
     await user.clear(experimentDescInput);
@@ -469,8 +470,8 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // Verify all filled fields are present
     expect(exportedData.experimenter_name).toEqual(['Test, User']);
-    expect(exportedData.lab).toBe('Frank Lab');
-    expect(exportedData.institution).toBe('UCSF');
+    expect(exportedData.lab).toBe('Test Lab');
+    expect(exportedData.institution).toBe('Test University');
     expect(exportedData.experiment_description).toBe('Spatial navigation with rewards');
     expect(exportedData.session_description).toBe('W-track alternation task');
     expect(exportedData.session_id).toBe('beans_01');
@@ -1019,11 +1020,11 @@ describe('End-to-End Session Creation Workflow', () => {
 
     const labInput = screen.getByLabelText(/^lab$/i);
     await user.clear(labInput);
-    await user.type(labInput, 'Frank Lab');
+    await user.type(labInput, 'Test Lab');
 
     const institutionInput = screen.getByLabelText(/institution/i);
     await user.clear(institutionInput);
-    await user.type(institutionInput, 'UCSF');
+    await user.type(institutionInput, 'Test University');
 
     const sessionIdInput = screen.getByLabelText(/session id/i);
     await user.clear(sessionIdInput);
@@ -1138,8 +1139,8 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // Verify values (includes experimenters from both fillRequiredFields and addListItem)
     expect(exportedData.experimenter_name).toContain('Guidera, Jennifer');
-    expect(exportedData.lab).toBe('Frank Lab');
-    expect(exportedData.institution).toBe('UCSF');
+    expect(exportedData.lab).toBe('Test Lab');
+    expect(exportedData.institution).toBe('Test University');
     expect(exportedData.session_id).toBe('test_session_001');
     expect(exportedData.subject.subject_id).toBe('RAT001');
     expect(exportedData.subject.species).toBe('Rattus norvegicus');

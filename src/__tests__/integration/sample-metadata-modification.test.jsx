@@ -3,6 +3,7 @@ import { render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../App';
 import YAML from 'yaml';
+import { getMinimalCompleteYaml } from '../helpers/test-fixtures';
 import fs from 'fs';
 import path from 'path';
 
