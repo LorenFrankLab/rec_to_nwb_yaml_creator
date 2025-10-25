@@ -3,6 +3,9 @@
 exports[`BASELINE: Custom Rules Validation > Tasks-Camera Relationship > BASELINE: validates tasks with no cameras defined > tasks-no-cameras 1`] = `
 {
   "errors": [],
+  "formErrorIds": [
+    "tasks",
+  ],
   "formErrors": [
     "Key: task.camera | Error: There is tasks camera_id, but no camera object with ids. No data is loaded",
   ],
