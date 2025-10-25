@@ -1277,21 +1277,34 @@ was incorrect. The schema has always enforced integer types correctly.
 - [x] Verify form reset includes this field
 - [x] **Actual Time:** 15 minutes
 
-#### Hardware Channel Mapping Duplicate Validation ⚠️ REAL BUG FOUND
+#### Hardware Channel Mapping Duplicate Validation ✅ COMPLETE
 
-**Status:** 🔴 NEEDS FIX
+**Status:** ✅ FIXED (2025-10-25)
 **Priority:** P2 (Medium - Data Quality)
 **Impact:** Could allow invalid hardware configurations that crash trodes_to_nwb
+**Duration:** 2.5 hours
 
-- [ ] Add schema validation to reject duplicate channel values in `map` object
-- [ ] Example: `map: { '0': 5, '1': 5 }` should fail (both map to channel 5)
-- [ ] Update `nwb_schema.json` with custom validation or additionalProperties constraint
-- [ ] Verify with baseline test `validation.baseline.test.js:458-492`
-- [ ] **Estimated Time:** 2-3 hours (requires schema research)
+- [x] Add custom validation in rulesValidation() to reject duplicate channel values
+- [x] Create comprehensive test suite (9 tests, all passing)
+- [x] Verify detection of duplicate mappings
+- [x] Verify valid unique mappings still pass
+- [x] **Test File:** `src/__tests__/unit/schema/schema-duplicate-channel-mapping-bug.test.js`
+- [x] **Test Results:** 9/9 passing, 1294/1295 full suite passing
+
+**Solution:** Added validation logic in App.js:2902-2929 that:
+1. Iterates through each ntrode in ntrode_electrode_group_channel_map
+2. Extracts all channel values from the map object
+3. Uses Set to detect duplicates (Set.size !== array.length)
+4. Returns helpful error message identifying which physical channels are duplicated
 
 **Business Logic:** Hardware channels cannot be mapped to the same physical channel. Each value in the `map` object must be unique to prevent hardware conflicts.
 
-**Test Evidence:** Baseline test shows YAML with duplicate mapping passes validation but should fail.
+**Error Message Format:**
+```
+Key: ntrode_electrode_group_channel_map | Error: ntrode_id 0 has duplicate channel mappings.
+Physical channel(s) 5 are mapped to multiple logical channels.
+Each logical channel must map to a unique physical channel to avoid hardware conflicts.
+```
 
 ### Additional Critical Bug Fixes
 

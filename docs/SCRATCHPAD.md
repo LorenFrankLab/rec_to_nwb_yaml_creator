@@ -30,15 +30,17 @@ Investigated 4 bugs documented in `validation.baseline.test.js` to determine if 
 - **Status:** Schema validation working as expected, no bug exists
 - **Action:** Update baseline test to remove "BUG" label
 
-**2. BUG: Hardware Channel Mapping Validation** ✅ **REAL BUG - NEEDS FIX**
+**2. BUG: Hardware Channel Mapping Validation** ✅ **FIXED (2025-10-25)**
 - **Test:** Lines 458-492
 - **Snapshot:** Lines 461-510
 - **Finding:** Duplicate channel mappings **NOT detected** by schema
 - **Evidence:** Test has `map: { '0': 5, '1': 5 }` (duplicate value 5) but no validation error about duplicates
 - **Business Logic:** Hardware channels can't be mapped to the same physical channel
 - **Impact:** Could allow invalid hardware configurations that crash trodes_to_nwb
-- **Status:** **CONFIRMED BUG - needs schema fix**
-- **Action:** Add to Phase 2 bug list as P2 priority
+- **Status:** **FIXED** - Added custom validation in rulesValidation()
+- **Solution:** App.js:2902-2929 validates unique channel values using Set
+- **Tests:** 9 comprehensive tests in schema-duplicate-channel-mapping-bug.test.js
+- **Duration:** 2.5 hours (TDD: RED → GREEN → REFACTOR)
 
 **3. BUG: Empty String Validation Gaps** ❌ FALSE ALARM - **ALREADY WORKING**
 - **Test:** Lines 494-514

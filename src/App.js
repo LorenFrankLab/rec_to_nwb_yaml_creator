@@ -2899,6 +2899,35 @@ export const rulesValidation = (jsonFileContent) => {
     isFormValid = false;
   }
 
+  // check for duplicate channel mappings in ntrode_electrode_group_channel_map
+  // Each ntrode's map object must have unique values (no duplicate physical channels)
+  // Hardware constraint: each logical channel must map to a unique physical channel
+  if (jsonFileContent.ntrode_electrode_group_channel_map?.length > 0) {
+    jsonFileContent.ntrode_electrode_group_channel_map.forEach((ntrode) => {
+      if (ntrode.map && typeof ntrode.map === 'object') {
+        const channelValues = Object.values(ntrode.map);
+        const uniqueValues = new Set(channelValues);
+
+        // If duplicate values exist, the Set will have fewer elements than the array
+        if (channelValues.length !== uniqueValues.size) {
+          // Find which values are duplicated for better error message
+          const duplicates = channelValues.filter(
+            (value, index) => channelValues.indexOf(value) !== index
+          );
+          const uniqueDuplicates = [...new Set(duplicates)];
+
+          errorMessages.push(
+            `Key: ntrode_electrode_group_channel_map | Error: ntrode_id ${ntrode.ntrode_id} has duplicate channel mappings. ` +
+            `Physical channel(s) ${uniqueDuplicates.join(', ')} are mapped to multiple logical channels. ` +
+            `Each logical channel must map to a unique physical channel to avoid hardware conflicts.`
+          );
+          errorIds.push(`ntrode_electrode_group_channel_map_${ntrode.ntrode_id}`);
+          isFormValid = false;
+        }
+      }
+    });
+  }
+
   return {
     isFormValid,
     formErrors: errorMessages,
