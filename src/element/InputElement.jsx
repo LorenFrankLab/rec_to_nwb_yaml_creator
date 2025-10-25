@@ -31,11 +31,23 @@ const InputElement = (prop) => {
       return '';
     }
 
+    // If defaultValue is already in YYYY-MM-DD format, return it directly
+    // This avoids timezone conversion issues with new Date()
+    if (/^\d{4}-\d{2}-\d{2}$/.test(defaultValue)) {
+      return defaultValue;
+    }
+
+    // For ISO 8601 datetime strings, extract the date part
+    if (defaultValue.includes('T')) {
+      return defaultValue.split('T')[0];
+    }
+
+    // Fallback: parse as date (this may have timezone issues)
     const dateObj = new Date(defaultValue);
 
     // get the month in this format of 04, the same for months
     const month = `0${dateObj.getMonth() + 1}`.slice(-2);
-    const day = `0${dateObj.getDate() + 1}`.slice(-2);
+    const day = `0${dateObj.getDate()}`.slice(-2); // FIX: removed +1 (getDate already returns 1-31)
     const year = dateObj.getFullYear();
 
     const shortDate = `${year}-${month}-${day}`;
@@ -63,7 +75,6 @@ const InputElement = (prop) => {
           min={min}
           onBlur={(e) => onBlur(e)}
           pattern={pattern}
-          onChange={() => {}} // done to quiet a react warning in the console
         />
       </div>
     </label>

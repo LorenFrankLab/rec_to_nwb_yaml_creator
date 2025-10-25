@@ -601,7 +601,7 @@ describe('InputElement Component', () => {
       expect(input).toHaveValue('2023-01-05');
     });
 
-    it('should handle end-of-month dates (BUG: timezone + day offset creates invalid dates)', () => {
+    it('should handle ISO 8601 datetime strings correctly (FIXED)', () => {
       const { container } = render(
         <InputElement
           id="test-input"
@@ -613,15 +613,10 @@ describe('InputElement Component', () => {
       );
 
       const input = container.querySelector('input[type="date"]');
-      // CURRENT BEHAVIOR (BUG): Returns empty string
-      // Root cause: Triple bug in getDefaultDateValue()
-      // 1. UTC date "2023-12-01T00:00:00.000Z" converts to Nov 30 in PST/PDT
-      // 2. getDate() returns 30, then adds 1 = 31
-      // 3. November 31st is invalid, so browser shows empty
-      // TODO Phase 2: Fix by:
-      //   - NOT adding 1 to getDate() (it's already 1-indexed)
-      //   - Using toISOString().split('T')[0] instead of manual formatting
-      expect(input).toHaveValue('');
+      // FIXED: Now correctly extracts date portion from ISO 8601 string
+      // getDefaultDateValue() now checks if defaultValue includes 'T' and splits on it
+      // This avoids timezone conversion issues and off-by-one bugs
+      expect(input).toHaveValue('2023-12-01');
     });
 
     it('should return empty string for date input with no defaultValue', () => {
