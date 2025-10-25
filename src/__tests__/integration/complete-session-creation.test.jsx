@@ -1034,35 +1034,65 @@ describe('End-to-End Session Creation Workflow', () => {
     );
     expect(electrodeGroupIdInput).toHaveValue(0); // Auto-assigned ID
 
+    // Fill electrode group fields with blur() + delay to prevent stale references
     // Use placeholder text to find location field (more specific than label)
-    const locationInputs = screen.queryAllByPlaceholderText(/type to find a location/i);
-    // Get the last one added (most recent electrode group)
+    let locationInputs = screen.queryAllByPlaceholderText(/type to find a location/i);
     const electrodeGroupLocationInput = locationInputs[locationInputs.length - 1];
     await user.type(electrodeGroupLocationInput, 'CA1');
+    electrodeGroupLocationInput.blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
     // Device type select - get all and use the last one (most recent electrode group)
-    const deviceTypeInputs = screen.queryAllByLabelText(/device type/i);
+    let deviceTypeInputs = screen.queryAllByLabelText(/device type/i);
     await user.selectOptions(deviceTypeInputs[deviceTypeInputs.length - 1], 'tetrode_12.5');
+    deviceTypeInputs[deviceTypeInputs.length - 1].blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
     // Description field - get all and use the last one (most recent electrode group)
-    const descriptionInputs = screen.queryAllByLabelText(/^description$/i);
+    let descriptionInputs = screen.queryAllByLabelText(/^description$/i);
     const electrodeGroupDescInput = descriptionInputs[descriptionInputs.length - 1];
     await user.type(electrodeGroupDescInput, 'Dorsal CA1 tetrode');
+    electrodeGroupDescInput.blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
     // Fill remaining required fields for electrode group
-    const targetedLocationInputs = screen.queryAllByLabelText(/targeted location/i);
+    let targetedLocationInputs = screen.queryAllByLabelText(/targeted location/i);
     await user.type(targetedLocationInputs[targetedLocationInputs.length - 1], 'CA1');
+    targetedLocationInputs[targetedLocationInputs.length - 1].blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
-    const targetedXInputs = screen.queryAllByLabelText(/targeted x/i);
+    // Use correct label text from App.js
+    let targetedXInputs = screen.queryAllByLabelText(/ML from Bregma/i);
     await user.type(targetedXInputs[targetedXInputs.length - 1], '1.5');
+    targetedXInputs[targetedXInputs.length - 1].blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
-    const targetedYInputs = screen.queryAllByLabelText(/targeted y/i);
+    let targetedYInputs = screen.queryAllByLabelText(/AP to Bregma/i);
     await user.type(targetedYInputs[targetedYInputs.length - 1], '2.0');
+    targetedYInputs[targetedYInputs.length - 1].blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
-    const targetedZInputs = screen.queryAllByLabelText(/targeted z/i);
+    let targetedZInputs = screen.queryAllByLabelText(/DV to Cortical Surface/i);
     await user.type(targetedZInputs[targetedZInputs.length - 1], '3.0');
+    targetedZInputs[targetedZInputs.length - 1].blur();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
-    const unitsInputs = screen.queryAllByLabelText(/^units$/i);
+    // Units field is DataListElement with unique placeholder
+    let unitsInputs = screen.queryAllByPlaceholderText(/Distance units defining positioning/i);
     await user.type(unitsInputs[unitsInputs.length - 1], 'mm');
 
     // Export using React fiber approach
