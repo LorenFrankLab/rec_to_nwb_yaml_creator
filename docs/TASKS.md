@@ -1120,22 +1120,26 @@ File: `src/__tests__/unit/app/App-importFile.test.jsx`
 
 ### Critical Bugs (P0)
 
-#### Schema Synchronization
+#### Schema Synchronization ✅ COMPLETE (2025-10-25)
 
-- [ ] Investigate schema mismatch with trodes_to_nwb
-- [ ] Determine canonical schema version
-- [ ] Sync schemas between repositories
-- [ ] Add schema hash validation to CI
-- [ ] **Estimated Time:** 4-6 hours
+- [x] Investigate schema mismatch with trodes_to_nwb
+- [x] Determine canonical schema version (trodes is canonical)
+- [x] Sync device types (added 4 missing types to web app)
+- [x] Document opto fields for trodes_to_nwb (TRODES_TO_NWB_SCHEMA_UPDATE.md)
+- [x] Update subject description (Gender → Sex)
+- [ ] Add schema hash validation to CI (deferred to Phase 3)
+- [ ] **Actual Time:** 4 hours
 
-#### Missing Device Types
+#### Missing Device Types ✅ COMPLETE (2025-10-25)
 
-- [ ] Add `128c-4s4mm6cm-15um-26um-sl` to deviceTypes
-- [ ] Add `128c-4s4mm6cm-20um-40um-sl` to deviceTypes
-- [ ] Add `128c-4s6mm6cm-20um-40um-sl` to deviceTypes
-- [ ] Add `128c-4s8mm6cm-15um-26um-sl` to deviceTypes
-- [ ] Verify device metadata exists in trodes_to_nwb
-- [ ] **Estimated Time:** 2-3 hours
+**Note:** Completed as part of Schema Synchronization task above
+
+- [x] Add `128c-4s4mm6cm-15um-26um-sl` to deviceTypes
+- [x] Add `128c-4s4mm6cm-20um-40um-sl` to deviceTypes
+- [x] Add `128c-4s6mm6cm-20um-40um-sl` to deviceTypes
+- [x] Add `128c-4s8mm6cm-15um-26um-sl` to deviceTypes
+- [x] Verify device metadata exists in trodes_to_nwb (all 4 devices have probe files)
+- [x] **Actual Time:** Included in 4-hour schema sync task
 
 ### High Priority Bugs (P1)
 

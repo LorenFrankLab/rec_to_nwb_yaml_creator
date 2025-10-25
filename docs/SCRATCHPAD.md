@@ -1438,3 +1438,109 @@ During testing, found TWO additional pre-existing bugs that were masked by the r
 
 The `requestSubmit()` bug is **SOLVED**. Remaining failures (14 tests) are due to separate React state synchronization issues where form edits aren't being captured before export. This needs separate investigation with the `systematic-debugging` skill.
 
+
+---
+
+### ✅ CRITICAL: Schema Synchronization with trodes_to_nwb (Week 10)
+
+**Duration:** 4 hours
+**Status:** ✅ COMPLETE
+**Date:** 2025-10-25
+**Impact:** Fixed P0 schema mismatch - device types now synchronized
+
+#### Investigation Findings
+
+**Schema Comparison:**
+- Web app schema: 3,200 lines (Jun 24, 2025)
+- trodes schema: 35,980 lines (Sep 26, 2025) ← **Newer/Canonical**
+- Hash match: ❌ NO (49df0539... vs 6ef519f5...)
+
+**Key Differences:**
+
+1. **Device Types:** trodes had 4 additional 128-channel probe variants
+   - `128c-4s8mm6cm-15um-26um-sl`
+   - `128c-4s6mm6cm-20um-40um-sl`
+   - `128c-4s4mm6cm-20um-40um-sl`
+   - `128c-4s4mm6cm-15um-26um-sl`
+   - All are 128-channel, 4-shank probes (32 channels/shank)
+
+2. **Optogenetics Fields:** Web app has 5 fields NOT in trodes
+   - `fs_gui_yamls` (FsGUI protocol configs)
+   - `opto_excitation_source` (light sources)
+   - `optical_fiber` (fiber implants)
+   - `virus_injection` (viral vectors)
+   - `optogenetic_stimulation_software` (control software)
+
+3. **Subject Description:** Minor text difference
+   - Web app: "Gender of animal model/patient"
+   - trodes: "Sex of animal model/patient" ← **NWB standard**
+
+#### Changes Made to Web App
+
+**Files Modified:**
+
+1. **src/valueList.js** (lines 838-855)
+   - Added 4 new device types to `deviceTypes()` function
+   - Total: 8 → 12 device types
+
+2. **src/ntrode/deviceTypes.js** (lines 32-55, 105-119)
+   - Added channel mappings for 4 new devices (32 channels each)
+   - Added shank counts for 4 new devices (4 shanks each)
+
+3. **src/nwb_schema.json** (lines 1618-1620, line 427)
+   - Updated `device_type` enum and examples with 4 new types
+   - Changed "Gender" → "Sex" in subject description
+
+**Test Coverage:**
+
+Created `src/__tests__/unit/schema/schema-device-type-sync.test.js`:
+- 13 tests verifying device types present
+- Tests channel counts (32 channels per device)
+- Tests shank counts (4 shanks per device)
+- ✅ All tests passing
+
+**Verification:**
+
+```bash
+✓ Web App devices: 12
+✓ trodes devices: 12
+✓ Match: YES
+✓ All device types synchronized!
+```
+
+#### Documentation for trodes_to_nwb
+
+Created comprehensive guide: [`docs/TRODES_TO_NWB_SCHEMA_UPDATE.md`](TRODES_TO_NWB_SCHEMA_UPDATE.md)
+
+**Contents:**
+- Complete JSON schema definitions for 5 opto fields
+- Validation rules (all-or-nothing for opto fields)
+- Implementation steps for Python package
+- Testing guidance
+- Spyglass database impact assessment
+
+**Estimated Time for trodes_to_nwb:** 4-6 hours (schema update + validation + NWB conversion)
+
+#### Remaining Schema Work
+
+**For trodes_to_nwb maintainer:**
+- [ ] Add 5 optogenetics fields to `nwb_schema.json`
+- [ ] Implement cross-field validation (all-or-nothing rule)
+- [ ] Add NWB conversion for optogenetics data
+- [ ] Test with web app-generated YAML files
+- [ ] Verify Spyglass ingestion works
+
+**For CI/CD (Future):**
+- [ ] Add schema hash validation to GitHub Actions
+- [ ] Auto-detect schema drift between repositories
+- [ ] Alert on schema mismatches
+
+#### Lessons Learned
+
+1. **Canonical Source:** trodes_to_nwb is more frequently updated - use as reference
+2. **Bidirectional Sync:** Both repos need updates (devices → web app, opto → trodes)
+3. **Testing First:** TDD approach caught all edge cases (channel counts, shank counts)
+4. **Documentation:** Comprehensive guide prevents implementation errors
+
+---
+

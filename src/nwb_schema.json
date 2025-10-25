@@ -424,7 +424,7 @@
       "enum": ["M", "F", "U", "O"],
       "default": "M",
       "examples": ["M", "F", "U", "O"],
-      "description": "Gender of animal model/patient"
+      "description": "Sex of animal model/patient"
      },
      "species": {
       "$id": "#root/subject/species",
@@ -1615,9 +1615,9 @@
        "title": "device_type",
        "type": "string",
        "default": "",
-       "examples": ["", "tetrode_12.5", "A1x32-6mm-50-177-H32_21mm", "128c-4s8mm6cm-20um-40um-sl", "128c-4s6mm6cm-15um-26um-sl", "32c-2s8mm6cm-20um-40um-dl", "64c-4s6mm6cm-20um-40um-dl", "64c-3s6mm6cm-20um-40um-sl", "NET-EBL-128ch-single-shank"],
+       "examples": ["", "tetrode_12.5", "A1x32-6mm-50-177-H32_21mm", "128c-4s8mm6cm-20um-40um-sl", "128c-4s8mm6cm-15um-26um-sl", "128c-4s6mm6cm-20um-40um-sl", "128c-4s6mm6cm-15um-26um-sl", "128c-4s4mm6cm-20um-40um-sl", "128c-4s4mm6cm-15um-26um-sl", "32c-2s8mm6cm-20um-40um-dl", "64c-4s6mm6cm-20um-40um-dl", "64c-3s6mm6cm-20um-40um-sl", "NET-EBL-128ch-single-shank"],
        "pattern": "^(.|\\s)*\\S(.|\\s)*$",
-       "enum": ["tetrode_12.5", "A1x32-6mm-50-177-H32_21mm", "128c-4s8mm6cm-20um-40um-sl", "128c-4s6mm6cm-15um-26um-sl", "32c-2s8mm6cm-20um-40um-dl", "64c-4s6mm6cm-20um-40um-dl", "64c-3s6mm6cm-20um-40um-sl", "NET-EBL-128ch-single-shank"]
+       "enum": ["tetrode_12.5", "A1x32-6mm-50-177-H32_21mm", "128c-4s8mm6cm-20um-40um-sl", "128c-4s8mm6cm-15um-26um-sl", "128c-4s6mm6cm-20um-40um-sl", "128c-4s6mm6cm-15um-26um-sl", "128c-4s4mm6cm-20um-40um-sl", "128c-4s4mm6cm-15um-26um-sl", "32c-2s8mm6cm-20um-40um-dl", "64c-4s6mm6cm-20um-40um-dl", "64c-3s6mm6cm-20um-40um-sl", "NET-EBL-128ch-single-shank"]
       },
       "description": {
        "$id": "#root/electrode_groups/items/description",
