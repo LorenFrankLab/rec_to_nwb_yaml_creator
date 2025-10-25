@@ -47,12 +47,12 @@ describe('App.js - onMapInput()', () => {
       const firstMapSelect = mapSelects[0];
       const initialValue = firstMapSelect.value;
 
-      // Select empty option (value="")
+      // Select empty option (value="" which becomes -1 in state)
       await selectAndWait(user, firstMapSelect, '');
 
-      // Value should be set to -1 (or empty string representing -1)
-      // The select will show the empty option
-      expect(firstMapSelect.value).toBe('');
+      // Value should be set to -1 in state
+      // The controlled select will show '-1' as the value
+      expect(firstMapSelect.value).toBe('-1');
     });
 
     it('should handle null value by setting -1', async () => {

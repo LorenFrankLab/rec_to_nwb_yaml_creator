@@ -93,7 +93,7 @@ const ChannelMap = (prop) => {
                               <select
                                 id={mapId}
                                 required
-                                defaultValue={nTrodeKeyId}
+                                value={mapValue}
                                 onChange={(e) =>
                                   onMapInput(e, {
                                     key: 'ntrode_electrode_group_channel_map',
@@ -108,6 +108,7 @@ const ChannelMap = (prop) => {
                                   return (
                                     <option
                                       key={`${mapId}-option-${optionIndex}`}
+                                      value={option}
                                     >
                                       {option !== -1 ? option : ''}
                                       {/* {item.map[option]} */}
