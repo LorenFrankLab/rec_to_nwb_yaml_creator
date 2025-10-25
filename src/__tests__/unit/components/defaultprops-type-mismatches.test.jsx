@@ -16,6 +16,7 @@ import { render } from '@testing-library/react';
 import CheckboxList from '../../../element/CheckboxList';
 import RadioList from '../../../element/RadioList';
 import ListElement from '../../../element/ListElement';
+import { getByClass } from '../../helpers/test-selectors';
 
 describe('defaultProps Type Mismatches Fix', () => {
   describe('CheckboxList', () => {
@@ -169,7 +170,7 @@ describe('defaultProps Type Mismatches Fix', () => {
       );
 
       // ASSERT - Should show placeholder, not list items (empty array default)
-      const listContainer = container.querySelector('.list-of-items');
+      const listContainer = getByClass('list-of-items')[0];
       expect(listContainer).toBeTruthy();
       // With empty array, should show inputPlaceholder span
       const placeholderSpan = listContainer.querySelector('span');

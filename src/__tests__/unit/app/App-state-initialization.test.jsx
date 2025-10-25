@@ -8,6 +8,7 @@
  */
 
 import { render, screen } from '@testing-library/react';
+import { getMainForm } from '../../helpers/test-selectors';
 import { describe, it, expect } from 'vitest';
 import { App } from '../../../App';
 import { defaultYMLValues, emptyFormData } from '../../../valueList';
@@ -148,7 +149,7 @@ describe('App State Initialization', () => {
     it('should render form element', () => {
       render(<App />);
       // Should have a form element
-      const formElement = document.querySelector('form');
+      const formElement = getMainForm();
       expect(formElement).toBeInTheDocument();
     });
 

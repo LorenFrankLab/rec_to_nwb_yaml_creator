@@ -18,6 +18,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CheckboxList from '../../../element/CheckboxList';
+import { getByClass } from '../../helpers/test-selectors';
 
 describe('CheckboxList Component', () => {
   const defaultProps = {
@@ -92,7 +93,7 @@ describe('CheckboxList Component', () => {
         <CheckboxList {...defaultProps} dataItems={[]} />
       );
 
-      const checkboxListDiv = container.querySelector('.checkbox-list');
+      const checkboxListDiv = getByClass('checkbox-list')[0];
       expect(checkboxListDiv).toHaveClass('hide');
     });
 
@@ -193,7 +194,7 @@ describe('CheckboxList Component', () => {
       // Check that divs with sanitized keys exist
       expect(container.querySelector('[class="checkbox-list-item"]')).toBeInTheDocument();
       // All divs should be rendered (3 items)
-      const listItems = container.querySelectorAll('.checkbox-list-item');
+      const listItems = getByClass('checkbox-list-item');
       expect(listItems).toHaveLength(3);
     });
   });
@@ -403,7 +404,7 @@ describe('CheckboxList Component', () => {
       expect(checkboxes).toHaveLength(3);
 
       // Keys are sanitized for React (no special chars)
-      const listItems = container.querySelectorAll('.checkbox-list-item');
+      const listItems = getByClass('checkbox-list-item');
       expect(listItems).toHaveLength(3);
     });
 
@@ -438,7 +439,7 @@ describe('CheckboxList Component', () => {
       // But this creates duplicate React keys (warning in console)
       // Key format: `${id}-${sanitizeTitle(dataItem)}`
       // Both "Camera 1" items get key: "cameras-Camera1"
-      const listItems = container.querySelectorAll('.checkbox-list-item');
+      const listItems = getByClass('checkbox-list-item');
       expect(listItems).toHaveLength(3);
     });
 
@@ -487,7 +488,7 @@ describe('CheckboxList Component', () => {
       );
 
       // Component still renders (prop type mismatch doesn't break it)
-      expect(container.querySelector('.checkbox-list')).toBeInTheDocument();
+      expect(getByClass('checkbox-list')[0]).toBeInTheDocument();
     });
 
     it('should use empty string defaults for optional props', () => {

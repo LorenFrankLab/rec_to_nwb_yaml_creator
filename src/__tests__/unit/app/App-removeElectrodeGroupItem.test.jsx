@@ -19,6 +19,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../../../App';
 import { useWindowConfirmMock, clickAddButton } from '../../helpers/test-hooks';
+import { getByClass, getById, getByName } from '../../helpers/test-selectors';
 
 describe('App.js - removeElectrodeGroupItem()', () => {
   const mocks = useWindowConfirmMock(beforeEach, afterEach, true);
@@ -34,7 +35,7 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       await clickAddButton(user, container, "Add electrode_groups");
 
       // Click remove button
-      const removeButton = container.querySelector('button.button-danger');
+      const removeButton = getByClass('button-danger')[0];
       await user.click(removeButton);
 
       // Verify confirmation was shown
@@ -52,7 +53,7 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       await clickAddButton(user, container, "Add electrode_groups", 2);
 
       // Remove second electrode group (index 1)
-      const removeButtons = container.querySelectorAll('button.button-danger');
+      const removeButtons = getByClass('button-danger');
       await user.click(removeButtons[1]);
 
       expect(mocks.confirm).toHaveBeenCalledWith('Remove index 1 from electrode_groups?');
@@ -71,16 +72,16 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       await clickAddButton(user, container, "Add electrode_groups");
 
       // Verify electrode group exists
-      let electrodeGroupSections = container.querySelectorAll('.array-item__controls');
+      let electrodeGroupSections = getByClass('array-item__controls');
       expect(electrodeGroupSections.length).toBe(1);
 
       // Remove it
-      const removeButton = container.querySelector('button.button-danger');
+      const removeButton = getByClass('button-danger')[0];
       await user.click(removeButton);
 
       // Verify electrode group removed
       await waitFor(() => {
-        electrodeGroupSections = container.querySelectorAll('.array-item__controls');
+        electrodeGroupSections = getByClass('array-item__controls');
         expect(electrodeGroupSections.length).toBe(0);
       });
 
@@ -96,11 +97,11 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       await clickAddButton(user, container, "Add electrode_groups", 3);
 
       // Remove first (index 0)
-      const removeButtons = container.querySelectorAll('button.button-danger');
+      const removeButtons = getByClass('button-danger');
       await user.click(removeButtons[0]);
 
       await waitFor(() => {
-        const electrodeGroupSections = container.querySelectorAll('.array-item__controls');
+        const electrodeGroupSections = getByClass('array-item__controls');
         expect(electrodeGroupSections.length).toBe(2);
       });
 
@@ -116,11 +117,11 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       await clickAddButton(user, container, "Add electrode_groups", 3);
 
       // Remove middle (index 1)
-      const removeButtons = container.querySelectorAll('button.button-danger');
+      const removeButtons = getByClass('button-danger');
       await user.click(removeButtons[1]);
 
       await waitFor(() => {
-        const electrodeGroupSections = container.querySelectorAll('.array-item__controls');
+        const electrodeGroupSections = getByClass('array-item__controls');
         expect(electrodeGroupSections.length).toBe(2);
       });
 
@@ -136,11 +137,11 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       await clickAddButton(user, container, "Add electrode_groups", 3);
 
       // Remove last (index 2)
-      const removeButtons = container.querySelectorAll('button.button-danger');
+      const removeButtons = getByClass('button-danger');
       await user.click(removeButtons[2]);
 
       await waitFor(() => {
-        const electrodeGroupSections = container.querySelectorAll('.array-item__controls');
+        const electrodeGroupSections = getByClass('array-item__controls');
         expect(electrodeGroupSections.length).toBe(2);
       });
 
@@ -158,11 +159,11 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       await clickAddButton(user, container, "Add electrode_groups");
 
       // Try to remove but cancel
-      const removeButton = container.querySelector('button.button-danger');
+      const removeButton = getByClass('button-danger')[0];
       await user.click(removeButton);
 
       // Verify electrode group still exists
-      const electrodeGroupSections = container.querySelectorAll('.array-item__controls');
+      const electrodeGroupSections = getByClass('array-item__controls');
       expect(electrodeGroupSections.length).toBe(1);
 
     });
@@ -176,11 +177,11 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       // Add electrode group and set device type
       await clickAddButton(user, container, "Add electrode_groups");
 
-      const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect, 'tetrode_12.5');
 
       // Try to remove but cancel
-      const removeButton = container.querySelector('button.button-danger');
+      const removeButton = getByClass('button-danger')[0];
       await user.click(removeButton);
 
       // Verify device type still set
@@ -199,22 +200,22 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       // Add electrode group and select device type to generate ntrodes
       await clickAddButton(user, container, "Add electrode_groups");
 
-      const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect, 'tetrode_12.5');
 
       await waitFor(() => {
         // Ntrode should be created
-        const ntrodeInputs = container.querySelectorAll('input[name="ntrode_id"]');
+        const ntrodeInputs = getByName('ntrode_id');
         expect(ntrodeInputs.length).toBe(1);
       });
 
       // Remove electrode group
-      const removeButton = container.querySelector('button.button-danger');
+      const removeButton = getByClass('button-danger')[0];
       await user.click(removeButton);
 
       await waitFor(() => {
         // Ntrode should be removed
-        const ntrodeInputs = container.querySelectorAll('input[name="ntrode_id"]');
+        const ntrodeInputs = getByName('ntrode_id');
         expect(ntrodeInputs.length).toBe(0);
       });
 
@@ -234,17 +235,17 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       await user.selectOptions(deviceTypeSelects[1], '32c-2s8mm6cm-20um-40um-dl'); // 2 ntrodes
 
       await waitFor(() => {
-        const ntrodeInputs = container.querySelectorAll('input[name="ntrode_id"]');
+        const ntrodeInputs = getByName('ntrode_id');
         expect(ntrodeInputs.length).toBe(3); // 1 + 2 = 3 total
       });
 
       // Remove first electrode group
-      const removeButtons = container.querySelectorAll('button.button-danger');
+      const removeButtons = getByClass('button-danger');
       await user.click(removeButtons[0]);
 
       await waitFor(() => {
         // Should have only 2 ntrodes left (from second electrode group)
-        const ntrodeInputs = container.querySelectorAll('input[name="ntrode_id"]');
+        const ntrodeInputs = getByName('ntrode_id');
         expect(ntrodeInputs.length).toBe(2);
       });
 
@@ -259,21 +260,21 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       // Add electrode group with 4-shank device (4 ntrodes)
       await clickAddButton(user, container, "Add electrode_groups");
 
-      const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect, '128c-4s6mm6cm-15um-26um-sl');
 
       await waitFor(() => {
-        const ntrodeInputs = container.querySelectorAll('input[name="ntrode_id"]');
+        const ntrodeInputs = getByName('ntrode_id');
         expect(ntrodeInputs.length).toBe(4);
       });
 
       // Remove electrode group
-      const removeButton = container.querySelector('button.button-danger');
+      const removeButton = getByClass('button-danger')[0];
       await user.click(removeButton);
 
       await waitFor(() => {
         // All 4 ntrodes should be removed
-        const ntrodeInputs = container.querySelectorAll('input[name="ntrode_id"]');
+        const ntrodeInputs = getByName('ntrode_id');
         expect(ntrodeInputs.length).toBe(0);
       });
 
@@ -291,16 +292,16 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       await clickAddButton(user, container, "Add electrode_groups");
 
       // Verify exists
-      let electrodeGroupSections = container.querySelectorAll('.array-item__controls');
+      let electrodeGroupSections = getByClass('array-item__controls');
       expect(electrodeGroupSections.length).toBe(1);
 
       // Remove it
-      const removeButton = container.querySelector('button.button-danger');
+      const removeButton = getByClass('button-danger')[0];
       await user.click(removeButton);
 
       // Verify state updated (UI reflects change)
       await waitFor(() => {
-        electrodeGroupSections = container.querySelectorAll('.array-item__controls');
+        electrodeGroupSections = getByClass('array-item__controls');
         expect(electrodeGroupSections.length).toBe(0);
       });
 
@@ -317,16 +318,16 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       await clickAddButton(user, container, "Add electrode_groups", 2);
 
       // Store initial count
-      let electrodeGroupSections = container.querySelectorAll('.array-item__controls');
+      let electrodeGroupSections = getByClass('array-item__controls');
       const initialCount = electrodeGroupSections.length;
       expect(initialCount).toBe(2);
 
       // Remove one
-      const removeButtons = container.querySelectorAll('button.button-danger');
+      const removeButtons = getByClass('button-danger');
       await user.click(removeButtons[0]);
 
       await waitFor(() => {
-        electrodeGroupSections = container.querySelectorAll('.array-item__controls');
+        electrodeGroupSections = getByClass('array-item__controls');
         expect(electrodeGroupSections.length).toBe(1);
         expect(electrodeGroupSections.length).not.toBe(initialCount);
       });
@@ -342,12 +343,12 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       const { container } = render(<App />);
 
       // Verify no electrode groups exist
-      const electrodeGroupSections = container.querySelectorAll('.array-item__controls');
+      const electrodeGroupSections = getByClass('array-item__controls');
       expect(electrodeGroupSections.length).toBe(0);
 
       // Remove button shouldn't exist
-      const removeButton = container.querySelector('button.button-danger');
-      expect(removeButton).toBeNull();
+      const removeButtons = getByClass('button-danger');
+      expect(removeButtons.length).toBe(0);
     });
   });
 
@@ -367,7 +368,7 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       await user.selectOptions(deviceTypeSelects[2], '32c-2s8mm6cm-20um-40um-dl');
 
       // Remove middle one (index 1)
-      const removeButtons = container.querySelectorAll('button.button-danger');
+      const removeButtons = getByClass('button-danger');
       await user.click(removeButtons[1]);
 
       await waitFor(() => {

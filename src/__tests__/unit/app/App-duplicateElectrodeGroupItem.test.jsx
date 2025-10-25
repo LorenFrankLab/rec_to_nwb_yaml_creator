@@ -7,6 +7,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../../../App';
 import { countArrayItems, countNtrodeMaps, getDuplicateButton, queryByName, clickAddButton } from '../../helpers/test-hooks';
+import { getByClass, getById, getByName } from '../../helpers/test-selectors';
 
 /**
  * Tests for duplicateElectrodeGroupItem() function
@@ -63,7 +64,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       await clickAddButton(user, container, "Add electrode_groups", 3);
 
       // Duplicate the FIRST electrode group (index 0)
-      const controls = container.querySelectorAll('.array-item__controls');
+      const controls = getByClass('array-item__controls');
       const firstGroupButtons = controls[0].querySelectorAll('button');
       const firstDuplicateButton = Array.from(firstGroupButtons).find(
         btn => !btn.classList.contains('button-danger')
@@ -73,7 +74,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
 
       // Wait for state update
       await waitFor(() => {
-        const updatedControls = container.querySelectorAll('.array-item__controls');
+        const updatedControls = getByClass('array-item__controls');
         expect(updatedControls).toHaveLength(4); // 3 + 1 duplicate
       });
 
@@ -90,7 +91,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
 
       await clickAddButton(user, container, "Add electrode_groups");
 
-      const controls = container.querySelectorAll('.array-item__controls');
+      const controls = getByClass('array-item__controls');
       const firstGroupButtons = controls[0].querySelectorAll('button');
       const duplicateButton = Array.from(firstGroupButtons).find(
         btn => !btn.classList.contains('button-danger')
@@ -99,7 +100,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       await user.click(duplicateButton);
 
       await waitFor(() => {
-        const controls = container.querySelectorAll('.array-item__controls');
+        const controls = getByClass('array-item__controls');
         expect(controls).toHaveLength(2);
       });
 
@@ -115,7 +116,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       await clickAddButton(user, container, "Add electrode_groups");
 
       // Duplicate it (should get id: 1)
-      const controls = container.querySelectorAll('.array-item__controls');
+      const controls = getByClass('array-item__controls');
       const firstGroupButtons = controls[0].querySelectorAll('button');
       const duplicateButton = Array.from(firstGroupButtons).find(
         btn => !btn.classList.contains('button-danger')
@@ -123,7 +124,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       await user.click(duplicateButton);
 
       await waitFor(() => {
-        const controls = container.querySelectorAll('.array-item__controls');
+        const controls = getByClass('array-item__controls');
         expect(controls).toHaveLength(2);
       });
 
@@ -139,7 +140,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       await clickAddButton(user, container, "Add electrode_groups", 3);
 
       // Duplicate the FIRST one (index 0, id: 0)
-      const controls = container.querySelectorAll('.array-item__controls');
+      const controls = getByClass('array-item__controls');
       const firstGroupButtons = controls[0].querySelectorAll('button');
       const firstDuplicateButton = Array.from(firstGroupButtons).find(
         btn => !btn.classList.contains('button-danger')
@@ -148,7 +149,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       await user.click(firstDuplicateButton);
 
       await waitFor(() => {
-        const updatedControls = container.querySelectorAll('.array-item__controls');
+        const updatedControls = getByClass('array-item__controls');
         expect(updatedControls).toHaveLength(4);
       });
 
@@ -163,12 +164,12 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       await clickAddButton(user, container, "Add electrode_groups");
 
       // Set location field
-      const locationInput = container.querySelector('#electrode_groups-location-0');
+      const locationInput = getById('electrode_groups-location-0');
       await user.clear(locationInput);
       await user.type(locationInput, 'CA1');
 
       // Duplicate it
-      const controls = container.querySelectorAll('.array-item__controls');
+      const controls = getByClass('array-item__controls');
       const firstGroupButtons = controls[0].querySelectorAll('button');
       const duplicateButton = Array.from(firstGroupButtons).find(
         btn => !btn.classList.contains('button-danger')
@@ -176,13 +177,13 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       await user.click(duplicateButton);
 
       await waitFor(() => {
-        const updatedControls = container.querySelectorAll('.array-item__controls');
+        const updatedControls = getByClass('array-item__controls');
         expect(updatedControls).toHaveLength(2);
       });
 
       // Both electrode groups should have location "CA1"
-      const locationInput0 = container.querySelector('#electrode_groups-location-0');
-      const locationInput1 = container.querySelector('#electrode_groups-location-1');
+      const locationInput0 = getById('electrode_groups-location-0');
+      const locationInput1 = getById('electrode_groups-location-1');
       expect(locationInput0).toHaveValue('CA1');
       expect(locationInput1).toHaveValue('CA1');
     });
@@ -196,17 +197,17 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       await clickAddButton(user, container, "Add electrode_groups");
 
       // Select device type to generate ntrode maps
-      const deviceSelect = container.querySelector('#electrode_groups-device_type-0');
+      const deviceSelect = getById('electrode_groups-device_type-0');
       await user.selectOptions(deviceSelect, 'tetrode_12.5');
 
       // Wait for ntrode maps to be generated (1 ntrode for tetrode)
       await waitFor(() => {
-        const ntrodeInputs = container.querySelectorAll('input[name="ntrode_id"]');
+        const ntrodeInputs = getByName('ntrode_id');
         expect(ntrodeInputs).toHaveLength(1);
       });
 
       // Duplicate electrode group
-      const controls = container.querySelectorAll('.array-item__controls');
+      const controls = getByClass('array-item__controls');
       const firstGroupButtons = controls[0].querySelectorAll('button');
       const duplicateButton = Array.from(firstGroupButtons).find(
         btn => !btn.classList.contains('button-danger')
@@ -215,10 +216,10 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
 
       // Should now have 2 electrode groups and 2 ntrode maps
       await waitFor(() => {
-        const controls = container.querySelectorAll('.array-item__controls');
+        const controls = getByClass('array-item__controls');
         expect(controls).toHaveLength(2);
 
-        const ntrodeInputs = container.querySelectorAll('input[name="ntrode_id"]');
+        const ntrodeInputs = getByName('ntrode_id');
         expect(ntrodeInputs).toHaveLength(2); // 1 original + 1 duplicated
       });
     });
@@ -229,17 +230,17 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       // Add electrode group with tetrode device (generates 1 ntrode with ntrode_id: 1)
       await clickAddButton(user, container, "Add electrode_groups");
 
-      const deviceSelect = container.querySelector('#electrode_groups-device_type-0');
+      const deviceSelect = getById('electrode_groups-device_type-0');
       await user.selectOptions(deviceSelect, 'tetrode_12.5');
 
       await waitFor(() => {
-        const ntrodeInputs = container.querySelectorAll('input[name="ntrode_id"]');
+        const ntrodeInputs = getByName('ntrode_id');
         expect(ntrodeInputs).toHaveLength(1);
         expect(ntrodeInputs[0]).toHaveValue(1); // First ntrode has id: 1
       });
 
       // Duplicate electrode group
-      const controls = container.querySelectorAll('.array-item__controls');
+      const controls = getByClass('array-item__controls');
       const firstGroupButtons = controls[0].querySelectorAll('button');
       const duplicateButton = Array.from(firstGroupButtons).find(
         btn => !btn.classList.contains('button-danger')
@@ -248,7 +249,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
 
       // Duplicated ntrode should have ntrode_id: 2 (max + 1)
       await waitFor(() => {
-        const ntrodeInputs = container.querySelectorAll('input[name="ntrode_id"]');
+        const ntrodeInputs = getByName('ntrode_id');
         expect(ntrodeInputs).toHaveLength(2);
         expect(ntrodeInputs[0]).toHaveValue(1); // Original
         expect(ntrodeInputs[1]).toHaveValue(2); // Duplicated (max 1 + 1)
@@ -261,16 +262,16 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       // Add electrode group with device
       await clickAddButton(user, container, "Add electrode_groups");
 
-      const deviceSelect = container.querySelector('#electrode_groups-device_type-0');
+      const deviceSelect = getById('electrode_groups-device_type-0');
       await user.selectOptions(deviceSelect, 'tetrode_12.5');
 
       await waitFor(() => {
-        const ntrodeInputs = container.querySelectorAll('input[name="ntrode_id"]');
+        const ntrodeInputs = getByName('ntrode_id');
         expect(ntrodeInputs).toHaveLength(1);
       });
 
       // Duplicate electrode group
-      const controls = container.querySelectorAll('.array-item__controls');
+      const controls = getByClass('array-item__controls');
       const firstGroupButtons = controls[0].querySelectorAll('button');
       const duplicateButton = Array.from(firstGroupButtons).find(
         btn => !btn.classList.contains('button-danger')
@@ -278,7 +279,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       await user.click(duplicateButton);
 
       await waitFor(() => {
-        const controls = container.querySelectorAll('.array-item__controls');
+        const controls = getByClass('array-item__controls');
         expect(controls).toHaveLength(2);
       });
 
@@ -296,17 +297,17 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       // Add electrode group with 2-shank device
       await clickAddButton(user, container, "Add electrode_groups");
 
-      const deviceSelect = container.querySelector('#electrode_groups-device_type-0');
+      const deviceSelect = getById('electrode_groups-device_type-0');
       await user.selectOptions(deviceSelect, '32c-2s8mm6cm-20um-40um-dl');
 
       // 32-channel, 2-shank device → 1 ntrode per shank = 2 total
       await waitFor(() => {
-        const ntrodeInputs = container.querySelectorAll('input[name="ntrode_id"]');
+        const ntrodeInputs = getByName('ntrode_id');
         expect(ntrodeInputs).toHaveLength(2);
       });
 
       // Duplicate electrode group
-      const controls = container.querySelectorAll('.array-item__controls');
+      const controls = getByClass('array-item__controls');
       const firstGroupButtons = controls[0].querySelectorAll('button');
       const duplicateButton = Array.from(firstGroupButtons).find(
         btn => !btn.classList.contains('button-danger')
@@ -315,7 +316,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
 
       // Should now have 4 ntrode maps (2 original + 2 duplicated)
       await waitFor(() => {
-        const ntrodeInputs = container.querySelectorAll('input[name="ntrode_id"]');
+        const ntrodeInputs = getByName('ntrode_id');
         expect(ntrodeInputs).toHaveLength(4);
       });
     });
@@ -326,11 +327,11 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       // Add electrode group with device
       await clickAddButton(user, container, "Add electrode_groups");
 
-      const deviceSelect = container.querySelector('#electrode_groups-device_type-0');
+      const deviceSelect = getById('electrode_groups-device_type-0');
       await user.selectOptions(deviceSelect, 'tetrode_12.5');
 
       await waitFor(() => {
-        const ntrodeInputs = container.querySelectorAll('input[name="ntrode_id"]');
+        const ntrodeInputs = getByName('ntrode_id');
         expect(ntrodeInputs).toHaveLength(1);
       });
 
@@ -341,7 +342,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       expect(channelSelects.length).toBe(4); // 1 ntrode × 4 channels
 
       // Duplicate electrode group
-      const controls = container.querySelectorAll('.array-item__controls');
+      const controls = getByClass('array-item__controls');
       const firstGroupButtons = controls[0].querySelectorAll('button');
       const duplicateButton = Array.from(firstGroupButtons).find(
         btn => !btn.classList.contains('button-danger')
@@ -369,7 +370,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
 
       await clickAddButton(user, container, "Add electrode_groups");
 
-      const controls = container.querySelectorAll('.array-item__controls');
+      const controls = getByClass('array-item__controls');
       const firstGroupButtons = controls[0].querySelectorAll('button');
       const duplicateButton = Array.from(firstGroupButtons).find(
         btn => !btn.classList.contains('button-danger')
@@ -377,7 +378,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       await user.click(duplicateButton);
 
       await waitFor(() => {
-        const controls = container.querySelectorAll('.array-item__controls');
+        const controls = getByClass('array-item__controls');
         expect(controls).toHaveLength(2);
       });
 
@@ -392,7 +393,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
 
       await clickAddButton(user, container, "Add electrode_groups");
 
-      const controls = container.querySelectorAll('.array-item__controls');
+      const controls = getByClass('array-item__controls');
       const firstGroupButtons = controls[0].querySelectorAll('button');
       const duplicateButton = Array.from(firstGroupButtons).find(
         btn => !btn.classList.contains('button-danger')
@@ -401,7 +402,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
 
       // State update is evidenced by UI change
       await waitFor(() => {
-        const controls = container.querySelectorAll('.array-item__controls');
+        const controls = getByClass('array-item__controls');
         expect(controls).toHaveLength(2);
       });
     });
@@ -415,9 +416,9 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       await clickAddButton(user, container, "Add electrode_groups", 3);
 
       // Set locations to distinguish them
-      const location0 = container.querySelector('#electrode_groups-location-0');
-      const location1 = container.querySelector('#electrode_groups-location-1');
-      const location2 = container.querySelector('#electrode_groups-location-2');
+      const location0 = getById('electrode_groups-location-0');
+      const location1 = getById('electrode_groups-location-1');
+      const location2 = getById('electrode_groups-location-2');
       await user.clear(location0);
       await user.type(location0, 'CA1');
       await user.clear(location1);
@@ -426,7 +427,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       await user.type(location2, 'DG');
 
       // Duplicate the middle one (index 1, "CA3")
-      const controls = container.querySelectorAll('.array-item__controls');
+      const controls = getByClass('array-item__controls');
       const middleGroupButtons = controls[1].querySelectorAll('button');
       const middleDuplicateButton = Array.from(middleGroupButtons).find(
         btn => !btn.classList.contains('button-danger')
@@ -436,15 +437,15 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
 
       // Should now have 4 electrode groups
       await waitFor(() => {
-        const updatedControls = container.querySelectorAll('.array-item__controls');
+        const updatedControls = getByClass('array-item__controls');
         expect(updatedControls).toHaveLength(4);
       });
 
       // Locations should be: CA1, CA3, CA3 (duplicate), DG
-      const updatedLocation0 = container.querySelector('#electrode_groups-location-0');
-      const updatedLocation1 = container.querySelector('#electrode_groups-location-1');
-      const updatedLocation2 = container.querySelector('#electrode_groups-location-2');
-      const updatedLocation3 = container.querySelector('#electrode_groups-location-3');
+      const updatedLocation0 = getById('electrode_groups-location-0');
+      const updatedLocation1 = getById('electrode_groups-location-1');
+      const updatedLocation2 = getById('electrode_groups-location-2');
+      const updatedLocation3 = getById('electrode_groups-location-3');
       expect(updatedLocation0).toHaveValue('CA1');
       expect(updatedLocation1).toHaveValue('CA3');
       expect(updatedLocation2).toHaveValue('CA3'); // Duplicated
@@ -457,19 +458,19 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
       // Add 2 electrode groups with different devices
       await clickAddButton(user, container, "Add electrode_groups", 2);
 
-      const deviceSelect0 = container.querySelector('#electrode_groups-device_type-0');
-      const deviceSelect1 = container.querySelector('#electrode_groups-device_type-1');
+      const deviceSelect0 = getById('electrode_groups-device_type-0');
+      const deviceSelect1 = getById('electrode_groups-device_type-1');
       await user.selectOptions(deviceSelect0, 'tetrode_12.5'); // 1 shank = 1 ntrode
       await user.selectOptions(deviceSelect1, '32c-2s8mm6cm-20um-40um-dl'); // 2 shanks = 2 ntrodes
 
       // Wait for ntrode generation (1 + 2 = 3 total)
       await waitFor(() => {
-        const ntrodeInputs = container.querySelectorAll('input[name="ntrode_id"]');
+        const ntrodeInputs = getByName('ntrode_id');
         expect(ntrodeInputs).toHaveLength(3);
       });
 
       // Duplicate the SECOND electrode group (the 2-ntrode one)
-      const controls = container.querySelectorAll('.array-item__controls');
+      const controls = getByClass('array-item__controls');
       const secondGroupButtons = controls[1].querySelectorAll('button');
       const secondDuplicateButton = Array.from(secondGroupButtons).find(
         btn => !btn.classList.contains('button-danger')
@@ -479,10 +480,10 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
 
       // Should now have 3 electrode groups and 5 ntrodes (1 + 2 + 2)
       await waitFor(() => {
-        const updatedControls = container.querySelectorAll('.array-item__controls');
+        const updatedControls = getByClass('array-item__controls');
         expect(updatedControls).toHaveLength(3);
 
-        const ntrodeInputs = container.querySelectorAll('input[name="ntrode_id"]');
+        const ntrodeInputs = getByName('ntrode_id');
         expect(ntrodeInputs).toHaveLength(5);
       });
     });

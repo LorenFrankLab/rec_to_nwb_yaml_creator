@@ -15,6 +15,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../../App';
+import { getById } from '../../helpers/test-selectors';
 
 describe('App.js - clickNav()', () => {
   describe('Navigation Click Behavior', () => {
@@ -30,7 +31,7 @@ describe('App.js - clickNav()', () => {
       await user.click(subjectNavLink);
 
       // Find the target element by its ID (data-id="subject-area")
-      const subjectSection = document.querySelector('#subject-area');
+      const subjectSection = getById('subject-area');
       expect(subjectSection).toBeTruthy();
 
       // Verify highlight-region class was added
@@ -91,7 +92,7 @@ describe('App.js - clickNav()', () => {
       await user.click(subjectNavLink);
 
       // Verify the element with matching ID gets the highlight
-      const targetElement = document.querySelector('#subject-area');
+      const targetElement = getById('subject-area');
       expect(targetElement).toBeTruthy();
       expect(targetElement.classList.contains('highlight-region')).toBe(true);
     });
@@ -116,7 +117,7 @@ describe('App.js - clickNav()', () => {
       // Use native click to avoid userEvent timer conflicts
       subjectNavLink.click();
 
-      const subjectSection = document.querySelector('#subject-area');
+      const subjectSection = getById('subject-area');
       const parentNode = subjectNavLink.parentNode;
 
       // Initially both classes should be present
@@ -156,7 +157,7 @@ describe('App.js - clickNav()', () => {
       expect(parentNode.classList.contains('active-nav-link')).toBe(true);
 
       // Should work again
-      const subjectSection = document.querySelector('#subject-area');
+      const subjectSection = getById('subject-area');
       expect(subjectSection.classList.contains('highlight-region')).toBe(true);
     });
 
@@ -180,7 +181,7 @@ describe('App.js - clickNav()', () => {
       expect(tasksNavLink.parentNode.classList.contains('active-nav-link')).toBe(true);
 
       // Only the last clicked section should have highlight-region
-      const tasksSection = document.querySelector('#tasks-area');
+      const tasksSection = getById('tasks-area');
       expect(tasksSection.classList.contains('highlight-region')).toBe(true);
     });
 

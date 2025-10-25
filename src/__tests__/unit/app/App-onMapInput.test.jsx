@@ -21,6 +21,7 @@ import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../../App';
 import { blurAndWait, selectAndWait } from '../../helpers/integration-test-helpers';
+import { getAddButton, getById } from '../../helpers/test-selectors';
 
 describe('App.js - onMapInput()', () => {
   beforeEach(() => {
@@ -33,11 +34,11 @@ describe('App.js - onMapInput()', () => {
       const { container } = render(<App />);
 
       // Add an electrode group with a device type to generate ntrode maps
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
+      const addButton = getAddButton('electrode_groups');
       await user.click(addButton);
 
       // Select a device type to generate ntrode maps
-      const deviceTypeSelect = container.querySelector('select[id="electrode_groups-device_type-0"]');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
       await selectAndWait(user, deviceTypeSelect, 'tetrode_12.5');
 
       // Find the channel map dropdown (first map[0] select)
@@ -60,10 +61,10 @@ describe('App.js - onMapInput()', () => {
       const { container } = render(<App />);
 
       // Add electrode group with device type
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
+      const addButton = getAddButton('electrode_groups');
       await user.click(addButton);
 
-      const deviceTypeSelect = container.querySelector('select[id="electrode_groups-device_type-0"]');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
       await selectAndWait(user, deviceTypeSelect, 'tetrode_12.5');
 
       // Find channel map dropdown
@@ -82,10 +83,10 @@ describe('App.js - onMapInput()', () => {
       const { container } = render(<App />);
 
       // Add electrode group with device type
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
+      const addButton = getAddButton('electrode_groups');
       await user.click(addButton);
 
-      const deviceTypeSelect = container.querySelector('select[id="electrode_groups-device_type-0"]');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
       await selectAndWait(user, deviceTypeSelect, 'tetrode_12.5');
 
       // Manually trigger onChange with empty string
@@ -111,7 +112,7 @@ describe('App.js - onMapInput()', () => {
 
       // Add electrode group but don't select device type (no ntrodes generated)
       const user = userEvent.setup();
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
+      const addButton = getAddButton('electrode_groups');
       await user.click(addButton);
 
       // No device type selected = no ntrodes generated
@@ -129,10 +130,10 @@ describe('App.js - onMapInput()', () => {
       const { container } = render(<App />);
 
       // Add electrode group with device type
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
+      const addButton = getAddButton('electrode_groups');
       await user.click(addButton);
 
-      const deviceTypeSelect = container.querySelector('select[id="electrode_groups-device_type-0"]');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
       await selectAndWait(user, deviceTypeSelect, 'tetrode_12.5');
 
       // Find channel map dropdowns
@@ -149,10 +150,10 @@ describe('App.js - onMapInput()', () => {
       const { container } = render(<App />);
 
       // Add electrode group with multi-shank device type
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
+      const addButton = getAddButton('electrode_groups');
       await user.click(addButton);
 
-      const deviceTypeSelect = container.querySelector('select[id="electrode_groups-device_type-0"]');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
       // Select multi-shank device
       await selectAndWait(user, deviceTypeSelect, '32c-2s8mm6cm-20um-40um-dl');
 
@@ -170,10 +171,10 @@ describe('App.js - onMapInput()', () => {
       const { container } = render(<App />);
 
       // Add electrode group with device type
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
+      const addButton = getAddButton('electrode_groups');
       await user.click(addButton);
 
-      const deviceTypeSelect = container.querySelector('select[id="electrode_groups-device_type-0"]');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
       await selectAndWait(user, deviceTypeSelect, 'tetrode_12.5');
 
       // Verify channel mapping dropdowns exist and can be interacted with
@@ -191,10 +192,10 @@ describe('App.js - onMapInput()', () => {
       const user = userEvent.setup();
       const { container } = render(<App />);
 
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
+      const addButton = getAddButton('electrode_groups');
       await user.click(addButton);
 
-      const deviceTypeSelect = container.querySelector('select[id="electrode_groups-device_type-0"]');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
 
       // Rapid device type changes (which regenerate channel maps)
       await selectAndWait(user, deviceTypeSelect, 'tetrode_12.5');
@@ -210,11 +211,11 @@ describe('App.js - onMapInput()', () => {
       const user = userEvent.setup();
       const { container } = render(<App />);
 
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
+      const addButton = getAddButton('electrode_groups');
       await user.click(addButton);
 
       // Select first device type
-      const deviceTypeSelect = container.querySelector('select[id="electrode_groups-device_type-0"]');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
       await selectAndWait(user, deviceTypeSelect, 'tetrode_12.5');
 
       // Change to different device type
@@ -233,7 +234,7 @@ describe('App.js - onMapInput()', () => {
       const { container } = render(<App />);
 
       // Add two electrode groups
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
+      const addButton = getAddButton('electrode_groups');
       await user.click(addButton);
       await user.click(addButton);
 
@@ -255,10 +256,10 @@ describe('App.js - onMapInput()', () => {
       const user = userEvent.setup();
       const { container } = render(<App />);
 
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
+      const addButton = getAddButton('electrode_groups');
       await user.click(addButton);
 
-      const deviceTypeSelect = container.querySelector('select[id="electrode_groups-device_type-0"]');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
       await selectAndWait(user, deviceTypeSelect, 'tetrode_12.5');
 
       const mapSelects = container.querySelectorAll('select[id*="ntrode_electrode_group_channel_map"]');
@@ -275,11 +276,11 @@ describe('App.js - onMapInput()', () => {
       const user = userEvent.setup();
       const { container } = render(<App />);
 
-      const addButton = container.querySelector('button[title="Add electrode_groups"]');
+      const addButton = getAddButton('electrode_groups');
       await user.click(addButton);
 
       // This triggers nTrodeMapSelected internally
-      const deviceTypeSelect = container.querySelector('select[id="electrode_groups-device_type-0"]');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
       await selectAndWait(user, deviceTypeSelect, 'tetrode_12.5');
 
       // After nTrodeMapSelected runs, channel maps should exist

@@ -13,6 +13,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ArrayUpdateMenu from '../../../ArrayUpdateMenu';
+import { getByClass } from '../../helpers/test-selectors';
 
 /**
  * Note: These are DOCUMENTATION TESTS (Phase 1)
@@ -71,7 +72,7 @@ describe('ArrayUpdateMenu Component', () => {
     it('renders in array-update-area container', () => {
       const { container } = render(<ArrayUpdateMenu {...defaultProps} />);
 
-      const div = container.querySelector('.array-update-area');
+      const div = getByClass('array-update-area')[0];
       expect(div).toBeInTheDocument();
     });
   });
@@ -159,7 +160,7 @@ describe('ArrayUpdateMenu Component', () => {
     it('renders in multi-area container', () => {
       const { container } = render(<ArrayUpdateMenu {...defaultProps} />);
 
-      const div = container.querySelector('.multi-area');
+      const div = getByClass('multi-area')[0];
       expect(div).toBeInTheDocument();
     });
   });

@@ -18,6 +18,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 import DataListElement from '../../../element/DataListElement';
+import { getMainForm, getFileInput } from '../../helpers/test-selectors';
 
 describe('DataListElement Component', () => {
   describe('Basic Rendering', () => {

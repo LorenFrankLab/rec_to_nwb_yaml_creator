@@ -13,6 +13,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../../App';
+import { getMainForm } from '../../helpers/test-selectors';
 
 describe('App.js - submitForm()', () => {
   describe('Form Submission Behavior', () => {
@@ -43,7 +44,7 @@ describe('App.js - submitForm()', () => {
       render(<App />);
 
       // Spy on form's requestSubmit method
-      const form = document.querySelector('form');
+      const form = getMainForm();
       const requestSubmitSpy = vi.spyOn(form, 'requestSubmit');
 
       // Click the Generate YML File button

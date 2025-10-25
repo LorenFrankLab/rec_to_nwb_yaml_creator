@@ -20,6 +20,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ListElement from '../../../element/ListElement';
+import { getByClass } from '../../helpers/test-selectors';
 
 describe('ListElement Component', () => {
   const defaultProps = {
@@ -120,7 +121,7 @@ describe('ListElement Component', () => {
 
       // Should show empty string placeholder
       const { container } = render(<ListElement {...defaultProps} defaultValue={[]} />);
-      const listDiv = container.querySelector('.list-of-items');
+      const listDiv = getByClass('list-of-items')[0];
       expect(listDiv).toBeInTheDocument();
     });
 
@@ -713,7 +714,7 @@ describe('ListElement Component', () => {
         />
       );
 
-      const listDiv = container.querySelector('.list-of-items');
+      const listDiv = getByClass('list-of-items')[0];
       expect(listDiv).toHaveClass('gray-out');
     });
 
@@ -725,7 +726,7 @@ describe('ListElement Component', () => {
         />
       );
 
-      const listDiv = container.querySelector('.list-of-items');
+      const listDiv = getByClass('list-of-items')[0];
       expect(listDiv).not.toHaveClass('gray-out');
     });
 
@@ -743,7 +744,7 @@ describe('ListElement Component', () => {
         />
       );
 
-      const listDiv = container.querySelector('.list-of-items');
+      const listDiv = getByClass('list-of-items')[0];
       expect(listDiv).not.toHaveClass('gray-out');
     });
   });
@@ -813,7 +814,7 @@ describe('ListElement Component', () => {
       // null is treated as having no items, but null?.length is undefined
       // So the condition defaultValue?.length === 0 is false
       // And defaultValue?.map() doesn't execute
-      const listDiv = container.querySelector('.list-of-items');
+      const listDiv = getByClass('list-of-items')[0];
       expect(listDiv).toBeInTheDocument();
     });
   });

@@ -23,6 +23,7 @@ import RadioList from '../../../element/RadioList';
 import DataListElement from '../../../element/DataListElement';
 import ListElement from '../../../element/ListElement';
 import ChannelMap from '../../../ntrode/ChannelMap';
+import { getMainForm, getFileInput } from '../../helpers/test-selectors';
 
 describe('Duplicate React Keys Fix', () => {
   describe('SelectElement', () => {

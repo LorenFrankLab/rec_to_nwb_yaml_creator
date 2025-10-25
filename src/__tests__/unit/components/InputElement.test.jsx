@@ -13,6 +13,7 @@
  */
 
 import { render, screen } from '@testing-library/react';
+import { getByClass, getMainForm } from '../../helpers/test-selectors';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 import InputElement from '../../../element/InputElement';
@@ -119,7 +120,7 @@ describe('InputElement Component', () => {
         />
       );
 
-      const input = container.querySelector('input[type="date"]');
+      const input = document.querySelector('[type=\"date\"]');
       expect(input).toBeInTheDocument();
     });
   });
@@ -166,7 +167,7 @@ describe('InputElement Component', () => {
         />
       );
 
-      const input = container.querySelector('input[type="date"]');
+      const input = document.querySelector('[type=\"date\"]');
       // CURRENT BEHAVIOR: Input shows 2023-01-15 (ISO date from Date object)
       // Note: The component DOES NOT actually add 1 to the date as code suggests
       // The getDate() + 1 in line 38 appears to be a BUG but doesn't affect output
@@ -532,7 +533,7 @@ describe('InputElement Component', () => {
         />
       );
 
-      const item1 = container.querySelector('.item1');
+      const item1 = getByClass('item1')[0];
       expect(item1).toBeInTheDocument();
       expect(item1).toHaveTextContent('Field Title');
     });
@@ -547,7 +548,7 @@ describe('InputElement Component', () => {
         />
       );
 
-      const item2 = container.querySelector('.item2');
+      const item2 = getByClass('item2')[0];
       expect(item2).toBeInTheDocument();
       expect(item2.querySelector('input')).toBeInTheDocument();
     });
@@ -565,7 +566,7 @@ describe('InputElement Component', () => {
         />
       );
 
-      const firstInput = container.querySelector('input');
+      const firstInput = screen.getByRole('textbox');
       expect(firstInput).toHaveValue('initial');
 
       // Re-render with new defaultValue
@@ -579,7 +580,7 @@ describe('InputElement Component', () => {
         />
       );
 
-      const updatedInput = container.querySelector('input');
+      const updatedInput = screen.getByRole('textbox');
       expect(updatedInput).toHaveValue('updated');
     });
   });
@@ -596,7 +597,7 @@ describe('InputElement Component', () => {
         />
       );
 
-      const input = container.querySelector('input[type="date"]');
+      const input = document.querySelector('[type=\"date\"]');
       // CURRENT BEHAVIOR: Correctly formats as 2023-01-05
       expect(input).toHaveValue('2023-01-05');
     });
@@ -612,7 +613,7 @@ describe('InputElement Component', () => {
         />
       );
 
-      const input = container.querySelector('input[type="date"]');
+      const input = document.querySelector('[type=\"date\"]');
       // FIXED: Now correctly extracts date portion from ISO 8601 string
       // getDefaultDateValue() now checks if defaultValue includes 'T' and splits on it
       // This avoids timezone conversion issues and off-by-one bugs
@@ -629,7 +630,7 @@ describe('InputElement Component', () => {
         />
       );
 
-      const input = container.querySelector('input[type="date"]');
+      const input = document.querySelector('[type=\"date\"]');
       expect(input).toHaveValue('');
     });
   });
@@ -647,7 +648,7 @@ describe('InputElement Component', () => {
         </form>
       );
 
-      const form = container.querySelector('form');
+      const form = getMainForm();
       const input = screen.getByRole('textbox');
 
       expect(form).toContainElement(input);

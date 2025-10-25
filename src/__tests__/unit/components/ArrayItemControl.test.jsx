@@ -17,6 +17,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ArrayItemControl from '../../../element/ArrayItemControl';
+import { getByClass } from '../../helpers/test-selectors';
 
 describe('ArrayItemControl Component', () => {
   const defaultProps = {
@@ -57,14 +58,14 @@ describe('ArrayItemControl Component', () => {
     it('should have array-item__controls container class', () => {
       const { container } = render(<ArrayItemControl {...defaultProps} />);
 
-      const controlsDiv = container.querySelector('.array-item__controls');
+      const controlsDiv = getByClass('array-item__controls')[0];
       expect(controlsDiv).toBeInTheDocument();
     });
 
     it('should have duplicate-item class for duplicate button container', () => {
       const { container } = render(<ArrayItemControl {...defaultProps} />);
 
-      const duplicateDiv = container.querySelector('.duplicate-item');
+      const duplicateDiv = getByClass('duplicate-item')[0];
       expect(duplicateDiv).toBeInTheDocument();
     });
 

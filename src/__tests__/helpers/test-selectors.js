@@ -213,3 +213,45 @@ export function triggerExport() {
 
   onSubmitHandler(event);
 }
+
+/**
+ * Get form field by ID (for unit tests that need exact element)
+ *
+ * @param {string} id - Element ID
+ * @returns {HTMLElement} The element
+ *
+ * BEFORE: container.querySelector('#session_id')
+ * AFTER: getById('session_id')
+ *
+ * NOTE: Use this for unit tests that test implementation details.
+ * For integration tests, prefer getByLabelText().
+ */
+export function getById(id) {
+  return document.getElementById(id);
+}
+
+/**
+ * Get elements by class name
+ *
+ * @param {string} className - Class name (without dot)
+ * @returns {HTMLElement[]} Array of elements
+ *
+ * BEFORE: container.querySelectorAll('.array-item__controls')
+ * AFTER: getByClass('array-item__controls')
+ */
+export function getByClass(className) {
+  return Array.from(document.getElementsByClassName(className));
+}
+
+/**
+ * Get elements by name attribute
+ *
+ * @param {string} name - Name attribute value
+ * @returns {HTMLElement[]} Array of elements
+ *
+ * BEFORE: container.querySelectorAll('input[name="ntrode_id"]')
+ * AFTER: getByName('ntrode_id')
+ */
+export function getByName(name) {
+  return Array.from(document.getElementsByName(name));
+}

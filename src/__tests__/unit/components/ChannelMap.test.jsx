@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ChannelMap from '../../../ntrode/ChannelMap';
+import { getByClass } from '../../helpers/test-selectors';
 
 describe('ChannelMap', () => {
   // Single-shank tetrode (4 channels)
@@ -486,7 +487,7 @@ describe('ChannelMap', () => {
     it('renders outer container with item1 and item2 divs', () => {
       const { container } = render(<ChannelMap {...defaultProps} />);
 
-      const outerContainer = container.querySelector('.container');
+      const outerContainer = getByClass('container')[0];
       expect(outerContainer).toBeInTheDocument();
 
       const item1 = outerContainer.querySelector('.item1');
@@ -509,21 +510,21 @@ describe('ChannelMap', () => {
     it('uses nTrode-container class for each shank', () => {
       const { container } = render(<ChannelMap {...defaultProps} nTrodeItems={multiShankData} />);
 
-      const ntrodeContainers = container.querySelectorAll('.nTrode-container');
+      const ntrodeContainers = getByClass('nTrode-container');
       expect(ntrodeContainers).toHaveLength(2);
     });
 
     it('uses ntrode-maps class for map container', () => {
       const { container } = render(<ChannelMap {...defaultProps} />);
 
-      const ntrodeMaps = container.querySelector('.ntrode-maps');
+      const ntrodeMaps = getByClass('ntrode-maps')[0];
       expect(ntrodeMaps).toBeInTheDocument();
     });
 
     it('uses ntrode-map class for each channel mapping', () => {
       const { container } = render(<ChannelMap {...defaultProps} />);
 
-      const ntrodeMapDivs = container.querySelectorAll('.ntrode-map');
+      const ntrodeMapDivs = getByClass('ntrode-map');
       expect(ntrodeMapDivs.length).toBeGreaterThanOrEqual(4); // At least 4 channels
     });
   });

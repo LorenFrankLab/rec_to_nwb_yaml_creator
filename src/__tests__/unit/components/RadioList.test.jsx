@@ -19,6 +19,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import RadioList from '../../../element/RadioList';
+import { getByClass } from '../../helpers/test-selectors';
 
 describe('RadioList Component', () => {
   const defaultProps = {
@@ -91,10 +92,10 @@ describe('RadioList Component', () => {
         <RadioList {...defaultProps} dataItems={['0', '1']} />
       );
 
-      const listDiv = container.querySelector('.checkbox-list');
+      const listDiv = getByClass('checkbox-list')[0];
       expect(listDiv).toBeInTheDocument();
 
-      const itemDiv = container.querySelector('.checkbox-list-item');
+      const itemDiv = getByClass('checkbox-list-item')[0];
       expect(itemDiv).toBeInTheDocument();
     });
   });
@@ -117,7 +118,7 @@ describe('RadioList Component', () => {
         <RadioList {...defaultProps} dataItems={[]} />
       );
 
-      const radioListDiv = container.querySelector('.checkbox-list');
+      const radioListDiv = getByClass('checkbox-list')[0];
       expect(radioListDiv).toHaveClass('hide');
     });
 
@@ -220,7 +221,7 @@ describe('RadioList Component', () => {
       expect(radios).toHaveLength(3);
 
       // Keys are sanitized for React (no special chars)
-      const listItems = container.querySelectorAll('.checkbox-list-item');
+      const listItems = getByClass('checkbox-list-item');
       expect(listItems).toHaveLength(3);
     });
   });
@@ -543,7 +544,7 @@ describe('RadioList Component', () => {
       expect(radios).toHaveLength(3);
 
       // Keys are sanitized for React (no special chars)
-      const listItems = container.querySelectorAll('.checkbox-list-item');
+      const listItems = getByClass('checkbox-list-item');
       expect(listItems).toHaveLength(3);
     });
 
@@ -578,7 +579,7 @@ describe('RadioList Component', () => {
       // But this creates duplicate React keys (warning in console)
       // Key format: `${id}-${sanitizeTitle(dataItem)}`
       // Both "Option 1" items get key: "options-Option1"
-      const listItems = container.querySelectorAll('.checkbox-list-item');
+      const listItems = getByClass('checkbox-list-item');
       expect(listItems).toHaveLength(3);
     });
 
@@ -624,7 +625,7 @@ describe('RadioList Component', () => {
       );
 
       // Component still renders
-      expect(container.querySelector('.checkbox-list')).toBeInTheDocument();
+      expect(getByClass('checkbox-list')[0]).toBeInTheDocument();
     });
 
     it('FIXED: PropTypes defaultValue now matches (line 80 vs 92)', () => {

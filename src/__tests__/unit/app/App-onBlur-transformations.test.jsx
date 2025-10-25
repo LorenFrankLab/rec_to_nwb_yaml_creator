@@ -14,6 +14,7 @@
 import { render, fireEvent } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { App } from '../../../App';
+import { getByName, getById } from '../../helpers/test-selectors';
 import {
   commaSeparatedStringToNumber,
   formatCommaSeparatedString,
@@ -172,7 +173,7 @@ describe('App onBlur Transformations', () => {
     it('should parse float on blur for number inputs', () => {
       const { container } = render(<App />);
 
-      const weightInput = container.querySelector('input[id="subject-weight"]');
+      const weightInput = getById('subject-weight');
 
       // Change value (as string)
       fireEvent.change(weightInput, { target: { value: '250.5' } });
@@ -187,7 +188,7 @@ describe('App onBlur Transformations', () => {
     it('should handle integer values in number inputs', () => {
       const { container } = render(<App />);
 
-      const weightInput = container.querySelector('input[id="subject-weight"]');
+      const weightInput = getById('subject-weight');
 
       fireEvent.change(weightInput, { target: { value: '300' } });
       fireEvent.blur(weightInput);
@@ -198,7 +199,7 @@ describe('App onBlur Transformations', () => {
     it('should handle decimal values with leading zero', () => {
       const { container } = render(<App />);
 
-      const multiplierInput = container.querySelector('input[name="times_period_multiplier"]');
+      const multiplierInput = getByName('times_period_multiplier')[0];
 
       fireEvent.change(multiplierInput, { target: { value: '0.5' } });
       fireEvent.blur(multiplierInput);
@@ -209,7 +210,7 @@ describe('App onBlur Transformations', () => {
     it('should handle very small decimal values', () => {
       const { container } = render(<App />);
 
-      const multiplierInput = container.querySelector('input[name="times_period_multiplier"]');
+      const multiplierInput = getByName('times_period_multiplier')[0];
 
       fireEvent.change(multiplierInput, { target: { value: '0.001' } });
       fireEvent.blur(multiplierInput);
@@ -220,7 +221,7 @@ describe('App onBlur Transformations', () => {
     it('should handle zero values', () => {
       const { container } = render(<App />);
 
-      const weightInput = container.querySelector('input[id="subject-weight"]');
+      const weightInput = getById('subject-weight');
 
       fireEvent.change(weightInput, { target: { value: '0' } });
       fireEvent.blur(weightInput);
@@ -231,7 +232,7 @@ describe('App onBlur Transformations', () => {
     it('should handle negative numbers', () => {
       const { container } = render(<App />);
 
-      const weightInput = container.querySelector('input[id="subject-weight"]');
+      const weightInput = getById('subject-weight');
 
       fireEvent.change(weightInput, { target: { value: '-50' } });
       fireEvent.blur(weightInput);
@@ -244,7 +245,7 @@ describe('App onBlur Transformations', () => {
     it('should not transform text input values', () => {
       const { container } = render(<App />);
 
-      const labInput = container.querySelector('input[name="lab"]');
+      const labInput = getByName('lab')[0];
 
       fireEvent.change(labInput, { target: { value: 'My Lab Name' } });
       fireEvent.blur(labInput);
@@ -255,7 +256,7 @@ describe('App onBlur Transformations', () => {
     it('should preserve whitespace in text inputs', () => {
       const { container } = render(<App />);
 
-      const descInput = container.querySelector('input[name="experiment_description"]');
+      const descInput = getByName('experiment_description')[0];
 
       fireEvent.change(descInput, { target: { value: '  spaced  text  ' } });
       fireEvent.blur(descInput);
@@ -266,7 +267,7 @@ describe('App onBlur Transformations', () => {
     it('should preserve special characters in text inputs', () => {
       const { container } = render(<App />);
 
-      const descInput = container.querySelector('input[name="session_description"]');
+      const descInput = getByName('session_description')[0];
 
       const specialText = 'Test & <script> "quotes" \'apostrophe\'';
       fireEvent.change(descInput, { target: { value: specialText } });
@@ -278,7 +279,7 @@ describe('App onBlur Transformations', () => {
     it('should handle empty string in text inputs', () => {
       const { container } = render(<App />);
 
-      const labInput = container.querySelector('input[name="lab"]');
+      const labInput = getByName('lab')[0];
 
       fireEvent.change(labInput, { target: { value: '' } });
       fireEvent.blur(labInput);
@@ -291,7 +292,7 @@ describe('App onBlur Transformations', () => {
     it('should handle rapid change and blur events', () => {
       const { container } = render(<App />);
 
-      const weightInput = container.querySelector('input[id="subject-weight"]');
+      const weightInput = getById('subject-weight');
 
       fireEvent.change(weightInput, { target: { value: '100' } });
       fireEvent.blur(weightInput);
@@ -306,7 +307,7 @@ describe('App onBlur Transformations', () => {
     it('should handle blur without change', () => {
       const { container } = render(<App />);
 
-      const labInput = container.querySelector('input[name="lab"]');
+      const labInput = getByName('lab')[0];
       const originalValue = labInput.value;
 
       // Blur without changing
@@ -318,7 +319,7 @@ describe('App onBlur Transformations', () => {
     it('should handle blur on empty number input', () => {
       const { container } = render(<App />);
 
-      const weightInput = container.querySelector('input[id="subject-weight"]');
+      const weightInput = getById('subject-weight');
 
       fireEvent.change(weightInput, { target: { value: '' } });
       fireEvent.blur(weightInput);

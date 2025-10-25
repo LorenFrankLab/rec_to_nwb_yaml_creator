@@ -11,13 +11,14 @@ import { render, fireEvent } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { App } from '../../../App';
 import { defaultYMLValues } from '../../../valueList';
+import { getById, getByName } from '../../helpers/test-selectors';
 
 describe('App Item Selection Handlers', () => {
   describe('itemSelected - Simple Selection', () => {
     it('should handle sex selection change', () => {
       const { container } = render(<App />);
 
-      const sexSelect = container.querySelector('select[id="subject-sex"]');
+      const sexSelect = getById('subject-sex');
       expect(sexSelect).toHaveValue(defaultYMLValues.subject.sex);
 
       fireEvent.change(sexSelect, { target: { value: 'F' } });
@@ -28,7 +29,7 @@ describe('App Item Selection Handlers', () => {
     it('should handle sex selection to different values', () => {
       const { container } = render(<App />);
 
-      const sexSelect = container.querySelector('select[id="subject-sex"]');
+      const sexSelect = getById('subject-sex');
 
       // M -> F
       fireEvent.change(sexSelect, { target: { value: 'F' } });
@@ -50,7 +51,7 @@ describe('App Item Selection Handlers', () => {
     it('should handle genotype DataList selection', () => {
       const { container } = render(<App />);
 
-      const genotypeInput = container.querySelector('input[id="subject-genotype"]');
+      const genotypeInput = getById('subject-genotype');
       expect(genotypeInput).toHaveValue('');
 
       // User selects from datalist
@@ -62,7 +63,7 @@ describe('App Item Selection Handlers', () => {
     it('should handle species DataList selection', () => {
       const { container } = render(<App />);
 
-      const speciesInput = container.querySelector('input[id="subject-species"]');
+      const speciesInput = getById('subject-species');
       expect(speciesInput).toHaveValue(defaultYMLValues.subject.species);
 
       fireEvent.change(speciesInput, { target: { value: 'Mus musculus' } });
@@ -73,7 +74,7 @@ describe('App Item Selection Handlers', () => {
     it('should handle lab selection', () => {
       const { container } = render(<App />);
 
-      const labInput = container.querySelector('input[name="lab"]');
+      const labInput = getByName('lab')[0];
       expect(labInput).toHaveValue(defaultYMLValues.lab);
 
       fireEvent.change(labInput, { target: { value: 'Different Lab' } });
@@ -86,7 +87,7 @@ describe('App Item Selection Handlers', () => {
     it('should preserve string values from select elements', () => {
       const { container } = render(<App />);
 
-      const sexSelect = container.querySelector('select[id="subject-sex"]');
+      const sexSelect = getById('subject-sex');
 
       fireEvent.change(sexSelect, { target: { value: 'F' } });
 
@@ -98,7 +99,7 @@ describe('App Item Selection Handlers', () => {
     it('should handle empty string selection', () => {
       const { container } = render(<App />);
 
-      const genotypeInput = container.querySelector('input[id="subject-genotype"]');
+      const genotypeInput = getById('subject-genotype');
 
       // User clears selection
       fireEvent.change(genotypeInput, { target: { value: '' } });
@@ -109,7 +110,7 @@ describe('App Item Selection Handlers', () => {
     it('should preserve special characters in selections', () => {
       const { container } = render(<App />);
 
-      const genotypeInput = container.querySelector('input[id="subject-genotype"]');
+      const genotypeInput = getById('subject-genotype');
 
       const specialValue = 'Type A/B (variant-1)';
       fireEvent.change(genotypeInput, { target: { value: specialValue } });
@@ -122,9 +123,9 @@ describe('App Item Selection Handlers', () => {
     it('should handle multiple field selections independently', () => {
       const { container } = render(<App />);
 
-      const sexSelect = container.querySelector('select[id="subject-sex"]');
-      const speciesInput = container.querySelector('input[id="subject-species"]');
-      const genotypeInput = container.querySelector('input[id="subject-genotype"]');
+      const sexSelect = getById('subject-sex');
+      const speciesInput = getById('subject-species');
+      const genotypeInput = getById('subject-genotype');
 
       fireEvent.change(sexSelect, { target: { value: 'F' } });
       fireEvent.change(speciesInput, { target: { value: 'Mus musculus' } });
@@ -138,7 +139,7 @@ describe('App Item Selection Handlers', () => {
     it('should handle rapid successive selections', () => {
       const { container } = render(<App />);
 
-      const sexSelect = container.querySelector('select[id="subject-sex"]');
+      const sexSelect = getById('subject-sex');
 
       fireEvent.change(sexSelect, { target: { value: 'F' } });
       fireEvent.change(sexSelect, { target: { value: 'U' } });
@@ -153,7 +154,7 @@ describe('App Item Selection Handlers', () => {
     it('should handle selection to same value', () => {
       const { container } = render(<App />);
 
-      const sexSelect = container.querySelector('select[id="subject-sex"]');
+      const sexSelect = getById('subject-sex');
       const originalValue = sexSelect.value;
 
       // Select same value
@@ -165,7 +166,7 @@ describe('App Item Selection Handlers', () => {
     it('should handle DataList input with custom value', () => {
       const { container } = render(<App />);
 
-      const genotypeInput = container.querySelector('input[id="subject-genotype"]');
+      const genotypeInput = getById('subject-genotype');
 
       // User types custom value not in list
       const customValue = 'Custom Genotype Not In List';
@@ -177,7 +178,7 @@ describe('App Item Selection Handlers', () => {
     it('should handle whitespace in selections', () => {
       const { container } = render(<App />);
 
-      const genotypeInput = container.querySelector('input[id="subject-genotype"]');
+      const genotypeInput = getById('subject-genotype');
 
       fireEvent.change(genotypeInput, { target: { value: '  spaced  ' } });
 
@@ -188,7 +189,7 @@ describe('App Item Selection Handlers', () => {
     it('should handle numeric strings in text selections', () => {
       const { container } = render(<App />);
 
-      const genotypeInput = container.querySelector('input[id="subject-genotype"]');
+      const genotypeInput = getById('subject-genotype');
 
       // Numeric-looking string should stay as string
       fireEvent.change(genotypeInput, { target: { value: '123' } });
@@ -202,7 +203,7 @@ describe('App Item Selection Handlers', () => {
     it('should work correctly when combined with blur events', () => {
       const { container } = render(<App />);
 
-      const genotypeInput = container.querySelector('input[id="subject-genotype"]');
+      const genotypeInput = getById('subject-genotype');
 
       // Change selection
       fireEvent.change(genotypeInput, { target: { value: 'Wild type' } });
@@ -218,7 +219,7 @@ describe('App Item Selection Handlers', () => {
     it('should handle change followed by blur on sex select', () => {
       const { container } = render(<App />);
 
-      const sexSelect = container.querySelector('select[id="subject-sex"]');
+      const sexSelect = getById('subject-sex');
 
       fireEvent.change(sexSelect, { target: { value: 'F' } });
       fireEvent.blur(sexSelect);

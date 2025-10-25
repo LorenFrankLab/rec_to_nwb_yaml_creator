@@ -17,6 +17,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import App from '../../../App';
+import { getById } from '../../helpers/test-selectors';
 
 describe('displayErrorOnUI', () => {
   describe('Documentation: Function Behavior', () => {
@@ -99,7 +100,7 @@ describe('displayErrorOnUI', () => {
 
     it('should handle missing element gracefully (no crash)', () => {
       // querySelector returns null for non-existent element
-      const element = document.querySelector('#non-existent-element-12345');
+      const element = getById('non-existent-element-12345');
       expect(element).toBeNull();
 
       // Attempt to access focus on null element using optional chaining

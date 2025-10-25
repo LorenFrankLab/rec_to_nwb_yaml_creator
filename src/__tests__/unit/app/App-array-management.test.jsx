@@ -10,6 +10,7 @@
  */
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { getById, getMainForm } from '../../helpers/test-selectors';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { App } from '../../../App';
 import { defaultYMLValues } from '../../../valueList';
@@ -42,35 +43,35 @@ describe('App Array Item Management', () => {
       const { container } = render(<App />);
 
       // Check no camera items initially
-      const cameraDetails = container.querySelector('#cameras-area');
+      const cameraDetails = getById('cameras-area');
       expect(cameraDetails).toBeInTheDocument();
     });
 
     it('should have initial empty tasks array', () => {
       const { container } = render(<App />);
 
-      const tasksDetails = container.querySelector('#tasks-area');
+      const tasksDetails = getById('tasks-area');
       expect(tasksDetails).toBeInTheDocument();
     });
 
     it('should have initial empty data acquisition device array', () => {
       const { container } = render(<App />);
 
-      const dataAcqDetails = container.querySelector('#data_acq_device-area');
+      const dataAcqDetails = getById('data_acq_device-area');
       expect(dataAcqDetails).toBeInTheDocument();
     });
 
     it('should have initial empty behavioral events array', () => {
       const { container } = render(<App />);
 
-      const behavioralDetails = container.querySelector('#behavioral_events-area');
+      const behavioralDetails = getById('behavioral_events-area');
       expect(behavioralDetails).toBeInTheDocument();
     });
 
     it('should have initial empty electrode groups array', () => {
       const { container } = render(<App />);
 
-      const electrodeDetails = container.querySelector('#electrode_groups-area');
+      const electrodeDetails = getById('electrode_groups-area');
       expect(electrodeDetails).toBeInTheDocument();
     });
   });
@@ -80,13 +81,13 @@ describe('App Array Item Management', () => {
       const { container } = render(<App />);
 
       // Verify all major array sections are present
-      expect(container.querySelector('#cameras-area')).toBeInTheDocument();
-      expect(container.querySelector('#tasks-area')).toBeInTheDocument();
-      expect(container.querySelector('#data_acq_device-area')).toBeInTheDocument();
-      expect(container.querySelector('#behavioral_events-area')).toBeInTheDocument();
-      expect(container.querySelector('#electrode_groups-area')).toBeInTheDocument();
-      expect(container.querySelector('#associated_files-area')).toBeInTheDocument();
-      expect(container.querySelector('#associated_video_files-area')).toBeInTheDocument();
+      expect(getById('cameras-area')).toBeInTheDocument();
+      expect(getById('tasks-area')).toBeInTheDocument();
+      expect(getById('data_acq_device-area')).toBeInTheDocument();
+      expect(getById('behavioral_events-area')).toBeInTheDocument();
+      expect(getById('electrode_groups-area')).toBeInTheDocument();
+      expect(getById('associated_files-area')).toBeInTheDocument();
+      expect(getById('associated_video_files-area')).toBeInTheDocument();
     });
 
     it('should render optogenetics array sections', () => {
@@ -97,7 +98,7 @@ describe('App Array Item Management', () => {
       expect(detailsElements.length).toBeGreaterThan(10);
 
       // Verify at least the main sections are present
-      expect(container.querySelector('#electrode_groups-area')).toBeInTheDocument();
+      expect(getById('electrode_groups-area')).toBeInTheDocument();
     });
   });
 
@@ -167,7 +168,7 @@ describe('App Array Item Management', () => {
       const { container } = render(<App />);
 
       // After render, form should still be structured correctly
-      const formElement = container.querySelector('form');
+      const formElement = getMainForm();
       expect(formElement).toBeInTheDocument();
     });
 
@@ -186,7 +187,7 @@ describe('App Array Item Management', () => {
 
       // ArrayItemControl only appears when array items exist
       // Initially arrays are empty, so no duplicate/remove buttons
-      const formElement = container.querySelector('form');
+      const formElement = getMainForm();
       expect(formElement).toBeInTheDocument();
     });
   });
@@ -196,7 +197,7 @@ describe('App Array Item Management', () => {
       render(<App />);
 
       // All arrays start empty - this should work fine
-      const formElement = document.querySelector('form');
+      const formElement = getMainForm();
       expect(formElement).toBeInTheDocument();
     });
 

@@ -26,6 +26,7 @@ import userEvent from '@testing-library/user-event';
 import App from '../../../App';
 import { getShankCount } from '../../../ntrode/deviceTypes';
 import { clickAddButton } from '../../helpers/test-hooks';
+import { getById, getByName } from '../../helpers/test-selectors';
 
 describe('App.js - nTrodeMapSelected()', () => {
   describe('Basic Device Type Selection', () => {
@@ -37,7 +38,7 @@ describe('App.js - nTrodeMapSelected()', () => {
       await clickAddButton(user, container, "Add electrode_groups");
 
       // Select device type
-      const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect, 'tetrode_12.5');
 
       // Verify device_type was set
@@ -52,16 +53,16 @@ describe('App.js - nTrodeMapSelected()', () => {
       await clickAddButton(user, container, "Add electrode_groups");
 
       // Before selection - no ntrodes
-      let ntrodeIdInputs = container.querySelectorAll('input[name="ntrode_id"]');
+      let ntrodeIdInputs = getByName('ntrode_id');
       expect(ntrodeIdInputs.length).toBe(0);
 
       // Select device type
-      const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect, 'tetrode_12.5');
 
       // After selection - ntrode created
       await waitFor(() => {
-        ntrodeIdInputs = container.querySelectorAll('input[name="ntrode_id"]');
+        ntrodeIdInputs = getByName('ntrode_id');
         expect(ntrodeIdInputs.length).toBeGreaterThan(0);
       });
     });
@@ -72,7 +73,7 @@ describe('App.js - nTrodeMapSelected()', () => {
 
       await clickAddButton(user, container, "Add electrode_groups");
 
-      const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
 
       // Select first device type
       await user.selectOptions(deviceTypeSelect, 'tetrode_12.5');
@@ -91,13 +92,13 @@ describe('App.js - nTrodeMapSelected()', () => {
 
       await clickAddButton(user, container, "Add electrode_groups");
 
-      const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect, 'tetrode_12.5');
 
       await waitFor(() => {
         // Tetrode has 1 shank, should generate 1 ntrode
         // Verify by counting ntrode_id inputs (one per ntrode)
-        const ntrodeIds = container.querySelectorAll('input[name="ntrode_id"]');
+        const ntrodeIds = getByName('ntrode_id');
         expect(ntrodeIds.length).toBe(1);
       });
     });
@@ -108,12 +109,12 @@ describe('App.js - nTrodeMapSelected()', () => {
 
       await clickAddButton(user, container, "Add electrode_groups");
 
-      const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect, '32c-2s8mm6cm-20um-40um-dl');
 
       await waitFor(() => {
         // 2-shank device should generate 2 ntrodes (one per shank)
-        const ntrodeIds = container.querySelectorAll('input[name="ntrode_id"]');
+        const ntrodeIds = getByName('ntrode_id');
         expect(ntrodeIds.length).toBe(2);
       });
     });
@@ -124,11 +125,11 @@ describe('App.js - nTrodeMapSelected()', () => {
 
       await clickAddButton(user, container, "Add electrode_groups");
 
-      const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect, '64c-3s6mm6cm-20um-40um-sl');
 
       await waitFor(() => {
-        const ntrodeIds = container.querySelectorAll('input[name="ntrode_id"]');
+        const ntrodeIds = getByName('ntrode_id');
         expect(ntrodeIds.length).toBe(3);
       });
     });
@@ -139,11 +140,11 @@ describe('App.js - nTrodeMapSelected()', () => {
 
       await clickAddButton(user, container, "Add electrode_groups");
 
-      const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect, '128c-4s6mm6cm-15um-26um-sl');
 
       await waitFor(() => {
-        const ntrodeIds = container.querySelectorAll('input[name="ntrode_id"]');
+        const ntrodeIds = getByName('ntrode_id');
         expect(ntrodeIds.length).toBe(4);
       });
     });
@@ -168,11 +169,11 @@ describe('App.js - nTrodeMapSelected()', () => {
 
       await clickAddButton(user, container, "Add electrode_groups");
 
-      const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect, 'tetrode_12.5');
 
       await waitFor(() => {
-        const ntrodeInput = container.querySelector('input[name="ntrode_id"]');
+        const ntrodeInput = getByName('ntrode_id')[0];
         expect(ntrodeInput.value).toBe('1');
       });
     });
@@ -183,11 +184,11 @@ describe('App.js - nTrodeMapSelected()', () => {
 
       await clickAddButton(user, container, "Add electrode_groups");
 
-      const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect, '128c-4s6mm6cm-15um-26um-sl'); // 4 shanks
 
       await waitFor(() => {
-        const ntrodeInputs = container.querySelectorAll('input[name="ntrode_id"]');
+        const ntrodeInputs = getByName('ntrode_id');
         expect(ntrodeInputs.length).toBe(4);
         expect(ntrodeInputs[0].value).toBe('1');
         expect(ntrodeInputs[1].value).toBe('2');
@@ -202,16 +203,16 @@ describe('App.js - nTrodeMapSelected()', () => {
 
       // Add first electrode group with tetrode (1 ntrode)
       await clickAddButton(user, container, "Add electrode_groups");
-      const deviceTypeSelect1 = container.querySelector('#electrode_groups-device_type-0');
+      const deviceTypeSelect1 = getById('electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect1, 'tetrode_12.5');
 
       // Add second electrode group with 2-shank device (2 ntrodes)
       await clickAddButton(user, container, "Add electrode_groups");
-      const deviceTypeSelect2 = container.querySelector('#electrode_groups-device_type-1');
+      const deviceTypeSelect2 = getById('electrode_groups-device_type-1');
       await user.selectOptions(deviceTypeSelect2, '32c-2s8mm6cm-20um-40um-dl');
 
       await waitFor(() => {
-        const ntrodeInputs = container.querySelectorAll('input[name="ntrode_id"]');
+        const ntrodeInputs = getByName('ntrode_id');
         expect(ntrodeInputs.length).toBe(3); // 1 + 2 = 3 total
         expect(ntrodeInputs[0].value).toBe('1');
         expect(ntrodeInputs[1].value).toBe('2');
@@ -227,13 +228,13 @@ describe('App.js - nTrodeMapSelected()', () => {
 
       await clickAddButton(user, container, "Add electrode_groups");
 
-      const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
 
       // Select tetrode (1 ntrode)
       await user.selectOptions(deviceTypeSelect, 'tetrode_12.5');
 
       await waitFor(() => {
-        let ntrodeIds = container.querySelectorAll('input[name="ntrode_id"]');
+        let ntrodeIds = getByName('ntrode_id');
         expect(ntrodeIds.length).toBe(1);
       });
 
@@ -241,7 +242,7 @@ describe('App.js - nTrodeMapSelected()', () => {
       await user.selectOptions(deviceTypeSelect, '128c-4s6mm6cm-15um-26um-sl');
 
       await waitFor(() => {
-        const ntrodeIds = container.querySelectorAll('input[name="ntrode_id"]');
+        const ntrodeIds = getByName('ntrode_id');
         expect(ntrodeIds.length).toBe(4); // Old ntrode replaced
       });
     });
@@ -252,16 +253,16 @@ describe('App.js - nTrodeMapSelected()', () => {
 
       // Add first electrode group with tetrode (1 ntrode)
       await clickAddButton(user, container, "Add electrode_groups");
-      const deviceTypeSelect1 = container.querySelector('#electrode_groups-device_type-0');
+      const deviceTypeSelect1 = getById('electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect1, 'tetrode_12.5');
 
       // Add second electrode group with 2-shank (2 ntrodes)
       await clickAddButton(user, container, "Add electrode_groups");
-      const deviceTypeSelect2 = container.querySelector('#electrode_groups-device_type-1');
+      const deviceTypeSelect2 = getById('electrode_groups-device_type-1');
       await user.selectOptions(deviceTypeSelect2, '32c-2s8mm6cm-20um-40um-dl');
 
       await waitFor(() => {
-        let ntrodeIds = container.querySelectorAll('input[name="ntrode_id"]');
+        let ntrodeIds = getByName('ntrode_id');
         expect(ntrodeIds.length).toBe(3); // 1 + 2 = 3
       });
 
@@ -269,7 +270,7 @@ describe('App.js - nTrodeMapSelected()', () => {
       await user.selectOptions(deviceTypeSelect1, '128c-4s6mm6cm-15um-26um-sl');
 
       await waitFor(() => {
-        const ntrodeIds = container.querySelectorAll('input[name="ntrode_id"]');
+        const ntrodeIds = getByName('ntrode_id');
         expect(ntrodeIds.length).toBe(6); // 4 (new) + 2 (preserved) = 6
       });
     });
@@ -280,13 +281,13 @@ describe('App.js - nTrodeMapSelected()', () => {
 
       await clickAddButton(user, container, "Add electrode_groups");
 
-      const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
 
       // Select tetrode (ntrode_id = 1)
       await user.selectOptions(deviceTypeSelect, 'tetrode_12.5');
 
       await waitFor(() => {
-        let ntrodeInputs = container.querySelectorAll('input[name="ntrode_id"]');
+        let ntrodeInputs = getByName('ntrode_id');
         expect(ntrodeInputs[0].value).toBe('1');
       });
 
@@ -294,7 +295,7 @@ describe('App.js - nTrodeMapSelected()', () => {
       await user.selectOptions(deviceTypeSelect, '64c-3s6mm6cm-20um-40um-sl');
 
       await waitFor(() => {
-        const ntrodeInputs = container.querySelectorAll('input[name="ntrode_id"]');
+        const ntrodeInputs = getByName('ntrode_id');
         expect(ntrodeInputs.length).toBe(3);
         expect(ntrodeInputs[0].value).toBe('1');
         expect(ntrodeInputs[1].value).toBe('2');
@@ -310,7 +311,7 @@ describe('App.js - nTrodeMapSelected()', () => {
 
       await clickAddButton(user, container, "Add electrode_groups");
 
-      const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect, 'tetrode_12.5');
 
       await waitFor(() => {
@@ -326,7 +327,7 @@ describe('App.js - nTrodeMapSelected()', () => {
 
       await clickAddButton(user, container, "Add electrode_groups");
 
-      const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect, 'tetrode_12.5');
 
       await waitFor(() => {
@@ -344,7 +345,7 @@ describe('App.js - nTrodeMapSelected()', () => {
 
       await clickAddButton(user, container, "Add electrode_groups");
 
-      const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
 
       // Rapidly change device types
       await user.selectOptions(deviceTypeSelect, 'tetrode_12.5');
@@ -353,7 +354,7 @@ describe('App.js - nTrodeMapSelected()', () => {
 
       await waitFor(() => {
         // Final state should reflect last selection (2 shanks)
-        const ntrodeIds = container.querySelectorAll('input[name="ntrode_id"]');
+        const ntrodeIds = getByName('ntrode_id');
         expect(ntrodeIds.length).toBe(2);
       });
     });
@@ -365,15 +366,15 @@ describe('App.js - nTrodeMapSelected()', () => {
       await clickAddButton(user, container, "Add electrode_groups");
 
       // First electrode group should have id = 0
-      const electrodeGroupIdInput = container.querySelector('#electrode_groups-id-0');
+      const electrodeGroupIdInput = getById('electrode_groups-id-0');
       expect(electrodeGroupIdInput.value).toBe('0');
 
-      const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
       await user.selectOptions(deviceTypeSelect, 'tetrode_12.5');
 
       await waitFor(() => {
         // Ntrode should be created successfully
-        const ntrodeInput = container.querySelector('input[name="ntrode_id"]');
+        const ntrodeInput = getByName('ntrode_id')[0];
         expect(ntrodeInput).toBeInTheDocument();
       });
     });
@@ -384,7 +385,7 @@ describe('App.js - nTrodeMapSelected()', () => {
 
       await clickAddButton(user, container, "Add electrode_groups");
 
-      const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
 
       const supportedDeviceTypes = [
         'tetrode_12.5',
@@ -414,17 +415,17 @@ describe('App.js - nTrodeMapSelected()', () => {
 
       await clickAddButton(user, container, "Add electrode_groups");
 
-      const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
 
       // Before selection - no ntrodes
-      let ntrodeInputs = container.querySelectorAll('input[name="ntrode_id"]');
+      let ntrodeInputs = getByName('ntrode_id');
       expect(ntrodeInputs.length).toBe(0);
 
       // After selection - state updated (verified by UI rendering)
       await user.selectOptions(deviceTypeSelect, 'tetrode_12.5');
 
       await waitFor(() => {
-        ntrodeInputs = container.querySelectorAll('input[name="ntrode_id"]');
+        ntrodeInputs = getByName('ntrode_id');
         expect(ntrodeInputs.length).toBe(1);
       });
     });
@@ -437,10 +438,10 @@ describe('App.js - nTrodeMapSelected()', () => {
 
       await clickAddButton(user, container, "Add electrode_groups");
 
-      const deviceTypeSelect = container.querySelector('#electrode_groups-device_type-0');
+      const deviceTypeSelect = getById('electrode_groups-device_type-0');
 
       // Store initial ntrode count
-      const initialNtrodeCount = container.querySelectorAll('input[name="ntrode_id"]').length;
+      const initialNtrodeCount = getByName('ntrode_id').length;
       expect(initialNtrodeCount).toBe(0);
 
       // Select device type
@@ -448,7 +449,7 @@ describe('App.js - nTrodeMapSelected()', () => {
 
       await waitFor(() => {
         // State should have updated (new ntrode created)
-        const newNtrodeCount = container.querySelectorAll('input[name="ntrode_id"]').length;
+        const newNtrodeCount = getByName('ntrode_id').length;
         expect(newNtrodeCount).toBe(1);
         expect(newNtrodeCount).not.toBe(initialNtrodeCount);
       });

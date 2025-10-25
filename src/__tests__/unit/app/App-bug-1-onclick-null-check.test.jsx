@@ -16,13 +16,14 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../../../App';
+import { getMainForm, getFileInput } from '../../helpers/test-selectors';
 
 describe('BUG #1: App.js:933 onClick handler null check', () => {
   it('should handle file input click when e.target exists', async () => {
     // ARRANGE
     const user = userEvent.setup();
     const { container } = render(<App />);
-    const fileInput = container.querySelector('#importYAMLFile');
+    const fileInput = getFileInput();
     expect(fileInput).toBeInTheDocument();
 
     // Create a test file
@@ -43,7 +44,7 @@ describe('BUG #1: App.js:933 onClick handler null check', () => {
   it('should handle file input click when e.target is null (edge case)', () => {
     // ARRANGE
     const { container } = render(<App />);
-    const fileInput = container.querySelector('#importYAMLFile');
+    const fileInput = getFileInput();
     expect(fileInput).toBeInTheDocument();
 
     // Get the onClick handler from React fiber
@@ -63,7 +64,7 @@ describe('BUG #1: App.js:933 onClick handler null check', () => {
   it('should handle file input click when e.target is undefined (edge case)', () => {
     // ARRANGE
     const { container } = render(<App />);
-    const fileInput = container.querySelector('#importYAMLFile');
+    const fileInput = getFileInput();
     expect(fileInput).toBeInTheDocument();
 
     // Get the onClick handler from React fiber
@@ -83,7 +84,7 @@ describe('BUG #1: App.js:933 onClick handler null check', () => {
   it('should handle file input click when event is null (extreme edge case)', () => {
     // ARRANGE
     const { container } = render(<App />);
-    const fileInput = container.querySelector('#importYAMLFile');
+    const fileInput = getFileInput();
     expect(fileInput).toBeInTheDocument();
 
     // Get the onClick handler from React fiber
@@ -100,7 +101,7 @@ describe('BUG #1: App.js:933 onClick handler null check', () => {
   it('should not crash when resetting file input value on click', () => {
     // ARRANGE
     const { container } = render(<App />);
-    const fileInput = container.querySelector('#importYAMLFile');
+    const fileInput = getFileInput();
     expect(fileInput).toBeInTheDocument();
 
     // Get the onClick handler from React fiber
@@ -125,7 +126,7 @@ describe('BUG #1: App.js:933 onClick handler null check', () => {
     // ARRANGE
     const user = userEvent.setup();
     const { container } = render(<App />);
-    const fileInput = container.querySelector('#importYAMLFile');
+    const fileInput = getFileInput();
 
     const file = new File(['test: value'], 'test.yml', { type: 'text/yaml' });
 

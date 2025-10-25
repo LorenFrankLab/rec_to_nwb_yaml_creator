@@ -26,6 +26,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../../App';
+import { getMainForm, getFileInput, getById } from '../../helpers/test-selectors';
 
 describe('App.js - importFile() YAML.parse() Error Handling', () => {
   describe('CRITICAL: Malformed YAML Handling', () => {
@@ -44,14 +45,14 @@ another_field: value
         type: 'text/yaml',
       });
 
-      const fileInput = container.querySelector('#importYAMLFile');
+      const fileInput = getFileInput();
 
       // Attempt to upload malformed YAML
       // This should NOT crash the app
       await user.upload(fileInput, yamlFile);
 
       // App should still be mounted (not crashed)
-      expect(container.querySelector('form')).toBeInTheDocument();
+      expect(getMainForm()).toBeInTheDocument();
     });
 
     it('should show error message when YAML parsing fails', async () => {
@@ -72,7 +73,7 @@ subject:
         type: 'text/yaml',
       });
 
-      const fileInput = container.querySelector('#importYAMLFile');
+      const fileInput = getFileInput();
       await user.upload(fileInput, yamlFile);
 
       // Wait for file processing
@@ -103,7 +104,7 @@ subject:
       const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
       // Fill out some form data first
-      const sessionIdInput = container.querySelector('#session_id');
+      const sessionIdInput = getById('session_id');
       await user.type(sessionIdInput, 'my_session');
       sessionIdInput.blur();
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -115,7 +116,7 @@ subject:
         type: 'text/yaml',
       });
 
-      const fileInput = container.querySelector('#importYAMLFile');
+      const fileInput = getFileInput();
       await user.upload(fileInput, yamlFile);
 
       await new Promise(resolve => setTimeout(resolve, 200));
@@ -123,7 +124,7 @@ subject:
       // Form should be cleared/reset (default behavior)
       // After failed import, form should be in a valid state
       // Re-query the input after re-render
-      const sessionIdInputAfter = container.querySelector('#session_id');
+      const sessionIdInputAfter = getById('session_id');
       expect(sessionIdInputAfter).toBeInTheDocument();
 
       alertSpy.mockRestore();
@@ -142,13 +143,13 @@ subject:
         type: 'text/yaml',
       });
 
-      const fileInput = container.querySelector('#importYAMLFile');
+      const fileInput = getFileInput();
       await user.upload(fileInput, emptyFile);
 
       await new Promise(resolve => setTimeout(resolve, 200));
 
       // Should not crash
-      expect(container.querySelector('form')).toBeInTheDocument();
+      expect(getMainForm()).toBeInTheDocument();
 
       alertSpy.mockRestore();
     });
@@ -165,13 +166,13 @@ subject:
         type: 'text/yaml',
       });
 
-      const fileInput = container.querySelector('#importYAMLFile');
+      const fileInput = getFileInput();
       await user.upload(fileInput, binaryFile);
 
       await new Promise(resolve => setTimeout(resolve, 200));
 
       // Should not crash
-      expect(container.querySelector('form')).toBeInTheDocument();
+      expect(getMainForm()).toBeInTheDocument();
 
       alertSpy.mockRestore();
     });
@@ -189,13 +190,13 @@ subject:
         type: 'text/yaml',
       });
 
-      const fileInput = container.querySelector('#importYAMLFile');
+      const fileInput = getFileInput();
       await user.upload(fileInput, yamlFile);
 
       await new Promise(resolve => setTimeout(resolve, 200));
 
       // Should not crash
-      expect(container.querySelector('form')).toBeInTheDocument();
+      expect(getMainForm()).toBeInTheDocument();
 
       alertSpy.mockRestore();
     });
@@ -230,13 +231,13 @@ subject:
         }
       };
 
-      const fileInput = container.querySelector('#importYAMLFile');
+      const fileInput = getFileInput();
       await user.upload(fileInput, yamlFile);
 
       await new Promise(resolve => setTimeout(resolve, 200));
 
       // Should not crash (may or may not show alert depending on implementation)
-      expect(container.querySelector('form')).toBeInTheDocument();
+      expect(getMainForm()).toBeInTheDocument();
 
       // Restore original FileReader
       window.FileReader = originalFileReader;
@@ -252,8 +253,8 @@ subject:
       const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
       // User fills out important data
-      const sessionIdInput = container.querySelector('#session_id');
-      const subjectIdInput = container.querySelector('#subject-subjectId');
+      const sessionIdInput = getById('session_id');
+      const subjectIdInput = getById('subject-subjectId');
 
       await user.type(sessionIdInput, 'critical_experiment_session');
       sessionIdInput.blur();
@@ -273,14 +274,14 @@ subject:
         type: 'text/yaml',
       });
 
-      const fileInput = container.querySelector('#importYAMLFile');
+      const fileInput = getFileInput();
       await user.upload(fileInput, yamlFile);
 
       await new Promise(resolve => setTimeout(resolve, 200));
 
       // After failed import, form should be cleared (current behavior after line 82)
       // but app should not have crashed
-      expect(container.querySelector('form')).toBeInTheDocument();
+      expect(getMainForm()).toBeInTheDocument();
 
       // Note: Current implementation DOES clear the form (line 82 runs before parse)
       // This test documents the data loss bug
