@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, within, waitFor, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../App';
 import YAML from 'yaml';
@@ -140,9 +140,11 @@ async function triggerExport(mockEvent = null) {
   // Blur the currently focused element to ensure onBlur fires
   // This simulates what happens when a user clicks the export button in real usage
   if (document.activeElement && document.activeElement !== document.body) {
-    fireEvent.blur(document.activeElement);
-    // Wait a tick for React state updates
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await act(async () => {
+      fireEvent.blur(document.activeElement);
+      // Small delay to ensure onBlur handlers complete
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
   }
 
   const form = document.querySelector('form');
@@ -604,6 +606,7 @@ describe('End-to-End Session Creation Workflow', () => {
     await user.type(descriptionInputs[0], 'Long Evans female rat');
 
     const weightInputs = screen.getAllByLabelText(/weight/i);
+    await user.clear(weightInputs[0]);
     await user.type(weightInputs[0], '350');
 
     // Export using React fiber approach
