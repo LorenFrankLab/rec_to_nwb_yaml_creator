@@ -860,74 +860,74 @@ File: `src/__tests__/unit/app/App-importFile.test.jsx`
 **Current Branch Coverage:** 30.86% (69% of if/else paths untested)
 **Target Branch Coverage:** 45-50% (+15% from critical error paths)
 
-**Test Suite 1: importFile() Error Handling** (10 tests, 2-3 hours)
+**Test Suite 1: importFile() Error Handling** ✅ COMPLETE (10 tests, 2-3 hours)
 
-- [ ] Create file: `App-importFile-error-handling.test.jsx`
-- [ ] Test empty file selection (line 85-87)
-- [ ] Test YAML parse errors - malformed YAML (line 92, known bug)
-- [ ] Test FileReader errors - file read failures (known bug)
-- [ ] Test missing subject handling (line 133-135)
-- [ ] Test invalid gender codes → 'U' (line 138-140)
-- [ ] Test type mismatch exclusion (line 124)
-- [ ] Test error message display on partial import (line 142-149)
-- [ ] Test empty jsonFileContent edge case
-- [ ] Test null values in jsonFileContent
-- [ ] Test array vs object type mismatches
-- [ ] **Subtotal:** 10 tests, 2-3 hours
+- [x] Create file: `App-importFile-error-handling.test.jsx`
+- [x] Test empty file selection (line 85-87)
+- [x] Test YAML parse errors - malformed YAML (line 92, known bug)
+- [x] Test FileReader errors - file read failures (known bug)
+- [x] Test missing subject handling (line 133-135)
+- [x] Test invalid gender codes → 'U' (line 138-140)
+- [x] Test type mismatch exclusion (line 124)
+- [x] Test error message display on partial import (line 142-149)
+- [x] Test empty jsonFileContent edge case
+- [x] Test null values in jsonFileContent
+- [x] Test array vs object type mismatches
+- [x] **Subtotal:** 10 tests, 2-3 hours
 
-**Test Suite 2: generateYMLFile() Branch Coverage** (8 tests, 1-2 hours)
+**Test Suite 2: generateYMLFile() Branch Coverage** ✅ COMPLETE (8 tests, 1-2 hours)
 
-- [ ] Create file: `App-generateYMLFile-branches.test.jsx`
-- [ ] Test suspicious logic at line 673 (errors display when valid?)
-- [ ] Test no errors when validation succeeds
-- [ ] Test empty jsonSchemaErrors array
-- [ ] Test multiple jsonSchemaErrors
-- [ ] Test empty formErrors array
-- [ ] Test combined schema and rules errors
-- [ ] Test export success when all validation passes
-- [ ] Test preventDefault called
-- [ ] **Subtotal:** 8 tests, 1-2 hours
+- [x] Create file: `App-generateYMLFile-branches.test.jsx`
+- [x] Test suspicious logic at line 673 (errors display when valid?)
+- [x] Test no errors when validation succeeds
+- [x] Test empty jsonSchemaErrors array
+- [x] Test multiple jsonSchemaErrors
+- [x] Test empty formErrors array
+- [x] Test combined schema and rules errors
+- [x] Test export success when all validation passes
+- [x] Test preventDefault called
+- [x] **Subtotal:** 8 tests, 1-2 hours
 
-**Test Suite 3: Validation Edge Cases** (12 tests, 2-3 hours)
+**Test Suite 3: Validation Edge Cases** ✅ COMPLETE (12 tests, 2-3 hours)
 
-- [ ] Create file: `App-validation-edge-cases.test.jsx`
-- [ ] Test rulesValidation: tasks with no cameras array
-- [ ] Test rulesValidation: tasks with empty cameras array
-- [ ] Test rulesValidation: tasks with no camera_id field
-- [ ] Test rulesValidation: empty tasks array
-- [ ] Test rulesValidation: tasks without camera_id if no cameras
-- [ ] Test jsonschemaValidation: null formContent
-- [ ] Test jsonschemaValidation: undefined formContent
-- [ ] Test jsonschemaValidation: empty object formContent
-- [ ] Test jsonschemaValidation: multiple errors accumulation
-- [ ] Test jsonschemaValidation: empty errors for valid data
-- [ ] Test known bug: empty strings accepted (BUG #5)
-- [ ] Test known bug: whitespace-only strings accepted
-- [ ] **Subtotal:** 12 tests, 2-3 hours
+- [x] Create file: `App-validation-edge-cases.test.jsx`
+- [x] Test rulesValidation: tasks with no cameras array
+- [x] Test rulesValidation: tasks with empty cameras array
+- [x] Test rulesValidation: tasks with no camera_id field
+- [x] Test rulesValidation: empty tasks array
+- [x] Test rulesValidation: tasks without camera_id if no cameras
+- [x] Test jsonschemaValidation: null formContent
+- [x] Test jsonschemaValidation: undefined formContent
+- [x] Test jsonschemaValidation: empty object formContent
+- [x] Test jsonschemaValidation: multiple errors accumulation
+- [x] Test jsonschemaValidation: empty errors for valid data
+- [x] Test known bug: empty strings accepted (BUG #5)
+- [x] Test known bug: whitespace-only strings accepted
+- [x] **Subtotal:** 12 tests, 2-3 hours
 
-**Test Suite 4: updateFormData() Falsy Value Handling** (6 tests, 1 hour)
+**Test Suite 4: updateFormData() Falsy Value Handling** ✅ COMPLETE (6 tests, 1 hour)
 
-- [ ] Create file: `App-updateFormData-edge-cases.test.jsx`
-- [ ] Test index = 0 (falsy but valid)
-- [ ] Test value = 0 (falsy but valid)
-- [ ] Test value = "" (empty string)
-- [ ] Test value = null
-- [ ] Test value = undefined
-- [ ] Test key = null with index defined
-- [ ] **Subtotal:** 6 tests, 1 hour
+- [x] Create file: `App-updateFormData-edge-cases.test.jsx`
+- [x] Test index = 0 (falsy but valid)
+- [x] Test value = 0 (falsy but valid)
+- [x] Test value = "" (empty string)
+- [x] Test value = null
+- [x] Test value = undefined
+- [x] Test key = null with index defined
+- [x] **Subtotal:** 6 tests, 1 hour
 
-**Test Suite 5: Error Display Branch Coverage** (6 tests, 1 hour)
+**Test Suite 5: Error Display Branch Coverage** ✅ COMPLETE (6 tests, 1 hour)
 
-- [ ] Create file: `App-error-display-branches.test.jsx`
-- [ ] Test showErrorMessage: error with no instancePath
-- [ ] Test showErrorMessage: deeply nested instancePath
-- [ ] Test showErrorMessage: element not found gracefully
-- [ ] Test displayErrorOnUI: element ID not found
-- [ ] Test displayErrorOnUI: timeout clearing
-- [ ] Test displayErrorOnUI: rapid successive error displays
-- [ ] **Subtotal:** 6 tests, 1 hour
+- [x] Create file: `App-error-display-branches.test.jsx`
+- [x] Test showErrorMessage: error with no instancePath
+- [x] Test showErrorMessage: deeply nested instancePath
+- [x] Test showErrorMessage: element not found gracefully
+- [x] Test displayErrorOnUI: element ID not found
+- [x] Test displayErrorOnUI: timeout clearing
+- [x] Test displayErrorOnUI: rapid successive error displays
+- [x] **Subtotal:** 6 tests, 1 hour
 
-**Task 1.5.11 Total:** 42 tests, 7-10 hours
+**Task 1.5.11 Total:** 42 tests, 7-10 hours → ✅ **COMPLETED (2025-10-24)**
 
 **Why This Task is Critical:**
 
