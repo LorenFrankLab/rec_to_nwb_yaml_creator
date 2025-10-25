@@ -6,11 +6,11 @@ import InfoIcon from './InfoIcon';
 
 
 /**
- * Radio collection where multiple items can be selected
+ * Radio collection where only one item can be selected
  *
  * @param {Object} prop Custom element's properties
  *
- * @returns Virtual DOM collection for multi-select Radios
+ * @returns Virtual DOM collection for single-select radio buttons
  */
 const RadioList = (prop) => {
   const {
