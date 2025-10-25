@@ -1188,15 +1188,23 @@ File: `src/__tests__/unit/app/App-importFile.test.jsx`
 - [x] Commit: `phase2(bug-7): enforce non-empty strings in schema`
 - [x] **Actual Time:** 2 hours
 
-#### BUG #8: Float camera ID acceptance (Schema BUG #3)
+#### BUG #8: Float camera ID acceptance (Schema BUG #3) - ✅ ALREADY FIXED
 
-- [ ] Write test that fails for float camera ID
-- [ ] Update schema: `"type": "integer"` (if not already)
-- [ ] Verify test passes after fix
-- [ ] Test with all ID fields
-- [ ] Update baselines to expect rejection
-- [ ] Commit: `phase2(bug-7): enforce integer IDs in schema`
-- [ ] **Estimated Time:** 1-2 hours
+**INVESTIGATION RESULT:** This bug does NOT exist - schema already correctly
+enforces integer types for all ID fields.
+
+- [x] Investigated current schema - all ID fields have `"type": "integer"`
+- [x] Created 9 verification tests (all passing)
+  - Camera ID: rejects float (1.5, 0.5), accepts integer (0, 5)
+  - Electrode group ID: rejects float, accepts integer
+  - Ntrode IDs: rejects float ntrode_id and electrode_group_id
+  - Task camera_id array: integer enforcement working
+- [x] Verified JSON Schema (AJV) correctly rejects float values
+- [x] Test file: `schema-integer-id-verification.test.js` (9 tests passing)
+- [x] **Actual Time:** 30 minutes (investigation only, no fix needed)
+
+**CONCLUSION:** The baseline test comment suggesting floats are accepted
+was incorrect. The schema has always enforced integer types correctly.
 
 ### Medium Priority Bugs (P2)
 
