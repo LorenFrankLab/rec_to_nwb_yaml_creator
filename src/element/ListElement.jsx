@@ -111,7 +111,7 @@ ListElement.propTypes = {
   required: PropTypes.bool,
   readOnly: PropTypes.bool,
   inputPlaceholder: PropTypes.string,
-  metaData: PropTypes.oneOf([PropTypes.object]),
+  metaData: PropTypes.object,
   step: PropTypes.string,
   updateFormData: PropTypes.func,
   defaultValue: PropTypes.arrayOf(

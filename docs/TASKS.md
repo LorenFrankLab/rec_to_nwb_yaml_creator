@@ -1259,11 +1259,11 @@ was incorrect. The schema has always enforced integer types correctly.
 - [x] Ensure comments match actual behavior
 - [x] **Actual Time:** 30 minutes
 
-#### Incorrect PropTypes Syntax
+#### Incorrect PropTypes Syntax ✅ COMPLETE
 
-- [ ] Fix ListElement, SelectInputPairElement, ChannelMap
-- [ ] Use correct PropTypes methods
-- [ ] **Estimated Time:** 1 hour
+- [x] Fix ListElement, SelectInputPairElement, ChannelMap
+- [x] Use correct PropTypes methods
+- [x] **Actual Time:** 30 minutes
 
 #### Dead Code
 

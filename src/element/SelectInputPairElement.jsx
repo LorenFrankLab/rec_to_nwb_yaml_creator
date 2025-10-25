@@ -156,7 +156,7 @@ SelectInputPairElement.propTypes = {
   required: PropTypes.bool,
   step: PropTypes.string,
   metaData: PropTypes.instanceOf(Object),
-  defaultValue: PropTypes.oneOf([PropTypes.string, PropTypes.number]),
+  defaultValue: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   onBlur: PropTypes.func,
 };
 

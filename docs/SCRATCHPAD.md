@@ -9,6 +9,68 @@
 
 ## Phase 2 Week 10 Progress (Continued)
 
+### ✅ INCORRECT PROPTYPES SYNTAX (P3) - FIXED
+
+**Duration:** 30 minutes
+**Status:** ✅ COMPLETE
+**Date:** 2025-10-25
+**Impact:** Fixed incorrect PropTypes validators in 3 components
+
+#### Bug Description
+
+**Files Affected:**
+1. `src/element/ListElement.jsx` (line 114)
+2. `src/element/SelectInputPairElement.jsx` (line 159)
+3. `src/ntrode/ChannelMap.jsx` (line 137)
+
+**Symptoms:**
+- Using `PropTypes.oneOf([PropTypes.object])` instead of `PropTypes.object`
+- Using `PropTypes.oneOf([...])` when `PropTypes.oneOfType([...])` is needed
+- Using `PropTypes.instanceOf(Object)` for arrays instead of `PropTypes.arrayOf(...)`
+
+#### Fixes Applied
+
+**1. ListElement.jsx (line 114):**
+```javascript
+// BEFORE (INCORRECT)
+metaData: PropTypes.oneOf([PropTypes.object])
+
+// AFTER (CORRECT)
+metaData: PropTypes.object
+```
+**Issue:** `oneOf` expects an array of VALUES (like `['red', 'blue']`), not PropTypes validators.
+
+**2. SelectInputPairElement.jsx (line 159):**
+```javascript
+// BEFORE (INCORRECT)
+defaultValue: PropTypes.oneOf([PropTypes.string, PropTypes.number])
+
+// AFTER (CORRECT)
+defaultValue: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
+```
+**Issue:** Should use `oneOfType` when accepting multiple PropTypes validators.
+
+**3. ChannelMap.jsx (line 137):**
+```javascript
+// BEFORE (INCORRECT)
+nTrodeItems: PropTypes.instanceOf(Object)
+
+// AFTER (CORRECT)
+nTrodeItems: PropTypes.arrayOf(PropTypes.object)
+```
+**Issue:** `nTrodeItems` is an array, not a single object. `instanceOf(Object)` is also too generic.
+
+#### Verification
+
+**Tests Run:**
+- `ListElement.test.jsx`: ✅ 50/50 passing
+- `SelectInputPairElement.test.jsx`: ✅ 47/47 passing
+- `ChannelMap.test.jsx`: ✅ 46/46 passing
+
+**Result:** No regressions, PropTypes now correctly validate prop types
+
+---
+
 ### ✅ MISLEADING JSDOC COMMENTS (P3) - FIXED
 
 **Duration:** 30 minutes
