@@ -2,12 +2,80 @@
 
 **Current Phase:** Phase 2 - Bug Fixes
 **Status:** 🟢 IN PROGRESS - Week 10
-**Last Updated:** 2025-10-25
+**Last Updated:** 2025-10-25 (continued)
 **Branch:** `modern`
 
 ---
 
-## Phase 2 Week 10 Progress
+## Phase 2 Week 10 Progress (Continued)
+
+### ✅ BUG #4 FIXED: SelectInputPairElement null check
+
+**Duration:** 1 hour
+**Status:** ✅ COMPLETE
+**Approach:** Test-Driven Development (TDD)
+**Impact:** Fixed crash when number-only input provided to SelectInputPairElement
+
+#### Bug Description
+
+**File:** `src/element/SelectInputPairElement.jsx:38`
+
+**Symptom:** Application crashes with `TypeError: Cannot read properties of null (reading 'length')` when:
+- Component receives defaultValue with only numbers (e.g., "42", "0", "007")
+- User behavior: Import YAML with numeric-only behavioral event (rare but possible)
+
+**Root Cause:** Line 38 accesses `textPart.length` without checking if `textPart` is null:
+```javascript
+// Line 20: textPart can be null if input has no letters
+const textPart = textNumber.match(/[a-zA-Z]+/g);
+
+// Line 38: BUG - crashes if textPart is null
+if (textPart.length === 1 && eventsDescription.includes(textPart[0])) {
+  [text] = textPart;
+}
+```
+
+#### TDD Process
+
+**RED Phase:**
+1. Tests already existed documenting the bug (lines 118-127, 406-426)
+2. Updated tests to expect correct behavior instead of crashes
+3. Verified 4 tests failed with null error
+
+**GREEN Phase:**
+1. Added null check: `if (textPart && textPart.length === 1 && ...)`
+2. Updated test expectations to match HTML behavior (select shows first item)
+3. All 49 tests now pass
+
+#### Fix Applied
+
+```javascript
+// BEFORE (BUG)
+if (textPart.length === 1 && eventsDescription.includes(textPart[0])) {
+  [text] = textPart;
+}
+
+// AFTER (FIXED)
+if (textPart && textPart.length === 1 && eventsDescription.includes(textPart[0])) {
+  [text] = textPart;
+}
+```
+
+#### Test Coverage
+
+**File:** `src/__tests__/unit/components/SelectInputPairElement.test.jsx`
+
+**Tests Added/Updated:**
+1. Component test: `handles defaultValue with only number (no text)` - Tests "42" input
+2. Unit test: `handles number-only input "42" correctly` - Returns {text: '', number: 42}
+3. Unit test: `handles number-only input "0" correctly` - Returns {text: '', number: 0}
+4. Unit test: `handles number with leading zeros "007" correctly` - Returns {text: '', number: 7}
+
+**Total Tests:** 49 tests, all passing
+
+---
+
+## Phase 2 Week 10 Progress (Earlier)
 
 ### ✅ CRITICAL BUGS FIXED: YAML.parse() + date_of_birth Corruption
 

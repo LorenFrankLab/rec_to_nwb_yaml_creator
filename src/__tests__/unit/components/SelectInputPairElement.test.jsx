@@ -115,15 +115,19 @@ describe('SelectInputPairElement', () => {
       expect(input).toHaveValue(null); // Empty number input shows null
     });
 
-    it('handles defaultValue with only number (no text) - BUG: crashes', () => {
-      // BUG: Line 38 tries to access textPart.length without null check
-      // When input is "42", textPart is null, causing: Cannot read properties of null (reading 'length')
-      // This test documents the current BROKEN behavior
-      // Expected after fix: Should handle gracefully and return { text: '', number: 42 }
+    it('handles defaultValue with only number (no text)', () => {
+      // After fix: Should handle gracefully when textPart is null
+      // When input is "42", textPart is null from regex, but should not crash
+      // Expected: text = '' (empty), which causes select to show first option "Din"
+      // This is correct HTML behavior - select always displays a value
 
-      expect(() => {
-        render(<SelectInputPairElement {...defaultProps} defaultValue="42" />);
-      }).toThrow("Cannot read properties of null (reading 'length')");
+      render(<SelectInputPairElement {...defaultProps} defaultValue="42" />);
+
+      const select = screen.getByRole('combobox');
+      const input = screen.getByRole('spinbutton');
+
+      expect(select).toHaveValue('Din'); // Empty text falls back to first item
+      expect(input).toHaveValue(42); // Number part parsed correctly
     });
   });
 
@@ -402,27 +406,26 @@ describe('splitTextNumber utility function', () => {
     });
   });
 
-  describe('Number-Only Input - BUG: Crashes', () => {
-    it('documents BUG: number-only input "42" crashes', () => {
-      // BUG: Line 38 checks textPart.length without null check
-      // When input is "42", textPart is null from line 20: textNumber.match(/[a-zA-Z]+/g)
-      // This causes TypeError: Cannot read properties of null (reading 'length')
+  describe('Number-Only Input', () => {
+    it('handles number-only input "42" correctly', () => {
+      // After fix: When input is "42", textPart is null from regex
+      // Should handle gracefully and return { text: '', number: 42 }
 
-      expect(() => {
-        splitTextNumber('42');
-      }).toThrow("Cannot read properties of null (reading 'length')");
+      const result = splitTextNumber('42');
+      expect(result.text).toBe('');
+      expect(result.number).toBe(42);
     });
 
-    it('documents BUG: number-only input "0" crashes', () => {
-      expect(() => {
-        splitTextNumber('0');
-      }).toThrow("Cannot read properties of null (reading 'length')");
+    it('handles number-only input "0" correctly', () => {
+      const result = splitTextNumber('0');
+      expect(result.text).toBe('');
+      expect(result.number).toBe(0);
     });
 
-    it('documents BUG: number with leading zeros "007" crashes', () => {
-      expect(() => {
-        splitTextNumber('007');
-      }).toThrow("Cannot read properties of null (reading 'length')");
+    it('handles number with leading zeros "007" correctly', () => {
+      const result = splitTextNumber('007');
+      expect(result.text).toBe('');
+      expect(result.number).toBe(7); // parseInt strips leading zeros
     });
   });
 

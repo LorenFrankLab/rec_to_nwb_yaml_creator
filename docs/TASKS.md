@@ -1145,13 +1145,13 @@ File: `src/__tests__/unit/app/App-importFile.test.jsx`
 
 #### BUG #4: SelectInputPairElement.jsx:38 null check missing
 
-- [ ] Read SelectInputPairElement.jsx lines 30-45
-- [ ] Write test with number-only input ("42")
-- [ ] Verify test crashes with "Cannot read properties of null"
-- [ ] Add null check before accessing `.length`
-- [ ] Verify test passes
-- [ ] Commit: `phase2(bug-4): fix SelectInputPairElement null check`
-- [ ] **Estimated Time:** 1 hour
+- [x] Read SelectInputPairElement.jsx lines 30-45
+- [x] Write test with number-only input ("42")
+- [x] Verify test crashes with "Cannot read properties of null"
+- [x] Add null check before accessing `.length`
+- [x] Verify test passes
+- [x] Commit: `phase2(bug-4): fix SelectInputPairElement null check`
+- [x] **Actual Time:** 1 hour
 
 **Note:** Original BUG #3 (InputElement date formatting) was completed as part of BUG #3 (P0) above.
 

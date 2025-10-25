@@ -35,7 +35,7 @@ export const splitTextNumber = (textNumber) => {
   //   number = Number.isNaN(parsedInt) ? 1 : parsedInt;
   //   [text] = textPart;
   // }
-  if (textPart.length === 1 && eventsDescription.includes(textPart[0])) {
+  if (textPart && textPart.length === 1 && eventsDescription.includes(textPart[0])) {
     [text] = textPart;
   }
 
