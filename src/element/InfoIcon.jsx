@@ -1,6 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 
 
 /**
@@ -14,7 +15,7 @@ const InfoIcon = (prop) => {
 
   return (
     <span title={infoText}>
-      <FontAwesomeIcon icon="circle-info" size={size} className="info-icon" />
+      <FontAwesomeIcon icon={faCircleInfo} size={size} className="info-icon" />
     </span>
   );
 };
