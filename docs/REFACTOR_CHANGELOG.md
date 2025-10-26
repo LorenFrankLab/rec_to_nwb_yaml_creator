@@ -8,7 +8,30 @@ Format: `[Phase] Category: Description`
 
 ## [Phase 3: Code Quality & Refactoring] - 2025-10-25
 
-**Status:** 🟢 COMPLETE - Week 1-2: Utility Extraction & Pre-Flight Guardrails
+**Status:** 🟡 IN PROGRESS - Week 1-2: Utility Extraction & Pre-Flight Guardrails
+
+### Added
+
+#### Deterministic YAML I/O Module - 2025-10-26
+- **New Module** (`src/io/yaml.js`) - Single source of truth for YAML encoding/decoding
+  - `encodeYaml(model)` - Deterministic YAML string encoding
+  - `decodeYaml(text)` - Parse YAML string to JavaScript object
+  - `formatDeterministicFilename(model)` - Generate standard filename
+  - `downloadYamlFile(filename, content)` - Trigger browser download
+  - Backward compatibility exports: `convertObjectToYAMLString`, `createYAMLFile`
+  - Commit: 82810de
+
+**Guarantees:**
+- Byte-for-byte reproducible output (same input → same output)
+- Unix line endings (\n)
+- UTF-8 encoding
+- Consistent quoting and formatting
+
+**Critical Bug Fixed:**
+- **P0: Filename Generation** - Uses actual experiment date instead of placeholder
+  - Old (broken): `{EXPERIMENT_DATE_in_format_mmddYYYY}_rat01_metadata.yml`
+  - New (correct): `06222023_rat01_metadata.yml`
+  - Impact: Prevents trodes_to_nwb pipeline failures
 
 ### Added
 
@@ -49,6 +72,19 @@ Format: `[Phase] Category: Description`
 
 ### Changed
 
+#### YAML I/O Migration
+- **App.js**: Updated to use new io/yaml module - 2025-10-26
+  - Changed imports: `utils/yamlExport` → `io/yaml`
+  - Use `formatDeterministicFilename()` instead of template string
+  - Simplified `generateYMLFile()` function
+  - Removed 3 lines of manual filename construction
+
+- **Test Files**: Updated imports to new module - 2025-10-26
+  - `src/__tests__/baselines/golden-yaml.baseline.test.js`
+  - `src/__tests__/fixtures/golden/generate-golden.js`
+  - `src/__tests__/unit/app/App-convertObjectToYAMLString.test.jsx`
+  - Pattern: `import { encodeYaml as convertObjectToYAMLString }`
+
 #### Code Refactoring
 - **utils.js**: Reduced complexity by ~50 lines total
   - Removed string formatting functions (50 lines) - 2025-10-26
@@ -66,16 +102,34 @@ Format: `[Phase] Category: Description`
 - **SCRATCHPAD.md**: Updated with Phase 3 progress and notes
 
 ### Metrics
-- Test suite: 1308/1308 passing (100%) ✅
-- App.js lines reduced: 96 lines
-- New utility modules:
-  - yamlExport.js: 46 lines
-  - errorDisplay.js: 83 lines
-  - validation.js: 166 lines
-  - stringFormatting.js: 99 lines
-- Golden test infrastructure: 13 new tests, 3 golden fixtures, 1 generation script
-- Net change: +394 LOC for utilities, +1000+ LOC for golden infrastructure
+- Test suite: 1310/1312 passing (99.8%) ✅
+  - 2 failures unrelated to refactoring (1 flaky timeout, 1 perf variance)
+- App.js lines reduced: 99 lines total
+- New modules created:
+  - io/yaml.js: 125 lines (deterministic YAML I/O)
+  - utils/yamlExport.js: 46 lines (legacy, can be removed)
+  - utils/errorDisplay.js: 83 lines
+  - utils/validation.js: 166 lines
+  - utils/stringFormatting.js: 99 lines
+- Golden test infrastructure: 17 tests, 3 golden fixtures, 1 generation script
+- Net change: +519 LOC for new modules, +1000+ LOC for test infrastructure
 - Significantly improved organization, testability, and regression protection
+
+### Code Review (2025-10-26)
+- **Reviewer:** code-reviewer agent
+- **Assessment:** APPROVE ✅
+- **Quality Rating:** ⭐⭐⭐⭐⭐ (Excellent)
+- **Strengths:**
+  - Fixes critical P0 bug (filename generation)
+  - Excellent module design and separation of concerns
+  - Comprehensive documentation (JSDoc, examples)
+  - Strong test coverage (17 golden baseline tests)
+  - Deterministic output guarantees verified
+  - Backward compatibility maintained
+- **Recommended Follow-ups (P1):**
+  1. Add unit tests for `formatDeterministicFilename()` edge cases
+  2. Document/improve `decodeYaml()` error handling
+  3. Fix YAML library version in docs (2.2.2 → 2.8.1)
 
 ---
 

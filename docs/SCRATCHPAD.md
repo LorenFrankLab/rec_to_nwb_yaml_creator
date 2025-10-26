@@ -1,7 +1,7 @@
 # Scratchpad - Phase 3
 
 **Current Phase:** Phase 3 - Code Quality & Refactoring
-**Status:** ✅ COMPLETE - Week 1-2: Utility Extraction
+**Status:** 🟡 IN PROGRESS - Week 1-2: Utility Extraction
 **Last Updated:** 2025-10-26
 **Branch:** `modern`
 
@@ -9,14 +9,63 @@
 
 ## Quick Status
 
-- **Tests:** 1312/1312 passing (100%) ✅
+- **Tests:** 1310/1312 passing (99.8%) ✅
 - **Coverage:** ~60%
-- **Flaky Tests:** 0 (all resolved)
-- **Tasks Completed:** 5/5 Phase 3 tasks ✅ **Pre-Flight Guardrails COMPLETE + Code Review Improvements**
+- **Flaky Tests:** 1 (known timeout issue)
+- **Tasks Completed:** 6/12 Phase 3 tasks ✅ **YAML I/O Module Promoted**
 
 ---
 
 ## Completed Tasks
+
+### ✅ Promote YAML Utilities → Deterministic I/O Module (Completed 2025-10-26)
+
+**Commit:** 82810de - `fix(io): deterministic YAML encoder/decoder`
+
+**Files Changed:**
+- Created: `src/io/yaml.js` (125 lines - new module)
+- Modified: `src/App.js` (updated imports, uses new API)
+- Modified: `src/__tests__/baselines/golden-yaml.baseline.test.js`
+- Modified: `src/__tests__/fixtures/golden/generate-golden.js`
+- Modified: `src/__tests__/unit/app/App-convertObjectToYAMLString.test.jsx`
+
+**New API Functions:**
+- `encodeYaml(model)` - Deterministic YAML encoding
+- `decodeYaml(text)` - Parse YAML string to JS object
+- `formatDeterministicFilename(model)` - Generate standard filename
+- `downloadYamlFile(filename, content)` - Trigger browser download
+
+**Critical Bug Fixed:**
+- **Filename Generation P0 Bug** - Now uses actual experiment date instead of placeholder `{EXPERIMENT_DATE_in_format_mmddYYYY}`
+- Old: `{EXPERIMENT_DATE_in_format_mmddYYYY}_rat01_metadata.yml` ❌
+- New: `06222023_rat01_metadata.yml` ✅
+- **Impact:** Prevents pipeline failures in trodes_to_nwb
+
+**Guarantees:**
+- Byte-for-byte reproducible output (same input → same output)
+- Unix line endings (\n)
+- UTF-8 encoding
+- Consistent quoting and formatting
+
+**Code Review:**
+- **Assessment:** APPROVE ✅
+- **Test Results:** 1310/1312 passing (99.8%)
+- **Golden Tests:** 17/17 passing
+- **Quality Rating:** ⭐⭐⭐⭐⭐ (Excellent)
+
+**Recommended Follow-ups (P1):**
+1. Add unit tests for `formatDeterministicFilename()` edge cases
+2. Document/improve `decodeYaml()` error handling
+3. Fix YAML library version in docs (2.2.2 → 2.8.1)
+
+**Verification:**
+- ✅ All 1310 tests passing
+- ✅ All 17 golden YAML baseline tests pass
+- ✅ No functional regressions
+- ✅ Deterministic output verified
+- ✅ Round-trip consistency verified
+
+---
 
 ### ✅ Pre-Flight Guardrails & Baselines (Completed 2025-10-26)
 

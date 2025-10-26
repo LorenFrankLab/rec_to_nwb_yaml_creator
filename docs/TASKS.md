@@ -68,29 +68,107 @@
 - [x] Commit: `chore: lint, CI, and golden YAML fixtures`
 - [x] **Estimated Time:** 1 hour (Completed 2025-10-26)
 
-### Promote YAML utilities → single deterministic IO module
+### Promote YAML utilities → single deterministic IO module ✅ COMPLETE
 >
 > You already extracted YAML export helpers. Make them the single source of truth.
 
-- [ ] **Rename/Move:** `src/utils/yamlExport.js` → `src/io/yaml.js`
-- [ ] **API:** `encodeYaml(model)`, `decodeYaml(text)`, `formatDeterministicFilename(model)`
-- [ ] **Determinism:** sorted keys, `\n` EOL, UTF-8, explicit quoting where required
-- [ ] **Codemod:** replace all imports of `utils/yamlExport` with `io/yaml`
-- [ ] **Tests:** golden equality across two consecutive exports; round-trip parity
-- [ ] Commit: `fix(io): deterministic YAML encoder/decoder`
+- [x] **Rename/Move:** `src/utils/yamlExport.js` → `src/io/yaml.js`
+- [x] **API:** `encodeYaml(model)`, `decodeYaml(text)`, `formatDeterministicFilename(model)`
+- [x] **Determinism:** sorted keys, `\n` EOL, UTF-8, explicit quoting where required
+- [x] **Codemod:** replace all imports of `utils/yamlExport` with `io/yaml`
+- [x] **Tests:** golden equality across two consecutive exports; round-trip parity
+- [x] Commit: `fix(io): deterministic YAML encoder/decoder` (82810de)
 
-### ✅ Promote validation utilities → pure validation system (event-driven)
+### Promote validation utilities → pure validation system (event-driven)
 >
 > You already extracted validation helpers. Rehome them and make timing explicit.
 
-- [ ] **Move/Split:** `src/utils/validation.js` → `src/validation/`
-  - `schemaValidation.js` (AJV/TypeBox)
-  - `rulesValidation.js` (domain rules)
-  - `index.js` → `validate(model): Issue[]`
-- [ ] **Timing:** No render-time validation; trigger via “Validate All”/submit
-- [ ] **A11y:** Map `Issue{path,code,severity,message}` to inputs via `aria-describedby`
-- [ ] **Tests:** fixture issues stable; interaction test ensures no per-keystroke validation
-- [ ] Commit: `refactor(validation): pure, event-driven validation system`
+**Goal:** Centralize validation logic while improving user experience with immediate feedback.
+**Outcome:** Users get fast inline hints while typing, formal validation on blur, and full cross-field validation on “Validate All” or export.
+
+---
+
+#### Validation Architecture Setup
+
+- [ ] **Move** existing `src/utils/validation.js` → `src/validation/`
+  - `schemaValidation.js` — JSON Schema / AJV structural rules
+  - `rulesValidation.js` — custom logical / cross-field rules
+  - `paths.js` — normalize AJV paths → `subject[0].weight` style
+  - `index.js` — `validate(model): Issue[]`
+- [ ] **Define Issue type:** `{ path, code, severity, message }`
+- [ ] **Unify output:** both schema and rules validations return `Issue[]`
+- [ ] **Sort deterministically** (`path + code`) for stable snapshot tests
+- [ ] Commit: `refactor(validation): unify validation modules`
+
+---
+
+#### Lightweight “Instant Feedback” Layer
+
+- [ ] Create `src/validation/quickChecks.js`
+  - Cheap synchronous checks: required, format, enum, type
+  - Runs on debounced `onChange` (250–400 ms)
+- [ ] Add `useQuickChecks(path, value)` hook for instant hints
+- [ ] Display hint text (subtle, not role="alert") below inputs
+- [ ] Ensure **no ARIA announcements** while typing
+- [ ] Commit: `feat(validation): add quickChecks instant hint layer`
+
+---
+
+#### Field-Scoped Validation (on Blur)
+
+- [ ] Add `validateField(model, path)` in `src/validation/index.js`
+  - Calls full `validate(model)` but filters results to that path subtree
+- [ ] In inputs:
+  - Call `onBlur(path)` → runs `validateField()`
+  - Update `fieldIssues[path]` in state
+- [ ] Errors render in `<div id="${id}-err" role="alert">…</div>`
+  - Inputs use `aria-describedby={errorId}`
+- [ ] Commit: `refactor(validation): add onBlur field validation`
+
+---
+
+#### Full-Form Validation (on Demand)
+
+- [ ] Implement `onValidateAll()` (Validate All button or pre-export)
+  - Runs `validate(model)`
+  - Populates `globalIssues` and a summary panel
+- [ ] Errors block export; warnings do not
+- [ ] Include “focus first error” behavior
+- [ ] Commit: `feat(validation): add full-form Validate All workflow`
+
+---
+
+#### Accessibility & UX Alignment
+
+- [ ] Every form field has a persistent HTML id **stable id** (`useStableId()`) for labels and error binding
+- [ ] Errors/warnings linked via `aria-describedby`
+- [ ] Section summary uses `aria-live="polite"` for new issues
+- [ ] Keyboard navigation cycles through invalid fields
+- [ ] Commit: `fix(a11y): ensure validation messages accessible`
+
+---
+
+#### Testing & Performance
+
+- [ ] **Fixture tests:**
+  - `validate(model)` produces stable, sorted issues
+  - `validateField()` returns correct subset
+  - `quickChecks()` results match expectations
+- [ ] **Timing tests:** validate not called on every keystroke (spy count ≤ 1)
+- [ ] **Golden YAML export still identical** after validation triggers
+- [ ] **Accessibility smoke:** no missing label/description errors (axe)
+- [ ] Commit: `test(validation): fixture and timing tests`
+
+---
+
+### Exit Criteria
+
+- [ ] Users see immediate field hints while typing
+- [ ] Errors appear on blur or Validate All (no flicker while typing)
+- [ ] Cross-field errors only shown on Validate All/export
+- [ ] All 3 validation layers (quick → field → global) share one source of truth
+- [ ] Performance within 5 ms per keystroke; no UI jank
+- [ ] Tests + a11y checks pass
 
 ### Stable IDs for List Items (fix incorrect key usage)
 
