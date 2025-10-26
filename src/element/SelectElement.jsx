@@ -58,6 +58,9 @@ const SelectElement = (prop) => {
     }
   };
 
+  // Generate hint ID for aria-describedby linking
+  const hintId = validation ? `${id}-hint` : undefined;
+
   return (
     <label className="container" htmlFor={id}>
       <div className="item1" title={title}>
@@ -71,6 +74,7 @@ const SelectElement = (prop) => {
           onBlur={handleBlur}
           value={defaultValue}
           required={required}
+          aria-describedby={hintId}
         >
           {addBlankOption ? (
             <option value="" name={name}>
@@ -102,7 +106,7 @@ const SelectElement = (prop) => {
           })}
         </select>
         {validation && (
-          <HintDisplay hint={quickChecks.hint} isRequired={required} />
+          <HintDisplay id={hintId} hint={quickChecks.hint} isRequired={required} />
         )}
       </div>
     </label>

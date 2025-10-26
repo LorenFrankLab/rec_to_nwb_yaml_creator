@@ -50,6 +50,9 @@ const DataListElement = (prop) => {
     onBlur(e);
   };
 
+  // Generate hint ID for aria-describedby linking
+  const hintId = validation ? `${id}-hint` : undefined;
+
   return (
     <label className="container" htmlFor={id}>
       <div className="item1">
@@ -67,6 +70,7 @@ const DataListElement = (prop) => {
           required={required}
           onChange={validation ? (e) => quickChecks.validate(name, e.target.value) : undefined}
           onBlur={handleBlur}
+          aria-describedby={hintId}
         />
         <datalist id={`${id}-list`} name={name}>
           {dataItems.map((dataItem, dataItemIndex) => {
@@ -82,7 +86,7 @@ const DataListElement = (prop) => {
           })}
         </datalist>
         {validation && (
-          <HintDisplay hint={quickChecks.hint} isRequired={required} />
+          <HintDisplay id={hintId} hint={quickChecks.hint} isRequired={required} />
         )}
       </div>
     </label>

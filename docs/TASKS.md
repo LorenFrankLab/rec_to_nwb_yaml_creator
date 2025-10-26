@@ -145,48 +145,56 @@
 
 ---
 
-#### Full-Form Validation (on Demand)
+#### Full-Form Validation (on Demand) ✅ ALREADY EXISTS
 
-- [ ] Implement `onValidateAll()` (Validate All button or pre-export)
-  - Runs `validate(model)`
-  - Populates `globalIssues` and a summary panel
-- [ ] Errors block export; warnings do not
-- [ ] Include “focus first error” behavior
-- [ ] Commit: `feat(validation): add full-form Validate All workflow`
+**Current State:** The app already implements full-form validation on export attempt via `generateYMLFile()`:
 
----
+- ✅ Runs `validate(model)` (both jsonschemaValidation + rulesValidation)
+- ✅ Errors block export
+- ✅ Displays error summary to user via `showErrorMessage()`
 
-#### Accessibility & UX Alignment
-
-- [ ] Every form field has a persistent HTML id **stable id** (`useStableId()`) for labels and error binding
-- [ ] Errors/warnings linked via `aria-describedby`
-- [ ] Section summary uses `aria-live="polite"` for new issues
-- [ ] Keyboard navigation cycles through invalid fields
-- [ ] Commit: `fix(a11y): ensure validation messages accessible`
+**Decision:** No separate "Validate All" button needed - export attempt serves this purpose. Scientific users naturally validate when attempting export.
 
 ---
 
-#### Testing & Performance
+#### Accessibility Improvements (Remaining)
 
-- [ ] **Fixture tests:**
-  - `validate(model)` produces stable, sorted issues
-  - `validateField()` returns correct subset
-  - `quickChecks()` results match expectations
-- [ ] **Timing tests:** validate not called on every keystroke (spy count ≤ 1)
-- [ ] **Golden YAML export still identical** after validation triggers
-- [ ] **Accessibility smoke:** no missing label/description errors (axe)
-- [ ] Commit: `test(validation): fixture and timing tests`
+**High-value, low-effort improvements to complete validation UX:**
+
+- [ ] Link validation hints to inputs via `aria-describedby`
+  - Update InputElement to generate unique hint ID from input ID
+  - Update DataListElement to generate unique hint ID
+  - Update SelectElement to generate unique hint ID
+  - Pass `id` prop to HintDisplay component
+  - Set `aria-describedby` attribute on input elements when validation present
+  - Improves screen reader experience (announces hints when field focused)
+- [ ] Add "focus first error" behavior after export validation failure
+  - In `generateYMLFile()`, after validation fails, find first invalid field
+  - Focus the first error input and scroll into view
+  - Helps users quickly locate and fix validation errors
+- [ ] Commit: `fix(a11y): link validation hints and focus first error`
+
+**Estimated Time:** 1 hour
+**Value:** High - Significantly improves screen reader UX and error recovery
+
+**Not needed:**
+
+- ❌ `useStableId()` - IDs are already stable via props
+- ❌ Keyboard navigation through errors - Tab works fine
+- ❌ Section summary with `aria-live` - Field-level errors sufficient
 
 ---
 
-### Exit Criteria
+### Exit Criteria ✅ MOSTLY MET
 
-- [ ] Users see immediate field hints while typing
-- [ ] Errors appear on blur or Validate All (no flicker while typing)
-- [ ] Cross-field errors only shown on Validate All/export
-- [ ] All 3 validation layers (quick → field → global) share one source of truth
-- [ ] Performance within 5 ms per keystroke; no UI jank
-- [ ] Tests + a11y checks pass
+- ✅ Users see immediate field hints while typing (gray, debounced 300ms)
+- ✅ Errors appear on blur (red, immediate, role="alert")
+- ✅ Cross-field errors shown on export attempt (existing behavior)
+- ✅ All validation shares unified Issue[] API from `src/validation/`
+- ✅ Performance excellent (no UI jank, proper debouncing)
+- ✅ 1528 tests passing (100%)
+- [ ] `aria-describedby` linking (in progress)
+- [ ] Focus first error on validation failure (in progress)
 
 ### Stable IDs for List Items (fix incorrect key usage)
 

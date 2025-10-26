@@ -103,6 +103,9 @@ const InputElement = (prop) => {
     return shortDate;
   };
 
+  // Generate hint ID for aria-describedby linking
+  const hintId = validation ? `${id}-hint` : undefined;
+
   return (
     <label className="container" htmlFor={id}>
       <div className="item1">
@@ -124,9 +127,10 @@ const InputElement = (prop) => {
           onInput={validation ? handleInput : undefined}
           onBlur={handleBlur}
           pattern={pattern}
+          aria-describedby={hintId}
         />
         {validation && (
-          <HintDisplay hint={quickChecks.hint} isRequired={required} />
+          <HintDisplay id={hintId} hint={quickChecks.hint} isRequired={required} />
         )}
       </div>
     </label>

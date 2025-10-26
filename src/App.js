@@ -499,6 +499,7 @@ const generateYMLFile = (e) => {
     return;
   }
 
+  // Display errors to user
   if (!isValid) {
     jsonSchemaErrors?.forEach((error) => {
       showErrorMessage(error);
@@ -510,6 +511,21 @@ const generateYMLFile = (e) => {
       displayErrorOnUI(error.id, error.message);
     });
   }
+
+  // Focus first invalid field for better accessibility
+  // Wait for error messages to be displayed in DOM
+  setTimeout(() => {
+    // Try to find first field with custom validity error (from displayErrorOnUI)
+    const firstInvalidField = document.querySelector('input:invalid, select:invalid, textarea:invalid');
+
+    if (firstInvalidField) {
+      firstInvalidField.focus();
+      firstInvalidField.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }
+  }, 100);
 };
 
 const duplicateArrayItem = (index, key) => {
