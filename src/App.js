@@ -978,6 +978,7 @@ useEffect(() => {
                 };
                 onBlur({ target }, { key: 'subject' });
               }}
+              validation={{ type: 'required' }}
             />
             <InputElement
               id="subject-weight"
@@ -1392,6 +1393,7 @@ useEffect(() => {
                             index,
                           })
                         }
+                        validation={{ type: 'required' }}
                       />
                       <InputElement
                         id={`associated_files-path-${index}`}
@@ -1406,6 +1408,7 @@ useEffect(() => {
                             index,
                           })
                         }
+                        validation={{ type: 'required' }}
                       />
                       <RadioList
                         id={`associated_files-taskEpoch-${index}`}
@@ -1539,6 +1542,7 @@ useEffect(() => {
               required
               defaultValue={formData.units.analog}
               onBlur={(e) => onBlur(e, { key: 'units' })}
+              validation={{ type: 'required' }}
             />
             <InputElement
               id="behavioralEvents"
@@ -1548,6 +1552,7 @@ useEffect(() => {
               placeholder="Behavioral Events"
               defaultValue={formData.units.behavioral_events}
               onBlur={(e) => onBlur(e, { key: 'units' })}
+              validation={{ type: 'required' }}
             />
           </div>
         </details>
@@ -1588,6 +1593,7 @@ useEffect(() => {
           placeholder="Default Header File Path"
           defaultValue={formData.default_header_file_path}
           onBlur={(e) => onBlur(e)}
+          validation={{ type: 'required' }}
         />
       </div>
       <div id="behavioral_events-area" className="area-region">
@@ -1712,6 +1718,7 @@ useEffect(() => {
                       onBlur={(e) =>
                         onBlur(e, { key, index })
                       }
+                      validation={{ type: 'required' }}
                     />
                     {/* <InputElement
                       id={`opto_excitation_source-model_name-${index}`}
@@ -1750,6 +1757,7 @@ useEffect(() => {
                       onBlur={(e) =>
                         onBlur(e, { key, index })
                       }
+                      validation={{ type: 'required' }}
                     />
                     <InputElement
                       id={`opto_excitation_source-wavelength_in_nm-${index}`}
@@ -1762,6 +1770,7 @@ useEffect(() => {
                       onBlur={(e) =>
                         onBlur(e, { key, index })
                       }
+                      validation={{ type: 'numberRange', min: 0 }}
                     />
                     <InputElement
                       id={`opto_excitation_source-power_in_W-${index}`}
@@ -1774,6 +1783,7 @@ useEffect(() => {
                       onBlur={(e) =>
                         onBlur(e, { key, index })
                       }
+                      validation={{ type: 'numberRange', min: 0 }}
                     />
                     <InputElement
                      id = {`opto_excitation_source-intensity_in_W_per_m2-${index}`}
@@ -1786,6 +1796,7 @@ useEffect(() => {
                       onBlur={(e) =>
                         onBlur(e, { key, index })
                       }
+                      validation={{ type: 'numberRange', min: 0 }}
                     />
                   </div>
                 </details>
@@ -1831,6 +1842,7 @@ useEffect(() => {
                     onBlur={(e) =>
                       onBlur(e, { key, index })
                     }
+                    validation={{ type: 'required' }}
                   />
                   <SelectElement
                     id = {`optical_fiber-hardware_name-${index}`}
@@ -1857,6 +1869,7 @@ useEffect(() => {
                     onBlur={(e) =>
                       onBlur(e, { key, index })
                     }
+                    validation={{ type: 'required' }}
                   />
                   <RadioList
                    id={`optical_fiber-hemisphere-${index}`}
@@ -1886,6 +1899,7 @@ useEffect(() => {
                     onBlur={(e) =>
                       onBlur(e, { key, index })
                     }
+                    validation={{ type: 'required' }}
                   />
                   <InputElement
                     id={`optical_fiber-ap_in_mm-${index}`}
@@ -1899,6 +1913,7 @@ useEffect(() => {
                     onBlur={(e) =>
                       onBlur(e, { key, index })
                     }
+                    validation={{ type: 'required' }}
                   />
                   <InputElement
                     id={`optical_fiber-ml_in_mm-${index}`}
@@ -1912,6 +1927,7 @@ useEffect(() => {
                     onBlur={(e) =>
                       onBlur(e, { key, index })
                     }
+                    validation={{ type: 'required' }}
                   />
                   <InputElement
                     id={`optical_fiber-dv_in_mm-${index}`}
@@ -1925,6 +1941,7 @@ useEffect(() => {
                     onBlur={(e) =>
                       onBlur(e, { key, index })
                     }
+                    validation={{ type: 'required' }}
                   />
                   <InputElement
                     id={`optical_fiber-roll_in_deg-${index}`}
@@ -1938,6 +1955,7 @@ useEffect(() => {
                     onBlur={(e) =>
                       onBlur(e, { key, index })
                     }
+                    validation={{ type: 'required' }}
                   />
                   <InputElement
                     id={`optical_fiber-pitch_in_deg-${index}`}
@@ -1951,6 +1969,7 @@ useEffect(() => {
                     onBlur={(e) =>
                       onBlur(e, { key, index })
                     }
+                    validation={{ type: 'required' }}
                   />
                   <InputElement
                     id={`optical_fiber-yaw_in_deg-${index}`}
@@ -1964,6 +1983,7 @@ useEffect(() => {
                     onBlur={(e) =>
                       onBlur(e, { key, index })
                     }
+                    validation={{ type: 'required' }}
                   />
                 </div>
                 </details>
@@ -2009,6 +2029,7 @@ useEffect(() => {
                       onBlur={(e) =>
                         onBlur(e, { key, index })
                       }
+                      validation={{ type: 'required' }}
                     />
                     <InputElement
                       id={`virus_injection-description-${index}`}
@@ -2021,6 +2042,7 @@ useEffect(() => {
                       onBlur={(e) =>
                         onBlur(e, { key, index })
                       }
+                      validation={{ type: 'required' }}
                     />
                     <SelectElement
                         id={`virus_injection-virus_name-${index}`}
@@ -2048,6 +2070,7 @@ useEffect(() => {
                       onBlur={(e) =>
                         onBlur(e, { key, index })
                       }
+                      validation={{ type: 'numberRange', min: 0 }}
                     />
                     <InputElement
                       id={`virus_injection-titer_in_vg_per_ml-${index}`}
@@ -2061,6 +2084,7 @@ useEffect(() => {
                       onBlur={(e) =>
                         onBlur(e, { key, index })
                       }
+                      validation={{ type: 'numberRange', min: 0 }}
                     />
                     <RadioList
                       id={`virus_injection-hemisphere-${index}`}
@@ -2090,6 +2114,7 @@ useEffect(() => {
                       onBlur={(e) =>
                         onBlur(e, { key, index })
                       }
+                      validation={{ type: 'required' }}
                     />
                     <InputElement
                       id={`virus_injection-ap_in_mm-${index}`}
@@ -2103,6 +2128,7 @@ useEffect(() => {
                       onBlur={(e) =>
                         onBlur(e, { key, index })
                       }
+                      validation={{ type: 'required' }}
                     />
                     <InputElement
                       id={`virus_injection-ml_in_mm-${index}`}
@@ -2116,6 +2142,7 @@ useEffect(() => {
                       onBlur={(e) =>
                         onBlur(e, { key, index })
                       }
+                      validation={{ type: 'required' }}
                     />
                     <InputElement
                       id={`virus_injection-dv_in_mm-${index}`}
@@ -2129,6 +2156,7 @@ useEffect(() => {
                       onBlur={(e) =>
                         onBlur(e, { key, index })
                       }
+                      validation={{ type: 'required' }}
                     />
                     <InputElement
                       id={`virus_injection-roll_in_deg-${index}`}
@@ -2142,6 +2170,7 @@ useEffect(() => {
                       onBlur={(e) =>
                         onBlur(e, { key, index })
                       }
+                      validation={{ type: 'required' }}
                     />
                     <InputElement
                       id={`virus_injection-pitch_in_deg-${index}`}
@@ -2155,6 +2184,7 @@ useEffect(() => {
                       onBlur={(e) =>
                         onBlur(e, { key, index })
                       }
+                      validation={{ type: 'required' }}
                     />
                     <InputElement
                       id={`virus_injection-yaw_in_deg-${index}`}
@@ -2168,6 +2198,7 @@ useEffect(() => {
                       onBlur={(e) =>
                         onBlur(e, { key, index })
                       }
+                      validation={{ type: 'required' }}
                     />
 
 
@@ -2219,6 +2250,7 @@ useEffect(() => {
                           index,
                         })
                       }
+                      validation={{ type: 'required' }}
                     />
                     <InputElement
                       id = {`fs_gui_yamls-power_in_mW-${index}`}
@@ -2234,6 +2266,7 @@ useEffect(() => {
                           index,
                         })
                       }
+                      validation={{ type: 'numberRange', min: 0 }}
                     />
                     <CheckboxList
                         id={`fs_gui_yamls-epochs-${index}`}
@@ -2321,6 +2354,7 @@ useEffect(() => {
                             index,
                           })
                         }
+                        validation={{ type: 'numberRange', min: 0 }}
                       />
                       <InputElement
                       id = {`fs_gui_yamls-nPulses-${index}`}
@@ -2335,6 +2369,7 @@ useEffect(() => {
                           index,
                         })
                       }
+                      validation={{ type: 'numberRange', min: 0 }}
                       />
                       <InputElement
                       id = {`fs_gui_yamls-sequencePeriod-${index}`}
@@ -2349,6 +2384,7 @@ useEffect(() => {
                           index,
                         })
                       }
+                      validation={{ type: 'numberRange', min: 0 }}
                       />
                       <InputElement
                         id={`fs_gui_yamls-nOutputTrains-${index}`}
@@ -2363,6 +2399,7 @@ useEffect(() => {
                             index,
                           })
                         }
+                        validation={{ type: 'numberRange', min: 0 }}
                       />
                       <InputElement
                         id={`fs_gui_yamls-train_interval-${index}`}
@@ -2377,6 +2414,7 @@ useEffect(() => {
                             index,
                           })
                         }
+                        validation={{ type: 'numberRange', min: 0 }}
                       />
                     </>
                   )}
@@ -2400,6 +2438,7 @@ useEffect(() => {
             defaultValue="fsgui"
             placeholder="Software used for optogenetic stimulation"
             onBlur={(e) => onBlur(e)}
+            validation={{ type: 'required' }}
           />
       </div>
       <div id="electrode_groups-area" className="area-region">
