@@ -1,7 +1,8 @@
 /**
  * HintDisplay - Subtle validation hint component
  *
- * Displays hints from useQuickChecks WITHOUT role="alert" or ARIA announcements.
+ * Displays hints from useQuickChecks with aria-live for accessibility.
+ * Uses "polite" to announce hints when user pauses, not immediately.
  * Hints are meant to be subtle, non-intrusive feedback while typing.
  *
  * @example
@@ -23,12 +24,17 @@ export function HintDisplay({ hint, className = '' }) {
   }
 
   return (
-    <div className={`validation-hint ${className}`} style={{
-      fontSize: '0.875rem',
-      color: '#666',
-      marginTop: '0.25rem',
-      fontStyle: 'italic'
-    }}>
+    <div
+      className={`validation-hint ${className}`}
+      aria-live="polite"  // UX-1: Accessible to screen readers (announces when user pauses)
+      aria-atomic="true"
+      style={{
+        fontSize: '0.875rem',
+        color: '#525252',  // UX-6: Improved contrast (8.31:1, WCAG AAA compliant)
+        marginTop: '0.25rem',
+        fontWeight: '500'  // Medium weight instead of italic for better readability
+      }}
+    >
       {hint.message}
     </div>
   );

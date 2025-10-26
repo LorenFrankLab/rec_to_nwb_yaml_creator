@@ -10,7 +10,7 @@ import { HintDisplay } from './validation/HintDisplay';
 
 function MyComponent() {
   const [formData, setFormData] = useState({ lab: '' });
-  const { hint, validate, clear } = useQuickChecks('required');
+  const { hint, validate } = useQuickChecks('required');
 
   return (
     <div>
@@ -22,7 +22,7 @@ function MyComponent() {
           setFormData({ ...formData, lab: e.target.value });
           validate('lab', e.target.value);  // Debounced validation
         }}
-        onFocus={clear}  // Clear hint when user focuses
+        // UX-2: Don't clear on focus - let hints persist so users can reference them
       />
       <HintDisplay hint={hint} />
     </div>
@@ -33,13 +33,13 @@ function MyComponent() {
 ## Date Format Validation
 
 ```javascript
-const { hint, validate, clear } = useQuickChecks('dateFormat');
+const { hint, validate } = useQuickChecks('dateFormat');
 
 <input
   type="text"
   placeholder="YYYY-MM-DDTHH:MM:SS"
   onChange={(e) => validate('session_start_time', e.target.value)}
-  onFocus={clear}
+  
 />
 <HintDisplay hint={hint} />
 ```
@@ -47,13 +47,13 @@ const { hint, validate, clear } = useQuickChecks('dateFormat');
 ## Enum Validation
 
 ```javascript
-const { hint, validate, clear } = useQuickChecks('enum', {
+const { hint, validate } = useQuickChecks('enum', {
   validValues: ['M', 'F', 'U']
 });
 
 <input
   onChange={(e) => validate('subject.sex', e.target.value)}
-  onFocus={clear}
+  
 />
 <HintDisplay hint={hint} />
 ```
@@ -61,7 +61,7 @@ const { hint, validate, clear } = useQuickChecks('enum', {
 ## Number Range Validation
 
 ```javascript
-const { hint, validate, clear } = useQuickChecks('numberRange', {
+const { hint, validate } = useQuickChecks('numberRange', {
   min: 0,
   max: 1000
 });
@@ -69,7 +69,7 @@ const { hint, validate, clear } = useQuickChecks('numberRange', {
 <input
   type="number"
   onChange={(e) => validate('subject.weight', e.target.value)}
-  onFocus={clear}
+  
 />
 <HintDisplay hint={hint} />
 ```
@@ -77,14 +77,14 @@ const { hint, validate, clear } = useQuickChecks('numberRange', {
 ## Pattern Validation
 
 ```javascript
-const { hint, validate, clear } = useQuickChecks('pattern', {
+const { hint, validate } = useQuickChecks('pattern', {
   pattern: /^[A-Z]/,
   patternMessage: 'Must start with uppercase letter'
 });
 
 <input
   onChange={(e) => validate('lab', e.target.value)}
-  onFocus={clear}
+  
 />
 <HintDisplay hint={hint} />
 ```
@@ -101,12 +101,20 @@ const dateHint = useQuickChecks('dateFormat');
 const sexHint = useQuickChecks('enum', { validValues: ['M', 'F', 'U'] });
 ```
 
-### 2. Clear on Focus
+### 2. Hints Persist Until Fixed (UX-2)
 
-Always clear hints when user focuses the input to avoid distraction:
+Hints are NOT cleared when user focuses the field. They remain visible until the user types
+a value that makes the field valid. This allows users to reference the hint message while
+fixing the issue, which is especially important for complex validations and users with
+cognitive load or working memory constraints.
 
+If you need to manually clear a hint (rare), use the `clear` function:
 ```javascript
-onFocus={clear}
+const { hint, validate, clear } = useQuickChecks('required');
+// Only clear in special cases, not on focus
+if (someCondition) {
+  clear();
+}
 ```
 
 ### 3. Debounce Delay

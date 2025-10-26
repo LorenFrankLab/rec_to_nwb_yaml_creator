@@ -7,13 +7,13 @@
  * - clear: Function to immediately clear hint
  *
  * @example
- * const { hint, validate, clear } = useQuickChecks('required');
+ * const { hint, validate } = useQuickChecks('required');
  *
  * <input
  *   onChange={(e) => validate('lab', e.target.value)}
- *   onFocus={clear}
  * />
  * {hint && <span className="hint">{hint.message}</span>}
+ * // Note: Hints persist until field becomes valid (don't clear on focus)
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
@@ -54,7 +54,7 @@ export function useQuickChecks(checkType, options = {}) {
       timeoutRef.current = null;
     }
     setHint(null);
-  }, []);
+  }, [setHint]); // P0-1: Include setHint for React compliance
 
   /**
    * Validate a field value (debounced)
@@ -82,7 +82,8 @@ export function useQuickChecks(checkType, options = {}) {
           break;
 
         case 'enum':
-          if (validValues) {
+          // P1-2: Validate parameters before use
+          if (validValues && Array.isArray(validValues) && validValues.length > 0) {
             result = quickChecks.enum(path, value, validValues);
           }
           break;
@@ -92,7 +93,8 @@ export function useQuickChecks(checkType, options = {}) {
           break;
 
         case 'pattern':
-          if (pattern) {
+          // P1-2: Validate pattern is a RegExp
+          if (pattern && pattern instanceof RegExp) {
             result = quickChecks.pattern(path, value, pattern, patternMessage);
           }
           break;
@@ -103,6 +105,7 @@ export function useQuickChecks(checkType, options = {}) {
       }
 
       setHint(result);
+      timeoutRef.current = null; // P0-2: Clear ref after timeout executes
     }, debounceMs);
   }, [checkType, debounceMs, validValues, min, max, pattern, patternMessage]);
 

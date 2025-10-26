@@ -38,6 +38,22 @@ function isEmpty(value) {
 }
 
 /**
+ * Check if a value should be treated as "not provided" for optional field validation
+ * P1-3: Standardized helper for consistent empty-value handling across all checks
+ * @param {any} value - Value to check
+ * @returns {boolean} True if value is null/undefined/empty string
+ */
+function isEmptyForOptionalField(value) {
+  if (value === null || value === undefined) {
+    return true;
+  }
+  if (typeof value === 'string' && value.trim() === '') {
+    return true;
+  }
+  return false;
+}
+
+/**
  * Quick validation checks for instant feedback
  */
 export const quickChecks = {
@@ -64,8 +80,8 @@ export const quickChecks = {
    * @returns {null|{severity: 'hint', message: string}} Null if valid, hint if invalid
    */
   dateFormat(path, value) {
-    // Empty values are allowed (field might be optional)
-    if (!value) {
+    // P1-3: Use standardized empty check
+    if (isEmptyForOptionalField(value)) {
       return null;
     }
 
@@ -90,8 +106,8 @@ export const quickChecks = {
    * @returns {null|{severity: 'hint', message: string}} Null if valid, hint if invalid
    */
   enum(path, value, validValues) {
-    // Empty values are allowed (field might be optional)
-    if (!value) {
+    // P1-3: Use standardized empty check
+    if (isEmptyForOptionalField(value)) {
       return null;
     }
 
@@ -114,8 +130,8 @@ export const quickChecks = {
    * @returns {null|{severity: 'hint', message: string}} Null if valid, hint if invalid
    */
   numberRange(path, value, min, max) {
-    // Empty values are allowed (field might be optional)
-    if (!value && value !== 0) {
+    // P1-1 & P1-3: More explicit empty check that handles all cases correctly
+    if (value === null || value === undefined || value === '') {
       return null;
     }
 
@@ -152,8 +168,9 @@ export const quickChecks = {
    * @returns {null|{severity: 'hint', message: string}} Null if valid, hint if invalid
    */
   pattern(path, value, pattern, customMessage) {
-    // Empty values are allowed (field might be optional)
-    if (!value) {
+    // P1-3: Use standardized empty check for null/undefined/empty string
+    // But validate whitespace-only strings (user provided a value, just invalid)
+    if (value === null || value === undefined || value === '') {
       return null;
     }
 
