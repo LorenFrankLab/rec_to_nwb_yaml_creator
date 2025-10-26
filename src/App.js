@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import YAML from 'yaml';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
+import { convertObjectToYAMLString, createYAMLFile } from './utils/yamlExport';
 
 import logo from './logo.png';
 import packageJson from '../package.json';
@@ -456,27 +457,6 @@ const removeElectrodeGroupItem = (index, key) => {
     form[key] = items
     setFormData(form);
   }
-};
-
-/**
- * Converts an object to YAML
- *
- * @param {object} content
- * @returns YAML as a string
- */
-const convertObjectToYAMLString = (content) => {
-  const doc = new YAML.Document();
-  doc.contents = content || {};
-
-  return doc.toString();
-};
-
-const createYAMLFile = (fileName, content) => {
-  var textFileAsBlob = new Blob([content], {type: 'text/yaml;charset=utf-8;'});
-  const downloadLink = document.createElement("a");
-  downloadLink.download = fileName;
-  downloadLink.href = window.webkitURL.createObjectURL(textFileAsBlob);
-  downloadLink.click();
 };
 
 /**

@@ -1,8 +1,9 @@
 /**
  * @file Tests for convertObjectToYAMLString function
  * @description Phase 1, Week 6 - YAML Conversion Functions
+ * @updated Phase 3 - Refactored to test extracted utility function
  *
- * Function location: src/App.js:444-449
+ * Function location: src/utils/yamlExport.js
  *
  * Purpose: Convert JavaScript object to YAML string using YAML.Document API
  *
@@ -20,25 +21,19 @@
 
 import { describe, it, expect } from 'vitest';
 import YAML from 'yaml';
+import { convertObjectToYAMLString } from '../../../utils/yamlExport';
 
 /**
- * Note: These are DOCUMENTATION TESTS (Phase 1)
- *
- * We are documenting HOW the function works, not testing if it's correct.
- * These tests should all PASS because they document current behavior.
+ * Note: Tests updated in Phase 3 to test actual exported function
  *
  * convertObjectToYAMLString is a thin wrapper around YAML.Document API.
- * We're testing our understanding of the implementation.
+ * These tests verify the function behaves correctly.
  */
 describe('convertObjectToYAMLString()', () => {
   describe('Basic Conversions', () => {
     it('converts simple object to YAML string', () => {
-      // Replicate the implementation
       const input = { name: 'test', value: 123 };
-
-      const doc = new YAML.Document();
-      doc.contents = input;
-      const result = doc.toString();
+      const result = convertObjectToYAMLString(input);
 
       // Should produce valid YAML
       expect(result).toContain('name: test');
@@ -54,9 +49,7 @@ describe('convertObjectToYAMLString()', () => {
         },
       };
 
-      const doc = new YAML.Document();
-      doc.contents = input;
-      const result = doc.toString();
+      const result = convertObjectToYAMLString(input);
 
       // Should preserve nesting
       expect(result).toContain('subject:');
@@ -73,9 +66,7 @@ describe('convertObjectToYAMLString()', () => {
         ],
       };
 
-      const doc = new YAML.Document();
-      doc.contents = input;
-      const result = doc.toString();
+      const result = convertObjectToYAMLString(input);
 
       // Should preserve arrays
       expect(result).toContain('experimenter:');
@@ -88,9 +79,7 @@ describe('convertObjectToYAMLString()', () => {
     it('converts empty object to YAML string', () => {
       const input = {};
 
-      const doc = new YAML.Document();
-      doc.contents = input;
-      const result = doc.toString();
+      const result = convertObjectToYAMLString(input);
 
       // Empty object produces "{}\n" in YAML
       expect(result).toBe('{}\n');
@@ -106,9 +95,7 @@ describe('convertObjectToYAMLString()', () => {
         field3: 'another',
       };
 
-      const doc = new YAML.Document();
-      doc.contents = input;
-      const result = doc.toString();
+      const result = convertObjectToYAMLString(input);
 
       // YAML represents null as "null" or empty
       expect(result).toContain('field1: value');
@@ -124,9 +111,7 @@ describe('convertObjectToYAMLString()', () => {
         field3: 'another',
       };
 
-      const doc = new YAML.Document();
-      doc.contents = input;
-      const result = doc.toString();
+      const result = convertObjectToYAMLString(input);
 
       // YAML.Document typically omits undefined values
       expect(result).toContain('field1: value');
@@ -144,13 +129,7 @@ describe('convertObjectToYAMLString()', () => {
   describe('YAML.Document API Usage', () => {
     it('uses YAML.Document constructor', () => {
       const input = { test: 'value' };
-
-      // This is how convertObjectToYAMLString works
-      const doc = new YAML.Document();
-      expect(doc).toBeInstanceOf(YAML.Document);
-
-      doc.contents = input;
-      const result = doc.toString();
+      const result = convertObjectToYAMLString(input);
 
       expect(typeof result).toBe('string');
       expect(result).toContain('test: value');
@@ -158,14 +137,7 @@ describe('convertObjectToYAMLString()', () => {
 
     it('uses toString() to get YAML string output', () => {
       const input = { name: 'test', count: 42 };
-
-      const doc = new YAML.Document();
-      doc.contents = input;
-
-      // toString() is the API method for converting to YAML string
-      expect(typeof doc.toString).toBe('function');
-
-      const result = doc.toString();
+      const result = convertObjectToYAMLString(input);
 
       // Result should be a string
       expect(typeof result).toBe('string');
@@ -178,7 +150,7 @@ describe('convertObjectToYAMLString()', () => {
 });
 
 /**
- * Implementation Notes (from reading App.js:444-449):
+ * Implementation Notes (from src/utils/yamlExport.js):
  *
  * 1. Creates new YAML.Document instance
  * 2. Sets doc.contents to input object (or {} if falsy)
@@ -191,9 +163,13 @@ describe('convertObjectToYAMLString()', () => {
  * - Does NOT filter or transform the input (content || {} is only safety check)
  *
  * Used by:
- * - generateYMLFile() at line 660 to convert form data before download
+ * - generateYMLFile() in App.js to convert form data before download
  *
  * Integration:
  * - Called during YAML export workflow
  * - Result is passed to createYAMLFile() for download
+ *
+ * Refactored in Phase 3:
+ * - Extracted from App.js to src/utils/yamlExport.js
+ * - Now a properly exported and testable utility function
  */

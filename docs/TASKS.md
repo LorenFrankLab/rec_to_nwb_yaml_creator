@@ -25,12 +25,12 @@
 
 #### Extract YAML Export Utilities (2 hours)
 
-- [ ] Create `src/utils/yamlExport.js`
-- [ ] Extract `convertObjectToYAMLString()` (App.js:444-474)
-- [ ] Extract `createYAMLFile()` helper
-- [ ] Update App.js imports
-- [ ] Run full test suite
-- [ ] Commit: `refactor: extract YAML export utilities`
+- [x] Create `src/utils/yamlExport.js`
+- [x] Extract `convertObjectToYAMLString()` (App.js:444-474)
+- [x] Extract `createYAMLFile()` helper
+- [x] Update App.js imports
+- [x] Run full test suite
+- [x] Commit: `refactor: extract YAML export utilities`
 
 #### Extract Error Display Utilities (1-2 hours)
 

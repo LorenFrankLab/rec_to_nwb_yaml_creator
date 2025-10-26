@@ -6,13 +6,11 @@ Your workflow MUST be:
 
     First, read these files IN ORDER:
         CLAUDE.md (implementation guide)
-        docs/PHASE_1.5_SUMMARY.md (quick context for current phase)
         docs/SCRATCHPAD.md (notes and current status)
         docs/REFACTOR_CHANGELOG.md (changes made so far)
         docs/TASKS.md (current tasks)
 
     THEN if you need more detail:
-        docs/plans/PHASE_1.5_TEST_QUALITY_IMPROVEMENTS.md (detailed Phase 1.5 plan)
         docs/plans/COMPREHENSIVE_REFACTORING_PLAN.md (overall project plan)
 
     Find the FIRST unchecked [ ] task in TASKS.md
