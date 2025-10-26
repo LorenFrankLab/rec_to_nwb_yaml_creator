@@ -253,9 +253,12 @@ describe('quickChecks', () => {
       expect(hint).toBeNull();
     });
 
-    it('should ignore non-numeric strings', () => {
+    it('should return hint for non-numeric strings', () => {
       const hint = quickChecks.numberRange('subject.weight', 'abc', 0, 1000);
-      expect(hint).toBeNull(); // Not a number, so no range check
+      expect(hint).toEqual({
+        severity: 'hint',
+        message: 'Must be a valid number'
+      });
     });
   });
 

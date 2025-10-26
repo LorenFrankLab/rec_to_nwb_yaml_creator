@@ -138,9 +138,12 @@ export const quickChecks = {
 
     const num = parseFloat(value);
 
-    // If not a valid number, ignore (let schema validation handle it)
+    // If not a valid number, show immediate feedback
     if (isNaN(num)) {
-      return null;
+      return {
+        severity: 'hint',
+        message: 'Must be a valid number'
+      };
     }
 
     const unitSuffix = unit ? ` ${unit}` : '';
