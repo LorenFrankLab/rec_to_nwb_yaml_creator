@@ -34,12 +34,12 @@
 
 #### Extract Error Display Utilities (1-2 hours)
 
-- [ ] Create `src/utils/errorDisplay.js`
-- [ ] Extract `showCustomValidityError()`
-- [ ] Extract `clearCustomValidityError()`
-- [ ] Update App.js imports
-- [ ] Run full test suite
-- [ ] Commit: `refactor: extract error display utilities`
+- [x] Create `src/utils/errorDisplay.js`
+- [x] Extract `showErrorMessage()` (not showCustomValidityError - already in utils.js)
+- [x] Extract `displayErrorOnUI()` (clearCustomValidityError doesn't exist)
+- [x] Update App.js imports
+- [x] Run full test suite
+- [x] Commit: `refactor: extract error display utilities`
 
 #### Extract Validation Utilities (2-3 hours)
 

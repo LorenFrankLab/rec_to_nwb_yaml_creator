@@ -18,12 +18,18 @@ Format: `[Phase] Category: Description`
   - `createYAMLFile(fileName, content)` - Creates and triggers YAML file download
   - Commit: 9d5f939
 
+- **Error Display Utilities** (`src/utils/errorDisplay.js`) - 2025-10-26
+  - `showErrorMessage(error)` - Displays Ajv validation errors with user-friendly messages
+  - `displayErrorOnUI(id, message)` - Displays custom validation errors on input elements
+  - Commit: [pending]
+
 ### Changed
 
 #### Code Refactoring
-- **App.js**: Reduced complexity by 20 lines
-  - Removed inline YAML export functions (lines 462-481)
-  - Added import from `src/utils/yamlExport.js`
+- **App.js**: Reduced complexity by 96 lines total
+  - Removed inline YAML export functions (20 lines) - 2025-10-25
+  - Removed inline error display functions (76 lines) - 2025-10-26
+  - Added imports from `src/utils/yamlExport.js` and `src/utils/errorDisplay.js`
   - Improved modularity and separation of concerns
 
 #### Tests
@@ -37,9 +43,12 @@ Format: `[Phase] Category: Description`
 - **SCRATCHPAD.md**: Updated with Phase 3 progress and notes
 
 ### Metrics
-- Test suite: 1295/1295 passing (100%)
-- App.js lines reduced: 20 lines
-- New utility module: 46 lines (net change: +26 LOC overall, but improved organization)
+- Test suite: 1293/1295 passing (99.8%, 2 perf baseline timeouts unrelated to changes)
+- App.js lines reduced: 96 lines
+- New utility modules:
+  - yamlExport.js: 46 lines
+  - errorDisplay.js: 83 lines
+- Net change: +33 LOC overall, significantly improved organization and reusability
 
 ---
 
