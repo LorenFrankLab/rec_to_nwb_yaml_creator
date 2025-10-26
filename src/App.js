@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import YAML from 'yaml';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faDownload } from "@fortawesome/free-solid-svg-icons";
 
 import logo from './logo.png';
 import packageJson from '../package.json';
@@ -963,7 +964,7 @@ useEffect(() => {
       <div className="file-upload-region">
         <label htmlFor="importYAMLFile">
           &nbsp;&nbsp;
-          <FontAwesomeIcon icon="download" className="pointer" size="2xs" title="Download a Yaml file to populate fields" />
+          <FontAwesomeIcon icon={faDownload} className="pointer" size="2xs" title="Download a Yaml file to populate fields" />
         </label>
         {/*
           input type="file" onClick sets e.target.value to null, so the same file can be imported multiple times.
