@@ -9,14 +9,90 @@
 
 ## Quick Status
 
-- **Tests:** 1310/1312 passing (99.8%) ✅
-- **Coverage:** ~60%
-- **Flaky Tests:** 1 (known timeout issue)
-- **Tasks Completed:** 6/12 Phase 3 tasks ✅ **YAML I/O Module Promoted**
+- **Tests:** 1454/1454 passing (100%) ✅
+- **Coverage:** ~65%
+- **Flaky Tests:** 0 ✅
+- **Tasks Completed:** 7/12 Phase 3 tasks ✅ **Validation Module Promoted**
 
 ---
 
 ## Completed Tasks
+
+### ✅ Promote Validation Utilities → Pure Validation System (Completed 2025-10-26)
+
+**Commit:** 5a4579e - `feat(validation): promote validation utilities to pure system with unified Issue[] API`
+
+**Files Changed:**
+- Created: `src/validation/index.js` (62 lines - public API)
+- Created: `src/validation/schemaValidation.js` (85 lines - AJV integration)
+- Created: `src/validation/rulesValidation.js` (105 lines - custom rules)
+- Created: `src/validation/paths.js` (48 lines - path normalization)
+- Created: `src/validation/__tests__/integration.test.js` (374 lines - 27 tests)
+- Created: `src/validation/__tests__/schemaValidation.test.js` (416 lines - 36 tests)
+- Created: `src/validation/__tests__/rulesValidation.test.js` (530 lines - 37 tests)
+- Created: `src/validation/__tests__/paths.test.js` (160 lines - 25 tests)
+- Created: `docs/plans/VALIDATION_REFACTORING_PLAN.md` (943 lines - comprehensive plan)
+
+**New API Functions:**
+- `validate(model)` - Full validation returning Issue[] (schema + rules)
+- `validateField(model, fieldPath)` - Field-level validation
+- `schemaValidation(model)` - AJV JSON Schema validation
+- `rulesValidation(model)` - Custom business logic validation
+- `normalizeAjvPath(ajvPath)` - Convert AJV paths to dot/bracket notation
+
+**Unified Issue[] Format:**
+```javascript
+{
+  path: string,           // Normalized: "cameras[0].id", "subject.weight"
+  code: string,           // Error type: "required", "pattern", "missing_camera"
+  severity: "error"|"warning",
+  message: string,        // User-friendly message
+  instancePath?: string,  // Original AJV path (for debugging)
+  schemaPath?: string     // Original AJV schema path (for debugging)
+}
+```
+
+**Validation Rules:**
+1. **Schema Validation** - AJV Draft 7 against nwb_schema.json
+2. **Tasks Require Cameras** - If camera_ids present, cameras array required
+3. **Video Files Require Cameras** - Associated video files need cameras defined
+4. **Optogenetics All-or-Nothing** - Must have all 3: virus_injection + optical_fiber + opto_excitation_source
+5. **No Duplicate Channels** - Ntrode channel maps can't map multiple channels to same hardware channel
+
+**Key Features:**
+- **TDD Approach** - All 125 tests written FIRST, then implementation
+- **Deterministic Sorting** - Issues sorted by path then code for stable output
+- **Performance Optimized** - AJV validator compiled once at module load
+- **Path Normalization** - Converts `/cameras/0/id` → `cameras[0].id`
+- **Null Safety** - Graceful handling of null/undefined models
+
+**Schema Discoveries:**
+- Field is `experimenter_name` (array), not `experimenter` (string)
+- Pattern is `^(.|\\s)*\\S(.|\\s)*` (allows whitespace, requires one non-whitespace)
+- Camera required fields: id, meters_per_pixel, manufacturer, model, lens, camera_name
+- AJV required field errors: `instancePath: ""` with field in `params.missingProperty`
+
+**Testing:**
+- 125 new validation tests (100% passing)
+- paths.test.js: 25 tests for normalization
+- schemaValidation.test.js: 36 tests for AJV integration
+- rulesValidation.test.js: 37 tests for custom rules
+- integration.test.js: 27 tests for unified API
+- Golden YAML baselines: 18/18 still passing (no regressions)
+- Full suite: 1454/1454 passing (up from 1310)
+
+**Verification:**
+- ✅ All 1454 tests passing (100%)
+- ✅ Golden YAML tests passing (no regressions)
+- ✅ Deterministic output verified
+- ✅ Comprehensive test coverage for edge cases
+
+**Next Steps:**
+- Phase 2: Integrate with App.js (replace existing validation)
+- Phase 3: Event-driven validation with debouncing
+- Apply UX improvements from review (ISO 8601 examples, grammar fixes)
+
+---
 
 ### ✅ Promote YAML Utilities → Deterministic I/O Module (Completed 2025-10-26)
 

@@ -79,26 +79,32 @@
 - [x] **Tests:** golden equality across two consecutive exports; round-trip parity
 - [x] Commit: `fix(io): deterministic YAML encoder/decoder` (82810de)
 
-### Promote validation utilities → pure validation system (event-driven)
->
+### Promote validation utilities → pure validation system (event-driven) ✅ PHASE 1 COMPLETE
+
 > You already extracted validation helpers. Rehome them and make timing explicit.
 
 **Goal:** Centralize validation logic while improving user experience with immediate feedback.
-**Outcome:** Users get fast inline hints while typing, formal validation on blur, and full cross-field validation on “Validate All” or export.
+**Outcome:** Users get fast inline hints while typing, formal validation on blur, and full cross-field validation on "Validate All" or export.
 
 ---
 
-#### Validation Architecture Setup
+#### Validation Architecture Setup ✅ COMPLETE (2025-10-26)
 
-- [ ] **Move** existing `src/utils/validation.js` → `src/validation/`
+- [x] **Move** existing `src/utils/validation.js` → `src/validation/`
   - `schemaValidation.js` — JSON Schema / AJV structural rules
   - `rulesValidation.js` — custom logical / cross-field rules
   - `paths.js` — normalize AJV paths → `subject[0].weight` style
   - `index.js` — `validate(model): Issue[]`
-- [ ] **Define Issue type:** `{ path, code, severity, message }`
-- [ ] **Unify output:** both schema and rules validations return `Issue[]`
-- [ ] **Sort deterministically** (`path + code`) for stable snapshot tests
-- [ ] Commit: `refactor(validation): unify validation modules`
+- [x] **Define Issue type:** `{ path, code, severity, message, instancePath?, schemaPath? }`
+- [x] **Unify output:** both schema and rules validations return `Issue[]`
+- [x] **Sort deterministically** (`path + code`) for stable snapshot tests
+- [x] Commit: `feat(validation): promote validation utilities to pure system with unified Issue[] API` (5a4579e)
+- [x] **Testing:** 125 new tests (TDD approach - tests written FIRST)
+  - paths.test.js: 25 tests
+  - schemaValidation.test.js: 36 tests
+  - rulesValidation.test.js: 37 tests
+  - integration.test.js: 27 tests
+- [x] **Verification:** All 1454 tests passing, no regressions
 
 ---
 
