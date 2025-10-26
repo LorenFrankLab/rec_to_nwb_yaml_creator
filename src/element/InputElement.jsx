@@ -44,6 +44,20 @@ const InputElement = (prop) => {
     }
   );
 
+  // Handle input event to detect invalid characters in number fields
+  const handleInput = (e) => {
+    if (!validation) return;
+
+    // For type="number", check validity.badInput (browser blocked invalid chars)
+    if (type === 'number' && e.target.validity?.badInput) {
+      quickChecks.validate(name, 'INVALID_NUMBER_INPUT');
+      return;
+    }
+
+    // Normal validation for all other cases
+    quickChecks.validate(name, e.target.value);
+  };
+
   const getDefaultDateValue = () => {
     if (!defaultValue) {
       return '';
@@ -91,7 +105,7 @@ const InputElement = (prop) => {
           readOnly={readOnly}
           step={step}
           min={min}
-          onChange={validation ? (e) => quickChecks.validate(name, e.target.value) : undefined}
+          onInput={validation ? handleInput : undefined}
           onBlur={(e) => onBlur(e)}
           pattern={pattern}
         />
