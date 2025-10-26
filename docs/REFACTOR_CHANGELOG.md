@@ -8,9 +8,42 @@ Format: `[Phase] Category: Description`
 
 ## [Phase 3: Code Quality & Refactoring] - 2025-10-25
 
-**Status:** 🟢 Week 3-4 IN PROGRESS - Import/Export Complete
+**Status:** 🟢 Week 3-4 IN PROGRESS - Electrode Group Logic Complete
 
 ### Added
+
+#### Electrode Group Management Hook - 2025-10-26
+
+- **New Hook** (`src/hooks/useElectrodeGroups.js`) - Extract electrode group logic from App.js
+  - `nTrodeMapSelected(e, metaData)` - Auto-generates ntrode channel maps when device type selected
+  - `removeElectrodeGroupItem(index, key)` - Removes electrode group and associated ntrode maps
+  - `duplicateElectrodeGroupItem(index, key)` - Duplicates electrode group with new ID and ntrode maps
+  - All functions wrapped in useCallback with correct dependencies
+  - Comprehensive JSDoc documentation with examples
+  - Commit: (pending)
+
+- **New Tests** (`src/hooks/__tests__/useElectrodeGroups.test.js`) - 35 comprehensive tests
+  - nTrodeMapSelected tests (12 tests): device assignment, ntrode generation, map structure, ID renumbering
+  - removeElectrodeGroupItem tests (10 tests): removal, cascading deletion, guard clauses, immutability
+  - duplicateElectrodeGroupItem tests (13 tests): duplication, ID increment, ntrode map cloning, guard clauses
+  - Excellent test organization with nested describe blocks
+  - Edge cases covered: null values, empty arrays, out-of-bounds indices
+  - All tests passing ✅
+
+**Quality Assessment (Code Review):**
+- **Rating:** APPROVE ✅ Ready to merge
+- **Critical Issues:** 0
+- **Quality Issues:** 3 (all low priority - commented code, optional chaining inconsistency, guard clause order)
+- **Test Coverage:** Exceptional (35 tests, comprehensive coverage of all functions)
+- **Scientific Correctness:** Verified (electrode group IDs, channel maps, sequential numbering preserved)
+- **Documentation:** Excellent (clear JSDoc with usage examples)
+
+**Impact:**
+- Reduced App.js by ~175 lines (~6%)
+- Improved code organization (complex electrode group logic now isolated in dedicated hook)
+- Better testability (electrode group logic now unit-testable)
+- Improved guard clause order (fixed potential error in duplicateElectrodeGroupItem)
+- No regressions (1612/1612 tests passing = 1577 + 35 new)
 
 #### Import/Export Feature Module - 2025-10-26
 

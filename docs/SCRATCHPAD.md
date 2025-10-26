@@ -1,13 +1,105 @@
 # Scratchpad - Phase 3
 
 **Current Phase:** Phase 3 - Code Quality & Refactoring - Week 3-4
-**Status:** 🟢 IN PROGRESS - Import/Export Complete
-**Last Updated:** 2025-10-26 17:36
+**Status:** 🟢 IN PROGRESS - Electrode Group Logic Complete
+**Last Updated:** 2025-10-26 17:58
 **Branch:** `modern`
 
 ---
 
-## 🎯 Session Summary (2025-10-26 - Import/Export Extraction Complete)
+## 🎯 Session Summary (2025-10-26 - Electrode Group Logic Extraction Complete)
+
+### Objective
+Extract electrode group management logic (nTrodeMapSelected, removeElectrodeGroupItem, duplicateElectrodeGroupItem) from App.js into dedicated custom hook (Week 3-4 task).
+
+### Final Status
+- **Tests:** 1612/1612 passing (100%) ✅
+- **New Tests:** 35 comprehensive electrode group hook tests
+- **App.js Reduction:** ~175 lines (3 complex functions extracted)
+- **Code Review:** APPROVE ✅ (zero critical issues, minor suggestions for follow-up)
+
+### What Was Completed
+
+1. ✅ **Created src/hooks/useElectrodeGroups.js** (256 lines)
+   - `nTrodeMapSelected(e, metaData)` - Auto-generates ntrode channel maps when device type selected
+   - `removeElectrodeGroupItem(index, key)` - Removes electrode group and associated ntrode maps
+   - `duplicateElectrodeGroupItem(index, key)` - Duplicates electrode group with new ID and ntrode maps
+   - All functions wrapped in useCallback with correct dependencies
+   - Comprehensive JSDoc documentation with examples
+
+2. ✅ **Created comprehensive tests** (809 lines, 35 tests)
+   - nTrodeMapSelected: 12 tests (device assignment, ntrode generation, ID renumbering)
+   - removeElectrodeGroupItem: 10 tests (removal, cascading deletion, guard clauses)
+   - duplicateElectrodeGroupItem: 13 tests (duplication, ID increment, ntrode map cloning)
+   - Excellent test organization with nested describe blocks
+   - Edge cases covered: null values, empty arrays, out-of-bounds indices
+   - Immutability verification tests
+
+3. ✅ **Updated App.js**
+   - Added hook import and usage
+   - Removed 3 complex functions (~175 lines)
+   - Removed unused imports (deviceTypeMap, getShankCount)
+   - Total reduction: ~175 lines
+
+4. ✅ **Code Review Results**
+   - **Assessment:** APPROVE ✅ Ready to merge
+   - **Critical Issues:** 0
+   - **Quality Issues:** 3 (all low priority - commented code, optional chaining inconsistency, guard clause order)
+   - **Test Coverage:** Exceptional (35 tests, comprehensive coverage)
+   - **Scientific Correctness:** Verified (electrode group IDs, channel maps, sequential numbering)
+   - **Documentation:** Excellent (clear JSDoc with usage examples)
+
+### Key Decisions
+
+1. **TDD Approach:** Wrote 35 tests FIRST, saw them fail, then implementation
+2. **Guard Clause Improvement:** Fixed `duplicateElectrodeGroupItem` to check `electrodeGroups` before array access (better than original)
+3. **useCallback Dependencies:** Included `[formData, setFormData]` (correct - functions read formData)
+4. **Immutability:** Maintained `structuredClone` pattern consistent with other hooks
+5. **Return Values:** Kept original return behavior (`null` for consistency with App.js)
+
+### Technical Highlights
+
+- **Function Correctness:** Extracted functions behave identically to originals (verified line-by-line)
+- **Scientific Data Integrity:** Maintains electrode group ID propagation, channel map accuracy, sequential ntrode_id numbering
+- **Integration:** Works seamlessly with trodes_to_nwb Python backend (device_type, electrode_group_id, ntrode_id contracts preserved)
+- **Performance:** Consistent with existing patterns (structuredClone acceptable for user-driven actions)
+
+### Test Quality
+
+**Excellent structure:**
+- 12 tests for nTrodeMapSelected (device types, shank counts, map structure, ID renumbering, map replacement)
+- 10 tests for removeElectrodeGroupItem (basic removal, cascading ntrode deletion, confirmation dialog, guard clauses)
+- 13 tests for duplicateElectrodeGroupItem (ID increment logic, ntrode map duplication, multi-shank devices, guard clauses)
+
+**Coverage includes:**
+- Device type assignment (tetrode, multi-shank devices)
+- Ntrode generation (1, 2, 4 shanks)
+- Channel map structure and offsets
+- ID management (sequential numbering, collision avoidance)
+- Data relationships (ntrode maps follow electrode groups)
+- Edge cases (empty arrays, null values, cancellation)
+- Immutability verification
+
+### Follow-up Suggestions from Code Review
+
+**Low priority (optional enhancements):**
+1. Resolve commented-out sort line in `nTrodeMapSelected` (remove or document why disabled)
+2. Standardize optional chaining usage across the hook
+3. Consider extracting `NTRODE_ID_START = 1` constant
+4. Add more specific JSDoc types (TypeScript-style)
+
+### Next Steps
+1. Update REFACTOR_CHANGELOG.md
+2. Update TASKS.md (mark task complete)
+3. Commit changes: `refactor: extract electrode group logic`
+4. Continue with remaining Week 3-4 tasks
+
+### Blockers
+None
+
+---
+
+## 🎯 Previous Session Summary (2025-10-26 - Import/Export Extraction Complete)
 
 ### Objective
 Extract import/export logic from App.js into dedicated feature module (Week 3-4 task).
