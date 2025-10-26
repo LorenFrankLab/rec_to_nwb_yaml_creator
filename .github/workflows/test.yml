@@ -114,6 +114,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: LorenFrankLab/trodes_to_nwb
+          ref: main
           path: trodes_to_nwb
 
       - name: Compare nwb_schema.json
@@ -130,10 +131,11 @@ jobs:
             if [ "$SCHEMA_HASH" != "$PYTHON_SCHEMA_HASH" ]; then
               echo "❌ Schema mismatch detected!"
               echo "Web app hash:    $SCHEMA_HASH"
-              echo "Python pkg hash: $PYTHON_SCHEMA_HASH"
+              echo "Python pkg hash: $PYTHON_SCHEMA_HASH (main branch)"
               echo ""
               echo "The nwb_schema.json files are out of sync between repositories."
-              echo "Please ensure both repositories use the same schema version."
+              echo "Please ensure the web app schema matches:"
+              echo "https://github.com/LorenFrankLab/trodes_to_nwb/blob/main/src/trodes_to_nwb/nwb_schema.json"
               exit 1
             fi
 
