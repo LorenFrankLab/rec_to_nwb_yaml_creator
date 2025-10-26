@@ -2,6 +2,8 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { sanitizeTitle } from '../utils';
 import InfoIcon from './InfoIcon';
+import { useQuickChecks } from '../validation/useQuickChecks';
+import { HintDisplay } from '../validation/HintDisplay';
 
 
 /**
@@ -23,7 +25,31 @@ const SelectElement = (prop) => {
     defaultValue,
     onChange,
     addBlankOption,
+    required,
+    validation,
   } = prop;
+
+  const quickChecks = useQuickChecks(
+    validation?.type,
+    {
+      debounceMs: validation?.debounceMs,
+      validValues: validation?.validValues,
+      min: validation?.min,
+      max: validation?.max,
+      unit: validation?.unit,
+      pattern: validation?.pattern,
+      patternMessage: validation?.patternMessage,
+    }
+  );
+
+  const handleChange = (e) => {
+    if (validation) {
+      quickChecks.validate(name, e.target.value);
+    }
+    if (onChange) {
+      onChange(e);
+    }
+  };
 
   return (
     <label className="container" htmlFor={id}>
@@ -31,7 +57,13 @@ const SelectElement = (prop) => {
         {title} <InfoIcon infoText={placeholder} />
       </div>
       <div className="item2">
-        <select id={id} name={name} onChange={onChange} value={defaultValue}>
+        <select
+          id={id}
+          name={name}
+          onChange={handleChange}
+          value={defaultValue}
+          required={required}
+        >
           {addBlankOption ? (
             <option value="" name={name}>
               &nbsp;
@@ -61,6 +93,9 @@ const SelectElement = (prop) => {
             );
           })}
         </select>
+        {validation && (
+          <HintDisplay hint={quickChecks.hint} isRequired={required} />
+        )}
       </div>
     </label>
   );
@@ -77,6 +112,17 @@ SelectElement.propTypes = {
   name: PropTypes.string.isRequired,
   placeholder: PropTypes.string,
   onChange: PropTypes.func,
+  required: PropTypes.bool,
+  validation: PropTypes.shape({
+    type: PropTypes.oneOf(['required', 'dateFormat', 'enum', 'numberRange', 'pattern']),
+    debounceMs: PropTypes.number,
+    validValues: PropTypes.array,
+    min: PropTypes.number,
+    max: PropTypes.number,
+    unit: PropTypes.string,
+    pattern: PropTypes.instanceOf(RegExp),
+    patternMessage: PropTypes.string,
+  }),
 };
 
 SelectElement.defaultProps = {
@@ -86,6 +132,8 @@ SelectElement.defaultProps = {
   addBlankOption: false,
   type: 'text',
   onChange: () => {},
+  required: false,
+  validation: null,
 };
 
 export default SelectElement;

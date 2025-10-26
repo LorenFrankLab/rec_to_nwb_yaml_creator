@@ -990,7 +990,7 @@ useEffect(() => {
               defaultValue={formData.subject.weight}
               placeholder="Weight at time of experiment, at time of surgery and at other important times (in grams)"
               onBlur={(e) => onBlur(e, { key: 'subject' })}
-              validation={{ type: 'numberRange', min: 0 }}
+              validation={{ type: 'numberRange', min: 0, unit: 'g' }}
             />
           </div>
         </details>
@@ -1147,7 +1147,7 @@ useEffect(() => {
                           index,
                         })
                       }
-                      validation={{ type: 'numberRange', min: 0 }}
+                      validation={{ type: 'numberRange', min: 0, unit: 'm/pixel' }}
                     />
                     <DataListElement
                       id={`cameras-manufacturer-${index}`}
@@ -1770,7 +1770,7 @@ useEffect(() => {
                       onBlur={(e) =>
                         onBlur(e, { key, index })
                       }
-                      validation={{ type: 'numberRange', min: 0 }}
+                      validation={{ type: 'numberRange', min: 0, unit: 'nm' }}
                     />
                     <InputElement
                       id={`opto_excitation_source-power_in_W-${index}`}
@@ -1783,7 +1783,7 @@ useEffect(() => {
                       onBlur={(e) =>
                         onBlur(e, { key, index })
                       }
-                      validation={{ type: 'numberRange', min: 0 }}
+                      validation={{ type: 'numberRange', min: 0, unit: 'W' }}
                     />
                     <InputElement
                      id = {`opto_excitation_source-intensity_in_W_per_m2-${index}`}
@@ -1796,7 +1796,7 @@ useEffect(() => {
                       onBlur={(e) =>
                         onBlur(e, { key, index })
                       }
-                      validation={{ type: 'numberRange', min: 0 }}
+                      validation={{ type: 'numberRange', min: 0, unit: 'W/m²' }}
                     />
                   </div>
                 </details>
@@ -2070,7 +2070,7 @@ useEffect(() => {
                       onBlur={(e) =>
                         onBlur(e, { key, index })
                       }
-                      validation={{ type: 'numberRange', min: 0 }}
+                      validation={{ type: 'numberRange', min: 0, unit: 'µL' }}
                     />
                     <InputElement
                       id={`virus_injection-titer_in_vg_per_ml-${index}`}
@@ -2266,7 +2266,7 @@ useEffect(() => {
                           index,
                         })
                       }
-                      validation={{ type: 'numberRange', min: 0 }}
+                      validation={{ type: 'numberRange', min: 0, unit: 'mW' }}
                     />
                     <CheckboxList
                         id={`fs_gui_yamls-epochs-${index}`}
@@ -2354,7 +2354,7 @@ useEffect(() => {
                             index,
                           })
                         }
-                        validation={{ type: 'numberRange', min: 0 }}
+                        validation={{ type: 'numberRange', min: 0, unit: 'ms' }}
                       />
                       <InputElement
                       id = {`fs_gui_yamls-nPulses-${index}`}
@@ -2384,7 +2384,7 @@ useEffect(() => {
                           index,
                         })
                       }
-                      validation={{ type: 'numberRange', min: 0 }}
+                      validation={{ type: 'numberRange', min: 0, unit: 'ms' }}
                       />
                       <InputElement
                         id={`fs_gui_yamls-nOutputTrains-${index}`}
@@ -2414,7 +2414,7 @@ useEffect(() => {
                             index,
                           })
                         }
-                        validation={{ type: 'numberRange', min: 0 }}
+                        validation={{ type: 'numberRange', min: 0, unit: 'ms' }}
                       />
                     </>
                   )}

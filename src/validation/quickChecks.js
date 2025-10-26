@@ -127,9 +127,10 @@ export const quickChecks = {
    * @param {number|string} value - Numeric value to check
    * @param {number} [min] - Minimum allowed value (inclusive)
    * @param {number} [max] - Maximum allowed value (inclusive)
+   * @param {string} [unit] - Unit to display (e.g., 'nm', 'mm', 'degrees')
    * @returns {null|{severity: 'hint', message: string}} Null if valid, hint if invalid
    */
-  numberRange(path, value, min, max) {
+  numberRange(path, value, min, max, unit) {
     // P1-1 & P1-3: More explicit empty check that handles all cases correctly
     if (value === null || value === undefined || value === '') {
       return null;
@@ -142,17 +143,19 @@ export const quickChecks = {
       return null;
     }
 
+    const unitSuffix = unit ? ` ${unit}` : '';
+
     if (min !== undefined && num < min) {
       return {
         severity: 'hint',
-        message: `Must be at least ${min}`
+        message: `Must be at least ${min}${unitSuffix}`
       };
     }
 
     if (max !== undefined && num > max) {
       return {
         severity: 'hint',
-        message: `Must be at most ${max}`
+        message: `Must be at most ${max}${unitSuffix}`
       };
     }
 

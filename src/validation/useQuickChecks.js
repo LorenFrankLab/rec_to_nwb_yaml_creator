@@ -28,6 +28,7 @@ import { quickChecks } from './quickChecks';
  * @param {Array} options.validValues - Valid values for enum check
  * @param {number} options.min - Minimum value for numberRange check
  * @param {number} options.max - Maximum value for numberRange check
+ * @param {string} options.unit - Unit to display for numberRange (e.g., 'nm', 'mm', 'degrees')
  * @param {RegExp} options.pattern - Regular expression for pattern check
  * @param {string} options.patternMessage - Custom message for pattern check
  * @returns {{hint: object|null, validate: function, clear: function}}
@@ -38,6 +39,7 @@ export function useQuickChecks(checkType, options = {}) {
     validValues,
     min,
     max,
+    unit,
     pattern,
     patternMessage
   } = options;
@@ -89,7 +91,7 @@ export function useQuickChecks(checkType, options = {}) {
           break;
 
         case 'numberRange':
-          result = quickChecks.numberRange(path, value, min, max);
+          result = quickChecks.numberRange(path, value, min, max, unit);
           break;
 
         case 'pattern':
@@ -107,7 +109,7 @@ export function useQuickChecks(checkType, options = {}) {
       setHint(result);
       timeoutRef.current = null; // P0-2: Clear ref after timeout executes
     }, debounceMs);
-  }, [checkType, debounceMs, validValues, min, max, pattern, patternMessage]);
+  }, [checkType, debounceMs, validValues, min, max, unit, pattern, patternMessage]);
 
   // Cleanup timeout on unmount
   useEffect(() => {

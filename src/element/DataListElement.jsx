@@ -33,6 +33,7 @@ const DataListElement = (prop) => {
       validValues: validation?.validValues,
       min: validation?.min,
       max: validation?.max,
+      unit: validation?.unit,
       pattern: validation?.pattern,
       patternMessage: validation?.patternMessage,
     }
