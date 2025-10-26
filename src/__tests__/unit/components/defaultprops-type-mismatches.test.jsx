@@ -188,13 +188,15 @@ describe('defaultProps Type Mismatches Fix', () => {
       expect(CheckboxListDefaults.defaultValue).toEqual([]);
     });
 
-    it('RadioList defaultValue should be array type', () => {
+    it('RadioList defaultValue should be string/number (single selection)', () => {
       // ARRANGE
       const RadioListDefaults = RadioList.defaultProps;
 
       // ASSERT
-      expect(Array.isArray(RadioListDefaults.defaultValue)).toBe(true);
-      expect(RadioListDefaults.defaultValue).toEqual([]);
+      // Radio buttons select ONE item, so defaultValue should be string/number, not array
+      expect(typeof RadioListDefaults.defaultValue === 'string' ||
+             typeof RadioListDefaults.defaultValue === 'number').toBe(true);
+      expect(RadioListDefaults.defaultValue).toEqual('');
     });
 
     it('ListElement defaultValue should be array type', () => {

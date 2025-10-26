@@ -54,11 +54,15 @@ describe('CheckboxList Component', () => {
       expect(screen.getByText('Select Cameras')).toBeInTheDocument();
     });
 
-    it('should have label with correct htmlFor attribute', () => {
-      const { container } = render(<CheckboxList {...defaultProps} />);
+    it('should use fieldset with legend for semantic grouping', () => {
+      render(<CheckboxList {...defaultProps} />);
 
-      const label = container.querySelector('label[for="test-checkbox-list"]');
-      expect(label).toBeInTheDocument();
+      // Should use fieldset/legend instead of label for accessibility
+      const fieldset = screen.getByRole('group', { name: /Select Cameras/i });
+      expect(fieldset.tagName).toBe('FIELDSET');
+
+      const legend = within(fieldset).getByText('Select Cameras');
+      expect(legend.tagName).toBe('LEGEND');
     });
 
     it('should render InfoIcon with placeholder as tooltip', () => {

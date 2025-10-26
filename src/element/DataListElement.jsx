@@ -4,9 +4,14 @@ import { sanitizeTitle } from '../utils';
 import InfoIcon from './InfoIcon';
 import { useQuickChecks } from '../validation/useQuickChecks';
 import { HintDisplay } from '../validation/HintDisplay';
+import { useStableId } from '../hooks/useStableId';
 
 /**
  * Data list providing users options to select from and allowing them to write their own selection
+ *
+ * Supports both controlled and uncontrolled patterns:
+ * - Controlled: pass `value` + `onChange` props
+ * - Uncontrolled: pass `defaultValue` prop (legacy)
  *
  * @param {Object} prop Custom element's properties
  *
@@ -14,17 +19,22 @@ import { HintDisplay } from '../validation/HintDisplay';
  */
 const DataListElement = (prop) => {
   const {
-    id,
+    id: providedId,
     name,
     title,
     dataItems,
+    value,
     defaultValue,
+    onChange,
     placeholder,
     type,
     onBlur,
     required,
     validation,
   } = prop;
+
+  const id = useStableId(providedId, 'datalist');
+  const isControlled = value !== undefined;
 
   const quickChecks = useQuickChecks(
     validation?.type,
@@ -39,6 +49,16 @@ const DataListElement = (prop) => {
     }
   );
 
+  const handleChange = (e) => {
+    if (onChange) {
+      onChange(e);
+    }
+
+    if (validation) {
+      quickChecks.validate(name, e.target.value);
+    }
+  };
+
   // Handle blur event to escalate hint to error if invalid
   const handleBlur = (e) => {
     // Call validation first (escalate to error if needed)
@@ -47,11 +67,31 @@ const DataListElement = (prop) => {
     }
 
     // Then call parent onBlur for any additional processing
-    onBlur(e);
+    if (onBlur) {
+      onBlur(e);
+    }
   };
 
   // Generate hint ID for aria-describedby linking
   const hintId = validation ? `${id}-hint` : undefined;
+
+  const inputProps = {
+    id,
+    type,
+    list: `${id}-list`,
+    name,
+    placeholder,
+    required,
+    onBlur: handleBlur,
+    'aria-describedby': hintId,
+  };
+
+  if (isControlled) {
+    inputProps.value = value;
+    inputProps.onChange = handleChange;
+  } else {
+    inputProps.defaultValue = defaultValue;
+  }
 
   return (
     <label className="container" htmlFor={id}>
@@ -59,19 +99,7 @@ const DataListElement = (prop) => {
         {title} <InfoIcon infoText={placeholder} />
       </div>
       <div className="item2 data-list">
-        <input
-          id={id}
-          type={type}
-          list={`${id}-list`}
-          name={name}
-          placeholder={placeholder}
-          defaultValue={defaultValue}
-          key={defaultValue}
-          required={required}
-          onChange={validation ? (e) => quickChecks.validate(name, e.target.value) : undefined}
-          onBlur={handleBlur}
-          aria-describedby={hintId}
-        />
+        <input {...inputProps} />
         <datalist id={`${id}-list`} name={name}>
           {dataItems.map((dataItem, dataItemIndex) => {
             return (
@@ -95,11 +123,13 @@ const DataListElement = (prop) => {
 
 DataListElement.propTypes = {
   title: PropTypes.string.isRequired,
-  type: PropTypes.oneOf([PropTypes.string, PropTypes.number]),
-  defaultValue: PropTypes.oneOf([PropTypes.string, PropTypes.number]),
+  type: PropTypes.string,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  defaultValue: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  onChange: PropTypes.func,
   dataItems: PropTypes.arrayOf(PropTypes.string),
   placeholder: PropTypes.string,
-  id: PropTypes.string.isRequired,
+  id: PropTypes.string,
   name: PropTypes.string.isRequired,
   onBlur: PropTypes.func,
   required: PropTypes.bool,
@@ -109,16 +139,21 @@ DataListElement.propTypes = {
     validValues: PropTypes.array,
     min: PropTypes.number,
     max: PropTypes.number,
+    unit: PropTypes.string,
     pattern: PropTypes.instanceOf(RegExp),
     patternMessage: PropTypes.string,
   }),
 };
 
 DataListElement.defaultProps = {
+  id: undefined,
   type: 'text',
+  value: undefined,
   defaultValue: '',
+  onChange: undefined,
   placeholder: '',
-  onBlur: () => {},
+  dataItems: [],
+  onBlur: undefined,
   required: false,
   validation: null,
 };

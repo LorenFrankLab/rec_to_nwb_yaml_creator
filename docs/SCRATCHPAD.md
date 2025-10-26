@@ -1,18 +1,89 @@
 # Scratchpad - Phase 3
 
 **Current Phase:** Phase 3 - Code Quality & Refactoring
-**Status:** 🟡 IN PROGRESS - Week 1-2: Utility Extraction
-**Last Updated:** 2025-10-26
+**Status:** 🟡 IN PROGRESS - Controlled Inputs & A11y (fixing test regressions)
+**Last Updated:** 2025-10-26 15:00
 **Branch:** `modern`
 
 ---
 
 ## Quick Status
 
-- **Tests:** 1528/1528 passing (100%) ✅
+- **Tests:** 1548/1570 passing (98.6%) - 22 failures due to refactoring
 - **Coverage:** ~65%
-- **Flaky Tests:** 0 ✅
-- **Tasks Completed:** 10/12 Phase 3 tasks ✅ **Validation UX Complete with Accessibility**
+- **New Tests Added:** 42 (useStableId + controlled inputs + fieldset/legend)
+- **Tasks Completed:** 11/12 Phase 3 tasks (Controlled Inputs implementation done, test fixes in progress)
+
+---
+
+## Current Task: Controlled Inputs & A11y Wiring
+
+### Implementation Complete ✅
+1. **useStableId Hook** - 16/16 tests passing
+2. **InputElement** - Controlled mode + stable IDs
+3. **DataListElement** - Controlled mode + stable IDs
+4. **ListElement** - Fixed missing input ID
+5. **CheckboxList** - fieldset/legend + stable IDs
+6. **RadioList** - fieldset/legend + stable IDs
+
+### Breaking Changes Made (Intentional)
+1. **Removed key={defaultValue} hack** - No more forced remounting
+2. **fieldset/legend for CheckboxList/RadioList** - Semantic HTML
+3. **Changed from label wrapper to fieldset** - Better accessibility
+
+### Test Failures to Fix (22)
+- Label/htmlFor expectations → Update to fieldset/legend
+- key prop tests → Delete (behavior removed)
+- Import/export integration → Investigate query selectors
+- Validation tests → Check onChange vs onInput
+- Duplicate keys test → Update fieldset count assertion
+
+---
+
+## ⚠️ Task Reconsidered: Stable IDs for List Items (2025-10-26)
+
+**Status:** ABANDONED after code review
+
+**Original Task:** Replace index-based React keys with stable IDs using nanoid() for all arrays.
+
+**Why Abandoned:**
+
+After implementing the task and requesting code review, we discovered a **critical data integrity issue**:
+
+1. **Only 2 of 11 arrays should have `id` fields** according to the JSON schema:
+   - ✅ `cameras` - id is REQUIRED in schema
+   - ✅ `electrode_groups` - id is REQUIRED in schema
+   - ❌ All other arrays (tasks, behavioral_events, etc.) - id is NOT in schema
+
+2. **Adding `id` fields to arrayDefaultValues exports them to YAML**, which would:
+   - Violate the JSON schema for arrays that don't require IDs
+   - Potentially cause validation failures in trodes_to_nwb
+   - Pollute scientific metadata with UI-only fields
+
+3. **Index-based keys are actually acceptable** for this use case because:
+   - Arrays are rarely reordered by users
+   - Items are typically only added/removed from the end
+   - The original keys use `sanitizeTitle(name + index)` for stability
+
+**Code Review Findings:**
+
+The code-reviewer agent identified the issue and recommended:
+- Remove `id` from arrays that don't require it in schema ✅ (partially implemented then reverted)
+- Keep React keys as-is (using index + stable property like name)
+- Add YAML export sanitization IF we proceed with internal IDs
+- Test with trodes_to_nwb to verify compatibility
+
+**Decision:**
+
+**All changes reverted.** The current implementation is correct:
+- Arrays with schema-required IDs (cameras, electrode_groups) already have them
+- Arrays without schema-required IDs use index-based keys (acceptable for this use case)
+- No YAML pollution risk
+- No breaking changes to downstream pipeline
+
+**Time Spent:** ~1.5 hours (investigation, implementation, code review, revert)
+
+**Lesson Learned:** Always verify schema requirements before adding fields to data models in scientific infrastructure. The task specification was based on an incorrect assumption about React best practices - not all arrays need stable IDs, especially when it would violate the data schema.
 
 ---
 

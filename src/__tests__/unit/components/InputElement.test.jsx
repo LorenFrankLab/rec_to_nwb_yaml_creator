@@ -554,36 +554,9 @@ describe('InputElement Component', () => {
     });
   });
 
-  describe('Key Prop for Re-rendering', () => {
-    it('should use defaultValue as key to force re-render on value change', () => {
-      const { container, rerender } = render(
-        <InputElement
-          id="test-input"
-          type="text"
-          title="Field"
-          name="field"
-          defaultValue="initial"
-        />
-      );
-
-      const firstInput = screen.getByRole('textbox');
-      expect(firstInput).toHaveValue('initial');
-
-      // Re-render with new defaultValue
-      rerender(
-        <InputElement
-          id="test-input"
-          type="text"
-          title="Field"
-          name="field"
-          defaultValue="updated"
-        />
-      );
-
-      const updatedInput = screen.getByRole('textbox');
-      expect(updatedInput).toHaveValue('updated');
-    });
-  });
+  // Key Prop test REMOVED: InputElement now uses controlled inputs (value + onChange)
+  // instead of key={defaultValue} hack. Uncontrolled mode still works but doesn't
+  // force re-renders - use controlled mode for dynamic updates.
 
   describe('Date Formatting Edge Cases', () => {
     it('should handle date with single-digit month', () => {

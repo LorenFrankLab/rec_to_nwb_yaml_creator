@@ -328,37 +328,8 @@ describe('DataListElement Component', () => {
       expect(input).toHaveValue('option1');
     });
 
-    it('BASELINE: key prop forces input re-render when defaultValue changes', () => {
-      const { rerender, container } = render(
-        <DataListElement
-          id="test-datalist"
-          title="Test Field"
-          name="test_field"
-          dataItems={['option1', 'option2']}
-          defaultValue="option1"
-        />
-      );
-
-      const firstInput = container.querySelector('input');
-      expect(firstInput).toHaveValue('option1');
-
-      // Rerender with new defaultValue
-      rerender(
-        <DataListElement
-          id="test-datalist"
-          title="Test Field"
-          name="test_field"
-          dataItems={['option1', 'option2']}
-          defaultValue="option2"
-        />
-      );
-
-      const secondInput = container.querySelector('input');
-      expect(secondInput).toHaveValue('option2');
-
-      // key={defaultValue} causes React to unmount and remount the input
-      // This is important for resetting uncontrolled input state
-    });
+    // Key prop test REMOVED: DataListElement now supports controlled mode (value + onChange).
+    // Use controlled mode for dynamic updates instead of key={defaultValue} remounting hack.
   });
 
   describe('User Interactions', () => {

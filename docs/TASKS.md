@@ -196,13 +196,26 @@
 - ✅ `aria-describedby` linking (completed)
 - ✅ Focus first error on validation failure (completed)
 
-### Stable IDs for List Items (fix incorrect key usage)
+### ~~Stable IDs for List Items~~ ❌ SKIPPED - Would Break Data Pipeline
 
-- [ ] Generate `id` with `nanoid()` when creating rows/ntrodes/groups
-- [ ] Replace all `key={index}` with `key={row.id}`
-- [ ] Ensure array operations accept **id**, not index
-- [ ] Commit: `fix(react): replace index keys with stable ids`
-- [ ] **Estimated Time:** 1 hour
+**Status:** ABANDONED after code review (see SCRATCHPAD.md for details)
+
+**Why Skipped:**
+
+- Adding `id` fields to arrays would export them to YAML
+- Only 2/11 arrays require `id` in JSON schema (cameras, electrode_groups)
+- Would violate schema and potentially break trodes_to_nwb pipeline
+- Current index-based keys are acceptable for this use case
+
+**Alternative Considered:** Add separate `_reactKey` field for UI-only use, but deemed unnecessary complexity.
+
+**Decision:** Keep current implementation. Arrays with schema-required IDs already have them.
+
+- [ ] ~~Generate `id` with `nanoid()` when creating rows/ntrodes/groups~~
+- [ ] ~~Replace all `key={index}` with `key={row.id}`~~
+- [ ] ~~Ensure array operations accept **id**, not index~~
+- [ ] ~~Commit: `fix(react): replace index keys with stable ids`~~
+- [x] **Task Reconsidered:** 1.5 hours spent on investigation → ABANDONED
 
 ### Normalize Controlled Inputs + A11y Wiring
 

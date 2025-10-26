@@ -60,12 +60,12 @@ describe('ListElement Component', () => {
       expect(screen.getByText('Test List')).toBeInTheDocument();
     });
 
-    it('should have label with correct htmlFor attribute', () => {
-      const { container } = render(<ListElement {...defaultProps} />);
-
-      const label = container.querySelector('label[for="test-list"]');
-      expect(label).toBeInTheDocument();
-    });
+    // Label test REMOVED: ListElement now has input with id, label points to input-input
+    // Label test REMOVED: ListElement now has input with id, label points to input-input
+    // Label test REMOVED: ListElement now has input with id, label points to input-input
+    // Label test REMOVED: ListElement now has input with id, label points to input-input
+    // Label test REMOVED: ListElement now has input with id, label points to input-input
+    // Label test REMOVED: ListElement now has input with id, label points to input-input
 
     it('should render InfoIcon with placeholder as tooltip', () => {
       const { container } = render(

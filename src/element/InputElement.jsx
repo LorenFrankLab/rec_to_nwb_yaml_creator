@@ -3,9 +3,14 @@ import PropTypes from 'prop-types';
 import InfoIcon from './InfoIcon';
 import { useQuickChecks } from '../validation/useQuickChecks';
 import { HintDisplay } from '../validation/HintDisplay';
+import { useStableId } from '../hooks/useStableId';
 
 /**
  * Provides a text box
+ *
+ * Supports both controlled and uncontrolled patterns:
+ * - Controlled: pass `value` + `onChange` props
+ * - Uncontrolled: pass `defaultValue` prop (legacy, for backward compatibility)
  *
  * @param {Object} prop Custom element's properties
  *
@@ -14,12 +19,14 @@ import { HintDisplay } from '../validation/HintDisplay';
  */
 const InputElement = (prop) => {
   const {
-    id,
+    id: providedId,
     type,
     title,
     name,
     placeholder,
+    value,
     defaultValue,
+    onChange,
     min,
     required,
     onBlur,
@@ -28,6 +35,12 @@ const InputElement = (prop) => {
     step,
     validation,
   } = prop;
+
+  // Generate stable, unique ID
+  const id = useStableId(providedId, 'input');
+
+  // Determine if controlled or uncontrolled
+  const isControlled = value !== undefined;
 
   // Initialize quick checks validation (always call hook per Rules of Hooks)
   // When validation prop is null, pass dummy values that won't be used
@@ -44,18 +57,24 @@ const InputElement = (prop) => {
     }
   );
 
-  // Handle input event to detect invalid characters in number fields
-  const handleInput = (e) => {
-    if (!validation) return;
-
-    // For type="number", check validity.badInput (browser blocked invalid chars)
-    if (type === 'number' && e.target.validity?.badInput) {
-      quickChecks.validate(name, 'INVALID_NUMBER_INPUT');
-      return;
+  // Handle input/change events
+  const handleChange = (e) => {
+    // Call parent onChange for controlled components
+    if (onChange) {
+      onChange(e);
     }
 
-    // Normal validation for all other cases
-    quickChecks.validate(name, e.target.value);
+    // Run validation if enabled
+    if (validation) {
+      // For type="number", check validity.badInput (browser blocked invalid chars)
+      if (type === 'number' && e.target.validity?.badInput) {
+        quickChecks.validate(name, 'INVALID_NUMBER_INPUT');
+        return;
+      }
+
+      // Normal validation for all other cases
+      quickChecks.validate(name, e.target.value);
+    }
   };
 
   // Handle blur event to escalate hint to error if invalid
@@ -71,40 +90,79 @@ const InputElement = (prop) => {
     }
 
     // Then call parent onBlur for any additional processing
-    onBlur(e);
+    if (onBlur) {
+      onBlur(e);
+    }
   };
 
+  // Helper to format date values for controlled inputs
+  const getDateValue = (val) => {
+    if (!val) {
+      return '';
+    }
+
+    const valString = String(val);
+
+    // If value is already in YYYY-MM-DD format, return it directly
+    if (/^\d{4}-\d{2}-\d{2}$/.test(valString)) {
+      return valString;
+    }
+
+    // For ISO 8601 datetime strings, extract the date part
+    if (valString.includes('T')) {
+      return valString.split('T')[0];
+    }
+
+    // Fallback: parse as date (this may have timezone issues)
+    const dateObj = new Date(valString);
+
+    const month = `0${dateObj.getMonth() + 1}`.slice(-2);
+    const day = `0${dateObj.getDate()}`.slice(-2);
+    const year = dateObj.getFullYear();
+
+    return `${year}-${month}-${day}`;
+  };
+
+  // Helper to format date values for uncontrolled inputs (legacy)
   const getDefaultDateValue = () => {
     if (!defaultValue) {
       return '';
     }
 
-    // If defaultValue is already in YYYY-MM-DD format, return it directly
-    // This avoids timezone conversion issues with new Date()
-    if (/^\d{4}-\d{2}-\d{2}$/.test(defaultValue)) {
-      return defaultValue;
-    }
-
-    // For ISO 8601 datetime strings, extract the date part
-    if (defaultValue.includes('T')) {
-      return defaultValue.split('T')[0];
-    }
-
-    // Fallback: parse as date (this may have timezone issues)
-    const dateObj = new Date(defaultValue);
-
-    // get the month in this format of 04, the same for months
-    const month = `0${dateObj.getMonth() + 1}`.slice(-2);
-    const day = `0${dateObj.getDate()}`.slice(-2); // FIX: removed +1 (getDate already returns 1-31)
-    const year = dateObj.getFullYear();
-
-    const shortDate = `${year}-${month}-${day}`;
-
-    return shortDate;
+    return getDateValue(defaultValue);
   };
 
   // Generate hint ID for aria-describedby linking
   const hintId = validation ? `${id}-hint` : undefined;
+
+  // Prepare input props based on controlled/uncontrolled mode
+  const inputProps = {
+    id,
+    type,
+    name,
+    className: `base-width ${readOnly ? 'gray-out' : ''}`,
+    placeholder,
+    required,
+    readOnly,
+    step,
+    min,
+    pattern,
+    'aria-describedby': hintId,
+    onBlur: handleBlur,
+  };
+
+  if (isControlled) {
+    // Controlled mode: use value + onChange
+    inputProps.value = type === 'date' ? getDateValue(value) : value;
+    inputProps.onChange = handleChange;
+  } else {
+    // Uncontrolled mode: use defaultValue
+    inputProps.defaultValue = type === 'date' ? getDefaultDateValue() : defaultValue;
+    // If validation enabled in uncontrolled mode, still need to trigger validation
+    if (validation || onChange) {
+      inputProps.onChange = handleChange;
+    }
+  }
 
   return (
     <label className="container" htmlFor={id}>
@@ -112,23 +170,7 @@ const InputElement = (prop) => {
         {title} <InfoIcon infoText={placeholder} />
       </div>
       <div className="item2">
-        <input
-          id={id}
-          type={type}
-          name={name}
-          className={`base-width ${readOnly ? 'gray-out' : ''}`}
-          placeholder={placeholder}
-          defaultValue={type !== 'date' ? defaultValue : getDefaultDateValue()}
-          key={defaultValue}
-          required={required}
-          readOnly={readOnly}
-          step={step}
-          min={min}
-          onInput={validation ? handleInput : undefined}
-          onBlur={handleBlur}
-          pattern={pattern}
-          aria-describedby={hintId}
-        />
+        <input {...inputProps} />
         {validation && (
           <HintDisplay id={hintId} hint={quickChecks.hint} isRequired={required} />
         )}
@@ -139,7 +181,7 @@ const InputElement = (prop) => {
 
 InputElement.propTypes = {
   title: PropTypes.string.isRequired,
-  id: PropTypes.string.isRequired,
+  id: PropTypes.string, // Optional - will be auto-generated if not provided
   type: PropTypes.string.isRequired,
   name: PropTypes.string.isRequired,
   placeholder: PropTypes.string,
@@ -147,6 +189,10 @@ InputElement.propTypes = {
   required: PropTypes.bool,
   step: PropTypes.string,
   min: PropTypes.string,
+  // Controlled mode
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  onChange: PropTypes.func,
+  // Uncontrolled mode (legacy)
   defaultValue: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   pattern: PropTypes.string,
   onBlur: PropTypes.func,
@@ -156,20 +202,24 @@ InputElement.propTypes = {
     validValues: PropTypes.arrayOf(PropTypes.string),
     min: PropTypes.number,
     max: PropTypes.number,
+    unit: PropTypes.string,
     pattern: PropTypes.instanceOf(RegExp),
     patternMessage: PropTypes.string,
   }),
 };
 
 InputElement.defaultProps = {
+  id: undefined,
   required: false,
   placeholder: '',
+  value: undefined,
   defaultValue: '',
+  onChange: undefined,
   readOnly: false,
   step: 'any',
   pattern: '^.+$',
   min: '',
-  onBlur: () => {},
+  onBlur: undefined,
   validation: null,
 };
 
