@@ -1176,6 +1176,7 @@ useEffect(() => {
                           index,
                         })
                       }
+                      validation={{ type: 'required' }}
                     />
                     <InputElement
                       id={`cameras-lens-${index}`}
@@ -1191,6 +1192,7 @@ useEffect(() => {
                           index,
                         })
                       }
+                      validation={{ type: 'required' }}
                     />{' '}
                     <InputElement
                       id={`cameras-cameraname-${index}`}
@@ -1206,6 +1208,7 @@ useEffect(() => {
                           index,
                         })
                       }
+                      validation={{ type: 'required' }}
                     />
                   </div>
                 </details>
@@ -1254,6 +1257,7 @@ useEffect(() => {
                           index,
                         })
                       }
+                      validation={{ type: 'required' }}
                     />
                     <InputElement
                       id={`tasks-task_description-${index}`}
@@ -1269,6 +1273,7 @@ useEffect(() => {
                           index,
                         })
                       }
+                      validation={{ type: 'required' }}
                     />
                     <InputElement
                       id={`tasks-task_environment-${index}`}
@@ -1284,6 +1289,7 @@ useEffect(() => {
                           index,
                         })
                       }
+                      validation={{ type: 'required' }}
                     />
                     <CheckboxList
                       id={`tasks-camera_id-${index}`}
