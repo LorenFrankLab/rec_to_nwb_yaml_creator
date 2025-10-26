@@ -365,7 +365,13 @@
 
 #### Extract Additional Form Components
 
-Following same pattern:
+**Pattern:** Props-based components, TDD approach, verify golden YAML tests
+
+**Completed:**
+- [x] `<DataAcqDeviceFields />` - 102 lines, 16 tests, array with CRUD ✅
+- [x] `<DeviceFields />` - 20 lines, 6 tests, single ListElement ✅
+
+**Remaining:**
 
 - [ ] `<DataAcqDevice />` (App.js:1148-1247)
 - [ ] `<CameraFields />` (App.js:1248-1371)

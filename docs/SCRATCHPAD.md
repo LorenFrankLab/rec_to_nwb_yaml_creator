@@ -7,14 +7,14 @@
 
 ---
 
-## 🎯 Current Task: COMPLETE - SubjectFields Extracted ✅
+## 🎯 Current Task: Component Extraction - 3 Components Complete ✅
 
 ### Task Overview
 
-**Status:** ✅ COMPLETE
-**What:** Extracted subject section from App.js into `<SubjectFields />` component
-**Approach:** Props-based component (not store-based, learned from debugging)
-**Reduction:** 97 lines from App.js (App.js: 2373 → 2276 lines)
+**Status:** 🟢 IN PROGRESS - 3 of 10+ components extracted
+**What:** Extracting form sections from App.js into dedicated components
+**Approach:** Props-based components (TDD, golden YAML verification)
+**Total Reduction:** 219 lines (App.js: 2373 → 2154 lines, 9.2%)
 
 ### Store Facade Status: ✅ COMPLETE (Not Yet Used in App.js)
 
@@ -112,9 +112,15 @@ export default function SubjectFields() {
 - Debugging + fixing: 3.5 hours (not estimated - learned from mistakes)
 - Total: 6 hours
 
-### Next Steps After SubjectFields
+### Components Extracted So Far
 
-Once first component extraction proven, continue with:
+1. ✅ **SubjectFields** (97 lines) - Simple object, 21 tests ✅
+2. ✅ **DataAcqDeviceFields** (102 lines) - Array with CRUD, 16 tests ✅
+3. ✅ **DeviceFields** (20 lines) - Single list field, 6 tests ✅
+
+**Total:** 219 lines extracted, 43 component tests, **1686/1686 tests passing (100%)**
+
+### Next Components to Extract
 1. ✅ SubjectFields (~80 lines) ← **CURRENT TASK**
 2. DataAcqDevice (~100 lines)
 3. CameraFields (~120 lines)
