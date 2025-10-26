@@ -91,7 +91,7 @@ InputElement.propTypes = {
   required: PropTypes.bool,
   step: PropTypes.string,
   min: PropTypes.string,
-  defaultValue: PropTypes.oneOf([PropTypes.string, PropTypes.number]),
+  defaultValue: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   pattern: PropTypes.string,
   onBlur: PropTypes.func,
 };
