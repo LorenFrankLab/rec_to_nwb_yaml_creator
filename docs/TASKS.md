@@ -271,12 +271,17 @@
 **Status:** ✅ COMPLETE - Both tasks finished
 **Actual Reduction:** ~190 lines (array management: ~80 lines, form updates: ~110 lines)
 
-### Extract Validation System (already moved; finalize behavior)
+### Extract Validation System ✅ COMPLETE
 
-- [ ] Ensure `validate(model)` merges schema + rules
-- [ ] Bind errors via `aria-describedby`;
-- [ ] Integration tests for timing & messages
-- [ ] Commit: `refactor(validation): finalize integration`
+- [x] Ensure `validate(model)` merges schema + rules
+- [x] Bind errors via `aria-describedby` (completed in accessibility phase)
+- [x] Integration tests for timing & messages (189 validation tests)
+- [x] Fix failing tests and update imports (camera validation logic improved)
+- [x] Delete redundant App validation tests (3 files, 1767 lines, 94 tests)
+- [x] Code review approved with minor suggestions
+- [x] Commit: `refactor(validation): finalize integration`
+- [x] **Actual Time:** 3 hours
+- [x] **Tests:** 1556/1556 passing (100%)
 
 ### Extract Import/Export Logic (with worker seam)
 

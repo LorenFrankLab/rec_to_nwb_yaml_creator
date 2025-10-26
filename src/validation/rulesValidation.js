@@ -31,23 +31,37 @@ export const rulesValidation = (model) => {
   const issues = [];
 
   // Rule 1: Tasks with camera_ids require cameras to be defined
+  // Only trigger if tasks have non-empty camera_id arrays
   if (!model.cameras && model.tasks?.length > 0) {
-    issues.push({
-      path: 'tasks',
-      code: 'missing_camera',
-      severity: 'error',
-      message: 'Tasks have camera_ids, but no cameras are defined'
-    });
+    const tasksWithCameras = model.tasks.some(task =>
+      task.camera_id && Array.isArray(task.camera_id) && task.camera_id.length > 0
+    );
+
+    if (tasksWithCameras) {
+      issues.push({
+        path: 'tasks',
+        code: 'missing_camera',
+        severity: 'error',
+        message: 'Tasks have camera_ids, but no cameras are defined'
+      });
+    }
   }
 
   // Rule 2: Associated video files with camera_ids require cameras
+  // Only trigger if video files have non-empty camera_id arrays
   if (!model.cameras && model.associated_video_files?.length > 0) {
-    issues.push({
-      path: 'associated_video_files',
-      code: 'missing_camera',
-      severity: 'error',
-      message: 'Associated video files have camera_ids, but no cameras are defined'
-    });
+    const videosWithCameras = model.associated_video_files.some(video =>
+      video.camera_id && Array.isArray(video.camera_id) && video.camera_id.length > 0
+    );
+
+    if (videosWithCameras) {
+      issues.push({
+        path: 'associated_video_files',
+        code: 'missing_camera',
+        severity: 'error',
+        message: 'Associated video files have camera_ids, but no cameras are defined'
+      });
+    }
   }
 
   // Rule 3: Optogenetics all-or-nothing configuration

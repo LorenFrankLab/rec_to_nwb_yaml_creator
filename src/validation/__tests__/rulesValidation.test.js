@@ -27,7 +27,7 @@ describe('rulesValidation()', () => {
 
     it('should return empty array when tasks have cameras defined', () => {
       const model = createTestYaml({
-        tasks: [{ camera_ids: [0] }],
+        tasks: [{ camera_id: [0] }], // Fixed: camera_id (singular)
         cameras: [{ id: 0, meters_per_pixel: 0.001, camera_name: 'cam1' }]
       });
       const issues = rulesValidation(model);
@@ -82,7 +82,7 @@ describe('rulesValidation()', () => {
     it('should return Issue objects with all required properties', () => {
       const model = {
         ...createTestYaml(),
-        tasks: [{ camera_ids: [0] }],
+        tasks: [{ camera_id: [0] }],
         cameras: undefined
       };
       const issues = rulesValidation(model);
@@ -99,7 +99,7 @@ describe('rulesValidation()', () => {
     it('should set severity to "error" for all rule violations', () => {
       const model = {
         ...createTestYaml(),
-        tasks: [{ camera_ids: [0] }],
+        tasks: [{ camera_id: [0] }],
         cameras: undefined,
         opto_excitation_source: [{ opto_excitation_source_name: 'LED' }],
         optical_fiber: undefined,
@@ -113,7 +113,7 @@ describe('rulesValidation()', () => {
     it('should not include instancePath or schemaPath (rules are not schema-based)', () => {
       const model = {
         ...createTestYaml(),
-        tasks: [{ camera_ids: [0] }],
+        tasks: [{ camera_id: [0] }],
         cameras: undefined
       };
       const issues = rulesValidation(model);
@@ -127,7 +127,7 @@ describe('rulesValidation()', () => {
     it('should detect tasks without cameras defined', () => {
       const model = {
         ...createTestYaml(),
-        tasks: [{ camera_ids: [0] }],
+        tasks: [{ camera_id: [0] }], // Fixed: camera_id (singular) not camera_ids
         cameras: undefined
       };
       const issues = rulesValidation(model);
@@ -143,7 +143,7 @@ describe('rulesValidation()', () => {
     it('should detect tasks when cameras is empty array', () => {
       const model = {
         ...createTestYaml(),
-        tasks: [{ camera_ids: [0] }],
+        tasks: [{ camera_id: [0] }], // Fixed: camera_id (singular) not camera_ids
         cameras: []
       };
       const issues = rulesValidation(model);
@@ -155,7 +155,7 @@ describe('rulesValidation()', () => {
 
     it('should not error when tasks exist but cameras defined', () => {
       const model = createTestYaml({
-        tasks: [{ camera_ids: [0] }],
+        tasks: [{ camera_id: [0] }], // Fixed: camera_id (singular) not camera_ids
         cameras: [{ id: 0, meters_per_pixel: 0.001, camera_name: 'cam1' }]
       });
       const issues = rulesValidation(model);
@@ -188,7 +188,7 @@ describe('rulesValidation()', () => {
     it('should detect associated_video_files without cameras defined', () => {
       const model = {
         ...createTestYaml(),
-        associated_video_files: [{ camera_id: 0, task_epochs: [1] }],
+        associated_video_files: [{ camera_id: [0], task_epochs: [1] }], // Fixed: camera_id should be array
         cameras: undefined
       };
       const issues = rulesValidation(model);
@@ -203,7 +203,7 @@ describe('rulesValidation()', () => {
 
     it('should not error when associated_video_files exist with cameras', () => {
       const model = createTestYaml({
-        associated_video_files: [{ camera_id: 0, task_epochs: [1] }],
+        associated_video_files: [{ camera_id: [0], task_epochs: [1] }], // Fixed: camera_id should be array
         cameras: [{ id: 0, meters_per_pixel: 0.001, camera_name: 'cam1' }]
       });
       const issues = rulesValidation(model);
@@ -488,7 +488,7 @@ describe('rulesValidation()', () => {
     it('should detect violations from multiple rules', () => {
       const model = {
         ...createTestYaml(),
-        tasks: [{ camera_ids: [0] }],  // Rule 1 violation
+        tasks: [{ camera_id: [0] }],  // Rule 1 violation
         cameras: undefined,
         opto_excitation_source: [{ opto_excitation_source_name: 'LED' }],  // Rule 3 violation
         optical_fiber: undefined,

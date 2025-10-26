@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
 import { encodeYaml, downloadYamlFile, formatDeterministicFilename } from './io/yaml';
 import { showErrorMessage, displayErrorOnUI } from './utils/errorDisplay';
-import { jsonschemaValidation, rulesValidation } from './utils/validation';
+import { validate } from './validation';
 import { useArrayManagement } from './hooks/useArrayManagement';
 import { useFormUpdates } from './hooks/useFormUpdates';
 
@@ -120,19 +120,11 @@ export function App() {
           setFormData(structuredClone(emptyFormData));
           return;
         }
-        const JSONschema = schema.current;
-        const validation = jsonschemaValidation(jsonFileContent, JSONschema);
-        const {
-              isValid,
-              jsonSchemaErrorMessages,
-              jsonSchemaErrors,
-              jsonSchemaErrorIds,
-            } = validation;
-          const { isFormValid, formErrorMessages, formErrors, formErrorIds } =
-              rulesValidation(jsonFileContent);
+        // Use unified validation API
+        const issues = validate(jsonFileContent);
 
-            if (isValid && isFormValid) {
-              // ensure relevant keys exist
+            if (issues.length === 0) {
+              // No validation errors - ensure relevant keys exist and load all data
               Object.keys(emptyFormData).forEach((key) => {
                 if (!Object.hasOwn(jsonFileContent, key)) {
                   jsonFileContent[key] = emptyFormData[key];
@@ -143,10 +135,25 @@ export function App() {
               return null;
             }
 
-            const allErrorIds = [...jsonSchemaErrorIds, ...formErrorIds];
+            // Validation errors found - extract error IDs and messages
+            // Extract top-level field IDs from paths (e.g., "cameras[0].id" → "cameras")
+            const allErrorIds = [
+              ...new Set(
+                issues.map(issue => {
+                  const topLevelField = issue.path.split('[')[0].split('.')[0];
+                  return topLevelField;
+                })
+              )
+            ];
+
+            const allErrorMessages = [
+              ...new Set(issues.map(issue => issue.message))
+            ];
+
             const formContent = structuredClone(emptyFormData);
             const formContentKeys = Object.keys(formContent);
 
+            // Import only fields that don't have validation errors
             formContentKeys.forEach((key) => {
               if (
                 !allErrorIds.includes(key) &&
@@ -168,10 +175,6 @@ export function App() {
             if (!genders.includes(formContent.subject.sex)) {
               formContent.subject.sex = 'U';
             }
-
-            const allErrorMessages = [
-              ...new Set([...formErrorMessages, ...jsonSchemaErrorMessages]),
-            ];
 
             if (allErrorMessages.length > 0) {
               // eslint-disable-next-line no-alert
@@ -362,29 +365,31 @@ const generateYMLFile = (e) => {
 
   const form = structuredClone(formData);
 
-  const validation = jsonschemaValidation(form);
-  const { isValid, jsonSchemaErrors } = validation;
-  const { isFormValid, formErrors } = rulesValidation(form);
+  // Use unified validation API that merges schema + rules
+  const issues = validate(form);
 
-  if (isValid && isFormValid) {
+  // If no validation issues, generate and download YAML
+  if (issues.length === 0) {
     const yAMLForm = encodeYaml(form);
     const fileName = formatDeterministicFilename(form);
     downloadYamlFile(fileName, yAMLForm);
     return;
   }
 
-  // Display errors to user
-  if (!isValid) {
-    jsonSchemaErrors?.forEach((error) => {
-      showErrorMessage(error);
-    });
-  }
-
-  if (!isFormValid) {
-    formErrors?.forEach((error) => {
-      displayErrorOnUI(error.id, error.message);
-    });
-  }
+  // Display validation errors to user
+  // Issues with instancePath are from schema validation (AJV format)
+  // Issues without instancePath are from rules validation (need ID conversion)
+  issues.forEach((issue) => {
+    if (issue.instancePath !== undefined) {
+      // Schema validation error - use showErrorMessage (expects AJV format)
+      showErrorMessage(issue);
+    } else {
+      // Rules validation error - use displayErrorOnUI (expects id + message)
+      // Convert path to ID format (e.g., "tasks" → "tasks", "cameras[0].id" → "cameras-id-0")
+      const id = issue.path.replace(/\[(\d+)\]\.(\w+)/g, '-$2-$1').replace(/\[(\d+)\]$/g, '-$1');
+      displayErrorOnUI(id, issue.message);
+    }
+  });
 
   // Focus first invalid field for better accessibility
   // Wait for error messages to be displayed in DOM

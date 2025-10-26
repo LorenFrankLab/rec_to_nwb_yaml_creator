@@ -22,7 +22,7 @@ import { describe, it, expect } from 'vitest';
 import YAML from 'yaml';
 import fs from 'fs';
 import path from 'path';
-import { rulesValidation } from '../../../utils/validation';
+import { validate } from '../../../validation';
 
 /**
  * Helper to load YAML fixtures
@@ -73,12 +73,14 @@ describe('BUG: Hardware Channel Mapping - Duplicate Values Not Detected', () => 
       };
 
       // ACT
-      const result = rulesValidation(formData);
+      const allIssues = validate(formData);
+      const rulesIssues = allIssues.filter(i => i.instancePath === undefined);
+      const isFormValid = rulesIssues.length === 0;
 
       // ASSERT - Should detect duplicate channel mapping
-      expect(result.isFormValid).toBe(false);
-      expect(result.formErrors).toHaveLength(1);
-      expect(result.formErrors[0]).toMatch(/duplicate.*channel.*map/i);
+      expect(isFormValid).toBe(false);
+      expect(rulesIssues.map(i => i.message)).toHaveLength(1);
+      expect(rulesIssues.map(i => i.message)[0]).toMatch(/duplicate.*channel.*map/i);
     });
 
     it('should reject ntrode map with three channels mapping to same value', () => {
@@ -114,12 +116,14 @@ describe('BUG: Hardware Channel Mapping - Duplicate Values Not Detected', () => 
       };
 
       // ACT
-      const result = rulesValidation(formData);
+      const allIssues = validate(formData);
+      const rulesIssues = allIssues.filter(i => i.instancePath === undefined);
+      const isFormValid = rulesIssues.length === 0;
 
       // ASSERT
-      expect(result.isFormValid).toBe(false);
-      expect(result.formErrors).toHaveLength(1);
-      expect(result.formErrors[0]).toMatch(/duplicate.*channel.*map/i);
+      expect(isFormValid).toBe(false);
+      expect(rulesIssues.map(i => i.message)).toHaveLength(1);
+      expect(rulesIssues.map(i => i.message)[0]).toMatch(/duplicate.*channel.*map/i);
     });
 
     it('should reject when multiple ntrodes have duplicate mappings', () => {
@@ -166,13 +170,16 @@ describe('BUG: Hardware Channel Mapping - Duplicate Values Not Detected', () => 
       };
 
       // ACT
-      const result = rulesValidation(formData);
+      const allIssues = validate(formData);
+      const rulesIssues = allIssues.filter(i => i.instancePath === undefined);
+      const isFormValid = rulesIssues.length === 0;
 
       // ASSERT - Should detect duplicates in BOTH ntrodes
-      expect(result.isFormValid).toBe(false);
-      expect(result.formErrors.length).toBeGreaterThanOrEqual(2);
-      expect(result.formErrors[0]).toMatch(/ntrode_id.*0.*duplicate/i);
-      expect(result.formErrors[1]).toMatch(/ntrode_id.*1.*duplicate/i);
+      expect(isFormValid).toBe(false);
+      expect(rulesIssues.map(i => i.message).length).toBeGreaterThanOrEqual(2);
+      // New validation API message format: "Ntrode 0 has duplicate channel mappings..."
+      expect(rulesIssues.map(i => i.message)[0]).toMatch(/ntrode\s+0.*duplicate/i);
+      expect(rulesIssues.map(i => i.message)[1]).toMatch(/ntrode\s+1.*duplicate/i);
     });
   });
 
@@ -210,11 +217,13 @@ describe('BUG: Hardware Channel Mapping - Duplicate Values Not Detected', () => 
       };
 
       // ACT
-      const result = rulesValidation(formData);
+      const allIssues = validate(formData);
+      const rulesIssues = allIssues.filter(i => i.instancePath === undefined);
+      const isFormValid = rulesIssues.length === 0;
 
       // ASSERT
-      expect(result.isFormValid).toBe(true);
-      expect(result.formErrors).toEqual([]);
+      expect(isFormValid).toBe(true);
+      expect(rulesIssues.map(i => i.message)).toEqual([]);
     });
 
     it('should accept ntrode map with non-sequential but unique values', () => {
@@ -250,11 +259,13 @@ describe('BUG: Hardware Channel Mapping - Duplicate Values Not Detected', () => 
       };
 
       // ACT
-      const result = rulesValidation(formData);
+      const allIssues = validate(formData);
+      const rulesIssues = allIssues.filter(i => i.instancePath === undefined);
+      const isFormValid = rulesIssues.length === 0;
 
       // ASSERT
-      expect(result.isFormValid).toBe(true);
-      expect(result.formErrors).toEqual([]);
+      expect(isFormValid).toBe(true);
+      expect(rulesIssues.map(i => i.message)).toEqual([]);
     });
 
     it('should accept multiple ntrodes each with unique mappings', () => {
@@ -301,11 +312,13 @@ describe('BUG: Hardware Channel Mapping - Duplicate Values Not Detected', () => 
       };
 
       // ACT
-      const result = rulesValidation(formData);
+      const allIssues = validate(formData);
+      const rulesIssues = allIssues.filter(i => i.instancePath === undefined);
+      const isFormValid = rulesIssues.length === 0;
 
       // ASSERT
-      expect(result.isFormValid).toBe(true);
-      expect(result.formErrors).toEqual([]);
+      expect(isFormValid).toBe(true);
+      expect(rulesIssues.map(i => i.message)).toEqual([]);
     });
 
     it('should accept empty ntrode_electrode_group_channel_map array', () => {
@@ -316,11 +329,13 @@ describe('BUG: Hardware Channel Mapping - Duplicate Values Not Detected', () => 
       };
 
       // ACT
-      const result = rulesValidation(formData);
+      const allIssues = validate(formData);
+      const rulesIssues = allIssues.filter(i => i.instancePath === undefined);
+      const isFormValid = rulesIssues.length === 0;
 
       // ASSERT
-      expect(result.isFormValid).toBe(true);
-      expect(result.formErrors).toEqual([]);
+      expect(isFormValid).toBe(true);
+      expect(rulesIssues.map(i => i.message)).toEqual([]);
     });
   });
 
@@ -358,11 +373,13 @@ describe('BUG: Hardware Channel Mapping - Duplicate Values Not Detected', () => 
       };
 
       // ACT
-      const result = rulesValidation(formData);
+      const allIssues = validate(formData);
+      const rulesIssues = allIssues.filter(i => i.instancePath === undefined);
+      const isFormValid = rulesIssues.length === 0;
 
       // ASSERT
-      expect(result.isFormValid).toBe(true);
-      expect(result.formErrors).toEqual([]);
+      expect(isFormValid).toBe(true);
+      expect(rulesIssues.map(i => i.message)).toEqual([]);
     });
 
     it('should reject 32-channel probe with one duplicate', () => {
@@ -399,12 +416,14 @@ describe('BUG: Hardware Channel Mapping - Duplicate Values Not Detected', () => 
       };
 
       // ACT
-      const result = rulesValidation(formData);
+      const allIssues = validate(formData);
+      const rulesIssues = allIssues.filter(i => i.instancePath === undefined);
+      const isFormValid = rulesIssues.length === 0;
 
       // ASSERT
-      expect(result.isFormValid).toBe(false);
-      expect(result.formErrors).toHaveLength(1);
-      expect(result.formErrors[0]).toMatch(/duplicate.*channel.*map/i);
+      expect(isFormValid).toBe(false);
+      expect(rulesIssues.map(i => i.message)).toHaveLength(1);
+      expect(rulesIssues.map(i => i.message)[0]).toMatch(/duplicate.*channel.*map/i);
     });
   });
 });

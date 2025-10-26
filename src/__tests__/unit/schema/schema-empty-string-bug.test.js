@@ -19,7 +19,7 @@ import { describe, it, expect } from 'vitest';
 import YAML from 'yaml';
 import fs from 'fs';
 import path from 'path';
-import { jsonschemaValidation } from '../../../utils/validation';
+import { validate } from '../../../validation';
 
 function loadFixture(category, filename) {
   const fixturePath = path.join(
@@ -58,14 +58,15 @@ describe('BUG #6: Empty String Validation for Missing Pattern Fields', () => {
       };
 
       // ACT: Validate the YAML
-      const result = jsonschemaValidation(yaml);
+      const issues = validate(yaml);
+      const isValid = issues.length === 0;
 
       // ASSERT: Should REJECT empty hemisphere (currently FAILS - bug exists)
-      expect(result.valid).toBe(false);
-      expect(result.errors).not.toBeNull();
-      expect(result.errors.some(err =>
-        err.instancePath.includes('hemisphere') &&
-        err.keyword === 'pattern'
+      expect(isValid).toBe(false);
+      expect(issues.length).toBeGreaterThan(0);
+      expect(issues.some(issue =>
+        issue.instancePath?.includes('hemisphere') &&
+        issue.code === 'pattern'
       )).toBe(true);
     });
 
@@ -91,16 +92,18 @@ describe('BUG #6: Empty String Validation for Missing Pattern Fields', () => {
         ]
       };
 
-      const result = jsonschemaValidation(yaml);
+      const issues = validate(yaml);
+      const isValid = issues.length === 0;
 
       // Should REJECT whitespace-only hemisphere
-      expect(result.valid).toBe(false);
-      expect(result.errors).not.toBeNull();
+      expect(isValid).toBe(false);
+      expect(issues.length).toBeGreaterThan(0);
     });
 
     it('should ACCEPT virus_injection with valid hemisphere', () => {
       const yaml = {
         ...loadFixture('valid', 'minimal-valid.yml'),
+        // NOTE: If ANY optogenetics field is present, ALL must be present
         virus_injection: [
           {
             name: 'Test Virus',
@@ -117,14 +120,40 @@ describe('BUG #6: Empty String Validation for Missing Pattern Fields', () => {
             pitch_in_deg: 0,
             yaw_in_deg: 0
           }
+        ],
+        opto_excitation_source: [
+          {
+            name: 'Laser1',
+            description: 'Blue laser for optogenetic stimulation',
+            wavelength_in_nm: 473,
+            power_in_W: 0.1,
+            intensity_in_W_per_m2: 1000, // Required field
+            model_name: 'LaserModel-473' // Required field
+          }
+        ],
+        optical_fiber: [
+          {
+            name: 'Fiber1',
+            hardware_name: 'Fiber Optic Cable 200um',
+            hemisphere: 'left',
+            implanted_fiber_description: '200um core fiber',
+            location: 'CA1',
+            ap_in_mm: 1.5,
+            ml_in_mm: 1.0,
+            dv_in_mm: 2.0,
+            pitch_in_deg: 0, // Required field
+            roll_in_deg: 0, // Required field
+            yaw_in_deg: 0 // Required field
+          }
         ]
       };
 
-      const result = jsonschemaValidation(yaml);
+      const issues = validate(yaml);
+      const isValid = issues.length === 0;
 
-      // Should ACCEPT valid hemisphere
-      expect(result.valid).toBe(true);
-      expect(result.errors).toBeNull();
+      // Should ACCEPT valid hemisphere (and complete optogenetics config)
+      expect(isValid).toBe(true);
+      expect(issues).toEqual([]);
     });
   });
 
@@ -137,14 +166,15 @@ describe('BUG #6: Empty String Validation for Missing Pattern Fields', () => {
       };
 
       // ACT: Validate the YAML
-      const result = jsonschemaValidation(yaml);
+      const issues = validate(yaml);
+      const isValid = issues.length === 0;
 
       // ASSERT: Should REJECT empty opto_software (currently FAILS - bug exists)
-      expect(result.valid).toBe(false);
-      expect(result.errors).not.toBeNull();
-      expect(result.errors.some(err =>
-        err.instancePath === '/opto_software' &&
-        err.keyword === 'pattern'
+      expect(isValid).toBe(false);
+      expect(issues.length).toBeGreaterThan(0);
+      expect(issues.some(issue =>
+        issue.instancePath === '/opto_software' &&
+        issue.code === 'pattern'
       )).toBe(true);
     });
 
@@ -154,11 +184,12 @@ describe('BUG #6: Empty String Validation for Missing Pattern Fields', () => {
         opto_software: '   ' // BUG: Whitespace-only should be rejected
       };
 
-      const result = jsonschemaValidation(yaml);
+      const issues = validate(yaml);
+      const isValid = issues.length === 0;
 
       // Should REJECT whitespace-only opto_software
-      expect(result.valid).toBe(false);
-      expect(result.errors).not.toBeNull();
+      expect(isValid).toBe(false);
+      expect(issues.length).toBeGreaterThan(0);
     });
 
     it('should ACCEPT valid opto_software', () => {
@@ -167,11 +198,12 @@ describe('BUG #6: Empty String Validation for Missing Pattern Fields', () => {
         opto_software: 'fsgui' // Valid value (default)
       };
 
-      const result = jsonschemaValidation(yaml);
+      const issues = validate(yaml);
+      const isValid = issues.length === 0;
 
       // Should ACCEPT valid opto_software
-      expect(result.valid).toBe(true);
-      expect(result.errors).toBeNull();
+      expect(isValid).toBe(true);
+      expect(issues).toEqual([]);
     });
   });
 });

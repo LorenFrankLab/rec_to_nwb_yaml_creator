@@ -152,7 +152,13 @@ describe('Unified Validation API', () => {
       it('should detect tasks without cameras (missing_camera)', () => {
         const model = {
           ...createTestYaml(),
-          tasks: [{ camera_ids: [0] }],
+          tasks: [{
+            task_name: 'Test Task',
+            task_description: 'A test task',
+            task_environment: 'Home',
+            camera_id: [0], // Fixed: camera_id (singular) and must be array
+            task_epochs: [1]
+          }],
           cameras: undefined
         };
         const issues = validate(model);
@@ -168,7 +174,7 @@ describe('Unified Validation API', () => {
       it('should detect associated_video_files without cameras', () => {
         const model = {
           ...createTestYaml(),
-          associated_video_files: [{ camera_id: 0, task_epochs: [1] }],
+          associated_video_files: [{ camera_id: [0], task_epochs: [1] }], // Fixed: camera_id must be array
           cameras: undefined
         };
         const issues = validate(model);
@@ -222,7 +228,13 @@ describe('Unified Validation API', () => {
         const model = {
           ...createTestYaml(),
           lab: '',  // Schema violation: empty string
-          tasks: [{ camera_ids: [0] }],  // Rules violation: no cameras defined
+          tasks: [{
+            task_name: 'Test Task',
+            task_description: 'A test task',
+            task_environment: 'Home',
+            camera_id: [0], // Fixed: camera_id (singular) + required fields for schema
+            task_epochs: [1]
+          }],  // Rules violation: no cameras defined
           cameras: undefined
         };
         const issues = validate(model);
@@ -237,7 +249,13 @@ describe('Unified Validation API', () => {
           ...createTestYaml(),
           lab: '',  // Schema: empty string
           institution: 12345,  // Schema: wrong type
-          tasks: [{ camera_ids: [0] }],  // Rules: missing cameras
+          tasks: [{
+            task_name: 'Test Task',
+            task_description: 'A test task',
+            task_environment: 'Home',
+            camera_id: [0], // Fixed: camera_id (singular) + required fields for schema
+            task_epochs: [1]
+          }],  // Rules: missing cameras
           opto_excitation_source: [{ opto_excitation_source_name: 'LED' }],  // Rules: partial opto
           optical_fiber: undefined,
           virus_injection: undefined

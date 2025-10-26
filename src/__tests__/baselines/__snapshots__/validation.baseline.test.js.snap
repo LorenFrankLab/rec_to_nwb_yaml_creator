@@ -2,12 +2,17 @@
 
 exports[`BASELINE: Custom Rules Validation > Tasks-Camera Relationship > BASELINE: validates tasks with no cameras defined > tasks-no-cameras 1`] = `
 {
-  "errors": [],
+  "errors": [
+    {
+      "id": "tasks",
+      "message": "Tasks have camera_ids, but no cameras are defined",
+    },
+  ],
   "formErrorIds": [
     "tasks",
   ],
   "formErrors": [
-    "Key: task.camera | Error: There is tasks camera_id, but no camera object with ids. No data is loaded",
+    "Tasks have camera_ids, but no cameras are defined",
   ],
   "isFormValid": false,
 }
@@ -18,11 +23,7 @@ exports[`BASELINE: JSON Schema Validation > Array Validation > BASELINE: documen
   "errors": [
     {
       "instancePath": "/experimenter_name",
-      "keyword": "minItems",
       "message": "must NOT have fewer than 1 items",
-      "params": {
-        "limit": 1,
-      },
       "schemaPath": "#/properties/experimenter_name/minItems",
     },
   ],
@@ -36,11 +37,7 @@ exports[`BASELINE: JSON Schema Validation > Array Validation > BASELINE: documen
   "jsonSchemaErrors": [
     {
       "instancePath": "/experimenter_name",
-      "keyword": "minItems",
       "message": "must NOT have fewer than 1 items",
-      "params": {
-        "limit": 1,
-      },
       "schemaPath": "#/properties/experimenter_name/minItems",
     },
   ],
@@ -86,11 +83,7 @@ exports[`BASELINE: JSON Schema Validation > Pattern Validation (non-empty string
   "errors": [
     {
       "instancePath": "/institution",
-      "keyword": "pattern",
-      "message": "must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
-      "params": {
-        "pattern": "^(.|\\s)*\\S(.|\\s)*$",
-      },
+      "message": "institution cannot be empty or contain only whitespace",
       "schemaPath": "#/properties/institution/pattern",
     },
   ],
@@ -99,16 +92,12 @@ exports[`BASELINE: JSON Schema Validation > Pattern Validation (non-empty string
     "institution",
   ],
   "jsonSchemaErrorMessages": [
-    "Key: institution. | Error: must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
+    "Key: institution. | Error: institution cannot be empty or contain only whitespace",
   ],
   "jsonSchemaErrors": [
     {
       "instancePath": "/institution",
-      "keyword": "pattern",
-      "message": "must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
-      "params": {
-        "pattern": "^(.|\\s)*\\S(.|\\s)*$",
-      },
+      "message": "institution cannot be empty or contain only whitespace",
       "schemaPath": "#/properties/institution/pattern",
     },
   ],
@@ -121,11 +110,7 @@ exports[`BASELINE: JSON Schema Validation > Pattern Validation (non-empty string
   "errors": [
     {
       "instancePath": "/lab",
-      "keyword": "pattern",
-      "message": "must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
-      "params": {
-        "pattern": "^(.|\\s)*\\S(.|\\s)*$",
-      },
+      "message": "lab cannot be empty or contain only whitespace",
       "schemaPath": "#/properties/lab/pattern",
     },
   ],
@@ -134,16 +119,12 @@ exports[`BASELINE: JSON Schema Validation > Pattern Validation (non-empty string
     "lab",
   ],
   "jsonSchemaErrorMessages": [
-    "Key: lab. | Error: must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
+    "Key: lab. | Error: lab cannot be empty or contain only whitespace",
   ],
   "jsonSchemaErrors": [
     {
       "instancePath": "/lab",
-      "keyword": "pattern",
-      "message": "must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
-      "params": {
-        "pattern": "^(.|\\s)*\\S(.|\\s)*$",
-      },
+      "message": "lab cannot be empty or contain only whitespace",
       "schemaPath": "#/properties/lab/pattern",
     },
   ],
@@ -156,11 +137,7 @@ exports[`BASELINE: JSON Schema Validation > Pattern Validation (non-empty string
   "errors": [
     {
       "instancePath": "/lab",
-      "keyword": "pattern",
-      "message": "must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
-      "params": {
-        "pattern": "^(.|\\s)*\\S(.|\\s)*$",
-      },
+      "message": "lab cannot be empty or contain only whitespace",
       "schemaPath": "#/properties/lab/pattern",
     },
   ],
@@ -169,16 +146,12 @@ exports[`BASELINE: JSON Schema Validation > Pattern Validation (non-empty string
     "lab",
   ],
   "jsonSchemaErrorMessages": [
-    "Key: lab. | Error: must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
+    "Key: lab. | Error: lab cannot be empty or contain only whitespace",
   ],
   "jsonSchemaErrors": [
     {
       "instancePath": "/lab",
-      "keyword": "pattern",
-      "message": "must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
-      "params": {
-        "pattern": "^(.|\\s)*\\S(.|\\s)*$",
-      },
+      "message": "lab cannot be empty or contain only whitespace",
       "schemaPath": "#/properties/lab/pattern",
     },
   ],
@@ -191,47 +164,27 @@ exports[`BASELINE: Validation Behavior Documentation > BUG: Hardware Channel Map
   "errors": [
     {
       "instancePath": "/electrode_groups/0",
-      "keyword": "required",
       "message": "must have required property 'targeted_location'",
-      "params": {
-        "missingProperty": "targeted_location",
-      },
       "schemaPath": "#/properties/electrode_groups/items/required",
     },
     {
       "instancePath": "/electrode_groups/0",
-      "keyword": "required",
       "message": "must have required property 'targeted_x'",
-      "params": {
-        "missingProperty": "targeted_x",
-      },
       "schemaPath": "#/properties/electrode_groups/items/required",
     },
     {
       "instancePath": "/electrode_groups/0",
-      "keyword": "required",
       "message": "must have required property 'targeted_y'",
-      "params": {
-        "missingProperty": "targeted_y",
-      },
       "schemaPath": "#/properties/electrode_groups/items/required",
     },
     {
       "instancePath": "/electrode_groups/0",
-      "keyword": "required",
       "message": "must have required property 'targeted_z'",
-      "params": {
-        "missingProperty": "targeted_z",
-      },
       "schemaPath": "#/properties/electrode_groups/items/required",
     },
     {
       "instancePath": "/electrode_groups/0",
-      "keyword": "required",
       "message": "must have required property 'units'",
-      "params": {
-        "missingProperty": "units",
-      },
       "schemaPath": "#/properties/electrode_groups/items/required",
     },
   ],
@@ -249,47 +202,27 @@ exports[`BASELINE: Validation Behavior Documentation > BUG: Hardware Channel Map
   "jsonSchemaErrors": [
     {
       "instancePath": "/electrode_groups/0",
-      "keyword": "required",
       "message": "must have required property 'targeted_location'",
-      "params": {
-        "missingProperty": "targeted_location",
-      },
       "schemaPath": "#/properties/electrode_groups/items/required",
     },
     {
       "instancePath": "/electrode_groups/0",
-      "keyword": "required",
       "message": "must have required property 'targeted_x'",
-      "params": {
-        "missingProperty": "targeted_x",
-      },
       "schemaPath": "#/properties/electrode_groups/items/required",
     },
     {
       "instancePath": "/electrode_groups/0",
-      "keyword": "required",
       "message": "must have required property 'targeted_y'",
-      "params": {
-        "missingProperty": "targeted_y",
-      },
       "schemaPath": "#/properties/electrode_groups/items/required",
     },
     {
       "instancePath": "/electrode_groups/0",
-      "keyword": "required",
       "message": "must have required property 'targeted_z'",
-      "params": {
-        "missingProperty": "targeted_z",
-      },
       "schemaPath": "#/properties/electrode_groups/items/required",
     },
     {
       "instancePath": "/electrode_groups/0",
-      "keyword": "required",
       "message": "must have required property 'units'",
-      "params": {
-        "missingProperty": "units",
-      },
       "schemaPath": "#/properties/electrode_groups/items/required",
     },
   ],
@@ -302,12 +235,7 @@ exports[`BASELINE: Validation Behavior Documentation > VALIDATION: Array Uniquen
   "errors": [
     {
       "instancePath": "/experimenter_name",
-      "keyword": "uniqueItems",
       "message": "must NOT have duplicate items (items ## 1 and 0 are identical)",
-      "params": {
-        "i": 0,
-        "j": 1,
-      },
       "schemaPath": "#/properties/experimenter_name/uniqueItems",
     },
   ],
@@ -321,12 +249,7 @@ exports[`BASELINE: Validation Behavior Documentation > VALIDATION: Array Uniquen
   "jsonSchemaErrors": [
     {
       "instancePath": "/experimenter_name",
-      "keyword": "uniqueItems",
       "message": "must NOT have duplicate items (items ## 1 and 0 are identical)",
-      "params": {
-        "i": 0,
-        "j": 1,
-      },
       "schemaPath": "#/properties/experimenter_name/uniqueItems",
     },
   ],
@@ -339,29 +262,17 @@ exports[`BASELINE: Validation Behavior Documentation > VALIDATION: Camera ID Typ
   "errors": [
     {
       "instancePath": "/cameras/0",
-      "keyword": "required",
-      "message": "must have required property 'manufacturer'",
-      "params": {
-        "missingProperty": "manufacturer",
-      },
-      "schemaPath": "#/properties/cameras/items/required",
-    },
-    {
-      "instancePath": "/cameras/0",
-      "keyword": "required",
-      "message": "must have required property 'model'",
-      "params": {
-        "missingProperty": "model",
-      },
-      "schemaPath": "#/properties/cameras/items/required",
-    },
-    {
-      "instancePath": "/cameras/0",
-      "keyword": "required",
       "message": "must have required property 'lens'",
-      "params": {
-        "missingProperty": "lens",
-      },
+      "schemaPath": "#/properties/cameras/items/required",
+    },
+    {
+      "instancePath": "/cameras/0",
+      "message": "must have required property 'manufacturer'",
+      "schemaPath": "#/properties/cameras/items/required",
+    },
+    {
+      "instancePath": "/cameras/0",
+      "message": "must have required property 'model'",
       "schemaPath": "#/properties/cameras/items/required",
     },
   ],
@@ -370,36 +281,24 @@ exports[`BASELINE: Validation Behavior Documentation > VALIDATION: Camera ID Typ
     "cameras",
   ],
   "jsonSchemaErrorMessages": [
+    "Key: cameras, 0. | Error: must have required property 'lens'",
     "Key: cameras, 0. | Error: must have required property 'manufacturer'",
     "Key: cameras, 0. | Error: must have required property 'model'",
-    "Key: cameras, 0. | Error: must have required property 'lens'",
   ],
   "jsonSchemaErrors": [
     {
       "instancePath": "/cameras/0",
-      "keyword": "required",
-      "message": "must have required property 'manufacturer'",
-      "params": {
-        "missingProperty": "manufacturer",
-      },
-      "schemaPath": "#/properties/cameras/items/required",
-    },
-    {
-      "instancePath": "/cameras/0",
-      "keyword": "required",
-      "message": "must have required property 'model'",
-      "params": {
-        "missingProperty": "model",
-      },
-      "schemaPath": "#/properties/cameras/items/required",
-    },
-    {
-      "instancePath": "/cameras/0",
-      "keyword": "required",
       "message": "must have required property 'lens'",
-      "params": {
-        "missingProperty": "lens",
-      },
+      "schemaPath": "#/properties/cameras/items/required",
+    },
+    {
+      "instancePath": "/cameras/0",
+      "message": "must have required property 'manufacturer'",
+      "schemaPath": "#/properties/cameras/items/required",
+    },
+    {
+      "instancePath": "/cameras/0",
+      "message": "must have required property 'model'",
       "schemaPath": "#/properties/cameras/items/required",
     },
   ],
@@ -411,40 +310,24 @@ exports[`BASELINE: Validation Behavior Documentation > VALIDATION: Camera ID Typ
 {
   "errors": [
     {
-      "instancePath": "/cameras/0",
-      "keyword": "required",
-      "message": "must have required property 'manufacturer'",
-      "params": {
-        "missingProperty": "manufacturer",
-      },
-      "schemaPath": "#/properties/cameras/items/required",
-    },
-    {
-      "instancePath": "/cameras/0",
-      "keyword": "required",
-      "message": "must have required property 'model'",
-      "params": {
-        "missingProperty": "model",
-      },
-      "schemaPath": "#/properties/cameras/items/required",
-    },
-    {
-      "instancePath": "/cameras/0",
-      "keyword": "required",
-      "message": "must have required property 'lens'",
-      "params": {
-        "missingProperty": "lens",
-      },
-      "schemaPath": "#/properties/cameras/items/required",
-    },
-    {
       "instancePath": "/cameras/0/id",
-      "keyword": "type",
       "message": "must be integer",
-      "params": {
-        "type": "integer",
-      },
       "schemaPath": "#/properties/cameras/items/properties/id/type",
+    },
+    {
+      "instancePath": "/cameras/0",
+      "message": "must have required property 'lens'",
+      "schemaPath": "#/properties/cameras/items/required",
+    },
+    {
+      "instancePath": "/cameras/0",
+      "message": "must have required property 'manufacturer'",
+      "schemaPath": "#/properties/cameras/items/required",
+    },
+    {
+      "instancePath": "/cameras/0",
+      "message": "must have required property 'model'",
+      "schemaPath": "#/properties/cameras/items/required",
     },
   ],
   "isValid": false,
@@ -452,47 +335,31 @@ exports[`BASELINE: Validation Behavior Documentation > VALIDATION: Camera ID Typ
     "cameras",
   ],
   "jsonSchemaErrorMessages": [
+    "Key: cameras, 0, id. | Error: must be integer",
+    "Key: cameras, 0. | Error: must have required property 'lens'",
     "Key: cameras, 0. | Error: must have required property 'manufacturer'",
     "Key: cameras, 0. | Error: must have required property 'model'",
-    "Key: cameras, 0. | Error: must have required property 'lens'",
-    "Key: cameras, 0, id. | Error: must be integer",
   ],
   "jsonSchemaErrors": [
     {
-      "instancePath": "/cameras/0",
-      "keyword": "required",
-      "message": "must have required property 'manufacturer'",
-      "params": {
-        "missingProperty": "manufacturer",
-      },
-      "schemaPath": "#/properties/cameras/items/required",
-    },
-    {
-      "instancePath": "/cameras/0",
-      "keyword": "required",
-      "message": "must have required property 'model'",
-      "params": {
-        "missingProperty": "model",
-      },
-      "schemaPath": "#/properties/cameras/items/required",
-    },
-    {
-      "instancePath": "/cameras/0",
-      "keyword": "required",
-      "message": "must have required property 'lens'",
-      "params": {
-        "missingProperty": "lens",
-      },
-      "schemaPath": "#/properties/cameras/items/required",
-    },
-    {
       "instancePath": "/cameras/0/id",
-      "keyword": "type",
       "message": "must be integer",
-      "params": {
-        "type": "integer",
-      },
       "schemaPath": "#/properties/cameras/items/properties/id/type",
+    },
+    {
+      "instancePath": "/cameras/0",
+      "message": "must have required property 'lens'",
+      "schemaPath": "#/properties/cameras/items/required",
+    },
+    {
+      "instancePath": "/cameras/0",
+      "message": "must have required property 'manufacturer'",
+      "schemaPath": "#/properties/cameras/items/required",
+    },
+    {
+      "instancePath": "/cameras/0",
+      "message": "must have required property 'model'",
+      "schemaPath": "#/properties/cameras/items/required",
     },
   ],
   "valid": false,
@@ -504,11 +371,7 @@ exports[`BASELINE: Validation Behavior Documentation > VALIDATION: Empty String 
   "errors": [
     {
       "instancePath": "/experiment_description",
-      "keyword": "pattern",
-      "message": "must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
-      "params": {
-        "pattern": "^(.|\\s)*\\S(.|\\s)*$",
-      },
+      "message": "experiment_description cannot be empty or contain only whitespace",
       "schemaPath": "#/properties/experiment_description/pattern",
     },
   ],
@@ -517,16 +380,12 @@ exports[`BASELINE: Validation Behavior Documentation > VALIDATION: Empty String 
     "experiment_description",
   ],
   "jsonSchemaErrorMessages": [
-    "Key: experiment_description. | Error: must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
+    "Key: experiment_description. | Error: experiment_description cannot be empty or contain only whitespace",
   ],
   "jsonSchemaErrors": [
     {
       "instancePath": "/experiment_description",
-      "keyword": "pattern",
-      "message": "must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
-      "params": {
-        "pattern": "^(.|\\s)*\\S(.|\\s)*$",
-      },
+      "message": "experiment_description cannot be empty or contain only whitespace",
       "schemaPath": "#/properties/experiment_description/pattern",
     },
   ],
@@ -539,11 +398,7 @@ exports[`BASELINE: Validation Behavior Documentation > VALIDATION: Empty String 
   "errors": [
     {
       "instancePath": "/session_description",
-      "keyword": "pattern",
-      "message": "must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
-      "params": {
-        "pattern": "^(.|\\s)*\\S(.|\\s)*$",
-      },
+      "message": "session_description cannot be empty or contain only whitespace",
       "schemaPath": "#/properties/session_description/pattern",
     },
   ],
@@ -552,16 +407,12 @@ exports[`BASELINE: Validation Behavior Documentation > VALIDATION: Empty String 
     "session_description",
   ],
   "jsonSchemaErrorMessages": [
-    "Key: session_description. | Error: must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
+    "Key: session_description. | Error: session_description cannot be empty or contain only whitespace",
   ],
   "jsonSchemaErrors": [
     {
       "instancePath": "/session_description",
-      "keyword": "pattern",
-      "message": "must match pattern "^(.|\\s)*\\S(.|\\s)*$"",
-      "params": {
-        "pattern": "^(.|\\s)*\\S(.|\\s)*$",
-      },
+      "message": "session_description cannot be empty or contain only whitespace",
       "schemaPath": "#/properties/session_description/pattern",
     },
   ],
