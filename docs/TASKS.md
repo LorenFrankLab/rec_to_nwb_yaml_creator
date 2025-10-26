@@ -331,26 +331,32 @@
 ### Week 5-7: Component Extraction
 
 **Goal:** Decompose large JSX render block into React components
-**Status:** 🟢 READY TO START - Week 3-4 complete
+**Status:** 🟡 IN PROGRESS - Store facade complete, SubjectFields next
 **Estimated Reduction:** 1400 lines (49% of current 2373-line App.js → ~973 lines)
 
-### Add a Light Store Facade (keeps future reducer optional)
+### Add a Light Store Facade (keeps future reducer optional) ✅ COMPLETE
 
-- [ ] Create `src/state/store.js` exposing `useStore()` → `{ model, selectors, actions }`
-- [ ] Internally call `useFormUpdates()` / `useArrayManagement()` for now
-- [ ] Update new components to read/write via store hooks instead of deep props
-- [ ] Commit: `refactor(state): store facade for selectors/actions`
-- [ ] **Estimated Time:** 3 hours
+- [x] Create `src/state/store.js` exposing `useStore()` → `{ model, selectors, actions }`
+- [x] Internally call `useFormUpdates()` / `useArrayManagement()` / `useElectrodeGroups()`
+- [x] Add selectors: getCameraIds(), getTaskEpochs(), getDioEvents()
+- [x] Create comprehensive tests (31 tests, all passing)
+- [x] Commit: `refactor(state): store facade for selectors/actions`
+- [x] **Actual Time:** ~3 hours (as estimated)
+- [ ] **NOTE:** App.js not yet migrated to use store (will happen with component extraction)
 
-#### Extract Subject Fields Component
+#### Extract Subject Fields Component ← **CURRENT TASK**
 
+- [ ] Read App.js subject section (lines 1063-1145) to understand dependencies
+- [ ] Create test file `src/components/__tests__/SubjectFields.test.jsx` (TDD)
+- [ ] Write tests FIRST (render, inputs, state updates, validation)
+- [ ] Watch tests fail
 - [ ] Create `src/components/SubjectFields.jsx`
-- [ ] Extract subject section JSX (App.js:1063-1145)
-- [ ] Pass form state and handlers via props
-- [ ] Add Storybook story
-- [ ] Test component in isolation
+- [ ] Extract subject section JSX using `useStore()` hook
+- [ ] Make tests pass
 - [ ] Update App.js to use `<SubjectFields />`
-- [ ] Run full test suite
+- [ ] Verify all 1612 tests still pass
+- [ ] Verify golden YAML tests pass (18/18)
+- [ ] Request code review
 - [ ] Commit: `refactor: extract SubjectFields component`
 - [ ] **Estimated Time:** 4 hours
 

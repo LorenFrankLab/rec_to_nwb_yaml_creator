@@ -7,124 +7,120 @@
 
 ---
 
-## 🎯 Current Task: Add Light Store Facade
+## 🎯 Current Task: Extract First Component (SubjectFields)
 
 ### Task Overview
 
-**What:** Create a lightweight store facade (`src/state/store.js`) that provides a clean API for accessing form state and actions.
+**What:** Extract the subject section from App.js into a dedicated `<SubjectFields />` component.
 
-**Why:** Prepare for component extraction by avoiding prop drilling. Components will use `useStore()` instead of receiving 10+ props.
+**Why:** Prove the component extraction pattern works before scaling to all sections. Reduces App.js render block by ~80 lines.
 
-**How:** Create a facade that wraps existing hooks internally but exposes a simpler API externally.
+**How:** Create component that uses `useStore()` internally, test in isolation, integrate back into App.js.
 
-### Benefits
+### Store Facade Status: ✅ COMPLETE (Not Yet Used in App.js)
 
-1. **Simplifies Component Props**
-   - Before: `<SubjectFields formData={formData} updateFormData={updateFormData} onBlur={onBlur} handleChange={handleChange} ... />`
-   - After: `<SubjectFields />` (uses `useStore()` internally)
+**File:** `src/state/store.js` (119 lines, 31 tests passing)
 
-2. **Enables Future Migration to useReducer**
-   - Current: Each hook manages state independently
-   - Future: Can swap to `useReducer` without changing component code
-   - Store facade provides stable API during migration
-
-3. **Improves Testability**
-   - Components can be tested with mock store
-   - No need to mock 5+ different hooks
-   - Easier to test different state scenarios
-
-4. **Better Developer Experience**
-   - Single import: `import { useStore } from '../state/store'`
-   - Autocomplete for all available actions
-   - Clear separation: state vs. actions vs. selectors
-
-### Implementation Plan
-
+**API:**
 ```javascript
-// src/state/store.js
-export function useStore() {
-  const [formData, setFormData] = useState(defaultYMLValues);
+const { model, selectors, actions } = useStore();
 
-  // Use existing hooks internally
-  const arrayActions = useArrayManagement(formData, setFormData);
-  const formActions = useFormUpdates(formData, setFormData);
-  const electrodeActions = useElectrodeGroups(formData, setFormData);
+// State access
+model.subject.subject_id
 
-  return {
-    // State
-    model: formData,
+// Selectors (computed)
+selectors.getCameraIds()
+selectors.getTaskEpochs()
+selectors.getDioEvents()
 
-    // Selectors (computed values)
-    selectors: {
-      getCameraIds: () => formData.cameras.map(c => c.id),
-      getTaskEpochs: () => formData.tasks.flatMap(t => t.task_epochs),
-      // ... other selectors
-    },
+// Actions (mutations)
+actions.updateFormData('session_id', 'exp_001')
+actions.addArrayItem('cameras', 1)
+actions.nTrodeMapSelected(event, metadata)
+```
 
-    // Actions (all mutations)
-    actions: {
-      ...arrayActions,
-      ...formActions,
-      ...electrodeActions,
-      // ... other actions
-    }
-  };
+**Benefits:**
+1. Single import instead of 3 hooks
+2. Clean API for component extraction
+3. Enables future useReducer migration
+4. Better testability (mock store instead of 5+ hooks)
+
+### Implementation Plan for SubjectFields
+
+**Location to Extract:** App.js lines 1063-1145 (~80 lines)
+
+**Component Structure:**
+```javascript
+// src/components/SubjectFields.jsx
+import { useStore } from '../state/store';
+import InputElement from '../element/InputElement';
+import DataListElement from '../element/DataListElement';
+
+export default function SubjectFields() {
+  const { model, actions } = useStore();
+
+  return (
+    <section>
+      <details id="subject" open>
+        <summary>Subject</summary>
+        <InputElement
+          value={model.subject.subject_id}
+          onChange={actions.handleChange('subject_id', 'subject')}
+          // ... other props
+        />
+        {/* ... other fields */}
+      </details>
+    </section>
+  );
 }
 ```
 
-### Current State vs. Desired State
+**Testing Strategy:**
+1. Unit test component in isolation (render, inputs, state updates)
+2. Test with mock store (different subject values)
+3. Integration test in App.js (existing tests should pass)
+4. Verify YAML output unchanged (golden baseline tests)
 
-**Current (App.js):**
-```javascript
-const [formData, setFormData] = useState(defaultYMLValues);
-const { addArrayItem, removeArrayItem, duplicateArrayItem } = useArrayManagement(formData, setFormData);
-const { updateFormData, updateFormArray, onBlur, handleChange } = useFormUpdates(formData, setFormData);
-const { nTrodeMapSelected, removeElectrodeGroupItem, duplicateElectrodeGroupItem } = useElectrodeGroups(formData, setFormData);
+### What Changed from Week 3-4
 
-// Pass 10+ props to every component
-<SubjectFields
-  formData={formData}
-  updateFormData={updateFormData}
-  onBlur={onBlur}
-  handleChange={handleChange}
-/>
-```
+**Before (Week 3-4):**
+- Extracted 3 custom hooks from App.js
+- App.js still uses hooks directly (lines 5-7)
+- No components extracted yet
 
-**Desired (with store facade):**
-```javascript
-// In App.js
-const store = useStore();
+**After Store Facade:**
+- Created `src/state/store.js` (wraps all 3 hooks)
+- Provides unified API: `{ model, selectors, actions }`
+- 31 tests passing, all selectors working
+- **BUT: App.js not migrated yet** - still using individual hooks
 
-// Pass nothing or just store
-<SubjectFields />  // or <SubjectFields store={store} />
+**Next Step (SubjectFields):**
+- Create first extracted component
+- Component uses `useStore()` internally
+- Prove the pattern works
+- Then scale to remaining 10+ sections
 
-// In SubjectFields.jsx
-const { model, actions } = useStore();
-return (
-  <input
-    value={model.subject.subject_id}
-    onChange={actions.handleChange('subject_id', 'subject')}
-  />
-);
-```
+### Estimated Time: 4 hours
 
-### Estimated Time: 3 hours
+- 1 hour: Read App.js subject section, understand dependencies
+- 1 hour: Write tests for SubjectFields component (TDD)
+- 1 hour: Implement SubjectFields component
+- 1 hour: Integrate into App.js, verify all tests pass, code review
 
-- 1 hour: Create store facade
-- 1 hour: Write tests
-- 1 hour: Update one example component to verify pattern works
+### Next Steps After SubjectFields
 
-### Next Steps After This Task
-
-Once store facade is ready, we can extract components one-by-one:
-1. SubjectFields (~80 lines)
+Once first component extraction proven, continue with:
+1. ✅ SubjectFields (~80 lines) ← **CURRENT TASK**
 2. DataAcqDevice (~100 lines)
 3. CameraFields (~120 lines)
 4. TaskFields (~110 lines)
 5. ElectrodeGroupFields (~400 lines)
-6. And more...
+6. BehavioralEventsFields (~80 lines)
+7. OptogeneticsFields (~200 lines)
+8. AssociatedFilesFields (~150 lines)
+9. And more...
 
-Total reduction: ~1400 lines from App.js render block.
+Total reduction target: ~1400 lines from App.js render block (49% of 2873 lines).
 
 ---
 
