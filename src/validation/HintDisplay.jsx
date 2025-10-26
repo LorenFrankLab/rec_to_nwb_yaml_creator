@@ -28,12 +28,6 @@ export function HintDisplay({ hint, className = '' }) {
       className={`validation-hint ${className}`}
       aria-live="polite"  // UX-1: Accessible to screen readers (announces when user pauses)
       aria-atomic="true"
-      style={{
-        fontSize: '0.875rem',
-        color: '#525252',  // UX-6: Improved contrast (8.31:1, WCAG AAA compliant)
-        marginTop: '0.25rem',
-        fontWeight: '500'  // Medium weight instead of italic for better readability
-      }}
     >
       {hint.message}
     </div>

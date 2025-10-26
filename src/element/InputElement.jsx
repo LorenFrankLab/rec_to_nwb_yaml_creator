@@ -1,6 +1,8 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import InfoIcon from './InfoIcon';
+import { useQuickChecks } from '../validation/useQuickChecks';
+import { HintDisplay } from '../validation/HintDisplay';
 
 /**
  * Provides a text box
@@ -24,7 +26,22 @@ const InputElement = (prop) => {
     readOnly,
     pattern,
     step,
+    validation,
   } = prop;
+
+  // Initialize quick checks validation (always call hook per Rules of Hooks)
+  // When validation prop is null, pass dummy values that won't be used
+  const quickChecks = useQuickChecks(
+    validation?.type || 'required',
+    {
+      debounceMs: validation?.debounceMs,
+      validValues: validation?.validValues,
+      min: validation?.min,
+      max: validation?.max,
+      pattern: validation?.pattern,
+      patternMessage: validation?.patternMessage,
+    }
+  );
 
   const getDefaultDateValue = () => {
     if (!defaultValue) {
@@ -73,9 +90,13 @@ const InputElement = (prop) => {
           readOnly={readOnly}
           step={step}
           min={min}
+          onChange={validation ? (e) => quickChecks.validate(name, e.target.value) : undefined}
           onBlur={(e) => onBlur(e)}
           pattern={pattern}
         />
+        {validation && quickChecks.hint && (
+          <HintDisplay hint={quickChecks.hint} />
+        )}
       </div>
     </label>
   );
@@ -94,6 +115,15 @@ InputElement.propTypes = {
   defaultValue: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   pattern: PropTypes.string,
   onBlur: PropTypes.func,
+  validation: PropTypes.shape({
+    type: PropTypes.oneOf(['required', 'dateFormat', 'enum', 'numberRange', 'pattern']).isRequired,
+    debounceMs: PropTypes.number,
+    validValues: PropTypes.arrayOf(PropTypes.string),
+    min: PropTypes.number,
+    max: PropTypes.number,
+    pattern: PropTypes.instanceOf(RegExp),
+    patternMessage: PropTypes.string,
+  }),
 };
 
 InputElement.defaultProps = {
@@ -105,6 +135,7 @@ InputElement.defaultProps = {
   pattern: '^.+$',
   min: '',
   onBlur: () => {},
+  validation: null,
 };
 
 export default InputElement;

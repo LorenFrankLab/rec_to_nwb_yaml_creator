@@ -541,3 +541,34 @@ details {
     position: fixed;
   }
 }
+
+//-----------------------------
+// Validation Hints
+//-----------------------------
+
+// Styling for instant validation hints (useQuickChecks + HintDisplay)
+.validation-hint {
+  font-size: 0.875rem;
+  color: #525252;  // WCAG AAA compliant (8.31:1 contrast on white)
+  margin-top: 0.25rem;
+  font-weight: 500;
+  line-height: 1.4;
+
+  // Ensure hints appear below input without displacing layout
+  display: block;
+  min-height: 1.2rem;  // Reserve space to prevent layout shift
+
+  // Smooth fade-in for better UX
+  animation: fadeIn 0.2s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

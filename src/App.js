@@ -827,6 +827,7 @@ useEffect(() => {
             placeholder="Laboratory where the experiment is conducted"
             required
             onBlur={(e) => onBlur(e)}
+            validation={{ type: 'required' }}
           />
         </div>
         <div id="institution-area" className="area-region">
@@ -876,6 +877,11 @@ useEffect(() => {
           placeholder="Session id, e.g - 1"
           defaultValue={formData.session_id}
           onBlur={(e) => onBlur(e)}
+          validation={{
+            type: 'pattern',
+            pattern: /^[a-zA-Z0-9_-]+$/,
+            patternMessage: 'Session ID must contain only letters, numbers, underscores, or hyphens'
+          }}
         />
       </div>
       <div id="keywords-area" className="form-container area-region">
@@ -945,6 +951,11 @@ useEffect(() => {
               defaultValue={formData.subject.subject_id}
               placeholder="ID of animal/person used/participating in experiment (lab convention)"
               onBlur={(e) => onBlur(e, { key: 'subject' })}
+              validation={{
+                type: 'pattern',
+                pattern: /^[a-zA-Z0-9_-]+$/,
+                patternMessage: 'Subject ID must contain only letters, numbers, underscores, or hyphens'
+              }}
             />
             <InputElement
               id="subject-dateOfBirth"
