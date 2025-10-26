@@ -1,9 +1,130 @@
 # Scratchpad - Phase 3
 
-**Current Phase:** Phase 3 - Code Quality & Refactoring - Week 3-4
-**Status:** 🟢 IN PROGRESS - Electrode Group Logic Complete
-**Last Updated:** 2025-10-26 17:58
+**Current Phase:** Phase 3 - Code Quality & Refactoring - Week 5-7
+**Status:** 🟢 READY TO START - Component Extraction (Store Facade)
+**Last Updated:** 2025-10-26 18:05
 **Branch:** `modern`
+
+---
+
+## 🎯 Current Task: Add Light Store Facade
+
+### Task Overview
+
+**What:** Create a lightweight store facade (`src/state/store.js`) that provides a clean API for accessing form state and actions.
+
+**Why:** Prepare for component extraction by avoiding prop drilling. Components will use `useStore()` instead of receiving 10+ props.
+
+**How:** Create a facade that wraps existing hooks internally but exposes a simpler API externally.
+
+### Benefits
+
+1. **Simplifies Component Props**
+   - Before: `<SubjectFields formData={formData} updateFormData={updateFormData} onBlur={onBlur} handleChange={handleChange} ... />`
+   - After: `<SubjectFields />` (uses `useStore()` internally)
+
+2. **Enables Future Migration to useReducer**
+   - Current: Each hook manages state independently
+   - Future: Can swap to `useReducer` without changing component code
+   - Store facade provides stable API during migration
+
+3. **Improves Testability**
+   - Components can be tested with mock store
+   - No need to mock 5+ different hooks
+   - Easier to test different state scenarios
+
+4. **Better Developer Experience**
+   - Single import: `import { useStore } from '../state/store'`
+   - Autocomplete for all available actions
+   - Clear separation: state vs. actions vs. selectors
+
+### Implementation Plan
+
+```javascript
+// src/state/store.js
+export function useStore() {
+  const [formData, setFormData] = useState(defaultYMLValues);
+
+  // Use existing hooks internally
+  const arrayActions = useArrayManagement(formData, setFormData);
+  const formActions = useFormUpdates(formData, setFormData);
+  const electrodeActions = useElectrodeGroups(formData, setFormData);
+
+  return {
+    // State
+    model: formData,
+
+    // Selectors (computed values)
+    selectors: {
+      getCameraIds: () => formData.cameras.map(c => c.id),
+      getTaskEpochs: () => formData.tasks.flatMap(t => t.task_epochs),
+      // ... other selectors
+    },
+
+    // Actions (all mutations)
+    actions: {
+      ...arrayActions,
+      ...formActions,
+      ...electrodeActions,
+      // ... other actions
+    }
+  };
+}
+```
+
+### Current State vs. Desired State
+
+**Current (App.js):**
+```javascript
+const [formData, setFormData] = useState(defaultYMLValues);
+const { addArrayItem, removeArrayItem, duplicateArrayItem } = useArrayManagement(formData, setFormData);
+const { updateFormData, updateFormArray, onBlur, handleChange } = useFormUpdates(formData, setFormData);
+const { nTrodeMapSelected, removeElectrodeGroupItem, duplicateElectrodeGroupItem } = useElectrodeGroups(formData, setFormData);
+
+// Pass 10+ props to every component
+<SubjectFields
+  formData={formData}
+  updateFormData={updateFormData}
+  onBlur={onBlur}
+  handleChange={handleChange}
+/>
+```
+
+**Desired (with store facade):**
+```javascript
+// In App.js
+const store = useStore();
+
+// Pass nothing or just store
+<SubjectFields />  // or <SubjectFields store={store} />
+
+// In SubjectFields.jsx
+const { model, actions } = useStore();
+return (
+  <input
+    value={model.subject.subject_id}
+    onChange={actions.handleChange('subject_id', 'subject')}
+  />
+);
+```
+
+### Estimated Time: 3 hours
+
+- 1 hour: Create store facade
+- 1 hour: Write tests
+- 1 hour: Update one example component to verify pattern works
+
+### Next Steps After This Task
+
+Once store facade is ready, we can extract components one-by-one:
+1. SubjectFields (~80 lines)
+2. DataAcqDevice (~100 lines)
+3. CameraFields (~120 lines)
+4. TaskFields (~110 lines)
+5. ElectrodeGroupFields (~400 lines)
+6. And more...
+
+Total reduction: ~1400 lines from App.js render block.
 
 ---
 
