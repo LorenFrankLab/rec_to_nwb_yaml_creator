@@ -157,27 +157,27 @@
 
 ---
 
-#### Accessibility Improvements (Remaining)
+#### Accessibility Improvements ✅ COMPLETE
 
 **High-value, low-effort improvements to complete validation UX:**
 
-- [ ] Link validation hints to inputs via `aria-describedby`
-  - Update InputElement to generate unique hint ID from input ID
-  - Update DataListElement to generate unique hint ID
-  - Update SelectElement to generate unique hint ID
+- [x] Link validation hints to inputs via `aria-describedby`
+  - Updated InputElement to generate unique hint ID from input ID
+  - Updated DataListElement to generate unique hint ID
+  - Updated SelectElement to generate unique hint ID
   - Pass `id` prop to HintDisplay component
   - Set `aria-describedby` attribute on input elements when validation present
   - Improves screen reader experience (announces hints when field focused)
-- [ ] Add "focus first error" behavior after export validation failure
+- [x] Add "focus first error" behavior after export validation failure
   - In `generateYMLFile()`, after validation fails, find first invalid field
-  - Focus the first error input and scroll into view
+  - Focus the first error input and scroll into view (smooth, center)
   - Helps users quickly locate and fix validation errors
-- [ ] Commit: `fix(a11y): link validation hints and focus first error`
+- [x] Commit: `fix(a11y): link validation hints and focus first error` (b6a6f94)
 
-**Estimated Time:** 1 hour
-**Value:** High - Significantly improves screen reader UX and error recovery
+**Time Taken:** 1 hour (as estimated)
+**Value Delivered:** High - Significantly improves screen reader UX and error recovery
 
-**Not needed:**
+**Not needed (design decision):**
 
 - ❌ `useStableId()` - IDs are already stable via props
 - ❌ Keyboard navigation through errors - Tab works fine
@@ -185,7 +185,7 @@
 
 ---
 
-### Exit Criteria ✅ MOSTLY MET
+### Exit Criteria ✅ COMPLETE
 
 - ✅ Users see immediate field hints while typing (gray, debounced 300ms)
 - ✅ Errors appear on blur (red, immediate, role="alert")
@@ -193,8 +193,8 @@
 - ✅ All validation shares unified Issue[] API from `src/validation/`
 - ✅ Performance excellent (no UI jank, proper debouncing)
 - ✅ 1528 tests passing (100%)
-- [ ] `aria-describedby` linking (in progress)
-- [ ] Focus first error on validation failure (in progress)
+- ✅ `aria-describedby` linking (completed)
+- ✅ Focus first error on validation failure (completed)
 
 ### Stable IDs for List Items (fix incorrect key usage)
 
