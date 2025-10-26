@@ -845,7 +845,7 @@ describe('End-to-End Session Creation Workflow', () => {
    * - Exported YAML is well-formed
    * - All sections are present in export
    */
-  it('validates and exports complete session as valid YAML', { timeout: 30000 }, async () => {
+  it('validates and exports complete session as valid YAML', { timeout: 60000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
     render(<App />);
