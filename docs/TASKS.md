@@ -394,6 +394,141 @@ Following same pattern:
 
 ---
 
+### Week 7.5: Implement React Context Provider for Shared Store
+
+**Goal:** Replace prop drilling with Context-based store pattern
+**Status:** 🔴 BLOCKED - Waiting for Week 5-7 component extractions to complete
+**Estimated Time:** 4-6 hours
+
+**Why This is Needed:**
+
+The current SubjectFields implementation revealed a critical issue: each `useStore()` call creates a **separate state instance** because the hook calls `useState()` internally. This means components don't share data.
+
+**Current Workaround (Temporary):**
+- All components accept props (formData, handleChange, onBlur, etc.)
+- App.js passes props down to each component
+- Works but requires prop drilling for 10+ components
+
+**Correct Pattern (Context Provider):**
+
+#### Task 7.5.1: Create StoreContext Provider
+
+- [ ] Create `src/state/StoreContext.js`
+- [ ] Implement `StoreProvider` component that creates store ONCE
+- [ ] Export `useStoreContext()` hook for accessing shared store
+- [ ] Add tests for StoreContext (provider, consumer, shared state)
+- [ ] Commit: `feat(state): add React Context provider for shared store`
+- [ ] **Estimated Time:** 2 hours
+
+**Implementation:**
+```javascript
+// src/state/StoreContext.js
+import { createContext, useContext } from 'react';
+import { useStore } from './store';
+
+const StoreContext = createContext(null);
+
+export function StoreProvider({ children }) {
+  const store = useStore(); // Created ONCE at top level
+  return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
+}
+
+export function useStoreContext() {
+  const context = useContext(StoreContext);
+  if (!context) {
+    throw new Error('useStoreContext must be used within StoreProvider');
+  }
+  return context;
+}
+```
+
+#### Task 7.5.2: Wrap App with StoreProvider
+
+- [ ] Update `src/App.js` to export wrapped component
+- [ ] Move `useState(defaultYMLValues)` call from App to StoreProvider (implicit via useStore)
+- [ ] Remove individual hook calls (useArrayManagement, useFormUpdates, useElectrodeGroups)
+- [ ] App accesses store via `useStoreContext()` instead of creating own state
+- [ ] Verify all tests pass (App still works identically)
+- [ ] Commit: `refactor(App): use StoreProvider for shared state`
+- [ ] **Estimated Time:** 1 hour
+
+**Implementation:**
+```javascript
+// src/App.js
+import { StoreProvider, useStoreContext } from './state/StoreContext';
+
+function AppContent() {
+  const { model: formData, actions } = useStoreContext();
+
+  // No more useState, useArrayManagement, etc.
+  // Everything comes from shared store
+
+  return (/* existing JSX */);
+}
+
+export function App() {
+  return (
+    <StoreProvider>
+      <AppContent />
+    </StoreProvider>
+  );
+}
+```
+
+#### Task 7.5.3: Migrate SubjectFields to useStoreContext
+
+- [ ] Update `src/components/SubjectFields.jsx` to use `useStoreContext()`
+- [ ] Remove all props (formData, handleChange, onBlur, itemSelected)
+- [ ] Update App.js to render `<SubjectFields />` without props
+- [ ] Update SubjectFields tests to provide StoreProvider wrapper
+- [ ] Verify all 21 SubjectFields tests pass
+- [ ] Verify integration tests pass
+- [ ] Commit: `refactor(SubjectFields): migrate to useStoreContext`
+- [ ] **Estimated Time:** 1.5 hours
+
+**Implementation:**
+```javascript
+// src/components/SubjectFields.jsx
+import { useStoreContext } from '../state/StoreContext';
+
+export default function SubjectFields() {
+  const { model, actions } = useStoreContext(); // Shared instance!
+
+  return (
+    <div id="subject-area" className="area-region">
+      {/* Same JSX, but reads from shared context */}
+    </div>
+  );
+}
+```
+
+#### Task 7.5.4: Migrate Remaining Components (if any extracted)
+
+- [ ] For each component extracted in Week 5-7:
+  - [ ] Remove props, use `useStoreContext()`
+  - [ ] Update tests to use StoreProvider
+  - [ ] Verify tests pass
+- [ ] Run full test suite (all tests passing)
+- [ ] Verify golden YAML tests pass (18/18)
+- [ ] Commit: `refactor(components): migrate all to useStoreContext`
+- [ ] **Estimated Time:** 1-2 hours (depends on component count)
+
+**Week 7.5 Exit Gate:**
+
+- [ ] StoreContext provider implemented and tested
+- [ ] App.js uses shared store (no more prop drilling)
+- [ ] All extracted components use `useStoreContext()`
+- [ ] All tests passing (1664+ tests)
+- [ ] Golden YAML tests passing (18/18)
+- [ ] No regressions in functionality
+- [ ] Code review approval
+
+**Blockers:**
+- Must complete Week 5-7 component extractions first
+- Need at least 2-3 components extracted to prove pattern works
+
+---
+
 ### Week 8: Code Cleanup
 
 **Goal:** Clean up remaining code quality issues
