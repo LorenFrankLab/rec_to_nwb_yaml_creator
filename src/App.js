@@ -11,6 +11,7 @@ import DataAcqDeviceFields from './components/DataAcqDeviceFields';
 import DeviceFields from './components/DeviceFields';
 import CamerasFields from './components/CamerasFields';
 import TasksFields from './components/TasksFields';
+import BehavioralEventsFields from './components/BehavioralEventsFields';
 
 import logo from './logo.png';
 import packageJson from '../package.json';
@@ -832,73 +833,15 @@ useEffect(() => {
           validation={{ type: 'required' }}
         />
       </div>
-      <div id="behavioral_events-area" className="area-region">
-        <details open>
-          <summary>Behavioral Events</summary>
-          <div className="form-container">
-            {formData?.behavioral_events.map(
-              (behavioralEvents, index) => {
-                const key = 'behavioral_events';
-
-                return (
-                  <details
-                    open
-                    key={`behavioral_events-${index}`}
-                    className="array-item"
-                  >
-                    <summary> Item #{index + 1} </summary>
-                    <ArrayItemControl
-                      index={index}
-                      keyValue={key}
-                      duplicateArrayItem={duplicateArrayItem}
-                      removeArrayItem={removeArrayItem}
-                    />
-                    <div className="form-container">
-                        <SelectInputPairElement
-                          id={`behavioral_events-description-${index}`}
-                        type="number"
-                        name="description"
-                        title="Description"
-                        step="1"
-                        min="0"
-                        items={behavioralEventsDescription()}
-                        value={behavioralEvents.description}
-                        onChange={handleChange('description', 'behavioral_events', index)}  
-                        placeholder="DIO info (eg. Din01)"
-                        metaData={{
-                          key,
-                          index,
-                        }}
-                          onBlur={onBlur}
-                        />
-                      <DataListElement
-                        id={`behavioral_events-name-${index}`}
-                        name="name"
-                        title="Name"
-                        dataItems={behavioralEventsNames()}
-                        value={behavioralEvents.name}
-                        onChange={handleChange('name', 'behavioral_events', index)}  
-                        placeholder="E.g. light1"
-                        onBlur={(e) =>
-                          itemSelected(e, {
-                            key,
-                            index,
-                          })
-                        }
-                      />
-                    </div>
-                  </details>
-                );
-              }
-            )}
-          </div>
-          <ArrayUpdateMenu
-            itemsKey="behavioral_events"
-            items={formData.behavioral_events}
-            addArrayItem={addArrayItem}
-          />
-        </details>
-      </div>
+      <BehavioralEventsFields
+        formData={formData}
+        handleChange={handleChange}
+        onBlur={onBlur}
+        itemSelected={itemSelected}
+        addArrayItem={addArrayItem}
+        removeArrayItem={removeArrayItem}
+        duplicateArrayItem={duplicateArrayItem}
+      />
       <DeviceFields
         formData={formData}
         updateFormData={updateFormData}
