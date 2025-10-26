@@ -225,7 +225,7 @@ describe('Controlled Inputs', () => {
           title="Device Type"
           type="text"
           dataItems={['tetrode', 'probe']}
-          defaultValue="tetrode"
+          value="tetrode"
           onChange={onChange}
         />
       );
@@ -240,7 +240,7 @@ describe('Controlled Inputs', () => {
           title="Device Type"
           type="text"
           dataItems={['tetrode', 'probe']}
-          defaultValue="probe"
+          value="probe"
           onChange={onChange}
         />
       );

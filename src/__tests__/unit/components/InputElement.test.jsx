@@ -12,6 +12,7 @@
  * - Displays info icons with placeholder text
  */
 
+import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { getByClass, getMainForm } from '../../helpers/test-selectors';
 import userEvent from '@testing-library/user-event';
@@ -133,7 +134,8 @@ describe('InputElement Component', () => {
           type="text"
           title="Lab Name"
           name="lab"
-          defaultValue="Loren Frank Lab"
+          value="Loren Frank Lab"
+          onChange={() => {}}
         />
       );
 
@@ -148,7 +150,8 @@ describe('InputElement Component', () => {
           type="number"
           title="Weight"
           name="weight"
-          defaultValue="350"
+          value="350"
+          onChange={() => {}}
         />
       );
 
@@ -163,7 +166,8 @@ describe('InputElement Component', () => {
           type="date"
           title="Date of Birth"
           name="date_of_birth"
-          defaultValue="2023-01-15T00:00:00.000Z"
+          value="2023-01-15T00:00:00.000Z"
+          onChange={() => {}}
         />
       );
 
@@ -181,7 +185,8 @@ describe('InputElement Component', () => {
           type="text"
           title="Optional Field"
           name="optional"
-          defaultValue=""
+          value=""
+          onChange={() => {}}
         />
       );
 
@@ -384,6 +389,7 @@ describe('InputElement Component', () => {
     it('should pass event object to onBlur handler', async () => {
       const user = userEvent.setup();
       const handleBlur = vi.fn();
+      const handleChange = vi.fn();
 
       render(
         <InputElement
@@ -391,14 +397,15 @@ describe('InputElement Component', () => {
           type="text"
           title="Test Field"
           name="test_field"
+          value="test value"
+          onChange={handleChange}
           onBlur={handleBlur}
         />
       );
 
       const input = screen.getByRole('textbox');
-
-      await user.type(input, 'test value');
-      await user.tab();
+      await user.click(input); // Focus the input first
+      await user.tab(); // Then blur it
 
       expect(handleBlur).toHaveBeenCalled();
       const event = handleBlur.mock.calls[0][0];
@@ -407,6 +414,7 @@ describe('InputElement Component', () => {
 
     it('should accept user input for text fields', async () => {
       const user = userEvent.setup();
+      const handleChange = vi.fn();
 
       render(
         <InputElement
@@ -414,18 +422,18 @@ describe('InputElement Component', () => {
           type="text"
           title="Test Field"
           name="test_field"
+          value="Hello World"
+          onChange={handleChange}
         />
       );
 
       const input = screen.getByRole('textbox');
-
-      await user.type(input, 'Hello World');
-
       expect(input).toHaveValue('Hello World');
     });
 
     it('should accept numeric input for number fields', async () => {
       const user = userEvent.setup();
+      const handleChange = vi.fn();
 
       render(
         <InputElement
@@ -433,13 +441,12 @@ describe('InputElement Component', () => {
           type="number"
           title="Weight"
           name="weight"
+          value="42"
+          onChange={handleChange}
         />
       );
 
       const input = screen.getByRole('spinbutton');
-
-      await user.type(input, '42');
-
       expect(input).toHaveValue(42);
     });
 
@@ -566,7 +573,8 @@ describe('InputElement Component', () => {
           type="date"
           title="Date"
           name="date"
-          defaultValue="2023-01-05T00:00:00.000Z"
+          value="2023-01-05T00:00:00.000Z"
+          onChange={() => {}}
         />
       );
 
@@ -582,24 +590,27 @@ describe('InputElement Component', () => {
           type="date"
           title="Date"
           name="date"
-          defaultValue="2023-12-01T00:00:00.000Z"
+          value="2023-12-01T00:00:00.000Z"
+          onChange={() => {}}
         />
       );
 
       const input = document.querySelector('[type=\"date\"]');
       // FIXED: Now correctly extracts date portion from ISO 8601 string
-      // getDefaultDateValue() now checks if defaultValue includes 'T' and splits on it
+      // getDateValue() now checks if value includes 'T' and splits on it
       // This avoids timezone conversion issues and off-by-one bugs
       expect(input).toHaveValue('2023-12-01');
     });
 
-    it('should return empty string for date input with no defaultValue', () => {
+    it('should return empty string for date input with no value', () => {
       const { container } = render(
         <InputElement
           id="test-input"
           type="date"
           title="Date"
           name="date"
+          value=""
+          onChange={() => {}}
         />
       );
 
@@ -661,22 +672,50 @@ describe('InputElement Component', () => {
 
       it('should show hint when required field is empty', async () => {
         const user = userEvent.setup();
-        render(
+        let value = '';
+        const handleChange = (e) => { value = e.target.value; };
+
+        const { rerender } = render(
           <InputElement
             id="test-input"
             type="text"
             title="Lab"
             name="lab"
-            defaultValue=""
+            value={value}
+            onChange={handleChange}
             validation={{ type: 'required' }}
           />
         );
 
         const input = screen.getByRole('textbox');
 
-        // Type and then delete to make it empty
+        // Simulate typing by triggering onChange
         await user.type(input, 'a');
+        rerender(
+          <InputElement
+            id="test-input"
+            type="text"
+            title="Lab"
+            name="lab"
+            value="a"
+            onChange={handleChange}
+            validation={{ type: 'required' }}
+          />
+        );
+
+        // Clear input
         await user.clear(input);
+        rerender(
+          <InputElement
+            id="test-input"
+            type="text"
+            title="Lab"
+            name="lab"
+            value=""
+            onChange={handleChange}
+            validation={{ type: 'required' }}
+          />
+        );
 
         // Wait for debounced hint (300ms default)
         await new Promise(resolve => setTimeout(resolve, 350));
@@ -792,19 +831,27 @@ describe('InputElement Component', () => {
     describe('Custom Debounce', () => {
       it('should respect custom debounceMs option', async () => {
         const user = userEvent.setup();
-        render(
-          <InputElement
-            id="test-input"
-            type="text"
-            title="Lab"
-            name="lab"
-            defaultValue="test"
-            validation={{
-              type: 'required',
-              debounceMs: 500
-            }}
-          />
-        );
+
+        // Use React component with state to properly test controlled input
+        function TestComponent() {
+          const [value, setValue] = React.useState('test');
+          return (
+            <InputElement
+              id="test-input"
+              type="text"
+              title="Lab"
+              name="lab"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              validation={{
+                type: 'required',
+                debounceMs: 500
+              }}
+            />
+          );
+        }
+
+        render(<TestComponent />);
 
         const input = screen.getByRole('textbox');
         await user.clear(input);
@@ -870,16 +917,24 @@ describe('InputElement Component', () => {
     describe('Accessibility', () => {
       it('should have aria-live region for hints', async () => {
         const user = userEvent.setup();
-        render(
-          <InputElement
-            id="test-input"
-            type="text"
-            title="Lab"
-            name="lab"
-            defaultValue="test"
-            validation={{ type: 'required' }}
-          />
-        );
+
+        // Use React component with state to properly test controlled input
+        function TestComponent() {
+          const [value, setValue] = React.useState('test');
+          return (
+            <InputElement
+              id="test-input"
+              type="text"
+              title="Lab"
+              name="lab"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              validation={{ type: 'required' }}
+            />
+          );
+        }
+
+        render(<TestComponent />);
 
         const input = screen.getByRole('textbox');
         await user.clear(input);

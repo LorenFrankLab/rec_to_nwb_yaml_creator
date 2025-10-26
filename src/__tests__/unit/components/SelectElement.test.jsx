@@ -253,7 +253,7 @@ describe('SelectElement Component', () => {
   });
 
   describe('Default Value and Selection', () => {
-    it('should set defaultValue as selected option', () => {
+    it('should set value as selected option (controlled mode)', () => {
       render(
         <SelectElement
           id="test-select"
@@ -261,7 +261,8 @@ describe('SelectElement Component', () => {
           title="Test Field"
           name="test_field"
           dataItems={['option1', 'option2', 'option3']}
-          defaultValue="option2"
+          value="option2"
+          onChange={() => {}}
         />
       );
 
@@ -269,7 +270,7 @@ describe('SelectElement Component', () => {
       expect(select).toHaveValue('option2');
     });
 
-    it('should default to empty string when no defaultValue provided (defaultProps)', () => {
+    it('should handle empty value (browser selects first option)', () => {
       render(
         <SelectElement
           id="test-select"
@@ -277,16 +278,17 @@ describe('SelectElement Component', () => {
           title="Test Field"
           name="test_field"
           dataItems={['option1', 'option2']}
+          value=""
+          onChange={() => {}}
         />
       );
 
       const select = screen.getByRole('combobox');
       // BASELINE: Without addBlankOption, browser selects first option by default
-      // Even though defaultValue is '', the browser auto-selects first option
       expect(select).toHaveValue('option1');
     });
 
-    it('should handle numeric defaultValue', () => {
+    it('should handle numeric value', () => {
       render(
         <SelectElement
           id="test-select"
@@ -294,7 +296,8 @@ describe('SelectElement Component', () => {
           title="Camera ID"
           name="camera_id"
           dataItems={['0', '1', '2']}
-          defaultValue={1}
+          value={1}
+          onChange={() => {}}
         />
       );
 
@@ -353,9 +356,7 @@ describe('SelectElement Component', () => {
       expect(callArg.target.id).toBe('test-select');
     });
 
-    it('should update selected value when user changes selection', async () => {
-      const user = userEvent.setup();
-
+    it('should update selected value when value prop changes (controlled mode)', async () => {
       const { rerender } = render(
         <SelectElement
           id="test-select"
@@ -363,14 +364,15 @@ describe('SelectElement Component', () => {
           title="Test Field"
           name="test_field"
           dataItems={['option1', 'option2', 'option3']}
-          defaultValue="option1"
+          value="option1"
+          onChange={() => {}}
         />
       );
 
       const select = screen.getByRole('combobox');
       expect(select).toHaveValue('option1');
 
-      // Rerender with new defaultValue (simulating parent state update)
+      // Rerender with new value (simulating parent state update in controlled mode)
       rerender(
         <SelectElement
           id="test-select"
@@ -378,7 +380,8 @@ describe('SelectElement Component', () => {
           title="Test Field"
           name="test_field"
           dataItems={['option1', 'option2', 'option3']}
-          defaultValue="option2"
+          value="option2"
+          onChange={() => {}}
         />
       );
 

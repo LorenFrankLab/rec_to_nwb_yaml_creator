@@ -51,7 +51,8 @@ const ChannelMap = (prop) => {
                     name="ntrode_id"
                     title="Ntrode Id"
                     required
-                    defaultValue={item.ntrode_id}
+                    value={item.ntrode_id}
+                    onChange={() => {}}
                     placeholder="Ntrode Id"
                     readOnly
                     onBlur={onBlur}
