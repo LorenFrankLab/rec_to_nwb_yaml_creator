@@ -853,6 +853,7 @@ useEffect(() => {
           required
           defaultValue={formData.experiment_description}
           onBlur={(e) => onBlur(e)}
+          validation={{ type: 'required' }}
         />
       </div>
       <div id="session_description-area" className="area-region">
@@ -865,6 +866,7 @@ useEffect(() => {
           placeholder="Description of current session, e.g - w-track task"
           defaultValue={formData.session_description}
           onBlur={(e) => onBlur(e)}
+          validation={{ type: 'required' }}
         />
       </div>
       <div id="session_id-area" className="area-region">
@@ -913,6 +915,7 @@ useEffect(() => {
               required
               placeholder="Summary of animal model/patient/specimen being examined"
               onBlur={(e) => onBlur(e, { key: 'subject' })}
+              validation={{ type: 'required' }}
             />
             <DataListElement
               id="subject-species"
