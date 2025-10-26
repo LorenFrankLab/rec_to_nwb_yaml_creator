@@ -21,7 +21,7 @@
 
 import { describe, it, expect } from 'vitest';
 import YAML from 'yaml';
-import { convertObjectToYAMLString } from '../../../utils/yamlExport';
+import { encodeYaml as convertObjectToYAMLString } from '../../../io/yaml';
 
 /**
  * Note: Tests updated in Phase 3 to test actual exported function

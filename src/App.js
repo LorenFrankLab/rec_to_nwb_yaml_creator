@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import YAML from 'yaml';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
-import { convertObjectToYAMLString, createYAMLFile } from './utils/yamlExport';
+import { encodeYaml, downloadYamlFile, formatDeterministicFilename } from './io/yaml';
 import { showErrorMessage, displayErrorOnUI } from './utils/errorDisplay';
 import { jsonschemaValidation, rulesValidation } from './utils/validation';
 
@@ -493,10 +493,9 @@ const generateYMLFile = (e) => {
   const { isFormValid, formErrors } = rulesValidation(form);
 
   if (isValid && isFormValid) {
-    const yAMLForm = convertObjectToYAMLString(form);
-    const subjectId = formData.subject.subject_id.toLocaleLowerCase();
-    const fileName = `{EXPERIMENT_DATE_in_format_mmddYYYY}_${subjectId}_metadata.yml`;
-    createYAMLFile(fileName, yAMLForm);
+    const yAMLForm = encodeYaml(form);
+    const fileName = formatDeterministicFilename(form);
+    downloadYamlFile(fileName, yAMLForm);
     return;
   }
 
