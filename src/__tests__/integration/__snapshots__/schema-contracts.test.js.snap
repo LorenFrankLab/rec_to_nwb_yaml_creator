@@ -26,13 +26,13 @@ exports[`BASELINE: Integration Contracts > Device Types Contract > verifies devi
 }
 `;
 
-exports[`BASELINE: Integration Contracts > Schema Hash > documents current schema version > schema-hash 1`] = `"1692346308bad1f177b1464d554de51797e113ee5a73fedf17dbc1995eca270c"`;
+exports[`BASELINE: Integration Contracts > Schema Hash > documents current schema version > schema-hash 1`] = `"a15136fd1086fde303e219350db6069e07225608dc8fda96e5be11db9dfe8e22"`;
 
 exports[`BASELINE: Integration Contracts > Schema Hash > verifies schema sync with trodes_to_nwb (if available) > schema-sync-status 1`] = `
 {
-  "inSync": false,
-  "trodesHash": "10963b0c1dbda6f8",
-  "webAppHash": "1692346308bad1f1",
+  "inSync": true,
+  "trodesHash": "a15136fd1086fde3",
+  "webAppHash": "a15136fd1086fde3",
 }
 `;
 

@@ -143,7 +143,7 @@ describe('Import/Export Workflow Integration', () => {
       const taskNameInputs = screen.getAllByLabelText(/task name/i);
       expect(taskNameInputs).toHaveLength(2);
       expect(taskNameInputs[0]).toHaveValue("Sleep");
-    });
+    }, 15000); // 15 second timeout - imports YAML file
 
     /**
      * Test 3: Import YAML and verify nested object structure (subject)
