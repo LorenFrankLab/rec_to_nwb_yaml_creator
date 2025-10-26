@@ -12,7 +12,7 @@
  * - Displays info icons with placeholder text
  */
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { getByClass, getMainForm } from '../../helpers/test-selectors';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
@@ -666,6 +666,260 @@ describe('InputElement Component', () => {
 
       const input = screen.getByRole('textbox');
       expect(input).toHaveAttribute('name', 'session_id');
+    });
+  });
+
+  describe('Validation Integration (Phase 2B)', () => {
+    describe('Required Validation', () => {
+      it('should accept validation prop with required type', () => {
+        render(
+          <InputElement
+            id="test-input"
+            type="text"
+            title="Lab"
+            name="lab"
+            validation={{ type: 'required' }}
+          />
+        );
+
+        const input = screen.getByRole('textbox');
+        expect(input).toBeInTheDocument();
+      });
+
+      it('should show hint when required field is empty', async () => {
+        const user = userEvent.setup();
+        render(
+          <InputElement
+            id="test-input"
+            type="text"
+            title="Lab"
+            name="lab"
+            defaultValue=""
+            validation={{ type: 'required' }}
+          />
+        );
+
+        const input = screen.getByRole('textbox');
+
+        // Type and then delete to make it empty
+        await user.type(input, 'a');
+        await user.clear(input);
+
+        // Wait for debounced hint (300ms default)
+        await new Promise(resolve => setTimeout(resolve, 350));
+
+        expect(screen.getByText('This field is required')).toBeInTheDocument();
+      });
+
+      it('should clear hint when required field is filled', async () => {
+        const user = userEvent.setup();
+        render(
+          <InputElement
+            id="test-input"
+            type="text"
+            title="Lab"
+            name="lab"
+            defaultValue=""
+            validation={{ type: 'required' }}
+          />
+        );
+
+        const input = screen.getByRole('textbox');
+
+        // Type a value
+        await user.type(input, 'Frank Lab');
+
+        // Wait for debounced validation
+        await new Promise(resolve => setTimeout(resolve, 350));
+
+        // Hint should not be present
+        expect(screen.queryByText('This field is required')).not.toBeInTheDocument();
+      });
+    });
+
+    describe('Pattern Validation', () => {
+      it('should accept validation prop with pattern type', () => {
+        render(
+          <InputElement
+            id="test-input"
+            type="text"
+            title="Session ID"
+            name="session_id"
+            validation={{
+              type: 'pattern',
+              pattern: /^[a-zA-Z0-9_-]+$/,
+              patternMessage: 'Must be alphanumeric'
+            }}
+          />
+        );
+
+        const input = screen.getByRole('textbox');
+        expect(input).toBeInTheDocument();
+      });
+
+      it('should show custom message when pattern fails', async () => {
+        const user = userEvent.setup();
+        render(
+          <InputElement
+            id="test-input"
+            type="text"
+            title="Session ID"
+            name="session_id"
+            defaultValue=""
+            validation={{
+              type: 'pattern',
+              pattern: /^[a-zA-Z0-9_-]+$/,
+              patternMessage: 'Session ID must contain only letters, numbers, underscores, or hyphens'
+            }}
+          />
+        );
+
+        const input = screen.getByRole('textbox');
+
+        // Type invalid characters
+        await user.type(input, 'test@#$');
+
+        // Wait for debounced hint
+        await new Promise(resolve => setTimeout(resolve, 350));
+
+        expect(screen.getByText(/Session ID must contain only letters, numbers, underscores, or hyphens/)).toBeInTheDocument();
+      });
+
+      it('should clear hint when pattern matches', async () => {
+        const user = userEvent.setup();
+        render(
+          <InputElement
+            id="test-input"
+            type="text"
+            title="Session ID"
+            name="session_id"
+            defaultValue="invalid@#$"
+            validation={{
+              type: 'pattern',
+              pattern: /^[a-zA-Z0-9_-]+$/,
+              patternMessage: 'Must be alphanumeric'
+            }}
+          />
+        );
+
+        const input = screen.getByRole('textbox');
+
+        // Clear and type valid value
+        await user.clear(input);
+        await user.type(input, 'session_123');
+
+        // Wait for debounced validation
+        await new Promise(resolve => setTimeout(resolve, 350));
+
+        // Hint should not be present
+        expect(screen.queryByText('Must be alphanumeric')).not.toBeInTheDocument();
+      });
+    });
+
+    describe('Custom Debounce', () => {
+      it('should respect custom debounceMs option', async () => {
+        const user = userEvent.setup();
+        render(
+          <InputElement
+            id="test-input"
+            type="text"
+            title="Lab"
+            name="lab"
+            defaultValue="test"
+            validation={{
+              type: 'required',
+              debounceMs: 500
+            }}
+          />
+        );
+
+        const input = screen.getByRole('textbox');
+        await user.clear(input);
+
+        // Wait less than debounce time - hint should not appear yet
+        await new Promise(resolve => setTimeout(resolve, 300));
+        expect(screen.queryByText('This field is required')).not.toBeInTheDocument();
+
+        // Wait for full debounce time - hint should now appear
+        await waitFor(
+          () => {
+            expect(screen.getByText('This field is required')).toBeInTheDocument();
+          },
+          { timeout: 1000 }
+        );
+      });
+    });
+
+    describe('Backward Compatibility', () => {
+      it('should work without validation prop (original behavior)', () => {
+        const mockOnBlur = vi.fn();
+        render(
+          <InputElement
+            id="test-input"
+            type="text"
+            title="Lab"
+            name="lab"
+            onBlur={mockOnBlur}
+          />
+        );
+
+        const input = screen.getByRole('textbox');
+        expect(input).toBeInTheDocument();
+
+        // Should not show any hints
+        expect(screen.queryByText(/required/i)).not.toBeInTheDocument();
+      });
+
+      it('should not interfere with existing onBlur handler', async () => {
+        const mockOnBlur = vi.fn();
+        const user = userEvent.setup();
+
+        render(
+          <InputElement
+            id="test-input"
+            type="text"
+            title="Lab"
+            name="lab"
+            onBlur={mockOnBlur}
+            validation={{ type: 'required' }}
+          />
+        );
+
+        const input = screen.getByRole('textbox');
+        await user.click(input);
+        await user.tab();
+
+        // onBlur should still be called
+        expect(mockOnBlur).toHaveBeenCalled();
+      });
+    });
+
+    describe('Accessibility', () => {
+      it('should have aria-live region for hints', async () => {
+        const user = userEvent.setup();
+        render(
+          <InputElement
+            id="test-input"
+            type="text"
+            title="Lab"
+            name="lab"
+            defaultValue="test"
+            validation={{ type: 'required' }}
+          />
+        );
+
+        const input = screen.getByRole('textbox');
+        await user.clear(input);
+
+        // Wait for hint to appear
+        await waitFor(
+          () => {
+            const hint = screen.getByText('This field is required');
+            expect(hint).toHaveAttribute('aria-live', 'polite');
+          },
+          { timeout: 1000 }
+        );
+      });
     });
   });
 });
