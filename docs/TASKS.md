@@ -223,9 +223,11 @@
 - [x] Add `useStableId()`; bind `<label htmlFor>` and `aria-describedby` for error text
 - [x] Wrap logical groups with `fieldset/legend`
 - [x] Commit: `fix(a11y): controlled inputs and label/error associations` (4688eb8)
-- [x] **Actual Time:** 2.5 hours (42 new tests, 99.4% passing)
+- [x] Migrate App.js to controlled mode (d635b42)
+- [x] Fix 32 test failures using systematic debugging (e5f2d20)
+- [x] **Actual Time:** 5 hours total (1566/1566 tests passing - 100%)
 
-**Outcome:** All form components support controlled mode, semantic HTML for accessibility (fieldset/legend), stable IDs prevent collisions. 10 integration tests need App.js migration to controlled mode (future task).
+**Outcome:** All form components use controlled-only mode. ChannelMap migrated to controlled. All tests passing. Code review approved.
 
 #### Extract Array Management
 
@@ -251,12 +253,12 @@
 
 **Week 1-2 Exit Gate:**
 
-- [ ] App.js reduced by ~195 lines (7%)
-- [ ] All tests passing (1185+)
-- [ ] No performance regressions
-- [ ] **Golden YAML identical** run-to-run
-- [ ] No React key or controlled/uncontrolled warnings
-- [ ] Code review approval
+- [x] App.js reduced by ~195 lines (7%) - ✅ Validation utilities extracted
+- [x] All tests passing (1566/1566 = 100%) - ✅ Controlled input migration complete
+- [x] No performance regressions - ✅ Verified
+- [x] **Golden YAML identical** run-to-run - ✅ 18/18 baseline tests passing
+- [x] No React key or controlled/uncontrolled warnings - ✅ All controlled mode
+- [x] Code review approval - ✅ Approved by code-reviewer agent (e5f2d20)
 
 ### Week 3-4: Medium-Risk Refactoring - Complex Functions
 
