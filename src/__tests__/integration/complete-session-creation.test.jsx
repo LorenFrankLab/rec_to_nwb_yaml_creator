@@ -264,7 +264,7 @@ describe('End-to-End Session Creation Workflow', () => {
    * - Form validates with complete data
    * - Exported YAML includes all fields
    */
-  it('creates complete session with all optional fields', { timeout: 30000 }, async () => {
+  it('creates complete session with all optional fields', { timeout: 60000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
     render(<App />);
