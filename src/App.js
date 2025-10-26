@@ -5,6 +5,7 @@ import { faDownload } from "@fortawesome/free-solid-svg-icons";
 import { encodeYaml, downloadYamlFile, formatDeterministicFilename } from './io/yaml';
 import { showErrorMessage, displayErrorOnUI } from './utils/errorDisplay';
 import { jsonschemaValidation, rulesValidation } from './utils/validation';
+import { useArrayManagement } from './hooks/useArrayManagement';
 
 import logo from './logo.png';
 import packageJson from '../package.json';
@@ -71,6 +72,11 @@ export function App() {
    * Stores JSON schema
    */
   const schema = useRef({});
+
+  /**
+   * Array management functions (add, remove, duplicate)
+   */
+  const { addArrayItem, removeArrayItem, duplicateArrayItem } = useArrayManagement(formData, setFormData);
 
   /**
    * Initiates importing an existing YAML file
@@ -403,57 +409,6 @@ const nTrodeMapSelected = (e, metaData) => {
   return null;
 };
 
-/**
- * addArrayItem
- *
- * @param {string} key key
- * @param {inter} count count
- */
-const addArrayItem = (key, count = 1) => {
-  const form = structuredClone(formData);
-  const arrayDefaultValue = arrayDefaultValues[key];
-  const items = Array(count).fill({ ...arrayDefaultValue });
-  const formItems = form[key];
-  const idValues = formItems
-    .map((formItem) => formItem.id)
-    .filter((formItem) => formItem !== undefined);
-  // -1 means no id field, else there it exist and get max
-  let maxId = -1;
-
-  if (arrayDefaultValue?.id !== undefined) {
-    maxId = idValues.length > 0 ? Math.max(...idValues) + 1 : 0;
-  }
-
-  items.forEach((item) => {
-    const selectedItem = { ...item }; // best never to directly alter iterator
-
-    // if id exist, increment to avoid duplicates
-    if (maxId !== -1) {
-      maxId += 1;
-      selectedItem.id = maxId - 1; // -1 makes this start from 0
-    }
-
-    formItems.push(selectedItem);
-  });
-
-  setFormData(form);
-};
-
-const removeArrayItem = (index, key) => {
-  // eslint-disable-next-line no-restricted-globals
-  if (window.confirm(`Remove index ${index} from ${key}?`)) {
-    const form = structuredClone(formData);
-    const items = structuredClone(form[key]);
-
-    if (!items || items.length === 0) {
-      return null;
-    }
-
-    items.splice(index, 1);
-    form[key] = items
-    setFormData(form);
-  }
-};
 
 const removeElectrodeGroupItem = (index, key) => {
   if (window.confirm(`Remove index ${index} from ${key}?`)) {
@@ -552,33 +507,6 @@ const generateYMLFile = (e) => {
       });
     }
   }, 100);
-};
-
-const duplicateArrayItem = (index, key) => {
-  const form = structuredClone(formData);
-  const item = structuredClone(form[key][index]);
-
-  // no item identified. Do nothing
-  if (!item) {
-    return;
-  }
-
-  // increment id by 1 if it exist
-  const keys = Object.keys(item);
-  keys.forEach((keyItem) => {
-    const keyLowerCase = keyItem.toLowerCase(); // remove case difference
-    if (['id', ' id'].includes(keyLowerCase)) {
-      const ids = form[key].map((formKey) => {
-        return formKey[keyLowerCase];
-      });
-
-      const maxId = Math.max(...ids);
-      item[keyItem] = maxId + 1;
-    }
-  });
-
-  form[key].splice(index + 1, 0, item);
-  setFormData(form);
 };
 
 const duplicateElectrodeGroupItem = (index, key) => {
