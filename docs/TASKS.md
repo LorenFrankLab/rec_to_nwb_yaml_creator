@@ -62,11 +62,11 @@
 
 ## Pre-Flight Guardrails & Baselines
 
-- [ ] Add Prettier + ESLint (react, react-hooks, jsx-a11y) and enable CI (if not already)
-- [ ] Create `tests/fixtures/golden/` with representative YAML exports (use src/**tests**/fixtures/valid/20230622_sample_metadata.yml, roundtrip)
-- [ ] Add test: `export(model) === golden` (byte-for-byte)
-- [ ] Commit: `chore: lint, CI, and golden YAML fixtures`
-- [ ] **Estimated Time:** 1 hour
+- [x] Add Prettier + ESLint (react, react-hooks, jsx-a11y) and enable CI (if not already) - Already configured via react-app preset
+- [x] Create `tests/fixtures/golden/` with representative YAML exports (use src/**tests**/fixtures/valid/20230622_sample_metadata.yml, roundtrip)
+- [x] Add test: `export(model) === golden` (byte-for-byte) - 13 tests added in golden-yaml.baseline.test.js
+- [x] Commit: `chore: lint, CI, and golden YAML fixtures`
+- [x] **Estimated Time:** 1 hour (Completed 2025-10-26)
 
 ### Promote YAML utilities → single deterministic IO module
 >

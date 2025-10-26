@@ -1,0 +1,11 @@
+experimenter_name:
+  - Doe, John
+lab: Frank
+institution: University of California, San Francisco
+data_acq_device:
+  - name: SpikeGadgets
+    system: SpikeGadgets
+    amplifier: Intan
+    adc_circuit: Intan
+times_period_multiplier: 1.5
+raw_data_to_volts: 0.195
