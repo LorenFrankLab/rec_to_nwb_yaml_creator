@@ -44,7 +44,7 @@
 
 ### ✅ Extract Error Display Utilities (Completed 2025-10-26)
 
-**Commit:** [pending] - `refactor: extract error display utilities`
+**Commit:** 5884eff - `refactor: extract error display utilities`
 
 **Files Changed:**
 - Created: `src/utils/errorDisplay.js` (83 lines)

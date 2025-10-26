@@ -21,7 +21,7 @@ Format: `[Phase] Category: Description`
 - **Error Display Utilities** (`src/utils/errorDisplay.js`) - 2025-10-26
   - `showErrorMessage(error)` - Displays Ajv validation errors with user-friendly messages
   - `displayErrorOnUI(id, message)` - Displays custom validation errors on input elements
-  - Commit: [pending]
+  - Commit: 5884eff
 
 ### Changed
 
