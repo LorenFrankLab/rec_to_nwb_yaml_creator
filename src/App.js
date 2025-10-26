@@ -2444,6 +2444,7 @@ useEffect(() => {
                           index,
                         })
                       }
+                      validation={{ type: 'numberRange', min: 0 }}
                     />
                     <DataListElement
                       id={`electrode_groups-location-${index}`}
@@ -2488,6 +2489,7 @@ useEffect(() => {
                           index,
                         })
                       }
+                      validation={{ type: 'required' }}
                     />
                     <DataListElement
                       id={`electrode_groups-targeted_location-${index}`}
@@ -2518,6 +2520,7 @@ useEffect(() => {
                           index,
                         })
                       }
+                      validation={{ type: 'required' }}
                     />
                     <InputElement
                       id={`electrode_groups-targeted_y-${index}`}
@@ -2534,6 +2537,7 @@ useEffect(() => {
                           index,
                         })
                       }
+                      validation={{ type: 'required' }}
                     />
                     <InputElement
                       id={`electrode_groups-targeted_z-${index}`}
@@ -2550,6 +2554,7 @@ useEffect(() => {
                           index,
                         })
                       }
+                      validation={{ type: 'required' }}
                     />
                     <DataListElement
                       id={`electrode_groups-units-${index}`}
