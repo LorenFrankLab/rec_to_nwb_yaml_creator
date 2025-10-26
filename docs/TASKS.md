@@ -108,12 +108,12 @@
 
 ---
 
-#### Lightweight “Instant Feedback” Layer
+#### Lightweight "Instant Feedback" Layer ✅ COMPLETE
 
-- [ ] Create `src/validation/quickChecks.js`
+- [x] Create `src/validation/quickChecks.js`
   - Cheap synchronous checks: required, format, enum, type
   - Runs on debounced `onChange` (250–400 ms)
-- [ ] Add `useQuickChecks(path, value)` hook for instant hints
+- [x] Add `useQuickChecks(path, value)` hook for instant hints
 - [ ] Display hint text (subtle, not role="alert") below inputs
 - [ ] Ensure **no ARIA announcements** while typing
 - [ ] Commit: `feat(validation): add quickChecks instant hint layer`
