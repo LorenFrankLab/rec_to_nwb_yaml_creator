@@ -60,6 +60,54 @@
 - [x] Run full test suite
 - [x] Commit: `refactor: extract string formatting utilities`
 
+## Pre-Flight Guardrails & Baselines
+
+- [ ] Add Prettier + ESLint (react, react-hooks, jsx-a11y) and enable CI (if not already)
+- [ ] Create `tests/fixtures/golden/` with representative YAML exports (use src/**tests**/fixtures/valid/20230622_sample_metadata.yml, roundtrip)
+- [ ] Add test: `export(model) === golden` (byte-for-byte)
+- [ ] Commit: `chore: lint, CI, and golden YAML fixtures`
+- [ ] **Estimated Time:** 1 hour
+
+### Promote YAML utilities → single deterministic IO module
+>
+> You already extracted YAML export helpers. Make them the single source of truth.
+
+- [ ] **Rename/Move:** `src/utils/yamlExport.js` → `src/io/yaml.js`
+- [ ] **API:** `encodeYaml(model)`, `decodeYaml(text)`, `formatDeterministicFilename(model)`
+- [ ] **Determinism:** sorted keys, `\n` EOL, UTF-8, explicit quoting where required
+- [ ] **Codemod:** replace all imports of `utils/yamlExport` with `io/yaml`
+- [ ] **Tests:** golden equality across two consecutive exports; round-trip parity
+- [ ] Commit: `fix(io): deterministic YAML encoder/decoder`
+
+### ✅ Promote validation utilities → pure validation system (event-driven)
+>
+> You already extracted validation helpers. Rehome them and make timing explicit.
+
+- [ ] **Move/Split:** `src/utils/validation.js` → `src/validation/`
+  - `schemaValidation.js` (AJV/TypeBox)
+  - `rulesValidation.js` (domain rules)
+  - `index.js` → `validate(model): Issue[]`
+- [ ] **Timing:** No render-time validation; trigger via “Validate All”/submit
+- [ ] **A11y:** Map `Issue{path,code,severity,message}` to inputs via `aria-describedby`
+- [ ] **Tests:** fixture issues stable; interaction test ensures no per-keystroke validation
+- [ ] Commit: `refactor(validation): pure, event-driven validation system`
+
+### Stable IDs for List Items (fix incorrect key usage)
+
+- [ ] Generate `id` with `nanoid()` when creating rows/ntrodes/groups
+- [ ] Replace all `key={index}` with `key={row.id}`
+- [ ] Ensure array operations accept **id**, not index
+- [ ] Commit: `fix(react): replace index keys with stable ids`
+- [ ] **Estimated Time:** 1 hour
+
+### Normalize Controlled Inputs + A11y Wiring
+
+- [ ] Convert mixed `defaultValue/value` inputs to **controlled**
+- [ ] Add `useStableId()`; bind `<label htmlFor>` and `aria-describedby` for error text
+- [ ] Wrap logical groups with `fieldset/legend`
+- [ ] Commit: `fix(a11y): controlled inputs and label/error associations`
+- [ ] **Estimated Time:** 2 hours
+
 #### Extract Array Management
 
 - [ ] Create `src/hooks/useArrayManagement.js`
@@ -87,6 +135,8 @@
 - [ ] App.js reduced by ~195 lines (7%)
 - [ ] All tests passing (1185+)
 - [ ] No performance regressions
+- [ ] **Golden YAML identical** run-to-run
+- [ ] No React key or controlled/uncontrolled warnings
 - [ ] Code review approval
 
 ### Week 3-4: Medium-Risk Refactoring - Complex Functions
@@ -95,23 +145,19 @@
 **Status:** 🔴 BLOCKED - Waiting for Week 1-2 completion
 **Estimated Reduction:** 310 additional lines (11% of App.js)
 
-#### Extract Validation System
+### Extract Validation System (already moved; finalize behavior)
 
-- [ ] Create `src/validation/schemaValidation.js`
-- [ ] Create `src/validation/rulesValidation.js`
-- [ ] Extract `jsonschemaValidation()` (App.js:544-583, 2776-2817)
-- [ ] Extract `rulesValidation()` (App.js:591-624, 2819-2839)
-- [ ] Update App.js imports
-- [ ] Run full test suite + integration tests
-- [ ] Test YAML export with trodes_to_nwb
-- [ ] Commit: `refactor: extract validation system`
-- [ ] **Estimated Time:** 4 hours
+- [ ] Ensure `validate(model)` merges schema + rules
+- [ ] Bind errors via `aria-describedby`; add “Validate All” UX if missing
+- [ ] Integration tests for timing & messages
+- [ ] Commit: `refactor(validation): finalize integration`
 
-#### Extract Import/Export Logic
+### Extract Import/Export Logic (with worker seam)
 
 - [ ] Create `src/features/importExport.js`
-- [ ] Extract `importFile()` (App.js:80-154)
-- [ ] Extract `generateYMLFile()` (App.js:652-678)
+- [ ] Extract `importFile()` (App.js:80-154) → `importFiles(files, { onProgress? })`
+- [ ] Extract `generateYMLFile()` (App.js:652-678) → `exportAll(model, { onProgress? })`
+- [ ] Ensure both functions use `src/io/yaml.js`
 - [ ] Update App.js to use extracted functions
 - [ ] Run full test suite
 - [ ] Manual test: import → edit → export → re-import
@@ -119,12 +165,13 @@
 - [ ] Commit: `refactor: extract import/export logic`
 - [ ] **Estimated Time:** 5 hours
 
-#### Extract Electrode Group Logic
+### Extract Electrode Group Logic (id-based ops + renumber rules)
 
 - [ ] Create `src/hooks/useElectrodeGroups.js`
 - [ ] Extract `nTrodeMapSelected()` (App.js:292-356)
-- [ ] Extract `duplicateElectrodeGroupItem()` (App.js:707-756)
-- [ ] Extract `removeElectrodeGroupItem()` (App.js:410-436)
+- [ ] Extract `duplicateElectrodeGroupItem()` (App.js:707-756) → `duplicateGroup(id)`
+- [ ] Extract `removeElectrodeGroupItem()` (App.js:410-436) → `removeGroup(id)`
+- [ ] Ensure **ntrode renumbering** logic is centralized & unit-tested
 - [ ] Update App.js to use extracted functions
 - [ ] Run full test suite (especially ntrode tests)
 - [ ] Verify ntrode ID renumbering logic preserved
@@ -147,6 +194,14 @@
 **Goal:** Decompose large JSX render block into React components
 **Status:** 🔴 BLOCKED - Waiting for Week 3-4 completion
 **Estimated Reduction:** 1400 lines (49% of App.js)
+
+### Add a Light Store Facade (keeps future reducer optional)
+
+- [ ] Create `src/state/store.js` exposing `useStore()` → `{ model, selectors, actions }`
+- [ ] Internally call `useFormUpdates()` / `useArrayManagement()` for now
+- [ ] Update new components to read/write via store hooks instead of deep props
+- [ ] Commit: `refactor(state): store facade for selectors/actions`
+- [ ] **Estimated Time:** 3 hours
 
 #### Extract Subject Fields Component
 
