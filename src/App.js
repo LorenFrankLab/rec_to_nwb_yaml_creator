@@ -1129,6 +1129,7 @@ useEffect(() => {
                           index,
                         })
                       }
+                      validation={{ type: 'numberRange', min: 0 }}
                     />
                     <InputElement
                       id={`cameras-metersperpixel-${index}`}
@@ -1145,6 +1146,7 @@ useEffect(() => {
                           index,
                         })
                       }
+                      validation={{ type: 'numberRange', min: 0 }}
                     />
                     <DataListElement
                       id={`cameras-manufacturer-${index}`}
@@ -1374,6 +1376,7 @@ useEffect(() => {
                             index,
                           })
                         }
+                        validation={{ type: 'required' }}
                       />
                       <InputElement
                         id={`associated_files-description-${index}`}
@@ -1474,6 +1477,7 @@ useEffect(() => {
                             index,
                           })
                         }
+                        validation={{ type: 'required' }}
                       />
                       <RadioList
                       id={`associated_video_files-camera_id-${index}`}
