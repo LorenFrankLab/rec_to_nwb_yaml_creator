@@ -6,6 +6,7 @@ import { encodeYaml, downloadYamlFile, formatDeterministicFilename } from './io/
 import { showErrorMessage, displayErrorOnUI } from './utils/errorDisplay';
 import { jsonschemaValidation, rulesValidation } from './utils/validation';
 import { useArrayManagement } from './hooks/useArrayManagement';
+import { useFormUpdates } from './hooks/useFormUpdates';
 
 import logo from './logo.png';
 import packageJson from '../package.json';
@@ -26,8 +27,6 @@ import RadioList from './element/RadioList';
 import ListElement from './element/ListElement';
 import ArrayItemControl from './element/ArrayItemControl';
 import {
-  commaSeparatedStringToNumber,
-  formatCommaSeparatedString,
   sanitizeTitle,
   titleCase,
   stringToInteger,
@@ -77,6 +76,11 @@ export function App() {
    * Array management functions (add, remove, duplicate)
    */
   const { addArrayItem, removeArrayItem, duplicateArrayItem } = useArrayManagement(formData, setFormData);
+
+  /**
+   * Form update functions (simple updates, array updates, blur transformations, onChange handlers)
+   */
+  const { updateFormData, updateFormArray, onBlur, handleChange } = useFormUpdates(formData, setFormData);
 
   /**
    * Initiates importing an existing YAML file
@@ -178,117 +182,6 @@ export function App() {
           setFormData(structuredClone(formContent));
       };
     };
-
-  /**
-   * Helper to create onChange handler for controlled inputs
-   * @param {string} name - Field name
-   * @param {string} key - Optional parent object/array key
-   * @param {number} index - Optional array index
-   * @returns {Function} onChange handler
-   */
-  const handleChange = (name, key, index) => (e) => {
-    updateFormData(name, e.target.value, key, index);
-  };
-
-    /**
-   * Wrapper for updating internal representation of form on the page. This only works on single item
-   *
-   * @param {string} name input form name
-   * @param {string} value input form value
-   * @param {string} key key for identifying object to update
-   * @param {integer} index index for identifying position to update
-   */
-    const updateFormData = (name, value, key, index) => {
-      const form = structuredClone(formData);
-
-      if (key === undefined) {
-        form[name] = value; // key value pair
-      } else if (index === undefined) {
-        form[key][name] = value; // object (as defined in json schema)
-      } else {
-        form[key][index] = form[key][index] || {};
-        form[key][index][name] = value; // array (as defined in json schema)
-      }
-
-      setFormData(form);
-    };
-
-  /**
-   * Wrapper for updating internal representation of form on the page. This is meant for updating a collection
-   *
-   * @param {string} name input form name
-   * @param {string} value input form value
-   * @param {string} key key for identifying object to update
-   * @param {integer} index index for identifying position to update
-   * @param {boolean} checked whether or not field is checked
-   * @returns null
-   */
-  const updateFormArray = (name, value, key, index, checked = true) => {
-    if (!name || !key) {
-      return null;
-    }
-
-    const form = structuredClone(formData);
-
-    form[key][index] = form[key][index] || {};
-    form[key][index][name] = form[key][index][name] || [];
-    if (checked) {
-      form[key][index][name].push(value);
-    } else {
-      form[key][index][name] = form[key][index][name].filter(
-        (v) => v !== value
-      );
-    }
-
-    form[key][index][name] = [...new Set(form[key][index][name])];
-    form[key][index][name].sort();
-
-    setFormData(form);
-    return null;
-  };
-
-  /**
-   * Updates a form field as use leaves element
-   *
-   * @param {object} e Event object
-   * @param {object} metaData Supporting data
-   */
-  const onBlur = (e, metaData) => {
-    const { target } = e;
-    const { name, value, type } = target;
-    const {
-      key,
-      index,
-      isCommaSeparatedStringToNumber,
-      isCommaSeparatedString,
-    } = metaData || {};
-    let inputValue = '';
-
-    if (isCommaSeparatedString) {
-      inputValue = formatCommaSeparatedString(value);
-    } else if (isCommaSeparatedStringToNumber) {
-      inputValue = commaSeparatedStringToNumber(value);
-    } else {
-      inputValue = type === 'number' ? parseFloat(value, 10) : value;
-    }
-
-    // For controlled inputs, only update if the value changed due to special processing
-    // or if we're doing special formatting (comma-separated, number parsing)
-    const currentValue = key === undefined
-      ? formData[name]
-      : index === undefined
-        ? formData[key]?.[name]
-        : formData[key]?.[index]?.[name];
-
-    // Only update if:
-    // 1. We did special processing (comma-separated, etc.), OR
-    // 2. The processed value is different from current value
-    const didSpecialProcessing = isCommaSeparatedString || isCommaSeparatedStringToNumber;
-
-    if (didSpecialProcessing || inputValue !== currentValue) {
-      updateFormData(name, inputValue, key, index);
-    }
-  };
 
   /**
    * Used by ntrode to map shank to value
