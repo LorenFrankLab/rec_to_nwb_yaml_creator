@@ -20,7 +20,7 @@ import { describe, it, expect } from 'vitest';
 import YAML from 'yaml';
 import fs from 'fs';
 import path from 'path';
-import { jsonschemaValidation } from '../../../App';
+import { jsonschemaValidation } from '../../../utils/validation';
 import schema from '../../../nwb_schema.json';
 
 function loadFixture(category, filename) {

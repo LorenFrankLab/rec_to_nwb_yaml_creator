@@ -16,7 +16,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { rulesValidation } from '../../../App';
+import { rulesValidation } from '../../../utils/validation';
 
 describe('rulesValidation() - Optogenetics Partial Metadata Detection', () => {
   describe('Partial Optogenetics Configuration (Should Fail)', () => {

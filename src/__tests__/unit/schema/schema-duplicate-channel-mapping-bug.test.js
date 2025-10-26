@@ -22,7 +22,7 @@ import { describe, it, expect } from 'vitest';
 import YAML from 'yaml';
 import fs from 'fs';
 import path from 'path';
-import { rulesValidation } from '../../../App.js';
+import { rulesValidation } from '../../../utils/validation';
 
 /**
  * Helper to load YAML fixtures

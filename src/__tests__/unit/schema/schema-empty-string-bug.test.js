@@ -19,7 +19,7 @@ import { describe, it, expect } from 'vitest';
 import YAML from 'yaml';
 import fs from 'fs';
 import path from 'path';
-import { jsonschemaValidation } from '../../../App';
+import { jsonschemaValidation } from '../../../utils/validation';
 
 function loadFixture(category, filename) {
   const fixturePath = path.join(

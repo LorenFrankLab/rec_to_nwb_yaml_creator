@@ -12,7 +12,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { renderWithProviders } from '../helpers/test-utils';
-import App, { jsonschemaValidation } from '../../App';
+import App from '../../App';
+import { jsonschemaValidation } from '../../utils/validation';
 import fs from 'fs';
 import path from 'path';
 import yaml from 'yaml';

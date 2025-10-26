@@ -11,7 +11,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import yaml from 'yaml';
-import { jsonschemaValidation } from '../../App';
+import { jsonschemaValidation } from '../../utils/validation';
 
 // Read fixture files
 const fixturesDir = path.join(__dirname);

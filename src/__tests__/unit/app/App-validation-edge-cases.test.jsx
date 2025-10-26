@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { jsonschemaValidation, rulesValidation } from '../../../App';
+import { jsonschemaValidation, rulesValidation } from '../../../utils/validation';
 
 /**
  * Suite 3: Validation Edge Cases Tests

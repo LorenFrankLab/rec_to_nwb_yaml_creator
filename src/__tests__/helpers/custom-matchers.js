@@ -1,5 +1,5 @@
 import { expect } from 'vitest';
-import { jsonschemaValidation } from '../../App';
+import { jsonschemaValidation } from '../../utils/validation';
 
 /**
  * Custom matchers for YAML validation testing

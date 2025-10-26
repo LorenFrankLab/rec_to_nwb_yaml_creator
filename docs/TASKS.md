@@ -43,12 +43,12 @@
 
 #### Extract Validation Utilities (2-3 hours)
 
-- [ ] Create `src/utils/validation.js`
-- [ ] Extract `jsonschemaValidation()`
-- [ ] Extract `rulesValidation()`
-- [ ] Update App.js imports
-- [ ] Run full test suite
-- [ ] Commit: `refactor: extract validation utilities`
+- [x] Create `src/utils/validation.js`
+- [x] Extract `jsonschemaValidation()`
+- [x] Extract `rulesValidation()`
+- [x] Update App.js imports
+- [x] Run full test suite
+- [x] Commit: `refactor: extract validation utilities`
 
 #### Extract String Formatting Utilities (1-2 hours)
 

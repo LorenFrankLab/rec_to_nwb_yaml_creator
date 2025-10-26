@@ -4,12 +4,12 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
 import { convertObjectToYAMLString, createYAMLFile } from './utils/yamlExport';
 import { showErrorMessage, displayErrorOnUI } from './utils/errorDisplay';
+import { jsonschemaValidation, rulesValidation } from './utils/validation';
 
 import logo from './logo.png';
 import packageJson from '../package.json';
 import JsonSchemaFile from './nwb_schema.json'
 import './App.scss';
-import addFormats from 'ajv-formats';
 import InputElement from './element/InputElement';
 import SelectElement from './element/SelectElement';
 import DataListElement from './element/DataListElement';
@@ -55,8 +55,6 @@ import {
   opticalFiberModelNames,
   virusNames,
 } from './valueList';
-
-const Ajv = require('ajv');
 
 export function App() {
   const [formData, setFormData] = useState(defaultYMLValues);
@@ -457,116 +455,6 @@ const removeElectrodeGroupItem = (index, key) => {
     form[key] = items
     setFormData(form);
   }
-};
-
-/**
- * Validates form data based on YAML JSON schema rules
- *
- * @param {object} formContent Form object
- * @returns Validation information
- */
-const jsonschemaValidation = (formContent) => {
-  const ajv = new Ajv({ allErrors: true });
-  addFormats(ajv);
-  const validate = ajv.compile(schema.current);
-
-  validate(formContent);
-
-  const validationMessages =
-    validate.errors?.map((error) => {
-      return `Key: ${error.instancePath
-        .split('/')
-        .filter((x) => x !== '')
-        .join(', ')}. | Error: ${error.message}`;
-    }) || [];
-
-  const errorIds = [
-    ...new Set(
-      validate.errors?.map((v) => {
-        const validationEntries = v.instancePath
-          .split('/')
-          .filter((x) => x !== '');
-
-        return validationEntries[0];
-      })
-    ),
-  ];
-
-  const isValid = validate.errors === null;
-
-  const message = isValid
-    ? 'Data is valid'
-    : `Data is not valid - \n ${validationMessages.join('\n \n')}`;
-
-  return {
-    isValid,
-    jsonSchemaErrorMessages: validationMessages,
-    jsonSchemaErrors: validate.errors,
-    jsonSchemaErrorIds: errorIds,
-  };
-};
-
-/**
- * Validates rules based on rules internal to this file. These rules are not easy to encode in JSON schema
- *
- * @param {object} jsonFileContent form data
- * @returns Validation information
- */
-const rulesValidation = (jsonFileContent) => {
-  const errorIds = [];
-  const errorMessages = [];
-  let isFormValid = true;
-  const errors = [];
-
-  // check if tasks have a camera but no camera is set
-  if (!jsonFileContent.cameras && jsonFileContent.tasks?.length > 0) {
-    errorMessages.push(
-      'Key: task.camera | Error: There is tasks camera_id, but no camera object with ids. No data is loaded'
-    );
-    errorIds.push('tasks');
-    isFormValid = false;
-  }
-
-  // check if associated_video_files have a camera but no camera is set
-  if (
-    !jsonFileContent.cameras &&
-    jsonFileContent.associated_video_files?.length > 0
-  ) {
-    errorMessages.push(
-      `Key: associated_video_files.camera_id. | Error: There is associated_video_files camera_id, but no camera object with ids. No data is loaded`
-    );
-    errorIds.push('associated_video_files');
-    isFormValid = false;
-  }
-
-  // check for partial optogenetics configuration
-  // If ANY optogenetics field is present, ALL must be present
-  // This is required by trodes_to_nwb Python package
-  const hasOptoSource = jsonFileContent.opto_excitation_source?.length > 0;
-  const hasOpticalFiber = jsonFileContent.optical_fiber?.length > 0;
-  const hasVirusInjection = jsonFileContent.virus_injection?.length > 0;
-
-  const optoFieldsPresent = [hasOptoSource, hasOpticalFiber, hasVirusInjection].filter(Boolean).length;
-
-  // Partial configuration detected (some but not all fields present)
-  if (optoFieldsPresent > 0 && optoFieldsPresent < 3) {
-    errorMessages.push(
-      `Key: optogenetics | Error: Partial optogenetics configuration detected. ` +
-      `If using optogenetics, ALL fields must be defined: ` +
-      `opto_excitation_source${hasOptoSource ? ' ✓' : ' ✗'}, ` +
-      `optical_fiber${hasOpticalFiber ? ' ✓' : ' ✗'}, ` +
-      `virus_injection${hasVirusInjection ? ' ✓' : ' ✗'}`
-    );
-    errorIds.push('opto_excitation_source');
-    isFormValid = false;
-  }
-
-  return {
-    isFormValid,
-    formErrorMessages: errorMessages,
-    formErrors: errorMessages,
-    formErrorIds: errorIds,
-  };
 };
 
 /**
@@ -2718,122 +2606,3 @@ useEffect(() => {
   </>;
 }
 export default App;
-
-// Export validation functions for testing
-// These are standalone versions that don't depend on React state
-export const jsonschemaValidation = (formContent) => {
-  const ajv = new Ajv({ allErrors: true });
-  addFormats(ajv);
-  const validate = ajv.compile(JsonSchemaFile);
-
-  validate(formContent);
-
-  const validationMessages =
-    validate.errors?.map((error) => {
-      return `Key: ${error.instancePath
-        .split('/')
-        .filter((x) => x !== '')
-        .join(', ')}. | Error: ${error.message}`;
-    }) || [];
-
-  const errorIds = [
-    ...new Set(
-      validate.errors?.map((v) => {
-        const validationEntries = v.instancePath
-          .split('/')
-          .filter((x) => x !== '');
-
-        return validationEntries[0];
-      })
-    ),
-  ];
-
-  const isValid = validate.errors === null;
-
-  const message = isValid
-    ? 'Data is valid'
-    : `Data is not valid - \n ${validationMessages.join('\n \n')}`;
-
-  return {
-    valid: isValid,
-    isValid,
-    jsonSchemaErrorMessages: validationMessages,
-    jsonSchemaErrors: validate.errors,
-    jsonSchemaErrorIds: errorIds,
-    errors: validate.errors,
-  };
-};
-
-export const rulesValidation = (jsonFileContent) => {
-  const errorIds = [];
-  const errorMessages = [];
-  let isFormValid = true;
-  const errors = [];
-
-  // check if tasks have a camera but no camera is set
-  if (!jsonFileContent.cameras && jsonFileContent.tasks?.length > 0) {
-    errorMessages.push(
-      'Key: task.camera | Error: There is tasks camera_id, but no camera object with ids. No data is loaded'
-    );
-    errorIds.push('tasks');
-    isFormValid = false;
-  }
-
-  // check for partial optogenetics configuration
-  // If ANY optogenetics field is present, ALL must be present
-  // This is required by trodes_to_nwb Python package
-  const hasOptoSource = jsonFileContent.opto_excitation_source?.length > 0;
-  const hasOpticalFiber = jsonFileContent.optical_fiber?.length > 0;
-  const hasVirusInjection = jsonFileContent.virus_injection?.length > 0;
-
-  const optoFieldsPresent = [hasOptoSource, hasOpticalFiber, hasVirusInjection].filter(Boolean).length;
-
-  // Partial configuration detected (some but not all fields present)
-  if (optoFieldsPresent > 0 && optoFieldsPresent < 3) {
-    errorMessages.push(
-      `Key: optogenetics | Error: Partial optogenetics configuration detected. ` +
-      `If using optogenetics, ALL fields must be defined: ` +
-      `opto_excitation_source${hasOptoSource ? ' ✓' : ' ✗'}, ` +
-      `optical_fiber${hasOpticalFiber ? ' ✓' : ' ✗'}, ` +
-      `virus_injection${hasVirusInjection ? ' ✓' : ' ✗'}`
-    );
-    errorIds.push('opto_excitation_source');
-    isFormValid = false;
-  }
-
-  // check for duplicate channel mappings in ntrode_electrode_group_channel_map
-  // Each ntrode's map object must have unique values (no duplicate physical channels)
-  // Hardware constraint: each logical channel must map to a unique physical channel
-  if (jsonFileContent.ntrode_electrode_group_channel_map?.length > 0) {
-    jsonFileContent.ntrode_electrode_group_channel_map.forEach((ntrode) => {
-      if (ntrode.map && typeof ntrode.map === 'object') {
-        const channelValues = Object.values(ntrode.map);
-        const uniqueValues = new Set(channelValues);
-
-        // If duplicate values exist, the Set will have fewer elements than the array
-        if (channelValues.length !== uniqueValues.size) {
-          // Find which values are duplicated for better error message
-          const duplicates = channelValues.filter(
-            (value, index) => channelValues.indexOf(value) !== index
-          );
-          const uniqueDuplicates = [...new Set(duplicates)];
-
-          errorMessages.push(
-            `Key: ntrode_electrode_group_channel_map | Error: ntrode_id ${ntrode.ntrode_id} has duplicate channel mappings. ` +
-            `Physical channel(s) ${uniqueDuplicates.join(', ')} are mapped to multiple logical channels. ` +
-            `Each logical channel must map to a unique physical channel to avoid hardware conflicts.`
-          );
-          errorIds.push(`ntrode_electrode_group_channel_map_${ntrode.ntrode_id}`);
-          isFormValid = false;
-        }
-      }
-    });
-  }
-
-  return {
-    isFormValid,
-    formErrors: errorMessages,
-    formErrorIds: errorIds,
-    errors,
-  };
-};
