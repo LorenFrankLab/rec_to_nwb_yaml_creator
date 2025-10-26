@@ -22,7 +22,7 @@ const SelectElement = (prop) => {
     dataItems,
     placeholder,
     dataItemsInfo,
-    defaultValue,
+    value,
     onChange,
     addBlankOption,
     required,
@@ -72,7 +72,7 @@ const SelectElement = (prop) => {
           name={name}
           onChange={handleChange}
           onBlur={handleBlur}
-          value={defaultValue}
+          value={value}
           required={required}
           aria-describedby={hintId}
         >
@@ -115,7 +115,7 @@ const SelectElement = (prop) => {
 
 SelectElement.propTypes = {
   title: PropTypes.string.isRequired,
-  defaultValue: PropTypes.oneOf([PropTypes.string, PropTypes.number]),
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   dataItems: PropTypes.arrayOf(PropTypes.string).isRequired,
   dataItemsInfo: PropTypes.arrayOf(PropTypes.string),
   addBlankOption: PropTypes.bool,
@@ -138,7 +138,7 @@ SelectElement.propTypes = {
 };
 
 SelectElement.defaultProps = {
-  defaultValue: '',
+  value: '',
   placeholder: '',
   dataItemsInfo: [],
   addBlankOption: false,

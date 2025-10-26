@@ -24,7 +24,6 @@ const DataListElement = (prop) => {
     title,
     dataItems,
     value,
-    defaultValue,
     onChange,
     placeholder,
     type,
@@ -34,7 +33,6 @@ const DataListElement = (prop) => {
   } = prop;
 
   const id = useStableId(providedId, 'datalist');
-  const isControlled = value !== undefined;
 
   const quickChecks = useQuickChecks(
     validation?.type,
@@ -84,14 +82,9 @@ const DataListElement = (prop) => {
     required,
     onBlur: handleBlur,
     'aria-describedby': hintId,
+    value,
+    onChange: handleChange,
   };
-
-  if (isControlled) {
-    inputProps.value = value;
-    inputProps.onChange = handleChange;
-  } else {
-    inputProps.defaultValue = defaultValue;
-  }
 
   return (
     <label className="container" htmlFor={id}>
@@ -99,10 +92,7 @@ const DataListElement = (prop) => {
         {title} <InfoIcon infoText={placeholder} />
       </div>
       <div className="item2 data-list">
-        <input
-          {...inputProps}
-          key={!isControlled ? defaultValue : undefined}
-        />
+        <input {...inputProps} />
         <datalist id={`${id}-list`} name={name}>
           {dataItems.map((dataItem, dataItemIndex) => {
             return (
@@ -128,7 +118,6 @@ DataListElement.propTypes = {
   title: PropTypes.string.isRequired,
   type: PropTypes.string,
   value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-  defaultValue: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   onChange: PropTypes.func,
   dataItems: PropTypes.arrayOf(PropTypes.string),
   placeholder: PropTypes.string,
@@ -151,8 +140,7 @@ DataListElement.propTypes = {
 DataListElement.defaultProps = {
   id: undefined,
   type: 'text',
-  value: undefined,
-  defaultValue: '',
+  value: '',
   onChange: undefined,
   placeholder: '',
   dataItems: [],

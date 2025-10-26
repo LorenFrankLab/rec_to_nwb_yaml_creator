@@ -25,7 +25,6 @@ const InputElement = (prop) => {
     name,
     placeholder,
     value,
-    defaultValue,
     onChange,
     min,
     required,
@@ -38,9 +37,6 @@ const InputElement = (prop) => {
 
   // Generate stable, unique ID
   const id = useStableId(providedId, 'input');
-
-  // Determine if controlled or uncontrolled
-  const isControlled = value !== undefined;
 
   // Initialize quick checks validation (always call hook per Rules of Hooks)
   // When validation prop is null, pass dummy values that won't be used
@@ -123,19 +119,10 @@ const InputElement = (prop) => {
     return `${year}-${month}-${day}`;
   };
 
-  // Helper to format date values for uncontrolled inputs (legacy)
-  const getDefaultDateValue = () => {
-    if (!defaultValue) {
-      return '';
-    }
-
-    return getDateValue(defaultValue);
-  };
-
   // Generate hint ID for aria-describedby linking
   const hintId = validation ? `${id}-hint` : undefined;
 
-  // Prepare input props based on controlled/uncontrolled mode
+  // Prepare input props (controlled mode only)
   const inputProps = {
     id,
     type,
@@ -149,20 +136,9 @@ const InputElement = (prop) => {
     pattern,
     'aria-describedby': hintId,
     onBlur: handleBlur,
+    value: type === 'date' ? getDateValue(value) : value,
+    onChange: handleChange,
   };
-
-  if (isControlled) {
-    // Controlled mode: use value + onChange
-    inputProps.value = type === 'date' ? getDateValue(value) : value;
-    inputProps.onChange = handleChange;
-  } else {
-    // Uncontrolled mode: use defaultValue
-    inputProps.defaultValue = type === 'date' ? getDefaultDateValue() : defaultValue;
-    // If validation enabled in uncontrolled mode, still need to trigger validation
-    if (validation || onChange) {
-      inputProps.onChange = handleChange;
-    }
-  }
 
   return (
     <label className="container" htmlFor={id}>
@@ -170,10 +146,7 @@ const InputElement = (prop) => {
         {title} <InfoIcon infoText={placeholder} />
       </div>
       <div className="item2">
-        <input
-          {...inputProps}
-          key={!isControlled ? (type === 'date' ? getDefaultDateValue() : defaultValue) : undefined}
-        />
+        <input {...inputProps} />
         {validation && (
           <HintDisplay id={hintId} hint={quickChecks.hint} isRequired={required} />
         )}
@@ -192,11 +165,8 @@ InputElement.propTypes = {
   required: PropTypes.bool,
   step: PropTypes.string,
   min: PropTypes.string,
-  // Controlled mode
   value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   onChange: PropTypes.func,
-  // Uncontrolled mode (legacy)
-  defaultValue: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   pattern: PropTypes.string,
   onBlur: PropTypes.func,
   validation: PropTypes.shape({
@@ -215,8 +185,7 @@ InputElement.defaultProps = {
   id: undefined,
   required: false,
   placeholder: '',
-  value: undefined,
-  defaultValue: '',
+  value: '',
   onChange: undefined,
   readOnly: false,
   step: 'any',

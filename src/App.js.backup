@@ -266,22 +266,7 @@ export function App() {
       inputValue = type === 'number' ? parseFloat(value, 10) : value;
     }
 
-    // For controlled inputs, only update if the value changed due to special processing
-    // or if we're doing special formatting (comma-separated, number parsing)
-    const currentValue = key === undefined
-      ? formData[name]
-      : index === undefined
-        ? formData[key]?.[name]
-        : formData[key]?.[index]?.[name];
-
-    // Only update if:
-    // 1. We did special processing (comma-separated, etc.), OR
-    // 2. The processed value is different from current value
-    const didSpecialProcessing = isCommaSeparatedString || isCommaSeparatedStringToNumber;
-
-    if (didSpecialProcessing || inputValue !== currentValue) {
-      updateFormData(name, inputValue, key, index);
-    }
+    updateFormData(name, inputValue, key, index);
   };
 
   /**
@@ -865,8 +850,7 @@ useEffect(() => {
             type="text"
             name="lab"
             title="Lab"
-            value={formData.lab}
-          onChange={handleChange('lab')}  
+            defaultValue={formData.lab}
             placeholder="Laboratory where the experiment is conducted"
             required
             onBlur={(e) => onBlur(e)}
@@ -878,8 +862,7 @@ useEffect(() => {
             id="institution"
             name="institution"
             title="Institution"
-            value={formData.institution}
-          onChange={handleChange('institution')}  
+            defaultValue={formData.institution}
             placeholder="Type to find an affiliated University or Research center"
             required
             dataItems={labs()}
@@ -895,8 +878,7 @@ useEffect(() => {
           title="Experiment Description"
           placeholder="Description of subject and where subject came from (e.g., breeder, if animal)"
           required
-          value={formData.experiment_description}
-          onChange={handleChange('experiment_description')}  
+          defaultValue={formData.experiment_description}
           onBlur={(e) => onBlur(e)}
           validation={{ type: 'required' }}
         />
@@ -909,8 +891,7 @@ useEffect(() => {
           title="Session Description"
           required
           placeholder="Description of current session, e.g - w-track task"
-          value={formData.session_description}
-          onChange={handleChange('session_description')}  
+          defaultValue={formData.session_description}
           onBlur={(e) => onBlur(e)}
           validation={{ type: 'required' }}
         />
@@ -923,8 +904,7 @@ useEffect(() => {
           title="Session Id"
           required
           placeholder="Session id, e.g - 1"
-          value={formData.session_id}
-          onChange={handleChange('session_id')}  
+          defaultValue={formData.session_id}
           onBlur={(e) => onBlur(e)}
           validation={{
             type: 'pattern',
@@ -958,8 +938,7 @@ useEffect(() => {
               type="text"
               name="description"
               title="Description"
-              value={formData.subject.description}
-              onChange={handleChange('description', 'subject')}  
+              defaultValue={formData.subject.description}
               required
               placeholder="Summary of animal model/patient/specimen being examined"
               onBlur={(e) => onBlur(e, { key: 'subject' })}
@@ -969,8 +948,7 @@ useEffect(() => {
               id="subject-species"
               name="species"
               title="Species"
-              value={formData.subject.species}
-              onChange={handleChange('species', 'subject')}  
+              defaultValue={formData.subject.species}
               placeholder="Type to find a species"
               dataItems={species()}
               onBlur={(e) => itemSelected(e, { key: 'subject' })}
@@ -979,8 +957,7 @@ useEffect(() => {
               id="subject-genotype"
               name="genotype"
               title="Genotype"
-              value={formData.subject.genotype}
-              onChange={handleChange('genotype', 'subject')}  
+              defaultValue={formData.subject.genotype}
               required
               placeholder="Genetic strain. If absent, assume Wild Type (WT)"
               dataItems={genotypes()}
@@ -992,8 +969,8 @@ useEffect(() => {
               title="Sex"
               placeholder="Sex of subject, single letter identifier	"
               dataItems={genderAcronym()}
-              value={formData.subject.sex}
-              onChange={handleChange('sex', 'subject')}
+              defaultValue={formData.subject.sex}
+              onChange={(e) => itemSelected(e, { key: 'subject' })}
             />
             <InputElement
               id="subject-subjectId"
@@ -1001,8 +978,7 @@ useEffect(() => {
               name="subject_id"
               title="Subject Id"
               required
-              value={formData.subject.subject_id}
-              onChange={handleChange('subject_id', 'subject')}  
+              defaultValue={formData.subject.subject_id}
               placeholder="ID of animal/person used/participating in experiment (lab convention)"
               onBlur={(e) => onBlur(e, { key: 'subject' })}
               validation={{
@@ -1016,8 +992,7 @@ useEffect(() => {
               type="date"
               name="date_of_birth"
               title="Date of Birth"
-              value={formData.subject.date_of_birth ? formData.subject.date_of_birth.split('T')[0] : ''}
-              onChange={handleChange('date_of_birth', 'subject')}  
+              defaultValue={formData.subject.date_of_birth ? formData.subject.date_of_birth.split('T')[0] : ''}
               placeholder="Date of birth of subject"
               required
               onBlur={(e) => {
@@ -1039,8 +1014,7 @@ useEffect(() => {
               title="Weight (grams)"
               required
               min="0"
-              value={formData.subject.weight}
-              onChange={handleChange('weight', 'subject')}  
+              defaultValue={formData.subject.weight}
               placeholder="Weight at time of experiment, at time of surgery and at other important times (in grams)"
               onBlur={(e) => onBlur(e, { key: 'subject' })}
               validation={{ type: 'numberRange', min: 0, unit: 'g' }}
@@ -1057,7 +1031,9 @@ useEffect(() => {
 
               return (
                 <details open
-                  key={`data_acq_device-${index}`}
+                  key={sanitizeTitle(
+                    `${dataAcqDevice.name}-dad-${index}`
+                  )}
                   className="array-item"
                 >
                   <summary> Item #{index + 1} </summary>
@@ -1077,8 +1053,7 @@ useEffect(() => {
                       type="text"
                       title="Name"
                       required
-                      value={dataAcqDevice.name}
-                      onChange={handleChange('name', 'data_acq_device', index)}  
+                      defaultValue={dataAcqDevice.name}
                       placeholder="Typically a number"
                       onBlur={(e) =>
                         onBlur(e, {
@@ -1094,8 +1069,7 @@ useEffect(() => {
                       name="system"
                       title="System"
                       required
-                      value={dataAcqDevice.system}
-                      onChange={handleChange('system', 'data_acq_device', index)}  
+                      defaultValue={dataAcqDevice.system}
                       placeholder="System of device"
                       onBlur={(e) =>
                         onBlur(e, {
@@ -1111,8 +1085,7 @@ useEffect(() => {
                       name="amplifier"
                       title="Amplifier"
                       required
-                      value={dataAcqDevice.amplifier}
-                      onChange={handleChange('amplifier', 'data_acq_device', index)}  
+                      defaultValue={dataAcqDevice.amplifier}
                       placeholder="Type to find an amplifier"
                       onBlur={(e) =>
                         onBlur(e, {
@@ -1128,8 +1101,7 @@ useEffect(() => {
                       type="text"
                       title="ADC circuit"
                       required
-                      value={dataAcqDevice.adc_circuit}
-                      onChange={handleChange('adc_circuit', 'data_acq_device', index)}  
+                      defaultValue={dataAcqDevice.adc_circuit}
                       placeholder="Type to find an adc circuit"
                       onBlur={(e) =>
                         onBlur(e, {
@@ -1176,8 +1148,7 @@ useEffect(() => {
                       type="number"
                       name="id"
                       title="Camera Id"
-                      value={cameras.id}
-                      onChange={handleChange('id', 'cameras', index)}  
+                      defaultValue={cameras.id}
                       placeholder="Typically a number	"
                       required
                       onBlur={(e) =>
@@ -1193,8 +1164,7 @@ useEffect(() => {
                       type="number"
                       name="meters_per_pixel"
                       title="Meters Per Pixel"
-                      value={cameras.meters_per_pixel}
-                      onChange={handleChange('meters_per_pixel', 'cameras', index)}  
+                      defaultValue={cameras.meters_per_pixel}
                       placeholder="Meters Per Pixel"
                       step="0.1"
                       required
@@ -1211,8 +1181,7 @@ useEffect(() => {
                       type="text"
                       name="manufacturer"
                       title="Manufacturer"
-                      value={cameras.manufacturer}
-                      onChange={handleChange('manufacturer', 'cameras', index)}  
+                      defaultValue={cameras.manufacturer}
                       placeholder="Type to find a manufacturer"
                       required
                       dataItems={cameraManufacturers()}
@@ -1228,8 +1197,7 @@ useEffect(() => {
                       type="text"
                       name="model"
                       title="model"
-                      value={cameras.model}
-                      onChange={handleChange('model', 'cameras', index)}  
+                      defaultValue={cameras.model}
                       placeholder="Model of this camera"
                       required
                       onBlur={(e) =>
@@ -1245,8 +1213,7 @@ useEffect(() => {
                       type="text"
                       name="lens"
                       title="lens"
-                      value={cameras.lens}
-                      onChange={handleChange('lens', 'cameras', index)}  
+                      defaultValue={cameras.lens}
                       placeholder="Info about lens in this camera"
                       required
                       onBlur={(e) =>
@@ -1262,8 +1229,7 @@ useEffect(() => {
                       type="text"
                       name="camera_name"
                       title="Camera Name"
-                      value={cameras.camera_name}
-                      onChange={handleChange('camera_name', 'cameras', index)}  
+                      defaultValue={cameras.camera_name}
                       placeholder="Name of this camera"
                       required
                       onBlur={(e) =>
@@ -1296,7 +1262,7 @@ useEffect(() => {
               return (
                 <details
                   open
-                  key={`tasks-${index}`}
+                  key={sanitizeTitle(`${tasks.task_name}-ts-${index}`)}
                   className="array-item"
                 >
                   <summary> Item #{index + 1} </summary>
@@ -1312,8 +1278,7 @@ useEffect(() => {
                       type="text"
                       name="task_name"
                       title="Task Name"
-                      value={tasks.task_name}
-                      onChange={handleChange('task_name', 'tasks', index)}  
+                      defaultValue={tasks.task_name}
                       placeholder="E.g. linear track, sleep"
                       required
                       onBlur={(e) =>
@@ -1329,8 +1294,7 @@ useEffect(() => {
                       type="text"
                       name="task_description"
                       title="Task Description"
-                      value={tasks.task_description}
-                      onChange={handleChange('task_description', 'tasks', index)}  
+                      defaultValue={tasks.task_description}
                       placeholder="Task Description"
                       required
                       onBlur={(e) =>
@@ -1346,8 +1310,7 @@ useEffect(() => {
                       type="text"
                       name="task_environment"
                       title="Task Environment"
-                      value={tasks.task_environment}
-                      onChange={handleChange('task_environment', 'tasks', index)}  
+                      defaultValue={tasks.task_environment}
                       placeholder="Where the task occurs (e.g. sleep box)"
                       required
                       onBlur={(e) =>
@@ -1364,8 +1327,7 @@ useEffect(() => {
                       name="camera_id"
                       title="Camera Id"
                       objectKind="Camera"
-                      value={tasks.camera_id}
-                      onChange={handleChange('camera_id', 'tasks', index)}  
+                      defaultValue={tasks.camera_id}
                       placeholder="Camera(s) recording this task"
                       dataItems={cameraIdsDefined}
                       updateFormArray={updateFormArray}
@@ -1382,7 +1344,7 @@ useEffect(() => {
                       step="1"
                       name="task_epochs"
                       title="Task Epochs"
-          defaultValue={tasks.task_epochs}
+                      defaultValue={tasks.task_epochs}
                       placeholder="What epochs this task is applied	"
                       inputPlaceholder="No task epoch"
                       updateFormData={updateFormData}
@@ -1415,7 +1377,9 @@ useEffect(() => {
                 return (
                   <details
                     open
-                    key={`associated_files-${index}`}
+                    key={sanitizeTitle(
+                      `${associatedFilesName.name}-afn-${index}`
+                    )}
                     className="array-item"
                   >
                     <summary> Item #{index + 1} </summary>
@@ -1431,8 +1395,7 @@ useEffect(() => {
                         type="text"
                         name="name"
                         title="Name"
-                        value={associatedFilesName.name}
-                        onChange={handleChange('name', 'associated_files', index)}  
+                        defaultValue={associatedFilesName.name}
                         placeholder="File name"
                         required
                         onBlur={(e) =>
@@ -1448,8 +1411,7 @@ useEffect(() => {
                         type="text"
                         name="description"
                         title="Description"
-                        value={associatedFilesName.description}
-                        onChange={handleChange('description', 'associated_files', index)}  
+                        defaultValue={associatedFilesName.description}
                         placeholder="Description of the file"
                         required
                         onBlur={(e) =>
@@ -1465,8 +1427,7 @@ useEffect(() => {
                         title="Path"
                         name="path"
                         placeholder="path"
-                        value={associatedFilesName.path}
-                        onChange={handleChange('path', 'associated_files', index)}  
+                        defaultValue={associatedFilesName.path}
                         required
                         onBlur={(e) =>
                           onBlur(e, {
@@ -1482,8 +1443,7 @@ useEffect(() => {
                         name="task_epochs"
                         title="Task Epochs"
                         objectKind="Task"
-                        value={associatedFilesName.task_epochs}
-                        onChange={handleChange('task_epochs', 'associated_files', index)}  
+                        defaultValue={associatedFilesName.task_epochs}
                         placeholder="What tasks/epochs was this code run for"
                         dataItems={taskEpochsDefined}
                         updateFormData={updateFormData}
@@ -1520,7 +1480,9 @@ useEffect(() => {
                 return (
                   <details
                     open
-                    key={`associated_video_files-${index}`}
+                    key={sanitizeTitle(
+                      `${associatedVideoFiles.name}-avf-${index}`
+                    )}
                     className="array-item"
                   >
                     <summary> Item #{index + 1} </summary>
@@ -1537,8 +1499,7 @@ useEffect(() => {
                         name="name"
                         required
                         title="Name"
-                        value={associatedVideoFiles.name}
-                      onChange={handleChange('name', 'associated_video_files', index)}  
+                        defaultValue={associatedVideoFiles.name}
                         placeholder="name"
                         onBlur={(e) =>
                           onBlur(e, {
@@ -1554,8 +1515,7 @@ useEffect(() => {
                       name="camera_id"
                       title="Camera Id"
                       objectKind="Camera"
-                      value={associatedVideoFiles.camera_id}
-                      onChange={handleChange('camera_id', 'associated_video_files', index)}  
+                      defaultValue={associatedVideoFiles.camera_id}
                       placeholder="What camera recorded this video	"
                       dataItems={cameraIdsDefined}
                       updateFormData={updateFormData}
@@ -1572,8 +1532,7 @@ useEffect(() => {
                         name="task_epochs"
                         title="Task Epochs"
                         objectKind="Task"
-                        value={associatedVideoFiles.task_epochs}
-                      onChange={handleChange('task_epochs', 'associated_video_files', index)}  
+                        defaultValue={associatedVideoFiles.task_epochs}
                         placeholder="What epoch was recorded in this video"
                         dataItems={taskEpochsDefined}
                         updateFormData={updateFormData}
@@ -1608,8 +1567,7 @@ useEffect(() => {
               title="Analog"
               placeholder="Analog"
               required
-              value={formData.units.analog}
-              onChange={handleChange('analog', 'units')}  
+              defaultValue={formData.units.analog}
               onBlur={(e) => onBlur(e, { key: 'units' })}
               validation={{ type: 'required' }}
             />
@@ -1619,8 +1577,7 @@ useEffect(() => {
               name="behavioral_events"
               title="Behavioral Events"
               placeholder="Behavioral Events"
-              value={formData.units.behavioral_events}
-              onChange={handleChange('behavioral_events', 'units')}  
+              defaultValue={formData.units.behavioral_events}
               onBlur={(e) => onBlur(e, { key: 'units' })}
               validation={{ type: 'required' }}
             />
@@ -1636,8 +1593,7 @@ useEffect(() => {
           placeholder="Times Period Multiplier"
           step="any"
           required
-          value={formData.times_period_multiplier}
-          onChange={handleChange('times_period_multiplier')}  
+          defaultValue={formData.times_period_multiplier}
           onBlur={(e) => onBlur(e)}
           validation={{ type: 'required' }}
         />
@@ -1650,8 +1606,7 @@ useEffect(() => {
           title="Ephys-to-Volt Conversion Factor"
           placeholder="Scalar to multiply each element in data to convert it to the specified 'unit'. If the data are stored in acquisition system units or other units that require a conversion to be interpretable, multiply the data by 'conversion' to convert the data to the specified 'unit'."
           step="any"
-          value={formData.raw_data_to_volts}
-          onChange={handleChange('raw_data_to_volts')}  
+          defaultValue={formData.raw_data_to_volts}
           onBlur={(e) => onBlur(e)}
           validation={{ type: 'required' }}
         />
@@ -1663,8 +1618,7 @@ useEffect(() => {
           title="Default Header File Path"
           name="default_header_file_path"
           placeholder="Default Header File Path"
-          value={formData.default_header_file_path}
-          onChange={handleChange('default_header_file_path')}  
+          defaultValue={formData.default_header_file_path}
           onBlur={(e) => onBlur(e)}
           validation={{ type: 'required' }}
         />
@@ -1680,7 +1634,9 @@ useEffect(() => {
                 return (
                   <details
                     open
-                    key={`behavioral_events-${index}`}
+                    key={sanitizeTitle(
+                      `${behavioralEvents.description}-be-${index}`
+                    )}
                     className="array-item"
                   >
                     <summary> Item #{index + 1} </summary>
@@ -1699,8 +1655,7 @@ useEffect(() => {
                         step="1"
                         min="0"
                         items={behavioralEventsDescription()}
-                        value={behavioralEvents.description}
-                        onChange={handleChange('description', 'behavioral_events', index)}  
+                        defaultValue={behavioralEvents.description}
                         placeholder="DIO info (eg. Din01)"
                         metaData={{
                           key,
@@ -1713,8 +1668,7 @@ useEffect(() => {
                         name="name"
                         title="Name"
                         dataItems={behavioralEventsNames()}
-                        value={behavioralEvents.name}
-                        onChange={handleChange('name', 'behavioral_events', index)}  
+                        defaultValue={behavioralEvents.name}
                         placeholder="E.g. light1"
                         onBlur={(e) =>
                           itemSelected(e, {
@@ -1746,7 +1700,7 @@ useEffect(() => {
             name="name"
             title="Name"
             inputPlaceholder="No Device"
-          defaultValue={formData?.device?.name}
+            defaultValue={formData?.device?.name}
             placeholder="Device names"
             updateFormData={updateFormData}
             metaData={{
@@ -1785,8 +1739,7 @@ useEffect(() => {
                       type="text"
                       name="name"
                       title="Setup Name"
-                      value={item.name}
-                      onChange={handleChange('name', 'opto_excitation_source', index)}  
+                      defaultValue={item.name}
                       placeholder="Name of your setup"
                       required
                       onBlur={(e) =>
@@ -1799,8 +1752,7 @@ useEffect(() => {
                       type="text"
                       name="model_name"
                       title="Hardware Model Name"
-                      value={item.model_name}
-                      onChange={handleChange('model_name', 'opto_excitation_source', index)}  
+                      defaultValue={item.model_name}
                       placeholder="Model of the hardware"
                       required
                       onBlur={(e) =>
@@ -1812,8 +1764,7 @@ useEffect(() => {
                         name="model_name"
                         title="Hardware Model Name"
                         dataItems={optoExcitationModelNames()}
-                        value={item.model_name || ''}
-                        onChange={handleChange('model_name', 'opto_excitation_source', index)}  
+                        defaultValue={item.model_name || ''}
                         placeholder="Model of the hardware"
                         onChange={(e) =>
                           itemSelected(e, {
@@ -1827,8 +1778,7 @@ useEffect(() => {
                       type="text"
                       name="description"
                       title="Description"
-                      value={item.description}
-                      onChange={handleChange('description', 'opto_excitation_source', index)}  
+                      defaultValue={item.description}
                       placeholder="Description of the setup"
                       required
                       onBlur={(e) =>
@@ -1841,8 +1791,7 @@ useEffect(() => {
                       type="number"
                       name="wavelength_in_nm"
                       title="Wavelength (nm)"
-                      value={item.wavelength_in_nm}
-                      onChange={handleChange('wavelength_in_nm', 'opto_excitation_source', index)}  
+                      defaultValue={item.wavelength_in_nm}
                       placeholder="xxx nm"
                       required
                       onBlur={(e) =>
@@ -1855,8 +1804,7 @@ useEffect(() => {
                       type="number"
                       name="power_in_W"
                       title="Source Power (W)"
-                      value={item.power_in_w}
-                      onChange={handleChange('power_in_w', 'opto_excitation_source', index)}  
+                      defaultValue={item.power_in_w}
                       placeholder="xxx W"
                       required
                       onBlur={(e) =>
@@ -1869,8 +1817,7 @@ useEffect(() => {
                       type="number"
                       name="intensity_in_W_per_m2"
                       title="Intensity (W/m2)"
-                      value={item.intensity_in_W_per_m2}
-                      onChange={handleChange('intensity_in_W_per_m2', 'opto_excitation_source', index)}
+                      defaultValue={item.intensity_in_W_per_m2}
                       placeholder="xxx W/m2"
                       required
                       onBlur={(e) =>
@@ -1916,8 +1863,7 @@ useEffect(() => {
                     name="name"
                     type="text"
                     title="Fiber Implant Name"
-                    value={item.name}
-                      onChange={handleChange('name', 'optical_fiber', index)}  
+                    defaultValue={item.name}
                     placeholder="Name of the fiber implant"
                     required
                     onBlur={(e) =>
@@ -1930,8 +1876,7 @@ useEffect(() => {
                     name="hardware_name"
                     title="Fiber Hardware Model Name"
                     dataItems={opticalFiberModelNames()}
-                    value={item.hardware_name || ''}
-                      onChange={handleChange('hardware_name', 'optical_fiber', index)}
+                    defaultValue={item.hardware_name || ''}
                     placeholder="Model of the fiber hardware device"
                     onChange={(e) =>
                       itemSelected(e, {
@@ -1945,8 +1890,7 @@ useEffect(() => {
                     type="text"
                     name="implanted_fiber_description"
                     title="Implant Description"
-                    value={item.implanted_fiber_description}
-                      onChange={handleChange('implanted_fiber_description', 'optical_fiber', index)}  
+                    defaultValue={item.implanted_fiber_description}
                     placeholder="Description of the fiber implant"
                     required
                     onBlur={(e) =>
@@ -1960,8 +1904,7 @@ useEffect(() => {
                     name="hemisphere"
                     title="Hemisphere"
                     objectKind="Hemisphere"
-                    value={item.hemisphere}
-                      onChange={handleChange('hemisphere', 'optical_fiber', index)}  
+                    defaultValue={item.hemisphere}
                     placeholder="Hemisphere of the fiber implant"
                     dataItems={['left','right',]}
                     updateFormData={updateFormData}
@@ -1977,8 +1920,7 @@ useEffect(() => {
                     type="text"
                     name="location"
                     title="Location"
-                    value={item.location}
-                      onChange={handleChange('location', 'optical_fiber', index)}  
+                    defaultValue={item.location}
                     placeholder="Location of the fiber implant"
                     required
                     onBlur={(e) =>
@@ -1991,8 +1933,7 @@ useEffect(() => {
                     type="number"
                     name="ap_in_mm"
                     title="AP (mm)"
-                    value={item.ap_in_mm}
-                      onChange={handleChange('ap_in_mm', 'optical_fiber', index)}  
+                    defaultValue={item.ap_in_mm}
                     placeholder="Anterior-Posterior (AP) in mm"
                     step="any"
                     required
@@ -2006,8 +1947,7 @@ useEffect(() => {
                     type="number"
                     name="ml_in_mm"
                     title="ML (mm)"
-                    value={item.ml_in_mm}
-                      onChange={handleChange('ml_in_mm', 'optical_fiber', index)}  
+                    defaultValue={item.ml_in_mm}
                     placeholder="Medial-Lateral (ML) in mm"
                     step="any"
                     required
@@ -2021,8 +1961,7 @@ useEffect(() => {
                     type="number"
                     name="dv_in_mm"
                     title="DV (mm)"
-                    value={item.dv_in_mm}
-                      onChange={handleChange('dv_in_mm', 'optical_fiber', index)}  
+                    defaultValue={item.dv_in_mm}
                     placeholder="Dorsal-Ventral (DV) in mm"
                     step="any"
                     required
@@ -2036,8 +1975,7 @@ useEffect(() => {
                     type="number"
                     name="roll_in_deg"
                     title="Roll (degrees)"
-                    value={item.roll_in_deg}
-                      onChange={handleChange('roll_in_deg', 'optical_fiber', index)}  
+                    defaultValue={item.roll_in_deg}
                     placeholder="Roll in degrees"
                     step="any"
                     required
@@ -2051,8 +1989,7 @@ useEffect(() => {
                     type="number"
                     name="pitch_in_deg"
                     title="Pitch (degrees)"
-                    value={item.pitch_in_deg}
-                      onChange={handleChange('pitch_in_deg', 'optical_fiber', index)}  
+                    defaultValue={item.pitch_in_deg}
                     placeholder="Pitch in degrees"
                     step="any"
                     required
@@ -2066,8 +2003,7 @@ useEffect(() => {
                     type="number"
                     name="yaw_in_deg"
                     title="Yaw (degrees)"
-                    value={item.yaw_in_deg}
-                      onChange={handleChange('yaw_in_deg', 'optical_fiber', index)}  
+                    defaultValue={item.yaw_in_deg}
                     placeholder="Yaw in degrees"
                     step="any"
                     required
@@ -2114,8 +2050,7 @@ useEffect(() => {
                       type="text"
                       name="name"
                       title="Injection Name"
-                      value={item.name}
-                      onChange={handleChange('name', 'virus_injection', index)}  
+                      defaultValue={item.name}
                       placeholder="Name of your injection (e.g. CA1 injection)"
                       required
                       onBlur={(e) =>
@@ -2128,8 +2063,7 @@ useEffect(() => {
                       type="text"
                       name="description"
                       title="Description"
-                      value={item.description}
-                      onChange={handleChange('description', 'virus_injection', index)}  
+                      defaultValue={item.description}
                       placeholder="Description of the injection"
                       required
                       onBlur={(e) =>
@@ -2142,8 +2076,7 @@ useEffect(() => {
                         name="virus_name"
                         title="Virus Name"
                         dataItems={virusNames()}
-                        value={item.virus_name || ''}
-                      onChange={handleChange('virus_name', 'virus_injection', index)}
+                        defaultValue={item.virus_name || ''}
                         placeholder="Model of the hardware"
                         onChange={(e) =>
                           itemSelected(e, {
@@ -2157,8 +2090,7 @@ useEffect(() => {
                       type="number"
                       name="volume_in_ul"
                       title="Volume (ul)"
-                      value={item.volume_in_ul}
-                      onChange={handleChange('volume_in_ul', 'virus_injection', index)}  
+                      defaultValue={item.volume_in_ul}
                       placeholder="Volume in ul"
                       step="any"
                       required
@@ -2172,8 +2104,7 @@ useEffect(() => {
                       type="number"
                       name="titer_in_vg_per_ml"
                       title="Titer (viral genomes/ml)"
-                      value={item.titer_in_vg_per_ml}
-                      onChange={handleChange('titer_in_vg_per_ml', 'virus_injection', index)}  
+                      defaultValue={item.titer_in_vg_per_ml}
                       placeholder="Titer in vg/ml"
                       step="any"
                       required
@@ -2204,8 +2135,7 @@ useEffect(() => {
                       type="text"
                       name="location"
                       title="Location"
-                      value={item.location}
-                      onChange={handleChange('location', 'virus_injection', index)}  
+                      defaultValue={item.location}
                       placeholder="Location of the injection"
                       required
                       onBlur={(e) =>
@@ -2218,8 +2148,7 @@ useEffect(() => {
                       type="number"
                       name="ap_in_mm"
                       title="AP (mm)"
-                      value={item.ap_in_mm}
-                      onChange={handleChange('ap_in_mm', 'virus_injection', index)}  
+                      defaultValue={item.ap_in_mm}
                       placeholder="Anterior-Posterior (AP) in mm"
                       step="any"
                       required
@@ -2233,8 +2162,7 @@ useEffect(() => {
                       type="number"
                       name="ml_in_mm"
                       title="ML (mm)"
-                      value={item.ml_in_mm}
-                      onChange={handleChange('ml_in_mm', 'virus_injection', index)}  
+                      defaultValue={item.ml_in_mm}
                       placeholder="Medial-Lateral (ML) in mm"
                       step="any"
                       required
@@ -2248,8 +2176,7 @@ useEffect(() => {
                       type="number"
                       name="dv_in_mm"
                       title="DV (mm)"
-                      value={item.dv_in_mm}
-                      onChange={handleChange('dv_in_mm', 'virus_injection', index)}  
+                      defaultValue={item.dv_in_mm}
                       placeholder="Dorsal-Ventral (DV) in mm"
                       step="any"
                       required
@@ -2263,8 +2190,7 @@ useEffect(() => {
                       type="number"
                       name="roll_in_deg"
                       title="Roll (degrees)"
-                      value={item.roll_in_deg}
-                      onChange={handleChange('roll_in_deg', 'virus_injection', index)}  
+                      defaultValue={item.roll_in_deg}
                       placeholder="Roll in degrees"
                       step="any"
                       required
@@ -2278,8 +2204,7 @@ useEffect(() => {
                       type="number"
                       name="pitch_in_deg"
                       title="Pitch (degrees)"
-                      value={item.pitch_in_deg}
-                      onChange={handleChange('pitch_in_deg', 'virus_injection', index)}  
+                      defaultValue={item.pitch_in_deg}
                       placeholder="Pitch in degrees"
                       step="any"
                       required
@@ -2293,8 +2218,7 @@ useEffect(() => {
                       type="number"
                       name="yaw_in_deg"
                       title="Yaw (degrees)"
-                      value={item.yaw_in_deg}
-                      onChange={handleChange('yaw_in_deg', 'virus_injection', index)}  
+                      defaultValue={item.yaw_in_deg}
                       placeholder="Yaw in degrees"
                       step="any"
                       required
@@ -2326,7 +2250,9 @@ useEffect(() => {
               return (
                 <details
                   open
-                  key={`fs_gui_yamls-${index}`}
+                  key={sanitizeTitle(
+                    `${fsGuiYamls.name}-fsg-${index}`
+                  )}
                   className="array-item"
                 >
                   <summary> Item #{index + 1} </summary>
@@ -2342,8 +2268,7 @@ useEffect(() => {
                       type="text"
                       name="name"
                       title="Name"
-                      value={fsGuiYamls.name}
-                      onChange={handleChange('name', 'fs_gui_yamls', index)}  
+                      defaultValue={fsGuiYamls.name}
                       placeholder="path to yaml file"
                       required
                       onBlur={(e) =>
@@ -2359,8 +2284,7 @@ useEffect(() => {
                       type="number"
                       name="power_in_mW"
                       title="Power in mW"
-                      value={fsGuiYamls.power_in_mW}
-                      onChange={handleChange('power_in_mW', 'fs_gui_yamls', index)}
+                      defaultValue={fsGuiYamls.power_in_mW}
                       placeholder="Power of laser in these epochs"
                       required
                       onBlur={(e) =>
@@ -2377,8 +2301,7 @@ useEffect(() => {
                         name="epochs"
                         title="Epochs"
                         objectKind="Task"
-                        value={fsGuiYamls.epochs}
-                      onChange={handleChange('epochs', 'fs_gui_yamls', index)}  
+                        defaultValue={fsGuiYamls.epochs}
                         placeholder="What epochs this optogenetics is applied	"
                         dataItems={taskEpochsDefined}
                         updateFormArray={updateFormArray}
@@ -2396,8 +2319,7 @@ useEffect(() => {
                       name="dio_output_name"
                       title="DIO Output Name"
                       objectKind="DIO"
-                      value={fsGuiYamls.dio_output_name}
-                      onChange={handleChange('dio_output_name', 'fs_gui_yamls', index)}  
+                      defaultValue={fsGuiYamls.dio_output_name}
                       placeholder="Name of the dio the trigger is sent through (e.g. Light_1)"
                       dataItems={dioEventsDefined}
                       updateFormData={updateFormData}
@@ -2414,8 +2336,7 @@ useEffect(() => {
                       name="camera_id"
                       title="Spatial Filters Camera Id"
                       objectKind="Camera"
-                      value={fsGuiYamls.camera_id}
-                      onChange={handleChange('camera_id', 'fs_gui_yamls', index)}  
+                      defaultValue={fsGuiYamls.camera_id}
                       placeholder="Camera(s) used to define spatial filters"
                       dataItems={cameraIdsDefined}
                       updateFormArray={updateFormArray}
@@ -2579,8 +2500,7 @@ useEffect(() => {
                       type="number"
                       name="id"
                       title="Id"
-                      value={electrodeGroup.id}
-                      onChange={handleChange('id', 'electrode_groups', index)}  
+                      defaultValue={electrodeGroup.id}
                       placeholder="Typically a number"
                       required
                       min={0}
@@ -2597,8 +2517,7 @@ useEffect(() => {
                       name="location"
                       title="Location"
                       placeholder="Type to find a location"
-                      value={electrodeGroup.location}
-                      onChange={handleChange('location', 'electrode_groups', index)}  
+                      defaultValue={electrodeGroup.location}
                       dataItems={locations()}
                       required
                       onBlur={(e) =>
@@ -2616,8 +2535,7 @@ useEffect(() => {
                       addBlankOption
                       dataItems={deviceTypes()}
                       placeholder="Used to match to probe yaml data"
-                      value={electrodeGroup.device_type}
-                      onChange={handleChange('device_type', 'electrode_groups', index)}  
+                      defaultValue={electrodeGroup.device_type}
                       onChange={(e) =>
                         nTrodeMapSelected(e, {
                           key,
@@ -2630,8 +2548,7 @@ useEffect(() => {
                       type="text"
                       name="description"
                       title="Description"
-                      value={electrodeGroup.description}
-                      onChange={handleChange('description', 'electrode_groups', index)}  
+                      defaultValue={electrodeGroup.description}
                       placeholder="Description"
                       required
                       onBlur={(e) =>
@@ -2647,8 +2564,7 @@ useEffect(() => {
                       name="targeted_location"
                       title="Targeted Location"
                       dataItems={locations()}
-                      value={electrodeGroup.targeted_location}
-                      onChange={handleChange('targeted_location', 'electrode_groups', index)}  
+                      defaultValue={electrodeGroup.targeted_location}
                       placeholder="Where device is implanted"
                       onBlur={(e) =>
                         itemSelected(e, {
@@ -2662,8 +2578,7 @@ useEffect(() => {
                       type="number"
                       name="targeted_x"
                       title="ML from Bregma"
-                      value={electrodeGroup.targeted_x}
-                      onChange={handleChange('targeted_x', 'electrode_groups', index)}  
+                      defaultValue={electrodeGroup.targeted_x}
                       placeholder="Medial-Lateral from Bregma (Targeted x)"
                       step="any"
                       required
@@ -2680,8 +2595,7 @@ useEffect(() => {
                       type="number"
                       name="targeted_y"
                       title="AP to Bregma"
-                      value={electrodeGroup.targeted_y}
-                      onChange={handleChange('targeted_y', 'electrode_groups', index)}  
+                      defaultValue={electrodeGroup.targeted_y}
                       placeholder="Anterior-Posterior to Bregma (Targeted y)"
                       step="any"
                       required
@@ -2698,8 +2612,7 @@ useEffect(() => {
                       type="number"
                       name="targeted_z"
                       title="DV to Cortical Surface"
-                      value={electrodeGroup.targeted_z}
-                      onChange={handleChange('targeted_z', 'electrode_groups', index)}  
+                      defaultValue={electrodeGroup.targeted_z}
                       placeholder="Dorsal-Ventral to Cortical Surface (Targeted z)"
                       step="any"
                       required
@@ -2715,8 +2628,7 @@ useEffect(() => {
                       id={`electrode_groups-units-${index}`}
                       name="units"
                       title="Units"
-                      value={electrodeGroup.units}
-                      onChange={handleChange('units', 'electrode_groups', index)}  
+                      defaultValue={electrodeGroup.units}
                       placeholder="Distance units defining positioning"
                       dataItems={units()}
                       onBlur={(e) =>
