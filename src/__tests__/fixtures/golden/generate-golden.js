@@ -2,9 +2,9 @@
  * Script to generate golden YAML fixtures
  *
  * This script reads existing valid YAML files, parses them, and re-exports them
- * using the convertObjectToYAMLString function to establish deterministic output baselines.
+ * using the encodeYaml function to establish deterministic output baselines.
  *
- * YAML Library Version: 2.2.2 (as of 2025-10-26)
+ * YAML Library Version: 2.8.1 (as of 2025-10-26)
  * Note: Golden fixtures are tied to this YAML library version. If the library is
  * upgraded, review the output diff and regenerate golden fixtures if needed.
  *
@@ -32,7 +32,7 @@ const sourceFiles = [
 ];
 
 console.log('🔄 Generating golden YAML fixtures...');
-console.log(`📦 Using YAML library version: ${YAML.version || '2.2.2'}\n`);
+console.log(`📦 Using YAML library version: ${YAML.version || '2.8.1'}\n`);
 
 let hasErrors = false;
 

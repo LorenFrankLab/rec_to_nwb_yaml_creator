@@ -45,14 +45,38 @@ export function encodeYaml(model) {
  * Decodes a YAML string to a JavaScript object
  *
  * @param {string} text - YAML string to parse
- * @returns {object} Parsed JavaScript object
+ * @returns {object|null} Parsed JavaScript object, or null for empty input
  *
- * @throws {YAMLParseError} If YAML string is malformed
+ * @throws {YAMLParseError} If YAML string is malformed or has syntax errors
+ * @throws {TypeError} If text is not a string
  *
  * @example
+ * // Valid YAML parsing
  * const yamlString = "name: test\nvalue: 123";
  * const obj = decodeYaml(yamlString);
  * // Returns: { name: 'test', value: 123 }
+ *
+ * @example
+ * // Empty string returns null
+ * const obj = decodeYaml('');
+ * // Returns: null
+ *
+ * @example
+ * // Malformed YAML throws error
+ * try {
+ *   decodeYaml('invalid: [yaml');
+ * } catch (error) {
+ *   console.error('Parse failed:', error.message);
+ *   // Error message includes line/column info
+ * }
+ *
+ * @example
+ * // Non-string input throws TypeError
+ * try {
+ *   decodeYaml(null);
+ * } catch (error) {
+ *   console.error('Type error:', error.message);
+ * }
  */
 export function decodeYaml(text) {
   return YAML.parse(text);
