@@ -239,10 +239,20 @@ All meaningful InputElement and DataListElement fields now have instant validati
 - **Code P0-1**: Extended DataListElement to support validation prop
 - **Code P0-1**: Added validation to `electrode_groups.location` (schema-required field)
 
+**P1/P2 Improvements Applied** (2025-10-26):
+- **P1-1**: Added units to number range validation (e.g., "Must be at least 0 nm")
+  - Applied to 11 numeric fields across optogenetics, cameras, subject, timing
+  - Units: nm, W, W/m², µL, mW, ms, g, m/pixel
+- **P1-2**: Extended SelectElement to support full validation
+  - Can now validate device_type, institution, and other select fields
+  - Maintains backward compatibility with existing onChange handlers
+- **P2**: Foundation for field-specific messages via unit parameter
+
 ---
 
 **Progress**: 64/64 fields (100%) ✅ COMPLETE
-**Pattern**: ✅ Proven across all field types (InputElement, DataListElement)
+**Pattern**: ✅ Proven across all field types (InputElement, DataListElement, SelectElement)
 **Tests**: ✅ All 1528 passing (zero regressions)
 **Critical Fields**: ✅ All validated (electrode groups, optogenetics, coordinates)
-**Production Ready**: ✅ Yes - P0 fixes complete
+**UX Quality**: ✅ Scientific units in validation messages
+**Production Ready**: ✅ Yes - P0 and P1/P2 improvements complete
