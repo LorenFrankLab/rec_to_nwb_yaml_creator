@@ -106,6 +106,22 @@ export function useStore() {
 
       // Electrode group actions
       ...electrodeActions,
+
+      /**
+       * Updates an item after selection (e.g., from DataListElement).
+       * Convenience wrapper around updateFormData with optional type parsing.
+       *
+       * @param {Object} e - Event object
+       * @param {Object} metaData - Metadata { key, index, type }
+       */
+      itemSelected: (e, metaData) => {
+        const { target } = e;
+        const { name, value } = target;
+        const { key, index, type } = metaData || {};
+        const inputValue = type === 'number' ? parseInt(value, 10) : value;
+
+        formActions.updateFormData(name, inputValue, key, index);
+      },
     }),
     [arrayActions, formActions, electrodeActions]
   );
