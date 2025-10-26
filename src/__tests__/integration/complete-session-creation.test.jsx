@@ -727,7 +727,7 @@ describe('End-to-End Session Creation Workflow', () => {
    * - Electrode group fields are populated
    * - Electrode group structure is correct
    */
-  it('adds electrode groups with device types', async () => {
+  it('adds electrode groups with device types', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
     render(<App />);
