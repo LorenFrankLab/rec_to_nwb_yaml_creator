@@ -128,6 +128,37 @@ describe('Golden YAML Baseline Tests', () => {
     });
   });
 
+  describe('Complex Structure Preservation', () => {
+    it('should preserve optogenetics metadata structure', () => {
+      const golden = readGoldenFixture('20230622_sample_metadata.yml');
+      const parsed = YAML.parse(golden);
+
+      // Verify optogenetics sections exist in sample fixture
+      expect(parsed).toHaveProperty('opto_excitation_source');
+      expect(parsed).toHaveProperty('optical_fiber');
+      expect(parsed).toHaveProperty('virus_injection');
+      expect(parsed).toHaveProperty('optogenetic_stimulation_software');
+
+      // Verify structures are arrays with content
+      expect(Array.isArray(parsed.opto_excitation_source)).toBe(true);
+      expect(parsed.opto_excitation_source.length).toBeGreaterThan(0);
+      expect(Array.isArray(parsed.optical_fiber)).toBe(true);
+      expect(parsed.optical_fiber.length).toBeGreaterThan(0);
+      expect(Array.isArray(parsed.virus_injection)).toBe(true);
+      expect(parsed.virus_injection.length).toBeGreaterThan(0);
+
+      // Round-trip should preserve structure exactly
+      const exported = convertObjectToYAMLString(parsed);
+      const reparsed = YAML.parse(exported);
+
+      // Deep equality on optogenetics sections
+      expect(reparsed.opto_excitation_source).toEqual(parsed.opto_excitation_source);
+      expect(reparsed.optical_fiber).toEqual(parsed.optical_fiber);
+      expect(reparsed.virus_injection).toEqual(parsed.virus_injection);
+      expect(reparsed.optogenetic_stimulation_software).toEqual(parsed.optogenetic_stimulation_software);
+    });
+  });
+
   describe('Format Stability', () => {
     it('should maintain consistent line endings', () => {
       const golden = readGoldenFixture('20230622_sample_metadata.yml');
@@ -163,6 +194,37 @@ describe('Golden YAML Baseline Tests', () => {
 
       expect(export1).toBe(export2);
     });
+
+    it('should preserve object key order from input', () => {
+      // Test with deliberately non-alphabetical keys
+      const data = {
+        zebra: 'last',
+        apple: 'first',
+        middle: 'between'
+      };
+
+      const exported = convertObjectToYAMLString(data);
+      const lines = exported.split('\n').filter(l => l.trim());
+
+      // Verify insertion order is preserved (not alphabetized)
+      expect(lines[0]).toContain('zebra:');
+      expect(lines[1]).toContain('apple:');
+      expect(lines[2]).toContain('middle:');
+    });
+
+    it('should maintain nested object key order through round-trip', () => {
+      const data = {
+        z_field: { nested_z: 1, nested_a: 2 },
+        a_field: { nested_m: 3, nested_b: 4 }
+      };
+
+      const exported = convertObjectToYAMLString(data);
+      const parsed = YAML.parse(exported);
+      const reexported = convertObjectToYAMLString(parsed);
+
+      // Round-trip should preserve exact order
+      expect(reexported).toBe(exported);
+    });
   });
 
   describe('Edge Cases', () => {
@@ -196,6 +258,29 @@ describe('Golden YAML Baseline Tests', () => {
       const parsed = YAML.parse(exported);
 
       expect(parsed).toEqual(data);
+    });
+
+    it('should handle multiline strings consistently', () => {
+      const data = {
+        short_description: 'Single line',
+        long_description: 'First line\nSecond line\nThird line',
+        paragraph: 'This is a very long description that spans multiple lines and should be handled consistently by the YAML library regardless of content length or line breaks within the text.'
+      };
+
+      const export1 = convertObjectToYAMLString(data);
+      const export2 = convertObjectToYAMLString(data);
+
+      // Should be deterministic
+      expect(export1).toBe(export2);
+
+      // Round-trip should preserve content exactly
+      const parsed = YAML.parse(export1);
+      expect(parsed.short_description).toBe('Single line');
+      expect(parsed.long_description).toBe('First line\nSecond line\nThird line');
+      expect(parsed.paragraph).toBe(data.paragraph);
+
+      // Verify multiline strings preserve newlines
+      expect(parsed.long_description.split('\n')).toHaveLength(3);
     });
 
     it('should handle numeric types correctly', () => {
