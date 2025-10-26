@@ -8,6 +8,7 @@ import { useElectrodeGroups } from './hooks/useElectrodeGroups';
 import { importFiles, exportAll } from './features/importExport';
 import SubjectFields from './components/SubjectFields';
 import DataAcqDeviceFields from './components/DataAcqDeviceFields';
+import DeviceFields from './components/DeviceFields';
 
 import logo from './logo.png';
 import packageJson from '../package.json';
@@ -1129,27 +1130,10 @@ useEffect(() => {
           />
         </details>
       </div>
-      <div id="device-area" className="area-region">
-        <details open>
-          <summary>Device</summary>
-          <div className="form-container">
-          <ListElement
-            id="device-name"
-            type="text"
-            name="name"
-            title="Name"
-            inputPlaceholder="No Device"
-          defaultValue={formData?.device?.name}
-            placeholder="Device names"
-            updateFormData={updateFormData}
-            metaData={{
-              nameValue: 'name',
-              keyValue: 'device',
-            }}
-          />
-          </div>
-          </details>
-        </div>
+      <DeviceFields
+        formData={formData}
+        updateFormData={updateFormData}
+      />
 
 
 
