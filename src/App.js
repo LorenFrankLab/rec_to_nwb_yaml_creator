@@ -7,6 +7,7 @@ import { useFormUpdates } from './hooks/useFormUpdates';
 import { useElectrodeGroups } from './hooks/useElectrodeGroups';
 import { importFiles, exportAll } from './features/importExport';
 import SubjectFields from './components/SubjectFields';
+import DataAcqDeviceFields from './components/DataAcqDeviceFields';
 
 import logo from './logo.png';
 import packageJson from '../package.json';
@@ -535,109 +536,14 @@ useEffect(() => {
         onBlur={onBlur}
         itemSelected={itemSelected}
       />
-      <div id="data_acq_device-area" className="area-region">
-        <details open>
-          <summary>Data Acq Device</summary>
-          <div>
-            {formData?.data_acq_device.map((dataAcqDevice, index) => {
-              const key = 'data_acq_device';
-
-              return (
-                <details open
-                  key={`data_acq_device-${index}`}
-                  className="array-item"
-                >
-                  <summary> Item #{index + 1} </summary>
-                  <ArrayItemControl
-                    index={index}
-                    keyValue={key}
-                    duplicateArrayItem={duplicateArrayItem}
-                    removeArrayItem={removeArrayItem}
-                  />
-                  <div
-                    id={`dataAcqDevice-${index + 1}`}
-                    className="form-container"
-                  >
-                    <DataListElement
-                      id={`data_acq_device-name-${index}`}
-                      name="name"
-                      type="text"
-                      title="Name"
-                      required
-                      value={dataAcqDevice.name}
-                      onChange={handleChange('name', 'data_acq_device', index)}  
-                      placeholder="Typically a number"
-                      onBlur={(e) =>
-                        onBlur(e, {
-                          key,
-                          index,
-                        })
-                      }
-                      dataItems={dataAcqDeviceName()}
-                    />
-                    <DataListElement
-                      id={`data_acq_device-system-${index}`}
-                      type="text"
-                      name="system"
-                      title="System"
-                      required
-                      value={dataAcqDevice.system}
-                      onChange={handleChange('system', 'data_acq_device', index)}  
-                      placeholder="System of device"
-                      onBlur={(e) =>
-                        onBlur(e, {
-                          key,
-                          index,
-                        })
-                      }
-                      dataItems={dataAcqDeviceSystem()}
-                    />
-                    <DataListElement
-                      id={`data_acq_device-amplifier-${index}`}
-                      type="text"
-                      name="amplifier"
-                      title="Amplifier"
-                      required
-                      value={dataAcqDevice.amplifier}
-                      onChange={handleChange('amplifier', 'data_acq_device', index)}  
-                      placeholder="Type to find an amplifier"
-                      onBlur={(e) =>
-                        onBlur(e, {
-                          key,
-                          index,
-                        })
-                      }
-                      dataItems={dataAcqDeviceAmplifier()}
-                    />
-                    <DataListElement
-                      id={`data_acq_device-adc_circuit-${index}`}
-                      name="adc_circuit"
-                      type="text"
-                      title="ADC circuit"
-                      required
-                      value={dataAcqDevice.adc_circuit}
-                      onChange={handleChange('adc_circuit', 'data_acq_device', index)}  
-                      placeholder="Type to find an adc circuit"
-                      onBlur={(e) =>
-                        onBlur(e, {
-                          key,
-                          index,
-                        })
-                      }
-                      dataItems={dataAcqDeviceADCCircuit()}
-                    />
-                  </div>
-                </details>
-              );
-            })}
-          </div>
-          <ArrayUpdateMenu
-            itemsKey="data_acq_device"
-            items={formData.data_acq_device}
-            addArrayItem={addArrayItem}
-          />
-        </details>
-      </div>
+      <DataAcqDeviceFields
+        formData={formData}
+        handleChange={handleChange}
+        onBlur={onBlur}
+        addArrayItem={addArrayItem}
+        removeArrayItem={removeArrayItem}
+        duplicateArrayItem={duplicateArrayItem}
+      />
       <div id="cameras-area" className="area-region">
         <details open>
           <summary>Cameras</summary>

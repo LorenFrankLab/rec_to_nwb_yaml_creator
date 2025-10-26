@@ -405,6 +405,7 @@ Following same pattern:
 The current SubjectFields implementation revealed a critical issue: each `useStore()` call creates a **separate state instance** because the hook calls `useState()` internally. This means components don't share data.
 
 **Current Workaround (Temporary):**
+
 - All components accept props (formData, handleChange, onBlur, etc.)
 - App.js passes props down to each component
 - Works but requires prop drilling for 10+ components
@@ -421,6 +422,7 @@ The current SubjectFields implementation revealed a critical issue: each `useSto
 - [ ] **Estimated Time:** 2 hours
 
 **Implementation:**
+
 ```javascript
 // src/state/StoreContext.js
 import { createContext, useContext } from 'react';
@@ -453,6 +455,7 @@ export function useStoreContext() {
 - [ ] **Estimated Time:** 1 hour
 
 **Implementation:**
+
 ```javascript
 // src/App.js
 import { StoreProvider, useStoreContext } from './state/StoreContext';
@@ -487,6 +490,7 @@ export function App() {
 - [ ] **Estimated Time:** 1.5 hours
 
 **Implementation:**
+
 ```javascript
 // src/components/SubjectFields.jsx
 import { useStoreContext } from '../state/StoreContext';
@@ -524,6 +528,7 @@ export default function SubjectFields() {
 - [ ] Code review approval
 
 **Blockers:**
+
 - Must complete Week 5-7 component extractions first
 - Need at least 2-3 components extracted to prove pattern works
 
