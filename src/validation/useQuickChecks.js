@@ -54,7 +54,7 @@ export function useQuickChecks(checkType, options = {}) {
       timeoutRef.current = null;
     }
     setHint(null);
-  }, [setHint]); // P0-1: Include setHint for React compliance
+  }, []); // Empty deps: setState functions are stable and don't need to be included
 
   /**
    * Validate a field value (debounced)
