@@ -8,9 +8,26 @@ Format: `[Phase] Category: Description`
 
 ## [Phase 3: Code Quality & Refactoring] - 2025-10-25
 
-**Status:** 🟡 IN PROGRESS - Week 1-2: Utility Extraction
+**Status:** 🟢 COMPLETE - Week 1-2: Utility Extraction & Pre-Flight Guardrails
 
 ### Added
+
+#### Golden YAML Fixtures & Baseline Tests
+- **Golden Fixtures** (`src/__tests__/fixtures/golden/`) - 2025-10-26
+  - `20230622_sample_metadata.yml` - Comprehensive sample metadata golden fixture
+  - `minimal-valid.yml` - Minimal valid metadata golden fixture
+  - `realistic-session.yml` - Realistic session golden fixture
+  - `generate-golden.js` - Script to regenerate golden fixtures from source
+  - Commit: 93bc504
+
+- **Golden YAML Baseline Tests** (`src/__tests__/baselines/golden-yaml.baseline.test.js`) - 2025-10-26
+  - 13 new tests for deterministic YAML export verification
+  - Byte-for-byte equality tests (3 tests)
+  - Multiple export consistency tests (2 tests)
+  - Deep round-trip consistency tests (2 tests)
+  - Format stability tests (3 tests - line endings, indentation, empty objects/arrays)
+  - Edge case tests (3 tests - null/undefined, special chars, numeric types)
+  - Commit: 93bc504
 
 #### Utility Modules
 - **YAML Export Utilities** (`src/utils/yamlExport.js`) - 2025-10-25
@@ -49,12 +66,16 @@ Format: `[Phase] Category: Description`
 - **SCRATCHPAD.md**: Updated with Phase 3 progress and notes
 
 ### Metrics
-- Test suite: 1293/1295 passing (99.8%, 2 perf baseline timeouts unrelated to changes)
+- Test suite: 1308/1308 passing (100%) ✅
 - App.js lines reduced: 96 lines
 - New utility modules:
   - yamlExport.js: 46 lines
   - errorDisplay.js: 83 lines
-- Net change: +33 LOC overall, significantly improved organization and reusability
+  - validation.js: 166 lines
+  - stringFormatting.js: 99 lines
+- Golden test infrastructure: 13 new tests, 3 golden fixtures, 1 generation script
+- Net change: +394 LOC for utilities, +1000+ LOC for golden infrastructure
+- Significantly improved organization, testability, and regression protection
 
 ---
 
