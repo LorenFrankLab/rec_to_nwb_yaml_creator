@@ -9,8 +9,9 @@
 
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from 'vitest';
-import { App } from '../App';
-import { defaultYMLValues } from '../valueList';
+import { App } from '../../../App';
+import { defaultYMLValues } from '../../../valueList';
+import { getById, getByName } from '../../helpers/test-selectors';
 
 describe('App Form Data Updates', () => {
   describe('updateFormData - Simple Key-Value Updates', () => {
@@ -32,8 +33,8 @@ describe('App Form Data Updates', () => {
       const { container } = render(<App />);
 
       // Use querySelector to get by name attribute since labels may not be properly associated
-      const labInput = container.querySelector('input[name="lab"]');
-      const institutionInput = container.querySelector('input[name="institution"]');
+      const labInput = getByName('lab')[0];
+      const institutionInput = getByName('institution')[0];
 
       expect(labInput).toHaveValue(defaultYMLValues.lab);
       expect(institutionInput).toHaveValue(defaultYMLValues.institution);
@@ -96,7 +97,7 @@ describe('App Form Data Updates', () => {
       const { container } = render(<App />);
 
       // Use getElementById for the specific subject species field
-      const speciesInput = container.querySelector('input[id="subject-species"]');
+      const speciesInput = getById('subject-species');
       expect(speciesInput).toHaveValue(defaultYMLValues.subject.species);
 
       fireEvent.change(speciesInput, { target: { value: 'Mus musculus' } });
@@ -107,7 +108,7 @@ describe('App Form Data Updates', () => {
     it('should update subject.description', () => {
       const { container } = render(<App />);
 
-      const descInput = container.querySelector('input[id="subject-description"]');
+      const descInput = getById('subject-description');
       expect(descInput).toHaveValue(defaultYMLValues.subject.description);
 
       fireEvent.change(descInput, { target: { value: 'Mouse strain' } });
@@ -119,7 +120,7 @@ describe('App Form Data Updates', () => {
       const { container } = render(<App />);
 
       // genotype uses DataListElement which renders an input element
-      const genotypeInput = container.querySelector('input[id="subject-genotype"]');
+      const genotypeInput = getById('subject-genotype');
       expect(genotypeInput).toHaveValue('');
 
       fireEvent.change(genotypeInput, { target: { value: 'Wild type' } });
@@ -130,7 +131,7 @@ describe('App Form Data Updates', () => {
     it('should update subject.weight as number', () => {
       const { container } = render(<App />);
 
-      const weightInput = container.querySelector('input[id="subject-weight"]');
+      const weightInput = getById('subject-weight');
       expect(weightInput).toHaveValue(defaultYMLValues.subject.weight);
 
       fireEvent.change(weightInput, { target: { value: '250' } });
@@ -152,9 +153,9 @@ describe('App Form Data Updates', () => {
     it('should update multiple subject fields independently', () => {
       const { container } = render(<App />);
 
-      const subjectIdInput = container.querySelector('input[id="subject-subjectId"]');
-      const speciesInput = container.querySelector('input[id="subject-species"]');
-      const weightInput = container.querySelector('input[id="subject-weight"]');
+      const subjectIdInput = getById('subject-subjectId');
+      const speciesInput = getById('subject-species');
+      const weightInput = getById('subject-weight');
 
       fireEvent.change(subjectIdInput, { target: { value: 'animal_123' } });
       fireEvent.change(speciesInput, { target: { value: 'New species' } });
@@ -181,7 +182,7 @@ describe('App Form Data Updates', () => {
     it('should update raw_data_to_volts', () => {
       const { container } = render(<App />);
 
-      const input = container.querySelector('input[name="raw_data_to_volts"]');
+      const input = getByName('raw_data_to_volts')[0];
       expect(input).toHaveValue(defaultYMLValues.raw_data_to_volts);
 
       fireEvent.change(input, { target: { value: '0.195' } });
@@ -307,7 +308,7 @@ describe('App Form Data Updates', () => {
     it('should handle zero values in numeric fields', () => {
       const { container } = render(<App />);
 
-      const weightInput = container.querySelector('input[id="subject-weight"]');
+      const weightInput = getById('subject-weight');
 
       fireEvent.change(weightInput, { target: { value: '0' } });
 
@@ -317,7 +318,7 @@ describe('App Form Data Updates', () => {
     it('should handle negative numbers', () => {
       const { container } = render(<App />);
 
-      const weightInput = container.querySelector('input[id="subject-weight"]');
+      const weightInput = getById('subject-weight');
 
       fireEvent.change(weightInput, { target: { value: '-100' } });
 

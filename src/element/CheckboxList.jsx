@@ -45,7 +45,7 @@ const CheckboxList = (prop) => {
             return (
               <div
                 className="checkbox-list-item"
-                key={`${id}-${sanitizeTitle(dataItem)}`}
+                key={`${id}-${dataItemIndex}-${sanitizeTitle(dataItem)}`}
               >
                 <input
                   type="checkbox"
@@ -70,7 +70,7 @@ const CheckboxList = (prop) => {
   );
 };
 
-CheckboxList.propType = {
+CheckboxList.propTypes = {
   title: PropTypes.string.isRequired,
   defaultValue: PropTypes.instanceOf(Array),
   dataItems: PropTypes.arrayOf(PropTypes.string),
@@ -84,7 +84,7 @@ CheckboxList.propType = {
 };
 
 CheckboxList.defaultProps = {
-  defaultValue: '',
+  defaultValue: [],
   placeholder: '',
   objectKind: '',
 };

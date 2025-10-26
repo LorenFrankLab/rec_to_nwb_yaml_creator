@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import InputElement from '../element/InputElement';
 import CheckboxList from '../element/CheckboxList';
-import { isNumeric, sanitizeTitle } from '../utils';
+import { isNumeric } from '../utils';
 import InfoIcon from './../element/InfoIcon';
 
 
@@ -40,7 +40,7 @@ const ChannelMap = (prop) => {
           return (
             <div
               className="nTrode-container"
-              key={`${keyBase}-${sanitizeTitle(index)}`}
+              key={`${keyBase}-${index}`}
             >
               <fieldset>
                 <legend>Shank #{index + 1}</legend>
@@ -87,13 +87,13 @@ const ChannelMap = (prop) => {
                           return (
                             <div
                               className="ntrode-map"
-                              key={`${mapId}-${sanitizeTitle(nTrodeKeyIndex)}`}
+                              key={`${mapId}`}
                             >
                               <label htmlFor={mapId}>{nTrodeKey}</label>
                               <select
                                 id={mapId}
                                 required
-                                defaultValue={nTrodeKeyId}
+                                value={mapValue}
                                 onChange={(e) =>
                                   onMapInput(e, {
                                     key: 'ntrode_electrode_group_channel_map',
@@ -104,12 +104,11 @@ const ChannelMap = (prop) => {
                                   })
                                 }
                               >
-                                {getOptions(options.map((o) => o + optionsLength * index), mapValue, mapValues).map((option) => {
+                                {getOptions(options.map((o) => o + optionsLength * index), mapValue, mapValues).map((option, optionIndex) => {
                                   return (
                                     <option
-                                      key={`${mapId}-${keyBase}-${sanitizeTitle(
-                                        option
-                                      )}${nTrodeKey}`}
+                                      key={`${mapId}-option-${optionIndex}`}
+                                      value={option}
                                     >
                                       {option !== -1 ? option : ''}
                                       {/* {item.map[option]} */}
@@ -133,9 +132,9 @@ const ChannelMap = (prop) => {
   );
 };
 
-ChannelMap.propType = {
+ChannelMap.propTypes = {
   electrodeGroupId: PropTypes.number,
-  nTrodeItems: PropTypes.instanceOf(Object),
+  nTrodeItems: PropTypes.arrayOf(PropTypes.object),
   onBlur: PropTypes.func,
   updateFormArray: PropTypes.func,
   onMapInput: PropTypes.func,

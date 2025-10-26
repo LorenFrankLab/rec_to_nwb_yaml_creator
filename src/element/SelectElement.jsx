@@ -43,9 +43,10 @@ const SelectElement = (prop) => {
                 ? parseInt(dataItem, 10)
                 : dataItem;
 
+            // Include index in key to ensure uniqueness even with duplicate values
             const keyOption =
               dataItemValue !== ''
-                ? `${dataItem}-${sanitizeTitle(dataItem)}`
+                ? `${dataItemIndex}-${dataItem}-${sanitizeTitle(dataItem)}`
                 : `${title}-0-selectItem-${dataItemIndex}`;
 
             const TitleOption =
@@ -65,7 +66,7 @@ const SelectElement = (prop) => {
   );
 };
 
-SelectElement.propType = {
+SelectElement.propTypes = {
   title: PropTypes.string.isRequired,
   defaultValue: PropTypes.oneOf([PropTypes.string, PropTypes.number]),
   dataItems: PropTypes.arrayOf(PropTypes.string).isRequired,

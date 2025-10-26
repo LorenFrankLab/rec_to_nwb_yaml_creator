@@ -5,7 +5,11 @@ exports[`BASELINE: Integration Contracts > Device Types Contract > documents all
   "tetrode_12.5",
   "A1x32-6mm-50-177-H32_21mm",
   "128c-4s8mm6cm-20um-40um-sl",
+  "128c-4s8mm6cm-15um-26um-sl",
+  "128c-4s6mm6cm-20um-40um-sl",
   "128c-4s6mm6cm-15um-26um-sl",
+  "128c-4s4mm6cm-20um-40um-sl",
+  "128c-4s4mm6cm-15um-26um-sl",
   "32c-2s8mm6cm-20um-40um-dl",
   "64c-4s6mm6cm-20um-40um-dl",
   "64c-3s6mm6cm-20um-40um-sl",
@@ -13,29 +17,7 @@ exports[`BASELINE: Integration Contracts > Device Types Contract > documents all
 ]
 `;
 
-exports[`BASELINE: Integration Contracts > Device Types Contract > verifies device types exist in trodes_to_nwb (if available) > device-type-sync-status 1`] = `
-{
-  "missingFromWebApp": [
-    "128c-4s4mm6cm-15um-26um-sl",
-    "128c-4s4mm6cm-20um-40um-sl",
-    "128c-4s6mm6cm-20um-40um-sl",
-    "128c-4s8mm6cm-15um-26um-sl",
-  ],
-  "missingProbeFiles": [],
-  "trodesCount": 12,
-  "webAppCount": 8,
-}
-`;
-
-exports[`BASELINE: Integration Contracts > Schema Hash > documents current schema version > schema-hash 1`] = `"49df05392d08b5d01c8b5706d29887715109f6689c1d1225f7279dd4d62391d3"`;
-
-exports[`BASELINE: Integration Contracts > Schema Hash > verifies schema sync with trodes_to_nwb (if available) > schema-sync-status 1`] = `
-{
-  "inSync": false,
-  "trodesHash": "6ef519f598ae930e",
-  "webAppHash": "49df05392d08b5d0",
-}
-`;
+exports[`BASELINE: Integration Contracts > Schema Hash > documents current schema version > schema-hash 1`] = `"a15136fd1086fde303e219350db6069e07225608dc8fda96e5be11db9dfe8e22"`;
 
 exports[`BASELINE: Integration Contracts > YAML Generation Contract > documents YAML output format > schema-required-fields 1`] = `
 [

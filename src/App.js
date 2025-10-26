@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import YAML from 'yaml';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faDownload } from "@fortawesome/free-solid-svg-icons";
 
 import logo from './logo.png';
 import packageJson from '../package.json';
@@ -79,7 +80,6 @@ export function App() {
    */
     const importFile = (e) => {
       e.preventDefault();
-      setFormData(structuredClone(emptyFormData)); // clear out form
       const file = e.target.files[0];
 
       if (!file) {
@@ -88,8 +88,29 @@ export function App() {
 
       const reader = new FileReader();
       reader.readAsText(e.target.files[0], 'UTF-8');
+
+      // Handle file read errors
+      reader.onerror = () => {
+        // eslint-disable-next-line no-alert
+        window.alert('Error reading file. Please try again.');
+        setFormData(structuredClone(emptyFormData));
+      };
+
       reader.onload = (evt) => {
-        const jsonFileContent = YAML.parse(evt.target.result);
+        // Parse YAML with error handling to prevent data loss
+        let jsonFileContent;
+        try {
+          jsonFileContent = YAML.parse(evt.target.result);
+        } catch (parseError) {
+          // eslint-disable-next-line no-alert
+          window.alert(
+            `Invalid YAML file: ${parseError.message}\n\n` +
+            `The file could not be parsed. Please check the YAML syntax and try again.`
+          );
+          // Restore form to defaults after parse error
+          setFormData(structuredClone(emptyFormData));
+          return;
+        }
         const JSONschema = schema.current;
         const validation = jsonschemaValidation(jsonFileContent, JSONschema);
         const {
@@ -163,6 +184,7 @@ export function App() {
    */
     const updateFormData = (name, value, key, index) => {
       const form = structuredClone(formData);
+
       if (key === undefined) {
         form[name] = value; // key value pair
       } else if (index === undefined) {
@@ -171,6 +193,7 @@ export function App() {
         form[key][index] = form[key][index] || {};
         form[key][index][name] = value; // array (as defined in json schema)
       }
+
       setFormData(form);
     };
 
@@ -449,7 +472,7 @@ const convertObjectToYAMLString = (content) => {
 };
 
 const createYAMLFile = (fileName, content) => {
-  var textFileAsBlob = new Blob([content], {type: 'text/plain'});
+  var textFileAsBlob = new Blob([content], {type: 'text/yaml;charset=utf-8;'});
   const downloadLink = document.createElement("a");
   downloadLink.download = fileName;
   downloadLink.href = window.webkitURL.createObjectURL(textFileAsBlob);
@@ -615,6 +638,28 @@ const rulesValidation = (jsonFileContent) => {
     isFormValid = false;
   }
 
+  // check for partial optogenetics configuration
+  // If ANY optogenetics field is present, ALL must be present
+  // This is required by trodes_to_nwb Python package
+  const hasOptoSource = jsonFileContent.opto_excitation_source?.length > 0;
+  const hasOpticalFiber = jsonFileContent.optical_fiber?.length > 0;
+  const hasVirusInjection = jsonFileContent.virus_injection?.length > 0;
+
+  const optoFieldsPresent = [hasOptoSource, hasOpticalFiber, hasVirusInjection].filter(Boolean).length;
+
+  // Partial configuration detected (some but not all fields present)
+  if (optoFieldsPresent > 0 && optoFieldsPresent < 3) {
+    errorMessages.push(
+      `Key: optogenetics | Error: Partial optogenetics configuration detected. ` +
+      `If using optogenetics, ALL fields must be defined: ` +
+      `opto_excitation_source${hasOptoSource ? ' ✓' : ' ✗'}, ` +
+      `optical_fiber${hasOpticalFiber ? ' ✓' : ' ✗'}, ` +
+      `virus_injection${hasVirusInjection ? ' ✓' : ' ✗'}`
+    );
+    errorIds.push('opto_excitation_source');
+    isFormValid = false;
+  }
+
   return {
     isFormValid,
     formErrorMessages: errorMessages,
@@ -651,7 +696,9 @@ const submitForm = (e) => {
  */
 const generateYMLFile = (e) => {
   e.preventDefault();
+
   const form = structuredClone(formData);
+
   const validation = jsonschemaValidation(form);
   const { isValid, jsonSchemaErrors } = validation;
   const { isFormValid, formErrors } = rulesValidation(form);
@@ -670,7 +717,7 @@ const generateYMLFile = (e) => {
     });
   }
 
-  if (isFormValid) {
+  if (!isFormValid) {
     formErrors?.forEach((error) => {
       displayErrorOnUI(error.id, error.message);
     });
@@ -917,7 +964,7 @@ useEffect(() => {
       <div className="file-upload-region">
         <label htmlFor="importYAMLFile">
           &nbsp;&nbsp;
-          <FontAwesomeIcon icon="download" className="pointer" size="2xs" title="Download a Yaml file to populate fields" />
+          <FontAwesomeIcon icon={faDownload} className="pointer" size="2xs" title="Download a Yaml file to populate fields" />
         </label>
         {/*
           input type="file" onClick sets e.target.value to null, so the same file can be imported multiple times.
@@ -930,7 +977,13 @@ useEffect(() => {
           className="download-existing-file"
           placeholder="Download a Yaml file to populate fields"
           onChange={(e) => importFile(e)}
-          onClick={(e) => e.target.value = null}
+          onClick={(e) => {
+            // Reset file input to allow re-uploading the same file
+            // See: https://stackoverflow.com/a/68480263/178550
+            if (e && e.target) {
+              e.target.value = '';
+            }
+          }}
         >
         </input>
       </div>
@@ -1110,7 +1163,7 @@ useEffect(() => {
               type="date"
               name="date_of_birth"
               title="Date of Birth"
-              defaultValue={formData.subject.date_of_birth}
+              defaultValue={formData.subject.date_of_birth ? formData.subject.date_of_birth.split('T')[0] : ''}
               placeholder="Date of birth of subject"
               required
               onBlur={(e) => {
@@ -2825,9 +2878,61 @@ export const rulesValidation = (jsonFileContent) => {
     isFormValid = false;
   }
 
+  // check for partial optogenetics configuration
+  // If ANY optogenetics field is present, ALL must be present
+  // This is required by trodes_to_nwb Python package
+  const hasOptoSource = jsonFileContent.opto_excitation_source?.length > 0;
+  const hasOpticalFiber = jsonFileContent.optical_fiber?.length > 0;
+  const hasVirusInjection = jsonFileContent.virus_injection?.length > 0;
+
+  const optoFieldsPresent = [hasOptoSource, hasOpticalFiber, hasVirusInjection].filter(Boolean).length;
+
+  // Partial configuration detected (some but not all fields present)
+  if (optoFieldsPresent > 0 && optoFieldsPresent < 3) {
+    errorMessages.push(
+      `Key: optogenetics | Error: Partial optogenetics configuration detected. ` +
+      `If using optogenetics, ALL fields must be defined: ` +
+      `opto_excitation_source${hasOptoSource ? ' ✓' : ' ✗'}, ` +
+      `optical_fiber${hasOpticalFiber ? ' ✓' : ' ✗'}, ` +
+      `virus_injection${hasVirusInjection ? ' ✓' : ' ✗'}`
+    );
+    errorIds.push('opto_excitation_source');
+    isFormValid = false;
+  }
+
+  // check for duplicate channel mappings in ntrode_electrode_group_channel_map
+  // Each ntrode's map object must have unique values (no duplicate physical channels)
+  // Hardware constraint: each logical channel must map to a unique physical channel
+  if (jsonFileContent.ntrode_electrode_group_channel_map?.length > 0) {
+    jsonFileContent.ntrode_electrode_group_channel_map.forEach((ntrode) => {
+      if (ntrode.map && typeof ntrode.map === 'object') {
+        const channelValues = Object.values(ntrode.map);
+        const uniqueValues = new Set(channelValues);
+
+        // If duplicate values exist, the Set will have fewer elements than the array
+        if (channelValues.length !== uniqueValues.size) {
+          // Find which values are duplicated for better error message
+          const duplicates = channelValues.filter(
+            (value, index) => channelValues.indexOf(value) !== index
+          );
+          const uniqueDuplicates = [...new Set(duplicates)];
+
+          errorMessages.push(
+            `Key: ntrode_electrode_group_channel_map | Error: ntrode_id ${ntrode.ntrode_id} has duplicate channel mappings. ` +
+            `Physical channel(s) ${uniqueDuplicates.join(', ')} are mapped to multiple logical channels. ` +
+            `Each logical channel must map to a unique physical channel to avoid hardware conflicts.`
+          );
+          errorIds.push(`ntrode_electrode_group_channel_map_${ntrode.ntrode_id}`);
+          isFormValid = false;
+        }
+      }
+    });
+  }
+
   return {
     isFormValid,
     formErrors: errorMessages,
+    formErrorIds: errorIds,
     errors,
   };
 };

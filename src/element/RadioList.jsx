@@ -6,11 +6,11 @@ import InfoIcon from './InfoIcon';
 
 
 /**
- * Radio collection where multiple items can be selected
+ * Radio collection where only one item can be selected
  *
  * @param {Object} prop Custom element's properties
  *
- * @returns Virtual DOM collection for multi-select Radios
+ * @returns Virtual DOM collection for single-select radio buttons
  */
 const RadioList = (prop) => {
   const {
@@ -50,7 +50,7 @@ const RadioList = (prop) => {
             return (
               <div
                 className="checkbox-list-item"
-                key={`${id}-${sanitizeTitle(dataItem)}`}
+                key={`${id}-${dataItemIndex}-${sanitizeTitle(dataItem)}`}
               >
                 <input
                   type="radio"
@@ -75,7 +75,7 @@ const RadioList = (prop) => {
   );
 };
 
-RadioList.propType = {
+RadioList.propTypes = {
   title: PropTypes.string.isRequired,
   defaultValue: PropTypes.instanceOf(Array),
   dataItems: PropTypes.arrayOf(PropTypes.string),
@@ -89,7 +89,7 @@ RadioList.propType = {
 };
 
 RadioList.defaultProps = {
-  defaultValue: '',
+  defaultValue: [],
   placeholder: '',
   objectKind: '',
 };

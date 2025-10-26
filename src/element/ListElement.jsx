@@ -21,7 +21,6 @@ const ListElement = (prop) => {
     placeholder,
     defaultValue,
     metaData,
-    required,
     inputPlaceholder,
     listPlaceHolder,
     updateFormData,
@@ -76,10 +75,13 @@ const ListElement = (prop) => {
         <div className={`list-of-items base-width ${readOnly ? 'gray-out' : ''}`} ref={listData}>
           { defaultValue?.length === 0
             ? <span>{`${inputPlaceholder}`}</span>
-            : defaultValue?.map((item) => <>
-              <span>
-                {item} <button type="button" onClick={(e)=> removeListItem(e, item)}>&#x2718;</button>
-              </span>&nbsp;</>)}
+            : defaultValue?.map((item, itemIndex) => (
+              <React.Fragment key={`${id}-list-item-${itemIndex}`}>
+                <span>
+                  {item} <button type="button" onClick={(e)=> removeListItem(e, item)}>&#x2718;</button>
+                </span>&nbsp;
+              </React.Fragment>
+            ))}
           <>
             {' '}
             <input
@@ -98,7 +100,7 @@ const ListElement = (prop) => {
   );
 };
 
-ListElement.propType = {
+ListElement.propTypes = {
   title: PropTypes.string.isRequired,
   id: PropTypes.string.isRequired,
   type: PropTypes.string.isRequired,
@@ -108,7 +110,7 @@ ListElement.propType = {
   required: PropTypes.bool,
   readOnly: PropTypes.bool,
   inputPlaceholder: PropTypes.string,
-  metaData: PropTypes.oneOf([PropTypes.object]),
+  metaData: PropTypes.object,
   step: PropTypes.string,
   updateFormData: PropTypes.func,
   defaultValue: PropTypes.arrayOf(
@@ -118,7 +120,7 @@ ListElement.propType = {
 
 ListElement.defaultProps = {
   placeholder: '',
-  defaultValue: '',
+  defaultValue: [],
   readOnly: false,
   metaData: {},
   inputPlaceholder: '',

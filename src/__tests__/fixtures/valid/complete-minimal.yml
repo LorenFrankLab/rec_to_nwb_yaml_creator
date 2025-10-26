@@ -1,0 +1,32 @@
+# Complete minimal YAML with ALL required fields for validation
+# Use this for integration tests to ensure import succeeds
+# Based on testing with trodes_to_nwb schema requirements
+
+experimenter_name:
+  - Doe, John
+lab: Test Lab
+institution: Test University
+experiment_description: Test experiment for integration tests
+session_description: Test session
+session_id: TEST001
+keywords:
+  - test
+subject:
+  subject_id: RAT001
+  description: Test Rat
+  genotype: Wild Type
+  weight: 300
+  sex: M
+  species: Rattus norvegicus
+  date_of_birth: "2024-01-01T00:00:00.000Z"
+data_acq_device:
+  - name: TestDevice
+    system: TestSystem
+    amplifier: TestAmp
+    adc_circuit: TestADC
+units:
+  analog: volts
+  behavioral_events: n/a
+times_period_multiplier: 1
+raw_data_to_volts: 0.000001
+default_header_file_path: header.h

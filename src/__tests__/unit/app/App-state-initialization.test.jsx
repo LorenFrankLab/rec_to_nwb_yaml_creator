@@ -8,9 +8,10 @@
  */
 
 import { render, screen } from '@testing-library/react';
+import { getMainForm } from '../../helpers/test-selectors';
 import { describe, it, expect } from 'vitest';
-import { App } from '../App';
-import { defaultYMLValues, emptyFormData } from '../valueList';
+import { App } from '../../../App';
+import { defaultYMLValues, emptyFormData } from '../../../valueList';
 
 describe('App State Initialization', () => {
   describe('Default State Values', () => {
@@ -93,18 +94,18 @@ describe('App State Initialization', () => {
   });
 
   describe('State Structure Consistency', () => {
-    it('should document key mismatch between defaultYMLValues and emptyFormData', () => {
+    it('should have matching keys between defaultYMLValues and emptyFormData', () => {
       const defaultKeys = Object.keys(defaultYMLValues).sort();
       const emptyKeys = Object.keys(emptyFormData).sort();
 
-      // KNOWN BUG: emptyFormData is missing 'optogenetic_stimulation_software'
-      // This is a data structure inconsistency that should be fixed in Phase 2
+      // FIXED: emptyFormData now includes 'optogenetic_stimulation_software'
+      // Both should have the same number of keys
       expect(defaultKeys.length).toBe(26);
-      expect(emptyKeys.length).toBe(25);
+      expect(emptyKeys.length).toBe(26);
 
-      // defaultYMLValues has 'optogenetic_stimulation_software' but emptyFormData doesn't
+      // Both should include 'optogenetic_stimulation_software'
       expect(defaultKeys).toContain('optogenetic_stimulation_software');
-      expect(emptyKeys).not.toContain('optogenetic_stimulation_software');
+      expect(emptyKeys).toContain('optogenetic_stimulation_software');
 
       // Verify other expected keys are present in both
       const commonKeys = ['experimenter_name', 'lab', 'institution', 'subject',
@@ -148,7 +149,7 @@ describe('App State Initialization', () => {
     it('should render form element', () => {
       render(<App />);
       // Should have a form element
-      const formElement = document.querySelector('form');
+      const formElement = getMainForm();
       expect(formElement).toBeInTheDocument();
     });
 
