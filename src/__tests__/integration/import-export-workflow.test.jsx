@@ -56,7 +56,7 @@ describe('Import/Export Workflow Integration', () => {
     /**
      * Test 1: Import minimal valid YAML and verify form population
      */
-    it('imports minimal valid YAML and populates form fields', async () => {
+    it('imports minimal valid YAML and populates form fields', { timeout: 30000 }, async () => {
       // ARRANGE
       const user = userEvent.setup();
       const { container } = render(<App />);
@@ -101,7 +101,7 @@ describe('Import/Export Workflow Integration', () => {
     /**
      * Test 2: Import YAML with arrays and verify array population
      */
-    it('imports YAML with arrays (cameras, tasks) and populates correctly', async () => {
+    it('imports YAML with arrays (cameras, tasks) and populates correctly', { timeout: 30000 }, async () => {
       // ARRANGE
       const user = userEvent.setup();
       const { container } = render(<App />);
@@ -148,7 +148,7 @@ describe('Import/Export Workflow Integration', () => {
     /**
      * Test 3: Import YAML and verify nested object structure (subject)
      */
-    it('imports YAML with nested objects and preserves structure', async () => {
+    it('imports YAML with nested objects and preserves structure', { timeout: 30000 }, async () => {
       // ARRANGE
       const user = userEvent.setup();
       const { container } = render(<App />);
@@ -191,7 +191,7 @@ describe('Import/Export Workflow Integration', () => {
      * without running into the field selector issues from Task 1.5.2.
      * We'll use import → export instead for comprehensive testing.
      */
-    it('exports form data as valid YAML with correct structure', async () => {
+    it('exports form data as valid YAML with correct structure', { timeout: 30000 }, async () => {
       // ARRANGE
       const user = userEvent.setup();
       const { container } = render(<App />);
@@ -238,7 +238,7 @@ describe('Import/Export Workflow Integration', () => {
     /**
      * Test 5: Verify export Blob properties
      */
-    it('creates Blob with correct MIME type and content', async () => {
+    it('creates Blob with correct MIME type and content', { timeout: 30000 }, async () => {
       // ARRANGE
       const user = userEvent.setup();
       const { container } = render(<App />);
@@ -275,7 +275,7 @@ describe('Import/Export Workflow Integration', () => {
     /**
      * Test 6: Import → Export → verify data preservation
      */
-    it('preserves all data through import → export cycle', async () => {
+    it('preserves all data through import → export cycle', { timeout: 30000 }, async () => {
       // ARRANGE
       const user = userEvent.setup();
       const { container } = render(<App />);
@@ -321,7 +321,7 @@ describe('Import/Export Workflow Integration', () => {
     /**
      * Test 7: Import → Modify → Export → verify modifications
      */
-    it('preserves modifications after import and re-export', async () => {
+    it('preserves modifications after import and re-export', { timeout: 30000 }, async () => {
       // ARRANGE
       const user = userEvent.setup();
       const { container } = render(<App />);

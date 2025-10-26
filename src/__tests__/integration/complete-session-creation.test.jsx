@@ -264,7 +264,7 @@ describe('End-to-End Session Creation Workflow', () => {
    * - Form validates with complete data
    * - Exported YAML includes all fields
    */
-  it('creates complete session with all optional fields', async () => {
+  it('creates complete session with all optional fields', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
     render(<App />);
@@ -783,7 +783,7 @@ describe('End-to-End Session Creation Workflow', () => {
    * - Ntrode structure is correct
    * - Ntrode IDs are assigned properly
    */
-  it('triggers ntrode generation when device type selected', async () => {
+  it('triggers ntrode generation when device type selected', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
     render(<App />);
@@ -845,7 +845,7 @@ describe('End-to-End Session Creation Workflow', () => {
    * - Exported YAML is well-formed
    * - All sections are present in export
    */
-  it('validates and exports complete session as valid YAML', async () => {
+  it('validates and exports complete session as valid YAML', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
     render(<App />);

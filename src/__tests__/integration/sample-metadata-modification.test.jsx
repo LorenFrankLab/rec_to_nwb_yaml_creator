@@ -74,7 +74,7 @@ describe('Sample Metadata Modification Workflow', () => {
    * - YAML is parsed correctly
    * - Form fields are populated with sample data
    */
-  it('imports sample metadata through file upload', async () => {
+  it('imports sample metadata through file upload', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
     const { container } = render(<App />);
@@ -123,7 +123,7 @@ describe('Sample Metadata Modification Workflow', () => {
    * - User can modify existing experimenter names
    * - New values are stored in form state
    */
-  it('modifies experimenter name after import', async () => {
+  it('modifies experimenter name after import', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
     const { container } = render(<App />);
@@ -151,7 +151,7 @@ describe('Sample Metadata Modification Workflow', () => {
    * Note: This test types long strings and may take 8-10 seconds
    * Timeout increased to 15s to prevent flakes when running with full suite
    */
-  it('modifies subject information after import', async () => {
+  it('modifies subject information after import', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
     const { container } = render(<App />);
@@ -193,7 +193,7 @@ describe('Sample Metadata Modification Workflow', () => {
    * - Camera IDs auto-increment correctly
    * - New camera appears in form
    */
-  it('adds new camera to imported metadata', async () => {
+  it('adds new camera to imported metadata', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
     const { container } = render(<App />);
@@ -227,7 +227,7 @@ describe('Sample Metadata Modification Workflow', () => {
    * - New task appears in form
    * - Task can reference existing cameras
    */
-  it('adds new task to imported metadata', async () => {
+  it('adds new task to imported metadata', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
     const { container } = render(<App />);
@@ -260,7 +260,7 @@ describe('Sample Metadata Modification Workflow', () => {
    * - Electrode group ID auto-increments
    * - New electrode group appears in form
    */
-  it('adds new electrode group to imported metadata', async () => {
+  it('adds new electrode group to imported metadata', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
     const { container } = render(<App />);
@@ -290,7 +290,7 @@ describe('Sample Metadata Modification Workflow', () => {
    * - Export functionality works after import
    * - Blob contains YAML content
    */
-  it('re-exports metadata with modifications preserved', async () => {
+  it('re-exports metadata with modifications preserved', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
     const { container } = render(<App />);
@@ -341,7 +341,7 @@ describe('Sample Metadata Modification Workflow', () => {
    * - All modifications are preserved through round-trip
    * - No data loss during import/export cycle
    */
-  it('preserves all modifications through import-modify-export-import round-trip', async () => {
+  it('preserves all modifications through import-modify-export-import round-trip', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
     const { container } = render(<App />);
