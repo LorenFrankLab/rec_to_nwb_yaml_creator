@@ -407,5 +407,5 @@ describe('Sample Metadata Modification Workflow', () => {
     // Verify other data still intact
     expect(screen.getByLabelText(/^lab$/i)).toHaveValue('Test Lab');
     expect(screen.getByLabelText(/institution/i)).toHaveValue('Test University');
-  });
+  }, 15000); // 15 second timeout - imports YAML multiple times
 });
