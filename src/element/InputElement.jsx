@@ -170,7 +170,10 @@ const InputElement = (prop) => {
         {title} <InfoIcon infoText={placeholder} />
       </div>
       <div className="item2">
-        <input {...inputProps} />
+        <input
+          {...inputProps}
+          key={!isControlled ? (type === 'date' ? getDefaultDateValue() : defaultValue) : undefined}
+        />
         {validation && (
           <HintDisplay id={hintId} hint={quickChecks.hint} isRequired={required} />
         )}

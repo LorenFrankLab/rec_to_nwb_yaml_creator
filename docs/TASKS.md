@@ -217,13 +217,15 @@
 - [ ] ~~Commit: `fix(react): replace index keys with stable ids`~~
 - [x] **Task Reconsidered:** 1.5 hours spent on investigation → ABANDONED
 
-### Normalize Controlled Inputs + A11y Wiring
+### Normalize Controlled Inputs + A11y Wiring ✅ COMPLETE
 
-- [ ] Convert mixed `defaultValue/value` inputs to **controlled**
-- [ ] Add `useStableId()`; bind `<label htmlFor>` and `aria-describedby` for error text
-- [ ] Wrap logical groups with `fieldset/legend`
-- [ ] Commit: `fix(a11y): controlled inputs and label/error associations`
-- [ ] **Estimated Time:** 2 hours
+- [x] Convert mixed `defaultValue/value` inputs to **controlled**
+- [x] Add `useStableId()`; bind `<label htmlFor>` and `aria-describedby` for error text
+- [x] Wrap logical groups with `fieldset/legend`
+- [x] Commit: `fix(a11y): controlled inputs and label/error associations` (4688eb8)
+- [x] **Actual Time:** 2.5 hours (42 new tests, 99.4% passing)
+
+**Outcome:** All form components support controlled mode, semantic HTML for accessibility (fieldset/legend), stable IDs prevent collisions. 10 integration tests need App.js migration to controlled mode (future task).
 
 #### Extract Array Management
 

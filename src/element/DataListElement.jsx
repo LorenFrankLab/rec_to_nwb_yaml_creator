@@ -99,7 +99,10 @@ const DataListElement = (prop) => {
         {title} <InfoIcon infoText={placeholder} />
       </div>
       <div className="item2 data-list">
-        <input {...inputProps} />
+        <input
+          {...inputProps}
+          key={!isControlled ? defaultValue : undefined}
+        />
         <datalist id={`${id}-list`} name={name}>
           {dataItems.map((dataItem, dataItemIndex) => {
             return (
