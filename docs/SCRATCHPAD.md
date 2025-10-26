@@ -103,17 +103,32 @@
 
 ---
 
-## Next Task
+## Completed Tasks
 
-**Extract String Formatting Utilities** (1-2 hours estimated)
+### ✅ Extract String Formatting Utilities (Completed 2025-10-26)
 
-1. Create `src/utils/stringFormatting.js`
-2. Extract `sanitizeTitle()`
-3. Extract `formatCommaSeparatedString()`
-4. Extract `commaSeparatedStringToNumber()`
-5. Update App.js imports
-6. Run full test suite
-7. Commit: `refactor: extract string formatting utilities`
+**Commit:** (pending) - `refactor: extract string formatting utilities`
+
+**Files Changed:**
+- Created: `src/utils/stringFormatting.js` (99 lines)
+- Modified: `src/utils.js` (-50 lines, added imports and re-exports)
+
+**Functions Extracted:**
+- `sanitizeTitle(title)` - Removes special characters for HTML IDs/keys
+- `formatCommaSeparatedString(stringSet)` - Converts comma-separated strings to arrays
+- `commaSeparatedStringToNumber(stringSet)` - Converts comma-separated integers to number arrays
+- `isInteger(value)` - Validates positive integer strings (dependency of commaSeparatedStringToNumber)
+
+**Impact:**
+- Reduced utils.js complexity by ~50 lines
+- Added comprehensive JSDoc documentation to stringFormatting.js
+- Improved code organization and maintainability
+- All string formatting logic now in dedicated module
+
+**Verification:**
+- ✅ All 1295 tests passing
+- ✅ No functional regressions
+- ✅ Clean extraction with proper imports and re-exports
 
 ---
 

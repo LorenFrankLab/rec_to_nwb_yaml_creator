@@ -52,13 +52,13 @@
 
 #### Extract String Formatting Utilities (1-2 hours)
 
-- [ ] Create `src/utils/stringFormatting.js`
-- [ ] Extract `sanitizeTitle()`
-- [ ] Extract `formatCommaSeparatedString()`
-- [ ] Extract `commaSeparatedStringToNumber()`
-- [ ] Update App.js imports
-- [ ] Run full test suite
-- [ ] Commit: `refactor: extract string formatting utilities`
+- [x] Create `src/utils/stringFormatting.js`
+- [x] Extract `sanitizeTitle()`
+- [x] Extract `formatCommaSeparatedString()`
+- [x] Extract `commaSeparatedStringToNumber()`
+- [x] Update utils.js imports
+- [x] Run full test suite
+- [x] Commit: `refactor: extract string formatting utilities`
 
 ### Week 3+: Custom Hooks (Future Phase)
 

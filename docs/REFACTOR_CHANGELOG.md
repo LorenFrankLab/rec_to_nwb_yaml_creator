@@ -23,14 +23,20 @@ Format: `[Phase] Category: Description`
   - `displayErrorOnUI(id, message)` - Displays custom validation errors on input elements
   - Commit: 5884eff
 
+- **String Formatting Utilities** (`src/utils/stringFormatting.js`) - 2025-10-26
+  - `sanitizeTitle(title)` - Removes special characters for HTML IDs/keys
+  - `formatCommaSeparatedString(stringSet)` - Converts comma-separated strings to arrays
+  - `commaSeparatedStringToNumber(stringSet)` - Converts comma-separated integers to number arrays
+  - `isInteger(value)` - Validates positive integer strings (dependency)
+  - Commit: (pending)
+
 ### Changed
 
 #### Code Refactoring
-- **App.js**: Reduced complexity by 96 lines total
-  - Removed inline YAML export functions (20 lines) - 2025-10-25
-  - Removed inline error display functions (76 lines) - 2025-10-26
-  - Added imports from `src/utils/yamlExport.js` and `src/utils/errorDisplay.js`
-  - Improved modularity and separation of concerns
+- **utils.js**: Reduced complexity by ~50 lines total
+  - Removed string formatting functions (50 lines) - 2025-10-26
+  - Added imports and re-exports from `src/utils/stringFormatting.js`
+  - Improved modularity and code organization
 
 #### Tests
 - **App-convertObjectToYAMLString.test.jsx**: Updated to test actual exports
