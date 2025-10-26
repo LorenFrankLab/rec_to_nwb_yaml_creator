@@ -27,6 +27,7 @@ const goldenFixturesDir = __dirname;
 // Source files to convert to golden fixtures
 const sourceFiles = [
   '20230622_sample_metadata.yml',
+  '20230622_sample_metadataProbeReconfig.yml',
   'minimal-valid.yml',
   'realistic-session.yml'
 ];

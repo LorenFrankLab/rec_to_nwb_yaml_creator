@@ -67,6 +67,13 @@ describe('Golden YAML Baseline Tests', () => {
 
       expect(roundTripped).toBe(golden);
     });
+
+    it('should produce identical output for 20230622_sample_metadataProbeReconfig.yml', () => {
+      const golden = readGoldenFixture('20230622_sample_metadataProbeReconfig.yml');
+      const roundTripped = roundTripYAML(golden);
+
+      expect(roundTripped).toBe(golden);
+    });
   });
 
   describe('Multiple Export Consistency', () => {
