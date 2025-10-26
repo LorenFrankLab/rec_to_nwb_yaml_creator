@@ -989,6 +989,7 @@ useEffect(() => {
               defaultValue={formData.subject.weight}
               placeholder="Weight at time of experiment, at time of surgery and at other important times (in grams)"
               onBlur={(e) => onBlur(e, { key: 'subject' })}
+              validation={{ type: 'numberRange', min: 0 }}
             />
           </div>
         </details>
@@ -1552,6 +1553,7 @@ useEffect(() => {
           required
           defaultValue={formData.times_period_multiplier}
           onBlur={(e) => onBlur(e)}
+          validation={{ type: 'required' }}
         />
       </div>
       <div id="raw_data_to_volts-area" className="area-region">
@@ -1564,6 +1566,7 @@ useEffect(() => {
           step="any"
           defaultValue={formData.raw_data_to_volts}
           onBlur={(e) => onBlur(e)}
+          validation={{ type: 'required' }}
         />
       </div>
       <div id="default_header_file_path-area" className="area-region">
