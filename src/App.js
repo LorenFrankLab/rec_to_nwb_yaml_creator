@@ -1,12 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import YAML from 'yaml';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
-import { encodeYaml, downloadYamlFile, formatDeterministicFilename } from './io/yaml';
 import { showErrorMessage, displayErrorOnUI } from './utils/errorDisplay';
-import { validate } from './validation';
 import { useArrayManagement } from './hooks/useArrayManagement';
 import { useFormUpdates } from './hooks/useFormUpdates';
+import { importFiles, exportAll } from './features/importExport';
 
 import logo from './logo.png';
 import packageJson from '../package.json';
@@ -87,104 +85,17 @@ export function App() {
    *
    * @param {object} e Event object
    */
-    const importFile = (e) => {
-      e.preventDefault();
-      const file = e.target.files[0];
+  const importFile = async (e) => {
+    e.preventDefault();
+    const file = e.target.files[0];
 
-      if (!file) {
-        return;
-      }
+    // Use extracted import logic
+    const result = await importFiles(file);
 
-      const reader = new FileReader();
-      reader.readAsText(e.target.files[0], 'UTF-8');
-
-      // Handle file read errors
-      reader.onerror = () => {
-        // eslint-disable-next-line no-alert
-        window.alert('Error reading file. Please try again.');
-        setFormData(structuredClone(emptyFormData));
-      };
-
-      reader.onload = (evt) => {
-        // Parse YAML with error handling to prevent data loss
-        let jsonFileContent;
-        try {
-          jsonFileContent = YAML.parse(evt.target.result);
-        } catch (parseError) {
-          // eslint-disable-next-line no-alert
-          window.alert(
-            `Invalid YAML file: ${parseError.message}\n\n` +
-            `The file could not be parsed. Please check the YAML syntax and try again.`
-          );
-          // Restore form to defaults after parse error
-          setFormData(structuredClone(emptyFormData));
-          return;
-        }
-        // Use unified validation API
-        const issues = validate(jsonFileContent);
-
-            if (issues.length === 0) {
-              // No validation errors - ensure relevant keys exist and load all data
-              Object.keys(emptyFormData).forEach((key) => {
-                if (!Object.hasOwn(jsonFileContent, key)) {
-                  jsonFileContent[key] = emptyFormData[key];
-                }
-              });
-
-              setFormData(structuredClone(jsonFileContent));
-              return null;
-            }
-
-            // Validation errors found - extract error IDs and messages
-            // Extract top-level field IDs from paths (e.g., "cameras[0].id" → "cameras")
-            const allErrorIds = [
-              ...new Set(
-                issues.map(issue => {
-                  const topLevelField = issue.path.split('[')[0].split('.')[0];
-                  return topLevelField;
-                })
-              )
-            ];
-
-            const allErrorMessages = [
-              ...new Set(issues.map(issue => issue.message))
-            ];
-
-            const formContent = structuredClone(emptyFormData);
-            const formContentKeys = Object.keys(formContent);
-
-            // Import only fields that don't have validation errors
-            formContentKeys.forEach((key) => {
-              if (
-                !allErrorIds.includes(key) &&
-                Object.hasOwn(jsonFileContent, key) &&
-                (typeof formContent[key]) === (typeof jsonFileContent[key])
-              ) {
-                formContent[key] = structuredClone(
-                  jsonFileContent[key]
-                );
-              }
-            });
-
-            // sex needs to be populated
-            if (!formContent.subject) {
-              formContent.subject = structuredClone(emptyFormData.subject);
-            }
-
-            const genders = genderAcronym();
-            if (!genders.includes(formContent.subject.sex)) {
-              formContent.subject.sex = 'U';
-            }
-
-            if (allErrorMessages.length > 0) {
-              // eslint-disable-next-line no-alert
-              window.alert(`Entries Excluded\n\n${allErrorMessages.join('\n')}`);
-            }
-
-
-          setFormData(structuredClone(formContent));
-      };
-    };
+    if (result.formData) {
+      setFormData(result.formData);
+    }
+  };
 
   /**
    * Used by ntrode to map shank to value
@@ -363,48 +274,41 @@ const submitForm = (e) => {
 const generateYMLFile = (e) => {
   e.preventDefault();
 
-  const form = structuredClone(formData);
+  // Use extracted export logic
+  const result = exportAll(formData);
 
-  // Use unified validation API that merges schema + rules
-  const issues = validate(form);
+  // If export failed, display validation errors
+  if (!result.success && result.validationIssues) {
+    // Display validation errors to user
+    // Issues with instancePath are from schema validation (AJV format)
+    // Issues without instancePath are from rules validation (need ID conversion)
+    result.validationIssues.forEach((issue) => {
+      if (issue.instancePath !== undefined) {
+        // Schema validation error - use showErrorMessage (expects AJV format)
+        showErrorMessage(issue);
+      } else {
+        // Rules validation error - use displayErrorOnUI (expects id + message)
+        // Convert path to ID format (e.g., "tasks" → "tasks", "cameras[0].id" → "cameras-id-0")
+        const id = issue.path.replace(/\[(\d+)\]\.(\w+)/g, '-$2-$1').replace(/\[(\d+)\]$/g, '-$1');
+        displayErrorOnUI(id, issue.message);
+      }
+    });
 
-  // If no validation issues, generate and download YAML
-  if (issues.length === 0) {
-    const yAMLForm = encodeYaml(form);
-    const fileName = formatDeterministicFilename(form);
-    downloadYamlFile(fileName, yAMLForm);
-    return;
+    // Focus first invalid field for better accessibility
+    // Wait for error messages to be displayed in DOM
+    setTimeout(() => {
+      // Try to find first field with custom validity error (from displayErrorOnUI)
+      const firstInvalidField = document.querySelector('input:invalid, select:invalid, textarea:invalid');
+
+      if (firstInvalidField) {
+        firstInvalidField.focus();
+        firstInvalidField.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+      }
+    }, 100);
   }
-
-  // Display validation errors to user
-  // Issues with instancePath are from schema validation (AJV format)
-  // Issues without instancePath are from rules validation (need ID conversion)
-  issues.forEach((issue) => {
-    if (issue.instancePath !== undefined) {
-      // Schema validation error - use showErrorMessage (expects AJV format)
-      showErrorMessage(issue);
-    } else {
-      // Rules validation error - use displayErrorOnUI (expects id + message)
-      // Convert path to ID format (e.g., "tasks" → "tasks", "cameras[0].id" → "cameras-id-0")
-      const id = issue.path.replace(/\[(\d+)\]\.(\w+)/g, '-$2-$1').replace(/\[(\d+)\]$/g, '-$1');
-      displayErrorOnUI(id, issue.message);
-    }
-  });
-
-  // Focus first invalid field for better accessibility
-  // Wait for error messages to be displayed in DOM
-  setTimeout(() => {
-    // Try to find first field with custom validity error (from displayErrorOnUI)
-    const firstInvalidField = document.querySelector('input:invalid, select:invalid, textarea:invalid');
-
-    if (firstInvalidField) {
-      firstInvalidField.focus();
-      firstInvalidField.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
-      });
-    }
-  }, 100);
 };
 
 const duplicateElectrodeGroupItem = (index, key) => {
