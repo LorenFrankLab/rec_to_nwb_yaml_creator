@@ -94,8 +94,8 @@ const InputElement = (prop) => {
           onBlur={(e) => onBlur(e)}
           pattern={pattern}
         />
-        {validation && quickChecks.hint && (
-          <HintDisplay hint={quickChecks.hint} />
+        {validation && (
+          <HintDisplay hint={quickChecks.hint} isRequired={required} />
         )}
       </div>
     </label>

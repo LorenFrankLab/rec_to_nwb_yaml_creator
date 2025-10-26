@@ -2,6 +2,8 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { sanitizeTitle } from '../utils';
 import InfoIcon from './InfoIcon';
+import { useQuickChecks } from '../validation/useQuickChecks';
+import { HintDisplay } from '../validation/HintDisplay';
 
 /**
  * Data list providing users options to select from and allowing them to write their own selection
@@ -20,7 +22,21 @@ const DataListElement = (prop) => {
     placeholder,
     type,
     onBlur,
+    required,
+    validation,
   } = prop;
+
+  const quickChecks = useQuickChecks(
+    validation?.type,
+    {
+      debounceMs: validation?.debounceMs,
+      validValues: validation?.validValues,
+      min: validation?.min,
+      max: validation?.max,
+      pattern: validation?.pattern,
+      patternMessage: validation?.patternMessage,
+    }
+  );
 
   return (
     <label className="container" htmlFor={id}>
@@ -36,6 +52,8 @@ const DataListElement = (prop) => {
           placeholder={placeholder}
           defaultValue={defaultValue}
           key={defaultValue}
+          required={required}
+          onChange={validation ? (e) => quickChecks.validate(name, e.target.value) : undefined}
           onBlur={onBlur}
         />
         <datalist id={`${id}-list`} name={name}>
@@ -51,6 +69,9 @@ const DataListElement = (prop) => {
             );
           })}
         </datalist>
+        {validation && (
+          <HintDisplay hint={quickChecks.hint} isRequired={required} />
+        )}
       </div>
     </label>
   );
@@ -65,6 +86,16 @@ DataListElement.propTypes = {
   id: PropTypes.string.isRequired,
   name: PropTypes.string.isRequired,
   onBlur: PropTypes.func,
+  required: PropTypes.bool,
+  validation: PropTypes.shape({
+    type: PropTypes.oneOf(['required', 'dateFormat', 'enum', 'numberRange', 'pattern']),
+    debounceMs: PropTypes.number,
+    validValues: PropTypes.array,
+    min: PropTypes.number,
+    max: PropTypes.number,
+    pattern: PropTypes.instanceOf(RegExp),
+    patternMessage: PropTypes.string,
+  }),
 };
 
 DataListElement.defaultProps = {
@@ -72,6 +103,8 @@ DataListElement.defaultProps = {
   defaultValue: '',
   placeholder: '',
   onBlur: () => {},
+  required: false,
+  validation: null,
 };
 
 export default DataListElement;

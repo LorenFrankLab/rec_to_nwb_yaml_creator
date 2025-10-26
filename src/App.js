@@ -2492,12 +2492,14 @@ useEffect(() => {
                       placeholder="Type to find a location"
                       defaultValue={electrodeGroup.location}
                       dataItems={locations()}
+                      required
                       onBlur={(e) =>
                         itemSelected(e, {
                           key,
                           index,
                         })
                       }
+                      validation={{ type: 'required' }}
                     />
                     <SelectElement
                       id={`electrode_groups-device_type-${index}`}
