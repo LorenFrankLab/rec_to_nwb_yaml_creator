@@ -1,17 +1,24 @@
 /**
- * HintDisplay - Subtle validation hint component
+ * HintDisplay - Validation hint/error component with smart escalation
  *
- * Displays hints from useQuickChecks with aria-live for accessibility.
- * Uses "assertive" for required fields to announce immediately,
- * "polite" for optional fields to announce when user pauses.
+ * Displays validation feedback from useQuickChecks with two severity levels:
+ * - hint (gray): Shown while typing (debounced onChange)
+ * - error (red): Shown after blur if field is invalid
+ *
+ * ARIA attributes escalate automatically:
+ * - Hints: role="status", aria-live="polite" (or "assertive" if required)
+ * - Errors: role="alert", aria-live="assertive" (always)
  *
  * Always renders to prevent layout shift - shows non-breaking space when no hint.
  *
  * @example
- * const { hint, validate } = useQuickChecks('required');
+ * const { hint, validate, validateOnBlur } = useQuickChecks('required');
  * return (
  *   <>
- *     <input onChange={(e) => validate('field', e.target.value)} />
+ *     <input
+ *       onInput={(e) => validate('field', e.target.value)}
+ *       onBlur={(e) => validateOnBlur('field', e.target.value)}
+ *     />
  *     <HintDisplay hint={hint} isRequired={true} />
  *   </>
  * );
@@ -21,14 +28,13 @@ import React from 'react';
 import PropTypes from 'prop-types';
 
 export function HintDisplay({ hint, isRequired = false, className = '' }) {
-  // P0-1 Fix: Always render to prevent layout shift
-  // P0-2 Fix: Add role="status" for accessibility
-  // P0-3 Fix: Use assertive for required fields, polite for optional
+  const isError = hint?.severity === 'error';
+
   return (
     <div
-      className={`validation-hint ${className}`}
-      role="status"
-      aria-live={isRequired ? "assertive" : "polite"}
+      className={`validation-hint ${isError ? 'validation-error' : ''} ${className}`}
+      role={isError ? 'alert' : 'status'}
+      aria-live={isError ? 'assertive' : (isRequired ? 'assertive' : 'polite')}
       aria-atomic="true"
     >
       {hint ? hint.message : '\u00A0'}
@@ -38,8 +44,8 @@ export function HintDisplay({ hint, isRequired = false, className = '' }) {
 
 HintDisplay.propTypes = {
   hint: PropTypes.shape({
-    severity: PropTypes.oneOf(['hint']).isRequired,
-    message: PropTypes.string.isRequired
+    severity: PropTypes.oneOf(['hint', 'error']),
+    message: PropTypes.string
   }),
   isRequired: PropTypes.bool,
   className: PropTypes.string

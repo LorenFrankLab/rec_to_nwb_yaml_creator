@@ -59,7 +59,48 @@ export function useQuickChecks(checkType, options = {}) {
   }, []); // Empty deps: setState functions are stable and don't need to be included
 
   /**
-   * Validate a field value (debounced)
+   * Run validation check (shared logic for validate and validateOnBlur)
+   * @param {string} path - Field path
+   * @param {any} value - Field value
+   * @returns {object|null} Validation result
+   */
+  const runValidation = useCallback((path, value) => {
+    let result = null;
+
+    switch (checkType) {
+      case 'required':
+        result = quickChecks.required(path, value);
+        break;
+
+      case 'dateFormat':
+        result = quickChecks.dateFormat(path, value);
+        break;
+
+      case 'enum':
+        if (validValues && Array.isArray(validValues) && validValues.length > 0) {
+          result = quickChecks.enum(path, value, validValues);
+        }
+        break;
+
+      case 'numberRange':
+        result = quickChecks.numberRange(path, value, min, max, unit);
+        break;
+
+      case 'pattern':
+        if (pattern && pattern instanceof RegExp) {
+          result = quickChecks.pattern(path, value, pattern, patternMessage);
+        }
+        break;
+
+      default:
+        result = null;
+    }
+
+    return result;
+  }, [checkType, validValues, min, max, unit, pattern, patternMessage]);
+
+  /**
+   * Validate a field value (debounced, shows hints)
    * @param {string} path - Field path
    * @param {any} value - Field value
    */
@@ -71,45 +112,40 @@ export function useQuickChecks(checkType, options = {}) {
 
     // Schedule new validation
     timeoutRef.current = setTimeout(() => {
-      let result = null;
+      const result = runValidation(path, value);
 
-      // Run the appropriate check
-      switch (checkType) {
-        case 'required':
-          result = quickChecks.required(path, value);
-          break;
-
-        case 'dateFormat':
-          result = quickChecks.dateFormat(path, value);
-          break;
-
-        case 'enum':
-          // P1-2: Validate parameters before use
-          if (validValues && Array.isArray(validValues) && validValues.length > 0) {
-            result = quickChecks.enum(path, value, validValues);
-          }
-          break;
-
-        case 'numberRange':
-          result = quickChecks.numberRange(path, value, min, max, unit);
-          break;
-
-        case 'pattern':
-          // P1-2: Validate pattern is a RegExp
-          if (pattern && pattern instanceof RegExp) {
-            result = quickChecks.pattern(path, value, pattern, patternMessage);
-          }
-          break;
-
-        default:
-          // Unknown check type - return null
-          result = null;
+      // Set as hint (not error)
+      if (result) {
+        result.severity = 'hint';
       }
 
       setHint(result);
-      timeoutRef.current = null; // P0-2: Clear ref after timeout executes
+      timeoutRef.current = null;
     }, debounceMs);
-  }, [checkType, debounceMs, validValues, min, max, unit, pattern, patternMessage]);
+  }, [debounceMs, runValidation]);
+
+  /**
+   * Validate a field value on blur (immediate, escalates to error)
+   * @param {string} path - Field path
+   * @param {any} value - Field value
+   */
+  const validateOnBlur = useCallback((path, value) => {
+    // Clear any pending debounced validation
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
+    // Run validation immediately (no debounce)
+    const result = runValidation(path, value);
+
+    // Escalate to error if invalid
+    if (result) {
+      result.severity = 'error';
+    }
+
+    setHint(result);
+  }, [runValidation]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -123,6 +159,7 @@ export function useQuickChecks(checkType, options = {}) {
   return {
     hint,
     validate,
+    validateOnBlur,
     clear
   };
 }

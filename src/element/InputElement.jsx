@@ -58,6 +58,22 @@ const InputElement = (prop) => {
     quickChecks.validate(name, e.target.value);
   };
 
+  // Handle blur event to escalate hint to error if invalid
+  const handleBlur = (e) => {
+    // Call validation first (escalate to error if needed)
+    if (validation) {
+      // For type="number", check badInput again in case user blurred with invalid chars
+      if (type === 'number' && e.target.validity?.badInput) {
+        quickChecks.validateOnBlur(name, 'INVALID_NUMBER_INPUT');
+      } else {
+        quickChecks.validateOnBlur(name, e.target.value);
+      }
+    }
+
+    // Then call parent onBlur for any additional processing
+    onBlur(e);
+  };
+
   const getDefaultDateValue = () => {
     if (!defaultValue) {
       return '';
@@ -106,7 +122,7 @@ const InputElement = (prop) => {
           step={step}
           min={min}
           onInput={validation ? handleInput : undefined}
-          onBlur={(e) => onBlur(e)}
+          onBlur={handleBlur}
           pattern={pattern}
         />
         {validation && (

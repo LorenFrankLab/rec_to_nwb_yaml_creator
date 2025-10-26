@@ -39,6 +39,17 @@ const DataListElement = (prop) => {
     }
   );
 
+  // Handle blur event to escalate hint to error if invalid
+  const handleBlur = (e) => {
+    // Call validation first (escalate to error if needed)
+    if (validation) {
+      quickChecks.validateOnBlur(name, e.target.value);
+    }
+
+    // Then call parent onBlur for any additional processing
+    onBlur(e);
+  };
+
   return (
     <label className="container" htmlFor={id}>
       <div className="item1">
@@ -55,7 +66,7 @@ const DataListElement = (prop) => {
           key={defaultValue}
           required={required}
           onChange={validation ? (e) => quickChecks.validate(name, e.target.value) : undefined}
-          onBlur={onBlur}
+          onBlur={handleBlur}
         />
         <datalist id={`${id}-list`} name={name}>
           {dataItems.map((dataItem, dataItemIndex) => {

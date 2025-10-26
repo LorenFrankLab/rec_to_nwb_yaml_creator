@@ -51,6 +51,13 @@ const SelectElement = (prop) => {
     }
   };
 
+  // Handle blur event to escalate hint to error if invalid
+  const handleBlur = (e) => {
+    if (validation) {
+      quickChecks.validateOnBlur(name, e.target.value);
+    }
+  };
+
   return (
     <label className="container" htmlFor={id}>
       <div className="item1" title={title}>
@@ -61,6 +68,7 @@ const SelectElement = (prop) => {
           id={id}
           name={name}
           onChange={handleChange}
+          onBlur={handleBlur}
           value={defaultValue}
           required={required}
         >

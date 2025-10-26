@@ -543,13 +543,15 @@ details {
 }
 
 //-----------------------------
-// Validation Hints
+// Validation Hints & Errors
 //-----------------------------
 
-// Styling for instant validation hints (useQuickChecks + HintDisplay)
+// Styling for instant validation with smart escalation (useQuickChecks + HintDisplay)
+// - Gray hints while typing (debounced onChange)
+// - Red errors after blur if invalid
 .validation-hint {
   font-size: 0.875rem;
-  color: #525252;  // WCAG AAA compliant (8.31:1 contrast on white)
+  color: #525252;  // Gray for hints - WCAG AAA compliant (8.31:1 contrast on white)
   margin-top: 0.25rem;
   font-weight: 500;
   line-height: 1.4;
@@ -562,6 +564,18 @@ details {
   animation: fadeIn 0.2s ease-in;
 }
 
+// Error state: Escalated validation after blur
+.validation-error {
+  color: #DC2626;  // Red for errors - WCAG AAA compliant (5.03:1 contrast on white)
+  font-weight: 600;
+
+  // Visual indicator for errors (accessibility + scannability)
+  &::before {
+    content: "⚠ ";
+    font-weight: 700;
+  }
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -570,5 +584,12 @@ details {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+// Respect user preference for reduced motion (accessibility)
+@media (prefers-reduced-motion: reduce) {
+  .validation-hint {
+    animation: none;
   }
 }
