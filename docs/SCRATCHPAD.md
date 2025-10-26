@@ -7,15 +7,14 @@
 
 ---
 
-## 🎯 Current Task: Extract First Component (SubjectFields)
+## 🎯 Current Task: COMPLETE - SubjectFields Extracted ✅
 
 ### Task Overview
 
-**What:** Extract the subject section from App.js into a dedicated `<SubjectFields />` component.
-
-**Why:** Prove the component extraction pattern works before scaling to all sections. Reduces App.js render block by ~80 lines.
-
-**How:** Create component that uses `useStore()` internally, test in isolation, integrate back into App.js.
+**Status:** ✅ COMPLETE
+**What:** Extracted subject section from App.js into `<SubjectFields />` component
+**Approach:** Props-based component (not store-based, learned from debugging)
+**Reduction:** 97 lines from App.js (App.js: 2373 → 2276 lines)
 
 ### Store Facade Status: ✅ COMPLETE (Not Yet Used in App.js)
 
@@ -100,12 +99,18 @@ export default function SubjectFields() {
 - Prove the pattern works
 - Then scale to remaining 10+ sections
 
-### Estimated Time: 4 hours
+### Actual Time: ~6 hours
 
-- 1 hour: Read App.js subject section, understand dependencies
-- 1 hour: Write tests for SubjectFields component (TDD)
-- 1 hour: Implement SubjectFields component
-- 1 hour: Integrate into App.js, verify all tests pass, code review
+- 1 hour: Read App.js subject section, understand dependencies ✅
+- 1.5 hours: Write tests (TDD), create component, integrate ✅
+- 2 hours: Debug failing integration tests (systematic debugging) ✅
+- 1 hour: Fix root cause (separate state instances), update tests ✅
+- 0.5 hours: Verify, document, commit ✅
+
+**Time breakdown:**
+- Initial implementation: 2.5 hours (as estimated)
+- Debugging + fixing: 3.5 hours (not estimated - learned from mistakes)
+- Total: 6 hours
 
 ### Next Steps After SubjectFields
 
@@ -124,7 +129,120 @@ Total reduction target: ~1400 lines from App.js render block (49% of 2873 lines)
 
 ---
 
-## 🎯 Session Summary (2025-10-26 - Electrode Group Logic Extraction Complete)
+## 🎯 Session Summary (2025-10-26 - SubjectFields Component Extraction Complete)
+
+### Objective
+Extract SubjectFields component to prove component extraction pattern for Phase 3 Week 5-7.
+
+### Final Status
+- **Tests:** 1664/1664 passing (100%) ✅
+- **Golden YAML:** 18/18 passing ✅
+- **New Files:** SubjectFields.jsx (122 lines), SubjectFields.test.jsx (21 tests)
+- **App.js Reduction:** 97 lines (2373 → 2276 lines, ~4%)
+- **Commit:** 106f9f6
+
+### What Was Completed
+
+1. ✅ **Created SubjectFields component** (props-based)
+   - Accepts formData, handleChange, onBlur, itemSelected as props
+   - Renders 7 subject fields (description, species, genotype, sex, subject_id, date_of_birth, weight)
+   - Preserves exact JSX from App.js (IDs, names, validation, custom date logic)
+   - 122 lines (vs 97 lines in App.js - includes wrapper divs)
+
+2. ✅ **Created comprehensive tests** (21 tests, all passing)
+   - Component rendering (4 tests)
+   - Field values from props (7 tests)
+   - User interactions (3 tests)
+   - Blur events (3 tests)
+   - Validation props (4 tests)
+
+3. ✅ **Systematic debugging of integration test failures**
+   - Root cause: Multiple independent state instances (App.js + SubjectFields)
+   - Problem: Each `useStore()` call creates separate state with `useState()`
+   - Solution: SubjectFields accepts props instead of calling `useStore()`
+   - Fixed: 11/11 integration tests now passing
+
+4. ✅ **Updated store.js**
+   - Added `itemSelected()` action (for future use)
+   - Store remains available but needs Context provider for shared state
+
+### Key Learning: Store Pattern Needs Context Provider
+
+**Current Problem:**
+- `useStore()` calls `useState()` internally
+- Each component that calls `useStore()` creates SEPARATE state instance
+- States don't communicate → data loss, broken functionality
+
+**Attempted Pattern (failed):**
+```javascript
+// App.js
+const store = useStore(); // Instance #1
+
+// SubjectFields.jsx
+const { model, actions } = useStore(); // Instance #2 (DIFFERENT!)
+
+// Result: Two separate states that don't sync
+```
+
+**Correct Pattern (for future):**
+```javascript
+// src/state/StoreContext.js
+const StoreContext = createContext();
+
+export function StoreProvider({ children }) {
+  const store = useStore(); // Created ONCE
+  return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
+}
+
+export function useStoreContext() {
+  return useContext(StoreContext);
+}
+
+// App.js
+<StoreProvider>
+  <SubjectFields />
+  {/* All components share same store instance */}
+</StoreProvider>
+
+// SubjectFields.jsx
+const { model, actions } = useStoreContext(); // Gets shared instance
+```
+
+**Current Workaround (working):**
+- SubjectFields accepts props (simple, reliable)
+- App.js maintains single source of truth
+- Props passed down explicitly
+- Pattern works for now, revisit Context when needed
+
+### Technical Highlights
+
+- **Systematic Debugging Success:** Followed 4-phase process, identified root cause, tested hypothesis, fixed once
+- **TDD Approach:** Tests written first (failed), component created (passed)
+- **Zero Regressions:** All 1664 tests passing, YAML output identical
+- **Integration Tests:** Fixed 11 previously-failing tests with root cause fix
+- **Clean Extraction:** Component behavior identical to original App.js code
+
+### Next Steps
+
+**Immediate:**
+1. Continue component extractions using prop-passing pattern
+2. Extract DataAcqDeviceFields next (similar complexity)
+3. Document prop-passing pattern as temporary approach
+
+**Future (Week 9+):**
+1. Implement StoreContext provider
+2. Migrate components from props to useStoreContext()
+3. Remove prop drilling
+4. Enable true shared state pattern
+
+**Recommendation:** Use props for remaining Phase 3 Week 5-7 extractions, defer Context to later phase.
+
+### Blockers
+None
+
+---
+
+## 🎯 Previous Session Summary (2025-10-26 - Electrode Group Logic Extraction Complete)
 
 ### Objective
 Extract electrode group management logic (nTrodeMapSelected, removeElectrodeGroupItem, duplicateElectrodeGroupItem) from App.js into dedicated custom hook (Week 3-4 task).
