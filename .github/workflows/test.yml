@@ -2,9 +2,9 @@ name: Test Suite
 
 on:
   push:
-    branches: ['**']  # Run on all branches
+    branches: [main]  # Only run on pushes to main
   pull_request:
-    branches: [main]
+    branches: [main]  # Run on all PRs to main
 
 permissions:
   contents: read
