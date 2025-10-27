@@ -427,13 +427,20 @@
 - [x] Fixed form-container div closure issue
 - [x] Commit: `refactor: extract SessionInfoFields component` (5186ad8)
 
+**ExperimenterFields Extraction:** ✅ COMPLETE (2025-10-26)
+
+- [x] Created component with single ListElement (34 lines)
+- [x] Created 12 comprehensive tests
+- [x] All tests passing: 1807/1807, 18/18 golden YAML
+- [x] Defensive coding with optional chaining
+- [x] Commit: `refactor: extract ExperimenterFields component` (2ef9dd6)
+
 **Remaining:**
 
-- [ ] `<ExperimenterFields />` - experimenter_name (ListElement)
 - [ ] `<LabInstitutionFields />` - lab, institution (InputElements)
 - [ ] `<UnitsFields />` - units.analog, units.behavioral_events (InputElements)
 - [ ] `<TechnicalFields />` - times_period_multiplier, raw_data_to_volts, default_header_file_path (InputElements)
-- [ ] **Estimated Time:** 1-2 days (4 components remaining)
+- [ ] **Estimated Time:** 1 day (3 components remaining)
 
 #### Visual Regression Testing Setup
 
