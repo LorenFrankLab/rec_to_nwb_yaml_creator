@@ -12,6 +12,7 @@
 The rec_to_nwb_yaml_creator has undergone significant architectural improvements with the introduction of the StoreContext pattern, eliminating prop drilling across 14 components. The application demonstrates solid React fundamentals with controlled components, custom hooks, and centralized state management. However, several opportunities exist for optimization, particularly around re-render performance, hook dependencies, and component composition patterns.
 
 **Key Findings:**
+
 - ✅ StoreContext successfully eliminates prop drilling
 - ✅ Comprehensive custom hooks abstraction
 - ✅ Controlled component pattern throughout
@@ -31,6 +32,7 @@ The rec_to_nwb_yaml_creator has undergone significant architectural improvements
 **Location:** `src/state/StoreContext.js`
 
 **Strengths:**
+
 1. Clean separation of concerns - context provides both state and actions
 2. Single source of truth for form state
 3. Proper context creation with custom hook
@@ -66,6 +68,7 @@ export function StoreProvider({ children }) {
 **Issue:** Single context contains entire formData + 20+ action functions. Any formData change triggers re-render of ALL consumers.
 
 **Recommendation:** Consider splitting into:
+
 - Read-only data context (formData, selectors)
 - Write operations context (actions)
 
@@ -78,6 +81,7 @@ export function StoreProvider({ children }) {
 ### Extracted Components Review
 
 **14 Components Reviewed:**
+
 1. SubjectFields ✅
 2. DataAcqDeviceFields ✅
 3. DeviceFields ✅
@@ -96,6 +100,7 @@ export function StoreProvider({ children }) {
 ### Component Patterns
 
 #### Strengths
+
 - Consistent API across components
 - Good use of custom hooks
 - Clear separation of concerns
@@ -127,11 +132,13 @@ export default memo(function InputElement({ title, id, value, onChange, onBlur, 
 **2. Large Components Need Splitting (MEDIUM PRIORITY)**
 
 **OptogeneticsFields** (840 lines):
+
 - Manages 5 subsections
 - Complex validation logic
 - Should be split into sub-components
 
 **ElectrodeGroupFields** (268 lines):
+
 - Manages 3 related arrays
 - Complex channel mapping
 - Should extract TargetedLocationList component
@@ -163,12 +170,14 @@ const handleAddTask = useCallback((count) => {
 **Grade:** A-
 
 **Strengths:**
+
 - Clean abstraction of form update logic
 - Proper use of useCallback
 - Handles nested updates correctly
 - Type coercion on blur
 
 **Issues:**
+
 - Hook dependency array complete ✅ (fixed in Week 8)
 
 ### useArrayManagement.js
@@ -176,11 +185,13 @@ const handleAddTask = useCallback((count) => {
 **Grade:** B+
 
 **Strengths:**
+
 - Centralized array operations
 - Proper ID management
 - Handles complex nested structures
 
 **Issues:**
+
 - Some functions could benefit from memoization
 - Consider adding validation for array index bounds
 
@@ -189,11 +200,13 @@ const handleAddTask = useCallback((count) => {
 **Grade:** B
 
 **Strengths:**
+
 - Complex logic well-abstracted
 - Good integration with device types
 - Handles ntrode renumbering correctly
 
 **Issues:**
+
 - Effect dependency arrays need review
 - Complex logic could be split into smaller hooks
 - Missing error handling for invalid device types
@@ -205,6 +218,7 @@ const handleAddTask = useCallback((count) => {
 **Review of all .map() calls in components:**
 
 ### ✅ Good Key Usage (90% of cases)
+
 ```javascript
 {formData.electrode_groups?.map((item) => (
   <div key={item.id}>  // ✅ Stable, unique ID
@@ -214,6 +228,7 @@ const handleAddTask = useCallback((count) => {
 ```
 
 ### ⚠️ Index Keys Found (10% of cases)
+
 ```javascript
 // Found in App.js navigation
 {sections.map((section, index) => (
@@ -234,6 +249,7 @@ const handleAddTask = useCallback((count) => {
 **Test Case:** Type one character in Subject ID field
 
 **Measured Results:**
+
 - Components re-rendered: ~150
 - Form elements re-rendered: ~100
 - Time to update: ~16ms (acceptable)
@@ -241,20 +257,24 @@ const handleAddTask = useCallback((count) => {
 ### Optimization Opportunities
 
 #### 1. Context Value Memoization (IMMEDIATE)
+
 **Effort:** 1 hour
 **Impact:** 30-40% reduction in re-renders
 
 #### 2. React.memo on Form Elements (SHORT-TERM)
+
 **Effort:** 4 hours
 **Impact:** 60-70% reduction in re-renders
 
 **Priority Order:**
+
 1. InputElement (used 100+ times)
 2. SelectElement (used 50+ times)
 3. DataListElement (used 30+ times)
 4. CheckboxList (used 20+ times)
 
 #### 3. Split StoreContext (MEDIUM-TERM)
+
 **Effort:** 8 hours
 **Impact:** 70-80% reduction in re-renders
 
@@ -291,6 +311,7 @@ function StoreProvider({ children }) {
 **Status:** ✅ All hooks passing after Week 8 cleanup
 
 **Previously Fixed Issues:**
+
 1. useFormUpdates: Added setFormData to dependencies ✅
 2. useElectrodeGroups: Fixed effect dependencies ✅
 3. useArrayManagement: Removed stale closure risks ✅
@@ -302,6 +323,7 @@ function StoreProvider({ children }) {
 ## Error Boundaries
 
 ### Current State
+
 **Status:** ⚠️ NO ERROR BOUNDARIES IMPLEMENTED
 
 **Risk:** Production crashes expose internal errors to users, potentially losing hours of data entry.
@@ -358,21 +380,25 @@ export class ErrorBoundary extends Component {
 ### Current Coverage
 
 **Test Files Analyzed:**
+
 - Component tests: 14 files (one per component)
 - Integration tests: 5 files
 - Hook tests: 3 files
 
 **Coverage:**
+
 - Components: ~85% (excellent)
 - Hooks: ~90% (excellent)
 - Integration: ~75% (good)
 
 **Strengths:**
+
 - Comprehensive test suite
 - Good use of renderWithProviders helper
 - Integration tests cover real workflows
 
 **Areas for Improvement:**
+
 - Add more edge case tests
 - Test error scenarios
 - Add performance regression tests
@@ -384,11 +410,13 @@ export class ErrorBoundary extends Component {
 ### Priority 1 (Fix Immediately)
 
 **1. Add Error Boundaries**
+
 - **Impact:** Prevents data loss on crashes
 - **Effort:** 2 hours
 - **Files:** App.js, ErrorBoundary.jsx
 
 **2. Memoize Context Value**
+
 - **Impact:** 30-40% performance improvement
 - **Effort:** 1 hour
 - **Files:** StoreContext.js
@@ -396,11 +424,13 @@ export class ErrorBoundary extends Component {
 ### Priority 2 (Fix Soon)
 
 **3. Add React.memo to Form Elements**
+
 - **Impact:** 60-70% performance improvement
 - **Effort:** 4 hours
 - **Files:** InputElement.jsx, SelectElement.jsx, DataListElement.jsx, CheckboxList.jsx
 
 **4. Split Large Components**
+
 - **Impact:** Improved maintainability
 - **Effort:** 8 hours
 - **Files:** OptogeneticsFields.jsx, ElectrodeGroupFields.jsx
@@ -408,11 +438,13 @@ export class ErrorBoundary extends Component {
 ### Priority 3 (Nice to Have)
 
 **5. Split StoreContext**
+
 - **Impact:** 70-80% performance improvement
 - **Effort:** 8 hours
 - **Files:** StoreContext.js, all components
 
 **6. Add Performance Monitoring**
+
 - **Impact:** Better visibility into performance
 - **Effort:** 4 hours
 - **Files:** App.js
@@ -517,12 +549,14 @@ export class ErrorBoundary extends Component {
 The rec_to_nwb_yaml_creator demonstrates solid React fundamentals with successful StoreContext migration eliminating prop drilling. The component architecture is logical, custom hooks are well-designed, and controlled components are consistently used.
 
 **Key Achievements:**
+
 - Clean architecture with StoreContext
 - Comprehensive test coverage (85%+)
 - Consistent patterns across 14 components
 - Good hook design and composition
 
 **Must Fix:**
+
 1. Add error boundaries (2 hours)
 2. Memoize context value (1 hour)
 
@@ -537,6 +571,7 @@ The rec_to_nwb_yaml_creator demonstrates solid React fundamentals with successfu
 **Estimated Effort to Production-Ready:** 15 hours (immediate + short-term fixes)
 
 **Risk Assessment:** MEDIUM-LOW
+
 - No critical bugs
 - Functional and stable
 - Performance acceptable
@@ -547,12 +582,14 @@ The codebase is well-positioned for optimization. The architecture is sound, and
 ---
 
 **Total Issues Found:**
+
 - Critical: 2
 - High: 2
 - Medium: 4
 - Low: 6
 
 **Overall Grade:** B+ (85/100)
+
 - Architecture: A-
 - Performance: B
 - Error Handling: C

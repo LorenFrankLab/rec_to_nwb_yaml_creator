@@ -73,6 +73,13 @@ const AlertModal = ({ isOpen, message, title = 'Alert', onClose, type = 'info' }
   const titleId = 'alert-modal-title';
   const messageId = 'alert-modal-message';
 
+  // Icon mapping for accessibility (not relying on color alone)
+  const iconMap = {
+    info: 'ℹ️',
+    warning: '⚠️',
+    error: '❌',
+  };
+
   return (
     <div
       className="alert-modal-overlay"
@@ -88,6 +95,9 @@ const AlertModal = ({ isOpen, message, title = 'Alert', onClose, type = 'info' }
         onClick={(e) => e.stopPropagation()} // Prevent overlay click when clicking content
       >
         <h2 id={titleId} className="alert-modal-title">
+          <span className="alert-modal-icon" aria-hidden="true">
+            {iconMap[type]}
+          </span>
           {title}
         </h2>
         <p id={messageId} className="alert-modal-message">

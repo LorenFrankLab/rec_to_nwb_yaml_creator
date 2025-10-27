@@ -35,7 +35,13 @@
 }
 
 .alert-modal-error {
-  border-left-color: #d32f2f; // Red for error
+  border-left-color: #DC2626; // Red for error (matches App.scss validation-error color)
+}
+
+.alert-modal-icon {
+  margin-right: 0.5rem;
+  font-size: 1.25rem;
+  vertical-align: middle;
 }
 
 .alert-modal-title {
@@ -43,6 +49,8 @@
   font-size: 1.5rem;
   font-weight: 600;
   color: #212121;
+  display: flex;
+  align-items: center;
 }
 
 .alert-modal-message {

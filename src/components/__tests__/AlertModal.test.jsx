@@ -143,7 +143,7 @@ describe('AlertModal', () => {
       const labelledBy = dialog.getAttribute('aria-labelledby');
 
       const title = document.getElementById(labelledBy);
-      expect(title.textContent).toBe('My Alert');
+      expect(title.textContent).toContain('My Alert'); // Contains, not exact match (includes icon)
     });
 
     it('should have aria-describedby pointing to message', () => {

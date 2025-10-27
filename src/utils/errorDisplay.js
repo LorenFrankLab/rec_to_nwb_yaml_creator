@@ -1,5 +1,29 @@
 import { showCustomValidityError, titleCase } from '../utils';
 
+// Callback for showing alert modals (set by App component)
+let alertCallback = null;
+
+/**
+ * Sets the callback function for displaying alert modals
+ * @param {Function} callback Function to call instead of window.alert
+ */
+export const setAlertCallback = (callback) => {
+  alertCallback = callback;
+};
+
+/**
+ * Shows an alert using callback if available, otherwise falls back to window.alert
+ * @param {string} message The message to display
+ */
+const showAlert = (message) => {
+  if (alertCallback) {
+    alertCallback(message);
+  } else {
+    // eslint-disable-next-line no-alert
+    window.alert(message);
+  }
+};
+
 /**
  * Displays an error message to the user if Ajv fails validation
  *
@@ -52,8 +76,7 @@ export const showErrorMessage = (error) => {
     errorMessage = 'Date of birth needs to comply with ISO 8061 format (https://en.wikipedia.org/wiki/ISO_8601)';
   }
 
-  // eslint-disable-next-line no-alert
-  window.alert(`${itemName} - ${errorMessage}`);
+  showAlert(`${itemName} - ${errorMessage}`);
 };
 
 /**
@@ -75,6 +98,5 @@ export const displayErrorOnUI = (id, message) => {
     return;
   }
 
-  // eslint-disable-next-line no-alert
-  window.alert(message);
+  showAlert(message);
 };
