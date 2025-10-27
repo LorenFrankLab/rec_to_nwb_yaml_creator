@@ -113,6 +113,9 @@ export function formatDeterministicFilename(model) {
 /**
  * Creates and triggers download of a YAML file in the browser
  *
+ * Creates a blob URL for the YAML content and immediately revokes it after
+ * triggering the download to prevent memory leaks.
+ *
  * @param {string} fileName - Name for the downloaded file (e.g., "metadata.yml")
  * @param {string} content - YAML content as a string
  *
@@ -124,9 +127,16 @@ export function formatDeterministicFilename(model) {
 export function downloadYamlFile(fileName, content) {
   const blob = new Blob([content], { type: 'text/yaml;charset=utf-8;' });
   const downloadLink = document.createElement('a');
-  downloadLink.download = fileName;
-  downloadLink.href = window.webkitURL.createObjectURL(blob);
-  downloadLink.click();
+  const url = URL.createObjectURL(blob);
+
+  try {
+    downloadLink.download = fileName;
+    downloadLink.href = url;
+    downloadLink.click();
+  } finally {
+    // Always revoke the URL to free memory, even if click fails
+    URL.revokeObjectURL(url);
+  }
 }
 
 /**
