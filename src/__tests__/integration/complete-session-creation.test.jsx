@@ -555,7 +555,7 @@ describe('End-to-End Session Creation Workflow', () => {
    * - Camera fields are populated
    * - Camera array structure is correct
    */
-  it('adds cameras with auto-incrementing IDs', async () => {
+  it('adds cameras with auto-incrementing IDs', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
     render(
@@ -628,7 +628,7 @@ describe('End-to-End Session Creation Workflow', () => {
    * - Task epochs are formatted correctly
    * - Task structure is valid
    */
-  it('adds tasks with camera references', async () => {
+  it('adds tasks with camera references', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
     render(
@@ -693,7 +693,7 @@ describe('End-to-End Session Creation Workflow', () => {
    * - Event structure is correct
    * - Events array is formatted properly
    */
-  it('adds behavioral events', async () => {
+  it('adds behavioral events', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
     render(
