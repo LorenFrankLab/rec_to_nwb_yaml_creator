@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import PropTypes from 'prop-types';
 import { sanitizeTitle } from '../utils';
 import InfoIcon from './InfoIcon';
@@ -13,11 +13,13 @@ import { useStableId } from '../hooks/useStableId';
  * - Controlled: pass `value` + `onChange` props
  * - Uncontrolled: pass `defaultValue` prop (legacy)
  *
+ * Performance: Wrapped in React.memo to prevent unnecessary re-renders
+ *
  * @param {Object} prop Custom element's properties
  *
  * @returns Virtual DOM contain an HTML Datalist with supporting HTML tags and code
  */
-const DataListElement = (prop) => {
+const DataListElementComponent = (prop) => {
   const {
     id: providedId,
     name,
@@ -114,7 +116,7 @@ const DataListElement = (prop) => {
   );
 };
 
-DataListElement.propTypes = {
+DataListElementComponent.propTypes = {
   title: PropTypes.string.isRequired,
   type: PropTypes.string,
   value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
@@ -137,7 +139,7 @@ DataListElement.propTypes = {
   }),
 };
 
-DataListElement.defaultProps = {
+DataListElementComponent.defaultProps = {
   id: undefined,
   type: 'text',
   value: '',
@@ -148,5 +150,16 @@ DataListElement.defaultProps = {
   required: false,
   validation: null,
 };
+
+const arePropsEqual = (prevProps, nextProps) => {
+  return (
+    prevProps.value === nextProps.value &&
+    prevProps.name === nextProps.name &&
+    prevProps.dataItems === nextProps.dataItems &&
+    prevProps.required === nextProps.required
+  );
+};
+
+const DataListElement = memo(DataListElementComponent, arePropsEqual);
 
 export default DataListElement;
