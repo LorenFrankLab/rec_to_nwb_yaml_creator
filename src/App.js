@@ -29,6 +29,7 @@ import {
   isProduction,
   useMount,
 } from './utils';
+import { formatElectrodeGroupLabel } from './utils/labelFormatters';
 import {
   defaultYMLValues,
 } from './valueList';
@@ -355,7 +356,7 @@ export function App() {
                         }}
                         onKeyDown={handleNavKeyDown}
                       >
-                        {`Electrode Group ${fd.id} - ${fd.location || 'Unnamed'}`}
+                        {formatElectrodeGroupLabel(fd)}
                       </a>
                     </li>
                   </ul>

@@ -7,6 +7,7 @@ import ArrayUpdateMenu from '../ArrayUpdateMenu';
 import ArrayItemControl from '../element/ArrayItemControl';
 import ChannelMap from '../ntrode/ChannelMap';
 import { locations, deviceTypes, units } from '../valueList';
+import { formatElectrodeGroupLabel } from '../utils/labelFormatters';
 
 /**
  * ElectrodeGroupFields Component
@@ -54,7 +55,7 @@ export default function ElectrodeGroupFields() {
                 key={electrodeGroupId}
                 className="array-item"
               >
-                <summary>Electrode Group {electrodeGroup.id} - {electrodeGroup.location || 'Unnamed'}</summary>
+                <summary>{formatElectrodeGroupLabel(electrodeGroup)}</summary>
                 <ArrayItemControl
                   index={index}
                   keyValue={key}
