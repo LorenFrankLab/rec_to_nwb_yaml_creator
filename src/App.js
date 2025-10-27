@@ -202,6 +202,21 @@ export function App() {
     }
   };
 
+  /**
+   * Handles keyboard file upload (Enter and Space keys)
+   * Implements WCAG 2.1 Level A requirement for keyboard accessibility
+   *
+   * @param {object} e Keyboard event object
+   */
+  const handleFileUploadKeyDown = (e) => {
+    // Only handle Enter and Space keys
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault(); // Prevent default Space scroll behavior
+      // Trigger the hidden file input's click event
+      document.getElementById('importYAMLFile').click();
+    }
+  };
+
   useMount(() => {
     // set app version
     const { version } = packageJson;
@@ -273,7 +288,13 @@ export function App() {
         &nbsp;&nbsp;&nbsp;
       </span>
       <div className="file-upload-region">
-        <label htmlFor="importYAMLFile">
+        <label
+          htmlFor="importYAMLFile"
+          tabIndex="0"
+          role="button"
+          aria-label="Import YAML file to populate form fields"
+          onKeyDown={handleFileUploadKeyDown}
+        >
           &nbsp;&nbsp;
           <FontAwesomeIcon icon={faDownload} className="pointer" size="2xs" title="Download a Yaml file to populate fields" />
         </label>
