@@ -39,7 +39,7 @@
  * }
  */
 
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useStore } from './store';
 
@@ -54,6 +54,16 @@ const StoreContext = createContext(null);
  *
  * Creates a single store instance and provides it to all descendant components.
  * Must wrap the entire component tree that needs access to the store.
+ *
+ * Performance Optimization (P0.4):
+ * Memoizes the context value to prevent unnecessary re-renders of all consumers
+ * when the store object reference changes. Without memoization, every formData change
+ * would create a new store object, causing ALL consumers to re-render even if their
+ * specific slice of data hasn't changed.
+ *
+ * The memoization ensures that:
+ * - model (formData) is only updated when data actually changes
+ * - actions and selectors maintain stable references (they're already memoized in useStore)
  *
  * @param {Object} props - Component props
  * @param {React.ReactNode} props.children - Child components
@@ -72,9 +82,22 @@ const StoreContext = createContext(null);
  * </StoreProvider>
  */
 export function StoreProvider({ children, initialState }) {
-  const store = useStore(initialState); // Created ONCE at top level
+  const store = useStore(initialState);
 
-  return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
+  // Memoize context value to prevent unnecessary re-renders
+  // Note: store.model, store.actions, and store.selectors are already stable
+  // from useStore's internal memoization, but we memoize the whole object
+  // to prevent a new object reference on every render
+  const memoizedStore = useMemo(
+    () => store,
+    [store.model, store.actions, store.selectors]
+  );
+
+  return (
+    <StoreContext.Provider value={memoizedStore}>
+      {children}
+    </StoreContext.Provider>
+  );
 }
 
 StoreProvider.propTypes = {
