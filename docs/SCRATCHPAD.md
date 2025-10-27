@@ -1,21 +1,13 @@
 # Scratchpad - Phase 3
 
 **Current Phase:** Phase 3 - Code Quality & Refactoring - Week 5-7
-**Status:** 🟢 7 Components Extracted - ElectrodeGroupFields Complete ✅
-**Last Updated:** 2025-10-26 20:25
+**Status:** 🟢 8 Components Extracted - OptogeneticsFields Complete ✅
+**Last Updated:** 2025-10-26 21:52
 **Branch:** `modern`
 
 ---
 
-## 🎯 Current Task: OptogeneticsFields Extraction (In Progress)
-
-### Task Overview
-
-**Status:** 🟡 Creating OptogeneticsFields component (~786 lines)
-**What:** Extracting all optogenetics sections (scientifically cohesive)
-**Approach:** TDD (tests written first), props-based component
-**Sections:** opto_excitation_source, optical_fiber, virus_injection, fs_gui_yamls, opto_software
-**Current Progress:** 7 of 10+ components extracted, OptogeneticsFields tests written
+## 🎯 Current Task: Component Extraction (Next: AssociatedFilesFields)
 
 ### Components Extracted So Far
 
@@ -26,8 +18,50 @@
 5. ✅ **TasksFields** (137 lines) - Array with dependencies, 8 tests ✅
 6. ✅ **BehavioralEventsFields** (88 lines) - Array with mixed elements, 7 tests ✅
 7. ✅ **ElectrodeGroupFields** (268 lines) - Complex array with ntrode integration, 26 tests ✅
+8. ✅ **OptogeneticsFields** (840 lines) - Largest component, 5 subsections, 13 tests ✅
 
-**Total:** ~801 lines extracted, 106 component tests, **1745/1745 tests passing (100%)**, **18/18 YAML reproduction tests passing**
+**Total:** ~1641 lines extracted, 119 component tests, **1758/1758 tests passing (100%)**, **18/18 YAML reproduction tests passing**
+
+---
+
+## 📝 Session Summary: OptogeneticsFields Extraction (2025-10-26 21:52)
+
+### What Was Accomplished
+
+**Extraction Complete:**
+- Created OptogeneticsFields.jsx (840 lines, largest component to date)
+- 5 subsections: opto_excitation_source, optical_fiber, virus_injection, fs_gui_yamls, opto_software
+- Reduced App.js by 773 lines
+- Added 13 comprehensive tests (309 lines)
+- All tests passing: 1758/1758 (100%), 18/18 golden YAML
+
+**Critical Bugs Fixed (from code review):**
+1. Field name inconsistency: `power_in_w` → `power_in_W` (now matches NWB schema)
+2. Wrong property: `formData.optogenetics_source` → `formData.opto_excitation_source`
+3. Removed 5 duplicate onChange handlers in OptogeneticsFields
+4. Removed 3 duplicate onChange handlers in App.js (associated_files, associated_video_files)
+
+**Quality Improvements:**
+- Removed 13 lines of commented-out code
+- Added missing `type` prop to opto_software InputElement
+- Zero build warnings for duplicate props
+- Clean component interface (12 props)
+
+### Commit History
+- `24ba4d5` - refactor: extract OptogeneticsFields component
+
+### Key Learnings
+1. **Scientific Organization**: User feedback crucial - "all optogenetics components belong together" guided scope
+2. **Code Review Value**: Found 3 critical bugs (field name, property name, 8 duplicate onChange) before merge
+3. **Largest Component Yet**: 840 lines is manageable with clear subsections and good test coverage
+4. **Integration Testing**: RadioList/CheckboxList require `updateFormData`, not `handleChange` for onChange
+
+### Next Steps
+- Extract AssociatedFilesFields component
+- Continue component extraction pattern
+- Consider extracting remaining large sections
+
+---
 
 ### Code Review Summary (2025-10-26 19:30)
 
