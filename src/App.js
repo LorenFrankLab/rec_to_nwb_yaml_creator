@@ -72,7 +72,49 @@ export function App() {
     if (result.formData) {
       // Import updates entire form state at once
       actions.setFormData(result.formData);
+
+      // Show import summary if available
+      if (result.importSummary) {
+        showImportSummary(result.importSummary);
+      }
     }
+  };
+
+  /**
+   * Display import summary modal
+   *
+   * @param {object} summary Import summary with imported/excluded fields
+   */
+  const showImportSummary = (summary) => {
+    const { importedFields, excludedFields, hasExclusions } = summary;
+
+    // Format field names for display (convert snake_case to Title Case)
+    const formatFieldName = (field) =>
+      field.split('_').map(word =>
+        word.charAt(0).toUpperCase() + word.slice(1)
+      ).join(' ');
+
+    // Build summary message
+    let message = hasExclusions
+      ? `**Import completed with exclusions**\n\n`
+      : `**Import successful**\n\n`;
+
+    message += `✓ **${importedFields.length} fields imported:**\n`;
+    message += importedFields.map(field => `  • ${formatFieldName(field)}`).join('\n');
+
+    if (hasExclusions) {
+      message += `\n\n✗ **${excludedFields.length} fields excluded:**\n`;
+      message += excludedFields.map(({ field, reason }) =>
+        `  • ${formatFieldName(field)}: ${reason}`
+      ).join('\n');
+    }
+
+    setAlertState({
+      isOpen: true,
+      message,
+      title: hasExclusions ? 'Import Summary - Partial Import' : 'Import Summary - Success',
+      type: hasExclusions ? 'warning' : 'success',
+    });
   };
 
   /**

@@ -219,10 +219,15 @@ cameras:
         expect(result.formData.institution).toBe('Test University');
         // cameras should be excluded (has validation error)
         expect(result.formData.cameras).toEqual(emptyFormData.cameras || []);
-        expect(mockAlert).toHaveBeenCalledWith(
-          expect.stringContaining('Entries Excluded')
-        );
-        expect(mockAlert.mock.calls[0][0]).toContain('cameras[0].id must be integer');
+
+        // Check import summary instead of alert
+        expect(result.importSummary).toBeDefined();
+        expect(result.importSummary.hasExclusions).toBe(true);
+        expect(result.importSummary.excludedFields).toHaveLength(1);
+        expect(result.importSummary.excludedFields[0].field).toBe('cameras');
+        expect(result.importSummary.excludedFields[0].reason).toContain('cameras[0].id must be integer');
+        expect(result.importSummary.importedFields).toContain('lab');
+        expect(result.importSummary.importedFields).toContain('institution');
       });
 
       it('extracts top-level field from nested error paths', async () => {

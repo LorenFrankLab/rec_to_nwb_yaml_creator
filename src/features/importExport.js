@@ -99,7 +99,8 @@ export async function importFiles(file, options = {}) {
 
       if (issues.length === 0) {
         // No validation errors - ensure relevant keys exist and load all data
-        Object.keys(emptyFormData).forEach((key) => {
+        const formContentKeys = Object.keys(emptyFormData);
+        formContentKeys.forEach((key) => {
           if (!Object.hasOwn(jsonFileContent, key)) {
             jsonFileContent[key] = emptyFormData[key];
           }
@@ -109,10 +110,22 @@ export async function importFiles(file, options = {}) {
           onProgress({ stage: 'complete', progress: 100 });
         }
 
+        // Build import summary for successful import
+        const importedFields = formContentKeys.filter(key =>
+          Object.hasOwn(jsonFileContent, key) &&
+          jsonFileContent[key] !== emptyFormData[key]
+        );
+
         resolve({
           success: true,
           error: null,
           formData: structuredClone(jsonFileContent),
+          importSummary: {
+            totalFields: formContentKeys.filter(key => Object.hasOwn(jsonFileContent, key)).length,
+            importedFields,
+            excludedFields: [],
+            hasExclusions: false,
+          },
         });
         return;
       }
@@ -168,20 +181,32 @@ export async function importFiles(file, options = {}) {
         formContent.subject.sex = 'U';
       }
 
-      // Alert user about excluded entries
-      if (allErrorMessages.length > 0) {
-        // eslint-disable-next-line no-alert
-        window.alert(`Entries Excluded\n\n${allErrorMessages.join('\n')}`);
-      }
-
       if (onProgress) {
         onProgress({ stage: 'complete', progress: 100 });
       }
+
+      // Build import summary
+      const importedFields = formContentKeys.filter(key =>
+        !allErrorIds.includes(key) && Object.hasOwn(jsonFileContent, key)
+      );
+
+      const excludedFields = allErrorIds.map(fieldId => ({
+        field: fieldId,
+        reason: issues
+          .filter(issue => issue.path.split('[')[0].split('.')[0] === fieldId)
+          .map(issue => issue.message)[0] || 'Validation error'
+      }));
 
       resolve({
         success: true,
         error: null,
         formData: structuredClone(formContent),
+        importSummary: {
+          totalFields: formContentKeys.filter(key => Object.hasOwn(jsonFileContent, key)).length,
+          importedFields,
+          excludedFields,
+          hasExclusions: excludedFields.length > 0,
+        },
       });
     };
 
