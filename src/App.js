@@ -16,6 +16,7 @@ import ElectrodeGroupFields from './components/ElectrodeGroupFields';
 import OptogeneticsFields from './components/OptogeneticsFields';
 import AssociatedFilesFields from './components/AssociatedFilesFields';
 import SessionInfoFields from './components/SessionInfoFields';
+import ExperimenterFields from './components/ExperimenterFields';
 
 import logo from './logo.png';
 import packageJson from '../package.json';
@@ -432,22 +433,10 @@ useEffect(() => {
       }}
     >
       <div className="form-container">
-        <div id="experimenter_name-area" className="area-region">
-        <ListElement
-          id="experimenter_name"
-          type="text"
-          name="experimenter_name"
-          inputPlaceholder="No experimenter"
-          defaultValue={formData.experimenter_name}
-          title="Experimenter Name"
-          placeholder="LastName, FirstName"
-          listPlaceHolder="LastName, FirstName"
+        <ExperimenterFields
+          formData={formData}
           updateFormData={updateFormData}
-          metaData={{
-            nameValue: 'experimenter_name',
-          }}
-    />
-        </div>
+        />
         <div id="lab-area" className="area-region">
           <InputElement
             id="lab"

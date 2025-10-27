@@ -605,6 +605,7 @@ export default function SubjectFields() {
 - [ ] Extract magic numbers to constants
 - [ ] Ensure there aren't redundant tests
 - [ ] Remove any commented-out code
+- [ ] Strict mode compliance
 - [ ] Remove any extraneous console.log statements
 - [ ] Make sure all comments are relevant and use comments best practices
 - [ ] **Estimated Time:** 1 week
