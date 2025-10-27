@@ -1,0 +1,370 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - link "Skip to main content" [ref=e3] [cursor=pointer]:
+    - /url: "#main-content"
+  - link "Skip to navigation" [ref=e4] [cursor=pointer]:
+    - /url: "#navigation"
+  - link "Loren Frank Lab logo" [ref=e6] [cursor=pointer]:
+    - /url: /
+    - img "Loren Frank Lab logo" [ref=e7]
+  - generic [ref=e8]:
+    - navigation "Form section navigation" [ref=e9]:
+      - generic [ref=e10]:
+        - paragraph [ref=e11]: Navigation
+        - list [ref=e12]:
+          - listitem [ref=e13]:
+            - link "Experimenter Name" [ref=e14] [cursor=pointer]:
+              - /url: "#experimenter_name-area"
+          - listitem [ref=e15]:
+            - link "Lab" [ref=e16] [cursor=pointer]:
+              - /url: "#lab-area"
+          - listitem [ref=e17]:
+            - link "Institution" [ref=e18] [cursor=pointer]:
+              - /url: "#institution-area"
+          - listitem [ref=e19]:
+            - link "Experiment Description" [ref=e20] [cursor=pointer]:
+              - /url: "#experiment_description-area"
+          - listitem [ref=e21]:
+            - link "Session Description" [ref=e22] [cursor=pointer]:
+              - /url: "#session_description-area"
+          - listitem [ref=e23]:
+            - link "Session Id" [ref=e24] [cursor=pointer]:
+              - /url: "#session_id-area"
+          - listitem [ref=e25]:
+            - link "Keywords" [ref=e26] [cursor=pointer]:
+              - /url: "#keywords-area"
+          - listitem [ref=e27]:
+            - link "Subject" [ref=e28] [cursor=pointer]:
+              - /url: "#subject-area"
+          - listitem [ref=e29]:
+            - link "Data Acq Device" [ref=e30] [cursor=pointer]:
+              - /url: "#data_acq_device-area"
+          - listitem [ref=e31]:
+            - link "Cameras" [ref=e32] [cursor=pointer]:
+              - /url: "#cameras-area"
+          - listitem [ref=e33]:
+            - link "Tasks" [ref=e34] [cursor=pointer]:
+              - /url: "#tasks-area"
+          - listitem [ref=e35]:
+            - link "Associated Files" [ref=e36] [cursor=pointer]:
+              - /url: "#associated_files-area"
+          - listitem [ref=e37]:
+            - link "Associated Video Files" [ref=e38] [cursor=pointer]:
+              - /url: "#associated_video_files-area"
+          - listitem [ref=e39]:
+            - link "Units" [ref=e40] [cursor=pointer]:
+              - /url: "#units-area"
+          - listitem [ref=e41]:
+            - link "Times Period Multiplier" [ref=e42] [cursor=pointer]:
+              - /url: "#times_period_multiplier-area"
+          - listitem [ref=e43]:
+            - link "Raw Data To Volts" [ref=e44] [cursor=pointer]:
+              - /url: "#raw_data_to_volts-area"
+          - listitem [ref=e45]:
+            - link "Default Header File Path" [ref=e46] [cursor=pointer]:
+              - /url: "#default_header_file_path-area"
+          - listitem [ref=e47]:
+            - link "Behavioral Events" [ref=e48] [cursor=pointer]:
+              - /url: "#behavioral_events-area"
+          - listitem [ref=e49]:
+            - link "Device" [ref=e50] [cursor=pointer]:
+              - /url: "#device-area"
+          - listitem [ref=e51]:
+            - link "Opto Excitation Source" [ref=e52] [cursor=pointer]:
+              - /url: "#opto_excitation_source-area"
+          - listitem [ref=e53]:
+            - link "Optical Fiber" [ref=e54] [cursor=pointer]:
+              - /url: "#optical_fiber-area"
+          - listitem [ref=e55]:
+            - link "Virus Injection" [ref=e56] [cursor=pointer]:
+              - /url: "#virus_injection-area"
+          - listitem [ref=e57]:
+            - link "Fs Gui Yamls" [ref=e58] [cursor=pointer]:
+              - /url: "#fs_gui_yamls-area"
+          - listitem [ref=e59]:
+            - link "Optogenetic Stimulation Software" [ref=e60] [cursor=pointer]:
+              - /url: "#optogenetic_stimulation_software-area"
+          - listitem [ref=e61]:
+            - link "Electrode Groups" [ref=e62] [cursor=pointer]:
+              - /url: "#electrode_groups-area"
+    - main "NWB metadata form" [ref=e63]:
+      - heading "Rec-to-NWB YAML Creator Import YAML file to populate form fields Choose File |Sample YAML" [level=2] [ref=e64]:
+        - text: Rec-to-NWB YAML Creator
+        - generic [ref=e65] [cursor=pointer]:
+          - button "Import YAML file to populate form fields" [ref=e66]:
+            - img [ref=e67]
+            - text: Import YAML
+          - button "Choose File" [ref=e69]
+        - text: "|"
+        - link "Sample YAML" [ref=e71] [cursor=pointer]:
+          - /url: https://raw.githubusercontent.com/LorenFrankLab/franklabnwb/master/yaml/yaml-generator-sample-file.yml
+      - generic [ref=e72]:
+        - generic [ref=e73]:
+          - generic [ref=e75]:
+            - generic "LastName, FirstName" [ref=e76]:
+              - text: Experimenter Name
+              - generic "LastName, FirstName" [ref=e77]:
+                - img [ref=e78] [cursor=pointer]
+            - generic [ref=e81]:
+              - generic [ref=e82]:
+                - text: Doe, John
+                - button "✘" [ref=e83] [cursor=pointer]
+              - textbox "Experimenter Name Doe, John ✘ +" [ref=e84]:
+                - /placeholder: LastName, FirstName
+              - button "+" [ref=e85] [cursor=pointer]
+          - generic [ref=e87]:
+            - generic [ref=e88]:
+              - text: Lab
+              - generic "Laboratory where the experiment is conducted" [ref=e89]:
+                - img [ref=e90] [cursor=pointer]
+            - generic [ref=e92]:
+              - textbox "Lab" [ref=e93]:
+                - /placeholder: Laboratory where the experiment is conducted
+                - text: Frank
+              - status [ref=e94]
+          - generic [ref=e96]:
+            - generic [ref=e97]:
+              - text: Institution
+              - generic "Type to find an affiliated University or Research center" [ref=e98]:
+                - img [ref=e99] [cursor=pointer]
+            - combobox "Institution" [ref=e102]: University of California, San Francisco
+          - generic [ref=e104]:
+            - generic [ref=e105]:
+              - text: Experiment Description
+              - generic "Description of subject and where subject came from (e.g., breeder, if animal)" [ref=e106]:
+                - img [ref=e107] [cursor=pointer]
+            - generic [ref=e109]:
+              - textbox "Experiment Description" [active] [ref=e110]:
+                - /placeholder: Description of subject and where subject came from (e.g., breeder, if animal)
+              - status [ref=e111]
+          - generic [ref=e113]:
+            - generic [ref=e114]:
+              - text: Session Description
+              - generic "Description of current session, e.g - w-track task" [ref=e115]:
+                - img [ref=e116] [cursor=pointer]
+            - generic [ref=e118]:
+              - textbox "Session Description" [ref=e119]:
+                - /placeholder: Description of current session, e.g - w-track task
+              - status [ref=e120]
+          - generic [ref=e122]:
+            - generic [ref=e123]:
+              - text: Session Id
+              - generic "Session id, e.g - 1" [ref=e124]:
+                - img [ref=e125] [cursor=pointer]
+            - generic [ref=e127]:
+              - textbox "Session Id" [ref=e128]:
+                - /placeholder: Session id, e.g - 1
+                - text: modified_session_id
+              - status [ref=e129]
+          - generic [ref=e131]:
+            - generic "Keywords" [ref=e132]:
+              - text: Keywords
+              - generic "Keywords" [ref=e133]:
+                - img [ref=e134] [cursor=pointer]
+            - generic [ref=e137]:
+              - text: No keyword
+              - textbox "Keywords No keyword +" [ref=e138]:
+                - /placeholder: Type Keywords
+              - button "+" [ref=e139] [cursor=pointer]
+          - group [ref=e141]:
+            - generic "Subject" [ref=e142] [cursor=pointer]
+            - generic [ref=e143]:
+              - generic [ref=e144]:
+                - generic [ref=e145]:
+                  - text: Description
+                  - generic "Summary of animal model/patient/specimen being examined" [ref=e146]:
+                    - img [ref=e147] [cursor=pointer]
+                - generic [ref=e149]:
+                  - textbox "Description" [ref=e150]:
+                    - /placeholder: Summary of animal model/patient/specimen being examined
+                  - status [ref=e151]
+              - generic [ref=e152]:
+                - generic [ref=e153]:
+                  - text: Species
+                  - generic "Type to find a species" [ref=e154]:
+                    - img [ref=e155] [cursor=pointer]
+                - combobox "Species" [ref=e158]
+              - generic [ref=e159]:
+                - generic [ref=e160]:
+                  - text: Genotype
+                  - generic "Genetic strain. If absent, assume Wild Type (WT)" [ref=e161]:
+                    - img [ref=e162] [cursor=pointer]
+                - combobox "Genotype" [ref=e165]
+              - generic [ref=e166]:
+                - generic "Sex" [ref=e167]:
+                  - text: Sex
+                  - generic "Sex of subject, single letter identifier" [ref=e168]:
+                    - img [ref=e169] [cursor=pointer]
+                - combobox "Sex" [ref=e172]:
+                  - option "M" [selected]
+                  - option "F"
+                  - option "U"
+                  - option "O"
+              - generic [ref=e173]:
+                - generic [ref=e174]:
+                  - text: Subject Id
+                  - generic "ID of animal/person used/participating in experiment (lab convention)" [ref=e175]:
+                    - img [ref=e176] [cursor=pointer]
+                - generic [ref=e178]:
+                  - textbox "Subject Id" [ref=e179]:
+                    - /placeholder: ID of animal/person used/participating in experiment (lab convention)
+                  - status [ref=e180]
+              - generic [ref=e181]:
+                - generic [ref=e182]:
+                  - text: Date of Birth
+                  - generic "Date of birth of subject" [ref=e183]:
+                    - img [ref=e184] [cursor=pointer]
+                - generic [ref=e186]:
+                  - textbox "Date of Birth" [ref=e187]:
+                    - /placeholder: Date of birth of subject
+                  - status [ref=e188]
+              - generic [ref=e189]:
+                - generic [ref=e190]:
+                  - text: Weight (grams)
+                  - generic "Weight at time of experiment, at time of surgery and at other important times (in grams)" [ref=e191]:
+                    - img [ref=e192] [cursor=pointer]
+                - generic [ref=e194]:
+                  - spinbutton "Weight (grams)" [ref=e195]: "0"
+                  - status [ref=e196]
+          - group [ref=e198]:
+            - generic "Data Acq Device" [ref=e199] [cursor=pointer]
+            - group [ref=e201]:
+              - 'generic "Device: SpikeGadgets" [ref=e202] [cursor=pointer]'
+              - generic [ref=e203]:
+                - button "Duplicate" [ref=e205] [cursor=pointer]
+                - button "Remove" [ref=e207] [cursor=pointer]
+              - generic [ref=e208]:
+                - generic [ref=e209]:
+                  - generic [ref=e210]:
+                    - text: Name
+                    - generic "Typically a number" [ref=e211]:
+                      - img [ref=e212] [cursor=pointer]
+                  - combobox "Name" [ref=e215]: SpikeGadgets
+                - generic [ref=e216]:
+                  - generic [ref=e217]:
+                    - text: System
+                    - generic "System of device" [ref=e218]:
+                      - img [ref=e219] [cursor=pointer]
+                  - combobox "System" [ref=e222]: SpikeGadgets
+                - generic [ref=e223]:
+                  - generic [ref=e224]:
+                    - text: Amplifier
+                    - generic "Type to find an amplifier" [ref=e225]:
+                      - img [ref=e226] [cursor=pointer]
+                  - combobox "Amplifier" [ref=e229]: Intan
+                - generic [ref=e230]:
+                  - generic [ref=e231]:
+                    - text: ADC circuit
+                    - generic "Type to find an adc circuit" [ref=e232]:
+                      - img [ref=e233] [cursor=pointer]
+                  - combobox "ADC circuit" [ref=e236]: Intan
+            - button "＋" [ref=e238] [cursor=pointer]
+          - group [ref=e240]:
+            - generic "Cameras" [ref=e241] [cursor=pointer]
+            - button "＋" [ref=e243] [cursor=pointer]
+          - group [ref=e245]:
+            - generic "Tasks" [ref=e246] [cursor=pointer]
+            - button "＋" [ref=e248] [cursor=pointer]
+          - group [ref=e250]:
+            - generic "Associated Files" [ref=e251] [cursor=pointer]
+            - button "＋" [ref=e253] [cursor=pointer]
+          - group [ref=e255]:
+            - generic "Associated Video Files" [ref=e256] [cursor=pointer]
+            - button "＋" [ref=e258] [cursor=pointer]
+          - group [ref=e260]:
+            - generic "Units" [ref=e261] [cursor=pointer]
+            - generic [ref=e262]:
+              - generic [ref=e263]:
+                - generic [ref=e264]:
+                  - text: Analog
+                  - generic "Analog" [ref=e265]:
+                    - img [ref=e266] [cursor=pointer]
+                - generic [ref=e268]:
+                  - textbox "Analog" [ref=e269]
+                  - status [ref=e270]
+              - generic [ref=e271]:
+                - generic [ref=e272]:
+                  - text: Behavioral Events
+                  - generic "Behavioral Events" [ref=e273]:
+                    - img [ref=e274] [cursor=pointer]
+                - generic [ref=e276]:
+                  - textbox "Behavioral Events" [ref=e277]
+                  - status [ref=e278]
+          - generic [ref=e280]:
+            - generic [ref=e281]:
+              - text: Times Period Multiplier
+              - generic "Times Period Multiplier" [ref=e282]:
+                - img [ref=e283] [cursor=pointer]
+            - generic [ref=e285]:
+              - spinbutton "Times Period Multiplier" [ref=e286]: "1.5"
+              - status [ref=e287]
+          - generic [ref=e289]:
+            - generic [ref=e290]:
+              - text: Ephys-to-Volt Conversion Factor
+              - generic "Scalar to multiply each element in data to convert it to the specified 'unit'. If the data are stored in acquisition system units or other units that require a conversion to be interpretable, multiply the data by 'conversion' to convert the data to the specified 'unit'." [ref=e291]:
+                - img [ref=e292] [cursor=pointer]
+            - generic [ref=e294]:
+              - spinbutton "Ephys-to-Volt Conversion Factor" [ref=e295]: "0.195"
+              - status [ref=e296]
+          - generic [ref=e298]:
+            - generic [ref=e299]:
+              - text: Default Header File Path
+              - generic "Default Header File Path" [ref=e300]:
+                - img [ref=e301] [cursor=pointer]
+            - generic [ref=e303]:
+              - textbox "Default Header File Path" [ref=e304]
+              - status [ref=e305]
+        - group [ref=e307]:
+          - generic "Behavioral Events" [ref=e308] [cursor=pointer]
+          - button "＋" [ref=e310] [cursor=pointer]
+        - group [ref=e312]:
+          - generic "Device" [ref=e313] [cursor=pointer]
+          - generic [ref=e315]:
+            - generic "Device names" [ref=e316]:
+              - text: Name
+              - generic "Device names" [ref=e317]:
+                - img [ref=e318] [cursor=pointer]
+            - generic [ref=e321]:
+              - text: No Device
+              - textbox "Name No Device +" [ref=e322]:
+                - /placeholder: Type Name
+              - button "+" [ref=e323] [cursor=pointer]
+        - group [ref=e325]:
+          - generic "Opto Excitation Source" [ref=e326] [cursor=pointer]
+          - button "＋" [ref=e328] [cursor=pointer]
+        - group [ref=e330]:
+          - generic "Optical Fiber" [ref=e331] [cursor=pointer]
+          - button "＋" [ref=e333] [cursor=pointer]
+        - group [ref=e335]:
+          - generic "Virus Injection" [ref=e336] [cursor=pointer]
+          - button "＋" [ref=e338] [cursor=pointer]
+        - group [ref=e340]:
+          - generic "FS Gui Yamls" [ref=e341] [cursor=pointer]
+          - button "＋" [ref=e343] [cursor=pointer]
+        - generic [ref=e345]:
+          - generic [ref=e346]:
+            - text: Optogenetic Stimulation Software
+            - generic "Software used for optogenetic stimulation" [ref=e347]:
+              - img [ref=e348] [cursor=pointer]
+          - generic [ref=e350]:
+            - textbox "Optogenetic Stimulation Software" [ref=e351]:
+              - /placeholder: Software used for optogenetic stimulation
+            - status [ref=e352]
+        - group [ref=e354]:
+          - generic "Electrode Groups" [ref=e355] [cursor=pointer]
+          - generic [ref=e357]:
+            - spinbutton [ref=e358]: "1"
+            - button "＋" [ref=e359] [cursor=pointer]
+        - generic [ref=e360]:
+          - button "Generate YML File" [ref=e361] [cursor=pointer]
+          - button "Reset" [ref=e362] [cursor=pointer]
+      - generic [ref=e363]:
+        - text: Copyright © 2025
+        - link "Loren Frank Lab" [ref=e364] [cursor=pointer]:
+          - /url: https://franklab.ucsf.edu/
+        - link "The University of California at San Francisco" [ref=e365] [cursor=pointer]:
+          - /url: http://www.ucsf.edu
+        - text: Version - 2.3.0
+```

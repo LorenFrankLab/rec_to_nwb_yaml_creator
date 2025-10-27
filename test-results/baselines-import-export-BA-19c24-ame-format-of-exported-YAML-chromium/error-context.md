@@ -1,0 +1,945 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - link "Skip to main content" [ref=e3] [cursor=pointer]:
+    - /url: "#main-content"
+  - link "Skip to navigation" [ref=e4] [cursor=pointer]:
+    - /url: "#navigation"
+  - link "Loren Frank Lab logo" [ref=e6] [cursor=pointer]:
+    - /url: /
+    - img "Loren Frank Lab logo" [ref=e7]
+  - generic [ref=e8]:
+    - navigation "Form section navigation" [ref=e9]:
+      - generic [ref=e10]:
+        - paragraph [ref=e11]: Navigation
+        - list [ref=e12]:
+          - listitem [ref=e13]:
+            - link "Experimenter Name" [ref=e14] [cursor=pointer]:
+              - /url: "#experimenter_name-area"
+          - listitem [ref=e15]:
+            - link "Lab" [ref=e16] [cursor=pointer]:
+              - /url: "#lab-area"
+          - listitem [ref=e17]:
+            - link "Institution" [ref=e18] [cursor=pointer]:
+              - /url: "#institution-area"
+          - listitem [ref=e19]:
+            - link "Experiment Description" [ref=e20] [cursor=pointer]:
+              - /url: "#experiment_description-area"
+          - listitem [ref=e21]:
+            - link "Session Description" [ref=e22] [cursor=pointer]:
+              - /url: "#session_description-area"
+          - listitem [ref=e23]:
+            - link "Session Id" [ref=e24] [cursor=pointer]:
+              - /url: "#session_id-area"
+          - listitem [ref=e25]:
+            - link "Keywords" [ref=e26] [cursor=pointer]:
+              - /url: "#keywords-area"
+          - listitem [ref=e27]:
+            - link "Subject" [ref=e28] [cursor=pointer]:
+              - /url: "#subject-area"
+          - listitem [ref=e29]:
+            - link "Data Acq Device" [ref=e30] [cursor=pointer]:
+              - /url: "#data_acq_device-area"
+          - listitem [ref=e31]:
+            - link "Cameras" [ref=e32] [cursor=pointer]:
+              - /url: "#cameras-area"
+          - listitem [ref=e33]:
+            - link "Tasks" [ref=e34] [cursor=pointer]:
+              - /url: "#tasks-area"
+          - listitem [ref=e35]:
+            - link "Associated Files" [ref=e36] [cursor=pointer]:
+              - /url: "#associated_files-area"
+          - listitem [ref=e37]:
+            - link "Associated Video Files" [ref=e38] [cursor=pointer]:
+              - /url: "#associated_video_files-area"
+          - listitem [ref=e39]:
+            - link "Units" [ref=e40] [cursor=pointer]:
+              - /url: "#units-area"
+          - listitem [ref=e41]:
+            - link "Times Period Multiplier" [ref=e42] [cursor=pointer]:
+              - /url: "#times_period_multiplier-area"
+          - listitem [ref=e43]:
+            - link "Raw Data To Volts" [ref=e44] [cursor=pointer]:
+              - /url: "#raw_data_to_volts-area"
+          - listitem [ref=e45]:
+            - link "Default Header File Path" [ref=e46] [cursor=pointer]:
+              - /url: "#default_header_file_path-area"
+          - listitem [ref=e47]:
+            - link "Behavioral Events" [ref=e48] [cursor=pointer]:
+              - /url: "#behavioral_events-area"
+          - listitem [ref=e49]:
+            - link "Device" [ref=e50] [cursor=pointer]:
+              - /url: "#device-area"
+          - listitem [ref=e51]:
+            - link "Opto Excitation Source" [ref=e52] [cursor=pointer]:
+              - /url: "#opto_excitation_source-area"
+          - listitem [ref=e53]:
+            - link "Optical Fiber" [ref=e54] [cursor=pointer]:
+              - /url: "#optical_fiber-area"
+          - listitem [ref=e55]:
+            - link "Virus Injection" [ref=e56] [cursor=pointer]:
+              - /url: "#virus_injection-area"
+          - listitem [ref=e57]:
+            - link "Fs Gui Yamls" [ref=e58] [cursor=pointer]:
+              - /url: "#fs_gui_yamls-area"
+          - listitem [ref=e59]:
+            - link "Optogenetic Stimulation Software" [ref=e60] [cursor=pointer]:
+              - /url: "#optogenetic_stimulation_software-area"
+          - listitem [ref=e61]:
+            - link "Electrode Groups" [ref=e62] [cursor=pointer]:
+              - /url: "#electrode_groups-area"
+            - list [ref=e63]:
+              - listitem [ref=e64]:
+                - link "Electrode Group 0 - CA1" [ref=e65] [cursor=pointer]:
+                  - /url: "#electrode_group_item_0-area"
+            - list [ref=e66]:
+              - listitem [ref=e67]:
+                - link "Electrode Group 1 - CA3" [ref=e68] [cursor=pointer]:
+                  - /url: "#electrode_group_item_1-area"
+    - main "NWB metadata form" [ref=e69]:
+      - heading "Rec-to-NWB YAML Creator Import YAML file to populate form fields Choose File |Sample YAML" [level=2] [ref=e70]:
+        - text: Rec-to-NWB YAML Creator
+        - generic [ref=e71] [cursor=pointer]:
+          - button "Import YAML file to populate form fields" [ref=e72]:
+            - img [ref=e73]
+            - text: Import YAML
+          - button "Choose File" [ref=e75]
+        - text: "|"
+        - link "Sample YAML" [ref=e77] [cursor=pointer]:
+          - /url: https://raw.githubusercontent.com/LorenFrankLab/franklabnwb/master/yaml/yaml-generator-sample-file.yml
+      - generic [ref=e78]:
+        - generic [ref=e79]:
+          - generic [ref=e81]:
+            - generic "LastName, FirstName" [ref=e82]:
+              - text: Experimenter Name
+              - generic "LastName, FirstName" [ref=e83]:
+                - img [ref=e84] [cursor=pointer]
+            - generic [ref=e87]:
+              - generic [ref=e88]:
+                - text: Guidera, Jennifer
+                - button "✘" [ref=e89] [cursor=pointer]
+              - generic [ref=e90]:
+                - text: Comrie, Alison
+                - button "✘" [ref=e91] [cursor=pointer]
+              - textbox "Experimenter Name Guidera, Jennifer ✘ Comrie, Alison ✘ +" [ref=e92]:
+                - /placeholder: LastName, FirstName
+              - button "+" [ref=e93] [cursor=pointer]
+          - generic [ref=e95]:
+            - generic [ref=e96]:
+              - text: Lab
+              - generic "Laboratory where the experiment is conducted" [ref=e97]:
+                - img [ref=e98] [cursor=pointer]
+            - generic [ref=e100]:
+              - textbox "Lab" [ref=e101]:
+                - /placeholder: Laboratory where the experiment is conducted
+                - text: Frank
+              - status [ref=e102]
+          - generic [ref=e104]:
+            - generic [ref=e105]:
+              - text: Institution
+              - generic "Type to find an affiliated University or Research center" [ref=e106]:
+                - img [ref=e107] [cursor=pointer]
+            - combobox "Institution" [ref=e110]: University of California, San Francisco
+          - generic [ref=e112]:
+            - generic [ref=e113]:
+              - text: Experiment Description
+              - generic "Description of subject and where subject came from (e.g., breeder, if animal)" [ref=e114]:
+                - img [ref=e115] [cursor=pointer]
+            - generic [ref=e117]:
+              - textbox "Experiment Description" [ref=e118]:
+                - /placeholder: Description of subject and where subject came from (e.g., breeder, if animal)
+                - text: Spatial navigation with reward locations
+              - status [ref=e119]
+          - generic [ref=e121]:
+            - generic [ref=e122]:
+              - text: Session Description
+              - generic "Description of current session, e.g - w-track task" [ref=e123]:
+                - img [ref=e124] [cursor=pointer]
+            - generic [ref=e126]:
+              - textbox "Session Description" [ref=e127]:
+                - /placeholder: Description of current session, e.g - w-track task
+                - text: W-track alternation task with sleep epochs
+              - status [ref=e128]
+          - generic [ref=e130]:
+            - generic [ref=e131]:
+              - text: Session Id
+              - generic "Session id, e.g - 1" [ref=e132]:
+                - img [ref=e133] [cursor=pointer]
+            - generic [ref=e135]:
+              - textbox "Session Id" [ref=e136]:
+                - /placeholder: Session id, e.g - 1
+                - text: beans_01
+              - status [ref=e137]
+          - generic [ref=e139]:
+            - generic "Keywords" [ref=e140]:
+              - text: Keywords
+              - generic "Keywords" [ref=e141]:
+                - img [ref=e142] [cursor=pointer]
+            - generic [ref=e145]:
+              - generic [ref=e146]:
+                - text: spatial navigation
+                - button "✘" [ref=e147] [cursor=pointer]
+              - generic [ref=e148]:
+                - text: hippocampus
+                - button "✘" [ref=e149] [cursor=pointer]
+              - generic [ref=e150]:
+                - text: tetrode recording
+                - button "✘" [ref=e151] [cursor=pointer]
+              - textbox "Keywords spatial navigation ✘ hippocampus ✘ tetrode recording ✘ +" [ref=e152]:
+                - /placeholder: Type Keywords
+              - button "+" [ref=e153] [cursor=pointer]
+          - group [ref=e155]:
+            - generic "Subject" [ref=e156] [cursor=pointer]
+            - generic [ref=e157]:
+              - generic [ref=e158]:
+                - generic [ref=e159]:
+                  - text: Description
+                  - generic "Summary of animal model/patient/specimen being examined" [ref=e160]:
+                    - img [ref=e161] [cursor=pointer]
+                - generic [ref=e163]:
+                  - textbox "Description" [ref=e164]:
+                    - /placeholder: Summary of animal model/patient/specimen being examined
+                    - text: Long Evans Rat
+                  - status [ref=e165]
+              - generic [ref=e166]:
+                - generic [ref=e167]:
+                  - text: Species
+                  - generic "Type to find a species" [ref=e168]:
+                    - img [ref=e169] [cursor=pointer]
+                - combobox "Species" [ref=e172]: Rattus norvegicus
+              - generic [ref=e173]:
+                - generic [ref=e174]:
+                  - text: Genotype
+                  - generic "Genetic strain. If absent, assume Wild Type (WT)" [ref=e175]:
+                    - img [ref=e176] [cursor=pointer]
+                - combobox "Genotype" [ref=e179]: Wild Type
+              - generic [ref=e180]:
+                - generic "Sex" [ref=e181]:
+                  - text: Sex
+                  - generic "Sex of subject, single letter identifier" [ref=e182]:
+                    - img [ref=e183] [cursor=pointer]
+                - combobox "Sex" [ref=e186]:
+                  - option "M" [selected]
+                  - option "F"
+                  - option "U"
+                  - option "O"
+              - generic [ref=e187]:
+                - generic [ref=e188]:
+                  - text: Subject Id
+                  - generic "ID of animal/person used/participating in experiment (lab convention)" [ref=e189]:
+                    - img [ref=e190] [cursor=pointer]
+                - generic [ref=e192]:
+                  - textbox "Subject Id" [ref=e193]:
+                    - /placeholder: ID of animal/person used/participating in experiment (lab convention)
+                    - text: beans
+                  - status [ref=e194]
+              - generic [ref=e195]:
+                - generic [ref=e196]:
+                  - text: Date of Birth
+                  - generic "Date of birth of subject" [ref=e197]:
+                    - img [ref=e198] [cursor=pointer]
+                - generic [ref=e200]:
+                  - textbox "Date of Birth" [ref=e201]:
+                    - /placeholder: Date of birth of subject
+                    - text: 2023-01-15
+                  - status [ref=e202]
+              - generic [ref=e203]:
+                - generic [ref=e204]:
+                  - text: Weight (grams)
+                  - generic "Weight at time of experiment, at time of surgery and at other important times (in grams)" [ref=e205]:
+                    - img [ref=e206] [cursor=pointer]
+                - generic [ref=e208]:
+                  - spinbutton "Weight (grams)" [ref=e209]: "450"
+                  - status [ref=e210]
+          - group [ref=e212]:
+            - generic "Data Acq Device" [ref=e213] [cursor=pointer]
+            - group [ref=e215]:
+              - 'generic "Device: SpikeGadgets" [ref=e216] [cursor=pointer]'
+              - generic [ref=e217]:
+                - button "Duplicate" [ref=e219] [cursor=pointer]
+                - button "Remove" [ref=e221] [cursor=pointer]
+              - generic [ref=e222]:
+                - generic [ref=e223]:
+                  - generic [ref=e224]:
+                    - text: Name
+                    - generic "Typically a number" [ref=e225]:
+                      - img [ref=e226] [cursor=pointer]
+                  - combobox "Name" [ref=e229]: SpikeGadgets
+                - generic [ref=e230]:
+                  - generic [ref=e231]:
+                    - text: System
+                    - generic "System of device" [ref=e232]:
+                      - img [ref=e233] [cursor=pointer]
+                  - combobox "System" [ref=e236]: SpikeGadgets
+                - generic [ref=e237]:
+                  - generic [ref=e238]:
+                    - text: Amplifier
+                    - generic "Type to find an amplifier" [ref=e239]:
+                      - img [ref=e240] [cursor=pointer]
+                  - combobox "Amplifier" [ref=e243]: Intan
+                - generic [ref=e244]:
+                  - generic [ref=e245]:
+                    - text: ADC circuit
+                    - generic "Type to find an adc circuit" [ref=e246]:
+                      - img [ref=e247] [cursor=pointer]
+                  - combobox "ADC circuit" [ref=e250]: Intan
+            - button "＋" [ref=e252] [cursor=pointer]
+          - group [ref=e254]:
+            - generic "Cameras" [ref=e255] [cursor=pointer]
+            - group [ref=e257]:
+              - generic "Camera 0 - overhead_camera" [ref=e258] [cursor=pointer]
+              - generic [ref=e259]:
+                - button "Duplicate" [ref=e261] [cursor=pointer]
+                - button "Remove" [ref=e263] [cursor=pointer]
+              - generic [ref=e264]:
+                - generic [ref=e265]:
+                  - generic [ref=e266]:
+                    - text: Camera Id
+                    - generic "Typically a number" [ref=e267]:
+                      - img [ref=e268] [cursor=pointer]
+                  - generic [ref=e270]:
+                    - spinbutton "Camera Id" [ref=e271]: "0"
+                    - status [ref=e272]
+                - generic [ref=e273]:
+                  - generic [ref=e274]:
+                    - text: Meters Per Pixel
+                    - generic "Meters Per Pixel" [ref=e275]:
+                      - img [ref=e276] [cursor=pointer]
+                  - generic [ref=e278]:
+                    - spinbutton "Meters Per Pixel" [ref=e279]: "0.001"
+                    - status [ref=e280]
+                - generic [ref=e281]:
+                  - generic [ref=e282]:
+                    - text: Manufacturer
+                    - generic "Type to find a manufacturer" [ref=e283]:
+                      - img [ref=e284] [cursor=pointer]
+                  - combobox "Manufacturer" [ref=e287]: Allied Vision
+                - generic [ref=e288]:
+                  - generic [ref=e289]:
+                    - text: model
+                    - generic "Model of this camera" [ref=e290]:
+                      - img [ref=e291] [cursor=pointer]
+                  - generic [ref=e293]:
+                    - textbox "model" [ref=e294]:
+                      - /placeholder: Model of this camera
+                      - text: Mako G-158
+                    - status [ref=e295]
+                - generic [ref=e296]:
+                  - generic [ref=e297]:
+                    - text: lens
+                    - generic "Info about lens in this camera" [ref=e298]:
+                      - img [ref=e299] [cursor=pointer]
+                  - generic [ref=e301]:
+                    - textbox "lens" [ref=e302]:
+                      - /placeholder: Info about lens in this camera
+                      - text: Fujinon HF16HA-1B
+                    - status [ref=e303]
+                - generic [ref=e304]:
+                  - generic [ref=e305]:
+                    - text: Camera Name
+                    - generic "Name of this camera" [ref=e306]:
+                      - img [ref=e307] [cursor=pointer]
+                  - generic [ref=e309]:
+                    - textbox "Camera Name" [ref=e310]:
+                      - /placeholder: Name of this camera
+                      - text: overhead_camera
+                    - status [ref=e311]
+            - button "＋" [ref=e313] [cursor=pointer]
+          - group [ref=e315]:
+            - generic "Tasks" [ref=e316] [cursor=pointer]
+            - generic [ref=e317]:
+              - group [ref=e318]:
+                - 'generic "Task: sleep" [ref=e319] [cursor=pointer]'
+                - generic [ref=e320]:
+                  - button "Duplicate" [ref=e322] [cursor=pointer]
+                  - button "Remove" [ref=e324] [cursor=pointer]
+                - generic [ref=e325]:
+                  - generic [ref=e326]:
+                    - generic [ref=e327]:
+                      - text: Task Name
+                      - generic "E.g. linear track, sleep" [ref=e328]:
+                        - img [ref=e329] [cursor=pointer]
+                    - generic [ref=e331]:
+                      - textbox "Task Name" [ref=e332]:
+                        - /placeholder: E.g. linear track, sleep
+                        - text: sleep
+                      - status [ref=e333]
+                  - generic [ref=e334]:
+                    - generic [ref=e335]:
+                      - text: Task Description
+                      - generic "Task Description" [ref=e336]:
+                        - img [ref=e337] [cursor=pointer]
+                    - generic [ref=e339]:
+                      - textbox "Task Description" [ref=e340]: Rest session before task
+                      - status [ref=e341]
+                  - generic [ref=e342]:
+                    - generic [ref=e343]:
+                      - text: Task Environment
+                      - generic "Where the task occurs (e.g. sleep box)" [ref=e344]:
+                        - img [ref=e345] [cursor=pointer]
+                    - generic [ref=e347]:
+                      - textbox "Task Environment" [ref=e348]:
+                        - /placeholder: Where the task occurs (e.g. sleep box)
+                        - text: home cage
+                      - status [ref=e349]
+                  - generic [ref=e350]:
+                    - generic "Camera(s) recording this task" [ref=e352]:
+                      - img [ref=e353] [cursor=pointer]
+                    - group "Camera Id" [ref=e356]:
+                      - generic [ref=e357]: Camera Id
+                      - generic [ref=e359]:
+                        - checkbox "0" [ref=e360]
+                        - generic [ref=e361]: "0"
+                  - generic [ref=e362]:
+                    - generic "What epochs this task is applied" [ref=e363]:
+                      - text: Task Epochs
+                      - generic "What epochs this task is applied" [ref=e364]:
+                        - img [ref=e365] [cursor=pointer]
+                    - generic [ref=e368]:
+                      - generic [ref=e369]:
+                        - text: "1"
+                        - button "✘" [ref=e370] [cursor=pointer]
+                      - generic [ref=e371]:
+                        - text: "3"
+                        - button "✘" [ref=e372] [cursor=pointer]
+                      - spinbutton "Task Epochs 1 ✘ 3 ✘ +" [ref=e373]
+                      - button "+" [ref=e374] [cursor=pointer]
+              - group [ref=e375]:
+                - 'generic "Task: w_track" [ref=e376] [cursor=pointer]'
+                - generic [ref=e377]:
+                  - button "Duplicate" [ref=e379] [cursor=pointer]
+                  - button "Remove" [ref=e381] [cursor=pointer]
+                - generic [ref=e382]:
+                  - generic [ref=e383]:
+                    - generic [ref=e384]:
+                      - text: Task Name
+                      - generic "E.g. linear track, sleep" [ref=e385]:
+                        - img [ref=e386] [cursor=pointer]
+                    - generic [ref=e388]:
+                      - textbox "Task Name" [ref=e389]:
+                        - /placeholder: E.g. linear track, sleep
+                        - text: w_track
+                      - status [ref=e390]
+                  - generic [ref=e391]:
+                    - generic [ref=e392]:
+                      - text: Task Description
+                      - generic "Task Description" [ref=e393]:
+                        - img [ref=e394] [cursor=pointer]
+                    - generic [ref=e396]:
+                      - textbox "Task Description" [ref=e397]: W-track alternation with reward at ends
+                      - status [ref=e398]
+                  - generic [ref=e399]:
+                    - generic [ref=e400]:
+                      - text: Task Environment
+                      - generic "Where the task occurs (e.g. sleep box)" [ref=e401]:
+                        - img [ref=e402] [cursor=pointer]
+                    - generic [ref=e404]:
+                      - textbox "Task Environment" [ref=e405]:
+                        - /placeholder: Where the task occurs (e.g. sleep box)
+                        - text: w-shaped track
+                      - status [ref=e406]
+                  - generic [ref=e407]:
+                    - generic "Camera(s) recording this task" [ref=e409]:
+                      - img [ref=e410] [cursor=pointer]
+                    - group "Camera Id" [ref=e413]:
+                      - generic [ref=e414]: Camera Id
+                      - generic [ref=e416]:
+                        - checkbox "0" [ref=e417]
+                        - generic [ref=e418]: "0"
+                  - generic [ref=e419]:
+                    - generic "What epochs this task is applied" [ref=e420]:
+                      - text: Task Epochs
+                      - generic "What epochs this task is applied" [ref=e421]:
+                        - img [ref=e422] [cursor=pointer]
+                    - generic [ref=e425]:
+                      - generic [ref=e426]:
+                        - text: "2"
+                        - button "✘" [ref=e427] [cursor=pointer]
+                      - spinbutton "Task Epochs 2 ✘ +" [ref=e428]
+                      - button "+" [ref=e429] [cursor=pointer]
+            - button "＋" [ref=e431] [cursor=pointer]
+          - group [ref=e433]:
+            - generic "Associated Files" [ref=e434] [cursor=pointer]
+            - group [ref=e436]:
+              - 'generic "File: probe_adjustment_log" [ref=e437] [cursor=pointer]'
+              - generic [ref=e438]:
+                - button "Duplicate" [ref=e440] [cursor=pointer]
+                - button "Remove" [ref=e442] [cursor=pointer]
+              - generic [ref=e443]:
+                - generic [ref=e444]:
+                  - generic [ref=e445]:
+                    - text: Name
+                    - generic "File name" [ref=e446]:
+                      - img [ref=e447] [cursor=pointer]
+                  - generic [ref=e449]:
+                    - textbox "Name" [ref=e450]:
+                      - /placeholder: File name
+                      - text: probe_adjustment_log
+                    - status [ref=e451]
+                - generic [ref=e452]:
+                  - generic [ref=e453]:
+                    - text: Description
+                    - generic "Description of the file" [ref=e454]:
+                      - img [ref=e455] [cursor=pointer]
+                  - generic [ref=e457]:
+                    - textbox "Description" [ref=e458]:
+                      - /placeholder: Description of the file
+                      - text: Daily probe depth adjustments
+                    - status [ref=e459]
+                - generic [ref=e460]:
+                  - generic [ref=e461]:
+                    - text: Path
+                    - generic "path" [ref=e462]:
+                      - img [ref=e463] [cursor=pointer]
+                  - generic [ref=e465]:
+                    - textbox "Path" [ref=e466]:
+                      - /placeholder: path
+                      - text: /data/beans/probe_logs/
+                    - status [ref=e467]
+                - generic [ref=e468]:
+                  - generic "What tasks/epochs was this code run for" [ref=e470]:
+                    - img [ref=e471] [cursor=pointer]
+                  - group "Task Epochs" [ref=e474]:
+                    - generic [ref=e475]: Task Epochs
+                    - generic [ref=e476]:
+                      - generic [ref=e477]:
+                        - radio "1" [ref=e478]
+                        - generic [ref=e479]: "1"
+                      - generic [ref=e480]:
+                        - radio "2" [ref=e481]
+                        - generic [ref=e482]: "2"
+                      - generic [ref=e483]:
+                        - radio "3" [ref=e484]
+                        - generic [ref=e485]: "3"
+            - button "＋" [ref=e487] [cursor=pointer]
+          - group [ref=e489]:
+            - generic "Associated Video Files" [ref=e490] [cursor=pointer]
+            - group [ref=e492]:
+              - 'generic "Video: overhead_video" [ref=e493] [cursor=pointer]'
+              - generic [ref=e494]:
+                - button "Duplicate" [ref=e496] [cursor=pointer]
+                - button "Remove" [ref=e498] [cursor=pointer]
+              - generic [ref=e499]:
+                - generic [ref=e500]:
+                  - generic [ref=e501]:
+                    - text: Name
+                    - generic "name" [ref=e502]:
+                      - img [ref=e503] [cursor=pointer]
+                  - generic [ref=e505]:
+                    - textbox "Name" [ref=e506]:
+                      - /placeholder: name
+                      - text: overhead_video
+                    - status [ref=e507]
+                - generic [ref=e508]:
+                  - generic "What camera recorded this video" [ref=e510]:
+                    - img [ref=e511] [cursor=pointer]
+                  - group "Camera Id" [ref=e514]:
+                    - generic [ref=e515]: Camera Id
+                    - generic [ref=e517]:
+                      - radio "0" [ref=e518]
+                      - generic [ref=e519]: "0"
+                - generic [ref=e520]:
+                  - generic "What epoch was recorded in this video" [ref=e522]:
+                    - img [ref=e523] [cursor=pointer]
+                  - group "Task Epochs" [ref=e526]:
+                    - generic [ref=e527]: Task Epochs
+                    - generic [ref=e528]:
+                      - generic [ref=e529]:
+                        - radio "1" [ref=e530]
+                        - generic [ref=e531]: "1"
+                      - generic [ref=e532]:
+                        - radio "2" [ref=e533]
+                        - generic [ref=e534]: "2"
+                      - generic [ref=e535]:
+                        - radio "3" [ref=e536]
+                        - generic [ref=e537]: "3"
+            - button "＋" [ref=e539] [cursor=pointer]
+          - group [ref=e541]:
+            - generic "Units" [ref=e542] [cursor=pointer]
+            - generic [ref=e543]:
+              - generic [ref=e544]:
+                - generic [ref=e545]:
+                  - text: Analog
+                  - generic "Analog" [ref=e546]:
+                    - img [ref=e547] [cursor=pointer]
+                - generic [ref=e549]:
+                  - textbox "Analog" [active] [ref=e550]
+                  - status [ref=e551]
+              - generic [ref=e552]:
+                - generic [ref=e553]:
+                  - text: Behavioral Events
+                  - generic "Behavioral Events" [ref=e554]:
+                    - img [ref=e555] [cursor=pointer]
+                - generic [ref=e557]:
+                  - textbox "Behavioral Events" [ref=e558]
+                  - status [ref=e559]
+          - generic [ref=e561]:
+            - generic [ref=e562]:
+              - text: Times Period Multiplier
+              - generic "Times Period Multiplier" [ref=e563]:
+                - img [ref=e564] [cursor=pointer]
+            - generic [ref=e566]:
+              - spinbutton "Times Period Multiplier" [ref=e567]: "1.5"
+              - status [ref=e568]
+          - generic [ref=e570]:
+            - generic [ref=e571]:
+              - text: Ephys-to-Volt Conversion Factor
+              - generic "Scalar to multiply each element in data to convert it to the specified 'unit'. If the data are stored in acquisition system units or other units that require a conversion to be interpretable, multiply the data by 'conversion' to convert the data to the specified 'unit'." [ref=e572]:
+                - img [ref=e573] [cursor=pointer]
+            - generic [ref=e575]:
+              - spinbutton "Ephys-to-Volt Conversion Factor" [ref=e576]: "0.195"
+              - status [ref=e577]
+          - generic [ref=e579]:
+            - generic [ref=e580]:
+              - text: Default Header File Path
+              - generic "Default Header File Path" [ref=e581]:
+                - img [ref=e582] [cursor=pointer]
+            - generic [ref=e584]:
+              - textbox "Default Header File Path" [ref=e585]
+              - status [ref=e586]
+        - group [ref=e588]:
+          - generic "Behavioral Events" [ref=e589] [cursor=pointer]
+          - button "＋" [ref=e591] [cursor=pointer]
+        - group [ref=e593]:
+          - generic "Device" [ref=e594] [cursor=pointer]
+          - generic [ref=e596]:
+            - generic "Device names" [ref=e597]:
+              - text: Name
+              - generic "Device names" [ref=e598]:
+                - img [ref=e599] [cursor=pointer]
+            - generic [ref=e602]:
+              - text: No Device
+              - textbox "Name No Device +" [ref=e603]:
+                - /placeholder: Type Name
+              - button "+" [ref=e604] [cursor=pointer]
+        - group [ref=e606]:
+          - generic "Opto Excitation Source" [ref=e607] [cursor=pointer]
+          - button "＋" [ref=e609] [cursor=pointer]
+        - group [ref=e611]:
+          - generic "Optical Fiber" [ref=e612] [cursor=pointer]
+          - button "＋" [ref=e614] [cursor=pointer]
+        - group [ref=e616]:
+          - generic "Virus Injection" [ref=e617] [cursor=pointer]
+          - button "＋" [ref=e619] [cursor=pointer]
+        - group [ref=e621]:
+          - generic "FS Gui Yamls" [ref=e622] [cursor=pointer]
+          - button "＋" [ref=e624] [cursor=pointer]
+        - generic [ref=e626]:
+          - generic [ref=e627]:
+            - text: Optogenetic Stimulation Software
+            - generic "Software used for optogenetic stimulation" [ref=e628]:
+              - img [ref=e629] [cursor=pointer]
+          - generic [ref=e631]:
+            - textbox "Optogenetic Stimulation Software" [ref=e632]:
+              - /placeholder: Software used for optogenetic stimulation
+            - status [ref=e633]
+        - group [ref=e635]:
+          - generic "Electrode Groups" [ref=e636] [cursor=pointer]
+          - generic [ref=e637]:
+            - group [ref=e638]:
+              - generic "Electrode Group 0 - CA1" [ref=e639] [cursor=pointer]
+              - generic [ref=e640]:
+                - button "Duplicate" [ref=e642] [cursor=pointer]
+                - button "Remove" [ref=e644] [cursor=pointer]
+              - generic [ref=e645]:
+                - generic [ref=e646]:
+                  - generic [ref=e647]:
+                    - text: Id
+                    - generic "Typically a number" [ref=e648]:
+                      - img [ref=e649] [cursor=pointer]
+                  - generic [ref=e651]:
+                    - spinbutton "Id" [ref=e652]: "0"
+                    - status [ref=e653]
+                - generic [ref=e654]:
+                  - generic [ref=e655]:
+                    - text: Location
+                    - generic "Type to find a location" [ref=e656]:
+                      - img [ref=e657] [cursor=pointer]
+                  - generic [ref=e659]:
+                    - combobox "Location" [ref=e660]: CA1
+                    - status [ref=e661]
+                - generic [ref=e662]:
+                  - generic "Device Type" [ref=e663]:
+                    - text: Device Type
+                    - generic "Used to match to probe yaml data" [ref=e664]:
+                      - img [ref=e665] [cursor=pointer]
+                  - combobox "Device Type" [ref=e668]:
+                    - option
+                    - option "tetrode_12.5" [selected]
+                    - option "A1x32-6mm-50-177-H32_21mm"
+                    - option "128c-4s8mm6cm-20um-40um-sl"
+                    - option "128c-4s8mm6cm-15um-26um-sl"
+                    - option "128c-4s6mm6cm-20um-40um-sl"
+                    - option "128c-4s6mm6cm-15um-26um-sl"
+                    - option "128c-4s4mm6cm-20um-40um-sl"
+                    - option "128c-4s4mm6cm-15um-26um-sl"
+                    - option "32c-2s8mm6cm-20um-40um-dl"
+                    - option "64c-4s6mm6cm-20um-40um-dl"
+                    - option "64c-3s6mm6cm-20um-40um-sl"
+                    - option "NET-EBL-128ch-single-shank"
+                - generic [ref=e669]:
+                  - generic [ref=e670]:
+                    - text: Description
+                    - generic "Description" [ref=e671]:
+                      - img [ref=e672] [cursor=pointer]
+                  - generic [ref=e674]:
+                    - textbox "Description" [ref=e675]: Dorsal CA1 right hemisphere
+                    - status [ref=e676]
+                - generic [ref=e677]:
+                  - generic [ref=e678]:
+                    - text: Targeted Location
+                    - generic "Where device is implanted" [ref=e679]:
+                      - img [ref=e680] [cursor=pointer]
+                  - combobox "Targeted Location" [ref=e683]: CA1
+                - generic [ref=e684]:
+                  - generic [ref=e685]:
+                    - text: ML from Bregma
+                    - generic "Medial-Lateral from Bregma (Targeted x)" [ref=e686]:
+                      - img [ref=e687] [cursor=pointer]
+                  - generic [ref=e689]:
+                    - spinbutton "ML from Bregma" [ref=e690]: "3"
+                    - status [ref=e691]
+                - generic [ref=e692]:
+                  - generic [ref=e693]:
+                    - text: AP to Bregma
+                    - generic "Anterior-Posterior to Bregma (Targeted y)" [ref=e694]:
+                      - img [ref=e695] [cursor=pointer]
+                  - generic [ref=e697]:
+                    - spinbutton "AP to Bregma" [ref=e698]: "2.5"
+                    - status [ref=e699]
+                - generic [ref=e700]:
+                  - generic [ref=e701]:
+                    - text: DV to Cortical Surface
+                    - generic "Dorsal-Ventral to Cortical Surface (Targeted z)" [ref=e702]:
+                      - img [ref=e703] [cursor=pointer]
+                  - generic [ref=e705]:
+                    - spinbutton "DV to Cortical Surface" [ref=e706]: "2"
+                    - status [ref=e707]
+                - generic [ref=e708]:
+                  - generic [ref=e709]:
+                    - text: Units
+                    - generic "Distance units defining positioning" [ref=e710]:
+                      - img [ref=e711] [cursor=pointer]
+                  - combobox "Units" [ref=e714]: mm
+                - 'group "Shank #1" [ref=e720]':
+                  - generic [ref=e721]: "Shank #1"
+                  - generic [ref=e722]:
+                    - generic [ref=e723]:
+                      - generic [ref=e724]:
+                        - text: Ntrode Id
+                        - generic "Ntrode Id" [ref=e725]:
+                          - img [ref=e726] [cursor=pointer]
+                      - spinbutton "Ntrode Id Ntrode Id 2" [ref=e729]: "1"
+                    - generic [ref=e730]:
+                      - generic "Bad Channels" [ref=e732]:
+                        - img [ref=e733] [cursor=pointer]
+                      - group "Bad Channels" [ref=e736]:
+                        - generic [ref=e737]: Bad Channels
+                        - generic [ref=e738]:
+                          - generic [ref=e739]:
+                            - checkbox "0 0" [ref=e740]
+                            - generic [ref=e741]: "0"
+                          - generic [ref=e742]:
+                            - checkbox "1 1" [ref=e743]
+                            - generic [ref=e744]: "1"
+                          - generic [ref=e745]:
+                            - checkbox "2 2" [ref=e746]
+                            - generic [ref=e747]: "2"
+                          - generic [ref=e748]:
+                            - checkbox "3 3" [ref=e749]
+                            - generic [ref=e750]: "3"
+                    - generic [ref=e751]:
+                      - generic [ref=e752]:
+                        - text: Map
+                        - generic "Electrode Map. Right Hand Side is expected mapping. Left Hand Side is actual mapping" [ref=e753]:
+                          - img [ref=e754] [cursor=pointer]
+                      - generic [ref=e757]:
+                        - generic [ref=e758]:
+                          - generic [ref=e759]: "0"
+                          - combobox "0 0" [ref=e760]:
+                            - option
+                            - option "0" [selected]
+                        - generic [ref=e761]:
+                          - generic [ref=e762]: "1"
+                          - combobox "1 1" [ref=e763]:
+                            - option
+                            - option "1" [selected]
+                        - generic [ref=e764]:
+                          - generic [ref=e765]: "2"
+                          - combobox "2 2" [ref=e766]:
+                            - option
+                            - option "2" [selected]
+                        - generic [ref=e767]:
+                          - generic [ref=e768]: "3"
+                          - combobox "3 3" [ref=e769]:
+                            - option
+                            - option "3" [selected]
+            - group [ref=e770]:
+              - generic "Electrode Group 1 - CA3" [ref=e771] [cursor=pointer]
+              - generic [ref=e772]:
+                - button "Duplicate" [ref=e774] [cursor=pointer]
+                - button "Remove" [ref=e776] [cursor=pointer]
+              - generic [ref=e777]:
+                - generic [ref=e778]:
+                  - generic [ref=e779]:
+                    - text: Id
+                    - generic "Typically a number" [ref=e780]:
+                      - img [ref=e781] [cursor=pointer]
+                  - generic [ref=e783]:
+                    - spinbutton "Id" [ref=e784]: "1"
+                    - status [ref=e785]
+                - generic [ref=e786]:
+                  - generic [ref=e787]:
+                    - text: Location
+                    - generic "Type to find a location" [ref=e788]:
+                      - img [ref=e789] [cursor=pointer]
+                  - generic [ref=e791]:
+                    - combobox "Location" [ref=e792]: CA3
+                    - status [ref=e793]
+                - generic [ref=e794]:
+                  - generic "Device Type" [ref=e795]:
+                    - text: Device Type
+                    - generic "Used to match to probe yaml data" [ref=e796]:
+                      - img [ref=e797] [cursor=pointer]
+                  - combobox "Device Type" [ref=e800]:
+                    - option
+                    - option "tetrode_12.5" [selected]
+                    - option "A1x32-6mm-50-177-H32_21mm"
+                    - option "128c-4s8mm6cm-20um-40um-sl"
+                    - option "128c-4s8mm6cm-15um-26um-sl"
+                    - option "128c-4s6mm6cm-20um-40um-sl"
+                    - option "128c-4s6mm6cm-15um-26um-sl"
+                    - option "128c-4s4mm6cm-20um-40um-sl"
+                    - option "128c-4s4mm6cm-15um-26um-sl"
+                    - option "32c-2s8mm6cm-20um-40um-dl"
+                    - option "64c-4s6mm6cm-20um-40um-dl"
+                    - option "64c-3s6mm6cm-20um-40um-sl"
+                    - option "NET-EBL-128ch-single-shank"
+                - generic [ref=e801]:
+                  - generic [ref=e802]:
+                    - text: Description
+                    - generic "Description" [ref=e803]:
+                      - img [ref=e804] [cursor=pointer]
+                  - generic [ref=e806]:
+                    - textbox "Description" [ref=e807]: CA3 right hemisphere
+                    - status [ref=e808]
+                - generic [ref=e809]:
+                  - generic [ref=e810]:
+                    - text: Targeted Location
+                    - generic "Where device is implanted" [ref=e811]:
+                      - img [ref=e812] [cursor=pointer]
+                  - combobox "Targeted Location" [ref=e815]: CA3
+                - generic [ref=e816]:
+                  - generic [ref=e817]:
+                    - text: ML from Bregma
+                    - generic "Medial-Lateral from Bregma (Targeted x)" [ref=e818]:
+                      - img [ref=e819] [cursor=pointer]
+                  - generic [ref=e821]:
+                    - spinbutton "ML from Bregma" [ref=e822]: "3.5"
+                    - status [ref=e823]
+                - generic [ref=e824]:
+                  - generic [ref=e825]:
+                    - text: AP to Bregma
+                    - generic "Anterior-Posterior to Bregma (Targeted y)" [ref=e826]:
+                      - img [ref=e827] [cursor=pointer]
+                  - generic [ref=e829]:
+                    - spinbutton "AP to Bregma" [ref=e830]: "3"
+                    - status [ref=e831]
+                - generic [ref=e832]:
+                  - generic [ref=e833]:
+                    - text: DV to Cortical Surface
+                    - generic "Dorsal-Ventral to Cortical Surface (Targeted z)" [ref=e834]:
+                      - img [ref=e835] [cursor=pointer]
+                  - generic [ref=e837]:
+                    - spinbutton "DV to Cortical Surface" [ref=e838]: "2.2"
+                    - status [ref=e839]
+                - generic [ref=e840]:
+                  - generic [ref=e841]:
+                    - text: Units
+                    - generic "Distance units defining positioning" [ref=e842]:
+                      - img [ref=e843] [cursor=pointer]
+                  - combobox "Units" [ref=e846]: mm
+                - 'group "Shank #1" [ref=e852]':
+                  - generic [ref=e853]: "Shank #1"
+                  - generic [ref=e854]:
+                    - generic [ref=e855]:
+                      - generic [ref=e856]:
+                        - text: Ntrode Id
+                        - generic "Ntrode Id" [ref=e857]:
+                          - img [ref=e858] [cursor=pointer]
+                      - spinbutton [ref=e861]: "2"
+                    - generic [ref=e862]:
+                      - generic "Bad Channels" [ref=e864]:
+                        - img [ref=e865] [cursor=pointer]
+                      - group "Bad Channels" [ref=e868]:
+                        - generic [ref=e869]: Bad Channels
+                        - generic [ref=e870]:
+                          - generic [ref=e871]:
+                            - checkbox [ref=e872]
+                            - generic [ref=e873]: "0"
+                          - generic [ref=e874]:
+                            - checkbox [checked] [ref=e875]
+                            - generic [ref=e876]: "1"
+                          - generic [ref=e877]:
+                            - checkbox [ref=e878]
+                            - generic [ref=e879]: "2"
+                          - generic [ref=e880]:
+                            - checkbox [ref=e881]
+                            - generic [ref=e882]: "3"
+                    - generic [ref=e883]:
+                      - generic [ref=e884]:
+                        - text: Map
+                        - generic "Electrode Map. Right Hand Side is expected mapping. Left Hand Side is actual mapping" [ref=e885]:
+                          - img [ref=e886] [cursor=pointer]
+                      - generic [ref=e889]:
+                        - generic [ref=e890]:
+                          - generic [ref=e891]: "0"
+                          - combobox [ref=e892]:
+                            - option
+                            - option "0"
+                            - option "1"
+                            - option "2"
+                            - option "3"
+                            - option "4" [selected]
+                        - generic [ref=e893]:
+                          - generic [ref=e894]: "1"
+                          - combobox [ref=e895]:
+                            - option
+                            - option "0"
+                            - option "1"
+                            - option "2"
+                            - option "3"
+                            - option "5" [selected]
+                        - generic [ref=e896]:
+                          - generic [ref=e897]: "2"
+                          - combobox [ref=e898]:
+                            - option
+                            - option "0"
+                            - option "1"
+                            - option "2"
+                            - option "3"
+                            - option "6" [selected]
+                        - generic [ref=e899]:
+                          - generic [ref=e900]: "3"
+                          - combobox [ref=e901]:
+                            - option
+                            - option "0"
+                            - option "1"
+                            - option "2"
+                            - option "3"
+                            - option "7" [selected]
+          - generic [ref=e903]:
+            - spinbutton [ref=e904]: "1"
+            - button "＋" [ref=e905] [cursor=pointer]
+        - generic [ref=e906]:
+          - button "Generate YML File" [ref=e907] [cursor=pointer]
+          - button "Reset" [ref=e908] [cursor=pointer]
+      - generic [ref=e909]:
+        - text: Copyright © 2025
+        - link "Loren Frank Lab" [ref=e910] [cursor=pointer]:
+          - /url: https://franklab.ucsf.edu/
+        - link "The University of California at San Francisco" [ref=e911] [cursor=pointer]:
+          - /url: http://www.ucsf.edu
+        - text: Version - 2.3.0
+```

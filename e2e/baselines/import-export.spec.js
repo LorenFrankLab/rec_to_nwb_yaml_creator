@@ -31,30 +31,20 @@ const waitForDownload = async (page, action) => {
 // Helper to dismiss alert modal if present
 const dismissAlertModal = async (page) => {
   try {
-    // Wait a bit for modal animation
-    await page.waitForTimeout(300);
+    // Wait for modal to appear
+    await page.waitForSelector('.alert-modal-overlay', { state: 'visible', timeout: 2000 });
 
-    // Try multiple selectors to find and dismiss the modal
-    const selectors = [
-      'button.alert-modal-close',
-      'button[aria-label="Close alert"]',
-      '.alert-modal-overlay' // Click overlay to dismiss
-    ];
+    // Click the close button specifically (most reliable)
+    const closeButton = page.locator('button.alert-modal-close').first();
+    await closeButton.click({ force: true, timeout: 3000 });
 
-    for (const selector of selectors) {
-      try {
-        const element = page.locator(selector).first();
-        if (await element.isVisible({ timeout: 500 })) {
-          await element.click({ timeout: 1000 });
-          await page.waitForTimeout(300);
-          return;
-        }
-      } catch {
-        continue;
-      }
-    }
+    // Wait for modal to completely disappear
+    await page.waitForSelector('.alert-modal-overlay', { state: 'hidden', timeout: 3000 });
+
+    // Extra wait for animations/transitions to complete and pointer events to be restored
+    await page.waitForTimeout(1000);
   } catch (e) {
-    // Modal not present or already dismissed
+    // Modal not present or already dismissed - this is acceptable
   }
 };
 
@@ -64,29 +54,29 @@ test.describe('BASELINE: Import/Export Workflow', () => {
     await page.goto('/');
     await expect(page.locator('input:not([type="file"]), textarea, select').first()).toBeVisible({ timeout: 10000 });
 
-    // Find import/upload button
-    const importButton = page.locator('input[type="file"], button:has-text("Import"), button:has-text("Upload")').first();
+    const importButton = page.locator('input[type="file"]').first();
 
     if (await importButton.isVisible()) {
-      // Load fixture file
       const fixturePath = getFixturePath('minimal-valid.yml');
 
       if (fs.existsSync(fixturePath)) {
-        // Upload the file
         await importButton.setInputFiles(fixturePath);
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(1000);
 
         // Dismiss success modal
         await dismissAlertModal(page);
 
-        // Verify some fields were populated
-        const sessionIdInput = page.locator('input[name*="session_id"]').first();
-        if (await sessionIdInput.isVisible()) {
-          const value = await sessionIdInput.inputValue();
-          // Just verify it has some value (documenting import worked)
-          expect(value).not.toBe('');
+        // Verify fields were imported (minimal-valid.yml has lab: "Frank")
+        // NOTE: experimenter_name array is NOT imported (baseline behavior to document)
+        const labInput = page.locator('input[name*="lab"]').first();
+        if (await labInput.isVisible()) {
+          const value = await labInput.inputValue();
+          // Documenting import worked - fixture has "Frank"
+          expect(value).toBe('Frank');
         }
       }
+    } else {
+      console.log(`[DEBUG] File input not visible - test block skipped`);
     }
   });
 
