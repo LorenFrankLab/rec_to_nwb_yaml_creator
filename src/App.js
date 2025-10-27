@@ -18,6 +18,7 @@ import AssociatedFilesFields from './components/AssociatedFilesFields';
 import SessionInfoFields from './components/SessionInfoFields';
 import ExperimenterFields from './components/ExperimenterFields';
 import LabInstitutionFields from './components/LabInstitutionFields';
+import UnitsFields from './components/UnitsFields';
 
 import logo from './logo.png';
 import packageJson from '../package.json';
@@ -495,36 +496,11 @@ useEffect(() => {
         taskEpochsDefined={taskEpochsDefined}
         cameraIdsDefined={cameraIdsDefined}
       />
-      <div id="units-area" className="area-region">
-        <details open>
-          <summary>Units</summary>
-          <div className="form-container">
-            <InputElement
-              id="analog"
-              type="text"
-              name="analog"
-              title="Analog"
-              placeholder="Analog"
-              required
-              value={formData.units.analog}
-              onChange={handleChange('analog', 'units')}  
-              onBlur={(e) => onBlur(e, { key: 'units' })}
-              validation={{ type: 'required' }}
-            />
-            <InputElement
-              id="behavioralEvents"
-              type="text"
-              name="behavioral_events"
-              title="Behavioral Events"
-              placeholder="Behavioral Events"
-              value={formData.units.behavioral_events}
-              onChange={handleChange('behavioral_events', 'units')}  
-              onBlur={(e) => onBlur(e, { key: 'units' })}
-              validation={{ type: 'required' }}
-            />
-          </div>
-        </details>
-      </div>
+      <UnitsFields
+        formData={formData}
+        handleChange={handleChange}
+        onBlur={onBlur}
+      />
       <div id="times_period_multiplier-area" className="area-region">
         <InputElement
           id="times_period_multiplier"
