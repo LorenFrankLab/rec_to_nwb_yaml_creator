@@ -2,11 +2,16 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../App';
+import { StoreProvider } from '../../state/StoreContext';
 
 describe('ListElement Query Test', () => {
   it('can query experimenter input by placeholder text', async () => {
     const user = userEvent.setup();
-    render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // THREE WAYS TO QUERY:
     

@@ -11,6 +11,7 @@ import { render, screen } from '@testing-library/react';
 import { getMainForm } from '../../helpers/test-selectors';
 import { describe, it, expect } from 'vitest';
 import { App } from '../../../App';
+import { StoreProvider } from '../../../state/StoreContext';
 import { defaultYMLValues, emptyFormData } from '../../../valueList';
 
 describe('App State Initialization', () => {
@@ -142,26 +143,42 @@ describe('App State Initialization', () => {
 
   describe('Component Rendering', () => {
     it('should render without crashing', () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       expect(container).toBeInTheDocument();
     });
 
     it('should render form element', () => {
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       // Should have a form element
       const formElement = getMainForm();
       expect(formElement).toBeInTheDocument();
     });
 
     it('should render multiple form sections', () => {
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       // Should have details elements for collapsible sections
       const detailsElements = document.querySelectorAll('details');
       expect(detailsElements.length).toBeGreaterThan(0);
     });
 
     it('should render input elements', () => {
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       // Should have multiple input elements
       const inputElements = document.querySelectorAll('input');
       expect(inputElements.length).toBeGreaterThan(10);

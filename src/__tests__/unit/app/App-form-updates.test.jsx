@@ -10,13 +10,18 @@
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { App } from '../../../App';
+import { StoreProvider } from '../../../state/StoreContext';
 import { defaultYMLValues } from '../../../valueList';
 import { getById, getByName } from '../../helpers/test-selectors';
 
 describe('App Form Data Updates', () => {
   describe('updateFormData - Simple Key-Value Updates', () => {
     it('should update top-level string fields', () => {
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Find and update the lab input field
       const labInput = screen.getAllByLabelText(/^lab$/i)[0];
@@ -30,7 +35,11 @@ describe('App Form Data Updates', () => {
     });
 
     it('should update top-level text fields independently', () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Use querySelector to get by name attribute since labels may not be properly associated
       const labInput = getByName('lab')[0];
@@ -48,7 +57,11 @@ describe('App Form Data Updates', () => {
     });
 
     it('should update session_id field', () => {
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const sessionIdInput = screen.getByLabelText(/^session id$/i);
       expect(sessionIdInput).toHaveValue('');
@@ -59,7 +72,11 @@ describe('App Form Data Updates', () => {
     });
 
     it('should update experiment_description field', () => {
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const descInput = screen.getByLabelText(/^experiment description$/i);
       expect(descInput).toHaveValue('');
@@ -70,7 +87,11 @@ describe('App Form Data Updates', () => {
     });
 
     it('should update session_description field', () => {
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const descInput = screen.getByLabelText(/^session description$/i);
       expect(descInput).toHaveValue('');
@@ -83,7 +104,11 @@ describe('App Form Data Updates', () => {
 
   describe('updateFormData - Nested Object Updates', () => {
     it('should update subject.subject_id', () => {
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const subjectIdInput = screen.getByLabelText(/^subject id$/i);
       expect(subjectIdInput).toHaveValue('');
@@ -94,7 +119,11 @@ describe('App Form Data Updates', () => {
     });
 
     it('should update subject.species', () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Use getElementById for the specific subject species field
       const speciesInput = getById('subject-species');
@@ -106,7 +135,11 @@ describe('App Form Data Updates', () => {
     });
 
     it('should update subject.description', () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const descInput = getById('subject-description');
       expect(descInput).toHaveValue(defaultYMLValues.subject.description);
@@ -117,7 +150,11 @@ describe('App Form Data Updates', () => {
     });
 
     it('should update subject.genotype', () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // genotype uses DataListElement which renders an input element
       const genotypeInput = getById('subject-genotype');
@@ -129,7 +166,11 @@ describe('App Form Data Updates', () => {
     });
 
     it('should update subject.weight as number', () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const weightInput = getById('subject-weight');
       expect(weightInput).toHaveValue(defaultYMLValues.subject.weight);
@@ -140,7 +181,11 @@ describe('App Form Data Updates', () => {
     });
 
     it('should update subject.sex', () => {
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const sexInput = screen.getByLabelText(/^sex$/i);
       expect(sexInput).toHaveValue('M');
@@ -151,7 +196,11 @@ describe('App Form Data Updates', () => {
     });
 
     it('should update multiple subject fields independently', () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const subjectIdInput = getById('subject-subjectId');
       const speciesInput = getById('subject-species');
@@ -169,7 +218,11 @@ describe('App Form Data Updates', () => {
 
   describe('updateFormData - Numeric Fields', () => {
     it('should update times_period_multiplier', () => {
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const input = screen.getByLabelText(/^times period multiplier$/i);
       expect(input).toHaveValue(defaultYMLValues.times_period_multiplier);
@@ -180,7 +233,11 @@ describe('App Form Data Updates', () => {
     });
 
     it('should update raw_data_to_volts', () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const input = getByName('raw_data_to_volts')[0];
       expect(input).toHaveValue(defaultYMLValues.raw_data_to_volts);
@@ -191,7 +248,11 @@ describe('App Form Data Updates', () => {
     });
 
     it('should handle numeric field updates with decimal values', () => {
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const input = screen.getByLabelText(/^times period multiplier$/i);
 
@@ -205,7 +266,11 @@ describe('App Form Data Updates', () => {
 
   describe('updateFormData - Units Nested Object', () => {
     it('should update units.analog', () => {
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Find the analog units input
       const analogInput = screen.getByLabelText(/^analog$/i);
@@ -217,7 +282,11 @@ describe('App Form Data Updates', () => {
     });
 
     it('should update units.behavioral_events', () => {
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const behavioralInput = screen.getByLabelText(/^behavioral events$/i);
       expect(behavioralInput).toHaveValue('');
@@ -230,7 +299,11 @@ describe('App Form Data Updates', () => {
 
   describe('Immutability - State Updates', () => {
     it('should not mutate original formData when updating', () => {
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const labInput = screen.getAllByLabelText(/^lab$/i)[0];
       const originalValue = labInput.value;
@@ -247,7 +320,11 @@ describe('App Form Data Updates', () => {
     });
 
     it('should handle rapid successive updates', () => {
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const labInput = screen.getAllByLabelText(/^lab$/i)[0];
 
@@ -263,7 +340,11 @@ describe('App Form Data Updates', () => {
 
   describe('Edge Cases', () => {
     it('should handle empty string updates', () => {
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const labInput = screen.getAllByLabelText(/^lab$/i)[0];
 
@@ -274,7 +355,11 @@ describe('App Form Data Updates', () => {
     });
 
     it('should handle whitespace in string fields', () => {
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const labInput = screen.getAllByLabelText(/^lab$/i)[0];
 
@@ -284,7 +369,11 @@ describe('App Form Data Updates', () => {
     });
 
     it('should handle special characters in text fields', () => {
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const descInput = screen.getByLabelText(/^experiment description$/i);
 
@@ -295,7 +384,11 @@ describe('App Form Data Updates', () => {
     });
 
     it('should handle very long strings', () => {
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const descInput = screen.getByLabelText(/^experiment description$/i);
 
@@ -306,7 +399,11 @@ describe('App Form Data Updates', () => {
     });
 
     it('should handle zero values in numeric fields', () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const weightInput = getById('subject-weight');
 
@@ -316,7 +413,11 @@ describe('App Form Data Updates', () => {
     });
 
     it('should handle negative numbers', () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const weightInput = getById('subject-weight');
 

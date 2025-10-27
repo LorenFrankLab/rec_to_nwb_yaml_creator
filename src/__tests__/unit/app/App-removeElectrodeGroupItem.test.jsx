@@ -18,6 +18,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../../../App';
+import { StoreProvider } from '../../../state/StoreContext';
 import { useWindowConfirmMock, clickAddButton } from '../../helpers/test-hooks';
 import { getByClass, getById, getByName } from '../../helpers/test-selectors';
 
@@ -25,7 +26,11 @@ describe('App.js - removeElectrodeGroupItem()', () => {
   const mocks = useWindowConfirmMock(beforeEach, afterEach, true);
   describe('Confirmation Dialog', () => {
     it('should show confirmation dialog when remove button clicked', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       // Mock window.confirm
@@ -44,7 +49,11 @@ describe('App.js - removeElectrodeGroupItem()', () => {
     });
 
     it('should include correct index and key in confirmation message', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       // Confirm mock set up by useWindowConfirmMock hook
@@ -63,7 +72,11 @@ describe('App.js - removeElectrodeGroupItem()', () => {
 
   describe('Removal When Confirmed', () => {
     it('should remove electrode group when user confirms', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       // Confirm mock set up by useWindowConfirmMock hook
@@ -88,7 +101,11 @@ describe('App.js - removeElectrodeGroupItem()', () => {
     });
 
     it('should remove first electrode group correctly', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       // Confirm mock set up by useWindowConfirmMock hook
@@ -108,7 +125,11 @@ describe('App.js - removeElectrodeGroupItem()', () => {
     });
 
     it('should remove middle electrode group correctly', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       // Confirm mock set up by useWindowConfirmMock hook
@@ -128,7 +149,11 @@ describe('App.js - removeElectrodeGroupItem()', () => {
     });
 
     it('should remove last electrode group correctly', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       // Confirm mock set up by useWindowConfirmMock hook
@@ -150,7 +175,11 @@ describe('App.js - removeElectrodeGroupItem()', () => {
 
   describe('Cancellation', () => {
     it('should not remove electrode group when user cancels', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       mocks.confirm.mockReturnValue(false);
@@ -169,7 +198,11 @@ describe('App.js - removeElectrodeGroupItem()', () => {
     });
 
     it('should maintain form state when removal cancelled', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       mocks.confirm.mockReturnValue(false);
@@ -192,7 +225,11 @@ describe('App.js - removeElectrodeGroupItem()', () => {
 
   describe('Associated Ntrode Map Removal', () => {
     it('should remove ntrode maps when electrode group removed', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       // Confirm mock set up by useWindowConfirmMock hook
@@ -222,7 +259,11 @@ describe('App.js - removeElectrodeGroupItem()', () => {
     });
 
     it('should only remove ntrodes for removed electrode group', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       // Confirm mock set up by useWindowConfirmMock hook
@@ -252,7 +293,11 @@ describe('App.js - removeElectrodeGroupItem()', () => {
     });
 
     it('should remove all ntrodes for multi-shank device', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       // Confirm mock set up by useWindowConfirmMock hook
@@ -283,7 +328,11 @@ describe('App.js - removeElectrodeGroupItem()', () => {
 
   describe('State Management', () => {
     it('should update formData state after removal', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       // Confirm mock set up by useWindowConfirmMock hook
@@ -310,7 +359,11 @@ describe('App.js - removeElectrodeGroupItem()', () => {
     it('should maintain immutability using structuredClone', async () => {
       // Behavioral test - function uses structuredClone multiple times
       // Verified by checking React state triggers re-renders
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       // Confirm mock set up by useWindowConfirmMock hook
@@ -340,7 +393,11 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       // This tests the guard clause: if (!items || items.length === 0)
       // Since we can't click remove when there are no items (no UI rendered),
       // this is more of a documentation test that the guard exists
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Verify no electrode groups exist
       const electrodeGroupSections = getByClass('array-item__controls');
@@ -354,7 +411,11 @@ describe('App.js - removeElectrodeGroupItem()', () => {
 
   describe('Other Electrode Groups Unaffected', () => {
     it('should not affect other electrode groups when one removed', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       // Confirm mock set up by useWindowConfirmMock hook

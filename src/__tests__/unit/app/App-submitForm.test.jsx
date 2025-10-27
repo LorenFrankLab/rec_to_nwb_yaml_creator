@@ -13,6 +13,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../../App';
+import { StoreProvider } from '../../../state/StoreContext';
 import { getMainForm } from '../../helpers/test-selectors';
 
 describe('App.js - submitForm()', () => {
@@ -20,7 +21,11 @@ describe('App.js - submitForm()', () => {
     it('should call openDetailsElement when Generate YML File button clicked', async () => {
       const user = userEvent.setup();
 
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Find some details elements (they're closed by default in some browsers)
       const detailsElements = document.querySelectorAll('details');
@@ -41,7 +46,11 @@ describe('App.js - submitForm()', () => {
     it('should trigger form submission via requestSubmit', async () => {
       const user = userEvent.setup();
 
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Spy on form's requestSubmit method
       const form = getMainForm();
@@ -66,7 +75,11 @@ describe('App.js - submitForm()', () => {
       // Mock HTMLAnchorElement.prototype.click
       const anchorClickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Fill in required fields to make validation pass
       const sessionIdInput = screen.getByLabelText(/session id/i);
@@ -95,7 +108,11 @@ describe('App.js - submitForm()', () => {
     it('should open all details elements before form submission', async () => {
       const user = userEvent.setup();
 
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Find all details elements
       const detailsElements = document.querySelectorAll('details');
@@ -124,7 +141,11 @@ describe('App.js - submitForm()', () => {
 
   describe('Button Type and Form Behavior', () => {
     it('should have type="button" on Generate YML File button', () => {
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const generateButton = screen.getByRole('button', { name: /generate yml file/i });
 
@@ -136,7 +157,11 @@ describe('App.js - submitForm()', () => {
     it('should use onClick handler instead of form submit event', async () => {
       const user = userEvent.setup();
 
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const generateButton = screen.getByRole('button', { name: /generate yml file/i });
 

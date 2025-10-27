@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../App';
+import { StoreProvider } from '../../state/StoreContext';
 import YAML from 'yaml';
 import { getMinimalCompleteYaml } from '../helpers/test-fixtures';
 import { getMainForm } from '../helpers/test-selectors';
@@ -90,7 +91,11 @@ describe('End-to-End Session Creation Workflow', () => {
   it('creates minimal valid session from blank form', async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // Verify we start with default values (not empty)
     const labInput = screen.getByLabelText(/^lab$/i);
@@ -267,7 +272,11 @@ describe('End-to-End Session Creation Workflow', () => {
   it('creates complete session with all optional fields', { timeout: 60000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // ACT - Fill all required fields using helper
     await fillRequiredFields(user, screen);
@@ -396,7 +405,11 @@ describe('End-to-End Session Creation Workflow', () => {
   it('adds multiple experimenter names', async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // ACT - Fill required fields first
     await fillRequiredFields(user, screen);
@@ -434,7 +447,11 @@ describe('End-to-End Session Creation Workflow', () => {
   it('adds complete subject information', async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // ACT - Fill required fields first
     await fillRequiredFields(user, screen);
@@ -494,7 +511,11 @@ describe('End-to-End Session Creation Workflow', () => {
   it('configures data acquisition device', async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // ACT - Fill required fields (includes 1 data_acq_device with defaults)
     await fillRequiredFields(user, screen);
@@ -539,7 +560,11 @@ describe('End-to-End Session Creation Workflow', () => {
   it('adds cameras with auto-incrementing IDs', async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // ACT - Fill required fields first
     await fillRequiredFields(user, screen);
@@ -608,7 +633,11 @@ describe('End-to-End Session Creation Workflow', () => {
   it('adds tasks with camera references', async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // ACT - Fill required fields first
     await fillRequiredFields(user, screen);
@@ -663,7 +692,11 @@ describe('End-to-End Session Creation Workflow', () => {
   it('adds behavioral events', async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // ACT - Fill required fields first
     await fillRequiredFields(user, screen);
@@ -730,7 +763,11 @@ describe('End-to-End Session Creation Workflow', () => {
   it('adds electrode groups with device types', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // ACT - Fill required fields first
     await fillRequiredFields(user, screen);
@@ -786,7 +823,11 @@ describe('End-to-End Session Creation Workflow', () => {
   it('triggers ntrode generation when device type selected', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // ACT - Fill required fields first
     await fillRequiredFields(user, screen);
@@ -848,7 +889,11 @@ describe('End-to-End Session Creation Workflow', () => {
   it('validates and exports complete session as valid YAML', { timeout: 60000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // ACT - Fill required fields first
     await fillRequiredFields(user, screen);

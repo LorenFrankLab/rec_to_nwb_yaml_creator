@@ -1,15 +1,16 @@
 import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { StoreProvider } from '../../state/StoreContext';
 
 /**
- * Custom render with common providers
+ * Custom render with common providers (includes StoreProvider)
  */
 export function renderWithProviders(ui, options = {}) {
   const user = userEvent.setup();
 
   return {
     user,
-    ...render(ui, options),
+    ...render(<StoreProvider>{ui}</StoreProvider>, options),
   };
 }
 

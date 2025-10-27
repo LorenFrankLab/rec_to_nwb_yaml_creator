@@ -24,6 +24,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../../../App';
+import { StoreProvider } from '../../../state/StoreContext';
 import { getShankCount } from '../../../ntrode/deviceTypes';
 import { clickAddButton } from '../../helpers/test-hooks';
 import { getById, getByName } from '../../helpers/test-selectors';
@@ -31,7 +32,11 @@ import { getById, getByName } from '../../helpers/test-selectors';
 describe('App.js - nTrodeMapSelected()', () => {
   describe('Basic Device Type Selection', () => {
     it('should set device_type on electrode group when selected', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       // Add electrode group
@@ -46,7 +51,11 @@ describe('App.js - nTrodeMapSelected()', () => {
     });
 
     it('should generate ntrode UI elements when device type selected', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       // Add electrode group
@@ -68,7 +77,11 @@ describe('App.js - nTrodeMapSelected()', () => {
     });
 
     it('should update device_type when changed to different value', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       await clickAddButton(user, container, "Add electrode_groups");
@@ -87,7 +100,11 @@ describe('App.js - nTrodeMapSelected()', () => {
 
   describe('Ntrode Generation Based on Shank Count', () => {
     it('should generate 1 ntrode for single-shank device (tetrode)', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       await clickAddButton(user, container, "Add electrode_groups");
@@ -104,7 +121,11 @@ describe('App.js - nTrodeMapSelected()', () => {
     });
 
     it('should generate 2 ntrodes for 2-shank device', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       await clickAddButton(user, container, "Add electrode_groups");
@@ -120,7 +141,11 @@ describe('App.js - nTrodeMapSelected()', () => {
     });
 
     it('should generate 3 ntrodes for 3-shank device', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       await clickAddButton(user, container, "Add electrode_groups");
@@ -135,7 +160,11 @@ describe('App.js - nTrodeMapSelected()', () => {
     });
 
     it('should generate 4 ntrodes for 4-shank device', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       await clickAddButton(user, container, "Add electrode_groups");
@@ -164,7 +193,11 @@ describe('App.js - nTrodeMapSelected()', () => {
 
   describe('Ntrode ID Sequential Numbering', () => {
     it('should assign ntrode_id starting from 1', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       await clickAddButton(user, container, "Add electrode_groups");
@@ -179,7 +212,11 @@ describe('App.js - nTrodeMapSelected()', () => {
     });
 
     it('should number multiple ntrodes sequentially (1, 2, 3, 4)', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       await clickAddButton(user, container, "Add electrode_groups");
@@ -198,7 +235,11 @@ describe('App.js - nTrodeMapSelected()', () => {
     });
 
     it('should continue sequential numbering across multiple electrode groups', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       // Add first electrode group with tetrode (1 ntrode)
@@ -223,7 +264,11 @@ describe('App.js - nTrodeMapSelected()', () => {
 
   describe('Replacing Existing Ntrode Maps', () => {
     it('should replace ntrode maps when device type changed', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       await clickAddButton(user, container, "Add electrode_groups");
@@ -248,7 +293,11 @@ describe('App.js - nTrodeMapSelected()', () => {
     });
 
     it('should preserve ntrode maps for other electrode groups', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       // Add first electrode group with tetrode (1 ntrode)
@@ -276,7 +325,11 @@ describe('App.js - nTrodeMapSelected()', () => {
     });
 
     it('should renumber all ntrode_id values after replacement', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       await clickAddButton(user, container, "Add electrode_groups");
@@ -306,7 +359,11 @@ describe('App.js - nTrodeMapSelected()', () => {
 
   describe('Channel Map Generation', () => {
     it('should create channel map UI elements', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       await clickAddButton(user, container, "Add electrode_groups");
@@ -322,7 +379,11 @@ describe('App.js - nTrodeMapSelected()', () => {
     });
 
     it('should display bad_channels checkbox list', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       await clickAddButton(user, container, "Add electrode_groups");
@@ -340,7 +401,11 @@ describe('App.js - nTrodeMapSelected()', () => {
 
   describe('Edge Cases and Error Handling', () => {
     it('should handle rapid device type changes', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       await clickAddButton(user, container, "Add electrode_groups");
@@ -360,7 +425,11 @@ describe('App.js - nTrodeMapSelected()', () => {
     });
 
     it('should handle device type selection on first electrode group', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       await clickAddButton(user, container, "Add electrode_groups");
@@ -380,7 +449,11 @@ describe('App.js - nTrodeMapSelected()', () => {
     });
 
     it('should handle all supported device types without errors', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       await clickAddButton(user, container, "Add electrode_groups");
@@ -410,7 +483,11 @@ describe('App.js - nTrodeMapSelected()', () => {
 
   describe('State Management', () => {
     it('should update formData state when device type selected', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       await clickAddButton(user, container, "Add electrode_groups");
@@ -433,7 +510,11 @@ describe('App.js - nTrodeMapSelected()', () => {
     it('should maintain immutability using structuredClone', async () => {
       // Behavioral test - verifies function doesn't mutate original formData
       // by checking that React state updates trigger re-renders
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
       const user = userEvent.setup();
 
       await clickAddButton(user, container, "Add electrode_groups");

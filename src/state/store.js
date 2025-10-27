@@ -122,8 +122,16 @@ export function useStore() {
 
         formActions.updateFormData(name, inputValue, key, index);
       },
+
+      /**
+       * Replaces entire form state (for bulk imports).
+       * Use sparingly - prefer individual field updates for most cases.
+       *
+       * @param {Object} newFormData - Complete new form state
+       */
+      setFormData,
     }),
-    [arrayActions, formActions, electrodeActions]
+    [arrayActions, formActions, electrodeActions, setFormData]
   );
 
   return {

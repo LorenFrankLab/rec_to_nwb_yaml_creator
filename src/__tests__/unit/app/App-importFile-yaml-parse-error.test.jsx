@@ -26,13 +26,18 @@ import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../../App';
+import { StoreProvider } from '../../../state/StoreContext';
 import { getMainForm, getFileInput, getById } from '../../helpers/test-selectors';
 
 describe('App.js - importFile() YAML.parse() Error Handling', () => {
   describe('CRITICAL: Malformed YAML Handling', () => {
     it('should not crash when importing malformed YAML', async () => {
       const user = userEvent.setup();
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Create malformed YAML file (invalid syntax)
       const malformedYAML = `
@@ -57,7 +62,11 @@ another_field: value
 
     it('should show error message when YAML parsing fails', async () => {
       const user = userEvent.setup();
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Spy on window.alert to capture error message
       const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
@@ -98,7 +107,11 @@ subject:
 
     it('should restore form to defaults when YAML parsing fails', async () => {
       const user = userEvent.setup();
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Mock alert to suppress error messages
       const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
@@ -134,7 +147,11 @@ subject:
   describe('Edge Cases: YAML Parsing Errors', () => {
     it('should handle completely empty file', async () => {
       const user = userEvent.setup();
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
@@ -156,7 +173,11 @@ subject:
 
     it('should handle binary file uploaded as YAML', async () => {
       const user = userEvent.setup();
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
@@ -179,7 +200,11 @@ subject:
 
     it('should handle YAML with invalid characters', async () => {
       const user = userEvent.setup();
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
@@ -205,7 +230,11 @@ subject:
   describe('FileReader Error Handling', () => {
     it('should handle FileReader errors gracefully', async () => {
       const user = userEvent.setup();
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
@@ -248,7 +277,11 @@ subject:
   describe('Data Loss Prevention', () => {
     it('should prevent data loss when user has existing form data', async () => {
       const user = userEvent.setup();
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 

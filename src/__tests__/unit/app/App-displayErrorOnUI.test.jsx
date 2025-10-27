@@ -17,6 +17,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import App from '../../../App';
+import { StoreProvider } from '../../../state/StoreContext';
 import { getById } from '../../helpers/test-selectors';
 
 describe('displayErrorOnUI', () => {
@@ -118,7 +119,11 @@ describe('displayErrorOnUI', () => {
 
   describe('Integration: Function Usage Context', () => {
     it('is called from rulesValidation when validation fails', () => {
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // displayErrorOnUI is called at line 675 in App.js
       // Context: rulesValidation custom validation errors
@@ -138,7 +143,11 @@ describe('displayErrorOnUI', () => {
     });
 
     it('works with element IDs from form fields', () => {
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Common field IDs that displayErrorOnUI would target
       const commonFieldIds = [

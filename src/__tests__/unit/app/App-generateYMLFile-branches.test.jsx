@@ -6,6 +6,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../../../App';
+import { StoreProvider } from '../../../state/StoreContext';
 
 /**
  * Suite 2: generateYMLFile() Branch Coverage Tests
@@ -66,7 +67,11 @@ describe('App - generateYMLFile() Branch Coverage', () => {
    */
   it('should not display errors when both validations pass', async () => {
     // ARRANGE
-    const { container } = render(<App />);
+    const { container } = render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // Mock successful validation (both return true)
     const isValid = true;

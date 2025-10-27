@@ -2,9 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
 import { showErrorMessage, displayErrorOnUI } from './utils/errorDisplay';
-import { useArrayManagement } from './hooks/useArrayManagement';
-import { useFormUpdates } from './hooks/useFormUpdates';
-import { useElectrodeGroups } from './hooks/useElectrodeGroups';
+import { useStoreContext } from './state/StoreContext';
 import { importFiles, exportAll } from './features/importExport';
 import SubjectFields from './components/SubjectFields';
 import DataAcqDeviceFields from './components/DataAcqDeviceFields';
@@ -66,15 +64,23 @@ import {
 } from './valueList';
 
 export function App() {
-  const [formData, setFormData] = useState(defaultYMLValues);
+  // Access shared store via Context
+  const { model: formData, actions, selectors } = useStoreContext();
 
-  const [cameraIdsDefined, setCameraIdsDefined] = useState([]);
-
-  const [taskEpochsDefined, setTaskEpochsDefined] = useState([]);
-
-  const [dioEventsDefined, setDioEventsDefined] = useState([]);
-
-  const [appVersion, setAppVersion] = useState('');
+  // Destructure actions for backward compatibility with component props
+  const {
+    updateFormData,
+    updateFormArray,
+    onBlur,
+    handleChange,
+    itemSelected,
+    addArrayItem,
+    removeArrayItem,
+    duplicateArrayItem,
+    nTrodeMapSelected,
+    removeElectrodeGroupItem,
+    duplicateElectrodeGroupItem,
+  } = actions;
 
   /**
    * Stores JSON schema
@@ -82,19 +88,16 @@ export function App() {
   const schema = useRef({});
 
   /**
-   * Array management functions (add, remove, duplicate)
+   * Computed values from selectors
    */
-  const { addArrayItem, removeArrayItem, duplicateArrayItem } = useArrayManagement(formData, setFormData);
+  const cameraIdsDefined = selectors.getCameraIds();
+  const taskEpochsDefined = selectors.getTaskEpochs();
+  const dioEventsDefined = selectors.getDioEvents();
 
   /**
-   * Form update functions (simple updates, array updates, blur transformations, onChange handlers)
+   * App version (local state, not part of form data)
    */
-  const { updateFormData, updateFormArray, onBlur, handleChange } = useFormUpdates(formData, setFormData);
-
-  /**
-   * Electrode group management functions (ntrode map generation, electrode group remove/duplicate)
-   */
-  const { nTrodeMapSelected, removeElectrodeGroupItem, duplicateElectrodeGroupItem } = useElectrodeGroups(formData, setFormData);
+  const [appVersion, setAppVersion] = useState('');
 
   /**
    * Initiates importing an existing YAML file
@@ -109,7 +112,8 @@ export function App() {
     const result = await importFiles(file);
 
     if (result.formData) {
-      setFormData(result.formData);
+      // Import updates entire form state at once
+      actions.setFormData(result.formData);
     }
   };
 
@@ -139,194 +143,137 @@ export function App() {
     }
 
     nTrodes[shankNumber].map[index] = stringToInteger(value);
-    setFormData(form);
+
+    // Update the entire ntrode_electrode_group_channel_map array
+    actions.updateFormData(key, form[key]);
     return null;
   };
 
   /**
-   * Updates an item after selection.
-   *
-   * @param {object} e Event object
-   * @param {object} metaData Supporting Data
+   * Open all Detail elements
    */
-  const itemSelected = (e, metaData) => {
-    const { target } = e;
-    const { name, value } = target;
-    const { key, index, type } = metaData || {};
-    const inputValue = type === 'number' ? parseInt(value, 10) : value;
+  const openDetailsElement = () => {
+    const details = document.querySelectorAll('details');
 
-    updateFormData(name, inputValue, key, index);
+    details.forEach((detail) => {
+      detail.open = true;
+    });
   };
 
+  /**
+   * submit form. This is this way as there is no official beforeSubmit method
+   *
+   * @param {object} e Javascript object
+   */
+  const submitForm = (e) => {
+    openDetailsElement();
+    document.querySelector('form').requestSubmit();
+  };
 
-/**
- * Open all Detail elements
- */
-const openDetailsElement = () => {
-  const details = document.querySelectorAll('details');
+  /**
+   * Create the YML file
+   *
+   * @param {object} e event parameter
+   */
+  const generateYMLFile = (e) => {
+    e.preventDefault();
 
-  details.forEach((detail) => {
-    detail.open = true;
-  });
-}
+    // Use extracted export logic
+    const result = exportAll(formData);
 
-/**
- * submit form. This is this way as there is no official beforeSubmit method
- *
- * @param {object} e Javascript object
- */
-const submitForm = (e) => {
-  openDetailsElement();
-  document.querySelector('form').requestSubmit();
-}
+    // If export failed, display validation errors
+    if (!result.success && result.validationIssues) {
+      // Display validation errors to user
+      // Issues with instancePath are from schema validation (AJV format)
+      // Issues without instancePath are from rules validation (need ID conversion)
+      result.validationIssues.forEach((issue) => {
+        if (issue.instancePath !== undefined) {
+          // Schema validation error - use showErrorMessage (expects AJV format)
+          showErrorMessage(issue);
+        } else {
+          // Rules validation error - use displayErrorOnUI (expects id + message)
+          // Convert path to ID format (e.g., "tasks" → "tasks", "cameras[0].id" → "cameras-id-0")
+          const id = issue.path.replace(/\[(\d+)\]\.(\w+)/g, '-$2-$1').replace(/\[(\d+)\]$/g, '-$1');
+          displayErrorOnUI(id, issue.message);
+        }
+      });
 
-/**
- * Create the YML file
- *
- * @param {object} e event parameter
- */
-const generateYMLFile = (e) => {
-  e.preventDefault();
+      // Focus first invalid field for better accessibility
+      // Wait for error messages to be displayed in DOM
+      setTimeout(() => {
+        // Try to find first field with custom validity error (from displayErrorOnUI)
+        const firstInvalidField = document.querySelector('input:invalid, select:invalid, textarea:invalid');
 
-  // Use extracted export logic
-  const result = exportAll(formData);
+        if (firstInvalidField) {
+          firstInvalidField.focus();
+          firstInvalidField.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+          });
+        }
+      }, 100);
+    }
+  };
 
-  // If export failed, display validation errors
-  if (!result.success && result.validationIssues) {
-    // Display validation errors to user
-    // Issues with instancePath are from schema validation (AJV format)
-    // Issues without instancePath are from rules validation (need ID conversion)
-    result.validationIssues.forEach((issue) => {
-      if (issue.instancePath !== undefined) {
-        // Schema validation error - use showErrorMessage (expects AJV format)
-        showErrorMessage(issue);
-      } else {
-        // Rules validation error - use displayErrorOnUI (expects id + message)
-        // Convert path to ID format (e.g., "tasks" → "tasks", "cameras[0].id" → "cameras-id-0")
-        const id = issue.path.replace(/\[(\d+)\]\.(\w+)/g, '-$2-$1').replace(/\[(\d+)\]$/g, '-$1');
-        displayErrorOnUI(id, issue.message);
-      }
+  /**
+   * Reset YML file
+   *
+   * @param {object} e event parameter
+   */
+  const clearYMLFile = (e) => {
+    e.preventDefault();
+
+    // eslint-disable-next-line no-alert
+    const shouldReset = window.confirm('Are you sure you want to reset?');
+
+    if (shouldReset) {
+      actions.setFormData(structuredClone(defaultYMLValues)); // clear out form
+    }
+  };
+
+  /**
+   * Processes clicking on a nav item
+   *
+   * @param {object} e Event object
+   */
+  const clickNav = (e) => {
+    const activeScrollSpies = document.querySelectorAll('.active-nav-link');
+
+    activeScrollSpies.forEach((spy) => {
+      spy.classList.remove('active-nav-link');
     });
 
-    // Focus first invalid field for better accessibility
-    // Wait for error messages to be displayed in DOM
+    const { target } = e;
+    const id = target.getAttribute('data-id');
+
+    const { parentNode } = e.target;
+    parentNode.classList.add('active-nav-link');
+    const element = document.querySelector(`#${id}`);
+
+    if (!element) {
+      parentNode?.classList.remove('active-nav-link');
+      return;
+    }
+
+    element.classList.add('highlight-region');
+
     setTimeout(() => {
-      // Try to find first field with custom validity error (from displayErrorOnUI)
-      const firstInvalidField = document.querySelector('input:invalid, select:invalid, textarea:invalid');
+      element?.classList.remove('highlight-region');
+      parentNode?.classList.remove('active-nav-link');
+    }, 1000);
+  };
 
-      if (firstInvalidField) {
-        firstInvalidField.focus();
-        firstInvalidField.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center'
-        });
-      }
-    }, 100);
-  }
-};
+  useMount(() => {
+    // set app version
+    const { version } = packageJson;
+    setAppVersion(version);
 
-/**
- * Reset YML file
- *
- * @param {object} e event parameter
- */
-const clearYMLFile = (e) => {
-  e.preventDefault();
-
-  // eslint-disable-next-line no-alert
-  const shouldReset = window.confirm('Are you sure you want to reset?');
-
-  if (shouldReset) {
-    setFormData(structuredClone(defaultYMLValues)); // clear out form
-  }
-};
-
-/**
- * Processes clicking on a nav item
- *
- * @param {object} e Event object
- */
-const clickNav = (e) => {
-  const activeScrollSpies = document.querySelectorAll('.active-nav-link');
-
-  activeScrollSpies.forEach((spy) => {
-    spy.classList.remove('active-nav-link');
+    // Handles initial read of JSON schema
+    schema.current = JsonSchemaFile; // JsonSchemaFile.properties;
   });
 
-  const { target } = e;
-  const id = target.getAttribute('data-id');
-
-  const { parentNode } = e.target;
-  parentNode.classList.add('active-nav-link');
-  const element = document.querySelector(`#${id}`);
-
-  if (!element) {
-    parentNode?.classList.remove('active-nav-link');
-    return;
-  }
-
-  element.classList.add('highlight-region');
-
-  setTimeout(() => {
-    element?.classList.remove('highlight-region');
-    parentNode?.classList.remove('active-nav-link');
-  }, 1000);
-};
-
-useMount(() => {
-  // set app version
-  const { version } = packageJson;
-  setAppVersion(version);
-
-  // Handles initial read of JSON schema
-  schema.current = JsonSchemaFile; // JsonSchemaFile.properties;
-});
-
-/**
- * Tracks camera and epoch additions
- */
-useEffect(() => {
-  // updated tracked camera ids
-  if (formData.cameras) {
-    const cameraIds = formData.cameras.map((camera) => camera.id);
-    setCameraIdsDefined([...[...new Set(cameraIds)]].filter((c) => !Number.isNaN(c)));
-  }
-
-  // update tracked dio events
-  if (formData.behavioral_events) {
-    const dioEvents = formData.behavioral_events.map((dioEvent) => dioEvent.name);
-    setDioEventsDefined(dioEvents);
-  }
-
-
-  // update tracked task epochs
-  const taskEpochs = [
-    ...[
-      ...new Set(
-        (formData.tasks.map((tasks) => tasks.task_epochs) || []).flat().sort()
-      ),
-    ],
-  ];
-
-  // remove deleted task epochs
-  let i = 0;
-
-  for (i = 0; i < formData.associated_files.length; i += 1) {
-    if (!taskEpochs.includes(formData.associated_files[i].task_epochs)) {
-      formData.associated_files[i].task_epochs = '';
-    }
-  }
-
-  for (i = 0; i < formData.associated_video_files.length; i += 1) {
-    if (!taskEpochs.includes(formData.associated_video_files[i].task_epochs)) {
-      formData.associated_video_files[i].task_epochs = '';
-    }
-  }
-
-  setFormData(formData);
-
-  setTaskEpochsDefined(taskEpochs);
-}, [formData]);
+// Note: Camera IDs, DIO events, and task epochs tracking is now handled by StoreContext selectors
+// See: getCameraIds(), getDioEvents(), getTaskEpochs() in state/selectors.js
 
    return <>
     <div className="home-region">

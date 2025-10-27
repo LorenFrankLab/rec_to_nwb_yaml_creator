@@ -1,7 +1,7 @@
 {
   "config": {
-    "configFile": "/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/.worktrees/phase-0-baselines/playwright.config.js",
-    "rootDir": "/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/.worktrees/phase-0-baselines/e2e",
+    "configFile": "/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/playwright.config.js",
+    "rootDir": "/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/e2e",
     "forbidOnly": false,
     "fullyParallel": true,
     "globalSetup": null,
@@ -37,7 +37,7 @@
     "quiet": false,
     "projects": [
       {
-        "outputDir": "/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/.worktrees/phase-0-baselines/test-results",
+        "outputDir": "/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/test-results",
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
@@ -45,7 +45,7 @@
         },
         "id": "chromium",
         "name": "chromium",
-        "testDir": "/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/.worktrees/phase-0-baselines/e2e",
+        "testDir": "/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/e2e",
         "testIgnore": [],
         "testMatch": [
           "**/*.@(spec|test).?(c|m)[jt]s?(x)"
@@ -66,665 +66,6 @@
     }
   },
   "suites": [
-    {
-      "title": "baselines/form-interaction.spec.js",
-      "file": "baselines/form-interaction.spec.js",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "BASELINE: Form Interactions",
-          "file": "baselines/form-interaction.spec.js",
-          "line": 16,
-          "column": 6,
-          "specs": [
-            {
-              "title": "can fill basic metadata fields",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 812,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-10-23T22:11:58.790Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "9ca64e3e23abf745d3e6-9a0d611d481436b3d868",
-              "file": "baselines/form-interaction.spec.js",
-              "line": 18,
-              "column": 7
-            },
-            {
-              "title": "can navigate between form sections using sidebar",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
-                      "status": "passed",
-                      "duration": 1776,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-10-23T22:11:58.786Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "9ca64e3e23abf745d3e6-6fe39e6563a982d9c035",
-              "file": "baselines/form-interaction.spec.js",
-              "line": 47,
-              "column": 7
-            },
-            {
-              "title": "can add and remove camera items",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
-                      "status": "passed",
-                      "duration": 1103,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-10-23T22:11:58.797Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "9ca64e3e23abf745d3e6-c988ace1f2838858dc78",
-              "file": "baselines/form-interaction.spec.js",
-              "line": 75,
-              "column": 7
-            },
-            {
-              "title": "can add and duplicate electrode groups",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
-                      "status": "passed",
-                      "duration": 1084,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-10-23T22:11:58.790Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "9ca64e3e23abf745d3e6-cc76639374224655b87c",
-              "file": "baselines/form-interaction.spec.js",
-              "line": 115,
-              "column": 7
-            },
-            {
-              "title": "can add task and verify epoch fields",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 4,
-                      "parallelIndex": 4,
-                      "status": "passed",
-                      "duration": 1087,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-10-23T22:11:58.791Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "9ca64e3e23abf745d3e6-8cb5321c619f871aca73",
-              "file": "baselines/form-interaction.spec.js",
-              "line": 161,
-              "column": 7
-            },
-            {
-              "title": "can select device type in electrode group",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 591,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-10-23T22:11:59.969Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "9ca64e3e23abf745d3e6-996bcf4f13b0462146a9",
-              "file": "baselines/form-interaction.spec.js",
-              "line": 203,
-              "column": 7
-            },
-            {
-              "title": "can open and close collapsible sections (details elements)",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
-                      "status": "passed",
-                      "duration": 629,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-10-23T22:12:00.231Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "9ca64e3e23abf745d3e6-199199412119cbb074b5",
-              "file": "baselines/form-interaction.spec.js",
-              "line": 235,
-              "column": 7
-            },
-            {
-              "title": "documents current form reset behavior",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 4,
-                      "parallelIndex": 4,
-                      "status": "passed",
-                      "duration": 712,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "Field after reset: \"\"\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-10-23T22:12:00.230Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "9ca64e3e23abf745d3e6-2cbe11549528ba2c6e60",
-              "file": "baselines/form-interaction.spec.js",
-              "line": 268,
-              "column": 7
-            },
-            {
-              "title": "documents dynamic camera ID dependency in tasks",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
-                      "status": "passed",
-                      "duration": 847,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-10-23T22:12:00.246Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "9ca64e3e23abf745d3e6-70a34aa670df385aad03",
-              "file": "baselines/form-interaction.spec.js",
-              "line": 295,
-              "column": 7
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "title": "baselines/import-export.spec.js",
-      "file": "baselines/import-export.spec.js",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "BASELINE: Import/Export Workflow",
-          "file": "baselines/import-export.spec.js",
-          "line": 31,
-          "column": 6,
-          "specs": [
-            {
-              "title": "can import valid minimal YAML file",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 343,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-10-23T22:12:00.584Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "cca0efd10f2eb9e44d28-377d9fea76fb98a21b71",
-              "file": "baselines/import-export.spec.js",
-              "line": 33,
-              "column": 7
-            },
-            {
-              "title": "can import complete YAML file",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
-                      "status": "passed",
-                      "duration": 387,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-10-23T22:12:00.876Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "cca0efd10f2eb9e44d28-9428c9629b01b37fc0d4",
-              "file": "baselines/import-export.spec.js",
-              "line": 60,
-              "column": 7
-            },
-            {
-              "title": "can import realistic session YAML",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
-                      "status": "passed",
-                      "duration": 380,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-10-23T22:12:00.928Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "cca0efd10f2eb9e44d28-bdc3529f21a9383ccbe4",
-              "file": "baselines/import-export.spec.js",
-              "line": 90,
-              "column": 7
-            },
-            {
-              "title": "can export YAML file after filling form",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [
-                    {
-                      "type": "skip",
-                      "location": {
-                        "file": "/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/.worktrees/phase-0-baselines/e2e/baselines/import-export.spec.js",
-                        "line": 124,
-                        "column": 8
-                      }
-                    }
-                  ],
-                  "expectedStatus": "skipped",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": -1,
-                      "parallelIndex": -1,
-                      "status": "skipped",
-                      "duration": 0,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-10-23T22:12:00.935Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "skipped"
-                }
-              ],
-              "id": "cca0efd10f2eb9e44d28-53a78cc754cdcee1a24b",
-              "file": "baselines/import-export.spec.js",
-              "line": 124,
-              "column": 8
-            },
-            {
-              "title": "documents round-trip: import -> modify -> export",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 395,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-10-23T22:12:00.936Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "cca0efd10f2eb9e44d28-78e37e5b1a77eb0f40a1",
-              "file": "baselines/import-export.spec.js",
-              "line": 190,
-              "column": 7
-            },
-            {
-              "title": "documents validation errors during export attempt",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 4,
-                      "parallelIndex": 4,
-                      "status": "passed",
-                      "duration": 5415,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-10-23T22:12:00.961Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "cca0efd10f2eb9e44d28-a4cb2c3cae25af296043",
-              "file": "baselines/import-export.spec.js",
-              "line": 231,
-              "column": 7
-            },
-            {
-              "title": "documents filename format of exported YAML",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
-                      "status": "passed",
-                      "duration": 417,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-10-23T22:12:01.110Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "cca0efd10f2eb9e44d28-53ed9d6c985a676e0aa9",
-              "file": "baselines/import-export.spec.js",
-              "line": 259,
-              "column": 7
-            },
-            {
-              "title": "documents behavior when importing invalid YAML",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
-                      "status": "passed",
-                      "duration": 385,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-10-23T22:12:01.276Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "cca0efd10f2eb9e44d28-3ccf1e6076e6049478e8",
-              "file": "baselines/import-export.spec.js",
-              "line": 290,
-              "column": 7
-            },
-            {
-              "title": "documents behavior when importing YAML with missing required fields",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
-                      "status": "passed",
-                      "duration": 373,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-10-23T22:12:01.318Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "cca0efd10f2eb9e44d28-9c9a212c190da617c96d",
-              "file": "baselines/import-export.spec.js",
-              "line": 332,
-              "column": 7
-            }
-          ]
-        }
-      ]
-    },
     {
       "title": "baselines/visual-regression.spec.js",
       "file": "baselines/visual-regression.spec.js",
@@ -754,12 +95,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1852,
+                      "duration": 2354,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:12:01.340Z",
+                      "startTime": "2025-10-27T03:41:37.801Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -785,15 +126,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 1958,
+                      "duration": 2313,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:12:01.537Z",
+                      "startTime": "2025-10-27T03:41:37.799Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -819,15 +160,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 2143,
+                      "duration": 4442,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:12:01.670Z",
+                      "startTime": "2025-10-27T03:41:37.786Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -853,15 +194,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
                       "status": "passed",
-                      "duration": 2181,
+                      "duration": 4500,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:12:01.701Z",
+                      "startTime": "2025-10-27T03:41:37.785Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -887,15 +228,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
+                      "workerIndex": 4,
+                      "parallelIndex": 4,
                       "status": "passed",
-                      "duration": 2099,
+                      "duration": 4500,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:12:03.200Z",
+                      "startTime": "2025-10-27T03:41:37.794Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -921,15 +262,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 2104,
+                      "duration": 4063,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:12:03.501Z",
+                      "startTime": "2025-10-27T03:41:40.344Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -955,15 +296,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 3057,
+                      "duration": 3116,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:12:03.819Z",
+                      "startTime": "2025-10-27T03:41:40.399Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -989,15 +330,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 1479,
+                      "duration": 1685,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:12:03.888Z",
+                      "startTime": "2025-10-27T03:41:42.481Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1017,10 +358,10 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2025-10-23T22:11:56.462Z",
-    "duration": 10480.26,
-    "expected": 25,
-    "skipped": 1,
+    "startTime": "2025-10-27T03:41:37.050Z",
+    "duration": 7467.792,
+    "expected": 8,
+    "skipped": 0,
     "unexpected": 0,
     "flaky": 0
   }
