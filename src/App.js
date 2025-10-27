@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
-import { showErrorMessage, displayErrorOnUI } from './utils/errorDisplay';
+import { showErrorMessage, displayErrorOnUI, setAlertCallback } from './utils/errorDisplay';
+import AlertModal from './components/AlertModal';
 import { useStoreContext } from './state/StoreContext';
 import { importFiles, exportAll } from './features/importExport';
 import SubjectFields from './components/SubjectFields';
@@ -45,6 +46,16 @@ export function App() {
    * App version (local state, not part of form data)
    */
   const [appVersion, setAppVersion] = useState('');
+
+  /**
+   * AlertModal state (replaces window.alert for accessible error display)
+   */
+  const [alertState, setAlertState] = useState({
+    isOpen: false,
+    message: '',
+    title: 'Alert',
+    type: 'info',
+  });
 
   /**
    * Initiates importing an existing YAML file
@@ -224,6 +235,21 @@ export function App() {
 
     // Handles initial read of JSON schema
     schema.current = JsonSchemaFile; // JsonSchemaFile.properties;
+
+    // Register AlertModal callback for accessible error display
+    setAlertCallback((message) => {
+      setAlertState({
+        isOpen: true,
+        message,
+        title: 'Alert',
+        type: 'error', // Default to error type for validation messages
+      });
+    });
+
+    // Cleanup callback on unmount
+    return () => {
+      setAlertCallback(null);
+    };
   });
 
 // Note: Camera IDs, DIO events, and task epochs tracking is now handled by StoreContext selectors
@@ -399,6 +425,13 @@ export function App() {
     </div>
     </div>
   </div>
+  <AlertModal
+    isOpen={alertState.isOpen}
+    message={alertState.message}
+    title={alertState.title}
+    type={alertState.type}
+    onClose={() => setAlertState({ ...alertState, isOpen: false })}
+  />
   </>;
 }
 export default App;
