@@ -230,13 +230,21 @@ export function App() {
 // See: getCameraIds(), getDioEvents(), getTaskEpochs() in state/store.js
 
    return <>
+    {/* Skip links for keyboard accessibility (WCAG 2.1 Level A - 2.4.1) */}
+    <a href="#main-content" className="skip-link">
+      Skip to main content
+    </a>
+    <a href="#navigation" className="skip-link">
+      Skip to navigation
+    </a>
+
     <div className="home-region">
       <a href={isProduction() ? '/rec_to_nwb_yaml_creator' : '/'}>
         <img src={logo} alt="Loren Frank Lab logo"/>
       </a>
     </div>
     <div className="page-container">
-      <div className="page-container__nav">
+      <div id="navigation" tabIndex="-1" className="page-container__nav">
         <div className="page-container__nav__content">
         <p className="page-container__nav--content__header">Navigation</p>
         <ul>
@@ -281,7 +289,7 @@ export function App() {
       </ul>
       </div>
       </div>
-      <div className="page-container__content">
+      <div id="main-content" tabIndex="-1" className="page-container__content">
       <h2 className="header-text">
       Rec-to-NWB YAML Creator
       <span>
