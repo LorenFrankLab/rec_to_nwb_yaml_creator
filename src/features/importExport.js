@@ -26,12 +26,23 @@ import { emptyFormData, genderAcronym } from '../valueList';
  * @param {File} file - File object to import
  * @param {Object} [options] - Optional configuration
  * @param {Function} [options.onProgress] - Progress callback (not implemented yet)
- * @returns {Promise<Object>} Result object with success, error, and formData
+ * @returns {Promise<Object>} Result object
+ * @returns {boolean} result.success - Whether import succeeded
+ * @returns {string|null} result.error - Error message if failed
+ * @returns {Object|null} result.formData - Validated form data
+ * @returns {Object} [result.importSummary] - Import summary (only present on success)
+ * @returns {number} result.importSummary.totalFields - Total fields in YAML file
+ * @returns {string[]} result.importSummary.importedFields - Successfully imported field names
+ * @returns {Array<{field: string, reason: string}>} result.importSummary.excludedFields - Excluded fields with validation reasons
+ * @returns {boolean} result.importSummary.hasExclusions - Whether any fields were excluded
  *
  * @example
  * const result = await importFiles(file);
  * if (result.success) {
  *   setFormData(result.formData);
+ *   if (result.importSummary) {
+ *     showImportSummary(result.importSummary);
+ *   }
  * } else {
  *   alert(result.error);
  * }

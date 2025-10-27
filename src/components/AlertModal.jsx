@@ -121,7 +121,7 @@ AlertModal.propTypes = {
   message: PropTypes.string.isRequired,
   title: PropTypes.string,
   onClose: PropTypes.func.isRequired,
-  type: PropTypes.oneOf(['info', 'warning', 'error']),
+  type: PropTypes.oneOf(['info', 'success', 'warning', 'error']),
 };
 
 AlertModal.defaultProps = {

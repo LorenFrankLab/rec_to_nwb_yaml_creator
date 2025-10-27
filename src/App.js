@@ -86,7 +86,7 @@ export function App() {
    * @param {object} summary Import summary with imported/excluded fields
    */
   const showImportSummary = (summary) => {
-    const { importedFields, excludedFields, hasExclusions } = summary;
+    const { importedFields, excludedFields, hasExclusions, totalFields } = summary;
 
     // Format field names for display (convert snake_case to Title Case)
     const formatFieldName = (field) =>
@@ -94,18 +94,27 @@ export function App() {
         word.charAt(0).toUpperCase() + word.slice(1)
       ).join(' ');
 
-    // Build summary message
-    let message = hasExclusions
-      ? `**Import completed with exclusions**\n\n`
-      : `**Import successful**\n\n`;
+    // Build summary message (plain text, no markdown)
+    let message = '';
 
-    message += `✓ **${importedFields.length} fields imported:**\n`;
-    message += importedFields.map(field => `  • ${formatFieldName(field)}`).join('\n');
-
+    // Summary header with ratio
     if (hasExclusions) {
-      message += `\n\n✗ **${excludedFields.length} fields excluded:**\n`;
+      message += `Import completed: ${importedFields.length}/${totalFields} fields imported\n\n`;
+    } else {
+      message += `All ${importedFields.length} fields imported successfully\n\n`;
+    }
+
+    // Imported fields section
+    if (importedFields.length > 0) {
+      message += `IMPORTED (${importedFields.length}):\n`;
+      message += importedFields.map(field => `  ${formatFieldName(field)}`).join('\n');
+    }
+
+    // Excluded fields section
+    if (hasExclusions) {
+      message += `\n\nEXCLUDED (${excludedFields.length}):\n`;
       message += excludedFields.map(({ field, reason }) =>
-        `  • ${formatFieldName(field)}: ${reason}`
+        `  ${formatFieldName(field)}: ${reason}`
       ).join('\n');
     }
 

@@ -160,6 +160,15 @@ subject:
         expect(result.formData.subject.subject_id).toBe('RAT001');
         expect(result.formData.subject.species).toBe('Rattus norvegicus');
         expect(result.formData.subject.sex).toBe('M');
+
+        // Check import summary for successful import
+        expect(result.importSummary).toBeDefined();
+        expect(result.importSummary.hasExclusions).toBe(false);
+        expect(result.importSummary.excludedFields).toHaveLength(0);
+        expect(result.importSummary.importedFields).toContain('lab');
+        expect(result.importSummary.importedFields).toContain('institution');
+        expect(result.importSummary.importedFields).toContain('session_id');
+        expect(result.importSummary.importedFields).toContain('experimenter_name');
       });
 
       it('fills in missing keys with emptyFormData defaults', async () => {
