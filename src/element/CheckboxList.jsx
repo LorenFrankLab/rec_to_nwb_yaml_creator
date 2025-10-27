@@ -84,10 +84,10 @@ const CheckboxListComponent = (prop) => {
 CheckboxListComponent.propTypes = {
   title: PropTypes.string.isRequired,
   defaultValue: PropTypes.instanceOf(Array),
-  dataItems: PropTypes.arrayOf(PropTypes.string),
+  dataItems: PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.string, PropTypes.number])),
   id: PropTypes.string,
   objectKind: PropTypes.string,
-  type: PropTypes.string.isRequired,
+  type: PropTypes.string,
   name: PropTypes.string.isRequired,
   placeholder: PropTypes.string,
   updateFormArray: PropTypes.func,

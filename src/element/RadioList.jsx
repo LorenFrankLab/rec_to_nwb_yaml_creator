@@ -88,10 +88,10 @@ const RadioList = (prop) => {
 RadioList.propTypes = {
   title: PropTypes.string.isRequired,
   defaultValue: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-  dataItems: PropTypes.arrayOf(PropTypes.string),
+  dataItems: PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.string, PropTypes.number])),
   id: PropTypes.string,
   objectKind: PropTypes.string,
-  type: PropTypes.string.isRequired,
+  type: PropTypes.string,
   name: PropTypes.string.isRequired,
   placeholder: PropTypes.string,
   updateFormData: PropTypes.func,

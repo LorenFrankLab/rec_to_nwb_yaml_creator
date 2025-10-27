@@ -134,7 +134,7 @@ const ChannelMap = (prop) => {
 };
 
 ChannelMap.propTypes = {
-  electrodeGroupId: PropTypes.number,
+  electrodeGroupId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
   nTrodeItems: PropTypes.arrayOf(PropTypes.object),
   onBlur: PropTypes.func,
   updateFormArray: PropTypes.func,

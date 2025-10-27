@@ -91,11 +91,12 @@ function AssociatedFilesFields() {
                       />
                       <InputElement
                         id={`associated_files-path-${index}`}
+                        type="text"
                         title="Path"
                         name="path"
                         placeholder="path"
                         value={associatedFilesName.path}
-                        onChange={handleChange('path', 'associated_files', index)}  
+                        onChange={handleChange('path', 'associated_files', index)}
                         required
                         onBlur={(e) =>
                           onBlur(e, {
