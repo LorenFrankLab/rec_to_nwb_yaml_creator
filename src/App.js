@@ -903,14 +903,14 @@ useEffect(() => {
                         title="Hardware Model Name"
                         dataItems={optoExcitationModelNames()}
                         value={item.model_name || ''}
-                        onChange={handleChange('model_name', 'opto_excitation_source', index)}  
                         placeholder="Model of the hardware"
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          handleChange('model_name', 'opto_excitation_source', index)(e);
                           itemSelected(e, {
                             key,
                             index,
-                          })
-                        }
+                          });
+                        }}
                       />
                     <InputElement
                       id={`opto_excitation_source-description-${index}`}
@@ -1021,14 +1021,14 @@ useEffect(() => {
                     title="Fiber Hardware Model Name"
                     dataItems={opticalFiberModelNames()}
                     value={item.hardware_name || ''}
-                      onChange={handleChange('hardware_name', 'optical_fiber', index)}
                     placeholder="Model of the fiber hardware device"
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      handleChange('hardware_name', 'optical_fiber', index)(e);
                       itemSelected(e, {
                         key,
                         index,
-                      })
-                    }
+                      });
+                    }}
                   />
                   <InputElement
                     id={`optical_fiber-implanted_fiber_description-${index}`}
@@ -1233,14 +1233,14 @@ useEffect(() => {
                         title="Virus Name"
                         dataItems={virusNames()}
                         value={item.virus_name || ''}
-                      onChange={handleChange('virus_name', 'virus_injection', index)}
                         placeholder="Model of the hardware"
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          handleChange('virus_name', 'virus_injection', index)(e);
                           itemSelected(e, {
                             key,
                             index,
-                          })
-                        }
+                          });
+                        }}
                       />
                      <InputElement
                       id={`virus_injection-volume_in_ul-${index}`}

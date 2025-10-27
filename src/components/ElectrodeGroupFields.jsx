@@ -78,7 +78,7 @@ export default function ElectrodeGroupFields({
                     onChange={handleChange('id', 'electrode_groups', index)}
                     placeholder="Typically a number"
                     required
-                    min={0}
+                    min="0"
                     onBlur={(e) =>
                       onBlur(e, {
                         key,
@@ -112,13 +112,13 @@ export default function ElectrodeGroupFields({
                     dataItems={deviceTypes()}
                     placeholder="Used to match to probe yaml data"
                     value={electrodeGroup.device_type}
-                    onChange={handleChange('device_type', 'electrode_groups', index)}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      handleChange('device_type', 'electrode_groups', index)(e);
                       nTrodeMapSelected(e, {
                         key,
                         index,
-                      })
-                    }
+                      });
+                    }}
                   />
                   <InputElement
                     id={`electrode_groups-description-${index}`}
