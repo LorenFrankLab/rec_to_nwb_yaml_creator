@@ -375,6 +375,7 @@
 - [x] `<CamerasFields />` - 124 lines, 17 tests, array with CRUD + validation ✅
 - [x] `<TasksFields />` - 135 lines, 8 tests, array with camera dependency ✅
 - [x] `<BehavioralEventsFields />` - 81 lines, 7 tests, array with CRUD ✅
+- [x] `<ElectrodeGroupFields />` - 268 lines, 26 tests, most complex component ✅
 
 **Code Review & Quality Improvements:** ✅ COMPLETE
 
@@ -384,9 +385,25 @@
 - [x] All 1719 tests passing (up from 1698)
 - [x] Commit: `test: add PropTypes and CRUD tests to 6 extracted components` (f98b347)
 
+**ElectrodeGroupFields Extraction:** ✅ COMPLETE (2025-10-26)
+
+- [x] Created component with 10 fields + ntrode integration (268 lines)
+- [x] Created 26 comprehensive tests (TDD approach)
+- [x] Code review: APPROVE ✅ (9/10 component, 10/10 tests, 10/10 integration)
+- [x] All 1745 tests passing (+26 new tests)
+- [x] All 18 golden YAML tests passing
+- [x] App.js reduced by ~214 lines (2373 → 1572 lines, 33.7% total reduction)
+- [x] Commit: `refactor: extract ElectrodeGroupFields component` (f0309a1)
+
+**Pre-existing Bug Fixes:** ✅ COMPLETE (2025-10-26)
+
+- [x] Fixed 4 duplicate onChange handlers (ElectrodeGroupFields, App.js optogenetics)
+- [x] Fixed 1 PropTypes warning (min={0} → min="0")
+- [x] All 1745 tests passing, 18 golden YAML tests passing
+- [x] Commit: `fix: resolve duplicate onChange handlers and PropTypes warnings` (571da07)
+
 **Remaining:**
 
-- [ ] `<ElectrodeGroupFields />` (App.js:~400 lines) - Most complex component
 - [ ] `<OptogeneticsFields />` - Multiple subsections (virus_injection, optical_fiber, etc.)
 - [ ] `<AssociatedFilesFields />` - Cross-field dependencies
 - [ ] Additional sections as needed

@@ -116,13 +116,51 @@
 
 Total reduction target: ~1400 lines from App.js render block (49% of 2873 lines).
 
+### Session Summary (2025-10-26 - Bug Fixes)
+
+**Final Status:**
+- **Tests:** 1745/1745 passing (100%) ✅
+- **YAML Reproduction:** 18/18 passing ✅
+- **Bugs Fixed:** 5 pre-existing bugs (4 duplicate onChange, 1 PropTypes warning)
+- **Files Modified:** ElectrodeGroupFields.jsx, App.js
+- **Commit:** 571da07 ✅
+
+**What Was Completed:**
+
+1. ✅ **Fixed duplicate onChange handlers (4 instances)**
+   - ElectrodeGroupFields.jsx:115-121 - device_type field
+   - App.js:900-913 - opto_excitation_source.model_name
+   - App.js:1018-1031 - optical_fiber.hardware_name
+   - App.js:1230-1243 - virus_injection.virus_name
+   - **Solution:** Combined both handlers into single onChange that calls both
+   - **Impact:** Form state updates AND item selection now both execute correctly
+
+2. ✅ **Fixed PropTypes warning (1 instance)**
+   - ElectrodeGroupFields.jsx:81 - min={0} → min="0"
+   - **Impact:** Eliminates console warning, maintains HTML validation
+
+**Technical Details:**
+
+- **Bug Discovery:** Found during ElectrodeGroupFields code review
+- **Not Regressions:** Existed in original App.js before extraction
+- **Systematic Search:** grep used to find all similar patterns
+- **Zero Behavioral Changes:** Fixes only, no YAML output changes
+
+**Actual Time:** ~30 minutes
+- Pattern search: 5 min
+- Fixes: 10 min
+- Testing: 10 min
+- Commit: 5 min
+
+---
+
 ### Session Summary (2025-10-26 - ElectrodeGroupFields Extraction)
 
 **Final Status:**
 - **Tests:** 1745/1745 passing (100%) ✅ (+26 new tests)
 - **YAML Reproduction:** 18/18 passing ✅
 - **Component:** ElectrodeGroupFields (268 lines, most complex component yet)
-- **App.js Reduction:** ~214 lines (2373 → ~1572 lines, total 33.7%)
+- **App.js Reduction:** ~214 lines (2373 → 1572 lines, total 33.7%)
 - **Code Review:** APPROVE ✅ (9/10 component quality, 10/10 test quality)
 
 **What Was Completed:**
