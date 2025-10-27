@@ -376,6 +376,9 @@
 - [x] `<TasksFields />` - 135 lines, 8 tests, array with camera dependency ✅
 - [x] `<BehavioralEventsFields />` - 81 lines, 7 tests, array with CRUD ✅
 - [x] `<ElectrodeGroupFields />` - 268 lines, 26 tests, most complex component ✅
+- [x] `<OptogeneticsFields />` - 840 lines, 13 tests, 5 subsections ✅
+- [x] `<AssociatedFilesFields />` - 237 lines, 18 tests, 2 subsections with dependencies ✅
+- [x] `<SessionInfoFields />` - 96 lines, 19 tests, 4 session metadata fields ✅
 
 **Code Review & Quality Improvements:** ✅ COMPLETE
 
@@ -402,12 +405,35 @@
 - [x] All 1745 tests passing, 18 golden YAML tests passing
 - [x] Commit: `fix: resolve duplicate onChange handlers and PropTypes warnings` (571da07)
 
+**OptogeneticsFields Extraction:** ✅ COMPLETE (2025-10-26)
+
+- [x] Created component with 5 subsections (840 lines)
+- [x] Created 13 comprehensive tests
+- [x] All tests passing: 1758/1758, 18/18 golden YAML
+- [x] Commit: `refactor: extract OptogeneticsFields component` (4a0e394)
+
+**AssociatedFilesFields Extraction:** ✅ COMPLETE (2025-10-26)
+
+- [x] Created component with 2 subsections (237 lines)
+- [x] Created 18 comprehensive tests
+- [x] All tests passing: 1776/1776, 18/18 golden YAML
+- [x] Commit: `refactor: extract AssociatedFilesFields component` (f6c6399)
+
+**SessionInfoFields Extraction:** ✅ COMPLETE (2025-10-26)
+
+- [x] Created component with 4 metadata fields (96 lines)
+- [x] Created 19 comprehensive tests
+- [x] All tests passing: 1795/1795, 18/18 golden YAML
+- [x] Fixed form-container div closure issue
+- [x] Commit: `refactor: extract SessionInfoFields component` (5186ad8)
+
 **Remaining:**
 
-- [x] `<OptogeneticsFields />` - Multiple subsections (virus_injection, optical_fiber, opto_excitation_source, fs_gui_yamls, opto_software) ✅
-- [x] `<AssociatedFilesFields />` - Two subsections (associated_files, associated_video_files) with cross-field dependencies ✅
-- [ ] Additional sections as needed
-- [ ] **Estimated Time:** 2-3 days (ongoing)
+- [ ] `<ExperimenterFields />` - experimenter_name (ListElement)
+- [ ] `<LabInstitutionFields />` - lab, institution (InputElements)
+- [ ] `<UnitsFields />` - units.analog, units.behavioral_events (InputElements)
+- [ ] `<TechnicalFields />` - times_period_multiplier, raw_data_to_volts, default_header_file_path (InputElements)
+- [ ] **Estimated Time:** 1-2 days (4 components remaining)
 
 #### Visual Regression Testing Setup
 
