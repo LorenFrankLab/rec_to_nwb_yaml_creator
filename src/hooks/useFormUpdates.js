@@ -189,7 +189,7 @@ export function useFormUpdates(formData, setFormData) {
         inputValue = commaSeparatedStringToNumber(value);
       } else {
         // Parse numbers, pass through strings
-        inputValue = type === 'number' ? parseFloat(value, 10) : value;
+        inputValue = type === 'number' ? parseFloat(value) : value;
       }
 
       // Get current value from form state
