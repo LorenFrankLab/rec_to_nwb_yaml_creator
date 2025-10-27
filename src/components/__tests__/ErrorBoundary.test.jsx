@@ -110,7 +110,7 @@ describe('ErrorBoundary - P0.3', () => {
   describe('Error Isolation', () => {
     it('should only affect components within the boundary', () => {
       // This tests that errors are caught and don't propagate
-      const { container } = render(
+      render(
         <div>
           <div>Outside boundary - should render</div>
           <ErrorBoundary>
@@ -172,7 +172,7 @@ describe('ErrorBoundary - P0.3', () => {
 
   describe('Error Boundary State', () => {
     it('should set hasError state to true when error is caught', () => {
-      const { container } = render(
+      render(
         <ErrorBoundary>
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>

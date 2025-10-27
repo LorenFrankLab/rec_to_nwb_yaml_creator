@@ -13,7 +13,6 @@ import { downloadYamlFile } from '../yaml';
 describe('downloadYamlFile - Memory Leak Prevention', () => {
   let createObjectURLSpy;
   let revokeObjectURLSpy;
-  let createElementSpy;
   let mockLink;
 
   beforeEach(() => {
@@ -29,7 +28,7 @@ describe('downloadYamlFile - Memory Leak Prevention', () => {
       href: '',
       click: vi.fn(),
     };
-    createElementSpy = vi.spyOn(document, 'createElement').mockReturnValue(mockLink);
+    vi.spyOn(document, 'createElement').mockReturnValue(mockLink);
   });
 
   afterEach(() => {

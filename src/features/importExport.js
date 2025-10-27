@@ -156,10 +156,6 @@ export async function importFiles(file, options = {}) {
         )
       ];
 
-      const allErrorMessages = [
-        ...new Set(issues.map(issue => issue.message))
-      ];
-
       const formContent = structuredClone(emptyFormData);
       const formContentKeys = Object.keys(formContent);
 

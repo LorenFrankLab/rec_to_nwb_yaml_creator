@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faDownload, faUpload } from "@fortawesome/free-solid-svg-icons";
+import { faUpload } from "@fortawesome/free-solid-svg-icons";
 import { showErrorMessage, displayErrorOnUI, setAlertCallback } from './utils/errorDisplay';
 import AlertModal from './components/AlertModal';
 import { useStoreContext } from './state/StoreContext';

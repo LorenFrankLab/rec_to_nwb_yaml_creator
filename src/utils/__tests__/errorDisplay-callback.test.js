@@ -16,12 +16,11 @@ import { showErrorMessage, displayErrorOnUI, setAlertCallback } from '../errorDi
  */
 
 describe('errorDisplay - AlertModal callback integration', () => {
-  let alertSpy;
   let mockCallback;
 
   beforeEach(() => {
     // Mock window.alert
-    alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    vi.spyOn(window, 'alert').mockImplementation(() => {});
 
     // Create mock callback
     mockCallback = vi.fn();

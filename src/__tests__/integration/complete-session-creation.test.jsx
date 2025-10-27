@@ -49,8 +49,6 @@ const LIST_PLACEHOLDERS = {
 describe('End-to-End Session Creation Workflow', () => {
   let mockBlob;
   let mockBlobUrl;
-  let createObjectURLSpy;
-  let revokeObjectURLSpy;
 
   beforeEach(() => {
     // Mock Blob for export functionality
@@ -67,8 +65,8 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // Mock URL.createObjectURL (standard API, not vendor-prefixed)
     mockBlobUrl = 'blob:mock-url';
-    createObjectURLSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue(mockBlobUrl);
-    revokeObjectURLSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue(mockBlobUrl);
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
 
     // Mock window.alert
     global.window.alert = vi.fn();

@@ -212,7 +212,7 @@ describe('errorDisplay - Core functionality', () => {
       input.id = 'session_id';
       document.body.appendChild(input);
 
-      const focusSpy = vi.spyOn(input, 'focus');
+      vi.spyOn(input, 'focus');
 
       const error = {
         message: 'must not be empty',
