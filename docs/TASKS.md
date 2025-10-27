@@ -368,18 +368,28 @@
 **Pattern:** Props-based components, TDD approach, verify golden YAML tests
 
 **Completed:**
-- [x] `<DataAcqDeviceFields />` - 102 lines, 16 tests, array with CRUD ✅
+
+- [x] `<SubjectFields />` - 99 lines, 21 tests ✅
+- [x] `<DataAcqDeviceFields />` - 102 lines, 21 tests, array with CRUD ✅
 - [x] `<DeviceFields />` - 20 lines, 6 tests, single ListElement ✅
+- [x] `<CamerasFields />` - 124 lines, 17 tests, array with CRUD + validation ✅
+- [x] `<TasksFields />` - 135 lines, 8 tests, array with camera dependency ✅
+- [x] `<BehavioralEventsFields />` - 81 lines, 7 tests, array with CRUD ✅
+
+**Code Review & Quality Improvements:** ✅ COMPLETE
+
+- [x] Added PropTypes to all 6 components (runtime type checking)
+- [x] Added CRUD operation tests (add, remove, duplicate buttons)
+- [x] Added validation tests for critical fields
+- [x] All 1719 tests passing (up from 1698)
+- [x] Commit: `test: add PropTypes and CRUD tests to 6 extracted components` (f98b347)
 
 **Remaining:**
 
-- [ ] `<DataAcqDevice />` (App.js:1148-1247)
-- [ ] `<CameraFields />` (App.js:1248-1371)
-- [ ] `<TaskFields />` (App.js:1372-1482)
-- [ ] `<ElectrodeGroupFields />` (App.js:~400 lines)
-- [ ] `<BehavioralEventsFields />`
-- [ ] `<OptogeneticsFields />`
-- [ ] `<AssociatedFilesFields />`
+- [ ] `<ElectrodeGroupFields />` (App.js:~400 lines) - Most complex component
+- [ ] `<OptogeneticsFields />` - Multiple subsections (virus_injection, optical_fiber, etc.)
+- [ ] `<AssociatedFilesFields />` - Cross-field dependencies
+- [ ] Additional sections as needed
 - [ ] **Estimated Time:** 2-3 days (ongoing)
 
 #### Visual Regression Testing Setup
