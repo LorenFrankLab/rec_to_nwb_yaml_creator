@@ -72,6 +72,8 @@ export function useStore() {
       return;
     }
 
+    // Update ref to mark this epoch set as processed
+    // Do this BEFORE the setFormData callback to prevent duplicate cleanup attempts
     lastValidEpochsRef.current = validEpochsStr;
 
     // Use callback form to get latest state at update time
@@ -112,7 +114,7 @@ export function useStore() {
       return updated;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.tasks]);
+  }, [formData]); // Must depend on entire formData, not just tasks, because task_epochs updates don't change array reference
 
   /**
    * Selectors provide computed/derived data from the state.

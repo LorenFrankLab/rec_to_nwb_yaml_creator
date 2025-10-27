@@ -60,23 +60,27 @@ export function useFormUpdates(formData, setFormData) {
    */
   const updateFormData = useCallback(
     (name, value, key, index) => {
-      const form = structuredClone(formData);
+      // Use callback form to ensure we always work with latest state
+      // This prevents race conditions when multiple rapid updates occur
+      setFormData((prevFormData) => {
+        const form = structuredClone(prevFormData);
 
-      if (key === undefined) {
-        // Simple key-value pair (top-level field)
-        form[name] = value;
-      } else if (index === undefined) {
-        // Nested object field (e.g., subject.species)
-        form[key][name] = value;
-      } else {
-        // Array item field (e.g., cameras[0].id)
-        form[key][index] = form[key][index] || {};
-        form[key][index][name] = value;
-      }
+        if (key === undefined) {
+          // Simple key-value pair (top-level field)
+          form[name] = value;
+        } else if (index === undefined) {
+          // Nested object field (e.g., subject.species)
+          form[key][name] = value;
+        } else {
+          // Array item field (e.g., cameras[0].id)
+          form[key][index] = form[key][index] || {};
+          form[key][index][name] = value;
+        }
 
-      setFormData(form);
+        return form;
+      });
     },
-    [formData, setFormData]
+    [setFormData]
   );
 
   /**

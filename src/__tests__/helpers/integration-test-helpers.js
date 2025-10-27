@@ -106,22 +106,39 @@ export async function triggerExport(mockEvent = null) {
     });
   }
 
+  // Wait for all React updates to flush
+  // This ensures form has the latest props and event handlers
+  await act(async () => {
+    await new Promise(resolve => {
+      // Use a longer timeout to ensure all state updates have propagated
+      setTimeout(resolve, 100);
+    });
+  });
+
+  // Instead of accessing fiber internals (which might be stale),
+  // simulate user clicking the submit button directly
   const form = document.querySelector('form');
-  const fiberKey = Object.keys(form).find(key => key.startsWith('__reactFiber'));
-  const fiber = form[fiberKey];
-  const onSubmitHandler = fiber?.memoizedProps?.onSubmit;
 
-  if (!onSubmitHandler) {
-    throw new Error('Could not find React onSubmit handler on form element');
+  if (mockEvent) {
+    // If mockEvent provided, use the old fiber-based approach
+    const fiberKey = Object.keys(form).find(key => key.startsWith('__reactFiber'));
+    const fiber = form[fiberKey];
+    const props = fiber?.pendingProps || fiber?.memoizedProps;
+    const onSubmitHandler = props?.onSubmit;
+
+    if (!onSubmitHandler) {
+      throw new Error('Could not find React onSubmit handler on form element');
+    }
+
+    await act(async () => {
+      onSubmitHandler(mockEvent);
+    });
+  } else {
+    // Otherwise, use fireEvent.submit which should trigger the latest handler
+    await act(async () => {
+      fireEvent.submit(form);
+    });
   }
-
-  const event = mockEvent || {
-    preventDefault: () => {},
-    target: form,
-    currentTarget: form,
-  };
-
-  onSubmitHandler(event);
 }
 
 /**
