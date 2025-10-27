@@ -17,6 +17,7 @@ import OptogeneticsFields from './components/OptogeneticsFields';
 import AssociatedFilesFields from './components/AssociatedFilesFields';
 import SessionInfoFields from './components/SessionInfoFields';
 import ExperimenterFields from './components/ExperimenterFields';
+import LabInstitutionFields from './components/LabInstitutionFields';
 
 import logo from './logo.png';
 import packageJson from '../package.json';
@@ -437,34 +438,13 @@ useEffect(() => {
           formData={formData}
           updateFormData={updateFormData}
         />
-        <div id="lab-area" className="area-region">
-          <InputElement
-            id="lab"
-            type="text"
-            name="lab"
-            title="Lab"
-            value={formData.lab}
-          onChange={handleChange('lab')}  
-            placeholder="Laboratory where the experiment is conducted"
-            required
-            onBlur={(e) => onBlur(e)}
-            validation={{ type: 'required' }}
-          />
-        </div>
-        <div id="institution-area" className="area-region">
-          <DataListElement
-            id="institution"
-            name="institution"
-            title="Institution"
-            value={formData.institution}
-          onChange={handleChange('institution')}  
-            placeholder="Type to find an affiliated University or Research center"
-            required
-            dataItems={labs()}
-            onBlur={(e) => itemSelected(e)}
-          />
-        </div>
-      <SessionInfoFields
+        <LabInstitutionFields
+          formData={formData}
+          handleChange={handleChange}
+          onBlur={onBlur}
+          itemSelected={itemSelected}
+        />
+        <SessionInfoFields
         formData={formData}
         handleChange={handleChange}
         onBlur={onBlur}
