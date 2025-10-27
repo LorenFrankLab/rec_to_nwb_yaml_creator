@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import DataListElement from '../element/DataListElement';
 import ArrayItemControl from '../element/ArrayItemControl';
 import ArrayUpdateMenu from '../ArrayUpdateMenu';
@@ -139,3 +140,21 @@ export default function DataAcqDeviceFields({
     </div>
   );
 }
+
+DataAcqDeviceFields.propTypes = {
+  formData: PropTypes.shape({
+    data_acq_device: PropTypes.arrayOf(
+      PropTypes.shape({
+        name: PropTypes.string,
+        system: PropTypes.string,
+        amplifier: PropTypes.string,
+        adc_circuit: PropTypes.string,
+      })
+    ).isRequired,
+  }).isRequired,
+  handleChange: PropTypes.func.isRequired,
+  onBlur: PropTypes.func.isRequired,
+  addArrayItem: PropTypes.func.isRequired,
+  removeArrayItem: PropTypes.func.isRequired,
+  duplicateArrayItem: PropTypes.func.isRequired,
+};

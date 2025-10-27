@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import InputElement from '../element/InputElement';
 import DataListElement from '../element/DataListElement';
 import ArrayItemControl from '../element/ArrayItemControl';
@@ -152,3 +153,24 @@ export default function CamerasFields({
     </div>
   );
 }
+
+CamerasFields.propTypes = {
+  formData: PropTypes.shape({
+    cameras: PropTypes.arrayOf(
+      PropTypes.shape({
+        id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+        meters_per_pixel: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+        manufacturer: PropTypes.string,
+        model: PropTypes.string,
+        lens: PropTypes.string,
+        camera_name: PropTypes.string,
+      })
+    ).isRequired,
+  }).isRequired,
+  handleChange: PropTypes.func.isRequired,
+  onBlur: PropTypes.func.isRequired,
+  addArrayItem: PropTypes.func.isRequired,
+  removeArrayItem: PropTypes.func.isRequired,
+  duplicateArrayItem: PropTypes.func.isRequired,
+  sanitizeTitle: PropTypes.func.isRequired,
+};

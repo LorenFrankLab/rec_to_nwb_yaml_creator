@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import ListElement from '../element/ListElement';
 
 /**
@@ -36,3 +37,12 @@ export default function DeviceFields({ formData, updateFormData }) {
     </div>
   );
 }
+
+DeviceFields.propTypes = {
+  formData: PropTypes.shape({
+    device: PropTypes.shape({
+      name: PropTypes.arrayOf(PropTypes.string),
+    }),
+  }).isRequired,
+  updateFormData: PropTypes.func.isRequired,
+};

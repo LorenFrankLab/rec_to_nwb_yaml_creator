@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import SelectInputPairElement from '../element/SelectInputPairElement';
 import DataListElement from '../element/DataListElement';
 import ArrayItemControl from '../element/ArrayItemControl';
@@ -84,3 +85,20 @@ export default function BehavioralEventsFields({
     </div>
   );
 }
+
+BehavioralEventsFields.propTypes = {
+  formData: PropTypes.shape({
+    behavioral_events: PropTypes.arrayOf(
+      PropTypes.shape({
+        description: PropTypes.string,
+        name: PropTypes.string,
+      })
+    ).isRequired,
+  }).isRequired,
+  handleChange: PropTypes.func.isRequired,
+  onBlur: PropTypes.func.isRequired,
+  itemSelected: PropTypes.func.isRequired,
+  addArrayItem: PropTypes.func.isRequired,
+  removeArrayItem: PropTypes.func.isRequired,
+  duplicateArrayItem: PropTypes.func.isRequired,
+};

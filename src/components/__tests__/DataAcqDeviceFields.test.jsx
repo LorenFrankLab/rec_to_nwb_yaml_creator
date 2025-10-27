@@ -225,4 +225,93 @@ describe('DataAcqDeviceFields', () => {
       expect(screen.getAllByLabelText(/ADC circuit/i)[0]).toBeRequired();
     });
   });
+
+  describe('CRUD Operations', () => {
+    it('calls addArrayItem when add button is clicked', async () => {
+      const user = userEvent.setup();
+      const mockAddArrayItem = vi.fn();
+      const props = { ...defaultProps, addArrayItem: mockAddArrayItem };
+
+      render(<DataAcqDeviceFields {...props} />);
+
+      // Find the add button in ArrayUpdateMenu
+      const addButton = screen.getByRole('button', { name: '＋' });
+      await user.click(addButton);
+
+      expect(mockAddArrayItem).toHaveBeenCalledTimes(1);
+      expect(mockAddArrayItem.mock.calls[0][0]).toBe('data_acq_device');
+      // In simple mode (allowMultiple=false), second arg is click event object
+      expect(mockAddArrayItem.mock.calls[0][1]).toBeTruthy();
+    });
+
+    it('calls removeArrayItem when remove button is clicked', async () => {
+      const user = userEvent.setup();
+      const mockRemoveArrayItem = vi.fn();
+      const props = { ...defaultProps, removeArrayItem: mockRemoveArrayItem };
+
+      render(<DataAcqDeviceFields {...props} />);
+
+      // Find the remove button for the first item
+      const removeButton = screen.getByRole('button', { name: /Remove/i });
+      await user.click(removeButton);
+
+      expect(mockRemoveArrayItem).toHaveBeenCalledWith(0, 'data_acq_device');
+    });
+
+    it('calls duplicateArrayItem when duplicate button is clicked', async () => {
+      const user = userEvent.setup();
+      const mockDuplicateArrayItem = vi.fn();
+      const props = { ...defaultProps, duplicateArrayItem: mockDuplicateArrayItem };
+
+      render(<DataAcqDeviceFields {...props} />);
+
+      // Find the duplicate button for the first item
+      const duplicateButton = screen.getByRole('button', { name: /Duplicate/i });
+      await user.click(duplicateButton);
+
+      expect(mockDuplicateArrayItem).toHaveBeenCalledWith(0, 'data_acq_device');
+    });
+
+    it('renders multiple devices with independent values', () => {
+      const props = {
+        ...defaultProps,
+        formData: {
+          data_acq_device: [
+            {
+              name: 'Device1',
+              system: 'SpikeGadgets',
+              amplifier: 'Intan',
+              adc_circuit: 'Intan',
+            },
+            {
+              name: 'Device2',
+              system: 'OpenEphys',
+              amplifier: 'RHD',
+              adc_circuit: 'RHD',
+            },
+          ],
+        },
+      };
+
+      render(<DataAcqDeviceFields {...props} />);
+
+      expect(screen.getByDisplayValue('Device1')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Device2')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('SpikeGadgets')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('OpenEphys')).toBeInTheDocument();
+    });
+
+    it('handles empty data_acq_device array', () => {
+      const props = {
+        ...defaultProps,
+        formData: { data_acq_device: [] },
+      };
+
+      render(<DataAcqDeviceFields {...props} />);
+
+      // Should show ArrayUpdateMenu but no items
+      expect(screen.getByText('Data Acq Device')).toBeInTheDocument();
+      expect(screen.queryByText(/Item #1/i)).not.toBeInTheDocument();
+    });
+  });
 });

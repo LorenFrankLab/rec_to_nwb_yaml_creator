@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import TasksFields from '../TasksFields';
 
 describe('TasksFields', () => {
@@ -99,5 +100,49 @@ describe('TasksFields', () => {
     render(<TasksFields {...props} />);
     // CheckboxList should render with dataItems prop
     expect(screen.getAllByText(/Camera Id/i)[0]).toBeInTheDocument();
+  });
+
+  describe('CRUD Operations', () => {
+    it('calls addArrayItem when add button is clicked', async () => {
+      const user = userEvent.setup();
+      const mockAddArrayItem = vi.fn();
+      const props = { ...defaultProps, addArrayItem: mockAddArrayItem };
+
+      render(<TasksFields {...props} />);
+
+      const addButton = screen.getByRole('button', { name: '＋' });
+      await user.click(addButton);
+
+      expect(mockAddArrayItem).toHaveBeenCalledTimes(1);
+      expect(mockAddArrayItem.mock.calls[0][0]).toBe('tasks');
+      // In simple mode (allowMultiple=false), second arg is click event object
+      expect(mockAddArrayItem.mock.calls[0][1]).toBeTruthy();
+    });
+
+    it('calls removeArrayItem when remove button is clicked', async () => {
+      const user = userEvent.setup();
+      const mockRemoveArrayItem = vi.fn();
+      const props = { ...defaultProps, removeArrayItem: mockRemoveArrayItem };
+
+      render(<TasksFields {...props} />);
+
+      const removeButton = screen.getByRole('button', { name: /Remove/i });
+      await user.click(removeButton);
+
+      expect(mockRemoveArrayItem).toHaveBeenCalledWith(0, 'tasks');
+    });
+
+    it('calls duplicateArrayItem when duplicate button is clicked', async () => {
+      const user = userEvent.setup();
+      const mockDuplicateArrayItem = vi.fn();
+      const props = { ...defaultProps, duplicateArrayItem: mockDuplicateArrayItem };
+
+      render(<TasksFields {...props} />);
+
+      const duplicateButton = screen.getByRole('button', { name: /Duplicate/i });
+      await user.click(duplicateButton);
+
+      expect(mockDuplicateArrayItem).toHaveBeenCalledWith(0, 'tasks');
+    });
   });
 });

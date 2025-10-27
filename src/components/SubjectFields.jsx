@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import InputElement from '../element/InputElement';
 import DataListElement from '../element/DataListElement';
 import SelectElement from '../element/SelectElement';
@@ -121,3 +122,20 @@ export default function SubjectFields({ formData, handleChange, onBlur, itemSele
     </div>
   );
 }
+
+SubjectFields.propTypes = {
+  formData: PropTypes.shape({
+    subject: PropTypes.shape({
+      description: PropTypes.string,
+      species: PropTypes.string,
+      genotype: PropTypes.string,
+      sex: PropTypes.string,
+      subject_id: PropTypes.string,
+      date_of_birth: PropTypes.string,
+      weight: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    }).isRequired,
+  }).isRequired,
+  handleChange: PropTypes.func.isRequired,
+  onBlur: PropTypes.func.isRequired,
+  itemSelected: PropTypes.func.isRequired,
+};
