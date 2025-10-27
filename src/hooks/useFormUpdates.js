@@ -80,7 +80,7 @@ export function useFormUpdates(formData, setFormData) {
         return form;
       });
     },
-    [setFormData]
+    [] // setFormData is guaranteed stable by React
   );
 
   /**

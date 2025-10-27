@@ -547,17 +547,13 @@ export function App() {
 }
 ```
 
-#### Task 7.5.3: Migrate Components to useStoreContext (DEFERRED)
+#### Task 7.5.3: Migrate Components to useStoreContext
 
-**Status:** 🟡 DEFERRED - App.js migration complete, component migration not started
+**Status:** 🟡 PENDING - App.js migration complete, component migration not started
 
-**Reason for Deferral:**
 - App.js successfully migrated to StoreContext
 - Components still receive props (backward compatible)
-- No immediate need to migrate components (prop drilling works fine)
-- Can be done incrementally in future if needed
 
-**If Proceeding with Component Migration:**
 - [ ] Update `src/components/SubjectFields.jsx` to use `useStoreContext()`
 - [ ] Remove all props (formData, handleChange, onBlur, itemSelected)
 - [ ] Update App.js to render `<SubjectFields />` without props
@@ -594,6 +590,7 @@ export default function SubjectFields() {
 - [ ] Code review approval (pending)
 
 **Outcome:**
+
 - ✅ **Foundation established** - StoreContext works perfectly
 - ✅ **App.js migrated** - Uses centralized store
 - ✅ **Zero regressions** - All functionality preserved

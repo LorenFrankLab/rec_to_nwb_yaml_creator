@@ -88,16 +88,27 @@ export async function addListItem(user, screen, placeholder, value) {
 }
 
 /**
- * Helper: Trigger export using React fiber approach
+ * Helper: Trigger form export by submitting the form
  *
- * Standard form submission methods don't work in jsdom (user.click, dispatchEvent, etc.)
- * We must access React's internal fiber tree and call the onSubmit handler directly.
+ * Standard form submission methods don't work reliably in jsdom:
+ * - user.click(button) doesn't trigger React's onSubmit
+ * - dispatchEvent doesn't trigger React handlers
+ *
+ * This helper uses fireEvent.submit which respects React's event system
+ * and always uses the latest onSubmit handler, preventing stale closures.
+ *
+ * CRITICAL: We use fireEvent.submit() instead of accessing React fiber internals because:
+ * 1. Fiber's memoizedProps can be stale after rapid state updates
+ * 2. Event handlers in memoizedProps may close over old state
+ * 3. fireEvent.submit() triggers the CURRENT handler, not a stale closure
+ *
+ * Historical context: Before this fix, accessing fiber.memoizedProps.onSubmit resulted
+ * in race conditions where rapid task_epochs additions would be lost during export.
+ * See commit 944d08d for full root cause analysis.
  *
  * See docs/TESTING_PATTERNS.md#special-case-3-form-export-trigger
- *
- * @param {Object|null} mockEvent - Optional mock event object
  */
-export async function triggerExport(mockEvent = null) {
+export async function triggerExport() {
   // Blur the currently focused element to ensure onBlur fires
   if (document.activeElement && document.activeElement !== document.body) {
     await act(async () => {
@@ -115,30 +126,11 @@ export async function triggerExport(mockEvent = null) {
     });
   });
 
-  // Instead of accessing fiber internals (which might be stale),
-  // simulate user clicking the submit button directly
+  // Use fireEvent.submit to trigger the latest handler
   const form = document.querySelector('form');
-
-  if (mockEvent) {
-    // If mockEvent provided, use the old fiber-based approach
-    const fiberKey = Object.keys(form).find(key => key.startsWith('__reactFiber'));
-    const fiber = form[fiberKey];
-    const props = fiber?.pendingProps || fiber?.memoizedProps;
-    const onSubmitHandler = props?.onSubmit;
-
-    if (!onSubmitHandler) {
-      throw new Error('Could not find React onSubmit handler on form element');
-    }
-
-    await act(async () => {
-      onSubmitHandler(mockEvent);
-    });
-  } else {
-    // Otherwise, use fireEvent.submit which should trigger the latest handler
-    await act(async () => {
-      fireEvent.submit(form);
-    });
-  }
+  await act(async () => {
+    fireEvent.submit(form);
+  });
 }
 
 /**

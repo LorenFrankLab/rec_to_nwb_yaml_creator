@@ -114,7 +114,7 @@ export function useStore() {
       return updated;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData]); // Must depend on entire formData, not just tasks, because task_epochs updates don't change array reference
+  }, [formData.tasks]); // Cleanup only needed when tasks change; callback form guarantees latest state access
 
   /**
    * Selectors provide computed/derived data from the state.
