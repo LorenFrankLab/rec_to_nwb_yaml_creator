@@ -188,6 +188,20 @@ export function App() {
     }, 1000);
   };
 
+  /**
+   * Handles keyboard navigation (Enter and Space keys)
+   * Implements WCAG 2.1 Level A requirement for keyboard accessibility
+   *
+   * @param {object} e Keyboard event object
+   */
+  const handleNavKeyDown = (e) => {
+    // Only handle Enter and Space keys
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault(); // Prevent default Space scroll behavior
+      clickNav(e);
+    }
+  };
+
   useMount(() => {
     // set app version
     const { version } = packageJson;
@@ -222,6 +236,7 @@ export function App() {
                 onClick={(e) => {
                   clickNav(e);
                 }}
+                onKeyDown={handleNavKeyDown}
               >
                 {titleCase(key.replaceAll('_', ' '))}
               </a>
@@ -238,6 +253,7 @@ export function App() {
                         onClick={(e) => {
                           clickNav(e);
                         }}
+                        onKeyDown={handleNavKeyDown}
                       >
                         {`item #${fdIndex + 1}`}
                       </a>
