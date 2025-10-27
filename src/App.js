@@ -355,7 +355,7 @@ export function App() {
                         }}
                         onKeyDown={handleNavKeyDown}
                       >
-                        {`item #${fdIndex + 1}`}
+                        {`Electrode Group ${fd.id} - ${fd.location || 'Unnamed'}`}
                       </a>
                     </li>
                   </ul>
