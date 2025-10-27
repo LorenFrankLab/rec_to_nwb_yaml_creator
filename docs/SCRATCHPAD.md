@@ -1,13 +1,13 @@
 # Scratchpad - Phase 3
 
 **Current Phase:** Phase 3 - Code Quality & Refactoring - Week 5-7
-**Status:** 🟢 8 Components Extracted - OptogeneticsFields Complete ✅
-**Last Updated:** 2025-10-26 21:52
+**Status:** 🟢 9 Components Extracted - AssociatedFilesFields Complete ✅
+**Last Updated:** 2025-10-26 22:08
 **Branch:** `modern`
 
 ---
 
-## 🎯 Current Task: Component Extraction (Next: AssociatedFilesFields)
+## 🎯 Current Task: Component Extraction (Continuing)
 
 ### Components Extracted So Far
 
@@ -19,8 +19,52 @@
 6. ✅ **BehavioralEventsFields** (88 lines) - Array with mixed elements, 7 tests ✅
 7. ✅ **ElectrodeGroupFields** (268 lines) - Complex array with ntrode integration, 26 tests ✅
 8. ✅ **OptogeneticsFields** (840 lines) - Largest component, 5 subsections, 13 tests ✅
+9. ✅ **AssociatedFilesFields** (237 lines) - 2 subsections with cross-dependencies, 18 tests ✅
 
-**Total:** ~1641 lines extracted, 119 component tests, **1758/1758 tests passing (100%)**, **18/18 YAML reproduction tests passing**
+**Total:** ~1878 lines extracted, 137 component tests, **1776/1776 tests passing (100%)**, **18/18 YAML reproduction tests passing**
+
+---
+
+## 📝 Session Summary: AssociatedFilesFields Extraction (2025-10-26 22:08)
+
+### What Was Accomplished
+
+**Extraction Complete:**
+- Created AssociatedFilesFields.jsx (237 lines)
+- 2 subsections: associated_files, associated_video_files
+- Reduced App.js by 179 lines
+- Added 18 comprehensive tests (289 lines)
+- All tests passing: 1776/1776 (100%), 18/18 golden YAML
+
+**Component Structure:**
+- associated_files: 4 fields (name, description, path, task_epochs with RadioList)
+- associated_video_files: 3 fields (name, camera_id with RadioList, task_epochs with RadioList)
+- Both sections have CRUD operations (add/remove/duplicate)
+
+**Dependencies Handled:**
+- taskEpochsDefined passed to both sections
+- cameraIdsDefined passed to associated_video_files only
+- Clean separation of concerns
+
+**Test Coverage:**
+- 6 rendering tests
+- 6 CRUD operation tests
+- 3 dependency tests
+- 3 edge case tests (empty arrays, no dependencies, multiple items)
+
+### Commit History
+- `f6c6399` - refactor: extract AssociatedFilesFields component
+
+### Key Learnings
+1. **ArrayUpdateMenu Uses Title**: Button has `title` attribute, not text content - use `getByTitle()` not `getByText()`
+2. **ArrayItemControl Uses Text**: Buttons have text "Duplicate" and "Remove" - use `getByText()`
+3. **RadioList Labels**: RadioList doesn't render placeholders as placeholders - check by label text instead
+4. **Multiple Labels**: When checking labels that appear multiple times, use `getAllByText()` instead of `getByText()`
+
+### Next Steps
+- Continue extracting remaining sections
+- Consider Units, Experimenter fields
+- Evaluate if any more large sections need extraction
 
 ---
 

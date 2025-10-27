@@ -405,7 +405,7 @@
 **Remaining:**
 
 - [x] `<OptogeneticsFields />` - Multiple subsections (virus_injection, optical_fiber, opto_excitation_source, fs_gui_yamls, opto_software) ✅
-- [ ] `<AssociatedFilesFields />` - Cross-field dependencies
+- [x] `<AssociatedFilesFields />` - Two subsections (associated_files, associated_video_files) with cross-field dependencies ✅
 - [ ] Additional sections as needed
 - [ ] **Estimated Time:** 2-3 days (ongoing)
 
