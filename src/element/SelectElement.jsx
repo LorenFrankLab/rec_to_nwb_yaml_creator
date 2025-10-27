@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import PropTypes from 'prop-types';
 import { sanitizeTitle } from '../utils';
 import InfoIcon from './InfoIcon';
@@ -9,11 +9,13 @@ import { HintDisplay } from '../validation/HintDisplay';
 /**
  * Provides an extended select tag for selection one option from a list
  *
+ * Performance: Wrapped in React.memo to prevent unnecessary re-renders
+ *
  * @param {Object} prop Custom element's properties
  *
  * @returns Virtual DOM wrapping an HTML select tag and supporting markup and code
  */
-const SelectElement = (prop) => {
+const SelectElementComponent = (prop) => {
   const {
     id,
     name,
@@ -113,7 +115,7 @@ const SelectElement = (prop) => {
   );
 };
 
-SelectElement.propTypes = {
+SelectElementComponent.propTypes = {
   title: PropTypes.string.isRequired,
   value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   dataItems: PropTypes.arrayOf(PropTypes.string).isRequired,
@@ -137,7 +139,7 @@ SelectElement.propTypes = {
   }),
 };
 
-SelectElement.defaultProps = {
+SelectElementComponent.defaultProps = {
   value: '',
   placeholder: '',
   dataItemsInfo: [],
@@ -147,5 +149,16 @@ SelectElement.defaultProps = {
   required: false,
   validation: null,
 };
+
+const arePropsEqual = (prevProps, nextProps) => {
+  return (
+    prevProps.value === nextProps.value &&
+    prevProps.name === nextProps.name &&
+    prevProps.dataItems === nextProps.dataItems &&
+    prevProps.required === nextProps.required
+  );
+};
+
+const SelectElement = memo(SelectElementComponent, arePropsEqual);
 
 export default SelectElement;
