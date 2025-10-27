@@ -157,5 +157,5 @@ TasksFields.propTypes = {
   addArrayItem: PropTypes.func.isRequired,
   removeArrayItem: PropTypes.func.isRequired,
   duplicateArrayItem: PropTypes.func.isRequired,
-  cameraIdsDefined: PropTypes.arrayOf(PropTypes.number).isRequired,
+  cameraIdsDefined: PropTypes.arrayOf(PropTypes.string).isRequired,
 };

@@ -206,10 +206,13 @@ export function App() {
 
         if (firstInvalidField) {
           firstInvalidField.focus();
-          firstInvalidField.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center'
-          });
+          // scrollIntoView may not exist in test environments (JSDOM)
+          if (firstInvalidField.scrollIntoView) {
+            firstInvalidField.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center'
+            });
+          }
         }
       }, 100);
     }

@@ -659,6 +659,12 @@ describe('End-to-End Session Creation Workflow', () => {
       epochs: [1, 3]
     });
 
+    // Wait for all state updates to complete before exporting
+    await waitFor(() => {
+      const taskNameInputs = screen.queryAllByLabelText(/task name/i);
+      expect(taskNameInputs.length).toBeGreaterThan(0);
+    });
+
     // Export using React fiber approach
     await triggerExport();
 

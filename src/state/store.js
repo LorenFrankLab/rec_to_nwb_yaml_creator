@@ -124,13 +124,15 @@ export function useStore() {
        * Get all camera IDs, filtering out NaN values.
        * Used for dropdown options in tasks, associated_video_files, etc.
        *
-       * @returns {number[]} Array of camera IDs
+       * @returns {string[]} Array of camera IDs as strings (for CheckboxList compatibility)
        */
       getCameraIds: () => {
         if (!formData.cameras) return [];
         const cameraIds = formData.cameras.map((camera) => camera.id);
-        // Deduplicate and filter out NaN values
-        return [...new Set(cameraIds)].filter((c) => !Number.isNaN(c));
+        // Deduplicate, filter out NaN values, and convert to strings for CheckboxList
+        return [...new Set(cameraIds)]
+          .filter((c) => !Number.isNaN(c))
+          .map(String);
       },
 
       /**

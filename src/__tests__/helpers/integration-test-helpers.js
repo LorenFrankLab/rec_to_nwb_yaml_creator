@@ -205,6 +205,12 @@ export async function addTask(user, screen, task) {
   for (const epoch of task.epochs) {
     await user.type(taskEpochInput, String(epoch));
     await user.keyboard('{Enter}');
+    // Wait for input to be cleared (indicates successful add)
+    await waitFor(() => {
+      expect(taskEpochInput.value).toBe('');
+    });
+    // Small delay to ensure state update completes
+    await new Promise(resolve => setTimeout(resolve, 100));
   }
 
   return initialCount;

@@ -61,6 +61,8 @@ If you encounter any of these, STOP and document in SCRATCHPAD.md:
 
 **Never proceed with assumptions** - this is critical scientific infrastructure.
 
+You MUST investigate any test failures. Flaky tests are not acceptable.
+
 ---
 
 Now tell me: **What task are you working on next?**
