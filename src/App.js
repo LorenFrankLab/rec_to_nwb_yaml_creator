@@ -273,7 +273,7 @@ export function App() {
   });
 
 // Note: Camera IDs, DIO events, and task epochs tracking is now handled by StoreContext selectors
-// See: getCameraIds(), getDioEvents(), getTaskEpochs() in state/selectors.js
+// See: getCameraIds(), getDioEvents(), getTaskEpochs() in state/store.js
 
    return <>
     <div className="home-region">
