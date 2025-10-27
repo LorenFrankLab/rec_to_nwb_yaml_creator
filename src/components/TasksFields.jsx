@@ -1,22 +1,26 @@
 import React from 'react';
-import PropTypes from 'prop-types';
+import { useStoreContext } from '../state/StoreContext';
 import InputElement from '../element/InputElement';
 import CheckboxList from '../element/CheckboxList';
 import ListElement from '../element/ListElement';
 import ArrayItemControl from '../element/ArrayItemControl';
 import ArrayUpdateMenu from '../ArrayUpdateMenu';
 
-export default function TasksFields({
-  formData,
-  handleChange,
-  onBlur,
-  updateFormData,
-  updateFormArray,
-  addArrayItem,
-  removeArrayItem,
-  duplicateArrayItem,
-  cameraIdsDefined,
-}) {
+/**
+ * TasksFields component
+ *
+ * Renders the tasks section of the form, supporting multiple tasks.
+ * Each task has name, description, environment, camera IDs, and task epochs.
+ *
+ * Uses the shared store context to access form data and actions, eliminating
+ * the need for prop drilling from App.js.
+ *
+ * @returns {JSX.Element} The tasks fields section
+ */
+export default function TasksFields() {
+  const { model: formData, actions, selectors } = useStoreContext();
+  const { handleChange, onBlur, updateFormData, updateFormArray, addArrayItem, removeArrayItem, duplicateArrayItem } = actions;
+  const cameraIdsDefined = selectors.getCameraIds();
   return (
     <div id="tasks-area" className="area-region">
       <details open>
@@ -137,25 +141,3 @@ export default function TasksFields({
     </div>
   );
 }
-
-TasksFields.propTypes = {
-  formData: PropTypes.shape({
-    tasks: PropTypes.arrayOf(
-      PropTypes.shape({
-        task_name: PropTypes.string,
-        task_description: PropTypes.string,
-        task_environment: PropTypes.string,
-        camera_id: PropTypes.arrayOf(PropTypes.number),
-        task_epochs: PropTypes.arrayOf(PropTypes.number),
-      })
-    ).isRequired,
-  }).isRequired,
-  handleChange: PropTypes.func.isRequired,
-  onBlur: PropTypes.func.isRequired,
-  updateFormData: PropTypes.func.isRequired,
-  updateFormArray: PropTypes.func.isRequired,
-  addArrayItem: PropTypes.func.isRequired,
-  removeArrayItem: PropTypes.func.isRequired,
-  duplicateArrayItem: PropTypes.func.isRequired,
-  cameraIdsDefined: PropTypes.arrayOf(PropTypes.string).isRequired,
-};

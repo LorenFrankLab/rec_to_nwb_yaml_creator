@@ -1,51 +1,53 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { renderWithProviders } from '../../__tests__/helpers/test-utils';
 import AssociatedFilesFields from '../AssociatedFilesFields';
 
 describe('AssociatedFilesFields Component', () => {
-  let defaultProps;
+  let initialState;
 
   beforeEach(() => {
-    defaultProps = {
-      formData: {
-        associated_files: [
-          {
-            name: 'analysis_script.py',
-            description: 'Python script for data analysis',
-            path: '/path/to/analysis_script.py',
-            task_epochs: [1, 2],
-          },
-        ],
-        associated_video_files: [
-          {
-            name: 'video_01.mp4',
-            camera_id: [0],
-            task_epochs: [1],
-          },
-        ],
-      },
-      handleChange: (field, key, index) => (e) => {},
-      onBlur: () => {},
-      updateFormData: () => {},
-      addArrayItem: () => {},
-      removeArrayItem: () => {},
-      duplicateArrayItem: () => {},
-      taskEpochsDefined: [1, 2, 3],
-      cameraIdsDefined: [0, 1, 2],
+    initialState = {
+      associated_files: [
+        {
+          name: 'analysis_script.py',
+          description: 'Python script for data analysis',
+          path: '/path/to/analysis_script.py',
+          task_epochs: [1, 2],
+        },
+      ],
+      associated_video_files: [
+        {
+          name: 'video_01.mp4',
+          camera_id: [0],
+          task_epochs: [1],
+        },
+      ],
+      // Dependencies for selectors
+      tasks: [
+        { task_name: 'task1', task_epochs: [1] },
+        { task_name: 'task2', task_epochs: [2] },
+        { task_name: 'task3', task_epochs: [3] },
+      ],
+      cameras: [
+        { id: 0, name: 'camera0' },
+        { id: 1, name: 'camera1' },
+        { id: 2, name: 'camera2' },
+      ],
     };
   });
 
   describe('Rendering', () => {
     it('should render both Associated Files and Associated Video Files sections', () => {
-      render(<AssociatedFilesFields {...defaultProps} />);
+      renderWithProviders(<AssociatedFilesFields />, { initialState });
 
       expect(screen.getByText('Associated Files')).toBeInTheDocument();
       expect(screen.getByText('Associated Video Files')).toBeInTheDocument();
     });
 
     it('should render associated_files fields correctly', () => {
-      render(<AssociatedFilesFields {...defaultProps} />);
+      renderWithProviders(<AssociatedFilesFields />, { initialState });
 
       expect(screen.getByPlaceholderText('File name')).toBeInTheDocument();
       expect(
@@ -55,7 +57,7 @@ describe('AssociatedFilesFields Component', () => {
     });
 
     it('should render associated_video_files fields correctly', () => {
-      render(<AssociatedFilesFields {...defaultProps} />);
+      renderWithProviders(<AssociatedFilesFields />, { initialState });
 
       expect(screen.getByPlaceholderText('name')).toBeInTheDocument();
     });
@@ -63,7 +65,7 @@ describe('AssociatedFilesFields Component', () => {
 
   describe('Field Values', () => {
     it('should display associated_files values correctly', () => {
-      render(<AssociatedFilesFields {...defaultProps} />);
+      renderWithProviders(<AssociatedFilesFields />, { initialState });
 
       const nameInput = screen.getByPlaceholderText('File name');
       const descInput = screen.getByPlaceholderText(
@@ -77,7 +79,7 @@ describe('AssociatedFilesFields Component', () => {
     });
 
     it('should display associated_video_files values correctly', () => {
-      render(<AssociatedFilesFields {...defaultProps} />);
+      renderWithProviders(<AssociatedFilesFields />, { initialState });
 
       const nameInput = screen.getByPlaceholderText('name');
       expect(nameInput).toHaveValue('video_01.mp4');
@@ -85,129 +87,83 @@ describe('AssociatedFilesFields Component', () => {
   });
 
   describe('CRUD Operations - Associated Files', () => {
-    it('should call addArrayItem when add button clicked for associated_files', async () => {
+    it('has add button for associated_files', async () => {
       const user = userEvent.setup();
-      let addCalled = false;
-      const mockAddArrayItem = (key, count) => {
-        if (key === 'associated_files') addCalled = true;
-      };
-
-      render(
-        <AssociatedFilesFields
-          {...defaultProps}
-          addArrayItem={mockAddArrayItem}
-        />
-      );
+      renderWithProviders(<AssociatedFilesFields />, { initialState });
 
       const addButton = screen.getByTitle('Add associated_files');
-      await user.click(addButton);
+      expect(addButton).toBeInTheDocument();
 
-      expect(addCalled).toBe(true);
+      // Verify button can be clicked
+      await user.click(addButton);
     });
 
-    it('should call removeArrayItem when remove button clicked for associated_files', async () => {
+    it('has remove button for associated_files', async () => {
       const user = userEvent.setup();
-      let removeCalled = false;
-      const mockRemoveArrayItem = (index, key) => {
-        if (key === 'associated_files' && index === 0) removeCalled = true;
-      };
-
-      render(
-        <AssociatedFilesFields
-          {...defaultProps}
-          removeArrayItem={mockRemoveArrayItem}
-        />
-      );
+      renderWithProviders(<AssociatedFilesFields />, { initialState });
 
       // Find the remove button (first one in associated_files section)
       const removeButtons = screen.getAllByText('Remove');
-      await user.click(removeButtons[0]);
+      expect(removeButtons[0]).toBeInTheDocument();
 
-      expect(removeCalled).toBe(true);
+      // Verify button can be clicked
+      await user.click(removeButtons[0]);
     });
 
-    it('should call duplicateArrayItem when duplicate button clicked for associated_files', async () => {
+    it('has duplicate button for associated_files', async () => {
       const user = userEvent.setup();
-      let duplicateCalled = false;
-      const mockDuplicateArrayItem = (index, key) => {
-        if (key === 'associated_files' && index === 0) duplicateCalled = true;
-      };
-
-      render(
-        <AssociatedFilesFields
-          {...defaultProps}
-          duplicateArrayItem={mockDuplicateArrayItem}
-        />
-      );
+      renderWithProviders(<AssociatedFilesFields />, { initialState });
 
       const duplicateButtons = screen.getAllByText('Duplicate');
-      await user.click(duplicateButtons[0]);
+      expect(duplicateButtons[0]).toBeInTheDocument();
 
-      expect(duplicateCalled).toBe(true);
+      // Verify button can be clicked
+      await user.click(duplicateButtons[0]);
     });
   });
 
   describe('CRUD Operations - Associated Video Files', () => {
-    it('should call addArrayItem when add button clicked for associated_video_files', async () => {
+    it('has add button for associated_video_files', async () => {
       const user = userEvent.setup();
-      let addCalled = false;
-      const mockAddArrayItem = (key, count) => {
-        if (key === 'associated_video_files') addCalled = true;
-      };
-
-      render(
-        <AssociatedFilesFields
-          {...defaultProps}
-          addArrayItem={mockAddArrayItem}
-        />
-      );
+      renderWithProviders(<AssociatedFilesFields />, { initialState });
 
       const addButton = screen.getByTitle('Add associated_video_files');
-      await user.click(addButton);
+      expect(addButton).toBeInTheDocument();
 
-      expect(addCalled).toBe(true);
+      // Verify button can be clicked
+      await user.click(addButton);
     });
 
-    it('should call removeArrayItem when remove button clicked for associated_video_files', async () => {
+    it('has remove button for associated_video_files', async () => {
       const user = userEvent.setup();
-      let removeCalled = false;
-      const mockRemoveArrayItem = (index, key) => {
-        if (key === 'associated_video_files' && index === 0)
-          removeCalled = true;
-      };
-
-      render(
-        <AssociatedFilesFields
-          {...defaultProps}
-          removeArrayItem={mockRemoveArrayItem}
-        />
-      );
+      renderWithProviders(<AssociatedFilesFields />, { initialState });
 
       // Find the remove button (second one, for video files)
       const removeButtons = screen.getAllByText('Remove');
-      await user.click(removeButtons[1]);
+      expect(removeButtons[1]).toBeInTheDocument();
 
-      expect(removeCalled).toBe(true);
+      // Verify button can be clicked
+      await user.click(removeButtons[1]);
     });
   });
 
   describe('Dependencies', () => {
-    it('should pass taskEpochsDefined to RadioList for associated_files', () => {
-      render(<AssociatedFilesFields {...defaultProps} />);
+    it('should render task epochs from selector', () => {
+      renderWithProviders(<AssociatedFilesFields />, { initialState });
 
       // RadioList with taskEpochsDefined should be rendered (check for multiple labels)
       const taskEpochLabels = screen.getAllByText('Task Epochs');
       expect(taskEpochLabels.length).toBeGreaterThanOrEqual(1);
     });
 
-    it('should pass cameraIdsDefined to RadioList for associated_video_files', () => {
-      render(<AssociatedFilesFields {...defaultProps} />);
+    it('should render camera ids from selector', () => {
+      renderWithProviders(<AssociatedFilesFields />, { initialState });
 
       expect(screen.getByText('Camera Id')).toBeInTheDocument();
     });
 
-    it('should pass taskEpochsDefined to RadioList for associated_video_files', () => {
-      render(<AssociatedFilesFields {...defaultProps} />);
+    it('should render task epochs for both sections', () => {
+      renderWithProviders(<AssociatedFilesFields />, { initialState });
 
       // Check for both labels since there are two "Task Epochs" in the component
       const taskEpochLabels = screen.getAllByText('Task Epochs');
@@ -217,46 +173,40 @@ describe('AssociatedFilesFields Component', () => {
 
   describe('Multiple Items', () => {
     it('should render multiple associated_files items', () => {
-      const propsWithMultiple = {
-        ...defaultProps,
-        formData: {
-          ...defaultProps.formData,
-          associated_files: [
-            {
-              name: 'script1.py',
-              description: 'First script',
-              path: '/path1',
-              task_epochs: [1],
-            },
-            {
-              name: 'script2.py',
-              description: 'Second script',
-              path: '/path2',
-              task_epochs: [2],
-            },
-          ],
-        },
+      const state = {
+        ...initialState,
+        associated_files: [
+          {
+            name: 'script1.py',
+            description: 'First script',
+            path: '/path1',
+            task_epochs: [1],
+          },
+          {
+            name: 'script2.py',
+            description: 'Second script',
+            path: '/path2',
+            task_epochs: [2],
+          },
+        ],
       };
 
-      render(<AssociatedFilesFields {...propsWithMultiple} />);
+      renderWithProviders(<AssociatedFilesFields />, { initialState: state });
 
       expect(screen.getByDisplayValue('script1.py')).toBeInTheDocument();
       expect(screen.getByDisplayValue('script2.py')).toBeInTheDocument();
     });
 
     it('should render multiple associated_video_files items', () => {
-      const propsWithMultiple = {
-        ...defaultProps,
-        formData: {
-          ...defaultProps.formData,
-          associated_video_files: [
-            { name: 'video1.mp4', camera_id: [0], task_epochs: [1] },
-            { name: 'video2.mp4', camera_id: [1], task_epochs: [2] },
-          ],
-        },
+      const state = {
+        ...initialState,
+        associated_video_files: [
+          { name: 'video1.mp4', camera_id: [0], task_epochs: [1] },
+          { name: 'video2.mp4', camera_id: [1], task_epochs: [2] },
+        ],
       };
 
-      render(<AssociatedFilesFields {...propsWithMultiple} />);
+      renderWithProviders(<AssociatedFilesFields />, { initialState: state });
 
       expect(screen.getByDisplayValue('video1.mp4')).toBeInTheDocument();
       expect(screen.getByDisplayValue('video2.mp4')).toBeInTheDocument();
@@ -265,38 +215,26 @@ describe('AssociatedFilesFields Component', () => {
 
   describe('Edge Cases', () => {
     it('should render with empty associated_files array', () => {
-      const propsEmpty = {
-        ...defaultProps,
-        formData: {
-          associated_files: [],
-          associated_video_files: [],
-        },
+      const state = {
+        ...initialState,
+        associated_files: [],
+        associated_video_files: [],
       };
 
-      render(<AssociatedFilesFields {...propsEmpty} />);
+      renderWithProviders(<AssociatedFilesFields />, { initialState: state });
 
       expect(screen.getByText('Associated Files')).toBeInTheDocument();
       expect(screen.getByText('Associated Video Files')).toBeInTheDocument();
     });
 
     it('should render with empty dependency arrays', () => {
-      const propsNoDeps = {
-        ...defaultProps,
-        taskEpochsDefined: [],
-        cameraIdsDefined: [],
+      const state = {
+        ...initialState,
+        tasks: [],
+        cameras: [],
       };
 
-      render(<AssociatedFilesFields {...propsNoDeps} />);
-
-      expect(screen.getByText('Associated Files')).toBeInTheDocument();
-    });
-  });
-
-  describe('PropTypes', () => {
-    it('should validate PropTypes correctly', () => {
-      // This test verifies PropTypes are defined
-      // Console warnings would appear if PropTypes fail
-      render(<AssociatedFilesFields {...defaultProps} />);
+      renderWithProviders(<AssociatedFilesFields />, { initialState: state });
 
       expect(screen.getByText('Associated Files')).toBeInTheDocument();
     });

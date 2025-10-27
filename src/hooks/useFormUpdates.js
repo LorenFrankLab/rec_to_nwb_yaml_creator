@@ -3,6 +3,7 @@ import {
   formatCommaSeparatedString,
   commaSeparatedStringToNumber,
 } from '../utils/stringFormatting';
+import { stringToInteger } from '../utils';
 
 /**
  * Custom hook for managing form field updates with proper immutability.
@@ -238,10 +239,70 @@ export function useFormUpdates(formData, setFormData) {
     [updateFormData]
   );
 
+  /**
+   * Updates ntrode channel map values for electrode groups.
+   *
+   * Handles special cases:
+   * - Treats empty strings, '-1', and whitespace as -1 (unmapped channel)
+   * - Updates the specific map entry for a shank within an electrode group
+   * - Filters ntrodes by electrode_group_id to find the right shank
+   *
+   * @param {Event} e - Change event from the input
+   * @param {Object} metaData - Metadata for locating the map entry
+   * @param {string} metaData.key - Form key ('ntrode_electrode_group_channel_map')
+   * @param {number} metaData.index - Map index (which channel in the map)
+   * @param {number} metaData.shankNumber - Which shank (ntrode) in the electrode group
+   * @param {number} metaData.electrodeGroupId - Electrode group ID to filter by
+   * @param {string} metaData.emptyOption - Empty option text to treat as -1
+   * @returns {null} Returns null if no ntrodes found
+   *
+   * @example
+   * // In ChannelMap component
+   * <select
+   *   onChange={(e) => onMapInput(e, {
+   *     key: 'ntrode_electrode_group_channel_map',
+   *     index: 0,
+   *     shankNumber: 0,
+   *     electrodeGroupId: 1,
+   *     emptyOption: '-- Select --'
+   *   })}
+   * />
+   */
+  const onMapInput = useCallback(
+    (e, metaData) => {
+      const { key, index, shankNumber, electrodeGroupId, emptyOption } = metaData;
+      const { target } = e;
+      let { value } = target;
+
+      // Treat empty options, -1, or empty strings as -1 (unmapped)
+      if ([emptyOption, -1, ''].includes(value?.trim())) {
+        value = -1;
+      }
+
+      const form = structuredClone(formData);
+      const nTrodes = form[key].filter(
+        (item) => item.electrode_group_id === electrodeGroupId
+      );
+
+      if (nTrodes.length === 0) {
+        return null;
+      }
+
+      // Update the specific map entry for this shank
+      nTrodes[shankNumber].map[index] = stringToInteger(value);
+
+      // Update the entire ntrode_electrode_group_channel_map array
+      updateFormData(key, form[key]);
+      return null;
+    },
+    [formData, updateFormData]
+  );
+
   return {
     updateFormData,
     updateFormArray,
     onBlur,
     handleChange,
+    onMapInput,
   };
 }

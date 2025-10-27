@@ -1,20 +1,25 @@
 import React from 'react';
-import PropTypes from 'prop-types';
+import { useStoreContext } from '../state/StoreContext';
 import SelectInputPairElement from '../element/SelectInputPairElement';
 import DataListElement from '../element/DataListElement';
 import ArrayItemControl from '../element/ArrayItemControl';
 import ArrayUpdateMenu from '../ArrayUpdateMenu';
 import { behavioralEventsNames, behavioralEventsDescription } from '../valueList';
 
-export default function BehavioralEventsFields({
-  formData,
-  handleChange,
-  onBlur,
-  itemSelected,
-  addArrayItem,
-  removeArrayItem,
-  duplicateArrayItem,
-}) {
+/**
+ * BehavioralEventsFields component
+ *
+ * Renders the behavioral events section of the form, supporting multiple events.
+ * Each event has description (DIO) and name fields.
+ *
+ * Uses the shared store context to access form data and actions, eliminating
+ * the need for prop drilling from App.js.
+ *
+ * @returns {JSX.Element} The behavioral events fields section
+ */
+export default function BehavioralEventsFields() {
+  const { model: formData, actions } = useStoreContext();
+  const { handleChange, onBlur, itemSelected, addArrayItem, removeArrayItem, duplicateArrayItem } = actions;
   return (
     <div id="behavioral_events-area" className="area-region">
       <details open>
@@ -85,20 +90,3 @@ export default function BehavioralEventsFields({
     </div>
   );
 }
-
-BehavioralEventsFields.propTypes = {
-  formData: PropTypes.shape({
-    behavioral_events: PropTypes.arrayOf(
-      PropTypes.shape({
-        description: PropTypes.string,
-        name: PropTypes.string,
-      })
-    ).isRequired,
-  }).isRequired,
-  handleChange: PropTypes.func.isRequired,
-  onBlur: PropTypes.func.isRequired,
-  itemSelected: PropTypes.func.isRequired,
-  addArrayItem: PropTypes.func.isRequired,
-  removeArrayItem: PropTypes.func.isRequired,
-  duplicateArrayItem: PropTypes.func.isRequired,
-};

@@ -124,31 +124,6 @@ export function App() {
    * @param {object} metaData Supporting Data
    * @returns null
    */
-  const onMapInput = (e, metaData) => {
-    const { key, index, shankNumber, electrodeGroupId, emptyOption } = metaData;
-    const { target } = e;
-    let { value } = target;
-
-    if ([emptyOption, -1, ''].includes(value?.trim())) {
-      value = -1;
-    }
-
-    const form = structuredClone(formData);
-    const nTrodes = form[key].filter(
-      (item) => item.electrode_group_id === electrodeGroupId
-    );
-
-    if (nTrodes.length === 0) {
-      return null;
-    }
-
-    nTrodes[shankNumber].map[index] = stringToInteger(value);
-
-    // Update the entire ntrode_electrode_group_channel_map array
-    actions.updateFormData(key, form[key]);
-    return null;
-  };
-
   /**
    * Open all Detail elements
    */
@@ -386,115 +361,24 @@ export function App() {
       }}
     >
       <div className="form-container">
-        <ExperimenterFields
-          formData={formData}
-          updateFormData={updateFormData}
-        />
-        <LabInstitutionFields
-          formData={formData}
-          handleChange={handleChange}
-          onBlur={onBlur}
-          itemSelected={itemSelected}
-        />
-        <SessionInfoFields
-        formData={formData}
-        handleChange={handleChange}
-        onBlur={onBlur}
-        updateFormData={updateFormData}
-      />
+        <ExperimenterFields />
+        <LabInstitutionFields />
+        <SessionInfoFields />
       <SubjectFields />
-      <DataAcqDeviceFields
-        formData={formData}
-        handleChange={handleChange}
-        onBlur={onBlur}
-        addArrayItem={addArrayItem}
-        removeArrayItem={removeArrayItem}
-        duplicateArrayItem={duplicateArrayItem}
-      />
-      <CamerasFields
-        formData={formData}
-        handleChange={handleChange}
-        onBlur={onBlur}
-        addArrayItem={addArrayItem}
-        removeArrayItem={removeArrayItem}
-        duplicateArrayItem={duplicateArrayItem}
-        sanitizeTitle={sanitizeTitle}
-      />
-      <TasksFields
-        formData={formData}
-        handleChange={handleChange}
-        onBlur={onBlur}
-        updateFormData={updateFormData}
-        updateFormArray={updateFormArray}
-        addArrayItem={addArrayItem}
-        removeArrayItem={removeArrayItem}
-        duplicateArrayItem={duplicateArrayItem}
-        cameraIdsDefined={cameraIdsDefined}
-      />
-      <AssociatedFilesFields
-        formData={formData}
-        handleChange={handleChange}
-        onBlur={onBlur}
-        updateFormData={updateFormData}
-        addArrayItem={addArrayItem}
-        removeArrayItem={removeArrayItem}
-        duplicateArrayItem={duplicateArrayItem}
-        taskEpochsDefined={taskEpochsDefined}
-        cameraIdsDefined={cameraIdsDefined}
-      />
-      <UnitsFields
-        formData={formData}
-        handleChange={handleChange}
-        onBlur={onBlur}
-      />
-      <TechnicalFields
-        formData={formData}
-        handleChange={handleChange}
-        onBlur={onBlur}
-      />
+      <DataAcqDeviceFields />
+      <CamerasFields />
+      <TasksFields />
+      <AssociatedFilesFields />
+      <UnitsFields />
+      <TechnicalFields />
       </div>
-      <BehavioralEventsFields
-        formData={formData}
-        handleChange={handleChange}
-        onBlur={onBlur}
-        itemSelected={itemSelected}
-        addArrayItem={addArrayItem}
-        removeArrayItem={removeArrayItem}
-        duplicateArrayItem={duplicateArrayItem}
-      />
-      <DeviceFields
-        formData={formData}
-        updateFormData={updateFormData}
-      />
+      <BehavioralEventsFields />
+      <DeviceFields />
 
 
 
-      <OptogeneticsFields
-        formData={formData}
-        handleChange={handleChange}
-        onBlur={onBlur}
-        itemSelected={itemSelected}
-        updateFormData={updateFormData}
-        updateFormArray={updateFormArray}
-        addArrayItem={addArrayItem}
-        removeArrayItem={removeArrayItem}
-        duplicateArrayItem={duplicateArrayItem}
-        taskEpochsDefined={taskEpochsDefined}
-        dioEventsDefined={dioEventsDefined}
-        cameraIdsDefined={cameraIdsDefined}
-      />
-      <ElectrodeGroupFields
-        formData={formData}
-        handleChange={handleChange}
-        onBlur={onBlur}
-        itemSelected={itemSelected}
-        nTrodeMapSelected={nTrodeMapSelected}
-        addArrayItem={addArrayItem}
-        removeElectrodeGroupItem={removeElectrodeGroupItem}
-        duplicateElectrodeGroupItem={duplicateElectrodeGroupItem}
-        updateFormArray={updateFormArray}
-        onMapInput={onMapInput}
-      />
+      <OptogeneticsFields />
+      <ElectrodeGroupFields />
       <div className="submit-button-parent">
         <button
           type="button"

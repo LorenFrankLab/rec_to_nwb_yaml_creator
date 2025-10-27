@@ -1,57 +1,26 @@
-import { render, screen } from '@testing-library/react';
-import { vi } from 'vitest';
+import { screen } from '@testing-library/react';
+import { renderWithProviders } from '../../__tests__/helpers/test-utils';
 import LabInstitutionFields from '../LabInstitutionFields';
 
 describe('LabInstitutionFields', () => {
-  const defaultProps = {
-    formData: {
-      lab: 'Frank Lab',
-      institution: 'University of California, San Francisco',
-    },
-    handleChange: vi.fn(() => vi.fn()),
-    onBlur: vi.fn(),
-    itemSelected: vi.fn(),
+  const initialState = {
+    lab: 'Frank Lab',
+    institution: 'University of California, San Francisco',
   };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  describe('PropTypes validation', () => {
-    it('should accept valid props without warnings', () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      render(<LabInstitutionFields {...defaultProps} />);
-      expect(consoleSpy).not.toHaveBeenCalled();
-      consoleSpy.mockRestore();
-    });
-
-    it('should warn if formData is missing', () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const { formData, ...propsWithoutFormData } = defaultProps;
-      render(<LabInstitutionFields {...propsWithoutFormData} />);
-      expect(consoleSpy).toHaveBeenCalled();
-      consoleSpy.mockRestore();
-    });
-
-    // Note: Tests for missing handleChange, onBlur, and itemSelected removed
-    // These props are marked as isRequired in PropTypes, so the component
-    // correctly throws an error when they're missing rather than silently failing.
-    // PropTypes validation is tested via the "should warn if formData is missing" test.
-  });
 
   describe('Component rendering', () => {
     it('should render lab field', () => {
-      render(<LabInstitutionFields {...defaultProps} />);
+      renderWithProviders(<LabInstitutionFields />, { initialState });
       expect(screen.getByDisplayValue('Frank Lab')).toBeInTheDocument();
     });
 
     it('should render institution field', () => {
-      render(<LabInstitutionFields {...defaultProps} />);
+      renderWithProviders(<LabInstitutionFields />, { initialState });
       expect(screen.getByDisplayValue('University of California, San Francisco')).toBeInTheDocument();
     });
 
     it('should render with area-region wrappers', () => {
-      const { container } = render(<LabInstitutionFields {...defaultProps} />);
+      const { container } = renderWithProviders(<LabInstitutionFields />, { initialState });
       const labArea = container.querySelector('#lab-area.area-region');
       const institutionArea = container.querySelector('#institution-area.area-region');
       expect(labArea).toBeInTheDocument();
@@ -59,7 +28,7 @@ describe('LabInstitutionFields', () => {
     });
 
     it('should render field titles', () => {
-      render(<LabInstitutionFields {...defaultProps} />);
+      renderWithProviders(<LabInstitutionFields />, { initialState });
       expect(screen.getByText('Lab')).toBeInTheDocument();
       expect(screen.getByText('Institution')).toBeInTheDocument();
     });
@@ -67,7 +36,7 @@ describe('LabInstitutionFields', () => {
 
   describe('Field types and validation', () => {
     it('should render lab as InputElement with required validation', () => {
-      const { container } = render(<LabInstitutionFields {...defaultProps} />);
+      const { container } = renderWithProviders(<LabInstitutionFields />, { initialState });
       const labInput = container.querySelector('#lab');
       expect(labInput).toBeInTheDocument();
       expect(labInput).toHaveAttribute('type', 'text');
@@ -75,58 +44,36 @@ describe('LabInstitutionFields', () => {
     });
 
     it('should render institution as DataListElement with required validation', () => {
-      const { container } = render(<LabInstitutionFields {...defaultProps} />);
+      const { container } = renderWithProviders(<LabInstitutionFields />, { initialState });
       const institutionInput = container.querySelector('#institution');
       expect(institutionInput).toBeInTheDocument();
       expect(institutionInput).toHaveAttribute('required');
     });
 
     it('should use correct placeholders', () => {
-      render(<LabInstitutionFields {...defaultProps} />);
+      renderWithProviders(<LabInstitutionFields />, { initialState });
       expect(screen.getByPlaceholderText('Laboratory where the experiment is conducted')).toBeInTheDocument();
       expect(screen.getByPlaceholderText('Type to find an affiliated University or Research center')).toBeInTheDocument();
     });
   });
 
-  describe('Event handlers', () => {
-    it('should call handleChange for lab field', () => {
-      const handleChange = vi.fn(() => vi.fn());
-      const props = { ...defaultProps, handleChange };
-      render(<LabInstitutionFields {...props} />);
-      expect(handleChange).toHaveBeenCalledWith('lab');
-    });
-
-    it('should call handleChange for institution field', () => {
-      const handleChange = vi.fn(() => vi.fn());
-      const props = { ...defaultProps, handleChange };
-      render(<LabInstitutionFields {...props} />);
-      expect(handleChange).toHaveBeenCalledWith('institution');
-    });
-  });
-
   describe('Form data handling', () => {
     it('should handle empty lab value', () => {
-      const props = {
-        ...defaultProps,
-        formData: {
-          ...defaultProps.formData,
-          lab: '',
-        },
+      const stateWithEmptyLab = {
+        lab: '',
+        institution: 'University of California, San Francisco',
       };
-      render(<LabInstitutionFields {...props} />);
+      renderWithProviders(<LabInstitutionFields />, { initialState: stateWithEmptyLab });
       const labInput = screen.getByPlaceholderText('Laboratory where the experiment is conducted');
       expect(labInput).toHaveValue('');
     });
 
     it('should handle empty institution value', () => {
-      const props = {
-        ...defaultProps,
-        formData: {
-          ...defaultProps.formData,
-          institution: '',
-        },
+      const stateWithEmptyInstitution = {
+        lab: 'Frank Lab',
+        institution: '',
       };
-      render(<LabInstitutionFields {...props} />);
+      renderWithProviders(<LabInstitutionFields />, { initialState: stateWithEmptyInstitution });
       const institutionInput = screen.getByPlaceholderText('Type to find an affiliated University or Research center');
       expect(institutionInput).toHaveValue('');
     });

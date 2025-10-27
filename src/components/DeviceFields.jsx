@@ -1,5 +1,5 @@
 import React from 'react';
-import PropTypes from 'prop-types';
+import { useStoreContext } from '../state/StoreContext';
 import ListElement from '../element/ListElement';
 
 /**
@@ -7,12 +7,15 @@ import ListElement from '../element/ListElement';
  *
  * Renders the device section of the form with a list of device names.
  *
- * @param {Object} props - Component props
- * @param {Object} props.formData - Current form data
- * @param {Function} props.updateFormData - Handler for updating form data
+ * Uses the shared store context to access form data and actions, eliminating
+ * the need for prop drilling from App.js.
+ *
  * @returns {JSX.Element} The device fields section
  */
-export default function DeviceFields({ formData, updateFormData }) {
+export default function DeviceFields() {
+  const { model: formData, actions } = useStoreContext();
+  const { updateFormData } = actions;
+
   return (
     <div id="device-area" className="area-region">
       <details open>
@@ -37,12 +40,3 @@ export default function DeviceFields({ formData, updateFormData }) {
     </div>
   );
 }
-
-DeviceFields.propTypes = {
-  formData: PropTypes.shape({
-    device: PropTypes.shape({
-      name: PropTypes.arrayOf(PropTypes.string),
-    }),
-  }).isRequired,
-  updateFormData: PropTypes.func.isRequired,
-};

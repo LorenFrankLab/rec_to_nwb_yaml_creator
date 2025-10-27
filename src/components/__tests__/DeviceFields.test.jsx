@@ -1,38 +1,36 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { screen } from '@testing-library/react';
+import { renderWithProviders } from '../../__tests__/helpers/test-utils';
 import DeviceFields from '../DeviceFields';
 
 describe('DeviceFields', () => {
-  let defaultProps;
+  let initialState;
 
   beforeEach(() => {
-    // Default props matching App.js interface
-    defaultProps = {
-      formData: {
-        device: {
-          name: [],
-        },
+    // Default state matching App.js interface
+    initialState = {
+      device: {
+        name: [],
       },
-      updateFormData: vi.fn(),
     };
   });
 
   describe('Component Rendering', () => {
     it('renders the device section', () => {
-      render(<DeviceFields {...defaultProps} />);
+      renderWithProviders(<DeviceFields />, { initialState });
 
       expect(screen.getByText('Device')).toBeInTheDocument();
     });
 
     it('renders with details element open by default', () => {
-      const { container } = render(<DeviceFields {...defaultProps} />);
+      const { container } = renderWithProviders(<DeviceFields />, { initialState });
 
       const details = container.querySelector('details');
       expect(details).toHaveAttribute('open');
     });
 
     it('has correct area ID', () => {
-      const { container } = render(<DeviceFields {...defaultProps} />);
+      const { container } = renderWithProviders(<DeviceFields />, { initialState });
 
       const area = container.querySelector('#device-area');
       expect(area).toBeInTheDocument();
@@ -40,25 +38,22 @@ describe('DeviceFields', () => {
     });
 
     it('renders ListElement for device names', () => {
-      render(<DeviceFields {...defaultProps} />);
+      renderWithProviders(<DeviceFields />, { initialState });
 
       // ListElement should render with title "Name"
       expect(screen.getByText('Name')).toBeInTheDocument();
     });
   });
 
-  describe('Field Values from Props', () => {
+  describe('Field Values from Store', () => {
     it('displays device names from formData', () => {
-      const props = {
-        ...defaultProps,
-        formData: {
-          device: {
-            name: ['Device1', 'Device2'],
-          },
+      const stateWithDevices = {
+        device: {
+          name: ['Device1', 'Device2'],
         },
       };
 
-      render(<DeviceFields {...props} />);
+      renderWithProviders(<DeviceFields />, { initialState: stateWithDevices });
 
       // ListElement displays array items
       // We can verify the component renders without error
@@ -66,7 +61,7 @@ describe('DeviceFields', () => {
     });
 
     it('handles empty device name array', () => {
-      render(<DeviceFields {...defaultProps} />);
+      renderWithProviders(<DeviceFields />, { initialState });
 
       expect(screen.getByText('Device')).toBeInTheDocument();
     });

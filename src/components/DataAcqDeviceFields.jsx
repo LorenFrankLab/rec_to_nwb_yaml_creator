@@ -1,5 +1,5 @@
 import React from 'react';
-import PropTypes from 'prop-types';
+import { useStoreContext } from '../state/StoreContext';
 import DataListElement from '../element/DataListElement';
 import ArrayItemControl from '../element/ArrayItemControl';
 import ArrayUpdateMenu from '../ArrayUpdateMenu';
@@ -16,23 +16,14 @@ import {
  * Renders the data acquisition device section of the form, supporting multiple devices.
  * Each device has name, system, amplifier, and ADC circuit fields.
  *
- * @param {Object} props - Component props
- * @param {Object} props.formData - Current form data
- * @param {Function} props.handleChange - Handler for field changes
- * @param {Function} props.onBlur - Handler for blur events
- * @param {Function} props.addArrayItem - Handler for adding new device
- * @param {Function} props.removeArrayItem - Handler for removing device
- * @param {Function} props.duplicateArrayItem - Handler for duplicating device
+ * Uses the shared store context to access form data and actions, eliminating
+ * the need for prop drilling from App.js.
+ *
  * @returns {JSX.Element} The data acquisition device fields section
  */
-export default function DataAcqDeviceFields({
-  formData,
-  handleChange,
-  onBlur,
-  addArrayItem,
-  removeArrayItem,
-  duplicateArrayItem,
-}) {
+export default function DataAcqDeviceFields() {
+  const { model: formData, actions } = useStoreContext();
+  const { handleChange, onBlur, addArrayItem, removeArrayItem, duplicateArrayItem } = actions;
   return (
     <div id="data_acq_device-area" className="area-region">
       <details open>
@@ -140,21 +131,3 @@ export default function DataAcqDeviceFields({
     </div>
   );
 }
-
-DataAcqDeviceFields.propTypes = {
-  formData: PropTypes.shape({
-    data_acq_device: PropTypes.arrayOf(
-      PropTypes.shape({
-        name: PropTypes.string,
-        system: PropTypes.string,
-        amplifier: PropTypes.string,
-        adc_circuit: PropTypes.string,
-      })
-    ).isRequired,
-  }).isRequired,
-  handleChange: PropTypes.func.isRequired,
-  onBlur: PropTypes.func.isRequired,
-  addArrayItem: PropTypes.func.isRequired,
-  removeArrayItem: PropTypes.func.isRequired,
-  duplicateArrayItem: PropTypes.func.isRequired,
-};

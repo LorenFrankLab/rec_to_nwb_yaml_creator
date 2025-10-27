@@ -1,4 +1,4 @@
-import PropTypes from 'prop-types';
+import { useStoreContext } from '../state/StoreContext';
 import InputElement from '../element/InputElement';
 import DataListElement from '../element/DataListElement';
 import { labs } from '../valueList';
@@ -10,21 +10,15 @@ import { labs } from '../valueList';
  * institution information. Institution field includes autocomplete from
  * a predefined list of universities and research centers.
  *
- * @param {Object} props - Component props
- * @param {Object} props.formData - Current form data
- * @param {string} props.formData.lab - Laboratory name
- * @param {string} props.formData.institution - Institution name
- * @param {Function} props.handleChange - Handler for input changes
- * @param {Function} props.onBlur - Handler for blur events
- * @param {Function} props.itemSelected - Handler for datalist selection
+ * Uses the shared store context to access form data and actions, eliminating
+ * the need for prop drilling from App.js.
+ *
  * @returns {JSX.Element} The lab and institution fields section
  */
-function LabInstitutionFields({
-  formData,
-  handleChange,
-  onBlur,
-  itemSelected,
-}) {
+function LabInstitutionFields() {
+  const { model: formData, actions } = useStoreContext();
+  const { handleChange, onBlur, itemSelected } = actions;
+
   return (
     <>
       <div id="lab-area" className="area-region">
@@ -57,15 +51,5 @@ function LabInstitutionFields({
     </>
   );
 }
-
-LabInstitutionFields.propTypes = {
-  formData: PropTypes.shape({
-    lab: PropTypes.string,
-    institution: PropTypes.string,
-  }).isRequired,
-  handleChange: PropTypes.func.isRequired,
-  onBlur: PropTypes.func.isRequired,
-  itemSelected: PropTypes.func.isRequired,
-};
 
 export default LabInstitutionFields;

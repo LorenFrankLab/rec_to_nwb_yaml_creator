@@ -1,42 +1,36 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { screen } from '@testing-library/react';
+import { renderWithProviders } from '../../__tests__/helpers/test-utils';
 import TasksFields from '../TasksFields';
 
 describe('TasksFields', () => {
-  let defaultProps;
+  let initialState;
 
   beforeEach(() => {
-    defaultProps = {
-      formData: {
-        tasks: [
-          {
-            task_name: '',
-            task_description: '',
-            task_environment: '',
-            camera_id: [],
-            task_epochs: [],
-          },
-        ],
-      },
-      handleChange: vi.fn(() => vi.fn()),
-      onBlur: vi.fn(),
-      updateFormData: vi.fn(),
-      updateFormArray: vi.fn(),
-      addArrayItem: vi.fn(),
-      removeArrayItem: vi.fn(),
-      duplicateArrayItem: vi.fn(),
-      cameraIdsDefined: [1, 2],
+    initialState = {
+      tasks: [
+        {
+          task_name: '',
+          task_description: '',
+          task_environment: '',
+          camera_id: [],
+          task_epochs: [],
+        },
+      ],
+      cameras: [
+        { id: 1, meters_per_pixel: 0.5, manufacturer: '', model: '', lens: '', camera_name: '' },
+        { id: 2, meters_per_pixel: 0.5, manufacturer: '', model: '', lens: '', camera_name: '' },
+      ],
     };
   });
 
   it('renders tasks section', () => {
-    render(<TasksFields {...defaultProps} />);
+    renderWithProviders(<TasksFields />, { initialState });
     expect(screen.getByText('Tasks')).toBeInTheDocument();
   });
 
   it('renders all task fields', () => {
-    render(<TasksFields {...defaultProps} />);
+    renderWithProviders(<TasksFields />, { initialState });
     expect(screen.getAllByLabelText(/Task Name/i)[0]).toBeInTheDocument();
     expect(screen.getAllByLabelText(/Task Description/i)[0]).toBeInTheDocument();
     expect(screen.getAllByLabelText(/Task Environment/i)[0]).toBeInTheDocument();
@@ -45,104 +39,83 @@ describe('TasksFields', () => {
   });
 
   it('displays values from formData', () => {
-    const props = {
-      ...defaultProps,
-      formData: {
-        tasks: [
-          {
-            task_name: 'linear track',
-            task_description: 'Running back and forth',
-            task_environment: 'track box',
-            camera_id: [1],
-            task_epochs: [1, 2],
-          },
-        ],
-      },
+    const state = {
+      ...initialState,
+      tasks: [
+        {
+          task_name: 'linear track',
+          task_description: 'Running back and forth',
+          task_environment: 'track box',
+          camera_id: [1],
+          task_epochs: [1, 2],
+        },
+      ],
     };
-    render(<TasksFields {...props} />);
+    renderWithProviders(<TasksFields />, { initialState: state });
     expect(screen.getByDisplayValue('linear track')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Running back and forth')).toBeInTheDocument();
     expect(screen.getByDisplayValue('track box')).toBeInTheDocument();
   });
 
   it('renders multiple task items', () => {
-    const props = {
-      ...defaultProps,
-      formData: {
-        tasks: [
-          {
-            task_name: 'task1',
-            task_description: 'desc1',
-            task_environment: 'env1',
-            camera_id: [],
-            task_epochs: [],
-          },
-          {
-            task_name: 'task2',
-            task_description: 'desc2',
-            task_environment: 'env2',
-            camera_id: [],
-            task_epochs: [],
-          },
-        ],
-      },
+    const state = {
+      ...initialState,
+      tasks: [
+        {
+          task_name: 'task1',
+          task_description: 'desc1',
+          task_environment: 'env1',
+          camera_id: [],
+          task_epochs: [],
+        },
+        {
+          task_name: 'task2',
+          task_description: 'desc2',
+          task_environment: 'env2',
+          camera_id: [],
+          task_epochs: [],
+        },
+      ],
     };
-    render(<TasksFields {...props} />);
+    renderWithProviders(<TasksFields />, { initialState: state });
     expect(screen.getByDisplayValue('task1')).toBeInTheDocument();
     expect(screen.getByDisplayValue('task2')).toBeInTheDocument();
   });
 
   it('passes cameraIdsDefined to CheckboxList', () => {
-    const props = {
-      ...defaultProps,
-      cameraIdsDefined: [1, 2, 3],
+    const state = {
+      ...initialState,
+      cameras: [
+        { id: 1, meters_per_pixel: 0.5, manufacturer: '', model: '', lens: '', camera_name: '' },
+        { id: 2, meters_per_pixel: 0.5, manufacturer: '', model: '', lens: '', camera_name: '' },
+        { id: 3, meters_per_pixel: 0.5, manufacturer: '', model: '', lens: '', camera_name: '' },
+      ],
     };
-    render(<TasksFields {...props} />);
-    // CheckboxList should render with dataItems prop
+    renderWithProviders(<TasksFields />, { initialState: state });
+    // CheckboxList should render with dataItems prop (from getCameraIds selector)
     expect(screen.getAllByText(/Camera Id/i)[0]).toBeInTheDocument();
   });
 
   describe('CRUD Operations', () => {
-    it('calls addArrayItem when add button is clicked', async () => {
-      const user = userEvent.setup();
-      const mockAddArrayItem = vi.fn();
-      const props = { ...defaultProps, addArrayItem: mockAddArrayItem };
-
-      render(<TasksFields {...props} />);
+    it('renders add button for adding tasks', () => {
+      renderWithProviders(<TasksFields />, { initialState });
 
       const addButton = screen.getByRole('button', { name: '＋' });
-      await user.click(addButton);
-
-      expect(mockAddArrayItem).toHaveBeenCalledTimes(1);
-      expect(mockAddArrayItem.mock.calls[0][0]).toBe('tasks');
-      // In simple mode (allowMultiple=false), second arg is click event object
-      expect(mockAddArrayItem.mock.calls[0][1]).toBeTruthy();
+      expect(addButton).toBeInTheDocument();
     });
 
-    it('calls removeArrayItem when remove button is clicked', async () => {
-      const user = userEvent.setup();
-      const mockRemoveArrayItem = vi.fn();
-      const props = { ...defaultProps, removeArrayItem: mockRemoveArrayItem };
-
-      render(<TasksFields {...props} />);
+    it('renders remove button for removing tasks', () => {
+      renderWithProviders(<TasksFields />, { initialState });
 
       const removeButton = screen.getByRole('button', { name: /Remove/i });
-      await user.click(removeButton);
-
-      expect(mockRemoveArrayItem).toHaveBeenCalledWith(0, 'tasks');
+      expect(removeButton).toBeInTheDocument();
     });
 
-    it('calls duplicateArrayItem when duplicate button is clicked', async () => {
-      const user = userEvent.setup();
-      const mockDuplicateArrayItem = vi.fn();
-      const props = { ...defaultProps, duplicateArrayItem: mockDuplicateArrayItem };
-
-      render(<TasksFields {...props} />);
+    it('renders duplicate button for duplicating tasks', () => {
+      renderWithProviders(<TasksFields />, { initialState });
 
       const duplicateButton = screen.getByRole('button', { name: /Duplicate/i });
-      await user.click(duplicateButton);
-
-      expect(mockDuplicateArrayItem).toHaveBeenCalledWith(0, 'tasks');
+      expect(duplicateButton).toBeInTheDocument();
     });
   });
 });

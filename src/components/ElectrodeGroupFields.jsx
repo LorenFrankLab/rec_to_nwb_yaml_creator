@@ -1,5 +1,5 @@
 import React from 'react';
-import PropTypes from 'prop-types';
+import { useStoreContext } from '../state/StoreContext';
 import InputElement from '../element/InputElement';
 import DataListElement from '../element/DataListElement';
 import SelectElement from '../element/SelectElement';
@@ -15,32 +15,25 @@ import { locations, deviceTypes, units } from '../valueList';
  * Each electrode group has targeting coordinates, device type selection, and
  * associated ntrode channel maps that are generated based on device type.
  *
+ * Uses the shared store context to access form data and actions, eliminating
+ * the need for prop drilling from App.js.
+ *
  * @component
- * @param {Object} props - Component props
- * @param {Object} props.formData - Form data containing electrode_groups and ntrode_electrode_group_channel_map
- * @param {Function} props.handleChange - Handler for field changes (name, key, index) => onChange handler
- * @param {Function} props.onBlur - Handler for field blur events
- * @param {Function} props.itemSelected - Handler for datalist selection events
- * @param {Function} props.nTrodeMapSelected - Handler for device type selection (generates ntrode maps)
- * @param {Function} props.addArrayItem - Handler for adding array items
- * @param {Function} props.removeElectrodeGroupItem - Handler for removing electrode group items
- * @param {Function} props.duplicateElectrodeGroupItem - Handler for duplicating electrode group items
- * @param {Function} props.updateFormArray - Handler for updating form array values
- * @param {Function} props.onMapInput - Handler for ntrode map input changes
  * @returns {JSX.Element} Electrode groups form section
  */
-export default function ElectrodeGroupFields({
-  formData,
-  handleChange,
-  onBlur,
-  itemSelected,
-  nTrodeMapSelected,
-  addArrayItem,
-  removeElectrodeGroupItem,
-  duplicateElectrodeGroupItem,
-  updateFormArray,
-  onMapInput,
-}) {
+export default function ElectrodeGroupFields() {
+  const { model: formData, actions } = useStoreContext();
+  const {
+    handleChange,
+    onBlur,
+    itemSelected,
+    nTrodeMapSelected,
+    addArrayItem,
+    removeElectrodeGroupItem,
+    duplicateElectrodeGroupItem,
+    updateFormArray,
+    onMapInput,
+  } = actions;
   return (
     <div id="electrode_groups-area" className="area-region">
       <details open>
@@ -259,37 +252,3 @@ export default function ElectrodeGroupFields({
     </div>
   );
 }
-
-ElectrodeGroupFields.propTypes = {
-  formData: PropTypes.shape({
-    electrode_groups: PropTypes.arrayOf(
-      PropTypes.shape({
-        id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-        location: PropTypes.string,
-        device_type: PropTypes.string,
-        description: PropTypes.string,
-        targeted_location: PropTypes.string,
-        targeted_x: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-        targeted_y: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-        targeted_z: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-        units: PropTypes.string,
-      })
-    ).isRequired,
-    ntrode_electrode_group_channel_map: PropTypes.arrayOf(
-      PropTypes.shape({
-        electrode_group_id: PropTypes.number,
-        ntrode_id: PropTypes.number,
-        map: PropTypes.object,
-      })
-    ),
-  }).isRequired,
-  handleChange: PropTypes.func.isRequired,
-  onBlur: PropTypes.func.isRequired,
-  itemSelected: PropTypes.func.isRequired,
-  nTrodeMapSelected: PropTypes.func.isRequired,
-  addArrayItem: PropTypes.func.isRequired,
-  removeElectrodeGroupItem: PropTypes.func.isRequired,
-  duplicateElectrodeGroupItem: PropTypes.func.isRequired,
-  updateFormArray: PropTypes.func.isRequired,
-  onMapInput: PropTypes.func.isRequired,
-};

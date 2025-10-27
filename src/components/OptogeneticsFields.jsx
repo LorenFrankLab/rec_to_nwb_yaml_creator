@@ -1,5 +1,5 @@
 import React from 'react';
-import PropTypes from 'prop-types';
+import { useStoreContext } from '../state/StoreContext';
 import InputElement from '../element/InputElement';
 import SelectElement from '../element/SelectElement';
 import RadioList from '../element/RadioList';
@@ -18,22 +18,28 @@ import {
  * Renders all optogenetics configuration sections including light sources,
  * fiber implants, virus injections, FsGUI protocols, and software settings.
  *
+ * Uses the shared store context to access form data and actions, eliminating
+ * the need for prop drilling from App.js.
+ *
  * @component
+ * @returns {JSX.Element} Optogenetics fields section
  */
-export default function OptogeneticsFields({
-  formData,
-  handleChange,
-  onBlur,
-  itemSelected,
-  updateFormData,
-  updateFormArray,
-  addArrayItem,
-  removeArrayItem,
-  duplicateArrayItem,
-  taskEpochsDefined,
-  dioEventsDefined,
-  cameraIdsDefined,
-}) {
+export default function OptogeneticsFields() {
+  const { model: formData, actions, selectors } = useStoreContext();
+  const {
+    handleChange,
+    onBlur,
+    itemSelected,
+    updateFormData,
+    updateFormArray,
+    addArrayItem,
+    removeArrayItem,
+    duplicateArrayItem,
+  } = actions;
+
+  const taskEpochsDefined = selectors.getTaskEpochs();
+  const dioEventsDefined = selectors.getDioEvents();
+  const cameraIdsDefined = selectors.getCameraIds();
   return (
     <>
 <div id="opto_excitation_source-area" className="area-region">
@@ -812,24 +818,3 @@ export default function OptogeneticsFields({
     </>
   );
 }
-
-OptogeneticsFields.propTypes = {
-  formData: PropTypes.shape({
-    fs_gui_yamls: PropTypes.array,
-    opto_excitation_source: PropTypes.array,
-    optical_fiber: PropTypes.array,
-    virus_injection: PropTypes.array,
-    opto_software: PropTypes.string,
-  }).isRequired,
-  handleChange: PropTypes.func.isRequired,
-  onBlur: PropTypes.func.isRequired,
-  itemSelected: PropTypes.func.isRequired,
-  updateFormData: PropTypes.func.isRequired,
-  updateFormArray: PropTypes.func.isRequired,
-  addArrayItem: PropTypes.func.isRequired,
-  removeArrayItem: PropTypes.func.isRequired,
-  duplicateArrayItem: PropTypes.func.isRequired,
-  taskEpochsDefined: PropTypes.array,
-  dioEventsDefined: PropTypes.array,
-  cameraIdsDefined: PropTypes.array,
-};

@@ -1,4 +1,5 @@
-import PropTypes from 'prop-types';
+import React from 'react';
+import { useStoreContext } from '../state/StoreContext';
 import InputElement from '../element/InputElement';
 import RadioList from '../element/RadioList';
 import ArrayItemControl from '../element/ArrayItemControl';
@@ -6,23 +7,29 @@ import ArrayUpdateMenu from '../ArrayUpdateMenu';
 
 /**
  * AssociatedFilesFields Component
- * 
+ *
  * Renders form fields for associated files and associated video files.
  * Both sections have dependencies on task epochs, and video files also depend on camera IDs.
- * 
+ *
+ * Uses the shared store context to access form data and actions, eliminating
+ * the need for prop drilling from App.js.
+ *
  * @component
+ * @returns {JSX.Element} Associated files fields section
  */
-function AssociatedFilesFields({
-  formData,
-  handleChange,
-  onBlur,
-  updateFormData,
-  addArrayItem,
-  removeArrayItem,
-  duplicateArrayItem,
-  taskEpochsDefined,
-  cameraIdsDefined,
-}) {
+function AssociatedFilesFields() {
+  const { model: formData, actions, selectors } = useStoreContext();
+  const {
+    handleChange,
+    onBlur,
+    updateFormData,
+    addArrayItem,
+    removeArrayItem,
+    duplicateArrayItem,
+  } = actions;
+
+  const taskEpochsDefined = selectors.getTaskEpochs();
+  const cameraIdsDefined = selectors.getCameraIds();
   return (
     <>
       <div id="associated_files-area" className="area-region">
@@ -218,20 +225,5 @@ function AssociatedFilesFields({
     </>
   );
 }
-
-AssociatedFilesFields.propTypes = {
-  formData: PropTypes.shape({
-    associated_files: PropTypes.array,
-    associated_video_files: PropTypes.array,
-  }).isRequired,
-  handleChange: PropTypes.func.isRequired,
-  onBlur: PropTypes.func.isRequired,
-  updateFormData: PropTypes.func.isRequired,
-  addArrayItem: PropTypes.func.isRequired,
-  removeArrayItem: PropTypes.func.isRequired,
-  duplicateArrayItem: PropTypes.func.isRequired,
-  taskEpochsDefined: PropTypes.array.isRequired,
-  cameraIdsDefined: PropTypes.array.isRequired,
-};
 
 export default AssociatedFilesFields;

@@ -1,4 +1,4 @@
-import PropTypes from 'prop-types';
+import { useStoreContext } from '../state/StoreContext';
 import InputElement from '../element/InputElement';
 
 /**
@@ -7,20 +7,14 @@ import InputElement from '../element/InputElement';
  * Renders the units configuration fields in a collapsible details section.
  * Defines the measurement units for analog signals and behavioral events.
  *
- * @param {Object} props - Component props
- * @param {Object} props.formData - Current form data
- * @param {Object} props.formData.units - Units configuration object
- * @param {string} props.formData.units.analog - Units for analog signals
- * @param {string} props.formData.units.behavioral_events - Units for behavioral events
- * @param {Function} props.handleChange - Handler for input changes
- * @param {Function} props.onBlur - Handler for blur events
+ * Uses the shared store context to access form data and actions, eliminating
+ * the need for prop drilling from App.js.
+ *
  * @returns {JSX.Element} The units fields section wrapped in a details element
  */
-function UnitsFields({
-  formData,
-  handleChange,
-  onBlur,
-}) {
+function UnitsFields() {
+  const { model: formData, actions } = useStoreContext();
+  const { handleChange, onBlur } = actions;
   const units = formData?.units || {};
 
   return (
@@ -57,16 +51,5 @@ function UnitsFields({
     </div>
   );
 }
-
-UnitsFields.propTypes = {
-  formData: PropTypes.shape({
-    units: PropTypes.shape({
-      analog: PropTypes.string,
-      behavioral_events: PropTypes.string,
-    }),
-  }).isRequired,
-  handleChange: PropTypes.func.isRequired,
-  onBlur: PropTypes.func.isRequired,
-};
 
 export default UnitsFields;

@@ -1,4 +1,4 @@
-import PropTypes from 'prop-types';
+import { useStoreContext } from '../state/StoreContext';
 import InputElement from '../element/InputElement';
 import ListElement from '../element/ListElement';
 
@@ -8,23 +8,15 @@ import ListElement from '../element/ListElement';
  * Renders form fields for session-level metadata including descriptions,
  * session ID, and keywords.
  *
- * @param {Object} props - Component props
- * @param {Object} props.formData - Current form data
- * @param {string} props.formData.experiment_description - Description of experiment
- * @param {string} props.formData.session_description - Description of session
- * @param {string} props.formData.session_id - Unique session identifier
- * @param {string[]} props.formData.keywords - Array of keyword strings
- * @param {Function} props.handleChange - Handler for input changes
- * @param {Function} props.onBlur - Handler for blur events
- * @param {Function} props.updateFormData - Handler for list updates
+ * Uses the shared store context to access form data and actions, eliminating
+ * the need for prop drilling from App.js.
+ *
  * @returns {JSX.Element} The session info fields section
  */
-function SessionInfoFields({
-  formData,
-  handleChange,
-  onBlur,
-  updateFormData,
-}) {
+function SessionInfoFields() {
+  const { model: formData, actions } = useStoreContext();
+  const { handleChange, onBlur, updateFormData } = actions;
+
   return (
     <>
       <div id="experiment_description-area" className="area-region">
@@ -92,17 +84,5 @@ function SessionInfoFields({
     </>
   );
 }
-
-SessionInfoFields.propTypes = {
-  formData: PropTypes.shape({
-    experiment_description: PropTypes.string,
-    session_description: PropTypes.string,
-    session_id: PropTypes.string,
-    keywords: PropTypes.arrayOf(PropTypes.string),
-  }).isRequired,
-  handleChange: PropTypes.func.isRequired,
-  onBlur: PropTypes.func.isRequired,
-  updateFormData: PropTypes.func.isRequired,
-};
 
 export default SessionInfoFields;

@@ -1,4 +1,4 @@
-import PropTypes from 'prop-types';
+import { useStoreContext } from '../state/StoreContext';
 import ListElement from '../element/ListElement';
 
 /**
@@ -7,16 +7,15 @@ import ListElement from '../element/ListElement';
  * Renders the experimenter name list field for entering multiple experimenters
  * in "LastName, FirstName" format. Uses ListElement for dynamic list management.
  *
- * @param {Object} props - Component props
- * @param {Object} props.formData - Current form data
- * @param {string[]} props.formData.experimenter_name - Array of experimenter names
- * @param {Function} props.updateFormData - Handler for list updates
+ * Uses the shared store context to access form data and actions, eliminating
+ * the need for prop drilling from App.js.
+ *
  * @returns {JSX.Element} The experimenter fields section
  */
-function ExperimenterFields({
-  formData,
-  updateFormData,
-}) {
+function ExperimenterFields() {
+  const { model: formData, actions } = useStoreContext();
+  const { updateFormData } = actions;
+
   return (
     <div id="experimenter_name-area" className="area-region">
       <ListElement
@@ -36,12 +35,5 @@ function ExperimenterFields({
     </div>
   );
 }
-
-ExperimenterFields.propTypes = {
-  formData: PropTypes.shape({
-    experimenter_name: PropTypes.arrayOf(PropTypes.string),
-  }).isRequired,
-  updateFormData: PropTypes.func.isRequired,
-};
 
 export default ExperimenterFields;

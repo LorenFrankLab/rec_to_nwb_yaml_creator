@@ -1,4 +1,4 @@
-import PropTypes from 'prop-types';
+import { useStoreContext } from '../state/StoreContext';
 import InputElement from '../element/InputElement';
 
 /**
@@ -7,20 +7,15 @@ import InputElement from '../element/InputElement';
  * Renders technical configuration fields for NWB file generation, including
  * timing multipliers, voltage conversion factors, and file paths.
  *
- * @param {Object} props - Component props
- * @param {Object} props.formData - Current form data
- * @param {number|string} props.formData.times_period_multiplier - Multiplier for timing periods
- * @param {number|string} props.formData.raw_data_to_volts - Conversion factor from raw data to volts
- * @param {string} props.formData.default_header_file_path - Path to default header file
- * @param {Function} props.handleChange - Handler for input changes
- * @param {Function} props.onBlur - Handler for blur events
+ * Uses the shared store context to access form data and actions, eliminating
+ * the need for prop drilling from App.js.
+ *
  * @returns {JSX.Element} The technical configuration fields section
  */
-function TechnicalFields({
-  formData,
-  handleChange,
-  onBlur,
-}) {
+function TechnicalFields() {
+  const { model: formData, actions } = useStoreContext();
+  const { handleChange, onBlur } = actions;
+
   return (
     <>
       <div id="times_period_multiplier-area" className="area-region">
@@ -70,15 +65,5 @@ function TechnicalFields({
     </>
   );
 }
-
-TechnicalFields.propTypes = {
-  formData: PropTypes.shape({
-    times_period_multiplier: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    raw_data_to_volts: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    default_header_file_path: PropTypes.string,
-  }).isRequired,
-  handleChange: PropTypes.func.isRequired,
-  onBlur: PropTypes.func.isRequired,
-};
 
 export default TechnicalFields;
