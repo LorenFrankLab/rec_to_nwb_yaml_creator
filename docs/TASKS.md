@@ -549,18 +549,43 @@ export function App() {
 
 #### Task 7.5.3: Migrate Components to useStoreContext
 
-**Status:** 🟡 PENDING - App.js migration complete, component migration not started
+**Status:** 🟡 IN PROGRESS - 1/14 components migrated (SubjectFields ✅)
 
-- App.js successfully migrated to StoreContext
-- Components still receive props (backward compatible)
+**Progress:** 1/14 components migrated
 
-- [ ] Update `src/components/SubjectFields.jsx` to use `useStoreContext()`
-- [ ] Remove all props (formData, handleChange, onBlur, itemSelected)
-- [ ] Update App.js to render `<SubjectFields />` without props
-- [ ] Update SubjectFields tests to provide StoreProvider wrapper
-- [ ] Verify all 21 SubjectFields tests pass
-- [ ] Repeat for remaining 13 components
-- [ ] **Estimated Time:** 1.5 hours per component (21 hours total)
+**Completed Components:**
+
+- [x] SubjectFields (21 tests passing, commit: 744b6c3)
+
+**Remaining Components:**
+
+- [ ] DataAcqDeviceFields (21 tests)
+- [ ] DeviceFields (6 tests)
+- [ ] CamerasFields (17 tests)
+- [ ] TasksFields (8 tests)
+- [ ] BehavioralEventsFields (7 tests)
+- [ ] ElectrodeGroupFields (26 tests)
+- [ ] OptogeneticsFields (13 tests)
+- [ ] AssociatedFilesFields (18 tests)
+- [ ] SessionInfoFields (19 tests)
+- [ ] ExperimenterFields (12 tests)
+- [ ] LabInstitutionFields (13 tests)
+- [ ] UnitsFields (15 tests)
+- [ ] TechnicalFields (17 tests)
+
+**Implementation Pattern Established:**
+
+1. Remove props from component signature
+2. Add `useStoreContext()` hook
+3. Update tests to use `renderWithProviders()` with `initialState`
+4. Update App.js to remove props
+5. Run tests and verify
+
+**Time Tracking:**
+
+- Estimated: 1.5 hours per component (21 hours total)
+- Actual (SubjectFields): 1 hour
+- Remaining estimate: 13 hours (13 components × 1 hour)
 
 **Implementation:**
 
@@ -579,24 +604,29 @@ export default function SubjectFields() {
 }
 ```
 
-**Week 7.5 Exit Gate:** ✅ PHASE 1 COMPLETE
+**Week 7.5 Exit Gate:** 🟡 IN PROGRESS
+
+**Phase 1 - Foundation (COMPLETE):**
 
 - [x] StoreContext provider implemented and tested (14 tests)
 - [x] App.js uses shared store (migrated from individual hooks)
-- [x] Test infrastructure updated (renderWithProviders, 27 test files fixed)
-- [x] All tests passing (1864/1866 = 99.9%)
+- [x] Test infrastructure updated (renderWithProviders, initialState support)
+- [x] All tests passing (1874/1874 = 100%)
 - [x] Golden YAML tests passing (18/18 = 100%)
 - [x] No regressions in functionality
-- [ ] Code review approval (pending)
 
-**Outcome:**
+**Phase 2 - Component Migration (IN PROGRESS):**
 
-- ✅ **Foundation established** - StoreContext works perfectly
-- ✅ **App.js migrated** - Uses centralized store
-- ✅ **Zero regressions** - All functionality preserved
-- 🟡 **Component migration deferred** - Not needed immediately, can be done incrementally
+- [x] SubjectFields migrated (1/14)
+- [ ] Remaining 13 components
+- [ ] Code review of migration pattern
+- [ ] Final integration tests
 
-**Time:** 3.5 hours (under 4-6 hour estimate)
+**Time Tracking:**
+
+- Phase 1 (Foundation): 3.5 hours ✅
+- Phase 2 (Components): 1 hour completed, ~13 hours remaining
+- Total estimated: ~17.5 hours (vs 21 hours original estimate)
 
 ---
 
