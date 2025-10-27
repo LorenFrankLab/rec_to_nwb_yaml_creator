@@ -404,7 +404,7 @@
 
 **Remaining:**
 
-- [ ] `<OptogeneticsFields />` - Multiple subsections (virus_injection, optical_fiber, etc.)
+- [x] `<OptogeneticsFields />` - Multiple subsections (virus_injection, optical_fiber, opto_excitation_source, fs_gui_yamls, opto_software) ✅
 - [ ] `<AssociatedFilesFields />` - Cross-field dependencies
 - [ ] Additional sections as needed
 - [ ] **Estimated Time:** 2-3 days (ongoing)
@@ -577,6 +577,10 @@ export default function SubjectFields() {
 - [ ] Add missing JSDoc comments
 - [ ] Improve variable naming
 - [ ] Extract magic numbers to constants
+- [ ] Ensure there aren't redundant tests
+- [ ] Remove any commented-out code
+- [ ] Remove any extraneous console.log statements
+- [ ] Make sure all comments are relevant and use comments best practices
 - [ ] **Estimated Time:** 1 week
 
 ### Phase 3 Exit Gate

@@ -7,14 +7,15 @@
 
 ---
 
-## 🎯 Current Task: Component Extraction - 7 Components Complete ✅
+## 🎯 Current Task: OptogeneticsFields Extraction (In Progress)
 
 ### Task Overview
 
-**Status:** 🟢 7 of 10+ components extracted, code review approved
-**What:** Extracting form sections from App.js into dedicated components
-**Approach:** Props-based components (TDD, golden YAML verification)
-**Total Reduction:** ~801 lines (App.js: 2373 → ~1572 lines, 33.7%)
+**Status:** 🟡 Creating OptogeneticsFields component (~786 lines)
+**What:** Extracting all optogenetics sections (scientifically cohesive)
+**Approach:** TDD (tests written first), props-based component
+**Sections:** opto_excitation_source, optical_fiber, virus_injection, fs_gui_yamls, opto_software
+**Current Progress:** 7 of 10+ components extracted, OptogeneticsFields tests written
 
 ### Components Extracted So Far
 
