@@ -19,6 +19,7 @@ import SessionInfoFields from './components/SessionInfoFields';
 import ExperimenterFields from './components/ExperimenterFields';
 import LabInstitutionFields from './components/LabInstitutionFields';
 import UnitsFields from './components/UnitsFields';
+import TechnicalFields from './components/TechnicalFields';
 
 import logo from './logo.png';
 import packageJson from '../package.json';
@@ -501,48 +502,11 @@ useEffect(() => {
         handleChange={handleChange}
         onBlur={onBlur}
       />
-      <div id="times_period_multiplier-area" className="area-region">
-        <InputElement
-          id="times_period_multiplier"
-          type="number"
-          name="times_period_multiplier"
-          title="Times Period Multiplier"
-          placeholder="Times Period Multiplier"
-          step="any"
-          required
-          value={formData.times_period_multiplier}
-          onChange={handleChange('times_period_multiplier')}  
-          onBlur={(e) => onBlur(e)}
-          validation={{ type: 'required' }}
-        />
-      </div>
-      <div id="raw_data_to_volts-area" className="area-region">
-        <InputElement
-          id="raw_data_to_volts"
-          type="number"
-          name="raw_data_to_volts"
-          title="Ephys-to-Volt Conversion Factor"
-          placeholder="Scalar to multiply each element in data to convert it to the specified 'unit'. If the data are stored in acquisition system units or other units that require a conversion to be interpretable, multiply the data by 'conversion' to convert the data to the specified 'unit'."
-          step="any"
-          value={formData.raw_data_to_volts}
-          onChange={handleChange('raw_data_to_volts')}  
-          onBlur={(e) => onBlur(e)}
-          validation={{ type: 'required' }}
-        />
-      </div>
-      <div id="default_header_file_path-area" className="area-region">
-      <InputElement
-          id="defaultHeaderFilePath"
-	        type="text"
-          title="Default Header File Path"
-          name="default_header_file_path"
-          placeholder="Default Header File Path"
-          value={formData.default_header_file_path}
-          onChange={handleChange('default_header_file_path')}  
-          onBlur={(e) => onBlur(e)}
-          validation={{ type: 'required' }}
-        />
-      </div>
+      <TechnicalFields
+        formData={formData}
+        handleChange={handleChange}
+        onBlur={onBlur}
+      />
       </div>
       <BehavioralEventsFields
         formData={formData}
