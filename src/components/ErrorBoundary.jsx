@@ -19,8 +19,20 @@
 
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import './ErrorBoundary.css';
 
 export class ErrorBoundary extends Component {
+  static propTypes = {
+    /** Child components to render */
+    children: PropTypes.node.isRequired,
+    /** Optional custom fallback UI to show when error occurs */
+    fallback: PropTypes.node,
+  };
+
+  static defaultProps = {
+    fallback: null,
+  };
+
   constructor(props) {
     super(props);
     this.state = {
@@ -73,99 +85,31 @@ export class ErrorBoundary extends Component {
 
       // Default fallback UI
       return (
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '100vh',
-            padding: '2rem',
-            backgroundColor: '#f5f5f5',
-            fontFamily: 'system-ui, sans-serif',
-          }}
-        >
-          <div
-            style={{
-              maxWidth: '600px',
-              padding: '2rem',
-              backgroundColor: 'white',
-              borderRadius: '8px',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-              textAlign: 'center',
-            }}
-          >
-            <h1
-              style={{
-                color: '#d32f2f',
-                fontSize: '1.5rem',
-                marginBottom: '1rem',
-              }}
-            >
+        <div className="error-boundary-container">
+          <div className="error-boundary-card">
+            <h1 className="error-boundary-title">
               Something went wrong
             </h1>
 
-            <p
-              style={{
-                color: '#666',
-                fontSize: '1rem',
-                lineHeight: '1.6',
-                marginBottom: '1.5rem',
-              }}
-            >
+            <p className="error-boundary-message">
               Your form data has been preserved. Please reload the page to continue working.
             </p>
 
             <button
               onClick={this.handleReload}
-              style={{
-                padding: '0.75rem 1.5rem',
-                fontSize: '1rem',
-                color: 'white',
-                backgroundColor: '#1976d2',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                transition: 'background-color 0.2s',
-              }}
-              onMouseOver={(e) => {
-                e.target.style.backgroundColor = '#1565c0';
-              }}
-              onMouseOut={(e) => {
-                e.target.style.backgroundColor = '#1976d2';
-              }}
+              className="error-boundary-button"
+              aria-label="Reload application to recover from error"
             >
               Reload Application
             </button>
 
             {/* Show error details in development mode */}
             {process.env.NODE_ENV === 'development' && this.state.error && (
-              <details
-                style={{
-                  marginTop: '2rem',
-                  textAlign: 'left',
-                  padding: '1rem',
-                  backgroundColor: '#f5f5f5',
-                  borderRadius: '4px',
-                  fontSize: '0.875rem',
-                }}
-              >
-                <summary
-                  style={{
-                    cursor: 'pointer',
-                    fontWeight: 'bold',
-                    marginBottom: '0.5rem',
-                  }}
-                >
+              <details className="error-boundary-details">
+                <summary>
                   Error Details (Development Only)
                 </summary>
-                <pre
-                  style={{
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                    color: '#d32f2f',
-                  }}
-                >
+                <pre>
                   {this.state.error.toString()}
                   {this.state.errorInfo && (
                     <>
@@ -185,14 +129,3 @@ export class ErrorBoundary extends Component {
     return this.props.children;
   }
 }
-
-ErrorBoundary.propTypes = {
-  /** Child components to render */
-  children: PropTypes.node.isRequired,
-  /** Optional custom fallback UI to show when error occurs */
-  fallback: PropTypes.node,
-};
-
-ErrorBoundary.defaultProps = {
-  fallback: null,
-};

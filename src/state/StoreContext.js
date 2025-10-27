@@ -85,11 +85,16 @@ export function StoreProvider({ children, initialState }) {
   const store = useStore(initialState);
 
   // Memoize context value to prevent unnecessary re-renders
-  // Note: store.model, store.actions, and store.selectors are already stable
-  // from useStore's internal memoization, but we memoize the whole object
-  // to prevent a new object reference on every render
+  // useStore returns a new object { model, actions, selectors } on every render,
+  // but actions and selectors are already memoized internally via useMemo.
+  // We recreate the store object here only when the dependencies actually change.
+  // This prevents ALL context consumers from re-rendering when unrelated state changes.
   const memoizedStore = useMemo(
-    () => store,
+    () => ({
+      model: store.model,
+      actions: store.actions,
+      selectors: store.selectors,
+    }),
     [store.model, store.actions, store.selectors]
   );
 
