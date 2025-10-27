@@ -15,6 +15,7 @@ import BehavioralEventsFields from './components/BehavioralEventsFields';
 import ElectrodeGroupFields from './components/ElectrodeGroupFields';
 import OptogeneticsFields from './components/OptogeneticsFields';
 import AssociatedFilesFields from './components/AssociatedFilesFields';
+import SessionInfoFields from './components/SessionInfoFields';
 
 import logo from './logo.png';
 import packageJson from '../package.json';
@@ -474,69 +475,12 @@ useEffect(() => {
             onBlur={(e) => itemSelected(e)}
           />
         </div>
-      </div>
-      <div id="experiment_description-area" className="area-region">
-        <InputElement
-          id="experiment_description"
-          type="text"
-          name="experiment_description"
-          title="Experiment Description"
-          placeholder="Description of subject and where subject came from (e.g., breeder, if animal)"
-          required
-          value={formData.experiment_description}
-          onChange={handleChange('experiment_description')}  
-          onBlur={(e) => onBlur(e)}
-          validation={{ type: 'required' }}
-        />
-      </div>
-      <div id="session_description-area" className="area-region">
-        <InputElement
-          id="session_description"
-          type="text"
-          name="session_description"
-          title="Session Description"
-          required
-          placeholder="Description of current session, e.g - w-track task"
-          value={formData.session_description}
-          onChange={handleChange('session_description')}  
-          onBlur={(e) => onBlur(e)}
-          validation={{ type: 'required' }}
-        />
-      </div>
-      <div id="session_id-area" className="area-region">
-        <InputElement
-          id="session_id"
-          type="text"
-          name="session_id"
-          title="Session Id"
-          required
-          placeholder="Session id, e.g - 1"
-          value={formData.session_id}
-          onChange={handleChange('session_id')}  
-          onBlur={(e) => onBlur(e)}
-          validation={{
-            type: 'pattern',
-            pattern: /^[a-zA-Z0-9_-]+$/,
-            patternMessage: 'Session ID must contain only letters, numbers, underscores, or hyphens'
-          }}
-        />
-      </div>
-      <div id="keywords-area" className="form-container area-region">
-        <ListElement
-          id="keywords"
-          type="text"
-          name="keywords"
-          title="Keywords"
-          defaultValue={formData.keywords}
-          required
-          inputPlaceholder="No keyword"
-          placeholder="Keywords"
-          updateFormData={updateFormData}
-          metaData={{
-            nameValue: 'keywords',
-          }}
-        />
-      </div>
+      <SessionInfoFields
+        formData={formData}
+        handleChange={handleChange}
+        onBlur={onBlur}
+        updateFormData={updateFormData}
+      />
       <SubjectFields
         formData={formData}
         handleChange={handleChange}
@@ -654,6 +598,7 @@ useEffect(() => {
           validation={{ type: 'required' }}
         />
       </div>
+      </div>
       <BehavioralEventsFields
         formData={formData}
         handleChange={handleChange}
@@ -721,9 +666,9 @@ useEffect(() => {
       Copyright © {new Date().getFullYear()} <a href="https://franklab.ucsf.edu/">Loren Frank Lab</a> <br />
       <a href="http://www.ucsf.edu">The University of California at San Francisco</a><br />
       Version - {appVersion}<br />
-      </div>
-      </div>
     </div>
+    </div>
+  </div>
   </>;
 }
 export default App;
