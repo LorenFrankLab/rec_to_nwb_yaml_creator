@@ -28,6 +28,19 @@ const waitForDownload = async (page, action) => {
   return await downloadPromise;
 };
 
+// Helper to dismiss alert modal if present
+const dismissAlertModal = async (page) => {
+  try {
+    const closeButton = page.locator('button:has-text("Close")').first();
+    if (await closeButton.isVisible({ timeout: 1000 })) {
+      await closeButton.click();
+      await page.waitForTimeout(200);
+    }
+  } catch (e) {
+    // Modal not present or already dismissed
+  }
+};
+
 test.describe('BASELINE: Import/Export Workflow', () => {
 
   test('can import valid minimal YAML file', async ({ page }) => {
@@ -45,6 +58,9 @@ test.describe('BASELINE: Import/Export Workflow', () => {
         // Upload the file
         await importButton.setInputFiles(fixturePath);
         await page.waitForTimeout(500);
+
+        // Dismiss success modal
+        await dismissAlertModal(page);
 
         // Verify some fields were populated
         const sessionIdInput = page.locator('input[name*="session_id"]').first();
@@ -69,6 +85,9 @@ test.describe('BASELINE: Import/Export Workflow', () => {
       if (fs.existsSync(fixturePath)) {
         await importButton.setInputFiles(fixturePath);
         await page.waitForTimeout(500);
+
+        // Dismiss success modal
+        await dismissAlertModal(page);
 
         // Verify more complex data was imported (e.g., cameras array)
         const cameraLink = page.locator('a:has-text("Cameras")').first();
@@ -99,6 +118,9 @@ test.describe('BASELINE: Import/Export Workflow', () => {
       if (fs.existsSync(fixturePath)) {
         await importButton.setInputFiles(fixturePath);
         await page.waitForTimeout(1000);
+
+        // Dismiss success modal
+        await dismissAlertModal(page);
 
         // Verify complex nested data imported (electrode groups)
         const electrodeLink = page.locator('a:has-text("Electrode Groups")').first();
@@ -131,6 +153,9 @@ test.describe('BASELINE: Import/Export Workflow', () => {
       if (fs.existsSync(fixturePath)) {
         await importButton.setInputFiles(fixturePath);
         await page.waitForTimeout(500);
+
+        // Dismiss success modal
+        await dismissAlertModal(page);
 
         // Verify import succeeded - check session_id was populated
         const sessionIdInput = page.locator('input[name*="session_id"]').first();
@@ -177,6 +202,9 @@ test.describe('BASELINE: Import/Export Workflow', () => {
       if (fs.existsSync(fixturePath)) {
         await importButton.setInputFiles(fixturePath);
         await page.waitForTimeout(500);
+
+        // Dismiss success modal
+        await dismissAlertModal(page);
 
         // Modify a field
         const sessionIdInput = page.locator('input[name*="session_id"]').first();
@@ -247,6 +275,9 @@ test.describe('BASELINE: Import/Export Workflow', () => {
         await importButton.setInputFiles(fixturePath);
         await page.waitForTimeout(500);
 
+        // Dismiss success modal
+        await dismissAlertModal(page);
+
         // Try to export
         const downloadButton = page.locator('button:has-text("Download"), button:has-text("Generate")').first();
         if (await downloadButton.isVisible()) {
@@ -298,6 +329,9 @@ test.describe('BASELINE: Import/Export Workflow', () => {
       await importButton.setInputFiles(invalidYamlPath);
       await page.waitForTimeout(500);
 
+      // Dismiss error modal if present
+      await dismissAlertModal(page);
+
       // Document that some error handling occurs
       // The app should show an error or alert
       expect(errorOccurred).toBeTruthy();
@@ -340,6 +374,9 @@ test.describe('BASELINE: Import/Export Workflow', () => {
 
         await importButton.setInputFiles(fixturePath);
         await page.waitForTimeout(500);
+
+        // Dismiss any alert modal
+        await dismissAlertModal(page);
 
         // Document behavior: app may show alert, or may partially import valid fields
         // Just capture what happens
