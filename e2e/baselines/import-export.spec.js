@@ -31,10 +31,27 @@ const waitForDownload = async (page, action) => {
 // Helper to dismiss alert modal if present
 const dismissAlertModal = async (page) => {
   try {
-    const closeButton = page.locator('button:has-text("Close")').first();
-    if (await closeButton.isVisible({ timeout: 1000 })) {
-      await closeButton.click();
-      await page.waitForTimeout(200);
+    // Wait a bit for modal animation
+    await page.waitForTimeout(300);
+
+    // Try multiple selectors to find and dismiss the modal
+    const selectors = [
+      'button.alert-modal-close',
+      'button[aria-label="Close alert"]',
+      '.alert-modal-overlay' // Click overlay to dismiss
+    ];
+
+    for (const selector of selectors) {
+      try {
+        const element = page.locator(selector).first();
+        if (await element.isVisible({ timeout: 500 })) {
+          await element.click({ timeout: 1000 });
+          await page.waitForTimeout(300);
+          return;
+        }
+      } catch {
+        continue;
+      }
     }
   } catch (e) {
     // Modal not present or already dismissed
