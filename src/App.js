@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faDownload } from "@fortawesome/free-solid-svg-icons";
+import { faDownload, faUpload } from "@fortawesome/free-solid-svg-icons";
 import { showErrorMessage, displayErrorOnUI, setAlertCallback } from './utils/errorDisplay';
 import AlertModal from './components/AlertModal';
 import { useStoreContext } from './state/StoreContext';
@@ -322,16 +322,15 @@ export function App() {
         &nbsp;&nbsp;&nbsp;
       </span>
       <div className="file-upload-region">
-        <label
-          htmlFor="importYAMLFile"
-          tabIndex="0"
-          role="button"
-          aria-label="Import YAML file to populate form fields"
+        <button
+          type="button"
+          className="import-button"
+          onClick={() => document.getElementById('importYAMLFile').click()}
           onKeyDown={handleFileUploadKeyDown}
+          aria-label="Import YAML file to populate form fields"
         >
-          &nbsp;&nbsp;
-          <FontAwesomeIcon icon={faDownload} className="pointer" size="2xs" title="Download a Yaml file to populate fields" />
-        </label>
+          <FontAwesomeIcon icon={faUpload} /> Import YAML
+        </button>
         {/*
           input type="file" onClick sets e.target.value to null, so the same file can be imported multiple times.
           See - https://stackoverflow.com/a/68480263/178550
@@ -340,8 +339,7 @@ export function App() {
           type="file"
           id="importYAMLFile"
           accept=".yml, .yaml"
-          className="download-existing-file"
-          placeholder="Download a Yaml file to populate fields"
+          className="visually-hidden"
           onChange={(e) => importFile(e)}
           onClick={(e) => {
             // Reset file input to allow re-uploading the same file
@@ -350,8 +348,7 @@ export function App() {
               e.target.value = '';
             }
           }}
-        >
-        </input>
+        />
       </div>
       <span>
         &nbsp;&nbsp;&nbsp;

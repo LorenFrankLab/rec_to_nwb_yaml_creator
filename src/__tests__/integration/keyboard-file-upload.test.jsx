@@ -39,12 +39,12 @@ describe('File Upload Keyboard Accessibility', () => {
         </StoreProvider>
       );
 
-      // Find the label by its htmlFor attribute
-      const fileLabel = document.querySelector('label[for="importYAMLFile"]');
-      expect(fileLabel).toBeTruthy();
+      // Find the button element
+      const fileButton = document.querySelector('.import-button');
+      expect(fileButton).toBeTruthy();
 
-      // Label should have tabIndex="0" to be keyboard focusable
-      expect(fileLabel.getAttribute('tabindex')).toBe('0');
+      // Button elements are focusable by default (don't need explicit tabindex)
+      expect(fileButton.tagName).toBe('BUTTON');
     });
 
     it('should allow direct focus on file upload label', () => {
@@ -54,11 +54,11 @@ describe('File Upload Keyboard Accessibility', () => {
         </StoreProvider>
       );
 
-      const fileLabel = document.querySelector('label[for="importYAMLFile"]');
-      fileLabel.focus();
+      const fileButton = document.querySelector('.import-button');
+      fileButton.focus();
 
       // Verify the label received focus
-      expect(document.activeElement).toBe(fileLabel);
+      expect(document.activeElement).toBe(fileButton);
     });
   });
 
@@ -70,15 +70,15 @@ describe('File Upload Keyboard Accessibility', () => {
         </StoreProvider>
       );
 
-      const fileLabel = document.querySelector('label[for="importYAMLFile"]');
+      const fileButton = document.querySelector('.import-button');
       const fileInput = document.querySelector('#importYAMLFile');
 
       // Spy on the click method of the file input
       const clickSpy = vi.spyOn(fileInput, 'click');
 
       // Focus the label
-      fileLabel.focus();
-      expect(document.activeElement).toBe(fileLabel);
+      fileButton.focus();
+      expect(document.activeElement).toBe(fileButton);
 
       // Press Enter
       await user.keyboard('{Enter}');
@@ -94,12 +94,12 @@ describe('File Upload Keyboard Accessibility', () => {
         </StoreProvider>
       );
 
-      const fileLabel = document.querySelector('label[for="importYAMLFile"]');
+      const fileButton = document.querySelector('.import-button');
       const fileInput = document.querySelector('#importYAMLFile');
 
       const clickSpy = vi.spyOn(fileInput, 'click');
 
-      fileLabel.focus();
+      fileButton.focus();
 
       // Press various keys that should NOT trigger upload
       await user.keyboard('a');
@@ -119,13 +119,13 @@ describe('File Upload Keyboard Accessibility', () => {
         </StoreProvider>
       );
 
-      const fileLabel = document.querySelector('label[for="importYAMLFile"]');
+      const fileButton = document.querySelector('.import-button');
       const fileInput = document.querySelector('#importYAMLFile');
 
       const clickSpy = vi.spyOn(fileInput, 'click');
 
-      fileLabel.focus();
-      expect(document.activeElement).toBe(fileLabel);
+      fileButton.focus();
+      expect(document.activeElement).toBe(fileButton);
 
       // Press Space
       await user.keyboard(' ');
@@ -141,12 +141,12 @@ describe('File Upload Keyboard Accessibility', () => {
         </StoreProvider>
       );
 
-      const fileLabel = document.querySelector('label[for="importYAMLFile"]');
+      const fileButton = document.querySelector('.import-button');
 
       // Spy on scrollBy to verify Space doesn't trigger page scroll
       const scrollSpy = vi.spyOn(window, 'scrollBy');
 
-      fileLabel.focus();
+      fileButton.focus();
       await user.keyboard(' ');
 
       // Space should NOT cause window scrolling (default browser behavior)
@@ -164,10 +164,10 @@ describe('File Upload Keyboard Accessibility', () => {
         </StoreProvider>
       );
 
-      const fileLabel = document.querySelector('label[for="importYAMLFile"]');
+      const fileButton = document.querySelector('.import-button');
 
       // Should have aria-label for screen readers
-      const ariaLabel = fileLabel.getAttribute('aria-label');
+      const ariaLabel = fileButton.getAttribute('aria-label');
       expect(ariaLabel).toBeTruthy();
       expect(ariaLabel).toMatch(/import|upload|yaml/i);
     });
@@ -179,10 +179,11 @@ describe('File Upload Keyboard Accessibility', () => {
         </StoreProvider>
       );
 
-      const fileLabel = document.querySelector('label[for="importYAMLFile"]');
+      const fileButton = document.querySelector('.import-button');
 
-      // Label should have role="button" since it behaves like a button
-      expect(fileLabel.getAttribute('role')).toBe('button');
+      // Button element should have button type
+      expect(fileButton.tagName).toBe('BUTTON');
+      expect(fileButton.getAttribute('type')).toBe('button');
     });
   });
 
@@ -197,7 +198,7 @@ describe('File Upload Keyboard Accessibility', () => {
       const fileInput = document.querySelector('#importYAMLFile');
 
       // File input should have a class that visually hides it
-      expect(fileInput.className).toContain('download-existing-file');
+      expect(fileInput.className).toContain('visually-hidden');
 
       // But it should still be in the DOM for programmatic access
       expect(fileInput).toBeTruthy();
@@ -227,11 +228,11 @@ describe('File Upload Keyboard Accessibility', () => {
         </StoreProvider>
       );
 
-      const fileLabel = container.querySelector('label[for="importYAMLFile"]');
-      fileLabel.focus();
+      const fileButton = container.querySelector('.import-button');
+      fileButton.focus();
 
-      // The label should receive focus (browser will apply focus ring)
-      expect(document.activeElement).toBe(fileLabel);
+      // The button should receive focus (browser will apply focus ring)
+      expect(document.activeElement).toBe(fileButton);
 
       // Note: Actual visual focus styles are tested manually
       // as CSS :focus pseudo-class is hard to test in JSDOM
@@ -246,13 +247,13 @@ describe('File Upload Keyboard Accessibility', () => {
         </StoreProvider>
       );
 
-      const fileLabel = document.querySelector('label[for="importYAMLFile"]');
+      const fileButton = document.querySelector('.import-button');
       const fileInput = document.querySelector('#importYAMLFile');
 
       // Create a mock file
       const mockFile = new File(['test: data'], 'test.yml', { type: 'text/yaml' });
 
-      fileLabel.focus();
+      fileButton.focus();
       await user.keyboard('{Enter}');
 
       // Simulate file selection (this would normally happen via OS file dialog)
