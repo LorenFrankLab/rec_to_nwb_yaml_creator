@@ -244,7 +244,7 @@ export function App() {
       </a>
     </div>
     <div className="page-container">
-      <div id="navigation" tabIndex="-1" className="page-container__nav">
+      <div id="navigation" tabIndex="-1" role="navigation" aria-label="Form section navigation" className="page-container__nav">
         <div className="page-container__nav__content">
         <p className="page-container__nav--content__header">Navigation</p>
         <ul>
@@ -289,7 +289,7 @@ export function App() {
       </ul>
       </div>
       </div>
-      <div id="main-content" tabIndex="-1" className="page-container__content">
+      <div id="main-content" tabIndex="-1" role="main" aria-label="NWB metadata form" className="page-container__content">
       <h2 className="header-text">
       Rec-to-NWB YAML Creator
       <span>
