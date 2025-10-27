@@ -57,21 +57,29 @@ const StoreContext = createContext(null);
  *
  * @param {Object} props - Component props
  * @param {React.ReactNode} props.children - Child components
+ * @param {Object} [props.initialState] - Optional initial state for the store (for testing)
  * @returns {JSX.Element} Provider component
  *
  * @example
  * <StoreProvider>
  *   <App />
  * </StoreProvider>
+ *
+ * @example
+ * // With initial state (useful for testing)
+ * <StoreProvider initialState={{ subject: { subject_id: 'rat01' } }}>
+ *   <SubjectFields />
+ * </StoreProvider>
  */
-export function StoreProvider({ children }) {
-  const store = useStore(); // Created ONCE at top level
+export function StoreProvider({ children, initialState }) {
+  const store = useStore(initialState); // Created ONCE at top level
 
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
 }
 
 StoreProvider.propTypes = {
   children: PropTypes.node.isRequired,
+  initialState: PropTypes.object,
 };
 
 /**

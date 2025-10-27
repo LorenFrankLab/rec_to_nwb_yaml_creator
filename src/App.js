@@ -402,12 +402,7 @@ export function App() {
         onBlur={onBlur}
         updateFormData={updateFormData}
       />
-      <SubjectFields
-        formData={formData}
-        handleChange={handleChange}
-        onBlur={onBlur}
-        itemSelected={itemSelected}
-      />
+      <SubjectFields />
       <DataAcqDeviceFields
         formData={formData}
         handleChange={handleChange}

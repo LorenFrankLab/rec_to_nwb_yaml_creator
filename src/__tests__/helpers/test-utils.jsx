@@ -1,16 +1,34 @@
 import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StoreProvider } from '../../state/StoreContext';
+import { defaultYMLValues } from '../../valueList';
 
 /**
  * Custom render with common providers (includes StoreProvider)
+ *
+ * @param {React.ReactElement} ui - Component to render
+ * @param {Object} options - Render options
+ * @param {Object} options.initialState - Initial state for the store (merged with defaults)
+ * @param {Object} options.renderOptions - Additional options to pass to render()
+ * @returns {Object} Render result with user-event instance
+ *
+ * @example
+ * renderWithProviders(<SubjectFields />, {
+ *   initialState: { subject: { subject_id: 'rat01' } }
+ * });
  */
 export function renderWithProviders(ui, options = {}) {
+  const { initialState, ...renderOptions } = options;
   const user = userEvent.setup();
+
+  // Merge initialState with defaults (deep merge for nested objects)
+  const mergedState = initialState
+    ? { ...defaultYMLValues, ...initialState }
+    : defaultYMLValues;
 
   return {
     user,
-    ...render(<StoreProvider>{ui}</StoreProvider>, options),
+    ...render(<StoreProvider initialState={mergedState}>{ui}</StoreProvider>, renderOptions),
   };
 }
 

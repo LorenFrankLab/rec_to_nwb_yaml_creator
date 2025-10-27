@@ -1,5 +1,5 @@
 import React from 'react';
-import PropTypes from 'prop-types';
+import { useStoreContext } from '../state/StoreContext';
 import InputElement from '../element/InputElement';
 import DataListElement from '../element/DataListElement';
 import SelectElement from '../element/SelectElement';
@@ -11,14 +11,14 @@ import { species, genotypes, genderAcronym } from '../valueList';
  * Renders the subject information section of the form, including fields for
  * description, species, genotype, sex, subject ID, date of birth, and weight.
  *
- * @param {Object} props - Component props
- * @param {Object} props.formData - Current form data
- * @param {Function} props.handleChange - Handler for field changes
- * @param {Function} props.onBlur - Handler for blur events
- * @param {Function} props.itemSelected - Handler for datalist selection
+ * Uses the shared store context to access form data and actions, eliminating
+ * the need for prop drilling from App.js.
+ *
  * @returns {JSX.Element} The subject fields section
  */
-export default function SubjectFields({ formData, handleChange, onBlur, itemSelected }) {
+export default function SubjectFields() {
+  const { model: formData, actions } = useStoreContext();
+  const { handleChange, onBlur, itemSelected } = actions;
 
   return (
     <div id="subject-area" className="area-region">
@@ -122,20 +122,3 @@ export default function SubjectFields({ formData, handleChange, onBlur, itemSele
     </div>
   );
 }
-
-SubjectFields.propTypes = {
-  formData: PropTypes.shape({
-    subject: PropTypes.shape({
-      description: PropTypes.string,
-      species: PropTypes.string,
-      genotype: PropTypes.string,
-      sex: PropTypes.string,
-      subject_id: PropTypes.string,
-      date_of_birth: PropTypes.string,
-      weight: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    }).isRequired,
-  }).isRequired,
-  handleChange: PropTypes.func.isRequired,
-  onBlur: PropTypes.func.isRequired,
-  itemSelected: PropTypes.func.isRequired,
-};

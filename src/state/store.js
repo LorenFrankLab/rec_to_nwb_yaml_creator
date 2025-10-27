@@ -16,6 +16,7 @@ import { defaultYMLValues } from '../valueList';
  *   associated_video_files when tasks are deleted. This prevents invalid YAML exports that
  *   corrupt the trodes_to_nwb pipeline and Spyglass database.
  *
+ * @param {Object} initialState - Optional initial state (defaults to defaultYMLValues)
  * @returns {Object} Store object
  * @returns {Object} return.model - The current form state (WARNING: NOT deep-frozen, do not mutate directly)
  * @returns {Object} return.actions - All state mutation functions
@@ -36,8 +37,8 @@ import { defaultYMLValues } from '../valueList';
  * const cameraIds = selectors.getCameraIds();
  * const taskEpochs = selectors.getTaskEpochs();
  */
-export function useStore() {
-  const [formData, setFormData] = useState(defaultYMLValues);
+export function useStore(initialState = null) {
+  const [formData, setFormData] = useState(initialState || defaultYMLValues);
 
   // Delegate to existing hooks
   const arrayActions = useArrayManagement(formData, setFormData);
