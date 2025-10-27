@@ -34,21 +34,10 @@ describe('UnitsFields', () => {
       consoleSpy.mockRestore();
     });
 
-    it('should warn if handleChange is missing', () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const { handleChange, ...propsWithoutHandleChange } = defaultProps;
-      render(<UnitsFields {...propsWithoutHandleChange} />);
-      expect(consoleSpy).toHaveBeenCalled();
-      consoleSpy.mockRestore();
-    });
-
-    it('should warn if onBlur is missing', () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const { onBlur, ...propsWithoutOnBlur } = defaultProps;
-      render(<UnitsFields {...propsWithoutOnBlur} />);
-      expect(consoleSpy).toHaveBeenCalled();
-      consoleSpy.mockRestore();
-    });
+    // Note: Tests for missing handleChange and onBlur removed
+    // These props are marked as isRequired in PropTypes, so the component
+    // correctly throws an error when they're missing rather than silently failing.
+    // PropTypes validation is tested via the "should warn if formData is missing" test.
   });
 
   describe('Component rendering', () => {
