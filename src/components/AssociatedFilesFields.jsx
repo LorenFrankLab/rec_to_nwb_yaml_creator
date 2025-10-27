@@ -46,7 +46,7 @@ function AssociatedFilesFields() {
                     key={`associated_files-${index}`}
                     className="array-item"
                   >
-                    <summary> Item #{index + 1} </summary>
+                    <summary>File: {associatedFilesName.name || 'Unnamed'}</summary>
                     <ArrayItemControl
                       index={index}
                       keyValue={key}
@@ -150,7 +150,7 @@ function AssociatedFilesFields() {
                     key={`associated_video_files-${index}`}
                     className="array-item"
                   >
-                    <summary> Item #{index + 1} </summary>
+                    <summary>Video: {associatedVideoFiles.name || 'Unnamed'}</summary>
                     <ArrayItemControl
                       index={index}
                       keyValue={key}

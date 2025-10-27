@@ -113,7 +113,8 @@ describe('CamerasFields', () => {
       renderWithProviders(<CamerasFields />, { initialState: state });
 
       expect(screen.getByText('Cameras')).toBeInTheDocument();
-      expect(screen.queryByText(/Item #1/i)).not.toBeInTheDocument();
+      // Should not have any camera items in empty array
+      expect(screen.queryByText(/Camera \d+ -/i)).not.toBeInTheDocument();
     });
   });
 

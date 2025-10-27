@@ -54,7 +54,7 @@ export default function ElectrodeGroupFields() {
                 key={electrodeGroupId}
                 className="array-item"
               >
-                <summary> Item #{index + 1} </summary>
+                <summary>Electrode Group {electrodeGroup.id} - {electrodeGroup.location || 'Unnamed'}</summary>
                 <ArrayItemControl
                   index={index}
                   keyValue={key}

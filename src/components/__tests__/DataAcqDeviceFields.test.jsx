@@ -55,7 +55,7 @@ describe('DataAcqDeviceFields', () => {
     it('renders single device item', () => {
       renderWithProviders(<DataAcqDeviceFields />, { initialState });
 
-      expect(screen.getByText('Item #1')).toBeInTheDocument();
+      expect(screen.getByText('Device: Unnamed')).toBeInTheDocument();
     });
 
     it('renders multiple device items', () => {
@@ -68,8 +68,8 @@ describe('DataAcqDeviceFields', () => {
 
       renderWithProviders(<DataAcqDeviceFields />, { initialState: state });
 
-      expect(screen.getByText('Item #1')).toBeInTheDocument();
-      expect(screen.getByText('Item #2')).toBeInTheDocument();
+      expect(screen.getByText('Device: 1')).toBeInTheDocument();
+      expect(screen.getByText('Device: 2')).toBeInTheDocument();
     });
 
     it('renders all fields for each device', () => {
@@ -85,7 +85,7 @@ describe('DataAcqDeviceFields', () => {
     it('renders array item controls (duplicate/remove)', () => {
       renderWithProviders(<DataAcqDeviceFields />, { initialState });
 
-      const item = screen.getByText('Item #1').closest('details');
+      const item = screen.getByText('Device: Unnamed').closest('details');
 
       // ArrayItemControl should render duplicate and remove buttons
       expect(item).toBeInTheDocument();
@@ -253,7 +253,7 @@ describe('DataAcqDeviceFields', () => {
 
       // Should show ArrayUpdateMenu but no items
       expect(screen.getByText('Data Acq Device')).toBeInTheDocument();
-      expect(screen.queryByText(/Item #1/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Device:/i)).not.toBeInTheDocument();
     });
   });
 });

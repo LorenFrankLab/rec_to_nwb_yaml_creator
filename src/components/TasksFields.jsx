@@ -35,7 +35,7 @@ export default function TasksFields() {
                 key={`tasks-${index}`}
                 className="array-item"
               >
-                <summary> Item #{index + 1} </summary>
+                <summary>Task: {tasks.task_name || 'Unnamed'}</summary>
                 <ArrayItemControl
                   index={index}
                   keyValue={key}

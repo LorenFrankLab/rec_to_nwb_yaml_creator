@@ -65,9 +65,9 @@ describe('ElectrodeGroupFields', () => {
       };
       renderWithProviders(<ElectrodeGroupFields />, { initialState: state });
 
-      // Should have 2 items
-      expect(screen.getByText('Item #1')).toBeInTheDocument();
-      expect(screen.getByText('Item #2')).toBeInTheDocument();
+      // Should have 2 items with descriptive labels
+      expect(screen.getByText('Electrode Group 0 - CA1')).toBeInTheDocument();
+      expect(screen.getByText('Electrode Group 1 - CA3')).toBeInTheDocument();
     });
   });
 

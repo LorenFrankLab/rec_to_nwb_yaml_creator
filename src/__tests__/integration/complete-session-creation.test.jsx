@@ -165,10 +165,10 @@ describe('End-to-End Session Creation Workflow', () => {
     await user.click(addDataAcqDeviceButton);
 
     // Wait for the new data acq device item to render
-    // Look for the "Item #1" summary text that appears when item is added
+    // Look for the "Device: SpikeGadgets" summary text that appears when item is added
     // Wait for async rendering to complete
     await waitFor(() => {
-      expect(screen.queryByText(/Item #1/)).not.toBeNull();
+      expect(screen.queryByText(/Device: SpikeGadgets/)).not.toBeNull();
     });
 
     // Fill required fields for the data acq device
@@ -710,14 +710,14 @@ describe('End-to-End Session Creation Workflow', () => {
     // Add behavioral events
     const addBehavioralEventButton = screen.getByTitle(/Add behavioral_events/i);
 
-    // Count behavioral events using "Item #" text
-    let behavioralEventItems = screen.queryAllByText(/Item #/i);
+    // Count behavioral events using "Event:" text
+    let behavioralEventItems = screen.queryAllByText(/Event:/i);
     const initialEventCount = behavioralEventItems.length;
 
     await user.click(addBehavioralEventButton);
 
     await waitFor(() => {
-      behavioralEventItems = screen.queryAllByText(/Item #/i);
+      behavioralEventItems = screen.queryAllByText(/Event:/i);
       expect(behavioralEventItems.length).toBe(initialEventCount + 1);
     });
 

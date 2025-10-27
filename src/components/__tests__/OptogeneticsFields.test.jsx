@@ -260,9 +260,9 @@ describe('OptogeneticsFields', () => {
 
       renderWithProviders(<OptogeneticsFields />, { initialState: state });
 
-      expect(screen.getByText('Source #1')).toBeInTheDocument();
-      expect(screen.getByText('Source #2')).toBeInTheDocument();
-      expect(screen.getByText('Fiber Implant #1')).toBeInTheDocument();
+      expect(screen.getByText('Source: Source 1')).toBeInTheDocument();
+      expect(screen.getByText('Source: Source 2')).toBeInTheDocument();
+      expect(screen.getByText('Fiber: Fiber 1')).toBeInTheDocument();
     });
   });
 });

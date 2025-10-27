@@ -38,7 +38,7 @@ export default function DataAcqDeviceFields() {
                 key={`data_acq_device-${index}`}
                 className="array-item"
               >
-                <summary> Item #{index + 1} </summary>
+                <summary>Device: {dataAcqDevice.name || 'Unnamed'}</summary>
                 <ArrayItemControl
                   index={index}
                   keyValue={key}

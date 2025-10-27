@@ -388,9 +388,9 @@ export async function fillRequiredFields(user, screen) {
   const addDataAcqDeviceButton = screen.getByTitle(/Add data_acq_device/i);
   await user.click(addDataAcqDeviceButton);
 
-  // Wait for item to render
+  // Wait for item to render (should show "Device: SpikeGadgets" after adding with default values)
   await waitFor(() => {
-    expect(screen.queryByText(/Item #1/)).toBeInTheDocument();
+    expect(screen.queryByText(/Device: SpikeGadgets/)).toBeInTheDocument();
   });
 
   // Verify default values are set (from arrayDefaultValues in valueList.js)

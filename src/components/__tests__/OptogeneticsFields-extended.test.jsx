@@ -439,9 +439,9 @@ describe('OptogeneticsFields - Extended Coverage', () => {
 
       renderWithProviders(<OptogeneticsFields />, { initialState: state });
 
-      expect(screen.getByText('Source #1')).toBeInTheDocument();
-      expect(screen.getByText('Source #2')).toBeInTheDocument();
-      expect(screen.getByText('Source #3')).toBeInTheDocument();
+      expect(screen.getByText('Source: Source 1')).toBeInTheDocument();
+      expect(screen.getByText('Source: Source 2')).toBeInTheDocument();
+      expect(screen.getByText('Source: Source 3')).toBeInTheDocument();
     });
 
     it('displays correct item numbers for multiple optical fibers', () => {
@@ -455,8 +455,8 @@ describe('OptogeneticsFields - Extended Coverage', () => {
 
       renderWithProviders(<OptogeneticsFields />, { initialState: state });
 
-      expect(screen.getByText('Fiber Implant #1')).toBeInTheDocument();
-      expect(screen.getByText('Fiber Implant #2')).toBeInTheDocument();
+      expect(screen.getByText('Fiber: Fiber 1')).toBeInTheDocument();
+      expect(screen.getByText('Fiber: Fiber 2')).toBeInTheDocument();
     });
 
     it('displays correct item numbers for multiple virus injections', () => {
@@ -470,8 +470,8 @@ describe('OptogeneticsFields - Extended Coverage', () => {
 
       renderWithProviders(<OptogeneticsFields />, { initialState: state });
 
-      expect(screen.getByText('Injection #1')).toBeInTheDocument();
-      expect(screen.getByText('Injection #2')).toBeInTheDocument();
+      expect(screen.getByText('Injection: Injection 1')).toBeInTheDocument();
+      expect(screen.getByText('Injection: Injection 2')).toBeInTheDocument();
     });
   });
 

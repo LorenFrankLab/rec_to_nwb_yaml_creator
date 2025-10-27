@@ -54,7 +54,7 @@ export default function OptogeneticsFields() {
             key={`OptoExcitationSource-${index}`}
             className="array-item"
           >
-            <summary>Source #{index + 1}</summary>
+            <summary>Source: {item.name || 'Unnamed'}{item.wavelength_in_nm ? ` - ${item.wavelength_in_nm}nm` : ''}</summary>
             <ArrayItemControl
               index={index}
               keyValue={key}
@@ -172,7 +172,7 @@ export default function OptogeneticsFields() {
           key={`optical_fiber-${index}`}
           className="array-item"
         >
-          <summary>Fiber Implant #{index + 1}</summary>
+          <summary>Fiber: {item.name || 'Unnamed'}{item.location ? ` - ${item.location}` : ''}</summary>
           <ArrayItemControl
             index={index}
             keyValue={key}
@@ -369,7 +369,7 @@ export default function OptogeneticsFields() {
             key={`virus_injection-${index}`}
             className="array-item"
           >
-            <summary>Injection #{index + 1}</summary>
+            <summary>Injection: {item.name || 'Unnamed'}{item.location ? ` - ${item.location}` : ''}</summary>
             <ArrayItemControl
               index={index}
               keyValue={key}
@@ -597,7 +597,7 @@ export default function OptogeneticsFields() {
             key={`fs_gui_yamls-${index}`}
             className="array-item"
           >
-            <summary> Item #{index + 1} </summary>
+            <summary>FsGUI: {fsGuiYamls.name || 'Unnamed'}</summary>
             <ArrayItemControl
               index={index}
               keyValue={key}

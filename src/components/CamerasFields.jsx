@@ -34,7 +34,7 @@ export default function CamerasFields() {
                 key={`cameras-${sanitizeTitle(cameras.id)}`}
                 className="array-item"
               >
-                <summary> Item #{index + 1} </summary>
+                <summary>Camera {cameras.id} - {cameras.camera_name || 'Unnamed'}</summary>
                 <ArrayItemControl
                   index={index}
                   keyValue={key}

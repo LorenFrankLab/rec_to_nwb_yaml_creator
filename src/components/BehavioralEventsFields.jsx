@@ -35,7 +35,7 @@ export default function BehavioralEventsFields() {
                   key={`behavioral_events-${index}`}
                   className="array-item"
                 >
-                  <summary> Item #{index + 1} </summary>
+                  <summary>Event: {behavioralEvents.name || 'Unnamed'}</summary>
                   <ArrayItemControl
                     index={index}
                     keyValue={key}
