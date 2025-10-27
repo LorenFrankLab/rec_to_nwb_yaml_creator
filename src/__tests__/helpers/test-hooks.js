@@ -157,9 +157,12 @@ export function useCreateElementMock(beforeEachFn, afterEachFn) {
 }
 
 /**
- * Hook: useWebkitURLMock
+ * Hook: useURLMock
  *
- * Sets up window.webkitURL.createObjectURL mock
+ * Sets up URL.createObjectURL and URL.revokeObjectURL mocks (standard API)
+ *
+ * NOTE: Previously named useWebkitURLMock - renamed to use standard URL API
+ * instead of vendor-prefixed webkitURL (P0.1 memory leak fix)
  *
  * @param {Function} beforeEachFn - Vitest beforeEach function
  * @param {Function} afterEachFn - Vitest afterEach function
@@ -167,34 +170,43 @@ export function useCreateElementMock(beforeEachFn, afterEachFn) {
  * @returns {Object} Mock objects
  *
  * @example
- * const mocks = useWebkitURLMock(beforeEach, afterEach);
+ * const mocks = useURLMock(beforeEach, afterEach);
  * // In test: expect(mocks.createObjectURL).toHaveBeenCalled();
  */
-export function useWebkitURLMock(beforeEachFn, afterEachFn, mockURL = 'blob:mock-url') {
+export function useURLMock(beforeEachFn, afterEachFn, mockURL = 'blob:mock-url') {
   const mocks = {
     createObjectURL: null,
-    originalWebkitURL: null,
+    revokeObjectURL: null,
   };
 
   beforeEachFn(() => {
-    mocks.originalWebkitURL = window.webkitURL;
-    mocks.createObjectURL = vi.fn(() => mockURL);
-    window.webkitURL = {
-      createObjectURL: mocks.createObjectURL,
-    };
+    mocks.createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue(mockURL);
+    mocks.revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
   });
 
   afterEachFn(() => {
-    window.webkitURL = mocks.originalWebkitURL;
+    vi.restoreAllMocks();
   });
 
   return mocks;
 }
 
 /**
+ * Hook: useWebkitURLMock
+ * @deprecated Use useURLMock instead (standard URL API)
+ * Kept for backward compatibility with existing tests
+ */
+export function useWebkitURLMock(beforeEachFn, afterEachFn, mockURL = 'blob:mock-url') {
+  console.warn('useWebkitURLMock is deprecated, use useURLMock instead');
+  return useURLMock(beforeEachFn, afterEachFn, mockURL);
+}
+
+/**
  * Hook: useFileDownloadMocks
  *
- * Combines all mocks needed for file download testing (Blob + createElement + webkitURL)
+ * Combines all mocks needed for file download testing (Blob + createElement + URL)
+ *
+ * Updated: Now uses standard URL API instead of vendor-prefixed webkitURL
  *
  * @param {Function} beforeEachFn - Vitest beforeEach function
  * @param {Function} afterEachFn - Vitest afterEach function
@@ -207,7 +219,7 @@ export function useWebkitURLMock(beforeEachFn, afterEachFn, mockURL = 'blob:mock
 export function useFileDownloadMocks(beforeEachFn, afterEachFn) {
   const blobMocks = useBlobMock(beforeEachFn, afterEachFn);
   const elementMocks = useCreateElementMock(beforeEachFn, afterEachFn);
-  const urlMocks = useWebkitURLMock(beforeEachFn, afterEachFn);
+  const urlMocks = useURLMock(beforeEachFn, afterEachFn);
 
   return {
     ...blobMocks,

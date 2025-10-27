@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../App';
@@ -32,6 +32,8 @@ describe('Sample Metadata Modification Workflow', () => {
   let sampleYamlContent;
   let mockBlob;
   let mockBlobUrl;
+  let createObjectURLSpy;
+  let revokeObjectURLSpy;
 
   beforeEach(() => {
     // Load the complete minimal YAML file with ALL required schema fields
@@ -53,14 +55,17 @@ describe('Sample Metadata Modification Workflow', () => {
       }
     };
 
-    // Mock URL.createObjectURL
+    // Mock URL.createObjectURL (standard API, not vendor-prefixed)
     mockBlobUrl = 'blob:mock-url';
-    global.window.webkitURL = {
-      createObjectURL: vi.fn(() => mockBlobUrl),
-    };
+    createObjectURLSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue(mockBlobUrl);
+    revokeObjectURLSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
 
     // Mock window.alert
     global.window.alert = vi.fn();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   /**

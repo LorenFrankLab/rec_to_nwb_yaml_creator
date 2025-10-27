@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../App';
@@ -49,6 +49,8 @@ const LIST_PLACEHOLDERS = {
 describe('End-to-End Session Creation Workflow', () => {
   let mockBlob;
   let mockBlobUrl;
+  let createObjectURLSpy;
+  let revokeObjectURLSpy;
 
   beforeEach(() => {
     // Mock Blob for export functionality
@@ -63,16 +65,17 @@ describe('End-to-End Session Creation Workflow', () => {
       }
     };
 
-    // Mock URL.createObjectURL
+    // Mock URL.createObjectURL (standard API, not vendor-prefixed)
     mockBlobUrl = 'blob:mock-url';
-    const createObjectURLSpy = vi.fn(() => mockBlobUrl);
-    global.window.webkitURL = {
-      createObjectURL: createObjectURLSpy,
-    };
-    global.createObjectURLSpy = createObjectURLSpy; // Store for debugging
+    createObjectURLSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue(mockBlobUrl);
+    revokeObjectURLSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
 
     // Mock window.alert
     global.window.alert = vi.fn();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   /**
