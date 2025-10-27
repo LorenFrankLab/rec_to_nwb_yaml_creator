@@ -19,6 +19,10 @@ import crypto from 'crypto';
 import schema from '../../nwb_schema.json';
 import { deviceTypes } from '../../valueList';
 
+// API URLs for integration contract verification
+const TRODES_SCHEMA_URL = 'https://raw.githubusercontent.com/LorenFrankLab/trodes_to_nwb/main/src/trodes_to_nwb/nwb_schema.json';
+const PROBE_METADATA_API_URL = 'https://api.github.com/repos/LorenFrankLab/trodes_to_nwb/contents/src/trodes_to_nwb/device_metadata/probe_metadata';
+
 describe('BASELINE: Integration Contracts', () => {
   describe('Schema Hash', () => {
     it('documents current schema version', () => {
@@ -34,8 +38,6 @@ describe('BASELINE: Integration Contracts', () => {
     it('verifies schema sync with trodes_to_nwb (from GitHub)', async () => {
       // Fetch schema from GitHub main branch to verify synchronization
       // This works in any environment (local, CI, contributor machines)
-
-      const TRODES_SCHEMA_URL = 'https://raw.githubusercontent.com/LorenFrankLab/trodes_to_nwb/main/src/trodes_to_nwb/nwb_schema.json';
 
       try {
         const response = await fetch(TRODES_SCHEMA_URL);
@@ -104,8 +106,6 @@ describe('BASELINE: Integration Contracts', () => {
     it('verifies device types exist in trodes_to_nwb (from GitHub)', async () => {
       // Fetch probe metadata directory from GitHub to verify device types exist
       // This works in any environment (local, CI, contributor machines)
-
-      const PROBE_METADATA_API_URL = 'https://api.github.com/repos/LorenFrankLab/trodes_to_nwb/contents/src/trodes_to_nwb/device_metadata/probe_metadata';
 
       try {
         const response = await fetch(PROBE_METADATA_API_URL);

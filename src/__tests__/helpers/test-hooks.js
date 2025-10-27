@@ -164,6 +164,10 @@ export function useCreateElementMock(beforeEachFn, afterEachFn) {
  * NOTE: Previously named useWebkitURLMock - renamed to use standard URL API
  * instead of vendor-prefixed webkitURL (P0.1 memory leak fix)
  *
+ * Memory Leak Fix: Blob URLs created during YAML export were not being revoked,
+ * causing memory leaks when generating many files. Now properly revoked after download.
+ * See commit: 83ca8c6 "fix(yaml): prevent memory leak by revoking blob URLs after download"
+ *
  * @param {Function} beforeEachFn - Vitest beforeEach function
  * @param {Function} afterEachFn - Vitest afterEach function
  * @param {string} mockURL - Mock URL to return (default: 'blob:mock-url')

@@ -13,22 +13,10 @@
 import { describe, it, expect } from 'vitest';
 import { renderWithProviders } from '../helpers/test-utils';
 import App from '../../App';
-import { validate } from '../../validation';
+import { jsonschemaValidation } from '../helpers/baseline-compatibility';
 import fs from 'fs';
 import path from 'path';
 import yaml from 'yaml';
-
-/**
- * Compatibility wrapper: converts new validate() API to old jsonschemaValidation() format
- */
-function jsonschemaValidation(formContent) {
-  const issues = validate(formContent);
-  const schemaIssues = issues.filter(issue => issue.instancePath !== undefined);
-  return {
-    valid: schemaIssues.length === 0,
-    errors: schemaIssues.length === 0 ? null : schemaIssues,
-  };
-}
 
 // Load test fixtures for realistic performance testing
 const fixturesPath = path.join(__dirname, '../fixtures/valid');

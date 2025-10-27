@@ -218,7 +218,9 @@ export async function addTask(user, screen, task) {
     await waitFor(() => {
       expect(taskEpochInput.value).toBe('');
     });
-    // Small delay to ensure state update completes
+    // Additional delay needed for rapid successive updates in loop
+    // waitFor ensures input is cleared, setTimeout ensures React state updates
+    // (taskEpochsDefined dependency) complete before next iteration
     await new Promise(resolve => setTimeout(resolve, 100));
   }
 
