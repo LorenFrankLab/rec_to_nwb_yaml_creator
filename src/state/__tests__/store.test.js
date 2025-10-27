@@ -169,8 +169,8 @@ describe('useStore', () => {
 
       const cameraIds = result.current.selectors.getCameraIds();
       expect(cameraIds).toHaveLength(2);
-      expect(cameraIds).toContain(0);
-      expect(cameraIds).toContain(1);
+      expect(cameraIds).toContain('0');
+      expect(cameraIds).toContain('1');
     });
 
     it('should filter out NaN camera IDs', () => {
