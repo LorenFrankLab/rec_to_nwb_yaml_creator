@@ -158,7 +158,7 @@ describe('defaultProps Type Mismatches Fix', () => {
       const mockUpdateFormData = vi.fn();
 
       // ACT
-      const { container } = render(
+      render(
         <ListElement
           id="test-list"
           name="test"

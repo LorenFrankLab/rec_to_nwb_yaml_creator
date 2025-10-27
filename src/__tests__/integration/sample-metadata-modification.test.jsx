@@ -1,12 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, waitFor } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../App';
 import { StoreProvider } from '../../state/StoreContext';
 import YAML from 'yaml';
-import { getMinimalCompleteYaml } from '../helpers/test-fixtures';
 import { triggerExport, importYamlFile } from '../helpers/integration-test-helpers';
-import { getInputByLabel, getAddButton, getFileInput, getRemoveButtons } from '../helpers/test-selectors';
+import { getAddButton, getFileInput } from '../helpers/test-selectors';
 import fs from 'fs';
 import path from 'path';
 
@@ -31,7 +30,6 @@ import path from 'path';
 
 describe('Sample Metadata Modification Workflow', () => {
   let sampleYamlContent;
-  let sampleMetadata;
   let mockBlob;
   let mockBlobUrl;
 
@@ -42,7 +40,6 @@ describe('Sample Metadata Modification Workflow', () => {
       '../fixtures/valid/minimal-complete.yml'
     );
     sampleYamlContent = fs.readFileSync(sampleYamlPath, 'utf-8');
-    sampleMetadata = YAML.parse(sampleYamlContent);
 
     // Mock Blob for export functionality
     mockBlob = null;
@@ -373,7 +370,7 @@ describe('Sample Metadata Modification Workflow', () => {
   it('preserves all modifications through import-modify-export-import round-trip', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
-    const { container } = render(
+    render(
       <StoreProvider>
         <App />
       </StoreProvider>

@@ -15,7 +15,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import App from '../../../App';
 import { StoreProvider } from '../../../state/StoreContext';
 import { getById } from '../../helpers/test-selectors';
@@ -88,13 +88,13 @@ describe('displayErrorOnUI', () => {
     });
 
     it('should show window.alert for non-INPUT elements', () => {
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+      vi.spyOn(window, 'alert').mockImplementation(() => {});
 
       // Simulate displayErrorOnUI behavior for non-INPUT element
       const message = 'Error on non-input element';
       window.alert(message);
 
-      expect(alertSpy).toHaveBeenCalledWith(message);
+      expect(window.alert).toHaveBeenCalledWith(message);
 
       vi.restoreAllMocks();
     });
@@ -214,7 +214,7 @@ describe('displayErrorOnUI', () => {
     it('shows alert is synchronous (blocks execution)', () => {
       let callbackCalled = false;
 
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {
+      vi.spyOn(window, 'alert').mockImplementation(() => {
         // Alert is synchronous - this executes before returning
         callbackCalled = true;
       });

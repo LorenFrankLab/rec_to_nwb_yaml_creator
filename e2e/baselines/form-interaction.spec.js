@@ -226,7 +226,6 @@ test.describe('BASELINE: Form Interactions', () => {
 
         // Verify ntrode channel map was auto-generated
         // This is a complex interaction - we just verify something happened
-        const channelMapSection = page.locator('text=Channel Map, text=Ntrode').first();
         // Document that this interaction exists
       }
     }

@@ -93,7 +93,7 @@ describe('CheckboxList Component', () => {
     });
 
     it('should hide checkbox-list div when dataItems is empty', () => {
-      const { container } = render(
+      render(
         <CheckboxList {...defaultProps} dataItems={[]} />
       );
 
@@ -395,7 +395,7 @@ describe('CheckboxList Component', () => {
 
   describe('Edge Cases', () => {
     it('should handle dataItems with special characters (sanitization)', () => {
-      const { container } = render(
+      render(
         <CheckboxList
           {...defaultProps}
           id="test-id"
@@ -428,7 +428,7 @@ describe('CheckboxList Component', () => {
 
     it('should handle dataItems with duplicate values (KNOWN ISSUE: duplicate keys)', () => {
       // This documents current behavior - duplicate values create duplicate keys
-      const { container } = render(
+      render(
         <CheckboxList
           {...defaultProps}
           id="cameras"
@@ -479,7 +479,7 @@ describe('CheckboxList Component', () => {
       // KNOWN ISSUE: propType says `defaultValue: PropTypes.instanceOf(Array)`
       // but defaultProps sets it to '' (empty string), not []
       // This documents the inconsistency
-      const { container } = render(
+      render(
         <CheckboxList
           id="test"
           name="test"

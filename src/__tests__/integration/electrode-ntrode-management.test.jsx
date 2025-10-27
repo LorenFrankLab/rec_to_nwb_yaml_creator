@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { deviceTypeMap, getShankCount } from '../../ntrode/deviceTypes';
 import { arrayDefaultValues } from '../../valueList';
 
@@ -129,7 +129,6 @@ describe('Electrode Group and Ntrode Management', () => {
     it('generates ntrode channel map when device type is selected', () => {
       // Simulate nTrodeMapSelected logic (App.js line 292)
       const deviceType = 'tetrode_12.5';
-      const electrodeGroupId = 0;
       const deviceTypeValues = deviceTypeMap(deviceType);
       const shankCount = getShankCount(deviceType);
 

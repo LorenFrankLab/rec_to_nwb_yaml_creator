@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { App } from '../../App';
 import { StoreProvider } from '../../state/StoreContext';
 import YAML from 'yaml';
-import { getMinimalCompleteYaml, getCustomizedYaml } from '../helpers/test-fixtures';
+import { getMinimalCompleteYaml } from '../helpers/test-fixtures';
 import { triggerExport } from '../helpers/integration-test-helpers';
 import { getFileInput } from '../helpers/test-selectors';
 
@@ -60,7 +60,7 @@ describe('Import/Export Workflow Integration', () => {
     it('imports minimal valid YAML and populates form fields', { timeout: 30000 }, async () => {
       // ARRANGE
       const user = userEvent.setup();
-      const { container } = render(
+      render(
       <StoreProvider>
         <App />
       </StoreProvider>
@@ -109,7 +109,7 @@ describe('Import/Export Workflow Integration', () => {
     it('imports YAML with arrays (cameras, tasks) and populates correctly', { timeout: 30000 }, async () => {
       // ARRANGE
       const user = userEvent.setup();
-      const { container } = render(
+      render(
       <StoreProvider>
         <App />
       </StoreProvider>
@@ -160,7 +160,7 @@ describe('Import/Export Workflow Integration', () => {
     it('imports YAML with nested objects and preserves structure', { timeout: 30000 }, async () => {
       // ARRANGE
       const user = userEvent.setup();
-      const { container } = render(
+      render(
       <StoreProvider>
         <App />
       </StoreProvider>
@@ -207,7 +207,7 @@ describe('Import/Export Workflow Integration', () => {
     it('exports form data as valid YAML with correct structure', { timeout: 30000 }, async () => {
       // ARRANGE
       const user = userEvent.setup();
-      const { container } = render(
+      render(
       <StoreProvider>
         <App />
       </StoreProvider>
@@ -258,7 +258,7 @@ describe('Import/Export Workflow Integration', () => {
     it('creates Blob with correct MIME type and content', { timeout: 30000 }, async () => {
       // ARRANGE
       const user = userEvent.setup();
-      const { container } = render(
+      render(
       <StoreProvider>
         <App />
       </StoreProvider>
@@ -299,7 +299,7 @@ describe('Import/Export Workflow Integration', () => {
     it('preserves all data through import → export cycle', { timeout: 30000 }, async () => {
       // ARRANGE
       const user = userEvent.setup();
-      const { container } = render(
+      render(
       <StoreProvider>
         <App />
       </StoreProvider>
@@ -349,7 +349,7 @@ describe('Import/Export Workflow Integration', () => {
     it('preserves modifications after import and re-export', { timeout: 30000 }, async () => {
       // ARRANGE
       const user = userEvent.setup();
-      const { container } = render(
+      render(
       <StoreProvider>
         <App />
       </StoreProvider>

@@ -70,7 +70,7 @@ describe('ArrayUpdateMenu Component', () => {
     });
 
     it('renders in array-update-area container', () => {
-      const { container } = render(<ArrayUpdateMenu {...defaultProps} />);
+      render(<ArrayUpdateMenu {...defaultProps} />);
 
       const div = getByClass('array-update-area')[0];
       expect(div).toBeInTheDocument();
@@ -158,7 +158,7 @@ describe('ArrayUpdateMenu Component', () => {
     });
 
     it('renders in multi-area container', () => {
-      const { container } = render(<ArrayUpdateMenu {...defaultProps} />);
+      render(<ArrayUpdateMenu {...defaultProps} />);
 
       const div = getByClass('multi-area')[0];
       expect(div).toBeInTheDocument();

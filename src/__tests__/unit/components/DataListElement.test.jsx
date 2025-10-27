@@ -18,7 +18,6 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 import DataListElement from '../../../element/DataListElement';
-import { getMainForm, getFileInput } from '../../helpers/test-selectors';
 
 describe('DataListElement Component', () => {
   describe('Basic Rendering', () => {
@@ -42,7 +41,7 @@ describe('DataListElement Component', () => {
     });
 
     it('should render label with title text', () => {
-      const { container } = render(
+      render(
         <DataListElement
           id="test-datalist"
           title="Brain Region"
@@ -219,7 +218,7 @@ describe('DataListElement Component', () => {
     });
 
     it('should render number input when type is number', () => {
-      const { container } = render(
+      render(
         <DataListElement
           id="test-datalist"
           title="Numeric Field"
@@ -268,7 +267,7 @@ describe('DataListElement Component', () => {
     });
 
     it('should handle numeric value', () => {
-      const { container } = render(
+      render(
         <DataListElement
           id="test-datalist"
           title="Numeric Field"

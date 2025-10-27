@@ -1,19 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../App';
 import { StoreProvider } from '../../state/StoreContext';
 import YAML from 'yaml';
-import { getMinimalCompleteYaml } from '../helpers/test-fixtures';
 import { getMainForm } from '../helpers/test-selectors';
 import {
   addListItem,
   fillRequiredFields,
   triggerExport,
   typeAndWait,
-  blurAndWait,
   selectAndWait,
-  getLast,
   addCamera,
   addTask,
   addElectrodeGroup,

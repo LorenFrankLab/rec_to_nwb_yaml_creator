@@ -2,12 +2,12 @@
  * @jest-environment jsdom
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { render, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../../../App';
 import { StoreProvider } from '../../../state/StoreContext';
-import { countArrayItems, countNtrodeMaps, getDuplicateButton, queryByName, clickAddButton } from '../../helpers/test-hooks';
+import { countArrayItems, getDuplicateButton, clickAddButton } from '../../helpers/test-hooks';
 import { getByClass, getById, getByName } from '../../helpers/test-selectors';
 
 /**

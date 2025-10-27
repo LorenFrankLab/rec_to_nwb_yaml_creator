@@ -17,7 +17,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useState } from 'react';
 import { useElectrodeGroups } from '../useElectrodeGroups';
-import { arrayDefaultValues } from '../../valueList';
 
 /**
  * Test wrapper that provides formData state and useElectrodeGroups hook

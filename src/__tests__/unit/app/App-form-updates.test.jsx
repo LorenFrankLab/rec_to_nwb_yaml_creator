@@ -7,8 +7,8 @@
  * manage form state updates with proper immutability and data structures.
  */
 
-import { render, screen, fireEvent, within } from '@testing-library/react';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
 import { App } from '../../../App';
 import { StoreProvider } from '../../../state/StoreContext';
 import { defaultYMLValues } from '../../../valueList';
@@ -35,7 +35,7 @@ describe('App Form Data Updates', () => {
     });
 
     it('should update top-level text fields independently', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -119,7 +119,7 @@ describe('App Form Data Updates', () => {
     });
 
     it('should update subject.species', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -135,7 +135,7 @@ describe('App Form Data Updates', () => {
     });
 
     it('should update subject.description', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -150,7 +150,7 @@ describe('App Form Data Updates', () => {
     });
 
     it('should update subject.genotype', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -166,7 +166,7 @@ describe('App Form Data Updates', () => {
     });
 
     it('should update subject.weight as number', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -196,7 +196,7 @@ describe('App Form Data Updates', () => {
     });
 
     it('should update multiple subject fields independently', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -233,7 +233,7 @@ describe('App Form Data Updates', () => {
     });
 
     it('should update raw_data_to_volts', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -399,7 +399,7 @@ describe('App Form Data Updates', () => {
     });
 
     it('should handle zero values in numeric fields', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -413,7 +413,7 @@ describe('App Form Data Updates', () => {
     });
 
     it('should handle negative numbers', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>

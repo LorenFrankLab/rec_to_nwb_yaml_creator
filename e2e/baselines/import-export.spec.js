@@ -333,9 +333,7 @@ test.describe('BASELINE: Import/Export Workflow', () => {
 
       if (fs.existsSync(fixturePath)) {
         // Listen for alerts/errors
-        let alertShown = false;
         page.on('dialog', async dialog => {
-          alertShown = true;
           console.log(`Alert: ${dialog.message()}`);
           await dialog.accept();
         });

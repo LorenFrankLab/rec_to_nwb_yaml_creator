@@ -15,7 +15,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../../../App';
 import { StoreProvider } from '../../../state/StoreContext';
@@ -372,8 +372,7 @@ describe('App.js - removeElectrodeGroupItem()', () => {
 
       // Store initial count
       let electrodeGroupSections = getByClass('array-item__controls');
-      const initialCount = electrodeGroupSections.length;
-      expect(initialCount).toBe(2);
+      expect(electrodeGroupSections.length).toBe(2);
 
       // Remove one
       const removeButtons = getByClass('button-danger');
@@ -382,7 +381,6 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       await waitFor(() => {
         electrodeGroupSections = getByClass('array-item__controls');
         expect(electrodeGroupSections.length).toBe(1);
-        expect(electrodeGroupSections.length).not.toBe(initialCount);
       });
 
     });
@@ -393,7 +391,7 @@ describe('App.js - removeElectrodeGroupItem()', () => {
       // This tests the guard clause: if (!items || items.length === 0)
       // Since we can't click remove when there are no items (no UI rendered),
       // this is more of a documentation test that the guard exists
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>

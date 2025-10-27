@@ -9,16 +9,16 @@
  * Note: Remove operations require window.confirm which we mock in tests.
  */
 
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import { getById, getMainForm } from '../../helpers/test-selectors';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { App } from '../../../App';
 import { StoreProvider } from '../../../state/StoreContext';
 import { defaultYMLValues } from '../../../valueList';
 import { useWindowConfirmMock } from '../../helpers/test-hooks';
 
 describe('App Array Item Management', () => {
-  const mocks = useWindowConfirmMock(beforeEach, afterEach, true);
+  useWindowConfirmMock(beforeEach, afterEach, true);
 
   describe('Array Item Structure - Default Values', () => {
     it('should initialize with empty arrays', () => {
@@ -45,7 +45,7 @@ describe('App Array Item Management', () => {
 
   describe('Add Array Items - Basic Functionality', () => {
     it('should have initial empty camera array', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -57,7 +57,7 @@ describe('App Array Item Management', () => {
     });
 
     it('should have initial empty tasks array', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -68,7 +68,7 @@ describe('App Array Item Management', () => {
     });
 
     it('should have initial empty data acquisition device array', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -79,7 +79,7 @@ describe('App Array Item Management', () => {
     });
 
     it('should have initial empty behavioral events array', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -90,7 +90,7 @@ describe('App Array Item Management', () => {
     });
 
     it('should have initial empty electrode groups array', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -103,7 +103,7 @@ describe('App Array Item Management', () => {
 
   describe('Array Section Rendering', () => {
     it('should render all major array sections', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -198,7 +198,7 @@ describe('App Array Item Management', () => {
 
   describe('Form State Consistency', () => {
     it('should maintain form structure after rendering', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -224,7 +224,7 @@ describe('App Array Item Management', () => {
 
   describe('ArrayItemControl Component Integration', () => {
     it('should render form without ArrayItemControl initially (empty arrays)', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -267,7 +267,7 @@ describe('App Array Item Management', () => {
 
   describe('Array Sections - Structural Validation', () => {
     it('should have proper section IDs for navigation', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -283,7 +283,7 @@ describe('App Array Item Management', () => {
       ];
 
       knownSectionIds.forEach(id => {
-        const element = container.querySelector(`#${id}`);
+        const element = getById(id);
         expect(element).toBeInTheDocument();
       });
     });

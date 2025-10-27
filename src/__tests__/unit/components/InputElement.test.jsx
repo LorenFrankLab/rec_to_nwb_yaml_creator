@@ -112,7 +112,7 @@ describe('InputElement Component', () => {
     });
 
     it('should render date input when type is date', () => {
-      const { container } = render(
+      render(
         <InputElement
           id="test-input"
           type="date"
@@ -121,7 +121,7 @@ describe('InputElement Component', () => {
         />
       );
 
-      const input = document.querySelector('[type=\"date\"]');
+      const input = document.querySelector('[type="date"]');
       expect(input).toBeInTheDocument();
     });
   });
@@ -160,7 +160,7 @@ describe('InputElement Component', () => {
     });
 
     it('should format date default value correctly (YYYY-MM-DD)', () => {
-      const { container } = render(
+      render(
         <InputElement
           id="test-input"
           type="date"
@@ -171,7 +171,7 @@ describe('InputElement Component', () => {
         />
       );
 
-      const input = document.querySelector('[type=\"date\"]');
+      const input = document.querySelector('[type="date"]');
       // CURRENT BEHAVIOR: Input shows 2023-01-15 (ISO date from Date object)
       // Note: The component DOES NOT actually add 1 to the date as code suggests
       // The getDate() + 1 in line 38 appears to be a BUG but doesn't affect output
@@ -413,7 +413,6 @@ describe('InputElement Component', () => {
     });
 
     it('should accept user input for text fields', async () => {
-      const user = userEvent.setup();
       const handleChange = vi.fn();
 
       render(
@@ -432,7 +431,6 @@ describe('InputElement Component', () => {
     });
 
     it('should accept numeric input for number fields', async () => {
-      const user = userEvent.setup();
       const handleChange = vi.fn();
 
       render(
@@ -531,7 +529,7 @@ describe('InputElement Component', () => {
     });
 
     it('should wrap title in item1 div', () => {
-      const { container } = render(
+      render(
         <InputElement
           id="test-input"
           type="text"
@@ -546,7 +544,7 @@ describe('InputElement Component', () => {
     });
 
     it('should wrap input in item2 div', () => {
-      const { container } = render(
+      render(
         <InputElement
           id="test-input"
           type="text"
@@ -567,7 +565,7 @@ describe('InputElement Component', () => {
 
   describe('Date Formatting Edge Cases', () => {
     it('should handle date with single-digit month', () => {
-      const { container } = render(
+      render(
         <InputElement
           id="test-input"
           type="date"
@@ -578,13 +576,13 @@ describe('InputElement Component', () => {
         />
       );
 
-      const input = document.querySelector('[type=\"date\"]');
+      const input = document.querySelector('[type="date"]');
       // CURRENT BEHAVIOR: Correctly formats as 2023-01-05
       expect(input).toHaveValue('2023-01-05');
     });
 
     it('should handle ISO 8601 datetime strings correctly (FIXED)', () => {
-      const { container } = render(
+      render(
         <InputElement
           id="test-input"
           type="date"
@@ -595,7 +593,7 @@ describe('InputElement Component', () => {
         />
       );
 
-      const input = document.querySelector('[type=\"date\"]');
+      const input = document.querySelector('[type="date"]');
       // FIXED: Now correctly extracts date portion from ISO 8601 string
       // getDateValue() now checks if value includes 'T' and splits on it
       // This avoids timezone conversion issues and off-by-one bugs
@@ -603,7 +601,7 @@ describe('InputElement Component', () => {
     });
 
     it('should return empty string for date input with no value', () => {
-      const { container } = render(
+      render(
         <InputElement
           id="test-input"
           type="date"
@@ -614,14 +612,14 @@ describe('InputElement Component', () => {
         />
       );
 
-      const input = document.querySelector('[type=\"date\"]');
+      const input = document.querySelector('[type="date"]');
       expect(input).toHaveValue('');
     });
   });
 
   describe('Integration with Form', () => {
     it('should work within a form element', () => {
-      const { container } = render(
+      render(
         <form>
           <InputElement
             id="test-input"

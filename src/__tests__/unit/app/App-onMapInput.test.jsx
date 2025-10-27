@@ -16,12 +16,12 @@
  * by simulating user interaction with channel map dropdowns
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../../App';
 import { StoreProvider } from '../../../state/StoreContext';
-import { blurAndWait, selectAndWait } from '../../helpers/integration-test-helpers';
+import { selectAndWait } from '../../helpers/integration-test-helpers';
 import { getAddButton, getById } from '../../helpers/test-selectors';
 
 describe('App.js - onMapInput()', () => {
@@ -51,7 +51,6 @@ describe('App.js - onMapInput()', () => {
       expect(mapSelects.length).toBeGreaterThan(0);
 
       const firstMapSelect = mapSelects[0];
-      const initialValue = firstMapSelect.value;
 
       // Select empty option (value="" which becomes -1 in state)
       await selectAndWait(user, firstMapSelect, '');

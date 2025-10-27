@@ -7,7 +7,7 @@
  * Tests verify proper immutability, state updates, and edge case handling.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useFormUpdates } from '../useFormUpdates';
 import { useState } from 'react';
@@ -566,7 +566,6 @@ describe('useFormUpdates', () => {
   describe('onBlur - Controlled Input Optimization', () => {
     it('should not update if value unchanged and no special processing', () => {
       const result = setupHook({ lab: 'My Lab' });
-      const initialFormData = result.current.formData;
 
       act(() => {
         const event = {

@@ -17,7 +17,7 @@ import { getById, getByName } from '../../helpers/test-selectors';
 describe('App Item Selection Handlers', () => {
   describe('itemSelected - Simple Selection', () => {
     it('should handle sex selection change', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -32,7 +32,7 @@ describe('App Item Selection Handlers', () => {
     });
 
     it('should handle sex selection to different values', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -58,7 +58,7 @@ describe('App Item Selection Handlers', () => {
     });
 
     it('should handle genotype DataList selection', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -74,7 +74,7 @@ describe('App Item Selection Handlers', () => {
     });
 
     it('should handle species DataList selection', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -89,7 +89,7 @@ describe('App Item Selection Handlers', () => {
     });
 
     it('should handle lab selection', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -106,7 +106,7 @@ describe('App Item Selection Handlers', () => {
 
   describe('itemSelected - String Values', () => {
     it('should preserve string values from select elements', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -122,7 +122,7 @@ describe('App Item Selection Handlers', () => {
     });
 
     it('should handle empty string selection', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -137,7 +137,7 @@ describe('App Item Selection Handlers', () => {
     });
 
     it('should preserve special characters in selections', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -154,7 +154,7 @@ describe('App Item Selection Handlers', () => {
 
   describe('itemSelected - Multiple Independent Selections', () => {
     it('should handle multiple field selections independently', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -174,7 +174,7 @@ describe('App Item Selection Handlers', () => {
     });
 
     it('should handle rapid successive selections', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -193,7 +193,7 @@ describe('App Item Selection Handlers', () => {
 
   describe('itemSelected - Edge Cases', () => {
     it('should handle selection to same value', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -209,7 +209,7 @@ describe('App Item Selection Handlers', () => {
     });
 
     it('should handle DataList input with custom value', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -225,7 +225,7 @@ describe('App Item Selection Handlers', () => {
     });
 
     it('should handle whitespace in selections', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -240,7 +240,7 @@ describe('App Item Selection Handlers', () => {
     });
 
     it('should handle numeric strings in text selections', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -258,7 +258,7 @@ describe('App Item Selection Handlers', () => {
 
   describe('itemSelected - Integration with onBlur', () => {
     it('should work correctly when combined with blur events', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -278,7 +278,7 @@ describe('App Item Selection Handlers', () => {
     });
 
     it('should handle change followed by blur on sex select', () => {
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>

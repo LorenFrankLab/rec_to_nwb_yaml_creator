@@ -88,7 +88,7 @@ describe('RadioList Component', () => {
     it('DOCUMENTED: Uses checkbox-list CSS classes (line 48, 52)', () => {
       // Despite being a RadioList, component uses "checkbox-list" classes
       // This is likely copy-paste artifact from CheckboxList
-      const { container } = render(
+      render(
         <RadioList {...defaultProps} dataItems={['0', '1']} />
       );
 
@@ -114,7 +114,7 @@ describe('RadioList Component', () => {
     });
 
     it('should hide radio-list div when dataItems is empty', () => {
-      const { container } = render(
+      render(
         <RadioList {...defaultProps} dataItems={[]} />
       );
 
@@ -208,7 +208,7 @@ describe('RadioList Component', () => {
     });
 
     it('should generate React keys using sanitized titles', () => {
-      const { container } = render(
+      render(
         <RadioList
           {...defaultProps}
           id="options"
@@ -531,7 +531,7 @@ describe('RadioList Component', () => {
 
   describe('Edge Cases', () => {
     it('should handle dataItems with special characters (sanitization)', () => {
-      const { container } = render(
+      render(
         <RadioList
           {...defaultProps}
           id="test-id"
@@ -564,7 +564,7 @@ describe('RadioList Component', () => {
 
     it('should handle dataItems with duplicate values (KNOWN ISSUE: duplicate keys)', () => {
       // This documents current behavior - duplicate values create duplicate keys
-      const { container } = render(
+      render(
         <RadioList
           {...defaultProps}
           id="options"
@@ -611,7 +611,7 @@ describe('RadioList Component', () => {
   describe('PropTypes and Defaults', () => {
     it('should use empty string as defaultValue when not provided', () => {
       // defaultProps sets defaultValue: ''
-      const { container } = render(
+      render(
         <RadioList
           id="test"
           name="test"

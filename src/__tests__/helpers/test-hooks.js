@@ -538,7 +538,7 @@ export function verifyImmutability(before, after, path = '') {
   }
 
   // Parse path like 'cameras[0].id' → ['cameras', '0', 'id']
-  const parts = path.split(/[\[\].]+/).filter(Boolean);
+  const parts = path.split(/[[\].]+/).filter(Boolean);
 
   let beforeValue = before;
   let afterValue = after;

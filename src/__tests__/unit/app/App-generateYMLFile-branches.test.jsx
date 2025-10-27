@@ -3,8 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render } from '@testing-library/react';
 import App from '../../../App';
 import { StoreProvider } from '../../../state/StoreContext';
 
@@ -29,10 +28,7 @@ import { StoreProvider } from '../../../state/StoreContext';
  */
 
 describe('App - generateYMLFile() Branch Coverage', () => {
-  let user;
-
   beforeEach(() => {
-    user = userEvent.setup();
   });
 
   /**
@@ -45,9 +41,6 @@ describe('App - generateYMLFile() Branch Coverage', () => {
   it('should document suspicious isFormValid logic (line 673)', () => {
     // ARRANGE
     const isFormValid = true;
-    const formErrors = [
-      { id: 'test_id', message: 'Test error' }
-    ];
 
     // ACT
     // Simulate the suspicious logic
@@ -67,7 +60,7 @@ describe('App - generateYMLFile() Branch Coverage', () => {
    */
   it('should not display errors when both validations pass', async () => {
     // ARRANGE
-    const { container } = render(
+    render(
       <StoreProvider>
         <App />
       </StoreProvider>

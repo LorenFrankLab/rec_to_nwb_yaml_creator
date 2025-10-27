@@ -33,7 +33,7 @@ describe('App.js - importFile() YAML.parse() Error Handling', () => {
   describe('CRITICAL: Malformed YAML Handling', () => {
     it('should not crash when importing malformed YAML', async () => {
       const user = userEvent.setup();
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -62,7 +62,7 @@ another_field: value
 
     it('should show error message when YAML parsing fails', async () => {
       const user = userEvent.setup();
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -107,7 +107,7 @@ subject:
 
     it('should restore form to defaults when YAML parsing fails', async () => {
       const user = userEvent.setup();
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -147,7 +147,7 @@ subject:
   describe('Edge Cases: YAML Parsing Errors', () => {
     it('should handle completely empty file', async () => {
       const user = userEvent.setup();
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -173,7 +173,7 @@ subject:
 
     it('should handle binary file uploaded as YAML', async () => {
       const user = userEvent.setup();
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -200,7 +200,7 @@ subject:
 
     it('should handle YAML with invalid characters', async () => {
       const user = userEvent.setup();
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -230,7 +230,7 @@ subject:
   describe('FileReader Error Handling', () => {
     it('should handle FileReader errors gracefully', async () => {
       const user = userEvent.setup();
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>
@@ -277,7 +277,7 @@ subject:
   describe('Data Loss Prevention', () => {
     it('should prevent data loss when user has existing form data', async () => {
       const user = userEvent.setup();
-      const { container } = render(
+      render(
         <StoreProvider>
           <App />
         </StoreProvider>

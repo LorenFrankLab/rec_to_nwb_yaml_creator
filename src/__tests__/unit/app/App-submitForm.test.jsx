@@ -31,9 +31,6 @@ describe('App.js - submitForm()', () => {
       const detailsElements = document.querySelectorAll('details');
       expect(detailsElements.length).toBeGreaterThan(0);
 
-      // Some might be closed initially
-      const initialOpenCount = Array.from(detailsElements).filter(d => d.open).length;
-
       // Click the Generate YML File button
       const generateButton = screen.getByRole('button', { name: /generate yml file/i });
       await user.click(generateButton);
