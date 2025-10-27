@@ -5,6 +5,7 @@ import DataListElement from '../element/DataListElement';
 import ArrayItemControl from '../element/ArrayItemControl';
 import ArrayUpdateMenu from '../ArrayUpdateMenu';
 import { behavioralEventsNames, behavioralEventsDescription } from '../valueList';
+import { formatBehavioralEventLabel } from '../utils/labelFormatters';
 
 /**
  * BehavioralEventsFields component
@@ -35,7 +36,7 @@ export default function BehavioralEventsFields() {
                   key={`behavioral_events-${index}`}
                   className="array-item"
                 >
-                  <summary>Event: {behavioralEvents.name || 'Unnamed'}</summary>
+                  <summary>{formatBehavioralEventLabel(behavioralEvents)}</summary>
                   <ArrayItemControl
                     index={index}
                     keyValue={key}

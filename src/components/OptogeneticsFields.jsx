@@ -11,6 +11,12 @@ import {
   opticalFiberModelNames,
   virusNames,
 } from '../valueList';
+import {
+  formatOptoSourceLabel,
+  formatOpticalFiberLabel,
+  formatVirusInjectionLabel,
+  formatFsGuiLabel,
+} from '../utils/labelFormatters';
 
 /**
  * OptogeneticsFields Component
@@ -54,7 +60,7 @@ export default function OptogeneticsFields() {
             key={`OptoExcitationSource-${index}`}
             className="array-item"
           >
-            <summary>Source: {item.name || 'Unnamed'}{item.wavelength_in_nm ? ` - ${item.wavelength_in_nm}nm` : ''}</summary>
+            <summary>{formatOptoSourceLabel(item)}</summary>
             <ArrayItemControl
               index={index}
               keyValue={key}
@@ -172,7 +178,7 @@ export default function OptogeneticsFields() {
           key={`optical_fiber-${index}`}
           className="array-item"
         >
-          <summary>Fiber: {item.name || 'Unnamed'}{item.location ? ` - ${item.location}` : ''}</summary>
+          <summary>{formatOpticalFiberLabel(item)}</summary>
           <ArrayItemControl
             index={index}
             keyValue={key}
@@ -369,7 +375,7 @@ export default function OptogeneticsFields() {
             key={`virus_injection-${index}`}
             className="array-item"
           >
-            <summary>Injection: {item.name || 'Unnamed'}{item.location ? ` - ${item.location}` : ''}</summary>
+            <summary>{formatVirusInjectionLabel(item)}</summary>
             <ArrayItemControl
               index={index}
               keyValue={key}
@@ -597,7 +603,7 @@ export default function OptogeneticsFields() {
             key={`fs_gui_yamls-${index}`}
             className="array-item"
           >
-            <summary>FsGUI: {fsGuiYamls.name || 'Unnamed'}</summary>
+            <summary>{formatFsGuiLabel(fsGuiYamls)}</summary>
             <ArrayItemControl
               index={index}
               keyValue={key}

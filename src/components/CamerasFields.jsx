@@ -6,6 +6,7 @@ import DataListElement from '../element/DataListElement';
 import ArrayItemControl from '../element/ArrayItemControl';
 import ArrayUpdateMenu from '../ArrayUpdateMenu';
 import { cameraManufacturers } from '../valueList';
+import { formatCameraLabel } from '../utils/labelFormatters';
 
 /**
  * CamerasFields component
@@ -34,7 +35,7 @@ export default function CamerasFields() {
                 key={`cameras-${sanitizeTitle(cameras.id)}`}
                 className="array-item"
               >
-                <summary>Camera {cameras.id} - {cameras.camera_name || 'Unnamed'}</summary>
+                <summary>{formatCameraLabel(cameras)}</summary>
                 <ArrayItemControl
                   index={index}
                   keyValue={key}

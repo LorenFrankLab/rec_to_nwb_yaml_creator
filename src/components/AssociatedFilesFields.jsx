@@ -4,6 +4,7 @@ import InputElement from '../element/InputElement';
 import RadioList from '../element/RadioList';
 import ArrayItemControl from '../element/ArrayItemControl';
 import ArrayUpdateMenu from '../ArrayUpdateMenu';
+import { formatAssociatedFileLabel, formatAssociatedVideoLabel } from '../utils/labelFormatters';
 
 /**
  * AssociatedFilesFields Component
@@ -46,7 +47,7 @@ function AssociatedFilesFields() {
                     key={`associated_files-${index}`}
                     className="array-item"
                   >
-                    <summary>File: {associatedFilesName.name || 'Unnamed'}</summary>
+                    <summary>{formatAssociatedFileLabel(associatedFilesName)}</summary>
                     <ArrayItemControl
                       index={index}
                       keyValue={key}
@@ -150,7 +151,7 @@ function AssociatedFilesFields() {
                     key={`associated_video_files-${index}`}
                     className="array-item"
                   >
-                    <summary>Video: {associatedVideoFiles.name || 'Unnamed'}</summary>
+                    <summary>{formatAssociatedVideoLabel(associatedVideoFiles)}</summary>
                     <ArrayItemControl
                       index={index}
                       keyValue={key}

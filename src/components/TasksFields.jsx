@@ -5,6 +5,7 @@ import CheckboxList from '../element/CheckboxList';
 import ListElement from '../element/ListElement';
 import ArrayItemControl from '../element/ArrayItemControl';
 import ArrayUpdateMenu from '../ArrayUpdateMenu';
+import { formatTaskLabel } from '../utils/labelFormatters';
 
 /**
  * TasksFields component
@@ -35,7 +36,7 @@ export default function TasksFields() {
                 key={`tasks-${index}`}
                 className="array-item"
               >
-                <summary>Task: {tasks.task_name || 'Unnamed'}</summary>
+                <summary>{formatTaskLabel(tasks)}</summary>
                 <ArrayItemControl
                   index={index}
                   keyValue={key}

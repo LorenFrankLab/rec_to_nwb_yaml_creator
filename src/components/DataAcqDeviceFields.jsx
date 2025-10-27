@@ -9,6 +9,7 @@ import {
   dataAcqDeviceAmplifier,
   dataAcqDeviceADCCircuit,
 } from '../valueList';
+import { formatDataAcqDeviceLabel } from '../utils/labelFormatters';
 
 /**
  * DataAcqDeviceFields component
@@ -38,7 +39,7 @@ export default function DataAcqDeviceFields() {
                 key={`data_acq_device-${index}`}
                 className="array-item"
               >
-                <summary>Device: {dataAcqDevice.name || 'Unnamed'}</summary>
+                <summary>{formatDataAcqDeviceLabel(dataAcqDevice)}</summary>
                 <ArrayItemControl
                   index={index}
                   keyValue={key}
