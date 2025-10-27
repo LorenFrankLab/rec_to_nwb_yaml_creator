@@ -10,7 +10,7 @@ import { showCustomValidityError } from './utils';
  * @returns Virtual DOM for updating an array entry of the resultant YML File
  */
 const ArrayUpdateMenu = (prop) => {
-  const { itemsKey, items, addArrayItem, allowMultiple } =
+  const { itemsKey, addArrayItem, allowMultiple } =
     prop;
 
   const itemCountRef = useRef();

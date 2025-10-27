@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
 import { showErrorMessage, displayErrorOnUI } from './utils/errorDisplay';
@@ -23,76 +23,23 @@ import logo from './logo.png';
 import packageJson from '../package.json';
 import JsonSchemaFile from './nwb_schema.json'
 import './App.scss';
-import InputElement from './element/InputElement';
-import SelectElement from './element/SelectElement';
-import DataListElement from './element/DataListElement';
-import ChannelMap from './ntrode/ChannelMap';
-import SelectInputPairElement from './element/SelectInputPairElement';
-import ArrayUpdateMenu from './ArrayUpdateMenu';
-import CheckboxList from './element/CheckboxList';
-import RadioList from './element/RadioList';
-import ListElement from './element/ListElement';
-import ArrayItemControl from './element/ArrayItemControl';
 import {
-  sanitizeTitle,
   titleCase,
-  stringToInteger,
   isProduction,
   useMount,
 } from './utils';
 import {
-  labs,
-  genderAcronym,
-  locations,
-  deviceTypes,
-  units,
-  species,
-  genotypes,
-  behavioralEventsNames,
-  behavioralEventsDescription,
-  emptyFormData,
   defaultYMLValues,
-  arrayDefaultValues,
-  dataAcqDeviceName,
-  dataAcqDeviceSystem,
-  dataAcqDeviceAmplifier,
-  dataAcqDeviceADCCircuit,
-  cameraManufacturers,
-  optoExcitationModelNames,
-  opticalFiberModelNames,
-  virusNames,
 } from './valueList';
 
 export function App() {
   // Access shared store via Context
-  const { model: formData, actions, selectors } = useStoreContext();
-
-  // Destructure actions for backward compatibility with component props
-  const {
-    updateFormData,
-    updateFormArray,
-    onBlur,
-    handleChange,
-    itemSelected,
-    addArrayItem,
-    removeArrayItem,
-    duplicateArrayItem,
-    nTrodeMapSelected,
-    removeElectrodeGroupItem,
-    duplicateElectrodeGroupItem,
-  } = actions;
+  const { model: formData, actions } = useStoreContext();
 
   /**
    * Stores JSON schema
    */
   const schema = useRef({});
-
-  /**
-   * Computed values from selectors
-   */
-  const cameraIdsDefined = selectors.getCameraIds();
-  const taskEpochsDefined = selectors.getTaskEpochs();
-  const dioEventsDefined = selectors.getDioEvents();
 
   /**
    * App version (local state, not part of form data)

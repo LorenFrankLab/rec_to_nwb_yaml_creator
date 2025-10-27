@@ -81,7 +81,7 @@ export function useFormUpdates(formData, setFormData) {
         return form;
       });
     },
-    [] // setFormData is guaranteed stable by React
+    [setFormData] // Include setFormData in dependencies for exhaustive-deps compliance
   );
 
   /**
