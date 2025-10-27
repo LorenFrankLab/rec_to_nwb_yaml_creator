@@ -76,6 +76,7 @@ const AlertModal = ({ isOpen, message, title = 'Alert', onClose, type = 'info' }
   // Icon mapping for accessibility (not relying on color alone)
   const iconMap = {
     info: 'ℹ️',
+    success: '✅',
     warning: '⚠️',
     error: '❌',
   };
