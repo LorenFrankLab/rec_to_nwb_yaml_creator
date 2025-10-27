@@ -5,13 +5,19 @@ import ListElement from '../element/ListElement';
 /**
  * SessionInfoFields Component
  *
- * Renders form fields for session-level metadata:
- * - experiment_description
- * - session_description
- * - session_id (with pattern validation)
- * - keywords (dynamic list)
+ * Renders form fields for session-level metadata including descriptions,
+ * session ID, and keywords.
  *
- * @component
+ * @param {Object} props - Component props
+ * @param {Object} props.formData - Current form data
+ * @param {string} props.formData.experiment_description - Description of experiment
+ * @param {string} props.formData.session_description - Description of session
+ * @param {string} props.formData.session_id - Unique session identifier
+ * @param {string[]} props.formData.keywords - Array of keyword strings
+ * @param {Function} props.handleChange - Handler for input changes
+ * @param {Function} props.onBlur - Handler for blur events
+ * @param {Function} props.updateFormData - Handler for list updates
+ * @returns {JSX.Element} The session info fields section
  */
 function SessionInfoFields({
   formData,
@@ -29,7 +35,7 @@ function SessionInfoFields({
           title="Experiment Description"
           placeholder="Description of subject and where subject came from (e.g., breeder, if animal)"
           required
-          value={formData.experiment_description}
+          value={formData?.experiment_description || ''}
           onChange={handleChange('experiment_description')}
           onBlur={(e) => onBlur(e)}
           validation={{ type: 'required' }}
@@ -43,7 +49,7 @@ function SessionInfoFields({
           title="Session Description"
           required
           placeholder="Description of current session, e.g - w-track task"
-          value={formData.session_description}
+          value={formData?.session_description || ''}
           onChange={handleChange('session_description')}
           onBlur={(e) => onBlur(e)}
           validation={{ type: 'required' }}
@@ -57,7 +63,7 @@ function SessionInfoFields({
           title="Session Id"
           required
           placeholder="Session id, e.g - 1"
-          value={formData.session_id}
+          value={formData?.session_id || ''}
           onChange={handleChange('session_id')}
           onBlur={(e) => onBlur(e)}
           validation={{
@@ -73,7 +79,7 @@ function SessionInfoFields({
           type="text"
           name="keywords"
           title="Keywords"
-          defaultValue={formData.keywords}
+          defaultValue={formData?.keywords || []}
           required
           inputPlaceholder="No keyword"
           placeholder="Keywords"
@@ -92,7 +98,7 @@ SessionInfoFields.propTypes = {
     experiment_description: PropTypes.string,
     session_description: PropTypes.string,
     session_id: PropTypes.string,
-    keywords: PropTypes.array,
+    keywords: PropTypes.arrayOf(PropTypes.string),
   }).isRequired,
   handleChange: PropTypes.func.isRequired,
   onBlur: PropTypes.func.isRequired,

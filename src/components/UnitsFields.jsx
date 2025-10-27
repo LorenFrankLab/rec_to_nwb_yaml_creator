@@ -1,13 +1,26 @@
 import PropTypes from 'prop-types';
 import InputElement from '../element/InputElement';
 
+/**
+ * UnitsFields Component
+ *
+ * Renders the units configuration fields in a collapsible details section.
+ * Defines the measurement units for analog signals and behavioral events.
+ *
+ * @param {Object} props - Component props
+ * @param {Object} props.formData - Current form data
+ * @param {Object} props.formData.units - Units configuration object
+ * @param {string} props.formData.units.analog - Units for analog signals
+ * @param {string} props.formData.units.behavioral_events - Units for behavioral events
+ * @param {Function} props.handleChange - Handler for input changes
+ * @param {Function} props.onBlur - Handler for blur events
+ * @returns {JSX.Element} The units fields section wrapped in a details element
+ */
 function UnitsFields({
   formData,
   handleChange,
   onBlur,
 }) {
-  const safeHandleChange = handleChange || (() => () => {});
-  const safeOnBlur = onBlur || (() => {});
   const units = formData?.units || {};
 
   return (
@@ -23,8 +36,8 @@ function UnitsFields({
             placeholder="Analog"
             required
             value={units.analog || ''}
-            onChange={safeHandleChange('analog', 'units')}
-            onBlur={(e) => safeOnBlur(e, { key: 'units' })}
+            onChange={handleChange('analog', 'units')}
+            onBlur={(e) => onBlur(e, { key: 'units' })}
             validation={{ type: 'required' }}
           />
           <InputElement
@@ -35,8 +48,8 @@ function UnitsFields({
             placeholder="Behavioral Events"
             required
             value={units.behavioral_events || ''}
-            onChange={safeHandleChange('behavioral_events', 'units')}
-            onBlur={(e) => safeOnBlur(e, { key: 'units' })}
+            onChange={handleChange('behavioral_events', 'units')}
+            onBlur={(e) => onBlur(e, { key: 'units' })}
             validation={{ type: 'required' }}
           />
         </div>

@@ -1,6 +1,18 @@
 import PropTypes from 'prop-types';
 import ListElement from '../element/ListElement';
 
+/**
+ * ExperimenterFields Component
+ *
+ * Renders the experimenter name list field for entering multiple experimenters
+ * in "LastName, FirstName" format. Uses ListElement for dynamic list management.
+ *
+ * @param {Object} props - Component props
+ * @param {Object} props.formData - Current form data
+ * @param {string[]} props.formData.experimenter_name - Array of experimenter names
+ * @param {Function} props.updateFormData - Handler for list updates
+ * @returns {JSX.Element} The experimenter fields section
+ */
 function ExperimenterFields({
   formData,
   updateFormData,
@@ -27,7 +39,7 @@ function ExperimenterFields({
 
 ExperimenterFields.propTypes = {
   formData: PropTypes.shape({
-    experimenter_name: PropTypes.array,
+    experimenter_name: PropTypes.arrayOf(PropTypes.string),
   }).isRequired,
   updateFormData: PropTypes.func.isRequired,
 };
