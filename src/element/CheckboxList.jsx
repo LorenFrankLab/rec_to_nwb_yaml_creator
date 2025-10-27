@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import PropTypes from 'prop-types';
 import { sanitizeTitle, stringToInteger } from '../utils';
 import InfoIcon from './InfoIcon';
@@ -8,12 +8,13 @@ import { useStableId } from '../hooks/useStableId';
  * Checkbox collection where multiple items can be selected
  *
  * Uses semantic HTML with fieldset/legend for accessibility
+ * Performance: Wrapped in React.memo to prevent unnecessary re-renders
  *
  * @param {Object} prop Custom element's properties
  *
  * @returns Virtual DOM collection for multi-select checkboxes
  */
-const CheckboxList = (prop) => {
+const CheckboxListComponent = (prop) => {
   const {
     id: providedId,
     name,
@@ -80,7 +81,7 @@ const CheckboxList = (prop) => {
   );
 };
 
-CheckboxList.propTypes = {
+CheckboxListComponent.propTypes = {
   title: PropTypes.string.isRequired,
   defaultValue: PropTypes.instanceOf(Array),
   dataItems: PropTypes.arrayOf(PropTypes.string),
@@ -94,7 +95,7 @@ CheckboxList.propTypes = {
   required: PropTypes.bool,
 };
 
-CheckboxList.defaultProps = {
+CheckboxListComponent.defaultProps = {
   id: undefined,
   defaultValue: [],
   dataItems: [],
@@ -104,5 +105,20 @@ CheckboxList.defaultProps = {
   metaData: {},
   required: false,
 };
+
+const arePropsEqual = (prevProps, nextProps) => {
+  return (
+    prevProps.defaultValue === nextProps.defaultValue &&
+    prevProps.dataItems === nextProps.dataItems &&
+    prevProps.name === nextProps.name &&
+    prevProps.required === nextProps.required
+  );
+};
+
+const CheckboxList = memo(CheckboxListComponent, arePropsEqual);
+
+// Copy static properties to memoized component for backward compatibility
+CheckboxList.propTypes = CheckboxListComponent.propTypes;
+CheckboxList.defaultProps = CheckboxListComponent.defaultProps;
 
 export default CheckboxList;
