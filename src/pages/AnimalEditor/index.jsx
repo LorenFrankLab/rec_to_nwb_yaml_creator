@@ -1,5 +1,4 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import AnimalEditorStepper from './AnimalEditorStepper';
 
 /**
@@ -12,6 +11,9 @@ import AnimalEditorStepper from './AnimalEditorStepper';
  * - Electrode groups configuration (device type, location, coordinates)
  * - Channel maps editing (logical → hardware channel mapping)
  * - Copy/template from existing animals
+ *
+ * Note: Component receives no props - animal ID is obtained via useAnimalIdFromUrl
+ * hook in AnimalEditorStepper.
  *
  * @returns {JSX.Element}
  */
@@ -26,5 +28,3 @@ export default function AnimalEditor() {
     </main>
   );
 }
-
-AnimalEditor.propTypes = {};

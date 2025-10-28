@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import { useAnimalIdFromUrl } from '../../hooks/useAnimalIdFromUrl';
 
@@ -9,6 +8,9 @@ import { useAnimalIdFromUrl } from '../../hooks/useAnimalIdFromUrl';
  * Manages the 2-step workflow for animal-level configuration:
  * 1. Electrode Groups - Configure device types, locations, coordinates
  * 2. Channel Maps - Configure logical-to-hardware channel mappings
+ *
+ * Note: Component receives no props - animal ID is obtained from URL via
+ * useAnimalIdFromUrl hook.
  *
  * @returns {JSX.Element}
  *
@@ -97,5 +99,3 @@ export default function AnimalEditorStepper() {
     </div>
   );
 }
-
-AnimalEditorStepper.propTypes = {};

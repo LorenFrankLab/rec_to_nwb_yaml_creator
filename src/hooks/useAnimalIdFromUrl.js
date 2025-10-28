@@ -34,7 +34,8 @@ export function useAnimalIdFromUrl() {
       const match = path.match(/^\/animal\/([^/]+)\/editor$/);
 
       if (match && match[1]) {
-        setAnimalId(match[1]);
+        // Decode URL-encoded characters (e.g., %20 -> space)
+        setAnimalId(decodeURIComponent(match[1]));
       } else {
         setAnimalId(null);
       }

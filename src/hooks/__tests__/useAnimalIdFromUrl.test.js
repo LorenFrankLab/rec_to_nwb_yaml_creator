@@ -1,6 +1,6 @@
 // src/hooks/__tests__/useAnimalIdFromUrl.test.js
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { useAnimalIdFromUrl } from '../useAnimalIdFromUrl';
 
 describe('useAnimalIdFromUrl', () => {
@@ -42,5 +42,51 @@ describe('useAnimalIdFromUrl', () => {
     window.location.hash = '#/animal/remy/editor?step=groups';
     const { result } = renderHook(() => useAnimalIdFromUrl());
     expect(result.current).toBe('remy');
+  });
+
+  it('decodes URL-encoded animal IDs with spaces', () => {
+    window.location.hash = '#/animal/bean%20whiskey/editor';
+    const { result } = renderHook(() => useAnimalIdFromUrl());
+    expect(result.current).toBe('bean whiskey');
+  });
+
+  it('decodes URL-encoded special characters', () => {
+    window.location.hash = '#/animal/test%2Fanimal/editor';
+    const { result } = renderHook(() => useAnimalIdFromUrl());
+    expect(result.current).toBe('test/animal');
+  });
+
+  it('handles complex IDs with underscores and periods', () => {
+    window.location.hash = '#/animal/animal_01.2023/editor';
+    const { result } = renderHook(() => useAnimalIdFromUrl());
+    expect(result.current).toBe('animal_01.2023');
+  });
+
+  it('updates animal ID on hash change', () => {
+    window.location.hash = '#/animal/remy/editor';
+    const { result, rerender } = renderHook(() => useAnimalIdFromUrl());
+    expect(result.current).toBe('remy');
+
+    // Simulate navigation to different animal
+    act(() => {
+      window.location.hash = '#/animal/bean/editor';
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    rerender();
+    expect(result.current).toBe('bean');
+  });
+
+  it('clears animal ID when navigating away', () => {
+    window.location.hash = '#/animal/remy/editor';
+    const { result, rerender } = renderHook(() => useAnimalIdFromUrl());
+    expect(result.current).toBe('remy');
+
+    // Navigate to different route
+    act(() => {
+      window.location.hash = '#/workspace';
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    rerender();
+    expect(result.current).toBeNull();
   });
 });
