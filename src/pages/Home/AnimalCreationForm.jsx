@@ -97,7 +97,7 @@ function AnimalCreationForm({
     species: 'Rattus norvegicus',
     speciesCustom: '',
     sex: 'U',
-    genotype: '',
+    genotype: 'Wild-type',
     date_of_birth: '',
     description: '',
     experimenter_names: defaultExperimenters.experimenter_names || [''],

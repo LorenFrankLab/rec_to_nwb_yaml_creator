@@ -167,7 +167,7 @@ describe('AnimalCreationForm', () => {
 
       // Fill required fields
       await user.type(screen.getByLabelText(/subject id/i), 'bean');
-      await user.type(screen.getByLabelText(/genotype/i), 'Wild-type');
+      // Genotype is pre-filled with 'Wild-type', no need to type
 
       const today = new Date().toISOString().split('T')[0];
       await user.type(screen.getByLabelText(/date of birth/i), today);
