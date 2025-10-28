@@ -1,0 +1,212 @@
+/**
+ * AnimalWorkspace Component Styles
+ *
+ * Layout:
+ * - Sidebar: Animal list with selection
+ * - Main area: Day list with validation status
+ * - Empty states for no animals/days
+ */
+
+.workspace-content {
+  display: flex;
+  gap: 2rem;
+  margin-top: 1rem;
+}
+
+/* Animal List Sidebar */
+.animal-list {
+  flex: 0 0 250px;
+  border-right: 1px solid #ddd;
+  padding-right: 1rem;
+}
+
+.animal-list h2 {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.animal-card {
+  display: block;
+  width: 100%;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.animal-card:hover {
+  background-color: #f5f5f5;
+  border-color: #999;
+}
+
+.animal-card.selected {
+  background-color: #e3f2fd;
+  border-color: #2196f3;
+  font-weight: 600;
+}
+
+.animal-name {
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.animal-day-count {
+  font-size: 0.875rem;
+  color: #666;
+}
+
+/* Day Management Main Area */
+.day-management {
+  flex: 1;
+}
+
+.day-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.day-list-header h2 {
+  font-size: 1.3rem;
+  margin: 0;
+}
+
+.day-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-primary,
+.btn-secondary {
+  padding: 0.5rem 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.btn-primary {
+  background-color: #2196f3;
+  color: white;
+  border-color: #2196f3;
+}
+
+.btn-primary:hover {
+  background-color: #1976d2;
+}
+
+.btn-secondary {
+  background-color: white;
+  color: #333;
+}
+
+.btn-secondary:hover {
+  background-color: #f5f5f5;
+}
+
+/* Day List */
+.day-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.day-item {
+  margin-bottom: 0.75rem;
+}
+
+.day-link {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+  text-decoration: none;
+  color: inherit;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.day-link:hover {
+  background-color: #fafafa;
+  border-color: #999;
+}
+
+.day-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.day-date {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.day-session-id {
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.day-status {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.status-chip {
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.status-chip.draft {
+  background-color: #fff3e0;
+  color: #e65100;
+}
+
+.status-chip.validated {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-chip.exported {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+/* Empty States */
+.empty-state {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: #666;
+}
+
+.empty-message {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.create-animal-link {
+  display: inline-block;
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  background-color: #2196f3;
+  color: white;
+  text-decoration: none;
+  border-radius: 4px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.create-animal-link:hover {
+  background-color: #1976d2;
+}
