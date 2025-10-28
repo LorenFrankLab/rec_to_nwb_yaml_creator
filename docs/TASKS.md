@@ -252,6 +252,83 @@
 
 ---
 
+### **M5.5 – Animal Creation Form** 🎯
+
+**Status:** DESIGN_APPROVED - Ready for implementation
+
+**Tasks**
+
+* [ ] Create `AnimalCreationForm.jsx` with 8 required fields (TDD)
+* [ ] Implement controlled inputs with field-level validation
+* [ ] Add species dropdown with constrained vocabulary
+* [ ] Add dynamic experimenter list (add/remove buttons)
+* [ ] Add HTML5 date picker with future date constraint
+* [ ] Implement smart defaults from workspace settings/last animal
+* [ ] Add uniqueness validation for subject_id
+* [ ] Update Home page to use AnimalCreationForm
+* [ ] Add success navigation to AnimalWorkspace
+* [ ] Add first-time user welcome message with escape hatch
+* [ ] Create Home.css with Material Design patterns
+* [ ] Write 20 comprehensive tests (15 form + 5 container)
+* [ ] Verify WCAG 2.1 Level AA compliance
+* [ ] Request code review
+
+**Acceptance (DoD)**
+
+* ✅ Users can create animals from Home page (#/home)
+* ✅ Form validates all required fields with inline errors
+* ✅ Submit disabled until all fields valid
+* ✅ Unique subject_id enforced (checks existing animals)
+* ✅ Date of birth cannot be in future
+* ✅ At least one experimenter required
+* ✅ Smart defaults populate from settings/last animal
+* ✅ Species uses constrained dropdown (prevents DB pollution)
+* ✅ After creation, navigates to AnimalWorkspace with animal selected
+* ✅ First-time users see welcome message with documentation link
+* ✅ All 20 tests passing (2359 total: 2339 + 20 new)
+* ✅ WCAG 2.1 Level AA compliant
+* ✅ Keyboard navigation works (Tab, Enter, Escape, Ctrl+Enter)
+* ✅ Screen readers announce errors correctly
+* ✅ Code review approved (no P0/P1 issues)
+
+**Rationale**
+
+**Critical Gap:** M4 (AnimalWorkspace) and M5 (Day Editor) assume animals already exist, but there's no UI to create them. Users are stuck using legacy form or browser console. This milestone fills that gap before M6.
+
+**Design Philosophy:** Progressive disclosure - collect only what's known at "animal creation time" (subject info + experimenters), defer hardware configuration to Day Editor per session. Matches scientific workflow and reduces cognitive load.
+
+**Artifacts**
+
+* ✅ `docs/M5.5_DESIGN.md` (design document with review feedback, 1300 lines)
+* [ ] `src/pages/Home/index.jsx` (update - replace stub, ~80 lines)
+* [ ] `src/pages/Home/AnimalCreationForm.jsx` (new - form component, ~350 lines)
+* [ ] `src/pages/Home/Home.css` (new - styling, ~250 lines)
+* [ ] `src/pages/Home/__tests__/Home.test.jsx` (new - 5 tests)
+* [ ] `src/pages/Home/__tests__/AnimalCreationForm.test.jsx` (new - 15 tests)
+
+**Form Fields (8 total):**
+
+1. Subject ID (text, unique, required)
+2. Species (dropdown: Rat/Mouse/Marmoset/Macaque/Other, required)
+3. Sex (radio: M/F/U/O, required)
+4. Genotype (text, required)
+5. Date of Birth (date picker, no future dates, required)
+6. Experimenter Names (dynamic list, min 1, required)
+7. Lab (text, pre-filled, required)
+8. Institution (text, pre-filled, required)
+
+**Test Results:** TBD (target 2359 tests: 2339 existing + 20 new)
+
+**Design Reviews:**
+
+* Code Review: REQUEST_CHANGES → APPROVED (all P0 issues resolved in design)
+* UI Review: NEEDS_POLISH → APPROVED (Material Design consistency, responsive)
+* UX Review: NEEDS_POLISH → APPROVED (progressive disclosure, smart defaults)
+
+**Estimated Effort:** 10-14 hours (1.5-2 days)
+
+---
+
 ### **M6 – Devices Step + Channel Map Editor**
 
 **Tasks**
