@@ -380,7 +380,80 @@
 
 ---
 
-### **M7 – Epochs/Tasks + Cross-Reference Validation**
+### **M7 – Animal Editor (Electrode Groups & Device Configuration)**
+
+**Status:** PLANNED
+
+**Rationale**
+
+Animal-level electrode group configuration is currently only accessible via the legacy form. This milestone brings electrode group editing into the modern UI, allowing users to configure device types, channel maps, and stereotaxic coordinates without leaving the new workflow.
+
+**Critical Design Constraint:** This is **animal-level** configuration that applies to all days unless overridden. Changes here affect the baseline configuration inherited by all recording sessions.
+
+**Tasks**
+
+* [ ] Create `AnimalEditor` page component with stepper navigation
+* [ ] Implement `ElectrodeGroupsStep` with CRUD operations (add/edit/delete groups)
+* [ ] Add device type selection dropdown (integrates with `deviceTypes.js`)
+* [ ] Implement auto-generation of ntrode channel maps when device type selected
+* [ ] Add `ChannelMapEditor` component for editing ntrode mappings
+  * [ ] Grid UI showing logical channel → hardware channel mappings
+  * [ ] CSV import/export for bulk editing
+  * [ ] Validation for duplicate/missing channels
+* [ ] Add stereotaxic coordinate inputs (AP, ML, DV) for each electrode group
+* [ ] Implement brain region (location) field with autocomplete for consistency
+* [ ] Add reference electrode configuration
+* [ ] Create `useAnimalEditor` hook for state management
+* [ ] Integrate validation framework (schema + rules validation)
+* [ ] Add navigation from AnimalWorkspace sidebar to Animal Editor
+* [ ] Update DevicesStep to link to new Animal Editor (replace legacy links)
+* [ ] Write comprehensive test suite (target: 50+ tests)
+  * [ ] CRUD operations for electrode groups
+  * [ ] Device type selection and channel map generation
+  * [ ] Channel map validation (duplicates, missing, sequential)
+  * [ ] CSV import/export round-trip
+  * [ ] Inherited data propagation to days
+* [ ] Add accessibility tests (WCAG 2.1 Level AA)
+* [ ] Request code review before completion
+* [ ] Update documentation (architecture, user guide)
+
+**Acceptance (DoD)**
+
+* Users can create/edit/delete electrode groups in new UI
+* Device type selection auto-generates appropriate channel maps
+* Channel maps editable via grid UI and CSV import/export
+* All validation rules enforced (duplicates, gaps, required fields)
+* Changes propagate to all days as inherited baseline
+* Days can still override bad_channels at day-level (M6 DevicesStep)
+* No regressions in existing 2447 tests
+* All new tests passing (target: 50+)
+* WCAG 2.1 Level AA compliant
+* Code review approved
+
+**Artifacts**
+
+* `src/pages/AnimalEditor/index.jsx` - Main container
+* `src/pages/AnimalEditor/AnimalEditorStepper.jsx` - Stepper navigation
+* `src/pages/AnimalEditor/ElectrodeGroupsStep.jsx` - CRUD interface
+* `src/pages/AnimalEditor/ChannelMapEditor.jsx` - Channel mapping UI
+* `src/pages/AnimalEditor/ElectrodeGroupForm.jsx` - Form for single group
+* `src/pages/AnimalEditor/AnimalEditor.css` - Material Design styling
+* `src/hooks/useAnimalEditor.js` - State management hook
+* `src/pages/AnimalEditor/__tests__/` - Test suite (50+ tests)
+* `docs/M7_ANIMAL_EDITOR_DESIGN.md` - Design document
+
+**Integration Points:**
+
+* **AnimalWorkspace:** Add "Edit Electrode Groups" button/link
+* **DevicesStep:** Replace `#/legacy` links with `#/animal/:id/editor`
+* **Store:** Animal electrode group changes update `animals` state
+* **Validation:** Reuse existing schema + rules validation from M6
+
+**Estimated Effort:** 24-32 hours
+
+---
+
+### **M8 – Epochs/Tasks + Cross-Reference Validation**
 
 **Tasks**
 
@@ -397,7 +470,7 @@
 
 ---
 
-### **M8 – Export Step + Continuous YAML Parity**
+### **M9 – Export Step + Continuous YAML Parity**
 
 **Tasks**
 
@@ -417,12 +490,12 @@
 
 ---
 
-### **M9 – Validation Summary & Batch Tools**
+### **M10 – Validation Summary & Batch Tools**
 
 **Tasks**
 
 * [ ] Implement `ValidationSummary` overview for all days.
-* [ ] Add “Validate All” and “Export Valid Only” actions.
+* [ ] Add "Validate All" and "Export Valid Only" actions.
 * [ ] Integrate `useAutosave.js` to persist drafts in localStorage.
 * [ ] Write integration test for autosave recovery.
 
@@ -434,12 +507,12 @@
 
 ---
 
-### **M10 – Probe Reconfiguration Wizard**
+### **M11 – Probe Reconfiguration Wizard**
 
 **Tasks**
 
 * [ ] Compare current vs. previous day device configurations.
-* [ ] Display diff and offer “apply forward” to next sessions.
+* [ ] Display diff and offer "apply forward" to next sessions.
 * [ ] Optionally update animal defaults snapshot.
 
 **Acceptance (DoD)**
@@ -450,7 +523,7 @@
 
 ---
 
-### **M11 – Continuous Accessibility & Keyboard Shortcuts**
+### **M12 – Continuous Accessibility & Keyboard Shortcuts**
 
 **Tasks**
 
@@ -465,13 +538,13 @@
 
 ---
 
-### **M12 – Feature Flag Cleanup & Legacy Removal**
+### **M13 – Feature Flag Cleanup & Legacy Removal**
 
 **Tasks**
 
 * [ ] Flip all feature flags on by default.
-* [ ] Add “Use Legacy Editor” toggle for one release.
-* [ ] Schedule PR13 for flag removal.
+* [ ] Add "Use Legacy Editor" toggle for one release.
+* [ ] Schedule PR14 for flag removal.
 * [ ] Tag release `v3.0.0` after parity confirmation.
 
 **Acceptance (DoD)**
