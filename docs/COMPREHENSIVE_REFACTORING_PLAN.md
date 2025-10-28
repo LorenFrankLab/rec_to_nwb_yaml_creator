@@ -1,444 +1,381 @@
-
 # Plan
 
-The NWB Metadata Creator migration plan defines a structured, incremental roadmap for evolving the current YAML creation tool into a modular, schema-driven React application optimized for neuroscience experiments that span multiple animals and multiple recording days. In this workflow, each recording day corresponds to a single NWB file and thus a single YAML file, so users must often create and manage many YAMLs per experiment. The existing app already produces valid metadata, but its monolithic design limits scalability, validation consistency, and efficiency when handling dozens of sessions across animals. This plan aims to improve the creation, validation, and batch management of YAML files by introducing a clearer data hierarchy (animal → days), shared defaults, autosave, and robust schema validation. Each milestone isolates low-risk, testable steps to modernize the architecture—adding modular components, centralized state management, and cross-day validation—while preserving bit-for-bit compatibility with existing YAML outputs to ensure continuity and scientific reproducibility.
+The NWB Metadata Creator migration plan defines a structured, incremental roadmap for evolving the current YAML creation tool into a modular, schema-driven React application optimized for neuroscience experiments that span multiple animals and multiple recording days. In this workflow, each recording day corresponds to a single NWB file and thus a single YAML file, so users must often create and manage many YAMLs per experiment. The existing app already produces valid metadata, but its monolithic design limits scalability, validation consistency, and efficiency when handling dozens of sessions across animals. This plan aims to improve the creation, validation, and batch management of YAML files by introducing a clearer data hierarchy (animal → days), shared defaults, autosave, and robust schema validation. Each milestone isolates low-risk, testable steps to modernize the architecture—adding modular components, centralized state management (via the **existing Context store**), and cross-day validation—while preserving bit-for-bit compatibility with existing YAML outputs to ensure continuity and scientific reproducibility.
 
 ## Global Goals
 
-* Preserve current YAML output bit-for-bit until we explicitly switch.
+* Preserve current YAML output bit-for-bit until we explicitly switch (shadow export from PR1).
 * Keep the current UI as the default; gate new pages with a feature flag.
-* Add tests and “shadow export” comparisons so regressions are impossible.
+* Reuse the existing **Context/hooks** state system (no new state library).
+* Stay single-page and bookmark-safe (hash-based navigation; no router initially).
+* Use existing Vitest infrastructure; add tests rather than replace frameworks.
+* Use schema **version** validation (not hash) and keep Python converter compatibility.
+* Enforce accessibility in every PR (not a final pass).
 
 ---
 
-## PR0 – Repo Prep & Safety Rails
+## PR0 – Repo Prep & Safety Rails (no behavior change)
 
-**Intent**: Add infra without changing behavior.
+**Intent:** Add safety rails that align with the current codebase; don’t disrupt behavior.
 
 **Edits**
 
-1. Add feature flags
+1. Feature flags
+   Create `src/featureFlags.js`:
 
-* Create `src/featureFlags.ts`
-
-```ts
+```js
 export const FLAGS = {
   newNavigation: false,
   newDayEditor: false,
   channelMapEditor: false,
-} as const;
+  shadowExportStrict: true, // block on mismatch in CI/prod
+  shadowExportLog: true     // log mismatches in dev
+};
 ```
 
-2. Add TypeScript baseline (keep JS allowed)
+2. Schema **version** check (not hash)
 
-* Add `tsconfig.json` (JS interop: `"allowJs": true`, `"checkJs": false`).
-* Rename nothing yet. Add one `.ts` file to prove pipeline.
+* Add `"version"` to `src/assets/schema/nwb_schema.json`.
+* Create `scripts/check-schema-version.mjs` that fails CI if schema version differs from the expected trodes_to_nwb target.
 
-3. Add testing utilities
+3. Test infra audit (reuse, don’t rebuild)
 
-* Ensure Jest/Vitest is installed (keep what you have).
-* Add `tests/helpers/yamlDiff.ts`:
-
-```ts
-import YAML from "yaml";
-export function yamlEqual(a: string, b: string) {
-  return YAML.parse(a) && YAML.parse(b) &&
-         JSON.stringify(YAML.parse(a)) === JSON.stringify(YAML.parse(b));
-}
-```
-
-4. Schema hash check (non-blocking for now)
-
-* Add `scripts/check-schema-hash.mjs` (reads local schema JSON and known hash).
-* Add a CI job that runs it and only warns (will turn blocking later).
+* Keep Vitest and existing test layout.
+* Ensure baseline and integration suites run in CI.
 
 **DoD**
 
-* Build passes. Tests run locally and in CI.
 * App behavior unchanged with flags off.
+* CI runs lint, tests, and `check-schema-version.mjs` successfully.
 
 ---
 
-## PR1 – Extract Pure Utilities (No UI changes)
+## PR0.5 – Type System Strategy (docs + light JSDoc)
 
-**Intent**: Move YAML & validation logic to stable, unit-tested modules.
+**Intent:** Decide on typing without churn.
 
 **Edits**
 
-1. Extract YAML writer
+* Add `docs/types_migration.md` with the plan:
 
-* Create `src/utils/yamlExport.ts`
+  * Phase 1: Use **JSDoc** in new/updated modules; enable `checkJs: true` (warning-only).
+  * Phase 2 (later): Optionally run `ts-migrate` after core refactor stabilizes.
+* Add ESLint rules to encourage JSDoc on exported functions/types.
 
-```ts
+**DoD**
+
+* Documented approach; no file renames; build remains green.
+
+---
+
+## PR1 – Extract Pure Utilities + Shadow Export (No UI changes)
+
+**Intent:** Centralize YAML and validation; enable regression-proofing immediately.
+
+**Edits**
+
+1. YAML writer
+   Create `src/utils/yamlExport.js`:
+
+```js
 import YAML from "yaml";
-export function toYaml(obj: unknown): string {
+
+/** @param {unknown} obj @returns {string} */
+export function toYaml(obj) {
   return YAML.stringify(obj, { aliasDuplicateObjects: false });
 }
 ```
 
-* Add tests: `tests/yamlExport.test.ts` (snapshot and round-trip).
+2. JSON Schema validator
+   Create `src/utils/schemaValidator.js`:
 
-2. Extract JSON Schema validation
-
-* Create `src/utils/schemaValidator.ts`
-
-```ts
+```js
 import Ajv from "ajv";
 import schema from "@/assets/schema/nwb_schema.json";
+
 const ajv = new Ajv({ allErrors: true, strict: true });
 const validateFn = ajv.compile(schema);
-export type ValidationIssue = { path: string; severity: "error"|"warning"; message: string };
-export function validateSchema(data: unknown) {
+
+/** @typedef {{path:string,severity:'error'|'warning',message:string}} ValidationIssue */
+
+/** @param {unknown} data @returns {{ok:boolean, errors:ValidationIssue[]}} */
+export function validateSchema(data) {
   const ok = validateFn(data);
-  return { ok: !!ok, errors: (validateFn.errors ?? []).map(e => ({
-    path: e.instancePath || e.schemaPath, severity: "error", message: e.message || "invalid"
-  })) as ValidationIssue[] };
+  const errors = (validateFn.errors ?? []).map(e => ({
+    path: e.instancePath || e.schemaPath,
+    severity: "error",
+    message: e.message || "invalid"
+  }));
+  return { ok: !!ok, errors };
 }
 ```
 
-* Add unit tests: valid/invalid fixtures.
+3. Shadow export comparator (enforced from now on)
+   Create `src/utils/shadowExport.js`:
 
-3. Shadow export comparator
-
-* Add `src/utils/shadowExport.ts`
-
-```ts
+```js
 import { toYaml } from "./yamlExport";
-export function shadowCompare(legacyYaml: string, data: unknown) {
-  const candidate = toYaml(data);
-  return { equal: legacyYaml === candidate, candidate };
+import { convertObjectToYAMLString as legacyExport } from "@/legacy/exporter"; // existing call
+
+/** @param {any} formData */
+export function shadowCompare(formData) {
+  const legacy = legacyExport(formData);
+  const candidate = toYaml(formData);
+  return { equal: legacy === candidate, legacy, candidate };
 }
 ```
 
-* Add tests verifying equality against current exporter on 2–3 real fixtures.
+4. Tests
 
-**Refactor**
-
-* Change current exporter call sites to use `toYaml` internally (no behavior change).
+* Add baseline tests that run shadow comparison against golden fixtures; CI **fails** on mismatch.
+* Refactor legacy export call sites to use `toYaml` internally (no behavior change).
 
 **DoD**
 
-* YAML output is bit-for-bit identical on fixtures.
-* Schema validator callable from anywhere; no UI changes yet.
+* YAML parity proven on fixtures.
+* Schema validator callable project-wide.
+* CI blocks merges on parity regressions.
 
 ---
 
-## PR2 – Introduce Router + New Skeleton (Flagged Off by Default)
+## PR2 – UI Skeleton (hash-based) + A11y Baseline (Flagged Off)
 
-**Intent**: Add routing & page shells, but keep old UI as default.
+**Intent:** Introduce page shells without routing library; embed accessibility early.
 
 **Edits**
 
-1. Router
+1. Conditional “routing” (hash parsing)
+   Create `src/AppShell.jsx`:
 
-* Install React Router if needed.
-* Create `src/AppRouter.tsx`
-
-```tsx
+```jsx
 import { FLAGS } from "@/featureFlags";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import LegacyApp from "@/App"; // existing
-import AnimalWorkspace from "@/pages/AnimalWorkspace/AnimalWorkspace"; // stub
-import DayEditor from "@/pages/DayEditor/DayEditor"; // stub
-import ValidationSummary from "@/pages/ValidationSummary/ValidationSummary"; // stub
+import LegacyApp from "@/App";
 
-export default function AppRouter() {
+export default function AppShell() {
   if (!FLAGS.newNavigation) return <LegacyApp />;
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<AnimalWorkspace />} />
-        <Route path="/animal/:animalId" element={<AnimalWorkspace />} />
-        <Route path="/animal/:animalId/day/:dayId" element={<DayEditor />} />
-        <Route path="/animal/:animalId/validation" element={<ValidationSummary />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
-  );
+
+  const parseHash = () => window.location.hash.slice(1) || "workspace";
+  const [view, setView] = React.useState(parseHash);
+  React.useEffect(() => {
+    const onHash = () => setView(parseHash());
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+
+  // #/workspace | #/day/<id> | #/validation
+  if (view.startsWith("day/")) return <DayEditor dayId={view.split("/")[1]} />;
+  if (view === "validation") return <ValidationSummary />;
+  return <AnimalWorkspace />;
 }
 ```
 
-2. Switch entry
+2. Page stubs
+   Create minimal, accessible stubs for:
 
-* In `src/main.jsx|tsx`, render `<AppRouter />` instead of `<App />`.
+* `src/pages/AnimalWorkspace/index.jsx`
+* `src/pages/DayEditor/index.jsx`
+* `src/pages/ValidationSummary/index.jsx`
 
-3. Page stubs (minimal placeholders)
+3. A11y scaffold
 
-* `AnimalWorkspace.jsx/tsx`, `DayEditor.jsx/tsx`, `ValidationSummary.jsx/tsx` with “TODO” text.
+* Add `<main>`, `<nav>`, ARIA labels, focus styles.
+* Add `aria` integration tests (axe) to CI.
 
 **DoD**
 
-* With flags off, legacy UI loads.
-* With `newNavigation: true`, new routes load stubs, no crashes.
+* With flags off → legacy UI. With flags on → stubs render via `#/…`.
+* No axe violations.
 
 ---
 
-## PR3 – State Stores & Data Model (No Visual Change)
+## PR3 – Extend Existing **Context** Store for Animal/Day (No UI break)
 
-**Intent**: Centralize animal/default/day state; keep legacy UI reading from existing state until we flip.
+**Intent:** Keep one state system; add workspace concepts.
 
 **Edits**
 
-1. Create Zustand stores (or Context if you prefer)
+* Update `src/state/store.js` and `src/state/StoreContext.js`:
 
-* `src/state/useAnimalStore.ts`
-
-```ts
-import create from "zustand";
-export type Animal = { id: string; subject: any; devices: any; cameras: any; days: string[] };
-export const useAnimalStore = create<{
-  animals: Record<string, Animal>;
-  upsert: (a: Animal)=>void;
-  addDay: (animalId: string, dayId: string)=>void;
-}>(() => ({ animals: {}, upsert: ()=>{}, addDay: ()=>{} }));
-```
-
-* `src/state/useDayStore.ts`
-
-```ts
-import create from "zustand";
-export type Day = { id: string; animalId: string; session: any; devices: any; epochs: any[]; validation?: any; draft?: any; exported?: string };
-export const useDayStore = create<{
-  days: Record<string, Day>;
-  upsert: (d: Day)=>void;
-  patch: (id: string, partial: Partial<Day>)=>void;
-}>(() => ({ days: {}, upsert: ()=>{}, patch: ()=>{} }));
-```
-
-* `src/state/useDefaultsStore.ts` for defaults & versioning.
-
-2. Migrate nothing yet—just wire in stores and add unit tests for reducers.
+  * Add `workspace: { animals, days, currentAnimal, currentDay }`.
+  * Actions: `addAnimal`, `addDay(animalId, date)`, `updateDay(id, partial)`, `cloneDay(id)`.
+  * Selectors: `getAnimalDays(id)`, `getDay(id)`.
+* Add `localStorage` autosave for workspace (namespaced key, versioned).
 
 **DoD**
 
-* Stores compile and have tests.
-* No UI changes; legacy code still works.
+* Legacy flows unchanged; tests pass.
+* New reducers/selectors covered by unit tests.
+* `docs/ANIMAL_WORKSPACE_DESIGN.md` merged.
 
 ---
 
-## PR4 – Animal Workspace MVP (List + Add Day, Flagged)
+## PR4 – Animal Workspace MVP (Flagged)
 
-**Intent**: Build the first new screen that’s obviously useful; still non-blocking.
+**Intent:** Make multi-day management visible and useful.
 
 **Edits**
 
-1. `AnimalWorkspace` MVP
-
-* Displays one selected animal (for now) with list of Day cards.
-* “Add Recording Day” → creates a Day from defaults (placeholder defaults).
-
-2. Batch create dialog (skeleton only)
-
-* `BatchCreateDialog` with date range picker (no logic yet).
-
-3. Acceptance Tests
-
-* Render page, add a day, verify state store updated.
+* Render animal card and per-day list with status chips.
+* “Add Recording Day” clones defaults.
+* Skeleton `BatchCreateDialog` (UI only).
 
 **DoD**
 
-* With flag on, you can add days and see cards.
-* No export yet. Legacy still unchanged.
+* Adding a day updates store and shows in UI.
+* A11y checks pass; unit/integration tests for creation.
 
 ---
 
-## PR5 – Day Editor (Stepper) – Step 1: Overview
+## PR5 – Day Editor (Stepper) – Overview
 
-**Intent**: Introduce the guided flow one step at a time.
+**Intent:** Introduce guided flow starting with Overview.
 
 **Edits**
 
-1. `DayEditorStepper`
-
-* Renders step nav (Overview, Devices, Epochs, Validation, Export).
-* Only “Overview” is active; others disabled.
-
-2. `OverviewStep`
-
-* Fields for session info. Bind to `useDayStore`.
-* Inline schema validation (field-level AJV on change) using `validateSchema`.
-
-3. Validation Summary (inline panel in editor)
-
-* Shows current errors/warnings for the day (from `validateSchema`).
+* `DayEditorStepper` with steps (Overview, Devices, Epochs, Validation, Export).
+* `OverviewStep` bound to Context store; debounced field-level `validateSchema`.
+* Inline errors with ARIA live regions; “scroll-to-field” links.
+* Validation panel shows issues.
 
 **DoD**
 
-* Editing Overview persists to store and shows live validation errors.
-* Export button disabled (not implemented).
+* Overview edits persist; export stays disabled.
+* A11y and tests pass.
 
 ---
 
-## PR6 – Devices Step + Channel Map Editor (MVP, feature-gated)
+## PR6 – Devices Step + Channel Map Editor (Feature-gated)
 
-**Intent**: Add Devices UI and a minimal Channel Map grid (CSV import/export only).
+**Intent:** Build Devices UI, minimal Channel Map grid w/ CSV round-trip.
 
 **Edits**
 
-1. `DevicesStep`
-
-* Confirm devices/electrode groups. Bind to store.
-* Immediate checks for duplicates/missing references (logical validator placeholder).
-
-2. `ChannelMapEditor` (flagged by `FLAGS.channelMapEditor`)
-
-* Minimal grid: columns = channel, shank, group, notes.
-* CSV import/export buttons with validation.
-
-3. Logical validation utilities
-
-* `src/components/validation/useValidation.ts` orchestrates:
-
-  * schema → logical → cross-reference (stubs for now)
-  * returns structured issues array
+* `DevicesStep` with device/group editing and early logic checks (duplicates, missing refs).
+* `ChannelMapEditor` (behind `FLAGS.channelMapEditor`): columns = channel, shank, group, notes; CSV import/export; inline validation.
+* `components/validation/useValidation.js` orchestrates schema + logic + cross-ref.
 
 **DoD**
 
-* Devices step edits saved; channel map CSV round-trip works.
-* Errors appear in Validation Summary.
+* Devices and channel map edits persist; CSV import/export validated.
+* Issues appear in Validation panel; tests pass.
 
 ---
 
-## PR7 – Epochs/Tasks Step + Cross-Refs
+## PR7 – Epochs/Tasks + Cross-Reference Checks
 
-**Intent**: Implement epochs and cross-ref checks (e.g., camera ids, task indices).
+**Intent:** Add temporal and reference logic.
 
 **Edits**
 
-1. `EpochsStep`
-
-* CRUD list of epochs with start/end; guard `end > start`.
-* Link tasks to epochs; autogenerate IDs.
-
-2. Cross-reference validation
-
-* Ensure references exist (camera_id present, etc.).
+* `EpochsStep` CRUD with `end > start`.
+* Cross-refs: `camera_id` exists; task indices valid.
+* Link errors to fields; keyboard focus management.
 
 **DoD**
 
-* Invalid references surface as actionable errors that link to fields.
+* Invalid refs clearly flagged and navigable.
+* Tests/A11y pass.
 
 ---
 
-## PR8 – Export Step + Filename Enforcement + Shadow Export
+## PR8 – Export Step + Filename Enforcement + (Continuous) Shadow Export
 
-**Intent**: Keep export locked until all checks pass; prove identical output.
+**Intent:** Safe export only when fully valid; parity guaranteed.
 
 **Edits**
 
-1. `ExportStep`
-
-* Shows generated filename template: `YYYY-MM-DD_<animal>_metadata.yml`
-* Enforce format (non-editable or templated with locked tokens).
-
-2. Unlock export only if:
-
-* `validateSchema` passes, and no “error” severity logical/cross-ref issues.
-
-3. Shadow export (temporary safety)
-
-* On export, also compute legacy YAML and compare. If mismatch → show diff and block (configurable).
-* Add test: export 3 fixtures and assert equality.
+* `ExportStep` with enforced template `YYYY-MM-DD_<animal>_metadata.yml`.
+* Export button enabled only if no **error** issues across schema/logic/xref/devices/naming.
+* On export, run `shadowCompare`; if mismatch and `shadowExportStrict`, block and show diff; in dev, log.
 
 **DoD**
 
-* For migrated steps, exported YAML equals legacy output on fixtures.
-* Filename is enforced.
+* Exported YAML equals legacy on fixtures.
+* Filename pattern enforced; tests cover success/fail paths.
 
 ---
 
-## PR9 – Batch Tools & Validation Summary Page
+## PR9 – Validation Summary + Batch Tools + Autosave
 
-**Intent**: Make multi-day workflows efficient.
+**Intent:** Improve multi-day workflows.
 
 **Edits**
 
-1. `ValidationSummary` page
-
-* Table of all days: status (valid/invalid/incomplete) with tooltips.
-
-2. Batch actions
-
-* “Validate All” runs pipeline for each day; stores results.
-* “Export Valid” exports only days with no errors.
-
-3. Background autosave
-
-* Add `useAutosave.ts` that periodically saves animal/day drafts to localStorage.
+* `ValidationSummary` table for all days with reasons for invalid states.
+* “Validate All” and “Export Valid Only”.
+* `useAutosave.js` poller to persist drafts to `localStorage`; restore on reload.
 
 **DoD**
 
-* Batch validate/export works; invalid days list reasons.
-* Autosave restores after refresh.
+* Batch ops work; autosave/restore verified in tests.
 
 ---
 
 ## PR10 – Probe Reconfiguration Wizard
 
-**Intent**: Only add once Devices and Channel Map are stable.
+**Intent:** Safely propagate device changes forward in time.
 
 **Edits**
 
-1. `ProbeReconfigWizard`
-
-* Compare current vs previous day device/electrode structure.
-* If changed, show diff → apply forward to subsequent new days (optionally update defaults snapshot).
-
-2. Tests
-
-* Given two consecutive days, toggling group structure triggers wizard; applying changes updates a new day’s default.
+* Detect structural diffs vs previous day; show wizard; “apply forward” to future days; optional update to animal defaults snapshot.
 
 **DoD**
 
-* Wizard detects structural changes, applies cleanly, updates defaults snapshot history.
+* Wizard detects and applies changes; tests simulate multi-day progression.
 
 ---
 
-## PR11 – Accessibility & Keyboarding Pass
+## PR11 – Accessibility & Keyboarding Enhancements (Continuous hardening)
 
-**Intent**: Hardening pass once UI shape stabilizes.
+**Intent:** Ensure top-tier usability.
 
 **Edits**
 
-* Add ARIA roles, live regions for validation messages, visible focus, skip links.
-* Keyboard shortcuts: save (⌘/Ctrl+S), add epoch (A), next/prev step.
-* Reduced motion mode for steppers/dialogs.
+* Global shortcuts: Save (Ctrl/Cmd+S), Next/Prev step, Add Epoch.
+* Verify ARIA/focus across all pages; reduced-motion mode.
 
 **DoD**
 
-* Axe checks pass on critical pages.
-* Keyboard-only workflows are viable.
+* Axe clean; end-to-end keyboard flow validated.
 
 ---
 
-## PR12 – Flip the Default Flags
+## PR12 – Flip Default Flags
 
-**Intent**: Make new app primary once parity confirmed.
+**Intent:** Make the new experience the default—safely.
 
 **Edits**
 
-* `FLAGS.newNavigation = true`, `FLAGS.newDayEditor = true`, `FLAGS.channelMapEditor = true`.
-* Keep a temporary “Use legacy editor” toggle in a Settings panel for 1–2 releases.
+* Set `newNavigation`, `newDayEditor`, `channelMapEditor` to `true`.
+* Provide a temporary “Use legacy editor” toggle for one release.
 
 **DoD**
 
-* New flow is default. Legacy still accessible (temporary).
+* New flow is default; parity maintained; telemetry/logs clean.
 
 ---
 
-# Shared Validation Pipeline (Used from PR5 onward)
+## Shared Validation Pipeline (from PR5)
 
-```ts
-// src/components/validation/pipeline.ts
+```js
+// src/components/validation/pipeline.js
 import { validateSchema } from "@/utils/schemaValidator";
-export type Issue = { path: string; severity: "error"|"warning"; message: string; source: "schema"|"logic"|"xref"|"naming"|"devices" };
-export function runValidation(dayData: unknown): { ok: boolean; issues: Issue[] } {
+
+/** @typedef {'schema'|'logic'|'xref'|'naming'|'devices'} Source */
+/** @typedef {{path:string,severity:'error'|'warning',message:string,source:Source}} Issue */
+
+/** @param {any} dayData @returns {{ok:boolean, issues:Issue[]}} */
+export function runValidation(dayData) {
   const schema = validateSchema(dayData);
   const logic = [];   // end > start, duplicates, etc.
   const xref  = [];   // ids exist, indices valid
   const naming= [];   // filename template tokens present
   const devices=[];   // channel map integrity
-  const issues = [...schema.errors, ...logic, ...xref, ...naming, ...devices];
+
+  const issues = [
+    ...schema.errors.map(e => ({ ...e, source: 'schema' })),
+    ...logic, ...xref, ...naming, ...devices
+  ];
   const ok = issues.every(i => i.severity !== "error");
   return { ok, issues };
 }
@@ -446,20 +383,26 @@ export function runValidation(dayData: unknown): { ok: boolean; issues: Issue[] 
 
 ---
 
-# Rollback Strategy
+## Rollback Strategy
 
-* Each PR is self-contained and reversible (git revert).
-* Keep the legacy exporter available until PR12 passes.
-* Shadow export comparison stays enabled for one release post-flip.
+* Each PR is self-contained and reversible (`git revert` should build & test).
+* Keep the legacy exporter callable until after PR12 ships; keep shadow export checks for at least one release thereafter.
+* Tag milestones (`v3.0.0-mN`) for quick rollbacks.
 
 ---
 
-# Acceptance Gates You Can Hand to Claude Code
+## Acceptance Gates (per PR)
 
-For every PR, require Claude to satisfy:
+1. **Tests:** Unit + at least one integration test.
+2. **Parity:** Shadow export equality on relevant fixtures (from PR1 onward).
+3. **Flags:** New features behind flags until PR12.
+4. **A11y:** No new axe violations.
+5. **DX:** Lint clean; CI green; JSDoc on exported APIs.
 
-1. **Tests**: unit tests for new modules + at least one integration test.
-2. **Parity**: YAML equality on existing fixtures (starting PR1, enforced PR8+).
-3. **Flags**: New code behind flags until PR12.
-4. **A11y**: No axe violations introduced (from PR11).
-5. **DX**: Types compile; lints clean; CI green.
+---
+
+**Next steps:**
+
+* Approve this plan.
+* Land PR0 and PR0.5.
+* Start PR1 to unlock shadow-guarded, incremental refactors.

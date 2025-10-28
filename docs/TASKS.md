@@ -1,324 +1,311 @@
-# TASKS.md
+# Milestones
 
-A milestone-based task plan for migrating the NWB Metadata Creator to the new architecture. Tasks are small, reviewable, and map 1:1 to PRs. Each milestone lists **Tasks**, **Acceptance (DoD)**, and **Artifacts**. Follow conventions in `CLAUDE.md` (small PRs, typed boundaries, feature flags, tests-first, parity checks).
-
----
-
-## M0 — Repo Prep & Safety Rails (PR0)
+### **M0 – Repository Audit & Safety Setup**
 
 **Tasks**
 
-* [ ] Add feature flags: `src/featureFlags.ts` with `newNavigation`, `newDayEditor`, `channelMapEditor` default `false`.
-* [ ] Add TypeScript baseline: `tsconfig.json` with `allowJs=true`, do not rename files yet.
-* [ ] Install/verify test runner (Vitest/Jest) and YAML lib.
-* [ ] Add YAML structural diff helper: `tests/helpers/yamlDiff.ts::yamlEqual()`.
-* [ ] Add schema hash script `scripts/check-schema-hash.mjs` (warn-only in CI).
-* [ ] Wire CI to run `lint`, `typecheck`, `test`, `check-schema-hash`.
+* [ ] Audit current test infrastructure (Vitest, baselines, integration tests).
+* [ ] Verify existing Context store (`StoreContext.js`, `store.js`) is intact and tested.
+* [ ] Add lightweight feature flag file `src/featureFlags.js` with all flags off.
+* [ ] Replace schema hash plan with **schema version validation** script:
+
+  * Reads `$schemaVersion` from local schema JSON.
+  * Confirms match against expected trodes_to_nwb version.
+* [ ] Add schema version test to CI pipeline.
 
 **Acceptance (DoD)**
 
-* Flags compile; app behavior unchanged with flags off.
-* CI green on lint/type/tests; schema script runs and warns.
+* No app behavior changes.
+* CI verifies schema version alignment.
+* Tests and linter run green.
 
 **Artifacts**
 
-* `src/featureFlags.ts`, `tsconfig.json`, `scripts/check-schema-hash.mjs`, `tests/helpers/yamlDiff.ts`.
+* `src/featureFlags.js`
+* `scripts/check-schema-version.mjs`
 
 ---
 
-## M1 — Extract Pure Utilities (PR1)
+### **M0.5 – Type System Strategy**
 
 **Tasks**
 
-* [ ] Create `src/utils/yamlExport.ts::toYaml(obj)` (no aliases).
-* [ ] Create `src/utils/schemaValidator.ts` using AJV (allErrors + strict).
-* [ ] Add unit tests for valid/invalid fixtures.
-* [ ] Create `src/utils/shadowExport.ts` to compare legacy YAML vs new.
-* [ ] Refactor legacy exporter to call `toYaml` (no behavior changes).
+* [ ] Document type strategy in `docs/types_migration.md`.
+* [ ] Choose between:
+
+  * **Option A:** Stay in JS with rich JSDoc typing.
+  * **Option B:** Adopt `ts-migrate` later once modularization stabilizes.
+* [ ] Define measurable type coverage goal (e.g., 70% function-level typing).
+* [ ] Add type lint rules to CI (`eslint-plugin-jsdoc` or `typescript-eslint`).
 
 **Acceptance (DoD)**
 
-* Bit-for-bit YAML equality on sample fixtures.
-* `validateSchema()` returns structured errors.
-* Legacy UI still works.
-
-**Artifacts**
-
-* `src/utils/yamlExport.ts`, `src/utils/schemaValidator.ts`, `src/utils/shadowExport.ts`, tests.
+* Type direction agreed and documented.
+* No new build dependencies yet.
+* PRs can use JSDoc for type hints immediately.
 
 ---
 
-## M2 — Router + Page Shells (Flagged) (PR2)
+### **M1 – Extract Pure Utilities & Add Shadow Export**
 
 **Tasks**
 
-* [ ] Add React Router and `src/AppRouter.tsx`.
-* [ ] Route stubs: `AnimalWorkspace`, `DayEditor`, `ValidationSummary`.
-* [ ] Entry point renders `<AppRouter/>`; when `FLAGS.newNavigation=false`, load legacy app.
+* [ ] Extract `toYaml()` into `src/utils/yamlExport.js`.
+* [ ] Create `src/utils/schemaValidator.js` using AJV (strict mode).
+* [ ] Add **shadow export test** to verify YAML parity between new and legacy code.
+
+  * Runs on all fixture YAMLs.
+  * Blocks merges if outputs differ.
+* [ ] Integrate with Vitest baseline suite.
+* [ ] Document regression protocol in `CLAUDE.md`.
 
 **Acceptance (DoD)**
 
-* Flags off → legacy UI unchanged.
-* Flags on → new routes load stubs; no runtime errors.
+* All YAML fixtures pass shadow export test.
+* No UI changes.
+* Utilities fully unit-tested.
 
 **Artifacts**
 
-* `src/AppRouter.tsx`, `src/pages/...` stubs.
+* `src/utils/yamlExport.js`
+* `src/utils/schemaValidator.js`
+* `tests/baseline/shadowExport.test.jsx`
 
 ---
 
-## M3 — Central State Stores (PR3)
+### **M2 – UI Skeleton (Single-Page Compatible + A11y Baseline)**
 
 **Tasks**
 
-* [ ] Zustand stores: `useAnimalStore.ts`, `useDayStore.ts`, `useDefaultsStore.ts` (types + reducers).
-* [ ] Unit tests for reducers (upsert/patch/addDay/version snapshot).
-* [ ] No UI wiring yet.
+* [ ] Introduce `AppLayout` wrapper for new UI skeleton (no routing change).
+* [ ] Implement **conditional rendering** for sections:
+
+  * `Home`, `AnimalWorkspace`, `DayEditor`, `ValidationSummary`.
+* [ ] Keep navigation **hash-based** (`#/workspace`, `#/day/:id`) to preserve bookmarks.
+* [ ] Add global ARIA landmarks (`main`, `nav`, `region`).
+* [ ] Add initial `aria-landmarks.test.jsx` to CI pipeline.
 
 **Acceptance (DoD)**
 
-* Stores compile and are tested; no UI change.
+* Legacy app still works.
+* New sections load via hash changes.
+* Axe accessibility tests pass.
 
 **Artifacts**
 
-* `src/state/*`, tests.
+* `src/layouts/AppLayout.jsx`
+* `src/pages/AnimalWorkspace/index.jsx`
+* `src/__tests__/integration/aria-landmarks.test.jsx`
 
 ---
 
-## M4 — Animal Workspace MVP (Flagged) (PR4)
+### **M3 – Extend Existing Store (Context) for Animal & Day**
 
 **Tasks**
 
-* [ ] Implement `AnimalWorkspace`: list Day cards for selected animal.
-* [ ] “Add Recording Day” → creates day with placeholder defaults.
-* [ ] Skeleton `BatchCreateDialog` (UI only; no logic).
-* [ ] Basic status chip (unknown/incomplete).
+* [ ] Add animal/day abstractions to existing `store.js`:
+
+  * `animals`, `days`, `defaults`, `actions` for adding and cloning days.
+* [ ] Maintain compatibility with existing form model.
+* [ ] Write new reducer/unit tests in `tests/state/store_animal.test.jsx`.
+* [ ] Add `docs/animal_hierarchy.md` to define:
+
+  * In-memory data model
+  * localStorage autosave model
+  * Mapping from day → YAML
 
 **Acceptance (DoD)**
 
-* With flags on, can add a day; state updates.
-* Unit/integration test: creation flows.
+* Store continues to power legacy UI.
+* New animal/day layers tested and non-breaking.
 
 **Artifacts**
 
-* `src/pages/AnimalWorkspace/*`, tests.
+* Updated `src/state/store.js`, `docs/animal_hierarchy.md`, tests.
 
 ---
 
-## M5 — Day Editor Stepper: Overview Step (PR5)
+### **M4 – Animal Workspace MVP**
 
 **Tasks**
 
-* [ ] Implement `DayEditorStepper` with steps: Overview, Devices, Epochs, Validation, Export (only Overview enabled).
-* [ ] `OverviewStep` form fields bound to `useDayStore`.
-* [ ] Inline field-level schema validation (onChange debounce).
-* [ ] `ValidationSummaryPanel` (inline) shows issues and “scroll-to-field”.
+* [ ] Add `AnimalWorkspace` component to manage animals and days.
+* [ ] Implement “Add Recording Day” (clones defaults).
+* [ ] Render validation status chips per day.
+* [ ] Create stub for `BatchCreateDialog` (no logic yet).
 
 **Acceptance (DoD)**
 
-* Editing Overview persists; schema errors render accessibly.
-* Export disabled.
+* Users can add and view days per animal.
+* State persists correctly.
+* Tests validate creation and rendering.
 
 **Artifacts**
 
-* `src/pages/DayEditor/DayEditorStepper.tsx`, `OverviewStep.tsx`, `ValidationSummaryPanel.tsx`, tests.
+* `src/pages/AnimalWorkspace/AnimalWorkspace.jsx`, tests.
 
 ---
 
-## M6 — Devices Step + Channel Map Editor (Flagged) (PR6)
+### **M5 – Day Editor Stepper (Overview Step)**
 
 **Tasks**
 
-* [ ] Implement `DevicesStep` with device/group editing.
-* [ ] Add minimal logical checks (duplicate channels, missing refs).
-* [ ] `ChannelMapEditor` MVP (behind `FLAGS.channelMapEditor`): grid with CSV import/export.
-* [ ] Hook validation orchestration: `src/components/validation/useValidation.ts` composing schema + logic + xref (stubs).
+* [ ] Add `DayEditorStepper.jsx` with step navigation (Overview, Devices, Epochs, Validation, Export).
+* [ ] Implement `OverviewStep` form bound to `store`.
+* [ ] Integrate field-level schema validation via `schemaValidator`.
+* [ ] Display inline errors with ARIA live regions.
+* [ ] Add accessibility tests for form focus and keyboard navigation.
 
 **Acceptance (DoD)**
 
-* Devices edits persist; CSV round-trip works; issues appear in panel.
+* Editing Overview updates store and shows inline validation.
+* All a11y tests pass.
+* Export remains disabled.
 
 **Artifacts**
 
-* `DevicesStep.tsx`, `ChannelMapEditor/*`, `useValidation.ts`, tests.
+* `src/pages/DayEditor/DayEditorStepper.jsx`, `OverviewStep.jsx`, tests.
 
 ---
 
-## M7 — Epochs/Tasks + Cross-Reference Checks (PR7)
+### **M6 – Devices Step + Channel Map Editor**
 
 **Tasks**
 
-* [ ] `EpochsStep`: CRUD epochs with start/end; guard `end > start`.
-* [ ] Task linkage and auto IDs.
-* [ ] Cross-ref checks: `camera_id` exists; task indices valid.
-* [ ] Validation panel links directly to offending fields.
+* [ ] Add `DevicesStep` form (edit devices/electrode groups).
+* [ ] Integrate `ChannelMapEditor` (grid UI, CSV import/export).
+* [ ] Add duplicate/missing channel validation.
+* [ ] Extend `useValidation.js` to combine schema + logic + cross-reference checks.
 
 **Acceptance (DoD)**
 
-* Invalid references produce actionable errors and focus management.
+* Devices edits persist and validate.
+* Channel map round-trips via CSV.
+* Validation summary displays accurate device-level issues.
 
 **Artifacts**
 
-* `EpochsStep.tsx`, updated `useValidation.ts`, tests.
+* `src/pages/DayEditor/DevicesStep.jsx`, `ChannelMapEditor.jsx`, tests.
 
 ---
 
-## M8 — Export Step + Filename Enforcement + Shadow Export (PR8)
+### **M7 – Epochs/Tasks + Cross-Reference Validation**
 
 **Tasks**
 
-* [ ] `ExportStep` with generated filename template `YYYY-MM-DD_<animal>_metadata.yml` (tokenized).
-* [ ] Export unlocks only when no **error** issues across schema/logic/xref/naming/devices.
-* [ ] Shadow export compare vs legacy; configurable block on mismatch.
-* [ ] Tests: export 3–5 real fixtures; assert equality.
+* [ ] Add `EpochsStep` CRUD table for behavioral tasks.
+* [ ] Validate `end_time > start_time`.
+* [ ] Cross-reference `camera_id` and `task_id` consistency.
+* [ ] Show scroll-to-field for invalid references.
 
 **Acceptance (DoD)**
 
-* Export produces identical YAML on fixtures.
-* Mismatch surfaces diff and blocks (while enabled).
-
-**Artifacts**
-
-* `ExportStep.tsx`, tests, fixture YAMLs.
+* Invalid references clearly highlighted.
+* YAML validation state updates live.
+* No regressions in existing tests.
 
 ---
 
-## M9 — Validation Summary Page + Batch Ops + Autosave (PR9)
+### **M8 – Export Step + Continuous YAML Parity**
 
 **Tasks**
 
-* [ ] `ValidationSummary` page: table with status chips and reasons.
-* [ ] “Validate All” runs pipeline for all days; store results.
-* [ ] “Export Valid” exports only valid days; summarize skipped.
-* [ ] `useAutosave.ts`: periodic save/restore from localStorage.
+* [ ] Add `ExportStep` UI with filename template `YYYY-MM-DD_<animal>_metadata.yml`.
+* [ ] Disable export until all validation passes.
+* [ ] Run **shadow export comparison** before file download.
+* [ ] Extend test suite to assert equality for all sample fixtures.
 
 **Acceptance (DoD)**
 
-* Batch validate/export works; autosave restores drafts after reload.
+* YAML parity confirmed in CI.
+* Export safely blocked on validation errors.
 
 **Artifacts**
 
-* `src/pages/ValidationSummary/*`, `src/hooks/useAutosave.ts`, tests.
+* `src/pages/DayEditor/ExportStep.jsx`, tests.
 
 ---
 
-## M10 — Probe Reconfiguration Wizard (PR10)
+### **M9 – Validation Summary & Batch Tools**
 
 **Tasks**
 
-* [ ] Diff current vs previous day device/electrode structure.
-* [ ] Wizard UI: show diff; apply forward to subsequent new days.
-* [ ] Optionally update defaults snapshot; record version history.
-* [ ] Tests for change detection and forward-apply.
+* [ ] Implement `ValidationSummary` overview for all days.
+* [ ] Add “Validate All” and “Export Valid Only” actions.
+* [ ] Integrate `useAutosave.js` to persist drafts in localStorage.
+* [ ] Write integration test for autosave recovery.
 
 **Acceptance (DoD)**
 
-* Structural changes trigger wizard; applying updates future-day defaults.
-
-**Artifacts**
-
-* `ProbeReconfigWizard/*`, tests.
+* Batch validation/export works.
+* Autosave restores state on reload.
+* All a11y tests pass.
 
 ---
 
-## M11 — Accessibility & Keyboarding Pass (PR11)
+### **M10 – Probe Reconfiguration Wizard**
 
 **Tasks**
 
-* [ ] Add ARIA roles, labels, and live regions for validation.
-* [ ] Visible focus, skip links, reduced-motion support.
-* [ ] Keyboard shortcuts: save (Ctrl/Cmd+S), add epoch (A), next/prev step.
-* [ ] Automated a11y checks (axe) in CI.
+* [ ] Compare current vs. previous day device configurations.
+* [ ] Display diff and offer “apply forward” to next sessions.
+* [ ] Optionally update animal defaults snapshot.
 
 **Acceptance (DoD)**
 
-* Axe checks pass; full keyboard workflow viable.
-
-**Artifacts**
-
-* A11y utilities, CI step, documentation.
+* Device structure diffs correctly detected and applied.
+* Snapshot history updates.
+* Tests simulate multi-day workflow.
 
 ---
 
-## M12 — Flip Feature Flags & Legacy Toggle (PR12)
+### **M11 – Continuous Accessibility & Keyboard Shortcuts**
 
 **Tasks**
 
-* [ ] Set `FLAGS.newNavigation=true`, `FLAGS.newDayEditor=true`, `FLAGS.channelMapEditor=true`.
-* [ ] Add temporary “Use legacy editor” toggle in Settings.
-* [ ] Keep shadow export for one release; log but don’t block if desired.
+* [ ] Add global keyboard shortcuts (Save, Next Step, Add Epoch).
+* [ ] Verify ARIA coverage and tab order in all new components.
+* [ ] Run automated Axe checks in CI.
 
 **Acceptance (DoD)**
 
-* New flow is default; no critical regressions.
-* Telemetry/logs show parity on live usage samples.
-
-**Artifacts**
-
-* Flag change, settings toggle, release notes.
+* All accessibility tests pass.
+* Full workflow navigable via keyboard.
 
 ---
 
-## Cross-Cutting Tasks (ongoing across milestones)
+### **M12 – Feature Flag Cleanup & Legacy Removal**
 
-**Validation Pipeline**
+**Tasks**
 
-* [ ] Implement `src/components/validation/pipeline.ts` combining:
+* [ ] Flip all feature flags on by default.
+* [ ] Add “Use Legacy Editor” toggle for one release.
+* [ ] Schedule PR13 for flag removal.
+* [ ] Tag release `v3.0.0` after parity confirmation.
 
-  * schema (AJV)
-  * logic (temporal ordering, duplicates)
-  * cross-ref (IDs, indices)
-  * naming (filename tokens)
-  * devices (channel map integrity)
-* [ ] Unified `Issue` type `{ path, severity, message, source }`.
-* [ ] Tests for each rule; table-driven cases.
+**Acceptance (DoD)**
 
-**Schema Sync & Governance**
-
-* [ ] Versioned schema file in `src/assets/schema/`.
-* [ ] CI job to diff schema version/hash (upgrade path doc).
-* [ ] Release checklist includes schema sync with converter.
-
-**Docs & DX**
-
-* [ ] Update README: local run, Node version, flags, fixtures.
-* [ ] `CONTRIBUTING.md`: PR size, tests required, flag policy, parity checks.
-* [ ] Troubleshooting guide: common validation failures + examples.
-
-**Security/Perf**
-
-* [ ] Configure CSP; sanitize imported CSV/templates.
-* [ ] Debounced validation; validate touched fields until submit.
-* [ ] Lazy-load heavy editors/wizards.
+* New workflow is default.
+* Legacy toggle functional and reversible.
+* Shadow export still enforced for one additional release.
 
 ---
 
-## Rollback & Parity Strategy
+## Cross-Cutting & Continuous Tasks
 
-**Per-PR Rollback**
-
-* [ ] Each PR is revertible without cascading changes.
-* [ ] Keep legacy exporter callable until M12+1 release.
-
-**Parity**
-
-* [ ] Shadow export compare enabled from M8; stays for one release after M12.
-* [ ] Golden fixtures maintained and auto-tested in CI.
+* [ ] Maintain **schema version sync** with Python converter.
+* [ ] Keep shadow export tests green across all milestones.
+* [ ] Document validation rules in `docs/validation_pipeline.md`.
+* [ ] Enforce a11y criteria in every PR.
+* [ ] Tag releases after each milestone (v3.0.0-mX).
+* [ ] Maintain rollback test in CI (revert + rebuild check).
 
 ---
 
-## Milestone Review Gates (apply to each PR)
+## Definition of Done (Applies to All PRs)
 
-* [ ] Tests: unit + at least one integration (page or store).
-* [ ] Parity: fixture YAML equality (from M1; enforced M8+).
-* [ ] Flags: new features gated until M12.
-* [ ] A11y: no new axe violations (from M11).
-* [ ] CI: lint, typecheck, test, schema check all green.
-
----
-
-## Suggested PR Sequence
-
-M0 → M1 → M2 → M3 → M4 → M5 → M6 → M7 → M8 → M9 → M10 → M11 → M12
-
-Keep PRs ≤ ~300 LOC net change where possible; prefer multiple tiny PRs over one large change.
+* ✅ All tests (unit, integration, a11y) pass.
+* ✅ YAML output identical to baseline.
+* ✅ Schema version matches converter.
+* ✅ Feature flags tested both ON and OFF.
+* ✅ Documentation updated for new modules.
