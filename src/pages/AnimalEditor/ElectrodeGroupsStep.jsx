@@ -141,16 +141,16 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
         <tbody>
           {electrodeGroups.map((group) => (
             <tr key={group.id}>
-              <td>{group.id}</td>
-              <td>{group.device_type}</td>
-              <td>{group.location}</td>
-              <td>{getChannelCount(group.device_type)}</td>
-              <td>
+              <td data-label="ID">{group.id}</td>
+              <td data-label="Device Type">{group.device_type}</td>
+              <td data-label="Location">{group.location}</td>
+              <td data-label="Channels">{getChannelCount(group.device_type)}</td>
+              <td data-label="Status">
                 <span className={`status-badge status-${getStatus(group)}`}>
                   {getStatus(group)}
                 </span>
               </td>
-              <td>
+              <td data-label="Actions">
                 <button className="button-small" onClick={() => handleEditClick(group.id)}>Edit</button>
                 <button
                   className="button-small button-danger"
