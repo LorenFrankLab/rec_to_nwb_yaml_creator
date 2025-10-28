@@ -12,6 +12,7 @@
  * 2. Associated video files with camera_ids require cameras to be defined
  * 3. Optogenetics configuration must be complete (all or none of the 3 fields)
  * 4. Ntrode channel mappings must have unique physical channels (no duplicates)
+ * 5. Ntrode channel mappings must be sequential (no missing channels)
  *
  * @param {object} model - The form data to validate
  * @returns {Issue[]} Array of validation issues with format:
@@ -109,6 +110,37 @@ export const rulesValidation = (model) => {
               `Ntrode ${ntrode.ntrode_id} has duplicate channel mappings. ` +
               `Physical channel(s) ${uniqueDuplicates.join(', ')} are mapped ` +
               `to multiple logical channels.`
+          });
+        }
+      }
+    });
+  }
+
+  // Rule 5: Sequential channel mappings (no gaps) in ntrode_electrode_group_channel_map
+  // Logical channels (keys) must be sequential starting from 0
+  // e.g., {0: 0, 1: 1, 2: 2, 3: 3} is valid, but {0: 0, 2: 2} is not (missing channel 1)
+  if (model.ntrode_electrode_group_channel_map?.length > 0) {
+    model.ntrode_electrode_group_channel_map.forEach((ntrode) => {
+      if (ntrode.map && typeof ntrode.map === 'object') {
+        const logicalChannels = Object.keys(ntrode.map).map(Number).sort((a, b) => a - b);
+
+        // Expected channels should go from 0 to the maximum channel number
+        // e.g., if we have channels [0, 3], we expect [0, 1, 2, 3]
+        const maxChannel = Math.max(...logicalChannels);
+        const expectedChannels = Array.from({ length: maxChannel + 1 }, (_, i) => i);
+
+        // Check if logical channels are sequential (0, 1, 2, 3, ...)
+        const missingChannels = expectedChannels.filter(ch => !logicalChannels.includes(ch));
+
+        if (missingChannels.length > 0) {
+          issues.push({
+            path: `ntrode_electrode_group_channel_map[${ntrode.ntrode_id}]`,
+            code: 'missing_channels',
+            severity: 'error',
+            message:
+              `Ntrode ${ntrode.ntrode_id} has gaps in channel mapping. ` +
+              `Missing logical channel(s): ${missingChannels.join(', ')}. ` +
+              `Channels must be sequential starting from 0.`
           });
         }
       }

@@ -484,6 +484,126 @@ describe('rulesValidation()', () => {
     });
   });
 
+  describe('Rule 5: Sequential Channel Mappings (No Gaps)', () => {
+    it('should detect missing channel in middle', () => {
+      const model = {
+        ...createTestYaml(),
+        ntrode_electrode_group_channel_map: [{
+          ntrode_id: 1,
+          electrode_group_id: 0,
+          map: { 0: 0, 2: 2, 3: 3 }  // Missing channel 1
+        }]
+      };
+      const issues = rulesValidation(model);
+
+      expect(issues).toContainEqual(expect.objectContaining({
+        path: 'ntrode_electrode_group_channel_map[1]',
+        code: 'missing_channels',
+        severity: 'error',
+        message: expect.stringContaining('Missing logical channel(s): 1')
+      }));
+    });
+
+    it('should detect multiple missing channels', () => {
+      const model = {
+        ...createTestYaml(),
+        ntrode_electrode_group_channel_map: [{
+          ntrode_id: 1,
+          electrode_group_id: 0,
+          map: { 0: 0, 3: 3 }  // Missing channels 1, 2
+        }]
+      };
+      const issues = rulesValidation(model);
+
+      const channelIssue = issues.find(i => i.code === 'missing_channels');
+      expect(channelIssue.message).toContain('1');
+      expect(channelIssue.message).toContain('2');
+    });
+
+    it('should not error for sequential channels starting from 0', () => {
+      const model = createTestYaml({
+        ntrode_electrode_group_channel_map: [{
+          ntrode_id: 1,
+          electrode_group_id: 0,
+          map: { 0: 0, 1: 1, 2: 2, 3: 3 }  // Sequential: 0, 1, 2, 3
+        }]
+      });
+      const issues = rulesValidation(model);
+
+      expect(issues.some(i => i.code === 'missing_channels')).toBe(false);
+    });
+
+    it('should handle unordered keys correctly', () => {
+      const model = createTestYaml({
+        ntrode_electrode_group_channel_map: [{
+          ntrode_id: 1,
+          electrode_group_id: 0,
+          map: { 3: 3, 1: 1, 0: 0, 2: 2 }  // Unordered but complete
+        }]
+      });
+      const issues = rulesValidation(model);
+
+      expect(issues.some(i => i.code === 'missing_channels')).toBe(false);
+    });
+
+    it('should include ntrode_id in path', () => {
+      const model = {
+        ...createTestYaml(),
+        ntrode_electrode_group_channel_map: [{
+          ntrode_id: 42,
+          electrode_group_id: 0,
+          map: { 0: 0, 2: 2 }  // Missing channel 1
+        }]
+      };
+      const issues = rulesValidation(model);
+
+      const channelIssue = issues.find(i => i.code === 'missing_channels');
+      expect(channelIssue.path).toContain('42');
+    });
+
+    it('should detect errors across multiple ntrodes', () => {
+      const model = {
+        ...createTestYaml(),
+        ntrode_electrode_group_channel_map: [
+          {
+            ntrode_id: 1,
+            electrode_group_id: 0,
+            map: { 0: 0, 2: 2, 3: 3 }  // Missing channel 1
+          },
+          {
+            ntrode_id: 2,
+            electrode_group_id: 0,
+            map: { 0: 0, 1: 1, 2: 2, 3: 3 }  // Valid
+          },
+          {
+            ntrode_id: 3,
+            electrode_group_id: 0,
+            map: { 0: 0, 3: 3 }  // Missing channels 1, 2
+          }
+        ]
+      };
+      const issues = rulesValidation(model);
+
+      const missingIssues = issues.filter(i => i.code === 'missing_channels');
+      expect(missingIssues.length).toBe(2);
+      expect(missingIssues.some(i => i.path.includes('1'))).toBe(true);
+      expect(missingIssues.some(i => i.path.includes('3'))).toBe(true);
+    });
+
+    it('should handle ntrode without map property', () => {
+      const model = createTestYaml({
+        ntrode_electrode_group_channel_map: [{
+          ntrode_id: 1,
+          electrode_group_id: 0,
+          // map property missing
+        }]
+      });
+      const issues = rulesValidation(model);
+
+      expect(issues.some(i => i.code === 'missing_channels')).toBe(false);
+    });
+  });
+
   describe('Multiple Rules Violations', () => {
     it('should detect violations from multiple rules', () => {
       const model = {
