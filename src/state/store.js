@@ -50,19 +50,22 @@ export function useStore(initialState = null) {
   const [formData, setFormData] = useState(initialState || defaultYMLValues);
 
   // M3: Workspace state for multi-animal, multi-day management
-  const [workspace, setWorkspace] = useState({
-    version: '1.0.0',
-    lastModified: getCurrentTimestamp(),
-    animals: {},
-    days: {},
-    settings: {
-      defaultLab: '',
-      defaultInstitution: '',
-      defaultExperimenters: [],
-      autoSaveInterval: 30000,
-      shadowExportEnabled: true,
-    },
-  });
+  // If initialState.workspace is provided (e.g., in tests), use it; otherwise use defaults
+  const [workspace, setWorkspace] = useState(
+    initialState?.workspace || {
+      version: '1.0.0',
+      lastModified: getCurrentTimestamp(),
+      animals: {},
+      days: {},
+      settings: {
+        defaultLab: '',
+        defaultInstitution: '',
+        defaultExperimenters: [],
+        autoSaveInterval: 30000,
+        shadowExportEnabled: true,
+      },
+    }
+  );
 
   // Delegate to existing hooks
   const arrayActions = useArrayManagement(formData, setFormData);

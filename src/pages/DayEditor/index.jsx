@@ -1,62 +1,33 @@
 /**
- * Day Editor View - Session Metadata Editor (Stub for M2)
+ * Day Editor View - Session Metadata Editor (M5 Implementation)
  *
- * Placeholder for guided day editor with stepper interface.
- * Will be implemented in M5-M7.
+ * Multi-step guided editor for recording session metadata with:
+ * - Overview: Session information with inherited animal defaults
+ * - Devices: Electrode groups, cameras (M6 - stub)
+ * - Epochs: Tasks, behavioral events (M7 - stub)
+ * - Validation: Summary of all errors (M9 - stub)
+ * - Export: YAML file download (M10 - stub)
  */
 
 import React from 'react';
 import PropTypes from 'prop-types';
+import DayEditorStepper from './DayEditorStepper';
+import './DayEditor.css';
 
 /**
+ * Day Editor - Entry point for day editing workflow
  *
- * @param root0
- * @param root0.dayId
+ * Renders the DayEditorStepper which manages the multi-step interface.
+ * The dayId prop is provided by AppLayout from the URL hash.
+ *
+ * @param {object} props
+ * @param {string} props.dayId - Day identifier from URL (e.g., "remy-2023-06-22")
+ * @returns {JSX.Element}
  */
 export function DayEditor({ dayId }) {
-  return (
-    <main id="main-content" tabIndex="-1" role="main" aria-labelledby="editor-heading">
-      <h1 id="editor-heading">Day Editor</h1>
-
-      <div className="feature-preview" role="region" aria-label="Feature status">
-        <p>
-          <strong>Status:</strong> In Development (Milestone 5-7)
-        </p>
-
-        {dayId && (
-          <p>
-            <strong>Day ID:</strong> {dayId}
-          </p>
-        )}
-
-        <p>This view will provide:</p>
-        <ul>
-          <li>Guided stepper interface (Overview, Devices, Epochs, Validation, Export)</li>
-          <li>Field-level validation with inline error messages</li>
-          <li>Channel map editor for electrode configuration</li>
-          <li>Cross-reference validation (cameras, tasks, epochs)</li>
-          <li>Safe export with shadow YAML comparison</li>
-        </ul>
-
-        <p>
-          <strong>Current workflow:</strong> Use the{' '}
-          <a href="#/">legacy form</a> to create individual YAML files.
-        </p>
-
-        <p className="help-text">
-          Questions? See the{' '}
-          <a
-            href="https://github.com/LorenFrankLab/rec_to_nwb_yaml_creator/blob/main/docs/TASKS.md"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            development roadmap
-          </a>
-          .
-        </p>
-      </div>
-    </main>
-  );
+  // DayEditorStepper reads dayId from URL via useDayIdFromUrl hook
+  // We don't need to pass it as a prop since it parses the hash directly
+  return <DayEditorStepper />;
 }
 
 DayEditor.propTypes = {

@@ -1,0 +1,404 @@
+/* ===== CSS Variables ===== */
+
+:root {
+  /* Primary */
+  --color-primary: #2196f3;
+  --color-primary-hover: #1976d2;
+  --color-primary-light: #e3f2fd;
+
+  /* Status */
+  --color-success: #2e7d32;
+  --color-success-light: #e8f5e9;
+  --color-warning: #d84315;
+  --color-warning-light: #fff3e0;
+  --color-error: #d32f2f;
+  --color-error-light: #ffebee;
+
+  /* Neutrals */
+  --color-grey-100: #f5f5f5;
+  --color-grey-200: #e0e0e0;
+  --color-grey-600: #666;
+  --color-grey-900: #333;
+  --color-white: #fff;
+
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+
+  /* Typography */
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.2rem;
+  --font-size-xl: 1.5rem;
+
+  /* Transitions */
+  --transition-fast: 150ms ease-out;
+  --transition-standard: 250ms ease-in-out;
+}
+
+/* ===== Layout ===== */
+
+.day-editor-stepper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.day-editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background-color: var(--color-white);
+  border-bottom: 1px solid var(--color-grey-200);
+}
+
+.day-editor-header h1 {
+  font-size: var(--font-size-xl);
+  margin: 0;
+  color: var(--color-grey-900);
+}
+
+.day-editor-content {
+  flex: 1;
+  padding: var(--spacing-lg);
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ===== Step Navigation ===== */
+
+.step-navigation {
+  background-color: var(--color-white);
+  border-bottom: 2px solid var(--color-grey-200);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.step-list {
+  display: flex;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.step-item {
+  flex: 1;
+}
+
+.step-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  border: none;
+  background: transparent;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  transition: all var(--transition-standard);
+  color: var(--color-grey-900);
+}
+
+.step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: var(--color-grey-200);
+  color: var(--color-grey-600);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.step-item.current .step-number {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+}
+
+.step-item.step-valid .step-number {
+  background-color: var(--color-success);
+  color: var(--color-white);
+}
+
+.step-item.step-error .step-number {
+  background-color: var(--color-error);
+  color: var(--color-white);
+}
+
+.step-item.current .step-button {
+  border-bottom-color: var(--color-primary);
+  background-color: var(--color-primary-light);
+  font-weight: 600;
+}
+
+.step-button:hover:not(:disabled) {
+  background-color: var(--color-grey-100);
+}
+
+.step-button:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+  z-index: 1;
+}
+
+.step-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.step-status-icon {
+  font-size: 1rem;
+}
+
+.step-item.step-valid .step-status-icon {
+  color: var(--color-success);
+}
+
+.step-item.step-incomplete .step-status-icon {
+  color: var(--color-warning);
+}
+
+.step-item.step-error .step-status-icon {
+  color: var(--color-error);
+}
+
+/* ===== Save Indicator ===== */
+
+.save-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-grey-600);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: 4px;
+  transition: opacity var(--transition-standard);
+}
+
+.save-indicator.saving {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.save-indicator.saved {
+  background-color: var(--color-success-light);
+  color: var(--color-success);
+}
+
+.save-indicator.error {
+  background-color: var(--color-error-light);
+  color: var(--color-error);
+}
+
+.save-indicator .spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ===== Form Sections ===== */
+
+.day-editor-section {
+  background-color: var(--color-white);
+  border: 1px solid var(--color-grey-200);
+  border-radius: 4px;
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+.day-editor-section h2 {
+  font-size: var(--font-size-lg);
+  margin-top: 0;
+  margin-bottom: var(--spacing-md);
+  color: var(--color-grey-900);
+  font-weight: 600;
+}
+
+.inherited-notice {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: var(--color-warning-light);
+  border: 1px solid #ffe0b2;
+  border-radius: 4px;
+  font-size: var(--font-size-sm);
+  color: var(--color-warning);
+  margin-bottom: var(--spacing-md);
+}
+
+.inherited-notice a {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+  font-weight: 500;
+}
+
+.inherited-notice a:hover {
+  color: #0d47a1;
+}
+
+/* ===== Form Grid ===== */
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.form-field label {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-grey-900);
+}
+
+.form-field label.required::after {
+  content: ' *';
+  color: var(--color-error);
+}
+
+.form-field input,
+.form-field select,
+.form-field textarea {
+  padding: var(--spacing-sm);
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: var(--font-size-base);
+  font-family: inherit;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+.form-field input.invalid,
+.form-field textarea.invalid {
+  border-color: var(--color-error);
+  background-color: var(--color-error-light);
+}
+
+.form-field input.invalid:focus,
+.form-field textarea.invalid:focus {
+  box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.1);
+}
+
+/* ===== Read-Only Fields ===== */
+
+.read-only-field {
+  background-color: var(--color-grey-100);
+  color: var(--color-grey-600);
+  border-color: var(--color-grey-200);
+  cursor: not-allowed;
+}
+
+.read-only-field:focus {
+  border-color: var(--color-grey-200);
+  box-shadow: none;
+}
+
+/* ===== Validation Messages ===== */
+
+.validation-hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-grey-600);
+  margin-top: var(--spacing-xs);
+  min-height: 1.25rem;
+}
+
+.validation-loading {
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
+  margin-top: var(--spacing-xs);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.validation-error {
+  font-size: var(--font-size-sm);
+  color: var(--color-error);
+  font-weight: 500;
+  margin-top: var(--spacing-xs);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-xs);
+}
+
+.validation-error::before {
+  content: '✗';
+  flex-shrink: 0;
+}
+
+/* ===== Screen Reader Only ===== */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ===== Error State ===== */
+
+.error-state {
+  padding: var(--spacing-xl);
+  text-align: center;
+  color: var(--color-error);
+}
+
+.error-state h2 {
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--spacing-md);
+}
+
+/* ===== Responsive ===== */
+
+@media (max-width: 768px) {
+  .step-list {
+    flex-direction: column;
+  }
+
+  .step-button {
+    justify-content: flex-start;
+    border-bottom: none;
+    border-left: 3px solid transparent;
+  }
+
+  .step-item.current .step-button {
+    border-left-color: var(--color-primary);
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
