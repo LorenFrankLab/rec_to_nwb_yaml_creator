@@ -1,13 +1,19 @@
 import { useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
+import Breadcrumb from './Breadcrumb';
 import ReadOnlyField from './ReadOnlyField';
 import { validateField } from './validation';
 
 /**
- * Overview Step - Edits session-specific metadata with inherited animal defaults
+ * Overview Step - Minimalist session metadata editor
  *
- * Displays read-only fields inherited from the animal (subject, experimenters)
- * and editable session-specific fields. Validates on blur and shows inline errors.
+ * Shows only day-specific editable fields with breadcrumb navigation.
+ * Inherited animal metadata is available in a collapsible section.
+ *
+ * UX Philosophy:
+ * - Show what matters: animal ID + date for context
+ * - Edit what's unique: session-specific metadata
+ * - Hide what's inherited: subject/experimenters (available if needed)
  *
  * @param {object} props
  * @param {import('@/state/workspaceTypes').Animal} props.animal - Animal record (read-only context)
@@ -15,18 +21,11 @@ import { validateField } from './validation';
  * @param {object} props.mergedDay - Merged animal + day for validation
  * @param {Function} props.onFieldUpdate - Callback: (fieldPath, value) => void
  * @returns {JSX.Element}
- *
- * @example
- * <OverviewStep
- *   animal={animal}
- *   day={day}
- *   mergedDay={mergeDayMetadata(animal, day)}
- *   onFieldUpdate={(path, value) => console.log(path, value)}
- * />
  */
 export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate }) {
   const [fieldErrors, setFieldErrors] = useState({});
   const [validatingField, setValidatingField] = useState(null);
+  const [showInherited, setShowInherited] = useState(false);
 
   // Validate field on blur
   const handleBlur = useCallback(async (fieldPath, value) => {
@@ -57,8 +56,35 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate }) 
   // Count validation errors for ARIA announcement
   const errorCount = Object.values(fieldErrors).filter(Boolean).length;
 
+  // Format date for display
+  const formattedDate = new Date(day.date).toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  // Breadcrumb items
+  const breadcrumbItems = [
+    { label: 'Home', href: '#/' },
+    { label: `Animal: ${animal.id}`, href: `#/animal/${animal.id}` },
+    { label: `Day: ${day.date}` },
+  ];
+
   return (
     <div className="overview-step">
+      {/* Breadcrumb Navigation */}
+      <Breadcrumb items={breadcrumbItems} />
+
+      {/* Context Header */}
+      <header className="day-context-header">
+        <h1 className="day-title">
+          <span className="animal-id">{animal.id}</span>
+          <span className="date-separator">•</span>
+          <span className="day-date">{formattedDate}</span>
+        </h1>
+      </header>
+
       {/* ARIA live region for screen readers */}
       <div
         role="status"
@@ -69,41 +95,9 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate }) 
         {errorCount > 0 && `${errorCount} validation ${errorCount === 1 ? 'error' : 'errors'}`}
       </div>
 
-      {/* Subject Information (Read-Only) */}
+      {/* Session Metadata (Day-Specific Editable Fields) */}
       <section className="day-editor-section">
-        <h2>Subject Information</h2>
-        <div className="inherited-notice">
-          Inherited from Animal
-          <a href={`#/animal/${animal.id}`}>Edit Animal</a>
-        </div>
-
-        <div className="form-grid">
-          <ReadOnlyField
-            label="Subject ID"
-            value={animal.subject.subject_id}
-          />
-          <ReadOnlyField
-            label="Species"
-            value={animal.subject.species}
-          />
-          <ReadOnlyField
-            label="Sex"
-            value={animal.subject.sex}
-          />
-          <ReadOnlyField
-            label="Genotype"
-            value={animal.subject.genotype}
-          />
-          <ReadOnlyField
-            label="Date of Birth"
-            value={animal.subject.date_of_birth}
-          />
-        </div>
-      </section>
-
-      {/* Session Information (Editable) */}
-      <section className="day-editor-section">
-        <h2>Session Information</h2>
+        <h2>Session Metadata</h2>
 
         <div className="form-grid">
           <div className="form-field">
@@ -173,34 +167,90 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate }) 
               rows="3"
               defaultValue={day.session.experiment_description}
               onBlur={(e) => handleBlur('session.experiment_description', e.target.value)}
-              placeholder="Override animal's default experiment description"
+              placeholder="Override animal's default experiment description if needed"
             />
+            <span className="field-help-text">
+              Leave blank to use animal's default: "{animal.experiment_description || 'None set'}"
+            </span>
           </div>
         </div>
       </section>
 
-      {/* Experimenters (Read-Only) */}
-      <section className="day-editor-section">
-        <h2>Experimenters</h2>
-        <div className="inherited-notice">
-          Inherited from Animal
-          <a href={`#/animal/${animal.id}`}>Edit Animal</a>
-        </div>
+      {/* Collapsible Inherited Metadata */}
+      <section className="inherited-metadata-section">
+        <button
+          type="button"
+          className="inherited-metadata-toggle"
+          onClick={() => setShowInherited(!showInherited)}
+          aria-expanded={showInherited}
+          aria-controls="inherited-metadata-content"
+        >
+          <span className="toggle-icon" aria-hidden="true">
+            {showInherited ? '▼' : '▶'}
+          </span>
+          View inherited metadata from animal
+          <span className="inherited-metadata-badge">Inherited</span>
+        </button>
 
-        <div className="form-grid">
-          <ReadOnlyField
-            label="Names"
-            value={animal.experimenters.experimenter_name.join(', ')}
-          />
-          <ReadOnlyField
-            label="Lab"
-            value={animal.experimenters.lab}
-          />
-          <ReadOnlyField
-            label="Institution"
-            value={animal.experimenters.institution}
-          />
-        </div>
+        {showInherited && (
+          <div id="inherited-metadata-content" className="inherited-metadata-content">
+            {/* Subject Information */}
+            <div className="inherited-section">
+              <h3>Subject Information</h3>
+              <div className="inherited-notice">
+                Inherited from Animal
+                <a href={`#/animal/${animal.id}`}>Edit Animal</a>
+              </div>
+
+              <div className="form-grid">
+                <ReadOnlyField
+                  label="Subject ID"
+                  value={animal.subject.subject_id}
+                />
+                <ReadOnlyField
+                  label="Species"
+                  value={animal.subject.species}
+                />
+                <ReadOnlyField
+                  label="Sex"
+                  value={animal.subject.sex}
+                />
+                <ReadOnlyField
+                  label="Genotype"
+                  value={animal.subject.genotype}
+                />
+                <ReadOnlyField
+                  label="Date of Birth"
+                  value={animal.subject.date_of_birth}
+                />
+              </div>
+            </div>
+
+            {/* Experimenters */}
+            <div className="inherited-section">
+              <h3>Experimenters</h3>
+              <div className="inherited-notice">
+                Inherited from Animal
+                <a href={`#/animal/${animal.id}`}>Edit Animal</a>
+              </div>
+
+              <div className="form-grid">
+                <ReadOnlyField
+                  label="Names"
+                  value={animal.experimenters.experimenter_name.join(', ')}
+                />
+                <ReadOnlyField
+                  label="Lab"
+                  value={animal.experimenters.lab}
+                />
+                <ReadOnlyField
+                  label="Institution"
+                  value={animal.experimenters.institution}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );
@@ -209,6 +259,7 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate }) 
 OverviewStep.propTypes = {
   animal: PropTypes.shape({
     id: PropTypes.string.isRequired,
+    experiment_description: PropTypes.string,
     subject: PropTypes.shape({
       subject_id: PropTypes.string.isRequired,
       species: PropTypes.string.isRequired,
@@ -223,6 +274,7 @@ OverviewStep.propTypes = {
     }).isRequired,
   }).isRequired,
   day: PropTypes.shape({
+    date: PropTypes.string.isRequired,
     session: PropTypes.shape({
       session_id: PropTypes.string,
       session_description: PropTypes.string,

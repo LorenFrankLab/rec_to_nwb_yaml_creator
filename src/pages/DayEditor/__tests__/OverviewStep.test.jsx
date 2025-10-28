@@ -21,6 +21,7 @@ describe('OverviewStep', () => {
   };
 
   const mockDay = {
+    date: '2023-06-22',
     session: {
       session_id: 'remy_20230622',
       session_description: 'Day 45 of training',
@@ -34,7 +35,8 @@ describe('OverviewStep', () => {
     ...mockAnimal.experimenters,
   };
 
-  it('displays inherited fields as read-only', () => {
+  it('displays inherited fields as read-only when expanded', async () => {
+    const user = userEvent.setup();
     render(
       <OverviewStep
         animal={mockAnimal}
@@ -44,7 +46,18 @@ describe('OverviewStep', () => {
       />
     );
 
-    // Subject fields should be read-only
+    // Inherited metadata should be hidden by default
+    expect(screen.queryByText('Subject Information')).not.toBeInTheDocument();
+
+    // Click toggle to show inherited metadata
+    const toggleButton = screen.getByRole('button', { name: /view inherited metadata/i });
+    await user.click(toggleButton);
+
+    // Now subject fields should be visible and read-only
+    await waitFor(() => {
+      expect(screen.getByText('Subject Information')).toBeInTheDocument();
+    });
+
     const subjectIdInput = screen.getByDisplayValue('remy');
     expect(subjectIdInput).toBeDisabled();
     expect(subjectIdInput).toHaveAttribute('readonly');
@@ -116,7 +129,8 @@ describe('OverviewStep', () => {
     expect(sessionIdLabel).toHaveClass('required');
   });
 
-  it('shows "Edit Animal" links', () => {
+  it('shows "Edit Animal" links when inherited metadata is expanded', async () => {
+    const user = userEvent.setup();
     render(
       <OverviewStep
         animal={mockAnimal}
@@ -126,12 +140,18 @@ describe('OverviewStep', () => {
       />
     );
 
-    const editLinks = screen.getAllByText(/Edit Animal/i);
-    expect(editLinks.length).toBeGreaterThan(0);
-    expect(editLinks[0]).toHaveAttribute('href', '#/animal/remy');
+    // Expand inherited metadata
+    const toggleButton = screen.getByRole('button', { name: /view inherited metadata/i });
+    await user.click(toggleButton);
+
+    await waitFor(() => {
+      const editLinks = screen.getAllByText(/Edit Animal/i);
+      expect(editLinks.length).toBeGreaterThan(0);
+      expect(editLinks[0]).toHaveAttribute('href', '#/animal/remy');
+    });
   });
 
-  it('groups fields in sections', () => {
+  it('shows breadcrumb navigation', () => {
     render(
       <OverviewStep
         animal={mockAnimal}
@@ -141,9 +161,38 @@ describe('OverviewStep', () => {
       />
     );
 
-    expect(screen.getByText('Subject Information')).toBeInTheDocument();
-    expect(screen.getByText('Session Information')).toBeInTheDocument();
-    expect(screen.getByText('Experimenters')).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: /breadcrumb/i })).toBeInTheDocument();
+    expect(screen.getByText(/Animal: remy/i)).toBeInTheDocument();
+    expect(screen.getByText(/Day: 2023-06-22/i)).toBeInTheDocument();
+  });
+
+  it('groups fields in sections', async () => {
+    const user = userEvent.setup();
+    render(
+      <OverviewStep
+        animal={mockAnimal}
+        day={mockDay}
+        mergedDay={mockMergedDay}
+        onFieldUpdate={vi.fn()}
+      />
+    );
+
+    // Session Metadata should always be visible
+    expect(screen.getByText('Session Metadata')).toBeInTheDocument();
+
+    // Inherited sections should be hidden by default
+    expect(screen.queryByText('Subject Information')).not.toBeInTheDocument();
+    expect(screen.queryByText('Experimenters')).not.toBeInTheDocument();
+
+    // Expand inherited metadata
+    const toggleButton = screen.getByRole('button', { name: /view inherited metadata/i });
+    await user.click(toggleButton);
+
+    // Now inherited sections should be visible
+    await waitFor(() => {
+      expect(screen.getByText('Subject Information')).toBeInTheDocument();
+      expect(screen.getByText('Experimenters')).toBeInTheDocument();
+    });
   });
 
   it('uses correct ARIA attributes for required fields', () => {

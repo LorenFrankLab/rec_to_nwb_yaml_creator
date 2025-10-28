@@ -77,6 +77,9 @@ describe('DayEditorStepper', () => {
 
   beforeEach(() => {
     useDayIdFromUrl.mockReturnValue('remy-2023-06-22');
+
+    // Mock scrollIntoView (not implemented in JSDOM)
+    Element.prototype.scrollIntoView = vi.fn();
   });
 
   it('shows error when day not found', () => {
@@ -132,8 +135,15 @@ describe('DayEditorStepper', () => {
       </StoreProvider>
     );
 
-    expect(screen.getByText('Subject Information')).toBeInTheDocument();
-    expect(screen.getByText('Session Information')).toBeInTheDocument();
+    // Session Metadata should be visible by default
+    expect(screen.getByText('Session Metadata')).toBeInTheDocument();
+
+    // Breadcrumb navigation should be present
+    expect(screen.getByRole('navigation', { name: /breadcrumb/i })).toBeInTheDocument();
+
+    // Inherited metadata should be hidden by default (can be expanded)
+    expect(screen.queryByText('Subject Information')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /view inherited metadata/i })).toBeInTheDocument();
   });
 
   it('navigates between steps', async () => {
