@@ -17,7 +17,7 @@ exports[`BASELINE: Integration Contracts > Device Types Contract > documents all
 ]
 `;
 
-exports[`BASELINE: Integration Contracts > Schema Hash > documents current schema version > schema-hash 1`] = `"a15136fd1086fde303e219350db6069e07225608dc8fda96e5be11db9dfe8e22"`;
+exports[`BASELINE: Integration Contracts > Schema Hash > documents current schema version > schema-hash 1`] = `"69b1b958ffd55facdb0bac56f40fcbd83b9638b1f0d4aac825d522e886b7ba65"`;
 
 exports[`BASELINE: Integration Contracts > YAML Generation Contract > documents YAML output format > schema-required-fields 1`] = `
 [
