@@ -340,6 +340,7 @@ export function LegacyFormView() {
                         className="nav-link"
                         href={`#electrode_group_item_${fd.id}-area`}
                         data-id={`electrode_group_item_${fd.id}-area`}
+                        title={formatElectrodeGroupLabel(fd)}
                         onClick={(e) => {
                           clickNav(e);
                         }}
