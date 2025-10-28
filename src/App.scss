@@ -442,6 +442,10 @@ a:hover {
 
 .nav-link {
   color: black;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 a.nav-link:hover {
