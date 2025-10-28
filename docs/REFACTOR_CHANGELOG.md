@@ -6,6 +6,87 @@
 
 ---
 
+## M1 - Extract Pure Utilities (October 27, 2025)
+
+### Summary
+
+Completed YAML utilities extraction and test coverage. Discovered that extraction had already been done in earlier refactoring (Phase 3), with all YAML functions moved to `src/io/yaml.js`. Added missing test coverage for `decodeYaml()` and removed deprecated legacy file.
+
+### Changes
+
+#### Test Coverage
+
+- **Created `src/__tests__/unit/io/yaml-decodeYaml.test.js`** - 23 comprehensive tests
+  - Normal operation: simple objects, nested structures, arrays, null values, booleans, numeric types
+  - Edge cases: empty strings, whitespace, empty objects, special characters, multiline strings
+  - Error handling: malformed YAML, multiple documents, non-string inputs (null, undefined, number, object)
+  - Round-trip compatibility: encode -> decode verification
+  - Scientific metadata use cases: NWB structures, ISO 8601 datetime preservation, empty arrays
+
+#### Cleanup
+
+- **Removed `src/utils/yamlExport.js`** - Deprecated file no longer used
+  - All functionality migrated to `io/yaml.js` in Phase 3
+  - Legacy aliases maintained for backwards compatibility
+
+#### Documentation Updates
+
+- **Updated `src/__tests__/unit/app/App-convertObjectToYAMLString.test.jsx`**
+  - Changed file location reference from `src/utils/yamlExport.js` to `src/io/yaml.js`
+  - Added refactoring history: Phase 1 → Phase 3 → M1
+  - Clarified legacy alias `convertObjectToYAMLString` = `encodeYaml`
+
+- **Updated `docs/TASKS.md`**
+  - Marked M1 first task as complete
+  - Added detail breakdown of YAML utilities and test coverage
+
+- **Updated `docs/SCRATCHPAD.md`**
+  - Changed session status to M1
+  - Added completed work summary
+  - Documented next steps for M1
+
+### Test Results
+
+- **Total Tests:** 2149 passing (up from 2126, +23 new tests)
+- **Test Files:** 109 passing
+- **New Tests:** 23 (all for `decodeYaml()`)
+- **Coverage:** All YAML I/O functions now have comprehensive test coverage
+
+### Existing YAML Test Coverage
+
+- `encodeYaml()` - 8 tests in `App-convertObjectToYAMLString.test.jsx`
+- `formatDeterministicFilename()` - 12 tests in `yaml-formatDeterministicFilename.test.js`
+- `downloadYamlFile()` - 7 tests in `yaml-memory-leak.test.js`
+- `decodeYaml()` - 23 tests in `yaml-decodeYaml.test.js` (NEW)
+
+### Files Changed
+
+```
+docs/REFACTOR_CHANGELOG.md                                      - M1 section added
+docs/SCRATCHPAD.md                                              - M1 status updated
+docs/TASKS.md                                                   - M1 first task marked complete
+src/__tests__/unit/app/App-convertObjectToYAMLString.test.jsx  - Documentation updated
+src/__tests__/unit/io/yaml-decodeYaml.test.js                  - 285 lines (new test file)
+src/utils/yamlExport.js                                         - Deleted (deprecated)
+```
+
+### Breaking Changes
+
+**None.** All changes are additive or cleanup:
+
+- Test coverage additions are non-breaking
+- Removed file was not imported anywhere
+- All existing tests continue to pass
+
+### Next Steps (M1 Continuation)
+
+1. Create `src/utils/schemaValidator.js` using AJV (strict mode)
+2. Add shadow export test for YAML parity verification
+3. Integrate shadow export with Vitest baseline suite
+4. Document regression protocol in CLAUDE.md
+
+---
+
 ## M0.5 - Type System Strategy (October 27, 2025)
 
 ### Summary
@@ -27,7 +108,7 @@ Established JSDoc-first type system strategy with 70% coverage goal, deferring f
 #### Configuration
 
 - **Created `jsconfig.json`** - JavaScript project configuration
-  - Enabled path aliases: `@/*` � `src/*`
+  - Enabled path aliases: `@/*` � `src/*`
   - Set target to ES2020
   - Module resolution configured for node
   - `checkJs: false` initially (enable in Phase 2)
@@ -102,6 +183,7 @@ src/__tests__/integration/schema-contracts.test.js - 1 snapshot updated
 ### Breaking Changes
 
 **None.** All changes are additive and non-breaking:
+
 - ESLint rules are warnings, not errors
 - jsconfig.json is informational (no build impact)
 - Existing code continues to work unchanged

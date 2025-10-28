@@ -1,19 +1,19 @@
 /**
- * @file Tests for convertObjectToYAMLString function
+ * @file Tests for encodeYaml function (legacy alias: convertObjectToYAMLString)
  * @description Phase 1, Week 6 - YAML Conversion Functions
- * @updated Phase 3 - Refactored to test extracted utility function
+ * @updated M1 - Tests updated to test io/yaml.js module
  *
- * Function location: src/utils/yamlExport.js
+ * Function location: src/io/yaml.js
  *
  * Purpose: Convert JavaScript object to YAML string using YAML.Document API
  *
  * Implementation:
  * ```javascript
- * const convertObjectToYAMLString = (content) => {
+ * export function encodeYaml(model) {
  *   const doc = new YAML.Document();
- *   doc.contents = content || {};
+ *   doc.contents = model || {};
  *   return doc.toString();
- * };
+ * }
  * ```
  *
  * Test Coverage: 8 tests documenting current behavior
@@ -150,7 +150,7 @@ describe('convertObjectToYAMLString()', () => {
 });
 
 /**
- * Implementation Notes (from src/utils/yamlExport.js):
+ * Implementation Notes (from src/io/yaml.js):
  *
  * 1. Creates new YAML.Document instance
  * 2. Sets doc.contents to input object (or {} if falsy)
@@ -163,13 +163,15 @@ describe('convertObjectToYAMLString()', () => {
  * - Does NOT filter or transform the input (content || {} is only safety check)
  *
  * Used by:
- * - generateYMLFile() in App.js to convert form data before download
+ * - features/importExport.js - exportAll() to convert form data before download
  *
  * Integration:
  * - Called during YAML export workflow
- * - Result is passed to createYAMLFile() for download
+ * - Result is passed to downloadYamlFile() for download
  *
- * Refactored in Phase 3:
- * - Extracted from App.js to src/utils/yamlExport.js
- * - Now a properly exported and testable utility function
+ * Refactored History:
+ * - Phase 1: Originally inline in App.js
+ * - Phase 3: Extracted to src/utils/yamlExport.js
+ * - M1: Migrated to src/io/yaml.js as encodeYaml()
+ * - Legacy alias convertObjectToYAMLString maintained for backwards compatibility
  */

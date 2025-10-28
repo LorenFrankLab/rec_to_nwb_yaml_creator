@@ -53,7 +53,12 @@
 
 **Tasks**
 
-* [ ] Extract `toYaml()` into `src/utils/yamlExport.js`.
+* [x] Extract `toYaml()` into `src/utils/yamlExport.js`. ✅ Already exists as `io/yaml.js`
+  * ✅ `encodeYaml()` - converts objects to YAML (8 existing tests)
+  * ✅ `decodeYaml()` - parses YAML to objects (23 new tests added)
+  * ✅ `formatDeterministicFilename()` - generates filenames (12 existing tests)
+  * ✅ `downloadYamlFile()` - triggers browser download (7 existing tests)
+  * ✅ Removed deprecated `src/utils/yamlExport.js`
 * [ ] Create `src/utils/schemaValidator.js` using AJV (strict mode).
 * [ ] Add **shadow export test** to verify YAML parity between new and legacy code.
 
