@@ -11,7 +11,10 @@ const Ajv = require('ajv');
 
 // Compile AJV validator once at module load for performance
 // Recompiling on every validation call would cause significant performance degradation
-const ajv = new Ajv({ allErrors: true });
+const ajv = new Ajv({
+  allErrors: true,
+  strict: false // Allow non-standard keywords like "version" for metadata
+});
 addFormats(ajv);
 const compiledValidator = ajv.compile(JsonSchemaFile);
 
