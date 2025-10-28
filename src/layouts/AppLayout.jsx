@@ -7,15 +7,16 @@
  * @module layouts/AppLayout
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, lazy, Suspense } from 'react';
 import { useHashRouter } from '../hooks/useHashRouter';
 import { Home } from '../pages/Home';
 import { AnimalWorkspace } from '../pages/AnimalWorkspace';
 import { DayEditor } from '../pages/DayEditor';
 import { ValidationSummary } from '../pages/ValidationSummary';
 import { LegacyFormView } from '../pages/LegacyFormView';
-import AnimalEditor from '../pages/AnimalEditor';
 import logo from '../logo.png';
+// Lazy load Animal Editor to avoid loading all its dependencies for tests that don't use it
+const AnimalEditor = lazy(() => import('../pages/AnimalEditor'));
 
 /**
  * Get view name for screen reader announcements
@@ -123,7 +124,11 @@ export function AppLayout() {
         return <DayEditor dayId={currentRoute.params.id} />;
 
       case 'animal-editor':
-        return <AnimalEditor />;
+        return (
+          <Suspense fallback={<div>Loading Animal Editor...</div>}>
+            <AnimalEditor />
+          </Suspense>
+        );
 
       case 'validation':
         return <ValidationSummary />;

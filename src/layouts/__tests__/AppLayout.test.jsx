@@ -93,10 +93,10 @@ describe('AppLayout', () => {
       expect(screen.getByTestId('validation-view')).toBeInTheDocument();
     });
 
-    it('renders animal editor view for #/animal/:id/editor', () => {
+    it('renders animal editor view for #/animal/:id/editor', async () => {
       window.location.hash = '#/animal/remy/editor';
       render(<AppLayout />);
-      expect(screen.getByTestId('animal-editor-view')).toBeInTheDocument();
+      expect(await screen.findByTestId('animal-editor-view')).toBeInTheDocument();
     });
 
     it('renders legacy view for unknown routes', () => {
