@@ -158,10 +158,10 @@ BadChannelsEditor.propTypes = {
       ntrode_id: PropTypes.number.isRequired,
       electrode_group_id: PropTypes.number.isRequired,
       bad_channels: PropTypes.arrayOf(PropTypes.number),
-      map: PropTypes.object.isRequired,
+      map: PropTypes.objectOf(PropTypes.number).isRequired,
     })
   ).isRequired,
-  badChannels: PropTypes.object.isRequired,
+  badChannels: PropTypes.objectOf(PropTypes.arrayOf(PropTypes.number)).isRequired,
   onUpdate: PropTypes.func.isRequired,
   errors: PropTypes.object,
   warnings: PropTypes.object,
