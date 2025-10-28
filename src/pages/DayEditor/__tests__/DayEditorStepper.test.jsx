@@ -164,4 +164,18 @@ describe('DayEditorStepper', () => {
     const overviewButton = screen.getByRole('button', { name: /Overview/i });
     expect(overviewButton).toBeInTheDocument();
   });
+
+  it('renders back button to animal workspace', () => {
+    render(
+      <StoreProvider initialState={mockInitialState}>
+        <DayEditorStepper />
+      </StoreProvider>
+    );
+
+    // Check for back button
+    const backButton = screen.getByRole('link', { name: /back to workspace/i });
+    expect(backButton).toBeInTheDocument();
+    expect(backButton).toHaveAttribute('href', '#/workspace?animal=remy');
+    expect(backButton.textContent).toContain('Back');
+  });
 });

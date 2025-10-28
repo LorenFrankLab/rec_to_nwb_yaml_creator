@@ -119,7 +119,16 @@ export default function DayEditorStepper() {
   return (
     <div className="day-editor-stepper">
       <header className="day-editor-header">
-        <h1>Day Editor: {animal.id} - {day.date}</h1>
+        <div className="day-editor-title">
+          <a
+            href={`#/workspace?animal=${animal.id}`}
+            className="back-button"
+            aria-label="Back to workspace"
+          >
+            ← Back
+          </a>
+          <h1>Day Editor: {animal.id} - {day.date}</h1>
+        </div>
         <SaveIndicator lastSaved={lastSaved} error={saveError} />
       </header>
 
