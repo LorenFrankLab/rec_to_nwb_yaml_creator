@@ -285,4 +285,32 @@ describe('AnimalWorkspace Component (M4) - Initial State', () => {
       alertSpy.mockRestore();
     });
   });
+
+  describe('Create New Animal Button', () => {
+    it('shows "New Animal" button in animal list sidebar', () => {
+      const initialState = {
+        workspace: {
+          animals: {
+            testanimal: {
+              subject: { subject_id: 'testanimal' },
+              days: [],
+            },
+          },
+          days: {},
+          settings: {},
+        },
+      };
+
+      render(
+        <StoreProvider initialState={initialState}>
+          <AnimalWorkspace />
+        </StoreProvider>
+      );
+
+      // Check for the "New Animal" button/link
+      const createButton = screen.getByRole('link', { name: /create new animal/i });
+      expect(createButton).toBeInTheDocument();
+      expect(createButton).toHaveAttribute('href', '#/home');
+    });
+  });
 });

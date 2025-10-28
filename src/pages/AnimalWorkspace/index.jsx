@@ -116,7 +116,12 @@ export function AnimalWorkspace() {
         <div className="workspace-content">
           {/* Animal List Sidebar */}
           <aside className="animal-list" role="navigation" aria-label="Animal list">
-            <h2>Animals</h2>
+            <div className="animal-list-header">
+              <h2>Animals</h2>
+              <a href="#/home" className="btn-create-animal" aria-label="Create new animal">
+                + New Animal
+              </a>
+            </div>
             {animalIds.map((animalId) => {
               const animal = animals[animalId];
               const dayCount = animal.days?.length || 0;
