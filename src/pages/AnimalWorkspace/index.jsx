@@ -19,6 +19,7 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
+import { CalendarDayCreator } from '../../components/CalendarDayCreator/CalendarDayCreator';
 import './AnimalWorkspace.css';
 
 /**
@@ -30,7 +31,7 @@ import './AnimalWorkspace.css';
 export function AnimalWorkspace() {
   const { model, actions, selectors } = useStoreContext();
   const [selectedAnimalId, setSelectedAnimalId] = useState(null);
-  const [newDayDate, setNewDayDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [showCalendar, setShowCalendar] = useState(false);
 
   const { animals, days } = model.workspace;
   const animalIds = Object.keys(animals);
@@ -57,45 +58,47 @@ export function AnimalWorkspace() {
   }
 
   /**
-   * Handle adding a new recording day
+   * Handle creating multiple recording days from calendar
+   * @param {string[]} dates - Array of ISO date strings (YYYY-MM-DD)
    */
-  function handleAddDay() {
-    if (!selectedAnimalId || !newDayDate) return;
+  async function handleCreateDays(dates) {
+    if (!selectedAnimalId || !dates || dates.length === 0) return;
 
-    // Validate date
-    if (!newDayDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      alert('Invalid date format. Please use YYYY-MM-DD.');
-      return;
-    }
+    for (const date of dates) {
+      const sessionId = `${selectedAnimalId}_${date.replace(/-/g, '')}`;
+      const dayId = `${selectedAnimalId}-${date}`;
 
-    const sessionId = `${selectedAnimalId}_${newDayDate.replace(/-/g, '')}`;
-    const dayId = `${selectedAnimalId}-${newDayDate}`;
+      // Skip if day already exists
+      if (days[dayId]) {
+        continue;
+      }
 
-    // Check if day already exists
-    if (days[dayId]) {
-      alert(`Recording day for ${newDayDate} already exists for ${selectedAnimalId}`);
-      return;
-    }
-
-    try {
-      actions.createDay(selectedAnimalId, newDayDate, {
-        session_id: sessionId,
-        session_description: `Recording session for ${selectedAnimalId} on ${newDayDate}`,
-      });
-
-      // Reset to today after successful creation
-      setNewDayDate(new Date().toISOString().split('T')[0]);
-    } catch (error) {
-      alert(`Failed to create day: ${error.message}`);
-      console.error('Error creating day:', error);
+      try {
+        actions.createDay(selectedAnimalId, date, {
+          session_id: sessionId,
+          session_description: `Recording session for ${selectedAnimalId} on ${date}`,
+        });
+      } catch (error) {
+        console.error(`Failed to create day ${date}:`, error);
+        throw new Error(`Failed to create day ${date}: ${error.message}`);
+      }
     }
   }
 
   /**
-   * Handle batch create days (stub for future milestone)
+   * Toggle calendar visibility
    */
-  function handleBatchCreateDays() {
-    alert('Batch create days: Coming soon in future milestone!');
+  function handleToggleCalendar() {
+    setShowCalendar(!showCalendar);
+  }
+
+  /**
+   * Get existing days for selected animal
+   * @returns {string[]} Array of ISO date strings
+   */
+  function getExistingDays() {
+    if (!selectedAnimal) return [];
+    return selectedAnimal.days.map((dayId) => days[dayId]?.date).filter(Boolean);
   }
 
   return (
@@ -158,35 +161,28 @@ export function AnimalWorkspace() {
                     Recording Days for {selectedAnimal.id}
                   </h2>
                   <div className="day-actions">
-                    <div className="add-day-group">
-                      <label htmlFor="new-day-date" className="visually-hidden">
-                        Recording date
-                      </label>
-                      <input
-                        id="new-day-date"
-                        type="date"
-                        value={newDayDate}
-                        onChange={(e) => setNewDayDate(e.target.value)}
-                        className="date-input"
-                        aria-label="Select date for new recording day"
-                      />
-                      <button
-                        className="btn-primary"
-                        onClick={handleAddDay}
-                        aria-label="Add recording day"
-                      >
-                        Add Recording Day
-                      </button>
-                    </div>
                     <button
-                      className="btn-secondary"
-                      onClick={handleBatchCreateDays}
-                      aria-label="Batch create days"
+                      className="btn-primary"
+                      onClick={handleToggleCalendar}
+                      aria-label={showCalendar ? 'Hide calendar' : 'Show calendar'}
+                      aria-expanded={showCalendar}
                     >
-                      Batch Create Days
+                      {showCalendar ? 'Hide Calendar' : 'Add Recording Days'}
                     </button>
                   </div>
                 </header>
+
+                {/* Calendar for creating multiple days */}
+                {showCalendar && (
+                  <div className="calendar-container">
+                    <CalendarDayCreator
+                      animalId={selectedAnimalId}
+                      existingDays={getExistingDays()}
+                      onCreateDays={handleCreateDays}
+                      onClose={() => setShowCalendar(false)}
+                    />
+                  </div>
+                )}
 
                 {selectedAnimal.days.length === 0 ? (
                   /* Empty State: No Days */

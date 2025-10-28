@@ -151,7 +151,7 @@ describe('AnimalWorkspace Component (M4) - Initial State', () => {
     });
   });
 
-  describe('Recording Day Creation with Date Picker', () => {
+  describe('Recording Day Creation with Calendar', () => {
     let originalHash;
 
     beforeEach(() => {
@@ -162,7 +162,7 @@ describe('AnimalWorkspace Component (M4) - Initial State', () => {
       window.location.hash = originalHash;
     });
 
-    it('renders date input with today as default value', async () => {
+    it('shows button to open calendar for adding days', async () => {
       const user = userEvent.setup();
 
       const initialState = {
@@ -188,17 +188,14 @@ describe('AnimalWorkspace Component (M4) - Initial State', () => {
       const animalButton = screen.getByRole('button', { name: /testanimal/i });
       await user.click(animalButton);
 
-      // Check date input exists with today's date
-      const dateInput = screen.getByLabelText(/select date for new recording day/i);
-      expect(dateInput).toBeInTheDocument();
-      expect(dateInput.type).toBe('date');
-
-      // Should default to today's date (YYYY-MM-DD format)
-      const today = new Date().toISOString().split('T')[0];
-      expect(dateInput.value).toBe(today);
+      // Check for "Add Recording Days" button (aria-label is "Show calendar")
+      const addButton = screen.getByRole('button', { name: /show calendar/i });
+      expect(addButton).toBeInTheDocument();
+      // Button text should be "Add Recording Days"
+      expect(addButton).toHaveTextContent(/add recording days/i);
     });
 
-    it('allows user to change the date before creating a day', async () => {
+    it('opens calendar when button is clicked', async () => {
       const user = userEvent.setup();
 
       const initialState = {
@@ -224,65 +221,50 @@ describe('AnimalWorkspace Component (M4) - Initial State', () => {
       const animalButton = screen.getByRole('button', { name: /testanimal/i });
       await user.click(animalButton);
 
-      // Change the date
-      const dateInput = screen.getByLabelText(/select date for new recording day/i);
-      await user.clear(dateInput);
-      await user.type(dateInput, '2023-06-22');
-
-      expect(dateInput.value).toBe('2023-06-22');
-    });
-
-    it('prevents creating duplicate days for the same date', async () => {
-      const user = userEvent.setup();
-
-      const initialState = {
-        workspace: {
-          animals: {
-            testanimal: {
-              subject: { subject_id: 'testanimal' },
-              days: ['testanimal-2023-06-22'],
-            },
-          },
-          days: {
-            'testanimal-2023-06-22': {
-              id: 'testanimal-2023-06-22',
-              animalId: 'testanimal',
-              date: '2023-06-22',
-              session: { session_id: 'testanimal_20230622' },
-              state: { draft: true },
-            },
-          },
-          settings: {},
-        },
-      };
-
-      // Mock window.alert
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
-
-      render(
-        <StoreProvider initialState={initialState}>
-          <AnimalWorkspace />
-        </StoreProvider>
-      );
-
-      // Select animal
-      const animalButton = screen.getByRole('button', { name: /testanimal/i });
-      await user.click(animalButton);
-
-      // Try to create day for existing date
-      const dateInput = screen.getByLabelText(/select date for new recording day/i);
-      await user.clear(dateInput);
-      await user.type(dateInput, '2023-06-22');
-
-      const addButton = screen.getByRole('button', { name: /add recording day/i });
+      // Click "Add Recording Days" button
+      const addButton = screen.getByRole('button', { name: /show calendar/i });
       await user.click(addButton);
 
-      // Should show alert
-      expect(alertSpy).toHaveBeenCalledWith(
-        expect.stringContaining('already exists')
+      // Calendar should appear
+      expect(screen.getByRole('dialog', { name: /recording days calendar/i })).toBeInTheDocument();
+    });
+
+    it('hides calendar when close button is clicked', async () => {
+      const user = userEvent.setup();
+
+      const initialState = {
+        workspace: {
+          animals: {
+            testanimal: {
+              subject: { subject_id: 'testanimal' },
+              days: [],
+            },
+          },
+          days: {},
+          settings: {},
+        },
+      };
+
+      render(
+        <StoreProvider initialState={initialState}>
+          <AnimalWorkspace />
+        </StoreProvider>
       );
 
-      alertSpy.mockRestore();
+      // Select animal
+      const animalButton = screen.getByRole('button', { name: /testanimal/i });
+      await user.click(animalButton);
+
+      // Open calendar
+      const addButton = screen.getByRole('button', { name: /show calendar/i });
+      await user.click(addButton);
+
+      // Close calendar
+      const closeButton = screen.getByRole('button', { name: /close calendar/i });
+      await user.click(closeButton);
+
+      // Calendar should be hidden
+      expect(screen.queryByRole('dialog', { name: /recording days calendar/i })).not.toBeInTheDocument();
     });
   });
 

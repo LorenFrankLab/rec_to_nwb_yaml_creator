@@ -271,3 +271,10 @@
 .create-animal-link:hover {
   background-color: #1976d2;
 }
+
+/* Calendar Container */
+.calendar-container {
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: center;
+}
