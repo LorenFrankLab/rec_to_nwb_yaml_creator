@@ -321,6 +321,7 @@ describe('ElectrodeGroupModal', () => {
         targeted_y: 2.5,
         targeted_z: 3.5,
         units: 'μm',
+        bad_channels: '',
       });
     });
 
@@ -690,6 +691,149 @@ describe('ElectrodeGroupModal', () => {
       expect(callArgs.targeted_x).toBe(-1.0);
       expect(callArgs.targeted_y).toBe(-2.0);
       expect(callArgs.targeted_z).toBe(-3.0);
+    });
+  });
+
+  describe('Bad channels field', () => {
+    it('should render bad_channels input field', () => {
+      render(
+        <ElectrodeGroupModal
+          isOpen={true}
+          mode="add"
+          onSave={() => {}}
+          onCancel={() => {}}
+        />
+      );
+
+      expect(screen.getByLabelText(/bad channels/i)).toBeInTheDocument();
+    });
+
+    it('should pre-populate bad_channels in edit mode', () => {
+      const group = {
+        id: 'eg1',
+        device_type: 'tetrode_12.5',
+        location: 'CA1',
+        targeted_x: 1.0,
+        targeted_y: 2.0,
+        targeted_z: 3.0,
+        units: 'mm',
+        bad_channels: '0,1,3',
+      };
+
+      render(
+        <ElectrodeGroupModal
+          isOpen={true}
+          mode="edit"
+          group={group}
+          onSave={() => {}}
+          onCancel={() => {}}
+        />
+      );
+
+      expect(screen.getByDisplayValue('0,1,3')).toBeInTheDocument();
+    });
+
+    it('should save bad_channels with form data', async () => {
+      const onSave = vi.fn();
+      render(
+        <ElectrodeGroupModal
+          isOpen={true}
+          mode="add"
+          onSave={onSave}
+          onCancel={() => {}}
+        />
+      );
+
+      const deviceTypeSelect = screen.getByLabelText(/device type/i);
+      const locationInput = screen.getByLabelText(/location/i);
+      const apInput = screen.getByLabelText(/ap|anterior[- ]?posterior/i);
+      const mlInput = screen.getByLabelText(/ml|medial[- ]?lateral/i);
+      const dvInput = screen.getByLabelText(/dv|dorsal[- ]?ventral/i);
+      const badChannelsInput = screen.getByLabelText(/bad channels/i);
+
+      await user.selectOptions(deviceTypeSelect, 'tetrode_12.5');
+      await user.type(locationInput, 'CA1');
+      await user.type(apInput, '1.0');
+      await user.type(mlInput, '2.0');
+      await user.type(dvInput, '3.0');
+      await user.type(badChannelsInput, '0,2');
+
+      const saveButton = screen.getByRole('button', { name: /save/i });
+      await user.click(saveButton);
+
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          bad_channels: '0,2',
+        })
+      );
+    });
+
+    it('should allow empty bad_channels (optional field)', async () => {
+      const onSave = vi.fn();
+      render(
+        <ElectrodeGroupModal
+          isOpen={true}
+          mode="add"
+          onSave={onSave}
+          onCancel={() => {}}
+        />
+      );
+
+      const deviceTypeSelect = screen.getByLabelText(/device type/i);
+      const locationInput = screen.getByLabelText(/location/i);
+      const apInput = screen.getByLabelText(/ap|anterior[- ]?posterior/i);
+      const mlInput = screen.getByLabelText(/ml|medial[- ]?lateral/i);
+      const dvInput = screen.getByLabelText(/dv|dorsal[- ]?ventral/i);
+
+      await user.selectOptions(deviceTypeSelect, 'tetrode_12.5');
+      await user.type(locationInput, 'CA1');
+      await user.type(apInput, '1.0');
+      await user.type(mlInput, '2.0');
+      await user.type(dvInput, '3.0');
+
+      const saveButton = screen.getByRole('button', { name: /save/i });
+      await user.click(saveButton);
+
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          bad_channels: '',
+        })
+      );
+    });
+
+    it('should handle bad_channels with spaces in comma-separated list', async () => {
+      const onSave = vi.fn();
+      render(
+        <ElectrodeGroupModal
+          isOpen={true}
+          mode="add"
+          onSave={onSave}
+          onCancel={() => {}}
+        />
+      );
+
+      const deviceTypeSelect = screen.getByLabelText(/device type/i);
+      const locationInput = screen.getByLabelText(/location/i);
+      const apInput = screen.getByLabelText(/ap|anterior[- ]?posterior/i);
+      const mlInput = screen.getByLabelText(/ml|medial[- ]?lateral/i);
+      const dvInput = screen.getByLabelText(/dv|dorsal[- ]?ventral/i);
+      const badChannelsInput = screen.getByLabelText(/bad channels/i);
+
+      await user.selectOptions(deviceTypeSelect, 'tetrode_12.5');
+      await user.type(locationInput, 'CA1');
+      await user.type(apInput, '1.0');
+      await user.type(mlInput, '2.0');
+      await user.type(dvInput, '3.0');
+      await user.type(badChannelsInput, '0, 1, 3');
+
+      const saveButton = screen.getByRole('button', { name: /save/i });
+      await user.click(saveButton);
+
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          bad_channels: '0, 1, 3',
+        })
+      );
     });
   });
 });

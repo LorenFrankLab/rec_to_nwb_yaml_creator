@@ -16,11 +16,12 @@ import './ElectrodeGroupModal.scss';
  * Features:
  * - Add mode: creates new electrode group
  * - Edit mode: updates existing electrode group
- * - Form validation: all fields required
+ * - Form validation: required fields validation
  * - Device type: dropdown with probe types
  * - Location: input field for brain region
  * - Coordinates: AP (targeted_x), ML (targeted_y), DV (targeted_z)
  * - Units: mm or μm
+ * - Bad channels: optional comma-separated list of non-functional channel indices
  *
  * @param {object} props Component properties
  * @param {boolean} props.isOpen Whether modal is currently open
@@ -58,6 +59,7 @@ const ElectrodeGroupModal = ({ isOpen, mode = 'add', group = null, onSave, onCan
     targeted_y: '',
     targeted_z: '',
     units: 'mm',
+    bad_channels: '',
   });
 
   // Initialize form data from group prop in edit mode
@@ -70,6 +72,7 @@ const ElectrodeGroupModal = ({ isOpen, mode = 'add', group = null, onSave, onCan
         targeted_y: group.targeted_y !== undefined && group.targeted_y !== '' ? String(group.targeted_y) : '',
         targeted_z: group.targeted_z !== undefined && group.targeted_z !== '' ? String(group.targeted_z) : '',
         units: group.units || 'mm',
+        bad_channels: group.bad_channels || '',
       });
     } else if (mode === 'add') {
       setFormData({
@@ -79,6 +82,7 @@ const ElectrodeGroupModal = ({ isOpen, mode = 'add', group = null, onSave, onCan
         targeted_y: '',
         targeted_z: '',
         units: 'mm',
+        bad_channels: '',
       });
     }
   }, [mode, group, isOpen]);
@@ -117,6 +121,7 @@ const ElectrodeGroupModal = ({ isOpen, mode = 'add', group = null, onSave, onCan
       targeted_y: parseFloat(formData.targeted_y),
       targeted_z: parseFloat(formData.targeted_z),
       units: formData.units,
+      bad_channels: formData.bad_channels,
     };
 
     onSave(dataToSave);
@@ -282,6 +287,20 @@ const ElectrodeGroupModal = ({ isOpen, mode = 'add', group = null, onSave, onCan
             </select>
           </div>
 
+          {/* Bad Channels */}
+          <div className="form-group">
+            <label htmlFor="bad_channels">Bad Channels (comma-separated)</label>
+            <input
+              id="bad_channels"
+              type="text"
+              name="bad_channels"
+              placeholder="e.g., 0,1,5"
+              value={formData.bad_channels}
+              onChange={handleInputChange}
+            />
+            <span className="help-text">List channel indices that are non-functional (optional)</span>
+          </div>
+
           {/* Buttons */}
           <div className="form-actions">
             <button
@@ -319,6 +338,7 @@ ElectrodeGroupModal.propTypes = {
     targeted_y: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     targeted_z: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     units: PropTypes.string,
+    bad_channels: PropTypes.string,
   }),
   onSave: PropTypes.func.isRequired,
   onCancel: PropTypes.func.isRequired,
