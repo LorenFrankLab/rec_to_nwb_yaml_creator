@@ -11,7 +11,7 @@
 
 ## Current Session: M5.5 Post-Release Fixes
 
-**Status:** 🔧 Addressing user feedback on M5.5 Animal Creation Form
+**Status:** ✅ COMPLETE - Fixed navigation routing bug and sex field
 
 **User Feedback:**
 
@@ -22,8 +22,15 @@
 
 1. ✅ Removed "Other (O)" option from Sex radio buttons in AnimalCreationForm.jsx
 2. ✅ Added URL parameter handling to AnimalWorkspace - reads `?animal=<id>` to auto-select animal
-3. ✅ Added 2 new tests for URL parameter functionality
-4. ✅ All 2372 tests passing (2370 + 2 new)
+3. ✅ **Fixed parseHashRoute to strip query parameters before route matching**
+   - Issue: `#/workspace?animal=bean` was treated as unknown route → fell back to legacy form
+   - Fix: Strip query parameters before matching routes in useHashRouter.js
+   - Added 4 new tests for query parameter handling
+4. ✅ All 2376 tests passing (2372 previous + 2 AnimalWorkspace tests + 2 router hook tests + 4 parseHashRoute tests)
+
+**Root Cause:**
+
+The navigation was going to the correct URL (`#/workspace?animal=bean`), but the hash router was rejecting it because it didn't match the exact string `"/workspace"`. The router needed to strip query parameters before matching.
 
 **Note on Experimenter Names:**
 

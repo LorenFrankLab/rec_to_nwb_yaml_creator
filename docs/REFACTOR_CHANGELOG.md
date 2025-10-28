@@ -6,6 +6,49 @@
 
 ---
 
+## M5.5.2 - Fix Hash Router Query Parameter Handling (October 28, 2025)
+
+### Summary
+
+Fixed critical routing bug where URLs with query parameters (e.g., `#/workspace?animal=bean`) were treated as unknown routes and fell back to legacy form instead of loading the modern workspace view.
+
+### Root Cause
+
+The `parseHashRoute` function in `useHashRouter.js` was doing exact string matching on the full hash including query parameters. When navigation went to `#/workspace?animal=bean`, it failed to match `"/workspace"` and fell back to the legacy view.
+
+### Changes
+
+#### Bug Fixes
+
+- **`src/hooks/useHashRouter.js`**
+  - Added query parameter stripping before route matching (line 51-53)
+  - Extract path from hash using `cleanHash.split('?')[0]`
+  - Use `pathWithoutQuery` for all route matching logic
+  - Now correctly routes `#/workspace?animal=bean` → workspace view
+  - Now correctly routes `#/day/123?view=details` → day view with id=123
+
+#### Tests Added
+
+- **`src/hooks/__tests__/useHashRouter.test.js`** - Added 4 tests
+  - Test `#/workspace?animal=bean` routes to workspace
+  - Test `#/home?foo=bar` routes to home
+  - Test `#/validation?status=draft` routes to validation
+  - Test `#/day/123?view=details` routes to day with id=123
+  - Updated existing query parameter test (line 388-395)
+  - Total tests now: 40 (was 36)
+
+### Test Results
+
+**All 2376 tests passing** (2372 + 2 AnimalWorkspace + 2 previous fixes + 4 parseHashRoute tests, 1 skipped)
+
+### Impact
+
+- **Navigation now works correctly**: Home → create animal → AnimalWorkspace (with animal auto-selected)
+- All hash routes now support query parameters without breaking
+- Future-proofs routing for additional query parameter use cases
+
+---
+
 ## M5.5.1 - Animal Creation Form Post-Release Fixes (October 28, 2025)
 
 ### Summary
@@ -19,13 +62,14 @@ Fixed user-reported issues from M5.5 initial release:
 #### Bug Fixes
 
 - **`src/pages/Home/AnimalCreationForm.jsx`**
-  - Removed "Other (O)" option from Sex radio buttons (line 368)
+  - Removed "Other (O)" option from Sex radio buttons (line 365-367)
   - Sex field now only offers: Male (M), Female (F), Unknown (U)
   - No test changes required (tests only used 'U')
 
 - **`src/pages/AnimalWorkspace/index.jsx`**
-  - Added `useEffect` hook to read `?animal=<id>` URL parameter on mount
+  - Added `useEffect` hook to read `?animal=<id>` URL parameter on mount (line 40-48)
   - Auto-selects animal if parameter present and animal exists
+  - Gracefully handles non-existent animal IDs
   - Fixes navigation from Home after animal creation
 
 #### Tests Added
@@ -37,12 +81,12 @@ Fixed user-reported issues from M5.5 initial release:
 
 ### Test Results
 
-**All 2372 tests passing** (2370 + 2 new, 1 skipped)
+**2374 tests passing** (2372 + 2 new, 1 skipped)
 
 ### Impact
 
-- Users can now successfully navigate from Home → AnimalWorkspace after creating an animal
 - Sex field matches NWB standard values (no "Other" option)
+- AnimalWorkspace can read URL parameters (prerequisite for M5.5.2 fix)
 - Experimenter names remain unchanged (correctly support full names like "Kyu Hyun Lee")
 
 ---

@@ -49,6 +49,27 @@ describe('parseHashRoute', () => {
     });
   });
 
+  describe('routes with query parameters', () => {
+    it('parses #/workspace?animal=bean correctly', () => {
+      expect(parseHashRoute('#/workspace?animal=bean')).toEqual({ view: 'workspace', params: {} });
+    });
+
+    it('parses #/home?foo=bar correctly', () => {
+      expect(parseHashRoute('#/home?foo=bar')).toEqual({ view: 'home', params: {} });
+    });
+
+    it('parses #/validation?status=draft correctly', () => {
+      expect(parseHashRoute('#/validation?status=draft')).toEqual({ view: 'validation', params: {} });
+    });
+
+    it('parses #/day/123?view=details correctly', () => {
+      expect(parseHashRoute('#/day/123?view=details')).toEqual({
+        view: 'day',
+        params: { id: '123' }
+      });
+    });
+  });
+
   describe('day route with ID parameter', () => {
     it('parses #/day/123 with valid ID', () => {
       expect(parseHashRoute('#/day/123')).toEqual({
@@ -385,13 +406,13 @@ describe('useHashRouter hook', () => {
       });
     });
 
-    it('handles hash with query parameters (future-proofing)', () => {
+    it('handles hash with query parameters', () => {
       window.location.hash = '#/workspace?animal=remy';
       const { result } = renderHook(() => useHashRouter());
 
-      // Currently ignores query params, but should not crash
-      expect(result.current.view).toBe('legacy'); // Not parsed yet
-      expect(result.current.isUnknownRoute).toBe(true);
+      // Should strip query params and match route correctly
+      expect(result.current.view).toBe('workspace');
+      expect(result.current.params).toEqual({});
     });
 
     it('handles hash with anchor fragments', () => {

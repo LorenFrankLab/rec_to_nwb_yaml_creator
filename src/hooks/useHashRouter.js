@@ -48,21 +48,25 @@ export function parseHashRoute(hash = typeof window !== 'undefined' ? window.loc
     return { view: 'legacy', params: {} };
   }
 
-  // Exact matches
-  if (cleanHash === '/home') {
+  // Strip query parameters for route matching
+  // e.g., "/workspace?animal=bean" -> "/workspace"
+  const pathWithoutQuery = cleanHash.split('?')[0];
+
+  // Exact matches (without query parameters)
+  if (pathWithoutQuery === '/home') {
     return { view: 'home', params: {} };
   }
 
-  if (cleanHash === '/workspace') {
+  if (pathWithoutQuery === '/workspace') {
     return { view: 'workspace', params: {} };
   }
 
-  if (cleanHash === '/validation') {
+  if (pathWithoutQuery === '/validation') {
     return { view: 'validation', params: {} };
   }
 
-  // Pattern match for /day/:id
-  const dayMatch = cleanHash.match(/^\/day\/([^/]+)$/);
+  // Pattern match for /day/:id (without query parameters)
+  const dayMatch = pathWithoutQuery.match(/^\/day\/([^/]+)$/);
   if (dayMatch) {
     const id = dayMatch[1];
 
