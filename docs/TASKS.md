@@ -72,19 +72,24 @@
   * ✅ Blocks merges if outputs differ (in CI pipeline)
   * ✅ Tests byte-for-byte equality, round-trip consistency, format stability
 * [x] Integrate with Vitest baseline suite. ✅ Already integrated and running in CI
-* [ ] Document regression protocol in `CLAUDE.md`.
+* [x] Document regression protocol in `CLAUDE.md`. ✅ Added comprehensive documentation
+  * ✅ Golden baseline test explanation
+  * ✅ Regeneration protocol
+  * ✅ Test coverage summary (2149 tests)
+  * ✅ CI/CD integration details
 
 **Acceptance (DoD)**
 
-* All YAML fixtures pass shadow export test.
-* No UI changes.
-* Utilities fully unit-tested.
+* ✅ All YAML fixtures pass shadow export test.
+* ✅ No UI changes.
+* ✅ Utilities fully unit-tested.
 
 **Artifacts**
 
-* `src/utils/yamlExport.js`
-* `src/utils/schemaValidator.js`
-* `tests/baseline/shadowExport.test.jsx`
+* ✅ `src/io/yaml.js` (YAML utilities)
+* ✅ `src/validation/` (Schema validator module)
+* ✅ `src/__tests__/baselines/golden-yaml.baseline.test.js` (Shadow export tests)
+* ✅ Updated `CLAUDE.md` with regression protocol
 
 ---
 

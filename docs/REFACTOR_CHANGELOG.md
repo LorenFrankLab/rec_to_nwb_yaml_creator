@@ -111,11 +111,51 @@ src/validation/
 
 **Conclusion:** M1 second task already complete. No action needed.
 
-### Next Steps (M1 Continuation)
+### Regression Protocol Documentation
 
-1. Add shadow export test for YAML parity verification
-2. Integrate shadow export with Vitest baseline suite
-3. Document regression protocol in CLAUDE.md
+Added comprehensive regression prevention documentation to CLAUDE.md:
+
+**Documentation Added:**
+- Golden baseline test explanation (how they work, what they catch)
+- Regeneration protocol (when/how to update golden fixtures)
+- Test coverage summary (2149 tests across 109 files)
+- CI/CD integration details
+- Safety guidelines for preventing data corruption
+- Golden fixture file descriptions (4 files: sample, minimal, realistic, probe-reconfig)
+
+**Key Sections:**
+1. How golden baseline tests work (read → parse → export → compare)
+2. When golden baseline tests fail (investigation protocol)
+3. When to regenerate fixtures (ONLY for intentional changes)
+4. When NEVER to regenerate (convenience, ignorance)
+5. Test coverage breakdown (YAML: 50, Validation: 189, Baselines: 18)
+
+### M1 Status: COMPLETE ✅
+
+**All 5 tasks complete:**
+
+1. ✅ Extract YAML utilities - Already existed as `io/yaml.js` (50 tests)
+2. ✅ Create schema validator - Already existed as `validation/` (189 tests)
+3. ✅ Add shadow export test - Already existed as golden baselines (18 tests)
+4. ✅ Integrate with Vitest - Already integrated in CI
+5. ✅ Document regression protocol - Added to CLAUDE.md
+
+**Total test coverage:** 2149 tests passing across 109 test files
+
+**Files Changed in M1:**
+```
+CLAUDE.md                                                - Regression protocol added (158 lines)
+docs/TASKS.md                                           - M1 marked complete
+docs/SCRATCHPAD.md                                      - M1 summary added
+docs/REFACTOR_CHANGELOG.md                              - M1 complete section
+src/__tests__/unit/io/yaml-decodeYaml.test.js          - 285 lines (new, +23 tests)
+src/__tests__/unit/app/App-convertObjectToYAMLString... - Documentation updated
+src/utils/yamlExport.js                                 - Deleted (deprecated)
+```
+
+**Breaking Changes:** None
+
+**Next Milestone:** M2 - UI Skeleton (Single-Page Compatible + A11y Baseline)
 
 ---
 

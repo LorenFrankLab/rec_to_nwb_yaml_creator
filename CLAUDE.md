@@ -445,12 +445,160 @@ When adding a new probe/device type to support:
 - `64c-3s6mm6cm-20um-40um-sl` - 64-channel, 3 shanks
 - `NET-EBL-128ch-single-shank` - 128-channel single shank
 
-## Testing Notes
+## Regression Prevention Protocol
 
-The codebase has minimal test coverage ([App.test.js](src/App.test.js)). When adding features:
+**CRITICAL:** This application generates YAML files that represent irreplaceable scientific data. Regressions in YAML output can corrupt experiments. We use **golden baseline tests** to prevent unintended changes.
+
+### Golden Baseline Tests
+
+Location: [src/__tests__/baselines/golden-yaml.baseline.test.js](src/__tests__/baselines/golden-yaml.baseline.test.js)
+
+**Purpose:** Ensure YAML export is deterministic and byte-for-byte identical across code changes.
+
+**Coverage:**
+- 18 comprehensive tests
+- 4 golden fixture files (sample, minimal, realistic, probe-reconfig)
+- Tests: deterministic export, round-trip consistency, format stability, edge cases
+
+### How Golden Baseline Tests Work
+
+```javascript
+// 1. Read golden fixture (known-good YAML file)
+const golden = readGoldenFixture('20230622_sample_metadata.yml');
+
+// 2. Parse YAML to JavaScript object
+const parsed = YAML.parse(golden);
+
+// 3. Re-export using our YAML encoder
+const reexported = encodeYaml(parsed);
+
+// 4. Compare byte-for-byte (MUST be identical)
+expect(reexported).toBe(golden);
+```
+
+**What This Catches:**
+- Unintended formatting changes (indentation, line endings, key order)
+- Data type changes (string → number, null → undefined)
+- Precision loss in numeric values
+- Encoding changes (UTF-8, special characters)
+- Library version changes that affect output
+
+### When Golden Baseline Tests Fail
+
+**🚨 DO NOT ignore golden baseline test failures!**
+
+If `golden-yaml.baseline.test.js` tests fail:
+
+1. **Investigate the cause:**
+   ```bash
+   npm test -- src/__tests__/baselines/golden-yaml.baseline.test.js --run
+   ```
+
+2. **Review the diff carefully:**
+   - Is the change intentional? (e.g., fixing a bug, upgrading YAML library)
+   - Does it affect data integrity?
+   - Will it break existing YAML files?
+
+3. **If the change is INTENTIONAL and SAFE:**
+   ```bash
+   # Regenerate golden fixtures
+   node src/__tests__/fixtures/golden/generate-golden.js
+
+   # Review the diff BEFORE committing
+   git diff src/__tests__/fixtures/golden/
+
+   # Run tests again to verify
+   npm test -- src/__tests__/baselines/golden-yaml.baseline.test.js --run
+   ```
+
+4. **Document the change:**
+   - Update CHANGELOG.md with breaking change notice
+   - Add migration guide if needed
+   - Coordinate with trodes_to_nwb team if format changed
+
+5. **Test integration:**
+   ```bash
+   # Generate test YAML from app
+   # Load into trodes_to_nwb and verify conversion succeeds
+   cd /Users/edeno/Documents/GitHub/trodes_to_nwb
+   python -c "from trodes_to_nwb.convert import create_nwbs; create_nwbs('test_data')"
+   ```
+
+### When to Regenerate Golden Fixtures
+
+**ONLY regenerate when:**
+- ✅ Fixing a known data corruption bug
+- ✅ Upgrading YAML library for security/compatibility
+- ✅ Adding new required fields to schema
+- ✅ Intentionally changing output format (with team approval)
+
+**NEVER regenerate because:**
+- ❌ Tests are "annoying" or "in the way"
+- ❌ You don't understand why they're failing
+- ❌ You want to "make CI green quickly"
+- ❌ The diff looks "small" or "harmless"
+
+### Golden Fixture Files
+
+Located in: [src/__tests__/fixtures/golden/](src/__tests__/fixtures/golden/)
+
+1. **20230622_sample_metadata.yml** (16 KB)
+   - Complete session with optogenetics, cameras, tasks, electrode groups
+   - Most comprehensive fixture for testing complex structures
+
+2. **minimal-valid.yml** (260 bytes)
+   - Minimal valid NWB metadata (required fields only)
+   - Tests baseline validation
+
+3. **realistic-session.yml** (5 KB)
+   - Typical recording session without optogenetics
+   - Tests common use case
+
+4. **20230622_sample_metadataProbeReconfig.yml** (4 KB)
+   - Session with probe reconfiguration
+   - Tests electrode group changes
+
+### Test Coverage
+
+**Current Status:** 2149 tests passing across 109 test files
+
+**Key Test Suites:**
+- **YAML I/O:** 50 tests ([io/yaml.js](src/io/yaml.js) module)
+  - `encodeYaml()` - 8 tests
+  - `decodeYaml()` - 23 tests
+  - `formatDeterministicFilename()` - 12 tests
+  - `downloadYamlFile()` - 7 tests
+
+- **Validation:** 189 tests ([validation/](src/validation/) module)
+  - Schema validation (AJV)
+  - Business rules validation
+  - Integration tests
+
+- **Golden Baselines:** 18 tests
+  - Deterministic export verification
+  - Round-trip consistency
+  - Format stability
+
+### Adding New Tests
+
+When adding features:
 
 - Test form state updates with complex nested structures
 - Validate electrode group & ntrode map synchronization
 - Test import of YAML files with various validation scenarios
 - Verify dynamic dependencies (cameras, epochs, dio events) update correctly
 - **Integration Testing**: Generate YAML and test with trodes_to_nwb to ensure end-to-end compatibility
+
+### Continuous Integration
+
+All tests run on every commit via GitHub Actions:
+
+```yaml
+# .github/workflows/test.yml
+- Run schema version check
+- Run full test suite (2149 tests)
+- Golden baseline tests MUST pass
+- Fail CI if any test fails
+```
+
+**Golden baseline tests are NOT optional.** They are the safety net that prevents data corruption.

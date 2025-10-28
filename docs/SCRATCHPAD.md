@@ -11,7 +11,7 @@
 
 ## Current Session: M1 - Extract Pure Utilities
 
-**Status:** M1 in progress - YAML utilities complete, moving to schemaValidator
+**Status:** ✅ M1 COMPLETE - All utilities extracted, all tests passing, documentation complete
 
 ### Documents Created
 
@@ -98,10 +98,32 @@
   - Integrated with Vitest and CI pipeline
   - Feature flags exist: `shadowExportStrict`, `shadowExportLog`
 
-**Next:**
+- [x] **Document regression protocol** ✅ Comprehensive documentation added to CLAUDE.md
+  - Golden baseline test explanation
+  - Regeneration protocol (when/how to update fixtures)
+  - Test coverage summary (2149 tests across 109 files)
+  - CI/CD integration details
+  - Safety guidelines for preventing data corruption
 
-- [ ] Document regression protocol in CLAUDE.md
-- [ ] Consider M1 complete (all utilities extracted, all tests exist)
+## M1 Complete Summary
+
+**All 5 tasks complete:**
+
+1. ✅ Extract YAML utilities (io/yaml.js) - 50 tests
+2. ✅ Create schema validator (validation/) - 189 tests
+3. ✅ Add shadow export test (golden baselines) - 18 tests
+4. ✅ Integrate with Vitest - Running in CI
+5. ✅ Document regression protocol - Added to CLAUDE.md
+
+**Total test coverage:** 2149 tests passing across 109 test files
+
+**Outcome:** Infrastructure was already in place from earlier refactoring. This session focused on:
+
+- Adding missing test coverage (decodeYaml: +23 tests)
+- Auditing and documenting existing infrastructure
+- Creating comprehensive regression prevention documentation
+
+**Next Milestone:** M2 - UI Skeleton (Single-Page Compatible + A11y Baseline)
 
 ### Open Questions
 
