@@ -12,7 +12,7 @@ import { useState, useEffect } from 'react';
 /**
  * Route information object
  * @typedef {object} RouteInfo
- * @property {'home'|'workspace'|'day'|'validation'|'legacy'} view - Current view name
+ * @property {'home'|'workspace'|'day'|'validation'|'animal-editor'|'legacy'} view - Current view name
  * @property {Object.<string, string>} params - Route parameters (e.g., {id: '123'})
  * @property {boolean} [isUnknownRoute] - True if route was not recognized
  */
@@ -63,6 +63,15 @@ export function parseHashRoute(hash = typeof window !== 'undefined' ? window.loc
 
   if (pathWithoutQuery === '/validation') {
     return { view: 'validation', params: {} };
+  }
+
+  // Pattern match for /animal/:id/editor (without query parameters)
+  const animalEditorMatch = pathWithoutQuery.match(/^\/animal\/([^/]+)\/editor$/);
+  if (animalEditorMatch) {
+    return {
+      view: 'animal-editor',
+      params: { animalId: animalEditorMatch[1] }
+    };
   }
 
   // Pattern match for /day/:id (without query parameters)

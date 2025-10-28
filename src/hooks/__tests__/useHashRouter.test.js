@@ -506,4 +506,20 @@ describe('integration scenarios', () => {
       expect(result.current.isUnknownRoute).toBe(true);
     });
   });
+
+  it('parses #/animal/:id/editor route', () => {
+    window.location.hash = '#/animal/remy/editor';
+    const { result } = renderHook(() => useHashRouter());
+
+    expect(result.current.view).toBe('animal-editor');
+    expect(result.current.params.animalId).toBe('remy');
+  });
+
+  it('parses animal editor route with query params', () => {
+    window.location.hash = '#/animal/bean/editor?step=groups';
+    const { result } = renderHook(() => useHashRouter());
+
+    expect(result.current.view).toBe('animal-editor');
+    expect(result.current.params.animalId).toBe('bean');
+  });
 });
