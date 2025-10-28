@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
+import BrainRegionAutocomplete from '../../components/BrainRegionAutocomplete';
 import './ElectrodeGroupModal.scss';
 
 /**
@@ -215,15 +216,12 @@ const ElectrodeGroupModal = ({ isOpen, mode = 'add', group = null, onSave, onCan
 
           {/* Location */}
           <div className="form-group">
-            <label htmlFor="location">Location</label>
-            <input
-              id="location"
-              type="text"
-              name="location"
-              placeholder="e.g., CA1, M1, PFC"
+            <BrainRegionAutocomplete
               value={formData.location}
-              onChange={handleInputChange}
-              required
+              onChange={(value) => setFormData(prev => ({ ...prev, location: value }))}
+              label="Location"
+              name="location"
+              required={true}
             />
           </div>
 

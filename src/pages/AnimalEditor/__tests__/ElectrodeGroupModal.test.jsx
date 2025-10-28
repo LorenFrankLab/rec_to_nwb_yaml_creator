@@ -555,6 +555,43 @@ describe('ElectrodeGroupModal', () => {
     });
   });
 
+  describe('Location field - BrainRegionAutocomplete integration', () => {
+    it('should use BrainRegionAutocomplete component for location field', () => {
+      render(
+        <ElectrodeGroupModal
+          isOpen={true}
+          mode="add"
+          onSave={() => {}}
+          onCancel={() => {}}
+        />
+      );
+
+      const input = screen.getByLabelText(/location/i);
+      expect(input).toHaveAttribute('list', expect.stringContaining('brain-region'));
+    });
+
+    it('should provide autocomplete suggestions for brain regions', () => {
+      const { container } = render(
+        <ElectrodeGroupModal
+          isOpen={true}
+          mode="add"
+          onSave={() => {}}
+          onCancel={() => {}}
+        />
+      );
+
+      const datalistId = screen.getByLabelText(/location/i).getAttribute('list');
+      const datalist = container.querySelector(`#${datalistId}`);
+      expect(datalist).toBeInTheDocument();
+
+      // Check for some common brain regions
+      const options = Array.from(datalist.querySelectorAll('option')).map((opt) => opt.value);
+      expect(options).toContain('CA1');
+      expect(options).toContain('M1');
+      expect(options).toContain('PFC');
+    });
+  });
+
   describe('Device type options', () => {
     it('should include common device types in dropdown', () => {
       render(
