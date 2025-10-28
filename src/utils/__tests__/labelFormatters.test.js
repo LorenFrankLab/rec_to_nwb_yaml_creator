@@ -15,37 +15,37 @@ import {
 
 describe('labelFormatters', () => {
   describe('formatElectrodeGroupLabel', () => {
-    it('formats complete electrode group with id and location', () => {
+    it('formats electrode group with id only (location not shown)', () => {
       expect(formatElectrodeGroupLabel({ id: 0, location: 'CA1' }))
-        .toBe('Electrode Group 0 - CA1');
+        .toBe('Electrode Group 0');
 
       expect(formatElectrodeGroupLabel({ id: 5, location: 'CA3' }))
-        .toBe('Electrode Group 5 - CA3');
+        .toBe('Electrode Group 5');
     });
 
-    it('handles missing location with "Unnamed" fallback', () => {
+    it('handles missing location (not displayed anyway)', () => {
       expect(formatElectrodeGroupLabel({ id: 1, location: '' }))
-        .toBe('Electrode Group 1 - Unnamed');
+        .toBe('Electrode Group 1');
     });
 
-    it('handles null location', () => {
+    it('handles null location (not displayed anyway)', () => {
       expect(formatElectrodeGroupLabel({ id: 1, location: null }))
-        .toBe('Electrode Group 1 - Unnamed');
+        .toBe('Electrode Group 1');
     });
 
-    it('handles undefined location', () => {
+    it('handles undefined location (not displayed anyway)', () => {
       expect(formatElectrodeGroupLabel({ id: 1 }))
-        .toBe('Electrode Group 1 - Unnamed');
+        .toBe('Electrode Group 1');
     });
 
-    it('handles complex location names', () => {
+    it('handles complex location names (not displayed in navigation)', () => {
       expect(formatElectrodeGroupLabel({ id: 2, location: 'alveus of the hippocampus (alv)' }))
-        .toBe('Electrode Group 2 - alveus of the hippocampus (alv)');
+        .toBe('Electrode Group 2');
     });
 
     it('handles numeric id of zero', () => {
       expect(formatElectrodeGroupLabel({ id: 0, location: 'DG' }))
-        .toBe('Electrode Group 0 - DG');
+        .toBe('Electrode Group 0');
     });
   });
 

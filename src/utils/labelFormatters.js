@@ -10,11 +10,11 @@
  * Format electrode group label
  * @param {object} item - Electrode group object
  * @param {number} item.id - Electrode group ID
- * @param {string} item.location - Brain region location
- * @returns {string} Formatted label: "Electrode Group {id} - {location}"
+ * @param {string} item.location - Brain region location (not displayed in navigation)
+ * @returns {string} Formatted label: "Electrode Group {id}"
  */
 export const formatElectrodeGroupLabel = (item) => {
-  return `Electrode Group ${item.id} - ${item.location || 'Unnamed'}`;
+  return `Electrode Group ${item.id}`;
 };
 
 /**
