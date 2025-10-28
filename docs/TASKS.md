@@ -252,26 +252,27 @@
 
 ---
 
-### **M5.5 – Animal Creation Form** 🎯
+### **M5.5 – Animal Creation Form** ✅
 
-**Status:** DESIGN_APPROVED - Ready for implementation
+**Status:** COMPLETE
 
 **Tasks**
 
-* [ ] Create `AnimalCreationForm.jsx` with 8 required fields (TDD)
-* [ ] Implement controlled inputs with field-level validation
-* [ ] Add species dropdown with constrained vocabulary
-* [ ] Add dynamic experimenter list (add/remove buttons)
-* [ ] Add HTML5 date picker with future date constraint
-* [ ] Implement smart defaults from workspace settings/last animal
-* [ ] Add uniqueness validation for subject_id
-* [ ] Update Home page to use AnimalCreationForm
-* [ ] Add success navigation to AnimalWorkspace
-* [ ] Add first-time user welcome message with escape hatch
-* [ ] Create Home.css with Material Design patterns
-* [ ] Write 20 comprehensive tests (15 form + 5 container)
-* [ ] Verify WCAG 2.1 Level AA compliance
-* [ ] Request code review
+* [x] Create `AnimalCreationForm.jsx` with 8 required fields (TDD)
+* [x] Implement controlled inputs with field-level validation
+* [x] Add species dropdown with constrained vocabulary
+* [x] Add dynamic experimenter list (add/remove buttons)
+* [x] Add HTML5 date picker with future date constraint
+* [x] Implement smart defaults from workspace settings/last animal
+* [x] Add uniqueness validation for subject_id
+* [x] Update Home page to use AnimalCreationForm
+* [x] Add success navigation to AnimalWorkspace
+* [x] Add first-time user welcome message with escape hatch
+* [x] Create Home.css with Material Design patterns
+* [x] Write 27 comprehensive tests (19 form + 8 container)
+* [x] Verify WCAG 2.1 Level AA compliance
+* [x] Request code review
+* [x] Fix P0 issues (JSDoc syntax, CSS variables)
 
 **Acceptance (DoD)**
 
@@ -285,11 +286,11 @@
 * ✅ Species uses constrained dropdown (prevents DB pollution)
 * ✅ After creation, navigates to AnimalWorkspace with animal selected
 * ✅ First-time users see welcome message with documentation link
-* ✅ All 20 tests passing (2359 total: 2339 + 20 new)
+* ✅ All 27 tests passing (2370 total: 2343 existing + 27 new)
 * ✅ WCAG 2.1 Level AA compliant
 * ✅ Keyboard navigation works (Tab, Enter, Escape, Ctrl+Enter)
 * ✅ Screen readers announce errors correctly
-* ✅ Code review approved (no P0/P1 issues)
+* ✅ Code review approved (all P0 issues fixed)
 
 **Rationale**
 
@@ -299,12 +300,13 @@
 
 **Artifacts**
 
-* ✅ `docs/M5.5_DESIGN.md` (design document with review feedback, 1300 lines)
-* [ ] `src/pages/Home/index.jsx` (update - replace stub, ~80 lines)
-* [ ] `src/pages/Home/AnimalCreationForm.jsx` (new - form component, ~350 lines)
-* [ ] `src/pages/Home/Home.css` (new - styling, ~250 lines)
-* [ ] `src/pages/Home/__tests__/Home.test.jsx` (new - 5 tests)
-* [ ] `src/pages/Home/__tests__/AnimalCreationForm.test.jsx` (new - 15 tests)
+* ✅ `docs/M5.5_DESIGN.md` (design document with review feedback, 1432 lines)
+* ✅ `src/pages/Home/index.jsx` (updated - container component, 146 lines)
+* ✅ `src/pages/Home/AnimalCreationForm.jsx` (new - form component, 560 lines)
+* ✅ `src/pages/Home/Home.css` (new - styling, 234 lines)
+* ✅ `src/pages/Home/__tests__/Home.test.jsx` (new - 8 tests, 198 lines)
+* ✅ `src/pages/Home/__tests__/AnimalCreationForm.test.jsx` (new - 19 tests, 388 lines)
+* ✅ `src/pages/DayEditor/DayEditor.css` (updated - added 4 CSS variables)
 
 **Form Fields (8 total):**
 
@@ -317,15 +319,15 @@
 7. Lab (text, pre-filled, required)
 8. Institution (text, pre-filled, required)
 
-**Test Results:** TBD (target 2359 tests: 2339 existing + 20 new)
+**Test Results:** 2370 tests passed, 1 skipped (27 new tests added)
 
 **Design Reviews:**
 
-* Code Review: REQUEST_CHANGES → APPROVED (all P0 issues resolved in design)
+* Code Review: REQUEST_CHANGES → APPROVED (P0-1: JSDoc fixed, P0-2: CSS variables added)
 * UI Review: NEEDS_POLISH → APPROVED (Material Design consistency, responsive)
 * UX Review: NEEDS_POLISH → APPROVED (progressive disclosure, smart defaults)
 
-**Estimated Effort:** 10-14 hours (1.5-2 days)
+**Actual Effort:** 12 hours (completed 2025-10-28)
 
 ---
 

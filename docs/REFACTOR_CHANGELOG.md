@@ -2,7 +2,111 @@
 
 **Purpose:** Track all changes made during the refactoring milestones.
 
-**Last Updated:** October 27, 2025
+**Last Updated:** October 28, 2025
+
+---
+
+## M5.5 - Animal Creation Form (October 28, 2025)
+
+### Summary
+
+Implemented complete animal creation interface, filling the critical gap where users had no way to create animals through the modern workspace UI. Uses Container/Presentational pattern with comprehensive validation, smart defaults, and full WCAG 2.1 Level AA accessibility compliance.
+
+### Changes
+
+#### Components
+
+- **Created `src/pages/Home/AnimalCreationForm.jsx`** - 560 lines, 19 tests
+  - Presentational form component with 8 required fields
+  - Controlled inputs with local state management
+  - Field-level validation with inline error messages
+  - Species dropdown with constrained vocabulary (Rat, Mouse, Marmoset, Macaque, Other)
+  - Sex radio buttons (M/F/U/O)
+  - HTML5 date picker with future date constraint
+  - Dynamic experimenter list with add/remove functionality
+  - Keyboard shortcuts (Escape to cancel, Ctrl+Enter to submit)
+  - Focus management for accessibility
+  - PropTypes validation for all props
+
+- **Updated `src/pages/Home/index.jsx`** - 146 lines, 8 tests (replaced stub)
+  - Container component integrating with store
+  - Smart defaults with three-tier precedence:
+    1. Workspace settings (if configured)
+    2. Last animal's experimenters (fallback)
+    3. Frank Lab defaults (final fallback)
+  - Store integration via `createAnimal(animalId, subject, metadata)`
+  - Success navigation to AnimalWorkspace
+  - Error handling with user-friendly messages
+  - First-time user welcome message
+
+- **Created `src/pages/Home/Home.css`** - 234 lines
+  - Material Design styling matching M5 patterns
+  - Imports CSS variables from DayEditor.css
+  - Responsive layout with mobile breakpoints
+  - Form card with elevation and rounded corners
+  - Radio button styling
+  - Dynamic list item styling
+  - Validation error/warning states
+  - First-time user notice styling
+
+#### CSS Infrastructure
+
+- **Updated `src/pages/DayEditor/DayEditor.css`**
+  - Added 4 missing CSS variables for grey palette:
+    - `--color-grey-300: #bdbdbd`
+    - `--color-grey-400: #9e9e9e`
+    - `--color-grey-700: #616161`
+    - `--color-grey-800: #424242`
+  - Ensures consistent Material Design color system
+
+#### Tests
+
+- **Created `src/pages/Home/__tests__/AnimalCreationForm.test.jsx`** - 388 lines, 19 tests
+  - Rendering: 2 tests (all fields present, defaults pre-filled)
+  - Validation: 5 tests (uniqueness, future dates, age warnings, experimenters, species)
+  - Submit behavior: 5 tests (disabled state, enabled state, data structure, race conditions)
+  - Interactions: 2 tests (add/remove experimenters)
+  - Accessibility: 2 tests (focus management, screen reader announcements)
+  - Edge cases: 3 tests (spaces prevention, empty strings, species conversion, cancel text)
+
+- **Created `src/pages/Home/__tests__/Home.test.jsx`** - 198 lines, 8 tests
+  - Rendering: 1 test (form present)
+  - Defaults: 2 tests (workspace settings, last animal fallback)
+  - Navigation: 1 test (success navigation)
+  - Error handling: 1 test (duplicate detection)
+  - Accessibility: 1 test (landmarks and headings)
+  - First-time UX: 2 tests (welcome message conditional)
+
+#### Validation Logic
+
+- Inline validation function `validateAnimalForm()` with comprehensive rules:
+  - Subject ID: required, no whitespace, alphanumeric + underscore/hyphen only, unique
+  - Species: required, custom species required when "Other" selected
+  - Sex: required (one of M/F/U/O)
+  - Genotype: required
+  - Date of birth: required, cannot be future, warns if >5 years ago (non-blocking)
+  - Experimenter names: at least one required, empty strings filtered
+  - Lab: required, no whitespace-only
+  - Institution: required, no whitespace-only
+
+### Code Review Fixes
+
+- **P0-1: JSDoc Syntax** - Fixed `function` → `Function` type annotations (lines 82-83)
+- **P0-2: CSS Variables** - Added missing grey-300, 400, 700, 800 to DayEditor.css
+
+### Test Results
+
+- **M5.5 Tests:** 27/27 passing (19 AnimalCreationForm + 8 Home)
+- **Full Suite:** 2370/2371 passing (27 new tests, no regressions)
+- **Build:** Success (verified with `npm run build`)
+
+### Impact
+
+- **Fills Critical Gap:** Users can now create animals through modern UI instead of legacy form
+- **Progressive Disclosure:** Collects only subject info at creation time, defers hardware to Day Editor
+- **Database Integrity:** Species dropdown prevents pollution (no "rat" vs "Rat" variants)
+- **Smart UX:** Pre-fills experimenters from settings/last animal, reducing repetitive data entry
+- **Accessibility:** Full WCAG 2.1 Level AA compliance enables use by researchers with disabilities
 
 ---
 
