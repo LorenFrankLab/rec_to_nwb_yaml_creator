@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StoreProvider } from '../../../state/StoreContext';
@@ -139,6 +139,14 @@ describe('AnimalEditorStepper', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useAnimalIdFromUrl.mockReturnValue('remy');
+
+    // Mock window.location.hash
+    delete window.location;
+    window.location = { hash: '' };
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe('Animal validation', () => {
@@ -208,6 +216,165 @@ describe('AnimalEditorStepper', () => {
 
       // Check button label changed
       expect(screen.getByRole('button', { name: /save configuration/i })).toBeInTheDocument();
+    });
+
+    it('Save button is enabled on final step', async () => {
+      const user = userEvent.setup();
+      renderWithStore(<AnimalEditorStepper />);
+
+      // Navigate to final step
+      const nextButton = screen.getByRole('button', { name: /next step/i });
+      await user.click(nextButton);
+
+      // Check button is enabled
+      const saveButton = screen.getByRole('button', { name: /save configuration/i });
+      expect(saveButton).not.toBeDisabled();
+    });
+  });
+
+  describe('Save functionality', () => {
+    it('navigates to create-day action when animal has no days', async () => {
+      const user = userEvent.setup();
+      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+
+      renderWithStore(<AnimalEditorStepper />);
+
+      // Navigate to final step
+      const nextButton = screen.getByRole('button', { name: /next step/i });
+      await user.click(nextButton);
+
+      // Click Save
+      const saveButton = screen.getByRole('button', { name: /save configuration/i });
+      await user.click(saveButton);
+
+      // Verify alert message for new animal
+      expect(alertSpy).toHaveBeenCalledWith('Configuration saved. Ready to create first recording day.');
+
+      // Verify navigation to create-day action
+      expect(window.location.hash).toBe('#/workspace?animal=remy&action=create-day');
+
+      alertSpy.mockRestore();
+    });
+
+    it('navigates to devices section when animal has days', async () => {
+      const user = userEvent.setup();
+      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+
+      const stateWithDays = {
+        workspace: {
+          animals: {
+            remy: {
+              id: 'remy',
+              subject: { subject_id: 'remy' },
+              devices: {
+                electrode_groups: [],
+                ntrode_electrode_group_channel_map: [],
+              },
+              days: ['remy-2023-06-22', 'remy-2023-06-23'],
+            },
+          },
+          days: {
+            'remy-2023-06-22': {
+              id: 'remy-2023-06-22',
+              animalId: 'remy',
+              date: '2023-06-22',
+            },
+            'remy-2023-06-23': {
+              id: 'remy-2023-06-23',
+              animalId: 'remy',
+              date: '2023-06-23',
+            },
+          },
+        },
+      };
+
+      renderWithStore(<AnimalEditorStepper />, stateWithDays);
+
+      // Navigate to final step
+      const nextButton = screen.getByRole('button', { name: /next step/i });
+      await user.click(nextButton);
+
+      // Click Save
+      const saveButton = screen.getByRole('button', { name: /save configuration/i });
+      await user.click(saveButton);
+
+      // Verify alert message shows day count (plural)
+      expect(alertSpy).toHaveBeenCalledWith('Configuration saved. 2 days will inherit changes.');
+
+      // Verify navigation to devices section
+      expect(window.location.hash).toBe('#/workspace?animal=remy&section=devices');
+
+      alertSpy.mockRestore();
+    });
+
+    it('shows singular day message when animal has one day', async () => {
+      const user = userEvent.setup();
+      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+
+      const stateWithOneDay = {
+        workspace: {
+          animals: {
+            remy: {
+              id: 'remy',
+              subject: { subject_id: 'remy' },
+              devices: {
+                electrode_groups: [],
+                ntrode_electrode_group_channel_map: [],
+              },
+              days: ['remy-2023-06-22'],
+            },
+          },
+          days: {
+            'remy-2023-06-22': {
+              id: 'remy-2023-06-22',
+              animalId: 'remy',
+              date: '2023-06-22',
+            },
+          },
+        },
+      };
+
+      renderWithStore(<AnimalEditorStepper />, stateWithOneDay);
+
+      // Navigate to final step
+      const nextButton = screen.getByRole('button', { name: /next step/i });
+      await user.click(nextButton);
+
+      // Click Save
+      const saveButton = screen.getByRole('button', { name: /save configuration/i });
+      await user.click(saveButton);
+
+      // Verify alert message shows singular "day"
+      expect(alertSpy).toHaveBeenCalledWith('Configuration saved. 1 day will inherit changes.');
+
+      // Verify navigation to devices section
+      expect(window.location.hash).toBe('#/workspace?animal=remy&section=devices');
+
+      alertSpy.mockRestore();
+    });
+
+    it('Save button works from Next button on final step', async () => {
+      const user = userEvent.setup();
+      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+
+      renderWithStore(<AnimalEditorStepper />);
+
+      // Navigate to final step
+      const nextButton = screen.getByRole('button', { name: /next step/i });
+      await user.click(nextButton);
+
+      // The "Next" button should now say "Save"
+      const saveButton = screen.getByRole('button', { name: /save configuration/i });
+      expect(saveButton).toHaveTextContent('Save');
+
+      // Click it
+      await user.click(saveButton);
+
+      // Verify save logic executed
+      expect(alertSpy).toHaveBeenCalled();
+      expect(window.location.hash).toContain('#/workspace');
+
+      alertSpy.mockRestore();
     });
   });
 

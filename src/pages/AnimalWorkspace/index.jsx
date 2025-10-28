@@ -10,6 +10,7 @@
  * - Add recording days with default values
  * - Display validation status chips
  * - Navigate to day editor
+ * - Navigate to animal editor for device configuration
  * - Batch create days (stub for future milestone)
  *
  * @see docs/ANIMAL_WORKSPACE_DESIGN.md for UI mockups
@@ -161,6 +162,13 @@ export function AnimalWorkspace() {
                     Recording Days for {selectedAnimal.id}
                   </h2>
                   <div className="day-actions">
+                    <a
+                      href={`#/animal/${selectedAnimalId}/editor`}
+                      className="btn-secondary"
+                      aria-label="Edit Devices"
+                    >
+                      Edit Devices
+                    </a>
                     <button
                       className="btn-primary"
                       onClick={handleToggleCalendar}

@@ -95,9 +95,9 @@ describe('DevicesStep', () => {
     );
 
     expect(screen.getByText(/device configuration inherited from animal/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /edit animal.*legacy/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /edit at animal level/i })).toHaveAttribute(
       'href',
-      '#/legacy'
+      '#/animal/test-animal/editor'
     );
   });
 
@@ -253,9 +253,9 @@ describe('DevicesStep', () => {
     );
 
     expect(screen.getByText(/no electrode groups configured/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /configure electrode groups.*legacy/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /configure electrode groups at animal level/i })).toHaveAttribute(
       'href',
-      '#/legacy'
+      '#/animal/test-animal/editor'
     );
   });
 
@@ -367,6 +367,13 @@ describe('DevicesStep', () => {
 
     // Should still render without crashing
     expect(screen.getByRole('heading', { name: /devices configuration/i })).toBeInTheDocument();
+    // Check that error message is present (multiple groups show this error)
+    const errorMessages = screen.getAllByText(/no channel mapping found/i);
+    expect(errorMessages.length).toBeGreaterThan(0);
+    expect(errorMessages[0]).toBeInTheDocument();
+    // Check that the fix link uses the new Animal Editor (there are multiple links, one per group)
+    const fixLinks = screen.getAllByRole('link', { name: /fix in animal editor/i });
+    expect(fixLinks[0]).toHaveAttribute('href', '#/animal/test-animal/editor');
   });
 
   it('uses aria-label on status badges for accessibility', () => {

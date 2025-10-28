@@ -87,6 +87,34 @@ export default function AnimalEditorStepper() {
     }
   }
 
+  /**
+   * Save animal configuration and navigate based on context
+   *
+   * Context-aware navigation:
+   * - If animal has NO days: Navigate to workspace with create-day action
+   * - If animal has days: Navigate to workspace devices section
+   *
+   * Success message shows how many days will inherit the changes
+   */
+  function handleSave() {
+    // Configuration already saved via updateAnimal calls throughout editing
+    // Just need to determine navigation destination
+
+    const hasDays = animal.days && animal.days.length > 0;
+    const dayCount = hasDays ? animal.days.length : 0;
+
+    // Show success message
+    if (hasDays) {
+      alert(`Configuration saved. ${dayCount} day${dayCount !== 1 ? 's' : ''} will inherit changes.`);
+      // Navigate to workspace devices section
+      window.location.hash = `#/workspace?animal=${animalId}&section=devices`;
+    } else {
+      alert('Configuration saved. Ready to create first recording day.');
+      // Navigate to workspace with create-day action
+      window.location.hash = `#/workspace?animal=${animalId}&action=create-day`;
+    }
+  }
+
   // Electrode groups modal handlers
   /**
    * Open modal in add mode
@@ -379,6 +407,9 @@ export default function AnimalEditorStepper() {
     },
   ];
 
+  // Check if we're on the final step
+  const isOnFinalStep = activeStep === steps.length - 1;
+
   return (
     <div className="animal-editor-stepper">
       <header className="animal-editor-header">
@@ -423,12 +454,12 @@ export default function AnimalEditorStepper() {
           Back
         </button>
         <button
-          onClick={handleNext}
-          disabled={activeStep === steps.length - 1}
+          onClick={isOnFinalStep ? handleSave : handleNext}
+          disabled={false}
           className="footer-nav-button btn-next"
-          aria-label={activeStep === steps.length - 1 ? 'Save configuration' : 'Go to next step'}
+          aria-label={isOnFinalStep ? 'Save configuration' : 'Go to next step'}
         >
-          {activeStep === steps.length - 1 ? 'Save' : 'Next'}
+          {isOnFinalStep ? 'Save' : 'Next'}
         </button>
       </footer>
 

@@ -295,4 +295,94 @@ describe('AnimalWorkspace Component (M4) - Initial State', () => {
       expect(createButton).toHaveAttribute('href', '#/home');
     });
   });
+
+  describe('Edit Devices Button', () => {
+    it('shows "Edit Devices" button when animal is selected', async () => {
+      const user = userEvent.setup();
+
+      const initialState = {
+        workspace: {
+          animals: {
+            testanimal: {
+              subject: { subject_id: 'testanimal' },
+              days: [],
+            },
+          },
+          days: {},
+          settings: {},
+        },
+      };
+
+      render(
+        <StoreProvider initialState={initialState}>
+          <AnimalWorkspace />
+        </StoreProvider>
+      );
+
+      // Select animal
+      const animalButton = screen.getByRole('button', { name: /testanimal/i });
+      await user.click(animalButton);
+
+      // Check for "Edit Devices" button/link
+      const editDevicesLink = screen.getByRole('link', { name: /edit devices|configure hardware/i });
+      expect(editDevicesLink).toBeInTheDocument();
+    });
+
+    it('navigates to Animal Editor when "Edit Devices" button is clicked', async () => {
+      const user = userEvent.setup();
+
+      const initialState = {
+        workspace: {
+          animals: {
+            testanimal: {
+              subject: { subject_id: 'testanimal' },
+              days: [],
+            },
+          },
+          days: {},
+          settings: {},
+        },
+      };
+
+      render(
+        <StoreProvider initialState={initialState}>
+          <AnimalWorkspace />
+        </StoreProvider>
+      );
+
+      // Select animal
+      const animalButton = screen.getByRole('button', { name: /testanimal/i });
+      await user.click(animalButton);
+
+      // Check the href of the "Edit Devices" button
+      const editDevicesLink = screen.getByRole('link', { name: /edit devices|configure hardware/i });
+      expect(editDevicesLink).toHaveAttribute('href', '#/animal/testanimal/editor');
+    });
+
+    it('does not show "Edit Devices" button when no animal is selected', () => {
+      const initialState = {
+        workspace: {
+          animals: {
+            testanimal: {
+              subject: { subject_id: 'testanimal' },
+              days: [],
+            },
+          },
+          days: {},
+          settings: {},
+        },
+      };
+
+      render(
+        <StoreProvider initialState={initialState}>
+          <AnimalWorkspace />
+        </StoreProvider>
+      );
+
+      // No animal selected yet
+      // Check that "Edit Devices" button/link is not present
+      const editDevicesLink = screen.queryByRole('link', { name: /edit devices|configure hardware/i });
+      expect(editDevicesLink).not.toBeInTheDocument();
+    });
+  });
 });
