@@ -9,9 +9,27 @@
 
 ---
 
-## Current Session: No Active Work
+## Current Session: M5.5 Post-Release Fixes
 
-**Status:** 🏁 READY FOR NEXT MILESTONE - All milestones M0-M5.5 complete.
+**Status:** 🔧 Addressing user feedback on M5.5 Animal Creation Form
+
+**User Feedback:**
+
+1. Sex field should not have "Other (O)" option - only Male (M), Female (F), Unknown (U)
+2. Navigation after animal creation goes to wrong page (workspace loads legacy form instead of AnimalWorkspace)
+
+**Fixes Applied:**
+
+1. ✅ Removed "Other (O)" option from Sex radio buttons in AnimalCreationForm.jsx
+2. ✅ Added URL parameter handling to AnimalWorkspace - reads `?animal=<id>` to auto-select animal
+3. ✅ Added 2 new tests for URL parameter functionality
+4. ✅ All 2372 tests passing (2370 + 2 new)
+
+**Note on Experimenter Names:**
+
+- Current implementation is correct - experimenter_name is an array of strings (full names)
+- Examples in schema: "Jennifer Guidera", "Alison Comrie"
+- Names like "Kyu Hyun Lee" work correctly as-is (stored as single string in array)
 
 ---
 

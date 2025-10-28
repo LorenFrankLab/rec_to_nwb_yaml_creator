@@ -6,6 +6,47 @@
 
 ---
 
+## M5.5.1 - Animal Creation Form Post-Release Fixes (October 28, 2025)
+
+### Summary
+
+Fixed user-reported issues from M5.5 initial release:
+1. Removed "Other (O)" option from Sex field per user feedback
+2. Fixed navigation bug where AnimalWorkspace wasn't receiving URL parameter to auto-select animal
+
+### Changes
+
+#### Bug Fixes
+
+- **`src/pages/Home/AnimalCreationForm.jsx`**
+  - Removed "Other (O)" option from Sex radio buttons (line 368)
+  - Sex field now only offers: Male (M), Female (F), Unknown (U)
+  - No test changes required (tests only used 'U')
+
+- **`src/pages/AnimalWorkspace/index.jsx`**
+  - Added `useEffect` hook to read `?animal=<id>` URL parameter on mount
+  - Auto-selects animal if parameter present and animal exists
+  - Fixes navigation from Home after animal creation
+
+#### Tests Added
+
+- **`src/pages/AnimalWorkspace/__tests__/AnimalWorkspace.test.jsx`** - Added 2 tests
+  - Test auto-selection from URL parameter
+  - Test graceful handling of non-existent animal in parameter
+  - Total tests now: 6 (was 4)
+
+### Test Results
+
+**All 2372 tests passing** (2370 + 2 new, 1 skipped)
+
+### Impact
+
+- Users can now successfully navigate from Home → AnimalWorkspace after creating an animal
+- Sex field matches NWB standard values (no "Other" option)
+- Experimenter names remain unchanged (correctly support full names like "Kyu Hyun Lee")
+
+---
+
 ## M5.5 - Animal Creation Form (October 28, 2025)
 
 ### Summary

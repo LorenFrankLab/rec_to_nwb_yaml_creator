@@ -16,7 +16,7 @@
  * @see docs/animal_hierarchy.md for data model
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import './AnimalWorkspace.css';
@@ -25,6 +25,7 @@ import './AnimalWorkspace.css';
  * AnimalWorkspace Component
  *
  * Main workspace view for managing animals and their recording days.
+ * Supports URL parameter ?animal=<id> to auto-select an animal on load.
  */
 export function AnimalWorkspace() {
   const { model, actions, selectors } = useStoreContext();
@@ -35,6 +36,16 @@ export function AnimalWorkspace() {
   const hasAnimals = animalIds.length > 0;
 
   const selectedAnimal = selectedAnimalId ? animals[selectedAnimalId] : null;
+
+  // Read ?animal=<id> URL parameter on mount to auto-select animal
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.hash.split('?')[1]);
+    const animalParam = params.get('animal');
+
+    if (animalParam && animals[animalParam]) {
+      setSelectedAnimalId(animalParam);
+    }
+  }, []); // Run only on mount
 
   /**
    * Handle animal selection

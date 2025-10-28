@@ -365,7 +365,6 @@ function AnimalCreationForm({
               { value: 'M', label: 'Male (M)' },
               { value: 'F', label: 'Female (F)' },
               { value: 'U', label: 'Unknown (U)' },
-              { value: 'O', label: 'Other (O)' },
             ].map(({ value, label }) => (
               <label key={value} className="radio-label">
                 <input
