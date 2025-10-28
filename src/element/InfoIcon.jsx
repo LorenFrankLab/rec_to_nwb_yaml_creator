@@ -5,10 +5,12 @@ import { faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 
 
 /**
- *  Displays info icon
+ * Displays info icon
  *
- * @param {react prop} prop
- * @returns
+ * @param {object} prop - Component props
+ * @param {string} prop.infoText - Tooltip text to display
+ * @param {string} [prop.size='2xs'] - Icon size
+ * @returns {JSX.Element} Info icon component
  */
 const InfoIcon = (prop) => {
   const { infoText, size } = prop;
