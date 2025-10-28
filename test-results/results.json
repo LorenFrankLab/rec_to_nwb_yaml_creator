@@ -1,7 +1,7 @@
 {
   "config": {
-    "configFile": "/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/.worktrees/phase-0-baselines/playwright.config.js",
-    "rootDir": "/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/.worktrees/phase-0-baselines/e2e",
+    "configFile": "/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/playwright.config.js",
+    "rootDir": "/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/e2e",
     "forbidOnly": false,
     "fullyParallel": true,
     "globalSetup": null,
@@ -37,7 +37,7 @@
     "quiet": false,
     "projects": [
       {
-        "outputDir": "/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/.worktrees/phase-0-baselines/test-results",
+        "outputDir": "/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/test-results",
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
@@ -45,7 +45,7 @@
         },
         "id": "chromium",
         "name": "chromium",
-        "testDir": "/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/.worktrees/phase-0-baselines/e2e",
+        "testDir": "/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/e2e",
         "testIgnore": [],
         "testMatch": [
           "**/*.@(spec|test).?(c|m)[jt]s?(x)"
@@ -95,12 +95,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 812,
+                      "duration": 727,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:11:58.790Z",
+                      "startTime": "2025-10-27T23:47:58.367Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -129,12 +129,12 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 1776,
+                      "duration": 1634,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:11:58.786Z",
+                      "startTime": "2025-10-27T23:47:58.359Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -163,12 +163,12 @@
                       "workerIndex": 2,
                       "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 1103,
+                      "duration": 956,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:11:58.797Z",
+                      "startTime": "2025-10-27T23:47:58.361Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -197,12 +197,12 @@
                       "workerIndex": 3,
                       "parallelIndex": 3,
                       "status": "passed",
-                      "duration": 1084,
+                      "duration": 1000,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:11:58.790Z",
+                      "startTime": "2025-10-27T23:47:58.361Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -231,12 +231,12 @@
                       "workerIndex": 4,
                       "parallelIndex": 4,
                       "status": "passed",
-                      "duration": 1087,
+                      "duration": 987,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:11:58.791Z",
+                      "startTime": "2025-10-27T23:47:58.368Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -265,12 +265,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 591,
+                      "duration": 731,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:11:59.969Z",
+                      "startTime": "2025-10-27T23:47:59.297Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -296,15 +296,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
+                      "workerIndex": 4,
+                      "parallelIndex": 4,
                       "status": "passed",
-                      "duration": 629,
+                      "duration": 819,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:12:00.231Z",
+                      "startTime": "2025-10-27T23:47:59.569Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -314,7 +314,7 @@
               ],
               "id": "9ca64e3e23abf745d3e6-199199412119cbb074b5",
               "file": "baselines/form-interaction.spec.js",
-              "line": 235,
+              "line": 234,
               "column": 7
             },
             {
@@ -330,10 +330,10 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
-                      "parallelIndex": 4,
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 712,
+                      "duration": 850,
                       "errors": [],
                       "stdout": [
                         {
@@ -342,7 +342,7 @@
                       ],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:12:00.230Z",
+                      "startTime": "2025-10-27T23:47:59.569Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -352,7 +352,7 @@
               ],
               "id": "9ca64e3e23abf745d3e6-2cbe11549528ba2c6e60",
               "file": "baselines/form-interaction.spec.js",
-              "line": 268,
+              "line": 267,
               "column": 7
             },
             {
@@ -368,15 +368,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
                       "status": "passed",
-                      "duration": 847,
+                      "duration": 979,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:12:00.246Z",
+                      "startTime": "2025-10-27T23:47:59.571Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -386,7 +386,7 @@
               ],
               "id": "9ca64e3e23abf745d3e6-70a34aa670df385aad03",
               "file": "baselines/form-interaction.spec.js",
-              "line": 295,
+              "line": 294,
               "column": 7
             }
           ]
@@ -403,7 +403,7 @@
         {
           "title": "BASELINE: Import/Export Workflow",
           "file": "baselines/import-export.spec.js",
-          "line": 31,
+          "line": 51,
           "column": 6,
           "specs": [
             {
@@ -422,12 +422,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 343,
+                      "duration": 2580,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:12:00.584Z",
+                      "startTime": "2025-10-27T23:48:00.056Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -437,7 +437,7 @@
               ],
               "id": "cca0efd10f2eb9e44d28-377d9fea76fb98a21b71",
               "file": "baselines/import-export.spec.js",
-              "line": 33,
+              "line": 53,
               "column": 7
             },
             {
@@ -453,15 +453,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 387,
+                      "duration": 2328,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:12:00.876Z",
+                      "startTime": "2025-10-27T23:48:00.237Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -471,7 +471,7 @@
               ],
               "id": "cca0efd10f2eb9e44d28-9428c9629b01b37fc0d4",
               "file": "baselines/import-export.spec.js",
-              "line": 60,
+              "line": 83,
               "column": 7
             },
             {
@@ -487,15 +487,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "workerIndex": 4,
+                      "parallelIndex": 4,
                       "status": "passed",
-                      "duration": 380,
+                      "duration": 2891,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:12:00.928Z",
+                      "startTime": "2025-10-27T23:48:00.404Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -505,54 +505,11 @@
               ],
               "id": "cca0efd10f2eb9e44d28-bdc3529f21a9383ccbe4",
               "file": "baselines/import-export.spec.js",
-              "line": 90,
+              "line": 116,
               "column": 7
             },
             {
-              "title": "can export YAML file after filling form",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [
-                    {
-                      "type": "skip",
-                      "location": {
-                        "file": "/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/.worktrees/phase-0-baselines/e2e/baselines/import-export.spec.js",
-                        "line": 124,
-                        "column": 8
-                      }
-                    }
-                  ],
-                  "expectedStatus": "skipped",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": -1,
-                      "parallelIndex": -1,
-                      "status": "skipped",
-                      "duration": 0,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-10-23T22:12:00.935Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "skipped"
-                }
-              ],
-              "id": "cca0efd10f2eb9e44d28-53a78cc754cdcee1a24b",
-              "file": "baselines/import-export.spec.js",
-              "line": 124,
-              "column": 8
-            },
-            {
-              "title": "documents round-trip: import -> modify -> export",
+              "title": "can export YAML file from trodes_to_nwb sample",
               "ok": true,
               "tags": [],
               "tests": [
@@ -564,15 +521,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 395,
+                      "duration": 2854,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:12:00.936Z",
+                      "startTime": "2025-10-27T23:48:00.437Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -580,9 +537,70 @@
                   "status": "expected"
                 }
               ],
+              "id": "cca0efd10f2eb9e44d28-f392fb90d553e615b8d3",
+              "file": "baselines/import-export.spec.js",
+              "line": 149,
+              "column": 7
+            },
+            {
+              "title": "documents round-trip: import -> modify -> export",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "timedOut",
+                      "duration": 30067,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                      },
+                      "errors": [
+                        {
+                          "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                        },
+                        {
+                          "location": {
+                            "file": "/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/e2e/baselines/import-export.spec.js",
+                            "column": 32,
+                            "line": 26
+                          },
+                          "message": "Error: page.waitForEvent: Test timeout of 30000ms exceeded.\n=========================== logs ===========================\nwaiting for event \"download\"\n============================================================\n\n  24 | // Helper to wait for download\n  25 | const waitForDownload = async (page, action) => {\n> 26 |   const downloadPromise = page.waitForEvent('download');\n     |                                ^\n  27 |   await action();\n  28 |   return await downloadPromise;\n  29 | };\n    at waitForDownload (/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/e2e/baselines/import-export.spec.js:26:32)\n    at /Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/e2e/baselines/import-export.spec.js:227:34"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-27T23:48:00.573Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/test-results/baselines-import-export-BA-a939c-ip-import---modify---export-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/test-results/baselines-import-export-BA-a939c-ip-import---modify---export-chromium/error-context.md"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
               "id": "cca0efd10f2eb9e44d28-78e37e5b1a77eb0f40a1",
               "file": "baselines/import-export.spec.js",
-              "line": 190,
+              "line": 200,
               "column": 7
             },
             {
@@ -598,15 +616,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
-                      "parallelIndex": 4,
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 5415,
+                      "duration": 5514,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:12:00.961Z",
+                      "startTime": "2025-10-27T23:48:02.574Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -616,12 +634,12 @@
               ],
               "id": "cca0efd10f2eb9e44d28-a4cb2c3cae25af296043",
               "file": "baselines/import-export.spec.js",
-              "line": 231,
+              "line": 244,
               "column": 7
             },
             {
               "title": "documents filename format of exported YAML",
-              "ok": true,
+              "ok": false,
               "tags": [],
               "tests": [
                 {
@@ -632,25 +650,52 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
-                      "status": "passed",
-                      "duration": 417,
-                      "errors": [],
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "timedOut",
+                      "duration": 30092,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                      },
+                      "errors": [
+                        {
+                          "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                        },
+                        {
+                          "location": {
+                            "file": "/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/e2e/baselines/import-export.spec.js",
+                            "column": 32,
+                            "line": 26
+                          },
+                          "message": "Error: page.waitForEvent: Test timeout of 30000ms exceeded.\n=========================== logs ===========================\nwaiting for event \"download\"\n============================================================\n\n  24 | // Helper to wait for download\n  25 | const waitForDownload = async (page, action) => {\n> 26 |   const downloadPromise = page.waitForEvent('download');\n     |                                ^\n  27 |   await action();\n  28 |   return await downloadPromise;\n  29 | };\n    at waitForDownload (/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/e2e/baselines/import-export.spec.js:26:32)\n    at /Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/e2e/baselines/import-export.spec.js:291:34"
+                        }
+                      ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:12:01.110Z",
+                      "startTime": "2025-10-27T23:48:02.643Z",
                       "annotations": [],
-                      "attachments": []
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/test-results/baselines-import-export-BA-19c24-ame-format-of-exported-YAML-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/test-results/baselines-import-export-BA-19c24-ame-format-of-exported-YAML-chromium/error-context.md"
+                        }
+                      ]
                     }
                   ],
-                  "status": "expected"
+                  "status": "unexpected"
                 }
               ],
               "id": "cca0efd10f2eb9e44d28-53ed9d6c985a676e0aa9",
               "file": "baselines/import-export.spec.js",
-              "line": 259,
+              "line": 272,
               "column": 7
             },
             {
@@ -666,15 +711,19 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 385,
+                      "duration": 2988,
                       "errors": [],
-                      "stdout": [],
+                      "stdout": [
+                        {
+                          "text": "Alert during invalid import: Invalid YAML file: Nested mappings are not allowed in compact mappings at line 1, column 10:\n\ninvalid: yaml: content: [unclosed array\n         ^\n\n\nThe file could not be parsed. Please check the YAML syntax and try again.\n"
+                        }
+                      ],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:12:01.276Z",
+                      "startTime": "2025-10-27T23:48:03.299Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -684,7 +733,7 @@
               ],
               "id": "cca0efd10f2eb9e44d28-3ccf1e6076e6049478e8",
               "file": "baselines/import-export.spec.js",
-              "line": 290,
+              "line": 306,
               "column": 7
             },
             {
@@ -700,15 +749,19 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "workerIndex": 4,
+                      "parallelIndex": 4,
                       "status": "passed",
-                      "duration": 373,
+                      "duration": 2050,
                       "errors": [],
-                      "stdout": [],
+                      "stdout": [
+                        {
+                          "text": "Session ID after importing invalid YAML: \"\"\n"
+                        }
+                      ],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:12:01.318Z",
+                      "startTime": "2025-10-27T23:48:03.302Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -718,7 +771,7 @@
               ],
               "id": "cca0efd10f2eb9e44d28-9c9a212c190da617c96d",
               "file": "baselines/import-export.spec.js",
-              "line": 332,
+              "line": 351,
               "column": 7
             }
           ]
@@ -751,15 +804,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
+                      "workerIndex": 4,
+                      "parallelIndex": 4,
                       "status": "passed",
-                      "duration": 1852,
+                      "duration": 1963,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:12:01.340Z",
+                      "startTime": "2025-10-27T23:48:05.361Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -788,12 +841,12 @@
                       "workerIndex": 2,
                       "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 1958,
+                      "duration": 1891,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:12:01.537Z",
+                      "startTime": "2025-10-27T23:48:06.295Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -819,15 +872,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
+                      "workerIndex": 4,
+                      "parallelIndex": 4,
                       "status": "passed",
-                      "duration": 2143,
+                      "duration": 2239,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:12:01.670Z",
+                      "startTime": "2025-10-27T23:48:07.331Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -856,12 +909,12 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 2181,
+                      "duration": 2257,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:12:01.701Z",
+                      "startTime": "2025-10-27T23:48:08.097Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -887,15 +940,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 2099,
+                      "duration": 2322,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:12:03.200Z",
+                      "startTime": "2025-10-27T23:48:08.193Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -921,15 +974,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
+                      "workerIndex": 4,
+                      "parallelIndex": 4,
                       "status": "passed",
-                      "duration": 2104,
+                      "duration": 2180,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:12:03.501Z",
+                      "startTime": "2025-10-27T23:48:09.576Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -955,15 +1008,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 3057,
+                      "duration": 3007,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:12:03.819Z",
+                      "startTime": "2025-10-27T23:48:10.363Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -989,15 +1042,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 1479,
+                      "duration": 1646,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-10-23T22:12:03.888Z",
+                      "startTime": "2025-10-27T23:48:10.523Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1017,11 +1070,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2025-10-23T22:11:56.462Z",
-    "duration": 10480.26,
-    "expected": 25,
-    "skipped": 1,
-    "unexpected": 0,
+    "startTime": "2025-10-27T23:47:57.570Z",
+    "duration": 35200.442,
+    "expected": 24,
+    "skipped": 0,
+    "unexpected": 2,
     "flaky": 0
   }
 }

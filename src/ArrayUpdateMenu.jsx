@@ -10,7 +10,7 @@ import { showCustomValidityError } from './utils';
  * @returns Virtual DOM for updating an array entry of the resultant YML File
  */
 const ArrayUpdateMenu = (prop) => {
-  const { itemsKey, items, addArrayItem, allowMultiple } =
+  const { itemsKey, addArrayItem, allowMultiple } =
     prop;
 
   const itemCountRef = useRef();
@@ -30,9 +30,6 @@ const ArrayUpdateMenu = (prop) => {
       itemCountRef.current.value = 1;
     }
   };
-
-
-  const displayStatus = items?.length === 0 || !items ? 'hide' : '';
 
   return (
     <div className="array-update-area">
@@ -62,11 +59,11 @@ const ArrayUpdateMenu = (prop) => {
   );
 };
 
-ArrayUpdateMenu.propType = {
+ArrayUpdateMenu.propTypes = {
   addArrayItem: PropTypes.func,
-  removeArrayItem: PropTypes.func,
   items: PropTypes.instanceOf(Array),
   itemsKey: PropTypes.string,
+  allowMultiple: PropTypes.bool,
 };
 
 ArrayUpdateMenu.defaultProps = {

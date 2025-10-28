@@ -3,11 +3,11 @@ import React, {
 import PropTypes from 'prop-types';
 
 /**
- * Host array item control
+ * Array item control buttons (duplicate and remove)
  *
  * @param {Object} prop Custom element's properties
  *
- * @returns Virtual DOM for File upload
+ * @returns Virtual DOM for array item controls (duplicate/remove buttons)
  */
 const ArrayItemControl = (prop) => {
   const {
@@ -40,7 +40,7 @@ const ArrayItemControl = (prop) => {
   );
 };
 
-ArrayItemControl.propType = {
+ArrayItemControl.propTypes = {
   index: PropTypes.number.isRequired,
   keyValue: PropTypes.string.isRequired,
   duplicateArrayItem: PropTypes.func,

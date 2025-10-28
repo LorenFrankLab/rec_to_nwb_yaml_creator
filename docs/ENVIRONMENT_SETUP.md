@@ -5,6 +5,7 @@ This document explains the contained development environment for the rec_to_nwb_
 ## Overview
 
 This project uses a **contained environment** approach to ensure:
+
 - **No global pollution** - Dependencies install locally to `node_modules/`
 - **Reproducibility** - Same Node version + package versions = identical environment
 - **Data safety** - Environment consistency prevents subtle bugs in scientific data pipeline
@@ -110,6 +111,7 @@ git commit -m "feat: add package-name for [purpose]"
 ### Troubleshooting
 
 **Problem:** `nvm: command not found`
+
 ```bash
 # Solution: Install nvm
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
@@ -117,12 +119,14 @@ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
 ```
 
 **Problem:** Wrong Node version active
+
 ```bash
 # Solution: Use nvm to switch
 nvm use  # Reads .nvmrc
 ```
 
 **Problem:** Module import errors
+
 ```bash
 # Solution: Reinstall dependencies
 rm -rf node_modules
@@ -130,6 +134,7 @@ npm install
 ```
 
 **Problem:** Version conflicts between projects
+
 ```bash
 # Solution: Use nvm to switch versions per project
 cd project1 && nvm use  # Uses project1's .nvmrc
@@ -147,18 +152,21 @@ This project generates YAML files consumed by the Python package [trodes_to_nwb]
 ## Why This Matters for Scientific Infrastructure
 
 This application generates metadata for **irreplaceable scientific experiments**:
+
 - Multi-month chronic recording studies (30-200+ days)
 - Multi-year longitudinal data
 - Published research findings
 - Public archives (DANDI)
 
 **Environment inconsistencies can:**
+
 - Introduce subtle validation bugs
 - Generate invalid YAML that corrupts NWB files
 - Break database queries in Spyglass
 - Invalidate months of experimental work
 
 **Contained environments prevent this by:**
+
 - Ensuring Claude Code always works with tested dependency versions
 - Eliminating "works on my machine" scenarios
 - Making bugs reproducible across all developers

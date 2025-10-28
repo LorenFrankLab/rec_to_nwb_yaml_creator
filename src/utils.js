@@ -1,4 +1,10 @@
 import { useEffect } from 'react';
+import {
+  sanitizeTitle as sanitizeTitleUtil,
+  formatCommaSeparatedString as formatCommaSeparatedStringUtil,
+  commaSeparatedStringToNumber as commaSeparatedStringToNumberUtil,
+  isInteger as isIntegerUtil,
+} from './utils/stringFormatting';
 
 /**
  * Makes a useEffect hook be called only once
@@ -9,10 +15,8 @@ import { useEffect } from 'react';
 // eslint-disable-next-line react-hooks/exhaustive-deps
 export const useMount = (fn) => useEffect(fn, []);
 
-/** Checks if value is an integer */
-export const isInteger = (value) => {
-  return /^\d+$/.test(value);
-};
+// Re-exported from utils/stringFormatting.js
+export const isInteger = isIntegerUtil;
 
 /**
  * Checks if value is a numeric
@@ -36,41 +40,11 @@ export const titleCase = (str) => {
   });
 };
 
-/**
- * Converts a comma-separated string into an array
- *
- * @param {string} stringSet A string with comma-separated numbers
- *
- * @returns An array where the comma in a comma-separated string is used as
- * the basis of the split. Non-numbers are not included in the returned string
- */
-export const commaSeparatedStringToNumber = (stringSet) => {
-  return [
-    ...new Set(
-      stringSet
-        .split(',')
-        .map((number) => number.trim())
-        .filter((number) => isInteger(number))
-        .map((number) => parseInt(number, 10))
-    ),
-  ];
-};
+// Re-exported from utils/stringFormatting.js
+export const commaSeparatedStringToNumber = commaSeparatedStringToNumberUtil;
 
-/**
- * Convert a comma-separated string to an array
- *
- * @param {string} stringSet A string with comma-separated strings
- */
-export const formatCommaSeparatedString = (stringSet) => {
-  return [
-    ...new Set(
-      stringSet
-        .split(',')
-        .map((s) => s.trim())
-        .filter((s) => s !== '')
-    ),
-  ];
-};
+// Re-exported from utils/stringFormatting.js
+export const formatCommaSeparatedString = formatCommaSeparatedStringUtil;
 
 /**
  * Displays an error message in input tag. It does nothing if the tag in not input
@@ -104,19 +78,8 @@ export const stringToInteger = (stringValue) => {
   return parseInt(stringValue, 10);
 };
 
-/**
- * Remove special characters from text
- * @param {string} title  Title
- */
-export const sanitizeTitle = (title) => {
-  if (!title) {
-    return '';
-  }
-  return title
-    .toString()
-    .trim()
-    .replace(/[^a-z0-9]/gi, '');
-};
+// Re-exported from utils/stringFormatting.js
+export const sanitizeTitle = sanitizeTitleUtil;
 
 
 /**
@@ -125,8 +88,10 @@ export const sanitizeTitle = (title) => {
  * @returns True if running in Production, false otherwise
  */
 export const isProduction = () => {
-  // It is better to use node.js. But that requires adding a package.
-  // See - https://stackoverflow.com/a/70989566/178550. This is sufficient for
-  // now but can be updated if the need arises
-  return window.location.href.includes('https://lorenfranklab.github.io');
+  // Security: Check hostname directly to prevent substring injection attacks
+  // BEFORE: window.location.href.includes('https://lorenfranklab.github.io')
+  //   - Vulnerable: https://evil.com/https://lorenfranklab.github.io would match
+  // AFTER: window.location.hostname === 'lorenfranklab.github.io'
+  //   - Secure: Only matches actual GitHub Pages domain
+  return window.location.hostname === 'lorenfranklab.github.io';
 };

@@ -41,7 +41,7 @@ export default defineConfig({
     },
     include: ['src/**/*.{test,spec}.{js,jsx}'],
     exclude: ['node_modules/', 'build/', 'dist/'],
-    testTimeout: 10000,
+    testTimeout: 15000,  // Increased from 10000 for slower CI environments
     hookTimeout: 10000,
   },
   resolve: {

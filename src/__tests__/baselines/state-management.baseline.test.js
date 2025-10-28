@@ -10,11 +10,7 @@
  * Performance characteristics and quirks are explicitly documented.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import App from '../../App';
-import { renderWithProviders } from '../helpers/test-utils';
+import { describe, it, expect } from 'vitest';
 
 /**
  * Helper to create realistic form data for testing
@@ -425,7 +421,6 @@ describe('BASELINE: Electrode Group & Ntrode Channel Map Synchronization', () =>
   describe('Device Type Selection and Ntrode Auto-Generation', () => {
     it('BASELINE: documents ntrode generation for tetrode_12.5', () => {
       // tetrode_12.5 has 4 channels, 1 shank
-      const deviceType = 'tetrode_12.5';
       const electrodeGroupId = 0;
 
       // Expected map for tetrode: {0: 0, 1: 1, 2: 2, 3: 3}
@@ -448,7 +443,6 @@ describe('BASELINE: Electrode Group & Ntrode Channel Map Synchronization', () =>
     it('BASELINE: documents ntrode generation for multi-shank probe', () => {
       // 32c-2s8mm6cm-20um-40um-dl has 16 channels per shank, 2 shanks
       // This is a simplified version - actual deviceTypeMap() is more complex
-      const deviceType = '32c-2s8mm6cm-20um-40um-dl';
       const electrodeGroupId = 1;
       const channelsPerShank = 16;
       const shankCount = 2;

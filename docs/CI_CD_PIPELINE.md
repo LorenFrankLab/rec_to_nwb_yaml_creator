@@ -36,6 +36,7 @@ The pipeline consists of 4 independent jobs that run in parallel (where possible
 **Runs on:** `ubuntu-latest`
 
 **Steps:**
+
 1. Checkout repository
 2. Setup Node.js v20.19.5 (from `.nvmrc`)
 3. Install dependencies (`npm ci`)
@@ -48,11 +49,13 @@ The pipeline consists of 4 independent jobs that run in parallel (where possible
 10. Upload coverage artifacts (30-day retention)
 
 **Failure Conditions:**
+
 - Linter errors (not warnings)
 - Baseline test failures
 - Coverage threshold not met (80% for lines, functions, branches, statements)
 
 **Artifacts:**
+
 - `coverage-report/` - HTML and LCOV coverage reports (30 days)
 
 ### Job 2: E2E (End-to-End Tests)
@@ -61,6 +64,7 @@ The pipeline consists of 4 independent jobs that run in parallel (where possible
 **Depends on:** `test` job must pass first
 
 **Steps:**
+
 1. Checkout repository
 2. Setup Node.js v20.19.5
 3. Install dependencies
@@ -70,9 +74,11 @@ The pipeline consists of 4 independent jobs that run in parallel (where possible
 7. Upload test results (always, even on failure)
 
 **Failure Conditions:**
+
 - Any E2E test failure across any browser
 
 **Artifacts:**
+
 - `playwright-report/` - HTML test report with screenshots (30 days)
 - `playwright-test-results/` - Raw test results and traces (30 days)
 
@@ -84,18 +90,21 @@ The pipeline consists of 4 independent jobs that run in parallel (where possible
 **Purpose:** Verify that `nwb_schema.json` is synchronized between this repository and the `trodes_to_nwb` Python package.
 
 **Steps:**
+
 1. Checkout this repository (`rec_to_nwb_yaml_creator`)
 2. Checkout `trodes_to_nwb` repository
 3. Compare SHA256 hashes of both schema files
 4. Exit with error if hashes don't match
 
 **Why This Matters:**
+
 - The web app and Python package must use identical schemas
 - Schema drift causes validation inconsistencies
 - Prevents YAML files passing validation here but failing in Python
 - Critical for scientific data integrity
 
 **Failure Conditions:**
+
 - Schema hash mismatch
 - Schema file not found in Python package
 
@@ -105,6 +114,7 @@ The pipeline consists of 4 independent jobs that run in parallel (where possible
 **Depends on:** `test` job must pass first
 
 **Steps:**
+
 1. Checkout repository
 2. Setup Node.js v20.19.5
 3. Install dependencies
@@ -112,15 +122,18 @@ The pipeline consists of 4 independent jobs that run in parallel (where possible
 5. Upload build artifacts
 
 **Failure Conditions:**
+
 - Build compilation errors
 - Missing required files
 
 **Artifacts:**
+
 - `build/` - Production-ready static files (7 days)
 
 ## Triggers
 
 ### Push Events
+
 ```yaml
 on:
   push:
@@ -128,11 +141,13 @@ on:
 ```
 
 The pipeline runs on **every push to any branch**. This ensures:
+
 - Feature branches are validated before PR
 - Commits to `main` are always tested
 - Worktree branches (`refactor/*`) are tested
 
 ### Pull Request Events
+
 ```yaml
 on:
   pull_request:
@@ -140,6 +155,7 @@ on:
 ```
 
 The pipeline runs on **every PR targeting `main`**. This provides:
+
 - Pre-merge validation
 - Required status checks for merging
 - Protection against breaking changes
@@ -156,6 +172,7 @@ The pipeline uses the exact Node.js version specified in `.nvmrc`:
 ```
 
 **Benefits:**
+
 - Consistent environment across CI and local development
 - Automatic caching of npm dependencies
 - Version updates managed through `.nvmrc` file
@@ -163,6 +180,7 @@ The pipeline uses the exact Node.js version specified in `.nvmrc`:
 ## Test Execution Details
 
 ### Baseline Tests
+
 ```bash
 npm run test:baseline
 # Runs: vitest run baselines
@@ -173,6 +191,7 @@ Tests in `src/__tests__/baselines/` that document current behavior (including bu
 **Coverage:** State management, validation, performance, integration contracts
 
 ### Unit Tests
+
 ```bash
 npm test -- run unit
 # Runs: vitest run unit
@@ -183,6 +202,7 @@ Tests in `src/__tests__/unit/` that test individual functions and components in 
 **Current Status:** Not implemented yet (Phase 1)
 
 ### Integration Tests
+
 ```bash
 npm run test:integration
 # Runs: vitest run integration
@@ -195,6 +215,7 @@ Tests in `src/__tests__/integration/` that test interactions between components.
 ### Coverage Requirements
 
 Defined in `vitest.config.js`:
+
 ```javascript
 coverage: {
   lines: 80,
@@ -207,6 +228,7 @@ coverage: {
 The pipeline **fails** if coverage drops below these thresholds.
 
 ### E2E Tests
+
 ```bash
 npm run test:e2e
 # Runs: playwright test
@@ -215,11 +237,13 @@ npm run test:e2e
 Tests in `e2e/` that test complete user workflows across browsers.
 
 **Browsers Tested:**
+
 - Chromium (Desktop Chrome)
 - Firefox (Desktop Firefox)
 - WebKit (Desktop Safari)
 
 **Configuration:** `playwright.config.js`
+
 - Retries: 2 (in CI only)
 - Workers: 1 (in CI, unlimited locally)
 - Screenshots: On failure only
@@ -239,6 +263,7 @@ Coverage reports are uploaded to [Codecov](https://codecov.io/) for tracking ove
 ```
 
 **Setup Required:**
+
 1. Add `CODECOV_TOKEN` to GitHub repository secrets
 2. Configure Codecov project settings
 3. Set up coverage thresholds and PR comments
@@ -267,6 +292,7 @@ Based on typical runs:
 | **Total Pipeline** | **< 10 minutes** | **~5-7 minutes** |
 
 **Optimization Strategies:**
+
 - Dependency caching (`cache: 'npm'`)
 - Parallel job execution
 - Playwright browser installation with deps
@@ -281,6 +307,7 @@ Based on typical runs:
 **Cause:** Performance variance or legitimate behavior changes
 
 **Solution:**
+
 ```bash
 # Update snapshots locally
 npm run test:baseline -- -u
@@ -297,6 +324,7 @@ git commit -m "test: update baseline snapshots"
 **Cause:** Code doesn't meet ESLint rules
 
 **Solution:**
+
 ```bash
 # Auto-fix what can be fixed
 npm run lint
@@ -312,6 +340,7 @@ npm run lint
 **Cause:** App startup slow or tests waiting for non-existent elements
 
 **Solution:**
+
 ```bash
 # Run locally with UI to debug
 npm run test:e2e:ui
@@ -327,6 +356,7 @@ npm run test:e2e:ui
 **Cause:** `nwb_schema.json` differs between repositories
 
 **Solution:**
+
 ```bash
 # Compare schemas
 cd /path/to/rec_to_nwb_yaml_creator
@@ -347,6 +377,7 @@ sha256sum src/trodes_to_nwb/nwb_schema.json
 **Cause:** New code added without tests
 
 **Solution:**
+
 ```bash
 # Run coverage locally
 npm run test:coverage
@@ -413,6 +444,7 @@ Planned improvements for the CI/CD pipeline:
 ## Questions?
 
 For issues with the CI/CD pipeline:
+
 1. Check GitHub Actions logs for detailed error messages
 2. Review this documentation for common solutions
 3. Test locally to reproduce issues

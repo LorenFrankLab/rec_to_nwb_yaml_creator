@@ -11,7 +11,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import yaml from 'yaml';
-import { jsonschemaValidation } from '../../App';
+import { validate } from '../../validation';
 
 // Read fixture files
 const fixturesDir = path.join(__dirname);
@@ -134,12 +134,13 @@ describe('Fixture Verification', () => {
       expect(typeof data.cameras[0].meters_per_pixel).toBe('string');
 
       // Should fail validation with type error
-      const result = jsonschemaValidation(data);
-      expect(result.valid).toBe(false);
-      expect(result.errors).toBeDefined();
-      expect(result.errors.length).toBeGreaterThan(0);
+      const issues = validate(data);
+      const isValid = issues.length === 0;
+      expect(isValid).toBe(false);
+      expect(issues).toBeDefined();
+      expect(issues.length).toBeGreaterThan(0);
       // Check that at least one error is about types
-      const hasTypeError = result.errors.some(err => err.keyword === 'type');
+      const hasTypeError = issues.some(issue => issue.code === 'type');
       expect(hasTypeError).toBe(true);
     });
 
@@ -153,16 +154,17 @@ describe('Fixture Verification', () => {
       expect(data.electrode_groups[0].location).toBe('');  // empty location
 
       // Should fail validation
-      const result = jsonschemaValidation(data);
-      expect(result.valid).toBe(false);
-      expect(result.errors).toBeDefined();
-      expect(result.errors.length).toBeGreaterThan(0);
+      const issues = validate(data);
+      const isValid = issues.length === 0;
+      expect(isValid).toBe(false);
+      expect(issues).toBeDefined();
+      expect(issues.length).toBeGreaterThan(0);
 
       // Check we have expected types of errors
-      const errorKeywords = result.errors.map(e => e.keyword);
+      const errorCodes = issues.map(issue => issue.code);
       // Should have pattern, minItems, or similar violations
-      const hasSchemaViolation = errorKeywords.some(k =>
-        ['pattern', 'minItems', 'minimum', 'required'].includes(k)
+      const hasSchemaViolation = errorCodes.some(code =>
+        ['pattern', 'minItems', 'minimum', 'required'].includes(code)
       );
       expect(hasSchemaViolation).toBe(true);
     });

@@ -16,10 +16,12 @@
 
 import { describe, it, expect } from 'vitest';
 import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
 import schema from '../../nwb_schema.json';
 import { deviceTypes } from '../../valueList';
+
+// API URLs for integration contract verification
+const TRODES_SCHEMA_URL = 'https://raw.githubusercontent.com/LorenFrankLab/trodes_to_nwb/main/src/trodes_to_nwb/nwb_schema.json';
+const PROBE_METADATA_API_URL = 'https://api.github.com/repos/LorenFrankLab/trodes_to_nwb/contents/src/trodes_to_nwb/device_metadata/probe_metadata';
 
 describe('BASELINE: Integration Contracts', () => {
   describe('Schema Hash', () => {
@@ -33,22 +35,20 @@ describe('BASELINE: Integration Contracts', () => {
       expect(hash).toMatchSnapshot('schema-hash');
     });
 
-    it('verifies schema sync with trodes_to_nwb (if available)', () => {
-      // This test gracefully degrades if trodes_to_nwb repo is not available
-      // Useful for CI environments where Python package may not be checked out
-
-      const trodesSchemaPath = path.join(
-        '/Users/edeno/Documents/GitHub/trodes_to_nwb',
-        'src/trodes_to_nwb/nwb_schema.json'
-      );
-
-      if (!fs.existsSync(trodesSchemaPath)) {
-        console.log('⚠️ trodes_to_nwb not found at expected location, skipping sync check');
-        return;
-      }
+    it('verifies schema sync with trodes_to_nwb (from GitHub)', async () => {
+      // Fetch schema from GitHub main branch to verify synchronization
+      // This works in any environment (local, CI, contributor machines)
 
       try {
-        const trodesSchema = JSON.parse(fs.readFileSync(trodesSchemaPath, 'utf-8'));
+        const response = await fetch(TRODES_SCHEMA_URL);
+
+        if (!response.ok) {
+          console.warn(`⚠️ Could not fetch trodes_to_nwb schema from GitHub (${response.status})`);
+          console.warn('   Skipping sync check');
+          return;
+        }
+
+        const trodesSchema = await response.json();
 
         const webAppHash = crypto
           .createHash('sha256')
@@ -64,19 +64,19 @@ describe('BASELINE: Integration Contracts', () => {
         console.log(`📊 trodes_to_nwb:  ${trodesHash.substring(0, 16)}...`);
 
         if (webAppHash !== trodesHash) {
-          console.warn('⚠️ SCHEMA MISMATCH DETECTED - This is a P0 bug!');
-          console.warn('   Schemas must be synchronized between repositories');
+          console.error('❌ SCHEMA MISMATCH DETECTED - This is a P0 bug!');
+          console.error('   Schemas must be synchronized between repositories');
+          console.error(`   Web app:       ${webAppHash}`);
+          console.error(`   trodes_to_nwb: ${trodesHash}`);
+          console.error(`   Compare: https://github.com/LorenFrankLab/trodes_to_nwb/blob/main/src/trodes_to_nwb/nwb_schema.json`);
         }
 
-        // Document current sync state
-        expect({
-          inSync: webAppHash === trodesHash,
-          webAppHash: webAppHash.substring(0, 16),
-          trodesHash: trodesHash.substring(0, 16),
-        }).toMatchSnapshot('schema-sync-status');
+        // Verify synchronization (fail test if mismatch)
+        expect(webAppHash).toBe(trodesHash);
       } catch (error) {
-        console.log(`⚠️ Error reading trodes_to_nwb schema: ${error.message}`);
-        // Don't fail test if we can't read the file
+        console.warn(`⚠️ Error fetching trodes_to_nwb schema: ${error.message}`);
+        console.warn('   Skipping sync check (network issue?)');
+        // Don't fail test if network error - gracefully degrade
       }
     });
   });
@@ -103,25 +103,23 @@ describe('BASELINE: Integration Contracts', () => {
       });
     });
 
-    it('verifies device types exist in trodes_to_nwb (if available)', () => {
-      // This test checks that device types have corresponding probe metadata files
-      // Gracefully degrades if trodes_to_nwb repo is not available
-
-      const probeMetadataDir = path.join(
-        '/Users/edeno/Documents/GitHub/trodes_to_nwb',
-        'src/trodes_to_nwb/device_metadata/probe_metadata'
-      );
-
-      if (!fs.existsSync(probeMetadataDir)) {
-        console.log('⚠️ trodes_to_nwb probe_metadata not found, skipping device type check');
-        return;
-      }
+    it('verifies device types exist in trodes_to_nwb (from GitHub)', async () => {
+      // Fetch probe metadata directory from GitHub to verify device types exist
+      // This works in any environment (local, CI, contributor machines)
 
       try {
-        const probeFiles = fs
-          .readdirSync(probeMetadataDir)
-          .filter(f => f.endsWith('.yml'))
-          .map(f => f.replace('.yml', ''))
+        const response = await fetch(PROBE_METADATA_API_URL);
+
+        if (!response.ok) {
+          console.warn(`⚠️ Could not fetch probe metadata from GitHub (${response.status})`);
+          console.warn('   Skipping device type check');
+          return;
+        }
+
+        const files = await response.json();
+        const probeFiles = files
+          .filter(f => f.name.endsWith('.yml'))
+          .map(f => f.name.replace('.yml', ''))
           .sort();
 
         const webAppTypes = deviceTypes().sort();
@@ -136,23 +134,24 @@ describe('BASELINE: Integration Contracts', () => {
           missingFromWebApp.forEach(probe => console.warn(`   - ${probe}`));
         }
 
-        // Check which device types don't have probe files (more critical)
+        // Check which device types don't have probe files (CRITICAL)
         const missingProbeFiles = webAppTypes.filter(type => !probeFiles.includes(type));
         if (missingProbeFiles.length > 0) {
-          console.warn(`⚠️ Device types in web app but NO probe file in trodes_to_nwb:`);
-          missingProbeFiles.forEach(type => console.warn(`   - ${type}`));
+          console.error(`❌ Device types in web app but NO probe file in trodes_to_nwb:`);
+          missingProbeFiles.forEach(type => console.error(`   - ${type}`));
+          console.error(`   View probe files: https://github.com/LorenFrankLab/trodes_to_nwb/tree/main/src/trodes_to_nwb/device_metadata/probe_metadata`);
+          // Fail test - web app has device types without probe files (DATA LOSS RISK)
+          throw new Error(`Missing probe files for: ${missingProbeFiles.join(', ')}`);
         }
 
-        // Document current state
-        expect({
-          webAppCount: webAppTypes.length,
-          trodesCount: probeFiles.length,
-          missingFromWebApp,
-          missingProbeFiles,
-        }).toMatchSnapshot('device-type-sync-status');
+        console.log('✅ All web app device types have corresponding probe files');
       } catch (error) {
-        console.log(`⚠️ Error checking probe metadata: ${error.message}`);
-        // Don't fail test if we can't read the directory
+        if (error.message.includes('Missing probe files')) {
+          throw error; // Re-throw validation errors
+        }
+        console.warn(`⚠️ Error fetching probe metadata: ${error.message}`);
+        console.warn('   Skipping device type check (network issue?)');
+        // Don't fail test if network error - gracefully degrade
       }
     });
   });

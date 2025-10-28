@@ -1,20 +1,21 @@
 import { expect } from 'vitest';
-import { jsonschemaValidation } from '../../App';
+import { validate } from '../../validation';
 
 /**
  * Custom matchers for YAML validation testing
  */
 expect.extend({
   toBeValidYaml(received) {
-    const result = jsonschemaValidation(received);
+    const issues = validate(received);
+    const isValid = issues.length === 0;
 
     return {
-      pass: result.valid,
+      pass: isValid,
       message: () =>
-        result.valid
+        isValid
           ? `Expected YAML to be invalid`
           : `Expected YAML to be valid, but got errors:\n${JSON.stringify(
-              result.errors,
+              issues,
               null,
               2
             )}`,
@@ -22,10 +23,10 @@ expect.extend({
   },
 
   toHaveValidationError(received, expectedError) {
-    const result = jsonschemaValidation(received);
+    const issues = validate(received);
 
-    const hasError = result.errors?.some(err =>
-      err.message.includes(expectedError)
+    const hasError = issues.some(issue =>
+      issue.message.includes(expectedError)
     );
 
     return {
@@ -34,7 +35,7 @@ expect.extend({
         hasError
           ? `Expected validation to NOT have error containing "${expectedError}"`
           : `Expected validation to have error containing "${expectedError}", but got:\n${JSON.stringify(
-              result.errors,
+              issues,
               null,
               2
             )}`,

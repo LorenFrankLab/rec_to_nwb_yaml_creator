@@ -86,6 +86,7 @@ export const emptyFormData = {
   virus_injection: [],
   optical_fiber: [],
   fs_gui_yamls: [],
+  optogenetic_stimulation_software: '',
 };
 
 /**
@@ -841,7 +842,11 @@ export const deviceTypes = () => {
       'tetrode_12.5',
       'A1x32-6mm-50-177-H32_21mm',
       '128c-4s8mm6cm-20um-40um-sl',
+      '128c-4s8mm6cm-15um-26um-sl',
+      '128c-4s6mm6cm-20um-40um-sl',
       '128c-4s6mm6cm-15um-26um-sl',
+      '128c-4s4mm6cm-20um-40um-sl',
+      '128c-4s4mm6cm-15um-26um-sl',
       '32c-2s8mm6cm-20um-40um-dl',
       '64c-4s6mm6cm-20um-40um-dl',
       '64c-3s6mm6cm-20um-40um-sl',

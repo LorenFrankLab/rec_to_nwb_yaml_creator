@@ -1,0 +1,99 @@
+# Minimal but COMPLETE YAML for fast integration tests
+# Based on 20230622_sample_metadata.yml but stripped down to essentials
+# Includes ALL required fields to pass validation
+
+experimenter_name:
+  - Doe, John
+lab: Test Lab
+institution: Test University
+experiment_description: Minimal test for integration tests
+session_description: test yaml
+session_id: TEST001
+keywords:
+  - testing
+subject:
+  description: Test Rat
+  genotype: Wild Type
+  sex: M
+  species: Rattus norvegicus
+  subject_id: RAT001
+  date_of_birth: "2024-01-01T00:00:00.000"
+  weight: 300
+data_acq_device:
+  - name: SpikeGadgets
+    system: SpikeGadgets
+    amplifier: Intan
+    adc_circuit: Intan
+device:
+  name:
+    - Trodes
+cameras:
+  - id: 0
+    meters_per_pixel: 0.001
+    manufacturer: Test Manufacturer
+    model: TestCam1
+    lens: TestLens1
+    camera_name: test camera 1
+  - id: 1
+    meters_per_pixel: 0.001
+    manufacturer: Test Manufacturer
+    model: TestCam2
+    lens: TestLens2
+    camera_name: test camera 2
+tasks:
+  - task_name: Sleep
+    task_description: sleeping task
+    task_environment: sleep box
+    camera_id:
+      - 0
+    task_epochs:
+      - 1
+  - task_name: Run
+    task_description: running task
+    task_environment: track
+    camera_id:
+      - 1
+    task_epochs:
+      - 2
+units:
+  analog: "-1"
+  behavioral_events: "-1"
+times_period_multiplier: 1
+raw_data_to_volts: 0.000001
+default_header_file_path: /test/path
+electrode_groups:
+  - id: 0
+    location: CA1
+    device_type: tetrode_12.5
+    description: test tetrode
+    targeted_location: hippocampus
+    targeted_x: 1.0
+    targeted_y: 2.0
+    targeted_z: 3.0
+    units: mm
+  - id: 1
+    location: CA3
+    device_type: tetrode_12.5
+    description: test tetrode 2
+    targeted_location: hippocampus
+    targeted_x: 1.5
+    targeted_y: 2.5
+    targeted_z: 3.5
+    units: mm
+ntrode_electrode_group_channel_map:
+  - ntrode_id: 0
+    electrode_group_id: 0
+    bad_channels: []
+    map:
+      "0": 0
+      "1": 1
+      "2": 2
+      "3": 3
+  - ntrode_id: 1
+    electrode_group_id: 1
+    bad_channels: []
+    map:
+      "0": 0
+      "1": 1
+      "2": 2
+      "3": 3

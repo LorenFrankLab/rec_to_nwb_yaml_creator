@@ -35,7 +35,7 @@ export const splitTextNumber = (textNumber) => {
   //   number = Number.isNaN(parsedInt) ? 1 : parsedInt;
   //   [text] = textPart;
   // }
-  if (textPart.length === 1 && eventsDescription.includes(textPart[0])) {
+  if (textPart && textPart.length === 1 && eventsDescription.includes(textPart[0])) {
     [text] = textPart;
   }
 
@@ -144,7 +144,7 @@ const SelectInputPairElement = (prop) => {
   );
 };
 
-SelectInputPairElement.propType = {
+SelectInputPairElement.propTypes = {
   items: PropTypes.instanceOf(Array),
   title: PropTypes.string.isRequired,
   id: PropTypes.string.isRequired,
@@ -156,7 +156,7 @@ SelectInputPairElement.propType = {
   required: PropTypes.bool,
   step: PropTypes.string,
   metaData: PropTypes.instanceOf(Object),
-  defaultValue: PropTypes.oneOf([PropTypes.string, PropTypes.number]),
+  defaultValue: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   onBlur: PropTypes.func,
 };
 
