@@ -112,7 +112,11 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
   }
 
   return (
-    <div className="channel-map-editor">
+    <div
+      className="channel-map-editor"
+      data-testid="channel-map-editor"
+      data-group-id={electrodeGroup.id}
+    >
       {/* Header */}
       <div className="channel-map-editor-header">
         <h2>Channel Map Editor</h2>
@@ -120,6 +124,7 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
           <span>Electrode Group: {electrodeGroup.id}</span>
           <span>Device Type: {electrodeGroup.device_type}</span>
           <span>Location: {electrodeGroup.location}</span>
+          <span data-testid="editor-channel-map-count">{localChannelMaps.length} maps</span>
         </div>
       </div>
 
@@ -183,6 +188,7 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
           className="btn-cancel"
           onClick={handleCancel}
           aria-label="Cancel and close editor"
+          data-testid="editor-cancel"
         >
           Cancel
         </button>
@@ -191,6 +197,7 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
           className="btn-save"
           onClick={handleSave}
           aria-label="Save channel map changes"
+          data-testid="editor-save"
         >
           Save
         </button>

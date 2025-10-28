@@ -3,6 +3,9 @@ import { useStoreContext } from '../../state/StoreContext';
 import { useAnimalIdFromUrl } from '../../hooks/useAnimalIdFromUrl';
 import ElectrodeGroupsStep from './ElectrodeGroupsStep';
 import ElectrodeGroupModal from './ElectrodeGroupModal';
+import ChannelMapsStep from './ChannelMapsStep';
+import ChannelMapEditor from './ChannelMapEditor';
+import { generateAllChannelMaps } from '../../utils/channelMapUtils';
 
 /**
  * Generate next sequential electrode group ID
@@ -48,6 +51,8 @@ export default function AnimalEditorStepper() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('add');
   const [editingGroup, setEditingGroup] = useState(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingGroupId, setEditingGroupId] = useState(null);
 
   // Validate animal exists
   const animal = animalId ? model.workspace.animals[animalId] : null;
@@ -168,6 +173,80 @@ export default function AnimalEditorStepper() {
     // This callback would handle inline edits or other field changes
   }
 
+  // Channel maps handlers
+  /**
+   * Open channel map editor for specific electrode group
+   * @param {string} groupId - Electrode group ID
+   */
+  function handleEditChannelMap(groupId) {
+    setEditingGroupId(groupId);
+    setEditorOpen(true);
+  }
+
+  /**
+   * Save channel map changes
+   * @param {Array} updatedMaps - Updated channel maps for the editing group
+   */
+  function handleSaveChannelMap(updatedMaps) {
+    // Get all channel maps
+    const allChannelMaps = animal.devices.ntrode_electrode_group_channel_map || [];
+
+    // Remove old maps for this group and add updated ones
+    const otherMaps = allChannelMaps.filter(map => map.electrode_group_id !== editingGroupId);
+    const newChannelMaps = [...otherMaps, ...updatedMaps];
+
+    actions.updateAnimal(animalId, {
+      devices: {
+        ...animal.devices,
+        ntrode_electrode_group_channel_map: newChannelMaps,
+      },
+    });
+
+    setEditorOpen(false);
+    setEditingGroupId(null);
+  }
+
+  /**
+   * Cancel channel map editor without saving
+   */
+  function handleCancelChannelMapEditor() {
+    setEditorOpen(false);
+    setEditingGroupId(null);
+  }
+
+  /**
+   * Auto-generate all channel maps for all electrode groups
+   */
+  function handleAutoGenerate() {
+    const existing = animal.devices.ntrode_electrode_group_channel_map || [];
+
+    if (existing.length > 0) {
+      if (!window.confirm('Overwrite existing channel maps?')) {
+        return;
+      }
+    }
+
+    const generated = generateAllChannelMaps(animal.devices.electrode_groups || []);
+
+    actions.updateAnimal(animalId, {
+      devices: {
+        ...animal.devices,
+        ntrode_electrode_group_channel_map: generated,
+      },
+    });
+  }
+
+  // Get electrode group for editor
+  const editingElectrodeGroup = editingGroupId
+    ? animal.devices.electrode_groups.find(g => g.id === editingGroupId)
+    : null;
+
+  // Get channel maps for editing group
+  const editingChannelMaps = editingGroupId
+    ? (animal.devices.ntrode_electrode_group_channel_map || [])
+        .filter(map => map.electrode_group_id === editingGroupId)
+    : [];
+
   // Step configuration
   const steps = [
     {
@@ -182,7 +261,26 @@ export default function AnimalEditorStepper() {
         />
       ),
     },
-    { label: 'Channel Maps', component: <div>Channel Maps (Step 2)</div> },
+    {
+      label: 'Channel Maps',
+      component: (
+        <div>
+          <ChannelMapsStep
+            animal={animal}
+            onEditChannelMap={handleEditChannelMap}
+          />
+          <div style={{ marginTop: '1rem' }}>
+            <button
+              onClick={handleAutoGenerate}
+              aria-label="Auto-generate all channel maps"
+              style={{ marginRight: '0.5rem' }}
+            >
+              Auto-Generate All Channel Maps
+            </button>
+          </div>
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -231,6 +329,18 @@ export default function AnimalEditorStepper() {
         onSave={handleSaveGroup}
         onCancel={handleCancelModal}
       />
+
+      {/* Channel Map Editor Modal */}
+      {editorOpen && editingElectrodeGroup && (
+        <dialog open>
+          <ChannelMapEditor
+            electrodeGroup={editingElectrodeGroup}
+            channelMaps={editingChannelMaps}
+            onSave={handleSaveChannelMap}
+            onCancel={handleCancelChannelMapEditor}
+          />
+        </dialog>
+      )}
     </div>
   );
 }

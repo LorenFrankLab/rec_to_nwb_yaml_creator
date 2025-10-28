@@ -74,7 +74,7 @@ export default function ChannelMapsStep({ animal, onEditChannelMap }) {
 
   // Table view
   return (
-    <div className="channel-maps-step">
+    <div className="channel-maps-step" data-testid="channel-maps-step">
       <header className="step-header">
         <h2>Step 2: Channel Maps</h2>
         <p>Configure channel mappings for each electrode group.</p>
@@ -108,6 +108,7 @@ export default function ChannelMapsStep({ animal, onEditChannelMap }) {
                   className="button-small"
                   onClick={() => handleEditClick(group.id)}
                   aria-label={`Edit channel map for electrode group ${group.id}`}
+                  data-testid={`edit-channel-map-${group.id}`}
                 >
                   Edit
                 </button>
