@@ -1,10 +1,12 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import AnimalEditorStepper from './AnimalEditorStepper';
 
 /**
  * AnimalEditor - Entry point for animal-level device configuration
  *
- * Route: #/animal/:id/editor
+ * Route: #/animal/{animalId}/editor
+ * Example: #/animal/remy/editor
  *
  * Provides interface for:
  * - Electrode groups configuration (device type, location, coordinates)
@@ -18,10 +20,11 @@ export default function AnimalEditor() {
     <main
       id="main-content"
       role="main"
-      aria-labelledby="animal-editor-heading"
       tabIndex="-1"
     >
       <AnimalEditorStepper />
     </main>
   );
 }
+
+AnimalEditor.propTypes = {};

@@ -36,10 +36,22 @@ describe('AnimalEditor', () => {
     );
   }
 
-  it('renders main landmark with proper aria-label', () => {
+  it('renders main landmark', () => {
     renderWithStore(<AnimalEditor />);
     const main = screen.getByRole('main');
-    expect(main).toHaveAttribute('aria-labelledby', 'animal-editor-heading');
+    expect(main).toBeInTheDocument();
+  });
+
+  it('has skip-to-main-content target id', () => {
+    renderWithStore(<AnimalEditor />);
+    const main = screen.getByRole('main');
+    expect(main).toHaveAttribute('id', 'main-content');
+  });
+
+  it('supports programmatic focus via tabIndex', () => {
+    renderWithStore(<AnimalEditor />);
+    const main = screen.getByRole('main');
+    expect(main).toHaveAttribute('tabIndex', '-1');
   });
 
   it('renders stepper component', () => {
