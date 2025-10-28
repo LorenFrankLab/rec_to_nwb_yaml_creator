@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
 import { useAnimalIdFromUrl } from '../../hooks/useAnimalIdFromUrl';
+import ElectrodeGroupsStep from './ElectrodeGroupsStep';
+import ElectrodeGroupModal from './ElectrodeGroupModal';
 
 /**
  * Animal Editor Stepper - Container for multi-step animal device configuration
@@ -20,8 +22,11 @@ import { useAnimalIdFromUrl } from '../../hooks/useAnimalIdFromUrl';
  */
 export default function AnimalEditorStepper() {
   const animalId = useAnimalIdFromUrl();
-  const { model } = useStoreContext();
+  const { model, actions } = useStoreContext();
   const [activeStep, setActiveStep] = useState(0);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState('add');
+  const [editingGroup, setEditingGroup] = useState(null);
 
   // Validate animal exists
   const animal = animalId ? model.workspace.animals[animalId] : null;
@@ -36,7 +41,7 @@ export default function AnimalEditorStepper() {
 
   // Step navigation handlers
   /**
-   *
+   * Move to next step
    */
   function handleNext() {
     if (activeStep < steps.length - 1) {
@@ -45,7 +50,7 @@ export default function AnimalEditorStepper() {
   }
 
   /**
-   *
+   * Move to previous step
    */
   function handleBack() {
     if (activeStep > 0) {
@@ -53,9 +58,77 @@ export default function AnimalEditorStepper() {
     }
   }
 
+  // Electrode groups modal handlers
+  /**
+   * Open modal in add mode
+   */
+  function handleAddGroup() {
+    setModalMode('add');
+    setEditingGroup(null);
+    setModalOpen(true);
+  }
+
+  /**
+   * Open modal in edit mode with selected group
+   * @param {object} group - Electrode group to edit
+   */
+  function handleEditGroup(group) {
+    setModalMode('edit');
+    setEditingGroup(group);
+    setModalOpen(true);
+  }
+
+  /**
+   * Save electrode group (add or edit)
+   * @param {object} groupData - Form data from modal
+   */
+  function handleSaveGroup(groupData) {
+    const updatedGroups = modalMode === 'add'
+      ? [...animal.devices.electrode_groups, { ...groupData, id: Date.now().toString() }]
+      : animal.devices.electrode_groups.map(g =>
+        g.id === editingGroup.id ? { ...g, ...groupData } : g
+      );
+
+    actions.updateAnimal(animalId, {
+      devices: {
+        ...animal.devices,
+        electrode_groups: updatedGroups,
+      },
+    });
+
+    setModalOpen(false);
+  }
+
+  /**
+   * Cancel modal without saving
+   */
+  function handleCancelModal() {
+    setModalOpen(false);
+  }
+
+  /**
+   * Handle field updates from ElectrodeGroupsStep
+   * @param {string} field - Field name
+   * @param {any} value - New value
+   */
+  function handleFieldUpdate(field, value) {
+    // Placeholder for future field updates
+    // This callback would handle inline edits or other field changes
+  }
+
   // Step configuration
   const steps = [
-    { label: 'Electrode Groups', component: <div>Electrode Groups (Step 1)</div> },
+    {
+      label: 'Electrode Groups',
+      component: (
+        <ElectrodeGroupsStep
+          animal={animal}
+          onFieldUpdate={handleFieldUpdate}
+          onAdd={handleAddGroup}
+          onEdit={handleEditGroup}
+        />
+      ),
+    },
     { label: 'Channel Maps', component: <div>Channel Maps (Step 2)</div> },
   ];
 
@@ -96,6 +169,15 @@ export default function AnimalEditorStepper() {
           {activeStep === steps.length - 1 ? 'Save' : 'Next'}
         </button>
       </footer>
+
+      {/* Electrode Groups Modal */}
+      <ElectrodeGroupModal
+        isOpen={modalOpen}
+        mode={modalMode}
+        group={editingGroup}
+        onSave={handleSaveGroup}
+        onCancel={handleCancelModal}
+      />
     </div>
   );
 }
