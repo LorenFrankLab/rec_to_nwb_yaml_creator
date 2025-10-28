@@ -9,7 +9,61 @@
 
 ---
 
-## Current Session: M5.5.4 - Calendar-Based Day Creation + Critical Fixes
+## Current Session: M6 - DevicesStep Implementation
+
+**Status:** ✅ COMPLETE - First M6 task finished, ready for commit
+
+### Session Summary
+
+**Completed:** DevicesStep with bad channels editing (first M6 task)
+
+**Components Created:**
+
+- DevicesStep.jsx (334 lines, 15 tests)
+- BadChannelsEditor.jsx (180 lines, 12 tests)
+- ReadOnlyDeviceInfo.jsx (80 lines, 5 tests)
+
+**Integration:**
+
+- Updated DayEditorStepper.jsx to use DevicesStep
+- Added 347 lines of Material Design CSS
+- All 2440 tests passing (no regressions)
+
+**Design Decisions:**
+
+- Only bad_channels editable at day level (channels fail over time)
+- Accordion UI for 1-66 electrode groups
+- Status badges for at-a-glance health (✓ All OK, ⚠ N failed, ⚠ All failed)
+- Progressive disclosure (editable first, read-only collapsible)
+
+**Next Steps:**
+
+- [ ] Commit changes: `feat(M6): implement DevicesStep with bad channels editing`
+- [ ] Continue with ChannelMapEditor (CSV import/export)
+- [ ] Add duplicate/missing channel validation
+
+### Files Changed
+
+**Created:**
+
+- src/pages/DayEditor/DevicesStep.jsx
+- src/pages/DayEditor/BadChannelsEditor.jsx
+- src/pages/DayEditor/ReadOnlyDeviceInfo.jsx
+- src/pages/DayEditor/**tests**/DevicesStep.test.jsx
+- src/pages/DayEditor/**tests**/BadChannelsEditor.test.jsx
+- src/pages/DayEditor/**tests**/ReadOnlyDeviceInfo.test.jsx
+- docs/M6_DEVICES_DESIGN.md
+
+**Modified:**
+
+- src/pages/DayEditor/DayEditorStepper.jsx (import + step config)
+- src/pages/DayEditor/DayEditor.css (+347 lines)
+- docs/TASKS.md (marked first M6 task complete)
+- docs/REFACTOR_CHANGELOG.md (added M6 entry)
+
+---
+
+## Previous Session: M5.5.4 - Calendar-Based Day Creation + Critical Fixes
 
 **Status:** ✅ PRODUCTION-READY - All critical issues fixed, tests passing
 

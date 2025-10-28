@@ -6,7 +6,7 @@ import { computeStepStatus } from './validation';
 import StepNavigation from './StepNavigation';
 import SaveIndicator from './SaveIndicator';
 import OverviewStep from './OverviewStep';
-import DevicesStub from './DevicesStub';
+import DevicesStep from './DevicesStep';
 import EpochsStub from './EpochsStub';
 import ValidationStub from './ValidationStub';
 import ExportStub from './ExportStub';
@@ -17,7 +17,7 @@ import ErrorState from './ErrorState';
  *
  * Manages the day editor workflow with 5 steps:
  * 1. Overview - Session metadata (M5 - implemented)
- * 2. Devices - Electrode groups, cameras (M6 - stub)
+ * 2. Devices - Electrode groups, cameras (M6 - implemented)
  * 3. Epochs - Tasks, behavioral events (M7 - stub)
  * 4. Validation - Summary of all errors (M9 - stub)
  * 5. Export - Download YAML file (M10 - stub)
@@ -95,7 +95,7 @@ export default function DayEditorStepper() {
   // Step configuration
   const steps = [
     { id: 'overview', label: 'Overview', component: OverviewStep },
-    { id: 'devices', label: 'Devices', component: DevicesStub },
+    { id: 'devices', label: 'Devices', component: DevicesStep },
     { id: 'epochs', label: 'Epochs', component: EpochsStub },
     { id: 'validation', label: 'Validation', component: ValidationStub },
     { id: 'export', label: 'Export', component: ExportStub },

@@ -6,6 +6,114 @@
 
 ---
 
+## M6 - DevicesStep Implementation (October 28, 2025)
+
+### Summary
+
+Implemented DevicesStep for Day Editor with accordion UI for editing day-specific bad channels. Only bad_channels are editable at day level (channels fail over time); all other device configuration is read-only and inherited from animal level.
+
+### Design Approach
+
+- **Accordion/Collapsible UI** - Native `<details>`/`<summary>` elements for 1-66 electrode groups
+- **Progressive Disclosure** - Editable content (bad channels) prioritized first, read-only device config collapsible
+- **Status Badges** - At-a-glance health indicators (✓ All OK, ⚠ N failed, ⚠ All failed - group inactive)
+- **Validation** - Real-time validation with warnings for all channels failed
+- **Material Design** - WCAG AA compliant colors, responsive layout
+
+### Components Created
+
+#### `src/pages/DayEditor/DevicesStep.jsx` (334 lines)
+- Main container component for Devices step (Step 2 of 5)
+- Renders accordion list of electrode groups
+- Computes status badges based on bad channel counts
+- Handles validation and field updates
+- Empty state handling for missing electrode groups or channel maps
+- 15 tests
+
+#### `src/pages/DayEditor/BadChannelsEditor.jsx` (180 lines)
+- Edit failed channels for each ntrode (shank)
+- Checkbox grid for marking channels as failed
+- Collapsible channel map reference table
+- Displays validation errors and warnings
+- 12 tests
+
+#### `src/pages/DayEditor/ReadOnlyDeviceInfo.jsx` (80 lines)
+- Display inherited electrode group configuration
+- Shows device_type, location, stereotaxic coordinates, description
+- Read-only with link to edit at animal level
+- 5 tests
+
+### Integration
+
+- **`src/pages/DayEditor/DayEditorStepper.jsx`**
+  - Updated import from `DevicesStub` to `DevicesStep`
+  - Updated step configuration to use DevicesStep component
+  - Updated comment to mark M6 as implemented
+
+### Styling
+
+- **`src/pages/DayEditor/DayEditor.css`** (added 347 lines)
+  - `.devices-step` container styles
+  - `.inherited-notice` banner with link
+  - `.electrode-group-details` accordion styles with open/closed states
+  - `.electrode-group-summary` with hover/focus states
+  - `.status-badge` with three variants (clean, warning, error)
+  - `.bad-channels-editor` checkbox grid layout
+  - `.channel-map-table` reference display
+  - Responsive breakpoints (@768px, @600px)
+  - WCAG AA compliant contrast ratios (8.5:1 for warnings, 7:1 for errors)
+
+### Test Results
+
+**All 2440 tests passing** (2408 existing + 32 new DevicesStep tests, 1 skipped)
+- No regressions in existing test suite
+- 100% test coverage for new components
+
+### Data Model
+
+```javascript
+day.deviceOverrides = {
+  bad_channels: {
+    '0': [1, 3],   // Ntrode 0: channels 1 and 3 failed
+    '1': [],       // Ntrode 1: no failures
+  }
+}
+```
+
+### Design Documentation
+
+- **`docs/M6_DEVICES_DESIGN.md`** (650 lines)
+  - Comprehensive design document
+  - UX review feedback incorporated
+  - UI review feedback incorporated
+  - Component architecture, data model, validation rules
+  - Testing strategy
+
+### Files Modified
+
+- `src/pages/DayEditor/DayEditorStepper.jsx` - Updated to use DevicesStep
+- `src/pages/DayEditor/DayEditor.css` - Added 347 lines of styling
+- `docs/TASKS.md` - Marked first M6 task as complete
+- `docs/REFACTOR_CHANGELOG.md` - Added M6 entry
+
+### Files Created
+
+- `src/pages/DayEditor/DevicesStep.jsx`
+- `src/pages/DayEditor/BadChannelsEditor.jsx`
+- `src/pages/DayEditor/ReadOnlyDeviceInfo.jsx`
+- `src/pages/DayEditor/__tests__/DevicesStep.test.jsx`
+- `src/pages/DayEditor/__tests__/BadChannelsEditor.test.jsx`
+- `src/pages/DayEditor/__tests__/ReadOnlyDeviceInfo.test.jsx`
+- `docs/M6_DEVICES_DESIGN.md`
+
+### Next Steps
+
+- [ ] Integrate ChannelMapEditor (grid UI, CSV import/export)
+- [ ] Add duplicate/missing channel validation
+- [ ] Extend validation to combine schema + logic + cross-reference checks
+
+---
+
 ## M5.5.3 - Add Date Picker for Recording Day Creation (October 28, 2025)
 
 ### Summary

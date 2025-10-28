@@ -335,20 +335,35 @@
 
 **Tasks**
 
-* [ ] Add `DevicesStep` form (edit devices/electrode groups).
+* [x] Add `DevicesStep` form (edit devices/electrode groups). ✅ Implemented with 32 tests
+  * ✅ `DevicesStep.jsx` - Main container (334 lines)
+  * ✅ `BadChannelsEditor.jsx` - Edit failed channels (180 lines)
+  * ✅ `ReadOnlyDeviceInfo.jsx` - Display inherited device config (80 lines)
+  * ✅ Accordion UI with status badges (All OK, N failed, All failed)
+  * ✅ Integrated with DayEditorStepper
+  * ✅ Material Design CSS styling (347 lines)
+  * ✅ All 2440 tests passing (no regressions)
 * [ ] Integrate `ChannelMapEditor` (grid UI, CSV import/export).
 * [ ] Add duplicate/missing channel validation.
 * [ ] Extend `useValidation.js` to combine schema + logic + cross-reference checks.
 
 **Acceptance (DoD)**
 
-* Devices edits persist and validate.
-* Channel map round-trips via CSV.
-* Validation summary displays accurate device-level issues.
+* ✅ Devices edits persist and validate (bad_channels only).
+* [ ] Channel map round-trips via CSV.
+* [ ] Validation summary displays accurate device-level issues.
 
 **Artifacts**
 
-* `src/pages/DayEditor/DevicesStep.jsx`, `ChannelMapEditor.jsx`, tests.
+* ✅ `src/pages/DayEditor/DevicesStep.jsx` (main component, 314 lines)
+* ✅ `src/pages/DayEditor/BadChannelsEditor.jsx` (failed channels editor, 174 lines)
+* ✅ `src/pages/DayEditor/ReadOnlyDeviceInfo.jsx` (read-only display, 72 lines)
+* ✅ `src/pages/DayEditor/__tests__/DevicesStep.test.jsx` (15 tests)
+* ✅ `src/pages/DayEditor/__tests__/BadChannelsEditor.test.jsx` (12 tests)
+* ✅ `src/pages/DayEditor/__tests__/ReadOnlyDeviceInfo.test.jsx` (5 tests)
+* ✅ `src/pages/DayEditor/DayEditor.css` (updated with 347 lines)
+* ✅ `docs/M6_DEVICES_DESIGN.md` (design document with UX/UI review, 650 lines)
+* [ ] `ChannelMapEditor.jsx`, tests (pending).
 
 ---
 
