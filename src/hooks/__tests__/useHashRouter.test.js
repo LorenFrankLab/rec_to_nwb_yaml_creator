@@ -523,3 +523,82 @@ describe('integration scenarios', () => {
     expect(result.current.params.animalId).toBe('bean');
   });
 });
+
+describe('animal editor route edge cases', () => {
+  describe('valid animal IDs', () => {
+    it('handles complex alphanumeric IDs with hyphens and underscores', () => {
+      expect(parseHashRoute('#/animal/remy-2023_batch-1/editor')).toEqual({
+        view: 'animal-editor',
+        params: { animalId: 'remy-2023_batch-1' }
+      });
+    });
+
+    it('handles numeric-only IDs', () => {
+      expect(parseHashRoute('#/animal/12345/editor')).toEqual({
+        view: 'animal-editor',
+        params: { animalId: '12345' }
+      });
+    });
+
+    it('handles uppercase IDs', () => {
+      expect(parseHashRoute('#/animal/BEAN/editor')).toEqual({
+        view: 'animal-editor',
+        params: { animalId: 'BEAN' }
+      });
+    });
+  });
+
+  describe('invalid animal IDs', () => {
+    it('rejects #/animal//editor with missing ID', () => {
+      const result = parseHashRoute('#/animal//editor');
+      expect(result.view).toBe('legacy');
+      expect(result.params).toEqual({});
+    });
+
+    it('rejects #/animal/   /editor with whitespace-only ID', () => {
+      const result = parseHashRoute('#/animal/   /editor');
+      expect(result.view).toBe('legacy');
+      expect(result.params).toEqual({});
+    });
+
+    it('rejects #/animal/remy with missing /editor suffix', () => {
+      const result = parseHashRoute('#/animal/remy');
+      expect(result.view).toBe('legacy');
+      expect(result.params).toEqual({});
+    });
+
+    it('rejects #/animal/remy/editor/extra with trailing segments', () => {
+      const result = parseHashRoute('#/animal/remy/editor/extra');
+      expect(result.view).toBe('legacy');
+      expect(result.params).toEqual({});
+    });
+  });
+
+  describe('console warnings for invalid animal IDs', () => {
+    let consoleWarnSpy;
+
+    beforeEach(() => {
+      consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('warns on whitespace-only animal ID', () => {
+      parseHashRoute('#/animal/   /editor');
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Invalid animal ID'),
+        '/animal/   /editor'
+      );
+    });
+
+    it('warns on empty animal ID (regex doesn\'t match)', () => {
+      parseHashRoute('#/animal//editor');
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Unknown route'),
+        '/animal//editor'
+      );
+    });
+  });
+});

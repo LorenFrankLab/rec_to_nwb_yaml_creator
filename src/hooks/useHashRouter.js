@@ -68,9 +68,17 @@ export function parseHashRoute(hash = typeof window !== 'undefined' ? window.loc
   // Pattern match for /animal/:id/editor (without query parameters)
   const animalEditorMatch = pathWithoutQuery.match(/^\/animal\/([^/]+)\/editor$/);
   if (animalEditorMatch) {
+    const animalId = animalEditorMatch[1];
+
+    // Validate ID is not empty or whitespace
+    if (!animalId || animalId.trim() === '') {
+      console.warn('Invalid animal ID in route:', cleanHash);
+      return { view: 'legacy', params: {} };
+    }
+
     return {
       view: 'animal-editor',
-      params: { animalId: animalEditorMatch[1] }
+      params: { animalId }
     };
   }
 
