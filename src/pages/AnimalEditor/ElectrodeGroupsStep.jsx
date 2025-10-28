@@ -12,9 +12,10 @@ import { deviceTypeMap } from '../../ntrode/deviceTypes';
  * @param {Function} props.onFieldUpdate - Field update callback
  * @param {Function} [props.onEdit] - Edit button click handler
  * @param {Function} [props.onAdd] - Add button click handler
+ * @param {Function} [props.onDelete] - Delete button click handler
  * @returns {JSX.Element}
  */
-export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onAdd }) {
+export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onAdd, onDelete }) {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showCopyDialog, setShowCopyDialog] = useState(false);
 
@@ -73,6 +74,16 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
   const handleEditClick = (groupId) => {
     if (onEdit) {
       onEdit(groupId);
+    }
+  };
+
+  /**
+   * Handle delete button click
+   * @param group - Electrode group to delete
+   */
+  const handleDeleteClick = (group) => {
+    if (onDelete) {
+      onDelete(group);
     }
   };
 
@@ -140,7 +151,13 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
               </td>
               <td>
                 <button className="button-small" onClick={() => handleEditClick(group.id)}>Edit</button>
-                <button className="button-small button-danger" onClick={() => {/* TODO: Implement delete */}}>Delete</button>
+                <button
+                  className="button-small button-danger"
+                  onClick={() => handleDeleteClick(group)}
+                  aria-label={`Delete electrode group ${group.id}`}
+                >
+                  Delete
+                </button>
               </td>
             </tr>
           ))}
@@ -163,9 +180,11 @@ ElectrodeGroupsStep.propTypes = {
   onFieldUpdate: PropTypes.func.isRequired,
   onEdit: PropTypes.func,
   onAdd: PropTypes.func,
+  onDelete: PropTypes.func,
 };
 
 ElectrodeGroupsStep.defaultProps = {
   onEdit: null,
   onAdd: null,
+  onDelete: null,
 };

@@ -83,4 +83,36 @@ describe('ElectrodeGroupsStep', () => {
     const deleteButtons = screen.getAllByText('Delete');
     expect(deleteButtons).toHaveLength(2);
   });
+
+  it('calls onDelete when delete button clicked', async () => {
+    const user = userEvent.setup();
+    const mockOnDelete = vi.fn();
+
+    render(
+      <ElectrodeGroupsStep
+        animal={mockAnimal}
+        onFieldUpdate={mockOnFieldUpdate}
+        onDelete={mockOnDelete}
+      />
+    );
+
+    const deleteButtons = screen.getAllByText('Delete');
+    await user.click(deleteButtons[0]);
+
+    expect(mockOnDelete).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 0 })
+    );
+  });
+
+  it('delete button has aria-label with group ID', () => {
+    render(
+      <ElectrodeGroupsStep
+        animal={mockAnimal}
+        onFieldUpdate={mockOnFieldUpdate}
+      />
+    );
+
+    const button = screen.getByLabelText(/Delete electrode group 0/i);
+    expect(button).toBeInTheDocument();
+  });
 });

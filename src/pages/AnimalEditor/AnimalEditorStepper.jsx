@@ -5,6 +5,27 @@ import ElectrodeGroupsStep from './ElectrodeGroupsStep';
 import ElectrodeGroupModal from './ElectrodeGroupModal';
 
 /**
+ * Generate next sequential electrode group ID
+ * Finds max existing ID and increments by 1
+ * @param {Array} existingGroups - Current electrode groups
+ * @returns {string} Next ID (e.g., "0", "1", "2"...)
+ */
+function generateNextElectrodeGroupId(existingGroups) {
+  if (!existingGroups || existingGroups.length === 0) {
+    return '0';
+  }
+
+  const maxId = Math.max(
+    ...existingGroups.map(g => {
+      const parsed = parseInt(g.id, 10);
+      return isNaN(parsed) ? 0 : parsed;
+    })
+  );
+
+  return (maxId + 1).toString();
+}
+
+/**
  * Animal Editor Stepper - Container for multi-step animal device configuration
  *
  * Manages the 2-step workflow for animal-level configuration:
@@ -84,7 +105,10 @@ export default function AnimalEditorStepper() {
    */
   function handleSaveGroup(groupData) {
     const updatedGroups = modalMode === 'add'
-      ? [...animal.devices.electrode_groups, { ...groupData, id: Date.now().toString() }]
+      ? [...animal.devices.electrode_groups, {
+        ...groupData,
+        id: generateNextElectrodeGroupId(animal.devices.electrode_groups)
+      }]
       : animal.devices.electrode_groups.map(g =>
         g.id === editingGroup.id ? { ...g, ...groupData } : g
       );
@@ -107,6 +131,34 @@ export default function AnimalEditorStepper() {
   }
 
   /**
+   * Delete electrode group with confirmation
+   * @param {object} group - Electrode group to delete
+   */
+  function handleDeleteGroup(group) {
+    // Confirmation dialog
+    const message = `Delete electrode group "${group.location}" (${group.device_type})?\n\nThis cannot be undone.`;
+
+    if (!window.confirm(message)) {
+      return;
+    }
+
+    // Remove from electrode_groups array
+    const updatedGroups = animal.devices.electrode_groups.filter(g => g.id !== group.id);
+
+    // Also remove associated channel maps
+    const updatedChannelMaps = (animal.devices.ntrode_electrode_group_channel_map || [])
+      .filter(map => map.electrode_group_id !== group.id);
+
+    actions.updateAnimal(animalId, {
+      devices: {
+        ...animal.devices,
+        electrode_groups: updatedGroups,
+        ntrode_electrode_group_channel_map: updatedChannelMaps,
+      },
+    });
+  }
+
+  /**
    * Handle field updates from ElectrodeGroupsStep
    * @param {string} field - Field name
    * @param {any} value - New value
@@ -126,6 +178,7 @@ export default function AnimalEditorStepper() {
           onFieldUpdate={handleFieldUpdate}
           onAdd={handleAddGroup}
           onEdit={handleEditGroup}
+          onDelete={handleDeleteGroup}
         />
       ),
     },
