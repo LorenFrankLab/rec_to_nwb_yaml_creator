@@ -78,12 +78,44 @@ src/utils/yamlExport.js                                         - Deleted (depre
 - Removed file was not imported anywhere
 - All existing tests continue to pass
 
+### Validation Utilities Audit
+
+After completing YAML utilities, audited validation infrastructure:
+
+**Findings:**
+- Validation utilities already extracted to `src/validation/` module
+- Pure utilities with no React dependencies (except UI components)
+- Comprehensive test coverage: 189 tests across 6 test files
+- Well-structured API: `validate()`, `validateField()`, `schemaValidation()`, `rulesValidation()`
+- Uses AJV with `strict: false` (intentional - allows schema version metadata)
+
+**Test Coverage:**
+- `schemaValidation.test.js` - JSON schema validation
+- `rulesValidation.test.js` - Business logic rules
+- `integration.test.js` - End-to-end validation
+- `quickChecks.test.js` - Fast validation checks
+- `paths.test.js` - Path normalization utilities
+- `useQuickChecks.test.js` - React hook tests
+
+**Module Structure:**
+```
+src/validation/
+├── index.js              - Unified API (validate, validateField)
+├── schemaValidation.js   - AJV JSON schema validation
+├── rulesValidation.js    - Custom business logic
+├── paths.js              - Path normalization utilities
+├── quickChecks.js        - Fast validation for UI
+├── useQuickChecks.js     - React hook (UI-only)
+└── HintDisplay.jsx       - React component (UI-only)
+```
+
+**Conclusion:** M1 second task already complete. No action needed.
+
 ### Next Steps (M1 Continuation)
 
-1. Create `src/utils/schemaValidator.js` using AJV (strict mode)
-2. Add shadow export test for YAML parity verification
-3. Integrate shadow export with Vitest baseline suite
-4. Document regression protocol in CLAUDE.md
+1. Add shadow export test for YAML parity verification
+2. Integrate shadow export with Vitest baseline suite
+3. Document regression protocol in CLAUDE.md
 
 ---
 

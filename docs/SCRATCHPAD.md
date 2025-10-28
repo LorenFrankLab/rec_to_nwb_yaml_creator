@@ -82,9 +82,16 @@
   - Updated test documentation to reference `io/yaml.js`
   - **Test Results:** 2149 tests passing (up from 2126, +23 new tests)
 
+- [x] **Validation utilities audit** ✅ Discovered existing pure utilities
+  - Schema validation already extracted to `src/validation/` module
+  - `schemaValidation()` - JSON schema validation with AJV
+  - `rulesValidation()` - Business logic validation
+  - `validate()` - Unified validation API
+  - Pure utilities with **189 tests across 6 test files**
+  - No React dependencies in core validation logic
+
 **Next:**
 
-- [ ] Create `src/utils/schemaValidator.js` using AJV (strict mode)
 - [ ] Add shadow export test for YAML parity verification
 - [ ] Integrate shadow export with Vitest baseline suite
 - [ ] Document regression protocol in CLAUDE.md

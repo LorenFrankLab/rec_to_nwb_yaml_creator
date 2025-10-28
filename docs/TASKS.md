@@ -59,7 +59,13 @@
   * ✅ `formatDeterministicFilename()` - generates filenames (12 existing tests)
   * ✅ `downloadYamlFile()` - triggers browser download (7 existing tests)
   * ✅ Removed deprecated `src/utils/yamlExport.js`
-* [ ] Create `src/utils/schemaValidator.js` using AJV (strict mode).
+* [x] Create `src/utils/schemaValidator.js` using AJV (strict mode). ✅ Already exists as `validation/` module
+  * ✅ `schemaValidation()` - validates against JSON schema (189 tests across 6 test files)
+  * ✅ `rulesValidation()` - validates business logic rules
+  * ✅ `validate()` - unified validation combining schema + rules
+  * ✅ `validateField()` - field-level validation
+  * ✅ Pure utilities with comprehensive JSDoc
+  * ℹ️ **Note:** Uses `strict: false` to allow version metadata field in schema
 * [ ] Add **shadow export test** to verify YAML parity between new and legacy code.
 
   * Runs on all fixture YAMLs.
