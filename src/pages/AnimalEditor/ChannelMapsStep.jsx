@@ -78,6 +78,11 @@ export default function ChannelMapsStep({ animal, onEditChannelMap }) {
       <header className="step-header">
         <h2>Step 2: Channel Maps</h2>
         <p>Configure channel mappings for each electrode group.</p>
+        <div className="badge-legend">
+          <span><span className="status-badge status-✓" aria-label="All channels mapped">✓</span> All channels mapped</span>
+          <span><span className="status-badge status-⚠" aria-label="Partially mapped">⚠</span> Partially mapped</span>
+          <span><span className="status-badge status-❌" aria-label="Not mapped">❌</span> Not mapped</span>
+        </div>
       </header>
 
       <table className="channel-maps-table">

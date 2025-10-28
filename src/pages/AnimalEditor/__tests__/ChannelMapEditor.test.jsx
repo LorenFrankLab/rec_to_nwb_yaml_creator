@@ -20,6 +20,8 @@ describe('ChannelMapEditor', () => {
 
   beforeEach(() => {
     user = userEvent.setup();
+    // Mock window.alert to prevent "Not implemented" errors in validation
+    vi.stubGlobal('alert', vi.fn());
   });
 
   const mockElectrodeGroup = {
@@ -44,8 +46,8 @@ describe('ChannelMapEditor', () => {
       electrode_group_id: 'eg1',
       ntrode_id: '1',
       electrode_id: 1,
-      bad_channels: [],
-      map: { 0: 4, 1: 5, 2: 6, 3: 7 },
+      bad_channels: [1],
+      map: { 0: 0, 1: 1, 2: 2, 3: 3 },
     },
   ];
 

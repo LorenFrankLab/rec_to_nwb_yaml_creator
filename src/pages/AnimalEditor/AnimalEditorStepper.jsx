@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
 import { useAnimalIdFromUrl } from '../../hooks/useAnimalIdFromUrl';
 import ElectrodeGroupsStep from './ElectrodeGroupsStep';
@@ -6,6 +6,7 @@ import ElectrodeGroupModal from './ElectrodeGroupModal';
 import ChannelMapsStep from './ChannelMapsStep';
 import ChannelMapEditor from './ChannelMapEditor';
 import { generateAllChannelMaps } from '../../utils/channelMapUtils';
+import { downloadChannelMapsCSV, importChannelMapsFromCSV } from '../../utils/csvChannelMapUtils';
 
 /**
  * Generate next sequential electrode group ID
@@ -53,6 +54,7 @@ export default function AnimalEditorStepper() {
   const [editingGroup, setEditingGroup] = useState(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingGroupId, setEditingGroupId] = useState(null);
+  const csvFileInputRef = useRef(null);
 
   // Validate animal exists
   const animal = animalId ? model.workspace.animals[animalId] : null;
@@ -236,6 +238,78 @@ export default function AnimalEditorStepper() {
     });
   }
 
+  /**
+   * Export channel maps to CSV file
+   */
+  function handleExportCSV() {
+    const channelMaps = animal.devices.ntrode_electrode_group_channel_map || [];
+    const electrodeGroups = animal.devices.electrode_groups || [];
+
+    if (channelMaps.length === 0) {
+      alert('No channel maps to export. Please auto-generate or configure channel maps first.');
+      return;
+    }
+
+    downloadChannelMapsCSV(channelMaps, electrodeGroups, `${animalId}_channel_maps.csv`);
+  }
+
+  /**
+   * Trigger file input for CSV import
+   */
+  function handleImportCSV() {
+    csvFileInputRef.current?.click();
+  }
+
+  /**
+   * Handle CSV file selection and import
+   * @param event
+   */
+  function handleCSVFileSelect(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const csvContent = e.target?.result;
+        const importedMaps = importChannelMapsFromCSV(csvContent);
+
+        // Validate imported maps match existing electrode groups
+        const electrodeGroupIds = new Set(
+          (animal.devices.electrode_groups || []).map((g) => g.id)
+        );
+        const invalidGroups = importedMaps.filter(
+          (map) => !electrodeGroupIds.has(map.electrode_group_id)
+        );
+
+        if (invalidGroups.length > 0) {
+          const invalidIds = [...new Set(invalidGroups.map((m) => m.electrode_group_id))].join(', ');
+          alert(
+            `Cannot import CSV:\n\nThe following electrode group IDs in the CSV do not exist:\n${invalidIds}\n\nPlease ensure electrode groups are created before importing channel maps.`
+          );
+          return;
+        }
+
+        // Update animal with imported maps
+        actions.updateAnimal(animalId, {
+          devices: {
+            ...animal.devices,
+            ntrode_electrode_group_channel_map: importedMaps,
+          },
+        });
+
+        alert(`Successfully imported ${importedMaps.length} channel maps from CSV.`);
+      } catch (error) {
+        alert(`Failed to import CSV:\n\n${error.message}`);
+      }
+
+      // Reset file input
+      event.target.value = '';
+    };
+
+    reader.readAsText(file);
+  }
+
   // Get electrode group for editor
   const editingElectrodeGroup = editingGroupId
     ? animal.devices.electrode_groups.find(g => g.id === editingGroupId)
@@ -277,6 +351,26 @@ export default function AnimalEditorStepper() {
             >
               Auto-Generate All Channel Maps
             </button>
+            <button
+              onClick={handleExportCSV}
+              aria-label="Export channel maps to CSV"
+              style={{ marginRight: '0.5rem' }}
+            >
+              Export to CSV
+            </button>
+            <button
+              onClick={handleImportCSV}
+              aria-label="Import channel maps from CSV"
+            >
+              Import from CSV
+            </button>
+            <input
+              ref={csvFileInputRef}
+              type="file"
+              accept=".csv"
+              style={{ display: 'none' }}
+              onChange={handleCSVFileSelect}
+            />
           </div>
         </div>
       ),

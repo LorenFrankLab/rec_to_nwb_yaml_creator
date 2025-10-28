@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { deviceTypeMap } from '../../ntrode/deviceTypes';
+import { getChannelCount } from '../../utils/deviceTypeUtils';
 import './ChannelMapEditor.scss';
 
 /**
@@ -35,31 +36,46 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
 
   // Handle electrode_id change
   const handleElectrodeIdChange = (ntrodeIndex, value) => {
-    const updated = [...localChannelMaps];
-    updated[ntrodeIndex].electrode_id = parseInt(value, 10) || 0;
+    const updated = localChannelMaps.map((map, idx) =>
+      idx === ntrodeIndex
+        ? { ...map, electrode_id: parseInt(value, 10) || 0 }
+        : map
+    );
     setLocalChannelMaps(updated);
   };
 
   // Handle channel map value change
   const handleChannelMapChange = (ntrodeIndex, channelIndex, value) => {
-    const updated = [...localChannelMaps];
-    updated[ntrodeIndex].map[channelIndex] = parseInt(value, 10) || 0;
+    const updated = localChannelMaps.map((map, idx) =>
+      idx === ntrodeIndex
+        ? { ...map, map: { ...map.map, [channelIndex]: parseInt(value, 10) || 0 } }
+        : map
+    );
     setLocalChannelMaps(updated);
   };
 
   // Handle bad_channels checkbox toggle
   const handleBadChannelToggle = (ntrodeIndex, channelIndex) => {
-    const updated = [...localChannelMaps];
-    const badChannels = updated[ntrodeIndex].bad_channels || [];
+    const updated = localChannelMaps.map((map, idx) => {
+      if (idx !== ntrodeIndex) return map;
 
-    const channelIndexInBadChannels = badChannels.indexOf(channelIndex);
-    if (channelIndexInBadChannels > -1) {
-      // Remove from bad_channels
-      updated[ntrodeIndex].bad_channels = badChannels.filter((ch) => ch !== channelIndex);
-    } else {
-      // Add to bad_channels
-      updated[ntrodeIndex].bad_channels = [...badChannels, channelIndex];
-    }
+      const badChannels = map.bad_channels || [];
+      const channelIndexInBadChannels = badChannels.indexOf(channelIndex);
+
+      if (channelIndexInBadChannels > -1) {
+        // Remove from bad_channels
+        return {
+          ...map,
+          bad_channels: badChannels.filter((ch) => ch !== channelIndex),
+        };
+      } else {
+        // Add to bad_channels
+        return {
+          ...map,
+          bad_channels: [...badChannels, channelIndex],
+        };
+      }
+    });
 
     setLocalChannelMaps(updated);
   };
@@ -72,7 +88,55 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
 
   // Handle Save button click
   const handleSave = () => {
+    // Validate channel maps before saving
+    const errors = validateChannelMaps(localChannelMaps, electrodeGroup.device_type, channelArray);
+
+    if (errors.length > 0) {
+      alert(`Cannot save - Please fix the following issues:\n\n${errors.join('\n')}`);
+      return;
+    }
+
     onSave(localChannelMaps);
+  };
+
+  // Validate channel maps for errors
+  const validateChannelMaps = (maps, deviceType, channels) => {
+    const errors = [];
+    const maxChannelValue = getChannelCount(deviceType) - 1;
+    const channelCount = channels.length;
+
+    maps.forEach((ntrodeMap) => {
+      // P0-2: Validate channel values are within range
+      Object.entries(ntrodeMap.map).forEach(([chIdx, hwChannel]) => {
+        if (hwChannel < 0 || hwChannel > maxChannelValue) {
+          errors.push(
+            `Ntrode ${ntrodeMap.ntrode_id}: Channel ${chIdx} maps to invalid hardware channel ${hwChannel} (valid range: 0-${maxChannelValue})`
+          );
+        }
+      });
+
+      // P1-1: Validate no duplicate hardware channels within same ntrode
+      const hwChannels = Object.values(ntrodeMap.map);
+      const duplicates = hwChannels.filter((val, idx) => hwChannels.indexOf(val) !== idx);
+      if (duplicates.length > 0) {
+        const uniqueDupes = [...new Set(duplicates)].join(', ');
+        errors.push(
+          `Ntrode ${ntrodeMap.ntrode_id}: Duplicate hardware channels detected: ${uniqueDupes}`
+        );
+      }
+
+      // P1-2: Validate bad_channels indices are within valid range
+      const badChannels = ntrodeMap.bad_channels || [];
+      badChannels.forEach((badCh) => {
+        if (badCh < 0 || badCh >= channelCount) {
+          errors.push(
+            `Ntrode ${ntrodeMap.ntrode_id}: Bad channel index ${badCh} is out of range (valid: 0-${channelCount - 1})`
+          );
+        }
+      });
+    });
+
+    return errors;
   };
 
   // Handle Cancel button click
@@ -162,6 +226,7 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
                   <input
                     type="number"
                     min="0"
+                    max={getChannelCount(electrodeGroup.device_type) - 1}
                     value={ntrodeMap.map[channelIndex] ?? channelIndex}
                     onChange={(e) =>
                       handleChannelMapChange(ntrodeIndex, channelIndex, e.target.value)
