@@ -66,11 +66,12 @@
   * ✅ `validateField()` - field-level validation
   * ✅ Pure utilities with comprehensive JSDoc
   * ℹ️ **Note:** Uses `strict: false` to allow version metadata field in schema
-* [ ] Add **shadow export test** to verify YAML parity between new and legacy code.
-
-  * Runs on all fixture YAMLs.
-  * Blocks merges if outputs differ.
-* [ ] Integrate with Vitest baseline suite.
+* [x] Add **shadow export test** to verify YAML parity. ✅ Already exists as golden baseline tests
+  * ✅ 18 tests in `__tests__/baselines/golden-yaml.baseline.test.js`
+  * ✅ Runs on 4 fixture YAMLs (sample, minimal, realistic, probe-reconfig)
+  * ✅ Blocks merges if outputs differ (in CI pipeline)
+  * ✅ Tests byte-for-byte equality, round-trip consistency, format stability
+* [x] Integrate with Vitest baseline suite. ✅ Already integrated and running in CI
 * [ ] Document regression protocol in `CLAUDE.md`.
 
 **Acceptance (DoD)**

@@ -90,11 +90,18 @@
   - Pure utilities with **189 tests across 6 test files**
   - No React dependencies in core validation logic
 
+- [x] **Shadow export testing audit** ✅ Discovered existing golden baseline tests
+  - Golden YAML baseline tests already exist: `__tests__/baselines/golden-yaml.baseline.test.js`
+  - **18 tests** verifying byte-for-byte YAML export equality
+  - Tests 4 fixture files: sample, minimal, realistic, probe-reconfig
+  - Round-trip consistency, format stability, edge cases
+  - Integrated with Vitest and CI pipeline
+  - Feature flags exist: `shadowExportStrict`, `shadowExportLog`
+
 **Next:**
 
-- [ ] Add shadow export test for YAML parity verification
-- [ ] Integrate shadow export with Vitest baseline suite
 - [ ] Document regression protocol in CLAUDE.md
+- [ ] Consider M1 complete (all utilities extracted, all tests exist)
 
 ### Open Questions
 
