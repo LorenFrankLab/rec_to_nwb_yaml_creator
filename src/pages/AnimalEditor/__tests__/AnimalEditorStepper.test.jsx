@@ -747,3 +747,379 @@ describe('AnimalEditorStepper', () => {
     });
   });
 });
+
+  describe('Channel Maps Integration', () => {
+    it('renders ChannelMapsStep in Step 2', async () => {
+      const user = userEvent.setup();
+      const state = {
+        workspace: {
+          animals: {
+            remy: {
+              id: 'remy',
+              subject: { subject_id: 'remy' },
+              devices: {
+                electrode_groups: [
+                  {
+                    id: '0',
+                    device_type: 'tetrode_12.5',
+                    location: 'CA1',
+                    targeted_x: 1.0,
+                    targeted_y: 2.0,
+                    targeted_z: 3.0,
+                    units: 'mm'
+                  }
+                ],
+                ntrode_electrode_group_channel_map: [],
+              },
+              days: [],
+            },
+          },
+          days: {},
+        },
+      };
+
+      renderWithStore(<AnimalEditorStepper />, state);
+
+      // Navigate to step 2
+      const nextButton = screen.getByRole('button', { name: /next step/i });
+      await user.click(nextButton);
+
+      expect(screen.getByTestId('channel-maps-step')).toBeInTheDocument();
+      expect(screen.getByText(/ChannelMapsStep for remy/)).toBeInTheDocument();
+    });
+
+    it('opens channel map editor when group clicked', async () => {
+      const user = userEvent.setup();
+      const state = {
+        workspace: {
+          animals: {
+            remy: {
+              id: 'remy',
+              subject: { subject_id: 'remy' },
+              devices: {
+                electrode_groups: [
+                  {
+                    id: '0',
+                    device_type: 'tetrode_12.5',
+                    location: 'CA1',
+                    targeted_x: 1.0,
+                    targeted_y: 2.0,
+                    targeted_z: 3.0,
+                    units: 'mm'
+                  }
+                ],
+                ntrode_electrode_group_channel_map: [],
+              },
+              days: [],
+            },
+          },
+          days: {},
+        },
+      };
+
+      renderWithStore(<AnimalEditorStepper />, state);
+
+      // Navigate to step 2
+      const nextButton = screen.getByRole('button', { name: /next step/i });
+      await user.click(nextButton);
+
+      // Click edit channel map button
+      const editButton = screen.getByTestId('edit-channel-map-0');
+      await user.click(editButton);
+
+      expect(screen.getByTestId('channel-map-editor')).toBeInTheDocument();
+      expect(screen.getByTestId('channel-map-editor')).toHaveAttribute('data-group-id', '0');
+    });
+
+    it('saves channel map changes correctly', async () => {
+      const user = userEvent.setup();
+      const state = {
+        workspace: {
+          animals: {
+            remy: {
+              id: 'remy',
+              subject: { subject_id: 'remy' },
+              devices: {
+                electrode_groups: [
+                  {
+                    id: '0',
+                    device_type: 'tetrode_12.5',
+                    location: 'CA1',
+                    targeted_x: 1.0,
+                    targeted_y: 2.0,
+                    targeted_z: 3.0,
+                    units: 'mm'
+                  }
+                ],
+                ntrode_electrode_group_channel_map: [
+                  {
+                    electrode_group_id: '0',
+                    ntrode_id: '0',
+                    electrode_id: 0,
+                    bad_channels: [],
+                    map: { 0: 0, 1: 1, 2: 2, 3: 3 }
+                  }
+                ],
+              },
+              days: [],
+            },
+          },
+          days: {},
+        },
+      };
+
+      renderWithStore(<AnimalEditorStepper />, state);
+
+      // Navigate to step 2
+      const nextButton = screen.getByRole('button', { name: /next step/i });
+      await user.click(nextButton);
+
+      // Click edit channel map button
+      const editButton = screen.getByTestId('edit-channel-map-0');
+      await user.click(editButton);
+
+      expect(screen.getByTestId('channel-map-editor')).toBeInTheDocument();
+
+      // Save changes
+      const saveButton = screen.getByTestId('editor-save');
+      await user.click(saveButton);
+
+      // Editor should close
+      expect(screen.queryByTestId('channel-map-editor')).not.toBeInTheDocument();
+    });
+
+    it('cancels editing without changes', async () => {
+      const user = userEvent.setup();
+      const state = {
+        workspace: {
+          animals: {
+            remy: {
+              id: 'remy',
+              subject: { subject_id: 'remy' },
+              devices: {
+                electrode_groups: [
+                  {
+                    id: '0',
+                    device_type: 'tetrode_12.5',
+                    location: 'CA1',
+                    targeted_x: 1.0,
+                    targeted_y: 2.0,
+                    targeted_z: 3.0,
+                    units: 'mm'
+                  }
+                ],
+                ntrode_electrode_group_channel_map: [
+                  {
+                    electrode_group_id: '0',
+                    ntrode_id: '0',
+                    electrode_id: 0,
+                    bad_channels: [],
+                    map: { 0: 0, 1: 1, 2: 2, 3: 3 }
+                  }
+                ],
+              },
+              days: [],
+            },
+          },
+          days: {},
+        },
+      };
+
+      renderWithStore(<AnimalEditorStepper />, state);
+
+      // Navigate to step 2
+      const nextButton = screen.getByRole('button', { name: /next step/i });
+      await user.click(nextButton);
+
+      // Click edit channel map button
+      const editButton = screen.getByTestId('edit-channel-map-0');
+      await user.click(editButton);
+
+      expect(screen.getByTestId('channel-map-editor')).toBeInTheDocument();
+
+      // Cancel editing
+      const cancelButton = screen.getByTestId('editor-cancel');
+      await user.click(cancelButton);
+
+      // Editor should close without saving
+      expect(screen.queryByTestId('channel-map-editor')).not.toBeInTheDocument();
+    });
+
+    it('auto-generates all channel maps', async () => {
+      const user = userEvent.setup();
+      const state = {
+        workspace: {
+          animals: {
+            remy: {
+              id: 'remy',
+              subject: { subject_id: 'remy' },
+              devices: {
+                electrode_groups: [
+                  {
+                    id: '0',
+                    device_type: 'tetrode_12.5',
+                    location: 'CA1',
+                    targeted_x: 1.0,
+                    targeted_y: 2.0,
+                    targeted_z: 3.0,
+                    units: 'mm'
+                  },
+                  {
+                    id: '1',
+                    device_type: 'tetrode_12.5',
+                    location: 'CA3',
+                    targeted_x: 4.0,
+                    targeted_y: 5.0,
+                    targeted_z: 6.0,
+                    units: 'mm'
+                  }
+                ],
+                ntrode_electrode_group_channel_map: [],
+              },
+              days: [],
+            },
+          },
+          days: {},
+        },
+      };
+
+      renderWithStore(<AnimalEditorStepper />, state);
+
+      // Navigate to step 2
+      const nextButton = screen.getByRole('button', { name: /next step/i });
+      await user.click(nextButton);
+
+      // Click auto-generate button
+      const autoGenerateButton = screen.getByRole('button', { name: /auto-generate all channel maps/i });
+      await user.click(autoGenerateButton);
+
+      // Verify we're still on channel maps step
+      expect(screen.getByTestId('channel-maps-step')).toBeInTheDocument();
+    });
+
+    it('shows confirmation before overwriting existing maps', async () => {
+      const user = userEvent.setup();
+      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+      const state = {
+        workspace: {
+          animals: {
+            remy: {
+              id: 'remy',
+              subject: { subject_id: 'remy' },
+              devices: {
+                electrode_groups: [
+                  {
+                    id: '0',
+                    device_type: 'tetrode_12.5',
+                    location: 'CA1',
+                    targeted_x: 1.0,
+                    targeted_y: 2.0,
+                    targeted_z: 3.0,
+                    units: 'mm'
+                  }
+                ],
+                ntrode_electrode_group_channel_map: [
+                  {
+                    electrode_group_id: '0',
+                    ntrode_id: '0',
+                    electrode_id: 0,
+                    bad_channels: [],
+                    map: { 0: 0, 1: 1, 2: 2, 3: 3 }
+                  }
+                ],
+              },
+              days: [],
+            },
+          },
+          days: {},
+        },
+      };
+
+      renderWithStore(<AnimalEditorStepper />, state);
+
+      // Navigate to step 2
+      const nextButton = screen.getByRole('button', { name: /next step/i });
+      await user.click(nextButton);
+
+      // Click auto-generate button
+      const autoGenerateButton = screen.getByRole('button', { name: /auto-generate all channel maps/i });
+      await user.click(autoGenerateButton);
+
+      expect(confirmSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Overwrite existing channel maps')
+      );
+
+      confirmSpy.mockRestore();
+    });
+
+    it('filters channel maps to show only those for editing group', async () => {
+      const user = userEvent.setup();
+      const state = {
+        workspace: {
+          animals: {
+            remy: {
+              id: 'remy',
+              subject: { subject_id: 'remy' },
+              devices: {
+                electrode_groups: [
+                  {
+                    id: '0',
+                    device_type: 'tetrode_12.5',
+                    location: 'CA1',
+                    targeted_x: 1.0,
+                    targeted_y: 2.0,
+                    targeted_z: 3.0,
+                    units: 'mm'
+                  },
+                  {
+                    id: '1',
+                    device_type: 'tetrode_12.5',
+                    location: 'CA3',
+                    targeted_x: 4.0,
+                    targeted_y: 5.0,
+                    targeted_z: 6.0,
+                    units: 'mm'
+                  }
+                ],
+                ntrode_electrode_group_channel_map: [
+                  {
+                    electrode_group_id: '0',
+                    ntrode_id: '0',
+                    electrode_id: 0,
+                    bad_channels: [],
+                    map: { 0: 0, 1: 1, 2: 2, 3: 3 }
+                  },
+                  {
+                    electrode_group_id: '1',
+                    ntrode_id: '1',
+                    electrode_id: 0,
+                    bad_channels: [],
+                    map: { 0: 0, 1: 1, 2: 2, 3: 3 }
+                  }
+                ],
+              },
+              days: [],
+            },
+          },
+          days: {},
+        },
+      };
+
+      renderWithStore(<AnimalEditorStepper />, state);
+
+      // Navigate to step 2
+      const nextButton = screen.getByRole('button', { name: /next step/i });
+      await user.click(nextButton);
+
+      // Click edit channel map button for group 0
+      const editButton = screen.getByTestId('edit-channel-map-0');
+      await user.click(editButton);
+
+      expect(screen.getByTestId('channel-map-editor')).toBeInTheDocument();
+      expect(screen.getByTestId('channel-map-editor')).toHaveAttribute('data-group-id', '0');
+      // Should show only 1 map (for group 0)
+      expect(screen.getByTestId('editor-channel-map-count')).toHaveTextContent('1 maps');
+    });
+  });
+});
