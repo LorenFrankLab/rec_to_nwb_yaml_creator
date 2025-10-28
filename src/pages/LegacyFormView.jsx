@@ -34,13 +34,10 @@ import LabInstitutionFields from '../components/LabInstitutionFields';
 import UnitsFields from '../components/UnitsFields';
 import TechnicalFields from '../components/TechnicalFields';
 
-import logo from '../logo.png';
-import packageJson from '../../package.json';
 import JsonSchemaFile from '../nwb_schema.json';
 import '../App.scss';
 import {
   titleCase,
-  isProduction,
   useMount,
 } from '../utils';
 import { formatElectrodeGroupLabel } from '../utils/labelFormatters';
@@ -64,11 +61,6 @@ export function LegacyFormView() {
    * Stores JSON schema
    */
   const schema = useRef({});
-
-  /**
-   * App version (local state, not part of form data)
-   */
-  const [appVersion, setAppVersion] = useState('');
 
   /**
    * AlertModal state (replaces window.alert for accessible error display)
@@ -296,10 +288,6 @@ export function LegacyFormView() {
   };
 
   useMount(() => {
-    // set app version
-    const { version } = packageJson;
-    setAppVersion(version);
-
     // Handles initial read of JSON schema
     schema.current = JsonSchemaFile; // JsonSchemaFile.properties;
 
