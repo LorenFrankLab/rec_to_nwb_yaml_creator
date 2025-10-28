@@ -24,13 +24,13 @@ import { emptyFormData, genderAcronym } from '../valueList';
  * fields have validation errors.
  *
  * @param {File} file - File object to import
- * @param {Object} [options] - Optional configuration
+ * @param {object} [options] - Optional configuration
  * @param {Function} [options.onProgress] - Progress callback (not implemented yet)
- * @returns {Promise<Object>} Result object
+ * @returns {Promise<object>} Result object
  * @returns {boolean} result.success - Whether import succeeded
  * @returns {string|null} result.error - Error message if failed
- * @returns {Object|null} result.formData - Validated form data
- * @returns {Object} [result.importSummary] - Import summary (only present on success)
+ * @returns {object | null} result.formData - Validated form data
+ * @returns {object} [result.importSummary] - Import summary (only present on success)
  * @returns {number} result.importSummary.totalFields - Total fields in YAML file
  * @returns {string[]} result.importSummary.importedFields - Successfully imported field names
  * @returns {Array<{field: string, reason: string}>} result.importSummary.excludedFields - Excluded fields with validation reasons
@@ -227,10 +227,10 @@ export async function importFiles(file, options = {}) {
  * Validates form data, encodes as YAML, and triggers browser download.
  * Returns validation issues if validation fails instead of downloading.
  *
- * @param {Object} model - Form data to export
- * @param {Object} [options] - Optional configuration
+ * @param {object} model - Form data to export
+ * @param {object} [options] - Optional configuration
  * @param {Function} [options.onProgress] - Progress callback (not implemented yet)
- * @returns {Object} Result object with success, error, validationIssues, yaml, and filename
+ * @returns {object} Result object with success, error, validationIssues, yaml, and filename
  *
  * @example
  * const result = exportAll(formData);

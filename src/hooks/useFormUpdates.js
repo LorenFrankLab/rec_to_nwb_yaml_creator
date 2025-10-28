@@ -15,9 +15,9 @@ import { stringToInteger } from '../utils';
  * - Checkbox multi-selection updates
  * - Input transformation on blur (number parsing, comma-separated strings)
  *
- * @param {Object} formData - Current form state
+ * @param {object} formData - Current form state
  * @param {Function} setFormData - State setter function from useState
- * @returns {Object} Form update functions
+ * @returns {object} Form update functions
  *
  * @example
  * const [formData, setFormData] = useState(defaultFormData);
@@ -148,7 +148,7 @@ export function useFormUpdates(formData, setFormData) {
    * processing or if we're doing special formatting.
    *
    * @param {Event} e - Blur event object
-   * @param {Object} [metaData] - Optional transformation metadata
+   * @param {object} [metaData] - Optional transformation metadata
    * @param {string} [metaData.key] - Parent object/array key
    * @param {number} [metaData.index] - Array index
    * @param {boolean} [metaData.isCommaSeparatedString] - Convert to string array
@@ -248,7 +248,7 @@ export function useFormUpdates(formData, setFormData) {
    * - Filters ntrodes by electrode_group_id to find the right shank
    *
    * @param {Event} e - Change event from the input
-   * @param {Object} metaData - Metadata for locating the map entry
+   * @param {object} metaData - Metadata for locating the map entry
    * @param {string} metaData.key - Form key ('ntrode_electrode_group_channel_map')
    * @param {number} metaData.index - Map index (which channel in the map)
    * @param {number} metaData.shankNumber - Which shank (ntrode) in the electrode group

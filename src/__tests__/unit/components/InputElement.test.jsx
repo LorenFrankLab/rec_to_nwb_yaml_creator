@@ -831,6 +831,9 @@ describe('InputElement Component', () => {
         const user = userEvent.setup();
 
         // Use React component with state to properly test controlled input
+        /**
+         *
+         */
         function TestComponent() {
           const [value, setValue] = React.useState('test');
           return (
@@ -917,6 +920,9 @@ describe('InputElement Component', () => {
         const user = userEvent.setup();
 
         // Use React component with state to properly test controlled input
+        /**
+         *
+         */
         function TestComponent() {
           const [value, setValue] = React.useState('test');
           return (

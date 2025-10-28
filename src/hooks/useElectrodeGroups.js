@@ -5,9 +5,9 @@ import { arrayDefaultValues } from '../valueList';
 /**
  * Custom hook for managing electrode group operations including ntrode channel map synchronization
  *
- * @param {Object} formData - The current form state
+ * @param {object} formData - The current form state
  * @param {Function} setFormData - Function to update form state
- * @returns {Object} Electrode group management functions
+ * @returns {object} Electrode group management functions
  *
  * @example
  * const { nTrodeMapSelected, removeElectrodeGroupItem, duplicateElectrodeGroupItem } =
@@ -34,7 +34,7 @@ export function useElectrodeGroups(formData, setFormData) {
    * 5. Renumbers all ntrode_id values sequentially (1, 2, 3, ...)
    *
    * @param {Event} e - The select change event
-   * @param {Object} metaData - Metadata about which electrode group was modified
+   * @param {object} metaData - Metadata about which electrode group was modified
    * @param {string} metaData.key - The form key ('electrode_groups')
    * @param {number} metaData.index - The index of the electrode group in the array
    * @returns {null} Always returns null

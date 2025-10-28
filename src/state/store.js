@@ -16,11 +16,11 @@ import { defaultYMLValues } from '../valueList';
  *   associated_video_files when tasks are deleted. This prevents invalid YAML exports that
  *   corrupt the trodes_to_nwb pipeline and Spyglass database.
  *
- * @param {Object} initialState - Optional initial state (defaults to defaultYMLValues)
- * @returns {Object} Store object
- * @returns {Object} return.model - The current form state (WARNING: NOT deep-frozen, do not mutate directly)
- * @returns {Object} return.actions - All state mutation functions
- * @returns {Object} return.selectors - Computed/derived data functions
+ * @param {object} initialState - Optional initial state (defaults to defaultYMLValues)
+ * @returns {object} Store object
+ * @returns {object} return.model - The current form state (WARNING: NOT deep-frozen, do not mutate directly)
+ * @returns {object} return.actions - All state mutation functions
+ * @returns {object} return.selectors - Computed/derived data functions
  *
  * @example
  * // In a component
@@ -186,8 +186,8 @@ export function useStore(initialState = null) {
        * Updates an item after selection (e.g., from DataListElement).
        * Convenience wrapper around updateFormData with optional type parsing.
        *
-       * @param {Object} e - Event object
-       * @param {Object} metaData - Metadata { key, index, type }
+       * @param {object} e - Event object
+       * @param {object} metaData - Metadata { key, index, type }
        */
       itemSelected: (e, metaData) => {
         const { target } = e;
@@ -202,7 +202,7 @@ export function useStore(initialState = null) {
        * Replaces entire form state (for bulk imports).
        * Use sparingly - prefer individual field updates for most cases.
        *
-       * @param {Object} newFormData - Complete new form state
+       * @param {object} newFormData - Complete new form state
        */
       setFormData,
     }),

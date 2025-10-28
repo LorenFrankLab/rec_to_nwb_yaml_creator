@@ -264,6 +264,9 @@ describe('State Immutability Tests', () => {
   });
 
   describe('Array Operations Immutability', () => {
+    /**
+     *
+     */
     function useArrayPattern() {
       const [formData, setFormData] = useState({
         electrode_groups: [

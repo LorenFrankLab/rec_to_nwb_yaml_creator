@@ -29,6 +29,11 @@ import fs from 'fs';
 import path from 'path';
 import { validate } from '../../../validation';
 
+/**
+ *
+ * @param category
+ * @param filename
+ */
 function loadFixture(category, filename) {
   const fixturePath = path.join(
     __dirname,

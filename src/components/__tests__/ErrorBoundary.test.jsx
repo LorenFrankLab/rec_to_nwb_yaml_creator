@@ -14,6 +14,11 @@ import { ErrorBoundary } from '../ErrorBoundary';
 import React from 'react';
 
 // Component that throws an error for testing
+/**
+ *
+ * @param root0
+ * @param root0.shouldThrow
+ */
 function ThrowError({ shouldThrow }) {
   if (shouldThrow) {
     throw new Error('Test error');
@@ -126,10 +131,16 @@ describe('ErrorBoundary - P0.3', () => {
     });
 
     it('should catch errors from deeply nested components', () => {
+      /**
+       *
+       */
       function DeepChild() {
         return <ThrowError shouldThrow={true} />;
       }
 
+      /**
+       *
+       */
       function MiddleChild() {
         return (
           <div>

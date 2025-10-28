@@ -15,6 +15,11 @@ import userEvent from '@testing-library/user-event';
 import { StoreProvider, useStoreContext } from '../StoreContext';
 
 // Test component that uses the store context
+/**
+ *
+ * @param root0
+ * @param root0.testId
+ */
 function TestConsumer({ testId = 'consumer' }) {
   const { model, actions, selectors } = useStoreContext();
 
@@ -74,6 +79,9 @@ describe('StoreContext', () => {
     it('should provide model, actions, and selectors', () => {
       let hookResult;
 
+      /**
+       *
+       */
       function TestComponent() {
         hookResult = useStoreContext();
         return <div>Test</div>;
@@ -169,6 +177,9 @@ describe('StoreContext', () => {
     it('should expose all array management actions', () => {
       let hookResult;
 
+      /**
+       *
+       */
       function TestComponent() {
         hookResult = useStoreContext();
         return <div>Test</div>;
@@ -188,6 +199,9 @@ describe('StoreContext', () => {
     it('should expose all electrode group actions', () => {
       let hookResult;
 
+      /**
+       *
+       */
       function TestComponent() {
         hookResult = useStoreContext();
         return <div>Test</div>;
@@ -209,6 +223,9 @@ describe('StoreContext', () => {
     it('should expose getCameraIds selector', () => {
       let hookResult;
 
+      /**
+       *
+       */
       function TestComponent() {
         hookResult = useStoreContext();
         return <div>Test</div>;
@@ -227,6 +244,9 @@ describe('StoreContext', () => {
     it('should expose getTaskEpochs selector', () => {
       let hookResult;
 
+      /**
+       *
+       */
       function TestComponent() {
         hookResult = useStoreContext();
         return <div>Test</div>;
@@ -245,6 +265,9 @@ describe('StoreContext', () => {
     it('should expose getDioEvents selector', () => {
       let hookResult;
 
+      /**
+       *
+       */
       function TestComponent() {
         hookResult = useStoreContext();
         return <div>Test</div>;

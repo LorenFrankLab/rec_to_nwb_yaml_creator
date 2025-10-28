@@ -29,6 +29,14 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
+/**
+ *
+ * @param root0
+ * @param root0.id
+ * @param root0.hint
+ * @param root0.isRequired
+ * @param root0.className
+ */
 export function HintDisplay({ id, hint, isRequired = false, className = '' }) {
   const isError = hint?.severity === 'error';
 

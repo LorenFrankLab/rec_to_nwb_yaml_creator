@@ -38,7 +38,7 @@ export async function blurAndWait(element, delayMs = 100) {
  *
  * Combines user.type() with blur + delay pattern to prevent stale element references.
  *
- * @param {Object} user - userEvent instance
+ * @param {object} user - userEvent instance
  * @param {HTMLElement} element - Element to type into
  * @param {string} value - Value to type
  */
@@ -50,7 +50,7 @@ export async function typeAndWait(user, element, value) {
 /**
  * Select option and wait for React reconciliation
  *
- * @param {Object} user - userEvent instance
+ * @param {object} user - userEvent instance
  * @param {HTMLElement} element - Select element
  * @param {string} value - Option value to select
  */
@@ -76,8 +76,8 @@ export function getLast(elements) {
  *
  * ListElement components require typing + Enter key to add items.
  *
- * @param {Object} user - userEvent instance
- * @param {Object} screen - Testing Library screen object
+ * @param {object} user - userEvent instance
+ * @param {object} screen - Testing Library screen object
  * @param {string} placeholder - Unique placeholder text (e.g., 'LastName, FirstName')
  * @param {string} value - Value to add to the list
  */
@@ -138,9 +138,9 @@ export async function triggerExport() {
  *
  * Cameras require 5 fields: name, manufacturer, model, lens, metersPerPixel
  *
- * @param {Object} user - userEvent instance
- * @param {Object} screen - Testing Library screen
- * @param {Object} camera - Camera data {name, manufacturer, model, lens, metersPerPixel}
+ * @param {object} user - userEvent instance
+ * @param {object} screen - Testing Library screen
+ * @param {object} camera - Camera data {name, manufacturer, model, lens, metersPerPixel}
  * @returns {Promise<number>} Index of the added camera
  */
 export async function addCamera(user, screen, camera) {
@@ -180,9 +180,9 @@ export async function addCamera(user, screen, camera) {
  *
  * Tasks require: name, description, environment, epochs (array)
  *
- * @param {Object} user - userEvent instance
- * @param {Object} screen - Testing Library screen
- * @param {Object} task - Task data {name, description, environment, epochs}
+ * @param {object} user - userEvent instance
+ * @param {object} screen - Testing Library screen
+ * @param {object} task - Task data {name, description, environment, epochs}
  * @returns {Promise<number>} Index of the added task
  */
 export async function addTask(user, screen, task) {
@@ -233,9 +233,9 @@ export async function addTask(user, screen, task) {
  * Electrode groups require 8 fields: location, deviceType, description, targetedLocation,
  * targetedX, targetedY, targetedZ, units
  *
- * @param {Object} user - userEvent instance
- * @param {Object} screen - Testing Library screen
- * @param {Object} group - Electrode group data
+ * @param {object} user - userEvent instance
+ * @param {object} screen - Testing Library screen
+ * @param {object} group - Electrode group data
  * @returns {Promise<number>} Index of the added electrode group
  */
 export async function addElectrodeGroup(user, screen, group) {
@@ -296,9 +296,9 @@ export async function addElectrodeGroup(user, screen, group) {
  * Simulates uploading a YAML file and waits for import to complete.
  * Used in sample metadata tests to set up baseline state.
  *
- * @param {Object} user - userEvent instance
- * @param {Object} screen - Testing Library screen
- * @param {Object} container - DOM container from render()
+ * @param {object} user - userEvent instance
+ * @param {object} screen - Testing Library screen
+ * @param {object} container - DOM container from render()
  * @param {string} yamlContent - YAML file content as string
  * @param {string} filename - Filename for the File object (default: 'test.yml')
  * @returns {Promise<void>}
@@ -326,8 +326,8 @@ export async function importYamlFile(user, screen, container, yamlContent, filen
  *
  * See docs/TESTING_PATTERNS.md for full explanation.
  *
- * @param {Object} user - userEvent instance
- * @param {Object} screen - Testing Library screen
+ * @param {object} user - userEvent instance
+ * @param {object} screen - Testing Library screen
  */
 export async function fillRequiredFields(user, screen) {
   // 1. Experimenter name (ListElement)

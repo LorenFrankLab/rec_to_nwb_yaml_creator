@@ -5,7 +5,7 @@ import { showCustomValidityError } from './utils';
 /**
  *  Encapsulates buttons for updating an array entry for the formData
  *
- * @param {Object} prop Custom element's properties
+ * @param {object} prop Custom element's properties
  *
  * @returns Virtual DOM for updating an array entry of the resultant YML File
  */

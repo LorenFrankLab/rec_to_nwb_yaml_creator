@@ -3,10 +3,8 @@ import PropTypes from 'prop-types';
 
 /**
  * Provides a means to get a file path
- *
- * @param {Object} prop Custom element's properties
- *
- * @returns Virtual DOM for File upload
+ * @param {object} fileProperty - Custom element's properties
+ * @returns {React.ReactElement} Virtual DOM for File upload
  */
 const FileUpload = (fileProperty) => {
   const {

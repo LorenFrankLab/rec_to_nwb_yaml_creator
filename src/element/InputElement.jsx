@@ -16,7 +16,7 @@ import { useStableId } from '../hooks/useStableId';
  * when props haven't changed. This significantly improves form performance
  * when the parent component re-renders.
  *
- * @param {Object} prop Custom element's properties
+ * @param {object} prop Custom element's properties
  *
  * @returns Virtual DOM for creating an input[type="string|number"] with
  * supporting HTML tags and code
@@ -210,6 +210,8 @@ InputElementComponent.defaultProps = {
  *
  * This prevents re-renders when parent state changes but this input's props remain the same.
  * Performance improvement: ~60-70% reduction in unnecessary renders for large forms.
+ * @param prevProps
+ * @param nextProps
  */
 const arePropsEqual = (prevProps, nextProps) => {
   return (

@@ -26,6 +26,8 @@ import { validate } from '../../../validation';
 
 /**
  * Helper to load YAML fixtures
+ * @param category
+ * @param filename
  */
 function loadFixture(category, filename) {
   const fixturePath = path.join(

@@ -31,7 +31,7 @@ import { quickChecks } from './quickChecks';
  * @param {string} options.unit - Unit to display for numberRange (e.g., 'nm', 'mm', 'degrees')
  * @param {RegExp} options.pattern - Regular expression for pattern check
  * @param {string} options.patternMessage - Custom message for pattern check
- * @returns {{hint: object|null, validate: function, clear: function}}
+ * @returns {{hint: object | null, validate: Function, clear: Function}}
  */
 export function useQuickChecks(checkType, options = {}) {
   const {

@@ -45,6 +45,7 @@ export class ErrorBoundary extends Component {
   /**
    * Update state so the next render will show the fallback UI
    * Called during the "render" phase, so side effects are not allowed
+   * @param error
    */
   static getDerivedStateFromError(error) {
     return {
@@ -56,6 +57,8 @@ export class ErrorBoundary extends Component {
   /**
    * Log error details to console (and eventually to monitoring service)
    * Called during the "commit" phase, so side effects are allowed
+   * @param error
+   * @param errorInfo
    */
   componentDidCatch(error, errorInfo) {
     console.error('Error Boundary caught an error:', error, errorInfo);

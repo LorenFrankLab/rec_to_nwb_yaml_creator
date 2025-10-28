@@ -8,7 +8,7 @@ import { useStableId } from '../hooks/useStableId';
 /**
  * Provides a text box
  *
- * @param {Object} prop Custom element's properties
+ * @param {object} prop Custom element's properties
  *
  * @returns Virtual DOM for creating an input[type="string|number"] with
  * supporting HTML tags and code

@@ -29,7 +29,7 @@ import { vi } from 'vitest';
  *
  * @param {Function} beforeEachFn - Vitest beforeEach function
  * @param {Function} afterEachFn - Vitest afterEach function
- * @returns {Object} Mock functions object
+ * @returns {object} Mock functions object
  *
  * @example
  * const mocks = useWindowAlertMock(beforeEach, afterEach);
@@ -57,7 +57,7 @@ export function useWindowAlertMock(beforeEachFn, afterEachFn) {
  * @param {Function} beforeEachFn - Vitest beforeEach function
  * @param {Function} afterEachFn - Vitest afterEach function
  * @param {boolean} defaultReturn - Default return value (true/false)
- * @returns {Object} Mock functions object
+ * @returns {object} Mock functions object
  *
  * @example
  * const mocks = useWindowConfirmMock(beforeEach, afterEach, true);
@@ -84,7 +84,7 @@ export function useWindowConfirmMock(beforeEachFn, afterEachFn, defaultReturn = 
  *
  * @param {Function} beforeEachFn - Vitest beforeEach function
  * @param {Function} afterEachFn - Vitest afterEach function
- * @returns {Object} Mock objects
+ * @returns {object} Mock objects
  *
  * @example
  * const mocks = useBlobMock(beforeEach, afterEach);
@@ -119,7 +119,7 @@ export function useBlobMock(beforeEachFn, afterEachFn) {
  *
  * @param {Function} beforeEachFn - Vitest beforeEach function
  * @param {Function} afterEachFn - Vitest afterEach function
- * @returns {Object} Mock objects with mockAnchor
+ * @returns {object} Mock objects with mockAnchor
  *
  * @example
  * const mocks = useCreateElementMock(beforeEach, afterEach);
@@ -171,7 +171,7 @@ export function useCreateElementMock(beforeEachFn, afterEachFn) {
  * @param {Function} beforeEachFn - Vitest beforeEach function
  * @param {Function} afterEachFn - Vitest afterEach function
  * @param {string} mockURL - Mock URL to return (default: 'blob:mock-url')
- * @returns {Object} Mock objects
+ * @returns {object} Mock objects
  *
  * @example
  * const mocks = useURLMock(beforeEach, afterEach);
@@ -197,6 +197,9 @@ export function useURLMock(beforeEachFn, afterEachFn, mockURL = 'blob:mock-url')
 
 /**
  * Hook: useWebkitURLMock
+ * @param beforeEachFn
+ * @param afterEachFn
+ * @param mockURL
  * @deprecated Use useURLMock instead (standard URL API)
  * Kept for backward compatibility with existing tests
  */
@@ -214,7 +217,7 @@ export function useWebkitURLMock(beforeEachFn, afterEachFn, mockURL = 'blob:mock
  *
  * @param {Function} beforeEachFn - Vitest beforeEach function
  * @param {Function} afterEachFn - Vitest afterEach function
- * @returns {Object} Combined mock objects
+ * @returns {object} Combined mock objects
  *
  * @example
  * const mocks = useFileDownloadMocks(beforeEach, afterEach);
@@ -239,7 +242,7 @@ export function useFileDownloadMocks(beforeEachFn, afterEachFn) {
  *
  * @param {Function} beforeEachFn - Vitest beforeEach function
  * @param {Function} afterEachFn - Vitest afterEach function
- * @returns {Object} Mock objects
+ * @returns {object} Mock objects
  *
  * @example
  * const mocks = useFileReaderMock(beforeEach, afterEach);
@@ -470,7 +473,7 @@ export async function waitForElement(queryFn, timeout = 1000) {
  * Found in 69 locations across App-duplicateElectrodeGroupItem, App-nTrodeMapSelected,
  * and App-removeElectrodeGroupItem tests.
  *
- * @param {Object} user - userEvent instance
+ * @param {object} user - userEvent instance
  * @param {HTMLElement} container - Container with the add button
  * @param {string} title - Button title attribute (e.g., "Add electrode_groups")
  * @param {number} count - Number of times to click (default: 1)
@@ -540,8 +543,8 @@ export async function setDeviceType(container, egIndex, deviceType) {
 /**
  * Verify form data immutability
  *
- * @param {Object} before - State before update
- * @param {Object} after - State after update
+ * @param {object} before - State before update
+ * @param {object} after - State after update
  * @param {string} path - Path to verify (e.g., 'cameras[0]')
  * @returns {boolean} True if immutable
  *
@@ -571,7 +574,7 @@ export function verifyImmutability(before, after, path = '') {
  * Assert array contains items with expected properties
  *
  * @param {Array} array - Array to verify
- * @param {Object} expectedProps - Expected properties object
+ * @param {object} expectedProps - Expected properties object
  * @returns {boolean} True if all items match
  *
  * @example

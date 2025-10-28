@@ -10,7 +10,7 @@ import { useStableId } from '../hooks/useStableId';
  * Uses semantic HTML with fieldset/legend for accessibility
  * Performance: Wrapped in React.memo to prevent unnecessary re-renders
  *
- * @param {Object} prop Custom element's properties
+ * @param {object} prop Custom element's properties
  *
  * @returns Virtual DOM collection for multi-select checkboxes
  */

@@ -15,7 +15,7 @@ import { useStableId } from '../hooks/useStableId';
  *
  * Performance: Wrapped in React.memo to prevent unnecessary re-renders
  *
- * @param {Object} prop Custom element's properties
+ * @param {object} prop Custom element's properties
  *
  * @returns Virtual DOM contain an HTML Datalist with supporting HTML tags and code
  */

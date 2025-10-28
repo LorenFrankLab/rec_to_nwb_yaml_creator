@@ -9,7 +9,7 @@ import { schemaValidation } from './schemaValidation';
 import { rulesValidation } from './rulesValidation';
 
 /**
- * @typedef {Object} Issue
+ * @typedef {object} Issue
  * @property {string} path - Normalized path: "subject.weight", "cameras[0].id"
  * @property {string} code - Error code: "required", "pattern", "missing_camera", "duplicate_channels", etc.
  * @property {"error"|"warning"} severity - Error severity level

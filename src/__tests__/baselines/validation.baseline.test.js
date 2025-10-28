@@ -18,6 +18,8 @@ import { jsonschemaValidation, rulesValidation } from '../helpers/baseline-compa
 
 /**
  * Helper to load YAML fixtures
+ * @param category
+ * @param filename
  */
 function loadFixture(category, filename) {
   const fixturePath = path.join(

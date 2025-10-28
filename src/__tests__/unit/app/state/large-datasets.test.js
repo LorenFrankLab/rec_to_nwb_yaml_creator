@@ -158,6 +158,9 @@ describe('Large Dataset State Management Tests', () => {
   });
 
   describe('Large Dataset State Updates', () => {
+    /**
+     *
+     */
     function useLargeFormData() {
       const [formData, setFormData] = useState({
         electrode_groups: Array(100)
@@ -282,6 +285,9 @@ describe('Large Dataset State Management Tests', () => {
 
   describe('Memory and Reference Behavior with Large Datasets', () => {
     // Re-declare the hook here for this describe block
+    /**
+     *
+     */
     function useLargeFormData() {
       const [formData, setFormData] = useState({
         electrode_groups: Array(100)

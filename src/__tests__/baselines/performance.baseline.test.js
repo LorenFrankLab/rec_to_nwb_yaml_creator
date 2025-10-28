@@ -32,6 +32,7 @@ const completeYaml = yaml.parse(
 
 /**
  * Helper to create large form data with many electrode groups
+ * @param electrodeGroupCount
  */
 function createLargeFormData(electrodeGroupCount = 100) {
   return {
@@ -64,6 +65,8 @@ function createLargeFormData(electrodeGroupCount = 100) {
 
 /**
  * Run a benchmark multiple times and return average timing
+ * @param fn
+ * @param iterations
  */
 function benchmark(fn, iterations = 10) {
   const timings = [];

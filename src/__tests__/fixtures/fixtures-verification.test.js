@@ -16,6 +16,11 @@ import { validate } from '../../validation';
 // Read fixture files
 const fixturesDir = path.join(__dirname);
 
+/**
+ *
+ * @param category
+ * @param filename
+ */
 function loadFixture(category, filename) {
   const filePath = path.join(fixturesDir, category, filename);
   const content = fs.readFileSync(filePath, 'utf8');

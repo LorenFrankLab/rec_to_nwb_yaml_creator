@@ -5,9 +5,9 @@ import { defaultYMLValues } from '../../valueList';
 
 /**
  * Deep merge helper - recursively merges objects while preserving nested structure
- * @param {Object} target - Target object (defaults)
- * @param {Object} source - Source object (overrides)
- * @returns {Object} Deeply merged object
+ * @param {object} target - Target object (defaults)
+ * @param {object} source - Source object (overrides)
+ * @returns {object} Deeply merged object
  */
 function deepMerge(target, source) {
   const output = { ...target };
@@ -39,10 +39,10 @@ function deepMerge(target, source) {
  * Custom render with common providers (includes StoreProvider)
  *
  * @param {React.ReactElement} ui - Component to render
- * @param {Object} options - Render options
- * @param {Object} options.initialState - Initial state for the store (deep-merged with defaults)
- * @param {Object} options.renderOptions - Additional options to pass to render()
- * @returns {Object} Render result with user-event instance
+ * @param {object} options - Render options
+ * @param {object} options.initialState - Initial state for the store (deep-merged with defaults)
+ * @param {object} options.renderOptions - Additional options to pass to render()
+ * @returns {object} Render result with user-event instance
  *
  * @example
  * // Partial state - deep merges with defaults
@@ -84,6 +84,7 @@ export function renderWithProviders(ui, options = {}) {
 
 /**
  * Wait for async validation to complete
+ * @param timeout
  */
 export async function waitForValidation(timeout = 1000) {
   return new Promise(resolve => setTimeout(resolve, timeout));
@@ -91,6 +92,7 @@ export async function waitForValidation(timeout = 1000) {
 
 /**
  * Generate test YAML data
+ * @param overrides
  */
 export function createTestYaml(overrides = {}) {
   const base = {

@@ -65,9 +65,9 @@ const StoreContext = createContext(null);
  * - model (formData) is only updated when data actually changes
  * - actions and selectors maintain stable references (they're already memoized in useStore)
  *
- * @param {Object} props - Component props
+ * @param {object} props - Component props
  * @param {React.ReactNode} props.children - Child components
- * @param {Object} [props.initialState] - Optional initial state for the store (for testing)
+ * @param {object} [props.initialState] - Optional initial state for the store (for testing)
  * @returns {JSX.Element} Provider component
  *
  * @example
@@ -116,10 +116,10 @@ StoreProvider.propTypes = {
  * Provides access to the shared store from any component within StoreProvider.
  * Throws an error if used outside StoreProvider to prevent silent bugs.
  *
- * @returns {Object} Store object
- * @returns {Object} return.model - Current form state (read-only)
- * @returns {Object} return.actions - State mutation functions
- * @returns {Object} return.selectors - Computed/derived data functions
+ * @returns {object} Store object
+ * @returns {object} return.model - Current form state (read-only)
+ * @returns {object} return.actions - State mutation functions
+ * @returns {object} return.selectors - Computed/derived data functions
  *
  * @throws {Error} If used outside StoreProvider
  *

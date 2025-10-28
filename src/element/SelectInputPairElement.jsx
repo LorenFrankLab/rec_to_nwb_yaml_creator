@@ -51,7 +51,7 @@ export const splitTextNumber = (textNumber) => {
 /**
  * Provides a means to get user data from a combination of select tag and input tag
  *
- * @param {Object} prop Custom element's properties
+ * @param {object} prop Custom element's properties
  *
  * @returns Virtual DOM for getting user input that combines a select tag and input tag
  */

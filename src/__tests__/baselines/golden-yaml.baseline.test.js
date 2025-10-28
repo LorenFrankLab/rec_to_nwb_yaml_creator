@@ -31,6 +31,7 @@ const goldenDir = path.join(__dirname, '../fixtures/golden');
 
 /**
  * Helper to read golden fixture
+ * @param filename
  */
 function readGoldenFixture(filename) {
   const filepath = path.join(goldenDir, filename);
@@ -39,6 +40,7 @@ function readGoldenFixture(filename) {
 
 /**
  * Helper to parse YAML and re-export
+ * @param yamlString
  */
 function roundTripYAML(yamlString) {
   const parsed = YAML.parse(yamlString);

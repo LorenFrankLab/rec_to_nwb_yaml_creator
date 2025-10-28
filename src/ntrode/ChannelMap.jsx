@@ -9,7 +9,7 @@ import InfoIcon from './../element/InfoIcon';
 /**
  * Generates a custom element for ntrode_electrode_group_channel_map's map
  *
- * @param {Object} prop Custom element's properties
+ * @param {object} prop Custom element's properties
  *
  * @returns Virtual DOM of the map for ntrode_electrode_group_channel_map
  */

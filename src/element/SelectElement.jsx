@@ -11,7 +11,7 @@ import { HintDisplay } from '../validation/HintDisplay';
  *
  * Performance: Wrapped in React.memo to prevent unnecessary re-renders
  *
- * @param {Object} prop Custom element's properties
+ * @param {object} prop Custom element's properties
  *
  * @returns Virtual DOM wrapping an HTML select tag and supporting markup and code
  */

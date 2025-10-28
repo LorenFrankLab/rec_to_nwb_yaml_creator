@@ -5,7 +5,7 @@ import PropTypes from 'prop-types';
 /**
  * Array item control buttons (duplicate and remove)
  *
- * @param {Object} prop Custom element's properties
+ * @param {object} prop Custom element's properties
  *
  * @returns Virtual DOM for array item controls (duplicate/remove buttons)
  */

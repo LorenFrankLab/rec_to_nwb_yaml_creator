@@ -15,8 +15,8 @@ import { validate } from '../../validation';
  * Compatibility wrapper: converts new validate() API to old jsonschemaValidation() format
  * This allows baseline tests to continue working without modification
  *
- * @param {Object} formContent - Form data to validate
- * @returns {Object} Validation result in old format
+ * @param {object} formContent - Form data to validate
+ * @returns {object} Validation result in old format
  */
 export function jsonschemaValidation(formContent) {
   const issues = validate(formContent);
@@ -64,8 +64,8 @@ export function jsonschemaValidation(formContent) {
 /**
  * Compatibility wrapper: converts new validate() API to old rulesValidation() format
  *
- * @param {Object} jsonFileContent - Form data to validate
- * @returns {Object} Validation result in old format
+ * @param {object} jsonFileContent - Form data to validate
+ * @returns {object} Validation result in old format
  */
 export function rulesValidation(jsonFileContent) {
   const issues = validate(jsonFileContent);

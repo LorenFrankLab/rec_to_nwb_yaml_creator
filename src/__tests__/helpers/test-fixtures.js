@@ -28,7 +28,7 @@ export function getMinimalCompleteYaml() {
  * Load minimal-complete.yml and customize specific fields
  * Useful for testing variations without duplicating the entire YAML
  *
- * @param {Object} overrides - Fields to override (uses simple string replacement)
+ * @param {object} overrides - Fields to override (uses simple string replacement)
  * @returns {string} Customized YAML content
  *
  * @example

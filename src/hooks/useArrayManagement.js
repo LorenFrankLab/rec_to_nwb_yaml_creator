@@ -13,9 +13,9 @@ import { arrayDefaultValues } from '../valueList';
 /**
  * Custom hook for managing array operations in form data
  *
- * @param {Object} formData - Current form state
+ * @param {object} formData - Current form state
  * @param {Function} setFormData - State setter function
- * @returns {Object} Object containing array management functions
+ * @returns {object} Object containing array management functions
  *
  * @example
  * const { addArrayItem, removeArrayItem, duplicateArrayItem } = useArrayManagement(formData, setFormData);

@@ -23,6 +23,11 @@ import path from 'path';
 import { validate } from '../../../validation';
 import schema from '../../../nwb_schema.json';
 
+/**
+ *
+ * @param category
+ * @param filename
+ */
 function loadFixture(category, filename) {
   const fixturePath = path.join(
     __dirname,
@@ -36,6 +41,8 @@ function loadFixture(category, filename) {
 
 /**
  * Get all string field paths from schema
+ * @param obj
+ * @param path
  */
 function getAllStringFields(obj, path = '') {
   const fields = [];

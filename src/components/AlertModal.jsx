@@ -14,7 +14,7 @@ import './AlertModal.scss';
  * - Focus management (auto-focus close button)
  * - Body scroll lock when open
  *
- * @param {Object} props Component properties
+ * @param {object} props Component properties
  * @param {boolean} props.isOpen Whether modal is currently open
  * @param {string} props.message Alert message to display
  * @param {string} props.title Alert title (default: "Alert")

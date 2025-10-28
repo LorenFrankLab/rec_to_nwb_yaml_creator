@@ -11,7 +11,7 @@ import { useStableId } from '../hooks/useStableId';
  *
  * Uses semantic HTML with fieldset/legend for accessibility
  *
- * @param {Object} prop Custom element's properties
+ * @param {object} prop Custom element's properties
  *
  * @returns Virtual DOM collection for single-select radio buttons
  */
