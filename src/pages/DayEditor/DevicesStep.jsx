@@ -173,8 +173,8 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate }) {
           <p className="empty-state-hint">
             Electrode groups are configured at the animal level and inherited by all days.
           </p>
-          <a href={`#/animal/${animal.id}`} className="button-primary">
-            Configure Electrode Groups
+          <a href="#/legacy" className="button-primary">
+            Configure Electrode Groups (Legacy Editor)
           </a>
         </div>
       </div>
@@ -188,7 +188,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate }) {
       {/* Inherited notice */}
       <div className="inherited-notice">
         Device configuration inherited from Animal
-        <a href={`#/animal/${animal.id}`}>Edit Animal</a>
+        <a href="#/legacy">Edit Animal (Legacy Editor)</a>
       </div>
 
       {/* Electrode groups (accordion) */}
@@ -216,7 +216,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate }) {
                   <div className="error-state-inline">
                     <p>⚠ No channel mapping found for this electrode group.</p>
                     <p>This usually indicates data corruption. Please review animal configuration.</p>
-                    <a href={`#/animal/${animal.id}`}>Fix in Animal Editor</a>
+                    <a href="#/legacy">Fix in Animal Editor (Legacy)</a>
                   </div>
                 </div>
               </details>

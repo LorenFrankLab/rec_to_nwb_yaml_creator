@@ -95,9 +95,9 @@ describe('DevicesStep', () => {
     );
 
     expect(screen.getByText(/device configuration inherited from animal/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /edit animal/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /edit animal.*legacy/i })).toHaveAttribute(
       'href',
-      '#/animal/test-animal'
+      '#/legacy'
     );
   });
 
@@ -253,9 +253,9 @@ describe('DevicesStep', () => {
     );
 
     expect(screen.getByText(/no electrode groups configured/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /configure electrode groups/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /configure electrode groups.*legacy/i })).toHaveAttribute(
       'href',
-      '#/animal/test-animal'
+      '#/legacy'
     );
   });
 
