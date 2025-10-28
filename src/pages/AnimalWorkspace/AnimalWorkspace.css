@@ -79,6 +79,39 @@
 .day-actions {
   display: flex;
   gap: 0.5rem;
+  align-items: center;
+}
+
+.add-day-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.date-input {
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.date-input:focus {
+  outline: 2px solid #2196f3;
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
 
 .btn-primary,
@@ -88,6 +121,7 @@
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.875rem;
+  white-space: nowrap;
 }
 
 .btn-primary {

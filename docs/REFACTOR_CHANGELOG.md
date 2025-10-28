@@ -6,6 +6,58 @@
 
 ---
 
+## M5.5.3 - Add Date Picker for Recording Day Creation (October 28, 2025)
+
+### Summary
+
+Fixed duplicate day creation error by adding a date picker to the AnimalWorkspace, allowing users to create recording days for different dates instead of only today's date.
+
+### Root Cause
+
+The "Add Recording Day" button always used `new Date().toISOString().split('T')[0]` (today's date), so clicking it twice on the same day attempted to create two days with the same ID (`animal-YYYY-MM-DD`), causing a "Day already exists" error.
+
+### Changes
+
+#### UI Enhancements
+
+- **`src/pages/AnimalWorkspace/index.jsx`**
+  - Added `newDayDate` state initialized to today's date (line 33)
+  - Updated `handleAddDay` to use `newDayDate` instead of always using today (line 62-92)
+  - Added client-side duplicate detection before calling createDay action
+  - Added date format validation (`YYYY-MM-DD` pattern)
+  - Date input resets to today after successful day creation
+  - Added HTML5 `<input type="date">` next to "Add Recording Day" button (line 156-167)
+  - Wrapped date input and button in `.add-day-group` for visual grouping
+
+#### Styling
+
+- **`src/pages/AnimalWorkspace/AnimalWorkspace.css`**
+  - Added `.add-day-group` flexbox layout (line 85-89)
+  - Added `.date-input` styling with focus states (line 91-103)
+  - Added `.visually-hidden` utility class for accessible labels (line 105-115)
+  - Added `white-space: nowrap` to buttons to prevent wrapping
+
+#### Tests Added
+
+- **`src/pages/AnimalWorkspace/__tests__/AnimalWorkspace.test.jsx`** - Added 3 tests
+  - Test date input renders with today as default value
+  - Test user can change the date before creating a day
+  - Test prevents creating duplicate days for the same date (with alert)
+  - Total tests now: 9 (was 6)
+
+### Test Results
+
+**All 2379 tests passing** (2376 + 3 new date picker tests, 1 skipped)
+
+### Impact
+
+- Users can now create recording days for any date, not just today
+- Multiple days can be created on the same calendar day (for different dates)
+- Clear error message if attempting to create duplicate day for same date
+- Better UX with visual date picker instead of hidden logic
+
+---
+
 ## M5.5.2 - Fix Hash Router Query Parameter Handling (October 28, 2025)
 
 ### Summary

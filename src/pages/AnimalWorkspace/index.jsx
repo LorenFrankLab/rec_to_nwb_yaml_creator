@@ -30,6 +30,7 @@ import './AnimalWorkspace.css';
 export function AnimalWorkspace() {
   const { model, actions, selectors } = useStoreContext();
   const [selectedAnimalId, setSelectedAnimalId] = useState(null);
+  const [newDayDate, setNewDayDate] = useState(() => new Date().toISOString().split('T')[0]);
 
   const { animals, days } = model.workspace;
   const animalIds = Object.keys(animals);
@@ -59,16 +60,31 @@ export function AnimalWorkspace() {
    * Handle adding a new recording day
    */
   function handleAddDay() {
-    if (!selectedAnimalId) return;
+    if (!selectedAnimalId || !newDayDate) return;
 
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    const sessionId = `${selectedAnimalId}_${today.replace(/-/g, '')}`;
+    // Validate date
+    if (!newDayDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      alert('Invalid date format. Please use YYYY-MM-DD.');
+      return;
+    }
+
+    const sessionId = `${selectedAnimalId}_${newDayDate.replace(/-/g, '')}`;
+    const dayId = `${selectedAnimalId}-${newDayDate}`;
+
+    // Check if day already exists
+    if (days[dayId]) {
+      alert(`Recording day for ${newDayDate} already exists for ${selectedAnimalId}`);
+      return;
+    }
 
     try {
-      actions.createDay(selectedAnimalId, today, {
+      actions.createDay(selectedAnimalId, newDayDate, {
         session_id: sessionId,
-        session_description: `Recording session for ${selectedAnimalId} on ${today}`,
+        session_description: `Recording session for ${selectedAnimalId} on ${newDayDate}`,
       });
+
+      // Reset to today after successful creation
+      setNewDayDate(new Date().toISOString().split('T')[0]);
     } catch (error) {
       alert(`Failed to create day: ${error.message}`);
       console.error('Error creating day:', error);
@@ -137,13 +153,26 @@ export function AnimalWorkspace() {
                     Recording Days for {selectedAnimal.id}
                   </h2>
                   <div className="day-actions">
-                    <button
-                      className="btn-primary"
-                      onClick={handleAddDay}
-                      aria-label="Add recording day"
-                    >
-                      Add Recording Day
-                    </button>
+                    <div className="add-day-group">
+                      <label htmlFor="new-day-date" className="visually-hidden">
+                        Recording date
+                      </label>
+                      <input
+                        id="new-day-date"
+                        type="date"
+                        value={newDayDate}
+                        onChange={(e) => setNewDayDate(e.target.value)}
+                        className="date-input"
+                        aria-label="Select date for new recording day"
+                      />
+                      <button
+                        className="btn-primary"
+                        onClick={handleAddDay}
+                        aria-label="Add recording day"
+                      >
+                        Add Recording Day
+                      </button>
+                    </div>
                     <button
                       className="btn-secondary"
                       onClick={handleBatchCreateDays}

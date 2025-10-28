@@ -9,14 +9,15 @@
 
 ---
 
-## Current Session: M5.5 Post-Release Fixes
+## Current Session: M5.5 Post-Release Fixes + Date Picker
 
-**Status:** ✅ COMPLETE - Fixed navigation routing bug and sex field
+**Status:** ✅ COMPLETE - Fixed navigation routing, sex field, and duplicate day creation
 
 **User Feedback:**
 
 1. Sex field should not have "Other (O)" option - only Male (M), Female (F), Unknown (U)
 2. Navigation after animal creation goes to wrong page (workspace loads legacy form instead of AnimalWorkspace)
+3. Error when trying to add more than one recording day: "Day 'bean-2025-10-28' already exists"
 
 **Fixes Applied:**
 
@@ -26,7 +27,13 @@
    - Issue: `#/workspace?animal=bean` was treated as unknown route → fell back to legacy form
    - Fix: Strip query parameters before matching routes in useHashRouter.js
    - Added 4 new tests for query parameter handling
-4. ✅ All 2376 tests passing (2372 previous + 2 AnimalWorkspace tests + 2 router hook tests + 4 parseHashRoute tests)
+4. ✅ **Added date picker for recording day creation**
+   - Issue: "Add Recording Day" button always used today's date, causing duplicates
+   - Fix: Added HTML5 date input next to button allowing users to select any date
+   - Added client-side duplicate detection with helpful error message
+   - Date input defaults to today, resets after successful creation
+   - Added 3 new tests for date picker functionality
+5. ✅ All 2379 tests passing (2376 previous + 3 new date picker tests)
 
 **Root Cause:**
 
