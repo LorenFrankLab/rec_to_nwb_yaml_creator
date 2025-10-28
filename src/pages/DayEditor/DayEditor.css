@@ -433,44 +433,6 @@
   }
 }
 
-/* ===== Day Context Header ===== */
-
-.day-context-header {
-  margin-bottom: var(--spacing-xl);
-}
-
-.day-title {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  font-size: var(--font-size-xl);
-  font-weight: 600;
-  color: var(--color-grey-900);
-  margin: 0 0 var(--spacing-xs) 0;
-}
-
-.animal-id {
-  color: var(--color-primary);
-  font-weight: 700;
-}
-
-.date-separator {
-  color: var(--color-grey-400);
-  font-weight: 400;
-}
-
-.day-date {
-  color: var(--color-grey-700);
-  font-weight: 500;
-}
-
-.session-id-display {
-  font-size: var(--font-size-sm);
-  color: var(--color-grey-600);
-  margin: 0;
-  font-family: 'Monaco', 'Courier New', monospace;
-}
-
 /* ===== Collapsible Inherited Metadata ===== */
 
 .inherited-metadata-section {
@@ -551,19 +513,6 @@
   color: var(--color-grey-600);
   margin-top: var(--spacing-xs);
   font-style: italic;
-}
-
-/* Mobile responsive header */
-@media (max-width: 640px) {
-  .day-title {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--spacing-xs);
-  }
-
-  .date-separator {
-    display: none;
-  }
 }
 
 /* Toggle icon rotation animation */

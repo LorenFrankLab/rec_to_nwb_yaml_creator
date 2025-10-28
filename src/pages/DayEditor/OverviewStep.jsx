@@ -56,14 +56,6 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate }) 
   // Count validation errors for ARIA announcement
   const errorCount = Object.values(fieldErrors).filter(Boolean).length;
 
-  // Format date for display
-  const formattedDate = new Date(day.date).toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-
   // Breadcrumb items
   const breadcrumbItems = [
     { label: 'Home', href: '#/' },
@@ -75,15 +67,6 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate }) 
     <div className="overview-step">
       {/* Breadcrumb Navigation */}
       <Breadcrumb items={breadcrumbItems} />
-
-      {/* Context Header */}
-      <header className="day-context-header">
-        <h1 className="day-title">
-          <span className="animal-id">{animal.id}</span>
-          <span className="date-separator">•</span>
-          <span className="day-date">{formattedDate}</span>
-        </h1>
-      </header>
 
       {/* ARIA live region for screen readers */}
       <div
