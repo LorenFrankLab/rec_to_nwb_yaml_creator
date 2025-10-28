@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { getChannelCount } from '../../utils/deviceTypeUtils';
+import './ChannelMapsStep.scss';
 
 /**
  * ChannelMapsStep - Step 2 of Animal Editor

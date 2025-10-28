@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
 import { deviceTypeMap } from '../../ntrode/deviceTypes';
+import './ElectrodeGroupsStep.scss';
 
 /**
  * ElectrodeGroupsStep - Step 1 of Animal Editor

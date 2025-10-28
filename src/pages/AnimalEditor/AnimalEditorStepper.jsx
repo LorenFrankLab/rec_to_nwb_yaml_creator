@@ -7,6 +7,7 @@ import ChannelMapsStep from './ChannelMapsStep';
 import ChannelMapEditor from './ChannelMapEditor';
 import { generateAllChannelMaps } from '../../utils/channelMapUtils';
 import { downloadChannelMapsCSV, importChannelMapsFromCSV } from '../../utils/csvChannelMapUtils';
+import './AnimalEditorStepper.scss';
 
 /**
  * Generate next sequential electrode group ID
@@ -60,11 +61,11 @@ export default function AnimalEditorStepper() {
   const animal = animalId ? model.workspace.animals[animalId] : null;
 
   if (!animalId) {
-    return <div>Error: No animal specified in URL</div>;
+    return <div className="error-state">Error: No animal specified in URL</div>;
   }
 
   if (!animal) {
-    return <div>Error: Animal &quot;{animalId}&quot; not found</div>;
+    return <div className="error-state">Error: Animal &quot;{animalId}&quot; not found</div>;
   }
 
   // Step navigation handlers
@@ -343,23 +344,24 @@ export default function AnimalEditorStepper() {
             animal={animal}
             onEditChannelMap={handleEditChannelMap}
           />
-          <div style={{ marginTop: '1rem' }}>
+          <div className="action-buttons" style={{ marginTop: '1rem' }}>
             <button
               onClick={handleAutoGenerate}
+              className="action-button btn-primary"
               aria-label="Auto-generate all channel maps"
-              style={{ marginRight: '0.5rem' }}
             >
               Auto-Generate All Channel Maps
             </button>
             <button
               onClick={handleExportCSV}
+              className="action-button btn-secondary"
               aria-label="Export channel maps to CSV"
-              style={{ marginRight: '0.5rem' }}
             >
               Export to CSV
             </button>
             <button
               onClick={handleImportCSV}
+              className="action-button btn-secondary"
               aria-label="Import channel maps from CSV"
             >
               Import from CSV
@@ -378,30 +380,44 @@ export default function AnimalEditorStepper() {
   ];
 
   return (
-    <div>
-      <header>
+    <div className="animal-editor-stepper">
+      <header className="animal-editor-header">
         <h1>Animal Editor: {animal.id}</h1>
       </header>
 
       {/* Step indicators */}
-      <div role="navigation" aria-label="Configuration steps">
-        {steps.map((step, index) => (
-          <div key={index} className={activeStep === index ? 'active' : ''}>
-            {step.label}
-          </div>
-        ))}
-      </div>
+      <nav className="animal-editor-step-nav" role="navigation" aria-label="Configuration steps">
+        <ul className="step-indicators">
+          {steps.map((step, index) => (
+            <li
+              key={index}
+              className={`step-indicator ${activeStep === index ? 'active' : ''} ${index < activeStep ? 'completed' : ''}`}
+            >
+              <button
+                className="step-indicator-button"
+                onClick={() => setActiveStep(index)}
+                aria-label={`Step ${index + 1}: ${step.label}`}
+                aria-current={activeStep === index ? 'step' : undefined}
+              >
+                <span className="step-number">{index + 1}</span>
+                <span>{step.label}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </nav>
 
       {/* Active step content */}
-      <main>
+      <main className="animal-editor-content" id="main-content" tabIndex="-1">
         {steps[activeStep].component}
       </main>
 
       {/* Navigation buttons */}
-      <footer>
+      <footer className="animal-editor-footer">
         <button
           onClick={handleBack}
           disabled={activeStep === 0}
+          className="footer-nav-button btn-back"
           aria-label="Go to previous step"
         >
           Back
@@ -409,6 +425,7 @@ export default function AnimalEditorStepper() {
         <button
           onClick={handleNext}
           disabled={activeStep === steps.length - 1}
+          className="footer-nav-button btn-next"
           aria-label={activeStep === steps.length - 1 ? 'Save configuration' : 'Go to next step'}
         >
           {activeStep === steps.length - 1 ? 'Save' : 'Next'}
