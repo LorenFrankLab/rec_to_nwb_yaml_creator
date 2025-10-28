@@ -33,6 +33,46 @@ vi.mock('../ElectrodeGroupsStep', () => ({
   ),
 }));
 
+vi.mock('../ChannelMapsStep', () => ({
+  default: ({ animal, onEditChannelMap }) => (
+    <div data-testid="channel-maps-step">
+      <h2>Step 2: Channel Maps</h2>
+      <div>ChannelMapsStep for {animal.id}</div>
+      {animal.devices?.ntrode_electrode_group_channel_map?.map(channelMap => (
+        <div key={channelMap.electrode_group_id}>
+          <button
+            onClick={() => onEditChannelMap?.(channelMap.electrode_group_id)}
+            data-testid={`edit-channel-map-${channelMap.electrode_group_id}`}
+          >
+            Edit {channelMap.electrode_group_id}
+          </button>
+        </div>
+      ))}
+    </div>
+  ),
+}));
+
+vi.mock('../ChannelMapEditor', () => ({
+  default: ({ electrodeGroup, channelMaps, onSave, onCancel }) => (
+    <div
+      data-testid="channel-map-editor"
+      data-group-id={electrodeGroup?.id}
+    >
+      <h3>Edit Channel Maps for Group {electrodeGroup?.id}</h3>
+      <div data-testid="editor-channel-map-count">
+        {channelMaps?.length || 0} maps
+      </div>
+      <button
+        onClick={() => onSave(channelMaps || [])}
+        data-testid="editor-save"
+      >
+        Save
+      </button>
+      <button onClick={onCancel} data-testid="editor-cancel">Cancel</button>
+    </div>
+  ),
+}));
+
 vi.mock('../ElectrodeGroupModal', () => ({
   default: ({ isOpen, mode, group, onSave, onCancel }) => {
     if (!isOpen) return null;

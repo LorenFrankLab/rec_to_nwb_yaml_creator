@@ -76,7 +76,9 @@ describe('ChannelMapsStep', () => {
 
     render(<ChannelMapsStep animal={animalWithUnmapped} onEditChannelMap={mockOnEditChannelMap} />);
 
-    expect(screen.getByText('❌')).toBeInTheDocument();
+    // Badge appears in both legend and table row
+    const unmappedBadges = screen.getAllByText('❌');
+    expect(unmappedBadges.length).toBeGreaterThan(0);
   });
 
   it('shows Edit button for each group', () => {
