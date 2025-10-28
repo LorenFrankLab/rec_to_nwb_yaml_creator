@@ -14,6 +14,7 @@ import { AnimalWorkspace } from '../pages/AnimalWorkspace';
 import { DayEditor } from '../pages/DayEditor';
 import { ValidationSummary } from '../pages/ValidationSummary';
 import { LegacyFormView } from '../pages/LegacyFormView';
+import AnimalEditor from '../pages/AnimalEditor';
 import logo from '../logo.png';
 
 /**
@@ -28,6 +29,7 @@ function getViewName(view) {
     workspace: 'Animal Workspace',
     day: 'Day Editor',
     validation: 'Validation Summary',
+    'animal-editor': 'Animal Editor',
   };
   return viewNames[view] || view;
 }
@@ -77,6 +79,7 @@ function handleSkipLinkClick(e, targetId) {
  * - #/home -> Home
  * - #/workspace -> AnimalWorkspace
  * - #/day/:id -> DayEditor
+ * - #/animal/:id/editor -> AnimalEditor
  * - #/validation -> ValidationSummary
  *
  * @returns {React.Element} Rendered layout with current view
@@ -118,6 +121,9 @@ export function AppLayout() {
 
       case 'day':
         return <DayEditor dayId={currentRoute.params.id} />;
+
+      case 'animal-editor':
+        return <AnimalEditor />;
 
       case 'validation':
         return <ValidationSummary />;
