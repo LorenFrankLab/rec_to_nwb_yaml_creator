@@ -5,13 +5,13 @@
 - Use this file to keep notes on ongoing development work.
 - When the work is completed, clean it out from this file, so that the contents only reflect ongoing work.
 
-**Last Updated:** October 27, 2025
+**Last Updated:** October 28, 2025
 
 ---
 
-## Current Session: M2 - UI Skeleton
+## Current Session: M3 - Extend Store for Workspace
 
-**Status:** ✅ M2 COMPLETE - All UI skeleton components implemented, routing working, accessibility verified
+**Status:** ✅ M3 COMPLETE - Workspace state management implemented, all tests passing, code review approved
 
 ### Documents Created
 
@@ -60,8 +60,11 @@
 - [x] **M0**: Feature flags ✅ 41 tests passing
 - [x] **M0**: Schema version validation ✅ Script created and integrated
 - [x] **M0.5**: Type System Strategy ✅ JSDoc-first approach configured
+- [x] **M1**: Extract Pure Utilities ✅ 257 total tests (io/yaml + validation)
+- [x] **M2**: UI Skeleton + Routing ✅ 2218 tests passing, accessibility verified
+- [x] **M3**: Extend Store for Workspace ✅ 2277 tests passing, 57 workspace tests
 
-### Current Work: M1 - Extract Pure Utilities
+### M1 Complete - Extract Pure Utilities
 
 **Completed:**
 
@@ -141,7 +144,43 @@
 - ✅ New sections load via hash (#/home, #/workspace, #/day/:id, #/validation)
 - ✅ ARIA landmarks verified in all views
 
-**Next Milestone:** M3 - Extend Existing Store (Context) for Animal & Day
+## M3 Complete Summary
+
+**All 4 tasks complete:**
+
+1. ✅ Add animal/day abstractions to store.js - Workspace state with CRUD actions (57 tests)
+2. ✅ Maintain compatibility - 100% backward compatible, all 2277 tests passing
+3. ✅ Write unit tests - 57 workspace tests across 3 files
+4. ✅ Add docs/animal_hierarchy.md - Complete documentation (495 lines)
+
+**Total test coverage:** 2277 tests passing across 114 test files (1 skipped)
+
+**Code Review:** ✅ Approved by code-reviewer agent (4.8/5.0 rating)
+
+**Key Accomplishments:**
+
+- **Workspace State Management:** Added `animals`, `days`, `settings` to store
+- **CRUD Actions:** Full suite of actions for animal/day management
+- **Configuration History:** Probe version tracking with snapshots
+- **Type Definitions:** 24 JSDoc types in workspaceTypes.js (430 lines)
+- **Pure Utilities:** mergeDayMetadata and helpers in workspaceUtils.js (172 lines)
+- **Performance Fixes:** Model memoization fixed 20 test regressions
+- **Closure Safety:** formDataRef pattern fixed stale closures in event handlers
+- **Test Coverage:** 57 workspace tests covering all actions and merge logic
+
+**Issues Fixed:**
+
+1. ✅ Model memoization - Prevented excessive re-renders (fixed 20/22 test failures)
+2. ✅ Stale closure bug - formDataRef pattern ensures handlers access latest state (fixed 1/2 test failures)
+3. ✅ Test assertion mismatch - Updated ElectrodeGroupFields test for new label format (fixed 1/2 test failures)
+
+**Technical Debt:**
+
+- ⚠️ formDataRef pattern is workaround for tests accessing fiber internals
+- 📝 TODO: Refactor tests in M4 to avoid accessing React fiber.memoizedProps
+- 📝 TODO: Add workspace size monitoring in M4 (localStorage limit)
+
+**Next Milestone:** M4 - Animal Workspace MVP (persistence, UI)
 
 ### Open Questions
 

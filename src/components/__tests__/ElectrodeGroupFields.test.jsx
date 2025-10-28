@@ -65,9 +65,9 @@ describe('ElectrodeGroupFields', () => {
       };
       renderWithProviders(<ElectrodeGroupFields />, { initialState: state });
 
-      // Should have 2 items with descriptive labels
-      expect(screen.getByText('Electrode Group 0 - CA1')).toBeInTheDocument();
-      expect(screen.getByText('Electrode Group 1 - CA3')).toBeInTheDocument();
+      // Should have 2 items with labels showing ID only (location not shown per commit 8f17b9c)
+      expect(screen.getByText('Electrode Group 0')).toBeInTheDocument();
+      expect(screen.getByText('Electrode Group 1')).toBeInTheDocument();
     });
   });
 

@@ -58,6 +58,17 @@ export function LegacyFormView() {
   const { model: formData, actions } = useStoreContext();
 
   /**
+   * Ref to always access latest formData (avoids stale closures in event handlers)
+   *
+   * When event handlers (like generateYMLFile) are attached to DOM elements,
+   * they capture the formData value at the time of attachment. If tests access
+   * these handlers via React internals (fiber.memoizedProps), they may get stale
+   * closures. Using a ref ensures handlers always access the latest formData.
+   */
+  const formDataRef = useRef(formData);
+  formDataRef.current = formData;
+
+  /**
    * Stores JSON schema
    */
   const schema = useRef({});
@@ -171,7 +182,8 @@ export function LegacyFormView() {
     e.preventDefault();
 
     // Use extracted export logic
-    const result = exportAll(formData);
+    // Access formData from ref to avoid stale closures
+    const result = exportAll(formDataRef.current);
 
     // If export failed, display validation errors
     if (!result.success && result.validationIssues) {
