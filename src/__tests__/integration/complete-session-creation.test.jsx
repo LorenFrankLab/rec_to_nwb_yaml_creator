@@ -1,18 +1,16 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../App';
+import { StoreProvider } from '../../state/StoreContext';
 import YAML from 'yaml';
-import { getMinimalCompleteYaml } from '../helpers/test-fixtures';
 import { getMainForm } from '../helpers/test-selectors';
 import {
   addListItem,
   fillRequiredFields,
   triggerExport,
   typeAndWait,
-  blurAndWait,
   selectAndWait,
-  getLast,
   addCamera,
   addTask,
   addElectrodeGroup,
@@ -65,16 +63,17 @@ describe('End-to-End Session Creation Workflow', () => {
       }
     };
 
-    // Mock URL.createObjectURL
+    // Mock URL.createObjectURL (standard API, not vendor-prefixed)
     mockBlobUrl = 'blob:mock-url';
-    const createObjectURLSpy = vi.fn(() => mockBlobUrl);
-    global.window.webkitURL = {
-      createObjectURL: createObjectURLSpy,
-    };
-    global.createObjectURLSpy = createObjectURLSpy; // Store for debugging
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue(mockBlobUrl);
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
 
     // Mock window.alert
     global.window.alert = vi.fn();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   /**
@@ -90,7 +89,11 @@ describe('End-to-End Session Creation Workflow', () => {
   it('creates minimal valid session from blank form', async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // Verify we start with default values (not empty)
     const labInput = screen.getByLabelText(/^lab$/i);
@@ -160,10 +163,10 @@ describe('End-to-End Session Creation Workflow', () => {
     await user.click(addDataAcqDeviceButton);
 
     // Wait for the new data acq device item to render
-    // Look for the "Item #1" summary text that appears when item is added
+    // Look for the "Device: SpikeGadgets" summary text that appears when item is added
     // Wait for async rendering to complete
     await waitFor(() => {
-      expect(screen.queryByText(/Item #1/)).not.toBeNull();
+      expect(screen.queryByText(/Device: SpikeGadgets/)).not.toBeNull();
     });
 
     // Fill required fields for the data acq device
@@ -267,7 +270,11 @@ describe('End-to-End Session Creation Workflow', () => {
   it('creates complete session with all optional fields', { timeout: 60000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // ACT - Fill all required fields using helper
     await fillRequiredFields(user, screen);
@@ -396,7 +403,11 @@ describe('End-to-End Session Creation Workflow', () => {
   it('adds multiple experimenter names', async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // ACT - Fill required fields first
     await fillRequiredFields(user, screen);
@@ -434,7 +445,11 @@ describe('End-to-End Session Creation Workflow', () => {
   it('adds complete subject information', async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // ACT - Fill required fields first
     await fillRequiredFields(user, screen);
@@ -494,7 +509,11 @@ describe('End-to-End Session Creation Workflow', () => {
   it('configures data acquisition device', async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // ACT - Fill required fields (includes 1 data_acq_device with defaults)
     await fillRequiredFields(user, screen);
@@ -536,10 +555,14 @@ describe('End-to-End Session Creation Workflow', () => {
    * - Camera fields are populated
    * - Camera array structure is correct
    */
-  it('adds cameras with auto-incrementing IDs', async () => {
+  it('adds cameras with auto-incrementing IDs', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // ACT - Fill required fields first
     await fillRequiredFields(user, screen);
@@ -605,10 +628,14 @@ describe('End-to-End Session Creation Workflow', () => {
    * - Task epochs are formatted correctly
    * - Task structure is valid
    */
-  it('adds tasks with camera references', async () => {
+  it('adds tasks with camera references', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // ACT - Fill required fields first
     await fillRequiredFields(user, screen);
@@ -628,6 +655,12 @@ describe('End-to-End Session Creation Workflow', () => {
       description: 'Rest session',
       environment: 'home cage',
       epochs: [1, 3]
+    });
+
+    // Wait for all state updates to complete before exporting
+    await waitFor(() => {
+      const taskNameInputs = screen.queryAllByLabelText(/task name/i);
+      expect(taskNameInputs.length).toBeGreaterThan(0);
     });
 
     // Export using React fiber approach
@@ -660,10 +693,14 @@ describe('End-to-End Session Creation Workflow', () => {
    * - Event structure is correct
    * - Events array is formatted properly
    */
-  it('adds behavioral events', async () => {
+  it('adds behavioral events', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // ACT - Fill required fields first
     await fillRequiredFields(user, screen);
@@ -671,14 +708,14 @@ describe('End-to-End Session Creation Workflow', () => {
     // Add behavioral events
     const addBehavioralEventButton = screen.getByTitle(/Add behavioral_events/i);
 
-    // Count behavioral events using "Item #" text
-    let behavioralEventItems = screen.queryAllByText(/Item #/i);
+    // Count behavioral events using "Event:" text
+    let behavioralEventItems = screen.queryAllByText(/Event:/i);
     const initialEventCount = behavioralEventItems.length;
 
     await user.click(addBehavioralEventButton);
 
     await waitFor(() => {
-      behavioralEventItems = screen.queryAllByText(/Item #/i);
+      behavioralEventItems = screen.queryAllByText(/Event:/i);
       expect(behavioralEventItems.length).toBe(initialEventCount + 1);
     });
 
@@ -730,7 +767,11 @@ describe('End-to-End Session Creation Workflow', () => {
   it('adds electrode groups with device types', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // ACT - Fill required fields first
     await fillRequiredFields(user, screen);
@@ -786,7 +827,11 @@ describe('End-to-End Session Creation Workflow', () => {
   it('triggers ntrode generation when device type selected', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // ACT - Fill required fields first
     await fillRequiredFields(user, screen);
@@ -848,7 +893,11 @@ describe('End-to-End Session Creation Workflow', () => {
   it('validates and exports complete session as valid YAML', { timeout: 60000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // ACT - Fill required fields first
     await fillRequiredFields(user, screen);

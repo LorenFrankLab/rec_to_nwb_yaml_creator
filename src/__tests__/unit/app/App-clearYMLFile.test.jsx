@@ -17,6 +17,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../../App';
+import { StoreProvider } from '../../../state/StoreContext';
 import { defaultYMLValues } from '../../../valueList';
 import { useWindowConfirmMock } from '../../helpers/test-hooks';
 
@@ -28,7 +29,11 @@ describe('App.js - clearYMLFile()', () => {
       const user = userEvent.setup();
       mocks.confirm.mockReturnValue(false); // Prevent actual reset
 
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const resetButton = screen.getByRole('button', { name: /reset/i });
       await user.click(resetButton);
@@ -42,7 +47,11 @@ describe('App.js - clearYMLFile()', () => {
       const user = userEvent.setup();
       mocks.confirm.mockReturnValue(false); // User clicks Cancel
 
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Modify a form field
       const sessionIdInput = screen.getByLabelText(/session id/i);
@@ -66,7 +75,11 @@ describe('App.js - clearYMLFile()', () => {
       const user = userEvent.setup();
       mocks.confirm.mockReturnValue(true);
 
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Verify that resetting clears form to defaultYMLValues
       // defaultYMLValues has specific values like lab="Loren Frank Lab"
@@ -91,7 +104,11 @@ describe('App.js - clearYMLFile()', () => {
       const user = userEvent.setup();
       mocks.confirm.mockReturnValue(true);
 
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Modify institution field (has a default value)
       const institutionInputs = screen.getAllByDisplayValue(defaultYMLValues.institution);
@@ -114,7 +131,11 @@ describe('App.js - clearYMLFile()', () => {
       const user = userEvent.setup();
       mocks.confirm.mockReturnValue(true);
 
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Don't modify anything - form starts at defaults
       const sessionIdInput = screen.getByLabelText(/session id/i);
@@ -137,7 +158,11 @@ describe('App.js - clearYMLFile()', () => {
       const user = userEvent.setup();
       mocks.confirm.mockReturnValue(true);
 
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Reset twice to verify defaultYMLValues isn't mutated
       const resetButton = screen.getByRole('button', { name: /reset/i });
@@ -165,7 +190,11 @@ describe('App.js - clearYMLFile()', () => {
       const user = userEvent.setup();
       mocks.confirm.mockReturnValue(true);
 
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const resetButton = screen.getByRole('button', { name: /reset/i });
 

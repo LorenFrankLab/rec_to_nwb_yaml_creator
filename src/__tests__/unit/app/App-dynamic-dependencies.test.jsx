@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
 import { App } from '../../../App';
+import { StoreProvider } from '../../../state/StoreContext';
 
 /**
  * Tests for dynamic dependency tracking in App.js
@@ -21,7 +22,11 @@ import { App } from '../../../App';
 describe('App: Dynamic Dependency Tracking', () => {
   describe('Camera ID Tracking', () => {
     it('initially has empty camera IDs list', () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Baseline: documents initial state
       // Camera IDs list starts empty until cameras are added
@@ -29,7 +34,11 @@ describe('App: Dynamic Dependency Tracking', () => {
     });
 
     it('tracks camera IDs from formData.cameras', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Wait for initial render and useEffect
       await waitFor(() => {
@@ -125,14 +134,22 @@ describe('App: Dynamic Dependency Tracking', () => {
 
   describe('DIO Event Tracking', () => {
     it('initially has empty DIO events list', () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Baseline: documents initial state
       expect(container).toBeInTheDocument();
     });
 
     it('tracks DIO event names from formData.behavioral_events', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       await waitFor(() => {
         expect(container.querySelector('[name="behavioral_events"]')).toBeInTheDocument();
@@ -188,14 +205,22 @@ describe('App: Dynamic Dependency Tracking', () => {
 
   describe('Task Epoch Tracking', () => {
     it('initially has empty task epochs list', () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Baseline: documents initial state
       expect(container).toBeInTheDocument();
     });
 
     it('tracks task names from formData.tasks', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       await waitFor(() => {
         // Just verify app rendered
@@ -309,7 +334,11 @@ describe('App: Dynamic Dependency Tracking', () => {
 
   describe('Dependency Usage in Form Fields', () => {
     it('task camera_id field uses cameraIdsDefined', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       await waitFor(() => {
         // Just verify app rendered - specific field presence depends on form structure
@@ -321,7 +350,11 @@ describe('App: Dynamic Dependency Tracking', () => {
     });
 
     it('associated_files task_epochs field uses taskEpochsDefined', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       await waitFor(() => {
         // Just verify app rendered
@@ -333,7 +366,11 @@ describe('App: Dynamic Dependency Tracking', () => {
     });
 
     it('fs_gui_yamls dio_output_name field uses dioEventsDefined', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Note: fs_gui_yamls section may be collapsed by default
       await waitFor(() => {
@@ -356,7 +393,11 @@ describe('App: Dynamic Dependency Tracking', () => {
     });
 
     it('updates are reactive to formData changes', async () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Baseline: documents reactive behavior
       // When formData.cameras changes, cameraIdsDefined updates

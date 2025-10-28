@@ -23,7 +23,6 @@ import RadioList from '../../../element/RadioList';
 import DataListElement from '../../../element/DataListElement';
 import ListElement from '../../../element/ListElement';
 import ChannelMap from '../../../ntrode/ChannelMap';
-import { getMainForm, getFileInput } from '../../helpers/test-selectors';
 
 describe('Duplicate React Keys Fix', () => {
   describe('SelectElement', () => {
@@ -255,7 +254,9 @@ describe('Duplicate React Keys Fix', () => {
 
       // ASSERT
       const fieldsets = screen.getAllByRole('group');
-      expect(fieldsets).toHaveLength(2); // 2 shanks
+      // Each shank has 1 fieldset (for shank) + 1 fieldset (for bad_channels CheckboxList) = 2 per shank
+      // 2 shanks × 2 fieldsets = 4 total
+      expect(fieldsets).toHaveLength(4);
 
       const duplicateKeyWarnings = consoleWarnSpy.mock.calls.filter(call =>
         call[0]?.toString().includes('Encountered two children with the same key')

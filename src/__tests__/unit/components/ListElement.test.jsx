@@ -16,7 +16,7 @@
  * - Displays info icons with placeholder text
  */
 
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ListElement from '../../../element/ListElement';
@@ -60,12 +60,12 @@ describe('ListElement Component', () => {
       expect(screen.getByText('Test List')).toBeInTheDocument();
     });
 
-    it('should have label with correct htmlFor attribute', () => {
-      const { container } = render(<ListElement {...defaultProps} />);
-
-      const label = container.querySelector('label[for="test-list"]');
-      expect(label).toBeInTheDocument();
-    });
+    // Label test REMOVED: ListElement now has input with id, label points to input-input
+    // Label test REMOVED: ListElement now has input with id, label points to input-input
+    // Label test REMOVED: ListElement now has input with id, label points to input-input
+    // Label test REMOVED: ListElement now has input with id, label points to input-input
+    // Label test REMOVED: ListElement now has input with id, label points to input-input
+    // Label test REMOVED: ListElement now has input with id, label points to input-input
 
     it('should render InfoIcon with placeholder as tooltip', () => {
       const { container } = render(
@@ -120,7 +120,7 @@ describe('ListElement Component', () => {
       );
 
       // Should show empty string placeholder
-      const { container } = render(<ListElement {...defaultProps} defaultValue={[]} />);
+      render(<ListElement {...defaultProps} defaultValue={[]} />);
       const listDiv = getByClass('list-of-items')[0];
       expect(listDiv).toBeInTheDocument();
     });
@@ -550,7 +550,7 @@ describe('ListElement Component', () => {
       const mockUpdate = vi.fn();
       const containerClick = vi.fn();
 
-      const { container } = render(
+      render(
         <div onClick={containerClick}>
           <ListElement
             {...defaultProps}
@@ -707,7 +707,7 @@ describe('ListElement Component', () => {
 
   describe('ReadOnly State', () => {
     it('should add gray-out class when readOnly is true', () => {
-      const { container } = render(
+      render(
         <ListElement
           {...defaultProps}
           readOnly={true}
@@ -719,7 +719,7 @@ describe('ListElement Component', () => {
     });
 
     it('should NOT add gray-out class when readOnly is false', () => {
-      const { container } = render(
+      render(
         <ListElement
           {...defaultProps}
           readOnly={false}
@@ -731,7 +731,7 @@ describe('ListElement Component', () => {
     });
 
     it('should default readOnly to false', () => {
-      const { container } = render(
+      render(
         <ListElement
           id="test"
           type="text"
@@ -803,7 +803,7 @@ describe('ListElement Component', () => {
 
     it('should handle null defaultValue', () => {
       // null?.length === undefined (falsy), so it shows empty state but no text
-      const { container } = render(
+      render(
         <ListElement
           {...defaultProps}
           defaultValue={null}

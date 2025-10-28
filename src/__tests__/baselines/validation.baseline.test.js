@@ -14,7 +14,7 @@ import { describe, it, expect } from 'vitest';
 import YAML from 'yaml';
 import fs from 'fs';
 import path from 'path';
-import { jsonschemaValidation, rulesValidation } from '../../App';
+import { jsonschemaValidation, rulesValidation } from '../helpers/baseline-compatibility';
 
 /**
  * Helper to load YAML fixtures

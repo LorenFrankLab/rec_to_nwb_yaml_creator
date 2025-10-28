@@ -2,6 +2,7 @@ import React, { useRef }  from 'react';
 import PropTypes from 'prop-types';
 import { stringToInteger } from './..//utils';
 import InfoIcon from './InfoIcon';
+import { useStableId } from '../hooks/useStableId';
 
 
 /**
@@ -14,7 +15,7 @@ import InfoIcon from './InfoIcon';
  */
 const ListElement = (prop) => {
   const {
-    id,
+    id: providedId,
     type,
     title,
     name,
@@ -27,6 +28,8 @@ const ListElement = (prop) => {
     step,
     readOnly,
   } = prop;
+
+  const id = useStableId(providedId, 'list');
 
   const addListItem = (e, valueToAddObject) => {
     let value = valueToAddObject.current.value?.trim();
@@ -66,8 +69,10 @@ const ListElement = (prop) => {
   const valueToAdd = useRef('');
   const textPlaceHolder = listPlaceHolder ? listPlaceHolder : `Type ${title}`;
 
+  const inputId = `${id}-input`;
+
   return (
-    <label className="container" htmlFor={id}>
+    <label className="container" htmlFor={inputId}>
       <div className="item1" title={placeholder}>
       {title} <InfoIcon infoText={placeholder} />
       </div>
@@ -85,6 +90,7 @@ const ListElement = (prop) => {
           <>
             {' '}
             <input
+              id={inputId}
               name={name}
               type={type}
               placeholder={textPlaceHolder}
@@ -102,7 +108,7 @@ const ListElement = (prop) => {
 
 ListElement.propTypes = {
   title: PropTypes.string.isRequired,
-  id: PropTypes.string.isRequired,
+  id: PropTypes.string,
   type: PropTypes.string.isRequired,
   name: PropTypes.string.isRequired,
   placeholder: PropTypes.string,

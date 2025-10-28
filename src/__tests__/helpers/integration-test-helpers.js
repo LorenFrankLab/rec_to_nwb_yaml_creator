@@ -88,16 +88,27 @@ export async function addListItem(user, screen, placeholder, value) {
 }
 
 /**
- * Helper: Trigger export using React fiber approach
+ * Helper: Trigger form export by submitting the form
  *
- * Standard form submission methods don't work in jsdom (user.click, dispatchEvent, etc.)
- * We must access React's internal fiber tree and call the onSubmit handler directly.
+ * Standard form submission methods don't work reliably in jsdom:
+ * - user.click(button) doesn't trigger React's onSubmit
+ * - dispatchEvent doesn't trigger React handlers
+ *
+ * This helper uses fireEvent.submit which respects React's event system
+ * and always uses the latest onSubmit handler, preventing stale closures.
+ *
+ * CRITICAL: We use fireEvent.submit() instead of accessing React fiber internals because:
+ * 1. Fiber's memoizedProps can be stale after rapid state updates
+ * 2. Event handlers in memoizedProps may close over old state
+ * 3. fireEvent.submit() triggers the CURRENT handler, not a stale closure
+ *
+ * Historical context: Before this fix, accessing fiber.memoizedProps.onSubmit resulted
+ * in race conditions where rapid task_epochs additions would be lost during export.
+ * See commit 944d08d for full root cause analysis.
  *
  * See docs/TESTING_PATTERNS.md#special-case-3-form-export-trigger
- *
- * @param {Object|null} mockEvent - Optional mock event object
  */
-export async function triggerExport(mockEvent = null) {
+export async function triggerExport() {
   // Blur the currently focused element to ensure onBlur fires
   if (document.activeElement && document.activeElement !== document.body) {
     await act(async () => {
@@ -106,22 +117,20 @@ export async function triggerExport(mockEvent = null) {
     });
   }
 
+  // Wait for all React updates to flush
+  // This ensures form has the latest props and event handlers
+  await act(async () => {
+    await new Promise(resolve => {
+      // Use a longer timeout to ensure all state updates have propagated
+      setTimeout(resolve, 100);
+    });
+  });
+
+  // Use fireEvent.submit to trigger the latest handler
   const form = document.querySelector('form');
-  const fiberKey = Object.keys(form).find(key => key.startsWith('__reactFiber'));
-  const fiber = form[fiberKey];
-  const onSubmitHandler = fiber?.memoizedProps?.onSubmit;
-
-  if (!onSubmitHandler) {
-    throw new Error('Could not find React onSubmit handler on form element');
-  }
-
-  const event = mockEvent || {
-    preventDefault: () => {},
-    target: form,
-    currentTarget: form,
-  };
-
-  onSubmitHandler(event);
+  await act(async () => {
+    fireEvent.submit(form);
+  });
 }
 
 /**
@@ -205,6 +214,14 @@ export async function addTask(user, screen, task) {
   for (const epoch of task.epochs) {
     await user.type(taskEpochInput, String(epoch));
     await user.keyboard('{Enter}');
+    // Wait for input to be cleared (indicates successful add)
+    await waitFor(() => {
+      expect(taskEpochInput.value).toBe('');
+    });
+    // Additional delay needed for rapid successive updates in loop
+    // waitFor ensures input is cleared, setTimeout ensures React state updates
+    // (taskEpochsDefined dependency) complete before next iteration
+    await new Promise(resolve => setTimeout(resolve, 100));
   }
 
   return initialCount;
@@ -373,9 +390,9 @@ export async function fillRequiredFields(user, screen) {
   const addDataAcqDeviceButton = screen.getByTitle(/Add data_acq_device/i);
   await user.click(addDataAcqDeviceButton);
 
-  // Wait for item to render
+  // Wait for item to render (should show "Device: SpikeGadgets" after adding with default values)
   await waitFor(() => {
-    expect(screen.queryByText(/Item #1/)).toBeInTheDocument();
+    expect(screen.queryByText(/Device: SpikeGadgets/)).toBeInTheDocument();
   });
 
   // Verify default values are set (from arrayDefaultValues in valueList.js)

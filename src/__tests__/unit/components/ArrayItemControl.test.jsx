@@ -56,14 +56,14 @@ describe('ArrayItemControl Component', () => {
     });
 
     it('should have array-item__controls container class', () => {
-      const { container } = render(<ArrayItemControl {...defaultProps} />);
+      render(<ArrayItemControl {...defaultProps} />);
 
       const controlsDiv = getByClass('array-item__controls')[0];
       expect(controlsDiv).toBeInTheDocument();
     });
 
     it('should have duplicate-item class for duplicate button container', () => {
-      const { container } = render(<ArrayItemControl {...defaultProps} />);
+      render(<ArrayItemControl {...defaultProps} />);
 
       const duplicateDiv = getByClass('duplicate-item')[0];
       expect(duplicateDiv).toBeInTheDocument();

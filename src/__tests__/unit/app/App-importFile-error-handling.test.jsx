@@ -4,8 +4,8 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import App from '../../../App';
+import { StoreProvider } from '../../../state/StoreContext';
 import { useWindowAlertMock } from '../../helpers/test-hooks';
 import YAML from 'yaml';
 
@@ -31,12 +31,7 @@ import YAML from 'yaml';
  */
 
 describe('App - importFile() Error Handling', () => {
-  let user;
   const alertMock = useWindowAlertMock(beforeEach, afterEach);
-
-  beforeEach(() => {
-    user = userEvent.setup();
-  });
 
   /**
    * Test 1: Empty file selection
@@ -44,10 +39,13 @@ describe('App - importFile() Error Handling', () => {
    */
   it('should return early when no file is selected', async () => {
     // ARRANGE
-    render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // Create a fake change event with no file
-    const fileInput = document.querySelector('input[type="file"]');
     const emptyEvent = {
       preventDefault: vi.fn(),
       target: { files: [] } // Empty FileList
@@ -79,7 +77,11 @@ describe('App - importFile() Error Handling', () => {
    */
   it('should crash when importing malformed YAML (KNOWN BUG)', async () => {
     // ARRANGE
-    const { rerender } = render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
     const malformedYaml = 'invalid: yaml: syntax: [[[';
 
     // Mock FileReader to return malformed YAML
@@ -90,9 +92,6 @@ describe('App - importFile() Error Handling', () => {
     };
 
     vi.spyOn(window, 'FileReader').mockImplementation(() => mockFileReader);
-
-    const file = new File([malformedYaml], 'test.yml', { type: 'text/yaml' });
-    const fileInput = document.querySelector('input[type="file"]');
 
     // ACT & ASSERT
     // This should throw because there's no try/catch
@@ -112,7 +111,11 @@ describe('App - importFile() Error Handling', () => {
    */
   it('should fail silently when FileReader encounters error (KNOWN BUG)', async () => {
     // ARRANGE
-    render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // Mock FileReader with error scenario
     const mockFileReader = {
@@ -126,9 +129,6 @@ describe('App - importFile() Error Handling', () => {
     vi.spyOn(window, 'FileReader').mockImplementation(() => mockFileReader);
 
     // ACT
-    const file = new File(['content'], 'test.yml', { type: 'text/yaml' });
-    const fileInput = document.querySelector('input[type="file"]');
-
     // Simulate FileReader error
     if (mockFileReader.onerror) {
       mockFileReader.onerror({ target: mockFileReader });
@@ -149,7 +149,11 @@ describe('App - importFile() Error Handling', () => {
    */
   it('should populate subject from emptyFormData when missing', async () => {
     // ARRANGE
-    const { container } = render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     const yamlWithoutSubject = `
 experimenter_name:
@@ -168,11 +172,8 @@ session_id: "123"
     };
 
     vi.spyOn(window, 'FileReader').mockImplementation(() => mockFileReader);
-    const file = new File([yamlWithoutSubject], 'test.yml', { type: 'text/yaml' });
 
     // ACT
-    const fileInput = document.querySelector('input[type="file"]');
-
     // Manually trigger onload with parsed YAML
     const jsonFileContent = YAML.parse(yamlWithoutSubject);
 
@@ -204,7 +205,11 @@ session_id: "123"
    */
   it('should default to "U" for invalid gender codes', async () => {
     // ARRANGE
-    const { container } = render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     const yamlWithInvalidGender = `
 experimenter_name:
@@ -241,7 +246,11 @@ subject:
    */
   it('should exclude fields with type mismatches', async () => {
     // ARRANGE
-    const { container } = render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     const yamlWithTypeMismatch = `
 experimenter_name:
@@ -278,12 +287,11 @@ institution: ["Should", "be", "string"]
    */
   it('should display alert when validation errors occur', async () => {
     // ARRANGE
-    const { container } = render(<App />);
-
-    const yamlWithErrors = `
-experimenter_name: "Should be array"
-lab: 123
-`;
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // Simulate validation errors
     const errorMessages = [

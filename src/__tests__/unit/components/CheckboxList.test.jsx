@@ -54,11 +54,15 @@ describe('CheckboxList Component', () => {
       expect(screen.getByText('Select Cameras')).toBeInTheDocument();
     });
 
-    it('should have label with correct htmlFor attribute', () => {
-      const { container } = render(<CheckboxList {...defaultProps} />);
+    it('should use fieldset with legend for semantic grouping', () => {
+      render(<CheckboxList {...defaultProps} />);
 
-      const label = container.querySelector('label[for="test-checkbox-list"]');
-      expect(label).toBeInTheDocument();
+      // Should use fieldset/legend instead of label for accessibility
+      const fieldset = screen.getByRole('group', { name: /Select Cameras/i });
+      expect(fieldset.tagName).toBe('FIELDSET');
+
+      const legend = within(fieldset).getByText('Select Cameras');
+      expect(legend.tagName).toBe('LEGEND');
     });
 
     it('should render InfoIcon with placeholder as tooltip', () => {
@@ -89,7 +93,7 @@ describe('CheckboxList Component', () => {
     });
 
     it('should hide checkbox-list div when dataItems is empty', () => {
-      const { container } = render(
+      render(
         <CheckboxList {...defaultProps} dataItems={[]} />
       );
 
@@ -391,7 +395,7 @@ describe('CheckboxList Component', () => {
 
   describe('Edge Cases', () => {
     it('should handle dataItems with special characters (sanitization)', () => {
-      const { container } = render(
+      render(
         <CheckboxList
           {...defaultProps}
           id="test-id"
@@ -424,7 +428,7 @@ describe('CheckboxList Component', () => {
 
     it('should handle dataItems with duplicate values (KNOWN ISSUE: duplicate keys)', () => {
       // This documents current behavior - duplicate values create duplicate keys
-      const { container } = render(
+      render(
         <CheckboxList
           {...defaultProps}
           id="cameras"
@@ -475,7 +479,7 @@ describe('CheckboxList Component', () => {
       // KNOWN ISSUE: propType says `defaultValue: PropTypes.instanceOf(Array)`
       // but defaultProps sets it to '' (empty string), not []
       // This documents the inconsistency
-      const { container } = render(
+      render(
         <CheckboxList
           id="test"
           name="test"

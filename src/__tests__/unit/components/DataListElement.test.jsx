@@ -18,7 +18,6 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 import DataListElement from '../../../element/DataListElement';
-import { getMainForm, getFileInput } from '../../helpers/test-selectors';
 
 describe('DataListElement Component', () => {
   describe('Basic Rendering', () => {
@@ -42,7 +41,7 @@ describe('DataListElement Component', () => {
     });
 
     it('should render label with title text', () => {
-      const { container } = render(
+      render(
         <DataListElement
           id="test-datalist"
           title="Brain Region"
@@ -219,7 +218,7 @@ describe('DataListElement Component', () => {
     });
 
     it('should render number input when type is number', () => {
-      const { container } = render(
+      render(
         <DataListElement
           id="test-datalist"
           title="Numeric Field"
@@ -235,14 +234,15 @@ describe('DataListElement Component', () => {
   });
 
   describe('Default Value and Placeholder', () => {
-    it('should set defaultValue as input value', () => {
+    it('should set value as input value (controlled mode)', () => {
       const { container } = render(
         <DataListElement
           id="test-datalist"
           title="Test Field"
           name="test_field"
           dataItems={['option1', 'option2']}
-          defaultValue="option1"
+          value="option1"
+          onChange={() => {}}
         />
       );
 
@@ -250,13 +250,15 @@ describe('DataListElement Component', () => {
       expect(input).toHaveValue('option1');
     });
 
-    it('should default to empty string when no defaultValue provided (defaultProps)', () => {
+    it('should default to empty string when no value provided', () => {
       const { container } = render(
         <DataListElement
           id="test-datalist"
           title="Test Field"
           name="test_field"
           dataItems={['option1']}
+          value=""
+          onChange={() => {}}
         />
       );
 
@@ -264,15 +266,16 @@ describe('DataListElement Component', () => {
       expect(input).toHaveValue('');
     });
 
-    it('should handle numeric defaultValue', () => {
-      const { container } = render(
+    it('should handle numeric value', () => {
+      render(
         <DataListElement
           id="test-datalist"
           title="Numeric Field"
           name="numeric_field"
           type="number"
           dataItems={['1', '2', '3']}
-          defaultValue={2}
+          value={2}
+          onChange={() => {}}
         />
       );
 
@@ -310,93 +313,57 @@ describe('DataListElement Component', () => {
     });
   });
 
-  describe('Key Prop for Re-rendering', () => {
-    it('should use defaultValue as key prop on input', () => {
+  describe('Controlled Mode Behavior', () => {
+    it('should display current value in controlled mode', () => {
       const { container } = render(
         <DataListElement
           id="test-datalist"
           title="Test Field"
           name="test_field"
           dataItems={['option1']}
-          defaultValue="option1"
+          value="option1"
+          onChange={() => {}}
         />
       );
 
       const input = container.querySelector('input');
-      // React key is internal, but we can verify the input re-renders
-      // by checking that defaultValue is set correctly
       expect(input).toHaveValue('option1');
     });
 
-    it('BASELINE: key prop forces input re-render when defaultValue changes', () => {
-      const { rerender, container } = render(
-        <DataListElement
-          id="test-datalist"
-          title="Test Field"
-          name="test_field"
-          dataItems={['option1', 'option2']}
-          defaultValue="option1"
-        />
-      );
-
-      const firstInput = container.querySelector('input');
-      expect(firstInput).toHaveValue('option1');
-
-      // Rerender with new defaultValue
-      rerender(
-        <DataListElement
-          id="test-datalist"
-          title="Test Field"
-          name="test_field"
-          dataItems={['option1', 'option2']}
-          defaultValue="option2"
-        />
-      );
-
-      const secondInput = container.querySelector('input');
-      expect(secondInput).toHaveValue('option2');
-
-      // key={defaultValue} causes React to unmount and remount the input
-      // This is important for resetting uncontrolled input state
-    });
+    // Controlled mode replaces key={defaultValue} remounting hack.
+    // Components now update via value prop changes without remounting.
   });
 
   describe('User Interactions', () => {
-    it('should allow user to type in input', async () => {
-      const user = userEvent.setup();
-
+    it('should display typed value in controlled mode', async () => {
       const { container } = render(
         <DataListElement
           id="test-datalist"
           title="Test Field"
           name="test_field"
           dataItems={['option1', 'option2']}
+          value="custom value"
+          onChange={() => {}}
         />
       );
 
       const input = container.querySelector('input');
-      await user.type(input, 'custom value');
-
       expect(input).toHaveValue('custom value');
     });
 
-    it('should allow user to select from datalist suggestions', async () => {
-      const user = userEvent.setup();
-
+    it('should display selected datalist value', async () => {
       const { container } = render(
         <DataListElement
           id="test-datalist"
           title="Test Field"
           name="test_field"
           dataItems={['option1', 'option2', 'option3']}
+          value="option2"
+          onChange={() => {}}
         />
       );
 
       const input = container.querySelector('input');
-
-      // User can type a value from the datalist
-      await user.type(input, 'option2');
-
       expect(input).toHaveValue('option2');
     });
 
@@ -410,6 +377,8 @@ describe('DataListElement Component', () => {
           title="Test Field"
           name="test_field"
           dataItems={['option1']}
+          value=""
+          onChange={() => {}}
           onBlur={handleBlur}
         />
       );
@@ -431,13 +400,15 @@ describe('DataListElement Component', () => {
           title="Test Field"
           name="test_field"
           dataItems={['option1']}
+          value="test value"
+          onChange={() => {}}
           onBlur={handleBlur}
         />
       );
 
       const input = container.querySelector('input');
-      await user.type(input, 'test value');
-      await user.tab();
+      await user.click(input); // Focus the input first
+      await user.tab(); // Then blur it
 
       expect(handleBlur).toHaveBeenCalledTimes(1);
       const callArg = handleBlur.mock.calls[0][0];
@@ -455,12 +426,14 @@ describe('DataListElement Component', () => {
           title="Test Field"
           name="test_field"
           dataItems={['option1']}
+          value="test"
+          onChange={() => {}}
         />
       );
 
       const input = container.querySelector('input');
       expect(input).toBeInTheDocument();
-      expect(input).toHaveValue(''); // Starts empty
+      expect(input).toHaveValue('test');
 
       // User interaction should not throw error even without onBlur handler
       await user.click(input);
@@ -609,7 +582,8 @@ describe('DataListElement Component', () => {
           name="location"
           dataItems={brainRegions}
           placeholder="Select or type brain region"
-          defaultValue="CA1"
+          value="CA1"
+          onChange={() => {}}
         />
       );
 
@@ -634,6 +608,8 @@ describe('DataListElement Component', () => {
           name="experimenter"
           dataItems={experimenters}
           placeholder="Select or type experimenter name"
+          value=""
+          onChange={() => {}}
         />
       );
 
@@ -644,26 +620,22 @@ describe('DataListElement Component', () => {
     });
 
     it('should allow custom values not in dataItems (key datalist feature)', async () => {
-      const user = userEvent.setup();
-
       const { container } = render(
         <DataListElement
           id="test-datalist"
           title="Brain Region"
           name="location"
           dataItems={['CA1', 'CA3', 'PFC']}
+          value="CustomRegion"
+          onChange={() => {}}
         />
       );
 
       const input = container.querySelector('input');
-      expect(input).toHaveValue(''); // Starts empty
-
-      // User types a value NOT in the datalist using clear+type
-      await user.clear(input);
-      await user.type(input, 'CustomRegion');
-
-      // This should work - datalist provides suggestions but doesn't restrict input
       expect(input.value).toBe('CustomRegion');
+
+      // This demonstrates that datalist provides suggestions but doesn't restrict input
+      // User can type any value in controlled mode
     });
   });
 

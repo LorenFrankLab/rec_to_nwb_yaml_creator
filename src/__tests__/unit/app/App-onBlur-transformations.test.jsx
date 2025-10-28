@@ -14,6 +14,7 @@
 import { render, fireEvent } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { App } from '../../../App';
+import { StoreProvider } from '../../../state/StoreContext';
 import { getByName, getById } from '../../helpers/test-selectors';
 import {
   commaSeparatedStringToNumber,
@@ -171,7 +172,11 @@ describe('App onBlur Transformations', () => {
 
   describe('onBlur - Number Input Transformations', () => {
     it('should parse float on blur for number inputs', () => {
-      const { container } = render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const weightInput = getById('subject-weight');
 
@@ -186,7 +191,11 @@ describe('App onBlur Transformations', () => {
     });
 
     it('should handle integer values in number inputs', () => {
-      const { container } = render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const weightInput = getById('subject-weight');
 
@@ -197,7 +206,11 @@ describe('App onBlur Transformations', () => {
     });
 
     it('should handle decimal values with leading zero', () => {
-      const { container } = render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const multiplierInput = getByName('times_period_multiplier')[0];
 
@@ -208,7 +221,11 @@ describe('App onBlur Transformations', () => {
     });
 
     it('should handle very small decimal values', () => {
-      const { container } = render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const multiplierInput = getByName('times_period_multiplier')[0];
 
@@ -219,7 +236,11 @@ describe('App onBlur Transformations', () => {
     });
 
     it('should handle zero values', () => {
-      const { container } = render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const weightInput = getById('subject-weight');
 
@@ -230,7 +251,11 @@ describe('App onBlur Transformations', () => {
     });
 
     it('should handle negative numbers', () => {
-      const { container } = render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const weightInput = getById('subject-weight');
 
@@ -243,7 +268,11 @@ describe('App onBlur Transformations', () => {
 
   describe('onBlur - Text Input Pass-through', () => {
     it('should not transform text input values', () => {
-      const { container } = render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const labInput = getByName('lab')[0];
 
@@ -254,7 +283,11 @@ describe('App onBlur Transformations', () => {
     });
 
     it('should preserve whitespace in text inputs', () => {
-      const { container } = render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const descInput = getByName('experiment_description')[0];
 
@@ -265,7 +298,11 @@ describe('App onBlur Transformations', () => {
     });
 
     it('should preserve special characters in text inputs', () => {
-      const { container } = render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const descInput = getByName('session_description')[0];
 
@@ -277,7 +314,11 @@ describe('App onBlur Transformations', () => {
     });
 
     it('should handle empty string in text inputs', () => {
-      const { container } = render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const labInput = getByName('lab')[0];
 
@@ -290,7 +331,11 @@ describe('App onBlur Transformations', () => {
 
   describe('onBlur - Edge Cases', () => {
     it('should handle rapid change and blur events', () => {
-      const { container } = render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const weightInput = getById('subject-weight');
 
@@ -305,7 +350,11 @@ describe('App onBlur Transformations', () => {
     });
 
     it('should handle blur without change', () => {
-      const { container } = render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const labInput = getByName('lab')[0];
       const originalValue = labInput.value;
@@ -317,7 +366,11 @@ describe('App onBlur Transformations', () => {
     });
 
     it('should handle blur on empty number input', () => {
-      const { container } = render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const weightInput = getById('subject-weight');
 

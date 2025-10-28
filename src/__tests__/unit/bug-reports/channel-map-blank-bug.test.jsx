@@ -12,7 +12,6 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import ChannelMap from '../../../ntrode/ChannelMap';
-import { getMainForm, getFileInput } from '../../helpers/test-selectors';
 
 describe('BUG: Channel Map Blank Value', () => {
   it('FIXED: option elements now have value attributes', () => {

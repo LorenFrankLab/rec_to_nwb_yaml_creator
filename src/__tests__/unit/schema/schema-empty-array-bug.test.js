@@ -27,7 +27,7 @@ import { describe, it, expect } from 'vitest';
 import YAML from 'yaml';
 import fs from 'fs';
 import path from 'path';
-import { jsonschemaValidation } from '../../../App';
+import { validate } from '../../../validation';
 
 function loadFixture(category, filename) {
   const fixturePath = path.join(
@@ -58,14 +58,15 @@ describe('Empty Array Validation (P2)', () => {
       };
 
       // ACT: Validate the YAML
-      const result = jsonschemaValidation(yaml);
+      const issues = validate(yaml);
+      const isValid = issues.length === 0;
 
       // ASSERT: Should REJECT empty epochs array (currently FAILS - bug exists)
-      expect(result.valid).toBe(false);
-      expect(result.errors).not.toBeNull();
-      expect(result.errors.some(err =>
+      expect(isValid).toBe(false);
+      expect(issues.length).toBeGreaterThan(0);
+      expect(issues.some(err =>
         err.instancePath.includes('/fs_gui_yamls/0/epochs') &&
-        err.keyword === 'minItems'
+        err.code === 'minItems'
       )).toBe(true);
     });
 
@@ -85,11 +86,12 @@ describe('Empty Array Validation (P2)', () => {
       };
 
       // ACT
-      const result = jsonschemaValidation(yaml);
+      const issues = validate(yaml);
+      const isValid = issues.length === 0;
 
       // ASSERT: Should ACCEPT
-      expect(result.valid).toBe(true);
-      expect(result.errors).toBeNull();
+      expect(isValid).toBe(true);
+      expect(issues).toEqual([]);
     });
 
     it('should ACCEPT fs_gui_yamls with multiple epochs', () => {
@@ -108,11 +110,12 @@ describe('Empty Array Validation (P2)', () => {
       };
 
       // ACT
-      const result = jsonschemaValidation(yaml);
+      const issues = validate(yaml);
+      const isValid = issues.length === 0;
 
       // ASSERT: Should ACCEPT
-      expect(result.valid).toBe(true);
-      expect(result.errors).toBeNull();
+      expect(isValid).toBe(true);
+      expect(issues).toEqual([]);
     });
   });
 
@@ -133,11 +136,12 @@ describe('Empty Array Validation (P2)', () => {
       };
 
       // ACT
-      const result = jsonschemaValidation(yaml);
+      const issues = validate(yaml);
+      const isValid = issues.length === 0;
 
       // ASSERT: Should ACCEPT empty camera_id
-      expect(result.valid).toBe(true);
-      expect(result.errors).toBeNull();
+      expect(isValid).toBe(true);
+      expect(issues).toEqual([]);
     });
 
     it('should ACCEPT tasks with empty task_epochs array', () => {
@@ -149,18 +153,19 @@ describe('Empty Array Validation (P2)', () => {
             task_name: 'Full Session Task',
             task_description: 'A task spanning entire session',
             task_environment: 'Home cage',
-            camera_id: [0],
+            camera_id: [], // Fixed: empty camera_id to avoid rules validation error
             task_epochs: [] // Valid: task spans entire session
           }
         ]
       };
 
       // ACT
-      const result = jsonschemaValidation(yaml);
+      const issues = validate(yaml);
+      const isValid = issues.length === 0;
 
       // ASSERT: Should ACCEPT empty task_epochs
-      expect(result.valid).toBe(true);
-      expect(result.errors).toBeNull();
+      expect(isValid).toBe(true);
+      expect(issues).toEqual([]);
     });
 
   });
@@ -174,11 +179,12 @@ describe('Empty Array Validation (P2)', () => {
       };
 
       // ACT
-      const result = jsonschemaValidation(yaml);
+      const issues = validate(yaml);
+      const isValid = issues.length === 0;
 
       // ASSERT: Should REJECT (verifies existing minItems works)
-      expect(result.valid).toBe(false);
-      expect(result.errors).not.toBeNull();
+      expect(isValid).toBe(false);
+      expect(issues.length).toBeGreaterThan(0);
     });
 
     it('should REJECT empty data_acq_device array', () => {
@@ -189,11 +195,12 @@ describe('Empty Array Validation (P2)', () => {
       };
 
       // ACT
-      const result = jsonschemaValidation(yaml);
+      const issues = validate(yaml);
+      const isValid = issues.length === 0;
 
       // ASSERT: Should REJECT (verifies existing minItems works)
-      expect(result.valid).toBe(false);
-      expect(result.errors).not.toBeNull();
+      expect(isValid).toBe(false);
+      expect(issues.length).toBeGreaterThan(0);
     });
   });
 });

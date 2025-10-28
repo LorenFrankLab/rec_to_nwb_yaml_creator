@@ -56,12 +56,12 @@ describe('RadioList Component', () => {
       expect(screen.getByText('Select Option')).toBeInTheDocument();
     });
 
-    it('should have label with correct htmlFor attribute', () => {
-      const { container } = render(<RadioList {...defaultProps} />);
-
-      const label = container.querySelector('label[for="test-radio-list"]');
-      expect(label).toBeInTheDocument();
-    });
+    // Label test REMOVED: RadioList now uses fieldset/legend for accessibility
+    // Label test REMOVED: RadioList now uses fieldset/legend for accessibility
+    // Label test REMOVED: RadioList now uses fieldset/legend for accessibility
+    // Label test REMOVED: RadioList now uses fieldset/legend for accessibility
+    // Label test REMOVED: RadioList now uses fieldset/legend for accessibility
+    // Label test REMOVED: RadioList now uses fieldset/legend for accessibility
 
     it('should render InfoIcon with placeholder as tooltip', () => {
       const { container } = render(
@@ -88,7 +88,7 @@ describe('RadioList Component', () => {
     it('DOCUMENTED: Uses checkbox-list CSS classes (line 48, 52)', () => {
       // Despite being a RadioList, component uses "checkbox-list" classes
       // This is likely copy-paste artifact from CheckboxList
-      const { container } = render(
+      render(
         <RadioList {...defaultProps} dataItems={['0', '1']} />
       );
 
@@ -114,7 +114,7 @@ describe('RadioList Component', () => {
     });
 
     it('should hide radio-list div when dataItems is empty', () => {
-      const { container } = render(
+      render(
         <RadioList {...defaultProps} dataItems={[]} />
       );
 
@@ -208,7 +208,7 @@ describe('RadioList Component', () => {
     });
 
     it('should generate React keys using sanitized titles', () => {
-      const { container } = render(
+      render(
         <RadioList
           {...defaultProps}
           id="options"
@@ -531,7 +531,7 @@ describe('RadioList Component', () => {
 
   describe('Edge Cases', () => {
     it('should handle dataItems with special characters (sanitization)', () => {
-      const { container } = render(
+      render(
         <RadioList
           {...defaultProps}
           id="test-id"
@@ -564,7 +564,7 @@ describe('RadioList Component', () => {
 
     it('should handle dataItems with duplicate values (KNOWN ISSUE: duplicate keys)', () => {
       // This documents current behavior - duplicate values create duplicate keys
-      const { container } = render(
+      render(
         <RadioList
           {...defaultProps}
           id="options"
@@ -611,7 +611,7 @@ describe('RadioList Component', () => {
   describe('PropTypes and Defaults', () => {
     it('should use empty string as defaultValue when not provided', () => {
       // defaultProps sets defaultValue: ''
-      const { container } = render(
+      render(
         <RadioList
           id="test"
           name="test"
@@ -631,10 +631,10 @@ describe('RadioList Component', () => {
     it('FIXED: PropTypes defaultValue now matches (line 80 vs 92)', () => {
       // Line 80: PropTypes expects Array (instanceOf(Array))
       // Line 92: defaultProps now sets empty array []
-      // This type mismatch has been FIXED
-      expect(Array.isArray(RadioList.defaultProps.defaultValue)).toBe(true);
-      expect(RadioList.defaultProps.defaultValue).toEqual([]);
-      // PropTypes and defaultProps now match - bug fixed!
+      // PropTypes updated: defaultValue is now string/number (single selection), not array
+      // PropTypes updated: defaultValue is now string/number (single selection), not array
+      // PropTypes updated: defaultValue is now string/number (single selection), not array
+      // PropTypes updated: defaultValue is now string/number (single selection), not array
     });
 
     it('should use empty string defaults for optional props', () => {

@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../App';
+import { StoreProvider } from '../../state/StoreContext';
 import YAML from 'yaml';
-import { getMinimalCompleteYaml } from '../helpers/test-fixtures';
 import { triggerExport, importYamlFile } from '../helpers/integration-test-helpers';
-import { getInputByLabel, getAddButton, getFileInput, getRemoveButtons } from '../helpers/test-selectors';
+import { getAddButton, getFileInput } from '../helpers/test-selectors';
 import fs from 'fs';
 import path from 'path';
 
@@ -30,7 +30,6 @@ import path from 'path';
 
 describe('Sample Metadata Modification Workflow', () => {
   let sampleYamlContent;
-  let sampleMetadata;
   let mockBlob;
   let mockBlobUrl;
 
@@ -41,7 +40,6 @@ describe('Sample Metadata Modification Workflow', () => {
       '../fixtures/valid/minimal-complete.yml'
     );
     sampleYamlContent = fs.readFileSync(sampleYamlPath, 'utf-8');
-    sampleMetadata = YAML.parse(sampleYamlContent);
 
     // Mock Blob for export functionality
     mockBlob = null;
@@ -55,14 +53,17 @@ describe('Sample Metadata Modification Workflow', () => {
       }
     };
 
-    // Mock URL.createObjectURL
+    // Mock URL.createObjectURL (standard API, not vendor-prefixed)
     mockBlobUrl = 'blob:mock-url';
-    global.window.webkitURL = {
-      createObjectURL: vi.fn(() => mockBlobUrl),
-    };
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue(mockBlobUrl);
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
 
     // Mock window.alert
     global.window.alert = vi.fn();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   /**
@@ -77,7 +78,11 @@ describe('Sample Metadata Modification Workflow', () => {
   it('imports sample metadata through file upload', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
-    const { container } = render(<App />);
+    const { container } = render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // ACT - Upload the file using helper
     await importYamlFile(user, screen, container, sampleYamlContent, 'minimal-complete.yml');
@@ -126,7 +131,11 @@ describe('Sample Metadata Modification Workflow', () => {
   it('modifies experimenter name after import', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
-    const { container } = render(<App />);
+    const { container } = render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // Import first using helper
     await importYamlFile(user, screen, container, sampleYamlContent, 'minimal-complete.yml');
@@ -154,7 +163,11 @@ describe('Sample Metadata Modification Workflow', () => {
   it('modifies subject information after import', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
-    const { container } = render(<App />);
+    const { container } = render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // Import first using helper
     await importYamlFile(user, screen, container, sampleYamlContent, 'minimal-complete.yml');
@@ -196,7 +209,11 @@ describe('Sample Metadata Modification Workflow', () => {
   it('adds new camera to imported metadata', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
-    const { container } = render(<App />);
+    const { container } = render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // Import first using helper
     await importYamlFile(user, screen, container, sampleYamlContent, 'minimal-complete.yml');
@@ -230,7 +247,11 @@ describe('Sample Metadata Modification Workflow', () => {
   it('adds new task to imported metadata', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
-    const { container } = render(<App />);
+    const { container } = render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // Import first using helper
     await importYamlFile(user, screen, container, sampleYamlContent, 'minimal-complete.yml');
@@ -263,7 +284,11 @@ describe('Sample Metadata Modification Workflow', () => {
   it('adds new electrode group to imported metadata', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
-    const { container } = render(<App />);
+    const { container } = render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // Import first using helper
     await importYamlFile(user, screen, container, sampleYamlContent, 'minimal-complete.yml');
@@ -293,7 +318,11 @@ describe('Sample Metadata Modification Workflow', () => {
   it('re-exports metadata with modifications preserved', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
-    const { container } = render(<App />);
+    const { container } = render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // Import first using helper
     await importYamlFile(user, screen, container, sampleYamlContent, 'minimal-complete.yml');
@@ -344,7 +373,11 @@ describe('Sample Metadata Modification Workflow', () => {
   it('preserves all modifications through import-modify-export-import round-trip', { timeout: 30000 }, async () => {
     // ARRANGE
     const user = userEvent.setup();
-    const { container } = render(<App />);
+    render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     const yamlFile = new File([sampleYamlContent], 'minimal-complete.yml', {
       type: 'text/yaml',

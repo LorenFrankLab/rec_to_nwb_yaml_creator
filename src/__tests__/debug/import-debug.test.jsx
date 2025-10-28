@@ -8,12 +8,17 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../App';
+import { StoreProvider } from '../../state/StoreContext';
 
 describe('DEBUG: Import subject_id investigation', () => {
   it('logs all form field values after import', async () => {
     // ARRANGE
     const user = userEvent.setup();
-    const { container } = render(<App />);
+    const { container } = render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
     // Use the ACTUAL minimal-sample.yml content that's known to work
     const minimalYaml = `experimenter_name:

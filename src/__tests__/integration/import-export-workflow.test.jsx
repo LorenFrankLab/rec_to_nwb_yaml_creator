@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../App';
+import { StoreProvider } from '../../state/StoreContext';
 import YAML from 'yaml';
-import { getMinimalCompleteYaml, getCustomizedYaml } from '../helpers/test-fixtures';
+import { getMinimalCompleteYaml } from '../helpers/test-fixtures';
 import { triggerExport } from '../helpers/integration-test-helpers';
 import { getFileInput } from '../helpers/test-selectors';
 
@@ -41,15 +42,17 @@ describe('Import/Export Workflow Integration', () => {
       }
     };
 
-    // Mock URL.createObjectURL
+    // Mock URL.createObjectURL (standard API, not vendor-prefixed)
     mockBlobUrl = 'blob:mock-url';
-    const createObjectURLSpy = vi.fn(() => mockBlobUrl);
-    global.window.webkitURL = {
-      createObjectURL: createObjectURLSpy,
-    };
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue(mockBlobUrl);
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
 
     // Mock window.alert
     global.window.alert = vi.fn();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe('Import Workflow - Valid YAML', () => {
@@ -59,7 +62,11 @@ describe('Import/Export Workflow Integration', () => {
     it('imports minimal valid YAML and populates form fields', { timeout: 30000 }, async () => {
       // ARRANGE
       const user = userEvent.setup();
-      const { container } = render(<App />);
+      render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
       // Complete minimal YAML with all required fields
       const yamlContent = getMinimalCompleteYaml();
@@ -104,7 +111,11 @@ describe('Import/Export Workflow Integration', () => {
     it('imports YAML with arrays (cameras, tasks) and populates correctly', { timeout: 30000 }, async () => {
       // ARRANGE
       const user = userEvent.setup();
-      const { container } = render(<App />);
+      render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
       // Complete YAML with arrays - added required fields
       const yamlContent = getMinimalCompleteYaml();
@@ -151,7 +162,11 @@ describe('Import/Export Workflow Integration', () => {
     it('imports YAML with nested objects and preserves structure', { timeout: 30000 }, async () => {
       // ARRANGE
       const user = userEvent.setup();
-      const { container } = render(<App />);
+      render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
       // Complete YAML with nested objects - added remaining required fields
       const yamlContent = getMinimalCompleteYaml();
@@ -194,7 +209,11 @@ describe('Import/Export Workflow Integration', () => {
     it('exports form data as valid YAML with correct structure', { timeout: 30000 }, async () => {
       // ARRANGE
       const user = userEvent.setup();
-      const { container } = render(<App />);
+      render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
       // Import a complete valid session first - added all required fields
       const yamlContent = getMinimalCompleteYaml();
@@ -241,7 +260,11 @@ describe('Import/Export Workflow Integration', () => {
     it('creates Blob with correct MIME type and content', { timeout: 30000 }, async () => {
       // ARRANGE
       const user = userEvent.setup();
-      const { container } = render(<App />);
+      render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
       // Complete YAML for Blob test - added all required fields
       const yamlContent = getMinimalCompleteYaml();
@@ -278,7 +301,11 @@ describe('Import/Export Workflow Integration', () => {
     it('preserves all data through import → export cycle', { timeout: 30000 }, async () => {
       // ARRANGE
       const user = userEvent.setup();
-      const { container } = render(<App />);
+      render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
       // Complete YAML for round-trip test - added all required fields
       const yamlContent = getMinimalCompleteYaml();
@@ -324,7 +351,11 @@ describe('Import/Export Workflow Integration', () => {
     it('preserves modifications after import and re-export', { timeout: 30000 }, async () => {
       // ARRANGE
       const user = userEvent.setup();
-      const { container } = render(<App />);
+      render(
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    );
 
       // Complete YAML for modification test - added all required fields
       const yamlContent = getMinimalCompleteYaml();

@@ -15,6 +15,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../../App';
+import { StoreProvider } from '../../../state/StoreContext';
 import { getById } from '../../helpers/test-selectors';
 
 describe('App.js - clickNav()', () => {
@@ -22,7 +23,11 @@ describe('App.js - clickNav()', () => {
     it('should add highlight-region class to target element when nav link clicked', async () => {
       const user = userEvent.setup();
 
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Find a navigation link
       const subjectNavLink = screen.getByRole('link', { name: /^subject$/i });
@@ -41,7 +46,11 @@ describe('App.js - clickNav()', () => {
     it('should add active-nav-link class to parent node when clicked', async () => {
       const user = userEvent.setup();
 
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Find a navigation link
       const subjectNavLink = screen.getByRole('link', { name: /^subject$/i });
@@ -57,7 +66,11 @@ describe('App.js - clickNav()', () => {
     it('should remove previous active-nav-link classes before adding new one', async () => {
       const user = userEvent.setup();
 
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Click first nav link
       const subjectNavLink = screen.getByRole('link', { name: /^subject$/i });
@@ -81,7 +94,11 @@ describe('App.js - clickNav()', () => {
     it('should find and target correct element based on data-id attribute', async () => {
       const user = userEvent.setup();
 
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Click nav link and verify it targets correct section
       const subjectNavLink = screen.getByRole('link', { name: /^subject$/i });
@@ -109,7 +126,11 @@ describe('App.js - clickNav()', () => {
     });
 
     it('should remove highlight-region and active-nav-link classes after 1000ms timeout', async () => {
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Find and click a nav link
       const subjectNavLink = screen.getByRole('link', { name: /^subject$/i });
@@ -137,7 +158,11 @@ describe('App.js - clickNav()', () => {
     it('should handle clicking same nav item multiple times', async () => {
       const user = userEvent.setup();
 
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const subjectNavLink = screen.getByRole('link', { name: /^subject$/i });
 
@@ -164,7 +189,11 @@ describe('App.js - clickNav()', () => {
     it('should handle rapid multiple clicks on different nav items', async () => {
       const user = userEvent.setup();
 
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Click multiple nav links rapidly
       const subjectNavLink = screen.getByRole('link', { name: /^subject$/i });
@@ -186,7 +215,11 @@ describe('App.js - clickNav()', () => {
     });
 
     it('should handle missing target element gracefully', () => {
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Create a mock event with invalid data-id
       const mockLink = document.createElement('a');

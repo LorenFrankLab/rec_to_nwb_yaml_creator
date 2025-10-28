@@ -51,7 +51,8 @@ const ChannelMap = (prop) => {
                     name="ntrode_id"
                     title="Ntrode Id"
                     required
-                    defaultValue={item.ntrode_id}
+                    value={item.ntrode_id}
+                    onChange={() => {}}
                     placeholder="Ntrode Id"
                     readOnly
                     onBlur={onBlur}
@@ -133,7 +134,7 @@ const ChannelMap = (prop) => {
 };
 
 ChannelMap.propTypes = {
-  electrodeGroupId: PropTypes.number,
+  electrodeGroupId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
   nTrodeItems: PropTypes.arrayOf(PropTypes.object),
   onBlur: PropTypes.func,
   updateFormArray: PropTypes.func,

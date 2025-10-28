@@ -9,11 +9,13 @@ This project uses [Husky](https://typicode.github.io/husky/) to manage Git hooks
 **When it runs:** Before every `git commit`
 
 **What it does:**
+
 - Runs [lint-staged](https://github.com/okonet/lint-staged) to automatically lint and fix staged files
 - Only processes files that are staged for commit (not the entire codebase)
 - Configuration is in `.lintstagedrc.json`
 
 **Current configuration:**
+
 - JavaScript/JSX files (`*.{js,jsx}`): Runs ESLint with auto-fix
 
 **Execution time:** Usually < 5 seconds (only checks staged files)
@@ -25,6 +27,7 @@ This project uses [Husky](https://typicode.github.io/husky/) to manage Git hooks
 **When it runs:** Before every `git push`
 
 **What it does:**
+
 - Runs baseline tests to ensure no regressions are pushed to the remote repository
 - Blocks the push if baseline tests fail
 - Provides clear error messages if tests fail
@@ -44,6 +47,7 @@ git commit -n -m "Your commit message"
 ```
 
 **When to use:**
+
 - Emergency hotfixes that need to bypass linting temporarily
 - WIP commits on feature branches (though consider fixing lint errors instead)
 - CI/CD automated commits
@@ -57,6 +61,7 @@ git push -n
 ```
 
 **When to use:**
+
 - Emergency pushes when baseline tests are temporarily broken
 - Pushing documentation-only changes
 - Pushing to feature branches when you know tests are failing but want to share code
@@ -86,6 +91,7 @@ Controls what linting/formatting happens on staged files:
 ```
 
 To modify what happens on commit:
+
 1. Edit `.lintstagedrc.json`
 2. Add/remove file patterns or commands
 3. Test with `npx lint-staged` before committing
@@ -95,6 +101,7 @@ To modify what happens on commit:
 Simple shell scripts that run before commit/push.
 
 **Modern Husky format (v9+):**
+
 - No shebang or source lines needed
 - Just write commands directly in the file
 
@@ -124,6 +131,7 @@ npm run test:baseline -- --run
 ### Hooks running but with errors
 
 Check the hook output carefully:
+
 - ESLint errors: Fix code style issues
 - Test failures: Investigate regression or update baselines
 - Permission errors: Ensure hooks are executable (`chmod +x .husky/*`)

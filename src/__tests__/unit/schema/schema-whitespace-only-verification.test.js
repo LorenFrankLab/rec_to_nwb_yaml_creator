@@ -20,7 +20,7 @@ import { describe, it, expect } from 'vitest';
 import YAML from 'yaml';
 import fs from 'fs';
 import path from 'path';
-import { jsonschemaValidation } from '../../../App';
+import { validate } from '../../../validation';
 import schema from '../../../nwb_schema.json';
 
 function loadFixture(category, filename) {
@@ -103,14 +103,15 @@ describe('VERIFICATION: Whitespace-Only String Protection (P2)', () => {
     };
 
     // ACT
-    const result = jsonschemaValidation(yaml);
+    const issues = validate(yaml);
+      const isValid = issues.length === 0;
 
     // ASSERT: Should reject whitespace-only value
-    expect(result.valid).toBe(false);
-    expect(result.errors).not.toBeNull();
-    expect(result.errors.some(err =>
+    expect(isValid).toBe(false);
+    expect(issues.length).toBeGreaterThan(0);
+    expect(issues.some(err =>
       err.instancePath === '/lab' &&
-      err.keyword === 'pattern'
+      err.code === 'pattern'
     )).toBe(true);
   });
 
@@ -125,14 +126,15 @@ describe('VERIFICATION: Whitespace-Only String Protection (P2)', () => {
     };
 
     // ACT
-    const result = jsonschemaValidation(yaml);
+    const issues = validate(yaml);
+      const isValid = issues.length === 0;
 
     // ASSERT: Should reject whitespace-only value (not in enum)
-    expect(result.valid).toBe(false);
-    expect(result.errors).not.toBeNull();
-    expect(result.errors.some(err =>
+    expect(isValid).toBe(false);
+    expect(issues.length).toBeGreaterThan(0);
+    expect(issues.some(err =>
       err.instancePath === '/subject/sex' &&
-      err.keyword === 'enum'
+      err.code === 'enum'
     )).toBe(true);
   });
 
@@ -144,11 +146,12 @@ describe('VERIFICATION: Whitespace-Only String Protection (P2)', () => {
     };
 
     // ACT
-    const result = jsonschemaValidation(yaml);
+    const issues = validate(yaml);
+      const isValid = issues.length === 0;
 
     // ASSERT: Should reject
-    expect(result.valid).toBe(false);
-    expect(result.errors).not.toBeNull();
+    expect(isValid).toBe(false);
+    expect(issues.length).toBeGreaterThan(0);
   });
 
   it('verifies pattern allows strings with whitespace edges but non-whitespace content', () => {
@@ -160,10 +163,11 @@ describe('VERIFICATION: Whitespace-Only String Protection (P2)', () => {
     };
 
     // ACT
-    const result = jsonschemaValidation(yaml);
+    const issues = validate(yaml);
+      const isValid = issues.length === 0;
 
     // ASSERT: Should accept (these are valid)
-    expect(result.valid).toBe(true);
+    expect(isValid).toBe(true);
   });
 
   describe('Sample field verification', () => {
@@ -195,11 +199,12 @@ describe('VERIFICATION: Whitespace-Only String Protection (P2)', () => {
         }
 
         // ACT
-        const result = jsonschemaValidation(yaml);
+        const issues = validate(yaml);
+      const isValid = issues.length === 0;
 
         // ASSERT
-        expect(result.valid).toBe(false);
-        expect(result.errors).not.toBeNull();
+        expect(isValid).toBe(false);
+        expect(issues.length).toBeGreaterThan(0);
       });
     });
   });
@@ -213,11 +218,12 @@ describe('VERIFICATION: Whitespace-Only String Protection (P2)', () => {
       };
 
       // ACT
-      const result = jsonschemaValidation(yaml);
+      const issues = validate(yaml);
+      const isValid = issues.length === 0;
 
       // ASSERT
-      expect(result.valid).toBe(false);
-      expect(result.errors).not.toBeNull();
+      expect(isValid).toBe(false);
+      expect(issues.length).toBeGreaterThan(0);
     });
 
     it('rejects whitespace-only keywords', () => {
@@ -228,11 +234,12 @@ describe('VERIFICATION: Whitespace-Only String Protection (P2)', () => {
       };
 
       // ACT
-      const result = jsonschemaValidation(yaml);
+      const issues = validate(yaml);
+      const isValid = issues.length === 0;
 
       // ASSERT
-      expect(result.valid).toBe(false);
-      expect(result.errors).not.toBeNull();
+      expect(isValid).toBe(false);
+      expect(issues.length).toBeGreaterThan(0);
     });
   });
 });

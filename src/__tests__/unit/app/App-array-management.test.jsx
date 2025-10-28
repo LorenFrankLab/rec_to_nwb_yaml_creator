@@ -9,15 +9,16 @@
  * Note: Remove operations require window.confirm which we mock in tests.
  */
 
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import { getById, getMainForm } from '../../helpers/test-selectors';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { App } from '../../../App';
+import { StoreProvider } from '../../../state/StoreContext';
 import { defaultYMLValues } from '../../../valueList';
 import { useWindowConfirmMock } from '../../helpers/test-hooks';
 
 describe('App Array Item Management', () => {
-  const mocks = useWindowConfirmMock(beforeEach, afterEach, true);
+  useWindowConfirmMock(beforeEach, afterEach, true);
 
   describe('Array Item Structure - Default Values', () => {
     it('should initialize with empty arrays', () => {
@@ -29,7 +30,11 @@ describe('App Array Item Management', () => {
     });
 
     it('should render add buttons for array sections', () => {
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Check that array sections have add functionality
       // These are rendered as part of ArrayUpdateMenu components
@@ -40,7 +45,11 @@ describe('App Array Item Management', () => {
 
   describe('Add Array Items - Basic Functionality', () => {
     it('should have initial empty camera array', () => {
-      const { container } = render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Check no camera items initially
       const cameraDetails = getById('cameras-area');
@@ -48,28 +57,44 @@ describe('App Array Item Management', () => {
     });
 
     it('should have initial empty tasks array', () => {
-      const { container } = render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const tasksDetails = getById('tasks-area');
       expect(tasksDetails).toBeInTheDocument();
     });
 
     it('should have initial empty data acquisition device array', () => {
-      const { container } = render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const dataAcqDetails = getById('data_acq_device-area');
       expect(dataAcqDetails).toBeInTheDocument();
     });
 
     it('should have initial empty behavioral events array', () => {
-      const { container } = render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const behavioralDetails = getById('behavioral_events-area');
       expect(behavioralDetails).toBeInTheDocument();
     });
 
     it('should have initial empty electrode groups array', () => {
-      const { container } = render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const electrodeDetails = getById('electrode_groups-area');
       expect(electrodeDetails).toBeInTheDocument();
@@ -78,7 +103,11 @@ describe('App Array Item Management', () => {
 
   describe('Array Section Rendering', () => {
     it('should render all major array sections', () => {
-      const { container } = render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Verify all major array sections are present
       expect(getById('cameras-area')).toBeInTheDocument();
@@ -91,7 +120,11 @@ describe('App Array Item Management', () => {
     });
 
     it('should render optogenetics array sections', () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Check that optogenetics sections exist (they may be in details elements)
       const detailsElements = container.querySelectorAll('details');
@@ -165,7 +198,11 @@ describe('App Array Item Management', () => {
 
   describe('Form State Consistency', () => {
     it('should maintain form structure after rendering', () => {
-      const { container } = render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // After render, form should still be structured correctly
       const formElement = getMainForm();
@@ -173,7 +210,11 @@ describe('App Array Item Management', () => {
     });
 
     it('should render all collapsible sections', () => {
-      const { container } = render(<App />);
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       const detailsElements = container.querySelectorAll('details');
       // Should have multiple details elements for collapsible sections
@@ -183,7 +224,11 @@ describe('App Array Item Management', () => {
 
   describe('ArrayItemControl Component Integration', () => {
     it('should render form without ArrayItemControl initially (empty arrays)', () => {
-      const { container } = render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // ArrayItemControl only appears when array items exist
       // Initially arrays are empty, so no duplicate/remove buttons
@@ -194,7 +239,11 @@ describe('App Array Item Management', () => {
 
   describe('Edge Cases - Array Operations', () => {
     it('should handle form with all arrays empty', () => {
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // All arrays start empty - this should work fine
       const formElement = getMainForm();
@@ -202,7 +251,11 @@ describe('App Array Item Management', () => {
     });
 
     it('should render without errors when all sections collapsed', () => {
-      render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Details elements can be collapsed/expanded
       const detailsElements = document.querySelectorAll('details');
@@ -214,7 +267,11 @@ describe('App Array Item Management', () => {
 
   describe('Array Sections - Structural Validation', () => {
     it('should have proper section IDs for navigation', () => {
-      const { container } = render(<App />);
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
 
       // Test key sections that we know exist
       const knownSectionIds = [
@@ -226,7 +283,7 @@ describe('App Array Item Management', () => {
       ];
 
       knownSectionIds.forEach(id => {
-        const element = container.querySelector(`#${id}`);
+        const element = getById(id);
         expect(element).toBeInTheDocument();
       });
     });

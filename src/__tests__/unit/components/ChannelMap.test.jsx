@@ -485,7 +485,7 @@ describe('ChannelMap', () => {
 
   describe('Layout and Structure', () => {
     it('renders outer container with item1 and item2 divs', () => {
-      const { container } = render(<ChannelMap {...defaultProps} />);
+      render(<ChannelMap {...defaultProps} />);
 
       const outerContainer = getByClass('container')[0];
       expect(outerContainer).toBeInTheDocument();
@@ -508,21 +508,21 @@ describe('ChannelMap', () => {
     });
 
     it('uses nTrode-container class for each shank', () => {
-      const { container } = render(<ChannelMap {...defaultProps} nTrodeItems={multiShankData} />);
+      render(<ChannelMap {...defaultProps} nTrodeItems={multiShankData} />);
 
       const ntrodeContainers = getByClass('nTrode-container');
       expect(ntrodeContainers).toHaveLength(2);
     });
 
     it('uses ntrode-maps class for map container', () => {
-      const { container } = render(<ChannelMap {...defaultProps} />);
+      render(<ChannelMap {...defaultProps} />);
 
       const ntrodeMaps = getByClass('ntrode-maps')[0];
       expect(ntrodeMaps).toBeInTheDocument();
     });
 
     it('uses ntrode-map class for each channel mapping', () => {
-      const { container } = render(<ChannelMap {...defaultProps} />);
+      render(<ChannelMap {...defaultProps} />);
 
       const ntrodeMapDivs = getByClass('ntrode-map');
       expect(ntrodeMapDivs.length).toBeGreaterThanOrEqual(4); // At least 4 channels

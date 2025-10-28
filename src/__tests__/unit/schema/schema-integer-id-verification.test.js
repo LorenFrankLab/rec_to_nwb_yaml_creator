@@ -22,7 +22,7 @@ import { describe, it, expect } from 'vitest';
 import YAML from 'yaml';
 import fs from 'fs';
 import path from 'path';
-import { jsonschemaValidation } from '../../../App';
+import { validate } from '../../../validation';
 
 function loadFixture(category, filename) {
   const fixturePath = path.join(
@@ -52,16 +52,17 @@ describe('BUG #8 Verification: Integer ID Enforcement', () => {
         ]
       };
 
-      const result = jsonschemaValidation(yaml);
+      const issues = validate(yaml);
+      const isValid = issues.length === 0;
 
       // If schema correctly enforces "type": "integer", this should FAIL
-      expect(result.valid).toBe(false);
-      expect(result.errors).not.toBeNull();
+      expect(isValid).toBe(false);
+      expect(issues.length).toBeGreaterThan(0);
 
       // Should have error about type
-      const typeError = result.errors.find(err =>
-        err.instancePath === '/cameras/0/id' &&
-        err.keyword === 'type'
+      const typeError = issues.find(issue =>
+        issue.instancePath === '/cameras/0/id' &&
+        issue.code === 'type'
       );
       expect(typeError).toBeDefined();
       expect(typeError.message).toContain('integer');
@@ -82,8 +83,9 @@ describe('BUG #8 Verification: Integer ID Enforcement', () => {
         ]
       };
 
-      const result = jsonschemaValidation(yaml);
-      expect(result.valid).toBe(false);
+      const issues = validate(yaml);
+      const isValid = issues.length === 0;
+      expect(isValid).toBe(false);
     });
 
     it('should ACCEPT camera with integer ID (0)', () => {
@@ -101,9 +103,10 @@ describe('BUG #8 Verification: Integer ID Enforcement', () => {
         ]
       };
 
-      const result = jsonschemaValidation(yaml);
-      expect(result.valid).toBe(true);
-      expect(result.errors).toBeNull();
+      const issues = validate(yaml);
+      const isValid = issues.length === 0;
+      expect(isValid).toBe(true);
+      expect(issues).toEqual([]);
     });
 
     it('should ACCEPT camera with integer ID (5)', () => {
@@ -121,8 +124,9 @@ describe('BUG #8 Verification: Integer ID Enforcement', () => {
         ]
       };
 
-      const result = jsonschemaValidation(yaml);
-      expect(result.valid).toBe(true);
+      const issues = validate(yaml);
+      const isValid = issues.length === 0;
+      expect(isValid).toBe(true);
     });
   });
 
@@ -145,11 +149,12 @@ describe('BUG #8 Verification: Integer ID Enforcement', () => {
         ]
       };
 
-      const result = jsonschemaValidation(yaml);
-      expect(result.valid).toBe(false);
+      const issues = validate(yaml);
+      const isValid = issues.length === 0;
+      expect(isValid).toBe(false);
 
-      const typeError = result.errors.find(err =>
-        err.instancePath === '/electrode_groups/0/id'
+      const typeError = issues.find(issue =>
+        issue.instancePath === '/electrode_groups/0/id'
       );
       expect(typeError).toBeDefined();
     });
@@ -172,8 +177,9 @@ describe('BUG #8 Verification: Integer ID Enforcement', () => {
         ]
       };
 
-      const result = jsonschemaValidation(yaml);
-      expect(result.valid).toBe(true);
+      const issues = validate(yaml);
+      const isValid = issues.length === 0;
+      expect(isValid).toBe(true);
     });
   });
 
@@ -199,11 +205,12 @@ describe('BUG #8 Verification: Integer ID Enforcement', () => {
         ]
       };
 
-      const result = jsonschemaValidation(yaml);
-      expect(result.valid).toBe(false);
+      const issues = validate(yaml);
+      const isValid = issues.length === 0;
+      expect(isValid).toBe(false);
 
-      const typeError = result.errors.find(err =>
-        err.instancePath === '/ntrode_electrode_group_channel_map/0/ntrode_id'
+      const typeError = issues.find(issue =>
+        issue.instancePath === '/ntrode_electrode_group_channel_map/0/ntrode_id'
       );
       expect(typeError).toBeDefined();
     });
@@ -229,8 +236,9 @@ describe('BUG #8 Verification: Integer ID Enforcement', () => {
         ]
       };
 
-      const result = jsonschemaValidation(yaml);
-      expect(result.valid).toBe(false);
+      const issues = validate(yaml);
+      const isValid = issues.length === 0;
+      expect(isValid).toBe(false);
     });
   });
 
@@ -257,14 +265,15 @@ describe('BUG #8 Verification: Integer ID Enforcement', () => {
         ]
       };
 
-      const result = jsonschemaValidation(yaml);
+      const issues = validate(yaml);
+      const isValid = issues.length === 0;
 
       // Note: camera_id is an array of integers
       // May or may not reject depending on schema enforcement
       // This test documents actual behavior
-      if (!result.valid) {
-        const typeError = result.errors.find(err =>
-          err.instancePath.includes('camera_id')
+      if (!isValid) {
+        const typeError = issues.find(issue =>
+          issue.instancePath.includes('camera_id')
         );
         expect(typeError).toBeDefined();
       }
