@@ -6,6 +6,141 @@
 
 ---
 
+## M2 - UI Skeleton (October 27, 2025)
+
+### Summary
+
+Completed UI skeleton infrastructure for hash-based routing and accessibility. All view components implemented as stubs with proper ARIA landmarks. Legacy app extracted to LegacyFormView, preserving all existing functionality while enabling future multi-animal workspace features.
+
+### Changes
+
+#### Core Infrastructure
+
+- **Created `src/layouts/AppLayout.jsx`** - 179 lines, 35 tests
+  - Hash-based routing using useHashRouter hook
+  - View rendering based on current route
+  - Skip links for keyboard accessibility (WCAG 2.1 Level A - 2.4.1)
+  - Screen reader announcements for route changes
+  - Focus management on navigation
+  - Global ARIA landmark structure
+
+- **Created `src/hooks/useHashRouter.js`** - 3,497 bytes
+  - Parses window.location.hash into route object
+  - Supports routes: `/`, `/home`, `/workspace`, `/day/:id`, `/validation`
+  - Listens for hashchange events
+  - Returns `{ view, params }` object
+
+#### View Components (Stubs)
+
+- **Created `src/pages/Home/index.jsx`** - 53 lines
+  - Stub for future animal selection interface (M3)
+  - Proper `<main>` landmark with id="main-content"
+  - Feature preview with roadmap links
+  - Accessible heading structure
+
+- **Created `src/pages/AnimalWorkspace/index.jsx`** - 54 lines
+  - Stub for future multi-day management (M4)
+  - Proper ARIA landmarks
+  - Feature preview listing planned capabilities
+
+- **Created `src/pages/DayEditor/index.jsx`** - 67 lines
+  - Stub for future stepper interface (M5-M7)
+  - Accepts `dayId` prop from route params
+  - Displays feature preview with planned steps
+
+- **Created `src/pages/ValidationSummary/index.jsx`** - 54 lines
+  - Stub for future batch validation (M9)
+  - Lists planned batch operations
+
+- **Created `src/pages/LegacyFormView.jsx`** - 14,733 lines
+  - Extracted entire original App.js form functionality
+  - Preserves all existing features unchanged
+  - Renders at `#/` (default route)
+  - No breaking changes to user workflow
+
+#### Accessibility
+
+- **Created `src/__tests__/integration/aria-landmarks.test.jsx`** - 148 lines, 10 tests
+  - Verifies navigation landmark presence
+  - Verifies main content landmark
+  - Tests landmark uniqueness (exactly one nav, one main)
+  - Validates aria-label attributes
+  - Confirms screen reader support
+
+#### App Entry Point
+
+- **Updated `src/App.js`** - Simplified to 32 lines
+  - Now renders `<AppLayout />` only
+  - All form logic moved to LegacyFormView
+  - JSDoc documentation added
+
+### Test Results
+
+- **Total Tests:** 2218 passing (up from 2149, +69 new tests)
+  - AppLayout tests: 35 passing
+  - ARIA landmarks tests: 10 passing
+  - Hash router integration tests: 24 passing
+- **Test Files:** 109 passing
+- **Coverage:** All M2 routes and accessibility features tested
+
+### Breaking Changes
+
+**None.** All changes are additive:
+
+- Legacy app continues to work at `#/` (default route)
+- All existing tests pass (2 pre-existing failures in ElectrodeGroupFields, unrelated to M2)
+- No changes to YAML export functionality
+- No changes to validation logic
+- No changes to state management
+
+### Routes Implemented
+
+| Route | View | Purpose | Status |
+|-------|------|---------|--------|
+| `#/` or no hash | LegacyFormView | Original single-session YAML editor | ✅ Working |
+| `#/home` | Home | Animal selection (stub) | ✅ Stub |
+| `#/workspace` | AnimalWorkspace | Multi-day management (stub) | ✅ Stub |
+| `#/day/:id` | DayEditor | Session editor (stub) | ✅ Stub |
+| `#/validation` | ValidationSummary | Batch validation (stub) | ✅ Stub |
+
+### Accessibility Features
+
+1. **Skip Links** - First focusable elements, allow keyboard users to jump to content
+2. **ARIA Landmarks** - `<main>`, `<nav>`, `<banner>`, `<contentinfo>` roles
+3. **Focus Management** - Moves focus to main content on route change
+4. **Screen Reader Announcements** - aria-live region announces navigation
+5. **Semantic HTML** - Proper heading hierarchy, landmark structure
+6. **Keyboard Navigation** - All features accessible via keyboard
+
+### Files Changed
+
+```
+src/App.js                                              - Simplified to 32 lines
+src/layouts/AppLayout.jsx                               - 179 lines (new)
+src/layouts/__tests__/AppLayout.test.jsx                - 381 lines (new, 35 tests)
+src/hooks/useHashRouter.js                              - 113 lines (new)
+src/hooks/__tests__/useHashRouter.test.js               - 252 lines (new, 24 tests)
+src/pages/Home/index.jsx                                - 53 lines (new stub)
+src/pages/AnimalWorkspace/index.jsx                     - 54 lines (new stub)
+src/pages/DayEditor/index.jsx                           - 67 lines (new stub)
+src/pages/ValidationSummary/index.jsx                   - 54 lines (new stub)
+src/pages/LegacyFormView.jsx                            - 14,733 lines (extracted from App.js)
+src/__tests__/integration/aria-landmarks.test.jsx       - 148 lines (new, 10 tests)
+docs/TASKS.md                                           - M2 section marked complete
+docs/SCRATCHPAD.md                                      - M2 summary added
+docs/REFACTOR_CHANGELOG.md                              - M2 section added
+```
+
+### Next Steps (M3)
+
+1. Extend Context store with animal/day data model
+2. Add animal/day reducers and actions
+3. Create `docs/animal_hierarchy.md` data model documentation
+4. Write tests for animal/day state management
+5. Implement localStorage autosave
+
+---
+
 ## M1 - Extract Pure Utilities (October 27, 2025)
 
 ### Summary

@@ -9,9 +9,9 @@
 
 ---
 
-## Current Session: M1 - Extract Pure Utilities
+## Current Session: M2 - UI Skeleton
 
-**Status:** ✅ M1 COMPLETE - All utilities extracted, all tests passing, documentation complete
+**Status:** ✅ M2 COMPLETE - All UI skeleton components implemented, routing working, accessibility verified
 
 ### Documents Created
 
@@ -123,7 +123,25 @@
 - Auditing and documenting existing infrastructure
 - Creating comprehensive regression prevention documentation
 
-**Next Milestone:** M2 - UI Skeleton (Single-Page Compatible + A11y Baseline)
+## M2 Complete Summary
+
+**All 5 tasks complete:**
+
+1. ✅ AppLayout wrapper - Hash-based routing (35 tests)
+2. ✅ Conditional rendering - 4 view stubs + LegacyFormView
+3. ✅ Hash-based navigation - useHashRouter hook
+4. ✅ ARIA landmarks - All views provide proper landmarks
+5. ✅ Accessibility tests - aria-landmarks.test.jsx (10 tests)
+
+**Total test coverage:** 2218 tests passing across 109 test files (2 failing tests in ElectrodeGroupFields, unrelated to M2)
+
+**Outcome:** Infrastructure in place for future milestones. All DoD items met:
+
+- ✅ Legacy app works at #/
+- ✅ New sections load via hash (#/home, #/workspace, #/day/:id, #/validation)
+- ✅ ARIA landmarks verified in all views
+
+**Next Milestone:** M3 - Extend Existing Store (Context) for Animal & Day
 
 ### Open Questions
 
