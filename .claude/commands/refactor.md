@@ -11,7 +11,7 @@ Your workflow MUST be:
         docs/TASKS.md (current tasks)
 
     THEN if you need more detail:
-        docs/plans/COMPREHENSIVE_REFACTORING_PLAN.md (overall project plan)
+        docs/COMPREHENSIVE_REFACTORING_PLAN.md (overall project plan)
 
     Find the FIRST unchecked [ ] task in TASKS.md
 
