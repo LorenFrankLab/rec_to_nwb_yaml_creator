@@ -42,7 +42,6 @@ const ElectrodeGroupModal = ({ isOpen, mode = 'add', group = null, onSave, onCan
     'A1x32-6mm-50-177-H32_21mm',
     '128c-4s8mm6cm-20um-40um-sl',
     '128c-4s6mm6cm-15um-26um-sl',
-    '128c-4s8mm6cm-15um-26um-sl',
     '128c-4s6mm6cm-20um-40um-sl',
     '128c-4s4mm6cm-20um-40um-sl',
     '128c-4s4mm6cm-15um-26um-sl',

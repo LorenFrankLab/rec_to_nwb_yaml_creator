@@ -60,7 +60,7 @@ export default function CopyFromAnimalDialog({ open, currentAnimalId, animals, o
       : 0;
 
     const maxNtrodeId = currentMaps.length > 0
-      ? Math.max(...currentMaps.map(m => m.ntrode_id || 0))
+      ? Math.max(...currentMaps.map(m => parseInt(m.ntrode_id, 10) || 0))
       : 0;
 
     return {
@@ -99,7 +99,7 @@ export default function CopyFromAnimalDialog({ open, currentAnimalId, animals, o
 
       return {
         ...structuredClone(map),
-        ntrode_id: nextIds.nextNtrodeId + index,
+        ntrode_id: String(nextIds.nextNtrodeId + index),
         electrode_group_id: newGroupId,
       };
     });
