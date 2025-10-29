@@ -2,20 +2,18 @@ import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { deviceTypeMap } from '../../ntrode/deviceTypes';
 import { getChannelCount } from '../../utils/deviceTypeUtils';
+import InfoIcon from '../../element/InfoIcon';
 import './ChannelMapEditor.scss';
 
 /**
  * ChannelMapEditor - Editor for ntrode channel maps for a specific electrode group
  *
- * Allows users to configure the mapping between logical electrode channels
- * (from Trodes) and hardware channel IDs.
- *
- * Features:
- * - Display electrode group header with ID, device type, and location
- * - Edit electrode_id for each ntrode
- * - Edit bad_channels checkbox for each channel
- * - Edit channel map values (hardware channel numbers)
- * - Save/Cancel buttons
+ * LEGACY LAYOUT MATCH: This component replicates the exact layout from the original
+ * ChannelMap.jsx component (src/ntrode/ChannelMap.jsx) with:
+ * - Fieldset with "Shank #N" legend
+ * - Readonly "Ntrode Id" field with InfoIcon
+ * - "Bad Channels" checkbox grid (NOT comma-separated input)
+ * - "Map" section with select dropdowns (NOT number inputs)
  *
  * @param {object} props Component properties
  * @param {object} props.electrodeGroup Electrode group being edited
@@ -33,53 +31,43 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
 
   // Get channel array for this device type (e.g., [0,1,2,3] for tetrode)
   const channelArray = deviceTypeMap(electrodeGroup.device_type);
+  const maxChannelValue = getChannelCount(electrodeGroup.device_type) - 1;
 
-  // Handle electrode_id change
-  const handleElectrodeIdChange = (ntrodeIndex, value) => {
-    const updated = localChannelMaps.map((map, idx) =>
-      idx === ntrodeIndex
-        ? { ...map, electrode_id: parseInt(value, 10) || 0 }
-        : map
-    );
+  // Handle bad channel checkbox toggle
+  const handleBadChannelToggle = (ntrodeIndex, channelIndex, isChecked) => {
+    const updated = localChannelMaps.map((map, idx) => {
+      if (idx !== ntrodeIndex) return map;
+
+      const currentBadChannels = map.bad_channels || [];
+      let newBadChannels;
+
+      if (isChecked) {
+        // Add to bad channels
+        newBadChannels = [...currentBadChannels, channelIndex].sort((a, b) => a - b);
+      } else {
+        // Remove from bad channels
+        newBadChannels = currentBadChannels.filter(ch => ch !== channelIndex);
+      }
+
+      return { ...map, bad_channels: newBadChannels };
+    });
+
     setLocalChannelMaps(updated);
   };
 
-  // Handle channel map value change
+  // Handle channel map select change
   const handleChannelMapChange = (ntrodeIndex, channelIndex, value) => {
+    const parsedValue = value === '' ? -1 : parseInt(value, 10);
+
     const updated = localChannelMaps.map((map, idx) =>
       idx === ntrodeIndex
-        ? { ...map, map: { ...map.map, [channelIndex]: parseInt(value, 10) || 0 } }
+        ? { ...map, map: { ...map.map, [channelIndex]: parsedValue } }
         : map
     );
     setLocalChannelMaps(updated);
   };
 
-  // Handle bad_channels comma-separated input change
-  const handleBadChannelsChange = (ntrodeIndex, inputValue) => {
-    // Parse comma-separated string to array of numbers
-    const badChannels = inputValue
-      .split(',')
-      .map(s => s.trim())
-      .filter(s => s !== '')
-      .map(s => parseInt(s, 10))
-      .filter(n => !isNaN(n))
-      .sort((a, b) => a - b);
-
-    const updated = localChannelMaps.map((map, idx) =>
-      idx === ntrodeIndex
-        ? { ...map, bad_channels: badChannels }
-        : map
-    );
-    setLocalChannelMaps(updated);
-  };
-
-  // Format bad_channels array as comma-separated string for display
-  const formatBadChannels = (ntrodeIndex) => {
-    const badChannels = localChannelMaps[ntrodeIndex]?.bad_channels || [];
-    return badChannels.join(', ');
-  };
-
-  // Check if channel is marked as bad (for reference table highlighting)
+  // Check if channel is marked as bad
   const isChannelBad = (ntrodeIndex, channelIndex) => {
     const badChannels = localChannelMaps[ntrodeIndex]?.bad_channels || [];
     return badChannels.includes(channelIndex);
@@ -107,7 +95,7 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
     maps.forEach((ntrodeMap) => {
       // P0-2: Validate channel values are within range
       Object.entries(ntrodeMap.map).forEach(([chIdx, hwChannel]) => {
-        if (hwChannel < 0 || hwChannel > maxChannelValue) {
+        if (hwChannel !== -1 && (hwChannel < 0 || hwChannel > maxChannelValue)) {
           errors.push(
             `Ntrode ${ntrodeMap.ntrode_id}: Channel ${chIdx} maps to invalid hardware channel ${hwChannel} (valid range: 0-${maxChannelValue})`
           );
@@ -115,7 +103,7 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
       });
 
       // P1-1: Validate no duplicate hardware channels within same ntrode
-      const hwChannels = Object.values(ntrodeMap.map);
+      const hwChannels = Object.values(ntrodeMap.map).filter(val => val !== -1);
       const duplicates = hwChannels.filter((val, idx) => hwChannels.indexOf(val) !== idx);
       if (duplicates.length > 0) {
         const uniqueDupes = [...new Set(duplicates)].join(', ');
@@ -194,73 +182,87 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
       {/* Content */}
       <div className="channel-map-editor-content">
         {localChannelMaps.map((ntrodeMap, ntrodeIndex) => (
-          <div key={ntrodeMap.ntrode_id} className="ntrode-section">
-            <h3>Ntrode {ntrodeMap.ntrode_id}</h3>
+          <fieldset key={ntrodeMap.ntrode_id} className="ntrode-fieldset">
+            <legend>Shank #{ntrodeIndex + 1}</legend>
 
-            {/* Electrode ID */}
-            <div className="ntrode-field">
-              <label htmlFor={`electrode-id-${ntrodeMap.ntrode_id}`}>
-                Electrode ID
-              </label>
-              <input
-                id={`electrode-id-${ntrodeMap.ntrode_id}`}
-                type="number"
-                min="0"
-                value={ntrodeMap.electrode_id}
-                onChange={(e) => handleElectrodeIdChange(ntrodeIndex, e.target.value)}
-                aria-label={`Electrode ID for ntrode ${ntrodeMap.ntrode_id}`}
-              />
-            </div>
-
-            {/* Bad Channels - Comma-separated input */}
-            <div className="ntrode-field bad-channels-field">
-              <label htmlFor={`bad-channels-${ntrodeMap.ntrode_id}`}>
-                Bad Channels (comma-separated indices)
-              </label>
-              <input
-                id={`bad-channels-${ntrodeMap.ntrode_id}`}
-                type="text"
-                value={formatBadChannels(ntrodeIndex)}
-                onChange={(e) => handleBadChannelsChange(ntrodeIndex, e.target.value)}
-                placeholder="e.g., 0, 5, 12, 18"
-                aria-label={`Bad channels for ntrode ${ntrodeMap.ntrode_id}`}
-                data-testid={`bad-channels-input-${ntrodeMap.ntrode_id}`}
-              />
-              <p className="field-help-text">
-                Enter channel indices separated by commas. Reference table below shows channel-to-hardware mapping.
-              </p>
-            </div>
-
-            {/* Channel Map Reference Table */}
-            <div className="channel-map-grid">
-              <div className="channel-map-header">
-                <span>Channel</span>
-                <span>Hardware ID</span>
-                <span>Status</span>
+            <div className="form-container">
+              {/* Ntrode Id - Readonly */}
+              <div className="ntrode-field ntrode-id-field">
+                <label htmlFor={`ntrode-id-${ntrodeMap.ntrode_id}`}>
+                  Ntrode Id
+                  <InfoIcon infoText="Ntrode identifier (read-only)" />
+                </label>
+                <input
+                  id={`ntrode-id-${ntrodeMap.ntrode_id}`}
+                  type="number"
+                  value={ntrodeMap.ntrode_id}
+                  readOnly
+                  disabled
+                  aria-label={`Ntrode ID ${ntrodeMap.ntrode_id} (read-only)`}
+                  data-testid={`ntrode-id-${ntrodeMap.ntrode_id}`}
+                />
               </div>
-              {channelArray.map((channelIndex) => (
-                <div
-                  key={channelIndex}
-                  className={`channel-map-row ${isChannelBad(ntrodeIndex, channelIndex) ? 'bad-channel' : ''}`}
-                >
-                  <span className="channel-index">Channel {channelIndex}</span>
-                  <input
-                    type="number"
-                    min="0"
-                    max={getChannelCount(electrodeGroup.device_type) - 1}
-                    value={ntrodeMap.map[channelIndex] ?? channelIndex}
-                    onChange={(e) =>
-                      handleChannelMapChange(ntrodeIndex, channelIndex, e.target.value)
-                    }
-                    aria-label={`Channel ${channelIndex} hardware mapping for ntrode ${ntrodeMap.ntrode_id}`}
-                  />
-                  <span className="channel-status">
-                    {isChannelBad(ntrodeIndex, channelIndex) ? '✗ Bad' : '✓ OK'}
-                  </span>
+
+              {/* Bad Channels - Checkbox Grid */}
+              <fieldset className="bad-channels-fieldset">
+                <legend>
+                  Bad Channels
+                  <InfoIcon infoText="Select channels with hardware failures. Only mark channels with true hardware issues, not analysis quality problems." />
+                </legend>
+                <div className="checkbox-list" data-testid={`bad-channels-checkboxes-${ntrodeMap.ntrode_id}`}>
+                  {channelArray.map((channelIndex) => (
+                    <div key={channelIndex} className="checkbox-list-item">
+                      <input
+                        type="checkbox"
+                        id={`bad-channel-${ntrodeMap.ntrode_id}-${channelIndex}`}
+                        checked={isChannelBad(ntrodeIndex, channelIndex)}
+                        onChange={(e) => handleBadChannelToggle(ntrodeIndex, channelIndex, e.target.checked)}
+                        aria-label={`Mark channel ${channelIndex} as bad for ntrode ${ntrodeMap.ntrode_id}`}
+                      />
+                      <label htmlFor={`bad-channel-${ntrodeMap.ntrode_id}-${channelIndex}`}>
+                        {channelIndex}
+                      </label>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </fieldset>
+
+              {/* Map - Select Dropdowns */}
+              <div className="map-field">
+                <label>
+                  Map
+                  <InfoIcon infoText="Electrode Map. Right Hand Side is expected mapping. Left Hand Side is actual mapping" />
+                </label>
+                <div className="ntrode-maps">
+                  {channelArray.map((channelIndex) => {
+                    // Generate options: -1 (empty), 0 to maxChannelValue
+                    const options = [-1, ...Array.from({ length: maxChannelValue + 1 }, (_, i) => i)];
+                    const currentValue = ntrodeMap.map[channelIndex] ?? channelIndex;
+
+                    return (
+                      <div key={channelIndex} className="ntrode-map">
+                        <label htmlFor={`map-${ntrodeMap.ntrode_id}-${channelIndex}`}>
+                          {channelIndex}
+                        </label>
+                        <select
+                          id={`map-${ntrodeMap.ntrode_id}-${channelIndex}`}
+                          value={currentValue}
+                          onChange={(e) => handleChannelMapChange(ntrodeIndex, channelIndex, e.target.value)}
+                          aria-label={`Hardware channel mapping for channel ${channelIndex} in ntrode ${ntrodeMap.ntrode_id}`}
+                        >
+                          {options.map((option) => (
+                            <option key={option} value={option}>
+                              {option !== -1 ? option : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
-          </div>
+          </fieldset>
         ))}
       </div>
 

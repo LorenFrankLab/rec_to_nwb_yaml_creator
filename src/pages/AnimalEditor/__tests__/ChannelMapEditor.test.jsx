@@ -13,6 +13,12 @@ import ChannelMapEditor from '../ChannelMapEditor';
  * Editor for ntrode channel maps for a specific electrode group.
  * Allows users to configure mapping between logical electrode channels
  * (from Trodes) and hardware channel IDs.
+ *
+ * LEGACY LAYOUT MATCH: Tests verify exact layout from original ChannelMap.jsx:
+ * - Fieldset with "Shank #N" legend
+ * - Readonly "Ntrode Id" field with InfoIcon
+ * - "Bad Channels" checkbox grid (NOT comma-separated input)
+ * - "Map" section with select dropdowns (NOT number inputs)
  */
 
 describe('ChannelMapEditor', () => {
@@ -69,8 +75,8 @@ describe('ChannelMapEditor', () => {
     });
   });
 
-  describe('Ntrode display', () => {
-    it('should display all ntrodes for the group', () => {
+  describe('Ntrode display (Legacy Layout)', () => {
+    it('should display "Shank #N" fieldsets for all ntrodes', () => {
       render(
         <ChannelMapEditor
           electrodeGroup={mockElectrodeGroup}
@@ -80,11 +86,12 @@ describe('ChannelMapEditor', () => {
         />
       );
 
-      expect(screen.getByText(/ntrode 0/i)).toBeInTheDocument();
-      expect(screen.getByText(/ntrode 1/i)).toBeInTheDocument();
+      // Legacy layout uses "Shank #1", "Shank #2" instead of "Ntrode 0", "Ntrode 1"
+      expect(screen.getByText('Shank #1')).toBeInTheDocument();
+      expect(screen.getByText('Shank #2')).toBeInTheDocument();
     });
 
-    it('should show electrode_id input for each ntrode', () => {
+    it('should show readonly Ntrode Id field for each shank', () => {
       render(
         <ChannelMapEditor
           electrodeGroup={mockElectrodeGroup}
@@ -94,13 +101,19 @@ describe('ChannelMapEditor', () => {
         />
       );
 
-      const electrodeIdInputs = screen.getAllByLabelText(/electrode id/i);
-      expect(electrodeIdInputs).toHaveLength(2);
-      expect(electrodeIdInputs[0]).toHaveValue(0);
-      expect(electrodeIdInputs[1]).toHaveValue(1);
+      // Ntrode Id fields are readonly (disabled) in legacy layout
+      const ntrodeIdInput0 = screen.getByTestId('ntrode-id-0');
+      const ntrodeIdInput1 = screen.getByTestId('ntrode-id-1');
+
+      expect(ntrodeIdInput0).toBeInTheDocument();
+      expect(ntrodeIdInput1).toBeInTheDocument();
+      expect(ntrodeIdInput0).toHaveValue(0);
+      expect(ntrodeIdInput1).toHaveValue(1);
+      expect(ntrodeIdInput0).toBeDisabled();
+      expect(ntrodeIdInput1).toBeDisabled();
     });
 
-    it('should show bad_channels comma-separated input for each ntrode', () => {
+    it('should show bad channels checkbox grid for each ntrode', () => {
       render(
         <ChannelMapEditor
           electrodeGroup={mockElectrodeGroup}
@@ -110,20 +123,21 @@ describe('ChannelMapEditor', () => {
         />
       );
 
-      // Should have 2 bad channels inputs (one per ntrode with ntrode_id 0 and 1)
-      const badChannelsInput0 = screen.getByTestId('bad-channels-input-0');
-      const badChannelsInput1 = screen.getByTestId('bad-channels-input-1');
+      // Legacy layout uses individual checkboxes, NOT comma-separated input
+      const badChannelsCheckboxes0 = screen.getByTestId('bad-channels-checkboxes-0');
+      const badChannelsCheckboxes1 = screen.getByTestId('bad-channels-checkboxes-1');
 
-      expect(badChannelsInput0).toBeInTheDocument();
-      expect(badChannelsInput1).toBeInTheDocument();
+      expect(badChannelsCheckboxes0).toBeInTheDocument();
+      expect(badChannelsCheckboxes1).toBeInTheDocument();
 
-      // Ntrode 1 should show existing bad_channels value
-      expect(badChannelsInput1).toHaveValue('1'); // Mock has bad_channels: [1]
+      // Ntrode 1 should have channel 1 checked (from mock bad_channels: [1])
+      const channel1Checkbox = screen.getByLabelText('Mark channel 1 as bad for ntrode 1');
+      expect(channel1Checkbox).toBeChecked();
     });
   });
 
-  describe('Channel map inputs', () => {
-    it('should show map inputs for all channels in device type', () => {
+  describe('Channel map selects (Legacy Layout)', () => {
+    it('should show select dropdowns for all channels in device type', () => {
       render(
         <ChannelMapEditor
           electrodeGroup={mockElectrodeGroup}
@@ -133,10 +147,10 @@ describe('ChannelMapEditor', () => {
         />
       );
 
-      // tetrode_12.5 has 4 channels (0,1,2,3), so 4 inputs per ntrode * 2 ntrodes = 8 total
-      const channelInputs = screen.getAllByRole('spinbutton');
-      // electrode_id inputs (2) + channel map inputs (2 ntrodes * 4 channels = 8) = 10 total
-      expect(channelInputs.length).toBeGreaterThanOrEqual(8);
+      // Legacy layout uses <select> dropdowns, NOT number inputs
+      // tetrode_12.5 has 4 channels (0,1,2,3), so 4 selects per ntrode * 2 ntrodes = 8 total
+      const channelSelects = screen.getAllByRole('combobox');
+      expect(channelSelects.length).toBe(8);
     });
 
     it('should show correct channel count based on device type', () => {
@@ -163,15 +177,14 @@ describe('ChannelMapEditor', () => {
         />
       );
 
-      // Should have 32 channel inputs for A1x32 probe (32 channels)
-      const channelInputs = screen.getAllByRole('spinbutton');
-      // 1 electrode_id + 32 channel map inputs = 33
-      expect(channelInputs.length).toBeGreaterThanOrEqual(32);
+      // Should have 32 channel select dropdowns for A1x32 probe (32 channels)
+      const channelSelects = screen.getAllByRole('combobox');
+      expect(channelSelects).toHaveLength(32);
     });
   });
 
-  describe('Update electrode_id', () => {
-    it('should update electrode_id when input changes', async () => {
+  describe('Update channel map values (Legacy Layout)', () => {
+    it('should update map value when select dropdown changes', async () => {
       render(
         <ChannelMapEditor
           electrodeGroup={mockElectrodeGroup}
@@ -181,16 +194,21 @@ describe('ChannelMapEditor', () => {
         />
       );
 
-      const electrodeIdInputs = screen.getAllByLabelText(/electrode id/i);
-      await user.clear(electrodeIdInputs[0]);
-      await user.type(electrodeIdInputs[0], '5');
+      // Find a channel map select dropdown
+      const channelSelect = screen.getByLabelText('Hardware channel mapping for channel 0 in ntrode 0');
 
-      expect(electrodeIdInputs[0]).toHaveValue(5);
+      expect(channelSelect).toBeInTheDocument();
+      expect(channelSelect.tagName).toBe('SELECT');
+
+      // Change value using fireEvent (select dropdowns)
+      fireEvent.change(channelSelect, { target: { value: '2' } });
+
+      expect(channelSelect).toHaveValue('2');
     });
   });
 
-  describe('Update channel map values', () => {
-    it('should update map value when channel input changes', async () => {
+  describe('Update bad_channels (Legacy Layout)', () => {
+    it('should update bad_channels when checkbox toggled', async () => {
       render(
         <ChannelMapEditor
           electrodeGroup={mockElectrodeGroup}
@@ -200,46 +218,19 @@ describe('ChannelMapEditor', () => {
         />
       );
 
-      // Find a channel map input (not the electrode_id input)
-      const inputs = screen.getAllByRole('spinbutton');
-      const channelMapInput = inputs.find((input) =>
-        input.getAttribute('aria-label')?.includes('Channel')
-      );
+      // Legacy layout uses checkboxes, NOT comma-separated text input
+      const channel0Checkbox = screen.getByLabelText('Mark channel 0 as bad for ntrode 0');
+      const channel2Checkbox = screen.getByLabelText('Mark channel 2 as bad for ntrode 0');
 
-      if (channelMapInput) {
-        const currentValue = channelMapInput.value;
-        await user.clear(channelMapInput);
-        await user.type(channelMapInput, '99');
-        expect(channelMapInput).toHaveValue(99);
-      }
-    });
-  });
+      expect(channel0Checkbox).not.toBeChecked();
+      expect(channel2Checkbox).not.toBeChecked();
 
-  describe('Update bad_channels', () => {
-    it('should update bad_channels when comma-separated input changed', async () => {
-      const { container } = render(
-        <ChannelMapEditor
-          electrodeGroup={mockElectrodeGroup}
-          channelMaps={mockChannelMaps}
-          onSave={() => {}}
-          onCancel={() => {}}
-        />
-      );
+      // Toggle checkboxes
+      await user.click(channel0Checkbox);
+      await user.click(channel2Checkbox);
 
-      const badChannelsInput = screen.getByTestId('bad-channels-input-0');
-
-      // Change comma-separated bad channels value
-      fireEvent.change(badChannelsInput, { target: { value: '0, 2, 3' } });
-
-      // Input should show the formatted value
-      expect(badChannelsInput).toHaveValue('0, 2, 3');
-
-      // Status indicators should update
-      // Ntrode 0: channels 0, 2, 3 marked bad = 3 bad channels
-      // Ntrode 1: channel 1 marked bad (from mock) = 1 bad channel
-      // Total: 4 bad channel rows should have .bad-channel class
-      const badChannelRows = container.querySelectorAll('.bad-channel');
-      expect(badChannelRows.length).toBe(4);
+      expect(channel0Checkbox).toBeChecked();
+      expect(channel2Checkbox).toBeChecked();
     });
   });
 
@@ -281,28 +272,6 @@ describe('ChannelMapEditor', () => {
 
       expect(onCancel).toHaveBeenCalledTimes(1);
       expect(onSave).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('Numeric input validation', () => {
-    it('should not allow negative numbers in map inputs', async () => {
-      render(
-        <ChannelMapEditor
-          electrodeGroup={mockElectrodeGroup}
-          channelMaps={mockChannelMaps}
-          onSave={() => {}}
-          onCancel={() => {}}
-        />
-      );
-
-      const inputs = screen.getAllByRole('spinbutton');
-      const channelMapInput = inputs.find((input) =>
-        input.getAttribute('aria-label')?.includes('Channel')
-      );
-
-      if (channelMapInput) {
-        expect(channelMapInput).toHaveAttribute('min', '0');
-      }
     });
   });
 
