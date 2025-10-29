@@ -460,20 +460,163 @@ Animal-level electrode group configuration is currently only accessible via the 
 
 ---
 
-### **M8 – Epochs/Tasks + Cross-Reference Validation**
+### **M8 – Cameras, Hardware & Tasks** ⏳ NEXT
+
+**Status:** PLANNED (Architecture approved by UX/UI review)
+
+**Rationale:** Complete animal-level hardware configuration and add day-level task/epoch management. Implements "Animal = Template, Day = Instance" pattern where hardware is configured once at animal level and inherited by all days.
+
+**Design Document:** `docs/plans/2025-10-29-m8-cameras-tasks-plan.md`
+
+**Architecture:**
+
+* **Animal Editor Step 3:** Cameras, Data Acquisition Device, Behavioral Events (M8a)
+* **Day Editor Step 3:** Tasks & Epochs (M8b)
+
+**Split into M8a and M8b for parallel development:**
+
+#### **M8a – Animal Editor: Cameras, Hardware & Behavioral Events**
 
 **Tasks**
 
-* [ ] Add `EpochsStep` CRUD table for behavioral tasks.
-* [ ] Validate `end_time > start_time`.
-* [ ] Cross-reference `camera_id` and `task_id` consistency.
-* [ ] Show scroll-to-field for invalid references.
+* [ ] Create `HardwareConfigStep.jsx` (Animal Editor Step 3)
+* [ ] Implement `CamerasSection.jsx` with CRUD table
+  * [ ] Camera ID, name, manufacturer, model, lens, meters_per_pixel
+  * [ ] CameraModal for add/edit operations
+  * [ ] Validation: unique IDs, positive meters_per_pixel
+* [ ] Implement `DataAcqSection.jsx`
+  * [ ] System, amplifier, ADC circuit
+  * [ ] Default header file path with file browser
+  * [ ] Advanced settings (Ephys-to-Volt, Times Multiplier) - collapsible
+* [ ] Implement `BehavioralEventsSection.jsx`
+  * [ ] DIO event definitions (name, description)
+  * [ ] Inline editing for simple fields
+  * [ ] Validation: unique names, valid identifiers
+* [ ] Apply UX/UI fixes from review:
+  * [ ] Replace emoji with Material Symbols (accessibility)
+  * [ ] Use elevation hierarchy (white bg for lists, gray for config)
+  * [ ] Enforce 48px minimum touch targets
+  * [ ] Add validation status column to tables
+  * [ ] Implement mobile responsive (card layout < 600px)
+* [ ] Write comprehensive tests (target: 55+ tests)
+  * [ ] CameraModal: 10 tests (CRUD, validation)
+  * [ ] CamerasSection: 12 tests (table, empty state)
+  * [ ] DataAcqSection: 8 tests (form, collapsible)
+  * [ ] BehavioralEventsSection: 10 tests (CRUD, validation)
+  * [ ] HardwareConfigStep: 15 tests (integration, navigation)
+* [ ] Integration with Animal Editor stepper
+* [ ] Accessibility audit (WCAG 2.1 Level AA)
+* [ ] Request code review
 
 **Acceptance (DoD)**
 
-* Invalid references clearly highlighted.
-* YAML validation state updates live.
-* No regressions in existing tests.
+* ✅ Users can configure cameras at animal level
+* ✅ Data acquisition device configurable with advanced settings
+* ✅ Behavioral events (DIO channels) manageable
+* ✅ Material Symbols used (not emoji)
+* ✅ WCAG AA compliant (4.5:1 contrast, 48px touch targets)
+* ✅ Mobile responsive (< 600px card layout)
+* ✅ 55+ new tests passing
+* ✅ No regressions in existing 2681 tests
+* ✅ Code review approved
+
+**Artifacts**
+
+* `src/pages/AnimalEditor/HardwareConfigStep.jsx`
+* `src/pages/AnimalEditor/CamerasSection.jsx`
+* `src/pages/AnimalEditor/CameraModal.jsx`
+* `src/pages/AnimalEditor/DataAcqSection.jsx`
+* `src/pages/AnimalEditor/BehavioralEventsSection.jsx`
+* `src/pages/AnimalEditor/__tests__/` (5 test files, 55+ tests)
+
+**Estimated Effort:** 26-34 hours (1-1.5 weeks)
+
+---
+
+#### **M8b – Day Editor: Tasks & Epochs**
+
+**Tasks**
+
+* [ ] Create `TasksEpochsStep.jsx` (Day Editor Step 3)
+* [ ] Implement `TasksTable.jsx` with CRUD operations
+  * [ ] Columns: Task name, cameras, epochs, actions
+  * [ ] Add/Edit/Delete operations
+  * [ ] Status badges for validation
+* [ ] Implement `TaskModal.jsx` with accordion sections
+  * [ ] Section 1: Task Details (name, description) - open by default
+  * [ ] Section 2: Cameras (multi-select from animal.cameras)
+  * [ ] Section 3: Behavioral Events (inherited display)
+  * [ ] Section 4: Task Epochs (inline table editor) - open by default
+* [ ] Implement `TaskEpochsEditor.jsx`
+  * [ ] Dynamic table: epoch #, start time, end time, actions
+  * [ ] Add/remove epoch rows
+  * [ ] Validation: end_time > start_time
+* [ ] Implement `BehavioralEventsDisplay.jsx`
+  * [ ] Read-only display of inherited events from animal
+  * [ ] Collapsible section for day-specific events (optional)
+  * [ ] Lock icons for inherited items
+* [ ] Apply UX/UI fixes:
+  * [ ] Info banner (blue) for missing cameras - non-blocking
+  * [ ] Accordion sections for progressive disclosure
+  * [ ] "Inherited from Animal" labels with lock icons
+  * [ ] Mobile responsive patterns
+* [ ] Cross-reference validation:
+  * [ ] Warn if task references non-existent camera
+  * [ ] Validate epoch times (end > start)
+  * [ ] Warn if no epochs defined for task
+* [ ] Write comprehensive tests (target: 63+ tests)
+  * [ ] TaskModal: 18 tests (accordions, validation)
+  * [ ] TasksTable: 10 tests (CRUD, empty state)
+  * [ ] TaskEpochsEditor: 12 tests (inline editing, validation)
+  * [ ] BehavioralEventsDisplay: 8 tests (inherited, day-specific)
+  * [ ] TasksEpochsStep: 15 tests (integration, warnings)
+* [ ] Integration with Day Editor stepper
+* [ ] Accessibility audit (WCAG 2.1 Level AA)
+* [ ] Request code review
+
+**Acceptance (DoD)**
+
+* ✅ Users can add/edit/delete tasks in Day Editor
+* ✅ Task epochs editor works with validation
+* ✅ Inherited behavioral events displayed (read-only)
+* ✅ Day-specific events can be added (optional)
+* ✅ Camera references validated (warn if missing, non-blocking)
+* ✅ Info banner for missing cameras (blue, not amber)
+* ✅ TaskModal uses accordion pattern
+* ✅ All validation rules enforced
+* ✅ 63+ new tests passing
+* ✅ No regressions
+* ✅ Code review approved
+
+**Artifacts**
+
+* `src/pages/DayEditor/TasksEpochsStep.jsx`
+* `src/pages/DayEditor/TasksTable.jsx`
+* `src/pages/DayEditor/TaskModal.jsx`
+* `src/pages/DayEditor/TaskEpochsEditor.jsx`
+* `src/pages/DayEditor/BehavioralEventsDisplay.jsx`
+* `src/pages/DayEditor/__tests__/` (5 test files, 63+ tests)
+
+**Estimated Effort:** 20-28 hours (1 week)
+
+---
+
+**Combined M8 Acceptance:**
+
+* ✅ Animal Editor has 3 steps (Electrode Groups, Channel Maps, Hardware)
+* ✅ Day Editor has 3 steps (Overview, Devices, Tasks)
+* ✅ Inheritance pattern works: day.tasks reference animal.cameras
+* ✅ Behavioral events inherited from animal (with day override option)
+* ✅ Total: 2799+ tests passing (2681 existing + 118 new)
+* ✅ Golden baseline tests still passing
+* ✅ WCAG 2.1 Level AA compliant
+* ✅ Mobile responsive (< 600px breakpoint)
+* ✅ UX/UI review feedback addressed
+* ✅ Code reviews approved for both parts
+
+**Total M8 Effort:** 46-62 hours (2-3 weeks with UX/UI polish)
+
+**Test Results (Target):** 2799 tests passing (2681 existing + 55 M8a + 63 M8b)
 
 ---
 
