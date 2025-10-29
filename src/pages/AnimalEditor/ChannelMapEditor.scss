@@ -1,3 +1,26 @@
+/* Native <dialog> element styling with z-index */
+dialog.channel-map-editor-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+  max-width: 900px;
+  width: 90%;
+  max-height: 90vh;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  background: white;
+  overflow: visible;
+
+  &::backdrop {
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 9998;
+  }
+}
+
 .channel-map-editor {
   display: flex;
   flex-direction: column;

@@ -61,6 +61,7 @@ const ElectrodeGroupModal = ({ isOpen, mode = 'add', group = null, onSave, onCan
     targeted_z: '',
     units: 'mm',
     bad_channels: '',
+    count: '1', // Only used in add mode - number of identical groups to create
   });
 
   // Initialize form data from group prop in edit mode
@@ -84,19 +85,22 @@ const ElectrodeGroupModal = ({ isOpen, mode = 'add', group = null, onSave, onCan
         targeted_z: '',
         units: 'mm',
         bad_channels: '',
+        count: '1',
       });
     }
   }, [mode, group, isOpen]);
 
   // Check if all required fields are filled
   const isFormValid = () => {
-    const { device_type, location, targeted_x, targeted_y, targeted_z } = formData;
+    const { device_type, location, targeted_x, targeted_y, targeted_z, count } = formData;
+    const isCountValid = mode === 'edit' || (count && parseInt(count, 10) > 0 && parseInt(count, 10) <= 100);
     return (
       device_type.trim() !== '' &&
       location.trim() !== '' &&
       targeted_x.trim() !== '' &&
       targeted_y.trim() !== '' &&
-      targeted_z.trim() !== ''
+      targeted_z.trim() !== '' &&
+      isCountValid
     );
   };
 
@@ -123,6 +127,7 @@ const ElectrodeGroupModal = ({ isOpen, mode = 'add', group = null, onSave, onCan
       targeted_z: parseFloat(formData.targeted_z),
       units: formData.units,
       bad_channels: formData.bad_channels,
+      count: mode === 'add' ? parseInt(formData.count, 10) : 1, // Only include count in add mode
     };
 
     onSave(dataToSave);
@@ -213,6 +218,26 @@ const ElectrodeGroupModal = ({ isOpen, mode = 'add', group = null, onSave, onCan
               ))}
             </select>
           </div>
+
+          {/* Count (Add mode only) */}
+          {mode === 'add' && (
+            <div className="form-group">
+              <label htmlFor="count">Number of Electrode Groups</label>
+              <input
+                id="count"
+                type="number"
+                name="count"
+                min="1"
+                max="100"
+                value={formData.count}
+                onChange={handleInputChange}
+                required
+              />
+              <span className="help-text">
+                Create multiple identical electrode groups at once (e.g., 4 tetrodes in CA1)
+              </span>
+            </div>
+          )}
 
           {/* Location */}
           <div className="form-group">

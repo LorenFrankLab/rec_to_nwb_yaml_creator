@@ -322,6 +322,7 @@ describe('ElectrodeGroupModal', () => {
         targeted_z: 3.5,
         units: 'μm',
         bad_channels: '',
+        count: 1, // count field added in add mode
       });
     });
 

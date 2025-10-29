@@ -144,32 +144,57 @@ export default function AnimalEditorStepper() {
   /**
    * Save electrode group (add or edit)
    * Auto-generates channel maps if device_type changed (like old app)
-   * @param {object} groupData - Form data from modal
+   * Supports bulk creation via count parameter (add mode only)
+   * @param {object} groupData - Form data from modal (includes count for add mode)
    */
   function handleSaveGroup(groupData) {
     const isAdding = modalMode === 'add';
-    const groupId = isAdding
-      ? generateNextElectrodeGroupId(animal.devices.electrode_groups)
-      : editingGroup.id;
+    const count = groupData.count || 1;
 
-    const updatedGroups = isAdding
-      ? [...animal.devices.electrode_groups, { ...groupData, id: groupId }]
-      : animal.devices.electrode_groups.map(g =>
-        g.id === editingGroup.id ? { ...g, ...groupData } : g
+    // Remove count from group data (not part of electrode group schema)
+    const { count: _, ...groupDataWithoutCount } = groupData;
+
+    let updatedGroups;
+    let groupsToGenerateMapsFor = [];
+
+    if (isAdding) {
+      // Add mode: create 'count' identical electrode groups
+      const newGroups = [];
+      const startId = parseInt(generateNextElectrodeGroupId(animal.devices.electrode_groups), 10);
+
+      for (let i = 0; i < count; i++) {
+        const groupId = String(startId + i);
+        const newGroup = { ...groupDataWithoutCount, id: groupId };
+        newGroups.push(newGroup);
+        groupsToGenerateMapsFor.push(newGroup);
+      }
+
+      updatedGroups = [...animal.devices.electrode_groups, ...newGroups];
+    } else {
+      // Edit mode: update single existing group
+      const groupId = editingGroup.id;
+      updatedGroups = animal.devices.electrode_groups.map(g =>
+        g.id === editingGroup.id ? { ...g, ...groupDataWithoutCount } : g
       );
 
-    // Check if device_type changed (for edit) or is new (for add)
-    const deviceTypeChanged = isAdding || (editingGroup.device_type !== groupData.device_type);
+      // Check if device_type changed
+      const deviceTypeChanged = editingGroup.device_type !== groupDataWithoutCount.device_type;
+      if (deviceTypeChanged) {
+        groupsToGenerateMapsFor.push({ ...groupDataWithoutCount, id: groupId });
+      }
+    }
 
+    // Auto-generate channel maps for new/changed groups
     let updatedChannelMaps = animal.devices.ntrode_electrode_group_channel_map || [];
 
-    if (deviceTypeChanged) {
-      // Auto-generate channel maps for this electrode group (like old app)
-      const generatedMaps = generateAllChannelMaps([{ ...groupData, id: groupId }]);
+    if (groupsToGenerateMapsFor.length > 0) {
+      // Generate maps for all new/changed groups
+      const generatedMaps = generateAllChannelMaps(groupsToGenerateMapsFor);
 
-      // Remove old maps for this group and add new generated ones
+      // Remove old maps for these groups and add new generated ones
+      const groupIds = new Set(groupsToGenerateMapsFor.map(g => g.id));
       updatedChannelMaps = updatedChannelMaps
-        .filter(map => map.electrode_group_id !== groupId)
+        .filter(map => !groupIds.has(map.electrode_group_id))
         .concat(generatedMaps);
     }
 
@@ -182,6 +207,11 @@ export default function AnimalEditorStepper() {
     });
 
     setModalOpen(false);
+
+    // Show success message for bulk creation
+    if (isAdding && count > 1) {
+      alert(`Successfully created ${count} identical electrode groups`);
+    }
   }
 
   /**
@@ -518,7 +548,7 @@ export default function AnimalEditorStepper() {
 
       {/* Channel Map Editor Modal */}
       {editorOpen && editingElectrodeGroup && (
-        <dialog open>
+        <dialog open className="channel-map-editor-modal">
           <ChannelMapEditor
             electrodeGroup={editingElectrodeGroup}
             channelMaps={editingChannelMaps}
