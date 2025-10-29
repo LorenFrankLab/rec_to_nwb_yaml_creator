@@ -70,9 +70,17 @@ export default function DayEditorStepper() {
       // Clone day and update nested field immutably
       const updated = structuredClone(day);
       let target = updated;
+
+      // Navigate to parent object, creating intermediate objects if they don't exist
       for (let i = 0; i < pathSegments.length - 1; i++) {
-        target = target[pathSegments[i]];
+        const segment = pathSegments[i];
+        if (!target[segment]) {
+          target[segment] = {};
+        }
+        target = target[segment];
       }
+
+      // Set the final value
       target[pathSegments[pathSegments.length - 1]] = value;
 
       // Extract top-level keys that changed

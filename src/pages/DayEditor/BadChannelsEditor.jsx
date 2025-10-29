@@ -31,8 +31,6 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, erro
    * @param {boolean} isChecked - Whether checkbox is checked
    */
   const handleChannelToggle = (ntrodeId, channelNum, isChecked) => {
-    console.log('[BadChannelsEditor] Checkbox clicked:', { ntrodeId, channelNum, isChecked });
-
     const currentBadChannels = badChannels[ntrodeId] || [];
     let updatedBadChannels;
 
@@ -44,7 +42,6 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, erro
       updatedBadChannels = currentBadChannels.filter(ch => ch !== channelNum);
     }
 
-    console.log('[BadChannelsEditor] Calling onUpdate with:', { ntrodeId: String(ntrodeId), updatedBadChannels });
     onUpdate(String(ntrodeId), updatedBadChannels);
   };
 
