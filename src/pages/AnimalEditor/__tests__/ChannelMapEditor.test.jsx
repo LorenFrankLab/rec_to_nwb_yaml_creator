@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ChannelMapEditor from '../ChannelMapEditor';
 
@@ -100,7 +100,7 @@ describe('ChannelMapEditor', () => {
       expect(electrodeIdInputs[1]).toHaveValue(1);
     });
 
-    it('should show bad_channels checkbox for each ntrode', () => {
+    it('should show bad_channels comma-separated input for each ntrode', () => {
       render(
         <ChannelMapEditor
           electrodeGroup={mockElectrodeGroup}
@@ -110,9 +110,15 @@ describe('ChannelMapEditor', () => {
         />
       );
 
-      // tetrode has 4 channels, so 4 checkboxes per ntrode * 2 ntrodes = 8 checkboxes
-      const badChannelCheckboxes = screen.getAllByRole('checkbox');
-      expect(badChannelCheckboxes).toHaveLength(8);
+      // Should have 2 bad channels inputs (one per ntrode with ntrode_id 0 and 1)
+      const badChannelsInput0 = screen.getByTestId('bad-channels-input-0');
+      const badChannelsInput1 = screen.getByTestId('bad-channels-input-1');
+
+      expect(badChannelsInput0).toBeInTheDocument();
+      expect(badChannelsInput1).toBeInTheDocument();
+
+      // Ntrode 1 should show existing bad_channels value
+      expect(badChannelsInput1).toHaveValue('1'); // Mock has bad_channels: [1]
     });
   });
 
@@ -210,8 +216,8 @@ describe('ChannelMapEditor', () => {
   });
 
   describe('Update bad_channels', () => {
-    it('should update bad_channels when checkbox toggled', async () => {
-      render(
+    it('should update bad_channels when comma-separated input changed', async () => {
+      const { container } = render(
         <ChannelMapEditor
           electrodeGroup={mockElectrodeGroup}
           channelMaps={mockChannelMaps}
@@ -220,15 +226,20 @@ describe('ChannelMapEditor', () => {
         />
       );
 
-      const badChannelCheckboxes = screen.getAllByRole('checkbox');
-      if (badChannelCheckboxes.length > 0) {
-        const firstCheckbox = badChannelCheckboxes[0];
-        const wasChecked = firstCheckbox.checked;
+      const badChannelsInput = screen.getByTestId('bad-channels-input-0');
 
-        await user.click(firstCheckbox);
+      // Change comma-separated bad channels value
+      fireEvent.change(badChannelsInput, { target: { value: '0, 2, 3' } });
 
-        expect(firstCheckbox.checked).toBe(!wasChecked);
-      }
+      // Input should show the formatted value
+      expect(badChannelsInput).toHaveValue('0, 2, 3');
+
+      // Status indicators should update
+      // Ntrode 0: channels 0, 2, 3 marked bad = 3 bad channels
+      // Ntrode 1: channel 1 marked bad (from mock) = 1 bad channel
+      // Total: 4 bad channel rows should have .bad-channel class
+      const badChannelRows = container.querySelectorAll('.bad-channel');
+      expect(badChannelRows.length).toBe(4);
     });
   });
 

@@ -85,6 +85,42 @@
           box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
         }
       }
+
+      input[type='text'] {
+        width: 100%;
+        max-width: 400px;
+        padding: 0.5rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        font-family: 'Monaco', 'Courier New', monospace;
+
+        &:focus {
+          outline: none;
+          border-color: #2196f3;
+          box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+        }
+
+        &::placeholder {
+          color: #999;
+          font-style: italic;
+        }
+      }
+
+      .field-help-text {
+        margin: 0.25rem 0 0 0;
+        font-size: 0.8rem;
+        color: #777;
+        font-style: italic;
+      }
+    }
+
+    .bad-channels-field {
+      padding: 1rem;
+      background: #fffef0;
+      border: 1px solid #f0e68c;
+      border-radius: 4px;
+      margin-bottom: 1.5rem;
     }
 
     .channel-map-grid {
@@ -110,16 +146,35 @@
         align-items: center;
         border-bottom: 1px solid #e0e0e0;
         background: white;
+        transition: background-color 0.2s;
 
         &:last-child {
           border-bottom: none;
           border-radius: 0 0 4px 4px;
         }
 
+        &.bad-channel {
+          background: #ffebee;
+          border-left: 3px solid #d32f2f;
+        }
+
         .channel-index {
           font-weight: 500;
           font-size: 0.9rem;
           color: #555;
+        }
+
+        .channel-status {
+          font-size: 0.85rem;
+          font-weight: 500;
+
+          &:contains('✗') {
+            color: #d32f2f;
+          }
+
+          &:contains('✓') {
+            color: #2e7d32;
+          }
         }
 
         input[type='number'] {

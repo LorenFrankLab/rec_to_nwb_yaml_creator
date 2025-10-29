@@ -54,33 +54,32 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
     setLocalChannelMaps(updated);
   };
 
-  // Handle bad_channels checkbox toggle
-  const handleBadChannelToggle = (ntrodeIndex, channelIndex) => {
-    const updated = localChannelMaps.map((map, idx) => {
-      if (idx !== ntrodeIndex) return map;
+  // Handle bad_channels comma-separated input change
+  const handleBadChannelsChange = (ntrodeIndex, inputValue) => {
+    // Parse comma-separated string to array of numbers
+    const badChannels = inputValue
+      .split(',')
+      .map(s => s.trim())
+      .filter(s => s !== '')
+      .map(s => parseInt(s, 10))
+      .filter(n => !isNaN(n))
+      .sort((a, b) => a - b);
 
-      const badChannels = map.bad_channels || [];
-      const channelIndexInBadChannels = badChannels.indexOf(channelIndex);
-
-      if (channelIndexInBadChannels > -1) {
-        // Remove from bad_channels
-        return {
-          ...map,
-          bad_channels: badChannels.filter((ch) => ch !== channelIndex),
-        };
-      } else {
-        // Add to bad_channels
-        return {
-          ...map,
-          bad_channels: [...badChannels, channelIndex],
-        };
-      }
-    });
-
+    const updated = localChannelMaps.map((map, idx) =>
+      idx === ntrodeIndex
+        ? { ...map, bad_channels: badChannels }
+        : map
+    );
     setLocalChannelMaps(updated);
   };
 
-  // Check if channel is marked as bad
+  // Format bad_channels array as comma-separated string for display
+  const formatBadChannels = (ntrodeIndex) => {
+    const badChannels = localChannelMaps[ntrodeIndex]?.bad_channels || [];
+    return badChannels.join(', ');
+  };
+
+  // Check if channel is marked as bad (for reference table highlighting)
   const isChannelBad = (ntrodeIndex, channelIndex) => {
     const badChannels = localChannelMaps[ntrodeIndex]?.bad_channels || [];
     return badChannels.includes(channelIndex);
@@ -213,15 +212,37 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
               />
             </div>
 
-            {/* Channel Map */}
+            {/* Bad Channels - Comma-separated input */}
+            <div className="ntrode-field bad-channels-field">
+              <label htmlFor={`bad-channels-${ntrodeMap.ntrode_id}`}>
+                Bad Channels (comma-separated indices)
+              </label>
+              <input
+                id={`bad-channels-${ntrodeMap.ntrode_id}`}
+                type="text"
+                value={formatBadChannels(ntrodeIndex)}
+                onChange={(e) => handleBadChannelsChange(ntrodeIndex, e.target.value)}
+                placeholder="e.g., 0, 5, 12, 18"
+                aria-label={`Bad channels for ntrode ${ntrodeMap.ntrode_id}`}
+                data-testid={`bad-channels-input-${ntrodeMap.ntrode_id}`}
+              />
+              <p className="field-help-text">
+                Enter channel indices separated by commas. Reference table below shows channel-to-hardware mapping.
+              </p>
+            </div>
+
+            {/* Channel Map Reference Table */}
             <div className="channel-map-grid">
               <div className="channel-map-header">
                 <span>Channel</span>
                 <span>Hardware ID</span>
-                <span>Bad Channel</span>
+                <span>Status</span>
               </div>
               {channelArray.map((channelIndex) => (
-                <div key={channelIndex} className="channel-map-row">
+                <div
+                  key={channelIndex}
+                  className={`channel-map-row ${isChannelBad(ntrodeIndex, channelIndex) ? 'bad-channel' : ''}`}
+                >
                   <span className="channel-index">Channel {channelIndex}</span>
                   <input
                     type="number"
@@ -233,12 +254,9 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
                     }
                     aria-label={`Channel ${channelIndex} hardware mapping for ntrode ${ntrodeMap.ntrode_id}`}
                   />
-                  <input
-                    type="checkbox"
-                    checked={isChannelBad(ntrodeIndex, channelIndex)}
-                    onChange={() => handleBadChannelToggle(ntrodeIndex, channelIndex)}
-                    aria-label={`Mark channel ${channelIndex} as bad for ntrode ${ntrodeMap.ntrode_id}`}
-                  />
+                  <span className="channel-status">
+                    {isChannelBad(ntrodeIndex, channelIndex) ? '✗ Bad' : '✓ OK'}
+                  </span>
                 </div>
               ))}
             </div>
