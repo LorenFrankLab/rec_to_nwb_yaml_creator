@@ -70,6 +70,140 @@ dialog.channel-map-editor-modal {
     margin: 2rem 0;
   }
 
+  /* Fieldset styling for each ntrode */
+  .ntrode-fieldset {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: #f9f9f9;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+
+    legend {
+      padding: 0 0.5rem;
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: #333;
+    }
+  }
+
+  /* Form container for fields within each ntrode */
+  .form-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  /* Ntrode ID field styling */
+  .ntrode-id-field {
+    label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: #555;
+    }
+
+    input[type='number'] {
+      width: 150px;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #f0f0f0;
+      cursor: not-allowed;
+    }
+  }
+
+  /* Bad Channels fieldset */
+  .bad-channels-fieldset {
+    padding: 1rem;
+    background: #fffef0;
+    border: 1px solid #f0e68c;
+    border-radius: 4px;
+
+    legend {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0 0.5rem;
+      font-weight: 500;
+      font-size: 0.95rem;
+      color: #666;
+    }
+
+    /* Ensure checkbox list is interactive */
+    .checkbox-list {
+      position: relative;
+      z-index: 1;
+      pointer-events: auto;
+    }
+
+    .checkbox-list-item {
+      position: relative;
+      z-index: 1;
+      pointer-events: auto;
+
+      input[type='checkbox'] {
+        position: relative;
+        z-index: 2;
+        pointer-events: auto;
+        cursor: pointer;
+        margin-right: 0.25rem;
+      }
+
+      label {
+        position: relative;
+        z-index: 1;
+        pointer-events: auto;
+        cursor: pointer;
+      }
+    }
+  }
+
+  /* Map field styling */
+  .map-field {
+    label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+      font-weight: 500;
+      color: #555;
+    }
+
+    .ntrode-maps {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 1rem;
+    }
+
+    .ntrode-map {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+
+      label {
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: #666;
+      }
+
+      select {
+        padding: 0.5rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        cursor: pointer;
+
+        &:focus {
+          outline: none;
+          border-color: #2196f3;
+          box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+        }
+      }
+    }
+  }
+
   .ntrode-section {
     margin-bottom: 2rem;
     padding: 1rem;
