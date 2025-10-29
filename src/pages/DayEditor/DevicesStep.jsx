@@ -2,6 +2,7 @@ import { useMemo, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import ReadOnlyDeviceInfo from './ReadOnlyDeviceInfo';
 import BadChannelsEditor from './BadChannelsEditor';
+import './DayEditor.scss';
 
 /**
  * DevicesStep - Devices configuration step (Step 2 of Day Editor)

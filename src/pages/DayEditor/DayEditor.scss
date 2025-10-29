@@ -1,8 +1,223 @@
 /**
  * DayEditor component styles
  *
- * Provides styling for Day Editor components including BadChannelsEditor
+ * Provides styling for Day Editor components including DevicesStep and BadChannelsEditor
  */
+
+/* DevicesStep styles */
+.devices-step {
+  h2 {
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+    color: #333;
+  }
+
+  .inherited-notice {
+    padding: 1rem;
+    background: #e3f2fd;
+    border-left: 4px solid #2196f3;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+
+    a {
+      color: #2196f3;
+      text-decoration: underline;
+      font-weight: 500;
+
+      &:hover {
+        color: #1976d2;
+      }
+    }
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    color: #666;
+
+    .empty-state-hint {
+      margin: 1rem 0;
+      font-style: italic;
+    }
+
+    .button-primary {
+      margin-top: 1rem;
+    }
+  }
+}
+
+/* Electrode groups accordion */
+.electrode-groups-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.electrode-group-details {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: white;
+
+  /* CRITICAL: Ensure details element doesn't block child content */
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+
+  &[open] {
+    .toggle-icon {
+      transform: rotate(90deg);
+    }
+  }
+}
+
+.electrode-group-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  cursor: pointer;
+  background: #f9f9f9;
+  border-bottom: 1px solid #e0e0e0;
+  user-select: none;
+
+  /* CRITICAL: Summary should not block content below */
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+
+  &:hover {
+    background: #f0f0f0;
+  }
+
+  &:focus {
+    outline: 2px solid #2196f3;
+    outline-offset: -2px;
+  }
+
+  .electrode-group-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 1.05rem;
+    color: #333;
+  }
+
+  .toggle-icon {
+    display: inline-block;
+    transition: transform 0.2s;
+    font-size: 0.75rem;
+  }
+
+  .status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    font-weight: 500;
+
+    &.status-clean {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+
+    &.status-warning {
+      background: #fff3e0;
+      color: #f57c00;
+    }
+
+    &.status-error {
+      background: #ffebee;
+      color: #c62828;
+    }
+  }
+}
+
+.electrode-group-content {
+  padding: 1.5rem;
+
+  /* CRITICAL: Content area must allow interaction */
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
+
+  .electrode-group-header {
+    margin-bottom: 1.5rem;
+
+    h3 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1.2rem;
+      color: #333;
+    }
+
+    .field-help-text {
+      margin: 0;
+      color: #666;
+      font-style: italic;
+    }
+  }
+
+  .error-state-inline {
+    padding: 1rem;
+    background: #ffebee;
+    border-left: 4px solid #c62828;
+    color: #c62828;
+
+    p {
+      margin: 0.5rem 0;
+    }
+
+    a {
+      color: #c62828;
+      text-decoration: underline;
+      font-weight: 500;
+    }
+  }
+}
+
+.device-config-details {
+  margin-top: 2rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: #fafafa;
+
+  &[open] {
+    .toggle-icon {
+      transform: rotate(90deg);
+    }
+  }
+}
+
+.device-config-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  background: #f5f5f5;
+  color: #555;
+  font-weight: 500;
+  font-size: 0.95rem;
+  user-select: none;
+
+  &:hover {
+    background: #eeeeee;
+  }
+
+  &:focus {
+    outline: 2px solid #2196f3;
+    outline-offset: -2px;
+  }
+
+  .toggle-icon {
+    display: inline-block;
+    transition: transform 0.2s;
+    font-size: 0.7rem;
+  }
+}
 
 /* BadChannelsEditor styles */
 .bad-channels-editor {
