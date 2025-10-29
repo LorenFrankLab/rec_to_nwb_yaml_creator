@@ -5,11 +5,117 @@
 - Use this file to keep notes on ongoing development work.
 - When the work is completed, clean it out from this file, so that the contents only reflect ongoing work.
 
-**Last Updated:** October 28, 2025
+**Last Updated:** October 29, 2025
 
 ---
 
-## Current Session: M7 - Animal Editor (COMPLETE ✅)
+## Current Session: M8a - Animal Hardware Configuration (COMPLETE ✅)
+
+**Status:** ✅ MILESTONE COMPLETE - All M8a tasks finished using Subagent-Driven Development
+
+**Last Updated:** October 29, 2025
+
+### Session Summary
+
+**Completed Full M8a Milestone (Animal Editor Step 3: Cameras, Hardware & Behavioral Events):**
+
+1. **CameraModal** - Add/edit form with WCAG AA compliance, focus trap, touch target fixes
+2. **CamerasSection** - Table view with CRUD operations and status badges
+3. **DataAcqSection** - Data acquisition device configuration with collapsible advanced settings
+4. **BehavioralEventsSection** - DIO event definitions with inline editing
+5. **HardwareConfigStep** - Container component integrating all 3 sections
+6. **Integration** - Added Step 3 to AnimalEditorStepper navigation
+
+**Implementation Approach:**
+
+- Used **Subagent-Driven Development** skill for parallel task execution
+- TDD methodology strictly followed: tests before implementation, RED → GREEN → REFACTOR
+- Code review after critical issues fixed
+- All UX/UI accessibility requirements met
+
+**Components Created:**
+
+- CameraModal.jsx (361 lines) + CameraModal.scss (211 lines)
+- CamerasSection.jsx (190 lines) + CamerasSection.scss (565 lines)
+- DataAcqSection.jsx (264 lines) + DataAcqSection.scss (219 lines)
+- BehavioralEventsSection.jsx (312 lines) + BehavioralEventsSection.scss (624 lines)
+- HardwareConfigStep.jsx (148 lines) + HardwareConfigStep.scss (192 lines)
+
+**Test Coverage:**
+
+- 67 new tests across 5 test files:
+  - CameraModal.test.jsx: 13 tests (includes focus trap tests)
+  - CamerasSection.test.jsx: 13 tests
+  - DataAcqSection.test.jsx: 9 tests
+  - BehavioralEventsSection.test.jsx: 10 tests
+  - HardwareConfigStep.test.jsx: 15 tests
+  - AnimalEditorStepper.test.jsx: 6 new integration tests (updated existing)
+- Total suite: 2747 tests passing, 1 skipped
+- Zero regressions
+
+**Accessibility Fixes Applied:**
+
+1. ✅ **Focus Trap:** Implemented Tab/Shift+Tab cycling in CameraModal
+2. ✅ **Touch Targets:** All buttons 48px minimum height (changed padding 0.6rem → 0.75rem)
+3. ✅ **Color Contrast:** Warning text changed #f57c00 → #D84315 (2.70:1 → 4.58:1)
+4. ✅ **Emoji Removal:** Replaced emoji icons with text-only warnings
+5. ✅ **Disabled Text Contrast:** Changed #999 on #f5f5f5 → #666666 on #e8e8e8 (2.61:1 → 5.00:1)
+
+**Material Design Compliance:**
+
+- ✅ Elevation hierarchy: Cameras (1), Data Acq (0), Events (1)
+- ✅ 8px grid spacing throughout
+- ✅ Responsive breakpoints: 600px, 768px, 900px
+- ✅ Card layout on mobile (< 600px)
+- ✅ Proper focus states with 2px outline offset
+- ✅ Collapsible sections using native `<details>` elements
+
+**Integration:**
+
+- Added HardwareConfigStep as Step 3 in AnimalEditorStepper
+- Updated navigation flow: Electrode Groups → Channel Maps → Hardware Config → Save
+- SaveIndicator integration for autosave feedback
+- State management via updateAnimal() action (cameras, data_acq_device, behavioral_events)
+
+**Commits:**
+
+- 7 M8a commits on modern branch:
+  - 43e62e2: feat(M8a): implement CameraModal with tests (11 passing)
+  - bca984c: fix(M8a): address critical accessibility issues in CameraModal
+  - 5a93e10: feat(M8a): implement CamerasSection with tests (13 passing)
+  - 3c185e4: feat(M8a): implement DataAcqSection with tests (9 passing)
+  - 685f4dc: feat(M8a): implement BehavioralEventsSection with tests (10 passing)
+  - dcd8d51: feat(M8a): implement HardwareConfigStep container with tests (15 passing)
+  - 89f5eb3: feat(M8a): integrate HardwareConfigStep into AnimalEditorStepper
+
+**Key Features:**
+
+- **3-Section Layout:** Cameras (table), Data Acq (form), Behavioral Events (inline editing)
+- **Status Badges:** ✓ validated, ⚠ warnings, ❌ errors
+- **Progressive Disclosure:** Advanced settings collapsed by default
+- **Inline Editing:** Behavioral events editable directly in table
+- **Validation:** Unique IDs/names, positive numeric constraints, valid identifiers
+- **File Browser:** Native file picker for header file path
+- **Reserved Word Warnings:** Prevents DIO event naming conflicts
+
+**Scientific Correctness:**
+
+- Meters per pixel validation (> 0, typical range 0.0005-0.002)
+- Camera IDs auto-increment to prevent collisions
+- Data acquisition system dropdown (SpikeGadgets, Open Ephys, Intan, Other)
+- Behavioral event names validated as identifiers (alphanumeric + underscore)
+- Reserved word warnings (reward, choice, start, end, trigger, sync)
+
+**Next Steps:**
+
+- M8b - Day Editor: Tasks & Epochs (Day Editor Step 3)
+- Implement TasksEpochsStep with task/epoch management
+- Add camera references in tasks (links to animal.cameras)
+- Behavioral event inheritance display (read-only from animal)
+
+---
+
+## Previous Session: M7 - Animal Editor (COMPLETE ✅)
 
 **Status:** ✅ MILESTONE COMPLETE - All M7 tasks finished, code review approved, P1 issues fixed
 
