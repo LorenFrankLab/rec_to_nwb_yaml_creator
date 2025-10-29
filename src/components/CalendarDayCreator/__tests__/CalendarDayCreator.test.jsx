@@ -157,7 +157,9 @@ describe('CalendarDayCreator Component', () => {
 
     it('prevents selecting existing days', async () => {
       const user = userEvent.setup();
-      const existingDate = new Date().toISOString().split('T')[0];
+      // Use local timezone to match calendar's date format (not UTC)
+      const now = new Date();
+      const existingDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
       render(
         <CalendarDayCreator
