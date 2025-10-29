@@ -735,18 +735,24 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
+  position: relative;
+  z-index: 1;
 }
 
 .checkbox-item input[type="checkbox"] {
   width: 18px;
   height: 18px;
   cursor: pointer;
+  position: relative;
+  z-index: 2;
 }
 
 .checkbox-item label {
   cursor: pointer;
   font-size: var(--font-size-base);
   color: var(--color-grey-900);
+  position: relative;
+  z-index: 2;
 }
 
 /* Channel Map Reference */
