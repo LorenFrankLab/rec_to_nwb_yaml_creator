@@ -134,50 +134,53 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
   // Handle edge case: no channel maps
   if (!channelMaps || channelMaps.length === 0) {
     return (
-      <div className="channel-map-editor">
-        <div className="channel-map-editor-header">
-          <h2>Channel Map Editor</h2>
-          <div className="electrode-group-info">
-            <span>Electrode Group: {electrodeGroup.id}</span>
-            <span>Device Type: {electrodeGroup.device_type}</span>
-            <span>Location: {electrodeGroup.location}</span>
+      <div className="channel-map-editor-overlay" role="presentation">
+        <div className="channel-map-editor">
+          <div className="channel-map-editor-header">
+            <h2>Channel Map Editor</h2>
+            <div className="electrode-group-info">
+              <span>Electrode Group: {electrodeGroup.id}</span>
+              <span>Device Type: {electrodeGroup.device_type}</span>
+              <span>Location: {electrodeGroup.location}</span>
+            </div>
           </div>
-        </div>
-        <div className="channel-map-editor-content">
-          <p className="empty-message">
-            No channel maps available. Please auto-generate channel maps first.
-          </p>
-        </div>
-        <div className="channel-map-editor-actions">
-          <button
-            type="button"
-            className="btn-cancel"
-            onClick={handleCancel}
-            aria-label="Cancel and close editor"
-          >
-            Cancel
-          </button>
+          <div className="channel-map-editor-content">
+            <p className="empty-message">
+              No channel maps available. Please auto-generate channel maps first.
+            </p>
+          </div>
+          <div className="channel-map-editor-actions">
+            <button
+              type="button"
+              className="btn-cancel"
+              onClick={handleCancel}
+              aria-label="Cancel and close editor"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div
-      className="channel-map-editor"
-      data-testid="channel-map-editor"
-      data-group-id={electrodeGroup.id}
-    >
-      {/* Header */}
-      <div className="channel-map-editor-header">
-        <h2>Channel Map Editor</h2>
-        <div className="electrode-group-info">
-          <span>Electrode Group: {electrodeGroup.id}</span>
-          <span>Device Type: {electrodeGroup.device_type}</span>
-          <span>Location: {electrodeGroup.location}</span>
-          <span data-testid="editor-channel-map-count">{localChannelMaps.length} maps</span>
+    <div className="channel-map-editor-overlay" role="presentation">
+      <div
+        className="channel-map-editor"
+        data-testid="channel-map-editor"
+        data-group-id={electrodeGroup.id}
+      >
+        {/* Header */}
+        <div className="channel-map-editor-header">
+          <h2>Channel Map Editor</h2>
+          <div className="electrode-group-info">
+            <span>Electrode Group: {electrodeGroup.id}</span>
+            <span>Device Type: {electrodeGroup.device_type}</span>
+            <span>Location: {electrodeGroup.location}</span>
+            <span data-testid="editor-channel-map-count">{localChannelMaps.length} maps</span>
+          </div>
         </div>
-      </div>
 
       {/* Content */}
       <div className="channel-map-editor-content">
@@ -286,6 +289,7 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
         >
           Save
         </button>
+      </div>
       </div>
     </div>
   );

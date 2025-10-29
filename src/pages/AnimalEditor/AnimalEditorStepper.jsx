@@ -548,14 +548,12 @@ export default function AnimalEditorStepper() {
 
       {/* Channel Map Editor Modal */}
       {editorOpen && editingElectrodeGroup && (
-        <dialog open className="channel-map-editor-modal">
-          <ChannelMapEditor
-            electrodeGroup={editingElectrodeGroup}
-            channelMaps={editingChannelMaps}
-            onSave={handleSaveChannelMap}
-            onCancel={handleCancelChannelMapEditor}
-          />
-        </dialog>
+        <ChannelMapEditor
+          electrodeGroup={editingElectrodeGroup}
+          channelMaps={editingChannelMaps}
+          onSave={handleSaveChannelMap}
+          onCancel={handleCancelChannelMapEditor}
+        />
       )}
 
       {/* Copy from Animal Dialog */}

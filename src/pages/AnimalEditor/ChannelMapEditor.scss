@@ -1,33 +1,37 @@
-/* Native <dialog> element styling with z-index */
-dialog.channel-map-editor-modal {
+/* Overlay wrapper for modal */
+.channel-map-editor-overlay {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 9999;
-  max-width: 900px;
-  width: 90%;
-  max-height: 90vh;
-  padding: 0;
-  border: none;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  background: white;
-  overflow: visible;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-in;
+}
 
-  &::backdrop {
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 9998;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 
 .channel-map-editor {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  max-width: 900px;
+  width: 90%;
+  max-height: 90vh;
   background: white;
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
 }
 
 .channel-map-editor-header {
@@ -120,6 +124,8 @@ dialog.channel-map-editor-modal {
     background: #fffef0;
     border: 1px solid #f0e68c;
     border-radius: 4px;
+    position: relative;
+    z-index: 1;
 
     legend {
       display: flex;
@@ -129,32 +135,34 @@ dialog.channel-map-editor-modal {
       font-weight: 500;
       font-size: 0.95rem;
       color: #666;
+      position: relative;
+      z-index: 1;
     }
 
     /* Ensure checkbox list is interactive */
     .checkbox-list {
       position: relative;
-      z-index: 1;
-      pointer-events: auto;
+      z-index: 10;
+      pointer-events: auto !important;
     }
 
     .checkbox-list-item {
       position: relative;
-      z-index: 1;
-      pointer-events: auto;
+      z-index: 10;
+      pointer-events: auto !important;
 
       input[type='checkbox'] {
         position: relative;
-        z-index: 2;
-        pointer-events: auto;
+        z-index: 100;
+        pointer-events: auto !important;
         cursor: pointer;
         margin-right: 0.25rem;
       }
 
       label {
         position: relative;
-        z-index: 1;
-        pointer-events: auto;
+        z-index: 10;
+        pointer-events: auto !important;
         cursor: pointer;
       }
     }
