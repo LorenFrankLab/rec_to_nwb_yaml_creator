@@ -143,22 +143,41 @@ export default function AnimalEditorStepper() {
 
   /**
    * Save electrode group (add or edit)
+   * Auto-generates channel maps if device_type changed (like old app)
    * @param {object} groupData - Form data from modal
    */
   function handleSaveGroup(groupData) {
-    const updatedGroups = modalMode === 'add'
-      ? [...animal.devices.electrode_groups, {
-        ...groupData,
-        id: generateNextElectrodeGroupId(animal.devices.electrode_groups)
-      }]
+    const isAdding = modalMode === 'add';
+    const groupId = isAdding
+      ? generateNextElectrodeGroupId(animal.devices.electrode_groups)
+      : editingGroup.id;
+
+    const updatedGroups = isAdding
+      ? [...animal.devices.electrode_groups, { ...groupData, id: groupId }]
       : animal.devices.electrode_groups.map(g =>
         g.id === editingGroup.id ? { ...g, ...groupData } : g
       );
+
+    // Check if device_type changed (for edit) or is new (for add)
+    const deviceTypeChanged = isAdding || (editingGroup.device_type !== groupData.device_type);
+
+    let updatedChannelMaps = animal.devices.ntrode_electrode_group_channel_map || [];
+
+    if (deviceTypeChanged) {
+      // Auto-generate channel maps for this electrode group (like old app)
+      const generatedMaps = generateAllChannelMaps([{ ...groupData, id: groupId }]);
+
+      // Remove old maps for this group and add new generated ones
+      updatedChannelMaps = updatedChannelMaps
+        .filter(map => map.electrode_group_id !== groupId)
+        .concat(generatedMaps);
+    }
 
     actions.updateAnimal(animalId, {
       devices: {
         ...animal.devices,
         electrode_groups: updatedGroups,
+        ntrode_electrode_group_channel_map: updatedChannelMaps,
       },
     });
 
@@ -295,28 +314,6 @@ export default function AnimalEditorStepper() {
   }
 
   /**
-   * Auto-generate all channel maps for all electrode groups
-   */
-  function handleAutoGenerate() {
-    const existing = animal.devices.ntrode_electrode_group_channel_map || [];
-
-    if (existing.length > 0) {
-      if (!window.confirm('Overwrite existing channel maps?')) {
-        return;
-      }
-    }
-
-    const generated = generateAllChannelMaps(animal.devices.electrode_groups || []);
-
-    actions.updateAnimal(animalId, {
-      devices: {
-        ...animal.devices,
-        ntrode_electrode_group_channel_map: generated,
-      },
-    });
-  }
-
-  /**
    * Export channel maps to CSV file
    */
   function handleExportCSV() {
@@ -324,7 +321,7 @@ export default function AnimalEditorStepper() {
     const electrodeGroups = animal.devices.electrode_groups || [];
 
     if (channelMaps.length === 0) {
-      alert('No channel maps to export. Please auto-generate or configure channel maps first.');
+      alert('No channel maps to export. Channel maps are automatically created when you add electrode groups with device types.');
       return;
     }
 
@@ -423,13 +420,10 @@ export default function AnimalEditorStepper() {
             onEditChannelMap={handleEditChannelMap}
           />
           <div className="action-buttons" style={{ marginTop: '1rem' }}>
-            <button
-              onClick={handleAutoGenerate}
-              className="action-button btn-primary"
-              aria-label="Auto-generate all channel maps"
-            >
-              Auto-Generate All Channel Maps
-            </button>
+            <p className="help-text" style={{ marginBottom: '0.5rem', color: '#666' }}>
+              Channel maps are automatically generated when you select a device type for an electrode group.
+              Use the buttons below to export or import channel maps as CSV.
+            </p>
             <button
               onClick={handleExportCSV}
               className="action-button btn-secondary"
