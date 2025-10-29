@@ -33,6 +33,7 @@ import './CameraModal.scss';
  */
 const CameraModal = ({ isOpen, mode = 'add', camera = null, existingCameras = [], onSave, onCancel }) => {
   const firstFieldRef = useRef(null);
+  const modalRef = useRef(null);
 
   // Calculate next available camera ID
   const getNextCameraId = () => {
@@ -148,18 +149,36 @@ const CameraModal = ({ isOpen, mode = 'add', camera = null, existingCameras = []
     onSave(dataToSave);
   };
 
-  // Handle ESC key
+  // Handle ESC key and focus trap
   useEffect(() => {
     if (!isOpen) return;
 
-    const handleEscape = (e) => {
+    const handleKeydown = (e) => {
+      // Handle Escape key
       if (e.key === 'Escape') {
         onCancel();
+        return;
+      }
+
+      // Handle focus trap (Tab and Shift+Tab)
+      if (e.key === 'Tab' && modalRef.current) {
+        const focusableSelector = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+        const focusableElements = modalRef.current.querySelectorAll(focusableSelector);
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey && document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement.focus();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement.focus();
+        }
       }
     };
 
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
+    document.addEventListener('keydown', handleKeydown);
+    return () => document.removeEventListener('keydown', handleKeydown);
   }, [isOpen, onCancel]);
 
   // Focus first field when modal opens
@@ -208,6 +227,7 @@ const CameraModal = ({ isOpen, mode = 'add', camera = null, existingCameras = []
         aria-modal="true"
         aria-labelledby={titleId}
         onClick={(e) => e.stopPropagation()} // Prevent overlay click when clicking content
+        ref={modalRef}
       >
         <h2 id={titleId} className="camera-modal-title">
           {title}

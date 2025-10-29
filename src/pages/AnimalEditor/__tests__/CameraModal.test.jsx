@@ -364,5 +364,75 @@ describe('CameraModal', () => {
         expect(screen.getByLabelText(/^camera name$/i)).toHaveFocus();
       });
     });
+
+    it('should trap focus within modal - Tab at last element cycles to first', async () => {
+      render(
+        <CameraModal
+          isOpen={true}
+          mode="add"
+          existingCameras={[]}
+          onSave={() => {}}
+          onCancel={() => {}}
+        />
+      );
+
+      // Fill required fields to enable Save button
+      await user.type(screen.getByLabelText(/^camera name$/i), 'Test');
+      await user.type(screen.getByLabelText(/manufacturer/i), 'Test');
+      await user.type(screen.getByLabelText(/model/i), 'Test');
+      await user.type(screen.getByLabelText(/meters per pixel/i), '0.001');
+
+      // Wait for Save button to be enabled
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /save/i })).not.toBeDisabled();
+      });
+
+      // Focus the last focusable element (Save button)
+      const saveButton = screen.getByRole('button', { name: /save/i });
+      saveButton.focus();
+      expect(saveButton).toHaveFocus();
+
+      // Press Tab - should cycle to first focusable element (Camera Name input)
+      await user.tab();
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/^camera name$/i)).toHaveFocus();
+      });
+    });
+
+    it('should trap focus within modal - Shift+Tab at first element cycles to last', async () => {
+      render(
+        <CameraModal
+          isOpen={true}
+          mode="add"
+          existingCameras={[]}
+          onSave={() => {}}
+          onCancel={() => {}}
+        />
+      );
+
+      // Fill required fields to enable Save button
+      await user.type(screen.getByLabelText(/^camera name$/i), 'Test');
+      await user.type(screen.getByLabelText(/manufacturer/i), 'Test');
+      await user.type(screen.getByLabelText(/model/i), 'Test');
+      await user.type(screen.getByLabelText(/meters per pixel/i), '0.001');
+
+      // Wait for Save button to be enabled
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /save/i })).not.toBeDisabled();
+      });
+
+      // Explicitly focus first element (Camera Name input)
+      const cameraNameInput = screen.getByLabelText(/^camera name$/i);
+      cameraNameInput.focus();
+      expect(cameraNameInput).toHaveFocus();
+
+      // Press Shift+Tab - should cycle to last focusable element (Save button)
+      await user.tab({ shift: true });
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /save/i })).toHaveFocus();
+      });
+    });
   });
 });
