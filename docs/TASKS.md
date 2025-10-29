@@ -479,32 +479,122 @@ Animal-level electrode group configuration is currently only accessible via the 
 
 **Tasks**
 
-* [ ] Create `HardwareConfigStep.jsx` (Animal Editor Step 3)
+* [ ] Create `HardwareConfigStep.jsx` (Animal Editor Step 3 - Animal-level hardware config)
+  * [ ] Purpose: Configure cameras, data acq device, behavioral events (DIO channels)
+  * [ ] Location: Renders as Step 3 in AnimalEditorStepper
+  * [ ] Note: This is ANIMAL-level config - applies to all days unless overridden
 * [ ] Implement `CamerasSection.jsx` with CRUD table
   * [ ] Camera ID, name, manufacturer, model, lens, meters_per_pixel
   * [ ] CameraModal for add/edit operations
   * [ ] Validation: unique IDs, positive meters_per_pixel
+  * [ ] Warning if meters_per_pixel outside typical range (0.0005-0.002)
 * [ ] Implement `DataAcqSection.jsx`
   * [ ] System, amplifier, ADC circuit
   * [ ] Default header file path with file browser
-  * [ ] Advanced settings (Ephys-to-Volt, Times Multiplier) - collapsible
-* [ ] Implement `BehavioralEventsSection.jsx`
+  * [ ] Advanced settings (Ephys-to-Volt, Times Multiplier) - collapsible by default
+* [ ] Implement `BehavioralEventsSection.jsx` (DIO channel definitions)
   * [ ] DIO event definitions (name, description)
   * [ ] Inline editing for simple fields
-  * [ ] Validation: unique names, valid identifiers
-* [ ] Apply UX/UI fixes from review:
-  * [ ] Replace emoji with Material Symbols (accessibility)
-  * [ ] Use elevation hierarchy (white bg for lists, gray for config)
+  * [ ] Validation: unique names, valid identifiers (alphanumeric + underscore)
+  * [ ] Warn if event name conflicts with reserved words
+* [ ] **CRITICAL: Accessibility & Design Compliance** (14-20 hours, BLOCKING)
+  * [ ] Replace all emoji icons with Material Symbols
+    * Rationale: Emoji are not accessible to screen readers
+    * Replace 📹, 🖥️, ⚡ with proper Material Symbol icons
+    * Test with NVDA and VoiceOver
+  * [ ] Fix color contrast to WCAG AA minimum (4.5:1)
+    * Audit all text/background combinations
+    * Fix inherited field styling
+    * Test with Axe DevTools
   * [ ] Enforce 48px minimum touch targets
-  * [ ] Add validation status column to tables
-  * [ ] Implement mobile responsive (card layout < 600px)
+    * All buttons, checkboxes, links must be >= 48x48px
+    * Add padding to meet target size without changing visual size
+    * Test on mobile devices (iOS Safari, Chrome Android)
+  * [ ] Implement mobile responsive patterns
+    * Card layout for tables at < 600px breakpoint
+    * Stack form fields vertically on mobile
+    * Test on iPhone SE, Galaxy S21 minimum sizes
+  * [ ] Use elevation hierarchy consistently
+    * White background (elevation 1) for lists/tables
+    * Gray background (elevation 0) for config sections
+    * Apply Material Design 3 elevation tokens
+* [ ] UX improvements (4-6 hours, non-blocking)
+  * [ ] Add validation status columns to tables
+  * [ ] Implement progressive disclosure for advanced settings
+  * [ ] Add helpful tooltips for complex fields (meters_per_pixel)
 * [ ] Write comprehensive tests (target: 55+ tests)
-  * [ ] CameraModal: 10 tests (CRUD, validation)
-  * [ ] CamerasSection: 12 tests (table, empty state)
-  * [ ] DataAcqSection: 8 tests (form, collapsible)
-  * [ ] BehavioralEventsSection: 10 tests (CRUD, validation)
-  * [ ] HardwareConfigStep: 15 tests (integration, navigation)
-* [ ] Integration with Animal Editor stepper
+  * [ ] CameraModal.test.jsx: 10 tests
+    * Renders with all form fields
+    * Auto-assigns next sequential ID
+    * Validates required fields (name, manufacturer, model)
+    * Validates meters_per_pixel > 0
+    * Warns if meters_per_pixel outside typical range (0.0005-0.002)
+    * Save button disabled until valid
+    * Cancel closes without saving changes
+    * Edit mode pre-populates form with camera data
+    * Handles create success/error states
+    * Focus management (auto-focus first field)
+  * [ ] CamerasSection.test.jsx: 12 tests
+    * Empty state shows "Add Camera" button and getting started message
+    * Table displays cameras with all columns (ID, name, manufacturer, model, m/px, status)
+    * Status badges render correctly (✓ validated, ⚠ warnings)
+    * "Add Camera" button opens modal in create mode
+    * "Edit" button opens modal in edit mode with camera data
+    * "Delete" button shows confirmation dialog
+    * Delete confirmation actually removes camera from list
+    * Duplicate ID validation prevents save
+    * Handles errors gracefully with user-friendly messages
+    * Table is keyboard navigable (Tab, Enter)
+    * Screen reader announces table structure
+    * Responsive layout (cards on mobile)
+  * [ ] DataAcqSection.test.jsx: 8 tests
+    * Renders all form fields (system dropdown, amplifier, ADC)
+    * Advanced settings collapsed by default
+    * Advanced settings toggle opens/closes
+    * File browser button opens file picker
+    * Validates ephys_to_volt > 0
+    * Validates times_multiplier > 0
+    * Help text visible for advanced settings
+    * Saves changes on blur with debounce
+  * [ ] BehavioralEventsSection.test.jsx: 10 tests
+    * Empty state shows "Add Behavioral Event" button
+    * Table displays events (name, description)
+    * Add button creates new event row
+    * Inline editing works for name and description
+    * Validates unique event names
+    * Validates event name is valid identifier (alphanumeric + underscore)
+    * Warns if event name conflicts with reserved words (reward, choice, etc.)
+    * Delete button removes event with confirmation
+    * Handles errors with inline error messages
+    * Keyboard navigation works (Tab, Enter, Escape)
+  * [ ] HardwareConfigStep.test.jsx: 15 tests
+    * Renders all 3 sections (Cameras, Data Acq, Behavioral Events)
+    * Sections have correct elevation styling (cameras=1, data_acq=0, events=1)
+    * Save indicator shows "Saving..." on changes
+    * Save indicator shows "Saved" after success
+    * Navigation buttons enabled/disabled based on validation
+    * Back button navigates to Step 2 (Channel Maps)
+    * Continue button saves and exits (or goes to Step 4 if optogenetics exists)
+    * Handles save errors gracefully
+    * Sections expand/collapse correctly
+    * Integrates with AnimalEditorStepper props
+    * Verifies data persists in animal.cameras, animal.data_acq_device, animal.behavioral_events
+    * Accessibility: all sections have proper landmarks
+    * Accessibility: keyboard navigation works
+    * Responsive: mobile layout at < 600px
+    * Performance: handles 10 cameras without lag
+* [ ] Integrate HardwareConfigStep into AnimalEditorStepper
+  * [ ] Add Step 3 to steps array in AnimalEditorStepper.jsx
+    * Step 1: Electrode Groups ✓ (M7 complete)
+    * Step 2: Channel Maps ✓ (M7 complete)
+    * Step 3: Hardware Config (NEW - M8a)
+    * Step 4: Optogenetics (future - M8.5)
+  * [ ] Test navigation flow:
+    * Back button: Step 3 → Step 2
+    * Continue button: Step 3 → Save & Exit (or Step 4 if optogenetics)
+  * [ ] Verify save indicator works when Hardware step is active
+  * [ ] Update step labels in navigation UI
+  * [ ] Test URL routing: #/animal/:id/editor defaults to Step 1
 * [ ] Accessibility audit (WCAG 2.1 Level AA)
 * [ ] Request code review
 
@@ -518,6 +608,7 @@ Animal-level electrode group configuration is currently only accessible via the 
 * ✅ Mobile responsive (< 600px card layout)
 * ✅ 55+ new tests passing
 * ✅ No regressions in existing 2681 tests
+* ✅ UX/UI review feedback incorporated (3 critical issues resolved)
 * ✅ Code review approved
 
 **Artifacts**
@@ -537,39 +628,133 @@ Animal-level electrode group configuration is currently only accessible via the 
 
 **Tasks**
 
-* [ ] Create `TasksEpochsStep.jsx` (Day Editor Step 3)
+* [ ] Create `TasksEpochsStep.jsx` (replaces EpochsStub in Day Editor)
+  * [ ] Note: This is Step 3 of 5 in DayEditorStepper
+  * [ ] Will replace current EpochsStub component
+* [ ] Implement camera availability info banner (NON-BLOCKING)
+  * [ ] Display banner when animal.cameras is empty or undefined
+  * [ ] Styling: Blue info banner (NOT amber warning - per UX review)
+  * [ ] Message: "No cameras configured in animal setup"
+  * [ ] Explanation: "Cameras are optional but recommended for video linking and spatial tracking"
+  * [ ] Action buttons:
+    * "Add Cameras in Animal Editor" → navigates to #/animal/:id/editor Step 3
+    * "Skip" → dismisses banner (don't show again for this session)
+  * [ ] Position: Below TasksTable heading, above table content
+  * [ ] Accessibility: role="status", aria-live="polite"
+  * [ ] Allow task creation even when banner is visible (non-blocking)
 * [ ] Implement `TasksTable.jsx` with CRUD operations
   * [ ] Columns: Task name, cameras, epochs, actions
   * [ ] Add/Edit/Delete operations
   * [ ] Status badges for validation
-* [ ] Implement `TaskModal.jsx` with accordion sections
-  * [ ] Section 1: Task Details (name, description) - open by default
+  * [ ] Empty state with "Add Task" button
+* [ ] Implement `TaskModal.jsx` with **accordion pattern** (UX requirement)
+  * [ ] Use native `<details>`/`<summary>` elements for sections
+  * [ ] Section 1: Task Details (name, description)
+    * Open by default (required fields)
+    * Name: text input (required, unique within day)
+    * Description: textarea (optional)
   * [ ] Section 2: Cameras (multi-select from animal.cameras)
-  * [ ] Section 3: Behavioral Events (inherited display)
-  * [ ] Section 4: Task Epochs (inline table editor) - open by default
+    * Collapsed by default (optional feature)
+    * Checkboxes for each camera in animal.cameras array
+    * If animal.cameras is empty: show info banner with link to Animal Editor
+    * Store selected camera IDs in task.camera_ids array
+  * [ ] Section 3: Behavioral Events (inherited from animal)
+    * Collapsed by default (informational)
+    * Read-only display with lock icons
+    * List all events from animal.behavioral_events
+    * Collapsible sub-section for day-specific events (optional)
+  * [ ] Section 4: Task Epochs (inline table editor)
+    * Open by default (required - at least 1 epoch)
+    * Dynamic table with add/remove rows
+    * Columns: epoch #, start time (s), end time (s), actions
+    * Integrated TaskEpochsEditor component
+  * [ ] Progressive disclosure principles:
+    * Required sections open by default
+    * Optional sections collapsed by default
+    * Visual hierarchy: required > optional > informational
+  * [ ] Modal behavior:
+    * Focus trap (Tab cycles within modal)
+    * ESC key closes modal
+    * Click outside closes modal
+    * Save button disabled until validation passes
+    * Cancel button discards changes
 * [ ] Implement `TaskEpochsEditor.jsx`
   * [ ] Dynamic table: epoch #, start time, end time, actions
   * [ ] Add/remove epoch rows
-  * [ ] Validation: end_time > start_time
+  * [ ] Inline editing of start/end times
+  * [ ] Validation: end_time > start_time (ERROR level)
+  * [ ] Auto-focus on new row
+  * [ ] Warn on overlapping epochs (INFO level)
 * [ ] Implement `BehavioralEventsDisplay.jsx`
   * [ ] Read-only display of inherited events from animal
+  * [ ] Show with lock icons to indicate inherited status
   * [ ] Collapsible section for day-specific events (optional)
-  * [ ] Lock icons for inherited items
-* [ ] Apply UX/UI fixes:
-  * [ ] Info banner (blue) for missing cameras - non-blocking
-  * [ ] Accordion sections for progressive disclosure
-  * [ ] "Inherited from Animal" labels with lock icons
-  * [ ] Mobile responsive patterns
-* [ ] Cross-reference validation:
-  * [ ] Warn if task references non-existent camera
-  * [ ] Validate epoch times (end > start)
-  * [ ] Warn if no epochs defined for task
+  * [ ] Add/edit day-specific events
+  * [ ] Validation: no duplicates with animal events
+* [ ] Cross-reference validation (**NON-BLOCKING** - per UX review)
+  * [ ] **Info-level** check if task references non-existent camera
+    * Display blue info banner (not red error)
+    * Message: "Task references camera ID X which doesn't exist in animal setup"
+    * Provide link to add camera in Animal Editor
+    * Allow saving task anyway (validate at export time)
+  * [ ] **Error-level** validation: epoch times (end > start)
+    * Inline error message on end_time field
+    * Message: "End time must be after start time"
+    * Prevent saving task until fixed
+  * [ ] **Warning-level** check: no epochs defined for task
+    * Show amber warning badge on task row
+    * Message: "Task has no epochs defined"
+    * Allow saving task anyway (can add epochs later)
+  * [ ] **Warning-level** check: overlapping epochs
+    * Message: "Epochs X and Y overlap - may be intentional"
+    * Allow saving (overlaps might be valid for multi-task sessions)
+  * [ ] **CRITICAL:** Allow incomplete tasks to be saved
+    * Validation happens at export time, not data entry time
+    * Display validation summary in Export step
 * [ ] Write comprehensive tests (target: 63+ tests)
-  * [ ] TaskModal: 18 tests (accordions, validation)
-  * [ ] TasksTable: 10 tests (CRUD, empty state)
-  * [ ] TaskEpochsEditor: 12 tests (inline editing, validation)
-  * [ ] BehavioralEventsDisplay: 8 tests (inherited, day-specific)
-  * [ ] TasksEpochsStep: 15 tests (integration, warnings)
+  * [ ] TaskModal.test.jsx: 18 tests
+    * All accordion sections render
+    * Required sections open by default
+    * Optional sections collapsed by default
+    * Camera selection works (multi-select checkboxes)
+    * Task epochs editor integrated
+    * Validation errors shown inline
+    * Save button disabled until valid
+    * Focus management and keyboard navigation
+    * Progressive disclosure (required > optional > informational)
+    * Modal behavior (focus trap, ESC, click outside)
+    * Info banner shows if no cameras configured
+    * Link to Animal Editor works
+  * [ ] TasksTable.test.jsx: 10 tests
+    * Empty state with "Add Task" button
+    * Table displays tasks with camera/epoch counts
+    * Status badges (✓/⚠/❌)
+    * Add/edit/delete operations
+    * Keyboard navigation works
+    * Responsive layout (cards on mobile)
+  * [ ] TaskEpochsEditor.test.jsx: 12 tests
+    * Add/remove epoch rows
+    * Inline editing of start/end times
+    * Validation: end > start
+    * Auto-focus on new row
+    * Warn on overlapping epochs (non-blocking)
+    * Handles errors with inline messages
+  * [ ] BehavioralEventsDisplay.test.jsx: 8 tests
+    * Shows inherited events (read-only with lock icon)
+    * Day-specific section collapsible
+    * Add/edit day-specific events
+    * Validation: no duplicates with animal events
+    * Lock icons indicate inherited status
+  * [ ] TasksEpochsStep.test.jsx: 15 tests
+    * Renders tasks table
+    * Shows inherited behavioral events
+    * Camera info banner appears if none configured
+    * Banner is blue (INFO), not amber (WARNING)
+    * Day-specific events section works
+    * Navigation buttons work
+    * Info banner non-blocking (allow task creation)
+    * Cross-reference validation non-blocking
+    * Integration tests verify inheritance from animal.cameras
 * [ ] Integration with Day Editor stepper
 * [ ] Accessibility audit (WCAG 2.1 Level AA)
 * [ ] Request code review
@@ -583,9 +768,10 @@ Animal-level electrode group configuration is currently only accessible via the 
 * ✅ Camera references validated (warn if missing, non-blocking)
 * ✅ Info banner for missing cameras (blue, not amber)
 * ✅ TaskModal uses accordion pattern
-* ✅ All validation rules enforced
+* ✅ All validation rules enforced (non-blocking per UX review)
 * ✅ 63+ new tests passing
 * ✅ No regressions
+* ✅ Integration tests verify inheritance from animal.cameras
 * ✅ Code review approved
 
 **Artifacts**
@@ -607,14 +793,23 @@ Animal-level electrode group configuration is currently only accessible via the 
 * ✅ Day Editor has 3 steps (Overview, Devices, Tasks)
 * ✅ Inheritance pattern works: day.tasks reference animal.cameras
 * ✅ Behavioral events inherited from animal (with day override option)
-* ✅ Total: 2799+ tests passing (2681 existing + 118 new)
+* ✅ Total: 2799+ tests passing
+  * 2681 existing tests (no regressions)
+  * 55 M8a tests (Animal Hardware Config)
+  * 63 M8b tests (Day Tasks & Epochs)
 * ✅ Golden baseline tests still passing
 * ✅ WCAG 2.1 Level AA compliant
 * ✅ Mobile responsive (< 600px breakpoint)
 * ✅ UX/UI review feedback addressed
 * ✅ Code reviews approved for both parts
 
-**Total M8 Effort:** 46-62 hours (2-3 weeks with UX/UI polish)
+**ℹ️ Note:** Optogenetics configuration (virus injection, optical fibers, opto excitation sources) is deferred to M8.5 as an optional animal-level feature. See plan section M8.5 for details.
+
+**Total M8 Effort:** 46-62 hours (2-3 weeks including UX/UI polish)
+
+* M8a: 26-34 hours (1-1.5 weeks)
+* M8b: 20-28 hours (1 week)
+* Note: Includes 14-20 hours of accessibility fixes
 
 **Test Results (Target):** 2799 tests passing (2681 existing + 55 M8a + 63 M8b)
 
@@ -622,21 +817,57 @@ Animal-level electrode group configuration is currently only accessible via the 
 
 ### **M9 – Export Step + Continuous YAML Parity**
 
+**⚠️ CRITICAL SAFETY REQUIREMENT:** This milestone enforces YAML parity with legacy format to prevent data corruption. Shadow export verification is MANDATORY and BLOCKING.
+
+**Background:** See CLAUDE.md "Regression Prevention Protocol" for detailed rationale. Any deviation from legacy YAML format risks corrupting months of research data.
+
 **Tasks**
 
-* [ ] Add `ExportStep` UI with filename template `YYYY-MM-DD_<animal>_metadata.yml`.
-* [ ] Disable export until all validation passes.
-* [ ] Run **shadow export comparison** before file download.
-* [ ] Extend test suite to assert equality for all sample fixtures.
+* [ ] **BLOCKING: Shadow export verification** (M1 regression protocol)
+  * [ ] Run golden baseline comparison before allowing download
+  * [ ] Compare byte-for-byte: new export vs. legacy format
+  * [ ] If mismatch detected:
+    * Block download with clear error message
+    * Show diff between new and expected format
+    * Log mismatch details for debugging
+    * Require manual review before allowing export override
+  * [ ] Test with all 4 golden fixtures:
+    * 20230622_sample_metadata.yml (comprehensive session with opto)
+    * minimal-valid.yml (required fields only)
+    * realistic-session.yml (typical session without opto)
+    * 20230622_sample_metadataProbeReconfig.yml (probe changes)
+  * [ ] Fail CI if shadow export tests don't pass
+  * [ ] Add feature flag: `shadowExportStrict` (default: true)
+* [ ] Add ExportStep UI with deterministic filename
+  * [ ] Template: `YYYY-MM-DD_<animalId>_metadata.yml`
+  * [ ] Use formatDeterministicFilename() from io/yaml.js
+  * [ ] Preview button to show YAML before download
+  * [ ] Validation summary display (all steps must pass)
+* [ ] Disable export button until all validation passes
+  * [ ] Check all steps completion status
+  * [ ] Display list of blocking issues if not ready
+  * [ ] Show which steps have errors
+* [ ] Extend test suite with parity assertions
+  * [ ] Assert byte-for-byte equality for all fixtures
+  * [ ] Test round-trip: import → edit → export → compare
+  * [ ] Test encoding stability (date formats, numbers, null values)
+  * [ ] Test with UTF-8 special characters
 
 **Acceptance (DoD)**
 
-* YAML parity confirmed in CI.
-* Export safely blocked on validation errors.
+* ✅ Shadow export comparison runs automatically before every download
+* ✅ Export blocked if YAML parity check fails
+* ✅ YAML parity confirmed in CI (18 golden baseline tests passing)
+* ✅ Export safely blocked on validation errors
+* ✅ All 4 golden fixtures pass round-trip test
+* ✅ Feature flag allows disabling strict mode for debugging only
+* ✅ User documentation explains shadow export requirement
 
 **Artifacts**
 
-* `src/pages/DayEditor/ExportStep.jsx`, tests.
+* `src/pages/DayEditor/ExportStep.jsx` - Export UI with shadow export integration
+* `src/__tests__/baselines/export-parity.test.js` - Export parity tests
+* Updated golden baseline tests with new UI workflow
 
 ---
 
