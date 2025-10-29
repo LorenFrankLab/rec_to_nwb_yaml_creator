@@ -52,6 +52,21 @@ vi.mock('../ChannelMapsStep', () => ({
   ),
 }));
 
+vi.mock('../HardwareConfigStep', () => ({
+  default: ({ animal, onFieldUpdate, onNavigateBack, onNavigateNext }) => (
+    <div data-testid="hardware-config-step">
+      <h2>Step 3: Hardware Config</h2>
+      <div>HardwareConfigStep for {animal.id}</div>
+      <button onClick={onNavigateBack} data-testid="hardware-back-button">
+        Back
+      </button>
+      <button onClick={onNavigateNext} data-testid="hardware-next-button">
+        Continue
+      </button>
+    </div>
+  ),
+}));
+
 vi.mock('../ChannelMapEditor', () => ({
   default: ({ electrodeGroup, channelMaps, onSave, onCancel }) => (
     <div
@@ -210,9 +225,10 @@ describe('AnimalEditorStepper', () => {
       const user = userEvent.setup();
       renderWithStore(<AnimalEditorStepper />);
 
-      // Navigate to final step
+      // Navigate to final step (now Step 2)
       const nextButton = screen.getByRole('button', { name: /next step/i });
-      await user.click(nextButton);
+      await user.click(nextButton); // Step 0 -> Step 1
+      await user.click(nextButton); // Step 1 -> Step 2 (final)
 
       // Check button label changed
       expect(screen.getByRole('button', { name: /save configuration/i })).toBeInTheDocument();
@@ -222,9 +238,10 @@ describe('AnimalEditorStepper', () => {
       const user = userEvent.setup();
       renderWithStore(<AnimalEditorStepper />);
 
-      // Navigate to final step
+      // Navigate to final step (now Step 2)
       const nextButton = screen.getByRole('button', { name: /next step/i });
-      await user.click(nextButton);
+      await user.click(nextButton); // Step 0 -> Step 1
+      await user.click(nextButton); // Step 1 -> Step 2 (final)
 
       // Check button is enabled
       const saveButton = screen.getByRole('button', { name: /save configuration/i });
@@ -239,9 +256,10 @@ describe('AnimalEditorStepper', () => {
 
       renderWithStore(<AnimalEditorStepper />);
 
-      // Navigate to final step
+      // Navigate to final step (now Step 2)
       const nextButton = screen.getByRole('button', { name: /next step/i });
-      await user.click(nextButton);
+      await user.click(nextButton); // Step 0 -> Step 1
+      await user.click(nextButton); // Step 1 -> Step 2 (final)
 
       // Click Save
       const saveButton = screen.getByRole('button', { name: /save configuration/i });
@@ -290,9 +308,10 @@ describe('AnimalEditorStepper', () => {
 
       renderWithStore(<AnimalEditorStepper />, stateWithDays);
 
-      // Navigate to final step
+      // Navigate to final step (now Step 2)
       const nextButton = screen.getByRole('button', { name: /next step/i });
-      await user.click(nextButton);
+      await user.click(nextButton); // Step 0 -> Step 1
+      await user.click(nextButton); // Step 1 -> Step 2 (final)
 
       // Click Save
       const saveButton = screen.getByRole('button', { name: /save configuration/i });
@@ -336,9 +355,10 @@ describe('AnimalEditorStepper', () => {
 
       renderWithStore(<AnimalEditorStepper />, stateWithOneDay);
 
-      // Navigate to final step
+      // Navigate to final step (now Step 2)
       const nextButton = screen.getByRole('button', { name: /next step/i });
-      await user.click(nextButton);
+      await user.click(nextButton); // Step 0 -> Step 1
+      await user.click(nextButton); // Step 1 -> Step 2 (final)
 
       // Click Save
       const saveButton = screen.getByRole('button', { name: /save configuration/i });
@@ -359,9 +379,10 @@ describe('AnimalEditorStepper', () => {
 
       renderWithStore(<AnimalEditorStepper />);
 
-      // Navigate to final step
+      // Navigate to final step (now Step 2)
       const nextButton = screen.getByRole('button', { name: /next step/i });
-      await user.click(nextButton);
+      await user.click(nextButton); // Step 0 -> Step 1
+      await user.click(nextButton); // Step 1 -> Step 2 (final)
 
       // The "Next" button should now say "Save"
       const saveButton = screen.getByRole('button', { name: /save configuration/i });
@@ -379,10 +400,11 @@ describe('AnimalEditorStepper', () => {
   });
 
   describe('Step indicators', () => {
-    it('shows 2 step indicators with correct labels', () => {
+    it('shows 3 step indicators with correct labels', () => {
       renderWithStore(<AnimalEditorStepper />);
       expect(screen.getByText('Electrode Groups')).toBeInTheDocument();
       expect(screen.getByText('Channel Maps')).toBeInTheDocument();
+      expect(screen.getByText('Hardware Config')).toBeInTheDocument();
     });
 
     it('marks active step visually', () => {
@@ -1226,6 +1248,120 @@ describe('AnimalEditorStepper', () => {
       expect(screen.getByTestId('channel-map-editor')).toHaveAttribute('data-group-id', '0');
       // Should show only 1 map (for group 0)
       expect(screen.getByTestId('editor-channel-map-count')).toHaveTextContent('1 maps');
+    });
+  });
+
+  describe('HardwareConfigStep Integration (Step 3)', () => {
+    it('renders HardwareConfigStep when on step 2', async () => {
+      const user = userEvent.setup();
+      renderWithStore(<AnimalEditorStepper />);
+
+      // Navigate to step 1 (Channel Maps)
+      const nextButton = screen.getByRole('button', { name: /next step/i });
+      await user.click(nextButton);
+      expect(screen.getByTestId('channel-maps-step')).toBeInTheDocument();
+
+      // Navigate to step 2 (Hardware Config)
+      await user.click(nextButton);
+      expect(screen.getByTestId('hardware-config-step')).toBeInTheDocument();
+      expect(screen.getByText(/Step 3: Hardware Config/)).toBeInTheDocument();
+    });
+
+    it('navigates from Step 2 (Channel Maps) to Step 3 (Hardware Config)', async () => {
+      const user = userEvent.setup();
+      renderWithStore(<AnimalEditorStepper />);
+
+      // Navigate through steps
+      const nextButton = screen.getByRole('button', { name: /next step/i });
+      await user.click(nextButton); // Step 0 -> Step 1
+      expect(screen.getByTestId('channel-maps-step')).toBeInTheDocument();
+
+      await user.click(nextButton); // Step 1 -> Step 2
+      expect(screen.getByTestId('hardware-config-step')).toBeInTheDocument();
+    });
+
+    it('navigates back from Step 3 to Step 2', async () => {
+      const user = userEvent.setup();
+      renderWithStore(<AnimalEditorStepper />);
+
+      // Navigate to step 2 (Hardware Config)
+      const nextButton = screen.getByRole('button', { name: /next step/i });
+      await user.click(nextButton); // Step 0 -> Step 1
+      await user.click(nextButton); // Step 1 -> Step 2
+      expect(screen.getByTestId('hardware-config-step')).toBeInTheDocument();
+
+      // Navigate back to step 1 (Channel Maps)
+      const backButton = screen.getByRole('button', { name: /previous step/i });
+      await user.click(backButton);
+      expect(screen.getByTestId('channel-maps-step')).toBeInTheDocument();
+    });
+
+    it('Step 3 is now the final step (Save button shown)', async () => {
+      const user = userEvent.setup();
+      renderWithStore(<AnimalEditorStepper />);
+
+      // Navigate to final step (Step 2 = Hardware Config)
+      const nextButton = screen.getByRole('button', { name: /next step/i });
+      await user.click(nextButton); // Step 0 -> Step 1
+      await user.click(nextButton); // Step 1 -> Step 2 (final)
+
+      // Check button label changed to Save
+      expect(screen.getByRole('button', { name: /save configuration/i })).toBeInTheDocument();
+    });
+
+    it('Continue button from Step 3 saves and exits', async () => {
+      const user = userEvent.setup();
+      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+
+      renderWithStore(<AnimalEditorStepper />);
+
+      // Navigate to step 2 (Hardware Config)
+      const nextButton = screen.getByRole('button', { name: /next step/i });
+      await user.click(nextButton); // Step 0 -> Step 1
+      await user.click(nextButton); // Step 1 -> Step 2
+
+      // Click Save
+      const saveButton = screen.getByRole('button', { name: /save configuration/i });
+      await user.click(saveButton);
+
+      // Verify save logic executed
+      expect(alertSpy).toHaveBeenCalled();
+      expect(window.location.hash).toContain('#/workspace');
+
+      alertSpy.mockRestore();
+    });
+
+    it('passes correct props to HardwareConfigStep', async () => {
+      const user = userEvent.setup();
+      const state = {
+        workspace: {
+          animals: {
+            remy: {
+              id: 'remy',
+              subject: { subject_id: 'remy' },
+              devices: {
+                electrode_groups: [],
+                ntrode_electrode_group_channel_map: [],
+              },
+              cameras: [],
+              data_acq_device: {},
+              behavioral_events: [],
+              days: [],
+            },
+          },
+          days: {},
+        },
+      };
+
+      renderWithStore(<AnimalEditorStepper />, state);
+
+      // Navigate to step 2
+      const nextButton = screen.getByRole('button', { name: /next step/i });
+      await user.click(nextButton);
+      await user.click(nextButton);
+
+      expect(screen.getByTestId('hardware-config-step')).toBeInTheDocument();
+      expect(screen.getByText('HardwareConfigStep for remy')).toBeInTheDocument();
     });
   });
 });

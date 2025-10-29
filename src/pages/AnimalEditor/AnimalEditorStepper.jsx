@@ -6,6 +6,7 @@ import ElectrodeGroupModal from './ElectrodeGroupModal';
 import CopyFromAnimalDialog from './CopyFromAnimalDialog';
 import ChannelMapsStep from './ChannelMapsStep';
 import ChannelMapEditor from './ChannelMapEditor';
+import HardwareConfigStep from './HardwareConfigStep';
 import { generateAllChannelMaps } from '../../utils/channelMapUtils';
 import { downloadChannelMapsCSV, importChannelMapsFromCSV } from '../../utils/csvChannelMapUtils';
 import './AnimalEditorStepper.scss';
@@ -34,9 +35,10 @@ function generateNextElectrodeGroupId(existingGroups) {
 /**
  * Animal Editor Stepper - Container for multi-step animal device configuration
  *
- * Manages the 2-step workflow for animal-level configuration:
+ * Manages the 3-step workflow for animal-level configuration:
  * 1. Electrode Groups - Configure device types, locations, coordinates
  * 2. Channel Maps - Configure logical-to-hardware channel mappings
+ * 3. Hardware Config - Configure cameras, data acquisition device, behavioral events
  *
  * Note: Component receives no props - animal ID is obtained from URL via
  * useAnimalIdFromUrl hook.
@@ -250,13 +252,15 @@ export default function AnimalEditorStepper() {
   }
 
   /**
-   * Handle field updates from ElectrodeGroupsStep
-   * @param {string} field - Field name
+   * Handle field updates from step components
+   * @param {string} field - Field name (e.g., "cameras", "data_acq_device", "behavioral_events")
    * @param {any} value - New value
    */
   function handleFieldUpdate(field, value) {
-    // Placeholder for future field updates
-    // This callback would handle inline edits or other field changes
+    // Update animal with new field value
+    actions.updateAnimal(animalId, {
+      [field]: value,
+    });
   }
 
   /**
@@ -477,6 +481,17 @@ export default function AnimalEditorStepper() {
             />
           </div>
         </div>
+      ),
+    },
+    {
+      label: 'Hardware Config',
+      component: (
+        <HardwareConfigStep
+          animal={animal}
+          onFieldUpdate={handleFieldUpdate}
+          onNavigateBack={handleBack}
+          onNavigateNext={handleSave}
+        />
       ),
     },
   ];
