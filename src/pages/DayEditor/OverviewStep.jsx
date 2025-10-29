@@ -83,38 +83,11 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate }) 
         <h2>Session Metadata</h2>
 
         <div className="form-grid">
-          <div className="form-field">
-            <label htmlFor="session-id" className="required">
-              Session ID
-            </label>
-            <input
-              id="session-id"
-              type="text"
-              name="session.session_id"
-              defaultValue={day.session.session_id}
-              onBlur={(e) => handleBlur('session.session_id', e.target.value)}
-              className={fieldErrors['session.session_id'] ? 'invalid' : ''}
-              aria-invalid={!!fieldErrors['session.session_id']}
-              aria-describedby={
-                fieldErrors['session.session_id'] ? 'session-id-error' : 'session-id-hint'
-              }
-              required
-            />
-            <span id="session-id-hint" className="validation-hint">
-              Format: {animal.id}_YYYYMMDD (e.g., {animal.id}_20230622)
-            </span>
-            {validatingField === 'session.session_id' && (
-              <span className="validation-loading" role="status" aria-live="polite">
-                <span className="spinner" aria-hidden="true">⟳</span>
-                Validating...
-              </span>
-            )}
-            {fieldErrors['session.session_id'] && (
-              <span id="session-id-error" className="validation-error" role="alert">
-                {fieldErrors['session.session_id'].message}
-              </span>
-            )}
-          </div>
+          <ReadOnlyField
+            label="Session ID"
+            value={day.session.session_id}
+            helpText={`Auto-generated from animal ID and date: ${animal.id}_${day.date.replace(/-/g, '')}`}
+          />
 
           <div className="form-field">
             <label htmlFor="session-description" className="required">

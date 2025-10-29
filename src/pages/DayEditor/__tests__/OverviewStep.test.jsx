@@ -73,12 +73,11 @@ describe('OverviewStep', () => {
       />
     );
 
-    const sessionIdInput = screen.getByLabelText(/Session ID/i);
-    expect(sessionIdInput).not.toBeDisabled();
-    expect(sessionIdInput).toHaveValue('remy_20230622');
+    // Session ID should display the value (it's read-only now, inside input value)
+    expect(screen.getByDisplayValue('remy_20230622')).toBeInTheDocument();
   });
 
-  it('calls onFieldUpdate on blur', async () => {
+  it('calls onFieldUpdate on blur for editable fields', async () => {
     const user = userEvent.setup();
     const onFieldUpdate = vi.fn();
 
@@ -91,17 +90,18 @@ describe('OverviewStep', () => {
       />
     );
 
-    const sessionIdInput = screen.getByLabelText(/Session ID/i);
-    await user.clear(sessionIdInput);
-    await user.type(sessionIdInput, 'remy_20230623');
+    // Test with Session Description (it's editable, Session ID is read-only)
+    const sessionDescriptionInput = screen.getByLabelText(/Session Description/i);
+    await user.clear(sessionDescriptionInput);
+    await user.type(sessionDescriptionInput, 'Updated description');
     await user.tab(); // Blur
 
     await waitFor(() => {
-      expect(onFieldUpdate).toHaveBeenCalledWith('session.session_id', 'remy_20230623');
+      expect(onFieldUpdate).toHaveBeenCalledWith('session.session_description', 'Updated description');
     });
   });
 
-  it('shows format hints for session_id', () => {
+  it('shows session ID as read-only with help text', () => {
     render(
       <OverviewStep
         animal={mockAnimal}
@@ -111,10 +111,11 @@ describe('OverviewStep', () => {
       />
     );
 
-    expect(screen.getByText(/Format:.*remy_\d{8}/i)).toBeInTheDocument();
+    // Session ID is read-only, shows auto-generated message
+    expect(screen.getByText(/Auto-generated from animal ID and date/i)).toBeInTheDocument();
   });
 
-  it('marks required fields with asterisks', () => {
+  it('marks required editable fields with asterisks', () => {
     render(
       <OverviewStep
         animal={mockAnimal}
@@ -125,8 +126,9 @@ describe('OverviewStep', () => {
     );
 
     // Check that required label has the required class (CSS adds asterisk)
-    const sessionIdLabel = screen.getByText(/Session ID/i);
-    expect(sessionIdLabel).toHaveClass('required');
+    // Session Description is required, Session ID is read-only
+    const sessionDescriptionLabel = screen.getByText(/Session Description/i);
+    expect(sessionDescriptionLabel).toHaveClass('required');
   });
 
   it('shows "Edit Animal" links when inherited metadata is expanded', async () => {
@@ -205,8 +207,9 @@ describe('OverviewStep', () => {
       />
     );
 
-    const sessionIdInput = screen.getByLabelText(/Session ID/i);
-    expect(sessionIdInput).toHaveAttribute('required');
+    // Session Description is required (Session ID is read-only)
+    const sessionDescriptionInput = screen.getByLabelText(/Session Description/i);
+    expect(sessionDescriptionInput).toHaveAttribute('required');
   });
 
   it('handles optional fields without required indicator', () => {

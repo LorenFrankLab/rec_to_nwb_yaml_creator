@@ -10,12 +10,13 @@ import PropTypes from 'prop-types';
  * @param {object} props
  * @param {string} props.label - Field label
  * @param {string} props.value - Field value (inherited from animal)
+ * @param {string} [props.helpText] - Optional help text to display below the field
  * @returns {JSX.Element}
  *
  * @example
  * <ReadOnlyField label="Subject ID" value="remy" />
  */
-export default function ReadOnlyField({ label, value }) {
+export default function ReadOnlyField({ label, value, helpText }) {
   // Generate HTML-safe ID from label
   const id = `readonly-${label.toLowerCase().replace(/\s+/g, '-')}`;
 
@@ -33,6 +34,9 @@ export default function ReadOnlyField({ label, value }) {
         disabled
         className="read-only-field"
       />
+      {helpText && (
+        <span className="field-help-text">{helpText}</span>
+      )}
     </div>
   );
 }
@@ -40,4 +44,5 @@ export default function ReadOnlyField({ label, value }) {
 ReadOnlyField.propTypes = {
   label: PropTypes.string.isRequired,
   value: PropTypes.string.isRequired,
+  helpText: PropTypes.string,
 };
