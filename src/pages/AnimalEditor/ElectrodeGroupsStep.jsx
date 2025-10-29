@@ -14,9 +14,10 @@ import './ElectrodeGroupsStep.scss';
  * @param {Function} [props.onEdit] - Edit button click handler
  * @param {Function} [props.onAdd] - Add button click handler
  * @param {Function} [props.onDelete] - Delete button click handler
+ * @param {Function} [props.onCopy] - Copy from animal click handler
  * @returns {JSX.Element}
  */
-export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onAdd, onDelete }) {
+export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onAdd, onDelete, onCopy }) {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showCopyDialog, setShowCopyDialog] = useState(false);
 
@@ -65,7 +66,11 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
    * Handle copy button click
    */
   const handleCopyClick = () => {
-    setShowCopyDialog(true);
+    if (onCopy) {
+      onCopy();
+    } else {
+      setShowCopyDialog(true);
+    }
   };
 
   /**
@@ -182,10 +187,12 @@ ElectrodeGroupsStep.propTypes = {
   onEdit: PropTypes.func,
   onAdd: PropTypes.func,
   onDelete: PropTypes.func,
+  onCopy: PropTypes.func,
 };
 
 ElectrodeGroupsStep.defaultProps = {
   onEdit: null,
   onAdd: null,
   onDelete: null,
+  onCopy: null,
 };

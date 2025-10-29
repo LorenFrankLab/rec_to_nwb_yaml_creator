@@ -3,6 +3,7 @@ import { useStoreContext } from '../../state/StoreContext';
 import { useAnimalIdFromUrl } from '../../hooks/useAnimalIdFromUrl';
 import ElectrodeGroupsStep from './ElectrodeGroupsStep';
 import ElectrodeGroupModal from './ElectrodeGroupModal';
+import CopyFromAnimalDialog from './CopyFromAnimalDialog';
 import ChannelMapsStep from './ChannelMapsStep';
 import ChannelMapEditor from './ChannelMapEditor';
 import { generateAllChannelMaps } from '../../utils/channelMapUtils';
@@ -55,6 +56,7 @@ export default function AnimalEditorStepper() {
   const [editingGroup, setEditingGroup] = useState(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingGroupId, setEditingGroupId] = useState(null);
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
   const csvFileInputRef = useRef(null);
 
   // Validate animal exists
@@ -202,6 +204,49 @@ export default function AnimalEditorStepper() {
   function handleFieldUpdate(field, value) {
     // Placeholder for future field updates
     // This callback would handle inline edits or other field changes
+  }
+
+  /**
+   * Handle copy from animal request
+   */
+  function handleCopyFromAnimal() {
+    setCopyDialogOpen(true);
+  }
+
+  /**
+   * Handle copy from animal execution
+   * @param {object} data - Copied electrode groups and channel maps
+   */
+  function handleCopyConfirm(data) {
+    const { sourceAnimalName, electrode_groups, ntrode_electrode_group_channel_map } = data;
+
+    // Append copied data to existing data
+    const existingGroups = animal.devices?.electrode_groups || [];
+    const existingMaps = animal.devices?.ntrode_electrode_group_channel_map || [];
+
+    const updatedGroups = [...existingGroups, ...electrode_groups];
+    const updatedMaps = [...existingMaps, ...ntrode_electrode_group_channel_map];
+
+    actions.updateAnimal(animalId, {
+      devices: {
+        ...animal.devices,
+        electrode_groups: updatedGroups,
+        ntrode_electrode_group_channel_map: updatedMaps,
+      },
+    });
+
+    setCopyDialogOpen(false);
+
+    // Show success message
+    const groupCount = electrode_groups.length;
+    alert(`Successfully copied ${groupCount} electrode ${groupCount === 1 ? 'group' : 'groups'} from ${sourceAnimalName}`);
+  }
+
+  /**
+   * Handle copy from animal cancellation
+   */
+  function handleCopyCancel() {
+    setCopyDialogOpen(false);
   }
 
   // Channel maps handlers
@@ -361,6 +406,7 @@ export default function AnimalEditorStepper() {
           onAdd={handleAddGroup}
           onEdit={handleEditGroup}
           onDelete={handleDeleteGroup}
+          onCopy={handleCopyFromAnimal}
         />
       ),
     },
@@ -483,6 +529,15 @@ export default function AnimalEditorStepper() {
           />
         </dialog>
       )}
+
+      {/* Copy from Animal Dialog */}
+      <CopyFromAnimalDialog
+        open={copyDialogOpen}
+        currentAnimalId={animalId}
+        animals={model.workspace.animals}
+        onCopy={handleCopyConfirm}
+        onCancel={handleCopyCancel}
+      />
     </div>
   );
 }
