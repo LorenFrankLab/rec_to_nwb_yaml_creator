@@ -129,10 +129,14 @@ export default function AnimalEditorStepper() {
 
   /**
    * Open modal in edit mode with selected group
-   * @param {object} group - Electrode group to edit
+   * @param {string|object} groupIdOrGroup - Electrode group ID or full group object
    */
-  function handleEditGroup(group) {
+  function handleEditGroup(groupIdOrGroup) {
     setModalMode('edit');
+    // Handle both cases: groupId (string) or full group object
+    const group = typeof groupIdOrGroup === 'string'
+      ? animal.devices.electrode_groups.find(g => g.id === groupIdOrGroup)
+      : groupIdOrGroup;
     setEditingGroup(group);
     setModalOpen(true);
   }
