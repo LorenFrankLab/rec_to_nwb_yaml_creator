@@ -1,0 +1,176 @@
+/**
+ * DayEditor component styles
+ *
+ * Provides styling for Day Editor components including BadChannelsEditor
+ */
+
+/* BadChannelsEditor styles */
+.bad-channels-editor {
+  .field-help-text {
+    margin-bottom: 1rem;
+    color: #666;
+    font-style: italic;
+    font-size: 0.9rem;
+  }
+
+  .ntrode-fieldset {
+    margin-bottom: 1.5rem;
+    padding: 1.5rem;
+    background: #f9f9f9;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+
+    legend {
+      padding: 0 0.5rem;
+      font-weight: 600;
+      font-size: 1.05rem;
+      color: #333;
+    }
+  }
+
+  .failed-channels-section {
+    margin-bottom: 1rem;
+
+    > label {
+      display: block;
+      margin-bottom: 0.75rem;
+      font-weight: 500;
+      color: #555;
+    }
+  }
+
+  /* Checkbox grid - ensure interactive */
+  .bad-channels-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    position: relative;
+    z-index: 10;
+    pointer-events: auto !important;
+  }
+
+  .checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.4rem 0.6rem;
+    border: 2px solid #ccc;
+    border-radius: 4px;
+    background: white;
+    position: relative;
+    z-index: 10;
+    pointer-events: auto !important;
+    cursor: pointer;
+    transition: border-color 0.2s;
+
+    &:hover {
+      border-color: #2196f3;
+    }
+
+    input[type='checkbox'] {
+      position: relative;
+      z-index: 100;
+      pointer-events: auto !important;
+      cursor: pointer;
+      margin: 0;
+      width: 16px;
+      height: 16px;
+
+      &:focus {
+        outline: 2px solid #2196f3;
+        outline-offset: 2px;
+      }
+    }
+
+    label {
+      position: relative;
+      z-index: 10;
+      pointer-events: auto !important;
+      cursor: pointer;
+      margin: 0;
+      font-size: 0.9rem;
+      color: #333;
+      user-select: none;
+    }
+  }
+
+  .validation-error {
+    display: block;
+    margin-top: 0.5rem;
+    color: #d32f2f;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .validation-warning {
+    display: block;
+    margin-top: 0.5rem;
+    color: #f57c00;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  /* Channel map reference (collapsible) */
+  .channel-map-reference {
+    margin-top: 1rem;
+  }
+
+  .channel-map-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #2196f3;
+    transition: all 0.2s;
+
+    &:hover {
+      background: #f5f5f5;
+      border-color: #2196f3;
+    }
+
+    &:focus {
+      outline: 2px solid #2196f3;
+      outline-offset: 2px;
+    }
+
+    .toggle-icon {
+      font-size: 0.75rem;
+      transition: transform 0.2s;
+    }
+  }
+
+  .channel-map-content {
+    margin-top: 0.75rem;
+    padding: 1rem;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+  }
+
+  .channel-map-table {
+    width: 100%;
+    border-collapse: collapse;
+
+    th,
+    td {
+      padding: 0.5rem;
+      text-align: left;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    th {
+      font-weight: 600;
+      color: #555;
+      background: #f9f9f9;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+  }
+}

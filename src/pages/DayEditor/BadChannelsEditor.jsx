@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
+import './DayEditor.scss';
 
 /**
  * BadChannelsEditor - Edit failed channels for electrode groups
