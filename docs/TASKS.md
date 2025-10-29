@@ -380,9 +380,9 @@
 
 ---
 
-### **M7 – Animal Editor (Electrode Groups & Device Configuration)**
+### **M7 – Animal Editor (Electrode Groups & Device Configuration)** ✅
 
-**Status:** PLANNED
+**Status:** COMPLETE (2025-10-29)
 
 **Rationale**
 
@@ -392,55 +392,58 @@ Animal-level electrode group configuration is currently only accessible via the 
 
 **Tasks**
 
-* [ ] Create `AnimalEditor` page component with stepper navigation
-* [ ] Implement `ElectrodeGroupsStep` with CRUD operations (add/edit/delete groups)
-* [ ] Add device type selection dropdown (integrates with `deviceTypes.js`)
-* [ ] Implement auto-generation of ntrode channel maps when device type selected
-* [ ] Add `ChannelMapEditor` component for editing ntrode mappings
-  * [ ] Grid UI showing logical channel → hardware channel mappings
-  * [ ] CSV import/export for bulk editing
-  * [ ] Validation for duplicate/missing channels
-* [ ] Add stereotaxic coordinate inputs (AP, ML, DV) for each electrode group
-* [ ] Implement brain region (location) field with autocomplete for consistency
-* [ ] Add reference electrode configuration
-* [ ] Create `useAnimalEditor` hook for state management
-* [ ] Integrate validation framework (schema + rules validation)
-* [ ] Add navigation from AnimalWorkspace sidebar to Animal Editor
-* [ ] Update DevicesStep to link to new Animal Editor (replace legacy links)
-* [ ] Write comprehensive test suite (target: 50+ tests)
-  * [ ] CRUD operations for electrode groups
-  * [ ] Device type selection and channel map generation
-  * [ ] Channel map validation (duplicates, missing, sequential)
-  * [ ] CSV import/export round-trip
-  * [ ] Inherited data propagation to days
-* [ ] Add accessibility tests (WCAG 2.1 Level AA)
-* [ ] Request code review before completion
-* [ ] Update documentation (architecture, user guide)
+* [x] Create `AnimalEditor` page component with stepper navigation ✅
+* [x] Implement `ElectrodeGroupsStep` with CRUD operations (add/edit/delete groups) ✅
+* [x] Add device type selection dropdown (integrates with `deviceTypes.js`) ✅
+* [x] Implement auto-generation of ntrode channel maps when device type selected ✅
+* [x] Add `ChannelMapEditor` component for editing ntrode mappings ✅
+  * [x] Grid UI showing logical channel → hardware channel mappings ✅
+  * [x] CSV import/export for bulk editing ✅
+  * [x] Validation for duplicate/missing channels ✅
+* [x] Add stereotaxic coordinate inputs (AP, ML, DV) for each electrode group ✅
+* [x] Implement brain region (location) field with autocomplete for consistency ✅
+* [x] Add reference electrode configuration ✅
+* [x] Create `useAnimalIdFromUrl` hook for routing ✅ (simplified - no dedicated editor hook needed)
+* [x] Integrate validation framework (schema + rules validation) ✅
+* [x] Add navigation from AnimalWorkspace sidebar to Animal Editor ✅
+* [x] Update DevicesStep to link to new Animal Editor (replace legacy links) ✅
+* [x] Write comprehensive test suite (target: 50+, actual: 114 tests) ✅
+  * [x] CRUD operations for electrode groups ✅
+  * [x] Device type selection and channel map generation ✅
+  * [x] Channel map validation (duplicates, missing, sequential) ✅
+  * [x] CSV import/export round-trip ✅
+  * [x] Inherited data propagation to days ✅
+* [x] Add accessibility tests (WCAG 2.1 Level AA) ✅
+* [x] Request code review before completion ✅ (APPROVED with P1 fixes applied)
+* [x] Update documentation (TASKS.md, SCRATCHPAD.md, CHANGELOG.md) ✅
 
 **Acceptance (DoD)**
 
-* Users can create/edit/delete electrode groups in new UI
-* Device type selection auto-generates appropriate channel maps
-* Channel maps editable via grid UI and CSV import/export
-* All validation rules enforced (duplicates, gaps, required fields)
-* Changes propagate to all days as inherited baseline
-* Days can still override bad_channels at day-level (M6 DevicesStep)
-* No regressions in existing 2447 tests
-* All new tests passing (target: 50+)
-* WCAG 2.1 Level AA compliant
-* Code review approved
+* ✅ Users can create/edit/delete electrode groups in new UI
+* ✅ Device type selection auto-generates appropriate channel maps
+* ✅ Channel maps editable via grid UI and CSV import/export
+* ✅ All validation rules enforced (duplicates, gaps, required fields)
+* ✅ Changes propagate to all days as inherited baseline
+* ✅ Days can still override bad_channels at day-level (M6 DevicesStep)
+* ✅ No regressions in existing tests (2681 passing, 1 skipped)
+* ✅ All new tests passing (114 tests across 6 files)
+* ✅ WCAG 2.1 Level AA compliant
+* ✅ Code review approved (P1 issues fixed)
 
 **Artifacts**
 
-* `src/pages/AnimalEditor/index.jsx` - Main container
-* `src/pages/AnimalEditor/AnimalEditorStepper.jsx` - Stepper navigation
-* `src/pages/AnimalEditor/ElectrodeGroupsStep.jsx` - CRUD interface
-* `src/pages/AnimalEditor/ChannelMapEditor.jsx` - Channel mapping UI
-* `src/pages/AnimalEditor/ElectrodeGroupForm.jsx` - Form for single group
-* `src/pages/AnimalEditor/AnimalEditor.css` - Material Design styling
-* `src/hooks/useAnimalEditor.js` - State management hook
-* `src/pages/AnimalEditor/__tests__/` - Test suite (50+ tests)
-* `docs/M7_ANIMAL_EDITOR_DESIGN.md` - Design document
+* ✅ `src/pages/AnimalEditor/index.jsx` - Main container (30 lines)
+* ✅ `src/pages/AnimalEditor/AnimalEditorStepper.jsx` - Stepper navigation (475 lines)
+* ✅ `src/pages/AnimalEditor/ElectrodeGroupsStep.jsx` - CRUD table interface (285 lines)
+* ✅ `src/pages/AnimalEditor/ElectrodeGroupModal.jsx` - Add/edit form modal (530 lines)
+* ✅ `src/pages/AnimalEditor/CopyFromAnimalDialog.jsx` - Template/copy dialog (185 lines)
+* ✅ `src/pages/AnimalEditor/ChannelMapsStep.jsx` - Channel maps step (220 lines)
+* ✅ `src/pages/AnimalEditor/ChannelMapEditor.jsx` - Grid UI editor (440 lines)
+* ✅ `src/hooks/useAnimalIdFromUrl.js` - URL parsing hook (48 lines)
+* ✅ `src/pages/AnimalEditor/__tests__/` - Test suite (114 tests across 6 files)
+* ✅ Material Design CSS integrated into existing DayEditor.css
+* ✅ CSV import/export utilities (csvChannelMapUtils.js)
+* ✅ Channel map generation utilities (channelMapUtils.js)
 
 **Integration Points:**
 
@@ -449,7 +452,11 @@ Animal-level electrode group configuration is currently only accessible via the 
 * **Store:** Animal electrode group changes update `animals` state
 * **Validation:** Reuse existing schema + rules validation from M6
 
-**Estimated Effort:** 24-32 hours
+**Actual Effort:** ~32 hours (completed over multiple sessions)
+
+**Test Results:** 2681 tests passing, 1 skipped (114 new M7 tests)
+
+**Code Review:** APPROVED (all P1 issues fixed in commit c75290d)
 
 ---
 
