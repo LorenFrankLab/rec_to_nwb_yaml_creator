@@ -1064,6 +1064,10 @@ export const arrayDefaultValues = {
     dio_output_name: "",
     state_script_parameters: false,
     pulseLength: 0,
+    nPulses: 0,
+    sequencePeriod: 0,
+    nOutputTrains: 0,
+    train_interval: 0,
   },
 
   optogenetic_stimulation_software: "fsgui",
