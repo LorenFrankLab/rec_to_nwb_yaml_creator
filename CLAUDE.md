@@ -309,6 +309,36 @@ npm run deploy         # Deploy to GitHub Pages (builds and pushes to gh-pages b
 
 **Important:** The `gh-pages` branch should never be deleted - it serves the live application.
 
+## Using Playwright (for Claude)
+
+This repo has **two** Playwright surfaces. Use the right one:
+
+| Goal | Tool | Notes |
+| --- | --- | --- |
+| Interactively drive/inspect the live app during a session (verify a UI change, debug a form, spot-check a11y) | **Playwright MCP** (`browser_*` tools) | Ephemeral. Not a substitute for committed tests. |
+| Repeatable regression / a11y / visual tests that run in CI | **`@playwright/test`** suite in `e2e/` | Committed. `npm run test:e2e`. |
+
+**Setup (required once):** browser binaries are not committed — run `npx playwright install chromium`
+(covers both the MCP server and the `e2e/` suite). A project [`.mcp.json`](.mcp.json) pins the
+Playwright MCP server so any clone's Claude session has it.
+
+**MCP best practices (modern, accessibility-tree-first):**
+
+- Prefer `browser_snapshot` (the accessibility tree, ~hundreds of tokens) over
+  `browser_take_screenshot` (~thousands) for understanding/asserting page state. Screenshots are for
+  visual confirmation only.
+- Workflow: `browser_navigate` → `browser_snapshot` → act by `ref` (`browser_click`,
+  `browser_fill_form`) → `browser_snapshot` to confirm. Refs are valid only within one snapshot;
+  re-snapshot after navigation/DOM changes.
+- Drive **localhost only** (`npm run start` → `http://localhost:3000`) or the public deploy — never a
+  production/private target. Wait on conditions (snapshots/auto-wait), never `sleep`. Close the
+  browser (`browser_close`) when done; MCP artifacts land in `.playwright-mcp/` (gitignored).
+- The MCP is for *finding out if it works*; once it does, encode the guarantee as a committed
+  `@playwright/test` spec. Automated Axe catches only ~30-40% of WCAG issues — pair with manual review.
+
+For committed accessibility tests, `jest-axe` (jsdom/Vitest lane) and/or `@axe-core/playwright` (e2e
+lane) are the recommended additions — see the v3 plan's Phase 9 (`.claude/docs/plans/`).
+
 ## Architecture
 
 ### State Management

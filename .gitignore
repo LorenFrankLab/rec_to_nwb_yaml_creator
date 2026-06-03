@@ -1,3 +1,6 @@
+# Playwright MCP session artifacts (screenshots/snapshots from interactive browser use)
+.playwright-mcp/
+
 # Logs
 logs
 *.log
