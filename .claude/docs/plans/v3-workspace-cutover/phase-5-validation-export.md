@@ -5,9 +5,13 @@
 This is the critical phase: it is the first time the new workspace UI produces a downloadable
 YAML file. Until now the legacy single-page form
 ([overview "two parallel UIs"](overview.md#background-the-executor-needs)) is the only path that can
-export. After this phase a user can validate a day and download byte-identical YAML entirely in the
-new UI, with downloads gated by an encoder-stability/schema pre-download check and the byte-for-byte
-legacy-parity guarantee enforced by the golden round-trip tests.
+export. After this phase a user can validate a day and download YAML entirely in the new UI, with
+downloads gated by an encoder-stability/schema pre-download check. The new path is proven **semantically
+parity-equal** to the legacy export (parses to the same metadata) plus a checked-in new-path byte
+snapshot; the stronger **byte-for-byte** legacy parity (the new file textually identical to a legacy
+export) is a deliberate follow-up in [Phase 10](phase-10-legacy-byteorder-parity.md), because
+`mergeDayMetadata` currently emits a different key order than the legacy `formData` and `encodeYaml`
+preserves order (see [the parity contract](shared-contracts.md#yaml-parity--shadow-export-contract)).
 
 **Depends on:** [Phase 2](phase-2-navigation-stub-honesty.md)'s flag-aware routing — new routes stay
 renderable in dev/tests with flags toggled, which the full-stepper render and export tests in this
@@ -21,17 +25,17 @@ phase's validation slice rely on.
 - [src/pages/DayEditor/validation.js:52-65](../../../../src/pages/DayEditor/validation.js) — `computeStepStatus(day, mergedDay)`. `validation` is hardcoded `'incomplete'` (`:62`); `export` is already derived from real issues (`:63`). `groupErrorsByStep` (`:117-148`) already buckets issues into `overview/devices/epochs/validation/export`. Reuse it; do not fork.
 - [src/pages/DayEditor/StepNavigation.jsx:118-121](../../../../src/pages/DayEditor/StepNavigation.jsx) — `isExportEnabled()` requires `overview/devices/epochs/validation` all `'valid'`. **Do not loosen.** It is unblocked by making statuses real (Phase 2 → `devices`, Phase 4 → `epochs`, this phase → `validation`).
 - [src/state/workspaceUtils.js:34-103](../../../../src/state/workspaceUtils.js) — `mergeDayMetadata(animal, day)` (2-arg; config derived internally from `day.configurationVersion`). The single bridge from workspace → flat YAML model.
-- [src/io/yaml.js:37,107,127](../../../../src/io/yaml.js) — `encodeYaml(model)` (`:37`), `formatDeterministicFilename(model)` (`:107`), `downloadYamlFile(fileName, content)` (`:127`). Filename format is `${experimentDate}_${subjectId.toLocaleLowerCase()}_metadata.yml` where `experimentDate = model.EXPERIMENT_DATE_in_format_mmddYYYY` and `subjectId = model.subject.subject_id` (`:108-110`).
+- [src/io/yaml.js:37,107,127](../../../../src/io/yaml.js) — `encodeYaml(model)` (`:37`), `formatDeterministicFilename(model)` (`:107`), `downloadYamlFile(fileName, content)` (`:127`). Filename format is `${experimentDate}_${subjectId.toLocaleLowerCase()}_metadata.yml` where `experimentDate = model.EXPERIMENT_DATE_in_format_mmddYYYY` and `subjectId = model.subject.subject_id` (`:108-110`). **Caveat (verified):** `mergeDayMetadata` does **not** set `EXPERIMENT_DATE_in_format_mmddYYYY` (it is not a YAML body key — it lives only in the filename, and the legacy form injects it at runtime). The Export step must supply it from `day.experimentDate` (mmddYYYY) when computing the filename — e.g. `formatDeterministicFilename({ ...merged, EXPERIMENT_DATE_in_format_mmddYYYY: day.experimentDate })` — or the filename degrades to the literal `{EXPERIMENT_DATE_in_format_mmddYYYY}` placeholder. This affects the **filename only**, never the YAML body.
 - [src/validation/index.js:27,50](../../../../src/validation/index.js) — `validate(model)` (`:27`) returns sorted `{ path, code, severity, message }[]`; `validateField(model, fieldPath)` (`:50`) filters to a subtree.
-- [src/features/importExport.js:244-293](../../../../src/features/importExport.js) — `exportAll(model)`: the **legacy export path**. It clones the model, validates, then `encodeYaml(structuredClone(model))` + `formatDeterministicFilename(form)` + `downloadYamlFile(...)`, where `model` is the full legacy flat `formData` object — built independently of `mergeDayMetadata`. **Note:** the legacy export operates on a *different* object than `mergeDayMetadata`'s output, so a runtime same-object re-encode cannot prove parity with this path. The byte-for-byte parity guarantee against legacy comes from the golden round-trip tests below (parse a golden fixture → build the equivalent workspace → `encodeYaml(mergeDayMetadata(animal, day))` → assert byte-identical to the fixture). The runtime gate is a cheaper, narrower check (see the shadow-gate task).
-- [src/__tests__/baselines/golden-yaml.baseline.test.js](../../../../src/__tests__/baselines/golden-yaml.baseline.test.js) — parity harness pattern: read fixture → `YAML.parse` → `encodeYaml` → `expect(...).toBe(golden)`. The 4 fixtures live in [src/__tests__/fixtures/golden/](../../../../src/__tests__/fixtures/golden/): `20230622_sample_metadata.yml`, `minimal-valid.yml`, `realistic-session.yml`, `20230622_sample_metadataProbeReconfig.yml`.
+- [src/features/importExport.js:244-293](../../../../src/features/importExport.js) — `exportAll(model)`: the **legacy export path**. It clones the model, validates, then `encodeYaml(structuredClone(model))` + `formatDeterministicFilename(form)` + `downloadYamlFile(...)`, where `model` is the full legacy flat `formData` object — built independently of `mergeDayMetadata`. **Note:** the legacy export operates on a *different* object (and a *different key order*) than `mergeDayMetadata`'s output, so a runtime same-object re-encode cannot prove parity with this path, and the new path is **not byte-identical to the legacy fixtures** (key order + always-on key set differ; `encodeYaml` preserves order). This phase proves the new path is **semantically** parity-equal (parse-back deep-equal) and snapshots its bytes; byte-for-byte legacy parity is [Phase 10](phase-10-legacy-byteorder-parity.md). The runtime gate is a cheaper, narrower encoder-stability check (see the shadow-gate task).
+- [src/__tests__/baselines/golden-yaml.baseline.test.js](../../../../src/__tests__/baselines/golden-yaml.baseline.test.js) — **within-path** encoder/format guard: read fixture → `YAML.parse` → `encodeYaml` → `expect(...).toBe(golden)`. It does **not** exercise `mergeDayMetadata`. Keep it byte-identical (never regenerate to pass). The 4 fixtures live in [src/__tests__/fixtures/golden/](../../../../src/__tests__/fixtures/golden/): `20230622_sample_metadata.yml`, `minimal-valid.yml`, `realistic-session.yml`, `20230622_sample_metadataProbeReconfig.yml`.
 - [src/featureFlags.js:60,72](../../../../src/featureFlags.js) — `shadowExportStrict` (`:60`, default `true`) and `shadowExportLog` (`:72`, default `true`) **already exist** (declared under the M1 group). This phase wires them into the runtime download path; it does not redeclare them. Read `isFeatureEnabled` (`:328`) for the access helper.
 
 **Contracts referenced:**
 
-- [YAML parity / shadow-export contract](shared-contracts.md#yaml-parity--shadow-export-contract) — new export path is `encodeYaml(mergeDayMetadata(animal, day))` + `formatDeterministicFilename` + `downloadYamlFile`. Two distinct safeguards: (1) a cheap runtime pre-download gate that proves the encoder is stable / does not mutate its input in place and that the output is schema-valid — `shadowExportStrict` (default true) gates whether a failure blocks the download; and (2) the byte-for-byte **legacy-parity** guarantee, enforced by the golden round-trip tests in this phase's validation slice (and `golden-yaml.baseline.test.js`) every phase. The runtime gate does **not** prove legacy parity; the golden tests do. **Do not weaken the golden tests.**
+- [YAML parity / shadow-export contract](shared-contracts.md#yaml-parity--shadow-export-contract) — new export path is `encodeYaml(mergeDayMetadata(animal, day))` + `formatDeterministicFilename` + `downloadYamlFile`. Safeguards relevant here: (1) a cheap runtime pre-download gate that proves the encoder is stable / does not mutate its input in place and that the output is schema-valid — `shadowExportStrict` (default true) gates whether a failure blocks the download; (2) the **within-path** encoder/format guard `golden-yaml.baseline.test.js` (parse → encode, byte-identical, every phase — **do not weaken**); and (3) **new-path semantic parity** — `decodeYaml(encodeYaml(mergeDayMetadata(...)))` deep-equals the expected metadata — plus a checked-in **new-path byte snapshot**. None of these prove byte-for-byte equality with the legacy export bytes; that is [Phase 10](phase-10-legacy-byteorder-parity.md).
 - [Validation & step-status contract](shared-contracts.md#validation--step-status-contract) — reuse `validate()` / `computeStepStatus()`; wire `validation` to real status; do not loosen `isExportEnabled`; only export is hard-gated on zero `error`-severity issues (data-entry steps stay non-blocking).
-- [`mergeDayMetadata` contract](shared-contracts.md#mergedaymetadata-contract) — the returned object maps 1:1 onto the legacy YAML schema; `encodeYaml(mergeDayMetadata(animal, day))` must equal the legacy export byte-for-byte. (Phase 1 made the result safe to own; this phase consumes it read-only.)
+- [`mergeDayMetadata` contract](shared-contracts.md#mergedaymetadata-contract) — the returned object maps 1:1 onto the legacy YAML schema; `encodeYaml(mergeDayMetadata(animal, day))` must be **semantically** parity-equal to the legacy export (deep-equal after `decodeYaml`). Byte-for-byte equality is [Phase 10](phase-10-legacy-byteorder-parity.md). (Phase 1 made the result safe to own; this phase consumes it read-only.)
 
 ## Tasks
 
@@ -53,8 +57,12 @@ phase's validation slice rely on.
   `epochs` (Phase 4) untouched; **do not edit `isExportEnabled`** in `StepNavigation.jsx`.
 - **Replace `ExportStub` with a real Export step.** Create
   `src/pages/DayEditor/ExportStep.jsx` (props `animal`, `day`). Build the flat model once via
-  `mergeDayMetadata(animal, day)`, compute `const yaml = encodeYaml(merged)` and
-  `const fileName = formatDeterministicFilename(merged)`, and render: (a) the resolved filename, (b) a
+  `mergeDayMetadata(animal, day)`, compute `const yaml = encodeYaml(merged)` and the filename from a
+  model that carries the experiment date —
+  `const fileName = formatDeterministicFilename({ ...merged, EXPERIMENT_DATE_in_format_mmddYYYY: day.experimentDate })`
+  (see the `io/yaml` input caveat: `merged` has no `EXPERIMENT_DATE_in_format_mmddYYYY`, so without this
+  the filename degrades to the placeholder; this affects the filename only, never the YAML body). Render:
+  (a) the resolved filename, (b) a
   YAML preview (read-only `<pre>` of `yaml`, behind a "Show preview" toggle for large output), and (c)
   a Download button. The Download button must run the **shadow-export gate** (next task) before calling
   `downloadYamlFile(fileName, yaml)`. The Export step is only reachable when every prerequisite step is
@@ -183,7 +191,7 @@ phase's validation slice rely on.
   schema-valid), that byte-for-byte legacy parity is proven by the golden round-trip tests, and that
   `shadowExportStrict` (default true) is a debug-only override for the runtime gate. No
   README/getting-started changes are required this phase (the new UI is still behind flags until
-  [Phase 10](overview.md#rollout-strategy)).
+  [Phase 11](overview.md#rollout-strategy)).
 
 ## Deliberately not in this phase
 
@@ -197,28 +205,27 @@ phase's validation slice rely on.
   `20230622_sample_metadata.yml` fixture but no editor is built.
 - **Any change to the YAML schema or `encodeYaml`.** A parity change is a blocker requiring explicit
   fixture regeneration per CLAUDE.md's protocol — never regenerate to make a test pass.
-- **Flipping `newDayEditor` / `animalWorkspace` defaults or default route** — Phase 10. New routes stay
+- **Flipping `newDayEditor` / `animalWorkspace` defaults or default route** — Phase 11. New routes stay
   reachable only for testing this phase.
 
 ## Validation slice
 
 | Test | Asserts |
 | --- | --- |
-| `export-parity: build → export matches sample fixture` *(integration)* | Parse `20230622_sample_metadata.yml`, build an equivalent workspace `animal`+`day`, `encodeYaml(mergeDayMetadata(animal, day))` is byte-identical to the fixture file. |
-| `export-parity: minimal-valid round-trips` *(integration)* | Same harness for `minimal-valid.yml`; byte-identical. |
-| `export-parity: realistic-session round-trips` *(integration)* | Same harness for `realistic-session.yml`; byte-identical. |
-| `export-parity: probe-reconfig round-trips` *(integration)* | Same harness for `20230622_sample_metadataProbeReconfig.yml`; byte-identical. |
+| `export-parity (semantic): build → merge → encode parses back to expected metadata` *(integration)* | Build an equivalent workspace `animal`+`day` for `realistic-session.yml`; `decodeYaml(encodeYaml(mergeDayMetadata(animal, day)))` **deep-equals** the parsed fixture for every key the merge emits, and carries no unexpected extra keys beyond the documented always-on set (`keywords`/`device`/`units`/`default_header_file_path`). Proves the build→merge→encode chain is correct and lossless (order-independent). |
+| `export-parity (new-path snapshot): build → export byte-stable` *(integration)* | `encodeYaml(mergeDayMetadata(animal, day))` for the built workspace is byte-identical to a **checked-in new-path golden snapshot** (`src/__tests__/fixtures/golden/workspace-export.realistic.yml` or similar) captured from this path. This is the new path's own regression guard — it is **not** asserted equal to the hand-authored legacy fixture (key order differs; that is Phase 10). |
+| `export-parity (determinism): repeated encode is byte-stable` | Two `encodeYaml(mergeDayMetadata(animal, day))` calls on the same workspace produce byte-identical output. |
 | `shadow gate: stable encoder returns ok` | `checkShadowExport(animal, day)` returns `{ ok: true, diff: null }` when `encodeYaml` is stable; `downloadYamlFile` is invoked. |
 | `shadow gate: injected instability blocks download` | With a stubbed/spied `encodeYaml` (or a forced divergence) so the two encodes differ, the Download handler sets a blocking error, renders the diff, and `downloadYamlFile` is **not** called while `shadowExportStrict` is true. |
 | `shadow gate: firstLineDiff reports line + both sides` | `firstLineDiff('a\nb', 'a\nc')` returns a string naming line 2 and both `"b"` / `"c"` values. |
 | `shadow gate: strict-off override proceeds with warning` | With `overrideFlags({ shadowExportStrict: false })` and an injected instability, the handler warns and still calls `downloadYamlFile`; restore flags after. |
-| `filename: matches legacy format` | `formatDeterministicFilename(merged)` equals `${EXPERIMENT_DATE_in_format_mmddYYYY}_${subject_id.toLowerCase()}_metadata.yml` (e.g. `06222023_<subject>_metadata.yml`); identical to `exportAll`'s computed filename for the equivalent flat model. |
+| `filename: matches legacy format` | `formatDeterministicFilename({ ...merged, EXPERIMENT_DATE_in_format_mmddYYYY: day.experimentDate })` equals `${day.experimentDate}_${subject_id.toLowerCase()}_metadata.yml` (e.g. `06222023_<subject>_metadata.yml`); identical to `exportAll`'s computed filename for the equivalent flat model. A guard test asserts the date is injected (no `{EXPERIMENT_DATE_in_format_mmddYYYY}` placeholder leaks into the filename). |
 | `validation step: surfaces error/warning/info` | Given a `mergedDay` yielding mixed-severity issues, `ValidationStep` renders each issue under the correct severity heading with its message and path. |
 | `step status: validation valid when catch-all clean` | `computeStepStatus(day, mergedDay)` returns `validation: 'valid'` when the catch-all bucket has no `error` issue, and `'error'` when it does. |
 | `export gate: disabled until all steps valid, then enabled` *(integration)* | With `devices`/`epochs`/`validation` all `'valid'`, `StepNavigation` enables the Export tab; if any is non-`valid`, the Export button is `disabled` (no edit to `isExportEnabled`). |
-| `golden baselines unchanged` | The existing `golden-yaml.baseline.test.js` suite still passes byte-identical for all 4 fixtures (regression guard, every phase). |
+| `golden baselines unchanged` | The existing `golden-yaml.baseline.test.js` suite still passes byte-identical for all 4 fixtures (within-path encoder/format guard, every phase). |
 
-Mark the build→export round-trip tests and the full-stepper render tests as integration; the
+Mark the build→merge→encode and full-stepper render tests as integration; the
 `firstLineDiff` / `checkShadowExport` / `computeStepStatus` tests are pure unit tests. Use Vitest
 (`describe`/`it`/`expect`), matching the existing baseline suite.
 
@@ -226,22 +233,25 @@ Mark the build→export round-trip tests and the full-stepper render tests as in
 
 - The 4 existing golden fixtures in
   [src/__tests__/fixtures/golden/](../../../../src/__tests__/fixtures/golden/) are the source of truth
-  for parity — never regenerate them in this phase.
-- Add **one** workspace-shaped fixture (a checked-in helper or `conftest`-style builder under
-  `src/__tests__/fixtures/`) that constructs an `animal` + `day` whose `mergeDayMetadata` output
-  reproduces one golden fixture exactly (prefer `realistic-session.yml` — no optogenetics, typical
-  shape). This proves the build→merge→export chain end-to-end, not just `encodeYaml` round-tripping.
-  The other 3 fixtures can be covered by the parse→build→export harness without a hand-built workspace
-  each.
+  for the **within-path** encoder guard — never regenerate them in this phase.
+- Add **one** workspace-shaped builder (a checked-in helper under `src/__tests__/fixtures/`) that
+  constructs an `animal` + `day` whose `mergeDayMetadata` output, when encoded, **deep-equals**
+  `realistic-session.yml`'s parsed metadata (modulo the documented always-on keys) — proving the
+  build→merge→encode chain end-to-end. **Do not** try to make it byte-identical to a hand-authored
+  fixture (impossible: key order + always-on key set differ; that is
+  [Phase 10](phase-10-legacy-byteorder-parity.md)).
+- Capture that builder's encoded output **once** as a checked-in **new-path snapshot**
+  (e.g. `src/__tests__/fixtures/golden/workspace-export.realistic.yml`) and assert byte-identity against
+  it every run — this is the new path's regression guard, distinct from the legacy fixtures.
 - For the injected-mismatch test, force divergence by spying on `encodeYaml` to mutate the second
-  (legacy) call's output, or by passing the gate a wrapper that perturbs one line — do not modify the
+  (clone) call's output, or by passing the gate a wrapper that perturbs one line — do not modify the
   real fixtures or the encoder.
 
 ## Review
 
 Follow the full gate in [review-protocol.md](review-protocol.md). Phase-specific:
 
-- **Self-verify (§1):** run this phase's Validation slice + `npx vitest run` (no regressions; baseline 2747/1 skipped) + `npx vitest run baselines` (byte-identical). **Golden round-trip parity is the headline of this phase and is mandatory** — the byte-identical baselines, not the runtime gate, are what prove legacy parity. No change to `encodeYaml`, `mergeDayMetadata`, the schema, or any golden fixture; `isExportEnabled` stays unchanged.
+- **Self-verify (§1):** run this phase's Validation slice + `npx vitest run` (no regressions) + `npx vitest run baselines` (byte-identical). The within-path golden baselines stay byte-identical (encoder/format guard); the new export path is proven by **semantic deep-equal** + the **new-path snapshot** — not by equality to the legacy fixtures (byte-for-byte legacy parity is [Phase 10](phase-10-legacy-byteorder-parity.md)). No change to `encodeYaml`, `mergeDayMetadata`, the schema, or any golden fixture; `isExportEnabled` stays unchanged.
 - **Playwright UI (§2):** complete a day → Validation step shows issues → Export step previews and downloads the YAML file; then inject a mismatch and confirm the export gate blocks with a diff shown (and `downloadYamlFile` is not called). 0 console errors.
 - **Reviewers:** `pr-review-toolkit:code-reviewer` (always), plus `silent-failure-hunter` (the export / shadow gate), `pr-test-analyzer` (validation + export behavior), and `ux-reviewer`.
 - **Checklist (§6):** every task implemented; "Deliberately not in this phase" honored; tests non-trivial (the mismatch test asserts the download is blocked, not merely that a spy was set up); no plan/phase/milestone strings (no "M9", "Phase 5") in code/test/module names or docstrings; old code flagged for removal is removed (`ValidationStub`/`ExportStub` replaced, no orphan imports; `validation.js:62` hardcode gone); user-facing docs updated (`docs/REFACTOR_CHANGELOG.md` shadow-export note added, not deferred).

@@ -66,9 +66,15 @@ Today it assigns nested animal/config references directly (`:62-72`) — Phase 1
 `structuredClone`d (or deep-frozen) result so downstream mutation cannot corrupt animal/config state.
 After Phase 1, callers may read freely; producers must not reintroduce shared references.
 
-**Parity invariant:** `encodeYaml(mergeDayMetadata(animal, day))` must equal the legacy export byte-for-byte
-for equivalent data. This is what the [shadow-export check](#yaml-parity--shadow-export-contract)
-enforces.
+**Parity invariant (semantic):** `encodeYaml(mergeDayMetadata(animal, day))` must parse to the **same
+metadata** (same keys, same values) as the legacy export for equivalent data — i.e. order-independent
+deep-equality after `decodeYaml`. It is **not** byte-for-byte identical to the legacy export today:
+`mergeDayMetadata` emits its own deterministic key order and a complete always-on key set, which differs
+from both the legacy `formData` order and the hand-authored golden fixtures, and `encodeYaml` preserves
+insertion order. Byte-for-byte equality with the *legacy export bytes* is a separate, stronger goal
+deferred to [Phase 10](phase-10-legacy-byteorder-parity.md) (align `mergeDayMetadata`'s key order to the
+legacy export). See the [YAML parity / shadow-export contract](#yaml-parity--shadow-export-contract) for
+how each guarantee is enforced.
 
 ---
 
@@ -96,13 +102,13 @@ Referenced by phases 2, 4, 5, 7.
 
 ## Persistence contract
 
-Referenced by phases 1, 7, 10. Established in Phase 1.
+Referenced by phases 1, 7, 11. Established in Phase 1.
 
 - Persist **only** `model.workspace` (animals + days + settings). **Never** persist legacy `formData`,
   and never persist anything that is itself YAML output.
 - Key: `localStorage["rec_to_nwb_workspace_v1"]`. Stored shape: `{ schemaVersion: <int>, workspace }`.
 - Gated by `featureFlags.localStoragePersistence` (`src/featureFlags.js:133`). Phase 1 flips it true;
-  it remains the single switch (Phase 10 leaves it on).
+  it remains the single switch (Phase 11 leaves it on).
 - **Autosave:** debounced write (≈500 ms) after any `workspace` change; no write on legacy-only edits.
 - **Load:** on store init, if the flag is on and a blob exists with a matching `schemaVersion`, hydrate
   `workspace`. On `schemaVersion` mismatch or parse error, **discard and start fresh with a
@@ -138,39 +144,54 @@ ESC/scroll/trap code); Phase 4's `TaskModal` is built on it from the start.
 
 ## YAML parity / shadow-export contract
 
-Referenced by phases 5, 7, 10. The project's hardest safety rule.
+Referenced by phases 5, 7, 10, 11. The project's hardest safety rule.
 
 - The new export path produces YAML via `encodeYaml(mergeDayMetadata(animal, day))`
   (`src/io/yaml.js:37`), filename via `formatDeterministicFilename(model)` (`:107`), download via
   `downloadYamlFile(name, content)` (`:127`).
-- The contract has **two distinct safeguards — keep them distinct:**
+- **Background (verified 2026-06-03):** there are three distinct key orderings in play and **none
+  match** — the legacy `formData` order (`defaultYMLValues`), the `mergeDayMetadata` order, and each
+  hand-authored golden fixture's order. `encodeYaml` preserves insertion order (it does not sort), so
+  byte-for-byte equality only ever held *within a single path* (`parse → encode` of the same object).
+  Cross-path byte-for-byte parity has never existed and is **not** required by `trodes_to_nwb`/Spyglass,
+  which parse YAML (order-independent). The data-integrity requirement is **semantic** equivalence.
+- The contract has **three distinct safeguards — keep them distinct:**
   - **Runtime pre-download gate (Phase 5):** before any download, recompute the YAML and verify the
     encoder is stable (does not mutate its input in place) and the output is schema-valid. This is an
-    encoder-stability/schema check — it does **not** prove byte-for-byte parity with the legacy export
-    path, because legacy `exportAll` (`src/features/importExport.js`) encodes a different,
-    independently-built flat `formData` object. On failure: **block the download**, show a diff, log
-    details. A `shadowExportStrict` flag (default true) gates only the debug override of this gate.
-  - **Legacy-parity invariant (do not weaken):** byte-for-byte equality with the locked-in output is
-    enforced by the golden round-trip tests — `src/__tests__/baselines/golden-yaml.baseline.test.js`
-    (4 fixtures) and the phase-level parse-fixture → build-workspace →
-    `encodeYaml(mergeDayMetadata(animal, day))` → assert-byte-identical tests — which MUST stay
-    byte-identical in **every** phase, not just Phase 5. These golden tests are the parity proof; a
-    parity change is a blocker requiring explicit fixture regeneration per CLAUDE.md's protocol — never
-    regenerate to "make it pass."
+    encoder-stability/schema check — it does **not** prove parity with the legacy export path, because
+    legacy `exportAll` (`src/features/importExport.js`) encodes a different, independently-built flat
+    `formData` object. On failure: **block the download**, show a diff, log details. A
+    `shadowExportStrict` flag (default true) gates only the debug override of this gate.
+  - **Within-path encoder/format guard (do not weaken):** `src/__tests__/baselines/golden-yaml.baseline.test.js`
+    parses each of the 4 fixtures and re-encodes (`parse → encode → assert byte-identical`). This proves
+    `encodeYaml` formatting/determinism is unchanged and MUST stay byte-identical in **every** phase. A
+    diff here is a blocker requiring explicit fixture regeneration per CLAUDE.md's protocol — never
+    regenerate to "make it pass." (Note: this guard does **not** exercise `mergeDayMetadata`.)
+  - **New-path semantic parity + snapshot (Phase 5):** the new export path is validated by (a)
+    `decodeYaml(encodeYaml(mergeDayMetadata(animal, day)))` **deep-equals** the expected metadata
+    (order-independent — the guarantee downstream needs), and (b) a checked-in **new-path golden
+    snapshot** captured from the workspace build that must stay byte-identical every phase (the new
+    path's regression guard). Do **not** attempt to assert the new path byte-identical to the legacy
+    hand-authored fixtures — it cannot be, for the reasons in Background.
+  - **Byte-for-byte legacy parity (deferred to [Phase 10](phase-10-legacy-byteorder-parity.md)):** the
+    stronger guarantee that `encodeYaml(mergeDayMetadata(x))` equals the *legacy export bytes* is pursued
+    in its own focused phase by aligning `mergeDayMetadata`'s key order to the legacy export, validated
+    against a legacy-export reference harness. Not required for v3.0.0 correctness (semantic parity
+    suffices); it is a hardening upgrade.
 
 ---
 
 ## Feature flags & routing contract
 
-Referenced by phases 1, 2, 10. `src/featureFlags.js`, `src/hooks/useHashRouter.js`,
+Referenced by phases 1, 2, 11. `src/featureFlags.js`, `src/hooks/useHashRouter.js`,
 `src/layouts/AppLayout.jsx`.
 
 - Current flags, all `false`: `showLegacyToggle` (`:105`), `animalWorkspace` (`:121`),
   `localStoragePersistence` (`:133`), `newDayEditor` (`:149`).
 - **Today routing does not gate on these flags** (new pages render via hash routes regardless).
   Phase 2 establishes the intended relationship: routes become flag-aware so a single flip controls
-  exposure. Until Phase 10, default route stays `legacy`; new routes remain reachable for testing.
-- **Phase 10 cutover (single switch):** flip `animalWorkspace`/`newDayEditor`/`localStoragePersistence`
+  exposure. Until Phase 11, default route stays `legacy`; new routes remain reachable for testing.
+- **Phase 11 cutover (single switch):** flip `animalWorkspace`/`newDayEditor`/`localStoragePersistence`
   on, set default route to workspace home, expose `showLegacyToggle`, keep shadow-export strict for one
   release. `#/` bookmarks must still resolve (see overview Open Question 3).
 - Unknown routes currently fall back to legacy with a console warning

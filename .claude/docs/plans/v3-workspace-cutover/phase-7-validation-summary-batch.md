@@ -150,7 +150,7 @@ this phase's validation slice rely on.
   Validate All and Export Valid Only, and that batch export routes every file through the same
   byte-for-byte shadow-export parity gate (skipping and reporting any mismatched day). No
   README/getting-started change is required this phase — the new UI remains behind flags until
-  [Phase 10](overview.md#rollout-strategy).
+  [Phase 11](overview.md#rollout-strategy).
 
 ## Deliberately not in this phase
 
@@ -164,7 +164,7 @@ this phase's validation slice rely on.
 - **Building or modifying persistence/autosave** — owned by [Phase 1](phase-1-persistence.md). This
   phase reuses it and tests recovery.
 - **Flipping `localStoragePersistence` / `animalWorkspace` defaults or the default route** —
-  [Phase 10](overview.md#rollout-strategy). New routes stay reachable only for testing this phase.
+  [Phase 11](overview.md#rollout-strategy). New routes stay reachable only for testing this phase.
 - **Adding a zip dependency or any new runtime dependency.** Sequential downloads only.
 
 ## Validation slice

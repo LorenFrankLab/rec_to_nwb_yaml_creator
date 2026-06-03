@@ -78,9 +78,10 @@ flagged for removal is actually removed; user-facing docs updated, not deferred.
 | 2 — nav/stub/a11y | ✓ (nav all routes; no dead-ends; stub steps disabled) | — | — | — | ✓ + a11y (landmarks/focus) | |
 | 3 — shared modal/feedback | ✓ (modal open/trap/ESC/focus-return; confirm dialog; no `alert`) | — | — | ✓ (Modal API) | ✓ + a11y | |
 | 4 — tasks/epochs | ✓ (task CRUD; epoch editor; camera-inheritance banner) | — | ✓ | — | ✓ + a11y | |
-| 5 — validation/export | ✓ (validate → export downloads file; gate blocks on mismatch) | ✓ (export/shadow gate) | ✓ | — | ✓ | Parity is the headline — §1 golden round-trip is mandatory. |
+| 5 — validation/export | ✓ (validate → export downloads file; gate blocks on mismatch) | ✓ (export/shadow gate) | ✓ | — | ✓ | §1 within-path golden round-trip stays byte-identical; new path proven by semantic deep-equal + a new-path snapshot. Byte-for-byte legacy parity is Phase 10. |
 | 6 — store/CSS refactor | smoke (app still renders/works; visual check after CSS merge) | — | ✓ | — | visual-regression check | Behavior-preserving: full suite + baselines are the proof. |
 | 7 — validation summary/batch | ✓ (validate-all; export-valid-only; reload recovery) | ✓ (batch export) | ✓ | — | ✓ | |
 | 8 — probe wizard | ✓ (config diff; apply-forward across days) | — | ✓ | ✓ (snapshot/versioning) | ✓ | |
 | 9 — a11y/keyboard | ✓ + **Axe zero-violations per route**; keyboard-only walkthrough | — | ✓ | — | ✓ deep a11y (`ux-reviewer`) | The dedicated a11y gate. |
-| 10 — cutover v3 | ✓ **full E2E** (create→configure→day→tasks→validate→export with flags on; legacy toggle) | ✓ | ✓ | ✓ | Final release/parity sign-off. |
+| 10 — legacy byte-order parity | smoke (export still downloads; output unchanged semantically) | ✓ (parity reference harness) | ✓ | — | — | Behavior-preserving reorder of `mergeDayMetadata`; the legacy-export reference harness + golden baselines are the proof. |
+| 11 — cutover v3 | ✓ **full E2E** (create→configure→day→tasks→validate→export with flags on; legacy toggle) | ✓ | ✓ | ✓ | Final release/parity sign-off. |

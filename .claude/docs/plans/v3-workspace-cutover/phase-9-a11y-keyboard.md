@@ -55,7 +55,7 @@ harnesses in this phase's validation slice drive directly via hash.
 
 - [Feature flags & routing contract](shared-contracts.md#feature-flags--routing-contract) — new routes are
   reachable for testing before cutover; Axe and keyboard tests drive them directly via hash. Do not change
-  the default route here (that is Phase 10).
+  the default route here (that is Phase 11).
 - [`<Modal>` primitive contract](shared-contracts.md#modal-primitive-contract) — focus trap (Tab/Shift-Tab
   cycle) and focus-return on close. This phase re-verifies these still hold (regression guard); it does
   **not** reimplement them.
@@ -132,7 +132,7 @@ harnesses in this phase's validation slice drive directly via hash.
   cover — the legacy form is the safety net, not the cutover target.
 - **No `<Modal>` reimplementation** — the help dialog consumes the Phase 3 primitive; trap/focus-return are
   verified, not rebuilt.
-- **No cutover / flag flips / default-route change** — that is [Phase 10](overview.md#rollout-strategy).
+- **No cutover / flag flips / default-route change** — that is [Phase 11](overview.md#rollout-strategy).
   Routes remain reachable for testing only.
 - **No change to YAML output, schema, or step-status gating** — `isExportEnabled` stays as-is; golden
   baselines stay byte-identical.

@@ -307,7 +307,7 @@ All changes are inside `useStore` so `StoreProvider` picks them up with no call-
 
 In [src/featureFlags.js:133](../../../../src/featureFlags.js) change `localStoragePersistence: false` to
 `localStoragePersistence: true`. This is the single persistence switch (the contract keeps it on through
-Phase 10). Leave `animalWorkspace`, `newDayEditor`, and `showLegacyToggle` `false` — those are Phase 10.
+Phase 11). Leave `animalWorkspace`, `newDayEditor`, and `showLegacyToggle` `false` — those are Phase 11.
 Update the existing flag-status assertion in
 [src/__tests__/unit/featureFlags.test.js](../../../../src/__tests__/unit/featureFlags.test.js) if it
 asserts the default of this specific flag.
@@ -430,7 +430,7 @@ throughout the store, e.g. `store.js:122`, so no new dependency.)
   existing monolithic `useStore`.
 - **Cross-day batch tools / bulk operations** — Phase 7.
 - **Flipping `animalWorkspace`/`newDayEditor`/`showLegacyToggle` or changing the default route** —
-  Phase 10. Only `localStoragePersistence` flips here.
+  Phase 11. Only `localStoragePersistence` flips here.
 - **Schema migration of old persisted blobs** — out of scope. A version mismatch is discarded with a
   notice, not migrated.
 - **Any cloud/server sync** — explicitly a non-goal of the whole plan (localStorage only).

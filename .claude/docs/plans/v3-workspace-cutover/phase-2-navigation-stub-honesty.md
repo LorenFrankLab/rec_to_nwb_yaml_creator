@@ -7,7 +7,7 @@ screens, drops users into empty "coming soon" steps, duplicates the `main` landm
 fabricated Devices status. This phase makes the new UI **discoverable and free of dead-ends**, makes
 stub steps honest, fixes landmark/focus accessibility bugs, and wires the Devices step to its real
 status. **The default route stays legacy** — the cutover (flag flip + default route) is
-[Phase 10](overview.md#rollout-strategy).
+[Phase 11](overview.md#rollout-strategy).
 
 **Inputs to read first:**
 
@@ -64,7 +64,7 @@ status. **The default route stays legacy** — the cutover (flag flip + default 
 **Contracts referenced:**
 
 - [Feature flags & routing contract](shared-contracts.md#feature-flags--routing-contract) — establish
-  the flag↔route relationship so Phase 10 is a single switch; default route stays `legacy`, new routes
+  the flag↔route relationship so Phase 11 is a single switch; default route stays `legacy`, new routes
   stay reachable for dev this phase. Resolves [overview Open Question 1](overview.md#open-questions).
 - [Validation & step-status contract](shared-contracts.md#validation--step-status-contract) — wire
   `computeStepStatus(...).devices` to real status; **do not loosen** `isExportEnabled` (every step must
@@ -76,7 +76,7 @@ status. **The default route stays legacy** — the cutover (flag flip + default 
   distinct from legacy's "Form section navigation") into the banner region (`AppLayout.jsx:170-174`),
   containing Home (`#/home`) and Workspace (`#/workspace`) links, plus a "Use Legacy Editor" toggle
   link (`#/`) rendered **only when `isFeatureEnabled('showLegacyToggle')`** (false this phase, so it
-  stays hidden until Phase 10). Keep the logo link. Because the legacy view already renders its own
+  stays hidden until Phase 11). Keep the logo link. Because the legacy view already renders its own
   `role="navigation"`, mark the new nav so per-route uniqueness is preserved: render the primary nav on
   **non-legacy** routes only (or scope landmark-uniqueness tests per route — see Validation slice). Add
   an `aria-current="page"` on the link matching `currentRoute.view`.
@@ -86,7 +86,7 @@ status. **The default route stays legacy** — the cutover (flag flip + default 
   redirect to legacy** (set `window.location.hash = '#/'` via an effect and render `LegacyFormView`).
   Keep all new routes **reachable for dev** this phase by also honoring an explicit opt-in: when the
   hash is a known new route, allow it through even with flags off, but **do not** change the default
-  (`#/` → legacy) — that flip is Phase 10. Net effect: Phase 10 flips `animalWorkspace`/`newDayEditor`
+  (`#/` → legacy) — that flip is Phase 11. Net effect: Phase 11 flips `animalWorkspace`/`newDayEditor`
   and the default route, and nothing else in routing changes. Document the resolved relationship inline
   (JSDoc) referencing the routing contract.
 - **Pass the animal id into `AnimalEditor`.** `useHashRouter` returns `params.animalId` (not `params.id`);
@@ -159,7 +159,7 @@ status. **The default route stays legacy** — the cutover (flag flip + default 
 - **Making any stub functional** (Epochs in [Phase 4], Validation/Export in [Phase 5]) — this phase only
   makes them honestly disabled.
 - **Flipping `animalWorkspace`/`newDayEditor`/`localStoragePersistence`/`showLegacyToggle` on, or
-  changing the default route to the workspace** — all of that is [Phase 10](overview.md#rollout-strategy).
+  changing the default route to the workspace** — all of that is [Phase 11](overview.md#rollout-strategy).
   Default route stays `#/` → legacy.
 - **Persistence / SaveIndicator truthfulness** — [Phase 1](shared-contracts.md#persistence-contract).
 - **Wiring `epochs`/`validation` step status** — Phases 4 / 5.

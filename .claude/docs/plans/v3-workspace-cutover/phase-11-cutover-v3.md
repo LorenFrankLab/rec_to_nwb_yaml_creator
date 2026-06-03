@@ -1,4 +1,4 @@
-# Phase 10 — Cutover to v3.0.0 (default workspace, legacy behind a toggle)
+# Phase 11 — Cutover to v3.0.0 (default workspace, legacy behind a toggle)
 
 [← back to PLAN.md](PLAN.md) · [overview](overview.md#rollout-strategy) · [shared contracts](shared-contracts.md#feature-flags--routing-contract)
 

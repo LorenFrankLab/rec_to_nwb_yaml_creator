@@ -50,5 +50,9 @@ For agent invocation, **load only the slice you need**:
     reconfiguration diff + apply-forward + snapshot history.
   - [phase-9-a11y-keyboard.md](phase-9-a11y-keyboard.md) — **M12:** global keyboard shortcuts,
     full ARIA/tab-order coverage, automated Axe in CI.
-  - [phase-10-cutover-v3.md](phase-10-cutover-v3.md) — **M13:** default route → workspace, legacy
+  - [phase-10-legacy-byteorder-parity.md](phase-10-legacy-byteorder-parity.md) — **safety (parity
+    hardening):** align `mergeDayMetadata`'s key order to the legacy export so the new path is
+    byte-for-byte identical to current production output — verified against a legacy-export reference
+    harness. Must land **before** cutover so the new default output is textually identical to legacy.
+  - [phase-11-cutover-v3.md](phase-11-cutover-v3.md) — **M13:** default route → workspace, legacy
     toggle, flag flip, parity enforcement, tag v3.0.0.
