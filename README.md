@@ -10,15 +10,33 @@ There are placeholders in text boxes describing what input is expected; after op
 
 You can get the link for this page at - https://lorenfranklab.github.io/rec_to_nwb_yaml_creator/
 
-## Running Locally
+## Requirements
 
-To run locally, run -
+- **Node.js `20.19.5`** — the version pinned in [`.nvmrc`](.nvmrc). Other Node majors are untested
+  (see [docs/ENVIRONMENT_SETUP.md](docs/ENVIRONMENT_SETUP.md) for installing this version, with and
+  without a version manager).
 
-```[bash]
-npm run start
+## Setup
+
+Install dependencies from the lockfile (reproducible; preferred over `npm install` for a clean clone):
+
+```bash
+npm ci
 ```
 
-A browser will open up with the application.
+## Development
+
+```bash
+npm start          # Start the dev server; a browser opens with the application
+npm test           # Run the test suite in watch mode (Vitest)
+npx vitest run     # Run the test suite once (CI-style)
+npm run test:baseline   # Run only the golden-YAML parity baseline suite
+npm run build      # Build the production bundle into build/
+npm run lint       # Run ESLint with auto-fix
+```
+
+See [docs/ENVIRONMENT_SETUP.md](docs/ENVIRONMENT_SETUP.md) for full environment details and
+troubleshooting.
 
 ## Deployment
 

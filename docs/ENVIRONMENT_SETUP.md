@@ -65,6 +65,31 @@ npm test          # Should run without errors
 npm start         # Should launch dev server
 ```
 
+### Without a Version Manager (no nvm)
+
+`nvm` is not required. If you don't have a version manager, obtain Node `20.19.5` another way, then
+`npm ci`:
+
+```bash
+# Option A — Homebrew (macOS/Linux)
+brew install node@20
+# Put node@20 on your PATH (Homebrew prints the exact line; one of):
+brew link --overwrite node@20
+# or, without linking:
+export PATH="$(brew --prefix node@20)/bin:$PATH"
+
+# Option B — alternatives: corepack or volta can also pin Node 20.19.5.
+#   (Mentioned as options only — do NOT add them as project dependencies.)
+
+# Then, in the repo:
+npm ci            # Reproducible install from package-lock.json
+node --version    # Should report v20.19.5 (the pinned, CI-tested version)
+npx vitest run    # Should run without errors
+```
+
+> **Note:** `20.19.5` is the supported, CI-tested version. Newer Node majors may install and pass
+> tests locally, but they are **not** the supported/CI version — pin to 20.x when in doubt.
+
 ## Maintenance
 
 ### Updating Node.js Version
@@ -107,6 +132,19 @@ npm test -- --watchAll=false
 git add package.json package-lock.json
 git commit -m "feat: add package-name for [purpose]"
 ```
+
+### Security Advisories (`npm audit`)
+
+`npm audit` reports a number of findings. The current policy:
+
+- The app's **direct** `yaml` dependency is kept patched (`>=2.8.3`) for
+  [GHSA-48c2-rrv3-qjmp](https://github.com/advisories/GHSA-48c2-rrv3-qjmp).
+- The **remaining** findings are **transitive** dependencies of `react-scripts@5.0.1`
+  (webpack-dev-server, postcss, an old `yaml@1.10.2` via cssnano/cosmiconfig, etc.). They are
+  **build/dev-time only**, not shipped to users at runtime, and are **accepted as known debt**.
+- **Do NOT run `npm audit fix --force`** — it attempts to downgrade/replace `react-scripts` and breaks
+  the build. Clearing these requires migrating off Create React App (e.g. to Vite), which is a
+  separate, larger effort and out of scope for routine dependency maintenance.
 
 ### Troubleshooting
 

@@ -2,9 +2,9 @@ name: Test Suite
 
 on:
   push:
-    branches: [main]  # Only run on pushes to main
+    branches: [main, modern]  # main + the active development branch
   pull_request:
-    branches: [main]  # Run on all PRs to main
+    branches: [main, modern]  # PRs targeting main or modern
 
 permissions:
   contents: read
@@ -158,11 +158,14 @@ jobs:
         run: npm ci
 
       - name: Build production bundle
-        # TODO: Remove CI=false after fixing ESLint warnings (target: Phase 3)
-        # Create React App treats warnings as errors when CI=true
-        # Known warnings: unused variables in App.js (lines 119, 122, 596, 618, 2852)
-        #                 unused variables in ArrayUpdateMenu.jsx (line 13)
-        # Issue: https://github.com/LorenFrankLab/rec_to_nwb_yaml_creator/issues/[TBD]
+        # CI=false is intentional and required: Create React App treats ESLint
+        # warnings as build errors when CI=true. The build currently surfaces ~79
+        # warnings across ~36 files (mostly missing-JSDoc-type rules, a few
+        # unused-vars and react-hooks/exhaustive-deps). Clearing them is deferred
+        # to a dedicated lint-cleanup pass (some live in src/state/store.js, which
+        # is slated for a separate refactor). Do NOT drop CI=false until the
+        # warning count is zero; do NOT suppress the rules globally. Tracked as
+        # known build debt.
         run: CI=false npm run build
 
       - name: Upload build artifacts

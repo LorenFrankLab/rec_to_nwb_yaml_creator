@@ -2,7 +2,34 @@
 
 **Purpose:** Track all changes made during the refactoring milestones.
 
-**Last Updated:** October 29, 2025
+**Last Updated:** June 3, 2026
+
+---
+
+## Environment, Setup & CI Hygiene (June 3, 2026) ✅ COMPLETE
+
+### Summary
+
+Contributor-setup and CI hardening with no application behavior change. YAML output remains
+byte-identical (golden-baseline parity verified after the dependency bump).
+
+### Changes
+
+- **Security:** bumped the direct `yaml` dependency to `>=2.8.3` (resolves to `2.9.0`) to clear
+  [GHSA-48c2-rrv3-qjmp](https://github.com/advisories/GHSA-48c2-rrv3-qjmp). No `package.json` range
+  change (already within `^2.2.2`); lockfile only. Golden-YAML baselines verified **byte-identical**
+  after the bump (all 4 fixtures).
+- **CI:** the test workflow now runs on pushes/PRs to the `modern` development branch, not only
+  `main`, so the active branch gets feedback before a PR is opened.
+- **CI build note:** the `CI=false npm run build` workaround (Create React App treats ESLint warnings
+  as errors) is retained, with the stale/inaccurate TODO replaced by an accurate tracked-debt note
+  (~79 warnings across ~36 files; clearing them is deferred to a dedicated lint-cleanup pass).
+- **Docs:** README gained a Requirements / Setup / Development / Test / Build section;
+  `docs/ENVIRONMENT_SETUP.md` gained a "without a version manager (no nvm)" fallback and a security
+  -advisories policy note.
+- **Known debt (accepted):** remaining `npm audit` findings are `react-scripts@5.0.1` transitive
+  dependencies (build/dev-time only, not shipped at runtime). `npm audit fix --force` is forbidden
+  (it breaks `react-scripts`); full remediation requires migrating off CRA and is out of scope.
 
 ---
 
