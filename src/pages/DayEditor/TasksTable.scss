@@ -1,0 +1,245 @@
+/**
+ * TasksTable styling — mirrors CamerasSection's table / empty-state / status-badge
+ * conventions, scoped to the Day Editor page. Reuses the DayEditor CSS variables.
+ */
+
+.tasks-table-section {
+  padding: var(--spacing-lg, 1.5rem);
+  max-width: 1200px;
+  margin: 0 auto;
+
+  .section-header {
+    margin-bottom: var(--spacing-lg, 1.5rem);
+
+    h2 {
+      font-size: var(--font-size-xl, 1.5rem);
+      font-weight: 500;
+      margin: 0 0 var(--spacing-sm, 0.5rem) 0;
+      color: var(--color-grey-900, #333);
+    }
+
+    p {
+      font-size: var(--font-size-base, 1rem);
+      color: var(--color-grey-600, #666);
+      margin: 0;
+      line-height: 1.5;
+    }
+  }
+
+  .table-actions {
+    display: flex;
+    gap: var(--spacing-md, 1rem);
+    margin-bottom: var(--spacing-lg, 1.5rem);
+    flex-wrap: wrap;
+  }
+}
+
+/* Buttons (shared visual language with CamerasSection). */
+.tasks-table-section,
+.tasks-table-section.empty-state {
+  .button-primary {
+    background-color: var(--color-primary, #2196f3);
+    color: var(--color-white, #fff);
+    border: none;
+    border-radius: 4px;
+    padding: 0.6rem 1.2rem;
+    font-size: var(--font-size-base, 1rem);
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    min-height: 44px;
+
+    &:hover:not(:disabled) {
+      background-color: var(--color-primary-hover, #1976d2);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-primary, #2196f3);
+      outline-offset: 2px;
+    }
+  }
+}
+
+.tasks-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: var(--color-white, #fff);
+  border: 1px solid var(--color-grey-200, #e0e0e0);
+  border-radius: 4px;
+  overflow: hidden;
+
+  thead {
+    background-color: var(--color-grey-100, #f5f5f5);
+    border-bottom: 2px solid var(--color-grey-300, #bdbdbd);
+
+    th {
+      text-align: left;
+      padding: var(--spacing-md, 1rem);
+      font-weight: 600;
+      font-size: var(--font-size-sm, 0.875rem);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--color-grey-700, #616161);
+      white-space: nowrap;
+    }
+  }
+
+  tbody {
+    tr {
+      border-bottom: 1px solid var(--color-grey-200, #e0e0e0);
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      td {
+        padding: var(--spacing-md, 1rem);
+        font-size: var(--font-size-base, 1rem);
+        color: var(--color-grey-900, #333);
+        vertical-align: middle;
+      }
+    }
+  }
+
+  .button-small {
+    background-color: var(--color-grey-100, #f5f5f5);
+    color: var(--color-grey-900, #333);
+    border: 1px solid var(--color-grey-300, #bdbdbd);
+    border-radius: 4px;
+    padding: 0.4rem 0.8rem;
+    font-size: var(--font-size-sm, 0.875rem);
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    margin-right: var(--spacing-xs, 0.25rem);
+    min-height: 44px;
+    min-width: 44px;
+
+    &:focus-visible {
+      outline: 2px solid var(--color-primary, #2196f3);
+      outline-offset: 2px;
+    }
+
+    &:last-child {
+      margin-right: 0;
+    }
+  }
+
+  .button-danger {
+    background-color: var(--color-error, #d32f2f);
+    color: var(--color-white, #fff);
+    border: 1px solid #b71c1c;
+
+    &:hover:not(:disabled) {
+      background-color: #b71c1c;
+    }
+  }
+}
+
+/* Status badges — glyph + color (color is not the only cue). */
+.tasks-table-section .status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xs, 0.25rem) var(--spacing-sm, 0.5rem);
+  border-radius: 4px;
+  font-size: var(--font-size-sm, 0.875rem);
+  font-weight: 600;
+  min-width: 2rem;
+}
+
+.tasks-table-section .status-badge.status-✓ {
+  background-color: var(--color-success-light, #e8f5e9);
+  color: var(--color-success, #2e7d32);
+  border: 1px solid #81c784;
+}
+
+.tasks-table-section .status-badge.status-⚠ {
+  background-color: var(--color-warning-light, #fff3e0);
+  color: #e65100;
+  border: 1px solid #ffb74d;
+}
+
+.tasks-table-section .status-badge.status-❌ {
+  background-color: var(--color-error-light, #ffebee);
+  color: #c62828;
+  border: 1px solid #e57373;
+}
+
+/* Empty state — matches CamerasSection's dashed card. */
+.tasks-table-section.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl, 2rem);
+  text-align: center;
+  background-color: var(--color-white, #fff);
+  border: 2px dashed var(--color-grey-300, #bdbdbd);
+  border-radius: 8px;
+  margin: var(--spacing-xl, 2rem) 0;
+  min-height: 320px;
+
+  .empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: var(--spacing-lg, 1.5rem);
+    opacity: 0.7;
+  }
+
+  h3 {
+    font-size: var(--font-size-xl, 1.5rem);
+    font-weight: 500;
+    margin: 0 0 var(--spacing-md, 1rem) 0;
+    color: var(--color-grey-900, #333);
+  }
+
+  p {
+    font-size: var(--font-size-base, 1rem);
+    color: var(--color-grey-600, #666);
+    margin: 0 0 var(--spacing-md, 1rem) 0;
+    max-width: 600px;
+    line-height: 1.6;
+  }
+
+  .empty-state-hint {
+    font-size: var(--font-size-sm, 0.875rem);
+    font-style: italic;
+    margin-bottom: var(--spacing-xl, 2rem);
+  }
+}
+
+/* Responsive: stack table into cards on small screens (data-label cells). */
+@media (max-width: 600px) {
+  .tasks-table {
+    thead {
+      display: none;
+    }
+
+    tbody tr {
+      display: block;
+      margin-bottom: var(--spacing-md, 1rem);
+      border: 1px solid var(--color-grey-200, #e0e0e0);
+      border-radius: 4px;
+      padding: var(--spacing-md, 1rem);
+    }
+
+    td {
+      display: flex;
+      justify-content: space-between;
+      padding: var(--spacing-sm, 0.5rem) 0;
+      border-bottom: 1px solid var(--color-grey-200, #e0e0e0);
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      &::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--color-grey-700, #616161);
+        text-transform: uppercase;
+        font-size: var(--font-size-sm, 0.875rem);
+      }
+    }
+  }
+}

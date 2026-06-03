@@ -58,10 +58,43 @@ export function computeStepStatus(day, mergedDay) {
   return {
     overview: getStepStatus(errorsByStep.overview, day.session),
     devices: computeDevicesStatus(day, mergedDay),
-    epochs: 'incomplete',     // Tasks & Epochs step not yet implemented
-    validation: 'incomplete', // Day validation step not yet implemented
+    epochs: computeEpochsStatus(day, errorsByStep.epochs),
+    // (errorsByStep.epochs is scoped to task-path errors inside computeEpochsStatus)
+    validation: 'incomplete', // Day validation step wired in a later phase
     export: issues.filter(i => i.severity === 'error').length === 0 ? 'valid' : 'error',
   };
+}
+
+/**
+ * Computes the Epochs (Tasks & Epochs) step status from the day's tasks and the
+ * task-level schema/rules errors.
+ *
+ * The status is driven by the day's **tasks**. We narrow the `epochs` error group
+ * to task-path errors (path references `tasks[…]`): the group also collects
+ * behavioral-event and associated-file paths (and a `units.behavioral_events`
+ * required artifact), which are completeness concerns owned by the later
+ * Validation step, not the Tasks & Epochs data-entry step.
+ *
+ * Severity policy: data entry is non-blocking except for blank schema-required
+ * task fields (and epoch end <= start, which is blocked at the modal Save so it
+ * cannot persist). Empty cameras, missing-camera references, no-epoch tasks, and
+ * epoch overlaps are warnings/info and never mark the step in error.
+ *
+ * @param {object} day - Day record (reads `tasks`).
+ * @param {Array} epochErrors - Issues grouped into the `epochs` step.
+ * @returns {'incomplete'|'error'|'valid'}
+ *   - `'incomplete'`: no tasks yet.
+ *   - `'error'`: a task has an error-severity issue (e.g., a blank required field).
+ *   - `'valid'`: at least one task and no task-level error-severity issues.
+ */
+export function computeEpochsStatus(day, epochErrors) {
+  const tasks = day?.tasks || [];
+  if (tasks.length === 0) return 'incomplete';
+
+  const hasTaskError = (epochErrors || []).some(
+    (issue) => issue.severity === 'error' && (issue.path || '').includes('task')
+  );
+  return hasTaskError ? 'error' : 'valid';
 }
 
 /**

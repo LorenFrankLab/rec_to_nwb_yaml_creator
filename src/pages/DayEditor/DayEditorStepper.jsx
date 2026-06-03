@@ -7,7 +7,7 @@ import StepNavigation from './StepNavigation';
 import SaveIndicator from './SaveIndicator';
 import OverviewStep from './OverviewStep';
 import DevicesStep from './DevicesStep';
-import EpochsStub from './EpochsStub';
+import TasksEpochsStep from './TasksEpochsStep';
 import ValidationStub from './ValidationStub';
 import ExportStub from './ExportStub';
 import ErrorState from './ErrorState';
@@ -18,7 +18,7 @@ import ErrorState from './ErrorState';
  * Manages the day editor workflow with 5 steps:
  * 1. Overview - Session metadata (implemented)
  * 2. Devices - Electrode groups, cameras (implemented)
- * 3. Epochs - Tasks, behavioral events (not yet available)
+ * 3. Epochs - Tasks, behavioral events (implemented)
  * 4. Validation - Summary of all errors (not yet available)
  * 5. Export - Download YAML file (gated until all steps valid)
  *
@@ -88,13 +88,13 @@ export default function DayEditorStepper() {
   }, [day, dayId, actions]);
 
   // Step configuration
-  // Epochs and Validation are not yet available, so they are disabled rather than
-  // silently opening empty content. Export stays gated by isExportEnabled (every
-  // step valid). These steps become functional in later work.
+  // Validation is not yet available, so it stays disabled rather than silently
+  // opening empty content. Export stays gated by isExportEnabled (every step
+  // valid). The Validation step becomes functional in later work.
   const steps = [
     { id: 'overview', label: 'Overview', component: OverviewStep },
     { id: 'devices', label: 'Devices', component: DevicesStep },
-    { id: 'epochs', label: 'Epochs', component: EpochsStub, disabled: true },
+    { id: 'epochs', label: 'Epochs', component: TasksEpochsStep },
     { id: 'validation', label: 'Validation', component: ValidationStub, disabled: true },
     { id: 'export', label: 'Export', component: ExportStub },
   ];

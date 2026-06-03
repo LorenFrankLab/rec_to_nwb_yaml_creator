@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { validateField, computeStepStatus, computeDevicesStatus, groupErrorsByStep } from '../validation';
+import { makeAnimalWithCamerasAndDay } from './taskFixtures';
 
 describe('validateField', () => {
   it('validates required fields', async () => {
@@ -140,7 +141,7 @@ describe('computeStepStatus', () => {
     expect(['error', 'incomplete']).toContain(status.overview);
   });
 
-  it('marks devices incomplete with no electrode groups, and epochs/validation not-yet-implemented', () => {
+  it('marks devices incomplete with no electrode groups, epochs incomplete with no tasks', () => {
     const day = {
       session: {
         session_id: 'test',
@@ -154,10 +155,40 @@ describe('computeStepStatus', () => {
 
     const status = computeStepStatus(day, mergedDay);
 
-    // No electrode groups → devices incomplete; epochs/validation steps not built yet.
+    // No electrode groups → devices incomplete; no tasks → epochs incomplete.
     expect(status.devices).toBe('incomplete');
     expect(status.epochs).toBe('incomplete');
+    // Validation step is wired in a later phase.
     expect(status.validation).toBe('incomplete');
+  });
+});
+
+describe('computeStepStatus epochs status', () => {
+  it('returns "incomplete" when the day has no tasks', () => {
+    const { day, mergedDay } = makeAnimalWithCamerasAndDay({ day: { tasks: [] } });
+    expect(computeStepStatus(day, mergedDay).epochs).toBe('incomplete');
+  });
+
+  it('returns "valid" when the day has at least one task with valid required fields', () => {
+    const { day, mergedDay } = makeAnimalWithCamerasAndDay();
+    expect(computeStepStatus(day, mergedDay).epochs).toBe('valid');
+  });
+
+  it('returns "error" when a task has a blank schema-required field', () => {
+    const { day, mergedDay } = makeAnimalWithCamerasAndDay({
+      day: {
+        tasks: [
+          {
+            task_name: 'sleep',
+            task_description: '', // blank required field → schema error
+            task_environment: 'HomeBox',
+            camera_id: [1],
+            task_epochs: [1],
+          },
+        ],
+      },
+    });
+    expect(computeStepStatus(day, mergedDay).epochs).toBe('error');
   });
 });
 

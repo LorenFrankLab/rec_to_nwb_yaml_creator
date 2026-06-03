@@ -1,0 +1,173 @@
+/**
+ * TaskModal styling. Overlay/content/title come from the shared Modal primitive;
+ * these cover the accordion sections, form fields, camera checkboxes, and actions.
+ * Reuses DayEditor CSS variables and shared inline-error/inline-warning classes.
+ */
+
+.task-modal-content {
+  max-width: 640px;
+}
+
+.task-modal-form {
+  details {
+    border: 1px solid var(--color-grey-200, #e0e0e0);
+    border-radius: 4px;
+    margin-bottom: var(--spacing-md, 1rem);
+
+    summary {
+      cursor: pointer;
+      padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem);
+      font-weight: 600;
+      color: var(--color-grey-900, #333);
+      background-color: var(--color-grey-100, #f5f5f5);
+      border-radius: 4px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+
+      &:focus-visible {
+        outline: 2px solid var(--color-primary, #2196f3);
+        outline-offset: 2px;
+      }
+    }
+
+    &[open] summary {
+      border-bottom: 1px solid var(--color-grey-200, #e0e0e0);
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+  }
+
+  .task-modal-section-body {
+    padding: var(--spacing-md, 1rem);
+  }
+
+  .form-group {
+    margin-bottom: var(--spacing-md, 1rem);
+
+    label {
+      display: block;
+      margin-bottom: var(--spacing-xs, 0.25rem);
+      font-weight: 500;
+      color: var(--color-grey-900, #333);
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      padding: 0.6rem;
+      border: 1px solid var(--color-grey-300, #bdbdbd);
+      border-radius: 4px;
+      font-size: var(--font-size-base, 1rem);
+      font-family: inherit;
+      box-sizing: border-box;
+      min-height: 44px;
+
+      &:focus {
+        outline: 2px solid var(--color-primary, #2196f3);
+        outline-offset: 1px;
+      }
+
+      &[aria-invalid='true'] {
+        border-color: var(--color-error, #d32f2f);
+      }
+    }
+  }
+
+  .camera-checkboxes {
+    border: none;
+    margin: 0;
+    padding: 0;
+
+    legend {
+      font-weight: 500;
+      margin-bottom: var(--spacing-xs, 0.25rem);
+      padding: 0;
+    }
+  }
+
+  .camera-checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm, 0.5rem);
+    padding: var(--spacing-xs, 0.25rem) 0;
+    min-height: 44px;
+
+    input {
+      width: 1.1rem;
+      height: 1.1rem;
+    }
+  }
+
+  .form-actions {
+    display: flex;
+    gap: var(--spacing-md, 1rem);
+    justify-content: flex-end;
+    margin-top: var(--spacing-lg, 1.5rem);
+  }
+
+  .btn-cancel,
+  .btn-save {
+    padding: 0.75rem 1.2rem;
+    border: none;
+    border-radius: 4px;
+    font-size: var(--font-size-base, 1rem);
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    min-height: 44px;
+
+    &:focus-visible {
+      outline: 2px solid var(--color-primary, #2196f3);
+      outline-offset: 2px;
+    }
+  }
+
+  .btn-cancel {
+    background-color: var(--color-grey-100, #f5f5f5);
+    color: var(--color-grey-900, #333);
+    border: 1px solid var(--color-grey-300, #bdbdbd);
+
+    &:hover {
+      background-color: var(--color-grey-200, #e0e0e0);
+    }
+  }
+
+  .btn-save {
+    background-color: var(--color-primary, #2196f3);
+    color: var(--color-white, #fff);
+
+    &:hover:not(:disabled) {
+      background-color: var(--color-primary-hover, #1976d2);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+/* Shared inline message styles (scoped to keep them on the Day Editor page). */
+.inline-error {
+  color: #c62828; /* WCAG AA on white */
+  font-size: var(--font-size-sm, 0.875rem);
+  margin-top: var(--spacing-xs, 0.25rem);
+}
+
+.inline-warning {
+  color: #e65100; /* Orange 900 - WCAG AA on white */
+  font-size: var(--font-size-sm, 0.875rem);
+  margin-top: var(--spacing-xs, 0.25rem);
+}
+
+.inline-info {
+  color: #1565c0; /* Blue 800 - WCAG AA on white */
+  font-size: var(--font-size-sm, 0.875rem);
+  margin-top: var(--spacing-xs, 0.25rem);
+
+  a {
+    color: inherit;
+    text-decoration: underline;
+  }
+}

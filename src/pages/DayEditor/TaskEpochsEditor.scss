@@ -1,0 +1,69 @@
+/**
+ * TaskEpochsEditor styling.
+ *
+ * Reuses the DayEditor CSS variables (loaded globally on the Day Editor page) and
+ * the shared inline-error / inline-warning / button-small / button-secondary
+ * conventions used elsewhere in the workspace UI.
+ */
+
+.task-epochs-editor {
+  .task-epochs-hint {
+    font-size: var(--font-size-sm, 0.875rem);
+    color: var(--color-grey-600, #666);
+    margin: 0 0 var(--spacing-md, 1rem) 0;
+    line-height: 1.5;
+  }
+
+  .task-epochs-empty {
+    font-style: italic;
+    color: var(--color-grey-600, #666);
+    margin: 0 0 var(--spacing-md, 1rem) 0;
+  }
+
+  .task-epochs-rows {
+    list-style: none;
+    margin: 0 0 var(--spacing-md, 1rem) 0;
+    padding: 0;
+  }
+
+  .task-epoch-row {
+    margin-bottom: var(--spacing-sm, 0.5rem);
+  }
+
+  .task-epoch-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm, 0.5rem);
+    align-items: center;
+
+    input {
+      padding: 0.5rem;
+      border: 1px solid var(--color-grey-300, #bdbdbd);
+      border-radius: 4px;
+      font-size: var(--font-size-base, 1rem);
+      font-family: inherit;
+      min-height: 44px; // WCAG AA touch target
+
+      &:focus {
+        outline: 2px solid var(--color-primary, #2196f3);
+        outline-offset: 1px;
+      }
+
+      &.error {
+        border-color: var(--color-error, #d32f2f);
+      }
+    }
+
+    .epoch-number-input {
+      width: 6rem;
+    }
+
+    .epoch-time-input {
+      width: 8rem;
+    }
+  }
+
+  .add-epoch-button {
+    min-height: 44px;
+  }
+}

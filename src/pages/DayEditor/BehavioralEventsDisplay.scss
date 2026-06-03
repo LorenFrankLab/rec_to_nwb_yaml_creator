@@ -1,0 +1,99 @@
+/**
+ * BehavioralEventsDisplay styling.
+ *
+ * Reuses DayEditor CSS variables and the shared inline-warning / button-small /
+ * button-secondary conventions. Inherited events are visually marked read-only.
+ */
+
+.behavioral-events-display {
+  .behavioral-events-display-heading {
+    font-size: var(--font-size-lg, 1.2rem);
+    font-weight: 500;
+    margin: 0 0 var(--spacing-sm, 0.5rem) 0;
+    color: var(--color-grey-900, #333);
+  }
+
+  .behavioral-events-display-empty {
+    font-style: italic;
+    color: var(--color-grey-600, #666);
+    margin: 0 0 var(--spacing-md, 1rem) 0;
+  }
+
+  .inherited-events-list,
+  .day-events-list {
+    list-style: none;
+    margin: 0 0 var(--spacing-md, 1rem) 0;
+    padding: 0;
+  }
+
+  .inherited-event,
+  .day-event {
+    display: flex;
+    align-items: baseline;
+    gap: var(--spacing-sm, 0.5rem);
+    padding: var(--spacing-xs, 0.25rem) 0;
+  }
+
+  .inherited-event {
+    color: var(--color-grey-700, #616161);
+  }
+
+  .lock-icon {
+    flex: none;
+  }
+
+  .inherited-event-name,
+  .day-event-name {
+    font-weight: 600;
+  }
+
+  .inherited-event-description,
+  .day-event-description {
+    color: var(--color-grey-600, #666);
+    font-size: var(--font-size-sm, 0.875rem);
+  }
+
+  .day-specific-events {
+    margin-top: var(--spacing-md, 1rem);
+  }
+
+  .day-specific-events-heading {
+    font-size: var(--font-size-base, 1rem);
+    font-weight: 500;
+    margin: 0 0 var(--spacing-sm, 0.5rem) 0;
+    color: var(--color-grey-900, #333);
+  }
+
+  .day-event-editor {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm, 0.5rem);
+    align-items: flex-end;
+  }
+
+  .day-event-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs, 0.25rem);
+    font-size: var(--font-size-sm, 0.875rem);
+
+    input {
+      padding: 0.5rem;
+      border: 1px solid var(--color-grey-300, #bdbdbd);
+      border-radius: 4px;
+      font-size: var(--font-size-base, 1rem);
+      font-family: inherit;
+      min-height: 44px;
+
+      &:focus {
+        outline: 2px solid var(--color-primary, #2196f3);
+        outline-offset: 1px;
+      }
+    }
+  }
+
+  .day-event-actions {
+    display: flex;
+    gap: var(--spacing-sm, 0.5rem);
+  }
+}
