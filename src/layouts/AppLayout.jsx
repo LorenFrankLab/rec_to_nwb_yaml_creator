@@ -9,6 +9,7 @@
 
 import React, { useEffect, useRef, lazy, Suspense } from 'react';
 import { useHashRouter } from '../hooks/useHashRouter';
+import { isFeatureEnabled } from '../featureFlags';
 import { useStoreContext } from '../state/StoreContext';
 import { useUnsavedWorkGuard } from '../hooks/useUnsavedWorkGuard';
 import { Home } from '../pages/Home';
@@ -115,7 +116,17 @@ export function AppLayout() {
   }, [currentRoute]);
 
   /**
-   * Render current view based on route
+   * Render current view based on route.
+   *
+   * Routing contract (see shared-contracts "Feature flags & routing"): the default
+   * route (`#/`) renders the legacy form, and the new workspace routes (`#/home`,
+   * `#/workspace`, `#/day/:id`, `#/animal/:id/editor`, `#/validation`) render their
+   * views and remain reachable for development regardless of the feature flags.
+   * The cutover (a single switch in a later phase) flips `animalWorkspace` /
+   * `newDayEditor` on and changes the *default* route to the workspace; nothing else
+   * in this resolution changes. We intentionally do NOT gate the explicit new routes
+   * behind the flags here, so they stay reachable while the default stays legacy.
+   *
    * @returns {React.Element} Current view component
    */
   function renderView() {
@@ -178,6 +189,35 @@ export function AppLayout() {
           <img src={logo} alt="Loren Frank Lab logo" />
         </a>
       </div>
+
+      {/*
+        Primary navigation makes the workspace discoverable. Rendered on the new
+        (non-legacy) routes only: the legacy view supplies its own in-page
+        "Form section navigation" landmark, so scoping this here keeps exactly one
+        navigation landmark per route. The "Use Legacy Editor" toggle is hidden until
+        the cutover enables `showLegacyToggle`.
+      */}
+      {currentRoute.view !== 'legacy' && (
+        <nav className="primary-nav" role="navigation" aria-label="Primary">
+          <a
+            href="#/home"
+            aria-current={currentRoute.view === 'home' ? 'page' : undefined}
+          >
+            Home
+          </a>
+          <a
+            href="#/workspace"
+            aria-current={currentRoute.view === 'workspace' ? 'page' : undefined}
+          >
+            Workspace
+          </a>
+          {isFeatureEnabled('showLegacyToggle') && (
+            <a href="#/" className="legacy-toggle">
+              Use Legacy Editor
+            </a>
+          )}
+        </nav>
+      )}
 
       {/* Notice when previously-saved workspace data could not be restored, so a
           discarded (corrupt / incompatible-version) workspace is never silent. */}

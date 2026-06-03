@@ -2,10 +2,12 @@
  * @vitest-environment jsdom
  */
 
-import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/react';
+import { describe, it, expect, afterEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import { StoreProvider } from '../../state/StoreContext';
 import { App } from '../../App';
+import { overrideFlags, restoreFlags } from '../../featureFlags';
+import { makeTestWorkspace } from '../helpers/test-fixtures';
 
 /**
  * Integration tests for ARIA landmarks (P1.1.4)
@@ -142,6 +144,92 @@ describe('ARIA Landmarks', () => {
       navs.forEach(nav => {
         expect(nav.getAttribute('aria-label')).toBeTruthy();
       });
+    });
+  });
+
+  describe('Per-route landmarks (new workspace UI)', () => {
+    const renderRoute = (hash) => {
+      window.location.hash = hash;
+      return render(
+        <StoreProvider initialState={{ workspace: makeTestWorkspace() }}>
+          <App />
+        </StoreProvider>
+      );
+    };
+
+    afterEach(() => {
+      restoreFlags();
+      window.location.hash = '';
+    });
+
+    // makeTestWorkspace seeds animal "remy" + day "remy_20230622".
+    it('Home: one main + one #main-content, a navigation landmark, and a Workspace link', () => {
+      overrideFlags({ animalWorkspace: true });
+      const { container } = renderRoute('#/home');
+
+      expect(container.querySelectorAll('[role="main"]')).toHaveLength(1);
+      expect(container.querySelectorAll('#main-content')).toHaveLength(1);
+      expect(container.querySelector('[role="navigation"]')).toBeTruthy();
+      // Escape to the workspace exists via the primary nav.
+      expect(screen.getByRole('link', { name: /^workspace$/i })).toBeInTheDocument();
+    });
+
+    it('Workspace: one main + one #main-content, a navigation landmark, escape to Home', () => {
+      overrideFlags({ animalWorkspace: true });
+      const { container } = renderRoute('#/workspace');
+
+      expect(container.querySelectorAll('[role="main"]')).toHaveLength(1);
+      expect(container.querySelectorAll('#main-content')).toHaveLength(1);
+      expect(container.querySelector('[role="navigation"]')).toBeTruthy();
+      expect(screen.getByRole('link', { name: /^home$/i })).toBeInTheDocument();
+    });
+
+    it('DayEditor: one main + one #main-content + one banner/contentinfo; back-to-workspace link', async () => {
+      overrideFlags({ animalWorkspace: true, newDayEditor: true });
+      const { container } = renderRoute('#/day/remy_20230622');
+
+      // useDayIdFromUrl resolves the day id in an effect, so wait for the real stepper.
+      const back = await screen.findByRole('link', { name: /back to workspace/i });
+      expect(back).toBeInTheDocument();
+      expect(container.querySelectorAll('[role="main"]')).toHaveLength(1);
+      expect(container.querySelectorAll('#main-content')).toHaveLength(1);
+      // The stepper header/footer are plain divs, so AppLayout owns the only banner
+      // and contentinfo landmarks (no duplicates).
+      expect(container.querySelectorAll('[role="banner"], header')).toHaveLength(1);
+      expect(container.querySelectorAll('[role="contentinfo"], footer')).toHaveLength(1);
+    });
+
+    it('AnimalEditor: exactly one main + one #main-content (duplicate removed); back-to-workspace link', async () => {
+      overrideFlags({ animalWorkspace: true });
+      const { container } = renderRoute('#/animal/remy/editor');
+
+      // AnimalEditor is lazy-loaded behind Suspense.
+      await waitFor(() => {
+        expect(container.querySelectorAll('[role="main"]')).toHaveLength(1);
+      });
+      expect(container.querySelectorAll('#main-content')).toHaveLength(1);
+      // Stepper header/footer are plain divs → AppLayout owns the only banner/contentinfo.
+      expect(container.querySelectorAll('[role="banner"], header')).toHaveLength(1);
+      expect(container.querySelectorAll('[role="contentinfo"], footer')).toHaveLength(1);
+      expect(screen.getByRole('link', { name: /back to workspace/i })).toBeInTheDocument();
+    });
+
+    it('keeps the default route (#/) on the legacy form even with flags enabled', () => {
+      overrideFlags({ animalWorkspace: true, newDayEditor: true });
+      window.location.hash = '#/';
+      // No seeded workspace here: the legacy form reads the flat formData model, so
+      // seeding only { workspace } would leave formData without its fields.
+      const { container } = render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
+
+      // Default stays legacy this phase (cutover flips the default in a later phase).
+      expect(container.querySelector('form')).toBeTruthy();
+      // Legacy supplies a single main; the primary nav is not rendered on legacy.
+      expect(container.querySelectorAll('[role="main"]')).toHaveLength(1);
+      expect(screen.queryByRole('navigation', { name: /primary/i })).not.toBeInTheDocument();
     });
   });
 });

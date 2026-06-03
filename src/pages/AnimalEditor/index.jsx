@@ -13,18 +13,12 @@ import AnimalEditorStepper from './AnimalEditorStepper';
  * - Copy/template from existing animals
  *
  * Note: Component receives no props - animal ID is obtained via useAnimalIdFromUrl
- * hook in AnimalEditorStepper.
+ * hook in AnimalEditorStepper. AnimalEditorStepper (and its error screen) render the
+ * single <main id="main-content"> for this route, so this entry adds no wrapper
+ * landmark (avoids a duplicate <main>/#main-content).
  *
  * @returns {JSX.Element}
  */
 export default function AnimalEditor() {
-  return (
-    <main
-      id="main-content"
-      role="main"
-      tabIndex="-1"
-    >
-      <AnimalEditorStepper />
-    </main>
-  );
+  return <AnimalEditorStepper />;
 }

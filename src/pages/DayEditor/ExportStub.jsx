@@ -1,20 +1,17 @@
 /**
- * Export Step - Placeholder for M10
+ * Export Step - placeholder (the step is gated until every step is valid).
  *
- * Will contain:
- * - YAML preview
- * - Download button
- * - Export options
+ * Will contain a YAML preview, a download button, and export options.
  */
 export default function ExportStub() {
   return (
     <div className="day-editor-section">
       <h2>Export YAML</h2>
-      <p>This step will be implemented in M10 (Export Step).</p>
-      <p>Features coming soon:</p>
+      <p>Coming soon — this step isn’t available yet.</p>
+      <p>It will provide:</p>
       <ul>
-        <li>YAML file preview</li>
-        <li>Download YAML file</li>
+        <li>A YAML file preview</li>
+        <li>Download of the YAML file</li>
         <li>Export options</li>
       </ul>
     </div>

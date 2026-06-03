@@ -2,6 +2,62 @@ body {
   font-family: sans-serif;
 }
 
+/* Global screen-reader-only utility. Defined here (index.css is loaded on every
+   route) so the always-present route announcer and per-component sr-only labels are
+   visually hidden on the new workspace routes too, not just where a route-specific
+   stylesheet happens to define it. */
+.sr-only,
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Primary navigation into the workspace (rendered on non-legacy routes). Sits in
+   normal flow below the banner; positioned/stacked so banner content can't overlap
+   and intercept clicks on the links. */
+.primary-nav {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.5rem 10px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #fafafa;
+}
+
+.primary-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.4rem 0.9rem;
+  border-radius: 4px;
+  color: #1565c0;
+  text-decoration: none;
+}
+
+.primary-nav a:hover {
+  background: #eef3fb;
+  text-decoration: underline;
+}
+
+.primary-nav a[aria-current='page'] {
+  font-weight: 600;
+  background: #e3f0ff;
+}
+
+.primary-nav .legacy-toggle {
+  margin-left: auto;
+}
+
 /* Notice shown when a previously-saved workspace could not be restored. */
 .load-notice {
   display: flex;

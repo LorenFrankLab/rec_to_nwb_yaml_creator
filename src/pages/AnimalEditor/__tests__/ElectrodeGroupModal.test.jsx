@@ -2,6 +2,7 @@
  * @vitest-environment jsdom
  */
 
+import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -872,6 +873,78 @@ describe('ElectrodeGroupModal', () => {
           bad_channels: '0, 1, 3',
         })
       );
+    });
+  });
+
+  describe('Accessibility: focus trap and focus return', () => {
+    const getFocusable = () => {
+      const dialog = document.querySelector('[role="dialog"]');
+      return dialog.querySelectorAll(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+    };
+
+    it('traps Tab from the last focusable element back to the first', async () => {
+      render(<ElectrodeGroupModal isOpen mode="add" onSave={() => {}} onCancel={() => {}} />);
+
+      const focusable = getFocusable();
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      last.focus();
+      expect(last).toHaveFocus();
+
+      await user.tab();
+      await waitFor(() => expect(first).toHaveFocus());
+    });
+
+    it('traps Shift+Tab from the first focusable element to the last', async () => {
+      render(<ElectrodeGroupModal isOpen mode="add" onSave={() => {}} onCancel={() => {}} />);
+
+      const focusable = getFocusable();
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      first.focus();
+      expect(first).toHaveFocus();
+
+      await user.tab({ shift: true });
+      await waitFor(() => expect(last).toHaveFocus());
+    });
+
+    it('returns focus to the trigger when closed via ESC', async () => {
+      /**
+       *
+       */
+      function Harness() {
+        const [open, setOpen] = useState(false);
+        return (
+          <>
+            <button type="button" onClick={() => setOpen(true)}>
+              Open modal
+            </button>
+            <ElectrodeGroupModal
+              isOpen={open}
+              mode="add"
+              onSave={() => setOpen(false)}
+              onCancel={() => setOpen(false)}
+            />
+          </>
+        );
+      }
+
+      render(<Harness />);
+      const trigger = screen.getByRole('button', { name: /open modal/i });
+      trigger.focus();
+      await user.click(trigger);
+
+      // Modal is open and focus moved into it.
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+      await user.keyboard('{Escape}');
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      await waitFor(() => expect(trigger).toHaveFocus());
     });
   });
 });

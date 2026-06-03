@@ -58,8 +58,8 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate }) 
 
   // Breadcrumb items
   const breadcrumbItems = [
-    { label: 'Home', href: '#/' },
-    { label: `Animal: ${animal.id}`, href: `#/animal/${animal.id}` },
+    { label: 'Home', href: '#/home' },
+    { label: `Animal: ${animal.id}`, href: `#/animal/${animal.id}/editor` },
     { label: `Day: ${day.date}` },
   ];
 
@@ -155,7 +155,7 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate }) 
               <h3>Subject Information</h3>
               <div className="inherited-notice">
                 Inherited from Animal
-                <a href={`#/animal/${animal.id}`}>Edit Animal</a>
+                <a href={`#/animal/${animal.id}/editor`}>Edit Animal</a>
               </div>
 
               <div className="form-grid">
@@ -187,7 +187,7 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate }) 
               <h3>Experimenters</h3>
               <div className="inherited-notice">
                 Inherited from Animal
-                <a href={`#/animal/${animal.id}`}>Edit Animal</a>
+                <a href={`#/animal/${animal.id}/editor`}>Edit Animal</a>
               </div>
 
               <div className="form-grid">

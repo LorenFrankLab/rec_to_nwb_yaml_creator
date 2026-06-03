@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateField, computeStepStatus, groupErrorsByStep } from '../validation';
+import { validateField, computeStepStatus, computeDevicesStatus, groupErrorsByStep } from '../validation';
 
 describe('validateField', () => {
   it('validates required fields', async () => {
@@ -140,7 +140,7 @@ describe('computeStepStatus', () => {
     expect(['error', 'incomplete']).toContain(status.overview);
   });
 
-  it('marks future steps as incomplete in M5', () => {
+  it('marks devices incomplete with no electrode groups, and epochs/validation not-yet-implemented', () => {
     const day = {
       session: {
         session_id: 'test',
@@ -154,10 +154,48 @@ describe('computeStepStatus', () => {
 
     const status = computeStepStatus(day, mergedDay);
 
-    // M6-M9 steps not implemented yet
+    // No electrode groups → devices incomplete; epochs/validation steps not built yet.
     expect(status.devices).toBe('incomplete');
     expect(status.epochs).toBe('incomplete');
     expect(status.validation).toBe('incomplete');
+  });
+});
+
+describe('computeDevicesStatus', () => {
+  const group = { id: 0, location: 'CA1', device_type: 'tetrode_12.5' };
+  const ntrode = { ntrode_id: 1, electrode_group_id: 0, map: { 0: 0, 1: 1, 2: 2, 3: 3 } };
+
+  it('returns "incomplete" when there are no electrode groups', () => {
+    expect(computeDevicesStatus({}, { electrode_groups: [], ntrode_electrode_group_channel_map: [] }))
+      .toBe('incomplete');
+  });
+
+  it('returns "incomplete" when a group has no channel mapping', () => {
+    const mergedDay = {
+      electrode_groups: [group],
+      ntrode_electrode_group_channel_map: [], // group 0 has no ntrode
+    };
+    expect(computeDevicesStatus({}, mergedDay)).toBe('incomplete');
+  });
+
+  it('returns "error" when a group has all channels marked bad', () => {
+    const day = { deviceOverrides: { bad_channels: { 1: [0, 1, 2, 3] } } }; // all 4 bad
+    const mergedDay = {
+      electrode_groups: [group],
+      ntrode_electrode_group_channel_map: [ntrode],
+    };
+    expect(computeDevicesStatus(day, mergedDay)).toBe('error');
+  });
+
+  it('returns "valid" for healthy groups, with partial bad channels staying non-blocking', () => {
+    const fullyHealthy = {
+      electrode_groups: [group],
+      ntrode_electrode_group_channel_map: [ntrode],
+    };
+    expect(computeDevicesStatus({}, fullyHealthy)).toBe('valid');
+
+    const partialBad = { deviceOverrides: { bad_channels: { 1: [0] } } }; // 1 of 4 bad
+    expect(computeDevicesStatus(partialBad, fullyHealthy)).toBe('valid');
   });
 });
 

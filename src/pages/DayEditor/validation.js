@@ -57,11 +57,55 @@ export function computeStepStatus(day, mergedDay) {
 
   return {
     overview: getStepStatus(errorsByStep.overview, day.session),
-    devices: 'incomplete',    // M6 will implement
-    epochs: 'incomplete',     // M7 will implement
-    validation: 'incomplete', // M9 will implement
+    devices: computeDevicesStatus(day, mergedDay),
+    epochs: 'incomplete',     // Tasks & Epochs step not yet implemented
+    validation: 'incomplete', // Day validation step not yet implemented
     export: issues.filter(i => i.severity === 'error').length === 0 ? 'valid' : 'error',
   };
+}
+
+/**
+ * Computes the Devices step status from the inherited electrode configuration and
+ * the day's bad-channel overrides. Mirrors the per-group health logic in
+ * DevicesStep (getGroupStatus + the missing-channel-map branch) so the stepper and
+ * the step content agree.
+ *
+ * @param {object} day - Day record (reads deviceOverrides.bad_channels).
+ * @param {object} mergedDay - Merged metadata (reads electrode_groups +
+ *   ntrode_electrode_group_channel_map).
+ * @returns {'incomplete'|'error'|'valid'}
+ *   - `'incomplete'`: no electrode groups, or any group has no channel mapping.
+ *   - `'error'`: any group has all its channels marked bad (group inactive).
+ *   - `'valid'`: otherwise (bad-channel warnings are non-blocking).
+ */
+export function computeDevicesStatus(day, mergedDay) {
+  const groups = mergedDay?.electrode_groups || [];
+  const ntrodeMap = mergedDay?.ntrode_electrode_group_channel_map || [];
+  const badChannels = day?.deviceOverrides?.bad_channels || {};
+
+  if (groups.length === 0) return 'incomplete';
+
+  let anyGroupAllBad = false;
+
+  for (const group of groups) {
+    const ntrodes = ntrodeMap.filter((n) => n.electrode_group_id === group.id);
+
+    // A group with no channel mapping is a data-completeness problem (corruption
+    // branch in DevicesStep), surfaced as incomplete rather than a hard error.
+    if (ntrodes.length === 0) return 'incomplete';
+
+    let totalChannels = 0;
+    let totalBadChannels = 0;
+    for (const ntrode of ntrodes) {
+      totalChannels += Object.keys(ntrode.map || {}).length;
+      totalBadChannels += (badChannels[ntrode.ntrode_id] || []).length;
+    }
+    if (totalChannels > 0 && totalBadChannels === totalChannels) {
+      anyGroupAllBad = true;
+    }
+  }
+
+  return anyGroupAllBad ? 'error' : 'valid';
 }
 
 /**

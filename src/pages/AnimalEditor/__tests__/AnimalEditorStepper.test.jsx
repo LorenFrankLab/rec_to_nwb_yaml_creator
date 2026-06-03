@@ -176,6 +176,31 @@ describe('AnimalEditorStepper', () => {
       expect(screen.getByText(/Animal.*not found/i)).toBeInTheDocument();
     });
 
+    it('renders exactly one main landmark (#main-content, role=main)', () => {
+      const { container } = renderWithStore(<AnimalEditorStepper />);
+      const mains = container.querySelectorAll('main');
+      expect(mains).toHaveLength(1);
+      expect(mains[0]).toHaveAttribute('id', 'main-content');
+      expect(mains[0]).toHaveAttribute('role', 'main');
+    });
+
+    it('renders a back-to-workspace link in the header', () => {
+      renderWithStore(<AnimalEditorStepper />);
+      const back = screen.getByRole('link', { name: /back to workspace/i });
+      expect(back).toHaveAttribute('href', '#/workspace?animal=remy');
+    });
+
+    it('the not-found error screen provides Workspace and Home escapes (no dead-end)', () => {
+      const emptyState = { workspace: { animals: {}, days: {} } };
+      const { container } = renderWithStore(<AnimalEditorStepper />, emptyState);
+      expect(screen.getByRole('link', { name: /return to workspace/i }))
+        .toHaveAttribute('href', '#/workspace');
+      expect(screen.getByRole('link', { name: /go to home/i }))
+        .toHaveAttribute('href', '#/home');
+      // Error screen still exposes a single main landmark / focus target.
+      expect(container.querySelectorAll('main')).toHaveLength(1);
+    });
+
     it('shows error when no animal ID in URL', () => {
       useAnimalIdFromUrl.mockReturnValue(null);
       renderWithStore(<AnimalEditorStepper />);

@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import { useAnimalIdFromUrl } from '../../hooks/useAnimalIdFromUrl';
 import ElectrodeGroupsStep from './ElectrodeGroupsStep';
@@ -65,11 +66,11 @@ export default function AnimalEditorStepper() {
   const animal = animalId ? model.workspace.animals[animalId] : null;
 
   if (!animalId) {
-    return <div className="error-state">Error: No animal specified in URL</div>;
+    return <AnimalEditorError message="No animal specified in URL." />;
   }
 
   if (!animal) {
-    return <div className="error-state">Error: Animal &quot;{animalId}&quot; not found</div>;
+    return <AnimalEditorError message={`Animal "${animalId}" not found.`} />;
   }
 
   // Step navigation handlers
@@ -501,9 +502,18 @@ export default function AnimalEditorStepper() {
 
   return (
     <div className="animal-editor-stepper">
-      <header className="animal-editor-header">
+      {/* Plain div, not <header>/<footer> (below): those map to the banner /
+          contentinfo landmarks here, duplicating AppLayout's. */}
+      <div className="animal-editor-header">
+        <a
+          href={`#/workspace?animal=${animal.id}`}
+          className="back-button"
+          aria-label="Back to workspace"
+        >
+          ← Back to Workspace
+        </a>
         <h1>Animal Editor: {animal.id}</h1>
-      </header>
+      </div>
 
       {/* Step indicators */}
       <nav className="animal-editor-step-nav" role="navigation" aria-label="Configuration steps">
@@ -516,24 +526,41 @@ export default function AnimalEditorStepper() {
               <button
                 className="step-indicator-button"
                 onClick={() => setActiveStep(index)}
-                aria-label={`Step ${index + 1}: ${step.label}`}
+                aria-label={`Step ${index + 1}: ${step.label}${
+                  activeStep === index
+                    ? ' (current)'
+                    : index < activeStep
+                      ? ' (completed)'
+                      : ''
+                }`}
                 aria-current={activeStep === index ? 'step' : undefined}
               >
                 <span className="step-number">{index + 1}</span>
                 <span>{step.label}</span>
+                {/* Status conveyed beyond color (WCAG 1.4.1) for screen readers. */}
+                {index < activeStep && activeStep !== index && (
+                  <span className="sr-only"> (completed)</span>
+                )}
               </button>
             </li>
           ))}
         </ul>
       </nav>
 
-      {/* Active step content */}
-      <main className="animal-editor-content" id="main-content" tabIndex="-1">
+      {/* Active step content. role/aria-label live here now that the duplicate
+          <main> wrapper in index.jsx has been removed (single main per view). */}
+      <main
+        className="animal-editor-content"
+        id="main-content"
+        role="main"
+        aria-label="Animal editor"
+        tabIndex="-1"
+      >
         {steps[activeStep].component}
       </main>
 
-      {/* Navigation buttons */}
-      <footer className="animal-editor-footer">
+      {/* Navigation buttons (plain div, not <footer> — see header note above) */}
+      <div className="animal-editor-footer">
         <button
           onClick={handleBack}
           disabled={activeStep === 0}
@@ -550,7 +577,7 @@ export default function AnimalEditorStepper() {
         >
           {isOnFinalStep ? 'Save' : 'Next'}
         </button>
-      </footer>
+      </div>
 
       {/* Electrode Groups Modal */}
       <ElectrodeGroupModal
@@ -582,3 +609,35 @@ export default function AnimalEditorStepper() {
     </div>
   );
 }
+
+/**
+ * Error screen for the Animal Editor when the animal can't be resolved. Provides
+ * its own landmark/focus target and navigation escapes so it is never a dead-end.
+ *
+ * @param {object} props
+ * @param {string} props.message - The error message to display.
+ * @returns {JSX.Element}
+ */
+function AnimalEditorError({ message }) {
+  return (
+    <main
+      id="main-content"
+      role="main"
+      tabIndex="-1"
+      aria-label="Error"
+      className="error-state"
+    >
+      <h2>Error</h2>
+      <p>{message}</p>
+      <p>
+        <a href="#/workspace">Return to Workspace</a>
+        {' · '}
+        <a href="#/home">Go to Home</a>
+      </p>
+    </main>
+  );
+}
+
+AnimalEditorError.propTypes = {
+  message: PropTypes.string.isRequired,
+};

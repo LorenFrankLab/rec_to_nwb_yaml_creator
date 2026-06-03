@@ -65,12 +65,18 @@ export function AnimalWorkspace() {
   async function handleCreateDays(dates) {
     if (!selectedAnimalId || !dates || dates.length === 0) return;
 
+    // Snapshot existing ids once, then accumulate locally. The `days` prop is the
+    // render-time snapshot and does not reflect ids created earlier in this same
+    // batch, so re-reading it per iteration would let a batch collide with its own
+    // just-created days (e.g. a duplicate date in the input).
+    const existingIds = new Set(Object.keys(days));
+
     for (const date of dates) {
       const sessionId = `${selectedAnimalId}_${date.replace(/-/g, '')}`;
       const dayId = `${selectedAnimalId}-${date}`;
 
-      // Skip if day already exists
-      if (days[dayId]) {
+      // Skip if the day already exists or was already created in this batch.
+      if (existingIds.has(dayId)) {
         continue;
       }
 
@@ -79,6 +85,7 @@ export function AnimalWorkspace() {
           session_id: sessionId,
           session_description: `Recording session for ${selectedAnimalId} on ${date}`,
         });
+        existingIds.add(dayId);
       } catch (error) {
         console.error(`Failed to create day ${date}:`, error);
         throw new Error(`Failed to create day ${date}: ${error.message}`);

@@ -69,6 +69,7 @@
 .back-button {
   display: inline-flex;
   align-items: center;
+  min-height: 44px; /* WCAG target size */
   padding: var(--spacing-xs) var(--spacing-sm);
   font-size: var(--font-size-sm);
   font-weight: 500;
@@ -84,6 +85,11 @@
 .back-button:hover {
   background-color: var(--color-primary);
   color: var(--color-white);
+}
+
+.back-button:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .day-editor-header h1 {
@@ -173,7 +179,7 @@
   font-weight: 600;
 }
 
-.step-button:hover:not(:disabled) {
+.step-button:hover:not(:disabled):not([aria-disabled='true']) {
   background-color: var(--color-grey-100);
 }
 
@@ -183,7 +189,10 @@
   z-index: 1;
 }
 
-.step-button:disabled {
+/* Disabled steps use aria-disabled (not the native disabled attribute) so screen
+   readers can still reach and announce them; style both for parity. */
+.step-button:disabled,
+.step-button[aria-disabled='true'] {
   opacity: 0.5;
   cursor: not-allowed;
 }

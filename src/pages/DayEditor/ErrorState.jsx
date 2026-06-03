@@ -8,14 +8,18 @@ import PropTypes from 'prop-types';
  * @returns {JSX.Element}
  */
 export default function ErrorState({ message }) {
+  // The normal DayEditor <main> is not rendered on the error path, so this screen
+  // supplies its own landmark + focus target and never dead-ends (escape links).
   return (
-    <div className="error-state">
+    <main id="main-content" role="main" tabIndex="-1" aria-label="Error" className="error-state">
       <h2>Error</h2>
       <p>{message}</p>
       <p>
         <a href="#/workspace">Return to Workspace</a>
+        {' · '}
+        <a href="#/home">Go to Home</a>
       </p>
-    </div>
+    </main>
   );
 }
 

@@ -24,8 +24,9 @@ import PropTypes from 'prop-types';
  */
 export default function StepNavigation({ steps, currentStep, stepStatus, onNavigate }) {
   const handleNavigate = (stepId) => {
-    // Check if step is disabled (Export step until valid)
-    if (stepId === 'export' && !isExportEnabled(stepStatus)) {
+    const step = steps.find((s) => s.id === stepId);
+    // No-op for steps marked not-yet-available, or Export until all steps are valid.
+    if (step?.disabled || (stepId === 'export' && !isExportEnabled(stepStatus))) {
       return;
     }
 
@@ -47,7 +48,7 @@ export default function StepNavigation({ steps, currentStep, stepStatus, onNavig
         {steps.map((step, index) => {
           const status = stepStatus[step.id];
           const isCurrent = currentStep === step.id;
-          const isDisabled = step.id === 'export' && !isExportEnabled(stepStatus);
+          const isDisabled = step.disabled || (step.id === 'export' && !isExportEnabled(stepStatus));
 
           return (
             <li
@@ -55,10 +56,11 @@ export default function StepNavigation({ steps, currentStep, stepStatus, onNavig
               className={`step-item step-${status} ${isCurrent ? 'current' : ''}`}
             >
               <button
+                type="button"
                 onClick={() => handleNavigate(step.id)}
-                disabled={isDisabled}
+                aria-disabled={isDisabled || undefined}
                 aria-current={isCurrent ? 'step' : undefined}
-                aria-label={`${step.label} - ${getStatusLabel(status)}`}
+                aria-label={`${step.label} - ${getButtonStatusLabel(step, status, stepStatus)}`}
                 className="step-button"
               >
                 <span className="step-number">{index + 1}</span>
@@ -109,6 +111,25 @@ function getStatusLabel(status) {
 }
 
 /**
+ * Accessible status label for a step button. Disabled/locked steps get a meaningful
+ * reason instead of their raw validation status (which would otherwise read e.g.
+ * "Export - Complete" on a button that is actually locked).
+ *
+ * @private
+ * @param {object} step - Step descriptor (may carry `disabled`).
+ * @param {string} status - The step's validation status.
+ * @param {object} stepStatus - Full status map (for the export gate).
+ * @returns {string} Human-readable status for the accessible name.
+ */
+function getButtonStatusLabel(step, status, stepStatus) {
+  if (step.disabled) return 'Not available yet';
+  if (step.id === 'export' && !isExportEnabled(stepStatus)) {
+    return 'Locked — complete previous steps first';
+  }
+  return getStatusLabel(status);
+}
+
+/**
  * Check if all required steps are valid (export enabled)
  *
  * @private
@@ -125,6 +146,7 @@ StepNavigation.propTypes = {
   steps: PropTypes.arrayOf(PropTypes.shape({
     id: PropTypes.string.isRequired,
     label: PropTypes.string.isRequired,
+    disabled: PropTypes.bool,
   })).isRequired,
   currentStep: PropTypes.string.isRequired,
   stepStatus: PropTypes.objectOf(

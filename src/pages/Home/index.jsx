@@ -83,13 +83,13 @@ export function Home() {
     };
 
     try {
-      // Call store action with correct signature
+      // createAnimal applies the workspace update synchronously from the caller's
+      // perspective; navigate immediately rather than via a setTimeout that could
+      // fire before the entity exists. (Duplicate-id validation lives inside the
+      // store updater and is not surfaced to this catch — a known gap, not relied on
+      // here; the form already enforces id uniqueness before submit.)
       actions.createAnimal(animalId, subject, metadata);
-
-      // Navigate after state update completes
-      setTimeout(() => {
-        window.location.hash = `#/workspace?animal=${animalId}`;
-      }, 0);
+      window.location.hash = `#/workspace?animal=${animalId}`;
     } catch (error) {
       console.error('Failed to create animal:', error);
       // Error is re-thrown to be handled by form

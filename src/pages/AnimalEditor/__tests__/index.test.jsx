@@ -36,26 +36,14 @@ describe('AnimalEditor', () => {
     );
   }
 
-  it('renders main landmark', () => {
-    renderWithStore(<AnimalEditor />);
-    const main = screen.getByRole('main');
-    expect(main).toBeInTheDocument();
-  });
-
-  it('has skip-to-main-content target id', () => {
-    renderWithStore(<AnimalEditor />);
-    const main = screen.getByRole('main');
-    expect(main).toHaveAttribute('id', 'main-content');
-  });
-
-  it('supports programmatic focus via tabIndex', () => {
-    renderWithStore(<AnimalEditor />);
-    const main = screen.getByRole('main');
-    expect(main).toHaveAttribute('tabIndex', '-1');
-  });
-
-  it('renders stepper component', () => {
-    renderWithStore(<AnimalEditor />);
+  // The <main id="main-content"> landmark is owned by AnimalEditorStepper (and its
+  // error screen), not by this entry wrapper — index.jsx no longer adds a second
+  // <main>, so there is exactly one per route. The single-main landmark is asserted
+  // in AnimalEditorStepper's tests and the per-route aria-landmarks integration test.
+  it('renders the stepper as a pass-through (no wrapper main landmark)', () => {
+    const { container } = renderWithStore(<AnimalEditor />);
     expect(screen.getByTestId('animal-editor-stepper')).toBeInTheDocument();
+    // No extra <main> introduced by the entry wrapper (stepper is mocked here).
+    expect(container.querySelectorAll('main')).toHaveLength(0);
   });
 });

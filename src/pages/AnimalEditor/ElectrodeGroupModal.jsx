@@ -35,6 +35,10 @@ import './ElectrodeGroupModal.scss';
  */
 const ElectrodeGroupModal = ({ isOpen, mode = 'add', group = null, onSave, onCancel }) => {
   const firstFieldRef = useRef(null);
+  // INTERIM (Phase 3 removes this): focus trap + focus-return are duplicated from
+  // CameraModal until the shared <Modal> primitive replaces both modals.
+  const modalRef = useRef(null);
+  const previousFocusRef = useRef(null);
 
   // Device types from the application
   const DEVICE_TYPES = [
@@ -132,25 +136,53 @@ const ElectrodeGroupModal = ({ isOpen, mode = 'add', group = null, onSave, onCan
     onSave(dataToSave);
   };
 
-  // Handle ESC key
+  // Handle ESC key and focus trap (ported from CameraModal; interim — see Phase 3).
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) return undefined;
 
-    const handleEscape = (e) => {
+    const handleKeydown = (e) => {
       if (e.key === 'Escape') {
         onCancel();
+        return;
+      }
+
+      if (e.key === 'Tab' && modalRef.current) {
+        const focusableSelector =
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+        const focusableElements = modalRef.current.querySelectorAll(focusableSelector);
+        if (focusableElements.length === 0) return;
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey && document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement.focus();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement.focus();
+        }
       }
     };
 
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
+    document.addEventListener('keydown', handleKeydown);
+    return () => document.removeEventListener('keydown', handleKeydown);
   }, [isOpen, onCancel]);
 
-  // Focus first field when modal opens
+  // Focus first field on open; restore focus to the opener on close (focus-return).
   useEffect(() => {
-    if (isOpen && firstFieldRef.current) {
+    if (!isOpen) return undefined;
+
+    previousFocusRef.current = document.activeElement;
+    if (firstFieldRef.current) {
       firstFieldRef.current.focus();
     }
+
+    return () => {
+      const previous = previousFocusRef.current;
+      if (previous && typeof previous.focus === 'function') {
+        previous.focus();
+      }
+    };
   }, [isOpen]);
 
   // Lock body scroll when modal is open
@@ -187,6 +219,7 @@ const ElectrodeGroupModal = ({ isOpen, mode = 'add', group = null, onSave, onCan
       role="presentation"
     >
       <div
+        ref={modalRef}
         className="electrode-group-modal-content"
         role="dialog"
         aria-modal="true"

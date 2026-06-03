@@ -441,6 +441,37 @@ describe('AppLayout', () => {
     });
   });
 
+  describe('primary navigation', () => {
+    it('is hidden on the legacy route (legacy supplies its own nav)', () => {
+      window.location.hash = '#/';
+      render(<AppLayout />);
+      expect(screen.queryByRole('navigation', { name: /primary/i })).not.toBeInTheDocument();
+    });
+
+    it('renders Home and Workspace links on non-legacy routes', () => {
+      window.location.hash = '#/home';
+      render(<AppLayout />);
+
+      const nav = screen.getByRole('navigation', { name: /primary/i });
+      expect(nav).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /^home$/i })).toHaveAttribute('href', '#/home');
+      expect(screen.getByRole('link', { name: /^workspace$/i })).toHaveAttribute('href', '#/workspace');
+    });
+
+    it('marks the current route link with aria-current=page', () => {
+      window.location.hash = '#/workspace';
+      render(<AppLayout />);
+      expect(screen.getByRole('link', { name: /^workspace$/i })).toHaveAttribute('aria-current', 'page');
+      expect(screen.getByRole('link', { name: /^home$/i })).not.toHaveAttribute('aria-current');
+    });
+
+    it('hides the "Use Legacy Editor" toggle while showLegacyToggle is off', () => {
+      window.location.hash = '#/home';
+      render(<AppLayout />);
+      expect(screen.queryByRole('link', { name: /use legacy editor/i })).not.toBeInTheDocument();
+    });
+  });
+
   describe('discarded-workspace notice', () => {
     afterEach(() => {
       window.localStorage.clear();

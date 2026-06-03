@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import OverviewStep from '../OverviewStep';
+import { parseHashRoute } from '../../../hooks/useHashRouter';
 
 describe('OverviewStep', () => {
   const mockAnimal = {
@@ -149,8 +150,29 @@ describe('OverviewStep', () => {
     await waitFor(() => {
       const editLinks = screen.getAllByText(/Edit Animal/i);
       expect(editLinks.length).toBeGreaterThan(0);
-      expect(editLinks[0]).toHaveAttribute('href', '#/animal/remy');
+      // Must resolve to the Animal Editor route, not the unknown-route → legacy fallback.
+      expect(editLinks[0]).toHaveAttribute('href', '#/animal/remy/editor');
     });
+  });
+
+  it('breadcrumb and Edit-Animal hrefs resolve to the Animal Editor route', async () => {
+    const user = userEvent.setup();
+    render(
+      <OverviewStep
+        animal={mockAnimal}
+        day={mockDay}
+        mergedDay={mockMergedDay}
+        onFieldUpdate={vi.fn()}
+      />
+    );
+
+    const animalCrumb = screen.getByRole('link', { name: /Animal: remy/i });
+    expect(animalCrumb).toHaveAttribute('href', '#/animal/remy/editor');
+
+    // parseHashRoute on that href yields the animal-editor view (not isUnknownRoute legacy).
+    const route = parseHashRoute('#/animal/remy/editor');
+    expect(route.view).toBe('animal-editor');
+    expect(route.isUnknownRoute).toBeFalsy();
   });
 
   it('shows breadcrumb navigation', () => {

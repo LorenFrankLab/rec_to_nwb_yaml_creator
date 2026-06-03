@@ -39,6 +39,7 @@
 .back-button {
   display: inline-flex;
   align-items: center;
+  min-height: 44px; // WCAG target size
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
@@ -182,6 +183,7 @@
 }
 
 .footer-nav-button {
+  min-height: 44px; // WCAG target size
   padding: 0.75rem 1.5rem;
   font-size: 1rem;
   font-weight: 500;

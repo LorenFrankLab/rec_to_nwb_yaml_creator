@@ -85,7 +85,8 @@ describe('StepNavigation', () => {
     );
 
     const exportButton = screen.getByRole('button', { name: /Export/ });
-    expect(exportButton).toBeDisabled();
+    // aria-disabled (kept in the a11y tree) rather than the native disabled attribute.
+    expect(exportButton).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('enables export when all steps valid', () => {
@@ -108,6 +109,7 @@ describe('StepNavigation', () => {
 
     const exportButton = screen.getByRole('button', { name: /Export/ });
     expect(exportButton).not.toBeDisabled();
+    expect(exportButton).not.toHaveAttribute('aria-disabled', 'true');
   });
 
   it('calls onNavigate when step clicked', async () => {
@@ -180,5 +182,67 @@ describe('StepNavigation', () => {
     const parentLi = devicesButton.closest('li');
 
     expect(parentLi).toHaveClass('current');
+  });
+
+  describe('disabled (not-yet-available) steps', () => {
+    const stepsWithDisabled = [
+      { id: 'overview', label: 'Overview' },
+      { id: 'devices', label: 'Devices' },
+      { id: 'epochs', label: 'Epochs', disabled: true },
+      { id: 'validation', label: 'Validation', disabled: true },
+      { id: 'export', label: 'Export' },
+    ];
+
+    it('marks Epochs, Validation, and Export buttons aria-disabled (kept in tab order for AT)', () => {
+      render(
+        <StepNavigation
+          steps={stepsWithDisabled}
+          currentStep="overview"
+          stepStatus={stepStatus}
+          onNavigate={vi.fn()}
+        />
+      );
+
+      // aria-disabled (not native `disabled`) so screen readers can still reach and
+      // announce these steps. Epochs/Validation via the marker; Export via the gate.
+      expect(screen.getByRole('button', { name: /Epochs/ })).toHaveAttribute('aria-disabled', 'true');
+      expect(screen.getByRole('button', { name: /Validation/ })).toHaveAttribute('aria-disabled', 'true');
+      expect(screen.getByRole('button', { name: /Export/ })).toHaveAttribute('aria-disabled', 'true');
+      // The disabled steps are NOT removed from the accessibility tree.
+      expect(screen.getByRole('button', { name: /Epochs/ })).not.toBeDisabled();
+    });
+
+    it('gives disabled/locked steps a meaningful accessible status (not a false "Complete")', () => {
+      render(
+        <StepNavigation
+          steps={stepsWithDisabled}
+          currentStep="overview"
+          stepStatus={{ ...stepStatus, export: 'valid' }}
+          onNavigate={vi.fn()}
+        />
+      );
+
+      expect(screen.getByRole('button', { name: /Epochs.*not available/i })).toBeInTheDocument();
+      // Export reads as locked, never "Complete", even if its raw status is 'valid'.
+      expect(screen.getByRole('button', { name: /Export.*locked/i })).toBeInTheDocument();
+    });
+
+    it('does not navigate when a disabled step is activated', async () => {
+      const user = userEvent.setup();
+      const onNavigate = vi.fn();
+      render(
+        <StepNavigation
+          steps={stepsWithDisabled}
+          currentStep="overview"
+          stepStatus={stepStatus}
+          onNavigate={onNavigate}
+        />
+      );
+
+      // Disabled buttons swallow clicks; assert the handler is never invoked.
+      await user.click(screen.getByRole('button', { name: /Epochs/ }));
+      await user.click(screen.getByRole('button', { name: /Validation/ }));
+      expect(onNavigate).not.toHaveBeenCalled();
+    });
   });
 });

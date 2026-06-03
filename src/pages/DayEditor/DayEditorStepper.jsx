@@ -16,11 +16,11 @@ import ErrorState from './ErrorState';
  * Day Editor Stepper - Container for multi-step session metadata editing
  *
  * Manages the day editor workflow with 5 steps:
- * 1. Overview - Session metadata (M5 - implemented)
- * 2. Devices - Electrode groups, cameras (M6 - implemented)
- * 3. Epochs - Tasks, behavioral events (M7 - stub)
- * 4. Validation - Summary of all errors (M9 - stub)
- * 5. Export - Download YAML file (M10 - stub)
+ * 1. Overview - Session metadata (implemented)
+ * 2. Devices - Electrode groups, cameras (implemented)
+ * 3. Epochs - Tasks, behavioral events (not yet available)
+ * 4. Validation - Summary of all errors (not yet available)
+ * 5. Export - Download YAML file (gated until all steps valid)
  *
  * @returns {JSX.Element}
  *
@@ -88,11 +88,14 @@ export default function DayEditorStepper() {
   }, [day, dayId, actions]);
 
   // Step configuration
+  // Epochs and Validation are not yet available, so they are disabled rather than
+  // silently opening empty content. Export stays gated by isExportEnabled (every
+  // step valid). These steps become functional in later work.
   const steps = [
     { id: 'overview', label: 'Overview', component: OverviewStep },
     { id: 'devices', label: 'Devices', component: DevicesStep },
-    { id: 'epochs', label: 'Epochs', component: EpochsStub },
-    { id: 'validation', label: 'Validation', component: ValidationStub },
+    { id: 'epochs', label: 'Epochs', component: EpochsStub, disabled: true },
+    { id: 'validation', label: 'Validation', component: ValidationStub, disabled: true },
     { id: 'export', label: 'Export', component: ExportStub },
   ];
 
@@ -113,14 +116,16 @@ export default function DayEditorStepper() {
 
   return (
     <div className="day-editor-stepper">
-      <header className="day-editor-header">
+      {/* Plain div, not <header>: a <header> here (not inside a sectioning element)
+          maps to the banner landmark, duplicating AppLayout's banner. */}
+      <div className="day-editor-header">
         <div className="day-editor-title">
           <a
             href={`#/workspace?animal=${animal.id}`}
             className="back-button"
             aria-label="Back to workspace"
           >
-            ← Back
+            ← Back to Workspace
           </a>
           <h1>Day Editor: {animal.id} - {day.date}</h1>
         </div>
@@ -130,7 +135,7 @@ export default function DayEditorStepper() {
           error={persistence.saveError}
           pending={persistence.hasPendingWrite}
         />
-      </header>
+      </div>
 
       <StepNavigation
         steps={steps}
@@ -139,7 +144,13 @@ export default function DayEditorStepper() {
         onNavigate={setCurrentStep}
       />
 
-      <main id="main-content" className="day-editor-content" tabIndex="-1">
+      <main
+        id="main-content"
+        className="day-editor-content"
+        role="main"
+        aria-label="Day editor"
+        tabIndex="-1"
+      >
         <CurrentStepComponent
           animal={animal}
           day={day}

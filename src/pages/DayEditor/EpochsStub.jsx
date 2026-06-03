@@ -1,19 +1,16 @@
 /**
- * Epochs Step - Placeholder for M7
+ * Epochs Step - placeholder (the step is disabled until this is built).
  *
- * Will contain:
- * - Task configuration
- * - Behavioral events
- * - Associated files
+ * Will contain task configuration, behavioral events, and associated files.
  */
 export default function EpochsStub() {
   return (
     <div className="day-editor-section">
       <h2>Epochs & Tasks</h2>
-      <p>This step will be implemented in M7 (Epochs Step).</p>
-      <p>Features coming soon:</p>
+      <p>Coming soon — this step isn’t available yet.</p>
+      <p>It will let you configure:</p>
       <ul>
-        <li>Task configuration</li>
+        <li>Tasks and epochs</li>
         <li>Behavioral event definitions</li>
         <li>Associated files & video files</li>
       </ul>
