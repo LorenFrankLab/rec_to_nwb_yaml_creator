@@ -1,6 +1,6 @@
 # v3.0.0 Workspace Cutover — Implementation Plan
 
-**Status:** Phases 0–3 complete (merged to `modern`). Phase 4 next.
+**Status:** Phases 0–4 complete (merged to `modern`). Phase 5 next.
 
 Carries the `modern` branch from its mid-build state (M8a complete; new multi-page workspace exists
 but cannot export YAML and loses data on refresh) through to **v3.0.0**, where the workspace UI is a
@@ -38,8 +38,8 @@ For agent invocation, **load only the slice you need**:
   - [phase-3-shared-modal-feedback.md](phase-3-shared-modal-feedback.md) — **tech debt:** extract a
     shared accessible `<Modal>`, migrate existing modals, replace `alert()`/`confirm()` with the
     in-app feedback components, single device-type source.
-  - [phase-4-tasks-epochs.md](phase-4-tasks-epochs.md) — **M8b:** Day Editor Tasks & Epochs step
-    (replaces `EpochsStub`).
+  - [phase-4-tasks-epochs.md](phase-4-tasks-epochs.md) — **M8b (complete):** Day Editor Tasks & Epochs
+    step (replaced `EpochsStub`).
   - [phase-5-validation-export.md](phase-5-validation-export.md) — **M9 (critical):** per-day
     Validation step + Export step with shadow-export parity; the new UI can finally produce YAML.
   - [phase-6-store-decomposition-css.md](phase-6-store-decomposition-css.md) — **tech debt:**
