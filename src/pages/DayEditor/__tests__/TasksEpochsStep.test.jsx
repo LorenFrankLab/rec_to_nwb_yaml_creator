@@ -49,7 +49,7 @@ describe('TasksEpochsStep', () => {
     renderStep({ animal: { cameras: [] } });
 
     expect(screen.getByRole('status', { name: /cameras/i })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /skip/i }));
+    await user.click(screen.getByRole('button', { name: /dismiss camera/i }));
     expect(screen.queryByRole('status', { name: /cameras/i })).not.toBeInTheDocument();
   });
 

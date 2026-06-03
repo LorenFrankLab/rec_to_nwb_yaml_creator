@@ -3,10 +3,15 @@ import PropTypes from 'prop-types';
 import { ConfirmDialog } from '../../components/Modal';
 import './TasksTable.scss';
 
-const REQUIRED_STRING_FIELDS = ['task_name', 'task_description', 'task_environment'];
+const REQUIRED_STRING_FIELDS = [
+  { key: 'task_name', label: 'task name' },
+  { key: 'task_description', label: 'task description' },
+  { key: 'task_environment', label: 'task environment' },
+];
 
 /**
- * Per-task status, conveyed beyond color by the badge glyph:
+ * Per-task status, conveyed beyond color by the badge glyph AND an explanatory
+ * label (used as the badge's accessible name and tooltip):
  *   ❌ a required string field is blank (schema would reject the task);
  *   ⚠ the task has no epochs, or references a camera the animal lacks;
  *   ✓ otherwise.
@@ -16,23 +21,33 @@ const REQUIRED_STRING_FIELDS = ['task_name', 'task_description', 'task_environme
  *
  * @param {object} task Task record.
  * @param {Array} cameras Animal cameras.
- * @returns {'✓'|'⚠'|'❌'}
+ * @returns {{glyph: '✓'|'⚠'|'❌', label: string}}
  */
 function getStatus(task, cameras) {
-  const hasBlankRequired = REQUIRED_STRING_FIELDS.some((field) => {
-    const value = task[field];
+  const blankFields = REQUIRED_STRING_FIELDS.filter(({ key }) => {
+    const value = task[key];
     return value === undefined || value === null || String(value).trim() === '';
   });
-  if (hasBlankRequired) return '❌';
+  if (blankFields.length > 0) {
+    return {
+      glyph: '❌',
+      label: `Missing required ${blankFields.map((f) => f.label).join(', ')}`,
+    };
+  }
 
   const availableIds = new Set((cameras || []).map((c) => Number(c.id)));
   const referencesMissingCamera = (task.camera_id || []).some(
     (id) => !availableIds.has(Number(id))
   );
   const hasNoEpochs = (task.task_epochs || []).length === 0;
-  if (hasNoEpochs || referencesMissingCamera) return '⚠';
+  const warnings = [];
+  if (hasNoEpochs) warnings.push('no epochs assigned');
+  if (referencesMissingCamera) warnings.push('references a camera this animal no longer has');
+  if (warnings.length > 0) {
+    return { glyph: '⚠', label: `Warning: ${warnings.join('; ')}` };
+  }
 
-  return '✓';
+  return { glyph: '✓', label: 'Complete' };
 }
 
 /**
@@ -74,7 +89,7 @@ export default function TasksTable({ tasks, cameras, onAdd, onEdit, onDelete }) 
         <p className="empty-state-hint">
           Each task inherits this animal&apos;s cameras and behavioral events.
         </p>
-        <button className="button-primary" onClick={onAdd}>
+        <button type="button" className="button-primary" onClick={onAdd}>
           Add First Task
         </button>
       </div>
@@ -89,7 +104,7 @@ export default function TasksTable({ tasks, cameras, onAdd, onEdit, onDelete }) 
       </header>
 
       <div className="table-actions">
-        <button className="button-primary" onClick={onAdd}>
+        <button type="button" className="button-primary" onClick={onAdd}>
           + Add Task
         </button>
       </div>
@@ -97,11 +112,11 @@ export default function TasksTable({ tasks, cameras, onAdd, onEdit, onDelete }) 
       <table className="tasks-table" role="table">
         <thead>
           <tr>
-            <th>Task</th>
-            <th>Cameras</th>
-            <th>Epochs</th>
-            <th>Status</th>
-            <th>Actions</th>
+            <th scope="col">Task</th>
+            <th scope="col">Cameras</th>
+            <th scope="col">Epochs</th>
+            <th scope="col">Status</th>
+            <th scope="col">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -116,13 +131,20 @@ export default function TasksTable({ tasks, cameras, onAdd, onEdit, onDelete }) 
                 </td>
                 <td data-label="Epochs">{(task.task_epochs || []).length}</td>
                 <td data-label="Status">
-                  <span className={`status-badge status-${status}`}>{status}</span>
+                  <span
+                    className={`status-badge status-${status.glyph}`}
+                    title={status.label}
+                  >
+                    <span aria-hidden="true">{status.glyph}</span>
+                    <span className="sr-only">{status.label}</span>
+                  </span>
                 </td>
                 <td data-label="Actions">
-                  <button className="button-small" onClick={() => onEdit(index)}>
+                  <button type="button" className="button-small" onClick={() => onEdit(index)}>
                     Edit
                   </button>
                   <button
+                    type="button"
                     className="button-small button-danger"
                     onClick={() => setPendingDeleteIndex(index)}
                     aria-label={`Delete task ${task.task_name || index + 1}`}

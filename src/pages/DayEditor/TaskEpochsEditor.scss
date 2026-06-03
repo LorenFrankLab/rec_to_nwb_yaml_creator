@@ -26,6 +26,24 @@
     padding: 0;
   }
 
+  .task-epoch-headers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm, 0.5rem);
+    margin-bottom: var(--spacing-xs, 0.25rem);
+    font-size: var(--font-size-sm, 0.875rem);
+    font-weight: 600;
+    color: var(--color-grey-700, #616161);
+
+    .epoch-number-input {
+      width: 6rem;
+    }
+
+    .epoch-time-input {
+      width: 8rem;
+    }
+  }
+
   .task-epoch-row {
     margin-bottom: var(--spacing-sm, 0.5rem);
   }

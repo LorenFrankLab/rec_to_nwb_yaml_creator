@@ -148,21 +148,37 @@
   }
 }
 
-/* Shared inline message styles (scoped to keep them on the Day Editor page). */
+.task-modal-form .help-text {
+  display: block;
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-grey-600, #666);
+  margin-top: var(--spacing-xs, 0.25rem);
+}
+
+.task-modal-form .save-hint {
+  flex: 1 1 100%;
+  margin: 0 0 var(--spacing-sm, 0.5rem) 0;
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-grey-700, #616161);
+  text-align: right;
+}
+
+/* Shared inline message styles (scoped to keep them on the Day Editor page).
+   Colors are verified WCAG AA (>= 4.5:1) against white. */
 .inline-error {
-  color: #c62828; /* WCAG AA on white */
+  color: #c62828; /* Red 800 - 5.9:1 on white */
   font-size: var(--font-size-sm, 0.875rem);
   margin-top: var(--spacing-xs, 0.25rem);
 }
 
 .inline-warning {
-  color: #e65100; /* Orange 900 - WCAG AA on white */
+  color: #bf360c; /* Deep Orange 900 - 5.6:1 on white */
   font-size: var(--font-size-sm, 0.875rem);
   margin-top: var(--spacing-xs, 0.25rem);
 }
 
 .inline-info {
-  color: #1565c0; /* Blue 800 - WCAG AA on white */
+  color: #1565c0; /* Blue 800 - 5.7:1 on white */
   font-size: var(--font-size-sm, 0.875rem);
   margin-top: var(--spacing-xs, 0.25rem);
 

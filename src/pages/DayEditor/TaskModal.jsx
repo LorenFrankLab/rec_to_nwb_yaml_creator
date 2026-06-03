@@ -19,7 +19,6 @@ import './TaskModal.scss';
  * are editor-local and never reach the saved task.
  *
  * @param {object} props Component props.
- * @param {'add'|'edit'} props.mode Add or edit.
  * @param {object|null} props.task Task being edited (edit mode).
  * @param {Array} props.existingTasks Sibling tasks in the day (unique-name check).
  * @param {Array} props.cameras Animal cameras (multi-select options).
@@ -29,13 +28,16 @@ import './TaskModal.scss';
  * @param {Function} props.onCancel Called on cancel / ESC / overlay close.
  * @returns {JSX.Element}
  */
-function TaskForm({ mode, task, existingTasks, cameras, inheritedEvents, animalId, onSave, onCancel }) {
+function TaskForm({ task, existingTasks, cameras, inheritedEvents, animalId, onSave, onCancel }) {
   const [taskName, setTaskName] = useState(() => task?.task_name ?? '');
   const [taskDescription, setTaskDescription] = useState(() => task?.task_description ?? '');
   const [taskEnvironment, setTaskEnvironment] = useState(() => task?.task_environment ?? '');
   const [cameraIds, setCameraIds] = useState(() => (task?.camera_id ?? []).map(Number));
   const [epochs, setEpochs] = useState(() => (task?.task_epochs ?? []).map(Number));
   const [epochsHaveError, setEpochsHaveError] = useState(false);
+  // Required-field errors are surfaced only after the field has been blurred, so
+  // a freshly opened form is not littered with "required" messages.
+  const [touched, setTouched] = useState({ name: false, environment: false });
   const baseId = useId();
 
   const availableCameraIds = new Set((cameras || []).map((c) => Number(c.id)));
@@ -46,8 +48,20 @@ function TaskForm({ mode, task, existingTasks, cameras, inheritedEvents, animalI
   const isDuplicateName =
     trimmedName !== '' && otherTasks.some((t) => t.task_name === trimmedName);
 
-  const hasBlankRequired = trimmedName === '' || taskEnvironment.trim() === '';
-  const saveDisabled = hasBlankRequired || isDuplicateName || epochsHaveError;
+  const nameBlank = trimmedName === '';
+  const environmentBlank = taskEnvironment.trim() === '';
+  const saveDisabled = nameBlank || environmentBlank || isDuplicateName || epochsHaveError;
+
+  // Human-readable reasons Save is blocked, announced to assistive tech so a
+  // disabled Save button is never an unexplained dead-end.
+  const blockingReasons = [];
+  if (nameBlank) blockingReasons.push('a task name');
+  if (environmentBlank) blockingReasons.push('a task environment');
+  if (isDuplicateName) blockingReasons.push('a unique task name');
+  if (epochsHaveError) blockingReasons.push('each epoch to end after it starts');
+  const saveHint = blockingReasons.length
+    ? `To save, add ${blockingReasons.join(', ')}.`
+    : '';
 
   /**
    * Toggle a camera id in the selection.
@@ -83,6 +97,13 @@ function TaskForm({ mode, task, existingTasks, cameras, inheritedEvents, animalI
   }
 
   const nameErrorId = `${baseId}-name-error`;
+  const nameBlankErrorId = `${baseId}-name-blank-error`;
+  const environmentErrorId = `${baseId}-environment-error`;
+  const descriptionHintId = `${baseId}-description-hint`;
+  const saveHintId = `${baseId}-save-hint`;
+  const showNameBlankError = touched.name && nameBlank;
+  const showEnvironmentError = touched.environment && environmentBlank;
+  const nameDescribedBy = isDuplicateName ? nameErrorId : showNameBlankError ? nameBlankErrorId : undefined;
 
   return (
     <form className="task-modal-form" onSubmit={(e) => e.preventDefault()}>
@@ -90,33 +111,49 @@ function TaskForm({ mode, task, existingTasks, cameras, inheritedEvents, animalI
         <summary>Task details</summary>
         <div className="task-modal-section-body">
           <div className="form-group">
-            <label htmlFor={`${baseId}-name`}>Task name</label>
+            <label htmlFor={`${baseId}-name`}>Task name (required)</label>
             <input
               id={`${baseId}-name`}
               type="text"
               value={taskName}
               onChange={(e) => setTaskName(e.target.value)}
+              onBlur={() => setTouched((prev) => ({ ...prev, name: true }))}
               required
-              aria-invalid={isDuplicateName}
-              aria-describedby={isDuplicateName ? nameErrorId : undefined}
+              aria-required="true"
+              aria-invalid={isDuplicateName || showNameBlankError}
+              aria-describedby={nameDescribedBy}
             />
             {isDuplicateName && (
               <div id={nameErrorId} className="inline-error" role="alert">
                 Task name must be unique within this day
               </div>
             )}
+            {showNameBlankError && !isDuplicateName && (
+              <div id={nameBlankErrorId} className="inline-error" role="alert">
+                Task name is required
+              </div>
+            )}
           </div>
 
           <div className="form-group">
-            <label htmlFor={`${baseId}-environment`}>Task environment</label>
+            <label htmlFor={`${baseId}-environment`}>Task environment (required)</label>
             <input
               id={`${baseId}-environment`}
               type="text"
               value={taskEnvironment}
               onChange={(e) => setTaskEnvironment(e.target.value)}
+              onBlur={() => setTouched((prev) => ({ ...prev, environment: true }))}
               placeholder="e.g., HomeBox"
               required
+              aria-required="true"
+              aria-invalid={showEnvironmentError}
+              aria-describedby={showEnvironmentError ? environmentErrorId : undefined}
             />
+            {showEnvironmentError && (
+              <div id={environmentErrorId} className="inline-error" role="alert">
+                Task environment is required
+              </div>
+            )}
           </div>
 
           <div className="form-group">
@@ -126,7 +163,11 @@ function TaskForm({ mode, task, existingTasks, cameras, inheritedEvents, animalI
               value={taskDescription}
               onChange={(e) => setTaskDescription(e.target.value)}
               rows={2}
+              aria-describedby={descriptionHintId}
             />
+            <span id={descriptionHintId} className="help-text">
+              Optional to save, but required before the day can be exported.
+            </span>
           </div>
         </div>
       </details>
@@ -136,11 +177,9 @@ function TaskForm({ mode, task, existingTasks, cameras, inheritedEvents, animalI
         <div className="task-modal-section-body">
           {(cameras || []).length === 0 ? (
             <div className="inline-info" role="status">
-              No cameras are defined for this animal. Cameras are optional, but link
-              video and spatial tracking.{' '}
-              {animalId && (
-                <a href={`#/animal/${animalId}/editor`}>Add cameras in the Animal Editor</a>
-              )}
+              No cameras are defined for this animal. Cameras are optional, but they
+              link video and spatial tracking. You can add them in the Animal Editor;
+              this task will still save without them.
             </div>
           ) : (
             <fieldset className="camera-checkboxes">
@@ -186,6 +225,11 @@ function TaskForm({ mode, task, existingTasks, cameras, inheritedEvents, animalI
       </details>
 
       <div className="form-actions">
+        {saveHint && (
+          <p id={saveHintId} className="save-hint" role="status">
+            {saveHint}
+          </p>
+        )}
         <button type="button" className="btn-cancel" onClick={onCancel} aria-label="Cancel">
           Cancel
         </button>
@@ -195,6 +239,7 @@ function TaskForm({ mode, task, existingTasks, cameras, inheritedEvents, animalI
           onClick={handleSave}
           disabled={saveDisabled}
           aria-label="Save task"
+          aria-describedby={saveHint ? saveHintId : undefined}
         >
           Save
         </button>
@@ -204,7 +249,6 @@ function TaskForm({ mode, task, existingTasks, cameras, inheritedEvents, animalI
 }
 
 TaskForm.propTypes = {
-  mode: PropTypes.oneOf(['add', 'edit']).isRequired,
   task: PropTypes.object,
   existingTasks: PropTypes.array.isRequired,
   cameras: PropTypes.array,
@@ -258,7 +302,6 @@ const TaskModal = ({
   >
     <TaskForm
       key={`${mode}-${task?.task_name ?? '__new__'}`}
-      mode={mode}
       task={task}
       existingTasks={existingTasks}
       cameras={cameras}

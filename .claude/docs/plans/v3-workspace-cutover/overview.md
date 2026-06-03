@@ -169,6 +169,24 @@ not executed here.
   natural fit for the [Phase 9](phase-9-a11y-keyboard.md) accessibility pass, which should also sweep
   the pre-existing color-contrast issues (inline-warning text, channel-map select focus rings, calendar
   day-number contrast) flagged in the Phase 3 UX review.
+- **Phase 4 UX/a11y items deferred to the Phase 9 sweep.** The Phase 4 reviewers surfaced three items
+  that are app-wide or shared-component concerns, out of scope for Phase 4's local change:
+  1. **Primary-button contrast.** `--color-primary` (`#2196f3`) with white text is ~3.1:1 — below
+     WCAG AA — and is the app-wide primary-button color (Home, Animal Editor, Day Editor all reuse it).
+     Phase 4 left it unchanged to avoid fragmenting the palette; fix it once, centrally, in the Phase 9
+     color-contrast sweep (alongside the inline-warning/focus-ring/calendar items already named above).
+     (Phase 4's own *new* inline-warning / `status-⚠` colors were bumped to AA-compliant values.)
+  2. **`role="alertdialog"` for destructive confirms.** `src/components/Modal/ConfirmDialog.jsx` (the
+     shared Phase 3 primitive) renders `role="dialog"`; ARIA recommends `alertdialog` for a destructive
+     confirm. Changing it touches the shared component used by every delete flow → defer to the Phase 9
+     a11y pass so it lands once for all callers.
+  3. **Inherited behavioral events vs. the YAML merge.** The Tasks & Epochs step shows the animal's
+     `behavioral_events` as inherited/read-only, but `mergeDayMetadata` (`src/state/workspaceUtils.js`)
+     emits only `day.behavioral_events` — it does not concatenate the animal's inherited events into the
+     exported metadata. This is a **pre-existing** merge gap (not introduced by Phase 4) that Phase 4's
+     UI now makes visible. **Follow-up:** reconcile the inheritance UI with the merge contract (either
+     merge animal events into the day output, or relabel the display) before cutover — a natural fit for
+     [Phase 5](phase-5-validation-export.md), which owns the export/merge path, or the Phase 7 summary.
 
 ## Estimated Effort
 

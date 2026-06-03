@@ -109,8 +109,9 @@ export default function TasksEpochsStep({ animal, day, onFieldUpdate }) {
               type="button"
               className="button-small"
               onClick={() => setBannerDismissed(true)}
+              aria-label="Dismiss camera recommendation"
             >
-              Skip
+              Skip for now
             </button>
           </div>
         </div>

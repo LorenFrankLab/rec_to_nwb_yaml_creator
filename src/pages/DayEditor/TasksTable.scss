@@ -156,7 +156,7 @@
 
 .tasks-table-section .status-badge.status-⚠ {
   background-color: var(--color-warning-light, #fff3e0);
-  color: #e65100;
+  color: #bf360c; /* Deep Orange 900 - >= 4.5:1 on the warning-light background */
   border: 1px solid #ffb74d;
 }
 

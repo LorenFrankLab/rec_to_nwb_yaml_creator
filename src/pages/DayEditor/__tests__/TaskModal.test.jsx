@@ -119,6 +119,53 @@ describe('TaskModal', () => {
     expect(save).toBeDisabled();
   });
 
+  it('re-enables Save once a bad epoch row is corrected', async () => {
+    const user = userEvent.setup();
+    renderModal();
+    const save = screen.getByRole('button', { name: /save task/i });
+
+    await user.type(screen.getByRole('textbox', { name: /task name/i }), 'sleep');
+    await user.type(screen.getByRole('textbox', { name: /task environment/i }), 'HomeBox');
+    await user.click(screen.getByRole('button', { name: /add epoch/i }));
+    await user.type(screen.getByRole('spinbutton', { name: /epoch number, row 1/i }), '1');
+    const start = screen.getByRole('spinbutton', { name: /start time.*row 1/i });
+    const end = screen.getByRole('spinbutton', { name: /end time.*row 1/i });
+    await user.type(start, '10');
+    await user.type(end, '5');
+    expect(save).toBeDisabled();
+
+    await user.clear(end);
+    await user.type(end, '20');
+    expect(save).toBeEnabled();
+  });
+
+  it('keeps Save disabled for a whitespace-only required field and trims on save', async () => {
+    const user = userEvent.setup();
+    const { onSave } = renderModal();
+    const save = screen.getByRole('button', { name: /save task/i });
+
+    await user.type(screen.getByRole('textbox', { name: /task name/i }), '  sleep  ');
+    await user.type(screen.getByRole('textbox', { name: /task environment/i }), '   ');
+    expect(save).toBeDisabled();
+
+    await user.clear(screen.getByRole('textbox', { name: /task environment/i }));
+    await user.type(screen.getByRole('textbox', { name: /task environment/i }), 'HomeBox');
+    await user.click(save);
+
+    expect(onSave.mock.calls[0][0].task_name).toBe('sleep');
+  });
+
+  it('detects a duplicate name even with surrounding whitespace', async () => {
+    const user = userEvent.setup();
+    renderModal({ existingTasks: [{ task_name: 'sleep', task_description: 'd', task_environment: 'e', camera_id: [], task_epochs: [] }] });
+
+    await user.type(screen.getByRole('textbox', { name: /task name/i }), '  sleep  ');
+    await user.type(screen.getByRole('textbox', { name: /task environment/i }), 'HomeBox');
+
+    expect(screen.getByRole('button', { name: /save task/i })).toBeDisabled();
+    expect(screen.getByText(/task name must be unique/i)).toBeInTheDocument();
+  });
+
   it('persists task_epochs as unique integers without start/end times', async () => {
     const user = userEvent.setup();
     const { onSave } = renderModal();

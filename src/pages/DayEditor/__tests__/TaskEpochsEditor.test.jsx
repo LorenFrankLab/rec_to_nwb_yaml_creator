@@ -89,6 +89,52 @@ describe('TaskEpochsEditor', () => {
     expect(lastCall.epochs.every((n) => Number.isInteger(n))).toBe(true);
   });
 
+  it('treats end == start as an error (boundary)', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<TaskEpochsEditor initialEpochs={[1]} onChange={onChange} />);
+
+    await user.type(screen.getByRole('spinbutton', { name: /start time.*row 1/i }), '5');
+    await user.type(screen.getByRole('spinbutton', { name: /end time.*row 1/i }), '5');
+
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ hasError: true }));
+  });
+
+  it('does not error or warn on a partially-specified interval (start only)', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<TaskEpochsEditor initialEpochs={[1]} onChange={onChange} />);
+
+    await user.type(screen.getByRole('spinbutton', { name: /start time.*row 1/i }), '5');
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ hasError: false }));
+  });
+
+  it('excludes non-integer epoch numbers from the emitted list', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<TaskEpochsEditor initialEpochs={[]} onChange={onChange} />);
+
+    await user.click(screen.getByRole('button', { name: /add epoch/i }));
+    await user.type(screen.getByRole('spinbutton', { name: /epoch number, row 1/i }), '1.5');
+
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ epochs: [] }));
+  });
+
+  it('de-duplicates repeated epoch numbers (schema uniqueItems)', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<TaskEpochsEditor initialEpochs={[3]} onChange={onChange} />);
+
+    await user.click(screen.getByRole('button', { name: /add epoch/i }));
+    await user.type(screen.getByRole('spinbutton', { name: /epoch number, row 2/i }), '3');
+
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ epochs: [3] }));
+  });
+
   it('removes a row when its remove button is clicked', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();

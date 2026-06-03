@@ -83,11 +83,12 @@ describe('Tasks & Epochs step (integration)', () => {
     await user.click(addButton);
 
     const dialog = screen.getByRole('dialog');
-    // Focus moved into the dialog on open.
+    // Focus moved into the dialog on open (onto the first focusable element).
     expect(dialog.contains(document.activeElement)).toBe(true);
 
-    // Tab keeps focus within the dialog (shared Modal focus trap).
-    await user.tab();
+    // Shift+Tab from the first focusable must WRAP to the last inside the dialog
+    // (the shared Modal trap); without the trap it would escape to the document.
+    await user.tab({ shift: true });
     expect(dialog.contains(document.activeElement)).toBe(true);
 
     // ESC closes and returns focus to the element that opened the modal.

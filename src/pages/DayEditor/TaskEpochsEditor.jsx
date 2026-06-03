@@ -153,6 +153,12 @@ export default function TaskEpochsEditor({ initialEpochs, onChange }) {
         <p className="task-epochs-empty">No epochs yet.</p>
       ) : (
         <ul className="task-epochs-rows" aria-labelledby={headingId}>
+          <li className="task-epoch-headers" aria-hidden="true">
+            <span className="epoch-number-input">Epoch #</span>
+            <span className="epoch-time-input">Start (s)</span>
+            <span className="epoch-time-input">End (s)</span>
+            <span className="epoch-row-spacer" />
+          </li>
           {rows.map((row, index) => {
             const reversed = isReversed(row);
             const errorId = `${headingId}-err-${index}`;
