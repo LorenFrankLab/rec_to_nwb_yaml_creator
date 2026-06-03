@@ -27,8 +27,8 @@
 /**
  * Workspace - Top-level container for all animals and days
  *
- * Persisted to localStorage with auto-save functionality.
- * Contains all animals, days, and workspace settings.
+ * Persisted to localStorage (key "rec_to_nwb_workspace_v1", debounced autosave) when
+ * the persistence feature flag is enabled. Contains all animals, days, and settings.
  *
  * @typedef {object} Workspace
  * @property {string} version - Schema version (e.g., "1.0.0")
@@ -36,6 +36,26 @@
  * @property {Record<AnimalId, Animal>} animals - All animals keyed by ID
  * @property {Record<DayId, Day>} days - All days keyed by ID
  * @property {WorkspaceSettings} settings - Global workspace settings
+ */
+
+/**
+ * PersistenceStatus - Real workspace save/load status exposed by the store.
+ *
+ * Derived only from actual persistence outcomes (never optimistic). Surfaced on the
+ * store return and via StoreContext as `persistence`. Never part of the form `model`
+ * and never serialized into YAML.
+ *
+ * Note: `lastSaved` here is the storage-write timestamp and is unrelated to
+ * `Workspace.version` (the in-memory data-model version) or the persisted envelope's
+ * integer `schemaVersion` (the storage-format version that governs hydrate/discard).
+ *
+ * @typedef {object} PersistenceStatus
+ * @property {boolean} enabled - Whether localStorage persistence is active (feature flag).
+ * @property {string|null} lastSaved - ISO timestamp of the last confirmed write, or null.
+ * @property {string|null} saveError - Message if the last write failed, or null.
+ * @property {boolean} hasPendingWrite - True while a debounced write is in flight.
+ * @property {string|null} loadNotice - Notice shown when a saved workspace was discarded, or null.
+ * @property {() => void} dismissLoadNotice - Clears the load notice.
  */
 
 /**

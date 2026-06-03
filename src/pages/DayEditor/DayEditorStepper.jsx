@@ -29,11 +29,9 @@ import ErrorState from './ErrorState';
  * <DayEditorStepper />
  */
 export default function DayEditorStepper() {
-  const { model, actions } = useStoreContext();
+  const { model, actions, persistence } = useStoreContext();
   const dayId = useDayIdFromUrl();
   const [currentStep, setCurrentStep] = useState('overview');
-  const [lastSaved, setLastSaved] = useState(null);
-  const [saveError, setSaveError] = useState(null);
 
   // Get day and animal from store
   const day = model.workspace?.days?.[dayId];
@@ -59,45 +57,34 @@ export default function DayEditorStepper() {
     return computeStepStatus(day, mergedDay);
   }, [day, mergedDay]);
 
-  // Field update handler with nested path support
+  // Field update handler with nested path support. The write is synchronous; real
+  // save status (and any failure) is reported by the store's debounced autosave via
+  // `persistence`, not optimistically here.
   const handleFieldUpdate = useCallback((fieldPath, value) => {
     if (!day || !dayId) return;
 
-    try {
-      // Parse path: "session.session_id" → ["session", "session_id"]
-      const pathSegments = fieldPath.split('.');
+    // Parse path: "session.session_id" → ["session", "session_id"]
+    const pathSegments = fieldPath.split('.');
 
-      // Clone day and update nested field immutably
-      const updated = structuredClone(day);
-      let target = updated;
+    // Clone day and update nested field immutably
+    const updated = structuredClone(day);
+    let target = updated;
 
-      // Navigate to parent object, creating intermediate objects if they don't exist
-      for (let i = 0; i < pathSegments.length - 1; i++) {
-        const segment = pathSegments[i];
-        if (!target[segment]) {
-          target[segment] = {};
-        }
-        target = target[segment];
+    // Navigate to parent object, creating intermediate objects if they don't exist
+    for (let i = 0; i < pathSegments.length - 1; i++) {
+      const segment = pathSegments[i];
+      if (!target[segment]) {
+        target[segment] = {};
       }
-
-      // Set the final value
-      target[pathSegments[pathSegments.length - 1]] = value;
-
-      // Extract top-level keys that changed
-      const topLevelKey = pathSegments[0];
-      const updates = { [topLevelKey]: updated[topLevelKey] };
-
-      // Update store
-      actions.updateDay(dayId, updates);
-
-      // Update save status
-      setLastSaved(new Date().toISOString());
-      setSaveError(null);
-
-    } catch (error) {
-      console.error('Failed to update field:', error);
-      setSaveError(`Failed to save ${fieldPath}: ${error.message}`);
+      target = target[segment];
     }
+
+    // Set the final value
+    target[pathSegments[pathSegments.length - 1]] = value;
+
+    // Extract top-level keys that changed and update the store.
+    const topLevelKey = pathSegments[0];
+    actions.updateDay(dayId, { [topLevelKey]: updated[topLevelKey] });
   }, [day, dayId, actions]);
 
   // Step configuration
@@ -137,7 +124,12 @@ export default function DayEditorStepper() {
           </a>
           <h1>Day Editor: {animal.id} - {day.date}</h1>
         </div>
-        <SaveIndicator lastSaved={lastSaved} error={saveError} />
+        <SaveIndicator
+          enabled={persistence.enabled}
+          lastSaved={persistence.lastSaved}
+          error={persistence.saveError}
+          pending={persistence.hasPendingWrite}
+        />
       </header>
 
       <StepNavigation

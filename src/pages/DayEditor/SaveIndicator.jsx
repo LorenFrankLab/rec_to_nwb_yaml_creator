@@ -1,74 +1,76 @@
-import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 
 /**
- * Save Indicator - Visual feedback for auto-save status
+ * Save Indicator - Truthful visual feedback for workspace persistence status.
  *
- * Shows a status indicator that transitions from "Saving..." to "Saved X ago"
- * after auto-save completes. Displays error messages if save fails.
+ * Status is derived entirely from real persistence state, never from an optimistic
+ * local timestamp:
+ * - `enabled === false`: persistence is off, so the indicator must NOT claim "Saved";
+ *   it shows a muted "Not saved (in memory)".
+ * - `error`: a write failed; shows the error.
+ * - `pending`: a debounced write is in flight; shows "Saving…".
+ * - `lastSaved`: a write succeeded; shows "Saved <time ago>".
  *
  * @param {object} props
- * @param {string|null} props.lastSaved - ISO timestamp of last save
- * @param {string|null} props.error - Error message if save failed
+ * @param {boolean} props.enabled - Whether localStorage persistence is active.
+ * @param {string|null} props.lastSaved - ISO timestamp of the last confirmed write.
+ * @param {string|null} props.error - Error message if the last write failed.
+ * @param {boolean} props.pending - Whether a debounced write is currently in flight.
  * @returns {JSX.Element|null}
- *
- * @example
- * <SaveIndicator
- *   lastSaved="2023-06-22T14:30:00.000Z"
- *   error={null}
- * />
  */
-export default function SaveIndicator({ lastSaved, error }) {
-  const [status, setStatus] = useState('idle');
-
-  useEffect(() => {
-    if (!lastSaved) return;
-
-    // Show "Saving..." briefly, then "Saved ✓"
-    setStatus('saving');
-    const timer = setTimeout(() => setStatus('saved'), 500);
-
-    return () => clearTimeout(timer);
-  }, [lastSaved]);
-
-  // Error takes precedence
-  if (error) {
+export default function SaveIndicator({ enabled, lastSaved, error, pending }) {
+  // Persistence off: never claim "Saved" for in-memory-only state.
+  if (!enabled) {
     return (
       <div
-        className="save-indicator error"
-        role="alert"
-        aria-live="assertive"
+        className="save-indicator not-persisted"
+        role="status"
+        aria-live="polite"
+        aria-label="Not saved — changes are in memory only"
       >
+        <span>Not saved (in memory)</span>
+      </div>
+    );
+  }
+
+  // A failed write takes precedence over any earlier success.
+  if (error) {
+    return (
+      <div className="save-indicator error" role="alert" aria-live="assertive">
         <span className="icon" aria-hidden="true">✗</span>
         <span>{error}</span>
       </div>
     );
   }
 
-  // No save yet
+  if (pending) {
+    return (
+      <div
+        className="save-indicator saving"
+        role="status"
+        aria-live="polite"
+        aria-label="Saving changes"
+      >
+        <span className="spinner" aria-hidden="true">⟳</span>
+        <span>Saving…</span>
+      </div>
+    );
+  }
+
+  // Nothing written yet this session.
   if (!lastSaved) return null;
 
   const timeAgo = formatTimeAgo(lastSaved);
 
   return (
     <div
-      className={`save-indicator ${status}`}
+      className="save-indicator saved"
       role="status"
       aria-live="polite"
-      aria-label={status === 'saving' ? 'Saving changes' : `Saved ${timeAgo}`}
+      aria-label={`Saved ${timeAgo}`}
     >
-      {status === 'saving' && (
-        <>
-          <span className="spinner" aria-hidden="true">⟳</span>
-          <span>Saving...</span>
-        </>
-      )}
-      {status === 'saved' && (
-        <>
-          <span className="checkmark" aria-hidden="true">✓</span>
-          <span>Saved {timeAgo}</span>
-        </>
-      )}
+      <span className="checkmark" aria-hidden="true">✓</span>
+      <span>Saved {timeAgo}</span>
     </div>
   );
 }
@@ -94,11 +96,15 @@ function formatTimeAgo(isoTimestamp) {
 }
 
 SaveIndicator.propTypes = {
+  enabled: PropTypes.bool,
   lastSaved: PropTypes.string,
   error: PropTypes.string,
+  pending: PropTypes.bool,
 };
 
 SaveIndicator.defaultProps = {
+  enabled: true,
   lastSaved: null,
   error: null,
+  pending: false,
 };

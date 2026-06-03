@@ -175,6 +175,24 @@ describe('DayEditorStepper', () => {
     expect(overviewButton).toBeInTheDocument();
   });
 
+  it('does not optimistically show "Saved" when a field is edited', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <StoreProvider initialState={mockInitialState}>
+        <DayEditorStepper />
+      </StoreProvider>
+    );
+
+    // Edit the first editable field in the Overview step.
+    const field = screen.getAllByRole('textbox')[0];
+    await user.type(field, 'x');
+
+    // Real save status comes from the store's debounced autosave; the stepper must
+    // not fake an immediate local "Saved" (the removed false-success pattern).
+    expect(screen.queryByText(/^Saved /)).not.toBeInTheDocument();
+  });
+
   it('renders back button to animal workspace', () => {
     render(
       <StoreProvider initialState={mockInitialState}>

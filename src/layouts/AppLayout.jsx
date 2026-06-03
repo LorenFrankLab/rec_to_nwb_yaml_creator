@@ -9,6 +9,8 @@
 
 import React, { useEffect, useRef, lazy, Suspense } from 'react';
 import { useHashRouter } from '../hooks/useHashRouter';
+import { useStoreContext } from '../state/StoreContext';
+import { useUnsavedWorkGuard } from '../hooks/useUnsavedWorkGuard';
 import { Home } from '../pages/Home';
 import { AnimalWorkspace } from '../pages/AnimalWorkspace';
 import { DayEditor } from '../pages/DayEditor';
@@ -88,6 +90,10 @@ function handleSkipLinkClick(e, targetId) {
 export function AppLayout() {
   const currentRoute = useHashRouter();
   const previousRoute = useRef(currentRoute);
+
+  // Warn before leaving the page while a workspace autosave is still in flight.
+  const { persistence } = useStoreContext();
+  useUnsavedWorkGuard(persistence.hasPendingWrite);
 
   // Focus management on route changes
   useEffect(() => {
@@ -172,6 +178,22 @@ export function AppLayout() {
           <img src={logo} alt="Loren Frank Lab logo" />
         </a>
       </div>
+
+      {/* Notice when previously-saved workspace data could not be restored, so a
+          discarded (corrupt / incompatible-version) workspace is never silent. */}
+      {persistence.loadNotice && (
+        <div className="load-notice" role="alert">
+          <span>{persistence.loadNotice}</span>
+          <button
+            type="button"
+            className="load-notice-dismiss"
+            onClick={persistence.dismissLoadNotice}
+            aria-label="Dismiss notice"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Main content area - views provide their own <main> element */}
       {renderView()}

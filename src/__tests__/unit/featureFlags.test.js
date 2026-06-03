@@ -35,7 +35,8 @@ describe('featureFlags', () => {
 
       // M3: Animal workspace
       expect(FLAGS.animalWorkspace).toBe(false);
-      expect(FLAGS.localStoragePersistence).toBe(false);
+      // Persistence is enabled by default: the workspace autosaves to localStorage.
+      expect(FLAGS.localStoragePersistence).toBe(true);
 
       // M4-M5: Day editor
       expect(FLAGS.newDayEditor).toBe(false);
@@ -63,9 +64,9 @@ describe('featureFlags', () => {
       expect(FLAGS.simulateSlowNetwork).toBe(false);
     });
 
-    it('should have exactly 2 flags enabled by default', () => {
+    it('should have exactly 3 flags enabled by default', () => {
       const enabledCount = Object.values(FLAGS).filter(Boolean).length;
-      expect(enabledCount).toBe(2); // shadowExportStrict, shadowExportLog
+      expect(enabledCount).toBe(3); // shadowExportStrict, shadowExportLog, localStoragePersistence
     });
   });
 
@@ -110,7 +111,8 @@ describe('featureFlags', () => {
       expect(enabled).toBeInstanceOf(Array);
       expect(enabled).toContain('shadowExportStrict');
       expect(enabled).toContain('shadowExportLog');
-      expect(enabled).toHaveLength(2);
+      expect(enabled).toContain('localStoragePersistence');
+      expect(enabled).toHaveLength(3);
     });
 
     it('should not include disabled features', () => {
@@ -141,8 +143,8 @@ describe('featureFlags', () => {
       const disabled = getDisabledFeatures();
       const totalFlags = Object.keys(FLAGS).length;
 
-      // Should be totalFlags - 2 (shadowExportStrict, shadowExportLog)
-      expect(disabled).toHaveLength(totalFlags - 2);
+      // Should be totalFlags - 3 (shadowExportStrict, shadowExportLog, localStoragePersistence)
+      expect(disabled).toHaveLength(totalFlags - 3);
     });
   });
 
@@ -167,14 +169,14 @@ describe('featureFlags', () => {
     it('should have correct enabled count', () => {
       const summary = getFlagSummary();
 
-      expect(summary.enabled).toBe(2); // shadowExportStrict, shadowExportLog
+      expect(summary.enabled).toBe(3); // shadowExportStrict, shadowExportLog, localStoragePersistence
     });
 
     it('should have correct disabled count', () => {
       const summary = getFlagSummary();
       const flagCount = Object.keys(FLAGS).length;
 
-      expect(summary.disabled).toBe(flagCount - 2);
+      expect(summary.disabled).toBe(flagCount - 3);
     });
 
     it('should have enabled + disabled = total', () => {

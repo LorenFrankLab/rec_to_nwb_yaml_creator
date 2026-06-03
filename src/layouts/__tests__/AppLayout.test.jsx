@@ -6,8 +6,17 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render as rtlRender, screen, waitFor } from '@testing-library/react';
+import { StoreProvider } from '../../state/StoreContext';
 import { AppLayout } from '../AppLayout';
+
+// AppLayout now consumes the store (persistence status for the unsaved-work guard),
+// so all renders are wrapped in a StoreProvider.
+const render = (ui, options) =>
+  rtlRender(ui, {
+    wrapper: ({ children }) => <StoreProvider>{children}</StoreProvider>,
+    ...options,
+  });
 
 // Mock child components to avoid deep rendering
 // NOTE: Mocks must provide <main> element since AppLayout no longer wraps views
@@ -429,6 +438,34 @@ describe('AppLayout', () => {
       await waitFor(() => {
         expect(screen.getByTestId('home-view')).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('discarded-workspace notice', () => {
+    afterEach(() => {
+      window.localStorage.clear();
+    });
+
+    it('shows a dismissible notice when a saved workspace could not be restored', async () => {
+      // Seed an unusable (corrupt) blob so hydration discards it on mount.
+      window.localStorage.setItem('rec_to_nwb_workspace_v1', '{not valid json');
+
+      render(<AppLayout />);
+
+      const notice = await screen.findByRole('alert');
+      expect(notice).toHaveTextContent(/could not be restored/i);
+
+      const dismiss = screen.getByRole('button', { name: /dismiss/i });
+      await dismiss.click();
+
+      await waitFor(() => {
+        expect(screen.queryByText(/could not be restored/i)).not.toBeInTheDocument();
+      });
+    });
+
+    it('shows no notice on a clean start (no saved blob)', () => {
+      render(<AppLayout />);
+      expect(screen.queryByText(/could not be restored/i)).not.toBeInTheDocument();
     });
   });
 });

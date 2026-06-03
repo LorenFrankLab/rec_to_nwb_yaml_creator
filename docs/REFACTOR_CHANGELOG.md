@@ -6,6 +6,36 @@
 
 ---
 
+## Workspace Persistence & Save-State Integrity (June 3, 2026) ✅ COMPLETE
+
+### Summary
+
+The workspace (animals, days, settings) now autosaves to the browser and the save
+indicator tells the truth, so the new multi-page UI no longer silently loses work on
+reload or claims "Saved" for in-memory-only state.
+
+### Changes
+
+- **Persistence:** real `localStorage` autosave for the workspace slice
+  (key `rec_to_nwb_workspace_v1`, version-gated blob, ~500 ms debounce). Only the
+  workspace is persisted — never the legacy form data, never YAML output. Enabled by
+  default (the `localStoragePersistence` flag is now `true`).
+- **Load safety:** on a missing blob the app starts fresh; on a corrupt or
+  incompatible-version blob it discards the data, shows a one-time notice, and starts
+  with an empty workspace rather than crashing.
+- **Truthful save indicator:** the indicator shows "Saved" only after a confirmed
+  write, "Saving…" while a write is in flight, the error if a write fails, and
+  "Not saved (in memory)" when persistence is off. Removed the false-success pattern
+  (optimistic "Saved" set from a synchronous state update) in the Day Editor and
+  Animal Editor hardware steps.
+- **Unsaved-work guard:** a `beforeunload` warning fires if the user navigates away
+  while a save is still pending.
+- **Data-integrity fix:** `mergeDayMetadata` now returns owned (cloned) data, so
+  downstream mutation can no longer corrupt animal/configuration state. Output is
+  byte-identical, so YAML golden baselines are unaffected.
+
+---
+
 ## Environment, Setup & CI Hygiene (June 3, 2026) ✅ COMPLETE
 
 ### Summary

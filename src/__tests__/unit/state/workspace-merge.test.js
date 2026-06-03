@@ -552,4 +552,28 @@ describe('mergeDayMetadata', () => {
       expect(merged.associated_video_files).toEqual([]);
     });
   });
+
+  describe('Ownership (returned object is safe to mutate)', () => {
+    it('mutating nested arrays on the result does not corrupt the source animal/config', () => {
+      const animal = createTestAnimal();
+      const day = createTestDay();
+
+      const merged = mergeDayMetadata(animal, day);
+
+      // Mutate nested structures on the merged result.
+      merged.electrode_groups.push({ id: 99, location: 'mutated' });
+      merged.electrode_groups[0].location = 'MUTATED';
+      merged.cameras.push({ id: 99 });
+      merged.data_acq_device.push({ name: 'MUTATED' });
+      merged.subject.weight = -1;
+
+      // Source animal + its configuration snapshot must be untouched.
+      const config = animal.configurationHistory.find((c) => c.version === day.configurationVersion);
+      expect(config.devices.electrode_groups).toHaveLength(1);
+      expect(config.devices.electrode_groups[0].location).toBe('CA1');
+      expect(animal.cameras).toHaveLength(1);
+      expect(animal.devices.data_acq_device).toHaveLength(1);
+      expect(animal.subject.weight).toBe(450);
+    });
+  });
 });

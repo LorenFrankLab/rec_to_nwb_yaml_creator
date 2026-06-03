@@ -94,8 +94,9 @@ export function StoreProvider({ children, initialState }) {
       model: store.model,
       actions: store.actions,
       selectors: store.selectors,
+      persistence: store.persistence,
     }),
-    [store.model, store.actions, store.selectors]
+    [store.model, store.actions, store.selectors, store.persistence]
   );
 
   return (
@@ -120,6 +121,7 @@ StoreProvider.propTypes = {
  * @returns {object} return.model - Current form state (read-only)
  * @returns {object} return.actions - State mutation functions
  * @returns {object} return.selectors - Computed/derived data functions
+ * @returns {import('./workspaceTypes').PersistenceStatus} return.persistence - Workspace save/load status
  *
  * @throws {Error} If used outside StoreProvider
  *

@@ -1,7 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render as rtlRender, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { StoreProvider } from '../../../state/StoreContext';
 import HardwareConfigStep from '../HardwareConfigStep';
+
+// HardwareConfigStep now reads persistence status from the store context, so all
+// renders are wrapped in a StoreProvider.
+const render = (ui, options) =>
+  rtlRender(ui, {
+    wrapper: ({ children }) => <StoreProvider>{children}</StoreProvider>,
+    ...options,
+  });
 
 describe('HardwareConfigStep', () => {
   const mockAnimal = {
@@ -83,7 +92,7 @@ describe('HardwareConfigStep', () => {
     expect(eventsSection).toBeInTheDocument();
   });
 
-  it('save indicator shows "Saving..." on changes', async () => {
+  it('delegates field edits to onFieldUpdate without optimistically claiming "Saved"', async () => {
     const user = userEvent.setup();
 
     render(
@@ -95,45 +104,20 @@ describe('HardwareConfigStep', () => {
       />
     );
 
-    // Find the amplifier input (text field that can be edited)
     const amplifierInput = screen.getByDisplayValue('Intan RHD2000');
-
-    // Change the value and blur to trigger save
     await user.clear(amplifierInput);
     await user.type(amplifierInput, 'New Amplifier');
     amplifierInput.blur();
 
-    // Save indicator should show "Saving..." or "Saved"
+    // The edit is delegated to the parent handler...
     await waitFor(() => {
-      const savingOrSaved = screen.queryByText(/Saving/i) || screen.queryByText(/Saved/i);
-      expect(savingOrSaved).toBeInTheDocument();
-    }, { timeout: 2000 });
-  });
+      expect(mockOnFieldUpdate).toHaveBeenCalled();
+    });
 
-  it('save indicator shows "Saved" after success', async () => {
-    const user = userEvent.setup();
-
-    render(
-      <HardwareConfigStep
-        animal={mockAnimal}
-        onFieldUpdate={mockOnFieldUpdate}
-        onNavigateBack={mockOnNavigateBack}
-        onNavigateNext={mockOnNavigateNext}
-      />
-    );
-
-    // Find the amplifier input (text field that can be edited)
-    const amplifierInput = screen.getByDisplayValue('Intan RHD2000');
-
-    // Change the value and blur to trigger save
-    await user.clear(amplifierInput);
-    await user.type(amplifierInput, 'New Amplifier');
-    amplifierInput.blur();
-
-    // Wait for "Saved" status (might take up to 500ms based on SaveIndicator component)
-    await waitFor(() => {
-      expect(screen.getByText(/Saved/i)).toBeInTheDocument();
-    }, { timeout: 1500 });
+    // ...and the component does NOT fake a "Saved" status locally. Real save status
+    // comes from the store's debounced autosave (covered by store-persistence tests);
+    // with a mock onFieldUpdate the workspace never changes, so no "Saved" appears.
+    expect(screen.queryByText(/^Saved /)).not.toBeInTheDocument();
   });
 
   it('navigation buttons enabled/disabled based on validation', () => {
@@ -191,33 +175,11 @@ describe('HardwareConfigStep', () => {
     expect(mockOnNavigateNext).toHaveBeenCalledTimes(1);
   });
 
-  it('handles save errors gracefully', async () => {
-    const user = userEvent.setup();
-    const mockOnFieldUpdateWithError = vi.fn(() => {
-      throw new Error('Save failed');
-    });
-
-    render(
-      <HardwareConfigStep
-        animal={mockAnimal}
-        onFieldUpdate={mockOnFieldUpdateWithError}
-        onNavigateBack={mockOnNavigateBack}
-        onNavigateNext={mockOnNavigateNext}
-      />
-    );
-
-    // Trigger a change that will cause an error using amplifier input
-    const amplifierInput = screen.getByDisplayValue('Intan RHD2000');
-    await user.clear(amplifierInput);
-    await user.type(amplifierInput, 'New Amplifier');
-    amplifierInput.blur();
-
-    // Error message should be displayed in SaveIndicator (role="alert")
-    await waitFor(() => {
-      const alert = screen.queryByRole('alert');
-      expect(alert).toBeInTheDocument();
-    }, { timeout: 1500 });
-  });
+  // Save-failure UX is no longer handled by a local try/catch in this component
+  // (that was a false-success pattern). A failed write is surfaced by the store's
+  // persistence.saveError → SaveIndicator. That behavior is covered by
+  // store-persistence.test.js (saveError on a thrown write) and
+  // SaveIndicator.test.jsx (renders the error with role="alert").
 
   it('sections expand/collapse correctly', async () => {
     const user = userEvent.setup();

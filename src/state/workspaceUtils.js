@@ -99,7 +99,11 @@ export function mergeDayMetadata(animal, day) {
     merged.fs_gui_yamls = day.fs_gui_yamls;
   }
 
-  return merged;
+  // Return owned data: the assignments above alias nested animal/config arrays and
+  // objects. Cloning ensures downstream mutation (or YAML encoders that sort/normalize
+  // in place) cannot corrupt animal/config state. Structurally identical output, so
+  // encodeYaml(...) stays byte-identical.
+  return structuredClone(merged);
 }
 
 /**

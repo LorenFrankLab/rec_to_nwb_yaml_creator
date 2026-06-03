@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
+import { useStoreContext } from '../../state/StoreContext';
 import CamerasSection from './CamerasSection';
 import DataAcqSection from './DataAcqSection';
 import BehavioralEventsSection from './BehavioralEventsSection';
@@ -43,29 +43,9 @@ export default function HardwareConfigStep({
   onNavigateBack,
   onNavigateNext,
 }) {
-  const [lastSaved, setLastSaved] = useState(null);
-  const [saveError, setSaveError] = useState(null);
-
-  /**
-   * Wrapped field update handler with save indicator feedback
-   * @param {string} fieldPath - Field path (e.g., "cameras", "data_acq_device", "behavioral_events")
-   * @param {any} value - New value
-   */
-  const handleFieldUpdate = useCallback((fieldPath, value) => {
-    try {
-      // Show saving indicator
-      setSaveError(null);
-
-      // Call parent handler
-      onFieldUpdate(fieldPath, value);
-
-      // Update last saved timestamp
-      setLastSaved(new Date().toISOString());
-    } catch (error) {
-      console.error('Failed to save field:', error);
-      setSaveError(`Failed to save ${fieldPath}: ${error.message}`);
-    }
-  }, [onFieldUpdate]);
+  // Real save status comes from the store's debounced autosave, not optimistic
+  // local bookkeeping. The parent's onFieldUpdate is passed straight to the sections.
+  const { persistence } = useStoreContext();
 
   /**
    * Handle Back button click
@@ -89,7 +69,12 @@ export default function HardwareConfigStep({
     <div className="hardware-config-step">
       <header className="step-header">
         <h2>Cameras, Hardware & Behavioral Events</h2>
-        <SaveIndicator lastSaved={lastSaved} error={saveError} />
+        <SaveIndicator
+          enabled={persistence.enabled}
+          lastSaved={persistence.lastSaved}
+          error={persistence.saveError}
+          pending={persistence.hasPendingWrite}
+        />
       </header>
 
       <div className="step-content">
@@ -97,7 +82,7 @@ export default function HardwareConfigStep({
         <section className="section-elevation-1" aria-labelledby="cameras-heading">
           <CamerasSection
             animal={animal}
-            onFieldUpdate={handleFieldUpdate}
+            onFieldUpdate={onFieldUpdate}
           />
         </section>
 
@@ -105,7 +90,7 @@ export default function HardwareConfigStep({
         <section className="section-elevation-0" aria-labelledby="data-acq-heading">
           <DataAcqSection
             animal={animal}
-            onFieldUpdate={handleFieldUpdate}
+            onFieldUpdate={onFieldUpdate}
           />
         </section>
 
@@ -113,7 +98,7 @@ export default function HardwareConfigStep({
         <section className="section-elevation-1" aria-labelledby="behavioral-events-heading">
           <BehavioralEventsSection
             animal={animal}
-            onFieldUpdate={handleFieldUpdate}
+            onFieldUpdate={onFieldUpdate}
           />
         </section>
       </div>

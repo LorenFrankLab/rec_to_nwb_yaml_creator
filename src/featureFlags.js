@@ -128,9 +128,9 @@ export const FLAGS = {
    *
    * Purpose: Autosave functionality
    * Milestone: M3
-   * Default: false (memory-only)
+   * Default: true (workspace autosaves to localStorage; key "rec_to_nwb_workspace_v1")
    */
-  localStoragePersistence: false,
+  localStoragePersistence: true,
 
   // ============================================================================
   // M4-M5: Day Editor

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useArrayManagement } from '../hooks/useArrayManagement';
 import { useFormUpdates } from '../hooks/useFormUpdates';
 import { useElectrodeGroups } from '../hooks/useElectrodeGroups';
@@ -9,6 +9,8 @@ import {
   getCurrentTimestamp,
   getCurrentDate,
 } from './workspaceUtils';
+import { FLAGS } from '../featureFlags';
+import { loadWorkspace, saveWorkspace, clearWorkspace } from './persistence';
 
 /**
  * Lightweight store facade that provides unified access to form state, actions, and selectors.
@@ -49,10 +51,14 @@ import {
 export function useStore(initialState = null) {
   const [formData, setFormData] = useState(initialState || defaultYMLValues);
 
-  // M3: Workspace state for multi-animal, multi-day management
-  // If initialState.workspace is provided (e.g., in tests), use it; otherwise use defaults
-  const [workspace, setWorkspace] = useState(
-    initialState?.workspace || {
+  // M3: Workspace state for multi-animal, multi-day management.
+  // Hydrate from localStorage when persistence is enabled and no test-provided
+  // workspace was supplied. Any discard reason is captured for a post-mount notice
+  // (we cannot call setState during render).
+  const initialDiscardRef = useRef(null);
+
+  const [workspace, setWorkspace] = useState(() => {
+    const fallback = {
       version: '1.0.0',
       lastModified: getCurrentTimestamp(),
       animals: {},
@@ -64,8 +70,65 @@ export function useStore(initialState = null) {
         autoSaveInterval: 30000,
         shadowExportEnabled: true,
       },
+    };
+
+    if (initialState?.workspace) return initialState.workspace; // tests win
+    if (!FLAGS.localStoragePersistence) return fallback;
+
+    const loaded = loadWorkspace();
+    if (loaded == null) return fallback; // clean first run
+    if (loaded.workspace) return loaded.workspace; // hydrated
+    initialDiscardRef.current = loaded.discarded; // unusable blob → notice after mount
+    return fallback;
+  });
+
+  // Persistence status: drives the truthful SaveIndicator and the beforeunload guard.
+  const [lastSaved, setLastSaved] = useState(null); // ISO string of last confirmed write, or null
+  const [saveError, setSaveError] = useState(null); // user-facing save-failure message, or null
+  const [hasPendingWrite, setHasPendingWrite] = useState(false); // debounce in flight
+  const [loadNotice, setLoadNotice] = useState(null); // discard notice for the UI, or null
+
+  // Surface a discard notice after mount when a saved blob could not be restored,
+  // and clear the unusable blob so it isn't re-read.
+  useEffect(() => {
+    if (initialDiscardRef.current) {
+      setLoadNotice(
+        'Saved workspace data could not be restored (it was from an incompatible ' +
+          'or corrupted version) and was discarded. Starting with an empty workspace.'
+      );
+      initialDiscardRef.current = null;
+      clearWorkspace();
     }
-  );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Debounced autosave on workspace change only (never on legacy formData edits).
+  // Skip the initial render so we don't immediately rewrite what we just hydrated.
+  const didMountAutosaveRef = useRef(false);
+
+  useEffect(() => {
+    if (!FLAGS.localStoragePersistence) return undefined;
+
+    if (!didMountAutosaveRef.current) {
+      didMountAutosaveRef.current = true;
+      return undefined;
+    }
+
+    setHasPendingWrite(true);
+    const timer = setTimeout(() => {
+      try {
+        saveWorkspace(workspace);
+        setLastSaved(new Date().toISOString());
+        setSaveError(null);
+      } catch (err) {
+        setSaveError(`Could not save workspace: ${err.message}`);
+      } finally {
+        setHasPendingWrite(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [workspace]);
 
   // Delegate to existing hooks
   const arrayActions = useArrayManagement(formData, setFormData);
@@ -645,9 +708,27 @@ export function useStore(initialState = null) {
     [formData, workspace]
   );
 
+  const dismissLoadNotice = useCallback(() => setLoadNotice(null), []);
+
+  // Real persistence status (never part of `model` — must not reach YAML).
+  // Memoized so the StoreContext value's identity is stable when nothing changed,
+  // preserving the provider's re-render optimization.
+  const persistence = useMemo(
+    () => ({
+      enabled: FLAGS.localStoragePersistence,
+      lastSaved,
+      saveError,
+      hasPendingWrite,
+      loadNotice,
+      dismissLoadNotice,
+    }),
+    [lastSaved, saveError, hasPendingWrite, loadNotice, dismissLoadNotice]
+  );
+
   return {
     model,
     selectors,
     actions,
+    persistence,
   };
 }
