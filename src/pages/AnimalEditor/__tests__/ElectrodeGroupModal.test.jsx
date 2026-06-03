@@ -7,6 +7,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ElectrodeGroupModal from '../ElectrodeGroupModal';
+import { deviceTypes } from '../../../valueList';
 
 /**
  * Tests for ElectrodeGroupModal component (M7.2.2)
@@ -430,7 +431,8 @@ describe('ElectrodeGroupModal', () => {
         />
       );
 
-      const backdrop = container.querySelector('.electrode-group-modal-overlay');
+      // Overlay is now provided by the shared Modal primitive.
+      const backdrop = container.querySelector('.modal-overlay');
       await user.click(backdrop);
 
       expect(onCancel).toHaveBeenCalledTimes(1);
@@ -611,6 +613,23 @@ describe('ElectrodeGroupModal', () => {
       expect(options).toContain('tetrode_12.5');
       expect(options).toContain('A1x32-6mm-50-177-H32_21mm');
       expect(options).toContain('128c-4s8mm6cm-20um-40um-sl');
+    });
+
+    it('sources device types from the single canonical list (no hardcoded copy)', () => {
+      render(
+        <ElectrodeGroupModal isOpen mode="add" onSave={() => {}} onCancel={() => {}} />
+      );
+
+      const deviceTypeSelect = screen.getByLabelText(/device type/i);
+      // Drop the leading "Select device type..." placeholder option.
+      const optionValues = Array.from(deviceTypeSelect.options)
+        .map((opt) => opt.value)
+        .filter((v) => v !== '');
+
+      // Exactly the canonical list, in order — including the entry the old hardcoded
+      // copy omitted.
+      expect(optionValues).toEqual(deviceTypes());
+      expect(optionValues).toContain('128c-4s8mm6cm-15um-26um-sl');
     });
   });
 

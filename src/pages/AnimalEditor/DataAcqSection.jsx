@@ -14,7 +14,7 @@ import './DataAcqSection.scss';
  * - Default header file path with file browser
  * - Collapsible "Advanced Settings" for ephys_to_volt and times_multiplier
  * - Validation: conversion factors must be > 0
- * - Debounced save on blur
+ * - Saves to parent on blur
  *
  * @param {object} props
  * @param {object} props.animal - Animal record with data_acq_device and technical
@@ -50,7 +50,7 @@ export default function DataAcqSection({ animal, onFieldUpdate }) {
   };
 
   /**
-   * Handle blur - save to parent with debounce
+   * Handle blur - save to parent on blur
    * @param {string} field - Field name
    * @param {any} value - Value to save
    */

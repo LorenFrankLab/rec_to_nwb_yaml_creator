@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StoreProvider } from '../../../state/StoreContext';
 import AnimalEditorStepper from '../AnimalEditorStepper';
@@ -277,7 +277,6 @@ describe('AnimalEditorStepper', () => {
   describe('Save functionality', () => {
     it('navigates to create-day action when animal has no days', async () => {
       const user = userEvent.setup();
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
       renderWithStore(<AnimalEditorStepper />);
 
@@ -290,18 +289,16 @@ describe('AnimalEditorStepper', () => {
       const saveButton = screen.getByRole('button', { name: /save configuration/i });
       await user.click(saveButton);
 
-      // Verify alert message for new animal
-      expect(alertSpy).toHaveBeenCalledWith('Configuration saved. Ready to create first recording day.');
+      // In-app alert shows the message; navigation is deferred until dismissal.
+      const alert = await screen.findByRole('alertdialog');
+      expect(alert).toHaveTextContent('Configuration saved. Ready to create first recording day.');
 
-      // Verify navigation to create-day action
+      await user.click(screen.getByRole('button', { name: /close alert/i }));
       expect(window.location.hash).toBe('#/workspace?animal=remy&action=create-day');
-
-      alertSpy.mockRestore();
     });
 
     it('navigates to devices section when animal has days', async () => {
       const user = userEvent.setup();
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
       const stateWithDays = {
         workspace: {
@@ -342,18 +339,16 @@ describe('AnimalEditorStepper', () => {
       const saveButton = screen.getByRole('button', { name: /save configuration/i });
       await user.click(saveButton);
 
-      // Verify alert message shows day count (plural)
-      expect(alertSpy).toHaveBeenCalledWith('Configuration saved. 2 days will inherit changes.');
+      // Alert shows plural day count; navigation deferred until dismissal.
+      const alert = await screen.findByRole('alertdialog');
+      expect(alert).toHaveTextContent('Configuration saved. 2 days will inherit changes.');
 
-      // Verify navigation to devices section
+      await user.click(screen.getByRole('button', { name: /close alert/i }));
       expect(window.location.hash).toBe('#/workspace?animal=remy&section=devices');
-
-      alertSpy.mockRestore();
     });
 
     it('shows singular day message when animal has one day', async () => {
       const user = userEvent.setup();
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
       const stateWithOneDay = {
         workspace: {
@@ -389,18 +384,16 @@ describe('AnimalEditorStepper', () => {
       const saveButton = screen.getByRole('button', { name: /save configuration/i });
       await user.click(saveButton);
 
-      // Verify alert message shows singular "day"
-      expect(alertSpy).toHaveBeenCalledWith('Configuration saved. 1 day will inherit changes.');
+      // Alert shows singular "day"; navigation deferred until dismissal.
+      const alert = await screen.findByRole('alertdialog');
+      expect(alert).toHaveTextContent('Configuration saved. 1 day will inherit changes.');
 
-      // Verify navigation to devices section
+      await user.click(screen.getByRole('button', { name: /close alert/i }));
       expect(window.location.hash).toBe('#/workspace?animal=remy&section=devices');
-
-      alertSpy.mockRestore();
     });
 
     it('Save button works from Next button on final step', async () => {
       const user = userEvent.setup();
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
       renderWithStore(<AnimalEditorStepper />);
 
@@ -416,11 +409,10 @@ describe('AnimalEditorStepper', () => {
       // Click it
       await user.click(saveButton);
 
-      // Verify save logic executed
-      expect(alertSpy).toHaveBeenCalled();
+      // Save logic executed: in-app alert shown, navigation on dismissal.
+      expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /close alert/i }));
       expect(window.location.hash).toContain('#/workspace');
-
-      alertSpy.mockRestore();
     });
   });
 
@@ -811,7 +803,6 @@ describe('AnimalEditorStepper', () => {
   describe('Delete electrode group', () => {
     it('shows confirmation dialog before deleting', async () => {
       const user = userEvent.setup();
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
 
       const state = {
         workspace: {
@@ -845,16 +836,13 @@ describe('AnimalEditorStepper', () => {
       const deleteButton = screen.getByTestId('delete-group-0');
       await user.click(deleteButton);
 
-      expect(confirmSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Delete electrode group')
-      );
-
-      confirmSpy.mockRestore();
+      // An in-app confirmation dialog appears (no native window.confirm).
+      const dialog = await screen.findByRole('dialog');
+      expect(dialog).toHaveTextContent('Delete electrode group');
     });
 
     it('deletes electrode group when confirmed', async () => {
       const user = userEvent.setup();
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
 
       const state = {
         workspace: {
@@ -898,18 +886,19 @@ describe('AnimalEditorStepper', () => {
       expect(screen.getByTestId('delete-group-0')).toBeInTheDocument();
       expect(screen.getByTestId('delete-group-1')).toBeInTheDocument();
 
-      // Delete first group
+      // Delete first group, then confirm in the dialog.
       const deleteButton = screen.getByTestId('delete-group-0');
       await user.click(deleteButton);
+      const dialog = await screen.findByRole('dialog');
+      await user.click(within(dialog).getByRole('button', { name: /^Delete$/i }));
 
-      // After deletion, group 0 should not exist in DOM (re-renders with updated state)
-      // The actual state update happens through the store
-      expect(screen.getByTestId('electrode-groups-step')).toBeInTheDocument();
+      // Group 0 is removed; group 1 remains.
+      expect(screen.queryByTestId('delete-group-0')).not.toBeInTheDocument();
+      expect(screen.getByTestId('delete-group-1')).toBeInTheDocument();
     });
 
     it('cancels delete when user declines confirmation', async () => {
       const user = userEvent.setup();
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
 
       const state = {
         workspace: {
@@ -943,15 +932,17 @@ describe('AnimalEditorStepper', () => {
       const deleteButton = screen.getByTestId('delete-group-0');
       await user.click(deleteButton);
 
-      // Group should still exist after cancelling
-      expect(screen.getByTestId('delete-group-0')).toBeInTheDocument();
+      // Cancel the confirmation dialog.
+      const dialog = await screen.findByRole('dialog');
+      await user.click(within(dialog).getByRole('button', { name: /^Cancel$/i }));
 
-      confirmSpy.mockRestore();
+      // Group should still exist after cancelling; dialog is gone.
+      expect(screen.getByTestId('delete-group-0')).toBeInTheDocument();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
     it('cascades delete to associated channel maps', async () => {
       const user = userEvent.setup();
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
 
       const state = {
         workspace: {
@@ -996,8 +987,11 @@ describe('AnimalEditorStepper', () => {
       const deleteButton = screen.getByTestId('delete-group-0');
       await user.click(deleteButton);
 
-      expect(confirmSpy).toHaveBeenCalled();
-      confirmSpy.mockRestore();
+      // Confirm in the dialog; the group (and, in the store, its channel maps) is removed.
+      const dialog = await screen.findByRole('dialog');
+      await user.click(within(dialog).getByRole('button', { name: /^Delete$/i }));
+
+      expect(screen.queryByTestId('delete-group-0')).not.toBeInTheDocument();
     });
   });
 
@@ -1336,7 +1330,6 @@ describe('AnimalEditorStepper', () => {
 
     it('Continue button from Step 3 saves and exits', async () => {
       const user = userEvent.setup();
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
       renderWithStore(<AnimalEditorStepper />);
 
@@ -1349,11 +1342,10 @@ describe('AnimalEditorStepper', () => {
       const saveButton = screen.getByRole('button', { name: /save configuration/i });
       await user.click(saveButton);
 
-      // Verify save logic executed
-      expect(alertSpy).toHaveBeenCalled();
+      // Save logic executed: in-app alert shown, navigation on dismissal.
+      expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /close alert/i }));
       expect(window.location.hash).toContain('#/workspace');
-
-      alertSpy.mockRestore();
     });
 
     it('passes correct props to HardwareConfigStep', async () => {

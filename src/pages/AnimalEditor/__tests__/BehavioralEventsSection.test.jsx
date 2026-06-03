@@ -247,11 +247,7 @@ describe('BehavioralEventsSection', () => {
   });
 
   describe('Delete Behavioral Event', () => {
-    it('should remove event with confirmation when delete button is clicked', async () => {
-      // Mock window.confirm
-      const originalConfirm = window.confirm;
-      window.confirm = vi.fn(() => true);
-
+    it('removes an event after confirming in the ConfirmDialog (no native confirm)', async () => {
       render(
         <BehavioralEventsSection
           animal={mockAnimal}
@@ -259,25 +255,38 @@ describe('BehavioralEventsSection', () => {
         />
       );
 
-      // Find delete button
-      const deleteButtons = screen.getAllByRole('button', { name: /Delete/i });
-      await user.click(deleteButtons[0]);
+      // Clicking the row Delete button opens an in-app confirmation dialog.
+      await user.click(screen.getByRole('button', { name: /delete reward_left/i }));
 
-      // Should show confirmation
-      expect(window.confirm).toHaveBeenCalledWith(
-        expect.stringContaining('reward_left')
-      );
+      const dialog = await screen.findByRole('dialog');
+      expect(dialog).toHaveTextContent('reward_left');
 
-      // Should call onFieldUpdate with event removed
+      // Confirm via the dialog's own Delete button (scoped to the dialog).
+      await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
+
       expect(mockOnFieldUpdate).toHaveBeenCalledWith(
         'behavioral_events',
         expect.arrayContaining([
           expect.objectContaining({ name: 'reward_right' }),
         ])
       );
+    });
 
-      // Restore window.confirm
-      window.confirm = originalConfirm;
+    it('does not remove the event when the confirmation is cancelled', async () => {
+      render(
+        <BehavioralEventsSection
+          animal={mockAnimal}
+          onFieldUpdate={mockOnFieldUpdate}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: /delete reward_left/i }));
+
+      const dialog = await screen.findByRole('dialog');
+      await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+
+      expect(mockOnFieldUpdate).not.toHaveBeenCalled();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
   });
 

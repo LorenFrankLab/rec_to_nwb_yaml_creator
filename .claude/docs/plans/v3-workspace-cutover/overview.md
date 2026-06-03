@@ -159,6 +159,16 @@ not executed here.
   navigation race in `src/pages/Home/index.jsx` and the stale-`days`-snapshot guard in batch day
   creation in `src/pages/AnimalWorkspace/index.jsx` are fixed in
   [Phase 2](phase-2-navigation-stub-honesty.md), not silently dropped.
+- **Remaining dialogs not yet on the shared `<Modal>` primitive.** Phase 3 created the primitive and
+  migrated `CameraModal`, `ElectrodeGroupModal`, and `AlertModal`. Three other overlay surfaces still
+  use bespoke markup and lack the full dialog a11y contract (focus trap / focus return / ESC / proper
+  ARIA): `src/pages/AnimalEditor/ChannelMapEditor.jsx`, `src/pages/AnimalEditor/CopyFromAnimalDialog.jsx`
+  (uses `<dialog open>` without `showModal()`), and `src/components/CalendarDayCreator/CalendarDayCreator.jsx`
+  (inline card carrying `role="dialog"`). These were **out of scope for Phase 3** (its task list named
+  only the three migrated modals). **Follow-up:** migrate them onto `<Modal>` (or fix in place) — a
+  natural fit for the [Phase 9](phase-9-a11y-keyboard.md) accessibility pass, which should also sweep
+  the pre-existing color-contrast issues (inline-warning text, channel-map select focus rings, calendar
+  day-number contrast) flagged in the Phase 3 UX review.
 
 ## Estimated Effort
 

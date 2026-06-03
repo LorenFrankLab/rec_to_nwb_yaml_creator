@@ -29,6 +29,9 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
     JSON.parse(JSON.stringify(channelMaps))
   );
 
+  // Inline validation errors shown on save (replaces a blocking alert()).
+  const [validationErrors, setValidationErrors] = useState([]);
+
   // Get channel array for this device type (e.g., [0,1,2,3] for tetrode)
   const channelArray = deviceTypeMap(electrodeGroup.device_type);
   const maxChannelValue = getChannelCount(electrodeGroup.device_type) - 1;
@@ -79,10 +82,11 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
     const errors = validateChannelMaps(localChannelMaps, electrodeGroup.device_type, channelArray);
 
     if (errors.length > 0) {
-      alert(`Cannot save - Please fix the following issues:\n\n${errors.join('\n')}`);
+      setValidationErrors(errors);
       return;
     }
 
+    setValidationErrors([]);
     onSave(localChannelMaps);
   };
 
@@ -268,6 +272,18 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
           </fieldset>
         ))}
       </div>
+
+      {/* Validation errors (inline, replaces a blocking alert) */}
+      {validationErrors.length > 0 && (
+        <div className="channel-map-editor-errors" role="alert">
+          <p>Cannot save — please fix the following issues:</p>
+          <ul>
+            {validationErrors.map((err) => (
+              <li key={err}>{err}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="channel-map-editor-actions">

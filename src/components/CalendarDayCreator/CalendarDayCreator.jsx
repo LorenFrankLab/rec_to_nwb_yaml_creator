@@ -88,6 +88,8 @@ export function CalendarDayCreator({ animalId, existingDays = [], onCreateDays, 
 
   // Selected dates (Set for O(1) lookup)
   const [selectedDates, setSelectedDates] = useState(new Set());
+  // Inline error shown if day creation fails (replaces a blocking alert()).
+  const [createError, setCreateError] = useState(null);
 
   /**
    * Navigate to previous month
@@ -173,6 +175,7 @@ export function CalendarDayCreator({ animalId, existingDays = [], onCreateDays, 
     const dates = Array.from(selectedDates).sort();
 
     try {
+      setCreateError(null);
       // Call parent callback with all dates
       await onCreateDays(dates);
 
@@ -181,7 +184,7 @@ export function CalendarDayCreator({ animalId, existingDays = [], onCreateDays, 
       if (onClose) onClose();
     } catch (error) {
       console.error('Failed to create days:', error);
-      alert(`Failed to create days: ${error.message}`);
+      setCreateError(`Failed to create days: ${error.message}`);
     }
   }, [selectedDates, onCreateDays, onClose]);
 
@@ -202,6 +205,12 @@ export function CalendarDayCreator({ animalId, existingDays = [], onCreateDays, 
       />
 
       <CalendarLegend />
+
+      {createError && (
+        <div className="calendar-create-error" role="alert">
+          {createError}
+        </div>
+      )}
 
       <div className="calendar-actions">
         <button

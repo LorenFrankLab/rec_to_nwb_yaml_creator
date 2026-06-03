@@ -419,3 +419,23 @@
     }
   }
 }
+
+/* Inline validation errors shown on save (replaces a blocking dialog). */
+.channel-map-editor-errors {
+  margin: 0 0 0.75rem;
+  padding: 0.75rem 1rem;
+  background-color: #ffebee;
+  color: #b71c1c;
+  border-left: 4px solid #d32f2f;
+  border-radius: 4px;
+
+  p {
+    margin: 0 0 0.5rem;
+    font-weight: 600;
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 1.25rem;
+  }
+}

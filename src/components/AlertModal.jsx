@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useId } from 'react';
 import PropTypes from 'prop-types';
+import Modal from './Modal/Modal';
 import './AlertModal.scss';
 
 /**
@@ -24,54 +25,10 @@ import './AlertModal.scss';
  * @returns {JSX.Element|null} Modal component or null if closed
  */
 const AlertModal = ({ isOpen, message, title = 'Alert', onClose, type = 'info' }) => {
-  const closeButtonRef = useRef(null);
-
-  // Handle ESC key
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleEscape = (e) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [isOpen, onClose]);
-
-  // Focus close button when modal opens
-  useEffect(() => {
-    if (isOpen && closeButtonRef.current) {
-      closeButtonRef.current.focus();
-    }
-  }, [isOpen]);
-
-  // Lock body scroll when modal is open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
-
-  // Handle click on overlay (outside modal)
-  const handleOverlayClick = (e) => {
-    if (e.target.classList.contains('alert-modal-overlay')) {
-      onClose();
-    }
-  };
-
-  // Don't render if not open
-  if (!isOpen) return null;
-
-  const titleId = 'alert-modal-title';
-  const messageId = 'alert-modal-message';
+  // Unique per instance so multiple alerts in the tree can't collide on ids.
+  const baseId = useId();
+  const titleId = `${baseId}-alert-title`;
+  const messageId = `${baseId}-alert-message`;
 
   // Icon mapping for accessibility (not relying on color alone)
   const iconMap = {
@@ -81,39 +38,33 @@ const AlertModal = ({ isOpen, message, title = 'Alert', onClose, type = 'info' }
     error: '❌',
   };
 
+  // Built on the shared Modal primitive, which provides the focus trap, focus
+  // return, ESC/overlay close, and scroll lock. AlertModal keeps its own visual
+  // classes (alert-modal-content + type variant, message, close button).
   return (
-    <div
-      className="alert-modal-overlay"
-      onClick={handleOverlayClick}
-      role="presentation"
-    >
-      <div
-        className={`alert-modal-content alert-modal-${type}`}
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={messageId}
-        onClick={(e) => e.stopPropagation()} // Prevent overlay click when clicking content
-      >
-        <h2 id={titleId} className="alert-modal-title">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      role="alertdialog"
+      titleId={titleId}
+      describedById={messageId}
+      className={`alert-modal-content alert-modal-${type}`}
+      title={
+        <>
           <span className="alert-modal-icon" aria-hidden="true">
             {iconMap[type]}
           </span>
           {title}
-        </h2>
-        <p id={messageId} className="alert-modal-message">
-          {message}
-        </p>
-        <button
-          ref={closeButtonRef}
-          onClick={onClose}
-          className="alert-modal-close"
-          aria-label="Close alert"
-        >
-          Close
-        </button>
-      </div>
-    </div>
+        </>
+      }
+    >
+      <p id={messageId} className="alert-modal-message">
+        {message}
+      </p>
+      <button type="button" onClick={onClose} className="alert-modal-close" aria-label="Close alert">
+        Close
+      </button>
+    </Modal>
   );
 };
 

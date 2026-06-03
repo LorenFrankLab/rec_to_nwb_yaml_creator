@@ -104,7 +104,8 @@ describe('AlertModal', () => {
       const onClose = vi.fn();
       const { container } = render(<AlertModal isOpen={true} message="Test" onClose={onClose} />);
 
-      const overlay = container.querySelector('.alert-modal-overlay');
+      // Overlay is now provided by the shared Modal primitive.
+      const overlay = container.querySelector('.modal-overlay');
       await user.click(overlay);
 
       expect(onClose).toHaveBeenCalledTimes(1);

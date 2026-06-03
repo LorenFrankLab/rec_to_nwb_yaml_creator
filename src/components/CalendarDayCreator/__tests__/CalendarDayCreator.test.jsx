@@ -341,7 +341,6 @@ describe('CalendarDayCreator Component', () => {
     it('handles creation errors', async () => {
       const user = userEvent.setup();
       const onCreateDays = vi.fn().mockRejectedValue(new Error('Creation failed'));
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
       render(
         <CalendarDayCreator
@@ -368,13 +367,11 @@ describe('CalendarDayCreator Component', () => {
         const createButton = screen.getByRole('button', { name: /create 1 recording day/i });
         await user.click(createButton);
 
-        // Verify error alert shown
+        // The failure is shown inline (role=alert), not via a native alert().
         await waitFor(() => {
-          expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Failed to create days'));
+          expect(screen.getByRole('alert')).toHaveTextContent(/Failed to create days/i);
         });
       }
-
-      alertSpy.mockRestore();
     });
   });
 

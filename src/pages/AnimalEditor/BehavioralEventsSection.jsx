@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
+import { ConfirmDialog } from '../../components/Modal';
 import './BehavioralEventsSection.scss';
 
 /**
@@ -20,6 +21,7 @@ export default function BehavioralEventsSection({ animal, onFieldUpdate }) {
   const [editingEvent, setEditingEvent] = useState(null);
   const [validationError, setValidationError] = useState(null);
   const [validationWarning, setValidationWarning] = useState(null);
+  const [pendingDeleteIndex, setPendingDeleteIndex] = useState(null);
 
   // Reserved words that should trigger warnings
   const RESERVED_WORDS = ['reward', 'choice', 'start', 'end', 'trigger', 'sync'];
@@ -130,15 +132,18 @@ export default function BehavioralEventsSection({ animal, onFieldUpdate }) {
    * @param {number} index - Index of event to delete
    */
   const handleDeleteClick = (index) => {
-    const event = events[index];
-    const confirmed = window.confirm(
-      `Delete behavioral event "${event.name}"?\n\nThis will remove the event from this animal's configuration.`
-    );
+    setPendingDeleteIndex(index);
+  };
 
-    if (confirmed) {
-      const updatedEvents = events.filter((_, i) => i !== index);
-      onFieldUpdate('behavioral_events', updatedEvents);
-    }
+  /**
+   * Remove the pending event once the user confirms.
+   */
+  const confirmDelete = () => {
+    const index = pendingDeleteIndex;
+    setPendingDeleteIndex(null);
+    if (index == null) return;
+    const updatedEvents = events.filter((_, i) => i !== index);
+    onFieldUpdate('behavioral_events', updatedEvents);
   };
 
   /**
@@ -296,6 +301,20 @@ export default function BehavioralEventsSection({ animal, onFieldUpdate }) {
           })}
         </tbody>
       </table>
+
+      <ConfirmDialog
+        isOpen={pendingDeleteIndex != null}
+        title="Delete behavioral event?"
+        message={
+          pendingDeleteIndex != null && events[pendingDeleteIndex]
+            ? `Delete behavioral event "${events[pendingDeleteIndex].name || '(unnamed event)'}"? This will remove the event from this animal's configuration.`
+            : ''
+        }
+        confirmLabel="Delete"
+        destructive
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDeleteIndex(null)}
+      />
     </div>
   );
 }

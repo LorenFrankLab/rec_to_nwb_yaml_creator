@@ -133,58 +133,8 @@ dialog.electrode-group-modal {
   }
 }
 
-.electrode-group-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  animation: fadeIn 0.2s ease-in;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.electrode-group-modal-content {
-  background-color: white;
-  border-radius: 8px;
-  padding: 2rem;
-  max-width: 600px;
-  width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  animation: slideUp 0.3s ease-out;
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.electrode-group-modal-title {
-  margin: 0 0 1.5rem 0;
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #333;
-}
+/* Overlay / content box / title are provided by the shared Modal primitive
+   (.modal-overlay / .modal-content / .modal-title). Only form-layout rules remain. */
 
 .electrode-group-modal-form {
   display: flex;
@@ -315,20 +265,3 @@ button {
   }
 }
 
-/* Scrollbar styling for modal content */
-.electrode-group-modal-content::-webkit-scrollbar {
-  width: 8px;
-}
-
-.electrode-group-modal-content::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.electrode-group-modal-content::-webkit-scrollbar-thumb {
-  background: #ccc;
-  border-radius: 4px;
-
-  &:hover {
-    background: #999;
-  }
-}

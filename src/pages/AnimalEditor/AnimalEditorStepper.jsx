@@ -8,6 +8,8 @@ import CopyFromAnimalDialog from './CopyFromAnimalDialog';
 import ChannelMapsStep from './ChannelMapsStep';
 import ChannelMapEditor from './ChannelMapEditor';
 import HardwareConfigStep from './HardwareConfigStep';
+import AlertModal from '../../components/AlertModal';
+import { ConfirmDialog } from '../../components/Modal';
 import { generateAllChannelMaps } from '../../utils/channelMapUtils';
 import { downloadChannelMapsCSV, importChannelMapsFromCSV } from '../../utils/csvChannelMapUtils';
 import './AnimalEditorStepper.scss';
@@ -61,6 +63,31 @@ export default function AnimalEditorStepper() {
   const [editingGroupId, setEditingGroupId] = useState(null);
   const [copyDialogOpen, setCopyDialogOpen] = useState(false);
   const csvFileInputRef = useRef(null);
+  // In-app feedback replacing native alert()/confirm().
+  const [alertState, setAlertState] = useState({ isOpen: false, message: '', type: 'info', title: 'Alert', onClose: null });
+  const [pendingDeleteGroup, setPendingDeleteGroup] = useState(null);
+
+  /**
+   * Show a non-blocking alert dialog. Optional onClose runs after the user dismisses
+   * it (used to defer navigation until the message has been seen).
+   * @param {string} message Message to display.
+   * @param {('info'|'success'|'warning'|'error')} [type] Alert type.
+   * @param {Function|null} [onClose] Optional action to run on dismiss.
+   * @param {string} [title] Dialog title (defaults to a sensible label per type).
+   */
+  function showAlert(message, type = 'success', onClose = null, title) {
+    const defaultTitle = { success: 'Success', error: 'Error', warning: 'Warning', info: 'Notice' }[type] || 'Notice';
+    setAlertState({ isOpen: true, message, type, title: title || defaultTitle, onClose });
+  }
+
+  /**
+   * Dismiss the alert dialog and run any deferred onClose action.
+   */
+  function handleAlertClose() {
+    const deferred = alertState.onClose;
+    setAlertState((prev) => ({ ...prev, isOpen: false }));
+    if (deferred) deferred();
+  }
 
   // Validate animal exists
   const animal = animalId ? model.workspace.animals[animalId] : null;
@@ -108,15 +135,25 @@ export default function AnimalEditorStepper() {
     const hasDays = animal.days && animal.days.length > 0;
     const dayCount = hasDays ? animal.days.length : 0;
 
-    // Show success message
+    // Show success message, then navigate once the user dismisses it.
     if (hasDays) {
-      alert(`Configuration saved. ${dayCount} day${dayCount !== 1 ? 's' : ''} will inherit changes.`);
-      // Navigate to workspace devices section
-      window.location.hash = `#/workspace?animal=${animalId}&section=devices`;
+      showAlert(
+        `Configuration saved. ${dayCount} day${dayCount !== 1 ? 's' : ''} will inherit changes. Close to return to the workspace.`,
+        'success',
+        () => {
+          window.location.hash = `#/workspace?animal=${animalId}&section=devices`;
+        },
+        'Configuration Saved'
+      );
     } else {
-      alert('Configuration saved. Ready to create first recording day.');
-      // Navigate to workspace with create-day action
-      window.location.hash = `#/workspace?animal=${animalId}&action=create-day`;
+      showAlert(
+        'Configuration saved. Ready to create first recording day. Close to return to the workspace.',
+        'success',
+        () => {
+          window.location.hash = `#/workspace?animal=${animalId}&action=create-day`;
+        },
+        'Configuration Saved'
+      );
     }
   }
 
@@ -213,7 +250,7 @@ export default function AnimalEditorStepper() {
 
     // Show success message for bulk creation
     if (isAdding && count > 1) {
-      alert(`Successfully created ${count} identical electrode groups`);
+      showAlert(`Successfully created ${count} identical electrode groups`, 'success');
     }
   }
 
@@ -225,16 +262,20 @@ export default function AnimalEditorStepper() {
   }
 
   /**
-   * Delete electrode group with confirmation
+   * Request deletion of an electrode group — opens a confirmation dialog.
    * @param {object} group - Electrode group to delete
    */
   function handleDeleteGroup(group) {
-    // Confirmation dialog
-    const message = `Delete electrode group "${group.location}" (${group.device_type})?\n\nThis cannot be undone.`;
+    setPendingDeleteGroup(group);
+  }
 
-    if (!window.confirm(message)) {
-      return;
-    }
+  /**
+   * Perform the deletion once confirmed, removing the group and its channel maps.
+   */
+  function confirmDeleteGroup() {
+    const group = pendingDeleteGroup;
+    setPendingDeleteGroup(null);
+    if (!group) return;
 
     // Remove from electrode_groups array
     const updatedGroups = animal.devices.electrode_groups.filter(g => g.id !== group.id);
@@ -297,7 +338,10 @@ export default function AnimalEditorStepper() {
 
     // Show success message
     const groupCount = electrode_groups.length;
-    alert(`Successfully copied ${groupCount} electrode ${groupCount === 1 ? 'group' : 'groups'} from ${sourceAnimalName}`);
+    showAlert(
+      `Successfully copied ${groupCount} electrode ${groupCount === 1 ? 'group' : 'groups'} from ${sourceAnimalName}`,
+      'success'
+    );
   }
 
   /**
@@ -356,7 +400,10 @@ export default function AnimalEditorStepper() {
     const electrodeGroups = animal.devices.electrode_groups || [];
 
     if (channelMaps.length === 0) {
-      alert('No channel maps to export. Channel maps are automatically created when you add electrode groups with device types.');
+      showAlert(
+        'No channel maps to export. Channel maps are automatically created when you add electrode groups with device types.',
+        'info'
+      );
       return;
     }
 
@@ -394,8 +441,9 @@ export default function AnimalEditorStepper() {
 
         if (invalidGroups.length > 0) {
           const invalidIds = [...new Set(invalidGroups.map((m) => m.electrode_group_id))].join(', ');
-          alert(
-            `Cannot import CSV:\n\nThe following electrode group IDs in the CSV do not exist:\n${invalidIds}\n\nPlease ensure electrode groups are created before importing channel maps.`
+          showAlert(
+            `Cannot import CSV. The following electrode group IDs in the CSV do not exist: ${invalidIds}. Please ensure electrode groups are created before importing channel maps.`,
+            'error'
           );
           return;
         }
@@ -408,9 +456,9 @@ export default function AnimalEditorStepper() {
           },
         });
 
-        alert(`Successfully imported ${importedMaps.length} channel maps from CSV.`);
+        showAlert(`Successfully imported ${importedMaps.length} channel maps from CSV.`, 'success');
       } catch (error) {
-        alert(`Failed to import CSV:\n\n${error.message}`);
+        showAlert(`Failed to import CSV: ${error.message}`, 'error');
       }
 
       // Reset file input
@@ -605,6 +653,28 @@ export default function AnimalEditorStepper() {
         animals={model.workspace.animals}
         onCopy={handleCopyConfirm}
         onCancel={handleCopyCancel}
+      />
+
+      <ConfirmDialog
+        isOpen={!!pendingDeleteGroup}
+        title="Delete electrode group?"
+        message={
+          pendingDeleteGroup
+            ? `Delete electrode group "${pendingDeleteGroup.location}" (${pendingDeleteGroup.device_type})? This cannot be undone.`
+            : ''
+        }
+        confirmLabel="Delete"
+        destructive
+        onConfirm={confirmDeleteGroup}
+        onCancel={() => setPendingDeleteGroup(null)}
+      />
+
+      <AlertModal
+        isOpen={alertState.isOpen}
+        message={alertState.message}
+        title={alertState.title}
+        type={alertState.type}
+        onClose={handleAlertClose}
       />
     </div>
   );
