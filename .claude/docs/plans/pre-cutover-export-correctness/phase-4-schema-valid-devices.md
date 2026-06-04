@@ -37,7 +37,7 @@ split that surfaced as PropType warnings).
 
 - [Schema device-output contract](shared-contracts.md#schema-device-output-contract) — integer IDs
   end-to-end; required `description` / `targeted_location`; unique `ntrode_id`.
-- [Parity & golden-fixture contract](shared-contracts.md#parity--golden-fixture-contract) — ID-type and
+- [Parity & golden-fixture contract](shared-contracts.md#parity-golden-fixture--round-trip-contract) — ID-type and
   added-field changes update new-path fixtures deliberately; legacy baselines stay.
 
 ## Tasks
@@ -51,6 +51,20 @@ split that surfaced as PropType warnings).
   and integer `electrode_group_id`. When generating maps for a *newly added* group, start `ntrode_id`
   after the current maximum existing `ntrode_id` across the animal (not at 0), so incremental adds never
   collide. Add a helper `nextNtrodeId(existingMaps)` and use it at the add site in `AnimalEditorStepper`.
+- **Task 3b — per-shank electrode-ID offset (multi-shank probes).** `generateChannelMapsForGroup`
+  (`channelMapUtils.js:61-76`) emits an **identical** map for every shank, so a 4-shank probe outputs
+  `0..31` four times instead of `0..31, 32..63, 64..95, 96..127`. Offset shank `i`'s value for local key
+  `idx` by `i * deviceTypeMap(device_type).length` (mirror `useElectrodeGroups.js:81`). See
+  [channel-map semantics](designs.md#multi-shank-per-shank-offset-generator-fix--phase-4). Add a fixture
+  test for a 128-channel 4-shank probe asserting the four blocks.
+- **Task 3c — drop stray non-schema keys.** `ElectrodeGroupModal` saves a `bad_channels` *string* onto the
+  electrode group (`ElectrodeGroupModal.jsx:83`) and `generateChannelMapsForGroup` adds `electrode_id: 0`
+  to each ntrode (`channelMapUtils.js:71`) — neither is a schema field, and both ride into the YAML via
+  `reorderKeys`. Remove them at the source (electrode-group save / ntrode generation).
+- **Task 3d — default `device.name`.** `device.name` is schema-required (`minItems:1`, string pattern) but
+  the workspace emits `name: []` (Home `:79`, `createAnimal` `:148`). Default it to `['Trodes']` at
+  `createAnimal` (legacy value), or collect it. (trodes_to_nwb ignores top-level `device`, but it fails
+  schema validation and the export gate.)
 - **Task 4 — normalize IDs at every ingress, not just generation.** Generated IDs (Tasks 1, 3) are one
   path; also normalize: **copy** (`CopyFromAnimalDialog.jsx:88` — `.toString()` → integer; new `ntrode_id`
   integer) and **CSV import** (`csvChannelMapUtils.js:179` — parse `ntrode_id` / `electrode_group_id` to
@@ -81,6 +95,8 @@ split that surfaced as PropType warnings).
 | `ntrode IDs are integers and unique across incremental adds` *(unit)* | adding a second group after a first does not restart `ntrode_id` at 0; all `ntrode_id` integers are distinct. |
 | `copy from animal produces integer IDs` *(unit)* | `CopyFromAnimalDialog`'s copied groups/ntrodes have integer `id` / `ntrode_id` / `electrode_group_id`, not strings. |
 | `CSV import produces integer, non-colliding ntrode IDs` *(unit)* | importing channel maps yields integer `ntrode_id` / `electrode_group_id` and renumbers to avoid collision with existing ntrodes. |
+| `multi-shank probe offsets electrode IDs per shank` *(unit)* | a 128ch 4-shank probe generates ntrode maps with values `0..31`, `32..63`, `64..95`, `96..127`; a single tetrode group is `0..3`; a second tetrode group resets to `0..3`. |
+| `exported devices carry no stray keys` *(unit)* | the merged electrode groups have no `bad_channels` string and ntrodes have no `electrode_id`; `device.name` is non-empty. |
 | `merged device output passes schema` *(unit)* | `schemaValidation(mergeDayMetadata(animal, day))` returns zero errors for a fully-configured session (was failing on ID type + missing fields). |
 | `ChannelMapEditor/DevicesStep render with integer IDs without PropType warnings` *(integration)* | rendering with integer IDs produces no PropType console error. |
 | `golden-yaml.baseline.test.js` (existing) | byte-identical — legacy fixtures unchanged. |

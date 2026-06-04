@@ -8,7 +8,9 @@ without updating this file and every phase that references it.
 - [Export-resolution source-of-truth contract](#export-resolution-source-of-truth-contract)
 - [Schema device-output contract](#schema-device-output-contract)
 - [Validation & export-gate contract](#validation--export-gate-contract)
-- [Parity & golden-fixture contract](#parity--golden-fixture-contract)
+- [Spyglass naming-identity contract](#spyglass-naming-identity-contract)
+- [DANDI conformance contract](#dandi-conformance-contract)
+- [Parity, golden-fixture & round-trip contract](#parity-golden-fixture--round-trip-contract)
 
 **Downstream:** the exported YAML feeds DANDI (public archive) and Spyglass
 (`/Users/edeno/Documents/GitHub/spyglass`). Per CLAUDE.md, Spyglass requires non-empty, consistently
@@ -102,9 +104,61 @@ Referenced by phases 1, 6. The day-level export must be **fail-closed**.
 
 ---
 
-## Parity & golden-fixture contract
+## Spyglass naming-identity contract
 
-Referenced by phases 2, 3, 4, 5. The project's hardest safety rule. There are **two** distinct guards;
+Referenced by phases 3, 6. Spyglass ingests these NWB files; several YAML fields become **database
+identities / primary keys**, and Spyglass ingestion **fails silently** (logs to an `InsertError` side
+table and continues) for most violations — so the app is the place to enforce them. (Verified against
+`spyglass@master`: `common_device.py`, `common_ephys.py`, `common_region.py`, `common_task.py`,
+`common_dio.py`, `common_behav.py`.)
+
+- **`cameras[].camera_name` is the `CameraDevice` primary key.** `meters_per_pixel`, `lens`, `model`,
+  `manufacturer` are dependent metadata. **Reusing a `camera_name` with different calibration/lens/model
+  raises a divergence error or silently reuses the wrong calibration.** Rule: `camera_name` unique within a
+  session; the same `camera_name` across days/animals implies identical calibration — a changed
+  zoom/calibration **requires a new `camera_name`**.
+- **Camera numeric ids are parsed from the NWB device name `camera_device {id}`** (`common_task.py:219`,
+  `common_behav.py:477`), which trodes_to_nwb writes from `cameras[].id`. Keep `id` an integer and unique;
+  don't rely on `camera_name` for the numeric join.
+- **`data_acq_device[].name` is a `DataAcquisitionDevice` identity** (`common_device.py:60,190`). Same
+  `name` with different `system`/`amplifier`/`adc_circuit` triggers a divergence check. Rule: `name`
+  unique; the same `name` implies identical technical fields.
+- **`tasks[].task_name` is checked for secondary-key consistency** (`common_task.py:20`): the same
+  `task_name` with a different `task_description` can raise. Rule: task names stable and consistent
+  (one description per name within the dataset).
+- **`electrode_groups[].location` (and `targeted_location`) auto-create `BrainRegion` rows by exact
+  string** (`common_ephys.py:51`, `common_region.py:44` — no trim/case-fold). Spelling/case drift
+  fragments regions. Rule: non-empty, canonical, case-consistent region strings.
+- **Video import depends on a successful `TaskEpoch`**: `associated_video_files` without matching task
+  metadata warn and **do not import** (`common_behav.py:451`, `common_task.py:240`). Rule: any non-empty
+  `associated_video_files` entry must have a matching `tasks[].task_epochs` and a valid `camera_id`.
+- **`behavioral_events` names must be unique within a session** — duplicate `dio_event_name` is a hard
+  `DIOEvents` PK violation (`common_dio.py`) and a trodes_to_nwb `ValueError`.
+
+Phase 3 enforces the camera / data-acq identity at the editing surface (warn on reuse-with-divergence);
+phase 6 adds the cross-reference / uniqueness / non-empty-location validation rules.
+
+## DANDI conformance contract
+
+Referenced by phases 5, 6. The NWB files are published to DANDI, whose validators impose requirements
+**above** `nwb_schema.json`. DANDI runs NWB Inspector with the **DANDI config**, which promotes these
+Subject checks to **CRITICAL (blocking)**:
+
+- **`species`** must be a **Latin binomial** (`^[A-Z][a-z]+ [a-z]+$`, e.g. `Rattus norvegicus`) **or an
+  NCBI Taxonomy URI** (`http://purl.obolibrary.org/obo/NCBITaxon_<digits>`). **Free text like `Rat` /
+  `Long Evans` is rejected** — and the app's schema example is literally `"Rat"`, so this is a real gap.
+- **`sex`** ∈ `{M,F,U,O}` upper-case (already an enum in the app — OK).
+- **`subject_id`** present, **no `/`**; **`session_id`** **no `/`**.
+- **age OR `date_of_birth`** present (DOB satisfies it once phase 5 lands; emit timezone-aware where
+  possible — best practice, non-blocking).
+
+Best-practice (non-blocking but expected): `experimenter` in `Last, First` form; `institution`;
+`keywords` present. `dandi validate` **exits non-zero** on any blocking violation. Phase 5 constrains
+`species` + the id patterns in-app; the round-trip gate (below) runs the actual validators.
+
+## Parity, golden-fixture & round-trip contract
+
+Referenced by phases 2, 3, 4, 5, 8. The project's hardest safety rule. There are **distinct** guards;
 keep them distinct:
 
 - **Legacy golden baselines — must stay byte-identical, every phase.**
@@ -125,7 +179,15 @@ keep them distinct:
   3. Re-assert `decodeYaml(encodeYaml(mergeDayMetadata(...)))` deep-equals the expected metadata and
      `schemaValidation(...)` returns zero errors.
   4. Document the change in `docs/REFACTOR_CHANGELOG.md`.
-- **`trodes_to_nwb` round-trip (when available).** `trodes_to_nwb` is not always checked out
-  (`/Users/edeno/Documents/GitHub/trodes_to_nwb`). When it is, convert a corrected sample and confirm
-  it succeeds + passes NWB Inspector. When it isn't, AJV schema validation against `nwb_schema.json` is
-  the required substitute gate. Never skip both.
+- **`trodes_to_nwb` → NWB → DANDI round-trip (MANDATORY for output-changing phases 2–5, 8).**
+  `trodes_to_nwb` is checked out (`/Users/edeno/Documents/GitHub/trodes_to_nwb`). "Converted without error"
+  is **not** sufficient — trodes_to_nwb's own schema validation only *logs* (`metadata_validation.validate`
+  never raises) and its NWB Inspector runner prints/saves but does **not** raise on findings
+  (`convert.py:377`). Acceptance for these phases is:
+  1. `create_nwbs(...)` produces an NWB file (no exception), **and**
+  2. `nwbinspector <file> --config dandi` reports **zero CRITICAL** findings, **and**
+  3. `dandi validate <file>` **exits zero**.
+  Run these against a corrected sample session (a minimal `.rec` + the generated YAML). If the executor's
+  environment genuinely cannot run trodes_to_nwb/dandi (e.g. a sandboxed CI without the Python stack), the
+  in-app AJV `schemaValidation` + the new DANDI/Spyglass rules (phase 6) are the *interim* gate, but the
+  real round-trip must be run before the phase merges — record the validator output in the PR.

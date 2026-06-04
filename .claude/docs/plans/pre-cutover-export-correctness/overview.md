@@ -83,11 +83,14 @@ how the model is built and gated, not in the encoder.
 - **No legacy-form changes.** The single-page legacy form is the frozen safety net; these fixes touch
   the workspace path only.
 - **No cutover.** Flag flips and the default-route change are Phase 11 of the v3 plan, not here.
-- **No new probe/device types, no schema changes.** The schema (`nwb_schema.json`) is the target to
-  conform to, not to edit.
+- **No new probe/device types.** But note `nwb_schema.json` **may need small edits** to encode DANDI
+  constraints the bundled schema omits (e.g. a `species` pattern, `subject_id`/`session_id` no-slash
+  patterns); coordinate any schema change with `trodes_to_nwb`'s bundled copy (they share it).
 - **No persistence-blob forward migration.** Out of scope (tracked in the v3 plan's release-gated item).
 - The reconfiguration *versioning* mechanics (added in the v3 plan) are reused, not redesigned — except
-  the device-resolution model in [designs.md](designs.md), which phase 2 must settle first.
+  the device-resolution model in [designs.md](designs.md), which phase 2 implements (model B).
+- **Optogenetics IS in scope** (phase 8): the workspace path can emit opto metadata, and trodes_to_nwb has
+  silent opto landmines (key mismatches, all-or-nothing skip) that corrupt opto sessions.
 
 ### Dependency policy
 
@@ -102,13 +105,19 @@ helpers (`getChannelCount`, `deviceTypeMap`, `validate`, `schemaValidation`).
   bad-channels applied), `data_acq_device`, and `cameras` equal what the UI shows as configured.
 - **Fail-closed:** no code path downloads YAML for a day with an error-severity issue.
 - **Legacy parity preserved:** the 125 golden baselines stay byte-identical throughout (see parity contract).
-- **(When available) round-trip:** the corrected YAML converts in `trodes_to_nwb` without error.
+- **Round-trip (mandatory, output-changing phases):** a corrected sample converts via `create_nwbs(...)`
+  **and** passes `nwbinspector --config dandi` (zero CRITICAL) **and** `dandi validate` (exit 0). "Converted
+  without error" alone is insufficient — both downstream validators only log, never raise
+  ([round-trip contract](shared-contracts.md#parity-golden-fixture--round-trip-contract)).
+- **Spyglass-ingestible:** identities are unique/consistent (camera_name, data_acq name, task name),
+  locations non-empty/canonical, behavioral-event names unique
+  ([naming-identity contract](shared-contracts.md#spyglass-naming-identity-contract)).
 
 ## Risks and Mitigations
 
 | Risk | Mitigation |
 | --- | --- |
-| A device-resolution fix silently changes *legacy* export bytes | The 125 golden baselines don't exercise `mergeDayMetadata`; they must stay byte-identical. Any baseline diff is a blocker, not a regenerate. See the [parity contract](shared-contracts.md#parity--golden-fixture-contract). |
+| A device-resolution fix silently changes *legacy* export bytes | The 125 golden baselines don't exercise `mergeDayMetadata`; they must stay byte-identical. Any baseline diff is a blocker, not a regenerate. See the [parity contract](shared-contracts.md#parity-golden-fixture--round-trip-contract). |
 | The probe-resolution redesign interacts with the reconfiguration wizard | Phase 2 settles the model in [designs.md](designs.md) first (Open Question 1) and re-runs the reconfig integration tests; the wizard's create-then-apply flow is preserved. |
 | Fixing IDs to integers breaks components that assume strings | Phase 4 standardizes the type end-to-end (creation, `ChannelMapEditor`/`DevicesStep` PropTypes, channel-map utils) in one PR and asserts the merged output's types. |
 | Fail-closed export makes the new editor look broken before output fixes land | Intended and safe — the legacy path is still default and the workspace is flag-gated. Phases 2–5 restore exportability for valid sessions. Noted in phase 1. |
@@ -138,10 +147,21 @@ All three are **decided** (2026-06-04):
    are seeded from animal-level defaults at `createDay` and overridable per day; `default_header_file_path`
    is per-day. Edit them in the Day Editor; the animal-level Hardware Config step keeps only
    `data_acq_device`.
+4. **`species` input — DECIDED: controlled dropdown of Latin binomials + an "other (binomial)" escape,
+   validated against the binomial / NCBI-taxon-URI form.** DANDI rejects free text (`Rat`); a dropdown is
+   safest while the escape keeps flexibility for unusual species (phase 5).
+5. **Behavioral-events ownership — DECIDED: day-level is the exported source; animal-level is editable
+   reference only.** Consistent with the v3 Phase-10.5 relabel. Phase 3 must make animal-level
+   `behavioral_events` actually persist (today `updateAnimal` drops them) **or** remove animal-level
+   editing; the export keeps reading `day.behavioral_events`.
 
 ## Estimated Effort
 
-~7 PRs. Rough diff sizes: phase 1 small (~150 LOC, mostly gate wiring + tests); phase 2 medium
-(~250 LOC incl. design + fixtures); phase 3 medium (~200 LOC); phase 4 medium (~200 LOC incl. type
-sweep); phase 5 small–medium (~150 LOC incl. repair UI); phase 6 medium (~250 LOC of rules + tests);
-phase 7 small–medium (~200 LOC). Test LOC dominates several phases.
+~8 PRs. Rough diff sizes: phase 1 small (~150 LOC); phase 2 medium (~250 LOC incl. design + fixtures);
+phase 3 medium–large (~300 LOC — the `updateAnimal` no-op fix, camera/data-acq identity, behavioral-events
+ownership); phase 4 medium (~250 LOC incl. integer-ID sweep + multi-shank offset + stray-key removal);
+phase 5 medium (~250 LOC — subject/session completeness: weight, species, DOB, no-slash ids,
+experiment_description); phase 6 large (~350 LOC of rules + the corrected channel-bound + Spyglass/DANDI
+rules + tests); phase 7 small–medium (~150 LOC, re-scoped); phase 8 medium (~200 LOC — opto key fixes +
+all-or-nothing validation). Test LOC dominates. Each output-changing phase also carries a mandatory
+trodes_to_nwb → NWB Inspector (dandi) → dandi-validate round-trip.

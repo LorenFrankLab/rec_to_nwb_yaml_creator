@@ -114,26 +114,43 @@ pinned config) so the editor and the export agree.
 
 ## Channel-map semantics
 
-Referenced by phases 2 and 6. Establishes what is and isn't bounded, so validation rules don't flag valid
-data (the High-severity review finding).
+Referenced by phases 4 and 6. **Corrected against trodes_to_nwb source + the legacy golden fixture** (an
+earlier draft had this wrong — it claimed map values were global hardware channels; they are not).
 
-Each ntrode `map` is `{ logical_channel_key : physical_hardware_channel_value }`:
+Each ntrode `map` is `{ logical_position_key : probe_electrode_id_value }`:
 
-- **Keys = logical/local channels**, `0 … getChannelCount(device_type) - 1`. For `tetrode_12.5`,
-  `getChannelCount` is 4, so keys are `0,1,2,3` — this is exactly `deviceTypeMap('tetrode_12.5')`
-  (`src/ntrode/deviceTypes.js:7`). Existing Rule 5 (`rulesValidation.js:122-148`) checks keys are
-  sequential from 0; the count can also be checked against `getChannelCount`.
-- **Values = physical/global hardware channels** in the `.rec` acquisition space. They are **not** bounded
-  by the device's local channel count: the second tetrode legitimately maps to hardware channels `4,5,6,7`
-  and the third to `8…` (see `workspace-export.realistic.yml:181-195`). The app generally **cannot** bound
-  the upper end (it depends on the rec file's total channel count, which is not in the YAML). Existing
-  Rule 4 (`rulesValidation.js:91-117`) checks values are unique *within* an ntrode.
-- **`bad_channels` = logical/local channel indices**, `0 … getChannelCount(device_type) - 1` (the
-  `ChannelMapEditor` checkbox grid is built from `deviceTypeMap`, so these are local). These **are**
-  app-boundable.
+- **Keys = logical position** within the ntrode/shank, `0 … (channels_in_this_ntrode - 1)` (local).
+  Existing Rule 5 (`rulesValidation.js:122-148`) checks keys are sequential from 0.
+- **Values = electrode IDs *within the probe*** (the `device_type`'s bundled probe metadata), **reset per
+  electrode group**. The real `.rec` hardware channel comes from the XML header, **not** the YAML
+  (`trodes_to_nwb` `convert_rec_header.py:178`); the YAML value is matched to a probe electrode id
+  (`convert_yaml.py:273`). **Proof:** the legacy golden `20230622_sample_metadata.yml` maps *every*
+  tetrode group `{0:0,1:1,2:2,3:3}` — separate groups reset to `0..3`, they do **not** increment globally.
+  So a second standalone tetrode with `{0:4,1:5,2:6,3:7}` is **invalid**; tetrode probe metadata only has
+  electrode ids `0..3`. (The `workspace-export.realistic.yml` `4..7` is a *bug* in a new-path fixture, not
+  evidence of validity.)
+  - **Single-shank device:** values are `0 … getChannelCount(device_type) - 1` (e.g. tetrode `0..3`).
+  - **Multi-shank device:** the probe's electrode ids `0 … getChannelCount-1` are **partitioned across
+    shanks** — each shank's ntrode covers a contiguous block. A 128-channel 4-shank probe → four ntrodes
+    with values `0..31`, `32..63`, `64..95`, `96..127` (legacy `20230622_sample_metadataProbeReconfig.yml`).
+    `deviceTypeMap(device_type)` returns the **per-shank** list (e.g. `0..31` for the 128ch), and
+    `getShankCount` the shank count — so the per-shank offset is `shankIndex * deviceTypeMap.length`.
+- **`bad_channels` = local electrode indices**, `0 … getChannelCount(device_type) - 1` (the
+  `ChannelMapEditor` grid is built from `deviceTypeMap`). trodes_to_nwb tests membership against the
+  probe-local 0-based electrode index (`electrode_counter_probe in bad_channels`) and **silently ignores**
+  out-of-range values, so bounding them in-app is the only protection.
 
-**Therefore (phase 6):** the only sound channel-bound rules are (a) `bad_channels` indices within
-`[0, getChannelCount(device_type))`, and (b) optionally map-**key** cardinality/identity
-(`Object.keys(map)` equals `0 … count-1`). **Do not** add a "map value within device channel count" rule —
-it would flag valid global hardware channels. A "map values are non-negative integers" check is safe; a
-cross-ntrode global-uniqueness check is possible but out of scope unless requested.
+**Therefore the sound channel rules (phase 6) are:** (a) each ntrode's map **values** are integers in
+`[0, getChannelCount(device_type))`; (b) within an electrode **group**, the ntrodes' values **partition**
+`0 … getChannelCount-1` (unique, complete — catches the missing per-shank offset and cross-shank
+collisions); (c) map **keys** are `0 … (ntrode channel count − 1)`; (d) `bad_channels` indices are in
+`[0, getChannelCount(device_type))`. The existing within-ntrode value-uniqueness rule stays.
+
+### Multi-shank per-shank offset (generator fix — phase 4)
+
+`generateChannelMapsForGroup` (`src/utils/channelMapUtils.js:61-76`) builds an **identical** map for every
+shank (`channels.reduce((acc, channelNum, idx) => (acc[idx]=channelNum)`), so a 4-shank probe emits
+`0..31` four times instead of `0..31, 32..63, 64..95, 96..127`. Mirror the legacy hook
+(`useElectrodeGroups.js:81`, which offsets by shank): shank `i`'s value for local key `idx` is
+`i * deviceTypeMap(device_type).length + deviceTypeMap(device_type)[idx]`. Add a fixture test for a
+128-channel 4-shank probe asserting the four expected blocks.

@@ -44,24 +44,42 @@ are local indices (boundable).
 - **Task 2 — dangling electrode-group references.** Add a rule: every
   `ntrode_electrode_group_channel_map[].electrode_group_id` references an existing `electrode_groups[].id`.
   Error severity.
-- **Task 3 — channel bounds (per [channel-map semantics](designs.md#channel-map-semantics)).** Add a
-  rule: for each ntrode, every `bad_channels` index is in `[0, getChannelCount(device_type))` (these are
-  **local** indices), and the `map` **keys** form the expected local set `0…count-1`. Look up the ntrode's
-  group via `electrode_group_id` for `device_type`. **Do NOT** bound the `map` **values** by device count —
-  they are global hardware channels (`4,5,6,7` for a second tetrode is valid); a "value in deviceTypeMap"
-  rule would flag checked-in valid fixtures. At most assert map values are non-negative integers (the
-  existing within-ntrode uniqueness rule stays). Error severity.
-- **Task 4 — non-empty, consistent `location` (Spyglass).** Add a rule: every `electrode_groups[].location`
-  is a non-empty, non-whitespace string (error severity — a NULL/empty location breaks Spyglass spatial
-  queries). Optionally flag inconsistent capitalization of the same region across groups (e.g. `CA1` vs
-  `ca1`) as a **warning** (Spyglass auto-creates `BrainRegion` rows and would fragment). See the downstream
-  note in [shared-contracts.md](shared-contracts.md).
-- **Task 5 — honor `issue.step` in routing.** `groupErrorsByStep` (`validation.js:198-229`) currently
-  ignores any `step` a rule sets and path-routes (sending `camera` paths to `devices` before `task`). Make
-  it prefer an explicit `issue.step` when present, falling back to path routing — then set `step` on the
-  new rules (`devices` for ntrode/group/location, `epochs` for task camera refs, etc.) so they surface on
-  the right step. Add routing tests; keep messages actionable (which id/index, the valid range).
-- **Task 6 — docs.** Note the new rules in `docs/REFACTOR_CHANGELOG.md`.
+- **Task 3 — channel bounds (per [channel-map semantics](designs.md#channel-map-semantics)).** Map
+  **values are probe electrode IDs**, reset per electrode **group** (a second tetrode is `0..3`, **not**
+  `4..7`). Add rules (error severity), looking up `device_type` via the ntrode's group: (a) every map
+  value is an integer in `[0, getChannelCount(device_type))`; (b) within an electrode **group**, the
+  ntrodes' values **partition** `0 … getChannelCount-1` (unique + complete — catches the missing
+  per-shank offset and cross-shank collisions); (c) map **keys** are `0 … (ntrode channel count − 1)`;
+  (d) `bad_channels` indices are in `[0, getChannelCount(device_type))`. The earlier "values are global
+  hardware, don't bound" framing was **wrong** (it would have passed the buggy `4..7` fixture); use the
+  corrected rules here.
+- **Task 4 — non-empty, consistent `location` AND `targeted_location` (Spyglass).** Both
+  `electrode_groups[].location` **and** `electrode_groups[].targeted_location` must be non-empty,
+  non-whitespace (error severity) — the **per-electrode** brain region comes from `targeted_location`
+  (trodes_to_nwb `add_electrode(location=targeted_location)`), and both auto-create Spyglass `BrainRegion`
+  rows by **exact string** (`common_region.py:44`, no trim/case-fold). Flag inconsistent capitalization of
+  the same region across groups (e.g. `CA1` vs `ca1`) as a **warning** (region fragmentation). See the
+  [Spyglass naming-identity contract](shared-contracts.md#spyglass-naming-identity-contract).
+- **Task 5 — `device_type` is a known probe.** Add a rule: every `electrode_groups[].device_type` is in
+  the supported set (the app's `deviceTypes()` ⊆ the 12 `trodes_to_nwb` `probe_metadata` `probe_type`
+  files, exact + case-sensitive — an unknown one is a hard `FileNotFoundError` downstream). Guards
+  copy/CSV-import-introduced values. Error severity.
+- **Task 6 — behavioral-event name uniqueness.** Add a rule: `behavioral_events[].name` values are unique
+  within the day (duplicate is a hard Spyglass `DIOEvents` PK violation and a trodes_to_nwb `ValueError`).
+  Error severity.
+- **Task 7 — video↔task dependency + camera refs.** Add a rule: each non-empty `associated_video_files`
+  entry has a `task_epochs` that matches some `tasks[].task_epochs` (Spyglass `VideoFile` depends on a
+  successful `TaskEpoch`; orphaned videos silently don't import — `common_behav.py:451`, `common_task.py:240`)
+  **and** a valid scalar `camera_id`. Error severity.
+- **Task 8 — within-session identity uniqueness (Spyglass).** Add rules: `cameras[].camera_name` unique;
+  `data_acq_device[].name` unique; `tasks[].task_name` used consistently (no two tasks with the same
+  `task_name` but different `task_description`). Error severity (these are PK/divergence hazards in
+  Spyglass). The reuse-with-divergence *editing* guard is phase 3; these catch it in the exported file.
+- **Task 9 — honor `issue.step` in routing.** `groupErrorsByStep` (`validation.js:198-229`) ignores any
+  `step` a rule sets and path-routes (`camera` → `devices` before `task`). Make it prefer an explicit
+  `issue.step`, falling back to path routing — then set `step` on the new rules so they surface on the
+  right step. Add routing tests; keep messages actionable (which id/index, valid range).
+- **Task 10 — docs.** Note the new rules in `docs/REFACTOR_CHANGELOG.md`.
 
 ## Deliberately not in this phase
 
@@ -78,9 +96,13 @@ are local indices (boundable).
 | `dangling task camera_id (array) is an error` *(unit)* | a task with `camera_id:[99]` when cameras are `[{id:0}]` errors; a valid reference yields none. |
 | `dangling video camera_id (scalar) is an error` *(unit)* | an `associated_video_files` item with scalar `camera_id: 99` errors; `camera_id: 0` passes. Proves the array-vs-scalar handling. |
 | `dangling ntrode electrode_group_id is an error` *(unit)* | an ntrode `electrode_group_id` with no matching group errors. |
-| `valid global hardware map values do NOT error` *(unit)* | a second `tetrode_12.5` ntrode with `map {0:4,1:5,2:6,3:7}` (global hardware channels) yields **no** channel-bound error — guards against the wrong rule. |
-| `out-of-range bad_channels index is an error` *(unit)* | `bad_channels:[99]` on a 4-channel ntrode errors; `[2]` passes; wrong map-key set (e.g. missing key `1`) errors. |
-| `empty electrode-group location is an error` *(unit)* | `location: ''` (or whitespace) errors; a non-empty location passes; mixed-case duplicates warn. |
+| `map values are bounded probe electrode IDs, reset per group` *(unit)* | a second `tetrode_12.5` group with `map {0:4,1:5,2:6,3:7}` **errors** (values must be `0..3`); `{0:0,1:1,2:2,3:3}` passes; a 4-shank probe whose shanks partition `0..127` passes, but two shanks sharing `0..31` (missing offset) errors. |
+| `out-of-range bad_channels index is an error` *(unit)* | `bad_channels:[99]` on a 4-channel ntrode errors; `[2]` passes; wrong map-key set (missing key `1`) errors. |
+| `empty location or targeted_location is an error` *(unit)* | `location: ''` or `targeted_location: ''` (or whitespace) errors; non-empty passes; mixed-case duplicates across groups warn. |
+| `unknown device_type is an error` *(unit)* | a `device_type` not in the supported probe set errors; a known one passes. |
+| `duplicate behavioral-event name is an error` *(unit)* | two `behavioral_events` with the same `name` error; unique names pass. |
+| `orphaned associated_video_file is an error` *(unit)* | a video whose `task_epochs` matches no task errors; a video with a matching task + valid scalar `camera_id` passes. |
+| `duplicate camera_name / data_acq name / divergent task_name is an error` *(unit)* | reused `camera_name`, reused `data_acq_device.name`, and same `task_name` with differing description each error. |
 | `rule issues route to the intended step` *(unit)* | a rule that sets `step:'devices'` lands in the devices bucket via `groupErrorsByStep`, overriding path routing. |
 | `new rules block export via the existing gate` *(integration)* | a day with a dangling reference has `computeStepStatus(...).export === 'error'` and cannot be exported (ties phase 1). |
 | `golden-yaml.baseline.test.js` (existing) | byte-identical — validation-only changes, no output bytes change. |

@@ -29,17 +29,32 @@ in the exported YAML.
 - [Export-resolution source-of-truth contract](shared-contracts.md#export-resolution-source-of-truth-contract)
   — `data_acq_device` ← `animal.devices.data_acq_device`; `cameras` ← `animal.cameras`; `technical.*` is
   per-day.
-- [Parity & golden-fixture contract](shared-contracts.md#parity--golden-fixture-contract) — adding
-  configured cameras/data-acq changes new-path output; update fixtures deliberately; legacy baselines stay.
+- [Spyglass naming-identity contract](shared-contracts.md#spyglass-naming-identity-contract) —
+  `camera_name` and `data_acq_device.name` are database identities; reuse-with-divergence is unsafe.
+- [Parity, golden-fixture & round-trip contract](shared-contracts.md#parity-golden-fixture--round-trip-contract)
+  — adding configured cameras/data-acq changes new-path output; update fixtures deliberately; legacy
+  baselines stay; run the mandatory round-trip.
+
+**Critical correction:** the Hardware Config writes are currently **total no-ops, not just mislocated.**
+`updateAnimal` only applies the keys `subject | experimenters | devices | cameras | optogenetics`
+(`useWorkspace.js:200-214`); the step's `onFieldUpdate('data_acq_device'|'technical'|'behavioral_events', …)`
+matches **no branch and is silently dropped**. Task 0 fixes this before any wiring matters.
 
 ## Tasks
 
-- **Task 1 — wire camera CRUD (incl. required `lens`).** In `HardwareConfigStep`, manage camera
-  add/edit/delete (open `CameraModal`, assign IDs, persist) and pass `onAdd`/`onEdit`/`onDelete` to
-  `CamerasSection`. Persist through `updateAnimal({ cameras })`. **Make `CameraModal` require `lens`** —
-  it is schema-required (`nwb_schema.json:697`) but the modal's validity check omits it
-  (`CameraModal.jsx:60`), so a camera can currently be saved schema-invalid. Mirror the ID-assignment /
-  save behavior already used to add cameras in the Animal workspace; remove dead/placeholder handlers.
+- **Task 0 — make `updateAnimal` actually persist these fields.** Extend `updateAnimal`
+  (`useWorkspace.js:200-214`) so `data_acq_device`, `technical`, and `behavioral_events` updates are
+  applied (or route them to the right slice: `data_acq_device` under `devices`, `behavioral_events` at
+  animal level per the decided ownership, `technical` per-day via `updateDay`). Without this, every other
+  task in this phase is a no-op. Add a test that each write reaches the model.
+- **Task 1 — wire camera CRUD (required `lens`, identity-safe).** In `HardwareConfigStep`, manage camera
+  add/edit/delete (open `CameraModal`, assign integer IDs, persist via `updateAnimal({ cameras })`) and pass
+  `onAdd`/`onEdit`/`onDelete` to `CamerasSection`. **Make `CameraModal` require `lens`** (schema-required
+  `nwb_schema.json:697`, omitted by `CameraModal.jsx:60`). **Enforce the Spyglass camera identity**
+  (naming-identity contract): `camera_name` unique within the animal/session; warn if a user reuses an
+  existing `camera_name` with different `meters_per_pixel`/`lens`/`model`/`manufacturer` (Spyglass keys
+  `CameraDevice` on `camera_name` and rejects/diverges on calibration drift) — a changed calibration needs
+  a new name. Keep integer `id` (trodes_to_nwb derives the numeric join from `camera_device {id}`).
 - **Task 2 — route data-acq to `animal.devices.data_acq_device` AS AN ARRAY.** The schema is an
   **array** of `{name, system, amplifier, adc_circuit}` items (`nwb_schema.json:504`, all required), and
   the export reads `animal.devices.data_acq_device` (`workspaceUtils.js:185`). `DataAcqSection` currently
@@ -47,6 +62,14 @@ in the exported YAML.
   Fix all three: (a) edit an array item (a single device is fine, but stored/exported as a one-element
   array), (b) collect the required `name`, (c) write to `animal.devices.data_acq_device` via
   `updateAnimal({ devices: { ...animal.devices, data_acq_device: [item] } })` — not a top-level field.
+  **Spyglass identity:** `data_acq_device[].name` keys `DataAcquisitionDevice`; the same `name` with
+  different `system`/`amplifier`/`adc_circuit` triggers a divergence check — keep `name` unique and
+  stable for a given technical config.
+- **Task 2b — behavioral-events ownership.** Per the decided ownership (animal-level is editable reference;
+  the day's `behavioral_events` is the exported source), make the Animal Editor's `behavioral_events`
+  actually persist (Task 0 enables this) **or** remove animal-level editing. The export keeps reading
+  `day.behavioral_events`. Whichever, the editor and the export must agree (no write that never reaches
+  the model).
 - **Task 3 — technical fields per-day with animal defaults (Q3 decided).** Move
   `default_header_file_path`, `raw_data_to_volts`, `times_period_multiplier`, `units` out of the
   animal-level Hardware Config step and edit them **per-day in the Day Editor** (where `day.technical`
@@ -69,7 +92,9 @@ in the exported YAML.
 
 | Test | Asserts |
 | --- | --- |
+| `updateAnimal persists data_acq_device / technical / behavioral_events` *(unit)* | each field written via the Hardware Config `onFieldUpdate` actually reaches the model (regression for the silent no-op). |
 | `Hardware Config add camera persists with required lens` *(integration)* | Add → save a camera (incl. `lens`) calls `updateAnimal`; it appears in `animal.cameras` and `mergeDayMetadata(...).cameras`; saving without `lens` is blocked by the modal. |
+| `reusing a camera_name with different calibration warns` *(integration)* | editing/adding a camera that reuses an existing `camera_name` with a different `meters_per_pixel`/`lens`/`model` surfaces a warning (Spyglass identity); a new name does not. |
 | `Hardware Config edit/delete camera persists` *(integration)* | edit changes the camera; delete removes it; both reflected in the merged export. |
 | `data-acq writes the schema array shape with name` *(integration)* | editing system/amplifier/adc_circuit/name writes `animal.devices.data_acq_device` as a one-element array `[{name, system, amplifier, adc_circuit}]`; `mergeDayMetadata(...).data_acq_device` is that array; `schemaValidation` raises no data-acq error. |
 | `technical fields edited per-day with animal defaults` *(integration)* | a new day inherits `raw_data_to_volts` / `times_period_multiplier` from animal defaults; editing them in the Day Editor updates `day.technical` and the export; the animal Hardware Config no longer edits them. |

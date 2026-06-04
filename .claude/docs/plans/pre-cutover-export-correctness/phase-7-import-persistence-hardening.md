@@ -25,12 +25,19 @@ guard after a failed autosave (Finding I).
   [src/pages/Home/index.jsx:101,111](../../../../src/pages/Home/index.jsx) —
   `Object.keys(workspace.animals)` crash sites if `animals` is undefined.
 
+**Scope note.** There is **no YAML import in the workspace path** — `importExport.js` operates on the
+legacy `formData` (single-page form). So Task 2 touches **legacy** code (an acknowledged exception to the
+"no legacy changes" non-goal, justified because the bug silently keeps invalid data). Task 1
+(`schemaValidation.js`) is **shared** — the workspace export gate calls `validate` → `schemaValidation`,
+so better nested-error paths improve the workspace's own validation messages (in-scope regardless).
+
 ## Tasks
 
-- **Task 1 — preserve nested error paths (Finding H).** In `schemaValidation.js`, for a nested `required`
-  error, build the field as the full path **joined with** the missing property (e.g.
+- **Task 1 — preserve nested error paths (shared; Finding H).** In `schemaValidation.js`, for a nested
+  `required` error, build the field as the full path **joined with** the missing property (e.g.
   `cameras[0].camera_name`), not the bare `missingProperty`. Keep top-level required errors (empty
   instancePath) reporting the bare property. Verify against AJV's `instancePath` + `params.missingProperty`.
+  This benefits the workspace export gate's messages, not just legacy import.
 - **Task 2 — exclude the right field on partial import (Finding H).** Confirm `importExport.js:153`'s
   top-level extraction now yields `cameras` (from `cameras[0].camera_name`), so the invalid `cameras`
   array is excluded from a partial import instead of imported. If the extraction logic is fragile, make it

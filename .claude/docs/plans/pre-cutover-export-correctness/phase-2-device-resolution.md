@@ -28,7 +28,7 @@ snapshots are the source of truth, `animal.devices` mirrors the latest snapshot,
 **Contracts referenced:**
 
 - [Export-resolution source-of-truth contract](shared-contracts.md#export-resolution-source-of-truth-contract).
-- [Parity & golden-fixture contract](shared-contracts.md#parity--golden-fixture-contract) — new-path
+- [Parity & golden-fixture contract](shared-contracts.md#parity-golden-fixture--round-trip-contract) — new-path
   fixtures updated deliberately; the 125 legacy baselines stay byte-identical.
 
 **Designs referenced:** [Device-resolution model](designs.md#device-resolution-model),
