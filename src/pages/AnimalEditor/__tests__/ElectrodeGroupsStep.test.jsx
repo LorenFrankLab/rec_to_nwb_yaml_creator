@@ -47,13 +47,14 @@ describe('ElectrodeGroupsStep', () => {
     expect(badges.length).toBeGreaterThan(0);
   });
 
-  it('marks a group missing schema-required description/targeted_location as incomplete', () => {
+  it('marks a group missing its required targeted_location as incomplete', () => {
     const animalWithIncompleteGroup = {
       id: 'remy',
       devices: {
         electrode_groups: [
-          // Missing description and targeted_location — required by the schema.
-          { id: 0, device_type: 'tetrode_12.5', location: 'CA1', targeted_x: 1, targeted_y: 2, targeted_z: 3, units: 'mm' },
+          // No targeted_location — the required region field. (location/description
+          // are optional in the editor and filled in on save.)
+          { id: 0, device_type: 'tetrode_12.5', targeted_x: 1, targeted_y: 2, targeted_z: 3, units: 'mm' },
         ],
         ntrode_electrode_group_channel_map: [],
       },

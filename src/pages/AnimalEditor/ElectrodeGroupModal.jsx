@@ -59,12 +59,13 @@ function ElectrodeGroupForm({ mode, group, knownRegions, onSave, onCancel }) {
   const isFiniteCoordinate = (value) => value.trim() !== '' && Number.isFinite(Number(value));
 
   const isFormValid = () => {
-    const { device_type, location, description, targeted_location, targeted_x, targeted_y, targeted_z, count } = formData;
+    // At recording time the scientist only has the TARGET; the actual `location`
+    // is confirmed later by histology, so only `targeted_location` is required here.
+    // `location` and `description` are optional and filled in on save (see handleSave).
+    const { device_type, targeted_location, targeted_x, targeted_y, targeted_z, count } = formData;
     const isCountValid = mode === 'edit' || (count && parseInt(count, 10) > 0 && parseInt(count, 10) <= 100);
     return (
       device_type.trim() !== '' &&
-      location.trim() !== '' &&
-      description.trim() !== '' &&
       targeted_location.trim() !== '' &&
       isFiniteCoordinate(targeted_x) &&
       isFiniteCoordinate(targeted_y) &&
@@ -84,11 +85,22 @@ function ElectrodeGroupForm({ mode, group, knownRegions, onSave, onCancel }) {
     // (e.g. "ca1") does not fragment Spyglass BrainRegion rows. Canonicalize
     // against the standard regions plus any already used in this workspace.
     const canonicalRegions = [...BRAIN_REGIONS, ...knownRegions];
+    const targetedLocation = canonicalizeRegion(formData.targeted_location, canonicalRegions);
+    // `location` is schema-required and Spyglass keys its BrainRegion off it, so
+    // default it to the target until the actual (post-histology) location is known.
+    const location = formData.location.trim() !== ''
+      ? canonicalizeRegion(formData.location, canonicalRegions)
+      : targetedLocation;
+    // `description` is schema-required (non-empty); derive a sensible default when
+    // the scientist leaves it blank so the export stays valid.
+    const description = formData.description.trim() !== ''
+      ? formData.description.trim()
+      : `${formData.device_type} targeting ${targetedLocation}`;
     onSave({
       device_type: formData.device_type,
-      location: canonicalizeRegion(formData.location, canonicalRegions),
-      description: formData.description.trim(),
-      targeted_location: canonicalizeRegion(formData.targeted_location, canonicalRegions),
+      location,
+      description,
+      targeted_location: targetedLocation,
       targeted_x: Number(formData.targeted_x),
       targeted_y: Number(formData.targeted_y),
       targeted_z: Number(formData.targeted_z),
@@ -138,40 +150,8 @@ function ElectrodeGroupForm({ mode, group, knownRegions, onSave, onCancel }) {
         </div>
       )}
 
-      {/* Location */}
-      <div className="form-group">
-        <BrainRegionAutocomplete
-          value={formData.location}
-          onChange={(value) => setFormData((prev) => ({ ...prev, location: value }))}
-          label="Location"
-          name="location"
-          suggestions={knownRegions}
-          required
-        />
-        <span className="help-text">
-          Actual recorded brain region (e.g., CA1). Becomes the NWB ElectrodeGroup
-          location and a Spyglass brain region — keep spelling consistent across groups.
-        </span>
-      </div>
-
-      {/* Description (schema-required, e.g. "Dorsal CA1 right hemisphere tetrode") */}
-      <div className="form-group">
-        <label htmlFor="description">Description</label>
-        <input
-          id="description"
-          type="text"
-          name="description"
-          placeholder="e.g., Dorsal CA1 right hemisphere tetrode"
-          value={formData.description}
-          onChange={handleInputChange}
-          required
-        />
-        <span className="help-text">
-          Free-text label for this group in the NWB file (e.g., hemisphere and depth target).
-        </span>
-      </div>
-
-      {/* Targeted Location (planned implant target; schema-required) */}
+      {/* Targeted Location (the planned implant target — the region known at
+          recording time, before histology; the primary required region field). */}
       <div className="form-group">
         <BrainRegionAutocomplete
           value={formData.targeted_location}
@@ -182,7 +162,40 @@ function ElectrodeGroupForm({ mode, group, knownRegions, onSave, onCancel }) {
           required
         />
         <span className="help-text">
-          Planned implant target region. May differ from Location if the probe drifted.
+          Planned implant target region (e.g., CA1) — the region you know at recording time.
+        </span>
+      </div>
+
+      {/* Location (actual, post-histology). Optional here — defaults to the target
+          until the confirmed location is known. */}
+      <div className="form-group">
+        <BrainRegionAutocomplete
+          value={formData.location}
+          onChange={(value) => setFormData((prev) => ({ ...prev, location: value }))}
+          label="Location (optional)"
+          name="location"
+          suggestions={knownRegions}
+        />
+        <span className="help-text">
+          Actual recorded region, confirmed by histology. Leave blank to use the
+          targeted location for now; update it once histology is done.
+        </span>
+      </div>
+
+      {/* Description (optional; auto-derived from device + target when left blank). */}
+      <div className="form-group">
+        <label htmlFor="description">Description (optional)</label>
+        <input
+          id="description"
+          type="text"
+          name="description"
+          placeholder="e.g., Dorsal CA1 right hemisphere tetrode"
+          value={formData.description}
+          onChange={handleInputChange}
+        />
+        <span className="help-text">
+          Free-text label for this group in the NWB file. Leave blank to auto-generate
+          one from the device type and target.
         </span>
       </div>
 
@@ -249,8 +262,8 @@ function ElectrodeGroupForm({ mode, group, knownRegions, onSave, onCancel }) {
       {/* Tell the user what is still missing rather than leaving Save silently disabled. */}
       {!isFormValid() && (
         <p className="form-invalid-hint" role="status">
-          Fill in all required fields (device type, location, description, targeted
-          location, and the AP/ML/DV coordinates) to save.
+          Fill in all required fields (device type, targeted location, and the
+          AP/ML/DV coordinates) to save.
         </p>
       )}
 

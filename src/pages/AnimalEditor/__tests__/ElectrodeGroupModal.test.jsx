@@ -20,7 +20,9 @@ import { deviceTypes } from '../../../valueList';
  */
 
 /**
- * Fill every required field with valid values for a tetrode group.
+ * Fill the required fields for a tetrode group. `location` and `description` are
+ * optional in the editor (filled in on save), so they default to blank here and
+ * are only typed when supplied via `overrides`.
  *
  * @param {object} user - userEvent instance.
  * @param {object} [overrides] - Optional field overrides.
@@ -29,8 +31,8 @@ import { deviceTypes } from '../../../valueList';
 async function fillRequiredFields(user, overrides = {}) {
   const values = {
     device_type: 'tetrode_12.5',
-    location: 'CA1',
-    description: 'CA1 tetrode',
+    location: '',
+    description: '',
     targeted_location: 'CA1',
     targeted_x: '1.0',
     targeted_y: '2.0',
@@ -40,15 +42,15 @@ async function fillRequiredFields(user, overrides = {}) {
   };
 
   // userEvent.type throws on an empty string, so only type non-empty values;
-  // a skipped field stays at its empty initial state (the "missing field" case).
+  // a skipped field stays at its empty initial state.
   const typeIfPresent = async (el, text) => {
     if (text !== '') await user.type(el, text);
   };
 
   await user.selectOptions(screen.getByLabelText(/device type/i), values.device_type);
-  await typeIfPresent(screen.getByLabelText('Location'), values.location);
-  await typeIfPresent(screen.getByLabelText(/description/i), values.description);
   await typeIfPresent(screen.getByLabelText('Targeted Location'), values.targeted_location);
+  await typeIfPresent(screen.getByLabelText('Location (optional)'), values.location);
+  await typeIfPresent(screen.getByLabelText(/description/i), values.description);
   await typeIfPresent(screen.getByLabelText(/ap|anterior[- ]?posterior/i), values.targeted_x);
   await typeIfPresent(screen.getByLabelText(/ml|medial[- ]?lateral/i), values.targeted_y);
   await typeIfPresent(screen.getByLabelText(/dv|dorsal[- ]?ventral/i), values.targeted_z);
@@ -85,7 +87,7 @@ describe('ElectrodeGroupModal', () => {
       render(<ElectrodeGroupModal isOpen mode="add" onSave={() => {}} onCancel={() => {}} />);
 
       expect(screen.getByLabelText(/device type/i)).toBeInTheDocument();
-      expect(screen.getByLabelText('Location')).toBeInTheDocument();
+      expect(screen.getByLabelText('Location (optional)')).toBeInTheDocument();
       expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
       expect(screen.getByLabelText('Targeted Location')).toBeInTheDocument();
       expect(screen.getByLabelText(/ap|anterior[- ]?posterior/i)).toBeInTheDocument();
@@ -131,7 +133,7 @@ describe('ElectrodeGroupModal', () => {
       render(<ElectrodeGroupModal isOpen mode="edit" group={group} onSave={() => {}} onCancel={() => {}} />);
 
       expect(screen.getByDisplayValue('tetrode_12.5')).toBeInTheDocument();
-      expect(screen.getByLabelText('Location')).toHaveValue('CA1');
+      expect(screen.getByLabelText('Location (optional)')).toHaveValue('CA1');
       expect(screen.getByLabelText(/description/i)).toHaveValue('CA1 tetrode');
       expect(screen.getByLabelText('Targeted Location')).toHaveValue('CA3');
       expect(screen.getByDisplayValue('1')).toBeInTheDocument();
@@ -152,10 +154,16 @@ describe('ElectrodeGroupModal', () => {
       expect(screen.getByRole('button', { name: /save/i })).toBeDisabled();
     });
 
-    it('should disable Save button when description is empty', async () => {
+    it('Save stays enabled when description is blank (optional)', async () => {
       render(<ElectrodeGroupModal isOpen mode="add" onSave={() => {}} onCancel={() => {}} />);
       await fillRequiredFields(user, { description: '' });
-      expect(screen.getByRole('button', { name: /save/i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /save/i })).not.toBeDisabled();
+    });
+
+    it('Save stays enabled when location is blank (optional)', async () => {
+      render(<ElectrodeGroupModal isOpen mode="add" onSave={() => {}} onCancel={() => {}} />);
+      await fillRequiredFields(user, { location: '' });
+      expect(screen.getByRole('button', { name: /save/i })).not.toBeDisabled();
     });
 
     it('should disable Save button when targeted_location is empty', async () => {
@@ -202,11 +210,11 @@ describe('ElectrodeGroupModal', () => {
   });
 
   describe('Region fields use controlled / canonical entry', () => {
-    it('cannot save a whitespace-only location', async () => {
+    it('a blank/whitespace-only location does not block save (it defaults to the target)', async () => {
       const onSave = vi.fn();
       render(<ElectrodeGroupModal isOpen mode="add" onSave={onSave} onCancel={() => {}} />);
       await fillRequiredFields(user, { location: '   ' });
-      expect(screen.getByRole('button', { name: /save/i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /save/i })).not.toBeDisabled();
     });
 
     it('cannot save a whitespace-only targeted_location', async () => {
@@ -221,7 +229,7 @@ describe('ElectrodeGroupModal', () => {
         <ElectrodeGroupModal isOpen mode="add" onSave={() => {}} onCancel={() => {}} />
       );
 
-      for (const field of ['Location', 'Targeted Location']) {
+      for (const field of ['Location (optional)', 'Targeted Location']) {
         const datalistId = screen.getByLabelText(field).getAttribute('list');
         const datalist = container.querySelector(`#${datalistId}`);
         const options = Array.from(datalist.querySelectorAll('option')).map((o) => o.value);
@@ -257,11 +265,12 @@ describe('ElectrodeGroupModal', () => {
   });
 
   describe('Save button behavior', () => {
-    it('calls onSave with the schema-shaped group (description + targeted_location, no bad_channels)', async () => {
+    it('calls onSave with the schema-shaped group (explicit location + description, no bad_channels)', async () => {
       const onSave = vi.fn();
       render(<ElectrodeGroupModal isOpen mode="add" onSave={onSave} onCancel={() => {}} />);
 
       await fillRequiredFields(user, {
+        location: 'CA1',
         description: 'Dorsal CA1 tetrode',
         targeted_location: 'CA1',
         targeted_x: '1.5',
@@ -283,6 +292,30 @@ describe('ElectrodeGroupModal', () => {
         count: 1,
       });
       expect(onSave.mock.calls[0][0]).not.toHaveProperty('bad_channels');
+    });
+
+    it('defaults location to the targeted location when location is left blank', async () => {
+      const onSave = vi.fn();
+      render(<ElectrodeGroupModal isOpen mode="add" onSave={onSave} onCancel={() => {}} />);
+
+      await fillRequiredFields(user, { targeted_location: 'CA3' }); // location left blank
+      await user.click(screen.getByRole('button', { name: /save/i }));
+
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({ location: 'CA3', targeted_location: 'CA3' })
+      );
+    });
+
+    it('auto-derives a description from device + target when left blank', async () => {
+      const onSave = vi.fn();
+      render(<ElectrodeGroupModal isOpen mode="add" onSave={onSave} onCancel={() => {}} />);
+
+      await fillRequiredFields(user, { targeted_location: 'CA3' }); // description left blank
+      await user.click(screen.getByRole('button', { name: /save/i }));
+
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({ description: 'tetrode_12.5 targeting CA3' })
+      );
     });
 
     it('emits numeric coordinates even when typed as strings', async () => {

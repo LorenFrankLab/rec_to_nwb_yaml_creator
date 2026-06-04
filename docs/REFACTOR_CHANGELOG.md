@@ -6,6 +6,41 @@
 
 ---
 
+## Electrode-group region UX + positive epoch numbers (June 4, 2026)
+
+### Summary
+
+Adjusted the electrode-group form to match the recording-time workflow (you only know the
+*target* until histology) and constrained task epoch numbers to positive integers. No schema
+or export-byte change for a fully-configured session; legacy baselines stay byte-identical.
+
+### Changes
+
+- **Targeted location is the primary required region field.** The Add/Edit Electrode Group modal
+  now leads with **Targeted Location** (required) — the region known at recording time. **Location**
+  (the actual, post-histology region) and **Description** are **optional in the editor**. On save,
+  a blank `location` defaults to the targeted location (Spyglass keys its `BrainRegion` off
+  `location`, so it must stay non-empty), and a blank `description` is auto-derived as
+  `"{device_type} targeting {targeted_location}"`. Both remain schema-required and are always present
+  in the saved group. The completeness badge and the disabled-Save hint were updated to match.
+- **Task epoch numbers are positive integers.** The epoch-number input gained `min="1"` and a typed
+  non-positive value is rejected, so `task_epochs` can no longer contain a negative/zero entry.
+
+### Deferred / noted
+
+- **`location` was NOT removed from the shared schema's `required` set.** `nwb_schema.json` is
+  version-pinned (`1.0.1`) to `trodes_to_nwb`'s bundled copy via the `check:schema` gate, which only
+  compares the version *string* — editing the `required` array here would create undetectable
+  cross-repo drift, and `trodes_to_nwb` / Spyglass still consume `location`. Making `location`
+  genuinely optional is a coordinated cross-repo change (schema version bump + `trodes_to_nwb` copy +
+  a Spyglass null-location fallback). The UI change above delivers the recording-time workflow
+  without that risk.
+- **Subject DOB / weight / description (the unexplained Day-Overview "x")** are inherited, read-only,
+  and not editable post-creation; the DOB is stored as `YYYY-MM-DD` but the schema needs a
+  `T`-timestamp. This is the planned **Phase 5** (subject/session completeness) — tracked, not fixed here.
+
+---
+
 ## Schema-valid device output: integer IDs, required fields, multi-shank offsets (June 4, 2026)
 
 ### Summary

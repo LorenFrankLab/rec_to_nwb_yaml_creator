@@ -257,6 +257,34 @@ Recorded during implementation; revisit in the named phase.
    future change should catch the throw and route to `ErrorState` with the message,
    without ever falling back to an empty-probes render.
 
+### Post-Phase-4 lab feedback (2026-06-04) — actioned + deferred
+
+From driving the running app:
+
+1. **Electrode-group region UX changed to match recording-time workflow (done).** The lab noted
+   that at recording time only the **target** is known — the actual `location` needs histology — so
+   `location` and `description` should not be required in the editor. The modal now leads with
+   **Targeted Location** (required); **Location** and **Description** are optional and filled in on
+   save (blank `location` → defaults to the target; blank `description` → `"{device_type} targeting
+   {targeted_location}"`). Both stay schema-required and present in the saved group.
+2. **Lab requested `location` be dropped from the schema `required` — DEFERRED as a coordinated
+   cross-repo change.** `nwb_schema.json` is version-pinned (`1.0.1`) to `trodes_to_nwb` via the
+   `check:schema` gate (which compares only the version string, so content drift is undetectable),
+   and `trodes_to_nwb`/Spyglass consume `location`. Genuinely removing the requirement needs: a schema
+   version bump here, the matching `trodes_to_nwb` bundled-copy edit, and a Spyglass null-location
+   fallback. Not done unilaterally; the UI change in (1) delivers the workflow without the risk.
+   Revisit if/when the cross-repo change is coordinated.
+3. **Task epoch numbers constrained to positive integers (done).** `min="1"` + reject non-positive.
+4. **Day-Overview unexplained "x" + DOB/weight/subject-description not editable → Phase 5 (noted).**
+   These subject fields are inherited, shown read-only in the day's collapsed "inherited metadata",
+   and their validation errors route to the Overview step (`validation.js` `stepIdForIssue`: any
+   `subject` path → `overview`) with no editable surface — hence a bare "x". The DOB is stored as
+   `YYYY-MM-DD` but the schema needs a `T`-timestamp. All of this is exactly
+   [phase 5 (subject/session completeness)](phase-5-subject-session-completeness.md); phase 5 should
+   also (a) make the Overview status name *which* inherited field is incomplete rather than a bare
+   "x", and (b) provide an editable/repair path for subject fields (they are currently only set at
+   animal creation).
+
 ### Phase 4 findings / follow-ups
 
 1. **Frozen-golden tetrode map values `0:4..3:7` are scientifically wrong but out of scope.**

@@ -60,7 +60,9 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
    * @returns {string}
    */
   function getStatusKey(group) {
-    const requiredText = ['device_type', 'location', 'description', 'targeted_location', 'units'];
+    // `location` and `description` are optional in the editor (filled in on save),
+    // so completeness keys off the fields the scientist must supply.
+    const requiredText = ['device_type', 'targeted_location', 'units'];
     const hasRequired = (
       requiredText.every(field => hasNonBlankValue(group[field])) &&
       hasFiniteCoordinate(group.targeted_x) &&
