@@ -203,9 +203,21 @@ This application is the **entry point** for the neuroscience data conversion pip
 > 📎 **Verified downstream requirements + how to re-research them:** [docs/PIPELINE_REQUIREMENTS.md](docs/PIPELINE_REQUIREMENTS.md).
 > It records the field-by-field trodes_to_nwb / DANDI / Spyglass requirements (what's required, tolerated,
 > or **silently** mishandled), the mandatory NWB-validation commands (`nwbinspector --config dandi`,
-> `dandi validate`), and the exact files/URLs + method to re-verify when those repos change (read them
-> from GitHub — the local `~/Documents/GitHub/{trodes_to_nwb,spyglass}` checkouts are not readable from the
-> agent sandbox). Re-verify before relying on any specific claim below.
+> `dandi validate`), and the exact files/URLs + method to re-verify when those repos change.
+
+**Pipeline gotchas (hard-won — see [docs/PIPELINE_REQUIREMENTS.md](docs/PIPELINE_REQUIREMENTS.md) for detail):**
+
+- **Downstream validation is mostly *silent*, so this app is the real gate.** trodes_to_nwb's schema check
+  only logs (never raises) and its NWB Inspector run doesn't fail on findings; Spyglass logs ingestion
+  errors to a side table and continues. A YAML that "converts without error" can still be wrong — validate
+  the NWB itself (`nwbinspector --config dandi` → zero CRITICAL, then `dandi validate` → exit 0).
+- **Channel-map `map` values are probe *electrode IDs*, reset per electrode group** (a 2nd tetrode is
+  `0..3`, not `4..7`), and multi-shank probes partition `0..N-1` across shanks — they are **not** global
+  hardware channels. `bad_channels` are probe-local indices; out-of-range is silently ignored downstream.
+- **DANDI rejects free-text `species`** — it must be a Latin binomial (`Rattus norvegicus`) or NCBI Taxon URI.
+- **Researching trodes_to_nwb / spyglass:** the local `~/Documents/GitHub/{trodes_to_nwb,spyglass}` checkouts
+  are **not readable from the agent sandbox** (EPERM) — read them from GitHub (`raw.githubusercontent.com` /
+  the contents API) instead.
 
 ### YAML File Consumption Workflow
 
@@ -252,7 +264,7 @@ The NWB files ultimately feed into [Spyglass](https://github.com/LorenFrankLab/s
 
 **Critical Database Constraints:**
 
-1. **Probe `device_type` must resolve to a real probe.** The `device_type` (e.g. `"tetrode_12.5"`) must match a `probe_type` file in `trodes_to_nwb`'s `device_metadata/probe_metadata/` (exact, case-sensitive — otherwise conversion hard-fails with `FileNotFoundError`). _(Verified update: on current Spyglass `master`, `ProbeType` is **auto-registered from the NWB `ndx_franklab_novela.Probe`**, not a pre-existing Spyglass table; the `ElectrodeGroup.probe_id`-NULL risk now occurs when the electrode group's device isn't a proper ndx Probe with `probe_type` + geometry. See [docs/PIPELINE_REQUIREMENTS.md](docs/PIPELINE_REQUIREMENTS.md) §3.)_
+1. **Probe `device_type` must resolve to a real probe.** The `device_type` (e.g. `"tetrode_12.5"`) must match a `probe_type` file in `trodes_to_nwb`'s `device_metadata/probe_metadata/` (exact, case-sensitive — otherwise conversion hard-fails with `FileNotFoundError`). *(Verified update: on current Spyglass `master`, `ProbeType` is auto-registered from the NWB `ndx_franklab_novela.Probe`, not a pre-existing Spyglass table; the `ElectrodeGroup.probe_id`-NULL risk now occurs when the electrode group's device isn't a proper ndx Probe with `probe_type` + geometry. See [docs/PIPELINE_REQUIREMENTS.md](docs/PIPELINE_REQUIREMENTS.md) §3.)*
 
 2. **Brain Region Naming Consistency** - The `electrode_group.location` field auto-creates `BrainRegion` entries in Spyglass. Inconsistent capitalization (e.g., "CA1", "ca1", "Ca1") creates duplicate database entries and fragments queries. **Always use consistent capitalization.**
 
@@ -347,6 +359,17 @@ For committed accessibility tests, `jest-axe` (jsdom/Vitest lane) and/or `@axe-c
 lane) are the recommended additions — see the v3 plan's Phase 9 (`.claude/docs/plans/`).
 
 ## Architecture
+
+### Two architectures live in this repo (read this first)
+
+The `modern` branch is mid-migration to a multi-page **workspace** model while the legacy single-page form
+is retained as a frozen safety net. Don't mix them (`workspace.*` vs `formData.*`):
+
+- **Legacy** — one flat `formData` object in [App.js](src/App.js) (described below). Frozen safety net.
+- **Workspace (v3 — where active work happens)** — an animal / day / configuration model in
+  [src/state/useWorkspace.js](src/state/useWorkspace.js); export flows through `mergeDayMetadata`
+  ([src/state/workspaceUtils.js](src/state/workspaceUtils.js)) → `encodeYaml`. The phased plans and their
+  shared contracts live in [.claude/docs/plans/](.claude/docs/plans/).
 
 ### State Management
 
@@ -597,24 +620,19 @@ Located in: [src/__tests__/fixtures/golden/](src/__tests__/fixtures/golden/)
 
 ### Test Coverage
 
-**Current Status:** 2149 tests passing across 109 test files
+Run the suites for current counts — don't hard-code totals here (they drift every PR):
 
-**Key Test Suites:**
-- **YAML I/O:** 50 tests ([io/yaml.js](src/io/yaml.js) module)
-  - `encodeYaml()` - 8 tests
-  - `decodeYaml()` - 23 tests
-  - `formatDeterministicFilename()` - 12 tests
-  - `downloadYamlFile()` - 7 tests
+```bash
+npx vitest run                 # full suite
+npx vitest run baselines       # golden baselines (the data-corruption safety net; 4 fixtures)
+npx vitest run src/validation  # a single module
+```
 
-- **Validation:** 189 tests ([validation/](src/validation/) module)
-  - Schema validation (AJV)
-  - Business rules validation
-  - Integration tests
+**Key suites:**
 
-- **Golden Baselines:** 18 tests
-  - Deterministic export verification
-  - Round-trip consistency
-  - Format stability
+- **YAML I/O** ([src/io/](src/io/)) — `encodeYaml` / `decodeYaml` / `formatDeterministicFilename` / `downloadYamlFile`.
+- **Validation** ([src/validation/](src/validation/)) — AJV schema + business rules + integration.
+- **Golden Baselines** — deterministic, byte-identical export over the 4 golden fixtures (see "Golden Baseline Tests" above).
 
 ### Adding New Tests
 
@@ -633,7 +651,7 @@ All tests run on every commit via GitHub Actions:
 ```yaml
 # .github/workflows/test.yml
 - Run schema version check
-- Run full test suite (2149 tests)
+- Run full test suite (npx vitest run)
 - Golden baseline tests MUST pass
 - Fail CI if any test fails
 ```
