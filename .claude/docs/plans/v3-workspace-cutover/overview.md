@@ -175,6 +175,9 @@ resolved the contrast items and left the rest, now gathered under **Phase 10.5**
 
 ### Phase 10.5 — pre-cutover cleanup (before [Phase 11](phase-11-cutover-v3.md))
 
+Scoped as its own phase file: [phase-10.5-pre-cutover-cleanup.md](phase-10.5-pre-cutover-cleanup.md)
+(tasks, validation slice, and review gate). The list below is the source of those tasks.
+
 A consolidated grab-bag of small a11y / correctness / tech-debt items left by Phases 3–10. None block
 the cutover individually, but they should be triaged here so v3.0.0 ships clean.
 

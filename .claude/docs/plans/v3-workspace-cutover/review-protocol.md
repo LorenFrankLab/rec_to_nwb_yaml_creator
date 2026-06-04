@@ -84,4 +84,5 @@ flagged for removal is actually removed; user-facing docs updated, not deferred.
 | 8 — validation summary/batch | ✓ (validate-all; export-valid-only; reload recovery) | ✓ (batch export) | ✓ | — | ✓ | |
 | 9 — probe wizard | ✓ (config diff; apply-forward across days) | — | ✓ | ✓ (snapshot/versioning) | ✓ | |
 | 10 — a11y/keyboard | ✓ + **Axe zero-violations per route**; keyboard-only walkthrough | — | ✓ | — | ✓ deep a11y (`ux-reviewer`) | The dedicated a11y gate. |
+| 10.5 — pre-cutover cleanup | ✓ (migrated dialogs trap/ESC/focus-return; destructive confirm; reconfig e2e) | ✓ **only if Task 4 takes the merge path** | ✓ | — | ✓ (dialog a11y + alertdialog + contrast) | Grab-bag of deferred a11y/correctness fixes. Baselines stay byte-identical unless Task 4 merges inherited events (then regenerate + review). |
 | 11 — cutover v3 | ✓ **full E2E** (create→configure→day→tasks→validate→export with flags on; legacy toggle) | ✓ | ✓ | ✓ | Final release/parity sign-off. |

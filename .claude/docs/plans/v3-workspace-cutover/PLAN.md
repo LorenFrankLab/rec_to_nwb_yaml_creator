@@ -55,5 +55,8 @@ For agent invocation, **load only the slice you need**:
     reconfiguration diff + apply-forward + snapshot history.
   - [phase-10-a11y-keyboard.md](phase-10-a11y-keyboard.md) — **M12:** global keyboard shortcuts,
     full ARIA/tab-order coverage, automated Axe in CI.
+  - [phase-10.5-pre-cutover-cleanup.md](phase-10.5-pre-cutover-cleanup.md) — **cleanup:** finish the
+    deferred dialog-on-`<Modal>` migrations + `alertdialog`, one contrast gap, and the two correctness
+    follow-ups (inherited behavioral events vs. merge; reconfig versioning atomicity) before cutover.
   - [phase-11-cutover-v3.md](phase-11-cutover-v3.md) — **M13:** default route → workspace, legacy
     toggle, flag flip, parity enforcement, tag v3.0.0.
