@@ -345,7 +345,7 @@ describe('mergeDayMetadata', () => {
       expect(merged.cameras[1].manufacturer).toBe('Basler');
     });
 
-    it('uses day cameras if override specified', () => {
+    it('ignores legacy day camera overrides and uses animal cameras as source of truth', () => {
       const animal = createTestAnimal({
         cameras: [
           { id: 0, meters_per_pixel: 0.00085, manufacturer: 'Allied Vision', model: 'Mako G-158' },
@@ -362,7 +362,7 @@ describe('mergeDayMetadata', () => {
       const merged = mergeDayMetadata(animal, day);
 
       expect(merged.cameras).toHaveLength(1);
-      expect(merged.cameras[0].manufacturer).toBe('Override Camera');
+      expect(merged.cameras[0].manufacturer).toBe('Allied Vision');
     });
 
     it('uses day electrode groups if override specified', () => {

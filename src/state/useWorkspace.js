@@ -151,6 +151,10 @@ export function useWorkspace(initialState = null) {
             },
             cameras: metadata.cameras || [],
             experimenters,
+            technicalDefaults: metadata.technicalDefaults || {
+              raw_data_to_volts: 0.195,
+              times_period_multiplier: 1.5,
+            },
             optogenetics: metadata.optogenetics,
             days: [],
             created: now,

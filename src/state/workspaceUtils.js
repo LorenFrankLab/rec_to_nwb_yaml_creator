@@ -191,7 +191,7 @@ export function mergeDayMetadata(animal, day) {
   const { electrode_groups: electrodeGroups, ntrode_electrode_group_channel_map: ntrodeMap } =
     resolveDayConfig(animal, day);
 
-  const cameras = day.deviceOverrides?.cameras || animal.cameras || [];
+  const cameras = animal.cameras || [];
   const opto = animal.optogenetics || null;
 
   // Build the merged object in legacy `defaultYMLValues` key order. keywords /
@@ -223,7 +223,7 @@ export function mergeDayMetadata(animal, day) {
       reorderKeys(d, DATA_ACQ_DEVICE_ORDER)
     ),
 
-    // === From Animal or Day Override: Cameras ===
+    // === From Animal: Cameras ===
     cameras: cameras.map((c) => reorderKeys(c, CAMERA_ORDER)),
 
     // === From Day: Behavioral Protocol ===

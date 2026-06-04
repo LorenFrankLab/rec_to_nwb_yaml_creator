@@ -80,6 +80,10 @@ export function Home() {
         ntrode_electrode_group_channel_map: [],
       },
       cameras: [],
+      technicalDefaults: {
+        raw_data_to_volts: 0.195,
+        times_period_multiplier: 1.5,
+      },
     };
 
     try {

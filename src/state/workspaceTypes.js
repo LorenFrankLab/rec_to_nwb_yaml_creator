@@ -70,6 +70,7 @@
  * @property {DeviceConfiguration} devices - Hardware configuration
  * @property {Camera[]} cameras - Camera setup
  * @property {ExperimenterInfo} experimenters - Lab and experimenter details
+ * @property {TechnicalDefaults} technicalDefaults - Defaults copied into new days
  * @property {OptogeneticsConfig} [optogenetics] - Optional optogenetics setup
  * @property {DayId[]} days - Ordered list of day IDs for this animal
  * @property {string} created - ISO timestamp when animal was created
@@ -324,6 +325,16 @@
  */
 
 /**
+ * Animal-level technical defaults copied into newly created days.
+ *
+ * These are not exported directly; day.technical is the export source of truth.
+ *
+ * @typedef {object} TechnicalDefaults
+ * @property {number} times_period_multiplier - Default timestamp multiplier for new days
+ * @property {number} raw_data_to_volts - Default ADC conversion factor for new days
+ */
+
+/**
  * Technical recording parameters
  *
  * @typedef {object} TechnicalParameters
@@ -344,13 +355,12 @@
 /**
  * Device overrides for a specific day
  *
- * If a day has different device configuration than the animal default,
- * these overrides are used instead of the animal's configuration.
+ * Probe/bad-channel overrides for a specific day. Cameras remain animal-level
+ * (`animal.cameras`) and are not overridden here.
  *
  * @typedef {object} DeviceOverrides
  * @property {ElectrodeGroup[]} [electrode_groups] - Override electrode groups
  * @property {NtrodeMap[]} [ntrode_electrode_group_channel_map] - Override channel maps
- * @property {Camera[]} [cameras] - Override cameras
  */
 
 /**

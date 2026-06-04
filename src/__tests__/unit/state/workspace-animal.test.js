@@ -41,6 +41,7 @@ describe('Animal State Management', () => {
       expect(animal.subject.species).toBe('Rattus norvegicus');
       expect(animal.subject.sex).toBe('M');
       expect(animal.days).toEqual([]);
+      expect(animal.technicalDefaults).toEqual({ raw_data_to_volts: 0.195, times_period_multiplier: 1.5 });
       expect(animal.configurationHistory).toHaveLength(1);
       expect(animal.configurationHistory[0].version).toBe(1);
       expect(animal.created).toMatch(/^\d{4}-\d{2}-\d{2}T/); // ISO timestamp
@@ -79,6 +80,7 @@ describe('Animal State Management', () => {
             lab: 'Frank',
             institution: 'University of California, San Francisco',
           },
+          technicalDefaults: { raw_data_to_volts: 0.2, times_period_multiplier: 2 },
         });
       });
 
@@ -88,6 +90,7 @@ describe('Animal State Management', () => {
       expect(animal.devices.electrode_groups).toHaveLength(1);
       expect(animal.cameras).toHaveLength(1);
       expect(animal.experimenters.lab).toBe('Frank');
+      expect(animal.technicalDefaults).toEqual({ raw_data_to_volts: 0.2, times_period_multiplier: 2 });
       expect(animal.subject.weight).toBe(450);
     });
 
