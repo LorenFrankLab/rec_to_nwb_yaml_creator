@@ -1,4 +1,4 @@
-# Phase 9 — Continuous accessibility & keyboard shortcuts
+# Phase 10 — Continuous accessibility & keyboard shortcuts
 
 [← back to overview](overview.md) · [shared contracts](shared-contracts.md)
 

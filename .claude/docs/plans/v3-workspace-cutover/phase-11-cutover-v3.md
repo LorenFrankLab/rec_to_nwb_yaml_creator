@@ -2,19 +2,28 @@
 
 [← back to PLAN.md](PLAN.md) · [overview](overview.md#rollout-strategy) · [shared contracts](shared-contracts.md#feature-flags--routing-contract)
 
-This is the single switch that exposes everything built in Phases 1–9. The new workspace UI becomes
+This is the single switch that exposes everything built in Phases 1–10. The new workspace UI becomes
 the **default**; the legacy single-page form stays reachable behind a "Use Legacy Editor" toggle (and
 an explicit `#/legacy` route) for one release; shadow-export parity stays **strictly enforced** for one
 more release; and the package is tagged **v3.0.0**. No legacy code is deleted here — removal is named
 below with a post-v3.0.0 revisit trigger
 ([overview Non-Goals](overview.md#non-goals)).
 
-This phase assumes Phases 1–9 have landed: persistence is on
+**Hard release gate (do not weaken):** cutover MUST NOT flip the default route until
+[Phase 6](phase-6-legacy-byteorder-parity.md) has landed and its **byte-for-byte legacy parity** tests
+pass. Before cutover the new UI is flag-gated/non-default, so a session exported via the new UI vs the
+legacy form may differ *textually* (semantically-equal, key-order-different) YAML — acceptable only while
+the new path is not the default a user lands on. Making the new path default while it still emitted
+byte-different files would surface that divergence to users who diff/commit/eyeball `.yml` files. The
+review §1 checklist below asserts Phase 6 parity is in place.
+
+This phase assumes Phases 1–10 have landed: persistence is on
 ([Persistence contract](shared-contracts.md#persistence-contract)), routing is flag-aware
 ([Phase 2](phase-2-navigation-stub-honesty.md) per the
-[Feature flags & routing contract](shared-contracts.md#feature-flags--routing-contract)), and the new
-UI can complete create→configure→day→tasks→validate→**export byte-identical YAML**
-([Phase 5](phase-5-validation-export.md)).
+[Feature flags & routing contract](shared-contracts.md#feature-flags--routing-contract)), the new
+UI can complete create→configure→day→tasks→validate→**export YAML**
+([Phase 5](phase-5-validation-export.md)), and that export is **byte-for-byte identical to the legacy
+export** ([Phase 6](phase-6-legacy-byteorder-parity.md)).
 
 **Inputs to read first:**
 
@@ -192,7 +201,7 @@ real flag flip is exercised without leaking across tests.
 
 Follow the full gate in [review-protocol.md](review-protocol.md). Phase-specific:
 
-- **Self-verify (§1):** run this phase's Validation slice + `npx vitest run` (no regressions; baseline 2747/1 skipped) + `npx vitest run baselines` (byte-identical). Emphasis: `shadowExportStrict` is still `true` and the Phase-5 export gate is untouched — parity is **not** relaxed; tests use real behavior (actual flag flip via `overrideFlags`, real `parseHashRoute` output, real toggle render).
+- **Self-verify (§1):** run this phase's Validation slice + `npx vitest run` (no regressions) + `npx vitest run baselines` (byte-identical). **Release gate: confirm [Phase 6](phase-6-legacy-byteorder-parity.md) byte-for-byte legacy parity has landed and its parity tests pass before flipping the default route** — do not cut over on semantic-only parity. Emphasis: `shadowExportStrict` is still `true` and the Phase-5 export gate is untouched — parity is **not** relaxed; tests use real behavior (actual flag flip via `overrideFlags`, real `parseHashRoute` output, real toggle render).
 - **Playwright UI (§2):** with flags ON, run a full E2E in a browser — `#/` lands on the workspace → create animal → configure → create day → tasks → validate → export a real file; flip the legacy toggle and back; confirm old `#/` bookmarks still resolve. 0 console errors.
 - **Reviewers:** `pr-review-toolkit:code-reviewer` (always), plus `silent-failure-hunter`, `pr-test-analyzer`, and `ux-reviewer`; this PR also carries the final release / parity sign-off.
 - **Checklist (§6):** every task implemented (all four flags at cutover values; `#/`→workspace with flag on and legacy fallback off; `#/legacy` resolves; version `3.0.0`; rollback CI check); "Deliberately not in this phase" honored (no legacy code deleted — removal path documented with a post-v3.0.0 revisit trigger; `legacy` view case and `LegacyFormView` still exist); tests non-trivial; no plan/phase/milestone strings in code/test/module names or docstrings; user-facing docs (README, `docs/REFACTOR_CHANGELOG.md`) updated in this phase, not deferred.

@@ -42,17 +42,18 @@ For agent invocation, **load only the slice you need**:
     step (replaced `EpochsStub`).
   - [phase-5-validation-export.md](phase-5-validation-export.md) — **M9 (critical):** per-day
     Validation step + Export step with shadow-export parity; the new UI can finally produce YAML.
-  - [phase-6-store-decomposition-css.md](phase-6-store-decomposition-css.md) — **tech debt:**
-    decompose `store.js`, resolve the DayEditor `.css`/`.scss` split-brain, delete dead stubs.
-  - [phase-7-validation-summary-batch.md](phase-7-validation-summary-batch.md) — **M10:** cross-day
-    Validation Summary + "Validate All" / "Export Valid Only".
-  - [phase-8-probe-reconfig-wizard.md](phase-8-probe-reconfig-wizard.md) — **M11:** probe
-    reconfiguration diff + apply-forward + snapshot history.
-  - [phase-9-a11y-keyboard.md](phase-9-a11y-keyboard.md) — **M12:** global keyboard shortcuts,
-    full ARIA/tab-order coverage, automated Axe in CI.
-  - [phase-10-legacy-byteorder-parity.md](phase-10-legacy-byteorder-parity.md) — **safety (parity
+  - [phase-6-legacy-byteorder-parity.md](phase-6-legacy-byteorder-parity.md) — **safety (parity
     hardening):** align `mergeDayMetadata`'s key order to the legacy export so the new path is
     byte-for-byte identical to current production output — verified against a legacy-export reference
-    harness. Must land **before** cutover so the new default output is textually identical to legacy.
+    harness. Sequenced **immediately after export** so every later phase inherits byte parity and there
+    is no byte-divergence window before cutover.
+  - [phase-7-store-decomposition-css.md](phase-7-store-decomposition-css.md) — **tech debt:**
+    decompose `store.js`, resolve the DayEditor `.css`/`.scss` split-brain, delete dead stubs.
+  - [phase-8-validation-summary-batch.md](phase-8-validation-summary-batch.md) — **M10:** cross-day
+    Validation Summary + "Validate All" / "Export Valid Only".
+  - [phase-9-probe-reconfig-wizard.md](phase-9-probe-reconfig-wizard.md) — **M11:** probe
+    reconfiguration diff + apply-forward + snapshot history.
+  - [phase-10-a11y-keyboard.md](phase-10-a11y-keyboard.md) — **M12:** global keyboard shortcuts,
+    full ARIA/tab-order coverage, automated Axe in CI.
   - [phase-11-cutover-v3.md](phase-11-cutover-v3.md) — **M13:** default route → workspace, legacy
     toggle, flag flip, parity enforcement, tag v3.0.0.

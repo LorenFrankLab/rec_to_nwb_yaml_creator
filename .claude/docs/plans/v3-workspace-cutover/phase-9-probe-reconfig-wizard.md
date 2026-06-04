@@ -1,4 +1,4 @@
-# Phase 8 — Probe reconfiguration wizard
+# Phase 9 — Probe reconfiguration wizard
 
 [← back to overview](overview.md) · [shared contracts](shared-contracts.md)
 
@@ -170,7 +170,7 @@ electrode geometry or channel maps (the Animal Editor already owns that — see
   (`ElectrodeGroupsStep`, `ChannelMapsStep`, `ChannelMapEditor`) already owns config
   editing. This phase consumes the resulting config; it never mutates electrode/ntrode
   *contents*, only versions and assignments.
-- **Validation summary / step-status wiring** — Phase 7. The wizard does not compute or
+- **Validation summary / step-status wiring** — Phase 8. The wizard does not compute or
   display validation issues.
 - **Export changes / shadow-export** — Phase 5. This phase must not touch the export path; it
   only relies on the existing parity invariant holding.

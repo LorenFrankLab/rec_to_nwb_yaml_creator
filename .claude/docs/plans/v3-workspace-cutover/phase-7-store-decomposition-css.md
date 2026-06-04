@@ -1,4 +1,4 @@
-# Phase 6 — store.js decomposition & CSS consolidation (tech debt)
+# Phase 7 — store.js decomposition & CSS consolidation (tech debt)
 
 [← back to PLAN.md](PLAN.md) · [overview](overview.md)
 

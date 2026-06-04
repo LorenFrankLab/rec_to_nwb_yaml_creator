@@ -26,7 +26,7 @@ Verified file:line refs the plan touches. Anchor to these so the executor doesn'
 - `src/index.js` → `src/App.js` → `src/layouts/AppLayout.jsx` — entry chain; AppLayout `switch`es on
   `currentRoute.view` and owns skip links / route announcer / focus-to-`#main-content`.
 - `src/hooks/useHashRouter.js:46-49` — empty/`#/` → `view:'legacy'` (default landing). `:69`
-  matches `/animal/:id/editor`; `:99-101` unknown route → silent fallback to legacy. **Phase 2 & 10
+  matches `/animal/:id/editor`; `:99-101` unknown route → silent fallback to legacy. **Phase 2 & 11
   change the default and add nav; Phase 2 fixes the broken `#/animal/:id` (no `/editor`) links.**
 - `src/featureFlags.js` — `animalWorkspace:false` (`:121`), `localStoragePersistence:false`
   (`:133`), `newDayEditor:false` (`:149`), `showLegacyToggle:false` (`:105`). **All new-UI flags are
@@ -34,7 +34,7 @@ Verified file:line refs the plan touches. Anchor to these so the executor doesn'
 - `src/state/store.js` — single `useStore` hook (~654 lines): legacy `formData` state, `workspace`
   state ({animals, days, settings}), `workspaceActions` CRUD, selectors, and an epoch-cleanup
   `useEffect` (~`:89-145`) that suppresses `exhaustive-deps` and guards only legacy `formData.tasks`.
-  Model assembled as `{ ...formData, workspace }`. **Phase 1 adds persistence here; Phase 6
+  Model assembled as `{ ...formData, workspace }`. **Phase 1 adds persistence here; Phase 7
   decomposes it.**
 - `src/state/workspaceUtils.js:34-100` — `mergeDayMetadata(animal, day)` builds the flat metadata
   object (deriving the config snapshot internally from `day.configurationVersion`); **assigns nested
@@ -50,7 +50,7 @@ Verified file:line refs the plan touches. Anchor to these so the executor doesn'
   Phases 2/4/5.
 - `src/pages/DayEditor/{EpochsStub,ValidationStub,ExportStub,DevicesStub}.jsx` — stubs. EpochsStub
   replaced in Phase 4; ValidationStub/ExportStub in Phase 5; DevicesStub is dead code (DayEditor uses
-  the real `DevicesStep`) deleted in Phase 6.
+  the real `DevicesStep`) deleted in Phase 7.
 - `src/pages/DayEditor/SaveIndicator.jsx` + `DayEditorStepper.jsx:63-101` +
   `src/pages/AnimalEditor/HardwareConfigStep.jsx:54-68` — render "Saved ✓" on every blur and wrap
   synchronous `setState` in dead try/catch. Phase 1 makes the indicator truthful and removes the
@@ -77,7 +77,7 @@ Verified file:line refs the plan touches. Anchor to these so the executor doesn'
 - The workspace UI becomes a complete workflow: create animal → configure devices/hardware → create
   day(s) → enter tasks/epochs → validate → **export YAML** → persists across reloads. The exported YAML
   is **semantically parity-equal** to the legacy export from Phase 5, and **byte-for-byte** identical to
-  it from [Phase 10](phase-10-legacy-byteorder-parity.md) (before cutover).
+  it from [Phase 6](phase-6-legacy-byteorder-parity.md) (before cutover).
 - Make the new UI safe and honest *before* extending it: no data loss, no false "Saved", no
   unreachable/dead-end paths, accessibility claims backed by markup and tests.
 - Pay down the audit's tech debt (god modules, modal duplication, CSS split-brain, `alert()` UX) in
@@ -89,7 +89,7 @@ Verified file:line refs the plan touches. Anchor to these so the executor doesn'
 - **No change to YAML output format or schema.** The `encodeYaml` formatting must stay byte-identical
   (the within-path `golden-yaml.baseline.test.js` guard); the schema is frozen. Any divergence there is a
   bug, not a feature. (Note: the *new* export path is not byte-identical to the legacy path until
-  [Phase 10](phase-10-legacy-byteorder-parity.md) — see Metrics and the parity contract — but it is
+  [Phase 6](phase-6-legacy-byteorder-parity.md) — see Metrics and the parity contract — but it is
   semantically equivalent throughout, and the encoder/schema themselves never change.)
 - **Do not delete `LegacyFormView` in this plan.** It is the safety net; removal is scheduled
   post-v3.0.0 (named in Phase 11, not executed).
@@ -117,26 +117,28 @@ may change freely. Legacy form runs in parallel through v3.0.0 + one release (Ph
 - Full test suite green at every phase boundary.
 - New-UI export semantic parity (Phase 5+): import legacy YAML → build workspace → export → parses to the
   same metadata (order-independent deep-equal); plus a checked-in new-path byte snapshot.
-- New-UI export byte-for-byte legacy parity (Phase 10+, before cutover): the new path's bytes equal the
+- New-UI export byte-for-byte legacy parity (Phase 6+, before cutover): the new path's bytes equal the
   legacy export's bytes, proven by a legacy-export reference harness.
 - A user can complete create→configure→export entirely in the new UI without touching legacy.
 - Reload mid-edit restores all workspace state (Phase 1 onward).
-- Axe: zero violations on every new route (Phase 9).
+- Axe: zero violations on every new route (Phase 10).
 
 ## Risks and Mitigations
 
 | Risk | Mitigation |
 | --- | --- |
-| New export path diverges from legacy YAML byte-for-byte | Phase 5 gates download on a shadow-export parity check; golden baselines run every phase. |
-| `store.js` decomposition (Phase 6) silently changes behavior | Behavior-preserving refactor done *after* export works, so full-suite + golden baselines cover it; no feature change in that phase. |
+| New export path diverges from legacy YAML byte-for-byte | Expected pre-cutover and benign downstream (semantic parity holds; `trodes_to_nwb`/Spyglass parse order-independently). Phase 5 proves semantic parity + a new-path snapshot and gates download on an encoder-stability check; **Phase 6** reorders `mergeDayMetadata` to the legacy key order so the bytes match; cutover (Phase 11) is **hard-gated** on Phase 6 byte parity. Within-path golden baselines run every phase. |
+| `store.js` decomposition (Phase 7) silently changes behavior | Behavior-preserving refactor done *after* export works, so full-suite + golden baselines cover it; no feature change in that phase. |
 | localStorage schema (Phase 1) outlives its shape and breaks on reload after model changes | Version the persisted blob; on version mismatch, discard with a user-visible notice rather than crash. **Once real users have v1 blobs, discard-on-mismatch loses their work** — a forward-migration path is a named deferred follow-up (see Deferred follow-ups), out of scope for v3.0.0. |
 | Flipping flags at cutover (Phase 11) exposes half-tested paths | Each feature phase ships its flag-on path tested; Phase 11 only flips after parity confirmed. |
 | `mergeDayMetadata` shared-reference mutation corrupts animal state | Phase 1 clones output and/or freezes it; contract documented. |
 
 ## Rollout Strategy
 
-Feature-flagged, phased. Through Phases 1–9 the default route stays legacy (`#/`); new-UI work lands
-behind the existing flags and hash routes, reachable for testing. **Phase 11** flips
+Feature-flagged, phased. Through Phases 1–10 the default route stays legacy (`#/`); new-UI work lands
+behind the existing flags and hash routes, reachable for testing. Byte-divergence between the new and
+legacy export is acceptable **only** during this flag-gated window; Phase 6 eliminates it before the
+flip. **Phase 11** flips
 `animalWorkspace`/`newDayEditor`/`localStoragePersistence` on, sets the default route to the
 workspace, exposes the "Use Legacy Editor" toggle (`showLegacyToggle`), keeps shadow-export parity
 enforced for one further release, and tags **v3.0.0**. `#/` bookmarks still resolve (to a redirect or
@@ -175,19 +177,19 @@ not executed here.
   (uses `<dialog open>` without `showModal()`), and `src/components/CalendarDayCreator/CalendarDayCreator.jsx`
   (inline card carrying `role="dialog"`). These were **out of scope for Phase 3** (its task list named
   only the three migrated modals). **Follow-up:** migrate them onto `<Modal>` (or fix in place) — a
-  natural fit for the [Phase 9](phase-9-a11y-keyboard.md) accessibility pass, which should also sweep
+  natural fit for the [Phase 10](phase-10-a11y-keyboard.md) accessibility pass, which should also sweep
   the pre-existing color-contrast issues (inline-warning text, channel-map select focus rings, calendar
   day-number contrast) flagged in the Phase 3 UX review.
-- **Phase 4 UX/a11y items deferred to the Phase 9 sweep.** The Phase 4 reviewers surfaced three items
+- **Phase 4 UX/a11y items deferred to the Phase 10 sweep.** The Phase 4 reviewers surfaced three items
   that are app-wide or shared-component concerns, out of scope for Phase 4's local change:
   1. **Primary-button contrast.** `--color-primary` (`#2196f3`) with white text is ~3.1:1 — below
      WCAG AA — and is the app-wide primary-button color (Home, Animal Editor, Day Editor all reuse it).
-     Phase 4 left it unchanged to avoid fragmenting the palette; fix it once, centrally, in the Phase 9
+     Phase 4 left it unchanged to avoid fragmenting the palette; fix it once, centrally, in the Phase 10
      color-contrast sweep (alongside the inline-warning/focus-ring/calendar items already named above).
      (Phase 4's own *new* inline-warning / `status-⚠` colors were bumped to AA-compliant values.)
   2. **`role="alertdialog"` for destructive confirms.** `src/components/Modal/ConfirmDialog.jsx` (the
      shared Phase 3 primitive) renders `role="dialog"`; ARIA recommends `alertdialog` for a destructive
-     confirm. Changing it touches the shared component used by every delete flow → defer to the Phase 9
+     confirm. Changing it touches the shared component used by every delete flow → defer to the Phase 10
      a11y pass so it lands once for all callers.
   3. **Inherited behavioral events vs. the YAML merge.** The Tasks & Epochs step shows the animal's
      `behavioral_events` as inherited/read-only, but `mergeDayMetadata` (`src/state/workspaceUtils.js`)
@@ -195,26 +197,29 @@ not executed here.
      exported metadata. This is a **pre-existing** merge gap (not introduced by Phase 4) that Phase 4's
      UI now makes visible. **Follow-up:** reconcile the inheritance UI with the merge contract (either
      merge animal events into the day output, or relabel the display) before cutover — a natural fit for
-     [Phase 5](phase-5-validation-export.md), which owns the export/merge path, or the Phase 7 summary.
+     [Phase 5](phase-5-validation-export.md), which owns the export/merge path, or the Phase 8 summary.
 
 ## Plan revisions
 
-- **2026-06-03 — parity model corrected; cutover renumbered.** Pre-Phase-5 verification found that
-  `encodeYaml` preserves key insertion order and that `mergeDayMetadata`, the legacy `formData`, and the
-  hand-authored golden fixtures each use **different** key orders/sets — so the new export path is *not*
-  byte-identical to the legacy fixtures, contradicting the original "byte-for-byte parity" premise of
-  Phase 5 and the `mergeDayMetadata` contract. Resolution: Phase 5 now proves **semantic** parity
-  (parse-back deep-equal) + a new-path byte snapshot, and a new dedicated
-  [Phase 10 — byte-for-byte legacy parity](phase-10-legacy-byteorder-parity.md) (reorder
-  `mergeDayMetadata` to the legacy key order) was inserted **before** cutover. The former Phase 10
-  (cutover) is now **Phase 11**. `shared-contracts.md`, `phase-5`, this file, and the review matrix were
-  updated accordingly; the within-path golden baselines are unchanged.
+- **2026-06-03 — parity model corrected; a byte-parity phase inserted after export.** Pre-Phase-5
+  verification found that `encodeYaml` preserves key insertion order and that `mergeDayMetadata`, the
+  legacy `formData`, and the hand-authored golden fixtures each use **different** key orders/sets — so
+  the new export path is *not* byte-identical to the legacy fixtures, contradicting the original
+  "byte-for-byte parity" premise of Phase 5 and the `mergeDayMetadata` contract. Resolution: Phase 5 now
+  proves **semantic** parity (parse-back deep-equal) + a new-path byte snapshot, and a new dedicated
+  [Phase 6 — byte-for-byte legacy parity](phase-6-legacy-byteorder-parity.md) (reorder `mergeDayMetadata`
+  to the legacy key order, verified against a legacy-export reference harness) was inserted
+  **immediately after export** so every later phase inherits byte parity and there is no byte-divergence
+  window. The previously-numbered Phases 6–9 (store decomposition, validation summary, probe wizard,
+  a11y) each shifted **down by one** to 7–10; cutover remains the final phase, **Phase 11**.
+  `shared-contracts.md`, `phase-5`, this file, and the review matrix were updated accordingly; the
+  within-path golden baselines are unchanged.
 
 ## Estimated Effort
 
 Large. Rough diff sizing per phase: P0 small (~docs + config + 1 dep bump); P1 medium (~300–500 LOC
 incl. tests); P2 medium; P3 medium-large (shared primitive + ~12 call-site migrations); P4 large
-(M8b, ~5 components + tests, original estimate 63+ tests); P5 large (export + parity, critical); P6
-large (store split, mechanical but broad); P7 medium; P8 medium-large; P9 medium; P10 medium
-(behavior-preserving `mergeDayMetadata` key-order reorder + legacy-export reference harness); P11
-small-medium (flags + default route + docs). Test count expected to grow from 2748 toward ~3000+.
+(M8b, ~5 components + tests, original estimate 63+ tests); P5 large (export, critical); P6 medium
+(behavior-preserving `mergeDayMetadata` key-order reorder + legacy-export reference harness); P7 large
+(store split, mechanical but broad); P8 medium; P9 medium-large; P10 medium; P11 small-medium (flags +
+default route + docs). Test count expected to grow from 2748 toward ~3000+.

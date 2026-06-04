@@ -1,4 +1,4 @@
-# Phase 10 — Byte-for-byte legacy-export parity
+# Phase 6 — Byte-for-byte legacy-export parity
 
 [← back to PLAN.md](PLAN.md) · [overview](overview.md) · [shared contracts](shared-contracts.md)
 
@@ -21,9 +21,20 @@ they are in `defaultYMLValues`, whereas `mergeDayMetadata` emits optogenetics ke
 match. None of this affects `trodes_to_nwb`/Spyglass (they parse YAML, order-independent) — it is a
 textual-regression / auditability upgrade, not a correctness fix.
 
-**Depends on:** [Phase 5](phase-5-validation-export.md) (the new export path + semantic-parity tests
-exist) and [Phase 6](phase-6-store-decomposition-css.md) (store decomposition done, so this touches a
-settled `mergeDayMetadata`). Must complete **before** [Phase 11](phase-11-cutover-v3.md).
+**Depends on:** [Phase 5](phase-5-validation-export.md) only (the new export path + semantic-parity
+tests exist). It is sequenced **immediately after** export and **before** the later phases, so every
+subsequent phase (store decomposition, validation summary, probe wizard, a11y, cutover) inherits byte
+parity and is guarded by the parity tests. Note `mergeDayMetadata` lives in `src/state/workspaceUtils.js`,
+**not** `store.js`, so this does not depend on the Phase 7 store decomposition — but the later
+decomposition (and the probe-wizard work that feeds `configurationHistory`) MUST preserve the byte
+parity established here, which the parity tests then enforce.
+
+**On sequencing (why a whole phase, not folded into Phase 5):** the reorder of the single most
+safety-critical function gets a dedicated diff, a `silent-failure-hunter` review, and the legacy-export
+reference harness — rather than being buried inside the larger export feature. Placing it right after
+Phase 5 (rather than just before cutover) closes the byte-divergence window as early as possible: from
+here on, the new and legacy export paths emit identical bytes. The genuinely uncertain part
+(always-on-key reconciliation against the real legacy bytes) needs the harness regardless.
 
 **Inputs to read first:**
 
@@ -59,11 +70,18 @@ settled `mergeDayMetadata`). Must complete **before** [Phase 11](phase-11-cutove
 
 ## Tasks
 
-- **Capture the legacy-export reference.** Add a test helper that, for a given valid fixture, produces
-  the legacy export bytes: parse the fixture via the legacy import → `formData` (or construct the
-  `formData` directly), then `encodeYaml(structuredClone(formData))`. This is the byte target. Do **not**
-  use the hand-authored golden fixtures as the target directly — they are authored in yet another order
-  and are not legacy-export output.
+- **Capture the legacy-export reference — and prove it is real, not a tautology.** Add a test helper
+  that, for a given valid fixture, produces the legacy export bytes: build the legacy `formData` (via the
+  legacy import path, or constructed to `defaultYMLValues` order) and `encodeYaml(structuredClone(formData))`.
+  This is the byte target. **Guard against a self-referential reference:** before trusting it, (a) assert
+  the legacy import→export round-trip is itself byte-stable, and (b) ground the reference against an
+  actual checked-in legacy-export artifact (capture one real legacy export and commit it) so the harness
+  compares the new path to *true production bytes*, not to a second derivation of the same code path. Do
+  **not** use the hand-authored golden fixtures as the target directly — they are authored in yet another
+  order and are not legacy-export output. **Also resolve, with this reference as arbiter, whether the
+  legacy export even populates `EXPERIMENT_DATE_in_format_mmddYYYY`** (Phase 5 found it absent from
+  `formData`); if the legacy filename also degrades, that is a pre-existing legacy bug to note, not a
+  parity failure of the new path.
 - **Align `mergeDayMetadata`'s key order to `defaultYMLValues`.** Reorder the merged object literal
   (top-level) and every nested object (`subject`, `device`, `electrode_groups[]`,
   `ntrode_electrode_group_channel_map[]`, `cameras[]`, `tasks[]`, optogenetics shapes) so the encoded
@@ -86,7 +104,7 @@ settled `mergeDayMetadata`). Must complete **before** [Phase 11](phase-11-cutove
 - **No change to `encodeYaml`, the schema, or any golden fixture.** Parity is achieved by reordering
   `mergeDayMetadata`'s output construction only. A golden-baseline diff is a blocker, never a regenerate.
 - **No cutover / flag flips** — [Phase 11](phase-11-cutover-v3.md).
-- **No new export features** (batch/summary were Phase 7).
+- **No new export features** (batch/summary were Phase 8).
 
 ## Validation slice
 

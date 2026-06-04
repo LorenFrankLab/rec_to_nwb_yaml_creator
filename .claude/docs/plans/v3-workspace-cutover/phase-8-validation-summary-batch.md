@@ -1,4 +1,4 @@
-# Phase 7 — Validation Summary & batch tools
+# Phase 8 — Validation Summary & batch tools
 
 [← back to PLAN.md](PLAN.md) · [overview](overview.md) · [shared-contracts](shared-contracts.md)
 
@@ -154,7 +154,7 @@ this phase's validation slice rely on.
 
 ## Deliberately not in this phase
 
-- **The probe-reconfiguration wizard** — that is [Phase 8](overview.md#estimated-effort) (original
+- **The probe-reconfiguration wizard** — that is [Phase 9](overview.md#estimated-effort) (original
   M11). Do not add device-diff or "apply forward" UI here.
 - **Any change to the export encoder, `mergeDayMetadata`, the shadow-export gate, or the schema.** This
   phase only *consumes* `encodeYaml` / `checkShadowExport` / `mergeDayMetadata`. A parity change is a

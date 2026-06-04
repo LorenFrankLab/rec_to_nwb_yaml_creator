@@ -70,7 +70,7 @@ severity policy.
 - [Workspace data model & store actions](shared-contracts.md#workspace-data-model--store-actions) —
   per-day tasks live at `days[dayId].tasks`; mutate only through `updateDay` (via the step's
   `onFieldUpdate`). Note the invariant: the orphaned-epoch cleanup effect is **not** extended here —
-  Phase 6 owns unifying it across legacy + workspace tasks. This phase only adds workspace tasks.
+  Phase 7 owns unifying it across legacy + workspace tasks. This phase only adds workspace tasks.
 
 ## Tasks
 
@@ -158,12 +158,12 @@ severity policy.
 
 - **YAML export and the per-day Validation step** — `ValidationStub`/`ExportStub` and wiring the
   `validation` step status are Phase 5. This phase only wires the `epochs` step status.
-- **Cross-day Validation Summary** — Phase 7.
+- **Cross-day Validation Summary** — Phase 8.
 - **Optogenetics editor UI** — out of scope for the whole plan (overview Non-Goals).
 - **Animal-level camera / hardware / behavioral-event editing** — already done in M8a; this phase only
   *reads/inherits* `animal.cameras` and `animal.behavioral_events`. The banner/links route the user to
   the existing Animal Editor; they do not edit animal data here.
-- **Extending the orphaned-epoch cleanup effect** to workspace tasks — Phase 6 owns the unified
+- **Extending the orphaned-epoch cleanup effect** to workspace tasks — Phase 7 owns the unified
   cleanup (per the data-model contract invariant). Do not touch the effect in `store.js` here.
 - **Replacing the shared `<Modal>` or its trap** — created/owned by Phase 3; consumed here.
 

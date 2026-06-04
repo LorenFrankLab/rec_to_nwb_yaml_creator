@@ -166,7 +166,7 @@ export function clearWorkspace() {
 Notes:
 - `loadWorkspace` never throws; `saveWorkspace` intentionally **does** throw so the autosave wiring can
   catch it and avoid setting `lastSaved` on a failed write.
-- We do not deep-validate the workspace shape here (Phase 6 owns the store split). Version gating plus a
+- We do not deep-validate the workspace shape here (Phase 7 owns the store split). Version gating plus a
   presence check is the contract's required floor; richer migration is out of scope.
 
 ### 2. Wire persistence into `useStore` (`src/state/store.js`)
@@ -426,9 +426,9 @@ throughout the store, e.g. `store.js:122`, so no new dependency.)
 - **Wiring `computeStepStatus` `devices`/`epochs`/`validation`** off their hardcoded `'incomplete'`
   (`DayEditor/validation.js:60-62`) — Phases 2/4/5. The `stepStatus` block in `DayEditorStepper.jsx:49-60`
   is untouched here.
-- **`store.js` decomposition** and deleting `DevicesStub` — Phase 6. Persistence is added inside the
+- **`store.js` decomposition** and deleting `DevicesStub` — Phase 7. Persistence is added inside the
   existing monolithic `useStore`.
-- **Cross-day batch tools / bulk operations** — Phase 7.
+- **Cross-day batch tools / bulk operations** — Phase 8.
 - **Flipping `animalWorkspace`/`newDayEditor`/`showLegacyToggle` or changing the default route** —
   Phase 11. Only `localStoragePersistence` flips here.
 - **Schema migration of old persisted blobs** — out of scope. A version mismatch is discarded with a

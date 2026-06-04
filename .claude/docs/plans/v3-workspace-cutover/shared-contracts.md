@@ -17,7 +17,7 @@ without updating this file and every phase that references it.
 
 ## Workspace data model & store actions
 
-Referenced by phases 1, 4, 5, 7, 8.
+Referenced by phases 1, 4, 5, 8, 9.
 
 The store (`src/state/store.js`, hook `useStore`) holds `model = { ...formData, workspace }`.
 `formData` is the legacy flat form; `workspace` is the new model. **Never mix them**: new pages read
@@ -45,13 +45,13 @@ duplicate id (callers must dedupe, not rely on a render-time snapshot).
 
 **Invariant (do not weaken):** the epoch-cleanup effect that removes orphaned task→epoch references
 must run for **both** legacy `formData.tasks` and workspace `days[].tasks` once multi-day tasks exist
-(Phase 4 adds workspace tasks; Phase 6 owns the unified cleanup). Today it guards legacy only.
+(Phase 4 adds workspace tasks; Phase 7 owns the unified cleanup). Today it guards legacy only.
 
 ---
 
 ## `mergeDayMetadata` contract
 
-Referenced by phases 1, 5, 7.
+Referenced by phases 1, 5, 6, 8.
 
 `mergeDayMetadata(animal, day)` (`src/state/workspaceUtils.js:34-100`) returns the **flat
 metadata object** that maps 1:1 onto the legacy YAML schema — the single bridge from the workspace
@@ -72,7 +72,7 @@ deep-equality after `decodeYaml`. It is **not** byte-for-byte identical to the l
 `mergeDayMetadata` emits its own deterministic key order and a complete always-on key set, which differs
 from both the legacy `formData` order and the hand-authored golden fixtures, and `encodeYaml` preserves
 insertion order. Byte-for-byte equality with the *legacy export bytes* is a separate, stronger goal
-deferred to [Phase 10](phase-10-legacy-byteorder-parity.md) (align `mergeDayMetadata`'s key order to the
+deferred to [Phase 6](phase-6-legacy-byteorder-parity.md) (align `mergeDayMetadata`'s key order to the
 legacy export). See the [YAML parity / shadow-export contract](#yaml-parity--shadow-export-contract) for
 how each guarantee is enforced.
 
@@ -80,7 +80,7 @@ how each guarantee is enforced.
 
 ## Validation & step-status contract
 
-Referenced by phases 2, 4, 5, 7.
+Referenced by phases 2, 4, 5, 8.
 
 - `validate(model)` → `src/validation/index.js:27` returns an array of issues
   `{ severity:'error'|'warning'|'info', message, field?, step? }`, combining `schemaValidation(model)`
@@ -102,7 +102,7 @@ Referenced by phases 2, 4, 5, 7.
 
 ## Persistence contract
 
-Referenced by phases 1, 7, 11. Established in Phase 1.
+Referenced by phases 1, 8, 11. Established in Phase 1.
 
 - Persist **only** `model.workspace` (animals + days + settings). **Never** persist legacy `formData`,
   and never persist anything that is itself YAML output.
@@ -144,7 +144,7 @@ ESC/scroll/trap code); Phase 4's `TaskModal` is built on it from the start.
 
 ## YAML parity / shadow-export contract
 
-Referenced by phases 5, 7, 10, 11. The project's hardest safety rule.
+Referenced by phases 5, 6, 8, 11. The project's hardest safety rule.
 
 - The new export path produces YAML via `encodeYaml(mergeDayMetadata(animal, day))`
   (`src/io/yaml.js:37`), filename via `formatDeterministicFilename(model)` (`:107`), download via
@@ -173,7 +173,7 @@ Referenced by phases 5, 7, 10, 11. The project's hardest safety rule.
     snapshot** captured from the workspace build that must stay byte-identical every phase (the new
     path's regression guard). Do **not** attempt to assert the new path byte-identical to the legacy
     hand-authored fixtures — it cannot be, for the reasons in Background.
-  - **Byte-for-byte legacy parity (deferred to [Phase 10](phase-10-legacy-byteorder-parity.md)):** the
+  - **Byte-for-byte legacy parity (deferred to [Phase 6](phase-6-legacy-byteorder-parity.md)):** the
     stronger guarantee that `encodeYaml(mergeDayMetadata(x))` equals the *legacy export bytes* is pursued
     in its own focused phase by aligning `mergeDayMetadata`'s key order to the legacy export, validated
     against a legacy-export reference harness. Not required for v3.0.0 correctness (semantic parity
