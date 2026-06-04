@@ -63,23 +63,11 @@ const byNtrodeId = (a, b) => a.ntrode_id - b.ntrode_id;
  * order-independent and all output arrays are sorted (by id / ntrode_id) so the
  * diff renders the same regardless of input order.
  *
+ * `hasChanges` is always derived: true iff any add/remove/changed array is non-empty.
+ *
  * @param {import('./workspaceTypes').ProbeConfiguration} prevConfig - Earlier config.
  * @param {import('./workspaceTypes').ProbeConfiguration} nextConfig - Later config.
- * @returns {{
- *   electrodeGroups: {
- *     added: object[],
- *     removed: object[],
- *     changed: Array<{ id: number, fields: string[], before: object, after: object }>,
- *   },
- *   channelMaps: {
- *     added: object[],
- *     removed: object[],
- *     changed: Array<{ ntrode_id: number, electrode_group_id: number,
- *                      mapChanged: boolean, badChannelsChanged: boolean,
- *                      before: object, after: object }>,
- *   },
- *   hasChanges: boolean,
- * }}
+ * @returns {import('./workspaceTypes').ProbeConfigDiff} The structured, sorted diff.
  */
 export function diffProbeConfigs(prevConfig, nextConfig) {
   const prevGroups = prevConfig?.electrode_groups || [];

@@ -30,7 +30,7 @@ import './DayEditor.scss';
  *   `applyConfigurationForward`); when provided, the reconfiguration wizard is available.
  * @returns {JSX.Element}
  */
-export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, animalDays, actions }) {
+export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, animalDays = undefined, actions = undefined }) {
   const electrodeGroups = animal.devices?.electrode_groups || [];
   const [wizardOpen, setWizardOpen] = useState(false);
 
@@ -215,26 +215,34 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
         <a href={`#/animal/${animal.id}/editor`}>Edit at Animal Level</a>
       </div>
 
-      {/* Configuration-version indicator + reconfiguration entry point */}
+      {/* Configuration-version indicator + reconfiguration entry point. The wizard
+          is a sibling of the bar (not nested inside the flex layout div) so the
+          dialog is not a descendant of a layout container. */}
       {reconfig && (
-        <div className="config-version-bar">
-          <div className="config-version-info">
-            <span className="config-version-label">
-              Configuration version {reconfig.version}
-              {reconfig.snapshot ? `: ${reconfig.snapshot.description} (${reconfig.snapshot.date})` : ''}
-            </span>
-            <span className="config-version-applied">
-              Applied to {reconfig.appliedCount} {reconfig.appliedCount === 1 ? 'day' : 'days'}
-            </span>
+        <>
+          <div className="config-version-bar">
+            <div className="config-version-info">
+              <span className="config-version-label">
+                Configuration version {reconfig.version}
+                {reconfig.snapshot
+                  ? `: ${reconfig.snapshot.description || 'No description'} (${reconfig.snapshot.date || 'date unknown'})`
+                  : ''}
+              </span>
+              <span className="config-version-applied">
+                Applied to {reconfig.appliedCount} {reconfig.appliedCount === 1 ? 'day' : 'days'}
+              </span>
+            </div>
+            <button
+              type="button"
+              className="config-reconfig-button"
+              onClick={() => setWizardOpen(true)}
+            >
+              Reconfigure devices…
+            </button>
           </div>
-          <button
-            type="button"
-            className="config-reconfig-button"
-            onClick={() => setWizardOpen(true)}
-          >
-            Reconfigure devices…
-          </button>
           <ReconfigWizard
+            // Remount per day/version so reopening shows fresh form state.
+            key={`${day.id}-${reconfig.version}`}
             isOpen={wizardOpen}
             onClose={() => setWizardOpen(false)}
             animal={animal}
@@ -243,7 +251,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
             candidateDays={reconfig.candidateDays}
             actions={actions}
           />
-        </div>
+        </>
       )}
 
       {/* Electrode groups (accordion) */}
@@ -371,11 +379,12 @@ DevicesStep.propTypes = {
   }).isRequired,
   mergedDay: PropTypes.object.isRequired,
   onFieldUpdate: PropTypes.func.isRequired,
+  // animalDays + actions are supplied together by DayEditorStepper to enable the
+  // configuration-version indicator and reconfiguration wizard; omitting both (e.g.
+  // in isolated unit renders) simply hides that section.
   animalDays: PropTypes.arrayOf(PropTypes.object),
-  actions: PropTypes.object,
-};
-
-DevicesStep.defaultProps = {
-  animalDays: undefined,
-  actions: undefined,
+  actions: PropTypes.shape({
+    addConfigurationSnapshot: PropTypes.func,
+    applyConfigurationForward: PropTypes.func,
+  }),
 };

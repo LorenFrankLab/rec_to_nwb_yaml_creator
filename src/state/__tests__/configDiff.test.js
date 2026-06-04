@@ -95,6 +95,34 @@ describe('diffProbeConfigs', () => {
     });
   });
 
+  it('detects an ntrode removed (the parallel path to ntrode added)', () => {
+    const prev = config([group(0)], [ntrode(1), ntrode(2)]);
+    const next = config([group(0)], [ntrode(1)]);
+
+    const diff = diffProbeConfigs(prev, next);
+
+    expect(diff.channelMaps.removed.map((n) => n.ntrode_id)).toEqual([2]);
+    expect(diff.channelMaps.added).toEqual([]);
+    expect(diff.hasChanges).toBe(true);
+  });
+
+  it('reports both flags when one ntrode changes map AND bad_channels', () => {
+    const prev = config([group(0)], [ntrode(1, { map: { 0: 0 }, bad_channels: [] })]);
+    const next = config([group(0)], [ntrode(1, { map: { 0: 5 }, bad_channels: [1] })]);
+
+    const diff = diffProbeConfigs(prev, next);
+
+    expect(diff.channelMaps.changed).toHaveLength(1);
+    expect(diff.channelMaps.changed[0]).toMatchObject({ mapChanged: true, badChannelsChanged: true });
+  });
+
+  it('treats missing/empty configs as no groups without throwing', () => {
+    expect(diffProbeConfigs(undefined, undefined).hasChanges).toBe(false);
+    expect(diffProbeConfigs({}, {}).hasChanges).toBe(false);
+    expect(diffProbeConfigs(undefined, config([group(0)], [])).electrodeGroups.added.map((g) => g.id)).toEqual([0]);
+    expect(diffProbeConfigs(config([group(0)], []), undefined).electrodeGroups.removed.map((g) => g.id)).toEqual([0]);
+  });
+
   it('reports no changes for identical configs (any key order)', () => {
     const prev = config([group(0), group(1)], [ntrode(1), ntrode(2)]);
     const next = config(

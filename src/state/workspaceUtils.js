@@ -92,10 +92,11 @@ export function resolveDayConfig(animal, day) {
 
   // A day cannot be resolved without a device configuration. Fail loudly with an
   // actionable message instead of a cryptic "cannot read properties of undefined"
-  // deep in the merge (e.g. a malformed/legacy persisted animal with no history).
-  if (!config) {
+  // deep in the merge (e.g. a malformed/legacy persisted animal with no history, or
+  // a snapshot missing its `devices`).
+  if (!config || !config.devices) {
     throw new Error(
-      `Cannot resolve device configuration for day "${day?.id}": animal "${animal?.id}" has no configuration history.`
+      `Cannot resolve device configuration for day "${day?.id}": animal "${animal?.id}" has no usable configuration history.`
     );
   }
 

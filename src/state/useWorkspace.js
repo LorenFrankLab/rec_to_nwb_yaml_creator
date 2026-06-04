@@ -318,7 +318,10 @@ export function useWorkspace(initialState = null) {
           }
 
           const now = getCurrentTimestamp();
-          const moving = new Set(dayIds);
+          // Only real, deduped days move — a day id not in the workspace must never
+          // leak into appliedToDays (which would pollute the usage view).
+          const validDayIds = [...new Set(dayIds)].filter((id) => prev.days[id]);
+          const moving = new Set(validDayIds);
 
           // (3) Remove the moving days from EVERY snapshot's list first, so the
           // result is a clean partition regardless of stale stored lists.
@@ -328,16 +331,14 @@ export function useWorkspace(initialState = null) {
           // (2) Add them to the target snapshot's list (dedup, stable order).
           target.appliedToDays = [
             ...target.appliedToDays.filter((id) => !moving.has(id)),
-            ...dayIds.filter((id, i) => dayIds.indexOf(id) === i),
+            ...validDayIds,
           ];
 
           // (1) Point each listed day at the target version.
           const updatedDays = { ...prev.days };
-          dayIds.forEach((dayId) => {
-            const day = updatedDays[dayId];
-            if (!day) return;
+          validDayIds.forEach((dayId) => {
             updatedDays[dayId] = {
-              ...structuredClone(day),
+              ...structuredClone(prev.days[dayId]),
               configurationVersion: snapshotVersion,
               lastModified: now,
             };
@@ -468,7 +469,10 @@ export function useWorkspace(initialState = null) {
             updated.state = { ...updated.state, ...updates.state };
           }
           // Probe-reconfiguration: point this day at a different configuration
-          // snapshot version (set by the reconfig wizard / applyConfigurationForward).
+          // snapshot version. NOTE: setting it here does NOT reconcile snapshots'
+          // `appliedToDays` — use applyConfigurationForward (which the reconfig wizard
+          // calls) when the stored partition must stay in sync; `reconcileAppliedToDays`
+          // derives the trustworthy view from each day's version regardless.
           if (updates.configurationVersion !== undefined) {
             updated.configurationVersion = updates.configurationVersion;
           }

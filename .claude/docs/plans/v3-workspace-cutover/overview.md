@@ -210,6 +210,25 @@ not executed here.
      failures via `console.error` (the app has no Sentry/structured-logging infra today). Routing these
      through a real logging path with error IDs is a cross-app concern, out of scope for the summary.
 
+- **Phase 9 review items deferred (out of scope for the wizard phase).** The Phase 9
+  reviewers surfaced three follow-ups left for later, all low practical risk:
+  1. **Cross-action atomicity of versioning.** The wizard calls `addConfigurationSnapshot`
+     then `applyConfigurationForward` as two sequential store actions, predicting the new
+     version as `configurationHistory.length + 1`. The calls are synchronous on the current
+     animal, so the version is correct in practice; but if the second action ever threw, an
+     orphan empty snapshot would remain. **Follow-up:** have `addConfigurationSnapshot`
+     return the created version (or add a combined create-and-apply action) so the two can't
+     desynchronize. Out of scope here (the plan deliberately kept creation and assignment
+     as separate actions).
+  2. **`appliedToDays` as a derived value.** It is currently a denormalized cache kept in
+     sync by `applyConfigurationForward`, with `reconcileAppliedToDays` providing the
+     trustworthy derived view (`updateDay({configurationVersion})` bypasses the stored
+     lists). **Follow-up:** consider dropping the stored field entirely and always deriving
+     it, removing the partition-maintenance burden. A data-model change, out of scope here.
+  3. **Wizard UX niceties for long studies.** Select-all/deselect-all controls and
+     relative/human-readable day labels for animals with 60–200+ days, and an explicit
+     success confirmation. Deferred to the [Phase 10](phase-10-a11y-keyboard.md) pass.
+
 ## Plan revisions
 
 - **2026-06-03 — parity model corrected; a byte-parity phase inserted after export.** Pre-Phase-5

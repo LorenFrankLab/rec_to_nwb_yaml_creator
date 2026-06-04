@@ -101,6 +101,21 @@ describe('applyConfigurationForward', () => {
     expect(JSON.stringify(result.current.model.workspace)).toBe(before);
   });
 
+  it('ignores day ids not in the workspace (no phantom entries in appliedToDays)', () => {
+    const { result, animalId, dayIds } = renderStore();
+
+    act(() => {
+      result.current.actions.applyConfigurationForward(animalId, 1, [dayIds.day3, 'no-such-day']);
+    });
+
+    const v1 = snapshot(result, animalId, 1);
+    expect(v1.appliedToDays).not.toContain('no-such-day');
+    expect(v1.appliedToDays).toContain(dayIds.day3);
+    expect(daysOf(result)[dayIds.day3].configurationVersion).toBe(1);
+    // The phantom id created no day entry.
+    expect(daysOf(result)['no-such-day']).toBeUndefined();
+  });
+
   it('throws on an unknown animal id', () => {
     const { result, dayIds } = renderStore();
 

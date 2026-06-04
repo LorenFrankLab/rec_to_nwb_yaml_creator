@@ -203,12 +203,18 @@
  * When probe positions are adjusted, a new configuration version is created.
  * Days reference configuration versions to track which probe setup was active.
  *
+ * **Invariant:** across an animal's `configurationHistory`, the `appliedToDays`
+ * lists are disjoint — each day id appears in at most one snapshot's list.
+ * `applyConfigurationForward` maintains this partition.
+ *
  * @typedef {object} ConfigurationSnapshot
  * @property {string} date - Date this config became active (YYYY-MM-DD)
  * @property {number} version - Sequential version number (1, 2, 3, ...)
  * @property {string} description - Change description (e.g., "Lowered CA1 tetrodes by 40um")
  * @property {ProbeConfiguration} devices - Probe and channel configuration
- * @property {DayId[]} appliedToDays - Days that use this configuration
+ * @property {DayId[]} appliedToDays - Days that use this configuration. This is a
+ *   denormalized cache; the authoritative source is each `Day.configurationVersion`
+ *   (derive the trustworthy view with `reconcileAppliedToDays`).
  */
 
 /**
@@ -217,6 +223,20 @@
  * @typedef {object} ProbeConfiguration
  * @property {ElectrodeGroup[]} electrode_groups - Electrode group positions
  * @property {NtrodeMap[]} ntrode_electrode_group_channel_map - Channel mappings
+ */
+
+/**
+ * Structured diff between two {@link ProbeConfiguration}s, as produced by
+ * `diffProbeConfigs`. Electrode groups are matched by `id`, ntrodes by `ntrode_id`;
+ * all arrays are sorted for deterministic rendering.
+ *
+ * **Invariant:** `hasChanges` is true iff any of the six add/remove/changed arrays
+ * is non-empty (it is always derived, never set independently).
+ *
+ * @typedef {object} ProbeConfigDiff
+ * @property {{ added: ElectrodeGroup[], removed: ElectrodeGroup[], changed: Array<{ id: number, fields: string[], before: ElectrodeGroup, after: ElectrodeGroup }> }} electrodeGroups
+ * @property {{ added: NtrodeMap[], removed: NtrodeMap[], changed: Array<{ ntrode_id: number, electrode_group_id: number, mapChanged: boolean, badChannelsChanged: boolean, before: NtrodeMap, after: NtrodeMap }> }} channelMaps
+ * @property {boolean} hasChanges - True iff any add/remove/changed entry exists.
  */
 
 /**

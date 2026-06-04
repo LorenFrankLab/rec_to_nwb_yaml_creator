@@ -8,6 +8,17 @@
     padding: 0.75rem 1rem;
   }
 
+  .reconfig-summary {
+    margin: 0 0 0.75rem;
+    color: #333;
+  }
+
+  .reconfig-days-hint {
+    margin: 0 0 0.5rem;
+    font-size: 0.8rem;
+    color: #555;
+  }
+
   .config-diff {
     section {
       margin-bottom: 1rem;
@@ -37,7 +48,8 @@
     }
 
     .diff-none {
-      color: #777;
+      /* #666 keeps AA contrast (≥4.5:1) for this small italic text on white. */
+      color: #666;
       font-style: italic;
       font-family: inherit;
     }

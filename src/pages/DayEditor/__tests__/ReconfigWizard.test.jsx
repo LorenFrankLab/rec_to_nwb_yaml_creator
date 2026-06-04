@@ -44,7 +44,7 @@ describe('ReconfigWizard [integration]', () => {
     expect(screen.getByText(/Added ntrode 3/)).toBeInTheDocument();
 
     await user.type(screen.getByLabelText(/change description/i), 'Lowered CA1 tetrodes');
-    await user.click(screen.getByRole('button', { name: /apply forward/i }));
+    await user.click(screen.getByRole('button', { name: /apply to/i }));
 
     // Creates the snapshot from the live (v2) config...
     expect(actions.addConfigurationSnapshot).toHaveBeenCalledTimes(1);
@@ -77,7 +77,7 @@ describe('ReconfigWizard [integration]', () => {
     );
 
     expect(screen.getByTestId('reconfig-no-change')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /apply forward/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /apply to/i })).toBeDisabled();
   });
 });
 

@@ -6,6 +6,24 @@ import { diffProbeConfigs } from '../../state/configDiff';
 import './ReconfigWizard.scss';
 
 /**
+ * Human-readable labels for the electrode-group fields a diff may flag as changed,
+ * so a scientist sees "brain region" rather than the raw `location` key. Unmapped
+ * keys fall through to the raw name.
+ */
+const GROUP_FIELD_LABELS = {
+  location: 'brain region',
+  device_type: 'probe type',
+  description: 'description',
+  targeted_location: 'targeted region',
+  targeted_x: 'ML coordinate',
+  targeted_y: 'AP coordinate',
+  targeted_z: 'DV coordinate',
+  units: 'coordinate units',
+};
+
+const labelField = (field) => GROUP_FIELD_LABELS[field] || field;
+
+/**
  * Probe-reconfiguration wizard.
  *
  * Shows a structured diff between the configuration in effect for the previous day
@@ -20,17 +38,27 @@ import './ReconfigWizard.scss';
  *
  * @param {object} props
  * @param {boolean} props.isOpen - Whether the dialog is shown.
- * @param {Function} props.onClose - Called on cancel/ESC/overlay and after a successful apply.
+ * @param {Function} props.onClose - Called (no args) on cancel/ESC/overlay and after a successful apply.
  * @param {object} props.animal - Animal whose live `devices` form the "next" config.
  * @param {object} props.day - The day being reconfigured (the default earliest applied day).
- * @param {object|null} props.prevDay - The chronologically previous day, or null.
+ * @param {object|null} [props.prevDay] - The chronologically previous day, or null.
  * @param {object[]} props.candidateDays - This day and all chronologically later days (apply-forward set).
  * @param {object} props.actions - Store actions: `addConfigurationSnapshot`, `applyConfigurationForward`.
  * @returns {JSX.Element|null}
  */
-export default function ReconfigWizard({ isOpen, onClose, animal, day, prevDay, candidateDays, actions }) {
+export default function ReconfigWizard({
+  isOpen,
+  onClose,
+  animal,
+  day,
+  prevDay = null,
+  candidateDays,
+  actions,
+}) {
   const baseId = useId();
   const titleId = `${baseId}-title`;
+  const summaryId = `${baseId}-summary`;
+  const errorId = `${baseId}-error`;
 
   const nextConfig = useMemo(
     () => ({
@@ -51,6 +79,7 @@ export default function ReconfigWizard({ isOpen, onClose, animal, day, prevDay, 
   const [error, setError] = useState('');
 
   const toggleDay = (id) => {
+    if (error) setError('');
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -71,7 +100,9 @@ export default function ReconfigWizard({ isOpen, onClose, animal, day, prevDay, 
     }
 
     // Version the change, then assign it forward. The new snapshot takes the next
-    // sequential version (matching addConfigurationSnapshot's own numbering).
+    // sequential version (matching addConfigurationSnapshot's own numbering). These
+    // two calls are synchronous and read the current animal, so the version is
+    // correct; see the cross-action atomicity follow-up in the v3 plan overview.
     const newVersion = (animal.configurationHistory?.length || 0) + 1;
     actions.addConfigurationSnapshot(animal.id, {
       date,
@@ -82,15 +113,24 @@ export default function ReconfigWizard({ isOpen, onClose, animal, day, prevDay, 
     const orderedIds = candidateDays.map((d) => d.id).filter((id) => selectedIds.has(id));
     actions.applyConfigurationForward(animal.id, newVersion, orderedIds);
 
-    onClose({ applied: true, version: newVersion, dayIds: orderedIds });
+    onClose();
   };
 
   if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Reconfigure devices" titleId={titleId} className="reconfig-wizard">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Reconfigure devices"
+      titleId={titleId}
+      // A consequential action (reassigns configuration across many recording days).
+      role="alertdialog"
+      describedById={diff.hasChanges ? summaryId : 'reconfig-no-change'}
+      className="reconfig-wizard"
+    >
       {!diff.hasChanges ? (
-        <p className="reconfig-no-change" data-testid="reconfig-no-change">
+        <p id="reconfig-no-change" className="reconfig-no-change" data-testid="reconfig-no-change">
           No configuration change detected between{' '}
           {prevDay ? `${prevDay.date}` : 'the baseline'} and the current animal
           configuration. Edit the electrode groups in the Animal Editor first, then
@@ -98,6 +138,10 @@ export default function ReconfigWizard({ isOpen, onClose, animal, day, prevDay, 
         </p>
       ) : (
         <div className="reconfig-diff">
+          <p id={summaryId} className="reconfig-summary">
+            This versions the current device configuration and applies it to the days
+            you select below. Days before this one are not affected. Review the changes:
+          </p>
           <ConfigDiffView diff={diff} />
         </div>
       )}
@@ -114,9 +158,13 @@ export default function ReconfigWizard({ isOpen, onClose, animal, day, prevDay, 
           <input
             type="text"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => {
+              if (error) setError('');
+              setDescription(e.target.value);
+            }}
             placeholder="e.g. Lowered CA1 tetrodes by 40 µm"
             disabled={!diff.hasChanges}
+            aria-describedby={error ? errorId : undefined}
           />
         </label>
 
@@ -132,6 +180,10 @@ export default function ReconfigWizard({ isOpen, onClose, animal, day, prevDay, 
 
         <fieldset className="reconfig-days" disabled={!diff.hasChanges}>
           <legend>Apply to days</legend>
+          <p className="reconfig-days-hint">
+            All days from {day.date} onward are selected by default. To change an
+            earlier day, open its Day Editor individually.
+          </p>
           {candidateDays.map((d) => (
             <label key={d.id} className="reconfig-day-option">
               <input
@@ -145,17 +197,22 @@ export default function ReconfigWizard({ isOpen, onClose, animal, day, prevDay, 
         </fieldset>
 
         {error && (
-          <p className="reconfig-error" role="alert">
+          <p id={errorId} className="reconfig-error" role="alert">
             {error}
           </p>
         )}
 
         <div className="form-actions">
-          <button type="button" className="btn-cancel" onClick={onClose}>
+          <button
+            type="button"
+            className="btn-cancel"
+            onClick={() => onClose()}
+            aria-label="Cancel and close"
+          >
             Cancel
           </button>
           <button type="submit" className="btn-primary" disabled={!diff.hasChanges}>
-            Apply forward
+            Apply to {selectedIds.size} {selectedIds.size === 1 ? 'day' : 'days'}
           </button>
         </div>
       </form>
@@ -176,15 +233,11 @@ ReconfigWizard.propTypes = {
   }).isRequired,
 };
 
-ReconfigWizard.defaultProps = {
-  prevDay: null,
-};
-
 /**
  * Read-only rendering of a {@link diffProbeConfigs} result.
  *
  * @param {object} props
- * @param {object} props.diff - The structured diff.
+ * @param {import('../../state/workspaceTypes').ProbeConfigDiff} props.diff - The structured diff.
  * @returns {JSX.Element}
  */
 function ConfigDiffView({ diff }) {
@@ -208,7 +261,7 @@ function ConfigDiffView({ diff }) {
         ))}
         {electrodeGroups.changed.map((c) => (
           <p key={`c-${c.id}`} className="diff-changed">
-            ~ Group {c.id} changed: {c.fields.join(', ')}
+            ~ Group {c.id} changed: {c.fields.map(labelField).join(', ')}
           </p>
         ))}
       </section>
