@@ -2,7 +2,7 @@
 
 [← back to PLAN.md](PLAN.md)
 
-These nine defects were found by a review of the new workspace export path (2026-06-04). They are
+These export-correctness defects were found by a review of the new workspace export path (2026-06-04). They are
 **pre-existing** — not introduced by any v3 phase — and they are export-correctness blockers for the
 cutover. Several are *silent scientific-data corruption*: the workspace path produces a YAML that
 parses but is wrong, with no error surfaced.
@@ -75,13 +75,16 @@ how the model is built and gated, not in the encoder.
   unsaved work after a failed autosave).
 - **DANDI / Spyglass conformance.** The NWB files produced from this YAML are archived on DANDI and
   ingested into Spyglass (`/Users/edeno/Documents/GitHub/spyglass`). Phase 6 adds the Spyglass-motivated
-  guards `trodes_to_nwb` won't (non-empty, consistent `electrode_groups[].location`; valid references)
-  — see the downstream note in [shared-contracts.md](shared-contracts.md).
+  guards `trodes_to_nwb` won't (non-empty, consistent `electrode_groups[].location`; valid references;
+  stable dataset-level identities such as camera/data-acq/task names). The merge gate also runs a Spyglass
+  smoke ingest, because Spyglass can log failures to `InsertError` and keep going unless told to raise —
+  see the downstream note in [shared-contracts.md](shared-contracts.md).
 
 ### Non-Goals
 
-- **No legacy-form changes.** The single-page legacy form is the frozen safety net; these fixes touch
-  the workspace path only.
+- **No broad legacy-form changes.** The single-page legacy form is the frozen safety net. The only allowed
+  exception is phase 7's shared schema-error-path fix plus the legacy partial-import bug it exposes; that
+  exception is documented in the phase and must not become a general legacy refactor.
 - **No cutover.** Flag flips and the default-route change are Phase 11 of the v3 plan, not here.
 - **No new probe/device types.** But note `nwb_schema.json` **may need small edits** to encode DANDI
   constraints the bundled schema omits (e.g. a `species` pattern, `subject_id`/`session_id` no-slash
@@ -107,11 +110,13 @@ helpers (`getChannelCount`, `deviceTypeMap`, `validate`, `schemaValidation`).
 - **Legacy parity preserved:** the 125 golden baselines stay byte-identical throughout (see parity contract).
 - **Round-trip (mandatory, output-changing phases):** a corrected sample converts via `create_nwbs(...)`
   **and** passes `nwbinspector --config dandi` (zero CRITICAL) **and** `dandi validate` (exit 0). "Converted
-  without error" alone is insufficient — both downstream validators only log, never raise
+  without error" alone is insufficient — `trodes_to_nwb`'s built-in schema/Inspector calls report findings
+  without failing the conversion, while `dandi validate` must be checked by exit code
   ([round-trip contract](shared-contracts.md#parity-golden-fixture--round-trip-contract)).
-- **Spyglass-ingestible:** identities are unique/consistent (camera_name, data_acq name, task name),
-  locations non-empty/canonical, behavioral-event names unique
-  ([naming-identity contract](shared-contracts.md#spyglass-naming-identity-contract)).
+- **Spyglass-ingestible:** identities are unique/consistent across the workspace/dataset (`camera_name`,
+  `data_acq_device[].name`, task name), locations non-empty/canonical, behavioral-event names unique, and a
+  Spyglass smoke ingest (`populate_all_common(..., raise_err=True)` or zero `InsertError` plus expected
+  rows) succeeds ([naming-identity contract](shared-contracts.md#spyglass-naming-identity-contract)).
 
 ## Risks and Mitigations
 
@@ -121,7 +126,7 @@ helpers (`getChannelCount`, `deviceTypeMap`, `validate`, `schemaValidation`).
 | The probe-resolution redesign interacts with the reconfiguration wizard | Phase 2 settles the model in [designs.md](designs.md) first (Open Question 1) and re-runs the reconfig integration tests; the wizard's create-then-apply flow is preserved. |
 | Fixing IDs to integers breaks components that assume strings | Phase 4 standardizes the type end-to-end (creation, `ChannelMapEditor`/`DevicesStep` PropTypes, channel-map utils) in one PR and asserts the merged output's types. |
 | Fail-closed export makes the new editor look broken before output fixes land | Intended and safe — the legacy path is still default and the workspace is flag-gated. Phases 2–5 restore exportability for valid sessions. Noted in phase 1. |
-| `trodes_to_nwb` not checked out locally | AJV/`nwb_schema.json` schema validation is the always-required gate; the Python round-trip is a recommended-when-available extra, not a blocker. |
+| Python/DANDI/Spyglass environment unavailable while developing a phase | AJV/`nwb_schema.json` + app rules are the interim local gate only. Output-changing phases must not merge until the real `trodes_to_nwb` → NWB Inspector dandi config → `dandi validate` → Spyglass smoke output is run and recorded. |
 
 ## Rollout Strategy
 
@@ -144,9 +149,10 @@ All three are **decided** (2026-06-04):
    trailing `Z` passes. No time-of-day input.
 3. **Hardware Config technical fields — DECIDED: per-day with animal-level defaults.** The rig is
    constant per animal but occasionally varies per day, so `raw_data_to_volts` / `times_period_multiplier`
-   are seeded from animal-level defaults at `createDay` and overridable per day; `default_header_file_path`
-   is per-day. Edit them in the Day Editor; the animal-level Hardware Config step keeps only
-   `data_acq_device`.
+   are stored as `animal.technicalDefaults`, seeded into `day.technical` at `createDay`, and overridable per
+   day; `default_header_file_path` is per-day only. The Animal Editor may edit the non-exported defaults,
+   but `mergeDayMetadata` reads only `day.technical.*`. Phase 3 must also rename the current UI key
+   `ephys_to_volt_conversion` to the exported `raw_data_to_volts`.
 4. **`species` input — DECIDED: controlled dropdown of Latin binomials + an "other (binomial)" escape,
    validated against the binomial / NCBI-taxon-URI form.** DANDI rejects free text (`Rat`); a dropdown is
    safest while the escape keeps flexibility for unusual species (phase 5).
@@ -164,4 +170,4 @@ phase 5 medium (~250 LOC — subject/session completeness: weight, species, DOB,
 experiment_description); phase 6 large (~350 LOC of rules + the corrected channel-bound + Spyglass/DANDI
 rules + tests); phase 7 small–medium (~150 LOC, re-scoped); phase 8 medium (~200 LOC — opto key fixes +
 all-or-nothing validation). Test LOC dominates. Each output-changing phase also carries a mandatory
-trodes_to_nwb → NWB Inspector (dandi) → dandi-validate round-trip.
+trodes_to_nwb → NWB Inspector (dandi) → dandi-validate → Spyglass smoke round-trip.

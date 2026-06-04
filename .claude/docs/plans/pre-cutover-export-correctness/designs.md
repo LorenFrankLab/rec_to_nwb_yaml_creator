@@ -6,7 +6,7 @@ Algorithmic detail too large for a phase's Tasks block. Phase files reference th
 
 - [Device-resolution model](#device-resolution-model) — phase 2 (Finding A). **Decided: model B.**
 - [Day bad-channel merge](#day-bad-channel-merge) — phase 2 (Finding B). Unambiguous.
-- [Channel-map semantics](#channel-map-semantics) — phases 2, 6. Local keys vs. global hardware values.
+- [Channel-map semantics](#channel-map-semantics) — phases 2, 6. Logical keys vs. probe-electrode-id values.
 
 ---
 
@@ -26,7 +26,9 @@ fixed at record time — pinning matches the science.)
 ### The model
 
 - **Source of truth = `configurationHistory[version].devices`** (frozen per-version snapshots).
-  `resolveDayConfig` reads the snapshot the day is pinned to — **never live `animal.devices` directly.**
+  `resolveDayConfig` reads the snapshot the day is pinned to — **never live `animal.devices` directly** and
+  **never silently falls back** to a different version when the pinned version is missing. A missing pin is
+  persisted-state corruption and must fail closed.
 - **`animal.devices` is a mirror of the *latest* version's snapshot.** It is the Animal Editor's working
   surface. `updateAnimal({ devices })` writes **both** `animal.devices` **and**
   `configurationHistory[latest].devices`, keeping them in sync. *This is the new behavior that fixes the
@@ -110,6 +112,13 @@ live `animal.devices` (`DevicesStep.jsx:34`), so on a *historical* day it would 
 the wrong ntrode list. Phase 2 makes `DevicesStep` render `resolveDayConfig(animal, day)` (the effective,
 pinned config) so the editor and the export agree.
 
+**Converter caveat for multi-ntrode groups.** Current `trodes_to_nwb` `add_electrode_groups` finds only the
+first `ntrode_electrode_group_channel_map` entry for an electrode group, then uses that entry's `ntrode_id`
+and `bad_channels` while iterating all probe electrodes. That means per-ntrode bad-channel arrays for a
+multi-shank probe group may be ignored downstream. Phase 2 must either coordinate a converter fix before
+claiming multi-ntrode bad-channel correctness, or explicitly constrain app-side bad-channel guarantees to
+single-ntrode electrode groups and prove the multi-shank case in the mandatory round-trip before merge.
+
 ---
 
 ## Channel-map semantics
@@ -138,7 +147,9 @@ Each ntrode `map` is `{ logical_position_key : probe_electrode_id_value }`:
 - **`bad_channels` = local electrode indices**, `0 … getChannelCount(device_type) - 1` (the
   `ChannelMapEditor` grid is built from `deviceTypeMap`). trodes_to_nwb tests membership against the
   probe-local 0-based electrode index (`electrode_counter_probe in bad_channels`) and **silently ignores**
-  out-of-range values, so bounding them in-app is the only protection.
+  out-of-range values, so bounding them in-app is the only protection. See the converter caveat above:
+  until `trodes_to_nwb` handles multiple channel-map rows per electrode group for `bad_channels`, the
+  round-trip must prove any multi-shank bad-channel behavior the UI claims.
 
 **Therefore the sound channel rules (phase 6) are:** (a) each ntrode's map **values** are integers in
 `[0, getChannelCount(device_type))`; (b) within an electrode **group**, the ntrodes' values **partition**

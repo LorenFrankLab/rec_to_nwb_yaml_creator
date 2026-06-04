@@ -22,12 +22,12 @@ guard after a failed autosave (Finding I).
   [src/layouts/AppLayout.jsx:98-100](../../../../src/layouts/AppLayout.jsx) — the guard keys only on
   `hasPendingWrite`, ignoring `saveError`.
 - [src/pages/AnimalWorkspace/index.jsx:37-38](../../../../src/pages/AnimalWorkspace/index.jsx) and
-  [src/pages/Home/index.jsx:101,111](../../../../src/pages/Home/index.jsx) —
-  `Object.keys(workspace.animals)` crash sites if `animals` is undefined.
+  [src/pages/Home/index.jsx:18,101,111](../../../../src/pages/Home/index.jsx) —
+  `Object.keys(workspace.animals)` / `Object.keys(animals)` crash sites if `animals` is undefined.
 
 **Scope note.** There is **no YAML import in the workspace path** — `importExport.js` operates on the
-legacy `formData` (single-page form). So Task 2 touches **legacy** code (an acknowledged exception to the
-"no legacy changes" non-goal, justified because the bug silently keeps invalid data). Task 1
+legacy `formData` (single-page form). So Task 2 touches **legacy** code (the only acknowledged exception to
+the "no broad legacy changes" non-goal, justified because the bug silently keeps invalid data). Task 1
 (`schemaValidation.js`) is **shared** — the workspace export gate calls `validate` → `schemaValidation`,
 so better nested-error paths improve the workspace's own validation messages (in-scope regardless).
 
@@ -47,7 +47,8 @@ so better nested-error paths improve the workspace's own validation messages (in
   empty `workspace` (no `animals`/`days`) as malformed → discard-with-notice, **or** normalize it to the
   full default shape (`animals:{}, days:{}, settings:{…}`) before returning. Recommended: normalize to the
   default shape so a valid-but-empty blob hydrates cleanly. Either way, no consumer should hit
-  `Object.keys(undefined)`. Add defensive defaults at the `AnimalWorkspace` / `Home` read sites as belt-and-braces.
+  `Object.keys(undefined)`. Add defensive defaults at the `AnimalWorkspace` / `Home` read sites as
+  belt-and-braces, including `Home.getDefaultExperimenters` before it calls `Object.keys(animals)`.
 - **Task 4 — keep the unsaved-work guard after a failed autosave (Finding I).** Do not clear
   `hasPendingWrite` when `saveWorkspace` throws — move it out of the unconditional `finally`, or have the
   guard also consider `saveError`. After a failed autosave the `beforeunload` guard must still warn. Wire
@@ -69,7 +70,7 @@ so better nested-error paths improve the workspace's own validation messages (in
 | `nested required error keeps its full path` *(unit)* | a camera missing `camera_name` produces field `cameras[0].camera_name` (not `camera_name`); a top-level missing field still reports the bare name. |
 | `partial import excludes the invalid nested array` *(integration)* | importing a file with an invalid camera excludes `cameras` (and reports it), and does **not** import the invalid camera. |
 | `loadWorkspace handles an empty workspace blob` *(unit)* | `{schemaVersion:1, workspace:{}}` either discards-with-notice or hydrates to the default shape; no consumer sees undefined `animals`/`days`. |
-| `AnimalWorkspace/Home render on an empty workspace without crashing` *(integration)* | rendering with an empty/normalized workspace does not throw `Object.keys(undefined)`. |
+| `AnimalWorkspace/Home render on an empty workspace without crashing` *(integration)* | rendering with an empty/normalized workspace does not throw `Object.keys(undefined)`, including the Home default-experimenter path. |
 | `failed autosave keeps the unsaved-work guard armed` *(unit/integration)* | when `saveWorkspace` throws, `saveError` is set and the `beforeunload` guard remains active (guard condition true). |
 
 All Vitest; import + render tests are integration.

@@ -40,8 +40,9 @@ snapshots are the source of truth, `animal.devices` mirrors the latest snapshot,
   `devices` branch (`useWorkspace.js:206-208`) write the new devices into **both** `animal.devices` and
   `configurationHistory[latest].devices` (via `structuredClone`). This is what makes configuring probes
   reach export. `resolveDayConfig` then reads `configurationHistory[day.configurationVersion].devices`
-  (the pinned snapshot) — keep its existing throw for a genuinely missing snapshot so corruption fails
-  loud, not silent-empty. (`animal.devices` is the editor mirror; the snapshot is authoritative.)
+  (the pinned snapshot) — remove the current fallback to latest/first when the pinned version is missing,
+  so corruption fails loud instead of exporting the wrong probe config. (`animal.devices` is the editor
+  mirror; the snapshot is authoritative.)
 - **Task 2 — reconfiguration is fork-before-edit.** Reshape `ReconfigWizard` per
   [designs.md](designs.md#reconfiguration-wizard-reshaping): on "Reconfigure from day X" it forks a new
   version (`addConfigurationSnapshot` with `devices = clone(latest snapshot)`, returns N+1),
@@ -52,7 +53,11 @@ snapshots are the source of truth, `animal.devices` mirrors the latest snapshot,
 - **Task 3 — day bad-channel merge (Finding B).** In `resolveDayConfig`, after selecting the ntrode list,
   apply `day.deviceOverrides.bad_channels` onto each ntrode's `bad_channels` per
   [designs.md](designs.md#day-bad-channel-merge), normalizing the key with `String(n.ntrode_id)`. Clone —
-  never mutate a snapshot.
+  never mutate a snapshot. Also account for the current `trodes_to_nwb` caveat: for electrode groups with
+  multiple ntrode rows, the converter currently reads only the first row's `bad_channels` while building the
+  electrode table. Either coordinate a converter fix before claiming multi-shank bad-channel correctness, or
+  keep the phase's converter-facing bad-channel proof to single-ntrode groups and defer the multi-shank
+  proof to the mandatory round-trip after that converter behavior is fixed.
 - **Task 4 — DevicesStep renders the effective config (Finding: bad-channel UI source).** `DevicesStep`
   currently renders live `animal.devices` (`DevicesStep.jsx:34`); make it render
   `resolveDayConfig(animal, day)` so the bad-channel editor edits the day's *pinned* ntrode list (correct
@@ -61,11 +66,11 @@ snapshots are the source of truth, `animal.devices` mirrors the latest snapshot,
   a configured session's expected export includes the probes and merged bad channels. Review the byte diff
   (probes appearing, bad-channels applied) and confirm each change is intended.
 - **Task 6 — docs + integration.** Update `docs/REFACTOR_CHANGELOG.md`. Round-trip a corrected sample
-  through `trodes_to_nwb` if accessible; always assert the new path is **semantically** complete (probes +
-  bad-channels present and equal to the configured devices). Full schema-zero-error is **not** asserted
-  here — string IDs / missing `description` remain until phase 4 — so use a fixture whose devices already
-  carry integer IDs + required fields for any `schemaValidation` assertion, or defer that assertion to
-  phase 4 (see the validation slice).
+  through `trodes_to_nwb` / NWB Inspector dandi config / `dandi validate` / Spyglass before merge; use a
+  fixture whose devices already carry integer IDs + required fields so this phase can prove its resolution
+  and bad-channel behavior without waiting for phase 4's UI-generation fixes. Always assert the new path is
+  **semantically** complete (probes + bad-channels present and equal to the configured devices). General
+  zero-error for UI-generated devices is still phase 4.
 
 ## Deliberately not in this phase
 
@@ -83,8 +88,10 @@ snapshots are the source of truth, `animal.devices` mirrors the latest snapshot,
 | `merged output is schema-valid for an already-valid-shaped fixture` *(unit)* | with a fixture whose devices carry integer IDs + `description`/`targeted_location`, `schemaValidation(mergeDayMetadata(...))` is zero-error — proves resolution doesn't *introduce* invalidity. (General zero-error for UI-generated devices is phase 4.) |
 | `day bad-channel overrides are applied to the exported ntrode map` *(unit)* | with `day.deviceOverrides.bad_channels[id] = [2]`, the merged ntrode `id` has `bad_channels: [2]`; other ntrodes unchanged; snapshot not mutated. **P0-B reproduction.** |
 | `bad-channel merge survives an integer ntrode_id` *(unit)* | an integer `ntrode_id` against a string-keyed override map still merges (guards phase 4). |
+| `missing pinned configuration fails closed` *(unit)* | a day whose `configurationVersion` has no matching snapshot throws an actionable error; it does not fall back to latest/first and export the wrong geometry. |
 | `DevicesStep edits the day's effective ntrode list` *(integration)* | on a historical day, the bad-channel editor renders the pinned snapshot's ntrodes (from `resolveDayConfig`), not live `animal.devices`. |
 | `reconfiguration yields correct per-day config (fork-before-edit)` *(integration)* | reuse `makeReconfigWorkspace`: forking from day X then editing geometry leaves earlier days on the frozen old config and later days on the new one; the two store actions + returned-version contract intact. |
+| `phase-2 corrected sample passes downstream gates` *(integration, mandatory)* | a schema-shaped sample exercising configured probes + day bad-channel merge converts, has zero DANDI CRITICAL findings, `dandi validate` exits 0, and Spyglass smoke ingest has no `InsertError`. |
 | `golden-yaml.baseline.test.js` (existing) | **byte-identical** — these are legacy fixtures and must not change. |
 
 All Vitest. Mark the reconfiguration integration test as integration.

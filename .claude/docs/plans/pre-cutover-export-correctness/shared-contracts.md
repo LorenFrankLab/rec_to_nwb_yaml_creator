@@ -14,12 +14,14 @@ without updating this file and every phase that references it.
 
 **Downstream:** the exported YAML feeds DANDI (public archive) and Spyglass
 (`/Users/edeno/Documents/GitHub/spyglass`). Per CLAUDE.md, Spyglass requires non-empty, consistently
-capitalized `electrode_groups[].location` (auto-creates `BrainRegion` rows), pre-registered
-`device_type`s, and the ndx_franklab_novela columns (`bad_channel`, etc.). `trodes_to_nwb` validates
-each session YAML against the **same `nwb_schema.json`** with `jsonschema.Draft202012Validator` and does
-**only** schema checks — no cross-reference or channel-bound checks (verified in
-`metadata_validation.py`). So the app is the sole place dangling references / out-of-range channels /
-empty locations can be caught (phase 6).
+capitalized `electrode_groups[].location` (auto-creates `BrainRegion` rows), stable database identities,
+pre-registered `device_type`s, and the ndx_franklab_novela columns (`bad_channel`, etc.). `trodes_to_nwb`
+validates each session YAML against its bundled schema copy (same behavioral schema; currently only the
+app copy has the top-level `"version"` metadata line) with `jsonschema.Draft202012Validator` and its
+metadata validator performs schema checks only — no app-level cross-reference or channel-bound checks
+(verified in `metadata_validation.py`). Conversion may still raise for missing converter-specific fields,
+but the app is the sole practical place dangling references / out-of-range channels / empty locations /
+identity drift can be caught before export (phase 6).
 
 ---
 
@@ -35,7 +37,7 @@ defined source of truth:
 | `ntrode_electrode_group_channel_map` | same resolution as above, **with** `day.deviceOverrides.bad_channels.{ntrode_id}` applied onto each ntrode's `bad_channels` (phase 2). |
 | `data_acq_device` | `animal.devices.data_acq_device` — an **array** of `{name, system, amplifier, adc_circuit}` items (schema `nwb_schema.json:504`, all four required). The Hardware Config step must write this array shape here (phase 3). |
 | `cameras` | `animal.cameras` — each `{id, camera_name, manufacturer, model, lens, meters_per_pixel}` with `lens` **required** (schema `:697`). Hardware Config add/edit/delete writes here (phase 3). |
-| `times_period_multiplier`, `raw_data_to_volts`, `default_header_file_path`, `units` | `day.technical.*` (per-day). **Decision (Q3):** these are per-day; `raw_data_to_volts` / `times_period_multiplier` are seeded from **animal-level defaults** at `createDay` and overridable per day; `default_header_file_path` is per-day. Edit them in the Day Editor, not the animal-level Hardware Config (phase 3). |
+| `times_period_multiplier`, `raw_data_to_volts`, `default_header_file_path`, `units` | `day.technical.*` (per-day). **Decision (Q3):** these are per-day; `raw_data_to_volts` / `times_period_multiplier` are seeded from `animal.technicalDefaults` at `createDay` and overridable per day; `default_header_file_path` is per-day. The Animal Editor may edit the non-exported defaults; `mergeDayMetadata` never reads defaults directly (phase 3). |
 
 **Invariant (do not weaken):** `mergeDayMetadata` already deep-clones its output (v3 Phase 1) and emits
 keys in legacy `formData` order for byte parity. Phases 2–3 change *which values* are emitted, not the
@@ -97,10 +99,11 @@ Referenced by phases 1, 6. The day-level export must be **fail-closed**.
   (`StepNavigation.jsx:139`, `isExportEnabled`), and keyboard navigation (`DayEditorStepper.jsx` Alt+Arrow)
   — must consult that single status. `ExportStep`'s download handler re-checks it (defense in depth) in
   addition to the encoder-stability shadow-export check, which stays.
-- **Severity policy (unchanged from the v3 plan):** data-entry steps are non-blocking (missing cameras /
-  incomplete tasks are info/warning). **Only export** is hard-gated on zero error-severity issues. The
-  new rules in phase 6 are **error** severity only where they would produce invalid/ambiguous YAML
-  (dangling references, out-of-range channels); softer issues stay warnings.
+- **Severity policy (unchanged from the v3 plan):** data-entry steps are non-blocking while the user is
+  drafting. **Only export** is hard-gated on zero error-severity issues. The new rules in phase 6 are
+  **error** severity where they would produce invalid/ambiguous or Spyglass-skipped YAML (dangling camera /
+  electrode-group references, out-of-range channels, duplicate task epochs, invalid video/task dependencies);
+  softer data-entry incompleteness stays warning/info until it reaches export.
 
 ---
 
@@ -113,30 +116,39 @@ table and continues) for most violations — so the app is the place to enforce 
 `common_dio.py`, `common_behav.py`.)
 
 - **`cameras[].camera_name` is the `CameraDevice` primary key.** `meters_per_pixel`, `lens`, `model`,
-  `manufacturer` are dependent metadata. **Reusing a `camera_name` with different calibration/lens/model
-  raises a divergence error or silently reuses the wrong calibration.** Rule: `camera_name` unique within a
-  session; the same `camera_name` across days/animals implies identical calibration — a changed
-  zoom/calibration **requires a new `camera_name`**.
+  `manufacturer`, and parsed numeric `camera_id` are dependent metadata. **Reusing a `camera_name` with
+  different calibration/lens/model/id raises a divergence error or silently reuses the wrong calibration.**
+  Rule: the same `camera_name` anywhere in the workspace/dataset implies identical calibration and numeric
+  id — a changed zoom/calibration/model/id **requires a new `camera_name`**.
 - **Camera numeric ids are parsed from the NWB device name `camera_device {id}`** (`common_task.py:219`,
   `common_behav.py:477`), which trodes_to_nwb writes from `cameras[].id`. Keep `id` an integer and unique;
   don't rely on `camera_name` for the numeric join.
 - **`data_acq_device[].name` is a `DataAcquisitionDevice` identity** (`common_device.py:60,190`). Same
-  `name` with different `system`/`amplifier`/`adc_circuit` triggers a divergence check. Rule: `name`
-  unique; the same `name` implies identical technical fields.
+  `name` with different `system`/`amplifier`/`adc_circuit` triggers a divergence check. Rule: the same
+  `name` anywhere in the workspace/dataset implies identical technical fields.
 - **`tasks[].task_name` is checked for secondary-key consistency** (`common_task.py:20`): the same
   `task_name` with a different `task_description` can raise. Rule: task names stable and consistent
-  (one description per name within the dataset).
-- **`electrode_groups[].location` (and `targeted_location`) auto-create `BrainRegion` rows by exact
-  string** (`common_ephys.py:51`, `common_region.py:44` — no trim/case-fold). Spelling/case drift
-  fragments regions. Rule: non-empty, canonical, case-consistent region strings.
-- **Video import depends on a successful `TaskEpoch`**: `associated_video_files` without matching task
-  metadata warn and **do not import** (`common_behav.py:451`, `common_task.py:240`). Rule: any non-empty
-  `associated_video_files` entry must have a matching `tasks[].task_epochs` and a valid `camera_id`.
+  (one description per name within the workspace/dataset).
+- **`electrode_groups[].location` auto-creates `BrainRegion` rows by exact string** (`common_ephys.py:51`,
+  `common_region.py:44` — no trim/case-fold). Spelling/case drift fragments regions. `targeted_location`
+  is still schema-required and is passed to `trodes_to_nwb` as the per-electrode location, but current
+  Spyglass common ingestion reads the group location for BrainRegion identity. Rule: both strings non-empty;
+  `location` is canonical/case-consistent across groups.
+- **Task/video import depends on a successful `TaskEpoch`**: `associated_video_files` without matching task
+  metadata warn and **do not import** (`common_behav.py:451`, `common_task.py:240`). `TaskEpoch` is keyed by
+  session + epoch and needs a unique interval match; duplicate task epochs across task rows, missing valid
+  camera names, or ambiguous/no interval matches can fail or skip inserts. Rule: task epochs are unique per
+  day, each task epoch can resolve to an interval, task camera ids are valid/non-empty unless a no-camera
+  path has been proven in the Spyglass smoke, and each video has a matching task epoch + valid scalar
+  `camera_id`. Timestamp-overlap and exact `VideoFile` row checks are proven by the Spyglass smoke gate.
 - **`behavioral_events` names must be unique within a session** — duplicate `dio_event_name` is a hard
   `DIOEvents` PK violation (`common_dio.py`) and a trodes_to_nwb `ValueError`.
 
 Phase 3 enforces the camera / data-acq identity at the editing surface (warn on reuse-with-divergence);
-phase 6 adds the cross-reference / uniqueness / non-empty-location validation rules.
+phase 6 adds the cross-reference / uniqueness / non-empty-location validation rules. The mandatory
+round-trip gate then runs a Spyglass smoke ingest (`populate_all_common(..., raise_err=True)` or zero
+`InsertError` plus expected `TaskEpoch` / `VideoFile` / `Electrode` rows), because default Spyglass
+population can log into `InsertError` and continue.
 
 ## DANDI conformance contract
 
@@ -179,15 +191,18 @@ keep them distinct:
   3. Re-assert `decodeYaml(encodeYaml(mergeDayMetadata(...)))` deep-equals the expected metadata and
      `schemaValidation(...)` returns zero errors.
   4. Document the change in `docs/REFACTOR_CHANGELOG.md`.
-- **`trodes_to_nwb` → NWB → DANDI round-trip (MANDATORY for output-changing phases 2–5, 8).**
+- **`trodes_to_nwb` → NWB → DANDI → Spyglass round-trip (MANDATORY for output-changing phases 2–5, 8).**
   `trodes_to_nwb` is checked out (`/Users/edeno/Documents/GitHub/trodes_to_nwb`). "Converted without error"
-  is **not** sufficient — trodes_to_nwb's own schema validation only *logs* (`metadata_validation.validate`
-  never raises) and its NWB Inspector runner prints/saves but does **not** raise on findings
-  (`convert.py:377`). Acceptance for these phases is:
+  is **not** sufficient — trodes_to_nwb's own schema validation returns/logs errors without failing the
+  conversion, and its NWB Inspector runner prints/saves but does **not** raise on findings (`convert.py`).
+  Acceptance for these phases is:
   1. `create_nwbs(...)` produces an NWB file (no exception), **and**
   2. `nwbinspector <file> --config dandi` reports **zero CRITICAL** findings, **and**
-  3. `dandi validate <file>` **exits zero**.
+  3. `dandi validate <file>` **exits zero**, **and**
+  4. Spyglass common ingest succeeds (`populate_all_common(..., raise_err=True)`) or the PR records zero
+     `InsertError` rows plus the expected `TaskEpoch` / `VideoFile` / `Electrode` rows for the sample.
   Run these against a corrected sample session (a minimal `.rec` + the generated YAML). If the executor's
-  environment genuinely cannot run trodes_to_nwb/dandi (e.g. a sandboxed CI without the Python stack), the
-  in-app AJV `schemaValidation` + the new DANDI/Spyglass rules (phase 6) are the *interim* gate, but the
-  real round-trip must be run before the phase merges — record the validator output in the PR.
+  environment genuinely cannot run trodes_to_nwb/dandi/Spyglass (e.g. a sandboxed CI without the Python
+  stack), the in-app AJV `schemaValidation` + the new DANDI/Spyglass rules (phase 6) are the *interim*
+  gate, but the real round-trip must be run before the phase merges — record the validator/ingest output
+  in the PR.

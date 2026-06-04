@@ -43,7 +43,9 @@ split that surfaced as PropType warnings).
 ## Tasks
 
 - **Task 1 — integer electrode-group IDs.** `generateNextElectrodeGroupId` returns a number; new groups
-  set `id: startId + i` (integer). Update any `parseInt(g.id, 10)` call sites that assumed strings.
+  set `id: startId + i` (integer). Update any `parseInt(g.id, 10)` call sites that assumed strings, and
+  update edit handlers such as `handleEditGroup` so a numeric id is resolved as an id, not treated as the
+  whole group object.
 - **Task 2 — required electrode-group fields.** `ElectrodeGroupModal` collects and saves `description`
   and `targeted_location` (add the inputs; sensible defaults are not enough — schema requires
   non-trivial strings, but a user-entered value is the goal). Persist them on the saved group.
@@ -51,6 +53,9 @@ split that surfaced as PropType warnings).
   and integer `electrode_group_id`. When generating maps for a *newly added* group, start `ntrode_id`
   after the current maximum existing `ntrode_id` across the animal (not at 0), so incremental adds never
   collide. Add a helper `nextNtrodeId(existingMaps)` and use it at the add site in `AnimalEditorStepper`.
+  Also validate electrode-group `id` uniqueness within the day/session; `trodes_to_nwb` names the NWB
+  electrode group from this id and Spyglass keys `ElectrodeGroup` by session + group name, so duplicate
+  group ids can collapse groups downstream.
 - **Task 3b — per-shank electrode-ID offset (multi-shank probes).** `generateChannelMapsForGroup`
   (`channelMapUtils.js:61-76`) emits an **identical** map for every shank, so a 4-shank probe outputs
   `0..31` four times instead of `0..31, 32..63, 64..95, 96..127`. Offset shank `i`'s value for local key
@@ -75,8 +80,8 @@ split that surfaced as PropType warnings).
   assumptions; this clears the contradictory-PropType warnings noted in the v3 follow-ups.
 - **Task 6 — fixtures + docs.** Update new-path parity fixtures to integer IDs + the new required fields;
   review the byte diff (string→integer IDs, added `description`/`targeted_location`). Update
-  `docs/REFACTOR_CHANGELOG.md`. Assert `schemaValidation(mergeDayMetadata(...))` is zero-error; round-trip
-  in `trodes_to_nwb` if available.
+  `docs/REFACTOR_CHANGELOG.md`. Assert `schemaValidation(mergeDayMetadata(...))` is zero-error; run the
+  mandatory downstream round-trip before merge.
 
 ## Deliberately not in this phase
 
@@ -91,8 +96,10 @@ split that surfaced as PropType warnings).
 | Test | Asserts |
 | --- | --- |
 | `new electrode-group IDs are integers` *(unit)* | adding groups yields integer `id` values (0, 1, 2…), not strings. |
+| `numeric electrode-group id edit path works` *(integration)* | editing by numeric id resolves the group object and saves without `editingGroup.id` becoming undefined. |
 | `saved electrode group includes description and targeted_location` *(integration)* | the ElectrodeGroupModal save path includes both required fields with the entered values. |
 | `ntrode IDs are integers and unique across incremental adds` *(unit)* | adding a second group after a first does not restart `ntrode_id` at 0; all `ntrode_id` integers are distinct. |
+| `electrode-group IDs are unique` *(unit)* | duplicate group ids are rejected before export; group names in the NWB/Spyglass path cannot collapse. |
 | `copy from animal produces integer IDs` *(unit)* | `CopyFromAnimalDialog`'s copied groups/ntrodes have integer `id` / `ntrode_id` / `electrode_group_id`, not strings. |
 | `CSV import produces integer, non-colliding ntrode IDs` *(unit)* | importing channel maps yields integer `ntrode_id` / `electrode_group_id` and renumbers to avoid collision with existing ntrodes. |
 | `multi-shank probe offsets electrode IDs per shank` *(unit)* | a 128ch 4-shank probe generates ntrode maps with values `0..31`, `32..63`, `64..95`, `96..127`; a single tetrode group is `0..3`; a second tetrode group resets to `0..3`. |

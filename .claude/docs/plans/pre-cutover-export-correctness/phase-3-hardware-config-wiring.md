@@ -42,19 +42,22 @@ matches **no branch and is silently dropped**. Task 0 fixes this before any wiri
 
 ## Tasks
 
-- **Task 0 — make `updateAnimal` actually persist these fields.** Extend `updateAnimal`
-  (`useWorkspace.js:200-214`) so `data_acq_device`, `technical`, and `behavioral_events` updates are
-  applied (or route them to the right slice: `data_acq_device` under `devices`, `behavioral_events` at
-  animal level per the decided ownership, `technical` per-day via `updateDay`). Without this, every other
-  task in this phase is a no-op. Add a test that each write reaches the model.
+- **Task 0 — make `updateAnimal` actually persist the animal-level fields.** Extend `updateAnimal`
+  (`useWorkspace.js:200-214`) so `data_acq_device`, `technicalDefaults`, and `behavioral_events` updates are
+  applied or routed to the right slice: `data_acq_device` under `devices`, `technicalDefaults` at
+  `animal.technicalDefaults`, and `behavioral_events` at animal level per the decided ownership. Do **not**
+  keep a top-level exported `animal.technical` field; exported technical values live on `day.technical` and
+  are edited via `updateDay`. Without this routing, every other task in this phase is a no-op. Add a test
+  that each write reaches the intended model location.
 - **Task 1 — wire camera CRUD (required `lens`, identity-safe).** In `HardwareConfigStep`, manage camera
   add/edit/delete (open `CameraModal`, assign integer IDs, persist via `updateAnimal({ cameras })`) and pass
   `onAdd`/`onEdit`/`onDelete` to `CamerasSection`. **Make `CameraModal` require `lens`** (schema-required
   `nwb_schema.json:697`, omitted by `CameraModal.jsx:60`). **Enforce the Spyglass camera identity**
-  (naming-identity contract): `camera_name` unique within the animal/session; warn if a user reuses an
-  existing `camera_name` with different `meters_per_pixel`/`lens`/`model`/`manufacturer` (Spyglass keys
-  `CameraDevice` on `camera_name` and rejects/diverges on calibration drift) — a changed calibration needs
-  a new name. Keep integer `id` (trodes_to_nwb derives the numeric join from `camera_device {id}`).
+  (naming-identity contract): `camera_name` is a workspace/dataset identity; warn if a user reuses an
+  existing `camera_name` anywhere in the workspace/dataset with different `meters_per_pixel`/`lens`/`model`
+  /`manufacturer`/**or numeric `id`** (Spyglass keys `CameraDevice` on `camera_name` and checks those
+  dependent fields) — a changed zoom/calibration/model/id needs a new name. Keep integer `id`
+  (`trodes_to_nwb` derives the numeric join from `camera_device {id}`).
 - **Task 2 — route data-acq to `animal.devices.data_acq_device` AS AN ARRAY.** The schema is an
   **array** of `{name, system, amplifier, adc_circuit}` items (`nwb_schema.json:504`, all required), and
   the export reads `animal.devices.data_acq_device` (`workspaceUtils.js:185`). `DataAcqSection` currently
@@ -70,13 +73,14 @@ matches **no branch and is silently dropped**. Task 0 fixes this before any wiri
   actually persist (Task 0 enables this) **or** remove animal-level editing. The export keeps reading
   `day.behavioral_events`. Whichever, the editor and the export must agree (no write that never reaches
   the model).
-- **Task 3 — technical fields per-day with animal defaults (Q3 decided).** Move
-  `default_header_file_path`, `raw_data_to_volts`, `times_period_multiplier`, `units` out of the
-  animal-level Hardware Config step and edit them **per-day in the Day Editor** (where `day.technical`
-  lives and the export reads). `createDay` seeds `raw_data_to_volts` / `times_period_multiplier` from
-  animal-level defaults (the rig is constant per animal; per-day override allowed);
-  `default_header_file_path` is per-day. Hardware Config then owns only animal-level `data_acq_device`.
-  No field may be edited at one level but read at another.
+- **Task 3 — technical fields per-day with animal defaults (Q3 decided).** Add
+  `animal.technicalDefaults = { raw_data_to_volts, times_period_multiplier }`, initialized from the current
+  hardcoded defaults (`0.195`, `1.5`) or collected values. The Animal Editor may edit these **defaults**
+  only; they are not exported directly. `createDay` copies them into `day.technical.raw_data_to_volts` and
+  `day.technical.times_period_multiplier`. Move `default_header_file_path` and `units` to per-day editing in
+  the Day Editor (where `day.technical` lives and the export reads). Fix the current key mismatch:
+  `DataAcqSection` uses `ephys_to_volt_conversion`, but export reads `raw_data_to_volts`; standardize on
+  `raw_data_to_volts`. No field may be edited at one level but read at another.
 - **Task 4 — fixtures + docs.** Update the new-path parity fixtures so a configured session's export
   includes the cameras (with `lens`) and the data-acq **array**; review the byte diff. Update
   `docs/REFACTOR_CHANGELOG.md`.
@@ -92,12 +96,12 @@ matches **no branch and is silently dropped**. Task 0 fixes this before any wiri
 
 | Test | Asserts |
 | --- | --- |
-| `updateAnimal persists data_acq_device / technical / behavioral_events` *(unit)* | each field written via the Hardware Config `onFieldUpdate` actually reaches the model (regression for the silent no-op). |
+| `updateAnimal persists data_acq_device / technicalDefaults / behavioral_events` *(unit)* | each field written via the Hardware Config `onFieldUpdate` reaches the intended model location (regression for the silent no-op); no top-level exported `animal.technical` is created. |
 | `Hardware Config add camera persists with required lens` *(integration)* | Add → save a camera (incl. `lens`) calls `updateAnimal`; it appears in `animal.cameras` and `mergeDayMetadata(...).cameras`; saving without `lens` is blocked by the modal. |
-| `reusing a camera_name with different calibration warns` *(integration)* | editing/adding a camera that reuses an existing `camera_name` with a different `meters_per_pixel`/`lens`/`model` surfaces a warning (Spyglass identity); a new name does not. |
+| `reusing a camera_name with different calibration/id warns` *(integration)* | editing/adding a camera that reuses an existing `camera_name` anywhere in the workspace with a different `meters_per_pixel`/`lens`/`model`/`manufacturer`/`id` surfaces a warning (Spyglass identity); a new name does not. |
 | `Hardware Config edit/delete camera persists` *(integration)* | edit changes the camera; delete removes it; both reflected in the merged export. |
 | `data-acq writes the schema array shape with name` *(integration)* | editing system/amplifier/adc_circuit/name writes `animal.devices.data_acq_device` as a one-element array `[{name, system, amplifier, adc_circuit}]`; `mergeDayMetadata(...).data_acq_device` is that array; `schemaValidation` raises no data-acq error. |
-| `technical fields edited per-day with animal defaults` *(integration)* | a new day inherits `raw_data_to_volts` / `times_period_multiplier` from animal defaults; editing them in the Day Editor updates `day.technical` and the export; the animal Hardware Config no longer edits them. |
+| `technical fields edited per-day with animal defaults` *(integration)* | a new day inherits `raw_data_to_volts` / `times_period_multiplier` from `animal.technicalDefaults`; editing the defaults affects newly created days only; editing a day updates `day.technical` and the export; `ephys_to_volt_conversion` no longer appears in workspace technical state. |
 | `golden-yaml.baseline.test.js` (existing) | byte-identical — legacy fixtures unchanged. |
 
 All Vitest; camera CRUD tests are integration (render `HardwareConfigStep` + modal).
