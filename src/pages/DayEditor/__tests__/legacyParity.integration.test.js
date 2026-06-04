@@ -21,6 +21,8 @@ import { mergeDayMetadata } from '../../../state/workspaceUtils';
 import {
   buildLegacyFormData,
   buildEquivalentWorkspace,
+  buildOptoLegacyFormData,
+  buildOptoWorkspace,
 } from '../../../__tests__/fixtures/legacyParityFixture';
 
 const referenceArtifact = fs.readFileSync(
@@ -122,8 +124,34 @@ describe('always-on key set matches legacy (non-optogenetics day)', () => {
   });
 });
 
+describe('optogenetics session byte parity', () => {
+  it('reorders opto/fs_gui items to legacy order — byte-identical to a legacy opto export', () => {
+    const { animal, day } = buildOptoWorkspace();
+
+    const legacyBytes = encodeYaml(buildOptoLegacyFormData());
+    const newBytes = encodeYaml(mergeDayMetadata(animal, day));
+
+    // The workspace opto items arrive with scrambled key order; the merge must
+    // reorder them to legacy item order to match byte-for-byte.
+    expect(newBytes).toBe(legacyBytes);
+  });
+
+  it('passes the real optogenetics data through unchanged (no value loss)', () => {
+    const { animal, day } = buildOptoWorkspace();
+    const merged = mergeDayMetadata(animal, day);
+
+    expect(merged.opto_excitation_source[0].name).toBe('Omicron LuxX+ Blue');
+    expect(merged.optical_fiber[0].excitation_source).toBe('Omicron LuxX+ Blue');
+    expect(merged.virus_injection[0].virus_name).toBe('AAV-1-EF1a-DIO-ChRmine-mScarlet-WPRE');
+    expect(merged.optogenetic_stimulation_software).toBe('fsgui');
+    expect(Object.keys(merged.opto_excitation_source[0])).toEqual([
+      'name', 'model_name', 'description', 'wavelength_in_nm', 'power_in_W', 'intensity_in_W_per_m2',
+    ]);
+  });
+});
+
 describe('lossless reordering', () => {
-  it('preserves a nested key the canonical template does not know about', () => {
+  it('preserves a nested key the canonical template does not know about (object)', () => {
     const { animal, day } = buildEquivalentWorkspace();
     animal.subject.age = 'P164'; // a field absent from the legacy subject template
 
@@ -133,6 +161,20 @@ describe('lossless reordering', () => {
     expect(merged.subject.age).toBe('P164');
     expect(Object.keys(merged.subject)).toEqual([
       'description', 'genotype', 'sex', 'species', 'subject_id', 'date_of_birth', 'weight', 'age',
+    ]);
+  });
+
+  it('preserves an unknown key on a nested array item (electrode group)', () => {
+    const { animal, day } = buildEquivalentWorkspace();
+    animal.configurationHistory[0].devices.electrode_groups[0].ref_elect_id = 7;
+
+    const merged = mergeDayMetadata(animal, day);
+
+    expect(merged.electrode_groups[0].ref_elect_id).toBe(7);
+    // Appended after the known template keys, never dropped.
+    expect(Object.keys(merged.electrode_groups[0])).toEqual([
+      'id', 'location', 'device_type', 'description', 'targeted_location',
+      'targeted_x', 'targeted_y', 'targeted_z', 'units', 'ref_elect_id',
     ]);
   });
 });

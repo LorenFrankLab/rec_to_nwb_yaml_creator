@@ -27,7 +27,9 @@ downloads is textually indistinguishable from current production output.
 - **Always-on optogenetics / fs_gui keys:** `opto_excitation_source`, `optical_fiber`,
   `virus_injection`, `fs_gui_yamls`, and `optogenetic_stimulation_software` are now
   emitted unconditionally — empty (`[]` / `''`) for a non-optogenetics session — because
-  the legacy `formData` always carries them and they are schema-valid when empty. The
+  the legacy `formData` always carries them and they are schema-valid when empty. For an
+  actual optogenetics session their nested item keys are reordered to legacy item order
+  too, so an opto export is byte-identical as well (covered by an opto parity test). The
   one remaining intentional divergence is the empty-key omission of `keywords` / `units`
   / `default_header_file_path` (the schema rejects them present-but-empty); these are
   filled in any genuinely exportable session, so shippable bytes still match legacy.

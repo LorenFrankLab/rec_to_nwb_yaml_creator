@@ -23,6 +23,22 @@ const ASSOCIATED_VIDEO_FILE_ORDER = ['name', 'camera_id', 'task_epochs'];
 const BEHAVIORAL_EVENT_ORDER = ['description', 'name'];
 const ELECTRODE_GROUP_ORDER = ['id', 'location', 'device_type', 'description', 'targeted_location', 'targeted_x', 'targeted_y', 'targeted_z', 'units'];
 const NTRODE_ORDER = ['ntrode_id', 'electrode_group_id', 'bad_channels', 'map'];
+const OPTO_EXCITATION_SOURCE_ORDER = ['name', 'model_name', 'description', 'wavelength_in_nm', 'power_in_W', 'intensity_in_W_per_m2'];
+const OPTICAL_FIBER_ORDER = ['name', 'hardware_name', 'implanted_fiber_description', 'location', 'hemisphere', 'ap_in_mm', 'ml_in_mm', 'dv_in_mm', 'roll_in_deg', 'pitch_in_deg', 'yaw_in_deg', 'reference', 'excitation_source'];
+const VIRUS_INJECTION_ORDER = ['name', 'description', 'hemisphere', 'location', 'ap_in_mm', 'ml_in_mm', 'dv_in_mm', 'roll_in_deg', 'pitch_in_deg', 'yaw_in_deg', 'reference', 'virus_name', 'titer_in_vg_per_ml', 'volume_in_uL'];
+const FS_GUI_YAML_ORDER = ['name', 'epochs', 'power_in_mW', 'dio_output_name', 'state_script_parameters', 'pulseLength'];
+
+/**
+ * Reorder each item of an array to match a key template (lossless). Non-array
+ * inputs pass through unchanged.
+ *
+ * @param {Array} arr - Array of plain objects.
+ * @param {string[]} order - Canonical key sequence for each item.
+ * @returns {Array} New array with each item's keys reordered.
+ */
+function reorderItems(arr, order) {
+  return Array.isArray(arr) ? arr.map((item) => reorderKeys(item, order)) : arr;
+}
 
 /**
  * Return a new object with `obj`'s keys ordered to match `order`. Known keys come
@@ -168,11 +184,13 @@ export function mergeDayMetadata(animal, day) {
     // === From Animal: Device ===
     device: reorderKeys(animal.devices.device, DEVICE_ORDER),
 
-    // === Optogenetics: always present (empty when no opto), matching legacy formData ===
-    opto_excitation_source: opto ? opto.opto_excitation_source : [],
-    optical_fiber: opto ? opto.optical_fiber : [],
-    virus_injection: opto ? opto.virus_injection : [],
-    fs_gui_yamls: day.fs_gui_yamls && day.fs_gui_yamls.length > 0 ? day.fs_gui_yamls : [],
+    // === Optogenetics: always present (empty when no opto), matching legacy formData.
+    // Nested items are reordered to legacy item order too, so an opto session is
+    // also byte-identical to a legacy opto export. ===
+    opto_excitation_source: opto ? reorderItems(opto.opto_excitation_source, OPTO_EXCITATION_SOURCE_ORDER) : [],
+    optical_fiber: opto ? reorderItems(opto.optical_fiber, OPTICAL_FIBER_ORDER) : [],
+    virus_injection: opto ? reorderItems(opto.virus_injection, VIRUS_INJECTION_ORDER) : [],
+    fs_gui_yamls: day.fs_gui_yamls && day.fs_gui_yamls.length > 0 ? reorderItems(day.fs_gui_yamls, FS_GUI_YAML_ORDER) : [],
     optogenetic_stimulation_software: opto ? opto.optogenetic_stimulation_software : '',
 
     // === From Configuration Version (or Day Override): Electrode Groups ===

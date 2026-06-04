@@ -492,10 +492,11 @@ describe('mergeDayMetadata', () => {
 
       const merged = mergeDayMetadata(animal, day);
 
-      // Verify the always-present top-level structure matches the legacy exporter.
-      // keywords / units / default_header_file_path are intentionally absent here
-      // because this day leaves them empty (covered by "Optional empty-key omission").
-      const expectedKeys = [
+      // Top-level key ORDER matches the legacy exporter (defaultYMLValues order),
+      // minus keywords / units / default_header_file_path — intentionally absent
+      // here because this day leaves them empty (see "Optional empty-key omission").
+      // Order-strict: this is the byte-for-byte legacy-parity guarantee.
+      expect(Object.keys(merged)).toEqual([
         'experimenter_name',
         'lab',
         'institution',
@@ -504,21 +505,22 @@ describe('mergeDayMetadata', () => {
         'session_id',
         'subject',
         'data_acq_device',
-        'device',
         'cameras',
-        'electrode_groups',
-        'ntrode_electrode_group_channel_map',
         'tasks',
-        'behavioral_events',
         'associated_files',
         'associated_video_files',
         'times_period_multiplier',
         'raw_data_to_volts',
-      ];
-
-      expectedKeys.forEach(key => {
-        expect(merged).toHaveProperty(key);
-      });
+        'behavioral_events',
+        'device',
+        'opto_excitation_source',
+        'optical_fiber',
+        'virus_injection',
+        'fs_gui_yamls',
+        'optogenetic_stimulation_software',
+        'electrode_groups',
+        'ntrode_electrode_group_channel_map',
+      ]);
     });
 
     it('includes units if specified in day', () => {

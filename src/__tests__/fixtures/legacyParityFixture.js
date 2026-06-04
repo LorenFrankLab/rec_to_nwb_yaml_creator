@@ -184,3 +184,70 @@ export function buildEquivalentWorkspace() {
 
   return { animal, day };
 }
+
+// Optogenetics items in canonical legacy (arrayDefaultValues) key order.
+const OPTO_EXCITATION_SOURCE = [
+  { name: 'Omicron LuxX+ Blue', model_name: 'Omicron LuxX+ 488-100', description: 'Laser', wavelength_in_nm: 488.0, power_in_W: 0.077, intensity_in_W_per_m2: 1e10 },
+];
+const OPTICAL_FIBER = [
+  { name: 'Optical fiber 1', hardware_name: 'optogenix_lambda_fiber', implanted_fiber_description: 'fiber', location: 'CA1', hemisphere: 'left', ap_in_mm: -3.5, ml_in_mm: 2.5, dv_in_mm: -2.0, roll_in_deg: 0.0, pitch_in_deg: 0.0, yaw_in_deg: 0.0, reference: 'Bregma at the cortical surface', excitation_source: 'Omicron LuxX+ Blue' },
+];
+const VIRUS_INJECTION = [
+  { name: 'Injection 1', description: 'Viral injection', hemisphere: 'left', location: 'CA1', ap_in_mm: -3.5, ml_in_mm: 2.5, dv_in_mm: -2.5, roll_in_deg: 0.0, pitch_in_deg: 0.0, yaw_in_deg: 0.0, reference: 'Bregma at the cortical surface', virus_name: 'AAV-1-EF1a-DIO-ChRmine-mScarlet-WPRE', titer_in_vg_per_ml: 1e12, volume_in_uL: 0.45 },
+];
+const FS_GUI_YAMLS = [
+  { name: '/path/to/fs_gui.yaml', epochs: [1], power_in_mW: 0.0, dio_output_name: 'out1', state_script_parameters: false, pulseLength: 0 },
+];
+
+/**
+ * Reverse the key order of each item in an array — used to scramble the workspace
+ * opto items so the parity test proves `mergeDayMetadata` actually re-orders them
+ * to legacy order (rather than passing whatever order it received).
+ *
+ * @param {Array} items - Array of plain objects.
+ * @returns {Array} New array with each item's keys reversed.
+ */
+function reverseItemKeys(items) {
+  return items.map((item) => {
+    const out = {};
+    for (const key of Object.keys(item).reverse()) out[key] = item[key];
+    return out;
+  });
+}
+
+/**
+ * Build a legacy `formData` for an optogenetics session (opto arrays filled, in
+ * legacy item order). Encoding it yields the legacy opto-export bytes.
+ *
+ * @returns {object} Legacy formData with optogenetics.
+ */
+export function buildOptoLegacyFormData() {
+  const base = buildLegacyFormData();
+  return structuredClone({
+    ...base,
+    opto_excitation_source: OPTO_EXCITATION_SOURCE,
+    optical_fiber: OPTICAL_FIBER,
+    virus_injection: VIRUS_INJECTION,
+    fs_gui_yamls: FS_GUI_YAMLS,
+    optogenetic_stimulation_software: 'fsgui',
+  });
+}
+
+/**
+ * Build the workspace `animal` + `day` for the same optogenetics session, with the
+ * opto item keys deliberately SCRAMBLED (reversed) so a passing byte-parity test
+ * proves the merge reorders them to legacy order.
+ *
+ * @returns {{ animal: object, day: object }}
+ */
+export function buildOptoWorkspace() {
+  const { animal, day } = buildEquivalentWorkspace();
+  animal.optogenetics = {
+    opto_excitation_source: reverseItemKeys(OPTO_EXCITATION_SOURCE),
+    optical_fiber: reverseItemKeys(OPTICAL_FIBER),
+    virus_injection: reverseItemKeys(VIRUS_INJECTION),
+    optogenetic_stimulation_software: 'fsgui',
+  };
+  day.fs_gui_yamls = reverseItemKeys(FS_GUI_YAMLS);
+  return { animal, day };
+}
