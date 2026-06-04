@@ -9,20 +9,17 @@ session_id: remy_20230622
 subject:
   description: Long Evans Rat from Charles River
   genotype: Wild Type
-  species: Rattus norvegicus
   sex: M
+  species: Rattus norvegicus
   subject_id: remy
-  weight: 485
   date_of_birth: 2023-01-10T00:00:00
+  weight: 485
   age: P164
 data_acq_device:
   - name: SpikeGadgets
     system: SpikeGadgets
     amplifier: Intan
     adc_circuit: Intan
-device:
-  name:
-    - Trodes
 cameras:
   - id: 0
     meters_per_pixel: 0.00085
@@ -36,6 +33,70 @@ cameras:
     model: Mako G-158
     lens: Fujinon HF16HA-1B
     camera_name: side_camera
+tasks:
+  - task_name: sleep
+    task_description: Pre-task rest in home cage
+    task_environment: home cage
+    camera_id:
+      - 0
+    task_epochs:
+      - 1
+  - task_name: w_alternation
+    task_description: W-track continuous alternation for reward
+    task_environment: elevated W-track (180cm arms)
+    camera_id:
+      - 0
+      - 1
+    task_epochs:
+      - 2
+      - 4
+  - task_name: sleep
+    task_description: Post-task rest in home cage
+    task_environment: home cage
+    camera_id:
+      - 0
+    task_epochs:
+      - 3
+      - 5
+associated_files:
+  - name: probe_adjustment_log
+    description: Daily probe depth adjustments and observations
+    path: /data/remy/probe_logs/20230622_adjustments.txt
+    task_epochs: 1
+  - name: behavioral_notes
+    description: Experimenter behavioral observations
+    path: /data/remy/behavior/20230622_notes.txt
+    task_epochs: 2
+associated_video_files:
+  - name: overhead_video_epoch2
+    camera_id: 0
+    task_epochs: 2
+  - name: overhead_video_epoch4
+    camera_id: 0
+    task_epochs: 4
+  - name: side_view_video_epoch2
+    camera_id: 1
+    task_epochs: 2
+  - name: side_view_video_epoch4
+    camera_id: 1
+    task_epochs: 4
+times_period_multiplier: 1.5
+raw_data_to_volts: 0.195
+behavioral_events:
+  - description: Reward delivery at left arm
+    name: reward_left
+  - description: Reward delivery at right arm
+    name: reward_right
+  - description: Trial start at center arm
+    name: trial_start
+device:
+  name:
+    - Trodes
+opto_excitation_source: []
+optical_fiber: []
+virus_injection: []
+fs_gui_yamls: []
+optogenetic_stimulation_software: ""
 electrode_groups:
   - id: 0
     location: CA1
@@ -176,59 +237,3 @@ ntrode_electrode_group_channel_map:
       "1": 29
       "2": 30
       "3": 31
-tasks:
-  - task_name: sleep
-    task_description: Pre-task rest in home cage
-    task_environment: home cage
-    camera_id:
-      - 0
-    task_epochs:
-      - 1
-  - task_name: w_alternation
-    task_description: W-track continuous alternation for reward
-    task_environment: elevated W-track (180cm arms)
-    camera_id:
-      - 0
-      - 1
-    task_epochs:
-      - 2
-      - 4
-  - task_name: sleep
-    task_description: Post-task rest in home cage
-    task_environment: home cage
-    camera_id:
-      - 0
-    task_epochs:
-      - 3
-      - 5
-behavioral_events:
-  - description: Reward delivery at left arm
-    name: reward_left
-  - description: Reward delivery at right arm
-    name: reward_right
-  - description: Trial start at center arm
-    name: trial_start
-associated_files:
-  - name: probe_adjustment_log
-    description: Daily probe depth adjustments and observations
-    path: /data/remy/probe_logs/20230622_adjustments.txt
-    task_epochs: 1
-  - name: behavioral_notes
-    description: Experimenter behavioral observations
-    path: /data/remy/behavior/20230622_notes.txt
-    task_epochs: 2
-associated_video_files:
-  - name: overhead_video_epoch2
-    camera_id: 0
-    task_epochs: 2
-  - name: overhead_video_epoch4
-    camera_id: 0
-    task_epochs: 4
-  - name: side_view_video_epoch2
-    camera_id: 1
-    task_epochs: 2
-  - name: side_view_video_epoch4
-    camera_id: 1
-    task_epochs: 4
-times_period_multiplier: 1.5
-raw_data_to_volts: 0.195

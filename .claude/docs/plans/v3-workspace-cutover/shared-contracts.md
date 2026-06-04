@@ -66,15 +66,21 @@ Today it assigns nested animal/config references directly (`:62-72`) — Phase 1
 `structuredClone`d (or deep-frozen) result so downstream mutation cannot corrupt animal/config state.
 After Phase 1, callers may read freely; producers must not reintroduce shared references.
 
-**Parity invariant (semantic):** `encodeYaml(mergeDayMetadata(animal, day))` must parse to the **same
-metadata** (same keys, same values) as the legacy export for equivalent data — i.e. order-independent
-deep-equality after `decodeYaml`. It is **not** byte-for-byte identical to the legacy export today:
-`mergeDayMetadata` emits its own deterministic key order and a complete always-on key set, which differs
-from both the legacy `formData` order and the hand-authored golden fixtures, and `encodeYaml` preserves
-insertion order. Byte-for-byte equality with the *legacy export bytes* is a separate, stronger goal
-deferred to [Phase 6](phase-6-legacy-byteorder-parity.md) (align `mergeDayMetadata`'s key order to the
-legacy export). See the [YAML parity / shadow-export contract](#yaml-parity--shadow-export-contract) for
-how each guarantee is enforced.
+**Parity invariant (byte-for-byte, since [Phase 6](phase-6-legacy-byteorder-parity.md)):**
+`encodeYaml(mergeDayMetadata(animal, day))` is **byte-for-byte identical** to the legacy export
+(`encodeYaml` of the legacy `formData`) for an equivalent, genuinely-exportable session. The merge emits
+keys in the legacy `formData` order (`defaultYMLValues`), top-level and nested (`subject`, `device`,
+`units`, and each `cameras[]`/`tasks[]`/`electrode_groups[]`/`ntrode[]`/`data_acq_device[]`/
+`associated_*[]`/`behavioral_events[]` item), and carries the legacy always-on keys
+(`opto_excitation_source`/`optical_fiber`/`virus_injection`/`fs_gui_yamls`/
+`optogenetic_stimulation_software`) emitted empty for non-optogenetics days. The **one** intentional
+divergence: `keywords`/`units`/`default_header_file_path` are omitted when empty (the schema rejects them
+present-but-empty, so emitting them would gate export); in any genuinely exportable session they are
+filled and present in both paths, so shippable bytes still match. Proven by the legacy-export reference
+harness (`src/__tests__/fixtures/legacyParityFixture.js` + the `legacy-export.reference.yml` artifact).
+Nested-key reordering is **lossless** — a field the canonical template doesn't list is appended, never
+dropped. See the [YAML parity / shadow-export contract](#yaml-parity--shadow-export-contract) for how
+each guarantee is enforced.
 
 ---
 
@@ -173,11 +179,13 @@ Referenced by phases 5, 6, 8, 11. The project's hardest safety rule.
     snapshot** captured from the workspace build that must stay byte-identical every phase (the new
     path's regression guard). Do **not** attempt to assert the new path byte-identical to the legacy
     hand-authored fixtures — it cannot be, for the reasons in Background.
-  - **Byte-for-byte legacy parity (deferred to [Phase 6](phase-6-legacy-byteorder-parity.md)):** the
-    stronger guarantee that `encodeYaml(mergeDayMetadata(x))` equals the *legacy export bytes* is pursued
-    in its own focused phase by aligning `mergeDayMetadata`'s key order to the legacy export, validated
-    against a legacy-export reference harness. Not required for v3.0.0 correctness (semantic parity
-    suffices); it is a hardening upgrade.
+  - **Byte-for-byte legacy parity (delivered in [Phase 6](phase-6-legacy-byteorder-parity.md)):**
+    `encodeYaml(mergeDayMetadata(x))` now equals the *legacy export bytes* for an equivalent
+    exportable session — `mergeDayMetadata` emits keys in legacy `formData` order (top-level + nested)
+    and carries the legacy always-on opto/fs_gui keys. Enforced by the legacy-export reference harness
+    (`legacyParityFixture.js` + the checked-in `legacy-export.reference.yml`). The one intentional
+    divergence (omit empty `keywords`/`units`/`default_header_file_path`) never affects shippable bytes,
+    since those are filled in any exportable session. Later phases must preserve this byte parity.
 
 ---
 

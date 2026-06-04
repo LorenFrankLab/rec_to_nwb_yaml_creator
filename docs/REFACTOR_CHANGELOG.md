@@ -6,6 +6,40 @@
 
 ---
 
+## Byte-for-Byte Legacy-Export Parity (June 3, 2026) ✅ COMPLETE
+
+### Summary
+
+The new workspace export path is now **byte-for-byte identical** to the legacy
+single-page form's export for an equivalent recording session — not just
+semantically equivalent. When the new UI becomes the default, the YAML a user
+downloads is textually indistinguishable from current production output.
+
+### Changes
+
+- **`mergeDayMetadata` key order aligned to legacy `formData`** (`defaultYMLValues`),
+  top-level and nested (`subject`, `device`, `units`, and each `cameras` / `tasks` /
+  `electrode_groups` / `ntrode_electrode_group_channel_map` / `data_acq_device` /
+  `associated_files` / `associated_video_files` / `behavioral_events` item). This is a
+  behavior-preserving reorder: same keys, same values, only insertion order changed.
+  Nested reordering is **lossless** — a field the canonical template doesn't list is
+  appended rather than dropped.
+- **Always-on optogenetics / fs_gui keys:** `opto_excitation_source`, `optical_fiber`,
+  `virus_injection`, `fs_gui_yamls`, and `optogenetic_stimulation_software` are now
+  emitted unconditionally — empty (`[]` / `''`) for a non-optogenetics session — because
+  the legacy `formData` always carries them and they are schema-valid when empty. The
+  one remaining intentional divergence is the empty-key omission of `keywords` / `units`
+  / `default_header_file_path` (the schema rejects them present-but-empty); these are
+  filled in any genuinely exportable session, so shippable bytes still match legacy.
+- **Legacy-export reference harness:** a checked-in fully-filled, schema-valid legacy
+  `formData` (`legacyParityFixture.js`) and its captured export artifact
+  (`legacy-export.reference.yml`) ground the parity tests against real legacy bytes,
+  not a second derivation of the same code path.
+- YAML encoder, schema, and the four golden fixtures are unchanged; golden baselines
+  remain byte-identical.
+
+---
+
 ## Day Validation Step + Export with Shadow Parity (June 3, 2026) ✅ COMPLETE
 
 ### Summary

@@ -8,6 +8,44 @@
  * @see docs/ANIMAL_WORKSPACE_DESIGN.md §5 YAML Export Flow
  */
 
+// Canonical key orders, mirroring the legacy `formData` shape in
+// `src/valueList.js` (`defaultYMLValues` / `arrayDefaultValues`). `encodeYaml`
+// preserves insertion order, so emitting keys in these orders makes the new
+// export path byte-for-byte identical to the legacy export for equivalent data.
+const SUBJECT_ORDER = ['description', 'genotype', 'sex', 'species', 'subject_id', 'date_of_birth', 'weight'];
+const DEVICE_ORDER = ['name'];
+const UNITS_ORDER = ['analog', 'behavioral_events'];
+const DATA_ACQ_DEVICE_ORDER = ['name', 'system', 'amplifier', 'adc_circuit'];
+const CAMERA_ORDER = ['id', 'meters_per_pixel', 'manufacturer', 'model', 'lens', 'camera_name'];
+const TASK_ORDER = ['task_name', 'task_description', 'task_environment', 'camera_id', 'task_epochs'];
+const ASSOCIATED_FILE_ORDER = ['name', 'description', 'path', 'task_epochs'];
+const ASSOCIATED_VIDEO_FILE_ORDER = ['name', 'camera_id', 'task_epochs'];
+const BEHAVIORAL_EVENT_ORDER = ['description', 'name'];
+const ELECTRODE_GROUP_ORDER = ['id', 'location', 'device_type', 'description', 'targeted_location', 'targeted_x', 'targeted_y', 'targeted_z', 'units'];
+const NTRODE_ORDER = ['ntrode_id', 'electrode_group_id', 'bad_channels', 'map'];
+
+/**
+ * Return a new object with `obj`'s keys ordered to match `order`. Known keys come
+ * first in `order` sequence; any keys NOT in the template are appended in their
+ * original order — so reordering is lossless (a field the template doesn't know
+ * about is preserved, never dropped). Non-object inputs are returned unchanged.
+ *
+ * @param {object} obj - Object to reorder.
+ * @param {string[]} order - Canonical key sequence.
+ * @returns {object} Reordered shallow copy (or `obj` if not a plain object).
+ */
+function reorderKeys(obj, order) {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj;
+  const result = {};
+  for (const key of order) {
+    if (Object.hasOwn(obj, key)) result[key] = obj[key];
+  }
+  for (const key of Object.keys(obj)) {
+    if (!Object.hasOwn(result, key)) result[key] = obj[key];
+  }
+  return result;
+}
+
 /**
  * Merges animal defaults with day-specific data to produce complete NWB metadata.
  *
@@ -20,6 +58,19 @@
  * - Day provides: session, tasks, epochs, files, technical parameters
  * - Day OVERRIDES: weight, experiment_description, cameras, electrode_groups (if specified)
  * - Configuration versions: Day references specific probe configuration from animal history
+ *
+ * Key order & always-on keys (byte-for-byte legacy parity):
+ * - The merged object's top-level and nested key order mirrors the legacy
+ *   `formData` (`defaultYMLValues`), so `encodeYaml(mergeDayMetadata(...))` is
+ *   byte-identical to a legacy export of the same session.
+ * - The optogenetics keys (`opto_excitation_source`, `optical_fiber`,
+ *   `virus_injection`, `optogenetic_stimulation_software`) and `fs_gui_yamls` are
+ *   emitted UNCONDITIONALLY — empty (`[]` / `''`) when absent — because the legacy
+ *   `formData` always carries them and they are schema-valid when empty.
+ * - `keywords`, `units`, and `default_header_file_path` are the exception: they are
+ *   omitted when empty (the schema rejects them present-but-empty). In any genuinely
+ *   exportable session they are filled, so the bytes still match legacy; only an
+ *   incomplete (non-exportable) session differs, and neither path ships it.
  *
  * @param {import('./workspaceTypes').Animal} animal - Parent animal with shared metadata
  * @param {import('./workspaceTypes').Day} day - Recording day with session-specific data
@@ -51,7 +102,18 @@ export function mergeDayMetadata(animal, day) {
     );
   }
 
-  // Build merged metadata object
+  const cameras = day.deviceOverrides?.cameras || animal.cameras || [];
+  const electrodeGroups =
+    day.deviceOverrides?.electrode_groups || config.devices.electrode_groups || [];
+  const ntrodeMap =
+    day.deviceOverrides?.ntrode_electrode_group_channel_map ||
+    config.devices.ntrode_electrode_group_channel_map ||
+    [];
+  const opto = animal.optogenetics || null;
+
+  // Build the merged object in legacy `defaultYMLValues` key order. keywords /
+  // units / default_header_file_path are placed at their canonical positions here
+  // and deleted below when empty (delete preserves the order of surviving keys).
   const merged = {
     // === From Animal: Experimenters ===
     experimenter_name: animal.experimenters.experimenter_name,
@@ -62,73 +124,79 @@ export function mergeDayMetadata(animal, day) {
     experiment_description: day.session.experiment_description || '',
     session_description: day.session.session_description,
     session_id: day.session.session_id,
+    keywords: Array.isArray(day.keywords) ? day.keywords : [],
 
-    // === From Animal: Subject (with day overrides) ===
-    subject: {
-      ...animal.subject,
-      // Weight override: Day weight takes precedence if specified
-      weight: day.session.weight !== undefined ? day.session.weight : animal.subject.weight,
-    },
+    // === From Animal: Subject (with day weight override) ===
+    subject: reorderKeys(
+      {
+        ...animal.subject,
+        weight: day.session.weight !== undefined ? day.session.weight : animal.subject.weight,
+      },
+      SUBJECT_ORDER
+    ),
 
     // === From Animal: Data Acquisition ===
-    data_acq_device: animal.devices.data_acq_device,
-    device: animal.devices.device,
+    data_acq_device: (animal.devices.data_acq_device || []).map((d) =>
+      reorderKeys(d, DATA_ACQ_DEVICE_ORDER)
+    ),
 
     // === From Animal or Day Override: Cameras ===
-    cameras: day.deviceOverrides?.cameras || animal.cameras,
-
-    // === From Configuration Version (or Day Override): Electrode Groups ===
-    electrode_groups: day.deviceOverrides?.electrode_groups || config.devices.electrode_groups,
-    ntrode_electrode_group_channel_map:
-      day.deviceOverrides?.ntrode_electrode_group_channel_map ||
-      config.devices.ntrode_electrode_group_channel_map,
+    cameras: cameras.map((c) => reorderKeys(c, CAMERA_ORDER)),
 
     // === From Day: Behavioral Protocol ===
-    tasks: day.tasks,
-    behavioral_events: day.behavioral_events,
+    tasks: (day.tasks || []).map((t) => reorderKeys(t, TASK_ORDER)),
 
     // === From Day: Data Files ===
-    associated_files: day.associated_files,
-    associated_video_files: day.associated_video_files,
+    associated_files: (day.associated_files || []).map((f) =>
+      reorderKeys(f, ASSOCIATED_FILE_ORDER)
+    ),
+    associated_video_files: (day.associated_video_files || []).map((v) =>
+      reorderKeys(v, ASSOCIATED_VIDEO_FILE_ORDER)
+    ),
 
     // === From Day: Technical Parameters ===
+    units: reorderKeys(day.technical.units, UNITS_ORDER),
     times_period_multiplier: day.technical.times_period_multiplier,
     raw_data_to_volts: day.technical.raw_data_to_volts,
+    default_header_file_path: day.technical.default_header_file_path,
+
+    // === From Day: Behavioral Events ===
+    behavioral_events: (day.behavioral_events || []).map((e) =>
+      reorderKeys(e, BEHAVIORAL_EVENT_ORDER)
+    ),
+
+    // === From Animal: Device ===
+    device: reorderKeys(animal.devices.device, DEVICE_ORDER),
+
+    // === Optogenetics: always present (empty when no opto), matching legacy formData ===
+    opto_excitation_source: opto ? opto.opto_excitation_source : [],
+    optical_fiber: opto ? opto.optical_fiber : [],
+    virus_injection: opto ? opto.virus_injection : [],
+    fs_gui_yamls: day.fs_gui_yamls && day.fs_gui_yamls.length > 0 ? day.fs_gui_yamls : [],
+    optogenetic_stimulation_software: opto ? opto.optogenetic_stimulation_software : '',
+
+    // === From Configuration Version (or Day Override): Electrode Groups ===
+    electrode_groups: electrodeGroups.map((g) => reorderKeys(g, ELECTRODE_GROUP_ORDER)),
+    ntrode_electrode_group_channel_map: ntrodeMap.map((n) => reorderKeys(n, NTRODE_ORDER)),
   };
 
-  // === Conditional: Optional schema-constrained keys ===
-  // The schema permits keywords / units / default_header_file_path to be ABSENT
-  // but rejects them when present-but-empty (keywords minItems, units required
-  // analog, default_header_file_path non-empty pattern). A clean hand-authored
-  // file omits them entirely. So include each ONLY when it has real content,
-  // rather than manufacture a schema-invalid empty value.
-  if (Array.isArray(day.keywords) && day.keywords.length > 0) {
-    merged.keywords = day.keywords;
+  // Omit the optional schema-constrained keys when empty. The schema permits them
+  // ABSENT but rejects them present-but-empty (keywords minItems, units required
+  // analog, default_header_file_path non-empty pattern), so emitting an empty value
+  // would make a complete day fail validation. `delete` preserves the insertion
+  // order of the remaining keys, so the legacy byte order is unaffected.
+  if (!(Array.isArray(day.keywords) && day.keywords.length > 0)) {
+    delete merged.keywords;
   }
-  if (day.technical.default_header_file_path) {
-    merged.default_header_file_path = day.technical.default_header_file_path;
+  if (!(day.technical.units && Object.keys(day.technical.units).length > 0)) {
+    delete merged.units;
   }
-  if (day.technical.units && Object.keys(day.technical.units).length > 0) {
-    merged.units = day.technical.units;
-  }
-
-  // === Conditional: Optogenetics (only if animal has optogenetics) ===
-  if (animal.optogenetics) {
-    merged.opto_excitation_source = animal.optogenetics.opto_excitation_source;
-    merged.optical_fiber = animal.optogenetics.optical_fiber;
-    merged.virus_injection = animal.optogenetics.virus_injection;
-    merged.optogenetic_stimulation_software = animal.optogenetics.optogenetic_stimulation_software;
-  }
-
-  // === Conditional: FsGUI YAMLs (only if day has them) ===
-  if (day.fs_gui_yamls && day.fs_gui_yamls.length > 0) {
-    merged.fs_gui_yamls = day.fs_gui_yamls;
+  if (!day.technical.default_header_file_path) {
+    delete merged.default_header_file_path;
   }
 
   // Return owned data: the assignments above alias nested animal/config arrays and
-  // objects. Cloning ensures downstream mutation (or YAML encoders that sort/normalize
-  // in place) cannot corrupt animal/config state. Structurally identical output, so
-  // encodeYaml(...) stays byte-identical.
+  // objects. Cloning ensures downstream mutation cannot corrupt animal/config state.
   return structuredClone(merged);
 }
 

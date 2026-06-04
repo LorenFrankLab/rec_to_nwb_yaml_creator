@@ -1,0 +1,117 @@
+experimenter_name:
+  - Guidera, Jennifer
+  - Comrie, Alison
+lab: Frank
+institution: University of California, San Francisco
+experiment_description: Chronic tetrode recording during spatial navigation
+session_description: W-track alternation, day 1
+session_id: rat1_20230101
+keywords:
+  - spatial
+  - w-track
+subject:
+  description: Long Evans Rat from Charles River
+  genotype: Wild Type
+  sex: M
+  species: Rattus norvegicus
+  subject_id: rat1
+  date_of_birth: 2023-01-10T00:00:00
+  weight: 450
+data_acq_device:
+  - name: SpikeGadgets
+    system: SpikeGadgets
+    amplifier: Intan
+    adc_circuit: Intan
+cameras:
+  - id: 0
+    meters_per_pixel: 0.00085
+    manufacturer: Allied Vision
+    model: Mako G-158
+    lens: Fujinon HF16HA-1B
+    camera_name: overhead_camera
+  - id: 1
+    meters_per_pixel: 0.0009
+    manufacturer: Allied Vision
+    model: Mako G-158
+    lens: Fujinon HF16HA-1B
+    camera_name: side_camera
+tasks:
+  - task_name: sleep
+    task_description: Pre-task rest in home cage
+    task_environment: home cage
+    camera_id:
+      - 0
+    task_epochs:
+      - 1
+  - task_name: w_alternation
+    task_description: W-track continuous alternation
+    task_environment: elevated W-track
+    camera_id:
+      - 0
+      - 1
+    task_epochs:
+      - 2
+associated_files:
+  - name: probe_adjustment_log
+    description: Daily probe depth adjustments
+    path: /data/rat1/logs/20230101_adjustments.txt
+    task_epochs: 1
+associated_video_files:
+  - name: overhead_video_epoch2
+    camera_id: 0
+    task_epochs: 2
+units:
+  analog: unspecified
+  behavioral_events: unspecified
+times_period_multiplier: 1.5
+raw_data_to_volts: 0.195
+default_header_file_path: default_header.xml
+behavioral_events:
+  - description: Din1
+    name: reward_left
+  - description: Din2
+    name: reward_right
+device:
+  name:
+    - Trodes
+opto_excitation_source: []
+optical_fiber: []
+virus_injection: []
+fs_gui_yamls: []
+optogenetic_stimulation_software: ""
+electrode_groups:
+  - id: 0
+    location: CA1
+    device_type: tetrode_12.5
+    description: CA1 tetrode 1
+    targeted_location: CA1
+    targeted_x: 3
+    targeted_y: 2.5
+    targeted_z: 2
+    units: mm
+  - id: 1
+    location: CA1
+    device_type: tetrode_12.5
+    description: CA1 tetrode 2
+    targeted_location: CA1
+    targeted_x: 3.1
+    targeted_y: 2.5
+    targeted_z: 2
+    units: mm
+ntrode_electrode_group_channel_map:
+  - ntrode_id: 1
+    electrode_group_id: 0
+    bad_channels: []
+    map:
+      "0": 0
+      "1": 1
+      "2": 2
+      "3": 3
+  - ntrode_id: 2
+    electrode_group_id: 1
+    bad_channels: []
+    map:
+      "0": 4
+      "1": 5
+      "2": 6
+      "3": 7

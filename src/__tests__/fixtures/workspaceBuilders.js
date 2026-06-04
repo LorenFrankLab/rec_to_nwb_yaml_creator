@@ -24,13 +24,19 @@ const TS = '2023-06-22T12:00:00.000Z';
  * the fully-enumerated expected object for a key-set-exact deep-equal.
  *
  * The merge omits empty optional keys (keywords / units / default_header_file_path),
- * so the only key it adds beyond the fixture for this empty-on-those-fields day is
- * `device` (always sourced from `animal.devices.device`, a valid non-empty value).
+ * so for this empty-on-those-fields day it adds `device` plus the always-on
+ * optogenetics / fs_gui keys the legacy `formData` always carries (emitted empty
+ * for a non-optogenetics session — see the byte-for-byte legacy parity work).
  *
- * @type {{ device: object }}
+ * @type {{ device: object, opto_excitation_source: [], optical_fiber: [], virus_injection: [], fs_gui_yamls: [], optogenetic_stimulation_software: string }}
  */
 export const REALISTIC_ALWAYS_ON_KEYS = {
   device: { name: ['Trodes'] },
+  opto_excitation_source: [],
+  optical_fiber: [],
+  virus_injection: [],
+  fs_gui_yamls: [],
+  optogenetic_stimulation_software: '',
 };
 
 /**

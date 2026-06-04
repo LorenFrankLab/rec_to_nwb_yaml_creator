@@ -470,16 +470,18 @@ describe('mergeDayMetadata', () => {
       expect(merged.optogenetic_stimulation_software).toBe('FsGUI');
     });
 
-    it('excludes optogenetics fields if animal has no optogenetics', () => {
+    it('emits empty optogenetics fields if animal has no optogenetics (legacy parity)', () => {
       const animal = createTestAnimal();
       const day = createTestDay();
 
       const merged = mergeDayMetadata(animal, day);
 
-      expect(merged.opto_excitation_source).toBeUndefined();
-      expect(merged.optical_fiber).toBeUndefined();
-      expect(merged.virus_injection).toBeUndefined();
-      expect(merged.optogenetic_stimulation_software).toBeUndefined();
+      // The legacy formData always carries these keys; emit them empty (rather than
+      // omit them) so the new export path is byte-identical to a legacy export.
+      expect(merged.opto_excitation_source).toEqual([]);
+      expect(merged.optical_fiber).toEqual([]);
+      expect(merged.virus_injection).toEqual([]);
+      expect(merged.optogenetic_stimulation_software).toBe('');
     });
   });
 
@@ -559,9 +561,10 @@ describe('mergeDayMetadata', () => {
 
       const merged = mergeDayMetadata(animal, day);
 
-      // Omitted entirely (not emitted as an empty array) — consistent with the
-      // omit-when-empty rule for optional keys, so the export stays schema-clean.
-      expect(merged).not.toHaveProperty('fs_gui_yamls');
+      // The legacy formData always carries fs_gui_yamls; emit it empty (not omitted)
+      // so the new export path is byte-identical to a legacy export. Empty is
+      // schema-valid, so it does not gate export.
+      expect(merged.fs_gui_yamls).toEqual([]);
     });
   });
 
