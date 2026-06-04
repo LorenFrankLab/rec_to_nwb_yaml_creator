@@ -46,4 +46,22 @@ describe('checkShadowExport', () => {
     expect(result.diff).toContain('"A"');
     expect(result.diff).toContain('"B"');
   });
+
+  it('detects an in-place mutation of the input even when re-encoding is identical', () => {
+    const { animal, day } = makeAnimalWithCamerasAndDay();
+    // An encoder that mutates its argument in place but returns a stable string.
+    // The pre-encode snapshot must catch this — comparing two re-encodes alone
+    // would NOT, because the mutation is idempotent.
+    vi.spyOn(yaml, 'encodeYaml').mockImplementation((model) => {
+      if (model && typeof model === 'object') {
+        model.__mutatedInPlace = true;
+      }
+      return 'stable\n';
+    });
+
+    const result = checkShadowExport(animal, day);
+
+    expect(result.ok).toBe(false);
+    expect(result.diff).toBeTruthy();
+  });
 });

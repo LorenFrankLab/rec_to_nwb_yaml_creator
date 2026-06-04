@@ -91,7 +91,7 @@ describe('OverviewStep', () => {
       />
     );
 
-    await user.type(screen.getByRole('textbox', { name: /add a keyword/i }), 'spatial');
+    await user.type(screen.getByRole('textbox', { name: /keywords/i }), 'spatial');
     await user.click(screen.getByRole('button', { name: /add keyword/i }));
 
     expect(onFieldUpdate).toHaveBeenCalledWith('keywords', ['spatial']);

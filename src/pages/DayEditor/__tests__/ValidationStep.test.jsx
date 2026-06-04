@@ -52,6 +52,21 @@ describe('ValidationStep', () => {
     expect(screen.getByText(/ready to export/i)).toBeInTheDocument();
   });
 
+  it('renders without throwing when mergedDay is undefined', () => {
+    expect(() => render(<ValidationStep mergedDay={undefined} />)).not.toThrow();
+  });
+
+  it('surfaces an issue with an unexpected severity under the Info heading rather than dropping it', () => {
+    vi.spyOn(validation, 'validate').mockReturnValue([
+      { severity: undefined, path: 'cameras', code: 'odd', message: 'unclassified issue' },
+    ]);
+
+    render(<ValidationStep {...baseProps} />);
+
+    expect(screen.getByRole('heading', { name: /info/i })).toBeInTheDocument();
+    expect(screen.getByText('unclassified issue')).toBeInTheDocument();
+  });
+
   it('surfaces real validation errors computed from the merged metadata', () => {
     const { animal, day } = buildRealisticWorkspace();
     // A complete realistic day validates clean; drop a required field to produce a

@@ -48,9 +48,7 @@ export default function ValidationStep({ mergedDay }) {
           : 'Export blocked — resolve all errors below before exporting.'}
       </p>
 
-      {issues.length === 0 ? (
-        <p className="validation-empty">No validation issues found for this day.</p>
-      ) : (
+      {issues.length > 0 && (
         <>
           <SeveritySection title="Errors" severity="error" issues={bySeverity.error} />
           <SeveritySection title="Warnings" severity="warning" issues={bySeverity.warning} />
@@ -113,8 +111,8 @@ SeveritySection.propTypes = {
 const STEP_LABELS = {
   overview: 'Overview',
   devices: 'Devices',
-  epochs: 'Tasks & Epochs',
-  validation: 'Other',
+  epochs: 'Epochs',
+  validation: 'Other required fields',
   export: 'Export',
 };
 

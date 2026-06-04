@@ -29,6 +29,7 @@ export default function ExportStep({ animal, day }) {
   const [showPreview, setShowPreview] = useState(false);
   const [blockingError, setBlockingError] = useState(null);
   const [overrideWarning, setOverrideWarning] = useState(null);
+  const [downloadedFile, setDownloadedFile] = useState(null);
 
   // Preview YAML + filename, recomputed when the inputs change.
   const { yaml, fileName } = useMemo(() => {
@@ -51,6 +52,7 @@ export default function ExportStep({ animal, day }) {
     if (!result.ok && isFeatureEnabled('shadowExportStrict')) {
       // BLOCKING: never download when the encoder-stability check fails in strict mode.
       setOverrideWarning(null);
+      setDownloadedFile(null);
       setBlockingError({
         message: 'Export blocked: encoder-stability check failed.',
         diff: result.diff,
@@ -70,6 +72,7 @@ export default function ExportStep({ animal, day }) {
 
     setBlockingError(null);
     downloadYamlFile(fileName, result.yaml);
+    setDownloadedFile(fileName);
   };
 
   return (
@@ -115,13 +118,20 @@ export default function ExportStep({ animal, day }) {
           className="export-preview-toggle"
           onClick={() => setShowPreview((prev) => !prev)}
           aria-expanded={showPreview}
+          aria-controls="export-yaml-preview"
         >
           {showPreview ? 'Hide preview' : 'Show preview'}
         </button>
       </div>
 
+      {downloadedFile && (
+        <p className="export-success" role="status">
+          Downloaded {downloadedFile}.
+        </p>
+      )}
+
       {showPreview && (
-        <pre className="export-preview" aria-label="YAML preview">
+        <pre id="export-yaml-preview" className="export-preview" aria-label="YAML preview">
           {yaml}
         </pre>
       )}

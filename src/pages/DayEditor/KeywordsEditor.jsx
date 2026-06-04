@@ -17,11 +17,21 @@ import PropTypes from 'prop-types';
 export default function KeywordsEditor({ value, onChange }) {
   const keywords = value || [];
   const [draft, setDraft] = useState('');
+  const [error, setError] = useState('');
 
   const addKeyword = () => {
     const trimmed = draft.trim();
+    if (!trimmed) {
+      setDraft('');
+      return;
+    }
+    if (keywords.includes(trimmed)) {
+      // Keep the draft so the user can see/edit what was rejected.
+      setError(`"${trimmed}" is already added.`);
+      return;
+    }
+    setError('');
     setDraft('');
-    if (!trimmed || keywords.includes(trimmed)) return;
     onChange([...keywords, trimmed]);
   };
 
@@ -58,10 +68,13 @@ export default function KeywordsEditor({ value, onChange }) {
         <input
           id="day-keyword-input"
           type="text"
-          aria-label="Add a keyword"
           value={draft}
           placeholder="Add a keyword"
-          onChange={(e) => setDraft(e.target.value)}
+          aria-describedby={error ? 'day-keyword-error' : undefined}
+          onChange={(e) => {
+            setDraft(e.target.value);
+            if (error) setError('');
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
@@ -73,6 +86,12 @@ export default function KeywordsEditor({ value, onChange }) {
           Add keyword
         </button>
       </div>
+
+      {error && (
+        <span id="day-keyword-error" role="alert" className="keyword-input-error">
+          {error}
+        </span>
+      )}
     </div>
   );
 }

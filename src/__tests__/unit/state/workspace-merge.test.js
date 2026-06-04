@@ -545,11 +545,9 @@ describe('mergeDayMetadata', () => {
 
       const merged = mergeDayMetadata(animal, day);
 
-      // Should either be empty array or undefined (depending on implementation)
-      // Most important: should not break YAML export
-      if (merged.fs_gui_yamls !== undefined) {
-        expect(merged.fs_gui_yamls).toEqual([]);
-      }
+      // Omitted entirely (not emitted as an empty array) — consistent with the
+      // omit-when-empty rule for optional keys, so the export stays schema-clean.
+      expect(merged).not.toHaveProperty('fs_gui_yamls');
     });
   });
 

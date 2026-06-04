@@ -62,6 +62,33 @@ describe('ExportStep', () => {
     expect(screen.getByText(/First difference at line 2/)).toBeInTheDocument();
   });
 
+  it('announces a successful download', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(yaml, 'downloadYamlFile').mockImplementation(() => {});
+    const { animal, day } = buildRealisticWorkspace();
+
+    render(<ExportStep animal={animal} day={day} />);
+    await user.click(screen.getByRole('button', { name: /download yaml/i }));
+
+    expect(screen.getByText(/downloaded 06222023_remy_metadata\.yml/i)).toBeInTheDocument();
+  });
+
+  it('re-enables the download button after dismissing a blocking error', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(yaml, 'downloadYamlFile').mockImplementation(() => {});
+    vi.spyOn(shadow, 'checkShadowExport').mockReturnValue(UNSTABLE);
+    const { animal, day } = buildRealisticWorkspace();
+
+    render(<ExportStep animal={animal} day={day} />);
+    const downloadButton = screen.getByRole('button', { name: /download yaml/i });
+
+    await user.click(downloadButton);
+    expect(downloadButton).toBeDisabled();
+
+    await user.click(screen.getByRole('button', { name: /dismiss and try again/i }));
+    expect(downloadButton).toBeEnabled();
+  });
+
   it('overrides the gate and downloads with a warning when strict mode is off', async () => {
     const user = userEvent.setup();
     overrideFlags({ shadowExportStrict: false });

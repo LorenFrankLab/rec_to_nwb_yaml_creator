@@ -233,6 +233,19 @@ not executed here.
 - **Follow-up (deferred):** `units` and `default_header_file_path` still have no dedicated workspace
   editor — they are simply omitted when empty (valid), but a future phase may add entry fields for labs
   that set them. Tracked here so the omission is not mistaken for full coverage.
+- **Phase 5 review follow-ups (out of scope, deferred):**
+  - **Validation message quality:** the per-day Validation step surfaces `validate()` messages verbatim;
+    raw AJV phrasing ("must have required property 'lab'") and dot-notation paths are domain jargon. A
+    user-facing message-translation pass belongs in the validation module, not this phase.
+  - **`shadowExportStrict` hardening:** the strict flag is a runtime-mutable global; if flipped off in a
+    deployed build, an encoder-stability failure downgrades to warn-and-proceed. Consider pinning it
+    `true` outside dev/test at cutover (**Phase 11**, which already keeps shadow-export strict for one
+    release).
+  - **`mergeDayMetadata` malformed-animal guard:** an animal with an empty `configurationHistory` makes
+    `config` undefined and the merge throws (pre-existing; not introduced here). Worth a guard + test.
+  - **Imported-keyword validation:** the `KeywordsEditor` trims/de-dupes at entry, but an imported day
+    could carry blank/duplicate keywords straight through the merge (`keywords.length > 0` only). The
+    Validation step would flag them, but entry-layer parity is a small follow-up.
 
 ## Estimated Effort
 

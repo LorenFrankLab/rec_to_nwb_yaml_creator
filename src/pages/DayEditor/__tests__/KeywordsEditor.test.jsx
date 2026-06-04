@@ -54,6 +54,22 @@ describe('KeywordsEditor', () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
+  it('shows an alert explaining why a duplicate keyword was rejected', async () => {
+    const user = userEvent.setup();
+    render(<KeywordsEditor value={['spatial']} onChange={vi.fn()} />);
+
+    await user.type(screen.getByRole('textbox', { name: /keyword/i }), 'spatial');
+    await user.click(screen.getByRole('button', { name: /add keyword/i }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/already added/i);
+  });
+
+  it('uses the visible label as the input accessible name (no orphaned aria-label)', () => {
+    render(<KeywordsEditor value={[]} onChange={vi.fn()} />);
+
+    expect(screen.getByRole('textbox', { name: /keywords/i })).toBeInTheDocument();
+  });
+
   it('treats undefined value as an empty list', () => {
     render(<KeywordsEditor value={undefined} onChange={vi.fn()} />);
 
