@@ -86,7 +86,7 @@
       min-height: 44px;
 
       &:focus {
-        outline: 2px solid var(--color-primary, #2196f3);
+        outline: 2px solid var(--color-primary, var(--color-primary));
         outline-offset: 1px;
       }
     }

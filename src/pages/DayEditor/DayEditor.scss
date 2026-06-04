@@ -288,9 +288,17 @@
 .form-field input:focus,
 .form-field select:focus,
 .form-field textarea:focus {
-  outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+  box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.15);
+}
+
+/* Keep a visible focus ring for keyboard users (WCAG 2.4.7); also survives Windows
+   High Contrast Mode, unlike a box-shadow alone. */
+.form-field input:focus-visible,
+.form-field select:focus-visible,
+.form-field textarea:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
 }
 
 .form-field input.invalid,
@@ -860,7 +868,7 @@
   .inherited-notice {
     padding: 1rem;
     background: #e3f2fd;
-    border-left: 4px solid #2196f3;
+    border-left: 4px solid var(--color-primary);
     margin-bottom: 1.5rem;
     display: flex;
     align-items: center;
@@ -869,7 +877,7 @@
     gap: 1rem;
 
     a {
-      color: #2196f3;
+      color: var(--color-primary);
       text-decoration: underline;
       font-weight: 500;
 
@@ -939,7 +947,7 @@
   }
 
   &:focus {
-    outline: 2px solid #2196f3;
+    outline: 2px solid var(--color-primary);
     outline-offset: -2px;
   }
 
@@ -1053,7 +1061,7 @@
   }
 
   &:focus {
-    outline: 2px solid #2196f3;
+    outline: 2px solid var(--color-primary);
     outline-offset: -2px;
   }
 
@@ -1124,7 +1132,7 @@
     transition: border-color 0.2s;
 
     &:hover {
-      border-color: #2196f3;
+      border-color: var(--color-primary);
     }
 
     input[type='checkbox'] {
@@ -1137,7 +1145,7 @@
       height: 16px;
 
       &:focus {
-        outline: 2px solid #2196f3;
+        outline: 2px solid var(--color-primary);
         outline-offset: 2px;
       }
     }
@@ -1185,16 +1193,16 @@
     border-radius: 4px;
     cursor: pointer;
     font-size: 0.9rem;
-    color: #2196f3;
+    color: var(--color-primary);
     transition: all 0.2s;
 
     &:hover {
       background: #f5f5f5;
-      border-color: #2196f3;
+      border-color: var(--color-primary);
     }
 
     &:focus {
-      outline: 2px solid #2196f3;
+      outline: 2px solid var(--color-primary);
       outline-offset: 2px;
     }
 
@@ -1284,7 +1292,7 @@
       h3 { color: #f57c00; }
     }
     &.validation-group-info {
-      border-left-color: #2196f3;
+      border-left-color: var(--color-primary);
       h3 { color: #1976d2; }
     }
   }
@@ -1334,7 +1342,7 @@
 
   .export-download-button {
     padding: 0.55rem 1.1rem;
-    background: #2196f3;
+    background: var(--color-primary);
     color: #fff;
     border: none;
     border-radius: 4px;
@@ -1356,7 +1364,7 @@
     cursor: pointer;
 
     &:hover { background: #eeeeee; }
-    &:focus-visible { outline: 2px solid #2196f3; outline-offset: 2px; }
+    &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
   }
 
   .export-success {
@@ -1460,7 +1468,7 @@
     cursor: pointer;
 
     &:hover { background: #eeeeee; }
-    &:focus-visible { outline: 2px solid #2196f3; outline-offset: 2px; }
+    &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
   }
 
   .keyword-input-error {

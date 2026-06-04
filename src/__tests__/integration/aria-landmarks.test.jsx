@@ -216,6 +216,8 @@ describe('ARIA Landmarks', () => {
       expect(container.querySelectorAll('[role="banner"], header')).toHaveLength(1);
       expect(container.querySelectorAll('[role="contentinfo"], footer')).toHaveLength(1);
       expect(screen.getByRole('link', { name: /back to workspace/i })).toBeInTheDocument();
+      // Exactly one step is marked current for assistive tech.
+      expect(container.querySelectorAll('[aria-current="step"]')).toHaveLength(1);
     });
 
     it('keeps the default route (#/) on the legacy form even with flags enabled', () => {

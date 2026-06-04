@@ -43,9 +43,9 @@
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #2196f3;
+  color: var(--color-primary);
   background-color: transparent;
-  border: 1px solid #2196f3;
+  border: 1px solid var(--color-primary);
   border-radius: 4px;
   text-decoration: none;
   transition: background-color 0.2s ease, color 0.2s ease;
@@ -53,12 +53,12 @@
   cursor: pointer;
 
   &:hover {
-    background-color: #2196f3;
+    background-color: var(--color-primary);
     color: #fff;
   }
 
   &:focus {
-    outline: 2px solid #2196f3;
+    outline: 2px solid var(--color-primary);
     outline-offset: 2px;
   }
 }
@@ -107,7 +107,7 @@
   }
 
   &:focus {
-    outline: 2px solid #2196f3;
+    outline: 2px solid var(--color-primary);
     outline-offset: -2px;
     z-index: 1;
   }
@@ -135,13 +135,13 @@
 /* Active step */
 .step-indicator.active {
   .step-indicator-button {
-    border-bottom-color: #2196f3;
+    border-bottom-color: var(--color-primary);
     background-color: #e3f2fd;
     font-weight: 600;
   }
 
   .step-number {
-    background-color: #2196f3;
+    background-color: var(--color-primary);
     color: #fff;
   }
 }
@@ -194,7 +194,7 @@
   font-family: inherit;
 
   &:focus {
-    outline: 2px solid #2196f3;
+    outline: 2px solid var(--color-primary);
     outline-offset: 2px;
   }
 
@@ -220,7 +220,7 @@
 
 .btn-next,
 .btn-save {
-  background-color: #2196f3;
+  background-color: var(--color-primary);
   color: #fff;
 
   &:hover:not(:disabled) {
@@ -277,7 +277,7 @@
   font-family: inherit;
 
   &:focus {
-    outline: 2px solid #2196f3;
+    outline: 2px solid var(--color-primary);
     outline-offset: 2px;
   }
 
@@ -288,7 +288,7 @@
 }
 
 .btn-primary {
-  background-color: #2196f3;
+  background-color: var(--color-primary);
   color: #fff;
 
   &:hover:not(:disabled) {
@@ -405,7 +405,7 @@ input[type="file"] {
   }
 
   .step-indicator.active .step-indicator-button {
-    border-left-color: #2196f3;
+    border-left-color: var(--color-primary);
   }
 
   .animal-editor-footer {
@@ -478,11 +478,11 @@ input[type="file"] {
 
 /* ===== WCAG AA Compliance Notes ===== */
 /*
- * Color contrast ratios verified:
- * - Primary blue (#2196f3) on white: 3.15:1 (AA for large text)
- * - Primary dark (#1976d2) on white: 4.58:1 (AA)
- * - Error red (#d32f2f) on white: 4.52:1 (AA)
- * - Success green (#2e7d32) on white: 4.56:1 (AA)
+ * Color contrast ratios verified (see src/__tests__/unit/a11y/contrast.test.js):
+ * - Primary (--color-primary #1565c0) on white: 5.75:1 (AA)
+ * - Warning (--color-warning #bf360c) on white: 5.60:1 (AA)
+ * - Error (--color-error #c62828) on white: 5.62:1 (AA)
+ * - Success green (#2e7d32) on white: 5.13:1 (AA)
  * - Grey 600 (#666) on white: 5.74:1 (AA)
  * - Grey 900 (#333) on white: 12.6:1 (AAA)
  *

@@ -103,9 +103,16 @@ export function AppLayout() {
   // navigation / add are broadcast to whichever stepper is on screen; help opens a
   // dialog; Ctrl/Cmd+S flushes the workspace save.
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const shortcutsTriggerRef = useRef(null);
+  // Open help; focus the trigger first so that when `?` opens the dialog (no element
+  // focused), the Modal captures a real opener and returns focus to it on close.
+  const openShortcuts = () => {
+    shortcutsTriggerRef.current?.focus();
+    setShortcutsOpen(true);
+  };
   useGlobalShortcuts({
     onSave: persistence.saveNow,
-    onShowHelp: () => setShortcutsOpen(true),
+    onShowHelp: openShortcuts,
     onNextStep: () => emitStepperShortcut('next'),
     onPrevStep: () => emitStepperShortcut('prev'),
     onAdd: () => emitStepperShortcut('add'),
@@ -204,11 +211,13 @@ export function AppLayout() {
           <img src={logo} alt="Loren Frank Lab logo" />
         </a>
         <button
+          ref={shortcutsTriggerRef}
           type="button"
           className="shortcuts-trigger"
           onClick={() => setShortcutsOpen(true)}
           aria-label="Keyboard shortcuts"
           aria-haspopup="dialog"
+          title="Keyboard shortcuts (press ?)"
         >
           <span aria-hidden="true">⌨</span>
           <span className="visually-hidden">Keyboard shortcuts</span>

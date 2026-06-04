@@ -229,6 +229,13 @@ not executed here.
      relative/human-readable day labels for animals with 60–200+ days, and an explicit
      success confirmation. Deferred to the [Phase 10](phase-10-a11y-keyboard.md) pass.
 
+- **Phase 10 review item deferred.** The `Alt+←` / `Alt+→` stepper shortcuts (the
+  chord the phase spec prescribed) collide with the browser's Back/Forward navigation
+  on Windows/Linux; the handler `preventDefault`s, so in-app it advances the stepper
+  rather than navigating history. **Follow-up:** consider `Alt+PageUp/PageDown` (or
+  `Alt+Shift+Arrow`) for cross-platform safety, or add a platform note in the shortcuts
+  help. Kept as specified for now; revisit before v3.0.0 if user feedback warrants.
+
 ## Plan revisions
 
 - **2026-06-03 — parity model corrected; a byte-parity phase inserted after export.** Pre-Phase-5

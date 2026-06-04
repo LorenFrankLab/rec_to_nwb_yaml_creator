@@ -272,21 +272,14 @@
 }
 
 /* Green checkmark - Complete */
-.status-badge.status-✓ {
+.status-badge.status-complete {
   background-color: var(--color-success-light);
   color: var(--color-success);
   border: 1px solid #81c784;
 }
 
-/* Amber warning - Incomplete */
-.status-badge.status-⚠ {
-  background-color: var(--color-warning-light);
-  color: #e65100; /* Orange 900 - WCAG AA compliant */
-  border: 1px solid #ffb74d;
-}
-
 /* Red X - Missing required */
-.status-badge.status-❌ {
+.status-badge.status-incomplete {
   background-color: var(--color-error-light);
   color: #c62828; /* Red 800 - WCAG AA compliant */
   border: 1px solid #e57373;

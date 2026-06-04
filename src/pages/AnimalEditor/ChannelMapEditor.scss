@@ -205,7 +205,7 @@
 
         &:focus {
           outline: none;
-          border-color: #2196f3;
+          border-color: var(--color-primary);
           box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
         }
       }
@@ -246,7 +246,7 @@
 
         &:focus {
           outline: none;
-          border-color: #2196f3;
+          border-color: var(--color-primary);
           box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
         }
       }
@@ -262,7 +262,7 @@
 
         &:focus {
           outline: none;
-          border-color: #2196f3;
+          border-color: var(--color-primary);
           box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
         }
 
@@ -350,7 +350,7 @@
 
           &:focus {
             outline: none;
-            border-color: #2196f3;
+            border-color: var(--color-primary);
             box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
           }
         }
@@ -362,7 +362,7 @@
           margin: 0;
 
           &:focus {
-            outline: 2px solid #2196f3;
+            outline: 2px solid var(--color-primary);
             outline-offset: 2px;
           }
         }
@@ -389,7 +389,7 @@
     transition: all 0.2s ease;
 
     &:focus {
-      outline: 2px solid #2196f3;
+      outline: 2px solid var(--color-primary);
       outline-offset: 2px;
     }
 
@@ -405,7 +405,7 @@
     }
 
     &.btn-save {
-      background: #2196f3;
+      background: var(--color-primary);
       color: white;
 
       &:hover {

@@ -65,16 +65,16 @@
   padding: 0.375rem 0.75rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--color-primary, #2196f3);
+  color: var(--color-primary, var(--color-primary));
   background-color: var(--color-white, #ffffff);
-  border: 1px solid var(--color-primary, #2196f3);
+  border: 1px solid var(--color-primary, var(--color-primary));
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.2s, color 0.2s;
 }
 
 .btn-today:hover {
-  background-color: var(--color-primary, #2196f3);
+  background-color: var(--color-primary, var(--color-primary));
   color: var(--color-white, #ffffff);
 }
 
@@ -130,7 +130,7 @@
 }
 
 .calendar-day:focus {
-  outline: 2px solid var(--color-primary, #2196f3);
+  outline: 2px solid var(--color-primary, var(--color-primary));
   outline-offset: 2px;
 }
 
@@ -140,14 +140,14 @@
 }
 
 .calendar-day--today {
-  border: 2px solid var(--color-primary, #2196f3);
+  border: 2px solid var(--color-primary, var(--color-primary));
   font-weight: 600;
 }
 
 .calendar-day--selected {
-  background-color: var(--color-primary, #2196f3);
+  background-color: var(--color-primary, var(--color-primary));
   color: var(--color-white, #ffffff);
-  border-color: var(--color-primary, #2196f3);
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .calendar-day--selected:hover {
@@ -221,7 +221,7 @@
 }
 
 .legend-indicator--selected {
-  background-color: var(--color-primary, #2196f3);
+  background-color: var(--color-primary, var(--color-primary));
 }
 
 .legend-indicator--existing {
@@ -230,7 +230,7 @@
 }
 
 .legend-indicator--today {
-  border: 2px solid var(--color-primary, #2196f3);
+  border: 2px solid var(--color-primary, var(--color-primary));
   background-color: var(--color-white, #ffffff);
 }
 
@@ -260,7 +260,7 @@
 
 .btn-primary {
   color: var(--color-white, #ffffff);
-  background-color: var(--color-primary, #2196f3);
+  background-color: var(--color-primary, var(--color-primary));
 }
 
 .btn-primary:hover:not(:disabled) {

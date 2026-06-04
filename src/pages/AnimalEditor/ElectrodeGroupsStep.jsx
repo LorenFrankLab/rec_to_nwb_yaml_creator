@@ -4,6 +4,15 @@ import { deviceTypeMap } from '../../ntrode/deviceTypes';
 import './ElectrodeGroupsStep.scss';
 
 /**
+ * Per-group completeness status: a decorative icon paired with a screen-reader
+ * label so status is never conveyed by color/emoji alone (WCAG 1.4.1).
+ */
+const STATUS_META = {
+  complete: { icon: '✓', label: 'Complete' },
+  incomplete: { icon: '❌', label: 'Missing required fields' },
+};
+
+/**
  * ElectrodeGroupsStep - Step 1 of Animal Editor
  *
  * Provides CRUD interface for electrode groups with table view.
@@ -38,17 +47,10 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
    * @param {object} group
    * @returns {string}
    */
-  function getStatus(group) {
-    // Required fields
+  function getStatusKey(group) {
     const required = ['device_type', 'location', 'targeted_x', 'targeted_y', 'targeted_z', 'units'];
     const hasRequired = required.every(field => group[field] !== undefined && group[field] !== '');
-
-    if (!hasRequired) {
-      return '❌';
-    }
-
-    // Has all fields (complete)
-    return '✓';
+    return hasRequired ? 'complete' : 'incomplete';
   }
 
   /**
@@ -151,12 +153,24 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
               <td data-label="Location">{group.location}</td>
               <td data-label="Channels">{getChannelCount(group.device_type)}</td>
               <td data-label="Status">
-                <span className={`status-badge status-${getStatus(group)}`}>
-                  {getStatus(group)}
-                </span>
+                {(() => {
+                  const key = getStatusKey(group);
+                  const meta = STATUS_META[key];
+                  return (
+                    <span className={`status-badge status-${key}`} role="img" aria-label={meta.label}>
+                      <span aria-hidden="true">{meta.icon}</span>
+                    </span>
+                  );
+                })()}
               </td>
               <td data-label="Actions">
-                <button className="button-small" onClick={() => handleEditClick(group.id)}>Edit</button>
+                <button
+                  className="button-small"
+                  onClick={() => handleEditClick(group.id)}
+                  aria-label={`Edit electrode group ${group.id}`}
+                >
+                  Edit
+                </button>
                 <button
                   className="button-small button-danger"
                   onClick={() => handleDeleteClick(group)}

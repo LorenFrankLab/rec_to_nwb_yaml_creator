@@ -136,4 +136,35 @@ describe('useStore persistence', () => {
     const { result } = renderHook(() => useStore());
     expect(result.current.persistence.enabled).toBe(true);
   });
+
+  it('saveNow flushes immediately and records lastSaved (Ctrl/Cmd+S path)', () => {
+    const { result } = renderHook(() => useStore({ workspace: makeTestWorkspace() }));
+    expect(result.current.persistence.lastSaved).toBeNull();
+
+    act(() => {
+      result.current.persistence.saveNow();
+    });
+
+    // Written synchronously (no debounce wait) and success recorded.
+    const blob = JSON.parse(window.localStorage.getItem(WORKSPACE_STORAGE_KEY));
+    expect(blob.schemaVersion).toBe(WORKSPACE_SCHEMA_VERSION);
+    expect(blob.workspace.animals).toHaveProperty('remy');
+    expect(result.current.persistence.lastSaved).not.toBeNull();
+    expect(result.current.persistence.saveError).toBeNull();
+  });
+
+  it('saveNow surfaces an error and does not claim success when the write throws', () => {
+    const { result } = renderHook(() => useStore({ workspace: makeTestWorkspace() }));
+    const spy = vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceeded');
+    });
+
+    act(() => {
+      result.current.persistence.saveNow();
+    });
+
+    expect(result.current.persistence.saveError).toMatch(/could not save/i);
+    expect(result.current.persistence.lastSaved).toBeNull();
+    spy.mockRestore();
+  });
 });

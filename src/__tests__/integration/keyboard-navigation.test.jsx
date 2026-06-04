@@ -198,7 +198,10 @@ describe('Keyboard Navigation Accessibility', () => {
       firstSummary.focus();
       expect(document.activeElement).toBe(firstSummary);
 
-      // Activating the summary (Enter/click on a native disclosure) expands it.
+      // Activating the summary expands it. jsdom does not toggle <details> on a
+      // synthetic Enter/Space keydown (it implements activation only via click), so
+      // we assert keyboard *focusability* above and activation via click here; the
+      // real Enter/Space toggle is browser-native and covered by the e2e lane.
       await user.click(firstSummary);
       await waitFor(() => expect(details.open).toBe(true));
     });

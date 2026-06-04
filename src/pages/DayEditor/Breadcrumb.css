@@ -23,7 +23,7 @@
 }
 
 .breadcrumb-link {
-  color: var(--color-primary, #2196f3);
+  color: var(--color-primary, var(--color-primary));
   text-decoration: none;
   font-size: 0.875rem;
   transition: color 0.2s;
@@ -35,7 +35,7 @@
 }
 
 .breadcrumb-link:focus {
-  outline: 2px solid var(--color-primary, #2196f3);
+  outline: 2px solid var(--color-primary, var(--color-primary));
   outline-offset: 2px;
   border-radius: 2px;
 }

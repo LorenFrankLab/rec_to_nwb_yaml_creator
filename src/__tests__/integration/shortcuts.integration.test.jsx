@@ -81,4 +81,46 @@ describe('global shortcuts + help (integration)', () => {
     fireEvent.keyDown(document.body, { key: 'n', altKey: true });
     expect(await screen.findByRole('dialog', { name: /add task/i })).toBeInTheDocument();
   });
+
+  it('Alt+N is a no-op on a step with no add target (Overview)', async () => {
+    await renderRoute(`#/day/${DAY_ID}`);
+    await screen.findByRole('heading', { name: /session metadata/i });
+
+    fireEvent.keyDown(document.body, { key: 'n', altKey: true });
+    await act(async () => { await Promise.resolve(); });
+    // No dialog appears and the view is unchanged.
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /session metadata/i })).toBeInTheDocument();
+  });
+
+  it('further shortcuts are ignored while the help dialog is open', async () => {
+    await renderRoute(`#/day/${DAY_ID}`);
+    await screen.findByRole('heading', { name: /session metadata/i });
+
+    fireEvent.keyDown(document.body, { key: '?' });
+    expect(await screen.findByRole('dialog', { name: /keyboard shortcuts/i })).toBeInTheDocument();
+
+    // With a modal open, Alt+N must not open another dialog and Alt+Arrow must not
+    // navigate the stepper underneath.
+    fireEvent.keyDown(document.body, { key: 'n', altKey: true });
+    fireEvent.keyDown(document.body, { key: 'ArrowRight', altKey: true });
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    expect(screen.getByRole('dialog', { name: /keyboard shortcuts/i })).toBeInTheDocument();
+  });
+
+  it('Alt+ArrowRight and Alt+N drive the AnimalEditor stepper', async () => {
+    await renderRoute('#/animal/remy/editor');
+    await screen.findByRole('heading', { name: /step 1: electrode groups/i });
+
+    // Alt+N on step 1 opens the add-electrode-group dialog.
+    fireEvent.keyDown(document.body, { key: 'n', altKey: true });
+    expect(await screen.findByRole('dialog', { name: /add electrode group/i })).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await act(async () => { await Promise.resolve(); });
+
+    // Alt+ArrowRight advances to Channel Maps.
+    fireEvent.keyDown(document.body, { key: 'ArrowRight', altKey: true });
+    expect(await screen.findByRole('heading', { name: /step 2: channel maps/i })).toBeInTheDocument();
+  });
 });

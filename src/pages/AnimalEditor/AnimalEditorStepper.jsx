@@ -72,8 +72,15 @@ export default function AnimalEditorStepper() {
   // early returns below to satisfy the Rules of Hooks; the step count is filled in
   // once `steps` is built further down (stepCountRef.current = steps.length).
   const stepCountRef = useRef(1);
+  // The current step's "add" handler (Alt+N), or null when the step has no add
+  // target. Filled in below once the handlers + active step are known.
+  const addHandlerRef = useRef(null);
   useStepperShortcut(
     useCallback((action) => {
+      if (action === 'add') {
+        addHandlerRef.current?.();
+        return;
+      }
       setActiveStep((cur) => {
         if (action === 'next') return Math.min(cur + 1, stepCountRef.current - 1);
         if (action === 'prev') return Math.max(cur - 1, 0);
@@ -562,9 +569,11 @@ export default function AnimalEditorStepper() {
 
   // Check if we're on the final step
   const isOnFinalStep = activeStep === steps.length - 1;
-  // Keep the shortcut handler's step count current (the ref + hook are declared up
-  // top, before the early returns, to satisfy the Rules of Hooks).
+  // Keep the shortcut handler's step count + add target current (the ref + hook are
+  // declared up top, before the early returns, to satisfy the Rules of Hooks). Alt+N
+  // adds an electrode group on the Electrode Groups step (0); other steps have no add.
   stepCountRef.current = steps.length;
+  addHandlerRef.current = activeStep === 0 ? handleAddGroup : null;
 
   return (
     <div className="animal-editor-stepper">
@@ -582,7 +591,7 @@ export default function AnimalEditorStepper() {
       </div>
 
       {/* Step indicators */}
-      <nav className="animal-editor-step-nav" role="navigation" aria-label="Configuration steps">
+      <nav className="animal-editor-step-nav" aria-label="Configuration steps">
         <ul className="step-indicators">
           {steps.map((step, index) => (
             <li
@@ -615,7 +624,7 @@ export default function AnimalEditorStepper() {
 
       {/* Announce the active step to screen readers on change (matches the
           DayEditor route announcer pattern). */}
-      <div className="visually-hidden" role="status" aria-live="polite">
+      <div className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
         {`Step ${activeStep + 1} of ${steps.length}: ${steps[activeStep].label}`}
       </div>
 
