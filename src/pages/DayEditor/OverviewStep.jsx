@@ -5,6 +5,7 @@ import ReadOnlyField from './ReadOnlyField';
 import KeywordsEditor from './KeywordsEditor';
 import DayTechnicalSection from './DayTechnicalSection';
 import { validateField } from './validation';
+import { isValidSpecies } from '../../validation/dandiSubject';
 
 /**
  * Overview Step - Minimalist session metadata editor
@@ -29,6 +30,10 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
   const [fieldErrors, setFieldErrors] = useState({});
   const [validatingField, setValidatingField] = useState(null);
   const [showInherited, setShowInherited] = useState(false);
+  // Inline error for the species repair field — without it the field could silently
+  // write an invalid value through to the animal, recreating the "blocked at export
+  // with no place to fix" trap this repair surface exists to remove.
+  const [speciesError, setSpeciesError] = useState('');
 
   // Validate field on blur
   const handleBlur = useCallback(async (fieldPath, value) => {
@@ -166,7 +171,7 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
           <span className="toggle-icon" aria-hidden="true">
             {showInherited ? '▼' : '▶'}
           </span>
-          View inherited metadata from animal
+          View / edit inherited subject metadata
           <span className="inherited-metadata-badge">Inherited</span>
         </button>
 
@@ -179,7 +184,8 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
             <div className="inherited-section">
               <h3>Subject Information</h3>
               <div className="inherited-notice">
-                Inherited from Animal — edits below update the animal for every day.
+                Inherited from Animal — editing these fields updates the animal record
+                shared by all of its recording days, including any already exported.
                 <a href={`#/animal/${animal.id}/editor`}>Edit Animal</a>
               </div>
 
@@ -230,11 +236,29 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
                     data-field-path="subject.species"
                     key={`species-${animal.subject.species || ''}`}
                     defaultValue={animal.subject.species || ''}
-                    onBlur={(e) => onSubjectUpdate('species', e.target.value.trim())}
+                    aria-invalid={!!speciesError}
+                    aria-describedby={speciesError ? 'subject-species-error' : 'subject-species-hint'}
+                    onBlur={(e) => {
+                      const value = e.target.value.trim();
+                      // Surface the format error here (the value still writes through so
+                      // the export gate agrees), so the user isn't silently left invalid.
+                      setSpeciesError(
+                        value !== '' && !isValidSpecies(value)
+                          ? 'Use a Latin binomial (e.g. Rattus norvegicus) or an NCBI Taxonomy URI.'
+                          : ''
+                      );
+                      onSubjectUpdate('species', value);
+                    }}
                   />
-                  <span className="field-help-text">
-                    Latin binomial (e.g. Rattus norvegicus) or an NCBI Taxonomy URI — DANDI rejects free text.
+                  <span id="subject-species-hint" className="field-help-text">
+                    Scientific name (e.g. Rattus norvegicus) or an NCBI Taxonomy URI. Free text
+                    like &quot;Rat&quot; is rejected by NWB archives.
                   </span>
+                  {speciesError && (
+                    <span id="subject-species-error" className="validation-error" role="alert">
+                      {speciesError}
+                    </span>
+                  )}
                 </div>
 
                 <div className="form-field">

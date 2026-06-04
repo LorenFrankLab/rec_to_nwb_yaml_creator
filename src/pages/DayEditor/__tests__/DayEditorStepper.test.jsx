@@ -143,7 +143,7 @@ describe('DayEditorStepper', () => {
 
     // Inherited metadata should be hidden by default (can be expanded)
     expect(screen.queryByText('Subject Information')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /view inherited metadata/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /inherited subject metadata/i })).toBeInTheDocument();
   });
 
   it('navigates between steps', async () => {

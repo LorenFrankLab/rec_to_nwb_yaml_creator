@@ -51,7 +51,7 @@ describe('OverviewStep', () => {
     expect(screen.queryByText('Subject Information')).not.toBeInTheDocument();
 
     // Click toggle to show inherited metadata
-    const toggleButton = screen.getByRole('button', { name: /view inherited metadata/i });
+    const toggleButton = screen.getByRole('button', { name: /inherited subject metadata/i });
     await user.click(toggleButton);
 
     // Now subject fields should be visible and read-only
@@ -163,7 +163,7 @@ describe('OverviewStep', () => {
     );
 
     // Expand inherited metadata
-    const toggleButton = screen.getByRole('button', { name: /view inherited metadata/i });
+    const toggleButton = screen.getByRole('button', { name: /inherited subject metadata/i });
     await user.click(toggleButton);
 
     await waitFor(() => {
@@ -228,7 +228,7 @@ describe('OverviewStep', () => {
     expect(screen.queryByText('Experimenters')).not.toBeInTheDocument();
 
     // Expand inherited metadata
-    const toggleButton = screen.getByRole('button', { name: /view inherited metadata/i });
+    const toggleButton = screen.getByRole('button', { name: /inherited subject metadata/i });
     await user.click(toggleButton);
 
     // Now inherited sections should be visible
@@ -293,7 +293,7 @@ describe('OverviewStep', () => {
           onSubjectUpdate={onSubjectUpdate}
         />
       );
-      await user.click(screen.getByRole('button', { name: /view inherited metadata/i }));
+      await user.click(screen.getByRole('button', { name: /inherited subject metadata/i }));
       await waitFor(() => expect(screen.getByText('Subject Information')).toBeInTheDocument());
       return user;
     };
@@ -318,6 +318,34 @@ describe('OverviewStep', () => {
       await user.tab();
 
       expect(onSubjectUpdate).toHaveBeenCalledWith('weight', 450);
+    });
+
+    it('shows an inline error when an edited species is not a valid binomial', async () => {
+      const onSubjectUpdate = vi.fn();
+      const user = await expand(onSubjectUpdate);
+
+      const species = screen.getByLabelText('Species');
+      await user.clear(species);
+      await user.type(species, 'Rat');
+      await user.tab();
+
+      // The user sees the format error at the repair site (not silently left invalid).
+      expect(screen.getByRole('alert')).toHaveTextContent(/latin binomial|ncbi/i);
+    });
+
+    it('clears the species error once a valid binomial is entered', async () => {
+      const user = await expand(vi.fn());
+      const species = screen.getByLabelText('Species');
+
+      await user.clear(species);
+      await user.type(species, 'Rat');
+      await user.tab();
+      expect(screen.queryByRole('alert')).toBeInTheDocument();
+
+      await user.clear(species);
+      await user.type(species, 'Rattus norvegicus');
+      await user.tab();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
 
     it('exposes data-field-path anchors so a subject validation error can focus the field', async () => {

@@ -35,7 +35,7 @@ function validateAnimalForm(formData, existingAnimals) {
       errors.speciesCustom = 'Custom species name is required';
     } else if (!isValidSpecies(formData.speciesCustom)) {
       errors.speciesCustom =
-        'Use a Latin binomial (e.g. "Rattus norvegicus") or an NCBI Taxonomy URI — DANDI rejects free text';
+        'Use a scientific name (e.g. "Rattus norvegicus") or an NCBI Taxonomy URI — free text like "Rat" is rejected by NWB archives';
     }
   }
 
@@ -479,7 +479,7 @@ function AnimalCreationForm({
             className={fieldErrors.weight ? 'invalid' : ''}
           />
           <span id="weight-hint" className="validation-hint">
-            Subject weight in grams at the time of recording.
+            Subject weight in grams (animal baseline, e.g. at surgery or first recording).
           </span>
           {fieldErrors.weight && (
             <span className="validation-error" role="alert">

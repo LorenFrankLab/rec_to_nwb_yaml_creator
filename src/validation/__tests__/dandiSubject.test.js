@@ -7,6 +7,10 @@ describe('isValidSpecies (DANDI: Latin binomial or NCBI Taxon URI)', () => {
     expect(isValidSpecies('Mus musculus')).toBe(true);
   });
 
+  it('accepts a trinomial (genus + subspecies)', () => {
+    expect(isValidSpecies('Mus musculus domesticus')).toBe(true);
+  });
+
   it('accepts an NCBI Taxonomy URI', () => {
     expect(isValidSpecies('http://purl.obolibrary.org/obo/NCBITaxon_10116')).toBe(true);
   });
