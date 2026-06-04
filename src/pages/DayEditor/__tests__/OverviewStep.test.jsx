@@ -267,6 +267,26 @@ describe('OverviewStep', () => {
     expect(experimentDesc).toBeRequired();
   });
 
+  it('shows an inline error when experiment description is cleared (validated at the merged path)', async () => {
+    const user = userEvent.setup();
+    render(
+      <OverviewStep
+        animal={mockAnimal}
+        day={{ ...mockDay, session: { ...mockDay.session, experiment_description: 'Some experiment' } }}
+        mergedDay={{ ...mockMergedDay, experiment_description: 'Some experiment' }}
+        onFieldUpdate={vi.fn()}
+      />
+    );
+
+    const field = screen.getByLabelText(/Experiment Description/i);
+    await user.clear(field);
+    await user.tab();
+
+    await waitFor(() => {
+      expect(screen.getByText(/cannot be empty|empty or contain only whitespace/i)).toBeInTheDocument();
+    });
+  });
+
   it('renders textarea for long text fields', () => {
     render(
       <OverviewStep
@@ -346,6 +366,39 @@ describe('OverviewStep', () => {
       await user.type(species, 'Rattus norvegicus');
       await user.tab();
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    it('auto-expands the inherited section when a subject field is the repair target', () => {
+      // The repair routes here with focusRequest.fieldPath = 'subject.weight'; the
+      // section must open so the control is actually rendered (and focusable).
+      render(
+        <OverviewStep
+          animal={mockAnimal}
+          day={mockDay}
+          mergedDay={mockMergedDay}
+          onFieldUpdate={vi.fn()}
+          onSubjectUpdate={vi.fn()}
+          focusRequest={{ fieldPath: 'subject.weight', token: 1 }}
+        />
+      );
+
+      // Without any click, the subject fields are visible because the section opened.
+      expect(screen.getByText('Subject Information')).toBeInTheDocument();
+      expect(document.querySelector('[data-field-path="subject.weight"]')).toBeInTheDocument();
+    });
+
+    it('does not auto-expand for a non-subject focus target', () => {
+      render(
+        <OverviewStep
+          animal={mockAnimal}
+          day={mockDay}
+          mergedDay={mockMergedDay}
+          onFieldUpdate={vi.fn()}
+          onSubjectUpdate={vi.fn()}
+          focusRequest={{ fieldPath: 'session_description', token: 1 }}
+        />
+      );
+      expect(screen.queryByText('Subject Information')).not.toBeInTheDocument();
     });
 
     it('exposes data-field-path anchors so a subject validation error can focus the field', async () => {

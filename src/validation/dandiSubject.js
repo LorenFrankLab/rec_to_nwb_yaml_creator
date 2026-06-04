@@ -11,23 +11,27 @@
  * the gate cannot disagree.
  */
 
-// A Latin binomial (or trinomial): capitalized genus + one or more lower-case
-// epithets (e.g. "Rattus norvegicus", "Mus musculus domesticus")...
-const LATIN_BINOMIAL = /^[A-Z][a-z]+( [a-z]+)+$/;
+// A Latin binomial: capitalized genus + a single lower-case species epithet
+// (e.g. "Rattus norvegicus"). NWB Inspector's dandi-config species check is exactly
+// this two-word form — trinomials/subspecies are NOT accepted, so we don't either...
+const LATIN_BINOMIAL = /^[A-Z][a-z]+ [a-z]+$/;
 // ...or an NCBI Taxonomy URI (e.g. "http://purl.obolibrary.org/obo/NCBITaxon_10116").
 const NCBI_TAXON_URI = /^http:\/\/purl\.obolibrary\.org\/obo\/NCBITaxon_\d+$/;
 
 /**
  * Whether a species value satisfies the DANDI requirement (Latin binomial or NCBI
- * Taxonomy URI). Surrounding whitespace is tolerated.
+ * Taxonomy URI). The value is tested **exactly as given** — surrounding whitespace is
+ * NOT tolerated, because the exported value is what NWB Inspector validates; a padded
+ * value that this helper accepted while the export emitted the padding would be
+ * fail-open. Callers store a trimmed value, so the gate stays fail-closed for the
+ * emitted string.
  *
  * @param {*} value - Candidate species string.
  * @returns {boolean} True when DANDI-valid.
  */
 export function isValidSpecies(value) {
   if (typeof value !== 'string') return false;
-  const trimmed = value.trim();
-  return LATIN_BINOMIAL.test(trimmed) || NCBI_TAXON_URI.test(trimmed);
+  return LATIN_BINOMIAL.test(value) || NCBI_TAXON_URI.test(value);
 }
 
 /**

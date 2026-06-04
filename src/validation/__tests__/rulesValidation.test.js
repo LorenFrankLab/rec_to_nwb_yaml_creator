@@ -686,6 +686,16 @@ describe('rulesValidation()', () => {
         .some((x) => x.code === 'invalid_species')).toBe(false);
     });
 
+    it('flags a padded species value (fail-closed against the exported string)', () => {
+      const issues = rulesValidation({ subject: { species: '  Rattus norvegicus  ' } });
+      expect(issues.some((x) => x.code === 'invalid_species')).toBe(true);
+    });
+
+    it('flags a trinomial species (NWB Inspector accepts only the binomial)', () => {
+      const issues = rulesValidation({ subject: { species: 'Mus musculus domesticus' } });
+      expect(issues.some((x) => x.code === 'invalid_species')).toBe(true);
+    });
+
     it('does not double-report an empty species (schema owns that)', () => {
       expect(rulesValidation({ subject: { species: '' } })
         .some((x) => x.code === 'invalid_species')).toBe(false);

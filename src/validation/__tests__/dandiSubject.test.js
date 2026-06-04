@@ -7,8 +7,8 @@ describe('isValidSpecies (DANDI: Latin binomial or NCBI Taxon URI)', () => {
     expect(isValidSpecies('Mus musculus')).toBe(true);
   });
 
-  it('accepts a trinomial (genus + subspecies)', () => {
-    expect(isValidSpecies('Mus musculus domesticus')).toBe(true);
+  it('rejects a trinomial / subspecies (NWB Inspector accepts only the two-word binomial)', () => {
+    expect(isValidSpecies('Mus musculus domesticus')).toBe(false);
   });
 
   it('accepts an NCBI Taxonomy URI', () => {
@@ -33,8 +33,11 @@ describe('isValidSpecies (DANDI: Latin binomial or NCBI Taxon URI)', () => {
     expect(isValidSpecies(null)).toBe(false);
   });
 
-  it('tolerates surrounding whitespace on an otherwise-valid binomial', () => {
-    expect(isValidSpecies('  Rattus norvegicus  ')).toBe(true);
+  it('rejects a padded value (the exported string must be clean — fail-closed)', () => {
+    // NWB Inspector validates the exact exported value; a padded value would fail
+    // there, so the gate must not accept it either.
+    expect(isValidSpecies('  Rattus norvegicus  ')).toBe(false);
+    expect(isValidSpecies('Rattus norvegicus ')).toBe(false);
   });
 });
 

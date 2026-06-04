@@ -33,7 +33,9 @@ function validateAnimalForm(formData, existingAnimals) {
   if (formData.species === 'other') {
     if (!formData.speciesCustom?.trim()) {
       errors.speciesCustom = 'Custom species name is required';
-    } else if (!isValidSpecies(formData.speciesCustom)) {
+    } else if (!isValidSpecies(formData.speciesCustom.trim())) {
+      // Validate the trimmed value — the same string the form stores (and the export
+      // emits), so the form and the export gate agree.
       errors.speciesCustom =
         'Use a scientific name (e.g. "Rattus norvegicus") or an NCBI Taxonomy URI — free text like "Rat" is rejected by NWB archives';
     }

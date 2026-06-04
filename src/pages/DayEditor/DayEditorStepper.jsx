@@ -243,6 +243,7 @@ export default function DayEditorStepper() {
           onFieldUpdate={handleFieldUpdate}
           onSubjectUpdate={handleSubjectUpdate}
           onNavigate={handleStepNavigate}
+          focusRequest={focusRequest}
           animalDays={animalDays}
           actions={actions}
         />

@@ -225,7 +225,10 @@ export const rulesValidation = (model) => {
         path: 'subject.subject_id',
         code: 'subject_id_slash',
         severity: 'error',
-        message: `Subject ID "${subject.subject_id}" must not contain "/" (DANDI rejects slashes in subject_id).`,
+        message:
+          `Subject ID "${subject.subject_id}" must not contain "/" (DANDI rejects slashes). ` +
+          `The Subject ID is the animal's identity and can't be edited here — recreate the ` +
+          `animal with a slash-free ID.`,
       });
     }
   }
@@ -235,7 +238,10 @@ export const rulesValidation = (model) => {
       path: 'session_id',
       code: 'session_id_slash',
       severity: 'error',
-      message: `Session ID "${model.session_id}" must not contain "/" (DANDI rejects slashes in session_id).`,
+      message:
+        `Session ID "${model.session_id}" must not contain "/" (DANDI rejects slashes). ` +
+        `The Session ID is derived from the Subject ID and date — fix the Subject ID (by ` +
+        `recreating the animal with a slash-free ID).`,
     });
   }
 

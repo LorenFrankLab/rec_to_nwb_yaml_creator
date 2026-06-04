@@ -6,6 +6,36 @@
 
 ---
 
+## Phase 5 review fixes: fail-closed species + reachable subject repair (June 4, 2026)
+
+### Changes
+
+- **Species validation is fail-closed and matches NWB Inspector.** `isValidSpecies` now requires the
+  exact two-word Latin binomial `^[A-Z][a-z]+ [a-z]+$` (trinomials/subspecies rejected — NWB Inspector's
+  dandi check accepts only the binomial) and no longer trims, so a padded value the gate accepted while
+  the export emitted the padding can't slip through. Callers store a trimmed value, so a clean species
+  passes and a padded/legacy one is flagged. The creation form validates the trimmed value it stores.
+- **Subject repair actions reach their control.** The editable DOB/weight/species/description fields live
+  in the collapsed "inherited metadata" section, so a `subject.*` repair landed on nothing. The Overview
+  now auto-expands that section when a subject field is the repair target (via the stepper's `focusRequest`).
+- **Inline validation of the day session fields uses the exported path.** `experiment_description` /
+  `session_description` are stored under `day.session.*` but exported at the top level (where the schema
+  error lives). The Overview blur-validation now patches the just-typed value onto the merged model at its
+  top-level path, so clearing a required field shows the inline error instead of silently blocking export.
+- **Slash-ID errors carry an actionable remedy.** `subject_id` / `session_id` slash messages now explain
+  that the Subject ID is identity and can't be edited in place — the animal must be recreated with a
+  slash-free ID (the Session ID derives from it). Creation already blocks new slashes; this is for
+  imported/legacy data.
+
+### Known limitations (imported/legacy data only)
+
+- A slashed `subject_id`/`session_id` is flagged but not editable from the day (identity / derived);
+  the message directs the user to recreate the animal. A rename/re-key flow is out of scope.
+- The subject weight repair edits the animal weight. A day-level `session.weight` override (settable only
+  via import, no UI) is the export's preferred source and isn't repaired from this surface.
+
+---
+
 ## Subject & session completeness for schema + DANDI (June 4, 2026)
 
 ### Summary

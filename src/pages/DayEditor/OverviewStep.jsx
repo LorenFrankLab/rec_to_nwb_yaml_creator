@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import Breadcrumb from './Breadcrumb';
 import ReadOnlyField from './ReadOnlyField';
@@ -24,9 +24,10 @@ import { isValidSpecies } from '../../validation/dandiSubject';
  * @param {object} props.mergedDay - Merged animal + day for validation
  * @param {Function} props.onFieldUpdate - Callback: (fieldPath, value) => void
  * @param props.onSubjectUpdate
+ * @param props.focusRequest
  * @returns {JSX.Element}
  */
-export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, onSubjectUpdate }) {
+export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, onSubjectUpdate, focusRequest }) {
   const [fieldErrors, setFieldErrors] = useState({});
   const [validatingField, setValidatingField] = useState(null);
   const [showInherited, setShowInherited] = useState(false);
@@ -35,16 +36,43 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
   // with no place to fix" trap this repair surface exists to remove.
   const [speciesError, setSpeciesError] = useState('');
 
-  // Validate field on blur
+  // A repair action for a subject field (e.g. subject.date_of_birth) routes here, but
+  // those controls live inside the collapsed "inherited metadata" section — so the
+  // stepper's focus search would find no anchor and land on nothing. Expand the
+  // section when a subject field is the focus target so the control is rendered and
+  // can actually be focused.
+  const focusFieldPath = focusRequest?.fieldPath;
+  const focusToken = focusRequest?.token;
+  useEffect(() => {
+    if (typeof focusFieldPath === 'string' && focusFieldPath.startsWith('subject.')) {
+      setShowInherited(true);
+    }
+    // focusToken changes on every repair click, so a re-click re-expands.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusToken, focusFieldPath]);
+
+  // Validate field on blur. The session fields are stored nested under `day.session`
+  // (the write path, e.g. `session.experiment_description`) but the export emits them
+  // at the TOP level (e.g. `experiment_description`) — which is the path the schema
+  // error carries. Validating the stale `mergedDay` at the nested write path showed no
+  // error even when the field was emptied. Instead, patch the just-typed value onto a
+  // clone of the merged model at its exported (top-level) path and validate there, so
+  // the inline error reflects the current value.
   const handleBlur = useCallback(async (fieldPath, value) => {
     setValidatingField(fieldPath);
 
     // 1. Update store (auto-save)
     onFieldUpdate(fieldPath, value);
 
-    // 2. Validate field
+    // 2. Validate the just-edited value at its exported path
     try {
-      const { valid, errors } = await validateField(mergedDay, fieldPath);
+      const validatePath = fieldPath.startsWith('session.')
+        ? fieldPath.slice('session.'.length)
+        : fieldPath;
+      const patched = structuredClone(mergedDay);
+      patched[validatePath] = value;
+
+      const { valid, errors } = await validateField(patched, validatePath);
 
       setFieldErrors(prev => ({
         ...prev,
@@ -341,8 +369,13 @@ OverviewStep.propTypes = {
   mergedDay: PropTypes.object.isRequired,
   onFieldUpdate: PropTypes.func.isRequired,
   onSubjectUpdate: PropTypes.func,
+  focusRequest: PropTypes.shape({
+    fieldPath: PropTypes.string,
+    token: PropTypes.number,
+  }),
 };
 
 OverviewStep.defaultProps = {
   onSubjectUpdate: () => {},
+  focusRequest: null,
 };
