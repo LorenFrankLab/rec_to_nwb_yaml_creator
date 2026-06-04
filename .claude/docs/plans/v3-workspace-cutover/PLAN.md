@@ -62,3 +62,5 @@ For agent invocation, **load only the slice you need**:
     follow-ups (inherited behavioral events vs. merge; reconfig versioning atomicity) before cutover.
   - [phase-11-cutover-v3.md](phase-11-cutover-v3.md) — **M13:** default route → workspace, legacy
     toggle, flag flip, parity enforcement, tag v3.0.0.
+    **Gated on** the [pre-cutover-export-correctness](../pre-cutover-export-correctness/PLAN.md) plan —
+    the workspace export path must produce valid, complete YAML before the default route flips.
