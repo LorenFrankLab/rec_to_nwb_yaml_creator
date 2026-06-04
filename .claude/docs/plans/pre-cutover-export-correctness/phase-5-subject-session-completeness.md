@@ -30,6 +30,8 @@ each makes the file invalid or DANDI-unpublishable with no in-app remedy.
 
 **Contracts referenced:**
 
+- [User mental-model contract](shared-contracts.md#user-mental-model-contract) — subject/session fields should
+  be framed as animal and recording-session facts, with DANDI constraints translated into user terms.
 - [Schema device-output contract](shared-contracts.md#schema-device-output-contract) — DOB timestamp form.
 - [DANDI conformance contract](shared-contracts.md#dandi-conformance-contract) — species binomial/URI,
   sex enum (already OK), no-slash ids, age-or-DOB.

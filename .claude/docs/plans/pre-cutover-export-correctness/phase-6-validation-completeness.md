@@ -38,6 +38,8 @@ fail-closed gate, these new **error**-severity rules then block export of the af
 
 **Contracts referenced:**
 
+- [User mental-model contract](shared-contracts.md#user-mental-model-contract) — validation and repair should
+  name the affected scientific object and next safe action, not only schema paths.
 - [Validation & export-gate contract](shared-contracts.md#validation--export-gate-contract) — new rules
   are **error** severity only where they yield invalid/ambiguous YAML; they flow through `validate` →
   `computeStepStatus.export` → the phase-1 gate.

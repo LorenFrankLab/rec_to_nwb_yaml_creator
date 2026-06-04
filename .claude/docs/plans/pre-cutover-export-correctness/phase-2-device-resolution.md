@@ -27,6 +27,8 @@ snapshots are the source of truth, `animal.devices` mirrors the latest snapshot,
 
 **Contracts referenced:**
 
+- [User mental-model contract](shared-contracts.md#user-mental-model-contract) — physical configuration is a
+  recording-day fact; historical days must not look like they edit live latest devices.
 - [Export-resolution source-of-truth contract](shared-contracts.md#export-resolution-source-of-truth-contract).
 - [UX mistake-prevention contract](shared-contracts.md#ux-mistake-prevention-contract) — day device editing
   must show the pinned configuration version/range context.

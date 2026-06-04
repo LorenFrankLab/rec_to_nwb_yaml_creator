@@ -35,6 +35,8 @@ split that surfaced as PropType warnings).
 
 **Contracts referenced:**
 
+- [User mental-model contract](shared-contracts.md#user-mental-model-contract) — device and region controls
+  should match how users describe implanted probes and brain locations, not just schema fields.
 - [Schema device-output contract](shared-contracts.md#schema-device-output-contract) — integer IDs
   end-to-end; required `description` / `targeted_location`; unique `ntrode_id`.
 - [UX mistake-prevention contract](shared-contracts.md#ux-mistake-prevention-contract) — canonical region /

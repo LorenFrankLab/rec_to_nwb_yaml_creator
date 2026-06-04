@@ -8,7 +8,9 @@ without updating this file and every phase that references it.
 - [Export-resolution source-of-truth contract](#export-resolution-source-of-truth-contract)
 - [Schema device-output contract](#schema-device-output-contract)
 - [Validation & export-gate contract](#validation--export-gate-contract)
+- [User mental-model contract](#user-mental-model-contract)
 - [UX mistake-prevention contract](#ux-mistake-prevention-contract)
+- [Professional UX quality contract](#professional-ux-quality-contract)
 - [Spyglass naming-identity contract](#spyglass-naming-identity-contract)
 - [DANDI conformance contract](#dandi-conformance-contract)
 - [Parity, golden-fixture & round-trip contract](#parity-golden-fixture--round-trip-contract)
@@ -108,9 +110,42 @@ Referenced by phases 1, 6. The day-level export must be **fail-closed**.
 
 ---
 
+## User mental-model contract
+
+Referenced by phases 1–11. Every agent implementing or auditing this plan must reason from the scientist's
+workflow first and the YAML/schema second. The app is not merely a schema editor; it is a tool for describing
+a real recording session so it can convert cleanly, publish to DANDI, and ingest into Spyglass.
+
+- **Users think in animals, recording days, rigs, and sessions.** They do not naturally think in
+  `mergeDayMetadata`, `ntrode_electrode_group_channel_map`, AJV paths, or Spyglass primary keys. UI labels,
+  repair actions, preflight summaries, and QA scenarios should start from "what was recorded on this day?"
+  and only expose technical names when precision requires it.
+- **Physical configuration is a recording fact.** Probe geometry, camera calibration/zoom, data-acq hardware,
+  and optogenetics state are facts about a recording day. Later edits are corrections to metadata, not a
+  casual rewrite of history. Configuration version context and reconfiguration confirmation must preserve
+  that mental model.
+- **Names are identities, not decoration.** Users may think a camera/task/data-acq name is just a label, but
+  Spyglass treats these as identities. The UI must teach this at the moment of risk: same name means same
+  dependent metadata; a camera with a different zoom/calibration/lens/model/id needs a different name.
+- **Export is a confidence checkpoint, not just file download.** Users expect "Export" to mean "this is ready
+  for conversion/publication/ingestion." The preflight summary must answer their real questions: which animal
+  and day, which configuration version, which cameras/calibrations, which probes/bad channels, which tasks
+  and videos, whether opto is on, and whether downstream identity risks remain.
+- **Repair should not require knowing the schema.** A scientist should not need DANDI/Spyglass/AJV knowledge
+  to fix an issue. Errors should name the affected scientific object, explain the consequence, and route to
+  the next safe action.
+- **Autosave and persistence must match ordinary expectations.** Users assume edits they see are retained
+  unless the UI says otherwise. Save state, failed-save warnings, reload recovery, and partial-import notices
+  must be visible and specific enough to maintain trust.
+- **Agent implementation rule.** Before adding controls, validation, QA, or copy, identify the user goal,
+  the user's likely mental model, the dangerous misconception, and the UI behavior that prevents or repairs
+  it. Phase 10/11 artifacts must include this mental-model mapping for the core workflows.
+
+---
+
 ## UX mistake-prevention contract
 
-Referenced by phases 1–8. The user should encounter invalid states as close as possible to
+Referenced by phases 1–11. The user should encounter invalid states as close as possible to
 the field or workflow that created them, not only at final export. This is a correctness contract, not polish:
 the UI must make the scientifically dangerous choices hard to make accidentally.
 
@@ -140,6 +175,40 @@ the UI must make the scientifically dangerous choices hard to make accidentally.
 - **Import/persistence errors name the damaged section.** Partial import and workspace-load recovery notices
   identify the excluded/normalized top-level section and the nested field/path that caused it, so users know
   what was not carried forward.
+- **Browser QA and scripted usability audit verify the integrated path.** Phase 9 samples these UX contracts
+  in Playwright using required controls and real browser navigation/download/persistence behavior; required
+  workspace flows must fail tests when a control is absent, not quietly skip. Phase 10 then triangulates UI,
+  workspace state, exported YAML, mistake injection, labels/units, keyboard/viewport behavior, and recovery
+  into an executable findings/fix log.
+
+---
+
+## Professional UX quality contract
+
+Referenced by phase 11. Correct output is not enough for cutover; the workspace must feel predictable,
+coherent, and professionally usable for repeated scientific work. Phase 11 is still Claude-executable: it
+uses code inspection, Playwright screenshots, keyboard/browser checks, and findings artifacts rather than
+human observation.
+
+- **Consistency is part of safety.** Add/Edit/Delete/Save/Cancel, modal close behavior, destructive
+  confirmations, disabled states, status badges, repair actions, and export/preflight controls behave the
+  same way across screens unless a difference is explicitly justified by the workflow.
+- **Scientific fields expose meaning at the control.** High-risk fields show labels, units, examples, and
+  required/optional status close to the input. Users should not need schema knowledge to know what
+  `meters_per_pixel`, `lens`, species, region, task epoch, camera id, or opto state means.
+- **Context is always visible.** Users can tell which animal/day/session/configuration version they are
+  editing, whether changes are saved, whether validation is clean, and whether export is ready.
+- **Responsive and dense layouts remain usable.** Desktop, tablet-ish, and narrow widths keep critical
+  controls reachable; text does not overflow important buttons/badges/modals/tables; validation and preflight
+  summaries stay scannable.
+- **Accessibility polish goes beyond tabbing.** Focus order, visible focus, focus trap/return, accessible
+  names, error associations, status announcements, contrast/status semantics, and reduced-motion tolerance are
+  checked for critical flows.
+- **Content design names consequence and next action.** Errors, empty states, disabled-state explanations,
+  destructive confirmations, and preflight copy use user-facing scientific language, state what will happen,
+  and tell the user the next safe action.
+- **Perceived performance builds confidence.** Autosave, validation, export, and recovery feedback are timely,
+  stable, and unambiguous; users are not left wondering whether a change saved or an export started.
 
 ---
 

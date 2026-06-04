@@ -24,6 +24,8 @@ that currently produce invalid YAML will (correctly) be blocked from export.
 
 **Contracts referenced:**
 
+- [User mental-model contract](shared-contracts.md#user-mental-model-contract) — Export is a confidence
+  checkpoint for a recording day, not just a file download.
 - [Validation & export-gate contract](shared-contracts.md#validation--export-gate-contract) — the gate
   consults `computeStepStatus(...).export`; `ExportStep` re-checks it; the shadow-export check stays.
 - [UX mistake-prevention contract](shared-contracts.md#ux-mistake-prevention-contract) — blocked export

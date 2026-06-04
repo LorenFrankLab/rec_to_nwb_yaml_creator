@@ -31,8 +31,10 @@ the "no broad legacy changes" non-goal, justified because the bug silently keeps
 (`schemaValidation.js`) is **shared** — the workspace export gate calls `validate` → `schemaValidation`,
 so better nested-error paths improve the workspace's own validation messages (in-scope regardless).
 
-**UX referenced:** [UX mistake-prevention contract](shared-contracts.md#ux-mistake-prevention-contract) —
-partial import and persistence recovery notices must name the damaged section/path.
+**UX referenced:** [User mental-model contract](shared-contracts.md#user-mental-model-contract) and
+[UX mistake-prevention contract](shared-contracts.md#ux-mistake-prevention-contract) — partial import and
+persistence recovery notices must name the damaged scientific section/path and preserve user trust in what
+was retained.
 
 ## Tasks
 

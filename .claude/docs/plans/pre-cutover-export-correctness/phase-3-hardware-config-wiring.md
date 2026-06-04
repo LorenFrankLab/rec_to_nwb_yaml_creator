@@ -26,6 +26,8 @@ in the exported YAML.
 
 **Contracts referenced:**
 
+- [User mental-model contract](shared-contracts.md#user-mental-model-contract) — cameras, data-acq hardware,
+  and technical defaults should be framed as rig/session facts, with names treated as identities.
 - [Export-resolution source-of-truth contract](shared-contracts.md#export-resolution-source-of-truth-contract)
   — `data_acq_device` ← `animal.devices.data_acq_device`; `cameras` ← `animal.cameras`; `technical.*` is
   per-day.

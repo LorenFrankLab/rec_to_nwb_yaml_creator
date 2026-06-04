@@ -34,6 +34,8 @@ experiment's central manipulation.)
 
 **Contracts referenced:**
 
+- [User mental-model contract](shared-contracts.md#user-mental-model-contract) — optogenetics is a recording
+  manipulation with an explicit on/off state, not hidden optional metadata.
 - [Parity, golden-fixture & round-trip contract](shared-contracts.md#parity-golden-fixture--round-trip-contract)
   — opto output changes; **run the mandatory round-trip** on an opto sample (convert → inspector → dandi
   validate → Spyglass smoke).

@@ -82,13 +82,18 @@ how the model is built and gated, not in the encoder.
   stable dataset-level identities such as camera/data-acq/task names). The merge gate also runs a Spyglass
   smoke ingest, because Spyglass can log failures to `InsertError` and keep going unless told to raise —
   see the downstream note in [shared-contracts.md](shared-contracts.md).
+- **Browser-level QA, usability/proper-behavior audit, and professional UX polish.** After phases 1–8, a
+  Playwright pass exercises the corrected workspace flows in a real browser, then Claude-executable audits
+  triangulate UI/workspace/export behavior and apply professional UX polish before the v3 cutover consumes
+  this work.
 
 ### Non-Goals
 
 - **No broad legacy-form changes.** The single-page legacy form is the frozen safety net. The only allowed
   exception is phase 7's shared schema-error-path fix plus the legacy partial-import bug it exposes; that
   exception is documented in the phase and must not become a general legacy refactor.
-- **No cutover.** Flag flips and the default-route change are Phase 11 of the v3 plan, not here.
+- **No cutover.** Flag flips and the default-route change are Phase 11 of the separate
+  [v3-workspace-cutover](../v3-workspace-cutover/PLAN.md) plan, not this plan's Phase 11 UX polish audit.
 - **No new probe/device types.** But note `nwb_schema.json` **may need small edits** to encode DANDI
   constraints the bundled schema omits (e.g. a `species` pattern, `subject_id`/`session_id` no-slash
   patterns); coordinate any schema change with `trodes_to_nwb`'s bundled copy (they share it).
@@ -100,8 +105,9 @@ how the model is built and gated, not in the encoder.
 
 ### Dependency policy
 
-No new runtime dependencies. All fixes use existing libraries (AJV, the `yaml` encoder) and existing
-helpers (`getChannelCount`, `deviceTypeMap`, `validate`, `schemaValidation`).
+No new runtime dependencies. All fixes use existing libraries (AJV, the `yaml` encoder), existing helpers
+(`getChannelCount`, `deviceTypeMap`, `validate`, `schemaValidation`), and the already-installed Playwright
+dev tooling for the phase-9 browser QA pass, phase-10 audit, and phase-11 UX polish audit.
 
 ## Metrics
 
@@ -120,10 +126,25 @@ helpers (`getChannelCount`, `deviceTypeMap`, `validate`, `schemaValidation`).
   `data_acq_device[].name`, task name), locations non-empty/canonical, behavioral-event names unique, and a
   Spyglass smoke ingest (`populate_all_common(..., raise_err=True)` or zero `InsertError` plus expected
   rows) succeeds ([naming-identity contract](shared-contracts.md#spyglass-naming-identity-contract)).
+- **User mental model preserved:** controls, validation, repair actions, and preflight explain the workflow
+  in terms of animals, recording days, rigs, cameras/calibrations, probes, tasks/videos, opto state, and
+  export confidence rather than schema paths alone
+  ([mental-model contract](shared-contracts.md#user-mental-model-contract)).
 - **UX mistake-prevention:** export-blocking issues expose repair actions; camera/data-acq/task identity
   drift is caught while editing; task/video camera and epoch references are controlled choices; configuration
   version and optogenetics enabled/off state are visible; Export shows the preflight summary
   ([UX contract](shared-contracts.md#ux-mistake-prevention-contract)).
+- **Playwright QA:** `npm run test:e2e` covers the corrected workspace happy path, fail-closed export/repair
+  navigation, mistake-prevention controls, persistence recovery, opto on/off behavior, and desktop/narrow
+  viewport reachability ([phase 9](phase-9-playwright-qa-pass.md)).
+- **Claude-executable usability/proper-behavior audit:** the phase-10 findings artifact proves UI/state/export
+  agreement, mistake-injection coverage, label/unit clarity, keyboard/narrow-viewport usability, visible
+  repair recovery, and a cutover recommendation
+  ([phase 10](phase-10-claude-usability-behavior-audit.md)).
+- **Professional UX quality:** the phase-11 polish report proves interaction consistency, form clarity,
+  information hierarchy, responsive layout, accessibility polish, content quality, and perceived-performance
+  confidence, with remaining debt severity-ranked
+  ([phase 11](phase-11-professional-ux-polish-audit.md)).
 
 ## Risks and Mitigations
 
@@ -134,17 +155,22 @@ helpers (`getChannelCount`, `deviceTypeMap`, `validate`, `schemaValidation`).
 | Fixing IDs to integers breaks components that assume strings | Phase 4 standardizes the type end-to-end (creation, `ChannelMapEditor`/`DevicesStep` PropTypes, channel-map utils) in one PR and asserts the merged output's types. |
 | Fail-closed export makes the new editor look broken before output fixes land | Intended and safe — the legacy path is still default and the workspace is flag-gated. Phases 2–5 restore exportability for valid sessions. Noted in phase 1. |
 | Python/DANDI/Spyglass environment unavailable while developing a phase | AJV/`nwb_schema.json` + app rules are the interim local gate only. Output-changing phases must not merge until the real `trodes_to_nwb` → NWB Inspector dandi config → `dandi validate` → Spyglass smoke output is run and recorded. |
+| Playwright QA becomes brittle or superficial | Phase 9 uses role/label selectors, deterministic workspace fixtures, event/locator waits, and no conditional "if visible" skips for required workspace flows. Visual snapshots stay limited; traces/screenshots are artifacts for debugging. |
+| Automated usability audit misses human confusion | Phase 10 is Claude-executable and catches UI/state/export mismatches, ambiguous labels, unreachable controls, and likely mistake paths. A separate human lab-user dry run is still recommended, but it is outside this Claude-run implementation plan. |
+| UX polish turns into broad redesign | Phase 11 fixes small consistency/content/layout/accessibility issues and logs larger redesigns as scoped follow-ups; it must not change export semantics or become a design-system rewrite. |
 
 ## Rollout Strategy
 
 Each phase is an independent PR merged to `modern` behind the existing workspace feature flags (still
-off by default). Nothing changes for legacy-form users. The output-changing phases (2–5) update the
+off by default). Nothing changes for legacy-form users. The output-changing phases (2–5, 8) update the
 **new-path** parity fixtures/tests deliberately and with review; they never touch the legacy golden
-baselines. The cutover (v3 Phase 11) consumes this work as its correctness precondition.
+baselines. Phase 9 is the browser regression QA gate after phases 1–8, Phase 10 is the Claude-executable
+usability/proper-behavior audit, and Phase 11 is the professional UX polish audit. The separate v3 cutover
+Phase 11 consumes this work as its correctness precondition.
 
 ## Open Questions
 
-All three are **decided** (2026-06-04):
+All open questions are **decided** (2026-06-04):
 
 1. **Device-resolution model — DECIDED: model B** (snapshots are the source of truth; the day pins a
    version; `animal.devices` mirrors the latest snapshot; reconfiguration forks *before* the geometry
@@ -170,14 +196,17 @@ All three are **decided** (2026-06-04):
 
 ## Estimated Effort
 
-~8 PRs. Rough diff sizes: phase 1 small–medium (~200 LOC including repair links/preflight); phase 2 medium
+~11 PRs. Rough diff sizes: phase 1 small–medium (~200 LOC including repair links/preflight); phase 2 medium
 (~275 LOC incl. design + fixtures + configuration-version context);
 phase 3 medium–large (~300 LOC — the `updateAnimal` no-op fix, camera/data-acq identity, behavioral-events
 ownership); phase 4 medium (~250 LOC incl. integer-ID sweep + multi-shank offset + stray-key removal);
 phase 5 medium (~250 LOC — subject/session completeness: weight, species, DOB, no-slash ids,
 experiment_description); phase 6 large (~450+ LOC of rules + task/video reference UX + the corrected
 channel-bound + Spyglass/DANDI rules + tests); phase 7 small–medium (~150 LOC, re-scoped); phase 8
-medium–large (~300+ LOC — workspace opto UI + key fixes + all-or-nothing validation). Test LOC dominates.
+medium–large (~300+ LOC — workspace opto UI + key fixes + all-or-nothing validation); phase 9 medium
+(~250+ LOC of Playwright fixtures/specs + QA runbook/artifacts); phase 10 small–medium (~150+ LOC/scripts
+plus QA artifact, depending how many findings are fixed inline); phase 11 small–medium (~150+ LOC/screenshots
+/copy/layout/a11y fixes + UX polish report, depending how many findings are fixed inline). Test LOC dominates.
 Each output-changing phase also carries a mandatory
 trodes_to_nwb → NWB Inspector (dandi) → dandi-validate → Spyglass smoke round-trip.
 
@@ -186,4 +215,7 @@ adds real UI per phase — the export preflight summary + repair-action routing 
 side-by-side comparison modals (phase 3), pinned-config badges + reconfiguration confirmation (phase 2),
 controlled region/canonical inputs (phases 4–5), task/video camera + epoch selectors and task-name identity
 checks (phase 6), and the opto enabled-state surface (phase 8) — which can push several phases meaningfully
-above the LOC noted. Treat the UX work as first-class scope, not trim.
+above the LOC noted. Phase 9 then verifies those UX paths in browser, including viewport/reachability issues
+that jsdom will miss. Phase 10 adds a scripted Claude-run usability/proper-behavior audit over the integrated
+experience. Phase 11 adds a professional UX polish pass over consistency, accessibility, content, responsive
+layout, and perceived performance. Treat the UX work as first-class scope, not trim.
