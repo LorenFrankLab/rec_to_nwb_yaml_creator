@@ -263,6 +263,34 @@ describe('BrainRegionAutocomplete', () => {
       expect(localMockOnChange).not.toHaveBeenCalled();
     });
 
+    it('does not wipe a whitespace-only value on blur', async () => {
+      const user = userEvent.setup();
+      const localMockOnChange = vi.fn();
+
+      render(<BrainRegionAutocomplete value="   " onChange={localMockOnChange} />);
+
+      const input = screen.getByRole('combobox');
+      input.focus();
+      await user.tab();
+
+      // canonicalizeRegion('   ') is '', which the blur guard refuses to emit
+      // (it would silently clear the field).
+      expect(localMockOnChange).not.toHaveBeenCalled();
+    });
+
+    it('does not call onChange on blur when the value is already canonical', async () => {
+      const user = userEvent.setup();
+      const localMockOnChange = vi.fn();
+
+      render(<BrainRegionAutocomplete value="CA1" onChange={localMockOnChange} />);
+
+      const input = screen.getByRole('combobox');
+      input.focus();
+      await user.tab();
+
+      expect(localMockOnChange).not.toHaveBeenCalled();
+    });
+
     it('allows typing custom brain region not in suggestions', async () => {
       const user = userEvent.setup();
 

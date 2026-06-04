@@ -186,6 +186,19 @@ describe('ElectrodeGroupModal', () => {
       await fillRequiredFields(user);
       expect(screen.getByRole('button', { name: /save/i })).not.toBeDisabled();
     });
+
+    it('shows a hint explaining the disabled Save, and removes it once valid', async () => {
+      render(<ElectrodeGroupModal isOpen mode="add" onSave={() => {}} onCancel={() => {}} />);
+
+      // Incomplete form: a hint names what's missing instead of a silent disabled button.
+      expect(screen.getByText(/fill in all required fields/i)).toBeInTheDocument();
+
+      await fillRequiredFields(user);
+
+      // Once valid, the hint disappears and Save is enabled.
+      expect(screen.queryByText(/fill in all required fields/i)).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /save/i })).not.toBeDisabled();
+    });
   });
 
   describe('Region fields use controlled / canonical entry', () => {

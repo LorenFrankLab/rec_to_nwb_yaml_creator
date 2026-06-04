@@ -403,5 +403,24 @@ describe('channelMapUtils', () => {
 
       expect(nextNtrodeId(existingMaps)).toBe(8);
     });
+
+    test('ignores a non-numeric ntrode_id instead of returning NaN', () => {
+      // A single corrupt id must not poison Math.max to NaN; it is excluded.
+      const existingMaps = [
+        { ntrode_id: 'abc', electrode_group_id: 0, bad_channels: [], map: {} },
+        { ntrode_id: 2, electrode_group_id: 1, bad_channels: [], map: {} },
+      ];
+
+      expect(nextNtrodeId(existingMaps)).toBe(3);
+    });
+
+    test('returns 0 when every ntrode_id is non-numeric', () => {
+      const existingMaps = [
+        { ntrode_id: undefined, electrode_group_id: 0, bad_channels: [], map: {} },
+        { ntrode_id: '', electrode_group_id: 1, bad_channels: [], map: {} },
+      ];
+
+      expect(nextNtrodeId(existingMaps)).toBe(0);
+    });
   });
 });

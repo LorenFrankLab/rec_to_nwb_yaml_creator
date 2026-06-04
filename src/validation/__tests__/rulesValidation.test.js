@@ -656,6 +656,18 @@ describe('rulesValidation()', () => {
       const issues = rulesValidation(model);
       expect(issues.some((i) => i.code === 'duplicate_ntrode_id')).toBe(false);
     });
+
+    it('reports a triplicated ntrode_id exactly once', () => {
+      const model = {
+        ntrode_electrode_group_channel_map: [
+          { ntrode_id: 2, electrode_group_id: 0, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+          { ntrode_id: 2, electrode_group_id: 1, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+          { ntrode_id: 2, electrode_group_id: 2, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+        ],
+      };
+      const dupIssues = rulesValidation(model).filter((i) => i.code === 'duplicate_ntrode_id');
+      expect(dupIssues).toHaveLength(1);
+    });
   });
 
   describe('Multiple Rules Violations', () => {

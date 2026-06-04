@@ -247,6 +247,27 @@ describe('importChannelMapsFromCSV', () => {
   });
 });
 
+describe('export → import round-trip', () => {
+  test('re-importing exported CSV preserves map/bad_channels and renumbers ntrode_id', () => {
+    const channelMaps = [
+      { electrode_group_id: 0, ntrode_id: 0, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+      { electrode_group_id: 0, ntrode_id: 1, bad_channels: [1, 3], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+    ];
+    const electrodeGroups = [{ id: 0, device_type: 'tetrode_12.5', location: 'CA1' }];
+
+    const reimported = importChannelMapsFromCSV(exportChannelMapsToCSV(channelMaps, electrodeGroups));
+
+    // The producer and consumer agree after dropping the electrode_id column:
+    // electrode_group_id, map, and bad_channels survive; ntrode_id is renumbered
+    // contiguously from 0 (import is not identity — it renumbers by design).
+    expect(reimported).toEqual([
+      { electrode_group_id: 0, ntrode_id: 0, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+      { electrode_group_id: 0, ntrode_id: 1, bad_channels: [1, 3], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+    ]);
+    reimported.forEach((m) => expect(m).not.toHaveProperty('electrode_id'));
+  });
+});
+
 describe('downloadChannelMapsCSV', () => {
   // Mock DOM APIs for testing
   let mockAnchor;

@@ -119,8 +119,11 @@ export function generateAllChannelMaps(electrodeGroups) {
  *
  * Finds the maximum `ntrode_id` across the existing maps and returns the next
  * integer, so a newly-added group's ntrodes never collide with existing ones.
- * Returns 0 for an empty array. Tolerates string-typed ids from legacy/imported
- * data (parsed defensively) while always returning an integer.
+ * Returns 0 for an empty array. Numeric-string ids from legacy/imported data are
+ * parsed; an id that does not parse to a number is treated as `-1` (i.e. excluded
+ * from the max), so a single corrupt entry can't poison the result to `NaN` and an
+ * all-corrupt map still yields `0`. The corrupt entry itself is surfaced loudly by
+ * schema validation (integer `ntrode_id`) and the duplicate-ntrode_id rule at export.
  *
  * @param {Array<object>} existingMaps - Array of existing channel map objects
  * @returns {number} Next available integer ntrode ID

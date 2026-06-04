@@ -493,7 +493,7 @@ export default function AnimalEditorStepper() {
   // Channel maps handlers
   /**
    * Open channel map editor for specific electrode group
-   * @param {string} groupId - Electrode group ID
+   * @param {number} groupId - Integer electrode group ID
    */
   function handleEditChannelMap(groupId) {
     setEditingGroupId(groupId);
