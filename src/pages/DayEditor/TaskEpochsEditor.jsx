@@ -48,14 +48,16 @@ export default function TaskEpochsEditor({ initialEpochs, onChange }) {
   });
 
   /**
-   * Parse an input string to an integer epoch number, or null if not a valid one.
+   * Parse an input string to a valid epoch number, or null if not a valid one.
+   * Epochs are 1-based positive integers, so non-positive values are rejected
+   * (and never persisted) — matching the `min="1"` guard on the input.
    * @param {string} value Raw input value.
    * @returns {number|null}
    */
   function toEpochNumber(value) {
     if (value === '' || value == null) return null;
     const n = Number(value);
-    return Number.isInteger(n) ? n : null;
+    return Number.isInteger(n) && n >= 1 ? n : null;
   }
 
   /**
@@ -169,6 +171,7 @@ export default function TaskEpochsEditor({ initialEpochs, onChange }) {
                     ref={(el) => { inputRefs.current[index] = el; }}
                     type="number"
                     step="1"
+                    min="1"
                     className="epoch-number-input"
                     aria-label={`Epoch number, row ${index + 1}`}
                     value={row.epochNumber}

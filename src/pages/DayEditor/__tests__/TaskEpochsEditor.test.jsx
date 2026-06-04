@@ -124,6 +124,27 @@ describe('TaskEpochsEditor', () => {
     expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ epochs: [] }));
   });
 
+  it('excludes non-positive epoch numbers (epochs are 1-based)', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<TaskEpochsEditor initialEpochs={[]} onChange={onChange} />);
+
+    await user.click(screen.getByRole('button', { name: /add epoch/i }));
+    await user.type(screen.getByRole('spinbutton', { name: /epoch number, row 1/i }), '-1');
+
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ epochs: [] }));
+  });
+
+  it('constrains the epoch number input to a minimum of 1', async () => {
+    const user = userEvent.setup();
+    render(<TaskEpochsEditor initialEpochs={[]} onChange={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: /add epoch/i }));
+
+    expect(screen.getByRole('spinbutton', { name: /epoch number, row 1/i }))
+      .toHaveAttribute('min', '1');
+  });
+
   it('de-duplicates repeated epoch numbers (schema uniqueItems)', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
