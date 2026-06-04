@@ -164,17 +164,16 @@ describe('lossless reordering', () => {
     ]);
   });
 
-  it('preserves an unknown key on a nested array item (electrode group)', () => {
+  it('scrubs unknown keys on schema-owned electrode group items', () => {
     const { animal, day } = buildEquivalentWorkspace();
     animal.configurationHistory[0].devices.electrode_groups[0].ref_elect_id = 7;
 
     const merged = mergeDayMetadata(animal, day);
 
-    expect(merged.electrode_groups[0].ref_elect_id).toBe(7);
-    // Appended after the known template keys, never dropped.
+    expect(merged.electrode_groups[0]).not.toHaveProperty('ref_elect_id');
     expect(Object.keys(merged.electrode_groups[0])).toEqual([
       'id', 'location', 'device_type', 'description', 'targeted_location',
-      'targeted_x', 'targeted_y', 'targeted_z', 'units', 'ref_elect_id',
+      'targeted_x', 'targeted_y', 'targeted_z', 'units',
     ]);
   });
 });

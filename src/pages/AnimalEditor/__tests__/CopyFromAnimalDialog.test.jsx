@@ -109,4 +109,82 @@ describe('CopyFromAnimalDialog', () => {
     // electrode_group_id references point at the new integer group IDs.
     expect(ntrode_electrode_group_channel_map.map((n) => n.electrode_group_id)).toEqual([1, 2]);
   });
+
+  it('normalizes mixed legacy source references and strips stray schema keys', async () => {
+    const user = userEvent.setup();
+    const onCopy = vi.fn();
+    const sourceAnimals = {
+      remy: {
+        subject: { subject_id: 'remy' },
+        devices: {
+          electrode_groups: [{ id: 0, device_type: 'tetrode_12.5', location: 'CA1' }],
+          ntrode_electrode_group_channel_map: [],
+        },
+      },
+      bean: {
+        subject: { subject_id: 'bean' },
+        devices: {
+          electrode_groups: [
+            {
+              id: '0',
+              device_type: 'tetrode_12.5',
+              location: 'CA3',
+              targeted_x: '1',
+              targeted_y: '2',
+              targeted_z: '3',
+              units: 'mm',
+              bad_channels: '0,1',
+            },
+          ],
+          ntrode_electrode_group_channel_map: [
+            {
+              ntrode_id: '0',
+              electrode_group_id: 0,
+              electrode_id: 99,
+              bad_channels: ['1'],
+              map: { 0: '0', 1: '1', 2: '2', 3: '3' },
+            },
+          ],
+        },
+      },
+    };
+
+    render(
+      <CopyFromAnimalDialog
+        open
+        currentAnimalId="remy"
+        animals={sourceAnimals}
+        onCopy={onCopy}
+        onCancel={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole('radio', { name: /bean/i }));
+    await user.click(screen.getByRole('button', { name: /^copy$/i }));
+
+    const { electrode_groups, ntrode_electrode_group_channel_map } = onCopy.mock.calls[0][0];
+    expect(electrode_groups).toEqual([
+      {
+        id: 1,
+        location: 'CA3',
+        device_type: 'tetrode_12.5',
+        description: 'CA3',
+        targeted_location: 'CA3',
+        targeted_x: 1,
+        targeted_y: 2,
+        targeted_z: 3,
+        units: 'mm',
+      },
+    ]);
+    expect(electrode_groups[0]).not.toHaveProperty('bad_channels');
+    expect(ntrode_electrode_group_channel_map).toEqual([
+      {
+        ntrode_id: 0,
+        electrode_group_id: 1,
+        bad_channels: [1],
+        map: { 0: 0, 1: 1, 2: 2, 3: 3 },
+      },
+    ]);
+    expect(ntrode_electrode_group_channel_map[0]).not.toHaveProperty('electrode_id');
+  });
 });

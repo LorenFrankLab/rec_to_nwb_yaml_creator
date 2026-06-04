@@ -52,6 +52,55 @@ describe('schema-valid device output (workspace export)', () => {
     });
   });
 
+  it('normalizes legacy snapshot device keys at the export boundary', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    animal.devices.device = { name: [] };
+    animal.configurationHistory[0].devices = {
+      electrode_groups: [
+        {
+          id: '0',
+          location: 'CA1',
+          device_type: 'tetrode_12.5',
+          targeted_x: '3',
+          targeted_y: '2.5',
+          targeted_z: '2',
+          units: 'mm',
+          bad_channels: '',
+        },
+      ],
+      ntrode_electrode_group_channel_map: [
+        {
+          ntrode_id: '1',
+          electrode_group_id: '0',
+          electrode_id: 8,
+          bad_channels: ['2'],
+          map: { 0: '0', 1: '1', 2: '2', 3: '3' },
+        },
+      ],
+    };
+
+    const merged = mergeDayMetadata(animal, day);
+
+    expect(merged.device.name).toEqual(['Trodes']);
+    expect(merged.electrode_groups[0]).toMatchObject({
+      id: 0,
+      description: 'CA1',
+      targeted_location: 'CA1',
+      targeted_x: 3,
+      targeted_y: 2.5,
+      targeted_z: 2,
+    });
+    expect(merged.electrode_groups[0]).not.toHaveProperty('bad_channels');
+    expect(merged.ntrode_electrode_group_channel_map[0]).toMatchObject({
+      ntrode_id: 1,
+      electrode_group_id: 0,
+      bad_channels: [2],
+      map: { 0: 0, 1: 1, 2: 2, 3: 3 },
+    });
+    expect(merged.ntrode_electrode_group_channel_map[0]).not.toHaveProperty('electrode_id');
+    expect(schemaValidation(merged)).toEqual([]);
+  });
+
   it('a multi-shank probe exports per-shank electrode-ID offsets and is schema-valid', () => {
     const { animal, day } = buildRealisticWorkspace();
 

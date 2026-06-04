@@ -232,7 +232,15 @@ export function stepIdForIssue(issue) {
     return 'overview';
   }
   // Device-related fields → Devices
-  if (path.includes('electrode') || path.includes('device') || path.includes('camera') || path.includes('ntrode')) {
+  if (
+    path.includes('electrode') ||
+    path.includes('device') ||
+    path.includes('camera') ||
+    path.includes('ntrode') ||
+    path.includes('targeted_') ||
+    path.includes('meters_per_pixel') ||
+    path.includes('lens')
+  ) {
     return 'devices';
   }
   // Task/behavioral fields → Epochs

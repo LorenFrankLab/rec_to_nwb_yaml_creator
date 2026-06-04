@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CamerasSection from '../CamerasSection';
 
@@ -244,14 +244,12 @@ describe('CamerasSection', () => {
   });
 
   describe('Validation', () => {
-    it('should prevent duplicate camera IDs', () => {
-      // This test verifies that the component correctly validates unique IDs
-      // The actual validation happens in the modal, but section should enforce it
+    it('surfaces duplicate camera IDs near the camera table', () => {
       const duplicateIdAnimal = {
         id: 'test',
         cameras: [
-          { id: 0, camera_name: 'Camera1', manufacturer: 'A', model: 'A', meters_per_pixel: 0.001 },
-          { id: 0, camera_name: 'Camera2', manufacturer: 'B', model: 'B', meters_per_pixel: 0.001 },
+          { id: 0, camera_name: 'Camera1', manufacturer: 'A', model: 'A', lens: '16mm', meters_per_pixel: 0.001 },
+          { id: 0, camera_name: 'Camera2', manufacturer: 'B', model: 'B', lens: '16mm', meters_per_pixel: 0.001 },
         ],
       };
 
@@ -262,10 +260,9 @@ describe('CamerasSection', () => {
         />
       );
 
-      // Both cameras should still render (section displays data as-is)
-      // But validation should flag this issue
       expect(screen.getByText('Camera1')).toBeInTheDocument();
       expect(screen.getByText('Camera2')).toBeInTheDocument();
+      expect(screen.getAllByLabelText(/duplicate camera id/i)).toHaveLength(2);
     });
   });
 

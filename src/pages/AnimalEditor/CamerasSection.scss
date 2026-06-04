@@ -276,21 +276,22 @@
 }
 
 /* Green checkmark - Complete (all fields valid, meters_per_pixel in range) */
-.status-badge.status-✓ {
+.status-badge.status-complete {
   background-color: var(--color-success-light);
   color: var(--color-success);
   border: 1px solid #81c784;
 }
 
 /* Amber warning - Warning (required fields present but meters_per_pixel outside range) */
-.status-badge.status-⚠ {
+.status-badge.status-warning {
   background-color: var(--color-warning-light);
   color: #e65100; /* Orange 900 - WCAG AA compliant (4.5:1 contrast) */
   border: 1px solid #ffb74d;
 }
 
 /* Red X - Missing required fields */
-.status-badge.status-❌ {
+.status-badge.status-incomplete,
+.status-badge.status-duplicate {
   background-color: var(--color-error-light);
   color: #c62828; /* Red 800 - WCAG AA compliant (4.5:1 contrast) */
   border: 1px solid #e57373;

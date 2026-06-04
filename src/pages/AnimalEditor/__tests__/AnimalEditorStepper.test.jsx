@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { StoreProvider } from '../../../state/StoreContext';
+import { StoreProvider, useStoreContext } from '../../../state/StoreContext';
 import AnimalEditorStepper from '../AnimalEditorStepper';
 
 import { useAnimalIdFromUrl } from '../../../hooks/useAnimalIdFromUrl';
@@ -99,6 +99,8 @@ vi.mock('../ElectrodeGroupModal', () => ({
           onClick={() => onSave({
             device_type: 'tetrode_12.5',
             location: 'CA1',
+            description: 'CA1 tetrode',
+            targeted_location: 'CA1',
             targeted_x: 1.0,
             targeted_y: 2.0,
             targeted_z: 3.0,
@@ -120,6 +122,18 @@ vi.mock('../../../hooks/useAnimalIdFromUrl', () => ({
   useAnimalIdFromUrl: vi.fn(),
 }));
 
+/**
+ * @returns {JSX.Element} Probe exposing device state for integration assertions.
+ */
+function StoreStateProbe() {
+  const { model } = useStoreContext();
+  return (
+    <pre data-testid="workspace-state">
+      {JSON.stringify(model.workspace.animals.remy?.devices || {})}
+    </pre>
+  );
+}
+
 describe('AnimalEditorStepper', () => {
   const mockInitialState = {
     workspace: {
@@ -139,9 +153,9 @@ describe('AnimalEditorStepper', () => {
   };
 
   /**
-   *
-   * @param component
-   * @param initialState
+   * @param {React.ReactNode} component - Component under test.
+   * @param {object} initialState - Store initial state.
+   * @returns {import('@testing-library/react').RenderResult} Render result.
    */
   function renderWithStore(component, initialState = mockInitialState) {
     return render(
@@ -627,9 +641,11 @@ describe('AnimalEditorStepper', () => {
               devices: {
                 electrode_groups: [
                   {
-                    id: 'group1',
+                    id: '0',
                     device_type: 'tetrode_12.5',
                     location: 'CA1',
+                    description: 'CA1 tetrode',
+                    targeted_location: 'CA1',
                     targeted_x: 1.0,
                     targeted_y: 2.0,
                     targeted_z: 3.0,
@@ -695,12 +711,12 @@ describe('AnimalEditorStepper', () => {
       };
       renderWithStore(<AnimalEditorStepper />, state);
 
-      const editButton = screen.getByTestId('edit-group-group1');
+      const editButton = screen.getByTestId('edit-group-0');
       await user.click(editButton);
 
       expect(screen.getByTestId('electrode-group-modal')).toBeInTheDocument();
       expect(screen.getByTestId('electrode-group-modal')).toHaveAttribute('data-mode', 'edit');
-      expect(screen.getByTestId('edit-group-id')).toHaveTextContent('group1');
+      expect(screen.getByTestId('edit-group-id')).toHaveTextContent('0');
     });
 
     it('resolves an integer electrode-group id on edit (group object, not undefined)', async () => {
@@ -772,9 +788,11 @@ describe('AnimalEditorStepper', () => {
               devices: {
                 electrode_groups: [
                   {
-                    id: 'group1',
+                    id: '0',
                     device_type: 'tetrode_12.5',
                     location: 'CA1',
+                    description: 'CA1 tetrode',
+                    targeted_location: 'CA1',
                     targeted_x: 1.0,
                     targeted_y: 2.0,
                     targeted_z: 3.0,
@@ -791,7 +809,7 @@ describe('AnimalEditorStepper', () => {
       };
       renderWithStore(<AnimalEditorStepper />, state);
 
-      const editButton = screen.getByTestId('edit-group-group1');
+      const editButton = screen.getByTestId('edit-group-0');
       await user.click(editButton);
 
       expect(screen.getByTestId('electrode-group-modal')).toBeInTheDocument();
@@ -822,7 +840,6 @@ describe('AnimalEditorStepper', () => {
   describe('ID Generation', () => {
     it('generates sequential IDs starting from 0 for empty groups', async () => {
       const user = userEvent.setup();
-      const mockUpdateAnimal = vi.fn();
       const stateWithEmptyGroups = {
         workspace: {
           animals: {
@@ -837,14 +854,6 @@ describe('AnimalEditorStepper', () => {
             },
           },
           days: {},
-        },
-      };
-
-      // Mock the store actions
-      const mockStore = {
-        model: stateWithEmptyGroups,
-        actions: {
-          updateAnimal: mockUpdateAnimal,
         },
       };
 
@@ -864,6 +873,44 @@ describe('AnimalEditorStepper', () => {
       // Verify ID is "0" - check via the mock calls
       // The actual verification happens through state updates
       expect(screen.getByTestId('electrode-groups-step')).toBeInTheDocument();
+    });
+
+    it('stores schema-shaped integer groups and non-colliding generated ntrodes on add', async () => {
+      const user = userEvent.setup();
+
+      renderWithStore(
+        <>
+          <AnimalEditorStepper />
+          <StoreStateProbe />
+        </>
+      );
+
+      await user.click(screen.getByRole('button', { name: 'Add' }));
+      await user.click(screen.getByTestId('modal-save'));
+
+      const devices = JSON.parse(screen.getByTestId('workspace-state').textContent);
+      expect(devices.electrode_groups).toEqual([
+        {
+          id: 0,
+          location: 'CA1',
+          device_type: 'tetrode_12.5',
+          description: 'CA1 tetrode',
+          targeted_location: 'CA1',
+          targeted_x: 1,
+          targeted_y: 2,
+          targeted_z: 3,
+          units: 'mm',
+        },
+      ]);
+      expect(devices.electrode_groups[0]).not.toHaveProperty('bad_channels');
+      expect(devices.ntrode_electrode_group_channel_map).toEqual([
+        {
+          electrode_group_id: 0,
+          ntrode_id: 0,
+          bad_channels: [],
+          map: { 0: 0, 1: 1, 2: 2, 3: 3 },
+        },
+      ]);
     });
 
     it('increments ID from existing max when adding new group', async () => {

@@ -44,7 +44,9 @@ export const schemaValidation = (model) => {
     // instead of instancePath (which is empty string for root object)
     let path = normalizeAjvPath(error.instancePath);
     if (error.keyword === 'required' && error.params?.missingProperty) {
-      path = error.params.missingProperty;
+      path = path
+        ? `${path}.${error.params.missingProperty}`
+        : error.params.missingProperty;
     }
 
     return {

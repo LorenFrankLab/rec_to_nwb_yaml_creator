@@ -106,12 +106,11 @@ describe('axe-a11y (configured workspace, all routes)', () => {
     it('ChannelMapEditor', async () => {
       const { container } = render(
         <ChannelMapEditor
-          electrodeGroup={{ id: 'eg1', device_type: 'tetrode_12.5', location: 'CA1' }}
+          electrodeGroup={{ id: 0, device_type: 'tetrode_12.5', location: 'CA1' }}
           channelMaps={[
             {
-              electrode_group_id: 'eg1',
-              ntrode_id: '0',
-              electrode_id: 0,
+              electrode_group_id: 0,
+              ntrode_id: 0,
               bad_channels: [],
               map: { 0: 0, 1: 1, 2: 2, 3: 3 },
             },

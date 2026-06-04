@@ -149,7 +149,17 @@ export function makeTestWorkspace(overrides = {}) {
         description: 'Initial configuration',
         devices: {
           electrode_groups: [
-            { id: 0, location: 'CA1', device_type: 'tetrode_12.5', description: 'Tetrode', targeted_location: 'CA1', units: 'um' },
+            {
+              id: 0,
+              location: 'CA1',
+              device_type: 'tetrode_12.5',
+              description: 'Tetrode',
+              targeted_location: 'CA1',
+              targeted_x: 1,
+              targeted_y: 2,
+              targeted_z: 3,
+              units: 'um',
+            },
           ],
           ntrode_electrode_group_channel_map: [
             { ntrode_id: 1, electrode_group_id: 0, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },

@@ -8,6 +8,8 @@
  * or schemaVersion mismatch, loadWorkspace returns null so the caller starts fresh.
  */
 
+import { normalizeWorkspaceDevices } from '../utils/deviceNormalization';
+
 /** localStorage key for the persisted workspace blob. */
 export const WORKSPACE_STORAGE_KEY = 'rec_to_nwb_workspace_v1';
 
@@ -16,7 +18,8 @@ export const WORKSPACE_STORAGE_KEY = 'rec_to_nwb_workspace_v1';
  * way that older blobs cannot be safely hydrated into; a mismatch is discarded.
  * @type {number}
  */
-export const WORKSPACE_SCHEMA_VERSION = 1;
+export const WORKSPACE_SCHEMA_VERSION = 2;
+const MIGRATABLE_SCHEMA_VERSIONS = new Set([1]);
 
 /**
  * Reason codes returned alongside a discarded load, for a user-visible notice.
@@ -67,12 +70,18 @@ export function loadWorkspace() {
     return { workspace: null, discarded: LOAD_DISCARD_REASON.MALFORMED };
   }
 
+  if (parsed.schemaVersion === WORKSPACE_SCHEMA_VERSION) {
+    return { workspace: normalizeWorkspaceDevices(parsed.workspace) };
+  }
+
+  if (MIGRATABLE_SCHEMA_VERSIONS.has(parsed.schemaVersion)) {
+    return { workspace: normalizeWorkspaceDevices(parsed.workspace) };
+  }
+
   // Structurally sound but from an incompatible schema version → VERSION_MISMATCH.
   if (parsed.schemaVersion !== WORKSPACE_SCHEMA_VERSION) {
     return { workspace: null, discarded: LOAD_DISCARD_REASON.VERSION_MISMATCH };
   }
-
-  return { workspace: parsed.workspace };
 }
 
 /**
@@ -85,7 +94,7 @@ export function loadWorkspace() {
 export function saveWorkspace(workspace) {
   const blob = JSON.stringify({
     schemaVersion: WORKSPACE_SCHEMA_VERSION,
-    workspace,
+    workspace: normalizeWorkspaceDevices(workspace),
   });
   window.localStorage.setItem(WORKSPACE_STORAGE_KEY, blob);
 }

@@ -13,6 +13,13 @@ describe('stepIdForIssue', () => {
     expect(stepIdForIssue({ path: 'cameras[1].lens' })).toBe('devices');
   });
 
+  it('routes nested required device fields to the devices step', () => {
+    expect(stepIdForIssue({ path: 'electrode_groups[0].targeted_location' })).toBe('devices');
+    expect(stepIdForIssue({ path: 'cameras[0].lens' })).toBe('devices');
+    expect(stepIdForIssue({ path: 'targeted_location' })).toBe('devices');
+    expect(stepIdForIssue({ path: 'lens' })).toBe('devices');
+  });
+
   it('routes task/behavioral issues to the epochs step', () => {
     expect(stepIdForIssue({ path: 'tasks[0].task_name' })).toBe('epochs');
   });
@@ -83,7 +90,7 @@ describe('validateField', () => {
       },
     };
 
-    const { valid, errors } = await validateField(mergedDay, 'session_id');
+    const { errors } = await validateField(mergedDay, 'session_id');
 
     // Should only return errors for session_id, not session_description
     expect(errors.every(e => e.path === 'session_id')).toBe(true);
@@ -94,7 +101,7 @@ describe('validateField', () => {
       session_id: '',
     };
 
-    const { valid, errors } = await validateField(mergedDay, 'session_id');
+    const { errors } = await validateField(mergedDay, 'session_id');
 
     expect(errors[0]).toHaveProperty('message');
     expect(errors[0].message).toBeTruthy();
@@ -112,7 +119,15 @@ describe('computeStepStatus', () => {
 
     const mergedDay = {
       ...day.session,
-      subject: { subject_id: 'remy' },
+      subject: {
+        description: 'Test subject',
+        subject_id: 'remy',
+        species: 'Rattus norvegicus',
+        sex: 'M',
+        genotype: 'Wild Type',
+        weight: 400,
+        date_of_birth: '2023-01-01T00:00:00',
+      },
       experimenter_name: ['Test'],
       lab: 'Lab',
       institution: 'Inst',

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import PropTypes from 'prop-types';
 import { deviceTypeMap } from '../../ntrode/deviceTypes';
 import './ElectrodeGroupsStep.scss';
@@ -11,6 +10,22 @@ const STATUS_META = {
   complete: { icon: '✓', label: 'Complete' },
   incomplete: { icon: '❌', label: 'Missing required fields' },
 };
+
+/**
+ * @param {unknown} value - Candidate required value.
+ * @returns {boolean} True when a required text-ish field has real content.
+ */
+function hasNonBlankValue(value) {
+  return value != null && (typeof value !== 'string' || value.trim() !== '');
+}
+
+/**
+ * @param {unknown} value - Candidate coordinate value.
+ * @returns {boolean} True when the coordinate is present and finite.
+ */
+function hasFiniteCoordinate(value) {
+  return value != null && value !== '' && Number.isFinite(Number(value));
+}
 
 /**
  * ElectrodeGroupsStep - Step 1 of Animal Editor
@@ -27,9 +42,6 @@ const STATUS_META = {
  * @returns {JSX.Element}
  */
 export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onAdd, onDelete, onCopy }) {
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [showCopyDialog, setShowCopyDialog] = useState(false);
-
   const electrodeGroups = animal.devices?.electrode_groups || [];
 
   /**
@@ -48,11 +60,13 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
    * @returns {string}
    */
   function getStatusKey(group) {
-    const required = [
-      'device_type', 'location', 'description', 'targeted_location',
-      'targeted_x', 'targeted_y', 'targeted_z', 'units',
-    ];
-    const hasRequired = required.every(field => group[field] !== undefined && group[field] !== '');
+    const requiredText = ['device_type', 'location', 'description', 'targeted_location', 'units'];
+    const hasRequired = (
+      requiredText.every(field => hasNonBlankValue(group[field])) &&
+      hasFiniteCoordinate(group.targeted_x) &&
+      hasFiniteCoordinate(group.targeted_y) &&
+      hasFiniteCoordinate(group.targeted_z)
+    );
     return hasRequired ? 'complete' : 'incomplete';
   }
 
@@ -62,8 +76,6 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
   const handleAddClick = () => {
     if (onAdd) {
       onAdd();
-    } else {
-      setShowAddDialog(true);
     }
   };
 
@@ -73,14 +85,12 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
   const handleCopyClick = () => {
     if (onCopy) {
       onCopy();
-    } else {
-      setShowCopyDialog(true);
     }
   };
 
   /**
    * Handle edit button click
-   * @param groupId
+   * @param {number} groupId - Electrode group id.
    */
   const handleEditClick = (groupId) => {
     if (onEdit) {
@@ -90,7 +100,7 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
 
   /**
    * Handle delete button click
-   * @param group - Electrode group to delete
+   * @param {object} group - Electrode group to delete.
    */
   const handleDeleteClick = (group) => {
     if (onDelete) {

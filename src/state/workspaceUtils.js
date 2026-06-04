@@ -8,6 +8,12 @@
  * @see docs/ANIMAL_WORKSPACE_DESIGN.md §5 YAML Export Flow
  */
 
+import {
+  normalizeDevices,
+  normalizeElectrodeGroup,
+  normalizeNtrodeMap,
+} from '../utils/deviceNormalization';
+
 // Canonical key orders, mirroring the legacy `formData` shape in
 // `src/valueList.js` (`defaultYMLValues` / `arrayDefaultValues`). `encodeYaml`
 // preserves insertion order, so emitting keys in these orders makes the new
@@ -77,9 +83,8 @@ function reorderKeys(obj, order) {
  * onto the resolved ntrode map. Factoring this here keeps the merge and the
  * reconfiguration wizard from diverging.
  *
- * Returns references into the animal/config (read-only by contract); callers that
- * persist the result must clone it. `mergeDayMetadata` clones its whole output, so
- * it is unaffected.
+ * Returns normalized owned device objects; callers that persist the result can do so
+ * without carrying legacy string IDs or non-schema electrode keys forward.
  *
  * @param {import('./workspaceTypes').Animal} animal - Parent animal with snapshots.
  * @param {import('./workspaceTypes').Day} day - Recording day.
@@ -141,8 +146,10 @@ export function resolveDayConfig(animal, day) {
     : baseNtrodes;
 
   return {
-    electrode_groups: electrodeGroups,
-    ntrode_electrode_group_channel_map: ntrodes,
+    electrode_groups: electrodeGroups.map((group, index) => normalizeElectrodeGroup(group, index)),
+    ntrode_electrode_group_channel_map: ntrodes.map((ntrode, index) =>
+      normalizeNtrodeMap(ntrode, index)
+    ),
     configurationVersion: config.version,
   };
 }
@@ -191,6 +198,7 @@ export function mergeDayMetadata(animal, day) {
   const { electrode_groups: electrodeGroups, ntrode_electrode_group_channel_map: ntrodeMap } =
     resolveDayConfig(animal, day);
 
+  const devices = normalizeDevices(animal.devices);
   const cameras = animal.cameras || [];
   const opto = animal.optogenetics || null;
 
@@ -219,7 +227,7 @@ export function mergeDayMetadata(animal, day) {
     ),
 
     // === From Animal: Data Acquisition ===
-    data_acq_device: (animal.devices.data_acq_device || []).map((d) =>
+    data_acq_device: (devices.data_acq_device || []).map((d) =>
       reorderKeys(d, DATA_ACQ_DEVICE_ORDER)
     ),
 
@@ -249,7 +257,7 @@ export function mergeDayMetadata(animal, day) {
     ),
 
     // === From Animal: Device ===
-    device: reorderKeys(animal.devices.device, DEVICE_ORDER),
+    device: reorderKeys(devices.device, DEVICE_ORDER),
 
     // === Optogenetics: always present (empty when no opto), matching legacy formData.
     // Nested items are reordered to legacy item order too, so an opto session is

@@ -97,6 +97,43 @@ describe('Animal State Management', () => {
       expect(animal.subject.weight).toBe(450);
     });
 
+    it('normalizes partial device metadata and defaults device.name', () => {
+      const { result } = renderHook(() => useStore());
+
+      act(() => {
+        result.current.actions.createAnimal('remy', {
+          species: 'Rattus norvegicus',
+          sex: 'M',
+          genotype: 'Wild Type',
+          date_of_birth: '2023-01-10T00:00:00Z',
+          description: 'Test subject',
+        }, {
+          devices: {
+            electrode_groups: [
+              { id: '0', location: 'CA1', device_type: 'tetrode_12.5', bad_channels: '' },
+            ],
+            ntrode_electrode_group_channel_map: [
+              { ntrode_id: '1', electrode_group_id: '0', electrode_id: 7, bad_channels: [], map: { 0: 0 } },
+            ],
+          },
+        });
+      });
+
+      const animal = result.current.model.workspace.animals.remy;
+      expect(animal.devices.device.name).toEqual(['Trodes']);
+      expect(animal.devices.electrode_groups[0]).toMatchObject({
+        id: 0,
+        description: 'CA1',
+        targeted_location: 'CA1',
+      });
+      expect(animal.devices.electrode_groups[0]).not.toHaveProperty('bad_channels');
+      expect(animal.devices.ntrode_electrode_group_channel_map[0]).toMatchObject({
+        ntrode_id: 1,
+        electrode_group_id: 0,
+      });
+      expect(animal.devices.ntrode_electrode_group_channel_map[0]).not.toHaveProperty('electrode_id');
+    });
+
     it('creates initial configuration snapshot automatically', () => {
       const { result } = renderHook(() => useStore());
 
@@ -388,7 +425,7 @@ describe('Animal State Management', () => {
       expect(animal.configurationHistory[1].version).toBe(2);
       expect(animal.configurationHistory[1].description).toBe('Lowered CA1 tetrodes by 40um');
       expect(animal.configurationHistory[1].date).toBe('2023-06-15');
-      expect(animal.configurationHistory[1].devices.electrode_groups[0].targeted_z).toBe('1.96');
+      expect(animal.configurationHistory[1].devices.electrode_groups[0].targeted_z).toBe(1.96);
     });
 
     it('increments version number automatically', () => {

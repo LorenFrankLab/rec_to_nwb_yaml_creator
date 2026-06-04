@@ -140,6 +140,27 @@ describe('schemaValidation()', () => {
       expect(locationIssue).toBeDefined();
       expect(locationIssue.path).toBe('electrode_groups[0].location');
     });
+
+    it('should preserve parent path for nested required properties', () => {
+      const model = createTestYaml({
+        electrode_groups: [{
+          id: 0,
+          location: 'CA1',
+          device_type: 'tetrode_12.5',
+          description: 'CA1 tetrode',
+          targeted_x: 1,
+          targeted_y: 2,
+          targeted_z: 3,
+          units: 'mm',
+        }]
+      });
+      const issues = schemaValidation(model);
+
+      expect(issues).toContainEqual(expect.objectContaining({
+        path: 'electrode_groups[0].targeted_location',
+        code: 'required',
+      }));
+    });
   });
 
   describe('Required Fields', () => {

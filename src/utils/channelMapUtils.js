@@ -43,7 +43,9 @@ import { getShankCount } from './deviceTypeUtils';
  * // Returns 4 ntrodes with IDs 10, 11, 12, 13 and per-shank electrode-id offsets
  */
 export function generateChannelMapsForGroup(electrodeGroup, startingNtrodeId = 0) {
-  const { id: electrode_group_id, device_type } = electrodeGroup;
+  const { device_type } = electrodeGroup;
+  const parsedGroupId = parseInt(electrodeGroup.id, 10);
+  const electrode_group_id = Number.isNaN(parsedGroupId) ? 0 : parsedGroupId;
 
   // Return empty array if device type is missing or unknown
   if (!device_type) {

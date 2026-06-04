@@ -1,6 +1,11 @@
 import { useState, useMemo, useId } from 'react';
 import PropTypes from 'prop-types';
 import Modal from '../../components/Modal/Modal';
+import {
+  normalizeElectrodeGroup,
+  normalizeIdKey,
+  normalizeNtrodeMap,
+} from '../../utils/deviceNormalization';
 import './CopyFromAnimalDialog.scss';
 
 /**
@@ -58,12 +63,18 @@ export default function CopyFromAnimalDialog({ open, currentAnimalId, animals, o
     const currentMaps = currentAnimal?.devices?.ntrode_electrode_group_channel_map || [];
 
     const maxGroupId = currentGroups.length > 0
-      ? Math.max(...currentGroups.map(g => parseInt(g.id, 10) || 0))
-      : 0;
+      ? Math.max(...currentGroups.map((g) => {
+          const parsed = parseInt(g.id, 10);
+          return Number.isNaN(parsed) ? -1 : parsed;
+        }))
+      : -1;
 
     const maxNtrodeId = currentMaps.length > 0
-      ? Math.max(...currentMaps.map(m => parseInt(m.ntrode_id, 10) || 0))
-      : 0;
+      ? Math.max(...currentMaps.map((m) => {
+          const parsed = parseInt(m.ntrode_id, 10);
+          return Number.isNaN(parsed) ? -1 : parsed;
+        }))
+      : -1;
 
     return {
       nextGroupId: maxGroupId + 1,
@@ -84,26 +95,32 @@ export default function CopyFromAnimalDialog({ open, currentAnimalId, animals, o
 
     // Deep clone electrode groups with new integer IDs
     const copiedGroups = selectedAnimal.electrodeGroups.map((group, index) => {
-      const oldId = group.id;
+      const oldId = normalizeIdKey(group.id);
       const newId = nextIds.nextGroupId + index;
       groupIdMap.set(oldId, newId);
 
-      return {
-        ...structuredClone(group),
-        id: newId,
-      };
+      return normalizeElectrodeGroup({ ...group, id: newId }, newId);
     });
 
     // Deep clone channel maps with new integer IDs and updated electrode_group_id references
-    const copiedMaps = selectedAnimal.channelMaps.map((map, index) => {
-      const oldGroupId = map.electrode_group_id;
-      const newGroupId = groupIdMap.has(oldGroupId) ? groupIdMap.get(oldGroupId) : oldGroupId;
+    let nextNtrodeId = nextIds.nextNtrodeId;
+    const copiedMaps = selectedAnimal.channelMaps.flatMap((map) => {
+      const oldGroupId = normalizeIdKey(map.electrode_group_id);
+      if (!groupIdMap.has(oldGroupId)) {
+        return [];
+      }
 
-      return {
-        ...structuredClone(map),
-        ntrode_id: nextIds.nextNtrodeId + index,
-        electrode_group_id: newGroupId,
-      };
+      const copied = normalizeNtrodeMap(
+        {
+          ...map,
+          ntrode_id: nextNtrodeId,
+          electrode_group_id: groupIdMap.get(oldGroupId),
+        },
+        nextNtrodeId,
+        groupIdMap.get(oldGroupId)
+      );
+      nextNtrodeId += 1;
+      return [copied];
     });
 
     onCopy({

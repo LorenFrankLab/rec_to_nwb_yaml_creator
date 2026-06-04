@@ -56,6 +56,8 @@ function getInitialFormData(mode, group) {
 function ElectrodeGroupForm({ mode, group, knownRegions, onSave, onCancel }) {
   const [formData, setFormData] = useState(() => getInitialFormData(mode, group));
 
+  const isFiniteCoordinate = (value) => value.trim() !== '' && Number.isFinite(Number(value));
+
   const isFormValid = () => {
     const { device_type, location, description, targeted_location, targeted_x, targeted_y, targeted_z, count } = formData;
     const isCountValid = mode === 'edit' || (count && parseInt(count, 10) > 0 && parseInt(count, 10) <= 100);
@@ -64,9 +66,9 @@ function ElectrodeGroupForm({ mode, group, knownRegions, onSave, onCancel }) {
       location.trim() !== '' &&
       description.trim() !== '' &&
       targeted_location.trim() !== '' &&
-      targeted_x.trim() !== '' &&
-      targeted_y.trim() !== '' &&
-      targeted_z.trim() !== '' &&
+      isFiniteCoordinate(targeted_x) &&
+      isFiniteCoordinate(targeted_y) &&
+      isFiniteCoordinate(targeted_z) &&
       isCountValid
     );
   };
@@ -87,9 +89,9 @@ function ElectrodeGroupForm({ mode, group, knownRegions, onSave, onCancel }) {
       location: canonicalizeRegion(formData.location, canonicalRegions),
       description: formData.description.trim(),
       targeted_location: canonicalizeRegion(formData.targeted_location, canonicalRegions),
-      targeted_x: parseFloat(formData.targeted_x),
-      targeted_y: parseFloat(formData.targeted_y),
-      targeted_z: parseFloat(formData.targeted_z),
+      targeted_x: Number(formData.targeted_x),
+      targeted_y: Number(formData.targeted_y),
+      targeted_z: Number(formData.targeted_z),
       units: formData.units,
       count: mode === 'add' ? parseInt(formData.count, 10) : 1,
     });

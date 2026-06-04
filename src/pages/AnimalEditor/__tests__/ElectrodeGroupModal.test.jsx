@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ElectrodeGroupModal from '../ElectrodeGroupModal';
 import { deviceTypes } from '../../../valueList';
@@ -167,6 +167,17 @@ describe('ElectrodeGroupModal', () => {
     it('should disable Save button when coordinates are empty', async () => {
       render(<ElectrodeGroupModal isOpen mode="add" onSave={() => {}} onCancel={() => {}} />);
       await fillRequiredFields(user, { targeted_x: '' });
+      expect(screen.getByRole('button', { name: /save/i })).toBeDisabled();
+    });
+
+    it('should disable Save button when a coordinate is non-finite', async () => {
+      render(<ElectrodeGroupModal isOpen mode="add" onSave={() => {}} onCancel={() => {}} />);
+      await fillRequiredFields(user);
+
+      fireEvent.change(screen.getByLabelText(/ap|anterior[- ]?posterior/i), {
+        target: { value: 'NaN' },
+      });
+
       expect(screen.getByRole('button', { name: /save/i })).toBeDisabled();
     });
 
@@ -373,7 +384,7 @@ describe('ElectrodeGroupModal', () => {
 
     it('returns focus to the trigger when closed via ESC', async () => {
       /**
-       *
+       * @returns {JSX.Element} Harness with a focusable trigger.
        */
       function Harness() {
         const [open, setOpen] = useState(false);

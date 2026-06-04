@@ -7,6 +7,12 @@ import {
 } from './workspaceUtils';
 import { FLAGS } from '../featureFlags';
 import { loadWorkspace, saveWorkspace, clearWorkspace } from './persistence';
+import {
+  normalizeDeviceOverrides,
+  normalizeDevices,
+  normalizeProbeConfigDevices,
+  normalizeWorkspaceDevices,
+} from '../utils/deviceNormalization';
 
 /**
  * Owns the workspace slice of the store: multi-animal/day state, its localStorage
@@ -43,7 +49,7 @@ export function useWorkspace(initialState = null) {
       },
     };
 
-    if (initialState?.workspace) return initialState.workspace; // tests win
+    if (initialState?.workspace) return normalizeWorkspaceDevices(initialState.workspace); // tests win
     if (!FLAGS.localStoragePersistence) return fallback;
 
     const loaded = loadWorkspace();
@@ -137,18 +143,14 @@ export function useWorkspace(initialState = null) {
             institution: prev.settings.defaultInstitution,
           };
 
+          const devices = normalizeDevices(metadata.devices);
           const animal = {
             id: animalId,
             subject: {
               subject_id: animalId,
               ...subject,
             },
-            devices: metadata.devices || {
-              data_acq_device: [],
-              device: { name: ['Trodes'] },
-              electrode_groups: [],
-              ntrode_electrode_group_channel_map: [],
-            },
+            devices,
             cameras: metadata.cameras || [],
             experimenters,
             technicalDefaults: metadata.technicalDefaults || {
@@ -165,8 +167,10 @@ export function useWorkspace(initialState = null) {
                 date: today,
                 description: 'Initial configuration',
                 devices: {
-                  electrode_groups: metadata.devices?.electrode_groups || [],
-                  ntrode_electrode_group_channel_map: metadata.devices?.ntrode_electrode_group_channel_map || [],
+                  electrode_groups: structuredClone(devices.electrode_groups),
+                  ntrode_electrode_group_channel_map: structuredClone(
+                    devices.ntrode_electrode_group_channel_map
+                  ),
                 },
                 appliedToDays: [],
               },
@@ -208,7 +212,7 @@ export function useWorkspace(initialState = null) {
             updated.experimenters = { ...updated.experimenters, ...updates.experimenters };
           }
           if (updates.devices) {
-            updated.devices = { ...updated.devices, ...updates.devices };
+            updated.devices = normalizeDevices({ ...updated.devices, ...updates.devices });
             // `animal.devices` is the editor's mirror of the LATEST configuration
             // snapshot, which is the authoritative source the export resolves. Write
             // the edit into that snapshot too, so probes configured after animal
@@ -239,7 +243,10 @@ export function useWorkspace(initialState = null) {
           // `animal.devices.data_acq_device`, so route the update there (a write to a
           // top-level `data_acq_device` would never reach the export).
           if (updates.data_acq_device) {
-            updated.devices = { ...updated.devices, data_acq_device: updates.data_acq_device };
+            updated.devices = normalizeDevices({
+              ...updated.devices,
+              data_acq_device: updates.data_acq_device,
+            });
           }
           // Animal-level technical DEFAULTS only (seeded into each day's `technical` at
           // createDay and overridable per day). These are never exported directly — the
@@ -337,7 +344,7 @@ export function useWorkspace(initialState = null) {
             version: updated.configurationHistory.length + 1,
             date: config.date,
             description: config.description,
-            devices: config.devices,
+            devices: normalizeProbeConfigDevices(config.devices),
             appliedToDays: [],
           };
 
@@ -533,7 +540,7 @@ export function useWorkspace(initialState = null) {
             updated.technical = { ...updated.technical, ...updates.technical };
           }
           if (updates.deviceOverrides) {
-            updated.deviceOverrides = updates.deviceOverrides;
+            updated.deviceOverrides = normalizeDeviceOverrides(updates.deviceOverrides);
           }
           if (updates.state) {
             updated.state = { ...updated.state, ...updates.state };

@@ -24,7 +24,8 @@ import { mergeDayMetadata } from '../../../state/workspaceUtils';
 describe('mergeDayMetadata', () => {
   /**
    * Helper to create a minimal animal for testing
-   * @param overrides
+   * @param {object} overrides Animal fields to override
+   * @returns {object} Test animal
    */
   function createTestAnimal(overrides = {}) {
     return {
@@ -83,7 +84,8 @@ describe('mergeDayMetadata', () => {
 
   /**
    * Helper to create a minimal day for testing
-   * @param overrides
+   * @param {object} overrides Day fields to override
+   * @returns {object} Test day
    */
   function createTestDay(overrides = {}) {
     return {
@@ -426,7 +428,7 @@ describe('mergeDayMetadata', () => {
       const merged = mergeDayMetadata(animal, day);
 
       expect(merged.electrode_groups[0].description).toBe('Version 2');
-      expect(merged.electrode_groups[0].targeted_z).toBe('1.96');
+      expect(merged.electrode_groups[0].targeted_z).toBe(1.96);
     });
 
     it('fails closed when the specified version is not found (does not silently fall back)', () => {

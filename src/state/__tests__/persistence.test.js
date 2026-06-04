@@ -94,6 +94,49 @@ describe('workspace persistence', () => {
     expect(loadWorkspace()).toEqual({ workspace: ws });
   });
 
+  it('migrates v1 workspace device data instead of discarding user work', () => {
+    const ws = makeTestWorkspace();
+    ws.animals.remy.devices = {
+      device: { name: [] },
+      electrode_groups: [
+        { id: '0', location: 'CA1', device_type: 'tetrode_12.5', bad_channels: '' },
+      ],
+      ntrode_electrode_group_channel_map: [
+        { ntrode_id: '1', electrode_group_id: '0', electrode_id: 12, bad_channels: [], map: { 0: 0 } },
+      ],
+    };
+
+    window.localStorage.setItem(
+      WORKSPACE_STORAGE_KEY,
+      JSON.stringify({ schemaVersion: 1, workspace: ws }),
+    );
+
+    const result = loadWorkspace();
+    expect(result.workspace.animals.remy.devices.device.name).toEqual(['Trodes']);
+    expect(result.workspace.animals.remy.devices.electrode_groups[0]).toMatchObject({
+      id: 0,
+      description: 'CA1',
+      targeted_location: 'CA1',
+    });
+    expect(result.workspace.animals.remy.devices.electrode_groups[0]).not.toHaveProperty('bad_channels');
+    expect(result.workspace.animals.remy.devices.ntrode_electrode_group_channel_map[0]).toMatchObject({
+      ntrode_id: 1,
+      electrode_group_id: 0,
+    });
+    expect(result.workspace.animals.remy.devices.ntrode_electrode_group_channel_map[0]).not.toHaveProperty('electrode_id');
+  });
+
+  it('normalizes device data before persisting', () => {
+    const ws = makeTestWorkspace();
+    ws.animals.remy.devices.device = { name: [] };
+
+    saveWorkspace(ws);
+
+    const stored = JSON.parse(window.localStorage.getItem(WORKSPACE_STORAGE_KEY));
+    expect(stored.schemaVersion).toBe(WORKSPACE_SCHEMA_VERSION);
+    expect(stored.workspace.animals.remy.devices.device.name).toEqual(['Trodes']);
+  });
+
   it('persists only the workspace slice, never legacy formData keys', () => {
     saveWorkspace(makeTestWorkspace());
 

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import PropTypes from 'prop-types';
 import './CamerasSection.scss';
 
@@ -21,6 +20,16 @@ import './CamerasSection.scss';
  */
 export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, onDelete }) {
   const cameras = animal.cameras || [];
+  const cameraIdCounts = cameras.reduce((acc, camera) => {
+    const key = String(camera.id);
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+  const duplicateCameraIds = new Set(
+    Object.entries(cameraIdCounts)
+      .filter(([, count]) => count > 1)
+      .map(([id]) => id)
+  );
 
   /**
    * Compute status badge for camera
@@ -32,6 +41,10 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
    * @returns {string} Status emoji
    */
   function getStatus(camera) {
+    if (duplicateCameraIds.has(String(camera.id))) {
+      return 'duplicate';
+    }
+
     // Required fields (lens is schema-required alongside the others).
     const required = ['camera_name', 'manufacturer', 'model', 'lens', 'meters_per_pixel'];
     const hasRequired = required.every(field => {
@@ -40,7 +53,7 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
     });
 
     if (!hasRequired) {
-      return '❌';
+      return 'incomplete';
     }
 
     // Check meters_per_pixel range
@@ -49,10 +62,10 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
     const TYPICAL_MAX = 0.002;
 
     if (mpp < TYPICAL_MIN || mpp > TYPICAL_MAX) {
-      return '⚠';
+      return 'warning';
     }
 
-    return '✓';
+    return 'complete';
   }
 
   /**
@@ -63,9 +76,20 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
    * @returns {string} A human-readable status.
    */
   function getStatusText(status) {
-    if (status === '❌') return 'Incomplete: required fields missing';
-    if (status === '⚠') return 'Warning: meters per pixel outside the typical range';
+    if (status === 'duplicate') return 'Duplicate camera ID';
+    if (status === 'incomplete') return 'Incomplete: required fields missing';
+    if (status === 'warning') return 'Warning: meters per pixel outside the typical range';
     return 'Complete';
+  }
+
+  /**
+   * @param {string} status - Internal status key from {@link getStatus}.
+   * @returns {string} The displayed status glyph.
+   */
+  function getStatusSymbol(status) {
+    if (status === 'complete') return '✓';
+    if (status === 'warning') return '⚠';
+    return '❌';
   }
 
   /**
@@ -143,22 +167,28 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
           </tr>
         </thead>
         <tbody>
-          {cameras.map((camera) => (
-            <tr key={camera.id}>
+          {cameras.map((camera, index) => (
+            <tr key={`${camera.id}-${index}`}>
               <td data-label="ID">{camera.id}</td>
               <td data-label="Name">{camera.camera_name || ''}</td>
               <td data-label="Manufacturer">{camera.manufacturer || ''}</td>
               <td data-label="Model">{camera.model || ''}</td>
               <td data-label="Meters/Pixel">{camera.meters_per_pixel}</td>
               <td data-label="Status">
+                {(() => {
+                  const status = getStatus(camera);
+                  const text = getStatusText(status);
+                  return (
                 <span
-                  className={`status-badge status-${getStatus(camera)}`}
+                  className={`status-badge status-${status}`}
                   role="img"
-                  aria-label={getStatusText(getStatus(camera))}
-                  title={getStatusText(getStatus(camera))}
+                  aria-label={text}
+                  title={text}
                 >
-                  {getStatus(camera)}
+                  {getStatusSymbol(status)}
                 </span>
+                  );
+                })()}
               </td>
               <td data-label="Actions">
                 <button

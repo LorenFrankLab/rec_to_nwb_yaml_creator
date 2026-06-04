@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ElectrodeGroupsStep from '../ElectrodeGroupsStep';
 
@@ -61,6 +61,33 @@ describe('ElectrodeGroupsStep', () => {
     render(<ElectrodeGroupsStep animal={animalWithIncompleteGroup} onFieldUpdate={mockOnFieldUpdate} />);
 
     // Incomplete groups render the missing-required glyph, not the complete checkmark.
+    expect(screen.queryAllByText('✓')).toHaveLength(0);
+    expect(screen.getByText('❌')).toBeInTheDocument();
+  });
+
+  it('marks whitespace strings and non-finite coordinates as incomplete', () => {
+    const animalWithInvalidGroup = {
+      id: 'remy',
+      devices: {
+        electrode_groups: [
+          {
+            id: 0,
+            device_type: 'tetrode_12.5',
+            location: '   ',
+            description: 'CA1 tetrode',
+            targeted_location: 'CA1',
+            targeted_x: Number.NaN,
+            targeted_y: 2,
+            targeted_z: 3,
+            units: 'mm',
+          },
+        ],
+        ntrode_electrode_group_channel_map: [],
+      },
+    };
+
+    render(<ElectrodeGroupsStep animal={animalWithInvalidGroup} onFieldUpdate={mockOnFieldUpdate} />);
+
     expect(screen.queryAllByText('✓')).toHaveLength(0);
     expect(screen.getByText('❌')).toBeInTheDocument();
   });
