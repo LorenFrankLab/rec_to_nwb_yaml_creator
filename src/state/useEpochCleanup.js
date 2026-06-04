@@ -82,7 +82,9 @@ export function useEpochCleanup({ formData, setFormData, workspace, updateDay })
       return updated;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.tasks]); // Cleanup only needed when tasks change; callback form guarantees latest state access
+  }, [formData?.tasks]); // Cleanup only needed when tasks change; callback form guarantees latest state access.
+  // Optional chaining matches normal operation (formData is always defined) but lets the
+  // clear `useStore` formData invariant surface instead of a cryptic render-time TypeError.
 
   // ----- Workspace day cleanup (same invariant, per day) -----
   // Guard keyed by dayId so cleanup runs only when a day's valid-epoch set changes.
@@ -90,6 +92,14 @@ export function useEpochCleanup({ formData, setFormData, workspace, updateDay })
 
   useEffect(() => {
     const days = workspace?.days || {};
+
+    // Drop guard entries for days that no longer exist so the ref can't grow
+    // unboundedly across a long session of create/delete cycles.
+    for (const trackedId of Object.keys(lastWorkspaceEpochsRef.current)) {
+      if (!Object.hasOwn(days, trackedId)) {
+        delete lastWorkspaceEpochsRef.current[trackedId];
+      }
+    }
 
     for (const dayId of Object.keys(days)) {
       const day = days[dayId];

@@ -280,6 +280,20 @@ describe('Day State Management', () => {
         'spatial',
         'w-track',
       ]);
+
+      // An explicit empty array clears keywords; an unrelated update preserves them.
+      act(() => {
+        result.current.actions.updateDay('remy-2023-06-22', { keywords: [] });
+      });
+      expect(result.current.model.workspace.days['remy-2023-06-22'].keywords).toEqual([]);
+
+      act(() => {
+        result.current.actions.updateDay('remy-2023-06-22', { keywords: ['replay'] });
+        result.current.actions.updateDay('remy-2023-06-22', {
+          session: { session_description: 'edited' },
+        });
+      });
+      expect(result.current.model.workspace.days['remy-2023-06-22'].keywords).toEqual(['replay']);
     });
 
     it('updates tasks array', () => {
