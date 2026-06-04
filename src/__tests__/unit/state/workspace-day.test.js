@@ -259,6 +259,29 @@ describe('Day State Management', () => {
       expect(day.session.session_id).toBe('remy_20230622'); // Unchanged
     });
 
+    it('persists keywords (the Overview keywords editor writes through updateDay)', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Test',
+        });
+      });
+
+      act(() => {
+        result.current.actions.updateDay('remy-2023-06-22', {
+          keywords: ['spatial', 'w-track'],
+        });
+      });
+
+      expect(result.current.model.workspace.days['remy-2023-06-22'].keywords).toEqual([
+        'spatial',
+        'w-track',
+      ]);
+    });
+
     it('updates tasks array', () => {
       const { result } = renderHook(() => useStore());
       createTestAnimal(result);

@@ -12,7 +12,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import DayEditorStepper from './DayEditorStepper';
-import './DayEditor.css';
+import './DayEditor.scss';
 
 /**
  * Day Editor - Entry point for day editing workflow

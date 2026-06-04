@@ -1,7 +1,7 @@
 /* Home.css - Animal Creation Form Styling */
 
-/* Import M5 CSS variables */
-@import '../DayEditor/DayEditor.css';
+/* Design tokens (--color-*, --spacing-*, etc.) are defined globally in src/index.css,
+   which loads on every route, so no stylesheet @import is needed here. */
 
 /* Page container - centered form card */
 .animal-creation-container {
