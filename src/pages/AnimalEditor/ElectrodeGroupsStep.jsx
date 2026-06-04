@@ -48,7 +48,10 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
    * @returns {string}
    */
   function getStatusKey(group) {
-    const required = ['device_type', 'location', 'targeted_x', 'targeted_y', 'targeted_z', 'units'];
+    const required = [
+      'device_type', 'location', 'description', 'targeted_location',
+      'targeted_x', 'targeted_y', 'targeted_z', 'units',
+    ];
     const hasRequired = required.every(field => group[field] !== undefined && group[field] !== '');
     return hasRequired ? 'complete' : 'incomplete';
   }

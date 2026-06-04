@@ -8,8 +8,8 @@ describe('ElectrodeGroupsStep', () => {
     id: 'remy',
     devices: {
       electrode_groups: [
-        { id: 0, device_type: 'tetrode_12.5', location: 'CA1', targeted_x: 2.6, targeted_y: -3.8, targeted_z: 0, units: 'mm' },
-        { id: 1, device_type: 'tetrode_12.5', location: 'CA3', targeted_x: 2.8, targeted_y: -3.6, targeted_z: 0, units: 'mm' }
+        { id: 0, device_type: 'tetrode_12.5', location: 'CA1', description: 'CA1 tetrode', targeted_location: 'CA1', targeted_x: 2.6, targeted_y: -3.8, targeted_z: 0, units: 'mm' },
+        { id: 1, device_type: 'tetrode_12.5', location: 'CA3', description: 'CA3 tetrode', targeted_location: 'CA3', targeted_x: 2.8, targeted_y: -3.6, targeted_z: 0, units: 'mm' }
       ],
       ntrode_electrode_group_channel_map: []
     }
@@ -45,6 +45,24 @@ describe('ElectrodeGroupsStep', () => {
     // Both groups should have complete status badges
     const badges = screen.getAllByText('✓');
     expect(badges.length).toBeGreaterThan(0);
+  });
+
+  it('marks a group missing schema-required description/targeted_location as incomplete', () => {
+    const animalWithIncompleteGroup = {
+      id: 'remy',
+      devices: {
+        electrode_groups: [
+          // Missing description and targeted_location — required by the schema.
+          { id: 0, device_type: 'tetrode_12.5', location: 'CA1', targeted_x: 1, targeted_y: 2, targeted_z: 3, units: 'mm' },
+        ],
+        ntrode_electrode_group_channel_map: [],
+      },
+    };
+    render(<ElectrodeGroupsStep animal={animalWithIncompleteGroup} onFieldUpdate={mockOnFieldUpdate} />);
+
+    // Incomplete groups render the missing-required glyph, not the complete checkmark.
+    expect(screen.queryAllByText('✓')).toHaveLength(0);
+    expect(screen.getByText('❌')).toBeInTheDocument();
   });
 
   it('renders "Add Electrode Group" button', () => {

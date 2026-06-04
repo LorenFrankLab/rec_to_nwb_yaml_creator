@@ -237,6 +237,32 @@ describe('BrainRegionAutocomplete', () => {
       expect(calls).toContain('C');
     });
 
+    it('snaps a case-only variant of a known region to the canonical value on blur', async () => {
+      const user = userEvent.setup();
+      const localMockOnChange = vi.fn();
+
+      render(<BrainRegionAutocomplete value="ca1" onChange={localMockOnChange} />);
+
+      const input = screen.getByRole('combobox');
+      input.focus();
+      await user.tab(); // blur the field
+
+      expect(localMockOnChange).toHaveBeenCalledWith('CA1');
+    });
+
+    it('does not call onChange on blur for a novel region (no canonical match)', async () => {
+      const user = userEvent.setup();
+      const localMockOnChange = vi.fn();
+
+      render(<BrainRegionAutocomplete value="Novel-region" onChange={localMockOnChange} />);
+
+      const input = screen.getByRole('combobox');
+      input.focus();
+      await user.tab();
+
+      expect(localMockOnChange).not.toHaveBeenCalled();
+    });
+
     it('allows typing custom brain region not in suggestions', async () => {
       const user = userEvent.setup();
 

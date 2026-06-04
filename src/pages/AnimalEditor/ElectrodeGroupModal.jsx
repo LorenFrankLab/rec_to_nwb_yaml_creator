@@ -146,6 +146,10 @@ function ElectrodeGroupForm({ mode, group, knownRegions, onSave, onCancel }) {
           suggestions={knownRegions}
           required
         />
+        <span className="help-text">
+          Actual recorded brain region (e.g., CA1). Becomes the NWB ElectrodeGroup
+          location and a Spyglass brain region — keep spelling consistent across groups.
+        </span>
       </div>
 
       {/* Description (schema-required, e.g. "Dorsal CA1 right hemisphere tetrode") */}
@@ -160,7 +164,9 @@ function ElectrodeGroupForm({ mode, group, knownRegions, onSave, onCancel }) {
           onChange={handleInputChange}
           required
         />
-        <span className="help-text">A short description of this electrode group</span>
+        <span className="help-text">
+          Free-text label for this group in the NWB file (e.g., hemisphere and depth target).
+        </span>
       </div>
 
       {/* Targeted Location (planned implant target; schema-required) */}
@@ -173,6 +179,9 @@ function ElectrodeGroupForm({ mode, group, knownRegions, onSave, onCancel }) {
           suggestions={knownRegions}
           required
         />
+        <span className="help-text">
+          Planned implant target region. May differ from Location if the probe drifted.
+        </span>
       </div>
 
       {/* Coordinates */}
@@ -228,6 +237,20 @@ function ElectrodeGroupForm({ mode, group, knownRegions, onSave, onCancel }) {
           <option value="μm">μm</option>
         </select>
       </div>
+
+      {/* Bad channels are not set here — they vary per recording day. */}
+      <p className="help-text">
+        Failed channels are marked per recording day in the Day Editor (Devices step),
+        not here, since channels fail over time.
+      </p>
+
+      {/* Tell the user what is still missing rather than leaving Save silently disabled. */}
+      {!isFormValid() && (
+        <p className="form-invalid-hint" role="status">
+          Fill in all required fields (device type, location, description, targeted
+          location, and the AP/ML/DV coordinates) to save.
+        </p>
+      )}
 
       {/* Buttons */}
       <div className="form-actions">

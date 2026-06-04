@@ -13,16 +13,14 @@ describe('exportChannelMapsToCSV', () => {
   test('exports tetrode channel maps correctly', () => {
     const channelMaps = [
       {
-        electrode_group_id: '0',
-        ntrode_id: '0',
-        electrode_id: 0,
+        electrode_group_id: 0,
+        ntrode_id: 0,
         bad_channels: [],
         map: { 0: 0, 1: 1, 2: 2, 3: 3 }
       },
       {
-        electrode_group_id: '0',
-        ntrode_id: '1',
-        electrode_id: 1,
+        electrode_group_id: 0,
+        ntrode_id: 1,
         bad_channels: [1, 3],
         map: { 0: 0, 1: 1, 2: 2, 3: 3 }
       }
@@ -30,7 +28,7 @@ describe('exportChannelMapsToCSV', () => {
 
     const electrodeGroups = [
       {
-        id: '0',
+        id: 0,
         device_type: 'tetrode_12.5',
         location: 'CA1'
       }
@@ -38,17 +36,16 @@ describe('exportChannelMapsToCSV', () => {
 
     const csv = exportChannelMapsToCSV(channelMaps, electrodeGroups);
 
-    expect(csv).toContain('electrode_group_id,device_type,location,ntrode_id,electrode_id,bad_channels,channel_0,channel_1,channel_2,channel_3');
-    expect(csv).toContain('0,tetrode_12.5,CA1,0,0,"",0,1,2,3');
-    expect(csv).toContain('0,tetrode_12.5,CA1,1,1,"1,3",0,1,2,3');
+    expect(csv).toContain('electrode_group_id,device_type,location,ntrode_id,bad_channels,channel_0,channel_1,channel_2,channel_3');
+    expect(csv).toContain('0,tetrode_12.5,CA1,0,"",0,1,2,3');
+    expect(csv).toContain('0,tetrode_12.5,CA1,1,"1,3",0,1,2,3');
   });
 
   test('exports 32-channel probe maps correctly', () => {
     const channelMaps = [
       {
-        electrode_group_id: '1',
-        ntrode_id: '0',
-        electrode_id: 0,
+        electrode_group_id: 1,
+        ntrode_id: 0,
         bad_channels: [],
         map: {
           0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7,
@@ -61,7 +58,7 @@ describe('exportChannelMapsToCSV', () => {
 
     const electrodeGroups = [
       {
-        id: '1',
+        id: 1,
         device_type: 'A1x32-6mm-50-177-H32_21mm',
         location: 'CA1'
       }
@@ -71,15 +68,14 @@ describe('exportChannelMapsToCSV', () => {
 
     expect(csv).toContain('channel_0,channel_1,channel_2,channel_3');
     expect(csv).toContain('channel_28,channel_29,channel_30,channel_31');
-    expect(csv).toContain('1,A1x32-6mm-50-177-H32_21mm,CA1,0,0,"",0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31');
+    expect(csv).toContain('1,A1x32-6mm-50-177-H32_21mm,CA1,0,"",0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31');
   });
 
   test('includes electrode group context', () => {
     const channelMaps = [
       {
-        electrode_group_id: '0',
-        ntrode_id: '0',
-        electrode_id: 0,
+        electrode_group_id: 0,
+        ntrode_id: 0,
         bad_channels: [],
         map: { 0: 0, 1: 1, 2: 2, 3: 3 }
       }
@@ -87,7 +83,7 @@ describe('exportChannelMapsToCSV', () => {
 
     const electrodeGroups = [
       {
-        id: '0',
+        id: 0,
         device_type: 'tetrode_12.5',
         location: 'CA3'
       }
@@ -104,16 +100,14 @@ describe('exportChannelMapsToCSV', () => {
   test('handles bad_channels array (empty and populated)', () => {
     const channelMaps = [
       {
-        electrode_group_id: '0',
-        ntrode_id: '0',
-        electrode_id: 0,
+        electrode_group_id: 0,
+        ntrode_id: 0,
         bad_channels: [],
         map: { 0: 0, 1: 1, 2: 2, 3: 3 }
       },
       {
-        electrode_group_id: '0',
-        ntrode_id: '1',
-        electrode_id: 1,
+        electrode_group_id: 0,
+        ntrode_id: 1,
         bad_channels: [0, 2],
         map: { 0: 0, 1: 1, 2: 2, 3: 3 }
       }
@@ -121,7 +115,7 @@ describe('exportChannelMapsToCSV', () => {
 
     const electrodeGroups = [
       {
-        id: '0',
+        id: 0,
         device_type: 'tetrode_12.5',
         location: 'CA1'
       }
@@ -129,16 +123,15 @@ describe('exportChannelMapsToCSV', () => {
 
     const csv = exportChannelMapsToCSV(channelMaps, electrodeGroups);
 
-    expect(csv).toContain('0,0,""');
-    expect(csv).toContain('1,1,"0,2"');
+    expect(csv).toContain('CA1,0,"",0,1,2,3');
+    expect(csv).toContain('CA1,1,"0,2",0,1,2,3');
   });
 
   test('includes header row with correct columns', () => {
     const channelMaps = [
       {
-        electrode_group_id: '0',
-        ntrode_id: '0',
-        electrode_id: 0,
+        electrode_group_id: 0,
+        ntrode_id: 0,
         bad_channels: [],
         map: { 0: 0, 1: 1, 2: 2, 3: 3 }
       }
@@ -146,7 +139,7 @@ describe('exportChannelMapsToCSV', () => {
 
     const electrodeGroups = [
       {
-        id: '0',
+        id: 0,
         device_type: 'tetrode_12.5',
         location: 'CA1'
       }
@@ -156,7 +149,7 @@ describe('exportChannelMapsToCSV', () => {
     const lines = csv.split('\n');
     const header = lines[0];
 
-    expect(header).toBe('electrode_group_id,device_type,location,ntrode_id,electrode_id,bad_channels,channel_0,channel_1,channel_2,channel_3');
+    expect(header).toBe('electrode_group_id,device_type,location,ntrode_id,bad_channels,channel_0,channel_1,channel_2,channel_3');
   });
 });
 

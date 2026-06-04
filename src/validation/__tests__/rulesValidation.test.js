@@ -631,6 +631,33 @@ describe('rulesValidation()', () => {
     });
   });
 
+  describe('Rule 7: Unique ntrode IDs', () => {
+    it('flags duplicate ntrode_id across the channel map', () => {
+      const model = {
+        ntrode_electrode_group_channel_map: [
+          { ntrode_id: 0, electrode_group_id: 0, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+          { ntrode_id: 0, electrode_group_id: 1, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+        ],
+      };
+      const issues = rulesValidation(model);
+      const dup = issues.find((i) => i.code === 'duplicate_ntrode_id');
+      expect(dup).toBeDefined();
+      expect(dup.severity).toBe('error');
+      expect(dup.message).toMatch(/0/);
+    });
+
+    it('does not flag unique ntrode_id values', () => {
+      const model = {
+        ntrode_electrode_group_channel_map: [
+          { ntrode_id: 0, electrode_group_id: 0, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+          { ntrode_id: 1, electrode_group_id: 1, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+        ],
+      };
+      const issues = rulesValidation(model);
+      expect(issues.some((i) => i.code === 'duplicate_ntrode_id')).toBe(false);
+    });
+  });
+
   describe('Multiple Rules Violations', () => {
     it('should detect violations from multiple rules', () => {
       const model = {

@@ -14,6 +14,7 @@
  * 4. Ntrode channel mappings must have unique physical channels (no duplicates)
  * 5. Ntrode channel mappings must be sequential (no missing channels)
  * 6. Electrode-group ids must be unique within a session
+ * 7. Ntrode ids must be unique across the animal's whole channel map
  *
  * @param {object} model - The form data to validate
  * @returns {Issue[]} Array of validation issues with format:
@@ -170,6 +171,30 @@ export const rulesValidation = (model) => {
         });
       }
       seen.add(id);
+    });
+  }
+
+  // Rule 7: Ntrode ids must be unique across the animal's whole channel map.
+  // `ntrode_id` keys the per-day bad-channel overrides and the NWB ntrode, so a
+  // duplicate silently misroutes bad channels and collapses ntrodes downstream.
+  if (model.ntrode_electrode_group_channel_map?.length > 0) {
+    const seenNtrodes = new Set();
+    const reportedNtrodes = new Set();
+    model.ntrode_electrode_group_channel_map.forEach((ntrode) => {
+      const id = ntrode?.ntrode_id;
+      if (id === undefined || id === null) return;
+      if (seenNtrodes.has(id) && !reportedNtrodes.has(id)) {
+        reportedNtrodes.add(id);
+        issues.push({
+          path: 'ntrode_electrode_group_channel_map',
+          code: 'duplicate_ntrode_id',
+          severity: 'error',
+          message:
+            `Duplicate ntrode id "${id}". Each ntrode must have a unique id — ` +
+            `duplicates misroute bad-channel marks and collapse ntrodes downstream.`,
+        });
+      }
+      seenNtrodes.add(id);
     });
   }
 

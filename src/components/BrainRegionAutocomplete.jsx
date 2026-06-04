@@ -97,6 +97,17 @@ const BrainRegionAutocompleteComponent = ({
     }
   };
 
+  // Snap to the canonical spelling on blur so a case-only variant (e.g. "ca1")
+  // visibly becomes the known region ("CA1") while the user is still in the form,
+  // rather than changing silently on save.
+  const handleBlur = () => {
+    if (!onChange) return;
+    const snapped = canonicalizeRegion(value, regionOptions);
+    if (snapped !== '' && snapped !== value) {
+      onChange(snapped);
+    }
+  };
+
   return (
     <label htmlFor={id}>
       {label}
@@ -106,6 +117,7 @@ const BrainRegionAutocompleteComponent = ({
         list={datalistId}
         value={value ?? ''}
         onChange={handleChange}
+        onBlur={handleBlur}
         name={name}
         required={required}
       />

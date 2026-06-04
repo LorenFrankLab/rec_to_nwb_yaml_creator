@@ -1286,6 +1286,56 @@ describe('AnimalEditorStepper', () => {
       expect(screen.getByTestId('channel-map-editor')).toHaveAttribute('data-group-id', '0');
     });
 
+    it('opens the channel map editor for the group with integer id 0 (0 is not falsy)', async () => {
+      const user = userEvent.setup();
+      const state = {
+        workspace: {
+          animals: {
+            remy: {
+              id: 'remy',
+              subject: { subject_id: 'remy' },
+              devices: {
+                electrode_groups: [
+                  {
+                    id: 0,
+                    device_type: 'tetrode_12.5',
+                    location: 'CA1',
+                    targeted_x: 1.0,
+                    targeted_y: 2.0,
+                    targeted_z: 3.0,
+                    units: 'mm'
+                  }
+                ],
+                ntrode_electrode_group_channel_map: [
+                  {
+                    electrode_group_id: 0,
+                    ntrode_id: 0,
+                    bad_channels: [],
+                    map: { 0: 0, 1: 1, 2: 2, 3: 3 }
+                  }
+                ],
+              },
+              days: [],
+            },
+          },
+          days: {},
+        },
+      };
+
+      renderWithStore(<AnimalEditorStepper />, state);
+
+      const nextButton = screen.getByRole('button', { name: /next step/i });
+      await user.click(nextButton);
+
+      await user.click(screen.getByTestId('edit-channel-map-0'));
+
+      // With the integer id 0, the editor must still resolve the group (a falsy-0
+      // guard would leave editingElectrodeGroup null and render nothing).
+      expect(screen.getByTestId('channel-map-editor')).toBeInTheDocument();
+      expect(screen.getByTestId('channel-map-editor')).toHaveAttribute('data-group-id', '0');
+      expect(screen.getByTestId('editor-channel-map-count')).toHaveTextContent('1 maps');
+    });
+
     it('saves channel map changes correctly', async () => {
       const user = userEvent.setup();
       const state = {

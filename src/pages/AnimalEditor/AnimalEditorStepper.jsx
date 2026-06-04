@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import { useStepperShortcut } from '../../hooks/stepperShortcuts';
@@ -169,6 +169,19 @@ export default function AnimalEditorStepper() {
     setAlertState((prev) => ({ ...prev, isOpen: false }));
     if (deferred) deferred();
   }
+
+  // Canonical region list seeded from regions already used across the workspace,
+  // so the electrode-group modal can offer them and snap case-only variants.
+  // Memoized (and declared before the early returns, per the Rules of Hooks) so a
+  // fresh array reference doesn't defeat the modal's BrainRegionAutocomplete memo.
+  const knownRegions = useMemo(() => [
+    ...new Set(
+      Object.values(model.workspace.animals || {})
+        .flatMap((a) => a.devices?.electrode_groups || [])
+        .flatMap((g) => [g.location, g.targeted_location])
+        .filter((r) => typeof r === 'string' && r.trim() !== '')
+    ),
+  ], [model.workspace.animals]);
 
   // Validate animal exists
   const animal = animalId ? model.workspace.animals[animalId] : null;
@@ -534,6 +547,10 @@ export default function AnimalEditorStepper() {
     reader.onload = (e) => {
       try {
         const csvContent = e.target?.result;
+        // CSV import fully replaces the channel map (see the store update below), so
+        // the imported ntrode ids are renumbered from 0 — no `existingMaps` to avoid
+        // colliding with. The collision-safe `existingMaps` parameter exists for an
+        // additive caller, which this is not.
         const importedMaps = importChannelMapsFromCSV(csvContent);
 
         // Validate imported maps match existing electrode groups
@@ -573,24 +590,14 @@ export default function AnimalEditorStepper() {
     reader.readAsText(file);
   }
 
-  // Canonical region list seeded from regions already used across the workspace,
-  // so the electrode-group modal can offer them and snap case-only variants.
-  const knownRegions = [
-    ...new Set(
-      Object.values(model.workspace.animals || {})
-        .flatMap((a) => a.devices?.electrode_groups || [])
-        .flatMap((g) => [g.location, g.targeted_location])
-        .filter((r) => typeof r === 'string' && r.trim() !== '')
-    ),
-  ];
-
-  // Get electrode group for editor
-  const editingElectrodeGroup = editingGroupId
+  // Get electrode group for editor. Compare against null, not truthiness — an
+  // integer group id of 0 is falsy but valid.
+  const editingElectrodeGroup = editingGroupId != null
     ? animal.devices.electrode_groups.find(g => g.id === editingGroupId)
     : null;
 
   // Get channel maps for editing group
-  const editingChannelMaps = editingGroupId
+  const editingChannelMaps = editingGroupId != null
     ? (animal.devices.ntrode_electrode_group_channel_map || [])
         .filter(map => map.electrode_group_id === editingGroupId)
     : [];

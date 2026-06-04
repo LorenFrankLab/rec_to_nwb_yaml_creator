@@ -135,6 +135,11 @@ export function nextNtrodeId(existingMaps) {
     return 0;
   }
 
-  const maxId = Math.max(...existingMaps.map((m) => parseInt(m.ntrode_id, 10)));
+  const maxId = Math.max(
+    ...existingMaps.map((m) => {
+      const parsed = parseInt(m.ntrode_id, 10);
+      return Number.isNaN(parsed) ? -1 : parsed;
+    })
+  );
   return maxId + 1;
 }

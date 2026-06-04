@@ -24,9 +24,11 @@ parity fixture changed. Legacy golden baselines stay byte-identical (125/125).
   set `id: startId + i` (integer). `handleEditGroup` resolves a numeric id via lookup rather than
   treating the number as the group object (which left `editingGroup.id` undefined).
 - **Required `description` / `targeted_location`.** `ElectrodeGroupModal` collects and saves both
-  required fields. `location` and `targeted_location` use canonical region entry seeded from the
-  workspace's existing regions; a case-only variant of a known region snaps to the canonical
-  spelling (`ca1` → `CA1`), and whitespace-only values cannot be saved.
+  required fields, with help text distinguishing recorded `location` from planned `targeted_location`
+  and a disabled-Save hint listing what's missing. `location` and `targeted_location` use canonical
+  region entry seeded from the workspace's existing regions; a case-only variant of a known region
+  snaps to the canonical spelling **on blur** (`ca1` → `CA1`, visible before save), and whitespace-only
+  values cannot be saved. The `ElectrodeGroupsStep` completeness badge now also checks these two fields.
 - **Integer ntrode IDs + collision guard.** `channelMapUtils` emits integer `ntrode_id` /
   `electrode_group_id`. New helper `nextNtrodeId(existingMaps)` (integer, one past the current
   max) is used at the add site so an incremental group add never restarts at 0 / collides.
@@ -41,8 +43,11 @@ parity fixture changed. Legacy golden baselines stay byte-identical (125/125).
 - **Integer IDs at every ingress.** Copy-from-animal (`CopyFromAnimalDialog`) and CSV import
   (`csvChannelMapUtils`) emit integer IDs; CSV import renumbers `ntrode_id` collision-safe and
   tolerates/ignores the legacy `electrode_id` column.
-- **Electrode-group id uniqueness rule.** A new business rule rejects duplicate electrode-group ids
-  before export (duplicates collapse groups during NWB conversion / Spyglass ingestion).
+- **ID-uniqueness rules.** New business rules reject duplicate electrode-group ids and duplicate
+  ntrode ids before export (duplicates collapse groups / misroute bad channels during NWB conversion
+  and Spyglass ingestion).
+- **CSV format.** `electrode_id` (never a schema field) is dropped from the exported CSV header/rows;
+  import tolerates and ignores it for backward compatibility with older CSVs.
 - **PropTypes reconciled to integer.** `ChannelMapEditor`, `DevicesStep`, and `BadChannelsEditor`
   expect integer `id` / `ntrode_id` / `electrode_group_id`; the contradictory string/number split is
   gone. `String()` normalization is kept only at the genuine object-key boundary (the

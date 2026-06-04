@@ -19,17 +19,16 @@ import { nextNtrodeId } from './channelMapUtils';
  *
  * @example
  * const maps = [{
- *   electrode_group_id: '0',
- *   ntrode_id: '0',
- *   electrode_id: 0,
+ *   electrode_group_id: 0,
+ *   ntrode_id: 0,
  *   bad_channels: [],
  *   map: { 0: 0, 1: 1, 2: 2, 3: 3 }
  * }];
- * const groups = [{ id: '0', device_type: 'tetrode_12.5', location: 'CA1' }];
+ * const groups = [{ id: 0, device_type: 'tetrode_12.5', location: 'CA1' }];
  * exportChannelMapsToCSV(maps, groups);
  * // Returns:
- * // electrode_group_id,device_type,location,ntrode_id,electrode_id,bad_channels,channel_0,channel_1,channel_2,channel_3
- * // 0,tetrode_12.5,CA1,0,0,"",0,1,2,3
+ * // electrode_group_id,device_type,location,ntrode_id,bad_channels,channel_0,channel_1,channel_2,channel_3
+ * // 0,tetrode_12.5,CA1,0,"",0,1,2,3
  */
 export function exportChannelMapsToCSV(channelMaps, electrodeGroups) {
   if (!channelMaps || channelMaps.length === 0) {
@@ -46,14 +45,14 @@ export function exportChannelMapsToCSV(channelMaps, electrodeGroups) {
   const firstMap = channelMaps[0];
   const channelCount = Object.keys(firstMap.map).length;
 
-  // Build header row
+  // Build header row. `electrode_id` is not a schema field on the ntrode and is no
+  // longer part of the channel-map shape, so it is not emitted.
   const channelHeaders = Array.from({ length: channelCount }, (_, i) => `channel_${i}`);
   const headers = [
     'electrode_group_id',
     'device_type',
     'location',
     'ntrode_id',
-    'electrode_id',
     'bad_channels',
     ...channelHeaders
   ];
@@ -77,7 +76,6 @@ export function exportChannelMapsToCSV(channelMaps, electrodeGroups) {
       group.device_type || '',
       group.location || '',
       channelMap.ntrode_id,
-      channelMap.electrode_id,
       badChannelsStr,
       ...channelValues
     ].join(',');

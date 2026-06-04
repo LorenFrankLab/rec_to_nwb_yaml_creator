@@ -271,11 +271,11 @@ Recorded during implementation; revisit in the named phase.
    golden baseline (forbidden without coordination) and re-checking the legacy↔new byte-parity
    harness + trodes_to_nwb, so it was deliberately **not** changed in phase 4. Revisit when a golden
    regeneration is coordinated (and verify in the deferred pre-cutover round-trip).
-2. **CSV `electrode_id` column is now vestigial (consider removing in a later pass).** Generated
-   ntrodes no longer carry `electrode_id` (it is not a schema field). `importChannelMapsFromCSV`
-   tolerates and ignores the column, and `exportChannelMapsToCSV` still writes it (now empty for
-   generated maps). The column could be dropped from the CSV format entirely in a future cleanup,
-   coordinated with any external CSV templates users may have.
+2. **CSV `electrode_id` column removed (resolved in phase 4 via review).** Generated ntrodes no
+   longer carry `electrode_id` (not a schema field). `exportChannelMapsToCSV` no longer emits the
+   column and `importChannelMapsFromCSV` tolerates/ignores it for backward compatibility with older
+   CSVs. No remaining work; noted here only because external CSV templates that relied on the column
+   will simply see it absent (and any value they keep is ignored on import).
 
 ### Phase 3 findings / follow-ups
 
