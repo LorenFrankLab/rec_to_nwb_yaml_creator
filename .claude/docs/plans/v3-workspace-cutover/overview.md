@@ -158,83 +158,71 @@ not executed here.
    move workspace to `#/home`? Decide in Phase 11; default best-answer: `#/` → workspace home, legacy
    moves behind the toggle + `#/legacy`.
 
-## Deferred follow-ups (named, out of scope for v3.0.0)
+## Deferred follow-ups
 
-- **Persistence-blob migration.** Phase 1 versions the localStorage blob and *discards with a notice*
-  on schemaVersion mismatch — no migration. That is acceptable for v3.0.0 (no real users have v1 blobs
-  yet). **Follow-up:** once real users have v1 blobs in the wild, a future model change that bumps the
-  schemaVersion will silently discard their saved work. A migration path (transform old blobs forward
-  instead of discarding) is **out of scope for v3.0.0** but is a named follow-up to schedule before the
-  first post-v3.0.0 model change that touches the persisted shape.
-- **Two audit Mediums handled in Phase 2 (not dropped).** The `setTimeout(…, 0)` post-create
-  navigation race in `src/pages/Home/index.jsx` and the stale-`days`-snapshot guard in batch day
-  creation in `src/pages/AnimalWorkspace/index.jsx` are fixed in
-  [Phase 2](phase-2-navigation-stub-honesty.md), not silently dropped.
-- **Remaining dialogs not yet on the shared `<Modal>` primitive.** Phase 3 created the primitive and
-  migrated `CameraModal`, `ElectrodeGroupModal`, and `AlertModal`. Three other overlay surfaces still
-  use bespoke markup and lack the full dialog a11y contract (focus trap / focus return / ESC / proper
-  ARIA): `src/pages/AnimalEditor/ChannelMapEditor.jsx`, `src/pages/AnimalEditor/CopyFromAnimalDialog.jsx`
-  (uses `<dialog open>` without `showModal()`), and `src/components/CalendarDayCreator/CalendarDayCreator.jsx`
-  (inline card carrying `role="dialog"`). These were **out of scope for Phase 3** (its task list named
-  only the three migrated modals). **Follow-up:** migrate them onto `<Modal>` (or fix in place) — a
-  natural fit for the [Phase 10](phase-10-a11y-keyboard.md) accessibility pass, which should also sweep
-  the pre-existing color-contrast issues (inline-warning text, channel-map select focus rings, calendar
-  day-number contrast) flagged in the Phase 3 UX review.
-- **Phase 4 UX/a11y items deferred to the Phase 10 sweep.** The Phase 4 reviewers surfaced three items
-  that are app-wide or shared-component concerns, out of scope for Phase 4's local change:
-  1. **Primary-button contrast.** `--color-primary` (`#2196f3`) with white text is ~3.1:1 — below
-     WCAG AA — and is the app-wide primary-button color (Home, Animal Editor, Day Editor all reuse it).
-     Phase 4 left it unchanged to avoid fragmenting the palette; fix it once, centrally, in the Phase 10
-     color-contrast sweep (alongside the inline-warning/focus-ring/calendar items already named above).
-     (Phase 4's own *new* inline-warning / `status-⚠` colors were bumped to AA-compliant values.)
-  2. **`role="alertdialog"` for destructive confirms.** `src/components/Modal/ConfirmDialog.jsx` (the
-     shared Phase 3 primitive) renders `role="dialog"`; ARIA recommends `alertdialog` for a destructive
-     confirm. Changing it touches the shared component used by every delete flow → defer to the Phase 10
-     a11y pass so it lands once for all callers.
-  3. **Inherited behavioral events vs. the YAML merge.** The Tasks & Epochs step shows the animal's
-     `behavioral_events` as inherited/read-only, but `mergeDayMetadata` (`src/state/workspaceUtils.js`)
-     emits only `day.behavioral_events` — it does not concatenate the animal's inherited events into the
-     exported metadata. This is a **pre-existing** merge gap (not introduced by Phase 4) that Phase 4's
-     UI now makes visible. **Follow-up:** reconcile the inheritance UI with the merge contract (either
-     merge animal events into the day output, or relabel the display) before cutover — a natural fit for
-     [Phase 5](phase-5-validation-export.md), which owns the export/merge path, or the Phase 8 summary.
-- **Phase 8 review items deferred (out of scope for the summary phase).** The Phase 8 reviewers
-  surfaced two enhancements left for a later pass:
-  1. **A persisted-"Validated" indicator in the summary table.** The status chip already shows
-     live-computed status, and "Validate All" persists `day.state.validated`, but the table does not
-     visually distinguish a day whose validated flag is persisted from one that is merely live-valid.
-     Phase 8 added a button `title` explaining the persistence purpose; a dedicated column/badge is a
-     UX enhancement best landed alongside the [Phase 10](phase-10-a11y-keyboard.md) pass (and is partly
-     redundant once the AnimalWorkspace per-day chips consume the same flag).
-  2. **Structured error logging for export skips/failures.** Phase 8 logs parity skips and export
-     failures via `console.error` (the app has no Sentry/structured-logging infra today). Routing these
-     through a real logging path with error IDs is a cross-app concern, out of scope for the summary.
+Consolidated after Phase 10. Earlier phase docs routed several items "to the Phase 10 sweep"; Phase 10
+resolved the contrast items and left the rest, now gathered under **Phase 10.5** below.
 
-- **Phase 9 review items deferred (out of scope for the wizard phase).** The Phase 9
-  reviewers surfaced three follow-ups left for later, all low practical risk:
-  1. **Cross-action atomicity of versioning.** The wizard calls `addConfigurationSnapshot`
-     then `applyConfigurationForward` as two sequential store actions, predicting the new
-     version as `configurationHistory.length + 1`. The calls are synchronous on the current
-     animal, so the version is correct in practice; but if the second action ever threw, an
-     orphan empty snapshot would remain. **Follow-up:** have `addConfigurationSnapshot`
-     return the created version (or add a combined create-and-apply action) so the two can't
-     desynchronize. Out of scope here (the plan deliberately kept creation and assignment
-     as separate actions).
-  2. **`appliedToDays` as a derived value.** It is currently a denormalized cache kept in
-     sync by `applyConfigurationForward`, with `reconcileAppliedToDays` providing the
-     trustworthy derived view (`updateDay({configurationVersion})` bypasses the stored
-     lists). **Follow-up:** consider dropping the stored field entirely and always deriving
-     it, removing the partition-maintenance burden. A data-model change, out of scope here.
-  3. **Wizard UX niceties for long studies.** Select-all/deselect-all controls and
-     relative/human-readable day labels for animals with 60–200+ days, and an explicit
-     success confirmation. Deferred to the [Phase 10](phase-10-a11y-keyboard.md) pass.
+### Resolved in Phase 10 (history)
 
-- **Phase 10 review item deferred.** The `Alt+←` / `Alt+→` stepper shortcuts (the
-  chord the phase spec prescribed) collide with the browser's Back/Forward navigation
-  on Windows/Linux; the handler `preventDefault`s, so in-app it advances the stepper
-  rather than navigating history. **Follow-up:** consider `Alt+PageUp/PageDown` (or
-  `Alt+Shift+Arrow`) for cross-platform safety, or add a platform note in the shortcuts
-  help. Kept as specified for now; revisit before v3.0.0 if user feedback warrants.
+- **Primary-button / app-wide contrast** (Phase 4 item). `--color-primary` `#2196f3` (~3.1:1 on white)
+  → `#1565c0` (AA); `--color-warning`/`--color-error` likewise bumped. The remaining `#2196f3` literals
+  across the new-page stylesheets (incl. channel-map focus rings, inline-warning text) were swept to the
+  token. Guarded by `src/__tests__/unit/a11y/contrast.test.js`.
+- **Phase 2 audit Mediums** — the `setTimeout(…, 0)` post-create navigation race
+  (`src/pages/Home/index.jsx`) and the stale-`days`-snapshot guard
+  (`src/pages/AnimalWorkspace/index.jsx`) were fixed in [Phase 2](phase-2-navigation-stub-honesty.md).
+
+### Phase 10.5 — pre-cutover cleanup (before [Phase 11](phase-11-cutover-v3.md))
+
+A consolidated grab-bag of small a11y / correctness / tech-debt items left by Phases 3–10. None block
+the cutover individually, but they should be triaged here so v3.0.0 ships clean.
+
+#### Accessibility (finish the Phase 10 work)
+
+1. **Migrate the last three dialogs onto the shared `<Modal>`** (full focus-trap / focus-return / ESC /
+   ARIA): `src/pages/AnimalEditor/ChannelMapEditor.jsx`, `src/pages/AnimalEditor/CopyFromAnimalDialog.jsx`
+   (`<dialog open>` without `showModal()`), `src/components/CalendarDayCreator/CalendarDayCreator.jsx`
+   (inline `role="dialog"`). Phase 3 migrated only `CameraModal`/`ElectrodeGroupModal`/`AlertModal`.
+2. **`role="alertdialog"` on `src/components/Modal/ConfirmDialog.jsx`** for destructive confirms (it
+   still renders `role="dialog"`; touches every delete flow, so do it once on the shared primitive).
+3. **Re-check `CalendarDayCreator` day-number contrast** — only the `#2196f3` literal was swept in
+   Phase 10; confirm the day-number/other pairs meet AA.
+
+#### Correctness / data integrity (prefer before cutover)
+
+1. **Inherited behavioral events vs. the YAML merge.** The Tasks & Epochs step shows the animal's
+   `behavioral_events` as inherited/read-only, but `mergeDayMetadata` (`src/state/workspaceUtils.js`)
+   emits only `day.behavioral_events` — it does not concatenate inherited events into the export. A
+   pre-existing merge gap surfaced by the Phase 4 UI. Reconcile (merge animal events into the day output,
+   or relabel the display).
+2. **Reconfig versioning atomicity** (Phase 9). The wizard calls `addConfigurationSnapshot` then
+   `applyConfigurationForward`, predicting the version as `configurationHistory.length + 1`; if the
+   second action threw, an orphan empty snapshot would remain. Have `addConfigurationSnapshot` return the
+   created version (or add a combined create-and-apply action) so the two can't desync.
+
+#### Tech-debt / UX (may slip to post-v3)
+
+1. **Make `ConfigurationSnapshot.appliedToDays` derived** rather than a denormalized cache kept in sync by
+   `applyConfigurationForward` (the trustworthy view is already `reconcileAppliedToDays`; `updateDay`
+   bypasses the stored lists). A data-model change.
+2. **Reconfig wizard UX for long studies** — select-all/deselect-all and relative/human-readable day
+   labels for animals with 60–200+ days, plus an explicit success confirmation.
+3. **`Alt+←` / `Alt+→` vs. browser Back/Forward** on Windows/Linux (the handler `preventDefault`s, so
+   in-app it navigates the stepper). Consider `Alt+PageUp/PageDown` (or `Alt+Shift+Arrow`), or add a
+   platform note in the shortcuts help.
+4. **Persisted-"Validated" indicator** in the Validation Summary table (distinguish a day whose
+   `state.validated` is persisted from one that is merely live-valid). Partly redundant once the
+   AnimalWorkspace per-day chips consume the same flag.
+5. **Structured error logging** for export skips/failures (currently `console.error`; no
+   Sentry/structured-logging infra exists yet). Cross-app concern.
+
+### Post-v3.0.0
+
+- **Persistence-blob forward migration.** Phase 1 versions the localStorage blob and *discards with a
+  notice* on `schemaVersion` mismatch — no migration. Acceptable for v3.0.0 (no real v1 blobs yet), but
+  once users have v1 blobs, a future shape change would silently discard their work. Schedule a
+  forward-migration path before the first post-v3.0.0 change that touches the persisted shape.
 
 ## Plan revisions
 
