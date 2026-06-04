@@ -1,9 +1,19 @@
 import '@testing-library/jest-dom';
-import { afterEach } from 'vitest';
+import { afterEach, expect } from 'vitest';
 import { cleanup } from '@testing-library/react';
+import { toHaveNoViolations } from 'jest-axe';
 
 // Import custom matchers
 import './__tests__/helpers/custom-matchers';
+
+// Suite-wide Axe matcher for the accessibility integration tests.
+expect.extend(toHaveNoViolations);
+
+// jsdom does not implement scrollIntoView; several components call it on
+// focus/navigation. Provide a no-op so those code paths don't crash in tests.
+if (typeof window !== 'undefined' && !window.HTMLElement.prototype.scrollIntoView) {
+  window.HTMLElement.prototype.scrollIntoView = () => {};
+}
 
 // jsdom runs on an opaque origin (about:blank), so window.localStorage is not
 // available by default. Provide a minimal in-memory Storage polyfill for tests

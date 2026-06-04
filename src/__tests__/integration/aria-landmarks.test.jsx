@@ -197,6 +197,10 @@ describe('ARIA Landmarks', () => {
       // and contentinfo landmarks (no duplicates).
       expect(container.querySelectorAll('[role="banner"], header')).toHaveLength(1);
       expect(container.querySelectorAll('[role="contentinfo"], footer')).toHaveLength(1);
+
+      // Exactly one step is marked current for assistive tech.
+      const current = container.querySelectorAll('[aria-current="step"]');
+      expect(current).toHaveLength(1);
     });
 
     it('AnimalEditor: exactly one main + one #main-content (duplicate removed); back-to-workspace link', async () => {

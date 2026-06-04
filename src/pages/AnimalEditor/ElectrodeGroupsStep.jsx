@@ -97,8 +97,8 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
   if (electrodeGroups.length === 0) {
     return (
       <div className="electrode-groups-step empty-state">
-        <div className="empty-state-icon">🔌</div>
-        <h3>No Electrode Groups Configured</h3>
+        <div className="empty-state-icon" aria-hidden="true">🔌</div>
+        <h2>No Electrode Groups Configured</h2>
         <p>
           Electrode groups define your recording hardware: brain regions, device types, and stereotaxic coordinates.
         </p>

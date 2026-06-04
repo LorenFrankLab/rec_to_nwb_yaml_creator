@@ -124,3 +124,8 @@
   /* #bf360c keeps AA contrast (≥4.5:1) on the #fff3e0 chip background. */
   color: #bf360c;
 }
+
+/* WCAG 2.5.8 target size: batch action buttons are at least 44px tall. */
+.validation-summary-actions button {
+  min-height: 44px;
+}

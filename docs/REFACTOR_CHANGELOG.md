@@ -6,6 +6,45 @@
 
 ---
 
+## Continuous accessibility & keyboard shortcuts (June 4, 2026) ✅ COMPLETE
+
+### Summary
+
+Hardens the workspace UI for accessibility: continuous automated Axe checks across
+every route, global keyboard shortcuts with a discoverable help dialog, a color-token
+contrast audit, and a deeper ARIA / tab-order / status pass.
+
+### Changes
+
+- **Automated Axe in CI.** `jest-axe` (dev dependency) runs inside the Vitest/jsdom
+  integration lane: `axe-a11y.test.jsx` renders every route — Home, AnimalWorkspace,
+  AnimalEditor, ValidationSummary, and the DayEditor at each of its five steps — with a
+  fully-configured workspace fixture and asserts zero violations. `toHaveNoViolations`
+  is wired suite-wide. Two real violations found and fixed: `<aside role="navigation">`
+  (role not allowed on `<aside>`) became `<nav>`, and an empty-state heading-order jump
+  (`h3`→`h2`).
+- **Global keyboard shortcuts** (`useGlobalShortcuts`, mounted once in AppLayout):
+  Ctrl/Cmd+S (save — always suppresses the browser dialog), Alt+→ / Alt+← (next /
+  previous stepper step), Alt+N (context add, e.g. open the add-task dialog on the
+  Epochs step), and `?` (open help). Shortcuts are suppressed while typing in a field or
+  while a modal is open. Step navigation / add are broadcast to the active stepper via a
+  small window-event bridge (`stepperShortcuts`).
+- **Discoverable shortcuts help** (`ShortcutsHelp`, on the shared `<Modal>`): opened by
+  `?` and by a labelled header trigger ("Keyboard shortcuts"); Esc closes.
+- **ARIA / tab-order pass:** AnimalEditorStepper gains an `aria-live` step-change
+  announcer; ≥44px target sizing on new action buttons; verified one `main` + one
+  labelled `navigation` and a single `aria-current="step"` per route.
+- **Color-contrast audit + guard.** Raised the shared tokens to WCAG AA — `--color-primary`
+  `#2196f3`→`#1565c0` (was 3.12:1 with white text), `--color-warning` `#d84315`→`#bf360c`,
+  `--color-error` `#d32f2f`→`#c62828`. `contrast.test.js` parses the tokens from
+  `index.css` and asserts every audited pair meets AA, so a future regression fails a test.
+- **Un-skipped** the nested electrode-group keyboard-navigation test (the configured
+  workspace fixture removed the old state blocker).
+- No change to YAML output, schema, or `isExportEnabled`; golden baselines stay
+  byte-identical.
+
+---
+
 ## Probe reconfiguration wizard (June 3, 2026) ✅ COMPLETE
 
 ### Summary

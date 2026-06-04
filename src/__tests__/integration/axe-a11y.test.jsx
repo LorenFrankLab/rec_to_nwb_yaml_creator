@@ -1,0 +1,99 @@
+/**
+ * Continuous-accessibility integration tests: render each workspace route with a
+ * fully-configured workspace and assert zero Axe violations.
+ *
+ * Runs in the jsdom/Vitest lane (fast, same fixture renders every route). Color
+ * contrast is NOT meaningfully computable in jsdom, so it is covered separately by
+ * the unit-level contrast check; these tests cover structure/ARIA/labelling.
+ */
+import { describe, it, expect, afterEach } from 'vitest';
+import { render, screen, waitFor, act, cleanup } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { axe } from 'jest-axe';
+import { App } from '../../App';
+import { StoreProvider } from '../../state/StoreContext';
+import { makeConfiguredWorkspace } from '../helpers/test-fixtures';
+
+const workspace = makeConfiguredWorkspace();
+const ANIMAL_ID = 'remy';
+const DAY_ID = 'remy-2023-06-22';
+
+/**
+ * Render <App/> seeded with the configured workspace at the given hash route.
+ *
+ * @param {string} hash - The hash route (e.g. '#/home').
+ * @returns {Promise<import('@testing-library/react').RenderResult>}
+ */
+async function renderRoute(hash) {
+  window.location.hash = hash;
+  const view = render(
+    <StoreProvider initialState={{ workspace }}>
+      <App />
+    </StoreProvider>
+  );
+  // Let the hash router + any lazy route resolve.
+  await act(async () => {
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    await Promise.resolve();
+  });
+  return view;
+}
+
+afterEach(() => {
+  cleanup();
+  window.location.hash = '';
+});
+
+/**
+ * Run Axe on a rendered container and assert zero violations.
+ *
+ * @param {HTMLElement} container - The rendered DOM container.
+ * @returns {Promise<void>}
+ */
+async function expectNoViolations(container) {
+  const results = await axe(container);
+  expect(results).toHaveNoViolations();
+}
+
+describe('axe-a11y (configured workspace, all routes)', () => {
+  it('Home has no violations', async () => {
+    const { container } = await renderRoute('#/home');
+    await screen.findByRole('main');
+    await expectNoViolations(container);
+  });
+
+  it('AnimalWorkspace has no violations', async () => {
+    const { container } = await renderRoute('#/workspace');
+    await screen.findByRole('main');
+    await expectNoViolations(container);
+  });
+
+  it('AnimalEditor has no violations', async () => {
+    const { container } = await renderRoute(`#/animal/${ANIMAL_ID}/editor`);
+    // Lazy-loaded; wait for the editor's main content.
+    await waitFor(() => expect(screen.getByRole('main')).toBeInTheDocument());
+    await expectNoViolations(container);
+  });
+
+  it('ValidationSummary has no violations', async () => {
+    const { container } = await renderRoute('#/validation');
+    await screen.findByRole('heading', { name: /validation summary/i });
+    await expectNoViolations(container);
+  });
+
+  describe('DayEditor steps', () => {
+    const steps = ['Overview', 'Devices', 'Epochs', 'Validation', 'Export'];
+
+    it.each(steps)('step %s has no violations', async (stepLabel) => {
+      const user = userEvent.setup();
+      const { container } = await renderRoute(`#/day/${DAY_ID}`);
+      await screen.findByRole('heading', { name: /day editor/i });
+
+      // Navigate to the requested step via its StepNavigation button.
+      const stepButton = screen.getByRole('button', { name: new RegExp(`^${stepLabel}`, 'i') });
+      await user.click(stepButton);
+
+      await expectNoViolations(container);
+    });
+  });
+});

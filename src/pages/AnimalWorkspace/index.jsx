@@ -126,7 +126,7 @@ export function AnimalWorkspace() {
         /* Main Content: Animal List + Day Management */
         <div className="workspace-content">
           {/* Animal List Sidebar */}
-          <aside className="animal-list" role="navigation" aria-label="Animal list">
+          <nav className="animal-list" aria-label="Animal list">
             <div className="animal-list-header">
               <h2>Animals</h2>
               <a href="#/home" className="btn-create-animal" aria-label="Create new animal">
@@ -152,7 +152,7 @@ export function AnimalWorkspace() {
                 </button>
               );
             })}
-          </aside>
+          </nav>
 
           {/* Day List Main Area */}
           <section className="day-management" aria-labelledby="day-list-heading">

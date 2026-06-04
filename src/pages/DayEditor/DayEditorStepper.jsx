@@ -1,5 +1,6 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
+import { useStepperShortcut } from '../../hooks/stepperShortcuts';
 import { useDayIdFromUrl } from '../../hooks/useDayIdFromUrl';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { computeStepStatus } from './validation';
@@ -32,6 +33,21 @@ export default function DayEditorStepper() {
   const { model, actions, selectors, persistence } = useStoreContext();
   const dayId = useDayIdFromUrl();
   const [currentStep, setCurrentStep] = useState('overview');
+
+  // Global Alt+Arrow shortcuts advance/retreat this stepper. The step order is
+  // fixed, so a ref captures it once and the handler stays stable.
+  const stepOrderRef = useRef(['overview', 'devices', 'epochs', 'validation', 'export']);
+  useStepperShortcut(
+    useCallback((action) => {
+      setCurrentStep((cur) => {
+        const ids = stepOrderRef.current;
+        const idx = ids.indexOf(cur);
+        if (action === 'next') return ids[Math.min(idx + 1, ids.length - 1)];
+        if (action === 'prev') return ids[Math.max(idx - 1, 0)];
+        return cur;
+      });
+    }, [])
+  );
 
   // Get day and animal from store
   const day = model.workspace?.days?.[dayId];

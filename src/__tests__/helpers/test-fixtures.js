@@ -8,9 +8,46 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { buildRealisticWorkspace } from '../fixtures/workspaceBuilders';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+/**
+ * Build a fully-configured single-animal, single-day workspace so every new route
+ * renders real content (not an empty state that would mask accessibility issues).
+ *
+ * Wraps {@link buildRealisticWorkspace} (a complete animal — subject, devices /
+ * electrode groups, cameras, experimenters — plus a day with session, tasks, and
+ * epochs) into the workspace slice shape the store seeds from. Fresh deep clone per
+ * call; deterministic (no Date.now / Math.random).
+ *
+ * @returns {{ version: string, lastModified: string, animals: object, days: object, settings: object }}
+ */
+export function makeConfiguredWorkspace() {
+  const { animal, day } = buildRealisticWorkspace();
+  // Mirror the configured probe layout into the live animal devices so the Animal
+  // Editor renders real electrode groups (not an empty state that hides a11y issues).
+  const config = animal.configurationHistory[0].devices;
+  animal.devices = {
+    ...animal.devices,
+    electrode_groups: config.electrode_groups,
+    ntrode_electrode_group_channel_map: config.ntrode_electrode_group_channel_map,
+  };
+  return {
+    version: '1.0.0',
+    lastModified: '2023-06-22T12:00:00.000Z',
+    animals: { [animal.id]: animal },
+    days: { [day.id]: day },
+    settings: {
+      defaultLab: animal.experimenters.lab,
+      defaultInstitution: animal.experimenters.institution,
+      defaultExperimenters: [],
+      autoSaveInterval: 30000,
+      shadowExportEnabled: true,
+    },
+  };
+}
 
 /**
  * Load the minimal-complete.yml fixture

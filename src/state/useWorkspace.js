@@ -571,6 +571,25 @@ export function useWorkspace(initialState = null) {
 
   const dismissLoadNotice = useCallback(() => setLoadNotice(null), []);
 
+  // Keep the latest workspace in a ref so `saveNow` can flush synchronously without
+  // re-creating the persistence object (and its callback identity) on every change.
+  const workspaceRef = useRef(workspace);
+  workspaceRef.current = workspace;
+
+  // Force an immediate write (Ctrl/Cmd+S), bypassing the autosave debounce. No-op
+  // when persistence is disabled. Mirrors the autosave's success/error bookkeeping.
+  const saveNow = useCallback(() => {
+    if (!FLAGS.localStoragePersistence) return;
+    try {
+      saveWorkspace(workspaceRef.current);
+      setLastSaved(new Date().toISOString());
+      setSaveError(null);
+      setHasPendingWrite(false);
+    } catch (err) {
+      setSaveError(`Could not save workspace: ${err.message}`);
+    }
+  }, []);
+
   // Real persistence status (never part of `model` — must not reach YAML).
   // Memoized so the StoreContext value's identity is stable when nothing changed,
   // preserving the provider's re-render optimization.
@@ -582,8 +601,9 @@ export function useWorkspace(initialState = null) {
       hasPendingWrite,
       loadNotice,
       dismissLoadNotice,
+      saveNow,
     }),
-    [lastSaved, saveError, hasPendingWrite, loadNotice, dismissLoadNotice]
+    [lastSaved, saveError, hasPendingWrite, loadNotice, dismissLoadNotice, saveNow]
   );
 
   return { workspace, setWorkspace, workspaceActions, workspaceSelectors, persistence };

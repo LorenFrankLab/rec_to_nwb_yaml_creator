@@ -3,10 +3,11 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StoreProvider } from '../../state/StoreContext';
 import { App } from '../../App';
+import { makeConfiguredWorkspace } from '../helpers/test-fixtures';
 
 /**
  * Integration tests for keyboard navigation accessibility (P1.1.1)
@@ -29,6 +30,7 @@ describe('Keyboard Navigation Accessibility', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    window.location.hash = '';
   });
 
   describe('Navigation links keyboard focusability', () => {
@@ -168,10 +170,37 @@ describe('Keyboard Navigation Accessibility', () => {
   });
 
   describe('Nested navigation (electrode groups)', () => {
-    it.skip('should support keyboard navigation for nested electrode group items', async () => {
-      // Skip this test for now - electrode groups require too much initial state
-      // This test will be enabled once we have proper test fixtures
-      // Testing pattern is the same as other navigation tests
+    it('supports keyboard navigation for nested electrode group items', async () => {
+      // A configured workspace removes the old "too much initial state" blocker.
+      window.location.hash = '#/day/remy-2023-06-22';
+      render(
+        <StoreProvider initialState={{ workspace: makeConfiguredWorkspace() }}>
+          <App />
+        </StoreProvider>
+      );
+      await act(async () => {
+        window.dispatchEvent(new HashChangeEvent('hashchange'));
+        await Promise.resolve();
+      });
+
+      // Keyboard-advance the stepper from Overview to Devices (Alt+ArrowRight).
+      fireEvent.keyDown(document.body, { key: 'ArrowRight', altKey: true });
+      await screen.findByRole('heading', { name: /devices configuration/i });
+
+      // Each electrode group is a native <details><summary> disclosure — nested,
+      // keyboard-focusable, and operable. Focus the first and toggle it open.
+      const summaries = document.querySelectorAll('.electrode-group-summary');
+      expect(summaries.length).toBeGreaterThan(0);
+      const firstSummary = summaries[0];
+      const details = firstSummary.closest('details');
+      expect(details.open).toBe(false);
+
+      firstSummary.focus();
+      expect(document.activeElement).toBe(firstSummary);
+
+      // Activating the summary (Enter/click on a native disclosure) expands it.
+      await user.click(firstSummary);
+      await waitFor(() => expect(details.open).toBe(true));
     });
   });
 

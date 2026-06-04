@@ -7,11 +7,14 @@
  * @module layouts/AppLayout
  */
 
-import React, { useEffect, useRef, lazy, Suspense } from 'react';
+import React, { useEffect, useRef, useState, lazy, Suspense } from 'react';
 import { useHashRouter } from '../hooks/useHashRouter';
 import { isFeatureEnabled } from '../featureFlags';
 import { useStoreContext } from '../state/StoreContext';
 import { useUnsavedWorkGuard } from '../hooks/useUnsavedWorkGuard';
+import useGlobalShortcuts from '../hooks/useGlobalShortcuts';
+import { emitStepperShortcut } from '../hooks/stepperShortcuts';
+import { ShortcutsHelp } from '../components/ShortcutsHelp';
 import { Home } from '../pages/Home';
 import { AnimalWorkspace } from '../pages/AnimalWorkspace';
 import { DayEditor } from '../pages/DayEditor';
@@ -95,6 +98,18 @@ export function AppLayout() {
   // Warn before leaving the page while a workspace autosave is still in flight.
   const { persistence } = useStoreContext();
   useUnsavedWorkGuard(persistence.hasPendingWrite);
+
+  // Global keyboard shortcuts (mounted once so they work on every route). Step
+  // navigation / add are broadcast to whichever stepper is on screen; help opens a
+  // dialog; Ctrl/Cmd+S flushes the workspace save.
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  useGlobalShortcuts({
+    onSave: persistence.saveNow,
+    onShowHelp: () => setShortcutsOpen(true),
+    onNextStep: () => emitStepperShortcut('next'),
+    onPrevStep: () => emitStepperShortcut('prev'),
+    onAdd: () => emitStepperShortcut('add'),
+  });
 
   // Focus management on route changes
   useEffect(() => {
@@ -188,7 +203,19 @@ export function AppLayout() {
         <a href="#/" aria-label="Return to metadata form">
           <img src={logo} alt="Loren Frank Lab logo" />
         </a>
+        <button
+          type="button"
+          className="shortcuts-trigger"
+          onClick={() => setShortcutsOpen(true)}
+          aria-label="Keyboard shortcuts"
+          aria-haspopup="dialog"
+        >
+          <span aria-hidden="true">⌨</span>
+          <span className="visually-hidden">Keyboard shortcuts</span>
+        </button>
       </div>
+
+      <ShortcutsHelp isOpen={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
 
       {/*
         Primary navigation makes the workspace discoverable. Rendered on the new

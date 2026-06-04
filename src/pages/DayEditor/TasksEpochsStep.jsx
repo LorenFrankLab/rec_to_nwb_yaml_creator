@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import TasksTable from './TasksTable';
 import TaskModal from './TaskModal';
 import BehavioralEventsDisplay from './BehavioralEventsDisplay';
+import { useStepperShortcut } from '../../hooks/stepperShortcuts';
 import './TasksEpochsStep.scss';
 
 /**
@@ -44,6 +45,16 @@ export default function TasksEpochsStep({ animal, day, onFieldUpdate }) {
     setEditingIndex(null);
     setModalOpen(true);
   }
+
+  // Alt+N (global "add" shortcut) opens the add-task modal while this step is on
+  // screen. A ref keeps the subscriber stable across renders.
+  const addTaskRef = useRef(handleAddTask);
+  addTaskRef.current = handleAddTask;
+  useStepperShortcut(
+    useCallback((action) => {
+      if (action === 'add') addTaskRef.current();
+    }, [])
+  );
 
   /**
    * Open the modal to edit the task at `index`.

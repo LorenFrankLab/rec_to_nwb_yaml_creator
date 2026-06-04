@@ -1,6 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
+import { useStepperShortcut } from '../../hooks/stepperShortcuts';
 import { useAnimalIdFromUrl } from '../../hooks/useAnimalIdFromUrl';
 import ElectrodeGroupsStep from './ElectrodeGroupsStep';
 import ElectrodeGroupModal from './ElectrodeGroupModal';
@@ -66,6 +67,20 @@ export default function AnimalEditorStepper() {
   // In-app feedback replacing native alert()/confirm().
   const [alertState, setAlertState] = useState({ isOpen: false, message: '', type: 'info', title: 'Alert', onClose: null });
   const [pendingDeleteGroup, setPendingDeleteGroup] = useState(null);
+
+  // Global Alt+Arrow shortcuts advance/retreat the stepper. Declared before the
+  // early returns below to satisfy the Rules of Hooks; the step count is filled in
+  // once `steps` is built further down (stepCountRef.current = steps.length).
+  const stepCountRef = useRef(1);
+  useStepperShortcut(
+    useCallback((action) => {
+      setActiveStep((cur) => {
+        if (action === 'next') return Math.min(cur + 1, stepCountRef.current - 1);
+        if (action === 'prev') return Math.max(cur - 1, 0);
+        return cur;
+      });
+    }, [])
+  );
 
   /**
    * Show a non-blocking alert dialog. Optional onClose runs after the user dismisses
@@ -547,6 +562,9 @@ export default function AnimalEditorStepper() {
 
   // Check if we're on the final step
   const isOnFinalStep = activeStep === steps.length - 1;
+  // Keep the shortcut handler's step count current (the ref + hook are declared up
+  // top, before the early returns, to satisfy the Rules of Hooks).
+  stepCountRef.current = steps.length;
 
   return (
     <div className="animal-editor-stepper">
@@ -594,6 +612,12 @@ export default function AnimalEditorStepper() {
           ))}
         </ul>
       </nav>
+
+      {/* Announce the active step to screen readers on change (matches the
+          DayEditor route announcer pattern). */}
+      <div className="visually-hidden" role="status" aria-live="polite">
+        {`Step ${activeStep + 1} of ${steps.length}: ${steps[activeStep].label}`}
+      </div>
 
       {/* Active step content. role/aria-label live here now that the duplicate
           <main> wrapper in index.jsx has been removed (single main per view). */}

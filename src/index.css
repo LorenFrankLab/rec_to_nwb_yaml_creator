@@ -93,17 +93,19 @@ body {
    Defined here so they are available app-wide on every route — DayEditor, Home, and the
    AnimalEditor steps all consume these CSS variables, and index.css loads everywhere. */
 :root {
-  /* Primary */
-  --color-primary: #2196f3;
+  /* Primary. #1565c0 chosen for WCAG AA: 5.75:1 with white text (buttons) and
+     5.03:1 against --color-primary-light (#e3f2fd). The former #2196f3 was 3.12:1
+     (fails AA for normal text). */
+  --color-primary: #1565c0;
   --color-primary-hover: #1976d2;
   --color-primary-light: #e3f2fd;
 
-  /* Status */
-  --color-success: #2e7d32;
+  /* Status — each AA (>=4.5:1) on white and on its own -light background. */
+  --color-success: #2e7d32; /* 5.13:1 on white, 4.56:1 on success-light */
   --color-success-light: #e8f5e9;
-  --color-warning: #d84315;
+  --color-warning: #bf360c; /* 5.60:1 on white, 5.11:1 on warning-light (was #d84315, 4.44:1) */
   --color-warning-light: #fff3e0;
-  --color-error: #d32f2f;
+  --color-error: #c62828; /* 5.62:1 on white, 4.92:1 on error-light (was #d32f2f, 4.36:1 on -light) */
   --color-error-light: #ffebee;
 
   /* Neutrals */

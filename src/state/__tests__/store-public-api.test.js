@@ -69,6 +69,7 @@ describe('useStore public API contract', () => {
       'lastSaved',
       'loadNotice',
       'saveError',
+      'saveNow',
     ]);
   });
 
