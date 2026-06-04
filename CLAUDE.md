@@ -200,6 +200,13 @@ This is a React-based web application that generates YAML configuration files fo
 
 This application is the **entry point** for the neuroscience data conversion pipeline. The YAML files it generates are consumed by [trodes_to_nwb](https://github.com/LorenFrankLab/trodes_to_nwb), a Python package that converts SpikeGadgets .rec files into NWB 2.0+ format.
 
+> 📎 **Verified downstream requirements + how to re-research them:** [docs/PIPELINE_REQUIREMENTS.md](docs/PIPELINE_REQUIREMENTS.md).
+> It records the field-by-field trodes_to_nwb / DANDI / Spyglass requirements (what's required, tolerated,
+> or **silently** mishandled), the mandatory NWB-validation commands (`nwbinspector --config dandi`,
+> `dandi validate`), and the exact files/URLs + method to re-verify when those repos change (read them
+> from GitHub — the local `~/Documents/GitHub/{trodes_to_nwb,spyglass}` checkouts are not readable from the
+> agent sandbox). Re-verify before relying on any specific claim below.
+
 ### YAML File Consumption Workflow
 
 ```
@@ -245,7 +252,7 @@ The NWB files ultimately feed into [Spyglass](https://github.com/LorenFrankLab/s
 
 **Critical Database Constraints:**
 
-1. **Probe Types Must Be Pre-Registered** - The `device_type` field (e.g., `"tetrode_12.5"`) must match existing entries in the Spyglass `Probe` table. Undefined probe types cause `ElectrodeGroup.probe_id` to become NULL, resulting in **data loss**.
+1. **Probe `device_type` must resolve to a real probe.** The `device_type` (e.g. `"tetrode_12.5"`) must match a `probe_type` file in `trodes_to_nwb`'s `device_metadata/probe_metadata/` (exact, case-sensitive — otherwise conversion hard-fails with `FileNotFoundError`). _(Verified update: on current Spyglass `master`, `ProbeType` is **auto-registered from the NWB `ndx_franklab_novela.Probe`**, not a pre-existing Spyglass table; the `ElectrodeGroup.probe_id`-NULL risk now occurs when the electrode group's device isn't a proper ndx Probe with `probe_type` + geometry. See [docs/PIPELINE_REQUIREMENTS.md](docs/PIPELINE_REQUIREMENTS.md) §3.)_
 
 2. **Brain Region Naming Consistency** - The `electrode_group.location` field auto-creates `BrainRegion` entries in Spyglass. Inconsistent capitalization (e.g., "CA1", "ca1", "Ca1") creates duplicate database entries and fragments queries. **Always use consistent capitalization.**
 
