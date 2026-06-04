@@ -241,11 +241,10 @@ not executed here.
     deployed build, an encoder-stability failure downgrades to warn-and-proceed. Consider pinning it
     `true` outside dev/test at cutover (**Phase 11**, which already keeps shadow-export strict for one
     release).
-  - **`mergeDayMetadata` malformed-animal guard:** an animal with an empty `configurationHistory` makes
-    `config` undefined and the merge throws (pre-existing; not introduced here). Worth a guard + test.
   - **Imported-keyword validation:** the `KeywordsEditor` trims/de-dupes at entry, but an imported day
     could carry blank/duplicate keywords straight through the merge (`keywords.length > 0` only). The
-    Validation step would flag them, but entry-layer parity is a small follow-up.
+    Validation step surfaces these as errors and blocks export (the correct, non-silent behavior);
+    adding entry-layer parity for imports is an optional nicety, deliberately not silent-filtered.
 
 ## Estimated Effort
 

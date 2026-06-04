@@ -175,6 +175,20 @@ describe('mergeDayMetadata', () => {
     });
   });
 
+  describe('Malformed animal guard', () => {
+    it('throws an actionable error when the animal has no configuration history', () => {
+      const animal = createTestAnimal({ configurationHistory: [] });
+      const day = createTestDay();
+      expect(() => mergeDayMetadata(animal, day)).toThrow(/configuration/i);
+    });
+
+    it('throws an actionable error when configurationHistory is missing entirely', () => {
+      const animal = createTestAnimal({ configurationHistory: undefined });
+      const day = createTestDay();
+      expect(() => mergeDayMetadata(animal, day)).toThrow(/configuration/i);
+    });
+  });
+
   describe('Optional empty-key omission', () => {
     // The schema permits keywords / units / default_header_file_path to be ABSENT
     // (minimal-valid.yml and realistic-session.yml omit all three and validate

@@ -34,9 +34,22 @@
 export function mergeDayMetadata(animal, day) {
   // Find the configuration version referenced by this day
   // Falls back to first config if version not found, or latest if version is null
-  const config = animal.configurationHistory.find(
-    (c) => c.version === day.configurationVersion
-  ) || animal.configurationHistory[animal.configurationHistory.length - 1] || animal.configurationHistory[0];
+  const history = animal.configurationHistory;
+  const config =
+    (Array.isArray(history) &&
+      (history.find((c) => c.version === day.configurationVersion) ||
+        history[history.length - 1] ||
+        history[0])) ||
+    null;
+
+  // A day cannot be merged without a device configuration. Fail loudly with an
+  // actionable message instead of a cryptic "cannot read properties of undefined"
+  // deep in the merge (e.g. a malformed/legacy persisted animal with no history).
+  if (!config) {
+    throw new Error(
+      `Cannot merge day "${day?.id}": animal "${animal?.id}" has no device configuration history.`
+    );
+  }
 
   // Build merged metadata object
   const merged = {
