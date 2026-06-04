@@ -13,7 +13,7 @@ Algorithmic detail too large for a phase's Tasks block. Phase files reference th
 ## Device-resolution model
 
 **Problem (Finding A).** `animal.devices` is what the Animal Editor edits, but the export resolves
-probes from `configurationHistory` snapshots (`resolveDayConfig`, `src/state/workspaceUtils.js:60-110`).
+probes from `configurationHistory` snapshots (`resolveDayConfig`, `src/state/workspaceUtils.js:84-111`).
 `createAnimal` seeds `configurationHistory[0].devices` empty (`useWorkspace.js:164`), and
 `updateAnimal({devices})` never updates any snapshot (`:206-208`). So configuring probes after creating
 the animal leaves the snapshot empty, and days created on it export **empty** `electrode_groups`.
@@ -117,7 +117,8 @@ first `ntrode_electrode_group_channel_map` entry for an electrode group, then us
 and `bad_channels` while iterating all probe electrodes. That means per-ntrode bad-channel arrays for a
 multi-shank probe group may be ignored downstream. Phase 2 must either coordinate a converter fix before
 claiming multi-ntrode bad-channel correctness, or explicitly constrain app-side bad-channel guarantees to
-single-ntrode electrode groups and prove the multi-shank case in the mandatory round-trip before merge.
+single-ntrode electrode groups and **flag the multi-shank case as a known limitation** to verify in the
+deferred pre-cutover round-trip (it is not runnable now).
 
 ---
 
@@ -148,8 +149,8 @@ Each ntrode `map` is `{ logical_position_key : probe_electrode_id_value }`:
   `ChannelMapEditor` grid is built from `deviceTypeMap`). trodes_to_nwb tests membership against the
   probe-local 0-based electrode index (`electrode_counter_probe in bad_channels`) and **silently ignores**
   out-of-range values, so bounding them in-app is the only protection. See the converter caveat above:
-  until `trodes_to_nwb` handles multiple channel-map rows per electrode group for `bad_channels`, the
-  round-trip must prove any multi-shank bad-channel behavior the UI claims.
+  until `trodes_to_nwb` handles multiple channel-map rows per electrode group for `bad_channels`, multi-shank
+  bad-channel behavior is a known limitation to verify in the deferred pre-cutover round-trip.
 
 **Therefore the sound channel rules (phase 6) are:** (a) each ntrode's map **values** are integers in
 `[0, getChannelCount(device_type))`; (b) within an electrode **group**, the ntrodes' values **partition**

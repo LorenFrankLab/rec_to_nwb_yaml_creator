@@ -13,11 +13,11 @@ The new export path is `encodeYaml(mergeDayMetadata(animal, day))` →
 `formatDeterministicFilename(model)` → `downloadYamlFile(...)` (`src/io/yaml.js`). The defects live in
 how the model is built and gated, not in the encoder.
 
-- `src/state/workspaceUtils.js:60-110` — `resolveDayConfig`: resolves a day's probe config from
+- `src/state/workspaceUtils.js:84-111` — `resolveDayConfig`: resolves a day's probe config from
   `configurationHistory` only, never live `animal.devices`; reads `deviceOverrides.electrode_groups`
   and `deviceOverrides.ntrode_electrode_group_channel_map` but **not** `deviceOverrides.bad_channels`.
   Touched by phase 2.
-- `src/state/workspaceUtils.js:154-230` — `mergeDayMetadata`: the single bridge to YAML. Reads
+- `src/state/workspaceUtils.js:150-249` — `mergeDayMetadata`: the single bridge to YAML. Reads
   `animal.devices.data_acq_device` (`:185`), `day.technical.*` (`:204-207`), and the resolved ntrode
   map verbatim (`:228`). Touched by phases 2–3.
 - `src/state/useWorkspace.js:117-174` — `createAnimal`: seeds `configurationHistory[0].devices` from
@@ -48,7 +48,7 @@ how the model is built and gated, not in the encoder.
   (ntrode item: integer `ntrode_id` / `electrode_group_id`). The schema each fix must satisfy.
 - `src/pages/Home/AnimalCreationForm.jsx:415-421` + `src/pages/Home/index.jsx:64` — DOB stored as
   `YYYY-MM-DD`. `src/pages/DayEditor/OverviewStep.jsx:184` — DOB shown read-only, no repair path.
-  Touched by phase 5. Legacy `src/components/SubjectFields.jsx:100-103` formats DOB with
+  Touched by phase 5. Legacy `src/components/SubjectFields.jsx:96-108` formats DOB with
   `new Date(value).toISOString()` — the pattern to mirror.
 - `src/validation/rulesValidation.js:36-148` — existing rules (camera-presence, opto all-or-nothing,
   channel uniqueness/sequentiality); missing cross-ref and bound checks. Touched by phase 6.
@@ -79,9 +79,9 @@ how the model is built and gated, not in the encoder.
 - **DANDI / Spyglass conformance.** The NWB files produced from this YAML are archived on DANDI and
   ingested into Spyglass (`/Users/edeno/Documents/GitHub/spyglass`). Phase 6 adds the Spyglass-motivated
   guards `trodes_to_nwb` won't (non-empty, consistent `electrode_groups[].location`; valid references;
-  stable dataset-level identities such as camera/data-acq/task names). The merge gate also runs a Spyglass
-  smoke ingest, because Spyglass can log failures to `InsertError` and keep going unless told to raise —
-  see the downstream note in [shared-contracts.md](shared-contracts.md).
+  stable dataset-level identities such as camera/data-acq/task names) **as in-app validation rules**.
+  The actual Spyglass/DANDI round-trip is **deferred** (no Python/Spyglass environment available now) — see
+  the round-trip note below and in [shared-contracts.md](shared-contracts.md).
 - **Browser-level QA, usability/proper-behavior audit, and professional UX polish.** After phases 1–8, a
   Playwright pass exercises the corrected workspace flows in a real browser, then Claude-executable audits
   triangulate UI/workspace/export behavior and apply professional UX polish before the v3 cutover consumes
@@ -117,15 +117,17 @@ dev tooling for the phase-9 browser QA pass, phase-10 audit, and phase-11 UX pol
   bad-channels applied), `data_acq_device`, and `cameras` equal what the UI shows as configured.
 - **Fail-closed:** no code path downloads YAML for a day with an error-severity issue.
 - **Legacy parity preserved:** the 125 golden baselines stay byte-identical throughout (see parity contract).
-- **Round-trip (mandatory, output-changing phases):** a corrected sample converts via `create_nwbs(...)`
-  **and** passes `nwbinspector --config dandi` (zero CRITICAL) **and** `dandi validate` (exit 0). "Converted
-  without error" alone is insufficient — `trodes_to_nwb`'s built-in schema/Inspector calls report findings
-  without failing the conversion, while `dandi validate` must be checked by exit code
-  ([round-trip contract](shared-contracts.md#parity-golden-fixture--round-trip-contract)).
-- **Spyglass-ingestible:** identities are unique/consistent across the workspace/dataset (`camera_name`,
-  `data_acq_device[].name`, task name), locations non-empty/canonical, behavioral-event names unique, and a
-  Spyglass smoke ingest (`populate_all_common(..., raise_err=True)` or zero `InsertError` plus expected
-  rows) succeeds ([naming-identity contract](shared-contracts.md#spyglass-naming-identity-contract)).
+- **In-app schema + rule gate (per phase):** `decodeYaml(encodeYaml(mergeDayMetadata(...)))` deep-equals the
+  expected metadata, `schemaValidation(...)` (AJV) is zero-error, and the new in-app DANDI/Spyglass rules
+  pass. This is the per-phase gate ([round-trip contract](shared-contracts.md#parity-golden-fixture--round-trip-contract)).
+- **Spyglass-ingestible (in-app proxy):** identities are unique/consistent across the workspace/dataset
+  (`camera_name`, `data_acq_device[].name`, task name), locations non-empty/canonical, behavioral-event names
+  unique ([naming-identity contract](shared-contracts.md#spyglass-naming-identity-contract)). These rules are
+  modeled on Spyglass requirements but are not a substitute for an actual ingest.
+- **Downstream round-trip — deferred, pre-cutover:** the real `trodes_to_nwb` → `nwbinspector --config dandi`
+  → `dandi validate` → Spyglass ingest is **not runnable now**, so it is **not** a per-phase merge gate;
+  it remains the ultimate correctness check and must be run once before the v3 cutover (commands + acceptance
+  in [docs/PIPELINE_REQUIREMENTS.md](../../../../docs/PIPELINE_REQUIREMENTS.md)).
 - **User mental model preserved:** controls, validation, repair actions, and preflight explain the workflow
   in terms of animals, recording days, rigs, cameras/calibrations, probes, tasks/videos, opto state, and
   export confidence rather than schema paths alone
@@ -139,11 +141,11 @@ dev tooling for the phase-9 browser QA pass, phase-10 audit, and phase-11 UX pol
   viewport reachability ([phase 9](phase-9-playwright-qa-pass.md)).
 - **Claude-executable usability/proper-behavior audit:** the phase-10 findings artifact proves UI/state/export
   agreement, mistake-injection coverage, label/unit clarity, keyboard/narrow-viewport usability, visible
-  repair recovery, and a cutover recommendation
+  repair recovery, and a proceed/block recommendation for Phase 11
   ([phase 10](phase-10-claude-usability-behavior-audit.md)).
 - **Professional UX quality:** the phase-11 polish report proves interaction consistency, form clarity,
   information hierarchy, responsive layout, accessibility polish, content quality, and perceived-performance
-  confidence, with remaining debt severity-ranked
+  confidence, with remaining debt severity-ranked and a final cutover recommendation for this plan
   ([phase 11](phase-11-professional-ux-polish-audit.md)).
 
 ## Risks and Mitigations
@@ -154,7 +156,7 @@ dev tooling for the phase-9 browser QA pass, phase-10 audit, and phase-11 UX pol
 | The probe-resolution redesign interacts with the reconfiguration wizard | Phase 2 settles the model in [designs.md](designs.md) first (Open Question 1) and re-runs the reconfig integration tests; the wizard's create-then-apply flow is preserved. |
 | Fixing IDs to integers breaks components that assume strings | Phase 4 standardizes the type end-to-end (creation, `ChannelMapEditor`/`DevicesStep` PropTypes, channel-map utils) in one PR and asserts the merged output's types. |
 | Fail-closed export makes the new editor look broken before output fixes land | Intended and safe — the legacy path is still default and the workspace is flag-gated. Phases 2–5 restore exportability for valid sessions. Noted in phase 1. |
-| Python/DANDI/Spyglass environment unavailable while developing a phase | AJV/`nwb_schema.json` + app rules are the interim local gate only. Output-changing phases must not merge until the real `trodes_to_nwb` → NWB Inspector dandi config → `dandi validate` → Spyglass smoke output is run and recorded. |
+| Python/DANDI/Spyglass environment unavailable (current state) | AJV/`nwb_schema.json` + the new in-app DANDI/Spyglass rules are the per-phase gate. The real downstream round-trip is deferred to a single pre-cutover task (not a per-phase blocker); schema-pass ≠ Inspector/DANDI/Spyglass-pass, so it must still be run before the v3 cutover. |
 | Playwright QA becomes brittle or superficial | Phase 9 uses role/label selectors, deterministic workspace fixtures, event/locator waits, and no conditional "if visible" skips for required workspace flows. Visual snapshots stay limited; traces/screenshots are artifacts for debugging. |
 | Automated usability audit misses human confusion | Phase 10 is Claude-executable and catches UI/state/export mismatches, ambiguous labels, unreachable controls, and likely mistake paths. A separate human lab-user dry run is still recommended, but it is outside this Claude-run implementation plan. |
 | UX polish turns into broad redesign | Phase 11 fixes small consistency/content/layout/accessibility issues and logs larger redesigns as scoped follow-ups; it must not change export semantics or become a design-system rewrite. |
@@ -165,8 +167,9 @@ Each phase is an independent PR merged to `modern` behind the existing workspace
 off by default). Nothing changes for legacy-form users. The output-changing phases (2–5, 8) update the
 **new-path** parity fixtures/tests deliberately and with review; they never touch the legacy golden
 baselines. Phase 9 is the browser regression QA gate after phases 1–8, Phase 10 is the Claude-executable
-usability/proper-behavior audit, and Phase 11 is the professional UX polish audit. The separate v3 cutover
-Phase 11 consumes this work as its correctness precondition.
+usability/proper-behavior audit that recommends whether to proceed to Phase 11, and Phase 11 is the
+professional UX polish audit that makes this plan's cutover recommendation. The separate v3 cutover Phase 11
+consumes this work as its correctness precondition.
 
 ## Open Questions
 
@@ -178,7 +181,7 @@ All open questions are **decided** (2026-06-04):
    workflow, and a recording day's geometry is a fixed physical fact. The wizard's live-vs-snapshot diff
    is dropped. Full design + the freeze-before-edit transaction: [designs.md](designs.md#device-resolution-model).
 2. **DOB precision — DECIDED: midnight-normalize** a date-only value with `new Date(value).toISOString()`
-   on save, mirroring legacy `SubjectFields.jsx:100-103`. The schema pattern is unanchored so the
+   on save, mirroring legacy `SubjectFields.jsx:96-108`. The schema pattern is unanchored so the
    trailing `Z` passes. No time-of-day input.
 3. **Hardware Config technical fields — DECIDED: per-day with animal-level defaults.** The rig is
    constant per animal but occasionally varies per day, so `raw_data_to_volts` / `times_period_multiplier`
@@ -207,8 +210,9 @@ medium–large (~300+ LOC — workspace opto UI + key fixes + all-or-nothing val
 (~250+ LOC of Playwright fixtures/specs + QA runbook/artifacts); phase 10 small–medium (~150+ LOC/scripts
 plus QA artifact, depending how many findings are fixed inline); phase 11 small–medium (~150+ LOC/screenshots
 /copy/layout/a11y fixes + UX polish report, depending how many findings are fixed inline). Test LOC dominates.
-Each output-changing phase also carries a mandatory
-trodes_to_nwb → NWB Inspector (dandi) → dandi-validate → Spyglass smoke round-trip.
+Each output-changing phase is gated on the in-app schema + DANDI/Spyglass **rules**; the actual
+trodes_to_nwb → NWB Inspector (dandi) → dandi-validate → Spyglass round-trip is deferred to a single
+pre-cutover task (no Python/Spyglass environment now).
 
 **Caveat:** these are rough lower bounds. The [UX mistake-prevention contract](shared-contracts.md#ux-mistake-prevention-contract)
 adds real UI per phase — the export preflight summary + repair-action routing (phase 1), identity

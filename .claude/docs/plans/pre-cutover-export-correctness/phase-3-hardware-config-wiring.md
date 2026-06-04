@@ -37,7 +37,7 @@ in the exported YAML.
   a side-by-side comparison and safe primary action, not a passive warning.
 - [Parity, golden-fixture & round-trip contract](shared-contracts.md#parity-golden-fixture--round-trip-contract)
   — adding configured cameras/data-acq changes new-path output; update fixtures deliberately; legacy
-  baselines stay; run the mandatory round-trip.
+  baselines stay; gate on the in-app schema + DANDI/Spyglass rules (the downstream round-trip is deferred).
 
 **Critical correction:** the Hardware Config writes are currently **total no-ops, not just mislocated.**
 `updateAnimal` only applies the keys `subject | experimenters | devices | cameras | optogenetics`
@@ -90,8 +90,8 @@ matches **no branch and is silently dropped**. Task 0 fixes this before any wiri
   `DataAcqSection` uses `ephys_to_volt_conversion`, but export reads `raw_data_to_volts`; standardize on
   `raw_data_to_volts`. No field may be edited at one level but read at another.
 - **Task 4 — fixtures + docs.** Update the new-path parity fixtures so a configured session's export
-  includes the cameras (with `lens`) and the data-acq **array**; review the byte diff. Run the mandatory
-  downstream round-trip for the corrected configured-camera/data-acq sample. Update
+  includes the cameras (with `lens`) and the data-acq **array**; review the byte diff. Gate on the in-app
+  schema + DANDI/Spyglass rules (the downstream round-trip is deferred to the pre-cutover task). Update
   `docs/REFACTOR_CHANGELOG.md`.
 
 ## Deliberately not in this phase
@@ -112,11 +112,11 @@ matches **no branch and is silently dropped**. Task 0 fixes this before any wiri
 | `data-acq writes the schema array shape with name` *(integration)* | editing system/amplifier/adc_circuit/name writes `animal.devices.data_acq_device` as a one-element array `[{name, system, amplifier, adc_circuit}]`; `mergeDayMetadata(...).data_acq_device` is that array; `schemaValidation` raises no data-acq error. |
 | `reusing a data-acq name with different dependent fields is identity-safe` *(integration)* | divergent reuse shows old-vs-new system/amplifier/adc_circuit, blocks normal save, and offers a primary "new name" action; identical reuse is allowed. |
 | `technical fields edited per-day with animal defaults` *(integration)* | a new day inherits `raw_data_to_volts` / `times_period_multiplier` from `animal.technicalDefaults`; editing the defaults affects newly created days only; editing a day updates `day.technical` and the export; `ephys_to_volt_conversion` no longer appears in workspace technical state. |
-| `phase-3 configured-camera/data-acq sample passes downstream gates` *(integration, mandatory)* | a corrected sample with configured cameras (including `lens`) and `data_acq_device` array converts, has zero DANDI CRITICAL findings, `dandi validate` exits 0, and Spyglass smoke ingest has no `InsertError`. |
+| `phase-3 configured-camera/data-acq sample is schema-valid` *(integration)* | a corrected sample with configured cameras (including `lens`) and the `data_acq_device` array has zero `schemaValidation` errors and passes the in-app DANDI/Spyglass identity rules. |
 | `golden-yaml.baseline.test.js` (existing) | byte-identical — legacy fixtures unchanged. |
 
 Automated app tests are Vitest; camera CRUD tests are integration (render `HardwareConfigStep` + modal).
-The downstream round-trip is the external mandatory gate from the shared contract.
+The real downstream round-trip is deferred to a single pre-cutover task (see the round-trip contract).
 
 ## Fixtures
 

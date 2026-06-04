@@ -30,7 +30,7 @@ identity drift can be caught before export (phase 6).
 
 ## Export-resolution source-of-truth contract
 
-Referenced by phases 2, 3. `mergeDayMetadata(animal, day)` (`src/state/workspaceUtils.js:154`) is the
+Referenced by phases 2, 3. `mergeDayMetadata(animal, day)` (`src/state/workspaceUtils.js:150`) is the
 single bridge from the workspace model to YAML. After this plan, each exported section has exactly one
 defined source of truth:
 
@@ -85,7 +85,7 @@ reviewer already flagged (`ChannelMapEditor` expects string, `DevicesStep` expec
 
 ## Validation & export-gate contract
 
-Referenced by phases 1, 6. The day-level export must be **fail-closed**.
+Referenced by phases 1, 6, 9. The day-level export must be **fail-closed**.
 
 - `validate(model)` (`src/validation/index.js:27`) → array of `{severity, message, field?, step?}`,
   combining `schemaValidation` (AJV) + `rulesValidation`.
@@ -203,7 +203,8 @@ human observation.
   summaries stay scannable.
 - **Accessibility polish goes beyond tabbing.** Focus order, visible focus, focus trap/return, accessible
   names, error associations, status announcements, contrast/status semantics, and reduced-motion tolerance are
-  checked for critical flows.
+  checked for named critical route/states with objective assertions, including text contrast at 4.5:1 and
+  focus/non-text status indicators at 3:1, not only subjective review.
 - **Content design names consequence and next action.** Errors, empty states, disabled-state explanations,
   destructive confirmations, and preflight copy use user-facing scientific language, state what will happen,
   and tell the user the next safe action.
@@ -214,7 +215,7 @@ human observation.
 
 ## Spyglass naming-identity contract
 
-Referenced by phases 3, 6. Spyglass ingests these NWB files; several YAML fields become **database
+Referenced by phases 3, 6, 10. Spyglass ingests these NWB files; several YAML fields become **database
 identities / primary keys**, and Spyglass ingestion **fails silently** (logs to an `InsertError` side
 table and continues) for most violations — so the app is the place to enforce them. (Verified against
 `spyglass@master`: `common_device.py`, `common_ephys.py`, `common_region.py`, `common_task.py`,
@@ -242,22 +243,23 @@ table and continues) for most violations — so the app is the place to enforce 
 - **Task/video import depends on a successful `TaskEpoch`**: `associated_video_files` without matching task
   metadata warn and **do not import** (`common_behav.py:451`, `common_task.py:240`). `TaskEpoch` is keyed by
   session + epoch and needs a unique interval match; duplicate task epochs across task rows, missing valid
-  camera names, or ambiguous/no interval matches can fail or skip inserts. Rule: task epochs are unique per
-  day, each task epoch can resolve to an interval, task camera ids are valid/non-empty unless a no-camera
-  path has been proven in the Spyglass smoke, and each video has a matching task epoch + valid scalar
-  `camera_id`. Timestamp-overlap and exact `VideoFile` row checks are proven by the Spyglass smoke gate.
+  camera names, or ambiguous/no interval matches can fail or skip inserts. Rule (app-checkable): task epochs
+  are unique per day, task camera ids are valid/non-empty (no-camera paths explicitly allowed/tested), and
+  each video has a matching task epoch + valid scalar `camera_id`. Timestamp-overlap and exact `VideoFile`
+  row checks are **not** app-provable — they are verified by the deferred pre-cutover Spyglass ingest.
 - **`behavioral_events` names must be unique within a session** — duplicate `dio_event_name` is a hard
   `DIOEvents` PK violation (`common_dio.py`) and a trodes_to_nwb `ValueError`.
 
 Phase 3 enforces the camera / data-acq identity at the editing surface (warn on reuse-with-divergence);
-phase 6 adds the cross-reference / uniqueness / non-empty-location validation rules. The mandatory
-round-trip gate then runs a Spyglass smoke ingest (`populate_all_common(..., raise_err=True)` or zero
-`InsertError` plus expected `TaskEpoch` / `VideoFile` / `Electrode` rows), because default Spyglass
-population can log into `InsertError` and continue.
+phase 6 adds the cross-reference / uniqueness / non-empty-location validation rules. The actual Spyglass
+ingest (`populate_all_common(..., raise_err=True)` or zero `InsertError` plus expected `TaskEpoch` /
+`VideoFile` / `Electrode` rows) is **deferred** to the single pre-cutover round-trip task (no Spyglass
+environment now); default Spyglass population logs into `InsertError` and continues, so these in-app rules
+are the only guard until then.
 
 ## DANDI conformance contract
 
-Referenced by phases 5, 6. The NWB files are published to DANDI, whose validators impose requirements
+Referenced by phases 5, 10. The NWB files are published to DANDI, whose validators impose requirements
 **above** `nwb_schema.json`. DANDI runs NWB Inspector with the **DANDI config**, which promotes these
 Subject checks to **CRITICAL (blocking)**:
 
@@ -275,7 +277,7 @@ Best-practice (non-blocking but expected): `experimenter` in `Last, First` form;
 
 ## Parity, golden-fixture & round-trip contract
 
-Referenced by phases 2, 3, 4, 5, 8. The project's hardest safety rule. There are **distinct** guards;
+Referenced by phases 2, 3, 4, 5, 8, 9. The project's hardest safety rule. There are **distinct** guards;
 keep them distinct:
 
 - **Legacy golden baselines — must stay byte-identical, every phase.**
@@ -296,18 +298,18 @@ keep them distinct:
   3. Re-assert `decodeYaml(encodeYaml(mergeDayMetadata(...)))` deep-equals the expected metadata and
      `schemaValidation(...)` returns zero errors.
   4. Document the change in `docs/REFACTOR_CHANGELOG.md`.
-- **`trodes_to_nwb` → NWB → DANDI → Spyglass round-trip (MANDATORY for output-changing phases 2–5, 8).**
-  `trodes_to_nwb` is checked out (`/Users/edeno/Documents/GitHub/trodes_to_nwb`). "Converted without error"
-  is **not** sufficient — trodes_to_nwb's own schema validation returns/logs errors without failing the
-  conversion, and its NWB Inspector runner prints/saves but does **not** raise on findings (`convert.py`).
-  Acceptance for these phases is:
-  1. `create_nwbs(...)` produces an NWB file (no exception), **and**
-  2. `nwbinspector <file> --config dandi` reports **zero CRITICAL** findings, **and**
-  3. `dandi validate <file>` **exits zero**, **and**
-  4. Spyglass common ingest succeeds (`populate_all_common(..., raise_err=True)`) or the PR records zero
-     `InsertError` rows plus the expected `TaskEpoch` / `VideoFile` / `Electrode` rows for the sample.
-  Run these against a corrected sample session (a minimal `.rec` + the generated YAML). If the executor's
-  environment genuinely cannot run trodes_to_nwb/dandi/Spyglass (e.g. a sandboxed CI without the Python
-  stack), the in-app AJV `schemaValidation` + the new DANDI/Spyglass rules (phase 6) are the *interim*
-  gate, but the real round-trip must be run before the phase merges — record the validator/ingest output
-  in the PR.
+- **In-app validation is the gate; the downstream round-trip is a deferred pre-cutover task (not a
+  per-phase merge gate).** The actual `trodes_to_nwb` → `nwbinspector --config dandi` → `dandi validate`
+  → Spyglass ingest round-trip is **not runnable in the current environment**, so it is **not** a merge
+  blocker for these phases. For the output-changing phases (2–5, 8), the gate is:
+  1. `decodeYaml(encodeYaml(mergeDayMetadata(...)))` deep-equals the expected metadata, **and**
+  2. `schemaValidation(...)` (AJV) returns zero errors for a genuinely-configured session, **and**
+  3. the new in-app **DANDI** (species form, no-slash ids) and **Spyglass** (identity uniqueness,
+     non-empty/canonical location, reference/channel-bound) validation **rules** from phases 5–6 pass.
+  These in-app rules are modeled on the downstream requirements (see
+  [docs/PIPELINE_REQUIREMENTS.md](../../../../docs/PIPELINE_REQUIREMENTS.md)) but are **not** a substitute
+  for the real validators — schema-pass ≠ Inspector/DANDI/Spyglass-pass. **The actual downstream
+  round-trip remains the ultimate correctness check and MUST be run before the v3 cutover**, when a
+  Python/Spyglass environment is available; track it as a single pre-cutover gate (the commands and
+  acceptance — zero Inspector CRITICAL, `dandi validate` exit 0, clean Spyglass ingest — live in
+  `docs/PIPELINE_REQUIREMENTS.md`), not as a blocker on each phase here.

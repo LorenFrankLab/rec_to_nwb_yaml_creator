@@ -55,10 +55,15 @@ this plan's Phase 11, **not** the separate v3-workspace-cutover Phase 11 default
   narrow mobile widths. Check for clipped labels, text overflow in buttons/badges/cards/tables, modals taller
   than viewport without usable scrolling, table action wrapping, overlapping validation/preflight content, and
   nested-card clutter. Add focused regression assertions for any fixed layout bug.
-- **Task 6 — accessibility polish audit.** Beyond basic keyboard reachability: verify visible focus,
-  predictable tab order, focus trap/return for modals, screen-reader names for icon/compact buttons, field
-  error association, status announcements for save/validation/export changes, color contrast for statuses,
-  reduced-motion tolerance, and no keyboard-only dead ends.
+- **Task 6 — objective accessibility polish audit.** Beyond basic keyboard reachability, run named
+  route/state checks for at least: Home create form; Animal Editor camera, data-acq, and electrode modals; Day
+  Editor task/video editor, validation summary, Export/preflight; and the opto-enabled editor. For each
+  route/state assert keyboard path order to primary/cancel/destructive actions, visible focus, modal focus
+  trap/return, accessible names for icon/compact buttons, required/invalid field label + error associations,
+  save/validation/export status changes through `role="status"`, `aria-live`, `role="alert"`, or another
+  documented accessible announcement pattern, status text/icon semantics beyond color alone, computed contrast
+  of at least 4.5:1 for text and 3:1 for focus/non-text status indicators, reduced-motion behavior, and no
+  keyboard-only dead ends.
 - **Task 7 — content-design pass.** Replace schema/internal jargon with user-facing scientific language where
   possible while preserving precision. Check that error messages name the consequence and next action; empty
   states tell users what to do next; destructive confirmations preview what will change; and help text is close
@@ -90,7 +95,7 @@ this plan's Phase 11, **not** the separate v3-workspace-cutover Phase 11 default
 | `interaction consistency checklist` *(QA artifact + fixes)* | common actions, modal patterns, destructive confirmations, disabled states, repair links, and status badges behave consistently. |
 | `form quality checklist` *(QA artifact + fixes)* | high-risk fields have clear labels, units, examples, required/optional state, validation timing, and disabled-state reasons. |
 | `responsive screenshot sweep` *(Playwright/artifacts)* | desktop/tablet/narrow screenshots show no clipped critical controls, incoherent overlap, or unusable modals/tables. |
-| `accessibility polish sweep` *(Playwright/manual-by-script)* | focus, names, error associations, announcements, contrast/status semantics, and keyboard paths pass for critical flows. |
+| `objective accessibility polish sweep` *(Playwright/manual-by-script)* | named route/state list is covered; keyboard path assertions, accessible-name assertions, error-association checks, status-announcement checks, status text/icon semantics, contrast checks at 4.5:1 text and 3:1 focus/non-text thresholds, and reduced-motion/no-animation checks pass or have logged blockers. |
 | `content-design audit` *(QA artifact + fixes)* | errors, empty states, help text, confirmations, and preflight summary use clear scientific/user language and next actions. |
 | `perceived-performance audit` *(QA artifact + fixes)* | save/validation/export feedback is visible, stable, and confidence-building. |
 | `professional UX polish report` *(QA artifact)* | includes commands, screenshots/artifacts, fixes, remaining debt by severity, and cutover recommendation. |

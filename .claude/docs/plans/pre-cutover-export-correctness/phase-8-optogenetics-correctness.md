@@ -37,8 +37,9 @@ experiment's central manipulation.)
 - [User mental-model contract](shared-contracts.md#user-mental-model-contract) — optogenetics is a recording
   manipulation with an explicit on/off state, not hidden optional metadata.
 - [Parity, golden-fixture & round-trip contract](shared-contracts.md#parity-golden-fixture--round-trip-contract)
-  — opto output changes; **run the mandatory round-trip** on an opto sample (convert → inspector → dandi
-  validate → Spyglass smoke).
+  — opto output changes; gate on the in-app schema + opto-completeness rules. The opto round-trip (which
+  actually proves the NWB contains the optogenetics objects) is **deferred** to the pre-cutover task and is
+  the most important opto check to run there, since the failure mode is a *silent* downstream drop.
 - [UX mistake-prevention contract](shared-contracts.md#ux-mistake-prevention-contract) — optogenetics has an
   explicit enabled/off state and no hidden partial configuration.
 
@@ -73,8 +74,9 @@ experiment's central manipulation.)
   collects it (schema-required, currently omitted). Drop non-schema UI-control keys (e.g.
   `state_script_parameters`) with an explicit sanitizer; `reorderKeys` is lossless and will otherwise
   preserve unknown keys even if they are removed from the order list. Validate epoch references.
-- **Task 5 — fixtures + docs + round-trip.** Add/maintain an opto new-path fixture; update
-  `docs/REFACTOR_CHANGELOG.md`; **run the mandatory round-trip on an opto sample** and paste the output.
+- **Task 5 — fixtures + docs + in-app gate.** Add/maintain an opto new-path fixture; update
+  `docs/REFACTOR_CHANGELOG.md`; gate on schema + the opto-completeness rule. Add the opto sample to the
+  deferred pre-cutover round-trip checklist (it must prove the NWB actually contains optogenetics).
 
 ## Deliberately not in this phase
 
@@ -93,21 +95,21 @@ experiment's central manipulation.)
 | `partial optogenetics is an error` *(unit)* | a session with some opto fields but missing one of the four required sections yields an error-severity issue (the export gate blocks it); a complete opto session passes; a no-opto session yields nothing. |
 | `more than one excitation source is an error` *(unit)* | two `opto_excitation_source` entries error. |
 | `fs_gui_yamls carries camera_id` *(unit)* | the merged `fs_gui_yamls` items include `camera_id`; sanitizer removes `state_script_parameters` even though `reorderKeys` preserves unknown keys. |
-| `opto session passes the round-trip` *(integration, mandatory)* | an opto sample → `create_nwbs` ok, the NWB file actually contains the optogenetics objects (not silently dropped), `nwbinspector --config dandi` zero CRITICAL, `dandi validate` exit 0, Spyglass smoke ingest clean. |
+| `opto session is schema-valid and complete` *(unit/integration)* | a complete opto sample is schema-valid and passes the all-or-nothing completeness rule. (Proving the NWB *actually contains* the optogenetics objects is the deferred pre-cutover round-trip — the highest-value opto check there, given the silent-drop failure mode.) |
 | `golden-yaml.baseline.test.js` (existing) | byte-identical — legacy fixtures unchanged (the opto always-on keys already match legacy). |
 
 ## Fixtures
 
 A complete optogenetics workspace session (virus_injection, opto_excitation_source, optical_fiber,
 optogenetic_stimulation_software, fs_gui_yamls) synthesized for pure merge/unit tests and configured through
-the workspace UI in integration tests; a minimal opto `.rec` + generated YAML for the round-trip; new-path
-opto fixture per the parity contract.
+the workspace UI in integration tests; new-path opto fixture per the parity contract. (A minimal opto
+`.rec` + generated YAML is needed only for the deferred pre-cutover round-trip, not this phase.)
 
 ## Review
 
 `pr-review-toolkit:code-reviewer`; `ux-reviewer`; `pr-review-toolkit:silent-failure-hunter` (this whole
 phase is about a silent downstream drop). Confirm: the workspace opto editor has an explicit enabled/off
 state and no hidden partial configuration; the converter-expected keys are emitted; the schema↔converter
-mismatch is resolved and documented (not papered over); all-or-nothing completeness blocks partial opto; the
-round-trip proves the NWB file actually contains optogenetics; legacy baselines unchanged; no plan/phase
-strings.
+mismatch is resolved and documented (not papered over); all-or-nothing completeness blocks partial opto;
+the opto sample is on the deferred pre-cutover round-trip checklist (which must prove the NWB actually
+contains optogenetics); legacy baselines unchanged; no plan/phase strings.

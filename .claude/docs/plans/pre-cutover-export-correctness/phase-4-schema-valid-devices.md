@@ -89,8 +89,8 @@ split that surfaced as PropType warnings).
   assumptions; this clears the contradictory-PropType warnings noted in the v3 follow-ups.
 - **Task 6 — fixtures + docs.** Update new-path parity fixtures to integer IDs + the new required fields;
   review the byte diff (string→integer IDs, added `description`/`targeted_location`). Update
-  `docs/REFACTOR_CHANGELOG.md`. Assert `schemaValidation(mergeDayMetadata(...))` is zero-error; run the
-  mandatory downstream round-trip before merge.
+  `docs/REFACTOR_CHANGELOG.md`. Gate on `schemaValidation(mergeDayMetadata(...))` zero-error + the in-app
+  DANDI/Spyglass rules; the downstream round-trip is deferred to the pre-cutover task.
 
 ## Deliberately not in this phase
 
@@ -117,11 +117,11 @@ split that surfaced as PropType warnings).
 | `exported devices carry no stray keys` *(unit)* | the merged electrode groups have no `bad_channels` string and ntrodes have no `electrode_id`; `device.name` is non-empty. |
 | `merged device output passes schema` *(unit)* | `schemaValidation(mergeDayMetadata(animal, day))` returns zero errors for a fully-configured session (was failing on ID type + missing fields). |
 | `ChannelMapEditor/DevicesStep render with integer IDs without PropType warnings` *(integration)* | rendering with integer IDs produces no PropType console error. |
-| `phase-4 corrected-device sample passes downstream gates` *(integration, mandatory)* | a corrected sample with integer IDs, required device fields, no stray keys, and multi-shank offsets converts, has zero DANDI CRITICAL findings, `dandi validate` exits 0, and Spyglass smoke ingest has no `InsertError`. |
+| `phase-4 corrected-device sample is schema-valid` *(integration)* | a corrected sample with integer IDs, required device fields, no stray keys, and multi-shank offsets has zero `schemaValidation` errors and passes the in-app device-type/identity rules. |
 | `golden-yaml.baseline.test.js` (existing) | byte-identical — legacy fixtures unchanged. |
 
-Automated app tests are Vitest. The downstream round-trip is the external mandatory gate from the shared
-contract.
+Automated app tests are Vitest. The real downstream round-trip is deferred to a single pre-cutover task
+(see the round-trip contract).
 
 ## Fixtures
 

@@ -2,10 +2,10 @@
 
 [← back to PLAN.md](PLAN.md) · [overview](overview.md) · [shared-contracts](shared-contracts.md#ux-mistake-prevention-contract)
 
-Goal: give Claude Code an executable final audit for usability and proper behavior before cutover. This is
-not a human usability study. It is a scripted, artifact-producing audit that uses the codebase, Playwright,
-screenshots/traces, localStorage inspection, exported YAML, and the phase contracts to catch confusing or
-scientifically dangerous behavior that ordinary unit tests can miss.
+Goal: give Claude Code an executable integrated audit for usability and proper behavior before the professional
+UX polish gate. This is not a human usability study. It is a scripted, artifact-producing audit that uses the
+codebase, Playwright, screenshots/traces, localStorage inspection, exported YAML, and the phase contracts to
+catch confusing or scientifically dangerous behavior that ordinary unit tests can miss.
 
 **Inputs to read first:**
 
@@ -67,8 +67,9 @@ scientifically dangerous behavior that ordinary unit tests can miss.
   Spyglass primary keys, or DANDI validator internals to repair a day.
 - **Task 7 — produce a findings/fix log.** The phase output is a concise QA artifact with: scenarios run,
   commands run, screenshots/traces/downloads location, pass/fail table, bugs fixed during the phase, residual
-  findings with severity, and explicit cutover recommendation (`pass`, `pass with tracked follow-ups`, or
-  `block`). Dangerous-confusion findings block cutover until fixed or explicitly accepted.
+  findings with severity, and explicit Phase 11 readiness recommendation (`proceed to Phase 11`, `proceed to
+  Phase 11 with tracked follow-ups`, or `block Phase 11`). Dangerous-confusion findings block handoff to Phase
+  11 and the cutover path until fixed or explicitly accepted in the artifact.
 
 ## Deliberately not in this phase
 
@@ -91,7 +92,7 @@ scientifically dangerous behavior that ordinary unit tests can miss.
 | `labels and units are scientifically clear` *(audit artifact + screenshots)* | camera calibration/zoom, species, region, configuration version, preflight, and opto state have clear labels/examples and no misleading defaults. |
 | `keyboard and narrow viewport completion` *(Playwright)* | critical dialogs, repair navigation, and Export can be completed by keyboard and at a narrow viewport without unreachable controls or incoherent overlap. |
 | `error recovery reaches valid export` *(Playwright/helper)* | starting from seeded invalid state, visible repair actions lead to a valid preflight/download without schema/internal knowledge. |
-| `findings/fix log` *(QA artifact)* | includes commands, artifacts, fixes made, remaining findings by severity, and cutover recommendation. |
+| `findings/fix log` *(QA artifact)* | includes commands, artifacts, fixes made, remaining findings by severity, and Phase 11 readiness recommendation. |
 
 ## Fixtures
 
@@ -105,5 +106,5 @@ hardware fields, task-name reuse with changed description, and opto partial/comp
 `pr-review-toolkit:code-reviewer`; `ux-reviewer`; `pr-review-toolkit:silent-failure-hunter`. Confirm: the
 audit is executable by Claude Code from a clean checkout; required scenarios do not silently skip; artifacts
 are useful for debugging; findings are severity-ranked and tied to files/routes/screenshots; dangerous
-confusion blocks cutover; manual human usability testing is recommended separately but not required to execute
-this phase.
+confusion blocks handoff to Phase 11 and the cutover path; manual human usability testing is recommended
+separately but not required to execute this phase.

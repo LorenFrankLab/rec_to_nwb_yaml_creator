@@ -32,8 +32,8 @@ browser-only behavior cannot hide behind unit/integration coverage.
 - [Validation & export-gate contract](shared-contracts.md#validation--export-gate-contract) — export stays
   fail-closed by button, keyboard, step navigation, and direct Export step interaction.
 - [Parity, golden-fixture & round-trip contract](shared-contracts.md#parity-golden-fixture--round-trip-contract)
-  — Playwright verifies browser download content shape only; downstream conversion/DANDI/Spyglass remains
-  the external gate from phases 2–5 and 8.
+  — Playwright verifies browser download content shape only; the actual downstream conversion/DANDI/Spyglass
+  round-trip is the deferred pre-cutover gate, not part of Phase 9.
 
 ## Tasks
 
@@ -60,8 +60,10 @@ browser-only behavior cannot hide behind unit/integration coverage.
   description is blocked with old-vs-new context.
 - **Task 5 — persistence and recovery QA.** Extend workspace e2e coverage for: autosaved workspace survives
   reload; an empty/malformed workspace blob normalizes or discards with a notice instead of crashing; failed
-  autosave keeps the unsaved-work guard armed if that state can be simulated from the browser harness; partial
-  import/recovery notices name the damaged section/path where the UI exposes the flow.
+  autosave keeps the unsaved-work guard armed. Prove the failed-save state in browser by stubbing
+  storage/save failure where possible; if the browser harness cannot simulate it, the Phase 9 artifact must
+  record why and cite the Phase 7 failed-autosave guard test as alternate proof. No silent skip is allowed.
+  Partial import/recovery notices name the damaged section/path where the UI exposes the flow.
 - **Task 6 — optogenetics browser smoke.** Add a focused opto flow: opto off exports no-opto state without
   required-field noise; opto on reveals required sections, blocks incomplete state, requires FsGUI camera/epoch
   references, and the downloaded YAML includes both converter and schema spellings once complete.
@@ -78,8 +80,9 @@ browser-only behavior cannot hide behind unit/integration coverage.
 
 - **Changing export semantics** — failures found here should open/fix targeted bugs in the owning phase code,
   but Phase 9's planned work is QA coverage and runbook hardening.
-- **Replacing Vitest or downstream gates** — Playwright covers browser workflows; it does not replace unit,
-  integration, golden-baseline, DANDI, `trodes_to_nwb`, or Spyglass smoke gates.
+- **Replacing Vitest or the deferred downstream round-trip** — Playwright covers browser workflows; it does
+  not replace unit, integration, golden-baseline, or the deferred pre-cutover `trodes_to_nwb`/DANDI/Spyglass
+  round-trip.
 - **Brittle visual snapshot expansion** — use screenshots/traces for failure diagnosis and a few intentional
   QA captures if useful, but do not create broad pixel baselines for every page state unless they are stable
   and reviewed.
@@ -93,7 +96,7 @@ browser-only behavior cannot hide behind unit/integration coverage.
 | `workspace happy path downloads corrected YAML` *(Playwright)* | a fully configured workspace day reaches Export, shows preflight, downloads YAML, and the downloaded text includes corrected subject/session, camera/data-acq/device/task/video sections. |
 | `invalid workspace day is fail-closed in browser` *(Playwright)* | stepper click, keyboard next, and download cannot bypass error-severity validation; repair actions navigate/focus as designed. |
 | `identity and reference mistakes are blocked before export` *(Playwright)* | camera/data-acq divergent reuse, task-name divergent reuse, region case drift, and stale task/video refs are blocked or repaired at the editing surface. |
-| `workspace persistence recovery is browser-safe` *(Playwright)* | reload preserves a valid workspace; empty/malformed blobs recover with a named notice and no crash; unsaved-work guard remains active after simulated save failure where feasible. |
+| `workspace persistence recovery is browser-safe` *(Playwright)* | reload preserves a valid workspace; empty/malformed blobs recover with a named notice and no crash; failed autosave either keeps the unsaved-work guard active in a browser simulation, or the QA artifact documents why browser simulation is impossible and cites the Phase 7 failed-autosave guard test as alternate proof. |
 | `workspace optogenetics is browser-configurable` *(Playwright)* | opto off/on states, required-field blocking, FsGUI camera/epoch references, and downloaded converter/schema key pairs work through the UI. |
 | `critical flows fit desktop and narrow viewports` *(Playwright)* | modals, step navigation, validation summary, repair actions, and Export remain reachable without incoherent overlap at desktop and narrow widths. |
 | `npm run test:e2e` *(CI/local)* | Playwright Chromium suite passes with reports/traces/screenshots available on failure. |

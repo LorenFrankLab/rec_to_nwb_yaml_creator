@@ -38,8 +38,9 @@ each makes the file invalid or DANDI-unpublishable with no in-app remedy.
 - [UX mistake-prevention contract](shared-contracts.md#ux-mistake-prevention-contract) — subject repairs are
   discoverable and canonical fields use controlled choices.
 - [Parity, golden-fixture & round-trip contract](shared-contracts.md#parity-golden-fixture--round-trip-contract)
-  — these change new-path output; update fixtures deliberately; **run the mandatory round-trip** (this
-  phase is the one DANDI most directly validates).
+  — these change new-path output; update fixtures deliberately. The in-app DANDI rule (species/no-slash) is
+  the gate here; the actual DANDI round-trip is deferred to the pre-cutover task (this phase is the one DANDI
+  most directly validates, so it should be high on the pre-cutover round-trip list).
 
 ## Tasks
 
@@ -66,11 +67,11 @@ each makes the file invalid or DANDI-unpublishable with no in-app remedy.
 - **Task 6 — in-app DANDI subject rule + schema patterns.** Add a validation rule (and/or `nwb_schema.json`
   patterns, coordinated with trodes_to_nwb's bundled copy) for species form + no-slash ids, so the export
   gate (phase 1) blocks a DANDI-invalid subject. Note `sex` is already an `M/F/U/O` enum (compliant).
-- **Task 7 — fixtures + docs + round-trip.** Update new-path fixtures (timestamp DOB, subject description,
+- **Task 7 — fixtures + docs + in-app gate.** Update new-path fixtures (timestamp DOB, subject description,
   weight present, binomial species, non-empty experiment description). Update `docs/REFACTOR_CHANGELOG.md`.
-  **Run the mandatory round-trip**
-  (`create_nwbs` → `nwbinspector --config dandi` zero CRITICAL → `dandi validate` exit 0 → Spyglass smoke)
-  on a corrected sample and paste the output.
+  Gate on `schemaValidation` zero-error + the in-app DANDI subject rule (species form, no-slash ids). The
+  actual round-trip (`create_nwbs` → `nwbinspector --config dandi` → `dandi validate`) is **deferred** (no
+  env now) to the single pre-cutover task — add this subject/DANDI sample to that task's checklist.
 
 ## Deliberately not in this phase
 
@@ -91,18 +92,18 @@ each makes the file invalid or DANDI-unpublishable with no in-app remedy.
 | `subject_id / session_id reject slashes` *(unit)* | a `/` in either is rejected; derived `session_id` never contains one. |
 | `empty experiment_description does not produce an invalid export` *(unit)* | a blank value is filled from the animal default or blocked before export; the exported key remains present and non-empty. |
 | `experiment_description repair focuses the field` *(integration)* | a blank/invalid experiment description blocks export with a repair action that navigates to Overview and focuses the field. |
-| `created animal passes the downstream round-trip` *(integration, mandatory)* | a corrected sample → `create_nwbs` ok, `nwbinspector --config dandi` zero CRITICAL, `dandi validate` exit 0, Spyglass smoke ingest clean. |
+| `created animal is schema + DANDI-rule valid` *(integration)* | a corrected sample has zero `schemaValidation` errors and passes the in-app DANDI subject rule (binomial species, no-slash ids). (Actual NWB-Inspector/`dandi validate` is the deferred pre-cutover round-trip.) |
 | `golden-yaml.baseline.test.js` (existing) | byte-identical — legacy fixtures unchanged. |
 
 ## Fixtures
 
 The creation form + `makeConfiguredWorkspace()`; animals with a date-only DOB / free-text species / no
-weight for the repair + validation tests; a minimal `.rec` + generated YAML for the round-trip; new-path
-fixtures updated per the parity contract.
+weight for the repair + validation tests; new-path fixtures updated per the parity contract. (A minimal
+`.rec` + generated YAML is needed only for the deferred pre-cutover round-trip, not this phase.)
 
 ## Review
 
 `pr-review-toolkit:code-reviewer`; `ux-reviewer` (the species dropdown + repair paths must be discoverable
 and the normalization invisible). Confirm: every required/blocking field is collected and exported; species
-validation rejects free text; round-trip output pasted in the PR; fixture diffs intentional; legacy
-baselines unchanged; no plan/phase strings.
+validation rejects free text; schema + in-app DANDI rule pass (downstream round-trip deferred to the
+pre-cutover task); fixture diffs intentional; legacy baselines unchanged; no plan/phase strings.

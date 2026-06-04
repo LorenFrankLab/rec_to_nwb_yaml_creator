@@ -6,9 +6,12 @@ The new multi-page workspace UI can currently hand `trodes_to_nwb` a YAML file t
 silently wrong — missing electrode probes, missing day-level bad-channel marks, schema-invalid
 device IDs, or a date-of-birth the schema rejects — with no error shown to the user. This plan
 closes those export-correctness defects so the workspace path produces valid, complete metadata,
-and hardens the surrounding import and persistence edges. It is the correctness prerequisite for the
-v3 cutover (the [v3-workspace-cutover](../v3-workspace-cutover/PLAN.md) Phase 11), which must not flip
-the default route to the workspace until the export path is trustworthy.
+and hardens the surrounding import and persistence edges. **Scope note:** phases 1–8 are the
+export-correctness fixes; phases 9–11 extend the plan to pre-cutover **QA and UX readiness** (browser
+regression QA, a Claude-executable usability/behavior audit, and a professional-UX-polish audit) so the
+workspace is not only correct but coherent and safe for repeated scientific use. It is the correctness
+prerequisite for the v3 cutover (the [v3-workspace-cutover](../v3-workspace-cutover/PLAN.md) Phase 11),
+which must not flip the default route to the workspace until the export path is trustworthy.
 
 ## Reading order
 

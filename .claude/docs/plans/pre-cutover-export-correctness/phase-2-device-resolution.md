@@ -13,9 +13,9 @@ snapshots are the source of truth, `animal.devices` mirrors the latest snapshot,
 
 **Inputs to read first:**
 
-- [src/state/workspaceUtils.js:60-110](../../../../src/state/workspaceUtils.js) — `resolveDayConfig`,
+- [src/state/workspaceUtils.js:84-111](../../../../src/state/workspaceUtils.js) — `resolveDayConfig`,
   the function this phase rewrites.
-- [src/state/workspaceUtils.js:154-230](../../../../src/state/workspaceUtils.js) — `mergeDayMetadata`;
+- [src/state/workspaceUtils.js:150-249](../../../../src/state/workspaceUtils.js) — `mergeDayMetadata`;
   confirms the ntrode map (`:228`) and electrode groups (`:227`) come solely from `resolveDayConfig`.
 - [src/state/useWorkspace.js:117-174](../../../../src/state/useWorkspace.js) — `createAnimal` initial
   snapshot (`:164`); [src/state/useWorkspace.js:262-313](../../../../src/state/useWorkspace.js) —
@@ -60,8 +60,8 @@ snapshots are the source of truth, `animal.devices` mirrors the latest snapshot,
   never mutate a snapshot. Also account for the current `trodes_to_nwb` caveat: for electrode groups with
   multiple ntrode rows, the converter currently reads only the first row's `bad_channels` while building the
   electrode table. Either coordinate a converter fix before claiming multi-shank bad-channel correctness, or
-  keep the phase's converter-facing bad-channel proof to single-ntrode groups and defer the multi-shank
-  proof to the mandatory round-trip after that converter behavior is fixed.
+  keep the phase's converter-facing bad-channel proof to single-ntrode groups and **flag the multi-shank
+  case as a known limitation** to verify in the deferred pre-cutover round-trip (and a converter fix).
 - **Task 4 — DevicesStep renders the effective config (Finding: bad-channel UI source).** `DevicesStep`
   currently renders live `animal.devices` (`DevicesStep.jsx:34`); make it render
   `resolveDayConfig(animal, day)` so the bad-channel editor edits the day's *pinned* ntrode list (correct
@@ -75,8 +75,8 @@ snapshots are the source of truth, `animal.devices` mirrors the latest snapshot,
 - **Task 5 — new-path parity fixtures.** Update `workspaceBuilders.js` / the new-path parity references so
   a configured session's expected export includes the probes and merged bad channels. Review the byte diff
   (probes appearing, bad-channels applied) and confirm each change is intended.
-- **Task 6 — docs + integration.** Update `docs/REFACTOR_CHANGELOG.md`. Round-trip a corrected sample
-  through `trodes_to_nwb` / NWB Inspector dandi config / `dandi validate` / Spyglass before merge; use a
+- **Task 6 — docs + in-app gate.** Update `docs/REFACTOR_CHANGELOG.md`. The downstream round-trip is
+  deferred (no Python/Spyglass env now) — gate this phase on the in-app schema + DANDI/Spyglass rules. Use a
   fixture whose devices already carry integer IDs + required fields so this phase can prove its resolution
   and bad-channel behavior without waiting for phase 4's UI-generation fixes. Always assert the new path is
   **semantically** complete (probes + bad-channels present and equal to the configured devices). General
@@ -103,11 +103,11 @@ snapshots are the source of truth, `animal.devices` mirrors the latest snapshot,
 | `DevicesStep shows pinned configuration context` *(integration)* | the devices step displays the day configuration version and whether it is latest/historical; the text updates after reconfiguration. |
 | `reconfiguration yields correct per-day config (fork-before-edit)` *(integration)* | reuse `makeReconfigWorkspace`: forking from day X then editing geometry leaves earlier days on the frozen old config and later days on the new one; the two store actions + returned-version contract intact. |
 | `reconfiguration confirmation shows affected days` *(integration)* | before fork, the wizard lists the day range that will move to the new version and the earlier days that remain pinned; confirmation happens before geometry edit. |
-| `phase-2 corrected sample passes downstream gates` *(integration, mandatory)* | a schema-shaped sample exercising configured probes + day bad-channel merge converts, has zero DANDI CRITICAL findings, `dandi validate` exits 0, and Spyglass smoke ingest has no `InsertError`. |
+| `phase-2 corrected sample is schema-valid` *(integration)* | a schema-shaped sample exercising configured probes + day bad-channel merge has zero `schemaValidation` errors and passes the in-app DANDI/Spyglass rules. |
 | `golden-yaml.baseline.test.js` (existing) | **byte-identical** — these are legacy fixtures and must not change. |
 
-Automated app tests are Vitest; mark the reconfiguration test as integration. The downstream round-trip is
-the external mandatory gate from the shared contract.
+Automated app tests are Vitest; mark the reconfiguration test as integration. The real downstream round-trip
+is deferred to a single pre-cutover task (see the round-trip contract), not a gate on this phase.
 
 ## Fixtures
 

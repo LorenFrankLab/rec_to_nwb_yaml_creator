@@ -32,7 +32,7 @@ fail-closed gate, these new **error**-severity rules then block export of the af
 - [src/utils/deviceTypeUtils.js:43-45](../../../../src/utils/deviceTypeUtils.js) —
   `getChannelCount(deviceType)`. [src/ntrode/deviceTypes.js:7-82](../../../../src/ntrode/deviceTypes.js) —
   `deviceTypeMap(deviceType)`.
-- [src/nwb_schema.json:888](../../../../src/nwb_schema.json) — `associated_video_files[].camera_id` is a
+- [src/nwb_schema.json:892](../../../../src/nwb_schema.json) — `associated_video_files[].camera_id` is a
   **scalar integer** (task `camera_id` is an array). [:993](../../../../src/nwb_schema.json) — integer
   electrode `id`. The schema constrains neither references nor channel bounds, so these must be rules.
 
@@ -101,13 +101,13 @@ indices. The earlier global-hardware-channel framing is obsolete.
   within the day (duplicate is a hard Spyglass `DIOEvents` PK violation and a trodes_to_nwb `ValueError`).
   Error severity.
 - **Task 7 — task/video dependency + camera refs.** Add rules: task epochs are unique per day/session; each
-  task with exported epochs has valid, non-empty `camera_id` values unless a no-camera task path has been
-  proven by the Spyglass smoke; each non-empty `associated_video_files` entry has a `task_epochs` that
+  task with exported epochs has valid, non-empty `camera_id` values (no-camera task paths must be explicitly
+  allowed/tested); each non-empty `associated_video_files` entry has a `task_epochs` that
   matches some `tasks[].task_epochs` (Spyglass `VideoFile` depends on a successful `TaskEpoch`; orphaned
   videos silently don't import — `common_behav.py:451`, `common_task.py:240`) **and** a valid scalar
-  `camera_id`. App validation cannot prove timestamp-overlap or interval-list fuzzy matching; the mandatory
-  Spyglass smoke must assert expected `TaskEpoch`/`VideoFile` rows. Error severity for the app-checkable
-  references/duplicates.
+  `camera_id`. Error severity for these app-checkable references/duplicates. **Known limitation:** app
+  validation cannot prove timestamp-overlap or interval-list fuzzy matching — that is verified by the
+  deferred pre-cutover Spyglass ingest (expected `TaskEpoch`/`VideoFile` rows), not by this phase.
 - **Task 8 — workspace/dataset identity consistency (Spyglass).** Add rules: a `camera_name` reused anywhere
   in the workspace/dataset has the same `meters_per_pixel`/`lens`/`model`/`manufacturer`/numeric `id`;
   `data_acq_device[].name` reused anywhere has the same `system`/`amplifier`/`adc_circuit`; `tasks[].task_name`
