@@ -17,7 +17,7 @@ describe('HardwareConfigStep', () => {
     id: 'remy',
     cameras: [
       {
-        id: '1',
+        id: 1,
         camera_name: 'Overhead',
         manufacturer: 'Basler',
         model: 'acA1300-60gm',
@@ -25,16 +25,12 @@ describe('HardwareConfigStep', () => {
         meters_per_pixel: 0.001,
       },
     ],
-    data_acq_device: {
-      system: 'SpikeGadgets',
-      amplifier: 'Intan RHD2000',
-      adc_circuit: 'Intan',
+    devices: {
+      data_acq_device: [
+        { name: 'SpikeGadgets_MCU', system: 'SpikeGadgets', amplifier: 'Intan RHD2000', adc_circuit: 'Intan' },
+      ],
     },
-    technical: {
-      default_header_file_path: '/path/to/config.trodesconf',
-      ephys_to_volt_conversion: 1.0,
-      times_period_multiplier: 1.0,
-    },
+    technicalDefaults: { raw_data_to_volts: 0.195, times_period_multiplier: 1.5 },
     behavioral_events: [
       { name: 'reward_left', description: 'Left reward port' },
       { name: 'reward_right', description: 'Right reward port' },
@@ -307,11 +303,91 @@ describe('HardwareConfigStep', () => {
     expect(mainContainer).toBeInTheDocument();
   });
 
+  describe('camera CRUD + identity safety', () => {
+    /**
+     * Seed the store with a workspace so the dataset-wide camera identity registry is
+     * populated, and render HardwareConfigStep against a prop animal.
+     *
+     * @param {object} workspace - Workspace slice to seed.
+     * @param {object} propAnimal - Animal passed as the HardwareConfigStep prop.
+     * @param {Function} onFieldUpdate - Field update spy.
+     */
+    const renderSeeded = (workspace, propAnimal, onFieldUpdate) =>
+      rtlRender(
+        <HardwareConfigStep
+          animal={propAnimal}
+          onFieldUpdate={onFieldUpdate}
+          onNavigateBack={vi.fn()}
+          onNavigateNext={vi.fn()}
+        />,
+        { wrapper: ({ children }) => <StoreProvider initialState={{ workspace }}>{children}</StoreProvider> }
+      );
+
+    it('adds a camera (with required lens) and persists it via onFieldUpdate(cameras)', async () => {
+      const user = userEvent.setup();
+      const onFieldUpdate = vi.fn();
+      const animal = { id: 'remy', cameras: [], devices: {}, behavioral_events: [] };
+      renderSeeded({ animals: { remy: animal }, days: {} }, animal, onFieldUpdate);
+
+      await user.click(screen.getByRole('button', { name: /add (first )?camera/i }));
+      await user.type(screen.getByLabelText(/^camera name$/i), 'overhead');
+      await user.type(screen.getByLabelText(/manufacturer/i), 'Allied');
+      await user.type(screen.getByLabelText(/model/i), 'Mako');
+      await user.type(screen.getByLabelText(/lens/i), '8mm');
+      await user.type(screen.getByLabelText(/meters per pixel/i), '0.001');
+      await user.click(screen.getByRole('button', { name: /save camera/i }));
+
+      expect(onFieldUpdate).toHaveBeenCalledWith('cameras', [
+        { id: 0, camera_name: 'overhead', manufacturer: 'Allied', model: 'Mako', lens: '8mm', meters_per_pixel: 0.001 },
+      ]);
+    });
+
+    it('blocks a divergent camera_name reuse and offers a new-name action', async () => {
+      const user = userEvent.setup();
+      const onFieldUpdate = vi.fn();
+      // Another animal already uses "overhead" with a different lens/calibration.
+      const jaq = { id: 'jaq', cameras: [{ id: 0, camera_name: 'overhead', manufacturer: 'Allied', model: 'Mako', lens: '6mm', meters_per_pixel: 0.0012 }], devices: {} };
+      const remy = { id: 'remy', cameras: [], devices: {}, behavioral_events: [] };
+      renderSeeded({ animals: { remy, jaq }, days: {} }, remy, onFieldUpdate);
+
+      await user.click(screen.getByRole('button', { name: /add (first )?camera/i }));
+      await user.type(screen.getByLabelText(/^camera name$/i), 'overhead');
+      await user.type(screen.getByLabelText(/manufacturer/i), 'Allied');
+      await user.type(screen.getByLabelText(/model/i), 'Mako');
+      await user.type(screen.getByLabelText(/lens/i), '8mm'); // diverges from jaq's 6mm
+      await user.type(screen.getByLabelText(/meters per pixel/i), '0.001');
+      await user.click(screen.getByRole('button', { name: /save camera/i }));
+
+      // Blocked: the comparison is shown and nothing is persisted.
+      expect(screen.getByRole('alert')).toHaveTextContent(/already used by jaq camera 0/i);
+      expect(onFieldUpdate).not.toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: /use a new camera name/i })).toBeInTheDocument();
+    });
+
+    it('deletes a camera after confirmation', async () => {
+      const user = userEvent.setup();
+      const onFieldUpdate = vi.fn();
+      const remy = {
+        id: 'remy',
+        cameras: [{ id: 0, camera_name: 'overhead', manufacturer: 'Allied', model: 'Mako', lens: '8mm', meters_per_pixel: 0.001 }],
+        devices: {},
+        behavioral_events: [],
+      };
+      renderSeeded({ animals: { remy }, days: {} }, remy, onFieldUpdate);
+
+      await user.click(screen.getByRole('button', { name: /delete camera 0/i }));
+      // Confirm in the destructive dialog.
+      await user.click(screen.getByRole('button', { name: /^delete$/i }));
+
+      expect(onFieldUpdate).toHaveBeenCalledWith('cameras', []);
+    });
+  });
+
   it('performance: handles 10 cameras without lag', async () => {
     const largeMockAnimal = {
       ...mockAnimal,
       cameras: Array.from({ length: 10 }, (_, i) => ({
-        id: String(i + 1),
+        id: i + 1,
         camera_name: `Camera ${i + 1}`,
         manufacturer: 'Basler',
         model: 'acA1300-60gm',

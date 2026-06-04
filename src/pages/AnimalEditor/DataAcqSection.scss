@@ -217,3 +217,22 @@
     background-color: var(--color-secondary-container-pressed, #b8a5cc);
   }
 }
+
+.identity-divergence {
+  margin: 0.75rem 0;
+  padding: 0.75rem 0.875rem;
+  background: #fff3e0;
+  border-left: 4px solid #e65100;
+  border-radius: 4px;
+
+  .identity-divergence-title { margin: 0 0 0.5rem; color: #e65100; font-weight: 600; }
+
+  .identity-divergence-table {
+    width: 100%;
+    margin-bottom: 0.5rem;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+
+    th, td { padding: 0.2rem 0.4rem; text-align: left; border-bottom: 1px solid #ffe0b2; }
+  }
+}

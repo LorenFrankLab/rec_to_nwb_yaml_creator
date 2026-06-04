@@ -257,6 +257,23 @@ Recorded during implementation; revisit in the named phase.
    future change should catch the throw and route to `ErrorState` with the message,
    without ever falling back to an empty-probes render.
 
+### Phase 3 findings / follow-ups
+
+1. **Blur-save has no unsaved-changes guard (app-wide pattern).** `DataAcqSection` (and other
+   blur-save sections) commit on blur; a field edited but never blurred (navigate away) is
+   silently discarded, and there is no "unsaved changes" indicator. This is an app-wide
+   editing pattern, not specific to Phase 3; consider a shared unsaved-state cue or save
+   affordance in a UX-polish pass (phase 11).
+2. **Camera table omits a Lens column.** `lens` is now required and part of the camera
+   identity, but the cameras table shows ID/Name/Manufacturer/Model/Meters-per-pixel/Status.
+   Add a Lens column (or expandable detail) in a polish pass; not export-affecting.
+3. **Minor cosmetic/consistency.** The "Use a new name" buttons in the camera modal vs.
+   data-acq divergence panels use different CSS classes (`btn-save` vs `button-primary`);
+   `DayTechnicalSection`'s `<details>` relies on the browser default disclosure triangle; and
+   `CameraModal` labels lack the visual required-`*` indicator that `DataAcqSection` shows
+   (adding it must keep the asterisk out of the accessible label — e.g. a CSS `::after` — so
+   it doesn't break label-text queries). Cosmetic; fold into the phase-11 consistency pass.
+
 ## Estimated Effort
 
 ~11 PRs. Rough diff sizes: phase 1 small–medium (~200 LOC including repair links/preflight); phase 2 medium

@@ -32,8 +32,8 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
    * @returns {string} Status emoji
    */
   function getStatus(camera) {
-    // Required fields
-    const required = ['camera_name', 'manufacturer', 'model', 'meters_per_pixel'];
+    // Required fields (lens is schema-required alongside the others).
+    const required = ['camera_name', 'manufacturer', 'model', 'lens', 'meters_per_pixel'];
     const hasRequired = required.every(field => {
       const value = camera[field];
       return value !== undefined && value !== null && value !== '';
@@ -53,6 +53,19 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
     }
 
     return '✓';
+  }
+
+  /**
+   * Text label for a camera's status symbol, so screen readers and colorblind users
+   * get meaning rather than a raw glyph.
+   *
+   * @param {string} status - The status emoji from {@link getStatus}.
+   * @returns {string} A human-readable status.
+   */
+  function getStatusText(status) {
+    if (status === '❌') return 'Incomplete: required fields missing';
+    if (status === '⚠') return 'Warning: meters per pixel outside the typical range';
+    return 'Complete';
   }
 
   /**
@@ -96,7 +109,7 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
         <p className="empty-state-hint">
           Configure camera metadata including manufacturer, model, lens, and meters per pixel for spatial calibration.
         </p>
-        <button className="button-primary" onClick={handleAddClick}>
+        <button type="button" className="button-primary" onClick={handleAddClick}>
           Add First Camera
         </button>
       </div>
@@ -112,7 +125,7 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
       </header>
 
       <div className="table-actions">
-        <button className="button-primary" onClick={handleAddClick}>
+        <button type="button" className="button-primary" onClick={handleAddClick}>
           + Add Camera
         </button>
       </div>
@@ -138,7 +151,12 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
               <td data-label="Model">{camera.model || ''}</td>
               <td data-label="Meters/Pixel">{camera.meters_per_pixel}</td>
               <td data-label="Status">
-                <span className={`status-badge status-${getStatus(camera)}`}>
+                <span
+                  className={`status-badge status-${getStatus(camera)}`}
+                  role="img"
+                  aria-label={getStatusText(getStatus(camera))}
+                  title={getStatusText(getStatus(camera))}
+                >
                   {getStatus(camera)}
                 </span>
               </td>

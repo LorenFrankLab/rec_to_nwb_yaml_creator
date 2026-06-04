@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import PropTypes from 'prop-types';
 import Modal from '../../components/Modal/Modal';
+import { IDENTITY_FIELD_LABELS } from './identitySafety';
 import './CameraModal.scss';
 
 const TYPICAL_MIN = 0.0005;
@@ -51,15 +52,19 @@ function getInitialFormData(mode, camera, existingCameras) {
  * @param {Array} props.existingCameras Existing cameras (ID assignment).
  * @param {Function} props.onSave Save callback with the cleaned camera object.
  * @param {Function} props.onCancel Cancel callback.
+ * @param props.divergence
+ * @param props.onUseNewName
  * @returns {JSX.Element}
  */
-function CameraForm({ mode, camera, existingCameras, onSave, onCancel }) {
+function CameraForm({ mode, camera, existingCameras, onSave, onCancel, divergence, onUseNewName }) {
   const [formData, setFormData] = useState(() => getInitialFormData(mode, camera, existingCameras));
   const [metersPerPixelWarning, setMetersPerPixelWarning] = useState('');
+  const nameInputRef = useRef(null);
 
   const isFormValid = () => {
-    const { camera_name, manufacturer, model, meters_per_pixel } = formData;
-    if (!camera_name.trim() || !manufacturer.trim() || !model.trim()) {
+    const { camera_name, manufacturer, model, lens, meters_per_pixel } = formData;
+    // `lens` is schema-required (nwb_schema.json camera item), so it is required here.
+    if (!camera_name.trim() || !manufacturer.trim() || !model.trim() || !lens.trim()) {
       return false;
     }
     if (!meters_per_pixel || meters_per_pixel === '') {
@@ -67,6 +72,11 @@ function CameraForm({ mode, camera, existingCameras, onSave, onCancel }) {
     }
     const mppValue = parseFloat(meters_per_pixel);
     return !isNaN(mppValue) && mppValue > 0;
+  };
+
+  const focusName = () => {
+    onUseNewName?.();
+    if (nameInputRef.current) nameInputRef.current.focus();
   };
 
   const handleInputChange = (e) => {
@@ -111,6 +121,7 @@ function CameraForm({ mode, camera, existingCameras, onSave, onCancel }) {
           id="camera_name"
           type="text"
           name="camera_name"
+          ref={nameInputRef}
           placeholder="e.g., HomeBox_camera"
           value={formData.camera_name}
           onChange={handleInputChange}
@@ -146,7 +157,7 @@ function CameraForm({ mode, camera, existingCameras, onSave, onCancel }) {
         />
       </div>
 
-      {/* Lens */}
+      {/* Lens (schema-required) */}
       <div className="form-group">
         <label htmlFor="lens">Lens</label>
         <input
@@ -156,6 +167,7 @@ function CameraForm({ mode, camera, existingCameras, onSave, onCancel }) {
           placeholder="e.g., 16mm"
           value={formData.lens}
           onChange={handleInputChange}
+          required
         />
       </div>
 
@@ -180,6 +192,34 @@ function CameraForm({ mode, camera, existingCameras, onSave, onCancel }) {
           </span>
         )}
       </div>
+
+      {/* Identity divergence: reusing a camera_name with different dependent fields. */}
+      {divergence && (
+        <div className="identity-divergence" role="alert">
+          <p className="identity-divergence-title">
+            The name “{formData.camera_name.trim()}” is already used by {divergence.existing.label}
+            {' '}with different settings. The same camera name must mean the same camera. Give this
+            camera a new name.
+          </p>
+          <table className="identity-divergence-table">
+            <thead>
+              <tr><th>Field</th><th>Existing</th><th>This camera</th></tr>
+            </thead>
+            <tbody>
+              {divergence.differingFields.map((field) => (
+                <tr key={field}>
+                  <td>{IDENTITY_FIELD_LABELS[field] || field}</td>
+                  <td>{String(divergence.existing.fields[field] ?? '')}</td>
+                  <td>{String(formData[field] ?? '')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <button type="button" className="btn-save" onClick={focusName}>
+            Use a new camera name
+          </button>
+        </div>
+      )}
 
       {/* Buttons */}
       <div className="form-actions">
@@ -211,9 +251,14 @@ CameraForm.propTypes = {
   existingCameras: PropTypes.array.isRequired,
   onSave: PropTypes.func.isRequired,
   onCancel: PropTypes.func.isRequired,
+  divergence: PropTypes.shape({
+    existing: PropTypes.object,
+    differingFields: PropTypes.arrayOf(PropTypes.string),
+  }),
+  onUseNewName: PropTypes.func,
 };
 
-CameraForm.defaultProps = { camera: null };
+CameraForm.defaultProps = { camera: null, divergence: null, onUseNewName: null };
 
 /**
  * CameraModal - Add/edit a camera. Dialog accessibility (focus trap, focus return,
@@ -226,9 +271,11 @@ CameraForm.defaultProps = { camera: null };
  * @param {Array} props.existingCameras Existing cameras (for ID assignment)
  * @param {Function} props.onSave Callback with form data when saved
  * @param {Function} props.onCancel Callback when modal is cancelled/closed
+ * @param props.divergence
+ * @param props.onUseNewName
  * @returns {JSX.Element}
  */
-const CameraModal = ({ isOpen, mode = 'add', camera = null, existingCameras = [], onSave, onCancel }) => (
+const CameraModal = ({ isOpen, mode = 'add', camera = null, existingCameras = [], onSave, onCancel, divergence = null, onUseNewName = null }) => (
   <Modal
     isOpen={isOpen}
     onClose={onCancel}
@@ -242,6 +289,8 @@ const CameraModal = ({ isOpen, mode = 'add', camera = null, existingCameras = []
       existingCameras={existingCameras}
       onSave={onSave}
       onCancel={onCancel}
+      divergence={divergence}
+      onUseNewName={onUseNewName}
     />
   </Modal>
 );
@@ -264,12 +313,19 @@ CameraModal.propTypes = {
   ),
   onSave: PropTypes.func.isRequired,
   onCancel: PropTypes.func.isRequired,
+  divergence: PropTypes.shape({
+    existing: PropTypes.object,
+    differingFields: PropTypes.arrayOf(PropTypes.string),
+  }),
+  onUseNewName: PropTypes.func,
 };
 
 CameraModal.defaultProps = {
   mode: 'add',
   camera: null,
   existingCameras: [],
+  divergence: null,
+  onUseNewName: null,
 };
 
 export default CameraModal;

@@ -1,6 +1,6 @@
 # Pre-cutover Export Correctness Implementation Plan
 
-**Status:** Phases 1–2 complete (export gate fails closed; device resolution / day bad-channel merge). Phases 3–11 not started.
+**Status:** Phases 1–3 complete (export gate fails closed; device resolution / day bad-channel merge; Hardware Config wiring + identity safety). Phases 4–11 not started.
 
 The new multi-page workspace UI can currently hand `trodes_to_nwb` a YAML file that is
 silently wrong — missing electrode probes, missing day-level bad-channel marks, schema-invalid

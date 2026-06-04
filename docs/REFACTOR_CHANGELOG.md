@@ -6,6 +6,45 @@
 
 ---
 
+## Hardware Config: wire cameras and route data-acq / technical to the export (June 4, 2026)
+
+### Summary
+
+The Animal Editor's Hardware Config step now actually persists what it appears to edit.
+Camera add/edit/delete were inert and data-acq / technical edits were written to model
+locations the export never reads (a silent no-op). After this, cameras and the data-acq
+device configured in the UI appear in the exported YAML, with Spyglass identity safety.
+Legacy golden baselines stay byte-identical.
+
+### Changes
+
+- **`updateAnimal` routing (was a silent no-op).** `updateAnimal` previously applied only
+  `subject | experimenters | devices | cameras | optogenetics`, so the step's
+  `data_acq_device` / `technical` / `behavioral_events` writes matched no branch and were
+  dropped. It now routes `data_acq_device` under `animal.devices`, `technicalDefaults` to
+  `animal.technicalDefaults`, and persists animal-level `behavioral_events`. No exported
+  `animal.technical` field is created.
+- **Camera CRUD wired + `lens` required.** `HardwareConfigStep` now manages the add/edit/
+  delete modal (integer IDs, persists via `updateAnimal({ cameras })`); the previously inert
+  buttons work. `CameraModal` requires `lens` (schema-required).
+- **Spyglass identity safety (cameras + data-acq).** Reusing a `camera_name` or
+  `data_acq_device[].name` anywhere in the dataset with different dependent fields
+  (camera: id/calibration/lens/model/manufacturer; data-acq: system/amplifier/adc_circuit)
+  is blocked at the editing surface with a side-by-side comparison and a primary
+  "use a new name" action. Identical reuse is allowed.
+- **Data-acq array shape with `name`.** `DataAcqSection` edits a device and persists it as
+  the schema array `[{name, system, amplifier, adc_circuit}]` at `animal.devices.data_acq_device`
+  (was a single object at a dropped top-level key, missing `name`).
+- **Technical defaults are per-day with animal defaults.** `animal.technicalDefaults`
+  (`raw_data_to_volts`, `times_period_multiplier`) are edited in the Animal Editor and seeded
+  into each day's `technical` at `createDay` (overridable per day). The UI key
+  `ephys_to_volt_conversion` is renamed to the exported `raw_data_to_volts`. Per-day
+  `default_header_file_path` and `units` are now edited in the Day Editor (a new technical
+  section on the Overview step), where the export reads `day.technical`; `units` is written as
+  a whole object and cleared to absent when blank so the schema never sees an empty `units`.
+
+---
+
 ## Device resolution: export the configured probes and day bad channels (June 4, 2026)
 
 ### Summary

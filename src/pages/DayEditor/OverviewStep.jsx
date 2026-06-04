@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import Breadcrumb from './Breadcrumb';
 import ReadOnlyField from './ReadOnlyField';
 import KeywordsEditor from './KeywordsEditor';
+import DayTechnicalSection from './DayTechnicalSection';
 import { validateField } from './validation';
 
 /**
@@ -140,6 +141,10 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate }) 
         </div>
       </section>
 
+      {/* Per-day technical parameters (default header path + units) live on
+          day.technical, where the export reads them. */}
+      <DayTechnicalSection technical={day.technical} onFieldUpdate={onFieldUpdate} />
+
       {/* Collapsible Inherited Metadata */}
       <section className="inherited-metadata-section">
         <button
@@ -245,6 +250,13 @@ OverviewStep.propTypes = {
       session_description: PropTypes.string,
       experiment_description: PropTypes.string,
     }).isRequired,
+    technical: PropTypes.shape({
+      default_header_file_path: PropTypes.string,
+      units: PropTypes.shape({
+        analog: PropTypes.string,
+        behavioral_events: PropTypes.string,
+      }),
+    }),
   }).isRequired,
   mergedDay: PropTypes.object.isRequired,
   onFieldUpdate: PropTypes.func.isRequired,

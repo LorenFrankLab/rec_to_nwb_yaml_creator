@@ -106,7 +106,8 @@ describe('CamerasSection', () => {
             camera_name: 'Test',
             manufacturer: 'Test',
             model: 'Test',
-            meters_per_pixel: 0.001, // Within typical range
+            meters_per_pixel: 0.001,
+            lens: '16mm', // Within typical range
           },
         ],
       };
@@ -132,7 +133,8 @@ describe('CamerasSection', () => {
             camera_name: 'Test',
             manufacturer: 'Test',
             model: 'Test',
-            meters_per_pixel: 0.005, // Outside typical range
+            meters_per_pixel: 0.005,
+            lens: '16mm', // Outside typical range
           },
         ],
       };

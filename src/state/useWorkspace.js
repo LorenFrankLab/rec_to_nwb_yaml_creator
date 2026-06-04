@@ -231,6 +231,24 @@ export function useWorkspace(initialState = null) {
           if (updates.cameras) {
             updated.cameras = updates.cameras;
           }
+          // Data-acq hardware is an animal-level device. The export reads
+          // `animal.devices.data_acq_device`, so route the update there (a write to a
+          // top-level `data_acq_device` would never reach the export).
+          if (updates.data_acq_device) {
+            updated.devices = { ...updated.devices, data_acq_device: updates.data_acq_device };
+          }
+          // Animal-level technical DEFAULTS only (seeded into each day's `technical` at
+          // createDay and overridable per day). These are never exported directly — the
+          // exported values live on `day.technical` — so there is no `animal.technical`.
+          if (updates.technicalDefaults) {
+            updated.technicalDefaults = { ...updated.technicalDefaults, ...updates.technicalDefaults };
+          }
+          // Animal-level behavioral events are an editable reference; the exported
+          // source is the day's `behavioral_events`. Persist them so the editor and the
+          // model agree (previously this write was silently dropped).
+          if (updates.behavioral_events) {
+            updated.behavioral_events = updates.behavioral_events;
+          }
           if (updates.optogenetics) {
             updated.optogenetics = updates.optogenetics;
           }
@@ -440,8 +458,11 @@ export function useWorkspace(initialState = null) {
             associated_files: [],
             associated_video_files: [],
             technical: {
-              times_period_multiplier: 1.5,
-              raw_data_to_volts: 0.195,
+              // Seeded from the animal's technical DEFAULTS (the rig is constant per
+              // animal but occasionally varies per day, so these are overridable on the
+              // day). Falls back to the standard values when no defaults are set.
+              times_period_multiplier: animal.technicalDefaults?.times_period_multiplier ?? 1.5,
+              raw_data_to_volts: animal.technicalDefaults?.raw_data_to_volts ?? 0.195,
               default_header_file_path: '',
               units: undefined,
             },

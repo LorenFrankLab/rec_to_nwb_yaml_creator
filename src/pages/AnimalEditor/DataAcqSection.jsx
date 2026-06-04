@@ -1,110 +1,102 @@
 import { useState, useRef } from 'react';
 import PropTypes from 'prop-types';
+import { findIdentityDivergence, DATA_ACQ_DEPENDENT_FIELDS, IDENTITY_FIELD_LABELS } from './identitySafety';
 import './DataAcqSection.scss';
 
 /**
- * DataAcqSection - Data Acquisition Device configuration section (M8a Task 3)
+ * DataAcqSection - Data Acquisition Device + technical defaults (Animal Editor).
  *
- * Single form (not table - only one device per animal) for configuring
- * data acquisition hardware and technical parameters.
+ * The export reads `animal.devices.data_acq_device` as an ARRAY of
+ * `{name, system, amplifier, adc_circuit}` (schema-required), so this section edits a
+ * single device but persists it as a one-element array via
+ * `onFieldUpdate('data_acq_device', [item])`. `name` is a Spyglass
+ * `DataAcquisitionDevice` identity: reusing it elsewhere in the dataset with different
+ * `system`/`amplifier`/`adc_circuit` is blocked here with a side-by-side comparison and
+ * a steer to a new name.
  *
- * Features:
- * - System dropdown (SpikeGadgets, Open Ephys, etc.)
- * - Amplifier and ADC circuit text inputs
- * - Default header file path with file browser
- * - Collapsible "Advanced Settings" for ephys_to_volt and times_multiplier
- * - Validation: conversion factors must be > 0
- * - Saves to parent on blur
+ * Technical DEFAULTS (`raw_data_to_volts`, `times_period_multiplier`) are edited here as
+ * `animal.technicalDefaults` (seeded into each day's `technical` at createDay,
+ * overridable per day). They are never exported directly. Per-day technical values
+ * (`default_header_file_path`, `units`) are edited in the Day Editor, where the export
+ * reads `day.technical`.
  *
  * @param {object} props
- * @param {object} props.animal - Animal record with data_acq_device and technical
- * @param {Function} props.onFieldUpdate - Field update callback
+ * @param {object} props.animal - Animal record (`devices.data_acq_device`, `technicalDefaults`).
+ * @param {Function} props.onFieldUpdate - Field update callback.
+ * @param {Array<{name: string, fields: object, label: string}>} [props.dataAcqRegistry] -
+ *   Data-acq identities elsewhere in the dataset, for divergent-reuse detection.
  * @returns {JSX.Element}
  */
-export default function DataAcqSection({ animal, onFieldUpdate }) {
-  const fileInputRef = useRef(null);
-
-  // Extract current values with defaults
-  const dataAcqDevice = animal.data_acq_device || {};
-  const technical = animal.technical || {};
+export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry = [] }) {
+  const device = (animal.devices?.data_acq_device || [])[0] || {};
+  const defaults = animal.technicalDefaults || {};
+  const nameInputRef = useRef(null);
 
   const [localState, setLocalState] = useState({
-    system: dataAcqDevice.system || 'SpikeGadgets',
-    amplifier: dataAcqDevice.amplifier || '',
-    adc_circuit: dataAcqDevice.adc_circuit || '',
-    default_header_file_path: technical.default_header_file_path || '',
-    ephys_to_volt_conversion: technical.ephys_to_volt_conversion || 1.0,
-    times_period_multiplier: technical.times_period_multiplier || 1.0,
+    name: device.name || '',
+    system: device.system || 'SpikeGadgets',
+    amplifier: device.amplifier || '',
+    adc_circuit: device.adc_circuit || '',
+    raw_data_to_volts: defaults.raw_data_to_volts ?? 0.195,
+    times_period_multiplier: defaults.times_period_multiplier ?? 1.5,
   });
+  // Set when the current device fields would reuse another device's name with
+  // divergent dependent values. Blocks the save until resolved.
+  const [divergence, setDivergence] = useState(null);
 
-  /**
-   * Handle field change with local state update
-   * @param {string} field - Field name
-   * @param {any} value - New value
-   */
   const handleFieldChange = (field, value) => {
-    setLocalState((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setLocalState((prev) => ({ ...prev, [field]: value }));
   };
 
+  const DEVICE_FIELDS = ['name', 'system', 'amplifier', 'adc_circuit'];
+
   /**
-   * Handle blur - save to parent on blur
-   * @param {string} field - Field name
-   * @param {any} value - Value to save
+   * Persist the device (as a one-element array) unless its name diverges from an
+   * existing data-acq identity; persist technical defaults directly.
+   *
+   * @param {string} field - The blurred field.
+   * @param {object} nextState - The latest local state (post-change).
    */
-  const handleBlur = (field, value) => {
-    // Determine which parent object to update
-    if (field === 'system' || field === 'amplifier' || field === 'adc_circuit') {
-      // Update data_acq_device
-      onFieldUpdate('data_acq_device', {
-        ...dataAcqDevice,
-        [field]: value,
-      });
-    } else {
-      // Update technical
-      onFieldUpdate('technical', {
-        ...technical,
-        [field]: value,
-      });
+  const commit = (field, nextState) => {
+    if (DEVICE_FIELDS.includes(field)) {
+      const candidate = {
+        name: nextState.name.trim(),
+        system: nextState.system,
+        amplifier: nextState.amplifier,
+        adc_circuit: nextState.adc_circuit,
+      };
+      const conflict = findIdentityDivergence(
+        candidate.name,
+        { system: candidate.system, amplifier: candidate.amplifier, adc_circuit: candidate.adc_circuit },
+        dataAcqRegistry
+      );
+      if (conflict) {
+        setDivergence(conflict);
+        return; // Block: do not write a divergent reuse.
+      }
+      setDivergence(null);
+      onFieldUpdate('data_acq_device', [candidate]);
+      return;
     }
+    onFieldUpdate('technicalDefaults', {
+      raw_data_to_volts: nextState.raw_data_to_volts,
+      times_period_multiplier: nextState.times_period_multiplier,
+    });
   };
 
-  /**
-   * Handle file browser button click
-   */
-  const handleBrowseClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
+  // Commit on blur from the current local state. `commit` has side effects
+  // (onFieldUpdate / setDivergence), so it must run outside any setState updater —
+  // a state updater must stay pure (React may call it more than once).
+  const handleBlur = (field) => {
+    commit(field, localState);
   };
 
-  /**
-   * Handle file selection
-   * @param {Event} event
-   */
-  const handleFileSelect = (event) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Get file path (or name as fallback since we can't access full path in browser)
-      const filePath = file.name;
-      setLocalState((prev) => ({
-        ...prev,
-        default_header_file_path: filePath,
-      }));
-      handleBlur('default_header_file_path', filePath);
-    }
+  const handleUseNewName = () => {
+    setDivergence(null);
+    if (nameInputRef.current) nameInputRef.current.focus();
   };
 
-  /**
-   * Validate numeric input > 0
-   * @param {number} value
-   * @returns {boolean}
-   */
-  const isValidPositive = (value) => {
-    return value > 0;
-  };
+  const isValidPositive = (value) => value > 0;
 
   return (
     <div className="data-acq-section">
@@ -114,6 +106,26 @@ export default function DataAcqSection({ animal, onFieldUpdate }) {
       </header>
 
       <form className="data-acq-form">
+        {/* Name (Spyglass identity) */}
+        <div className="form-group">
+          <label htmlFor="data_acq_name">
+            Name <span className="required">*</span>
+          </label>
+          <input
+            type="text"
+            id="data_acq_name"
+            ref={nameInputRef}
+            value={localState.name}
+            onChange={(e) => handleFieldChange('name', e.target.value)}
+            onBlur={() => handleBlur('name')}
+            placeholder="e.g., SpikeGadgets_MCU"
+            required
+          />
+          <small className="help-text">
+            Identifies this acquisition device. The same name must mean the same hardware.
+          </small>
+        </div>
+
         {/* System Dropdown */}
         <div className="form-group">
           <label htmlFor="system">
@@ -123,7 +135,7 @@ export default function DataAcqSection({ animal, onFieldUpdate }) {
             id="system"
             value={localState.system}
             onChange={(e) => handleFieldChange('system', e.target.value)}
-            onBlur={(e) => handleBlur('system', e.target.value)}
+            onBlur={() => handleBlur('system')}
             required
           >
             <option value="SpikeGadgets">SpikeGadgets</option>
@@ -141,7 +153,7 @@ export default function DataAcqSection({ animal, onFieldUpdate }) {
             id="amplifier"
             value={localState.amplifier}
             onChange={(e) => handleFieldChange('amplifier', e.target.value)}
-            onBlur={(e) => handleBlur('amplifier', e.target.value)}
+            onBlur={() => handleBlur('amplifier')}
             placeholder="e.g., Intan RHD2000"
           />
         </div>
@@ -154,82 +166,74 @@ export default function DataAcqSection({ animal, onFieldUpdate }) {
             id="adc_circuit"
             value={localState.adc_circuit}
             onChange={(e) => handleFieldChange('adc_circuit', e.target.value)}
-            onBlur={(e) => handleBlur('adc_circuit', e.target.value)}
+            onBlur={() => handleBlur('adc_circuit')}
             placeholder="e.g., Intan"
           />
         </div>
 
-        {/* Default Header File Path */}
-        <div className="form-group">
-          <label htmlFor="default_header_file_path">Default Header File</label>
-          <div className="file-input-group">
-            <input
-              type="text"
-              id="default_header_file_path"
-              value={localState.default_header_file_path}
-              onChange={(e) => handleFieldChange('default_header_file_path', e.target.value)}
-              onBlur={(e) => handleBlur('default_header_file_path', e.target.value)}
-              placeholder="/path/to/config.trodesconf"
-            />
-            <button
-              type="button"
-              className="button-secondary"
-              onClick={handleBrowseClick}
-              aria-label="Browse for file"
-            >
-              Browse...
+        {divergence && (
+          <div className="identity-divergence" role="alert">
+            <p className="identity-divergence-title">
+              The name “{localState.name.trim()}” is already used by {divergence.existing.label} with
+              different hardware. The same data-acq name must mean the same device.
+            </p>
+            <table className="identity-divergence-table">
+              <thead>
+                <tr><th>Field</th><th>Existing</th><th>This device</th></tr>
+              </thead>
+              <tbody>
+                {divergence.differingFields.map((field) => (
+                  <tr key={field}>
+                    <td>{IDENTITY_FIELD_LABELS[field] || field}</td>
+                    <td>{String(divergence.existing.fields[field] ?? '')}</td>
+                    <td>{String(localState[field] ?? '')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <button type="button" className="button-primary" onClick={handleUseNewName}>
+              Use a new name
             </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".trodesconf,.xml"
-              onChange={handleFileSelect}
-              style={{ display: 'none' }}
-              aria-hidden="true"
-            />
           </div>
-        </div>
+        )}
 
-        {/* Advanced Settings - Collapsible */}
+        {/* Technical defaults (seeded into new days) */}
         <details className="advanced-settings">
           <summary>Advanced Settings</summary>
           <div className="advanced-content">
             <p className="help-text">
-              ℹ️ Contact support before changing these values. Incorrect settings can corrupt data.
+              These seed the technical defaults for new recording days and can be overridden per day.
+              Typical values are 0.195 (raw data to volts) and 1.5 (times period multiplier); change them
+              only if instructed by your recording-system vendor or pipeline maintainer — incorrect values
+              can corrupt data.
             </p>
 
-            {/* Ephys to Volt Conversion */}
             <div className="form-group">
-              <label htmlFor="ephys_to_volt_conversion">
-                Ephys to Volt Conversion
-              </label>
+              <label htmlFor="raw_data_to_volts">Raw Data to Volts</label>
               <input
                 type="number"
-                id="ephys_to_volt_conversion"
-                value={localState.ephys_to_volt_conversion}
-                onChange={(e) => handleFieldChange('ephys_to_volt_conversion', parseFloat(e.target.value))}
-                onBlur={(e) => handleBlur('ephys_to_volt_conversion', parseFloat(e.target.value))}
+                id="raw_data_to_volts"
+                value={Number.isFinite(localState.raw_data_to_volts) ? localState.raw_data_to_volts : ''}
+                onChange={(e) => handleFieldChange('raw_data_to_volts', parseFloat(e.target.value))}
+                onBlur={() => handleBlur('raw_data_to_volts')}
                 step="0.0001"
                 min="0"
-                aria-invalid={!isValidPositive(localState.ephys_to_volt_conversion)}
-                aria-describedby="ephys-help"
+                aria-invalid={!isValidPositive(localState.raw_data_to_volts)}
+                aria-describedby="raw-data-help"
               />
-              <small id="ephys-help" className="help-text">
+              <small id="raw-data-help" className="help-text">
                 Conversion factor for electrophysiology signals (must be &gt; 0)
               </small>
             </div>
 
-            {/* Times Period Multiplier */}
             <div className="form-group">
-              <label htmlFor="times_period_multiplier">
-                Times Period Multiplier
-              </label>
+              <label htmlFor="times_period_multiplier">Times Period Multiplier</label>
               <input
                 type="number"
                 id="times_period_multiplier"
-                value={localState.times_period_multiplier}
+                value={Number.isFinite(localState.times_period_multiplier) ? localState.times_period_multiplier : ''}
                 onChange={(e) => handleFieldChange('times_period_multiplier', parseFloat(e.target.value))}
-                onBlur={(e) => handleBlur('times_period_multiplier', parseFloat(e.target.value))}
+                onBlur={() => handleBlur('times_period_multiplier')}
                 step="0.0001"
                 min="0"
                 aria-invalid={!isValidPositive(localState.times_period_multiplier)}
@@ -249,16 +253,25 @@ export default function DataAcqSection({ animal, onFieldUpdate }) {
 DataAcqSection.propTypes = {
   animal: PropTypes.shape({
     id: PropTypes.string.isRequired,
-    data_acq_device: PropTypes.shape({
-      system: PropTypes.string,
-      amplifier: PropTypes.string,
-      adc_circuit: PropTypes.string,
+    devices: PropTypes.shape({
+      data_acq_device: PropTypes.arrayOf(
+        PropTypes.shape({
+          name: PropTypes.string,
+          system: PropTypes.string,
+          amplifier: PropTypes.string,
+          adc_circuit: PropTypes.string,
+        })
+      ),
     }),
-    technical: PropTypes.shape({
-      default_header_file_path: PropTypes.string,
-      ephys_to_volt_conversion: PropTypes.number,
+    technicalDefaults: PropTypes.shape({
+      raw_data_to_volts: PropTypes.number,
       times_period_multiplier: PropTypes.number,
     }),
   }).isRequired,
   onFieldUpdate: PropTypes.func.isRequired,
+  dataAcqRegistry: PropTypes.arrayOf(PropTypes.object),
+};
+
+DataAcqSection.defaultProps = {
+  dataAcqRegistry: [],
 };

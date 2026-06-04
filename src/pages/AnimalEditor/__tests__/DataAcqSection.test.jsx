@@ -7,230 +7,98 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import DataAcqSection from '../DataAcqSection';
 
-/**
- * Tests for DataAcqSection component (M8a Task 3)
- *
- * Single form (not table) for data acquisition device configuration.
- * Tests cover rendering, collapsible advanced settings, validation, and accessibility.
- */
-
 describe('DataAcqSection', () => {
   let user;
+  let onFieldUpdate;
 
-  const mockAnimal = {
+  const animal = {
     id: 'remy',
-    data_acq_device: {
-      system: 'SpikeGadgets',
-      amplifier: 'Intan RHD2000',
-      adc_circuit: 'Intan',
+    devices: {
+      data_acq_device: [
+        { name: 'SpikeGadgets_MCU', system: 'SpikeGadgets', amplifier: 'Intan RHD2000', adc_circuit: 'Intan' },
+      ],
     },
-    technical: {
-      default_header_file_path: '/path/to/config.trodesconf',
-      ephys_to_volt_conversion: 1.0,
-      times_period_multiplier: 1.0,
-    },
+    technicalDefaults: { raw_data_to_volts: 0.195, times_period_multiplier: 1.5 },
   };
-
-  const mockOnFieldUpdate = vi.fn();
 
   beforeEach(() => {
     user = userEvent.setup();
-    vi.clearAllMocks();
+    onFieldUpdate = vi.fn();
   });
 
-  describe('Form Fields', () => {
-    it('should render all form fields (system dropdown, amplifier, ADC)', () => {
-      render(
-        <DataAcqSection
-          animal={mockAnimal}
-          onFieldUpdate={mockOnFieldUpdate}
-        />
-      );
+  it('populates the device fields (incl. name) from the data_acq_device array', () => {
+    render(<DataAcqSection animal={animal} onFieldUpdate={onFieldUpdate} />);
 
-      // Check for system dropdown
-      expect(screen.getByLabelText(/System/i)).toBeInTheDocument();
-
-      // Check for amplifier input
-      expect(screen.getByLabelText(/Amplifier/i)).toBeInTheDocument();
-
-      // Check for ADC input
-      expect(screen.getByLabelText(/ADC/i)).toBeInTheDocument();
-
-      // Check for header file path
-      expect(screen.getByLabelText(/Default Header File/i)).toBeInTheDocument();
-    });
-
-    it('should populate fields with existing animal data', () => {
-      render(
-        <DataAcqSection
-          animal={mockAnimal}
-          onFieldUpdate={mockOnFieldUpdate}
-        />
-      );
-
-      // Check values are populated
-      expect(screen.getByDisplayValue('SpikeGadgets')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('Intan RHD2000')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('Intan')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('/path/to/config.trodesconf')).toBeInTheDocument();
-    });
+    expect(screen.getByDisplayValue('SpikeGadgets_MCU')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('SpikeGadgets')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Intan RHD2000')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Intan')).toBeInTheDocument();
   });
 
-  describe('Advanced Settings', () => {
-    it('should have advanced settings collapsed by default', () => {
-      render(
-        <DataAcqSection
-          animal={mockAnimal}
-          onFieldUpdate={mockOnFieldUpdate}
-        />
-      );
+  it('writes the data-acq device as a one-element array including name on blur', async () => {
+    render(<DataAcqSection animal={animal} onFieldUpdate={onFieldUpdate} />);
 
-      // Find the details element
-      const details = screen.getByText(/Advanced Settings/i).closest('details');
-      expect(details).toBeInTheDocument();
-      expect(details).not.toHaveAttribute('open');
-    });
+    const amplifier = screen.getByLabelText(/Amplifier/i);
+    await user.clear(amplifier);
+    await user.type(amplifier, 'Intan RHD2132');
+    await user.tab();
 
-    it('should toggle advanced settings open/closed on click', async () => {
-      render(
-        <DataAcqSection
-          animal={mockAnimal}
-          onFieldUpdate={mockOnFieldUpdate}
-        />
-      );
-
-      // Find the summary element
-      const summary = screen.getByText(/Advanced Settings/i);
-      const details = summary.closest('details');
-
-      // Initially closed
-      expect(details).not.toHaveAttribute('open');
-
-      // Click to open
-      await user.click(summary);
-      expect(details).toHaveAttribute('open');
-
-      // Click to close
-      await user.click(summary);
-      expect(details).not.toHaveAttribute('open');
-    });
-
-    it('should show help text visible for advanced settings', async () => {
-      render(
-        <DataAcqSection
-          animal={mockAnimal}
-          onFieldUpdate={mockOnFieldUpdate}
-        />
-      );
-
-      // Open advanced settings
-      const summary = screen.getByText(/Advanced Settings/i);
-      await user.click(summary);
-
-      // Check for help text
-      expect(screen.getByText(/Contact support before changing/i)).toBeInTheDocument();
-    });
+    await waitFor(() => expect(onFieldUpdate).toHaveBeenCalledWith('data_acq_device', [
+      { name: 'SpikeGadgets_MCU', system: 'SpikeGadgets', amplifier: 'Intan RHD2132', adc_circuit: 'Intan' },
+    ]));
   });
 
-  describe('File Browser', () => {
-    it('should open file picker when file browser button is clicked', async () => {
-      render(
-        <DataAcqSection
-          animal={mockAnimal}
-          onFieldUpdate={mockOnFieldUpdate}
-        />
-      );
+  it('edits technical defaults (raw_data_to_volts) via technicalDefaults, not technical', async () => {
+    render(<DataAcqSection animal={animal} onFieldUpdate={onFieldUpdate} />);
 
-      // Find the browse button
-      const browseButton = screen.getByRole('button', { name: /Browse/i });
-      expect(browseButton).toBeInTheDocument();
+    await user.click(screen.getByText(/Advanced Settings/i));
+    const rawData = screen.getByLabelText(/Raw Data to Volts/i);
+    await user.clear(rawData);
+    await user.type(rawData, '0.25');
+    await user.tab();
 
-      // Click should not throw error
-      await user.click(browseButton);
+    await waitFor(() => {
+      const call = onFieldUpdate.mock.calls.find((c) => c[0] === 'technicalDefaults');
+      expect(call).toBeTruthy();
+      expect(call[1].raw_data_to_volts).toBe(0.25);
     });
+    // The old animal-level key is gone.
+    expect(screen.queryByLabelText(/Ephys to Volt/i)).not.toBeInTheDocument();
   });
 
-  describe('Validation', () => {
-    it('should validate ephys_to_volt > 0', async () => {
-      const invalidAnimal = {
-        ...mockAnimal,
-        technical: {
-          ...mockAnimal.technical,
-          ephys_to_volt_conversion: -1.0,
-        },
-      };
-
-      render(
-        <DataAcqSection
-          animal={invalidAnimal}
-          onFieldUpdate={mockOnFieldUpdate}
-        />
-      );
-
-      // Open advanced settings to access field
-      const summary = screen.getByText(/Advanced Settings/i);
-      await user.click(summary);
-
-      // Find ephys_to_volt input
-      const ephysInput = screen.getByLabelText(/Ephys to Volt/i);
-      expect(ephysInput).toBeInTheDocument();
-
-      // Should have invalid value
-      expect(ephysInput).toHaveValue(-1);
-    });
-
-    it('should validate times_multiplier > 0', async () => {
-      const invalidAnimal = {
-        ...mockAnimal,
-        technical: {
-          ...mockAnimal.technical,
-          times_period_multiplier: -1.0,
-        },
-      };
-
-      render(
-        <DataAcqSection
-          animal={invalidAnimal}
-          onFieldUpdate={mockOnFieldUpdate}
-        />
-      );
-
-      // Open advanced settings to access field
-      const summary = screen.getByText(/Advanced Settings/i);
-      await user.click(summary);
-
-      // Find times_multiplier input
-      const timesInput = screen.getByLabelText(/Times Period Multiplier/i);
-      expect(timesInput).toBeInTheDocument();
-
-      // Should have invalid value
-      expect(timesInput).toHaveValue(-1);
-    });
+  it('no longer edits the per-day default header file path at the animal level', () => {
+    render(<DataAcqSection animal={animal} onFieldUpdate={onFieldUpdate} />);
+    expect(screen.queryByLabelText(/Default Header File/i)).not.toBeInTheDocument();
   });
 
-  describe('Save Changes', () => {
-    it('should save changes on blur with debounce', async () => {
-      render(
-        <DataAcqSection
-          animal={mockAnimal}
-          onFieldUpdate={mockOnFieldUpdate}
-        />
-      );
+  it('blocks a divergent data-acq name reuse and offers a new-name action', async () => {
+    const dataAcqRegistry = [
+      { name: 'SHARED', label: 'jaq data-acq device', fields: { system: 'Open Ephys', amplifier: 'Intan', adc_circuit: 'Intan' } },
+    ];
+    render(<DataAcqSection animal={animal} onFieldUpdate={onFieldUpdate} dataAcqRegistry={dataAcqRegistry} />);
 
-      // Find amplifier input
-      const amplifierInput = screen.getByLabelText(/Amplifier/i);
+    const nameInput = screen.getByLabelText(/^Name/i);
+    await user.clear(nameInput);
+    await user.type(nameInput, 'SHARED'); // same name, but this animal's system is SpikeGadgets ≠ Open Ephys
+    await user.tab();
 
-      // Clear and type new value
-      await user.clear(amplifierInput);
-      await user.type(amplifierInput, 'New Amplifier');
+    // Divergence is surfaced and the write is blocked.
+    expect(screen.getByRole('alert')).toHaveTextContent(/already used by jaq data-acq device/i);
+    expect(onFieldUpdate).not.toHaveBeenCalledWith('data_acq_device', expect.anything());
+    expect(screen.getByRole('button', { name: /use a new name/i })).toBeInTheDocument();
+  });
 
-      // Blur to trigger save
-      await user.tab();
+  it('allows an identical data-acq name reuse (same dependent fields)', async () => {
+    const dataAcqRegistry = [
+      { name: 'SpikeGadgets_MCU', label: 'jaq data-acq device', fields: { system: 'SpikeGadgets', amplifier: 'Intan RHD2000', adc_circuit: 'Intan' } },
+    ];
+    render(<DataAcqSection animal={animal} onFieldUpdate={onFieldUpdate} dataAcqRegistry={dataAcqRegistry} />);
 
-      // Wait for debounce
-      await waitFor(() => {
-        expect(mockOnFieldUpdate).toHaveBeenCalled();
-      }, { timeout: 1000 });
-    });
+    const amplifier = screen.getByLabelText(/Amplifier/i);
+    await user.click(amplifier);
+    await user.tab();
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    await waitFor(() => expect(onFieldUpdate).toHaveBeenCalledWith('data_acq_device', expect.any(Array)));
   });
 });

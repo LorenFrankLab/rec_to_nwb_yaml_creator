@@ -123,8 +123,13 @@ describe('CameraModal', () => {
       await user.type(screen.getByLabelText(/model/i), 'Test Model');
       expect(saveButton).toBeDisabled();
 
-      // Fill in meters_per_pixel (required field)
+      // Fill in meters_per_pixel
       await user.type(screen.getByLabelText(/meters per pixel/i), '0.001');
+      // Still disabled — lens is schema-required.
+      expect(saveButton).toBeDisabled();
+
+      // Fill in lens (required)
+      await user.type(screen.getByLabelText(/lens/i), '16mm');
 
       // Now save button should be enabled
       await waitFor(() => {
@@ -151,6 +156,7 @@ describe('CameraModal', () => {
       await user.type(screen.getByLabelText(/^camera name$/i), 'Test Camera');
       await user.type(screen.getByLabelText(/manufacturer/i), 'Test Manufacturer');
       await user.type(screen.getByLabelText(/model/i), 'Test Model');
+      await user.type(screen.getByLabelText(/lens/i), '16mm');
 
       const metersPerPixelInput = screen.getByLabelText(/meters per pixel/i);
 
@@ -239,6 +245,7 @@ describe('CameraModal', () => {
       await user.type(screen.getByLabelText(/manufacturer/i), 'Test Manufacturer');
       await user.type(screen.getByLabelText(/model/i), 'Test Model');
       await user.type(screen.getByLabelText(/meters per pixel/i), '0.001');
+      await user.type(screen.getByLabelText(/lens/i), '16mm');
 
       await waitFor(() => {
         expect(saveButton).not.toBeDisabled();
@@ -380,6 +387,7 @@ describe('CameraModal', () => {
       await user.type(screen.getByLabelText(/^camera name$/i), 'Test');
       await user.type(screen.getByLabelText(/manufacturer/i), 'Test');
       await user.type(screen.getByLabelText(/model/i), 'Test');
+      await user.type(screen.getByLabelText(/lens/i), '16mm');
       await user.type(screen.getByLabelText(/meters per pixel/i), '0.001');
 
       // Wait for Save button to be enabled
@@ -415,6 +423,7 @@ describe('CameraModal', () => {
       await user.type(screen.getByLabelText(/^camera name$/i), 'Test');
       await user.type(screen.getByLabelText(/manufacturer/i), 'Test');
       await user.type(screen.getByLabelText(/model/i), 'Test');
+      await user.type(screen.getByLabelText(/lens/i), '16mm');
       await user.type(screen.getByLabelText(/meters per pixel/i), '0.001');
 
       // Wait for Save button to be enabled
