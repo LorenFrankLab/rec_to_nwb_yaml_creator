@@ -1,6 +1,6 @@
 # Pre-cutover Export Correctness Implementation Plan
 
-**Status:** Phases 1–4 complete (export gate fails closed; device resolution / day bad-channel merge; Hardware Config wiring + identity safety; schema-valid device output — integer IDs end-to-end, required `description`/`targeted_location`, per-shank offsets, no stray keys, `device.name`, ntrode-/group-ID uniqueness). Phases 5–11 not started.
+**Status:** Phases 1–5 complete (export gate fails closed; device resolution / day bad-channel merge; Hardware Config wiring + identity safety; schema-valid device output — integer IDs end-to-end, required device fields, per-shank offsets, no stray keys, ntrode-/group-ID uniqueness; subject/session completeness + DANDI — weight/description collected, timestamp DOB, Latin-binomial species + no-slash ids, required `experiment_description`, and an in-Overview subject repair surface). Phases 6–11 not started. Note: an interim refinement made electrode-group `location` optional in the editor and then reverted to required-with-targeted-default per lab decision (see overview.md / REFACTOR_CHANGELOG).
 
 The new multi-page workspace UI can currently hand `trodes_to_nwb` a YAML file that is
 silently wrong — missing electrode probes, missing day-level bad-channel marks, schema-invalid
