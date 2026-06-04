@@ -212,7 +212,10 @@ export function mergeDayMetadata(animal, day) {
     institution: animal.experimenters.institution,
 
     // === From Day: Session ===
-    experiment_description: day.session.experiment_description || '',
+    // Per-day value wins; fall back to the animal-level default (what the
+    // OverviewStep "leave blank to use animal's default" hint promises).
+    experiment_description:
+      day.session.experiment_description || animal.experiment_description || '',
     session_description: day.session.session_description,
     session_id: day.session.session_id,
     keywords: Array.isArray(day.keywords) ? day.keywords : [],

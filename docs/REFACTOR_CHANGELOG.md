@@ -6,6 +6,45 @@
 
 ---
 
+## Subject & session completeness for schema + DANDI (June 4, 2026)
+
+### Summary
+
+The workspace path now emits every required subject/session field and satisfies the DANDI
+subject blockers, and existing animals can be repaired without leaving the Day Editor. Legacy
+golden baselines stay byte-identical (the new-path fixtures were already complete).
+
+### Changes
+
+- **Weight + description collected.** Animal creation now collects a required numeric **weight** and
+  an optional **description** (auto-derived from genotype + species when blank). `createAnimal` keeps
+  schema-required fallbacks for non-form callers.
+- **DOB is a timestamp.** The date-picker value is midnight-normalized with `new Date(value).toISOString()`
+  at creation and in the repair path, satisfying the schema's `T`-timestamp pattern (a bare `YYYY-MM-DD`
+  was rejected).
+- **Species must be a Latin binomial / NCBI Taxon URI.** A shared `validation/dandiSubject` helper is
+  used by the creation form (the "other" escape is validated) and a new export-gate rule; free text
+  like "Rat" is rejected (DANDI CRITICAL).
+- **No-slash ids.** A `/` in `subject_id` (already blocked at creation) or `session_id` is rejected by
+  the rule (DANDI CRITICAL); the derived `session_id` can't introduce one.
+- **`experiment_description` animal fallback.** `mergeDayMetadata` now falls back to
+  `animal.experiment_description` (making the OverviewStep "leave blank to use animal's default" hint
+  truthful) before emitting `''`.
+- **Subject repair surface.** The Day Editor's Overview makes the inherited **date of birth, weight,
+  species, and description** editable (writing through to the animal via a new `onSubjectUpdate`), with
+  `data-field-path` anchors so a subject validation error routes to and focuses the field — the
+  previously unexplained Overview "✗" with no place to fix it.
+- **Validation rule (Rule 8):** DANDI subject conformance (species form + no-slash ids), error-severity,
+  so the per-day export gate blocks a DANDI-invalid subject. `sex` is already an `M/F/U/O` enum.
+
+### Deferred
+
+- The actual `trodes_to_nwb` → `nwbinspector --config dandi` → `dandi validate` round-trip is deferred
+  to the single pre-cutover task (no Python/DANDI environment now); this subject/DANDI sample is high on
+  that checklist.
+
+---
+
 ## Electrode-group region UX + positive epoch numbers (June 4, 2026)
 
 ### Summary

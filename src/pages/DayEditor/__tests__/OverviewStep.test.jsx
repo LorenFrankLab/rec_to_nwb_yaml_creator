@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import OverviewStep from '../OverviewStep';
 import { parseHashRoute } from '../../../hooks/useHashRouter';
@@ -279,5 +279,53 @@ describe('OverviewStep', () => {
 
     const sessionDescTextarea = screen.getByLabelText(/Session Description/i);
     expect(sessionDescTextarea.tagName).toBe('TEXTAREA');
+  });
+
+  describe('Subject repair fields (editable, write through to the animal)', () => {
+    const expand = async (onSubjectUpdate) => {
+      const user = userEvent.setup();
+      render(
+        <OverviewStep
+          animal={mockAnimal}
+          day={mockDay}
+          mergedDay={mockMergedDay}
+          onFieldUpdate={vi.fn()}
+          onSubjectUpdate={onSubjectUpdate}
+        />
+      );
+      await user.click(screen.getByRole('button', { name: /view inherited metadata/i }));
+      await waitFor(() => expect(screen.getByText('Subject Information')).toBeInTheDocument());
+      return user;
+    };
+
+    it('normalizes an edited date of birth to a T-timestamp', async () => {
+      const onSubjectUpdate = vi.fn();
+      await expand(onSubjectUpdate);
+
+      const dob = screen.getByLabelText(/date of birth/i);
+      fireEvent.change(dob, { target: { value: '2024-02-03' } });
+      fireEvent.blur(dob);
+
+      expect(onSubjectUpdate).toHaveBeenCalledWith('date_of_birth', new Date('2024-02-03').toISOString());
+    });
+
+    it('writes an edited weight as a number', async () => {
+      const onSubjectUpdate = vi.fn();
+      const user = await expand(onSubjectUpdate);
+
+      const weight = screen.getByLabelText(/weight/i);
+      await user.type(weight, '450');
+      await user.tab();
+
+      expect(onSubjectUpdate).toHaveBeenCalledWith('weight', 450);
+    });
+
+    it('exposes data-field-path anchors so a subject validation error can focus the field', async () => {
+      await expand(vi.fn());
+
+      for (const path of ['subject.date_of_birth', 'subject.weight', 'subject.species', 'subject.description']) {
+        expect(document.querySelector(`[data-field-path="${path}"]`)).toBeInTheDocument();
+      }
+    });
   });
 });

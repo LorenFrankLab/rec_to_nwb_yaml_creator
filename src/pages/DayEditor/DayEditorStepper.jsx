@@ -162,6 +162,14 @@ export default function DayEditorStepper() {
     actions.updateDay(dayId, { [topLevelKey]: updated[topLevelKey] });
   }, [day, dayId, actions]);
 
+  // Subject fields live on the animal, not the day. The Overview step uses this to
+  // repair inherited subject metadata (DOB / weight / description / species) in
+  // place, writing through to the animal so existing animals can be fixed.
+  const handleSubjectUpdate = useCallback((field, value) => {
+    if (!animal) return;
+    actions.updateAnimal(animal.id, { subject: { ...animal.subject, [field]: value } });
+  }, [animal, actions]);
+
   // Step configuration. Export stays gated by isExportEnabled (every prerequisite
   // step valid, including the now-real Validation step).
   const steps = [
@@ -233,6 +241,7 @@ export default function DayEditorStepper() {
           day={day}
           mergedDay={mergedDay}
           onFieldUpdate={handleFieldUpdate}
+          onSubjectUpdate={handleSubjectUpdate}
           onNavigate={handleStepNavigate}
           animalDays={animalDays}
           actions={actions}

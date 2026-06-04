@@ -22,9 +22,10 @@ import { validateField } from './validation';
  * @param {import('@/state/workspaceTypes').Day} props.day - Day record (editable)
  * @param {object} props.mergedDay - Merged animal + day for validation
  * @param {Function} props.onFieldUpdate - Callback: (fieldPath, value) => void
+ * @param props.onSubjectUpdate
  * @returns {JSX.Element}
  */
-export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate }) {
+export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, onSubjectUpdate }) {
   const [fieldErrors, setFieldErrors] = useState({});
   const [validatingField, setValidatingField] = useState(null);
   const [showInherited, setShowInherited] = useState(false);
@@ -163,35 +164,82 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate }) 
 
         {showInherited && (
           <div id="inherited-metadata-content" className="inherited-metadata-content">
-            {/* Subject Information */}
+            {/* Subject Information. Identity fields are read-only; the fields a
+                recording-day scientist commonly needs to repair (date of birth,
+                weight, description, species) are editable here and write through to
+                the animal so existing animals can be fixed without leaving the day. */}
             <div className="inherited-section">
               <h3>Subject Information</h3>
               <div className="inherited-notice">
-                Inherited from Animal
+                Inherited from Animal — edits below update the animal for every day.
                 <a href={`#/animal/${animal.id}/editor`}>Edit Animal</a>
               </div>
 
               <div className="form-grid">
-                <ReadOnlyField
-                  label="Subject ID"
-                  value={animal.subject.subject_id}
-                />
-                <ReadOnlyField
-                  label="Species"
-                  value={animal.subject.species}
-                />
-                <ReadOnlyField
-                  label="Sex"
-                  value={animal.subject.sex}
-                />
-                <ReadOnlyField
-                  label="Genotype"
-                  value={animal.subject.genotype}
-                />
-                <ReadOnlyField
-                  label="Date of Birth"
-                  value={animal.subject.date_of_birth}
-                />
+                <ReadOnlyField label="Subject ID" value={animal.subject.subject_id} />
+                <ReadOnlyField label="Sex" value={animal.subject.sex} />
+                <ReadOnlyField label="Genotype" value={animal.subject.genotype} />
+
+                <div className="form-field">
+                  <label htmlFor="subject-date-of-birth">Date of Birth</label>
+                  <input
+                    id="subject-date-of-birth"
+                    type="date"
+                    data-field-path="subject.date_of_birth"
+                    key={animal.subject.date_of_birth || ''}
+                    defaultValue={(animal.subject.date_of_birth || '').split('T')[0]}
+                    max={new Date().toISOString().split('T')[0]}
+                    onBlur={(e) =>
+                      onSubjectUpdate(
+                        'date_of_birth',
+                        e.target.value ? new Date(e.target.value).toISOString() : ''
+                      )
+                    }
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label htmlFor="subject-weight">Weight (grams)</label>
+                  <input
+                    id="subject-weight"
+                    type="number"
+                    min="0"
+                    step="any"
+                    data-field-path="subject.weight"
+                    key={`weight-${animal.subject.weight ?? ''}`}
+                    defaultValue={animal.subject.weight ?? ''}
+                    onBlur={(e) =>
+                      onSubjectUpdate('weight', e.target.value === '' ? undefined : Number(e.target.value))
+                    }
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label htmlFor="subject-species">Species</label>
+                  <input
+                    id="subject-species"
+                    type="text"
+                    data-field-path="subject.species"
+                    key={`species-${animal.subject.species || ''}`}
+                    defaultValue={animal.subject.species || ''}
+                    onBlur={(e) => onSubjectUpdate('species', e.target.value.trim())}
+                  />
+                  <span className="field-help-text">
+                    Latin binomial (e.g. Rattus norvegicus) or an NCBI Taxonomy URI — DANDI rejects free text.
+                  </span>
+                </div>
+
+                <div className="form-field">
+                  <label htmlFor="subject-description">Description</label>
+                  <input
+                    id="subject-description"
+                    type="text"
+                    data-field-path="subject.description"
+                    key={`desc-${animal.subject.description || ''}`}
+                    defaultValue={animal.subject.description || ''}
+                    onBlur={(e) => onSubjectUpdate('description', e.target.value)}
+                  />
+                </div>
               </div>
             </div>
 
@@ -260,4 +308,9 @@ OverviewStep.propTypes = {
   }).isRequired,
   mergedDay: PropTypes.object.isRequired,
   onFieldUpdate: PropTypes.func.isRequired,
+  onSubjectUpdate: PropTypes.func,
+};
+
+OverviewStep.defaultProps = {
+  onSubjectUpdate: () => {},
 };
