@@ -99,12 +99,11 @@ export default function ReconfigWizard({
       return;
     }
 
-    // Version the change, then assign it forward. The new snapshot takes the next
-    // sequential version (matching addConfigurationSnapshot's own numbering). These
-    // two calls are synchronous and read the current animal, so the version is
-    // correct; see the cross-action atomicity follow-up in the v3 plan overview.
-    const newVersion = (animal.configurationHistory?.length || 0) + 1;
-    actions.addConfigurationSnapshot(animal.id, {
+    // Version the change, then assign that exact version forward. The store assigns
+    // the version from its authoritative state and returns it, so we apply forward to
+    // the snapshot we just created instead of re-deriving the number from a possibly
+    // stale `animal` prop (which could mis-target a different version).
+    const newVersion = actions.addConfigurationSnapshot(animal.id, {
       date,
       description: description.trim(),
       devices: structuredClone(nextConfig),

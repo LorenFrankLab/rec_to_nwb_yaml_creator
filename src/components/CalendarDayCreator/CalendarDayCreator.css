@@ -2,16 +2,13 @@
  * CalendarDayCreator - Styles for calendar-based day creation
  */
 
+/* Passed as the Modal content className: the overlay, box (background, border,
+   radius, shadow, max-width, padding), and title come from the shared Modal
+   primitive. Only the calendar's own column layout lives here. */
 .calendar-day-creator {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  padding: 1.5rem;
-  background-color: var(--color-white, #ffffff);
-  border: 1px solid var(--color-border, #e0e0e0);
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  max-width: 600px;
 }
 
 /* Header */
@@ -19,13 +16,6 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-}
-
-.calendar-title {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--color-text-primary, #212121);
 }
 
 .calendar-nav {
@@ -97,7 +87,7 @@
   text-align: center;
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--color-text-secondary, #757575);
+  color: var(--color-grey-600, #666666);
 }
 
 .calendar-days {
@@ -135,8 +125,11 @@
 }
 
 /* Day States */
+/* Adjacent-month cells are still interactive (only existing days are disabled), so
+   their day numbers must meet AA. grey-600 reads as dimmed yet stays >= 4.5:1 on the
+   white and hover-grey cell backgrounds (was #bdbdbd at 1.88:1). */
 .calendar-day--other-month {
-  color: var(--color-text-disabled, #bdbdbd);
+  color: var(--color-grey-600, #666666);
 }
 
 .calendar-day--today {
@@ -190,7 +183,7 @@
 .legend-title {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--color-text-secondary, #757575);
+  color: var(--color-grey-600, #666666);
 }
 
 .legend-items {
@@ -236,7 +229,7 @@
 
 .legend-label {
   font-size: 0.875rem;
-  color: var(--color-text-secondary, #757575);
+  color: var(--color-grey-600, #666666);
 }
 
 /* Actions */
@@ -288,7 +281,7 @@
 }
 
 .btn-close {
-  color: var(--color-text-secondary, #757575);
+  color: var(--color-grey-600, #666666);
   background-color: transparent;
   border: 1px solid var(--color-border, #e0e0e0);
 }

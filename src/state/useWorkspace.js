@@ -53,6 +53,13 @@ export function useWorkspace(initialState = null) {
     return fallback;
   });
 
+  // Latest committed workspace, refreshed every render. Lets the memoized actions and
+  // `saveNow` read the authoritative current state synchronously (the `setWorkspace`
+  // updater is deferred under React batching, so its result is not available at the
+  // moment an action returns).
+  const workspaceRef = useRef(workspace);
+  workspaceRef.current = workspace;
+
   // Persistence status: drives the truthful SaveIndicator and the beforeunload guard.
   const [lastSaved, setLastSaved] = useState(null); // ISO string of last confirmed write, or null
   const [saveError, setSaveError] = useState(null); // user-facing save-failure message, or null
@@ -253,13 +260,27 @@ export function useWorkspace(initialState = null) {
       },
 
       /**
-       * Adds a new configuration snapshot to track probe changes
+       * Adds a new configuration snapshot to track probe changes and returns the
+       * created version number. The version is assigned from the authoritative store
+       * state inside the `setWorkspace` updater (not from a possibly-stale caller
+       * snapshot), so the reconfiguration wizard can apply the snapshot forward to
+       * exactly the version it just created — no cross-action re-derivation.
        *
        * @param {string} animalId - Animal identifier
        * @param {object} config - Configuration data (date, description, devices)
+       * @returns {number} The version number assigned to the created snapshot.
        * @throws {Error} If animal does not exist
        */
       addConfigurationSnapshot: (animalId, config) => {
+        // The version is assigned from `prev` inside the updater so sequential adds
+        // number correctly (1→2→3). The returned value is derived from the authoritative
+        // current store (workspaceRef) rather than the deferred updater, because React
+        // batches the updater and its result is not available when this action returns.
+        // For a single add per tick — the wizard's create-then-apply path — the two
+        // agree: no intervening update changes the history length between them.
+        const current = workspaceRef.current.animals[animalId];
+        const createdVersion = current ? current.configurationHistory.length + 1 : undefined;
+
         setWorkspace((prev) => {
           if (!prev.animals[animalId]) {
             throw new Error(`Animal "${animalId}" not found`);
@@ -288,6 +309,8 @@ export function useWorkspace(initialState = null) {
             lastModified: updated.lastModified,
           };
         });
+
+        return createdVersion;
       },
 
       /**
@@ -570,11 +593,6 @@ export function useWorkspace(initialState = null) {
   );
 
   const dismissLoadNotice = useCallback(() => setLoadNotice(null), []);
-
-  // Keep the latest workspace in a ref so `saveNow` can flush synchronously without
-  // re-creating the persistence object (and its callback identity) on every change.
-  const workspaceRef = useRef(workspace);
-  workspaceRef.current = workspace;
 
   // Force an immediate write (Ctrl/Cmd+S), bypassing the autosave debounce. No-op
   // when persistence is disabled. Mirrors the autosave's success/error bookkeeping.

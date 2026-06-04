@@ -34,8 +34,6 @@ export function CalendarHeader({ currentMonth, onPreviousMonth, onNextMonth, onT
 
   return (
     <div className="calendar-header">
-      <h2 className="calendar-title">Recording Days Calendar</h2>
-
       <div className="calendar-nav">
         <button
           type="button"

@@ -62,4 +62,18 @@ describe('ConfirmDialog', () => {
     render(<ConfirmDialog {...baseProps} confirmLabel="OK" onConfirm={vi.fn()} onCancel={vi.fn()} />);
     expect(screen.getByRole('button', { name: 'OK' })).toHaveClass('btn-save');
   });
+
+  it('exposes role="alertdialog" with the message described when destructive', () => {
+    render(<ConfirmDialog {...baseProps} destructive onConfirm={vi.fn()} onCancel={vi.fn()} />);
+    const dialog = screen.getByRole('alertdialog');
+    const describedBy = dialog.getAttribute('aria-describedby');
+    expect(describedBy).toBeTruthy();
+    expect(document.getElementById(describedBy)).toHaveTextContent('This cannot be undone.');
+  });
+
+  it('stays role="dialog" when not destructive', () => {
+    render(<ConfirmDialog {...baseProps} onConfirm={vi.fn()} onCancel={vi.fn()} />);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
 });

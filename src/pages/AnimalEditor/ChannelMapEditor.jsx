@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useId } from 'react';
 import PropTypes from 'prop-types';
+import Modal from '../../components/Modal/Modal';
 import { deviceTypeMap } from '../../ntrode/deviceTypes';
 import { getChannelCount } from '../../utils/deviceTypeUtils';
 import InfoIcon from '../../element/InfoIcon';
@@ -24,6 +25,9 @@ import './ChannelMapEditor.scss';
  * @returns {JSX.Element} Channel map editor component
  */
 const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => {
+  // Stable id wiring the shared Modal's title to aria-labelledby.
+  const titleId = useId();
+
   // Local state for editing channel maps
   const [localChannelMaps, setLocalChannelMaps] = useState(
     JSON.parse(JSON.stringify(channelMaps))
@@ -138,46 +142,50 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
   // Handle edge case: no channel maps
   if (!channelMaps || channelMaps.length === 0) {
     return (
-      <div className="channel-map-editor-overlay" role="presentation">
-        <div className="channel-map-editor">
-          <div className="channel-map-editor-header">
-            <h2>Channel Map Editor</h2>
-            <div className="electrode-group-info">
-              <span>Electrode Group: {electrodeGroup.id}</span>
-              <span>Device Type: {electrodeGroup.device_type}</span>
-              <span>Location: {electrodeGroup.location}</span>
-            </div>
-          </div>
-          <div className="channel-map-editor-content">
-            <p className="empty-message">
-              No channel maps available. Please auto-generate channel maps first.
-            </p>
-          </div>
-          <div className="channel-map-editor-actions">
-            <button
-              type="button"
-              className="btn-cancel"
-              onClick={handleCancel}
-              aria-label="Cancel and close editor"
-            >
-              Cancel
-            </button>
+      <Modal
+        isOpen
+        onClose={onCancel}
+        title="Channel Map Editor"
+        titleId={titleId}
+        className="channel-map-editor-modal"
+      >
+        <div className="channel-map-editor-header">
+          <div className="electrode-group-info">
+            <span>Electrode Group: {electrodeGroup.id}</span>
+            <span>Device Type: {electrodeGroup.device_type}</span>
+            <span>Location: {electrodeGroup.location}</span>
           </div>
         </div>
-      </div>
+        <div className="channel-map-editor-content">
+          <p className="empty-message">
+            No channel maps available. Please auto-generate channel maps first.
+          </p>
+        </div>
+        <div className="channel-map-editor-actions">
+          <button
+            type="button"
+            className="btn-cancel"
+            onClick={handleCancel}
+            aria-label="Cancel and close editor"
+          >
+            Cancel
+          </button>
+        </div>
+      </Modal>
     );
   }
 
   return (
-    <div className="channel-map-editor-overlay" role="presentation">
-      <div
-        className="channel-map-editor"
-        data-testid="channel-map-editor"
-        data-group-id={electrodeGroup.id}
-      >
+    <Modal
+      isOpen
+      onClose={onCancel}
+      title="Channel Map Editor"
+      titleId={titleId}
+      className="channel-map-editor-modal"
+    >
+      <div data-testid="channel-map-editor" data-group-id={electrodeGroup.id}>
         {/* Header */}
         <div className="channel-map-editor-header">
-          <h2>Channel Map Editor</h2>
           <div className="electrode-group-info">
             <span>Electrode Group: {electrodeGroup.id}</span>
             <span>Device Type: {electrodeGroup.device_type}</span>
@@ -307,7 +315,7 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
         </button>
       </div>
       </div>
-    </div>
+    </Modal>
   );
 };
 

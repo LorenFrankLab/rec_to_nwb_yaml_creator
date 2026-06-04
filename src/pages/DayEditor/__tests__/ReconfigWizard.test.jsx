@@ -6,13 +6,16 @@ import DevicesStep from '../DevicesStep';
 import { makeReconfigWorkspace } from '../../../state/__tests__/fixtures/reconfigWorkspace';
 
 /**
- * Build mocked store actions the wizard calls.
+ * Build mocked store actions the wizard calls. `addConfigurationSnapshot` returns the
+ * created version (as the real store action does), which the wizard threads into
+ * `applyConfigurationForward`.
  *
+ * @param {number} [createdVersion] - Version the store reports for the new snapshot.
  * @returns {{ addConfigurationSnapshot: import('vitest').Mock, applyConfigurationForward: import('vitest').Mock }}
  */
-function makeActions() {
+function makeActions(createdVersion = 3) {
   return {
-    addConfigurationSnapshot: vi.fn(),
+    addConfigurationSnapshot: vi.fn().mockReturnValue(createdVersion),
     applyConfigurationForward: vi.fn(),
   };
 }
@@ -55,6 +58,37 @@ describe('ReconfigWizard [integration]', () => {
 
     // ...then applies the NEW version (3 = existing 2 snapshots + 1) forward to the days.
     expect(actions.applyConfigurationForward).toHaveBeenCalledWith(animalId, 3, [dayIds.day3, dayIds.day4]);
+  });
+
+  it('applies forward using the version the store returns, not a prop-derived number', async () => {
+    const user = userEvent.setup();
+    const { workspace, animalId, dayIds } = makeReconfigWorkspace();
+    const animal = workspace.animals[animalId];
+    const day = workspace.days[dayIds.day3];
+    const prevDay = workspace.days[dayIds.day2];
+    const candidateDays = [workspace.days[dayIds.day3], workspace.days[dayIds.day4]];
+
+    // The store reports version 7 as authoritative; a number re-derived from this
+    // animal prop's history length would have guessed 3. The wizard must use 7, so a
+    // stale prop can no longer mis-target a different snapshot.
+    const actions = makeActions(7);
+
+    render(
+      <ReconfigWizard
+        isOpen
+        onClose={vi.fn()}
+        animal={animal}
+        day={day}
+        prevDay={prevDay}
+        candidateDays={candidateDays}
+        actions={actions}
+      />
+    );
+
+    await user.type(screen.getByLabelText(/change description/i), 'Lowered CA1 tetrodes');
+    await user.click(screen.getByRole('button', { name: /apply to/i }));
+
+    expect(actions.applyConfigurationForward).toHaveBeenCalledWith(animalId, 7, [dayIds.day3, dayIds.day4]);
   });
 
   it('shows a no-change state and disables apply when the config is unchanged', () => {

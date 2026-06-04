@@ -1,49 +1,19 @@
-/* Overlay wrapper for modal */
-.channel-map-editor-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  animation: fadeIn 0.2s ease-in;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.channel-map-editor {
-  display: flex;
-  flex-direction: column;
+/* The overlay, content box, and title come from the shared Modal primitive. This
+   editor is wider than the default modal and lets its header/content/actions own
+   their padding, so the content box drops the default 2rem padding. */
+.modal-content.channel-map-editor-modal {
   max-width: 900px;
-  width: 90%;
-  max-height: 90vh;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  overflow: hidden;
+  padding: 0;
+
+  .modal-title {
+    padding: 1rem 1.5rem 0;
+    margin-bottom: 0.5rem;
+  }
 }
 
 .channel-map-editor-header {
-  padding: 1rem 1.5rem;
+  padding: 0 1.5rem 1rem;
   border-bottom: 1px solid #e0e0e0;
-
-  h2 {
-    margin: 0 0 0.5rem 0;
-    font-size: 1.5rem;
-    font-weight: 500;
-    color: #333;
-  }
 
   .electrode-group-info {
     display: flex;

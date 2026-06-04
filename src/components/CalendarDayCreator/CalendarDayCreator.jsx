@@ -7,8 +7,9 @@
  * @see docs/CALENDAR_DAY_CREATION_DESIGN.md for full design
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useId } from 'react';
 import PropTypes from 'prop-types';
+import Modal from '../Modal/Modal';
 import { CalendarGrid } from './CalendarGrid';
 import { CalendarHeader } from './CalendarHeader';
 import { CalendarLegend } from './CalendarLegend';
@@ -79,6 +80,9 @@ function getDateRange(startDate, endDate) {
  * @param {Function} props.onClose - Callback to close calendar
  */
 export function CalendarDayCreator({ animalId, existingDays = [], onCreateDays, onClose }) {
+  // Stable id wiring the shared Modal's title to aria-labelledby.
+  const titleId = useId();
+
   // Current displayed month
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState({
@@ -189,7 +193,13 @@ export function CalendarDayCreator({ animalId, existingDays = [], onCreateDays, 
   }, [selectedDates, onCreateDays, onClose]);
 
   return (
-    <div className="calendar-day-creator" role="dialog" aria-label="Recording days calendar">
+    <Modal
+      isOpen
+      onClose={() => onClose && onClose()}
+      title="Recording Days Calendar"
+      titleId={titleId}
+      className="calendar-day-creator"
+    >
       <CalendarHeader
         currentMonth={currentMonth}
         onPreviousMonth={handlePreviousMonth}
@@ -238,7 +248,7 @@ export function CalendarDayCreator({ animalId, existingDays = [], onCreateDays, 
           </button>
         )}
       </div>
-    </div>
+    </Modal>
   );
 }
 

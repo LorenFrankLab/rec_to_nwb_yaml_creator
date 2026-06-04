@@ -419,6 +419,35 @@ describe('Animal State Management', () => {
       expect(animal.configurationHistory[1].version).toBe(2);
       expect(animal.configurationHistory[2].version).toBe(3);
     });
+
+    it('returns the created version number', () => {
+      const { result } = renderHook(() => useStore());
+
+      act(() => {
+        result.current.actions.createAnimal('remy', {
+          species: 'Rattus norvegicus',
+          sex: 'M',
+          genotype: 'Wild Type',
+          date_of_birth: '2023-01-10T00:00:00Z',
+          description: 'Test subject',
+        });
+      });
+
+      // createAnimal seeds version 1, so the next snapshot is version 2.
+      let returnedVersion;
+      act(() => {
+        returnedVersion = result.current.actions.addConfigurationSnapshot('remy', {
+          date: '2023-06-15',
+          description: 'Lowered tetrodes',
+          devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [] },
+        });
+      });
+
+      expect(returnedVersion).toBe(2);
+      const animal = result.current.model.workspace.animals['remy'];
+      expect(animal.configurationHistory).toHaveLength(2);
+      expect(animal.configurationHistory[1].version).toBe(2);
+    });
   });
 
   describe('workspace.animals selector', () => {

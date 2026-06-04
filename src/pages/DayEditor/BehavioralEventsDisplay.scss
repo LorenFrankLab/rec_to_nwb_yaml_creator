@@ -19,6 +19,14 @@
     margin: 0 0 var(--spacing-md, 1rem) 0;
   }
 
+  /* Clarifies that inherited animal-level events are reference-only and not part of
+     this day's export. grey-600 stays >= 4.5:1 on white (see contrast guard). */
+  .behavioral-events-display-note {
+    color: var(--color-grey-600, #666);
+    font-size: var(--font-size-sm, 0.875rem);
+    margin: 0 0 var(--spacing-sm, 0.5rem) 0;
+  }
+
   .inherited-events-list,
   .day-events-list {
     list-style: none;

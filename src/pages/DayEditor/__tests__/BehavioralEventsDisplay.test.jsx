@@ -63,6 +63,36 @@ describe('BehavioralEventsDisplay', () => {
     ]);
   });
 
+  it('clarifies that inherited events are animal-level reference and are not exported with the day', () => {
+    render(
+      <BehavioralEventsDisplay
+        inheritedEvents={inherited}
+        dayEvents={[]}
+        onDayEventsChange={vi.fn()}
+      />
+    );
+
+    // The inherited list must not imply it is part of this day's export.
+    expect(screen.getByText(/not written to this day's metadata/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/only the day-specific events below are exported/i)
+    ).toBeInTheDocument();
+  });
+
+  it('describes a duplicate-named day event as the exported one (no "takes precedence")', () => {
+    render(
+      <BehavioralEventsDisplay
+        inheritedEvents={inherited}
+        dayEvents={[{ name: 'reward_well', description: 'overrides reward' }]}
+        onDayEventsChange={vi.fn()}
+      />
+    );
+
+    const warning = screen.getByRole('status');
+    expect(warning).not.toHaveTextContent(/take(s)? precedence/i);
+    expect(warning).toHaveTextContent(/exported with this day/i);
+  });
+
   it('flags a day-specific event that duplicates an inherited name (non-blocking)', () => {
     render(
       <BehavioralEventsDisplay

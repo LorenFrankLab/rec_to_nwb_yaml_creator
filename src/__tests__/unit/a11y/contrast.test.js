@@ -89,6 +89,14 @@ const PAIRS = [
   ['validation chip: valid', '#2e7d32', '#e8f5e9', 4.5],
   ['validation chip: error', '#c62828', '#fdecea', 4.5],
   ['validation chip: incomplete', '#bf360c', '#fff3e0', 4.5],
+  // CalendarDayCreator muted/day-number text. The muted secondary text (weekday
+  // headers, legend, close button) sits on the off-white legend panel (#fafafa);
+  // adjacent-month day numbers sit on white and the grey hover background (#f5f5f5).
+  // grey-600 keeps all of these >= 4.5:1 (off-white 5.50:1, hover 5.27:1).
+  ['calendar muted text on off-white legend', 'color-grey-600', '#fafafa', 4.5],
+  ['calendar other-month day number on hover grey', 'color-grey-600', '#f5f5f5', 4.5],
+  // CopyFromAnimalDialog copy-preview text on its primary-light panel.
+  ['copy-preview text on primary-light panel', 'color-primary', 'color-primary-light', 4.5],
 ];
 
 describe('color contrast (audited workspace pairs meet AA)', () => {

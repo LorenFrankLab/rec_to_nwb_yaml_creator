@@ -175,6 +175,41 @@ describe('mergeDayMetadata', () => {
     });
   });
 
+  describe('Behavioral events are day-only (animal events are reference-only)', () => {
+    it('does not export the animal behavioral_events with the day', () => {
+      // The animal carries its own behavioral_events; the day carries one of its own.
+      const animal = createTestAnimal({
+        behavioral_events: [
+          { name: 'animal_level_event', description: 'Defined on the animal' },
+        ],
+      });
+      const day = createTestDay({
+        behavioral_events: [{ name: 'poke_center', description: 'Center well poke' }],
+      });
+
+      const merged = mergeDayMetadata(animal, day);
+
+      // Only the day's events are exported; the animal's are not concatenated in.
+      expect(merged.behavioral_events).toEqual([
+        { name: 'poke_center', description: 'Center well poke' },
+      ]);
+      expect(merged.behavioral_events).not.toContainEqual(
+        expect.objectContaining({ name: 'animal_level_event' })
+      );
+    });
+
+    it('exports no behavioral_events for a day with none, regardless of animal events', () => {
+      const animal = createTestAnimal({
+        behavioral_events: [{ name: 'animal_level_event', description: 'Defined on the animal' }],
+      });
+      const day = createTestDay({ behavioral_events: [] });
+
+      const merged = mergeDayMetadata(animal, day);
+
+      expect(merged.behavioral_events).toEqual([]);
+    });
+  });
+
   describe('Malformed animal guard', () => {
     it('throws an actionable error when the animal has no configuration history', () => {
       const animal = createTestAnimal({ configurationHistory: [] });

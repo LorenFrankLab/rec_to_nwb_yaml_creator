@@ -258,7 +258,7 @@ describe('BehavioralEventsSection', () => {
       // Clicking the row Delete button opens an in-app confirmation dialog.
       await user.click(screen.getByRole('button', { name: /delete reward_left/i }));
 
-      const dialog = await screen.findByRole('dialog');
+      const dialog = await screen.findByRole('alertdialog');
       expect(dialog).toHaveTextContent('reward_left');
 
       // Confirm via the dialog's own Delete button (scoped to the dialog).
@@ -282,11 +282,11 @@ describe('BehavioralEventsSection', () => {
 
       await user.click(screen.getByRole('button', { name: /delete reward_left/i }));
 
-      const dialog = await screen.findByRole('dialog');
+      const dialog = await screen.findByRole('alertdialog');
       await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
 
       expect(mockOnFieldUpdate).not.toHaveBeenCalled();
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     });
   });
 

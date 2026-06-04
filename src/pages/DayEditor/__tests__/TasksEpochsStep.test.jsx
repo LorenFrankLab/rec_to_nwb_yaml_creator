@@ -94,7 +94,7 @@ describe('TasksEpochsStep', () => {
     const { onFieldUpdate } = renderStep();
 
     await user.click(screen.getByRole('button', { name: /delete task/i }));
-    const dialog = screen.getByRole('dialog');
+    const dialog = screen.getByRole('alertdialog');
     await user.click(within(dialog).getByRole('button', { name: /^delete$/i }));
 
     expect(onFieldUpdate).toHaveBeenCalledWith('tasks', []);

@@ -76,7 +76,7 @@ describe('TasksTable', () => {
     // Dialog is open but nothing deleted yet.
     expect(onDelete).not.toHaveBeenCalled();
 
-    const dialog = screen.getByRole('dialog');
+    const dialog = screen.getByRole('alertdialog');
     await user.click(within(dialog).getByRole('button', { name: /^delete$/i }));
     expect(onDelete).toHaveBeenCalledWith(0);
   });

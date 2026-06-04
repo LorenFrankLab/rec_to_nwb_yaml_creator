@@ -13,6 +13,9 @@ import { axe } from 'jest-axe';
 import { App } from '../../App';
 import { StoreProvider } from '../../state/StoreContext';
 import { makeConfiguredWorkspace } from '../helpers/test-fixtures';
+import ChannelMapEditor from '../../pages/AnimalEditor/ChannelMapEditor';
+import CopyFromAnimalDialog from '../../pages/AnimalEditor/CopyFromAnimalDialog';
+import { CalendarDayCreator } from '../../components/CalendarDayCreator/CalendarDayCreator';
 
 const workspace = makeConfiguredWorkspace();
 const ANIMAL_ID = 'remy';
@@ -93,6 +96,59 @@ describe('axe-a11y (configured workspace, all routes)', () => {
       const stepButton = screen.getByRole('button', { name: new RegExp(`^${stepLabel}`, 'i') });
       await user.click(stepButton);
 
+      await expectNoViolations(container);
+    });
+  });
+
+  // The overlay surfaces migrated onto the shared Modal primitive: rendered open so
+  // Axe sees the live dialog (role, labelling, focusables), one case per dialog.
+  describe('migrated dialogs (open) have no violations', () => {
+    it('ChannelMapEditor', async () => {
+      const { container } = render(
+        <ChannelMapEditor
+          electrodeGroup={{ id: 'eg1', device_type: 'tetrode_12.5', location: 'CA1' }}
+          channelMaps={[
+            {
+              electrode_group_id: 'eg1',
+              ntrode_id: '0',
+              electrode_id: 0,
+              bad_channels: [],
+              map: { 0: 0, 1: 1, 2: 2, 3: 3 },
+            },
+          ]}
+          onSave={() => {}}
+          onCancel={() => {}}
+        />
+      );
+      await screen.findByRole('dialog', { name: /channel map editor/i });
+      await expectNoViolations(container);
+    });
+
+    it('CopyFromAnimalDialog', async () => {
+      const { animals } = workspace;
+      const { container } = render(
+        <CopyFromAnimalDialog
+          open
+          currentAnimalId="not-this-one"
+          animals={animals}
+          onCopy={() => {}}
+          onCancel={() => {}}
+        />
+      );
+      await screen.findByRole('dialog', { name: /copy electrode groups/i });
+      await expectNoViolations(container);
+    });
+
+    it('CalendarDayCreator', async () => {
+      const { container } = render(
+        <CalendarDayCreator
+          animalId={ANIMAL_ID}
+          existingDays={[]}
+          onCreateDays={() => {}}
+          onClose={() => {}}
+        />
+      );
+      await screen.findByRole('dialog', { name: /recording days calendar/i });
       await expectNoViolations(container);
     });
   });

@@ -2,7 +2,49 @@
 
 **Purpose:** Track all changes made during the refactoring milestones.
 
-**Last Updated:** June 3, 2026
+**Last Updated:** June 4, 2026
+
+---
+
+## Pre-cutover cleanup (June 4, 2026) ✅ COMPLETE
+
+### Summary
+
+A grab-bag of deferred accessibility and correctness fixes so the cutover lands on a
+clean base: finish migrating the last bespoke dialogs onto the shared `<Modal>`, give
+destructive confirms the right role, close one color-contrast gap, clarify how inherited
+behavioral events relate to a day's export, and make probe-reconfiguration versioning
+atomic. **YAML export is unchanged — golden baselines stay byte-identical.**
+
+### Changes
+
+- **Last dialogs on the shared `<Modal>`.** `ChannelMapEditor`, `CopyFromAnimalDialog`,
+  and `CalendarDayCreator` now render through the shared `<Modal>` primitive instead of
+  hand-rolled overlays (`CopyFromAnimalDialog` previously used a non-trapping
+  `<dialog open>`). They inherit the primitive's focus trap, focus return, Esc/overlay
+  close, and scroll lock; their bespoke overlay markup and the now-dead
+  `dialog.electrode-group-modal` styles were removed. A parameterized integration test
+  asserts trap + focus-return + Esc per dialog, and the Axe suite now opens each one.
+- **`role="alertdialog"` for destructive confirms.** `ConfirmDialog` passes
+  `role="alertdialog"` (with the message wired via `aria-describedby`) when `destructive`,
+  so delete confirmations are announced as alerts; routine confirms stay `role="dialog"`.
+- **CalendarDayCreator contrast.** Muted secondary text and adjacent-month day numbers
+  moved off low-contrast literals (`#757575` on the off-white legend was 4.41:1;
+  other-month numbers were `#bdbdbd` at 1.88:1) to the `--color-grey-600` token, which
+  stays ≥4.5:1 on white, the hover grey, and the off-white legend. Both pairs were added
+  to `contrast.test.js`.
+- **Inherited behavioral events clarified (no export change).** The Day Editor showed the
+  animal's `behavioral_events` as "inherited" in a way that implied they were part of the
+  day's export. They are not: `mergeDayMetadata` emits only the day's `behavioral_events`.
+  The display now states the inherited list is animal-level reference that is *not written
+  to this day's metadata* — only day-specific events are exported. `mergeDayMetadata` is
+  unchanged; a new test locks that animal-level events are never concatenated into the
+  export, so golden baselines remain byte-identical.
+- **Atomic reconfiguration versioning.** `addConfigurationSnapshot` now returns the
+  created version number (from the authoritative store state), and the reconfiguration
+  wizard applies the snapshot forward to that exact returned version instead of
+  re-deriving it from a possibly-stale `animal` prop — removing the cross-action
+  desync / orphan-snapshot risk. No store public-API keys changed.
 
 ---
 

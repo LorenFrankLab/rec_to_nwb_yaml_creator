@@ -37,6 +37,40 @@ Track these so they aren't lost once the plan's numbered phases are done.
    logs via `console.error`; route these through a real logging path (error IDs / Sentry-style) once such
    infrastructure exists. Cross-app concern, not specific to one page.
 
+## Surfaced by the pre-cutover dialog migration (reviewer findings, out of that scope)
+
+These are pre-existing issues that the dialog-on-`<Modal>` migration made more visible (a
+focus-trapped modal raises the stakes of keyboard/AT gaps in the enclosed content). They were
+out of scope for the cleanup pass and are tracked here.
+
+7. **CalendarDay grid is keyboard-unreachable when viewing a non-current month.**
+   [CalendarDay.jsx](../../../../src/components/CalendarDayCreator/CalendarDay.jsx) uses
+   `tabIndex={isToday ? 0 : -1}`, so once the user navigates to a month that does not contain
+   "today", every day cell has `tabIndex=-1` and Tab skips the whole grid — and now that the
+   calendar is a focus-trapped modal, a keyboard-only user cannot select an off-month date at all
+   (only ESC/nav/action buttons are reachable). Implement a proper roving tabindex that defaults to
+   the first selectable cell of the displayed month when today is absent.
+
+8. **CalendarGrid presents all 42 day cells as a single `role="row"`.**
+   [CalendarGrid.jsx](../../../../src/components/CalendarDayCreator/CalendarGrid.jsx) wraps the 42
+   cells in one row under `role="grid"`; AT grid-navigation announces one row of 42 columns instead
+   of 6 weeks × 7 days. Split into one `role="row"` per week (chunks of 7).
+
+9. **ChannelMapEditor empty-state instruction is a dead end.**
+   [ChannelMapEditor.jsx](../../../../src/pages/AnimalEditor/ChannelMapEditor.jsx) says "Please
+   auto-generate channel maps first," but there is no auto-generate affordance; maps are generated
+   implicitly when an electrode group is saved with a device type. Reword to point the user at the
+   real action (close the editor, re-save the electrode group). Pre-existing copy, now shown in a
+   more prominent focused dialog.
+
+10. **`addConfigurationSnapshot` return value diverges from the assigned version on multiple adds
+    within one render tick.** The returned version derives from `workspaceRef.current` (authoritative
+    *now*), while the in-updater assignment uses `prev.length + 1`; for a single create-then-apply per
+    tick (the only caller, the reconfig wizard) they agree, but two adds in the same tick would both
+    return the same number while assigning sequential ones. Not reachable today; revisit if another
+    caller batches snapshot creation. See
+    [useWorkspace.js](../../../../src/state/useWorkspace.js) `addConfigurationSnapshot`.
+
 ## Release-gated
 
 6. **Persistence-blob forward migration.** [Phase 1](phase-1-persistence.md) versions the localStorage

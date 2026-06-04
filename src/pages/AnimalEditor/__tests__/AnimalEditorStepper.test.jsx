@@ -837,7 +837,7 @@ describe('AnimalEditorStepper', () => {
       await user.click(deleteButton);
 
       // An in-app confirmation dialog appears (no native window.confirm).
-      const dialog = await screen.findByRole('dialog');
+      const dialog = await screen.findByRole('alertdialog');
       expect(dialog).toHaveTextContent('Delete electrode group');
     });
 
@@ -889,7 +889,7 @@ describe('AnimalEditorStepper', () => {
       // Delete first group, then confirm in the dialog.
       const deleteButton = screen.getByTestId('delete-group-0');
       await user.click(deleteButton);
-      const dialog = await screen.findByRole('dialog');
+      const dialog = await screen.findByRole('alertdialog');
       await user.click(within(dialog).getByRole('button', { name: /^Delete$/i }));
 
       // Group 0 is removed; group 1 remains.
@@ -933,12 +933,12 @@ describe('AnimalEditorStepper', () => {
       await user.click(deleteButton);
 
       // Cancel the confirmation dialog.
-      const dialog = await screen.findByRole('dialog');
+      const dialog = await screen.findByRole('alertdialog');
       await user.click(within(dialog).getByRole('button', { name: /^Cancel$/i }));
 
       // Group should still exist after cancelling; dialog is gone.
       expect(screen.getByTestId('delete-group-0')).toBeInTheDocument();
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     });
 
     it('cascades delete to associated channel maps', async () => {
@@ -988,7 +988,7 @@ describe('AnimalEditorStepper', () => {
       await user.click(deleteButton);
 
       // Confirm in the dialog; the group (and, in the store, its channel maps) is removed.
-      const dialog = await screen.findByRole('dialog');
+      const dialog = await screen.findByRole('alertdialog');
       await user.click(within(dialog).getByRole('button', { name: /^Delete$/i }));
 
       expect(screen.queryByTestId('delete-group-0')).not.toBeInTheDocument();

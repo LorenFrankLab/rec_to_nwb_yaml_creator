@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useId } from 'react';
 import PropTypes from 'prop-types';
-import './ElectrodeGroupModal.scss';
+import Modal from '../../components/Modal/Modal';
+import './CopyFromAnimalDialog.scss';
 
 /**
  * Dialog for copying electrode groups from another animal
@@ -18,6 +19,7 @@ import './ElectrodeGroupModal.scss';
  */
 export default function CopyFromAnimalDialog({ open, currentAnimalId, animals, onCopy, onCancel }) {
   const [selectedAnimalId, setSelectedAnimalId] = useState(null);
+  const titleId = useId();
 
   /**
    * Get available source animals (exclude current)
@@ -132,19 +134,16 @@ export default function CopyFromAnimalDialog({ open, currentAnimalId, animals, o
    */
   const groupCount = selectedAnimal?.electrodeGroups.length || 0;
 
-  if (!open) {
-    return null;
-  }
-
   return (
-    <dialog open className="electrode-group-modal">
-      <div className="modal-content">
-        <header className="modal-header">
-          <h2>Copy Electrode Groups from Animal</h2>
-        </header>
-
-        <div className="modal-body">
-          {availableAnimals.length === 0 ? (
+    <Modal
+      isOpen={open}
+      onClose={handleCancel}
+      title="Copy Electrode Groups from Animal"
+      titleId={titleId}
+      className="copy-from-animal-modal"
+    >
+      <div className="modal-body">
+        {availableAnimals.length === 0 ? (
             <p className="info-message">
               No other animals available to copy from.
             </p>
@@ -193,29 +192,28 @@ export default function CopyFromAnimalDialog({ open, currentAnimalId, animals, o
                   </p>
                 </div>
               )}
-            </>
-          )}
-        </div>
-
-        <footer className="modal-actions">
-          <button
-            type="button"
-            onClick={handleCancel}
-            className="button-secondary"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleCopy}
-            disabled={!canCopy}
-            className="button-primary"
-          >
-            Copy
-          </button>
-        </footer>
+          </>
+        )}
       </div>
-    </dialog>
+
+      <footer className="modal-actions">
+        <button
+          type="button"
+          onClick={handleCancel}
+          className="button-secondary"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={handleCopy}
+          disabled={!canCopy}
+          className="button-primary"
+        >
+          Copy
+        </button>
+      </footer>
+    </Modal>
   );
 }
 

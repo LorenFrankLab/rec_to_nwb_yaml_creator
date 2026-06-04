@@ -70,18 +70,25 @@ export default function BehavioralEventsDisplay({
           No behavioral events are defined for this animal.
         </p>
       ) : (
-        <ul className="inherited-events-list" aria-label="Inherited behavioral events">
-          {events.map((event) => (
-            <li key={event.name} className="inherited-event">
-              <span className="lock-icon" aria-hidden="true">🔒</span>
-              <span className="inherited-event-name">{event.name}</span>
-              {event.description && (
-                <span className="inherited-event-description">{event.description}</span>
-              )}
-              <span className="sr-only"> (inherited, read-only)</span>
-            </li>
-          ))}
-        </ul>
+        <>
+          <p className="behavioral-events-display-note">
+            These behavioral events are defined on the animal for reference. They are
+            not written to this day&apos;s metadata.
+            {!readOnly && ' Only the day-specific events below are exported with this recording day.'}
+          </p>
+          <ul className="inherited-events-list" aria-label="Inherited behavioral events">
+            {events.map((event) => (
+              <li key={event.name} className="inherited-event">
+                <span className="lock-icon" aria-hidden="true">🔒</span>
+                <span className="inherited-event-name">{event.name}</span>
+                {event.description && (
+                  <span className="inherited-event-description">{event.description}</span>
+                )}
+                <span className="sr-only"> (inherited, read-only)</span>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
 
       {!readOnly && (
@@ -91,7 +98,7 @@ export default function BehavioralEventsDisplay({
           {duplicateNames.length > 0 && (
             <div className="inline-warning" role="status">
               {duplicateNames.map((name) => (
-                `"${name}" duplicates an inherited event — the day-specific entry will take precedence.`
+                `"${name}" matches an inherited animal-level event; only this day-specific entry is exported with this day.`
               )).join(' ')}
             </div>
           )}

@@ -40,6 +40,12 @@ const ConfirmDialog = ({
       onClose={onCancel}
       title={title}
       titleId={titleId}
+      // Destructive confirms are consequential: alertdialog asks AT to announce the
+      // dialog and its described message immediately. Routine confirms stay 'dialog'.
+      role={destructive ? 'alertdialog' : 'dialog'}
+      // A destructive choice should be made deliberately — don't let a stray backdrop
+      // click silently cancel it (ARIA alertdialog guidance). ESC/Cancel still close.
+      closeOnOverlayClick={!destructive}
       describedById={messageId}
       className="confirm-dialog"
     >
