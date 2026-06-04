@@ -15,7 +15,7 @@ vi.mock('../ElectrodeGroupsStep', () => ({
       {animal.devices?.electrode_groups?.map(group => (
         <div key={group.id}>
           <button
-            onClick={() => onEdit?.(group)}
+            onClick={() => onEdit?.(group.id)}
             data-testid={`edit-group-${group.id}`}
           >
             Edit {group.id}
@@ -701,6 +701,47 @@ describe('AnimalEditorStepper', () => {
       expect(screen.getByTestId('electrode-group-modal')).toBeInTheDocument();
       expect(screen.getByTestId('electrode-group-modal')).toHaveAttribute('data-mode', 'edit');
       expect(screen.getByTestId('edit-group-id')).toHaveTextContent('group1');
+    });
+
+    it('resolves an integer electrode-group id on edit (group object, not undefined)', async () => {
+      const user = userEvent.setup();
+      const state = {
+        workspace: {
+          animals: {
+            remy: {
+              id: 'remy',
+              subject: { subject_id: 'remy' },
+              devices: {
+                electrode_groups: [
+                  {
+                    id: 0,
+                    device_type: 'tetrode_12.5',
+                    location: 'CA1',
+                    description: 'CA1 tetrode',
+                    targeted_location: 'CA1',
+                    targeted_x: 1.0,
+                    targeted_y: 2.0,
+                    targeted_z: 3.0,
+                    units: 'mm'
+                  }
+                ],
+                ntrode_electrode_group_channel_map: [],
+              },
+              days: [],
+            },
+          },
+          days: {},
+        },
+      };
+      renderWithStore(<AnimalEditorStepper />, state);
+
+      // ElectrodeGroupsStep calls onEdit(group.id) — an INTEGER. handleEditGroup
+      // must resolve it to the group object, not treat the number as the group.
+      await user.click(screen.getByTestId('edit-group-0'));
+
+      expect(screen.getByTestId('electrode-group-modal')).toHaveAttribute('data-mode', 'edit');
+      // The resolved group's id renders (would be empty if editingGroup were the number 0).
+      expect(screen.getByTestId('edit-group-id')).toHaveTextContent('0');
     });
 
     it('modal saves new electrode group when in add mode', async () => {

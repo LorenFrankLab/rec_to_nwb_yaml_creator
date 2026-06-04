@@ -145,7 +145,7 @@ export function useWorkspace(initialState = null) {
             },
             devices: metadata.devices || {
               data_acq_device: [],
-              device: { name: [] },
+              device: { name: ['Trodes'] },
               electrode_groups: [],
               ntrode_electrode_group_channel_map: [],
             },

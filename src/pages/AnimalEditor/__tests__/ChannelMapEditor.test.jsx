@@ -31,7 +31,7 @@ describe('ChannelMapEditor', () => {
   });
 
   const mockElectrodeGroup = {
-    id: 'eg1',
+    id: 1,
     device_type: 'tetrode_12.5',
     location: 'CA1',
     targeted_x: 1.0,
@@ -42,16 +42,14 @@ describe('ChannelMapEditor', () => {
 
   const mockChannelMaps = [
     {
-      electrode_group_id: 'eg1',
-      ntrode_id: '0',
-      electrode_id: 0,
+      electrode_group_id: 1,
+      ntrode_id: 0,
       bad_channels: [],
       map: { 0: 0, 1: 1, 2: 2, 3: 3 },
     },
     {
-      electrode_group_id: 'eg1',
-      ntrode_id: '1',
-      electrode_id: 1,
+      electrode_group_id: 1,
+      ntrode_id: 1,
       bad_channels: [1],
       map: { 0: 0, 1: 1, 2: 2, 3: 3 },
     },
@@ -68,10 +66,26 @@ describe('ChannelMapEditor', () => {
         />
       );
 
-      expect(screen.getByText(/electrode group/i)).toBeInTheDocument();
-      expect(screen.getByText(/eg1/i)).toBeInTheDocument();
+      expect(screen.getByText(/electrode group: 1/i)).toBeInTheDocument();
       expect(screen.getByText(/tetrode_12.5/i)).toBeInTheDocument();
       expect(screen.getByText(/CA1/i)).toBeInTheDocument();
+    });
+
+    it('renders with integer IDs without PropType warnings', () => {
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      render(
+        <ChannelMapEditor
+          electrodeGroup={mockElectrodeGroup}
+          channelMaps={mockChannelMaps}
+          onSave={() => {}}
+          onCancel={() => {}}
+        />
+      );
+      const propTypeWarnings = errorSpy.mock.calls.filter(
+        (args) => typeof args[0] === 'string' && args[0].includes('Failed prop type')
+      );
+      expect(propTypeWarnings).toEqual([]);
+      errorSpy.mockRestore();
     });
   });
 
@@ -160,9 +174,8 @@ describe('ChannelMapEditor', () => {
       };
       const largeChannelMap = [
         {
-          electrode_group_id: 'eg1',
-          ntrode_id: '0',
-          electrode_id: 0,
+          electrode_group_id: 1,
+          ntrode_id: 0,
           bad_channels: [],
           map: Object.fromEntries(Array.from({ length: 32 }, (_, i) => [i, i])),
         },

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import Modal from '../../components/Modal/Modal';
-import BrainRegionAutocomplete from '../../components/BrainRegionAutocomplete';
+import BrainRegionAutocomplete, { canonicalizeRegion, BRAIN_REGIONS } from '../../components/BrainRegionAutocomplete';
 import { deviceTypes } from '../../valueList';
 import './ElectrodeGroupModal.scss';
 
@@ -19,22 +19,24 @@ function getInitialFormData(mode, group) {
     return {
       device_type: group.device_type || '',
       location: group.location || '',
+      description: group.description || '',
+      targeted_location: group.targeted_location || '',
       targeted_x: group.targeted_x !== undefined && group.targeted_x !== '' ? String(group.targeted_x) : '',
       targeted_y: group.targeted_y !== undefined && group.targeted_y !== '' ? String(group.targeted_y) : '',
       targeted_z: group.targeted_z !== undefined && group.targeted_z !== '' ? String(group.targeted_z) : '',
       units: group.units || 'mm',
-      bad_channels: group.bad_channels || '',
       count: '1',
     };
   }
   return {
     device_type: '',
     location: '',
+    description: '',
+    targeted_location: '',
     targeted_x: '',
     targeted_y: '',
     targeted_z: '',
     units: 'mm',
-    bad_channels: '',
     count: '1',
   };
 }
@@ -46,19 +48,22 @@ function getInitialFormData(mode, group) {
  * @param {object} props
  * @param {string} props.mode 'add' or 'edit'.
  * @param {object|null} props.group Group data for edit mode.
+ * @param {string[]} props.knownRegions Canonical regions already used in the workspace.
  * @param {Function} props.onSave Save callback with the cleaned group object.
  * @param {Function} props.onCancel Cancel callback.
  * @returns {JSX.Element}
  */
-function ElectrodeGroupForm({ mode, group, onSave, onCancel }) {
+function ElectrodeGroupForm({ mode, group, knownRegions, onSave, onCancel }) {
   const [formData, setFormData] = useState(() => getInitialFormData(mode, group));
 
   const isFormValid = () => {
-    const { device_type, location, targeted_x, targeted_y, targeted_z, count } = formData;
+    const { device_type, location, description, targeted_location, targeted_x, targeted_y, targeted_z, count } = formData;
     const isCountValid = mode === 'edit' || (count && parseInt(count, 10) > 0 && parseInt(count, 10) <= 100);
     return (
       device_type.trim() !== '' &&
       location.trim() !== '' &&
+      description.trim() !== '' &&
+      targeted_location.trim() !== '' &&
       targeted_x.trim() !== '' &&
       targeted_y.trim() !== '' &&
       targeted_z.trim() !== '' &&
@@ -73,14 +78,19 @@ function ElectrodeGroupForm({ mode, group, onSave, onCancel }) {
 
   const handleSave = () => {
     if (!isFormValid()) return;
+    // Snap region fields to their canonical spelling so a case-only variant
+    // (e.g. "ca1") does not fragment Spyglass BrainRegion rows. Canonicalize
+    // against the standard regions plus any already used in this workspace.
+    const canonicalRegions = [...BRAIN_REGIONS, ...knownRegions];
     onSave({
       device_type: formData.device_type,
-      location: formData.location,
+      location: canonicalizeRegion(formData.location, canonicalRegions),
+      description: formData.description.trim(),
+      targeted_location: canonicalizeRegion(formData.targeted_location, canonicalRegions),
       targeted_x: parseFloat(formData.targeted_x),
       targeted_y: parseFloat(formData.targeted_y),
       targeted_z: parseFloat(formData.targeted_z),
       units: formData.units,
-      bad_channels: formData.bad_channels,
       count: mode === 'add' ? parseInt(formData.count, 10) : 1,
     });
   };
@@ -133,6 +143,34 @@ function ElectrodeGroupForm({ mode, group, onSave, onCancel }) {
           onChange={(value) => setFormData((prev) => ({ ...prev, location: value }))}
           label="Location"
           name="location"
+          suggestions={knownRegions}
+          required
+        />
+      </div>
+
+      {/* Description (schema-required, e.g. "Dorsal CA1 right hemisphere tetrode") */}
+      <div className="form-group">
+        <label htmlFor="description">Description</label>
+        <input
+          id="description"
+          type="text"
+          name="description"
+          placeholder="e.g., Dorsal CA1 right hemisphere tetrode"
+          value={formData.description}
+          onChange={handleInputChange}
+          required
+        />
+        <span className="help-text">A short description of this electrode group</span>
+      </div>
+
+      {/* Targeted Location (planned implant target; schema-required) */}
+      <div className="form-group">
+        <BrainRegionAutocomplete
+          value={formData.targeted_location}
+          onChange={(value) => setFormData((prev) => ({ ...prev, targeted_location: value }))}
+          label="Targeted Location"
+          name="targeted_location"
+          suggestions={knownRegions}
           required
         />
       </div>
@@ -191,20 +229,6 @@ function ElectrodeGroupForm({ mode, group, onSave, onCancel }) {
         </select>
       </div>
 
-      {/* Bad Channels */}
-      <div className="form-group">
-        <label htmlFor="bad_channels">Bad Channels (comma-separated)</label>
-        <input
-          id="bad_channels"
-          type="text"
-          name="bad_channels"
-          placeholder="e.g., 0,1,5"
-          value={formData.bad_channels}
-          onChange={handleInputChange}
-        />
-        <span className="help-text">List channel indices that are non-functional (optional)</span>
-      </div>
-
       {/* Buttons */}
       <div className="form-actions">
         <button
@@ -232,11 +256,12 @@ function ElectrodeGroupForm({ mode, group, onSave, onCancel }) {
 ElectrodeGroupForm.propTypes = {
   mode: PropTypes.oneOf(['add', 'edit']).isRequired,
   group: PropTypes.object,
+  knownRegions: PropTypes.arrayOf(PropTypes.string),
   onSave: PropTypes.func.isRequired,
   onCancel: PropTypes.func.isRequired,
 };
 
-ElectrodeGroupForm.defaultProps = { group: null };
+ElectrodeGroupForm.defaultProps = { group: null, knownRegions: [] };
 
 /**
  * ElectrodeGroupModal - Add/edit an electrode group. Dialog accessibility (focus
@@ -247,11 +272,12 @@ ElectrodeGroupForm.defaultProps = { group: null };
  * @param {boolean} props.isOpen Whether modal is currently open
  * @param {string} props.mode 'add' or 'edit'
  * @param {object} props.group Electrode group data (optional for add mode)
+ * @param {string[]} props.knownRegions Canonical regions already used in the workspace
  * @param {Function} props.onSave Callback with form data when saved
  * @param {Function} props.onCancel Callback when modal is cancelled/closed
  * @returns {JSX.Element}
  */
-const ElectrodeGroupModal = ({ isOpen, mode = 'add', group = null, onSave, onCancel }) => (
+const ElectrodeGroupModal = ({ isOpen, mode = 'add', group = null, knownRegions = [], onSave, onCancel }) => (
   <Modal
     isOpen={isOpen}
     onClose={onCancel}
@@ -259,7 +285,7 @@ const ElectrodeGroupModal = ({ isOpen, mode = 'add', group = null, onSave, onCan
     titleId="electrode-group-modal-title"
     className="electrode-group-modal-content"
   >
-    <ElectrodeGroupForm mode={mode} group={group} onSave={onSave} onCancel={onCancel} />
+    <ElectrodeGroupForm mode={mode} group={group} knownRegions={knownRegions} onSave={onSave} onCancel={onCancel} />
   </Modal>
 );
 
@@ -267,15 +293,17 @@ ElectrodeGroupModal.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   mode: PropTypes.oneOf(['add', 'edit']),
   group: PropTypes.shape({
-    id: PropTypes.string,
+    id: PropTypes.number,
     device_type: PropTypes.string,
     location: PropTypes.string,
+    description: PropTypes.string,
+    targeted_location: PropTypes.string,
     targeted_x: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     targeted_y: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     targeted_z: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     units: PropTypes.string,
-    bad_channels: PropTypes.string,
   }),
+  knownRegions: PropTypes.arrayOf(PropTypes.string),
   onSave: PropTypes.func.isRequired,
   onCancel: PropTypes.func.isRequired,
 };
@@ -283,6 +311,7 @@ ElectrodeGroupModal.propTypes = {
 ElectrodeGroupModal.defaultProps = {
   mode: 'add',
   group: null,
+  knownRegions: [],
 };
 
 export default ElectrodeGroupModal;

@@ -11,19 +11,20 @@ import ChannelMapEditor from './ChannelMapEditor';
 import HardwareConfigStep from './HardwareConfigStep';
 import AlertModal from '../../components/AlertModal';
 import { ConfirmDialog } from '../../components/Modal';
-import { generateAllChannelMaps } from '../../utils/channelMapUtils';
+import { generateChannelMapsForGroup, nextNtrodeId } from '../../utils/channelMapUtils';
 import { downloadChannelMapsCSV, importChannelMapsFromCSV } from '../../utils/csvChannelMapUtils';
 import './AnimalEditorStepper.scss';
 
 /**
- * Generate next sequential electrode group ID
- * Finds max existing ID and increments by 1
+ * Generate the next sequential electrode group ID.
+ * Finds the max existing ID and increments by 1. IDs are integers end-to-end
+ * (schema requires `integer`); string-typed legacy ids are parsed defensively.
  * @param {Array} existingGroups - Current electrode groups
- * @returns {string} Next ID (e.g., "0", "1", "2"...)
+ * @returns {number} Next integer ID (e.g., 0, 1, 2...)
  */
 function generateNextElectrodeGroupId(existingGroups) {
   if (!existingGroups || existingGroups.length === 0) {
-    return '0';
+    return 0;
   }
 
   const maxId = Math.max(
@@ -33,7 +34,7 @@ function generateNextElectrodeGroupId(existingGroups) {
     })
   );
 
-  return (maxId + 1).toString();
+  return maxId + 1;
 }
 
 /**
@@ -265,14 +266,15 @@ export default function AnimalEditorStepper() {
 
   /**
    * Open modal in edit mode with selected group
-   * @param {string|object} groupIdOrGroup - Electrode group ID or full group object
+   * @param {number|string|object} groupIdOrGroup - Electrode group ID (integer) or full group object
    */
   function handleEditGroup(groupIdOrGroup) {
     setModalMode('edit');
-    // Handle both cases: groupId (string) or full group object
-    const group = typeof groupIdOrGroup === 'string'
-      ? animal.devices.electrode_groups.find(g => g.id === groupIdOrGroup)
-      : groupIdOrGroup;
+    // Resolve by id (integer or legacy string) via lookup; only treat an actual
+    // object as the group itself. A bare integer id must not be mistaken for the group.
+    const group = typeof groupIdOrGroup === 'object' && groupIdOrGroup !== null
+      ? groupIdOrGroup
+      : animal.devices.electrode_groups.find(g => g.id === groupIdOrGroup);
     setEditingGroup(group);
     setModalOpen(true);
   }
@@ -294,12 +296,12 @@ export default function AnimalEditorStepper() {
     let groupsToGenerateMapsFor = [];
 
     if (isAdding) {
-      // Add mode: create 'count' identical electrode groups
+      // Add mode: create 'count' identical electrode groups with integer IDs
       const newGroups = [];
-      const startId = parseInt(generateNextElectrodeGroupId(animal.devices.electrode_groups), 10);
+      const startId = generateNextElectrodeGroupId(animal.devices.electrode_groups);
 
       for (let i = 0; i < count; i++) {
-        const groupId = String(startId + i);
+        const groupId = startId + i;
         const newGroup = { ...groupDataWithoutCount, id: groupId };
         newGroups.push(newGroup);
         groupsToGenerateMapsFor.push(newGroup);
@@ -324,14 +326,21 @@ export default function AnimalEditorStepper() {
     let updatedChannelMaps = animal.devices.ntrode_electrode_group_channel_map || [];
 
     if (groupsToGenerateMapsFor.length > 0) {
-      // Generate maps for all new/changed groups
-      const generatedMaps = generateAllChannelMaps(groupsToGenerateMapsFor);
-
-      // Remove old maps for these groups and add new generated ones
+      // Remove old maps for the groups we're regenerating; keep the rest.
       const groupIds = new Set(groupsToGenerateMapsFor.map(g => g.id));
-      updatedChannelMaps = updatedChannelMaps
-        .filter(map => !groupIds.has(map.electrode_group_id))
-        .concat(generatedMaps);
+      const retainedMaps = updatedChannelMaps.filter(map => !groupIds.has(map.electrode_group_id));
+
+      // New ntrode IDs start after the current max across the animal, so an
+      // incremental add never collides with an existing ntrode.
+      let startNtrodeId = nextNtrodeId(retainedMaps);
+      const generatedMaps = [];
+      for (const group of groupsToGenerateMapsFor) {
+        const groupMaps = generateChannelMapsForGroup(group, startNtrodeId);
+        generatedMaps.push(...groupMaps);
+        startNtrodeId += groupMaps.length;
+      }
+
+      updatedChannelMaps = retainedMaps.concat(generatedMaps);
     }
 
     actions.updateAnimal(animalId, {
@@ -564,6 +573,17 @@ export default function AnimalEditorStepper() {
     reader.readAsText(file);
   }
 
+  // Canonical region list seeded from regions already used across the workspace,
+  // so the electrode-group modal can offer them and snap case-only variants.
+  const knownRegions = [
+    ...new Set(
+      Object.values(model.workspace.animals || {})
+        .flatMap((a) => a.devices?.electrode_groups || [])
+        .flatMap((g) => [g.location, g.targeted_location])
+        .filter((r) => typeof r === 'string' && r.trim() !== '')
+    ),
+  ];
+
   // Get electrode group for editor
   const editingElectrodeGroup = editingGroupId
     ? animal.devices.electrode_groups.find(g => g.id === editingGroupId)
@@ -753,6 +773,7 @@ export default function AnimalEditorStepper() {
         isOpen={modalOpen}
         mode={modalMode}
         group={editingGroup}
+        knownRegions={knownRegions}
         onSave={handleSaveGroup}
         onCancel={handleCancelModal}
       />

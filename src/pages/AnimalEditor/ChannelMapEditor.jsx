@@ -321,7 +321,7 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
 
 ChannelMapEditor.propTypes = {
   electrodeGroup: PropTypes.shape({
-    id: PropTypes.string.isRequired,
+    id: PropTypes.number.isRequired,
     device_type: PropTypes.string.isRequired,
     location: PropTypes.string.isRequired,
     targeted_x: PropTypes.number,
@@ -331,9 +331,8 @@ ChannelMapEditor.propTypes = {
   }).isRequired,
   channelMaps: PropTypes.arrayOf(
     PropTypes.shape({
-      electrode_group_id: PropTypes.string.isRequired,
-      ntrode_id: PropTypes.string.isRequired,
-      electrode_id: PropTypes.number.isRequired,
+      electrode_group_id: PropTypes.number.isRequired,
+      ntrode_id: PropTypes.number.isRequired,
       bad_channels: PropTypes.arrayOf(PropTypes.number),
       map: PropTypes.object.isRequired,
     })

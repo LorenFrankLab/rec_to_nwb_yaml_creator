@@ -5,6 +5,8 @@
  * Allows users to bulk-edit channel maps in spreadsheet software.
  */
 
+import { nextNtrodeId } from './channelMapUtils';
+
 /**
  * Exports channel maps to CSV format
  *
@@ -122,17 +124,24 @@ function parseCSVRow(row) {
  * Parses CSV string and converts to channel map objects.
  * Validates required columns and numeric values.
  *
+ * IDs are emitted as integers (schema requires integer `ntrode_id` /
+ * `electrode_group_id`). `ntrode_id` values are renumbered to a contiguous integer
+ * sequence starting after the current max in `existingMaps`, so imported ntrodes
+ * never collide with existing ones. The non-schema `electrode_id` column is
+ * tolerated but ignored (not carried onto the ntrode).
+ *
  * @param {string} csvString - CSV formatted string
+ * @param {Array<object>} [existingMaps=[]] - Existing channel maps to renumber past.
  * @returns {Array<object>} Array of channel map objects
  * @throws {Error} If CSV is invalid or missing required columns
  *
  * @example
- * const csv = `electrode_group_id,device_type,location,ntrode_id,electrode_id,bad_channels,channel_0,channel_1,channel_2,channel_3
- * 0,tetrode_12.5,CA1,0,0,"",0,1,2,3`;
+ * const csv = `electrode_group_id,device_type,location,ntrode_id,bad_channels,channel_0,channel_1,channel_2,channel_3
+ * 0,tetrode_12.5,CA1,0,"",0,1,2,3`;
  * importChannelMapsFromCSV(csv);
- * // Returns: [{ electrode_group_id: '0', ntrode_id: '0', electrode_id: 0, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } }]
+ * // Returns: [{ electrode_group_id: 0, ntrode_id: 0, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } }]
  */
-export function importChannelMapsFromCSV(csvString) {
+export function importChannelMapsFromCSV(csvString, existingMaps = []) {
   const lines = csvString.trim().split('\n');
 
   if (lines.length < 2) {
@@ -142,11 +151,11 @@ export function importChannelMapsFromCSV(csvString) {
   // Parse header
   const headers = parseCSVRow(lines[0]);
 
-  // Validate required columns
+  // Validate required columns. `electrode_id` is no longer required (it is not a
+  // schema field on the ntrode); older CSVs that still include it are tolerated.
   const requiredColumns = [
     'electrode_group_id',
     'ntrode_id',
-    'electrode_id',
     'bad_channels'
   ];
 
@@ -165,8 +174,10 @@ export function importChannelMapsFromCSV(csvString) {
     throw new Error('Missing required columns: No channel columns found');
   }
 
-  // Parse data rows
+  // Parse data rows. ntrode_id is renumbered to a contiguous integer sequence
+  // starting after the current max existing ntrode_id (collision-safe).
   const channelMaps = [];
+  let assignedNtrodeId = nextNtrodeId(existingMaps);
 
   for (let i = 1; i < lines.length; i++) {
     const cells = parseCSVRow(lines[i]);
@@ -175,17 +186,13 @@ export function importChannelMapsFromCSV(csvString) {
       continue; // Skip empty lines
     }
 
-    // Extract values
-    const electrode_group_id = cells[headers.indexOf('electrode_group_id')];
-    const ntrode_id = cells[headers.indexOf('ntrode_id')];
-    const electrode_id_str = cells[headers.indexOf('electrode_id')];
-    const bad_channels_str = cells[headers.indexOf('bad_channels')];
-
-    // Validate and parse electrode_id
-    const electrode_id = parseInt(electrode_id_str, 10);
-    if (isNaN(electrode_id)) {
-      throw new Error(`Invalid numeric value for electrode_id at row ${i + 1}: "${electrode_id_str}"`);
+    // Extract values. electrode_group_id is parsed to an integer (schema type).
+    const electrode_group_id_str = cells[headers.indexOf('electrode_group_id')];
+    const electrode_group_id = parseInt(electrode_group_id_str, 10);
+    if (isNaN(electrode_group_id)) {
+      throw new Error(`Invalid numeric value for electrode_group_id at row ${i + 1}: "${electrode_group_id_str}"`);
     }
+    const bad_channels_str = cells[headers.indexOf('bad_channels')];
 
     // Parse bad_channels (empty quotes "" or "1,2,3")
     let bad_channels = [];
@@ -219,11 +226,11 @@ export function importChannelMapsFromCSV(csvString) {
 
     channelMaps.push({
       electrode_group_id,
-      ntrode_id,
-      electrode_id,
+      ntrode_id: assignedNtrodeId,
       bad_channels,
       map
     });
+    assignedNtrodeId += 1;
   }
 
   return channelMaps;

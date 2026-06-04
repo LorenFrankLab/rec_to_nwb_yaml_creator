@@ -6,6 +6,59 @@
 
 ---
 
+## Schema-valid device output: integer IDs, required fields, multi-shank offsets (June 4, 2026)
+
+### Summary
+
+The workspace export path now emits electrode groups and ntrode channel maps the schema
+accepts. IDs are **integers end-to-end** (`id` / `ntrode_id` / `electrode_group_id`), each
+electrode group carries the schema-required `description` and `targeted_location`, multi-shank
+probes partition probe electrode IDs across shanks, stray non-schema keys are gone, and
+`device.name` defaults to a non-empty value. This **changes new-path output bytes** (string→integer
+IDs, added fields) but the new-path parity fixtures already used the corrected shape, so no
+parity fixture changed. Legacy golden baselines stay byte-identical (125/125).
+
+### Changes
+
+- **Integer electrode-group IDs.** `generateNextElectrodeGroupId` returns a number; new groups
+  set `id: startId + i` (integer). `handleEditGroup` resolves a numeric id via lookup rather than
+  treating the number as the group object (which left `editingGroup.id` undefined).
+- **Required `description` / `targeted_location`.** `ElectrodeGroupModal` collects and saves both
+  required fields. `location` and `targeted_location` use canonical region entry seeded from the
+  workspace's existing regions; a case-only variant of a known region snaps to the canonical
+  spelling (`ca1` → `CA1`), and whitespace-only values cannot be saved.
+- **Integer ntrode IDs + collision guard.** `channelMapUtils` emits integer `ntrode_id` /
+  `electrode_group_id`. New helper `nextNtrodeId(existingMaps)` (integer, one past the current
+  max) is used at the add site so an incremental group add never restarts at 0 / collides.
+- **Per-shank electrode-ID offset.** `generateChannelMapsForGroup` offsets shank `i`'s values by
+  `i * perShankCount`, so a 128-channel 4-shank probe emits `0..31, 32..63, 64..95, 96..127`
+  instead of `0..31` four times. A second standalone tetrode still resets to `0..3` (probe-local ids).
+- **Stray keys removed.** The non-schema `electrode_id` on each ntrode and the `bad_channels`
+  string on the electrode group are no longer emitted (bad channels are managed per-ntrode in the
+  Channel Map editor / per-day in the Day Editor).
+- **Default `device.name`.** `createAnimal` and the Home create form seed `device.name: ['Trodes']`
+  (schema `minItems: 1`) instead of `[]`.
+- **Integer IDs at every ingress.** Copy-from-animal (`CopyFromAnimalDialog`) and CSV import
+  (`csvChannelMapUtils`) emit integer IDs; CSV import renumbers `ntrode_id` collision-safe and
+  tolerates/ignores the legacy `electrode_id` column.
+- **Electrode-group id uniqueness rule.** A new business rule rejects duplicate electrode-group ids
+  before export (duplicates collapse groups during NWB conversion / Spyglass ingestion).
+- **PropTypes reconciled to integer.** `ChannelMapEditor`, `DevicesStep`, and `BadChannelsEditor`
+  expect integer `id` / `ntrode_id` / `electrode_group_id`; the contradictory string/number split is
+  gone. `String()` normalization is kept only at the genuine object-key boundary (the
+  `deviceOverrides.bad_channels` map, whose keys are strings); model-internal id joins compare
+  integers directly.
+
+### Known limitation / follow-up
+
+- The hand-authored `realistic-session.yml` (a frozen legacy golden) and the new-path fixtures
+  built to byte-match it use `0:4..3:7` map values for a *second* tetrode group. Per the channel-map
+  semantics (map values are probe-local electrode ids that reset per group), this should be `0..3`.
+  The generator already resets correctly; correcting the frozen fixtures requires a coordinated
+  golden regeneration + converter re-check and is out of scope here (tracked as a Phase-4 follow-up).
+
+---
+
 ## Hardware Config: wire cameras and route data-acq / technical to the export (June 4, 2026)
 
 ### Summary

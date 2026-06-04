@@ -46,6 +46,9 @@ describe('Animal State Management', () => {
       expect(animal.configurationHistory[0].version).toBe(1);
       expect(animal.created).toMatch(/^\d{4}-\d{2}-\d{2}T/); // ISO timestamp
       expect(animal.lastModified).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+      // device.name is schema-required (minItems: 1); default it to the legacy value
+      // so the export gate doesn't fail on an empty name array.
+      expect(animal.devices.device.name).toEqual(['Trodes']);
     });
 
     it('creates animal with full metadata including devices', () => {

@@ -273,11 +273,11 @@ describe('computeDevicesStatus', () => {
     expect(computeDevicesStatus({}, mergedDay)).toBe('error');
   });
 
-  it('matches numeric group IDs to string electrode_group_id values', () => {
+  it('matches integer group IDs to integer electrode_group_id values', () => {
     const mergedDay = {
       electrode_groups: [group],
       ntrode_electrode_group_channel_map: [
-        { ...ntrode, electrode_group_id: '0', bad_channels: [0, 1, 2, 3] },
+        { ...ntrode, electrode_group_id: 0, bad_channels: [0, 1, 2, 3] },
       ],
     };
     expect(computeDevicesStatus({}, mergedDay)).toBe('error');

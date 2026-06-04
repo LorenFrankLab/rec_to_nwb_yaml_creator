@@ -161,7 +161,7 @@ describe('exportChannelMapsToCSV', () => {
 });
 
 describe('importChannelMapsFromCSV', () => {
-  test('imports valid CSV correctly', () => {
+  test('imports valid CSV with integer IDs and no stray electrode_id key', () => {
     const csv = `electrode_group_id,device_type,location,ntrode_id,electrode_id,bad_channels,channel_0,channel_1,channel_2,channel_3
 0,tetrode_12.5,CA1,0,0,"",0,1,2,3
 0,tetrode_12.5,CA1,1,1,"1,3",0,1,2,3`;
@@ -169,18 +169,54 @@ describe('importChannelMapsFromCSV', () => {
     const result = importChannelMapsFromCSV(csv);
 
     expect(result).toHaveLength(2);
+    // electrode_group_id parsed to integer; ntrode_id renumbered to integers from 0;
+    // the (non-schema) electrode_id column is ignored, not carried onto the ntrode.
     expect(result[0]).toEqual({
-      electrode_group_id: '0',
-      ntrode_id: '0',
-      electrode_id: 0,
+      electrode_group_id: 0,
+      ntrode_id: 0,
       bad_channels: [],
       map: { 0: 0, 1: 1, 2: 2, 3: 3 }
     });
     expect(result[1]).toEqual({
-      electrode_group_id: '0',
-      ntrode_id: '1',
-      electrode_id: 1,
+      electrode_group_id: 0,
+      ntrode_id: 1,
       bad_channels: [1, 3],
+      map: { 0: 0, 1: 1, 2: 2, 3: 3 }
+    });
+    result.forEach((m) => expect(m).not.toHaveProperty('electrode_id'));
+  });
+
+  test('produces integer, non-colliding ntrode IDs against existing maps', () => {
+    const csv = `electrode_group_id,device_type,location,ntrode_id,electrode_id,bad_channels,channel_0,channel_1,channel_2,channel_3
+3,tetrode_12.5,CA1,7,0,"",0,1,2,3
+3,tetrode_12.5,CA1,9,0,"",0,1,2,3`;
+
+    const existingMaps = [
+      { ntrode_id: 0, electrode_group_id: 0, bad_channels: [], map: {} },
+      { ntrode_id: 4, electrode_group_id: 1, bad_channels: [], map: {} },
+    ];
+
+    const result = importChannelMapsFromCSV(csv, existingMaps);
+
+    // Renumbered to integers starting after the current max existing ntrode_id (4) → 5, 6.
+    expect(result.map((m) => m.ntrode_id)).toEqual([5, 6]);
+    result.forEach((m) => {
+      expect(typeof m.ntrode_id).toBe('number');
+      expect(typeof m.electrode_group_id).toBe('number');
+    });
+    expect(result.map((m) => m.electrode_group_id)).toEqual([3, 3]);
+  });
+
+  test('imports a CSV that omits the electrode_id column', () => {
+    const csv = `electrode_group_id,device_type,location,ntrode_id,bad_channels,channel_0,channel_1,channel_2,channel_3
+0,tetrode_12.5,CA1,0,"",0,1,2,3`;
+
+    const result = importChannelMapsFromCSV(csv);
+
+    expect(result[0]).toEqual({
+      electrode_group_id: 0,
+      ntrode_id: 0,
+      bad_channels: [],
       map: { 0: 0, 1: 1, 2: 2, 3: 3 }
     });
   });
@@ -210,9 +246,9 @@ describe('importChannelMapsFromCSV', () => {
     expect(() => importChannelMapsFromCSV(csv)).toThrow('Missing required columns');
   });
 
-  test('throws error for invalid numeric values', () => {
+  test('throws error for invalid numeric channel values', () => {
     const csv = `electrode_group_id,device_type,location,ntrode_id,electrode_id,bad_channels,channel_0,channel_1,channel_2,channel_3
-0,tetrode_12.5,CA1,0,invalid,"",0,1,2,3`;
+0,tetrode_12.5,CA1,0,0,"",invalid,1,2,3`;
 
     expect(() => importChannelMapsFromCSV(csv)).toThrow('Invalid numeric value');
   });

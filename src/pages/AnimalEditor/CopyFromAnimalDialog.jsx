@@ -82,10 +82,10 @@ export default function CopyFromAnimalDialog({ open, currentAnimalId, animals, o
     // Create mapping of old electrode_group IDs to new IDs
     const groupIdMap = new Map();
 
-    // Deep clone electrode groups with new IDs
+    // Deep clone electrode groups with new integer IDs
     const copiedGroups = selectedAnimal.electrodeGroups.map((group, index) => {
       const oldId = group.id;
-      const newId = (nextIds.nextGroupId + index).toString();
+      const newId = nextIds.nextGroupId + index;
       groupIdMap.set(oldId, newId);
 
       return {
@@ -94,14 +94,14 @@ export default function CopyFromAnimalDialog({ open, currentAnimalId, animals, o
       };
     });
 
-    // Deep clone channel maps with new IDs and updated electrode_group_id references
+    // Deep clone channel maps with new integer IDs and updated electrode_group_id references
     const copiedMaps = selectedAnimal.channelMaps.map((map, index) => {
       const oldGroupId = map.electrode_group_id;
-      const newGroupId = groupIdMap.get(oldGroupId) || oldGroupId;
+      const newGroupId = groupIdMap.has(oldGroupId) ? groupIdMap.get(oldGroupId) : oldGroupId;
 
       return {
         ...structuredClone(map),
-        ntrode_id: String(nextIds.nextNtrodeId + index),
+        ntrode_id: nextIds.nextNtrodeId + index,
         electrode_group_id: newGroupId,
       };
     });

@@ -13,6 +13,7 @@
  * 3. Optogenetics configuration must be complete (all or none of the 3 fields)
  * 4. Ntrode channel mappings must have unique physical channels (no duplicates)
  * 5. Ntrode channel mappings must be sequential (no missing channels)
+ * 6. Electrode-group ids must be unique within a session
  *
  * @param {object} model - The form data to validate
  * @returns {Issue[]} Array of validation issues with format:
@@ -144,6 +145,31 @@ export const rulesValidation = (model) => {
           });
         }
       }
+    });
+  }
+
+  // Rule 6: Electrode-group ids must be unique within a session.
+  // trodes_to_nwb names the NWB electrode group from this id and Spyglass keys
+  // ElectrodeGroup by session + group name, so duplicate ids collapse groups
+  // downstream (silent data loss).
+  if (model.electrode_groups?.length > 0) {
+    const seen = new Set();
+    const reported = new Set();
+    model.electrode_groups.forEach((group) => {
+      const id = group?.id;
+      if (id === undefined || id === null) return;
+      if (seen.has(id) && !reported.has(id)) {
+        reported.add(id);
+        issues.push({
+          path: 'electrode_groups',
+          code: 'duplicate_electrode_group_id',
+          severity: 'error',
+          message:
+            `Duplicate electrode group id "${id}". Each electrode group must have a ` +
+            `unique id — duplicates collapse groups during NWB conversion and Spyglass ingestion.`,
+        });
+      }
+      seen.add(id);
     });
   }
 

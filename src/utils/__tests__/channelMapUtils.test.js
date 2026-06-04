@@ -5,14 +5,14 @@
 import {
   generateChannelMapsForGroup,
   generateAllChannelMaps,
-  getNextNtrodeId
+  nextNtrodeId
 } from '../channelMapUtils';
 
 describe('channelMapUtils', () => {
   describe('generateChannelMapsForGroup', () => {
     test('generates maps for tetrode (4 channels, 1 shank)', () => {
       const electrodeGroup = {
-        id: '0',
+        id: 0,
         device_type: 'tetrode_12.5',
         location: 'CA1',
         targeted_location: 'CA1',
@@ -25,18 +25,20 @@ describe('channelMapUtils', () => {
       const result = generateChannelMapsForGroup(electrodeGroup);
 
       expect(result).toHaveLength(1); // 1 shank
+      // Integer IDs end-to-end; no stray electrode_id key.
       expect(result[0]).toEqual({
-        electrode_group_id: '0',
-        ntrode_id: '0',
-        electrode_id: 0,
+        electrode_group_id: 0,
+        ntrode_id: 0,
         bad_channels: [],
         map: { 0: 0, 1: 1, 2: 2, 3: 3 }
       });
     });
 
-    test('generates maps for 128-channel probe (128 channels, 4 shanks)', () => {
+    test('offsets electrode IDs per shank for a multi-shank probe', () => {
+      // A 128-channel 4-shank probe partitions probe electrode ids 0..127 across
+      // its four shanks: 0..31, 32..63, 64..95, 96..127 (not 0..31 four times).
       const electrodeGroup = {
-        id: '1',
+        id: 1,
         device_type: '128c-4s8mm6cm-20um-40um-sl',
         location: 'CA1',
         targeted_location: 'CA1',
@@ -50,34 +52,22 @@ describe('channelMapUtils', () => {
 
       expect(result).toHaveLength(4); // 4 shanks
 
-      // Check first shank
-      expect(result[0]).toEqual({
-        electrode_group_id: '1',
-        ntrode_id: '0',
-        electrode_id: 0,
-        bad_channels: [],
-        map: expect.objectContaining({
-          0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7,
-          8: 8, 9: 9, 10: 10, 11: 11, 12: 12, 13: 13, 14: 14, 15: 15,
-          16: 16, 17: 17, 18: 18, 19: 19, 20: 20, 21: 21, 22: 22, 23: 23,
-          24: 24, 25: 25, 26: 26, 27: 27, 28: 28, 29: 29, 30: 30, 31: 31
-        })
-      });
+      const shankBlock = (offset) =>
+        Object.fromEntries(Array.from({ length: 32 }, (_, i) => [i, offset + i]));
 
-      // Check second shank
-      expect(result[1].ntrode_id).toBe('1');
-      expect(result[1].electrode_group_id).toBe('1');
+      expect(result[0].map).toEqual(shankBlock(0));   // 0..31
+      expect(result[1].map).toEqual(shankBlock(32));  // 32..63
+      expect(result[2].map).toEqual(shankBlock(64));  // 64..95
+      expect(result[3].map).toEqual(shankBlock(96));  // 96..127
 
-      // Check third shank
-      expect(result[2].ntrode_id).toBe('2');
-
-      // Check fourth shank
-      expect(result[3].ntrode_id).toBe('3');
+      // Across the group the values partition 0..127 exactly once.
+      const allValues = result.flatMap((n) => Object.values(n.map)).sort((a, b) => a - b);
+      expect(allValues).toEqual(Array.from({ length: 128 }, (_, i) => i));
     });
 
-    test('uses sequential ntrode IDs starting from 0', () => {
+    test('uses sequential integer ntrode IDs starting from 0', () => {
       const electrodeGroup = {
-        id: '5',
+        id: 5,
         device_type: '64c-4s6mm6cm-20um-40um-dl',
         location: 'CA1',
         targeted_location: 'CA1',
@@ -90,15 +80,12 @@ describe('channelMapUtils', () => {
       const result = generateChannelMapsForGroup(electrodeGroup);
 
       expect(result).toHaveLength(4); // 4 shanks
-      expect(result[0].ntrode_id).toBe('0');
-      expect(result[1].ntrode_id).toBe('1');
-      expect(result[2].ntrode_id).toBe('2');
-      expect(result[3].ntrode_id).toBe('3');
+      expect(result.map((n) => n.ntrode_id)).toEqual([0, 1, 2, 3]);
     });
 
     test('uses custom starting ntrode ID', () => {
       const electrodeGroup = {
-        id: '0',
+        id: 0,
         device_type: '32c-2s8mm6cm-20um-40um-dl',
         location: 'CA1',
         targeted_location: 'CA1',
@@ -111,13 +98,12 @@ describe('channelMapUtils', () => {
       const result = generateChannelMapsForGroup(electrodeGroup, 10);
 
       expect(result).toHaveLength(2); // 2 shanks
-      expect(result[0].ntrode_id).toBe('10');
-      expect(result[1].ntrode_id).toBe('11');
+      expect(result.map((n) => n.ntrode_id)).toEqual([10, 11]);
     });
 
-    test('creates identity mapping for each device type', () => {
+    test('creates identity mapping for a single-shank device', () => {
       const electrodeGroup = {
-        id: '0',
+        id: 0,
         device_type: 'tetrode_12.5',
         location: 'CA1',
         targeted_location: 'CA1',
@@ -129,13 +115,13 @@ describe('channelMapUtils', () => {
 
       const result = generateChannelMapsForGroup(electrodeGroup);
 
-      // Identity mapping: channel index maps to channel number
+      // Identity mapping: channel index maps to probe electrode id
       expect(result[0].map).toEqual({ 0: 0, 1: 1, 2: 2, 3: 3 });
     });
 
     test('handles electrode group with unknown device type (return empty array)', () => {
       const electrodeGroup = {
-        id: '0',
+        id: 0,
         device_type: 'unknown_device',
         location: 'CA1',
         targeted_location: 'CA1',
@@ -152,7 +138,7 @@ describe('channelMapUtils', () => {
 
     test('handles electrode group with undefined device type (return empty array)', () => {
       const electrodeGroup = {
-        id: '0',
+        id: 0,
         location: 'CA1',
         targeted_location: 'CA1',
         targeted_x: 1.0,
@@ -169,7 +155,7 @@ describe('channelMapUtils', () => {
 
     test('sets bad_channels to empty array by default', () => {
       const electrodeGroup = {
-        id: '0',
+        id: 0,
         device_type: 'tetrode_12.5',
         location: 'CA1',
         targeted_location: 'CA1',
@@ -184,9 +170,9 @@ describe('channelMapUtils', () => {
       expect(result[0].bad_channels).toEqual([]);
     });
 
-    test('sets electrode_id to 0 by default', () => {
+    test('does not emit a stray electrode_id key', () => {
       const electrodeGroup = {
-        id: '0',
+        id: 0,
         device_type: 'tetrode_12.5',
         location: 'CA1',
         targeted_location: 'CA1',
@@ -198,12 +184,12 @@ describe('channelMapUtils', () => {
 
       const result = generateChannelMapsForGroup(electrodeGroup);
 
-      expect(result[0].electrode_id).toBe(0);
+      expect(result[0]).not.toHaveProperty('electrode_id');
     });
 
-    test('includes electrode_group_id from source group', () => {
+    test('inherits integer electrode_group_id from source group', () => {
       const electrodeGroup = {
-        id: '42',
+        id: 42,
         device_type: 'tetrode_12.5',
         location: 'CA1',
         targeted_location: 'CA1',
@@ -215,12 +201,12 @@ describe('channelMapUtils', () => {
 
       const result = generateChannelMapsForGroup(electrodeGroup);
 
-      expect(result[0].electrode_group_id).toBe('42');
+      expect(result[0].electrode_group_id).toBe(42);
     });
 
     test('returns new objects (not mutating inputs)', () => {
       const electrodeGroup = {
-        id: '0',
+        id: 0,
         device_type: 'tetrode_12.5',
         location: 'CA1',
         targeted_location: 'CA1',
@@ -239,10 +225,10 @@ describe('channelMapUtils', () => {
   });
 
   describe('generateAllChannelMaps', () => {
-    test('handles multiple groups', () => {
+    test('handles multiple groups with integer IDs', () => {
       const electrodeGroups = [
         {
-          id: '0',
+          id: 0,
           device_type: 'tetrode_12.5',
           location: 'CA1',
           targeted_location: 'CA1',
@@ -252,7 +238,7 @@ describe('channelMapUtils', () => {
           units: 'mm'
         },
         {
-          id: '1',
+          id: 1,
           device_type: 'tetrode_12.5',
           location: 'CA3',
           targeted_location: 'CA3',
@@ -266,14 +252,46 @@ describe('channelMapUtils', () => {
       const result = generateAllChannelMaps(electrodeGroups);
 
       expect(result).toHaveLength(2); // 1 shank per tetrode, 2 tetrodes
-      expect(result[0].electrode_group_id).toBe('0');
-      expect(result[1].electrode_group_id).toBe('1');
+      expect(result[0].electrode_group_id).toBe(0);
+      expect(result[1].electrode_group_id).toBe(1);
     });
 
-    test('maintains sequential IDs across groups', () => {
+    test('a second tetrode group resets map values to 0..3 (probe-local ids)', () => {
       const electrodeGroups = [
         {
-          id: '0',
+          id: 0,
+          device_type: 'tetrode_12.5',
+          location: 'CA1',
+          targeted_location: 'CA1',
+          targeted_x: 1.0,
+          targeted_y: 2.0,
+          targeted_z: 3.0,
+          units: 'mm'
+        },
+        {
+          id: 1,
+          device_type: 'tetrode_12.5',
+          location: 'CA3',
+          targeted_location: 'CA3',
+          targeted_x: 2.0,
+          targeted_y: 3.0,
+          targeted_z: 4.0,
+          units: 'mm'
+        }
+      ];
+
+      const result = generateAllChannelMaps(electrodeGroups);
+
+      // ntrode_id still increments globally, but the map VALUES reset per group:
+      // a tetrode probe only has electrode ids 0..3.
+      expect(result[0].map).toEqual({ 0: 0, 1: 1, 2: 2, 3: 3 });
+      expect(result[1].map).toEqual({ 0: 0, 1: 1, 2: 2, 3: 3 });
+    });
+
+    test('maintains sequential integer ntrode IDs across groups', () => {
+      const electrodeGroups = [
+        {
+          id: 0,
           device_type: '32c-2s8mm6cm-20um-40um-dl', // 2 shanks
           location: 'CA1',
           targeted_location: 'CA1',
@@ -283,7 +301,7 @@ describe('channelMapUtils', () => {
           units: 'mm'
         },
         {
-          id: '1',
+          id: 1,
           device_type: '64c-3s6mm6cm-20um-40um-sl', // 3 shanks
           location: 'CA3',
           targeted_location: 'CA3',
@@ -297,15 +315,7 @@ describe('channelMapUtils', () => {
       const result = generateAllChannelMaps(electrodeGroups);
 
       expect(result).toHaveLength(5); // 2 + 3 = 5 total shanks
-
-      // First group gets IDs 0-1
-      expect(result[0].ntrode_id).toBe('0');
-      expect(result[1].ntrode_id).toBe('1');
-
-      // Second group gets IDs 2-4
-      expect(result[2].ntrode_id).toBe('2');
-      expect(result[3].ntrode_id).toBe('3');
-      expect(result[4].ntrode_id).toBe('4');
+      expect(result.map((n) => n.ntrode_id)).toEqual([0, 1, 2, 3, 4]);
     });
 
     test('handles empty array', () => {
@@ -316,7 +326,7 @@ describe('channelMapUtils', () => {
     test('skips groups with unknown device types', () => {
       const electrodeGroups = [
         {
-          id: '0',
+          id: 0,
           device_type: 'tetrode_12.5',
           location: 'CA1',
           targeted_location: 'CA1',
@@ -326,7 +336,7 @@ describe('channelMapUtils', () => {
           units: 'mm'
         },
         {
-          id: '1',
+          id: 1,
           device_type: 'unknown_device',
           location: 'CA3',
           targeted_location: 'CA3',
@@ -340,47 +350,58 @@ describe('channelMapUtils', () => {
       const result = generateAllChannelMaps(electrodeGroups);
 
       expect(result).toHaveLength(1);
-      expect(result[0].electrode_group_id).toBe('0');
+      expect(result[0].electrode_group_id).toBe(0);
     });
   });
 
-  describe('getNextNtrodeId', () => {
-    test('finds max ID correctly', () => {
+  describe('incremental add collision-safety (nextNtrodeId + generateChannelMapsForGroup)', () => {
+    test('a second group added after the first does not restart ntrode_id at 0', () => {
+      // First add: a 4-shank probe occupies ntrode ids 0..3.
+      const group0 = { id: 0, device_type: '128c-4s8mm6cm-20um-40um-sl', location: 'CA1' };
+      const firstMaps = generateChannelMapsForGroup(group0, nextNtrodeId([]));
+      expect(firstMaps.map((n) => n.ntrode_id)).toEqual([0, 1, 2, 3]);
+
+      // Second add: ntrode ids continue after the current max (3) → 4, not 0.
+      const group1 = { id: 1, device_type: 'tetrode_12.5', location: 'CA3' };
+      const secondMaps = generateChannelMapsForGroup(group1, nextNtrodeId(firstMaps));
+      expect(secondMaps.map((n) => n.ntrode_id)).toEqual([4]);
+
+      const allIds = [...firstMaps, ...secondMaps].map((n) => n.ntrode_id);
+      expect(new Set(allIds).size).toBe(allIds.length); // all unique
+      allIds.forEach((id) => expect(typeof id).toBe('number'));
+    });
+  });
+
+  describe('nextNtrodeId', () => {
+    test('returns an integer one past the max existing ntrode_id', () => {
       const existingMaps = [
-        { ntrode_id: '0', electrode_group_id: '0', electrode_id: 0, bad_channels: [], map: {} },
-        { ntrode_id: '5', electrode_group_id: '1', electrode_id: 0, bad_channels: [], map: {} },
-        { ntrode_id: '3', electrode_group_id: '2', electrode_id: 0, bad_channels: [], map: {} }
+        { ntrode_id: 0, electrode_group_id: 0, bad_channels: [], map: {} },
+        { ntrode_id: 5, electrode_group_id: 1, bad_channels: [], map: {} },
+        { ntrode_id: 3, electrode_group_id: 2, bad_channels: [], map: {} }
       ];
 
-      const result = getNextNtrodeId(existingMaps);
-
-      expect(result).toBe('6'); // max is 5, next is 6
+      expect(nextNtrodeId(existingMaps)).toBe(6); // max is 5, next is 6
     });
 
-    test('returns "0" for empty array', () => {
-      const result = getNextNtrodeId([]);
-      expect(result).toBe('0');
+    test('returns 0 for an empty array', () => {
+      expect(nextNtrodeId([])).toBe(0);
     });
 
-    test('handles string IDs correctly', () => {
+    test('tolerates string-typed ntrode_id from legacy/imported data', () => {
       const existingMaps = [
-        { ntrode_id: '10', electrode_group_id: '0', electrode_id: 0, bad_channels: [], map: {} },
-        { ntrode_id: '20', electrode_group_id: '1', electrode_id: 0, bad_channels: [], map: {} }
+        { ntrode_id: '10', electrode_group_id: 0, bad_channels: [], map: {} },
+        { ntrode_id: '20', electrode_group_id: 1, bad_channels: [], map: {} }
       ];
 
-      const result = getNextNtrodeId(existingMaps);
-
-      expect(result).toBe('21');
+      expect(nextNtrodeId(existingMaps)).toBe(21);
     });
 
-    test('handles single map', () => {
+    test('handles a single map', () => {
       const existingMaps = [
-        { ntrode_id: '7', electrode_group_id: '0', electrode_id: 0, bad_channels: [], map: {} }
+        { ntrode_id: 7, electrode_group_id: 0, bad_channels: [], map: {} }
       ];
 
-      const result = getNextNtrodeId(existingMaps);
-
-      expect(result).toBe('8');
+      expect(nextNtrodeId(existingMaps)).toBe(8);
     });
   });
 });

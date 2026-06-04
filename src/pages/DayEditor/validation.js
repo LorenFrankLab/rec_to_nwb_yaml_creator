@@ -124,7 +124,8 @@ export function computeDevicesStatus(day, mergedDay) {
   let anyGroupAllBad = false;
 
   for (const group of groups) {
-    const ntrodes = ntrodeMap.filter((n) => String(n.electrode_group_id) === String(group.id));
+    // electrode_group_id and group ids are integers end-to-end (schema contract).
+    const ntrodes = ntrodeMap.filter((n) => n.electrode_group_id === group.id);
 
     // A group with no channel mapping is a data-completeness problem (corruption
     // branch in DevicesStep), surfaced as incomplete rather than a hard error.

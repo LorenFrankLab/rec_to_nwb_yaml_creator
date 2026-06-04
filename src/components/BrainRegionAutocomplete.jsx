@@ -26,7 +26,7 @@ import { useStableId } from '../hooks/useStableId';
  * />
  */
 
-const BRAIN_REGIONS = [
+export const BRAIN_REGIONS = [
   // Hippocampus
   'CA1',
   'CA2',
@@ -54,15 +54,42 @@ const BRAIN_REGIONS = [
   'SNc',
 ];
 
+/**
+ * Resolve a typed region value to its canonical form against a list of known
+ * regions, preventing case-only spelling drift (e.g. `ca1` → `CA1`) that would
+ * fragment Spyglass `BrainRegion` rows.
+ *
+ * - Empty / whitespace-only input returns `''` (the caller treats this as invalid).
+ * - An exact match returns the value unchanged.
+ * - A case-insensitive match snaps to the canonical known spelling.
+ * - Anything else returns the trimmed value (a legitimate new "other" region).
+ *
+ * @param {string} value - Raw typed value.
+ * @param {string[]} [knownRegions=BRAIN_REGIONS] - Canonical region list.
+ * @returns {string} Canonical region string (or '' when blank).
+ */
+export function canonicalizeRegion(value, knownRegions = BRAIN_REGIONS) {
+  const trimmed = (value ?? '').trim();
+  if (trimmed === '') return '';
+  if (knownRegions.includes(trimmed)) return trimmed;
+  const caseMatch = knownRegions.find((r) => r.toLowerCase() === trimmed.toLowerCase());
+  return caseMatch || trimmed;
+}
+
 const BrainRegionAutocompleteComponent = ({
   value = '',
   onChange,
   label = 'Brain Region',
   name,
   required = false,
+  suggestions = [],
 }) => {
   const id = useStableId(undefined, 'brain-region');
   const datalistId = `${id}-list`;
+
+  // Merge the canonical regions with any workspace-derived suggestions, deduped
+  // and order-stable (canonical first), so already-used regions are also offered.
+  const regionOptions = [...new Set([...BRAIN_REGIONS, ...suggestions])];
 
   const handleChange = (e) => {
     if (onChange) {
@@ -83,7 +110,7 @@ const BrainRegionAutocompleteComponent = ({
         required={required}
       />
       <datalist id={datalistId}>
-        {BRAIN_REGIONS.map((region) => (
+        {regionOptions.map((region) => (
           <option key={region} value={region} />
         ))}
       </datalist>
@@ -97,6 +124,7 @@ BrainRegionAutocompleteComponent.propTypes = {
   label: PropTypes.string,
   name: PropTypes.string,
   required: PropTypes.bool,
+  suggestions: PropTypes.arrayOf(PropTypes.string),
 };
 
 BrainRegionAutocompleteComponent.defaultProps = {
@@ -104,6 +132,7 @@ BrainRegionAutocompleteComponent.defaultProps = {
   label: 'Brain Region',
   name: undefined,
   required: false,
+  suggestions: [],
 };
 
 const arePropsEqual = (prevProps, nextProps) => {
@@ -111,7 +140,8 @@ const arePropsEqual = (prevProps, nextProps) => {
     prevProps.value === nextProps.value &&
     prevProps.label === nextProps.label &&
     prevProps.name === nextProps.name &&
-    prevProps.required === nextProps.required
+    prevProps.required === nextProps.required &&
+    prevProps.suggestions === nextProps.suggestions
   );
 };
 

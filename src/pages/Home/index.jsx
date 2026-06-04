@@ -72,10 +72,11 @@ export function Home() {
         lab: formData.lab,
         institution: formData.institution,
       },
-      // Devices auto-created empty (configured later in Day Editor)
+      // Devices auto-created empty (configured later in Day Editor). `device.name`
+      // is schema-required (minItems: 1), so seed it with the legacy default.
       devices: {
         data_acq_device: [],
-        device: { name: [] },
+        device: { name: ['Trodes'] },
         electrode_groups: [],
         ntrode_electrode_group_channel_map: [],
       },

@@ -257,6 +257,26 @@ Recorded during implementation; revisit in the named phase.
    future change should catch the throw and route to `ErrorState` with the message,
    without ever falling back to an empty-probes render.
 
+### Phase 4 findings / follow-ups
+
+1. **Frozen-golden tetrode map values `0:4..3:7` are scientifically wrong but out of scope.**
+   `realistic-session.yml` (one of the 4 byte-frozen legacy golden baselines) and the new-path
+   fixtures built to byte-match it (`workspaceBuilders.js`, `legacyParityFixture.js`,
+   `golden/workspace-export.realistic.yml`, `golden/legacy-export.reference.yml`) give a *second*
+   standalone tetrode group the map values `{0:4,1:5,2:6,3:7}`. Per the channel-map semantics
+   ([designs.md](designs.md#channel-map-semantics)), map values are probe-local electrode ids that
+   **reset per electrode group**, so a tetrode's second group should be `{0:0,1:1,2:2,3:3}`. The
+   **generator is correct** (`generateChannelMapsForGroup` resets per group; proven by dedicated
+   unit tests), so this is purely a fixture-data artifact. Correcting it means regenerating a frozen
+   golden baseline (forbidden without coordination) and re-checking the legacy↔new byte-parity
+   harness + trodes_to_nwb, so it was deliberately **not** changed in phase 4. Revisit when a golden
+   regeneration is coordinated (and verify in the deferred pre-cutover round-trip).
+2. **CSV `electrode_id` column is now vestigial (consider removing in a later pass).** Generated
+   ntrodes no longer carry `electrode_id` (it is not a schema field). `importChannelMapsFromCSV`
+   tolerates and ignores the column, and `exportChannelMapsToCSV` still writes it (now empty for
+   generated maps). The column could be dropped from the CSV format entirely in a future cleanup,
+   coordinated with any external CSV templates users may have.
+
 ### Phase 3 findings / follow-ups
 
 1. **Blur-save has no unsaved-changes guard (app-wide pattern).** `DataAcqSection` (and other

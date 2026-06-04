@@ -604,6 +604,33 @@ describe('rulesValidation()', () => {
     });
   });
 
+  describe('Rule 6: Unique electrode-group IDs', () => {
+    it('flags duplicate electrode-group ids', () => {
+      const model = {
+        electrode_groups: [
+          { id: 0, location: 'CA1', device_type: 'tetrode_12.5' },
+          { id: 0, location: 'CA3', device_type: 'tetrode_12.5' },
+        ],
+      };
+      const issues = rulesValidation(model);
+      const dup = issues.find((i) => i.code === 'duplicate_electrode_group_id');
+      expect(dup).toBeDefined();
+      expect(dup.severity).toBe('error');
+      expect(dup.message).toMatch(/0/);
+    });
+
+    it('does not flag unique electrode-group ids', () => {
+      const model = {
+        electrode_groups: [
+          { id: 0, location: 'CA1', device_type: 'tetrode_12.5' },
+          { id: 1, location: 'CA3', device_type: 'tetrode_12.5' },
+        ],
+      };
+      const issues = rulesValidation(model);
+      expect(issues.some((i) => i.code === 'duplicate_electrode_group_id')).toBe(false);
+    });
+  });
+
   describe('Multiple Rules Violations', () => {
     it('should detect violations from multiple rules', () => {
       const model = {

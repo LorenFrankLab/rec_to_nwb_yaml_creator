@@ -159,8 +159,8 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, erro
 BadChannelsEditor.propTypes = {
   ntrodes: PropTypes.arrayOf(
     PropTypes.shape({
-      ntrode_id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
-      electrode_group_id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+      ntrode_id: PropTypes.number.isRequired,
+      electrode_group_id: PropTypes.number.isRequired,
       bad_channels: PropTypes.arrayOf(PropTypes.number),
       map: PropTypes.objectOf(PropTypes.number).isRequired,
     })

@@ -78,16 +78,17 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
 
   /**
    * Get ntrodes for a specific electrode group
-   * @param {number|string} groupId - Electrode group ID
+   * @param {number} groupId - Integer electrode group ID
    * @returns {Array} Ntrodes belonging to this group
    */
   const getNtrodesForGroup = useCallback((groupId) => {
-    return ntrodeChannelMap.filter(ntrode => String(ntrode.electrode_group_id) === String(groupId));
+    // electrode_group_id and group ids are integers end-to-end (schema contract).
+    return ntrodeChannelMap.filter(ntrode => ntrode.electrode_group_id === groupId);
   }, [ntrodeChannelMap]);
 
   /**
    * Calculate status for an electrode group
-   * @param {number|string} groupId - Electrode group ID
+   * @param {number} groupId - Electrode group ID
    * @returns {object} { status: 'clean'|'warning'|'error', badChannelCount: number, allBad: boolean }
    */
   const getGroupStatus = useCallback((groupId) => {
@@ -115,7 +116,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
 
   /**
    * Get status badge text and aria-label
-   * @param {number|string} groupId - Electrode group ID
+   * @param {number} groupId - Electrode group ID
    * @returns {object} { text: string, ariaLabel: string, className: string }
    */
   const getStatusBadge = useCallback((groupId) => {
@@ -387,8 +388,8 @@ DevicesStep.propTypes = {
       ),
       ntrode_electrode_group_channel_map: PropTypes.arrayOf(
         PropTypes.shape({
-          ntrode_id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
-          electrode_group_id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+          ntrode_id: PropTypes.number.isRequired,
+          electrode_group_id: PropTypes.number.isRequired,
           bad_channels: PropTypes.arrayOf(PropTypes.number),
           map: PropTypes.objectOf(PropTypes.number).isRequired,
         })

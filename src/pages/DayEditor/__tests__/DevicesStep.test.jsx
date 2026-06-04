@@ -94,6 +94,23 @@ describe('DevicesStep', () => {
     expect(screen.getByRole('heading', { name: /devices configuration/i })).toBeInTheDocument();
   });
 
+  it('renders with integer IDs without PropType warnings', () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    render(
+      <DevicesStep
+        animal={mockAnimal}
+        day={mockDay}
+        mergedDay={mockMergedDay}
+        onFieldUpdate={mockOnFieldUpdate}
+      />
+    );
+    const propTypeWarnings = errorSpy.mock.calls.filter(
+      (args) => typeof args[0] === 'string' && args[0].includes('Failed prop type')
+    );
+    expect(propTypeWarnings).toEqual([]);
+    errorSpy.mockRestore();
+  });
+
   it('displays inherited notice with link to edit animal', () => {
     render(
       <DevicesStep
@@ -333,31 +350,34 @@ describe('DevicesStep', () => {
     expect(screen.getByText(/all channels failed - group inactive/i)).toBeInTheDocument();
   });
 
-  it('validates invalid channels across string ntrode and electrode group IDs', async () => {
+  it('validates invalid channels against a string-keyed bad-channel override', async () => {
     const user = userEvent.setup();
-    const stringNtrodeMap = [
-      { ntrode_id: '0', electrode_group_id: '0', bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+    // ntrode ids are integers (schema contract); the deviceOverrides.bad_channels
+    // map is keyed by ntrode_id as a JS object key (a string) — the lookup bridges
+    // the integer ntrode_id to that string key.
+    const ntrodeMap = [
+      { ntrode_id: 0, electrode_group_id: 0, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
     ];
-    const animalWithStringNtrodeId = {
+    const animalWithNtrode = {
       ...mockAnimal,
       devices: {
         electrode_groups: [ELECTRODE_GROUPS[0]],
-        ntrode_electrode_group_channel_map: stringNtrodeMap,
+        ntrode_electrode_group_channel_map: ntrodeMap,
       },
       configurationHistory: historyFor({
         electrode_groups: [ELECTRODE_GROUPS[0]],
-        ntrode_electrode_group_channel_map: stringNtrodeMap,
+        ntrode_electrode_group_channel_map: ntrodeMap,
       }),
     };
-    const dayWithInvalidStringOverride = {
+    const dayWithInvalidOverride = {
       ...mockDay,
       deviceOverrides: { bad_channels: { '0': [9] } },
     };
 
     render(
       <DevicesStep
-        animal={animalWithStringNtrodeId}
-        day={dayWithInvalidStringOverride}
+        animal={animalWithNtrode}
+        day={dayWithInvalidOverride}
         mergedDay={mockMergedDay}
         onFieldUpdate={mockOnFieldUpdate}
       />
