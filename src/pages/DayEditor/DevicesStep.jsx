@@ -1,7 +1,9 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState } from 'react';
 import PropTypes from 'prop-types';
 import ReadOnlyDeviceInfo from './ReadOnlyDeviceInfo';
 import BadChannelsEditor from './BadChannelsEditor';
+import ReconfigWizard from './ReconfigWizard';
+import { reconcileAppliedToDays } from '../../state/configDiff';
 import './DayEditor.scss';
 
 /**
@@ -22,10 +24,31 @@ import './DayEditor.scss';
  * @param {object} props.day - Day record (editable)
  * @param {object} props.mergedDay - Merged animal + day for validation
  * @param {Function} props.onFieldUpdate - Callback: (fieldPath, value) => void
+ * @param {object[]} [props.animalDays] - The animal's days (sorted by date); enables the
+ *   configuration-version indicator + reconfiguration wizard. Omitted in isolated tests.
+ * @param {object} [props.actions] - Store actions (`addConfigurationSnapshot`,
+ *   `applyConfigurationForward`); when provided, the reconfiguration wizard is available.
  * @returns {JSX.Element}
  */
-export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate }) {
+export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, animalDays, actions }) {
   const electrodeGroups = animal.devices?.electrode_groups || [];
+  const [wizardOpen, setWizardOpen] = useState(false);
+
+  // Configuration-version legibility (only when wired with store actions + the
+  // animal's days, i.e. inside the real Day Editor — not in isolated unit renders).
+  const reconfigEnabled = !!actions && Array.isArray(animalDays) && animalDays.length > 0;
+
+  const reconfig = useMemo(() => {
+    if (!reconfigEnabled) return null;
+    const version = day.configurationVersion;
+    const snapshot = (animal.configurationHistory || []).find((s) => s.version === version) || null;
+    const daysById = Object.fromEntries(animalDays.map((d) => [d.id, d]));
+    const appliedCount = (reconcileAppliedToDays(animal, daysById)[version] || []).length;
+    const idx = animalDays.findIndex((d) => d.id === day.id);
+    const prevDay = idx > 0 ? animalDays[idx - 1] : null;
+    const candidateDays = idx >= 0 ? animalDays.slice(idx) : [day];
+    return { version, snapshot, appliedCount, prevDay, candidateDays };
+  }, [reconfigEnabled, animal, day, animalDays]);
 
   // Wrap in useMemo to prevent changing on every render
   const ntrodeChannelMap = useMemo(() => {
@@ -192,6 +215,37 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate }) {
         <a href={`#/animal/${animal.id}/editor`}>Edit at Animal Level</a>
       </div>
 
+      {/* Configuration-version indicator + reconfiguration entry point */}
+      {reconfig && (
+        <div className="config-version-bar">
+          <div className="config-version-info">
+            <span className="config-version-label">
+              Configuration version {reconfig.version}
+              {reconfig.snapshot ? `: ${reconfig.snapshot.description} (${reconfig.snapshot.date})` : ''}
+            </span>
+            <span className="config-version-applied">
+              Applied to {reconfig.appliedCount} {reconfig.appliedCount === 1 ? 'day' : 'days'}
+            </span>
+          </div>
+          <button
+            type="button"
+            className="config-reconfig-button"
+            onClick={() => setWizardOpen(true)}
+          >
+            Reconfigure devices…
+          </button>
+          <ReconfigWizard
+            isOpen={wizardOpen}
+            onClose={() => setWizardOpen(false)}
+            animal={animal}
+            day={day}
+            prevDay={reconfig.prevDay}
+            candidateDays={reconfig.candidateDays}
+            actions={actions}
+          />
+        </div>
+      )}
+
       {/* Electrode groups (accordion) */}
       <section className="electrode-groups-section" aria-label="Electrode Groups">
         {electrodeGroups.map((group) => {
@@ -317,4 +371,11 @@ DevicesStep.propTypes = {
   }).isRequired,
   mergedDay: PropTypes.object.isRequired,
   onFieldUpdate: PropTypes.func.isRequired,
+  animalDays: PropTypes.arrayOf(PropTypes.object),
+  actions: PropTypes.object,
+};
+
+DevicesStep.defaultProps = {
+  animalDays: undefined,
+  actions: undefined,
 };

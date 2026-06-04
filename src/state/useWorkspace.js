@@ -291,6 +291,70 @@ export function useWorkspace(initialState = null) {
       },
 
       /**
+       * Applies a configuration snapshot forward to a set of days: points each
+       * listed day at `snapshotVersion` and keeps each snapshot's `appliedToDays`
+       * a partition (a day appears in at most one snapshot's list). Used by the
+       * reconfiguration wizard AFTER it has created the snapshot via
+       * {@link addConfigurationSnapshot}; creation and assignment stay separate so
+       * each action's `setWorkspace` is self-contained.
+       *
+       * @param {string} animalId - Animal identifier.
+       * @param {number} snapshotVersion - Existing snapshot version to apply.
+       * @param {string[]} dayIds - Day ids to move onto that version.
+       * @throws {Error} If the animal or the snapshot version does not exist.
+       */
+      applyConfigurationForward: (animalId, snapshotVersion, dayIds) => {
+        setWorkspace((prev) => {
+          if (!prev.animals[animalId]) {
+            throw new Error(`Animal "${animalId}" not found`);
+          }
+
+          const animal = structuredClone(prev.animals[animalId]);
+          const target = animal.configurationHistory.find((s) => s.version === snapshotVersion);
+          if (!target) {
+            throw new Error(
+              `Configuration version "${snapshotVersion}" not found for animal "${animalId}"`
+            );
+          }
+
+          const now = getCurrentTimestamp();
+          const moving = new Set(dayIds);
+
+          // (3) Remove the moving days from EVERY snapshot's list first, so the
+          // result is a clean partition regardless of stale stored lists.
+          animal.configurationHistory.forEach((snapshot) => {
+            snapshot.appliedToDays = (snapshot.appliedToDays || []).filter((id) => !moving.has(id));
+          });
+          // (2) Add them to the target snapshot's list (dedup, stable order).
+          target.appliedToDays = [
+            ...target.appliedToDays.filter((id) => !moving.has(id)),
+            ...dayIds.filter((id, i) => dayIds.indexOf(id) === i),
+          ];
+
+          // (1) Point each listed day at the target version.
+          const updatedDays = { ...prev.days };
+          dayIds.forEach((dayId) => {
+            const day = updatedDays[dayId];
+            if (!day) return;
+            updatedDays[dayId] = {
+              ...structuredClone(day),
+              configurationVersion: snapshotVersion,
+              lastModified: now,
+            };
+          });
+
+          animal.lastModified = now;
+
+          return {
+            ...prev,
+            animals: { ...prev.animals, [animalId]: animal },
+            days: updatedDays,
+            lastModified: now,
+          };
+        });
+      },
+
+      /**
        * Creates a new recording day for an animal
        *
        * @param {string} animalId - Parent animal identifier
@@ -403,6 +467,11 @@ export function useWorkspace(initialState = null) {
           if (updates.state) {
             updated.state = { ...updated.state, ...updates.state };
           }
+          // Probe-reconfiguration: point this day at a different configuration
+          // snapshot version (set by the reconfig wizard / applyConfigurationForward).
+          if (updates.configurationVersion !== undefined) {
+            updated.configurationVersion = updates.configurationVersion;
+          }
           // Day-level keywords (written by the Overview keywords editor through the
           // stepper). Without this branch the user's keywords are silently dropped.
           if (updates.keywords !== undefined) {
@@ -487,7 +556,7 @@ export function useWorkspace(initialState = null) {
         const animal = workspace.animals[animalId];
         if (!animal) return [];
 
-        return animal.days
+        return (animal.days || [])
           .map((dayId) => workspace.days[dayId])
           .filter(Boolean)
           .sort((a, b) => a.date.localeCompare(b.date));

@@ -63,6 +63,53 @@ function reorderKeys(obj, order) {
 }
 
 /**
+ * Resolve a day's **effective** probe configuration: the electrode groups and
+ * channel map that actually apply to this recording day.
+ *
+ * Selection rule (the single source of truth, shared with {@link mergeDayMetadata}):
+ * day `deviceOverrides` > the configuration snapshot picked by
+ * `day.configurationVersion` (falling back to the latest snapshot, then the first)
+ * > an empty list. This is exactly the precedence the legacy merge used; factoring
+ * it here ensures the merge and the reconfiguration wizard cannot diverge.
+ *
+ * Returns references into the animal/config (read-only by contract); callers that
+ * persist the result must clone it. `mergeDayMetadata` clones its whole output, so
+ * it is unaffected.
+ *
+ * @param {import('./workspaceTypes').Animal} animal - Parent animal with snapshots.
+ * @param {import('./workspaceTypes').Day} day - Recording day.
+ * @returns {{ electrode_groups: object[], ntrode_electrode_group_channel_map: object[] }}
+ * @throws {Error} If the animal has no usable configuration history.
+ */
+export function resolveDayConfig(animal, day) {
+  const history = animal.configurationHistory;
+  const config =
+    (Array.isArray(history) &&
+      (history.find((c) => c.version === day.configurationVersion) ||
+        history[history.length - 1] ||
+        history[0])) ||
+    null;
+
+  // A day cannot be resolved without a device configuration. Fail loudly with an
+  // actionable message instead of a cryptic "cannot read properties of undefined"
+  // deep in the merge (e.g. a malformed/legacy persisted animal with no history).
+  if (!config) {
+    throw new Error(
+      `Cannot resolve device configuration for day "${day?.id}": animal "${animal?.id}" has no configuration history.`
+    );
+  }
+
+  return {
+    electrode_groups:
+      day.deviceOverrides?.electrode_groups || config.devices.electrode_groups || [],
+    ntrode_electrode_group_channel_map:
+      day.deviceOverrides?.ntrode_electrode_group_channel_map ||
+      config.devices.ntrode_electrode_group_channel_map ||
+      [],
+  };
+}
+
+/**
  * Merges animal defaults with day-specific data to produce complete NWB metadata.
  *
  * This is the MOST CRITICAL function in the workspace architecture - it must produce
@@ -74,6 +121,7 @@ function reorderKeys(obj, order) {
  * - Day provides: session, tasks, epochs, files, technical parameters
  * - Day OVERRIDES: weight, experiment_description, cameras, electrode_groups (if specified)
  * - Configuration versions: Day references specific probe configuration from animal history
+ *   (resolved by {@link resolveDayConfig}).
  *
  * Key order & always-on keys (byte-for-byte legacy parity):
  * - The merged object's top-level and nested key order mirrors the legacy
@@ -99,32 +147,13 @@ function reorderKeys(obj, order) {
  * const yaml = encodeYaml(metadata); // Ready for export
  */
 export function mergeDayMetadata(animal, day) {
-  // Find the configuration version referenced by this day
-  // Falls back to first config if version not found, or latest if version is null
-  const history = animal.configurationHistory;
-  const config =
-    (Array.isArray(history) &&
-      (history.find((c) => c.version === day.configurationVersion) ||
-        history[history.length - 1] ||
-        history[0])) ||
-    null;
-
-  // A day cannot be merged without a device configuration. Fail loudly with an
-  // actionable message instead of a cryptic "cannot read properties of undefined"
-  // deep in the merge (e.g. a malformed/legacy persisted animal with no history).
-  if (!config) {
-    throw new Error(
-      `Cannot merge day "${day?.id}": animal "${animal?.id}" has no device configuration history.`
-    );
-  }
+  // Resolve the day's effective probe config (snapshot selection + deviceOverrides
+  // precedence) via the shared helper, so the merge and the reconfig wizard's
+  // notion of "effective config" cannot drift.
+  const { electrode_groups: electrodeGroups, ntrode_electrode_group_channel_map: ntrodeMap } =
+    resolveDayConfig(animal, day);
 
   const cameras = day.deviceOverrides?.cameras || animal.cameras || [];
-  const electrodeGroups =
-    day.deviceOverrides?.electrode_groups || config.devices.electrode_groups || [];
-  const ntrodeMap =
-    day.deviceOverrides?.ntrode_electrode_group_channel_map ||
-    config.devices.ntrode_electrode_group_channel_map ||
-    [];
   const opto = animal.optogenetics || null;
 
   // Build the merged object in legacy `defaultYMLValues` key order. keywords /

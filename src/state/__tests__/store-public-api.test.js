@@ -27,6 +27,7 @@ describe('useStore public API contract', () => {
     expect(Object.keys(result.current.actions).sort()).toEqual([
       'addArrayItem',
       'addConfigurationSnapshot',
+      'applyConfigurationForward',
       'createAnimal',
       'createDay',
       'deleteAnimal',

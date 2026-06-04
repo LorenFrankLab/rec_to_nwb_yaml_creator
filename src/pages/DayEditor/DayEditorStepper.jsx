@@ -29,7 +29,7 @@ import ErrorState from './ErrorState';
  * <DayEditorStepper />
  */
 export default function DayEditorStepper() {
-  const { model, actions, persistence } = useStoreContext();
+  const { model, actions, selectors, persistence } = useStoreContext();
   const dayId = useDayIdFromUrl();
   const [currentStep, setCurrentStep] = useState('overview');
 
@@ -112,6 +112,10 @@ export default function DayEditorStepper() {
 
   const CurrentStepComponent = steps.find(s => s.id === currentStep).component;
 
+  // The animal's days (sorted by date) power the Devices step's reconfiguration
+  // wizard (version legibility + apply-forward). Computed here where the store is.
+  const animalDays = selectors.getAnimalDays(animal.id);
+
   return (
     <div className="day-editor-stepper">
       {/* Plain div, not <header>: a <header> here (not inside a sectioning element)
@@ -154,6 +158,8 @@ export default function DayEditorStepper() {
           day={day}
           mergedDay={mergedDay}
           onFieldUpdate={handleFieldUpdate}
+          animalDays={animalDays}
+          actions={actions}
         />
       </main>
     </div>

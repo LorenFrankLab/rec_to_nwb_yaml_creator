@@ -1470,3 +1470,36 @@
     font-size: 0.8125rem;
   }
 }
+
+/* Configuration-version indicator + reconfiguration entry point (Devices step). */
+.config-version-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 0.5rem 0 1rem;
+  padding: 0.6rem 0.9rem;
+  background: #eef3fb;
+  border: 1px solid #c7d6ef;
+  border-radius: 4px;
+}
+
+.config-version-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.config-version-label {
+  font-weight: 600;
+}
+
+.config-version-applied {
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.config-reconfig-button {
+  flex-shrink: 0;
+}
