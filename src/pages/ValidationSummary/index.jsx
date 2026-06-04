@@ -16,6 +16,7 @@
  */
 
 import { useMemo, useState } from 'react';
+import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { computeStepStatus } from '../DayEditor/validation';
@@ -74,6 +75,54 @@ function buildRows(workspace) {
   return rows;
 }
 
+const subjectLabel = (animal) => animal.subject?.subject_id ?? animal.id;
+
+/**
+ * An assertive (`role="alert"`) report of days that were NOT exported normally, with
+ * a per-day detail block (the parity diff, or the error that aborted the export).
+ *
+ * @param {object} props
+ * @param {string} props.message - Lead sentence describing what happened.
+ * @param {Array<{ dayId: string, subjectId: string, date: string, detail?: string }>} props.items
+ *   - The affected days; `detail` is rendered in a labelled `<pre>` when present.
+ * @param {string} props.detailLabel - Accessible name prefix for each `<pre>` block.
+ * @param {string} props.className - Region styling hook.
+ * @returns {JSX.Element|null}
+ */
+function ExportReport({ message, items, detailLabel, className }) {
+  if (items.length === 0) return null;
+  return (
+    <div role="alert" className={className}>
+      <p>{message}</p>
+      <ul>
+        {items.map((item) => (
+          <li key={item.dayId}>
+            <strong>
+              {item.subjectId} — {item.date}
+            </strong>{' '}
+            ({item.dayId})
+            {item.detail && (
+              <pre
+                className="validation-summary-diff"
+                aria-label={`${detailLabel} for ${item.subjectId} ${item.date}`}
+              >
+                {item.detail}
+              </pre>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+ExportReport.propTypes = {
+  message: PropTypes.string.isRequired,
+  items: PropTypes.arrayOf(PropTypes.object).isRequired,
+  detailLabel: PropTypes.string.isRequired,
+  className: PropTypes.string.isRequired,
+};
+
 /**
  * @returns {JSX.Element}
  */
@@ -92,38 +141,72 @@ export function ValidationSummary() {
     return acc;
   }, [rows]);
 
-  // Action feedback: a polite status message + a per-day skipped-parity report.
+  // Action feedback: a polite status message plus three assertive per-day reports —
+  // parity skips (strict), debug-override downloads (strict off), and hard failures.
   const [actionMessage, setActionMessage] = useState('');
   const [skippedReport, setSkippedReport] = useState([]);
+  const [overriddenReport, setOverriddenReport] = useState([]);
+  const [failedReport, setFailedReport] = useState([]);
+
+  const clearReports = () => {
+    setSkippedReport([]);
+    setOverriddenReport([]);
+    setFailedReport([]);
+  };
 
   const handleValidateAll = () => {
+    // Guard each write: a day removed between render and click must not abort the
+    // loop and leave the rest unvalidated with no feedback.
+    let failures = 0;
     rows.forEach(({ day, chip }) => {
-      actions.updateDay(day.id, {
-        state: { ...day.state, validated: chip === 'valid' },
-      });
+      try {
+        actions.updateDay(day.id, {
+          state: { ...day.state, validated: chip === 'valid' },
+        });
+      } catch (err) {
+        failures += 1;
+        // eslint-disable-next-line no-console
+        console.error(`[validation-summary] could not validate day "${day.id}":`, err);
+      }
     });
-    setSkippedReport([]);
-    setActionMessage(`Validated ${rows.length} ${rows.length === 1 ? 'day' : 'days'}.`);
+    clearReports();
+    const total = rows.length;
+    setActionMessage(
+      failures === 0
+        ? `Validated ${total} ${total === 1 ? 'day' : 'days'}.`
+        : `Validated ${total - failures} of ${total} ${total === 1 ? 'day' : 'days'} (${failures} failed).`
+    );
   };
 
   const handleExportValidOnly = () => {
+    const validRows = rows.filter((row) => row.chip === 'valid');
+
+    if (validRows.length === 0) {
+      clearReports();
+      setActionMessage(
+        'No valid days to export. Fix errors or complete the required fields to enable export.'
+      );
+      return;
+    }
+
     const strict = isFeatureEnabled('shadowExportStrict');
     const skipped = [];
+    const overridden = [];
+    const failed = [];
     let exported = 0;
 
-    rows
-      .filter((row) => row.chip === 'valid')
-      .forEach(({ animal, day }) => {
+    validRows.forEach(({ animal, day }) => {
+      const identity = { dayId: day.id, subjectId: subjectLabel(animal), date: day.date };
+      try {
         const { ok, yaml, diff } = checkShadowExport(animal, day);
 
         // Parity mismatch in strict mode: skip and report, never download.
         if (!ok && strict) {
-          skipped.push({
-            dayId: day.id,
-            subjectId: animal.subject?.subject_id ?? animal.id,
-            date: day.date,
-            diff,
-          });
+          skipped.push({ ...identity, detail: diff });
+          // eslint-disable-next-line no-console
+          console.error(
+            `[validation-summary] export parity check failed for "${day.id}" — skipped (strict mode).`
+          );
           return;
         }
 
@@ -135,10 +218,30 @@ export function ValidationSummary() {
         });
         downloadYamlFile(fileName, yaml);
         exported += 1;
-      });
+
+        if (!ok) {
+          // strict === false: downloaded DESPITE a parity mismatch. Surface it loudly,
+          // mirroring ExportStep's override warning, so the override is never silent.
+          overridden.push({ ...identity, detail: diff });
+        }
+      } catch (err) {
+        // A throw (e.g. encoder failure) must not silently truncate the batch.
+        failed.push({ ...identity, detail: err.message });
+        // eslint-disable-next-line no-console
+        console.error(`[validation-summary] export failed for "${day.id}":`, err);
+      }
+    });
 
     setSkippedReport(skipped);
-    setActionMessage(`Exported ${exported} ${exported === 1 ? 'file' : 'files'}.`);
+    setOverriddenReport(overridden);
+    setFailedReport(failed);
+
+    const notValid = rows.length - validRows.length;
+    let message = `Exported ${exported} ${exported === 1 ? 'file' : 'files'}.`;
+    if (notValid > 0) {
+      message += ` ${notValid} ${notValid === 1 ? 'day' : 'days'} not exported (not marked valid).`;
+    }
+    setActionMessage(message);
   };
 
   const hasDays = rows.length > 0;
@@ -150,7 +253,7 @@ export function ValidationSummary() {
       {!hasDays ? (
         <p className="validation-summary-empty">
           No recording days yet. Create an animal and a recording day to see its
-          validation status here.
+          validation status here. <a href="#/workspace">Go to Workspace</a>.
         </p>
       ) : (
         <>
@@ -163,42 +266,74 @@ export function ValidationSummary() {
           </p>
 
           <div className="validation-summary-actions">
-            <button type="button" onClick={handleValidateAll}>
+            <button
+              type="button"
+              onClick={handleValidateAll}
+              title="Save each day's current validation status so it persists across reloads and other views."
+            >
               Validate All
             </button>
-            <button type="button" onClick={handleExportValidOnly}>
+            <button
+              type="button"
+              onClick={handleExportValidOnly}
+              title="Download YAML for every day with Valid status. Days with errors or incomplete fields are not exported."
+            >
               Export Valid Only
             </button>
           </div>
 
+          <p className="validation-summary-hint">
+            <strong>Export Valid Only</strong> downloads one YAML file per day with{' '}
+            <em>Valid</em> status ({counts.valid} {counts.valid === 1 ? 'day' : 'days'}). Days
+            with errors or incomplete fields are not exported.
+          </p>
+
           {/* Polite live region for batch-action completion announcements. */}
-          <div role="status" aria-live="polite" className="validation-summary-status">
+          <div
+            role="status"
+            aria-atomic="true"
+            className="validation-summary-status"
+          >
             {actionMessage}
           </div>
 
-          {skippedReport.length > 0 && (
-            <div role="alert" className="validation-summary-skipped">
-              <p>
-                {skippedReport.length}{' '}
-                {skippedReport.length === 1 ? 'day was' : 'days were'} skipped — the
-                export parity check failed, so {skippedReport.length === 1 ? 'it was' : 'they were'}{' '}
-                not downloaded:
-              </p>
-              <ul>
-                {skippedReport.map((s) => (
-                  <li key={s.dayId}>
-                    <strong>
-                      {s.subjectId} — {s.date}
-                    </strong>{' '}
-                    ({s.dayId})
-                    {s.diff && <pre className="validation-summary-diff">{s.diff}</pre>}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <ExportReport
+            className="validation-summary-skipped"
+            detailLabel="Export parity diff"
+            message={
+              skippedReport.length === 1
+                ? '1 day was skipped — its export parity check failed, so it was not downloaded:'
+                : `${skippedReport.length} days were skipped — their export parity checks failed, so they were not downloaded:`
+            }
+            items={skippedReport}
+          />
+
+          <ExportReport
+            className="validation-summary-overridden"
+            detailLabel="Export parity diff"
+            message={
+              overriddenReport.length === 1
+                ? '1 file was downloaded despite a parity mismatch (strict mode off):'
+                : `${overriddenReport.length} files were downloaded despite parity mismatches (strict mode off):`
+            }
+            items={overriddenReport}
+          />
+
+          <ExportReport
+            className="validation-summary-failed"
+            detailLabel="Export error"
+            message={
+              failedReport.length === 1
+                ? '1 day could not be exported (an error occurred) and was not downloaded:'
+                : `${failedReport.length} days could not be exported (errors occurred) and were not downloaded:`
+            }
+            items={failedReport}
+          />
 
           <table className="validation-summary-table">
+            <caption className="visually-hidden">
+              Recording days across all animals with validation status
+            </caption>
             <thead>
               <tr>
                 <th scope="col">Animal</th>
@@ -211,7 +346,7 @@ export function ValidationSummary() {
             <tbody>
               {rows.map(({ animal, day, chip }) => (
                 <tr key={day.id} data-testid={`day-row-${day.id}`}>
-                  <td>{animal.subject?.subject_id ?? animal.id}</td>
+                  <td>{subjectLabel(animal)}</td>
                   <td>{day.date}</td>
                   <td>{day.session?.session_id || '—'}</td>
                   <td>
@@ -220,7 +355,12 @@ export function ValidationSummary() {
                     </span>
                   </td>
                   <td>
-                    <a href={`#/day/${day.id}`}>Open editor</a>
+                    <a
+                      href={`#/day/${day.id}`}
+                      aria-label={`Open editor for ${subjectLabel(animal)} ${day.date}`}
+                    >
+                      Open editor
+                    </a>
                   </td>
                 </tr>
               ))}

@@ -18,7 +18,13 @@
 }
 
 .validation-summary-counts .count--incomplete {
-  color: #e65100;
+  /* #bf360c keeps AA contrast (≥4.5:1) on the white page background. */
+  color: #bf360c;
+}
+
+.validation-summary-hint {
+  color: #444;
+  margin: 0 0 0.75rem;
 }
 
 .validation-summary-actions {
@@ -33,7 +39,8 @@
   font-weight: 500;
 }
 
-.validation-summary-skipped {
+.validation-summary-skipped,
+.validation-summary-failed {
   border: 1px solid #c62828;
   border-radius: 4px;
   background-color: #fdecea;
@@ -41,7 +48,18 @@
   margin: 0.5rem 0 1rem;
 }
 
-.validation-summary-skipped ul {
+/* Debug-override downloads (strict mode off): warn, don't alarm. */
+.validation-summary-overridden {
+  border: 1px solid #bf360c;
+  border-radius: 4px;
+  background-color: #fff3e0;
+  padding: 0.75rem 1rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.validation-summary-skipped ul,
+.validation-summary-overridden ul,
+.validation-summary-failed ul {
   margin: 0.5rem 0 0;
   padding-left: 1.25rem;
 }
@@ -103,5 +121,6 @@
 
 .validation-summary-table .status-chip--incomplete {
   background-color: #fff3e0;
-  color: #e65100;
+  /* #bf360c keeps AA contrast (≥4.5:1) on the #fff3e0 chip background. */
+  color: #bf360c;
 }

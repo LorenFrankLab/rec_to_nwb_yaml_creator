@@ -1,7 +1,7 @@
 /**
  * Reload-recovery integration test for the Validation Summary.
  *
- * Exercises the Phase 1 load-on-init persistence path (NOT a rebuilt persistence
+ * Exercises the load-on-init localStorage persistence path (NOT a rebuilt persistence
  * layer): a versioned workspace blob seeded into localStorage must hydrate the
  * real store on mount, so the summary renders the restored days and counts.
  *
@@ -27,7 +27,7 @@ describe('ValidationSummary reload recovery (integration)', () => {
   it('restores the workspace and summary from persisted localStorage on mount', () => {
     const { workspace } = makeSummaryWorkspace();
 
-    // Seed the Phase 1 blob shape BEFORE mount so the load-on-init path runs.
+    // Seed the versioned blob shape BEFORE mount so the load-on-init path runs.
     window.localStorage.setItem(
       WORKSPACE_STORAGE_KEY,
       JSON.stringify({ schemaVersion: WORKSPACE_SCHEMA_VERSION, workspace })
