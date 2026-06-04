@@ -162,17 +162,17 @@ describe('ExportStep', () => {
     expect(within(preflight).getByText('Off')).toBeInTheDocument();
   });
 
-  it('reports the resolved configuration version in preflight, not a stale day-pinned one', () => {
+  it('reports the resolved configuration version in preflight, not the day-pinned value', () => {
     const { animal, day } = buildRealisticWorkspace();
-    // Day pins a version that no longer exists; resolveDayConfig falls back to the
-    // animal's actual snapshot (version 1). The preflight must show what is encoded.
-    day.configurationVersion = 99;
+    // An unpinned day resolves to the latest snapshot (version 1). The preflight must
+    // show the resolved version (via resolveDayConfig), not the day's own pin — which
+    // here is absent and would otherwise render as "—".
+    delete day.configurationVersion;
 
     render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
 
     const preflight = screen.getByRole('region', { name: /preflight/i });
     expect(within(preflight).getByText(/version 1\b/i)).toBeInTheDocument();
-    expect(within(preflight).queryByText(/version 99/i)).not.toBeInTheDocument();
   });
 
   it('blocks the download in handleDownload even if the disabled button state is bypassed', async () => {

@@ -66,11 +66,16 @@ function reorderKeys(obj, order) {
  * Resolve a day's **effective** probe configuration: the electrode groups and
  * channel map that actually apply to this recording day.
  *
- * Selection rule (the single source of truth, shared with {@link mergeDayMetadata}):
- * day `deviceOverrides` > the configuration snapshot picked by
- * `day.configurationVersion` (falling back to the latest snapshot, then the first)
- * > an empty list. This is exactly the precedence the legacy merge used; factoring
- * it here ensures the merge and the reconfiguration wizard cannot diverge.
+ * Configuration snapshots are the authoritative source the export resolves from;
+ * the day pins which version applies. Selection rule (the single source of truth,
+ * shared with {@link mergeDayMetadata}): day `deviceOverrides` > the snapshot the day
+ * is pinned to (`day.configurationVersion`) > an empty list. A pinned version with no
+ * matching snapshot is persisted-state corruption and **fails closed** (throws) — it
+ * never silently falls back to a different version, which would export the wrong
+ * probe geometry. An unpinned day (no `configurationVersion`) uses the latest
+ * snapshot, the editor default. Day-level `deviceOverrides.bad_channels` are merged
+ * onto the resolved ntrode map. Factoring this here keeps the merge and the
+ * reconfiguration wizard from diverging.
  *
  * Returns references into the animal/config (read-only by contract); callers that
  * persist the result must clone it. `mergeDayMetadata` clones its whole output, so
@@ -79,38 +84,65 @@ function reorderKeys(obj, order) {
  * @param {import('./workspaceTypes').Animal} animal - Parent animal with snapshots.
  * @param {import('./workspaceTypes').Day} day - Recording day.
  * @returns {{ electrode_groups: object[], ntrode_electrode_group_channel_map: object[], configurationVersion: (number|undefined) }}
- *   `configurationVersion` is the version of the snapshot actually resolved (which
- *   may differ from `day.configurationVersion` when that pin is stale/missing and
- *   the fallback applies) — callers that surface the version must use this, not the
- *   day's pin, to stay consistent with what is exported.
- * @throws {Error} If the animal has no usable configuration history.
+ *   `configurationVersion` is the version of the snapshot actually resolved (the
+ *   latest, for an unpinned day) — callers that surface the version must use this,
+ *   not the day's pin, to stay consistent with what is exported.
+ * @throws {Error} If the animal has no configuration history, or the day pins a
+ *   version with no matching snapshot.
  */
 export function resolveDayConfig(animal, day) {
   const history = animal.configurationHistory;
-  const config =
-    (Array.isArray(history) &&
-      (history.find((c) => c.version === day.configurationVersion) ||
-        history[history.length - 1] ||
-        history[0])) ||
-    null;
-
-  // A day cannot be resolved without a device configuration. Fail loudly with an
-  // actionable message instead of a cryptic "cannot read properties of undefined"
-  // deep in the merge (e.g. a malformed/legacy persisted animal with no history, or
-  // a snapshot missing its `devices`).
-  if (!config || !config.devices) {
+  if (!Array.isArray(history) || history.length === 0) {
     throw new Error(
-      `Cannot resolve device configuration for day "${day?.id}": animal "${animal?.id}" has no usable configuration history.`
+      `Cannot resolve device configuration for day "${day?.id}": animal "${animal?.id}" has no configuration history.`
     );
   }
 
+  // The day is the source of truth for WHICH snapshot to use. A day that pins a
+  // specific version must resolve THAT snapshot — never a silent fallback to a
+  // different version, which would export the wrong probe geometry. A pin with no
+  // matching snapshot is persisted-state corruption and fails closed. An unpinned
+  // day (no configurationVersion — only legacy/test data; `createDay` always pins)
+  // uses the latest snapshot, the editor default.
+  const hasPin = day.configurationVersion != null;
+  const config = hasPin
+    ? history.find((c) => c.version === day.configurationVersion)
+    : history[history.length - 1];
+
+  if (!config || !config.devices) {
+    throw new Error(
+      hasPin
+        ? `Cannot resolve device configuration for day "${day?.id}": animal "${animal?.id}" has no snapshot for configuration version "${day?.configurationVersion}".`
+        : `Cannot resolve device configuration for day "${day?.id}": animal "${animal?.id}" has no usable configuration history.`
+    );
+  }
+
+  const electrodeGroups =
+    day.deviceOverrides?.electrode_groups || config.devices.electrode_groups || [];
+  const baseNtrodes =
+    day.deviceOverrides?.ntrode_electrode_group_channel_map ||
+    config.devices.ntrode_electrode_group_channel_map ||
+    [];
+
+  // Apply day-level bad-channel overrides onto the resolved ntrode map. The override
+  // map is keyed by ntrode_id; a present entry REPLACES that ntrode's `bad_channels`
+  // (the DevicesStep editor manages the full per-ntrode array). Keys are object
+  // (string) keys; normalize with String(ntrode_id) so the lookup survives a future
+  // change of ntrode_id to an integer. Clone the overridden entry so the snapshot is
+  // never mutated. An override keyed to an ntrode_id absent from the resolved map is
+  // ignored here (a stale/dangling reference; surfacing it is a validation concern).
+  const overrides = day.deviceOverrides?.bad_channels;
+  const ntrodes = overrides
+    ? baseNtrodes.map((n) =>
+        Object.hasOwn(overrides, String(n.ntrode_id))
+          ? { ...n, bad_channels: [...overrides[String(n.ntrode_id)]] }
+          : n
+      )
+    : baseNtrodes;
+
   return {
-    electrode_groups:
-      day.deviceOverrides?.electrode_groups || config.devices.electrode_groups || [],
-    ntrode_electrode_group_channel_map:
-      day.deviceOverrides?.ntrode_electrode_group_channel_map ||
-      config.devices.ntrode_electrode_group_channel_map ||
-      [],
+    electrode_groups: electrodeGroups,
+    ntrode_electrode_group_channel_map: ntrodes,
     configurationVersion: config.version,
   };
 }

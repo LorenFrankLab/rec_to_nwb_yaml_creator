@@ -429,15 +429,13 @@ describe('mergeDayMetadata', () => {
       expect(merged.electrode_groups[0].targeted_z).toBe('1.96');
     });
 
-    it('falls back to version 1 if specified version not found', () => {
+    it('fails closed when the specified version is not found (does not silently fall back)', () => {
       const animal = createTestAnimal();
       const day = createTestDay({ configurationVersion: 999 }); // Invalid version
 
-      const merged = mergeDayMetadata(animal, day);
-
-      // Should use first configuration (version 1)
-      expect(merged.electrode_groups).toHaveLength(1);
-      expect(merged.electrode_groups[0].id).toBe(0);
+      // A pin with no matching snapshot is persisted-state corruption. It must throw
+      // rather than silently export a different version's geometry.
+      expect(() => mergeDayMetadata(animal, day)).toThrow(/configuration version/i);
     });
 
     it('uses latest version if configurationVersion is null', () => {

@@ -4,54 +4,64 @@ import userEvent from '@testing-library/user-event';
 import DevicesStep from '../DevicesStep';
 
 describe('DevicesStep', () => {
+  const ELECTRODE_GROUPS = [
+    {
+      id: 0,
+      location: 'CA1',
+      device_type: 'tetrode_12.5',
+      description: 'Dorsal CA1 tetrode',
+      targeted_location: 'CA1',
+      targeted_x: 2.6,
+      targeted_y: -3.8,
+      targeted_z: 1.5,
+      units: 'mm',
+    },
+    {
+      id: 1,
+      location: 'PFC',
+      device_type: 'tetrode_12.5',
+      description: 'Prefrontal cortex tetrode',
+      targeted_location: 'PFC',
+      targeted_x: 1.0,
+      targeted_y: 2.0,
+      targeted_z: 2.5,
+      units: 'mm',
+    },
+  ];
+
+  const NTRODE_MAP = [
+    { ntrode_id: 0, electrode_group_id: 0, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+    { ntrode_id: 1, electrode_group_id: 1, bad_channels: [], map: { 0: 4, 1: 5, 2: 6, 3: 7 } },
+  ];
+
+  /**
+   * Wrap a devices object into a single-version configuration history, the shape
+   * `resolveDayConfig` (which DevicesStep now reads) requires.
+   *
+   * @param {object} devices - `{ electrode_groups, ntrode_electrode_group_channel_map }`.
+   * @returns {object[]} A one-entry configurationHistory.
+   */
+  const historyFor = (devices) => [
+    { version: 1, date: '2023-06-22', description: 'Initial configuration', devices, appliedToDays: [] },
+  ];
+
   const mockAnimal = {
     id: 'test-animal',
     devices: {
-      electrode_groups: [
-        {
-          id: 0,
-          location: 'CA1',
-          device_type: 'tetrode_12.5',
-          description: 'Dorsal CA1 tetrode',
-          targeted_location: 'CA1',
-          targeted_x: 2.6,
-          targeted_y: -3.8,
-          targeted_z: 1.5,
-          units: 'mm',
-        },
-        {
-          id: 1,
-          location: 'PFC',
-          device_type: 'tetrode_12.5',
-          description: 'Prefrontal cortex tetrode',
-          targeted_location: 'PFC',
-          targeted_x: 1.0,
-          targeted_y: 2.0,
-          targeted_z: 2.5,
-          units: 'mm',
-        },
-      ],
-      ntrode_electrode_group_channel_map: [
-        {
-          ntrode_id: 0,
-          electrode_group_id: 0,
-          bad_channels: [],
-          map: { 0: 0, 1: 1, 2: 2, 3: 3 },
-        },
-        {
-          ntrode_id: 1,
-          electrode_group_id: 1,
-          bad_channels: [],
-          map: { 0: 4, 1: 5, 2: 6, 3: 7 },
-        },
-      ],
+      electrode_groups: ELECTRODE_GROUPS,
+      ntrode_electrode_group_channel_map: NTRODE_MAP,
     },
+    configurationHistory: historyFor({
+      electrode_groups: ELECTRODE_GROUPS,
+      ntrode_electrode_group_channel_map: NTRODE_MAP,
+    }),
   };
 
   const mockDay = {
     id: 'test-animal-2023-06-22',
     animalId: 'test-animal',
     date: '2023-06-22',
+    configurationVersion: 1,
     deviceOverrides: {
       bad_channels: {
         '0': [],
@@ -235,12 +245,11 @@ describe('DevicesStep', () => {
   });
 
   it('handles empty state when no electrode groups', () => {
+    const noGroups = { electrode_groups: [], ntrode_electrode_group_channel_map: [] };
     const animalWithNoGroups = {
       ...mockAnimal,
-      devices: {
-        electrode_groups: [],
-        ntrode_electrode_group_channel_map: [],
-      },
+      devices: noGroups,
+      configurationHistory: historyFor(noGroups),
     };
 
     render(
@@ -348,12 +357,14 @@ describe('DevicesStep', () => {
   });
 
   it('handles data corruption (missing ntrode maps)', () => {
+    const missingMaps = {
+      electrode_groups: mockAnimal.devices.electrode_groups,
+      ntrode_electrode_group_channel_map: [], // Missing maps
+    };
     const animalWithMissingMaps = {
       ...mockAnimal,
-      devices: {
-        electrode_groups: mockAnimal.devices.electrode_groups,
-        ntrode_electrode_group_channel_map: [], // Missing maps
-      },
+      devices: missingMaps,
+      configurationHistory: historyFor(missingMaps),
     };
 
     render(
@@ -388,5 +399,78 @@ describe('DevicesStep', () => {
 
     const statusBadge = screen.getByLabelText(/status: all channels ok/i);
     expect(statusBadge).toBeInTheDocument();
+  });
+
+  describe('effective (pinned) configuration', () => {
+    // v1 has one CA1 group; v2 adds a CA3 group. animal.devices mirrors the LATEST (v2).
+    const V2_GROUPS = [
+      ELECTRODE_GROUPS[0],
+      { id: 2, location: 'CA3', device_type: 'tetrode_12.5', description: 'CA3 tetrode', targeted_location: 'CA3', targeted_x: 3.5, targeted_y: 3, targeted_z: 2.2, units: 'mm' },
+    ];
+    const V2_NTRODES = [
+      { ntrode_id: 0, electrode_group_id: 0, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+      { ntrode_id: 2, electrode_group_id: 2, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+    ];
+    const twoVersionAnimal = {
+      id: 'test-animal',
+      devices: { electrode_groups: V2_GROUPS, ntrode_electrode_group_channel_map: V2_NTRODES },
+      configurationHistory: [
+        { version: 1, date: '2023-06-20', description: 'Initial', devices: { electrode_groups: [ELECTRODE_GROUPS[0]], ntrode_electrode_group_channel_map: [NTRODE_MAP[0]] }, appliedToDays: [] },
+        { version: 2, date: '2023-06-22', description: 'Added CA3', devices: { electrode_groups: V2_GROUPS, ntrode_electrode_group_channel_map: V2_NTRODES }, appliedToDays: [] },
+      ],
+    };
+    const historicalDay = { ...mockDay, configurationVersion: 1, deviceOverrides: { bad_channels: {} } };
+    const wiring = {
+      animalDays: [historicalDay],
+      actions: { addConfigurationSnapshot: vi.fn(), applyConfigurationForward: vi.fn() },
+    };
+
+    it('renders the pinned snapshot ntrode list on a historical day, not live animal.devices', () => {
+      render(
+        <DevicesStep
+          animal={twoVersionAnimal}
+          day={historicalDay}
+          mergedDay={mockMergedDay}
+          onFieldUpdate={mockOnFieldUpdate}
+          {...wiring}
+        />
+      );
+
+      // v1's CA1 group is shown; the v2-only CA3 group (in live animal.devices) is NOT.
+      expect(screen.getAllByText(/electrode group 0: CA1/i).length).toBeGreaterThan(0);
+      expect(screen.queryAllByText(/electrode group 2: CA3/i)).toHaveLength(0);
+    });
+
+    it('shows the pinned configuration version and marks it historical', () => {
+      render(
+        <DevicesStep
+          animal={twoVersionAnimal}
+          day={historicalDay}
+          mergedDay={mockMergedDay}
+          onFieldUpdate={mockOnFieldUpdate}
+          {...wiring}
+        />
+      );
+
+      expect(screen.getByText(/configuration version 1/i)).toBeInTheDocument();
+      expect(screen.getByText(/^historical$/i)).toBeInTheDocument();
+    });
+
+    it('marks the latest configuration as latest', () => {
+      const latestDay = { ...mockDay, configurationVersion: 2, deviceOverrides: { bad_channels: {} } };
+      render(
+        <DevicesStep
+          animal={twoVersionAnimal}
+          day={latestDay}
+          mergedDay={mockMergedDay}
+          onFieldUpdate={mockOnFieldUpdate}
+          animalDays={[latestDay]}
+          actions={wiring.actions}
+        />
+      );
+
+      expect(screen.getByText(/configuration version 2/i)).toBeInTheDocument();
+      expect(screen.getByText(/^latest$/i)).toBeInTheDocument();
+    });
   });
 });

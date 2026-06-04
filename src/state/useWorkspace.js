@@ -205,6 +205,28 @@ export function useWorkspace(initialState = null) {
           }
           if (updates.devices) {
             updated.devices = { ...updated.devices, ...updates.devices };
+            // `animal.devices` is the editor's mirror of the LATEST configuration
+            // snapshot, which is the authoritative source the export resolves. Write
+            // the edit into that snapshot too, so probes configured after animal
+            // creation actually reach `resolveDayConfig` (otherwise the day exports
+            // empty electrode_groups). Reconfiguration forks a new latest version
+            // BEFORE editing, so this only ever rewrites the current latest — never a
+            // historical, frozen snapshot.
+            const history = updated.configurationHistory;
+            if (Array.isArray(history) && history.length > 0) {
+              const latest = history[history.length - 1];
+              latest.devices = {
+                ...latest.devices,
+                electrode_groups: structuredClone(
+                  updated.devices.electrode_groups || latest.devices?.electrode_groups || []
+                ),
+                ntrode_electrode_group_channel_map: structuredClone(
+                  updated.devices.ntrode_electrode_group_channel_map ||
+                    latest.devices?.ntrode_electrode_group_channel_map ||
+                    []
+                ),
+              };
+            }
           }
           if (updates.cameras) {
             updated.cameras = updates.cameras;

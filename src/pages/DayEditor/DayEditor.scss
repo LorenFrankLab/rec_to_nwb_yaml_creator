@@ -1582,6 +1582,27 @@
   font-weight: 600;
 }
 
+.config-version-tag {
+  margin-left: 0.5rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  vertical-align: middle;
+
+  &.config-version-tag-latest {
+    background: #e8f5e9;
+    color: #1b5e20;
+  }
+
+  &.config-version-tag-historical {
+    background: #fff3e0;
+    color: #e65100;
+  }
+}
+
 .config-version-applied {
   font-size: 0.85rem;
   color: #555;

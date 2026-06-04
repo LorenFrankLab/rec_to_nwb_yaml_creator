@@ -155,7 +155,7 @@ describe('diffProbeConfigs', () => {
 });
 
 describe('resolveDayConfig', () => {
-  it('selects the snapshot matching configurationVersion; falls back to latest when unmatched', () => {
+  it('selects the snapshot matching configurationVersion; fails closed when the pin is unmatched', () => {
     const { workspace, animalId, dayIds, v1, v2 } = makeReconfigWorkspace();
     const animal = workspace.animals[animalId];
 
@@ -168,11 +168,10 @@ describe('resolveDayConfig', () => {
       v2.electrode_groups.map((g) => g.id)
     );
 
-    // Unmatched version → falls back to the latest snapshot (v2), matching mergeDayMetadata.
+    // An unmatched pin is persisted-state corruption — fail closed rather than
+    // silently exporting a different version's geometry.
     const orphan = { ...day1, configurationVersion: 99 };
-    expect(resolveDayConfig(animal, orphan).electrode_groups.map((g) => g.id)).toEqual(
-      v2.electrode_groups.map((g) => g.id)
-    );
+    expect(() => resolveDayConfig(animal, orphan)).toThrow(/configuration version/i);
   });
 
   it('lets day deviceOverrides take precedence over the snapshot', () => {

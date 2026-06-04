@@ -6,6 +6,51 @@
 
 ---
 
+## Device resolution: export the configured probes and day bad channels (June 4, 2026)
+
+### Summary
+
+Closes two P0 data-loss defects in the workspace export path: configured probes were
+omitted from export, and day-level bad-channel edits were dropped. The workspace path
+now exports the electrode groups, ntrode map, and bad channels the user actually
+configured. **This changes new-path output for affected sessions; the 125 legacy golden
+baselines stay byte-identical** (they don't exercise `mergeDayMetadata`).
+
+### Changes
+
+- **`updateAnimal` mirrors devices into the latest configuration snapshot.** Configuration
+  snapshots are the authoritative source the export resolves (model B: snapshots are the
+  source of truth, `animal.devices` mirrors the latest, reconfiguration forks before
+  editing). Editing devices now writes both `animal.devices` and
+  `configurationHistory[latest].devices`, so probes configured after animal creation
+  actually reach `resolveDayConfig` — the P0-A fix.
+- **`resolveDayConfig` fails closed on a stale pin.** A day that pins a configuration
+  version with no matching snapshot now throws instead of silently falling back to a
+  different version (which would export the wrong probe geometry). An unpinned day still
+  resolves to the latest snapshot.
+- **Day bad-channel overrides are merged into the exported ntrode map (P0-B).**
+  `resolveDayConfig` applies `day.deviceOverrides.bad_channels` (keyed by `ntrode_id`,
+  normalized to survive phase 4's integer-id change, cloned so snapshots are never
+  mutated) onto each ntrode's `bad_channels`.
+- **DevicesStep edits the day's effective (pinned) configuration**, not live
+  `animal.devices` — so on a historical day the bad-channel editor targets the correct
+  ntrode list. A configuration badge shows the version and whether it is `latest` or
+  `historical`.
+- **Reconfiguration is fork-before-edit.** The wizard no longer shows a live-vs-snapshot
+  diff; it forks the current configuration into a new version, confirms which days move
+  to it (earlier days stay pinned), and applies it forward — the user then edits the new
+  geometry in the Animal Editor. The `addConfigurationSnapshot` / `applyConfigurationForward`
+  store actions and the returned-version contract are unchanged.
+
+> **Known limitation (deferred pre-cutover round-trip):** for an electrode group with
+> multiple ntrode rows, current `trodes_to_nwb` reads only the first row's `bad_channels`
+> while building the electrode table, so per-ntrode bad channels on a multi-shank probe
+> may be ignored downstream. App-side bad-channel guarantees are proven for single-ntrode
+> groups; the multi-shank case is flagged to verify (with a converter fix) in the deferred
+> round-trip.
+
+---
+
 ## Export gate fails closed (June 4, 2026)
 
 ### Summary

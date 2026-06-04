@@ -233,6 +233,30 @@ Recorded during implementation; revisit in the named phase.
    allowing any path to an empty result. Cross-cutting; do it deliberately in the validation
    phase (6) or persistence/hardening phase (7), not as a drive-by in phase 1.
 
+### Phase 2 findings / follow-ups
+
+1. **Stale/dangling bad-channel overrides are silently ignored (surface in phase 6).**
+   `resolveDayConfig` applies `day.deviceOverrides.bad_channels` only to ntrodes present
+   in the resolved (pinned) map. An override keyed to an `ntrode_id` absent from that map
+   (e.g. left over from a different configuration version after a reconfiguration) is
+   ignored — it cannot be attached and is not exported. This is the correct export
+   behavior, but the dropped marking is currently invisible to the user. Phase 6
+   (dangling-reference validation) should surface a warning that a day carries a
+   bad-channel override for an ntrode not in its configuration, so the scientist can
+   re-mark it on the correct ntrode.
+2. **`diffProbeConfigs` is now production-dead (remove in a later phase).** The
+   fork-before-edit reconfiguration wizard dropped the live-vs-snapshot diff, so
+   `src/state/configDiff.js`'s `diffProbeConfigs` is only referenced by its own tests
+   (`reconcileAppliedToDays` from the same module is still used). Left in place this
+   phase; remove it + its tests + the `workspaceTypes.js` doc reference in a cleanup pass.
+3. **A corrupt persisted day hard-crashes the Day Editor (improve to ErrorState later).**
+   `resolveDayConfig` now throws on a stale pin, and both `DayEditorStepper` (via
+   `mergeDayMetadata`) and `DevicesStep` call it during render — so a day pinning a
+   missing configuration version crashes the editor instead of showing the actionable
+   thrown message. This is fail-loud (not silent-wrong, which is the priority), but a
+   future change should catch the throw and route to `ErrorState` with the message,
+   without ever falling back to an empty-probes render.
+
 ## Estimated Effort
 
 ~11 PRs. Rough diff sizes: phase 1 small–medium (~200 LOC including repair links/preflight); phase 2 medium

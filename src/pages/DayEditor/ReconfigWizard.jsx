@@ -1,48 +1,35 @@
 import { useId, useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import Modal from '../../components/Modal/Modal';
-import { resolveDayConfig } from '../../state/workspaceUtils';
-import { diffProbeConfigs } from '../../state/configDiff';
 import './ReconfigWizard.scss';
 
 /**
- * Human-readable labels for the electrode-group fields a diff may flag as changed,
- * so a scientist sees "brain region" rather than the raw `location` key. Unmapped
- * keys fall through to the raw name.
- */
-const GROUP_FIELD_LABELS = {
-  location: 'brain region',
-  device_type: 'probe type',
-  description: 'description',
-  targeted_location: 'targeted region',
-  targeted_x: 'ML coordinate',
-  targeted_y: 'AP coordinate',
-  targeted_z: 'DV coordinate',
-  units: 'coordinate units',
-};
-
-const labelField = (field) => GROUP_FIELD_LABELS[field] || field;
-
-/**
- * Probe-reconfiguration wizard.
+ * Probe-reconfiguration wizard — fork-before-edit.
  *
- * Shows a structured diff between the configuration in effect for the previous day
- * (`prevDay`, or this day's own resolved config when there is no previous day) and
- * the current live animal device configuration, then versions that change as a new
- * {@link import('../../state/workspaceTypes').ConfigurationSnapshot} and applies it
- * forward to the chosen days.
+ * A recording day's probe geometry is a physical fact fixed at record time, so the
+ * app pins each day to a frozen configuration snapshot. Reconfiguration therefore
+ * **forks a new version before** the geometry is edited:
  *
- * It only **diffs and versions** existing configuration; electrode geometry and
- * channel maps are edited in the Animal Editor. Creation and assignment are two
- * store actions: `addConfigurationSnapshot` then `applyConfigurationForward`.
+ *   1. `addConfigurationSnapshot` clones the current latest configuration into a new
+ *      version (returns its assigned number, which is applied forward verbatim).
+ *   2. `applyConfigurationForward` repoints the selected days (this day onward) to
+ *      that new version.
+ *   3. `animal.devices` already mirrors the new latest (the new version is a clone of
+ *      the old latest it mirrored), so editing geometry afterward in the Animal Editor
+ *      writes only the new version — earlier days keep their frozen configuration *by
+ *      construction*.
+ *
+ * The wizard is a fork-point + affected-days confirmation: it shows which days move
+ * to the new version and that earlier days stay pinned, then forks. There is no
+ * live-vs-snapshot diff (geometry is edited afterward, not before).
  *
  * @param {object} props
  * @param {boolean} props.isOpen - Whether the dialog is shown.
- * @param {Function} props.onClose - Called (no args) on cancel/ESC/overlay and after a successful apply.
- * @param {object} props.animal - Animal whose live `devices` form the "next" config.
- * @param {object} props.day - The day being reconfigured (the default earliest applied day).
- * @param {object|null} [props.prevDay] - The chronologically previous day, or null.
- * @param {object[]} props.candidateDays - This day and all chronologically later days (apply-forward set).
+ * @param {Function} props.onClose - Called (no args) on cancel/ESC/overlay and after a successful fork.
+ * @param {object} props.animal - Animal whose latest configuration is forked.
+ * @param {object} props.day - The day being reconfigured (the earliest day to move).
+ * @param {object|null} [props.prevDay] - The chronologically previous day, or null (for the "stays pinned" note).
+ * @param {object[]} props.candidateDays - This day and all chronologically later days (the apply-forward set).
  * @param {object} props.actions - Store actions: `addConfigurationSnapshot`, `applyConfigurationForward`.
  * @returns {JSX.Element|null}
  */
@@ -60,18 +47,20 @@ export default function ReconfigWizard({
   const summaryId = `${baseId}-summary`;
   const errorId = `${baseId}-error`;
 
-  const nextConfig = useMemo(
-    () => ({
-      electrode_groups: animal.devices?.electrode_groups || [],
-      ntrode_electrode_group_channel_map: animal.devices?.ntrode_electrode_group_channel_map || [],
-    }),
-    [animal.devices]
-  );
-
-  const diff = useMemo(
-    () => diffProbeConfigs(resolveDayConfig(animal, prevDay || day), nextConfig),
-    [animal, prevDay, day, nextConfig]
-  );
+  // The configuration to fork is the current latest snapshot (which `animal.devices`
+  // mirrors). The new version starts identical to it; the user edits geometry after.
+  const latestDevices = useMemo(() => {
+    const history = animal.configurationHistory || [];
+    const latest = history[history.length - 1];
+    return {
+      electrode_groups:
+        latest?.devices?.electrode_groups || animal.devices?.electrode_groups || [],
+      ntrode_electrode_group_channel_map:
+        latest?.devices?.ntrode_electrode_group_channel_map ||
+        animal.devices?.ntrode_electrode_group_channel_map ||
+        [],
+    };
+  }, [animal]);
 
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(day.date);
@@ -89,26 +78,28 @@ export default function ReconfigWizard({
   };
 
   const handleApply = () => {
-    if (!diff.hasChanges) return;
+    if (latestDevices.electrode_groups.length === 0) {
+      setError('Configure probes in the Animal Editor before creating a new configuration version.');
+      return;
+    }
     if (!description.trim()) {
       setError('Enter a short description of what changed.');
       return;
     }
     if (selectedIds.size === 0) {
-      setError('Select at least one day to apply this configuration to.');
+      setError('Select at least one day to move to the new configuration.');
       return;
     }
 
-    // Version the change, then assign that exact version forward. The store assigns
-    // the version from its authoritative state and returns it, so we apply forward to
-    // the snapshot we just created instead of re-deriving the number from a possibly
-    // stale `animal` prop (which could mis-target a different version).
+    // Fork the current configuration into a new version, then move the selected days
+    // onto it. The store assigns the version from its authoritative state and returns
+    // it, so we apply forward to exactly the snapshot we just created.
     const newVersion = actions.addConfigurationSnapshot(animal.id, {
       date,
       description: description.trim(),
-      devices: structuredClone(nextConfig),
+      devices: structuredClone(latestDevices),
     });
-    // Apply in the candidate (chronological) order, filtered to the selected set.
+    // Apply in chronological (candidate) order, filtered to the selected set.
     const orderedIds = candidateDays.map((d) => d.id).filter((id) => selectedIds.has(id));
     actions.applyConfigurationForward(animal.id, newVersion, orderedIds);
 
@@ -123,27 +114,23 @@ export default function ReconfigWizard({
       onClose={onClose}
       title="Reconfigure devices"
       titleId={titleId}
-      // A consequential action (reassigns configuration across many recording days).
+      // A consequential action (forks a new configuration across many recording days).
       role="alertdialog"
-      describedById={diff.hasChanges ? summaryId : 'reconfig-no-change'}
+      describedById={summaryId}
       className="reconfig-wizard"
     >
-      {!diff.hasChanges ? (
-        <p id="reconfig-no-change" className="reconfig-no-change" data-testid="reconfig-no-change">
-          No configuration change detected between{' '}
-          {prevDay ? `${prevDay.date}` : 'the baseline'} and the current animal
-          configuration. Edit the electrode groups in the Animal Editor first, then
-          reopen this wizard to version the change.
-        </p>
-      ) : (
-        <div className="reconfig-diff">
-          <p id={summaryId} className="reconfig-summary">
-            This versions the current device configuration and applies it to the days
-            you select below. Days before this one are not affected. Review the changes:
-          </p>
-          <ConfigDiffView diff={diff} />
-        </div>
-      )}
+      <p id={summaryId} className="reconfig-summary">
+        This creates a new configuration version starting {day.date}. The selected
+        days move to the new version; earlier days keep their current configuration.
+        After confirming, edit the new probe geometry in the Animal Editor — only the
+        new version (and the days on it) changes.
+      </p>
+
+      <p className="reconfig-pinned-note">
+        {prevDay
+          ? `Days through ${prevDay.date} stay pinned to their current configuration and are not affected.`
+          : 'There are no earlier days; this is the first recording day.'}
+      </p>
 
       <form
         className="reconfig-form"
@@ -162,26 +149,20 @@ export default function ReconfigWizard({
               setDescription(e.target.value);
             }}
             placeholder="e.g. Lowered CA1 tetrodes by 40 µm"
-            disabled={!diff.hasChanges}
             aria-describedby={error ? errorId : undefined}
           />
         </label>
 
         <label className="reconfig-field">
           <span>Effective date</span>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            disabled={!diff.hasChanges}
-          />
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </label>
 
-        <fieldset className="reconfig-days" disabled={!diff.hasChanges}>
-          <legend>Apply to days</legend>
+        <fieldset className="reconfig-days">
+          <legend>Days moving to the new configuration</legend>
           <p className="reconfig-days-hint">
-            All days from {day.date} onward are selected by default. To change an
-            earlier day, open its Day Editor individually.
+            All days from {day.date} onward are selected by default. To move an earlier
+            day, open its Day Editor individually.
           </p>
           {candidateDays.map((d) => (
             <label key={d.id} className="reconfig-day-option">
@@ -210,8 +191,8 @@ export default function ReconfigWizard({
           >
             Cancel
           </button>
-          <button type="submit" className="btn-primary" disabled={!diff.hasChanges}>
-            Apply to {selectedIds.size} {selectedIds.size === 1 ? 'day' : 'days'}
+          <button type="submit" className="btn-primary">
+            Create version & apply to {selectedIds.size} {selectedIds.size === 1 ? 'day' : 'days'}
           </button>
         </div>
       </form>
@@ -230,69 +211,4 @@ ReconfigWizard.propTypes = {
     addConfigurationSnapshot: PropTypes.func.isRequired,
     applyConfigurationForward: PropTypes.func.isRequired,
   }).isRequired,
-};
-
-/**
- * Read-only rendering of a {@link diffProbeConfigs} result.
- *
- * @param {object} props
- * @param {import('../../state/workspaceTypes').ProbeConfigDiff} props.diff - The structured diff.
- * @returns {JSX.Element}
- */
-function ConfigDiffView({ diff }) {
-  const { electrodeGroups, channelMaps } = diff;
-  return (
-    <div className="config-diff">
-      <section aria-label="Electrode group changes">
-        <h3>Electrode groups</h3>
-        {electrodeGroups.added.length === 0 &&
-          electrodeGroups.removed.length === 0 &&
-          electrodeGroups.changed.length === 0 && <p className="diff-none">No electrode group changes.</p>}
-        {electrodeGroups.added.map((g) => (
-          <p key={`a-${g.id}`} className="diff-added">
-            + Added group {g.id} ({g.location}, {g.device_type})
-          </p>
-        ))}
-        {electrodeGroups.removed.map((g) => (
-          <p key={`r-${g.id}`} className="diff-removed">
-            − Removed group {g.id} ({g.location})
-          </p>
-        ))}
-        {electrodeGroups.changed.map((c) => (
-          <p key={`c-${c.id}`} className="diff-changed">
-            ~ Group {c.id} changed: {c.fields.map(labelField).join(', ')}
-          </p>
-        ))}
-      </section>
-
-      <section aria-label="Channel map changes">
-        <h3>Channel maps</h3>
-        {channelMaps.added.length === 0 &&
-          channelMaps.removed.length === 0 &&
-          channelMaps.changed.length === 0 && <p className="diff-none">No channel map changes.</p>}
-        {channelMaps.added.map((n) => (
-          <p key={`a-${n.ntrode_id}`} className="diff-added">
-            + Added ntrode {n.ntrode_id} (group {n.electrode_group_id})
-          </p>
-        ))}
-        {channelMaps.removed.map((n) => (
-          <p key={`r-${n.ntrode_id}`} className="diff-removed">
-            − Removed ntrode {n.ntrode_id}
-          </p>
-        ))}
-        {channelMaps.changed.map((c) => (
-          <p key={`c-${c.ntrode_id}`} className="diff-changed">
-            ~ Ntrode {c.ntrode_id} changed:{' '}
-            {[c.mapChanged && 'channel map', c.badChannelsChanged && 'bad channels']
-              .filter(Boolean)
-              .join(', ')}
-          </p>
-        ))}
-      </section>
-    </div>
-  );
-}
-
-ConfigDiffView.propTypes = {
-  diff: PropTypes.object.isRequired,
 };

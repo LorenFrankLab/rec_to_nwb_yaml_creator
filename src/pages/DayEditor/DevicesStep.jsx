@@ -4,6 +4,7 @@ import ReadOnlyDeviceInfo from './ReadOnlyDeviceInfo';
 import BadChannelsEditor from './BadChannelsEditor';
 import ReconfigWizard from './ReconfigWizard';
 import { reconcileAppliedToDays } from '../../state/configDiff';
+import { resolveDayConfig } from '../../state/workspaceUtils';
 import './DayEditor.scss';
 
 /**
@@ -31,8 +32,14 @@ import './DayEditor.scss';
  * @returns {JSX.Element}
  */
 export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, animalDays = undefined, actions = undefined }) {
-  const electrodeGroups = animal.devices?.electrode_groups || [];
   const [wizardOpen, setWizardOpen] = useState(false);
+
+  // Render the day's EFFECTIVE (pinned) configuration, not live `animal.devices`.
+  // On a historical day, `animal.devices` mirrors the *latest* version, so editing
+  // bad channels against it would target the wrong ntrode list. `resolveDayConfig`
+  // gives the snapshot the day is actually pinned to — matching what the export uses.
+  const effectiveConfig = useMemo(() => resolveDayConfig(animal, day), [animal, day]);
+  const electrodeGroups = effectiveConfig.electrode_groups;
 
   // Configuration-version legibility (only when wired with store actions + the
   // animal's days, i.e. inside the real Day Editor — not in isolated unit renders).
@@ -40,20 +47,22 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
 
   const reconfig = useMemo(() => {
     if (!reconfigEnabled) return null;
-    const version = day.configurationVersion;
+    const version = effectiveConfig.configurationVersion;
     const snapshot = (animal.configurationHistory || []).find((s) => s.version === version) || null;
     const daysById = Object.fromEntries(animalDays.map((d) => [d.id, d]));
     const appliedCount = (reconcileAppliedToDays(animal, daysById)[version] || []).length;
     const idx = animalDays.findIndex((d) => d.id === day.id);
     const prevDay = idx > 0 ? animalDays[idx - 1] : null;
     const candidateDays = idx >= 0 ? animalDays.slice(idx) : [day];
-    return { version, snapshot, appliedCount, prevDay, candidateDays };
-  }, [reconfigEnabled, animal, day, animalDays]);
+    const history = animal.configurationHistory || [];
+    const latestVersion = history.length > 0 ? history[history.length - 1].version : version;
+    return { version, snapshot, appliedCount, prevDay, candidateDays, isLatest: version === latestVersion };
+  }, [reconfigEnabled, animal, day, animalDays, effectiveConfig.configurationVersion]);
 
   // Wrap in useMemo to prevent changing on every render
   const ntrodeChannelMap = useMemo(() => {
-    return animal.devices?.ntrode_electrode_group_channel_map || [];
-  }, [animal.devices?.ntrode_electrode_group_channel_map]);
+    return effectiveConfig.ntrode_electrode_group_channel_map || [];
+  }, [effectiveConfig.ntrode_electrode_group_channel_map]);
 
   // Get bad channels for current day (with safe fallback)
   const badChannels = useMemo(() => {
@@ -227,6 +236,16 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
                 {reconfig.snapshot
                   ? `: ${reconfig.snapshot.description || 'No description'} (${reconfig.snapshot.date || 'date unknown'})`
                   : ''}
+                <span
+                  className={`config-version-tag config-version-tag-${reconfig.isLatest ? 'latest' : 'historical'}`}
+                >
+                  {reconfig.isLatest ? 'latest' : 'historical'}
+                </span>
+              </span>
+              <span className="config-version-applied">
+                {reconfig.isLatest
+                  ? 'Editing day-level bad channels against the latest configuration. Probe geometry is edited in the Animal Editor.'
+                  : 'This is a historical configuration. You are editing day-level bad channels against a pinned past snapshot, not changing probe geometry.'}
               </span>
               <span className="config-version-applied">
                 Applied to {reconfig.appliedCount} {reconfig.appliedCount === 1 ? 'day' : 'days'}
