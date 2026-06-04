@@ -215,6 +215,25 @@ not executed here.
   `shared-contracts.md`, `phase-5`, this file, and the review matrix were updated accordingly; the
   within-path golden baselines are unchanged.
 
+- **2026-06-03 — Phase 5 scope: root-cause export-reachability fix (in-scope deviation, owner-approved).**
+  Implementing Phase 5 surfaced a structural blocker: `mergeDayMetadata` always emitted `keywords: []`,
+  `units: {}`, and an empty `default_header_file_path`, all of which the schema rejects when
+  present-but-empty (keywords `minItems`, units required `analog`, non-empty pattern). Because the
+  workspace model had **no `keywords` field at all**, *no* day — however complete — could validate clean,
+  so the (now-real) `validation` step was permanently in error and the Export gate could never unlock.
+  The phase doc's guard "do not modify `mergeDayMetadata`" was about not changing its **key order**
+  (that is Phase 6); fabricating schema-invalid empty values is a correctness bug. Resolution (approved):
+  the merge now **omits** `keywords`/`units`/`default_header_file_path` when empty (matching a clean
+  hand-authored file), a `keywords` field was added to the `Day` model + a Keywords editor in the
+  Overview step, and the new-path snapshot + `REALISTIC_ALWAYS_ON_KEYS` were updated (now only `device`
+  is always added beyond the fixture). The within-path golden baselines remain byte-identical, the
+  encoder/schema are unchanged, and `isExportEnabled` was not loosened. **Phase 6 note:** legacy
+  `exportAll` emits `keywords: []` from `defaultYMLValues`, so byte-for-byte legacy parity must reconcile
+  present-vs-absent for empty optional keys, not only key order.
+- **Follow-up (deferred):** `units` and `default_header_file_path` still have no dedicated workspace
+  editor — they are simply omitted when empty (valid), but a future phase may add entry fields for labs
+  that set them. Tracked here so the omission is not mistaken for full coverage.
+
 ## Estimated Effort
 
 Large. Rough diff sizing per phase: P0 small (~docs + config + 1 dep bump); P1 medium (~300–500 LOC

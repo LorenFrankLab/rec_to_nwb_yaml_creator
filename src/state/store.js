@@ -430,6 +430,7 @@ export function useStore(initialState = null) {
               experiment_description: session.experiment_description,
               weight: session.weight,
             },
+            keywords: [],
             tasks: [],
             behavioral_events: [],
             associated_files: [],

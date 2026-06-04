@@ -7,7 +7,7 @@
  *
  * Guarantees:
  * - Byte-for-byte reproducible output (same input -> same output)
- * - Sorted object keys for stability
+ * - Object keys are emitted in the input object's insertion order (NOT sorted)
  * - Unix line endings (\n)
  * - UTF-8 encoding
  * - Consistent quoting rules

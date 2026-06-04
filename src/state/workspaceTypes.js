@@ -232,6 +232,7 @@
  * @property {string} experimentDate - Date in mmddYYYY format (for filename)
  * @property {string} [sessionStartTime] - ISO datetime of session start
  * @property {SessionMetadata} session - Session-specific metadata
+ * @property {string[]} [keywords] - Optional searchable keyword tags (NWB keywords)
  * @property {Task[]} tasks - Behavioral tasks
  * @property {BehavioralEvent[]} behavioral_events - DIO events
  * @property {AssociatedFile[]} associated_files - Data files

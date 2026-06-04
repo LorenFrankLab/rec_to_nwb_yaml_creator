@@ -172,7 +172,61 @@ describe('mergeDayMetadata', () => {
       expect(merged).toHaveProperty('associated_video_files');
       expect(merged).toHaveProperty('times_period_multiplier');
       expect(merged).toHaveProperty('raw_data_to_volts');
-      expect(merged).toHaveProperty('default_header_file_path');
+    });
+  });
+
+  describe('Optional empty-key omission', () => {
+    // The schema permits keywords / units / default_header_file_path to be ABSENT
+    // (minimal-valid.yml and realistic-session.yml omit all three and validate
+    // clean), but rejects them when present-but-empty (keywords minItems, units
+    // required analog, default_header_file_path non-empty pattern). The merge must
+    // therefore omit them when empty rather than manufacture a schema-invalid value.
+
+    it('omits keywords when the day has none', () => {
+      const merged = mergeDayMetadata(createTestAnimal(), createTestDay());
+      expect(merged).not.toHaveProperty('keywords');
+    });
+
+    it('includes keywords when the day provides a non-empty list', () => {
+      const merged = mergeDayMetadata(
+        createTestAnimal(),
+        createTestDay({ keywords: ['spatial', 'w-track'] })
+      );
+      expect(merged.keywords).toEqual(['spatial', 'w-track']);
+    });
+
+    it('omits units when the day does not specify them', () => {
+      const merged = mergeDayMetadata(
+        createTestAnimal(),
+        createTestDay({
+          technical: {
+            times_period_multiplier: 1.5,
+            raw_data_to_volts: 0.195,
+            default_header_file_path: '',
+            units: undefined,
+          },
+        })
+      );
+      expect(merged).not.toHaveProperty('units');
+    });
+
+    it('omits default_header_file_path when it is empty', () => {
+      const merged = mergeDayMetadata(createTestAnimal(), createTestDay());
+      expect(merged).not.toHaveProperty('default_header_file_path');
+    });
+
+    it('includes default_header_file_path when it is set', () => {
+      const merged = mergeDayMetadata(
+        createTestAnimal(),
+        createTestDay({
+          technical: {
+            times_period_multiplier: 1.5,
+            raw_data_to_volts: 0.195,
+            default_header_file_path: 'default_header.xml',
+          },
+        })
+      );
+      expect(merged.default_header_file_path).toBe('default_header.xml');
     });
   });
 
@@ -422,7 +476,9 @@ describe('mergeDayMetadata', () => {
 
       const merged = mergeDayMetadata(animal, day);
 
-      // Verify top-level structure matches legacy exporter
+      // Verify the always-present top-level structure matches the legacy exporter.
+      // keywords / units / default_header_file_path are intentionally absent here
+      // because this day leaves them empty (covered by "Optional empty-key omission").
       const expectedKeys = [
         'experimenter_name',
         'lab',
@@ -430,7 +486,6 @@ describe('mergeDayMetadata', () => {
         'experiment_description',
         'session_description',
         'session_id',
-        'keywords',
         'subject',
         'data_acq_device',
         'device',
@@ -443,31 +498,11 @@ describe('mergeDayMetadata', () => {
         'associated_video_files',
         'times_period_multiplier',
         'raw_data_to_volts',
-        'default_header_file_path',
-        'units',
       ];
 
       expectedKeys.forEach(key => {
         expect(merged).toHaveProperty(key);
       });
-    });
-
-    it('initializes keywords as empty array', () => {
-      const animal = createTestAnimal();
-      const day = createTestDay();
-
-      const merged = mergeDayMetadata(animal, day);
-
-      expect(merged.keywords).toEqual([]);
-    });
-
-    it('initializes units as empty object if not specified', () => {
-      const animal = createTestAnimal();
-      const day = createTestDay({ technical: { units: undefined } });
-
-      const merged = mergeDayMetadata(animal, day);
-
-      expect(merged.units).toEqual({});
     });
 
     it('includes units if specified in day', () => {

@@ -78,6 +78,25 @@ describe('OverviewStep', () => {
     expect(screen.getByDisplayValue('remy_20230622')).toBeInTheDocument();
   });
 
+  it('adds a keyword and updates the day keywords field', async () => {
+    const user = userEvent.setup();
+    const onFieldUpdate = vi.fn();
+
+    render(
+      <OverviewStep
+        animal={mockAnimal}
+        day={mockDay}
+        mergedDay={mockMergedDay}
+        onFieldUpdate={onFieldUpdate}
+      />
+    );
+
+    await user.type(screen.getByRole('textbox', { name: /add a keyword/i }), 'spatial');
+    await user.click(screen.getByRole('button', { name: /add keyword/i }));
+
+    expect(onFieldUpdate).toHaveBeenCalledWith('keywords', ['spatial']);
+  });
+
   it('calls onFieldUpdate on blur for editable fields', async () => {
     const user = userEvent.setup();
     const onFieldUpdate = vi.fn();

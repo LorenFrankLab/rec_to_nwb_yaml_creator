@@ -48,14 +48,16 @@ export const FLAGS = {
   // ============================================================================
 
   /**
-   * Enable shadow export validation in tests
+   * Enforce the encoder-stability pre-download gate for the new export path.
    *
-   * When true, runs both old and new YAML export implementations and compares
-   * outputs byte-for-byte. Fails tests if outputs differ.
+   * When true (the default), a failed encoder-stability check before a workspace
+   * YAML download is unconditionally fatal for that download. When false, the
+   * failure is a debug-only override: the download proceeds with a loud warning.
+   * Also used by tests that compare export implementations.
    *
-   * Purpose: Ensure YAML export parity during refactoring
+   * Purpose: Guard YAML export integrity; gate the debug override of the runtime check
    * Milestone: M1
-   * Default: true (always validate in tests)
+   * Default: true (block on failure)
    */
   shadowExportStrict: true,
 

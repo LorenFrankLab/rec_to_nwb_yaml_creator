@@ -6,6 +6,49 @@
 
 ---
 
+## Day Validation Step + Export with Shadow Parity (June 3, 2026) ✅ COMPLETE
+
+### Summary
+
+The new multi-page workspace UI can now validate a recording day and download its
+YAML file end-to-end. A per-day Validation step surfaces every issue, and an Export
+step previews and downloads the YAML — with each download guarded by an
+encoder-stability pre-download check.
+
+### Changes
+
+- **Validation step:** runs the shared `validate()` routine against the merged
+  animal + day metadata and lists issues grouped by severity (errors, warnings, info)
+  and by editor step, with a top-line summary and a ready-to-export / blocked
+  indicator keyed on whether any error-severity issue remains.
+- **Export step:** builds the flat model via `mergeDayMetadata`, shows the resolved
+  download filename (the experiment date is injected for the filename only, never the
+  YAML body) and an optional YAML preview, and downloads the file.
+- **Export safety — encoder-stability gate:** before every download the new UI
+  recomputes the YAML and verifies the encoder does not mutate its input in place
+  (`encodeYaml(merged)` vs `encodeYaml(structuredClone(merged))`). On a mismatch the
+  download is **blocked** and a diff is shown; `shadowExportStrict` (default `true`)
+  is a debug-only override of this gate. This is an encoder-stability check — it does
+  **not** prove byte-for-byte parity with the legacy export path.
+- **Parity model:** the new path is proven **semantically** parity-equal to the
+  legacy export (parse-back deep-equal against the `realistic-session.yml` fixture)
+  and guarded by a checked-in **new-path byte snapshot**
+  (`workspace-export.realistic.yml`). The within-path `golden-yaml.baseline.test.js`
+  continues to prove the encoder's formatting is unchanged (byte-identical). True
+  byte-for-byte parity with the legacy export bytes is a deliberate follow-up
+  (`mergeDayMetadata` key-order alignment).
+- **Correctness fix (export reachability):** `mergeDayMetadata` previously always
+  emitted `keywords: []`, `units: {}`, and an empty `default_header_file_path`, which
+  the schema rejects (keywords `minItems`, units required `analog`, non-empty
+  pattern) — so a complete day could never validate clean and Export was permanently
+  gated. The merge now **omits these optional keys when empty** (matching a clean
+  hand-authored file), so a complete day validates clean and exports. A new
+  **Keywords editor** in the Overview step lets users add searchable keyword tags
+  (stored on the day; included only when non-empty). YAML golden baselines are
+  unaffected.
+
+---
+
 ## Workspace Persistence & Save-State Integrity (June 3, 2026) ✅ COMPLETE
 
 ### Summary

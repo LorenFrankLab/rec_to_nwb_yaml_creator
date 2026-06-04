@@ -49,7 +49,6 @@ export function mergeDayMetadata(animal, day) {
     experiment_description: day.session.experiment_description || '',
     session_description: day.session.session_description,
     session_id: day.session.session_id,
-    keywords: [], // Could auto-generate from tasks in future
 
     // === From Animal: Subject (with day overrides) ===
     subject: {
@@ -82,9 +81,23 @@ export function mergeDayMetadata(animal, day) {
     // === From Day: Technical Parameters ===
     times_period_multiplier: day.technical.times_period_multiplier,
     raw_data_to_volts: day.technical.raw_data_to_volts,
-    default_header_file_path: day.technical.default_header_file_path,
-    units: day.technical.units || {},
   };
+
+  // === Conditional: Optional schema-constrained keys ===
+  // The schema permits keywords / units / default_header_file_path to be ABSENT
+  // but rejects them when present-but-empty (keywords minItems, units required
+  // analog, default_header_file_path non-empty pattern). A clean hand-authored
+  // file omits them entirely. So include each ONLY when it has real content,
+  // rather than manufacture a schema-invalid empty value.
+  if (Array.isArray(day.keywords) && day.keywords.length > 0) {
+    merged.keywords = day.keywords;
+  }
+  if (day.technical.default_header_file_path) {
+    merged.default_header_file_path = day.technical.default_header_file_path;
+  }
+  if (day.technical.units && Object.keys(day.technical.units).length > 0) {
+    merged.units = day.technical.units;
+  }
 
   // === Conditional: Optogenetics (only if animal has optogenetics) ===
   if (animal.optogenetics) {

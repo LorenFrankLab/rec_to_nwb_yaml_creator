@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import Breadcrumb from './Breadcrumb';
 import ReadOnlyField from './ReadOnlyField';
+import KeywordsEditor from './KeywordsEditor';
 import { validateField } from './validation';
 
 /**
@@ -129,6 +130,11 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate }) 
               Leave blank to use animal's default: "{animal.experiment_description || 'None set'}"
             </span>
           </div>
+
+          <KeywordsEditor
+            value={day.keywords}
+            onChange={(keywords) => onFieldUpdate('keywords', keywords)}
+          />
         </div>
       </section>
 
@@ -231,6 +237,7 @@ OverviewStep.propTypes = {
   }).isRequired,
   day: PropTypes.shape({
     date: PropTypes.string.isRequired,
+    keywords: PropTypes.arrayOf(PropTypes.string),
     session: PropTypes.shape({
       session_id: PropTypes.string,
       session_description: PropTypes.string,

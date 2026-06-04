@@ -60,7 +60,11 @@ export function computeStepStatus(day, mergedDay) {
     devices: computeDevicesStatus(day, mergedDay),
     epochs: computeEpochsStatus(day, errorsByStep.epochs),
     // (errorsByStep.epochs is scoped to task-path errors inside computeEpochsStatus)
-    validation: 'incomplete', // Day validation step wired in a later phase
+    // The validation step owns the catch-all bucket (anything not routed to
+    // overview/devices/epochs). It is in error only when that bucket has an
+    // error-severity issue; an empty/clean catch-all reports valid so it stops
+    // permanently disabling Export.
+    validation: errorsByStep.validation.some(i => i.severity === 'error') ? 'error' : 'valid',
     export: issues.filter(i => i.severity === 'error').length === 0 ? 'valid' : 'error',
   };
 }

@@ -8,19 +8,19 @@ import SaveIndicator from './SaveIndicator';
 import OverviewStep from './OverviewStep';
 import DevicesStep from './DevicesStep';
 import TasksEpochsStep from './TasksEpochsStep';
-import ValidationStub from './ValidationStub';
-import ExportStub from './ExportStub';
+import ValidationStep from './ValidationStep';
+import ExportStep from './ExportStep';
 import ErrorState from './ErrorState';
 
 /**
  * Day Editor Stepper - Container for multi-step session metadata editing
  *
  * Manages the day editor workflow with 5 steps:
- * 1. Overview - Session metadata (implemented)
- * 2. Devices - Electrode groups, cameras (implemented)
- * 3. Epochs - Tasks, behavioral events (implemented)
- * 4. Validation - Summary of all errors (not yet available)
- * 5. Export - Download YAML file (gated until all steps valid)
+ * 1. Overview - Session metadata
+ * 2. Devices - Electrode groups, cameras
+ * 3. Epochs - Tasks, behavioral events
+ * 4. Validation - Summary of all validation issues
+ * 5. Export - Download YAML file (gated until all prerequisite steps valid)
  *
  * @returns {JSX.Element}
  *
@@ -87,16 +87,14 @@ export default function DayEditorStepper() {
     actions.updateDay(dayId, { [topLevelKey]: updated[topLevelKey] });
   }, [day, dayId, actions]);
 
-  // Step configuration
-  // Validation is not yet available, so it stays disabled rather than silently
-  // opening empty content. Export stays gated by isExportEnabled (every step
-  // valid). The Validation step becomes functional in later work.
+  // Step configuration. Export stays gated by isExportEnabled (every prerequisite
+  // step valid, including the now-real Validation step).
   const steps = [
     { id: 'overview', label: 'Overview', component: OverviewStep },
     { id: 'devices', label: 'Devices', component: DevicesStep },
     { id: 'epochs', label: 'Epochs', component: TasksEpochsStep },
-    { id: 'validation', label: 'Validation', component: ValidationStub, disabled: true },
-    { id: 'export', label: 'Export', component: ExportStub },
+    { id: 'validation', label: 'Validation', component: ValidationStep },
+    { id: 'export', label: 'Export', component: ExportStep },
   ];
 
   // Early returns AFTER all hooks (Rules of Hooks requirement)

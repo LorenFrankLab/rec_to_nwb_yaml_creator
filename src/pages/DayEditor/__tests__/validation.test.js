@@ -158,8 +158,31 @@ describe('computeStepStatus', () => {
     // No electrode groups → devices incomplete; no tasks → epochs incomplete.
     expect(status.devices).toBe('incomplete');
     expect(status.epochs).toBe('incomplete');
-    // Validation step is wired in a later phase.
-    expect(status.validation).toBe('incomplete');
+  });
+});
+
+describe('computeStepStatus validation status', () => {
+  // A model that validates clean (mirrors minimal-valid.yml): empty catch-all bucket.
+  const cleanMerged = {
+    experimenter_name: ['Doe, John'],
+    lab: 'Frank',
+    institution: 'University of California, San Francisco',
+    data_acq_device: [
+      { name: 'SpikeGadgets', system: 'SpikeGadgets', amplifier: 'Intan', adc_circuit: 'Intan' },
+    ],
+    times_period_multiplier: 1.5,
+    raw_data_to_volts: 0.195,
+  };
+  const day = { session: { session_id: 'remy_20230622', session_description: 'Day 1' } };
+
+  it('returns "valid" when the catch-all validation bucket has no error', () => {
+    expect(computeStepStatus(day, cleanMerged).validation).toBe('valid');
+  });
+
+  it('returns "error" when the catch-all validation bucket has an error-severity issue', () => {
+    // keywords: [] fails the schema's minItems and routes to the catch-all bucket.
+    const merged = { ...cleanMerged, keywords: [] };
+    expect(computeStepStatus(day, merged).validation).toBe('error');
   });
 });
 
