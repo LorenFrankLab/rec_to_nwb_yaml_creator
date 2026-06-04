@@ -3,6 +3,38 @@ import PropTypes from 'prop-types';
 import { findIdentityDivergence, DATA_ACQ_DEPENDENT_FIELDS, IDENTITY_FIELD_LABELS } from './identitySafety';
 import './DataAcqSection.scss';
 
+const DEVICE_FIELDS = ['name', 'system', 'amplifier', 'adc_circuit'];
+const REQUIRED_DEVICE_FIELDS = DEVICE_FIELDS;
+
+/**
+ *
+ * @param fields
+ */
+function normalizeDeviceFields(fields) {
+  return {
+    name: String(fields.name ?? '').trim(),
+    system: String(fields.system ?? '').trim(),
+    amplifier: String(fields.amplifier ?? '').trim(),
+    adc_circuit: String(fields.adc_circuit ?? '').trim(),
+  };
+}
+
+/**
+ *
+ * @param device
+ */
+function isCompleteDevice(device) {
+  return REQUIRED_DEVICE_FIELDS.every((field) => device[field]);
+}
+
+/**
+ *
+ * @param device
+ */
+function dependentFields(device) {
+  return Object.fromEntries(DATA_ACQ_DEPENDENT_FIELDS.map((field) => [field, device[field]]));
+}
+
 /**
  * DataAcqSection - Data Acquisition Device + technical defaults (Animal Editor).
  *
@@ -43,12 +75,11 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
   // Set when the current device fields would reuse another device's name with
   // divergent dependent values. Blocks the save until resolved.
   const [divergence, setDivergence] = useState(null);
+  const [deviceError, setDeviceError] = useState('');
 
   const handleFieldChange = (field, value) => {
     setLocalState((prev) => ({ ...prev, [field]: value }));
   };
-
-  const DEVICE_FIELDS = ['name', 'system', 'amplifier', 'adc_circuit'];
 
   /**
    * Persist the device (as a one-element array) unless its name diverges from an
@@ -59,22 +90,37 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
    */
   const commit = (field, nextState) => {
     if (DEVICE_FIELDS.includes(field)) {
-      const candidate = {
-        name: nextState.name.trim(),
-        system: nextState.system,
-        amplifier: nextState.amplifier,
-        adc_circuit: nextState.adc_circuit,
-      };
+      const candidate = normalizeDeviceFields(nextState);
+      if (!isCompleteDevice(candidate)) {
+        setDivergence(null);
+        setDeviceError('Complete name, system, amplifier, and ADC circuit before saving this device.');
+        return;
+      }
+
+      const savedDevice = normalizeDeviceFields(device);
+      const savedIdentity = isCompleteDevice(savedDevice)
+        ? [{
+            name: savedDevice.name,
+            label: `${animal.id} data-acq device saved identity`,
+            fields: dependentFields(savedDevice),
+          }]
+        : [];
       const conflict = findIdentityDivergence(
         candidate.name,
-        { system: candidate.system, amplifier: candidate.amplifier, adc_circuit: candidate.adc_circuit },
+        dependentFields(candidate),
+        savedIdentity
+      ) || findIdentityDivergence(
+        candidate.name,
+        dependentFields(candidate),
         dataAcqRegistry
       );
       if (conflict) {
         setDivergence(conflict);
+        setDeviceError('');
         return; // Block: do not write a divergent reuse.
       }
       setDivergence(null);
+      setDeviceError('');
       onFieldUpdate('data_acq_device', [candidate]);
       return;
     }
@@ -147,7 +193,9 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
 
         {/* Amplifier */}
         <div className="form-group">
-          <label htmlFor="amplifier">Amplifier</label>
+          <label htmlFor="amplifier">
+            Amplifier <span className="required">*</span>
+          </label>
           <input
             type="text"
             id="amplifier"
@@ -155,12 +203,15 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
             onChange={(e) => handleFieldChange('amplifier', e.target.value)}
             onBlur={() => handleBlur('amplifier')}
             placeholder="e.g., Intan RHD2000"
+            required
           />
         </div>
 
         {/* ADC Circuit */}
         <div className="form-group">
-          <label htmlFor="adc_circuit">ADC Circuit</label>
+          <label htmlFor="adc_circuit">
+            ADC Circuit <span className="required">*</span>
+          </label>
           <input
             type="text"
             id="adc_circuit"
@@ -168,8 +219,15 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
             onChange={(e) => handleFieldChange('adc_circuit', e.target.value)}
             onBlur={() => handleBlur('adc_circuit')}
             placeholder="e.g., Intan"
+            required
           />
         </div>
+
+        {deviceError && (
+          <div className="validation-error" role="alert">
+            {deviceError}
+          </div>
+        )}
 
         {divergence && (
           <div className="identity-divergence" role="alert">

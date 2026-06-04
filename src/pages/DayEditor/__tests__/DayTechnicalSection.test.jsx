@@ -39,6 +39,18 @@ describe('DayTechnicalSection', () => {
     expect(onFieldUpdate).toHaveBeenCalledWith('technical.units', { analog: 'volts', behavioral_events: 'unspecified' });
   });
 
+  it('does not persist partial units', async () => {
+    const user = userEvent.setup();
+    const onFieldUpdate = vi.fn();
+    render(<DayTechnicalSection technical={{}} onFieldUpdate={onFieldUpdate} />);
+
+    await user.type(screen.getByLabelText(/analog units/i), 'volts');
+    await user.tab();
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/enter both analog and behavioral-event units/i);
+    expect(onFieldUpdate).not.toHaveBeenCalledWith('technical.units', expect.anything());
+  });
+
   it('clears units to undefined when both fields are blank (so export omits it)', async () => {
     const user = userEvent.setup();
     const onFieldUpdate = vi.fn();

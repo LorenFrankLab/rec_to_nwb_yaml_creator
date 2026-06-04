@@ -46,10 +46,10 @@ export default function HardwareConfigStep({
 
   const cameras = useMemo(() => animal.cameras || [], [animal.cameras]);
 
-  // Data-acq identities elsewhere in the dataset (this animal excluded), for the
-  // DataAcqSection divergent-reuse check.
+  // Data-acq identities elsewhere in the dataset (plus any other items on this
+  // animal), for the DataAcqSection divergent-reuse check.
   const dataAcqRegistry = useMemo(
-    () => collectDataAcqIdentities(model.workspace, animal.id),
+    () => collectDataAcqIdentities(model.workspace, { animalId: animal.id, index: 0 }),
     [model.workspace, animal.id]
   );
 
@@ -83,7 +83,16 @@ export default function HardwareConfigStep({
         : null;
     const registry = collectCameraIdentities(model.workspace, exclude);
     const candidate = Object.fromEntries(CAMERA_DEPENDENT_FIELDS.map((f) => [f, cameraData[f]]));
-    const conflict = findIdentityDivergence(cameraData.camera_name, candidate, registry);
+    const currentIdentity =
+      cameraModal.mode === 'edit' && cameraModal.camera
+        ? [{
+            name: cameraModal.camera.camera_name,
+            label: `${animal.id} camera ${cameraModal.camera.id} saved identity`,
+            fields: Object.fromEntries(CAMERA_DEPENDENT_FIELDS.map((f) => [f, cameraModal.camera[f]])),
+          }]
+        : [];
+    const selfConflict = findIdentityDivergence(cameraData.camera_name, candidate, currentIdentity);
+    const conflict = selfConflict || findIdentityDivergence(cameraData.camera_name, candidate, registry);
     if (conflict) {
       setCameraDivergence(conflict);
       return; // Block: a divergent reuse must get a new name.

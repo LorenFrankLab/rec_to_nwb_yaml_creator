@@ -20,6 +20,11 @@ describe('DataAcqSection', () => {
     },
     technicalDefaults: { raw_data_to_volts: 0.195, times_period_multiplier: 1.5 },
   };
+  const draftAnimal = {
+    id: 'remy',
+    devices: { data_acq_device: [] },
+    technicalDefaults: { raw_data_to_volts: 0.195, times_period_multiplier: 1.5 },
+  };
 
   beforeEach(() => {
     user = userEvent.setup();
@@ -36,6 +41,31 @@ describe('DataAcqSection', () => {
   });
 
   it('writes the data-acq device as a one-element array including name on blur', async () => {
+    render(<DataAcqSection animal={draftAnimal} onFieldUpdate={onFieldUpdate} />);
+
+    await user.type(screen.getByLabelText(/^Name/i), 'SpikeGadgets_MCU');
+    const amplifier = screen.getByLabelText(/Amplifier/i);
+    await user.type(amplifier, 'Intan RHD2132');
+    const adcCircuit = screen.getByLabelText(/ADC Circuit/i);
+    await user.type(adcCircuit, 'Intan');
+    await user.tab(); // commit after all required fields are present
+
+    await waitFor(() => expect(onFieldUpdate).toHaveBeenCalledWith('data_acq_device', [
+      { name: 'SpikeGadgets_MCU', system: 'SpikeGadgets', amplifier: 'Intan RHD2132', adc_circuit: 'Intan' },
+    ]));
+  });
+
+  it('keeps incomplete data-acq edits local instead of writing schema-invalid records', async () => {
+    render(<DataAcqSection animal={draftAnimal} onFieldUpdate={onFieldUpdate} />);
+
+    await user.type(screen.getByLabelText(/^Name/i), 'SpikeGadgets_MCU');
+    await user.tab();
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/complete name, system, amplifier, and adc circuit/i);
+    expect(onFieldUpdate).not.toHaveBeenCalledWith('data_acq_device', expect.anything());
+  });
+
+  it('blocks changing saved data-acq hardware under the same name', async () => {
     render(<DataAcqSection animal={animal} onFieldUpdate={onFieldUpdate} />);
 
     const amplifier = screen.getByLabelText(/Amplifier/i);
@@ -43,9 +73,9 @@ describe('DataAcqSection', () => {
     await user.type(amplifier, 'Intan RHD2132');
     await user.tab();
 
-    await waitFor(() => expect(onFieldUpdate).toHaveBeenCalledWith('data_acq_device', [
-      { name: 'SpikeGadgets_MCU', system: 'SpikeGadgets', amplifier: 'Intan RHD2132', adc_circuit: 'Intan' },
-    ]));
+    expect(screen.getByRole('alert')).toHaveTextContent(/saved identity/i);
+    expect(screen.getByRole('alert')).toHaveTextContent(/Amplifier/i);
+    expect(onFieldUpdate).not.toHaveBeenCalledWith('data_acq_device', expect.anything());
   });
 
   it('edits technical defaults (raw_data_to_volts) via technicalDefaults, not technical', async () => {

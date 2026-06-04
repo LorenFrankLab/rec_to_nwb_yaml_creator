@@ -100,10 +100,10 @@ describe('HardwareConfigStep', () => {
       />
     );
 
-    const amplifierInput = screen.getByDisplayValue('Intan RHD2000');
-    await user.clear(amplifierInput);
-    await user.type(amplifierInput, 'New Amplifier');
-    amplifierInput.blur();
+    const nameInput = screen.getByDisplayValue('SpikeGadgets_MCU');
+    await user.clear(nameInput);
+    await user.type(nameInput, 'SpikeGadgets_MCU_renamed');
+    await user.tab();
 
     // The edit is delegated to the parent handler...
     await waitFor(() => {
@@ -362,6 +362,54 @@ describe('HardwareConfigStep', () => {
       expect(screen.getByRole('alert')).toHaveTextContent(/already used by jaq camera 0/i);
       expect(onFieldUpdate).not.toHaveBeenCalled();
       expect(screen.getByRole('button', { name: /use a new camera name/i })).toBeInTheDocument();
+    });
+
+    it('blocks changing a saved camera calibration under the same camera_name', async () => {
+      const user = userEvent.setup();
+      const onFieldUpdate = vi.fn();
+      const remy = {
+        id: 'remy',
+        cameras: [{ id: 0, camera_name: 'overhead', manufacturer: 'Allied', model: 'Mako', lens: '8mm', meters_per_pixel: 0.001 }],
+        devices: {},
+        behavioral_events: [],
+      };
+      renderSeeded({ animals: { remy }, days: {} }, remy, onFieldUpdate);
+
+      await user.click(screen.getByRole('button', { name: /^edit$/i }));
+      const metersPerPixel = screen.getByLabelText(/meters per pixel/i);
+      await user.clear(metersPerPixel);
+      await user.type(metersPerPixel, '0.002');
+      await user.click(screen.getByRole('button', { name: /save camera/i }));
+
+      expect(screen.getByRole('alert')).toHaveTextContent(/saved identity/i);
+      expect(screen.getByRole('alert')).toHaveTextContent(/meters per pixel/i);
+      expect(onFieldUpdate).not.toHaveBeenCalled();
+    });
+
+    it('allows changed camera hardware when the edit uses a new camera_name', async () => {
+      const user = userEvent.setup();
+      const onFieldUpdate = vi.fn();
+      const remy = {
+        id: 'remy',
+        cameras: [{ id: 0, camera_name: 'overhead', manufacturer: 'Allied', model: 'Mako', lens: '8mm', meters_per_pixel: 0.001 }],
+        devices: {},
+        behavioral_events: [],
+      };
+      renderSeeded({ animals: { remy }, days: {} }, remy, onFieldUpdate);
+
+      await user.click(screen.getByRole('button', { name: /^edit$/i }));
+      const name = screen.getByLabelText(/^camera name$/i);
+      await user.clear(name);
+      await user.type(name, 'overhead_zoomed');
+      const metersPerPixel = screen.getByLabelText(/meters per pixel/i);
+      await user.clear(metersPerPixel);
+      await user.type(metersPerPixel, '0.002');
+      await user.click(screen.getByRole('button', { name: /save camera/i }));
+
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(onFieldUpdate).toHaveBeenCalledWith('cameras', [
+        { id: 0, camera_name: 'overhead_zoomed', manufacturer: 'Allied', model: 'Mako', lens: '8mm', meters_per_pixel: 0.002 },
+      ]);
     });
 
     it('deletes a camera after confirmation', async () => {

@@ -39,6 +39,15 @@ describe('findIdentityDivergence', () => {
     );
     expect(result.differingFields).toEqual(['id']);
   });
+
+  it('normalizes surrounding whitespace on identity names', () => {
+    const result = findIdentityDivergence(
+      ' overhead ',
+      { id: 0, meters_per_pixel: 0.002, lens: '8mm', model: 'Mako', manufacturer: 'Allied' },
+      registry
+    );
+    expect(result.differingFields).toEqual(['meters_per_pixel']);
+  });
 });
 
 describe('collectCameraIdentities', () => {
@@ -73,5 +82,23 @@ describe('collectDataAcqIdentities', () => {
 
   it('excludes the animal being edited', () => {
     expect(collectDataAcqIdentities(workspace, 'remy').map((e) => e.name)).toEqual(['OE']);
+  });
+
+  it('can exclude only the selected data-acq item on the edited animal', () => {
+    const multiDeviceWorkspace = {
+      animals: {
+        remy: {
+          id: 'remy',
+          devices: {
+            data_acq_device: [
+              { name: 'SG', system: 'SpikeGadgets', amplifier: 'Intan', adc_circuit: 'Intan' },
+              { name: 'OE', system: 'Open Ephys', amplifier: 'Intan', adc_circuit: 'Intan' },
+            ],
+          },
+        },
+      },
+    };
+
+    expect(collectDataAcqIdentities(multiDeviceWorkspace, { animalId: 'remy', index: 0 }).map((e) => e.name)).toEqual(['OE']);
   });
 });

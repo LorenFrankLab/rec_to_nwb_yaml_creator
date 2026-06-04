@@ -46,6 +46,9 @@ export default function DayTechnicalSection({ technical, onFieldUpdate }) {
       onFieldUpdate('technical.units', undefined);
       return;
     }
+    if (!analog || !behavioralEvents) {
+      return;
+    }
     onFieldUpdate('technical.units', { analog, behavioral_events: behavioralEvents });
   };
 

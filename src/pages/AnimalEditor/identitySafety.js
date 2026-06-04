@@ -30,16 +30,16 @@ function valuesEqual(a, b) {
  * @param {string} name - The candidate identity name (e.g. camera_name).
  * @param {Record<string, *>} candidateFields - The candidate's dependent fields.
  * @param {Array<{name: string, fields: Record<string, *>, label?: string}>} registry -
- *   Existing identities the candidate is checked against. The caller excludes the
- *   entry being edited so it never conflicts with itself.
+ *   Existing identities the candidate is checked against.
  * @returns {{existing: object, differingFields: string[]}|null} The conflicting entry
  *   and the dependent fields that differ, or null when the name is unused or its reuse
  *   is identical (a safe reuse).
  */
 export function findIdentityDivergence(name, candidateFields, registry) {
-  if (!name) return null;
+  const normalizedName = String(name ?? '').trim();
+  if (!normalizedName) return null;
   for (const entry of registry) {
-    if (entry.name !== name) continue;
+    if (String(entry.name ?? '').trim() !== normalizedName) continue;
     const differingFields = Object.keys(candidateFields).filter(
       (key) => !valuesEqual(candidateFields[key], entry.fields[key])
     );
@@ -74,7 +74,7 @@ export const DATA_ACQ_DEPENDENT_FIELDS = ['system', 'amplifier', 'adc_circuit'];
 
 /**
  * Build the camera-name identity registry from every animal in the workspace,
- * excluding the camera currently being edited (so editing it is not self-divergent).
+ * excluding the camera currently being edited when requested.
  *
  * @param {object} workspace - The workspace slice (`{ animals }`).
  * @param {{animalId: string, id: number}|null} [exclude] - The camera being edited.
@@ -103,20 +103,22 @@ export function collectCameraIdentities(workspace, exclude = null) {
 
 /**
  * Build the data-acq-name identity registry from every animal in the workspace,
- * excluding the animal currently being edited.
+ * excluding either an animal or one selected item when requested.
  *
  * @param {object} workspace - The workspace slice (`{ animals }`).
- * @param {string|null} [excludeAnimalId] - The animal being edited.
+ * @param {string|{animalId: string, index?: number}|null} [exclude] - The animal or item being edited.
  * @returns {Array<{name: string, fields: Record<string, *>, label: string}>}
  */
-export function collectDataAcqIdentities(workspace, excludeAnimalId = null) {
+export function collectDataAcqIdentities(workspace, exclude = null) {
+  const excludeAnimalId = typeof exclude === 'string' ? exclude : exclude?.animalId;
+  const excludeIndex = exclude && typeof exclude === 'object' ? exclude.index : null;
   const registry = [];
   for (const animal of Object.values(workspace?.animals || {})) {
-    if (animal.id === excludeAnimalId) continue;
-    for (const device of animal.devices?.data_acq_device || []) {
+    for (const [index, device] of (animal.devices?.data_acq_device || []).entries()) {
+      if (animal.id === excludeAnimalId && (excludeIndex == null || index === excludeIndex)) continue;
       registry.push({
         name: device.name,
-        label: `${animal.id} data-acq device`,
+        label: `${animal.id} data-acq device${index > 0 ? ` ${index + 1}` : ''}`,
         fields: {
           system: device.system,
           amplifier: device.amplifier,
