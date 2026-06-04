@@ -6,6 +6,38 @@
 
 ---
 
+## Probe reconfiguration wizard (June 3, 2026) ✅ COMPLETE
+
+### Summary
+
+The Day Editor's Devices step now shows which configuration version a recording day
+uses and lets the user version a mid-experiment device change and apply it forward to
+later days — without disturbing days that did not change.
+
+### Changes
+
+- **`resolveDayConfig(animal, day)`** factored out of `mergeDayMetadata` as the single
+  source of truth for a day's effective probe configuration (snapshot-by-version +
+  `deviceOverrides` precedence). `mergeDayMetadata` now calls it, so the export merge and
+  the wizard can never diverge. Behavior-preserving — golden baselines stay byte-identical.
+- **`diffProbeConfigs(prev, next)`** (new `src/state/configDiff.js`): a pure, deterministic,
+  order-independent diff of two probe configurations (electrode groups + channel maps), plus
+  `reconcileAppliedToDays` to derive version usage from each day's `configurationVersion`.
+- **Store:** `updateDay` accepts `configurationVersion`; a new `applyConfigurationForward`
+  action reassigns a set of days to a snapshot version and keeps each snapshot's
+  `appliedToDays` a partition (each day in at most one list).
+- **Reconfiguration wizard** (`ReconfigWizard`, on the shared accessible `<Modal>`): renders
+  the structured diff, versions the current configuration via `addConfigurationSnapshot`,
+  and applies it forward to the chosen day and later days. A "no change detected" state
+  disables apply. No `alert()` / `window.confirm()`.
+- **Devices step:** a read-only "Configuration version N — applied to M days" indicator and
+  the wizard entry point.
+- No change to `encodeYaml`, the schema, the export path, or the four golden fixtures;
+  reassigning a day's version never changes its exported bytes unless the snapshot it
+  resolves to actually differs.
+
+---
+
 ## Validation Summary & batch tools (June 3, 2026) ✅ COMPLETE
 
 ### Summary
