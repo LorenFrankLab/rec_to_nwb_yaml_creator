@@ -55,14 +55,18 @@ export function Home() {
   const handleSubmit = (formData) => {
     const animalId = formData.subject_id.toLowerCase().trim();
 
-    // Build subject object (matches NWB schema)
+    // Build subject object (matches NWB schema). `description` is schema-required
+    // (non-empty); auto-generate a label from genotype + species when left blank.
     const subject = {
       subject_id: animalId,
       species: formData.species,
       sex: formData.sex,
       genotype: formData.genotype,
       date_of_birth: formData.date_of_birth,
-      description: formData.description || '',
+      weight: formData.weight,
+      description: formData.description?.trim()
+        ? formData.description.trim()
+        : `${formData.genotype} ${formData.species}`.trim(),
     };
 
     // Build metadata object

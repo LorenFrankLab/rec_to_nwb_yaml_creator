@@ -131,6 +131,35 @@ describe('AnimalCreationForm', () => {
       // Validation error appears
       expect(screen.getAllByText(/custom species.*required/i).length).toBeGreaterThan(0);
     });
+
+    it('rejects a non-binomial custom species (DANDI)', async () => {
+      const user = userEvent.setup();
+      render(<AnimalCreationForm {...defaultProps} />);
+
+      await user.selectOptions(screen.getByLabelText(/species/i), 'other');
+      await user.type(await screen.findByLabelText(/custom species/i), 'Rat');
+
+      fireEvent.submit(screen.getByRole('form'));
+
+      expect(screen.getAllByText(/latin binomial|ncbi/i).length).toBeGreaterThan(0);
+    });
+
+    it('keeps submit disabled until weight is provided', async () => {
+      const user = userEvent.setup();
+      render(<AnimalCreationForm {...defaultProps} />);
+
+      await user.type(screen.getByLabelText(/subject id/i), 'bean');
+      const today = new Date().toISOString().split('T')[0];
+      await user.type(screen.getByLabelText(/date of birth/i), today);
+
+      // All other required fields are filled, but weight is still blank.
+      expect(screen.getByRole('button', { name: /create animal/i })).toBeDisabled();
+
+      await user.type(screen.getByLabelText(/weight/i), '450');
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /create animal/i })).not.toBeDisabled();
+      });
+    });
   });
 
   // Submit Behavior Tests
@@ -152,6 +181,7 @@ describe('AnimalCreationForm', () => {
 
       const today = new Date().toISOString().split('T')[0];
       await user.type(screen.getByLabelText(/date of birth/i), today);
+      await user.type(screen.getByLabelText(/weight/i), '450');
 
       await waitFor(() => {
         const submitButton = screen.getByRole('button', { name: /create animal/i });
@@ -171,6 +201,7 @@ describe('AnimalCreationForm', () => {
 
       const today = new Date().toISOString().split('T')[0];
       await user.type(screen.getByLabelText(/date of birth/i), today);
+      await user.type(screen.getByLabelText(/weight/i), '450');
 
       const submitButton = screen.getByRole('button', { name: /create animal/i });
       await user.click(submitButton);
@@ -182,7 +213,9 @@ describe('AnimalCreationForm', () => {
             species: 'Rattus norvegicus',
             sex: 'U',
             genotype: 'Wild-type',
-            date_of_birth: today,
+            // DOB is normalized to a T-timestamp; weight is emitted numeric.
+            date_of_birth: new Date(today).toISOString(),
+            weight: 450,
             experimenter_names: ['Alice Researcher'],
             lab: 'Loren Frank Lab',
             institution: 'University of California, San Francisco',
@@ -203,6 +236,7 @@ describe('AnimalCreationForm', () => {
 
       const today = new Date().toISOString().split('T')[0];
       await user.type(screen.getByLabelText(/date of birth/i), today);
+      await user.type(screen.getByLabelText(/weight/i), '450');
 
       const submitButton = screen.getByRole('button', { name: /create animal/i });
 
@@ -321,6 +355,7 @@ describe('AnimalCreationForm', () => {
 
       const today = new Date().toISOString().split('T')[0];
       await user.type(screen.getByLabelText(/date of birth/i), today);
+      await user.type(screen.getByLabelText(/weight/i), '450');
 
       // Wait for button to become enabled
       const submitButton = screen.getByRole('button', { name: /create animal/i });
@@ -358,6 +393,7 @@ describe('AnimalCreationForm', () => {
 
       const today = new Date().toISOString().split('T')[0];
       await user.type(screen.getByLabelText(/date of birth/i), today);
+      await user.type(screen.getByLabelText(/weight/i), '70000');
 
       const submitButton = screen.getByRole('button', { name: /create animal/i });
       await user.click(submitButton);
@@ -365,7 +401,7 @@ describe('AnimalCreationForm', () => {
       await waitFor(() => {
         expect(onSubmit).toHaveBeenCalledWith(
           expect.objectContaining({
-            species: 'Homo sapiens', // Custom value, not "other"
+            species: 'Homo sapiens', // Custom value (a valid Latin binomial), not "other"
           })
         );
       });

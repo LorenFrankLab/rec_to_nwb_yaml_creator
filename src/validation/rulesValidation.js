@@ -4,6 +4,8 @@
  * Validates business logic that is not easily expressed in JSON schema.
  */
 
+import { isValidSpecies, idHasSlash } from './dandiSubject';
+
 /**
  * Custom business logic validation rules
  *
@@ -15,6 +17,8 @@
  * 5. Ntrode channel mappings must be sequential (no missing channels)
  * 6. Electrode-group ids must be unique within a session
  * 7. Ntrode ids must be unique across the animal's whole channel map
+ * 8. DANDI subject conformance: species is a Latin binomial / NCBI URI, and
+ *    subject_id / session_id contain no slashes
  *
  * @param {object} model - The form data to validate
  * @returns {Issue[]} Array of validation issues with format:
@@ -195,6 +199,43 @@ export const rulesValidation = (model) => {
         });
       }
       seenNtrodes.add(id);
+    });
+  }
+
+  // Rule 8: DANDI subject conformance. The NWB files publish to DANDI, whose
+  // Inspector (dandi config) makes these Subject checks CRITICAL/blocking.
+  const subject = model.subject;
+  if (subject && typeof subject === 'object') {
+    // species: a present-but-invalid value (free text like "Rat") is rejected.
+    // An empty/missing species is left to the schema's required + pattern check.
+    const sp = subject.species;
+    if (typeof sp === 'string' && sp.trim() !== '' && !isValidSpecies(sp)) {
+      issues.push({
+        path: 'subject.species',
+        code: 'invalid_species',
+        severity: 'error',
+        message:
+          `Species "${sp}" is not DANDI-valid. Use a Latin binomial (e.g. ` +
+          `"Rattus norvegicus") or an NCBI Taxonomy URI — DANDI rejects free text.`,
+      });
+    }
+
+    if (idHasSlash(subject.subject_id)) {
+      issues.push({
+        path: 'subject.subject_id',
+        code: 'subject_id_slash',
+        severity: 'error',
+        message: `Subject ID "${subject.subject_id}" must not contain "/" (DANDI rejects slashes in subject_id).`,
+      });
+    }
+  }
+
+  if (idHasSlash(model.session_id)) {
+    issues.push({
+      path: 'session_id',
+      code: 'session_id_slash',
+      severity: 'error',
+      message: `Session ID "${model.session_id}" must not contain "/" (DANDI rejects slashes in session_id).`,
     });
   }
 

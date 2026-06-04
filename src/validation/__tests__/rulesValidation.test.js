@@ -670,6 +670,41 @@ describe('rulesValidation()', () => {
     });
   });
 
+  describe('Rule 8: DANDI subject conformance (species + no-slash ids)', () => {
+    it('flags a free-text species', () => {
+      const issues = rulesValidation({ subject: { species: 'Rat' } });
+      const i = issues.find((x) => x.code === 'invalid_species');
+      expect(i).toBeDefined();
+      expect(i.severity).toBe('error');
+      expect(i.path).toBe('subject.species');
+    });
+
+    it('accepts a Latin binomial and an NCBI URI species', () => {
+      expect(rulesValidation({ subject: { species: 'Rattus norvegicus' } })
+        .some((x) => x.code === 'invalid_species')).toBe(false);
+      expect(rulesValidation({ subject: { species: 'http://purl.obolibrary.org/obo/NCBITaxon_10116' } })
+        .some((x) => x.code === 'invalid_species')).toBe(false);
+    });
+
+    it('does not double-report an empty species (schema owns that)', () => {
+      expect(rulesValidation({ subject: { species: '' } })
+        .some((x) => x.code === 'invalid_species')).toBe(false);
+      expect(rulesValidation({ subject: {} })
+        .some((x) => x.code === 'invalid_species')).toBe(false);
+    });
+
+    it('flags a slash in subject_id and session_id', () => {
+      const issues = rulesValidation({ subject: { subject_id: 'remy/1' }, session_id: 'remy/2023' });
+      expect(issues.find((x) => x.code === 'subject_id_slash')?.path).toBe('subject.subject_id');
+      expect(issues.find((x) => x.code === 'session_id_slash')?.path).toBe('session_id');
+    });
+
+    it('accepts slash-free ids', () => {
+      const issues = rulesValidation({ subject: { subject_id: 'remy' }, session_id: 'remy_20230622' });
+      expect(issues.some((x) => x.code === 'subject_id_slash' || x.code === 'session_id_slash')).toBe(false);
+    });
+  });
+
   describe('Multiple Rules Violations', () => {
     it('should detect violations from multiple rules', () => {
       const model = {

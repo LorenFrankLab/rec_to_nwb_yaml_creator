@@ -148,6 +148,10 @@ export function useWorkspace(initialState = null) {
             id: animalId,
             subject: {
               subject_id: animalId,
+              // Schema-required fallbacks for callers that omit them; the creation
+              // form collects a real weight and a description (or derives one).
+              weight: 100,
+              description: 'Subject',
               ...subject,
             },
             devices,

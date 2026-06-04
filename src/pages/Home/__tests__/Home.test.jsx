@@ -97,6 +97,7 @@ describe('Home - Animal Creation Container', () => {
 
     const today = new Date().toISOString().split('T')[0];
     await user.type(screen.getByLabelText(/date of birth/i), today);
+    await user.type(screen.getByLabelText(/weight/i), '450');
 
     const submitButton = screen.getByRole('button', { name: /create animal/i });
     await user.click(submitButton);

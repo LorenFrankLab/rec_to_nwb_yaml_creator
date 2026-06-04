@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
+import { isValidSpecies } from '../../validation/dandiSubject';
 import './Home.css';
 
 /**
@@ -25,12 +26,24 @@ function validateAnimalForm(formData, existingAnimals) {
     }
   }
 
-  // Species
+  // Species — must be a DANDI-valid Latin binomial / NCBI Taxon URI (free text rejected)
   if (!formData.species?.trim()) {
     errors.species = 'Species is required';
   }
-  if (formData.species === 'other' && !formData.speciesCustom?.trim()) {
-    errors.speciesCustom = 'Custom species name is required';
+  if (formData.species === 'other') {
+    if (!formData.speciesCustom?.trim()) {
+      errors.speciesCustom = 'Custom species name is required';
+    } else if (!isValidSpecies(formData.speciesCustom)) {
+      errors.speciesCustom =
+        'Use a Latin binomial (e.g. "Rattus norvegicus") or an NCBI Taxonomy URI — DANDI rejects free text';
+    }
+  }
+
+  // Weight (grams) — schema-required, non-negative number
+  if (formData.weight === '' || formData.weight == null) {
+    errors.weight = 'Weight is required';
+  } else if (!(Number(formData.weight) >= 0)) {
+    errors.weight = 'Weight must be a non-negative number';
   }
 
   // Sex
@@ -99,6 +112,7 @@ function AnimalCreationForm({
     sex: 'U',
     genotype: 'Wild-type',
     date_of_birth: '',
+    weight: '',
     description: '',
     experimenter_names: defaultExperimenters.experimenter_names || [''],
     lab: defaultExperimenters.lab || '',
@@ -115,6 +129,7 @@ function AnimalCreationForm({
     formData.subject_id.trim() &&
     formData.genotype.trim() &&
     formData.date_of_birth &&
+    formData.weight !== '' &&
     formData.experimenter_names.some((n) => n.trim()) &&
     formData.lab.trim() &&
     formData.institution.trim() &&
@@ -203,11 +218,16 @@ function AnimalCreationForm({
 
     setIsSubmitting(true);
 
-    // Prepare final data with trimmed values and filtered arrays
+    // Prepare final data with trimmed values and filtered arrays. The date picker
+    // yields YYYY-MM-DD; the schema needs a T-timestamp, so midnight-normalize with
+    // toISOString (mirrors the legacy SubjectFields path). Weight is emitted numeric.
     const finalData = {
       ...formData,
       subject_id: formData.subject_id.trim(),
-      species: formData.species === 'other' ? formData.speciesCustom : formData.species,
+      species: (formData.species === 'other' ? formData.speciesCustom : formData.species).trim(),
+      date_of_birth: formData.date_of_birth ? new Date(formData.date_of_birth).toISOString() : '',
+      weight: Number(formData.weight),
+      description: formData.description.trim(),
       experimenter_names: formData.experimenter_names.filter((n) => n.trim()),
     };
 
@@ -238,6 +258,7 @@ function AnimalCreationForm({
     sex: 'Sex',
     genotype: 'Genotype',
     date_of_birth: 'Date of Birth',
+    weight: 'Weight',
     experimenter_names: 'Experimenter Names',
     lab: 'Lab',
     institution: 'Institution',
@@ -436,6 +457,51 @@ function AnimalCreationForm({
               ⚠ {ageWarning} Verify date is correct.
             </div>
           )}
+        </div>
+
+        {/* Weight */}
+        <div className="form-field">
+          <label htmlFor="weight" className="required">
+            Weight (grams)
+          </label>
+          <input
+            id="weight"
+            type="number"
+            min="0"
+            step="any"
+            value={formData.weight}
+            onChange={(e) => handleChange('weight', e.target.value)}
+            onBlur={() => handleBlur('weight')}
+            required
+            placeholder="e.g., 450"
+            aria-describedby="weight-hint"
+            aria-invalid={!!fieldErrors.weight}
+            className={fieldErrors.weight ? 'invalid' : ''}
+          />
+          <span id="weight-hint" className="validation-hint">
+            Subject weight in grams at the time of recording.
+          </span>
+          {fieldErrors.weight && (
+            <span className="validation-error" role="alert">
+              {fieldErrors.weight}
+            </span>
+          )}
+        </div>
+
+        {/* Description */}
+        <div className="form-field">
+          <label htmlFor="description">Description</label>
+          <input
+            id="description"
+            type="text"
+            value={formData.description}
+            onChange={(e) => handleChange('description', e.target.value)}
+            placeholder="e.g., Long Evans rat from Charles River"
+            aria-describedby="description-hint"
+          />
+          <span id="description-hint" className="validation-hint">
+            Free-text note about the subject. Leave blank to auto-generate one from genotype and species.
+          </span>
         </div>
       </div>
 
