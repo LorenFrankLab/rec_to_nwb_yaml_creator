@@ -49,6 +49,23 @@ describe('subject/session completeness + DANDI rules', () => {
     expect(issues.some((i) => i.path === 'subject.date_of_birth')).toBe(true);
   });
 
+  it('blocks an empty experiment_description (schema needs a non-empty value)', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    day.session.experiment_description = '';
+    animal.experiment_description = undefined; // no animal-level fallback
+    const issues = validate(mergeDayMetadata(animal, day));
+    expect(issues.some((i) => i.path === 'experiment_description')).toBe(true);
+  });
+
+  it('falls back to the animal-level experiment_description when the day is blank', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    day.session.experiment_description = '';
+    animal.experiment_description = 'Chronic recording during spatial navigation';
+    const merged = mergeDayMetadata(animal, day);
+    expect(merged.experiment_description).toBe('Chronic recording during spatial navigation');
+    expect(schemaValidation(merged)).toEqual([]);
+  });
+
   it('blocks a missing weight (schema-required)', () => {
     const { animal, day } = buildRealisticWorkspace();
     delete animal.subject.weight;

@@ -118,21 +118,29 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
           </div>
 
           <div className="form-field">
-            <label htmlFor="experiment-description">
-              Experiment Description (Optional)
+            <label htmlFor="experiment-description" className="required">
+              Experiment Description
             </label>
             <textarea
               id="experiment-description"
               name="session.experiment_description"
               data-field-path="experiment_description"
               rows="3"
-              defaultValue={day.session.experiment_description}
+              defaultValue={day.session.experiment_description || animal.experiment_description || ''}
               onBlur={(e) => handleBlur('session.experiment_description', e.target.value)}
-              placeholder="Override animal's default experiment description if needed"
+              placeholder="e.g., Chronic tetrode recording during spatial navigation"
+              className={fieldErrors['session.experiment_description'] ? 'invalid' : ''}
+              aria-invalid={!!fieldErrors['session.experiment_description']}
+              required
             />
             <span className="field-help-text">
-              Leave blank to use animal's default: "{animal.experiment_description || 'None set'}"
+              Describes the overall experiment. Required for export and written to the NWB file.
             </span>
+            {fieldErrors['session.experiment_description'] && (
+              <span className="validation-error" role="alert">
+                {fieldErrors['session.experiment_description'].message}
+              </span>
+            )}
           </div>
 
           <KeywordsEditor

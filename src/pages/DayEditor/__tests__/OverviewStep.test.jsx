@@ -253,7 +253,7 @@ describe('OverviewStep', () => {
     expect(sessionDescriptionInput).toHaveAttribute('required');
   });
 
-  it('handles optional fields without required indicator', () => {
+  it('marks experiment description as required (non-empty; written to the NWB file)', () => {
     render(
       <OverviewStep
         animal={mockAnimal}
@@ -263,8 +263,8 @@ describe('OverviewStep', () => {
       />
     );
 
-    const experimentDescLabel = screen.getByText(/Experiment Description.*Optional/i);
-    expect(experimentDescLabel).toBeInTheDocument();
+    const experimentDesc = screen.getByLabelText(/Experiment Description/i);
+    expect(experimentDesc).toBeRequired();
   });
 
   it('renders textarea for long text fields', () => {
