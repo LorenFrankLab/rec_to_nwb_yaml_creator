@@ -1,0 +1,107 @@
+/* Validation Summary — cross-day overview page. */
+
+.validation-summary-counts {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.validation-summary-counts .count {
+  white-space: nowrap;
+}
+
+.validation-summary-counts .count--valid {
+  color: #2e7d32;
+}
+
+.validation-summary-counts .count--error {
+  color: #c62828;
+}
+
+.validation-summary-counts .count--incomplete {
+  color: #e65100;
+}
+
+.validation-summary-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.validation-summary-status {
+  min-height: 1.25rem;
+  margin: 0.5rem 0;
+  font-weight: 500;
+}
+
+.validation-summary-skipped {
+  border: 1px solid #c62828;
+  border-radius: 4px;
+  background-color: #fdecea;
+  padding: 0.75rem 1rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.validation-summary-skipped ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.validation-summary-diff {
+  background-color: #fff;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  padding: 0.5rem;
+  margin: 0.25rem 0 0.5rem;
+  overflow-x: auto;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+}
+
+.validation-summary-empty {
+  padding: 2rem 0;
+  color: #555;
+}
+
+.validation-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+}
+
+.validation-summary-table th,
+.validation-summary-table td {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.validation-summary-table th {
+  font-weight: 600;
+  border-bottom: 2px solid #bdbdbd;
+}
+
+/* Per-day status chip. The text label is the primary (non-color) status cue;
+   color is a secondary reinforcement (WCAG 1.4.1 — do not rely on color alone). */
+.validation-summary-table .status-chip {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.validation-summary-table .status-chip--valid {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.validation-summary-table .status-chip--error {
+  background-color: #fdecea;
+  color: #c62828;
+}
+
+.validation-summary-table .status-chip--incomplete {
+  background-color: #fff3e0;
+  color: #e65100;
+}

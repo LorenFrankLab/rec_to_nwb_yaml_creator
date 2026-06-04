@@ -14,6 +14,90 @@
 
 import { waitFor, fireEvent, act } from '@testing-library/react';
 import { expect } from 'vitest';
+import { buildRealisticWorkspace } from '../fixtures/workspaceBuilders';
+
+/**
+ * Build a three-day workspace spanning two animals for Validation Summary tests.
+ *
+ * Reuses {@link buildRealisticWorkspace} (a fully-exportable animal + day) as the
+ * source of genuine, schema-valid metadata, then derives three days whose REAL
+ * `computeStepStatus` chips are, respectively:
+ *
+ * 1. **valid** — the unmodified realistic day (every step `'valid'`).
+ * 2. **incomplete** — `session_id` omitted, so the Overview step is `'incomplete'`
+ *    (a missing-but-not-invalid field: it is absent from the schema's top-level
+ *    `required` set, so it produces no error-severity issue).
+ * 3. **error** — a whitespace-only `session_description`, which trips the schema's
+ *    non-empty pattern and produces a genuine `error`-severity issue.
+ *
+ * The valid + incomplete days belong to animal `remy`; the error day belongs to a
+ * second animal (`totoro`) so the fixture also exercises cross-animal flattening.
+ * Chips are intentionally NOT hard-coded — tests derive them from `computeStepStatus`
+ * so the assertions stay honest if validation behavior changes.
+ *
+ * Deterministic (fixed timestamps, no Date.now / Math.random).
+ *
+ * @returns {{ workspace: object, ids: { validDayId: string, incompleteDayId: string, errorDayId: string } }}
+ *   A workspace slice (`{ version, lastModified, animals, days, settings }`) plus the
+ *   three day ids for convenient assertions.
+ */
+export function makeSummaryWorkspace() {
+  const ts = '2023-06-22T12:00:00.000Z';
+
+  // Animal "remy": valid day + incomplete day.
+  const { animal: remy, day: validDay } = buildRealisticWorkspace();
+
+  const incompleteDay = {
+    ...structuredClone(validDay),
+    id: 'remy-2023-06-23',
+    date: '2023-06-23',
+    experimentDate: '06232023',
+    // session_id omitted → Overview step incomplete, no error-severity issue.
+    session: { ...validDay.session, session_id: undefined },
+  };
+  remy.days = [validDay.id, incompleteDay.id];
+
+  // Animal "totoro": one error day (whitespace-only session_description).
+  const { animal: totoro } = buildRealisticWorkspace();
+  totoro.id = 'totoro';
+  totoro.subject = { ...totoro.subject, subject_id: 'totoro' };
+
+  const errorDay = {
+    ...structuredClone(validDay),
+    id: 'totoro-2023-06-22',
+    animalId: 'totoro',
+    session: { ...validDay.session, session_description: '   ' },
+  };
+  totoro.days = [errorDay.id];
+
+  return {
+    workspace: {
+      version: '1.0.0',
+      lastModified: ts,
+      animals: {
+        [remy.id]: remy,
+        [totoro.id]: totoro,
+      },
+      days: {
+        [validDay.id]: validDay,
+        [incompleteDay.id]: incompleteDay,
+        [errorDay.id]: errorDay,
+      },
+      settings: {
+        defaultLab: 'Frank',
+        defaultInstitution: 'University of California, San Francisco',
+        defaultExperimenters: [],
+        autoSaveInterval: 30000,
+        shadowExportEnabled: true,
+      },
+    },
+    ids: {
+      validDayId: validDay.id,
+      incompleteDayId: incompleteDay.id,
+      errorDayId: errorDay.id,
+    },
+  };
+}
 
 /**
  * Apply blur + delay to allow React reconciliation

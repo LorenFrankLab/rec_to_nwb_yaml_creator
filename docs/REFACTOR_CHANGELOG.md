@@ -6,6 +6,40 @@
 
 ---
 
+## Validation Summary & batch tools (June 3, 2026) ✅ COMPLETE
+
+### Summary
+
+The Validation Summary page is now a working cross-day overview instead of a
+placeholder. It lists every recording day across all animals with a per-day status
+chip, surfaces valid / error / incomplete counts, and adds two batch actions.
+
+### Changes
+
+- **Cross-day overview table.** One row per day across every animal, in a deterministic
+  order (animals by id, then days by date). Each row shows the subject id, date, session
+  id, a status chip, and a link to that day's editor (`#/day/<id>`). The chip is derived
+  from the **same** validation the Day Editor uses (`mergeDayMetadata` +
+  `computeStepStatus`) — never a forked copy: every step `valid` → **Valid**, any step
+  `error` → **Error**, otherwise → **Incomplete**. Counts recompute from the workspace on
+  every render.
+- **Validate All.** Recomputes status for every day and persists the outcome onto
+  `day.state.validated` (via `actions.updateDay`, preserving store immutability) so reload
+  and other views agree. It only computes/persists status — it never loosens any export
+  gate.
+- **Export Valid Only.** Sequentially downloads each fully-valid day's YAML, routing
+  **every** file through the same byte-for-byte shadow-export parity gate the single-day
+  Export step uses (`checkShadowExport`). A day that fails parity in strict mode is
+  **skipped and reported** with its first-line diff, never downloaded. Downloads use the
+  deterministic per-day filename; no zip dependency is introduced (sequential downloads).
+- **Reload recovery.** The page reflects the workspace restored by the existing Phase 1
+  localStorage persistence on reload; an integration test seeds a versioned blob and
+  asserts the summary renders the restored days and counts.
+- No change to `encodeYaml`, the schema, `mergeDayMetadata`, the shadow gate, or the four
+  golden fixtures; golden baselines remain byte-identical.
+
+---
+
 ## Byte-for-Byte Legacy-Export Parity (June 3, 2026) ✅ COMPLETE
 
 ### Summary
