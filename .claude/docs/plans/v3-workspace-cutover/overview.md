@@ -198,6 +198,17 @@ not executed here.
      UI now makes visible. **Follow-up:** reconcile the inheritance UI with the merge contract (either
      merge animal events into the day output, or relabel the display) before cutover — a natural fit for
      [Phase 5](phase-5-validation-export.md), which owns the export/merge path, or the Phase 8 summary.
+- **Phase 8 review items deferred (out of scope for the summary phase).** The Phase 8 reviewers
+  surfaced two enhancements left for a later pass:
+  1. **A persisted-"Validated" indicator in the summary table.** The status chip already shows
+     live-computed status, and "Validate All" persists `day.state.validated`, but the table does not
+     visually distinguish a day whose validated flag is persisted from one that is merely live-valid.
+     Phase 8 added a button `title` explaining the persistence purpose; a dedicated column/badge is a
+     UX enhancement best landed alongside the [Phase 10](phase-10-a11y-keyboard.md) pass (and is partly
+     redundant once the AnimalWorkspace per-day chips consume the same flag).
+  2. **Structured error logging for export skips/failures.** Phase 8 logs parity skips and export
+     failures via `console.error` (the app has no Sentry/structured-logging infra today). Routing these
+     through a real logging path with error IDs is a cross-app concern, out of scope for the summary.
 
 ## Plan revisions
 

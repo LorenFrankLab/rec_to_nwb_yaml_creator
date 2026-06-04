@@ -1,6 +1,6 @@
 # v3.0.0 Workspace Cutover — Implementation Plan
 
-**Status:** Phases 0–7 complete (merged to `modern`). Phase 8 next.
+**Status:** Phases 0–8 complete (merged to `modern`). Phase 9 next.
 
 Carries the `modern` branch from its mid-build state (M8a complete; new multi-page workspace exists
 but cannot export YAML and loses data on refresh) through to **v3.0.0**, where the workspace UI is a
