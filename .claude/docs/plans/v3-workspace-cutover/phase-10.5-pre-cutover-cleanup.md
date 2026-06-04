@@ -115,18 +115,11 @@ for Task 5).
 
 ## Deliberately not in this phase
 
-- **Make `ConfigurationSnapshot.appliedToDays` a derived value** (drop the denormalized cache). A larger
-  data-model refactor; the stored list is correctly maintained by `applyConfigurationForward` and the
-  trustworthy view already exists (`reconcileAppliedToDays`). Stays a post-v3 follow-up.
-- **Reconfig wizard UX for long studies** — select-all/deselect-all, relative/human-readable day labels,
-  explicit success confirmation. Nice-to-have, not a cutover blocker.
-- **Changing the `Alt+←` / `Alt+→` shortcut chord** (browser Back/Forward conflict on Windows/Linux).
-  Tracked as a follow-up; revisit with user feedback, not pre-cutover.
-- **A persisted-"Validated" indicator** in the Validation Summary table. UX enhancement, partly redundant
-  once AnimalWorkspace per-day chips consume the flag.
-- **Structured error logging** for export skips/failures (currently `console.error`). Cross-app infra,
-  out of scope.
-- **Persistence-blob forward migration** — explicitly post-v3.0.0 (see overview).
+- **The "not blocking the cutover" follow-ups** — UX niceties (reconfig wizard long-study controls,
+  persisted-"Validated" indicator), behavior-preserving tech-debt (making `appliedToDays` derived,
+  structured error logging), the `Alt+←`/`Alt+→` chord question, and the release-gated persistence-blob
+  forward migration. All tracked in [post-v3-followups.md](post-v3-followups.md); they can ship after
+  v3.0.0.
 - **Any new feature, route, schema change, flag flip, or default-route change** — Phase 11 owns cutover.
 
 ## Validation slice

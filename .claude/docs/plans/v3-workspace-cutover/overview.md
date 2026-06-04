@@ -204,28 +204,11 @@ the cutover individually, but they should be triaged here so v3.0.0 ships clean.
    second action threw, an orphan empty snapshot would remain. Have `addConfigurationSnapshot` return the
    created version (or add a combined create-and-apply action) so the two can't desync.
 
-#### Tech-debt / UX (may slip to post-v3)
+### Not blocking the cutover
 
-1. **Make `ConfigurationSnapshot.appliedToDays` derived** rather than a denormalized cache kept in sync by
-   `applyConfigurationForward` (the trustworthy view is already `reconcileAppliedToDays`; `updateDay`
-   bypasses the stored lists). A data-model change.
-2. **Reconfig wizard UX for long studies** — select-all/deselect-all and relative/human-readable day
-   labels for animals with 60–200+ days, plus an explicit success confirmation.
-3. **`Alt+←` / `Alt+→` vs. browser Back/Forward** on Windows/Linux (the handler `preventDefault`s, so
-   in-app it navigates the stepper). Consider `Alt+PageUp/PageDown` (or `Alt+Shift+Arrow`), or add a
-   platform note in the shortcuts help.
-4. **Persisted-"Validated" indicator** in the Validation Summary table (distinguish a day whose
-   `state.validated` is persisted from one that is merely live-valid). Partly redundant once the
-   AnimalWorkspace per-day chips consume the same flag.
-5. **Structured error logging** for export skips/failures (currently `console.error`; no
-   Sentry/structured-logging infra exists yet). Cross-app concern.
-
-### Post-v3.0.0
-
-- **Persistence-blob forward migration.** Phase 1 versions the localStorage blob and *discards with a
-  notice* on `schemaVersion` mismatch — no migration. Acceptable for v3.0.0 (no real v1 blobs yet), but
-  once users have v1 blobs, a future shape change would silently discard their work. Schedule a
-  forward-migration path before the first post-v3.0.0 change that touches the persisted shape.
+The UX niceties, behavior-preserving tech-debt refactors (e.g. making `appliedToDays` derived), the
+`Alt+Arrow` chord question, and the release-gated persistence-blob forward migration are tracked
+separately in [post-v3-followups.md](post-v3-followups.md) — they can ship after v3.0.0.
 
 ## Plan revisions
 

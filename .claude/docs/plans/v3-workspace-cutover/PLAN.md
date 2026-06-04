@@ -27,6 +27,8 @@ For agent invocation, **load only the slice you need**:
 - [review-protocol.md](review-protocol.md) — the verify-and-review gate every phase passes:
   self-verification, Playwright UI verification, code review, specialized + UX/a11y reviewers, with a
   per-phase matrix.
+- [post-v3-followups.md](post-v3-followups.md) — items intentionally **not** blocking the v3.0.0 cutover
+  (UX niceties, behavior-preserving tech-debt, the release-gated persistence-blob migration).
 - Phases (each ships as a separable PR):
   - [phase-0-setup-ci-hygiene.md](phase-0-setup-ci-hygiene.md) — make the project set up and CI pass
     cleanly for a fresh contributor (README, Node-without-nvm, `yaml` advisory, CI triggers).
