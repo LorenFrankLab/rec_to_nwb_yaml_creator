@@ -97,6 +97,7 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate }) 
             <textarea
               id="session-description"
               name="session.session_description"
+              data-field-path="session_description"
               rows="3"
               defaultValue={day.session.session_description}
               onBlur={(e) => handleBlur('session.session_description', e.target.value)}
@@ -121,6 +122,7 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate }) 
             <textarea
               id="experiment-description"
               name="session.experiment_description"
+              data-field-path="experiment_description"
               rows="3"
               defaultValue={day.session.experiment_description}
               onBlur={(e) => handleBlur('session.experiment_description', e.target.value)}

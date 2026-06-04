@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { validate } from '../../validation';
 import { groupErrorsByStep } from './validation';
+import { RepairActionButton, STEP_LABELS } from './RepairActions';
 import './DayEditor.scss';
 
 /**
@@ -16,9 +17,11 @@ import './DayEditor.scss';
  *
  * @param {object} props
  * @param {object} props.mergedDay - Merged animal + day metadata to validate.
+ * @param {(stepId: string, fieldPath?: string) => void} [props.onNavigate] - Routes a
+ *   repair action to the step that owns the fix (and an optional field target).
  * @returns {JSX.Element}
  */
-export default function ValidationStep({ mergedDay }) {
+export default function ValidationStep({ mergedDay, onNavigate }) {
   const issues = useMemo(() => validate(mergedDay || {}), [mergedDay]);
 
   const bySeverity = useMemo(() => groupBySeverity(issues), [issues]);
@@ -50,7 +53,7 @@ export default function ValidationStep({ mergedDay }) {
 
       {issues.length > 0 && (
         <>
-          <SeveritySection title="Errors" severity="error" issues={bySeverity.error} />
+          <SeveritySection title="Errors" severity="error" issues={bySeverity.error} onNavigate={onNavigate} />
           <SeveritySection title="Warnings" severity="warning" issues={bySeverity.warning} />
           <SeveritySection title="Info" severity="info" issues={bySeverity.info} />
         </>
@@ -61,6 +64,11 @@ export default function ValidationStep({ mergedDay }) {
 
 ValidationStep.propTypes = {
   mergedDay: PropTypes.object,
+  onNavigate: PropTypes.func,
+};
+
+ValidationStep.defaultProps = {
+  onNavigate: () => {},
 };
 
 /**
@@ -72,13 +80,17 @@ ValidationStep.propTypes = {
  * @param {string} props.title - Visible heading for the severity group.
  * @param {string} props.severity - Severity key (for styling/keys).
  * @param {Array} props.issues - Issues of this severity.
+ * @param {(stepId: string, fieldPath?: string) => void} [props.onNavigate] - Repair
+ *   routing callback. Repair actions are offered only for export-blocking errors.
  * @returns {JSX.Element|null}
  */
-function SeveritySection({ title, severity, issues }) {
+function SeveritySection({ title, severity, issues, onNavigate }) {
   if (issues.length === 0) return null;
 
   const byStep = groupErrorsByStep(issues);
   const stepOrder = ['overview', 'devices', 'epochs', 'validation', 'export'];
+  // Only error-severity issues block export, so only they get a repair action.
+  const repairable = severity === 'error' && typeof onNavigate === 'function';
 
   return (
     <section className={`validation-group validation-group-${severity}`}>
@@ -93,6 +105,7 @@ function SeveritySection({ title, severity, issues }) {
                 <li key={`${issue.path}-${issue.code}-${index}`} className="validation-issue">
                   <span className="validation-issue-message">{issue.message}</span>
                   {issue.path && <code className="validation-issue-path">{issue.path}</code>}
+                  {repairable && <RepairActionButton issue={issue} onNavigate={onNavigate} />}
                 </li>
               ))}
             </ul>
@@ -106,14 +119,7 @@ SeveritySection.propTypes = {
   title: PropTypes.string.isRequired,
   severity: PropTypes.string.isRequired,
   issues: PropTypes.arrayOf(PropTypes.object).isRequired,
-};
-
-const STEP_LABELS = {
-  overview: 'Overview',
-  devices: 'Devices',
-  epochs: 'Epochs',
-  validation: 'Other required fields',
-  export: 'Export',
+  onNavigate: PropTypes.func,
 };
 
 /**

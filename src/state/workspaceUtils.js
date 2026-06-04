@@ -78,7 +78,11 @@ function reorderKeys(obj, order) {
  *
  * @param {import('./workspaceTypes').Animal} animal - Parent animal with snapshots.
  * @param {import('./workspaceTypes').Day} day - Recording day.
- * @returns {{ electrode_groups: object[], ntrode_electrode_group_channel_map: object[] }}
+ * @returns {{ electrode_groups: object[], ntrode_electrode_group_channel_map: object[], configurationVersion: (number|undefined) }}
+ *   `configurationVersion` is the version of the snapshot actually resolved (which
+ *   may differ from `day.configurationVersion` when that pin is stale/missing and
+ *   the fallback applies) — callers that surface the version must use this, not the
+ *   day's pin, to stay consistent with what is exported.
  * @throws {Error} If the animal has no usable configuration history.
  */
 export function resolveDayConfig(animal, day) {
@@ -107,6 +111,7 @@ export function resolveDayConfig(animal, day) {
       day.deviceOverrides?.ntrode_electrode_group_channel_map ||
       config.devices.ntrode_electrode_group_channel_map ||
       [],
+    configurationVersion: config.version,
   };
 }
 

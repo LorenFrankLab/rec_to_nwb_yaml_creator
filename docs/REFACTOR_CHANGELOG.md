@@ -6,6 +6,41 @@
 
 ---
 
+## Export gate fails closed (June 4, 2026)
+
+### Summary
+
+Every route to a per-day "Download YAML" now consults the single authoritative
+export status, so a schema/rule-invalid day can no longer be exported by clicking the
+stepper, using the keyboard, or trusting a stale step. A blocked export explains why and
+offers per-error repair actions that route to the owning step (focusing the control when
+a field anchor exists); a valid day shows a read-only preflight summary before download.
+**YAML export is unchanged — golden baselines stay byte-identical.**
+
+### Changes
+
+- **Single export gate, three routes.** Lifted `isExportEnabled` into a shared
+  `src/pages/DayEditor/stepGate.js` (the one place that owns the step-id list) and made it
+  also require `computeStepStatus(...).export === 'valid'`. Both the StepNavigation click
+  gate and the `DayEditorStepper` keyboard stepper shortcut (`Alt+Right`) import it, so the
+  keyboard can no longer cross into Export on a day that is "valid" in every data-entry step
+  but still carries an export-blocking schema/rule error.
+- **Download re-validates (defense in depth).** `ExportStep` recomputes validation against
+  the same merged day it would encode and refuses to download while any error-severity issue
+  remains — before, and in addition to, the existing encoder-stability shadow-export check
+  (which is unchanged and still runs only on a clean day).
+- **Blocked export is actionable.** The disabled state shows "Resolve N validation error(s)
+  before exporting" plus a repair action per error. Repair routing is shared between the
+  Export step and the Validation summary (`RepairActions` + `stepIdForIssue`): it navigates
+  to the owning step and focuses/highlights the targeted control when a field anchor is
+  present, degrading to the step otherwise.
+- **Valid-day preflight summary.** A clean day renders a compact read-only summary derived
+  from the merged day (subject/session, configuration version, cameras, probes/bad channels,
+  tasks/videos, optogenetics on/off) as the user's final confidence check. Later phases
+  enrich the underlying data without changing this derivation.
+
+---
+
 ## Pre-cutover cleanup (June 4, 2026) ✅ COMPLETE
 
 ### Summary

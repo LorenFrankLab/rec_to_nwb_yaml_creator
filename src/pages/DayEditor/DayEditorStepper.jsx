@@ -1,9 +1,10 @@
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
 import { useStepperShortcut } from '../../hooks/stepperShortcuts';
 import { useDayIdFromUrl } from '../../hooks/useDayIdFromUrl';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { computeStepStatus } from './validation';
+import { isExportEnabled } from './stepGate';
 import StepNavigation from './StepNavigation';
 import SaveIndicator from './SaveIndicator';
 import OverviewStep from './OverviewStep';
@@ -37,12 +38,23 @@ export default function DayEditorStepper() {
   // Global Alt+Arrow shortcuts advance/retreat this stepper. The step order is
   // fixed, so a ref captures it once and the handler stays stable.
   const stepOrderRef = useRef(['overview', 'devices', 'epochs', 'validation', 'export']);
+  // Latest validation status, read by the keyboard handler at fire time so the
+  // shortcut respects the SAME export gate as the click path (no advancing into a
+  // gated Export). Updated each render below, after stepStatus is computed.
+  const stepStatusRef = useRef(null);
   useStepperShortcut(
     useCallback((action) => {
       setCurrentStep((cur) => {
         const ids = stepOrderRef.current;
         const idx = ids.indexOf(cur);
-        if (action === 'next') return ids[Math.min(idx + 1, ids.length - 1)];
+        if (action === 'next') {
+          const nextId = ids[Math.min(idx + 1, ids.length - 1)];
+          // Fail closed: never let the keyboard cross into Export while it is gated.
+          if (nextId === 'export' && !isExportEnabled(stepStatusRef.current)) {
+            return cur;
+          }
+          return nextId;
+        }
         if (action === 'prev') return ids[Math.max(idx - 1, 0)];
         return cur;
       });
@@ -72,6 +84,53 @@ export default function DayEditorStepper() {
     }
     return computeStepStatus(day, mergedDay);
   }, [day, mergedDay]);
+  // Keep the keyboard handler's view of the gate current (it reads this ref at
+  // fire time rather than closing over a stale status).
+  stepStatusRef.current = stepStatus;
+
+  // Repair-action navigation. A repair routes to the step that owns the fix and,
+  // when a field target is available, focuses/highlights that control after the
+  // destination step renders. With no matching anchor it degrades to the step
+  // itself (focusing the main content region).
+  const [focusRequest, setFocusRequest] = useState(null);
+  const focusTokenRef = useRef(0);
+  const handleStepNavigate = useCallback((stepId, fieldPath) => {
+    setCurrentStep(stepId);
+    if (fieldPath) {
+      focusTokenRef.current += 1;
+      setFocusRequest({ fieldPath, token: focusTokenRef.current });
+    } else {
+      setFocusRequest(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!focusRequest) return undefined;
+    let highlighted = null;
+    let removeTimer = null;
+    const raf = requestAnimationFrame(() => {
+      const main = document.getElementById('main-content');
+      if (!main) return;
+      const target = Array.from(main.querySelectorAll('[data-field-path]')).find(
+        (el) => el.getAttribute('data-field-path') === focusRequest.fieldPath
+      );
+      if (target) {
+        target.focus();
+        target.classList.add('repair-target-highlight');
+        highlighted = target;
+        // Transient cue: drop the highlight so it does not read as a persistent state.
+        removeTimer = setTimeout(() => target.classList.remove('repair-target-highlight'), 2000);
+      } else {
+        // No precise anchor: land the user on the owning step's content.
+        main.focus();
+      }
+    });
+    return () => {
+      cancelAnimationFrame(raf);
+      if (removeTimer) clearTimeout(removeTimer);
+      if (highlighted) highlighted.classList.remove('repair-target-highlight');
+    };
+  }, [focusRequest]);
 
   // Field update handler with nested path support. The write is synchronous; real
   // save status (and any failure) is reported by the store's debounced autosave via
@@ -159,7 +218,7 @@ export default function DayEditorStepper() {
         steps={steps}
         currentStep={currentStep}
         stepStatus={stepStatus}
-        onNavigate={setCurrentStep}
+        onNavigate={handleStepNavigate}
       />
 
       <main
@@ -174,6 +233,7 @@ export default function DayEditorStepper() {
           day={day}
           mergedDay={mergedDay}
           onFieldUpdate={handleFieldUpdate}
+          onNavigate={handleStepNavigate}
           animalDays={animalDays}
           actions={actions}
         />

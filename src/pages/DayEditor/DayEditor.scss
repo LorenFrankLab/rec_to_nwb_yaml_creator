@@ -1407,6 +1407,85 @@
 
   .export-preview { max-height: 30rem; }
   .export-diff { max-height: 12rem; }
+
+  .export-validation-blocked {
+    margin: 1rem 0;
+    padding: 0.75rem 0.875rem;
+    background: #ffebee;
+    border-left: 4px solid #c62828;
+    border-radius: 4px;
+
+    .export-validation-blocked-reason {
+      margin: 0 0 0.5rem;
+      font-weight: 600;
+      color: #c62828;
+    }
+  }
+
+  .export-preflight {
+    margin: 1rem 0;
+    padding: 0.875rem 1rem;
+    background: #f4f8fb;
+    border: 1px solid #d6e4ef;
+    border-radius: 4px;
+
+    h3 { margin: 0 0 0.625rem; font-size: 1rem; }
+
+    .export-preflight-list {
+      margin: 0;
+      display: grid;
+      grid-template-columns: max-content 1fr;
+      gap: 0.35rem 1rem;
+    }
+
+    .export-preflight-row {
+      display: contents;
+
+      dt { font-weight: 600; color: #37474f; }
+      dd { margin: 0; color: #263238; }
+    }
+  }
+}
+
+/* ===========================================================================
+   Repair actions (shared by the Export step and the Validation summary)
+   =========================================================================== */
+.repair-action-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.repair-action-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.repair-action-button {
+  flex: none;
+  padding: 0.2rem 0.6rem;
+  background: #fff;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: 4px;
+  font-size: 0.8125rem;
+  cursor: pointer;
+
+  &:hover { background: #e3f2fd; }
+  &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+}
+
+/* Transient cue applied to a control a repair action focuses. */
+.repair-target-highlight {
+  outline: 3px solid #f9a825;
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .repair-target-highlight { transition: none; }
 }
 
 /* ===========================================================================

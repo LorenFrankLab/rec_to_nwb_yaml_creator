@@ -227,6 +227,32 @@ describe('StepNavigation', () => {
       expect(screen.getByRole('button', { name: /Export.*locked/i })).toBeInTheDocument();
     });
 
+    it('explains an export blocked by validation errors differently from incomplete prerequisites', () => {
+      // Every prerequisite step is valid, but export is gated by a validation error.
+      render(
+        <StepNavigation
+          steps={steps}
+          currentStep="overview"
+          stepStatus={{
+            overview: 'valid',
+            devices: 'valid',
+            epochs: 'valid',
+            validation: 'valid',
+            export: 'error',
+          }}
+          onNavigate={vi.fn()}
+        />
+      );
+
+      // The locked reason must point at validation, not at already-complete steps.
+      expect(
+        screen.getByRole('button', { name: /Export.*resolve validation errors/i })
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /Export.*complete previous steps/i })
+      ).not.toBeInTheDocument();
+    });
+
     it('does not navigate when a disabled step is activated', async () => {
       const user = userEvent.setup();
       const onNavigate = vi.fn();

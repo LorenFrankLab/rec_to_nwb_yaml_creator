@@ -1,9 +1,11 @@
 import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { encodeYaml, formatDeterministicFilename, downloadYamlFile } from '../../io/yaml';
-import { mergeDayMetadata } from '../../state/workspaceUtils';
+import { mergeDayMetadata, resolveDayConfig } from '../../state/workspaceUtils';
+import { validate } from '../../validation';
 import { isFeatureEnabled } from '../../featureFlags';
 import { checkShadowExport } from './shadowExport';
+import RepairActions from './RepairActions';
 import './DayEditor.scss';
 
 /**
@@ -11,42 +13,70 @@ import './DayEditor.scss';
  *
  * Builds the flat metadata model from the workspace via {@link mergeDayMetadata},
  * shows the resolved download filename and an optional YAML preview, and lets the
- * user download the file. Every download first runs an encoder-stability
- * pre-download check ({@link checkShadowExport}); when that check fails it blocks
- * the download and shows a diff in strict mode (the default), or warns and
- * proceeds when the strict flag is disabled for debugging.
+ * user download the file.
  *
- * The step itself is only reachable once every prerequisite step is valid (the
- * existing StepNavigation export gate); this component does not re-implement that
- * gate but still hard-stops on the shadow check.
+ * Export fails closed. The step is normally only reachable once the day is fully
+ * valid (the StepNavigation export gate and the keyboard gate both consult the same
+ * authoritative status), but this component re-validates the merged day itself as
+ * defense in depth: if any error-severity issue exists it surfaces the blocking
+ * reason plus per-error repair actions and refuses to download. Only when the day
+ * is clean does it run the encoder-stability pre-download check
+ * ({@link checkShadowExport}) — a distinct guard (encoder determinism, not schema
+ * validity) that still hard-stops the download in strict mode (the default).
  *
  * @param {object} props
  * @param {object} props.animal - Animal record providing shared metadata.
  * @param {object} props.day - Recording day providing session-specific data.
+ * @param {(stepId: string, fieldPath?: string) => void} [props.onNavigate] - Routes a
+ *   repair action to the step that owns the fix (and an optional field target).
  * @returns {JSX.Element}
  */
-export default function ExportStep({ animal, day }) {
+export default function ExportStep({ animal, day, onNavigate }) {
   const [showPreview, setShowPreview] = useState(false);
   const [blockingError, setBlockingError] = useState(null);
   const [overrideWarning, setOverrideWarning] = useState(null);
   const [downloadedFile, setDownloadedFile] = useState(null);
 
-  // Preview YAML + filename, recomputed when the inputs change.
-  const { yaml, fileName } = useMemo(() => {
-    const merged = mergeDayMetadata(animal, day);
+  // Merge once; preview YAML, filename, validation, and the preflight summary are
+  // all derived from this single merged object (the same one that will be encoded),
+  // never from duplicate component state.
+  const { merged, yaml, fileName } = useMemo(() => {
+    const mergedDay = mergeDayMetadata(animal, day);
     return {
-      yaml: encodeYaml(merged),
+      merged: mergedDay,
+      yaml: encodeYaml(mergedDay),
       // mergeDayMetadata does not carry EXPERIMENT_DATE_in_format_mmddYYYY (it is
       // a filename-only key); inject it from the day so the filename does not
       // degrade to the literal placeholder. Filename only — never the YAML body.
       fileName: formatDeterministicFilename({
-        ...merged,
+        ...mergedDay,
         EXPERIMENT_DATE_in_format_mmddYYYY: day.experimentDate,
       }),
     };
   }, [animal, day]);
 
+  // Authoritative export gate, re-checked here (defense in depth): the day may not
+  // be downloaded while any error-severity validation issue remains.
+  const validationErrors = useMemo(
+    () => validate(merged).filter((issue) => issue.severity === 'error'),
+    [merged]
+  );
+  const exportBlocked = validationErrors.length > 0;
+
+  const preflight = useMemo(() => {
+    if (exportBlocked) return null;
+    // Use the version of the snapshot actually resolved into `merged` (which may
+    // differ from the day's pin when stale), so preflight matches the encoded YAML.
+    const { configurationVersion } = resolveDayConfig(animal, day);
+    return buildPreflightSummary(merged, configurationVersion);
+  }, [animal, day, merged, exportBlocked]);
+
   const handleDownload = () => {
+    // Defense in depth: validation gates the download before the encoder check.
+    if (exportBlocked) {
+      return;
+    }
+
     const result = checkShadowExport(animal, day);
 
     if (!result.ok && isFeatureEnabled('shadowExportStrict')) {
@@ -83,6 +113,30 @@ export default function ExportStep({ animal, day }) {
         File name: <code className="export-filename">{fileName}</code>
       </p>
 
+      {exportBlocked && (
+        <div className="export-validation-blocked" role="alert">
+          <p className="export-validation-blocked-reason">
+            Resolve {validationErrors.length} validation{' '}
+            {validationErrors.length === 1 ? 'error' : 'errors'} before exporting.
+          </p>
+          <RepairActions issues={validationErrors} onNavigate={onNavigate} />
+        </div>
+      )}
+
+      {!exportBlocked && preflight && (
+        <section className="export-preflight" aria-label="Export preflight summary">
+          <h3>Preflight summary</h3>
+          <dl className="export-preflight-list">
+            {preflight.map(({ label, value }) => (
+              <div key={label} className="export-preflight-row">
+                <dt>{label}</dt>
+                <dd>{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      )}
+
       {blockingError && (
         <div className="export-blocking-error" role="alert">
           <p>{blockingError.message}</p>
@@ -109,7 +163,7 @@ export default function ExportStep({ animal, day }) {
           type="button"
           className="export-download-button"
           onClick={handleDownload}
-          disabled={!!blockingError}
+          disabled={!!blockingError || exportBlocked}
         >
           Download YAML
         </button>
@@ -139,7 +193,62 @@ export default function ExportStep({ animal, day }) {
   );
 }
 
+/**
+ * Build the read-only preflight summary rows from the merged day that will be
+ * encoded. This is the user's final confidence check before download: which
+ * subject/session, configuration version, cameras, probes/bad channels,
+ * tasks/videos, and whether optogenetics is on.
+ *
+ * Scaffold: rows are derived from whatever the merged day already carries today.
+ * Later phases enrich the underlying data (configuration version, camera
+ * calibration, optogenetics state, downstream identity warnings) without changing
+ * this derivation — it always reads the merged day, never duplicate state.
+ *
+ * @param {object} merged - The merged day metadata about to be encoded.
+ * @param {number|undefined} configurationVersion - The version of the snapshot
+ *   actually resolved into `merged` (from {@link resolveDayConfig}).
+ * @returns {Array<{label: string, value: string}>}
+ */
+function buildPreflightSummary(merged, configurationVersion) {
+  const subjectId = merged.subject?.subject_id || '—';
+  const sessionId = merged.session_id || '—';
+
+  const ntrodeMap = merged.ntrode_electrode_group_channel_map || [];
+  const badChannelCount = ntrodeMap.reduce(
+    (total, ntrode) => total + (ntrode.bad_channels?.length || 0),
+    0
+  );
+
+  const optoOn =
+    (merged.opto_excitation_source?.length || 0) > 0 ||
+    (merged.optical_fiber?.length || 0) > 0 ||
+    (merged.virus_injection?.length || 0) > 0;
+
+  return [
+    { label: 'Subject & session', value: `${subjectId} — session ${sessionId}` },
+    {
+      label: 'Configuration version',
+      value: configurationVersion != null ? `Version ${configurationVersion}` : '—',
+    },
+    { label: 'Cameras', value: `${(merged.cameras || []).length} cameras` },
+    {
+      label: 'Probes & bad channels',
+      value: `${(merged.electrode_groups || []).length} electrode groups, ${badChannelCount} bad channels`,
+    },
+    {
+      label: 'Tasks & videos',
+      value: `${(merged.tasks || []).length} tasks, ${(merged.associated_video_files || []).length} videos`,
+    },
+    { label: 'Optogenetics', value: optoOn ? 'On' : 'Off' },
+  ];
+}
+
 ExportStep.propTypes = {
   animal: PropTypes.object.isRequired,
   day: PropTypes.object.isRequired,
+  onNavigate: PropTypes.func,
+};
+
+ExportStep.defaultProps = {
+  onNavigate: () => {},
 };

@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { isExportEnabled, exportBlockReason } from './stepGate';
 
 /**
  * Step Navigation - Breadcrumb with validation status indicators
@@ -124,22 +125,11 @@ function getStatusLabel(status) {
 function getButtonStatusLabel(step, status, stepStatus) {
   if (step.disabled) return 'Not available yet';
   if (step.id === 'export' && !isExportEnabled(stepStatus)) {
-    return 'Locked — complete previous steps first';
+    return exportBlockReason(stepStatus) === 'validation-errors'
+      ? 'Locked — resolve validation errors before exporting'
+      : 'Locked — complete previous steps first';
   }
   return getStatusLabel(status);
-}
-
-/**
- * Check if all required steps are valid (export enabled)
- *
- * @private
- * @param {object} stepStatus - Status map
- * @returns {boolean} True if export should be enabled
- */
-function isExportEnabled(stepStatus) {
-  return ['overview', 'devices', 'epochs', 'validation'].every(
-    stepId => stepStatus[stepId] === 'valid'
-  );
 }
 
 StepNavigation.propTypes = {

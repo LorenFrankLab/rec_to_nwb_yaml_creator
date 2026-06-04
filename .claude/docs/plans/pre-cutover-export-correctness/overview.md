@@ -197,6 +197,42 @@ All open questions are **decided** (2026-06-04):
    `behavioral_events` actually persist (today `updateAnimal` drops them) **or** remove animal-level
    editing; the export keeps reading `day.behavioral_events`.
 
+## Implementation findings / follow-ups
+
+Recorded during implementation; revisit in the named phase.
+
+1. **Phase-1 gate-isolation fixture corrected (resolved in phase 1).** The phase-1 file
+   suggested isolating the new export gate with an electrode group missing schema-required
+   `description`. That does **not** isolate it: AJV reports the `required` error with path
+   `description` (the bare missing-property name), which `groupErrorsByStep`/`stepIdForIssue`
+   route to the **catch-all `validation`** bucket, so `validation: 'error'` and the *old*
+   prerequisite gate already blocks — proving nothing about the export status. The truly
+   isolating fixture is a device-field error whose path contains `electrode`/`camera`/`ntrode`
+   (routes to the Devices bucket, which `computeDevicesStatus` ignores), e.g. a non-numeric
+   `electrode_groups[0].targeted_x`: `{overview, devices, epochs, validation}` all `'valid'`,
+   `export: 'error'`. Phase 1 uses this fixture.
+2. **Issue→step routing is path-substring based and coarse (revisit in phase 6).**
+   `stepIdForIssue` routes by substring of the issue `path`, so a bare `required` artifact
+   whose path is only the missing property name (e.g. `description`, `weight`) lands in the
+   catch-all `validation` step rather than the step that actually owns the field. Repair
+   actions therefore degrade to the catch-all step for those issues. Phase 6's richer issue
+   shape (`path`/`actionLabel`) should also carry an explicit owning `step` (or a fuller path)
+   so routing/repair targeting is precise rather than substring-inferred.
+3. **Field-level repair focus is wired only for the Overview editable session fields
+   (extend in phase 6).** Repair focus targets `[data-field-path]` anchors; phase 1 added them
+   to the Overview `session_description` / `experiment_description` controls (the editable
+   fields whose validation paths match). Other steps degrade to step-level focus until phase 6
+   adds field-level issue metadata and the corresponding anchors on those steps' controls.
+4. **`schemaValidation` does not fail closed on an AJV runtime throw (harden in phase 6/7).**
+   `src/validation/schemaValidation.js` calls the compiled validator with no `try/catch`. Today
+   that is acceptable — a throw propagates out of `validate()` and crashes the render (no download
+   fires, so it is *not* fail-open), and no caller defaults a thrown result to `[]`. But the
+   export gate now rests entirely on `validate()` returning error issues for bad data, so this
+   shared module (also used by the frozen legacy path) should be made explicitly fail-closed:
+   wrap the validator call and, on throw, return a synthetic error-severity issue rather than
+   allowing any path to an empty result. Cross-cutting; do it deliberately in the validation
+   phase (6) or persistence/hardening phase (7), not as a drive-by in phase 1.
+
 ## Estimated Effort
 
 ~11 PRs. Rough diff sizes: phase 1 small–medium (~200 LOC including repair links/preflight); phase 2 medium

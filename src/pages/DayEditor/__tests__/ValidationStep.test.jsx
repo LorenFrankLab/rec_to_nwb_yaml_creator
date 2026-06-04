@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import ValidationStep from '../ValidationStep';
 import * as validation from '../../../validation';
 import { mergeDayMetadata } from '../../../state/workspaceUtils';
@@ -65,6 +66,31 @@ describe('ValidationStep', () => {
 
     expect(screen.getByRole('heading', { name: /info/i })).toBeInTheDocument();
     expect(screen.getByText('unclassified issue')).toBeInTheDocument();
+  });
+
+  it('offers a repair action on each error that routes to the owning step with the field target', async () => {
+    const user = userEvent.setup();
+    const onNavigate = vi.fn();
+    vi.spyOn(validation, 'validate').mockReturnValue([
+      { severity: 'error', path: 'electrode_groups[0].targeted_x', code: 'type', message: 'must be number' },
+    ]);
+
+    render(<ValidationStep {...baseProps} onNavigate={onNavigate} />);
+
+    await user.click(screen.getByRole('button', { name: /fix in devices/i }));
+
+    expect(onNavigate).toHaveBeenCalledWith('devices', 'electrode_groups[0].targeted_x');
+  });
+
+  it('does not render repair actions for non-error issues', () => {
+    const onNavigate = vi.fn();
+    vi.spyOn(validation, 'validate').mockReturnValue([
+      { severity: 'warning', path: 'cameras', code: 'w', message: 'a warning' },
+    ]);
+
+    render(<ValidationStep {...baseProps} onNavigate={onNavigate} />);
+
+    expect(screen.queryByRole('button', { name: /fix in/i })).not.toBeInTheDocument();
   });
 
   it('surfaces real validation errors computed from the merged metadata', () => {

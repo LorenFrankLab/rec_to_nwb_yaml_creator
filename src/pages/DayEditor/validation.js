@@ -205,25 +205,40 @@ export function groupErrorsByStep(errors) {
   };
 
   errors.forEach(error => {
-    const path = error.path || error.instancePath || '';
-
-    // Session-related fields → Overview
-    if (path.includes('session') || path.includes('subject') || path.includes('experimenter') || path.includes('lab') || path.includes('institution') || path.includes('experiment_description')) {
-      groups.overview.push(error);
-    }
-    // Device-related fields → Devices
-    else if (path.includes('electrode') || path.includes('device') || path.includes('camera') || path.includes('ntrode')) {
-      groups.devices.push(error);
-    }
-    // Task/behavioral fields → Epochs
-    else if (path.includes('task') || path.includes('behavioral') || path.includes('epoch') || path.includes('associated')) {
-      groups.epochs.push(error);
-    }
-    // Everything else → Validation (catch-all)
-    else {
-      groups.validation.push(error);
-    }
+    groups[stepIdForIssue(error)].push(error);
   });
 
   return groups;
+}
+
+/**
+ * Determine which editor step "owns" a single validation issue, by inspecting its
+ * path. This is the single source of truth for issue→step routing, used both to
+ * group the validation summary ({@link groupErrorsByStep}) and to route a repair
+ * action to the step that can fix it.
+ *
+ * Routing degrades to the catch-all `validation` step when a path matches none of
+ * the data-entry steps (e.g. a bare `required` artifact whose path is just the
+ * missing property name).
+ *
+ * @param {{path?: string, instancePath?: string}} issue - A validation issue.
+ * @returns {'overview'|'devices'|'epochs'|'validation'} The owning step id.
+ */
+export function stepIdForIssue(issue) {
+  const path = issue?.path || issue?.instancePath || '';
+
+  // Session-related fields → Overview
+  if (path.includes('session') || path.includes('subject') || path.includes('experimenter') || path.includes('lab') || path.includes('institution') || path.includes('experiment_description')) {
+    return 'overview';
+  }
+  // Device-related fields → Devices
+  if (path.includes('electrode') || path.includes('device') || path.includes('camera') || path.includes('ntrode')) {
+    return 'devices';
+  }
+  // Task/behavioral fields → Epochs
+  if (path.includes('task') || path.includes('behavioral') || path.includes('epoch') || path.includes('associated')) {
+    return 'epochs';
+  }
+  // Everything else → Validation (catch-all)
+  return 'validation';
 }

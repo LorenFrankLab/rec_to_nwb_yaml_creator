@@ -1,6 +1,39 @@
 import { describe, it, expect } from 'vitest';
-import { validateField, computeStepStatus, computeDevicesStatus, groupErrorsByStep } from '../validation';
+import { validateField, computeStepStatus, computeDevicesStatus, groupErrorsByStep, stepIdForIssue } from '../validation';
 import { makeAnimalWithCamerasAndDay } from './taskFixtures';
+
+describe('stepIdForIssue', () => {
+  it('routes session/subject issues to the overview step', () => {
+    expect(stepIdForIssue({ path: 'session_description' })).toBe('overview');
+    expect(stepIdForIssue({ path: 'subject.weight' })).toBe('overview');
+  });
+
+  it('routes electrode/camera/ntrode issues to the devices step', () => {
+    expect(stepIdForIssue({ path: 'electrode_groups[0].targeted_x' })).toBe('devices');
+    expect(stepIdForIssue({ path: 'cameras[1].lens' })).toBe('devices');
+  });
+
+  it('routes task/behavioral issues to the epochs step', () => {
+    expect(stepIdForIssue({ path: 'tasks[0].task_name' })).toBe('epochs');
+  });
+
+  it('routes anything unrecognized to the validation catch-all step', () => {
+    expect(stepIdForIssue({ path: 'description' })).toBe('validation');
+  });
+
+  it('agrees with groupErrorsByStep for the same issues', () => {
+    const issues = [
+      { path: 'session_description', code: 'pattern', severity: 'error' },
+      { path: 'electrode_groups[0].targeted_x', code: 'type', severity: 'error' },
+      { path: 'tasks[0].task_name', code: 'pattern', severity: 'error' },
+      { path: 'description', code: 'required', severity: 'error' },
+    ];
+    const grouped = groupErrorsByStep(issues);
+    for (const issue of issues) {
+      expect(grouped[stepIdForIssue(issue)]).toContainEqual(issue);
+    }
+  });
+});
 
 describe('validateField', () => {
   it('validates required fields', async () => {
