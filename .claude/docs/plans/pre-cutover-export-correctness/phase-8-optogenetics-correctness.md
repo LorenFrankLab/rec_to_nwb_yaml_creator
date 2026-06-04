@@ -37,6 +37,8 @@ experiment's central manipulation.)
 - [Parity, golden-fixture & round-trip contract](shared-contracts.md#parity-golden-fixture--round-trip-contract)
   — opto output changes; **run the mandatory round-trip** on an opto sample (convert → inspector → dandi
   validate → Spyglass smoke).
+- [UX mistake-prevention contract](shared-contracts.md#ux-mistake-prevention-contract) — optogenetics has an
+  explicit enabled/off state and no hidden partial configuration.
 
 ## Tasks
 
@@ -44,7 +46,9 @@ experiment's central manipulation.)
   `animal.optogenetics` and `day.fs_gui_yamls`, but the workspace editor currently exposes no optogenetics
   step. Add a workspace-bound optogenetics surface (or a documented import/fixture path if UI is deliberately
   deferred) that writes `animal.optogenetics` and `day.fs_gui_yamls` through workspace actions. Without this,
-  Phase 8 can only test synthetic state, not a user-configurable workspace session.
+  Phase 8 can only test synthetic state, not a user-configurable workspace session. The UX starts with an
+  explicit "Optogenetics enabled" control: off means no opto metadata is expected; on reveals and requires
+  the four converter-required sections plus FsGUI camera/epoch references.
 - **Task 1 — emit the keys the converter actually reads.** Ensure the export emits
   `optogenetic_stimulation_software` (the converter's gate key; the app already does — keep it) and
   `virus_injection[].volume_in_uL` (capital L — the converter reads this). During the schema/converter
@@ -82,6 +86,7 @@ experiment's central manipulation.)
 | Test | Asserts |
 | --- | --- |
 | `workspace optogenetics can be configured` *(integration)* | the workspace editor/import path writes `animal.optogenetics` and `day.fs_gui_yamls`; export no longer relies only on synthetic state. |
+| `opto enabled state controls required fields` *(integration)* | opto off exports empty/no-opto state without errors; opto on reveals required sections and blocks save/export until all converter-required sections and FsGUI references are complete. |
 | `opto session emits converter and schema keys` *(unit)* | a configured opto session's merged output has non-empty equal pairs: `optogenetic_stimulation_software`/`opto_software` and `virus_injection[].volume_in_uL`/`volume_in_ul`. |
 | `partial optogenetics is an error` *(unit)* | a session with some opto fields but missing one of the four required sections yields an error-severity issue (the export gate blocks it); a complete opto session passes; a no-opto session yields nothing. |
 | `more than one excitation source is an error` *(unit)* | two `opto_excitation_source` entries error. |

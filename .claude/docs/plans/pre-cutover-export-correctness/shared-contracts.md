@@ -8,6 +8,7 @@ without updating this file and every phase that references it.
 - [Export-resolution source-of-truth contract](#export-resolution-source-of-truth-contract)
 - [Schema device-output contract](#schema-device-output-contract)
 - [Validation & export-gate contract](#validation--export-gate-contract)
+- [UX mistake-prevention contract](#ux-mistake-prevention-contract)
 - [Spyglass naming-identity contract](#spyglass-naming-identity-contract)
 - [DANDI conformance contract](#dandi-conformance-contract)
 - [Parity, golden-fixture & round-trip contract](#parity-golden-fixture--round-trip-contract)
@@ -104,6 +105,39 @@ Referenced by phases 1, 6. The day-level export must be **fail-closed**.
   **error** severity where they would produce invalid/ambiguous or Spyglass-skipped YAML (dangling camera /
   electrode-group references, out-of-range channels, duplicate task epochs, invalid video/task dependencies);
   softer data-entry incompleteness stays warning/info until it reaches export.
+
+---
+
+## UX mistake-prevention contract
+
+Referenced by phases 1–8. The user should encounter invalid states as close as possible to
+the field or workflow that created them, not only at final export. This is a correctness contract, not polish:
+the UI must make the scientifically dangerous choices hard to make accidentally.
+
+- **Every export-blocking issue has a repair target.** Validation issues that block export include enough
+  metadata to route the user to the right step and focus/highlight the relevant control where possible
+  (`step`, `path`/`field`, and a short action label). Export and validation summaries show those actions;
+  the disabled Export state is never a dead-end message.
+- **Identity-safe naming is active, not passive.** When a camera/data-acq/task name reuses an existing
+  Spyglass identity with different dependent metadata, the UI shows a side-by-side comparison and offers the
+  safe primary action: create/use a new name. A changed camera zoom/calibration/model/lens/manufacturer/id
+  must not be hidden behind a generic warning.
+- **Pinned configuration context is visible.** Day device editing shows which configuration version the day
+  uses and whether it is historical/current. Reconfiguration confirms the day range affected before the user
+  edits geometry; historical days should not look like they are editing live latest devices.
+- **Controlled choices for canonical references.** Species, probe/device type, camera references, task epoch
+  references, and region/location fields use controlled dropdowns or strong autocomplete from known values
+  where possible. "Other" escapes remain, but must validate the emitted value before export.
+- **Optogenetics has an explicit enabled state.** No partial hidden opto state: when opto is off, opto fields
+  are absent/empty by design; when on, all converter-required sections are visible and required, including
+  FsGUI camera/epoch references.
+- **Export has a preflight summary.** Before download, the user sees a compact summary of the day that will
+  be encoded: subject/session completeness, configuration version, cameras/calibrations, probes/bad channels,
+  tasks/videos, optogenetics status, and any downstream identity warnings. Passing preflight is the user's
+  confidence check; failing preflight links back to repairs.
+- **Import/persistence errors name the damaged section.** Partial import and workspace-load recovery notices
+  identify the excluded/normalized top-level section and the nested field/path that caused it, so users know
+  what was not carried forward.
 
 ---
 

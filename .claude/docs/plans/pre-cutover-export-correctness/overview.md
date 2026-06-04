@@ -70,6 +70,8 @@ how the model is built and gated, not in the encoder.
   schema-valid DOB.
 - Export **fails closed**: a day with any error-severity validation issue cannot be downloaded by any
   route (button, keyboard, or the Export step).
+- The UI prevents common scientific mistakes before export: identity drift is caught at edit time, blocked
+  exports link to the exact repair target, and the final Export step shows a compact preflight summary.
 - Validation catches the cross-reference and channel-bound errors a scientist can realistically create.
 - Import and persistence degrade safely (no silent invalid imports, no crash on an empty blob, no lost
   unsaved work after a failed autosave).
@@ -117,6 +119,9 @@ helpers (`getChannelCount`, `deviceTypeMap`, `validate`, `schemaValidation`).
   `data_acq_device[].name`, task name), locations non-empty/canonical, behavioral-event names unique, and a
   Spyglass smoke ingest (`populate_all_common(..., raise_err=True)` or zero `InsertError` plus expected
   rows) succeeds ([naming-identity contract](shared-contracts.md#spyglass-naming-identity-contract)).
+- **UX mistake-prevention:** export-blocking issues expose repair actions; camera/data-acq/task identity
+  drift is caught while editing; configuration version and optogenetics enabled/off state are visible; Export
+  shows the preflight summary ([UX contract](shared-contracts.md#ux-mistake-prevention-contract)).
 
 ## Risks and Mitigations
 
@@ -163,7 +168,8 @@ All three are **decided** (2026-06-04):
 
 ## Estimated Effort
 
-~8 PRs. Rough diff sizes: phase 1 small (~150 LOC); phase 2 medium (~250 LOC incl. design + fixtures);
+~8 PRs. Rough diff sizes: phase 1 small–medium (~200 LOC including repair links/preflight); phase 2 medium
+(~275 LOC incl. design + fixtures + configuration-version context);
 phase 3 medium–large (~300 LOC — the `updateAnimal` no-op fix, camera/data-acq identity, behavioral-events
 ownership); phase 4 medium (~250 LOC incl. integer-ID sweep + multi-shank offset + stray-key removal);
 phase 5 medium (~250 LOC — subject/session completeness: weight, species, DOB, no-slash ids,
@@ -171,3 +177,9 @@ experiment_description); phase 6 large (~350 LOC of rules + the corrected channe
 rules + tests); phase 7 small–medium (~150 LOC, re-scoped); phase 8 medium (~200 LOC — opto key fixes +
 all-or-nothing validation). Test LOC dominates. Each output-changing phase also carries a mandatory
 trodes_to_nwb → NWB Inspector (dandi) → dandi-validate → Spyglass smoke round-trip.
+
+**Caveat:** these are rough lower bounds. The [UX mistake-prevention contract](shared-contracts.md#ux-mistake-prevention-contract)
+adds real UI per phase — the export preflight summary + repair-action routing (phase 1), identity
+side-by-side comparison modals (phase 3), pinned-config badges + reconfiguration confirmation (phase 2),
+controlled region/canonical inputs (phases 4–5), and the opto enabled-state surface (phase 8) — which can
+push several phases meaningfully above the LOC noted. Treat the UX work as first-class scope, not trim.

@@ -28,6 +28,8 @@ snapshots are the source of truth, `animal.devices` mirrors the latest snapshot,
 **Contracts referenced:**
 
 - [Export-resolution source-of-truth contract](shared-contracts.md#export-resolution-source-of-truth-contract).
+- [UX mistake-prevention contract](shared-contracts.md#ux-mistake-prevention-contract) — day device editing
+  must show the pinned configuration version/range context.
 - [Parity & golden-fixture contract](shared-contracts.md#parity-golden-fixture--round-trip-contract) — new-path
   fixtures updated deliberately; the 125 legacy baselines stay byte-identical.
 
@@ -61,7 +63,13 @@ snapshots are the source of truth, `animal.devices` mirrors the latest snapshot,
 - **Task 4 — DevicesStep renders the effective config (Finding: bad-channel UI source).** `DevicesStep`
   currently renders live `animal.devices` (`DevicesStep.jsx:34`); make it render
   `resolveDayConfig(animal, day)` so the bad-channel editor edits the day's *pinned* ntrode list (correct
-  for historical days), matching what the export uses.
+  for historical days), matching what the export uses. Show a compact configuration badge in `DevicesStep`
+  (e.g. "Configuration v2, applied from 2026-06-04") and mark whether it is the latest or historical so
+  users know they are editing day-level bad channels against a pinned snapshot, not changing geometry.
+- **Task 4b — reconfiguration confirmation UX.** The fork-before-edit wizard confirms the affected day range
+  before it creates the new version, then lands the user in the Animal Editor with a clear "editing latest
+  configuration vN" context. It must not show the old live-vs-snapshot diff; it should show the days that
+  will move to the new version and the days that stay pinned to the old one.
 - **Task 5 — new-path parity fixtures.** Update `workspaceBuilders.js` / the new-path parity references so
   a configured session's expected export includes the probes and merged bad channels. Review the byte diff
   (probes appearing, bad-channels applied) and confirm each change is intended.
@@ -90,7 +98,9 @@ snapshots are the source of truth, `animal.devices` mirrors the latest snapshot,
 | `bad-channel merge survives an integer ntrode_id` *(unit)* | an integer `ntrode_id` against a string-keyed override map still merges (guards phase 4). |
 | `missing pinned configuration fails closed` *(unit)* | a day whose `configurationVersion` has no matching snapshot throws an actionable error; it does not fall back to latest/first and export the wrong geometry. |
 | `DevicesStep edits the day's effective ntrode list` *(integration)* | on a historical day, the bad-channel editor renders the pinned snapshot's ntrodes (from `resolveDayConfig`), not live `animal.devices`. |
+| `DevicesStep shows pinned configuration context` *(integration)* | the devices step displays the day configuration version and whether it is latest/historical; the text updates after reconfiguration. |
 | `reconfiguration yields correct per-day config (fork-before-edit)` *(integration)* | reuse `makeReconfigWorkspace`: forking from day X then editing geometry leaves earlier days on the frozen old config and later days on the new one; the two store actions + returned-version contract intact. |
+| `reconfiguration confirmation shows affected days` *(integration)* | before fork, the wizard lists the day range that will move to the new version and the earlier days that remain pinned; confirmation happens before geometry edit. |
 | `phase-2 corrected sample passes downstream gates` *(integration, mandatory)* | a schema-shaped sample exercising configured probes + day bad-channel merge converts, has zero DANDI CRITICAL findings, `dandi validate` exits 0, and Spyglass smoke ingest has no `InsertError`. |
 | `golden-yaml.baseline.test.js` (existing) | **byte-identical** — these are legacy fixtures and must not change. |
 

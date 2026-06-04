@@ -26,6 +26,8 @@ that currently produce invalid YAML will (correctly) be blocked from export.
 
 - [Validation & export-gate contract](shared-contracts.md#validation--export-gate-contract) — the gate
   consults `computeStepStatus(...).export`; `ExportStep` re-checks it; the shadow-export check stays.
+- [UX mistake-prevention contract](shared-contracts.md#ux-mistake-prevention-contract) — blocked export
+  must expose repair actions, and valid export shows a preflight summary before download.
 
 ## Tasks
 
@@ -44,9 +46,22 @@ that currently produce invalid YAML will (correctly) be blocked from export.
   are distinct (one is schema/rule validity, one is encoder determinism) — keep both.
 - **Surface why export is blocked.** Where the Export step is rendered disabled, show the blocking
   reason (e.g. "Resolve N validation errors before exporting") sourced from the same status, so the user
-  isn't staring at an inert button. Small copy + a pointer to the Validation step.
+  isn't staring at an inert button. Brief copy plus the repair-action list below replaces a generic pointer
+  to the Validation step.
+- **Make blocked export actionable.** Render each error-severity issue with a repair action that navigates to
+  the owning step and focuses/highlights the relevant control when the issue carries a path/field target.
+  Fall back to the owning step when a precise field target is unavailable. Reuse this action model in the
+  Validation step/summary so the two surfaces agree. *Dependency:* this phase routes with the issue metadata
+  that exists today (`step`, optional `field`) and degrades to step-level; phase 6's Task 9b extends the
+  issue shape (`path`/`actionLabel`) so field-level coverage for the new rules completes there.
+- **Show a valid-day preflight summary.** When export is valid, the Export step shows a compact read-only
+  summary derived from the same `mergedDay` that will be encoded: subject/session readiness, configuration
+  version, cameras/calibrations, probes/bad-channel count, tasks/videos, optogenetics on/off, and downstream
+  identity warnings. This is the user's final confidence check before download. *Build the scaffold here from
+  whatever `mergedDay` already carries; sections fill in as later phases land (configuration version → phase 2,
+  cameras → phase 3, opto state → phase 8, identity warnings → phase 6).*
 - **Docs.** Add a short entry to `docs/REFACTOR_CHANGELOG.md` noting the export path now fails closed on
-  validation errors across button, keyboard, and step.
+  validation errors across button, keyboard, and step, with repair actions/preflight.
 
 ## Deliberately not in this phase
 
@@ -63,6 +78,8 @@ that currently produce invalid YAML will (correctly) be blocked from export.
 | `step-nav click cannot reach Export on an error day` *(integration)* | clicking the Export step button with an error-day status does not navigate (`onNavigate` not called for `export`). |
 | `Alt+Right does not advance into Export on an error day` *(integration)* | firing the stepper `next` shortcut from the `validation` step with an error day keeps `currentStep === 'validation'`; on a valid day it advances to `export`. |
 | `ExportStep blocks download when validation has errors` *(integration)* | with an error-day `mergedDay`, `handleDownload` does not produce a file and renders the blocking error; with a valid day it proceeds to the shadow-export check. |
+| `blocked export offers repair actions` *(integration)* | each rendered error has a step/field repair action; clicking it navigates to the intended step and focuses/highlights the field when available. |
+| `valid export shows preflight summary` *(integration)* | a valid day renders the preflight sections from `mergedDay` before download: subject/session, configuration version, cameras, probes/bad channels, tasks/videos, and opto state. |
 | `golden-yaml.baseline.test.js` (existing) | unchanged — no output bytes change in this phase. |
 
 All Vitest; integration tests render the stepper/export step with a seeded day and reset state between runs.
@@ -81,6 +98,7 @@ new fixture shapes.
 Dispatch `pr-review-toolkit:code-reviewer` against the diff before merging. Confirm: every task
 implemented; the "Deliberately not" list honored; the shared `isExportEnabled` helper is used by both
 nav paths (no duplicated step-id list); tests exercise real blocking (not tautologies); the shadow-export
-check is preserved alongside the new schema re-check; no plan/phase strings in code or test names; the
-changelog entry is updated. Also dispatch `pr-review-toolkit:silent-failure-hunter` (this phase is all
-error-handling/gating).
+check is preserved alongside the new schema re-check; repair links are field-targeted where possible; the
+preflight summary is derived from `mergedDay` rather than duplicate state; no plan/phase strings in code or
+test names; the changelog entry is updated. Also dispatch `pr-review-toolkit:silent-failure-hunter` (this
+phase is all error-handling/gating).

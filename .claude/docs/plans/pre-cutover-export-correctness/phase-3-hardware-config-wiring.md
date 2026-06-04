@@ -31,6 +31,8 @@ in the exported YAML.
   per-day.
 - [Spyglass naming-identity contract](shared-contracts.md#spyglass-naming-identity-contract) —
   `camera_name` and `data_acq_device.name` are database identities; reuse-with-divergence is unsafe.
+- [UX mistake-prevention contract](shared-contracts.md#ux-mistake-prevention-contract) — identity drift gets
+  a side-by-side comparison and safe primary action, not a passive warning.
 - [Parity, golden-fixture & round-trip contract](shared-contracts.md#parity-golden-fixture--round-trip-contract)
   — adding configured cameras/data-acq changes new-path output; update fixtures deliberately; legacy
   baselines stay; run the mandatory round-trip.
@@ -53,11 +55,13 @@ matches **no branch and is silently dropped**. Task 0 fixes this before any wiri
   add/edit/delete (open `CameraModal`, assign integer IDs, persist via `updateAnimal({ cameras })`) and pass
   `onAdd`/`onEdit`/`onDelete` to `CamerasSection`. **Make `CameraModal` require `lens`** (schema-required
   `nwb_schema.json:697`, omitted by `CameraModal.jsx:60`). **Enforce the Spyglass camera identity**
-  (naming-identity contract): `camera_name` is a workspace/dataset identity; warn if a user reuses an
+  (naming-identity contract): `camera_name` is a workspace/dataset identity; detect when a user reuses an
   existing `camera_name` anywhere in the workspace/dataset with different `meters_per_pixel`/`lens`/`model`
   /`manufacturer`/**or numeric `id`** (Spyglass keys `CameraDevice` on `camera_name` and checks those
-  dependent fields) — a changed zoom/calibration/model/id needs a new name. Keep integer `id`
-  (`trodes_to_nwb` derives the numeric join from `camera_device {id}`).
+  dependent fields) — a changed zoom/calibration/model/id needs a new name. The modal shows old vs. new
+  values side by side and makes "Use a new camera name" the primary safe action; saving a divergent reuse
+  requires an explicit override/confirmation if allowed at all. Keep integer `id` (`trodes_to_nwb` derives
+  the numeric join from `camera_device {id}`).
 - **Task 2 — route data-acq to `animal.devices.data_acq_device` AS AN ARRAY.** The schema is an
   **array** of `{name, system, amplifier, adc_circuit}` items (`nwb_schema.json:504`, all required), and
   the export reads `animal.devices.data_acq_device` (`workspaceUtils.js:185`). `DataAcqSection` currently
@@ -67,7 +71,8 @@ matches **no branch and is silently dropped**. Task 0 fixes this before any wiri
   `updateAnimal({ devices: { ...animal.devices, data_acq_device: [item] } })` — not a top-level field.
   **Spyglass identity:** `data_acq_device[].name` keys `DataAcquisitionDevice`; the same `name` with
   different `system`/`amplifier`/`adc_circuit` triggers a divergence check — keep `name` unique and
-  stable for a given technical config.
+  stable for a given technical config. Mirror the camera UX: show old vs. new dependent values and make a
+  new data-acq name the primary safe action when dependent fields differ.
 - **Task 2b — behavioral-events ownership.** Per the decided ownership (animal-level is editable reference;
   the day's `behavioral_events` is the exported source), make the Animal Editor's `behavioral_events`
   actually persist (Task 0 enables this) **or** remove animal-level editing. The export keeps reading
@@ -98,9 +103,10 @@ matches **no branch and is silently dropped**. Task 0 fixes this before any wiri
 | --- | --- |
 | `updateAnimal persists data_acq_device / technicalDefaults / behavioral_events` *(unit)* | each field written via the Hardware Config `onFieldUpdate` reaches the intended model location (regression for the silent no-op); no top-level exported `animal.technical` is created. |
 | `Hardware Config add camera persists with required lens` *(integration)* | Add → save a camera (incl. `lens`) calls `updateAnimal`; it appears in `animal.cameras` and `mergeDayMetadata(...).cameras`; saving without `lens` is blocked by the modal. |
-| `reusing a camera_name with different calibration/id warns` *(integration)* | editing/adding a camera that reuses an existing `camera_name` anywhere in the workspace with a different `meters_per_pixel`/`lens`/`model`/`manufacturer`/`id` surfaces a warning (Spyglass identity); a new name does not. |
+| `reusing a camera_name with different calibration/id is identity-safe` *(integration)* | editing/adding a camera that reuses an existing `camera_name` anywhere in the workspace with a different `meters_per_pixel`/`lens`/`model`/`manufacturer`/`id` shows old-vs-new comparison and a primary "new name" action; a new name does not warn. |
 | `Hardware Config edit/delete camera persists` *(integration)* | edit changes the camera; delete removes it; both reflected in the merged export. |
 | `data-acq writes the schema array shape with name` *(integration)* | editing system/amplifier/adc_circuit/name writes `animal.devices.data_acq_device` as a one-element array `[{name, system, amplifier, adc_circuit}]`; `mergeDayMetadata(...).data_acq_device` is that array; `schemaValidation` raises no data-acq error. |
+| `reusing a data-acq name with different dependent fields is identity-safe` *(integration)* | divergent reuse shows old-vs-new system/amplifier/adc_circuit and a primary "new name" action; identical reuse is allowed. |
 | `technical fields edited per-day with animal defaults` *(integration)* | a new day inherits `raw_data_to_volts` / `times_period_multiplier` from `animal.technicalDefaults`; editing the defaults affects newly created days only; editing a day updates `day.technical` and the export; `ephys_to_volt_conversion` no longer appears in workspace technical state. |
 | `golden-yaml.baseline.test.js` (existing) | byte-identical — legacy fixtures unchanged. |
 

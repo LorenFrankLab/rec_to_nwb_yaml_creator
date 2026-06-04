@@ -37,6 +37,8 @@ split that surfaced as PropType warnings).
 
 - [Schema device-output contract](shared-contracts.md#schema-device-output-contract) — integer IDs
   end-to-end; required `description` / `targeted_location`; unique `ntrode_id`.
+- [UX mistake-prevention contract](shared-contracts.md#ux-mistake-prevention-contract) — canonical region /
+  device choices should prevent typo-driven invalid or fragmented metadata.
 - [Parity & golden-fixture contract](shared-contracts.md#parity-golden-fixture--round-trip-contract) — ID-type and
   added-field changes update new-path fixtures deliberately; legacy baselines stay.
 
@@ -48,7 +50,9 @@ split that surfaced as PropType warnings).
   whole group object.
 - **Task 2 — required electrode-group fields.** `ElectrodeGroupModal` collects and saves `description`
   and `targeted_location` (add the inputs; sensible defaults are not enough — schema requires
-  non-trivial strings, but a user-entered value is the goal). Persist them on the saved group.
+  non-trivial strings, but a user-entered value is the goal). Persist them on the saved group. Use controlled
+  choices/strong autocomplete for `location` and `targeted_location` seeded from the existing region list;
+  allow "other" only when the emitted string is non-empty and passes phase 6's canonicalization checks.
 - **Task 3 — integer ntrode IDs + no collisions.** In `channelMapUtils.js`, emit integer `ntrode_id`
   and integer `electrode_group_id`. When generating maps for a *newly added* group, start `ntrode_id`
   after the current maximum existing `ntrode_id` across the animal (not at 0), so incremental adds never
@@ -98,6 +102,7 @@ split that surfaced as PropType warnings).
 | `new electrode-group IDs are integers` *(unit)* | adding groups yields integer `id` values (0, 1, 2…), not strings. |
 | `numeric electrode-group id edit path works` *(integration)* | editing by numeric id resolves the group object and saves without `editingGroup.id` becoming undefined. |
 | `saved electrode group includes description and targeted_location` *(integration)* | the ElectrodeGroupModal save path includes both required fields with the entered values. |
+| `region fields use controlled/canonical entry` *(integration)* | location/targeted_location can be selected from known regions or entered via a validated "other" path; whitespace-only/empty values cannot be saved. |
 | `ntrode IDs are integers and unique across incremental adds` *(unit)* | adding a second group after a first does not restart `ntrode_id` at 0; all `ntrode_id` integers are distinct. |
 | `electrode-group IDs are unique` *(unit)* | duplicate group ids are rejected before export; group names in the NWB/Spyglass path cannot collapse. |
 | `copy from animal produces integer IDs` *(unit)* | `CopyFromAnimalDialog`'s copied groups/ntrodes have integer `id` / `ntrode_id` / `electrode_group_id`, not strings. |

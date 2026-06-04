@@ -33,6 +33,8 @@ each makes the file invalid or DANDI-unpublishable with no in-app remedy.
 - [Schema device-output contract](shared-contracts.md#schema-device-output-contract) — DOB timestamp form.
 - [DANDI conformance contract](shared-contracts.md#dandi-conformance-contract) — species binomial/URI,
   sex enum (already OK), no-slash ids, age-or-DOB.
+- [UX mistake-prevention contract](shared-contracts.md#ux-mistake-prevention-contract) — subject repairs are
+  discoverable and canonical fields use controlled choices.
 - [Parity, golden-fixture & round-trip contract](shared-contracts.md#parity-golden-fixture--round-trip-contract)
   — these change new-path output; update fixtures deliberately; **run the mandatory round-trip** (this
   phase is the one DANDI most directly validates).
@@ -42,7 +44,7 @@ each makes the file invalid or DANDI-unpublishable with no in-app remedy.
 - **Task 1 — `date_of_birth` timestamp (Q2 decided: midnight-normalize).** Normalize the date-picker value
   with `new Date(value).toISOString()` on save (mirror `SubjectFields.jsx`). Add an in-editor **repair
   path** (editable DOB writing through `updateAnimal({ subject: { date_of_birth } })`) for animals created
-  before this fix. Keep the `type="date"` UX.
+  before this fix. Keep the `type="date"` UX and surface the repair action from any DOB validation error.
 - **Task 2 — collect required subject fields.** Add/render a non-empty subject `description` input and add a
   `weight` field to animal creation (and/or per-day session weight in OverviewStep), default them in
   `createAnimal`, so `mergeDayMetadata` exports a non-empty `subject.description` and numeric `weight`.
@@ -58,7 +60,7 @@ each makes the file invalid or DANDI-unpublishable with no in-app remedy.
 - **Task 5 — non-empty `experiment_description`.** Do **not** omit this key: `trodes_to_nwb` indexes
   `metadata["experiment_description"]` directly during NWB initialization. Implement the animal-level
   default the OverviewStep hint promises and/or require a non-empty day value, then export a non-empty
-  string. Fix the false "leave blank" hint.
+  string. Fix the false "leave blank" hint and make the OverviewStep error focus the description field.
 - **Task 6 — in-app DANDI subject rule + schema patterns.** Add a validation rule (and/or `nwb_schema.json`
   patterns, coordinated with trodes_to_nwb's bundled copy) for species form + no-slash ids, so the export
   gate (phase 1) blocks a DANDI-invalid subject. Note `sex` is already an `M/F/U/O` enum (compliant).
@@ -80,11 +82,13 @@ each makes the file invalid or DANDI-unpublishable with no in-app remedy.
 | Test | Asserts |
 | --- | --- |
 | `creation stores a schema-valid timestamp DOB` *(unit)* | a `YYYY-MM-DD` value becomes a `T`-timestamp; `schemaValidation` raises no DOB error. |
+| `DOB repair action is discoverable` *(integration)* | an existing date-only DOB surfaces a repair action from validation/export summary and focuses the editable DOB control. |
 | `subject.description is collected and exported` *(integration)* | a created animal's `mergeDayMetadata(...).subject.description` is non-empty; schema raises no subject-description error. |
 | `subject.weight is collected and exported` *(integration)* | a created animal's `mergeDayMetadata(...).subject.weight` is a number; schema raises no `weight` error. |
 | `species must be a Latin binomial` *(unit)* | `Rat` and a custom non-binomial are rejected; `Rattus norvegicus` and an NCBI URI pass; the export gate blocks a free-text species. |
 | `subject_id / session_id reject slashes` *(unit)* | a `/` in either is rejected; derived `session_id` never contains one. |
 | `empty experiment_description does not produce an invalid export` *(unit)* | a blank value is filled from the animal default or blocked before export; the exported key remains present and non-empty. |
+| `experiment_description repair focuses the field` *(integration)* | a blank/invalid experiment description blocks export with a repair action that navigates to Overview and focuses the field. |
 | `created animal passes the downstream round-trip` *(integration, mandatory)* | a corrected sample → `create_nwbs` ok, `nwbinspector --config dandi` zero CRITICAL, `dandi validate` exit 0, Spyglass smoke ingest clean. |
 | `golden-yaml.baseline.test.js` (existing) | byte-identical — legacy fixtures unchanged. |
 

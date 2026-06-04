@@ -31,6 +31,9 @@ the "no broad legacy changes" non-goal, justified because the bug silently keeps
 (`schemaValidation.js`) is **shared** — the workspace export gate calls `validate` → `schemaValidation`,
 so better nested-error paths improve the workspace's own validation messages (in-scope regardless).
 
+**UX referenced:** [UX mistake-prevention contract](shared-contracts.md#ux-mistake-prevention-contract) —
+partial import and persistence recovery notices must name the damaged section/path.
+
 ## Tasks
 
 - **Task 1 — preserve nested error paths (shared; Finding H).** In `schemaValidation.js`, for a nested
@@ -42,13 +45,16 @@ so better nested-error paths improve the workspace's own validation messages (in
   top-level extraction now yields `cameras` (from `cameras[0].camera_name`), so the invalid `cameras`
   array is excluded from a partial import instead of imported. If the extraction logic is fragile, make it
   robust to both `a[0].b` and `a.b` and bare `a` forms. The end-to-end behavior: an imported file with an
-  invalid camera excludes `cameras` (with a notice), not nothing.
+  invalid camera excludes `cameras` (with a notice), not nothing. The notice names both the top-level
+  section excluded (`cameras`) and the nested required path (`cameras[0].camera_name`), so the user knows
+  exactly what was dropped.
 - **Task 3 — guard empty-workspace load (Finding I).** Either have `loadWorkspace` reject a structurally
   empty `workspace` (no `animals`/`days`) as malformed → discard-with-notice, **or** normalize it to the
   full default shape (`animals:{}, days:{}, settings:{…}`) before returning. Recommended: normalize to the
   default shape so a valid-but-empty blob hydrates cleanly. Either way, no consumer should hit
   `Object.keys(undefined)`. Add defensive defaults at the `AnimalWorkspace` / `Home` read sites as
-  belt-and-braces, including `Home.getDefaultExperimenters` before it calls `Object.keys(animals)`.
+  belt-and-braces, including `Home.getDefaultExperimenters` before it calls `Object.keys(animals)`. If the
+  blob is normalized/discarded, surface a concise recovery notice that names the missing top-level keys.
 - **Task 4 — keep the unsaved-work guard after a failed autosave (Finding I).** Do not clear
   `hasPendingWrite` when `saveWorkspace` throws — move it out of the unconditional `finally`, or have the
   guard also consider `saveError`. After a failed autosave the `beforeunload` guard must still warn. Wire
@@ -68,8 +74,9 @@ so better nested-error paths improve the workspace's own validation messages (in
 | Test | Asserts |
 | --- | --- |
 | `nested required error keeps its full path` *(unit)* | a camera missing `camera_name` produces field `cameras[0].camera_name` (not `camera_name`); a top-level missing field still reports the bare name. |
-| `partial import excludes the invalid nested array` *(integration)* | importing a file with an invalid camera excludes `cameras` (and reports it), and does **not** import the invalid camera. |
+| `partial import excludes the invalid nested array` *(integration)* | importing a file with an invalid camera excludes `cameras` (and reports `cameras[0].camera_name`), and does **not** import the invalid camera. |
 | `loadWorkspace handles an empty workspace blob` *(unit)* | `{schemaVersion:1, workspace:{}}` either discards-with-notice or hydrates to the default shape; no consumer sees undefined `animals`/`days`. |
+| `empty workspace recovery notice names missing keys` *(integration)* | loading/normalizing an empty blob tells the user which top-level sections were missing or normalized. |
 | `AnimalWorkspace/Home render on an empty workspace without crashing` *(integration)* | rendering with an empty/normalized workspace does not throw `Object.keys(undefined)`, including the Home default-experimenter path. |
 | `failed autosave keeps the unsaved-work guard armed` *(unit/integration)* | when `saveWorkspace` throws, `saveError` is set and the `beforeunload` guard remains active (guard condition true). |
 

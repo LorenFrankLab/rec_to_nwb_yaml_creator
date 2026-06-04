@@ -29,6 +29,8 @@ With phase 1's fail-closed gate, these new **error**-severity rules then block e
 - [Validation & export-gate contract](shared-contracts.md#validation--export-gate-contract) — new rules
   are **error** severity only where they yield invalid/ambiguous YAML; they flow through `validate` →
   `computeStepStatus.export` → the phase-1 gate.
+- [UX mistake-prevention contract](shared-contracts.md#ux-mistake-prevention-contract) — new rules must
+  include repair targets/action labels so blocked export guides the user back to the bad field/workflow.
 
 **Designs referenced:** [Channel-map semantics](designs.md#channel-map-semantics) — keys are local
 (`0…count-1`), values are probe-electrode IDs bounded by device/group, and `bad_channels` are probe-local
@@ -85,6 +87,10 @@ indices. The earlier global-hardware-channel framing is obsolete.
   `step` a rule sets and path-routes (`camera` → `devices` before `task`). Make it prefer an explicit
   `issue.step`, falling back to path routing — then set `step` on the new rules so they surface on the
   right step. Add routing tests; keep messages actionable (which id/index, valid range).
+- **Task 9b — add repair metadata to validation issues.** Extend the issue shape used by app rules with
+  optional `path`/`field`, `step`, and `actionLabel` (and a focus id/path if the UI needs one). Each new
+  rule in this phase should set enough metadata for Phase 1's Export/Validation repair actions to navigate
+  and focus/highlight the offending camera, task, electrode group, ntrode map, video, or opto section.
 - **Task 10 — docs.** Note the new rules in `docs/REFACTOR_CHANGELOG.md`.
 
 ## Deliberately not in this phase
@@ -111,6 +117,7 @@ indices. The earlier global-hardware-channel framing is obsolete.
 | `orphaned associated_video_file is an error` *(unit)* | a video whose `task_epochs` matches no task errors; a video with a matching task + valid scalar `camera_id` passes. |
 | `duplicate/divergent camera_name / data_acq name / task_name is an error` *(unit)* | reused `camera_name` with different calibration/id, reused `data_acq_device.name` with different dependent fields, and same `task_name` with differing description each error across the workspace/dataset. |
 | `rule issues route to the intended step` *(unit)* | a rule that sets `step:'devices'` lands in the devices bucket via `groupErrorsByStep`, overriding path routing. |
+| `rule issues include repair metadata` *(unit)* | each new error-severity rule emits `step`, an actionable `path`/field target when applicable, and a short `actionLabel` used by the export repair UI. |
 | `new rules block export via the existing gate` *(integration)* | a day with a dangling reference has `computeStepStatus(...).export === 'error'` and cannot be exported (ties phase 1). |
 | `golden-yaml.baseline.test.js` (existing) | byte-identical — validation-only changes, no output bytes change. |
 
