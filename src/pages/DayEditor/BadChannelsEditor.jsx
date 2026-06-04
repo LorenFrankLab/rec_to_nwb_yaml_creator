@@ -26,12 +26,13 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, erro
 
   /**
    * Handle checkbox change for a channel
-   * @param {number} ntrodeId - Ntrode ID
+   * @param {number|string} ntrodeId - Ntrode ID
    * @param {number} channelNum - Channel number
    * @param {boolean} isChecked - Whether checkbox is checked
    */
   const handleChannelToggle = (ntrodeId, channelNum, isChecked) => {
-    const currentBadChannels = badChannels[ntrodeId] || [];
+    const key = String(ntrodeId);
+    const currentBadChannels = badChannels[key] || [];
     let updatedBadChannels;
 
     if (isChecked) {
@@ -42,17 +43,18 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, erro
       updatedBadChannels = currentBadChannels.filter(ch => ch !== channelNum);
     }
 
-    onUpdate(String(ntrodeId), updatedBadChannels);
+    onUpdate(key, updatedBadChannels);
   };
 
   /**
    * Toggle channel map visibility
-   * @param {number} ntrodeId - Ntrode ID
+   * @param {number|string} ntrodeId - Ntrode ID
    */
   const toggleChannelMap = (ntrodeId) => {
+    const key = String(ntrodeId);
     setExpandedMaps(prev => ({
       ...prev,
-      [ntrodeId]: !prev[ntrodeId],
+      [key]: !prev[key],
     }));
   };
 
@@ -64,20 +66,21 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, erro
 
       {ntrodes.map((ntrode, index) => {
         const ntrodeId = ntrode.ntrode_id;
-        const currentBadChannels = badChannels[ntrodeId] || [];
+        const ntrodeKey = String(ntrodeId);
+        const currentBadChannels = badChannels[ntrodeKey] || [];
         const channels = Object.keys(ntrode.map).map(Number).sort((a, b) => a - b);
-        const error = errors?.[ntrodeId];
-        const warning = warnings?.[ntrodeId];
+        const error = errors?.[ntrodeKey];
+        const warning = warnings?.[ntrodeKey];
 
         return (
-          <fieldset key={ntrodeId} className="ntrode-fieldset">
+          <fieldset key={ntrodeKey} className="ntrode-fieldset">
             <legend>Shank #{index + 1} (Ntrode ID: {ntrodeId})</legend>
 
             <div className="failed-channels-section">
-              <label htmlFor={`failed-channels-${ntrodeId}`}>Failed Channels</label>
+              <label htmlFor={`failed-channels-${ntrodeKey}`}>Failed Channels</label>
 
               <div
-                id={`failed-channels-${ntrodeId}`}
+                id={`failed-channels-${ntrodeKey}`}
                 className="bad-channels-checkboxes"
                 role="group"
                 aria-label={`Failed channels for Shank ${index + 1}`}
@@ -86,11 +89,11 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, erro
                   <div key={channelNum} className="checkbox-item">
                     <input
                       type="checkbox"
-                      id={`channel-${ntrodeId}-${channelNum}`}
+                      id={`channel-${ntrodeKey}-${channelNum}`}
                       checked={currentBadChannels.includes(channelNum)}
                       onChange={(e) => handleChannelToggle(ntrodeId, channelNum, e.target.checked)}
                     />
-                    <label htmlFor={`channel-${ntrodeId}-${channelNum}`}>
+                    <label htmlFor={`channel-${ntrodeKey}-${channelNum}`}>
                       Channel {channelNum}
                     </label>
                   </div>
@@ -116,17 +119,17 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, erro
                 type="button"
                 className="channel-map-toggle"
                 onClick={() => toggleChannelMap(ntrodeId)}
-                aria-expanded={expandedMaps[ntrodeId] || false}
-                aria-controls={`channel-map-${ntrodeId}`}
+                aria-expanded={expandedMaps[ntrodeKey] || false}
+                aria-controls={`channel-map-${ntrodeKey}`}
               >
                 <span className="toggle-icon" aria-hidden="true">
-                  {expandedMaps[ntrodeId] ? '▼' : '▶'}
+                  {expandedMaps[ntrodeKey] ? '▼' : '▶'}
                 </span>
                 View Channel Map
               </button>
 
-              {expandedMaps[ntrodeId] && (
-                <div id={`channel-map-${ntrodeId}`} className="channel-map-content">
+              {expandedMaps[ntrodeKey] && (
+                <div id={`channel-map-${ntrodeKey}`} className="channel-map-content">
                   <table className="channel-map-table">
                     <thead>
                       <tr>
@@ -156,8 +159,8 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, erro
 BadChannelsEditor.propTypes = {
   ntrodes: PropTypes.arrayOf(
     PropTypes.shape({
-      ntrode_id: PropTypes.number.isRequired,
-      electrode_group_id: PropTypes.number.isRequired,
+      ntrode_id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+      electrode_group_id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
       bad_channels: PropTypes.arrayOf(PropTypes.number),
       map: PropTypes.objectOf(PropTypes.number).isRequired,
     })

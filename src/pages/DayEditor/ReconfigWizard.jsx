@@ -12,7 +12,7 @@ import './ReconfigWizard.scss';
  *
  *   1. `addConfigurationSnapshot` clones the current latest configuration into a new
  *      version (returns its assigned number, which is applied forward verbatim).
- *   2. `applyConfigurationForward` repoints the selected days (this day onward) to
+ *   2. `applyConfigurationForward` repoints the affected day range (this day onward) to
  *      that new version.
  *   3. `animal.devices` already mirrors the new latest (the new version is a clone of
  *      the old latest it mirrored), so editing geometry afterward in the Animal Editor
@@ -25,7 +25,7 @@ import './ReconfigWizard.scss';
  *
  * @param {object} props
  * @param {boolean} props.isOpen - Whether the dialog is shown.
- * @param {Function} props.onClose - Called (no args) on cancel/ESC/overlay and after a successful fork.
+ * @param {Function} props.onClose - Called (no args) on cancel/ESC/overlay and after a successful fork before navigating to the Animal Editor.
  * @param {object} props.animal - Animal whose latest configuration is forked.
  * @param {object} props.day - The day being reconfigured (the earliest day to move).
  * @param {object|null} [props.prevDay] - The chronologically previous day, or null (for the "stays pinned" note).
@@ -64,17 +64,28 @@ export default function ReconfigWizard({
 
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(day.date);
-  const [selectedIds, setSelectedIds] = useState(() => new Set(candidateDays.map((d) => d.id)));
   const [error, setError] = useState('');
 
-  const toggleDay = (id) => {
-    if (error) setError('');
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
+  const movingDays = useMemo(() => {
+    const sortedDays = [...candidateDays].sort((a, b) => (
+      (a.date || '').localeCompare(b.date || '') ||
+      (a.id || '').localeCompare(b.id || '')
+    ));
+    const startIndex = sortedDays.findIndex((d) => d.id === day.id);
+    if (startIndex >= 0) return sortedDays.slice(startIndex);
+    if (day.date) return sortedDays.filter((d) => (d.date || '') >= day.date);
+    return sortedDays;
+  }, [candidateDays, day.date, day.id]);
+
+  const navigateToAnimalEditor = (newVersion) => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams({
+      context: 'reconfigure',
+      version: String(newVersion),
+      fromDay: day.id,
+      movedDays: String(movingDays.length),
     });
+    window.location.hash = `#/animal/${encodeURIComponent(animal.id)}/editor?${params.toString()}`;
   };
 
   const handleApply = () => {
@@ -86,12 +97,12 @@ export default function ReconfigWizard({
       setError('Enter a short description of what changed.');
       return;
     }
-    if (selectedIds.size === 0) {
-      setError('Select at least one day to move to the new configuration.');
+    if (movingDays.length === 0) {
+      setError('No recording days are available to move to the new configuration.');
       return;
     }
 
-    // Fork the current configuration into a new version, then move the selected days
+    // Fork the current configuration into a new version, then move the affected range
     // onto it. The store assigns the version from its authoritative state and returns
     // it, so we apply forward to exactly the snapshot we just created.
     const newVersion = actions.addConfigurationSnapshot(animal.id, {
@@ -99,11 +110,13 @@ export default function ReconfigWizard({
       description: description.trim(),
       devices: structuredClone(latestDevices),
     });
-    // Apply in chronological (candidate) order, filtered to the selected set.
-    const orderedIds = candidateDays.map((d) => d.id).filter((id) => selectedIds.has(id));
+    // Apply the contiguous chronological suffix. Hardware reconfiguration is a
+    // physical change, so day X and every later candidate day move together.
+    const orderedIds = movingDays.map((d) => d.id);
     actions.applyConfigurationForward(animal.id, newVersion, orderedIds);
 
     onClose();
+    navigateToAnimalEditor(newVersion);
   };
 
   if (!isOpen) return null;
@@ -120,8 +133,8 @@ export default function ReconfigWizard({
       className="reconfig-wizard"
     >
       <p id={summaryId} className="reconfig-summary">
-        This creates a new configuration version starting {day.date}. The selected
-        days move to the new version; earlier days keep their current configuration.
+        This creates a new configuration version starting {day.date}. This day and
+        all later listed days move to the new version; earlier days keep their current configuration.
         After confirming, edit the new probe geometry in the Animal Editor — only the
         new version (and the days on it) changes.
       </p>
@@ -161,19 +174,16 @@ export default function ReconfigWizard({
         <fieldset className="reconfig-days">
           <legend>Days moving to the new configuration</legend>
           <p className="reconfig-days-hint">
-            All days from {day.date} onward are selected by default. To move an earlier
-            day, open its Day Editor individually.
+            Hardware changes apply as a contiguous range from {day.date} onward.
+            To start at a different day, open that day’s Day Editor.
           </p>
-          {candidateDays.map((d) => (
-            <label key={d.id} className="reconfig-day-option">
-              <input
-                type="checkbox"
-                checked={selectedIds.has(d.id)}
-                onChange={() => toggleDay(d.id)}
-              />
-              {d.date} ({d.session?.session_id || d.id})
-            </label>
-          ))}
+          <ol className="reconfig-day-list">
+            {movingDays.map((d) => (
+              <li key={d.id} className="reconfig-day-option">
+                {d.date} ({d.session?.session_id || d.id})
+              </li>
+            ))}
+          </ol>
         </fieldset>
 
         {error && (
@@ -192,7 +202,7 @@ export default function ReconfigWizard({
             Cancel
           </button>
           <button type="submit" className="btn-primary">
-            Create version & apply to {selectedIds.size} {selectedIds.size === 1 ? 'day' : 'days'}
+            Create version & apply to {movingDays.length} {movingDays.length === 1 ? 'day' : 'days'}
           </button>
         </div>
       </form>

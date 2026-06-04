@@ -265,24 +265,36 @@ describe('computeDevicesStatus', () => {
     expect(computeDevicesStatus({}, mergedDay)).toBe('incomplete');
   });
 
-  it('returns "error" when a group has all channels marked bad', () => {
-    const day = { deviceOverrides: { bad_channels: { 1: [0, 1, 2, 3] } } }; // all 4 bad
+  it('returns "error" when merged ntrode bad_channels mark all channels bad', () => {
     const mergedDay = {
       electrode_groups: [group],
-      ntrode_electrode_group_channel_map: [ntrode],
+      ntrode_electrode_group_channel_map: [{ ...ntrode, bad_channels: [0, 1, 2, 3] }],
     };
-    expect(computeDevicesStatus(day, mergedDay)).toBe('error');
+    expect(computeDevicesStatus({}, mergedDay)).toBe('error');
+  });
+
+  it('matches numeric group IDs to string electrode_group_id values', () => {
+    const mergedDay = {
+      electrode_groups: [group],
+      ntrode_electrode_group_channel_map: [
+        { ...ntrode, electrode_group_id: '0', bad_channels: [0, 1, 2, 3] },
+      ],
+    };
+    expect(computeDevicesStatus({}, mergedDay)).toBe('error');
   });
 
   it('returns "valid" for healthy groups, with partial bad channels staying non-blocking', () => {
     const fullyHealthy = {
       electrode_groups: [group],
-      ntrode_electrode_group_channel_map: [ntrode],
+      ntrode_electrode_group_channel_map: [{ ...ntrode, bad_channels: [] }],
     };
     expect(computeDevicesStatus({}, fullyHealthy)).toBe('valid');
 
-    const partialBad = { deviceOverrides: { bad_channels: { 1: [0] } } }; // 1 of 4 bad
-    expect(computeDevicesStatus(partialBad, fullyHealthy)).toBe('valid');
+    const partialBad = {
+      electrode_groups: [group],
+      ntrode_electrode_group_channel_map: [{ ...ntrode, bad_channels: [0] }],
+    };
+    expect(computeDevicesStatus({}, partialBad)).toBe('valid');
   });
 });
 

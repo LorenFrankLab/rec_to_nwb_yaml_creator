@@ -244,6 +244,48 @@ describe('DevicesStep', () => {
     expect(mockOnFieldUpdate).toHaveBeenCalledWith('deviceOverrides.bad_channels.0', [1]);
   });
 
+  it('renders inherited snapshot bad channels and preserves them when editing', async () => {
+    const user = userEvent.setup();
+    const inheritedNtrodeMap = [
+      { ...NTRODE_MAP[0], bad_channels: [1] },
+      NTRODE_MAP[1],
+    ];
+    const animalWithInheritedBadChannels = {
+      ...mockAnimal,
+      devices: {
+        ...mockAnimal.devices,
+        ntrode_electrode_group_channel_map: inheritedNtrodeMap,
+      },
+      configurationHistory: historyFor({
+        electrode_groups: ELECTRODE_GROUPS,
+        ntrode_electrode_group_channel_map: inheritedNtrodeMap,
+      }),
+    };
+    const dayWithoutOverride = {
+      ...mockDay,
+      deviceOverrides: { bad_channels: {} },
+    };
+
+    render(
+      <DevicesStep
+        animal={animalWithInheritedBadChannels}
+        day={dayWithoutOverride}
+        mergedDay={mockMergedDay}
+        onFieldUpdate={mockOnFieldUpdate}
+      />
+    );
+
+    expect(screen.getByText(/1 failed channel/i)).toBeInTheDocument();
+
+    const group0Summaries = screen.getAllByText(/electrode group 0: CA1/i);
+    await user.click(group0Summaries[0]);
+
+    expect(screen.getAllByLabelText(/channel 1/i)[0]).toBeChecked();
+    await user.click(screen.getAllByLabelText(/channel 2/i)[0]);
+
+    expect(mockOnFieldUpdate).toHaveBeenCalledWith('deviceOverrides.bad_channels.0', [1, 2]);
+  });
+
   it('handles empty state when no electrode groups', () => {
     const noGroups = { electrode_groups: [], ntrode_electrode_group_channel_map: [] };
     const animalWithNoGroups = {
@@ -289,6 +331,42 @@ describe('DevicesStep', () => {
     );
 
     expect(screen.getByText(/all channels failed - group inactive/i)).toBeInTheDocument();
+  });
+
+  it('validates invalid channels across string ntrode and electrode group IDs', async () => {
+    const user = userEvent.setup();
+    const stringNtrodeMap = [
+      { ntrode_id: '0', electrode_group_id: '0', bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+    ];
+    const animalWithStringNtrodeId = {
+      ...mockAnimal,
+      devices: {
+        electrode_groups: [ELECTRODE_GROUPS[0]],
+        ntrode_electrode_group_channel_map: stringNtrodeMap,
+      },
+      configurationHistory: historyFor({
+        electrode_groups: [ELECTRODE_GROUPS[0]],
+        ntrode_electrode_group_channel_map: stringNtrodeMap,
+      }),
+    };
+    const dayWithInvalidStringOverride = {
+      ...mockDay,
+      deviceOverrides: { bad_channels: { '0': [9] } },
+    };
+
+    render(
+      <DevicesStep
+        animal={animalWithStringNtrodeId}
+        day={dayWithInvalidStringOverride}
+        mergedDay={mockMergedDay}
+        onFieldUpdate={mockOnFieldUpdate}
+      />
+    );
+
+    const group0Summaries = screen.getAllByText(/electrode group 0: CA1/i);
+    await user.click(group0Summaries[0]);
+
+    expect(screen.getByText(/invalid channels: 9/i)).toBeInTheDocument();
   });
 
   it('handles missing deviceOverrides gracefully', () => {

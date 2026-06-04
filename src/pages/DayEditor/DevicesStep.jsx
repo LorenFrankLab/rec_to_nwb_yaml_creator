@@ -64,23 +64,30 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
     return effectiveConfig.ntrode_electrode_group_channel_map || [];
   }, [effectiveConfig.ntrode_electrode_group_channel_map]);
 
-  // Get bad channels for current day (with safe fallback)
+  // Effective bad channels by ntrode ID. `resolveDayConfig` has already applied the
+  // day-level replacement semantics onto the pinned snapshot, so this is exactly the
+  // channel state export will encode.
   const badChannels = useMemo(() => {
-    return day.deviceOverrides?.bad_channels || {};
-  }, [day.deviceOverrides?.bad_channels]);
+    return Object.fromEntries(
+      ntrodeChannelMap.map((ntrode) => [
+        String(ntrode.ntrode_id),
+        Array.isArray(ntrode.bad_channels) ? ntrode.bad_channels : [],
+      ])
+    );
+  }, [ntrodeChannelMap]);
 
   /**
    * Get ntrodes for a specific electrode group
-   * @param {number} groupId - Electrode group ID
+   * @param {number|string} groupId - Electrode group ID
    * @returns {Array} Ntrodes belonging to this group
    */
   const getNtrodesForGroup = useCallback((groupId) => {
-    return ntrodeChannelMap.filter(ntrode => ntrode.electrode_group_id === groupId);
+    return ntrodeChannelMap.filter(ntrode => String(ntrode.electrode_group_id) === String(groupId));
   }, [ntrodeChannelMap]);
 
   /**
    * Calculate status for an electrode group
-   * @param {number} groupId - Electrode group ID
+   * @param {number|string} groupId - Electrode group ID
    * @returns {object} { status: 'clean'|'warning'|'error', badChannelCount: number, allBad: boolean }
    */
   const getGroupStatus = useCallback((groupId) => {
@@ -89,7 +96,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
     let totalChannels = 0;
 
     ntrodes.forEach(ntrode => {
-      const ntrodeId = ntrode.ntrode_id;
+      const ntrodeId = String(ntrode.ntrode_id);
       const currentBadChannels = badChannels[ntrodeId] || [];
       const channelCount = Object.keys(ntrode.map).length;
 
@@ -108,7 +115,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
 
   /**
    * Get status badge text and aria-label
-   * @param {number} groupId - Electrode group ID
+   * @param {number|string} groupId - Electrode group ID
    * @returns {object} { text: string, ariaLabel: string, className: string }
    */
   const getStatusBadge = useCallback((groupId) => {
@@ -148,12 +155,12 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
 
   /**
    * Validate bad channels
-   * @param {number} ntrodeId - Ntrode ID
+   * @param {number|string} ntrodeId - Ntrode ID
    * @param {number[]} badChannelArray - Array of bad channel numbers
    * @returns {object|null} Error or warning message
    */
   const validateBadChannels = useCallback((ntrodeId, badChannelArray) => {
-    const ntrode = ntrodeChannelMap.find(n => n.ntrode_id === ntrodeId);
+    const ntrode = ntrodeChannelMap.find(n => String(n.ntrode_id) === String(ntrodeId));
     if (!ntrode) return null;
 
     const validChannels = Object.keys(ntrode.map).map(Number);
@@ -183,7 +190,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
     const warnings = {};
 
     Object.keys(badChannels).forEach(ntrodeId => {
-      const validation = validateBadChannels(Number(ntrodeId), badChannels[ntrodeId]);
+      const validation = validateBadChannels(ntrodeId, badChannels[ntrodeId]);
       if (validation) {
         if (validation.type === 'error') {
           errors[ntrodeId] = validation.message;
@@ -380,8 +387,8 @@ DevicesStep.propTypes = {
       ),
       ntrode_electrode_group_channel_map: PropTypes.arrayOf(
         PropTypes.shape({
-          ntrode_id: PropTypes.number.isRequired,
-          electrode_group_id: PropTypes.number.isRequired,
+          ntrode_id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+          electrode_group_id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
           bad_channels: PropTypes.arrayOf(PropTypes.number),
           map: PropTypes.objectOf(PropTypes.number).isRequired,
         })

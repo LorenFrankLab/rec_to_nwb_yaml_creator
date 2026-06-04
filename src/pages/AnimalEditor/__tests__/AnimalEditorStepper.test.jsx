@@ -170,6 +170,13 @@ describe('AnimalEditorStepper', () => {
       expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Animal Editor: remy');
     });
 
+    it('does not show reconfiguration context on a normal editor open', () => {
+      renderWithStore(<AnimalEditorStepper />);
+
+      expect(document.querySelector('.configuration-edit-context')).not.toBeInTheDocument();
+      expect(screen.queryByText(/configuration v/i)).not.toBeInTheDocument();
+    });
+
     it('shows error when animal not found', () => {
       const emptyState = { workspace: { animals: {}, days: {} } };
       renderWithStore(<AnimalEditorStepper />, emptyState);
@@ -188,6 +195,158 @@ describe('AnimalEditorStepper', () => {
       renderWithStore(<AnimalEditorStepper />);
       const back = screen.getByRole('link', { name: /back to workspace/i });
       expect(back).toHaveAttribute('href', '#/workspace?animal=remy');
+    });
+
+    it('shows latest configuration context and moved-day acknowledgement after a reconfiguration fork', () => {
+      window.location.hash = '#/animal/remy/editor?context=reconfigure&version=3&fromDay=remy-2023-06-24&movedDays=1';
+      const stateAfterReconfig = {
+        workspace: {
+          animals: {
+            remy: {
+              id: 'remy',
+              subject: { subject_id: 'remy' },
+              devices: {
+                electrode_groups: [],
+                ntrode_electrode_group_channel_map: [],
+              },
+              days: ['remy-2023-06-24'],
+              configurationHistory: [
+                { version: 1, date: '2023-06-22', description: 'Initial', devices: {} },
+                { version: 3, date: '2023-06-24', description: 'Lowered CA1', devices: {} },
+              ],
+            },
+          },
+          days: {
+            'remy-2023-06-24': {
+              id: 'remy-2023-06-24',
+              animalId: 'remy',
+              date: '2023-06-24',
+            },
+          },
+        },
+      };
+
+      renderWithStore(<AnimalEditorStepper />, stateAfterReconfig);
+
+      expect(document.querySelector('.configuration-edit-context')).toHaveTextContent(
+        'Editing latest configuration v3 for reconfiguration starting 2023-06-24. Moved 1 day to this version.'
+      );
+    });
+
+    it('warns when a reconfiguration route points at a historical configuration version', () => {
+      window.location.hash = '#/animal/remy/editor?context=reconfigure&version=2&fromDay=remy-2023-06-24&movedDays=2';
+      const stateAfterLaterReconfig = {
+        workspace: {
+          animals: {
+            remy: {
+              id: 'remy',
+              subject: { subject_id: 'remy' },
+              devices: {
+                electrode_groups: [],
+                ntrode_electrode_group_channel_map: [],
+              },
+              days: ['remy-2023-06-24', 'remy-2023-06-25'],
+              configurationHistory: [
+                { version: 1, date: '2023-06-22', description: 'Initial', devices: {} },
+                { version: 2, date: '2023-06-24', description: 'Lowered CA1', devices: {} },
+                { version: 3, date: '2023-06-25', description: 'Lowered CA3', devices: {} },
+              ],
+            },
+          },
+          days: {
+            'remy-2023-06-24': {
+              id: 'remy-2023-06-24',
+              animalId: 'remy',
+              date: '2023-06-24',
+            },
+            'remy-2023-06-25': {
+              id: 'remy-2023-06-25',
+              animalId: 'remy',
+              date: '2023-06-25',
+            },
+          },
+        },
+      };
+
+      renderWithStore(<AnimalEditorStepper />, stateAfterLaterReconfig);
+
+      expect(document.querySelector('.configuration-edit-context')).toHaveTextContent(
+        'Review configuration v2; current latest is v3 for reconfiguration starting 2023-06-24. Moved 2 days to this version.'
+      );
+    });
+
+    it('treats blank and nonnumeric route values as absent instead of rendering v0', () => {
+      window.location.hash = '#/animal/remy/editor?context=reconfigure&version=&fromDay=remy-2023-06-24&movedDays=abc';
+      const stateAfterReconfig = {
+        workspace: {
+          animals: {
+            remy: {
+              id: 'remy',
+              subject: { subject_id: 'remy' },
+              devices: {
+                electrode_groups: [],
+                ntrode_electrode_group_channel_map: [],
+              },
+              days: ['remy-2023-06-24'],
+              configurationHistory: [
+                { version: 1, date: '2023-06-22', description: 'Initial', devices: {} },
+                { version: 3, date: '2023-06-24', description: 'Lowered CA1', devices: {} },
+              ],
+            },
+          },
+          days: {
+            'remy-2023-06-24': {
+              id: 'remy-2023-06-24',
+              animalId: 'remy',
+              date: '2023-06-24',
+            },
+          },
+        },
+      };
+
+      renderWithStore(<AnimalEditorStepper />, stateAfterReconfig);
+
+      expect(document.querySelector('.configuration-edit-context')).toHaveTextContent(
+        'Editing latest configuration v3 for reconfiguration starting 2023-06-24.'
+      );
+      expect(document.querySelector('.configuration-edit-context')).not.toHaveTextContent(/v0|moved/i);
+    });
+
+    it('ignores route versions that are absent from configuration history', () => {
+      window.location.hash = '#/animal/remy/editor?context=reconfigure&version=99&fromDay=remy-2023-06-24';
+      const stateAfterReconfig = {
+        workspace: {
+          animals: {
+            remy: {
+              id: 'remy',
+              subject: { subject_id: 'remy' },
+              devices: {
+                electrode_groups: [],
+                ntrode_electrode_group_channel_map: [],
+              },
+              days: ['remy-2023-06-24'],
+              configurationHistory: [
+                { version: 1, date: '2023-06-22', description: 'Initial', devices: {} },
+                { version: 3, date: '2023-06-24', description: 'Lowered CA1', devices: {} },
+              ],
+            },
+          },
+          days: {
+            'remy-2023-06-24': {
+              id: 'remy-2023-06-24',
+              animalId: 'remy',
+              date: '2023-06-24',
+            },
+          },
+        },
+      };
+
+      renderWithStore(<AnimalEditorStepper />, stateAfterReconfig);
+
+      expect(document.querySelector('.configuration-edit-context')).toHaveTextContent(
+        'Editing latest configuration v3 for reconfiguration starting 2023-06-24.'
+      );
+      expect(document.querySelector('.configuration-edit-context')).not.toHaveTextContent(/v99/i);
     });
 
     it('the not-found error screen provides Workspace and Home escapes (no dead-end)', () => {
