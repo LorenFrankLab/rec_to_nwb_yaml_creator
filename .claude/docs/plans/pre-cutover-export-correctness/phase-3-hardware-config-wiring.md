@@ -59,9 +59,9 @@ matches **no branch and is silently dropped**. Task 0 fixes this before any wiri
   existing `camera_name` anywhere in the workspace/dataset with different `meters_per_pixel`/`lens`/`model`
   /`manufacturer`/**or numeric `id`** (Spyglass keys `CameraDevice` on `camera_name` and checks those
   dependent fields) — a changed zoom/calibration/model/id needs a new name. The modal shows old vs. new
-  values side by side and makes "Use a new camera name" the primary safe action; saving a divergent reuse
-  requires an explicit override/confirmation if allowed at all. Keep integer `id` (`trodes_to_nwb` derives
-  the numeric join from `camera_device {id}`).
+  values side by side and makes "Use a new camera name" the primary safe action. Saving a divergent reuse is
+  blocked in the normal export path; an override would be a separate admin/import repair path, not this UI.
+  Keep integer `id` (`trodes_to_nwb` derives the numeric join from `camera_device {id}`).
 - **Task 2 — route data-acq to `animal.devices.data_acq_device` AS AN ARRAY.** The schema is an
   **array** of `{name, system, amplifier, adc_circuit}` items (`nwb_schema.json:504`, all required), and
   the export reads `animal.devices.data_acq_device` (`workspaceUtils.js:185`). `DataAcqSection` currently
@@ -72,7 +72,8 @@ matches **no branch and is silently dropped**. Task 0 fixes this before any wiri
   **Spyglass identity:** `data_acq_device[].name` keys `DataAcquisitionDevice`; the same `name` with
   different `system`/`amplifier`/`adc_circuit` triggers a divergence check — keep `name` unique and
   stable for a given technical config. Mirror the camera UX: show old vs. new dependent values and make a
-  new data-acq name the primary safe action when dependent fields differ.
+  new data-acq name the primary safe action when dependent fields differ; block normal save of divergent
+  reuse.
 - **Task 2b — behavioral-events ownership.** Per the decided ownership (animal-level is editable reference;
   the day's `behavioral_events` is the exported source), make the Animal Editor's `behavioral_events`
   actually persist (Task 0 enables this) **or** remove animal-level editing. The export keeps reading
@@ -87,7 +88,8 @@ matches **no branch and is silently dropped**. Task 0 fixes this before any wiri
   `DataAcqSection` uses `ephys_to_volt_conversion`, but export reads `raw_data_to_volts`; standardize on
   `raw_data_to_volts`. No field may be edited at one level but read at another.
 - **Task 4 — fixtures + docs.** Update the new-path parity fixtures so a configured session's export
-  includes the cameras (with `lens`) and the data-acq **array**; review the byte diff. Update
+  includes the cameras (with `lens`) and the data-acq **array**; review the byte diff. Run the mandatory
+  downstream round-trip for the corrected configured-camera/data-acq sample. Update
   `docs/REFACTOR_CHANGELOG.md`.
 
 ## Deliberately not in this phase
@@ -103,23 +105,27 @@ matches **no branch and is silently dropped**. Task 0 fixes this before any wiri
 | --- | --- |
 | `updateAnimal persists data_acq_device / technicalDefaults / behavioral_events` *(unit)* | each field written via the Hardware Config `onFieldUpdate` reaches the intended model location (regression for the silent no-op); no top-level exported `animal.technical` is created. |
 | `Hardware Config add camera persists with required lens` *(integration)* | Add → save a camera (incl. `lens`) calls `updateAnimal`; it appears in `animal.cameras` and `mergeDayMetadata(...).cameras`; saving without `lens` is blocked by the modal. |
-| `reusing a camera_name with different calibration/id is identity-safe` *(integration)* | editing/adding a camera that reuses an existing `camera_name` anywhere in the workspace with a different `meters_per_pixel`/`lens`/`model`/`manufacturer`/`id` shows old-vs-new comparison and a primary "new name" action; a new name does not warn. |
+| `reusing a camera_name with different calibration/id is identity-safe` *(integration)* | editing/adding a camera that reuses an existing `camera_name` anywhere in the workspace with a different `meters_per_pixel`/`lens`/`model`/`manufacturer`/`id` shows old-vs-new comparison, blocks normal save, and offers a primary "new name" action; a new name does not warn. |
 | `Hardware Config edit/delete camera persists` *(integration)* | edit changes the camera; delete removes it; both reflected in the merged export. |
 | `data-acq writes the schema array shape with name` *(integration)* | editing system/amplifier/adc_circuit/name writes `animal.devices.data_acq_device` as a one-element array `[{name, system, amplifier, adc_circuit}]`; `mergeDayMetadata(...).data_acq_device` is that array; `schemaValidation` raises no data-acq error. |
-| `reusing a data-acq name with different dependent fields is identity-safe` *(integration)* | divergent reuse shows old-vs-new system/amplifier/adc_circuit and a primary "new name" action; identical reuse is allowed. |
+| `reusing a data-acq name with different dependent fields is identity-safe` *(integration)* | divergent reuse shows old-vs-new system/amplifier/adc_circuit, blocks normal save, and offers a primary "new name" action; identical reuse is allowed. |
 | `technical fields edited per-day with animal defaults` *(integration)* | a new day inherits `raw_data_to_volts` / `times_period_multiplier` from `animal.technicalDefaults`; editing the defaults affects newly created days only; editing a day updates `day.technical` and the export; `ephys_to_volt_conversion` no longer appears in workspace technical state. |
+| `phase-3 configured-camera/data-acq sample passes downstream gates` *(integration, mandatory)* | a corrected sample with configured cameras (including `lens`) and `data_acq_device` array converts, has zero DANDI CRITICAL findings, `dandi validate` exits 0, and Spyglass smoke ingest has no `InsertError`. |
 | `golden-yaml.baseline.test.js` (existing) | byte-identical — legacy fixtures unchanged. |
 
-All Vitest; camera CRUD tests are integration (render `HardwareConfigStep` + modal).
+Automated app tests are Vitest; camera CRUD tests are integration (render `HardwareConfigStep` + modal).
+The downstream round-trip is the external mandatory gate from the shared contract.
 
 ## Fixtures
 
 `makeConfiguredWorkspace()` for a populated animal; the `CameraModal` and existing camera fixtures for
-add/edit/delete; new-path parity fixtures updated per the parity contract.
+add/edit/delete plus divergent camera/data-acq identity reuse; new-path parity fixtures updated per the
+parity contract.
 
 ## Review
 
 `pr-review-toolkit:code-reviewer`; `ux-reviewer` (the camera CRUD is user-facing — confirm the buttons
 now work, give feedback, and don't dead-end). Confirm: no field is written at one level but read at
-another; dead placeholder handlers removed; fixtures' byte diff intentional; legacy baselines unchanged;
-no plan/phase strings in code or test names.
+another; divergent camera/data-acq identity reuse is blocked with a clear new-name path; dead placeholder
+handlers removed; fixtures' byte diff intentional; legacy baselines unchanged; no plan/phase strings in code
+or test names.

@@ -52,7 +52,10 @@ split that surfaced as PropType warnings).
   and `targeted_location` (add the inputs; sensible defaults are not enough — schema requires
   non-trivial strings, but a user-entered value is the goal). Persist them on the saved group. Use controlled
   choices/strong autocomplete for `location` and `targeted_location` seeded from the existing region list;
-  allow "other" only when the emitted string is non-empty and passes phase 6's canonicalization checks.
+  allow "other" only when the emitted string is trimmed, non-empty, and not a case-only duplicate of an
+  existing canonical region value. If a user types `ca1` while `CA1` is known, snap to/suggest the canonical
+  `CA1` value instead of saving a fragmented spelling. Phase 6 still adds cross-workspace warnings for
+  already-existing mixed-case drift.
 - **Task 3 — integer ntrode IDs + no collisions.** In `channelMapUtils.js`, emit integer `ntrode_id`
   and integer `electrode_group_id`. When generating maps for a *newly added* group, start `ntrode_id`
   after the current maximum existing `ntrode_id` across the animal (not at 0), so incremental adds never
@@ -103,6 +106,7 @@ split that surfaced as PropType warnings).
 | `numeric electrode-group id edit path works` *(integration)* | editing by numeric id resolves the group object and saves without `editingGroup.id` becoming undefined. |
 | `saved electrode group includes description and targeted_location` *(integration)* | the ElectrodeGroupModal save path includes both required fields with the entered values. |
 | `region fields use controlled/canonical entry` *(integration)* | location/targeted_location can be selected from known regions or entered via a validated "other" path; whitespace-only/empty values cannot be saved. |
+| `region other path prevents case-only drift` *(integration)* | typing a case-only variant of a known region (for example `ca1` when `CA1` exists) selects/suggests the canonical known value instead of saving a new fragmented value. |
 | `ntrode IDs are integers and unique across incremental adds` *(unit)* | adding a second group after a first does not restart `ntrode_id` at 0; all `ntrode_id` integers are distinct. |
 | `electrode-group IDs are unique` *(unit)* | duplicate group ids are rejected before export; group names in the NWB/Spyglass path cannot collapse. |
 | `copy from animal produces integer IDs` *(unit)* | `CopyFromAnimalDialog`'s copied groups/ntrodes have integer `id` / `ntrode_id` / `electrode_group_id`, not strings. |
@@ -111,18 +115,21 @@ split that surfaced as PropType warnings).
 | `exported devices carry no stray keys` *(unit)* | the merged electrode groups have no `bad_channels` string and ntrodes have no `electrode_id`; `device.name` is non-empty. |
 | `merged device output passes schema` *(unit)* | `schemaValidation(mergeDayMetadata(animal, day))` returns zero errors for a fully-configured session (was failing on ID type + missing fields). |
 | `ChannelMapEditor/DevicesStep render with integer IDs without PropType warnings` *(integration)* | rendering with integer IDs produces no PropType console error. |
+| `phase-4 corrected-device sample passes downstream gates` *(integration, mandatory)* | a corrected sample with integer IDs, required device fields, no stray keys, and multi-shank offsets converts, has zero DANDI CRITICAL findings, `dandi validate` exits 0, and Spyglass smoke ingest has no `InsertError`. |
 | `golden-yaml.baseline.test.js` (existing) | byte-identical — legacy fixtures unchanged. |
 
-All Vitest.
+Automated app tests are Vitest. The downstream round-trip is the external mandatory gate from the shared
+contract.
 
 ## Fixtures
 
 `makeConfiguredWorkspace()` / inline animals with integer-ID devices; `ElectrodeGroupModal` for the
-save-path test; new-path parity fixtures updated per the parity contract.
+save-path and canonical-region tests; new-path parity fixtures updated per the parity contract.
 
 ## Review
 
-`pr-review-toolkit:code-reviewer`; `pr-review-toolkit:type-design-analyzer` (the ID type is a
-cross-cutting contract — confirm it's integer end-to-end with no boundary string-coercion). Confirm:
-schema validity proven, not assumed; PropType split eliminated; collision guard tested with a real
-two-group add; fixture byte diff intentional; legacy baselines unchanged; no plan/phase strings.
+`pr-review-toolkit:code-reviewer`; `ux-reviewer`; `pr-review-toolkit:type-design-analyzer` (the ID type is a
+cross-cutting contract — confirm it's integer end-to-end with no boundary string-coercion). Confirm: schema
+validity proven, not assumed; controlled region entry prevents empty/case-fragmented values before export;
+PropType split eliminated; collision guard tested with a real two-group add; fixture byte diff intentional;
+legacy baselines unchanged; no plan/phase strings.

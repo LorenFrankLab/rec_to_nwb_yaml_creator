@@ -104,7 +104,8 @@ snapshots are the source of truth, `animal.devices` mirrors the latest snapshot,
 | `phase-2 corrected sample passes downstream gates` *(integration, mandatory)* | a schema-shaped sample exercising configured probes + day bad-channel merge converts, has zero DANDI CRITICAL findings, `dandi validate` exits 0, and Spyglass smoke ingest has no `InsertError`. |
 | `golden-yaml.baseline.test.js` (existing) | **byte-identical** — these are legacy fixtures and must not change. |
 
-All Vitest. Mark the reconfiguration integration test as integration.
+Automated app tests are Vitest; mark the reconfiguration test as integration. The downstream round-trip is
+the external mandatory gate from the shared contract.
 
 ## Fixtures
 

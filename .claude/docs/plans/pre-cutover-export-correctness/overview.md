@@ -70,8 +70,9 @@ how the model is built and gated, not in the encoder.
   schema-valid DOB.
 - Export **fails closed**: a day with any error-severity validation issue cannot be downloaded by any
   route (button, keyboard, or the Export step).
-- The UI prevents common scientific mistakes before export: identity drift is caught at edit time, blocked
-  exports link to the exact repair target, and the final Export step shows a compact preflight summary.
+- The UI prevents common scientific mistakes before export: identity drift is caught at edit time, task/video
+  references are selected from known cameras/epochs, blocked exports link to the exact repair target, and the
+  final Export step shows a compact preflight summary.
 - Validation catches the cross-reference and channel-bound errors a scientist can realistically create.
 - Import and persistence degrade safely (no silent invalid imports, no crash on an empty blob, no lost
   unsaved work after a failed autosave).
@@ -120,8 +121,9 @@ helpers (`getChannelCount`, `deviceTypeMap`, `validate`, `schemaValidation`).
   Spyglass smoke ingest (`populate_all_common(..., raise_err=True)` or zero `InsertError` plus expected
   rows) succeeds ([naming-identity contract](shared-contracts.md#spyglass-naming-identity-contract)).
 - **UX mistake-prevention:** export-blocking issues expose repair actions; camera/data-acq/task identity
-  drift is caught while editing; configuration version and optogenetics enabled/off state are visible; Export
-  shows the preflight summary ([UX contract](shared-contracts.md#ux-mistake-prevention-contract)).
+  drift is caught while editing; task/video camera and epoch references are controlled choices; configuration
+  version and optogenetics enabled/off state are visible; Export shows the preflight summary
+  ([UX contract](shared-contracts.md#ux-mistake-prevention-contract)).
 
 ## Risks and Mitigations
 
@@ -173,13 +175,15 @@ All three are **decided** (2026-06-04):
 phase 3 medium–large (~300 LOC — the `updateAnimal` no-op fix, camera/data-acq identity, behavioral-events
 ownership); phase 4 medium (~250 LOC incl. integer-ID sweep + multi-shank offset + stray-key removal);
 phase 5 medium (~250 LOC — subject/session completeness: weight, species, DOB, no-slash ids,
-experiment_description); phase 6 large (~350 LOC of rules + the corrected channel-bound + Spyglass/DANDI
-rules + tests); phase 7 small–medium (~150 LOC, re-scoped); phase 8 medium (~200 LOC — opto key fixes +
-all-or-nothing validation). Test LOC dominates. Each output-changing phase also carries a mandatory
+experiment_description); phase 6 large (~450+ LOC of rules + task/video reference UX + the corrected
+channel-bound + Spyglass/DANDI rules + tests); phase 7 small–medium (~150 LOC, re-scoped); phase 8
+medium–large (~300+ LOC — workspace opto UI + key fixes + all-or-nothing validation). Test LOC dominates.
+Each output-changing phase also carries a mandatory
 trodes_to_nwb → NWB Inspector (dandi) → dandi-validate → Spyglass smoke round-trip.
 
 **Caveat:** these are rough lower bounds. The [UX mistake-prevention contract](shared-contracts.md#ux-mistake-prevention-contract)
 adds real UI per phase — the export preflight summary + repair-action routing (phase 1), identity
 side-by-side comparison modals (phase 3), pinned-config badges + reconfiguration confirmation (phase 2),
-controlled region/canonical inputs (phases 4–5), and the opto enabled-state surface (phase 8) — which can
-push several phases meaningfully above the LOC noted. Treat the UX work as first-class scope, not trim.
+controlled region/canonical inputs (phases 4–5), task/video camera + epoch selectors and task-name identity
+checks (phase 6), and the opto enabled-state surface (phase 8) — which can push several phases meaningfully
+above the LOC noted. Treat the UX work as first-class scope, not trim.

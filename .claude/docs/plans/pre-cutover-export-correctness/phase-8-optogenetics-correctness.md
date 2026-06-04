@@ -42,13 +42,13 @@ experiment's central manipulation.)
 
 ## Tasks
 
-- **Task 0 — add or explicitly wire the workspace optogenetics entry path.** The workspace export can emit
+- **Task 0 — add the workspace optogenetics entry path.** The workspace export can emit
   `animal.optogenetics` and `day.fs_gui_yamls`, but the workspace editor currently exposes no optogenetics
-  step. Add a workspace-bound optogenetics surface (or a documented import/fixture path if UI is deliberately
-  deferred) that writes `animal.optogenetics` and `day.fs_gui_yamls` through workspace actions. Without this,
-  Phase 8 can only test synthetic state, not a user-configurable workspace session. The UX starts with an
-  explicit "Optogenetics enabled" control: off means no opto metadata is expected; on reveals and requires
-  the four converter-required sections plus FsGUI camera/epoch references.
+  step. Add a workspace-bound optogenetics surface that writes `animal.optogenetics` and `day.fs_gui_yamls`
+  through workspace actions. An import/fixture-only path is not sufficient for this phase: opto is in scope,
+  so a user-configurable workspace session must exist. The UX starts with an explicit "Optogenetics enabled"
+  control: off means no opto metadata is expected; on reveals and requires the four converter-required
+  sections plus FsGUI camera/epoch references.
 - **Task 1 — emit the keys the converter actually reads.** Ensure the export emits
   `optogenetic_stimulation_software` (the converter's gate key; the app already does — keep it) and
   `virus_injection[].volume_in_uL` (capital L — the converter reads this). During the schema/converter
@@ -85,7 +85,7 @@ experiment's central manipulation.)
 
 | Test | Asserts |
 | --- | --- |
-| `workspace optogenetics can be configured` *(integration)* | the workspace editor/import path writes `animal.optogenetics` and `day.fs_gui_yamls`; export no longer relies only on synthetic state. |
+| `workspace optogenetics can be configured` *(integration)* | the workspace editor writes `animal.optogenetics` and `day.fs_gui_yamls`; export no longer relies on import-only or synthetic state. |
 | `opto enabled state controls required fields` *(integration)* | opto off exports empty/no-opto state without errors; opto on reveals required sections and blocks save/export until all converter-required sections and FsGUI references are complete. |
 | `opto session emits converter and schema keys` *(unit)* | a configured opto session's merged output has non-empty equal pairs: `optogenetic_stimulation_software`/`opto_software` and `virus_injection[].volume_in_uL`/`volume_in_ul`. |
 | `partial optogenetics is an error` *(unit)* | a session with some opto fields but missing one of the four required sections yields an error-severity issue (the export gate blocks it); a complete opto session passes; a no-opto session yields nothing. |
@@ -97,13 +97,15 @@ experiment's central manipulation.)
 ## Fixtures
 
 A complete optogenetics workspace session (virus_injection, opto_excitation_source, optical_fiber,
-optogenetic_stimulation_software, fs_gui_yamls) synthesized for the unit tests; a minimal opto `.rec` +
-generated YAML for the round-trip; new-path opto fixture per the parity contract.
+optogenetic_stimulation_software, fs_gui_yamls) synthesized for pure merge/unit tests and configured through
+the workspace UI in integration tests; a minimal opto `.rec` + generated YAML for the round-trip; new-path
+opto fixture per the parity contract.
 
 ## Review
 
-`pr-review-toolkit:code-reviewer`; `pr-review-toolkit:silent-failure-hunter` (this whole phase is about a
-silent downstream drop). Confirm: the converter-expected keys are emitted; the schema↔converter mismatch
-is resolved and documented (not papered over); all-or-nothing completeness blocks partial opto; the
+`pr-review-toolkit:code-reviewer`; `ux-reviewer`; `pr-review-toolkit:silent-failure-hunter` (this whole
+phase is about a silent downstream drop). Confirm: the workspace opto editor has an explicit enabled/off
+state and no hidden partial configuration; the converter-expected keys are emitted; the schema↔converter
+mismatch is resolved and documented (not papered over); all-or-nothing completeness blocks partial opto; the
 round-trip proves the NWB file actually contains optogenetics; legacy baselines unchanged; no plan/phase
 strings.

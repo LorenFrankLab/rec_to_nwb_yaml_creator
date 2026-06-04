@@ -78,7 +78,7 @@ that currently produce invalid YAML will (correctly) be blocked from export.
 | `step-nav click cannot reach Export on an error day` *(integration)* | clicking the Export step button with an error-day status does not navigate (`onNavigate` not called for `export`). |
 | `Alt+Right does not advance into Export on an error day` *(integration)* | firing the stepper `next` shortcut from the `validation` step with an error day keeps `currentStep === 'validation'`; on a valid day it advances to `export`. |
 | `ExportStep blocks download when validation has errors` *(integration)* | with an error-day `mergedDay`, `handleDownload` does not produce a file and renders the blocking error; with a valid day it proceeds to the shadow-export check. |
-| `blocked export offers repair actions` *(integration)* | each rendered error has a step/field repair action; clicking it navigates to the intended step and focuses/highlights the field when available. |
+| `blocked export offers repair actions` *(integration)* | each rendered error has an owning-step repair action; clicking it navigates to the intended step and focuses/highlights the field when target metadata is available. |
 | `valid export shows preflight summary` *(integration)* | a valid day renders the preflight sections from `mergedDay` before download: subject/session, configuration version, cameras, probes/bad channels, tasks/videos, and opto state. |
 | `golden-yaml.baseline.test.js` (existing) | unchanged — no output bytes change in this phase. |
 

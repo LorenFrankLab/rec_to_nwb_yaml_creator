@@ -127,7 +127,9 @@ the UI must make the scientifically dangerous choices hard to make accidentally.
   edits geometry; historical days should not look like they are editing live latest devices.
 - **Controlled choices for canonical references.** Species, probe/device type, camera references, task epoch
   references, and region/location fields use controlled dropdowns or strong autocomplete from known values
-  where possible. "Other" escapes remain, but must validate the emitted value before export.
+  where possible. "Other" escapes remain, but must validate the emitted value before export. If a phase adds
+  an export-blocking reference rule, that phase also owns the closest practical editing-surface prevention
+  for the same mistake; validation-only catch-up is not enough for user-created task/video/camera references.
 - **Optogenetics has an explicit enabled state.** No partial hidden opto state: when opto is off, opto fields
   are absent/empty by design; when on, all converter-required sections are visible and required, including
   FsGUI camera/epoch references.
