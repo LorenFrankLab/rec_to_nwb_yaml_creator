@@ -199,7 +199,7 @@ export function mergeDayMetadata(animal, day) {
     resolveDayConfig(animal, day);
 
   const devices = normalizeDevices(animal.devices);
-  const cameras = animal.cameras || [];
+  const cameras = Array.isArray(animal.cameras) ? animal.cameras : [];
   const opto = animal.optogenetics || null;
 
   // Build the merged object in legacy `defaultYMLValues` key order. keywords /
@@ -230,7 +230,7 @@ export function mergeDayMetadata(animal, day) {
     ),
 
     // === From Animal: Data Acquisition ===
-    data_acq_device: (devices.data_acq_device || []).map((d) =>
+    data_acq_device: (Array.isArray(devices.data_acq_device) ? devices.data_acq_device : []).map((d) =>
       reorderKeys(d, DATA_ACQ_DEVICE_ORDER)
     ),
 
@@ -238,13 +238,13 @@ export function mergeDayMetadata(animal, day) {
     cameras: cameras.map((c) => reorderKeys(c, CAMERA_ORDER)),
 
     // === From Day: Behavioral Protocol ===
-    tasks: (day.tasks || []).map((t) => reorderKeys(t, TASK_ORDER)),
+    tasks: (Array.isArray(day.tasks) ? day.tasks : []).map((t) => reorderKeys(t, TASK_ORDER)),
 
     // === From Day: Data Files ===
-    associated_files: (day.associated_files || []).map((f) =>
+    associated_files: (Array.isArray(day.associated_files) ? day.associated_files : []).map((f) =>
       reorderKeys(f, ASSOCIATED_FILE_ORDER)
     ),
-    associated_video_files: (day.associated_video_files || []).map((v) =>
+    associated_video_files: (Array.isArray(day.associated_video_files) ? day.associated_video_files : []).map((v) =>
       reorderKeys(v, ASSOCIATED_VIDEO_FILE_ORDER)
     ),
 
@@ -255,7 +255,7 @@ export function mergeDayMetadata(animal, day) {
     default_header_file_path: day.technical.default_header_file_path,
 
     // === From Day: Behavioral Events ===
-    behavioral_events: (day.behavioral_events || []).map((e) =>
+    behavioral_events: (Array.isArray(day.behavioral_events) ? day.behavioral_events : []).map((e) =>
       reorderKeys(e, BEHAVIORAL_EVENT_ORDER)
     ),
 

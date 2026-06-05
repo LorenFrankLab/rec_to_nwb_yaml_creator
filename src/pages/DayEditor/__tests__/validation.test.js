@@ -395,7 +395,6 @@ describe('repairTargetForIssue (Repair Routing Contract)', () => {
     { code: 'channel_key_out_of_range', issue: { code: 'channel_key_out_of_range', path: 'ntrode_electrode_group_channel_map[0]', field: 'map', step: 'devices', repairSurface: 'animal' } },
     { code: 'channel_partition_invalid', issue: { code: 'channel_partition_invalid', path: 'ntrode_electrode_group_channel_map', field: 'map', step: 'devices', repairSurface: 'animal' } },
     { code: 'channel_row_count_mismatch', issue: { code: 'channel_row_count_mismatch', path: 'ntrode_electrode_group_channel_map', field: 'map', step: 'devices', repairSurface: 'animal' } },
-    { code: 'multishank_bad_channels_ignored', issue: { code: 'multishank_bad_channels_ignored', path: 'ntrode_electrode_group_channel_map[1]', field: 'bad_channels', step: 'devices', repairSurface: 'animal' } },
     { code: 'inconsistent_probe_catalog', issue: { code: 'inconsistent_probe_catalog', path: 'electrode_groups[0].device_type', field: 'device_type', step: 'devices', repairSurface: 'animal' } },
     { code: 'empty_location', issue: { code: 'empty_location', path: 'electrode_groups[0].location', field: 'location', step: 'devices', repairSurface: 'animal' } },
     { code: 'empty_targeted_location', issue: { code: 'empty_targeted_location', path: 'electrode_groups[0].targeted_location', field: 'targeted_location', step: 'devices', repairSurface: 'animal' } },
@@ -421,6 +420,8 @@ describe('repairTargetForIssue (Repair Routing Contract)', () => {
     { code: 'orphaned_file', step: 'epochs', issue: { code: 'orphaned_file', path: 'associated_files[0].task_epochs', field: 'task_epochs', step: 'epochs', repairSurface: 'day' } },
     { code: 'divergent_task_identity', step: 'epochs', issue: { code: 'divergent_task_identity', path: 'tasks', field: 'task_name', step: 'epochs', repairSurface: 'day' } },
     { code: 'bad_channel_out_of_range', step: 'devices', issue: { code: 'bad_channel_out_of_range', path: 'ntrode_electrode_group_channel_map[0]', field: 'bad_channels', step: 'devices', repairSurface: 'day' } },
+    { code: 'multishank_bad_channels_ignored', step: 'devices', issue: { code: 'multishank_bad_channels_ignored', path: 'ntrode_electrode_group_channel_map[1]', field: 'bad_channels', step: 'devices', repairSurface: 'day' } },
+    { code: 'stale_bad_channel_override', step: 'devices', issue: { code: 'stale_bad_channel_override', path: 'deviceOverrides.bad_channels', field: 'bad_channels', step: 'devices', repairSurface: 'day' } },
     { code: 'missing_camera', step: 'epochs', issue: { code: 'missing_camera', path: 'tasks', repairSurface: 'day' } },
     { code: 'partial_configuration', step: 'validation', issue: { code: 'partial_configuration', path: 'optogenetics', repairSurface: 'day' } },
   ];
@@ -456,11 +457,17 @@ describe('repairTargetForIssue (Repair Routing Contract)', () => {
   });
 
   it('falls back to deriving the animal surface from an AJV schema path with no metadata', () => {
-    // A schema issue under electrode_groups carries no repairSurface — it must still
-    // derive to the animal surface (where geometry is edited).
+    // A schema issue under electrode_groups/cameras carries no repairSurface — it
+    // must still derive to the animal surface (where geometry is edited).
     expect(repairTargetForIssue({ code: 'type', path: 'electrode_groups[0].targeted_x' }).surface).toBe('animal');
     expect(repairTargetForIssue({ code: 'required', instancePath: '/cameras/0/lens' }).surface).toBe('animal');
-    expect(repairTargetForIssue({ code: 'required', path: 'subject.weight' }).surface).toBe('animal');
+  });
+
+  it('routes a schema subject issue to the Day Editor Overview (where subject is repairable)', () => {
+    // Inherited subject fields are edited in the Day Editor Overview, not the Animal
+    // Editor (which has no subject step) — schema errors like subject.weight follow.
+    expect(repairTargetForIssue({ code: 'required', path: 'subject.weight' }).surface).toBe('day');
+    expect(repairTargetForIssue({ code: 'required', path: 'subject.weight' }).step).toBe('overview');
   });
 
   it('falls back to the day surface for a session/overview schema issue', () => {

@@ -61,15 +61,41 @@ export function parseExactInteger(value) {
   return value;
 }
 
+/**
+ * Trim a string field WITHOUT laundering a corrupt non-string into a plausible
+ * value. A real string is trimmed; `null`/`undefined` become `''` (absent); a
+ * non-string (e.g. `location: 123`, `units: 7`, an object) is PRESERVED as-is so
+ * the schema's `type: string` check surfaces the corruption instead of
+ * `String(123)` → `"123"` slipping through (Normalization Contract).
+ *
+ * @param {*} value - Candidate string field.
+ * @returns {*} Trimmed string, '' for absent, or the original non-string value.
+ */
 function cleanString(value) {
   if (value == null) return '';
-  return String(value).trim();
+  if (typeof value !== 'string') return value;
+  return value.trim();
 }
 
+/**
+ * Coerce a numeric field STRICTLY: a finite number stays; an EXACT numeric string
+ * (`"2.5"`) migrates to the number; anything else — a non-finite number, junk like
+ * `"2.5mm"`, or a non-scalar — is PRESERVED unchanged so the schema's numeric type
+ * check flags it (no `parseFloat("2.5mm")` → `2.5` laundering). `null`/`undefined`/
+ * `''` return `undefined` so the field is omitted and the schema's `required` check
+ * surfaces the absence.
+ *
+ * @param {*} value - Candidate numeric field.
+ * @returns {*} The number, the preserved corrupt value, or `undefined` when absent.
+ */
 function toFiniteNumber(value) {
   if (value == null || value === '') return undefined;
-  const parsed = typeof value === 'number' ? value : Number.parseFloat(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
+  if (typeof value === 'number') return value; // finite stays; NaN/Inf preserved for schema
+  if (typeof value === 'string' && /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(value.trim())) {
+    const n = Number(value);
+    if (Number.isFinite(n)) return n;
+  }
+  return value; // preserve corrupt (e.g. "2.5mm") for the schema to flag
 }
 
 /**

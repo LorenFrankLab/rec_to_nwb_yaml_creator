@@ -123,3 +123,41 @@ describe('Normalization Contract: export gate sees un-laundered state', () => {
     expect(computeStepStatus(day, merged).export).toBe('valid');
   });
 });
+
+describe('Normalization Contract: corrupt scalar fields are not laundered', () => {
+  it('a numeric location is preserved (not String()-coerced) and blocks export', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    snapshotDevices(animal).electrode_groups[0].location = 123;
+    const merged = mergeDayMetadata(animal, day);
+    expect(merged.electrode_groups[0].location).not.toBe('123');
+    expect(computeStepStatus(day, merged).export).toBe('error');
+  });
+
+  it('a targeted_x with trailing junk ("2.5mm") is not parseFloat-laundered to 2.5', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    snapshotDevices(animal).electrode_groups[0].targeted_x = '2.5mm';
+    const merged = mergeDayMetadata(animal, day);
+    expect(merged.electrode_groups[0].targeted_x).not.toBe(2.5);
+    expect(computeStepStatus(day, merged).export).toBe('error');
+  });
+});
+
+describe('Load-time integrity: stale day-level bad-channel overrides surface', () => {
+  it('a deviceOverrides.bad_channels key with no matching ntrode blocks export', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    day.deviceOverrides = { bad_channels: { 999: [0] } }; // ntrode 999 does not exist
+    const merged = mergeDayMetadata(animal, day);
+    const status = computeStepStatus(day, merged);
+    expect(status.export).toBe('error');
+  });
+});
+
+describe('mergeDayMetadata tolerates malformed day shapes (fail-closed, no crash)', () => {
+  it('does not throw when day arrays are malformed non-arrays', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    day.tasks = 'not-an-array';
+    day.associated_files = { bad: true };
+    animal.cameras = 'nope';
+    expect(() => mergeDayMetadata(animal, day)).not.toThrow();
+  });
+});

@@ -64,8 +64,11 @@ export const rulesValidation = (model) => {
   // Rule 2: Associated video files with camera_ids require cameras
   // Only trigger if video files have non-empty camera_id arrays
   if (!model.cameras && Array.isArray(model.associated_video_files) && model.associated_video_files.length > 0) {
+    // associated_video_files[].camera_id is a SCALAR integer (schema), unlike the
+    // task camera_id ARRAY — so a video referencing camera 0 with no cameras table
+    // must still trip the missing-camera rule.
     const videosWithCameras = model.associated_video_files.some(video =>
-      video.camera_id && Array.isArray(video.camera_id) && video.camera_id.length > 0
+      video?.camera_id !== undefined && video?.camera_id !== null && video?.camera_id !== ''
     );
 
     if (videosWithCameras) {
@@ -316,7 +319,7 @@ export const rulesValidation = (model) => {
     }
   });
 
-  // Rule 11 (Phase Probe Metadata Contract): catalog-driven channel bounds.
+  // Rule 11: catalog-driven channel bounds.
   // The VERIFIED probe catalog (probeCatalog.js, transcribed from trodes_to_nwb)
   // is the source of truth. Map VALUES are probe electrode ids, reset PER
   // electrode group, and partitioned across shanks (a 2nd tetrode is 0..3 not 4..7;
@@ -475,6 +478,47 @@ export const rulesValidation = (model) => {
             `Electrode group ${groupId} ("${deviceType}") channel map must cover electrode ids ` +
             `0–${channelCount - 1} exactly once across its ntrodes (no gaps or duplicates). The ` +
             `converter looks up every probe electrode id, so a missing id fails conversion.`,
+        });
+      }
+    });
+  }
+
+  // Rule 11b: in a PARTIALLY-configured day (the channel map has at least one row),
+  // every electrode group must still have its own rows — a group with ZERO rows
+  // slips past the per-group check above (which only sees groups with ≥1 row) and
+  // would otherwise be caught only by step incompleteness. A FULLY-unconfigured day
+  // (no rows at all) stays "incomplete" (step status owns it), not an error.
+  if (
+    Array.isArray(model.electrode_groups) &&
+    model.electrode_groups.length > 0 &&
+    Array.isArray(model.ntrode_electrode_group_channel_map) &&
+    model.ntrode_electrode_group_channel_map.length > 0
+  ) {
+    const rowCountByGroup = new Map();
+    (Array.isArray(model.ntrode_electrode_group_channel_map)
+      ? model.ntrode_electrode_group_channel_map
+      : []
+    ).forEach((ntrode) => {
+      const gid = ntrode?.electrode_group_id;
+      if (gid === undefined || gid === null) return;
+      rowCountByGroup.set(gid, (rowCountByGroup.get(gid) || 0) + 1);
+    });
+    model.electrode_groups.forEach((group, gi) => {
+      const expectedRows = getProbeShanks(group?.device_type).length;
+      if (expectedRows === 0) return; // unknown device → Rule 13 owns it
+      const actualRows = rowCountByGroup.get(group?.id) || 0;
+      if (actualRows === 0) {
+        issues.push({
+          path: `electrode_groups[${gi}]`,
+          field: 'map',
+          step: 'devices',
+          actionLabel: 'Add channel map',
+          code: 'channel_row_count_mismatch',
+          repairSurface: 'animal',
+          severity: 'error',
+          message:
+            `Electrode group ${group?.id ?? gi} ("${group?.device_type}") has no channel-map ` +
+            `rows, but the probe has ${expectedRows} shank(s). Add one ntrode row per shank.`,
         });
       }
     });
@@ -887,9 +931,11 @@ export const rulesValidation = (model) => {
           path: `ntrode_electrode_group_channel_map[${ntrode.ntrode_id}]`,
           field: 'bad_channels',
           step: 'devices',
-          actionLabel: 'Move bad channels to the first ntrode row',
+          actionLabel: 'Edit bad channels',
           code: 'multishank_bad_channels_ignored',
-          repairSurface: 'animal',
+          // Repaired in the Day Editor Devices step, whose probe-wide bad-channel
+          // selector writes probe-local indices to the group's first ntrode row.
+          repairSurface: 'day',
           severity: 'error',
           message:
             `Bad channels on ntrode ${ntrode.ntrode_id} (electrode group ${gid}) are ignored ` +

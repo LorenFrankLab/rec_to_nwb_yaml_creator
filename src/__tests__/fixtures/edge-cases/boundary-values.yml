@@ -204,7 +204,7 @@ electrode_groups:
 ntrode_electrode_group_channel_map:
   - ntrode_id: 1
     electrode_group_id: 0
-    bad_channels: [0, 1, 2, 3]  # All channels bad
+    bad_channels: [0, 1, 2, 3]  # All channels bad (boundary)
     map:
       0: 0
       1: 1
@@ -212,6 +212,118 @@ ntrode_electrode_group_channel_map:
       3: 3
   - ntrode_id: 2
     electrode_group_id: 1
+    bad_channels: []
+    map:
+      0: 0
+      1: 1
+      2: 2
+      3: 3
+  - ntrode_id: 3
+    electrode_group_id: 2
+    bad_channels: []
+    map:
+      0: 0
+      1: 1
+      2: 2
+      3: 3
+  - ntrode_id: 4
+    electrode_group_id: 3
+    bad_channels: []
+    map:
+      0: 0
+      1: 1
+      2: 2
+      3: 3
+  - ntrode_id: 5
+    electrode_group_id: 4
+    bad_channels: []
+    map:
+      0: 0
+      1: 1
+      2: 2
+      3: 3
+  - ntrode_id: 6
+    electrode_group_id: 5
+    bad_channels: []
+    map:
+      0: 0
+      1: 1
+      2: 2
+      3: 3
+  - ntrode_id: 7
+    electrode_group_id: 6
+    bad_channels: []
+    map:
+      0: 0
+      1: 1
+      2: 2
+      3: 3
+  - ntrode_id: 8
+    electrode_group_id: 7
+    bad_channels: []
+    map:
+      0: 0
+      1: 1
+      2: 2
+      3: 3
+  - ntrode_id: 9
+    electrode_group_id: 8
+    bad_channels: []
+    map:
+      0: 0
+      1: 1
+      2: 2
+      3: 3
+  - ntrode_id: 10
+    electrode_group_id: 9
+    bad_channels: []
+    map:
+      0: 0
+      1: 1
+      2: 2
+      3: 3
+  - ntrode_id: 11
+    electrode_group_id: 10
+    bad_channels: []
+    map:
+      0: 0
+      1: 1
+      2: 2
+      3: 3
+  - ntrode_id: 12
+    electrode_group_id: 11
+    bad_channels: []
+    map:
+      0: 0
+      1: 1
+      2: 2
+      3: 3
+  - ntrode_id: 13
+    electrode_group_id: 12
+    bad_channels: []
+    map:
+      0: 0
+      1: 1
+      2: 2
+      3: 3
+  - ntrode_id: 14
+    electrode_group_id: 13
+    bad_channels: []
+    map:
+      0: 0
+      1: 1
+      2: 2
+      3: 3
+  - ntrode_id: 15
+    electrode_group_id: 14
+    bad_channels: []
+    map:
+      0: 0
+      1: 1
+      2: 2
+      3: 3
+  - ntrode_id: 16
+    electrode_group_id: 15
     bad_channels: []
     map:
       0: 0

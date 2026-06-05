@@ -47,6 +47,13 @@ describe('Unified Validation API', () => {
             targeted_z: 2.0,
             units: 'mm',
           }],
+          // A configured tetrode group needs its one ntrode channel-map row.
+          ntrode_electrode_group_channel_map: [{
+            ntrode_id: 1,
+            electrode_group_id: 0,
+            bad_channels: [],
+            map: { 0: 0, 1: 1, 2: 2, 3: 3 },
+          }],
           cameras: [{
             id: 0,
             meters_per_pixel: 0.001,
@@ -171,10 +178,12 @@ describe('Unified Validation API', () => {
         }));
       });
 
-      it('should detect associated_video_files without cameras', () => {
+      it('should detect associated_video_files without cameras (scalar camera_id)', () => {
         const model = {
           ...createTestYaml(),
-          associated_video_files: [{ camera_id: [0], task_epochs: [1] }], // Fixed: camera_id must be array
+          // Video camera_id is a SCALAR integer (schema) — a video referencing camera
+          // 0 with no cameras table must still trip the missing-camera rule.
+          associated_video_files: [{ camera_id: 0, task_epochs: 1 }],
           cameras: undefined
         };
         const issues = validate(model);

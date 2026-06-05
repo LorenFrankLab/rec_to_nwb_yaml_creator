@@ -49,8 +49,51 @@ export async function validateField(mergedData, fieldPath) {
  *   console.log('Overview step has validation errors');
  * }
  */
+/**
+ * Surface day-level `deviceOverrides.bad_channels` keys that don't match any
+ * resolved ntrode. `resolveDayConfig` silently drops such keys before
+ * `validate(merged)` runs, so a stale/corrupt override (e.g. a bad-channel mark on
+ * an ntrode that no longer exists, or a non-integer key) would otherwise vanish
+ * with no repair surfaced. These issues are folded into `computeStepStatus` so the
+ * export gate blocks them and the Devices step can repair them.
+ *
+ * @param {object} day - The day record (reads `deviceOverrides.bad_channels`).
+ * @param {object} mergedDay - Merged metadata (resolved ntrode id set).
+ * @returns {Array} Error issues for stale override keys.
+ */
+export function dayOverrideIssues(day, mergedDay) {
+  const overrides = day?.deviceOverrides?.bad_channels;
+  if (!overrides || typeof overrides !== 'object' || Array.isArray(overrides)) return [];
+  const validNtrodeIds = new Set(
+    (mergedDay?.ntrode_electrode_group_channel_map || []).map((n) => String(n?.ntrode_id))
+  );
+  const issues = [];
+  Object.keys(overrides).forEach((key) => {
+    if (!validNtrodeIds.has(String(key))) {
+      issues.push({
+        path: 'deviceOverrides.bad_channels',
+        field: 'bad_channels',
+        step: 'devices',
+        repairSurface: 'day',
+        actionLabel: 'Fix bad channels',
+        code: 'stale_bad_channel_override',
+        severity: 'error',
+        message:
+          `A day-level bad-channel override targets ntrode "${key}", which no longer exists ` +
+          `in this day's channel map. Remove the stale override or restore the ntrode.`,
+      });
+    }
+  });
+  return issues;
+}
+
+/**
+ *
+ * @param day
+ * @param mergedDay
+ */
 export function computeStepStatus(day, mergedDay) {
-  const issues = validate(mergedDay);
+  const issues = [...validate(mergedDay), ...dayOverrideIssues(day, mergedDay)];
 
   // Group errors by step
   const errorsByStep = groupErrorsByStep(issues);
@@ -302,7 +345,6 @@ const SURFACE_BY_CODE = {
   channel_key_out_of_range: 'animal',
   channel_partition_invalid: 'animal',
   channel_row_count_mismatch: 'animal',
-  multishank_bad_channels_ignored: 'animal',
   inconsistent_probe_catalog: 'animal',
   empty_location: 'animal',
   empty_targeted_location: 'animal',
@@ -328,6 +370,8 @@ const SURFACE_BY_CODE = {
   orphaned_file: 'day',
   divergent_task_identity: 'day',
   bad_channel_out_of_range: 'day',
+  multishank_bad_channels_ignored: 'day',
+  stale_bad_channel_override: 'day',
   missing_camera: 'day',
   partial_configuration: 'day',
   // No editable in-app target — read-only identity (slash ids). The explanatory
@@ -364,10 +408,13 @@ function deriveSurfaceFromPath(issue) {
   const raw = issue?.path || issue?.instancePath || '';
   const path = raw.replace(/^\//, '').replace(/\//g, '.');
 
-  // Session/overview fields stay in the Day Editor even though they are "subject"-
-  // adjacent — check these BEFORE the broad subject match below.
+  // Session/overview fields stay in the Day Editor. The inherited SUBJECT fields
+  // (species/sex/genotype/DOB/weight/description) are repairable in the Day Editor
+  // Overview step (the Animal Editor has no subject step), so they route to 'day'
+  // too — check these BEFORE the device matches below.
   if (
     path.includes('session') ||
+    path.includes('subject') ||
     path.includes('experimenter') ||
     path.includes('lab') ||
     path.includes('institution') ||
@@ -376,8 +423,7 @@ function deriveSurfaceFromPath(issue) {
     return 'day';
   }
 
-  // Animal-Editor-owned domains: electrode geometry, channel maps, cameras, data-acq
-  // devices, and subject metadata (DOB/weight/description/species/sex/genotype).
+  // Animal-Editor-owned domains: electrode geometry, channel maps, cameras, data-acq devices.
   if (
     path.includes('electrode') ||
     path.includes('ntrode') ||
@@ -385,8 +431,7 @@ function deriveSurfaceFromPath(issue) {
     path.includes('data_acq') ||
     path.includes('targeted_') ||
     path.includes('meters_per_pixel') ||
-    path.includes('lens') ||
-    path.includes('subject')
+    path.includes('lens')
   ) {
     return 'animal';
   }
