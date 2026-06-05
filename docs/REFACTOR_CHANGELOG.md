@@ -6,6 +6,31 @@
 
 ---
 
+## Phase 7 review fixes, round 4 — fix the CLASS, not the cited line (June 5, 2026)
+
+A fourth review found the unswept siblings of earlier fixes. The meta-lesson (now a memory): fix the
+invariant across ALL sites, and check the dual concerns — gate AND surface, prevent AND repair, all shapes,
+read-only routing, sibling-component parity. All 6 findings fixed (branch not merged):
+
+- **Gated ≠ surfaced (HIGH).** A shared `validateDay(day, mergedDay)` = `validate(merged)` + `dayOverrideIssues`
+  is now the single issue source for the export gate AND the rendered repair lists (ValidationStep,
+  ExportStep), so a stale bad-channel override that blocks export is a visible, repairable error — not an
+  invisible gate.
+- **Lossless non-array (HIGH).** `normalizeNumberList` preserves a corrupt non-array `bad_channels` (`"2.9"`)
+  verbatim instead of laundering it to a clean `[]`; iteration is already `Array.isArray`-guarded.
+- **Repair loaded corruption (HIGH).** Multi-shank bad-channel editors (Day + Animal) MIGRATE a group clean on
+  save — first row gets the selection, later rows' `bad_channels` are cleared — so loaded later-row corruption
+  is repairable, not a dead-end; a load-time notice explains the consolidation.
+- **Guard all shapes (MED).** `mergeDayMetadata` guards nested OBJECT records (`day.session`,
+  `animal.experimenters`, `day.technical`, `animal.subject`), not just arrays, so a malformed import returns
+  issues instead of crashing.
+- **Read-only routing (MED).** Schema errors on read-only identity fields (`subject_id`/`session_id`) route to
+  the `none` repair surface, not a Day Overview dead-end.
+- **Anchor parity (MED).** `AssociatedVideosEditor` camera/epoch selects carry `data-field-path` anchors like
+  the other repair editors.
+
+---
+
 ## Phase 7 review fixes, round 3 — close the remaining laundering/routing/repair gaps (June 5, 2026)
 
 A third deep review (multi-agent) found 9 more gaps; all fixed (branch not merged):
