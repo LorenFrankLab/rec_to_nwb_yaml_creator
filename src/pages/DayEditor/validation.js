@@ -88,12 +88,30 @@ export function dayOverrideIssues(day, mergedDay) {
 }
 
 /**
+ * The authoritative issue list for a day — schema + rules over the merged model
+ * PLUS day-level issues that the merge would otherwise hide (stale bad-channel
+ * overrides). This is the SINGLE source so the export gate
+ * (`computeStepStatus`) and the rendered repair lists (ValidationStep, ExportStep)
+ * never diverge — a blocking issue must always be visible and repairable, never
+ * "gated but invisible".
  *
- * @param day
- * @param mergedDay
+ * @param {object} day - The day record.
+ * @param {object} mergedDay - Merged animal + day metadata.
+ * @returns {Array} All validation issues for the day.
+ */
+export function validateDay(day, mergedDay) {
+  return [...validate(mergedDay), ...dayOverrideIssues(day, mergedDay)];
+}
+
+/**
+ * Validates entire day and computes step status.
+ *
+ * @param {object} day - The day record.
+ * @param {object} mergedDay - Merged animal + day metadata.
+ * @returns {object} Status map per step.
  */
 export function computeStepStatus(day, mergedDay) {
-  const issues = [...validate(mergedDay), ...dayOverrideIssues(day, mergedDay)];
+  const issues = validateDay(day, mergedDay);
 
   // Group errors by step
   const errorsByStep = groupErrorsByStep(issues);
@@ -407,6 +425,14 @@ function deriveSurfaceFromPath(issue) {
   // work as for the app rules' dotted paths ("cameras[0].lens").
   const raw = issue?.path || issue?.instancePath || '';
   const path = raw.replace(/^\//, '').replace(/\//g, '.');
+
+  // Read-only identity fields have no editable target on ANY step (subject_id is the
+  // animal's identity; session_id is derived from it) — both are rendered read-only.
+  // A generic SCHEMA error on them (not just the slash-specific app rules) must route
+  // to 'none' (message only) rather than dead-ending on a disabled control.
+  if (/(^|\.)subject_id($|\b)/.test(path) || /(^|\.)session_id($|\b)/.test(path)) {
+    return 'none';
+  }
 
   // Session/overview fields stay in the Day Editor. The inherited SUBJECT fields
   // (species/sex/genotype/DOB/weight/description) are repairable in the Day Editor

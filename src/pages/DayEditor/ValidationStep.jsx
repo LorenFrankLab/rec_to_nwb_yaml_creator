@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import PropTypes from 'prop-types';
-import { validate } from '../../validation';
-import { groupErrorsByStep } from './validation';
+import { groupErrorsByStep, validateDay } from './validation';
 import { RepairActionButton, STEP_LABELS, isRepairable } from './RepairActions';
 import './DayEditor.scss';
 
@@ -16,6 +15,8 @@ import './DayEditor.scss';
  * when no errors remain.
  *
  * @param {object} props
+ * @param {object} [props.day] - The day record (for day-level issues the merge hides,
+ *   e.g. stale bad-channel overrides).
  * @param {object} props.mergedDay - Merged animal + day metadata to validate.
  * @param {(stepId: string, fieldPath?: string) => void} [props.onNavigate] - Routes a
  *   repair action to the step that owns the fix (and an optional field target).
@@ -23,8 +24,8 @@ import './DayEditor.scss';
  *   animal-surface repairs can deep-link into the Animal Editor).
  * @returns {JSX.Element}
  */
-export default function ValidationStep({ mergedDay, onNavigate, animal }) {
-  const issues = useMemo(() => validate(mergedDay || {}), [mergedDay]);
+export default function ValidationStep({ day, mergedDay, onNavigate, animal }) {
+  const issues = useMemo(() => validateDay(day || {}, mergedDay || {}), [day, mergedDay]);
 
   const bySeverity = useMemo(() => groupBySeverity(issues), [issues]);
 
@@ -65,12 +66,14 @@ export default function ValidationStep({ mergedDay, onNavigate, animal }) {
 }
 
 ValidationStep.propTypes = {
+  day: PropTypes.object,
   mergedDay: PropTypes.object,
   onNavigate: PropTypes.func,
   animal: PropTypes.object,
 };
 
 ValidationStep.defaultProps = {
+  day: null,
   onNavigate: () => {},
   animal: null,
 };

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateField, computeStepStatus, computeDevicesStatus, groupErrorsByStep, stepIdForIssue, repairTargetForIssue } from '../validation';
+import { validateField, computeStepStatus, computeDevicesStatus, groupErrorsByStep, stepIdForIssue, repairTargetForIssue, validateDay } from '../validation';
 import { makeAnimalWithCamerasAndDay } from './taskFixtures';
 
 describe('stepIdForIssue', () => {
@@ -482,5 +482,27 @@ describe('repairTargetForIssue (Repair Routing Contract)', () => {
   it('prefers an explicit repairSurface over path/code derivation', () => {
     // A subject path would derive to animal, but an explicit day surface wins.
     expect(repairTargetForIssue({ code: 'x', path: 'subject.species', repairSurface: 'day' }).surface).toBe('day');
+  });
+});
+
+describe('round-4 review fixes', () => {
+  it('routes a read-only identity schema path (subject_id/session_id) to the none surface', () => {
+    expect(repairTargetForIssue({ code: 'pattern', path: 'subject.subject_id' }).surface).toBe('none');
+    expect(repairTargetForIssue({ code: 'pattern', path: 'session_id' }).surface).toBe('none');
+  });
+
+  it('validateDay surfaces a stale deviceOverrides.bad_channels key as a rendered issue', () => {
+    const day = { deviceOverrides: { bad_channels: { 999: [0] } } };
+    const merged = { ntrode_electrode_group_channel_map: [{ ntrode_id: 1, map: { 0: 0 } }] };
+    const codes = validateDay(day, merged).map((i) => i.code);
+    expect(codes).toContain('stale_bad_channel_override');
+  });
+
+  it('validateDay = computeStepStatus issue source (gate and rendered list cannot diverge)', () => {
+    const day = { deviceOverrides: { bad_channels: { 999: [0] } } };
+    const merged = { ntrode_electrode_group_channel_map: [{ ntrode_id: 1, map: { 0: 0 } }] };
+    // The same issue that blocks export is in the rendered list.
+    expect(validateDay(day, merged).some((i) => i.code === 'stale_bad_channel_override')).toBe(true);
+    expect(computeStepStatus(day, merged).export).toBe('error');
   });
 });

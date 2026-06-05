@@ -161,3 +161,23 @@ describe('mergeDayMetadata tolerates malformed day shapes (fail-closed, no crash
     expect(() => mergeDayMetadata(animal, day)).not.toThrow();
   });
 });
+
+describe('Normalization Contract round 4: non-array bad_channels + malformed objects', () => {
+  it('a non-array bad_channels ("2.9") is preserved (not laundered to []) and blocks export', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    snapshotDevices(animal).ntrode_electrode_group_channel_map[0].bad_channels = '2.9';
+    const merged = mergeDayMetadata(animal, day);
+    // Preserved verbatim (not coerced to a clean []) so the schema array-type check fires.
+    expect(merged.ntrode_electrode_group_channel_map[0].bad_channels).toBe('2.9');
+    expect(computeStepStatus(day, merged).export).toBe('error');
+  });
+
+  it('does not throw when nested OBJECT records are malformed (session/experimenters/technical)', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    day.session = 'not-an-object';
+    day.technical = 42;
+    animal.experimenters = undefined;
+    animal.subject = 'corrupt';
+    expect(() => mergeDayMetadata(animal, day)).not.toThrow();
+  });
+});

@@ -105,11 +105,18 @@ function toFiniteNumber(value) {
  * is PRESERVED as-is so the channel-bound rules flag it instead of silently
  * flooring `2.9` to `2`. Absent entries (`null` / `undefined` / `""`) are dropped.
  *
+ * A non-array, non-absent value (e.g. `bad_channels: "2.9"`) is PRESERVED VERBATIM
+ * — NOT coerced to a clean `[]` — so the schema's `type: array` check surfaces the
+ * corruption instead of it silently vanishing (the channel rules / DevicesStep
+ * already guard iteration with `Array.isArray`, so a preserved scalar can't crash).
+ *
  * @param {*} value - Candidate index list.
- * @returns {Array} Normalized list (integers de-duped; corrupt entries preserved).
+ * @returns {*} Normalized array (integers de-duped; corrupt entries preserved), `[]`
+ *   for an absent value, or the original non-array value preserved for validation.
  */
 function normalizeNumberList(value) {
-  if (!Array.isArray(value)) return [];
+  if (value == null) return []; // absent → clean empty default (byte-parity)
+  if (!Array.isArray(value)) return value; // corrupt non-array → preserved for schema
   const seen = new Set();
   const out = [];
   value.forEach((item) => {

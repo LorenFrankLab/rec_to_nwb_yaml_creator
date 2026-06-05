@@ -35,6 +35,17 @@ const VIRUS_INJECTION_ORDER = ['name', 'description', 'hemisphere', 'location', 
 const FS_GUI_YAML_ORDER = ['name', 'epochs', 'power_in_mW', 'dio_output_name', 'state_script_parameters', 'pulseLength'];
 
 /**
+ * Whether `value` is a plain object record (not null, not an array). Used to guard
+ * nested record dereferences in the merge so a malformed import can't crash it.
+ *
+ * @param {*} value - Candidate record.
+ * @returns {boolean} True for a non-null, non-array object.
+ */
+function isPlainRecord(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/**
  * Reorder each item of an array to match a key template (lossless). Non-array
  * inputs pass through unchanged.
  *
@@ -201,30 +212,38 @@ export function mergeDayMetadata(animal, day) {
   const devices = normalizeDevices(animal.devices);
   const cameras = Array.isArray(animal.cameras) ? animal.cameras : [];
   const opto = animal.optogenetics || null;
+  // Guard nested OBJECT records the same way the array fields are guarded: a
+  // malformed import (e.g. day.session a string, animal.experimenters undefined)
+  // must produce validation issues downstream, not crash the merge here. Missing
+  // leaf fields then surface as schema 'required'/type errors at the export gate.
+  const experimenters = isPlainRecord(animal.experimenters) ? animal.experimenters : {};
+  const session = isPlainRecord(day.session) ? day.session : {};
+  const technical = isPlainRecord(day.technical) ? day.technical : {};
+  const subject = isPlainRecord(animal.subject) ? animal.subject : {};
 
   // Build the merged object in legacy `defaultYMLValues` key order. keywords /
   // units / default_header_file_path are placed at their canonical positions here
   // and deleted below when empty (delete preserves the order of surviving keys).
   const merged = {
     // === From Animal: Experimenters ===
-    experimenter_name: animal.experimenters.experimenter_name,
-    lab: animal.experimenters.lab,
-    institution: animal.experimenters.institution,
+    experimenter_name: experimenters.experimenter_name,
+    lab: experimenters.lab,
+    institution: experimenters.institution,
 
     // === From Day: Session ===
     // Per-day value wins; fall back to the animal-level default (what the
     // OverviewStep "leave blank to use animal's default" hint promises).
     experiment_description:
-      day.session.experiment_description || animal.experiment_description || '',
-    session_description: day.session.session_description,
-    session_id: day.session.session_id,
+      session.experiment_description || animal.experiment_description || '',
+    session_description: session.session_description,
+    session_id: session.session_id,
     keywords: Array.isArray(day.keywords) ? day.keywords : [],
 
     // === From Animal: Subject (with day weight override) ===
     subject: reorderKeys(
       {
-        ...animal.subject,
-        weight: day.session.weight !== undefined ? day.session.weight : animal.subject.weight,
+        ...subject,
+        weight: session.weight !== undefined ? session.weight : subject.weight,
       },
       SUBJECT_ORDER
     ),
@@ -249,10 +268,10 @@ export function mergeDayMetadata(animal, day) {
     ),
 
     // === From Day: Technical Parameters ===
-    units: reorderKeys(day.technical.units, UNITS_ORDER),
-    times_period_multiplier: day.technical.times_period_multiplier,
-    raw_data_to_volts: day.technical.raw_data_to_volts,
-    default_header_file_path: day.technical.default_header_file_path,
+    units: reorderKeys(technical.units, UNITS_ORDER),
+    times_period_multiplier: technical.times_period_multiplier,
+    raw_data_to_volts: technical.raw_data_to_volts,
+    default_header_file_path: technical.default_header_file_path,
 
     // === From Day: Behavioral Events ===
     behavioral_events: (Array.isArray(day.behavioral_events) ? day.behavioral_events : []).map((e) =>
@@ -284,10 +303,10 @@ export function mergeDayMetadata(animal, day) {
   if (!(Array.isArray(day.keywords) && day.keywords.length > 0)) {
     delete merged.keywords;
   }
-  if (!(day.technical.units && Object.keys(day.technical.units).length > 0)) {
+  if (!(technical.units && Object.keys(technical.units).length > 0)) {
     delete merged.units;
   }
-  if (!day.technical.default_header_file_path) {
+  if (!technical.default_header_file_path) {
     delete merged.default_header_file_path;
   }
 

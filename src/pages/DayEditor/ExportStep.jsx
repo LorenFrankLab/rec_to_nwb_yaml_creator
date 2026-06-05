@@ -2,8 +2,7 @@ import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { encodeYaml, formatDeterministicFilename, downloadYamlFile } from '../../io/yaml';
 import { mergeDayMetadata, resolveDayConfig } from '../../state/workspaceUtils';
-import { validate } from '../../validation';
-import { computeStepStatus } from './validation';
+import { computeStepStatus, validateDay } from './validation';
 import { isExportEnabled } from './stepGate';
 import { isFeatureEnabled } from '../../featureFlags';
 import { checkShadowExport } from './shadowExport';
@@ -63,8 +62,8 @@ export default function ExportStep({ animal, day, onNavigate }) {
   // Authoritative export gate, re-checked here (defense in depth): the day may not
   // be downloaded while any error-severity validation issue remains.
   const validationErrors = useMemo(
-    () => validate(merged).filter((issue) => issue.severity === 'error'),
-    [merged]
+    () => validateDay(day, merged).filter((issue) => issue.severity === 'error'),
+    [day, merged]
   );
   // The authoritative export gate the stepper uses (isExportEnabled over the full
   // computeStepStatus map): it folds in step-level statuses — notably
