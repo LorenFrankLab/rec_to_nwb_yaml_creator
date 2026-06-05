@@ -225,6 +225,15 @@ export function groupErrorsByStep(errors) {
  * @returns {'overview'|'devices'|'epochs'|'validation'} The owning step id.
  */
 export function stepIdForIssue(issue) {
+  // Prefer an explicit, valid issue.step (set by Phase 6 rules) over path routing,
+  // so a rule can land its repair action on the step that actually fixes it
+  // (e.g. a camera-path issue routed to 'epochs'). Fall back to path routing when
+  // step is absent or not a known data-entry step.
+  const ROUTABLE_STEPS = ['overview', 'devices', 'epochs', 'validation'];
+  if (issue?.step && ROUTABLE_STEPS.includes(issue.step)) {
+    return issue.step;
+  }
+
   const path = issue?.path || issue?.instancePath || '';
 
   // Session-related fields → Overview

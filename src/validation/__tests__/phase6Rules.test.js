@@ -399,6 +399,77 @@ describe('Phase 6: workspace/dataset identity consistency (Task 8)', () => {
   });
 });
 
+describe('Phase 6: repair metadata on new error rules (Task 9b)', () => {
+  // A single model that trips every new error-severity rule at once, so we can
+  // assert each emitted issue carries the repair metadata the Export/Validation
+  // UI needs: step, an actionable path/field, and a short actionLabel.
+  const VALID_STEPS = ['overview', 'devices', 'epochs', 'validation'];
+  const NEW_CODES = [
+    'dangling_camera_ref',
+    'dangling_electrode_group_ref',
+    'channel_value_out_of_range',
+    'channel_key_out_of_range',
+    'bad_channel_out_of_range',
+    'channel_partition_invalid',
+    'empty_location',
+    'empty_targeted_location',
+    'unknown_device_type',
+    'duplicate_behavioral_event_name',
+    'duplicate_task_epoch',
+    'orphaned_video',
+    'divergent_camera_identity',
+    'divergent_data_acq_identity',
+    'divergent_task_identity',
+  ];
+
+  const brokenModel = () => ({
+    cameras: [
+      { id: 0, camera_name: 'overhead', meters_per_pixel: 0.001, lens: 'A', model: 'M', manufacturer: 'X' },
+      { id: 0, camera_name: 'overhead', meters_per_pixel: 0.002, lens: 'A', model: 'M', manufacturer: 'X' },
+    ],
+    data_acq_device: [
+      { name: 'acq', system: 'S1', amplifier: 'A', adc_circuit: 'C' },
+      { name: 'acq', system: 'S2', amplifier: 'A', adc_circuit: 'C' },
+    ],
+    electrode_groups: [
+      { id: 0, device_type: 'made_up_probe', location: '', targeted_location: '' },
+      { id: 1, device_type: 'tetrode_12.5', location: 'CA1', targeted_location: 'CA1' },
+    ],
+    ntrode_electrode_group_channel_map: [
+      { ntrode_id: 1, electrode_group_id: 1, bad_channels: [99], map: { 0: 7, 2: 2, 3: 3 } },
+      { ntrode_id: 2, electrode_group_id: 42, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+    ],
+    behavioral_events: [
+      { name: 'reward', description: 'a' },
+      { name: 'reward', description: 'b' },
+    ],
+    tasks: [
+      { task_name: 'sleep', task_description: 'pre', camera_id: [99], task_epochs: [1] },
+      { task_name: 'sleep', task_description: 'post', camera_id: [0], task_epochs: [1] },
+    ],
+    associated_video_files: [{ name: 'v', camera_id: 0, task_epochs: 77 }],
+  });
+
+  it('every new error-severity rule emits step, a path/field target, and an actionLabel', () => {
+    const issues = rulesValidation(brokenModel());
+    const newIssues = issues.filter((i) => NEW_CODES.includes(i.code));
+    expect(newIssues.length).toBeGreaterThan(0);
+    newIssues.forEach((issue) => {
+      expect(VALID_STEPS, `${issue.code} step`).toContain(issue.step);
+      expect(typeof issue.actionLabel, `${issue.code} actionLabel`).toBe('string');
+      expect(issue.actionLabel.length, `${issue.code} actionLabel`).toBeGreaterThan(0);
+      expect(typeof (issue.path || issue.field), `${issue.code} path/field`).toBe('string');
+    });
+  });
+
+  it('triggers all new error codes (each rule reachable)', () => {
+    const present = new Set(rulesValidation(brokenModel()).map((i) => i.code));
+    NEW_CODES.forEach((code) => {
+      expect(present.has(code), `expected code ${code} to fire`).toBe(true);
+    });
+  });
+});
+
 describe('Phase 6: channel bounds skipped for unknown device (Task 3/5 interaction)', () => {
   it('does not run channel-bound checks for an unknown device_type', () => {
     // Unknown device → getChannelCount 0; Task 5 reports the unknown device,

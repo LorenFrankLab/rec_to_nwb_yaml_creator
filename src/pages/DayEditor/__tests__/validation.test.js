@@ -28,6 +28,24 @@ describe('stepIdForIssue', () => {
     expect(stepIdForIssue({ path: 'description' })).toBe('validation');
   });
 
+  it('prefers an explicit issue.step over path routing (Task 9)', () => {
+    // A camera-path issue would path-route to 'devices', but an explicit step wins.
+    expect(stepIdForIssue({ path: 'cameras[0].camera_name', step: 'epochs' })).toBe('epochs');
+    // A task-path issue with an explicit devices step routes to devices.
+    expect(stepIdForIssue({ path: 'tasks[0].task_name', step: 'devices' })).toBe('devices');
+  });
+
+  it('ignores an invalid issue.step and falls back to path routing (Task 9)', () => {
+    expect(stepIdForIssue({ path: 'tasks[0].task_name', step: 'not-a-step' })).toBe('epochs');
+  });
+
+  it('groupErrorsByStep honors explicit issue.step', () => {
+    const issues = [{ path: 'cameras[0].camera_name', code: 'x', severity: 'error', step: 'epochs' }];
+    const grouped = groupErrorsByStep(issues);
+    expect(grouped.epochs).toContainEqual(issues[0]);
+    expect(grouped.devices).toHaveLength(0);
+  });
+
   it('agrees with groupErrorsByStep for the same issues', () => {
     const issues = [
       { path: 'session_description', code: 'pattern', severity: 'error' },
