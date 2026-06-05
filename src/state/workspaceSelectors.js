@@ -53,13 +53,24 @@ export const getAnimalElectrodeGroups = (animal) =>
 export const getAnimalNtrodeMaps = (animal) =>
   asArray(getAnimalDevices(animal).ntrode_electrode_group_channel_map);
 
-/** @param {object} config @returns {Array} A probe config's electrode groups. */
-export const getProbeElectrodeGroups = (config) =>
-  asArray(asRecord(config).electrode_groups);
+/**
+ * Electrode groups of a ProbeConfiguration — the shape that exposes `electrode_groups` at
+ * its TOP level. Pass a ProbeConfiguration, OR a snapshot's `.devices` (which IS one) — NOT
+ * a whole snapshot `{version, devices}` (that would silently yield `[]`).
+ * @param {object} probeConfig - A ProbeConfiguration (or snapshot.devices).
+ * @returns {Array}
+ */
+export const getProbeElectrodeGroups = (probeConfig) =>
+  asArray(asRecord(probeConfig).electrode_groups);
 
-/** @param {object} config @returns {Array} A probe config's ntrode channel maps. */
-export const getProbeNtrodeMaps = (config) =>
-  asArray(asRecord(config).ntrode_electrode_group_channel_map);
+/**
+ * Ntrode channel maps of a ProbeConfiguration (top-level `ntrode_electrode_group_channel_map`).
+ * Pass a ProbeConfiguration or a snapshot's `.devices`, NOT a whole snapshot.
+ * @param {object} probeConfig - A ProbeConfiguration (or snapshot.devices).
+ * @returns {Array}
+ */
+export const getProbeNtrodeMaps = (probeConfig) =>
+  asArray(asRecord(probeConfig).ntrode_electrode_group_channel_map);
 
 /** @param {object} animal @returns {object} The animal's subject record (always a record). */
 export const getAnimalSubject = (animal) => asRecord(animal?.subject);

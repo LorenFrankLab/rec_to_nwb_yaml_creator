@@ -27,13 +27,6 @@ const srcDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..
 const SELECTOR_OWNED = [
   'animal\\.cameras',
   'animal\\.configurationHistory',
-  'animal\\.devices\\?\\.data_acq_device',
-  'animal\\.devices(?:\\?\\.|\\.)electrode_groups',
-  'animal\\.devices(?:\\?\\.|\\.)ntrode_electrode_group_channel_map',
-  'animalData\\.devices(?:\\?\\.|\\.)electrode_groups',
-  'animalData\\.devices(?:\\?\\.|\\.)ntrode_electrode_group_channel_map',
-  'currentAnimal\\?\\.devices(?:\\?\\.|\\.)electrode_groups',
-  'currentAnimal\\?\\.devices(?:\\?\\.|\\.)ntrode_electrode_group_channel_map',
   'animal\\.days',
   'animal\\.subject',
   'animal\\.experimenters',
@@ -45,6 +38,16 @@ const SELECTOR_OWNED = [
   'day\\.associated_files',
   'day\\.associated_video_files',
   'days\\[[^\\]]+\\]\\.tasks',
+  // Nested device collections — HOLDER-AGNOSTIC: `<anyVar>.devices(?.).<field>`, so a raw
+  // read off ANY holder (animal mirror, snapshot, config) is fenced, not just a few named
+  // variables. These belong to getAnimal*/getProbe* selectors.
+  '\\w+(?:\\?\\.|\\.)devices(?:\\?\\.|\\.)electrode_groups',
+  '\\w+(?:\\?\\.|\\.)devices(?:\\?\\.|\\.)ntrode_electrode_group_channel_map',
+  '\\w+(?:\\?\\.|\\.)devices(?:\\?\\.|\\.)data_acq_device',
+  // A ProbeConfiguration exposes electrode_groups / ntrode map at TOP level (no `.devices`);
+  // configDiff reads them off prev/next config — own them via getProbe* too.
+  '(?:prev|next)Config\\.electrode_groups',
+  '(?:prev|next)Config\\.ntrode_electrode_group_channel_map',
 ];
 const FORBIDDEN = SELECTOR_OWNED.flatMap((field) => [
   new RegExp(`${field}\\s*\\|\\|\\s*\\[\\]`),

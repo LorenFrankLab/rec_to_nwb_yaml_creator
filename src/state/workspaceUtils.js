@@ -276,6 +276,9 @@ export function mergeDayMetadata(animal, day) {
     ),
 
     // === From Animal: Data Acquisition ===
+    // Read from RAW animal (not the normalized `devices` above): byte-safe ONLY because
+    // normalizeDevices does not transform data_acq_device items (it structuredClones them).
+    // If the normalizer ever starts normalizing these, route this through `devices` instead.
     data_acq_device: getDataAcqDevices(animal).map((d) =>
       reorderKeys(d, DATA_ACQ_DEVICE_ORDER)
     ),

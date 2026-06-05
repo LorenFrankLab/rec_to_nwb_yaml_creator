@@ -61,6 +61,10 @@ export default function ReconfigWizard({
     const latest = history[history.length - 1];
     const latestGroups = getProbeElectrodeGroups(latest?.devices);
     const latestMaps = getProbeNtrodeMaps(latest?.devices);
+    // Fall back to the animal mirror when the latest snapshot is EMPTY (not merely
+    // falsy as before). The two diverge only if a snapshot held `[]` while the mirror
+    // was non-empty, which `updateAnimal`'s mirror-into-latest logic prevents for in-app
+    // state; an empty latest snapshot correctly falls back to the mirror.
     return {
       electrode_groups: latestGroups.length > 0 ? latestGroups : getAnimalElectrodeGroups(animal),
       ntrode_electrode_group_channel_map:
