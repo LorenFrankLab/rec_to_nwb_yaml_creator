@@ -141,3 +141,72 @@ describe('DevicesStep — stale bad-channel override repair (Finding 3)', () => 
     expect(screen.getByRole('button', { name: /stale failed-channel override for ntrode 888/i })).toBeInTheDocument();
   });
 });
+
+/**
+ * Round-6 review findings — every malformed `deviceOverrides` shape that blocks export
+ * (surfaced by `dayOverrideIssues`) must also be REPAIRABLE on the Devices step, not
+ * just gated. The merge declines to apply these, so they have no editor row; DevicesStep
+ * renders a focusable removal control for each.
+ */
+describe('DevicesStep — malformed override repair (round-6)', () => {
+  const ELECTRODE_GROUPS = [
+    {
+      id: 0, location: 'CA1', device_type: 'tetrode_12.5', description: 'Dorsal CA1 tetrode',
+      targeted_location: 'CA1', targeted_x: 2.6, targeted_y: -3.8, targeted_z: 1.5, units: 'mm',
+    },
+  ];
+  const NTRODE_MAP = [
+    { ntrode_id: 0, electrode_group_id: 0, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+  ];
+  const mockAnimal = {
+    id: 'test-animal',
+    devices: { electrode_groups: ELECTRODE_GROUPS, ntrode_electrode_group_channel_map: NTRODE_MAP },
+    configurationHistory: [
+      { version: 1, date: '2023-06-22', description: 'Initial', appliedToDays: [], devices: { electrode_groups: ELECTRODE_GROUPS, ntrode_electrode_group_channel_map: NTRODE_MAP } },
+    ],
+  };
+  const mockMergedDay = { ...mockAnimal };
+  const baseDay = { id: 'd1', animalId: 'test-animal', date: '2023-06-22', configurationVersion: 1 };
+
+  let onFieldUpdate;
+  beforeEach(() => { onFieldUpdate = vi.fn(); });
+
+  const renderWith = (deviceOverrides) =>
+    render(<DevicesStep animal={mockAnimal} day={{ ...baseDay, deviceOverrides }} mergedDay={mockMergedDay} onFieldUpdate={onFieldUpdate} />);
+
+  it('offers a per-key removal for a malformed (non-array) VALUE under a valid ntrode key', async () => {
+    const user = userEvent.setup();
+    renderWith({ bad_channels: { '0': '23' } });
+    const control = screen.getByRole('button', { name: /corrupt failed-channel override for ntrode 0/i });
+    expect(control).toHaveAttribute('data-field-path', 'deviceOverrides.bad_channels');
+    await user.click(control);
+    expect(onFieldUpdate).toHaveBeenCalledTimes(1);
+    expect(onFieldUpdate).toHaveBeenCalledWith('deviceOverrides.bad_channels', {});
+  });
+
+  it('offers a whole-container removal for a scalar bad_channels container', async () => {
+    const user = userEvent.setup();
+    renderWith({ bad_channels: '2.9' });
+    const control = screen.getByRole('button', { name: /remove corrupt failed-channel override/i });
+    expect(control).toHaveAttribute('data-field-path', 'deviceOverrides.bad_channels');
+    await user.click(control);
+    expect(onFieldUpdate).toHaveBeenCalledTimes(1);
+    // The whole deviceOverrides is rewritten without the corrupt bad_channels key.
+    expect(onFieldUpdate).toHaveBeenCalledWith('deviceOverrides', {});
+  });
+
+  it('offers removal for a malformed (non-array) geometry override', async () => {
+    const user = userEvent.setup();
+    renderWith({ electrode_groups: 'corrupt' });
+    const control = screen.getByRole('button', { name: /remove corrupt electrode_groups override/i });
+    expect(control).toHaveAttribute('data-field-path', 'deviceOverrides.electrode_groups');
+    await user.click(control);
+    expect(onFieldUpdate).toHaveBeenCalledTimes(1);
+    expect(onFieldUpdate).toHaveBeenCalledWith('deviceOverrides', {});
+  });
+
+  it('does not render any malformed-override control for clean overrides', () => {
+    renderWith({ bad_channels: { '0': [1] } });
+    expect(screen.queryByRole('button', { name: /corrupt/i })).toBeNull();
+  });
+});

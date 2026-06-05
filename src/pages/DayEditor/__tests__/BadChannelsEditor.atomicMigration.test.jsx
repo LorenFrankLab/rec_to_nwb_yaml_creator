@@ -152,9 +152,37 @@ describe('BadChannelsEditor — later-row marks are TRANSLATED not dropped (Find
     expect(batched['11']).toEqual([]);
   });
 
-  it('falls back to the raw key when row.map[key] is undefined', async () => {
+  it('falls back to the raw key ONLY when it is a representable probe electrode id', async () => {
     const user = userEvent.setup();
-    // Later row whose map lacks key 99 → fall back to 99 itself.
+    // Later row whose map lacks key 5, but 5 is a valid probe-local id (0..63) → keep it.
+    const ntrodes = [
+      { ntrode_id: 10, electrode_group_id: 2, bad_channels: [], map: shankMap(0, 21) },
+      { ntrode_id: 11, electrode_group_id: 2, bad_channels: [5], map: shankMap(21, 21) },
+      { ntrode_id: 12, electrode_group_id: 2, bad_channels: [], map: shankMap(42, 22) },
+    ];
+    // Remove key 5 from row 11's map so it is untranslatable but in-range.
+    delete ntrodes[1].map[5];
+    render(
+      <BadChannelsEditor
+        ntrodes={ntrodes}
+        deviceType={DEVICE_TYPE}
+        badChannels={{ '10': [], '11': [5], '12': [] }}
+        onUpdate={vi.fn()}
+        onBatchUpdate={onBatchUpdate}
+      />
+    );
+
+    await user.click(screen.getByLabelText('Electrode 0', { exact: true }));
+
+    const batched = onBatchUpdate.mock.calls[0][0];
+    expect(batched['10']).toContain(5);
+  });
+
+  it('DROPS an untranslatable, out-of-range later-row mark instead of fabricating an unrepairable first-row value (Medium 2)', async () => {
+    const user = userEvent.setup();
+    // Later row carries 99 — no map entry AND outside the probe range (0..63). The
+    // converter ignores later-row marks anyway, and 99 has no probe-wide checkbox, so
+    // copying it onto the first row would be an unrepairable export blocker. Drop it.
     const ntrodes = [
       { ntrode_id: 10, electrode_group_id: 2, bad_channels: [], map: shankMap(0, 21) },
       { ntrode_id: 11, electrode_group_id: 2, bad_channels: [99], map: shankMap(21, 21) },
@@ -173,7 +201,9 @@ describe('BadChannelsEditor — later-row marks are TRANSLATED not dropped (Find
     await user.click(screen.getByLabelText('Electrode 0', { exact: true }));
 
     const batched = onBatchUpdate.mock.calls[0][0];
-    expect(batched['10']).toContain(99);
+    expect(batched['10']).not.toContain(99);
+    expect(batched['10']).toEqual([0]); // only the toggled, representable id remains
+    expect(batched['11']).toEqual([]);
   });
 
   it('after the atomic migration the model passes multishank_bad_channels_ignored', async () => {

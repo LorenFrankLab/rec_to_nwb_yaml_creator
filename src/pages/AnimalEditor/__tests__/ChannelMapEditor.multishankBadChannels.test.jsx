@@ -259,6 +259,32 @@ describe('ChannelMapEditor — multi-shank later-row corruption MIGRATION (HIGH)
     expect(saved.find((m) => m.ntrode_id === 12).bad_channels).toEqual([]);
   });
 
+  it('DROPS an untranslatable, out-of-range later-row mark rather than fabricating an unrepairable first-row id (Medium 2)', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    const maps = corruptedMaps();
+    // Replace row 11's marks with 99: no map entry AND outside the probe range. It must
+    // NOT be copied onto the first row (the probe-wide selector can't uncheck it).
+    maps[1].bad_channels = [99];
+    render(
+      <ChannelMapEditor
+        electrodeGroup={group64c3s}
+        channelMaps={maps}
+        onSave={onSave}
+        onCancel={() => {}}
+      />
+    );
+
+    await user.click(screen.getByLabelText(/electrode 42/i));
+    await user.click(screen.getByTestId('editor-save'));
+
+    const saved = onSave.mock.calls[0][0];
+    expect(saved.find((m) => m.ntrode_id === 10).bad_channels).not.toContain(99);
+    // Still translates the OTHER valid later-row mark (12.map[7]===49) and the toggle.
+    expect(saved.find((m) => m.ntrode_id === 10).bad_channels).toEqual([42, 49]);
+    expect(saved.find((m) => m.ntrode_id === 11).bad_channels).toEqual([]);
+  });
+
   it('migrated save passes the multishank_bad_channels_ignored rule', async () => {
     const user = userEvent.setup();
     const onSave = vi.fn();

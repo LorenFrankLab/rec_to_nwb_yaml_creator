@@ -132,22 +132,33 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
     );
     const hasLaterRowCorruption = laterRowsWithBad.length > 0;
 
+    // The set of ids the probe-wide selector can actually render/uncheck. A migrated
+    // value MUST be one of these, or it becomes an unrepairable export blocker (no
+    // checkbox to clear it).
+    const probeIdSet = new Set(electrodeIds);
+
     /**
      * Translate a later row's stored bad-channel entries (row-local map KEYS) to
      * probe-local electrode ids via `row.map[key]`. The probe-wide selector and the
      * converter both speak probe-local ids, so a later row's marks must be carried
-     * over by their mapped id, never by their raw row-local index. Falls back to the
-     * raw key when the row's map lacks it (so a value is never silently dropped).
+     * over by their mapped id, never by their raw row-local index. When the row's map
+     * lacks the key we fall back to the raw key, but ONLY keep values that are
+     * representable probe electrode ids: an untranslatable, out-of-range mark cannot
+     * correspond to any real electrode, has no probe-wide checkbox, and is ignored by
+     * the converter anyway, so copying it would fabricate an unrepairable first-row
+     * value. We drop those rather than block export on a value the user can't clear.
      * @param {object} ntrode - A later ntrode row from `ntrodes`.
-     * @returns {number[]} Probe-local electrode ids for this row's stored marks.
+     * @returns {number[]} Representable probe-local electrode ids for this row's marks.
      */
     const translateLaterRowMarks = (ntrode) => {
       const stored = badChannels[String(ntrode.ntrode_id)] || [];
       const map = ntrode.map || {};
-      return stored.map((key) => {
-        const mapped = map[key];
-        return mapped === undefined || mapped === null ? key : mapped;
-      });
+      return stored
+        .map((key) => {
+          const mapped = map[key];
+          return mapped === undefined || mapped === null ? key : mapped;
+        })
+        .filter((id) => probeIdSet.has(id));
     };
 
     /**

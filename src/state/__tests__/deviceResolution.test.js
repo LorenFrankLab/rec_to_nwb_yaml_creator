@@ -154,6 +154,19 @@ describe('resolveDayConfig applies day bad-channel overrides', () => {
     expect(ntrodes.some((n) => n.ntrode_id === 99)).toBe(false);
   });
 
+  it('does NOT smear a non-array override value onto the ntrode row (leaves the base bad_channels)', () => {
+    // A corrupt scalar override value under a VALID key must not be applied to the
+    // geometry row: doing so produces an Animal-Editor-routed schema error on a field
+    // the user can't reach there. The merge declines it (leaving the snapshot's
+    // bad_channels intact); `dayOverrideIssues` surfaces the corrupt override as a
+    // day-routed blocker instead.
+    const day = { id: 'd', configurationVersion: 1, deviceOverrides: { bad_channels: { 1: '23' } } };
+    const { ntrode_electrode_group_channel_map: ntrodes } = resolveDayConfig(animal, day);
+    const ntrode1 = ntrodes.find((n) => n.ntrode_id === 1);
+    expect(ntrode1.bad_channels).toEqual([]); // base value preserved, scalar NOT applied
+    expect(ntrode1.bad_channels).not.toBe('23');
+  });
+
   it('merges a string-keyed override against an integer ntrode_id (survives an integer ntrode_id)', () => {
     const intAnimal = structuredClone(animal);
     intAnimal.configurationHistory[0].devices.ntrode_electrode_group_channel_map.forEach((n) => {

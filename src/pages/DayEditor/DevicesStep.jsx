@@ -166,33 +166,79 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
     onFieldUpdate('deviceOverrides.bad_channels', badChannelsObject);
   }, [onFieldUpdate]);
 
-  // STALE OVERRIDE REPAIR (review finding): a `deviceOverrides.bad_channels` key that
-  // matches NO resolved ntrode_id (e.g. a 999 left over from a removed/reconfigured
-  // ntrode) emits a `stale_bad_channel_override` validation issue routed to this step,
-  // but it has no ntrode row, no anchor, and no clear action — a repair dead-end. We
-  // surface a focusable repair control per stale key (below) that removes only that
-  // key via a single atomic update.
+  // MALFORMED / STALE OVERRIDE REPAIR (review findings): the merge declines to apply
+  // any malformed `deviceOverrides` shape, so each blocks export (via `dayOverrideIssues`)
+  // but has NO editor row — a repair dead-end. We surface a focusable removal control for
+  // every such shape. The contract is: whatever `dayOverrideIssues` flags here is
+  // repairable here. The shapes (mirroring that function):
+  //   - a `bad_channels` KEY with no resolved ntrode_id (stale), OR a key whose VALUE is
+  //     not a list (corrupt) → remove just that key;
+  //   - the whole `bad_channels` CONTAINER is a scalar/array, not an ntrode→list map →
+  //     remove the whole override;
+  //   - a geometry override (`electrode_groups` / ntrode map) present but not an array →
+  //     remove that override key.
   const resolvedNtrodeIds = useMemo(
     () => new Set(ntrodeChannelMap.map((n) => String(n.ntrode_id))),
     [ntrodeChannelMap]
   );
+  const overridesRecord = useMemo(() => {
+    const o = day.deviceOverrides;
+    return o !== null && typeof o === 'object' && !Array.isArray(o) ? o : null;
+  }, [day.deviceOverrides]);
+
+  const badChannelContainer = overridesRecord?.bad_channels;
+  const badChannelContainerIsRecord =
+    badChannelContainer !== null && typeof badChannelContainer === 'object' && !Array.isArray(badChannelContainer);
+  // The container is present but not an ntrode→list map (e.g. scalar "2.9"): the whole
+  // override must be removed (there are no per-key controls to render).
+  const badChannelContainerMalformed = badChannelContainer != null && !badChannelContainerIsRecord;
+
+  // Per-key problems, partitioned for distinct labels: stale (no resolved ntrode) vs.
+  // corrupt value (resolved key, non-array value). Both removed by deleting the key.
   const staleOverrideKeys = useMemo(() => {
-    const overrides = day.deviceOverrides?.bad_channels;
-    if (!overrides || typeof overrides !== 'object') return [];
-    return Object.keys(overrides).filter((key) => !resolvedNtrodeIds.has(String(key)));
-  }, [day.deviceOverrides, resolvedNtrodeIds]);
+    if (!badChannelContainerIsRecord) return [];
+    return Object.keys(badChannelContainer).filter((key) => !resolvedNtrodeIds.has(String(key)));
+  }, [badChannelContainer, badChannelContainerIsRecord, resolvedNtrodeIds]);
+  const corruptValueKeys = useMemo(() => {
+    if (!badChannelContainerIsRecord) return [];
+    return Object.keys(badChannelContainer).filter(
+      (key) => resolvedNtrodeIds.has(String(key)) && !Array.isArray(badChannelContainer[key])
+    );
+  }, [badChannelContainer, badChannelContainerIsRecord, resolvedNtrodeIds]);
+
+  // Geometry overrides present-but-not-an-array (the merge fell back to the snapshot).
+  const malformedGeometryKeys = useMemo(() => {
+    if (!overridesRecord) return [];
+    return ['electrode_groups', 'ntrode_electrode_group_channel_map'].filter(
+      (k) => overridesRecord[k] != null && !Array.isArray(overridesRecord[k])
+    );
+  }, [overridesRecord]);
 
   /**
-   * Remove a single stale bad-channel override key via ONE atomic write of the whole
-   * map (minus that key). After this the `stale_bad_channel_override` issue is gone.
-   * @param {string} staleKey - The ntrode_id key with no resolved ntrode.
+   * Remove a single bad-channel override key (stale or corrupt-value) via ONE atomic
+   * write of the whole map minus that key. The container is a record here (guarded by
+   * the callers), so spreading it is safe.
+   * @param {string} key - The ntrode_id key to drop.
    */
-  const handleRemoveStaleOverride = useCallback((staleKey) => {
-    const overrides = day.deviceOverrides?.bad_channels || {};
+  const handleRemoveOverrideKey = useCallback((key) => {
+    const overrides = badChannelContainerIsRecord ? badChannelContainer : {};
     const next = { ...overrides };
-    delete next[staleKey];
+    delete next[key];
     onFieldUpdate('deviceOverrides.bad_channels', next);
-  }, [day.deviceOverrides, onFieldUpdate]);
+  }, [badChannelContainer, badChannelContainerIsRecord, onFieldUpdate]);
+
+  /**
+   * Remove an entire malformed override KEY off `deviceOverrides` (a scalar bad_channels
+   * container, or a non-array geometry override). Rewrites the whole `deviceOverrides`
+   * record without that key — `handleFieldUpdate` only SETS a path, so deleting a key
+   * means writing the parent object minus it.
+   * @param {string} overrideKey - 'bad_channels' | 'electrode_groups' | 'ntrode_electrode_group_channel_map'.
+   */
+  const handleRemoveOverride = useCallback((overrideKey) => {
+    const next = { ...(overridesRecord || {}) };
+    delete next[overrideKey];
+    onFieldUpdate('deviceOverrides', next);
+  }, [overridesRecord, onFieldUpdate]);
 
   /**
    * Validate bad channels
@@ -336,27 +382,66 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
         </>
       )}
 
-      {/* Stale bad-channel override repair controls: each key here points to an
-          ntrode that no longer resolves, so the export rule blocks but there is no
-          editor row. Each control removes only its key via one atomic update. */}
-      {staleOverrideKeys.length > 0 && (
+      {/* Malformed / stale override repair controls: the merge declines to apply these,
+          so the export rule blocks but there is no editor row. Each control removes only
+          the offending override (a key, or the whole malformed override) atomically. */}
+      {(staleOverrideKeys.length > 0 ||
+        corruptValueKeys.length > 0 ||
+        badChannelContainerMalformed ||
+        malformedGeometryKeys.length > 0) && (
         <section
           className="stale-overrides-section"
-          aria-label="Stale failed-channel overrides"
+          aria-label="Corrupt or stale device overrides"
         >
           <p className="field-help-text">
-            Some failed-channel overrides reference ntrodes that no longer exist in this
-            configuration. trodes_to_nwb ignores them and they block export. Remove them:
+            Some device overrides on this day are corrupt or stale. trodes_to_nwb ignores
+            them and they block export. Remove them:
           </p>
+
           {staleOverrideKeys.map((staleKey) => (
             <button
               key={`stale-${staleKey}`}
               type="button"
               className="stale-override-remove"
               data-field-path="deviceOverrides.bad_channels"
-              onClick={() => handleRemoveStaleOverride(staleKey)}
+              onClick={() => handleRemoveOverrideKey(staleKey)}
             >
               Remove stale failed-channel override for ntrode {staleKey}
+            </button>
+          ))}
+
+          {corruptValueKeys.map((key) => (
+            <button
+              key={`corrupt-${key}`}
+              type="button"
+              className="stale-override-remove"
+              data-field-path="deviceOverrides.bad_channels"
+              onClick={() => handleRemoveOverrideKey(key)}
+            >
+              Remove corrupt failed-channel override for ntrode {key}
+            </button>
+          ))}
+
+          {badChannelContainerMalformed && (
+            <button
+              type="button"
+              className="stale-override-remove"
+              data-field-path="deviceOverrides.bad_channels"
+              onClick={() => handleRemoveOverride('bad_channels')}
+            >
+              Remove corrupt failed-channel override
+            </button>
+          )}
+
+          {malformedGeometryKeys.map((key) => (
+            <button
+              key={`geom-${key}`}
+              type="button"
+              className="stale-override-remove"
+              data-field-path={`deviceOverrides.${key}`}
+              onClick={() => handleRemoveOverride(key)}
+            >
+              Remove corrupt {key} override
             </button>
           ))}
         </section>
@@ -483,9 +568,10 @@ DevicesStep.propTypes = {
     id: PropTypes.string.isRequired,
     animalId: PropTypes.string.isRequired,
     date: PropTypes.string.isRequired,
-    deviceOverrides: PropTypes.shape({
-      bad_channels: PropTypes.object,
-    }),
+    // deviceOverrides is intentionally lossless: a malformed import can carry a corrupt
+    // bad_channels container (scalar/array) or non-array geometry override. The component
+    // detects and offers removal for each, so the shape is deliberately unconstrained.
+    deviceOverrides: PropTypes.object,
   }).isRequired,
   mergedDay: PropTypes.object.isRequired,
   onFieldUpdate: PropTypes.func.isRequired,

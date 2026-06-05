@@ -506,3 +506,60 @@ describe('round-4 review fixes', () => {
     expect(computeStepStatus(day, merged).export).toBe('error');
   });
 });
+
+describe('round-6 review fixes — every malformed day override is surfaced + day-routed', () => {
+  const merged = { ntrode_electrode_group_channel_map: [{ ntrode_id: 1, map: { 0: 0 } }] };
+
+  it('surfaces a non-array electrode_groups override as a day-routed blocker (was silent fail-open)', () => {
+    const day = { deviceOverrides: { electrode_groups: 'corrupt' } };
+    const issue = validateDay(day, merged).find((i) => i.code === 'malformed_device_override');
+    expect(issue).toBeTruthy();
+    expect(issue.severity).toBe('error');
+    expect(issue.path).toBe('deviceOverrides.electrode_groups');
+    expect(repairTargetForIssue(issue).surface).toBe('day');
+    expect(repairTargetForIssue(issue).step).toBe('devices');
+    expect(computeStepStatus(day, merged).export).toBe('error');
+  });
+
+  it('surfaces a non-array ntrode_electrode_group_channel_map override as a day-routed blocker', () => {
+    const day = { deviceOverrides: { ntrode_electrode_group_channel_map: 42 } };
+    const issue = validateDay(day, merged).find((i) => i.code === 'malformed_device_override');
+    expect(issue).toBeTruthy();
+    expect(issue.path).toBe('deviceOverrides.ntrode_electrode_group_channel_map');
+    expect(repairTargetForIssue(issue).surface).toBe('day');
+  });
+
+  it('does NOT surface a malformed_device_override for a well-formed (array) geometry override', () => {
+    const day = { deviceOverrides: { electrode_groups: [], ntrode_electrode_group_channel_map: [] } };
+    expect(validateDay(day, merged).some((i) => i.code === 'malformed_device_override')).toBe(false);
+  });
+
+  it('surfaces a scalar bad_channels CONTAINER ("2.9") as a day-routed blocker (was invisible)', () => {
+    const day = { deviceOverrides: { bad_channels: '2.9' } };
+    const issue = validateDay(day, merged).find((i) => i.code === 'malformed_bad_channel_override');
+    expect(issue).toBeTruthy();
+    expect(issue.path).toBe('deviceOverrides.bad_channels');
+    expect(repairTargetForIssue(issue).surface).toBe('day');
+    expect(repairTargetForIssue(issue).step).toBe('devices');
+    expect(computeStepStatus(day, merged).export).toBe('error');
+  });
+
+  it('surfaces a non-array VALUE under a VALID ntrode key as a day-routed blocker (was Animal-routed)', () => {
+    const day = { deviceOverrides: { bad_channels: { 1: '23' } } };
+    const issue = validateDay(day, merged).find((i) => i.code === 'malformed_bad_channel_override');
+    expect(issue).toBeTruthy();
+    expect(issue.path).toBe('deviceOverrides.bad_channels');
+    expect(repairTargetForIssue(issue).surface).toBe('day');
+    expect(computeStepStatus(day, merged).export).toBe('error');
+  });
+
+  it('does NOT surface malformed_bad_channel_override for a well-formed array value', () => {
+    const day = { deviceOverrides: { bad_channels: { 1: [0] } } };
+    expect(validateDay(day, merged).some((i) => i.code === 'malformed_bad_channel_override')).toBe(false);
+  });
+
+  it('a null/undefined override container is not a blocker', () => {
+    expect(validateDay({ deviceOverrides: { bad_channels: null } }, merged).some((i) => i.code === 'malformed_bad_channel_override')).toBe(false);
+    expect(validateDay({ deviceOverrides: {} }, merged).some((i) => i.code?.startsWith('malformed_')).valueOf()).toBe(false);
+  });
+});

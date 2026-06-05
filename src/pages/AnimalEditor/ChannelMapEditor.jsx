@@ -122,17 +122,23 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
   // A later row's bad_channels entries are KEYS into that row's `map` (row-local
   // indices); the probe-local id is `row.map[key]`. We TRANSLATE each entry to its
   // mapped id (falling back to the raw key when the map lacks it) and UNION it onto the
-  // first row — never silently dropping a mark — so multishank_bad_channels_ignored
-  // then passes and no failed channel is lost.
+  // first row so multishank_bad_channels_ignored then passes. We keep ONLY values that
+  // are representable probe electrode ids: an untranslatable, out-of-range mark has no
+  // probe-wide checkbox (the converter ignores later-row marks anyway), so copying it
+  // would fabricate an unrepairable, export-blocking first-row value — drop those.
   const handleProbeWideBadChannelToggle = (electrodeId, isChecked) => {
-    // Translate every later row's marks (row-local map keys) to probe-local ids.
+    const probeIdSet = new Set(probeElectrodeIds);
+    // Translate every later row's marks (row-local map keys) to probe-local ids,
+    // keeping only representable ones.
     const translatedLaterMarks = localChannelMaps.slice(1).flatMap((map) => {
       const stored = Array.isArray(map.bad_channels) ? map.bad_channels : [];
       const rowMap = map.map || {};
-      return stored.map((key) => {
-        const mapped = rowMap[key];
-        return mapped === undefined || mapped === null ? key : mapped;
-      });
+      return stored
+        .map((key) => {
+          const mapped = rowMap[key];
+          return mapped === undefined || mapped === null ? key : mapped;
+        })
+        .filter((id) => probeIdSet.has(id));
     });
 
     const updated = localChannelMaps.map((map, idx) => {

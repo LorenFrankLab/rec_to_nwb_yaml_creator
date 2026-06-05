@@ -145,18 +145,23 @@ export function resolveDayConfig(animal, day) {
     : (config.devices.ntrode_electrode_group_channel_map || []);
 
   // Apply day-level bad-channel overrides onto the resolved ntrode map. The override
-  // map is keyed by ntrode_id; a present entry REPLACES that ntrode's `bad_channels`.
-  // A corrupt (non-array) override value is PRESERVED as-is — never spread (a string
-  // "23" would become ['2','3'], a number would throw) — so the schema/rules surface
-  // it instead of laundering or crashing. An override keyed to an absent ntrode_id is
-  // a stale reference surfaced by `dayOverrideIssues`, not applied here.
+  // map is keyed by ntrode_id; a present, WELL-FORMED (array) entry REPLACES that
+  // ntrode's `bad_channels`. Anything malformed is NOT applied to the geometry row:
+  //  - a non-record container (e.g. scalar "2.9") is ignored wholesale;
+  //  - a non-array value under a valid key is declined (the base row is kept) — we do
+  //    NOT smear the scalar onto the row, because that surfaces as an Animal-Editor
+  //    schema error on a field the user can't reach there. The corruption is instead
+  //    surfaced by `dayOverrideIssues` as a day-routed blocker (which reads the raw
+  //    override directly), so it is neither laundered nor hidden — just routed to its
+  //    real owner. An override keyed to an absent ntrode_id is likewise left to
+  //    `dayOverrideIssues`, not applied here.
   const overrides = day.deviceOverrides?.bad_channels;
   const baseArray = Array.isArray(baseNtrodes) ? baseNtrodes : [];
-  const ntrodes = overrides && typeof overrides === 'object'
+  const ntrodes = isPlainRecord(overrides)
     ? baseArray.map((n) => {
         if (!Object.hasOwn(overrides, String(n.ntrode_id))) return n;
         const ov = overrides[String(n.ntrode_id)];
-        return { ...n, bad_channels: Array.isArray(ov) ? [...ov] : ov };
+        return Array.isArray(ov) ? { ...n, bad_channels: [...ov] } : n;
       })
     : baseArray;
 

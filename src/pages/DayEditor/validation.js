@@ -50,40 +50,130 @@ export async function validateField(mergedData, fieldPath) {
  * }
  */
 /**
- * Surface day-level `deviceOverrides.bad_channels` keys that don't match any
- * resolved ntrode. `resolveDayConfig` silently drops such keys before
- * `validate(merged)` runs, so a stale/corrupt override (e.g. a bad-channel mark on
- * an ntrode that no longer exists, or a non-integer key) would otherwise vanish
- * with no repair surfaced. These issues are folded into `computeStepStatus` so the
- * export gate blocks them and the Devices step can repair them.
+ * Whether `value` is a plain object record (not null, not an array). Mirrors the
+ * helper in `workspaceUtils.js` — used to tell a well-formed override container/map
+ * from a malformed (scalar/array) one.
  *
- * @param {object} day - The day record (reads `deviceOverrides.bad_channels`).
+ * @param {*} value
+ * @returns {boolean}
+ */
+function isRecord(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/**
+ * Surface EVERY malformed/stale `day.deviceOverrides` shape that `resolveDayConfig`
+ * cannot faithfully apply, so it becomes a visible, day-routed, export-blocking issue
+ * instead of vanishing (fail-open) or being smeared onto the geometry path (which
+ * would mis-route to the Animal Editor). This is the validation "shadow" of every
+ * refuse-to-apply branch in {@link resolveDayConfig}; the two MUST stay in lockstep —
+ * whenever the merge declines a malformed override, this surfaces it.
+ *
+ * Covered shapes (all → `day` surface, `devices` step, error severity):
+ *  - geometry override (`electrode_groups` / `ntrode_electrode_group_channel_map`)
+ *    present but not an array — the merge falls back to the snapshot, so the corrupt
+ *    override would otherwise be invisible (`malformed_device_override`);
+ *  - `bad_channels` container that is not an ntrode_id→list map (e.g. scalar "2.9")
+ *    — the merge ignores it entirely (`malformed_bad_channel_override`);
+ *  - a `bad_channels` key with no resolved ntrode — stale/dangling
+ *    (`stale_bad_channel_override`);
+ *  - a `bad_channels` value under a VALID key that is not a list — the merge declines
+ *    to apply it (rather than smear a scalar onto the ntrode row, which would surface
+ *    as an Animal-Editor schema error the user can't reach there)
+ *    (`malformed_bad_channel_override`).
+ *
+ * These issues are folded into `computeStepStatus` (the export gate) AND the rendered
+ * repair lists via {@link validateDay}, so a blocking override is always repairable on
+ * the Devices step (see {@link DevicesStep} repair controls), never "gated but invisible".
+ *
+ * @param {object} day - The day record (reads `deviceOverrides`).
  * @param {object} mergedDay - Merged metadata (resolved ntrode id set).
- * @returns {Array} Error issues for stale override keys.
+ * @returns {Array} Error issues for malformed/stale overrides.
  */
 export function dayOverrideIssues(day, mergedDay) {
-  const overrides = day?.deviceOverrides?.bad_channels;
-  if (!overrides || typeof overrides !== 'object' || Array.isArray(overrides)) return [];
-  const validNtrodeIds = new Set(
-    (mergedDay?.ntrode_electrode_group_channel_map || []).map((n) => String(n?.ntrode_id))
-  );
+  const overrides = day?.deviceOverrides;
+  if (!isRecord(overrides)) return [];
+
   const issues = [];
-  Object.keys(overrides).forEach((key) => {
-    if (!validNtrodeIds.has(String(key))) {
+
+  // Geometry overrides present-but-not-an-array: resolveDayConfig fell back to the
+  // snapshot, silently ignoring the corrupt override. Surface each (null/undefined
+  // means "no override", which is fine — only a present, non-array value is corrupt).
+  for (const key of ['electrode_groups', 'ntrode_electrode_group_channel_map']) {
+    const value = overrides[key];
+    if (value != null && !Array.isArray(value)) {
+      issues.push({
+        path: `deviceOverrides.${key}`,
+        field: key,
+        step: 'devices',
+        repairSurface: 'day',
+        actionLabel: 'Remove device override',
+        code: 'malformed_device_override',
+        severity: 'error',
+        message:
+          `This day's "${key}" device override is corrupt (expected a list of devices). ` +
+          `It is being ignored in favor of the saved configuration — remove the override to clear this error.`,
+      });
+    }
+  }
+
+  const bad = overrides.bad_channels;
+  if (bad != null) {
+    if (!isRecord(bad)) {
+      // Container is a scalar/array instead of an ntrode_id→list map: the merge
+      // ignores it entirely, so without this it would vanish with no repair.
       issues.push({
         path: 'deviceOverrides.bad_channels',
         field: 'bad_channels',
         step: 'devices',
         repairSurface: 'day',
-        actionLabel: 'Fix bad channels',
-        code: 'stale_bad_channel_override',
+        actionLabel: 'Remove failed-channel override',
+        code: 'malformed_bad_channel_override',
         severity: 'error',
         message:
-          `A day-level bad-channel override targets ntrode "${key}", which no longer exists ` +
-          `in this day's channel map. Remove the stale override or restore the ntrode.`,
+          `This day's failed-channel override is corrupt (expected a map of ntrode id → ` +
+          `failed-channel list). It is being ignored — remove the override to clear this error.`,
+      });
+    } else {
+      const validNtrodeIds = new Set(
+        (mergedDay?.ntrode_electrode_group_channel_map || []).map((n) => String(n?.ntrode_id))
+      );
+      Object.keys(bad).forEach((key) => {
+        if (!validNtrodeIds.has(String(key))) {
+          issues.push({
+            path: 'deviceOverrides.bad_channels',
+            field: 'bad_channels',
+            step: 'devices',
+            repairSurface: 'day',
+            actionLabel: 'Fix bad channels',
+            code: 'stale_bad_channel_override',
+            severity: 'error',
+            message:
+              `A day-level bad-channel override targets ntrode "${key}", which no longer exists ` +
+              `in this day's channel map. Remove the stale override or restore the ntrode.`,
+          });
+        } else if (!Array.isArray(bad[key])) {
+          // Value under a VALID ntrode key is not a list. resolveDayConfig declines to
+          // apply it (smearing a scalar onto the ntrode row would surface as an
+          // Animal-Editor schema error on a field the user can't reach there), so the
+          // corrupt value is surfaced HERE, keyed to its real owner (the day override).
+          issues.push({
+            path: 'deviceOverrides.bad_channels',
+            field: 'bad_channels',
+            step: 'devices',
+            repairSurface: 'day',
+            actionLabel: 'Remove failed-channel override',
+            code: 'malformed_bad_channel_override',
+            severity: 'error',
+            message:
+              `A day-level failed-channel override for ntrode "${key}" is corrupt (expected a ` +
+              `list of channel numbers). Remove the stale override to clear this error.`,
+          });
+        }
       });
     }
-  });
+  }
+
   return issues;
 }
 
@@ -390,6 +480,8 @@ const SURFACE_BY_CODE = {
   bad_channel_out_of_range: 'day',
   multishank_bad_channels_ignored: 'day',
   stale_bad_channel_override: 'day',
+  malformed_bad_channel_override: 'day',
+  malformed_device_override: 'day',
   missing_camera: 'day',
   partial_configuration: 'day',
   // No editable in-app target — read-only identity (slash ids). The explanatory
