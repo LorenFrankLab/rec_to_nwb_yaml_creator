@@ -25,7 +25,7 @@ import './DayEditor.scss';
  * @returns {JSX.Element}
  */
 export default function ValidationStep({ day, mergedDay, onNavigate, animal }) {
-  const issues = useMemo(() => validateDay(day || {}, mergedDay || {}), [day, mergedDay]);
+  const issues = useMemo(() => validateDay(day || {}, mergedDay || {}, animal), [day, mergedDay, animal]);
 
   const bySeverity = useMemo(() => groupBySeverity(issues), [issues]);
 

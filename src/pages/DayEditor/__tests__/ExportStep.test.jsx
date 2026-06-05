@@ -190,6 +190,39 @@ describe('ExportStep', () => {
     expect(onNavigate).toHaveBeenCalledWith('devices', undefined);
   });
 
+  it('routes a devices-INCOMPLETE blocker (no electrode groups) to the Animal Editor, not Day Devices', async () => {
+    // Missing maps / no electrode groups are ANIMAL-owned (geometry lives at the animal
+    // level), so the Export blocker must route there, not generically to Day Devices.
+    const user = userEvent.setup();
+    const onNavigate = vi.fn();
+    const { animal, day } = buildRealisticWorkspace();
+    // Strip all electrode groups + channel maps → devices status 'incomplete'.
+    animal.configurationHistory[0].devices.electrode_groups = [];
+    animal.configurationHistory[0].devices.ntrode_electrode_group_channel_map = [];
+
+    render(<ExportStep animal={animal} day={day} onNavigate={onNavigate} />);
+
+    await user.click(screen.getByRole('button', { name: /fix in animal editor/i }));
+    expect(onNavigate).toHaveBeenCalledWith('animal', undefined);
+  });
+
+  it('tolerates a malformed-animal merge throw (corrupt configurationHistory) without crashing', () => {
+    // mergeDayMetadata throws by design on a non-array configurationHistory; ExportStep
+    // must render (blocked) and surface the repairable reason instead of crashing.
+    const { animal, day } = buildRealisticWorkspace();
+    animal.configurationHistory = 'corrupt';
+    expect(() => render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />)).not.toThrow();
+    expect(screen.getByText(/could not be assembled|missing or corrupt/i)).toBeInTheDocument();
+  });
+
+  it('blocks export and surfaces a repair when animal.cameras is corrupt (raw-animal gate)', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    animal.cameras = 'nope';
+    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+    // The download is blocked and the raw-animal issue is in the repair list.
+    expect(screen.getByRole('button', { name: /download yaml/i })).toBeDisabled();
+  });
+
   it('offers a repair action per error that routes to the editable owner with the field target', async () => {
     const user = userEvent.setup();
     const onNavigate = vi.fn();

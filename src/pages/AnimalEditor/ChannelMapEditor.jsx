@@ -57,9 +57,16 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
   // corruption the converter silently ignores (it reads bad_channels from the first
   // row only), and the multi-shank probe-wide selector HIDES the later-row controls.
   // Computed once from the INITIAL channelMaps so the consolidation notice stays
-  // visible until the user edits the selector (which performs the migration).
+  // visible until the user edits the selector (which performs the migration). A later
+  // row's value can be a non-empty ARRAY or a preserved corrupt SCALAR (non-array) —
+  // both are converter-ignored corruption that still blocks export, so a hidden scalar
+  // must also surface the notice (the migration clears it).
   const [hadLaterRowBadChannelsOnLoad] = useState(() =>
-    channelMaps.slice(1).some((m) => Array.isArray(m.bad_channels) && m.bad_channels.length > 0)
+    channelMaps.slice(1).some((m) =>
+      Array.isArray(m.bad_channels)
+        ? m.bad_channels.length > 0
+        : m.bad_channels != null
+    )
   );
 
   // Per-shank electrode-id partition (converter truth), matched to ntrode rows by
@@ -156,8 +163,16 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
         ).sort((a, b) => a - b);
         return { ...map, bad_channels: merged };
       }
-      // Later rows: cleared after migrating their marks onto the first row.
-      if (Array.isArray(map.bad_channels) && map.bad_channels.length > 0) {
+      // Later rows: cleared after migrating their representable marks onto the first
+      // row. Clear a non-empty ARRAY (its marks were translated above) AND a preserved
+      // corrupt SCALAR (non-array). A scalar is converter-ignored corruption with no
+      // representable entries to carry over and a hidden grid that cannot reach it, so
+      // an explicit migration toggle is its only repair path — resetting it to [] here
+      // (not laundering it silently on load) unblocks schema validation.
+      const isNonEmptyArray =
+        Array.isArray(map.bad_channels) && map.bad_channels.length > 0;
+      const isScalar = !Array.isArray(map.bad_channels) && map.bad_channels != null;
+      if (isNonEmptyArray || isScalar) {
         return { ...map, bad_channels: [] };
       }
       return map;

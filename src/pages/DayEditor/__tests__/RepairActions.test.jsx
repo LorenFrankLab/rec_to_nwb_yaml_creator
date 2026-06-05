@@ -19,6 +19,29 @@ describe('RepairActions', () => {
     expect(onNavigate).toHaveBeenCalledWith('overview', 'session_description');
   });
 
+  it('navigates with an explicit focusPath when present, not the raw path', async () => {
+    // A provenance-retagged geometry error keeps its schema `path` (e.g. an
+    // electrode_groups field) but carries an explicit `focusPath` pointing at the day's
+    // remove-override control. The button must focus the control that performs the fix.
+    const user = userEvent.setup();
+    const onNavigate = vi.fn();
+    render(
+      <RepairActions
+        issues={[{
+          path: 'electrode_groups[0].location',
+          focusPath: 'deviceOverrides.electrode_groups',
+          ownerSurface: 'day',
+          step: 'devices',
+          code: 'required',
+          message: 'electrode group location is required',
+        }]}
+        onNavigate={onNavigate}
+      />
+    );
+    await user.click(screen.getByRole('button', { name: /fix in devices/i }));
+    expect(onNavigate).toHaveBeenCalledWith('devices', 'deviceOverrides.electrode_groups');
+  });
+
   it('routes an animal-surface issue (device geometry) to the Animal Editor', async () => {
     const user = userEvent.setup();
     const onNavigate = vi.fn();

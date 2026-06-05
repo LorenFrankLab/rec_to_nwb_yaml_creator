@@ -84,13 +84,18 @@ export function RepairActionButton({ issue, onNavigate, animalId }) {
   if (target.surface === 'none') return null;
 
   const navTarget = target.surface === 'animal' ? 'animal' : target.step;
+  // Prefer an explicit focusPath (the control that PERFORMS the fix) over the raw schema
+  // path (which may point at a field with no editable control on the owning surface — e.g.
+  // a provenance-retagged geometry error routes to Devices but should focus the day's
+  // remove-override control, not the read-only electrode-group field).
+  const focusTarget = issue.focusPath || issue.path || undefined;
   return (
     <button
       type="button"
       className="repair-action-button"
       data-repair-surface={target.surface}
       data-animal-id={target.surface === 'animal' ? animalId : undefined}
-      onClick={() => onNavigate(navTarget, issue.path || undefined)}
+      onClick={() => onNavigate(navTarget, focusTarget)}
     >
       {target.label}
     </button>
@@ -100,9 +105,11 @@ export function RepairActionButton({ issue, onNavigate, animalId }) {
 RepairActionButton.propTypes = {
   issue: PropTypes.shape({
     path: PropTypes.string,
+    focusPath: PropTypes.string,
     code: PropTypes.string,
     message: PropTypes.string,
     repairSurface: PropTypes.string,
+    ownerSurface: PropTypes.string,
     step: PropTypes.string,
   }).isRequired,
   onNavigate: PropTypes.func.isRequired,

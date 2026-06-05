@@ -65,10 +65,17 @@ export default function DayEditorStepper() {
   const day = model.workspace?.days?.[dayId];
   const animal = day ? model.workspace?.animals?.[day.animalId] : null;
 
-  // Merge animal + day for validation (must be before early returns to follow Rules of Hooks)
+  // Merge animal + day for validation (must be before early returns to follow Rules of Hooks).
+  // mergeDayMetadata throws BY DESIGN on a malformed animal (missing/non-array
+  // configurationHistory); tolerate it so the stepper renders (the gate fails closed and
+  // the raw-shape animal validation surfaces the repairable issue) instead of crashing.
   const mergedDay = useMemo(() => {
     if (!animal || !day) return null;
-    return mergeDayMetadata(animal, day);
+    try {
+      return mergeDayMetadata(animal, day);
+    } catch {
+      return null;
+    }
   }, [animal, day]);
 
   // Dataset-wide task_name -> task_description map for the Spyglass task-name
@@ -108,8 +115,8 @@ export default function DayEditorStepper() {
         export: 'error',
       };
     }
-    return computeStepStatus(day, mergedDay);
-  }, [day, mergedDay]);
+    return computeStepStatus(day, mergedDay, animal);
+  }, [day, mergedDay, animal]);
   // Keep the keyboard handler's view of the gate current (it reads this ref at
   // fire time rather than closing over a stale status).
   stepStatusRef.current = stepStatus;

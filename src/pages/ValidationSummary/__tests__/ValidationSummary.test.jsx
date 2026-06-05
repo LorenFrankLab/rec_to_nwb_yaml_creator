@@ -298,6 +298,48 @@ describe('ValidationSummary', () => {
     expect(screen.getByRole('status')).toHaveTextContent(/validated 1 day\./i);
   });
 
+  describe('corrupt workspace shape during initial row construction', () => {
+    it('a day whose mergeDayMetadata throws is flagged as an error row, not crashing the whole summary', () => {
+      // One good animal/day plus a broken animal whose configurationHistory is
+      // missing → mergeDayMetadata throws by design. The broken day must be
+      // reported (an error chip), and the good day must still render: one corrupt
+      // day must never blank the whole multi-day summary.
+      const { workspace, ids } = makeSummaryWorkspace();
+
+      // Break remy so resolveDayConfig (inside mergeDayMetadata) throws for its days.
+      workspace.animals.remy.configurationHistory = [];
+      // Keep only one remy day to assert it precisely.
+      delete workspace.days[ids.incompleteDayId];
+      workspace.animals.remy.days = [ids.validDayId];
+
+      provideStore(workspace);
+
+      // Renders without throwing — the broken day is contained, not fatal.
+      expect(() => render(<ValidationSummary />)).not.toThrow();
+
+      // The good (totoro) day still renders.
+      expect(screen.getByTestId(`day-row-${ids.errorDayId}`)).toBeInTheDocument();
+
+      // The broken remy day is present and visibly flagged as an error/unreadable
+      // row — never silently dropped or shown as valid.
+      const brokenRow = screen.getByTestId(`day-row-${ids.validDayId}`);
+      expect(within(brokenRow).getByText(/error/i)).toBeInTheDocument();
+    });
+
+    it('a non-array animal.days does not crash the summary', () => {
+      // Corrupt import: animal.days is an object, not an array. Iterating it must
+      // not throw; the animal simply contributes no rows.
+      const { workspace, ids } = makeSummaryWorkspace();
+      workspace.animals.remy.days = {}; // corrupt shape
+      provideStore(workspace);
+
+      expect(() => render(<ValidationSummary />)).not.toThrow();
+
+      // The other animal's day still renders.
+      expect(screen.getByTestId(`day-row-${ids.errorDayId}`)).toBeInTheDocument();
+    });
+  });
+
   it('an animal with zero days contributes no rows and does not crash', () => {
     const { workspace, ids } = makeSummaryWorkspace();
     // Strip remy down to a single day; give totoro no days at all.

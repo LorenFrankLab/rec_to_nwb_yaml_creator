@@ -44,26 +44,36 @@ export default function ExportStep({ animal, day, onNavigate }) {
   // Merge once; preview YAML, filename, validation, and the preflight summary are
   // all derived from this single merged object (the same one that will be encoded),
   // never from duplicate component state.
-  const { merged, yaml, fileName } = useMemo(() => {
-    const mergedDay = mergeDayMetadata(animal, day);
-    return {
-      merged: mergedDay,
-      yaml: encodeYaml(mergedDay),
-      // mergeDayMetadata does not carry EXPERIMENT_DATE_in_format_mmddYYYY (it is
-      // a filename-only key); inject it from the day so the filename does not
-      // degrade to the literal placeholder. Filename only — never the YAML body.
-      fileName: formatDeterministicFilename({
-        ...mergedDay,
-        EXPERIMENT_DATE_in_format_mmddYYYY: day.experimentDate,
-      }),
-    };
+  const { merged, yaml, fileName, mergeError } = useMemo(() => {
+    try {
+      const mergedDay = mergeDayMetadata(animal, day);
+      return {
+        merged: mergedDay,
+        yaml: encodeYaml(mergedDay),
+        // mergeDayMetadata does not carry EXPERIMENT_DATE_in_format_mmddYYYY (it is
+        // a filename-only key); inject it from the day so the filename does not
+        // degrade to the literal placeholder. Filename only — never the YAML body.
+        fileName: formatDeterministicFilename({
+          ...mergedDay,
+          EXPERIMENT_DATE_in_format_mmddYYYY: day.experimentDate,
+        }),
+        mergeError: null,
+      };
+    } catch (err) {
+      // mergeDayMetadata throws BY DESIGN on a malformed animal (e.g. missing/non-array
+      // configurationHistory). Tolerate it: render with an empty stub so the raw-shape
+      // animal validation surfaces the blocking, repairable issue instead of crashing the
+      // whole Export step. Export stays closed (an empty merged fails validation).
+      return { merged: {}, yaml: '', fileName: '', mergeError: err };
+    }
   }, [animal, day]);
 
   // Authoritative export gate, re-checked here (defense in depth): the day may not
-  // be downloaded while any error-severity validation issue remains.
+  // be downloaded while any error-severity validation issue remains. Pass `animal` so
+  // raw animal-shape corruption (e.g. `cameras: "nope"`) is part of the gate.
   const validationErrors = useMemo(
-    () => validateDay(day, merged).filter((issue) => issue.severity === 'error'),
-    [day, merged]
+    () => validateDay(day, merged, animal).filter((issue) => issue.severity === 'error'),
+    [day, merged, animal]
   );
   // The authoritative export gate the stepper uses (isExportEnabled over the full
   // computeStepStatus map): it folds in step-level statuses — notably
@@ -72,21 +82,26 @@ export default function ExportStep({ animal, day, onNavigate }) {
   // Consulting it here keeps the directly-mounted ExportStep's gate exactly as
   // strict as the stepper's, so a directly-mounted ExportStep cannot download a day
   // the stepper would refuse to reach.
-  const stepStatus = useMemo(() => computeStepStatus(day, merged), [day, merged]);
+  const stepStatus = useMemo(() => computeStepStatus(day, merged, animal), [day, merged, animal]);
   const exportGateOpen = useMemo(() => isExportEnabled(stepStatus), [stepStatus]);
   const exportBlocked = validationErrors.length > 0 || !exportGateOpen;
 
   // Step-status blockers (a prerequisite step not 'valid' — e.g. Devices 'error' for
   // all-channels-bad, or 'incomplete' for missing maps) that NO error-severity
   // validate() issue surfaces. Without these, ExportStep would block with generic text
-  // and no repair button (a dead-end). Route the user to the blocking step.
-  const blockingSteps = useMemo(
-    () =>
-      validationErrors.length === 0
-        ? ['overview', 'devices', 'epochs', 'validation'].filter((s) => stepStatus[s] !== 'valid')
-        : [],
-    [validationErrors.length, stepStatus]
-  );
+  // and no repair button (a dead-end). Route the user to the EDITABLE OWNER: Devices
+  // 'incomplete' (no electrode groups / missing channel maps) is an Animal-Editor fix
+  // (geometry lives at the animal level), not a day-Devices edit; everything else stays
+  // on its day step.
+  const blockingSteps = useMemo(() => {
+    if (validationErrors.length > 0) return [];
+    return ['overview', 'devices', 'epochs', 'validation']
+      .filter((s) => stepStatus[s] !== 'valid')
+      .map((step) => ({
+        step,
+        owner: step === 'devices' && stepStatus.devices === 'incomplete' ? 'animal' : 'day',
+      }));
+  }, [validationErrors.length, stepStatus]);
 
   const preflight = useMemo(() => {
     if (exportBlocked) return null;
@@ -140,6 +155,12 @@ export default function ExportStep({ animal, day, onNavigate }) {
 
       {exportBlocked && (
         <div className="export-validation-blocked" role="alert">
+          {mergeError && (
+            <p className="export-merge-error">
+              This day&apos;s metadata could not be assembled — its animal&apos;s device
+              configuration is missing or corrupt. Repair it in the Animal Editor, then return.
+            </p>
+          )}
           <p className="export-validation-blocked-reason">
             {validationErrors.length > 0
               ? `Resolve ${validationErrors.length} validation ${
@@ -156,14 +177,15 @@ export default function ExportStep({ animal, day, onNavigate }) {
           )}
           {validationErrors.length === 0 && blockingSteps.length > 0 && (
             <div className="export-step-blockers">
-              {blockingSteps.map((stepId) => (
+              {blockingSteps.map(({ step, owner }) => (
                 <button
-                  key={stepId}
+                  key={step}
                   type="button"
                   className="repair-action-button"
-                  onClick={() => onNavigate?.(stepId, undefined)}
+                  data-repair-surface={owner}
+                  onClick={() => onNavigate?.(owner === 'animal' ? 'animal' : step, undefined)}
                 >
-                  Fix in {STEP_LABELS[stepId] || stepId}
+                  {owner === 'animal' ? 'Fix in Animal Editor' : `Fix in ${STEP_LABELS[step] || step}`}
                 </button>
               ))}
             </div>

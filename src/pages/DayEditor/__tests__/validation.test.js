@@ -645,6 +645,20 @@ describe('Boundary 1 — raw-shape gate folded into validateDay / step status', 
     const day = { tasks: [], associated_files: [], keywords: [] };
     expect(validateDay(day, merged).some((i) => i.code === 'malformed_day_collection')).toBe(false);
   });
+
+  it('validateDay folds raw ANIMAL shape when the animal is passed (cameras laundering gate)', () => {
+    const animal = { cameras: 'nope' };
+    const issue = validateDay({}, merged, animal).find((i) => i.code === 'malformed_animal_collection');
+    expect(issue).toBeTruthy();
+    expect(issue.field).toBe('cameras');
+    expect(repairTargetForIssue(issue).surface).toBe('animal');
+    // And it blocks export through the authoritative status.
+    expect(computeStepStatus({}, merged, animal).export).toBe('error');
+  });
+
+  it('validateDay without an animal arg is unchanged (no animal issues)', () => {
+    expect(validateDay({}, merged).some((i) => i.code === 'malformed_animal_collection')).toBe(false);
+  });
 });
 
 describe('Boundary 2 — ownership by provenance, not path (High 3)', () => {

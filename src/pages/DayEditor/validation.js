@@ -6,7 +6,7 @@
  */
 
 import { validate, validateField as validateFieldCore } from '../../validation';
-import { validateRawDay } from '../../validation/rawShape';
+import { validateRawDay, validateRawAnimal } from '../../validation/rawShape';
 
 /**
  * Validates a single field against schema and rules.
@@ -259,13 +259,17 @@ export function dayOverrideIssues(day, mergedDay, baseIssues = []) {
  *
  * @param {object} day - The day record.
  * @param {object} mergedDay - Merged animal + day metadata.
+ * @param animal
  * @returns {Array} All validation issues for the day.
  */
-export function validateDay(day, mergedDay) {
-  // Boundary 1: validate the RAW persisted day shape FIRST — before the merge launders a
-  // corrupt collection (`tasks: {}`) into an empty export default that the merged-model
-  // validation below would see as clean. These block export on raw corruption regardless.
+export function validateDay(day, mergedDay, animal) {
+  // Boundary 1: validate the RAW persisted day AND animal shape FIRST — before the merge
+  // launders a corrupt collection (`tasks: {}`, `animal.cameras: "nope"`) into an empty
+  // export default that the merged-model validation below would see as clean. These block
+  // export on raw corruption regardless of how the merge would launder it. `animal` is
+  // optional (call sites that have it pass it); without it, animal raw issues are skipped.
   const raw = validateRawDay(day);
+  const rawAnimal = validateRawAnimal(animal);
   // Compute the base (schema + rules) issues once, then pass them to dayOverrideIssues
   // so it can tell an erroring array geometry override (a dead-end that needs a day-routed
   // escape) from a clean one (which must NOT be flagged).
@@ -276,7 +280,7 @@ export function validateDay(day, mergedDay) {
   // geometry errors to the day when the day overrides that geometry, so they don't
   // dead-end on "Fix in Animal Editor".
   const taggedBase = tagBaseOwnershipByProvenance(base, dayGeometryProvenance(day));
-  return [...raw, ...taggedBase, ...dayOverrideIssues(day, mergedDay, base)];
+  return [...raw, ...rawAnimal, ...taggedBase, ...dayOverrideIssues(day, mergedDay, base)];
 }
 
 /**
@@ -336,10 +340,12 @@ function tagBaseOwnershipByProvenance(issues, prov) {
  *
  * @param {object} day - The day record.
  * @param {object} mergedDay - Merged animal + day metadata.
+ * @param {object} [animal] - The owning animal (optional); folds raw animal-shape issues
+ *   (e.g. a non-array `cameras`) into the export gate.
  * @returns {object} Status map per step.
  */
-export function computeStepStatus(day, mergedDay) {
-  const issues = validateDay(day, mergedDay);
+export function computeStepStatus(day, mergedDay, animal) {
+  const issues = validateDay(day, mergedDay, animal);
 
   // Group errors by step
   const errorsByStep = groupErrorsByStep(issues);

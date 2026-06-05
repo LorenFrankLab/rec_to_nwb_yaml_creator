@@ -61,15 +61,33 @@ function buildRows(workspace) {
 
   const rows = [];
   for (const animal of animals) {
-    const days = (animal.days || [])
+    // A non-array `days` is corrupt persisted state (e.g. `{}` from a bad import).
+    // Treat it as "no days" rather than letting `.map` throw and blank the whole
+    // multi-day summary — the rest of the workspace must still render.
+    const dayIds = Array.isArray(animal.days) ? animal.days : [];
+    const days = dayIds
       .map((dayId) => workspace.days[dayId])
       .filter(Boolean)
       .sort((a, b) => a.date.localeCompare(b.date));
 
     for (const day of days) {
-      const mergedDay = mergeDayMetadata(animal, day);
-      const chip = deriveChip(computeStepStatus(day, mergedDay));
-      rows.push({ animal, day, chip });
+      // mergeDayMetadata throws BY DESIGN on a corrupt animal (missing/empty
+      // configurationHistory, an unresolvable pin, etc.). One unreadable day must
+      // not take down the entire summary and hide every other day — report it as a
+      // distinct error row so it is visibly flagged for repair, never silently
+      // dropped or shown as valid.
+      try {
+        const mergedDay = mergeDayMetadata(animal, day);
+        const chip = deriveChip(computeStepStatus(day, mergedDay, animal));
+        rows.push({ animal, day, chip });
+      } catch (err) {
+        rows.push({ animal, day, chip: 'error', unreadable: true });
+        // eslint-disable-next-line no-console
+        console.error(
+          `[validation-summary] could not read day "${day?.id}" — flagged as error:`,
+          err
+        );
+      }
     }
   }
   return rows;
@@ -344,14 +362,24 @@ export function ValidationSummary() {
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ animal, day, chip }) => (
+              {rows.map(({ animal, day, chip, unreadable }) => (
                 <tr key={day.id} data-testid={`day-row-${day.id}`}>
                   <td>{subjectLabel(animal)}</td>
                   <td>{day.date}</td>
                   <td>{day.session?.session_id || '—'}</td>
                   <td>
-                    <span className={`status-chip status-chip--${chip}`}>
-                      {CHIP_LABEL[chip]}
+                    {/* An unreadable day (its config could not be resolved) is shown
+                        as an error chip with an honest label so it is flagged for
+                        repair, not mistaken for a normal validation error. */}
+                    <span
+                      className={`status-chip status-chip--${chip}`}
+                      title={
+                        unreadable
+                          ? 'This day could not be read — its device configuration is missing or corrupt. Open the editor to repair it.'
+                          : undefined
+                      }
+                    >
+                      {unreadable ? 'Error — cannot read' : CHIP_LABEL[chip]}
                     </span>
                   </td>
                   <td>

@@ -130,7 +130,10 @@ export function validateRawAnimal(animal) {
           code: 'malformed_animal_collection',
           field: key,
           ownerSurface: 'animal',
-          repairStep: 'overview',
+          // An animal-collection fix has no day data-entry step that owns it (the repair
+          // is in the Animal Editor); route the day-step grouping to the catch-all so it
+          // doesn't mislabel a specific day step.
+          repairStep: 'validation',
           label,
         })
       );

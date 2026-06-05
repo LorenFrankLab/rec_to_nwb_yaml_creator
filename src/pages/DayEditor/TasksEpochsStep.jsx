@@ -22,8 +22,10 @@ const EPOCHS_STEP_COLLECTIONS = RAW_DAY_ARRAY_FIELDS.filter((f) => f.repairStep 
  */
 function validEpochSet(tasks) {
   const set = new Set();
-  (tasks || []).forEach((task) => {
-    (task.task_epochs || []).forEach((epoch) => {
+  // Guard corrupt persisted shapes (a non-array tasks / task_epochs from a bad import)
+  // so the orphan helpers never throw before the raw-shape reset UI can render.
+  (Array.isArray(tasks) ? tasks : []).forEach((task) => {
+    (Array.isArray(task?.task_epochs) ? task.task_epochs : []).forEach((epoch) => {
       const n = Number(epoch);
       if (Number.isInteger(n)) set.add(n);
     });
@@ -45,9 +47,11 @@ function findOrphanedReferences(day, nextTasks) {
     entry.task_epochs !== '' &&
     entry.task_epochs != null &&
     !valid.has(Number(entry.task_epochs));
+  // Guard corrupt persisted shapes: a non-array associated_* (e.g. `{}`) must not throw
+  // when a task Add/Edit/Delete runs before the user resets it via the raw-shape notice.
   return {
-    videos: (day.associated_video_files || []).filter(isOrphan),
-    files: (day.associated_files || []).filter(isOrphan),
+    videos: (Array.isArray(day.associated_video_files) ? day.associated_video_files : []).filter(isOrphan),
+    files: (Array.isArray(day.associated_files) ? day.associated_files : []).filter(isOrphan),
   };
 }
 
@@ -58,7 +62,7 @@ function findOrphanedReferences(day, nextTasks) {
  * @returns {Array} The repaired array.
  */
 function clearOrphans(entries, valid) {
-  return (entries || []).map((entry) =>
+  return (Array.isArray(entries) ? entries : []).map((entry) =>
     entry.task_epochs !== '' &&
     entry.task_epochs != null &&
     !valid.has(Number(entry.task_epochs))
