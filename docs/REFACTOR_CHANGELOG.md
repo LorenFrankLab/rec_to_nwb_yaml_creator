@@ -19,20 +19,27 @@ report only the surviving rows while a corrupt day silently disappears.
   (`{ day: { id }, chip: 'error', missingRecord: true }`, rendered "Error — missing day
   record"), so it is visible and counted. A reference that resolves to a real record still
   flows through the existing merge → chip / merge-throw → "Error — cannot read" paths.
-- Per-reference surfacing is gated on `daysMapUsable = isRecord(workspace.days)`: when the
-  WHOLE `days` map is missing/non-record (coarse workspace-structural corruption surfaced
-  elsewhere by the Phase 1–3 banners), the existing "No recording days" empty-summary
-  behavior is preserved — we do not fabricate N phantom rows. Only a usable map missing a
-  specific id surfaces a row.
+- A missing/non-record WHOLE `days` map is corruption too, not emptiness (review fix): every
+  referenced day then resolves to no record and is surfaced as its own error row, instead of
+  laundering into the "No recording days" empty state that would hide every day. (An animal
+  with a genuinely empty `days` array, or a corrupt per-animal `days` value, still contributes
+  no rows — there is no reference to surface.)
 - Synthetic rows are tolerated by every consumer: the render falls back (`day.date || '—'`,
   index-suffixed React key), `Validate All` catches the `updateDay` "not found" throw and
   counts it a failure, and `Export Valid Only` excludes them (chip `'error'`).
-- Code-reviewed (pr-review-toolkit:code-reviewer): no Critical/Important findings; the
-  editor-link aria-label now falls back to the day id for a dateless synthetic row.
-  Live-verified with Playwright: a corrupt day reference renders "Error — missing day
-  record" and is counted (2 with errors) instead of vanishing.
+- A missing-record row does NOT dead-end on "Open editor" (which would land on the Day
+  Editor's "Day not found"): it offers an executable **Remove day reference** repair backed by
+  a new `removeDayReference(animalId, dayId)` store action that drops the dangling id from the
+  owning animal and deletes any corrupt leftover record. The owning animal id is known from
+  the iteration, so it works even for a scalar record that has no `animalId`.
+- Code-reviewed (pr-review-toolkit:code-reviewer) across two rounds: no Critical/Important
+  findings; the editor-link aria-label falls back to the day id for a dateless synthetic row,
+  and the two review Mediums (whole-map laundering, dead-end action) are the fixes above.
+  Live-verified with Playwright: a corrupt-`days`-map workspace renders both referenced days
+  as "Error — missing day record" (2 with errors, not the empty state), and Remove day
+  reference drops the reference, clears the row, and persists.
 
-Gate: full vitest (3770 pass), 125 golden baselines byte-identical, 0 lint errors, clean
+Gate: full vitest (3774 pass), 125 golden baselines byte-identical, 0 lint errors, clean
 build. Branch not merged — this completes Phases 1–4 of the canonical-state & repair contract.
 
 ---

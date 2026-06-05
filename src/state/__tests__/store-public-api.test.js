@@ -41,6 +41,7 @@ describe('useStore public API contract', () => {
       'onMapInput',
       'rebuildConfigurationHistory',
       'removeArrayItem',
+      'removeDayReference',
       'removeElectrodeGroupItem',
       'setFormData',
       'updateAnimal',

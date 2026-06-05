@@ -49,7 +49,9 @@ function provideStore(workspace) {
   const updateDay = vi.fn();
   useStoreContext.mockReturnValue({
     model: { workspace },
-    actions: { updateDay },
+    // removeDayReference is present so a missing-record row's repair button never references
+    // an undefined action; the dedicated repair test installs its own captured spy.
+    actions: { updateDay, removeDayReference: vi.fn() },
     selectors: {},
     persistence: { enabled: false },
   });
@@ -339,30 +341,59 @@ describe('ValidationSummary', () => {
       expect(screen.getByTestId(`day-row-${ids.errorDayId}`)).toBeInTheDocument();
     });
 
-    it('a missing workspace.days map does not crash the summary', () => {
-      // Corrupt persisted state: animals reference day ids, but the top-level
-      // `days` map is gone entirely. Looking up day records must not deref
-      // `undefined[id]` and blank the whole summary — the animals simply
-      // resolve to no readable days.
-      const { workspace } = makeSummaryWorkspace();
+    it('surfaces every referenced day as an error row when the whole days map is MISSING', () => {
+      // Phase 4: a missing top-level `days` map is corruption, not emptiness. Every animal
+      // day reference resolves to no record and must surface as an explicit error row — never
+      // laundered into the "No recording days" empty state, which would hide every day.
+      const { workspace, ids } = makeSummaryWorkspace();
       delete workspace.days; // days map absent
       provideStore(workspace);
 
       expect(() => render(<ValidationSummary />)).not.toThrow();
 
-      // No rows resolve, so the empty state is shown rather than a crash.
-      expect(screen.getByText(/no recording days/i)).toBeInTheDocument();
+      expect(screen.queryByText(/no recording days/i)).not.toBeInTheDocument();
+      expect(screen.getByTestId(`day-row-${ids.validDayId}`)).toBeInTheDocument();
+      expect(screen.getByTestId(`day-row-${ids.errorDayId}`)).toBeInTheDocument();
+      // remy (2 days) + totoro (1 day) = 3 references, all surfaced as errors, none valid.
+      expect(screen.getByTestId('summary-counts')).toHaveTextContent(/0 valid/i);
+      expect(screen.getByTestId('summary-counts')).toHaveTextContent(/3 with errors/i);
     });
 
-    it('a non-record workspace.days does not crash the summary', () => {
-      // `days` persisted as a non-record (e.g. an array from a bad migration).
-      // Indexing it by id must be guarded so the summary still renders.
-      const { workspace } = makeSummaryWorkspace();
+    it('surfaces every referenced day as an error row when the days map is a NON-RECORD', () => {
+      // `days` persisted as a non-record (e.g. an array from a bad migration). Each reference
+      // resolves to no record → explicit error row, not the laundered empty state.
+      const { workspace, ids } = makeSummaryWorkspace();
       workspace.days = []; // non-record shape
       provideStore(workspace);
 
       expect(() => render(<ValidationSummary />)).not.toThrow();
-      expect(screen.getByText(/no recording days/i)).toBeInTheDocument();
+      expect(screen.queryByText(/no recording days/i)).not.toBeInTheDocument();
+      expect(screen.getByTestId(`day-row-${ids.errorDayId}`)).toBeInTheDocument();
+      expect(screen.getByTestId('summary-counts')).toHaveTextContent(/3 with errors/i);
+    });
+
+    it('offers an executable "Remove day reference" repair on a missing-record row (no dead-end)', async () => {
+      // A missing-record row must not dead-end on "Open editor" (#/day/<id> → Day not found).
+      // It offers an executable repair that drops the dangling reference from the owning animal.
+      const user = userEvent.setup();
+      const { workspace } = makeSummaryWorkspace();
+      delete workspace.days[`${'remy-2023-06-22'}`];
+      delete workspace.days['remy-2023-06-23'];
+      workspace.animals.remy.days = ['remy-2099-01-01'];
+      workspace.animals.totoro.days = [];
+
+      const removeDayReference = vi.fn();
+      useStoreContext.mockReturnValue({
+        model: { workspace },
+        actions: { updateDay: vi.fn(), removeDayReference },
+        selectors: {},
+        persistence: { enabled: false },
+      });
+
+      render(<ValidationSummary />);
+      const row = screen.getByTestId('day-row-remy-2099-01-01');
+      await user.click(within(row).getByRole('button', { name: /remove .*day reference/i }));
+      expect(removeDayReference).toHaveBeenCalledWith('remy', 'remy-2099-01-01');
     });
 
     it('non-string animal ids do not crash the summary', () => {

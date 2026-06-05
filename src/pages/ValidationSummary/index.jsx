@@ -81,14 +81,12 @@ function buildRows(workspace) {
     orderKey(a.id).localeCompare(orderKey(b.id))
   );
 
-  // `days` may be absent or a non-record (e.g. an array from a bad migration);
-  // indexing a non-record by id must not deref `undefined[id]` and crash the page. When the
-  // WHOLE map is unusable, that is a coarse workspace-structural corruption handled by the
-  // empty-summary path — we do NOT fabricate a per-day error row for every reference (that
-  // would explode one corruption into N phantom rows). Per-reference corruption (a usable
-  // map missing a specific id) IS surfaced below — that is the Phase 4 contract.
-  const daysMapUsable = isRecord(workspace?.days);
-  const daysById = daysMapUsable ? workspace.days : {};
+  // `days` may be absent or a non-record (e.g. an array from a bad migration); indexing a
+  // non-record by id must not deref `undefined[id]` and crash the page. A missing/non-record
+  // map is corruption, not emptiness: every day reference an animal holds then resolves to no
+  // record and is surfaced as an explicit error row below — never laundered into the "No
+  // recording days" empty state, which would hide every referenced day.
+  const daysById = isRecord(workspace?.days) ? workspace.days : {};
 
   const rows = [];
   for (const animal of animals) {
@@ -115,9 +113,9 @@ function buildRows(workspace) {
       // distinct error row keyed by its id, so it is visibly flagged for repair and counted
       // — never silently dropped or shown as valid.
       if (!isRecord(record)) {
-        // Whole-map corruption is handled by the empty-summary path; don't fabricate a row
-        // per reference. A usable map missing THIS id is a dangling reference — surface it.
-        if (!daysMapUsable) continue;
+        // A reference resolving to no day record (missing id, or a non-record leftover, or a
+        // wholly-missing days map) is dangling corruption. Surface it as an explicit error
+        // row keyed by its id so it is visible, counted, and repairable — never dropped.
         rows.push({ animal, day: { id: dayId }, chip: 'error', missingRecord: true });
         // eslint-disable-next-line no-console
         console.error(
@@ -445,12 +443,26 @@ export function ValidationSummary() {
                     </span>
                   </td>
                   <td>
-                    <a
-                      href={`#/day/${day.id}`}
-                      aria-label={`Open editor for ${subjectLabel(animal)} ${day.date || day.id}`}
-                    >
-                      Open editor
-                    </a>
+                    {missingRecord ? (
+                      // A missing/non-record day has nothing to open (the Day Editor would
+                      // dead-end on "Day not found"). Offer an executable repair that drops
+                      // the dangling reference from the owning animal instead.
+                      <button
+                        type="button"
+                        className="validation-summary-repair"
+                        onClick={() => actions.removeDayReference(animal.id, day.id)}
+                        aria-label={`Remove dangling day reference ${day.id} from ${subjectLabel(animal)}`}
+                      >
+                        Remove day reference
+                      </button>
+                    ) : (
+                      <a
+                        href={`#/day/${day.id}`}
+                        aria-label={`Open editor for ${subjectLabel(animal)} ${day.date || day.id}`}
+                      >
+                        Open editor
+                      </a>
+                    )}
                   </td>
                 </tr>
               ))}

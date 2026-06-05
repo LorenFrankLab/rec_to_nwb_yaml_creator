@@ -687,6 +687,39 @@ export function useWorkspace(initialState = null) {
       },
 
       /**
+       * Removes a DANGLING day reference: drops `dayId` from the animal's `days` array and
+       * deletes any corrupt leftover `days[dayId]` record. Unlike {@link deleteDay} (which
+       * throws on a missing record and assumes a well-formed day with an `animalId`), this is
+       * the repair for a reference that resolves to a MISSING or non-record day — the kind the
+       * ValidationSummary surfaces as an "Error — missing day record" row. The owning animal
+       * id is passed explicitly (a corrupt record has no `animalId` to read it from). No-op for
+       * an unknown animal (the reference's owner is gone — nothing to repair).
+       *
+       * @param {string} animalId - The animal whose `days` array holds the dangling reference.
+       * @param {string} dayId - The dangling day id to remove.
+       */
+      removeDayReference: (animalId, dayId) => {
+        setWorkspace((prev) => {
+          const animal = prev.animals[animalId];
+          if (!animal) return prev;
+
+          const updatedAnimal = {
+            ...animal,
+            days: getAnimalDayIds(animal).filter((id) => id !== dayId),
+          };
+          const updatedDays = { ...prev.days };
+          delete updatedDays[dayId];
+
+          return {
+            ...prev,
+            animals: { ...prev.animals, [animalId]: updatedAnimal },
+            days: updatedDays,
+            lastModified: getCurrentTimestamp(),
+          };
+        });
+      },
+
+      /**
        * Updates workspace settings
        *
        * @param {object} settings - Partial settings updates

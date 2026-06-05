@@ -480,6 +480,53 @@ describe('Day State Management', () => {
     });
   });
 
+  describe('removeDayReference', () => {
+    it('removes a dangling day reference (missing record) from the animal without throwing', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+      });
+      // Simulate a dangling reference: the animal points at a day id with no record.
+      act(() => {
+        result.current.model.workspace.animals['remy'].days = ['remy-2023-06-22', 'remy-2099-01-01'];
+        result.current.actions.removeDayReference('remy', 'remy-2099-01-01');
+      });
+      const animal = result.current.model.workspace.animals['remy'];
+      expect(animal.days).toEqual(['remy-2023-06-22']);
+    });
+
+    it('also drops a corrupt (non-record) leftover day record while removing the reference', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+      });
+      act(() => {
+        // A truthy-but-non-record leftover survives as a dangling, unrepairable record.
+        result.current.model.workspace.days['remy-2023-06-22'] = 'corrupt-leftover-string';
+        result.current.actions.removeDayReference('remy', 'remy-2023-06-22');
+      });
+      expect(result.current.model.workspace.days['remy-2023-06-22']).toBeUndefined();
+      expect(result.current.model.workspace.animals['remy'].days).toEqual([]);
+    });
+
+    it('is a no-op for an unknown animal (no throw)', () => {
+      const { result } = renderHook(() => useStore());
+      expect(() => {
+        act(() => {
+          result.current.actions.removeDayReference('ghost', 'ghost-2023-06-22');
+        });
+      }).not.toThrow();
+    });
+  });
+
   describe('workspace.days selector', () => {
     it('returns empty object initially', () => {
       const { result } = renderHook(() => useStore());
