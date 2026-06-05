@@ -12,7 +12,7 @@
  * These tests assert the anchors render with the precise path format the rules emit.
  */
 import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import AssociatedVideosEditor from '../AssociatedVideosEditor';
 
 const cameras = [
@@ -71,5 +71,23 @@ describe('AssociatedVideosEditor — repair-focus anchors', () => {
     );
     expect(staleCameraSelect).not.toBeNull();
     expect(staleCameraSelect.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  // collectValidEpochs iterates each task's task_epochs. A task inside an otherwise
+  // valid tasks array can carry a malformed task_epochs (a string, not an array);
+  // it must contribute no epochs rather than crash this epoch-repair UI.
+  it('does not throw when a task has a non-array task_epochs', () => {
+    expect(() =>
+      render(
+        <AssociatedVideosEditor
+          videos={[{ name: 'a.h264', camera_id: 1, task_epochs: '' }]}
+          cameras={cameras}
+          tasks={[{ task_name: 'run', task_epochs: '1' }]}
+          onChange={() => {}}
+        />
+      )
+    ).not.toThrow();
+    // The malformed task contributes no valid epochs, so the empty-state note shows.
+    expect(screen.getByText(/no task epochs/i)).toBeInTheDocument();
   });
 });

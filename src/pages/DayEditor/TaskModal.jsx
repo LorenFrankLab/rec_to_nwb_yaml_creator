@@ -46,8 +46,15 @@ function TaskForm({
   const [taskName, setTaskName] = useState(() => task?.task_name ?? '');
   const [taskDescription, setTaskDescription] = useState(() => task?.task_description ?? '');
   const [taskEnvironment, setTaskEnvironment] = useState(() => task?.task_environment ?? '');
-  const [cameraIds, setCameraIds] = useState(() => (task?.camera_id ?? []).map(Number));
-  const [epochs, setEpochs] = useState(() => (task?.task_epochs ?? []).map(Number));
+  // A malformed child array on the loaded task (camera_id/task_epochs as a scalar
+  // rather than an array) must initialize as empty, not crash the form on `.map` —
+  // the form is the repair surface, so it has to open.
+  const [cameraIds, setCameraIds] = useState(() =>
+    (Array.isArray(task?.camera_id) ? task.camera_id : []).map(Number)
+  );
+  const [epochs, setEpochs] = useState(() =>
+    (Array.isArray(task?.task_epochs) ? task.task_epochs : []).map(Number)
+  );
   const [epochsHaveError, setEpochsHaveError] = useState(false);
   // Required-field errors are surfaced only after the field has been blurred, so
   // a freshly opened form is not littered with "required" messages.

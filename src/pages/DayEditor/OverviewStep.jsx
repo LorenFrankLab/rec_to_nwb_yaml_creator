@@ -33,6 +33,20 @@ const OVERVIEW_STEP_COLLECTIONS = RAW_DAY_ARRAY_FIELDS.filter((f) => f.repairSte
  * @returns {JSX.Element}
  */
 export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, onSubjectUpdate, focusRequest }) {
+  // Tolerate corrupt persisted state: a malformed (null/scalar) `day.session`,
+  // `animal.subject`, or `animal.experimenters` must not crash the editor on a raw
+  // dereference. The merge already guards these for export; the repair editor reads
+  // through these guarded locals so a corrupt record renders blank fields the user can
+  // fix, never a blank/crashed step.
+  const isRecord = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+  const session = isRecord(day.session) ? day.session : {};
+  const subject = isRecord(animal.subject) ? animal.subject : {};
+  const experimenters = isRecord(animal.experimenters) ? animal.experimenters : {};
+  const experimenterNames = Array.isArray(experimenters.experimenter_name)
+    ? experimenters.experimenter_name
+    : [];
+  const dayDateKey = String(day.date ?? '').replace(/-/g, '');
+
   const [fieldErrors, setFieldErrors] = useState({});
   const [validatingField, setValidatingField] = useState(null);
   const [showInherited, setShowInherited] = useState(false);
@@ -134,8 +148,8 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
         <div className="form-grid">
           <ReadOnlyField
             label="Session ID"
-            value={day.session.session_id}
-            helpText={`Auto-generated from animal ID and date: ${animal.id}_${day.date.replace(/-/g, '')}`}
+            value={session.session_id}
+            helpText={`Auto-generated from animal ID and date: ${animal.id}_${dayDateKey}`}
           />
 
           <div className="form-field">
@@ -147,7 +161,7 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
               name="session.session_description"
               data-field-path="session_description"
               rows="3"
-              defaultValue={day.session.session_description}
+              defaultValue={session.session_description}
               onBlur={(e) => handleBlur('session.session_description', e.target.value)}
               className={fieldErrors['session.session_description'] ? 'invalid' : ''}
               aria-invalid={!!fieldErrors['session.session_description']}
@@ -172,7 +186,7 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
               name="session.experiment_description"
               data-field-path="experiment_description"
               rows="3"
-              defaultValue={day.session.experiment_description || animal.experiment_description || ''}
+              defaultValue={session.experiment_description || animal.experiment_description || ''}
               onBlur={(e) => handleBlur('session.experiment_description', e.target.value)}
               placeholder="e.g., Chronic tetrode recording during spatial navigation"
               className={fieldErrors['session.experiment_description'] ? 'invalid' : ''}
@@ -231,9 +245,9 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
               </div>
 
               <div className="form-grid">
-                <ReadOnlyField label="Subject ID" value={animal.subject.subject_id} />
-                <ReadOnlyField label="Sex" value={animal.subject.sex} />
-                <ReadOnlyField label="Genotype" value={animal.subject.genotype} />
+                <ReadOnlyField label="Subject ID" value={subject.subject_id} />
+                <ReadOnlyField label="Sex" value={subject.sex} />
+                <ReadOnlyField label="Genotype" value={subject.genotype} />
 
                 <div className="form-field">
                   <label htmlFor="subject-date-of-birth">Date of Birth</label>
@@ -241,8 +255,8 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
                     id="subject-date-of-birth"
                     type="date"
                     data-field-path="subject.date_of_birth"
-                    key={animal.subject.date_of_birth || ''}
-                    defaultValue={(animal.subject.date_of_birth || '').split('T')[0]}
+                    key={subject.date_of_birth || ''}
+                    defaultValue={(subject.date_of_birth || '').split('T')[0]}
                     max={new Date().toISOString().split('T')[0]}
                     onBlur={(e) =>
                       onSubjectUpdate(
@@ -261,15 +275,15 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
                     min="0"
                     step="any"
                     data-field-path="subject.weight"
-                    key={`weight-${animal.subject.weight ?? ''}`}
-                    defaultValue={animal.subject.weight ?? ''}
+                    key={`weight-${subject.weight ?? ''}`}
+                    defaultValue={subject.weight ?? ''}
                     onBlur={(e) => {
                       onSubjectUpdate('weight', e.target.value === '' ? undefined : Number(e.target.value));
                       // The export prefers a day-level weight override over the animal
                       // weight, so a stale/invalid day override (only ever set via import)
                       // would defeat this repair. Clear it so the weight just entered is
                       // the value that's exported.
-                      if (day.session.weight !== undefined) {
+                      if (session.weight !== undefined) {
                         onFieldUpdate('session.weight', undefined);
                       }
                     }}
@@ -283,8 +297,8 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
                     id="subject-species"
                     type="text"
                     data-field-path="subject.species"
-                    key={`species-${animal.subject.species || ''}`}
-                    defaultValue={animal.subject.species || ''}
+                    key={`species-${subject.species || ''}`}
+                    defaultValue={subject.species || ''}
                     aria-invalid={!!speciesError}
                     aria-describedby={speciesError ? 'subject-species-error' : 'subject-species-hint'}
                     onBlur={(e) => {
@@ -316,8 +330,8 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
                     id="subject-description"
                     type="text"
                     data-field-path="subject.description"
-                    key={`desc-${animal.subject.description || ''}`}
-                    defaultValue={animal.subject.description || ''}
+                    key={`desc-${subject.description || ''}`}
+                    defaultValue={subject.description || ''}
                     onBlur={(e) => onSubjectUpdate('description', e.target.value)}
                   />
                 </div>
@@ -335,15 +349,15 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
               <div className="form-grid">
                 <ReadOnlyField
                   label="Names"
-                  value={animal.experimenters.experimenter_name.join(', ')}
+                  value={experimenterNames.join(', ')}
                 />
                 <ReadOnlyField
                   label="Lab"
-                  value={animal.experimenters.lab}
+                  value={experimenters.lab}
                 />
                 <ReadOnlyField
                   label="Institution"
-                  value={animal.experimenters.institution}
+                  value={experimenters.institution}
                 />
               </div>
             </div>

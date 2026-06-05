@@ -46,6 +46,20 @@ function deriveChip(stepStatus) {
 const CHIP_LABEL = { valid: 'Valid', error: 'Error', incomplete: 'Incomplete' };
 
 /**
+ * True only for plain object records — not null, not an array, not a primitive.
+ *
+ * Used to distinguish a usable persisted map/day object from the corrupt shapes a
+ * bad import/migration can leave behind (a `days` array instead of a map, a leftover
+ * string where a day record is expected), which would otherwise throw on indexing or
+ * property access and blank the whole summary.
+ *
+ * @param {unknown} value
+ * @returns {boolean}
+ */
+const isRecord = (value) =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+
+/**
  * Flatten every day across all animals into a deterministic, table-ordered list.
  *
  * Order: animals by id, then each animal's days by date — the same order the table
@@ -55,9 +69,20 @@ const CHIP_LABEL = { valid: 'Valid', error: 'Error', incomplete: 'Incomplete' };
  * @returns {Array<{ animal: object, day: object, chip: 'valid'|'error'|'incomplete' }>}
  */
 function buildRows(workspace) {
+  // Every sort key here is read from PERSISTED state, which a bad import/migration
+  // can corrupt: an animal id or day date may be missing or a non-string, and
+  // `localeCompare` on a non-string throws. Coerce to a string for ordering only
+  // (never mutating the record) so one malformed key can't throw and blank the
+  // whole multi-day summary.
+  const orderKey = (value) => (typeof value === 'string' ? value : String(value ?? ''));
+
   const animals = Object.values(workspace?.animals || {}).sort((a, b) =>
-    a.id.localeCompare(b.id)
+    orderKey(a.id).localeCompare(orderKey(b.id))
   );
+
+  // `days` may be absent or a non-record (e.g. an array from a bad migration);
+  // indexing a non-record by id must not deref `undefined[id]` and crash the page.
+  const daysById = isRecord(workspace?.days) ? workspace.days : {};
 
   const rows = [];
   for (const animal of animals) {
@@ -66,9 +91,12 @@ function buildRows(workspace) {
     // multi-day summary — the rest of the workspace must still render.
     const dayIds = Array.isArray(animal.days) ? animal.days : [];
     const days = dayIds
-      .map((dayId) => workspace.days[dayId])
-      .filter(Boolean)
-      .sort((a, b) => a.date.localeCompare(b.date));
+      .map((dayId) => daysById[dayId])
+      // Keep only resolvable day RECORDS: a missing id (undefined) or a
+      // truthy-but-non-record leftover (e.g. a string from a partial migration)
+      // is dropped here rather than dereferenced as if it were a day object.
+      .filter(isRecord)
+      .sort((a, b) => orderKey(a.date).localeCompare(orderKey(b.date)));
 
     for (const day of days) {
       // mergeDayMetadata throws BY DESIGN on a corrupt animal (missing/empty

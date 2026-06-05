@@ -199,10 +199,13 @@ export default function AnimalEditorStepper() {
   // so the electrode-group modal can offer them and snap case-only variants.
   // Memoized (and declared before the early returns, per the Rules of Hooks) so a
   // fresh array reference doesn't defeat the modal's BrainRegionAutocomplete memo.
+  // Renders on every workspace; a persisted `electrode_groups` may be a non-array, and
+  // `|| []` would PRESERVE it and throw on the `.flatMap`. Guard with Array.isArray so a
+  // single corrupt animal can't crash this region-collection sweep.
   const knownRegions = useMemo(() => [
     ...new Set(
       Object.values(model.workspace.animals || {})
-        .flatMap((a) => a.devices?.electrode_groups || [])
+        .flatMap((a) => (Array.isArray(a.devices?.electrode_groups) ? a.devices.electrode_groups : []))
         .flatMap((g) => [g.location, g.targeted_location])
         .filter((r) => typeof r === 'string' && r.trim() !== '')
     ),
@@ -219,7 +222,12 @@ export default function AnimalEditorStepper() {
     return <AnimalEditorError message={`Animal "${animalId}" not found.`} />;
   }
 
-  const configurationHistory = animal.configurationHistory || [];
+  // The editor is a repair destination for malformed persisted state, so it must not
+  // crash on the corruption it exists to fix: `configurationHistory` may be a non-array.
+  // `|| []` would PRESERVE a string and then throw on the `.some`/index/`.length` below.
+  const configurationHistory = Array.isArray(animal.configurationHistory)
+    ? animal.configurationHistory
+    : [];
   const latestSnapshot = configurationHistory[configurationHistory.length - 1] || null;
   const latestConfigurationVersion = latestSnapshot?.version ?? null;
   const isReconfigurationEdit = routeContext.context === 'reconfigure';

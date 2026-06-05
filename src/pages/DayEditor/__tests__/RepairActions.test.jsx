@@ -101,6 +101,20 @@ describe('RepairActions', () => {
     expect(onNavigate).toHaveBeenCalledWith('devices', 'ntrode_electrode_group_channel_map[0]');
   });
 
+  it('collapses duplicate repair buttons for issues that share one underlying fix', () => {
+    // A shadowed day geometry override produces both a retagged base schema error and a
+    // shadowed_geometry_override — both routing to the same remove-override control. Render
+    // both messages, but only ONE "Fix in Devices" button.
+    const issues = [
+      { code: 'required', path: 'electrode_groups[0].location', focusPath: 'deviceOverrides.electrode_groups', ownerSurface: 'day', step: 'devices', message: 'electrode group location is required' },
+      { code: 'shadowed_geometry_override', path: 'deviceOverrides.electrode_groups', focusPath: 'deviceOverrides.electrode_groups', ownerSurface: 'day', step: 'devices', message: 'this day overrides the saved geometry' },
+    ];
+    render(<RepairActions issues={issues} onNavigate={vi.fn()} />);
+    expect(screen.getByText(/location is required/i)).toBeInTheDocument();
+    expect(screen.getByText(/overrides the saved geometry/i)).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /fix in devices/i })).toHaveLength(1);
+  });
+
   it('does NOT render a fix button for non-repairable identity issues (slash ids)', () => {
     render(
       <RepairActions

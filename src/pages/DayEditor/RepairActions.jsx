@@ -48,16 +48,35 @@ export function isRepairable(issue) {
 export default function RepairActions({ issues, onNavigate, animalId }) {
   if (!issues || issues.length === 0) return null;
 
+  // Several issues can share ONE underlying fix — e.g. a corrupt day geometry override
+  // produces both the retagged base schema errors AND a `shadowed_geometry_override`, all
+  // routing to the same remove-override control. Render every message (each explains a
+  // distinct symptom) but COLLAPSE the repair button to one per unique (surface, target),
+  // so the user isn't shown a stack of identical "Fix in …" buttons for a single repair.
+  const seenTargets = new Set();
+  const repairKey = (issue) => {
+    const { surface, step } = repairTargetForIssue(issue);
+    return `${surface}:${step ?? ''}:${issue.focusPath || issue.path || ''}`;
+  };
+
   return (
     <ul className="repair-action-list">
-      {issues.map((issue, index) => (
-        <li key={`${issue.path}-${issue.code}-${index}`} className="repair-action-item">
-          <span className="repair-action-message">{issue.message}</span>
-          {isRepairable(issue) && (
-            <RepairActionButton issue={issue} onNavigate={onNavigate} animalId={animalId} />
-          )}
-        </li>
-      ))}
+      {issues.map((issue, index) => {
+        let showButton = isRepairable(issue);
+        if (showButton) {
+          const key = repairKey(issue);
+          if (seenTargets.has(key)) showButton = false;
+          else seenTargets.add(key);
+        }
+        return (
+          <li key={`${issue.path}-${issue.code}-${index}`} className="repair-action-item">
+            <span className="repair-action-message">{issue.message}</span>
+            {showButton && (
+              <RepairActionButton issue={issue} onNavigate={onNavigate} animalId={animalId} />
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 }

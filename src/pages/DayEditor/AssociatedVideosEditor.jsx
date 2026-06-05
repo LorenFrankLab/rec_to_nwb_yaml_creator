@@ -14,8 +14,11 @@ import './AssociatedVideosEditor.scss';
  */
 function collectValidEpochs(tasks) {
   const seen = new Set();
-  (tasks || []).forEach((task) => {
-    (task.task_epochs || []).forEach((epoch) => {
+  (Array.isArray(tasks) ? tasks : []).forEach((task) => {
+    // A malformed task_epochs inside an otherwise-valid task (a string, not an
+    // array) must contribute no epochs rather than crash this repair UI on `.forEach`.
+    const epochs = Array.isArray(task?.task_epochs) ? task.task_epochs : [];
+    epochs.forEach((epoch) => {
       const n = Number(epoch);
       if (Number.isInteger(n)) seen.add(n);
     });

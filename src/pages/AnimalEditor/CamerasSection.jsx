@@ -19,7 +19,11 @@ import './CamerasSection.scss';
  * @returns {JSX.Element}
  */
 export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, onDelete }) {
-  const cameras = animal.cameras || [];
+  // This section is a repair destination for a malformed-collection finding, so it must
+  // tolerate the very corruption it exists to fix: persisted `cameras` may be a non-array
+  // (e.g. the string "nope"). Normalize once and iterate the guarded local everywhere, so
+  // `.reduce`/`.map`/`.length` degrade to the empty state instead of throwing.
+  const cameras = Array.isArray(animal.cameras) ? animal.cameras : [];
   const cameraIdCounts = cameras.reduce((acc, camera) => {
     const key = String(camera.id);
     acc[key] = (acc[key] || 0) + 1;

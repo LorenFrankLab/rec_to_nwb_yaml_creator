@@ -39,7 +39,19 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
   // On a historical day, `animal.devices` mirrors the *latest* version, so editing
   // bad channels against it would target the wrong ntrode list. `resolveDayConfig`
   // gives the snapshot the day is actually pinned to — matching what the export uses.
-  const effectiveConfig = useMemo(() => resolveDayConfig(animal, day), [animal, day]);
+  // It THROWS by design on a missing/corrupt configurationHistory; catch it so a repair
+  // routed here (or the step simply being reachable) renders a fail-closed, Animal-Editor-
+  // pointing message instead of crashing the editor.
+  const { effectiveConfig, configError } = useMemo(() => {
+    try {
+      return { effectiveConfig: resolveDayConfig(animal, day), configError: null };
+    } catch (err) {
+      return {
+        effectiveConfig: { electrode_groups: [], ntrode_electrode_group_channel_map: [], configurationVersion: undefined },
+        configError: err,
+      };
+    }
+  }, [animal, day]);
   const electrodeGroups = effectiveConfig.electrode_groups;
 
   // Configuration-version legibility (only when wired with store actions + the
@@ -397,6 +409,26 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
       ))}
     </section>
   ) : null;
+
+  // Config-error state: resolveDayConfig threw (the animal's device configuration is
+  // missing or corrupt). Fail closed with a single, truthful, Animal-Editor-pointing
+  // repair instead of crashing the step.
+  if (configError) {
+    return (
+      <div className="devices-step">
+        <h2>Devices Configuration</h2>
+        <div className="error-state-inline" role="alert">
+          <p>
+            This animal&apos;s device configuration is missing or corrupt, so devices
+            can&apos;t be shown for this day.
+          </p>
+          <a href={`#/animal/${animal.id}/editor`} className="button-primary">
+            Configure devices in the Animal Editor
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   // Empty state: No electrode groups. The override cleanup section still renders so a
   // malformed-override repair is reachable even with no groups configured.

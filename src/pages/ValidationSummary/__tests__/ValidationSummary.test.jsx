@@ -338,6 +338,86 @@ describe('ValidationSummary', () => {
       // The other animal's day still renders.
       expect(screen.getByTestId(`day-row-${ids.errorDayId}`)).toBeInTheDocument();
     });
+
+    it('a missing workspace.days map does not crash the summary', () => {
+      // Corrupt persisted state: animals reference day ids, but the top-level
+      // `days` map is gone entirely. Looking up day records must not deref
+      // `undefined[id]` and blank the whole summary — the animals simply
+      // resolve to no readable days.
+      const { workspace } = makeSummaryWorkspace();
+      delete workspace.days; // days map absent
+      provideStore(workspace);
+
+      expect(() => render(<ValidationSummary />)).not.toThrow();
+
+      // No rows resolve, so the empty state is shown rather than a crash.
+      expect(screen.getByText(/no recording days/i)).toBeInTheDocument();
+    });
+
+    it('a non-record workspace.days does not crash the summary', () => {
+      // `days` persisted as a non-record (e.g. an array from a bad migration).
+      // Indexing it by id must be guarded so the summary still renders.
+      const { workspace } = makeSummaryWorkspace();
+      workspace.days = []; // non-record shape
+      provideStore(workspace);
+
+      expect(() => render(<ValidationSummary />)).not.toThrow();
+      expect(screen.getByText(/no recording days/i)).toBeInTheDocument();
+    });
+
+    it('non-string animal ids do not crash the summary', () => {
+      // Corrupt import: animal ids are missing (would be non-string). They are
+      // used in `.localeCompare` while sorting animals and as a fallback label,
+      // so a non-string must be tolerated without throwing. Both animals lose
+      // their id so the throw is independent of sort argument order.
+      const { workspace, ids } = makeSummaryWorkspace();
+      delete workspace.animals.remy.id;
+      delete workspace.animals.totoro.id;
+      provideStore(workspace);
+
+      expect(() => render(<ValidationSummary />)).not.toThrow();
+
+      // The days still render despite the unsortable ids.
+      expect(screen.getByTestId(`day-row-${ids.validDayId}`)).toBeInTheDocument();
+      expect(screen.getByTestId(`day-row-${ids.errorDayId}`)).toBeInTheDocument();
+    });
+
+    it('non-string day dates do not crash the summary', () => {
+      // Corrupt import: day `date` values are numbers. They are used in
+      // `.localeCompare` while sorting days, so a non-string must be tolerated
+      // without throwing. Both remy days are broken so the throw is independent
+      // of sort argument order.
+      const { workspace, ids } = makeSummaryWorkspace();
+      workspace.days[ids.validDayId].date = 20230622;
+      workspace.days[ids.incompleteDayId].date = 20230623;
+      provideStore(workspace);
+
+      expect(() => render(<ValidationSummary />)).not.toThrow();
+
+      // The well-formed animal's day still renders.
+      expect(screen.getByTestId(`day-row-${ids.errorDayId}`)).toBeInTheDocument();
+    });
+
+    it('a non-record day record (truthy but malformed) is contained and never shown valid', () => {
+      // A day id resolves to a truthy-but-non-record value (e.g. a leftover
+      // string from a partial migration). It survives `.filter(Boolean)` but
+      // must not be dereferenced as a day object — and, crucially, must never be
+      // shown as a valid day. Keep a single such day so sort is skipped, isolating
+      // the deref/merge path on the bad record.
+      const { workspace, ids } = makeSummaryWorkspace();
+      delete workspace.days[ids.incompleteDayId];
+      workspace.animals.remy.days = [ids.validDayId];
+      workspace.days[ids.validDayId] = 'corrupt-day-string';
+      provideStore(workspace);
+
+      expect(() => render(<ValidationSummary />)).not.toThrow();
+
+      // The well-formed animal's day still renders.
+      expect(screen.getByTestId(`day-row-${ids.errorDayId}`)).toBeInTheDocument();
+
+      // The malformed day is NEVER counted as valid.
+      expect(screen.getByTestId('summary-counts')).toHaveTextContent(/0 valid/i);
+    });
   });
 
   it('an animal with zero days contributes no rows and does not crash', () => {

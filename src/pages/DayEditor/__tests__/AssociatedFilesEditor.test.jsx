@@ -132,4 +132,21 @@ describe('AssociatedFilesEditor', () => {
     await user.click(screen.getByRole('button', { name: /remove file/i }));
     expect(onChange).toHaveBeenCalledWith([]);
   });
+
+  // collectValidEpochs iterates each task's task_epochs. A task inside an otherwise
+  // valid tasks array can carry a malformed task_epochs (a string, not an array);
+  // it must contribute no epochs rather than crash the epoch-repair UI.
+  it('does not throw when a task has a non-array task_epochs', () => {
+    expect(() =>
+      render(
+        <AssociatedFilesEditor
+          files={[{ name: 'f', task_epochs: '' }]}
+          tasks={[{ task_name: 'a', task_epochs: '1' }]}
+          onChange={() => {}}
+        />
+      )
+    ).not.toThrow();
+    // The malformed task contributes no valid epochs, so the empty-state note shows.
+    expect(screen.getByText(/no task epochs/i)).toBeInTheDocument();
+  });
 });

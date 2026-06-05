@@ -36,6 +36,20 @@ describe('OverviewStep', () => {
     ...mockAnimal.experimenters,
   };
 
+  it('tolerates malformed nested records (session/subject/experimenters) without crashing', () => {
+    // A repair routes here; malformed null/scalar nested objects must render blank fields
+    // the user can fix, never crash the step on a raw dereference.
+    const corruptAnimal = { id: 'remy', subject: 'corrupt', experimenters: null };
+    const corruptDay = { date: 42, session: 'nope' };
+    expect(() =>
+      render(
+        <OverviewStep animal={corruptAnimal} day={corruptDay} mergedDay={{}} onFieldUpdate={vi.fn()} onSubjectUpdate={vi.fn()} />
+      )
+    ).not.toThrow();
+    // The Session Metadata heading still renders (step is usable, not blanked).
+    expect(screen.getByRole('heading', { name: /session metadata/i })).toBeInTheDocument();
+  });
+
   it('displays inherited fields as read-only when expanded', async () => {
     const user = userEvent.setup();
     render(

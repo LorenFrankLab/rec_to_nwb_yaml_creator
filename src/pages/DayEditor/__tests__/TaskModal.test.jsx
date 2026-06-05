@@ -236,4 +236,23 @@ describe('TaskModal', () => {
     expect(screen.getByRole('button', { name: /save task/i })).toBeDisabled();
     expect(screen.getByText(/already used in this dataset with a different description/i)).toBeInTheDocument();
   });
+
+  // Editing a task whose persisted task_epochs / camera_id are malformed (a string
+  // or number rather than an array) must open the form instead of throwing on the
+  // `.map(Number)` initializers — the corruption is then editable and repairable.
+  it('opens without throwing when editing a task whose task_epochs is a non-array', () => {
+    expect(() =>
+      renderModal({
+        mode: 'edit',
+        task: {
+          task_name: 'sleep',
+          task_description: 'd',
+          task_environment: 'HomeBox',
+          camera_id: 5,
+          task_epochs: '1',
+        },
+      })
+    ).not.toThrow();
+    expect(detailsFor('Task details')).toBeInTheDocument();
+  });
 });

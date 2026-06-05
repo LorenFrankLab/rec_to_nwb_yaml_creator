@@ -431,6 +431,34 @@ describe('HardwareConfigStep', () => {
     });
   });
 
+  // A repair routed to the Animal Editor must not dead-end by crashing on the very
+  // corruption it exists to fix. HardwareConfigStep passes `animal.cameras` to
+  // CamerasSection; a non-array (string/object/number) must be normalized to [] so the
+  // section renders its empty state rather than throwing on `.reduce`/`.map`.
+  describe('Corrupt persisted cameras', () => {
+    it.each([
+      ['a string', 'nope'],
+      ['a plain object', {}],
+      ['a number', 42],
+    ])('renders without throwing when animal.cameras is %s', (_label, corrupt) => {
+      const corruptAnimal = { ...mockAnimal, cameras: corrupt };
+
+      expect(() => {
+        render(
+          <HardwareConfigStep
+            animal={corruptAnimal}
+            onFieldUpdate={mockOnFieldUpdate}
+            onNavigateBack={mockOnNavigateBack}
+            onNavigateNext={mockOnNavigateNext}
+          />
+        );
+      }).not.toThrow();
+
+      // Cameras degrade to the empty state instead of a crash.
+      expect(screen.getByText(/No Cameras Configured/i)).toBeInTheDocument();
+    });
+  });
+
   it('performance: handles 10 cameras without lag', async () => {
     const largeMockAnimal = {
       ...mockAnimal,

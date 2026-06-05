@@ -273,4 +273,15 @@ describe('DevicesStep — round-7 override removal completeness', () => {
     renderWith(emptyAnimal, { bad_channels: '2.9' });
     expect(screen.getByRole('button', { name: /remove corrupt failed-channel override/i })).toBeInTheDocument();
   });
+
+  it('does not crash when resolveDayConfig throws (corrupt configurationHistory); shows a repair-pointing message', () => {
+    // The Devices step is reachable even when the animal's config is corrupt; it must fail
+    // closed with an Animal-Editor link, not throw (resolveDayConfig raises by design).
+    const corruptAnimal = { id: 'test-animal', devices: {}, configurationHistory: 'corrupt' };
+    expect(() =>
+      render(<DevicesStep animal={corruptAnimal} day={baseDay} mergedDay={{}} onFieldUpdate={onFieldUpdate} />)
+    ).not.toThrow();
+    expect(screen.getByText(/device configuration is missing or corrupt/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /configure devices in the animal editor/i })).toBeInTheDocument();
+  });
 });

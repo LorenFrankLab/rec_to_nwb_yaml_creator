@@ -36,10 +36,14 @@ function getStatus(task, cameras) {
   }
 
   const availableIds = new Set((cameras || []).map((c) => Number(c.id)));
-  const referencesMissingCamera = (task.camera_id || []).some(
+  // A malformed child array inside a valid loaded task (e.g. camera_id as a number,
+  // task_epochs as a string) must not crash the status badge — treat it as empty.
+  const cameraIds = Array.isArray(task.camera_id) ? task.camera_id : [];
+  const taskEpochs = Array.isArray(task.task_epochs) ? task.task_epochs : [];
+  const referencesMissingCamera = cameraIds.some(
     (id) => !availableIds.has(Number(id))
   );
-  const hasNoEpochs = (task.task_epochs || []).length === 0;
+  const hasNoEpochs = taskEpochs.length === 0;
   const warnings = [];
   if (hasNoEpochs) warnings.push('no epochs assigned');
   if (referencesMissingCamera) warnings.push('references a camera this animal no longer has');
@@ -169,7 +173,11 @@ export default function TasksTable({
         <tbody>
           {tasks.map((task, index) => {
             const status = getStatus(task, cameras);
-            const cameraIds = task.camera_id || [];
+            // A malformed child array (camera_id/task_epochs as a scalar) in loaded
+            // state must render as empty here, not throw on `.join`/`.length`, so the
+            // corrupt task stays visible and editable for repair.
+            const cameraIds = Array.isArray(task.camera_id) ? task.camera_id : [];
+            const taskEpochs = Array.isArray(task.task_epochs) ? task.task_epochs : [];
             return (
               <tr key={index}>
                 <td data-label="Task">{task.task_name || <em>unnamed</em>}</td>
@@ -177,9 +185,7 @@ export default function TasksTable({
                   {cameraIds.length === 0 ? '—' : cameraIds.join(', ')}
                 </td>
                 <td data-label="Epochs">
-                  {(task.task_epochs || []).length === 0
-                    ? '—'
-                    : (task.task_epochs || []).join(', ')}
+                  {taskEpochs.length === 0 ? '—' : taskEpochs.join(', ')}
                 </td>
                 <td data-label="Status">
                   <span

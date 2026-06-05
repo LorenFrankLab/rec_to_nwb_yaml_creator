@@ -193,10 +193,14 @@ export default function DayEditorStepper() {
     const updated = structuredClone(day);
     let target = updated;
 
-    // Navigate to parent object, creating intermediate objects if they don't exist
+    // Navigate to parent object, (re)creating intermediate objects. A repair write-through
+    // a path whose intermediate is corrupt (e.g. `day.session` loaded as a scalar/array)
+    // must not throw on `scalar.field = value` (strict-mode TypeError): replace any
+    // non-plain-object intermediate with a fresh object so the repaired field lands cleanly.
     for (let i = 0; i < pathSegments.length - 1; i++) {
       const segment = pathSegments[i];
-      if (!target[segment]) {
+      const child = target[segment];
+      if (child === null || typeof child !== 'object' || Array.isArray(child)) {
         target[segment] = {};
       }
       target = target[segment];

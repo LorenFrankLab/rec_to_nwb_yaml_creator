@@ -130,4 +130,17 @@ describe('TasksTable', () => {
     expect(dialog).toHaveTextContent(/overhead\.h264/);
     expect(dialog).toHaveTextContent(/stim_log/);
   });
+
+  // A child field (task_epochs / camera_id) inside an otherwise-valid task can be
+  // malformed in loaded state — a string/number where an array is assumed. The
+  // table must render the row (so the corruption is visible + repairable) rather
+  // than throw on `.join`/`.some`/`.length`.
+  it('renders a row without throwing when task_epochs and camera_id are non-arrays', () => {
+    expect(() =>
+      renderTable({ tasks: [{ task_name: 'a', task_epochs: '1', camera_id: 5 }] })
+    ).not.toThrow();
+    const row = screen.getByRole('row', { name: /^a/i });
+    // The malformed child arrays render as empty (em dash), not their raw scalar.
+    expect(within(row).getAllByText('—').length).toBeGreaterThan(0);
+  });
 });

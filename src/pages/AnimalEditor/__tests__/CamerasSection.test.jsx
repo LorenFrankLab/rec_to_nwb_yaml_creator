@@ -266,6 +266,34 @@ describe('CamerasSection', () => {
     });
   });
 
+  describe('Corrupt persisted props', () => {
+    // A corrupt `animal.cameras` (e.g. the string "nope") validates upstream as
+    // malformed and ROUTES the repair here. The section is the repair destination, so
+    // it must tolerate the very corruption it exists to fix — never throw on iterating a
+    // non-array prop — and render the (empty) state so the user can re-add cameras.
+    it.each([
+      ['a string', 'nope'],
+      ['a plain object', {}],
+      ['a number', 42],
+      ['null', null],
+      ['undefined', undefined],
+    ])('renders the empty state instead of throwing when cameras is %s', (_label, corrupt) => {
+      const corruptAnimal = { id: 'test', cameras: corrupt };
+
+      expect(() => {
+        render(
+          <CamerasSection
+            animal={corruptAnimal}
+            onFieldUpdate={mockOnFieldUpdate}
+          />
+        );
+      }).not.toThrow();
+
+      // Degrades to the empty state (no cameras to show) rather than a crash.
+      expect(screen.getByText(/No Cameras Configured/i)).toBeInTheDocument();
+    });
+  });
+
   describe('Error Handling', () => {
     it('should handle errors gracefully with user-friendly messages', () => {
       // Test with malformed camera data
