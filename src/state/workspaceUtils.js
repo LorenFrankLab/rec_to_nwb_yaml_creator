@@ -13,6 +13,23 @@ import {
   normalizeElectrodeGroup,
   normalizeNtrodeMap,
 } from '../utils/deviceNormalization';
+import {
+  getAnimalCameras,
+  getConfigHistory,
+  getDataAcqDevices,
+  getAnimalDevices,
+  getAnimalExperimenters,
+  getAnimalSubject,
+  getDaySession,
+  getDayTasks,
+  getDayAssociatedFiles,
+  getDayAssociatedVideos,
+  getDayBehavioralEvents,
+  getDayKeywords,
+  getDayFsGuiYamls,
+  getProbeElectrodeGroups,
+  getProbeNtrodeMaps,
+} from './workspaceSelectors';
 
 // Canonical key orders, mirroring the legacy `formData` shape in
 // `src/valueList.js` (`defaultYMLValues` / `arrayDefaultValues`). `encodeYaml`
@@ -33,6 +50,17 @@ const OPTO_EXCITATION_SOURCE_ORDER = ['name', 'model_name', 'description', 'wave
 const OPTICAL_FIBER_ORDER = ['name', 'hardware_name', 'implanted_fiber_description', 'location', 'hemisphere', 'ap_in_mm', 'ml_in_mm', 'dv_in_mm', 'roll_in_deg', 'pitch_in_deg', 'yaw_in_deg', 'reference', 'excitation_source'];
 const VIRUS_INJECTION_ORDER = ['name', 'description', 'hemisphere', 'location', 'ap_in_mm', 'ml_in_mm', 'dv_in_mm', 'roll_in_deg', 'pitch_in_deg', 'yaw_in_deg', 'reference', 'virus_name', 'titer_in_vg_per_ml', 'volume_in_uL'];
 const FS_GUI_YAML_ORDER = ['name', 'epochs', 'power_in_mW', 'dio_output_name', 'state_script_parameters', 'pulseLength'];
+
+/**
+ * Whether `value` is a plain object record (not null, not an array). Used to guard
+ * nested record dereferences in the merge so a malformed import can't crash it.
+ *
+ * @param {*} value - Candidate record.
+ * @returns {boolean} True for a non-null, non-array object.
+ */
+function isPlainRecord(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
 
 /**
  * Reorder each item of an array to match a key template (lossless). Non-array
@@ -96,8 +124,8 @@ function reorderKeys(obj, order) {
  *   version with no matching snapshot.
  */
 export function resolveDayConfig(animal, day) {
-  const history = animal.configurationHistory;
-  if (!Array.isArray(history) || history.length === 0) {
+  const history = getConfigHistory(animal);
+  if (history.length === 0) {
     throw new Error(
       `Cannot resolve device configuration for day "${day?.id}": animal "${animal?.id}" has no configuration history.`
     );
@@ -122,31 +150,42 @@ export function resolveDayConfig(animal, day) {
     );
   }
 
-  const electrodeGroups =
-    day.deviceOverrides?.electrode_groups || config.devices.electrode_groups || [];
-  const baseNtrodes =
-    day.deviceOverrides?.ntrode_electrode_group_channel_map ||
-    config.devices.ntrode_electrode_group_channel_map ||
-    [];
+  // Prefer the day's deviceOverrides ONLY when they are well-formed arrays. A
+  // malformed (non-array) override is corrupt persisted state; using it would
+  // crash the `.map` below, so fall back to the snapshot (fail-closed) rather than
+  // crash before the repair UI can render.
+  const electrodeGroups = Array.isArray(day.deviceOverrides?.electrode_groups)
+    ? day.deviceOverrides.electrode_groups
+    : getProbeElectrodeGroups(config.devices);
+  const baseNtrodes = Array.isArray(day.deviceOverrides?.ntrode_electrode_group_channel_map)
+    ? day.deviceOverrides.ntrode_electrode_group_channel_map
+    : getProbeNtrodeMaps(config.devices);
 
   // Apply day-level bad-channel overrides onto the resolved ntrode map. The override
-  // map is keyed by ntrode_id; a present entry REPLACES that ntrode's `bad_channels`
-  // (the DevicesStep editor manages the full per-ntrode array). Keys are object
-  // (string) keys; normalize with String(ntrode_id) so the lookup survives a future
-  // change of ntrode_id to an integer. Clone the overridden entry so the snapshot is
-  // never mutated. An override keyed to an ntrode_id absent from the resolved map is
-  // ignored here (a stale/dangling reference; surfacing it is a validation concern).
+  // map is keyed by ntrode_id; a present, WELL-FORMED (array) entry REPLACES that
+  // ntrode's `bad_channels`. Anything malformed is NOT applied to the geometry row:
+  //  - a non-record container (e.g. scalar "2.9") is ignored wholesale;
+  //  - a non-array value under a valid key is declined (the base row is kept) — we do
+  //    NOT smear the scalar onto the row, because that surfaces as an Animal-Editor
+  //    schema error on a field the user can't reach there. The corruption is instead
+  //    surfaced by `dayOverrideIssues` as a day-routed blocker (which reads the raw
+  //    override directly), so it is neither laundered nor hidden — just routed to its
+  //    real owner. An override keyed to an absent ntrode_id is likewise left to
+  //    `dayOverrideIssues`, not applied here.
   const overrides = day.deviceOverrides?.bad_channels;
-  const ntrodes = overrides
-    ? baseNtrodes.map((n) =>
-        Object.hasOwn(overrides, String(n.ntrode_id))
-          ? { ...n, bad_channels: [...overrides[String(n.ntrode_id)]] }
-          : n
-      )
-    : baseNtrodes;
+  const baseArray = Array.isArray(baseNtrodes) ? baseNtrodes : [];
+  const ntrodes = isPlainRecord(overrides)
+    ? baseArray.map((n) => {
+        if (!Object.hasOwn(overrides, String(n.ntrode_id))) return n;
+        const ov = overrides[String(n.ntrode_id)];
+        return Array.isArray(ov) ? { ...n, bad_channels: [...ov] } : n;
+      })
+    : baseArray;
 
   return {
-    electrode_groups: electrodeGroups.map((group, index) => normalizeElectrodeGroup(group, index)),
+    electrode_groups: (Array.isArray(electrodeGroups) ? electrodeGroups : []).map((group, index) =>
+      normalizeElectrodeGroup(group, index)
+    ),
     ntrode_electrode_group_channel_map: ntrodes.map((ntrode, index) =>
       normalizeNtrodeMap(ntrode, index)
     ),
@@ -198,39 +237,50 @@ export function mergeDayMetadata(animal, day) {
   const { electrode_groups: electrodeGroups, ntrode_electrode_group_channel_map: ntrodeMap } =
     resolveDayConfig(animal, day);
 
-  const devices = normalizeDevices(animal.devices);
-  const cameras = animal.cameras || [];
+  const devices = normalizeDevices(getAnimalDevices(animal));
+  // Raw animal/day fields read through the canonical shape-safe selectors — the single
+  // place these guards live, so the merge can't drift from the editors. A malformed
+  // import still surfaces as a validation issue downstream (normalization never decides
+  // export validity); it just can't crash the merge here.
+  const cameras = getAnimalCameras(animal);
   const opto = animal.optogenetics || null;
+  const experimenters = getAnimalExperimenters(animal);
+  const session = getDaySession(day);
+  const technical = isPlainRecord(day.technical) ? day.technical : {};
+  const subject = getAnimalSubject(animal);
 
   // Build the merged object in legacy `defaultYMLValues` key order. keywords /
   // units / default_header_file_path are placed at their canonical positions here
   // and deleted below when empty (delete preserves the order of surviving keys).
   const merged = {
     // === From Animal: Experimenters ===
-    experimenter_name: animal.experimenters.experimenter_name,
-    lab: animal.experimenters.lab,
-    institution: animal.experimenters.institution,
+    experimenter_name: experimenters.experimenter_name,
+    lab: experimenters.lab,
+    institution: experimenters.institution,
 
     // === From Day: Session ===
     // Per-day value wins; fall back to the animal-level default (what the
     // OverviewStep "leave blank to use animal's default" hint promises).
     experiment_description:
-      day.session.experiment_description || animal.experiment_description || '',
-    session_description: day.session.session_description,
-    session_id: day.session.session_id,
-    keywords: Array.isArray(day.keywords) ? day.keywords : [],
+      session.experiment_description || animal.experiment_description || '',
+    session_description: session.session_description,
+    session_id: session.session_id,
+    keywords: getDayKeywords(day),
 
     // === From Animal: Subject (with day weight override) ===
     subject: reorderKeys(
       {
-        ...animal.subject,
-        weight: day.session.weight !== undefined ? day.session.weight : animal.subject.weight,
+        ...subject,
+        weight: session.weight !== undefined ? session.weight : subject.weight,
       },
       SUBJECT_ORDER
     ),
 
     // === From Animal: Data Acquisition ===
-    data_acq_device: (devices.data_acq_device || []).map((d) =>
+    // Read from RAW animal (not the normalized `devices` above): byte-safe ONLY because
+    // normalizeDevices does not transform data_acq_device items (it structuredClones them).
+    // If the normalizer ever starts normalizing these, route this through `devices` instead.
+    data_acq_device: getDataAcqDevices(animal).map((d) =>
       reorderKeys(d, DATA_ACQ_DEVICE_ORDER)
     ),
 
@@ -238,24 +288,24 @@ export function mergeDayMetadata(animal, day) {
     cameras: cameras.map((c) => reorderKeys(c, CAMERA_ORDER)),
 
     // === From Day: Behavioral Protocol ===
-    tasks: (day.tasks || []).map((t) => reorderKeys(t, TASK_ORDER)),
+    tasks: getDayTasks(day).map((t) => reorderKeys(t, TASK_ORDER)),
 
     // === From Day: Data Files ===
-    associated_files: (day.associated_files || []).map((f) =>
+    associated_files: getDayAssociatedFiles(day).map((f) =>
       reorderKeys(f, ASSOCIATED_FILE_ORDER)
     ),
-    associated_video_files: (day.associated_video_files || []).map((v) =>
+    associated_video_files: getDayAssociatedVideos(day).map((v) =>
       reorderKeys(v, ASSOCIATED_VIDEO_FILE_ORDER)
     ),
 
     // === From Day: Technical Parameters ===
-    units: reorderKeys(day.technical.units, UNITS_ORDER),
-    times_period_multiplier: day.technical.times_period_multiplier,
-    raw_data_to_volts: day.technical.raw_data_to_volts,
-    default_header_file_path: day.technical.default_header_file_path,
+    units: reorderKeys(technical.units, UNITS_ORDER),
+    times_period_multiplier: technical.times_period_multiplier,
+    raw_data_to_volts: technical.raw_data_to_volts,
+    default_header_file_path: technical.default_header_file_path,
 
     // === From Day: Behavioral Events ===
-    behavioral_events: (day.behavioral_events || []).map((e) =>
+    behavioral_events: getDayBehavioralEvents(day).map((e) =>
       reorderKeys(e, BEHAVIORAL_EVENT_ORDER)
     ),
 
@@ -268,7 +318,7 @@ export function mergeDayMetadata(animal, day) {
     opto_excitation_source: opto ? reorderItems(opto.opto_excitation_source, OPTO_EXCITATION_SOURCE_ORDER) : [],
     optical_fiber: opto ? reorderItems(opto.optical_fiber, OPTICAL_FIBER_ORDER) : [],
     virus_injection: opto ? reorderItems(opto.virus_injection, VIRUS_INJECTION_ORDER) : [],
-    fs_gui_yamls: day.fs_gui_yamls && day.fs_gui_yamls.length > 0 ? reorderItems(day.fs_gui_yamls, FS_GUI_YAML_ORDER) : [],
+    fs_gui_yamls: getDayFsGuiYamls(day).length > 0 ? reorderItems(getDayFsGuiYamls(day), FS_GUI_YAML_ORDER) : [],
     optogenetic_stimulation_software: opto ? opto.optogenetic_stimulation_software : '',
 
     // === From Configuration Version (or Day Override): Electrode Groups ===
@@ -281,13 +331,13 @@ export function mergeDayMetadata(animal, day) {
   // analog, default_header_file_path non-empty pattern), so emitting an empty value
   // would make a complete day fail validation. `delete` preserves the insertion
   // order of the remaining keys, so the legacy byte order is unaffected.
-  if (!(Array.isArray(day.keywords) && day.keywords.length > 0)) {
+  if (getDayKeywords(day).length === 0) {
     delete merged.keywords;
   }
-  if (!(day.technical.units && Object.keys(day.technical.units).length > 0)) {
+  if (!(technical.units && Object.keys(technical.units).length > 0)) {
     delete merged.units;
   }
-  if (!day.technical.default_header_file_path) {
+  if (!technical.default_header_file_path) {
     delete merged.default_header_file_path;
   }
 

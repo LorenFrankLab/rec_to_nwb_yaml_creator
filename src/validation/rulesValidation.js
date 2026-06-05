@@ -6,7 +6,11 @@
 
 import { isValidSpecies, idHasSlash } from './dandiSubject';
 import { getChannelCount, validateDeviceType } from '../utils/deviceTypeUtils';
-import { deviceTypeMap } from '../ntrode/deviceTypes';
+import {
+  getProbeShanks,
+  getProbeElectrodeIds,
+  isProbeCatalogConsistent,
+} from '../ntrode/probeCatalog';
 
 /**
  * Custom business logic validation rules
@@ -50,6 +54,7 @@ export const rulesValidation = (model) => {
       issues.push({
         path: 'tasks',
         code: 'missing_camera',
+        repairSurface: 'day',
         severity: 'error',
         message: 'Tasks have camera_ids, but no cameras are defined'
       });
@@ -59,14 +64,18 @@ export const rulesValidation = (model) => {
   // Rule 2: Associated video files with camera_ids require cameras
   // Only trigger if video files have non-empty camera_id arrays
   if (!model.cameras && Array.isArray(model.associated_video_files) && model.associated_video_files.length > 0) {
+    // associated_video_files[].camera_id is a SCALAR integer (schema), unlike the
+    // task camera_id ARRAY — so a video referencing camera 0 with no cameras table
+    // must still trip the missing-camera rule.
     const videosWithCameras = model.associated_video_files.some(video =>
-      video.camera_id && Array.isArray(video.camera_id) && video.camera_id.length > 0
+      video?.camera_id !== undefined && video?.camera_id !== null && video?.camera_id !== ''
     );
 
     if (videosWithCameras) {
       issues.push({
         path: 'associated_video_files',
         code: 'missing_camera',
+        repairSurface: 'day',
         severity: 'error',
         message: 'Associated video files have camera_ids, but no cameras are defined'
       });
@@ -84,6 +93,7 @@ export const rulesValidation = (model) => {
     issues.push({
       path: 'optogenetics',
       code: 'partial_configuration',
+      repairSurface: 'day',
       severity: 'error',
       message:
         `Partial optogenetics configuration detected. All fields required: ` +
@@ -113,6 +123,7 @@ export const rulesValidation = (model) => {
           issues.push({
             path: `ntrode_electrode_group_channel_map[${ntrode.ntrode_id}]`,
             code: 'duplicate_channels',
+            repairSurface: 'animal',
             severity: 'error',
             message:
               `Ntrode ${ntrode.ntrode_id} has duplicate channel mappings. ` +
@@ -144,6 +155,7 @@ export const rulesValidation = (model) => {
           issues.push({
             path: `ntrode_electrode_group_channel_map[${ntrode.ntrode_id}]`,
             code: 'missing_channels',
+            repairSurface: 'animal',
             severity: 'error',
             message:
               `Ntrode ${ntrode.ntrode_id} has gaps in channel mapping. ` +
@@ -170,6 +182,7 @@ export const rulesValidation = (model) => {
         issues.push({
           path: 'electrode_groups',
           code: 'duplicate_electrode_group_id',
+          repairSurface: 'animal',
           severity: 'error',
           message:
             `Duplicate electrode group id "${id}". Each electrode group must have a ` +
@@ -194,6 +207,7 @@ export const rulesValidation = (model) => {
         issues.push({
           path: 'ntrode_electrode_group_channel_map',
           code: 'duplicate_ntrode_id',
+          repairSurface: 'animal',
           severity: 'error',
           message:
             `Duplicate ntrode id "${id}". Each ntrode must have a unique id — ` +
@@ -215,6 +229,7 @@ export const rulesValidation = (model) => {
       issues.push({
         path: 'subject.species',
         code: 'invalid_species',
+        repairSurface: 'day',
         severity: 'error',
         message:
           `Species "${sp}" is not DANDI-valid. Use a Latin binomial (e.g. ` +
@@ -226,6 +241,7 @@ export const rulesValidation = (model) => {
       issues.push({
         path: 'subject.subject_id',
         code: 'subject_id_slash',
+        repairSurface: 'none',
         severity: 'error',
         message:
           `Subject ID "${subject.subject_id}" must not contain "/" (DANDI rejects slashes). ` +
@@ -239,6 +255,7 @@ export const rulesValidation = (model) => {
     issues.push({
       path: 'session_id',
       code: 'session_id_slash',
+      repairSurface: 'none',
       severity: 'error',
       message:
         `Session ID "${model.session_id}" must not contain "/" (DANDI rejects slashes). ` +
@@ -247,7 +264,7 @@ export const rulesValidation = (model) => {
     });
   }
 
-  // Rule 9 (Phase 6, Task 1): dangling camera references.
+  // Rule 9: dangling camera references.
   // Every value in each tasks[].camera_id ARRAY and each scalar
   // associated_video_files[].camera_id must reference an existing cameras[].id.
   // (Existing Rules 1/2 only catch the no-cameras-at-all case; this catches a
@@ -258,7 +275,7 @@ export const rulesValidation = (model) => {
   const validCameraIds = Array.isArray(model.cameras)
     ? new Set(model.cameras.map((c) => c?.id).filter((id) => id !== undefined && id !== null))
     : null;
-  if (validCameraIds) (model.tasks || []).forEach((task, ti) => {
+  if (validCameraIds) (Array.isArray(model.tasks) ? model.tasks : []).forEach((task, ti) => {
     if (!Array.isArray(task?.camera_id)) return;
     task.camera_id.forEach((cid) => {
       if (cid === undefined || cid === null) return;
@@ -269,6 +286,7 @@ export const rulesValidation = (model) => {
           step: 'epochs',
           actionLabel: 'Fix task camera',
           code: 'dangling_camera_ref',
+          repairSurface: 'day',
           severity: 'error',
           message:
             `Task ${ti + 1}${task.task_name ? ` ("${task.task_name}")` : ''} references ` +
@@ -279,7 +297,7 @@ export const rulesValidation = (model) => {
     });
   });
   // Video camera_id is a SCALAR integer, not an array (schema nwb_schema.json:892).
-  if (validCameraIds) (model.associated_video_files || []).forEach((video, vi) => {
+  if (validCameraIds) (Array.isArray(model.associated_video_files) ? model.associated_video_files : []).forEach((video, vi) => {
     const cid = video?.camera_id;
     // A blank/empty camera_id is an incomplete row; the schema's required/type
     // check owns that with a clear message — don't emit "references camera id ,".
@@ -291,6 +309,7 @@ export const rulesValidation = (model) => {
         step: 'epochs',
         actionLabel: 'Fix video camera',
         code: 'dangling_camera_ref',
+        repairSurface: 'day',
         severity: 'error',
         message:
           `Video ${vi + 1}${video.name ? ` ("${video.name}")` : ''} references camera id ` +
@@ -300,21 +319,28 @@ export const rulesValidation = (model) => {
     }
   });
 
-  // Rule 11 (Phase 6, Task 3): channel bounds (see designs.md#channel-map-semantics).
-  // Map VALUES are probe electrode ids, reset PER electrode group (a second
-  // tetrode is 0..3, not 4..7). Bounds come from the real device helpers:
-  //   getChannelCount(device_type)  → total probe electrode ids [0, count)
-  //   deviceTypeMap(device_type)    → the per-shank electrode-id list (its length
-  //                                   is the channel count of one ntrode/shank)
-  // Looked up via the ntrode's electrode group's device_type. Unknown devices
-  // (count 0) are skipped here — Task 5 reports them.
+  // Rule 11: catalog-driven channel bounds.
+  // The VERIFIED probe catalog (probeCatalog.js, transcribed from trodes_to_nwb)
+  // is the source of truth. Map VALUES are probe electrode ids, reset PER
+  // electrode group, and partitioned across shanks (a 2nd tetrode is 0..3 not 4..7;
+  // a 64c-3s probe partitions 64 ids UNEVENLY as 21/21/22). Per electrode group:
+  //   (a) every map value is in getProbeElectrodeIds(device_type) [0, total);
+  //   (b) the group's ntrode values cover getProbeElectrodeIds exactly once;
+  //   (c) the group's ntrode ROW COUNT equals num_shanks, and — matching rows to
+  //       shanks BY ORDER — row i's keys are 0..(shank_i.electrodeIds.length-1);
+  //   (d) bad_channels are probe-local indices in [0, total).
+  // Unknown devices (no shanks) are skipped here — Rule 13 (unknown_device_type) reports them.
   if (Array.isArray(model.ntrode_electrode_group_channel_map) && model.ntrode_electrode_group_channel_map.length > 0) {
     const groupById = new Map(
-      (model.electrode_groups || [])
+      (Array.isArray(model.electrode_groups) ? model.electrode_groups : [])
         .filter((g) => g?.id !== undefined && g?.id !== null)
         .map((g) => [g.id, g])
     );
-    // Collect the value set per electrode group for the partition check (b).
+
+    // Per-row checks (a)/(d) and key-count (c), with rows matched to shanks BY
+    // ORDER within each group. `rowIndexByGroup` tracks each group's next shank.
+    const rowIndexByGroup = new Map();
+    // Collect the value set per electrode group for the coverage check (b).
     const valuesByGroup = new Map();
 
     model.ntrode_electrode_group_channel_map.forEach((ntrode) => {
@@ -323,14 +349,19 @@ export const rulesValidation = (model) => {
       const channelCount = getChannelCount(deviceType);
       if (!channelCount) return; // dangling group / unknown device handled elsewhere
 
-      const perNtrodeCount = deviceTypeMap(deviceType).length;
+      const shanks = getProbeShanks(deviceType);
+      const electrodeIdSet = new Set(getProbeElectrodeIds(deviceType));
+      const gid = ntrode.electrode_group_id;
+      const rowIndex = rowIndexByGroup.get(gid) ?? 0;
+      rowIndexByGroup.set(gid, rowIndex + 1);
+      // The shank this row should mirror (by order); undefined if there are more
+      // rows than shanks (an excess row — flagged by the coverage/count checks).
+      const shank = shanks[rowIndex];
       const map = ntrode.map && typeof ntrode.map === 'object' ? ntrode.map : {};
 
-      // (a) every map value is an integer in [0, channelCount)
+      // (a) every map value is a probe electrode id of this device.
       const values = Object.values(map);
-      const outOfRange = values.filter(
-        (v) => !Number.isInteger(v) || v < 0 || v >= channelCount
-      );
+      const outOfRange = values.filter((v) => !electrodeIdSet.has(v));
       if (outOfRange.length > 0) {
         issues.push({
           path: `ntrode_electrode_group_channel_map[${ntrode.ntrode_id}]`,
@@ -338,6 +369,7 @@ export const rulesValidation = (model) => {
           step: 'devices',
           actionLabel: 'Fix channel map',
           code: 'channel_value_out_of_range',
+          repairSurface: 'animal',
           severity: 'error',
           message:
             `Ntrode ${ntrode.ntrode_id} maps to electrode id(s) ` +
@@ -346,13 +378,15 @@ export const rulesValidation = (model) => {
         });
       }
 
-      // (c) map keys are 0 … (perNtrodeCount − 1)
+      // (c) this row's keys are 0..(shank_i.electrodeIds.length-1). When there is
+      // no matching shank (excess row), the expected count is 0, so any key fails.
+      const expectedKeyCount = shank ? shank.electrodeIds.length : 0;
       const keys = Object.keys(map).map(Number);
       const keySet = new Set(keys);
       const keysValid =
-        keys.length === perNtrodeCount &&
-        keys.every((k) => Number.isInteger(k) && k >= 0 && k < perNtrodeCount) &&
-        keySet.size === perNtrodeCount;
+        keys.length === expectedKeyCount &&
+        keys.every((k) => Number.isInteger(k) && k >= 0 && k < expectedKeyCount) &&
+        keySet.size === expectedKeyCount;
       if (!keysValid) {
         issues.push({
           path: `ntrode_electrode_group_channel_map[${ntrode.ntrode_id}]`,
@@ -360,14 +394,15 @@ export const rulesValidation = (model) => {
           step: 'devices',
           actionLabel: 'Fix channel map',
           code: 'channel_key_out_of_range',
+          repairSurface: 'animal',
           severity: 'error',
           message:
-            `Ntrode ${ntrode.ntrode_id} channel-map keys must be 0–${perNtrodeCount - 1} ` +
-            `(one per channel of device "${deviceType}").`,
+            `Ntrode ${ntrode.ntrode_id} channel-map keys must be 0–${expectedKeyCount - 1} ` +
+            `(one per channel of shank ${rowIndex + 1} of device "${deviceType}").`,
         });
       }
 
-      // (d) bad_channels indices are in [0, channelCount)
+      // (d) bad_channels indices are probe-local, in [0, channelCount).
       const badChannels = Array.isArray(ntrode.bad_channels) ? ntrode.bad_channels : [];
       const badOutOfRange = badChannels.filter(
         (b) => !Number.isInteger(b) || b < 0 || b >= channelCount
@@ -379,6 +414,7 @@ export const rulesValidation = (model) => {
           step: 'devices',
           actionLabel: 'Fix bad channels',
           code: 'bad_channel_out_of_range',
+          repairSurface: 'day',
           severity: 'error',
           message:
             `Ntrode ${ntrode.ntrode_id} marks bad channel(s) ` +
@@ -387,25 +423,45 @@ export const rulesValidation = (model) => {
         });
       }
 
-      // Accumulate values for this group's partition check.
-      if (!valuesByGroup.has(ntrode.electrode_group_id)) {
-        valuesByGroup.set(ntrode.electrode_group_id, { deviceType, channelCount, values: [] });
+      // Accumulate values for this group's coverage check.
+      if (!valuesByGroup.has(gid)) {
+        valuesByGroup.set(gid, { deviceType, channelCount, values: [] });
       }
-      valuesByGroup.get(ntrode.electrode_group_id).values.push(...values);
+      valuesByGroup.get(gid).values.push(...values);
     });
 
     // (b) within an electrode group, the ntrodes' values must cover EVERY probe
     // electrode id 0 … channelCount-1 exactly once (complete + unique). The
     // converter looks up hw_channel_map[group][str(electrode_id)] for every probe
-    // electrode (convert_yaml.add_electrode_groups), so a gap (e.g. a multi-shank
-    // probe whose per-shank lists under-generate, like 64c-3s yielding 60 of 64
-    // ids) or a cross-shank collision (missing per-shank offset) breaks conversion.
-    // Skipped when (a) already flagged an out-of-range value for the group, so a
-    // single mistake yields a single error.
+    // electrode (convert_yaml.add_electrode_groups), so a gap (e.g. a 64c-3s map
+    // that under-generates to 60 of 64 ids) or a cross-shank collision (missing
+    // per-shank offset) breaks conversion. Skipped when (a) already flagged an
+    // out-of-range value for the group, so a single mistake yields a single error.
     valuesByGroup.forEach(({ deviceType, channelCount, values }, groupId) => {
-      const anyOutOfRange = values.some(
-        (v) => !Number.isInteger(v) || v < 0 || v >= channelCount
-      );
+      // (e) the group's ntrode ROW COUNT must equal the probe's shank count. An
+      // extra (e.g. empty `{ map: {} }`) row contributes no values and would slip
+      // past the coverage check, but the converter expects exactly one row per
+      // shank (convert_rec_header header check), so flag the mismatch.
+      const expectedRows = getProbeShanks(deviceType).length;
+      const actualRows = rowIndexByGroup.get(groupId) ?? 0;
+      if (expectedRows > 0 && actualRows !== expectedRows) {
+        issues.push({
+          path: `ntrode_electrode_group_channel_map`,
+          field: 'map',
+          step: 'devices',
+          actionLabel: 'Fix channel map',
+          code: 'channel_row_count_mismatch',
+          repairSurface: 'animal',
+          severity: 'error',
+          message:
+            `Electrode group ${groupId} ("${deviceType}") has ${actualRows} channel-map row(s) ` +
+            `but the probe has ${expectedRows} shank(s). There must be exactly one ntrode row per ` +
+            `shank — remove extra rows or add the missing one.`,
+        });
+        return; // a row-count problem subsumes the coverage check
+      }
+      const electrodeIdSet = new Set(getProbeElectrodeIds(deviceType));
+      const anyOutOfRange = values.some((v) => !electrodeIdSet.has(v));
       if (anyOutOfRange) return; // (a) owns this group's error
       const unique = new Set(values);
       const covers = values.length === channelCount && unique.size === channelCount;
@@ -416,6 +472,7 @@ export const rulesValidation = (model) => {
           step: 'devices',
           actionLabel: 'Fix channel map',
           code: 'channel_partition_invalid',
+          repairSurface: 'animal',
           severity: 'error',
           message:
             `Electrode group ${groupId} ("${deviceType}") channel map must cover electrode ids ` +
@@ -426,7 +483,48 @@ export const rulesValidation = (model) => {
     });
   }
 
-  // Rule 12 (Phase 6, Task 4): non-empty, consistent location / targeted_location.
+  // Rule 11b: in a PARTIALLY-configured day (the channel map has at least one row),
+  // every electrode group must still have its own rows — a group with ZERO rows
+  // slips past the per-group check above (which only sees groups with ≥1 row) and
+  // would otherwise be caught only by step incompleteness. A FULLY-unconfigured day
+  // (no rows at all) stays "incomplete" (step status owns it), not an error.
+  if (
+    Array.isArray(model.electrode_groups) &&
+    model.electrode_groups.length > 0 &&
+    Array.isArray(model.ntrode_electrode_group_channel_map) &&
+    model.ntrode_electrode_group_channel_map.length > 0
+  ) {
+    const rowCountByGroup = new Map();
+    (Array.isArray(model.ntrode_electrode_group_channel_map)
+      ? model.ntrode_electrode_group_channel_map
+      : []
+    ).forEach((ntrode) => {
+      const gid = ntrode?.electrode_group_id;
+      if (gid === undefined || gid === null) return;
+      rowCountByGroup.set(gid, (rowCountByGroup.get(gid) || 0) + 1);
+    });
+    model.electrode_groups.forEach((group, gi) => {
+      const expectedRows = getProbeShanks(group?.device_type).length;
+      if (expectedRows === 0) return; // unknown device → Rule 13 owns it
+      const actualRows = rowCountByGroup.get(group?.id) || 0;
+      if (actualRows === 0) {
+        issues.push({
+          path: `electrode_groups[${gi}]`,
+          field: 'map',
+          step: 'devices',
+          actionLabel: 'Add channel map',
+          code: 'channel_row_count_mismatch',
+          repairSurface: 'animal',
+          severity: 'error',
+          message:
+            `Electrode group ${group?.id ?? gi} ("${group?.device_type}") has no channel-map ` +
+            `rows, but the probe has ${expectedRows} shank(s). Add one ntrode row per shank.`,
+        });
+      }
+    });
+  }
+
+  // Rule 12: non-empty, consistent location / targeted_location.
   // Spyglass auto-creates BrainRegion rows from electrode_group.location by exact
   // string (no trim/case-fold); targeted_location is schema-required and used by
   // trodes_to_nwb as the per-electrode location. Both must be non-empty; a
@@ -441,6 +539,7 @@ export const rulesValidation = (model) => {
           step: 'devices',
           actionLabel: 'Set location',
           code: 'empty_location',
+          repairSurface: 'animal',
           severity: 'error',
           message:
             `Electrode group ${group?.id ?? gi} has an empty location. A non-empty brain ` +
@@ -454,6 +553,7 @@ export const rulesValidation = (model) => {
           step: 'devices',
           actionLabel: 'Set targeted location',
           code: 'empty_targeted_location',
+          repairSurface: 'animal',
           severity: 'error',
           message:
             `Electrode group ${group?.id ?? gi} has an empty targeted_location. It is ` +
@@ -480,6 +580,7 @@ export const rulesValidation = (model) => {
           step: 'devices',
           actionLabel: 'Make location capitalization consistent',
           code: 'inconsistent_location_case',
+          repairSurface: 'animal',
           severity: 'warning',
           message:
             `Inconsistent capitalization of the same location across electrode groups: ` +
@@ -490,7 +591,7 @@ export const rulesValidation = (model) => {
     });
   }
 
-  // Rule 13 (Phase 6, Task 5): device_type is a known/registered probe.
+  // Rule 13: device_type is a known/registered probe.
   // An unknown device_type hard-fails downstream (trodes_to_nwb FileNotFoundError
   // loading the probe metadata). Guards copy/CSV-import-introduced values.
   if (Array.isArray(model.electrode_groups) && model.electrode_groups.length > 0) {
@@ -504,6 +605,7 @@ export const rulesValidation = (model) => {
           step: 'devices',
           actionLabel: 'Pick a supported probe',
           code: 'unknown_device_type',
+          repairSurface: 'animal',
           severity: 'error',
           message:
             `Electrode group ${group?.id ?? gi} uses device_type "${dt}", which is not a ` +
@@ -514,7 +616,38 @@ export const rulesValidation = (model) => {
     });
   }
 
-  // Rule 14 (Phase 6, Task 6): behavioral-event names unique within the day.
+  // Rule 20 (Probe Metadata Contract): the device_type's catalog entry must be
+  // INTERNALLY CONSISTENT (contiguous electrode ids 0..n-1, no gaps/dupes, shank
+  // count matches). A known-but-inconsistent catalog entry would generate a
+  // converter-invalid channel map, so export is BLOCKED and the probe is NAMED.
+  // Entirely-unknown device types are owned by Rule 13 (unknown_device_type).
+  if (Array.isArray(model.electrode_groups) && model.electrode_groups.length > 0) {
+    const reportedProbes = new Set();
+    model.electrode_groups.forEach((group, gi) => {
+      const dt = group?.device_type;
+      if (dt === undefined || dt === null || dt === '') return; // schema owns empty
+      if (!validateDeviceType(dt)) return; // unknown -> Rule 13 owns it
+      if (isProbeCatalogConsistent(dt)) return; // consistent -> nothing to report
+      if (reportedProbes.has(dt)) return; // one error per inconsistent probe
+      reportedProbes.add(dt);
+      issues.push({
+        path: `electrode_groups[${gi}].device_type`,
+        field: 'device_type',
+        step: 'devices',
+        actionLabel: 'Pick a supported probe',
+        code: 'inconsistent_probe_catalog',
+        repairSurface: 'animal',
+        severity: 'error',
+        message:
+          `Electrode group ${group?.id ?? gi} uses device type "${dt}", whose channel geometry is ` +
+          `inconsistent and cannot be exported (its channel map would fail conversion). Choose a ` +
+          `different, supported probe type. If you believe "${dt}" should be supported, contact your ` +
+          `lab's pipeline maintainer.`,
+      });
+    });
+  }
+
+  // Rule 14: behavioral-event names unique within the day.
   // A duplicate dio_event name is a hard Spyglass DIOEvents primary-key violation
   // and a trodes_to_nwb ValueError.
   if (Array.isArray(model.behavioral_events) && model.behavioral_events.length > 0) {
@@ -531,6 +664,7 @@ export const rulesValidation = (model) => {
           step: 'epochs',
           actionLabel: 'Rename behavioral event',
           code: 'duplicate_behavioral_event_name',
+          repairSurface: 'day',
           severity: 'error',
           message:
             `Duplicate behavioral event name "${name}". Each behavioral (DIO) event name ` +
@@ -541,13 +675,13 @@ export const rulesValidation = (model) => {
     });
   }
 
-  // Rule 15 (Phase 6, Task 7): task/video epoch dependencies.
+  // Rule 15: task/video epoch dependencies.
   // (a) task epochs are unique across task rows — Spyglass TaskEpoch is keyed by
   //     session + epoch, so the same epoch number in two tasks collides.
   // (b) each non-empty associated_video_files entry has a task_epochs that matches
   //     some task's task_epochs — an orphaned video silently does not import
   //     (common_behav.py:451, common_task.py:240). Scalar camera_id validity is
-  //     Rule 9 (Task 1).
+  //     Rule 9.
   // A task with epochs and no camera is the explicitly-allowed no-camera path (a
   // camera-less epoch is valid; only a *video* needs a backing epoch + camera).
   if (Array.isArray(model.tasks) && model.tasks.length > 0) {
@@ -569,6 +703,7 @@ export const rulesValidation = (model) => {
           step: 'epochs',
           actionLabel: 'Fix task epochs',
           code: 'duplicate_task_epoch',
+          repairSurface: 'day',
           severity: 'error',
           message:
             `Task epoch ${epoch} is used by more than one task. Each epoch belongs to a ` +
@@ -580,7 +715,7 @@ export const rulesValidation = (model) => {
 
   if (Array.isArray(model.associated_video_files) && model.associated_video_files.length > 0) {
     const taskEpochSet = new Set();
-    (model.tasks || []).forEach((task) => {
+    (Array.isArray(model.tasks) ? model.tasks : []).forEach((task) => {
       (Array.isArray(task?.task_epochs) ? task.task_epochs : []).forEach((e) => {
         if (e !== undefined && e !== null) taskEpochSet.add(e);
       });
@@ -596,6 +731,7 @@ export const rulesValidation = (model) => {
           step: 'epochs',
           actionLabel: 'Fix video epoch',
           code: 'orphaned_video',
+          repairSurface: 'day',
           severity: 'error',
           message:
             `Video ${vi + 1}${video.name ? ` ("${video.name}")` : ''} references task epoch ` +
@@ -606,10 +742,41 @@ export const rulesValidation = (model) => {
     });
   }
 
-  // Rule 16 (Phase 6, Task 8): workspace/dataset identity consistency (Spyglass).
+  // orphaned_file: an associated_files[].task_epochs (scalar) must match some
+  // task's epochs. Preserved (never silently scrubbed) stale references surface
+  // here so the user can repair them instead of losing the value (Load-Time Orphan
+  // Visibility Contract).
+  if (Array.isArray(model.associated_files) && model.associated_files.length > 0) {
+    const taskEpochSet = new Set();
+    (Array.isArray(model.tasks) ? model.tasks : []).forEach((task) => {
+      (Array.isArray(task?.task_epochs) ? task.task_epochs : []).forEach((e) => {
+        if (e !== undefined && e !== null) taskEpochSet.add(e);
+      });
+    });
+    model.associated_files.forEach((file, fi) => {
+      const epoch = file?.task_epochs;
+      if (epoch === undefined || epoch === null || epoch === '') return; // schema owns empty
+      if (!taskEpochSet.has(epoch)) {
+        issues.push({
+          path: `associated_files[${fi}].task_epochs`,
+          field: 'task_epochs',
+          step: 'epochs',
+          actionLabel: 'Fix file epoch',
+          code: 'orphaned_file',
+          repairSurface: 'day',
+          severity: 'error',
+          message:
+            `Associated file ${fi + 1}${file.name ? ` ("${file.name}")` : ''} references task ` +
+            `epoch ${epoch}, which no task defines. Point it at an existing epoch or remove it.`,
+        });
+      }
+    });
+  }
+
+  // Rule 16: workspace/dataset identity consistency (Spyglass).
   // Within the exported model, a reused identity name must carry identical
   // dependent metadata, else Spyglass raises a divergence error or silently reuses
-  // the wrong row. (The editing-time guard is phase 3 / Task 0b; this catches
+  // the wrong row. (The editing-time guard is the camera/data-acq/task-name editor; this catches
   // imported/existing invalid state in the exported file.)
   const identityDivergences = (items, nameKey, depKeys, code, label, noun) => {
     if (!Array.isArray(items)) return; // schema owns wrong-type (e.g. object) cases
@@ -627,6 +794,7 @@ export const rulesValidation = (model) => {
           path: noun,
           field: nameKey,
           step: noun === 'tasks' ? 'epochs' : 'devices',
+          repairSurface: noun === 'tasks' ? 'day' : 'animal',
           actionLabel: label,
           code,
           severity: 'error',
@@ -654,13 +822,13 @@ export const rulesValidation = (model) => {
     'divergent_task_identity', 'Use a new task name', 'tasks'
   );
 
-  // Rule 10 (Phase 6, Task 2): dangling electrode-group references.
+  // Rule 10: dangling electrode-group references.
   // Every ntrode_electrode_group_channel_map[].electrode_group_id must reference
   // an existing electrode_groups[].id (otherwise the ntrode maps onto nothing
   // and trodes_to_nwb/Spyglass silently drop or misattach the channels).
   if (Array.isArray(model.ntrode_electrode_group_channel_map) && model.ntrode_electrode_group_channel_map.length > 0) {
     const validGroupIds = new Set(
-      (model.electrode_groups || []).map((g) => g?.id).filter((id) => id !== undefined && id !== null)
+      (Array.isArray(model.electrode_groups) ? model.electrode_groups : []).map((g) => g?.id).filter((id) => id !== undefined && id !== null)
     );
     model.ntrode_electrode_group_channel_map.forEach((ntrode) => {
       const egid = ntrode?.electrode_group_id;
@@ -672,6 +840,7 @@ export const rulesValidation = (model) => {
           step: 'devices',
           actionLabel: 'Fix channel map',
           code: 'dangling_electrode_group_ref',
+          repairSurface: 'animal',
           severity: 'error',
           message:
             `Ntrode ${ntrode.ntrode_id} references electrode group id ${egid}, but no ` +
@@ -681,7 +850,7 @@ export const rulesValidation = (model) => {
     });
   }
 
-  // Rule 17 (Phase 6 follow-up, High 3): behavioral-event DESCRIPTION uniqueness.
+  // Rule 17: behavioral-event DESCRIPTION uniqueness.
   // trodes_to_nwb (convert_dios) keys DIO channels by behavioral_events[].description
   // and raises a ValueError on a duplicate description. (Rule 14 covers `name`.)
   if (Array.isArray(model.behavioral_events) && model.behavioral_events.length > 0) {
@@ -698,6 +867,7 @@ export const rulesValidation = (model) => {
           step: 'epochs',
           actionLabel: 'Rename behavioral event description',
           code: 'duplicate_behavioral_event_description',
+          repairSurface: 'day',
           severity: 'error',
           message:
             `Duplicate behavioral event description "${desc}". The converter keys DIO ` +
@@ -708,7 +878,7 @@ export const rulesValidation = (model) => {
     });
   }
 
-  // Rule 18 (Phase 6 follow-up, Medium): camera id uniqueness.
+  // Rule 18: camera id uniqueness.
   // The converter names NWB camera devices `camera_device {id}` and videos
   // dereference that exact name, so duplicate cameras[].id collide downstream.
   if (Array.isArray(model.cameras) && model.cameras.length > 0) {
@@ -725,6 +895,7 @@ export const rulesValidation = (model) => {
           step: 'devices',
           actionLabel: 'Use a unique camera id',
           code: 'duplicate_camera_id',
+          repairSurface: 'animal',
           severity: 'error',
           message:
             `Duplicate camera id "${id}". Camera ids must be unique — the converter names ` +
@@ -735,7 +906,7 @@ export const rulesValidation = (model) => {
     });
   }
 
-  // Rule 19 (Phase 6 follow-up, High 2): multi-shank bad_channels are ignored
+  // Rule 19: multi-shank bad_channels are ignored
   // downstream. convert_yaml.add_electrode_groups uses ONLY the first ntrode row
   // matching an electrode group for `bad_channels` (then tests every probe
   // electrode against it). So bad_channels marked on a *later* row of a multi-row
@@ -760,8 +931,11 @@ export const rulesValidation = (model) => {
           path: `ntrode_electrode_group_channel_map[${ntrode.ntrode_id}]`,
           field: 'bad_channels',
           step: 'devices',
-          actionLabel: 'Move bad channels to the first ntrode row',
+          actionLabel: 'Edit bad channels',
           code: 'multishank_bad_channels_ignored',
+          // Repaired in the Day Editor Devices step, whose probe-wide bad-channel
+          // selector writes probe-local indices to the group's first ntrode row.
+          repairSurface: 'day',
           severity: 'error',
           message:
             `Bad channels on ntrode ${ntrode.ntrode_id} (electrode group ${gid}) are ignored ` +

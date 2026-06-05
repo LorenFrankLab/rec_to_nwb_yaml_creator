@@ -4,8 +4,22 @@ import Breadcrumb from './Breadcrumb';
 import ReadOnlyField from './ReadOnlyField';
 import KeywordsEditor from './KeywordsEditor';
 import DayTechnicalSection from './DayTechnicalSection';
+import MalformedCollectionNotice from './MalformedCollectionNotice';
+import RawCorruptionBanner from '../../components/RawCorruptionBanner';
+import { rawRecord } from '../../components/rawPropTypes';
 import { validateField } from './validation';
 import { isValidSpecies } from '../../validation/dandiSubject';
+import { RAW_DAY_ARRAY_FIELDS } from '../../validation/rawShape';
+import {
+  getDaySession,
+  getDayKeywords,
+  getAnimalSubject,
+  getAnimalExperimenters,
+  getExperimenterNames,
+} from '../../state/workspaceSelectors';
+
+// The day-owned collections this step owns (raw-shape reset surface).
+const OVERVIEW_STEP_COLLECTIONS = RAW_DAY_ARRAY_FIELDS.filter((f) => f.repairStep === 'overview');
 
 /**
  * Overview Step - Minimalist session metadata editor
@@ -25,9 +39,22 @@ import { isValidSpecies } from '../../validation/dandiSubject';
  * @param {Function} props.onFieldUpdate - Callback: (fieldPath, value) => void
  * @param props.onSubjectUpdate
  * @param props.focusRequest
+ * @param props.onRepair
  * @returns {JSX.Element}
  */
-export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, onSubjectUpdate, focusRequest }) {
+export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, onSubjectUpdate, focusRequest, onRepair }) {
+  // Tolerate corrupt persisted state: a malformed (null/scalar) `day.session`,
+  // `animal.subject`, or `animal.experimenters` must not crash the editor on a raw
+  // dereference. Read through the canonical shape-safe selectors (the single place these
+  // guards live), so a corrupt record renders blank fields the user can fix, never a
+  // blank/crashed step.
+  const session = getDaySession(day);
+  const subject = getAnimalSubject(animal);
+  const experimenters = getAnimalExperimenters(animal);
+  const experimenterNames = getExperimenterNames(animal);
+  const keywords = getDayKeywords(day);
+  const dayDateKey = String(day.date ?? '').replace(/-/g, '');
+
   const [fieldErrors, setFieldErrors] = useState({});
   const [validatingField, setValidatingField] = useState(null);
   const [showInherited, setShowInherited] = useState(false);
@@ -71,7 +98,9 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
       const validatePath = fieldPath.startsWith('session.')
         ? fieldPath.slice('session.'.length)
         : fieldPath;
-      const patched = structuredClone(mergedDay);
+      // mergedDay is null on the merge-failed fail-closed path (corrupt animal config);
+      // clone a safe `{}` so a blur-time validation can't throw on a null dereference.
+      const patched = structuredClone(mergedDay || {});
       patched[validatePath] = value;
 
       const { valid, errors } = await validateField(patched, validatePath);
@@ -106,6 +135,18 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
       {/* Breadcrumb Navigation */}
       <Breadcrumb items={breadcrumbItems} />
 
+      <MalformedCollectionNotice
+        day={day}
+        fields={OVERVIEW_STEP_COLLECTIONS}
+        onReset={(key) => onFieldUpdate(key, [])}
+      />
+
+      {/* A malformed (non-record) session loses its read-only, derived session_id and
+          dead-ends (the field can't be re-entered). Surface an executable "Reset session"
+          that restores the canonical session_id. The day array collections above are owned
+          by MalformedCollectionNotice; this banner owns only the session record. */}
+      <RawCorruptionBanner day={day} fields={['session']} onRepair={onRepair} />
+
       {/* ARIA live region for screen readers */}
       <div
         role="status"
@@ -123,8 +164,8 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
         <div className="form-grid">
           <ReadOnlyField
             label="Session ID"
-            value={day.session.session_id}
-            helpText={`Auto-generated from animal ID and date: ${animal.id}_${day.date.replace(/-/g, '')}`}
+            value={session.session_id}
+            helpText={`Auto-generated from animal ID and date: ${animal.id}_${dayDateKey}`}
           />
 
           <div className="form-field">
@@ -136,7 +177,7 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
               name="session.session_description"
               data-field-path="session_description"
               rows="3"
-              defaultValue={day.session.session_description}
+              defaultValue={session.session_description}
               onBlur={(e) => handleBlur('session.session_description', e.target.value)}
               className={fieldErrors['session.session_description'] ? 'invalid' : ''}
               aria-invalid={!!fieldErrors['session.session_description']}
@@ -161,7 +202,7 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
               name="session.experiment_description"
               data-field-path="experiment_description"
               rows="3"
-              defaultValue={day.session.experiment_description || animal.experiment_description || ''}
+              defaultValue={session.experiment_description || animal.experiment_description || ''}
               onBlur={(e) => handleBlur('session.experiment_description', e.target.value)}
               placeholder="e.g., Chronic tetrode recording during spatial navigation"
               className={fieldErrors['session.experiment_description'] ? 'invalid' : ''}
@@ -179,7 +220,7 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
           </div>
 
           <KeywordsEditor
-            value={day.keywords}
+            value={keywords}
             onChange={(keywords) => onFieldUpdate('keywords', keywords)}
           />
         </div>
@@ -220,9 +261,9 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
               </div>
 
               <div className="form-grid">
-                <ReadOnlyField label="Subject ID" value={animal.subject.subject_id} />
-                <ReadOnlyField label="Sex" value={animal.subject.sex} />
-                <ReadOnlyField label="Genotype" value={animal.subject.genotype} />
+                <ReadOnlyField label="Subject ID" value={subject.subject_id} />
+                <ReadOnlyField label="Sex" value={subject.sex} />
+                <ReadOnlyField label="Genotype" value={subject.genotype} />
 
                 <div className="form-field">
                   <label htmlFor="subject-date-of-birth">Date of Birth</label>
@@ -230,8 +271,8 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
                     id="subject-date-of-birth"
                     type="date"
                     data-field-path="subject.date_of_birth"
-                    key={animal.subject.date_of_birth || ''}
-                    defaultValue={(animal.subject.date_of_birth || '').split('T')[0]}
+                    key={subject.date_of_birth || ''}
+                    defaultValue={(subject.date_of_birth || '').split('T')[0]}
                     max={new Date().toISOString().split('T')[0]}
                     onBlur={(e) =>
                       onSubjectUpdate(
@@ -250,15 +291,15 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
                     min="0"
                     step="any"
                     data-field-path="subject.weight"
-                    key={`weight-${animal.subject.weight ?? ''}`}
-                    defaultValue={animal.subject.weight ?? ''}
+                    key={`weight-${subject.weight ?? ''}`}
+                    defaultValue={subject.weight ?? ''}
                     onBlur={(e) => {
                       onSubjectUpdate('weight', e.target.value === '' ? undefined : Number(e.target.value));
                       // The export prefers a day-level weight override over the animal
                       // weight, so a stale/invalid day override (only ever set via import)
                       // would defeat this repair. Clear it so the weight just entered is
                       // the value that's exported.
-                      if (day.session.weight !== undefined) {
+                      if (session.weight !== undefined) {
                         onFieldUpdate('session.weight', undefined);
                       }
                     }}
@@ -272,8 +313,8 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
                     id="subject-species"
                     type="text"
                     data-field-path="subject.species"
-                    key={`species-${animal.subject.species || ''}`}
-                    defaultValue={animal.subject.species || ''}
+                    key={`species-${subject.species || ''}`}
+                    defaultValue={subject.species || ''}
                     aria-invalid={!!speciesError}
                     aria-describedby={speciesError ? 'subject-species-error' : 'subject-species-hint'}
                     onBlur={(e) => {
@@ -305,8 +346,8 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
                     id="subject-description"
                     type="text"
                     data-field-path="subject.description"
-                    key={`desc-${animal.subject.description || ''}`}
-                    defaultValue={animal.subject.description || ''}
+                    key={`desc-${subject.description || ''}`}
+                    defaultValue={subject.description || ''}
                     onBlur={(e) => onSubjectUpdate('description', e.target.value)}
                   />
                 </div>
@@ -324,15 +365,15 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
               <div className="form-grid">
                 <ReadOnlyField
                   label="Names"
-                  value={animal.experimenters.experimenter_name.join(', ')}
+                  value={experimenterNames.join(', ')}
                 />
                 <ReadOnlyField
                   label="Lab"
-                  value={animal.experimenters.lab}
+                  value={experimenters.lab}
                 />
                 <ReadOnlyField
                   label="Institution"
-                  value={animal.experimenters.institution}
+                  value={experimenters.institution}
                 />
               </div>
             </div>
@@ -347,27 +388,30 @@ OverviewStep.propTypes = {
   animal: PropTypes.shape({
     id: PropTypes.string.isRequired,
     experiment_description: PropTypes.string,
-    subject: PropTypes.shape({
-      subject_id: PropTypes.string.isRequired,
-      species: PropTypes.string.isRequired,
-      sex: PropTypes.string.isRequired,
-      genotype: PropTypes.string.isRequired,
-      date_of_birth: PropTypes.string.isRequired,
-    }).isRequired,
-    experimenters: PropTypes.shape({
-      experimenter_name: PropTypes.arrayOf(PropTypes.string).isRequired,
-      lab: PropTypes.string.isRequired,
-      institution: PropTypes.string.isRequired,
-    }).isRequired,
+    // Tolerant: this step is a repair destination — malformed (scalar/null) subject /
+    // experimenters / session are first-class corrupt state it renders (through the
+    // shape-safe selectors) so the user can fix them; their PropTypes must not warn on it.
+    subject: rawRecord({
+      subject_id: PropTypes.string,
+      species: PropTypes.string,
+      sex: PropTypes.string,
+      genotype: PropTypes.string,
+      date_of_birth: PropTypes.string,
+    }),
+    experimenters: rawRecord({
+      experimenter_name: PropTypes.arrayOf(PropTypes.string),
+      lab: PropTypes.string,
+      institution: PropTypes.string,
+    }),
   }).isRequired,
   day: PropTypes.shape({
-    date: PropTypes.string.isRequired,
+    date: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     keywords: PropTypes.arrayOf(PropTypes.string),
-    session: PropTypes.shape({
+    session: rawRecord({
       session_id: PropTypes.string,
       session_description: PropTypes.string,
       experiment_description: PropTypes.string,
-    }).isRequired,
+    }),
     technical: PropTypes.shape({
       default_header_file_path: PropTypes.string,
       units: PropTypes.shape({
@@ -376,16 +420,21 @@ OverviewStep.propTypes = {
       }),
     }),
   }).isRequired,
-  mergedDay: PropTypes.object.isRequired,
+  // Nullable: the stepper passes null on the merge-failed fail-closed path (corrupt animal
+  // config). Not required — a clean-state assumption must not leak into that path.
+  mergedDay: PropTypes.object,
   onFieldUpdate: PropTypes.func.isRequired,
   onSubjectUpdate: PropTypes.func,
   focusRequest: PropTypes.shape({
     fieldPath: PropTypes.string,
     token: PropTypes.number,
   }),
+  onRepair: PropTypes.func,
 };
 
 OverviewStep.defaultProps = {
+  mergedDay: null,
   onSubjectUpdate: () => {},
   focusRequest: null,
+  onRepair: undefined,
 };

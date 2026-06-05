@@ -24,12 +24,44 @@ describe('ChannelMapsStep', () => {
 
   const mockOnEditChannelMap = vi.fn();
 
+  it('renders an em dash (not 0) for an unknown/uncatalogued device type', () => {
+    const animal = {
+      id: 'remy',
+      devices: {
+        electrode_groups: [
+          { id: 0, device_type: 'mystery-probe-9000', location: 'CA1', targeted_x: 1, targeted_y: 2, targeted_z: 3, units: 'mm' },
+        ],
+        ntrode_electrode_group_channel_map: [],
+      },
+    };
+    render(<ChannelMapsStep animal={animal} onEditChannelMap={mockOnEditChannelMap} />);
+    expect(screen.getByText('—', { selector: '[data-label="Channels"]' })).toBeInTheDocument();
+    expect(screen.getByText('—', { selector: '[data-label="Shanks"]' })).toBeInTheDocument();
+    expect(screen.queryByText('0', { selector: '[data-label="Channels"]' })).not.toBeInTheDocument();
+  });
+
+  it('shows the shank count from the catalog (uneven 64c-3s = 3 shanks)', () => {
+    const animal = {
+      id: 'remy',
+      devices: {
+        electrode_groups: [
+          { id: 0, device_type: '64c-3s6mm6cm-20um-40um-sl', location: 'CA1', targeted_x: 1, targeted_y: 2, targeted_z: 3, units: 'mm' },
+        ],
+        ntrode_electrode_group_channel_map: [],
+      },
+    };
+    render(<ChannelMapsStep animal={animal} onEditChannelMap={mockOnEditChannelMap} />);
+    expect(screen.getByText('64', { selector: '[data-label="Channels"]' })).toBeInTheDocument();
+    expect(screen.getByText('3', { selector: '[data-label="Shanks"]' })).toBeInTheDocument();
+  });
+
   it('renders table with all electrode groups', () => {
     render(<ChannelMapsStep animal={mockAnimal} onEditChannelMap={mockOnEditChannelMap} />);
 
-    // Should display both electrode groups by ID
-    expect(screen.getByText('0')).toBeInTheDocument();
-    expect(screen.getByText('1')).toBeInTheDocument();
+    // Should display both electrode groups by ID (scope to the ID column — the
+    // Shanks column can also read "1" for a single-shank probe).
+    expect(screen.getByText('0', { selector: '[data-label="ID"]' })).toBeInTheDocument();
+    expect(screen.getByText('1', { selector: '[data-label="ID"]' })).toBeInTheDocument();
   });
 
   it('shows correct device type for each group', () => {
@@ -110,6 +142,44 @@ describe('ChannelMapsStep', () => {
     render(<ChannelMapsStep animal={emptyAnimal} onEditChannelMap={mockOnEditChannelMap} />);
 
     expect(screen.getByText(/Add electrode groups in Step 1 before configuring channel maps/i)).toBeInTheDocument();
+  });
+
+  it.each([
+    ['a string', 'corrupt'],
+    ['a plain object', {}],
+    ['a number', 42],
+  ])('renders the empty state instead of throwing when electrode_groups is %s', (_label, corrupt) => {
+    const corruptAnimal = {
+      ...mockAnimal,
+      devices: {
+        electrode_groups: corrupt,
+        ntrode_electrode_group_channel_map: mockAnimal.devices.ntrode_electrode_group_channel_map,
+      },
+    };
+
+    expect(() =>
+      render(<ChannelMapsStep animal={corruptAnimal} onEditChannelMap={mockOnEditChannelMap} />)
+    ).not.toThrow();
+    expect(screen.getByText(/Add electrode groups in Step 1 before configuring channel maps/i)).toBeInTheDocument();
+  });
+
+  it.each([
+    ['a string', 'corrupt'],
+    ['a plain object', {}],
+    ['a number', 42],
+  ])('renders unmapped status instead of throwing when channel maps is %s', (_label, corrupt) => {
+    const corruptAnimal = {
+      ...mockAnimal,
+      devices: {
+        electrode_groups: mockAnimal.devices.electrode_groups,
+        ntrode_electrode_group_channel_map: corrupt,
+      },
+    };
+
+    expect(() =>
+      render(<ChannelMapsStep animal={corruptAnimal} onEditChannelMap={mockOnEditChannelMap} />)
+    ).not.toThrow();
+    expect(screen.getAllByText('❌').length).toBeGreaterThan(0);
   });
 
   it('displays group location correctly', () => {

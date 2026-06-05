@@ -110,7 +110,7 @@ describe('Animal State Management', () => {
         }, {
           devices: {
             electrode_groups: [
-              { id: '0', location: 'CA1', device_type: 'tetrode_12.5', bad_channels: '' },
+              { id: '0', location: 'CA1', device_type: 'tetrode_12.5', description: 'CA1 tetrode', targeted_location: 'CA1', bad_channels: '' },
             ],
             ntrode_electrode_group_channel_map: [
               { ntrode_id: '1', electrode_group_id: '0', electrode_id: 7, bad_channels: [], map: { 0: 0 } },
@@ -121,9 +121,11 @@ describe('Animal State Management', () => {
 
       const animal = result.current.model.workspace.animals.remy;
       expect(animal.devices.device.name).toEqual(['Trodes']);
+      // Strict normalization migrates clean integer-string ids and passes present
+      // required text through unchanged (no synthesis from location).
       expect(animal.devices.electrode_groups[0]).toMatchObject({
         id: 0,
-        description: 'CA1',
+        description: 'CA1 tetrode',
         targeted_location: 'CA1',
       });
       expect(animal.devices.electrode_groups[0]).not.toHaveProperty('bad_channels');
@@ -490,6 +492,99 @@ describe('Animal State Management', () => {
       const animal = result.current.model.workspace.animals['remy'];
       expect(animal.configurationHistory).toHaveLength(2);
       expect(animal.configurationHistory[1].version).toBe(2);
+    });
+  });
+
+  describe('rebuildConfigurationHistory', () => {
+    /**
+     * Helper: create an animal with a known device configuration, then corrupt its
+     * configurationHistory directly in the store (simulating restored/imported corruption).
+     * @param result
+     */
+    function createAnimalWithDevices(result) {
+      act(() => {
+        result.current.actions.createAnimal('remy', {
+          species: 'Rattus norvegicus',
+          sex: 'M',
+          genotype: 'Wild Type',
+          date_of_birth: '2023-01-10T00:00:00Z',
+          description: 'Test subject',
+        }, {
+          devices: {
+            electrode_groups: [
+              { id: 0, location: 'CA1', device_type: 'tetrode_12.5', description: 'CA1 tetrode' },
+            ],
+            ntrode_electrode_group_channel_map: [
+              { ntrode_id: 0, electrode_group_id: 0, map: { 0: 0, 1: 1, 2: 2, 3: 3 }, bad_channels: [] },
+            ],
+          },
+        });
+      });
+    }
+
+    it('resets a corrupt (non-array) configurationHistory to a single v1 snapshot from current devices', () => {
+      const { result } = renderHook(() => useStore());
+      createAnimalWithDevices(result);
+
+      // Corrupt the history the way a restored bad save would, then rebuild.
+      act(() => {
+        result.current.model.workspace.animals['remy'].configurationHistory = { broken: true };
+        result.current.actions.rebuildConfigurationHistory('remy');
+      });
+
+      const animal = result.current.model.workspace.animals['remy'];
+      expect(Array.isArray(animal.configurationHistory)).toBe(true);
+      expect(animal.configurationHistory).toHaveLength(1);
+      const snap = animal.configurationHistory[0];
+      expect(snap.version).toBe(1);
+      expect(snap.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(snap.appliedToDays).toEqual([]);
+      expect(snap.devices.electrode_groups[0].location).toBe('CA1');
+      expect(snap.devices.ntrode_electrode_group_channel_map[0].ntrode_id).toBe(0);
+    });
+
+    it('tolerates a non-array (string) configurationHistory start and rebuilds from devices', () => {
+      const { result } = renderHook(() => useStore());
+      createAnimalWithDevices(result);
+
+      act(() => {
+        result.current.model.workspace.animals['remy'].configurationHistory = 'corrupt';
+        result.current.actions.rebuildConfigurationHistory('remy');
+      });
+
+      const animal = result.current.model.workspace.animals['remy'];
+      expect(Array.isArray(animal.configurationHistory)).toBe(true);
+      expect(animal.configurationHistory).toHaveLength(1);
+      expect(animal.configurationHistory[0].version).toBe(1);
+    });
+
+    it('tolerates a non-array inner devices.electrode_groups and rebuilds an empty snapshot', () => {
+      // The inner guard: even with a valid devices RECORD, its electrode_groups /
+      // ntrode_electrode_group_channel_map may themselves be a non-array — the rebuild must
+      // produce a v1 snapshot with [] for those, not throw on structuredClone of a corrupt value.
+      const { result } = renderHook(() => useStore());
+      createAnimalWithDevices(result);
+
+      act(() => {
+        result.current.model.workspace.animals['remy'].devices.electrode_groups = 'nope';
+        result.current.model.workspace.animals['remy'].devices.ntrode_electrode_group_channel_map = 42;
+        result.current.model.workspace.animals['remy'].configurationHistory = 'corrupt';
+        result.current.actions.rebuildConfigurationHistory('remy');
+      });
+
+      const snap = result.current.model.workspace.animals['remy'].configurationHistory[0];
+      expect(snap.version).toBe(1);
+      expect(snap.devices.electrode_groups).toEqual([]);
+      expect(snap.devices.ntrode_electrode_group_channel_map).toEqual([]);
+    });
+
+    it('does nothing for an unknown animal (no throw)', () => {
+      const { result } = renderHook(() => useStore());
+      expect(() => {
+        act(() => {
+          result.current.actions.rebuildConfigurationHistory('ghost');
+        });
+      }).not.toThrow();
     });
   });
 

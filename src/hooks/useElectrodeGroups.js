@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { deviceTypeMap, getShankCount } from '../ntrode/deviceTypes';
+import { getProbeShanks } from '../ntrode/probeCatalog';
 import { arrayDefaultValues } from '../valueList';
 
 /**
@@ -55,38 +55,37 @@ export function useElectrodeGroups(formData, setFormData) {
       const { value } = e.target;
       const { key, index } = metaData;
       const electrodeGroupId = form.electrode_groups[index].id;
-      const deviceTypeValues = deviceTypeMap(value);
-      const shankCount = getShankCount(value);
-      const map = {};
 
       form[key][index].device_type = value;
 
-      // set map with default values
-      deviceTypeValues.forEach((deviceTypeValue) => {
-        map[deviceTypeValue] = deviceTypeValue;
-      });
+      // The probe catalog (probeCatalog.js) is the SOURCE OF TRUTH for how a
+      // probe's electrode ids partition across shanks. Routing legacy generation
+      // through it (instead of first-shank length math) keeps even probes
+      // byte-identical AND fixes the unevenly-partitioned 64c-3s probe, where the
+      // old math silently dropped electrode ids 60-63 (only 21 keys on the third
+      // shank instead of 22). This mirrors the modern generateChannelMapsForGroup.
+      const shanks = getProbeShanks(value);
 
       const nTrodes = [];
 
-      // set nTrodes data except for bad_channel as the default suffices for now
-      for (let nIndex = 0; nIndex < shankCount; nIndex += 1) {
+      // One ntrode per shank. Local keys are 0..(shankLen-1); the VALUES are the
+      // shank's actual probe electrode ids (already carrying any multi-shank
+      // offset from the catalog). bad_channel defaults are left as-is.
+      shanks.forEach((shank) => {
         const nTrodeBase = structuredClone(
           arrayDefaultValues.ntrode_electrode_group_channel_map
         );
 
-        const nTrodeMap = { ...map };
-        const nTrodeMapKeys = Object.keys(nTrodeMap).map((k) => parseInt(k, 10));
-        const nTrodeMapLength = nTrodeMapKeys.length;
-
-        nTrodeMapKeys.forEach((nKey) => {
-          nTrodeMap[nKey] += nTrodeMapLength * nIndex;
+        const nTrodeMap = {};
+        shank.electrodeIds.forEach((electrodeId, localKey) => {
+          nTrodeMap[localKey] = electrodeId;
         });
 
         nTrodeBase.electrode_group_id = electrodeGroupId;
         nTrodeBase.map = nTrodeMap;
 
         nTrodes.push(nTrodeBase);
-      }
+      });
 
       const nTrodeMapFormData = form?.ntrode_electrode_group_channel_map?.filter(
         (n) => n.electrode_group_id !== electrodeGroupId

@@ -36,6 +36,58 @@ describe('OverviewStep', () => {
     ...mockAnimal.experimenters,
   };
 
+  it('tolerates malformed nested records (session/subject/experimenters) without crashing or warning', () => {
+    // A repair routes here; malformed null/scalar nested objects must render blank fields
+    // the user can fix, never crash the step on a raw dereference — and, because corrupt
+    // state is first-class here, without emitting React prop-type / controlled-input warnings.
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const corruptAnimal = { id: 'remy', subject: 'corrupt', experimenters: null };
+    const corruptDay = { date: 42, session: 'nope' };
+    expect(() =>
+      render(
+        <OverviewStep animal={corruptAnimal} day={corruptDay} mergedDay={{}} onFieldUpdate={vi.fn()} onSubjectUpdate={vi.fn()} />
+      )
+    ).not.toThrow();
+    // The Session Metadata heading still renders (step is usable, not blanked).
+    expect(screen.getByRole('heading', { name: /session metadata/i })).toBeInTheDocument();
+    expect(errorSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  it('tolerates a null mergedDay (the merge-failed fail-closed path) without warning', () => {
+    // DayEditorStepper passes mergedDay=null when the merge throws (corrupt animal config).
+    // OverviewStep must render that fail-closed state without a required-prop warning.
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(() =>
+      render(
+        <OverviewStep animal={mockAnimal} day={mockDay} mergedDay={null} onFieldUpdate={vi.fn()} onSubjectUpdate={vi.fn()} />
+      )
+    ).not.toThrow();
+    expect(screen.getByRole('heading', { name: /session metadata/i })).toBeInTheDocument();
+    expect(errorSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  it('surfaces a malformed session with an executable Reset session banner', async () => {
+    const user = userEvent.setup();
+    const onRepair = vi.fn();
+    render(
+      <OverviewStep
+        animal={mockAnimal}
+        day={{ date: '2023-06-22', session: 'corrupt' }}
+        mergedDay={{}}
+        onFieldUpdate={vi.fn()}
+        onSubjectUpdate={vi.fn()}
+        onRepair={onRepair}
+      />
+    );
+    const reset = screen.getByRole('button', { name: /^reset session$/i });
+    await user.click(reset);
+    expect(onRepair).toHaveBeenCalledWith(
+      expect.objectContaining({ repairCommand: { type: 'resetDaySession' } })
+    );
+  });
+
   it('displays inherited fields as read-only when expanded', async () => {
     const user = userEvent.setup();
     render(

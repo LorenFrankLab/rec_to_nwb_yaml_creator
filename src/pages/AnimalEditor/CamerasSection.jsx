@@ -1,8 +1,10 @@
 import PropTypes from 'prop-types';
+import { getAnimalCameras } from '../../state/workspaceSelectors';
+import { rawArray } from '../../components/rawPropTypes';
 import './CamerasSection.scss';
 
 /**
- * CamerasSection - Camera configuration section for Animal Editor (M8a Task 2)
+ * CamerasSection - Camera configuration section for Animal Editor
  *
  * Provides CRUD interface for cameras with table view.
  * Displays camera metadata: ID, name, manufacturer, model, meters_per_pixel.
@@ -19,7 +21,11 @@ import './CamerasSection.scss';
  * @returns {JSX.Element}
  */
 export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, onDelete }) {
-  const cameras = animal.cameras || [];
+  // This section is a repair destination for a malformed-collection finding, so it must
+  // tolerate the very corruption it exists to fix. Read cameras through the canonical
+  // selector: a non-array `cameras` (e.g. "nope") degrades to the empty state instead of
+  // throwing on `.reduce`/`.map`/`.length`.
+  const cameras = getAnimalCameras(animal);
   const cameraIdCounts = cameras.reduce((acc, camera) => {
     const key = String(camera.id);
     acc[key] = (acc[key] || 0) + 1;
@@ -216,7 +222,9 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
 CamerasSection.propTypes = {
   animal: PropTypes.shape({
     id: PropTypes.string.isRequired,
-    cameras: PropTypes.arrayOf(PropTypes.shape({
+    // Tolerant: this is a repair destination — a corrupt non-array `cameras` is the very
+    // state it surfaces (read through getAnimalCameras), so it must not warn on it.
+    cameras: rawArray(PropTypes.shape({
       id: PropTypes.number.isRequired,
       camera_name: PropTypes.string,
       manufacturer: PropTypes.string,

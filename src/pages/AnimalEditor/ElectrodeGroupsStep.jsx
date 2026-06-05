@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
-import { deviceTypeMap } from '../../ntrode/deviceTypes';
+import { getAnimalElectrodeGroups } from '../../state/workspaceSelectors';
+import { getChannelCount, getShankCount } from '../../utils/deviceTypeUtils';
 import './ElectrodeGroupsStep.scss';
 
 /**
@@ -28,6 +29,18 @@ function hasFiniteCoordinate(value) {
 }
 
 /**
+ * Render a catalog-derived geometry count, distinguishing an UNKNOWN probe (count 0,
+ * which never occurs for a real catalogued probe) from a real zero. An em dash makes an
+ * uncatalogued device visually distinct rather than reading as "0 channels/shanks".
+ *
+ * @param {number} count - Channel or shank count from the probe catalog.
+ * @returns {number|string} The count, or '—' when 0 (unknown device).
+ */
+function formatGeometryCount(count) {
+  return count > 0 ? count : '—';
+}
+
+/**
  * ElectrodeGroupsStep - Step 1 of Animal Editor
  *
  * Provides CRUD interface for electrode groups with table view.
@@ -42,17 +55,7 @@ function hasFiniteCoordinate(value) {
  * @returns {JSX.Element}
  */
 export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onAdd, onDelete, onCopy }) {
-  const electrodeGroups = animal.devices?.electrode_groups || [];
-
-  /**
-   * Get channel count for a device type
-   * @param {string} deviceType
-   * @returns {number}
-   */
-  function getChannelCount(deviceType) {
-    const channels = deviceTypeMap(deviceType);
-    return channels ? channels.length : 0;
-  }
+  const electrodeGroups = getAnimalElectrodeGroups(animal);
 
   /**
    * Compute status badge (✓ complete, ⚠ incomplete, ❌ missing required)
@@ -156,6 +159,7 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
             <th>Device Type</th>
             <th>Location</th>
             <th>Channels</th>
+            <th>Shanks</th>
             <th>Status</th>
             <th>Actions</th>
           </tr>
@@ -166,7 +170,8 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
               <td data-label="ID">{group.id}</td>
               <td data-label="Device Type">{group.device_type}</td>
               <td data-label="Location">{group.location}</td>
-              <td data-label="Channels">{getChannelCount(group.device_type)}</td>
+              <td data-label="Channels">{formatGeometryCount(getChannelCount(group.device_type))}</td>
+              <td data-label="Shanks">{formatGeometryCount(getShankCount(group.device_type))}</td>
               <td data-label="Status">
                 {(() => {
                   const key = getStatusKey(group);

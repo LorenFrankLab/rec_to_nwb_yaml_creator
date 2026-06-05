@@ -1,10 +1,10 @@
 /**
- * Phase 6 — Validation completeness rules.
+ * Cross-reference and channel-bound validation rules.
  *
  * Unit tests for the cross-reference / channel-bound / identity rules added to
  * {@link rulesValidation}. Each rule has both a failing (invalid) and a passing
  * (valid) case. Reference bounds come from the real device helpers
- * (getChannelCount / deviceTypeMap), never hardcoded.
+ * (getChannelCount / probe catalog), never hardcoded.
  *
  * Model shape: these rules see the *merged day metadata* (flat YAML), so tests
  * construct flat models directly.
@@ -15,11 +15,11 @@
 import { describe, it, expect } from 'vitest';
 import { rulesValidation } from '../rulesValidation';
 import { getChannelCount } from '../../utils/deviceTypeUtils';
-import { deviceTypeMap } from '../../ntrode/deviceTypes';
+import { getProbeShanks } from '../../ntrode/probeCatalog';
 
 const codes = (issues) => issues.map((i) => i.code);
 
-describe('Phase 6: dangling camera references (Task 1)', () => {
+describe('dangling camera references', () => {
   it('errors when a task camera_id (array) references a missing camera', () => {
     const model = {
       cameras: [{ id: 0, camera_name: 'overhead' }],
@@ -72,7 +72,7 @@ describe('Phase 6: dangling camera references (Task 1)', () => {
   });
 });
 
-describe('Phase 6: dangling electrode-group references (Task 2)', () => {
+describe('dangling electrode-group references', () => {
   it('errors when an ntrode electrode_group_id has no matching group', () => {
     const model = {
       electrode_groups: [{ id: 0, device_type: 'tetrode_12.5', location: 'CA1', targeted_location: 'CA1' }],
@@ -109,17 +109,27 @@ const fourShankGroup = (id) => ({
   location: 'CA1',
   targeted_location: 'CA1',
 });
-// Build a per-shank ntrode for a multi-shank probe at shank index `shank`.
+// Build a per-shank ntrode for a multi-shank probe at shank index `shank`,
+// using the VERIFIED probe catalog (converter truth). Local keys are
+// 0..(shankLen-1); values are that shank's actual electrode ids — which is
+// byte-identical to the old even-offset math for evenly-partitioned probes and
+// CORRECT for the uneven 64c-3s probe (21/21/22).
 const shankNtrode = (ntrodeId, groupId, deviceType, shank) => {
-  const perShank = deviceTypeMap(deviceType); // e.g. [0..31]
+  const shanks = getProbeShanks(deviceType);
+  const ids = shanks[shank].electrodeIds;
   const map = {};
-  perShank.forEach((electrodeId, localKey) => {
-    map[localKey] = shank * perShank.length + electrodeId;
+  ids.forEach((electrodeId, localKey) => {
+    map[localKey] = electrodeId;
   });
   return { ntrode_id: ntrodeId, electrode_group_id: groupId, bad_channels: [], map };
 };
+// Build ALL per-shank ntrodes for a group from the catalog (a correct, complete map).
+const catalogNtrodes = (groupId, deviceType, startId = 1) =>
+  getProbeShanks(deviceType).map((_, shank) =>
+    shankNtrode(startId + shank, groupId, deviceType, shank)
+  );
 
-describe('Phase 6: channel bounds (Task 3)', () => {
+describe('channel bounds', () => {
   it('errors when a second tetrode group maps values 4..7 (must reset 0..3)', () => {
     // Each tetrode is its own probe; values are probe electrode ids reset per
     // group. getChannelCount('tetrode_12.5') === 4, so 4..7 are out of range.
@@ -168,23 +178,70 @@ describe('Phase 6: channel bounds (Task 3)', () => {
     expect(codes(issues)).not.toContain('channel_partition_invalid');
   });
 
-  it('errors when a group map does not cover every probe electrode id (64c-3s under-generates)', () => {
+  it('passes for a catalog-correct 64c-3s map (uneven 21/21/22 covering ids 0..63)', () => {
     // The converter indexes hw_channel_map[group][str(electrode_id)] for EVERY
-    // probe electrode 0..getChannelCount-1, so the group's map must cover all of
-    // them. The app's deviceTypeMap for 64c-3s yields only 3×20=60 entries while
-    // the probe has 64 electrodes (ids 0..63) — that map fails conversion, so it
-    // must be flagged (not accepted).
+    // probe electrode 0..getChannelCount-1. 64c-3s partitions 64 electrodes
+    // UNEVENLY (21/21/22). A catalog-correct map covers ids 0..63 exactly once
+    // and is converter-valid, so it must NOT be flagged.
     const dt = '64c-3s6mm6cm-20um-40um-sl';
-    expect(deviceTypeMap(dt).length * 3).not.toBe(getChannelCount(dt));
+    expect(getChannelCount(dt)).toBe(64);
     const model = {
       electrode_groups: [{ id: 0, device_type: dt, location: 'CA1', targeted_location: 'CA1' }],
+      ntrode_electrode_group_channel_map: catalogNtrodes(0, dt),
+    };
+    const c = codes(rulesValidation(model));
+    expect(c).not.toContain('channel_partition_invalid');
+    expect(c).not.toContain('channel_value_out_of_range');
+    expect(c).not.toContain('channel_key_out_of_range');
+  });
+
+  it('errors when a 64c-3s map under-generates and drops electrode ids 60..63', () => {
+    // A stale/old 64c-3s map that assumed 20/20/20 covers only ids 0..59 — the
+    // converter looks up 60..63 and fails. It must be flagged (not accepted).
+    const dt = '64c-3s6mm6cm-20um-40um-sl';
+    const twenty = (offset) =>
+      Object.fromEntries(Array.from({ length: 20 }, (_, i) => [i, offset + i]));
+    const model = {
+      electrode_groups: [{ id: 0, device_type: dt, location: 'CA1', targeted_location: 'CA1' }],
+      ntrode_electrode_group_channel_map: [
+        { ntrode_id: 1, electrode_group_id: 0, bad_channels: [], map: twenty(0) },
+        { ntrode_id: 2, electrode_group_id: 0, bad_channels: [], map: twenty(20) },
+        { ntrode_id: 3, electrode_group_id: 0, bad_channels: [], map: twenty(40) },
+      ],
+    };
+    expect(codes(rulesValidation(model))).toContain('channel_partition_invalid');
+  });
+
+  it('errors when a group map duplicates an electrode id across shanks', () => {
+    // A repeated electrode id (and the consequent missing id) breaks the
+    // complete-coverage contract the converter relies on.
+    const dt = '128c-4s8mm6cm-20um-40um-sl';
+    const model = {
+      electrode_groups: [fourShankGroup(0)],
       ntrode_electrode_group_channel_map: [
         shankNtrode(1, 0, dt, 0),
         shankNtrode(2, 0, dt, 1),
         shankNtrode(3, 0, dt, 2),
+        // Shank 3 wrongly repeats shank 2's ids (64..95) instead of 96..127.
+        shankNtrode(4, 0, dt, 2),
       ],
     };
     expect(codes(rulesValidation(model))).toContain('channel_partition_invalid');
+  });
+
+  it('errors when a multi-shank ROW has the wrong key count for its shank', () => {
+    // Row count must equal num_shanks, and matched by order, row i's keys must be
+    // 0..(shank_i.length-1). 64c-3s shank 2 has 22 keys; a 21-key row there is wrong.
+    const dt = '64c-3s6mm6cm-20um-40um-sl';
+    const rows = catalogNtrodes(0, dt);
+    // Truncate the third (22-key) row to 21 keys (drop key 21 -> electrode id 63).
+    const broken = { ...rows[2], map: { ...rows[2].map } };
+    delete broken.map[21];
+    const model = {
+      electrode_groups: [{ id: 0, device_type: dt, location: 'CA1', targeted_location: 'CA1' }],
+      ntrode_electrode_group_channel_map: [rows[0], rows[1], broken],
+    };
+    expect(codes(rulesValidation(model))).toContain('channel_key_out_of_range');
   });
 
   it('errors when two shanks of a multi-shank probe share 0..31 (missing offset)', () => {
@@ -199,6 +256,30 @@ describe('Phase 6: channel bounds (Task 3)', () => {
       ],
     };
     expect(codes(rulesValidation(model))).toContain('channel_partition_invalid');
+  });
+
+  it('errors on an extra (empty) ntrode row beyond the probe shank count', () => {
+    // A tetrode is single-shank → exactly one ntrode row. An extra empty row
+    // contributes no values (so coverage still passes) but the converter expects
+    // one row per shank, so the row-count mismatch must be flagged.
+    const model = {
+      electrode_groups: [tetrodeGroup(0)],
+      ntrode_electrode_group_channel_map: [
+        { ntrode_id: 1, electrode_group_id: 0, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+        { ntrode_id: 2, electrode_group_id: 0, bad_channels: [], map: {} }, // excess empty row
+      ],
+    };
+    expect(codes(rulesValidation(model))).toContain('channel_row_count_mismatch');
+  });
+
+  it('passes when row count equals the shank count', () => {
+    const model = {
+      electrode_groups: [tetrodeGroup(0)],
+      ntrode_electrode_group_channel_map: [
+        { ntrode_id: 1, electrode_group_id: 0, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+      ],
+    };
+    expect(codes(rulesValidation(model))).not.toContain('channel_row_count_mismatch');
   });
 
   it('errors on out-of-range bad_channels index; passes for in-range', () => {
@@ -241,7 +322,7 @@ describe('Phase 6: channel bounds (Task 3)', () => {
 
 });
 
-describe('Phase 6: location + targeted_location (Task 4)', () => {
+describe('location + targeted_location', () => {
   const group = (over) => ({
     id: 0,
     device_type: 'tetrode_12.5',
@@ -275,7 +356,7 @@ describe('Phase 6: location + targeted_location (Task 4)', () => {
   });
 });
 
-describe('Phase 6: device_type known probe (Task 5)', () => {
+describe('device_type known probe', () => {
   it('errors on an unknown device_type', () => {
     const issues = rulesValidation({
       electrode_groups: [{ id: 0, device_type: 'made_up_probe', location: 'CA1', targeted_location: 'CA1' }],
@@ -292,7 +373,7 @@ describe('Phase 6: device_type known probe (Task 5)', () => {
   });
 });
 
-describe('Phase 6: behavioral-event name uniqueness (Task 6)', () => {
+describe('behavioral-event name uniqueness', () => {
   it('errors on duplicate behavioral_events name', () => {
     const issues = rulesValidation({
       behavioral_events: [
@@ -315,7 +396,7 @@ describe('Phase 6: behavioral-event name uniqueness (Task 6)', () => {
   });
 });
 
-describe('Phase 6: task/video dependency + camera refs (Task 7)', () => {
+describe('task/video dependency + camera refs', () => {
   it('errors on duplicate task epochs across task rows', () => {
     const issues = rulesValidation({
       cameras: [{ id: 0, camera_name: 'c' }],
@@ -362,6 +443,24 @@ describe('Phase 6: task/video dependency + camera refs (Task 7)', () => {
     expect(orphan.severity).toBe('error');
   });
 
+  it('errors on an orphaned associated_file (task_epochs matches no task)', () => {
+    const issues = rulesValidation({
+      tasks: [{ task_name: 'a', task_description: 'd', task_epochs: [2] }],
+      associated_files: [{ name: 'f.dat', task_epochs: 9 }],
+    });
+    const orphan = issues.find((i) => i.code === 'orphaned_file');
+    expect(orphan).toBeDefined();
+    expect(orphan.severity).toBe('error');
+    expect(orphan.message).toContain('9');
+  });
+
+  it('passes an associated_file with a matching task epoch', () => {
+    expect(codes(rulesValidation({
+      tasks: [{ task_name: 'a', task_description: 'd', task_epochs: [2] }],
+      associated_files: [{ name: 'f.dat', task_epochs: 2 }],
+    }))).not.toContain('orphaned_file');
+  });
+
   it('passes a video with a matching task epoch and valid scalar camera_id', () => {
     const issues = rulesValidation({
       cameras: [{ id: 0, camera_name: 'c' }],
@@ -373,7 +472,7 @@ describe('Phase 6: task/video dependency + camera refs (Task 7)', () => {
   });
 });
 
-describe('Phase 6: workspace/dataset identity consistency (Task 8)', () => {
+describe('workspace/dataset identity consistency', () => {
   it('errors on reused camera_name with divergent calibration/id', () => {
     const issues = rulesValidation({
       cameras: [
@@ -440,7 +539,7 @@ describe('Phase 6: workspace/dataset identity consistency (Task 8)', () => {
   });
 });
 
-describe('Phase 6: repair metadata on new error rules (Task 9b)', () => {
+describe('repair metadata on new error rules', () => {
   // A single model that trips every new error-severity rule at once, so we can
   // assert each emitted issue carries the repair metadata the Export/Validation
   // UI needs: step, an actionable path/field, and a short actionLabel.
@@ -452,6 +551,7 @@ describe('Phase 6: repair metadata on new error rules (Task 9b)', () => {
     'channel_key_out_of_range',
     'bad_channel_out_of_range',
     'channel_partition_invalid',
+    'channel_row_count_mismatch',
     'empty_location',
     'empty_targeted_location',
     'unknown_device_type',
@@ -475,14 +575,21 @@ describe('Phase 6: repair metadata on new error rules (Task 9b)', () => {
     electrode_groups: [
       { id: 0, device_type: 'made_up_probe', location: '', targeted_location: '' },
       { id: 1, device_type: 'tetrode_12.5', location: 'CA1', targeted_location: 'CA1' },
-      { id: 2, device_type: 'tetrode_12.5', location: 'CA3', targeted_location: 'CA3' },
+      { id: 2, device_type: '128c-4s8mm6cm-20um-40um-sl', location: 'CA3', targeted_location: 'CA3' },
+      { id: 3, device_type: 'tetrode_12.5', location: 'PFC', targeted_location: 'PFC' },
     ],
     ntrode_electrode_group_channel_map: [
       // group 1: out-of-range value (7), bad_channel (99), wrong key set (missing 1)
       { ntrode_id: 1, electrode_group_id: 1, bad_channels: [99], map: { 0: 7, 2: 2, 3: 3 } },
-      // group 2: two ntrodes that collide on the same electrode ids (missing offset)
-      { ntrode_id: 2, electrode_group_id: 2, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
-      { ntrode_id: 3, electrode_group_id: 2, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+      // group 2 (4-shank, correct row count 4): shanks 0 and 0 collide (missing
+      // offset) and shank 1 is absent → coverage collision → channel_partition_invalid
+      shankNtrode(2, 2, '128c-4s8mm6cm-20um-40um-sl', 0),
+      shankNtrode(3, 2, '128c-4s8mm6cm-20um-40um-sl', 0),
+      shankNtrode(8, 2, '128c-4s8mm6cm-20um-40um-sl', 2),
+      shankNtrode(9, 2, '128c-4s8mm6cm-20um-40um-sl', 3),
+      // group 3 (tetrode, 1 shank) with an extra row → row-count mismatch
+      { ntrode_id: 5, electrode_group_id: 3, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+      { ntrode_id: 6, electrode_group_id: 3, bad_channels: [], map: {} },
       // dangling electrode_group_id
       { ntrode_id: 4, electrode_group_id: 42, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
     ],
@@ -517,7 +624,7 @@ describe('Phase 6: repair metadata on new error rules (Task 9b)', () => {
   });
 });
 
-describe('Phase 6: channel bounds skipped for unknown device (Task 3/5 interaction)', () => {
+describe('channel bounds skipped for unknown device', () => {
   it('does not run channel-bound checks for an unknown device_type', () => {
     // Unknown device → getChannelCount 0; Task 5 reports the unknown device,
     // channel bounds are skipped (no spurious out-of-range noise).

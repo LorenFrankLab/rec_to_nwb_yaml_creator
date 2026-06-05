@@ -201,6 +201,114 @@ describe('useElectrodeGroups', () => {
       });
     });
 
+    // Regression: the legacy generator must route channel-map generation
+    // through the verified probe catalog (Contract 1), NOT first-shank length
+    // math, so the unevenly-partitioned 64c-3s probe is generated correctly and
+    // even probes stay byte-identical.
+    describe('Probe catalog truth (per-shank electrode-id partition)', () => {
+      /**
+       *
+       * @param ntrode
+       */
+      function flatMapKeysToValues(ntrode) {
+        // Returns the electrode ids (map VALUES) for one ntrode, as integers.
+        return Object.keys(ntrode.map)
+          .map((k) => parseInt(k, 10))
+          .sort((a, b) => a - b)
+          .map((k) => ntrode.map[k]);
+      }
+
+      it('should generate 64c-3s as 3 ntrodes covering electrode ids 0..63 exactly once (21/21/22), not three 21-key rows dropping 63', () => {
+        const { result } = renderHook(() => useTestHook());
+
+        act(() => {
+          result.current.formData.electrode_groups = [
+            { id: 0, device_type: '', location: '' },
+          ];
+        });
+
+        act(() => {
+          result.current.nTrodeMapSelected(
+            { target: { value: '64c-3s6mm6cm-20um-40um-sl' } },
+            { key: 'electrode_groups', index: 0 }
+          );
+        });
+
+        const ntrodes = result.current.formData.ntrode_electrode_group_channel_map;
+        expect(ntrodes).toHaveLength(3);
+
+        // Local keys per shank are 0..(len-1); lengths are 21/21/22.
+        expect(Object.keys(ntrodes[0].map)).toHaveLength(21);
+        expect(Object.keys(ntrodes[1].map)).toHaveLength(21);
+        expect(Object.keys(ntrodes[2].map)).toHaveLength(22);
+
+        // Per-shank electrode-id partition matches the verified catalog.
+        const range = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
+        expect(flatMapKeysToValues(ntrodes[0])).toEqual(range(0, 20));
+        expect(flatMapKeysToValues(ntrodes[1])).toEqual(range(21, 41));
+        expect(flatMapKeysToValues(ntrodes[2])).toEqual(range(42, 63));
+
+        // The union of all electrode ids must be exactly 0..63 (electrode 63 not dropped).
+        const allIds = ntrodes
+          .flatMap((n) => flatMapKeysToValues(n))
+          .sort((a, b) => a - b);
+        expect(allIds).toEqual(range(0, 63));
+        expect(allIds).toContain(63);
+      });
+
+      it('should generate a 4-shank 128c probe byte-identical to the known partition (0..31 / 32..63 / 64..95 / 96..127)', () => {
+        const { result } = renderHook(() => useTestHook());
+
+        act(() => {
+          result.current.formData.electrode_groups = [
+            { id: 0, device_type: '', location: '' },
+          ];
+        });
+
+        act(() => {
+          result.current.nTrodeMapSelected(
+            { target: { value: '128c-4s8mm6cm-20um-40um-sl' } },
+            { key: 'electrode_groups', index: 0 }
+          );
+        });
+
+        const ntrodes = result.current.formData.ntrode_electrode_group_channel_map;
+        expect(ntrodes).toHaveLength(4);
+
+        const range = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
+        // Each shank: local keys 0..31, values are the offset electrode ids.
+        const expectedShanks = [range(0, 31), range(32, 63), range(64, 95), range(96, 127)];
+        expectedShanks.forEach((ids, shankIndex) => {
+          const expectedMap = {};
+          ids.forEach((id, localKey) => {
+            expectedMap[localKey] = id;
+          });
+          expect(ntrodes[shankIndex].map).toEqual(expectedMap);
+        });
+      });
+
+      it('should generate a tetrode byte-identical to the known map ({0:0,1:1,2:2,3:3})', () => {
+        const { result } = renderHook(() => useTestHook());
+
+        act(() => {
+          result.current.formData.electrode_groups = [
+            { id: 0, device_type: '', location: '' },
+          ];
+        });
+
+        act(() => {
+          result.current.nTrodeMapSelected(
+            { target: { value: 'tetrode_12.5' } },
+            { key: 'electrode_groups', index: 0 }
+          );
+        });
+
+        const ntrodes = result.current.formData.ntrode_electrode_group_channel_map;
+        expect(ntrodes).toHaveLength(1);
+        expect(ntrodes[0].map).toEqual({ 0: 0, 1: 1, 2: 2, 3: 3 });
+      });
+    });
+
     describe('Ntrode ID Renumbering', () => {
       it('should assign sequential ntrode_id values starting at 1', () => {
         const { result } = renderHook(() => useTestHook());

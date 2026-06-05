@@ -19,6 +19,7 @@ import { useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
+import { getAnimalDayIds, getAnimalSubject } from '../../state/workspaceSelectors';
 import { computeStepStatus } from '../DayEditor/validation';
 import { formatDeterministicFilename, downloadYamlFile } from '../../io/yaml';
 import { checkShadowExport } from '../DayEditor/shadowExport';
@@ -46,6 +47,20 @@ function deriveChip(stepStatus) {
 const CHIP_LABEL = { valid: 'Valid', error: 'Error', incomplete: 'Incomplete' };
 
 /**
+ * True only for plain object records — not null, not an array, not a primitive.
+ *
+ * Used to distinguish a usable persisted map/day object from the corrupt shapes a
+ * bad import/migration can leave behind (a `days` array instead of a map, a leftover
+ * string where a day record is expected), which would otherwise throw on indexing or
+ * property access and blank the whole summary.
+ *
+ * @param {unknown} value
+ * @returns {boolean}
+ */
+const isRecord = (value) =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+
+/**
  * Flatten every day across all animals into a deterministic, table-ordered list.
  *
  * Order: animals by id, then each animal's days by date — the same order the table
@@ -55,27 +70,86 @@ const CHIP_LABEL = { valid: 'Valid', error: 'Error', incomplete: 'Incomplete' };
  * @returns {Array<{ animal: object, day: object, chip: 'valid'|'error'|'incomplete' }>}
  */
 function buildRows(workspace) {
-  const animals = Object.values(workspace?.animals || {}).sort((a, b) =>
-    a.id.localeCompare(b.id)
-  );
+  // Every sort key here is read from PERSISTED state, which a bad import/migration
+  // can corrupt: an animal id or day date may be missing or a non-string, and
+  // `localeCompare` on a non-string throws. Coerce to a string for ordering only
+  // (never mutating the record) so one malformed key can't throw and blank the
+  // whole multi-day summary.
+  const orderKey = (value) => (typeof value === 'string' ? value : String(value ?? ''));
+
+  // Carry the workspace.animals MAP KEY alongside each animal: it is the reliable store
+  // handle for a repair (e.g. removeDayReference), whereas `animal.id` may be missing/corrupt
+  // (this summary tolerates that). Sort by the key (== id for well-formed data).
+  const animals = Object.entries(workspace?.animals || {})
+    .map(([animalKey, animal]) => ({ animalKey, animal }))
+    .sort((a, b) => orderKey(a.animalKey).localeCompare(orderKey(b.animalKey)));
+
+  // `days` may be absent or a non-record (e.g. an array from a bad migration); indexing a
+  // non-record by id must not deref `undefined[id]` and crash the page. A missing/non-record
+  // map is corruption, not emptiness: every day reference an animal holds then resolves to no
+  // record and is surfaced as an explicit error row below — never laundered into the "No
+  // recording days" empty state, which would hide every referenced day.
+  const daysById = isRecord(workspace?.days) ? workspace.days : {};
 
   const rows = [];
-  for (const animal of animals) {
-    const days = (animal.days || [])
-      .map((dayId) => workspace.days[dayId])
-      .filter(Boolean)
-      .sort((a, b) => a.date.localeCompare(b.date));
+  for (const { animalKey, animal } of animals) {
+    // A non-array `days` is corrupt persisted state (e.g. `{}` from a bad import).
+    // Treat it as "no days" rather than letting `.map` throw and blank the whole
+    // multi-day summary — the rest of the workspace must still render.
+    const dayIds = getAnimalDayIds(animal);
+    // Resolve each reference to its persisted record, KEEPING the reference even when it
+    // doesn't resolve to a record (a dangling/missing id, or a truthy-but-non-record
+    // leftover from a partial migration). A corrupt reference must be surfaced as an error
+    // row below — never dropped — or the accounting would report only the surviving rows
+    // while a corrupt day hides. Order by date (records) with corrupt refs (no date) first.
+    const resolved = dayIds
+      .map((dayId) => ({ dayId, record: daysById[dayId] }))
+      .sort((a, b) =>
+        orderKey(isRecord(a.record) ? a.record.date : '').localeCompare(
+          orderKey(isRecord(b.record) ? b.record.date : '')
+        )
+      );
 
-    for (const day of days) {
-      const mergedDay = mergeDayMetadata(animal, day);
-      const chip = deriveChip(computeStepStatus(day, mergedDay));
-      rows.push({ animal, day, chip });
+    for (const { dayId, record } of resolved) {
+      // A reference that does not resolve to a day RECORD (missing id → undefined, or a
+      // truthy-but-non-record leftover) cannot be merged/validated. Surface it as a
+      // distinct error row keyed by its id, so it is visibly flagged for repair and counted
+      // — never silently dropped or shown as valid.
+      if (!isRecord(record)) {
+        // A reference resolving to no day record (missing id, or a non-record leftover, or a
+        // wholly-missing days map) is dangling corruption. Surface it as an explicit error
+        // row keyed by its id so it is visible, counted, and repairable — never dropped.
+        rows.push({ animal, animalKey, day: { id: dayId }, chip: 'error', missingRecord: true });
+        // eslint-disable-next-line no-console
+        console.error(
+          `[validation-summary] day reference "${dayId}" does not resolve to a record — flagged as error.`
+        );
+        continue;
+      }
+
+      // mergeDayMetadata throws BY DESIGN on a corrupt animal (missing/empty
+      // configurationHistory, an unresolvable pin, etc.). One unreadable day must
+      // not take down the entire summary and hide every other day — report it as a
+      // distinct error row so it is visibly flagged for repair, never silently
+      // dropped or shown as valid.
+      try {
+        const mergedDay = mergeDayMetadata(animal, record);
+        const chip = deriveChip(computeStepStatus(record, mergedDay, animal));
+        rows.push({ animal, animalKey, day: record, chip });
+      } catch (err) {
+        rows.push({ animal, animalKey, day: record, chip: 'error', unreadable: true });
+        // eslint-disable-next-line no-console
+        console.error(
+          `[validation-summary] could not read day "${record?.id}" — flagged as error:`,
+          err
+        );
+      }
     }
   }
   return rows;
 }
 
-const subjectLabel = (animal) => animal.subject?.subject_id ?? animal.id;
+const subjectLabel = (animal) => getAnimalSubject(animal).subject_id ?? animal.id;
 
 /**
  * An assertive (`role="alert"`) report of days that were NOT exported normally, with
@@ -344,23 +418,54 @@ export function ValidationSummary() {
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ animal, day, chip }) => (
-                <tr key={day.id} data-testid={`day-row-${day.id}`}>
+              {rows.map(({ animal, animalKey, day, chip, unreadable, missingRecord }, index) => (
+                <tr key={`${day.id ?? 'unknown'}-${index}`} data-testid={`day-row-${day.id}`}>
                   <td>{subjectLabel(animal)}</td>
-                  <td>{day.date}</td>
+                  <td>{day.date || '—'}</td>
                   <td>{day.session?.session_id || '—'}</td>
                   <td>
-                    <span className={`status-chip status-chip--${chip}`}>
-                      {CHIP_LABEL[chip]}
+                    {/* An unreadable day (its config could not be resolved) OR a reference
+                        that resolves to no day record is shown as an error chip with an
+                        honest label, so it is flagged for repair and counted — never
+                        silently dropped or mistaken for a normal validation error. */}
+                    <span
+                      className={`status-chip status-chip--${chip}`}
+                      title={
+                        unreadable
+                          ? 'This day could not be read — its device configuration is missing or corrupt. Open the editor to repair it.'
+                          : missingRecord
+                            ? 'This day’s saved record is missing or corrupt. Open the editor to repair or recreate it.'
+                            : undefined
+                      }
+                    >
+                      {unreadable
+                        ? 'Error — cannot read'
+                        : missingRecord
+                          ? 'Error — missing day record'
+                          : CHIP_LABEL[chip]}
                     </span>
                   </td>
                   <td>
-                    <a
-                      href={`#/day/${day.id}`}
-                      aria-label={`Open editor for ${subjectLabel(animal)} ${day.date}`}
-                    >
-                      Open editor
-                    </a>
+                    {missingRecord ? (
+                      // A missing/non-record day has nothing to open (the Day Editor would
+                      // dead-end on "Day not found"). Offer an executable repair that drops
+                      // the dangling reference from the owning animal instead.
+                      <button
+                        type="button"
+                        className="validation-summary-repair"
+                        onClick={() => actions.removeDayReference(animalKey, day.id)}
+                        aria-label={`Remove dangling day reference ${day.id} from ${subjectLabel(animal)}`}
+                      >
+                        Remove day reference
+                      </button>
+                    ) : (
+                      <a
+                        href={`#/day/${day.id}`}
+                        aria-label={`Open editor for ${subjectLabel(animal)} ${day.date || day.id}`}
+                      >
+                        Open editor
+                      </a>
+                    )}
                   </td>
                 </tr>
               ))}

@@ -6,6 +6,9 @@ import * as yaml from '../../../io/yaml';
 import * as shadow from '../shadowExport';
 import { overrideFlags, restoreFlags } from '../../../featureFlags';
 import { buildRealisticWorkspace } from '../../../__tests__/fixtures/workspaceBuilders';
+import { mergeDayMetadata } from '../../../state/workspaceUtils';
+import { computeStepStatus } from '../validation';
+import { validate } from '../../../validation';
 
 const UNSTABLE = {
   ok: false,
@@ -23,6 +26,23 @@ const UNSTABLE = {
 function buildExportErrorWorkspace() {
   const { animal, day } = buildRealisticWorkspace();
   animal.configurationHistory[0].devices.electrode_groups[0].targeted_x = 'not-a-number';
+  return { animal, day };
+}
+
+/**
+ * A realistic workspace whose merged day has NO schema/rule validation error, but
+ * an electrode group with ALL its channels marked bad — a device-status failure
+ * (computeDevicesStatus → 'error') that a flat validate(merged) pass does not
+ * surface. This is the case where ExportStep's old narrow gate (validate only)
+ * would have let the download through.
+ *
+ * @returns {{ animal: object, day: object }}
+ */
+function buildAllChannelsBadWorkspace() {
+  const { animal, day } = buildRealisticWorkspace();
+  animal.configurationHistory[0].devices.ntrode_electrode_group_channel_map.forEach((n) => {
+    if (n.electrode_group_id === 0) n.bad_channels = [0, 1, 2, 3];
+  });
   return { animal, day };
 }
 
@@ -128,18 +148,116 @@ describe('ExportStep', () => {
     expect(shadowSpy).not.toHaveBeenCalled();
   });
 
-  it('offers a repair action per error that routes to the owning step with the field target', async () => {
+  it('blocks the download on a device-status failure (all channels bad) that flat validation misses', async () => {
+    const user = userEvent.setup();
+    const downloadSpy = vi.spyOn(yaml, 'downloadYamlFile').mockImplementation(() => {});
+    const shadowSpy = vi.spyOn(shadow, 'checkShadowExport');
+    const { animal, day } = buildAllChannelsBadWorkspace();
+
+    // Sanity: this fixture has NO schema/rule validation error — validate(merged)
+    // alone would not block — but computeStepStatus's devices status is 'error'
+    // (all channels bad), so the authoritative export gate is closed.
+    const merged = mergeDayMetadata(animal, day);
+    expect(validate(merged).filter((i) => i.severity === 'error')).toHaveLength(0);
+    expect(computeStepStatus(day, merged).export).toBe('valid');
+
+    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+
+    const downloadButton = screen.getByRole('button', { name: /download yaml/i });
+    // The button is disabled and a blocking reason is shown up front.
+    expect(downloadButton).toBeDisabled();
+    expect(screen.getByText(/before exporting/i)).toBeInTheDocument();
+
+    await user.click(downloadButton);
+
+    // Defense in depth: no file is produced and the shadow check never runs.
+    expect(downloadSpy).not.toHaveBeenCalled();
+    expect(shadowSpy).not.toHaveBeenCalled();
+  });
+
+  it('offers a repair action for a STEP-STATUS-only blocker (all channels bad) with no validate() error', async () => {
+    // Boundary 3 / Medium-1: the gate is closed via computeStepStatus.devices === 'error'
+    // (all channels bad), but validate(merged) has no error — so the OLD ExportStep showed
+    // generic text with no button (a repair dead-end). It must route to the blocking step.
+    const user = userEvent.setup();
+    const onNavigate = vi.fn();
+    const { animal, day } = buildAllChannelsBadWorkspace();
+
+    render(<ExportStep animal={animal} day={day} onNavigate={onNavigate} />);
+
+    const repairButton = screen.getByRole('button', { name: /fix in devices/i });
+    await user.click(repairButton);
+    expect(onNavigate).toHaveBeenCalledWith('devices', undefined);
+  });
+
+  it('routes a devices-INCOMPLETE blocker (no electrode groups) to the Animal Editor, not Day Devices', async () => {
+    // Missing maps / no electrode groups are ANIMAL-owned (geometry lives at the animal
+    // level), so the Export blocker must route there, not generically to Day Devices.
+    const user = userEvent.setup();
+    const onNavigate = vi.fn();
+    const { animal, day } = buildRealisticWorkspace();
+    // Strip all electrode groups + channel maps → devices status 'incomplete'.
+    animal.configurationHistory[0].devices.electrode_groups = [];
+    animal.configurationHistory[0].devices.ntrode_electrode_group_channel_map = [];
+
+    render(<ExportStep animal={animal} day={day} onNavigate={onNavigate} />);
+
+    await user.click(screen.getByRole('button', { name: /fix in animal editor/i }));
+    expect(onNavigate).toHaveBeenCalledWith('animal', undefined);
+  });
+
+  it('tolerates a malformed-animal merge throw (corrupt configurationHistory) without crashing', () => {
+    // mergeDayMetadata throws by design on a non-array configurationHistory; ExportStep
+    // must render (blocked) and surface the repairable reason instead of crashing.
+    const { animal, day } = buildRealisticWorkspace();
+    animal.configurationHistory = 'corrupt';
+    expect(() => render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />)).not.toThrow();
+    expect(screen.getByText(/could not be assembled|missing or corrupt/i)).toBeInTheDocument();
+  });
+
+  it('surfaces an EXECUTABLE rebuild repair when configurationHistory is missing/empty (merge throws → merged {})', async () => {
+    // The merge throws on an empty history, so ExportStep falls back to merged={}. The raw
+    // animal gate must still surface the missing-history issue AND offer its executable
+    // rebuild button (not just a dead-end blocked message).
+    const user = userEvent.setup();
+    const onRepair = vi.fn();
+    const { animal, day } = buildRealisticWorkspace();
+    animal.configurationHistory = [];
+    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} onRepair={onRepair} />);
+
+    expect(screen.getByRole('button', { name: /download yaml/i })).toBeDisabled();
+    expect(screen.getByText(/configuration history is missing or empty/i)).toBeInTheDocument();
+    const rebuild = screen.getByRole('button', { name: /^rebuild device configuration history$/i });
+    await user.click(rebuild);
+    expect(onRepair).toHaveBeenCalledWith(
+      expect.objectContaining({ repairCommand: { type: 'rebuildConfigurationHistory' } })
+    );
+  });
+
+  it('blocks export AND surfaces a routable repair when animal.cameras is corrupt (raw-animal gate)', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    animal.cameras = 'nope';
+    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+    // The download is blocked AND the raw-animal issue renders a repair action routed to
+    // the Animal Editor (not a dead-end disabled button with no surfaced fix).
+    expect(screen.getByRole('button', { name: /download yaml/i })).toBeDisabled();
+    expect(screen.getByText(/cameras.*is corrupt|corrupt.*list/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /fix in animal editor/i })).toBeInTheDocument();
+  });
+
+  it('offers a repair action per error that routes to the editable owner with the field target', async () => {
     const user = userEvent.setup();
     const onNavigate = vi.fn();
     const { animal, day } = buildExportErrorWorkspace();
 
     render(<ExportStep animal={animal} day={day} onNavigate={onNavigate} />);
 
-    // The targeted_x type error routes to the Devices step.
-    const repairButton = screen.getByRole('button', { name: /devices/i });
+    // The targeted_x type error is device geometry — editable only in the Animal Editor —
+    // so the repair routes to the 'animal' surface, not the Day-Editor Devices step.
+    const repairButton = screen.getByRole('button', { name: /fix in animal editor/i });
     await user.click(repairButton);
 
-    expect(onNavigate).toHaveBeenCalledWith('devices', expect.stringContaining('electrode_groups'));
+    expect(onNavigate).toHaveBeenCalledWith('animal', expect.stringContaining('electrode_groups'));
   });
 
   it('shows a preflight summary derived from the merged day on a valid day', () => {

@@ -8,6 +8,11 @@ import {
 import { FLAGS } from '../featureFlags';
 import { loadWorkspace, saveWorkspace, clearWorkspace } from './persistence';
 import {
+  getAnimalDayIds,
+  getAnimalDevices,
+  getConfigHistory,
+} from './workspaceSelectors';
+import {
   normalizeDeviceOverrides,
   normalizeDevices,
   normalizeProbeConfigDevices,
@@ -216,7 +221,7 @@ export function useWorkspace(initialState = null) {
             updated.experimenters = { ...updated.experimenters, ...updates.experimenters };
           }
           if (updates.devices) {
-            updated.devices = normalizeDevices({ ...updated.devices, ...updates.devices });
+            updated.devices = normalizeDevices({ ...getAnimalDevices(updated), ...updates.devices });
             // `animal.devices` is the editor's mirror of the LATEST configuration
             // snapshot, which is the authoritative source the export resolves. Write
             // the edit into that snapshot too, so probes configured after animal
@@ -224,18 +229,14 @@ export function useWorkspace(initialState = null) {
             // empty electrode_groups). Reconfiguration forks a new latest version
             // BEFORE editing, so this only ever rewrites the current latest — never a
             // historical, frozen snapshot.
-            const history = updated.configurationHistory;
-            if (Array.isArray(history) && history.length > 0) {
+            const history = getConfigHistory(updated);
+            if (history.length > 0) {
               const latest = history[history.length - 1];
               latest.devices = {
                 ...latest.devices,
-                electrode_groups: structuredClone(
-                  updated.devices.electrode_groups || latest.devices?.electrode_groups || []
-                ),
+                electrode_groups: structuredClone(updated.devices.electrode_groups),
                 ntrode_electrode_group_channel_map: structuredClone(
-                  updated.devices.ntrode_electrode_group_channel_map ||
-                    latest.devices?.ntrode_electrode_group_channel_map ||
-                    []
+                  updated.devices.ntrode_electrode_group_channel_map
                 ),
               };
             }
@@ -248,7 +249,7 @@ export function useWorkspace(initialState = null) {
           // top-level `data_acq_device` would never reach the export).
           if (updates.data_acq_device) {
             updated.devices = normalizeDevices({
-              ...updated.devices,
+              ...getAnimalDevices(updated),
               data_acq_device: updates.data_acq_device,
             });
           }
@@ -298,7 +299,7 @@ export function useWorkspace(initialState = null) {
           const updatedDays = { ...prev.days };
 
           // Delete all days for this animal
-          animal.days.forEach((dayId) => {
+          getAnimalDayIds(animal).forEach((dayId) => {
             delete updatedDays[dayId];
           });
 
@@ -334,7 +335,8 @@ export function useWorkspace(initialState = null) {
         // For a single add per tick — the wizard's create-then-apply path — the two
         // agree: no intervening update changes the history length between them.
         const current = workspaceRef.current.animals[animalId];
-        const createdVersion = current ? current.configurationHistory.length + 1 : undefined;
+        const currentHistory = getConfigHistory(current);
+        const createdVersion = current ? currentHistory.length + 1 : undefined;
 
         setWorkspace((prev) => {
           if (!prev.animals[animalId]) {
@@ -343,16 +345,17 @@ export function useWorkspace(initialState = null) {
 
           const animal = prev.animals[animalId];
           const updated = structuredClone(animal);
+          const history = getConfigHistory(updated);
 
           const newVersion = {
-            version: updated.configurationHistory.length + 1,
+            version: history.length + 1,
             date: config.date,
             description: config.description,
             devices: normalizeProbeConfigDevices(config.devices),
             appliedToDays: [],
           };
 
-          updated.configurationHistory.push(newVersion);
+          updated.configurationHistory = [...history, newVersion];
           updated.lastModified = getCurrentTimestamp();
 
           return {
@@ -388,7 +391,8 @@ export function useWorkspace(initialState = null) {
           }
 
           const animal = structuredClone(prev.animals[animalId]);
-          const target = animal.configurationHistory.find((s) => s.version === snapshotVersion);
+          const history = getConfigHistory(animal);
+          const target = history.find((s) => s.version === snapshotVersion);
           if (!target) {
             throw new Error(
               `Configuration version "${snapshotVersion}" not found for animal "${animalId}"`
@@ -403,7 +407,7 @@ export function useWorkspace(initialState = null) {
 
           // (3) Remove the moving days from EVERY snapshot's list first, so the
           // result is a clean partition regardless of stale stored lists.
-          animal.configurationHistory.forEach((snapshot) => {
+          history.forEach((snapshot) => {
             snapshot.appliedToDays = (snapshot.appliedToDays || []).filter((id) => !moving.has(id));
           });
           // (2) Add them to the target snapshot's list (dedup, stable order).
@@ -411,6 +415,7 @@ export function useWorkspace(initialState = null) {
             ...target.appliedToDays.filter((id) => !moving.has(id)),
             ...validDayIds,
           ];
+          animal.configurationHistory = history;
 
           // (1) Point each listed day at the target version.
           const updatedDays = { ...prev.days };
@@ -428,6 +433,61 @@ export function useWorkspace(initialState = null) {
             ...prev,
             animals: { ...prev.animals, [animalId]: animal },
             days: updatedDays,
+            lastModified: now,
+          };
+        });
+      },
+
+      /**
+       * Rebuilds a corrupt or missing `configurationHistory` from scratch: replaces it
+       * with a single version-1 snapshot derived from the animal's CURRENT `devices`
+       * (the editor's mirror of the latest configuration). This is the executable repair
+       * for a raw-shape `malformed_animal_collection` on `configurationHistory` — a
+       * restored/imported non-array history that shadows valid data and blocks export.
+       *
+       * Tolerates any start shape (non-array, missing); `getAnimalDevices` / the
+       * `structuredClone` of the (possibly-empty) electrode arrays never throw. No-op for
+       * an unknown animal (the repair surface is gone — nothing to fix).
+       *
+       * Scope: this clears the raw-shape `configurationHistory` corruption (the issue the
+       * repair command carries). It does NOT re-pin days that referenced a now-gone version
+       * > 1 — those still fail closed in `resolveDayConfig` until re-applied — so it is one
+       * step toward export-readiness, not a guarantee of it.
+       *
+       * @param {string} animalId - Animal identifier.
+       */
+      rebuildConfigurationHistory: (animalId) => {
+        setWorkspace((prev) => {
+          if (!prev.animals[animalId]) return prev;
+
+          const animal = prev.animals[animalId];
+          const updated = structuredClone(animal);
+          const devices = getAnimalDevices(updated);
+          const now = getCurrentTimestamp();
+
+          updated.configurationHistory = [
+            {
+              version: 1,
+              date: getCurrentDate(),
+              description: 'Rebuilt configuration',
+              devices: {
+                electrode_groups: structuredClone(
+                  Array.isArray(devices.electrode_groups) ? devices.electrode_groups : []
+                ),
+                ntrode_electrode_group_channel_map: structuredClone(
+                  Array.isArray(devices.ntrode_electrode_group_channel_map)
+                    ? devices.ntrode_electrode_group_channel_map
+                    : []
+                ),
+              },
+              appliedToDays: [],
+            },
+          ];
+          updated.lastModified = now;
+
+          return {
+            ...prev,
+            animals: { ...prev.animals, [animalId]: updated },
             lastModified: now,
           };
         });
@@ -488,10 +548,10 @@ export function useWorkspace(initialState = null) {
             },
             created: now,
             lastModified: now,
-            configurationVersion: animal.configurationHistory.length, // Latest version
+            configurationVersion: getConfigHistory(animal).length, // Latest version
           };
 
-          const updatedAnimal = { ...animal, days: [...animal.days, dayId] };
+          const updatedAnimal = { ...animal, days: [...getAnimalDayIds(animal), dayId] };
 
           return {
             ...prev,
@@ -524,9 +584,18 @@ export function useWorkspace(initialState = null) {
           const day = prev.days[dayId];
           const updated = structuredClone(day);
 
-          // Apply updates (deep merge for nested objects)
+          // Apply updates (deep merge for nested objects). Guard the CURRENT session to a
+          // record before spreading: a corrupt import can persist `session` as a scalar/array,
+          // and `{...'corrupt'}` would scatter char-indexed keys into the record. The
+          // resetDaySession repair relies on this to write a clean session over a malformed one.
           if (updates.session) {
-            updated.session = { ...updated.session, ...updates.session };
+            const currentSession =
+              updated.session !== null &&
+              typeof updated.session === 'object' &&
+              !Array.isArray(updated.session)
+                ? updated.session
+                : {};
+            updated.session = { ...currentSession, ...updates.session };
           }
           if (updates.tasks !== undefined) {
             updated.tasks = updates.tasks;
@@ -539,6 +608,13 @@ export function useWorkspace(initialState = null) {
           }
           if (updates.associated_video_files !== undefined) {
             updated.associated_video_files = updates.associated_video_files;
+          }
+          // FsGUI protocol files are a day-owned collection the export merge reads
+          // (workspaceUtils `mergeDayMetadata`). Without this branch a write — including
+          // the raw-shape `resetDayCollection` repair — would be silently dropped, so the
+          // corruption it is meant to clear would persist.
+          if (updates.fs_gui_yamls !== undefined) {
+            updated.fs_gui_yamls = updates.fs_gui_yamls;
           }
           if (updates.technical) {
             updated.technical = { ...updated.technical, ...updates.technical };
@@ -592,7 +668,7 @@ export function useWorkspace(initialState = null) {
           const animal = prev.animals[day.animalId];
           const updatedAnimal = {
             ...animal,
-            days: animal.days.filter((id) => id !== dayId),
+            days: getAnimalDayIds(animal).filter((id) => id !== dayId),
           };
 
           const updatedDays = { ...prev.days };
@@ -604,6 +680,44 @@ export function useWorkspace(initialState = null) {
               ...prev.animals,
               [day.animalId]: updatedAnimal,
             },
+            days: updatedDays,
+            lastModified: getCurrentTimestamp(),
+          };
+        });
+      },
+
+      /**
+       * Removes a DANGLING day reference: drops `dayId` from the animal's `days` array and
+       * deletes any corrupt leftover `days[dayId]` record. Unlike {@link deleteDay} (which
+       * throws on a missing record and assumes a well-formed day with an `animalId`), this is
+       * the repair for a reference that resolves to a MISSING or non-record day — the kind the
+       * ValidationSummary surfaces as an "Error — missing day record" row. The owning animal
+       * id is passed explicitly (a corrupt record has no `animalId` to read it from). No-op for
+       * an unknown animal (the reference's owner is gone — nothing to repair).
+       *
+       * @param {string} animalId - The animal whose `days` array holds the dangling reference.
+       * @param {string} dayId - The dangling day id to remove.
+       */
+      removeDayReference: (animalId, dayId) => {
+        setWorkspace((prev) => {
+          const animal = prev.animals[animalId];
+          if (!animal) return prev;
+
+          const updatedAnimal = {
+            ...animal,
+            days: getAnimalDayIds(animal).filter((id) => id !== dayId),
+          };
+          // Guard the days map: a corrupt non-record `days` (the whole-map corruption this
+          // repair is also reachable from) must normalize to `{}`, not be spread into a
+          // char-indexed object. There is no valid day record inside a non-record map to lose.
+          const daysIsRecord =
+            prev.days !== null && typeof prev.days === 'object' && !Array.isArray(prev.days);
+          const updatedDays = daysIsRecord ? { ...prev.days } : {};
+          delete updatedDays[dayId];
+
+          return {
+            ...prev,
+            animals: { ...prev.animals, [animalId]: updatedAnimal },
             days: updatedDays,
             lastModified: getCurrentTimestamp(),
           };
@@ -641,7 +755,7 @@ export function useWorkspace(initialState = null) {
         const animal = workspace.animals[animalId];
         if (!animal) return [];
 
-        return (animal.days || [])
+        return getAnimalDayIds(animal)
           .map((dayId) => workspace.days[dayId])
           .filter(Boolean)
           .sort((a, b) => a.date.localeCompare(b.date));

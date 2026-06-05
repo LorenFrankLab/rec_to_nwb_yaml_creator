@@ -3,9 +3,10 @@
 [← back to PLAN.md](PLAN.md) · [overview](overview.md) · [shared-contracts](shared-contracts.md#ux-mistake-prevention-contract)
 
 Goal: prove the corrected workspace path works as a user experience in a real browser before cutover. Phases
-1–8 add the model, validation, export, and UI correctness pieces; this phase exercises the stitched-together
-flows with Playwright so regressions in routing, focus, modals, disabled states, downloads, localStorage, and
-browser-only behavior cannot hide behind unit/integration coverage.
+1–8 add the model, validation, export, and UI correctness pieces; Phase 8.5 stabilizes the domain boundaries
+those pieces depend on; this phase exercises the stitched-together flows with Playwright so regressions in
+routing, focus, modals, disabled states, downloads, localStorage, and browser-only behavior cannot hide behind
+unit/integration coverage.
 
 **Inputs to read first:**
 
@@ -20,8 +21,8 @@ browser-only behavior cannot hide behind unit/integration coverage.
 - [e2e/baselines](../../../../e2e/baselines) — legacy baseline specs. Keep them as legacy coverage, but do
   not model new workspace QA after their conditional/skip-if-visible style; Phase 9 tests must fail when a
   required workspace control is missing.
-- Phase docs 1–8 — especially the validation slices and UX mistake-prevention tests. Phase 9 samples from
-  those flows at the browser level; it does not replace their lower-level tests.
+- Phase docs 1–8.5 — especially the validation slices, domain-boundary checks, and UX mistake-prevention
+  tests. Phase 9 samples from those flows at the browser level; it does not replace their lower-level tests.
 
 **Contracts referenced:**
 

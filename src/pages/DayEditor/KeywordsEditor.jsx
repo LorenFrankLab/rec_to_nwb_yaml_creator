@@ -15,7 +15,8 @@ import PropTypes from 'prop-types';
  * @returns {JSX.Element}
  */
 export default function KeywordsEditor({ value, onChange }) {
-  const keywords = value || [];
+  // Tolerate corrupt persisted state: a non-array `value` (`{}`) must not crash render.
+  const keywords = Array.isArray(value) ? value : [];
   const [draft, setDraft] = useState('');
   const [error, setError] = useState('');
 

@@ -49,7 +49,9 @@ function provideStore(workspace) {
   const updateDay = vi.fn();
   useStoreContext.mockReturnValue({
     model: { workspace },
-    actions: { updateDay },
+    // removeDayReference is present so a missing-record row's repair button never references
+    // an undefined action; the dedicated repair test installs its own captured spy.
+    actions: { updateDay, removeDayReference: vi.fn() },
     selectors: {},
     persistence: { enabled: false },
   });
@@ -296,6 +298,206 @@ describe('ValidationSummary', () => {
     await user.click(screen.getByRole('button', { name: /validate all/i }));
 
     expect(screen.getByRole('status')).toHaveTextContent(/validated 1 day\./i);
+  });
+
+  describe('corrupt workspace shape during initial row construction', () => {
+    it('a day whose mergeDayMetadata throws is flagged as an error row, not crashing the whole summary', () => {
+      // One good animal/day plus a broken animal whose configurationHistory is
+      // missing → mergeDayMetadata throws by design. The broken day must be
+      // reported (an error chip), and the good day must still render: one corrupt
+      // day must never blank the whole multi-day summary.
+      const { workspace, ids } = makeSummaryWorkspace();
+
+      // Break remy so resolveDayConfig (inside mergeDayMetadata) throws for its days.
+      workspace.animals.remy.configurationHistory = [];
+      // Keep only one remy day to assert it precisely.
+      delete workspace.days[ids.incompleteDayId];
+      workspace.animals.remy.days = [ids.validDayId];
+
+      provideStore(workspace);
+
+      // Renders without throwing — the broken day is contained, not fatal.
+      expect(() => render(<ValidationSummary />)).not.toThrow();
+
+      // The good (totoro) day still renders.
+      expect(screen.getByTestId(`day-row-${ids.errorDayId}`)).toBeInTheDocument();
+
+      // The broken remy day is present and visibly flagged as an error/unreadable
+      // row — never silently dropped or shown as valid.
+      const brokenRow = screen.getByTestId(`day-row-${ids.validDayId}`);
+      expect(within(brokenRow).getByText(/error/i)).toBeInTheDocument();
+    });
+
+    it('a non-array animal.days does not crash the summary', () => {
+      // Corrupt import: animal.days is an object, not an array. Iterating it must
+      // not throw; the animal simply contributes no rows.
+      const { workspace, ids } = makeSummaryWorkspace();
+      workspace.animals.remy.days = {}; // corrupt shape
+      provideStore(workspace);
+
+      expect(() => render(<ValidationSummary />)).not.toThrow();
+
+      // The other animal's day still renders.
+      expect(screen.getByTestId(`day-row-${ids.errorDayId}`)).toBeInTheDocument();
+    });
+
+    it('surfaces every referenced day as an error row when the whole days map is MISSING', () => {
+      // Phase 4: a missing top-level `days` map is corruption, not emptiness. Every animal
+      // day reference resolves to no record and must surface as an explicit error row — never
+      // laundered into the "No recording days" empty state, which would hide every day.
+      const { workspace, ids } = makeSummaryWorkspace();
+      delete workspace.days; // days map absent
+      provideStore(workspace);
+
+      expect(() => render(<ValidationSummary />)).not.toThrow();
+
+      expect(screen.queryByText(/no recording days/i)).not.toBeInTheDocument();
+      expect(screen.getByTestId(`day-row-${ids.validDayId}`)).toBeInTheDocument();
+      expect(screen.getByTestId(`day-row-${ids.errorDayId}`)).toBeInTheDocument();
+      // remy (2 days) + totoro (1 day) = 3 references, all surfaced as errors, none valid.
+      expect(screen.getByTestId('summary-counts')).toHaveTextContent(/0 valid/i);
+      expect(screen.getByTestId('summary-counts')).toHaveTextContent(/3 with errors/i);
+    });
+
+    it('surfaces every referenced day as an error row when the days map is a NON-RECORD', () => {
+      // `days` persisted as a non-record (e.g. an array from a bad migration). Each reference
+      // resolves to no record → explicit error row, not the laundered empty state.
+      const { workspace, ids } = makeSummaryWorkspace();
+      workspace.days = []; // non-record shape
+      provideStore(workspace);
+
+      expect(() => render(<ValidationSummary />)).not.toThrow();
+      expect(screen.queryByText(/no recording days/i)).not.toBeInTheDocument();
+      expect(screen.getByTestId(`day-row-${ids.errorDayId}`)).toBeInTheDocument();
+      expect(screen.getByTestId('summary-counts')).toHaveTextContent(/3 with errors/i);
+    });
+
+    it('offers an executable "Remove day reference" repair on a missing-record row (no dead-end)', async () => {
+      // A missing-record row must not dead-end on "Open editor" (#/day/<id> → Day not found).
+      // It offers an executable repair that drops the dangling reference from the owning animal.
+      const user = userEvent.setup();
+      const { workspace } = makeSummaryWorkspace();
+      delete workspace.days[`${'remy-2023-06-22'}`];
+      delete workspace.days['remy-2023-06-23'];
+      workspace.animals.remy.days = ['remy-2099-01-01'];
+      workspace.animals.totoro.days = [];
+
+      const removeDayReference = vi.fn();
+      useStoreContext.mockReturnValue({
+        model: { workspace },
+        actions: { updateDay: vi.fn(), removeDayReference },
+        selectors: {},
+        persistence: { enabled: false },
+      });
+
+      render(<ValidationSummary />);
+      const row = screen.getByTestId('day-row-remy-2099-01-01');
+      await user.click(within(row).getByRole('button', { name: /remove .*day reference/i }));
+      expect(removeDayReference).toHaveBeenCalledWith('remy', 'remy-2099-01-01');
+    });
+
+    it('repairs a dangling reference using the workspace MAP KEY even when animal.id is corrupt', async () => {
+      // The summary tolerates a missing/corrupt animal.id; the repair must still target the
+      // owning animal. buildRows carries the reliable map key, so removeDayReference is called
+      // with the key (the real store handle), not a missing `animal.id` (which would no-op).
+      const user = userEvent.setup();
+      const { workspace } = makeSummaryWorkspace();
+      delete workspace.days[`${'remy-2023-06-22'}`];
+      delete workspace.days['remy-2023-06-23'];
+      delete workspace.animals.remy.id; // corrupt: no own id
+      workspace.animals.remy.days = ['remy-2099-01-01'];
+      workspace.animals.totoro.days = [];
+
+      const removeDayReference = vi.fn();
+      useStoreContext.mockReturnValue({
+        model: { workspace },
+        actions: { updateDay: vi.fn(), removeDayReference },
+        selectors: {},
+        persistence: { enabled: false },
+      });
+
+      render(<ValidationSummary />);
+      const row = screen.getByTestId('day-row-remy-2099-01-01');
+      await user.click(within(row).getByRole('button', { name: /remove .*day reference/i }));
+      // 'remy' is the workspace.animals MAP KEY (the store handle), not animal.id (deleted).
+      expect(removeDayReference).toHaveBeenCalledWith('remy', 'remy-2099-01-01');
+    });
+
+    it('non-string animal ids do not crash the summary', () => {
+      // Corrupt import: animal ids are missing (would be non-string). They are
+      // used in `.localeCompare` while sorting animals and as a fallback label,
+      // so a non-string must be tolerated without throwing. Both animals lose
+      // their id so the throw is independent of sort argument order.
+      const { workspace, ids } = makeSummaryWorkspace();
+      delete workspace.animals.remy.id;
+      delete workspace.animals.totoro.id;
+      provideStore(workspace);
+
+      expect(() => render(<ValidationSummary />)).not.toThrow();
+
+      // The days still render despite the unsortable ids.
+      expect(screen.getByTestId(`day-row-${ids.validDayId}`)).toBeInTheDocument();
+      expect(screen.getByTestId(`day-row-${ids.errorDayId}`)).toBeInTheDocument();
+    });
+
+    it('non-string day dates do not crash the summary', () => {
+      // Corrupt import: day `date` values are numbers. They are used in
+      // `.localeCompare` while sorting days, so a non-string must be tolerated
+      // without throwing. Both remy days are broken so the throw is independent
+      // of sort argument order.
+      const { workspace, ids } = makeSummaryWorkspace();
+      workspace.days[ids.validDayId].date = 20230622;
+      workspace.days[ids.incompleteDayId].date = 20230623;
+      provideStore(workspace);
+
+      expect(() => render(<ValidationSummary />)).not.toThrow();
+
+      // The well-formed animal's day still renders.
+      expect(screen.getByTestId(`day-row-${ids.errorDayId}`)).toBeInTheDocument();
+    });
+
+    it('a non-record day record (truthy but malformed) is surfaced as an EXPLICIT error row, never dropped or valid', () => {
+      // Phase 4: a day id resolving to a truthy-but-non-record value (e.g. a leftover
+      // string from a partial migration) must NOT be silently dropped — that would let the
+      // accounting report only the surviving rows while a corrupt day hides. It is surfaced
+      // as a distinct error row so validate/export counts stay honest.
+      const { workspace, ids } = makeSummaryWorkspace();
+      delete workspace.days[ids.incompleteDayId];
+      workspace.animals.remy.days = [ids.validDayId];
+      workspace.days[ids.validDayId] = 'corrupt-day-string';
+      provideStore(workspace);
+
+      expect(() => render(<ValidationSummary />)).not.toThrow();
+
+      // The well-formed animal's day still renders.
+      expect(screen.getByTestId(`day-row-${ids.errorDayId}`)).toBeInTheDocument();
+
+      // The corrupt reference is now an explicit error row (not dropped), never valid.
+      const corruptRow = screen.getByTestId(`day-row-${ids.validDayId}`);
+      expect(within(corruptRow).getByText(/error/i)).toBeInTheDocument();
+      // Two error rows now: totoro's error day + the corrupt reference. None valid.
+      expect(screen.getByTestId('summary-counts')).toHaveTextContent(/0 valid/i);
+      expect(screen.getByTestId('summary-counts')).toHaveTextContent(/2 with errors/i);
+    });
+
+    it('a day reference with NO matching record (missing day) is surfaced as an explicit error row', () => {
+      // Phase 4: an animal references a day id that does not exist in workspace.days (a
+      // dangling reference from a partial migration). It must be reported as an error row,
+      // not dropped — otherwise the day silently disappears from the accounting.
+      const { workspace, ids } = makeSummaryWorkspace();
+      delete workspace.days[ids.validDayId];
+      delete workspace.days[ids.incompleteDayId];
+      workspace.animals.remy.days = ['remy-2099-01-01'];
+      provideStore(workspace);
+
+      expect(() => render(<ValidationSummary />)).not.toThrow();
+
+      const missingRow = screen.getByTestId('day-row-remy-2099-01-01');
+      expect(within(missingRow).getByText(/error/i)).toBeInTheDocument();
+      // totoro's error day + the missing reference = 2 errors, 0 valid.
+      expect(screen.getByTestId('summary-counts')).toHaveTextContent(/0 valid/i);
+      expect(screen.getByTestId('summary-counts')).toHaveTextContent(/2 with errors/i);
+    });
   });
 
   it('an animal with zero days contributes no rows and does not crash', () => {

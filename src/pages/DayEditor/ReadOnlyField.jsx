@@ -9,7 +9,9 @@ import PropTypes from 'prop-types';
  *
  * @param {object} props
  * @param {string} props.label - Field label
- * @param {string} props.value - Field value (inherited from animal)
+ * @param {string} [props.value] - Field value (inherited from animal). When a corrupt record
+ *   loses the field (e.g. a malformed session's read-only session_id), this is `undefined`;
+ *   it renders as a controlled empty string so the input never flips uncontrolled→controlled.
  * @param {string} [props.helpText] - Optional help text to display below the field
  * @returns {JSX.Element}
  *
@@ -29,7 +31,7 @@ export default function ReadOnlyField({ label, value, helpText }) {
       <input
         id={id}
         type="text"
-        value={value}
+        value={value ?? ''}
         readOnly
         disabled
         className="read-only-field"
@@ -43,6 +45,12 @@ export default function ReadOnlyField({ label, value, helpText }) {
 
 ReadOnlyField.propTypes = {
   label: PropTypes.string.isRequired,
-  value: PropTypes.string.isRequired,
+  // Not required: a repair destination renders this for a corrupt record whose value is lost.
+  value: PropTypes.string,
   helpText: PropTypes.string,
+};
+
+ReadOnlyField.defaultProps = {
+  value: '',
+  helpText: undefined,
 };

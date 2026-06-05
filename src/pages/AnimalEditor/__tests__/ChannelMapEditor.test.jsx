@@ -288,6 +288,76 @@ describe('ChannelMapEditor', () => {
     });
   });
 
+  describe('Probe Metadata Contract: per-shank grids (uneven 64c-3s)', () => {
+    // 64c-3s partitions 64 electrodes UNEVENLY across 3 shanks (21/21/22). The
+    // editor must derive each shank's Map grid from the probe catalog, not from a
+    // single uniform channel array — otherwise shank 3 (22 channels) loses key 21
+    // (electrode id 63) from its Map dropdowns. Bad channels for a MULTI-shank probe
+    // are edited as ONE probe-wide selector (0..63), written to the first ntrode row
+    // (converter truth), so electrode id 63 stays reachable there too.
+    const group64c3s = {
+      id: 2,
+      device_type: '64c-3s6mm6cm-20um-40um-sl',
+      location: 'CA1',
+      targeted_x: 1.0,
+      targeted_y: 2.0,
+      targeted_z: 3.0,
+      units: 'mm',
+    };
+    const shankMap = (offset, len) =>
+      Object.fromEntries(Array.from({ length: len }, (_, i) => [i, offset + i]));
+    const maps64c3s = [
+      { electrode_group_id: 2, ntrode_id: 0, bad_channels: [], map: shankMap(0, 21) },
+      { electrode_group_id: 2, ntrode_id: 1, bad_channels: [], map: shankMap(21, 21) },
+      { electrode_group_id: 2, ntrode_id: 2, bad_channels: [], map: shankMap(42, 22) },
+    ];
+
+    it('renders the third shank with 22 channels (keys 0..21), not 21', () => {
+      const { container } = render(
+        <ChannelMapEditor
+          electrodeGroup={group64c3s}
+          channelMaps={maps64c3s}
+          onSave={() => {}}
+          onCancel={() => {}}
+        />
+      );
+
+      const fieldsets = container.querySelectorAll('.ntrode-fieldset');
+      expect(fieldsets).toHaveLength(3);
+
+      // Per-shank map dropdown counts must be 21 / 21 / 22.
+      const mapSelectCounts = Array.from(fieldsets).map(
+        (fs) => fs.querySelectorAll('.ntrode-map select').length
+      );
+      expect(mapSelectCounts).toEqual([21, 21, 22]);
+
+      // The third shank's last Map channel (local key 21 → electrode id 63) must
+      // exist as a Map dropdown.
+      const lastFieldsetSelects = fieldsets[2].querySelectorAll('.ntrode-map select');
+      expect(lastFieldsetSelects).toHaveLength(22);
+
+      // Bad channels for this MULTI-shank probe are ONE probe-wide grid (0..63),
+      // written to the first ntrode row (id 0). Electrode id 63 is reachable here.
+      const probeWideBadChannels = screen.getByTestId('bad-channels-checkboxes-0');
+      expect(probeWideBadChannels.querySelectorAll('input[type="checkbox"]')).toHaveLength(64);
+      expect(screen.getByLabelText('Mark electrode 63 as bad for this probe')).toBeInTheDocument();
+    });
+
+    it('saves without dropping electrode id 63 (no spurious validation error)', () => {
+      const onSave = vi.fn();
+      render(
+        <ChannelMapEditor
+          electrodeGroup={group64c3s}
+          channelMaps={maps64c3s}
+          onSave={onSave}
+          onCancel={() => {}}
+        />
+      );
+      fireEvent.click(screen.getByTestId('editor-save'));
+      expect(onSave).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('Empty channel maps edge case', () => {
     it('should show message when no channel maps exist', () => {
       render(

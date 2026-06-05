@@ -10,6 +10,8 @@
  * @module pages/AnimalEditor/identitySafety
  */
 
+import { getAnimalCameras, getDataAcqDevices } from '../../state/workspaceSelectors';
+
 /**
  * Compare two dependent-field values for identity purposes. Numbers compare
  * numerically; everything else compares as trimmed strings so `'8mm'` vs `'8mm'`
@@ -83,7 +85,7 @@ export const DATA_ACQ_DEPENDENT_FIELDS = ['system', 'amplifier', 'adc_circuit'];
 export function collectCameraIdentities(workspace, exclude = null) {
   const registry = [];
   for (const animal of Object.values(workspace?.animals || {})) {
-    for (const camera of animal.cameras || []) {
+    for (const camera of getAnimalCameras(animal)) {
       if (exclude && animal.id === exclude.animalId && camera.id === exclude.id) continue;
       registry.push({
         name: camera.camera_name,
@@ -114,7 +116,9 @@ export function collectDataAcqIdentities(workspace, exclude = null) {
   const excludeIndex = exclude && typeof exclude === 'object' ? exclude.index : null;
   const registry = [];
   for (const animal of Object.values(workspace?.animals || {})) {
-    for (const [index, device] of (animal.devices?.data_acq_device || []).entries()) {
+    // Read through the canonical selector: a corrupt non-array data_acq_device (`|| []`
+    // preserves a string/object and throws on `.entries()`) is treated as no devices.
+    for (const [index, device] of getDataAcqDevices(animal).entries()) {
       if (animal.id === excludeAnimalId && (excludeIndex == null || index === excludeIndex)) continue;
       registry.push({
         name: device.name,

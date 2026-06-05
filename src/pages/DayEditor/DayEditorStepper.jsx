@@ -3,6 +3,8 @@ import { useStoreContext } from '../../state/StoreContext';
 import { useStepperShortcut } from '../../hooks/stepperShortcuts';
 import { useDayIdFromUrl } from '../../hooks/useDayIdFromUrl';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
+import { getAnimalSubject, getDayTasks } from '../../state/workspaceSelectors';
+import { applyRepairCommand } from '../../state/repairCommands';
 import { computeStepStatus } from './validation';
 import { isExportEnabled } from './stepGate';
 import StepNavigation from './StepNavigation';
@@ -65,14 +67,21 @@ export default function DayEditorStepper() {
   const day = model.workspace?.days?.[dayId];
   const animal = day ? model.workspace?.animals?.[day.animalId] : null;
 
-  // Merge animal + day for validation (must be before early returns to follow Rules of Hooks)
+  // Merge animal + day for validation (must be before early returns to follow Rules of Hooks).
+  // mergeDayMetadata throws BY DESIGN on a malformed animal (missing/non-array
+  // configurationHistory); tolerate it so the stepper renders (the gate fails closed and
+  // the raw-shape animal validation surfaces the repairable issue) instead of crashing.
   const mergedDay = useMemo(() => {
     if (!animal || !day) return null;
-    return mergeDayMetadata(animal, day);
+    try {
+      return mergeDayMetadata(animal, day);
+    } catch {
+      return null;
+    }
   }, [animal, day]);
 
   // Dataset-wide task_name -> task_description map for the Spyglass task-name
-  // identity guard (Phase 6 Task 0b). task_name is an identity across the whole
+  // identity guard. task_name is an identity across the whole
   // dataset, so the modal must check a reused name against EVERY other day's
   // description, not just the current day's siblings. The CURRENT day's tasks are
   // excluded here (the step folds them back in, giving live siblings precedence);
@@ -83,7 +92,8 @@ export default function DayEditorStepper() {
     const days = model.workspace?.days || {};
     for (const id of Object.keys(days)) {
       if (id === dayId) continue;
-      (days[id].tasks || []).forEach((task) => {
+      const siblingTasks = getDayTasks(days[id]);
+      siblingTasks.forEach((task) => {
         if (task.task_name) {
           map[task.task_name] = task.task_description ?? '';
         }
@@ -103,8 +113,8 @@ export default function DayEditorStepper() {
         export: 'error',
       };
     }
-    return computeStepStatus(day, mergedDay);
-  }, [day, mergedDay]);
+    return computeStepStatus(day, mergedDay, animal);
+  }, [day, mergedDay, animal]);
   // Keep the keyboard handler's view of the gate current (it reads this ref at
   // fire time rather than closing over a stale status).
   stepStatusRef.current = stepStatus;
@@ -115,15 +125,30 @@ export default function DayEditorStepper() {
   // itself (focusing the main content region).
   const [focusRequest, setFocusRequest] = useState(null);
   const focusTokenRef = useRef(0);
-  const handleStepNavigate = useCallback((stepId, fieldPath) => {
-    setCurrentStep(stepId);
+  const handleStepNavigate = useCallback((target, fieldPath) => {
+    // An 'animal' target routes to the Animal Editor (the editable owner of device
+    // geometry, channel maps, cameras, data-acq devices, and subject identity),
+    // mirroring the camera-banner link. Day-Editor step targets stay in this stepper.
+    if (target === 'animal') {
+      if (animal?.id) {
+        // Encode the field path so the Animal Editor can deep-link to the step that
+        // owns the fix (channel maps / electrode groups / hardware) rather than always
+        // landing on step 0 and dropping the repair target.
+        const base = `#/animal/${encodeURIComponent(animal.id)}/editor`;
+        window.location.hash = fieldPath
+          ? `${base}?field=${encodeURIComponent(fieldPath)}`
+          : base;
+      }
+      return;
+    }
+    setCurrentStep(target);
     if (fieldPath) {
       focusTokenRef.current += 1;
       setFocusRequest({ fieldPath, token: focusTokenRef.current });
     } else {
       setFocusRequest(null);
     }
-  }, []);
+  }, [animal?.id]);
 
   useEffect(() => {
     if (!focusRequest) return undefined;
@@ -166,10 +191,14 @@ export default function DayEditorStepper() {
     const updated = structuredClone(day);
     let target = updated;
 
-    // Navigate to parent object, creating intermediate objects if they don't exist
+    // Navigate to parent object, (re)creating intermediate objects. A repair write-through
+    // a path whose intermediate is corrupt (e.g. `day.session` loaded as a scalar/array)
+    // must not throw on `scalar.field = value` (strict-mode TypeError): replace any
+    // non-plain-object intermediate with a fresh object so the repaired field lands cleanly.
     for (let i = 0; i < pathSegments.length - 1; i++) {
       const segment = pathSegments[i];
-      if (!target[segment]) {
+      const child = target[segment];
+      if (child === null || typeof child !== 'object' || Array.isArray(child)) {
         target[segment] = {};
       }
       target = target[segment];
@@ -183,12 +212,28 @@ export default function DayEditorStepper() {
     actions.updateDay(dayId, { [topLevelKey]: updated[topLevelKey] });
   }, [day, dayId, actions]);
 
+  // Executable repair: run an issue's serializable repairCommand against the store, in
+  // place. The stepper owns the animal/day/actions the executor needs, so it is the single
+  // place that context is assembled — no global side effects. A commandable issue's button
+  // (in ExportStep's blocked list and the Validation summary) calls this instead of
+  // navigating to a destination that may render a blank empty state.
+  const handleRepair = useCallback((issue) => {
+    if (!issue?.repairCommand) return;
+    applyRepairCommand(issue.repairCommand, {
+      actions,
+      animalId: animal?.id,
+      dayId,
+      day,
+      animal,
+    });
+  }, [actions, animal, dayId, day]);
+
   // Subject fields live on the animal, not the day. The Overview step uses this to
   // repair inherited subject metadata (DOB / weight / description / species) in
   // place, writing through to the animal so existing animals can be fixed.
   const handleSubjectUpdate = useCallback((field, value) => {
     if (!animal) return;
-    actions.updateAnimal(animal.id, { subject: { ...animal.subject, [field]: value } });
+    actions.updateAnimal(animal.id, { subject: { ...getAnimalSubject(animal), [field]: value } });
   }, [animal, actions]);
 
   // Step configuration. Export stays gated by isExportEnabled (every prerequisite
@@ -265,6 +310,7 @@ export default function DayEditorStepper() {
           onFieldUpdate={handleFieldUpdate}
           onSubjectUpdate={handleSubjectUpdate}
           onNavigate={handleStepNavigate}
+          onRepair={handleRepair}
           focusRequest={focusRequest}
           animalDays={animalDays}
           actions={actions}

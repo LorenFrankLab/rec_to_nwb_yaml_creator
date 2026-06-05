@@ -5,8 +5,23 @@ import TasksTable from './TasksTable';
 import TaskModal from './TaskModal';
 import BehavioralEventsDisplay from './BehavioralEventsDisplay';
 import AssociatedVideosEditor from './AssociatedVideosEditor';
+import AssociatedFilesEditor from './AssociatedFilesEditor';
+import MalformedCollectionNotice from './MalformedCollectionNotice';
 import { useStepperShortcut } from '../../hooks/stepperShortcuts';
+import { RAW_DAY_ARRAY_FIELDS } from '../../validation/rawShape';
+import {
+  getAnimalBehavioralEvents,
+  getAnimalCameras,
+  getDayTasks,
+  getDayAssociatedVideos,
+  getDayAssociatedFiles,
+  getDayBehavioralEvents,
+} from '../../state/workspaceSelectors';
 import './TasksEpochsStep.scss';
+
+// The day-owned collections this step owns (raw-shape reset surface). Derived from the
+// single source so the reset controls and the validator can't drift.
+const EPOCHS_STEP_COLLECTIONS = RAW_DAY_ARRAY_FIELDS.filter((f) => f.repairStep === 'epochs');
 
 /**
  * Collect the valid task-epoch numbers across a set of tasks.
@@ -15,8 +30,10 @@ import './TasksEpochsStep.scss';
  */
 function validEpochSet(tasks) {
   const set = new Set();
-  (tasks || []).forEach((task) => {
-    (task.task_epochs || []).forEach((epoch) => {
+  // Guard corrupt persisted shapes (a non-array tasks / task_epochs from a bad import)
+  // so the orphan helpers never throw before the raw-shape reset UI can render.
+  (Array.isArray(tasks) ? tasks : []).forEach((task) => {
+    (Array.isArray(task?.task_epochs) ? task.task_epochs : []).forEach((epoch) => {
       const n = Number(epoch);
       if (Number.isInteger(n)) set.add(n);
     });
@@ -38,9 +55,11 @@ function findOrphanedReferences(day, nextTasks) {
     entry.task_epochs !== '' &&
     entry.task_epochs != null &&
     !valid.has(Number(entry.task_epochs));
+  // Guard corrupt persisted shapes: a non-array associated_* (e.g. `{}`) must not throw
+  // when a task Add/Edit/Delete runs before the user resets it via the raw-shape notice.
   return {
-    videos: (day.associated_video_files || []).filter(isOrphan),
-    files: (day.associated_files || []).filter(isOrphan),
+    videos: getDayAssociatedVideos(day).filter(isOrphan),
+    files: getDayAssociatedFiles(day).filter(isOrphan),
   };
 }
 
@@ -51,7 +70,7 @@ function findOrphanedReferences(day, nextTasks) {
  * @returns {Array} The repaired array.
  */
 function clearOrphans(entries, valid) {
-  return (entries || []).map((entry) =>
+  return (Array.isArray(entries) ? entries : []).map((entry) =>
     entry.task_epochs !== '' &&
     entry.task_epochs != null &&
     !valid.has(Number(entry.task_epochs))
@@ -69,7 +88,7 @@ function clearOrphans(entries, valid) {
  * `onFieldUpdate('associated_video_files', …)`, which the stepper routes to the
  * store's `updateDay`; this component never touches the store directly.
  *
- * Repair-before-orphaning (Phase 6 Task 0c): a task delete or an epoch-removing
+ * Repair-before-orphaning: a task delete or an epoch-removing
  * task edit that would leave an `associated_video_files` / `associated_files`
  * entry pointing at a now-missing epoch surfaces the affected rows and requires an
  * explicit, deterministic cleanup BEFORE the orphan is committed — the day's
@@ -87,8 +106,15 @@ function clearOrphans(entries, valid) {
  * @returns {JSX.Element}
  */
 export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, onFieldUpdate }) {
-  const tasks = day.tasks || [];
-  const cameras = animal.cameras || [];
+  // Tolerate corrupt persisted state: a non-array `tasks` (e.g. `{}` from a bad import)
+  // must not crash render (`.map`/`.forEach`); it is surfaced + reset via
+  // MalformedCollectionNotice below. Guard ALL day-owned arrays this step iterates.
+  const tasks = getDayTasks(day);
+  const cameras = getAnimalCameras(animal);
+  const associatedVideos = getDayAssociatedVideos(day);
+  const associatedFiles = getDayAssociatedFiles(day);
+  const inheritedBehavioralEvents = getAnimalBehavioralEvents(animal);
+  const dayBehavioralEvents = getDayBehavioralEvents(day);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('add');
@@ -183,12 +209,14 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
     // The delete is already confirmed (with the affected-video notice) in TasksTable,
     // so clean up and commit together — no second prompt for the delete path.
     onFieldUpdate('tasks', nextTasks);
-    const repairedVideos = clearOrphans(day.associated_video_files, valid);
-    const repairedFiles = clearOrphans(day.associated_files, valid);
-    if (JSON.stringify(repairedVideos) !== JSON.stringify(day.associated_video_files || [])) {
+    const currentVideos = getDayAssociatedVideos(day);
+    const currentFiles = getDayAssociatedFiles(day);
+    const repairedVideos = clearOrphans(currentVideos, valid);
+    const repairedFiles = clearOrphans(currentFiles, valid);
+    if (JSON.stringify(repairedVideos) !== JSON.stringify(currentVideos)) {
       onFieldUpdate('associated_video_files', repairedVideos);
     }
-    if (JSON.stringify(repairedFiles) !== JSON.stringify(day.associated_files || [])) {
+    if (JSON.stringify(repairedFiles) !== JSON.stringify(currentFiles)) {
       onFieldUpdate('associated_files', repairedFiles);
     }
   }
@@ -201,12 +229,14 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
     const { nextTasks } = pendingRepair;
     const valid = validEpochSet(nextTasks);
     onFieldUpdate('tasks', nextTasks);
-    const repairedVideos = clearOrphans(day.associated_video_files, valid);
-    const repairedFiles = clearOrphans(day.associated_files, valid);
-    if (JSON.stringify(repairedVideos) !== JSON.stringify(day.associated_video_files || [])) {
+    const currentVideos = getDayAssociatedVideos(day);
+    const currentFiles = getDayAssociatedFiles(day);
+    const repairedVideos = clearOrphans(currentVideos, valid);
+    const repairedFiles = clearOrphans(currentFiles, valid);
+    if (JSON.stringify(repairedVideos) !== JSON.stringify(currentVideos)) {
       onFieldUpdate('associated_video_files', repairedVideos);
     }
-    if (JSON.stringify(repairedFiles) !== JSON.stringify(day.associated_files || [])) {
+    if (JSON.stringify(repairedFiles) !== JSON.stringify(currentFiles)) {
       onFieldUpdate('associated_files', repairedFiles);
     }
     setPendingRepair(null);
@@ -231,6 +261,18 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
   }
 
   /**
+   * Affected associated_files for the pending delete (so TasksTable can name them
+   * in its confirmation, alongside the affected videos). Returns the file orphans
+   * that deleting `index` would create.
+   * @param {number} index Task index slated for deletion.
+   * @returns {Array} The affected associated_files entries.
+   */
+  function affectedFilesForDelete(index) {
+    const nextTasks = tasks.filter((_, i) => i !== index);
+    return findOrphanedReferences(day, nextTasks).files;
+  }
+
+  /**
    * Close the modal without saving.
    */
   function handleCancel() {
@@ -247,6 +289,12 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
   return (
     <div className="day-editor-section tasks-epochs-step">
       <h2>Tasks &amp; Epochs</h2>
+
+      <MalformedCollectionNotice
+        day={day}
+        fields={EPOCHS_STEP_COLLECTIONS}
+        onReset={(key) => onFieldUpdate(key, [])}
+      />
 
       {showCameraBanner && (
         <div
@@ -283,19 +331,26 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
         onEdit={handleEditTask}
         onDelete={handleDeleteTask}
         affectedVideosForDelete={affectedVideosForDelete}
+        affectedFilesForDelete={affectedFilesForDelete}
       />
 
       <AssociatedVideosEditor
-        videos={day.associated_video_files}
+        videos={associatedVideos}
         cameras={cameras}
         tasks={tasks}
         onChange={(next) => onFieldUpdate('associated_video_files', next)}
       />
 
+      <AssociatedFilesEditor
+        files={associatedFiles}
+        tasks={tasks}
+        onChange={(next) => onFieldUpdate('associated_files', next)}
+      />
+
       <section className="behavioral-events-block">
         <BehavioralEventsDisplay
-          inheritedEvents={animal.behavioral_events}
-          dayEvents={day.behavioral_events}
+          inheritedEvents={inheritedBehavioralEvents}
+          dayEvents={dayBehavioralEvents}
           onDayEventsChange={(events) => onFieldUpdate('behavioral_events', events)}
         />
       </section>
@@ -306,7 +361,7 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
         task={editingTask}
         existingTasks={tasks}
         cameras={cameras}
-        inheritedEvents={animal.behavioral_events}
+        inheritedEvents={inheritedBehavioralEvents}
         knownTaskDescriptions={dayKnownDescriptions}
         animalId={animal.id}
         onSave={handleSaveTask}

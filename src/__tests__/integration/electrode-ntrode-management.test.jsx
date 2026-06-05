@@ -48,10 +48,15 @@ describe('Electrode Group and Ntrode Management', () => {
       expect(channels).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
     });
 
-    it('maps 64c-3s6mm6cm-20um-40um-sl to 20 channels', () => {
+    it('maps 64c-3s6mm6cm-20um-40um-sl to its first shank (21 ids, uneven probe)', () => {
+      // 64c-3s partitions 64 electrodes UNEVENLY across 3 shanks (21/21/22).
+      // deviceTypeMap returns the FIRST shank only: ids 0..20 (21 ids), NOT 20.
       const channels = deviceTypeMap('64c-3s6mm6cm-20um-40um-sl');
 
-      expect(channels).toHaveLength(20);
+      expect(channels).toHaveLength(21);
+      expect(channels).toEqual([
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+      ]);
     });
 
     it('maps NET-EBL-128ch-single-shank to 128 channels', () => {

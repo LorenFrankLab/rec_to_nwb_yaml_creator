@@ -1,11 +1,14 @@
 import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
+import { getAnimalCameras } from '../../state/workspaceSelectors';
 import { ConfirmDialog } from '../../components/Modal';
 import CamerasSection from './CamerasSection';
 import CameraModal from './CameraModal';
 import DataAcqSection from './DataAcqSection';
 import BehavioralEventsSection from './BehavioralEventsSection';
+import RawCorruptionBanner from '../../components/RawCorruptionBanner';
+import { rawArray } from '../../components/rawPropTypes';
 import SaveIndicator from '../DayEditor/SaveIndicator';
 import {
   collectCameraIdentities,
@@ -30,6 +33,7 @@ import './HardwareConfigStep.scss';
  * @param {Function} props.onFieldUpdate - Field update callback from AnimalEditorStepper.
  * @param {Function} props.onNavigateBack - Navigate back to Step 2 (Channel Maps).
  * @param {Function} props.onNavigateNext - Navigate to Step 4 (Optogenetics) or exit.
+ * @param props.onRepair
  * @returns {JSX.Element}
  */
 export default function HardwareConfigStep({
@@ -37,6 +41,7 @@ export default function HardwareConfigStep({
   onFieldUpdate,
   onNavigateBack,
   onNavigateNext,
+  onRepair,
 }) {
   const { model, persistence } = useStoreContext();
 
@@ -44,7 +49,10 @@ export default function HardwareConfigStep({
   const [cameraDivergence, setCameraDivergence] = useState(null);
   const [pendingDelete, setPendingDelete] = useState(null);
 
-  const cameras = useMemo(() => animal.cameras || [], [animal.cameras]);
+  // A repair routed to this editor must not dead-end by crashing on the corruption it
+  // exists to fix. Read cameras through the canonical selector: a non-array `cameras`
+  // (`|| []` would PRESERVE a string and crash CamerasSection's `.reduce`) renders safely.
+  const cameras = useMemo(() => getAnimalCameras(animal), [animal]);
 
   // Data-acq identities elsewhere in the dataset (plus any other items on this
   // animal), for the DataAcqSection divergent-reuse check.
@@ -125,6 +133,16 @@ export default function HardwareConfigStep({
       </header>
 
       <div className="step-content">
+        {/* Destination repair surface: a corrupt cameras / data_acq_device /
+            configurationHistory would otherwise hide behind a section's empty state. The
+            banner surfaces it with an executable reset, so a repair routed here is never a
+            dead-end. */}
+        <RawCorruptionBanner
+          animal={animal}
+          fields={['cameras', 'data_acq_device', 'configurationHistory']}
+          onRepair={onRepair}
+        />
+
         <section className="section-elevation-1" aria-label="Cameras">
           <CamerasSection
             animal={animal}
@@ -195,17 +213,20 @@ export default function HardwareConfigStep({
 HardwareConfigStep.propTypes = {
   animal: PropTypes.shape({
     id: PropTypes.string.isRequired,
-    cameras: PropTypes.arrayOf(PropTypes.object),
+    // Tolerant: this step is a repair destination for corrupt animal hardware.
+    cameras: rawArray(PropTypes.object),
     devices: PropTypes.object,
     technicalDefaults: PropTypes.object,
-    behavioral_events: PropTypes.arrayOf(PropTypes.object),
+    behavioral_events: rawArray(PropTypes.object),
   }).isRequired,
   onFieldUpdate: PropTypes.func.isRequired,
   onNavigateBack: PropTypes.func,
   onNavigateNext: PropTypes.func,
+  onRepair: PropTypes.func,
 };
 
 HardwareConfigStep.defaultProps = {
   onNavigateBack: null,
   onNavigateNext: null,
+  onRepair: undefined,
 };

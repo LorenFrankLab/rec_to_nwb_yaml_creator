@@ -99,7 +99,7 @@ describe('workspace persistence', () => {
     ws.animals.remy.devices = {
       device: { name: [] },
       electrode_groups: [
-        { id: '0', location: 'CA1', device_type: 'tetrode_12.5', bad_channels: '' },
+        { id: '0', location: 'CA1', device_type: 'tetrode_12.5', description: 'CA1 tetrode', targeted_location: 'CA1', bad_channels: '' },
       ],
       ntrode_electrode_group_channel_map: [
         { ntrode_id: '1', electrode_group_id: '0', electrode_id: 12, bad_channels: [], map: { 0: 0 } },
@@ -113,9 +113,11 @@ describe('workspace persistence', () => {
 
     const result = loadWorkspace();
     expect(result.workspace.animals.remy.devices.device.name).toEqual(['Trodes']);
+    // Strict load normalization: clean integer-string ids migrate to integers and
+    // present required text passes through UNCHANGED (never synthesized from location).
     expect(result.workspace.animals.remy.devices.electrode_groups[0]).toMatchObject({
       id: 0,
-      description: 'CA1',
+      description: 'CA1 tetrode',
       targeted_location: 'CA1',
     });
     expect(result.workspace.animals.remy.devices.electrode_groups[0]).not.toHaveProperty('bad_channels');

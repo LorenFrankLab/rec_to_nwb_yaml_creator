@@ -6,17 +6,23 @@
  * channel indices and hardware channel numbers.
  */
 
-import { deviceTypeMap } from '../ntrode/deviceTypes';
-import { getShankCount } from './deviceTypeUtils';
+import { getProbeShanks } from '../ntrode/probeCatalog';
 
 /**
  * Generates default ntrode channel maps for a single electrode group
  *
- * Creates one ntrode per shank, mapping each logical position to a probe electrode
- * id. The probe's electrode ids (`0 … channelCount - 1`) are partitioned across the
- * shanks: shank `i`'s value for local key `idx` is `i * perShankCount + channels[idx]`,
- * so a 4-shank probe emits `0..31, 32..63, 64..95, 96..127` rather than `0..31` four
- * times. `ntrode_id` and `electrode_group_id` are integers end-to-end.
+ * Creates one ntrode per shank, using the VERIFIED probe catalog
+ * (`getProbeShanks`) as the source of truth for how the probe's electrode ids
+ * partition across shanks. For shank `i`, the ntrode's `map` has local keys
+ * `0 … (shank_i.electrodeIds.length − 1)` mapping to `shank_i.electrodeIds[key]`.
+ *
+ * This is BYTE-IDENTICAL to the prior length-math generator for the evenly
+ * partitioned probes (a 4-shank 128c probe still emits `0..31, 32..63, 64..95,
+ * 96..127`). It also generates the UNEVEN `64c-3s6mm6cm-20um-40um-sl` probe
+ * correctly — 3 ntrodes with 21/21/22 keys mapping to ids `0..20`, `21..41`,
+ * `42..63` — where the old math silently dropped electrode ids 60–63.
+ *
+ * `ntrode_id` and `electrode_group_id` are integers end-to-end.
  *
  * @param {object} electrodeGroup - Electrode group configuration object
  * @param {number} electrodeGroup.id - Integer identifier for the electrode group
@@ -52,36 +58,28 @@ export function generateChannelMapsForGroup(electrodeGroup, startingNtrodeId = 0
     return [];
   }
 
-  const channels = deviceTypeMap(device_type);
-  const shankCount = getShankCount(device_type);
-
-  // Return empty array if device type is not recognized (shankCount will be 0)
-  if (shankCount === 0) {
+  // The catalog is the source of truth for per-shank electrode-id partitioning.
+  // Unknown/uncatalogued device types yield no shanks (empty array).
+  const shanks = getProbeShanks(device_type);
+  if (shanks.length === 0) {
     return [];
   }
 
-  // The per-shank electrode count partitions the probe's electrode ids across shanks.
-  const perShankCount = channels.length;
-
-  // Create one ntrode per shank
-  const ntrodes = [];
-  for (let i = 0; i < shankCount; i++) {
-    // Map each logical position to its probe electrode id, offset by the shank index
-    // so multi-shank probes partition the probe's electrode ids across shanks.
-    const map = channels.reduce((acc, channelNum, idx) => {
-      acc[idx] = i * perShankCount + channelNum;
+  // Create one ntrode per shank. Local keys are 0..(shankLen-1); values are the
+  // shank's actual electrode ids (which already carry any multi-shank offset).
+  return shanks.map((shank, i) => {
+    const map = shank.electrodeIds.reduce((acc, electrodeId, idx) => {
+      acc[idx] = electrodeId;
       return acc;
     }, {});
 
-    ntrodes.push({
+    return {
       electrode_group_id,
       ntrode_id: startingNtrodeId + i,
       bad_channels: [],
-      map
-    });
-  }
-
-  return ntrodes;
+      map,
+    };
+  });
 }
 
 /**

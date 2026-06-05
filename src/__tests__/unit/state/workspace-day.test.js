@@ -296,6 +296,57 @@ describe('Day State Management', () => {
       expect(result.current.model.workspace.days['remy-2023-06-22'].keywords).toEqual(['replay']);
     });
 
+    it('replaces a malformed (non-record) current session instead of spreading it', () => {
+      // A corrupt import can persist `session` as a scalar/array. A session update must not
+      // spread that (`{...'corrupt'}` would scatter char-indexed keys into the record); the
+      // merge guards the current value to a record first, so the reset writes cleanly.
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Test',
+        });
+      });
+      // Corrupt the persisted session, then update it.
+      act(() => {
+        result.current.model.workspace.days['remy-2023-06-22'].session = 'corrupt';
+        result.current.actions.updateDay('remy-2023-06-22', {
+          session: { session_id: 'remy_20230622' },
+        });
+      });
+      expect(result.current.model.workspace.days['remy-2023-06-22'].session).toEqual({
+        session_id: 'remy_20230622',
+      });
+    });
+
+    it('persists fs_gui_yamls (the merge reads them, so a reset must write through)', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Test',
+        });
+      });
+
+      act(() => {
+        result.current.actions.updateDay('remy-2023-06-22', {
+          fs_gui_yamls: [{ name: 'protocol.yml', epochs: [1] }],
+        });
+      });
+      expect(result.current.model.workspace.days['remy-2023-06-22'].fs_gui_yamls).toEqual([
+        { name: 'protocol.yml', epochs: [1] },
+      ]);
+
+      // An explicit empty array clears them (the resetDayCollection repair path).
+      act(() => {
+        result.current.actions.updateDay('remy-2023-06-22', { fs_gui_yamls: [] });
+      });
+      expect(result.current.model.workspace.days['remy-2023-06-22'].fs_gui_yamls).toEqual([]);
+    });
+
     it('updates tasks array', () => {
       const { result } = renderHook(() => useStore());
       createTestAnimal(result);
@@ -426,6 +477,72 @@ describe('Day State Management', () => {
           result.current.actions.deleteDay('nonexistent-2023-06-22');
         });
       }).toThrow(/day.*not found/i);
+    });
+  });
+
+  describe('removeDayReference', () => {
+    it('removes a dangling day reference (missing record) from the animal without throwing', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+      });
+      // Simulate a dangling reference: the animal points at a day id with no record.
+      act(() => {
+        result.current.model.workspace.animals['remy'].days = ['remy-2023-06-22', 'remy-2099-01-01'];
+        result.current.actions.removeDayReference('remy', 'remy-2099-01-01');
+      });
+      const animal = result.current.model.workspace.animals['remy'];
+      expect(animal.days).toEqual(['remy-2023-06-22']);
+    });
+
+    it('also drops a corrupt (non-record) leftover day record while removing the reference', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+      });
+      act(() => {
+        // A truthy-but-non-record leftover survives as a dangling, unrepairable record.
+        result.current.model.workspace.days['remy-2023-06-22'] = 'corrupt-leftover-string';
+        result.current.actions.removeDayReference('remy', 'remy-2023-06-22');
+      });
+      expect(result.current.model.workspace.days['remy-2023-06-22']).toBeUndefined();
+      expect(result.current.model.workspace.animals['remy'].days).toEqual([]);
+    });
+
+    it('is a no-op for an unknown animal (no throw)', () => {
+      const { result } = renderHook(() => useStore());
+      expect(() => {
+        act(() => {
+          result.current.actions.removeDayReference('ghost', 'ghost-2023-06-22');
+        });
+      }).not.toThrow();
+    });
+
+    it('normalizes a corrupt (non-record) days map to {} instead of spreading it', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+      });
+      // The whole days map is corrupt (a non-record). Removing a dangling ref must not spread
+      // the string into a char-indexed object — it normalizes the map to {}.
+      act(() => {
+        result.current.model.workspace.days = 'corrupt-whole-map';
+        result.current.actions.removeDayReference('remy', 'remy-2023-06-22');
+      });
+      expect(result.current.model.workspace.days).toEqual({});
+      expect(result.current.model.workspace.animals['remy'].days).toEqual([]);
     });
   });
 

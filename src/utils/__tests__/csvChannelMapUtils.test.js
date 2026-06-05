@@ -9,6 +9,35 @@ import {
   downloadChannelMapsCSV
 } from '../csvChannelMapUtils';
 
+/**
+ * Builds the channel maps for an uneven-shank 64c-3s probe.
+ * trodes_to_nwb partitions 64 electrodes 21/21/22 across 3 shanks
+ * (ids 0..20 / 21..41 / 42..63). Each ntrode row's `map` is keyed by the
+ * shank-local index (0..N-1) → probe electrode id, so the third row has 22
+ * keys (0..21) while the first two have 21 (0..20).
+ */
+function build64c3sMaps() {
+  const shankRanges = [
+    { start: 0, end: 20 }, // 21 channels
+    { start: 21, end: 41 }, // 21 channels
+    { start: 42, end: 63 }, // 22 channels
+  ];
+  return shankRanges.map((range, ntrodeId) => {
+    const map = {};
+    let localIndex = 0;
+    for (let id = range.start; id <= range.end; id += 1) {
+      map[localIndex] = id;
+      localIndex += 1;
+    }
+    return {
+      electrode_group_id: 0,
+      ntrode_id: ntrodeId,
+      bad_channels: [],
+      map,
+    };
+  });
+}
+
 describe('exportChannelMapsToCSV', () => {
   test('exports tetrode channel maps correctly', () => {
     const channelMaps = [
@@ -151,6 +180,59 @@ describe('exportChannelMapsToCSV', () => {
 
     expect(header).toBe('electrode_group_id,device_type,location,ntrode_id,bad_channels,channel_0,channel_1,channel_2,channel_3');
   });
+
+  test('does not drop the 22nd channel of an uneven 64c-3s probe (electrode id 63 / channel_21)', () => {
+    const channelMaps = build64c3sMaps();
+    const electrodeGroups = [
+      { id: 0, device_type: '64c-3s6mm6cm-20um-40um-sl', location: 'CA1' },
+    ];
+
+    const csv = exportChannelMapsToCSV(channelMaps, electrodeGroups);
+    const lines = csv.split('\n');
+    const header = lines[0];
+
+    // Header must include channel_21 (the 22nd channel column) because the
+    // widest shank has 22 channels — column count is the max across rows.
+    expect(header).toContain('channel_21');
+    // channel_20 must still exist (no over-extension beyond the widest shank).
+    expect(header).toContain('channel_20');
+    expect(header).not.toContain('channel_22');
+
+    // The third shank's row carries all 22 electrode ids, including id 63 in
+    // channel_21. Build the expected widest-row value string 42..63.
+    const thirdShankValues = [];
+    for (let id = 42; id <= 63; id += 1) thirdShankValues.push(id);
+    expect(lines[3]).toBe(
+      `0,64c-3s6mm6cm-20um-40um-sl,CA1,2,"",${thirdShankValues.join(',')}`
+    );
+
+    // All 64 electrode ids (0..63) must be present across the CSV body.
+    const body = lines.slice(1).join(',');
+    for (let id = 0; id <= 63; id += 1) {
+      expect(body.split(',')).toContain(String(id));
+    }
+  });
+
+  test('pads shorter rows so column alignment is preserved for uneven probes', () => {
+    const channelMaps = build64c3sMaps();
+    const electrodeGroups = [
+      { id: 0, device_type: '64c-3s6mm6cm-20um-40um-sl', location: 'CA1' },
+    ];
+
+    const csv = exportChannelMapsToCSV(channelMaps, electrodeGroups);
+    const lines = csv.split('\n');
+
+    const columnCount = lines[0].split(',').length;
+    // Every data row must have the same number of columns as the header so the
+    // CSV is well-formed (shorter shanks padded with empty trailing cells).
+    for (let i = 1; i < lines.length; i += 1) {
+      expect(lines[i].split(',').length).toBe(columnCount);
+    }
+
+    // First shank (21 channels) must leave channel_21 empty (trailing comma).
+    const firstShankCells = lines[1].split(',');
+    expect(firstShankCells[firstShankCells.length - 1]).toBe('');
+  });
 });
 
 describe('importChannelMapsFromCSV', () => {
@@ -232,6 +314,25 @@ describe('importChannelMapsFromCSV', () => {
     expect(result[0].map).toEqual({ 0: 5, 1: 10, 2: 15, 3: 20 });
   });
 
+  test('round-trips an uneven 64c-3s export without dropping channels', () => {
+    const channelMaps = build64c3sMaps();
+    const electrodeGroups = [
+      { id: 0, device_type: '64c-3s6mm6cm-20um-40um-sl', location: 'CA1' },
+    ];
+
+    const csv = exportChannelMapsToCSV(channelMaps, electrodeGroups);
+    const reimported = importChannelMapsFromCSV(csv);
+
+    // The third shank must come back with all 22 channels, including id 63.
+    expect(Object.keys(reimported[2].map)).toHaveLength(22);
+    expect(reimported[2].map[21]).toBe(63);
+
+    // Shorter shanks (21 channels) must NOT gain a phantom channel_21 from the
+    // padded empty cell — empty trailing cells are not imported as channels.
+    expect(Object.keys(reimported[0].map)).toHaveLength(21);
+    expect(reimported[0].map[21]).toBeUndefined();
+  });
+
   test('throws error for missing required columns', () => {
     const csv = `electrode_group_id,ntrode_id,electrode_id
 0,0,0`;
@@ -239,11 +340,87 @@ describe('importChannelMapsFromCSV', () => {
     expect(() => importChannelMapsFromCSV(csv)).toThrow('Missing required columns');
   });
 
-  test('throws error for invalid numeric channel values', () => {
+  test('preserves a non-integer channel value instead of truncating it', () => {
+    // Normalization Contract: a channel cell that is not an exact integer
+    // ("invalid") is PRESERVED verbatim so the downstream channel-bound rules
+    // flag it. Previously parseInt would have truncated junk like "2.9" -> 2 or
+    // thrown on "invalid"; preserving lets validation surface the corruption.
     const csv = `electrode_group_id,device_type,location,ntrode_id,electrode_id,bad_channels,channel_0,channel_1,channel_2,channel_3
 0,tetrode_12.5,CA1,0,0,"",invalid,1,2,3`;
 
-    expect(() => importChannelMapsFromCSV(csv)).toThrow('Invalid numeric value');
+    const result = importChannelMapsFromCSV(csv);
+
+    expect(result[0].map[0]).toBe('invalid');
+    // Clean integer cells in the same row are still coerced to integers.
+    expect(result[0].map[1]).toBe(1);
+  });
+  // --- Normalization Contract: no silent truncation of non-integer cells ---
+  // parseInt('2.9') === 2 / parseInt('63abc') === 63 would launder a corrupt
+  // cell into a plausible channel. The Normalization Contract requires such a
+  // value to be PRESERVED for channel-bound validation to flag (channel values
+  // / bad-channels) or REJECTED with a clear error (structurally-required ints),
+  // never silently truncated.
+
+  test('does NOT silently truncate a non-integer channel value "2.9" to 2', () => {
+    const csv = `electrode_group_id,device_type,location,ntrode_id,bad_channels,channel_0,channel_1,channel_2,channel_3
+0,tetrode_12.5,CA1,0,"",2.9,1,2,3`;
+
+    const result = importChannelMapsFromCSV(csv);
+
+    // Must NOT collapse to the integer 2 (that would be silent truncation).
+    expect(result[0].map[0]).not.toBe(2);
+    // Preserved verbatim so the downstream channel-bound rules surface it.
+    expect(result[0].map[0]).toBe('2.9');
+  });
+
+  test('does NOT silently truncate a junk channel value "63abc" to 63', () => {
+    const csv = `electrode_group_id,device_type,location,ntrode_id,bad_channels,channel_0,channel_1,channel_2,channel_3
+0,tetrode_12.5,CA1,0,"",63abc,1,2,3`;
+
+    const result = importChannelMapsFromCSV(csv);
+
+    expect(result[0].map[0]).not.toBe(63);
+    expect(result[0].map[0]).toBe('63abc');
+  });
+
+  test('does NOT silently truncate a non-integer bad_channel "2.9" to 2', () => {
+    const csv = `electrode_group_id,device_type,location,ntrode_id,bad_channels,channel_0,channel_1,channel_2,channel_3
+0,tetrode_12.5,CA1,0,"2.9",0,1,2,3`;
+
+    const result = importChannelMapsFromCSV(csv);
+
+    expect(result[0].bad_channels).not.toContain(2);
+    expect(result[0].bad_channels).toEqual(['2.9']);
+  });
+
+  test('does NOT silently truncate a junk bad_channel "63abc" to 63', () => {
+    const csv = `electrode_group_id,device_type,location,ntrode_id,bad_channels,channel_0,channel_1,channel_2,channel_3
+0,tetrode_12.5,CA1,0,"63abc",0,1,2,3`;
+
+    const result = importChannelMapsFromCSV(csv);
+
+    expect(result[0].bad_channels).not.toContain(63);
+    expect(result[0].bad_channels).toEqual(['63abc']);
+  });
+
+  test('rejects (does not truncate) a non-integer electrode_group_id "2.9"', () => {
+    const csv = `electrode_group_id,device_type,location,ntrode_id,bad_channels,channel_0,channel_1,channel_2,channel_3
+2.9,tetrode_12.5,CA1,0,"",0,1,2,3`;
+
+    // electrode_group_id is a structurally-required integer; a non-integer cell
+    // must be a clear error naming the cell, not silently floored to 2.
+    expect(() => importChannelMapsFromCSV(csv)).toThrow(/electrode_group_id/);
+    expect(() => importChannelMapsFromCSV(csv)).toThrow('2.9');
+  });
+
+  test('preserves negative exact-integer channel values', () => {
+    const csv = `electrode_group_id,device_type,location,ntrode_id,bad_channels,channel_0,channel_1,channel_2,channel_3
+0,tetrode_12.5,CA1,0,"",-1,1,2,3`;
+
+    const result = importChannelMapsFromCSV(csv);
+
+    // "-1" is an exact integer string -> coerced to the integer -1.
+    expect(result[0].map[0]).toBe(-1);
   });
 });
 

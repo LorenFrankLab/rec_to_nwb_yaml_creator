@@ -2,7 +2,496 @@
 
 **Purpose:** Track all changes made during the refactoring milestones.
 
-**Last Updated:** June 4, 2026
+**Last Updated:** June 5, 2026
+
+---
+
+## Canonical state & repair — Phase 4: summaries never drop corrupt records (June 5, 2026)
+
+The final phase closes the accounting half of the contract: a cross-day summary must never
+report only the surviving rows while a corrupt day silently disappears.
+
+- `ValidationSummary.buildRows` previously `.filter(isRecord)`-DROPPED any day reference that
+  resolved to a missing id (undefined) or a truthy-but-non-record leftover (a string from a
+  partial migration). The dropped day vanished from both the table and the valid/error/
+  incomplete counts — so the summary could look complete while hiding a corrupt day.
+- Now each unresolved reference is surfaced as an explicit error row
+  (`{ day: { id }, chip: 'error', missingRecord: true }`, rendered "Error — missing day
+  record"), so it is visible and counted. A reference that resolves to a real record still
+  flows through the existing merge → chip / merge-throw → "Error — cannot read" paths.
+- A missing/non-record WHOLE `days` map is corruption too, not emptiness (review fix): every
+  referenced day then resolves to no record and is surfaced as its own error row, instead of
+  laundering into the "No recording days" empty state that would hide every day. (An animal
+  with a genuinely empty `days` array, or a corrupt per-animal `days` value, still contributes
+  no rows — there is no reference to surface.)
+- Synthetic rows are tolerated by every consumer: the render falls back (`day.date || '—'`,
+  index-suffixed React key), `Validate All` catches the `updateDay` "not found" throw and
+  counts it a failure, and `Export Valid Only` excludes them (chip `'error'`).
+- A missing-record row does NOT dead-end on "Open editor" (which would land on the Day
+  Editor's "Day not found"): it offers an executable **Remove day reference** repair backed by
+  a new `removeDayReference(animalId, dayId)` store action that drops the dangling id from the
+  owning animal and deletes any corrupt leftover record. The owning animal id is known from
+  the iteration, so it works even for a scalar record that has no `animalId`.
+- Code-reviewed (pr-review-toolkit:code-reviewer) across two rounds: no Critical/Important
+  findings; the editor-link aria-label falls back to the day id for a dateless synthetic row,
+  and the two review Mediums (whole-map laundering, dead-end action) are the fixes above.
+  Live-verified with Playwright: a corrupt-`days`-map workspace renders both referenced days
+  as "Error — missing day record" (2 with errors, not the empty state), and Remove day
+  reference drops the reference, clears the row, and persists.
+
+Gate: full vitest (3774 pass), 125 golden baselines byte-identical, 0 lint errors, clean
+build. Branch not merged — this completes Phases 1–4 of the canonical-state & repair contract.
+
+---
+
+## Canonical state & repair — Phase 3: destination repair banners (June 5, 2026)
+
+Phase 2 made an issue's repair button PERFORM the fix. Phase 3 adds the destination-side
+surface so a repair routed to an editor lands on a VISIBLE executable control, not an empty
+state that hides the corruption.
+
+- New shared `src/components/RawCorruptionBanner.jsx`: given the raw `animal`/`day` + a
+  `fields` filter + `onRepair`, it computes the owned raw-shape issues (which already carry
+  `repairCommand` + `actionLabel` + `message` from the validators) and renders one executable
+  reset button per issue. Renders nothing without an executor or owned corruption (no dead
+  controls). It owns no reset logic — a thin, command-driven view over the validators.
+- Animal Editor: `HardwareConfigStep` renders the banner over `cameras` / `data_acq_device` /
+  `configurationHistory`. A corrupt `cameras: "nope"` previously vanished behind CamerasSection's
+  "Add First Camera" empty state; now a "Reset cameras" control sits above it. `onRepair` is
+  threaded from `AnimalEditorStepper` (which owns animal/actions).
+- Day Editor: `OverviewStep` renders the banner for the `session` record. A malformed
+  (non-record) `session` loses its read-only, derived `session_id` (which the user cannot
+  re-type) — a dead-end. New raw-shape issue `malformed_day_session` + `resetDaySession`
+  command rebuild a clean session with the canonical `<animalId>_<YYYYMMDD>` session_id; the
+  editable descriptions reset to blank for the user to refill. The day array collections stay
+  owned by the existing `MalformedCollectionNotice`; the banner owns only the session record.
+- `updateDay` now guards the session-merge: a malformed CURRENT session (e.g. a string) is
+  replaced with `{}` before spreading, so `{...'corrupt'}` can't scatter char-indexed keys
+  (defense-in-depth the reset relies on).
+- DevicesStep (day overrides) and the day array collections (OverviewStep) were already
+  destination-repairable from earlier work, so no new surface was added there.
+- Code-reviewed (pr-review-toolkit:code-reviewer): no Critical/Important findings.
+  Live-verified with Playwright: both banners render at their destinations and clear the
+  corruption (and persist) on click; non-commandable flows unchanged.
+
+Gate: full vitest (3759 pass), 125 golden baselines byte-identical, 0 lint errors, clean
+build. Branch not merged. Phase 4 (ValidationSummary error-rows for corrupt/missing days)
+follows.
+
+---
+
+## Canonical state & repair — Phase 2: executable repair commands (June 5, 2026)
+
+Phase 1 made the raw → canonical READ boundary shape-safe. Phase 2 closes the
+issue → repair WRITE boundary: a validation issue's repair button now PERFORMS the
+promised fix instead of merely navigating to a destination that could land on a blank
+empty state.
+
+- New `src/state/repairCommands.js`: `applyRepairCommand(command, ctx)` maps a
+  serializable `repairCommand` (`{type, field?, key?}`) to a store write. Closed command
+  set (`REPAIR_COMMAND_TYPES`): `resetDayCollection` / `resetAnimalCameras` /
+  `resetDataAcqDevice` / `rebuildConfigurationHistory` / `resetDeviceOverrides` /
+  `removeDeviceOverrideKey` / `resetBadChannelOverrides` / `removeBadChannelOverrideKey`.
+  Partial-removal commands read the day's CURRENT `deviceOverrides` to preserve sibling
+  keys and tolerate a corrupt non-record container. Unknown/malformed command → no-op.
+- Store (`useWorkspace.js`): added a `rebuildConfigurationHistory(animalId)` action (resets
+  a corrupt/missing history to a single v1 snapshot from the animal's current devices;
+  tolerates a non-array start; no-op on unknown animal) and an `fs_gui_yamls` branch to
+  `updateDay` (the merge reads it, so a `resetDayCollection` repair would otherwise be
+  silently dropped).
+- Issue producers attach `repairCommand`: `rawShape.js` (`malformed_day_collection` →
+  resetDayCollection; `malformed_animal_collection` → resetAnimalCameras /
+  rebuildConfigurationHistory / resetDataAcqDevice by field; a new
+  `missing_configuration_history` issue makes a REAL animal's missing/empty history — which
+  resolves no day and fails the merge closed — repairable via the same rebuild command,
+  gated on a `devices` record so it never false-fires on minimal animal stubs) and
+  `validation.js`
+  `dayOverrideIssues` (whole/geometry-key/bad-channel container/stale/corrupt-value →
+  resetDeviceOverrides / removeDeviceOverrideKey / resetBadChannelOverrides /
+  removeBadChannelOverrideKey). `normalizeIssue` preserves it. `shadowed_geometry_override`
+  intentionally carries NO command (its destination renders a working removal control; keep-
+  vs-drop is a user judgment, not an unambiguous reset).
+- UI: `RepairActions`/`RepairActionButton` render an executable reset button (labeled with
+  the issue's `actionLabel`, naming exactly what is reset) that calls `onRepair(issue)` when
+  the issue carries a command and an executor is wired; otherwise the navigate button is
+  unchanged (backward compatible). `DayEditorStepper` owns animal/day/actions and provides
+  `onRepair` → `applyRepairCommand`, threaded to ExportStep + ValidationStep.
+- The repairability matrix now asserts the issue→fix invariant: every commandable malformed
+  shape carries the exact command, and EXECUTING it reproduces the documented repair AND
+  clears the issue. A structural test forces every command type to have an executor branch.
+- Code-reviewed (pr-review-toolkit:code-reviewer): no Critical/Important findings; the
+  rebuild-history scope note (clears the raw-shape issue but does not re-pin days) was added
+  to the action's JSDoc.
+
+Gate: full vitest (3734 pass), 125 golden baselines byte-identical, 0 lint errors, clean
+build. Branch not merged. Phases 3–4 (destination RawCorruptionBanner; ValidationSummary
+error-rows for corrupt/missing days) follow.
+
+---
+
+## Canonical state & repair — Phase 1: shape-safe read layer (June 5, 2026)
+
+First phase of making the raw → canonical → repair boundary structural (user decision: full
+structural, phased & gated, executable repair commands). The recurring "one component guards,
+another lags" class came from every call site re-deriving safety ad-hoc.
+
+- New `src/state/workspaceSelectors.js`: the SINGLE place raw animal/day collections and
+  records are guarded — `getAnimalCameras` / `getConfigHistory` / `getDataAcqDevices` /
+  `getAnimalSubject` / `getAnimalExperimenters` / `getExperimenterNames` / `getAnimalDayIds` /
+  `getDaySession` / `getDayTasks` / `getDayAssociated{Videos,Files}` / `getDayBehavioralEvents` /
+  `getDayKeywords`. Never throw, never mutate, always return a safe value; raw-shape validation
+  still flags the corruption (normalization never decides export validity).
+- Migrated EVERY raw consumer through the selectors — including the export merge and the two
+  HIGH crash sites (DevicesStep reconfig `configurationHistory.find`, HardwareConfig /
+  identitySafety `data_acq_device.entries()`), plus OverviewStep / TasksEpochsStep /
+  ValidationSummary / AnimalWorkspace / useWorkspace / configDiff.
+- `workspaceSelectors.guard.test.js` forbids `<field> || []` / `Array.isArray(<field>)` /
+  `isRecord(<field>)` for every selector-owned field across 100+ shipped files, so the drift
+  can't recur (normalizer + raw-shape detectors exempt — they define/inspect corrupt state).
+- Code-reviewed (pr-review-toolkit:code-reviewer); its completeness findings (OverviewStep +
+  TasksEpochsStep still hand-guarding; guard test under-covering) were fixed in the same phase.
+
+Phases 2–4 (executable repair commands on issues; destination repair banners; ValidationSummary
+error-rows for corrupt days) follow. Plan:
+`.claude/docs/plans/pre-cutover-export-correctness/phase-canonical-state-and-repair.md`.
+Gate: 3677 tests pass, 125 baselines byte-identical, 0 lint errors, clean build. Branch not merged.
+
+---
+
+## Validation contract — repair-destination tolerance (June 5, 2026)
+
+The contract surfaces, routes, and gates corruption correctly — but a repair button can
+land the user on an editor that then dereferences the raw corrupt prop and crashes (a
+dead-end-by-crash). This round extends "components never throw on loaded corruption" to
+every repair **destination**, and adds one dedup:
+
+- **Animal Editor destinations (High).** A corrupt `cameras: "nope"` routes to Hardware
+  Config; `CamerasSection` / `HardwareConfigStep` now `Array.isArray`-guard cameras (was
+  `|| []`, which preserved the string before `.reduce`). `AnimalEditorStepper` guards the
+  `.some` on a non-array `configurationHistory` and the render-path `knownRegions` flatMap.
+- **OverviewStep (High).** Reads `day.session` / `animal.subject` / `animal.experimenters`
+  through guarded record locals (+ array-guarded `experimenter_name`, string-guarded
+  `day.date`), so malformed nested objects render blank repairable fields. The stepper's
+  field write-through replaces a non-plain-object intermediate with a fresh object so a
+  repair write can't throw on `scalar.field = v`.
+- **Devices (Medium).** DevicesStep catches the `resolveDayConfig` throw (missing/corrupt
+  `configurationHistory`) and renders one truthful "configure devices in the Animal Editor"
+  message instead of crashing.
+- **Epochs (Medium).** TasksTable / TaskModal / AssociatedVideos+FilesEditor guard malformed
+  CHILD arrays inside otherwise-valid tasks (`task.task_epochs`, `task.camera_id`).
+- **ValidationSummary (Medium).** `buildRows` coerces non-string ids/dates for ordering,
+  guards an absent/non-record `workspace.days`, and drops non-record day leftovers before
+  merge, so one malformed record can't blank the whole multi-day summary.
+- **Dedup (Low).** RepairActions collapses duplicate repair buttons for issues sharing one
+  fix (a shadowed geometry override's retagged base errors + the override issue) — every
+  message renders, one button.
+
+Gate: 3654 tests pass (`--test-timeout=30000`), 125 golden baselines byte-identical, 0 lint
+errors, clean build. Branch not merged.
+
+---
+
+## Validation contract — apply the contract-review findings (June 5, 2026)
+
+A five-agent review *of the contract itself* (code, tests, silent-failures, comments,
+type-design, vs `modern`) found no data-laundering path but flagged enforceability/coverage
+gaps. All addressed:
+
+- **`normalizeIssue` at the `validateDay` boundary** (type-design finding) — the issue
+  contract was conventional (hand-built literals, three coexisting field generations, a
+  never-read `repairStep`, and resolution that *failed open to Day*). Now every emitted
+  issue is normalized: owner resolved once and stamped as `ownerSurface` (mirrored to the
+  legacy `repairSurface`), a guaranteed `focusPath`, and a day `step`; `repairStep` dropped;
+  an unresolved owner **throws**. The invariant is enforced, not hoped-for. The duplicated
+  geometry/bad-channel classifier is hoisted to one `geometryDomainOf` helper.
+- **Step-status consistency** — the owning step (Epochs / Overview) now badges `error` for a
+  `malformed_day_collection` on its collections, so a step badge can't read green beside its
+  own blocking reset notice.
+- **Repairability-matrix gaps** — added the `malformed_animal_collection` round-trip; pinned
+  the `SURFACE_BY_CODE` routing table directly (each code resolves to its mapped surface, not
+  bypassed by inline fields); extended the coverage guard.
+- **Test gaps** — DayEditorStepper merge-throw tolerance (corrupt `configurationHistory`);
+  tightened the ExportStep cameras-gate test (asserts the repair action renders) and the
+  MalformedCollectionNotice "reset" test (honest naming).
+- **Docs** — reconciled the plan doc with an as-built deviations section; corrected the
+  rawShape over-claim and the `validateDay` JSDoc.
+- **Tolerance** — `csvChannelMapUtils` guards a corrupt scalar `bad_channels`; a corrupt
+  nested `data_acq_device` gets a precise message. Stripped review/plan bookkeeping tags
+  (HIGH review finding / Finding N / P0-/P1- / Phase N) from shipped comments, including
+  pre-existing baseline ones.
+
+Gate: 3630 tests pass (`--test-timeout=30000`), 125 golden baselines byte-identical, 0 lint
+errors, clean build, no plan/review tags in shipped code. Branch not merged.
+
+---
+
+## Validation contract — wire the gaps the contract reviewer found (June 5, 2026)
+
+The first review *of the contract itself* (not another symptom hunt) found wiring gaps —
+validators built but not connected, a field produced but not consumed, ownership not
+threaded into one routing path, and merge-consumers that crash instead of surfacing:
+
+- **`validateRawAnimal` wired into the gate (High).** `validateDay` / `computeStepStatus`
+  take an optional `animal` and fold raw animal-shape issues (`cameras: "nope"`), so animal
+  corruption blocks export instead of laundering to `[]`. Threaded through ExportStep,
+  DayEditorStepper, ValidationStep, ValidationSummary. `mergeDayMetadata` throws by design
+  on a malformed animal (non-array `configurationHistory`); ExportStep + DayEditorStepper
+  now try/catch it and render blocked-with-a-reason instead of crashing.
+- **`focusPath` consumed (Medium).** `RepairActionButton` navigates with
+  `issue.focusPath ?? issue.path`, so a provenance-retagged geometry error focuses the
+  day's remove-override control, not the read-only schema field.
+- **Owner-aware step-blocker routing (Medium).** ExportStep routes a Devices-*incomplete*
+  blocker (no electrode groups / missing maps — animal-owned geometry) to the Animal
+  Editor; Devices-*error* (all-bad, day-owned) still routes to Devices.
+- **TasksEpochsStep orphan helpers guarded (Medium).** `findOrphanedReferences` /
+  `clearOrphans` / `validEpochSet` tolerate non-array associated arrays, so a task
+  Add/Edit/Delete before resetting a corrupt `associated_*` doesn't crash.
+- **ChannelMapEditor multi-shank later-row scalar (High).** A hidden later-row scalar
+  `bad_channels` is now cleared by the migration toggle — was unrepairable.
+- **ValidationSummary tolerance (Medium).** Guards non-array `animal.days` and try/catches
+  the per-day merge, flagging a throwing day as "Error — cannot read" instead of blanking
+  the whole multi-day summary.
+
+Gate: 3622 tests pass (`--test-timeout=30000`), 125 golden baselines byte-identical, 0 lint
+errors, clean build. Branch not merged.
+
+---
+
+## Validation contract — make the boundaries explicit (after round 8) (June 5, 2026)
+
+Review rounds 6–8 were the same bug in different clothes: corruption laundered into export
+defaults, repairs routed by path instead of ownership, blockers with no reachable fix, and
+components throwing on corrupt loaded state. Rather than patch round-8's six findings
+locally (a seventh outfit), we forced the system into four explicit, tested boundaries.
+Decision (user): full contract, phased & gated, on the phase-7 branch; round-8 findings
+absorbed as the first rows of the contract's matrices. Plan:
+[phase-validation-contract.md](../.claude/docs/plans/pre-cutover-export-correctness/phase-validation-contract.md).
+
+- **Boundary 1 — raw shape is validated BEFORE normalization.** New `src/validation/rawShape.js`
+  (`validateRawDay`/`validateRawAnimal`) runs on the PERSISTED object. Every day-owned array
+  (tasks, associated_files/video_files, behavioral_events, fs_gui_yamls, keywords) and animal
+  array (cameras, configurationHistory), when present-but-non-array, is a blocking, owner-routed,
+  repairable issue — so a corrupt `tasks: {}` can't dissolve into an empty export. `validateDay`
+  folds raw-shape issues in first; `computeEpochsStatus` no longer treats `{}` as valid; the
+  Epochs/Overview UI and the file/video/event/keyword editors guard their iterations;
+  `MalformedCollectionNotice` gives each corrupt collection a focusable reset. *(round-8 High 1)*
+- **Boundary 2 — ownership by PROVENANCE, not path.** `repairTargetForIssue` honors an explicit
+  `ownerSurface` first. `validateDay` derives geometry provenance from the persisted day alone
+  (a collection is day-owned iff the day overrides it with an array) and re-tags base geometry
+  errors to the day when the day owns them — no more "Fix in Animal Editor" dead-end for
+  day-owned geometry. The shadowed-override domain check excludes bad-channel errors, so a clean
+  ntrode override is no longer falsely blamed. *(round-8 High 3; Medium 3 lands in Boundary 4)*
+- **Boundary 3 — repairability is a tested invariant.** `repairabilityMatrix.test.js` asserts, for
+  every malformed shape: issue raised → carries the ownership contract → routes to that surface →
+  export blocked → the documented repair clears it, with a coverage guard against unmatched codes.
+  ExportStep now renders a "Fix in {step}" action for step-status-only blockers (all-channels-bad,
+  missing maps) that no `validate()` error surfaces. *(round-8 Medium 1)*
+- **Boundary 4 — converter-truth ≠ UI-convenience; components never throw on corruption.**
+  `validatorSeparation.test.js` pins that `rulesValidation` holds converter truths (export-blocking)
+  while all-channels-bad is a UI-convenience status. `deviceEditorTolerance.test.jsx` renders the
+  device editors against a battery of corrupt shapes without throwing. ChannelMapEditor guards every
+  `bad_channels` read (scalar can't crash) + a scalar-reset control, and rejects non-integer marks at
+  edit time; BadChannelsEditor renders invalid-mark removal before the grid so repair-focus lands on
+  the control that can clear the value. *(round-8 High 2, Medium 2, Medium 3)*
+
+Gate: 3610 tests pass (with adequate `--test-timeout`), 125 golden baselines byte-identical, 0 lint
+errors, clean build. Branch not merged.
+
+---
+
+## Phase 7 review fixes, round 7 — surface, route, repair, and don't crash first (June 5, 2026)
+
+Three independent reviewers converged on the `deviceOverrides` cluster again. Six findings, same family
+(branch not merged):
+
+- **Top-level non-record `deviceOverrides` failed open (HIGH).** A restored `deviceOverrides: "corrupt"` had
+  the merge read keys off it (all undefined → snapshot) and `dayOverrideIssues` bail with no issue. Now a
+  day-routed `malformed_device_override` (path `deviceOverrides`) with a whole-override removal control.
+- **Array geometry override dead-ended repair routing (HIGH).** A day-level array `electrode_groups` / ntrode
+  override is a *supported* resolver feature (the `configDiff` test proves it) that SHADOWS the snapshot; when
+  its contents err, those errors route to the Animal Editor — which edits the snapshot, not the override — a
+  dead-end. We do NOT flag a clean override, but when its contents error we add a day-routed
+  `shadowed_geometry_override` escape, and DevicesStep offers "revert to saved configuration" for any present
+  geometry override. (`dayOverrideIssues` now receives the base `validate()` issues to make this distinction.)
+- **Invalid array bad-channel marks were blocking but unremovable (HIGH).** An out-of-range / non-integer mark
+  has no checkbox and the toggles carry it forward, so it was stuck. Both editors now render a removal control
+  per invalid mark (single- and multi-shank; multi-shank uses the atomic batch path).
+- **Cleanup controls skipped in the empty (no-electrode-groups) state (MED).** The cleanup section is now
+  computed before the early return and rendered in both branches.
+- **Override repair focus was not key-specific (MED).** Every button shared `deviceOverrides.bad_channels`;
+  per-key issues + buttons now carry `deviceOverrides.bad_channels.<id>` so focus lands on the clicked ntrode.
+- **DayEditorStepper crashed before validation on a sibling day's malformed `tasks` (MED).** `tasks: {}` is
+  truthy-non-array → `.forEach` threw during render, bypassing the fail-closed validation UI. Guarded with
+  `Array.isArray` (only sibling iteration over persisted data in that file).
+
+Gate: 3553 tests pass (with an adequate test-timeout — the slow multi-shank checkbox renders flake on timeout
+under parallel load, not on logic), 125 golden baselines byte-identical, 0 lint errors, clean build.
+
+---
+
+## Phase 7 review fixes, round 6 — the override-issue surface, made complete (June 5, 2026)
+
+Round 5 hardened how the merge *applies* malformed `deviceOverrides`; round 6 found the matching gap in how
+those refusals are *surfaced and routed*. `resolveDayConfig` has several branches that silently decline to
+apply a malformed override (fail-open to the snapshot, or ignore a corrupt `bad_channels` container/value), but
+`dayOverrideIssues` shadowed only ONE of them (stale keys) — so the others were invisible or mis-routed. Fixed
+as one class (branch not merged):
+
+- **Every refuse-to-apply branch is now shadowed (HIGH).** `dayOverrideIssues` is documented and implemented as
+  the validation shadow of *every* decline in `resolveDayConfig`: non-array `electrode_groups`/ntrode override
+  (`malformed_device_override`), a non-record `bad_channels` container like `"2.9"`
+  (`malformed_bad_channel_override`), a stale key (`stale_bad_channel_override`), and a non-array value under a
+  valid key (`malformed_bad_channel_override`). All route to the **Day** surface / **Devices** step and block
+  export — no more "gated but invisible" or fail-open-and-forgotten.
+- **Scalar value not smeared onto geometry (HIGH).** A non-array `bad_channels` value under a valid ntrode key
+  is no longer copied onto the merged ntrode row (which surfaced as an *Animal-Editor* schema error the user
+  can't reach). The row keeps its clean base value; the corruption surfaces as a day-routed override issue
+  read directly from the raw override — still lossless, just routed to its real owner.
+- **All malformed shapes are repairable (HIGH).** DevicesStep renders a focusable removal control for each:
+  per-key for stale/corrupt-value keys, whole-override for a scalar container or a non-array geometry override.
+- **Migration no longer fabricates unrepairable state (MED).** When consolidating later-row marks, a mark with
+  no `map` entry AND outside the probe range (which the converter ignores and the probe-wide selector can't
+  uncheck) is dropped rather than copied onto the first row as an unclearable export blocker. In-range /
+  translatable marks are still carried over — in BOTH the Day and Animal editors.
+
+Gate: 3530 tests pass, 125 golden baselines byte-identical, 0 lint errors, clean build.
+
+---
+
+## Phase 7 review fixes, round 5 — the deviceOverrides path, swept end to end (June 5, 2026)
+
+Round 5 found that the `deviceOverrides` (day-level bad-channel) path was under-guarded, non-atomic, and
+lossy. Swept as one class; all 5 findings fixed (branch not merged):
+
+- **Atomic migration (HIGH).** The multi-shank bad-channel migration is now a SINGLE write of the whole
+  `deviceOverrides.bad_channels` object, not N per-ntrode calls that raced the stale-`day` closure (which
+  could lose the first-row selection or reintroduce a later-row value).
+- **Translate, don't drop (HIGH).** Consolidating later-row marks now TRANSLATES each (a key into that row's
+  `map`) to the probe-local id (`row.map[key]`) and unions it onto the first row before clearing later rows —
+  in BOTH the Day and Animal editors — so loaded marks migrate instead of vanishing.
+- **Scalar override not laundered/crashing (HIGH).** A scalar `deviceOverrides.bad_channels` value (`"23"`/
+  `23`) is preserved verbatim, never spread (`"23"`→`['2','3']`) or thrown on.
+- **Malformed list overrides don't crash (HIGH).** A non-array `deviceOverrides.electrode_groups`/ntrode map
+  is no longer preferred-then-`.map`ed; well-formed arrays only, fail-closed fallback to the snapshot.
+- **Stale override is repairable (MED).** DevicesStep renders a focusable "remove stale override" button for a
+  `bad_channels` key with no resolved ntrode, clearing only that key atomically.
+
+---
+
+## Phase 7 review fixes, round 4 — fix the CLASS, not the cited line (June 5, 2026)
+
+A fourth review found the unswept siblings of earlier fixes. The meta-lesson (now a memory): fix the
+invariant across ALL sites, and check the dual concerns — gate AND surface, prevent AND repair, all shapes,
+read-only routing, sibling-component parity. All 6 findings fixed (branch not merged):
+
+- **Gated ≠ surfaced (HIGH).** A shared `validateDay(day, mergedDay)` = `validate(merged)` + `dayOverrideIssues`
+  is now the single issue source for the export gate AND the rendered repair lists (ValidationStep,
+  ExportStep), so a stale bad-channel override that blocks export is a visible, repairable error — not an
+  invisible gate.
+- **Lossless non-array (HIGH).** `normalizeNumberList` preserves a corrupt non-array `bad_channels` (`"2.9"`)
+  verbatim instead of laundering it to a clean `[]`; iteration is already `Array.isArray`-guarded.
+- **Repair loaded corruption (HIGH).** Multi-shank bad-channel editors (Day + Animal) MIGRATE a group clean on
+  save — first row gets the selection, later rows' `bad_channels` are cleared — so loaded later-row corruption
+  is repairable, not a dead-end; a load-time notice explains the consolidation.
+- **Guard all shapes (MED).** `mergeDayMetadata` guards nested OBJECT records (`day.session`,
+  `animal.experimenters`, `day.technical`, `animal.subject`), not just arrays, so a malformed import returns
+  issues instead of crashing.
+- **Read-only routing (MED).** Schema errors on read-only identity fields (`subject_id`/`session_id`) route to
+  the `none` repair surface, not a Day Overview dead-end.
+- **Anchor parity (MED).** `AssociatedVideosEditor` camera/epoch selects carry `data-field-path` anchors like
+  the other repair editors.
+
+---
+
+## Phase 7 review fixes, round 3 — close the remaining laundering/routing/repair gaps (June 5, 2026)
+
+A third deep review (multi-agent) found 9 more gaps; all fixed (branch not merged):
+
+- **Lossless scalar normalization (HIGH).** `cleanString`/`toFiniteNumber` no longer launder a numeric
+  `location`/`units` (via `String()`) or junk coordinate like `targeted_x: "2.5mm"` (via `parseFloat`) into a
+  schema-valid value — corrupt scalars are preserved so the schema type check surfaces them.
+- **Scalar video `camera_id` (HIGH).** Rule 2 checks the scalar (not `Array.isArray`), so a video referencing
+  camera 0 with no cameras table trips the missing-camera rule.
+- **Subject repair routing (HIGH).** Schema `subject.*` errors route to the Day Editor Overview (where the
+  inherited subject fields are repairable), not the Animal Editor.
+- **Multi-shank bad-channel repair (HIGH).** `multishank_bad_channels_ignored` routes to the Day Devices step;
+  the Animal Editor `ChannelMapEditor` now edits multi-shank bad channels as a probe-wide `0…N-1` selector on
+  the first ntrode row too (accepts `42`/`63`).
+- **Fail-closed merge (HIGH).** `mergeDayMetadata` guards malformed (non-array) day fields so a corrupt import
+  returns validation issues instead of crashing.
+- **Stale day-level bad-channel overrides (HIGH).** `deviceOverrides.bad_channels` keys that match no resolved
+  ntrode are surfaced (folded into `computeStepStatus`) instead of being silently dropped by the merge.
+- **Zero-row electrode group (MED).** In a partially-configured day, an electrode group with no ntrode rows is
+  a validation error (`channel_row_count_mismatch`), not just step-incompleteness.
+- **CSV import (MED).** Exact integer parsing (no `parseInt` truncation of `"2.9"`/`"63abc"`).
+- **Repair focus anchors (MED).** `data-field-path` on the associated-files epoch select and bad-channel
+  controls so repair buttons focus the offending control.
+
+---
+
+## Phase 7 review fixes — close the reachable-surface and repair-path gaps (June 5, 2026)
+
+A multi-agent review (3 in-house reviewers + a deeper external review) found gaps where the Phase 7
+contracts didn't fully reach every surface. All fixed (branch `phase-7-converter-truth-contracts`,
+not merged):
+
+- **Legacy `#/` route generated invalid 64c-3s maps (HIGH).** `useElectrodeGroups` used first-shank length
+  math and dropped electrode id 63; it now generates through the probe catalog like the modern path.
+- **Fail-closed validation could throw (HIGH).** Inner `(model.x || [])` iterations are now `Array.isArray`-
+  guarded so a malformed import returns issues instead of crashing.
+- **Normalization still laundered ids/bad_channels (HIGH).** `normalizeIdKey` and `normalizeNumberList` are
+  now lossless (`parseExactInteger`), so a corrupt override key (`"2.9"`) is not rerouted onto a real ntrode
+  and a corrupt `bad_channels` index is preserved for the rules to flag.
+- **`invalid_species` routing was backwards (HIGH).** Species is editable in the Day Editor Overview (not the
+  Animal Editor), so it routes to Overview.
+- **`orphaned_file` had no repair surface (HIGH).** New `AssociatedFilesEditor` in the Epochs step; deleting a
+  task now names affected associated_files in the confirmation.
+- **Multi-shank `bad_channels` were unreachable in the UI (HIGH).** The bad-channels editor now presents a
+  probe-wide `0…N-1` selector for multi-shank groups and writes to the group's first ntrode row (what the
+  converter honors).
+- **`ExportStep` gate was narrower than the stepper (MED).** It now uses the full `isExportEnabled(
+  computeStepStatus(...))`, so device-status failures (all channels bad) block direct export.
+- **CSV export truncated uneven shanks (MED); extra empty ntrode rows passed (MED).** CSV sizes to the widest
+  shank; a new `channel_row_count_mismatch` rule requires one ntrode row per shank.
+- **UX:** "Fix in Animal Editor" now deep-links to the owning step with a step-aware label; repair copy,
+  aria associations, unknown-device `—` cells, and the `-1` sentinel-on-save are addressed.
+
+---
+
+## Phase 7 — Converter-truth contracts: the UI shows the world the converter will encode (June 4, 2026)
+
+Four contracts so the app generates/validates exactly what `trodes_to_nwb` will encode, surfaces corruption
+instead of hiding it, and routes repairs to where they're actually fixable. Branch
+`phase-7-converter-truth-contracts` (not merged pending review). Golden + parity byte-identical throughout.
+
+- **Probe Metadata Contract.** New `src/ntrode/probeCatalog.js` makes the `trodes_to_nwb` per-shank
+  electrode-id partitions the source of truth (`getProbeMetadata`/`getProbeShanks`/`getProbeElectrodeIds`/
+  `isProbeCatalogConsistent`). The channel-map generator, geometry helpers, channel-bound validation, and the
+  AnimalEditor channel-map UI all derive from it. Fixes `64c-3s6mm6cm-20um-40um-sl`: its converter metadata
+  partitions 64 electrodes **unevenly** (21/21/22) but the app assumed 20/20/20 and silently dropped ids
+  60–63; it now generates/validates/renders the correct 3-row map. The other 11 probes are byte-identical.
+  Added `inconsistent_probe_catalog` (blocks export and names a probe whose catalog entry is inconsistent).
+  Filed upstream metadata bug [trodes_to_nwb#167](https://github.com/LorenFrankLab/trodes_to_nwb/issues/167)
+  (the file declares `num_shanks: 4` but defines 3 shanks).
+- **Load-Time Orphan Visibility Contract.** Removed the silent workspace epoch-scrub from `useEpochCleanup`:
+  a loaded stale `associated_files`/`associated_video_files` `task_epochs` is now **preserved** (the user sees
+  the value), validation owns it (`orphaned_file` / `orphaned_video`), and the export gate blocks until it's
+  repaired. The editor renders a stale ref as a visible "Missing epoch N" / "Missing camera N" option instead
+  of a blank select. The explicit, user-confirmed destructive-edit cleanup is unchanged; the legacy form's
+  scrub is unchanged.
+- **Repair Routing Contract.** Validation issues carry `repairSurface` (`day` | `animal` | `none`) and a
+  single `repairTargetForIssue` resolver (explicit metadata → per-code map → path/code fallback for AJV
+  issues). Device geometry / channel maps / probe catalog / cameras / data-acq / subject identity route to the
+  **Animal Editor**; task/video/event + day-level bad-channel overrides route to the **Day Editor** step;
+  slash-id identities have no button. Button copy names the destination ("Fix in Animal Editor"). A table test
+  asserts every error code maps to a valid surface.
+- **Normalization Contract.** `deviceNormalization` no longer launders corrupt persisted state into valid-
+  looking YAML at the export/load boundary. `parseExactInteger` accepts an integer or exact integer-string
+  (`"2"`→`2`) and **preserves** everything else (`"2.9"`, `"abc"`, `""`) so schema/rules fire;
+  `normalizeMap` is lossless; `normalizeElectrodeGroup` no longer synthesizes `description`/`targeted_location`
+  or back-fills ids. Creation-time default synthesis moved to `*WithDefaults` helpers used only by AnimalEditor
+  creation. Export now validates the un-laundered resolved state, so `ntrode_id:"abc"`, `map{"0":"2.9"}`, and a
+  missing `targeted_location` all block export. Clean inputs stay byte-identical.
 
 ---
 

@@ -10,6 +10,7 @@ without updating this file and every phase that references it.
 - [Validation & export-gate contract](#validation--export-gate-contract)
 - [User mental-model contract](#user-mental-model-contract)
 - [UX mistake-prevention contract](#ux-mistake-prevention-contract)
+- [Domain boundaries & ownership contract](#domain-boundaries--ownership-contract)
 - [Professional UX quality contract](#professional-ux-quality-contract)
 - [Spyglass naming-identity contract](#spyglass-naming-identity-contract)
 - [DANDI conformance contract](#dandi-conformance-contract)
@@ -112,14 +113,22 @@ Referenced by phases 1, 6, 9. The day-level export must be **fail-closed**.
 
 ## User mental-model contract
 
-Referenced by phases 1–11. Every agent implementing or auditing this plan must reason from the scientist's
-workflow first and the YAML/schema second. The app is not merely a schema editor; it is a tool for describing
-a real recording session so it can convert cleanly, publish to DANDI, and ingest into Spyglass.
+Referenced by phases 1–11 and [workflow-clarity-design.md](workflow-clarity-design.md). Every agent
+implementing or auditing this plan must reason from the scientist's workflow first and the YAML/schema
+second. The app is not merely a schema editor; it is a tool for describing a real recording session so it
+can convert cleanly, publish to DANDI, and ingest into Spyglass.
 
 - **Users think in animals, recording days, rigs, and sessions.** They do not naturally think in
   `mergeDayMetadata`, `ntrode_electrode_group_channel_map`, AJV paths, or Spyglass primary keys. UI labels,
   repair actions, preflight summaries, and QA scenarios should start from "what was recorded on this day?"
   and only expose technical names when precision requires it.
+- **The workflow order must be visible.** The app should guide users through: create/select animal, configure
+  shared animal hardware (especially electrodes/probes), create/import recording days, fill day-specific
+  metadata and failed channels, record hardware changes starting on a day, then export. Electrode setup must
+  be a first-class setup action, not something users find only by opening a recording day.
+- **Existing data needs a review state.** If the workspace already has days, imported metadata, recovered
+  configurations, or repaired persisted state, the UI should say what was found and what must be reviewed
+  before export. Do not let recovered data look silently trusted or disappear behind empty states.
 - **Physical configuration is a recording fact.** Probe geometry, camera calibration/zoom, data-acq hardware,
   and optogenetics state are facts about a recording day. Later edits are corrections to metadata, not a
   casual rewrite of history. Configuration version context and reconfiguration confirmation must preserve
@@ -180,6 +189,24 @@ the UI must make the scientifically dangerous choices hard to make accidentally.
   workspace flows must fail tests when a control is absent, not quietly skip. Phase 10 then triangulates UI,
   workspace state, exported YAML, mistake injection, labels/units, keyboard/viewport behavior, and recovery
   into an executable findings/fix log.
+
+---
+
+## Domain boundaries & ownership contract
+
+Referenced by phase 8.5. Correctness contracts should be owned by domain/state modules, not by whichever
+React page first needed them.
+
+- **Page modules render and dispatch; domain modules decide export truth.** Validation composition, repair
+  ownership/routing, bad-channel converter semantics, override cleanup semantics, and workspace configuration
+  transitions should live in pure helpers or state modules with direct tests.
+- **No sibling page folder owns app-wide behavior.** A Day Editor page may render Day Editor controls, but
+  Animal Editor, Export, RepairActions, and other surfaces should not import app-wide validation/routing from
+  `pages/DayEditor`. Use a shared domain module instead.
+- **Extraction is behavior-preserving before QA.** Phase 8.5 is allowed to move code and add guard tests; it
+  should not redesign export semantics, rewrite the whole store, or remove the legacy path.
+- **Architecture guard tests are part of correctness.** Tests should fail when domain/state modules import
+  page modules or when page modules import app-wide domain behavior from sibling page folders.
 
 ---
 

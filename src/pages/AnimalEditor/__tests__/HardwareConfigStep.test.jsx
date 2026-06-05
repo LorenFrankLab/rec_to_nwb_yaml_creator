@@ -65,6 +65,40 @@ describe('HardwareConfigStep', () => {
     expect(behavioralEventsHeadings.length).toBeGreaterThan(0);
   });
 
+  it('surfaces a corrupt cameras collection as an executable reset banner (not the empty state alone)', async () => {
+    const user = userEvent.setup();
+    const onRepair = vi.fn();
+    render(
+      <HardwareConfigStep
+        animal={{ ...mockAnimal, cameras: 'nope' }}
+        onFieldUpdate={mockOnFieldUpdate}
+        onRepair={onRepair}
+      />
+    );
+    // The corruption is visible with an executable reset, instead of hiding behind the
+    // "Add First Camera" empty state.
+    const reset = screen.getByRole('button', { name: /^reset cameras$/i });
+    await user.click(reset);
+    expect(onRepair).toHaveBeenCalledWith(
+      expect.objectContaining({ repairCommand: { type: 'resetAnimalCameras' } })
+    );
+  });
+
+  it('surfaces a corrupt data_acq_device as an executable reset banner — without prop-type warnings', () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    render(
+      <HardwareConfigStep
+        animal={{ ...mockAnimal, cameras: 'nope', devices: { data_acq_device: 'bad' } }}
+        onFieldUpdate={mockOnFieldUpdate}
+        onRepair={vi.fn()}
+      />
+    );
+    expect(screen.getByRole('button', { name: /reset data acquisition devices/i })).toBeInTheDocument();
+    // Corrupt animal hardware is first-class state here, so no React warnings on render.
+    expect(errorSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
   it('sections have correct elevation styling (cameras=1, data_acq=0, events=1)', () => {
     const { container } = render(
       <HardwareConfigStep
@@ -428,6 +462,39 @@ describe('HardwareConfigStep', () => {
       await user.click(screen.getByRole('button', { name: /^delete$/i }));
 
       expect(onFieldUpdate).toHaveBeenCalledWith('cameras', []);
+    });
+  });
+
+  // A repair routed to the Animal Editor must not dead-end by crashing on the very
+  // corruption it exists to fix. HardwareConfigStep passes `animal.cameras` to
+  // CamerasSection; a non-array (string/object/number) must be normalized to [] so the
+  // section renders its empty state rather than throwing on `.reduce`/`.map`.
+  describe('Corrupt persisted cameras', () => {
+    it.each([
+      ['a string', 'nope'],
+      ['a plain object', {}],
+      ['a number', 42],
+    ])('renders without throwing or warning when animal.cameras is %s', (_label, corrupt) => {
+      // Corrupt cameras is first-class state here, so render must be both crash-free AND
+      // React-warning-free (no stock prop-type warning that contradicts the contract).
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const corruptAnimal = { ...mockAnimal, cameras: corrupt };
+
+      expect(() => {
+        render(
+          <HardwareConfigStep
+            animal={corruptAnimal}
+            onFieldUpdate={mockOnFieldUpdate}
+            onNavigateBack={mockOnNavigateBack}
+            onNavigateNext={mockOnNavigateNext}
+          />
+        );
+      }).not.toThrow();
+
+      // Cameras degrade to the empty state instead of a crash.
+      expect(screen.getByText(/No Cameras Configured/i)).toBeInTheDocument();
+      expect(errorSpy).not.toHaveBeenCalled();
+      errorSpy.mockRestore();
     });
   });
 

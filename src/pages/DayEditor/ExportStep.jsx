@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { encodeYaml, formatDeterministicFilename, downloadYamlFile } from '../../io/yaml';
 import { mergeDayMetadata, resolveDayConfig } from '../../state/workspaceUtils';
-import { validate } from '../../validation';
+import { computeStepStatus, validateDay, STEP_LABELS } from './validation';
+import { isExportEnabled } from './stepGate';
 import { isFeatureEnabled } from '../../featureFlags';
 import { checkShadowExport } from './shadowExport';
 import RepairActions from './RepairActions';
@@ -17,9 +18,12 @@ import './DayEditor.scss';
  *
  * Export fails closed. The step is normally only reachable once the day is fully
  * valid (the StepNavigation export gate and the keyboard gate both consult the same
- * authoritative status), but this component re-validates the merged day itself as
- * defense in depth: if any error-severity issue exists it surfaces the blocking
- * reason plus per-error repair actions and refuses to download. Only when the day
+ * authoritative status), but this component re-checks that SAME authoritative gate
+ * itself as defense in depth: it both re-validates the merged day (per-error repair
+ * actions) AND consults isExportEnabled(computeStepStatus(...)), which folds in
+ * step-level failures a flat validate() pass misses — e.g. a Devices "all channels
+ * bad" status. If any error-severity issue exists OR the authoritative gate is
+ * closed it surfaces the blocking reason and refuses to download. Only when the day
  * is clean does it run the encoder-stability pre-download check
  * ({@link checkShadowExport}) — a distinct guard (encoder determinism, not schema
  * validity) that still hard-stops the download in strict mode (the default).
@@ -29,9 +33,12 @@ import './DayEditor.scss';
  * @param {object} props.day - Recording day providing session-specific data.
  * @param {(stepId: string, fieldPath?: string) => void} [props.onNavigate] - Routes a
  *   repair action to the step that owns the fix (and an optional field target).
+ * @param {(issue: object) => void} [props.onRepair] - Executes an issue's `repairCommand`
+ *   in place (threaded from DayEditorStepper) so a commandable corruption in the blocked
+ *   list resets without leaving the Export step.
  * @returns {JSX.Element}
  */
-export default function ExportStep({ animal, day, onNavigate }) {
+export default function ExportStep({ animal, day, onNavigate, onRepair }) {
   const [showPreview, setShowPreview] = useState(false);
   const [blockingError, setBlockingError] = useState(null);
   const [overrideWarning, setOverrideWarning] = useState(null);
@@ -40,28 +47,64 @@ export default function ExportStep({ animal, day, onNavigate }) {
   // Merge once; preview YAML, filename, validation, and the preflight summary are
   // all derived from this single merged object (the same one that will be encoded),
   // never from duplicate component state.
-  const { merged, yaml, fileName } = useMemo(() => {
-    const mergedDay = mergeDayMetadata(animal, day);
-    return {
-      merged: mergedDay,
-      yaml: encodeYaml(mergedDay),
-      // mergeDayMetadata does not carry EXPERIMENT_DATE_in_format_mmddYYYY (it is
-      // a filename-only key); inject it from the day so the filename does not
-      // degrade to the literal placeholder. Filename only — never the YAML body.
-      fileName: formatDeterministicFilename({
-        ...mergedDay,
-        EXPERIMENT_DATE_in_format_mmddYYYY: day.experimentDate,
-      }),
-    };
+  const { merged, yaml, fileName, mergeError } = useMemo(() => {
+    try {
+      const mergedDay = mergeDayMetadata(animal, day);
+      return {
+        merged: mergedDay,
+        yaml: encodeYaml(mergedDay),
+        // mergeDayMetadata does not carry EXPERIMENT_DATE_in_format_mmddYYYY (it is
+        // a filename-only key); inject it from the day so the filename does not
+        // degrade to the literal placeholder. Filename only — never the YAML body.
+        fileName: formatDeterministicFilename({
+          ...mergedDay,
+          EXPERIMENT_DATE_in_format_mmddYYYY: day.experimentDate,
+        }),
+        mergeError: null,
+      };
+    } catch (err) {
+      // mergeDayMetadata throws BY DESIGN on a malformed animal (e.g. missing/non-array
+      // configurationHistory). Tolerate it: render with an empty stub so the raw-shape
+      // animal validation surfaces the blocking, repairable issue instead of crashing the
+      // whole Export step. Export stays closed (an empty merged fails validation).
+      return { merged: {}, yaml: '', fileName: '', mergeError: err };
+    }
   }, [animal, day]);
 
   // Authoritative export gate, re-checked here (defense in depth): the day may not
-  // be downloaded while any error-severity validation issue remains.
+  // be downloaded while any error-severity validation issue remains. Pass `animal` so
+  // raw animal-shape corruption (e.g. `cameras: "nope"`) is part of the gate.
   const validationErrors = useMemo(
-    () => validate(merged).filter((issue) => issue.severity === 'error'),
-    [merged]
+    () => validateDay(day, merged, animal).filter((issue) => issue.severity === 'error'),
+    [day, merged, animal]
   );
-  const exportBlocked = validationErrors.length > 0;
+  // The authoritative export gate the stepper uses (isExportEnabled over the full
+  // computeStepStatus map): it folds in step-level statuses — notably
+  // computeDevicesStatus's "all channels bad" → 'error' — that a flat
+  // validate(merged) pass alone does NOT surface (it is not a schema/rule error).
+  // Consulting it here keeps the directly-mounted ExportStep's gate exactly as
+  // strict as the stepper's, so a directly-mounted ExportStep cannot download a day
+  // the stepper would refuse to reach.
+  const stepStatus = useMemo(() => computeStepStatus(day, merged, animal), [day, merged, animal]);
+  const exportGateOpen = useMemo(() => isExportEnabled(stepStatus), [stepStatus]);
+  const exportBlocked = validationErrors.length > 0 || !exportGateOpen;
+
+  // Step-status blockers (a prerequisite step not 'valid' — e.g. Devices 'error' for
+  // all-channels-bad, or 'incomplete' for missing maps) that NO error-severity
+  // validate() issue surfaces. Without these, ExportStep would block with generic text
+  // and no repair button (a dead-end). Route the user to the EDITABLE OWNER: Devices
+  // 'incomplete' (no electrode groups / missing channel maps) is an Animal-Editor fix
+  // (geometry lives at the animal level), not a day-Devices edit; everything else stays
+  // on its day step.
+  const blockingSteps = useMemo(() => {
+    if (validationErrors.length > 0) return [];
+    return ['overview', 'devices', 'epochs', 'validation']
+      .filter((s) => stepStatus[s] !== 'valid')
+      .map((step) => ({
+        step,
+        owner: step === 'devices' && stepStatus.devices === 'incomplete' ? 'animal' : 'day',
+      }));
+  }, [validationErrors.length, stepStatus]);
 
   const preflight = useMemo(() => {
     if (exportBlocked) return null;
@@ -115,11 +158,42 @@ export default function ExportStep({ animal, day, onNavigate }) {
 
       {exportBlocked && (
         <div className="export-validation-blocked" role="alert">
+          {mergeError && (
+            <p className="export-merge-error">
+              This day&apos;s metadata could not be assembled — its animal&apos;s device
+              configuration is missing or corrupt. Repair it in the Animal Editor, then return.
+            </p>
+          )}
           <p className="export-validation-blocked-reason">
-            Resolve {validationErrors.length} validation{' '}
-            {validationErrors.length === 1 ? 'error' : 'errors'} before exporting.
+            {validationErrors.length > 0
+              ? `Resolve ${validationErrors.length} validation ${
+                  validationErrors.length === 1 ? 'error' : 'errors'
+                } before exporting.`
+              : 'Resolve the blocking device/step issue before exporting.'}
           </p>
-          <RepairActions issues={validationErrors} onNavigate={onNavigate} />
+          {validationErrors.length > 0 && (
+            <RepairActions
+              issues={validationErrors}
+              onNavigate={onNavigate}
+              animalId={animal?.id}
+              onRepair={onRepair}
+            />
+          )}
+          {validationErrors.length === 0 && blockingSteps.length > 0 && (
+            <div className="export-step-blockers">
+              {blockingSteps.map(({ step, owner }) => (
+                <button
+                  key={step}
+                  type="button"
+                  className="repair-action-button"
+                  data-repair-surface={owner}
+                  onClick={() => onNavigate?.(owner === 'animal' ? 'animal' : step, undefined)}
+                >
+                  {owner === 'animal' ? 'Fix in Animal Editor' : `Fix in ${STEP_LABELS[step] || step}`}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -247,8 +321,10 @@ ExportStep.propTypes = {
   animal: PropTypes.object.isRequired,
   day: PropTypes.object.isRequired,
   onNavigate: PropTypes.func,
+  onRepair: PropTypes.func,
 };
 
 ExportStep.defaultProps = {
   onNavigate: () => {},
+  onRepair: undefined,
 };

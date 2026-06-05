@@ -1,17 +1,21 @@
 import { useEffect, useRef } from 'react';
 
 /**
- * Critical data-integrity effect: clear orphaned task-epoch references.
+ * Legacy data-integrity effect: clear orphaned task-epoch references in the
+ * **legacy single-session `formData`** only.
  *
- * When a task is removed, any `task_epochs` reference in `associated_files` or
- * `associated_video_files` that pointed at one of its epochs becomes invalid and
- * would corrupt the exported YAML. This hook scrubs those orphaned references to
- * `''` — for BOTH the legacy single-session `formData` AND every workspace day —
- * so the invariant holds regardless of which editing surface produced the data.
+ * When a task is removed in the legacy form, any `task_epochs` reference in
+ * `associated_files` / `associated_video_files` pointing at one of its epochs
+ * becomes invalid; this hook scrubs those to `''`. A ref-based change-guard keyed
+ * on the valid-epoch set runs cleanup only when that set actually changes.
  *
- * Each slice uses a ref-based change-guard keyed on its valid-epoch set so cleanup
- * runs only when the set of valid epochs actually changes, never looping on the
- * write it just made.
+ * Workspace days are NOT scrubbed here (Load-Time Orphan Visibility Contract):
+ * silently erasing a loaded stale reference hides corruption from the user. The
+ * workspace instead **preserves** stale references so they stay visible, lets
+ * validation own them (`orphaned_file` / `orphaned_video` → export blocked), and
+ * clears them only through the explicit, user-confirmed destructive-edit flow in
+ * the Day Editor (TasksEpochsStep). `workspace` / `updateDay` are still accepted
+ * for call-site compatibility but no longer drive an automatic scrub.
  *
  * @param {object} params
  * @param {object} params.formData - Legacy single-session form state.
@@ -86,63 +90,10 @@ export function useEpochCleanup({ formData, setFormData, workspace, updateDay })
   // Optional chaining matches normal operation (formData is always defined) but lets the
   // clear `useStore` formData invariant surface instead of a cryptic render-time TypeError.
 
-  // ----- Workspace day cleanup (same invariant, per day) -----
-  // Guard keyed by dayId so cleanup runs only when a day's valid-epoch set changes.
-  const lastWorkspaceEpochsRef = useRef({});
-
-  useEffect(() => {
-    const days = workspace?.days || {};
-
-    // Drop guard entries for days that no longer exist so the ref can't grow
-    // unboundedly across a long session of create/delete cycles.
-    for (const trackedId of Object.keys(lastWorkspaceEpochsRef.current)) {
-      if (!Object.hasOwn(days, trackedId)) {
-        delete lastWorkspaceEpochsRef.current[trackedId];
-      }
-    }
-
-    for (const dayId of Object.keys(days)) {
-      const day = days[dayId];
-      const validEpochs = (day.tasks || [])
-        .flatMap((task) => task.task_epochs || [])
-        .filter(Boolean);
-      const validEpochsStr = JSON.stringify([...validEpochs].sort());
-
-      // Skip days whose valid-epoch set has not changed since we last processed them.
-      if (lastWorkspaceEpochsRef.current[dayId] === validEpochsStr) {
-        continue;
-      }
-      lastWorkspaceEpochsRef.current[dayId] = validEpochsStr;
-
-      const hasOrphanedFiles = (day.associated_files || []).some(
-        (file) => file.task_epochs && !validEpochs.includes(file.task_epochs)
-      );
-      const hasOrphanedVideos = (day.associated_video_files || []).some(
-        (file) => file.task_epochs && !validEpochs.includes(file.task_epochs)
-      );
-
-      if (!hasOrphanedFiles && !hasOrphanedVideos) {
-        continue;
-      }
-
-      const associatedFiles = (day.associated_files || []).map((file) =>
-        file.task_epochs && !validEpochs.includes(file.task_epochs)
-          ? { ...file, task_epochs: '' }
-          : file
-      );
-      const associatedVideoFiles = (day.associated_video_files || []).map((file) =>
-        file.task_epochs && !validEpochs.includes(file.task_epochs)
-          ? { ...file, task_epochs: '' }
-          : file
-      );
-
-      // Dispatch through the workspace update path so immutability + lastModified
-      // semantics match every other day mutation.
-      updateDay(dayId, {
-        associated_files: associatedFiles,
-        associated_video_files: associatedVideoFiles,
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspace?.days]); // Per-day guard prevents looping on the write we just made
+  // Workspace days are intentionally NOT auto-scrubbed (see the hook doc): stale
+  // references are preserved for the user, surfaced by validation, and cleared
+  // only via the explicit destructive-edit flow. `workspace` / `updateDay` remain
+  // in the signature for call-site stability and future use.
+  void workspace;
+  void updateDay;
 }

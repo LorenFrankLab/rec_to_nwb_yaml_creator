@@ -692,9 +692,14 @@ describe('AnimalEditorStepper', () => {
               devices: {
                 electrode_groups: [
                   {
-                    id: 'group1',
+                    // Strict load normalization preserves ids verbatim (no laundering
+                    // of a corrupt string id into a synthesized index), so the group
+                    // must already carry its real schema-integer id.
+                    id: 0,
                     device_type: 'tetrode_12.5',
                     location: 'CA1',
+                    description: 'CA1 tetrode',
+                    targeted_location: 'CA1',
                     targeted_x: 1.0,
                     targeted_y: 2.0,
                     targeted_z: 3.0,

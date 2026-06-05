@@ -6,12 +6,33 @@
  */
 
 import { nextNtrodeId } from './channelMapUtils';
+import { parseExactInteger } from './deviceNormalization';
+
+/**
+ * Returns the number of channel entries (map keys) in a single channel map.
+ *
+ * @param {object} channelMap - A channel map object with a `map` field
+ * @returns {number} The count of map keys (0 if `map` is missing/empty)
+ * @private
+ */
+function mapKeyCount(channelMap) {
+  return channelMap && channelMap.map ? Object.keys(channelMap.map).length : 0;
+}
 
 /**
  * Exports channel maps to CSV format
  *
  * Creates a CSV representation of channel maps with electrode group context.
  * Includes header row and formats bad_channels as quoted comma-separated string.
+ *
+ * The number of `channel_*` columns is driven by the WIDEST row (the maximum
+ * map-key count across all rows), not the first row. This is required for
+ * uneven-shank probes (e.g. `64c-3s6mm6cm-20um-40um-sl`, whose shanks hold
+ * 21/21/22 channels): using the first row's count would silently drop
+ * `channel_21` / electrode id 63 on the wider third shank. Rows narrower than
+ * the widest are padded with empty trailing cells so every row aligns with the
+ * header. For even probes every row has the same count, so the max equals the
+ * first row's count and output is unchanged (byte-identical).
  *
  * @param {Array<object>} channelMaps - Array of channel map objects
  * @param {Array<object>} electrodeGroups - Array of electrode group objects
@@ -41,9 +62,13 @@ export function exportChannelMapsToCSV(channelMaps, electrodeGroups) {
     return acc;
   }, {});
 
-  // Determine channel count from first map
-  const firstMap = channelMaps[0];
-  const channelCount = Object.keys(firstMap.map).length;
+  // Determine channel count from the WIDEST row (max map-key count across all
+  // rows) so uneven-shank probes don't drop the extra channel(s) of a wider
+  // shank. For even probes this equals every row's count (output unchanged).
+  const channelCount = channelMaps.reduce(
+    (max, channelMap) => Math.max(max, mapKeyCount(channelMap)),
+    0
+  );
 
   // Build header row. `electrode_id` is not a schema field on the ntrode and is no
   // longer part of the channel-map shape, so it is not emitted.
@@ -61,12 +86,15 @@ export function exportChannelMapsToCSV(channelMaps, electrodeGroups) {
   const rows = channelMaps.map(channelMap => {
     const group = groupLookup[channelMap.electrode_group_id] || {};
 
-    // Format bad_channels array as quoted comma-separated string
-    const badChannelsStr = channelMap.bad_channels.length > 0
-      ? `"${channelMap.bad_channels.join(',')}"`
-      : '""';
+    // Format bad_channels array as quoted comma-separated string. Guard a preserved
+    // corrupt non-array value (the normalizer keeps it lossless) so the CSV export
+    // tolerates loaded corruption instead of throwing on `.length`/`.join`.
+    const badChannels = Array.isArray(channelMap.bad_channels) ? channelMap.bad_channels : [];
+    const badChannelsStr = badChannels.length > 0 ? `"${badChannels.join(',')}"` : '""';
 
-    // Extract channel values from map object
+    // Extract channel values from map object. Rows narrower than the widest row
+    // emit empty trailing cells for the missing higher channel indices so the
+    // CSV stays rectangular (header-aligned).
     const channelValues = Array.from({ length: channelCount }, (_, i) => {
       return channelMap.map[i] !== undefined ? channelMap.map[i] : '';
     });
@@ -128,6 +156,11 @@ function parseCSVRow(row) {
  * never collide with existing ones. The non-schema `electrode_id` column is
  * tolerated but ignored (not carried onto the ntrode).
  *
+ * Empty channel cells are skipped, not treated as channels. Uneven-shank probes
+ * export rectangular CSVs where narrower shanks have empty trailing channel cells
+ * (see `exportChannelMapsToCSV`); those padded cells must not become phantom
+ * channels (or NaN errors) on re-import.
+ *
  * @param {string} csvString - CSV formatted string
  * @param {Array<object>} [existingMaps=[]] - Existing channel maps to renumber past.
  * @returns {Array<object>} Array of channel map objects
@@ -186,8 +219,12 @@ export function importChannelMapsFromCSV(csvString, existingMaps = []) {
 
     // Extract values. electrode_group_id is parsed to an integer (schema type).
     const electrode_group_id_str = cells[headers.indexOf('electrode_group_id')];
-    const electrode_group_id = parseInt(electrode_group_id_str, 10);
-    if (isNaN(electrode_group_id)) {
+    // electrode_group_id is a structurally-required integer (schema type). Use
+    // EXACT integer parsing (Normalization Contract): "2" -> 2, but "2.9" /
+    // "63abc" / "" are rejected with a clear, cell-naming error rather than
+    // silently truncated by parseInt ("2.9" -> 2).
+    const electrode_group_id = parseExactInteger(electrode_group_id_str);
+    if (!Number.isInteger(electrode_group_id)) {
       throw new Error(`Invalid numeric value for electrode_group_id at row ${i + 1}: "${electrode_group_id_str}"`);
     }
     const bad_channels_str = cells[headers.indexOf('bad_channels')];
@@ -198,27 +235,36 @@ export function importChannelMapsFromCSV(csvString, existingMaps = []) {
       const values = bad_channels_str.split(',').map(v => v.trim());
       bad_channels = values
         .filter(v => v !== '')
-        .map(v => {
-          const num = parseInt(v, 10);
-          if (isNaN(num)) {
-            throw new Error(`Invalid numeric value in bad_channels at row ${i + 1}: "${v}"`);
-          }
-          return num;
-        });
+        // Exact integer-string -> integer; anything else ("2.9", "63abc") is
+        // PRESERVED unchanged (Normalization Contract) so the channel-bound
+        // rules flag it instead of parseInt silently flooring "2.9" -> 2.
+        .map(v => parseExactInteger(v));
     }
 
     // Parse channel map
     const map = {};
     for (const { index } of channelColumns) {
       const channelValue = cells[index];
-      const channelNum = parseInt(channelValue, 10);
 
-      if (isNaN(channelNum)) {
-        throw new Error(`Invalid numeric value for channel at row ${i + 1}: "${channelValue}"`);
+      // Skip empty/missing cells. Uneven-shank probes are exported as
+      // rectangular CSVs where narrower shanks have empty trailing channel
+      // cells (padding); those must not become phantom channels or NaN errors.
+      if (channelValue === undefined || channelValue.trim() === '') {
+        continue;
       }
 
-      // Extract channel index from header (e.g., "channel_0" → 0)
-      const channelIndex = parseInt(headers[index].split('_')[1], 10);
+      // Exact integer-string -> integer; anything else ("2.9", "63abc") is
+      // PRESERVED unchanged (Normalization Contract) so the channel-bound rules
+      // surface it instead of parseInt silently truncating "2.9" -> 2.
+      const channelNum = parseExactInteger(channelValue);
+
+      // The channel index comes from an app-generated header ("channel_0" -> 0)
+      // and is a structurally-required integer key; reject (don't truncate) a
+      // malformed header column rather than writing to a corrupt key.
+      const channelIndex = parseExactInteger(headers[index].split('_')[1]);
+      if (!Number.isInteger(channelIndex)) {
+        throw new Error(`Invalid channel column header at row ${i + 1}: "${headers[index]}"`);
+      }
       map[channelIndex] = channelNum;
     }
 

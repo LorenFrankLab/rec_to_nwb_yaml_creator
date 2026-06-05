@@ -14,8 +14,11 @@ import './AssociatedVideosEditor.scss';
  */
 function collectValidEpochs(tasks) {
   const seen = new Set();
-  (tasks || []).forEach((task) => {
-    (task.task_epochs || []).forEach((epoch) => {
+  (Array.isArray(tasks) ? tasks : []).forEach((task) => {
+    // A malformed task_epochs inside an otherwise-valid task (a string, not an
+    // array) must contribute no epochs rather than crash this repair UI on `.forEach`.
+    const epochs = Array.isArray(task?.task_epochs) ? task.task_epochs : [];
+    epochs.forEach((epoch) => {
       const n = Number(epoch);
       if (Number.isInteger(n)) seen.add(n);
     });
@@ -29,7 +32,7 @@ function collectValidEpochs(tasks) {
  * Owned by the Day Editor and persisted through `onChange(nextArray)` (the step
  * routes that to `onFieldUpdate('associated_video_files', nextArray)`).
  *
- * Controlled-reference contract (Phase 6 Task 0b): each row's `camera_id` is a
+ * Controlled-reference contract: each row's `camera_id` is a
  * SCALAR chosen from the animal's cameras (a `<select>`), and `task_epochs` is a
  * SCALAR chosen from the day's task epochs (a `<select>`). There is no manual
  * numeric entry for either — the normal path can only ever produce ids that exist.
@@ -46,7 +49,11 @@ function collectValidEpochs(tasks) {
  */
 export default function AssociatedVideosEditor({ videos, cameras, tasks, onChange }) {
   const baseId = useId();
-  const validCameraIds = new Set((cameras || []).map((c) => Number(c.id)));
+  // Tolerate corrupt persisted state: a non-array `videos` (e.g. `{}`) must not crash
+  // `.map`/`.filter`/`.length`. It is surfaced + reset by the step's raw-shape notice;
+  // here we render it as empty rather than throw.
+  const videoList = Array.isArray(videos) ? videos : [];
+  const validCameraIds = new Set((Array.isArray(cameras) ? cameras : []).map((c) => Number(c.id)));
   const validEpochs = collectValidEpochs(tasks);
   const validEpochSet = new Set(validEpochs);
 
@@ -57,14 +64,14 @@ export default function AssociatedVideosEditor({ videos, cameras, tasks, onChang
    * @param {*} value New value (already coerced).
    */
   function updateRow(index, field, value) {
-    onChange(videos.map((video, i) => (i === index ? { ...video, [field]: value } : video)));
+    onChange(videoList.map((video, i) => (i === index ? { ...video, [field]: value } : video)));
   }
 
   /**
    * Append an empty video row.
    */
   function addRow() {
-    onChange([...(videos || []), { name: '', camera_id: '', task_epochs: '' }]);
+    onChange([...videoList, { name: '', camera_id: '', task_epochs: '' }]);
   }
 
   /**
@@ -72,7 +79,7 @@ export default function AssociatedVideosEditor({ videos, cameras, tasks, onChang
    * @param {number} index Row index.
    */
   function removeRow(index) {
-    onChange(videos.filter((_, i) => i !== index));
+    onChange(videoList.filter((_, i) => i !== index));
   }
 
   return (
@@ -86,11 +93,11 @@ export default function AssociatedVideosEditor({ videos, cameras, tasks, onChang
         </p>
       </header>
 
-      {(videos || []).length === 0 ? (
+      {videoList.length === 0 ? (
         <p className="associated-videos-empty">No associated video files yet.</p>
       ) : (
         <ul className="associated-videos-rows">
-          {videos.map((video, index) => {
+          {videoList.map((video, index) => {
             const cameraId = video.camera_id;
             const epoch = video.task_epochs;
             const cameraStale =
@@ -118,14 +125,24 @@ export default function AssociatedVideosEditor({ videos, cameras, tasks, onChang
                   <label htmlFor={`${baseId}-camera-${index}`}>Camera</label>
                   <select
                     id={`${baseId}-camera-${index}`}
-                    value={cameraStale ? '' : (cameraId === '' || cameraId == null ? '' : String(cameraId))}
+                    /* Repair-focus anchor: matches the path the camera-id rule emits so a
+                       repair click lands on THIS row instead of the broad step. */
+                    data-field-path={`associated_video_files[${index}].camera_id`}
+                    value={cameraId === '' || cameraId == null ? '' : String(cameraId)}
                     aria-invalid={cameraStale}
-                    aria-describedby={cameraStale || epochStale ? staleId : undefined}
+                    aria-describedby={cameraStale ? staleId : undefined}
                     onChange={(e) =>
                       updateRow(index, 'camera_id', e.target.value === '' ? '' : Number(e.target.value))
                     }
                   >
                     <option value="">— select camera —</option>
+                    {/* Surface a stale (removed) camera as a visible, unselectable option
+                        so the user sees the value they entered instead of a blank select. */}
+                    {cameraStale && (
+                      <option value={String(cameraId)} disabled>
+                        Missing camera — previously id {String(cameraId)}
+                      </option>
+                    )}
                     {(cameras || []).map((camera) => (
                       <option key={Number(camera.id)} value={String(Number(camera.id))}>
                         {Number(camera.id)} – {camera.camera_name || 'unnamed'}
@@ -144,14 +161,22 @@ export default function AssociatedVideosEditor({ videos, cameras, tasks, onChang
                   <label htmlFor={`${baseId}-epoch-${index}`}>Task epoch</label>
                   <select
                     id={`${baseId}-epoch-${index}`}
-                    value={epochStale ? '' : (epoch === '' || epoch == null ? '' : String(epoch))}
+                    /* Repair-focus anchor: matches the path the task-epochs rule emits. */
+                    data-field-path={`associated_video_files[${index}].task_epochs`}
+                    value={epoch === '' || epoch == null ? '' : String(epoch)}
                     aria-invalid={epochStale}
-                    aria-describedby={cameraStale || epochStale ? staleId : undefined}
+                    aria-describedby={epochStale ? staleId : undefined}
                     onChange={(e) =>
                       updateRow(index, 'task_epochs', e.target.value === '' ? '' : Number(e.target.value))
                     }
                   >
                     <option value="">— select epoch —</option>
+                    {/* Surface a stale (orphaned) epoch as a visible, unselectable option. */}
+                    {epochStale && (
+                      <option value={String(epoch)} disabled>
+                        Missing epoch {String(epoch)}
+                      </option>
+                    )}
                     {validEpochs.map((value) => (
                       <option key={value} value={String(value)}>
                         {value}

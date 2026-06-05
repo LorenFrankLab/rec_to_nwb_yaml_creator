@@ -133,3 +133,6 @@ docs/_build/
 
 # Git worktrees (isolated workspaces)
 .worktrees/
+
+# Claude Code scheduled-task runtime lock
+.claude/scheduled_tasks.lock

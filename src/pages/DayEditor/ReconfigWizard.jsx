@@ -1,6 +1,13 @@
 import { useId, useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import Modal from '../../components/Modal/Modal';
+import {
+  getAnimalElectrodeGroups,
+  getAnimalNtrodeMaps,
+  getConfigHistory,
+  getProbeElectrodeGroups,
+  getProbeNtrodeMaps,
+} from '../../state/workspaceSelectors';
 import './ReconfigWizard.scss';
 
 /**
@@ -50,15 +57,18 @@ export default function ReconfigWizard({
   // The configuration to fork is the current latest snapshot (which `animal.devices`
   // mirrors). The new version starts identical to it; the user edits geometry after.
   const latestDevices = useMemo(() => {
-    const history = animal.configurationHistory || [];
+    const history = getConfigHistory(animal);
     const latest = history[history.length - 1];
+    const latestGroups = getProbeElectrodeGroups(latest?.devices);
+    const latestMaps = getProbeNtrodeMaps(latest?.devices);
+    // Fall back to the animal mirror when the latest snapshot is EMPTY (not merely
+    // falsy as before). The two diverge only if a snapshot held `[]` while the mirror
+    // was non-empty, which `updateAnimal`'s mirror-into-latest logic prevents for in-app
+    // state; an empty latest snapshot correctly falls back to the mirror.
     return {
-      electrode_groups:
-        latest?.devices?.electrode_groups || animal.devices?.electrode_groups || [],
+      electrode_groups: latestGroups.length > 0 ? latestGroups : getAnimalElectrodeGroups(animal),
       ntrode_electrode_group_channel_map:
-        latest?.devices?.ntrode_electrode_group_channel_map ||
-        animal.devices?.ntrode_electrode_group_channel_map ||
-        [],
+        latestMaps.length > 0 ? latestMaps : getAnimalNtrodeMaps(animal),
     };
   }, [animal]);
 

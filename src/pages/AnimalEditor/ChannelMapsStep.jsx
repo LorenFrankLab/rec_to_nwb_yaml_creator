@@ -1,6 +1,19 @@
 import PropTypes from 'prop-types';
-import { getChannelCount } from '../../utils/deviceTypeUtils';
+import { getAnimalElectrodeGroups, getAnimalNtrodeMaps } from '../../state/workspaceSelectors';
+import { getChannelCount, getShankCount } from '../../utils/deviceTypeUtils';
 import './ChannelMapsStep.scss';
+
+/**
+ * Render a catalog-derived geometry count, distinguishing an UNKNOWN probe (count 0,
+ * which never occurs for a real catalogued probe) from a real zero. An em dash makes an
+ * uncatalogued device visually distinct rather than reading as "0 channels/shanks".
+ *
+ * @param {number} count - Channel or shank count from the probe catalog.
+ * @returns {number|string} The count, or '—' when 0 (unknown device).
+ */
+function formatGeometryCount(count) {
+  return count > 0 ? count : '—';
+}
 
 /**
  * ChannelMapsStep - Step 2 of Animal Editor
@@ -13,8 +26,8 @@ import './ChannelMapsStep.scss';
  * @returns {JSX.Element}
  */
 export default function ChannelMapsStep({ animal, onEditChannelMap }) {
-  const electrodeGroups = animal.devices?.electrode_groups || [];
-  const channelMaps = animal.devices?.ntrode_electrode_group_channel_map || [];
+  const electrodeGroups = getAnimalElectrodeGroups(animal);
+  const channelMaps = getAnimalNtrodeMaps(animal);
 
   /**
    * Calculate map status for an electrode group
@@ -93,6 +106,7 @@ export default function ChannelMapsStep({ animal, onEditChannelMap }) {
             <th>Device Type</th>
             <th>Location</th>
             <th>Channels</th>
+            <th>Shanks</th>
             <th>Map Status</th>
             <th>Actions</th>
           </tr>
@@ -103,7 +117,8 @@ export default function ChannelMapsStep({ animal, onEditChannelMap }) {
               <td data-label="ID">{group.id}</td>
               <td data-label="Device Type">{group.device_type}</td>
               <td data-label="Location">{group.location}</td>
-              <td data-label="Channels">{getChannelCount(group.device_type)}</td>
+              <td data-label="Channels">{formatGeometryCount(getChannelCount(group.device_type))}</td>
+              <td data-label="Shanks">{formatGeometryCount(getShankCount(group.device_type))}</td>
               <td data-label="Map Status">
                 <span className={`status-badge status-${getMapStatus(group)}`}>
                   {getMapStatus(group)}
