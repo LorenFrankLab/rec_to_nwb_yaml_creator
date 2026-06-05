@@ -141,11 +141,20 @@ export function dayOverrideIssues(day, mergedDay, baseIssues = []) {
   //    array override is NOT flagged (no dead-end to break).
   const baseErrors = (Array.isArray(baseIssues) ? baseIssues : []).filter((i) => i?.severity === 'error');
   const errorPath = (i) => i?.path || i?.instancePath || '';
+  // A geometry override is "erroring" only when its STRUCTURAL contents err — NOT when a
+  // day-owned bad-channel overlay errors on an ntrode path. Excluding bad_channels here
+  // is what stops a CLEAN ntrode override from being falsely blamed for a bad-channel
+  // error (the path contains "ntrode" either way).
+  const isBadChannelError = (i) =>
+    i?.field === 'bad_channels' ||
+    errorPath(i).includes('bad_channels') ||
+    i?.code === 'bad_channel_out_of_range' ||
+    i?.code === 'multishank_bad_channels_ignored';
   // 'electrode_groups' (with the trailing 's') appears only in electrode-group paths;
   // the ntrode path is 'ntrode_electrode_group_channel_map' (singular 'electrode_group').
   const GEOMETRY_DOMAINS = {
-    electrode_groups: (i) => errorPath(i).includes('electrode_groups'),
-    ntrode_electrode_group_channel_map: (i) => errorPath(i).includes('ntrode'),
+    electrode_groups: (i) => !isBadChannelError(i) && errorPath(i).includes('electrode_groups'),
+    ntrode_electrode_group_channel_map: (i) => !isBadChannelError(i) && errorPath(i).includes('ntrode'),
   };
   for (const key of ['electrode_groups', 'ntrode_electrode_group_channel_map']) {
     const value = overrides[key];
@@ -261,7 +270,65 @@ export function validateDay(day, mergedDay) {
   // so it can tell an erroring array geometry override (a dead-end that needs a day-routed
   // escape) from a clean one (which must NOT be flagged).
   const base = validate(mergedDay);
-  return [...raw, ...base, ...dayOverrideIssues(day, mergedDay, base)];
+  // Boundary 2: ownership by PROVENANCE, not path. A geometry error's owner depends on
+  // WHERE the merged geometry came from — the animal snapshot (animal-owned, edit there)
+  // or a day-level override (day-owned, the snapshot is the wrong editor). Re-tag base
+  // geometry errors to the day when the day overrides that geometry, so they don't
+  // dead-end on "Fix in Animal Editor".
+  const taggedBase = tagBaseOwnershipByProvenance(base, dayGeometryProvenance(day));
+  return [...raw, ...taggedBase, ...dayOverrideIssues(day, mergedDay, base)];
+}
+
+/**
+ * Day-level geometry provenance, derived from the persisted day's overrides ALONE (no
+ * animal needed): a collection is day-owned exactly when the day overrides it with an
+ * array. `bad_channels` are always a day-editable overlay (their rule already routes to
+ * day), so they are not part of geometry provenance.
+ *
+ * @param {object} day - The persisted day.
+ * @returns {{ electrode_groups: boolean, ntrode: boolean }} Whether each is day-overridden.
+ */
+function dayGeometryProvenance(day) {
+  const ov = day && typeof day === 'object' && !Array.isArray(day) ? day.deviceOverrides : null;
+  const rec = ov && typeof ov === 'object' && !Array.isArray(ov) ? ov : {};
+  return {
+    electrode_groups: Array.isArray(rec.electrode_groups),
+    ntrode: Array.isArray(rec.ntrode_electrode_group_channel_map),
+  };
+}
+
+/**
+ * Re-tag base (schema/rule) GEOMETRY errors with explicit day ownership when the day
+ * overrides that geometry — the override, not the animal snapshot, owns them, so fixing
+ * the snapshot can't clear them. Bad-channel errors are left alone (already day-owned by
+ * their rule). Non-overridden domains are untouched (snapshot-owned → animal).
+ *
+ * @param {Array} issues - Base validation issues.
+ * @param {{ electrode_groups: boolean, ntrode: boolean }} prov - Geometry provenance.
+ * @returns {Array} Issues with explicit `ownerSurface`/`repairStep`/`focusPath` on the
+ *   day-overridden geometry errors.
+ */
+function tagBaseOwnershipByProvenance(issues, prov) {
+  if (!prov.electrode_groups && !prov.ntrode) return issues;
+  return issues.map((issue) => {
+    if (issue?.severity !== 'error') return issue;
+    const path = issue.path || issue.instancePath || '';
+    const isBadChannel =
+      issue.field === 'bad_channels' ||
+      path.includes('bad_channels') ||
+      issue.code === 'bad_channel_out_of_range' ||
+      issue.code === 'multishank_bad_channels_ignored';
+    if (isBadChannel) return issue;
+    // 'electrode_groups' (with the trailing 's') is only in electrode-group paths; the
+    // ntrode path is 'ntrode_electrode_group_channel_map' (singular 'electrode_group').
+    if (prov.electrode_groups && path.includes('electrode_groups')) {
+      return { ...issue, ownerSurface: 'day', step: 'devices', repairStep: 'devices', focusPath: 'deviceOverrides.electrode_groups' };
+    }
+    if (prov.ntrode && path.includes('ntrode')) {
+      return { ...issue, ownerSurface: 'day', step: 'devices', repairStep: 'devices', focusPath: 'deviceOverrides.ntrode_electrode_group_channel_map' };
+    }
+    return issue;
+  });
 }
 
 /**
@@ -690,10 +757,16 @@ export function animalEditorStepForFieldPath(fieldPath) {
  * @returns {{surface: 'day'|'animal'|'none', step: string|null, label: string}}
  */
 export function repairTargetForIssue(issue) {
+  // Boundary 2: an EXPLICIT ownerSurface (set by the producer or the provenance pass in
+  // validateDay) wins — ownership is declared, not inferred from path. The legacy
+  // repairSurface / SURFACE_BY_CODE / path-derivation chain is the fallback for issues
+  // that don't yet carry explicit ownership (AJV schema issues in unambiguous domains).
   let surface =
-    issue?.repairSurface && REPAIR_SURFACES.has(issue.repairSurface)
-      ? issue.repairSurface
-      : SURFACE_BY_CODE[issue?.code];
+    issue?.ownerSurface && REPAIR_SURFACES.has(issue.ownerSurface)
+      ? issue.ownerSurface
+      : issue?.repairSurface && REPAIR_SURFACES.has(issue.repairSurface)
+        ? issue.repairSurface
+        : SURFACE_BY_CODE[issue?.code];
   if (!surface) {
     surface = deriveSurfaceFromPath(issue);
   }

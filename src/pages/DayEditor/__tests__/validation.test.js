@@ -646,3 +646,57 @@ describe('Boundary 1 — raw-shape gate folded into validateDay / step status', 
     expect(validateDay(day, merged).some((i) => i.code === 'malformed_day_collection')).toBe(false);
   });
 });
+
+describe('Boundary 2 — ownership by provenance, not path (High 3)', () => {
+  it('re-routes base geometry errors to the DAY when the day overrides that geometry (was Animal dead-end)', () => {
+    // The merged electrode group is content-invalid (schema error on an electrode_groups
+    // path). Because the DAY supplies that geometry (deviceOverrides.electrode_groups is an
+    // array), the error is owned by the day override — fixing the animal snapshot can't
+    // clear it. So it must route to the day surface, not "Fix in Animal Editor".
+    const erroringMerged = { electrode_groups: [{ id: 0 }], ntrode_electrode_group_channel_map: [] };
+    const day = { deviceOverrides: { electrode_groups: [{ id: 0 }] } };
+    const geometryErrors = validateDay(day, erroringMerged).filter(
+      (i) => i.severity === 'error' && (i.path || i.instancePath || '').includes('electrode_groups')
+    );
+    expect(geometryErrors.length).toBeGreaterThan(0);
+    // EVERY such error is now day-owned (none dead-ends to the Animal Editor).
+    for (const issue of geometryErrors) {
+      expect(repairTargetForIssue(issue).surface).toBe('day');
+    }
+  });
+
+  it('does NOT re-route geometry errors to the day when the snapshot owns the geometry', () => {
+    // No day-level geometry override → the geometry is the animal snapshot's; errors stay
+    // animal-routed (the editable owner).
+    const erroringMerged = { electrode_groups: [{ id: 0 }], ntrode_electrode_group_channel_map: [] };
+    const issue = validateDay({}, erroringMerged).find(
+      (i) => i.severity === 'error' && (i.path || i.instancePath || '').includes('electrode_groups')
+    );
+    expect(issue).toBeTruthy();
+    expect(repairTargetForIssue(issue).surface).toBe('animal');
+  });
+
+  it('does NOT falsely blame a clean ntrode override for a bad-channel error on an ntrode path', () => {
+    // A clean array ntrode override + a bad-channel error (which lives on an ntrode path
+    // but is a day-owned overlay, not the geometry). The geometry override must NOT be
+    // flagged as shadowed/erroring — the ntrode-domain check excludes bad_channels.
+    const merged = {
+      electrode_groups: [{ id: 0, location: 'CA1', device_type: 'tetrode_12.5' }],
+      ntrode_electrode_group_channel_map: [
+        { ntrode_id: 1, electrode_group_id: 0, map: { 0: 0, 1: 1, 2: 2, 3: 3 }, bad_channels: [99] },
+      ],
+    };
+    const day = {
+      deviceOverrides: {
+        ntrode_electrode_group_channel_map: [
+          { ntrode_id: 1, electrode_group_id: 0, map: { 0: 0, 1: 1, 2: 2, 3: 3 }, bad_channels: [99] },
+        ],
+      },
+    };
+    const issues = validateDay(day, merged);
+    // The bad-channel error is present (day-owned)...
+    expect(issues.some((i) => i.code === 'bad_channel_out_of_range')).toBe(true);
+    // ...but the ntrode override is NOT falsely flagged as a shadowed/erroring geometry override.
+    expect(issues.some((i) => i.code === 'shadowed_geometry_override')).toBe(false);
+  });
+});
