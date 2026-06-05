@@ -5,6 +5,7 @@ import TasksTable from './TasksTable';
 import TaskModal from './TaskModal';
 import BehavioralEventsDisplay from './BehavioralEventsDisplay';
 import AssociatedVideosEditor from './AssociatedVideosEditor';
+import AssociatedFilesEditor from './AssociatedFilesEditor';
 import { useStepperShortcut } from '../../hooks/stepperShortcuts';
 import './TasksEpochsStep.scss';
 
@@ -231,6 +232,18 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
   }
 
   /**
+   * Affected associated_files for the pending delete (so TasksTable can name them
+   * in its confirmation, alongside the affected videos). Returns the file orphans
+   * that deleting `index` would create.
+   * @param {number} index Task index slated for deletion.
+   * @returns {Array} The affected associated_files entries.
+   */
+  function affectedFilesForDelete(index) {
+    const nextTasks = tasks.filter((_, i) => i !== index);
+    return findOrphanedReferences(day, nextTasks).files;
+  }
+
+  /**
    * Close the modal without saving.
    */
   function handleCancel() {
@@ -283,6 +296,7 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
         onEdit={handleEditTask}
         onDelete={handleDeleteTask}
         affectedVideosForDelete={affectedVideosForDelete}
+        affectedFilesForDelete={affectedFilesForDelete}
       />
 
       <AssociatedVideosEditor
@@ -290,6 +304,12 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
         cameras={cameras}
         tasks={tasks}
         onChange={(next) => onFieldUpdate('associated_video_files', next)}
+      />
+
+      <AssociatedFilesEditor
+        files={day.associated_files}
+        tasks={tasks}
+        onChange={(next) => onFieldUpdate('associated_files', next)}
       />
 
       <section className="behavioral-events-block">

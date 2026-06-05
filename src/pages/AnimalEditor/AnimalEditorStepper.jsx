@@ -18,6 +18,7 @@ import {
   normalizeIdKey,
   normalizeNtrodeMapWithDefaults,
 } from '../../utils/deviceNormalization';
+import { animalEditorStepForFieldPath } from '../DayEditor/validation';
 import './AnimalEditorStepper.scss';
 
 /**
@@ -72,6 +73,7 @@ function parseAnimalEditorRouteContext(hash) {
     version: parseIntegerParam(params.get('version')),
     fromDayId: params.get('fromDay'),
     movedDays: movedDays > 0 ? movedDays : null,
+    field: params.get('field'),
   };
 }
 
@@ -83,7 +85,7 @@ function parseAnimalEditorRouteContext(hash) {
 function useAnimalEditorRouteContext() {
   const [routeContext, setRouteContext] = useState(() => (
     typeof window === 'undefined'
-      ? { context: null, version: null, fromDayId: null, movedDays: null }
+      ? { context: null, version: null, fromDayId: null, movedDays: null, field: null }
       : parseAnimalEditorRouteContext(window.location.hash)
   ));
 
@@ -120,13 +122,31 @@ export default function AnimalEditorStepper() {
   const animalId = useAnimalIdFromUrl();
   const routeContext = useAnimalEditorRouteContext();
   const { model, actions } = useStoreContext();
-  const [activeStep, setActiveStep] = useState(0);
+  // Deep-link: a repair routed here as `?field=<path>` opens the Animal Editor on the
+  // step that owns that field (channel maps / electrode groups / hardware) instead of
+  // dropping the target and landing on step 0. Read at mount via the initializer.
+  const [activeStep, setActiveStep] = useState(() => {
+    if (typeof window === 'undefined') return 0;
+    const initial = parseAnimalEditorRouteContext(window.location.hash);
+    return initial.field ? animalEditorStepForFieldPath(initial.field).index : 0;
+  });
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('add');
   const [editingGroup, setEditingGroup] = useState(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingGroupId, setEditingGroupId] = useState(null);
   const [copyDialogOpen, setCopyDialogOpen] = useState(false);
+  // If a NEW repair field arrives while the editor is already mounted (a hashchange to a
+  // different `?field=` rather than a fresh route mount), jump to that field's owning
+  // step. Keyed on the field string so plain step navigation (which never changes the
+  // hash) does not re-trigger it. The mount-time initializer above covers fresh routes.
+  const lastFieldRef = useRef(routeContext.field);
+  useEffect(() => {
+    if (routeContext.field && routeContext.field !== lastFieldRef.current) {
+      lastFieldRef.current = routeContext.field;
+      setActiveStep(animalEditorStepForFieldPath(routeContext.field).index);
+    }
+  }, [routeContext.field]);
   const csvFileInputRef = useRef(null);
   // In-app feedback replacing native alert()/confirm().
   const [alertState, setAlertState] = useState({ isOpen: false, message: '', type: 'info', title: 'Alert', onClose: null });

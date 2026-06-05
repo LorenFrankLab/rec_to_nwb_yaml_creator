@@ -169,10 +169,9 @@ describe('Associated video files editor (Task 0b)', () => {
 
   it('names the specific stale camera value in the error', async () => {
     const user = userEvent.setup();
-    // Stale camera id 5 (not defined on this day). NB: a stale task_epochs is
-    // silently scrubbed by the useEpochCleanup backstop on load, so only the
-    // camera reference survives to be flagged here; the stale-epoch wording is
-    // covered by the component-level test below.
+    // Stale camera id 5 (not defined on this day); the epoch is valid so this case
+    // isolates the camera wording. (Stale epochs are no longer scrubbed on load —
+    // they are preserved and surfaced; see the orphan-visibility tests.)
     renderStepper({
       day: {
         associated_video_files: [
@@ -237,6 +236,56 @@ describe('Associated video files editor (Task 0b)', () => {
     const region = screen.getByRole('region', { name: /associated video/i });
     await user.click(within(region).getByRole('button', { name: /add video/i }));
     expect(within(region).getByText(/no task epochs/i)).toBeInTheDocument();
+  });
+
+  it('points aria-describedby at the alert only for the stale control (camera stale only)', () => {
+    // Camera is stale (5), epoch is valid (1): only the camera select must point at
+    // the stale alert; the epoch select must NOT reference it.
+    render(
+      <AssociatedVideosEditor
+        videos={[{ name: 'stale_vid', camera_id: 5, task_epochs: 1 }]}
+        cameras={[{ id: 0, camera_name: 'overhead' }]}
+        tasks={[{ task_epochs: [1, 3] }]}
+        onChange={() => {}}
+      />
+    );
+    const alertId = screen.getByRole('alert').id;
+    const cameraSelect = screen.getByLabelText(/camera/i);
+    const epochSelect = screen.getByLabelText(/task epoch/i);
+    expect(cameraSelect).toHaveAttribute('aria-describedby', alertId);
+    expect(epochSelect).not.toHaveAttribute('aria-describedby');
+  });
+
+  it('points aria-describedby at the alert only for the stale control (epoch stale only)', () => {
+    // Epoch is stale (9), camera is valid (0): only the epoch select references the alert.
+    render(
+      <AssociatedVideosEditor
+        videos={[{ name: 'stale_vid', camera_id: 0, task_epochs: 9 }]}
+        cameras={[{ id: 0, camera_name: 'overhead' }]}
+        tasks={[{ task_epochs: [1, 3] }]}
+        onChange={() => {}}
+      />
+    );
+    const alertId = screen.getByRole('alert').id;
+    const cameraSelect = screen.getByLabelText(/camera/i);
+    const epochSelect = screen.getByLabelText(/task epoch/i);
+    expect(epochSelect).toHaveAttribute('aria-describedby', alertId);
+    expect(cameraSelect).not.toHaveAttribute('aria-describedby');
+  });
+
+  it('softens the missing-camera option copy to name it as a removed reference', () => {
+    render(
+      <AssociatedVideosEditor
+        videos={[{ name: 'stale_vid', camera_id: 5, task_epochs: 1 }]}
+        cameras={[{ id: 0, camera_name: 'overhead' }]}
+        tasks={[{ task_epochs: [1, 3] }]}
+        onChange={() => {}}
+      />
+    );
+    const cameraSelect = screen.getByLabelText(/camera/i);
+    expect(
+      within(cameraSelect).getByRole('option', { name: /missing camera — previously id 5/i })
+    ).toBeInTheDocument();
   });
 
   it('marks the video name field as required and shows an example filename placeholder', async () => {

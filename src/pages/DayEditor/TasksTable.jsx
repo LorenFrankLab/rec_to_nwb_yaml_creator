@@ -57,9 +57,10 @@ function getStatus(task, cameras) {
  * parent, which owns task persistence through onFieldUpdate.
  *
  * Repair-before-orphaning (Phase 6 Task 0c): when deleting a task would orphan
- * `associated_video_files` (their epoch would vanish), the confirmation names the
- * affected videos so the user is not blindsided. The parent's delete handler then
- * clears those references deterministically.
+ * `associated_video_files` and/or `associated_files` (their epoch would vanish),
+ * the confirmation names BOTH the affected videos and the affected files so the
+ * user is not blindsided. The parent's delete handler then clears those references
+ * deterministically.
  *
  * @param {object} props
  * @param {Array} props.tasks Day tasks.
@@ -69,6 +70,9 @@ function getStatus(task, cameras) {
  * @param {Function} props.onDelete Delete handler, called with the task index.
  * @param {Function} [props.affectedVideosForDelete] `(index) => Array` of videos
  *   that deleting task `index` would orphan, for the confirmation notice.
+ * @param {Function} [props.affectedFilesForDelete] `(index) => Array` of
+ *   associated_files that deleting task `index` would orphan, named alongside the
+ *   videos in the confirmation notice.
  * @returns {JSX.Element}
  */
 export default function TasksTable({
@@ -78,6 +82,7 @@ export default function TasksTable({
   onEdit,
   onDelete,
   affectedVideosForDelete,
+  affectedFilesForDelete,
 }) {
   const [pendingDeleteIndex, setPendingDeleteIndex] = useState(null);
 
@@ -100,10 +105,23 @@ export default function TasksTable({
   function deleteMessage(index) {
     if (index == null || !tasks[index]) return '';
     const base = `Delete task "${tasks[index].task_name || '(unnamed task)'}"? This removes it from this day.`;
-    const affected = affectedVideosForDelete ? affectedVideosForDelete(index) : [];
-    if (affected.length === 0) return base;
-    const names = affected.map((v) => v.name || '(unnamed)').join(', ');
-    return `${base} This will also unset the epoch reference on associated video file${affected.length > 1 ? 's' : ''}: ${names}.`;
+    const affectedVideos = affectedVideosForDelete ? affectedVideosForDelete(index) : [];
+    const affectedFiles = affectedFilesForDelete ? affectedFilesForDelete(index) : [];
+    const clauses = [];
+    if (affectedVideos.length > 0) {
+      const names = affectedVideos.map((v) => v.name || '(unnamed)').join(', ');
+      clauses.push(
+        `associated video file${affectedVideos.length > 1 ? 's' : ''}: ${names}`
+      );
+    }
+    if (affectedFiles.length > 0) {
+      const names = affectedFiles.map((f) => f.name || '(unnamed)').join(', ');
+      clauses.push(
+        `associated file${affectedFiles.length > 1 ? 's' : ''}: ${names}`
+      );
+    }
+    if (clauses.length === 0) return base;
+    return `${base} This will also unset the epoch reference on ${clauses.join('; and ')}.`;
   }
 
   if (tasks.length === 0) {
@@ -211,9 +229,11 @@ TasksTable.propTypes = {
   onEdit: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
   affectedVideosForDelete: PropTypes.func,
+  affectedFilesForDelete: PropTypes.func,
 };
 
 TasksTable.defaultProps = {
   cameras: [],
   affectedVideosForDelete: undefined,
+  affectedFilesForDelete: undefined,
 };

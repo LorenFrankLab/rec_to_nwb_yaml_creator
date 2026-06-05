@@ -396,6 +396,41 @@ function deriveSurfaceFromPath(issue) {
 }
 
 /**
+ * The Animal Editor's steps, in order, with the field-path keywords that route to each.
+ * Used to (a) deep-link an animal-surface repair to the right step and (b) give the
+ * repair button a step-aware label. The Day Editor's repair routing already decides the
+ * SURFACE (`animal`); this only resolves WHICH animal-editor step owns the field.
+ *
+ * @type {Array<{ index: number, label: string }>}
+ */
+export const ANIMAL_EDITOR_STEPS = [
+  { index: 0, label: 'Electrode Groups' },
+  { index: 1, label: 'Channel Maps' },
+  { index: 2, label: 'Hardware Config' },
+];
+
+/**
+ * Resolve which Animal Editor step owns a field path (for deep-linking + labeling an
+ * animal-surface repair). Channel-map paths → Channel Maps; camera / data-acq paths →
+ * Hardware Config; electrode-group geometry/identity (and anything else) → Electrode
+ * Groups (the default first step). AJV instancePath slashes are normalized first.
+ *
+ * Note channel-map is checked BEFORE electrode-group because the channel-map path
+ * (`ntrode_electrode_group_channel_map`) contains the substring "electrode_group".
+ *
+ * @param {string} [fieldPath] - Issue path (dotted app path or AJV instancePath).
+ * @returns {{ index: number, label: string }} The owning step (defaults to step 0).
+ */
+export function animalEditorStepForFieldPath(fieldPath) {
+  const path = String(fieldPath || '').replace(/^\//, '').replace(/\//g, '.');
+
+  if (path.includes('ntrode')) return ANIMAL_EDITOR_STEPS[1];
+  if (path.includes('camera') || path.includes('data_acq')) return ANIMAL_EDITOR_STEPS[2];
+  // electrode geometry/identity + bare keyword paths (device_type/location/targeted_*).
+  return ANIMAL_EDITOR_STEPS[0];
+}
+
+/**
  * The single source of truth for routing a repair action to the editable OWNER of a
  * problem (Repair Routing Contract). Returns the surface to navigate to, the Day-Editor
  * step (for `day` surface) or `null` (for `animal`/`none`), and the button label.
@@ -423,7 +458,9 @@ export function repairTargetForIssue(issue) {
   }
 
   if (surface === 'animal') {
-    return { surface: 'animal', step: null, label: 'Fix in Animal Editor' };
+    // Step-aware label so the user knows which Animal Editor step the fix lives in.
+    const { label: stepLabel } = animalEditorStepForFieldPath(issue?.path || issue?.instancePath);
+    return { surface: 'animal', step: null, label: `Fix in Animal Editor → ${stepLabel}` };
   }
   if (surface === 'none') {
     return { surface: 'none', step: null, label: 'No in-app fix' };

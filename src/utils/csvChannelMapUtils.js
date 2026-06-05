@@ -8,10 +8,30 @@
 import { nextNtrodeId } from './channelMapUtils';
 
 /**
+ * Returns the number of channel entries (map keys) in a single channel map.
+ *
+ * @param {object} channelMap - A channel map object with a `map` field
+ * @returns {number} The count of map keys (0 if `map` is missing/empty)
+ * @private
+ */
+function mapKeyCount(channelMap) {
+  return channelMap && channelMap.map ? Object.keys(channelMap.map).length : 0;
+}
+
+/**
  * Exports channel maps to CSV format
  *
  * Creates a CSV representation of channel maps with electrode group context.
  * Includes header row and formats bad_channels as quoted comma-separated string.
+ *
+ * The number of `channel_*` columns is driven by the WIDEST row (the maximum
+ * map-key count across all rows), not the first row. This is required for
+ * uneven-shank probes (e.g. `64c-3s6mm6cm-20um-40um-sl`, whose shanks hold
+ * 21/21/22 channels): using the first row's count would silently drop
+ * `channel_21` / electrode id 63 on the wider third shank. Rows narrower than
+ * the widest are padded with empty trailing cells so every row aligns with the
+ * header. For even probes every row has the same count, so the max equals the
+ * first row's count and output is unchanged (byte-identical).
  *
  * @param {Array<object>} channelMaps - Array of channel map objects
  * @param {Array<object>} electrodeGroups - Array of electrode group objects
@@ -41,9 +61,13 @@ export function exportChannelMapsToCSV(channelMaps, electrodeGroups) {
     return acc;
   }, {});
 
-  // Determine channel count from first map
-  const firstMap = channelMaps[0];
-  const channelCount = Object.keys(firstMap.map).length;
+  // Determine channel count from the WIDEST row (max map-key count across all
+  // rows) so uneven-shank probes don't drop the extra channel(s) of a wider
+  // shank. For even probes this equals every row's count (output unchanged).
+  const channelCount = channelMaps.reduce(
+    (max, channelMap) => Math.max(max, mapKeyCount(channelMap)),
+    0
+  );
 
   // Build header row. `electrode_id` is not a schema field on the ntrode and is no
   // longer part of the channel-map shape, so it is not emitted.
@@ -66,7 +90,9 @@ export function exportChannelMapsToCSV(channelMaps, electrodeGroups) {
       ? `"${channelMap.bad_channels.join(',')}"`
       : '""';
 
-    // Extract channel values from map object
+    // Extract channel values from map object. Rows narrower than the widest row
+    // emit empty trailing cells for the missing higher channel indices so the
+    // CSV stays rectangular (header-aligned).
     const channelValues = Array.from({ length: channelCount }, (_, i) => {
       return channelMap.map[i] !== undefined ? channelMap.map[i] : '';
     });
@@ -127,6 +153,11 @@ function parseCSVRow(row) {
  * sequence starting after the current max in `existingMaps`, so imported ntrodes
  * never collide with existing ones. The non-schema `electrode_id` column is
  * tolerated but ignored (not carried onto the ntrode).
+ *
+ * Empty channel cells are skipped, not treated as channels. Uneven-shank probes
+ * export rectangular CSVs where narrower shanks have empty trailing channel cells
+ * (see `exportChannelMapsToCSV`); those padded cells must not become phantom
+ * channels (or NaN errors) on re-import.
  *
  * @param {string} csvString - CSV formatted string
  * @param {Array<object>} [existingMaps=[]] - Existing channel maps to renumber past.
@@ -211,6 +242,14 @@ export function importChannelMapsFromCSV(csvString, existingMaps = []) {
     const map = {};
     for (const { index } of channelColumns) {
       const channelValue = cells[index];
+
+      // Skip empty/missing cells. Uneven-shank probes are exported as
+      // rectangular CSVs where narrower shanks have empty trailing channel
+      // cells (padding); those must not become phantom channels or NaN errors.
+      if (channelValue === undefined || channelValue.trim() === '') {
+        continue;
+      }
+
       const channelNum = parseInt(channelValue, 10);
 
       if (isNaN(channelNum)) {

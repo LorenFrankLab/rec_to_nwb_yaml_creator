@@ -35,6 +35,23 @@ describe('ElectrodeGroupsStep', () => {
     expect(cell).toBeInTheDocument();
   });
 
+  it('renders an em dash (not 0) for an unknown/uncatalogued device type', () => {
+    const animal = {
+      id: 'remy',
+      devices: {
+        electrode_groups: [
+          { id: 0, device_type: 'mystery-probe-9000', location: 'CA1', targeted_location: 'CA1', targeted_x: 1, targeted_y: 2, targeted_z: 3, units: 'mm' },
+        ],
+        ntrode_electrode_group_channel_map: [],
+      },
+    };
+    render(<ElectrodeGroupsStep animal={animal} onFieldUpdate={mockOnFieldUpdate} />);
+    // An unknown probe is visually distinct: '—' for both channels and shanks, never 0.
+    expect(screen.getByText('—', { selector: '[data-label="Channels"]' })).toBeInTheDocument();
+    expect(screen.getByText('—', { selector: '[data-label="Shanks"]' })).toBeInTheDocument();
+    expect(screen.queryByText('0', { selector: '[data-label="Channels"]' })).not.toBeInTheDocument();
+  });
+
   it('renders table with electrode groups', () => {
     render(<ElectrodeGroupsStep animal={mockAnimal} onFieldUpdate={mockOnFieldUpdate} />);
 

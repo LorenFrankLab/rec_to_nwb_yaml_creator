@@ -11,6 +11,10 @@ afterEach(() => vi.restoreAllMocks());
 describe('ValidationStep', () => {
   const baseProps = { animal: {}, day: {}, mergedDay: {} };
 
+  it('declares a default for the optional animal prop', () => {
+    expect(ValidationStep.defaultProps).toHaveProperty('animal', null);
+  });
+
   it('renders each issue under its severity heading with message and path', () => {
     vi.spyOn(validation, 'validate').mockReturnValue([
       { severity: 'error', path: 'session_id', code: 'required', message: 'session_id is required' },

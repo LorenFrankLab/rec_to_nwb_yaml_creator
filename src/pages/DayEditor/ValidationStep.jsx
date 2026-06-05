@@ -72,6 +72,7 @@ ValidationStep.propTypes = {
 
 ValidationStep.defaultProps = {
   onNavigate: () => {},
+  animal: null,
 };
 
 /**

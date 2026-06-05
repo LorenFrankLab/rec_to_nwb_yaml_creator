@@ -79,6 +79,30 @@ describe('Normalization Contract: export gate sees un-laundered state', () => {
     expect(computeStepStatus(day, merged).export).toBe('error');
   });
 
+  it('a corrupt targeted coordinate blocks export (not laundered/dropped silently)', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    snapshotDevices(animal).electrode_groups[0].targeted_x = 'abc';
+
+    const merged = mergeDayMetadata(animal, day);
+
+    // The corrupt coordinate is not coerced to a plausible number; the schema's
+    // required/numeric check on targeted_x then blocks export.
+    expect(merged.electrode_groups[0].targeted_x).not.toBe(0);
+    expect(computeStepStatus(day, merged).export).toBe('error');
+  });
+
+  it('a corrupt bad_channels entry blocks export and is NOT floored to an integer', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    snapshotDevices(animal).ntrode_electrode_group_channel_map[0].bad_channels = ['2.9'];
+
+    const merged = mergeDayMetadata(animal, day);
+
+    // Lossless: "2.9" is preserved (not parseInt-floored to 2) so the channel rule flags it.
+    expect(merged.ntrode_electrode_group_channel_map[0].bad_channels).toContain('2.9');
+    expect(merged.ntrode_electrode_group_channel_map[0].bad_channels).not.toContain(2);
+    expect(computeStepStatus(day, merged).export).toBe('error');
+  });
+
   it('clean integer-string id migration exports with NO error and NO semantic change', () => {
     const { animal, day } = buildRealisticWorkspace();
     const groups = snapshotDevices(animal).electrode_groups;

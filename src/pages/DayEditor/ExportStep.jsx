@@ -3,6 +3,8 @@ import PropTypes from 'prop-types';
 import { encodeYaml, formatDeterministicFilename, downloadYamlFile } from '../../io/yaml';
 import { mergeDayMetadata, resolveDayConfig } from '../../state/workspaceUtils';
 import { validate } from '../../validation';
+import { computeStepStatus } from './validation';
+import { isExportEnabled } from './stepGate';
 import { isFeatureEnabled } from '../../featureFlags';
 import { checkShadowExport } from './shadowExport';
 import RepairActions from './RepairActions';
@@ -17,9 +19,12 @@ import './DayEditor.scss';
  *
  * Export fails closed. The step is normally only reachable once the day is fully
  * valid (the StepNavigation export gate and the keyboard gate both consult the same
- * authoritative status), but this component re-validates the merged day itself as
- * defense in depth: if any error-severity issue exists it surfaces the blocking
- * reason plus per-error repair actions and refuses to download. Only when the day
+ * authoritative status), but this component re-checks that SAME authoritative gate
+ * itself as defense in depth: it both re-validates the merged day (per-error repair
+ * actions) AND consults isExportEnabled(computeStepStatus(...)), which folds in
+ * step-level failures a flat validate() pass misses — e.g. a Devices "all channels
+ * bad" status. If any error-severity issue exists OR the authoritative gate is
+ * closed it surfaces the blocking reason and refuses to download. Only when the day
  * is clean does it run the encoder-stability pre-download check
  * ({@link checkShadowExport}) — a distinct guard (encoder determinism, not schema
  * validity) that still hard-stops the download in strict mode (the default).
@@ -61,7 +66,18 @@ export default function ExportStep({ animal, day, onNavigate }) {
     () => validate(merged).filter((issue) => issue.severity === 'error'),
     [merged]
   );
-  const exportBlocked = validationErrors.length > 0;
+  // The authoritative export gate the stepper uses (isExportEnabled over the full
+  // computeStepStatus map): it folds in step-level statuses — notably
+  // computeDevicesStatus's "all channels bad" → 'error' — that a flat
+  // validate(merged) pass alone does NOT surface (it is not a schema/rule error).
+  // Consulting it here keeps the directly-mounted ExportStep's gate exactly as
+  // strict as the stepper's, so a directly-mounted ExportStep cannot download a day
+  // the stepper would refuse to reach.
+  const exportGateOpen = useMemo(
+    () => isExportEnabled(computeStepStatus(day, merged)),
+    [day, merged]
+  );
+  const exportBlocked = validationErrors.length > 0 || !exportGateOpen;
 
   const preflight = useMemo(() => {
     if (exportBlocked) return null;
@@ -116,10 +132,19 @@ export default function ExportStep({ animal, day, onNavigate }) {
       {exportBlocked && (
         <div className="export-validation-blocked" role="alert">
           <p className="export-validation-blocked-reason">
-            Resolve {validationErrors.length} validation{' '}
-            {validationErrors.length === 1 ? 'error' : 'errors'} before exporting.
+            {validationErrors.length > 0
+              ? `Resolve ${validationErrors.length} validation ${
+                  validationErrors.length === 1 ? 'error' : 'errors'
+                } before exporting.`
+              : 'Resolve the blocking device/step issue before exporting.'}
           </p>
-          <RepairActions issues={validationErrors} onNavigate={onNavigate} animalId={animal?.id} />
+          {validationErrors.length > 0 && (
+            <RepairActions
+              issues={validationErrors}
+              onNavigate={onNavigate}
+              animalId={animal?.id}
+            />
+          )}
         </div>
       )}
 

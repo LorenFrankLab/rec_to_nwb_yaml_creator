@@ -5,6 +5,7 @@ import BadChannelsEditor from './BadChannelsEditor';
 import ReconfigWizard from './ReconfigWizard';
 import { reconcileAppliedToDays } from '../../state/configDiff';
 import { resolveDayConfig } from '../../state/workspaceUtils';
+import { getProbeShanks, getProbeElectrodeIds } from '../../ntrode/probeCatalog';
 import './DayEditor.scss';
 
 /**
@@ -164,7 +165,22 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
     const ntrode = ntrodeChannelMap.find(n => String(n.ntrode_id) === String(ntrodeId));
     if (!ntrode) return null;
 
-    const validChannels = Object.keys(ntrode.map).map(Number);
+    // For a MULTI-shank group the first ntrode row carries PROBE-LOCAL indices
+    // spanning all shanks (0..N-1), so its valid range is the whole probe, not just
+    // that row's map keys. (Matches the probe-wide selector + converter semantics.)
+    const group = electrodeGroups.find((g) => g.id === ntrode.electrode_group_id);
+    const probeShanks = getProbeShanks(group?.device_type);
+    const groupNtrodes = ntrodeChannelMap.filter(
+      (n) => n.electrode_group_id === ntrode.electrode_group_id
+    );
+    const isMultiShankFirstRow =
+      probeShanks.length > 1 &&
+      groupNtrodes.length > 1 &&
+      groupNtrodes[0]?.ntrode_id === ntrode.ntrode_id;
+
+    const validChannels = isMultiShankFirstRow
+      ? getProbeElectrodeIds(group.device_type)
+      : Object.keys(ntrode.map).map(Number);
     const invalidChannels = badChannelArray.filter(ch => !validChannels.includes(ch));
 
     if (invalidChannels.length > 0) {
@@ -183,7 +199,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
     }
 
     return null;
-  }, [ntrodeChannelMap]);
+  }, [ntrodeChannelMap, electrodeGroups]);
 
   // Compute validation errors and warnings
   const { errors, warnings } = useMemo(() => {
@@ -346,6 +362,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
                 {/* Failed Channels Editor (EDITABLE - prioritized at top) */}
                 <BadChannelsEditor
                   ntrodes={ntrodes}
+                  deviceType={group.device_type}
                   badChannels={badChannels}
                   onUpdate={handleBadChannelsUpdate}
                   errors={errors}

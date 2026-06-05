@@ -1,0 +1,122 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import BadChannelsEditor from '../BadChannelsEditor';
+import { rulesValidation } from '../../../validation/rulesValidation';
+
+/**
+ * Multi-shank bad-channels: HIGH review finding.
+ *
+ * trodes_to_nwb reads bad_channels ONLY from a group's FIRST ntrode row and
+ * interprets them as PROBE-LOCAL electrode indices 0..N-1 across ALL shanks. The
+ * per-shank (row-local) checkbox UI could not reach an id like 42 on shank 3 of a
+ * 64c-3s probe. For a MULTI-shank group we now present ONE probe-wide selector
+ * spanning 0..N-1 and write the whole selection to the FIRST ntrode row's id.
+ */
+describe('BadChannelsEditor — multi-shank probe-wide selector', () => {
+  // A 64c-3s group: three ntrode rows (shanks of 21/21/22), probe-local ids 0..63.
+  const MULTISHANK_NTRODES = [
+    { ntrode_id: 10, electrode_group_id: 2, bad_channels: [], map: Object.fromEntries(Array.from({ length: 21 }, (_, i) => [i, i])) },
+    { ntrode_id: 11, electrode_group_id: 2, bad_channels: [], map: Object.fromEntries(Array.from({ length: 21 }, (_, i) => [i, 21 + i])) },
+    { ntrode_id: 12, electrode_group_id: 2, bad_channels: [], map: Object.fromEntries(Array.from({ length: 22 }, (_, i) => [i, 42 + i])) },
+  ];
+  const DEVICE_TYPE = '64c-3s6mm6cm-20um-40um-sl';
+
+  let onUpdate;
+  beforeEach(() => {
+    onUpdate = vi.fn();
+  });
+
+  it('renders one probe-wide selector spanning electrode ids 0..63 (not per-shank rows)', () => {
+    render(
+      <BadChannelsEditor
+        ntrodes={MULTISHANK_NTRODES}
+        deviceType={DEVICE_TYPE}
+        badChannels={{ '10': [], '11': [], '12': [] }}
+        onUpdate={onUpdate}
+      />
+    );
+
+    // The probe-wide electrodes 42 and 63 (unreachable in the old row-local UI) exist.
+    expect(screen.getByLabelText(/electrode 42/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/electrode 63/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/electrode 0/i)).toBeInTheDocument();
+    // No per-shank "Shank #2 (Ntrode ID: 11)" legend in multi-shank mode.
+    expect(screen.queryByText(/Ntrode ID: 11/i)).not.toBeInTheDocument();
+  });
+
+  it('writes a marked probe-local electrode (42) to the FIRST ntrode row id', async () => {
+    const user = userEvent.setup();
+    render(
+      <BadChannelsEditor
+        ntrodes={MULTISHANK_NTRODES}
+        deviceType={DEVICE_TYPE}
+        badChannels={{ '10': [], '11': [], '12': [] }}
+        onUpdate={onUpdate}
+      />
+    );
+
+    await user.click(screen.getByLabelText(/electrode 42/i));
+    // First ntrode row's id is 10 — converter honors bad_channels from this row only.
+    expect(onUpdate).toHaveBeenCalledWith('10', [42]);
+  });
+
+  it('can mark the highest probe-local electrode (63)', async () => {
+    const user = userEvent.setup();
+    render(
+      <BadChannelsEditor
+        ntrodes={MULTISHANK_NTRODES}
+        deviceType={DEVICE_TYPE}
+        badChannels={{ '10': [], '11': [], '12': [] }}
+        onUpdate={onUpdate}
+      />
+    );
+
+    await user.click(screen.getByLabelText(/electrode 63/i));
+    expect(onUpdate).toHaveBeenCalledWith('10', [63]);
+  });
+
+  it('reflects existing first-row bad_channels as checked and appends in sorted order', async () => {
+    const user = userEvent.setup();
+    render(
+      <BadChannelsEditor
+        ntrodes={MULTISHANK_NTRODES}
+        deviceType={DEVICE_TYPE}
+        badChannels={{ '10': [42], '11': [], '12': [] }}
+        onUpdate={onUpdate}
+      />
+    );
+
+    expect(screen.getByLabelText(/electrode 42/i)).toBeChecked();
+    await user.click(screen.getByLabelText('Electrode 5', { exact: true }));
+    expect(onUpdate).toHaveBeenCalledWith('10', [5, 42]);
+  });
+});
+
+describe('multishank_bad_channels_ignored does not fire for first-row probe-local bad channels', () => {
+  // The probe-wide selector writes the WHOLE bad-channel set to the FIRST ntrode row
+  // (id 10). With later rows empty, the converter-truth rule must NOT flag the group.
+  const DEVICE_TYPE = '64c-3s6mm6cm-20um-40um-sl';
+  const model = {
+    electrode_groups: [
+      { id: 2, location: 'CA1', device_type: DEVICE_TYPE, targeted_location: 'CA1' },
+    ],
+    ntrode_electrode_group_channel_map: [
+      { ntrode_id: 10, electrode_group_id: 2, bad_channels: [42], map: Object.fromEntries(Array.from({ length: 21 }, (_, i) => [i, i])) },
+      { ntrode_id: 11, electrode_group_id: 2, bad_channels: [], map: Object.fromEntries(Array.from({ length: 21 }, (_, i) => [i, 21 + i])) },
+      { ntrode_id: 12, electrode_group_id: 2, bad_channels: [], map: Object.fromEntries(Array.from({ length: 22 }, (_, i) => [i, 42 + i])) },
+    ],
+  };
+
+  it('does not report multishank_bad_channels_ignored when only the first row has bad channels', () => {
+    const issues = rulesValidation(model);
+    expect(issues.some((i) => i.code === 'multishank_bad_channels_ignored')).toBe(false);
+  });
+
+  it('does report it when a LATER row carries bad channels (regression guard)', () => {
+    const broken = structuredClone(model);
+    broken.ntrode_electrode_group_channel_map[2].bad_channels = [3];
+    const issues = rulesValidation(broken);
+    expect(issues.some((i) => i.code === 'multishank_bad_channels_ignored')).toBe(true);
+  });
+});

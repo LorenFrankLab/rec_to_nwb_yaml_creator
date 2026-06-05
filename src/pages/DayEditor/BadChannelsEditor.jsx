@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
+import { getProbeShanks, getProbeElectrodeIds } from '../../ntrode/probeCatalog';
 import './DayEditor.scss';
 
 /**
@@ -9,20 +10,37 @@ import './DayEditor.scss';
  * recording day. This is the only day-level device configuration that changes
  * over time (channels fail due to hardware degradation, tissue reactions, etc.).
  *
+ * MULTI-SHANK CONTRACT (converter truth): trodes_to_nwb reads `bad_channels` ONLY
+ * from an electrode group's FIRST ntrode row and interprets them as PROBE-LOCAL
+ * electrode indices `0..N-1` spanning ALL shanks (convert_yaml.add_electrode_groups).
+ * A row-local per-shank UI therefore cannot reach a valid bad channel like `42` on
+ * shank 3 of a 64c-3s probe. So for a MULTI-shank group we present ONE selector over
+ * the probe's full electrode-id range (`getProbeElectrodeIds`) and write the whole
+ * selection to the FIRST ntrode row's id — exactly what the converter honors, and the
+ * shape the `multishank_bad_channels_ignored` rule expects. Single-shank groups keep
+ * the per-row checkbox behavior (row-local == probe-local for one shank).
+ *
  * @param {object} props
  * @param {Array} props.ntrodes - Ntrode channel maps for this electrode group
  * @param {object} props.badChannels - Current bad channels: { [ntrodeId]: [channelNumbers] }
  * @param {Function} props.onUpdate - Callback: (ntrodeId, badChannelArray) => void
+ * @param {string} [props.deviceType] - The electrode group's device type; enables the
+ *   probe-wide selector for multi-shank probes (via the verified probe catalog).
  * @param {object} props.errors - Validation errors: { [ntrodeId]: errorMessage }
  * @param {object} props.warnings - Validation warnings: { [ntrodeId]: warningMessage }
  * @returns {JSX.Element}
  */
-export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, errors, warnings }) {
+export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, deviceType, errors, warnings }) {
   const [expandedMaps, setExpandedMaps] = useState({});
 
   if (!ntrodes || ntrodes.length === 0) {
     return null;
   }
+
+  // Multi-shank iff the verified catalog reports >1 shank for this device. We also
+  // require >1 ntrode row so a 1-row group never collapses to a degenerate selector.
+  const probeShanks = getProbeShanks(deviceType);
+  const isMultiShank = probeShanks.length > 1 && ntrodes.length > 1;
 
   /**
    * Handle checkbox change for a channel
@@ -57,6 +75,67 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, erro
       [key]: !prev[key],
     }));
   };
+
+  // ── Multi-shank: ONE probe-wide selector written to the FIRST ntrode row. ──
+  if (isMultiShank) {
+    const firstNtrode = ntrodes[0];
+    const firstKey = String(firstNtrode.ntrode_id);
+    const electrodeIds = getProbeElectrodeIds(deviceType); // 0 … N-1
+    const currentBadChannels = badChannels[firstKey] || [];
+    const error = errors?.[firstKey];
+    const warning = warnings?.[firstKey];
+
+    return (
+      <div className="bad-channels-editor">
+        <p className="field-help-text">
+          Only mark channels with hardware failures. Analysis quality issues should be handled during spike sorting.
+        </p>
+        <p className="field-help-text">
+          This multi-shank probe is mapped by a single probe-local electrode index spanning
+          all shanks. trodes_to_nwb reads failed channels from one list for the whole group.
+        </p>
+
+        <fieldset className="ntrode-fieldset">
+          <legend>Failed Electrodes (probe-local 0–{electrodeIds.length - 1})</legend>
+
+          <div className="failed-channels-section">
+            <div
+              id={`failed-channels-${firstKey}`}
+              className="bad-channels-checkboxes"
+              role="group"
+              aria-label="Failed electrodes for this multi-shank probe"
+            >
+              {electrodeIds.map((electrodeId) => (
+                <div key={electrodeId} className="checkbox-item">
+                  <input
+                    type="checkbox"
+                    id={`electrode-${firstKey}-${electrodeId}`}
+                    checked={currentBadChannels.includes(electrodeId)}
+                    onChange={(e) => handleChannelToggle(firstNtrode.ntrode_id, electrodeId, e.target.checked)}
+                  />
+                  <label htmlFor={`electrode-${firstKey}-${electrodeId}`}>
+                    Electrode {electrodeId}
+                  </label>
+                </div>
+              ))}
+            </div>
+
+            {error && (
+              <span className="validation-error" role="alert">
+                {error}
+              </span>
+            )}
+
+            {warning && (
+              <span className="validation-warning" role="alert">
+                {warning}
+              </span>
+            )}
+          </div>
+        </fieldset>
+      </div>
+    );
+  }
 
   return (
     <div className="bad-channels-editor">
@@ -167,11 +246,13 @@ BadChannelsEditor.propTypes = {
   ).isRequired,
   badChannels: PropTypes.objectOf(PropTypes.arrayOf(PropTypes.number)).isRequired,
   onUpdate: PropTypes.func.isRequired,
+  deviceType: PropTypes.string,
   errors: PropTypes.object,
   warnings: PropTypes.object,
 };
 
 BadChannelsEditor.defaultProps = {
+  deviceType: undefined,
   errors: {},
   warnings: {},
 };

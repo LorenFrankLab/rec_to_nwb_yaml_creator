@@ -121,7 +121,13 @@ export default function DayEditorStepper() {
     // mirroring the camera-banner link. Day-Editor step targets stay in this stepper.
     if (target === 'animal') {
       if (animal?.id) {
-        window.location.hash = `#/animal/${encodeURIComponent(animal.id)}/editor`;
+        // Encode the field path so the Animal Editor can deep-link to the step that
+        // owns the fix (channel maps / electrode groups / hardware) rather than always
+        // landing on step 0 and dropping the repair target.
+        const base = `#/animal/${encodeURIComponent(animal.id)}/editor`;
+        window.location.hash = fieldPath
+          ? `${base}?field=${encodeURIComponent(fieldPath)}`
+          : base;
       }
       return;
     }

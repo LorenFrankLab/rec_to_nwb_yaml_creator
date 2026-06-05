@@ -1,0 +1,51 @@
+.associated-files-editor {
+  margin-top: 1.5rem;
+
+  .associated-files-header {
+    margin-bottom: 0.75rem;
+
+    h3 {
+      margin: 0 0 0.25rem;
+    }
+
+    .associated-files-hint {
+      margin: 0;
+      font-size: 0.875rem;
+      color: var(--text-secondary, #555);
+    }
+  }
+
+  .associated-files-empty {
+    font-style: italic;
+    color: var(--text-secondary, #555);
+  }
+
+  .associated-files-rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .associated-file-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border-color, #e0e0e0);
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .inline-error {
+      flex-basis: 100%;
+    }
+  }
+
+  .add-file-button {
+    margin-top: 0.75rem;
+  }
+}

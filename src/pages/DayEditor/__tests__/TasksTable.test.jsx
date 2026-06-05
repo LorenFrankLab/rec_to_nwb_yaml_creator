@@ -93,4 +93,41 @@ describe('TasksTable', () => {
     const row = screen.getByRole('row', { name: /sleep/i });
     expect(within(row).getAllByText('—').length).toBeGreaterThan(0);
   });
+
+  it('names affected videos in the delete confirmation', async () => {
+    const user = userEvent.setup();
+    renderTable({
+      tasks: [completeTask],
+      affectedVideosForDelete: () => [{ name: 'overhead.h264' }],
+    });
+    await user.click(screen.getByRole('button', { name: /delete task/i }));
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog).toHaveTextContent(/associated video file/i);
+    expect(dialog).toHaveTextContent(/overhead\.h264/);
+  });
+
+  it('names affected associated_files in the delete confirmation', async () => {
+    const user = userEvent.setup();
+    renderTable({
+      tasks: [completeTask],
+      affectedFilesForDelete: () => [{ name: 'stim_log' }],
+    });
+    await user.click(screen.getByRole('button', { name: /delete task/i }));
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog).toHaveTextContent(/associated file/i);
+    expect(dialog).toHaveTextContent(/stim_log/);
+  });
+
+  it('names both affected videos and files when a delete orphans each', async () => {
+    const user = userEvent.setup();
+    renderTable({
+      tasks: [completeTask],
+      affectedVideosForDelete: () => [{ name: 'overhead.h264' }],
+      affectedFilesForDelete: () => [{ name: 'stim_log' }],
+    });
+    await user.click(screen.getByRole('button', { name: /delete task/i }));
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog).toHaveTextContent(/overhead\.h264/);
+    expect(dialog).toHaveTextContent(/stim_log/);
+  });
 });

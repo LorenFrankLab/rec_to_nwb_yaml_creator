@@ -28,6 +28,18 @@ function hasFiniteCoordinate(value) {
 }
 
 /**
+ * Render a catalog-derived geometry count, distinguishing an UNKNOWN probe (count 0,
+ * which never occurs for a real catalogued probe) from a real zero. An em dash makes an
+ * uncatalogued device visually distinct rather than reading as "0 channels/shanks".
+ *
+ * @param {number} count - Channel or shank count from the probe catalog.
+ * @returns {number|string} The count, or '—' when 0 (unknown device).
+ */
+function formatGeometryCount(count) {
+  return count > 0 ? count : '—';
+}
+
+/**
  * ElectrodeGroupsStep - Step 1 of Animal Editor
  *
  * Provides CRUD interface for electrode groups with table view.
@@ -157,8 +169,8 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
               <td data-label="ID">{group.id}</td>
               <td data-label="Device Type">{group.device_type}</td>
               <td data-label="Location">{group.location}</td>
-              <td data-label="Channels">{getChannelCount(group.device_type)}</td>
-              <td data-label="Shanks">{getShankCount(group.device_type)}</td>
+              <td data-label="Channels">{formatGeometryCount(getChannelCount(group.device_type))}</td>
+              <td data-label="Shanks">{formatGeometryCount(getShankCount(group.device_type))}</td>
               <td data-label="Status">
                 {(() => {
                   const key = getStatusKey(group);

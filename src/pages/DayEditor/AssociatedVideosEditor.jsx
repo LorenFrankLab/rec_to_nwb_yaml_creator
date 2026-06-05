@@ -120,7 +120,7 @@ export default function AssociatedVideosEditor({ videos, cameras, tasks, onChang
                     id={`${baseId}-camera-${index}`}
                     value={cameraId === '' || cameraId == null ? '' : String(cameraId)}
                     aria-invalid={cameraStale}
-                    aria-describedby={cameraStale || epochStale ? staleId : undefined}
+                    aria-describedby={cameraStale ? staleId : undefined}
                     onChange={(e) =>
                       updateRow(index, 'camera_id', e.target.value === '' ? '' : Number(e.target.value))
                     }
@@ -130,7 +130,7 @@ export default function AssociatedVideosEditor({ videos, cameras, tasks, onChang
                         so the user sees the value they entered instead of a blank select. */}
                     {cameraStale && (
                       <option value={String(cameraId)} disabled>
-                        Missing camera {String(cameraId)}
+                        Missing camera — previously id {String(cameraId)}
                       </option>
                     )}
                     {(cameras || []).map((camera) => (
@@ -153,7 +153,7 @@ export default function AssociatedVideosEditor({ videos, cameras, tasks, onChang
                     id={`${baseId}-epoch-${index}`}
                     value={epoch === '' || epoch == null ? '' : String(epoch)}
                     aria-invalid={epochStale}
-                    aria-describedby={cameraStale || epochStale ? staleId : undefined}
+                    aria-describedby={epochStale ? staleId : undefined}
                     onChange={(e) =>
                       updateRow(index, 'task_epochs', e.target.value === '' ? '' : Number(e.target.value))
                     }

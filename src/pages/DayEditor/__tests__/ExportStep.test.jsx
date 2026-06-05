@@ -6,6 +6,9 @@ import * as yaml from '../../../io/yaml';
 import * as shadow from '../shadowExport';
 import { overrideFlags, restoreFlags } from '../../../featureFlags';
 import { buildRealisticWorkspace } from '../../../__tests__/fixtures/workspaceBuilders';
+import { mergeDayMetadata } from '../../../state/workspaceUtils';
+import { computeStepStatus } from '../validation';
+import { validate } from '../../../validation';
 
 const UNSTABLE = {
   ok: false,
@@ -23,6 +26,23 @@ const UNSTABLE = {
 function buildExportErrorWorkspace() {
   const { animal, day } = buildRealisticWorkspace();
   animal.configurationHistory[0].devices.electrode_groups[0].targeted_x = 'not-a-number';
+  return { animal, day };
+}
+
+/**
+ * A realistic workspace whose merged day has NO schema/rule validation error, but
+ * an electrode group with ALL its channels marked bad — a device-status failure
+ * (computeDevicesStatus → 'error') that a flat validate(merged) pass does not
+ * surface. This is the case where ExportStep's old narrow gate (validate only)
+ * would have let the download through.
+ *
+ * @returns {{ animal: object, day: object }}
+ */
+function buildAllChannelsBadWorkspace() {
+  const { animal, day } = buildRealisticWorkspace();
+  animal.configurationHistory[0].devices.ntrode_electrode_group_channel_map.forEach((n) => {
+    if (n.electrode_group_id === 0) n.bad_channels = [0, 1, 2, 3];
+  });
   return { animal, day };
 }
 
@@ -125,6 +145,33 @@ describe('ExportStep', () => {
     render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
     await user.click(screen.getByRole('button', { name: /download yaml/i }));
 
+    expect(shadowSpy).not.toHaveBeenCalled();
+  });
+
+  it('blocks the download on a device-status failure (all channels bad) that flat validation misses', async () => {
+    const user = userEvent.setup();
+    const downloadSpy = vi.spyOn(yaml, 'downloadYamlFile').mockImplementation(() => {});
+    const shadowSpy = vi.spyOn(shadow, 'checkShadowExport');
+    const { animal, day } = buildAllChannelsBadWorkspace();
+
+    // Sanity: this fixture has NO schema/rule validation error — validate(merged)
+    // alone would not block — but computeStepStatus's devices status is 'error'
+    // (all channels bad), so the authoritative export gate is closed.
+    const merged = mergeDayMetadata(animal, day);
+    expect(validate(merged).filter((i) => i.severity === 'error')).toHaveLength(0);
+    expect(computeStepStatus(day, merged).export).toBe('valid');
+
+    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+
+    const downloadButton = screen.getByRole('button', { name: /download yaml/i });
+    // The button is disabled and a blocking reason is shown up front.
+    expect(downloadButton).toBeDisabled();
+    expect(screen.getByText(/before exporting/i)).toBeInTheDocument();
+
+    await user.click(downloadButton);
+
+    // Defense in depth: no file is produced and the shadow check never runs.
+    expect(downloadSpy).not.toHaveBeenCalled();
     expect(shadowSpy).not.toHaveBeenCalled();
   });
 

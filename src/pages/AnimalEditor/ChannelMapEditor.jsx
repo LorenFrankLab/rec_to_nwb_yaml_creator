@@ -136,6 +136,19 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
         }
       });
 
+      // P0-3: Reject UNSET (-1) entries. The -1 sentinel is the dropdown's blank
+      // option; saving it persists a converter-invalid map (the export gate catches
+      // it later, but surface it at edit time). Every channel must map to a real id.
+      const unsetChannels = Object.entries(ntrodeMap.map)
+        .filter(([, hwChannel]) => hwChannel === -1)
+        .map(([chIdx]) => chIdx);
+      if (unsetChannels.length > 0) {
+        errors.push(
+          `Ntrode ${ntrodeMap.ntrode_id}: Channel(s) ${unsetChannels.join(', ')} are unset ` +
+          `(no hardware channel selected). Select a hardware channel for every entry before saving.`
+        );
+      }
+
       // P1-1: Validate no duplicate hardware channels within same ntrode
       const hwChannels = Object.values(ntrodeMap.map).filter(val => val !== -1);
       const duplicates = hwChannels.filter((val, idx) => hwChannels.indexOf(val) !== idx);
@@ -219,12 +232,20 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
             <span>Electrode Group: {electrodeGroup.id}</span>
             <span>Device Type: {electrodeGroup.device_type}</span>
             <span>Location: {electrodeGroup.location}</span>
-            <span data-testid="editor-shank-count">
-              {probeShanks.length} shanks
-            </span>
-            <span data-testid="editor-channel-count">
-              {getChannelCount(electrodeGroup.device_type)} channels
-            </span>
+            {probeShanks.length > 0 ? (
+              <>
+                <span data-testid="editor-shank-count">
+                  {probeShanks.length} shanks
+                </span>
+                <span data-testid="editor-channel-count">
+                  {getChannelCount(electrodeGroup.device_type)} channels
+                </span>
+              </>
+            ) : (
+              <span data-testid="editor-catalog-unavailable">
+                Catalog unavailable — channel layout from saved data
+              </span>
+            )}
             <span data-testid="editor-channel-map-count">{localChannelMaps.length} maps</span>
           </div>
         </div>
