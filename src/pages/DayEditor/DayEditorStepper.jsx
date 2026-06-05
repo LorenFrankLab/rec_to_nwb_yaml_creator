@@ -79,7 +79,7 @@ export default function DayEditorStepper() {
   }, [animal, day]);
 
   // Dataset-wide task_name -> task_description map for the Spyglass task-name
-  // identity guard (Phase 6 Task 0b). task_name is an identity across the whole
+  // identity guard. task_name is an identity across the whole
   // dataset, so the modal must check a reused name against EVERY other day's
   // description, not just the current day's siblings. The CURRENT day's tasks are
   // excluded here (the step folds them back in, giving live siblings precedence);

@@ -12,9 +12,12 @@
  * the PERSISTED object (the raw day/animal), before any merge, and block export on a
  * corrupt shape regardless of how the merge would launder it.
  *
- * Every issue carries the explicit ownership contract (Boundary 2): `ownerSurface`,
- * `repairStep`, `focusPath` — set by the producer, never inferred from `path` later. The
- * legacy `repairSurface`/`step`/`path` fields are mirrored until consumers migrate.
+ * Every issue THIS MODULE produces carries the explicit ownership contract
+ * (`ownerSurface`/`repairStep`/`focusPath`), with the legacy `repairSurface`/`step`/`path`
+ * mirrored. (System-wide this is not yet universal — `dayOverrideIssues` and AJV schema
+ * issues still resolve their surface via the fallback chain in `repairTargetForIssue`;
+ * `normalizeIssue` at the `validateDay` boundary is what guarantees EVERY emitted issue
+ * ends up with a resolved `ownerSurface`/`focusPath`.)
  */
 
 /**
@@ -139,5 +142,28 @@ export function validateRawAnimal(animal) {
       );
     }
   }
+
+  // A corrupt (non-array) nested `devices.data_acq_device` is laundered to `[]` by
+  // normalizeDevices and blocked only by the schema's generic minItems message. Surface a
+  // precise animal-routed issue so the user sees "corrupt (expected a list)".
+  const daq = isRecord(animal.devices) ? animal.devices.data_acq_device : undefined;
+  if (daq != null && !Array.isArray(daq)) {
+    issues.push(
+      malformedCollectionIssue({
+        code: 'malformed_animal_collection',
+        field: 'data_acq_device',
+        ownerSurface: 'animal',
+        repairStep: 'validation',
+        label: 'data acquisition devices',
+      })
+    );
+  }
+
+  // NOTE: a MISSING (null/empty) configurationHistory is intentionally NOT flagged here.
+  // It already fails closed (the merge throws → ExportStep/DayEditorStepper render blocked,
+  // ValidationSummary flags the day "cannot read"), and flagging it in this per-`validateDay`
+  // path would false-fire on the minimal animal stubs some callers pass. Only the laundering
+  // shapes (present-but-non-array collections) belong here.
+
   return issues;
 }

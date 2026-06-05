@@ -130,12 +130,31 @@ describe('Repairability matrix — every malformed shape is raised, owned, and c
     expect(stillPresent, `repair did not clear code "${code}"`).toBe(false);
   });
 
-  it('covers every day-routed malformed/override code currently produced', () => {
-    // Guard against a new code being added without a matrix row: this list must equal
-    // the set of codes the scenarios exercise. Update BOTH when adding a code.
-    const exercised = new Set(SCENARIOS.map((s) => s.code));
+  it('animal-collection corruption (cameras) completes the same repair round-trip', () => {
+    // The animal code can't ride the day harness (its repair mutates the ANIMAL), but it
+    // must satisfy the identical invariant: raised → owned (animal) → routes → blocks →
+    // the documented repair (reset to []) clears it.
+    const merged = baseMerged();
+    const corruptAnimal = { cameras: 'nope' };
+    const issue = validateDay({}, merged, corruptAnimal).find((i) => i.code === 'malformed_animal_collection');
+    expect(issue, 'expected malformed_animal_collection to be raised').toBeTruthy();
+    expect(issue.severity).toBe('error');
+    expect(issue.ownerSurface).toBe('animal');
+    expect(repairTargetForIssue(issue).surface).toBe('animal');
+    expect(computeStepStatus({}, merged, corruptAnimal).export).toBe('error');
+    const repairedAnimal = { cameras: [] };
+    expect(
+      validateDay({}, merged, repairedAnimal).some((i) => i.code === 'malformed_animal_collection')
+    ).toBe(false);
+  });
+
+  it('covers every malformed/override code the contract produces (day + animal)', () => {
+    // Guard against a new code being added without a round-trip: this set must equal the
+    // codes the scenarios + the animal test exercise. Update BOTH when adding a code.
+    const exercised = new Set([...SCENARIOS.map((s) => s.code), 'malformed_animal_collection']);
     expect([...exercised].sort()).toEqual(
       [
+        'malformed_animal_collection',
         'malformed_bad_channel_override',
         'malformed_day_collection',
         'malformed_device_override',

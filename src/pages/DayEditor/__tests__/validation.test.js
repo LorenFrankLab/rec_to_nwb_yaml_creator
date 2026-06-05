@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateField, computeStepStatus, computeDevicesStatus, computeEpochsStatus, groupErrorsByStep, stepIdForIssue, repairTargetForIssue, validateDay, dayOverrideIssues } from '../validation';
+import { validateField, computeStepStatus, computeDevicesStatus, computeEpochsStatus, groupErrorsByStep, stepIdForIssue, repairTargetForIssue, validateDay, dayOverrideIssues, SURFACE_BY_CODE } from '../validation';
 import { makeAnimalWithCamerasAndDay } from './taskFixtures';
 
 describe('stepIdForIssue', () => {
@@ -641,6 +641,15 @@ describe('Boundary 1 — raw-shape gate folded into validateDay / step status', 
     expect(computeEpochsStatus({ tasks: [] }, [])).toBe('incomplete');
   });
 
+  it('the OWNING step badges error for a corrupt collection (not a green badge beside the reset)', () => {
+    // A corrupt behavioral_events (epochs-owned) → Epochs step 'error', matching its reset
+    // notice — not a false 'incomplete'/'valid'.
+    expect(computeStepStatus({ tasks: [{ task_name: 't' }], behavioral_events: {} }, merged).epochs).toBe('error');
+    // A corrupt keywords (overview-owned) on an INCOMPLETE-session day → Overview 'error',
+    // not hidden behind 'incomplete'.
+    expect(computeStepStatus({ keywords: 'oops' }, merged).overview).toBe('error');
+  });
+
   it('a clean day with array collections raises no malformed_day_collection', () => {
     const day = { tasks: [], associated_files: [], keywords: [] };
     expect(validateDay(day, merged).some((i) => i.code === 'malformed_day_collection')).toBe(false);
@@ -658,6 +667,49 @@ describe('Boundary 1 — raw-shape gate folded into validateDay / step status', 
 
   it('validateDay without an animal arg is unchanged (no animal issues)', () => {
     expect(validateDay({}, merged).some((i) => i.code === 'malformed_animal_collection')).toBe(false);
+  });
+});
+
+describe('normalizeIssue — the ownership contract is enforced, not conventional', () => {
+  const merged = { ntrode_electrode_group_channel_map: [{ ntrode_id: 1, map: { 0: 0 } }] };
+
+  it('every issue from validateDay carries a valid ownerSurface (mirrored to repairSurface) and a focusPath', () => {
+    const day = {
+      tasks: {},
+      deviceOverrides: { bad_channels: { 999: [0] }, electrode_groups: 'corrupt' },
+    };
+    const issues = validateDay(day, merged, { cameras: 'nope' });
+    expect(issues.length).toBeGreaterThan(0);
+    for (const issue of issues) {
+      expect(['day', 'animal', 'none']).toContain(issue.ownerSurface);
+      expect(issue.repairSurface).toBe(issue.ownerSurface); // legacy mirror stays in sync
+      expect(typeof issue.focusPath === 'string' || issue.focusPath === undefined).toBe(true);
+      // The dead `repairStep` issue field is dropped (it was written-but-never-read).
+      expect(Object.prototype.hasOwnProperty.call(issue, 'repairStep')).toBe(false);
+      // A day issue carries a resolved day step.
+      if (issue.ownerSurface === 'day') {
+        expect(['overview', 'devices', 'epochs', 'validation']).toContain(issue.step);
+      }
+    }
+  });
+
+  it('the SURFACE_BY_CODE routing table resolves each code to its mapped surface (not bypassed by inline fields)', () => {
+    // Pass ONLY { code } — no inline repairSurface/ownerSurface/path — so the table itself
+    // is under test, not short-circuited. A wrong table entry fails here even if the rule
+    // still emits the right inline surface.
+    for (const [code, surface] of Object.entries(SURFACE_BY_CODE)) {
+      expect(repairTargetForIssue({ code }).surface, `code "${code}"`).toBe(surface);
+    }
+  });
+
+  it('a provenance-retagged geometry error gets focusPath at the day override control', () => {
+    const erroringMerged = { electrode_groups: [{ id: 0 }], ntrode_electrode_group_channel_map: [] };
+    const day = { deviceOverrides: { electrode_groups: [{ id: 0 }] } };
+    const issue = validateDay(day, erroringMerged).find(
+      (i) => i.severity === 'error' && (i.path || '').includes('electrode_groups') && i.ownerSurface === 'day'
+    );
+    expect(issue).toBeTruthy();
+    expect(issue.focusPath).toBe('deviceOverrides.electrode_groups');
   });
 });
 

@@ -1,8 +1,7 @@
 /**
  * String Formatting Utilities
  *
- * Extracted from src/utils.js as part of Phase 3 refactoring.
- * These utilities handle string transformations and sanitization.
+ * Extracted from src/utils.js. These utilities handle string transformations and sanitization.
  */
 
 /**

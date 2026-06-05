@@ -30,7 +30,9 @@ describe('MalformedCollectionNotice', () => {
     expect(screen.queryByRole('button', { name: /reset corrupt associated files/i })).toBeNull();
   });
 
-  it('clicking reset clears that field to an empty array', async () => {
+  it('clicking reset invokes onReset with the field key (the caller resets it to [])', async () => {
+    // This component only fires the callback; that resetting to [] CLEARS the underlying
+    // malformed_day_collection issue is proven by the validation/repairability tests.
     const user = userEvent.setup();
     const onReset = vi.fn();
     render(<MalformedCollectionNotice day={{ tasks: 'corrupt' }} fields={FIELDS} onReset={onReset} />);

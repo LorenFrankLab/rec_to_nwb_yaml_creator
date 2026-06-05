@@ -72,6 +72,30 @@ Gate each: full vitest suite (adequate `--test-timeout`; slow multi-shank render
 timeout under parallel load), 125 golden baselines byte-identical, 0 lint errors, clean
 build, no plan/phase strings in shipped code. Do NOT merge to `modern`; pause before merge.
 
+## As-built — deviations from the design above
+
+The four-boundary design below is the original plan; the shipped implementation differs in
+a few mechanisms. The authoritative as-built record is `docs/REFACTOR_CHANGELOG.md`. Key
+deviations (verified against the code):
+
+- **`deriveSurfaceFromPath` was NOT deleted** (Boundary 2 said "delete"). It is retained as
+  the final fallback in `repairTargetForIssue` for AJV schema issues that carry no app
+  ownership metadata. The resolution order is: explicit `ownerSurface` → `repairSurface` →
+  `SURFACE_BY_CODE` → `deriveSurfaceFromPath`.
+- **`deviceOverrides` shape checks were NOT re-homed** into `rawShape.js` (Boundary 1 said
+  "re-home"). They remain in `dayOverrideIssues` (which needs `mergedDay`/`baseIssues` for
+  the stale-key and shadowed-override cases). `rawShape.js` covers only the top-level
+  day/animal array fields.
+- **`resolveDayConfig`/`mergeDayMetadata` do NOT return a provenance map** (Boundary 2
+  described one). Geometry provenance is derived from the persisted day alone
+  (`dayGeometryProvenance`) and applied by `tagBaseOwnershipByProvenance`.
+- **Ownership enforcement landed as `normalizeIssue`** at the `validateDay` boundary (added
+  after the contract reviewer pass): it resolves the owner once, stamps `ownerSurface` /
+  `focusPath` / day `step` on every emitted issue, mirrors the legacy `repairSurface`,
+  drops the never-read `repairStep` issue field, and throws on an unresolved owner. So
+  "ownership is declared, not inferred" is true at the consumer boundary even though
+  individual producers still vary.
+
 ## Round-8 findings → boundary map
 - High 1 (day-collection laundering + Epochs crash) → B1
 - High 3 (shadowed-override routing / false-blame) → B2

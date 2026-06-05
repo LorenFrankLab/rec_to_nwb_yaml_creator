@@ -86,10 +86,11 @@ export function exportChannelMapsToCSV(channelMaps, electrodeGroups) {
   const rows = channelMaps.map(channelMap => {
     const group = groupLookup[channelMap.electrode_group_id] || {};
 
-    // Format bad_channels array as quoted comma-separated string
-    const badChannelsStr = channelMap.bad_channels.length > 0
-      ? `"${channelMap.bad_channels.join(',')}"`
-      : '""';
+    // Format bad_channels array as quoted comma-separated string. Guard a preserved
+    // corrupt non-array value (the normalizer keeps it lossless) so the CSV export
+    // tolerates loaded corruption instead of throwing on `.length`/`.join`.
+    const badChannels = Array.isArray(channelMap.bad_channels) ? channelMap.bad_channels : [];
+    const badChannelsStr = badChannels.length > 0 ? `"${badChannels.join(',')}"` : '""';
 
     // Extract channel values from map object. Rows narrower than the widest row
     // emit empty trailing cells for the missing higher channel indices so the

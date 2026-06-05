@@ -70,10 +70,29 @@ describe('validateRawAnimal — malformed animal-owned collections', () => {
   });
 
   it('does not flag well-formed animal collections', () => {
-    expect(validateRawAnimal({ cameras: [], devices: { electrode_groups: [] } }).length).toBe(0);
+    expect(
+      validateRawAnimal({ cameras: [], configurationHistory: [{ version: 1 }], devices: { electrode_groups: [] } })
+        .length
+    ).toBe(0);
   });
 
   it('a non-record animal returns no issues', () => {
     expect(validateRawAnimal(undefined)).toEqual([]);
   });
+
+  it('does NOT flag a MISSING configurationHistory (it fails closed via the merge throw, not laundering)', () => {
+    // Per the raw-shape contract, this path guards only laundering shapes; an absent
+    // configurationHistory is handled by the merge-throw tolerance + ValidationSummary chip,
+    // and flagging it here would false-fire on minimal animal stubs.
+    expect(validateRawAnimal({ cameras: [] }).some((i) => i.code === 'missing_configuration_history')).toBe(false);
+  });
+
+  it('flags a corrupt nested devices.data_acq_device with a precise animal-routed message', () => {
+    const issue = validateRawAnimal({ configurationHistory: [{ version: 1 }], devices: { data_acq_device: 'nope' } })
+      .find((i) => i.field === 'data_acq_device');
+    expect(issue).toBeTruthy();
+    expect(issue.code).toBe('malformed_animal_collection');
+    expect(issue.ownerSurface).toBe('animal');
+  });
+
 });

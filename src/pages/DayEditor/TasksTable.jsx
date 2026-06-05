@@ -56,7 +56,7 @@ function getStatus(task, cameras) {
  * ConfirmDialog (no raw window.confirm). Add/Edit/Delete are delegated to the
  * parent, which owns task persistence through onFieldUpdate.
  *
- * Repair-before-orphaning (Phase 6 Task 0c): when deleting a task would orphan
+ * Repair-before-orphaning: when deleting a task would orphan
  * `associated_video_files` and/or `associated_files` (their epoch would vanish),
  * the confirmation names BOTH the affected videos and the affected files so the
  * user is not blindsided. The parent's delete handler then clears those references

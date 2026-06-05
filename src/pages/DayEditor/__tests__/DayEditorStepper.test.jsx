@@ -106,6 +106,27 @@ describe('DayEditorStepper', () => {
     expect(screen.getByText(/No day ID provided/i)).toBeInTheDocument();
   });
 
+  it('does not crash when the edited day\'s animal has a corrupt configurationHistory (merge throws by design)', () => {
+    // mergeDayMetadata throws on a non-array configurationHistory; the stepper must
+    // try/catch it and render the fail-closed editor (heading present) rather than crash.
+    const corruptState = {
+      ...mockInitialState,
+      workspace: {
+        ...mockInitialState.workspace,
+        animals: { remy: { ...mockAnimal, configurationHistory: 'corrupt' } },
+      },
+    };
+
+    expect(() =>
+      render(
+        <StoreProvider initialState={corruptState}>
+          <DayEditorStepper />
+        </StoreProvider>
+      )
+    ).not.toThrow();
+    expect(screen.getByRole('heading', { name: /Day Editor:/i })).toBeInTheDocument();
+  });
+
   it('renders header with animal and date', () => {
     render(
       <StoreProvider initialState={mockInitialState}>

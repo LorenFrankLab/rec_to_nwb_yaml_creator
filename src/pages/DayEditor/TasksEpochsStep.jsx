@@ -80,7 +80,7 @@ function clearOrphans(entries, valid) {
  * `onFieldUpdate('associated_video_files', …)`, which the stepper routes to the
  * store's `updateDay`; this component never touches the store directly.
  *
- * Repair-before-orphaning (Phase 6 Task 0c): a task delete or an epoch-removing
+ * Repair-before-orphaning: a task delete or an epoch-removing
  * task edit that would leave an `associated_video_files` / `associated_files`
  * entry pointing at a now-missing epoch surfaces the affected rows and requires an
  * explicit, deterministic cleanup BEFORE the orphan is committed — the day's

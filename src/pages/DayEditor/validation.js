@@ -63,6 +63,34 @@ function isRecord(value) {
 }
 
 /**
+ * Classify a validation issue into its GEOMETRY domain — the single source for both the
+ * provenance re-tag and the shadowed-override check, so the subtle path matching can't
+ * drift between them:
+ *   - `'electrode_groups'` — an electrode-group structural error;
+ *   - `'ntrode'` — an ntrode channel-map structural error;
+ *   - `null` — a bad-channel overlay error (lives on an ntrode path but is a day-owned
+ *     overlay, so it must NOT be attributed to a geometry override) or a non-geometry issue.
+ *
+ * `'electrode_groups'` (with the trailing 's') appears only in electrode-group paths; the
+ * ntrode path is `ntrode_electrode_group_channel_map` (singular `electrode_group`).
+ *
+ * @param {{path?: string, instancePath?: string, field?: string, code?: string}} issue
+ * @returns {'electrode_groups'|'ntrode'|null}
+ */
+function geometryDomainOf(issue) {
+  const path = issue?.path || issue?.instancePath || '';
+  const isBadChannel =
+    issue?.field === 'bad_channels' ||
+    path.includes('bad_channels') ||
+    issue?.code === 'bad_channel_out_of_range' ||
+    issue?.code === 'multishank_bad_channels_ignored';
+  if (isBadChannel) return null;
+  if (path.includes('electrode_groups')) return 'electrode_groups';
+  if (path.includes('ntrode')) return 'ntrode';
+  return null;
+}
+
+/**
  * Surface EVERY malformed/stale/shadowing `day.deviceOverrides` shape that
  * `resolveDayConfig` cannot faithfully apply (or applies in a way whose errors
  * mis-route), so it becomes a visible, day-routed, export-blocking, REPAIRABLE issue
@@ -140,21 +168,12 @@ export function dayOverrideIssues(day, mergedDay, baseIssues = []) {
   //    mis-route to the Animal Editor → add a day-routed removable escape. A CLEAN valid
   //    array override is NOT flagged (no dead-end to break).
   const baseErrors = (Array.isArray(baseIssues) ? baseIssues : []).filter((i) => i?.severity === 'error');
-  const errorPath = (i) => i?.path || i?.instancePath || '';
-  // A geometry override is "erroring" only when its STRUCTURAL contents err — NOT when a
-  // day-owned bad-channel overlay errors on an ntrode path. Excluding bad_channels here
-  // is what stops a CLEAN ntrode override from being falsely blamed for a bad-channel
-  // error (the path contains "ntrode" either way).
-  const isBadChannelError = (i) =>
-    i?.field === 'bad_channels' ||
-    errorPath(i).includes('bad_channels') ||
-    i?.code === 'bad_channel_out_of_range' ||
-    i?.code === 'multishank_bad_channels_ignored';
-  // 'electrode_groups' (with the trailing 's') appears only in electrode-group paths;
-  // the ntrode path is 'ntrode_electrode_group_channel_map' (singular 'electrode_group').
+  // A geometry override is "erroring" only when its STRUCTURAL contents err — a day-owned
+  // bad-channel overlay error on an ntrode path must NOT blame a clean override.
+  // {@link geometryDomainOf} encodes that classification (shared with the provenance re-tag).
   const GEOMETRY_DOMAINS = {
-    electrode_groups: (i) => !isBadChannelError(i) && errorPath(i).includes('electrode_groups'),
-    ntrode_electrode_group_channel_map: (i) => !isBadChannelError(i) && errorPath(i).includes('ntrode'),
+    electrode_groups: (i) => geometryDomainOf(i) === 'electrode_groups',
+    ntrode_electrode_group_channel_map: (i) => geometryDomainOf(i) === 'ntrode',
   };
   for (const key of ['electrode_groups', 'ntrode_electrode_group_channel_map']) {
     const value = overrides[key];
@@ -250,17 +269,24 @@ export function dayOverrideIssues(day, mergedDay, baseIssues = []) {
 }
 
 /**
- * The authoritative issue list for a day — schema + rules over the merged model
- * PLUS day-level issues that the merge would otherwise hide (stale bad-channel
- * overrides). This is the SINGLE source so the export gate
- * (`computeStepStatus`) and the rendered repair lists (ValidationStep, ExportStep)
- * never diverge — a blocking issue must always be visible and repairable, never
- * "gated but invisible".
+ * The authoritative issue list for a day, and the SINGLE source so the export gate
+ * (`computeStepStatus`) and the rendered repair lists (ValidationStep, ExportStep) never
+ * diverge — a blocking issue must always be visible and repairable, never "gated but
+ * invisible". It folds together, in order:
+ *   1. raw-shape issues for the persisted day AND animal ({@link validateRawDay} /
+ *      {@link validateRawAnimal}) — Boundary 1, caught before the merge can launder them;
+ *   2. schema + rules over the merged model, with day-overridden geometry errors re-tagged
+ *      to the day surface by provenance ({@link tagBaseOwnershipByProvenance}) — Boundary 2;
+ *   3. the family of malformed/stale/shadowing `deviceOverrides` issues the merge would
+ *      otherwise hide ({@link dayOverrideIssues}).
+ * Every issue is then run through {@link normalizeIssue} so it carries the canonical
+ * ownership contract.
  *
  * @param {object} day - The day record.
  * @param {object} mergedDay - Merged animal + day metadata.
- * @param animal
- * @returns {Array} All validation issues for the day.
+ * @param {object} [animal] - The owning animal (optional); folds raw animal-shape issues
+ *   (e.g. a non-array `cameras`) into the gate.
+ * @returns {Array} All validation issues for the day (each ownership-normalized).
  */
 export function validateDay(day, mergedDay, animal) {
   // Boundary 1: validate the RAW persisted day AND animal shape FIRST — before the merge
@@ -280,7 +306,46 @@ export function validateDay(day, mergedDay, animal) {
   // geometry errors to the day when the day overrides that geometry, so they don't
   // dead-end on "Fix in Animal Editor".
   const taggedBase = tagBaseOwnershipByProvenance(base, dayGeometryProvenance(day));
-  return [...raw, ...rawAnimal, ...taggedBase, ...dayOverrideIssues(day, mergedDay, base)];
+  // Stamp every issue with the canonical ownership contract (normalizeIssue) so consumers
+  // read `ownerSurface`/`step`/`focusPath` directly — never re-inferring — and an issue
+  // with no resolvable owner throws loudly instead of silently routing to the Day Editor.
+  return [...raw, ...rawAnimal, ...taggedBase, ...dayOverrideIssues(day, mergedDay, base)].map(
+    normalizeIssue
+  );
+}
+
+/**
+ * Canonicalize a validation issue so the ownership contract is ENFORCED, not conventional.
+ * The owner is resolved ONCE here (the same chain {@link repairTargetForIssue} uses) and
+ * stamped explicitly: `ownerSurface` (mirrored to the legacy `repairSurface` so a consumer
+ * reading either gets the same answer), a guaranteed `focusPath` (the schema `path` when no
+ * explicit anchor was set), and — for a day issue — the resolved `step`. The never-read
+ * `repairStep` issue field is dropped so the field generations can't drift. An issue that
+ * resolves to no valid surface throws (a contract violation must be loud, never a silent
+ * default-to-Day).
+ *
+ * @param {object} issue - A raw validation issue.
+ * @returns {object} The issue with canonical ownership/focus fields.
+ */
+function normalizeIssue(issue) {
+  if (!issue || typeof issue !== 'object') return issue;
+  const { surface, step } = repairTargetForIssue(issue);
+  if (!REPAIR_SURFACES.has(surface)) {
+    throw new Error(
+      `normalizeIssue: unresolved ownerSurface for code="${issue.code}" path="${issue.path || issue.instancePath || ''}"`
+    );
+  }
+  const next = {
+    ...issue,
+    ownerSurface: surface,
+    repairSurface: surface,
+    focusPath: issue.focusPath || issue.path || issue.instancePath,
+  };
+  // `step` routes only the day surface (animal/none go to their own editors); stamp the
+  // resolved day step so grouping/focus read one field, and drop the dead alias.
+  if (surface === 'day' && step != null) next.step = step;
+  delete next.repairStep;
+  return next;
 }
 
 /**
@@ -309,27 +374,19 @@ function dayGeometryProvenance(day) {
  *
  * @param {Array} issues - Base validation issues.
  * @param {{ electrode_groups: boolean, ntrode: boolean }} prov - Geometry provenance.
- * @returns {Array} Issues with explicit `ownerSurface`/`repairStep`/`focusPath` on the
- *   day-overridden geometry errors.
+ * @returns {Array} Issues with explicit day `ownerSurface`/`step`/`focusPath` on the
+ *   day-overridden geometry errors; the focus anchor points at the override-removal control.
  */
 function tagBaseOwnershipByProvenance(issues, prov) {
   if (!prov.electrode_groups && !prov.ntrode) return issues;
   return issues.map((issue) => {
     if (issue?.severity !== 'error') return issue;
-    const path = issue.path || issue.instancePath || '';
-    const isBadChannel =
-      issue.field === 'bad_channels' ||
-      path.includes('bad_channels') ||
-      issue.code === 'bad_channel_out_of_range' ||
-      issue.code === 'multishank_bad_channels_ignored';
-    if (isBadChannel) return issue;
-    // 'electrode_groups' (with the trailing 's') is only in electrode-group paths; the
-    // ntrode path is 'ntrode_electrode_group_channel_map' (singular 'electrode_group').
-    if (prov.electrode_groups && path.includes('electrode_groups')) {
-      return { ...issue, ownerSurface: 'day', step: 'devices', repairStep: 'devices', focusPath: 'deviceOverrides.electrode_groups' };
+    const domain = geometryDomainOf(issue);
+    if (domain === 'electrode_groups' && prov.electrode_groups) {
+      return { ...issue, ownerSurface: 'day', step: 'devices', focusPath: 'deviceOverrides.electrode_groups' };
     }
-    if (prov.ntrode && path.includes('ntrode')) {
-      return { ...issue, ownerSurface: 'day', step: 'devices', repairStep: 'devices', focusPath: 'deviceOverrides.ntrode_electrode_group_channel_map' };
+    if (domain === 'ntrode' && prov.ntrode) {
+      return { ...issue, ownerSurface: 'day', step: 'devices', focusPath: 'deviceOverrides.ntrode_electrode_group_channel_map' };
     }
     return issue;
   });
@@ -368,11 +425,12 @@ export function computeStepStatus(day, mergedDay, animal) {
  * Computes the Epochs (Tasks & Epochs) step status from the day's tasks and the
  * task-level schema/rules errors.
  *
- * The status is driven by the day's **tasks**. We narrow the `epochs` error group
- * to task-path errors (path references `tasks[…]`): the group also collects
- * behavioral-event and associated-file paths (and a `units.behavioral_events`
- * required artifact), which are completeness concerns owned by the later
- * Validation step, not the Tasks & Epochs data-entry step.
+ * The status is driven by the day's **tasks**, with two exceptions that must badge
+ * 'error' because their repair control renders on THIS step: a non-array `tasks`, and any
+ * `malformed_day_collection` raw-shape error on an epochs-owned collection. Otherwise we
+ * narrow the `epochs` error group to task-path errors (path references `tasks[…]`): the
+ * group also collects behavioral-event and associated-file completeness concerns owned by
+ * the later Validation step, not the Tasks & Epochs data-entry step.
  *
  * Severity policy: data entry is non-blocking except for blank schema-required
  * task fields (and epoch end <= start, which is blocked at the modal Save so it
@@ -387,10 +445,16 @@ export function computeStepStatus(day, mergedDay, animal) {
  *   - `'valid'`: at least one task and no task-level error-severity issues.
  */
 export function computeEpochsStatus(day, epochErrors) {
-  // A non-array `tasks` is corrupt persisted state (raw-shape error, blocking) — reflect
-  // it as 'error', never a false 'incomplete'/'valid'. `{}.length` is undefined, so the
-  // old `=== 0` guard let `{}` slip through as if it had tasks.
+  // A raw-shape corruption (`malformed_day_collection`) on any epochs-owned collection
+  // (tasks / associated_files / associated_video_files / behavioral_events / fs_gui_yamls)
+  // is a blocking error whose reset control renders ON this step — so the step badge must
+  // read 'error', not a false 'incomplete'/'valid'. This generalizes the non-array-`tasks`
+  // guard to the whole raw-shape family so the badge can't disagree with the reset notice.
+  // The direct `day.tasks` check also covers a standalone call whose bucket isn't populated.
   if (day?.tasks != null && !Array.isArray(day.tasks)) return 'error';
+  if ((epochErrors || []).some((i) => i.severity === 'error' && i.code === 'malformed_day_collection')) {
+    return 'error';
+  }
   const tasks = Array.isArray(day?.tasks) ? day.tasks : [];
   if (tasks.length === 0) return 'incomplete';
 
@@ -453,6 +517,14 @@ export function computeDevicesStatus(day, mergedDay) {
  * @returns {'valid'|'incomplete'|'error'|'pending'}
  */
 function getStepStatus(errors, data) {
+  // A raw-shape corruption (`malformed_day_collection`, e.g. a non-array `keywords`) is a
+  // blocking error whose reset control renders on this step — it must badge 'error' even
+  // when other required fields are still blank, otherwise the corruption hides behind
+  // 'incomplete'. (Plain missing-required-field errors keep the softer 'incomplete' below.)
+  if ((errors || []).some((e) => e.severity === 'error' && e.code === 'malformed_day_collection')) {
+    return 'error';
+  }
+
   // Check completeness first - if data is incomplete, treat as incomplete
   // rather than error (even if validation would fail)
   if (!data || !isStepComplete(data)) {
@@ -594,7 +666,7 @@ const REPAIR_SURFACES = new Set(['day', 'animal', 'none']);
  *
  * @type {Record<string, 'day'|'animal'|'none'>}
  */
-const SURFACE_BY_CODE = {
+export const SURFACE_BY_CODE = {
   // Editable ONLY in the Animal Editor (device geometry, channel maps, probe catalog,
   // electrode-group identity/location, cameras, data-acq devices, subject identity).
   channel_value_out_of_range: 'animal',

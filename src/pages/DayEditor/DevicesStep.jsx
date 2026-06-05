@@ -166,7 +166,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
     onFieldUpdate('deviceOverrides.bad_channels', badChannelsObject);
   }, [onFieldUpdate]);
 
-  // MALFORMED / STALE OVERRIDE REPAIR (review findings): the merge declines to apply
+  // MALFORMED / STALE OVERRIDE REPAIR: the merge declines to apply
   // any malformed `deviceOverrides` shape, so each blocks export (via `dayOverrideIssues`)
   // but has NO editor row — a repair dead-end. We surface a focusable removal control for
   // every such shape. The contract is: whatever `dayOverrideIssues` flags here is

@@ -38,8 +38,8 @@ function isEmpty(value) {
 }
 
 /**
- * Check if a value should be treated as "not provided" for optional field validation
- * P1-3: Standardized helper for consistent empty-value handling across all checks
+ * Check if a value should be treated as "not provided" for optional field validation.
+ * Standardized helper for consistent empty-value handling across all checks
  * @param {any} value - Value to check
  * @returns {boolean} True if value is null/undefined/empty string
  */
@@ -80,7 +80,7 @@ export const quickChecks = {
    * @returns {null|{severity: 'hint', message: string}} Null if valid, hint if invalid
    */
   dateFormat(path, value) {
-    // P1-3: Use standardized empty check
+    // Use standardized empty check
     if (isEmptyForOptionalField(value)) {
       return null;
     }
@@ -106,7 +106,7 @@ export const quickChecks = {
    * @returns {null|{severity: 'hint', message: string}} Null if valid, hint if invalid
    */
   enum(path, value, validValues) {
-    // P1-3: Use standardized empty check
+    // Use standardized empty check
     if (isEmptyForOptionalField(value)) {
       return null;
     }
@@ -131,7 +131,7 @@ export const quickChecks = {
    * @returns {null|{severity: 'hint', message: string}} Null if valid, hint if invalid
    */
   numberRange(path, value, min, max, unit) {
-    // P1-1 & P1-3: More explicit empty check that handles all cases correctly
+    // More explicit empty check that handles all cases correctly
     if (value === null || value === undefined || value === '') {
       return null;
     }
@@ -174,7 +174,7 @@ export const quickChecks = {
    * @returns {null|{severity: 'hint', message: string}} Null if valid, hint if invalid
    */
   pattern(path, value, pattern, customMessage) {
-    // P1-3: Use standardized empty check for null/undefined/empty string
+    // Use standardized empty check for null/undefined/empty string
     // But validate whitespace-only strings (user provided a value, just invalid)
     if (value === null || value === undefined || value === '') {
       return null;

@@ -215,12 +215,15 @@ describe('ExportStep', () => {
     expect(screen.getByText(/could not be assembled|missing or corrupt/i)).toBeInTheDocument();
   });
 
-  it('blocks export and surfaces a repair when animal.cameras is corrupt (raw-animal gate)', () => {
+  it('blocks export AND surfaces a routable repair when animal.cameras is corrupt (raw-animal gate)', () => {
     const { animal, day } = buildRealisticWorkspace();
     animal.cameras = 'nope';
     render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
-    // The download is blocked and the raw-animal issue is in the repair list.
+    // The download is blocked AND the raw-animal issue renders a repair action routed to
+    // the Animal Editor (not a dead-end disabled button with no surfaced fix).
     expect(screen.getByRole('button', { name: /download yaml/i })).toBeDisabled();
+    expect(screen.getByText(/cameras.*is corrupt|corrupt.*list/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /fix in animal editor/i })).toBeInTheDocument();
   });
 
   it('offers a repair action per error that routes to the editable owner with the field target', async () => {

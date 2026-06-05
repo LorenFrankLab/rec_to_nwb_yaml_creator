@@ -20,7 +20,7 @@ import './DayEditor.scss';
  * shape the `multishank_bad_channels_ignored` rule expects. Single-shank groups keep
  * the per-row checkbox behavior (row-local == probe-local for one shank).
  *
- * LATER-ROW CORRUPTION MIGRATION (HIGH review finding): a day/animal LOADED from disk
+ * LATER-ROW CORRUPTION MIGRATION: a day/animal LOADED from disk
  * may already carry `bad_channels` on a LATER ntrode row (persisted corruption). The
  * converter silently ignores those, so the `multishank_bad_channels_ignored` rule
  * fires and BLOCKS export — but the probe-wide selector HIDES the later-row controls,
@@ -32,7 +32,7 @@ import './DayEditor.scss';
  * The translated ids are never silently dropped. Touching the selector therefore also
  * repairs the corruption, and the rule then passes.
  *
- * ATOMIC BATCHED WRITE (HIGH review finding): the Day Editor's save path rebuilds the
+ * ATOMIC BATCHED WRITE: the Day Editor's save path rebuilds the
  * whole `deviceOverrides` from a stale render closure and REPLACES it, so firing N
  * separate per-ntrode `onUpdate` calls in one handler RACES and clobbers earlier
  * writes (losing the first-row selection or reintroducing a later-row value). The

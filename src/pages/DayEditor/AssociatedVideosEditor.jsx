@@ -29,7 +29,7 @@ function collectValidEpochs(tasks) {
  * Owned by the Day Editor and persisted through `onChange(nextArray)` (the step
  * routes that to `onFieldUpdate('associated_video_files', nextArray)`).
  *
- * Controlled-reference contract (Phase 6 Task 0b): each row's `camera_id` is a
+ * Controlled-reference contract: each row's `camera_id` is a
  * SCALAR chosen from the animal's cameras (a `<select>`), and `task_epochs` is a
  * SCALAR chosen from the day's task epochs (a `<select>`). There is no manual
  * numeric entry for either — the normal path can only ever produce ids that exist.

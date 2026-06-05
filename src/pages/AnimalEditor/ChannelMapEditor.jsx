@@ -124,7 +124,7 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
 
   // Handle probe-wide bad-channel toggle (multi-shank: probe-local id 0..N-1,
   // written to the group's FIRST ntrode row — the only row the converter honors).
-  // MIGRATION (HIGH review finding): editing the probe-wide selection MIGRATES every
+  // MIGRATION: editing the probe-wide selection MIGRATES every
   // later row's marks onto the first row, then CLEARS the later rows. A group loaded
   // with later-row corruption (which the converter ignores and the export rule blocks
   // on) is otherwise a repair dead-end here, because the later-row controls are hidden.
@@ -264,7 +264,7 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
     const probeChannelCount = getProbeElectrodeIds(deviceType).length;
 
     maps.forEach((ntrodeMap, ntrodeIndex) => {
-      // P0-2: Validate channel values are within range
+      // Validate channel values are within range
       Object.entries(ntrodeMap.map).forEach(([chIdx, hwChannel]) => {
         if (hwChannel !== -1 && (hwChannel < 0 || hwChannel > maxValue)) {
           errors.push(
@@ -273,7 +273,7 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
         }
       });
 
-      // P0-3: Reject UNSET (-1) entries. The -1 sentinel is the dropdown's blank
+      // Reject UNSET (-1) entries. The -1 sentinel is the dropdown's blank
       // option; saving it persists a converter-invalid map (the export gate catches
       // it later, but surface it at edit time). Every channel must map to a real id.
       const unsetChannels = Object.entries(ntrodeMap.map)
@@ -286,7 +286,7 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
         );
       }
 
-      // P1-1: Validate no duplicate hardware channels within same ntrode
+      // Validate no duplicate hardware channels within same ntrode
       const hwChannels = Object.values(ntrodeMap.map).filter(val => val !== -1);
       const duplicates = hwChannels.filter((val, idx) => hwChannels.indexOf(val) !== idx);
       if (duplicates.length > 0) {
@@ -296,7 +296,7 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
         );
       }
 
-      // P1-2: Validate bad_channels indices are probe-local and in range.
+      // Validate bad_channels indices are probe-local and in range.
       // A loaded bad_channels may be a SCALAR (corrupt persisted state preserved
       // by the normalizer); guard the iteration so it never throws. The scalar is
       // surfaced/repaired via the whole-value reset control, not iterated here.
@@ -325,7 +325,7 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
           ? shanks[ntrodeIndex].electrodeIds.length
           : Object.keys(ntrodeMap.map).length;
         badChannels.forEach((badCh) => {
-          // Finding 2: reject a non-integer mark (e.g. 'abc') at edit time, mirroring
+          // Reject a non-integer mark (e.g. 'abc') at edit time, mirroring
           // the multi-shank branch — otherwise it silently passes save and only blocks
           // at export. Row-local index must be an in-range integer.
           if (!Number.isInteger(badCh) || badCh < 0 || badCh >= shankLen) {
