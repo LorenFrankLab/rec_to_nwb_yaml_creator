@@ -8,6 +8,7 @@ import CameraModal from './CameraModal';
 import DataAcqSection from './DataAcqSection';
 import BehavioralEventsSection from './BehavioralEventsSection';
 import RawCorruptionBanner from '../../components/RawCorruptionBanner';
+import { rawArray } from '../../components/rawPropTypes';
 import SaveIndicator from '../DayEditor/SaveIndicator';
 import {
   collectCameraIdentities,
@@ -212,10 +213,11 @@ export default function HardwareConfigStep({
 HardwareConfigStep.propTypes = {
   animal: PropTypes.shape({
     id: PropTypes.string.isRequired,
-    cameras: PropTypes.arrayOf(PropTypes.object),
+    // Tolerant: this step is a repair destination for corrupt animal hardware.
+    cameras: rawArray(PropTypes.object),
     devices: PropTypes.object,
     technicalDefaults: PropTypes.object,
-    behavioral_events: PropTypes.arrayOf(PropTypes.object),
+    behavioral_events: rawArray(PropTypes.object),
   }).isRequired,
   onFieldUpdate: PropTypes.func.isRequired,
   onNavigateBack: PropTypes.func,

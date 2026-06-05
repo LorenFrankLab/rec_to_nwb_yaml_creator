@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import ReadOnlyField from '../ReadOnlyField';
 
@@ -57,5 +57,17 @@ describe('ReadOnlyField', () => {
 
     const input = screen.getByDisplayValue('2023-01-01');
     expect(input).toHaveAttribute('id', 'readonly-date-of-birth');
+  });
+
+  it('renders an empty controlled input (no warnings) when value is undefined', () => {
+    // A repair destination renders this for a corrupt record whose field is lost (e.g. a
+    // malformed session's session_id). It must render a controlled empty string — never
+    // `undefined` (which trips the required-prop + uncontrolled→controlled React warnings).
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    render(<ReadOnlyField label="Session ID" value={undefined} />);
+    const input = screen.getByLabelText(/Session ID/i);
+    expect(input).toHaveValue('');
+    expect(errorSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
   });
 });

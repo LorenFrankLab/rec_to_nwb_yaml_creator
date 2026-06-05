@@ -36,9 +36,11 @@ describe('OverviewStep', () => {
     ...mockAnimal.experimenters,
   };
 
-  it('tolerates malformed nested records (session/subject/experimenters) without crashing', () => {
+  it('tolerates malformed nested records (session/subject/experimenters) without crashing or warning', () => {
     // A repair routes here; malformed null/scalar nested objects must render blank fields
-    // the user can fix, never crash the step on a raw dereference.
+    // the user can fix, never crash the step on a raw dereference — and, because corrupt
+    // state is first-class here, without emitting React prop-type / controlled-input warnings.
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const corruptAnimal = { id: 'remy', subject: 'corrupt', experimenters: null };
     const corruptDay = { date: 42, session: 'nope' };
     expect(() =>
@@ -48,6 +50,8 @@ describe('OverviewStep', () => {
     ).not.toThrow();
     // The Session Metadata heading still renders (step is usable, not blanked).
     expect(screen.getByRole('heading', { name: /session metadata/i })).toBeInTheDocument();
+    expect(errorSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
   });
 
   it('surfaces a malformed session with an executable Reset session banner', async () => {

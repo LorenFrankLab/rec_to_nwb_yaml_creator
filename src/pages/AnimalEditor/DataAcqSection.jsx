@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { findIdentityDivergence, DATA_ACQ_DEPENDENT_FIELDS, IDENTITY_FIELD_LABELS } from './identitySafety';
 import { getDataAcqDevices } from '../../state/workspaceSelectors';
+import { rawArray } from '../../components/rawPropTypes';
 import './DataAcqSection.scss';
 
 const DEVICE_FIELDS = ['name', 'system', 'amplifier', 'adc_circuit'];
@@ -315,7 +316,9 @@ DataAcqSection.propTypes = {
   animal: PropTypes.shape({
     id: PropTypes.string.isRequired,
     devices: PropTypes.shape({
-      data_acq_device: PropTypes.arrayOf(
+      // Tolerant: a repair destination — a corrupt non-array data_acq_device is the state it
+      // surfaces (read through getDataAcqDevices), so it must not warn on it.
+      data_acq_device: rawArray(
         PropTypes.shape({
           name: PropTypes.string,
           system: PropTypes.string,

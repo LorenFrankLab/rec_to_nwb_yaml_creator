@@ -6,6 +6,7 @@ import KeywordsEditor from './KeywordsEditor';
 import DayTechnicalSection from './DayTechnicalSection';
 import MalformedCollectionNotice from './MalformedCollectionNotice';
 import RawCorruptionBanner from '../../components/RawCorruptionBanner';
+import { rawRecord } from '../../components/rawPropTypes';
 import { validateField } from './validation';
 import { isValidSpecies } from '../../validation/dandiSubject';
 import { RAW_DAY_ARRAY_FIELDS } from '../../validation/rawShape';
@@ -385,27 +386,30 @@ OverviewStep.propTypes = {
   animal: PropTypes.shape({
     id: PropTypes.string.isRequired,
     experiment_description: PropTypes.string,
-    subject: PropTypes.shape({
-      subject_id: PropTypes.string.isRequired,
-      species: PropTypes.string.isRequired,
-      sex: PropTypes.string.isRequired,
-      genotype: PropTypes.string.isRequired,
-      date_of_birth: PropTypes.string.isRequired,
-    }).isRequired,
-    experimenters: PropTypes.shape({
-      experimenter_name: PropTypes.arrayOf(PropTypes.string).isRequired,
-      lab: PropTypes.string.isRequired,
-      institution: PropTypes.string.isRequired,
-    }).isRequired,
+    // Tolerant: this step is a repair destination — malformed (scalar/null) subject /
+    // experimenters / session are first-class corrupt state it renders (through the
+    // shape-safe selectors) so the user can fix them; their PropTypes must not warn on it.
+    subject: rawRecord({
+      subject_id: PropTypes.string,
+      species: PropTypes.string,
+      sex: PropTypes.string,
+      genotype: PropTypes.string,
+      date_of_birth: PropTypes.string,
+    }),
+    experimenters: rawRecord({
+      experimenter_name: PropTypes.arrayOf(PropTypes.string),
+      lab: PropTypes.string,
+      institution: PropTypes.string,
+    }),
   }).isRequired,
   day: PropTypes.shape({
-    date: PropTypes.string.isRequired,
+    date: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     keywords: PropTypes.arrayOf(PropTypes.string),
-    session: PropTypes.shape({
+    session: rawRecord({
       session_id: PropTypes.string,
       session_description: PropTypes.string,
       experiment_description: PropTypes.string,
-    }).isRequired,
+    }),
     technical: PropTypes.shape({
       default_header_file_path: PropTypes.string,
       units: PropTypes.shape({

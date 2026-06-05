@@ -22,9 +22,12 @@ describe('animalEditorStepForFieldPath', () => {
     expect(animalEditorStepForFieldPath('ntrode_electrode_group_channel_map[0].map')).toMatchObject({ index: 1 });
   });
 
-  it('maps camera / data-acq paths to the Hardware Config step (2)', () => {
+  it('maps camera / data-acq / configuration-history paths to the Hardware Config step (2)', () => {
     expect(animalEditorStepForFieldPath('cameras[0].lens')).toMatchObject({ index: 2, label: 'Hardware Config' });
     expect(animalEditorStepForFieldPath('data_acq_device[0].name')).toMatchObject({ index: 2 });
+    // The configurationHistory rebuild control lives in the Hardware Config banner, so its
+    // repair must deep-link there (not default to Electrode Groups).
+    expect(animalEditorStepForFieldPath('configurationHistory')).toMatchObject({ index: 2, label: 'Hardware Config' });
   });
 
   it('defaults to the Electrode Groups step for an unknown/empty path', () => {

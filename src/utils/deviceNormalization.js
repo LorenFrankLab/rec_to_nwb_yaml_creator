@@ -374,7 +374,21 @@ export function normalizeWorkspaceDevices(workspace) {
   Object.values(animals).forEach((animal) => {
     if (!isPlainObject(animal)) return;
 
+    // Capture a corrupt (present-but-non-array) data_acq_device BEFORE normalizing: the
+    // raw-state contract requires persisted corruption to survive hydration so raw-shape
+    // validation can surface its repair banner. normalizeDevices would otherwise launder it
+    // to [] here (at load), silently hiding the corruption — exactly what the contract
+    // forbids. A corrupt configurationHistory is already preserved below (the Array.isArray
+    // guard leaves a non-array untouched), and animal.cameras is top-level (never normalized
+    // here), so data_acq_device is the only laundering gap to close.
+    const rawDevices = isPlainObject(animal.devices) ? animal.devices : {};
+    const rawDataAcq = rawDevices.data_acq_device;
+
     animal.devices = normalizeDevices(animal.devices || EMPTY_DEVICES);
+
+    if (rawDataAcq != null && !Array.isArray(rawDataAcq)) {
+      animal.devices.data_acq_device = rawDataAcq;
+    }
 
     if (Array.isArray(animal.configurationHistory)) {
       animal.configurationHistory = animal.configurationHistory.map((snapshot) => ({

@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { getAnimalCameras } from '../../state/workspaceSelectors';
+import { rawArray } from '../../components/rawPropTypes';
 import './CamerasSection.scss';
 
 /**
@@ -221,7 +222,9 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
 CamerasSection.propTypes = {
   animal: PropTypes.shape({
     id: PropTypes.string.isRequired,
-    cameras: PropTypes.arrayOf(PropTypes.shape({
+    // Tolerant: this is a repair destination — a corrupt non-array `cameras` is the very
+    // state it surfaces (read through getAnimalCameras), so it must not warn on it.
+    cameras: rawArray(PropTypes.shape({
       id: PropTypes.number.isRequired,
       camera_name: PropTypes.string,
       manufacturer: PropTypes.string,

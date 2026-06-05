@@ -818,7 +818,12 @@ export function animalEditorStepForFieldPath(fieldPath) {
   const path = String(fieldPath || '').replace(/^\//, '').replace(/\//g, '.');
 
   if (path.includes('ntrode')) return ANIMAL_EDITOR_STEPS[1];
-  if (path.includes('camera') || path.includes('data_acq')) return ANIMAL_EDITOR_STEPS[2];
+  // Cameras, data-acq, and the device configuration history all live on the Hardware Config
+  // step (the configurationHistory rebuild control is rendered in its corruption banner), so
+  // their repairs deep-link there rather than defaulting to Electrode Groups.
+  if (path.includes('camera') || path.includes('data_acq') || path.includes('configurationHistory')) {
+    return ANIMAL_EDITOR_STEPS[2];
+  }
   // electrode geometry/identity + bare keyword paths (device_type/location/targeted_*).
   return ANIMAL_EDITOR_STEPS[0];
 }

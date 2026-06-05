@@ -162,6 +162,27 @@ describe('device normalization (strict export/load path)', () => {
     expect(normalized.animals.remy.configurationHistory[0].devices.electrode_groups[0].id).toBe(1);
     expect(normalized.days.d1.deviceOverrides.bad_channels).toEqual({ 2: [0, 1] });
   });
+
+  it('preserves a corrupt (non-array) data_acq_device instead of laundering it to [] on hydration', () => {
+    // The raw-state contract: persisted corruption must survive normalization so raw-shape
+    // validation can surface its repair banner. A non-array data_acq_device would otherwise
+    // be silently coerced to [] here (at load), hiding the corruption from the contract.
+    const workspace = {
+      animals: { remy: { id: 'remy', devices: { data_acq_device: 'corrupt' } } },
+      days: {},
+    };
+    const normalized = normalizeWorkspaceDevices(workspace);
+    expect(normalized.animals.remy.devices.data_acq_device).toBe('corrupt');
+  });
+
+  it('still normalizes a well-formed data_acq_device array', () => {
+    const workspace = {
+      animals: { remy: { id: 'remy', devices: { data_acq_device: [{ name: 'X' }] } } },
+      days: {},
+    };
+    const normalized = normalizeWorkspaceDevices(workspace);
+    expect(normalized.animals.remy.devices.data_acq_device).toEqual([{ name: 'X' }]);
+  });
 });
 
 describe('device normalization (creation-defaults path)', () => {

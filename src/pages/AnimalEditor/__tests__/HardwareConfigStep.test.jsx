@@ -84,15 +84,19 @@ describe('HardwareConfigStep', () => {
     );
   });
 
-  it('surfaces a corrupt data_acq_device as an executable reset banner', () => {
+  it('surfaces a corrupt data_acq_device as an executable reset banner — without prop-type warnings', () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     render(
       <HardwareConfigStep
-        animal={{ ...mockAnimal, devices: { data_acq_device: 'bad' } }}
+        animal={{ ...mockAnimal, cameras: 'nope', devices: { data_acq_device: 'bad' } }}
         onFieldUpdate={mockOnFieldUpdate}
         onRepair={vi.fn()}
       />
     );
     expect(screen.getByRole('button', { name: /reset data acquisition devices/i })).toBeInTheDocument();
+    // Corrupt animal hardware is first-class state here, so no React warnings on render.
+    expect(errorSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
   });
 
   it('sections have correct elevation styling (cameras=1, data_acq=0, events=1)', () => {
