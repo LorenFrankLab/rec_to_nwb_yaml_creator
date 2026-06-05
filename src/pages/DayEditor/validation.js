@@ -6,6 +6,7 @@
  */
 
 import { validate, validateField as validateFieldCore } from '../../validation';
+import { validateRawDay } from '../../validation/rawShape';
 
 /**
  * Validates a single field against schema and rules.
@@ -252,11 +253,15 @@ export function dayOverrideIssues(day, mergedDay, baseIssues = []) {
  * @returns {Array} All validation issues for the day.
  */
 export function validateDay(day, mergedDay) {
+  // Boundary 1: validate the RAW persisted day shape FIRST — before the merge launders a
+  // corrupt collection (`tasks: {}`) into an empty export default that the merged-model
+  // validation below would see as clean. These block export on raw corruption regardless.
+  const raw = validateRawDay(day);
   // Compute the base (schema + rules) issues once, then pass them to dayOverrideIssues
   // so it can tell an erroring array geometry override (a dead-end that needs a day-routed
   // escape) from a clean one (which must NOT be flagged).
   const base = validate(mergedDay);
-  return [...base, ...dayOverrideIssues(day, mergedDay, base)];
+  return [...raw, ...base, ...dayOverrideIssues(day, mergedDay, base)];
 }
 
 /**
@@ -309,7 +314,11 @@ export function computeStepStatus(day, mergedDay) {
  *   - `'valid'`: at least one task and no task-level error-severity issues.
  */
 export function computeEpochsStatus(day, epochErrors) {
-  const tasks = day?.tasks || [];
+  // A non-array `tasks` is corrupt persisted state (raw-shape error, blocking) — reflect
+  // it as 'error', never a false 'incomplete'/'valid'. `{}.length` is undefined, so the
+  // old `=== 0` guard let `{}` slip through as if it had tasks.
+  if (day?.tasks != null && !Array.isArray(day.tasks)) return 'error';
+  const tasks = Array.isArray(day?.tasks) ? day.tasks : [];
   if (tasks.length === 0) return 'incomplete';
 
   const hasTaskError = (epochErrors || []).some(
@@ -549,6 +558,8 @@ const SURFACE_BY_CODE = {
   malformed_bad_channel_override: 'day',
   malformed_device_override: 'day',
   shadowed_geometry_override: 'day',
+  malformed_day_collection: 'day',
+  malformed_animal_collection: 'animal',
   missing_camera: 'day',
   partial_configuration: 'day',
   // No editable in-app target — read-only identity (slash ids). The explanatory

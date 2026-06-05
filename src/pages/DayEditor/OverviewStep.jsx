@@ -4,8 +4,13 @@ import Breadcrumb from './Breadcrumb';
 import ReadOnlyField from './ReadOnlyField';
 import KeywordsEditor from './KeywordsEditor';
 import DayTechnicalSection from './DayTechnicalSection';
+import MalformedCollectionNotice from './MalformedCollectionNotice';
 import { validateField } from './validation';
 import { isValidSpecies } from '../../validation/dandiSubject';
+import { RAW_DAY_ARRAY_FIELDS } from '../../validation/rawShape';
+
+// The day-owned collections this step owns (raw-shape reset surface).
+const OVERVIEW_STEP_COLLECTIONS = RAW_DAY_ARRAY_FIELDS.filter((f) => f.repairStep === 'overview');
 
 /**
  * Overview Step - Minimalist session metadata editor
@@ -105,6 +110,12 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
     <div className="overview-step">
       {/* Breadcrumb Navigation */}
       <Breadcrumb items={breadcrumbItems} />
+
+      <MalformedCollectionNotice
+        day={day}
+        fields={OVERVIEW_STEP_COLLECTIONS}
+        onReset={(key) => onFieldUpdate(key, [])}
+      />
 
       {/* ARIA live region for screen readers */}
       <div

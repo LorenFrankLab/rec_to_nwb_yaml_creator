@@ -6,8 +6,14 @@ import TaskModal from './TaskModal';
 import BehavioralEventsDisplay from './BehavioralEventsDisplay';
 import AssociatedVideosEditor from './AssociatedVideosEditor';
 import AssociatedFilesEditor from './AssociatedFilesEditor';
+import MalformedCollectionNotice from './MalformedCollectionNotice';
 import { useStepperShortcut } from '../../hooks/stepperShortcuts';
+import { RAW_DAY_ARRAY_FIELDS } from '../../validation/rawShape';
 import './TasksEpochsStep.scss';
+
+// The day-owned collections this step owns (raw-shape reset surface). Derived from the
+// single source so the reset controls and the validator can't drift.
+const EPOCHS_STEP_COLLECTIONS = RAW_DAY_ARRAY_FIELDS.filter((f) => f.repairStep === 'epochs');
 
 /**
  * Collect the valid task-epoch numbers across a set of tasks.
@@ -88,8 +94,11 @@ function clearOrphans(entries, valid) {
  * @returns {JSX.Element}
  */
 export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, onFieldUpdate }) {
-  const tasks = day.tasks || [];
-  const cameras = animal.cameras || [];
+  // Tolerate corrupt persisted state: a non-array `tasks` (e.g. `{}` from a bad import)
+  // must not crash render (`.map`/`.forEach`); it is surfaced + reset via
+  // MalformedCollectionNotice below. Guard ALL day-owned arrays this step iterates.
+  const tasks = Array.isArray(day.tasks) ? day.tasks : [];
+  const cameras = Array.isArray(animal.cameras) ? animal.cameras : [];
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('add');
@@ -260,6 +269,12 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
   return (
     <div className="day-editor-section tasks-epochs-step">
       <h2>Tasks &amp; Epochs</h2>
+
+      <MalformedCollectionNotice
+        day={day}
+        fields={EPOCHS_STEP_COLLECTIONS}
+        onReset={(key) => onFieldUpdate(key, [])}
+      />
 
       {showCameraBanner && (
         <div

@@ -46,7 +46,11 @@ function collectValidEpochs(tasks) {
  */
 export default function AssociatedVideosEditor({ videos, cameras, tasks, onChange }) {
   const baseId = useId();
-  const validCameraIds = new Set((cameras || []).map((c) => Number(c.id)));
+  // Tolerate corrupt persisted state: a non-array `videos` (e.g. `{}`) must not crash
+  // `.map`/`.filter`/`.length`. It is surfaced + reset by the step's raw-shape notice;
+  // here we render it as empty rather than throw.
+  const videoList = Array.isArray(videos) ? videos : [];
+  const validCameraIds = new Set((Array.isArray(cameras) ? cameras : []).map((c) => Number(c.id)));
   const validEpochs = collectValidEpochs(tasks);
   const validEpochSet = new Set(validEpochs);
 
@@ -57,14 +61,14 @@ export default function AssociatedVideosEditor({ videos, cameras, tasks, onChang
    * @param {*} value New value (already coerced).
    */
   function updateRow(index, field, value) {
-    onChange(videos.map((video, i) => (i === index ? { ...video, [field]: value } : video)));
+    onChange(videoList.map((video, i) => (i === index ? { ...video, [field]: value } : video)));
   }
 
   /**
    * Append an empty video row.
    */
   function addRow() {
-    onChange([...(videos || []), { name: '', camera_id: '', task_epochs: '' }]);
+    onChange([...videoList, { name: '', camera_id: '', task_epochs: '' }]);
   }
 
   /**
@@ -72,7 +76,7 @@ export default function AssociatedVideosEditor({ videos, cameras, tasks, onChang
    * @param {number} index Row index.
    */
   function removeRow(index) {
-    onChange(videos.filter((_, i) => i !== index));
+    onChange(videoList.filter((_, i) => i !== index));
   }
 
   return (
@@ -86,11 +90,11 @@ export default function AssociatedVideosEditor({ videos, cameras, tasks, onChang
         </p>
       </header>
 
-      {(videos || []).length === 0 ? (
+      {videoList.length === 0 ? (
         <p className="associated-videos-empty">No associated video files yet.</p>
       ) : (
         <ul className="associated-videos-rows">
-          {videos.map((video, index) => {
+          {videoList.map((video, index) => {
             const cameraId = video.camera_id;
             const epoch = video.task_epochs;
             const cameraStale =

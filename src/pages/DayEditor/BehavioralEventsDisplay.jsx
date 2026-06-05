@@ -26,8 +26,10 @@ export default function BehavioralEventsDisplay({
   onDayEventsChange,
   readOnly,
 }) {
-  const events = inheritedEvents || [];
-  const dayItems = dayEvents || [];
+  // Tolerate corrupt persisted state: a non-array events list (`{}`) must not crash
+  // `.map`. Surfaced + reset by the step's raw-shape notice; rendered empty here.
+  const events = Array.isArray(inheritedEvents) ? inheritedEvents : [];
+  const dayItems = Array.isArray(dayEvents) ? dayEvents : [];
 
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState({ name: '', description: '' });

@@ -44,6 +44,35 @@ describe('TasksEpochsStep', () => {
     expect(screen.queryByRole('status', { name: /cameras/i })).not.toBeInTheDocument();
   });
 
+  describe('Boundary 1 — tolerates + repairs corrupt day collections', () => {
+    it('does not crash when tasks / videos / files / behavioral_events are non-arrays', () => {
+      expect(() =>
+        renderStep({
+          day: {
+            tasks: {},
+            associated_video_files: 'corrupt',
+            associated_files: 42,
+            behavioral_events: { 0: 'x' },
+          },
+        })
+      ).not.toThrow();
+    });
+
+    it('renders a focusable reset control for each corrupt collection it owns', () => {
+      renderStep({ day: { tasks: {}, associated_files: 'corrupt' } });
+      const taskReset = screen.getByRole('button', { name: /reset corrupt tasks/i });
+      expect(taskReset).toHaveAttribute('data-field-path', 'tasks');
+      expect(screen.getByRole('button', { name: /reset corrupt associated files/i })).toBeInTheDocument();
+    });
+
+    it('clicking reset writes an empty array for that field', async () => {
+      const user = userEvent.setup();
+      const { onFieldUpdate } = renderStep({ day: { tasks: {} } });
+      await user.click(screen.getByRole('button', { name: /reset corrupt tasks/i }));
+      expect(onFieldUpdate).toHaveBeenCalledWith('tasks', []);
+    });
+  });
+
   it('dismisses the camera banner when Skip is clicked', async () => {
     const user = userEvent.setup();
     renderStep({ animal: { cameras: [] } });

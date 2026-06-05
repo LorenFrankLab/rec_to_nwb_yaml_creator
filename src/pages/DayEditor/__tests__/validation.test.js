@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateField, computeStepStatus, computeDevicesStatus, groupErrorsByStep, stepIdForIssue, repairTargetForIssue, validateDay, dayOverrideIssues } from '../validation';
+import { validateField, computeStepStatus, computeDevicesStatus, computeEpochsStatus, groupErrorsByStep, stepIdForIssue, repairTargetForIssue, validateDay, dayOverrideIssues } from '../validation';
 import { makeAnimalWithCamerasAndDay } from './taskFixtures';
 
 describe('stepIdForIssue', () => {
@@ -614,5 +614,35 @@ describe('round-7 review fixes — top-level, shadowed-geometry, and key-specifi
       (i) => i.code === 'malformed_bad_channel_override'
     );
     expect(corrupt.path).toBe('deviceOverrides.bad_channels.1');
+  });
+});
+
+describe('Boundary 1 — raw-shape gate folded into validateDay / step status', () => {
+  const merged = { ntrode_electrode_group_channel_map: [] };
+
+  it('validateDay surfaces a malformed day-owned collection (was laundered to [] and invisible)', () => {
+    const day = { tasks: {}, session: { session_id: 's', session_description: 'd' } };
+    const issue = validateDay(day, merged).find((i) => i.code === 'malformed_day_collection');
+    expect(issue).toBeTruthy();
+    expect(issue.field).toBe('tasks');
+    expect(repairTargetForIssue(issue).surface).toBe('day');
+    expect(repairTargetForIssue(issue).step).toBe('epochs');
+  });
+
+  it('a malformed tasks shape blocks export via computeStepStatus (raw shape, not merged)', () => {
+    const day = { tasks: {} };
+    expect(computeStepStatus(day, merged).export).toBe('error');
+    // And the Epochs step reflects it as an error, not a false "incomplete"/"valid".
+    expect(computeStepStatus(day, merged).epochs).toBe('error');
+  });
+
+  it('computeEpochsStatus treats a non-array tasks as error, not valid/incomplete', () => {
+    expect(computeEpochsStatus({ tasks: {} }, [])).toBe('error');
+    expect(computeEpochsStatus({ tasks: [] }, [])).toBe('incomplete');
+  });
+
+  it('a clean day with array collections raises no malformed_day_collection', () => {
+    const day = { tasks: [], associated_files: [], keywords: [] };
+    expect(validateDay(day, merged).some((i) => i.code === 'malformed_day_collection')).toBe(false);
   });
 });

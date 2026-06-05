@@ -55,6 +55,8 @@ function collectValidEpochs(tasks) {
  */
 export default function AssociatedFilesEditor({ files, tasks, onChange }) {
   const baseId = useId();
+  // Tolerate corrupt persisted state: a non-array `files` (`{}`) must not crash render.
+  const fileList = Array.isArray(files) ? files : [];
   const validEpochs = collectValidEpochs(tasks);
   const validEpochSet = new Set(validEpochs);
 
@@ -65,14 +67,14 @@ export default function AssociatedFilesEditor({ files, tasks, onChange }) {
    * @param {*} value New value (already coerced).
    */
   function updateRow(index, field, value) {
-    onChange(files.map((file, i) => (i === index ? { ...file, [field]: value } : file)));
+    onChange(fileList.map((file, i) => (i === index ? { ...file, [field]: value } : file)));
   }
 
   /**
    * Append an empty file row.
    */
   function addRow() {
-    onChange([...(files || []), { name: '', description: '', path: '', task_epochs: '' }]);
+    onChange([...fileList, { name: '', description: '', path: '', task_epochs: '' }]);
   }
 
   /**
@@ -80,7 +82,7 @@ export default function AssociatedFilesEditor({ files, tasks, onChange }) {
    * @param {number} index Row index.
    */
   function removeRow(index) {
-    onChange(files.filter((_, i) => i !== index));
+    onChange(fileList.filter((_, i) => i !== index));
   }
 
   return (
@@ -94,11 +96,11 @@ export default function AssociatedFilesEditor({ files, tasks, onChange }) {
         </p>
       </header>
 
-      {(files || []).length === 0 ? (
+      {fileList.length === 0 ? (
         <p className="associated-files-empty">No associated files yet.</p>
       ) : (
         <ul className="associated-files-rows">
-          {files.map((file, index) => {
+          {fileList.map((file, index) => {
             const epoch = file.task_epochs;
             const epochStale =
               epoch !== '' && epoch != null && !validEpochSet.has(Number(epoch));
