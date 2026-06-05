@@ -28,10 +28,15 @@ describe('ChannelMapEditor tolerates corrupt loaded bad_channels', () => {
     ['null', null],
     ['out-of-range array', [99]],
     ['non-integer array', ['abc']],
-  ])('does not throw for %s bad_channels', (_label, bad) => {
+  ])('renders for %s bad_channels without throwing or warning', (_label, bad) => {
+    // Corrupt loaded state is first-class here (detected + repaired at runtime), so the
+    // editor must render it WITHOUT a React prop-type console warning either.
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     expect(() =>
       render(<ChannelMapEditor electrodeGroup={group} channelMaps={rowWith(bad)} onSave={vi.fn()} onCancel={vi.fn()} />)
     ).not.toThrow();
+    expect(errorSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
   });
 });
 
@@ -54,7 +59,8 @@ describe('DevicesStep tolerates corrupt deviceOverrides', () => {
     ['scalar bad_channels container', { bad_channels: '2.9' }],
     ['non-array geometry override', { electrode_groups: 'x' }],
     ['stale + corrupt bad_channels keys', { bad_channels: { 999: [0], 0: '23' } }],
-  ])('does not throw for %s', (_label, deviceOverrides) => {
+  ])('renders for %s without throwing or warning', (_label, deviceOverrides) => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     expect(() =>
       render(
         <DevicesStep
@@ -65,5 +71,7 @@ describe('DevicesStep tolerates corrupt deviceOverrides', () => {
         />
       )
     ).not.toThrow();
+    expect(errorSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
   });
 });

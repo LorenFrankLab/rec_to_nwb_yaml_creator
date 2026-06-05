@@ -98,7 +98,9 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
       const validatePath = fieldPath.startsWith('session.')
         ? fieldPath.slice('session.'.length)
         : fieldPath;
-      const patched = structuredClone(mergedDay);
+      // mergedDay is null on the merge-failed fail-closed path (corrupt animal config);
+      // clone a safe `{}` so a blur-time validation can't throw on a null dereference.
+      const patched = structuredClone(mergedDay || {});
       patched[validatePath] = value;
 
       const { valid, errors } = await validateField(patched, validatePath);
@@ -418,7 +420,9 @@ OverviewStep.propTypes = {
       }),
     }),
   }).isRequired,
-  mergedDay: PropTypes.object.isRequired,
+  // Nullable: the stepper passes null on the merge-failed fail-closed path (corrupt animal
+  // config). Not required — a clean-state assumption must not leak into that path.
+  mergedDay: PropTypes.object,
   onFieldUpdate: PropTypes.func.isRequired,
   onSubjectUpdate: PropTypes.func,
   focusRequest: PropTypes.shape({
@@ -429,6 +433,7 @@ OverviewStep.propTypes = {
 };
 
 OverviewStep.defaultProps = {
+  mergedDay: null,
   onSubjectUpdate: () => {},
   focusRequest: null,
   onRepair: undefined,

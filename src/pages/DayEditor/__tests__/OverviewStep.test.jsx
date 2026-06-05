@@ -54,6 +54,20 @@ describe('OverviewStep', () => {
     errorSpy.mockRestore();
   });
 
+  it('tolerates a null mergedDay (the merge-failed fail-closed path) without warning', () => {
+    // DayEditorStepper passes mergedDay=null when the merge throws (corrupt animal config).
+    // OverviewStep must render that fail-closed state without a required-prop warning.
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(() =>
+      render(
+        <OverviewStep animal={mockAnimal} day={mockDay} mergedDay={null} onFieldUpdate={vi.fn()} onSubjectUpdate={vi.fn()} />
+      )
+    ).not.toThrow();
+    expect(screen.getByRole('heading', { name: /session metadata/i })).toBeInTheDocument();
+    expect(errorSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
   it('surfaces a malformed session with an executable Reset session banner', async () => {
     const user = userEvent.setup();
     const onRepair = vi.fn();

@@ -6,6 +6,7 @@ import ReconfigWizard from './ReconfigWizard';
 import { reconcileAppliedToDays } from '../../state/configDiff';
 import { resolveDayConfig } from '../../state/workspaceUtils';
 import { getConfigHistory } from '../../state/workspaceSelectors';
+import { rawRecord } from '../../components/rawPropTypes';
 import { getProbeShanks, getProbeElectrodeIds } from '../../ntrode/probeCatalog';
 import './DayEditor.scss';
 
@@ -638,8 +639,9 @@ DevicesStep.propTypes = {
     date: PropTypes.string.isRequired,
     // deviceOverrides is intentionally lossless: a malformed import can carry a corrupt
     // bad_channels container (scalar/array) or non-array geometry override. The component
-    // detects and offers removal for each, so the shape is deliberately unconstrained.
-    deviceOverrides: PropTypes.object,
+    // detects and offers removal for each. rawRecord tolerates a non-record (scalar/array)
+    // value too, so the PropType never warns on the corruption it exists to surface.
+    deviceOverrides: rawRecord({}),
   }).isRequired,
   mergedDay: PropTypes.object.isRequired,
   onFieldUpdate: PropTypes.func.isRequired,

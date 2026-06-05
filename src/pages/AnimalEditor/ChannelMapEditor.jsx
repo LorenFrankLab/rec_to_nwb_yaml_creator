@@ -673,7 +673,10 @@ ChannelMapEditor.propTypes = {
     PropTypes.shape({
       electrode_group_id: PropTypes.number.isRequired,
       ntrode_id: PropTypes.number.isRequired,
-      bad_channels: PropTypes.arrayOf(PropTypes.number),
+      // Tolerant union: this editor renders + repairs corrupt loaded bad_channels (a scalar,
+      // or an array with out-of-range/non-integer values), so its PropType must not warn on
+      // the very corruption it exists to fix. Items are validated/repaired at runtime.
+      bad_channels: PropTypes.oneOfType([PropTypes.array, PropTypes.number, PropTypes.string]),
       map: PropTypes.object.isRequired,
     })
   ).isRequired,
