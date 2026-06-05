@@ -165,6 +165,25 @@ describe('Phase 6: channel bounds (Task 3)', () => {
     expect(codes(issues)).not.toContain('channel_partition_invalid');
   });
 
+  it('passes a 3-shank probe whose per-shank lists do not tile getChannelCount evenly', () => {
+    // 64c-3s exposes 3×20=60 electrode ids while getChannelCount reports 64. A
+    // correctly-generated (offset, collision-free) map must NOT be flagged — the
+    // partition check is uniqueness, not complete coverage of 0..63.
+    const dt = '64c-3s6mm6cm-20um-40um-sl';
+    expect(deviceTypeMap(dt).length * 3).not.toBe(getChannelCount(dt));
+    const model = {
+      electrode_groups: [{ id: 0, device_type: dt, location: 'CA1', targeted_location: 'CA1' }],
+      ntrode_electrode_group_channel_map: [
+        shankNtrode(1, 0, dt, 0),
+        shankNtrode(2, 0, dt, 1),
+        shankNtrode(3, 0, dt, 2),
+      ],
+    };
+    const c = codes(rulesValidation(model));
+    expect(c).not.toContain('channel_partition_invalid');
+    expect(c).not.toContain('channel_value_out_of_range');
+  });
+
   it('errors when two shanks of a multi-shank probe share 0..31 (missing offset)', () => {
     const dt = '128c-4s8mm6cm-20um-40um-sl';
     const model = {
@@ -205,6 +224,16 @@ describe('Phase 6: channel bounds (Task 3)', () => {
       ],
     };
     expect(codes(rulesValidation(model))).toContain('channel_key_out_of_range');
+  });
+
+  it('passes when map keys are exactly 0..(count-1)', () => {
+    const model = {
+      electrode_groups: [tetrodeGroup(0)],
+      ntrode_electrode_group_channel_map: [
+        { ntrode_id: 1, electrode_group_id: 0, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+      ],
+    };
+    expect(codes(rulesValidation(model))).not.toContain('channel_key_out_of_range');
   });
 
 });
@@ -375,6 +404,15 @@ describe('Phase 6: workspace/dataset identity consistency (Task 8)', () => {
     expect(div.severity).toBe('error');
   });
 
+  it('passes reused data_acq_device name with identical technical fields', () => {
+    expect(codes(rulesValidation({
+      data_acq_device: [
+        { name: 'acq', system: 'S1', amplifier: 'A', adc_circuit: 'C' },
+        { name: 'acq', system: 'S1', amplifier: 'A', adc_circuit: 'C' },
+      ],
+    }))).not.toContain('divergent_data_acq_identity');
+  });
+
   it('errors on reused task_name with divergent task_description', () => {
     const issues = rulesValidation({
       cameras: [{ id: 0, camera_name: 'c' }],
@@ -434,10 +472,16 @@ describe('Phase 6: repair metadata on new error rules (Task 9b)', () => {
     electrode_groups: [
       { id: 0, device_type: 'made_up_probe', location: '', targeted_location: '' },
       { id: 1, device_type: 'tetrode_12.5', location: 'CA1', targeted_location: 'CA1' },
+      { id: 2, device_type: 'tetrode_12.5', location: 'CA3', targeted_location: 'CA3' },
     ],
     ntrode_electrode_group_channel_map: [
+      // group 1: out-of-range value (7), bad_channel (99), wrong key set (missing 1)
       { ntrode_id: 1, electrode_group_id: 1, bad_channels: [99], map: { 0: 7, 2: 2, 3: 3 } },
-      { ntrode_id: 2, electrode_group_id: 42, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+      // group 2: two ntrodes that collide on the same electrode ids (missing offset)
+      { ntrode_id: 2, electrode_group_id: 2, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+      { ntrode_id: 3, electrode_group_id: 2, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+      // dangling electrode_group_id
+      { ntrode_id: 4, electrode_group_id: 42, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
     ],
     behavioral_events: [
       { name: 'reward', description: 'a' },

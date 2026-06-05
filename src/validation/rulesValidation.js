@@ -281,7 +281,9 @@ export const rulesValidation = (model) => {
   // Video camera_id is a SCALAR integer, not an array (schema nwb_schema.json:892).
   if (validCameraIds) (model.associated_video_files || []).forEach((video, vi) => {
     const cid = video?.camera_id;
-    if (cid === undefined || cid === null) return;
+    // A blank/empty camera_id is an incomplete row; the schema's required/type
+    // check owns that with a clear message — don't emit "references camera id ,".
+    if (cid === undefined || cid === null || cid === '') return;
     if (!validCameraIds.has(cid)) {
       issues.push({
         path: `associated_video_files[${vi}].camera_id`,
@@ -392,16 +394,18 @@ export const rulesValidation = (model) => {
       valuesByGroup.get(ntrode.electrode_group_id).values.push(...values);
     });
 
-    // (b) within an electrode group, the ntrodes' values partition 0 … channelCount−1
-    // (unique + complete — catches a missing per-shank offset or cross-shank collision).
-    valuesByGroup.forEach(({ deviceType, channelCount, values }, groupId) => {
-      const inRange = values.filter((v) => Number.isInteger(v) && v >= 0 && v < channelCount);
-      const unique = new Set(inRange);
-      const partitions =
-        values.length === channelCount &&
-        inRange.length === channelCount &&
-        unique.size === channelCount;
-      if (!partitions) {
+    // (b) within an electrode group, no electrode id is mapped twice across the
+    // group's ntrodes (a missing per-shank offset makes two shanks collide on the
+    // same ids). We check UNIQUENESS rather than complete coverage of
+    // 0…channelCount-1: per-shank lists don't always tile getChannelCount evenly
+    // (e.g. 64c-3s exposes 3×20=60 ids while getChannelCount reports 64), so a
+    // complete-coverage check would false-positive on a correctly-generated map.
+    // Out-of-range values are caught separately by (a).
+    valuesByGroup.forEach(({ deviceType, values }, groupId) => {
+      const counts = new Map();
+      values.forEach((v) => counts.set(v, (counts.get(v) || 0) + 1));
+      const collisions = [...counts.entries()].filter(([, n]) => n > 1).map(([v]) => v);
+      if (collisions.length > 0) {
         issues.push({
           path: `ntrode_electrode_group_channel_map`,
           field: 'map',
@@ -410,9 +414,9 @@ export const rulesValidation = (model) => {
           code: 'channel_partition_invalid',
           severity: 'error',
           message:
-            `Electrode group ${groupId} ("${deviceType}") channel map must cover electrode ids ` +
-            `0–${channelCount - 1} exactly once across its ntrodes (no gaps, duplicates, or ` +
-            `out-of-range values). Multi-shank probes offset each shank by its channel count.`,
+            `Electrode group ${groupId} ("${deviceType}") maps electrode id(s) ` +
+            `${collisions.join(', ')} more than once across its ntrodes. Each electrode id ` +
+            `must be used once — multi-shank probes offset each shank by its channel count.`,
         });
       }
     });
@@ -579,7 +583,8 @@ export const rulesValidation = (model) => {
     });
     model.associated_video_files.forEach((video, vi) => {
       const epoch = video?.task_epochs;
-      if (epoch === undefined || epoch === null) return; // empty handled elsewhere
+      // Blank/empty task_epochs is an incomplete row; schema required/type owns it.
+      if (epoch === undefined || epoch === null || epoch === '') return;
       if (!taskEpochSet.has(epoch)) {
         issues.push({
           path: `associated_video_files[${vi}].task_epochs`,

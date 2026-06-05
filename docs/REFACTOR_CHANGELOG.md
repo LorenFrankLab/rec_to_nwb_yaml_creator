@@ -24,10 +24,11 @@ repair UI can route to and focus the offending object. They flow through `valida
 - **Channel bounds (Task 3).** Per [designs.md#channel-map-semantics] — map **values are probe electrode
   ids, reset per electrode group** (a second tetrode is `0..3`, not `4..7`). Bounds come from the real
   device helpers (`getChannelCount` / `deviceTypeMap`), never hardcoded: (a) every map value is an integer
-  in `[0, getChannelCount(device_type))`; (b) within a group the ntrodes' values **partition**
-  `0…count-1` (unique + complete — catches a missing per-shank offset or cross-shank collision); (c) map
-  **keys** are `0…(ntrode channel count − 1)`; (d) `bad_channels` indices are in `[0, count)`. Skipped for
-  unknown devices (Task 5 reports those).
+  in `[0, getChannelCount(device_type))`; (b) within a group, **no electrode id is mapped twice** across
+  the ntrodes (catches a missing per-shank offset / cross-shank collision — a uniqueness check, not a
+  complete-coverage one, since per-shank lists don't always tile `getChannelCount` evenly, e.g. `64c-3s`
+  exposes 3×20=60 ids while the metadata reports 64); (c) map **keys** are `0…(ntrode channel count − 1)`;
+  (d) `bad_channels` indices are in `[0, count)`. Skipped for unknown devices (Task 5 reports those).
 - **Non-empty, consistent location (Task 4).** Both `electrode_groups[].location` **and**
   `targeted_location` must be non-empty (error); a mixed-case duplicate `location` across groups
   (e.g. `CA1` vs `ca1`) is a **warning** (Spyglass region fragmentation).
