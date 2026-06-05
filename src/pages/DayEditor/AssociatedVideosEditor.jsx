@@ -118,6 +118,9 @@ export default function AssociatedVideosEditor({ videos, cameras, tasks, onChang
                   <label htmlFor={`${baseId}-camera-${index}`}>Camera</label>
                   <select
                     id={`${baseId}-camera-${index}`}
+                    /* Repair-focus anchor: matches the path the camera-id rule emits so a
+                       repair click lands on THIS row instead of the broad step. */
+                    data-field-path={`associated_video_files[${index}].camera_id`}
                     value={cameraId === '' || cameraId == null ? '' : String(cameraId)}
                     aria-invalid={cameraStale}
                     aria-describedby={cameraStale ? staleId : undefined}
@@ -151,6 +154,8 @@ export default function AssociatedVideosEditor({ videos, cameras, tasks, onChang
                   <label htmlFor={`${baseId}-epoch-${index}`}>Task epoch</label>
                   <select
                     id={`${baseId}-epoch-${index}`}
+                    /* Repair-focus anchor: matches the path the task-epochs rule emits. */
+                    data-field-path={`associated_video_files[${index}].task_epochs`}
                     value={epoch === '' || epoch == null ? '' : String(epoch)}
                     aria-invalid={epochStale}
                     aria-describedby={epochStale ? staleId : undefined}

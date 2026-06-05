@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ChannelMapEditor from '../ChannelMapEditor';
+import { rulesValidation } from '../../../validation/rulesValidation';
 
 /**
  * HIGH review finding — Animal Editor multi-shank bad-channel editing.
@@ -183,3 +184,115 @@ describe('ChannelMapEditor — single-shank bad-channel editing unchanged', () =
     expect(onSave.mock.calls[0][0][0].bad_channels).toEqual([2]);
   });
 });
+
+describe('ChannelMapEditor — multi-shank later-row corruption MIGRATION (HIGH)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('alert', vi.fn());
+  });
+
+  const group64c3s = {
+    id: 2,
+    device_type: '64c-3s6mm6cm-20um-40um-sl',
+    location: 'CA1',
+    targeted_x: 1.0,
+    targeted_y: 2.0,
+    targeted_z: 3.0,
+    units: 'mm',
+  };
+  const shankMap = (offset, len) =>
+    Object.fromEntries(Array.from({ length: len }, (_, i) => [i, offset + i]));
+  // LOADED with bad_channels on LATER rows (persisted corruption the converter ignores).
+  const corruptedMaps = () => [
+    { electrode_group_id: 2, ntrode_id: 10, bad_channels: [], map: shankMap(0, 21) },
+    { electrode_group_id: 2, ntrode_id: 11, bad_channels: [3], map: shankMap(21, 21) },
+    { electrode_group_id: 2, ntrode_id: 12, bad_channels: [7], map: shankMap(42, 22) },
+  ];
+
+  it('surfaces a load-time notice that later-row marks will be consolidated to the first row', () => {
+    render(
+      <ChannelMapEditor
+        electrodeGroup={group64c3s}
+        channelMaps={corruptedMaps()}
+        onSave={() => {}}
+        onCancel={() => {}}
+      />
+    );
+    const notice = screen.getByRole('status');
+    expect(notice).toHaveTextContent(/consolidat|first row/i);
+  });
+
+  it('does NOT render the notice when no later row carries bad channels', () => {
+    render(
+      <ChannelMapEditor
+        electrodeGroup={group64c3s}
+        channelMaps={maps64c3sClean()}
+        onSave={() => {}}
+        onCancel={() => {}}
+      />
+    );
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('clears later rows AND writes the selection to the first row when the probe-wide selection is edited, then saves clean', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    render(
+      <ChannelMapEditor
+        electrodeGroup={group64c3s}
+        channelMaps={corruptedMaps()}
+        onSave={onSave}
+        onCancel={() => {}}
+      />
+    );
+
+    await user.click(screen.getByLabelText(/electrode 42/i));
+    await user.click(screen.getByTestId('editor-save'));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    const saved = onSave.mock.calls[0][0];
+    expect(saved.find((m) => m.ntrode_id === 10).bad_channels).toEqual([42]);
+    // Later-row corruption is cleared by the migration.
+    expect(saved.find((m) => m.ntrode_id === 11).bad_channels).toEqual([]);
+    expect(saved.find((m) => m.ntrode_id === 12).bad_channels).toEqual([]);
+  });
+
+  it('migrated save passes the multishank_bad_channels_ignored rule', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    render(
+      <ChannelMapEditor
+        electrodeGroup={group64c3s}
+        channelMaps={corruptedMaps()}
+        onSave={onSave}
+        onCancel={() => {}}
+      />
+    );
+
+    await user.click(screen.getByLabelText(/electrode 42/i));
+    await user.click(screen.getByTestId('editor-save'));
+
+    const saved = onSave.mock.calls[0][0];
+    const model = {
+      electrode_groups: [
+        { id: 2, location: 'CA1', device_type: group64c3s.device_type, targeted_location: 'CA1' },
+      ],
+      ntrode_electrode_group_channel_map: saved,
+    };
+    const issues = rulesValidation(model);
+    expect(issues.some((i) => i.code === 'multishank_bad_channels_ignored')).toBe(false);
+  });
+});
+
+// Local clean fixture used by the notice-absence test above.
+/**
+ *
+ */
+function maps64c3sClean() {
+  const shankMap = (offset, len) =>
+    Object.fromEntries(Array.from({ length: len }, (_, i) => [i, offset + i]));
+  return [
+    { electrode_group_id: 2, ntrode_id: 10, bad_channels: [], map: shankMap(0, 21) },
+    { electrode_group_id: 2, ntrode_id: 11, bad_channels: [], map: shankMap(21, 21) },
+    { electrode_group_id: 2, ntrode_id: 12, bad_channels: [], map: shankMap(42, 22) },
+  ];
+}

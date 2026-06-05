@@ -120,3 +120,84 @@ describe('multishank_bad_channels_ignored does not fire for first-row probe-loca
     expect(issues.some((i) => i.code === 'multishank_bad_channels_ignored')).toBe(true);
   });
 });
+
+describe('BadChannelsEditor — multi-shank later-row corruption MIGRATION (HIGH)', () => {
+  // A multi-shank group LOADED with bad_channels on a LATER ntrode row (persisted
+  // corruption / migration). The converter ignores later rows, so the
+  // multishank_bad_channels_ignored rule fires and blocks export. The probe-wide
+  // selector HIDES later-row controls, so the ONLY repair path is: editing the
+  // probe-wide selection must ALSO clear the later rows' bad_channels.
+  const DEVICE_TYPE = '64c-3s6mm6cm-20um-40um-sl';
+  const corruptedNtrodes = () => [
+    { ntrode_id: 10, electrode_group_id: 2, bad_channels: [], map: Object.fromEntries(Array.from({ length: 21 }, (_, i) => [i, i])) },
+    { ntrode_id: 11, electrode_group_id: 2, bad_channels: [3], map: Object.fromEntries(Array.from({ length: 21 }, (_, i) => [i, 21 + i])) },
+    { ntrode_id: 12, electrode_group_id: 2, bad_channels: [7], map: Object.fromEntries(Array.from({ length: 22 }, (_, i) => [i, 42 + i])) },
+  ];
+
+  let onUpdate;
+  beforeEach(() => {
+    onUpdate = vi.fn();
+  });
+
+  it('surfaces a load-time notice that later-row marks will be consolidated to the first row', () => {
+    render(
+      <BadChannelsEditor
+        ntrodes={corruptedNtrodes()}
+        deviceType={DEVICE_TYPE}
+        badChannels={{ '10': [], '11': [3], '12': [7] }}
+        onUpdate={onUpdate}
+      />
+    );
+
+    const notice = screen.getByRole('status');
+    expect(notice).toHaveTextContent(/consolidat|first row/i);
+  });
+
+  it('does NOT render the notice when no later row carries bad channels', () => {
+    render(
+      <BadChannelsEditor
+        ntrodes={corruptedNtrodes().map((n) => ({ ...n, bad_channels: [] }))}
+        deviceType={DEVICE_TYPE}
+        badChannels={{ '10': [], '11': [], '12': [] }}
+        onUpdate={onUpdate}
+      />
+    );
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('clears ALL later rows AND writes the selection to the first row when the probe-wide selection is edited', async () => {
+    const user = userEvent.setup();
+    render(
+      <BadChannelsEditor
+        ntrodes={corruptedNtrodes()}
+        deviceType={DEVICE_TYPE}
+        badChannels={{ '10': [], '11': [3], '12': [7] }}
+        onUpdate={onUpdate}
+      />
+    );
+
+    await user.click(screen.getByLabelText(/electrode 42/i));
+
+    // First row gets the probe-wide selection.
+    expect(onUpdate).toHaveBeenCalledWith('10', [42]);
+    // Both later rows that carried bad channels are cleared to [].
+    expect(onUpdate).toHaveBeenCalledWith('11', []);
+    expect(onUpdate).toHaveBeenCalledWith('12', []);
+  });
+
+  it('after migration the model passes the multishank_bad_channels_ignored rule', () => {
+    // Simulate applying the editor's migration (first row set, later rows cleared).
+    const migrated = {
+      electrode_groups: [
+        { id: 2, location: 'CA1', device_type: DEVICE_TYPE, targeted_location: 'CA1' },
+      ],
+      ntrode_electrode_group_channel_map: corruptedNtrodes().map((n) =>
+        n.ntrode_id === 10
+          ? { ...n, bad_channels: [42] }
+          : { ...n, bad_channels: [] }
+      ),
+    };
+    const issues = rulesValidation(migrated);
+    expect(issues.some((i) => i.code === 'multishank_bad_channels_ignored')).toBe(false);
+  });
+});

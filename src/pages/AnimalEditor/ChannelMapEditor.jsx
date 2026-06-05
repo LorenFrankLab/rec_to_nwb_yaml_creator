@@ -53,6 +53,15 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
   // Inline validation errors shown on save (replaces a blocking alert()).
   const [validationErrors, setValidationErrors] = useState([]);
 
+  // Did the group LOAD with bad_channels on a LATER ntrode row? That is persisted
+  // corruption the converter silently ignores (it reads bad_channels from the first
+  // row only), and the multi-shank probe-wide selector HIDES the later-row controls.
+  // Computed once from the INITIAL channelMaps so the consolidation notice stays
+  // visible until the user edits the selector (which performs the migration).
+  const [hadLaterRowBadChannelsOnLoad] = useState(() =>
+    channelMaps.slice(1).some((m) => Array.isArray(m.bad_channels) && m.bad_channels.length > 0)
+  );
+
   // Per-shank electrode-id partition (converter truth), matched to ntrode rows by
   // order. The maximum map VALUE is the total probe channel count − 1.
   const probeShanks = getProbeShanks(electrodeGroup.device_type);
@@ -106,16 +115,25 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
 
   // Handle probe-wide bad-channel toggle (multi-shank: probe-local id 0..N-1,
   // written to the group's FIRST ntrode row — the only row the converter honors).
+  // MIGRATION (HIGH review finding): editing the probe-wide selection also CLEARS
+  // bad_channels on EVERY later row. A group loaded with later-row corruption (which
+  // the converter ignores and the export rule blocks on) is otherwise a repair
+  // dead-end here, because the later-row controls are hidden. Consolidating onto the
+  // first row on any edit repairs it so multishank_bad_channels_ignored then passes.
   const handleProbeWideBadChannelToggle = (electrodeId, isChecked) => {
     const updated = localChannelMaps.map((map, idx) => {
-      if (idx !== 0) return map;
-
-      const currentBadChannels = map.bad_channels || [];
-      const newBadChannels = isChecked
-        ? [...currentBadChannels, electrodeId].sort((a, b) => a - b)
-        : currentBadChannels.filter((ch) => ch !== electrodeId);
-
-      return { ...map, bad_channels: newBadChannels };
+      if (idx === 0) {
+        const currentBadChannels = map.bad_channels || [];
+        const newBadChannels = isChecked
+          ? [...currentBadChannels, electrodeId].sort((a, b) => a - b)
+          : currentBadChannels.filter((ch) => ch !== electrodeId);
+        return { ...map, bad_channels: newBadChannels };
+      }
+      // Later rows: consolidate (clear) any bad_channels the converter would ignore.
+      if (Array.isArray(map.bad_channels) && map.bad_channels.length > 0) {
+        return { ...map, bad_channels: [] };
+      }
+      return map;
     });
     setLocalChannelMaps(updated);
   };
@@ -292,6 +310,13 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
           Bad Channels (probe-local 0–{probeElectrodeIds.length - 1})
           <InfoIcon infoText="This multi-shank probe is mapped by a single probe-local electrode index spanning all shanks. trodes_to_nwb reads failed channels from the group's first ntrode row only. Mark all bad channels here. Only mark channels with true hardware failures, not analysis quality problems." />
         </legend>
+        {hadLaterRowBadChannelsOnLoad && (
+          <p className="migration-notice" role="status">
+            This group has failed-channel marks on a later shank row that trodes_to_nwb
+            ignores. They will be consolidated onto this probe-wide list (the first row)
+            the next time you change a selection here, then saved.
+          </p>
+        )}
         <div
           className="checkbox-list"
           role="group"

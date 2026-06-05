@@ -20,6 +20,17 @@ import './DayEditor.scss';
  * shape the `multishank_bad_channels_ignored` rule expects. Single-shank groups keep
  * the per-row checkbox behavior (row-local == probe-local for one shank).
  *
+ * LATER-ROW CORRUPTION MIGRATION (HIGH review finding): a day/animal LOADED from disk
+ * may already carry `bad_channels` on a LATER ntrode row (persisted corruption). The
+ * converter silently ignores those, so the `multishank_bad_channels_ignored` rule
+ * fires and BLOCKS export — but the probe-wide selector HIDES the later-row controls,
+ * leaving the user with no way to clear them (a repair DEAD-END). So whenever the user
+ * edits the probe-wide selection, we MIGRATE the group to a clean state: write the
+ * selection to the FIRST row AND clear `bad_channels` to `[]` on every later row that
+ * still carries any. Touching the selector therefore also repairs the corruption, and
+ * the rule then passes. On load, if any later row carries bad channels we surface a
+ * brief notice so the user understands the upcoming consolidation.
+ *
  * REPAIR-FOCUS ANCHORS: the bad-channel control carries `data-field-path` set to
  * `ntrode_electrode_group_channel_map[<ntrode_id>]`, the exact path the
  * `bad_channel_out_of_range` / `multishank_bad_channels_ignored` validation issues
@@ -95,7 +106,31 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, devi
     const warning = warnings?.[firstKey];
     // Either validation rule may key the issue by a non-first ntrode id; anchor
     // those to the same probe-wide control so a repair click still lands here.
-    const otherNtrodeIds = ntrodes.slice(1).map((n) => n.ntrode_id);
+    const laterNtrodes = ntrodes.slice(1);
+    const otherNtrodeIds = laterNtrodes.map((n) => n.ntrode_id);
+
+    // Later rows that currently carry bad_channels — persisted corruption the
+    // converter ignores. We consolidate these onto the first row whenever the
+    // probe-wide selection is edited (migration); flag it on load so the user knows.
+    const laterRowsWithBad = laterNtrodes.filter(
+      (n) => (badChannels[String(n.ntrode_id)] || []).length > 0
+    );
+    const hasLaterRowCorruption = laterRowsWithBad.length > 0;
+
+    /**
+     * Probe-wide toggle: update the FIRST row with the selection AND migrate the
+     * group clean by clearing bad_channels on every later row that still carries
+     * any. This makes touching the selector repair loaded later-row corruption so
+     * the `multishank_bad_channels_ignored` rule passes.
+     * @param {number} electrodeId - Probe-local electrode id.
+     * @param {boolean} isChecked - Whether the box was checked.
+     */
+    const handleProbeWideToggle = (electrodeId, isChecked) => {
+      handleChannelToggle(firstNtrode.ntrode_id, electrodeId, isChecked);
+      laterRowsWithBad.forEach((n) => {
+        onUpdate(String(n.ntrode_id), []);
+      });
+    };
 
     return (
       <div className="bad-channels-editor">
@@ -106,6 +141,14 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, devi
           This multi-shank probe is mapped by a single probe-local electrode index spanning
           all shanks. trodes_to_nwb reads failed channels from one list for the whole group.
         </p>
+
+        {hasLaterRowCorruption && (
+          <p className="field-help-text migration-notice" role="status">
+            This group has failed-channel marks on a later shank row that trodes_to_nwb
+            ignores. They will be consolidated onto this probe-wide list (the first row)
+            the next time you change a selection here.
+          </p>
+        )}
 
         <fieldset className="ntrode-fieldset">
           <legend>Failed Electrodes (probe-local 0–{electrodeIds.length - 1})</legend>
@@ -127,7 +170,7 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, devi
                     type="checkbox"
                     id={`electrode-${firstKey}-${electrodeId}`}
                     checked={currentBadChannels.includes(electrodeId)}
-                    onChange={(e) => handleChannelToggle(firstNtrode.ntrode_id, electrodeId, e.target.checked)}
+                    onChange={(e) => handleProbeWideToggle(electrodeId, e.target.checked)}
                   />
                   <label htmlFor={`electrode-${firstKey}-${electrodeId}`}>
                     Electrode {electrodeId}
