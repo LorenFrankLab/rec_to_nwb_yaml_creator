@@ -84,6 +84,50 @@ describe('workspace persistence', () => {
     spy.mockRestore();
   });
 
+  it('normalizes a structurally-empty workspace blob to the default shape with a recovery list', () => {
+    window.localStorage.setItem(
+      WORKSPACE_STORAGE_KEY,
+      JSON.stringify({ schemaVersion: WORKSPACE_SCHEMA_VERSION, workspace: {} }),
+    );
+
+    const result = loadWorkspace();
+
+    // Hydrates cleanly: the required sections exist as plain objects so no consumer
+    // hits Object.keys(undefined).
+    expect(result.workspace.animals).toEqual({});
+    expect(result.workspace.days).toEqual({});
+    expect(result.workspace.settings).toBeTypeOf('object');
+    expect(result.workspace.settings).not.toBeNull();
+    // The restored sections are reported for a user-facing recovery notice.
+    expect(result.recovered.missingKeys).toEqual(
+      expect.arrayContaining(['animals', 'days', 'settings']),
+    );
+  });
+
+  it('restores only the missing section when a blob is partially shaped', () => {
+    window.localStorage.setItem(
+      WORKSPACE_STORAGE_KEY,
+      JSON.stringify({
+        schemaVersion: WORKSPACE_SCHEMA_VERSION,
+        workspace: { animals: {}, days: {} }, // settings missing
+      }),
+    );
+
+    const result = loadWorkspace();
+
+    expect(result.recovered.missingKeys).toEqual(['settings']);
+    expect(result.workspace.settings).toBeTypeOf('object');
+  });
+
+  it('does not report recovery for a complete workspace blob', () => {
+    saveWorkspace(makeTestWorkspace());
+
+    const result = loadWorkspace();
+
+    expect(result).not.toHaveProperty('recovered');
+    expect(result.workspace.animals).toHaveProperty('remy');
+  });
+
   it('accepts a blob with the current schemaVersion', () => {
     const ws = makeTestWorkspace();
     window.localStorage.setItem(

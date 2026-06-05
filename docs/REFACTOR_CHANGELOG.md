@@ -6,6 +6,48 @@
 
 ---
 
+## Import & persistence hardening — Phase 7 (June 5, 2026)
+
+Closes the two correctness edges that live OUTSIDE the export chain: partial YAML import
+silently keeping invalid nested objects, and persistence edges that crash on an empty blob or
+drop the unsaved-work guard after a failed autosave. No export-path changes; the 125 golden
+baselines stay byte-identical.
+
+- **Nested schema-error paths are preserved (shared gate improvement).** `schemaValidation`
+  already builds a nested `required` error's full path (`cameras[0].camera_name`) rather than
+  the bare `missingProperty`; added regression tests (camera + top-level) that lock this so the
+  partial-import keying below can never silently regress. This also sharpens the workspace
+  export gate's own messages, not just legacy import.
+- **Partial import excludes the right section and names the exact field.** `importExport`'s
+  top-level extraction is now a robust `topLevelFieldFromPath` helper (handles `a[0].b`, `a.b`,
+  bare `a`, and empty/invalid paths), so a camera missing `camera_name` excludes the whole
+  `cameras` section instead of importing the invalid camera. Each excluded entry now carries the
+  full nested `paths`, and the import-summary notice names both the section (`cameras`) and the
+  nested path (`cameras[0].camera_name`). A real-`validate` integration test (new
+  `one-invalid-camera.yml` fixture) proves the end-to-end behavior. This is the one acknowledged
+  legacy-form exception, justified because the bug silently keeps invalid scientific data.
+- **An empty/incomplete workspace blob hydrates cleanly.** `loadWorkspace` now device-normalizes
+  and then guarantees the required top-level sections (`animals`/`days`/`settings`) via a shared
+  `createDefaultWorkspace` factory (single source of truth, also now the store's hydration
+  fallback). A structurally valid but empty/partial blob (`{schemaVersion, workspace:{}}`) is
+  restored to the default shape and reported via `recovered.missingKeys`; `useWorkspace` surfaces
+  a recovery notice naming the restored sections (kept, not discarded). Belt-and-braces defaults
+  added at the read sites (`AnimalWorkspace`, `Home`, incl. `Home.getDefaultExperimenters`) so no
+  consumer can hit `Object.keys(undefined)`.
+- **A failed autosave no longer drops the unsaved-work guard.** The debounced autosave clears
+  `hasPendingWrite` only on a confirmed write (moved out of the unconditional `finally`), so a
+  throw keeps the flag set and `saveError` populated. `AppLayout` wires the `beforeunload` guard
+  to `hasPendingWrite || !!saveError`, so a failed save still warns before navigation — including
+  the `saveNow` (Ctrl/Cmd+S) path that sets `saveError` without re-arming `hasPendingWrite`.
+
+Deliberately out of scope (per phase plan): persistence-blob forward migration, import-UX rework
+beyond correct exclusion, and any export-path validation changes.
+
+Gate: full vitest suite, 125 golden baselines byte-identical, 0 lint errors, clean build.
+Branch not merged.
+
+---
+
 ## Canonical state & repair — Phase 4: summaries never drop corrupt records (June 5, 2026)
 
 The final phase closes the accounting half of the contract: a cross-day summary must never

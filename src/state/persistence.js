@@ -9,6 +9,42 @@
  */
 
 import { normalizeWorkspaceDevices } from '../utils/deviceNormalization';
+import { createDefaultWorkspace } from './workspaceUtils';
+
+/** Top-level sections every consumer reads directly (and would crash on if missing). */
+const REQUIRED_WORKSPACE_KEYS = ['animals', 'days', 'settings'];
+
+const isPlainObject = (value) =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+
+/**
+ * Ensures a hydrated workspace has the required top-level sections (`animals`,
+ * `days`, `settings`) as plain objects, restoring any missing or structurally-wrong
+ * section from the canonical default shape.
+ *
+ * A structurally valid but EMPTY or partial blob (e.g. `{schemaVersion, workspace:{}}`,
+ * the shape an older/aborted write could leave) then hydrates cleanly instead of
+ * leaving a consumer to hit `Object.keys(undefined)`. Existing sections are preserved
+ * untouched; only genuinely missing ones are filled.
+ *
+ * @param {object} workspace - The (device-normalized) workspace to shape-check.
+ * @returns {{ workspace: object, missingKeys: string[] }} The repaired workspace and
+ *   the list of sections that had to be restored (empty when nothing was missing).
+ */
+function ensureWorkspaceShape(workspace) {
+  const defaults = createDefaultWorkspace();
+  const result = { ...workspace };
+  const missingKeys = [];
+
+  REQUIRED_WORKSPACE_KEYS.forEach((key) => {
+    if (!isPlainObject(workspace[key])) {
+      missingKeys.push(key);
+      result[key] = defaults[key];
+    }
+  });
+
+  return { workspace: result, missingKeys };
+}
 
 /** localStorage key for the persisted workspace blob. */
 export const WORKSPACE_STORAGE_KEY = 'rec_to_nwb_workspace_v1';
@@ -35,8 +71,11 @@ export const LOAD_DISCARD_REASON = {
 /**
  * Loads the persisted workspace.
  *
- * @returns {{ workspace: object } | { workspace: null, discarded: LOAD_DISCARD_REASON } | null}
+ * @returns {{ workspace: object, recovered?: { missingKeys: string[] } } | { workspace: null, discarded: LOAD_DISCARD_REASON } | null}
  *   - `{ workspace }` on a successful, version-matching load.
+ *   - `{ workspace, recovered: { missingKeys } }` when the blob was structurally
+ *     valid but missing required top-level sections; they were restored to the default
+ *     shape and `missingKeys` names them — caller shows a recovery notice.
  *   - `{ workspace: null, discarded: <reason> }` when a blob exists but is unusable
  *     (corrupt JSON, malformed shape, or wrong schemaVersion) — caller discards and
  *     shows a notice. `discarded` is a `LOAD_DISCARD_REASON` member.
@@ -70,18 +109,23 @@ export function loadWorkspace() {
     return { workspace: null, discarded: LOAD_DISCARD_REASON.MALFORMED };
   }
 
-  if (parsed.schemaVersion === WORKSPACE_SCHEMA_VERSION) {
-    return { workspace: normalizeWorkspaceDevices(parsed.workspace) };
-  }
-
-  if (MIGRATABLE_SCHEMA_VERSIONS.has(parsed.schemaVersion)) {
-    return { workspace: normalizeWorkspaceDevices(parsed.workspace) };
+  if (
+    parsed.schemaVersion === WORKSPACE_SCHEMA_VERSION ||
+    MIGRATABLE_SCHEMA_VERSIONS.has(parsed.schemaVersion)
+  ) {
+    // Device-normalize first, then guarantee the required top-level sections exist so a
+    // valid-but-empty/partial blob hydrates cleanly. A restored section is reported via
+    // `recovered` for a user-facing notice (never silently filled).
+    const { workspace, missingKeys } = ensureWorkspaceShape(
+      normalizeWorkspaceDevices(parsed.workspace)
+    );
+    return missingKeys.length > 0
+      ? { workspace, recovered: { missingKeys } }
+      : { workspace };
   }
 
   // Structurally sound but from an incompatible schema version → VERSION_MISMATCH.
-  if (parsed.schemaVersion !== WORKSPACE_SCHEMA_VERSION) {
-    return { workspace: null, discarded: LOAD_DISCARD_REASON.VERSION_MISMATCH };
-  }
+  return { workspace: null, discarded: LOAD_DISCARD_REASON.VERSION_MISMATCH };
 }
 
 /**

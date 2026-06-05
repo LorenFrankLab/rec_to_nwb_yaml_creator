@@ -35,7 +35,9 @@ export function AnimalWorkspace() {
   const [selectedAnimalId, setSelectedAnimalId] = useState(null);
   const [showCalendar, setShowCalendar] = useState(false);
 
-  const { animals, days } = model.workspace;
+  // Default the required sections so a workspace that somehow reaches here without them
+  // renders its empty state instead of crashing on Object.keys(undefined).
+  const { animals = {}, days = {} } = model.workspace;
   const animalIds = Object.keys(animals);
   const hasAnimals = animalIds.length > 0;
 

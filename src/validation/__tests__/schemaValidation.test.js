@@ -161,6 +161,40 @@ describe('schemaValidation()', () => {
         code: 'required',
       }));
     });
+
+    it('keeps the full path for a nested required camera field (not the bare missing property)', () => {
+      // A camera missing camera_name must report cameras[0].camera_name, not the bare
+      // camera_name. Partial import keys exclusion off the top-level field parsed from this
+      // path, so a collapsed path would mis-key the exclusion and silently import the camera.
+      const model = createTestYaml({
+        cameras: [{
+          id: 0,
+          meters_per_pixel: 0.001,
+          manufacturer: 'Test Mfg',
+          model: 'Test Model',
+          lens: '2.8mm',
+          // camera_name omitted → required violation
+        }]
+      });
+      const issues = schemaValidation(model);
+
+      expect(issues).toContainEqual(expect.objectContaining({
+        path: 'cameras[0].camera_name',
+        code: 'required',
+      }));
+      // The bare collapsed form must NOT appear.
+      expect(issues.some(i => i.path === 'camera_name')).toBe(false);
+    });
+
+    it('reports a top-level required field by its bare name (empty instancePath)', () => {
+      const model = { ...createTestYaml(), lab: undefined };
+      const issues = schemaValidation(model);
+
+      expect(issues).toContainEqual(expect.objectContaining({
+        path: 'lab',
+        code: 'required',
+      }));
+    });
   });
 
   describe('Required Fields', () => {

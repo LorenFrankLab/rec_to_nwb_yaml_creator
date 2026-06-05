@@ -16,7 +16,8 @@ import './Home.css';
  * @returns {{ experimenter_names: string[], lab: string, institution: string }}
  */
 function getDefaultExperimenters(workspace) {
-  const { settings, animals } = workspace;
+  // Default `animals` so an incomplete workspace can't crash the Object.keys() below.
+  const { settings, animals = {} } = workspace;
 
   // Priority 1: Workspace settings (if non-empty)
   if (settings?.default_lab?.trim()) {
@@ -106,8 +107,10 @@ export function Home() {
     }
   };
 
+  const animals = model.workspace.animals || {};
+
   const handleCancel = () => {
-    if (Object.keys(model.workspace.animals).length > 0) {
+    if (Object.keys(animals).length > 0) {
       // Animals exist - go to workspace
       window.location.hash = '#/workspace';
     } else {
@@ -117,7 +120,7 @@ export function Home() {
   };
 
   const defaultExperimenters = getDefaultExperimenters(model.workspace);
-  const showCancelAsSkip = Object.keys(model.workspace.animals).length === 0;
+  const showCancelAsSkip = Object.keys(animals).length === 0;
 
   return (
     <main id="main-content" tabIndex="-1" role="main">
@@ -144,7 +147,7 @@ export function Home() {
           onSubmit={handleSubmit}
           onCancel={handleCancel}
           defaultExperimenters={defaultExperimenters}
-          existingAnimals={model.workspace.animals}
+          existingAnimals={animals}
           showCancelAsSkip={showCancelAsSkip}
         />
       </div>

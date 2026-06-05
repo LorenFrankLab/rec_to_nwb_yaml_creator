@@ -17,6 +17,24 @@ import {
 import { emptyFormData, genderAcronym } from '../valueList';
 
 /**
+ * Extracts the top-level form field id from a normalized validation path.
+ *
+ * Partial import excludes by top-level section, so the section parsed here must be a
+ * real `emptyFormData` key. Robust to every path shape `validate` can produce:
+ *   - `cameras[0].camera_name` → `cameras`
+ *   - `subject.weight`         → `subject`
+ *   - `cameras`                → `cameras`
+ *   - `''` / non-string        → `''` (callers filter these out)
+ *
+ * @param {string} issuePath - Normalized issue path (dot + bracket notation).
+ * @returns {string} The top-level field id, or `''` when the path is empty/invalid.
+ */
+function topLevelFieldFromPath(issuePath) {
+  if (typeof issuePath !== 'string' || issuePath.length === 0) return '';
+  return issuePath.split('[')[0].split('.')[0];
+}
+
+/**
  * Import YAML files and prepare form data
  *
  * Parses YAML content, validates against schema and rules, and prepares
@@ -33,7 +51,7 @@ import { emptyFormData, genderAcronym } from '../valueList';
  * @returns {object} [result.importSummary] - Import summary (only present on success)
  * @returns {number} result.importSummary.totalFields - Total fields in YAML file
  * @returns {string[]} result.importSummary.importedFields - Successfully imported field names
- * @returns {Array<{field: string, reason: string}>} result.importSummary.excludedFields - Excluded fields with validation reasons
+ * @returns {Array<{field: string, reason: string, paths: string[]}>} result.importSummary.excludedFields - Excluded fields with the first validation reason and the full nested paths under that section
  * @returns {boolean} result.importSummary.hasExclusions - Whether any fields were excluded
  *
  * @example
@@ -146,14 +164,12 @@ export async function importFiles(file, options = {}) {
         onProgress({ stage: 'partial-import', progress: 70 });
       }
 
-      // Extract top-level field IDs from paths (e.g., "cameras[0].id" → "cameras")
+      // Extract top-level field IDs from paths (e.g., "cameras[0].id" → "cameras").
+      // A nested-required path such as "cameras[0].camera_name" must resolve to the
+      // real section "cameras" so the invalid section is excluded — not the bare
+      // missing property, which is not a top-level key and would let it slip through.
       const allErrorIds = [
-        ...new Set(
-          issues.map(issue => {
-            const topLevelField = issue.path.split('[')[0].split('.')[0];
-            return topLevelField;
-          })
-        )
+        ...new Set(issues.map(issue => topLevelFieldFromPath(issue.path)).filter(Boolean))
       ];
 
       const formContent = structuredClone(emptyFormData);
@@ -197,12 +213,19 @@ export async function importFiles(file, options = {}) {
         !allErrorIds.includes(key) && Object.hasOwn(jsonFileContent, key)
       );
 
-      const excludedFields = allErrorIds.map(fieldId => ({
-        field: fieldId,
-        reason: issues
-          .filter(issue => issue.path.split('[')[0].split('.')[0] === fieldId)
-          .map(issue => issue.message)[0] || 'Validation error'
-      }));
+      const excludedFields = allErrorIds.map(fieldId => {
+        const fieldIssues = issues.filter(
+          issue => topLevelFieldFromPath(issue.path) === fieldId
+        );
+        return {
+          field: fieldId,
+          reason: fieldIssues.map(issue => issue.message)[0] || 'Validation error',
+          // The full nested validation paths under this section (e.g.
+          // "cameras[0].camera_name"), so the notice can name the exact field at
+          // fault — not just that "cameras" was dropped.
+          paths: [...new Set(fieldIssues.map(issue => issue.path).filter(Boolean))],
+        };
+      });
 
       resolve({
         success: true,

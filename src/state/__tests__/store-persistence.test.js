@@ -132,6 +132,40 @@ describe('useStore persistence', () => {
     expect(result.current.persistence.saveError).toMatch(/could not save/i);
   });
 
+  it('keeps the unsaved-work guard armed after a failed autosave', () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() => useStore());
+
+    vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceededError');
+    });
+
+    act(() => {
+      result.current.actions.createAnimal('remy', { species: 'Rattus norvegicus' });
+    });
+    act(() => {
+      vi.advanceTimersByTime(600);
+    });
+
+    // The write never succeeded: do NOT report a clean state. The pending-write flag
+    // stays set and saveError is populated, so the beforeunload guard remains armed.
+    expect(result.current.persistence.saveError).toMatch(/could not save/i);
+    expect(result.current.persistence.hasPendingWrite).toBe(true);
+  });
+
+  it('hydrates a structurally-empty blob and surfaces a recovery notice naming the missing sections', () => {
+    // A valid-but-empty workspace blob (e.g. from an aborted/older write) must hydrate
+    // cleanly rather than crash a consumer on Object.keys(undefined).
+    seedBlob({});
+
+    const { result } = renderHook(() => useStore());
+
+    expect(result.current.model.workspace.animals).toEqual({});
+    expect(result.current.model.workspace.days).toEqual({});
+    expect(result.current.persistence.loadNotice).toMatch(/animals/);
+    expect(result.current.persistence.loadNotice).toMatch(/days/);
+  });
+
   it('exposes persistence.enabled reflecting the flag (on by default)', () => {
     const { result } = renderHook(() => useStore());
     expect(result.current.persistence.enabled).toBe(true);
