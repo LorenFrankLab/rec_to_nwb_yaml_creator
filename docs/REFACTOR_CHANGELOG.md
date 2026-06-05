@@ -6,6 +6,26 @@
 
 ---
 
+## Phase 7 review fixes, round 5 — the deviceOverrides path, swept end to end (June 5, 2026)
+
+Round 5 found that the `deviceOverrides` (day-level bad-channel) path was under-guarded, non-atomic, and
+lossy. Swept as one class; all 5 findings fixed (branch not merged):
+
+- **Atomic migration (HIGH).** The multi-shank bad-channel migration is now a SINGLE write of the whole
+  `deviceOverrides.bad_channels` object, not N per-ntrode calls that raced the stale-`day` closure (which
+  could lose the first-row selection or reintroduce a later-row value).
+- **Translate, don't drop (HIGH).** Consolidating later-row marks now TRANSLATES each (a key into that row's
+  `map`) to the probe-local id (`row.map[key]`) and unions it onto the first row before clearing later rows —
+  in BOTH the Day and Animal editors — so loaded marks migrate instead of vanishing.
+- **Scalar override not laundered/crashing (HIGH).** A scalar `deviceOverrides.bad_channels` value (`"23"`/
+  `23`) is preserved verbatim, never spread (`"23"`→`['2','3']`) or thrown on.
+- **Malformed list overrides don't crash (HIGH).** A non-array `deviceOverrides.electrode_groups`/ntrode map
+  is no longer preferred-then-`.map`ed; well-formed arrays only, fail-closed fallback to the snapshot.
+- **Stale override is repairable (MED).** DevicesStep renders a focusable "remove stale override" button for a
+  `bad_channels` key with no resolved ntrode, clearing only that key atomically.
+
+---
+
 ## Phase 7 review fixes, round 4 — fix the CLASS, not the cited line (June 5, 2026)
 
 A fourth review found the unswept siblings of earlier fixes. The meta-lesson (now a memory): fix the
