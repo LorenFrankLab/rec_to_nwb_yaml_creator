@@ -6,6 +6,38 @@
 
 ---
 
+## Validation contract — wire the gaps the contract reviewer found (June 5, 2026)
+
+The first review *of the contract itself* (not another symptom hunt) found wiring gaps —
+validators built but not connected, a field produced but not consumed, ownership not
+threaded into one routing path, and merge-consumers that crash instead of surfacing:
+
+- **`validateRawAnimal` wired into the gate (High).** `validateDay` / `computeStepStatus`
+  take an optional `animal` and fold raw animal-shape issues (`cameras: "nope"`), so animal
+  corruption blocks export instead of laundering to `[]`. Threaded through ExportStep,
+  DayEditorStepper, ValidationStep, ValidationSummary. `mergeDayMetadata` throws by design
+  on a malformed animal (non-array `configurationHistory`); ExportStep + DayEditorStepper
+  now try/catch it and render blocked-with-a-reason instead of crashing.
+- **`focusPath` consumed (Medium).** `RepairActionButton` navigates with
+  `issue.focusPath ?? issue.path`, so a provenance-retagged geometry error focuses the
+  day's remove-override control, not the read-only schema field.
+- **Owner-aware step-blocker routing (Medium).** ExportStep routes a Devices-*incomplete*
+  blocker (no electrode groups / missing maps — animal-owned geometry) to the Animal
+  Editor; Devices-*error* (all-bad, day-owned) still routes to Devices.
+- **TasksEpochsStep orphan helpers guarded (Medium).** `findOrphanedReferences` /
+  `clearOrphans` / `validEpochSet` tolerate non-array associated arrays, so a task
+  Add/Edit/Delete before resetting a corrupt `associated_*` doesn't crash.
+- **ChannelMapEditor multi-shank later-row scalar (High).** A hidden later-row scalar
+  `bad_channels` is now cleared by the migration toggle — was unrepairable.
+- **ValidationSummary tolerance (Medium).** Guards non-array `animal.days` and try/catches
+  the per-day merge, flagging a throwing day as "Error — cannot read" instead of blanking
+  the whole multi-day summary.
+
+Gate: 3622 tests pass (`--test-timeout=30000`), 125 golden baselines byte-identical, 0 lint
+errors, clean build. Branch not merged.
+
+---
+
 ## Validation contract — make the boundaries explicit (after round 8) (June 5, 2026)
 
 Review rounds 6–8 were the same bug in different clothes: corruption laundered into export
