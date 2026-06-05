@@ -474,7 +474,10 @@ describe('HardwareConfigStep', () => {
       ['a string', 'nope'],
       ['a plain object', {}],
       ['a number', 42],
-    ])('renders without throwing when animal.cameras is %s', (_label, corrupt) => {
+    ])('renders without throwing or warning when animal.cameras is %s', (_label, corrupt) => {
+      // Corrupt cameras is first-class state here, so render must be both crash-free AND
+      // React-warning-free (no stock prop-type warning that contradicts the contract).
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const corruptAnimal = { ...mockAnimal, cameras: corrupt };
 
       expect(() => {
@@ -490,6 +493,8 @@ describe('HardwareConfigStep', () => {
 
       // Cameras degrade to the empty state instead of a crash.
       expect(screen.getByText(/No Cameras Configured/i)).toBeInTheDocument();
+      expect(errorSpy).not.toHaveBeenCalled();
+      errorSpy.mockRestore();
     });
   });
 

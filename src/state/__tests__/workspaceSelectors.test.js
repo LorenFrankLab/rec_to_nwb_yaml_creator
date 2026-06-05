@@ -19,6 +19,7 @@ import {
   getDayAssociatedFiles,
   getDayBehavioralEvents,
   getDayKeywords,
+  getDayFsGuiYamls,
 } from '../workspaceSelectors';
 
 /**
@@ -51,6 +52,7 @@ describe('workspaceSelectors — array fields are always safe arrays', () => {
     ['getDayAssociatedFiles', getDayAssociatedFiles, (v) => ({ associated_files: v })],
     ['getDayBehavioralEvents', getDayBehavioralEvents, (v) => ({ behavioral_events: v })],
     ['getDayKeywords', getDayKeywords, (v) => ({ keywords: v })],
+    ['getDayFsGuiYamls', getDayFsGuiYamls, (v) => ({ fs_gui_yamls: v })],
   ];
 
   it.each(arraySelectors)('%s returns [] for every corrupt shape', (_name, selector, wrap) => {

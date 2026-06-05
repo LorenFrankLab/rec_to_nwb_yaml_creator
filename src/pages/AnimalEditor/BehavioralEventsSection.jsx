@@ -5,7 +5,7 @@ import { getAnimalBehavioralEvents } from '../../state/workspaceSelectors';
 import './BehavioralEventsSection.scss';
 
 /**
- * BehavioralEventsSection - Behavioral events (DIO channels) configuration section for Animal Editor (M8a Task 4)
+ * BehavioralEventsSection - Behavioral events (DIO channels) configuration section for Animal Editor
  *
  * Provides inline editing interface for behavioral events.
  * Displays event name and description.

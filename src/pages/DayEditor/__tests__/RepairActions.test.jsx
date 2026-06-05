@@ -158,6 +158,35 @@ describe('RepairActions', () => {
     expect(onNavigate).toHaveBeenCalledWith('animal', 'cameras');
   });
 
+  it('does NOT collapse two issues that share a focusPath but carry DIFFERENT executable commands', async () => {
+    // Dedup is keyed on the repair TARGET; two distinct executable repairs (different
+    // repairCommands) on the same focusPath must each keep their button, or one fix vanishes.
+    const user = userEvent.setup();
+    const onRepair = vi.fn();
+    const issues = [
+      {
+        code: 'malformed_bad_channel_override', path: 'deviceOverrides.bad_channels.1',
+        focusPath: 'deviceOverrides.bad_channels.1', ownerSurface: 'day', step: 'devices',
+        actionLabel: 'Remove failed-channel override',
+        repairCommand: { type: 'removeBadChannelOverrideKey', key: '1' },
+        message: 'bad_channels 1 is corrupt',
+      },
+      {
+        code: 'malformed_device_override', path: 'deviceOverrides.bad_channels.1',
+        focusPath: 'deviceOverrides.bad_channels.1', ownerSurface: 'day', step: 'devices',
+        actionLabel: 'Remove device overrides',
+        repairCommand: { type: 'resetDeviceOverrides' },
+        message: 'whole overrides corrupt',
+      },
+    ];
+    render(<RepairActions issues={issues} onNavigate={vi.fn()} onRepair={onRepair} />);
+    // Both executable buttons render (distinct commands), not collapsed to one.
+    expect(screen.getByRole('button', { name: /remove failed-channel override/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /remove device overrides/i })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /remove device overrides/i }));
+    expect(onRepair).toHaveBeenCalledWith(expect.objectContaining({ repairCommand: { type: 'resetDeviceOverrides' } }));
+  });
+
   it('does NOT render a fix button for non-repairable identity issues (slash ids)', () => {
     render(
       <RepairActions

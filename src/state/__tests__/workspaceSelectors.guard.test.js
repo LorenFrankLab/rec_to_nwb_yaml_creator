@@ -35,6 +35,7 @@ const SELECTOR_OWNED = [
   'day\\.tasks',
   'day\\.session',
   'day\\.keywords',
+  'day\\.fs_gui_yamls',
   'day\\.behavioral_events',
   'day\\.associated_files',
   'day\\.associated_video_files',

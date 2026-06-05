@@ -26,6 +26,7 @@ import {
   getDayAssociatedVideos,
   getDayBehavioralEvents,
   getDayKeywords,
+  getDayFsGuiYamls,
   getProbeElectrodeGroups,
   getProbeNtrodeMaps,
 } from './workspaceSelectors';
@@ -317,7 +318,7 @@ export function mergeDayMetadata(animal, day) {
     opto_excitation_source: opto ? reorderItems(opto.opto_excitation_source, OPTO_EXCITATION_SOURCE_ORDER) : [],
     optical_fiber: opto ? reorderItems(opto.optical_fiber, OPTICAL_FIBER_ORDER) : [],
     virus_injection: opto ? reorderItems(opto.virus_injection, VIRUS_INJECTION_ORDER) : [],
-    fs_gui_yamls: day.fs_gui_yamls && day.fs_gui_yamls.length > 0 ? reorderItems(day.fs_gui_yamls, FS_GUI_YAML_ORDER) : [],
+    fs_gui_yamls: getDayFsGuiYamls(day).length > 0 ? reorderItems(getDayFsGuiYamls(day), FS_GUI_YAML_ORDER) : [],
     optogenetic_stimulation_software: opto ? opto.optogenetic_stimulation_software : '',
 
     // === From Configuration Version (or Day Override): Electrode Groups ===

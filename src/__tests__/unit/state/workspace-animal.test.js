@@ -558,6 +558,26 @@ describe('Animal State Management', () => {
       expect(animal.configurationHistory[0].version).toBe(1);
     });
 
+    it('tolerates a non-array inner devices.electrode_groups and rebuilds an empty snapshot', () => {
+      // The inner guard: even with a valid devices RECORD, its electrode_groups /
+      // ntrode_electrode_group_channel_map may themselves be a non-array — the rebuild must
+      // produce a v1 snapshot with [] for those, not throw on structuredClone of a corrupt value.
+      const { result } = renderHook(() => useStore());
+      createAnimalWithDevices(result);
+
+      act(() => {
+        result.current.model.workspace.animals['remy'].devices.electrode_groups = 'nope';
+        result.current.model.workspace.animals['remy'].devices.ntrode_electrode_group_channel_map = 42;
+        result.current.model.workspace.animals['remy'].configurationHistory = 'corrupt';
+        result.current.actions.rebuildConfigurationHistory('remy');
+      });
+
+      const snap = result.current.model.workspace.animals['remy'].configurationHistory[0];
+      expect(snap.version).toBe(1);
+      expect(snap.devices.electrode_groups).toEqual([]);
+      expect(snap.devices.ntrode_electrode_group_channel_map).toEqual([]);
+    });
+
     it('does nothing for an unknown animal (no throw)', () => {
       const { result } = renderHook(() => useStore());
       expect(() => {

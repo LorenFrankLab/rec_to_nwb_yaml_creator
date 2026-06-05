@@ -48,7 +48,7 @@ export const RAW_DAY_ARRAY_FIELDS = [
 
 /**
  * The animal-owned ARRAY fields. A corrupt one routes to the Animal Editor. Each carries
- * its executable repair command (Phase 2): cameras reset to none, and the device
+ * its executable repair command: cameras reset to none, and the device
  * configuration history REBUILT from the animal's current devices (not emptied — an empty
  * history would itself fail the merge), with a label that names that distinction.
  *
@@ -73,8 +73,8 @@ export const RAW_ANIMAL_ARRAY_FIELDS = [
  * @param {'day'|'animal'} opts.ownerSurface - Who can edit the fix.
  * @param {string} opts.repairStep - The owning step id (day) — used for routing/focus.
  * @param {string} opts.label - Human label for the collection.
- * @param {object} [opts.repairCommand] - The serializable executable repair (Phase 2);
- *   executing it performs the reset this issue describes (see `repairCommands.js`).
+ * @param {object} [opts.repairCommand] - The serializable executable repair; executing it
+ *   performs the reset this issue describes (see `repairCommands.js`).
  * @param {string} [opts.actionLabel] - Override the default `Reset ${label}` button label
  *   (e.g. "Rebuild …" for a configurationHistory rebuild rather than an empty reset).
  * @returns {object} Issue.
@@ -208,9 +208,9 @@ export function validateRawAnimal(animal) {
 
   // A MISSING (null/undefined) or EMPTY ([]) configurationHistory on a REAL animal can
   // resolve no day's probe geometry — `resolveDayConfig` throws and export fails closed.
-  // Phase 2 makes that REPAIRABLE rather than only blocked: surface a commandable rebuild
-  // issue whose `rebuildConfigurationHistory` command reseeds a v1 snapshot from the
-  // animal's current devices. "Real animal" is gated on a `devices` record so this never
+  // Make that REPAIRABLE rather than only blocked: surface a commandable rebuild issue whose
+  // `rebuildConfigurationHistory` command reseeds a v1 snapshot from the animal's current
+  // devices. "Real animal" is gated on a `devices` record so this never
   // false-fires on the minimal animal stubs some callers pass (which have no devices). A
   // non-array history is NOT handled here — it is the laundering shape already flagged as
   // `malformed_animal_collection` above (also with a rebuild command) — so the two never

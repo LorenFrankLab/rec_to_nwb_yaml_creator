@@ -61,7 +61,11 @@ export default function RepairActions({ issues, onNavigate, animalId, onRepair }
   const seenTargets = new Set();
   const repairKey = (issue) => {
     const { surface, step } = repairTargetForIssue(issue);
-    return `${surface}:${step ?? ''}:${issue.focusPath || issue.path || ''}`;
+    // Include the executable command in the key: two issues can share a (surface, step,
+    // focusPath) yet carry DIFFERENT repairCommands (e.g. a per-ntrode bad-channel removal vs
+    // a whole-overrides reset on the same path). Collapsing those would drop one real fix.
+    const command = issue.repairCommand ? `${issue.repairCommand.type}:${issue.repairCommand.key ?? issue.repairCommand.field ?? ''}` : '';
+    return `${surface}:${step ?? ''}:${issue.focusPath || issue.path || ''}:${command}`;
   };
 
   return (

@@ -34,6 +34,28 @@ export const REPAIR_COMMAND_TYPES = Object.freeze([
 ]);
 
 /**
+ * The OWNING SURFACE of each command type — `'day'` commands write through `updateDay(dayId,…)`,
+ * `'animal'` commands through `updateAnimal(animalId,…)`/`rebuildConfigurationHistory(animalId)`.
+ * The executor uses this to enforce the contract structurally: a command whose surface id is
+ * absent in `ctx` is a no-op, never a write with an `undefined` id (which would THROW inside the
+ * store action — `Day "undefined" not found`). This keeps "missing/malformed → no-op" true even
+ * when a command is routed to a handler whose ctx lacks the matching id.
+ *
+ * @type {Readonly<Record<string, 'day'|'animal'>>}
+ */
+const COMMAND_SURFACE = Object.freeze({
+  resetDayCollection: 'day',
+  resetDeviceOverrides: 'day',
+  removeDeviceOverrideKey: 'day',
+  resetBadChannelOverrides: 'day',
+  removeBadChannelOverrideKey: 'day',
+  resetDaySession: 'day',
+  resetAnimalCameras: 'animal',
+  resetDataAcqDevice: 'animal',
+  rebuildConfigurationHistory: 'animal',
+});
+
+/**
  * Whether `value` is a plain object record (not null, not an array). Mirrors the shared
  * guard used across validation/selectors — used to read the day's CURRENT `deviceOverrides`
  * tolerantly when a partial-removal command needs to preserve sibling keys.
@@ -75,6 +97,14 @@ export function applyRepairCommand(command, ctx) {
   if (!command || typeof command !== 'object') return;
   const { actions, animalId, dayId, day } = ctx || {};
   if (!actions) return;
+
+  // Enforce the surface→id contract: a command can only write if the id for its owning
+  // surface is present. Absent → no-op (NOT a write with `undefined`, which would throw in
+  // the store action). This makes "missing id → no-op" structural, independent of which
+  // handler routes the command.
+  const surface = COMMAND_SURFACE[command.type];
+  if (surface === 'day' && !dayId) return;
+  if (surface === 'animal' && !animalId) return;
 
   switch (command.type) {
     case 'resetDayCollection': {
@@ -131,7 +161,12 @@ export function applyRepairCommand(command, ctx) {
       // and the user cannot re-enter (the field is read-only). The editable description
       // fields reset to blank for the user to refill. updateDay guards the malformed current
       // session before merging, so this writes cleanly.
-      const sessionId = `${ctx.animal?.id ?? ''}_${String(ctx.day?.date ?? '').replace(/-/g, '')}`;
+      // Prefer the convenience `ctx.animal`/`ctx.day`, but fall back to the contract ids
+      // (`animalId`, and the date parsed off `dayId` which is `<animalId>-<YYYY-MM-DD>`) so a
+      // caller that passes only the documented ids still derives a real session_id.
+      const sessionAnimalId = ctx.animal?.id ?? animalId ?? '';
+      const sessionDate = ctx.day?.date ?? String(dayId ?? '').slice(String(sessionAnimalId).length + 1);
+      const sessionId = `${sessionAnimalId}_${String(sessionDate).replace(/-/g, '')}`;
       actions.updateDay(dayId, { session: { session_id: sessionId } });
       return;
     }

@@ -221,6 +221,39 @@ describe('Repairability matrix — every malformed shape is raised, owned, and c
     expect(updateAnimal).toHaveBeenCalledWith('remy', { cameras: [] });
   });
 
+  it('animal-collection corruption (data_acq_device) completes the same repair round-trip', () => {
+    // The OTHER malformed_animal_collection producer: a corrupt nested devices.data_acq_device
+    // must also be raised → owned (animal) → blocks → and resetDataAcqDevice CLEARS it.
+    const merged = baseMerged();
+    const corruptAnimal = { configurationHistory: [{ version: 1 }], devices: { data_acq_device: 'nope' } };
+    const issue = validateDay({}, merged, corruptAnimal).find(
+      (i) => i.code === 'malformed_animal_collection' && i.field === 'data_acq_device'
+    );
+    expect(issue, 'expected a data_acq_device malformed_animal_collection').toBeTruthy();
+    expect(issue.ownerSurface).toBe('animal');
+    expect(repairTargetForIssue(issue).surface).toBe('animal');
+    expect(computeStepStatus({}, merged, corruptAnimal).export).toBe('error');
+
+    // Documented repair clears it.
+    const repairedAnimal = { configurationHistory: [{ version: 1 }], devices: { data_acq_device: [] } };
+    expect(
+      validateDay({}, merged, repairedAnimal).some(
+        (i) => i.code === 'malformed_animal_collection' && i.field === 'data_acq_device'
+      )
+    ).toBe(false);
+
+    // The executable half: resetDataAcqDevice resets it to [] via updateAnimal.
+    expect(issue.repairCommand).toEqual({ type: 'resetDataAcqDevice' });
+    const updateAnimal = vi.fn();
+    applyRepairCommand(issue.repairCommand, {
+      actions: { updateAnimal, updateDay: vi.fn(), rebuildConfigurationHistory: vi.fn() },
+      animalId: 'remy',
+      dayId: 'd',
+      animal: corruptAnimal,
+    });
+    expect(updateAnimal).toHaveBeenCalledWith('remy', { data_acq_device: [] });
+  });
+
   it('missing/empty configurationHistory completes the same repair round-trip (rebuild command)', () => {
     // A real animal (has devices) that lost its history can resolve no day; it must be
     // raised → owned (animal) → routes → blocks → and the rebuild command clears it.

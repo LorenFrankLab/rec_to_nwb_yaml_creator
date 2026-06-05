@@ -2,7 +2,7 @@ import PropTypes from 'prop-types';
 import { validateRawAnimal, validateRawDay } from '../validation/rawShape';
 
 /**
- * RawCorruptionBanner — the destination-side surface for raw-shape corruption (Phase 3).
+ * RawCorruptionBanner — the destination-side surface for raw-shape corruption.
  *
  * A repair routed to an editor ("Fix in Animal Editor → Hardware Config" for a corrupt
  * `cameras`) must land on a VISIBLE reset control, not an empty "Add First Camera" state
@@ -29,6 +29,9 @@ import { validateRawAnimal, validateRawDay } from '../validation/rawShape';
 export default function RawCorruptionBanner({ animal, day, fields, onRepair }) {
   if (typeof onRepair !== 'function') return null;
 
+  // Each issue carries its `ownerSurface`, so filtering/keying include it: should an animal
+  // and a day raw field ever share a name (the sets are disjoint today, so this is defensive),
+  // the banner still treats them as distinct issues rather than collapsing or key-colliding.
   const owned = new Set(fields);
   const issues = [
     ...(animal ? validateRawAnimal(animal) : []),
@@ -44,7 +47,7 @@ export default function RawCorruptionBanner({ animal, day, fields, onRepair }) {
       </p>
       <ul className="raw-corruption-list">
         {issues.map((issue) => (
-          <li key={`${issue.code}-${issue.field}`} className="raw-corruption-item">
+          <li key={`${issue.ownerSurface}-${issue.code}-${issue.field}`} className="raw-corruption-item">
             <span className="raw-corruption-message">{issue.message}</span>
             <button
               type="button"

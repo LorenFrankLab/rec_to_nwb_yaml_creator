@@ -4,7 +4,7 @@ import { rawArray } from '../../components/rawPropTypes';
 import './CamerasSection.scss';
 
 /**
- * CamerasSection - Camera configuration section for Animal Editor (M8a Task 2)
+ * CamerasSection - Camera configuration section for Animal Editor
  *
  * Provides CRUD interface for cameras with table view.
  * Displays camera metadata: ID, name, manufacturer, model, meters_per_pixel.

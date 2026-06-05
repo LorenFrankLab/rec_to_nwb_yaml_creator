@@ -107,3 +107,6 @@ export const getDayBehavioralEvents = (day) => asArray(day?.behavioral_events);
 
 /** @param {object} day @returns {Array} The day's keywords. */
 export const getDayKeywords = (day) => asArray(day?.keywords);
+
+/** @param {object} day @returns {Array} The day's FsGUI protocol files. */
+export const getDayFsGuiYamls = (day) => asArray(day?.fs_gui_yamls);
