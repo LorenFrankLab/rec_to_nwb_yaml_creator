@@ -110,7 +110,7 @@ describe('Animal State Management', () => {
         }, {
           devices: {
             electrode_groups: [
-              { id: '0', location: 'CA1', device_type: 'tetrode_12.5', bad_channels: '' },
+              { id: '0', location: 'CA1', device_type: 'tetrode_12.5', description: 'CA1 tetrode', targeted_location: 'CA1', bad_channels: '' },
             ],
             ntrode_electrode_group_channel_map: [
               { ntrode_id: '1', electrode_group_id: '0', electrode_id: 7, bad_channels: [], map: { 0: 0 } },
@@ -121,9 +121,11 @@ describe('Animal State Management', () => {
 
       const animal = result.current.model.workspace.animals.remy;
       expect(animal.devices.device.name).toEqual(['Trodes']);
+      // Strict normalization migrates clean integer-string ids and passes present
+      // required text through unchanged (no synthesis from location).
       expect(animal.devices.electrode_groups[0]).toMatchObject({
         id: 0,
-        description: 'CA1',
+        description: 'CA1 tetrode',
         targeted_location: 'CA1',
       });
       expect(animal.devices.electrode_groups[0]).not.toHaveProperty('bad_channels');

@@ -14,9 +14,9 @@ import { ConfirmDialog } from '../../components/Modal';
 import { generateChannelMapsForGroup, nextNtrodeId } from '../../utils/channelMapUtils';
 import { downloadChannelMapsCSV, importChannelMapsFromCSV } from '../../utils/csvChannelMapUtils';
 import {
-  normalizeElectrodeGroup,
+  normalizeElectrodeGroupWithDefaults,
   normalizeIdKey,
-  normalizeNtrodeMap,
+  normalizeNtrodeMapWithDefaults,
 } from '../../utils/deviceNormalization';
 import './AnimalEditorStepper.scss';
 
@@ -322,7 +322,7 @@ export default function AnimalEditorStepper() {
 
       for (let i = 0; i < count; i++) {
         const groupId = startId + i;
-        const newGroup = normalizeElectrodeGroup(
+        const newGroup = normalizeElectrodeGroupWithDefaults(
           { ...groupDataWithoutCount, id: groupId },
           groupId
         );
@@ -334,7 +334,7 @@ export default function AnimalEditorStepper() {
     } else {
       // Edit mode: update single existing group
       const groupId = editingGroup.id;
-      const normalizedGroup = normalizeElectrodeGroup(
+      const normalizedGroup = normalizeElectrodeGroupWithDefaults(
         { ...groupDataWithoutCount, id: groupId },
         groupId
       );
@@ -461,9 +461,9 @@ export default function AnimalEditorStepper() {
     const existingMaps = animal.devices?.ntrode_electrode_group_channel_map || [];
 
     const updatedGroups = [...existingGroups, ...electrode_groups]
-      .map((group, index) => normalizeElectrodeGroup(group, index));
+      .map((group, index) => normalizeElectrodeGroupWithDefaults(group, index));
     const updatedMaps = [...existingMaps, ...ntrode_electrode_group_channel_map]
-      .map((map, index) => normalizeNtrodeMap(map, index));
+      .map((map, index) => normalizeNtrodeMapWithDefaults(map, index));
 
     actions.updateAnimal(animalId, {
       devices: {
@@ -514,7 +514,7 @@ export default function AnimalEditorStepper() {
       map => normalizeIdKey(map.electrode_group_id) !== editingKey
     );
     const newChannelMaps = [...otherMaps, ...updatedMaps]
-      .map((map, index) => normalizeNtrodeMap(map, index));
+      .map((map, index) => normalizeNtrodeMapWithDefaults(map, index));
 
     actions.updateAnimal(animalId, {
       devices: {

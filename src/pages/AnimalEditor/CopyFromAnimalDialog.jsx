@@ -2,9 +2,9 @@ import { useState, useMemo, useId } from 'react';
 import PropTypes from 'prop-types';
 import Modal from '../../components/Modal/Modal';
 import {
-  normalizeElectrodeGroup,
+  normalizeElectrodeGroupWithDefaults,
   normalizeIdKey,
-  normalizeNtrodeMap,
+  normalizeNtrodeMapWithDefaults,
 } from '../../utils/deviceNormalization';
 import './CopyFromAnimalDialog.scss';
 
@@ -99,7 +99,7 @@ export default function CopyFromAnimalDialog({ open, currentAnimalId, animals, o
       const newId = nextIds.nextGroupId + index;
       groupIdMap.set(oldId, newId);
 
-      return normalizeElectrodeGroup({ ...group, id: newId }, newId);
+      return normalizeElectrodeGroupWithDefaults({ ...group, id: newId }, newId);
     });
 
     // Deep clone channel maps with new integer IDs and updated electrode_group_id references
@@ -110,7 +110,7 @@ export default function CopyFromAnimalDialog({ open, currentAnimalId, animals, o
         return [];
       }
 
-      const copied = normalizeNtrodeMap(
+      const copied = normalizeNtrodeMapWithDefaults(
         {
           ...map,
           ntrode_id: nextNtrodeId,

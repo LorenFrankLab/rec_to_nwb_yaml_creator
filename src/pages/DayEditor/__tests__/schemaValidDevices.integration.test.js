@@ -61,6 +61,8 @@ describe('schema-valid device output (workspace export)', () => {
           id: '0',
           location: 'CA1',
           device_type: 'tetrode_12.5',
+          description: 'CA1 tetrode',
+          targeted_location: 'CA1',
           targeted_x: '3',
           targeted_y: '2.5',
           targeted_z: '2',
@@ -84,7 +86,9 @@ describe('schema-valid device output (workspace export)', () => {
     expect(merged.device.name).toEqual(['Trodes']);
     expect(merged.electrode_groups[0]).toMatchObject({
       id: 0,
-      description: 'CA1',
+      // Strict normalization passes present required text through unchanged; it is
+      // NOT synthesized from location.
+      description: 'CA1 tetrode',
       targeted_location: 'CA1',
       targeted_x: 3,
       targeted_y: 2.5,
