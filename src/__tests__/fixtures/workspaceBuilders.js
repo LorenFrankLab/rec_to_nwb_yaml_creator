@@ -59,15 +59,21 @@ export function buildRealisticWorkspace() {
     { id: 7, location: 'PFC', device_type: 'tetrode_12.5', description: 'Medial prefrontal cortex tetrode 2', targeted_location: 'mPFC', targeted_x: 0.6, targeted_y: 3.2, targeted_z: 4, units: 'mm' },
   ];
 
+  // Each tetrode is its own probe (device_type tetrode_12.5, 4 electrode ids), so
+  // every group's channel map resets to local electrode ids 0..3 — values are NOT
+  // global hardware channels (see designs.md#channel-map-semantics). Phase 6's
+  // channel-bounds rule enforces this; the earlier globally-incrementing 0..31 map
+  // was a known-invalid workspace (it still lives, frozen, in the legacy golden
+  // realistic-session.yml, which is byte-baselined but never validated).
   const ntrodeMap = [
     { ntrode_id: 1, electrode_group_id: 0, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
-    { ntrode_id: 2, electrode_group_id: 1, bad_channels: [], map: { 0: 4, 1: 5, 2: 6, 3: 7 } },
-    { ntrode_id: 3, electrode_group_id: 2, bad_channels: [2], map: { 0: 8, 1: 9, 2: 10, 3: 11 } },
-    { ntrode_id: 4, electrode_group_id: 3, bad_channels: [], map: { 0: 12, 1: 13, 2: 14, 3: 15 } },
-    { ntrode_id: 5, electrode_group_id: 4, bad_channels: [], map: { 0: 16, 1: 17, 2: 18, 3: 19 } },
-    { ntrode_id: 6, electrode_group_id: 5, bad_channels: [3], map: { 0: 20, 1: 21, 2: 22, 3: 23 } },
-    { ntrode_id: 7, electrode_group_id: 6, bad_channels: [], map: { 0: 24, 1: 25, 2: 26, 3: 27 } },
-    { ntrode_id: 8, electrode_group_id: 7, bad_channels: [], map: { 0: 28, 1: 29, 2: 30, 3: 31 } },
+    { ntrode_id: 2, electrode_group_id: 1, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+    { ntrode_id: 3, electrode_group_id: 2, bad_channels: [2], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+    { ntrode_id: 4, electrode_group_id: 3, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+    { ntrode_id: 5, electrode_group_id: 4, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+    { ntrode_id: 6, electrode_group_id: 5, bad_channels: [3], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+    { ntrode_id: 7, electrode_group_id: 6, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+    { ntrode_id: 8, electrode_group_id: 7, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
   ];
 
   const animal = {

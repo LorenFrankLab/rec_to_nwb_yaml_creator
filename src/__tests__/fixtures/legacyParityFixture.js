@@ -65,9 +65,12 @@ const ELECTRODE_GROUPS = [
   { id: 1, location: 'CA1', device_type: 'tetrode_12.5', description: 'CA1 tetrode 2', targeted_location: 'CA1', targeted_x: 3.1, targeted_y: 2.5, targeted_z: 2, units: 'mm' },
 ];
 
+// Each tetrode group is an independent probe → electrode ids reset to 0..3 per
+// group (designs.md#channel-map-semantics); the legacy globally-incrementing
+// 0..7 map was a known-invalid workspace now caught by Phase 6's channel-bounds rule.
 const NTRODE_MAP = [
   { ntrode_id: 1, electrode_group_id: 0, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
-  { ntrode_id: 2, electrode_group_id: 1, bad_channels: [], map: { 0: 4, 1: 5, 2: 6, 3: 7 } },
+  { ntrode_id: 2, electrode_group_id: 1, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
 ];
 
 const UNITS = { analog: 'unspecified', behavioral_events: 'unspecified' };

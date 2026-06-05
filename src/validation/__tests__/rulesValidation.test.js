@@ -58,18 +58,16 @@ describe('rulesValidation()', () => {
     });
 
     it('should return empty array for valid ntrode channel mappings', () => {
+      // Two independent tetrode groups; each is its own probe so values reset to
+      // 0..3 per group (designs.md#channel-map-semantics).
       const model = createTestYaml({
+        electrode_groups: [
+          { id: 0, device_type: 'tetrode_12.5', location: 'CA1', targeted_location: 'CA1' },
+          { id: 1, device_type: 'tetrode_12.5', location: 'CA1', targeted_location: 'CA1' },
+        ],
         ntrode_electrode_group_channel_map: [
-          {
-            ntrode_id: 1,
-            electrode_group_id: 0,
-            map: { 0: 0, 1: 1, 2: 2, 3: 3 }  // All unique
-          },
-          {
-            ntrode_id: 2,
-            electrode_group_id: 0,
-            map: { 0: 4, 1: 5, 2: 6, 3: 7 }  // All unique
-          }
+          { ntrode_id: 1, electrode_group_id: 0, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+          { ntrode_id: 2, electrode_group_id: 1, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
         ]
       });
       const issues = rulesValidation(model);

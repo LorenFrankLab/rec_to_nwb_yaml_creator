@@ -183,57 +183,57 @@ ntrode_electrode_group_channel_map:
     electrode_group_id: 1
     bad_channels: []
     map:
-      "0": 4
-      "1": 5
-      "2": 6
-      "3": 7
+      "0": 0
+      "1": 1
+      "2": 2
+      "3": 3
   - ntrode_id: 3
     electrode_group_id: 2
     bad_channels:
       - 2
     map:
-      "0": 8
-      "1": 9
-      "2": 10
-      "3": 11
+      "0": 0
+      "1": 1
+      "2": 2
+      "3": 3
   - ntrode_id: 4
     electrode_group_id: 3
     bad_channels: []
     map:
-      "0": 12
-      "1": 13
-      "2": 14
-      "3": 15
+      "0": 0
+      "1": 1
+      "2": 2
+      "3": 3
   - ntrode_id: 5
     electrode_group_id: 4
     bad_channels: []
     map:
-      "0": 16
-      "1": 17
-      "2": 18
-      "3": 19
+      "0": 0
+      "1": 1
+      "2": 2
+      "3": 3
   - ntrode_id: 6
     electrode_group_id: 5
     bad_channels:
       - 3
     map:
-      "0": 20
-      "1": 21
-      "2": 22
-      "3": 23
+      "0": 0
+      "1": 1
+      "2": 2
+      "3": 3
   - ntrode_id: 7
     electrode_group_id: 6
     bad_channels: []
     map:
-      "0": 24
-      "1": 25
-      "2": 26
-      "3": 27
+      "0": 0
+      "1": 1
+      "2": 2
+      "3": 3
   - ntrode_id: 8
     electrode_group_id: 7
     bad_channels: []
     map:
-      "0": 28
-      "1": 29
-      "2": 30
-      "3": 31
+      "0": 0
+      "1": 1
+      "2": 2
+      "3": 3

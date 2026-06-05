@@ -278,7 +278,9 @@ describe('BUG #8 Verification: Integer ID Enforcement', () => {
       // This test documents actual behavior
       if (!isValid) {
         const typeError = issues.find(issue =>
-          issue.instancePath.includes('camera_id')
+          // Schema issues carry instancePath; rules issues (e.g. dangling camera
+          // ref for the non-existent id 1.5) do not — guard before matching.
+          (issue.instancePath || issue.path || '').includes('camera_id')
         );
         expect(typeError).toBeDefined();
       }

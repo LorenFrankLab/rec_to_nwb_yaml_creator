@@ -64,11 +64,14 @@ describe('BUG: Hardware Channel Mapping - Duplicate Values Not Detected', () => 
             ntrode_id: 0,
             electrode_group_id: 0,
             bad_channels: [],
+            // tetrode electrode ids are 0..3; channels 0 and 1 both map to 1 (DUPLICATE).
+            // The Phase 6 partition rule also flags this broken map, so assert the
+            // duplicate-channel message is present rather than an exact issue count.
             map: {
-              '0': 5,
-              '1': 5, // DUPLICATE - both 0 and 1 map to physical channel 5
-              '2': 7,
-              '3': 8,
+              '0': 1,
+              '1': 1, // DUPLICATE - both 0 and 1 map to electrode 1
+              '2': 2,
+              '3': 3,
             },
           },
         ],
@@ -81,8 +84,7 @@ describe('BUG: Hardware Channel Mapping - Duplicate Values Not Detected', () => 
 
       // ASSERT - Should detect duplicate channel mapping
       expect(isFormValid).toBe(false);
-      expect(rulesIssues.map(i => i.message)).toHaveLength(1);
-      expect(rulesIssues.map(i => i.message)[0]).toMatch(/duplicate.*channel.*map/i);
+      expect(rulesIssues.some(i => /duplicate.*channel.*map/i.test(i.message))).toBe(true);
     });
 
     it('should reject ntrode map with three channels mapping to same value', () => {
@@ -109,9 +111,9 @@ describe('BUG: Hardware Channel Mapping - Duplicate Values Not Detected', () => 
             bad_channels: [],
             map: {
               '0': 3,
-              '1': 3, // All three map to channel 3 (INVALID!)
+              '1': 3, // Three channels map to electrode 3 (INVALID!)
               '2': 3,
-              '3': 8,
+              '3': 0,
             },
           },
         ],
@@ -124,8 +126,7 @@ describe('BUG: Hardware Channel Mapping - Duplicate Values Not Detected', () => 
 
       // ASSERT
       expect(isFormValid).toBe(false);
-      expect(rulesIssues.map(i => i.message)).toHaveLength(1);
-      expect(rulesIssues.map(i => i.message)[0]).toMatch(/duplicate.*channel.*map/i);
+      expect(rulesIssues.some(i => /duplicate.*channel.*map/i.test(i.message))).toBe(true);
     });
 
     it('should reject when multiple ntrodes have duplicate mappings', () => {
@@ -133,17 +134,8 @@ describe('BUG: Hardware Channel Mapping - Duplicate Values Not Detected', () => 
       const formData = {
         ...loadFixture('valid', 'minimal-valid.yml'),
         electrode_groups: [
-          {
-            id: 0,
-            location: 'CA1',
-            device_type: 'tetrode_12.5',
-            description: 'Test electrode',
-            targeted_location: 'CA1',
-            targeted_x: 0,
-            targeted_y: 0,
-            targeted_z: 0,
-            units: 'um',
-          },
+          { id: 0, location: 'CA1', device_type: 'tetrode_12.5', description: 'Test electrode', targeted_location: 'CA1', targeted_x: 0, targeted_y: 0, targeted_z: 0, units: 'um' },
+          { id: 1, location: 'CA1', device_type: 'tetrode_12.5', description: 'Test electrode', targeted_location: 'CA1', targeted_x: 0, targeted_y: 0, targeted_z: 0, units: 'um' },
         ],
         ntrode_electrode_group_channel_map: [
           {
@@ -152,20 +144,20 @@ describe('BUG: Hardware Channel Mapping - Duplicate Values Not Detected', () => 
             bad_channels: [],
             map: {
               '0': 1,
-              '1': 1, // Duplicate in first ntrode
+              '1': 1, // Duplicate in first ntrode (in range 0..3)
               '2': 2,
               '3': 3,
             },
           },
           {
             ntrode_id: 1,
-            electrode_group_id: 0,
+            electrode_group_id: 1,
             bad_channels: [],
             map: {
-              '0': 5,
-              '1': 6,
-              '2': 6, // Duplicate in second ntrode
-              '3': 7,
+              '0': 0,
+              '1': 2,
+              '2': 2, // Duplicate in second ntrode (in range 0..3)
+              '3': 3,
             },
           },
         ],
@@ -178,10 +170,9 @@ describe('BUG: Hardware Channel Mapping - Duplicate Values Not Detected', () => 
 
       // ASSERT - Should detect duplicates in BOTH ntrodes
       expect(isFormValid).toBe(false);
-      expect(rulesIssues.map(i => i.message).length).toBeGreaterThanOrEqual(2);
-      // New validation API message format: "Ntrode 0 has duplicate channel mappings..."
-      expect(rulesIssues.map(i => i.message)[0]).toMatch(/ntrode\s+0.*duplicate/i);
-      expect(rulesIssues.map(i => i.message)[1]).toMatch(/ntrode\s+1.*duplicate/i);
+      const messages = rulesIssues.map(i => i.message);
+      expect(messages.some(m => /ntrode\s+0.*duplicate/i.test(m))).toBe(true);
+      expect(messages.some(m => /ntrode\s+1.*duplicate/i.test(m))).toBe(true);
     });
   });
 
@@ -228,7 +219,7 @@ describe('BUG: Hardware Channel Mapping - Duplicate Values Not Detected', () => 
       expect(rulesIssues.map(i => i.message)).toEqual([]);
     });
 
-    it('should accept ntrode map with non-sequential but unique values', () => {
+    it('should accept ntrode map with a non-sequential permutation of the probe electrode ids', () => {
       // ARRANGE
       const formData = {
         ...loadFixture('valid', 'minimal-valid.yml'),
@@ -250,11 +241,12 @@ describe('BUG: Hardware Channel Mapping - Duplicate Values Not Detected', () => 
             ntrode_id: 0,
             electrode_group_id: 0,
             bad_channels: [],
+            // A non-sequential but valid permutation of the tetrode's electrode ids 0..3.
             map: {
-              '0': 10,
-              '1': 25,
-              '2': 3,
-              '3': 127,
+              '0': 3,
+              '1': 1,
+              '2': 2,
+              '3': 0,
             },
           },
         ],
@@ -275,18 +267,10 @@ describe('BUG: Hardware Channel Mapping - Duplicate Values Not Detected', () => 
       const formData = {
         ...loadFixture('valid', 'minimal-valid.yml'),
         electrode_groups: [
-          {
-            id: 0,
-            location: 'CA1',
-            device_type: 'tetrode_12.5',
-            description: 'Test electrode',
-            targeted_location: 'CA1',
-            targeted_x: 0,
-            targeted_y: 0,
-            targeted_z: 0,
-            units: 'um',
-          },
+          { id: 0, location: 'CA1', device_type: 'tetrode_12.5', description: 'Test electrode', targeted_location: 'CA1', targeted_x: 0, targeted_y: 0, targeted_z: 0, units: 'um' },
+          { id: 1, location: 'CA1', device_type: 'tetrode_12.5', description: 'Test electrode', targeted_location: 'CA1', targeted_x: 0, targeted_y: 0, targeted_z: 0, units: 'um' },
         ],
+        // Two independent tetrode probes → each resets electrode ids to 0..3.
         ntrode_electrode_group_channel_map: [
           {
             ntrode_id: 0,
@@ -301,13 +285,13 @@ describe('BUG: Hardware Channel Mapping - Duplicate Values Not Detected', () => 
           },
           {
             ntrode_id: 1,
-            electrode_group_id: 0,
+            electrode_group_id: 1,
             bad_channels: [],
             map: {
-              '0': 4,
-              '1': 5,
-              '2': 6,
-              '3': 7,
+              '0': 0,
+              '1': 1,
+              '2': 2,
+              '3': 3,
             },
           },
         ],
@@ -424,8 +408,7 @@ describe('BUG: Hardware Channel Mapping - Duplicate Values Not Detected', () => 
 
       // ASSERT
       expect(isFormValid).toBe(false);
-      expect(rulesIssues.map(i => i.message)).toHaveLength(1);
-      expect(rulesIssues.map(i => i.message)[0]).toMatch(/duplicate.*channel.*map/i);
+      expect(rulesIssues.some(i => /duplicate.*channel.*map/i.test(i.message))).toBe(true);
     });
   });
 });
