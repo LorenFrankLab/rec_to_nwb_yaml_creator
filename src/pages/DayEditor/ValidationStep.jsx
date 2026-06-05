@@ -19,9 +19,11 @@ import './DayEditor.scss';
  * @param {object} props.mergedDay - Merged animal + day metadata to validate.
  * @param {(stepId: string, fieldPath?: string) => void} [props.onNavigate] - Routes a
  *   repair action to the step that owns the fix (and an optional field target).
+ * @param {object} [props.animal] - The owning animal record (provides animalId so
+ *   animal-surface repairs can deep-link into the Animal Editor).
  * @returns {JSX.Element}
  */
-export default function ValidationStep({ mergedDay, onNavigate }) {
+export default function ValidationStep({ mergedDay, onNavigate, animal }) {
   const issues = useMemo(() => validate(mergedDay || {}), [mergedDay]);
 
   const bySeverity = useMemo(() => groupBySeverity(issues), [issues]);
@@ -53,7 +55,7 @@ export default function ValidationStep({ mergedDay, onNavigate }) {
 
       {issues.length > 0 && (
         <>
-          <SeveritySection title="Errors" severity="error" issues={bySeverity.error} onNavigate={onNavigate} />
+          <SeveritySection title="Errors" severity="error" issues={bySeverity.error} onNavigate={onNavigate} animalId={animal?.id} />
           <SeveritySection title="Warnings" severity="warning" issues={bySeverity.warning} />
           <SeveritySection title="Info" severity="info" issues={bySeverity.info} />
         </>
@@ -65,6 +67,7 @@ export default function ValidationStep({ mergedDay, onNavigate }) {
 ValidationStep.propTypes = {
   mergedDay: PropTypes.object,
   onNavigate: PropTypes.func,
+  animal: PropTypes.object,
 };
 
 ValidationStep.defaultProps = {
@@ -82,9 +85,11 @@ ValidationStep.defaultProps = {
  * @param {Array} props.issues - Issues of this severity.
  * @param {(stepId: string, fieldPath?: string) => void} [props.onNavigate] - Repair
  *   routing callback. Repair actions are offered only for export-blocking errors.
+ * @param {string} [props.animalId] - The owning animal's id (threaded to animal-surface
+ *   repair buttons for Animal Editor deep-links).
  * @returns {JSX.Element|null}
  */
-function SeveritySection({ title, severity, issues, onNavigate }) {
+function SeveritySection({ title, severity, issues, onNavigate, animalId }) {
   if (issues.length === 0) return null;
 
   const byStep = groupErrorsByStep(issues);
@@ -106,7 +111,7 @@ function SeveritySection({ title, severity, issues, onNavigate }) {
                   <span className="validation-issue-message">{issue.message}</span>
                   {issue.path && <code className="validation-issue-path">{issue.path}</code>}
                   {repairable && isRepairable(issue) && (
-                    <RepairActionButton issue={issue} onNavigate={onNavigate} />
+                    <RepairActionButton issue={issue} onNavigate={onNavigate} animalId={animalId} />
                   )}
                 </li>
               ))}
@@ -122,6 +127,7 @@ SeveritySection.propTypes = {
   severity: PropTypes.string.isRequired,
   issues: PropTypes.arrayOf(PropTypes.object).isRequired,
   onNavigate: PropTypes.func,
+  animalId: PropTypes.string,
 };
 
 /**

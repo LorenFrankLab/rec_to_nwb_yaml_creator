@@ -4,19 +4,78 @@ import userEvent from '@testing-library/user-event';
 import RepairActions from '../RepairActions';
 
 describe('RepairActions', () => {
-  it('renders a "Fix in <step>" button for a repairable issue and routes to its step', async () => {
+  it('renders a "Fix in <step>" button for a day-surface issue and routes to its step', async () => {
     const user = userEvent.setup();
     const onNavigate = vi.fn();
     render(
       <RepairActions
-        issues={[{ path: 'subject.weight', code: 'required', message: 'weight is required' }]}
+        issues={[{ path: 'session_description', code: 'required', message: 'session description is required' }]}
         onNavigate={onNavigate}
       />
     );
 
     const button = screen.getByRole('button', { name: /fix in overview/i });
     await user.click(button);
-    expect(onNavigate).toHaveBeenCalledWith('overview', 'subject.weight');
+    expect(onNavigate).toHaveBeenCalledWith('overview', 'session_description');
+  });
+
+  it('routes an animal-surface issue (device geometry) to the Animal Editor', async () => {
+    const user = userEvent.setup();
+    const onNavigate = vi.fn();
+    render(
+      <RepairActions
+        issues={[{
+          path: 'electrode_groups[0].location',
+          code: 'empty_location',
+          repairSurface: 'animal',
+          message: 'Electrode group 0 has an empty location.',
+        }]}
+        onNavigate={onNavigate}
+        animalId="remy"
+      />
+    );
+
+    const button = screen.getByRole('button', { name: /fix in animal editor/i });
+    await user.click(button);
+    // The animal surface routes via the 'animal' sentinel so the Day Editor handler
+    // can hand off to the Animal Editor route; the field target is preserved.
+    expect(onNavigate).toHaveBeenCalledWith('animal', 'electrode_groups[0].location');
+  });
+
+  it('routes an AJV schema issue under electrode_groups to the Animal Editor (metadata fallback)', async () => {
+    const user = userEvent.setup();
+    const onNavigate = vi.fn();
+    render(
+      <RepairActions
+        issues={[{ path: 'electrode_groups[0].targeted_x', code: 'type', message: 'must be number' }]}
+        onNavigate={onNavigate}
+        animalId="remy"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /fix in animal editor/i }));
+    expect(onNavigate).toHaveBeenCalledWith('animal', 'electrode_groups[0].targeted_x');
+  });
+
+  it('routes a day-surface device override (bad_channel_out_of_range) to the Devices step', async () => {
+    const user = userEvent.setup();
+    const onNavigate = vi.fn();
+    render(
+      <RepairActions
+        issues={[{
+          path: 'ntrode_electrode_group_channel_map[0]',
+          field: 'bad_channels',
+          step: 'devices',
+          code: 'bad_channel_out_of_range',
+          repairSurface: 'day',
+          message: 'bad channel out of range',
+        }]}
+        onNavigate={onNavigate}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /fix in devices/i }));
+    expect(onNavigate).toHaveBeenCalledWith('devices', 'ntrode_electrode_group_channel_map[0]');
   });
 
   it('does NOT render a fix button for non-repairable identity issues (slash ids)', () => {

@@ -54,6 +54,7 @@ export const rulesValidation = (model) => {
       issues.push({
         path: 'tasks',
         code: 'missing_camera',
+        repairSurface: 'day',
         severity: 'error',
         message: 'Tasks have camera_ids, but no cameras are defined'
       });
@@ -71,6 +72,7 @@ export const rulesValidation = (model) => {
       issues.push({
         path: 'associated_video_files',
         code: 'missing_camera',
+        repairSurface: 'day',
         severity: 'error',
         message: 'Associated video files have camera_ids, but no cameras are defined'
       });
@@ -88,6 +90,7 @@ export const rulesValidation = (model) => {
     issues.push({
       path: 'optogenetics',
       code: 'partial_configuration',
+      repairSurface: 'day',
       severity: 'error',
       message:
         `Partial optogenetics configuration detected. All fields required: ` +
@@ -117,6 +120,7 @@ export const rulesValidation = (model) => {
           issues.push({
             path: `ntrode_electrode_group_channel_map[${ntrode.ntrode_id}]`,
             code: 'duplicate_channels',
+            repairSurface: 'animal',
             severity: 'error',
             message:
               `Ntrode ${ntrode.ntrode_id} has duplicate channel mappings. ` +
@@ -148,6 +152,7 @@ export const rulesValidation = (model) => {
           issues.push({
             path: `ntrode_electrode_group_channel_map[${ntrode.ntrode_id}]`,
             code: 'missing_channels',
+            repairSurface: 'animal',
             severity: 'error',
             message:
               `Ntrode ${ntrode.ntrode_id} has gaps in channel mapping. ` +
@@ -174,6 +179,7 @@ export const rulesValidation = (model) => {
         issues.push({
           path: 'electrode_groups',
           code: 'duplicate_electrode_group_id',
+          repairSurface: 'animal',
           severity: 'error',
           message:
             `Duplicate electrode group id "${id}". Each electrode group must have a ` +
@@ -198,6 +204,7 @@ export const rulesValidation = (model) => {
         issues.push({
           path: 'ntrode_electrode_group_channel_map',
           code: 'duplicate_ntrode_id',
+          repairSurface: 'animal',
           severity: 'error',
           message:
             `Duplicate ntrode id "${id}". Each ntrode must have a unique id — ` +
@@ -219,6 +226,7 @@ export const rulesValidation = (model) => {
       issues.push({
         path: 'subject.species',
         code: 'invalid_species',
+        repairSurface: 'animal',
         severity: 'error',
         message:
           `Species "${sp}" is not DANDI-valid. Use a Latin binomial (e.g. ` +
@@ -230,6 +238,7 @@ export const rulesValidation = (model) => {
       issues.push({
         path: 'subject.subject_id',
         code: 'subject_id_slash',
+        repairSurface: 'none',
         severity: 'error',
         message:
           `Subject ID "${subject.subject_id}" must not contain "/" (DANDI rejects slashes). ` +
@@ -243,6 +252,7 @@ export const rulesValidation = (model) => {
     issues.push({
       path: 'session_id',
       code: 'session_id_slash',
+      repairSurface: 'none',
       severity: 'error',
       message:
         `Session ID "${model.session_id}" must not contain "/" (DANDI rejects slashes). ` +
@@ -273,6 +283,7 @@ export const rulesValidation = (model) => {
           step: 'epochs',
           actionLabel: 'Fix task camera',
           code: 'dangling_camera_ref',
+          repairSurface: 'day',
           severity: 'error',
           message:
             `Task ${ti + 1}${task.task_name ? ` ("${task.task_name}")` : ''} references ` +
@@ -295,6 +306,7 @@ export const rulesValidation = (model) => {
         step: 'epochs',
         actionLabel: 'Fix video camera',
         code: 'dangling_camera_ref',
+        repairSurface: 'day',
         severity: 'error',
         message:
           `Video ${vi + 1}${video.name ? ` ("${video.name}")` : ''} references camera id ` +
@@ -354,6 +366,7 @@ export const rulesValidation = (model) => {
           step: 'devices',
           actionLabel: 'Fix channel map',
           code: 'channel_value_out_of_range',
+          repairSurface: 'animal',
           severity: 'error',
           message:
             `Ntrode ${ntrode.ntrode_id} maps to electrode id(s) ` +
@@ -378,6 +391,7 @@ export const rulesValidation = (model) => {
           step: 'devices',
           actionLabel: 'Fix channel map',
           code: 'channel_key_out_of_range',
+          repairSurface: 'animal',
           severity: 'error',
           message:
             `Ntrode ${ntrode.ntrode_id} channel-map keys must be 0–${expectedKeyCount - 1} ` +
@@ -397,6 +411,7 @@ export const rulesValidation = (model) => {
           step: 'devices',
           actionLabel: 'Fix bad channels',
           code: 'bad_channel_out_of_range',
+          repairSurface: 'day',
           severity: 'error',
           message:
             `Ntrode ${ntrode.ntrode_id} marks bad channel(s) ` +
@@ -432,6 +447,7 @@ export const rulesValidation = (model) => {
           step: 'devices',
           actionLabel: 'Fix channel map',
           code: 'channel_partition_invalid',
+          repairSurface: 'animal',
           severity: 'error',
           message:
             `Electrode group ${groupId} ("${deviceType}") channel map must cover electrode ids ` +
@@ -457,6 +473,7 @@ export const rulesValidation = (model) => {
           step: 'devices',
           actionLabel: 'Set location',
           code: 'empty_location',
+          repairSurface: 'animal',
           severity: 'error',
           message:
             `Electrode group ${group?.id ?? gi} has an empty location. A non-empty brain ` +
@@ -470,6 +487,7 @@ export const rulesValidation = (model) => {
           step: 'devices',
           actionLabel: 'Set targeted location',
           code: 'empty_targeted_location',
+          repairSurface: 'animal',
           severity: 'error',
           message:
             `Electrode group ${group?.id ?? gi} has an empty targeted_location. It is ` +
@@ -496,6 +514,7 @@ export const rulesValidation = (model) => {
           step: 'devices',
           actionLabel: 'Make location capitalization consistent',
           code: 'inconsistent_location_case',
+          repairSurface: 'animal',
           severity: 'warning',
           message:
             `Inconsistent capitalization of the same location across electrode groups: ` +
@@ -520,6 +539,7 @@ export const rulesValidation = (model) => {
           step: 'devices',
           actionLabel: 'Pick a supported probe',
           code: 'unknown_device_type',
+          repairSurface: 'animal',
           severity: 'error',
           message:
             `Electrode group ${group?.id ?? gi} uses device_type "${dt}", which is not a ` +
@@ -550,6 +570,7 @@ export const rulesValidation = (model) => {
         step: 'devices',
         actionLabel: 'Pick a supported probe',
         code: 'inconsistent_probe_catalog',
+        repairSurface: 'animal',
         severity: 'error',
         message:
           `Electrode group ${group?.id ?? gi} uses device_type "${dt}", whose probe metadata ` +
@@ -577,6 +598,7 @@ export const rulesValidation = (model) => {
           step: 'epochs',
           actionLabel: 'Rename behavioral event',
           code: 'duplicate_behavioral_event_name',
+          repairSurface: 'day',
           severity: 'error',
           message:
             `Duplicate behavioral event name "${name}". Each behavioral (DIO) event name ` +
@@ -615,6 +637,7 @@ export const rulesValidation = (model) => {
           step: 'epochs',
           actionLabel: 'Fix task epochs',
           code: 'duplicate_task_epoch',
+          repairSurface: 'day',
           severity: 'error',
           message:
             `Task epoch ${epoch} is used by more than one task. Each epoch belongs to a ` +
@@ -642,6 +665,7 @@ export const rulesValidation = (model) => {
           step: 'epochs',
           actionLabel: 'Fix video epoch',
           code: 'orphaned_video',
+          repairSurface: 'day',
           severity: 'error',
           message:
             `Video ${vi + 1}${video.name ? ` ("${video.name}")` : ''} references task epoch ` +
@@ -673,6 +697,7 @@ export const rulesValidation = (model) => {
           step: 'epochs',
           actionLabel: 'Fix file epoch',
           code: 'orphaned_file',
+          repairSurface: 'day',
           severity: 'error',
           message:
             `Associated file ${fi + 1}${file.name ? ` ("${file.name}")` : ''} references task ` +
@@ -703,6 +728,7 @@ export const rulesValidation = (model) => {
           path: noun,
           field: nameKey,
           step: noun === 'tasks' ? 'epochs' : 'devices',
+          repairSurface: noun === 'tasks' ? 'day' : 'animal',
           actionLabel: label,
           code,
           severity: 'error',
@@ -748,6 +774,7 @@ export const rulesValidation = (model) => {
           step: 'devices',
           actionLabel: 'Fix channel map',
           code: 'dangling_electrode_group_ref',
+          repairSurface: 'animal',
           severity: 'error',
           message:
             `Ntrode ${ntrode.ntrode_id} references electrode group id ${egid}, but no ` +
@@ -774,6 +801,7 @@ export const rulesValidation = (model) => {
           step: 'epochs',
           actionLabel: 'Rename behavioral event description',
           code: 'duplicate_behavioral_event_description',
+          repairSurface: 'day',
           severity: 'error',
           message:
             `Duplicate behavioral event description "${desc}". The converter keys DIO ` +
@@ -801,6 +829,7 @@ export const rulesValidation = (model) => {
           step: 'devices',
           actionLabel: 'Use a unique camera id',
           code: 'duplicate_camera_id',
+          repairSurface: 'animal',
           severity: 'error',
           message:
             `Duplicate camera id "${id}". Camera ids must be unique — the converter names ` +
@@ -838,6 +867,7 @@ export const rulesValidation = (model) => {
           step: 'devices',
           actionLabel: 'Move bad channels to the first ntrode row',
           code: 'multishank_bad_channels_ignored',
+          repairSurface: 'animal',
           severity: 'error',
           message:
             `Bad channels on ntrode ${ntrode.ntrode_id} (electrode group ${gid}) are ignored ` +

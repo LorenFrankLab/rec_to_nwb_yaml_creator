@@ -119,7 +119,7 @@ export default function ExportStep({ animal, day, onNavigate }) {
             Resolve {validationErrors.length} validation{' '}
             {validationErrors.length === 1 ? 'error' : 'errors'} before exporting.
           </p>
-          <RepairActions issues={validationErrors} onNavigate={onNavigate} />
+          <RepairActions issues={validationErrors} onNavigate={onNavigate} animalId={animal?.id} />
         </div>
       )}
 

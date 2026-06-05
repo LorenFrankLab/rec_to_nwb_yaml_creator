@@ -259,3 +259,176 @@ export function stepIdForIssue(issue) {
   // Everything else → Validation (catch-all)
   return 'validation';
 }
+
+/**
+ * User-facing step names, the single source of truth for step→label mapping shared by
+ * the repair-action buttons and the Validation summary's step-group headings (re-exported
+ * from RepairActions for back-compat). The catch-all `validation` step reads as
+ * "Other required fields".
+ *
+ * @type {Record<string, string>}
+ */
+export const STEP_LABELS = {
+  overview: 'Overview',
+  devices: 'Devices',
+  epochs: 'Epochs',
+  validation: 'Other required fields',
+  export: 'Export',
+};
+
+/**
+ * The valid repair surfaces. `day` issues are editable in the Day Editor's own steps;
+ * `animal` issues are only editable in the Animal Editor (device geometry, channel
+ * maps, cameras, data-acq devices, subject identity); `none` issues point at a
+ * read-only identity (slash ids) with no in-app editable target.
+ *
+ * @type {Set<string>}
+ */
+const REPAIR_SURFACES = new Set(['day', 'animal', 'none']);
+
+/**
+ * Explicit surface for each app rule code (Repair Routing Contract). This is the
+ * authoritative map: an issue's `repairSurface` (set by the rule) is preferred, but
+ * this table is the fallback for app-rule codes and the single place the contract is
+ * enumerated. Codes absent here fall through to path/code derivation (notably AJV
+ * schema issues, which carry no app metadata).
+ *
+ * @type {Record<string, 'day'|'animal'|'none'>}
+ */
+const SURFACE_BY_CODE = {
+  // Editable ONLY in the Animal Editor (device geometry, channel maps, probe catalog,
+  // electrode-group identity/location, cameras, data-acq devices, subject identity).
+  channel_value_out_of_range: 'animal',
+  channel_key_out_of_range: 'animal',
+  channel_partition_invalid: 'animal',
+  multishank_bad_channels_ignored: 'animal',
+  inconsistent_probe_catalog: 'animal',
+  empty_location: 'animal',
+  empty_targeted_location: 'animal',
+  inconsistent_location_case: 'animal',
+  unknown_device_type: 'animal',
+  duplicate_electrode_group_id: 'animal',
+  duplicate_ntrode_id: 'animal',
+  dangling_electrode_group_ref: 'animal',
+  duplicate_channels: 'animal',
+  missing_channels: 'animal',
+  duplicate_camera_id: 'animal',
+  divergent_camera_identity: 'animal',
+  divergent_data_acq_identity: 'animal',
+  invalid_species: 'animal',
+  // Editable in the Day Editor (task/video/event re-picks, day bad-channel overrides,
+  // session metadata, optogenetics completeness).
+  dangling_camera_ref: 'day',
+  duplicate_behavioral_event_name: 'day',
+  duplicate_behavioral_event_description: 'day',
+  duplicate_task_epoch: 'day',
+  orphaned_video: 'day',
+  orphaned_file: 'day',
+  divergent_task_identity: 'day',
+  bad_channel_out_of_range: 'day',
+  missing_camera: 'day',
+  partial_configuration: 'day',
+  // No editable in-app target — read-only identity (slash ids). The explanatory
+  // message states the remedy (recreate the animal); a "Fix in …" button would
+  // dead-end on a disabled control.
+  subject_id_slash: 'none',
+  session_id_slash: 'none',
+};
+
+/**
+ * Codes whose affected field is a read-only identity with no editable in-app target.
+ * Kept distinct so the path/code FALLBACK (for schema issues) can honor them even when
+ * the path otherwise looks like a subject/session field.
+ *
+ * @type {Set<string>}
+ */
+const NONE_CODES = new Set(['subject_id_slash', 'session_id_slash']);
+
+/**
+ * Derive the repair surface for an issue that carries no explicit `repairSurface` and
+ * no app-rule code in {@link SURFACE_BY_CODE} — i.e. an AJV schema issue. Device
+ * geometry, channel maps, cameras, data-acq devices, and subject identity are edited in
+ * the Animal Editor; everything else (session/overview, tasks, catch-all) is edited in
+ * the Day Editor. Slash-id codes have no editable target.
+ *
+ * @param {{code?: string, path?: string, instancePath?: string}} issue
+ * @returns {'day'|'animal'|'none'}
+ */
+function deriveSurfaceFromPath(issue) {
+  if (NONE_CODES.has(issue?.code)) return 'none';
+
+  // Normalize an AJV instancePath ("/cameras/0/lens") so the same substring checks
+  // work as for the app rules' dotted paths ("cameras[0].lens").
+  const raw = issue?.path || issue?.instancePath || '';
+  const path = raw.replace(/^\//, '').replace(/\//g, '.');
+
+  // Session/overview fields stay in the Day Editor even though they are "subject"-
+  // adjacent — check these BEFORE the broad subject match below.
+  if (
+    path.includes('session') ||
+    path.includes('experimenter') ||
+    path.includes('lab') ||
+    path.includes('institution') ||
+    path.includes('experiment_description')
+  ) {
+    return 'day';
+  }
+
+  // Animal-Editor-owned domains: electrode geometry, channel maps, cameras, data-acq
+  // devices, and subject metadata (DOB/weight/description/species/sex/genotype).
+  if (
+    path.includes('electrode') ||
+    path.includes('ntrode') ||
+    path.includes('camera') ||
+    path.includes('data_acq') ||
+    path.includes('targeted_') ||
+    path.includes('meters_per_pixel') ||
+    path.includes('lens') ||
+    path.includes('subject')
+  ) {
+    return 'animal';
+  }
+
+  // Everything else (tasks, behavioral events, catch-all required artifacts) → Day Editor.
+  return 'day';
+}
+
+/**
+ * The single source of truth for routing a repair action to the editable OWNER of a
+ * problem (Repair Routing Contract). Returns the surface to navigate to, the Day-Editor
+ * step (for `day` surface) or `null` (for `animal`/`none`), and the button label.
+ *
+ * Resolution order:
+ *   1. an explicit `issue.repairSurface` (set by the app rule) wins;
+ *   2. else the app-rule code's surface from {@link SURFACE_BY_CODE};
+ *   3. else derive from path/code ({@link deriveSurfaceFromPath}) — the fallback for
+ *      AJV schema issues, which carry no app metadata.
+ *
+ * For `day`, the owning step is {@link stepIdForIssue} (which itself honors an explicit
+ * `issue.step`); the label is "Fix in {StepLabel}". For `animal`, the label is
+ * "Fix in Animal Editor". For `none`, no button is rendered (the label is informational).
+ *
+ * @param {{code?: string, path?: string, instancePath?: string, step?: string, repairSurface?: string}} issue
+ * @returns {{surface: 'day'|'animal'|'none', step: string|null, label: string}}
+ */
+export function repairTargetForIssue(issue) {
+  let surface =
+    issue?.repairSurface && REPAIR_SURFACES.has(issue.repairSurface)
+      ? issue.repairSurface
+      : SURFACE_BY_CODE[issue?.code];
+  if (!surface) {
+    surface = deriveSurfaceFromPath(issue);
+  }
+
+  if (surface === 'animal') {
+    return { surface: 'animal', step: null, label: 'Fix in Animal Editor' };
+  }
+  if (surface === 'none') {
+    return { surface: 'none', step: null, label: 'No in-app fix' };
+  }
+
+  // Day surface: route to the owning Day-Editor step.
+  const step = stepIdForIssue(issue);
+  const stepLabel = STEP_LABELS[step] || step;
+  return { surface: 'day', step, label: `Fix in ${stepLabel}` };
+}

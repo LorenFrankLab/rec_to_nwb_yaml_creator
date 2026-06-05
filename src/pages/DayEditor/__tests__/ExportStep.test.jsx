@@ -128,18 +128,19 @@ describe('ExportStep', () => {
     expect(shadowSpy).not.toHaveBeenCalled();
   });
 
-  it('offers a repair action per error that routes to the owning step with the field target', async () => {
+  it('offers a repair action per error that routes to the editable owner with the field target', async () => {
     const user = userEvent.setup();
     const onNavigate = vi.fn();
     const { animal, day } = buildExportErrorWorkspace();
 
     render(<ExportStep animal={animal} day={day} onNavigate={onNavigate} />);
 
-    // The targeted_x type error routes to the Devices step.
-    const repairButton = screen.getByRole('button', { name: /devices/i });
+    // The targeted_x type error is device geometry — editable only in the Animal Editor —
+    // so the repair routes to the 'animal' surface, not the Day-Editor Devices step.
+    const repairButton = screen.getByRole('button', { name: /fix in animal editor/i });
     await user.click(repairButton);
 
-    expect(onNavigate).toHaveBeenCalledWith('devices', expect.stringContaining('electrode_groups'));
+    expect(onNavigate).toHaveBeenCalledWith('animal', expect.stringContaining('electrode_groups'));
   });
 
   it('shows a preflight summary derived from the merged day on a valid day', () => {

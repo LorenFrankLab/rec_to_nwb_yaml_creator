@@ -68,18 +68,34 @@ describe('ValidationStep', () => {
     expect(screen.getByText('unclassified issue')).toBeInTheDocument();
   });
 
-  it('offers a repair action on each error that routes to the owning step with the field target', async () => {
+  it('routes a day-surface error (session) to the owning Day-Editor step with the field target', async () => {
+    const user = userEvent.setup();
+    const onNavigate = vi.fn();
+    vi.spyOn(validation, 'validate').mockReturnValue([
+      { severity: 'error', path: 'session_description', code: 'required', message: 'session description is required' },
+    ]);
+
+    render(<ValidationStep {...baseProps} onNavigate={onNavigate} />);
+
+    await user.click(screen.getByRole('button', { name: /fix in overview/i }));
+
+    expect(onNavigate).toHaveBeenCalledWith('overview', 'session_description');
+  });
+
+  it('routes an animal-surface error (device geometry) to the Animal Editor', async () => {
     const user = userEvent.setup();
     const onNavigate = vi.fn();
     vi.spyOn(validation, 'validate').mockReturnValue([
       { severity: 'error', path: 'electrode_groups[0].targeted_x', code: 'type', message: 'must be number' },
     ]);
 
-    render(<ValidationStep {...baseProps} onNavigate={onNavigate} />);
+    render(<ValidationStep {...baseProps} animal={{ id: 'remy' }} onNavigate={onNavigate} />);
 
-    await user.click(screen.getByRole('button', { name: /fix in devices/i }));
+    // The button names the Animal Editor (the editable owner), not the Devices step.
+    await user.click(screen.getByRole('button', { name: /fix in animal editor/i }));
+    expect(screen.queryByRole('button', { name: /fix in devices/i })).not.toBeInTheDocument();
 
-    expect(onNavigate).toHaveBeenCalledWith('devices', 'electrode_groups[0].targeted_x');
+    expect(onNavigate).toHaveBeenCalledWith('animal', 'electrode_groups[0].targeted_x');
   });
 
   it('does not render repair actions for non-error issues', () => {

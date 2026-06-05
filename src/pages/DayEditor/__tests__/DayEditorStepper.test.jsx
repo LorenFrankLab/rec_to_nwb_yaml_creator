@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, waitFor } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StoreProvider } from '../../../state/StoreContext';
 import DayEditorStepper from '../DayEditorStepper';
@@ -207,15 +207,14 @@ describe('DayEditorStepper', () => {
     expect(backButton.textContent).toContain('Back');
   });
 
-  // Full repair round-trip for a subject.* issue. The mock animal's species "Rat" is
+  // Repair routing for a subject identity issue. The mock animal's species "Rat" is
   // free text (not a Latin binomial), so the Validation step shows a blocking
-  // `invalid_species` error that routes to Overview. Clicking its repair button must
-  // (a) land on Overview, (b) expand the collapsed inherited-subject section so the
-  // species control exists, and (c) focus that control — the timing race the
-  // during-render expand exists to prevent (a passive effect would expand a tick
-  // after the parent searched for the anchor, miss it, and fall back to <main>).
-  it('repairs an inherited subject field end-to-end: expands the section and focuses the control', async () => {
+  // `invalid_species` error. Subject identity is editable only in the Animal Editor
+  // (the Day Editor inherits it), so under the Repair Routing Contract the repair button
+  // routes to the Animal Editor route rather than dead-ending in the Day Editor.
+  it('routes an inherited subject-identity repair (species) to the Animal Editor', async () => {
     const user = userEvent.setup();
+    window.location.hash = '#/day/remy-2023-06-22';
 
     render(
       <StoreProvider initialState={mockInitialState}>
@@ -226,21 +225,15 @@ describe('DayEditorStepper', () => {
     // Go to the Validation step where blocking issues list their repair actions.
     await user.click(screen.getByRole('button', { name: /^Validation/i }));
 
-    // The species issue (subject.species → Overview) offers a "Fix in Overview" button.
+    // The species issue (subject.species) offers a "Fix in Animal Editor" button.
     const speciesIssue = screen.getByText(/Species "Rat" is not DANDI-valid/i);
     const speciesRepair = within(speciesIssue.closest('li')).getByRole('button', {
-      name: /fix in overview/i,
+      name: /fix in animal editor/i,
     });
     await user.click(speciesRepair);
 
-    // Lands on Overview with the inherited section expanded (during-render, so the
-    // control is present in the same commit the parent searches for the anchor).
-    expect(screen.getByText('Subject Information')).toBeInTheDocument();
-    const speciesInput = screen.getByLabelText(/species/i);
-    expect(speciesInput).toHaveAttribute('data-field-path', 'subject.species');
-
-    // The parent stepper focuses the anchor on the next animation frame.
-    await waitFor(() => expect(speciesInput).toHaveFocus());
+    // Hands off to the Animal Editor route for this animal (the editable owner).
+    expect(window.location.hash).toBe('#/animal/remy/editor');
   });
 
   it('does not offer a repair button for a slash session_id (read-only identity dead-end)', async () => {

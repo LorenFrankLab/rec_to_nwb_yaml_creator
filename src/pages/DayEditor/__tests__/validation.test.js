@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateField, computeStepStatus, computeDevicesStatus, groupErrorsByStep, stepIdForIssue } from '../validation';
+import { validateField, computeStepStatus, computeDevicesStatus, groupErrorsByStep, stepIdForIssue, repairTargetForIssue } from '../validation';
 import { makeAnimalWithCamerasAndDay } from './taskFixtures';
 
 describe('stepIdForIssue', () => {
@@ -378,5 +378,101 @@ describe('groupErrorsByStep', () => {
 
     // Should go to validation step as catch-all
     expect(grouped.validation).toHaveLength(1);
+  });
+});
+
+describe('repairTargetForIssue (Repair Routing Contract)', () => {
+  // The single source of truth for "where is this issue fixed". Every app error code
+  // must resolve to a surface in {day, animal, none} with a non-empty label, and every
+  // day-surface issue must resolve to a valid routable step.
+  const ROUTABLE_STEPS = ['overview', 'devices', 'epochs', 'validation'];
+
+  // EXACT surface mapping from the Repair Routing Contract. Each code is paired with a
+  // representative issue (path + the metadata the rule actually sets) so the helper sees
+  // what production sees.
+  const ANIMAL_CODES = [
+    { code: 'channel_value_out_of_range', issue: { code: 'channel_value_out_of_range', path: 'ntrode_electrode_group_channel_map[0]', field: 'map', step: 'devices', repairSurface: 'animal' } },
+    { code: 'channel_key_out_of_range', issue: { code: 'channel_key_out_of_range', path: 'ntrode_electrode_group_channel_map[0]', field: 'map', step: 'devices', repairSurface: 'animal' } },
+    { code: 'channel_partition_invalid', issue: { code: 'channel_partition_invalid', path: 'ntrode_electrode_group_channel_map', field: 'map', step: 'devices', repairSurface: 'animal' } },
+    { code: 'multishank_bad_channels_ignored', issue: { code: 'multishank_bad_channels_ignored', path: 'ntrode_electrode_group_channel_map[1]', field: 'bad_channels', step: 'devices', repairSurface: 'animal' } },
+    { code: 'inconsistent_probe_catalog', issue: { code: 'inconsistent_probe_catalog', path: 'electrode_groups[0].device_type', field: 'device_type', step: 'devices', repairSurface: 'animal' } },
+    { code: 'empty_location', issue: { code: 'empty_location', path: 'electrode_groups[0].location', field: 'location', step: 'devices', repairSurface: 'animal' } },
+    { code: 'empty_targeted_location', issue: { code: 'empty_targeted_location', path: 'electrode_groups[0].targeted_location', field: 'targeted_location', step: 'devices', repairSurface: 'animal' } },
+    { code: 'inconsistent_location_case', issue: { code: 'inconsistent_location_case', path: 'electrode_groups', field: 'location', step: 'devices', repairSurface: 'animal', severity: 'warning' } },
+    { code: 'unknown_device_type', issue: { code: 'unknown_device_type', path: 'electrode_groups[0].device_type', field: 'device_type', step: 'devices', repairSurface: 'animal' } },
+    { code: 'duplicate_electrode_group_id', issue: { code: 'duplicate_electrode_group_id', path: 'electrode_groups', repairSurface: 'animal' } },
+    { code: 'duplicate_ntrode_id', issue: { code: 'duplicate_ntrode_id', path: 'ntrode_electrode_group_channel_map', repairSurface: 'animal' } },
+    { code: 'dangling_electrode_group_ref', issue: { code: 'dangling_electrode_group_ref', path: 'ntrode_electrode_group_channel_map[0]', field: 'electrode_group_id', step: 'devices', repairSurface: 'animal' } },
+    { code: 'duplicate_channels', issue: { code: 'duplicate_channels', path: 'ntrode_electrode_group_channel_map[0]', repairSurface: 'animal' } },
+    { code: 'missing_channels', issue: { code: 'missing_channels', path: 'ntrode_electrode_group_channel_map[0]', repairSurface: 'animal' } },
+    { code: 'duplicate_camera_id', issue: { code: 'duplicate_camera_id', path: 'cameras', field: 'id', step: 'devices', repairSurface: 'animal' } },
+    { code: 'divergent_camera_identity', issue: { code: 'divergent_camera_identity', path: 'cameras', field: 'camera_name', step: 'devices', repairSurface: 'animal' } },
+    { code: 'divergent_data_acq_identity', issue: { code: 'divergent_data_acq_identity', path: 'data_acq_device', field: 'name', step: 'devices', repairSurface: 'animal' } },
+    { code: 'invalid_species', issue: { code: 'invalid_species', path: 'subject.species', repairSurface: 'animal' } },
+  ];
+
+  const DAY_CODES = [
+    { code: 'dangling_camera_ref', step: 'epochs', issue: { code: 'dangling_camera_ref', path: 'tasks[0].camera_id', field: 'camera_id', step: 'epochs', repairSurface: 'day' } },
+    { code: 'duplicate_behavioral_event_name', step: 'epochs', issue: { code: 'duplicate_behavioral_event_name', path: 'behavioral_events', field: 'name', step: 'epochs', repairSurface: 'day' } },
+    { code: 'duplicate_behavioral_event_description', step: 'epochs', issue: { code: 'duplicate_behavioral_event_description', path: 'behavioral_events', field: 'description', step: 'epochs', repairSurface: 'day' } },
+    { code: 'duplicate_task_epoch', step: 'epochs', issue: { code: 'duplicate_task_epoch', path: 'tasks', field: 'task_epochs', step: 'epochs', repairSurface: 'day' } },
+    { code: 'orphaned_video', step: 'epochs', issue: { code: 'orphaned_video', path: 'associated_video_files[0].task_epochs', field: 'task_epochs', step: 'epochs', repairSurface: 'day' } },
+    { code: 'orphaned_file', step: 'epochs', issue: { code: 'orphaned_file', path: 'associated_files[0].task_epochs', field: 'task_epochs', step: 'epochs', repairSurface: 'day' } },
+    { code: 'divergent_task_identity', step: 'epochs', issue: { code: 'divergent_task_identity', path: 'tasks', field: 'task_name', step: 'epochs', repairSurface: 'day' } },
+    { code: 'bad_channel_out_of_range', step: 'devices', issue: { code: 'bad_channel_out_of_range', path: 'ntrode_electrode_group_channel_map[0]', field: 'bad_channels', step: 'devices', repairSurface: 'day' } },
+    { code: 'missing_camera', step: 'epochs', issue: { code: 'missing_camera', path: 'tasks', repairSurface: 'day' } },
+    { code: 'partial_configuration', step: 'validation', issue: { code: 'partial_configuration', path: 'optogenetics', repairSurface: 'day' } },
+  ];
+
+  const NONE_CODES = [
+    { code: 'subject_id_slash', issue: { code: 'subject_id_slash', path: 'subject.subject_id' } },
+    { code: 'session_id_slash', issue: { code: 'session_id_slash', path: 'session_id' } },
+  ];
+
+  it.each([...ANIMAL_CODES, ...DAY_CODES, ...NONE_CODES])(
+    'returns a {day|animal|none} surface and a non-empty label for $code',
+    ({ issue }) => {
+      const target = repairTargetForIssue(issue);
+      expect(['day', 'animal', 'none']).toContain(target.surface);
+      expect(typeof target.label).toBe('string');
+      expect(target.label.length).toBeGreaterThan(0);
+    }
+  );
+
+  it.each(ANIMAL_CODES)('routes $code to the animal surface', ({ issue }) => {
+    expect(repairTargetForIssue(issue).surface).toBe('animal');
+  });
+
+  it.each(DAY_CODES)('routes $code to the day surface on step $step', ({ issue, step }) => {
+    const target = repairTargetForIssue(issue);
+    expect(target.surface).toBe('day');
+    expect(ROUTABLE_STEPS).toContain(target.step);
+    expect(target.step).toBe(step);
+  });
+
+  it.each(NONE_CODES)('routes $code to the none surface (no button)', ({ issue }) => {
+    expect(repairTargetForIssue(issue).surface).toBe('none');
+  });
+
+  it('falls back to deriving the animal surface from an AJV schema path with no metadata', () => {
+    // A schema issue under electrode_groups carries no repairSurface — it must still
+    // derive to the animal surface (where geometry is edited).
+    expect(repairTargetForIssue({ code: 'type', path: 'electrode_groups[0].targeted_x' }).surface).toBe('animal');
+    expect(repairTargetForIssue({ code: 'required', instancePath: '/cameras/0/lens' }).surface).toBe('animal');
+    expect(repairTargetForIssue({ code: 'required', path: 'subject.weight' }).surface).toBe('animal');
+  });
+
+  it('falls back to the day surface for a session/overview schema issue', () => {
+    expect(repairTargetForIssue({ code: 'required', path: 'session_description' }).surface).toBe('day');
+    expect(repairTargetForIssue({ code: 'required', path: 'session_description' }).step).toBe('overview');
+  });
+
+  it('keeps the slash-id schema fallback on the none surface', () => {
+    expect(repairTargetForIssue({ code: 'subject_id_slash', path: 'subject.subject_id' }).surface).toBe('none');
+  });
+
+  it('prefers an explicit repairSurface over path/code derivation', () => {
+    // A subject path would derive to animal, but an explicit day surface wins.
+    expect(repairTargetForIssue({ code: 'x', path: 'subject.species', repairSurface: 'day' }).surface).toBe('day');
   });
 });

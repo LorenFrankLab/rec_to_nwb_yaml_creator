@@ -115,15 +115,24 @@ export default function DayEditorStepper() {
   // itself (focusing the main content region).
   const [focusRequest, setFocusRequest] = useState(null);
   const focusTokenRef = useRef(0);
-  const handleStepNavigate = useCallback((stepId, fieldPath) => {
-    setCurrentStep(stepId);
+  const handleStepNavigate = useCallback((target, fieldPath) => {
+    // An 'animal' target routes to the Animal Editor (the editable owner of device
+    // geometry, channel maps, cameras, data-acq devices, and subject identity),
+    // mirroring the camera-banner link. Day-Editor step targets stay in this stepper.
+    if (target === 'animal') {
+      if (animal?.id) {
+        window.location.hash = `#/animal/${encodeURIComponent(animal.id)}/editor`;
+      }
+      return;
+    }
+    setCurrentStep(target);
     if (fieldPath) {
       focusTokenRef.current += 1;
       setFocusRequest({ fieldPath, token: focusTokenRef.current });
     } else {
       setFocusRequest(null);
     }
-  }, []);
+  }, [animal?.id]);
 
   useEffect(() => {
     if (!focusRequest) return undefined;
