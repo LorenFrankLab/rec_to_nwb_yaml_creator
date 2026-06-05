@@ -23,8 +23,10 @@ describe('BadChannelsEditor — multi-shank probe-wide selector', () => {
   const DEVICE_TYPE = '64c-3s6mm6cm-20um-40um-sl';
 
   let onUpdate;
+  let onBatchUpdate;
   beforeEach(() => {
     onUpdate = vi.fn();
+    onBatchUpdate = vi.fn();
   });
 
   it('renders one probe-wide selector spanning electrode ids 0..63 (not per-shank rows)', () => {
@@ -34,6 +36,7 @@ describe('BadChannelsEditor — multi-shank probe-wide selector', () => {
         deviceType={DEVICE_TYPE}
         badChannels={{ '10': [], '11': [], '12': [] }}
         onUpdate={onUpdate}
+        onBatchUpdate={onBatchUpdate}
       />
     );
 
@@ -45,7 +48,7 @@ describe('BadChannelsEditor — multi-shank probe-wide selector', () => {
     expect(screen.queryByText(/Ntrode ID: 11/i)).not.toBeInTheDocument();
   });
 
-  it('writes a marked probe-local electrode (42) to the FIRST ntrode row id', async () => {
+  it('writes a marked probe-local electrode (42) to the FIRST ntrode row id via a batched update', async () => {
     const user = userEvent.setup();
     render(
       <BadChannelsEditor
@@ -53,12 +56,15 @@ describe('BadChannelsEditor — multi-shank probe-wide selector', () => {
         deviceType={DEVICE_TYPE}
         badChannels={{ '10': [], '11': [], '12': [] }}
         onUpdate={onUpdate}
+        onBatchUpdate={onBatchUpdate}
       />
     );
 
     await user.click(screen.getByLabelText(/electrode 42/i));
     // First ntrode row's id is 10 — converter honors bad_channels from this row only.
-    expect(onUpdate).toHaveBeenCalledWith('10', [42]);
+    // The probe-wide selector writes the whole map atomically (no per-row race).
+    expect(onBatchUpdate).toHaveBeenCalledTimes(1);
+    expect(onBatchUpdate.mock.calls[0][0]['10']).toEqual([42]);
   });
 
   it('can mark the highest probe-local electrode (63)', async () => {
@@ -69,11 +75,12 @@ describe('BadChannelsEditor — multi-shank probe-wide selector', () => {
         deviceType={DEVICE_TYPE}
         badChannels={{ '10': [], '11': [], '12': [] }}
         onUpdate={onUpdate}
+        onBatchUpdate={onBatchUpdate}
       />
     );
 
     await user.click(screen.getByLabelText(/electrode 63/i));
-    expect(onUpdate).toHaveBeenCalledWith('10', [63]);
+    expect(onBatchUpdate.mock.calls[0][0]['10']).toEqual([63]);
   });
 
   it('reflects existing first-row bad_channels as checked and appends in sorted order', async () => {
@@ -84,12 +91,13 @@ describe('BadChannelsEditor — multi-shank probe-wide selector', () => {
         deviceType={DEVICE_TYPE}
         badChannels={{ '10': [42], '11': [], '12': [] }}
         onUpdate={onUpdate}
+        onBatchUpdate={onBatchUpdate}
       />
     );
 
     expect(screen.getByLabelText(/electrode 42/i)).toBeChecked();
     await user.click(screen.getByLabelText('Electrode 5', { exact: true }));
-    expect(onUpdate).toHaveBeenCalledWith('10', [5, 42]);
+    expect(onBatchUpdate.mock.calls[0][0]['10']).toEqual([5, 42]);
   });
 });
 
@@ -126,7 +134,8 @@ describe('BadChannelsEditor — multi-shank later-row corruption MIGRATION (HIGH
   // corruption / migration). The converter ignores later rows, so the
   // multishank_bad_channels_ignored rule fires and blocks export. The probe-wide
   // selector HIDES later-row controls, so the ONLY repair path is: editing the
-  // probe-wide selection must ALSO clear the later rows' bad_channels.
+  // probe-wide selection must MIGRATE the later rows' marks (translated to probe-local
+  // ids) onto the first row and clear the later rows — emitted as ONE atomic batch.
   const DEVICE_TYPE = '64c-3s6mm6cm-20um-40um-sl';
   const corruptedNtrodes = () => [
     { ntrode_id: 10, electrode_group_id: 2, bad_channels: [], map: Object.fromEntries(Array.from({ length: 21 }, (_, i) => [i, i])) },
@@ -135,8 +144,10 @@ describe('BadChannelsEditor — multi-shank later-row corruption MIGRATION (HIGH
   ];
 
   let onUpdate;
+  let onBatchUpdate;
   beforeEach(() => {
     onUpdate = vi.fn();
+    onBatchUpdate = vi.fn();
   });
 
   it('surfaces a load-time notice that later-row marks will be consolidated to the first row', () => {
@@ -146,6 +157,7 @@ describe('BadChannelsEditor — multi-shank later-row corruption MIGRATION (HIGH
         deviceType={DEVICE_TYPE}
         badChannels={{ '10': [], '11': [3], '12': [7] }}
         onUpdate={onUpdate}
+        onBatchUpdate={onBatchUpdate}
       />
     );
 
@@ -160,12 +172,13 @@ describe('BadChannelsEditor — multi-shank later-row corruption MIGRATION (HIGH
         deviceType={DEVICE_TYPE}
         badChannels={{ '10': [], '11': [], '12': [] }}
         onUpdate={onUpdate}
+        onBatchUpdate={onBatchUpdate}
       />
     );
     expect(screen.queryByRole('status')).toBeNull();
   });
 
-  it('clears ALL later rows AND writes the selection to the first row when the probe-wide selection is edited', async () => {
+  it('MIGRATES (translated) later-row marks onto the first row and clears them in ONE batch', async () => {
     const user = userEvent.setup();
     render(
       <BadChannelsEditor
@@ -173,16 +186,21 @@ describe('BadChannelsEditor — multi-shank later-row corruption MIGRATION (HIGH
         deviceType={DEVICE_TYPE}
         badChannels={{ '10': [], '11': [3], '12': [7] }}
         onUpdate={onUpdate}
+        onBatchUpdate={onBatchUpdate}
       />
     );
 
     await user.click(screen.getByLabelText(/electrode 42/i));
 
-    // First row gets the probe-wide selection.
-    expect(onUpdate).toHaveBeenCalledWith('10', [42]);
+    // Exactly one atomic write of the whole map (no racing per-ntrode onUpdate).
+    expect(onBatchUpdate).toHaveBeenCalledTimes(1);
+    expect(onUpdate).not.toHaveBeenCalled();
+    const batched = onBatchUpdate.mock.calls[0][0];
+    // First row = union(new toggle 42, translated 11.map[3]===24, 12.map[7]===49).
+    expect(batched['10']).toEqual([24, 42, 49]);
     // Both later rows that carried bad channels are cleared to [].
-    expect(onUpdate).toHaveBeenCalledWith('11', []);
-    expect(onUpdate).toHaveBeenCalledWith('12', []);
+    expect(batched['11']).toEqual([]);
+    expect(batched['12']).toEqual([]);
   });
 
   it('after migration the model passes the multishank_bad_channels_ignored rule', () => {
@@ -193,7 +211,7 @@ describe('BadChannelsEditor — multi-shank later-row corruption MIGRATION (HIGH
       ],
       ntrode_electrode_group_channel_map: corruptedNtrodes().map((n) =>
         n.ntrode_id === 10
-          ? { ...n, bad_channels: [42] }
+          ? { ...n, bad_channels: [24, 42, 49] }
           : { ...n, bad_channels: [] }
       ),
     };

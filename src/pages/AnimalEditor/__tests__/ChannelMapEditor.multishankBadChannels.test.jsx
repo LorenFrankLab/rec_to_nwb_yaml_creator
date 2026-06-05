@@ -202,6 +202,7 @@ describe('ChannelMapEditor — multi-shank later-row corruption MIGRATION (HIGH)
   const shankMap = (offset, len) =>
     Object.fromEntries(Array.from({ length: len }, (_, i) => [i, offset + i]));
   // LOADED with bad_channels on LATER rows (persisted corruption the converter ignores).
+  // Row 11 map[3] === 24, row 12 map[7] === 49 (probe-local ids).
   const corruptedMaps = () => [
     { electrode_group_id: 2, ntrode_id: 10, bad_channels: [], map: shankMap(0, 21) },
     { electrode_group_id: 2, ntrode_id: 11, bad_channels: [3], map: shankMap(21, 21) },
@@ -233,7 +234,7 @@ describe('ChannelMapEditor — multi-shank later-row corruption MIGRATION (HIGH)
     expect(screen.queryByRole('status')).toBeNull();
   });
 
-  it('clears later rows AND writes the selection to the first row when the probe-wide selection is edited, then saves clean', async () => {
+  it('MIGRATES (translated) later-row marks onto the first row, clears later rows, then saves clean', async () => {
     const user = userEvent.setup();
     const onSave = vi.fn();
     render(
@@ -250,8 +251,10 @@ describe('ChannelMapEditor — multi-shank later-row corruption MIGRATION (HIGH)
 
     expect(onSave).toHaveBeenCalledTimes(1);
     const saved = onSave.mock.calls[0][0];
-    expect(saved.find((m) => m.ntrode_id === 10).bad_channels).toEqual([42]);
-    // Later-row corruption is cleared by the migration.
+    // First row = union(new toggle 42, translated 11.map[3]===24, 12.map[7]===49).
+    // The later-row marks are TRANSLATED to probe-local ids, NOT dropped.
+    expect(saved.find((m) => m.ntrode_id === 10).bad_channels).toEqual([24, 42, 49]);
+    // Later rows are cleared by the migration.
     expect(saved.find((m) => m.ntrode_id === 11).bad_channels).toEqual([]);
     expect(saved.find((m) => m.ntrode_id === 12).bad_channels).toEqual([]);
   });

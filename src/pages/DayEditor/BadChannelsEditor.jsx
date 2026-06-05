@@ -25,11 +25,21 @@ import './DayEditor.scss';
  * converter silently ignores those, so the `multishank_bad_channels_ignored` rule
  * fires and BLOCKS export — but the probe-wide selector HIDES the later-row controls,
  * leaving the user with no way to clear them (a repair DEAD-END). So whenever the user
- * edits the probe-wide selection, we MIGRATE the group to a clean state: write the
- * selection to the FIRST row AND clear `bad_channels` to `[]` on every later row that
- * still carries any. Touching the selector therefore also repairs the corruption, and
- * the rule then passes. On load, if any later row carries bad channels we surface a
- * brief notice so the user understands the upcoming consolidation.
+ * edits the probe-wide selection, we MIGRATE the group to a clean state: TRANSLATE each
+ * later row's marks (which are KEYS into that row's `map`, i.e. row-local indices) to
+ * the probe-local electrode id `row.map[key]` (falling back to the raw key if the map
+ * lacks it), UNION those onto the FIRST row's selection, then CLEAR every later row.
+ * The translated ids are never silently dropped. Touching the selector therefore also
+ * repairs the corruption, and the rule then passes.
+ *
+ * ATOMIC BATCHED WRITE (HIGH review finding): the Day Editor's save path rebuilds the
+ * whole `deviceOverrides` from a stale render closure and REPLACES it, so firing N
+ * separate per-ntrode `onUpdate` calls in one handler RACES and clobbers earlier
+ * writes (losing the first-row selection or reintroducing a later-row value). The
+ * multi-shank migration therefore emits the ENTIRE new `bad_channels` map in ONE call
+ * via `onBatchUpdate(badChannelsObject)`. Single-shank editing stays per-ntrode (one
+ * `onUpdate` per change is already atomic). On load, if any later row carries bad
+ * channels we surface a brief notice so the user understands the upcoming consolidation.
  *
  * REPAIR-FOCUS ANCHORS: the bad-channel control carries `data-field-path` set to
  * `ntrode_electrode_group_channel_map[<ntrode_id>]`, the exact path the
@@ -43,14 +53,19 @@ import './DayEditor.scss';
  * @param {object} props
  * @param {Array} props.ntrodes - Ntrode channel maps for this electrode group
  * @param {object} props.badChannels - Current bad channels: { [ntrodeId]: [channelNumbers] }
+ *   (the FULL map across all groups, so a batched write can rewrite the whole object).
  * @param {Function} props.onUpdate - Callback: (ntrodeId, badChannelArray) => void
+ *   (single-shank, per-ntrode atomic write).
+ * @param {Function} [props.onBatchUpdate] - Callback: (badChannelsObject) => void —
+ *   atomic write of the WHOLE bad_channels map, used by the multi-shank probe-wide
+ *   migration so concurrent per-ntrode writes can't race/clobber.
  * @param {string} [props.deviceType] - The electrode group's device type; enables the
  *   probe-wide selector for multi-shank probes (via the verified probe catalog).
  * @param {object} props.errors - Validation errors: { [ntrodeId]: errorMessage }
  * @param {object} props.warnings - Validation warnings: { [ntrodeId]: warningMessage }
  * @returns {JSX.Element}
  */
-export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, deviceType, errors, warnings }) {
+export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBatchUpdate, deviceType, errors, warnings }) {
   const [expandedMaps, setExpandedMaps] = useState({});
 
   if (!ntrodes || ntrodes.length === 0) {
@@ -118,18 +133,53 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, devi
     const hasLaterRowCorruption = laterRowsWithBad.length > 0;
 
     /**
-     * Probe-wide toggle: update the FIRST row with the selection AND migrate the
-     * group clean by clearing bad_channels on every later row that still carries
-     * any. This makes touching the selector repair loaded later-row corruption so
-     * the `multishank_bad_channels_ignored` rule passes.
+     * Translate a later row's stored bad-channel entries (row-local map KEYS) to
+     * probe-local electrode ids via `row.map[key]`. The probe-wide selector and the
+     * converter both speak probe-local ids, so a later row's marks must be carried
+     * over by their mapped id, never by their raw row-local index. Falls back to the
+     * raw key when the row's map lacks it (so a value is never silently dropped).
+     * @param {object} ntrode - A later ntrode row from `ntrodes`.
+     * @returns {number[]} Probe-local electrode ids for this row's stored marks.
+     */
+    const translateLaterRowMarks = (ntrode) => {
+      const stored = badChannels[String(ntrode.ntrode_id)] || [];
+      const map = ntrode.map || {};
+      return stored.map((key) => {
+        const mapped = map[key];
+        return mapped === undefined || mapped === null ? key : mapped;
+      });
+    };
+
+    /**
+     * Probe-wide toggle: compute the ENTIRE new bad_channels map and write it in ONE
+     * atomic `onBatchUpdate` call (the Day Editor replaces deviceOverrides wholesale,
+     * so separate per-ntrode writes would race/clobber). The first row becomes the
+     * UNION of (its toggled selection) and (every later row's TRANSLATED marks), and
+     * every later row is cleared to `[]`. This both edits the selection and repairs
+     * loaded later-row corruption so `multishank_bad_channels_ignored` passes.
      * @param {number} electrodeId - Probe-local electrode id.
      * @param {boolean} isChecked - Whether the box was checked.
      */
     const handleProbeWideToggle = (electrodeId, isChecked) => {
-      handleChannelToggle(firstNtrode.ntrode_id, electrodeId, isChecked);
-      laterRowsWithBad.forEach((n) => {
-        onUpdate(String(n.ntrode_id), []);
+      // 1. First-row selection after toggling this electrode.
+      const firstSelection = isChecked
+        ? [...currentBadChannels, electrodeId]
+        : currentBadChannels.filter((ch) => ch !== electrodeId);
+
+      // 2. Union with translated later-row marks (never dropped).
+      const translated = laterNtrodes.flatMap((n) => translateLaterRowMarks(n));
+      const firstUnion = Array.from(new Set([...firstSelection, ...translated])).sort(
+        (a, b) => a - b
+      );
+
+      // 3. Build the WHOLE new bad_channels map: first row = union, later rows = [].
+      const next = { ...badChannels };
+      next[firstKey] = firstUnion;
+      laterNtrodes.forEach((n) => {
+        next[String(n.ntrode_id)] = [];
       });
+
+      onBatchUpdate(next);
     };
 
     return (
@@ -323,12 +373,14 @@ BadChannelsEditor.propTypes = {
   ).isRequired,
   badChannels: PropTypes.objectOf(PropTypes.arrayOf(PropTypes.number)).isRequired,
   onUpdate: PropTypes.func.isRequired,
+  onBatchUpdate: PropTypes.func,
   deviceType: PropTypes.string,
   errors: PropTypes.object,
   warnings: PropTypes.object,
 };
 
 BadChannelsEditor.defaultProps = {
+  onBatchUpdate: undefined,
   deviceType: undefined,
   errors: {},
   warnings: {},

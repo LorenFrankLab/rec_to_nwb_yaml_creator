@@ -156,6 +156,45 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
   }, [onFieldUpdate]);
 
   /**
+   * Atomic write of the WHOLE bad_channels map. The Day Editor stepper rebuilds
+   * `deviceOverrides` from a stale render closure and REPLACES it, so the multi-shank
+   * probe-wide migration (which touches several ntrode rows at once) must write the
+   * entire map in a single update — separate per-ntrode writes would race/clobber.
+   * @param {object} badChannelsObject - The complete `{ [ntrodeId]: number[] }` map.
+   */
+  const handleBadChannelsBatchUpdate = useCallback((badChannelsObject) => {
+    onFieldUpdate('deviceOverrides.bad_channels', badChannelsObject);
+  }, [onFieldUpdate]);
+
+  // STALE OVERRIDE REPAIR (review finding): a `deviceOverrides.bad_channels` key that
+  // matches NO resolved ntrode_id (e.g. a 999 left over from a removed/reconfigured
+  // ntrode) emits a `stale_bad_channel_override` validation issue routed to this step,
+  // but it has no ntrode row, no anchor, and no clear action — a repair dead-end. We
+  // surface a focusable repair control per stale key (below) that removes only that
+  // key via a single atomic update.
+  const resolvedNtrodeIds = useMemo(
+    () => new Set(ntrodeChannelMap.map((n) => String(n.ntrode_id))),
+    [ntrodeChannelMap]
+  );
+  const staleOverrideKeys = useMemo(() => {
+    const overrides = day.deviceOverrides?.bad_channels;
+    if (!overrides || typeof overrides !== 'object') return [];
+    return Object.keys(overrides).filter((key) => !resolvedNtrodeIds.has(String(key)));
+  }, [day.deviceOverrides, resolvedNtrodeIds]);
+
+  /**
+   * Remove a single stale bad-channel override key via ONE atomic write of the whole
+   * map (minus that key). After this the `stale_bad_channel_override` issue is gone.
+   * @param {string} staleKey - The ntrode_id key with no resolved ntrode.
+   */
+  const handleRemoveStaleOverride = useCallback((staleKey) => {
+    const overrides = day.deviceOverrides?.bad_channels || {};
+    const next = { ...overrides };
+    delete next[staleKey];
+    onFieldUpdate('deviceOverrides.bad_channels', next);
+  }, [day.deviceOverrides, onFieldUpdate]);
+
+  /**
    * Validate bad channels
    * @param {number|string} ntrodeId - Ntrode ID
    * @param {number[]} badChannelArray - Array of bad channel numbers
@@ -297,6 +336,32 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
         </>
       )}
 
+      {/* Stale bad-channel override repair controls: each key here points to an
+          ntrode that no longer resolves, so the export rule blocks but there is no
+          editor row. Each control removes only its key via one atomic update. */}
+      {staleOverrideKeys.length > 0 && (
+        <section
+          className="stale-overrides-section"
+          aria-label="Stale failed-channel overrides"
+        >
+          <p className="field-help-text">
+            Some failed-channel overrides reference ntrodes that no longer exist in this
+            configuration. trodes_to_nwb ignores them and they block export. Remove them:
+          </p>
+          {staleOverrideKeys.map((staleKey) => (
+            <button
+              key={`stale-${staleKey}`}
+              type="button"
+              className="stale-override-remove"
+              data-field-path="deviceOverrides.bad_channels"
+              onClick={() => handleRemoveStaleOverride(staleKey)}
+            >
+              Remove stale failed-channel override for ntrode {staleKey}
+            </button>
+          ))}
+        </section>
+      )}
+
       {/* Electrode groups (accordion) */}
       <section className="electrode-groups-section" aria-label="Electrode Groups">
         {electrodeGroups.map((group) => {
@@ -365,6 +430,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
                   deviceType={group.device_type}
                   badChannels={badChannels}
                   onUpdate={handleBadChannelsUpdate}
+                  onBatchUpdate={handleBadChannelsBatchUpdate}
                   errors={errors}
                   warnings={warnings}
                 />

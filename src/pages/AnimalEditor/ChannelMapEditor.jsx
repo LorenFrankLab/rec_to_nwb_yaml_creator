@@ -115,21 +115,39 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
 
   // Handle probe-wide bad-channel toggle (multi-shank: probe-local id 0..N-1,
   // written to the group's FIRST ntrode row — the only row the converter honors).
-  // MIGRATION (HIGH review finding): editing the probe-wide selection also CLEARS
-  // bad_channels on EVERY later row. A group loaded with later-row corruption (which
-  // the converter ignores and the export rule blocks on) is otherwise a repair
-  // dead-end here, because the later-row controls are hidden. Consolidating onto the
-  // first row on any edit repairs it so multishank_bad_channels_ignored then passes.
+  // MIGRATION (HIGH review finding): editing the probe-wide selection MIGRATES every
+  // later row's marks onto the first row, then CLEARS the later rows. A group loaded
+  // with later-row corruption (which the converter ignores and the export rule blocks
+  // on) is otherwise a repair dead-end here, because the later-row controls are hidden.
+  // A later row's bad_channels entries are KEYS into that row's `map` (row-local
+  // indices); the probe-local id is `row.map[key]`. We TRANSLATE each entry to its
+  // mapped id (falling back to the raw key when the map lacks it) and UNION it onto the
+  // first row — never silently dropping a mark — so multishank_bad_channels_ignored
+  // then passes and no failed channel is lost.
   const handleProbeWideBadChannelToggle = (electrodeId, isChecked) => {
+    // Translate every later row's marks (row-local map keys) to probe-local ids.
+    const translatedLaterMarks = localChannelMaps.slice(1).flatMap((map) => {
+      const stored = Array.isArray(map.bad_channels) ? map.bad_channels : [];
+      const rowMap = map.map || {};
+      return stored.map((key) => {
+        const mapped = rowMap[key];
+        return mapped === undefined || mapped === null ? key : mapped;
+      });
+    });
+
     const updated = localChannelMaps.map((map, idx) => {
       if (idx === 0) {
         const currentBadChannels = map.bad_channels || [];
-        const newBadChannels = isChecked
-          ? [...currentBadChannels, electrodeId].sort((a, b) => a - b)
+        const firstSelection = isChecked
+          ? [...currentBadChannels, electrodeId]
           : currentBadChannels.filter((ch) => ch !== electrodeId);
-        return { ...map, bad_channels: newBadChannels };
+        // Union the first-row selection with the translated later-row marks.
+        const merged = Array.from(
+          new Set([...firstSelection, ...translatedLaterMarks])
+        ).sort((a, b) => a - b);
+        return { ...map, bad_channels: merged };
       }
-      // Later rows: consolidate (clear) any bad_channels the converter would ignore.
+      // Later rows: cleared after migrating their marks onto the first row.
       if (Array.isArray(map.bad_channels) && map.bad_channels.length > 0) {
         return { ...map, bad_channels: [] };
       }
