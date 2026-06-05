@@ -144,6 +144,44 @@ describe('ChannelMapsStep', () => {
     expect(screen.getByText(/Add electrode groups in Step 1 before configuring channel maps/i)).toBeInTheDocument();
   });
 
+  it.each([
+    ['a string', 'corrupt'],
+    ['a plain object', {}],
+    ['a number', 42],
+  ])('renders the empty state instead of throwing when electrode_groups is %s', (_label, corrupt) => {
+    const corruptAnimal = {
+      ...mockAnimal,
+      devices: {
+        electrode_groups: corrupt,
+        ntrode_electrode_group_channel_map: mockAnimal.devices.ntrode_electrode_group_channel_map,
+      },
+    };
+
+    expect(() =>
+      render(<ChannelMapsStep animal={corruptAnimal} onEditChannelMap={mockOnEditChannelMap} />)
+    ).not.toThrow();
+    expect(screen.getByText(/Add electrode groups in Step 1 before configuring channel maps/i)).toBeInTheDocument();
+  });
+
+  it.each([
+    ['a string', 'corrupt'],
+    ['a plain object', {}],
+    ['a number', 42],
+  ])('renders unmapped status instead of throwing when channel maps is %s', (_label, corrupt) => {
+    const corruptAnimal = {
+      ...mockAnimal,
+      devices: {
+        electrode_groups: mockAnimal.devices.electrode_groups,
+        ntrode_electrode_group_channel_map: corrupt,
+      },
+    };
+
+    expect(() =>
+      render(<ChannelMapsStep animal={corruptAnimal} onEditChannelMap={mockOnEditChannelMap} />)
+    ).not.toThrow();
+    expect(screen.getAllByText('❌').length).toBeGreaterThan(0);
+  });
+
   it('displays group location correctly', () => {
     render(<ChannelMapsStep animal={mockAnimal} onEditChannelMap={mockOnEditChannelMap} />);
 

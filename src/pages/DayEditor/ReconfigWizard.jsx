@@ -1,7 +1,13 @@
 import { useId, useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import Modal from '../../components/Modal/Modal';
-import { getConfigHistory } from '../../state/workspaceSelectors';
+import {
+  getAnimalElectrodeGroups,
+  getAnimalNtrodeMaps,
+  getConfigHistory,
+  getProbeElectrodeGroups,
+  getProbeNtrodeMaps,
+} from '../../state/workspaceSelectors';
 import './ReconfigWizard.scss';
 
 /**
@@ -53,13 +59,12 @@ export default function ReconfigWizard({
   const latestDevices = useMemo(() => {
     const history = getConfigHistory(animal);
     const latest = history[history.length - 1];
+    const latestGroups = getProbeElectrodeGroups(latest?.devices);
+    const latestMaps = getProbeNtrodeMaps(latest?.devices);
     return {
-      electrode_groups:
-        latest?.devices?.electrode_groups || animal.devices?.electrode_groups || [],
+      electrode_groups: latestGroups.length > 0 ? latestGroups : getAnimalElectrodeGroups(animal),
       ntrode_electrode_group_channel_map:
-        latest?.devices?.ntrode_electrode_group_channel_map ||
-        animal.devices?.ntrode_electrode_group_channel_map ||
-        [],
+        latestMaps.length > 0 ? latestMaps : getAnimalNtrodeMaps(animal),
     };
   }, [animal]);
 

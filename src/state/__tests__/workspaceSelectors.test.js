@@ -2,7 +2,12 @@ import { describe, it, expect } from 'vitest';
 import {
   getAnimalCameras,
   getConfigHistory,
+  getAnimalDevices,
   getDataAcqDevices,
+  getAnimalElectrodeGroups,
+  getAnimalNtrodeMaps,
+  getProbeElectrodeGroups,
+  getProbeNtrodeMaps,
   getAnimalSubject,
   getAnimalExperimenters,
   getExperimenterNames,
@@ -26,6 +31,18 @@ describe('workspaceSelectors — array fields are always safe arrays', () => {
     ['getAnimalCameras', getAnimalCameras, (v) => ({ cameras: v })],
     ['getConfigHistory', getConfigHistory, (v) => ({ configurationHistory: v })],
     ['getDataAcqDevices', getDataAcqDevices, (v) => ({ devices: { data_acq_device: v } })],
+    ['getAnimalElectrodeGroups', getAnimalElectrodeGroups, (v) => ({ devices: { electrode_groups: v } })],
+    [
+      'getAnimalNtrodeMaps',
+      getAnimalNtrodeMaps,
+      (v) => ({ devices: { ntrode_electrode_group_channel_map: v } }),
+    ],
+    ['getProbeElectrodeGroups', getProbeElectrodeGroups, (v) => ({ electrode_groups: v })],
+    [
+      'getProbeNtrodeMaps',
+      getProbeNtrodeMaps,
+      (v) => ({ ntrode_electrode_group_channel_map: v }),
+    ],
     ['getAnimalDayIds', getAnimalDayIds, (v) => ({ days: v })],
     ['getDayTasks', getDayTasks, (v) => ({ tasks: v })],
     ['getDayAssociatedVideos', getDayAssociatedVideos, (v) => ({ associated_video_files: v })],
@@ -55,6 +72,15 @@ describe('workspaceSelectors — array fields are always safe arrays', () => {
 });
 
 describe('workspaceSelectors — record fields are always safe records', () => {
+  it('getAnimalDevices returns {} for scalar/array/null', () => {
+    for (const bad of ['corrupt', 42, null, [1], undefined]) {
+      expect(getAnimalDevices({ devices: bad })).toEqual({});
+    }
+    expect(getAnimalDevices({ devices: { device: { name: ['Trodes'] } } })).toEqual({
+      device: { name: ['Trodes'] },
+    });
+  });
+
   it('getAnimalSubject / getAnimalExperimenters return {} for scalar/array/null', () => {
     for (const bad of ['corrupt', 42, null, [1], undefined]) {
       expect(getAnimalSubject({ subject: bad })).toEqual({});

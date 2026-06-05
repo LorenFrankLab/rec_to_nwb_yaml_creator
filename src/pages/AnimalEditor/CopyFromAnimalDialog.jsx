@@ -1,6 +1,7 @@
 import { useState, useMemo, useId } from 'react';
 import PropTypes from 'prop-types';
 import Modal from '../../components/Modal/Modal';
+import { getAnimalElectrodeGroups, getAnimalNtrodeMaps } from '../../state/workspaceSelectors';
 import {
   normalizeElectrodeGroupWithDefaults,
   normalizeIdKey,
@@ -35,8 +36,8 @@ export default function CopyFromAnimalDialog({ open, currentAnimalId, animals, o
       .map(([animalId, animalData]) => ({
         id: animalId,
         name: animalData.subject?.subject_id || animalId,
-        electrodeGroups: animalData.devices?.electrode_groups || [],
-        channelMaps: animalData.devices?.ntrode_electrode_group_channel_map || [],
+        electrodeGroups: getAnimalElectrodeGroups(animalData),
+        channelMaps: getAnimalNtrodeMaps(animalData),
       }));
   }, [animals, currentAnimalId]);
 
@@ -59,8 +60,8 @@ export default function CopyFromAnimalDialog({ open, currentAnimalId, animals, o
    * Calculate next available IDs for electrode groups and channel maps
    */
   const nextIds = useMemo(() => {
-    const currentGroups = currentAnimal?.devices?.electrode_groups || [];
-    const currentMaps = currentAnimal?.devices?.ntrode_electrode_group_channel_map || [];
+    const currentGroups = getAnimalElectrodeGroups(currentAnimal);
+    const currentMaps = getAnimalNtrodeMaps(currentAnimal);
 
     const maxGroupId = currentGroups.length > 0
       ? Math.max(...currentGroups.map((g) => {

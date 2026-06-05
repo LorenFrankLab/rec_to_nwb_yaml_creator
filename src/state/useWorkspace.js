@@ -7,7 +7,11 @@ import {
 } from './workspaceUtils';
 import { FLAGS } from '../featureFlags';
 import { loadWorkspace, saveWorkspace, clearWorkspace } from './persistence';
-import { getAnimalDayIds } from './workspaceSelectors';
+import {
+  getAnimalDayIds,
+  getAnimalDevices,
+  getConfigHistory,
+} from './workspaceSelectors';
 import {
   normalizeDeviceOverrides,
   normalizeDevices,
@@ -217,7 +221,7 @@ export function useWorkspace(initialState = null) {
             updated.experimenters = { ...updated.experimenters, ...updates.experimenters };
           }
           if (updates.devices) {
-            updated.devices = normalizeDevices({ ...updated.devices, ...updates.devices });
+            updated.devices = normalizeDevices({ ...getAnimalDevices(updated), ...updates.devices });
             // `animal.devices` is the editor's mirror of the LATEST configuration
             // snapshot, which is the authoritative source the export resolves. Write
             // the edit into that snapshot too, so probes configured after animal
@@ -225,18 +229,14 @@ export function useWorkspace(initialState = null) {
             // empty electrode_groups). Reconfiguration forks a new latest version
             // BEFORE editing, so this only ever rewrites the current latest — never a
             // historical, frozen snapshot.
-            const history = updated.configurationHistory;
-            if (Array.isArray(history) && history.length > 0) {
+            const history = getConfigHistory(updated);
+            if (history.length > 0) {
               const latest = history[history.length - 1];
               latest.devices = {
                 ...latest.devices,
-                electrode_groups: structuredClone(
-                  updated.devices.electrode_groups || latest.devices?.electrode_groups || []
-                ),
+                electrode_groups: structuredClone(updated.devices.electrode_groups),
                 ntrode_electrode_group_channel_map: structuredClone(
-                  updated.devices.ntrode_electrode_group_channel_map ||
-                    latest.devices?.ntrode_electrode_group_channel_map ||
-                    []
+                  updated.devices.ntrode_electrode_group_channel_map
                 ),
               };
             }
@@ -249,7 +249,7 @@ export function useWorkspace(initialState = null) {
           // top-level `data_acq_device` would never reach the export).
           if (updates.data_acq_device) {
             updated.devices = normalizeDevices({
-              ...updated.devices,
+              ...getAnimalDevices(updated),
               data_acq_device: updates.data_acq_device,
             });
           }
@@ -299,7 +299,7 @@ export function useWorkspace(initialState = null) {
           const updatedDays = { ...prev.days };
 
           // Delete all days for this animal
-          animal.days.forEach((dayId) => {
+          getAnimalDayIds(animal).forEach((dayId) => {
             delete updatedDays[dayId];
           });
 
@@ -335,7 +335,8 @@ export function useWorkspace(initialState = null) {
         // For a single add per tick — the wizard's create-then-apply path — the two
         // agree: no intervening update changes the history length between them.
         const current = workspaceRef.current.animals[animalId];
-        const createdVersion = current ? current.configurationHistory.length + 1 : undefined;
+        const currentHistory = getConfigHistory(current);
+        const createdVersion = current ? currentHistory.length + 1 : undefined;
 
         setWorkspace((prev) => {
           if (!prev.animals[animalId]) {
@@ -344,16 +345,17 @@ export function useWorkspace(initialState = null) {
 
           const animal = prev.animals[animalId];
           const updated = structuredClone(animal);
+          const history = getConfigHistory(updated);
 
           const newVersion = {
-            version: updated.configurationHistory.length + 1,
+            version: history.length + 1,
             date: config.date,
             description: config.description,
             devices: normalizeProbeConfigDevices(config.devices),
             appliedToDays: [],
           };
 
-          updated.configurationHistory.push(newVersion);
+          updated.configurationHistory = [...history, newVersion];
           updated.lastModified = getCurrentTimestamp();
 
           return {
@@ -389,7 +391,8 @@ export function useWorkspace(initialState = null) {
           }
 
           const animal = structuredClone(prev.animals[animalId]);
-          const target = animal.configurationHistory.find((s) => s.version === snapshotVersion);
+          const history = getConfigHistory(animal);
+          const target = history.find((s) => s.version === snapshotVersion);
           if (!target) {
             throw new Error(
               `Configuration version "${snapshotVersion}" not found for animal "${animalId}"`
@@ -404,7 +407,7 @@ export function useWorkspace(initialState = null) {
 
           // (3) Remove the moving days from EVERY snapshot's list first, so the
           // result is a clean partition regardless of stale stored lists.
-          animal.configurationHistory.forEach((snapshot) => {
+          history.forEach((snapshot) => {
             snapshot.appliedToDays = (snapshot.appliedToDays || []).filter((id) => !moving.has(id));
           });
           // (2) Add them to the target snapshot's list (dedup, stable order).
@@ -412,6 +415,7 @@ export function useWorkspace(initialState = null) {
             ...target.appliedToDays.filter((id) => !moving.has(id)),
             ...validDayIds,
           ];
+          animal.configurationHistory = history;
 
           // (1) Point each listed day at the target version.
           const updatedDays = { ...prev.days };
@@ -489,10 +493,10 @@ export function useWorkspace(initialState = null) {
             },
             created: now,
             lastModified: now,
-            configurationVersion: animal.configurationHistory.length, // Latest version
+            configurationVersion: getConfigHistory(animal).length, // Latest version
           };
 
-          const updatedAnimal = { ...animal, days: [...animal.days, dayId] };
+          const updatedAnimal = { ...animal, days: [...getAnimalDayIds(animal), dayId] };
 
           return {
             ...prev,
@@ -593,7 +597,7 @@ export function useWorkspace(initialState = null) {
           const animal = prev.animals[day.animalId];
           const updatedAnimal = {
             ...animal,
-            days: animal.days.filter((id) => id !== dayId),
+            days: getAnimalDayIds(animal).filter((id) => id !== dayId),
           };
 
           const updatedDays = { ...prev.days };

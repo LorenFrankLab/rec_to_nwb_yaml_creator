@@ -3,6 +3,7 @@ import { useStoreContext } from '../../state/StoreContext';
 import { useStepperShortcut } from '../../hooks/stepperShortcuts';
 import { useDayIdFromUrl } from '../../hooks/useDayIdFromUrl';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
+import { getDayTasks } from '../../state/workspaceSelectors';
 import { computeStepStatus } from './validation';
 import { isExportEnabled } from './stepGate';
 import StepNavigation from './StepNavigation';
@@ -90,11 +91,7 @@ export default function DayEditorStepper() {
     const days = model.workspace?.days || {};
     for (const id of Object.keys(days)) {
       if (id === dayId) continue;
-      // A corrupt/legacy import can persist `tasks` as a truthy non-array (e.g.
-      // `{}`), which `tasks || []` would NOT replace. Guarding on array-ness keeps
-      // that bad shape from throwing during render and crashing the editor before
-      // the fail-closed validation UI can surface the corruption.
-      const siblingTasks = Array.isArray(days[id].tasks) ? days[id].tasks : [];
+      const siblingTasks = getDayTasks(days[id]);
       siblingTasks.forEach((task) => {
         if (task.task_name) {
           map[task.task_name] = task.task_description ?? '';

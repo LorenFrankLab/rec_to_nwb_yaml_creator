@@ -1,7 +1,13 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
-import { getConfigHistory } from '../../state/workspaceSelectors';
+import {
+  getAnimalDayIds,
+  getAnimalDevices,
+  getAnimalElectrodeGroups,
+  getAnimalNtrodeMaps,
+  getConfigHistory,
+} from '../../state/workspaceSelectors';
 import { useStepperShortcut } from '../../hooks/stepperShortcuts';
 import { useAnimalIdFromUrl } from '../../hooks/useAnimalIdFromUrl';
 import ElectrodeGroupsStep from './ElectrodeGroupsStep';
@@ -201,12 +207,12 @@ export default function AnimalEditorStepper() {
   // Memoized (and declared before the early returns, per the Rules of Hooks) so a
   // fresh array reference doesn't defeat the modal's BrainRegionAutocomplete memo.
   // Renders on every workspace; a persisted `electrode_groups` may be a non-array, and
-  // `|| []` would PRESERVE it and throw on the `.flatMap`. Guard with Array.isArray so a
-  // single corrupt animal can't crash this region-collection sweep.
+  // `|| []` would PRESERVE it and throw on the `.flatMap`. Read through the canonical
+  // selector so a single corrupt animal can't crash this region-collection sweep.
   const knownRegions = useMemo(() => [
     ...new Set(
       Object.values(model.workspace.animals || {})
-        .flatMap((a) => (Array.isArray(a.devices?.electrode_groups) ? a.devices.electrode_groups : []))
+        .flatMap((a) => getAnimalElectrodeGroups(a))
         .flatMap((g) => [g.location, g.targeted_location])
         .filter((r) => typeof r === 'string' && r.trim() !== '')
     ),
@@ -222,6 +228,10 @@ export default function AnimalEditorStepper() {
   if (!animal) {
     return <AnimalEditorError message={`Animal "${animalId}" not found.`} />;
   }
+
+  const animalDevices = getAnimalDevices(animal);
+  const electrodeGroups = getAnimalElectrodeGroups(animal);
+  const ntrodeMaps = getAnimalNtrodeMaps(animal);
 
   // The editor is a repair destination for malformed persisted state, so it must not
   // crash on the corruption it exists to fix. Read history through the canonical selector:
@@ -274,8 +284,8 @@ export default function AnimalEditorStepper() {
     // Configuration already saved via updateAnimal calls throughout editing
     // Just need to determine navigation destination
 
-    const hasDays = animal.days && animal.days.length > 0;
-    const dayCount = hasDays ? animal.days.length : 0;
+    const dayCount = getAnimalDayIds(animal).length;
+    const hasDays = dayCount > 0;
 
     // Show success message, then navigate once the user dismisses it.
     if (hasDays) {
@@ -319,7 +329,7 @@ export default function AnimalEditorStepper() {
     // object as the group itself. A bare integer id must not be mistaken for the group.
     const group = typeof groupIdOrGroup === 'object' && groupIdOrGroup !== null
       ? groupIdOrGroup
-      : animal.devices.electrode_groups.find(
+      : electrodeGroups.find(
           (g) => normalizeIdKey(g.id) === normalizeIdKey(groupIdOrGroup)
         );
     setEditingGroup(group);
@@ -345,7 +355,7 @@ export default function AnimalEditorStepper() {
     if (isAdding) {
       // Add mode: create 'count' identical electrode groups with integer IDs
       const newGroups = [];
-      const startId = generateNextElectrodeGroupId(animal.devices.electrode_groups);
+      const startId = generateNextElectrodeGroupId(electrodeGroups);
 
       for (let i = 0; i < count; i++) {
         const groupId = startId + i;
@@ -357,7 +367,7 @@ export default function AnimalEditorStepper() {
         groupsToGenerateMapsFor.push(newGroup);
       }
 
-      updatedGroups = [...animal.devices.electrode_groups, ...newGroups];
+      updatedGroups = [...electrodeGroups, ...newGroups];
     } else {
       // Edit mode: update single existing group
       const groupId = editingGroup.id;
@@ -365,7 +375,7 @@ export default function AnimalEditorStepper() {
         { ...groupDataWithoutCount, id: groupId },
         groupId
       );
-      updatedGroups = animal.devices.electrode_groups.map(g =>
+      updatedGroups = electrodeGroups.map(g =>
         normalizeIdKey(g.id) === normalizeIdKey(editingGroup.id) ? normalizedGroup : g
       );
 
@@ -377,7 +387,7 @@ export default function AnimalEditorStepper() {
     }
 
     // Auto-generate channel maps for new/changed groups
-    let updatedChannelMaps = animal.devices.ntrode_electrode_group_channel_map || [];
+    let updatedChannelMaps = ntrodeMaps;
 
     if (groupsToGenerateMapsFor.length > 0) {
       // Remove old maps for the groups we're regenerating; keep the rest.
@@ -401,7 +411,7 @@ export default function AnimalEditorStepper() {
 
     actions.updateAnimal(animalId, {
       devices: {
-        ...animal.devices,
+        ...animalDevices,
         electrode_groups: updatedGroups,
         ntrode_electrode_group_channel_map: updatedChannelMaps,
       },
@@ -440,17 +450,17 @@ export default function AnimalEditorStepper() {
 
     // Remove from electrode_groups array
     const deletingGroupId = normalizeIdKey(group.id);
-    const updatedGroups = animal.devices.electrode_groups.filter(
+    const updatedGroups = electrodeGroups.filter(
       g => normalizeIdKey(g.id) !== deletingGroupId
     );
 
     // Also remove associated channel maps
-    const updatedChannelMaps = (animal.devices.ntrode_electrode_group_channel_map || [])
+    const updatedChannelMaps = ntrodeMaps
       .filter(map => normalizeIdKey(map.electrode_group_id) !== deletingGroupId);
 
     actions.updateAnimal(animalId, {
       devices: {
-        ...animal.devices,
+        ...animalDevices,
         electrode_groups: updatedGroups,
         ntrode_electrode_group_channel_map: updatedChannelMaps,
       },
@@ -484,8 +494,8 @@ export default function AnimalEditorStepper() {
     const { sourceAnimalName, electrode_groups, ntrode_electrode_group_channel_map } = data;
 
     // Append copied data to existing data
-    const existingGroups = animal.devices?.electrode_groups || [];
-    const existingMaps = animal.devices?.ntrode_electrode_group_channel_map || [];
+    const existingGroups = electrodeGroups;
+    const existingMaps = ntrodeMaps;
 
     const updatedGroups = [...existingGroups, ...electrode_groups]
       .map((group, index) => normalizeElectrodeGroupWithDefaults(group, index));
@@ -494,7 +504,7 @@ export default function AnimalEditorStepper() {
 
     actions.updateAnimal(animalId, {
       devices: {
-        ...animal.devices,
+        ...animalDevices,
         electrode_groups: updatedGroups,
         ntrode_electrode_group_channel_map: updatedMaps,
       },
@@ -533,7 +543,7 @@ export default function AnimalEditorStepper() {
    */
   function handleSaveChannelMap(updatedMaps) {
     // Get all channel maps
-    const allChannelMaps = animal.devices.ntrode_electrode_group_channel_map || [];
+    const allChannelMaps = ntrodeMaps;
 
     // Remove old maps for this group and add updated ones
     const editingKey = normalizeIdKey(editingGroupId);
@@ -545,7 +555,7 @@ export default function AnimalEditorStepper() {
 
     actions.updateAnimal(animalId, {
       devices: {
-        ...animal.devices,
+        ...animalDevices,
         ntrode_electrode_group_channel_map: newChannelMaps,
       },
     });
@@ -566,8 +576,7 @@ export default function AnimalEditorStepper() {
    * Export channel maps to CSV file
    */
   function handleExportCSV() {
-    const channelMaps = animal.devices.ntrode_electrode_group_channel_map || [];
-    const electrodeGroups = animal.devices.electrode_groups || [];
+    const channelMaps = ntrodeMaps;
 
     if (channelMaps.length === 0) {
       showAlert(
@@ -607,7 +616,7 @@ export default function AnimalEditorStepper() {
 
         // Validate imported maps match existing electrode groups
         const electrodeGroupIds = new Set(
-          (animal.devices.electrode_groups || []).map((g) => normalizeIdKey(g.id))
+          electrodeGroups.map((g) => normalizeIdKey(g.id))
         );
         const invalidGroups = importedMaps.filter(
           (map) => !electrodeGroupIds.has(normalizeIdKey(map.electrode_group_id))
@@ -625,7 +634,7 @@ export default function AnimalEditorStepper() {
         // Update animal with imported maps
         actions.updateAnimal(animalId, {
           devices: {
-            ...animal.devices,
+            ...animalDevices,
             ntrode_electrode_group_channel_map: importedMaps,
           },
         });
@@ -645,14 +654,14 @@ export default function AnimalEditorStepper() {
   // Get electrode group for editor. Compare against null, not truthiness — an
   // integer group id of 0 is falsy but valid.
   const editingElectrodeGroup = editingGroupId != null
-    ? animal.devices.electrode_groups.find(
+    ? electrodeGroups.find(
         g => normalizeIdKey(g.id) === normalizeIdKey(editingGroupId)
       )
     : null;
 
   // Get channel maps for editing group
   const editingChannelMaps = editingGroupId != null
-    ? (animal.devices.ntrode_electrode_group_channel_map || [])
+    ? ntrodeMaps
         .filter(map => normalizeIdKey(map.electrode_group_id) === normalizeIdKey(editingGroupId))
     : [];
 

@@ -15,6 +15,9 @@ import {
 } from '../utils/deviceNormalization';
 import {
   getAnimalCameras,
+  getConfigHistory,
+  getDataAcqDevices,
+  getAnimalDevices,
   getAnimalExperimenters,
   getAnimalSubject,
   getDaySession,
@@ -23,6 +26,8 @@ import {
   getDayAssociatedVideos,
   getDayBehavioralEvents,
   getDayKeywords,
+  getProbeElectrodeGroups,
+  getProbeNtrodeMaps,
 } from './workspaceSelectors';
 
 // Canonical key orders, mirroring the legacy `formData` shape in
@@ -118,8 +123,8 @@ function reorderKeys(obj, order) {
  *   version with no matching snapshot.
  */
 export function resolveDayConfig(animal, day) {
-  const history = animal.configurationHistory;
-  if (!Array.isArray(history) || history.length === 0) {
+  const history = getConfigHistory(animal);
+  if (history.length === 0) {
     throw new Error(
       `Cannot resolve device configuration for day "${day?.id}": animal "${animal?.id}" has no configuration history.`
     );
@@ -150,10 +155,10 @@ export function resolveDayConfig(animal, day) {
   // crash before the repair UI can render.
   const electrodeGroups = Array.isArray(day.deviceOverrides?.electrode_groups)
     ? day.deviceOverrides.electrode_groups
-    : (config.devices.electrode_groups || []);
+    : getProbeElectrodeGroups(config.devices);
   const baseNtrodes = Array.isArray(day.deviceOverrides?.ntrode_electrode_group_channel_map)
     ? day.deviceOverrides.ntrode_electrode_group_channel_map
-    : (config.devices.ntrode_electrode_group_channel_map || []);
+    : getProbeNtrodeMaps(config.devices);
 
   // Apply day-level bad-channel overrides onto the resolved ntrode map. The override
   // map is keyed by ntrode_id; a present, WELL-FORMED (array) entry REPLACES that
@@ -231,7 +236,7 @@ export function mergeDayMetadata(animal, day) {
   const { electrode_groups: electrodeGroups, ntrode_electrode_group_channel_map: ntrodeMap } =
     resolveDayConfig(animal, day);
 
-  const devices = normalizeDevices(animal.devices);
+  const devices = normalizeDevices(getAnimalDevices(animal));
   // Raw animal/day fields read through the canonical shape-safe selectors — the single
   // place these guards live, so the merge can't drift from the editors. A malformed
   // import still surfaces as a validation issue downstream (normalization never decides
@@ -271,7 +276,7 @@ export function mergeDayMetadata(animal, day) {
     ),
 
     // === From Animal: Data Acquisition ===
-    data_acq_device: (Array.isArray(devices.data_acq_device) ? devices.data_acq_device : []).map((d) =>
+    data_acq_device: getDataAcqDevices(animal).map((d) =>
       reorderKeys(d, DATA_ACQ_DEVICE_ORDER)
     ),
 

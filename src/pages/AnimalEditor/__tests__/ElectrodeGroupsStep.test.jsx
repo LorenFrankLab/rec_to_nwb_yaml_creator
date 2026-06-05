@@ -151,6 +151,22 @@ describe('ElectrodeGroupsStep', () => {
     expect(screen.getByText(/No Electrode Groups Configured/)).toBeInTheDocument();
   });
 
+  it.each([
+    ['a string', 'corrupt'],
+    ['a plain object', {}],
+    ['a number', 42],
+  ])('renders the empty state instead of throwing when electrode_groups is %s', (_label, corrupt) => {
+    const corruptAnimal = {
+      ...mockAnimal,
+      devices: { electrode_groups: corrupt, ntrode_electrode_group_channel_map: [] },
+    };
+
+    expect(() =>
+      render(<ElectrodeGroupsStep animal={corruptAnimal} onFieldUpdate={mockOnFieldUpdate} />)
+    ).not.toThrow();
+    expect(screen.getByText(/No Electrode Groups Configured/)).toBeInTheDocument();
+  });
+
   it('has Edit button for each group', () => {
     render(<ElectrodeGroupsStep animal={mockAnimal} onFieldUpdate={mockOnFieldUpdate} />);
 

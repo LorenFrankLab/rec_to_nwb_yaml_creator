@@ -39,8 +39,27 @@ export const getAnimalCameras = (animal) => asArray(animal?.cameras);
 /** @param {object} animal @returns {Array} The animal's configuration history. */
 export const getConfigHistory = (animal) => asArray(animal?.configurationHistory);
 
+/** @param {object} animal @returns {object} The animal's devices record. */
+export const getAnimalDevices = (animal) => asRecord(animal?.devices);
+
 /** @param {object} animal @returns {Array} The animal's data-acquisition devices. */
-export const getDataAcqDevices = (animal) => asArray(asRecord(animal?.devices).data_acq_device);
+export const getDataAcqDevices = (animal) => asArray(getAnimalDevices(animal).data_acq_device);
+
+/** @param {object} animal @returns {Array} The animal's electrode groups. */
+export const getAnimalElectrodeGroups = (animal) =>
+  asArray(getAnimalDevices(animal).electrode_groups);
+
+/** @param {object} animal @returns {Array} The animal's ntrode channel maps. */
+export const getAnimalNtrodeMaps = (animal) =>
+  asArray(getAnimalDevices(animal).ntrode_electrode_group_channel_map);
+
+/** @param {object} config @returns {Array} A probe config's electrode groups. */
+export const getProbeElectrodeGroups = (config) =>
+  asArray(asRecord(config).electrode_groups);
+
+/** @param {object} config @returns {Array} A probe config's ntrode channel maps. */
+export const getProbeNtrodeMaps = (config) =>
+  asArray(asRecord(config).ntrode_electrode_group_channel_map);
 
 /** @param {object} animal @returns {object} The animal's subject record (always a record). */
 export const getAnimalSubject = (animal) => asRecord(animal?.subject);

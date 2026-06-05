@@ -28,6 +28,12 @@ const SELECTOR_OWNED = [
   'animal\\.cameras',
   'animal\\.configurationHistory',
   'animal\\.devices\\?\\.data_acq_device',
+  'animal\\.devices(?:\\?\\.|\\.)electrode_groups',
+  'animal\\.devices(?:\\?\\.|\\.)ntrode_electrode_group_channel_map',
+  'animalData\\.devices(?:\\?\\.|\\.)electrode_groups',
+  'animalData\\.devices(?:\\?\\.|\\.)ntrode_electrode_group_channel_map',
+  'currentAnimal\\?\\.devices(?:\\?\\.|\\.)electrode_groups',
+  'currentAnimal\\?\\.devices(?:\\?\\.|\\.)ntrode_electrode_group_channel_map',
   'animal\\.days',
   'animal\\.subject',
   'animal\\.experimenters',
@@ -38,11 +44,14 @@ const SELECTOR_OWNED = [
   'day\\.behavioral_events',
   'day\\.associated_files',
   'day\\.associated_video_files',
+  'days\\[[^\\]]+\\]\\.tasks',
 ];
 const FORBIDDEN = SELECTOR_OWNED.flatMap((field) => [
   new RegExp(`${field}\\s*\\|\\|\\s*\\[\\]`),
   new RegExp(`Array\\.isArray\\(\\s*${field}\\s*\\)`),
   new RegExp(`isRecord\\(\\s*${field}\\s*\\)`),
+  new RegExp(`\\b(?:const|let)\\s+\\w+\\s*=\\s*${field}\\b`),
+  new RegExp(`${field}\\.(?:map|flatMap|filter|find|some|forEach|reduce|entries)\\s*\\(`),
 ]);
 
 const isExempt = (file) =>

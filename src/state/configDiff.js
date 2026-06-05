@@ -11,7 +11,12 @@
  */
 
 import { resolveDayConfig } from './workspaceUtils';
-import { getConfigHistory, getAnimalDayIds } from './workspaceSelectors';
+import {
+  getAnimalDayIds,
+  getConfigHistory,
+  getProbeElectrodeGroups,
+  getProbeNtrodeMaps,
+} from './workspaceSelectors';
 
 // Re-export so wizard/UI code has a single import surface for config resolution.
 export { resolveDayConfig };
@@ -71,10 +76,10 @@ const byNtrodeId = (a, b) => a.ntrode_id - b.ntrode_id;
  * @returns {import('./workspaceTypes').ProbeConfigDiff} The structured, sorted diff.
  */
 export function diffProbeConfigs(prevConfig, nextConfig) {
-  const prevGroups = prevConfig?.electrode_groups || [];
-  const nextGroups = nextConfig?.electrode_groups || [];
-  const prevNtrodes = prevConfig?.ntrode_electrode_group_channel_map || [];
-  const nextNtrodes = nextConfig?.ntrode_electrode_group_channel_map || [];
+  const prevGroups = getProbeElectrodeGroups(prevConfig);
+  const nextGroups = getProbeElectrodeGroups(nextConfig);
+  const prevNtrodes = getProbeNtrodeMaps(prevConfig);
+  const nextNtrodes = getProbeNtrodeMaps(nextConfig);
 
   const prevGroupById = new Map(prevGroups.map((g) => [g.id, g]));
   const nextGroupById = new Map(nextGroups.map((g) => [g.id, g]));

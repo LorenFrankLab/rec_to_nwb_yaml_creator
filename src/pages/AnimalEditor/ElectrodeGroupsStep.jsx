@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { getAnimalElectrodeGroups } from '../../state/workspaceSelectors';
 import { getChannelCount, getShankCount } from '../../utils/deviceTypeUtils';
 import './ElectrodeGroupsStep.scss';
 
@@ -54,7 +55,7 @@ function formatGeometryCount(count) {
  * @returns {JSX.Element}
  */
 export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onAdd, onDelete, onCopy }) {
-  const electrodeGroups = animal.devices?.electrode_groups || [];
+  const electrodeGroups = getAnimalElectrodeGroups(animal);
 
   /**
    * Compute status badge (✓ complete, ⚠ incomplete, ❌ missing required)

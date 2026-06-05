@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { getAnimalElectrodeGroups, getAnimalNtrodeMaps } from '../../state/workspaceSelectors';
 import { getChannelCount, getShankCount } from '../../utils/deviceTypeUtils';
 import './ChannelMapsStep.scss';
 
@@ -25,8 +26,8 @@ function formatGeometryCount(count) {
  * @returns {JSX.Element}
  */
 export default function ChannelMapsStep({ animal, onEditChannelMap }) {
-  const electrodeGroups = animal.devices?.electrode_groups || [];
-  const channelMaps = animal.devices?.ntrode_electrode_group_channel_map || [];
+  const electrodeGroups = getAnimalElectrodeGroups(animal);
+  const channelMaps = getAnimalNtrodeMaps(animal);
 
   /**
    * Calculate map status for an electrode group
