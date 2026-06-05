@@ -175,6 +175,21 @@ describe('ExportStep', () => {
     expect(shadowSpy).not.toHaveBeenCalled();
   });
 
+  it('offers a repair action for a STEP-STATUS-only blocker (all channels bad) with no validate() error', async () => {
+    // Boundary 3 / Medium-1: the gate is closed via computeStepStatus.devices === 'error'
+    // (all channels bad), but validate(merged) has no error — so the OLD ExportStep showed
+    // generic text with no button (a repair dead-end). It must route to the blocking step.
+    const user = userEvent.setup();
+    const onNavigate = vi.fn();
+    const { animal, day } = buildAllChannelsBadWorkspace();
+
+    render(<ExportStep animal={animal} day={day} onNavigate={onNavigate} />);
+
+    const repairButton = screen.getByRole('button', { name: /fix in devices/i });
+    await user.click(repairButton);
+    expect(onNavigate).toHaveBeenCalledWith('devices', undefined);
+  });
+
   it('offers a repair action per error that routes to the editable owner with the field target', async () => {
     const user = userEvent.setup();
     const onNavigate = vi.fn();

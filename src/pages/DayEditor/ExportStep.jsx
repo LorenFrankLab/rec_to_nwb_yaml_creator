@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { encodeYaml, formatDeterministicFilename, downloadYamlFile } from '../../io/yaml';
 import { mergeDayMetadata, resolveDayConfig } from '../../state/workspaceUtils';
-import { computeStepStatus, validateDay } from './validation';
+import { computeStepStatus, validateDay, STEP_LABELS } from './validation';
 import { isExportEnabled } from './stepGate';
 import { isFeatureEnabled } from '../../featureFlags';
 import { checkShadowExport } from './shadowExport';
@@ -72,11 +72,21 @@ export default function ExportStep({ animal, day, onNavigate }) {
   // Consulting it here keeps the directly-mounted ExportStep's gate exactly as
   // strict as the stepper's, so a directly-mounted ExportStep cannot download a day
   // the stepper would refuse to reach.
-  const exportGateOpen = useMemo(
-    () => isExportEnabled(computeStepStatus(day, merged)),
-    [day, merged]
-  );
+  const stepStatus = useMemo(() => computeStepStatus(day, merged), [day, merged]);
+  const exportGateOpen = useMemo(() => isExportEnabled(stepStatus), [stepStatus]);
   const exportBlocked = validationErrors.length > 0 || !exportGateOpen;
+
+  // Step-status blockers (a prerequisite step not 'valid' — e.g. Devices 'error' for
+  // all-channels-bad, or 'incomplete' for missing maps) that NO error-severity
+  // validate() issue surfaces. Without these, ExportStep would block with generic text
+  // and no repair button (a dead-end). Route the user to the blocking step.
+  const blockingSteps = useMemo(
+    () =>
+      validationErrors.length === 0
+        ? ['overview', 'devices', 'epochs', 'validation'].filter((s) => stepStatus[s] !== 'valid')
+        : [],
+    [validationErrors.length, stepStatus]
+  );
 
   const preflight = useMemo(() => {
     if (exportBlocked) return null;
@@ -143,6 +153,20 @@ export default function ExportStep({ animal, day, onNavigate }) {
               onNavigate={onNavigate}
               animalId={animal?.id}
             />
+          )}
+          {validationErrors.length === 0 && blockingSteps.length > 0 && (
+            <div className="export-step-blockers">
+              {blockingSteps.map((stepId) => (
+                <button
+                  key={stepId}
+                  type="button"
+                  className="repair-action-button"
+                  onClick={() => onNavigate?.(stepId, undefined)}
+                >
+                  Fix in {STEP_LABELS[stepId] || stepId}
+                </button>
+              ))}
+            </div>
           )}
         </div>
       )}
