@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import Breadcrumb from './Breadcrumb';
 import ReadOnlyField from './ReadOnlyField';
@@ -37,19 +37,21 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
   const [speciesError, setSpeciesError] = useState('');
 
   // A repair action for a subject field (e.g. subject.date_of_birth) routes here, but
-  // those controls live inside the collapsed "inherited metadata" section — so the
-  // stepper's focus search would find no anchor and land on nothing. Expand the
-  // section when a subject field is the focus target so the control is rendered and
-  // can actually be focused.
+  // those controls live inside the collapsed "inherited metadata" section. Expand the
+  // section when a subject field is the focus target, **during render** (the
+  // adjust-state-from-props pattern) rather than in a passive effect — so the control
+  // is present in the same commit the parent stepper searches for the focus anchor.
+  // A passive effect would expand a tick later and the stepper could search first,
+  // miss the anchor, and fall back to the step with no retry.
   const focusFieldPath = focusRequest?.fieldPath;
-  const focusToken = focusRequest?.token;
-  useEffect(() => {
+  const focusToken = focusRequest?.token ?? null;
+  const [seenFocusToken, setSeenFocusToken] = useState(null);
+  if (focusToken !== seenFocusToken) {
+    setSeenFocusToken(focusToken);
     if (typeof focusFieldPath === 'string' && focusFieldPath.startsWith('subject.')) {
       setShowInherited(true);
     }
-    // focusToken changes on every repair click, so a re-click re-expands.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusToken, focusFieldPath]);
+  }
 
   // Validate field on blur. The session fields are stored nested under `day.session`
   // (the write path, e.g. `session.experiment_description`) but the export emits them
@@ -250,10 +252,18 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
                     data-field-path="subject.weight"
                     key={`weight-${animal.subject.weight ?? ''}`}
                     defaultValue={animal.subject.weight ?? ''}
-                    onBlur={(e) =>
-                      onSubjectUpdate('weight', e.target.value === '' ? undefined : Number(e.target.value))
-                    }
+                    onBlur={(e) => {
+                      onSubjectUpdate('weight', e.target.value === '' ? undefined : Number(e.target.value));
+                      // The export prefers a day-level weight override over the animal
+                      // weight, so a stale/invalid day override (only ever set via import)
+                      // would defeat this repair. Clear it so the weight just entered is
+                      // the value that's exported.
+                      if (day.session.weight !== undefined) {
+                        onFieldUpdate('session.weight', undefined);
+                      }
+                    }}
                   />
+                  <span className="field-help-text">Animal baseline weight, in grams.</span>
                 </div>
 
                 <div className="form-field">

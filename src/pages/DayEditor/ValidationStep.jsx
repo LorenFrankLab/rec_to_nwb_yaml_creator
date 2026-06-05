@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { validate } from '../../validation';
 import { groupErrorsByStep } from './validation';
-import { RepairActionButton, STEP_LABELS } from './RepairActions';
+import { RepairActionButton, STEP_LABELS, isRepairable } from './RepairActions';
 import './DayEditor.scss';
 
 /**
@@ -105,7 +105,9 @@ function SeveritySection({ title, severity, issues, onNavigate }) {
                 <li key={`${issue.path}-${issue.code}-${index}`} className="validation-issue">
                   <span className="validation-issue-message">{issue.message}</span>
                   {issue.path && <code className="validation-issue-path">{issue.path}</code>}
-                  {repairable && <RepairActionButton issue={issue} onNavigate={onNavigate} />}
+                  {repairable && isRepairable(issue) && (
+                    <RepairActionButton issue={issue} onNavigate={onNavigate} />
+                  )}
                 </li>
               ))}
             </ul>

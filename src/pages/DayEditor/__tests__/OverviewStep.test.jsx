@@ -340,6 +340,32 @@ describe('OverviewStep', () => {
       expect(onSubjectUpdate).toHaveBeenCalledWith('weight', 450);
     });
 
+    it('clears a day-level weight override on repair so the edited weight is exported', async () => {
+      const user = userEvent.setup();
+      const onSubjectUpdate = vi.fn();
+      const onFieldUpdate = vi.fn();
+      // A day with an (import-only) weight override that the export would prefer.
+      const dayWithWeightOverride = { ...mockDay, session: { ...mockDay.session, weight: 999 } };
+      render(
+        <OverviewStep
+          animal={mockAnimal}
+          day={dayWithWeightOverride}
+          mergedDay={mockMergedDay}
+          onFieldUpdate={onFieldUpdate}
+          onSubjectUpdate={onSubjectUpdate}
+        />
+      );
+      await user.click(screen.getByRole('button', { name: /inherited subject metadata/i }));
+
+      const weight = screen.getByLabelText(/weight/i);
+      await user.type(weight, '450');
+      await user.tab();
+
+      expect(onSubjectUpdate).toHaveBeenCalledWith('weight', 450);
+      // The stale day override is cleared so the just-entered weight is what's exported.
+      expect(onFieldUpdate).toHaveBeenCalledWith('session.weight', undefined);
+    });
+
     it('shows an inline error when an edited species is not a valid binomial', async () => {
       const onSubjectUpdate = vi.fn();
       const user = await expand(onSubjectUpdate);

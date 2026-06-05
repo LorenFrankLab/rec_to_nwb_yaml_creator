@@ -6,6 +6,29 @@
 
 ---
 
+## Phase 5 review fixes (round 2): race-free repair focus, honest slash UX, weight-override clear (June 4, 2026)
+
+### Changes
+
+- **Subject repair focus no longer races the parent stepper.** The Overview expanded its inherited
+  section in a passive effect, one commit *after* `DayEditorStepper`'s `focusRequest` effect searched the
+  DOM for the target — so a full repair click could search before the subject control existed, fall back
+  to focusing `<main>`, and never retry. The expand is now done **during render** (adjust-state-from-props
+  on the focus token), so the control is present in the same commit the parent searches. A new
+  `DayEditorStepper` integration test drives the entire repair click for `subject.species` and asserts the
+  section expands and the control receives focus (not just the `OverviewStep`-alone unit test).
+- **Slash-ID errors no longer show a dead-end "Fix in …" button on *both* surfaces.** The
+  `NON_REPAIRABLE_CODES` suppression lived only in the `RepairActions` wrapper (used by Export), while the
+  Validation summary rendered `RepairActionButton` directly and still offered a button that lands on a
+  read-only field. The predicate is now a shared `isRepairable(issue)` export gated by both surfaces, so
+  they cannot drift. Integration test added for the Validation surface.
+- **Repairing the subject weight clears a stale day-level override.** The export prefers
+  `day.session.weight` (settable only via import) over the animal weight, which would defeat the weight
+  repair. The weight field's blur now clears that override when present, so the just-entered weight is the
+  value exported. (Resolves the round-1 "Known limitations" item below.)
+
+---
+
 ## Phase 5 review fixes: fail-closed species + reachable subject repair (June 4, 2026)
 
 ### Changes
@@ -31,8 +54,9 @@
 
 - A slashed `subject_id`/`session_id` is flagged but not editable from the day (identity / derived);
   the message directs the user to recreate the animal. A rename/re-key flow is out of scope.
-- The subject weight repair edits the animal weight. A day-level `session.weight` override (settable only
-  via import, no UI) is the export's preferred source and isn't repaired from this surface.
+- ~~The subject weight repair edits the animal weight. A day-level `session.weight` override is the
+  export's preferred source and isn't repaired from this surface.~~ Resolved in round 2 — the weight
+  repair now clears the day override.
 
 ---
 
