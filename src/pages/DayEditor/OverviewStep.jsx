@@ -8,6 +8,7 @@ import MalformedCollectionNotice from './MalformedCollectionNotice';
 import { validateField } from './validation';
 import { isValidSpecies } from '../../validation/dandiSubject';
 import { RAW_DAY_ARRAY_FIELDS } from '../../validation/rawShape';
+import { getDaySession, getAnimalSubject, getAnimalExperimenters, getExperimenterNames } from '../../state/workspaceSelectors';
 
 // The day-owned collections this step owns (raw-shape reset surface).
 const OVERVIEW_STEP_COLLECTIONS = RAW_DAY_ARRAY_FIELDS.filter((f) => f.repairStep === 'overview');
@@ -35,16 +36,13 @@ const OVERVIEW_STEP_COLLECTIONS = RAW_DAY_ARRAY_FIELDS.filter((f) => f.repairSte
 export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, onSubjectUpdate, focusRequest }) {
   // Tolerate corrupt persisted state: a malformed (null/scalar) `day.session`,
   // `animal.subject`, or `animal.experimenters` must not crash the editor on a raw
-  // dereference. The merge already guards these for export; the repair editor reads
-  // through these guarded locals so a corrupt record renders blank fields the user can
-  // fix, never a blank/crashed step.
-  const isRecord = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
-  const session = isRecord(day.session) ? day.session : {};
-  const subject = isRecord(animal.subject) ? animal.subject : {};
-  const experimenters = isRecord(animal.experimenters) ? animal.experimenters : {};
-  const experimenterNames = Array.isArray(experimenters.experimenter_name)
-    ? experimenters.experimenter_name
-    : [];
+  // dereference. Read through the canonical shape-safe selectors (the single place these
+  // guards live), so a corrupt record renders blank fields the user can fix, never a
+  // blank/crashed step.
+  const session = getDaySession(day);
+  const subject = getAnimalSubject(animal);
+  const experimenters = getAnimalExperimenters(animal);
+  const experimenterNames = getExperimenterNames(animal);
   const dayDateKey = String(day.date ?? '').replace(/-/g, '');
 
   const [fieldErrors, setFieldErrors] = useState({});

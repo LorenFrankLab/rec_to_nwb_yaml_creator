@@ -9,7 +9,12 @@ import AssociatedFilesEditor from './AssociatedFilesEditor';
 import MalformedCollectionNotice from './MalformedCollectionNotice';
 import { useStepperShortcut } from '../../hooks/stepperShortcuts';
 import { RAW_DAY_ARRAY_FIELDS } from '../../validation/rawShape';
-import { getAnimalCameras, getDayTasks } from '../../state/workspaceSelectors';
+import {
+  getAnimalCameras,
+  getDayTasks,
+  getDayAssociatedVideos,
+  getDayAssociatedFiles,
+} from '../../state/workspaceSelectors';
 import './TasksEpochsStep.scss';
 
 // The day-owned collections this step owns (raw-shape reset surface). Derived from the
@@ -51,8 +56,8 @@ function findOrphanedReferences(day, nextTasks) {
   // Guard corrupt persisted shapes: a non-array associated_* (e.g. `{}`) must not throw
   // when a task Add/Edit/Delete runs before the user resets it via the raw-shape notice.
   return {
-    videos: (Array.isArray(day.associated_video_files) ? day.associated_video_files : []).filter(isOrphan),
-    files: (Array.isArray(day.associated_files) ? day.associated_files : []).filter(isOrphan),
+    videos: getDayAssociatedVideos(day).filter(isOrphan),
+    files: getDayAssociatedFiles(day).filter(isOrphan),
   };
 }
 
@@ -198,12 +203,14 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
     // The delete is already confirmed (with the affected-video notice) in TasksTable,
     // so clean up and commit together — no second prompt for the delete path.
     onFieldUpdate('tasks', nextTasks);
-    const repairedVideos = clearOrphans(day.associated_video_files, valid);
-    const repairedFiles = clearOrphans(day.associated_files, valid);
-    if (JSON.stringify(repairedVideos) !== JSON.stringify(day.associated_video_files || [])) {
+    const currentVideos = getDayAssociatedVideos(day);
+    const currentFiles = getDayAssociatedFiles(day);
+    const repairedVideos = clearOrphans(currentVideos, valid);
+    const repairedFiles = clearOrphans(currentFiles, valid);
+    if (JSON.stringify(repairedVideos) !== JSON.stringify(currentVideos)) {
       onFieldUpdate('associated_video_files', repairedVideos);
     }
-    if (JSON.stringify(repairedFiles) !== JSON.stringify(day.associated_files || [])) {
+    if (JSON.stringify(repairedFiles) !== JSON.stringify(currentFiles)) {
       onFieldUpdate('associated_files', repairedFiles);
     }
   }
@@ -216,12 +223,14 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
     const { nextTasks } = pendingRepair;
     const valid = validEpochSet(nextTasks);
     onFieldUpdate('tasks', nextTasks);
-    const repairedVideos = clearOrphans(day.associated_video_files, valid);
-    const repairedFiles = clearOrphans(day.associated_files, valid);
-    if (JSON.stringify(repairedVideos) !== JSON.stringify(day.associated_video_files || [])) {
+    const currentVideos = getDayAssociatedVideos(day);
+    const currentFiles = getDayAssociatedFiles(day);
+    const repairedVideos = clearOrphans(currentVideos, valid);
+    const repairedFiles = clearOrphans(currentFiles, valid);
+    if (JSON.stringify(repairedVideos) !== JSON.stringify(currentVideos)) {
       onFieldUpdate('associated_video_files', repairedVideos);
     }
-    if (JSON.stringify(repairedFiles) !== JSON.stringify(day.associated_files || [])) {
+    if (JSON.stringify(repairedFiles) !== JSON.stringify(currentFiles)) {
       onFieldUpdate('associated_files', repairedFiles);
     }
     setPendingRepair(null);

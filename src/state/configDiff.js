@@ -11,7 +11,7 @@
  */
 
 import { resolveDayConfig } from './workspaceUtils';
-import { getConfigHistory } from './workspaceSelectors';
+import { getConfigHistory, getAnimalDayIds } from './workspaceSelectors';
 
 // Re-export so wizard/UI code has a single import surface for config resolution.
 export { resolveDayConfig };
@@ -147,7 +147,7 @@ export function reconcileAppliedToDays(animal, daysById) {
   for (const snapshot of getConfigHistory(animal)) {
     byVersion[snapshot.version] = [];
   }
-  for (const dayId of animal.days || []) {
+  for (const dayId of getAnimalDayIds(animal)) {
     const day = daysById?.[dayId];
     if (!day) continue;
     const version = day.configurationVersion;

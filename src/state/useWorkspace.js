@@ -7,6 +7,7 @@ import {
 } from './workspaceUtils';
 import { FLAGS } from '../featureFlags';
 import { loadWorkspace, saveWorkspace, clearWorkspace } from './persistence';
+import { getAnimalDayIds } from './workspaceSelectors';
 import {
   normalizeDeviceOverrides,
   normalizeDevices,
@@ -641,7 +642,7 @@ export function useWorkspace(initialState = null) {
         const animal = workspace.animals[animalId];
         if (!animal) return [];
 
-        return (animal.days || [])
+        return getAnimalDayIds(animal)
           .map((dayId) => workspace.days[dayId])
           .filter(Boolean)
           .sort((a, b) => a.date.localeCompare(b.date));

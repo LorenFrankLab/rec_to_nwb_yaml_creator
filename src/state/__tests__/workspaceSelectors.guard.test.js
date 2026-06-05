@@ -20,15 +20,30 @@ import path from 'node:path';
 
 const srcDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../');
 
-// Ad-hoc guards on RAW animal/day fields that must instead go through a selector.
-const FORBIDDEN = [
-  /\banimal\.cameras\s*\|\|\s*\[\]/,
-  /Array\.isArray\(\s*animal\.cameras\s*\)/,
-  /\banimal\.configurationHistory\s*\|\|\s*\[\]/,
-  /Array\.isArray\(\s*animal\.configurationHistory\s*\)/,
-  /animal\.devices\?\.data_acq_device\s*\|\|\s*\[\]/,
-  /\bday\.tasks\s*\|\|\s*\[\]/,
+// Ad-hoc guards on RAW animal/day fields that must instead go through a selector. Covers
+// EVERY selector-owned field — `<expr> || []` and `Array.isArray(<expr>)`/`isRecord(<expr>)`
+// — so the migration's promise ("no ad-hoc access left to get wrong") is actually locked in
+// and a future component can't quietly re-derive safety for one of these fields.
+const SELECTOR_OWNED = [
+  'animal\\.cameras',
+  'animal\\.configurationHistory',
+  'animal\\.devices\\?\\.data_acq_device',
+  'animal\\.days',
+  'animal\\.subject',
+  'animal\\.experimenters',
+  'experimenters\\.experimenter_name',
+  'day\\.tasks',
+  'day\\.session',
+  'day\\.keywords',
+  'day\\.behavioral_events',
+  'day\\.associated_files',
+  'day\\.associated_video_files',
 ];
+const FORBIDDEN = SELECTOR_OWNED.flatMap((field) => [
+  new RegExp(`${field}\\s*\\|\\|\\s*\\[\\]`),
+  new RegExp(`Array\\.isArray\\(\\s*${field}\\s*\\)`),
+  new RegExp(`isRecord\\(\\s*${field}\\s*\\)`),
+]);
 
 const isExempt = (file) =>
   file.endsWith('workspaceSelectors.js') ||

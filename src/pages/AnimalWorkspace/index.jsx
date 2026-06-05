@@ -20,6 +20,7 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
+import { getAnimalDayIds } from '../../state/workspaceSelectors';
 import { CalendarDayCreator } from '../../components/CalendarDayCreator/CalendarDayCreator';
 import './AnimalWorkspace.css';
 
@@ -135,7 +136,7 @@ export function AnimalWorkspace() {
             </div>
             {animalIds.map((animalId) => {
               const animal = animals[animalId];
-              const dayCount = animal.days?.length || 0;
+              const dayCount = getAnimalDayIds(animal).length;
               const isSelected = animalId === selectedAnimalId;
 
               return (

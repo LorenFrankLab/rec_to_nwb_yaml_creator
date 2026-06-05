@@ -19,6 +19,7 @@ import { useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
+import { getAnimalDayIds } from '../../state/workspaceSelectors';
 import { computeStepStatus } from '../DayEditor/validation';
 import { formatDeterministicFilename, downloadYamlFile } from '../../io/yaml';
 import { checkShadowExport } from '../DayEditor/shadowExport';
@@ -89,7 +90,7 @@ function buildRows(workspace) {
     // A non-array `days` is corrupt persisted state (e.g. `{}` from a bad import).
     // Treat it as "no days" rather than letting `.map` throw and blank the whole
     // multi-day summary — the rest of the workspace must still render.
-    const dayIds = Array.isArray(animal.days) ? animal.days : [];
+    const dayIds = getAnimalDayIds(animal);
     const days = dayIds
       .map((dayId) => daysById[dayId])
       // Keep only resolvable day RECORDS: a missing id (undefined) or a
