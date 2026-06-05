@@ -58,6 +58,24 @@ describe('BehavioralEventsSection', () => {
       // Add button should be present
       expect(screen.getByRole('button', { name: /Add First Behavioral Event/i })).toBeInTheDocument();
     });
+
+    it.each([
+      ['a string', 'corrupt'],
+      ['a plain object', {}],
+      ['a number', 42],
+    ])('renders the empty state instead of throwing when behavioral_events is %s', (_label, corrupt) => {
+      const corruptAnimal = { id: 'test', behavioral_events: corrupt };
+
+      expect(() =>
+        render(
+          <BehavioralEventsSection
+            animal={corruptAnimal}
+            onFieldUpdate={mockOnFieldUpdate}
+          />
+        )
+      ).not.toThrow();
+      expect(screen.getByText(/No Behavioral Events/i)).toBeInTheDocument();
+    });
   });
 
   describe('Table Display', () => {

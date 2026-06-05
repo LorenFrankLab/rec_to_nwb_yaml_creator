@@ -8,7 +8,13 @@ import MalformedCollectionNotice from './MalformedCollectionNotice';
 import { validateField } from './validation';
 import { isValidSpecies } from '../../validation/dandiSubject';
 import { RAW_DAY_ARRAY_FIELDS } from '../../validation/rawShape';
-import { getDaySession, getAnimalSubject, getAnimalExperimenters, getExperimenterNames } from '../../state/workspaceSelectors';
+import {
+  getDaySession,
+  getDayKeywords,
+  getAnimalSubject,
+  getAnimalExperimenters,
+  getExperimenterNames,
+} from '../../state/workspaceSelectors';
 
 // The day-owned collections this step owns (raw-shape reset surface).
 const OVERVIEW_STEP_COLLECTIONS = RAW_DAY_ARRAY_FIELDS.filter((f) => f.repairStep === 'overview');
@@ -43,6 +49,7 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
   const subject = getAnimalSubject(animal);
   const experimenters = getAnimalExperimenters(animal);
   const experimenterNames = getExperimenterNames(animal);
+  const keywords = getDayKeywords(day);
   const dayDateKey = String(day.date ?? '').replace(/-/g, '');
 
   const [fieldErrors, setFieldErrors] = useState({});
@@ -202,7 +209,7 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
           </div>
 
           <KeywordsEditor
-            value={day.keywords}
+            value={keywords}
             onChange={(keywords) => onFieldUpdate('keywords', keywords)}
           />
         </div>

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  getAnimalBehavioralEvents,
   getAnimalCameras,
   getConfigHistory,
   getAnimalDevices,
@@ -29,6 +30,7 @@ import {
 describe('workspaceSelectors — array fields are always safe arrays', () => {
   const arraySelectors = [
     ['getAnimalCameras', getAnimalCameras, (v) => ({ cameras: v })],
+    ['getAnimalBehavioralEvents', getAnimalBehavioralEvents, (v) => ({ behavioral_events: v })],
     ['getConfigHistory', getConfigHistory, (v) => ({ configurationHistory: v })],
     ['getDataAcqDevices', getDataAcqDevices, (v) => ({ devices: { data_acq_device: v } })],
     ['getAnimalElectrodeGroups', getAnimalElectrodeGroups, (v) => ({ devices: { electrode_groups: v } })],

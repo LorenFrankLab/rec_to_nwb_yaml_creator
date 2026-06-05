@@ -19,7 +19,7 @@ import { useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
-import { getAnimalDayIds } from '../../state/workspaceSelectors';
+import { getAnimalDayIds, getAnimalSubject } from '../../state/workspaceSelectors';
 import { computeStepStatus } from '../DayEditor/validation';
 import { formatDeterministicFilename, downloadYamlFile } from '../../io/yaml';
 import { checkShadowExport } from '../DayEditor/shadowExport';
@@ -122,7 +122,7 @@ function buildRows(workspace) {
   return rows;
 }
 
-const subjectLabel = (animal) => animal.subject?.subject_id ?? animal.id;
+const subjectLabel = (animal) => getAnimalSubject(animal).subject_id ?? animal.id;
 
 /**
  * An assertive (`role="alert"`) report of days that were NOT exported normally, with

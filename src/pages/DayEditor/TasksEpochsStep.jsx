@@ -10,10 +10,12 @@ import MalformedCollectionNotice from './MalformedCollectionNotice';
 import { useStepperShortcut } from '../../hooks/stepperShortcuts';
 import { RAW_DAY_ARRAY_FIELDS } from '../../validation/rawShape';
 import {
+  getAnimalBehavioralEvents,
   getAnimalCameras,
   getDayTasks,
   getDayAssociatedVideos,
   getDayAssociatedFiles,
+  getDayBehavioralEvents,
 } from '../../state/workspaceSelectors';
 import './TasksEpochsStep.scss';
 
@@ -109,6 +111,10 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
   // MalformedCollectionNotice below. Guard ALL day-owned arrays this step iterates.
   const tasks = getDayTasks(day);
   const cameras = getAnimalCameras(animal);
+  const associatedVideos = getDayAssociatedVideos(day);
+  const associatedFiles = getDayAssociatedFiles(day);
+  const inheritedBehavioralEvents = getAnimalBehavioralEvents(animal);
+  const dayBehavioralEvents = getDayBehavioralEvents(day);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('add');
@@ -329,22 +335,22 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
       />
 
       <AssociatedVideosEditor
-        videos={day.associated_video_files}
+        videos={associatedVideos}
         cameras={cameras}
         tasks={tasks}
         onChange={(next) => onFieldUpdate('associated_video_files', next)}
       />
 
       <AssociatedFilesEditor
-        files={day.associated_files}
+        files={associatedFiles}
         tasks={tasks}
         onChange={(next) => onFieldUpdate('associated_files', next)}
       />
 
       <section className="behavioral-events-block">
         <BehavioralEventsDisplay
-          inheritedEvents={animal.behavioral_events}
-          dayEvents={day.behavioral_events}
+          inheritedEvents={inheritedBehavioralEvents}
+          dayEvents={dayBehavioralEvents}
           onDayEventsChange={(events) => onFieldUpdate('behavioral_events', events)}
         />
       </section>
@@ -355,7 +361,7 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
         task={editingTask}
         existingTasks={tasks}
         cameras={cameras}
-        inheritedEvents={animal.behavioral_events}
+        inheritedEvents={inheritedBehavioralEvents}
         knownTaskDescriptions={dayKnownDescriptions}
         animalId={animal.id}
         onSave={handleSaveTask}

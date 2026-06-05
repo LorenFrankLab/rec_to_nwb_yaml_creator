@@ -36,6 +36,9 @@ const asRecord = (value) =>
 /** @param {object} animal @returns {Array} The animal's cameras (always an array). */
 export const getAnimalCameras = (animal) => asArray(animal?.cameras);
 
+/** @param {object} animal @returns {Array} The animal's behavioral events. */
+export const getAnimalBehavioralEvents = (animal) => asArray(animal?.behavioral_events);
+
 /** @param {object} animal @returns {Array} The animal's configuration history. */
 export const getConfigHistory = (animal) => asArray(animal?.configurationHistory);
 

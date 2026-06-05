@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
 import { ConfirmDialog } from '../../components/Modal';
+import { getAnimalBehavioralEvents } from '../../state/workspaceSelectors';
 import './BehavioralEventsSection.scss';
 
 /**
@@ -16,7 +17,7 @@ import './BehavioralEventsSection.scss';
  * @returns {JSX.Element}
  */
 export default function BehavioralEventsSection({ animal, onFieldUpdate }) {
-  const events = animal.behavioral_events || [];
+  const events = getAnimalBehavioralEvents(animal);
   const [editingIndex, setEditingIndex] = useState(null);
   const [editingEvent, setEditingEvent] = useState(null);
   const [validationError, setValidationError] = useState(null);

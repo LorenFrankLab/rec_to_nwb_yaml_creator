@@ -26,6 +26,7 @@ const srcDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..
 // and a future component can't quietly re-derive safety for one of these fields.
 const SELECTOR_OWNED = [
   'animal\\.cameras',
+  'animal\\.behavioral_events',
   'animal\\.configurationHistory',
   'animal\\.days',
   'animal\\.subject',
@@ -54,6 +55,8 @@ const FORBIDDEN = SELECTOR_OWNED.flatMap((field) => [
   new RegExp(`Array\\.isArray\\(\\s*${field}\\s*\\)`),
   new RegExp(`isRecord\\(\\s*${field}\\s*\\)`),
   new RegExp(`\\b(?:const|let)\\s+\\w+\\s*=\\s*${field}\\b`),
+  new RegExp(`\\.\\.\\.\\s*${field}\\b`),
+  new RegExp(`\\{\\s*${field}\\s*\\}`),
   new RegExp(`${field}\\.(?:map|flatMap|filter|find|some|forEach|reduce|entries)\\s*\\(`),
 ]);
 
