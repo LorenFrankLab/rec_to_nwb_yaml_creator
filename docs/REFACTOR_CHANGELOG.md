@@ -6,6 +6,36 @@
 
 ---
 
+## Phase 7 review fixes, round 7 — surface, route, repair, and don't crash first (June 5, 2026)
+
+Three independent reviewers converged on the `deviceOverrides` cluster again. Six findings, same family
+(branch not merged):
+
+- **Top-level non-record `deviceOverrides` failed open (HIGH).** A restored `deviceOverrides: "corrupt"` had
+  the merge read keys off it (all undefined → snapshot) and `dayOverrideIssues` bail with no issue. Now a
+  day-routed `malformed_device_override` (path `deviceOverrides`) with a whole-override removal control.
+- **Array geometry override dead-ended repair routing (HIGH).** A day-level array `electrode_groups` / ntrode
+  override is a *supported* resolver feature (the `configDiff` test proves it) that SHADOWS the snapshot; when
+  its contents err, those errors route to the Animal Editor — which edits the snapshot, not the override — a
+  dead-end. We do NOT flag a clean override, but when its contents error we add a day-routed
+  `shadowed_geometry_override` escape, and DevicesStep offers "revert to saved configuration" for any present
+  geometry override. (`dayOverrideIssues` now receives the base `validate()` issues to make this distinction.)
+- **Invalid array bad-channel marks were blocking but unremovable (HIGH).** An out-of-range / non-integer mark
+  has no checkbox and the toggles carry it forward, so it was stuck. Both editors now render a removal control
+  per invalid mark (single- and multi-shank; multi-shank uses the atomic batch path).
+- **Cleanup controls skipped in the empty (no-electrode-groups) state (MED).** The cleanup section is now
+  computed before the early return and rendered in both branches.
+- **Override repair focus was not key-specific (MED).** Every button shared `deviceOverrides.bad_channels`;
+  per-key issues + buttons now carry `deviceOverrides.bad_channels.<id>` so focus lands on the clicked ntrode.
+- **DayEditorStepper crashed before validation on a sibling day's malformed `tasks` (MED).** `tasks: {}` is
+  truthy-non-array → `.forEach` threw during render, bypassing the fail-closed validation UI. Guarded with
+  `Array.isArray` (only sibling iteration over persisted data in that file).
+
+Gate: 3553 tests pass (with an adequate test-timeout — the slow multi-shank checkbox renders flake on timeout
+under parallel load, not on logic), 125 golden baselines byte-identical, 0 lint errors, clean build.
+
+---
+
 ## Phase 7 review fixes, round 6 — the override-issue surface, made complete (June 5, 2026)
 
 Round 5 hardened how the merge *applies* malformed `deviceOverrides`; round 6 found the matching gap in how
