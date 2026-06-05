@@ -65,7 +65,8 @@ const VIRUS_FIELDS = [
  * @param fields
  */
 function emptyItem(fields) {
-  return Object.fromEntries(fields.map((f) => [f.name, f.type === 'number' ? '' : '']));
+  // Every field starts as '' so the input is controlled and the required check fires.
+  return Object.fromEntries(fields.map((f) => [f.name, '']));
 }
 
 /** A fresh, enabled-but-empty optogenetics block (one excitation source, no fibers/viruses). */
@@ -159,7 +160,13 @@ export default function OptogeneticsStep({ animal, onUpdate }) {
   // Completeness mirrors the converter gate (and the partial_configuration export rule).
   const completeness = enabled
     ? {
-        source: opto.opto_excitation_source.length > 0,
+        // A single source is always pre-seeded, so "present" must mean it has been filled
+        // in (a non-empty name) — otherwise the checklist would claim the source is done
+        // before the user has typed anything.
+        source:
+          opto.opto_excitation_source.length > 0 &&
+          typeof opto.opto_excitation_source[0]?.name === 'string' &&
+          opto.opto_excitation_source[0].name.trim() !== '',
         fiber: opto.optical_fiber.length > 0,
         virus: opto.virus_injection.length > 0,
         software:
@@ -194,10 +201,12 @@ export default function OptogeneticsStep({ animal, onUpdate }) {
         <>
           {!isComplete && (
             <p className="opto-incomplete" role="status">
-              Optogenetics is incomplete. trodes_to_nwb silently drops ALL optogenetics
-              unless every section is present, so export is blocked until you add: {' '}
+              Your exported file will contain <strong>no optogenetics data</strong> unless
+              every section below is complete (the conversion tool drops the whole
+              optogenetics block otherwise, with no error). Export stays blocked until you
+              add: {' '}
               {[
-                !completeness.source && 'an excitation source',
+                !completeness.source && 'an excitation source (with a name)',
                 !completeness.fiber && 'at least one optical fiber',
                 !completeness.virus && 'at least one virus injection',
                 !completeness.software && 'the stimulation software name',

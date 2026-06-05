@@ -51,6 +51,10 @@ describe('Empty Array Validation (P2)', () => {
       // ARRANGE: Create YAML with fs_gui_yaml containing empty epochs
       const yaml = {
         ...loadFixture('valid', 'minimal-valid.yml'),
+        // A camera + task so the fs_gui camera_id / epoch references resolve (the
+        // reference-integrity rule is orthogonal to the schema bug under test).
+        cameras: [{ id: 0, meters_per_pixel: 0.001, manufacturer: 'm', model: 'mod', lens: 'l', camera_name: 'c' }],
+        tasks: [{ task_name: 't', task_description: 'd', task_environment: 'e', camera_id: [0], task_epochs: [1, 2, 3] }],
         fs_gui_yamls: [
           {
             name: 'test.yaml',
@@ -79,6 +83,8 @@ describe('Empty Array Validation (P2)', () => {
       // ARRANGE: Valid fs_gui_yaml with one epoch
       const yaml = {
         ...loadFixture('valid', 'minimal-valid.yml'),
+        cameras: [{ id: 0, meters_per_pixel: 0.001, manufacturer: 'm', model: 'mod', lens: 'l', camera_name: 'c' }],
+        tasks: [{ task_name: 't', task_description: 'd', task_environment: 'e', camera_id: [0], task_epochs: [1, 2, 3] }],
         fs_gui_yamls: [
           {
             name: 'test.yaml',
@@ -103,6 +109,8 @@ describe('Empty Array Validation (P2)', () => {
       // ARRANGE: Valid fs_gui_yaml with multiple epochs
       const yaml = {
         ...loadFixture('valid', 'minimal-valid.yml'),
+        cameras: [{ id: 0, meters_per_pixel: 0.001, manufacturer: 'm', model: 'mod', lens: 'l', camera_name: 'c' }],
+        tasks: [{ task_name: 't', task_description: 'd', task_environment: 'e', camera_id: [0], task_epochs: [1, 2, 3] }],
         fs_gui_yamls: [
           {
             name: 'test.yaml',

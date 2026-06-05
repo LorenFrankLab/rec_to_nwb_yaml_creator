@@ -110,7 +110,7 @@ function reorderKeys(obj, order) {
  * stored data carried — lets the same YAML pass app AJV and convert without the
  * converter silently dropping the whole optogenetics block. The duplicate is a
  * deliberate, documented compatibility shim until the schema and converter agree on one
- * canonical spelling (see docs/REFACTOR_CHANGELOG.md and the phase-8 key-mismatch note).
+ * canonical spelling (see docs/REFACTOR_CHANGELOG.md and docs/PIPELINE_REQUIREMENTS.md).
  *
  * @param {Array} items - Raw virus_injection items.
  * @returns {Array} Reordered items with both `volume_in_uL` and `volume_in_ul` set.

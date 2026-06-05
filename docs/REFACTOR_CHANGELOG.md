@@ -50,8 +50,22 @@ unchanged).
   `docs/PIPELINE_REQUIREMENTS.md` (it must prove the NWB actually contains the optogenetics
   objects — the highest-value opto check, given the silent-drop failure mode).
 
-Gate: full vitest (3829), golden baselines byte-identical, 0 lint errors, clean build. Branch not
-merged.
+Review fixes (code-reviewer, ux-reviewer, silent-failure-hunter), applied in-phase:
+- **fs_gui reference integrity rule (Task 4 "validate epoch references").** Added a
+  `rulesValidation` rule: each `fs_gui_yamls[].camera_id` must reference an existing camera
+  (`dangling_camera_ref`) and each `epochs[]` value must match a task epoch
+  (`orphaned_fs_gui_epoch`) — error severity. The editor's controlled choices prevent *typing* a
+  dangling reference; this catches a *stale* one (a deleted camera / renumbered epoch from
+  import) that would otherwise export silently.
+- **Repair routing for opto moved to the Animal Editor.** `SURFACE_BY_CODE.partial_configuration`
+  (and `multiple_excitation_sources`) → `'animal'`, matching the rule's explicit surface and the
+  new Optogenetics step (the stale `'day'` entry was a latent dead-end).
+- **Honest incomplete-state.** The editor's source-completeness check now requires a non-empty
+  source name (a single source is pre-seeded, so `length > 0` always read "complete"); the
+  incomplete notice now leads with the user consequence ("your exported file will contain no
+  optogenetics data") rather than the tool name.
+
+Gate: full vitest, golden baselines byte-identical, 0 lint errors, clean build. Branch not merged.
 
 ---
 

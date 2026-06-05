@@ -701,6 +701,7 @@ export const SURFACE_BY_CODE = {
   duplicate_task_epoch: 'day',
   orphaned_video: 'day',
   orphaned_file: 'day',
+  orphaned_fs_gui_epoch: 'day',
   divergent_task_identity: 'day',
   bad_channel_out_of_range: 'day',
   multishank_bad_channels_ignored: 'day',
@@ -713,7 +714,10 @@ export const SURFACE_BY_CODE = {
   malformed_animal_collection: 'animal',
   missing_configuration_history: 'animal',
   missing_camera: 'day',
-  partial_configuration: 'day',
+  // Optogenetics sections live on the Animal Editor's Optogenetics step (the rule also
+  // sets repairSurface:'animal' explicitly; this keeps the authoritative table in sync).
+  partial_configuration: 'animal',
+  multiple_excitation_sources: 'animal',
   // No editable in-app target — read-only identity (slash ids). The explanatory
   // message states the remedy (recreate the animal); a "Fix in …" button would
   // dead-end on a disabled control.

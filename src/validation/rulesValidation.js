@@ -801,6 +801,61 @@ export const rulesValidation = (model) => {
     });
   }
 
+  // Rule 15c: fs_gui_yamls reference integrity (optogenetics, day-level). Each FsGUI
+  // protocol's `camera_id` must reference an existing camera and each of its `epochs`
+  // must match a task epoch — otherwise the converter writes an opto protocol pointing
+  // at a camera/epoch that does not exist (or silently drops it). The editor constrains
+  // NEW edits to controlled choices, but an imported/stale value (a deleted camera, a
+  // renumbered epoch) is only caught here.
+  if (Array.isArray(model.fs_gui_yamls) && model.fs_gui_yamls.length > 0) {
+    const validCameraIdSet = Array.isArray(model.cameras)
+      ? new Set(model.cameras.map((c) => c?.id).filter((id) => id !== undefined && id !== null))
+      : new Set();
+    const taskEpochSet = new Set();
+    (Array.isArray(model.tasks) ? model.tasks : []).forEach((task) => {
+      (Array.isArray(task?.task_epochs) ? task.task_epochs : []).forEach((e) => {
+        if (e !== undefined && e !== null) taskEpochSet.add(e);
+      });
+    });
+
+    model.fs_gui_yamls.forEach((fsGui, fi) => {
+      const cid = fsGui?.camera_id;
+      // Blank/empty camera_id is an incomplete row owned by the schema required check.
+      if (cid !== undefined && cid !== null && cid !== '' && !validCameraIdSet.has(cid)) {
+        issues.push({
+          path: `fs_gui_yamls[${fi}].camera_id`,
+          field: 'camera_id',
+          step: 'epochs',
+          actionLabel: 'Fix FsGUI camera',
+          code: 'dangling_camera_ref',
+          repairSurface: 'day',
+          severity: 'error',
+          message:
+            `FsGUI protocol ${fi + 1}${fsGui.name ? ` ("${fsGui.name}")` : ''} references camera id ` +
+            `${cid}, but no camera with that id is defined. Pick an existing camera or restore it.`,
+        });
+      }
+
+      (Array.isArray(fsGui?.epochs) ? fsGui.epochs : []).forEach((epoch) => {
+        if (epoch === undefined || epoch === null || epoch === '') return;
+        if (!taskEpochSet.has(epoch)) {
+          issues.push({
+            path: `fs_gui_yamls[${fi}].epochs`,
+            field: 'epochs',
+            step: 'epochs',
+            actionLabel: 'Fix FsGUI epochs',
+            code: 'orphaned_fs_gui_epoch',
+            repairSurface: 'day',
+            severity: 'error',
+            message:
+              `FsGUI protocol ${fi + 1}${fsGui.name ? ` ("${fsGui.name}")` : ''} references task epoch ` +
+              `${epoch}, which no task defines. Point it at an existing epoch or remove it.`,
+          });
+        }
+      });
+    });
+  }
+
   // Rule 16: workspace/dataset identity consistency (Spyglass).
   // Within the exported model, a reused identity name must carry identical
   // dependent metadata, else Spyglass raises a divergence error or silently reuses

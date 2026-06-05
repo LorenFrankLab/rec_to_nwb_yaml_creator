@@ -355,6 +355,48 @@ describe('rulesValidation()', () => {
       }));
     });
 
+    it('errors on an fs_gui_yamls camera_id that no camera defines (dangling ref)', () => {
+      const model = {
+        cameras: [{ id: 0 }],
+        tasks: [{ task_name: 't', task_epochs: [1] }],
+        fs_gui_yamls: [{ name: 'p.yaml', epochs: [1], camera_id: 42 }],
+      };
+      const issues = rulesValidation(model);
+
+      expect(issues).toContainEqual(expect.objectContaining({
+        code: 'dangling_camera_ref',
+        path: expect.stringContaining('fs_gui_yamls'),
+        severity: 'error',
+      }));
+    });
+
+    it('errors on an fs_gui_yamls epoch that no task defines (orphaned epoch)', () => {
+      const model = {
+        cameras: [{ id: 0 }],
+        tasks: [{ task_name: 't', task_epochs: [1] }],
+        fs_gui_yamls: [{ name: 'p.yaml', epochs: [99], camera_id: 0 }],
+      };
+      const issues = rulesValidation(model);
+
+      expect(issues).toContainEqual(expect.objectContaining({
+        code: 'orphaned_fs_gui_epoch',
+        path: expect.stringContaining('fs_gui_yamls'),
+        severity: 'error',
+      }));
+    });
+
+    it('passes for fs_gui_yamls with valid camera + epoch references', () => {
+      const model = {
+        cameras: [{ id: 0 }],
+        tasks: [{ task_name: 't', task_epochs: [1, 2] }],
+        fs_gui_yamls: [{ name: 'p.yaml', epochs: [1, 2], camera_id: 0 }],
+      };
+      const issues = rulesValidation(model);
+
+      expect(issues.some(i => i.code === 'dangling_camera_ref')).toBe(false);
+      expect(issues.some(i => i.code === 'orphaned_fs_gui_epoch')).toBe(false);
+    });
+
     it('should not error when all four fields absent', () => {
       const model = createTestYaml({
         opto_excitation_source: undefined,

@@ -47,15 +47,15 @@ describe('OptogeneticsStep', () => {
     render(<Harness />);
 
     await user.click(screen.getByRole('checkbox', { name: /has optogenetics/i }));
-    // Enabled but no fiber/virus yet → incomplete (mirrors the converter gate).
-    expect(screen.getByText(/optogenetics is incomplete/i)).toBeInTheDocument();
+    // Enabled but the source has no name and there's no fiber/virus yet → incomplete.
+    expect(screen.getByText(/no optogenetics data/i)).toBeInTheDocument();
 
+    await user.type(screen.getByLabelText(/setup name/i), 'LED-470');
     await user.click(screen.getByRole('button', { name: /add optical fiber/i }));
     await user.click(screen.getByRole('button', { name: /add virus injection/i }));
 
-    // Source + fiber + virus + software all present → complete (the gate checks presence,
-    // not per-field completeness, which the schema enforces separately).
-    expect(screen.queryByText(/optogenetics is incomplete/i)).not.toBeInTheDocument();
+    // Named source + fiber + virus + software all present → the incomplete notice clears.
+    expect(screen.queryByText(/no optogenetics data/i)).not.toBeInTheDocument();
   });
 
   it('commits edits to the excitation source and software through onUpdate', async () => {
