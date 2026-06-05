@@ -6,6 +6,32 @@
 
 ---
 
+## Phase 7 review fixes, round 3 — close the remaining laundering/routing/repair gaps (June 5, 2026)
+
+A third deep review (multi-agent) found 9 more gaps; all fixed (branch not merged):
+
+- **Lossless scalar normalization (HIGH).** `cleanString`/`toFiniteNumber` no longer launder a numeric
+  `location`/`units` (via `String()`) or junk coordinate like `targeted_x: "2.5mm"` (via `parseFloat`) into a
+  schema-valid value — corrupt scalars are preserved so the schema type check surfaces them.
+- **Scalar video `camera_id` (HIGH).** Rule 2 checks the scalar (not `Array.isArray`), so a video referencing
+  camera 0 with no cameras table trips the missing-camera rule.
+- **Subject repair routing (HIGH).** Schema `subject.*` errors route to the Day Editor Overview (where the
+  inherited subject fields are repairable), not the Animal Editor.
+- **Multi-shank bad-channel repair (HIGH).** `multishank_bad_channels_ignored` routes to the Day Devices step;
+  the Animal Editor `ChannelMapEditor` now edits multi-shank bad channels as a probe-wide `0…N-1` selector on
+  the first ntrode row too (accepts `42`/`63`).
+- **Fail-closed merge (HIGH).** `mergeDayMetadata` guards malformed (non-array) day fields so a corrupt import
+  returns validation issues instead of crashing.
+- **Stale day-level bad-channel overrides (HIGH).** `deviceOverrides.bad_channels` keys that match no resolved
+  ntrode are surfaced (folded into `computeStepStatus`) instead of being silently dropped by the merge.
+- **Zero-row electrode group (MED).** In a partially-configured day, an electrode group with no ntrode rows is
+  a validation error (`channel_row_count_mismatch`), not just step-incompleteness.
+- **CSV import (MED).** Exact integer parsing (no `parseInt` truncation of `"2.9"`/`"63abc"`).
+- **Repair focus anchors (MED).** `data-field-path` on the associated-files epoch select and bad-channel
+  controls so repair buttons focus the offending control.
+
+---
+
 ## Phase 7 review fixes — close the reachable-surface and repair-path gaps (June 5, 2026)
 
 A multi-agent review (3 in-house reviewers + a deeper external review) found gaps where the Phase 7
