@@ -10,25 +10,39 @@ import './TaskModal.scss';
  * (and remounts when its `key` changes), letting these lazy useState initializers
  * read from props once per edit — no array-keyed init effect.
  *
- * Severity policy: Save is blocked only by error-severity issues — a blank
- * task_name or task_environment, a task name that duplicates another task in the
- * day, or any epoch row with end <= start. task_description, camera selection, and
- * empty/missing-camera references are non-blocking.
+ * Severity policy: Save is blocked by error-severity issues — a blank task_name or
+ * task_environment, any epoch row with end <= start, a SELECTED camera id the
+ * animal does not define (a dangling reference that would corrupt the export), and
+ * a task_name that reuses a known dataset task_name with a DIFFERENT
+ * task_description (the Spyglass task-identity guard: one description per name).
+ * A duplicate name is allowed iff its description matches the known/sibling one.
  *
  * camera_id and task_epochs are persisted as integer arrays. Epoch start/end times
  * are editor-local and never reach the saved task.
  *
  * @param {object} props Component props.
  * @param {object|null} props.task Task being edited (edit mode).
- * @param {Array} props.existingTasks Sibling tasks in the day (unique-name check).
+ * @param {Array} props.existingTasks Sibling tasks in the day (identity check).
  * @param {Array} props.cameras Animal cameras (multi-select options).
  * @param {Array} props.inheritedEvents Animal behavioral events (read-only display).
+ * @param {object} props.knownTaskDescriptions Map of task_name -> canonical
+ *   task_description across the whole workspace/dataset, excluding the task being
+ *   edited. Drives the Spyglass task-identity guard.
  * @param {string} [props.animalId] Parent animal id (for the Animal Editor link).
  * @param {Function} props.onSave Called with the saved task object.
  * @param {Function} props.onCancel Called on cancel / ESC / overlay close.
  * @returns {JSX.Element}
  */
-function TaskForm({ task, existingTasks, cameras, inheritedEvents, animalId, onSave, onCancel }) {
+function TaskForm({
+  task,
+  existingTasks,
+  cameras,
+  inheritedEvents,
+  knownTaskDescriptions,
+  animalId,
+  onSave,
+  onCancel,
+}) {
   const [taskName, setTaskName] = useState(() => task?.task_name ?? '');
   const [taskDescription, setTaskDescription] = useState(() => task?.task_description ?? '');
   const [taskEnvironment, setTaskEnvironment] = useState(() => task?.task_environment ?? '');
@@ -42,23 +56,54 @@ function TaskForm({ task, existingTasks, cameras, inheritedEvents, animalId, onS
 
   const availableCameraIds = new Set((cameras || []).map((c) => Number(c.id)));
   const missingCameraIds = cameraIds.filter((id) => !availableCameraIds.has(id));
+  // A dangling SELECTED camera reference is an ERROR — it would corrupt the export
+  // (Spyglass links camera_id to a real camera). It blocks Save until removed or the
+  // camera is restored in the Animal Editor.
+  const hasDanglingCamera = missingCameraIds.length > 0;
 
   const otherTasks = existingTasks.filter((t) => t !== task);
   const trimmedName = taskName.trim();
-  const isDuplicateName =
-    trimmedName !== '' && otherTasks.some((t) => t.task_name === trimmedName);
+  const trimmedDescription = taskDescription.trim();
+
+  // ----- Spyglass task-name identity guard -----
+  // task_name is an identity across the dataset; a given name must carry ONE
+  // description. The canonical description for this name (from sibling tasks in the
+  // day OR any other day in the workspace) is compared with what the user typed.
+  // Sibling tasks take precedence over the cross-workspace map so an in-day rename
+  // is checked against the freshest data.
+  const siblingWithName = otherTasks.find((t) => t.task_name === trimmedName);
+  const knownDescription =
+    trimmedName !== ''
+      ? siblingWithName
+        ? (siblingWithName.task_description ?? '')
+        : Object.prototype.hasOwnProperty.call(knownTaskDescriptions || {}, trimmedName)
+          ? (knownTaskDescriptions[trimmedName] ?? '')
+          : null
+      : null;
+  // Reuse with a DIFFERENT description is blocked. Same name + same description is
+  // allowed (this supersedes the old unconditional within-day duplicate-name block).
+  const descriptionConflict =
+    knownDescription != null && knownDescription.trim() !== trimmedDescription;
 
   const nameBlank = trimmedName === '';
   const environmentBlank = taskEnvironment.trim() === '';
-  const saveDisabled = nameBlank || environmentBlank || isDuplicateName || epochsHaveError;
+  const saveDisabled =
+    nameBlank || environmentBlank || epochsHaveError || hasDanglingCamera || descriptionConflict;
 
   // Human-readable reasons Save is blocked, announced to assistive tech so a
   // disabled Save button is never an unexplained dead-end.
   const blockingReasons = [];
   if (nameBlank) blockingReasons.push('a task name');
   if (environmentBlank) blockingReasons.push('a task environment');
-  if (isDuplicateName) blockingReasons.push('a unique task name');
   if (epochsHaveError) blockingReasons.push('each epoch to end after it starts');
+  if (hasDanglingCamera) {
+    blockingReasons.push(
+      `to remove camera reference${missingCameraIds.length > 1 ? 's' : ''} not defined for this animal (${missingCameraIds.join(', ')})`
+    );
+  }
+  if (descriptionConflict) {
+    blockingReasons.push('a new task name or a matching task description');
+  }
   const saveHint = blockingReasons.length
     ? `To save, add ${blockingReasons.join(', ')}.`
     : '';
@@ -71,6 +116,13 @@ function TaskForm({ task, existingTasks, cameras, inheritedEvents, animalId, onS
     setCameraIds((prev) =>
       prev.includes(id) ? prev.filter((existing) => existing !== id) : [...prev, id]
     );
+  }
+
+  /**
+   * Drop all dangling (animal-undefined) camera references from the selection.
+   */
+  function removeDanglingCameras() {
+    setCameraIds((prev) => prev.filter((id) => availableCameraIds.has(id)));
   }
 
   /**
@@ -89,21 +141,26 @@ function TaskForm({ task, existingTasks, cameras, inheritedEvents, animalId, onS
     if (saveDisabled) return;
     onSave({
       task_name: trimmedName,
-      task_description: taskDescription.trim(),
+      task_description: trimmedDescription,
       task_environment: taskEnvironment.trim(),
       camera_id: cameraIds,
       task_epochs: epochs,
     });
   }
 
-  const nameErrorId = `${baseId}-name-error`;
+  const danglingCameraErrorId = `${baseId}-dangling-camera-error`;
   const nameBlankErrorId = `${baseId}-name-blank-error`;
   const environmentErrorId = `${baseId}-environment-error`;
   const descriptionHintId = `${baseId}-description-hint`;
+  const descriptionConflictId = `${baseId}-description-conflict`;
   const saveHintId = `${baseId}-save-hint`;
   const showNameBlankError = touched.name && nameBlank;
   const showEnvironmentError = touched.environment && environmentBlank;
-  const nameDescribedBy = isDuplicateName ? nameErrorId : showNameBlankError ? nameBlankErrorId : undefined;
+  const nameDescribedBy = descriptionConflict
+    ? descriptionConflictId
+    : showNameBlankError
+      ? nameBlankErrorId
+      : undefined;
 
   return (
     <form className="task-modal-form" onSubmit={(e) => e.preventDefault()}>
@@ -120,15 +177,10 @@ function TaskForm({ task, existingTasks, cameras, inheritedEvents, animalId, onS
               onBlur={() => setTouched((prev) => ({ ...prev, name: true }))}
               required
               aria-required="true"
-              aria-invalid={isDuplicateName || showNameBlankError}
+              aria-invalid={descriptionConflict || showNameBlankError}
               aria-describedby={nameDescribedBy}
             />
-            {isDuplicateName && (
-              <div id={nameErrorId} className="inline-error" role="alert">
-                Task name must be unique within this day
-              </div>
-            )}
-            {showNameBlankError && !isDuplicateName && (
+            {showNameBlankError && (
               <div id={nameBlankErrorId} className="inline-error" role="alert">
                 Task name is required
               </div>
@@ -168,6 +220,26 @@ function TaskForm({ task, existingTasks, cameras, inheritedEvents, animalId, onS
             <span id={descriptionHintId} className="help-text">
               Optional to save, but required before the day can be exported.
             </span>
+            {descriptionConflict && (
+              <div id={descriptionConflictId} className="inline-error" role="alert">
+                <p className="task-identity-conflict-lead">
+                  Task name &quot;{trimmedName}&quot; is already used in this dataset with a
+                  different description. Spyglass treats the task name as an identity, so
+                  one name must have one description. Use a new name or match the existing
+                  description.
+                </p>
+                <dl className="task-identity-conflict-compare">
+                  <div>
+                    <dt>Existing description</dt>
+                    <dd>{knownDescription || <em>(empty)</em>}</dd>
+                  </div>
+                  <div>
+                    <dt>Your description</dt>
+                    <dd>{trimmedDescription || <em>(empty)</em>}</dd>
+                  </div>
+                </dl>
+              </div>
+            )}
           </div>
         </div>
       </details>
@@ -186,6 +258,13 @@ function TaskForm({ task, existingTasks, cameras, inheritedEvents, animalId, onS
               <legend>Cameras used in this task</legend>
               {cameras.map((camera) => {
                 const id = Number(camera.id);
+                const details = [];
+                if (camera.meters_per_pixel != null && camera.meters_per_pixel !== '') {
+                  details.push(`${camera.meters_per_pixel} m/px`);
+                }
+                if (camera.lens) {
+                  details.push(camera.lens);
+                }
                 return (
                   <label key={id} className="camera-checkbox">
                     <input
@@ -194,17 +273,29 @@ function TaskForm({ task, existingTasks, cameras, inheritedEvents, animalId, onS
                       onChange={() => toggleCamera(id)}
                     />
                     {id} – {camera.camera_name || 'unnamed'}
+                    {details.length > 0 ? ` (${details.join(', ')})` : ''}
                   </label>
                 );
               })}
             </fieldset>
           )}
 
-          {missingCameraIds.length > 0 && (
-            <div className="inline-info" role="status">
-              This task references camera id{missingCameraIds.length > 1 ? 's' : ''}{' '}
-              {missingCameraIds.join(', ')} not defined for this animal. The
-              reference is kept; add the camera in the Animal Editor or remove it.
+          {hasDanglingCamera && (
+            <div id={danglingCameraErrorId} className="inline-error" role="alert">
+              <p>
+                This task references camera id{missingCameraIds.length > 1 ? 's' : ''}{' '}
+                {missingCameraIds.join(', ')} not defined for this animal. Remove the
+                reference{missingCameraIds.length > 1 ? 's' : ''} or restore the camera in
+                the Animal Editor before saving.
+              </p>
+              <button
+                type="button"
+                className="button-small button-danger"
+                onClick={removeDanglingCameras}
+                aria-label={`Remove camera reference${missingCameraIds.length > 1 ? 's' : ''} ${missingCameraIds.join(', ')}`}
+              >
+                Remove camera reference{missingCameraIds.length > 1 ? 's' : ''}
+              </button>
             </div>
           )}
         </div>
@@ -253,6 +344,7 @@ TaskForm.propTypes = {
   existingTasks: PropTypes.array.isRequired,
   cameras: PropTypes.array,
   inheritedEvents: PropTypes.array,
+  knownTaskDescriptions: PropTypes.object,
   animalId: PropTypes.string,
   onSave: PropTypes.func.isRequired,
   onCancel: PropTypes.func.isRequired,
@@ -262,6 +354,7 @@ TaskForm.defaultProps = {
   task: null,
   cameras: [],
   inheritedEvents: [],
+  knownTaskDescriptions: {},
   animalId: undefined,
 };
 
@@ -274,9 +367,11 @@ TaskForm.defaultProps = {
  * @param {boolean} props.isOpen Whether the modal is shown.
  * @param {'add'|'edit'} props.mode Add or edit.
  * @param {object|null} props.task Task being edited (edit mode).
- * @param {Array} props.existingTasks Sibling tasks in the day (unique-name check).
+ * @param {Array} props.existingTasks Sibling tasks in the day (identity check).
  * @param {Array} props.cameras Animal cameras (multi-select options).
  * @param {Array} props.inheritedEvents Animal behavioral events (read-only display).
+ * @param {object} [props.knownTaskDescriptions] Map of task_name -> canonical
+ *   task_description across the workspace/dataset (excluding the task being edited).
  * @param {string} [props.animalId] Parent animal id (for the Animal Editor link).
  * @param {Function} props.onSave Called with the saved task object.
  * @param {Function} props.onCancel Called on cancel / ESC / overlay close.
@@ -289,6 +384,7 @@ const TaskModal = ({
   existingTasks = [],
   cameras = [],
   inheritedEvents = [],
+  knownTaskDescriptions = {},
   animalId,
   onSave,
   onCancel,
@@ -306,6 +402,7 @@ const TaskModal = ({
       existingTasks={existingTasks}
       cameras={cameras}
       inheritedEvents={inheritedEvents}
+      knownTaskDescriptions={knownTaskDescriptions}
       animalId={animalId}
       onSave={onSave}
       onCancel={onCancel}
@@ -320,6 +417,7 @@ TaskModal.propTypes = {
   existingTasks: PropTypes.array,
   cameras: PropTypes.array,
   inheritedEvents: PropTypes.array,
+  knownTaskDescriptions: PropTypes.object,
   animalId: PropTypes.string,
   onSave: PropTypes.func.isRequired,
   onCancel: PropTypes.func.isRequired,
@@ -331,6 +429,7 @@ TaskModal.defaultProps = {
   existingTasks: [],
   cameras: [],
   inheritedEvents: [],
+  knownTaskDescriptions: {},
   animalId: undefined,
 };
 

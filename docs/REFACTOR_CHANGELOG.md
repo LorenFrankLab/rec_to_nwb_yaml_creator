@@ -6,6 +6,82 @@
 
 ---
 
+## Phase 6 — Validation completeness: task/video reference UX, cross-reference & channel-bound rules (June 4, 2026)
+
+### New validation rules (`src/validation/rulesValidation.js`, error severity unless noted)
+
+All new rules carry repair metadata (`step`, `path`/`field`, `actionLabel`) so the Export/Validation
+repair UI can route to and focus the offending object. They flow through `validate` →
+`computeStepStatus(...).export`, so any error blocks export of the affected day (Phase 1 fail-closed gate).
+
+- **Dangling camera references (Task 1).** Every value in each `tasks[].camera_id` **array** and each
+  scalar `associated_video_files[].camera_id` must reference an existing `cameras[].id`. Handles the
+  array-vs-scalar split (video `camera_id` is a scalar; the old Rule 2 `Array.isArray` check did not apply
+  to it). Runs only when a `cameras` array is present (an absent `cameras` is already covered by the
+  no-cameras Rules 1/2, so no double-report).
+- **Dangling electrode-group references (Task 2).** Every `ntrode_electrode_group_channel_map[].electrode_group_id`
+  must reference an existing `electrode_groups[].id`.
+- **Channel bounds (Task 3).** Per [designs.md#channel-map-semantics] — map **values are probe electrode
+  ids, reset per electrode group** (a second tetrode is `0..3`, not `4..7`). Bounds come from the real
+  device helpers (`getChannelCount` / `deviceTypeMap`), never hardcoded: (a) every map value is an integer
+  in `[0, getChannelCount(device_type))`; (b) within a group the ntrodes' values **partition**
+  `0…count-1` (unique + complete — catches a missing per-shank offset or cross-shank collision); (c) map
+  **keys** are `0…(ntrode channel count − 1)`; (d) `bad_channels` indices are in `[0, count)`. Skipped for
+  unknown devices (Task 5 reports those).
+- **Non-empty, consistent location (Task 4).** Both `electrode_groups[].location` **and**
+  `targeted_location` must be non-empty (error); a mixed-case duplicate `location` across groups
+  (e.g. `CA1` vs `ca1`) is a **warning** (Spyglass region fragmentation).
+- **Known `device_type` (Task 5).** Each `electrode_groups[].device_type` must be a supported probe
+  (`validateDeviceType`); an unknown one hard-fails downstream (`FileNotFoundError`).
+- **Behavioral-event name uniqueness (Task 6).** `behavioral_events[].name` values must be unique within
+  the day (duplicate is a Spyglass `DIOEvents` PK violation / trodes_to_nwb `ValueError`).
+- **Task/video dependencies (Task 7).** Task epochs must be unique across task rows; each
+  `associated_video_files` entry's `task_epochs` must match some task's epochs (orphaned videos silently
+  do not import in Spyglass). A camera-less epoch is the explicitly-allowed no-camera path (only a *video*
+  needs a backing epoch + camera).
+- **Workspace/dataset identity consistency (Task 8).** A reused `camera_name` must carry identical
+  `id`/`meters_per_pixel`/`lens`/`model`/`manufacturer`; a reused `data_acq_device[].name` identical
+  `system`/`amplifier`/`adc_circuit`; a reused `tasks[].task_name` one `task_description`. These catch
+  imported/existing divergence in the exported file (the editing-time guard is Phase 3 / Task 0b).
+
+### Routing (`src/pages/DayEditor/validation.js`)
+
+- **`stepIdForIssue` now prefers an explicit `issue.step`** (falling back to path routing when absent or
+  invalid), so a rule can land its repair action on the step that fixes it — e.g. a camera-path issue
+  routed to the Epochs step (Task 9).
+
+### Editor UX (mistake prevention)
+
+- **Controlled camera references that block on dangling (Task 0).** `TaskModal` keeps camera selection as
+  controlled checkboxes from the animal's cameras (labels now include id + name + calibration/lens), and a
+  **dangling selected camera id now blocks Save** with an accessible "remove reference" action.
+- **Workspace associated-video editor (Task 0).** New `AssociatedVideosEditor` owns
+  `day.associated_video_files`: `camera_id` is a scalar `<select>` from the animal's cameras and
+  `task_epochs` a `<select>` from the day's task epochs — no manual numeric entry; stale loaded ids are
+  flagged and must be re-pointed.
+- **Task-name identity guard (Task 0b).** Saving a task whose `task_name` already exists in the
+  workspace/dataset with a **different** `task_description` shows the existing vs. proposed descriptions
+  side by side and blocks Save until the name changes or the description matches; same name + same
+  description is allowed (supersedes the old unconditional within-day duplicate-name block). This is the
+  task analogue of Phase 3's camera/data-acq identity guard.
+- **Repair-before-orphaning (Task 0c).** Deleting a task (or removing a task epoch) that a video/file
+  references surfaces the affected rows and requires explicit repair or a deterministic cleanup through
+  `updateDay`, instead of relying on the silent `useEpochCleanup` scrub.
+
+### Fixture corrections (known-invalid workspace data; legacy golden bytes preserved)
+
+The legacy `realistic-session.yml` golden encodes a **globally-incrementing** tetrode channel map
+(`0..3, 4..7, …`) and **epoch-specific descriptions for the same `sleep` task_name** — both known-invalid
+per the rules above. That golden file stays **byte-identical** (it is byte-baselined but never validated).
+The corrected source of truth is the workspace builder: `buildRealisticWorkspace`, `legacyParityFixture`,
+and the `valid/` + `edge-cases/` copies now reset each tetrode group's map to `0..3` and give the two
+`sleep` tasks one canonical description. The new-path snapshot (`workspace-export.realistic.yml`) and the
+legacy reference (`legacy-export.reference.yml`) were regenerated; `exportParity.integration.test.js` no
+longer asserts channel-map/`sleep`-description semantic parity with the buggy legacy fixture and adds an
+explicit negative test for the `4..7` pattern.
+
+---
+
 ## Phase 5 review fixes (round 2): race-free repair focus, honest slash UX, weight-override clear (June 4, 2026)
 
 ### Changes

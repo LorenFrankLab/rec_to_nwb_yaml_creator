@@ -155,15 +155,17 @@ describe('TaskModal', () => {
     expect(onSave.mock.calls[0][0].task_name).toBe('sleep');
   });
 
-  it('detects a duplicate name even with surrounding whitespace', async () => {
+  it('blocks a reused task name (with a different description) even with surrounding whitespace', async () => {
     const user = userEvent.setup();
+    // Sibling "sleep" has description 'd'; typing the same name with a DIFFERENT
+    // (here empty) description trips the task-name identity guard.
     renderModal({ existingTasks: [{ task_name: 'sleep', task_description: 'd', task_environment: 'e', camera_id: [], task_epochs: [] }] });
 
     await user.type(screen.getByRole('textbox', { name: /task name/i }), '  sleep  ');
     await user.type(screen.getByRole('textbox', { name: /task environment/i }), 'HomeBox');
 
     expect(screen.getByRole('button', { name: /save task/i })).toBeDisabled();
-    expect(screen.getByText(/task name must be unique/i)).toBeInTheDocument();
+    expect(screen.getByText(/already used in this dataset with a different description/i)).toBeInTheDocument();
   });
 
   it('persists task_epochs as unique integers without start/end times', async () => {
@@ -197,7 +199,7 @@ describe('TaskModal', () => {
     expect(onSave).toHaveBeenCalledTimes(1);
   });
 
-  it('flags a reference to a camera the animal no longer has as info, and still saves it', async () => {
+  it('blocks Save on a reference to a camera the animal no longer has until it is removed', async () => {
     const user = userEvent.setup();
     const onSave = vi.fn();
     render(
@@ -214,20 +216,24 @@ describe('TaskModal', () => {
     );
 
     const cameraSection = detailsFor('Cameras');
-    expect(within(cameraSection).getByRole('status')).toHaveTextContent(/9/);
+    expect(within(cameraSection).getByRole('alert')).toHaveTextContent(/9/);
+    expect(screen.getByRole('button', { name: /save task/i })).toBeDisabled();
 
+    // Removing the dangling reference unblocks Save and the bad id is dropped.
+    await user.click(screen.getByRole('button', { name: /remove camera reference/i }));
     await user.click(screen.getByRole('button', { name: /save task/i }));
-    expect(onSave.mock.calls[0][0].camera_id).toContain(9);
+    expect(onSave.mock.calls[0][0].camera_id).not.toContain(9);
   });
 
-  it('blocks Save on a duplicate task name within the day', async () => {
+  it('blocks Save when reusing a sibling task name with a different description', async () => {
     const user = userEvent.setup();
     renderModal({ existingTasks: [{ task_name: 'sleep', task_description: 'd', task_environment: 'e', camera_id: [], task_epochs: [] }] });
 
     await user.type(screen.getByRole('textbox', { name: /task name/i }), 'sleep');
     await user.type(screen.getByRole('textbox', { name: /task environment/i }), 'HomeBox');
+    await user.type(screen.getByRole('textbox', { name: /task description/i }), 'different');
 
     expect(screen.getByRole('button', { name: /save task/i })).toBeDisabled();
-    expect(screen.getByText(/task name must be unique/i)).toBeInTheDocument();
+    expect(screen.getByText(/already used in this dataset with a different description/i)).toBeInTheDocument();
   });
 });

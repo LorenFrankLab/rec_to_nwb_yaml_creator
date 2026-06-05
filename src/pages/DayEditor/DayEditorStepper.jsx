@@ -71,6 +71,27 @@ export default function DayEditorStepper() {
     return mergeDayMetadata(animal, day);
   }, [animal, day]);
 
+  // Dataset-wide task_name -> task_description map for the Spyglass task-name
+  // identity guard (Phase 6 Task 0b). task_name is an identity across the whole
+  // dataset, so the modal must check a reused name against EVERY other day's
+  // description, not just the current day's siblings. The CURRENT day's tasks are
+  // excluded here (the step folds them back in, giving live siblings precedence);
+  // a name appearing in multiple other days keeps the last-seen description, which
+  // is sufficient to detect a conflicting reuse. Must precede early returns.
+  const knownTaskDescriptions = useMemo(() => {
+    const map = {};
+    const days = model.workspace?.days || {};
+    for (const id of Object.keys(days)) {
+      if (id === dayId) continue;
+      (days[id].tasks || []).forEach((task) => {
+        if (task.task_name) {
+          map[task.task_name] = task.task_description ?? '';
+        }
+      });
+    }
+    return map;
+  }, [model.workspace?.days, dayId]);
+
   // Compute step validation status (must be before early returns to follow Rules of Hooks)
   const stepStatus = useMemo(() => {
     if (!day || !mergedDay) {
@@ -240,6 +261,7 @@ export default function DayEditorStepper() {
           animal={animal}
           day={day}
           mergedDay={mergedDay}
+          knownTaskDescriptions={knownTaskDescriptions}
           onFieldUpdate={handleFieldUpdate}
           onSubjectUpdate={handleSubjectUpdate}
           onNavigate={handleStepNavigate}

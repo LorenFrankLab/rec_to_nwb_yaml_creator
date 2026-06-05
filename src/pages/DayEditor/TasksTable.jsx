@@ -56,15 +56,29 @@ function getStatus(task, cameras) {
  * ConfirmDialog (no raw window.confirm). Add/Edit/Delete are delegated to the
  * parent, which owns task persistence through onFieldUpdate.
  *
+ * Repair-before-orphaning (Phase 6 Task 0c): when deleting a task would orphan
+ * `associated_video_files` (their epoch would vanish), the confirmation names the
+ * affected videos so the user is not blindsided. The parent's delete handler then
+ * clears those references deterministically.
+ *
  * @param {object} props
  * @param {Array} props.tasks Day tasks.
  * @param {Array} props.cameras Animal cameras (for status + display).
  * @param {Function} props.onAdd Add-task handler.
  * @param {Function} props.onEdit Edit handler, called with the task index.
  * @param {Function} props.onDelete Delete handler, called with the task index.
+ * @param {Function} [props.affectedVideosForDelete] `(index) => Array` of videos
+ *   that deleting task `index` would orphan, for the confirmation notice.
  * @returns {JSX.Element}
  */
-export default function TasksTable({ tasks, cameras, onAdd, onEdit, onDelete }) {
+export default function TasksTable({
+  tasks,
+  cameras,
+  onAdd,
+  onEdit,
+  onDelete,
+  affectedVideosForDelete,
+}) {
   const [pendingDeleteIndex, setPendingDeleteIndex] = useState(null);
 
   /**
@@ -75,6 +89,21 @@ export default function TasksTable({ tasks, cameras, onAdd, onEdit, onDelete }) 
     setPendingDeleteIndex(null);
     if (index == null) return;
     onDelete(index);
+  }
+
+  /**
+   * Build the delete-confirmation message, appending an affected-video notice when
+   * deleting this task would orphan associated videos.
+   * @param {number} index Task index slated for deletion.
+   * @returns {string}
+   */
+  function deleteMessage(index) {
+    if (index == null || !tasks[index]) return '';
+    const base = `Delete task "${tasks[index].task_name || '(unnamed task)'}"? This removes it from this day.`;
+    const affected = affectedVideosForDelete ? affectedVideosForDelete(index) : [];
+    if (affected.length === 0) return base;
+    const names = affected.map((v) => v.name || '(unnamed)').join(', ');
+    return `${base} This will also unset the epoch reference on associated video file${affected.length > 1 ? 's' : ''}: ${names}.`;
   }
 
   if (tasks.length === 0) {
@@ -161,11 +190,7 @@ export default function TasksTable({ tasks, cameras, onAdd, onEdit, onDelete }) 
       <ConfirmDialog
         isOpen={pendingDeleteIndex != null}
         title="Delete task?"
-        message={
-          pendingDeleteIndex != null && tasks[pendingDeleteIndex]
-            ? `Delete task "${tasks[pendingDeleteIndex].task_name || '(unnamed task)'}"? This removes it from this day.`
-            : ''
-        }
+        message={deleteMessage(pendingDeleteIndex)}
         confirmLabel="Delete"
         destructive
         onConfirm={confirmDelete}
@@ -181,8 +206,10 @@ TasksTable.propTypes = {
   onAdd: PropTypes.func.isRequired,
   onEdit: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
+  affectedVideosForDelete: PropTypes.func,
 };
 
 TasksTable.defaultProps = {
   cameras: [],
+  affectedVideosForDelete: undefined,
 };
