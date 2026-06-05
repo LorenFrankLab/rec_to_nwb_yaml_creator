@@ -6,6 +6,35 @@
 
 ---
 
+## Canonical state & repair — Phase 1: shape-safe read layer (June 5, 2026)
+
+First phase of making the raw → canonical → repair boundary structural (user decision: full
+structural, phased & gated, executable repair commands). The recurring "one component guards,
+another lags" class came from every call site re-deriving safety ad-hoc.
+
+- New `src/state/workspaceSelectors.js`: the SINGLE place raw animal/day collections and
+  records are guarded — `getAnimalCameras` / `getConfigHistory` / `getDataAcqDevices` /
+  `getAnimalSubject` / `getAnimalExperimenters` / `getExperimenterNames` / `getAnimalDayIds` /
+  `getDaySession` / `getDayTasks` / `getDayAssociated{Videos,Files}` / `getDayBehavioralEvents` /
+  `getDayKeywords`. Never throw, never mutate, always return a safe value; raw-shape validation
+  still flags the corruption (normalization never decides export validity).
+- Migrated EVERY raw consumer through the selectors — including the export merge and the two
+  HIGH crash sites (DevicesStep reconfig `configurationHistory.find`, HardwareConfig /
+  identitySafety `data_acq_device.entries()`), plus OverviewStep / TasksEpochsStep /
+  ValidationSummary / AnimalWorkspace / useWorkspace / configDiff.
+- `workspaceSelectors.guard.test.js` forbids `<field> || []` / `Array.isArray(<field>)` /
+  `isRecord(<field>)` for every selector-owned field across 100+ shipped files, so the drift
+  can't recur (normalizer + raw-shape detectors exempt — they define/inspect corrupt state).
+- Code-reviewed (pr-review-toolkit:code-reviewer); its completeness findings (OverviewStep +
+  TasksEpochsStep still hand-guarding; guard test under-covering) were fixed in the same phase.
+
+Phases 2–4 (executable repair commands on issues; destination repair banners; ValidationSummary
+error-rows for corrupt days) follow. Plan:
+`.claude/docs/plans/pre-cutover-export-correctness/phase-canonical-state-and-repair.md`.
+Gate: 3677 tests pass, 125 baselines byte-identical, 0 lint errors, clean build. Branch not merged.
+
+---
+
 ## Validation contract — repair-destination tolerance (June 5, 2026)
 
 The contract surfaces, routes, and gates corruption correctly — but a repair button can
