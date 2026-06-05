@@ -133,31 +133,37 @@ export function resolveDayConfig(animal, day) {
     );
   }
 
-  const electrodeGroups =
-    day.deviceOverrides?.electrode_groups || config.devices.electrode_groups || [];
-  const baseNtrodes =
-    day.deviceOverrides?.ntrode_electrode_group_channel_map ||
-    config.devices.ntrode_electrode_group_channel_map ||
-    [];
+  // Prefer the day's deviceOverrides ONLY when they are well-formed arrays. A
+  // malformed (non-array) override is corrupt persisted state; using it would
+  // crash the `.map` below, so fall back to the snapshot (fail-closed) rather than
+  // crash before the repair UI can render.
+  const electrodeGroups = Array.isArray(day.deviceOverrides?.electrode_groups)
+    ? day.deviceOverrides.electrode_groups
+    : (config.devices.electrode_groups || []);
+  const baseNtrodes = Array.isArray(day.deviceOverrides?.ntrode_electrode_group_channel_map)
+    ? day.deviceOverrides.ntrode_electrode_group_channel_map
+    : (config.devices.ntrode_electrode_group_channel_map || []);
 
   // Apply day-level bad-channel overrides onto the resolved ntrode map. The override
-  // map is keyed by ntrode_id; a present entry REPLACES that ntrode's `bad_channels`
-  // (the DevicesStep editor manages the full per-ntrode array). Keys are object
-  // (string) keys; normalize with String(ntrode_id) so the lookup survives a future
-  // change of ntrode_id to an integer. Clone the overridden entry so the snapshot is
-  // never mutated. An override keyed to an ntrode_id absent from the resolved map is
-  // ignored here (a stale/dangling reference; surfacing it is a validation concern).
+  // map is keyed by ntrode_id; a present entry REPLACES that ntrode's `bad_channels`.
+  // A corrupt (non-array) override value is PRESERVED as-is — never spread (a string
+  // "23" would become ['2','3'], a number would throw) — so the schema/rules surface
+  // it instead of laundering or crashing. An override keyed to an absent ntrode_id is
+  // a stale reference surfaced by `dayOverrideIssues`, not applied here.
   const overrides = day.deviceOverrides?.bad_channels;
-  const ntrodes = overrides
-    ? baseNtrodes.map((n) =>
-        Object.hasOwn(overrides, String(n.ntrode_id))
-          ? { ...n, bad_channels: [...overrides[String(n.ntrode_id)]] }
-          : n
-      )
-    : baseNtrodes;
+  const baseArray = Array.isArray(baseNtrodes) ? baseNtrodes : [];
+  const ntrodes = overrides && typeof overrides === 'object'
+    ? baseArray.map((n) => {
+        if (!Object.hasOwn(overrides, String(n.ntrode_id))) return n;
+        const ov = overrides[String(n.ntrode_id)];
+        return { ...n, bad_channels: Array.isArray(ov) ? [...ov] : ov };
+      })
+    : baseArray;
 
   return {
-    electrode_groups: electrodeGroups.map((group, index) => normalizeElectrodeGroup(group, index)),
+    electrode_groups: (Array.isArray(electrodeGroups) ? electrodeGroups : []).map((group, index) =>
+      normalizeElectrodeGroup(group, index)
+    ),
     ntrode_electrode_group_channel_map: ntrodes.map((ntrode, index) =>
       normalizeNtrodeMap(ntrode, index)
     ),

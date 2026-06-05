@@ -181,3 +181,23 @@ describe('Normalization Contract round 4: non-array bad_channels + malformed obj
     expect(() => mergeDayMetadata(animal, day)).not.toThrow();
   });
 });
+
+describe('Normalization Contract round 5: malformed deviceOverrides do not crash/launder', () => {
+  it('a scalar bad_channels override is preserved (not spread into chars) and does not crash', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    const firstNtrode = animal.configurationHistory[0].devices.ntrode_electrode_group_channel_map[0];
+    day.deviceOverrides = { bad_channels: { [firstNtrode.ntrode_id]: '23' } };
+    expect(() => mergeDayMetadata(animal, day)).not.toThrow();
+    const merged = mergeDayMetadata(animal, day);
+    const applied = merged.ntrode_electrode_group_channel_map.find((n) => n.ntrode_id === firstNtrode.ntrode_id);
+    // Preserved verbatim — NOT [...'23'] === ['2','3'].
+    expect(applied.bad_channels).not.toEqual(['2', '3']);
+    expect(computeStepStatus(day, merged).export).toBe('error');
+  });
+
+  it('a non-array deviceOverrides.electrode_groups / ntrode map does not crash the merge', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    day.deviceOverrides = { electrode_groups: 'corrupt', ntrode_electrode_group_channel_map: 42 };
+    expect(() => mergeDayMetadata(animal, day)).not.toThrow();
+  });
+});
