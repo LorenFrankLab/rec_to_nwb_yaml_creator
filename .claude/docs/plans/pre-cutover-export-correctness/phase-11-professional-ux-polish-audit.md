@@ -10,6 +10,9 @@ this plan's Phase 11, **not** the separate v3-workspace-cutover Phase 11 default
 **Inputs to read first:**
 
 - Phase docs 1–10, especially Phase 9/10 artifacts and any screenshots/traces/finding logs.
+- [workflow-clarity-design.md](workflow-clarity-design.md) — required workflow/information architecture for
+  electrode setup discoverability, existing-data review, Day Devices meaning, reconfiguration clarity, and
+  export preflight alignment.
 - [src/pages/Home](../../../../src/pages/Home), [src/pages/AnimalWorkspace](../../../../src/pages/AnimalWorkspace),
   [src/pages/AnimalEditor](../../../../src/pages/AnimalEditor), and
   [src/pages/DayEditor](../../../../src/pages/DayEditor) — primary workspace screens.
@@ -30,6 +33,14 @@ this plan's Phase 11, **not** the separate v3-workspace-cutover Phase 11 default
 
 ## Tasks
 
+- **Task 0 — workflow clarity gate.** Before general polish, verify and fix the core user workflow from
+  [workflow-clarity-design.md](workflow-clarity-design.md). A user must be able to discover electrode setup
+  from the animal workspace, understand that Animal Editor hardware is shared animal setup, understand that
+  Day Editor Devices is the current day's configuration version plus day-specific failed channels, and know
+  what to do when existing/imported data already has days/configurations. Required states: new animal with no
+  days; animal with days but no electrodes; imported/recovered animal with existing configuration; Day Devices
+  empty state; historical configuration; reconfiguration starting from a day. Fix small routing/copy/layout
+  gaps immediately; log larger information-architecture gaps as `blocks safe use` unless explicitly accepted.
 - **Task 1 — screen/state inventory.** Generate a checklist of every workspace screen and major state:
   Home create/edit, Animal Workspace, Animal Editor steps, Day Editor steps, modals, empty states, validation
   summary, Export/preflight, persistence/recovery notices, opto off/on, and destructive confirmations. Mark
@@ -91,6 +102,7 @@ this plan's Phase 11, **not** the separate v3-workspace-cutover Phase 11 default
 
 | Test / Artifact | Asserts |
 | --- | --- |
+| `workflow clarity gate` *(QA artifact + fixes)* | new/existing/imported/historical/reconfiguration states from `workflow-clarity-design.md` expose the correct primary next action, especially `Set Up Electrodes`, existing-data review, day-specific failed channels, configuration version context, and export preflight alignment. |
 | `workspace screen/state mental-model inventory` *(QA artifact)* | every major screen/state is accounted for with test or screenshot coverage plus user goal, intended mental model, and dangerous misconception. |
 | `interaction consistency checklist` *(QA artifact + fixes)* | common actions, modal patterns, destructive confirmations, disabled states, repair links, and status badges behave consistently. |
 | `form quality checklist` *(QA artifact + fixes)* | high-risk fields have clear labels, units, examples, required/optional state, validation timing, and disabled-state reasons. |

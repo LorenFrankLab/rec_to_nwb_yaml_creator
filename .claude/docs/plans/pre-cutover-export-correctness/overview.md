@@ -86,6 +86,11 @@ how the model is built and gated, not in the encoder.
   Playwright pass exercises the corrected workspace flows in a real browser, then Claude-executable audits
   triangulate UI/workspace/export behavior and apply professional UX polish before the v3 cutover consumes
   this work.
+- **Workflow clarity and electrode setup discoverability.** The app must make the intended order of operations
+  obvious: create/select animal, configure shared hardware/electrodes, create/import recording days, fill
+  day-specific metadata and failed channels, record hardware changes by day range, then export. A user must
+  not have to discover electrode setup by guessing that it lives behind a Day Editor Devices view; see
+  [workflow-clarity-design.md](workflow-clarity-design.md).
 
 ### Non-Goals
 
@@ -147,6 +152,12 @@ dev tooling for the phase-9 browser QA pass, phase-10 audit, and phase-11 UX pol
   information hierarchy, responsive layout, accessibility polish, content quality, and perceived-performance
   confidence, with remaining debt severity-ranked and a final cutover recommendation for this plan
   ([phase 11](phase-11-professional-ux-polish-audit.md)).
+- **Workflow clarity:** the workspace, Animal Editor, Day Editor Devices step, reconfiguration wizard,
+  validation summary, and Export preflight expose the same user workflow: animal setup first, recording-day
+  metadata second, day-specific failed channels, configuration changes by day range, and export confidence.
+  New animals, existing/imported data, missing electrodes, historical configurations, and reconfiguration
+  starts are covered by explicit routes/states and Playwright or QA artifacts
+  ([workflow clarity design](workflow-clarity-design.md)).
 
 ## Risks and Mitigations
 
@@ -160,6 +171,7 @@ dev tooling for the phase-9 browser QA pass, phase-10 audit, and phase-11 UX pol
 | Playwright QA becomes brittle or superficial | Phase 9 uses role/label selectors, deterministic workspace fixtures, event/locator waits, and no conditional "if visible" skips for required workspace flows. Visual snapshots stay limited; traces/screenshots are artifacts for debugging. |
 | Automated usability audit misses human confusion | Phase 10 is Claude-executable and catches UI/state/export mismatches, ambiguous labels, unreachable controls, and likely mistake paths. A separate human lab-user dry run is still recommended, but it is outside this Claude-run implementation plan. |
 | UX polish turns into broad redesign | Phase 11 fixes small consistency/content/layout/accessibility issues and logs larger redesigns as scoped follow-ups; it must not change export semantics or become a design-system rewrite. |
+| Users still cannot find electrode setup or the correct workflow order | The workflow-clarity design is a Phase 11 input and gate: animal setup checklist, `Set Up Electrodes` CTA, Day Devices empty state, existing-data review state, reconfiguration context, validation grouping, and preflight alignment must be audited/fixed or logged as `blocks safe use`. |
 
 ## Rollout Strategy
 

@@ -112,14 +112,22 @@ Referenced by phases 1, 6, 9. The day-level export must be **fail-closed**.
 
 ## User mental-model contract
 
-Referenced by phases 1–11. Every agent implementing or auditing this plan must reason from the scientist's
-workflow first and the YAML/schema second. The app is not merely a schema editor; it is a tool for describing
-a real recording session so it can convert cleanly, publish to DANDI, and ingest into Spyglass.
+Referenced by phases 1–11 and [workflow-clarity-design.md](workflow-clarity-design.md). Every agent
+implementing or auditing this plan must reason from the scientist's workflow first and the YAML/schema
+second. The app is not merely a schema editor; it is a tool for describing a real recording session so it
+can convert cleanly, publish to DANDI, and ingest into Spyglass.
 
 - **Users think in animals, recording days, rigs, and sessions.** They do not naturally think in
   `mergeDayMetadata`, `ntrode_electrode_group_channel_map`, AJV paths, or Spyglass primary keys. UI labels,
   repair actions, preflight summaries, and QA scenarios should start from "what was recorded on this day?"
   and only expose technical names when precision requires it.
+- **The workflow order must be visible.** The app should guide users through: create/select animal, configure
+  shared animal hardware (especially electrodes/probes), create/import recording days, fill day-specific
+  metadata and failed channels, record hardware changes starting on a day, then export. Electrode setup must
+  be a first-class setup action, not something users find only by opening a recording day.
+- **Existing data needs a review state.** If the workspace already has days, imported metadata, recovered
+  configurations, or repaired persisted state, the UI should say what was found and what must be reviewed
+  before export. Do not let recovered data look silently trusted or disappear behind empty states.
 - **Physical configuration is a recording fact.** Probe geometry, camera calibration/zoom, data-acq hardware,
   and optogenetics state are facts about a recording day. Later edits are corrections to metadata, not a
   casual rewrite of history. Configuration version context and reconfiguration confirmation must preserve
