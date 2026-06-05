@@ -56,6 +56,18 @@ Review fixes (pr-review-toolkit code-reviewer + silent-failure-hunter), applied 
   "use workspace settings" default-experimenter branch silently never fired. Fixed to the
   canonical keys; the prior test had encoded the wrong (snake_case) shape and was corrected.
 
+Second review round (further findings), applied in-phase:
+- Partial import no longer throws on an empty/non-object document. `YAML.parse('')` is `null`
+  (and a YAML list parses to an array), which previously hit `Object.hasOwn(null, key)` and
+  hung the import promise. A plain-object guard now rejects such a file with a clear message;
+  covered by empty-file and list-document integration tests.
+- The partial-import summary no longer claims a field was imported when it was skipped on a
+  type mismatch. `importedFields` is now built from the fields actually assigned, and a
+  type-mismatched field is surfaced as an excluded entry so it is neither falsely reported
+  imported nor silently dropped.
+- `loadWorkspace` rejects a non-plain-object workspace root (e.g. `workspace: []`) as malformed
+  instead of spreading it into a default-shaped object and reporting it as "missing sections".
+
 Gate: full vitest suite, 125 golden baselines byte-identical, 0 lint errors, clean build.
 Branch not merged.
 

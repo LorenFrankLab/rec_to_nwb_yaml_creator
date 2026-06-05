@@ -300,6 +300,41 @@ cameras:
         expect(result.formData.lab).toBe('Test Lab');
       });
 
+      it('does not list a type-mismatched field as imported, and surfaces it as excluded', async () => {
+        // ARRANGE: experimenter_name is a string but the form expects an array, so it is
+        // skipped by the type-match gate. The summary must NOT claim it was imported, and
+        // must not silently drop it either.
+        const yamlContent = `
+lab: Test Lab
+experimenter_name: "Doe, John"
+cameras:
+  - id: 1.5
+`;
+        const file = new File([yamlContent], 'test.yml', { type: 'text/yaml' });
+
+        validate.mockReturnValue([
+          {
+            path: 'cameras[0].id',
+            code: 'type',
+            severity: 'error',
+            message: 'cameras[0].id must be integer',
+          },
+        ]);
+
+        // ACT
+        const result = await importFiles(file);
+
+        // ASSERT
+        expect(result.formData.experimenter_name).toEqual([]); // not actually imported
+        expect(result.importSummary.importedFields).not.toContain('experimenter_name');
+        expect(result.importSummary.importedFields).toContain('lab'); // genuinely imported
+        const mismatch = result.importSummary.excludedFields.find(
+          (entry) => entry.field === 'experimenter_name'
+        );
+        expect(mismatch).toBeDefined();
+        expect(mismatch.reason).toMatch(/type/i);
+      });
+
       it('fixes invalid subject.sex to U if not in valid list (during partial import)', async () => {
         // ARRANGE
         const yamlContent = `

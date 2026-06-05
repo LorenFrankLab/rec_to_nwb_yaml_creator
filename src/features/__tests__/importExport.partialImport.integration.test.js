@@ -42,6 +42,28 @@ describe('importFiles partial import (real validation)', () => {
     expect(result.formData.institution).toBe('Test University');
   });
 
+  it('returns a clear error for an empty document (YAML.parse → null) instead of throwing', async () => {
+    // An empty file parses to null; the partial-import path must not crash on
+    // Object.hasOwn(null, key). It should reject cleanly with empty-default form data.
+    const file = new File([''], 'empty.yml', { type: 'text/yaml' });
+
+    const result = await importFiles(file);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/metadata|empty|not a valid/i);
+    expect(result.formData).toBeTruthy();
+    expect(result.formData.cameras).toEqual([]);
+  });
+
+  it('rejects a non-object document root (e.g. a YAML list) without throwing', async () => {
+    const file = new File(['- one\n- two\n'], 'list.yml', { type: 'text/yaml' });
+
+    const result = await importFiles(file);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/metadata|not a valid/i);
+  });
+
   it('names both the excluded section and the nested required path in the summary', async () => {
     const file = loadFixtureFile('../../__tests__/fixtures/invalid/one-invalid-camera.yml');
 

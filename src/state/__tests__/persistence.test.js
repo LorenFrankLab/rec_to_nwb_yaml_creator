@@ -104,6 +104,20 @@ describe('workspace persistence', () => {
     );
   });
 
+  it('discards a blob whose workspace root is an array (malformed, not recoverable)', () => {
+    // An array root is genuine root corruption, not an empty/partial object: it must be
+    // malformed, not spread into {} and reported as merely "missing sections".
+    window.localStorage.setItem(
+      WORKSPACE_STORAGE_KEY,
+      JSON.stringify({ schemaVersion: WORKSPACE_SCHEMA_VERSION, workspace: [] }),
+    );
+
+    expect(loadWorkspace()).toEqual({
+      workspace: null,
+      discarded: LOAD_DISCARD_REASON.MALFORMED,
+    });
+  });
+
   it('discards (does not silently overwrite) a blob whose required section is present but corrupt-typed', () => {
     // animals present as an array is genuine corruption, not absence: it must surface
     // loudly as malformed rather than be silently replaced with {} and mislabeled

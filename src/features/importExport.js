@@ -119,6 +119,28 @@ export async function importFiles(file, options = {}) {
         return;
       }
 
+      // A metadata document must be a plain object. An empty file parses to `null`, and
+      // a scalar/list document parses to a primitive/array; either would later throw on
+      // `Object.hasOwn(jsonFileContent, key)` (silently hanging the import promise), so
+      // reject it here with a clear message instead.
+      if (
+        jsonFileContent === null ||
+        typeof jsonFileContent !== 'object' ||
+        Array.isArray(jsonFileContent)
+      ) {
+        // eslint-disable-next-line no-alert
+        window.alert(
+          'The file does not contain a metadata document.\n\n' +
+          'Expected a YAML mapping of metadata fields, but the file was empty or not an object.'
+        );
+        resolve({
+          success: false,
+          error: 'The file does not contain a valid metadata document (expected a YAML mapping).',
+          formData: structuredClone(emptyFormData),
+        });
+        return;
+      }
+
       if (onProgress) {
         onProgress({ stage: 'validating', progress: 50 });
       }
@@ -175,21 +197,25 @@ export async function importFiles(file, options = {}) {
       const formContent = structuredClone(emptyFormData);
       const formContentKeys = Object.keys(formContent);
 
-      // Import only fields that don't have validation errors
-      // and match the expected type
+      // Import only fields that don't have validation errors and match the expected
+      // type. Track what was ACTUALLY assigned (and what was skipped on a type mismatch)
+      // so the summary reports the truth rather than inferring it from presence alone.
+      const importedFields = [];
+      const typeMismatchedFields = [];
       formContentKeys.forEach((key) => {
-        if (
-          !allErrorIds.includes(key) &&
-          Object.hasOwn(jsonFileContent, key)
-        ) {
-          // Check type compatibility before importing
-          const expectedType = typeof formContent[key];
-          const actualType = typeof jsonFileContent[key];
+        if (allErrorIds.includes(key) || !Object.hasOwn(jsonFileContent, key)) {
+          return;
+        }
+        const expectedType = typeof formContent[key];
+        const actualType = typeof jsonFileContent[key];
 
-          // Only import if types match
-          if (expectedType === actualType) {
-            formContent[key] = structuredClone(jsonFileContent[key]);
-          }
+        if (expectedType === actualType) {
+          formContent[key] = structuredClone(jsonFileContent[key]);
+          importedFields.push(key);
+        } else {
+          // Skipped: the YAML value's type doesn't match the form's. Don't claim it was
+          // imported, and don't silently drop it — record it for the excluded summary.
+          typeMismatchedFields.push({ key, expectedType, actualType });
         }
       });
 
@@ -209,10 +235,6 @@ export async function importFiles(file, options = {}) {
       }
 
       // Build import summary
-      const importedFields = formContentKeys.filter(key =>
-        !allErrorIds.includes(key) && Object.hasOwn(jsonFileContent, key)
-      );
-
       const excludedFields = allErrorIds.map(fieldId => {
         const fieldIssues = issues.filter(
           issue => topLevelFieldFromPath(issue.path) === fieldId
@@ -241,6 +263,16 @@ export async function importFiles(file, options = {}) {
           paths: [...new Set(documentLevelIssues.map(issue => issue.path).filter(Boolean))],
         });
       }
+
+      // Fields skipped on a type mismatch are excluded too — surface them so a skipped
+      // field is never silently absent from both the imported and excluded lists.
+      typeMismatchedFields.forEach(({ key, expectedType, actualType }) => {
+        excludedFields.push({
+          field: key,
+          reason: `Type mismatch: expected ${expectedType}, but the file had ${actualType}`,
+          paths: [],
+        });
+      });
 
       resolve({
         success: true,

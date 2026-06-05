@@ -109,13 +109,10 @@ export function loadWorkspace() {
     return { workspace: null, discarded: LOAD_DISCARD_REASON.PARSE_ERROR };
   }
 
-  // Structural corruption (not a version problem) → MALFORMED.
-  if (
-    !parsed ||
-    typeof parsed !== 'object' ||
-    !parsed.workspace ||
-    typeof parsed.workspace !== 'object'
-  ) {
+  // Structural corruption (not a version problem) → MALFORMED. The workspace root must
+  // be a plain object: an array (or other non-plain-object) is root corruption, not an
+  // empty/partial object, and must not be laundered into a default-shaped workspace.
+  if (!isPlainObject(parsed) || !isPlainObject(parsed.workspace)) {
     return { workspace: null, discarded: LOAD_DISCARD_REASON.MALFORMED };
   }
 
