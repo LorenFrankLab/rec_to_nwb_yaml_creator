@@ -43,6 +43,19 @@ baselines stay byte-identical.
 Deliberately out of scope (per phase plan): persistence-blob forward migration, import-UX rework
 beyond correct exclusion, and any export-path validation changes.
 
+Review fixes (pr-review-toolkit code-reviewer + silent-failure-hunter), applied in-phase:
+- Partial import no longer silently drops a document-level (empty top-level path, e.g. a root
+  type error) validation issue: it is surfaced as a `document` entry so every `validate` issue is
+  accounted for in the summary (the prior `.filter(Boolean)` swallowed it).
+- `loadWorkspace` now distinguishes an ABSENT required section (restore-and-notice) from a
+  PRESENT-but-wrong-typed one (e.g. `animals` as an array). The latter is genuine corruption and
+  is discarded loudly as malformed rather than silently overwritten with `{}` and mislabeled as
+  "missing — your data was loaded".
+- `Home.getDefaultExperimenters` read snake_case settings keys (`default_lab`, …) that never
+  exist at runtime — the canonical settings shape is camelCase (`defaultLab`, …) — so the
+  "use workspace settings" default-experimenter branch silently never fired. Fixed to the
+  canonical keys; the prior test had encoded the wrong (snake_case) shape and was corrected.
+
 Gate: full vitest suite, 125 golden baselines byte-identical, 0 lint errors, clean build.
 Branch not merged.
 

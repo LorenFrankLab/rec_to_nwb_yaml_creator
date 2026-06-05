@@ -19,12 +19,14 @@ function getDefaultExperimenters(workspace) {
   // Default `animals` so an incomplete workspace can't crash the Object.keys() below.
   const { settings, animals = {} } = workspace;
 
-  // Priority 1: Workspace settings (if non-empty)
-  if (settings?.default_lab?.trim()) {
+  // Priority 1: Workspace settings (if non-empty). Keys are camelCase to match the
+  // canonical settings shape (createDefaultWorkspace / useWorkspace / WorkspaceSettings);
+  // snake_case keys never exist at runtime, so reading them silently skipped this branch.
+  if (settings?.defaultLab?.trim()) {
     return {
-      experimenter_names: settings.default_experimenters || [''],
-      lab: settings.default_lab,
-      institution: settings.default_institution,
+      experimenter_names: settings.defaultExperimenters || [''],
+      lab: settings.defaultLab,
+      institution: settings.defaultInstitution,
     };
   }
 

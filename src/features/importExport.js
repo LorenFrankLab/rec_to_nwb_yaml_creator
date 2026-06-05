@@ -227,6 +227,21 @@ export async function importFiles(file, options = {}) {
         };
       });
 
+      // Document-level issues (empty top-level field, e.g. a root type error) map to no
+      // form section, so they're dropped from `allErrorIds` above. Surface them in their
+      // own summary entry rather than silently swallowing them — every validation issue
+      // must be accounted for in the summary.
+      const documentLevelIssues = issues.filter(
+        issue => topLevelFieldFromPath(issue.path) === ''
+      );
+      if (documentLevelIssues.length > 0) {
+        excludedFields.push({
+          field: 'document',
+          reason: documentLevelIssues.map(issue => issue.message)[0] || 'Validation error',
+          paths: [...new Set(documentLevelIssues.map(issue => issue.path).filter(Boolean))],
+        });
+      }
+
       resolve({
         success: true,
         error: null,

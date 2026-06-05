@@ -30,10 +30,13 @@ describe('Home - Animal Creation Container', () => {
       workspace: {
         animals: {},
         days: {},
+        // Canonical workspace settings shape is camelCase (createDefaultWorkspace /
+        // useWorkspace / WorkspaceSettings typedef). The default-experimenter priority-1
+        // branch must read THESE keys, not snake_case ones that never exist at runtime.
         settings: {
-          default_lab: 'Test Lab',
-          default_institution: 'Test University',
-          default_experimenters: ['Bob Smith'],
+          defaultLab: 'Test Lab',
+          defaultInstitution: 'Test University',
+          defaultExperimenters: ['Bob Smith'],
         },
       },
     };

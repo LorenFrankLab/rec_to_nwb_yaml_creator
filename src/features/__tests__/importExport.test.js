@@ -332,6 +332,35 @@ cameras:
         expect(result.formData.subject.subject_id).toBe('RAT001');
       });
 
+      it('surfaces a document-level validation issue (empty path) instead of silently dropping it', async () => {
+        // ARRANGE
+        const yamlContent = `lab: Test Lab`;
+        const file = new File([yamlContent], 'test.yml', { type: 'text/yaml' });
+
+        // A root-level error has an empty top-level field; it must still be reported so
+        // no validation issue is silently swallowed from the partial-import summary.
+        validate.mockReturnValue([
+          {
+            path: '',
+            code: 'type',
+            severity: 'error',
+            message: 'must be object',
+          },
+        ]);
+
+        // ACT
+        const result = await importFiles(file);
+
+        // ASSERT
+        expect(result.success).toBe(true);
+        expect(result.importSummary.hasExclusions).toBe(true);
+        const docEntry = result.importSummary.excludedFields.find(
+          (entry) => entry.field === 'document'
+        );
+        expect(docEntry).toBeDefined();
+        expect(docEntry.reason).toContain('must be object');
+      });
+
       it('initializes subject if missing from YAML', async () => {
         // ARRANGE
         const yamlContent = `

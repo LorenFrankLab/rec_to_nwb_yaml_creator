@@ -18,32 +18,42 @@ const isPlainObject = (value) =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 
 /**
- * Ensures a hydrated workspace has the required top-level sections (`animals`,
- * `days`, `settings`) as plain objects, restoring any missing or structurally-wrong
- * section from the canonical default shape.
+ * Shape-checks a hydrated workspace's required top-level sections (`animals`, `days`,
+ * `settings`), distinguishing two cases that must be handled differently:
  *
- * A structurally valid but EMPTY or partial blob (e.g. `{schemaVersion, workspace:{}}`,
- * the shape an older/aborted write could leave) then hydrates cleanly instead of
- * leaving a consumer to hit `Object.keys(undefined)`. Existing sections are preserved
- * untouched; only genuinely missing ones are filled.
+ * - **Absent** (`undefined`/`null`, i.e. a structurally empty/partial blob such as
+ *   `{schemaVersion, workspace:{}}` from an older/aborted write): restore from the
+ *   canonical default shape so the blob hydrates cleanly instead of leaving a consumer
+ *   to hit `Object.keys(undefined)`. Reported via `missingKeys` for a recovery notice.
+ * - **Present but wrong-typed** (e.g. `animals` is an array/string): genuine
+ *   corruption, NOT absence. It is reported via `corruptKeys` and is NOT silently
+ *   overwritten here — the caller discards the blob loudly rather than destroying real
+ *   data while telling the user it was merely "missing".
+ *
+ * Existing valid sections are preserved untouched.
  *
  * @param {object} workspace - The (device-normalized) workspace to shape-check.
- * @returns {{ workspace: object, missingKeys: string[] }} The repaired workspace and
- *   the list of sections that had to be restored (empty when nothing was missing).
+ * @returns {{ workspace: object, missingKeys: string[], corruptKeys: string[] }}
+ *   The (absent-filled) workspace, the restored-from-absent sections, and the
+ *   present-but-corrupt sections.
  */
 function ensureWorkspaceShape(workspace) {
   const defaults = createDefaultWorkspace();
   const result = { ...workspace };
   const missingKeys = [];
+  const corruptKeys = [];
 
   REQUIRED_WORKSPACE_KEYS.forEach((key) => {
-    if (!isPlainObject(workspace[key])) {
+    const value = workspace[key];
+    if (value === undefined || value === null) {
       missingKeys.push(key);
       result[key] = defaults[key];
+    } else if (!isPlainObject(value)) {
+      corruptKeys.push(key);
     }
   });
 
-  return { workspace: result, missingKeys };
+  return { workspace: result, missingKeys, corruptKeys };
 }
 
 /** localStorage key for the persisted workspace blob. */
@@ -116,9 +126,14 @@ export function loadWorkspace() {
     // Device-normalize first, then guarantee the required top-level sections exist so a
     // valid-but-empty/partial blob hydrates cleanly. A restored section is reported via
     // `recovered` for a user-facing notice (never silently filled).
-    const { workspace, missingKeys } = ensureWorkspaceShape(
+    const { workspace, missingKeys, corruptKeys } = ensureWorkspaceShape(
       normalizeWorkspaceDevices(parsed.workspace)
     );
+    // A present-but-wrong-typed required section is corruption, not absence: discard
+    // loudly rather than silently overwrite real data and mislabel it as "restored".
+    if (corruptKeys.length > 0) {
+      return { workspace: null, discarded: LOAD_DISCARD_REASON.MALFORMED };
+    }
     return missingKeys.length > 0
       ? { workspace, recovered: { missingKeys } }
       : { workspace };

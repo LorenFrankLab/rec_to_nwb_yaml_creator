@@ -104,6 +104,24 @@ describe('workspace persistence', () => {
     );
   });
 
+  it('discards (does not silently overwrite) a blob whose required section is present but corrupt-typed', () => {
+    // animals present as an array is genuine corruption, not absence: it must surface
+    // loudly as malformed rather than be silently replaced with {} and mislabeled
+    // "missing... your data was loaded" (which would understate destroying real data).
+    window.localStorage.setItem(
+      WORKSPACE_STORAGE_KEY,
+      JSON.stringify({
+        schemaVersion: WORKSPACE_SCHEMA_VERSION,
+        workspace: { animals: ['corrupt'], days: {}, settings: {} },
+      }),
+    );
+
+    expect(loadWorkspace()).toEqual({
+      workspace: null,
+      discarded: LOAD_DISCARD_REASON.MALFORMED,
+    });
+  });
+
   it('restores only the missing section when a blob is partially shaped', () => {
     window.localStorage.setItem(
       WORKSPACE_STORAGE_KEY,
