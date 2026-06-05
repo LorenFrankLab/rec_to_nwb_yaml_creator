@@ -251,6 +251,26 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
           <legend>Failed Electrodes (probe-local 0–{electrodeIds.length - 1})</legend>
 
           <div className="failed-channels-section">
+            {/* Removal controls for loaded first-row marks that have no checkbox
+                (out-of-range/corrupt). Without these the value can never be cleared
+                and permanently blocks export. These are rendered BEFORE the grid so
+                that, when invalid marks exist, the FIRST element carrying the first
+                row's `data-field-path` is this button: the stepper's repair-focus
+                lands on the control that can actually clear the value, not the grid
+                (which has no checkbox for an out-of-range id and cannot repair it). */}
+            {invalidMarks.map((value) => (
+              <button
+                key={`invalid-${String(value)}`}
+                type="button"
+                className="remove-invalid-mark"
+                onClick={() => handleRemoveInvalidMark(value)}
+                aria-label={`Remove invalid failed channel ${value} from ntrode ${firstNtrode.ntrode_id}`}
+                data-field-path={`ntrode_electrode_group_channel_map[${firstNtrode.ntrode_id}]`}
+              >
+                Remove invalid failed channel {String(value)}
+              </button>
+            ))}
+
             <div
               id={`failed-channels-${firstKey}`}
               className="bad-channels-checkboxes"
@@ -258,7 +278,9 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
               aria-label="Failed electrodes for this multi-shank probe"
               tabIndex={-1}
               /* Repair-focus anchor: matches the bad-channel issue path keyed by the
-                 FIRST ntrode row — the row the converter honors. */
+                 FIRST ntrode row — the row the converter honors. When there are NO
+                 invalid marks this grid is the first (and only) element with this
+                 path, so normal repair focus (marking a valid channel) lands here. */
               data-field-path={`ntrode_electrode_group_channel_map[${firstNtrode.ntrode_id}]`}
             >
               {electrodeIds.map((electrodeId) => (
@@ -288,22 +310,6 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
                 className="repair-focus-anchor"
                 data-field-path={`ntrode_electrode_group_channel_map[${ntrodeId}]`}
               />
-            ))}
-
-            {/* Removal controls for loaded first-row marks that have no checkbox
-                (out-of-range/corrupt). Without these the value can never be cleared
-                and permanently blocks export. */}
-            {invalidMarks.map((value) => (
-              <button
-                key={`invalid-${String(value)}`}
-                type="button"
-                className="remove-invalid-mark"
-                onClick={() => handleRemoveInvalidMark(value)}
-                aria-label={`Remove invalid failed channel ${value} from ntrode ${firstNtrode.ntrode_id}`}
-                data-field-path={`ntrode_electrode_group_channel_map[${firstNtrode.ntrode_id}]`}
-              >
-                Remove invalid failed channel {String(value)}
-              </button>
             ))}
 
             {error && (
@@ -348,6 +354,26 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
             <div className="failed-channels-section">
               <label htmlFor={`failed-channels-${ntrodeKey}`}>Failed Channels</label>
 
+              {/* Removal controls for loaded marks with no checkbox (out-of-range or
+                  non-integer). Without these the value can never be cleared and
+                  permanently blocks export. These are rendered BEFORE the grid so
+                  that, when invalid marks exist, the FIRST element carrying this
+                  ntrode's `data-field-path` is this button: the stepper's repair-focus
+                  lands on the control that can actually clear the value, not the grid
+                  (which has no checkbox for an out-of-range id and cannot repair it). */}
+              {invalidMarks.map((value) => (
+                <button
+                  key={`invalid-${String(value)}`}
+                  type="button"
+                  className="remove-invalid-mark"
+                  onClick={() => handleRemoveInvalidMark(ntrodeId, value)}
+                  aria-label={`Remove invalid failed channel ${value} from ntrode ${ntrodeId}`}
+                  data-field-path={`ntrode_electrode_group_channel_map[${ntrodeId}]`}
+                >
+                  Remove invalid failed channel {String(value)}
+                </button>
+              ))}
+
               <div
                 id={`failed-channels-${ntrodeKey}`}
                 className="bad-channels-checkboxes"
@@ -355,7 +381,9 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
                 aria-label={`Failed channels for Shank ${index + 1}`}
                 tabIndex={-1}
                 /* Repair-focus anchor: matches the bad-channel issue path for this
-                   ntrode row so a repair click lands on this control. */
+                   ntrode row. When there are NO invalid marks this grid is the first
+                   (and only) element with this path, so normal repair focus (marking
+                   a valid channel) lands here. */
                 data-field-path={`ntrode_electrode_group_channel_map[${ntrodeId}]`}
               >
                 {channels.map(channelNum => (
@@ -372,22 +400,6 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
                   </div>
                 ))}
               </div>
-
-              {/* Removal controls for loaded marks with no checkbox (out-of-range or
-                  non-integer). Without these the value can never be cleared and
-                  permanently blocks export. */}
-              {invalidMarks.map((value) => (
-                <button
-                  key={`invalid-${String(value)}`}
-                  type="button"
-                  className="remove-invalid-mark"
-                  onClick={() => handleRemoveInvalidMark(ntrodeId, value)}
-                  aria-label={`Remove invalid failed channel ${value} from ntrode ${ntrodeId}`}
-                  data-field-path={`ntrode_electrode_group_channel_map[${ntrodeId}]`}
-                >
-                  Remove invalid failed channel {String(value)}
-                </button>
-              ))}
 
               {error && (
                 <span className="validation-error" role="alert">

@@ -101,6 +101,27 @@ describe('ChannelMapEditor — single-shank invalid-mark removal', () => {
       screen.queryByRole('button', { name: /remove invalid failed channel/i })
     ).toBeNull();
   });
+
+  // Finding 2 (Medium): the single-shank save-validation branch must reject a
+  // non-integer bad channel ('abc') at EDIT time, mirroring the multi-shank branch
+  // — not silently pass save and only block at export.
+  it('blocks save on a non-integer single-shank bad channel and does not call onSave', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    render(
+      <ChannelMapEditor
+        electrodeGroup={singleShankGroup}
+        channelMaps={mapsWith(['abc'])}
+        onSave={onSave}
+        onCancel={() => {}}
+      />
+    );
+
+    await user.click(screen.getByTestId('editor-save'));
+
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent(/bad channel index abc is out of range/i);
+  });
 });
 
 describe('ChannelMapEditor — multi-shank invalid-mark removal', () => {
