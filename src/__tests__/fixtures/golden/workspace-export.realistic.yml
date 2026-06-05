@@ -35,7 +35,7 @@ cameras:
     camera_name: side_camera
 tasks:
   - task_name: sleep
-    task_description: Pre-task rest in home cage
+    task_description: Rest in home cage
     task_environment: home cage
     camera_id:
       - 0
@@ -51,7 +51,7 @@ tasks:
       - 2
       - 4
   - task_name: sleep
-    task_description: Post-task rest in home cage
+    task_description: Rest in home cage
     task_environment: home cage
     camera_id:
       - 0

@@ -207,6 +207,199 @@ describe('Phase 6: channel bounds (Task 3)', () => {
     expect(codes(rulesValidation(model))).toContain('channel_key_out_of_range');
   });
 
+});
+
+describe('Phase 6: location + targeted_location (Task 4)', () => {
+  const group = (over) => ({
+    id: 0,
+    device_type: 'tetrode_12.5',
+    location: 'CA1',
+    targeted_location: 'CA1',
+    ...over,
+  });
+
+  it('errors when location is empty or whitespace', () => {
+    expect(codes(rulesValidation({ electrode_groups: [group({ location: '' })] }))).toContain('empty_location');
+    expect(codes(rulesValidation({ electrode_groups: [group({ location: '   ' })] }))).toContain('empty_location');
+  });
+
+  it('errors when targeted_location is empty or whitespace', () => {
+    expect(codes(rulesValidation({ electrode_groups: [group({ targeted_location: '' })] }))).toContain('empty_targeted_location');
+  });
+
+  it('passes when both location and targeted_location are non-empty', () => {
+    const c = codes(rulesValidation({ electrode_groups: [group()] }));
+    expect(c).not.toContain('empty_location');
+    expect(c).not.toContain('empty_targeted_location');
+  });
+
+  it('warns (not errors) on mixed-case duplicate location across groups', () => {
+    const issues = rulesValidation({
+      electrode_groups: [group({ id: 0, location: 'CA1' }), group({ id: 1, location: 'ca1' })],
+    });
+    const warn = issues.find((i) => i.code === 'inconsistent_location_case');
+    expect(warn).toBeDefined();
+    expect(warn.severity).toBe('warning');
+  });
+});
+
+describe('Phase 6: device_type known probe (Task 5)', () => {
+  it('errors on an unknown device_type', () => {
+    const issues = rulesValidation({
+      electrode_groups: [{ id: 0, device_type: 'made_up_probe', location: 'CA1', targeted_location: 'CA1' }],
+    });
+    const unknown = issues.find((i) => i.code === 'unknown_device_type');
+    expect(unknown).toBeDefined();
+    expect(unknown.severity).toBe('error');
+  });
+
+  it('passes for a known device_type', () => {
+    expect(codes(rulesValidation({
+      electrode_groups: [{ id: 0, device_type: 'tetrode_12.5', location: 'CA1', targeted_location: 'CA1' }],
+    }))).not.toContain('unknown_device_type');
+  });
+});
+
+describe('Phase 6: behavioral-event name uniqueness (Task 6)', () => {
+  it('errors on duplicate behavioral_events name', () => {
+    const issues = rulesValidation({
+      behavioral_events: [
+        { name: 'reward', description: 'a' },
+        { name: 'reward', description: 'b' },
+      ],
+    });
+    const dup = issues.find((i) => i.code === 'duplicate_behavioral_event_name');
+    expect(dup).toBeDefined();
+    expect(dup.severity).toBe('error');
+  });
+
+  it('passes for unique behavioral_events names', () => {
+    expect(codes(rulesValidation({
+      behavioral_events: [
+        { name: 'reward_left', description: 'a' },
+        { name: 'reward_right', description: 'b' },
+      ],
+    }))).not.toContain('duplicate_behavioral_event_name');
+  });
+});
+
+describe('Phase 6: task/video dependency + camera refs (Task 7)', () => {
+  it('errors on duplicate task epochs across task rows', () => {
+    const issues = rulesValidation({
+      cameras: [{ id: 0, camera_name: 'c' }],
+      tasks: [
+        { task_name: 'a', task_description: 'd1', camera_id: [0], task_epochs: [1, 2] },
+        { task_name: 'b', task_description: 'd2', camera_id: [0], task_epochs: [2, 3] },
+      ],
+    });
+    const dup = issues.find((i) => i.code === 'duplicate_task_epoch');
+    expect(dup).toBeDefined();
+    expect(dup.severity).toBe('error');
+    expect(dup.message).toContain('2');
+  });
+
+  it('passes when task epochs are unique across tasks', () => {
+    expect(codes(rulesValidation({
+      cameras: [{ id: 0, camera_name: 'c' }],
+      tasks: [
+        { task_name: 'a', task_description: 'd1', camera_id: [0], task_epochs: [1] },
+        { task_name: 'b', task_description: 'd2', camera_id: [0], task_epochs: [2, 3] },
+      ],
+    }))).not.toContain('duplicate_task_epoch');
+  });
+
+  it('allows a task with epochs and no camera (explicitly-allowed no-camera path)', () => {
+    // A camera-less epoch (e.g. a sleep box with no video) is valid: Spyglass only
+    // skips a VIDEO that lacks a backing epoch+camera, not a camera-less epoch.
+    const issues = rulesValidation({
+      cameras: [{ id: 0, camera_name: 'c' }],
+      tasks: [{ task_name: 'sleep', task_description: 'rest', camera_id: [], task_epochs: [1] }],
+    });
+    expect(codes(issues)).not.toContain('duplicate_task_epoch');
+    expect(codes(issues)).not.toContain('orphaned_video');
+  });
+
+  it('errors on an orphaned associated_video_file (task_epochs matches no task)', () => {
+    const issues = rulesValidation({
+      cameras: [{ id: 0, camera_name: 'c' }],
+      tasks: [{ task_name: 'a', task_description: 'd', camera_id: [0], task_epochs: [2] }],
+      associated_video_files: [{ name: 'v', camera_id: 0, task_epochs: 9 }],
+    });
+    const orphan = issues.find((i) => i.code === 'orphaned_video');
+    expect(orphan).toBeDefined();
+    expect(orphan.severity).toBe('error');
+  });
+
+  it('passes a video with a matching task epoch and valid scalar camera_id', () => {
+    const issues = rulesValidation({
+      cameras: [{ id: 0, camera_name: 'c' }],
+      tasks: [{ task_name: 'a', task_description: 'd', camera_id: [0], task_epochs: [2] }],
+      associated_video_files: [{ name: 'v', camera_id: 0, task_epochs: 2 }],
+    });
+    expect(codes(issues)).not.toContain('orphaned_video');
+    expect(codes(issues)).not.toContain('dangling_camera_ref');
+  });
+});
+
+describe('Phase 6: workspace/dataset identity consistency (Task 8)', () => {
+  it('errors on reused camera_name with divergent calibration/id', () => {
+    const issues = rulesValidation({
+      cameras: [
+        { id: 0, camera_name: 'overhead', meters_per_pixel: 0.001, lens: 'A', model: 'M', manufacturer: 'X' },
+        { id: 1, camera_name: 'overhead', meters_per_pixel: 0.002, lens: 'A', model: 'M', manufacturer: 'X' },
+      ],
+    });
+    const div = issues.find((i) => i.code === 'divergent_camera_identity');
+    expect(div).toBeDefined();
+    expect(div.severity).toBe('error');
+  });
+
+  it('passes reused camera_name with identical dependent fields', () => {
+    expect(codes(rulesValidation({
+      cameras: [
+        { id: 0, camera_name: 'overhead', meters_per_pixel: 0.001, lens: 'A', model: 'M', manufacturer: 'X' },
+        { id: 0, camera_name: 'overhead', meters_per_pixel: 0.001, lens: 'A', model: 'M', manufacturer: 'X' },
+      ],
+    }))).not.toContain('divergent_camera_identity');
+  });
+
+  it('errors on reused data_acq_device name with divergent technical fields', () => {
+    const issues = rulesValidation({
+      data_acq_device: [
+        { name: 'acq', system: 'S1', amplifier: 'A', adc_circuit: 'C' },
+        { name: 'acq', system: 'S2', amplifier: 'A', adc_circuit: 'C' },
+      ],
+    });
+    const div = issues.find((i) => i.code === 'divergent_data_acq_identity');
+    expect(div).toBeDefined();
+    expect(div.severity).toBe('error');
+  });
+
+  it('errors on reused task_name with divergent task_description', () => {
+    const issues = rulesValidation({
+      cameras: [{ id: 0, camera_name: 'c' }],
+      tasks: [
+        { task_name: 'sleep', task_description: 'pre', camera_id: [0], task_epochs: [1] },
+        { task_name: 'sleep', task_description: 'post', camera_id: [0], task_epochs: [2] },
+      ],
+    });
+    const div = issues.find((i) => i.code === 'divergent_task_identity');
+    expect(div).toBeDefined();
+    expect(div.severity).toBe('error');
+  });
+
+  it('passes reused task_name with the same task_description', () => {
+    expect(codes(rulesValidation({
+      cameras: [{ id: 0, camera_name: 'c' }],
+      tasks: [
+        { task_name: 'sleep', task_description: 'rest', camera_id: [0], task_epochs: [1] },
+        { task_name: 'sleep', task_description: 'rest', camera_id: [0], task_epochs: [2] },
+      ],
+    }))).not.toContain('divergent_task_identity');
+  });
+});
+
+describe('Phase 6: channel bounds skipped for unknown device (Task 3/5 interaction)', () => {
   it('does not run channel-bound checks for an unknown device_type', () => {
     // Unknown device → getChannelCount 0; Task 5 reports the unknown device,
     // channel bounds are skipped (no spurious out-of-range noise).

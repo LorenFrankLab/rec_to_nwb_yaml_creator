@@ -49,6 +49,12 @@ describe('export parity (new workspace path)', () => {
       ...decodeYaml(realisticFixture),
       ...REALISTIC_ALWAYS_ON_KEYS,
     };
+    // The legacy golden gives the two 'sleep' tasks epoch-specific descriptions
+    // (Pre-/Post-task), a known-invalid Spyglass divergence. The corrected builder
+    // uses one canonical description per task_name, so normalize the expectation.
+    expected.tasks = expected.tasks.map((t) =>
+      t.task_name === 'sleep' ? { ...t, task_description: 'Rest in home cage' } : t
+    );
 
     // The channel map intentionally diverges from the legacy golden (see header):
     // the legacy fixture's incrementing map is a known-invalid workspace, so we

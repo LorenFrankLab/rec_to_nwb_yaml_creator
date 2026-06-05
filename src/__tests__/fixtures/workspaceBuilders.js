@@ -135,10 +135,16 @@ export function buildRealisticWorkspace() {
       experiment_description: 'Chronic tetrode recording during spatial navigation',
       weight: undefined, // inherit animal weight (485)
     },
+    // The two 'sleep' tasks share ONE task_description — Spyglass treats task_name
+    // as an identity with one description per name (designs.md / Spyglass
+    // naming-identity contract). The legacy golden realistic-session.yml encodes
+    // epoch-specific descriptions ("Pre-task"/"Post-task") for the same name, which
+    // is a known-invalid divergence; it stays frozen there (never validated) while
+    // the builder is the corrected source of truth.
     tasks: [
-      { task_name: 'sleep', task_description: 'Pre-task rest in home cage', task_environment: 'home cage', camera_id: [0], task_epochs: [1] },
+      { task_name: 'sleep', task_description: 'Rest in home cage', task_environment: 'home cage', camera_id: [0], task_epochs: [1] },
       { task_name: 'w_alternation', task_description: 'W-track continuous alternation for reward', task_environment: 'elevated W-track (180cm arms)', camera_id: [0, 1], task_epochs: [2, 4] },
-      { task_name: 'sleep', task_description: 'Post-task rest in home cage', task_environment: 'home cage', camera_id: [0], task_epochs: [3, 5] },
+      { task_name: 'sleep', task_description: 'Rest in home cage', task_environment: 'home cage', camera_id: [0], task_epochs: [3, 5] },
     ],
     behavioral_events: [
       { description: 'Reward delivery at left arm', name: 'reward_left' },

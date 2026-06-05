@@ -5,7 +5,7 @@
  */
 
 import { isValidSpecies, idHasSlash } from './dandiSubject';
-import { getChannelCount } from '../utils/deviceTypeUtils';
+import { getChannelCount, validateDeviceType } from '../utils/deviceTypeUtils';
 import { deviceTypeMap } from '../ntrode/deviceTypes';
 
 /**
@@ -417,6 +417,233 @@ export const rulesValidation = (model) => {
       }
     });
   }
+
+  // Rule 12 (Phase 6, Task 4): non-empty, consistent location / targeted_location.
+  // Spyglass auto-creates BrainRegion rows from electrode_group.location by exact
+  // string (no trim/case-fold); targeted_location is schema-required and used by
+  // trodes_to_nwb as the per-electrode location. Both must be non-empty; a
+  // mixed-case duplicate location fragments regions (warning).
+  if (model.electrode_groups?.length > 0) {
+    const nonEmpty = (v) => typeof v === 'string' && v.trim() !== '';
+    model.electrode_groups.forEach((group, gi) => {
+      if (!nonEmpty(group?.location)) {
+        issues.push({
+          path: `electrode_groups[${gi}].location`,
+          field: 'location',
+          step: 'devices',
+          actionLabel: 'Set location',
+          code: 'empty_location',
+          severity: 'error',
+          message:
+            `Electrode group ${group?.id ?? gi} has an empty location. A non-empty brain ` +
+            `region is required — Spyglass creates a BrainRegion from this exact string.`,
+        });
+      }
+      if (!nonEmpty(group?.targeted_location)) {
+        issues.push({
+          path: `electrode_groups[${gi}].targeted_location`,
+          field: 'targeted_location',
+          step: 'devices',
+          actionLabel: 'Set targeted location',
+          code: 'empty_targeted_location',
+          severity: 'error',
+          message:
+            `Electrode group ${group?.id ?? gi} has an empty targeted_location. It is ` +
+            `required and used downstream as the per-electrode location.`,
+        });
+      }
+    });
+
+    // Warning: the same location spelled with different case across groups
+    // (e.g. "CA1" vs "ca1") fragments Spyglass BrainRegion rows.
+    const byLower = new Map();
+    model.electrode_groups.forEach((group) => {
+      const loc = group?.location;
+      if (typeof loc !== 'string' || loc.trim() === '') return;
+      const key = loc.trim().toLowerCase();
+      if (!byLower.has(key)) byLower.set(key, new Set());
+      byLower.get(key).add(loc.trim());
+    });
+    byLower.forEach((variants) => {
+      if (variants.size > 1) {
+        issues.push({
+          path: 'electrode_groups',
+          field: 'location',
+          step: 'devices',
+          actionLabel: 'Make location capitalization consistent',
+          code: 'inconsistent_location_case',
+          severity: 'warning',
+          message:
+            `Inconsistent capitalization of the same location across electrode groups: ` +
+            `${[...variants].map((v) => `"${v}"`).join(', ')}. Use one spelling — Spyglass ` +
+            `treats these as different brain regions and fragments queries.`,
+        });
+      }
+    });
+  }
+
+  // Rule 13 (Phase 6, Task 5): device_type is a known/registered probe.
+  // An unknown device_type hard-fails downstream (trodes_to_nwb FileNotFoundError
+  // loading the probe metadata). Guards copy/CSV-import-introduced values.
+  if (model.electrode_groups?.length > 0) {
+    model.electrode_groups.forEach((group, gi) => {
+      const dt = group?.device_type;
+      if (dt === undefined || dt === null || dt === '') return; // schema 'required' owns the empty case
+      if (!validateDeviceType(dt)) {
+        issues.push({
+          path: `electrode_groups[${gi}].device_type`,
+          field: 'device_type',
+          step: 'devices',
+          actionLabel: 'Pick a supported probe',
+          code: 'unknown_device_type',
+          severity: 'error',
+          message:
+            `Electrode group ${group?.id ?? gi} uses device_type "${dt}", which is not a ` +
+            `supported probe. Conversion fails when the probe metadata can't be found — ` +
+            `choose a known device type.`,
+        });
+      }
+    });
+  }
+
+  // Rule 14 (Phase 6, Task 6): behavioral-event names unique within the day.
+  // A duplicate dio_event name is a hard Spyglass DIOEvents primary-key violation
+  // and a trodes_to_nwb ValueError.
+  if (model.behavioral_events?.length > 0) {
+    const seenNames = new Set();
+    const reportedNames = new Set();
+    model.behavioral_events.forEach((event) => {
+      const name = event?.name;
+      if (name === undefined || name === null || name === '') return;
+      if (seenNames.has(name) && !reportedNames.has(name)) {
+        reportedNames.add(name);
+        issues.push({
+          path: 'behavioral_events',
+          field: 'name',
+          step: 'epochs',
+          actionLabel: 'Rename behavioral event',
+          code: 'duplicate_behavioral_event_name',
+          severity: 'error',
+          message:
+            `Duplicate behavioral event name "${name}". Each behavioral (DIO) event name ` +
+            `must be unique — duplicates collide on the Spyglass DIOEvents primary key.`,
+        });
+      }
+      seenNames.add(name);
+    });
+  }
+
+  // Rule 15 (Phase 6, Task 7): task/video epoch dependencies.
+  // (a) task epochs are unique across task rows — Spyglass TaskEpoch is keyed by
+  //     session + epoch, so the same epoch number in two tasks collides.
+  // (b) each non-empty associated_video_files entry has a task_epochs that matches
+  //     some task's task_epochs — an orphaned video silently does not import
+  //     (common_behav.py:451, common_task.py:240). Scalar camera_id validity is
+  //     Rule 9 (Task 1).
+  // A task with epochs and no camera is the explicitly-allowed no-camera path (a
+  // camera-less epoch is valid; only a *video* needs a backing epoch + camera).
+  if (model.tasks?.length > 0) {
+    const epochOwners = new Map(); // epoch -> count across task rows
+    model.tasks.forEach((task) => {
+      const epochs = Array.isArray(task?.task_epochs) ? task.task_epochs : [];
+      epochs.forEach((e) => {
+        if (e === undefined || e === null) return;
+        epochOwners.set(e, (epochOwners.get(e) || 0) + 1);
+      });
+    });
+    const reportedEpochs = new Set();
+    epochOwners.forEach((count, epoch) => {
+      if (count > 1 && !reportedEpochs.has(epoch)) {
+        reportedEpochs.add(epoch);
+        issues.push({
+          path: 'tasks',
+          field: 'task_epochs',
+          step: 'epochs',
+          actionLabel: 'Fix task epochs',
+          code: 'duplicate_task_epoch',
+          severity: 'error',
+          message:
+            `Task epoch ${epoch} is used by more than one task. Each epoch belongs to a ` +
+            `single task — duplicates collide on the Spyglass TaskEpoch key.`,
+        });
+      }
+    });
+  }
+
+  if (model.associated_video_files?.length > 0) {
+    const taskEpochSet = new Set();
+    (model.tasks || []).forEach((task) => {
+      (Array.isArray(task?.task_epochs) ? task.task_epochs : []).forEach((e) => {
+        if (e !== undefined && e !== null) taskEpochSet.add(e);
+      });
+    });
+    model.associated_video_files.forEach((video, vi) => {
+      const epoch = video?.task_epochs;
+      if (epoch === undefined || epoch === null) return; // empty handled elsewhere
+      if (!taskEpochSet.has(epoch)) {
+        issues.push({
+          path: `associated_video_files[${vi}].task_epochs`,
+          field: 'task_epochs',
+          step: 'epochs',
+          actionLabel: 'Fix video epoch',
+          code: 'orphaned_video',
+          severity: 'error',
+          message:
+            `Video ${vi + 1}${video.name ? ` ("${video.name}")` : ''} references task epoch ` +
+            `${epoch}, which no task defines. Spyglass silently drops videos without a ` +
+            `matching task epoch — point it at an existing epoch.`,
+        });
+      }
+    });
+  }
+
+  // Rule 16 (Phase 6, Task 8): workspace/dataset identity consistency (Spyglass).
+  // Within the exported model, a reused identity name must carry identical
+  // dependent metadata, else Spyglass raises a divergence error or silently reuses
+  // the wrong row. (The editing-time guard is phase 3 / Task 0b; this catches
+  // imported/existing invalid state in the exported file.)
+  const identityDivergences = (items, nameKey, depKeys, code, label, noun) => {
+    if (!Array.isArray(items)) return; // schema owns wrong-type (e.g. object) cases
+    const seen = new Map(); // name -> first item's dependent signature
+    const reported = new Set();
+    items.forEach((item) => {
+      const name = item?.[nameKey];
+      if (name === undefined || name === null || name === '') return;
+      const sig = JSON.stringify(depKeys.map((k) => item?.[k] ?? null));
+      if (!seen.has(name)) {
+        seen.set(name, sig);
+      } else if (seen.get(name) !== sig && !reported.has(name)) {
+        reported.add(name);
+        issues.push({
+          path: noun,
+          field: nameKey,
+          step: noun === 'tasks' ? 'epochs' : 'devices',
+          actionLabel: label,
+          code,
+          severity: 'error',
+          message:
+            `${noun === 'tasks' ? 'Task' : noun === 'cameras' ? 'Camera' : 'Data-acquisition device'} ` +
+            `"${name}" is reused with different ${depKeys.join('/')}. In Spyglass the name is an ` +
+            `identity — reuse the same name only with identical metadata, or use a new name.`,
+        });
+      }
+    });
+  };
+  identityDivergences(
+    model.cameras, 'camera_name',
+    ['id', 'meters_per_pixel', 'lens', 'model', 'manufacturer'],
+    'divergent_camera_identity', 'Use a new camera name', 'cameras'
+  );
+  identityDivergences(
+    model.data_acq_device, 'name',
+    ['system', 'amplifier', 'adc_circuit'],
+    'divergent_data_acq_identity', 'Use a new device name', 'data_acq_device'
+  );
+  identityDivergences(
+    model.tasks, 'task_name',
+    ['task_description'],
+    'divergent_task_identity', 'Use a new task name', 'tasks'
+  );
 
   // Rule 10 (Phase 6, Task 2): dangling electrode-group references.
   // Every ntrode_electrode_group_channel_map[].electrode_group_id must reference

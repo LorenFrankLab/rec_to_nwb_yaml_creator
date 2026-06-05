@@ -45,7 +45,7 @@ cameras:
 
 tasks:
   - task_name: sleep
-    task_description: Pre-task rest in home cage
+    task_description: Rest in home cage
     task_environment: home cage
     camera_id: [0]
     task_epochs: [1]
@@ -55,7 +55,7 @@ tasks:
     camera_id: [0, 1]
     task_epochs: [2, 4]
   - task_name: sleep
-    task_description: Post-task rest in home cage
+    task_description: Rest in home cage
     task_environment: home cage
     camera_id: [0]
     task_epochs: [3, 5]
