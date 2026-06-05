@@ -209,10 +209,10 @@ describe('DayEditorStepper', () => {
 
   // Repair routing for a subject identity issue. The mock animal's species "Rat" is
   // free text (not a Latin binomial), so the Validation step shows a blocking
-  // `invalid_species` error. Subject identity is editable only in the Animal Editor
-  // (the Day Editor inherits it), so under the Repair Routing Contract the repair button
-  // routes to the Animal Editor route rather than dead-ending in the Day Editor.
-  it('routes an inherited subject-identity repair (species) to the Animal Editor', async () => {
+  // `invalid_species` error. The inherited subject fields ARE editable in the Day
+  // Editor Overview step (Phase 5 made them repairable in place; the Animal Editor
+  // has no subject step), so the repair routes to Overview, not the Animal Editor.
+  it('routes an inherited subject-identity repair (species) to the Overview step', async () => {
     const user = userEvent.setup();
     window.location.hash = '#/day/remy-2023-06-22';
 
@@ -225,15 +225,17 @@ describe('DayEditorStepper', () => {
     // Go to the Validation step where blocking issues list their repair actions.
     await user.click(screen.getByRole('button', { name: /^Validation/i }));
 
-    // The species issue (subject.species) offers a "Fix in Animal Editor" button.
+    // The species issue (subject.species) offers a "Fix in Overview" button.
     const speciesIssue = screen.getByText(/Species "Rat" is not DANDI-valid/i);
     const speciesRepair = within(speciesIssue.closest('li')).getByRole('button', {
-      name: /fix in animal editor/i,
+      name: /fix in overview/i,
     });
     await user.click(speciesRepair);
 
-    // Hands off to the Animal Editor route for this animal (the editable owner).
-    expect(window.location.hash).toBe('#/animal/remy/editor');
+    // Stays in the Day Editor and lands on the Overview step (the editable owner),
+    // not the Animal Editor.
+    expect(window.location.hash).not.toBe('#/animal/remy/editor');
+    expect(screen.getByRole('button', { name: /^Overview/i })).toHaveAttribute('aria-current', 'step');
   });
 
   it('does not offer a repair button for a slash session_id (read-only identity dead-end)', async () => {

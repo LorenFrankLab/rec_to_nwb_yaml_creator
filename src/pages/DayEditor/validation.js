@@ -301,6 +301,7 @@ const SURFACE_BY_CODE = {
   channel_value_out_of_range: 'animal',
   channel_key_out_of_range: 'animal',
   channel_partition_invalid: 'animal',
+  channel_row_count_mismatch: 'animal',
   multishank_bad_channels_ignored: 'animal',
   inconsistent_probe_catalog: 'animal',
   empty_location: 'animal',
@@ -315,9 +316,10 @@ const SURFACE_BY_CODE = {
   duplicate_camera_id: 'animal',
   divergent_camera_identity: 'animal',
   divergent_data_acq_identity: 'animal',
-  invalid_species: 'animal',
   // Editable in the Day Editor (task/video/event re-picks, day bad-channel overrides,
-  // session metadata, optogenetics completeness).
+  // session metadata incl. the inherited subject fields repairable in Overview,
+  // optogenetics completeness).
+  invalid_species: 'day',
   dangling_camera_ref: 'day',
   duplicate_behavioral_event_name: 'day',
   duplicate_behavioral_event_description: 'day',

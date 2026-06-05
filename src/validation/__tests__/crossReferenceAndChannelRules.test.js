@@ -258,6 +258,30 @@ describe('channel bounds', () => {
     expect(codes(rulesValidation(model))).toContain('channel_partition_invalid');
   });
 
+  it('errors on an extra (empty) ntrode row beyond the probe shank count', () => {
+    // A tetrode is single-shank → exactly one ntrode row. An extra empty row
+    // contributes no values (so coverage still passes) but the converter expects
+    // one row per shank, so the row-count mismatch must be flagged.
+    const model = {
+      electrode_groups: [tetrodeGroup(0)],
+      ntrode_electrode_group_channel_map: [
+        { ntrode_id: 1, electrode_group_id: 0, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+        { ntrode_id: 2, electrode_group_id: 0, bad_channels: [], map: {} }, // excess empty row
+      ],
+    };
+    expect(codes(rulesValidation(model))).toContain('channel_row_count_mismatch');
+  });
+
+  it('passes when row count equals the shank count', () => {
+    const model = {
+      electrode_groups: [tetrodeGroup(0)],
+      ntrode_electrode_group_channel_map: [
+        { ntrode_id: 1, electrode_group_id: 0, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+      ],
+    };
+    expect(codes(rulesValidation(model))).not.toContain('channel_row_count_mismatch');
+  });
+
   it('errors on out-of-range bad_channels index; passes for in-range', () => {
     const bad = {
       electrode_groups: [tetrodeGroup(0)],
@@ -527,6 +551,7 @@ describe('repair metadata on new error rules', () => {
     'channel_key_out_of_range',
     'bad_channel_out_of_range',
     'channel_partition_invalid',
+    'channel_row_count_mismatch',
     'empty_location',
     'empty_targeted_location',
     'unknown_device_type',
@@ -550,14 +575,21 @@ describe('repair metadata on new error rules', () => {
     electrode_groups: [
       { id: 0, device_type: 'made_up_probe', location: '', targeted_location: '' },
       { id: 1, device_type: 'tetrode_12.5', location: 'CA1', targeted_location: 'CA1' },
-      { id: 2, device_type: 'tetrode_12.5', location: 'CA3', targeted_location: 'CA3' },
+      { id: 2, device_type: '128c-4s8mm6cm-20um-40um-sl', location: 'CA3', targeted_location: 'CA3' },
+      { id: 3, device_type: 'tetrode_12.5', location: 'PFC', targeted_location: 'PFC' },
     ],
     ntrode_electrode_group_channel_map: [
       // group 1: out-of-range value (7), bad_channel (99), wrong key set (missing 1)
       { ntrode_id: 1, electrode_group_id: 1, bad_channels: [99], map: { 0: 7, 2: 2, 3: 3 } },
-      // group 2: two ntrodes that collide on the same electrode ids (missing offset)
-      { ntrode_id: 2, electrode_group_id: 2, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
-      { ntrode_id: 3, electrode_group_id: 2, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+      // group 2 (4-shank, correct row count 4): shanks 0 and 0 collide (missing
+      // offset) and shank 1 is absent → coverage collision → channel_partition_invalid
+      shankNtrode(2, 2, '128c-4s8mm6cm-20um-40um-sl', 0),
+      shankNtrode(3, 2, '128c-4s8mm6cm-20um-40um-sl', 0),
+      shankNtrode(8, 2, '128c-4s8mm6cm-20um-40um-sl', 2),
+      shankNtrode(9, 2, '128c-4s8mm6cm-20um-40um-sl', 3),
+      // group 3 (tetrode, 1 shank) with an extra row → row-count mismatch
+      { ntrode_id: 5, electrode_group_id: 3, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+      { ntrode_id: 6, electrode_group_id: 3, bad_channels: [], map: {} },
       // dangling electrode_group_id
       { ntrode_id: 4, electrode_group_id: 42, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
     ],

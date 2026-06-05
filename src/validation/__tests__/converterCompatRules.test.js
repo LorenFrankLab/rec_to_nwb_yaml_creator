@@ -124,6 +124,16 @@ describe('fail-closed on malformed shapes', () => {
     expect(Array.isArray(result)).toBe(true);
   });
 
+  it('does not throw when one array field is valid but a sibling is a non-array (cross-array guard)', () => {
+    // The camera-ref rule guards `cameras` but iterates `tasks`; the channel rules
+    // read `electrode_groups`, etc. A malformed sibling (truthy non-array) must not
+    // crash the iteration after AJV has already flagged the schema error.
+    expect(() => rulesValidation({ cameras: [{ id: 0, camera_name: 'c' }], tasks: 'not-an-array' })).not.toThrow();
+    expect(() => rulesValidation({ cameras: [{ id: 0, camera_name: 'c' }], associated_video_files: 'nope' })).not.toThrow();
+    expect(() => rulesValidation({ ntrode_electrode_group_channel_map: [{ ntrode_id: 1, electrode_group_id: 0, map: {} }], electrode_groups: 'bad' })).not.toThrow();
+    expect(() => rulesValidation({ associated_files: [{ name: 'f', task_epochs: 1 }], tasks: 5 })).not.toThrow();
+  });
+
   it('handles null/array entries inside arrays without throwing', () => {
     const model = {
       cameras: [null, { id: 0, camera_name: 'c' }],

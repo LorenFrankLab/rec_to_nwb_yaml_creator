@@ -226,7 +226,7 @@ export const rulesValidation = (model) => {
       issues.push({
         path: 'subject.species',
         code: 'invalid_species',
-        repairSurface: 'animal',
+        repairSurface: 'day',
         severity: 'error',
         message:
           `Species "${sp}" is not DANDI-valid. Use a Latin binomial (e.g. ` +
@@ -272,7 +272,7 @@ export const rulesValidation = (model) => {
   const validCameraIds = Array.isArray(model.cameras)
     ? new Set(model.cameras.map((c) => c?.id).filter((id) => id !== undefined && id !== null))
     : null;
-  if (validCameraIds) (model.tasks || []).forEach((task, ti) => {
+  if (validCameraIds) (Array.isArray(model.tasks) ? model.tasks : []).forEach((task, ti) => {
     if (!Array.isArray(task?.camera_id)) return;
     task.camera_id.forEach((cid) => {
       if (cid === undefined || cid === null) return;
@@ -294,7 +294,7 @@ export const rulesValidation = (model) => {
     });
   });
   // Video camera_id is a SCALAR integer, not an array (schema nwb_schema.json:892).
-  if (validCameraIds) (model.associated_video_files || []).forEach((video, vi) => {
+  if (validCameraIds) (Array.isArray(model.associated_video_files) ? model.associated_video_files : []).forEach((video, vi) => {
     const cid = video?.camera_id;
     // A blank/empty camera_id is an incomplete row; the schema's required/type
     // check owns that with a clear message — don't emit "references camera id ,".
@@ -326,10 +326,10 @@ export const rulesValidation = (model) => {
   //   (c) the group's ntrode ROW COUNT equals num_shanks, and — matching rows to
   //       shanks BY ORDER — row i's keys are 0..(shank_i.electrodeIds.length-1);
   //   (d) bad_channels are probe-local indices in [0, total).
-  // Unknown devices (no shanks) are skipped here — Task 5 reports them.
+  // Unknown devices (no shanks) are skipped here — Rule 13 (unknown_device_type) reports them.
   if (Array.isArray(model.ntrode_electrode_group_channel_map) && model.ntrode_electrode_group_channel_map.length > 0) {
     const groupById = new Map(
-      (model.electrode_groups || [])
+      (Array.isArray(model.electrode_groups) ? model.electrode_groups : [])
         .filter((g) => g?.id !== undefined && g?.id !== null)
         .map((g) => [g.id, g])
     );
@@ -435,6 +435,28 @@ export const rulesValidation = (model) => {
     // per-shank offset) breaks conversion. Skipped when (a) already flagged an
     // out-of-range value for the group, so a single mistake yields a single error.
     valuesByGroup.forEach(({ deviceType, channelCount, values }, groupId) => {
+      // (e) the group's ntrode ROW COUNT must equal the probe's shank count. An
+      // extra (e.g. empty `{ map: {} }`) row contributes no values and would slip
+      // past the coverage check, but the converter expects exactly one row per
+      // shank (convert_rec_header header check), so flag the mismatch.
+      const expectedRows = getProbeShanks(deviceType).length;
+      const actualRows = rowIndexByGroup.get(groupId) ?? 0;
+      if (expectedRows > 0 && actualRows !== expectedRows) {
+        issues.push({
+          path: `ntrode_electrode_group_channel_map`,
+          field: 'map',
+          step: 'devices',
+          actionLabel: 'Fix channel map',
+          code: 'channel_row_count_mismatch',
+          repairSurface: 'animal',
+          severity: 'error',
+          message:
+            `Electrode group ${groupId} ("${deviceType}") has ${actualRows} channel-map row(s) ` +
+            `but the probe has ${expectedRows} shank(s). There must be exactly one ntrode row per ` +
+            `shank — remove extra rows or add the missing one.`,
+        });
+        return; // a row-count problem subsumes the coverage check
+      }
       const electrodeIdSet = new Set(getProbeElectrodeIds(deviceType));
       const anyOutOfRange = values.some((v) => !electrodeIdSet.has(v));
       if (anyOutOfRange) return; // (a) owns this group's error
@@ -573,10 +595,10 @@ export const rulesValidation = (model) => {
         repairSurface: 'animal',
         severity: 'error',
         message:
-          `Electrode group ${group?.id ?? gi} uses device_type "${dt}", whose probe metadata ` +
-          `is internally inconsistent (its electrode ids are not a contiguous 0..n-1 set, or its ` +
-          `shank count is wrong). This probe cannot be exported — its channel map would fail ` +
-          `conversion. Choose a different probe or fix the probe catalog entry for "${dt}".`,
+          `Electrode group ${group?.id ?? gi} uses device type "${dt}", whose channel geometry is ` +
+          `inconsistent and cannot be exported (its channel map would fail conversion). Choose a ` +
+          `different, supported probe type. If you believe "${dt}" should be supported, contact your ` +
+          `lab's pipeline maintainer.`,
       });
     });
   }
@@ -615,7 +637,7 @@ export const rulesValidation = (model) => {
   // (b) each non-empty associated_video_files entry has a task_epochs that matches
   //     some task's task_epochs — an orphaned video silently does not import
   //     (common_behav.py:451, common_task.py:240). Scalar camera_id validity is
-  //     Rule 9 (Task 1).
+  //     Rule 9.
   // A task with epochs and no camera is the explicitly-allowed no-camera path (a
   // camera-less epoch is valid; only a *video* needs a backing epoch + camera).
   if (Array.isArray(model.tasks) && model.tasks.length > 0) {
@@ -649,7 +671,7 @@ export const rulesValidation = (model) => {
 
   if (Array.isArray(model.associated_video_files) && model.associated_video_files.length > 0) {
     const taskEpochSet = new Set();
-    (model.tasks || []).forEach((task) => {
+    (Array.isArray(model.tasks) ? model.tasks : []).forEach((task) => {
       (Array.isArray(task?.task_epochs) ? task.task_epochs : []).forEach((e) => {
         if (e !== undefined && e !== null) taskEpochSet.add(e);
       });
@@ -682,7 +704,7 @@ export const rulesValidation = (model) => {
   // Visibility Contract).
   if (Array.isArray(model.associated_files) && model.associated_files.length > 0) {
     const taskEpochSet = new Set();
-    (model.tasks || []).forEach((task) => {
+    (Array.isArray(model.tasks) ? model.tasks : []).forEach((task) => {
       (Array.isArray(task?.task_epochs) ? task.task_epochs : []).forEach((e) => {
         if (e !== undefined && e !== null) taskEpochSet.add(e);
       });
@@ -710,7 +732,7 @@ export const rulesValidation = (model) => {
   // Rule 16: workspace/dataset identity consistency (Spyglass).
   // Within the exported model, a reused identity name must carry identical
   // dependent metadata, else Spyglass raises a divergence error or silently reuses
-  // the wrong row. (The editing-time guard is phase 3 / Task 0b; this catches
+  // the wrong row. (The editing-time guard is the camera/data-acq/task-name editor; this catches
   // imported/existing invalid state in the exported file.)
   const identityDivergences = (items, nameKey, depKeys, code, label, noun) => {
     if (!Array.isArray(items)) return; // schema owns wrong-type (e.g. object) cases
@@ -762,7 +784,7 @@ export const rulesValidation = (model) => {
   // and trodes_to_nwb/Spyglass silently drop or misattach the channels).
   if (Array.isArray(model.ntrode_electrode_group_channel_map) && model.ntrode_electrode_group_channel_map.length > 0) {
     const validGroupIds = new Set(
-      (model.electrode_groups || []).map((g) => g?.id).filter((id) => id !== undefined && id !== null)
+      (Array.isArray(model.electrode_groups) ? model.electrode_groups : []).map((g) => g?.id).filter((id) => id !== undefined && id !== null)
     );
     model.ntrode_electrode_group_channel_map.forEach((ntrode) => {
       const egid = ntrode?.electrode_group_id;

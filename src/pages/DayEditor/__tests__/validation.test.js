@@ -394,6 +394,7 @@ describe('repairTargetForIssue (Repair Routing Contract)', () => {
     { code: 'channel_value_out_of_range', issue: { code: 'channel_value_out_of_range', path: 'ntrode_electrode_group_channel_map[0]', field: 'map', step: 'devices', repairSurface: 'animal' } },
     { code: 'channel_key_out_of_range', issue: { code: 'channel_key_out_of_range', path: 'ntrode_electrode_group_channel_map[0]', field: 'map', step: 'devices', repairSurface: 'animal' } },
     { code: 'channel_partition_invalid', issue: { code: 'channel_partition_invalid', path: 'ntrode_electrode_group_channel_map', field: 'map', step: 'devices', repairSurface: 'animal' } },
+    { code: 'channel_row_count_mismatch', issue: { code: 'channel_row_count_mismatch', path: 'ntrode_electrode_group_channel_map', field: 'map', step: 'devices', repairSurface: 'animal' } },
     { code: 'multishank_bad_channels_ignored', issue: { code: 'multishank_bad_channels_ignored', path: 'ntrode_electrode_group_channel_map[1]', field: 'bad_channels', step: 'devices', repairSurface: 'animal' } },
     { code: 'inconsistent_probe_catalog', issue: { code: 'inconsistent_probe_catalog', path: 'electrode_groups[0].device_type', field: 'device_type', step: 'devices', repairSurface: 'animal' } },
     { code: 'empty_location', issue: { code: 'empty_location', path: 'electrode_groups[0].location', field: 'location', step: 'devices', repairSurface: 'animal' } },

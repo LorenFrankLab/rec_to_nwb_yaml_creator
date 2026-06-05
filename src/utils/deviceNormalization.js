@@ -14,8 +14,12 @@ function isPlainObject(value) {
 }
 
 export function normalizeIdKey(value) {
-  const parsed = Number.parseInt(value, 10);
-  return Number.isNaN(parsed) ? String(value) : String(parsed);
+  // Lossless: an integer / exact integer-string becomes its canonical string form
+  // ("2"→"2"); anything else ("2.9", "abc") is preserved verbatim so a corrupt
+  // bad-channel-override key is NOT silently rerouted onto a real ntrode (e.g.
+  // "2.9" must not collapse onto ntrode "2"). Validation/schema then flags it.
+  const parsed = parseExactInteger(value);
+  return Number.isInteger(parsed) ? String(parsed) : String(value);
 }
 
 /**
@@ -68,14 +72,33 @@ function toFiniteNumber(value) {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+/**
+ * Normalize a list of integer indices (e.g. `bad_channels`) STRICTLY and
+ * LOSSLESSLY, matching the channel-map value contract: an exact integer /
+ * integer-string is coerced and de-duplicated; a corrupt entry (`2.9`, `"abc"`)
+ * is PRESERVED as-is so the channel-bound rules flag it instead of silently
+ * flooring `2.9` to `2`. Absent entries (`null` / `undefined` / `""`) are dropped.
+ *
+ * @param {*} value - Candidate index list.
+ * @returns {Array} Normalized list (integers de-duped; corrupt entries preserved).
+ */
 function normalizeNumberList(value) {
   if (!Array.isArray(value)) return [];
-  return [...new Set(
-    value
-      .map((item) => toFiniteNumber(item))
-      .filter((item) => item !== undefined)
-      .map((item) => Number.parseInt(item, 10))
-  )];
+  const seen = new Set();
+  const out = [];
+  value.forEach((item) => {
+    if (item == null || item === '') return;
+    const parsed = parseExactInteger(item);
+    if (Number.isInteger(parsed)) {
+      if (!seen.has(parsed)) {
+        seen.add(parsed);
+        out.push(parsed);
+      }
+    } else {
+      out.push(parsed); // corrupt → preserved for validation to surface
+    }
+  });
+  return out;
 }
 
 /**
