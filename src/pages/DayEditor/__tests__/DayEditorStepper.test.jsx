@@ -41,6 +41,10 @@ describe('DayEditorStepper', () => {
   };
 
   const mockDay = {
+    // Every production-created day carries its id + configurationVersion; the fixture must
+    // too, or DevicesStep (which requires day.id) trips a prop-type warning on mount.
+    id: 'remy-2023-06-22',
+    configurationVersion: 1,
     date: '2023-06-22',
     animalId: 'remy',
     session: {
@@ -167,8 +171,12 @@ describe('DayEditorStepper', () => {
     expect(screen.getByRole('button', { name: /inherited subject metadata/i })).toBeInTheDocument();
   });
 
-  it('navigates between steps', async () => {
+  it('navigates between steps without emitting React warnings', async () => {
     const user = userEvent.setup();
+    // The repair / fail-closed gate requires a clean console: a realistic day fixture
+    // (with its id, as every production-created day has) must not trip a required-prop
+    // warning when the Devices step mounts.
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     render(
       <StoreProvider initialState={mockInitialState}>
@@ -182,6 +190,8 @@ describe('DayEditorStepper', () => {
 
     // Should show devices stub
     expect(screen.getByText(/Devices Configuration/i)).toBeInTheDocument();
+    expect(errorSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
   });
 
   it('computes step status from validation', () => {
