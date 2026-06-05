@@ -6,6 +6,39 @@
 
 ---
 
+## Validation contract — repair-destination tolerance (June 5, 2026)
+
+The contract surfaces, routes, and gates corruption correctly — but a repair button can
+land the user on an editor that then dereferences the raw corrupt prop and crashes (a
+dead-end-by-crash). This round extends "components never throw on loaded corruption" to
+every repair **destination**, and adds one dedup:
+
+- **Animal Editor destinations (High).** A corrupt `cameras: "nope"` routes to Hardware
+  Config; `CamerasSection` / `HardwareConfigStep` now `Array.isArray`-guard cameras (was
+  `|| []`, which preserved the string before `.reduce`). `AnimalEditorStepper` guards the
+  `.some` on a non-array `configurationHistory` and the render-path `knownRegions` flatMap.
+- **OverviewStep (High).** Reads `day.session` / `animal.subject` / `animal.experimenters`
+  through guarded record locals (+ array-guarded `experimenter_name`, string-guarded
+  `day.date`), so malformed nested objects render blank repairable fields. The stepper's
+  field write-through replaces a non-plain-object intermediate with a fresh object so a
+  repair write can't throw on `scalar.field = v`.
+- **Devices (Medium).** DevicesStep catches the `resolveDayConfig` throw (missing/corrupt
+  `configurationHistory`) and renders one truthful "configure devices in the Animal Editor"
+  message instead of crashing.
+- **Epochs (Medium).** TasksTable / TaskModal / AssociatedVideos+FilesEditor guard malformed
+  CHILD arrays inside otherwise-valid tasks (`task.task_epochs`, `task.camera_id`).
+- **ValidationSummary (Medium).** `buildRows` coerces non-string ids/dates for ordering,
+  guards an absent/non-record `workspace.days`, and drops non-record day leftovers before
+  merge, so one malformed record can't blank the whole multi-day summary.
+- **Dedup (Low).** RepairActions collapses duplicate repair buttons for issues sharing one
+  fix (a shadowed geometry override's retagged base errors + the override issue) — every
+  message renders, one button.
+
+Gate: 3654 tests pass (`--test-timeout=30000`), 125 golden baselines byte-identical, 0 lint
+errors, clean build. Branch not merged.
+
+---
+
 ## Validation contract — apply the contract-review findings (June 5, 2026)
 
 A five-agent review *of the contract itself* (code, tests, silent-failures, comments,
