@@ -134,6 +134,9 @@ describe('Phase 6: channel bounds (Task 3)', () => {
     const issues = rulesValidation(model);
     expect(codes(issues)).toContain('channel_value_out_of_range');
     expect(issues.find((i) => i.code === 'channel_value_out_of_range').severity).toBe('error');
+    // One mistake, one error: out-of-range (but unique) values must NOT also
+    // trip the cross-ntrode collision rule.
+    expect(codes(issues)).not.toContain('channel_partition_invalid');
   });
 
   it('passes when each tetrode group resets values to 0..3', () => {

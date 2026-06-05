@@ -80,4 +80,17 @@ describe('TasksTable', () => {
     await user.click(within(dialog).getByRole('button', { name: /^delete$/i }));
     expect(onDelete).toHaveBeenCalledWith(0);
   });
+
+  it('lists the actual epoch numbers (not just a count) so they match the repair dialog', () => {
+    renderTable({ tasks: [{ ...completeTask, task_epochs: [1, 3] }] });
+    const row = screen.getByRole('row', { name: /sleep/i });
+    const epochsCell = within(row).getByText('1, 3');
+    expect(epochsCell).toBeInTheDocument();
+  });
+
+  it('shows an em dash for a task with no epochs', () => {
+    renderTable({ tasks: [{ ...completeTask, task_epochs: [] }] });
+    const row = screen.getByRole('row', { name: /sleep/i });
+    expect(within(row).getAllByText('—').length).toBeGreaterThan(0);
+  });
 });

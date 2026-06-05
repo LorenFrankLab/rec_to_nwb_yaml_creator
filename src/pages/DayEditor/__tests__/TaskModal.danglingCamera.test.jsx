@@ -55,6 +55,38 @@ describe('TaskModal dangling camera references (Task 0a)', () => {
     expect(alert).toHaveTextContent(/9/);
   });
 
+  it('opens the Cameras section by default so the remove action is reachable', () => {
+    // A collapsed Cameras section would hide the only action that unblocks Save —
+    // a disabled-Save dead-end. The section must be open when a dangling reference
+    // exists so the user can act without hunting for it.
+    renderEditModal();
+    const cameraSection = screen.getByText('Cameras', { selector: 'summary' }).closest('details');
+    expect(cameraSection).toHaveAttribute('open');
+  });
+
+  it('leaves the Cameras section collapsed when there is no dangling reference', () => {
+    renderEditModal({
+      task: {
+        task_name: 'sleep',
+        task_description: 'd',
+        task_environment: 'HomeBox',
+        camera_id: [0],
+        task_epochs: [],
+      },
+    });
+    const cameraSection = screen.getByText('Cameras', { selector: 'summary' }).closest('details');
+    expect(cameraSection).not.toHaveAttribute('open');
+  });
+
+  it('wires the dangling-camera error into the Save button description', () => {
+    renderEditModal();
+    const save = screen.getByRole('button', { name: /save task/i });
+    const describedBy = (save.getAttribute('aria-describedby') || '').split(/\s+/);
+    const errorDiv = screen.getByRole('alert');
+    expect(errorDiv.id).toBeTruthy();
+    expect(describedBy).toContain(errorDiv.id);
+  });
+
   it('re-enables and saves once the dangling camera reference is removed', async () => {
     const user = userEvent.setup();
     const { onSave } = renderEditModal();
@@ -107,5 +139,15 @@ describe('TaskModal dangling camera references (Task 0a)', () => {
     expect(
       within(cameraSection).getByRole('checkbox', { name: /0.*overhead.*0\.001.*8mm/i })
     ).toBeInTheDocument();
+  });
+
+  it('phrases the dangling-camera save hint as a complete, grammatical sentence', () => {
+    // The shared "To save, add ..." template was ungrammatical for this reason
+    // ("add to remove camera references..."). The hint must read as a real clause.
+    renderEditModal();
+    const hint = screen.getByRole('status');
+    expect(hint).toHaveTextContent(/remove camera reference/i);
+    expect(hint).toHaveTextContent(/9/);
+    expect(hint).not.toHaveTextContent(/add to remove/i);
   });
 });

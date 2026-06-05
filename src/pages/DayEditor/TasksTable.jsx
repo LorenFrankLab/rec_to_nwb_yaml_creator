@@ -158,7 +158,11 @@ export default function TasksTable({
                 <td data-label="Cameras">
                   {cameraIds.length === 0 ? '—' : cameraIds.join(', ')}
                 </td>
-                <td data-label="Epochs">{(task.task_epochs || []).length}</td>
+                <td data-label="Epochs">
+                  {(task.task_epochs || []).length === 0
+                    ? '—'
+                    : (task.task_epochs || []).join(', ')}
+                </td>
                 <td data-label="Status">
                   <span
                     className={`status-badge status-${status.glyph}`}

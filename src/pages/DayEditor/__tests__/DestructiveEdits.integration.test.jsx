@@ -145,6 +145,13 @@ describe('Repair-before-orphaning destructive edits (Task 0c)', () => {
     // A repair prompt surfaces the affected video and requires action.
     const repair = await screen.findByRole('alertdialog');
     expect(repair).toHaveTextContent(/vid_epoch1/);
+    // The copy must be accurate about what Confirm and Cancel actually do:
+    // Confirm saves the task AND clears the orphaned video reference; Cancel
+    // discards THIS task change (not just "keeps the epoch") and leaves the
+    // video unchanged.
+    expect(repair).toHaveTextContent(/sav\w+ (this |the )?task/i);
+    expect(repair).toHaveTextContent(/discard\w*/i);
+    expect(repair).not.toHaveTextContent(/keep the epoch/i);
     await user.click(within(repair).getByRole('button', { name: /clear|confirm|repair/i }));
 
     const videos = readVideos();

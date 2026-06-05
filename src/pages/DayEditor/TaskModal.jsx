@@ -90,23 +90,31 @@ function TaskForm({
   const saveDisabled =
     nameBlank || environmentBlank || epochsHaveError || hasDanglingCamera || descriptionConflict;
 
+  const danglingCameraErrorId = `${baseId}-dangling-camera-error`;
+  const nameBlankErrorId = `${baseId}-name-blank-error`;
+  const environmentErrorId = `${baseId}-environment-error`;
+  const descriptionHintId = `${baseId}-description-hint`;
+  const descriptionConflictId = `${baseId}-description-conflict`;
+  const saveHintId = `${baseId}-save-hint`;
+
   // Human-readable reasons Save is blocked, announced to assistive tech so a
-  // disabled Save button is never an unexplained dead-end.
+  // disabled Save button is never an unexplained dead-end. Each reason is a
+  // complete, self-contained sentence so the combined hint reads grammatically
+  // for any mix of reasons (the old shared "To save, add ${reasons}" template was
+  // ungrammatical for the dangling-camera and description-conflict cases).
   const blockingReasons = [];
-  if (nameBlank) blockingReasons.push('a task name');
-  if (environmentBlank) blockingReasons.push('a task environment');
-  if (epochsHaveError) blockingReasons.push('each epoch to end after it starts');
+  if (nameBlank) blockingReasons.push('Enter a task name.');
+  if (environmentBlank) blockingReasons.push('Enter a task environment.');
+  if (epochsHaveError) blockingReasons.push('Make each epoch end after it starts.');
   if (hasDanglingCamera) {
     blockingReasons.push(
-      `to remove camera reference${missingCameraIds.length > 1 ? 's' : ''} not defined for this animal (${missingCameraIds.join(', ')})`
+      `Remove camera reference${missingCameraIds.length > 1 ? 's' : ''} not defined for this animal (ids: ${missingCameraIds.join(', ')}) in the Cameras section.`
     );
   }
   if (descriptionConflict) {
-    blockingReasons.push('a new task name or a matching task description');
+    blockingReasons.push('Rename this task or match the existing description.');
   }
-  const saveHint = blockingReasons.length
-    ? `To save, add ${blockingReasons.join(', ')}.`
-    : '';
+  const saveHint = blockingReasons.length ? `To save: ${blockingReasons.join(' ')}` : '';
 
   /**
    * Toggle a camera id in the selection.
@@ -148,12 +156,6 @@ function TaskForm({
     });
   }
 
-  const danglingCameraErrorId = `${baseId}-dangling-camera-error`;
-  const nameBlankErrorId = `${baseId}-name-blank-error`;
-  const environmentErrorId = `${baseId}-environment-error`;
-  const descriptionHintId = `${baseId}-description-hint`;
-  const descriptionConflictId = `${baseId}-description-conflict`;
-  const saveHintId = `${baseId}-save-hint`;
   const showNameBlankError = touched.name && nameBlank;
   const showEnvironmentError = touched.environment && environmentBlank;
   const nameDescribedBy = descriptionConflict
@@ -161,6 +163,18 @@ function TaskForm({
     : showNameBlankError
       ? nameBlankErrorId
       : undefined;
+  // The textarea always references its help hint; while a description conflict is
+  // active it also references the conflict message so a screen-reader user hears
+  // the conflict while focused on the description field.
+  const descriptionDescribedBy = descriptionConflict
+    ? `${descriptionHintId} ${descriptionConflictId}`
+    : descriptionHintId;
+  // Save announces its blocking reasons (the hint) and, when active, the specific
+  // dangling-camera error so the reference id is reachable from the button itself.
+  const saveDescribedBy =
+    [saveHint ? saveHintId : null, hasDanglingCamera ? danglingCameraErrorId : null]
+      .filter(Boolean)
+      .join(' ') || undefined;
 
   return (
     <form className="task-modal-form" onSubmit={(e) => e.preventDefault()}>
@@ -215,7 +229,8 @@ function TaskForm({
               value={taskDescription}
               onChange={(e) => setTaskDescription(e.target.value)}
               rows={2}
-              aria-describedby={descriptionHintId}
+              aria-invalid={descriptionConflict}
+              aria-describedby={descriptionDescribedBy}
             />
             <span id={descriptionHintId} className="help-text">
               Optional to save, but required before the day can be exported.
@@ -244,7 +259,7 @@ function TaskForm({
         </div>
       </details>
 
-      <details>
+      <details open={hasDanglingCamera}>
         <summary>Cameras</summary>
         <div className="task-modal-section-body">
           {(cameras || []).length === 0 ? (
@@ -330,7 +345,7 @@ function TaskForm({
           onClick={handleSave}
           disabled={saveDisabled}
           aria-label="Save task"
-          aria-describedby={saveHint ? saveHintId : undefined}
+          aria-describedby={saveDescribedBy}
         >
           Save
         </button>

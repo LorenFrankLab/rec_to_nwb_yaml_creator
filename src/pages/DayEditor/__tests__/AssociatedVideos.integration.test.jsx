@@ -10,6 +10,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StoreProvider, useStoreContext } from '../../../state/StoreContext';
 import DayEditorStepper from '../DayEditorStepper';
+import AssociatedVideosEditor from '../AssociatedVideosEditor';
 import { useDayIdFromUrl } from '../../../hooks/useDayIdFromUrl';
 import { makeAnimalWithCamerasAndDay } from './taskFixtures';
 
@@ -164,5 +165,74 @@ describe('Associated video files editor (Task 0b)', () => {
     const region = screen.getByRole('region', { name: /associated video/i });
     await user.click(within(region).getByRole('button', { name: /remove video/i }));
     expect(readVideos()).toHaveLength(0);
+  });
+
+  it('names the specific stale camera value in the error', async () => {
+    const user = userEvent.setup();
+    // Stale camera id 5 (not defined on this day). NB: a stale task_epochs is
+    // silently scrubbed by the useEpochCleanup backstop on load, so only the
+    // camera reference survives to be flagged here; the stale-epoch wording is
+    // covered by the component-level test below.
+    renderStepper({
+      day: {
+        associated_video_files: [
+          { name: 'stale_vid', camera_id: 5, task_epochs: 1 },
+        ],
+      },
+    });
+    await goToEpochs(user);
+
+    const region = screen.getByRole('region', { name: /associated video/i });
+    const alert = within(region).getByRole('alert');
+    // The exact stale value is named, not a generic "no longer exists".
+    expect(alert).toHaveTextContent(/camera id 5|camera 5/i);
+  });
+
+  it('names the specific stale epoch value in the error (component-level)', () => {
+    // Direct render bypasses the silent epoch-cleanup backstop so we can assert
+    // the stale-epoch wording names the number.
+    render(
+      <AssociatedVideosEditor
+        videos={[{ name: 'stale_vid', camera_id: 0, task_epochs: 9 }]}
+        cameras={[{ id: 0, camera_name: 'overhead' }]}
+        tasks={[{ task_epochs: [1, 3] }]}
+        onChange={() => {}}
+      />
+    );
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent(/epoch 9/i);
+  });
+
+  it('shows an empty-state note for the camera select when the animal has no cameras', async () => {
+    const user = userEvent.setup();
+    renderStepper({ animal: { cameras: [] } });
+    await goToEpochs(user);
+
+    const region = screen.getByRole('region', { name: /associated video/i });
+    await user.click(within(region).getByRole('button', { name: /add video/i }));
+    expect(within(region).getByText(/no cameras are defined/i)).toBeInTheDocument();
+  });
+
+  it('shows an empty-state note for the epoch select when no task epochs are defined', async () => {
+    const user = userEvent.setup();
+    renderStepper({ day: { tasks: [] } });
+    await goToEpochs(user);
+
+    const region = screen.getByRole('region', { name: /associated video/i });
+    await user.click(within(region).getByRole('button', { name: /add video/i }));
+    expect(within(region).getByText(/no task epochs/i)).toBeInTheDocument();
+  });
+
+  it('marks the video name field as required and shows an example filename placeholder', async () => {
+    const user = userEvent.setup();
+    renderStepper();
+    await goToEpochs(user);
+
+    const region = screen.getByRole('region', { name: /associated video/i });
+    await user.click(within(region).getByRole('button', { name: /add video/i }));
+
+    const nameInput = within(region).getByRole('textbox', { name: /video name/i });
+    expect(nameInput).toBeRequired();
+    expect(nameInput).toHaveAttribute('placeholder', expect.stringMatching(/\.h264$/i));
   });
 });

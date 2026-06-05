@@ -133,4 +133,40 @@ describe('TaskModal task_name identity guard (Task 0b)', () => {
 
     expect(screen.getByRole('button', { name: /save task/i })).toBeDisabled();
   });
+
+  it('phrases the description-conflict save hint as a complete sentence', async () => {
+    const user = userEvent.setup();
+    renderModal({ knownTaskDescriptions: { sleep: 'Rest in the home cage' } });
+
+    await user.type(screen.getByRole('textbox', { name: /task name/i }), 'sleep');
+    await user.type(screen.getByRole('textbox', { name: /task environment/i }), 'HomeBox');
+    await user.type(
+      screen.getByRole('textbox', { name: /task description/i }),
+      'A different description'
+    );
+
+    // The shared "To save, add ..." template was ungrammatical for this reason
+    // ("add a new task name..."). The hint must read as a real instruction.
+    const hint = screen.getByRole('status');
+    expect(hint).toHaveTextContent(/rename this task|match the existing description/i);
+    expect(hint).not.toHaveTextContent(/add a new task name/i);
+  });
+
+  it('describes the description field by the conflict message when a conflict exists', async () => {
+    const user = userEvent.setup();
+    renderModal({ knownTaskDescriptions: { sleep: 'Rest in the home cage' } });
+
+    await user.type(screen.getByRole('textbox', { name: /task name/i }), 'sleep');
+    await user.type(
+      screen.getByRole('textbox', { name: /task description/i }),
+      'A different description'
+    );
+
+    const textarea = screen.getByRole('textbox', { name: /task description/i });
+    const describedBy = (textarea.getAttribute('aria-describedby') || '').split(/\s+/);
+    const conflict = screen.getByText(/already used in this dataset with a different description/i);
+    const conflictContainer = conflict.closest('[id]');
+    expect(conflictContainer.id).toBeTruthy();
+    expect(describedBy).toContain(conflictContainer.id);
+  });
 });

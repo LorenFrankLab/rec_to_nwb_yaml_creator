@@ -318,7 +318,7 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
         title="Repair affected videos?"
         message={
           pendingRepair
-            ? `This change removes a task epoch still referenced by: ${repairNames}. Confirm to clear those references (their epoch will be unset) so no dangling reference is left, or cancel to keep the epoch.`
+            ? `Saving this task removes a task epoch still referenced by: ${repairNames}. Confirm to save the task and clear the orphaned epoch reference(s) (their epoch will be unset) so no dangling reference is left. Cancel to discard this task change; the referenced file(s) stay unchanged.`
             : ''
         }
         confirmLabel="Clear references"

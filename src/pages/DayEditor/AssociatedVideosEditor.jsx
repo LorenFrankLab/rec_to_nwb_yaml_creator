@@ -102,11 +102,14 @@ export default function AssociatedVideosEditor({ videos, cameras, tasks, onChang
             return (
               <li key={index} className="associated-video-row">
                 <div className="form-group">
-                  <label htmlFor={`${baseId}-name-${index}`}>Video name</label>
+                  <label htmlFor={`${baseId}-name-${index}`}>Video name (required)</label>
                   <input
                     id={`${baseId}-name-${index}`}
                     type="text"
                     value={video.name || ''}
+                    placeholder="e.g., 20210606_J16_01_s1.1.h264"
+                    required
+                    aria-required="true"
                     onChange={(e) => updateRow(index, 'name', e.target.value)}
                   />
                 </div>
@@ -129,6 +132,12 @@ export default function AssociatedVideosEditor({ videos, cameras, tasks, onChang
                       </option>
                     ))}
                   </select>
+                  {(cameras || []).length === 0 && (
+                    <p className="inline-info" role="status">
+                      No cameras are defined for this animal — add cameras in the Animal
+                      Editor to link this video to one.
+                    </p>
+                  )}
                 </div>
 
                 <div className="form-group">
@@ -149,6 +158,12 @@ export default function AssociatedVideosEditor({ videos, cameras, tasks, onChang
                       </option>
                     ))}
                   </select>
+                  {validEpochs.length === 0 && (
+                    <p className="inline-info" role="status">
+                      No task epochs defined — add tasks with epochs first, then link this
+                      video to one.
+                    </p>
+                  )}
                 </div>
 
                 <button
@@ -162,12 +177,20 @@ export default function AssociatedVideosEditor({ videos, cameras, tasks, onChang
 
                 {(cameraStale || epochStale) && (
                   <div id={staleId} className="inline-error" role="alert">
-                    Video &quot;{label}&quot; references a{' '}
-                    {cameraStale && epochStale
-                      ? 'camera and epoch that no longer exist'
-                      : cameraStale
-                        ? 'camera that no longer exists'
-                        : 'task epoch that no longer exists'}
+                    Video &quot;{label}&quot; references{' '}
+                    {cameraStale && (
+                      <>
+                        camera id {String(cameraId)}, which is no longer defined for this
+                        animal
+                      </>
+                    )}
+                    {cameraStale && epochStale ? ', and ' : ''}
+                    {epochStale && (
+                      <>
+                        epoch {String(epoch)}, which is no longer defined in any task on
+                        this day
+                      </>
+                    )}
                     . Re-point it to a current camera/epoch before exporting.
                   </div>
                 )}
