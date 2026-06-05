@@ -6,6 +6,35 @@
 
 ---
 
+## Phase 7 review fixes — close the reachable-surface and repair-path gaps (June 5, 2026)
+
+A multi-agent review (3 in-house reviewers + a deeper external review) found gaps where the Phase 7
+contracts didn't fully reach every surface. All fixed (branch `phase-7-converter-truth-contracts`,
+not merged):
+
+- **Legacy `#/` route generated invalid 64c-3s maps (HIGH).** `useElectrodeGroups` used first-shank length
+  math and dropped electrode id 63; it now generates through the probe catalog like the modern path.
+- **Fail-closed validation could throw (HIGH).** Inner `(model.x || [])` iterations are now `Array.isArray`-
+  guarded so a malformed import returns issues instead of crashing.
+- **Normalization still laundered ids/bad_channels (HIGH).** `normalizeIdKey` and `normalizeNumberList` are
+  now lossless (`parseExactInteger`), so a corrupt override key (`"2.9"`) is not rerouted onto a real ntrode
+  and a corrupt `bad_channels` index is preserved for the rules to flag.
+- **`invalid_species` routing was backwards (HIGH).** Species is editable in the Day Editor Overview (not the
+  Animal Editor), so it routes to Overview.
+- **`orphaned_file` had no repair surface (HIGH).** New `AssociatedFilesEditor` in the Epochs step; deleting a
+  task now names affected associated_files in the confirmation.
+- **Multi-shank `bad_channels` were unreachable in the UI (HIGH).** The bad-channels editor now presents a
+  probe-wide `0…N-1` selector for multi-shank groups and writes to the group's first ntrode row (what the
+  converter honors).
+- **`ExportStep` gate was narrower than the stepper (MED).** It now uses the full `isExportEnabled(
+  computeStepStatus(...))`, so device-status failures (all channels bad) block direct export.
+- **CSV export truncated uneven shanks (MED); extra empty ntrode rows passed (MED).** CSV sizes to the widest
+  shank; a new `channel_row_count_mismatch` rule requires one ntrode row per shank.
+- **UX:** "Fix in Animal Editor" now deep-links to the owning step with a step-aware label; repair copy,
+  aria associations, unknown-device `—` cells, and the `-1` sentinel-on-save are addressed.
+
+---
+
 ## Phase 7 — Converter-truth contracts: the UI shows the world the converter will encode (June 4, 2026)
 
 Four contracts so the app generates/validates exactly what `trodes_to_nwb` will encode, surfaces corruption
