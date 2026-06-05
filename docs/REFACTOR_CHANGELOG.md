@@ -2,7 +2,36 @@
 
 **Purpose:** Track all changes made during the refactoring milestones.
 
-**Last Updated:** June 4, 2026
+**Last Updated:** June 5, 2026
+
+---
+
+## Phase 7 review fixes, round 6 — the override-issue surface, made complete (June 5, 2026)
+
+Round 5 hardened how the merge *applies* malformed `deviceOverrides`; round 6 found the matching gap in how
+those refusals are *surfaced and routed*. `resolveDayConfig` has several branches that silently decline to
+apply a malformed override (fail-open to the snapshot, or ignore a corrupt `bad_channels` container/value), but
+`dayOverrideIssues` shadowed only ONE of them (stale keys) — so the others were invisible or mis-routed. Fixed
+as one class (branch not merged):
+
+- **Every refuse-to-apply branch is now shadowed (HIGH).** `dayOverrideIssues` is documented and implemented as
+  the validation shadow of *every* decline in `resolveDayConfig`: non-array `electrode_groups`/ntrode override
+  (`malformed_device_override`), a non-record `bad_channels` container like `"2.9"`
+  (`malformed_bad_channel_override`), a stale key (`stale_bad_channel_override`), and a non-array value under a
+  valid key (`malformed_bad_channel_override`). All route to the **Day** surface / **Devices** step and block
+  export — no more "gated but invisible" or fail-open-and-forgotten.
+- **Scalar value not smeared onto geometry (HIGH).** A non-array `bad_channels` value under a valid ntrode key
+  is no longer copied onto the merged ntrode row (which surfaced as an *Animal-Editor* schema error the user
+  can't reach). The row keeps its clean base value; the corruption surfaces as a day-routed override issue
+  read directly from the raw override — still lossless, just routed to its real owner.
+- **All malformed shapes are repairable (HIGH).** DevicesStep renders a focusable removal control for each:
+  per-key for stale/corrupt-value keys, whole-override for a scalar container or a non-array geometry override.
+- **Migration no longer fabricates unrepairable state (MED).** When consolidating later-row marks, a mark with
+  no `map` entry AND outside the probe range (which the converter ignores and the probe-wide selector can't
+  uncheck) is dropped rather than copied onto the first row as an unclearable export blocker. In-range /
+  translatable marks are still carried over — in BOTH the Day and Animal editors.
+
+Gate: 3530 tests pass, 125 golden baselines byte-identical, 0 lint errors, clean build.
 
 ---
 
