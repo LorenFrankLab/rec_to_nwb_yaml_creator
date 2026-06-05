@@ -166,6 +166,28 @@ describe('useStore persistence', () => {
     expect(result.current.persistence.loadNotice).toMatch(/days/);
   });
 
+  it('recovery notice names only the genuinely-missing section (settings), not present ones', () => {
+    seedBlob({ animals: {}, days: {} }); // only settings absent
+
+    const { result } = renderHook(() => useStore());
+
+    expect(result.current.persistence.loadNotice).toMatch(/settings/);
+    expect(result.current.persistence.loadNotice).not.toMatch(/animals/);
+    expect(result.current.persistence.loadNotice).not.toMatch(/days/);
+  });
+
+  it('discards (not recovers) a corrupt-typed section: discard notice + cleared blob + empty workspace', () => {
+    // A present-but-wrong-typed section is corruption, not absence: the store must route
+    // it to the loud discard path (notice + clear blob), never the recovery path.
+    seedBlob({ animals: ['corrupt'], days: {}, settings: {} });
+
+    const { result } = renderHook(() => useStore());
+
+    expect(result.current.persistence.loadNotice).toMatch(/could not be restored/i);
+    expect(window.localStorage.getItem(WORKSPACE_STORAGE_KEY)).toBeNull();
+    expect(result.current.model.workspace.animals).toEqual({});
+  });
+
   it('exposes persistence.enabled reflecting the flag (on by default)', () => {
     const { result } = renderHook(() => useStore());
     expect(result.current.persistence.enabled).toBe(true);

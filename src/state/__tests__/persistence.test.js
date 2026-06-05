@@ -151,6 +151,27 @@ describe('workspace persistence', () => {
     expect(result.workspace.settings).toBeTypeOf('object');
   });
 
+  it('preserves populated animals/days intact while filling only the missing section', () => {
+    // Data-loss safety net: shape-repair fills an ABSENT section without touching real,
+    // populated data. A regression that overwrote unconditionally (or returned the bare
+    // default) would destroy months of metadata yet pass the empty-blob tests above.
+    const ws = makeTestWorkspace();
+    delete ws.settings; // structurally-incomplete: settings absent, real data present
+    window.localStorage.setItem(
+      WORKSPACE_STORAGE_KEY,
+      JSON.stringify({ schemaVersion: WORKSPACE_SCHEMA_VERSION, workspace: ws }),
+    );
+
+    const result = loadWorkspace();
+
+    // The real animal + day survive untouched (makeTestWorkspace is already normalized,
+    // so it round-trips unchanged); only settings is restored.
+    expect(result.workspace.animals).toEqual(ws.animals);
+    expect(result.workspace.days).toEqual(ws.days);
+    expect(result.recovered.missingKeys).toEqual(['settings']);
+    expect(result.workspace.settings).toBeTypeOf('object');
+  });
+
   it('does not report recovery for a complete workspace blob', () => {
     saveWorkspace(makeTestWorkspace());
 

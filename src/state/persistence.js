@@ -4,8 +4,11 @@
  * Serializes ONLY the workspace slice (animals + days + settings). Legacy formData
  * is never persisted, and nothing that is itself YAML output is ever persisted.
  *
- * Stored shape: { schemaVersion: <int>, workspace }. On a missing blob, parse error,
- * or schemaVersion mismatch, loadWorkspace returns null so the caller starts fresh.
+ * Stored shape: { schemaVersion: <int>, workspace }. `loadWorkspace` returns bare
+ * `null` only for a missing blob / unavailable storage; an unusable blob (parse error,
+ * version mismatch, malformed shape) returns `{ workspace: null, discarded }`, and a
+ * structurally-incomplete-but-valid blob returns `{ workspace, recovered }`. See the
+ * `loadWorkspace` JSDoc for the full return contract.
  */
 
 import { normalizeWorkspaceDevices } from '../utils/deviceNormalization';
