@@ -6,6 +6,48 @@
 
 ---
 
+## Validation contract — make the boundaries explicit (after round 8) (June 5, 2026)
+
+Review rounds 6–8 were the same bug in different clothes: corruption laundered into export
+defaults, repairs routed by path instead of ownership, blockers with no reachable fix, and
+components throwing on corrupt loaded state. Rather than patch round-8's six findings
+locally (a seventh outfit), we forced the system into four explicit, tested boundaries.
+Decision (user): full contract, phased & gated, on the phase-7 branch; round-8 findings
+absorbed as the first rows of the contract's matrices. Plan:
+[phase-validation-contract.md](../.claude/docs/plans/pre-cutover-export-correctness/phase-validation-contract.md).
+
+- **Boundary 1 — raw shape is validated BEFORE normalization.** New `src/validation/rawShape.js`
+  (`validateRawDay`/`validateRawAnimal`) runs on the PERSISTED object. Every day-owned array
+  (tasks, associated_files/video_files, behavioral_events, fs_gui_yamls, keywords) and animal
+  array (cameras, configurationHistory), when present-but-non-array, is a blocking, owner-routed,
+  repairable issue — so a corrupt `tasks: {}` can't dissolve into an empty export. `validateDay`
+  folds raw-shape issues in first; `computeEpochsStatus` no longer treats `{}` as valid; the
+  Epochs/Overview UI and the file/video/event/keyword editors guard their iterations;
+  `MalformedCollectionNotice` gives each corrupt collection a focusable reset. *(round-8 High 1)*
+- **Boundary 2 — ownership by PROVENANCE, not path.** `repairTargetForIssue` honors an explicit
+  `ownerSurface` first. `validateDay` derives geometry provenance from the persisted day alone
+  (a collection is day-owned iff the day overrides it with an array) and re-tags base geometry
+  errors to the day when the day owns them — no more "Fix in Animal Editor" dead-end for
+  day-owned geometry. The shadowed-override domain check excludes bad-channel errors, so a clean
+  ntrode override is no longer falsely blamed. *(round-8 High 3; Medium 3 lands in Boundary 4)*
+- **Boundary 3 — repairability is a tested invariant.** `repairabilityMatrix.test.js` asserts, for
+  every malformed shape: issue raised → carries the ownership contract → routes to that surface →
+  export blocked → the documented repair clears it, with a coverage guard against unmatched codes.
+  ExportStep now renders a "Fix in {step}" action for step-status-only blockers (all-channels-bad,
+  missing maps) that no `validate()` error surfaces. *(round-8 Medium 1)*
+- **Boundary 4 — converter-truth ≠ UI-convenience; components never throw on corruption.**
+  `validatorSeparation.test.js` pins that `rulesValidation` holds converter truths (export-blocking)
+  while all-channels-bad is a UI-convenience status. `deviceEditorTolerance.test.jsx` renders the
+  device editors against a battery of corrupt shapes without throwing. ChannelMapEditor guards every
+  `bad_channels` read (scalar can't crash) + a scalar-reset control, and rejects non-integer marks at
+  edit time; BadChannelsEditor renders invalid-mark removal before the grid so repair-focus lands on
+  the control that can clear the value. *(round-8 High 2, Medium 2, Medium 3)*
+
+Gate: 3610 tests pass (with adequate `--test-timeout`), 125 golden baselines byte-identical, 0 lint
+errors, clean build. Branch not merged.
+
+---
+
 ## Phase 7 review fixes, round 7 — surface, route, repair, and don't crash first (June 5, 2026)
 
 Three independent reviewers converged on the `deviceOverrides` cluster again. Six findings, same family
