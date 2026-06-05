@@ -398,12 +398,11 @@ describe('ValidationSummary', () => {
       expect(screen.getByTestId(`day-row-${ids.errorDayId}`)).toBeInTheDocument();
     });
 
-    it('a non-record day record (truthy but malformed) is contained and never shown valid', () => {
-      // A day id resolves to a truthy-but-non-record value (e.g. a leftover
-      // string from a partial migration). It survives `.filter(Boolean)` but
-      // must not be dereferenced as a day object — and, crucially, must never be
-      // shown as a valid day. Keep a single such day so sort is skipped, isolating
-      // the deref/merge path on the bad record.
+    it('a non-record day record (truthy but malformed) is surfaced as an EXPLICIT error row, never dropped or valid', () => {
+      // Phase 4: a day id resolving to a truthy-but-non-record value (e.g. a leftover
+      // string from a partial migration) must NOT be silently dropped — that would let the
+      // accounting report only the surviving rows while a corrupt day hides. It is surfaced
+      // as a distinct error row so validate/export counts stay honest.
       const { workspace, ids } = makeSummaryWorkspace();
       delete workspace.days[ids.incompleteDayId];
       workspace.animals.remy.days = [ids.validDayId];
@@ -415,8 +414,31 @@ describe('ValidationSummary', () => {
       // The well-formed animal's day still renders.
       expect(screen.getByTestId(`day-row-${ids.errorDayId}`)).toBeInTheDocument();
 
-      // The malformed day is NEVER counted as valid.
+      // The corrupt reference is now an explicit error row (not dropped), never valid.
+      const corruptRow = screen.getByTestId(`day-row-${ids.validDayId}`);
+      expect(within(corruptRow).getByText(/error/i)).toBeInTheDocument();
+      // Two error rows now: totoro's error day + the corrupt reference. None valid.
       expect(screen.getByTestId('summary-counts')).toHaveTextContent(/0 valid/i);
+      expect(screen.getByTestId('summary-counts')).toHaveTextContent(/2 with errors/i);
+    });
+
+    it('a day reference with NO matching record (missing day) is surfaced as an explicit error row', () => {
+      // Phase 4: an animal references a day id that does not exist in workspace.days (a
+      // dangling reference from a partial migration). It must be reported as an error row,
+      // not dropped — otherwise the day silently disappears from the accounting.
+      const { workspace, ids } = makeSummaryWorkspace();
+      delete workspace.days[ids.validDayId];
+      delete workspace.days[ids.incompleteDayId];
+      workspace.animals.remy.days = ['remy-2099-01-01'];
+      provideStore(workspace);
+
+      expect(() => render(<ValidationSummary />)).not.toThrow();
+
+      const missingRow = screen.getByTestId('day-row-remy-2099-01-01');
+      expect(within(missingRow).getByText(/error/i)).toBeInTheDocument();
+      // totoro's error day + the missing reference = 2 errors, 0 valid.
+      expect(screen.getByTestId('summary-counts')).toHaveTextContent(/0 valid/i);
+      expect(screen.getByTestId('summary-counts')).toHaveTextContent(/2 with errors/i);
     });
   });
 

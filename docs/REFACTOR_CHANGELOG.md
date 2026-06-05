@@ -6,6 +6,37 @@
 
 ---
 
+## Canonical state & repair — Phase 4: summaries never drop corrupt records (June 5, 2026)
+
+The final phase closes the accounting half of the contract: a cross-day summary must never
+report only the surviving rows while a corrupt day silently disappears.
+
+- `ValidationSummary.buildRows` previously `.filter(isRecord)`-DROPPED any day reference that
+  resolved to a missing id (undefined) or a truthy-but-non-record leftover (a string from a
+  partial migration). The dropped day vanished from both the table and the valid/error/
+  incomplete counts — so the summary could look complete while hiding a corrupt day.
+- Now each unresolved reference is surfaced as an explicit error row
+  (`{ day: { id }, chip: 'error', missingRecord: true }`, rendered "Error — missing day
+  record"), so it is visible and counted. A reference that resolves to a real record still
+  flows through the existing merge → chip / merge-throw → "Error — cannot read" paths.
+- Per-reference surfacing is gated on `daysMapUsable = isRecord(workspace.days)`: when the
+  WHOLE `days` map is missing/non-record (coarse workspace-structural corruption surfaced
+  elsewhere by the Phase 1–3 banners), the existing "No recording days" empty-summary
+  behavior is preserved — we do not fabricate N phantom rows. Only a usable map missing a
+  specific id surfaces a row.
+- Synthetic rows are tolerated by every consumer: the render falls back (`day.date || '—'`,
+  index-suffixed React key), `Validate All` catches the `updateDay` "not found" throw and
+  counts it a failure, and `Export Valid Only` excludes them (chip `'error'`).
+- Code-reviewed (pr-review-toolkit:code-reviewer): no Critical/Important findings; the
+  editor-link aria-label now falls back to the day id for a dateless synthetic row.
+  Live-verified with Playwright: a corrupt day reference renders "Error — missing day
+  record" and is counted (2 with errors) instead of vanishing.
+
+Gate: full vitest (3770 pass), 125 golden baselines byte-identical, 0 lint errors, clean
+build. Branch not merged — this completes Phases 1–4 of the canonical-state & repair contract.
+
+---
+
 ## Canonical state & repair — Phase 3: destination repair banners (June 5, 2026)
 
 Phase 2 made an issue's repair button PERFORM the fix. Phase 3 adds the destination-side
