@@ -396,6 +396,33 @@ describe('ValidationSummary', () => {
       expect(removeDayReference).toHaveBeenCalledWith('remy', 'remy-2099-01-01');
     });
 
+    it('repairs a dangling reference using the workspace MAP KEY even when animal.id is corrupt', async () => {
+      // The summary tolerates a missing/corrupt animal.id; the repair must still target the
+      // owning animal. buildRows carries the reliable map key, so removeDayReference is called
+      // with the key (the real store handle), not a missing `animal.id` (which would no-op).
+      const user = userEvent.setup();
+      const { workspace } = makeSummaryWorkspace();
+      delete workspace.days[`${'remy-2023-06-22'}`];
+      delete workspace.days['remy-2023-06-23'];
+      delete workspace.animals.remy.id; // corrupt: no own id
+      workspace.animals.remy.days = ['remy-2099-01-01'];
+      workspace.animals.totoro.days = [];
+
+      const removeDayReference = vi.fn();
+      useStoreContext.mockReturnValue({
+        model: { workspace },
+        actions: { updateDay: vi.fn(), removeDayReference },
+        selectors: {},
+        persistence: { enabled: false },
+      });
+
+      render(<ValidationSummary />);
+      const row = screen.getByTestId('day-row-remy-2099-01-01');
+      await user.click(within(row).getByRole('button', { name: /remove .*day reference/i }));
+      // 'remy' is the workspace.animals MAP KEY (the store handle), not animal.id (deleted).
+      expect(removeDayReference).toHaveBeenCalledWith('remy', 'remy-2099-01-01');
+    });
+
     it('non-string animal ids do not crash the summary', () => {
       // Corrupt import: animal ids are missing (would be non-string). They are
       // used in `.localeCompare` while sorting animals and as a fallback label,

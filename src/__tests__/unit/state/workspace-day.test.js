@@ -525,6 +525,25 @@ describe('Day State Management', () => {
         });
       }).not.toThrow();
     });
+
+    it('normalizes a corrupt (non-record) days map to {} instead of spreading it', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+      });
+      // The whole days map is corrupt (a non-record). Removing a dangling ref must not spread
+      // the string into a char-indexed object — it normalizes the map to {}.
+      act(() => {
+        result.current.model.workspace.days = 'corrupt-whole-map';
+        result.current.actions.removeDayReference('remy', 'remy-2023-06-22');
+      });
+      expect(result.current.model.workspace.days).toEqual({});
+      expect(result.current.model.workspace.animals['remy'].days).toEqual([]);
+    });
   });
 
   describe('workspace.days selector', () => {

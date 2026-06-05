@@ -707,7 +707,12 @@ export function useWorkspace(initialState = null) {
             ...animal,
             days: getAnimalDayIds(animal).filter((id) => id !== dayId),
           };
-          const updatedDays = { ...prev.days };
+          // Guard the days map: a corrupt non-record `days` (the whole-map corruption this
+          // repair is also reachable from) must normalize to `{}`, not be spread into a
+          // char-indexed object. There is no valid day record inside a non-record map to lose.
+          const daysIsRecord =
+            prev.days !== null && typeof prev.days === 'object' && !Array.isArray(prev.days);
+          const updatedDays = daysIsRecord ? { ...prev.days } : {};
           delete updatedDays[dayId];
 
           return {

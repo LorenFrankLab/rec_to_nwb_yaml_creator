@@ -77,9 +77,12 @@ function buildRows(workspace) {
   // whole multi-day summary.
   const orderKey = (value) => (typeof value === 'string' ? value : String(value ?? ''));
 
-  const animals = Object.values(workspace?.animals || {}).sort((a, b) =>
-    orderKey(a.id).localeCompare(orderKey(b.id))
-  );
+  // Carry the workspace.animals MAP KEY alongside each animal: it is the reliable store
+  // handle for a repair (e.g. removeDayReference), whereas `animal.id` may be missing/corrupt
+  // (this summary tolerates that). Sort by the key (== id for well-formed data).
+  const animals = Object.entries(workspace?.animals || {})
+    .map(([animalKey, animal]) => ({ animalKey, animal }))
+    .sort((a, b) => orderKey(a.animalKey).localeCompare(orderKey(b.animalKey)));
 
   // `days` may be absent or a non-record (e.g. an array from a bad migration); indexing a
   // non-record by id must not deref `undefined[id]` and crash the page. A missing/non-record
@@ -89,7 +92,7 @@ function buildRows(workspace) {
   const daysById = isRecord(workspace?.days) ? workspace.days : {};
 
   const rows = [];
-  for (const animal of animals) {
+  for (const { animalKey, animal } of animals) {
     // A non-array `days` is corrupt persisted state (e.g. `{}` from a bad import).
     // Treat it as "no days" rather than letting `.map` throw and blank the whole
     // multi-day summary — the rest of the workspace must still render.
@@ -116,7 +119,7 @@ function buildRows(workspace) {
         // A reference resolving to no day record (missing id, or a non-record leftover, or a
         // wholly-missing days map) is dangling corruption. Surface it as an explicit error
         // row keyed by its id so it is visible, counted, and repairable — never dropped.
-        rows.push({ animal, day: { id: dayId }, chip: 'error', missingRecord: true });
+        rows.push({ animal, animalKey, day: { id: dayId }, chip: 'error', missingRecord: true });
         // eslint-disable-next-line no-console
         console.error(
           `[validation-summary] day reference "${dayId}" does not resolve to a record — flagged as error.`
@@ -132,9 +135,9 @@ function buildRows(workspace) {
       try {
         const mergedDay = mergeDayMetadata(animal, record);
         const chip = deriveChip(computeStepStatus(record, mergedDay, animal));
-        rows.push({ animal, day: record, chip });
+        rows.push({ animal, animalKey, day: record, chip });
       } catch (err) {
-        rows.push({ animal, day: record, chip: 'error', unreadable: true });
+        rows.push({ animal, animalKey, day: record, chip: 'error', unreadable: true });
         // eslint-disable-next-line no-console
         console.error(
           `[validation-summary] could not read day "${record?.id}" — flagged as error:`,
@@ -415,7 +418,7 @@ export function ValidationSummary() {
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ animal, day, chip, unreadable, missingRecord }, index) => (
+              {rows.map(({ animal, animalKey, day, chip, unreadable, missingRecord }, index) => (
                 <tr key={`${day.id ?? 'unknown'}-${index}`} data-testid={`day-row-${day.id}`}>
                   <td>{subjectLabel(animal)}</td>
                   <td>{day.date || '—'}</td>
@@ -450,7 +453,7 @@ export function ValidationSummary() {
                       <button
                         type="button"
                         className="validation-summary-repair"
-                        onClick={() => actions.removeDayReference(animal.id, day.id)}
+                        onClick={() => actions.removeDayReference(animalKey, day.id)}
                         aria-label={`Remove dangling day reference ${day.id} from ${subjectLabel(animal)}`}
                       >
                         Remove day reference
