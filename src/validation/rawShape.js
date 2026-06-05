@@ -47,12 +47,21 @@ export const RAW_DAY_ARRAY_FIELDS = [
 ];
 
 /**
- * The animal-owned ARRAY fields. A corrupt one routes to the Animal Editor.
- * @type {Array<{ key: string, label: string }>}
+ * The animal-owned ARRAY fields. A corrupt one routes to the Animal Editor. Each carries
+ * its executable repair command (Phase 2): cameras reset to none, and the device
+ * configuration history REBUILT from the animal's current devices (not emptied — an empty
+ * history would itself fail the merge), with a label that names that distinction.
+ *
+ * @type {Array<{ key: string, label: string, repairCommand: object, actionLabel?: string }>}
  */
 export const RAW_ANIMAL_ARRAY_FIELDS = [
-  { key: 'cameras', label: 'cameras' },
-  { key: 'configurationHistory', label: 'device configuration history' },
+  { key: 'cameras', label: 'cameras', repairCommand: { type: 'resetAnimalCameras' } },
+  {
+    key: 'configurationHistory',
+    label: 'device configuration history',
+    repairCommand: { type: 'rebuildConfigurationHistory' },
+    actionLabel: 'Rebuild device configuration history',
+  },
 ];
 
 /**
@@ -64,9 +73,13 @@ export const RAW_ANIMAL_ARRAY_FIELDS = [
  * @param {'day'|'animal'} opts.ownerSurface - Who can edit the fix.
  * @param {string} opts.repairStep - The owning step id (day) — used for routing/focus.
  * @param {string} opts.label - Human label for the collection.
+ * @param {object} [opts.repairCommand] - The serializable executable repair (Phase 2);
+ *   executing it performs the reset this issue describes (see `repairCommands.js`).
+ * @param {string} [opts.actionLabel] - Override the default `Reset ${label}` button label
+ *   (e.g. "Rebuild …" for a configurationHistory rebuild rather than an empty reset).
  * @returns {object} Issue.
  */
-function malformedCollectionIssue({ code, field, ownerSurface, repairStep, label }) {
+function malformedCollectionIssue({ code, field, ownerSurface, repairStep, label, repairCommand, actionLabel }) {
   const where = ownerSurface === 'day'
     ? 'It is treated as empty on export, which would silently drop data'
     : 'It shadows valid data and blocks export';
@@ -78,7 +91,9 @@ function malformedCollectionIssue({ code, field, ownerSurface, repairStep, label
     ownerSurface,
     repairStep,
     focusPath: field,
-    actionLabel: `Reset ${label}`,
+    actionLabel: actionLabel || `Reset ${label}`,
+    // The executable repair: a button can run this to PERFORM the reset, not just navigate.
+    repairCommand,
     // Legacy mirror — consumers read these until Boundary 2 migration.
     repairSurface: ownerSurface,
     step: repairStep,
@@ -109,6 +124,7 @@ export function validateRawDay(day) {
           ownerSurface: 'day',
           repairStep,
           label,
+          repairCommand: { type: 'resetDayCollection', field: key },
         })
       );
     }
@@ -125,7 +141,7 @@ export function validateRawDay(day) {
 export function validateRawAnimal(animal) {
   if (!isRecord(animal)) return [];
   const issues = [];
-  for (const { key, label } of RAW_ANIMAL_ARRAY_FIELDS) {
+  for (const { key, label, repairCommand, actionLabel } of RAW_ANIMAL_ARRAY_FIELDS) {
     const value = animal[key];
     if (value != null && !Array.isArray(value)) {
       issues.push(
@@ -138,6 +154,8 @@ export function validateRawAnimal(animal) {
           // doesn't mislabel a specific day step.
           repairStep: 'validation',
           label,
+          repairCommand,
+          actionLabel,
         })
       );
     }
@@ -155,6 +173,7 @@ export function validateRawAnimal(animal) {
         ownerSurface: 'animal',
         repairStep: 'validation',
         label: 'data acquisition devices',
+        repairCommand: { type: 'resetDataAcqDevice' },
       })
     );
   }

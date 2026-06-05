@@ -43,9 +43,14 @@ export function isRepairable(issue) {
  *   `fieldPath` is a focus target.
  * @param {string} [props.animalId] - The owning animal's id, available so the
  *   destination can deep-link into the Animal Editor for animal-surface repairs.
+ * @param {(issue: object) => void} [props.onRepair] - Executes an issue's `repairCommand`
+ *   in place (the issue→fix half of the contract). When provided and an issue carries a
+ *   `repairCommand`, its button PERFORMS the reset instead of navigating to a destination
+ *   that may show a blank empty state. Threaded from DayEditorStepper, which owns the
+ *   animal/day/actions the executor needs.
  * @returns {JSX.Element|null}
  */
-export default function RepairActions({ issues, onNavigate, animalId }) {
+export default function RepairActions({ issues, onNavigate, animalId, onRepair }) {
   if (!issues || issues.length === 0) return null;
 
   // Several issues can share ONE underlying fix — e.g. a corrupt day geometry override
@@ -72,7 +77,12 @@ export default function RepairActions({ issues, onNavigate, animalId }) {
           <li key={`${issue.path}-${issue.code}-${index}`} className="repair-action-item">
             <span className="repair-action-message">{issue.message}</span>
             {showButton && (
-              <RepairActionButton issue={issue} onNavigate={onNavigate} animalId={animalId} />
+              <RepairActionButton
+                issue={issue}
+                onNavigate={onNavigate}
+                animalId={animalId}
+                onRepair={onRepair}
+              />
             )}
           </li>
         );
@@ -90,17 +100,36 @@ export default function RepairActions({ issues, onNavigate, animalId }) {
  * target so the destination can focus the control.
  *
  * @param {object} props
- * @param {{path?: string, code?: string, message?: string, repairSurface?: string, step?: string}} props.issue
+ * @param {{path?: string, code?: string, message?: string, repairSurface?: string, step?: string, repairCommand?: object, actionLabel?: string}} props.issue
  * @param {(target: string, fieldPath?: string) => void} props.onNavigate - Routing callback.
  * @param {string} [props.animalId] - The owning animal's id (for Animal Editor deep-links).
+ * @param {(issue: object) => void} [props.onRepair] - Executes the issue's `repairCommand`.
  * @returns {JSX.Element|null}
  */
-export function RepairActionButton({ issue, onNavigate, animalId }) {
+export function RepairActionButton({ issue, onNavigate, animalId, onRepair }) {
   const target = repairTargetForIssue(issue);
   // `none`-surface issues have no editable target; render no button (the caller shows
   // the explanatory message). isRepairable already suppresses these upstream, but guard
   // here too so this component can never produce a dead-end button on its own.
   if (target.surface === 'none') return null;
+
+  // Executable repair: when the issue carries a serializable repairCommand and an executor
+  // is wired, the button PERFORMS the documented reset in place instead of navigating to a
+  // destination that may render a blank empty state. The label names exactly what is reset
+  // (the issue's actionLabel), so a destructive reset is never ambiguous.
+  if (issue.repairCommand && typeof onRepair === 'function') {
+    return (
+      <button
+        type="button"
+        className="repair-action-button repair-action-button-execute"
+        data-repair-surface={target.surface}
+        data-repair-command={issue.repairCommand.type}
+        onClick={() => onRepair(issue)}
+      >
+        {issue.actionLabel || target.label}
+      </button>
+    );
+  }
 
   const navTarget = target.surface === 'animal' ? 'animal' : target.step;
   // Prefer an explicit focusPath (the control that PERFORMS the fix) over the raw schema
@@ -130,13 +159,17 @@ RepairActionButton.propTypes = {
     repairSurface: PropTypes.string,
     ownerSurface: PropTypes.string,
     step: PropTypes.string,
+    actionLabel: PropTypes.string,
+    repairCommand: PropTypes.object,
   }).isRequired,
   onNavigate: PropTypes.func.isRequired,
   animalId: PropTypes.string,
+  onRepair: PropTypes.func,
 };
 
 RepairActionButton.defaultProps = {
   animalId: undefined,
+  onRepair: undefined,
 };
 
 RepairActions.propTypes = {
@@ -149,8 +182,10 @@ RepairActions.propTypes = {
   ).isRequired,
   onNavigate: PropTypes.func.isRequired,
   animalId: PropTypes.string,
+  onRepair: PropTypes.func,
 };
 
 RepairActions.defaultProps = {
   animalId: undefined,
+  onRepair: undefined,
 };

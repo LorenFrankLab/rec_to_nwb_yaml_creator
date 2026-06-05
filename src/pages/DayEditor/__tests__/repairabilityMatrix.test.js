@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { validateDay, computeStepStatus, repairTargetForIssue } from '../validation';
+import { applyRepairCommand } from '../../../state/repairCommands';
 
 /**
  * Boundary 3 — REPAIRABILITY is an invariant, tested as a matrix.
@@ -36,11 +37,35 @@ const erroringGeometryMerged = () => ({
 });
 
 /**
- * Each row: a malformed RAW day, the merged model to validate against, the issue code it
- * must raise, the owner surface it must route to, and the DOCUMENTED repair (the same
- * mutation the UI control performs) that must clear the code.
+ * Simulate executing a repairCommand the way the store would: `updateDay` shallow-merges
+ * the partial update onto the day (matching `useWorkspace.updateDay`'s per-field writes,
+ * each of which REPLACES the named field). Returns the resulting raw day so the matrix can
+ * prove the command produces the SAME mutation the documented `repair` describes — tying
+ * the executable command to the contract, not re-deriving it.
  *
- * @type {Array<{name: string, code: string, owner: string, day: object, merged: object, repair: (day: object) => object}>}
+ * @param {object} command - The issue's repairCommand.
+ * @param {object} day - The raw day to repair.
+ * @returns {object} The day after the command's store write.
+ */
+function execDayCommand(command, day) {
+  const state = { day: structuredClone(day) };
+  const actions = {
+    updateDay: (_id, updates) => Object.assign(state.day, updates),
+    updateAnimal: vi.fn(),
+    rebuildConfigurationHistory: vi.fn(),
+  };
+  applyRepairCommand(command, { actions, animalId: 'a', dayId: 'd', day: state.day });
+  return state.day;
+}
+
+/**
+ * Each row: a malformed RAW day, the merged model to validate against, the issue code it
+ * must raise, the owner surface it must route to, the DOCUMENTED repair (the same mutation
+ * the UI control performs), and — for the commandable shapes — the serializable
+ * `repairCommand` the issue must carry, whose execution must reproduce the documented repair.
+ * `command: null` marks a shape that is repairable-by-navigation only (no executable reset).
+ *
+ * @type {Array<{name: string, code: string, owner: string, day: object, merged: object, repair: (day: object) => object, command: object|null}>}
  */
 const SCENARIOS = [
   {
@@ -50,6 +75,7 @@ const SCENARIOS = [
     day: { tasks: {} },
     merged: baseMerged(),
     repair: (day) => ({ ...day, tasks: [] }),
+    command: { type: 'resetDayCollection', field: 'tasks' },
   },
   {
     name: 'malformed day collection (keywords: scalar)',
@@ -58,6 +84,7 @@ const SCENARIOS = [
     day: { keywords: 'kw' },
     merged: baseMerged(),
     repair: (day) => ({ ...day, keywords: [] }),
+    command: { type: 'resetDayCollection', field: 'keywords' },
   },
   {
     name: 'top-level non-record deviceOverrides',
@@ -66,6 +93,7 @@ const SCENARIOS = [
     day: { deviceOverrides: 'corrupt' },
     merged: baseMerged(),
     repair: (day) => ({ ...day, deviceOverrides: {} }),
+    command: { type: 'resetDeviceOverrides' },
   },
   {
     name: 'non-array geometry override',
@@ -74,6 +102,7 @@ const SCENARIOS = [
     day: { deviceOverrides: { electrode_groups: 'corrupt' } },
     merged: baseMerged(),
     repair: (day) => ({ ...day, deviceOverrides: {} }),
+    command: { type: 'removeDeviceOverrideKey', key: 'electrode_groups' },
   },
   {
     name: 'scalar bad_channels container',
@@ -82,6 +111,7 @@ const SCENARIOS = [
     day: { deviceOverrides: { bad_channels: '2.9' } },
     merged: baseMerged(),
     repair: (day) => ({ ...day, deviceOverrides: {} }),
+    command: { type: 'resetBadChannelOverrides' },
   },
   {
     name: 'stale bad_channels key (no resolved ntrode)',
@@ -90,6 +120,7 @@ const SCENARIOS = [
     day: { deviceOverrides: { bad_channels: { 999: [0] } } },
     merged: baseMerged(),
     repair: (day) => ({ ...day, deviceOverrides: { bad_channels: {} } }),
+    command: { type: 'removeBadChannelOverrideKey', key: '999' },
   },
   {
     name: 'non-array bad_channels value under a valid key',
@@ -98,6 +129,7 @@ const SCENARIOS = [
     day: { deviceOverrides: { bad_channels: { 1: '23' } } },
     merged: baseMerged(),
     repair: (day) => ({ ...day, deviceOverrides: { bad_channels: {} } }),
+    command: { type: 'removeBadChannelOverrideKey', key: '1' },
   },
   {
     name: 'shadowed array geometry override whose contents error',
@@ -106,11 +138,15 @@ const SCENARIOS = [
     day: { deviceOverrides: { electrode_groups: [{ id: 0 }] } },
     merged: erroringGeometryMerged(),
     repair: (day) => ({ ...day, deviceOverrides: {} }),
+    // Navigation-only: its destination (DevicesStep) renders a working removal control, and
+    // keeping-vs-dropping a content-erroring (but well-shaped) override is a user judgment,
+    // not an unambiguous corruption reset.
+    command: null,
   },
 ];
 
 describe('Repairability matrix — every malformed shape is raised, owned, and clears on repair', () => {
-  it.each(SCENARIOS)('$name', ({ code, owner, day, merged, repair }) => {
+  it.each(SCENARIOS)('$name', ({ code, owner, day, merged, repair, command }) => {
     // 1. A blocking issue with this code is raised.
     const issue = validateDay(day, merged).find((i) => i.code === code);
     expect(issue, `expected code "${code}" to be raised`).toBeTruthy();
@@ -128,6 +164,20 @@ describe('Repairability matrix — every malformed shape is raised, owned, and c
     const repaired = repair(day);
     const stillPresent = validateDay(repaired, merged).some((i) => i.code === code);
     expect(stillPresent, `repair did not clear code "${code}"`).toBe(false);
+
+    // 5. A commandable shape carries that exact command, and EXECUTING it both reproduces
+    //    the documented repair AND clears the issue (the issue→fix half of the contract).
+    if (command === null) {
+      expect(issue.repairCommand, `code "${code}" must be navigation-only`).toBeUndefined();
+    } else {
+      expect(issue.repairCommand, `code "${code}" must carry a repairCommand`).toEqual(command);
+      const executed = execDayCommand(issue.repairCommand, day);
+      expect(executed, 'executing the command must reproduce the documented repair').toEqual(repaired);
+      expect(
+        validateDay(executed, merged).some((i) => i.code === code),
+        `executing the command did not clear code "${code}"`
+      ).toBe(false);
+    }
   });
 
   it('animal-collection corruption (cameras) completes the same repair round-trip', () => {
@@ -146,6 +196,18 @@ describe('Repairability matrix — every malformed shape is raised, owned, and c
     expect(
       validateDay({}, merged, repairedAnimal).some((i) => i.code === 'malformed_animal_collection')
     ).toBe(false);
+
+    // The executable half: the issue carries resetAnimalCameras, and running it resets the
+    // animal cameras to [] (clearing the issue) via the updateAnimal store action.
+    expect(issue.repairCommand).toEqual({ type: 'resetAnimalCameras' });
+    const updateAnimal = vi.fn();
+    applyRepairCommand(issue.repairCommand, {
+      actions: { updateAnimal, updateDay: vi.fn(), rebuildConfigurationHistory: vi.fn() },
+      animalId: 'remy',
+      dayId: 'd',
+      animal: corruptAnimal,
+    });
+    expect(updateAnimal).toHaveBeenCalledWith('remy', { cameras: [] });
   });
 
   it('covers every malformed/override code the contract produces (day + animal)', () => {

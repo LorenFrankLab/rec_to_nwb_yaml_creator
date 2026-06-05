@@ -294,6 +294,62 @@ describe('DayEditorStepper', () => {
     expect(screen.getByText(/Day Editor: remy - 2023-06-22/i)).toBeInTheDocument();
   });
 
+  // Phase 2: a commandable corruption (raw-shape malformed_day_collection) renders an
+  // EXECUTABLE reset button on the Validation step. Clicking it performs the documented
+  // reset through the store (DayEditorStepper.onRepair → applyRepairCommand → updateDay),
+  // so the corruption — and its button — clear in place rather than dead-ending on navigation.
+  it('executes a raw-shape repair command in place (Reset tasks clears the corruption)', async () => {
+    const user = userEvent.setup();
+    const corruptState = {
+      workspace: {
+        animals: { remy: mockAnimal },
+        days: { 'remy-2023-06-22': { ...mockDay, tasks: {} } },
+        settings: {},
+      },
+    };
+
+    render(
+      <StoreProvider initialState={corruptState}>
+        <DayEditorStepper />
+      </StoreProvider>
+    );
+
+    await user.click(screen.getByRole('button', { name: /^Validation/i }));
+
+    // The corrupt-tasks issue offers an executable "Reset tasks" button (not "Fix in …").
+    const resetButton = screen.getByRole('button', { name: /^reset tasks$/i });
+    await user.click(resetButton);
+
+    // The reset wrote `tasks: []` through the store, so the corruption and its button are gone.
+    expect(screen.queryByRole('button', { name: /^reset tasks$/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/"tasks" is corrupt/i)).not.toBeInTheDocument();
+  });
+
+  it('executes an animal-collection repair command in place (Reset cameras clears the corruption)', async () => {
+    const user = userEvent.setup();
+    const corruptState = {
+      workspace: {
+        animals: { remy: { ...mockAnimal, cameras: 'nope' } },
+        days: { 'remy-2023-06-22': mockDay },
+        settings: {},
+      },
+    };
+
+    render(
+      <StoreProvider initialState={corruptState}>
+        <DayEditorStepper />
+      </StoreProvider>
+    );
+
+    await user.click(screen.getByRole('button', { name: /^Validation/i }));
+
+    const resetButton = screen.getByRole('button', { name: /^reset cameras$/i });
+    await user.click(resetButton);
+
+    expect(screen.queryByRole('button', { name: /^reset cameras$/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/"cameras" is corrupt/i)).not.toBeInTheDocument();
+  });
+
   it('does not offer a repair button for a slash session_id (read-only identity dead-end)', async () => {
     const user = userEvent.setup();
 

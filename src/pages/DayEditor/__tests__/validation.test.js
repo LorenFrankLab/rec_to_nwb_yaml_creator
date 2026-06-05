@@ -670,6 +670,62 @@ describe('Boundary 1 — raw-shape gate folded into validateDay / step status', 
   });
 });
 
+describe('Phase 2 — dayOverrideIssues carry executable repair commands', () => {
+  const merged = { ntrode_electrode_group_channel_map: [{ ntrode_id: 1, map: { 0: 0 } }] };
+
+  it('whole non-record container → resetDeviceOverrides', () => {
+    const issues = dayOverrideIssues({ deviceOverrides: 'corrupt' }, merged, []);
+    expect(issues[0].repairCommand).toEqual({ type: 'resetDeviceOverrides' });
+  });
+
+  it('non-array geometry key → removeDeviceOverrideKey for that key', () => {
+    const issue = dayOverrideIssues({ deviceOverrides: { electrode_groups: 'corrupt' } }, merged, []).find(
+      (i) => i.code === 'malformed_device_override'
+    );
+    expect(issue.repairCommand).toEqual({ type: 'removeDeviceOverrideKey', key: 'electrode_groups' });
+  });
+
+  it('scalar bad_channels container → resetBadChannelOverrides', () => {
+    const issue = dayOverrideIssues({ deviceOverrides: { bad_channels: '2.9' } }, merged, []).find(
+      (i) => i.code === 'malformed_bad_channel_override'
+    );
+    expect(issue.repairCommand).toEqual({ type: 'resetBadChannelOverrides' });
+  });
+
+  it('stale bad_channels key → removeBadChannelOverrideKey for that ntrode id', () => {
+    const issue = dayOverrideIssues({ deviceOverrides: { bad_channels: { 999: [0] } } }, merged, []).find(
+      (i) => i.code === 'stale_bad_channel_override'
+    );
+    expect(issue.repairCommand).toEqual({ type: 'removeBadChannelOverrideKey', key: '999' });
+  });
+
+  it('corrupt bad_channels value under a valid key → removeBadChannelOverrideKey for that key', () => {
+    const issue = dayOverrideIssues({ deviceOverrides: { bad_channels: { 1: '23' } } }, merged, []).find(
+      (i) => i.code === 'malformed_bad_channel_override'
+    );
+    expect(issue.repairCommand).toEqual({ type: 'removeBadChannelOverrideKey', key: '1' });
+  });
+
+  it('shadowed_geometry_override intentionally carries NO command (its destination renders a working removal control)', () => {
+    const erroringMerged = { electrode_groups: [{ id: 0 }], ntrode_electrode_group_channel_map: [] };
+    const issue = dayOverrideIssues(
+      { deviceOverrides: { electrode_groups: [{ id: 0 }] } },
+      erroringMerged,
+      [{ severity: 'error', path: 'electrode_groups[0].location' }]
+    ).find((i) => i.code === 'shadowed_geometry_override');
+    expect(issue).toBeTruthy();
+    expect(issue.repairCommand).toBeUndefined();
+  });
+
+  it('normalizeIssue (via validateDay) preserves the repairCommand', () => {
+    const day = { tasks: {}, deviceOverrides: { bad_channels: { 999: [0] } } };
+    const taskIssue = validateDay(day, merged).find((i) => i.code === 'malformed_day_collection');
+    expect(taskIssue.repairCommand).toEqual({ type: 'resetDayCollection', field: 'tasks' });
+    const staleIssue = validateDay(day, merged).find((i) => i.code === 'stale_bad_channel_override');
+    expect(staleIssue.repairCommand).toEqual({ type: 'removeBadChannelOverrideKey', key: '999' });
+  });
+});
+
 describe('normalizeIssue — the ownership contract is enforced, not conventional', () => {
   const merged = { ntrode_electrode_group_channel_map: [{ ntrode_id: 1, map: { 0: 0 } }] };
 

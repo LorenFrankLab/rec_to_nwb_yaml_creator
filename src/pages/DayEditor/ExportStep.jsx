@@ -33,9 +33,12 @@ import './DayEditor.scss';
  * @param {object} props.day - Recording day providing session-specific data.
  * @param {(stepId: string, fieldPath?: string) => void} [props.onNavigate] - Routes a
  *   repair action to the step that owns the fix (and an optional field target).
+ * @param {(issue: object) => void} [props.onRepair] - Executes an issue's `repairCommand`
+ *   in place (threaded from DayEditorStepper) so a commandable corruption in the blocked
+ *   list resets without leaving the Export step.
  * @returns {JSX.Element}
  */
-export default function ExportStep({ animal, day, onNavigate }) {
+export default function ExportStep({ animal, day, onNavigate, onRepair }) {
   const [showPreview, setShowPreview] = useState(false);
   const [blockingError, setBlockingError] = useState(null);
   const [overrideWarning, setOverrideWarning] = useState(null);
@@ -173,6 +176,7 @@ export default function ExportStep({ animal, day, onNavigate }) {
               issues={validationErrors}
               onNavigate={onNavigate}
               animalId={animal?.id}
+              onRepair={onRepair}
             />
           )}
           {validationErrors.length === 0 && blockingSteps.length > 0 && (
@@ -317,8 +321,10 @@ ExportStep.propTypes = {
   animal: PropTypes.object.isRequired,
   day: PropTypes.object.isRequired,
   onNavigate: PropTypes.func,
+  onRepair: PropTypes.func,
 };
 
 ExportStep.defaultProps = {
   onNavigate: () => {},
+  onRepair: undefined,
 };

@@ -39,6 +39,7 @@ describe('useStore public API contract', () => {
       'nTrodeMapSelected',
       'onBlur',
       'onMapInput',
+      'rebuildConfigurationHistory',
       'removeArrayItem',
       'removeElectrodeGroupItem',
       'setFormData',

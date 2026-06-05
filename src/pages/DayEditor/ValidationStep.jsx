@@ -22,9 +22,12 @@ import './DayEditor.scss';
  *   repair action to the step that owns the fix (and an optional field target).
  * @param {object} [props.animal] - The owning animal record (provides animalId so
  *   animal-surface repairs can deep-link into the Animal Editor).
+ * @param {(issue: object) => void} [props.onRepair] - Executes an issue's `repairCommand`
+ *   in place (threaded from DayEditorStepper). A commandable issue's button performs the
+ *   reset instead of navigating.
  * @returns {JSX.Element}
  */
-export default function ValidationStep({ day, mergedDay, onNavigate, animal }) {
+export default function ValidationStep({ day, mergedDay, onNavigate, animal, onRepair }) {
   const issues = useMemo(() => validateDay(day || {}, mergedDay || {}, animal), [day, mergedDay, animal]);
 
   const bySeverity = useMemo(() => groupBySeverity(issues), [issues]);
@@ -56,7 +59,7 @@ export default function ValidationStep({ day, mergedDay, onNavigate, animal }) {
 
       {issues.length > 0 && (
         <>
-          <SeveritySection title="Errors" severity="error" issues={bySeverity.error} onNavigate={onNavigate} animalId={animal?.id} />
+          <SeveritySection title="Errors" severity="error" issues={bySeverity.error} onNavigate={onNavigate} animalId={animal?.id} onRepair={onRepair} />
           <SeveritySection title="Warnings" severity="warning" issues={bySeverity.warning} />
           <SeveritySection title="Info" severity="info" issues={bySeverity.info} />
         </>
@@ -70,12 +73,14 @@ ValidationStep.propTypes = {
   mergedDay: PropTypes.object,
   onNavigate: PropTypes.func,
   animal: PropTypes.object,
+  onRepair: PropTypes.func,
 };
 
 ValidationStep.defaultProps = {
   day: null,
   onNavigate: () => {},
   animal: null,
+  onRepair: undefined,
 };
 
 /**
@@ -91,9 +96,10 @@ ValidationStep.defaultProps = {
  *   routing callback. Repair actions are offered only for export-blocking errors.
  * @param {string} [props.animalId] - The owning animal's id (threaded to animal-surface
  *   repair buttons for Animal Editor deep-links).
+ * @param {(issue: object) => void} [props.onRepair] - Executes an issue's `repairCommand`.
  * @returns {JSX.Element|null}
  */
-function SeveritySection({ title, severity, issues, onNavigate, animalId }) {
+function SeveritySection({ title, severity, issues, onNavigate, animalId, onRepair }) {
   if (issues.length === 0) return null;
 
   const byStep = groupErrorsByStep(issues);
@@ -115,7 +121,7 @@ function SeveritySection({ title, severity, issues, onNavigate, animalId }) {
                   <span className="validation-issue-message">{issue.message}</span>
                   {issue.path && <code className="validation-issue-path">{issue.path}</code>}
                   {repairable && isRepairable(issue) && (
-                    <RepairActionButton issue={issue} onNavigate={onNavigate} animalId={animalId} />
+                    <RepairActionButton issue={issue} onNavigate={onNavigate} animalId={animalId} onRepair={onRepair} />
                   )}
                 </li>
               ))}
@@ -132,6 +138,7 @@ SeveritySection.propTypes = {
   issues: PropTypes.arrayOf(PropTypes.object).isRequired,
   onNavigate: PropTypes.func,
   animalId: PropTypes.string,
+  onRepair: PropTypes.func,
 };
 
 /**

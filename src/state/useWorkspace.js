@@ -439,6 +439,61 @@ export function useWorkspace(initialState = null) {
       },
 
       /**
+       * Rebuilds a corrupt or missing `configurationHistory` from scratch: replaces it
+       * with a single version-1 snapshot derived from the animal's CURRENT `devices`
+       * (the editor's mirror of the latest configuration). This is the executable repair
+       * for a raw-shape `malformed_animal_collection` on `configurationHistory` — a
+       * restored/imported non-array history that shadows valid data and blocks export.
+       *
+       * Tolerates any start shape (non-array, missing); `getAnimalDevices` / the
+       * `structuredClone` of the (possibly-empty) electrode arrays never throw. No-op for
+       * an unknown animal (the repair surface is gone — nothing to fix).
+       *
+       * Scope: this clears the raw-shape `configurationHistory` corruption (the issue the
+       * repair command carries). It does NOT re-pin days that referenced a now-gone version
+       * > 1 — those still fail closed in `resolveDayConfig` until re-applied — so it is one
+       * step toward export-readiness, not a guarantee of it.
+       *
+       * @param {string} animalId - Animal identifier.
+       */
+      rebuildConfigurationHistory: (animalId) => {
+        setWorkspace((prev) => {
+          if (!prev.animals[animalId]) return prev;
+
+          const animal = prev.animals[animalId];
+          const updated = structuredClone(animal);
+          const devices = getAnimalDevices(updated);
+          const now = getCurrentTimestamp();
+
+          updated.configurationHistory = [
+            {
+              version: 1,
+              date: getCurrentDate(),
+              description: 'Rebuilt configuration',
+              devices: {
+                electrode_groups: structuredClone(
+                  Array.isArray(devices.electrode_groups) ? devices.electrode_groups : []
+                ),
+                ntrode_electrode_group_channel_map: structuredClone(
+                  Array.isArray(devices.ntrode_electrode_group_channel_map)
+                    ? devices.ntrode_electrode_group_channel_map
+                    : []
+                ),
+              },
+              appliedToDays: [],
+            },
+          ];
+          updated.lastModified = now;
+
+          return {
+            ...prev,
+            animals: { ...prev.animals, [animalId]: updated },
+            lastModified: now,
+          };
+        });
+      },
+
+      /**
        * Creates a new recording day for an animal
        *
        * @param {string} animalId - Parent animal identifier
@@ -544,6 +599,13 @@ export function useWorkspace(initialState = null) {
           }
           if (updates.associated_video_files !== undefined) {
             updated.associated_video_files = updates.associated_video_files;
+          }
+          // FsGUI protocol files are a day-owned collection the export merge reads
+          // (workspaceUtils `mergeDayMetadata`). Without this branch a write — including
+          // the raw-shape `resetDayCollection` repair — would be silently dropped, so the
+          // corruption it is meant to clear would persist.
+          if (updates.fs_gui_yamls !== undefined) {
+            updated.fs_gui_yamls = updates.fs_gui_yamls;
           }
           if (updates.technical) {
             updated.technical = { ...updated.technical, ...updates.technical };

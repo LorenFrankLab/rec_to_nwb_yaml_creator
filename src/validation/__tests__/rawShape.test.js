@@ -41,6 +41,24 @@ describe('validateRawDay — malformed day-owned collections', () => {
     expect(issue.repairStep).toBe('overview');
   });
 
+  it('carries an executable resetDayCollection repairCommand naming the corrupt field', () => {
+    const issue = validateRawDay({ tasks: {} }).find((i) => i.field === 'tasks');
+    expect(issue.repairCommand).toEqual({ type: 'resetDayCollection', field: 'tasks' });
+  });
+
+  it('every malformed day collection carries a resetDayCollection command for its field', () => {
+    const day = {
+      tasks: {},
+      associated_files: 'x',
+      associated_video_files: 42,
+      behavioral_events: { 0: 'a' },
+      keywords: 'kw',
+    };
+    for (const issue of validateRawDay(day)) {
+      expect(issue.repairCommand).toEqual({ type: 'resetDayCollection', field: issue.field });
+    }
+  });
+
   it('does NOT flag a well-formed (array) collection, nor an absent one', () => {
     const day = { tasks: [], associated_files: [{ name: 'f' }], keywords: undefined };
     expect(validateRawDay(day).some((i) => i.code === 'malformed_day_collection')).toBe(false);
@@ -67,6 +85,26 @@ describe('validateRawAnimal — malformed animal-owned collections', () => {
     expect(issue.code).toBe('malformed_animal_collection');
     expect(issue.ownerSurface).toBe('animal');
     expect(issue.severity).toBe('error');
+  });
+
+  it('attaches a resetAnimalCameras command to corrupt cameras', () => {
+    const issue = validateRawAnimal({ cameras: 'nope' }).find((i) => i.field === 'cameras');
+    expect(issue.repairCommand).toEqual({ type: 'resetAnimalCameras' });
+  });
+
+  it('attaches a rebuildConfigurationHistory command to a corrupt configurationHistory', () => {
+    const issue = validateRawAnimal({ configurationHistory: 'corrupt' }).find(
+      (i) => i.field === 'configurationHistory'
+    );
+    expect(issue.repairCommand).toEqual({ type: 'rebuildConfigurationHistory' });
+  });
+
+  it('attaches a resetDataAcqDevice command to a corrupt nested data_acq_device', () => {
+    const issue = validateRawAnimal({
+      configurationHistory: [{ version: 1 }],
+      devices: { data_acq_device: 'nope' },
+    }).find((i) => i.field === 'data_acq_device');
+    expect(issue.repairCommand).toEqual({ type: 'resetDataAcqDevice' });
   });
 
   it('does not flag well-formed animal collections', () => {

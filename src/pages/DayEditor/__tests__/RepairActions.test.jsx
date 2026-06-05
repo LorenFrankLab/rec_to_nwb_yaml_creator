@@ -115,6 +115,49 @@ describe('RepairActions', () => {
     expect(screen.getAllByRole('button', { name: /fix in devices/i })).toHaveLength(1);
   });
 
+  it('executes a repairCommand (not navigate) when an issue carries one and onRepair is provided', async () => {
+    const user = userEvent.setup();
+    const onNavigate = vi.fn();
+    const onRepair = vi.fn();
+    const issue = {
+      path: 'tasks',
+      field: 'tasks',
+      ownerSurface: 'day',
+      step: 'epochs',
+      code: 'malformed_day_collection',
+      actionLabel: 'Reset tasks',
+      repairCommand: { type: 'resetDayCollection', field: 'tasks' },
+      message: "This day's \"tasks\" is corrupt (expected a list).",
+    };
+    render(<RepairActions issues={[issue]} onNavigate={onNavigate} onRepair={onRepair} />);
+
+    // The button reads as a destructive reset that names what it resets — not "Fix in …".
+    const button = screen.getByRole('button', { name: /reset tasks/i });
+    await user.click(button);
+    expect(onRepair).toHaveBeenCalledWith(issue);
+    expect(onNavigate).not.toHaveBeenCalled();
+  });
+
+  it('falls back to a navigate button when no onRepair is wired (backward compatible)', async () => {
+    const user = userEvent.setup();
+    const onNavigate = vi.fn();
+    const issue = {
+      path: 'cameras',
+      field: 'cameras',
+      ownerSurface: 'animal',
+      code: 'malformed_animal_collection',
+      actionLabel: 'Reset cameras',
+      repairCommand: { type: 'resetAnimalCameras' },
+      message: "This animal's \"cameras\" is corrupt (expected a list).",
+    };
+    render(<RepairActions issues={[issue]} onNavigate={onNavigate} animalId="remy" />);
+
+    // With no executor wired, the commandable issue still routes to its editable owner.
+    const button = screen.getByRole('button', { name: /fix in animal editor/i });
+    await user.click(button);
+    expect(onNavigate).toHaveBeenCalledWith('animal', 'cameras');
+  });
+
   it('does NOT render a fix button for non-repairable identity issues (slash ids)', () => {
     render(
       <RepairActions

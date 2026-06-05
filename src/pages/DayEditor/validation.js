@@ -150,6 +150,7 @@ export function dayOverrideIssues(day, mergedDay, baseIssues = []) {
       step: 'devices',
       repairSurface: 'day',
       actionLabel: 'Remove device overrides',
+      repairCommand: { type: 'resetDeviceOverrides' },
       code: 'malformed_device_override',
       severity: 'error',
       message:
@@ -185,6 +186,7 @@ export function dayOverrideIssues(day, mergedDay, baseIssues = []) {
         step: 'devices',
         repairSurface: 'day',
         actionLabel: 'Remove device override',
+        repairCommand: { type: 'removeDeviceOverrideKey', key },
         code: 'malformed_device_override',
         severity: 'error',
         message:
@@ -219,6 +221,7 @@ export function dayOverrideIssues(day, mergedDay, baseIssues = []) {
         step: 'devices',
         repairSurface: 'day',
         actionLabel: 'Remove failed-channel override',
+        repairCommand: { type: 'resetBadChannelOverrides' },
         code: 'malformed_bad_channel_override',
         severity: 'error',
         message:
@@ -236,7 +239,8 @@ export function dayOverrideIssues(day, mergedDay, baseIssues = []) {
             field: 'bad_channels',
             step: 'devices',
             repairSurface: 'day',
-            actionLabel: 'Fix bad channels',
+            actionLabel: 'Remove stale failed-channel override',
+            repairCommand: { type: 'removeBadChannelOverrideKey', key: String(key) },
             code: 'stale_bad_channel_override',
             severity: 'error',
             message:
@@ -254,6 +258,7 @@ export function dayOverrideIssues(day, mergedDay, baseIssues = []) {
             step: 'devices',
             repairSurface: 'day',
             actionLabel: 'Remove failed-channel override',
+            repairCommand: { type: 'removeBadChannelOverrideKey', key: String(key) },
             code: 'malformed_bad_channel_override',
             severity: 'error',
             message:

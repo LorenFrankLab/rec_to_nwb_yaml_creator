@@ -6,6 +6,51 @@
 
 ---
 
+## Canonical state & repair — Phase 2: executable repair commands (June 5, 2026)
+
+Phase 1 made the raw → canonical READ boundary shape-safe. Phase 2 closes the
+issue → repair WRITE boundary: a validation issue's repair button now PERFORMS the
+promised fix instead of merely navigating to a destination that could land on a blank
+empty state.
+
+- New `src/state/repairCommands.js`: `applyRepairCommand(command, ctx)` maps a
+  serializable `repairCommand` (`{type, field?, key?}`) to a store write. Closed command
+  set (`REPAIR_COMMAND_TYPES`): `resetDayCollection` / `resetAnimalCameras` /
+  `resetDataAcqDevice` / `rebuildConfigurationHistory` / `resetDeviceOverrides` /
+  `removeDeviceOverrideKey` / `resetBadChannelOverrides` / `removeBadChannelOverrideKey`.
+  Partial-removal commands read the day's CURRENT `deviceOverrides` to preserve sibling
+  keys and tolerate a corrupt non-record container. Unknown/malformed command → no-op.
+- Store (`useWorkspace.js`): added a `rebuildConfigurationHistory(animalId)` action (resets
+  a corrupt/missing history to a single v1 snapshot from the animal's current devices;
+  tolerates a non-array start; no-op on unknown animal) and an `fs_gui_yamls` branch to
+  `updateDay` (the merge reads it, so a `resetDayCollection` repair would otherwise be
+  silently dropped).
+- Issue producers attach `repairCommand`: `rawShape.js` (`malformed_day_collection` →
+  resetDayCollection; `malformed_animal_collection` → resetAnimalCameras /
+  rebuildConfigurationHistory / resetDataAcqDevice by field) and `validation.js`
+  `dayOverrideIssues` (whole/geometry-key/bad-channel container/stale/corrupt-value →
+  resetDeviceOverrides / removeDeviceOverrideKey / resetBadChannelOverrides /
+  removeBadChannelOverrideKey). `normalizeIssue` preserves it. `shadowed_geometry_override`
+  intentionally carries NO command (its destination renders a working removal control; keep-
+  vs-drop is a user judgment, not an unambiguous reset).
+- UI: `RepairActions`/`RepairActionButton` render an executable reset button (labeled with
+  the issue's `actionLabel`, naming exactly what is reset) that calls `onRepair(issue)` when
+  the issue carries a command and an executor is wired; otherwise the navigate button is
+  unchanged (backward compatible). `DayEditorStepper` owns animal/day/actions and provides
+  `onRepair` → `applyRepairCommand`, threaded to ExportStep + ValidationStep.
+- The repairability matrix now asserts the issue→fix invariant: every commandable malformed
+  shape carries the exact command, and EXECUTING it reproduces the documented repair AND
+  clears the issue. A structural test forces every command type to have an executor branch.
+- Code-reviewed (pr-review-toolkit:code-reviewer): no Critical/Important findings; the
+  rebuild-history scope note (clears the raw-shape issue but does not re-pin days) was added
+  to the action's JSDoc.
+
+Gate: full vitest (3734 pass), 125 golden baselines byte-identical, 0 lint errors, clean
+build. Branch not merged. Phases 3–4 (destination RawCorruptionBanner; ValidationSummary
+error-rows for corrupt/missing days) follow.
+
+---
+
 ## Canonical state & repair — Phase 1: shape-safe read layer (June 5, 2026)
 
 First phase of making the raw → canonical → repair boundary structural (user decision: full

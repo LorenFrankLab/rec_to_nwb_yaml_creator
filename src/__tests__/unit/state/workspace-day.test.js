@@ -296,6 +296,33 @@ describe('Day State Management', () => {
       expect(result.current.model.workspace.days['remy-2023-06-22'].keywords).toEqual(['replay']);
     });
 
+    it('persists fs_gui_yamls (the merge reads them, so a reset must write through)', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Test',
+        });
+      });
+
+      act(() => {
+        result.current.actions.updateDay('remy-2023-06-22', {
+          fs_gui_yamls: [{ name: 'protocol.yml', epochs: [1] }],
+        });
+      });
+      expect(result.current.model.workspace.days['remy-2023-06-22'].fs_gui_yamls).toEqual([
+        { name: 'protocol.yml', epochs: [1] },
+      ]);
+
+      // An explicit empty array clears them (the resetDayCollection repair path).
+      act(() => {
+        result.current.actions.updateDay('remy-2023-06-22', { fs_gui_yamls: [] });
+      });
+      expect(result.current.model.workspace.days['remy-2023-06-22'].fs_gui_yamls).toEqual([]);
+    });
+
     it('updates tasks array', () => {
       const { result } = renderHook(() => useStore());
       createTestAnimal(result);

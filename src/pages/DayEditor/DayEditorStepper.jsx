@@ -3,7 +3,8 @@ import { useStoreContext } from '../../state/StoreContext';
 import { useStepperShortcut } from '../../hooks/stepperShortcuts';
 import { useDayIdFromUrl } from '../../hooks/useDayIdFromUrl';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
-import { getDayTasks } from '../../state/workspaceSelectors';
+import { getAnimalSubject, getDayTasks } from '../../state/workspaceSelectors';
+import { applyRepairCommand } from '../../state/repairCommands';
 import { computeStepStatus } from './validation';
 import { isExportEnabled } from './stepGate';
 import StepNavigation from './StepNavigation';
@@ -211,12 +212,28 @@ export default function DayEditorStepper() {
     actions.updateDay(dayId, { [topLevelKey]: updated[topLevelKey] });
   }, [day, dayId, actions]);
 
+  // Executable repair: run an issue's serializable repairCommand against the store, in
+  // place. The stepper owns the animal/day/actions the executor needs, so it is the single
+  // place that context is assembled — no global side effects. A commandable issue's button
+  // (in ExportStep's blocked list and the Validation summary) calls this instead of
+  // navigating to a destination that may render a blank empty state.
+  const handleRepair = useCallback((issue) => {
+    if (!issue?.repairCommand) return;
+    applyRepairCommand(issue.repairCommand, {
+      actions,
+      animalId: animal?.id,
+      dayId,
+      day,
+      animal,
+    });
+  }, [actions, animal, dayId, day]);
+
   // Subject fields live on the animal, not the day. The Overview step uses this to
   // repair inherited subject metadata (DOB / weight / description / species) in
   // place, writing through to the animal so existing animals can be fixed.
   const handleSubjectUpdate = useCallback((field, value) => {
     if (!animal) return;
-    actions.updateAnimal(animal.id, { subject: { ...animal.subject, [field]: value } });
+    actions.updateAnimal(animal.id, { subject: { ...getAnimalSubject(animal), [field]: value } });
   }, [animal, actions]);
 
   // Step configuration. Export stays gated by isExportEnabled (every prerequisite
@@ -293,6 +310,7 @@ export default function DayEditorStepper() {
           onFieldUpdate={handleFieldUpdate}
           onSubjectUpdate={handleSubjectUpdate}
           onNavigate={handleStepNavigate}
+          onRepair={handleRepair}
           focusRequest={focusRequest}
           animalDays={animalDays}
           actions={actions}
