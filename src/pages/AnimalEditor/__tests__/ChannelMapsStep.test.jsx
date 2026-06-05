@@ -24,12 +24,28 @@ describe('ChannelMapsStep', () => {
 
   const mockOnEditChannelMap = vi.fn();
 
+  it('shows the shank count from the catalog (uneven 64c-3s = 3 shanks)', () => {
+    const animal = {
+      id: 'remy',
+      devices: {
+        electrode_groups: [
+          { id: 0, device_type: '64c-3s6mm6cm-20um-40um-sl', location: 'CA1', targeted_x: 1, targeted_y: 2, targeted_z: 3, units: 'mm' },
+        ],
+        ntrode_electrode_group_channel_map: [],
+      },
+    };
+    render(<ChannelMapsStep animal={animal} onEditChannelMap={mockOnEditChannelMap} />);
+    expect(screen.getByText('64', { selector: '[data-label="Channels"]' })).toBeInTheDocument();
+    expect(screen.getByText('3', { selector: '[data-label="Shanks"]' })).toBeInTheDocument();
+  });
+
   it('renders table with all electrode groups', () => {
     render(<ChannelMapsStep animal={mockAnimal} onEditChannelMap={mockOnEditChannelMap} />);
 
-    // Should display both electrode groups by ID
-    expect(screen.getByText('0')).toBeInTheDocument();
-    expect(screen.getByText('1')).toBeInTheDocument();
+    // Should display both electrode groups by ID (scope to the ID column — the
+    // Shanks column can also read "1" for a single-shank probe).
+    expect(screen.getByText('0', { selector: '[data-label="ID"]' })).toBeInTheDocument();
+    expect(screen.getByText('1', { selector: '[data-label="ID"]' })).toBeInTheDocument();
   });
 
   it('shows correct device type for each group', () => {

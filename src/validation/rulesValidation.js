@@ -6,7 +6,11 @@
 
 import { isValidSpecies, idHasSlash } from './dandiSubject';
 import { getChannelCount, validateDeviceType } from '../utils/deviceTypeUtils';
-import { deviceTypeMap } from '../ntrode/deviceTypes';
+import {
+  getProbeShanks,
+  getProbeElectrodeIds,
+  isProbeCatalogConsistent,
+} from '../ntrode/probeCatalog';
 
 /**
  * Custom business logic validation rules
@@ -247,7 +251,7 @@ export const rulesValidation = (model) => {
     });
   }
 
-  // Rule 9 (Phase 6, Task 1): dangling camera references.
+  // Rule 9: dangling camera references.
   // Every value in each tasks[].camera_id ARRAY and each scalar
   // associated_video_files[].camera_id must reference an existing cameras[].id.
   // (Existing Rules 1/2 only catch the no-cameras-at-all case; this catches a
@@ -300,21 +304,28 @@ export const rulesValidation = (model) => {
     }
   });
 
-  // Rule 11 (Phase 6, Task 3): channel bounds (see designs.md#channel-map-semantics).
-  // Map VALUES are probe electrode ids, reset PER electrode group (a second
-  // tetrode is 0..3, not 4..7). Bounds come from the real device helpers:
-  //   getChannelCount(device_type)  → total probe electrode ids [0, count)
-  //   deviceTypeMap(device_type)    → the per-shank electrode-id list (its length
-  //                                   is the channel count of one ntrode/shank)
-  // Looked up via the ntrode's electrode group's device_type. Unknown devices
-  // (count 0) are skipped here — Task 5 reports them.
+  // Rule 11 (Phase Probe Metadata Contract): catalog-driven channel bounds.
+  // The VERIFIED probe catalog (probeCatalog.js, transcribed from trodes_to_nwb)
+  // is the source of truth. Map VALUES are probe electrode ids, reset PER
+  // electrode group, and partitioned across shanks (a 2nd tetrode is 0..3 not 4..7;
+  // a 64c-3s probe partitions 64 ids UNEVENLY as 21/21/22). Per electrode group:
+  //   (a) every map value is in getProbeElectrodeIds(device_type) [0, total);
+  //   (b) the group's ntrode values cover getProbeElectrodeIds exactly once;
+  //   (c) the group's ntrode ROW COUNT equals num_shanks, and — matching rows to
+  //       shanks BY ORDER — row i's keys are 0..(shank_i.electrodeIds.length-1);
+  //   (d) bad_channels are probe-local indices in [0, total).
+  // Unknown devices (no shanks) are skipped here — Task 5 reports them.
   if (Array.isArray(model.ntrode_electrode_group_channel_map) && model.ntrode_electrode_group_channel_map.length > 0) {
     const groupById = new Map(
       (model.electrode_groups || [])
         .filter((g) => g?.id !== undefined && g?.id !== null)
         .map((g) => [g.id, g])
     );
-    // Collect the value set per electrode group for the partition check (b).
+
+    // Per-row checks (a)/(d) and key-count (c), with rows matched to shanks BY
+    // ORDER within each group. `rowIndexByGroup` tracks each group's next shank.
+    const rowIndexByGroup = new Map();
+    // Collect the value set per electrode group for the coverage check (b).
     const valuesByGroup = new Map();
 
     model.ntrode_electrode_group_channel_map.forEach((ntrode) => {
@@ -323,14 +334,19 @@ export const rulesValidation = (model) => {
       const channelCount = getChannelCount(deviceType);
       if (!channelCount) return; // dangling group / unknown device handled elsewhere
 
-      const perNtrodeCount = deviceTypeMap(deviceType).length;
+      const shanks = getProbeShanks(deviceType);
+      const electrodeIdSet = new Set(getProbeElectrodeIds(deviceType));
+      const gid = ntrode.electrode_group_id;
+      const rowIndex = rowIndexByGroup.get(gid) ?? 0;
+      rowIndexByGroup.set(gid, rowIndex + 1);
+      // The shank this row should mirror (by order); undefined if there are more
+      // rows than shanks (an excess row — flagged by the coverage/count checks).
+      const shank = shanks[rowIndex];
       const map = ntrode.map && typeof ntrode.map === 'object' ? ntrode.map : {};
 
-      // (a) every map value is an integer in [0, channelCount)
+      // (a) every map value is a probe electrode id of this device.
       const values = Object.values(map);
-      const outOfRange = values.filter(
-        (v) => !Number.isInteger(v) || v < 0 || v >= channelCount
-      );
+      const outOfRange = values.filter((v) => !electrodeIdSet.has(v));
       if (outOfRange.length > 0) {
         issues.push({
           path: `ntrode_electrode_group_channel_map[${ntrode.ntrode_id}]`,
@@ -346,13 +362,15 @@ export const rulesValidation = (model) => {
         });
       }
 
-      // (c) map keys are 0 … (perNtrodeCount − 1)
+      // (c) this row's keys are 0..(shank_i.electrodeIds.length-1). When there is
+      // no matching shank (excess row), the expected count is 0, so any key fails.
+      const expectedKeyCount = shank ? shank.electrodeIds.length : 0;
       const keys = Object.keys(map).map(Number);
       const keySet = new Set(keys);
       const keysValid =
-        keys.length === perNtrodeCount &&
-        keys.every((k) => Number.isInteger(k) && k >= 0 && k < perNtrodeCount) &&
-        keySet.size === perNtrodeCount;
+        keys.length === expectedKeyCount &&
+        keys.every((k) => Number.isInteger(k) && k >= 0 && k < expectedKeyCount) &&
+        keySet.size === expectedKeyCount;
       if (!keysValid) {
         issues.push({
           path: `ntrode_electrode_group_channel_map[${ntrode.ntrode_id}]`,
@@ -362,12 +380,12 @@ export const rulesValidation = (model) => {
           code: 'channel_key_out_of_range',
           severity: 'error',
           message:
-            `Ntrode ${ntrode.ntrode_id} channel-map keys must be 0–${perNtrodeCount - 1} ` +
-            `(one per channel of device "${deviceType}").`,
+            `Ntrode ${ntrode.ntrode_id} channel-map keys must be 0–${expectedKeyCount - 1} ` +
+            `(one per channel of shank ${rowIndex + 1} of device "${deviceType}").`,
         });
       }
 
-      // (d) bad_channels indices are in [0, channelCount)
+      // (d) bad_channels indices are probe-local, in [0, channelCount).
       const badChannels = Array.isArray(ntrode.bad_channels) ? ntrode.bad_channels : [];
       const badOutOfRange = badChannels.filter(
         (b) => !Number.isInteger(b) || b < 0 || b >= channelCount
@@ -387,25 +405,23 @@ export const rulesValidation = (model) => {
         });
       }
 
-      // Accumulate values for this group's partition check.
-      if (!valuesByGroup.has(ntrode.electrode_group_id)) {
-        valuesByGroup.set(ntrode.electrode_group_id, { deviceType, channelCount, values: [] });
+      // Accumulate values for this group's coverage check.
+      if (!valuesByGroup.has(gid)) {
+        valuesByGroup.set(gid, { deviceType, channelCount, values: [] });
       }
-      valuesByGroup.get(ntrode.electrode_group_id).values.push(...values);
+      valuesByGroup.get(gid).values.push(...values);
     });
 
     // (b) within an electrode group, the ntrodes' values must cover EVERY probe
     // electrode id 0 … channelCount-1 exactly once (complete + unique). The
     // converter looks up hw_channel_map[group][str(electrode_id)] for every probe
-    // electrode (convert_yaml.add_electrode_groups), so a gap (e.g. a multi-shank
-    // probe whose per-shank lists under-generate, like 64c-3s yielding 60 of 64
-    // ids) or a cross-shank collision (missing per-shank offset) breaks conversion.
-    // Skipped when (a) already flagged an out-of-range value for the group, so a
-    // single mistake yields a single error.
+    // electrode (convert_yaml.add_electrode_groups), so a gap (e.g. a 64c-3s map
+    // that under-generates to 60 of 64 ids) or a cross-shank collision (missing
+    // per-shank offset) breaks conversion. Skipped when (a) already flagged an
+    // out-of-range value for the group, so a single mistake yields a single error.
     valuesByGroup.forEach(({ deviceType, channelCount, values }, groupId) => {
-      const anyOutOfRange = values.some(
-        (v) => !Number.isInteger(v) || v < 0 || v >= channelCount
-      );
+      const electrodeIdSet = new Set(getProbeElectrodeIds(deviceType));
+      const anyOutOfRange = values.some((v) => !electrodeIdSet.has(v));
       if (anyOutOfRange) return; // (a) owns this group's error
       const unique = new Set(values);
       const covers = values.length === channelCount && unique.size === channelCount;
@@ -426,7 +442,7 @@ export const rulesValidation = (model) => {
     });
   }
 
-  // Rule 12 (Phase 6, Task 4): non-empty, consistent location / targeted_location.
+  // Rule 12: non-empty, consistent location / targeted_location.
   // Spyglass auto-creates BrainRegion rows from electrode_group.location by exact
   // string (no trim/case-fold); targeted_location is schema-required and used by
   // trodes_to_nwb as the per-electrode location. Both must be non-empty; a
@@ -490,7 +506,7 @@ export const rulesValidation = (model) => {
     });
   }
 
-  // Rule 13 (Phase 6, Task 5): device_type is a known/registered probe.
+  // Rule 13: device_type is a known/registered probe.
   // An unknown device_type hard-fails downstream (trodes_to_nwb FileNotFoundError
   // loading the probe metadata). Guards copy/CSV-import-introduced values.
   if (Array.isArray(model.electrode_groups) && model.electrode_groups.length > 0) {
@@ -514,7 +530,37 @@ export const rulesValidation = (model) => {
     });
   }
 
-  // Rule 14 (Phase 6, Task 6): behavioral-event names unique within the day.
+  // Rule 20 (Probe Metadata Contract): the device_type's catalog entry must be
+  // INTERNALLY CONSISTENT (contiguous electrode ids 0..n-1, no gaps/dupes, shank
+  // count matches). A known-but-inconsistent catalog entry would generate a
+  // converter-invalid channel map, so export is BLOCKED and the probe is NAMED.
+  // Entirely-unknown device types are owned by Rule 13 (unknown_device_type).
+  if (Array.isArray(model.electrode_groups) && model.electrode_groups.length > 0) {
+    const reportedProbes = new Set();
+    model.electrode_groups.forEach((group, gi) => {
+      const dt = group?.device_type;
+      if (dt === undefined || dt === null || dt === '') return; // schema owns empty
+      if (!validateDeviceType(dt)) return; // unknown -> Rule 13 owns it
+      if (isProbeCatalogConsistent(dt)) return; // consistent -> nothing to report
+      if (reportedProbes.has(dt)) return; // one error per inconsistent probe
+      reportedProbes.add(dt);
+      issues.push({
+        path: `electrode_groups[${gi}].device_type`,
+        field: 'device_type',
+        step: 'devices',
+        actionLabel: 'Pick a supported probe',
+        code: 'inconsistent_probe_catalog',
+        severity: 'error',
+        message:
+          `Electrode group ${group?.id ?? gi} uses device_type "${dt}", whose probe metadata ` +
+          `is internally inconsistent (its electrode ids are not a contiguous 0..n-1 set, or its ` +
+          `shank count is wrong). This probe cannot be exported — its channel map would fail ` +
+          `conversion. Choose a different probe or fix the probe catalog entry for "${dt}".`,
+      });
+    });
+  }
+
+  // Rule 14: behavioral-event names unique within the day.
   // A duplicate dio_event name is a hard Spyglass DIOEvents primary-key violation
   // and a trodes_to_nwb ValueError.
   if (Array.isArray(model.behavioral_events) && model.behavioral_events.length > 0) {
@@ -541,7 +587,7 @@ export const rulesValidation = (model) => {
     });
   }
 
-  // Rule 15 (Phase 6, Task 7): task/video epoch dependencies.
+  // Rule 15: task/video epoch dependencies.
   // (a) task epochs are unique across task rows — Spyglass TaskEpoch is keyed by
   //     session + epoch, so the same epoch number in two tasks collides.
   // (b) each non-empty associated_video_files entry has a task_epochs that matches
@@ -606,7 +652,7 @@ export const rulesValidation = (model) => {
     });
   }
 
-  // Rule 16 (Phase 6, Task 8): workspace/dataset identity consistency (Spyglass).
+  // Rule 16: workspace/dataset identity consistency (Spyglass).
   // Within the exported model, a reused identity name must carry identical
   // dependent metadata, else Spyglass raises a divergence error or silently reuses
   // the wrong row. (The editing-time guard is phase 3 / Task 0b; this catches
@@ -654,7 +700,7 @@ export const rulesValidation = (model) => {
     'divergent_task_identity', 'Use a new task name', 'tasks'
   );
 
-  // Rule 10 (Phase 6, Task 2): dangling electrode-group references.
+  // Rule 10: dangling electrode-group references.
   // Every ntrode_electrode_group_channel_map[].electrode_group_id must reference
   // an existing electrode_groups[].id (otherwise the ntrode maps onto nothing
   // and trodes_to_nwb/Spyglass silently drop or misattach the channels).
@@ -681,7 +727,7 @@ export const rulesValidation = (model) => {
     });
   }
 
-  // Rule 17 (Phase 6 follow-up, High 3): behavioral-event DESCRIPTION uniqueness.
+  // Rule 17: behavioral-event DESCRIPTION uniqueness.
   // trodes_to_nwb (convert_dios) keys DIO channels by behavioral_events[].description
   // and raises a ValueError on a duplicate description. (Rule 14 covers `name`.)
   if (Array.isArray(model.behavioral_events) && model.behavioral_events.length > 0) {
@@ -708,7 +754,7 @@ export const rulesValidation = (model) => {
     });
   }
 
-  // Rule 18 (Phase 6 follow-up, Medium): camera id uniqueness.
+  // Rule 18: camera id uniqueness.
   // The converter names NWB camera devices `camera_device {id}` and videos
   // dereference that exact name, so duplicate cameras[].id collide downstream.
   if (Array.isArray(model.cameras) && model.cameras.length > 0) {
@@ -735,7 +781,7 @@ export const rulesValidation = (model) => {
     });
   }
 
-  // Rule 19 (Phase 6 follow-up, High 2): multi-shank bad_channels are ignored
+  // Rule 19: multi-shank bad_channels are ignored
   // downstream. convert_yaml.add_electrode_groups uses ONLY the first ntrode row
   // matching an electrode group for `bad_channels` (then tests every probe
   // electrode against it). So bad_channels marked on a *later* row of a multi-row

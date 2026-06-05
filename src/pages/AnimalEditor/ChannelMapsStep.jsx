@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import { getChannelCount } from '../../utils/deviceTypeUtils';
+import { getChannelCount, getShankCount } from '../../utils/deviceTypeUtils';
 import './ChannelMapsStep.scss';
 
 /**
@@ -93,6 +93,7 @@ export default function ChannelMapsStep({ animal, onEditChannelMap }) {
             <th>Device Type</th>
             <th>Location</th>
             <th>Channels</th>
+            <th>Shanks</th>
             <th>Map Status</th>
             <th>Actions</th>
           </tr>
@@ -104,6 +105,7 @@ export default function ChannelMapsStep({ animal, onEditChannelMap }) {
               <td data-label="Device Type">{group.device_type}</td>
               <td data-label="Location">{group.location}</td>
               <td data-label="Channels">{getChannelCount(group.device_type)}</td>
+              <td data-label="Shanks">{getShankCount(group.device_type)}</td>
               <td data-label="Map Status">
                 <span className={`status-badge status-${getMapStatus(group)}`}>
                   {getMapStatus(group)}

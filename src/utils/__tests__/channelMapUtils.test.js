@@ -423,4 +423,73 @@ describe('channelMapUtils', () => {
       expect(nextNtrodeId(existingMaps)).toBe(0);
     });
   });
+  // Probe Metadata Contract: the generator builds one ntrode per shank from the
+  // VERIFIED probe catalog (converter truth), not from length-math. For even
+  // probes the output is BYTE-IDENTICAL to the prior generator; the 64c-3s probe
+  // is now generated correctly (uneven 21/21/22 partition covering ids 0..63).
+  describe('catalog-driven generation (Probe Metadata Contract)', () => {
+    const group = (id, device_type) => ({
+      id,
+      device_type,
+      location: 'CA1',
+      targeted_location: 'CA1',
+      targeted_x: 1.0,
+      targeted_y: 2.0,
+      targeted_z: 3.0,
+      units: 'mm',
+    });
+
+    // Reference even-probe output computed from the prior (correct) generator,
+    // so a regression on even probes is caught byte-identically.
+    const evenBlock = (offset, len) =>
+      Object.fromEntries(Array.from({ length: len }, (_, i) => [i, offset + i]));
+
+    it('128c-4s8mm6cm-20um-40um-sl is byte-identical (4 shanks, 0..31/32..63/64..95/96..127)', () => {
+      const result = generateChannelMapsForGroup(group(0, '128c-4s8mm6cm-20um-40um-sl'));
+      expect(result).toHaveLength(4);
+      expect(result[0].map).toEqual(evenBlock(0, 32));
+      expect(result[1].map).toEqual(evenBlock(32, 32));
+      expect(result[2].map).toEqual(evenBlock(64, 32));
+      expect(result[3].map).toEqual(evenBlock(96, 32));
+      expect(result.map((n) => n.ntrode_id)).toEqual([0, 1, 2, 3]);
+    });
+
+    it('32c-2s8mm6cm-20um-40um-dl is byte-identical (2 shanks, 0..15/16..31)', () => {
+      const result = generateChannelMapsForGroup(group(0, '32c-2s8mm6cm-20um-40um-dl'));
+      expect(result).toHaveLength(2);
+      expect(result[0].map).toEqual(evenBlock(0, 16));
+      expect(result[1].map).toEqual(evenBlock(16, 16));
+    });
+
+    it('64c-4s6mm6cm-20um-40um-dl is byte-identical (4 shanks, 16 per shank)', () => {
+      const result = generateChannelMapsForGroup(group(0, '64c-4s6mm6cm-20um-40um-dl'));
+      expect(result).toHaveLength(4);
+      expect(result[0].map).toEqual(evenBlock(0, 16));
+      expect(result[1].map).toEqual(evenBlock(16, 16));
+      expect(result[2].map).toEqual(evenBlock(32, 16));
+      expect(result[3].map).toEqual(evenBlock(48, 16));
+    });
+
+    it('tetrode_12.5 is byte-identical (1 shank, 0..3)', () => {
+      const result = generateChannelMapsForGroup(group(0, 'tetrode_12.5'));
+      expect(result).toHaveLength(1);
+      expect(result[0].map).toEqual({ 0: 0, 1: 1, 2: 2, 3: 3 });
+    });
+
+    it('64c-3s generates a converter-valid uneven 21/21/22 map covering ids 0..63', () => {
+      const result = generateChannelMapsForGroup(group(0, '64c-3s6mm6cm-20um-40um-sl'));
+      expect(result).toHaveLength(3); // 3 shanks
+
+      // Per-shank local keys are 0..(len-1); values are the shank's electrode ids.
+      expect(result[0].map).toEqual(evenBlock(0, 21));   // keys 0..20 -> 0..20
+      expect(result[1].map).toEqual(evenBlock(21, 21));  // keys 0..20 -> 21..41
+      expect(result[2].map).toEqual(evenBlock(42, 22));  // keys 0..21 -> 42..63
+
+      expect(result.map((n) => Object.keys(n.map).length)).toEqual([21, 21, 22]);
+
+      // Across the group the values cover 0..63 exactly once (no dropped 60..63).
+      const allValues = result.flatMap((n) => Object.values(n.map)).sort((a, b) => a - b);
+      expect(allValues).toEqual(Array.from({ length: 64 }, (_, i) => i));
+    });
+  });
 });

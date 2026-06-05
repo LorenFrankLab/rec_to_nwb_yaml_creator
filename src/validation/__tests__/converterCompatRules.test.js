@@ -1,5 +1,5 @@
 /**
- * Phase 6 follow-up — converter-compatibility rules (verified against trodes_to_nwb).
+ * Converter-compatibility validation rules (verified against trodes_to_nwb).
  *
  * - Duplicate behavioral_events[].description → hard ValueError in convert_dios
  *   (DIO channels are keyed by description, raising on duplicates).
@@ -17,7 +17,7 @@ import { rulesValidation } from '../rulesValidation';
 
 const codes = (issues) => issues.map((i) => i.code);
 
-describe('Phase 6 follow-up: duplicate DIO description (High 3)', () => {
+describe('duplicate DIO description', () => {
   it('errors when two behavioral_events share a description', () => {
     const issues = rulesValidation({
       behavioral_events: [
@@ -41,7 +41,7 @@ describe('Phase 6 follow-up: duplicate DIO description (High 3)', () => {
   });
 });
 
-describe('Phase 6 follow-up: duplicate camera id (Medium)', () => {
+describe('duplicate camera id', () => {
   it('errors when two cameras share an id', () => {
     const issues = rulesValidation({
       cameras: [
@@ -64,7 +64,7 @@ describe('Phase 6 follow-up: duplicate camera id (Medium)', () => {
   });
 });
 
-describe('Phase 6 follow-up: multi-shank bad_channels first-row semantics (High 2)', () => {
+describe('multi-shank bad_channels first-row semantics', () => {
   const fourShankGroup = (id) => ({
     id,
     device_type: '128c-4s8mm6cm-20um-40um-sl',
@@ -105,7 +105,7 @@ describe('Phase 6 follow-up: multi-shank bad_channels first-row semantics (High 
   });
 });
 
-describe('Phase 6 follow-up: fail-closed on malformed shapes (Medium)', () => {
+describe('fail-closed on malformed shapes', () => {
   it('does not throw and returns an array for grossly malformed input', () => {
     const malformed = {
       cameras: 'not-an-array',

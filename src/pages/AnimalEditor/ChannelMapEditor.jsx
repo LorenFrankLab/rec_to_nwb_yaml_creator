@@ -1,8 +1,8 @@
 import React, { useState, useId } from 'react';
 import PropTypes from 'prop-types';
 import Modal from '../../components/Modal/Modal';
-import { deviceTypeMap } from '../../ntrode/deviceTypes';
 import { getChannelCount } from '../../utils/deviceTypeUtils';
+import { getProbeShanks } from '../../ntrode/probeCatalog';
 import InfoIcon from '../../element/InfoIcon';
 import './ChannelMapEditor.scss';
 
@@ -15,6 +15,12 @@ import './ChannelMapEditor.scss';
  * - Readonly "Ntrode Id" field with InfoIcon
  * - "Bad Channels" checkbox grid (NOT comma-separated input)
  * - "Map" section with select dropdowns (NOT number inputs)
+ *
+ * Per-shank grids are derived from the VERIFIED probe catalog (`getProbeShanks`),
+ * matching ntrode rows to shanks BY ORDER, so an UNEVEN probe like
+ * `64c-3s6mm6cm-20um-40um-sl` (21/21/22) renders its third shank's full 22
+ * channels instead of a uniform 21. Falls back to the row's own map keys when the
+ * device is uncatalogued or there are more rows than shanks.
  *
  * @param {object} props Component properties
  * @param {object} props.electrodeGroup Electrode group being edited
@@ -36,9 +42,28 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
   // Inline validation errors shown on save (replaces a blocking alert()).
   const [validationErrors, setValidationErrors] = useState([]);
 
-  // Get channel array for this device type (e.g., [0,1,2,3] for tetrode)
-  const channelArray = deviceTypeMap(electrodeGroup.device_type);
+  // Per-shank electrode-id partition (converter truth), matched to ntrode rows by
+  // order. The maximum map VALUE is the total probe channel count − 1.
+  const probeShanks = getProbeShanks(electrodeGroup.device_type);
   const maxChannelValue = getChannelCount(electrodeGroup.device_type) - 1;
+
+  /**
+   * Local channel keys (0 … len-1) for the ntrode row at `ntrodeIndex`.
+   * Uses the catalog shank for that row; falls back to the row's own map keys
+   * (uncatalogued device or excess rows) so the editor never silently drops keys.
+   * @param {number} ntrodeIndex
+   * @returns {number[]}
+   */
+  const channelKeysForRow = (ntrodeIndex) => {
+    const shank = probeShanks[ntrodeIndex];
+    if (shank) {
+      return shank.electrodeIds.map((_, i) => i);
+    }
+    const map = localChannelMaps[ntrodeIndex]?.map || {};
+    return Object.keys(map)
+      .map(Number)
+      .sort((a, b) => a - b);
+  };
 
   // Handle bad channel checkbox toggle
   const handleBadChannelToggle = (ntrodeIndex, channelIndex, isChecked) => {
@@ -83,7 +108,7 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
   // Handle Save button click
   const handleSave = () => {
     // Validate channel maps before saving
-    const errors = validateChannelMaps(localChannelMaps, electrodeGroup.device_type, channelArray);
+    const errors = validateChannelMaps(localChannelMaps, electrodeGroup.device_type);
 
     if (errors.length > 0) {
       setValidationErrors(errors);
@@ -94,18 +119,19 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
     onSave(localChannelMaps);
   };
 
-  // Validate channel maps for errors
-  const validateChannelMaps = (maps, deviceType, channels) => {
+  // Validate channel maps for errors. Bad-channel indices are probe-local: their
+  // range is the per-shank channel count (derived from the catalog by row order).
+  const validateChannelMaps = (maps, deviceType) => {
     const errors = [];
-    const maxChannelValue = getChannelCount(deviceType) - 1;
-    const channelCount = channels.length;
+    const maxValue = getChannelCount(deviceType) - 1;
+    const shanks = getProbeShanks(deviceType);
 
-    maps.forEach((ntrodeMap) => {
+    maps.forEach((ntrodeMap, ntrodeIndex) => {
       // P0-2: Validate channel values are within range
       Object.entries(ntrodeMap.map).forEach(([chIdx, hwChannel]) => {
-        if (hwChannel !== -1 && (hwChannel < 0 || hwChannel > maxChannelValue)) {
+        if (hwChannel !== -1 && (hwChannel < 0 || hwChannel > maxValue)) {
           errors.push(
-            `Ntrode ${ntrodeMap.ntrode_id}: Channel ${chIdx} maps to invalid hardware channel ${hwChannel} (valid range: 0-${maxChannelValue})`
+            `Ntrode ${ntrodeMap.ntrode_id}: Channel ${chIdx} maps to invalid hardware channel ${hwChannel} (valid range: 0-${maxValue})`
           );
         }
       });
@@ -120,12 +146,15 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
         );
       }
 
-      // P1-2: Validate bad_channels indices are within valid range
+      // P1-2: Validate bad_channels indices are within this shank's local range.
+      const shankLen = shanks[ntrodeIndex]
+        ? shanks[ntrodeIndex].electrodeIds.length
+        : Object.keys(ntrodeMap.map).length;
       const badChannels = ntrodeMap.bad_channels || [];
       badChannels.forEach((badCh) => {
-        if (badCh < 0 || badCh >= channelCount) {
+        if (badCh < 0 || badCh >= shankLen) {
           errors.push(
-            `Ntrode ${ntrodeMap.ntrode_id}: Bad channel index ${badCh} is out of range (valid: 0-${channelCount - 1})`
+            `Ntrode ${ntrodeMap.ntrode_id}: Bad channel index ${badCh} is out of range (valid: 0-${shankLen - 1})`
           );
         }
       });
@@ -190,13 +219,21 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
             <span>Electrode Group: {electrodeGroup.id}</span>
             <span>Device Type: {electrodeGroup.device_type}</span>
             <span>Location: {electrodeGroup.location}</span>
+            <span data-testid="editor-shank-count">
+              {probeShanks.length} shanks
+            </span>
+            <span data-testid="editor-channel-count">
+              {getChannelCount(electrodeGroup.device_type)} channels
+            </span>
             <span data-testid="editor-channel-map-count">{localChannelMaps.length} maps</span>
           </div>
         </div>
 
       {/* Content */}
       <div className="channel-map-editor-content">
-        {localChannelMaps.map((ntrodeMap, ntrodeIndex) => (
+        {localChannelMaps.map((ntrodeMap, ntrodeIndex) => {
+          const channelKeys = channelKeysForRow(ntrodeIndex);
+          return (
           <fieldset key={ntrodeMap.ntrode_id} className="ntrode-fieldset">
             <legend>Shank #{ntrodeIndex + 1}</legend>
 
@@ -225,7 +262,7 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
                   <InfoIcon infoText="Select channels with hardware failures. Only mark channels with true hardware issues, not analysis quality problems." />
                 </legend>
                 <div className="checkbox-list" data-testid={`bad-channels-checkboxes-${ntrodeMap.ntrode_id}`}>
-                  {channelArray.map((channelIndex) => (
+                  {channelKeys.map((channelIndex) => (
                     <div key={channelIndex} className="checkbox-list-item">
                       <input
                         type="checkbox"
@@ -249,7 +286,7 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
                   <InfoIcon infoText="Electrode Map. Right Hand Side is expected mapping. Left Hand Side is actual mapping" />
                 </label>
                 <div className="ntrode-maps">
-                  {channelArray.map((channelIndex) => {
+                  {channelKeys.map((channelIndex) => {
                     // Generate options: -1 (empty), 0 to maxChannelValue
                     const options = [-1, ...Array.from({ length: maxChannelValue + 1 }, (_, i) => i)];
                     const currentValue = ntrodeMap.map[channelIndex] ?? channelIndex;
@@ -278,7 +315,8 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
               </div>
             </div>
           </fieldset>
-        ))}
+          );
+        })}
       </div>
 
       {/* Validation errors (inline, replaces a blocking alert) */}

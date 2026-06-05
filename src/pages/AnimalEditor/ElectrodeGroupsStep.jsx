@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import { deviceTypeMap } from '../../ntrode/deviceTypes';
+import { getChannelCount, getShankCount } from '../../utils/deviceTypeUtils';
 import './ElectrodeGroupsStep.scss';
 
 /**
@@ -43,16 +43,6 @@ function hasFiniteCoordinate(value) {
  */
 export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onAdd, onDelete, onCopy }) {
   const electrodeGroups = animal.devices?.electrode_groups || [];
-
-  /**
-   * Get channel count for a device type
-   * @param {string} deviceType
-   * @returns {number}
-   */
-  function getChannelCount(deviceType) {
-    const channels = deviceTypeMap(deviceType);
-    return channels ? channels.length : 0;
-  }
 
   /**
    * Compute status badge (✓ complete, ⚠ incomplete, ❌ missing required)
@@ -156,6 +146,7 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
             <th>Device Type</th>
             <th>Location</th>
             <th>Channels</th>
+            <th>Shanks</th>
             <th>Status</th>
             <th>Actions</th>
           </tr>
@@ -167,6 +158,7 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
               <td data-label="Device Type">{group.device_type}</td>
               <td data-label="Location">{group.location}</td>
               <td data-label="Channels">{getChannelCount(group.device_type)}</td>
+              <td data-label="Shanks">{getShankCount(group.device_type)}</td>
               <td data-label="Status">
                 {(() => {
                   const key = getStatusKey(group);

@@ -17,6 +17,24 @@ describe('ElectrodeGroupsStep', () => {
 
   const mockOnFieldUpdate = vi.fn();
 
+  it('shows the full catalog channel count for an uneven multi-shank probe (64c-3s = 64)', () => {
+    // ElectrodeGroupsStep must report the catalog channel count (64), not the
+    // length of one shank. The old local helper used deviceTypeMap(...).length,
+    // which is 21 for the uneven 64c-3s probe — a silent under-count.
+    const animal = {
+      id: 'remy',
+      devices: {
+        electrode_groups: [
+          { id: 0, device_type: '64c-3s6mm6cm-20um-40um-sl', location: 'CA1', targeted_location: 'CA1', targeted_x: 1, targeted_y: 2, targeted_z: 3, units: 'mm' },
+        ],
+        ntrode_electrode_group_channel_map: [],
+      },
+    };
+    render(<ElectrodeGroupsStep animal={animal} onFieldUpdate={mockOnFieldUpdate} />);
+    const cell = screen.getByText('64', { selector: '[data-label="Channels"]' });
+    expect(cell).toBeInTheDocument();
+  });
+
   it('renders table with electrode groups', () => {
     render(<ElectrodeGroupsStep animal={mockAnimal} onFieldUpdate={mockOnFieldUpdate} />);
 

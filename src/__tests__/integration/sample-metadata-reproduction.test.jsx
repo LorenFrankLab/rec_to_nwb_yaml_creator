@@ -3,6 +3,8 @@ import { render, waitFor } from '@testing-library/react';
 import { App } from '../../App';
 import { StoreProvider } from '../../state/StoreContext';
 import YAML from 'yaml';
+import { deviceTypeMap } from '../../ntrode/deviceTypes';
+import { isProbeCatalogConsistent } from '../../ntrode/probeCatalog';
 import fs from 'fs';
 import path from 'path';
 
@@ -239,15 +241,17 @@ describe('Sample Metadata Reproduction Integration Test', () => {
     });
 
     it('verifies all device types are supported', () => {
-      const { deviceTypeMap } = require('../../ntrode/deviceTypes');
-
       sampleMetadata.electrode_groups.forEach((electrodeGroup) => {
         const channels = deviceTypeMap(electrodeGroup.device_type);
 
-        // Should return valid channel array
+        // Should return a valid (first-shank) channel array...
         expect(channels).toBeDefined();
         expect(Array.isArray(channels)).toBe(true);
         expect(channels.length).toBeGreaterThan(0);
+
+        // ...and the probe's catalog entry must be internally consistent, so the
+        // app can generate a converter-valid channel map for it.
+        expect(isProbeCatalogConsistent(electrodeGroup.device_type)).toBe(true);
       });
     });
   });

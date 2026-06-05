@@ -1,22 +1,36 @@
 /**
- * Device type metadata mapping
- * Contains channel count and shank count for each supported probe type
+ * Device-type geometry helpers.
+ *
+ * Geometry (channel count, shank count, device-type validity) is derived from the
+ * VERIFIED probe catalog (`src/ntrode/probeCatalog.js`), which transcribes the
+ * trodes_to_nwb probe metadata. The catalog is the single source of truth so the
+ * app can never disagree with the converter about a probe's electrode count or how
+ * its electrodes partition across shanks.
+ */
+
+import {
+  getProbeMetadata,
+  getProbeElectrodeIds,
+} from '../ntrode/probeCatalog';
+
+/**
+ * The supported device/probe types, in their canonical order.
  * @private
  */
-const DEVICE_METADATA = {
-  'tetrode_12.5': { channels: 4, shanks: 1 },
-  'A1x32-6mm-50-177-H32_21mm': { channels: 32, shanks: 1 },
-  '128c-4s8mm6cm-20um-40um-sl': { channels: 128, shanks: 4 },
-  '128c-4s6mm6cm-15um-26um-sl': { channels: 128, shanks: 4 },
-  '128c-4s8mm6cm-15um-26um-sl': { channels: 128, shanks: 4 },
-  '128c-4s6mm6cm-20um-40um-sl': { channels: 128, shanks: 4 },
-  '128c-4s4mm6cm-20um-40um-sl': { channels: 128, shanks: 4 },
-  '128c-4s4mm6cm-15um-26um-sl': { channels: 128, shanks: 4 },
-  '32c-2s8mm6cm-20um-40um-dl': { channels: 32, shanks: 2 },
-  '64c-4s6mm6cm-20um-40um-dl': { channels: 64, shanks: 4 },
-  '64c-3s6mm6cm-20um-40um-sl': { channels: 64, shanks: 3 },
-  'NET-EBL-128ch-single-shank': { channels: 128, shanks: 1 },
-};
+const DEVICE_TYPES = [
+  'tetrode_12.5',
+  'A1x32-6mm-50-177-H32_21mm',
+  '128c-4s8mm6cm-20um-40um-sl',
+  '128c-4s6mm6cm-15um-26um-sl',
+  '128c-4s8mm6cm-15um-26um-sl',
+  '128c-4s6mm6cm-20um-40um-sl',
+  '128c-4s4mm6cm-20um-40um-sl',
+  '128c-4s4mm6cm-15um-26um-sl',
+  '32c-2s8mm6cm-20um-40um-dl',
+  '64c-4s6mm6cm-20um-40um-dl',
+  '64c-3s6mm6cm-20um-40um-sl',
+  'NET-EBL-128ch-single-shank',
+];
 
 /**
  * Returns an array of all available device/probe types
@@ -27,35 +41,43 @@ const DEVICE_METADATA = {
  * // ['tetrode_12.5', 'A1x32-6mm-50-177-H32_21mm', ...]
  */
 export function getDeviceTypes() {
-  return Object.keys(DEVICE_METADATA);
+  return [...DEVICE_TYPES];
 }
 
 /**
- * Returns the number of channels for a given device type
+ * Returns the number of channels (probe electrode ids) for a given device type.
+ *
+ * Derived from the probe catalog: the total number of electrode ids across all
+ * shanks. Returns 0 for an unknown device type.
  *
  * @param {string} deviceType - The device type identifier
  * @returns {number} Number of channels (0 if device type is invalid)
  * @example
  * getChannelCount('tetrode_12.5')     // 4
  * getChannelCount('128c-4s8mm6cm-20um-40um-sl')  // 128
+ * getChannelCount('64c-3s6mm6cm-20um-40um-sl')   // 64
  * getChannelCount('unknown_device')    // 0
  */
 export function getChannelCount(deviceType) {
-  return DEVICE_METADATA[deviceType]?.channels || 0;
+  return getProbeElectrodeIds(deviceType).length;
 }
 
 /**
- * Returns the number of shanks for a given device type
+ * Returns the number of shanks for a given device type.
+ *
+ * Derived from the probe catalog. Returns 0 for an unknown device type.
  *
  * @param {string} deviceType - The device type identifier
  * @returns {number} Number of shanks (0 if device type is invalid)
  * @example
  * getShankCount('tetrode_12.5')  // 1
  * getShankCount('128c-4s8mm6cm-20um-40um-sl')  // 4
+ * getShankCount('64c-3s6mm6cm-20um-40um-sl')   // 3
  * getShankCount('unknown_device')  // 0
  */
 export function getShankCount(deviceType) {
-  return DEVICE_METADATA[deviceType]?.shanks || 0;
+  const meta = getProbeMetadata(deviceType);
+  return meta ? meta.num_shanks : 0;
 }
 
 /**
@@ -69,5 +91,5 @@ export function getShankCount(deviceType) {
  * validateDeviceType(null)             // false
  */
 export function validateDeviceType(deviceType) {
-  return deviceType in DEVICE_METADATA;
+  return typeof deviceType === 'string' && getProbeMetadata(deviceType) !== undefined;
 }

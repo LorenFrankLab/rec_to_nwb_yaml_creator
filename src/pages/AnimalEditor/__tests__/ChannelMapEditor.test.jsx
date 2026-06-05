@@ -288,6 +288,67 @@ describe('ChannelMapEditor', () => {
     });
   });
 
+  describe('Probe Metadata Contract: per-shank grids (uneven 64c-3s)', () => {
+    // 64c-3s partitions 64 electrodes UNEVENLY across 3 shanks (21/21/22). The
+    // editor must derive each shank's grid from the probe catalog, not from a
+    // single uniform channel array — otherwise shank 3 (22 channels) loses keys
+    // 21 (electrode id 63) for both its Map dropdowns and its Bad Channels grid.
+    const group64c3s = {
+      id: 2,
+      device_type: '64c-3s6mm6cm-20um-40um-sl',
+      location: 'CA1',
+      targeted_x: 1.0,
+      targeted_y: 2.0,
+      targeted_z: 3.0,
+      units: 'mm',
+    };
+    const shankMap = (offset, len) =>
+      Object.fromEntries(Array.from({ length: len }, (_, i) => [i, offset + i]));
+    const maps64c3s = [
+      { electrode_group_id: 2, ntrode_id: 0, bad_channels: [], map: shankMap(0, 21) },
+      { electrode_group_id: 2, ntrode_id: 1, bad_channels: [], map: shankMap(21, 21) },
+      { electrode_group_id: 2, ntrode_id: 2, bad_channels: [], map: shankMap(42, 22) },
+    ];
+
+    it('renders the third shank with 22 channels (keys 0..21), not 21', () => {
+      const { container } = render(
+        <ChannelMapEditor
+          electrodeGroup={group64c3s}
+          channelMaps={maps64c3s}
+          onSave={() => {}}
+          onCancel={() => {}}
+        />
+      );
+
+      const fieldsets = container.querySelectorAll('.ntrode-fieldset');
+      expect(fieldsets).toHaveLength(3);
+
+      // Per-shank map dropdown counts must be 21 / 21 / 22.
+      const mapSelectCounts = Array.from(fieldsets).map(
+        (fs) => fs.querySelectorAll('.ntrode-map select').length
+      );
+      expect(mapSelectCounts).toEqual([21, 21, 22]);
+
+      // The third shank's last channel (local key 21) must exist for both the
+      // Map dropdown and the Bad Channels checkbox (electrode id 63).
+      expect(screen.getByTestId('bad-channels-checkboxes-2').querySelectorAll('input[type="checkbox"]')).toHaveLength(22);
+    });
+
+    it('saves without dropping electrode id 63 (no spurious validation error)', () => {
+      const onSave = vi.fn();
+      render(
+        <ChannelMapEditor
+          electrodeGroup={group64c3s}
+          channelMaps={maps64c3s}
+          onSave={onSave}
+          onCancel={() => {}}
+        />
+      );
+      fireEvent.click(screen.getByTestId('editor-save'));
+      expect(onSave).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('Empty channel maps edge case', () => {
     it('should show message when no channel maps exist', () => {
       render(
