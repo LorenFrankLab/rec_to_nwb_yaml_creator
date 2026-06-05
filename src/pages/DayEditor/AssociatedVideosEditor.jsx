@@ -118,7 +118,7 @@ export default function AssociatedVideosEditor({ videos, cameras, tasks, onChang
                   <label htmlFor={`${baseId}-camera-${index}`}>Camera</label>
                   <select
                     id={`${baseId}-camera-${index}`}
-                    value={cameraStale ? '' : (cameraId === '' || cameraId == null ? '' : String(cameraId))}
+                    value={cameraId === '' || cameraId == null ? '' : String(cameraId)}
                     aria-invalid={cameraStale}
                     aria-describedby={cameraStale || epochStale ? staleId : undefined}
                     onChange={(e) =>
@@ -126,6 +126,13 @@ export default function AssociatedVideosEditor({ videos, cameras, tasks, onChang
                     }
                   >
                     <option value="">— select camera —</option>
+                    {/* Surface a stale (removed) camera as a visible, unselectable option
+                        so the user sees the value they entered instead of a blank select. */}
+                    {cameraStale && (
+                      <option value={String(cameraId)} disabled>
+                        Missing camera {String(cameraId)}
+                      </option>
+                    )}
                     {(cameras || []).map((camera) => (
                       <option key={Number(camera.id)} value={String(Number(camera.id))}>
                         {Number(camera.id)} – {camera.camera_name || 'unnamed'}
@@ -144,7 +151,7 @@ export default function AssociatedVideosEditor({ videos, cameras, tasks, onChang
                   <label htmlFor={`${baseId}-epoch-${index}`}>Task epoch</label>
                   <select
                     id={`${baseId}-epoch-${index}`}
-                    value={epochStale ? '' : (epoch === '' || epoch == null ? '' : String(epoch))}
+                    value={epoch === '' || epoch == null ? '' : String(epoch)}
                     aria-invalid={epochStale}
                     aria-describedby={cameraStale || epochStale ? staleId : undefined}
                     onChange={(e) =>
@@ -152,6 +159,12 @@ export default function AssociatedVideosEditor({ videos, cameras, tasks, onChang
                     }
                   >
                     <option value="">— select epoch —</option>
+                    {/* Surface a stale (orphaned) epoch as a visible, unselectable option. */}
+                    {epochStale && (
+                      <option value={String(epoch)} disabled>
+                        Missing epoch {String(epoch)}
+                      </option>
+                    )}
                     {validEpochs.map((value) => (
                       <option key={value} value={String(value)}>
                         {value}

@@ -652,6 +652,36 @@ export const rulesValidation = (model) => {
     });
   }
 
+  // orphaned_file: an associated_files[].task_epochs (scalar) must match some
+  // task's epochs. Preserved (never silently scrubbed) stale references surface
+  // here so the user can repair them instead of losing the value (Load-Time Orphan
+  // Visibility Contract).
+  if (Array.isArray(model.associated_files) && model.associated_files.length > 0) {
+    const taskEpochSet = new Set();
+    (model.tasks || []).forEach((task) => {
+      (Array.isArray(task?.task_epochs) ? task.task_epochs : []).forEach((e) => {
+        if (e !== undefined && e !== null) taskEpochSet.add(e);
+      });
+    });
+    model.associated_files.forEach((file, fi) => {
+      const epoch = file?.task_epochs;
+      if (epoch === undefined || epoch === null || epoch === '') return; // schema owns empty
+      if (!taskEpochSet.has(epoch)) {
+        issues.push({
+          path: `associated_files[${fi}].task_epochs`,
+          field: 'task_epochs',
+          step: 'epochs',
+          actionLabel: 'Fix file epoch',
+          code: 'orphaned_file',
+          severity: 'error',
+          message:
+            `Associated file ${fi + 1}${file.name ? ` ("${file.name}")` : ''} references task ` +
+            `epoch ${epoch}, which no task defines. Point it at an existing epoch or remove it.`,
+        });
+      }
+    });
+  }
+
   // Rule 16: workspace/dataset identity consistency (Spyglass).
   // Within the exported model, a reused identity name must carry identical
   // dependent metadata, else Spyglass raises a divergence error or silently reuses

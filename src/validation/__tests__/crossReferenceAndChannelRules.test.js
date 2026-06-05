@@ -419,6 +419,24 @@ describe('task/video dependency + camera refs', () => {
     expect(orphan.severity).toBe('error');
   });
 
+  it('errors on an orphaned associated_file (task_epochs matches no task)', () => {
+    const issues = rulesValidation({
+      tasks: [{ task_name: 'a', task_description: 'd', task_epochs: [2] }],
+      associated_files: [{ name: 'f.dat', task_epochs: 9 }],
+    });
+    const orphan = issues.find((i) => i.code === 'orphaned_file');
+    expect(orphan).toBeDefined();
+    expect(orphan.severity).toBe('error');
+    expect(orphan.message).toContain('9');
+  });
+
+  it('passes an associated_file with a matching task epoch', () => {
+    expect(codes(rulesValidation({
+      tasks: [{ task_name: 'a', task_description: 'd', task_epochs: [2] }],
+      associated_files: [{ name: 'f.dat', task_epochs: 2 }],
+    }))).not.toContain('orphaned_file');
+  });
+
   it('passes a video with a matching task epoch and valid scalar camera_id', () => {
     const issues = rulesValidation({
       cameras: [{ id: 0, camera_name: 'c' }],

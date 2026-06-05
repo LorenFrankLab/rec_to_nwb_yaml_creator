@@ -189,8 +189,6 @@ describe('Associated video files editor (Task 0b)', () => {
   });
 
   it('names the specific stale epoch value in the error (component-level)', () => {
-    // Direct render bypasses the silent epoch-cleanup backstop so we can assert
-    // the stale-epoch wording names the number.
     render(
       <AssociatedVideosEditor
         videos={[{ name: 'stale_vid', camera_id: 0, task_epochs: 9 }]}
@@ -201,6 +199,24 @@ describe('Associated video files editor (Task 0b)', () => {
     );
     const alert = screen.getByRole('alert');
     expect(alert).toHaveTextContent(/epoch 9/i);
+  });
+
+  it('renders a stale epoch as a visible "Missing epoch N" option, not a blank select', () => {
+    // Load-Time Orphan Visibility: the dropdown must SHOW the stale value (9), so
+    // the user sees what they entered and can re-point it — never silently blank.
+    render(
+      <AssociatedVideosEditor
+        videos={[{ name: 'stale_vid', camera_id: 0, task_epochs: 9 }]}
+        cameras={[{ id: 0, camera_name: 'overhead' }]}
+        tasks={[{ task_epochs: [1, 3] }]}
+        onChange={() => {}}
+      />
+    );
+    const epochSelect = screen.getByLabelText(/task epoch/i);
+    // The stale value is the selected, visible option (an invalid/disabled choice).
+    const staleOption = within(epochSelect).getByRole('option', { name: /missing epoch 9/i });
+    expect(staleOption).toBeInTheDocument();
+    expect(epochSelect).toHaveValue('9');
   });
 
   it('shows an empty-state note for the camera select when the animal has no cameras', async () => {
