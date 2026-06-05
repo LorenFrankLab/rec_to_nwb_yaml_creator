@@ -210,19 +210,65 @@ describe('Repairability matrix — every malformed shape is raised, owned, and c
     expect(updateAnimal).toHaveBeenCalledWith('remy', { cameras: [] });
   });
 
+  it('missing/empty configurationHistory completes the same repair round-trip (rebuild command)', () => {
+    // A real animal (has devices) that lost its history can resolve no day; it must be
+    // raised → owned (animal) → routes → blocks → and the rebuild command clears it.
+    const merged = baseMerged();
+    const brokenAnimal = { id: 'remy', devices: { electrode_groups: [] }, configurationHistory: [] };
+    const issue = validateDay({}, merged, brokenAnimal).find((i) => i.code === 'missing_configuration_history');
+    expect(issue, 'expected missing_configuration_history to be raised').toBeTruthy();
+    expect(issue.severity).toBe('error');
+    expect(issue.ownerSurface).toBe('animal');
+    expect(repairTargetForIssue(issue).surface).toBe('animal');
+    expect(computeStepStatus({}, merged, brokenAnimal).export).toBe('error');
+
+    // Executing the rebuild command delegates to the store action; after the store rebuilds
+    // a single v1 snapshot the issue is gone (proven against the real store in the
+    // DayEditorStepper integration test).
+    expect(issue.repairCommand).toEqual({ type: 'rebuildConfigurationHistory' });
+    const rebuildConfigurationHistory = vi.fn();
+    applyRepairCommand(issue.repairCommand, {
+      actions: { rebuildConfigurationHistory, updateDay: vi.fn(), updateAnimal: vi.fn() },
+      animalId: 'remy',
+      dayId: 'd',
+      animal: brokenAnimal,
+    });
+    expect(rebuildConfigurationHistory).toHaveBeenCalledWith('remy');
+    // A rebuilt (length-1) history no longer raises the missing-history issue.
+    const rebuilt = { ...brokenAnimal, configurationHistory: [{ version: 1, devices: {} }] };
+    expect(
+      validateDay({}, merged, rebuilt).some((i) => i.code === 'missing_configuration_history')
+    ).toBe(false);
+  });
+
   it('covers every malformed/override code the contract produces (day + animal)', () => {
     // Guard against a new code being added without a round-trip: this set must equal the
-    // codes the scenarios + the animal test exercise. Update BOTH when adding a code.
-    const exercised = new Set([...SCENARIOS.map((s) => s.code), 'malformed_animal_collection']);
+    // codes the scenarios + the animal tests exercise. Update BOTH when adding a code.
+    const exercised = new Set([
+      ...SCENARIOS.map((s) => s.code),
+      'malformed_animal_collection',
+      'missing_configuration_history',
+    ]);
     expect([...exercised].sort()).toEqual(
       [
         'malformed_animal_collection',
         'malformed_bad_channel_override',
         'malformed_day_collection',
         'malformed_device_override',
+        'missing_configuration_history',
         'shadowed_geometry_override',
         'stale_bad_channel_override',
       ].sort()
     );
+  });
+
+  it('documents the ONE deliberate navigation-only exception (shadowed_geometry_override)', () => {
+    // Every other commandable malformed shape carries a repairCommand. shadowed_geometry_override
+    // is the sole intentional exception: its override is a well-shaped array whose CONTENTS err,
+    // its destination (DevicesStep) renders a working removal control, and keep-vs-drop is a user
+    // judgment — not an unambiguous reset. This test fails loudly if it ever silently gains or is
+    // expected to carry a command, forcing the exception to stay a conscious decision.
+    const navOnly = SCENARIOS.filter((s) => s.command === null).map((s) => s.code);
+    expect(navOnly).toEqual(['shadowed_geometry_override']);
   });
 });

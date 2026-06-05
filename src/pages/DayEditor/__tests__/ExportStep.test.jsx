@@ -215,6 +215,25 @@ describe('ExportStep', () => {
     expect(screen.getByText(/could not be assembled|missing or corrupt/i)).toBeInTheDocument();
   });
 
+  it('surfaces an EXECUTABLE rebuild repair when configurationHistory is missing/empty (merge throws → merged {})', async () => {
+    // The merge throws on an empty history, so ExportStep falls back to merged={}. The raw
+    // animal gate must still surface the missing-history issue AND offer its executable
+    // rebuild button (not just a dead-end blocked message).
+    const user = userEvent.setup();
+    const onRepair = vi.fn();
+    const { animal, day } = buildRealisticWorkspace();
+    animal.configurationHistory = [];
+    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} onRepair={onRepair} />);
+
+    expect(screen.getByRole('button', { name: /download yaml/i })).toBeDisabled();
+    expect(screen.getByText(/configuration history is missing or empty/i)).toBeInTheDocument();
+    const rebuild = screen.getByRole('button', { name: /^rebuild device configuration history$/i });
+    await user.click(rebuild);
+    expect(onRepair).toHaveBeenCalledWith(
+      expect.objectContaining({ repairCommand: { type: 'rebuildConfigurationHistory' } })
+    );
+  });
+
   it('blocks export AND surfaces a routable repair when animal.cameras is corrupt (raw-animal gate)', () => {
     const { animal, day } = buildRealisticWorkspace();
     animal.cameras = 'nope';

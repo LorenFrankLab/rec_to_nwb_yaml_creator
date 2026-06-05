@@ -118,11 +118,57 @@ describe('validateRawAnimal — malformed animal-owned collections', () => {
     expect(validateRawAnimal(undefined)).toEqual([]);
   });
 
-  it('does NOT flag a MISSING configurationHistory (it fails closed via the merge throw, not laundering)', () => {
-    // Per the raw-shape contract, this path guards only laundering shapes; an absent
-    // configurationHistory is handled by the merge-throw tolerance + ValidationSummary chip,
-    // and flagging it here would false-fire on minimal animal stubs.
+  it('does NOT flag a missing configurationHistory on a minimal animal STUB (no devices record)', () => {
+    // A bare stub (no `devices`) is not a real animal — some callers pass these to test
+    // other codes. Flagging it would false-fire, so the missing-history check requires a
+    // real animal (a `devices` record). The REAL-animal case is covered below.
     expect(validateRawAnimal({ cameras: [] }).some((i) => i.code === 'missing_configuration_history')).toBe(false);
+  });
+
+  it('flags a REAL animal (has devices) whose configurationHistory is MISSING, with a rebuild command', () => {
+    // A real animal that lost its history can resolve no day's probe geometry — the merge
+    // throws and export fails closed, but Phase 2 must make it REPAIRABLE, not just blocked.
+    const issue = validateRawAnimal({
+      id: 'remy',
+      devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [] },
+    }).find((i) => i.code === 'missing_configuration_history');
+    expect(issue).toBeTruthy();
+    expect(issue.severity).toBe('error');
+    expect(issue.ownerSurface).toBe('animal');
+    expect(issue.field).toBe('configurationHistory');
+    expect(issue.repairCommand).toEqual({ type: 'rebuildConfigurationHistory' });
+  });
+
+  it('flags a REAL animal whose configurationHistory is EMPTY ([]) the same way', () => {
+    const issue = validateRawAnimal({
+      id: 'remy',
+      devices: { electrode_groups: [] },
+      configurationHistory: [],
+    }).find((i) => i.code === 'missing_configuration_history');
+    expect(issue).toBeTruthy();
+    expect(issue.repairCommand).toEqual({ type: 'rebuildConfigurationHistory' });
+  });
+
+  it('does NOT flag missing_configuration_history when the history is a valid non-empty array', () => {
+    expect(
+      validateRawAnimal({
+        id: 'remy',
+        devices: { electrode_groups: [] },
+        configurationHistory: [{ version: 1 }],
+      }).some((i) => i.code === 'missing_configuration_history')
+    ).toBe(false);
+  });
+
+  it('does NOT double-flag a non-array history as both malformed and missing', () => {
+    // A non-array history is the laundering shape (malformed_animal_collection); the
+    // missing-history check must not also fire for it.
+    const issues = validateRawAnimal({
+      id: 'remy',
+      devices: { electrode_groups: [] },
+      configurationHistory: 'corrupt',
+    });
+    expect(issues.some((i) => i.code === 'missing_configuration_history')).toBe(false);
+    expect(issues.some((i) => i.code === 'malformed_animal_collection' && i.field === 'configurationHistory')).toBe(true);
   });
 
   it('flags a corrupt nested devices.data_acq_device with a precise animal-routed message', () => {

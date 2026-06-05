@@ -27,7 +27,11 @@ empty state.
   silently dropped).
 - Issue producers attach `repairCommand`: `rawShape.js` (`malformed_day_collection` →
   resetDayCollection; `malformed_animal_collection` → resetAnimalCameras /
-  rebuildConfigurationHistory / resetDataAcqDevice by field) and `validation.js`
+  rebuildConfigurationHistory / resetDataAcqDevice by field; a new
+  `missing_configuration_history` issue makes a REAL animal's missing/empty history — which
+  resolves no day and fails the merge closed — repairable via the same rebuild command,
+  gated on a `devices` record so it never false-fires on minimal animal stubs) and
+  `validation.js`
   `dayOverrideIssues` (whole/geometry-key/bad-channel container/stale/corrupt-value →
   resetDeviceOverrides / removeDeviceOverrideKey / resetBadChannelOverrides /
   removeBadChannelOverrideKey). `normalizeIssue` preserves it. `shadowed_geometry_override`

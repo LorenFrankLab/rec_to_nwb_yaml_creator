@@ -178,11 +178,38 @@ export function validateRawAnimal(animal) {
     );
   }
 
-  // NOTE: a MISSING (null/empty) configurationHistory is intentionally NOT flagged here.
-  // It already fails closed (the merge throws → ExportStep/DayEditorStepper render blocked,
-  // ValidationSummary flags the day "cannot read"), and flagging it in this per-`validateDay`
-  // path would false-fire on the minimal animal stubs some callers pass. Only the laundering
-  // shapes (present-but-non-array collections) belong here.
+  // A MISSING (null/undefined) or EMPTY ([]) configurationHistory on a REAL animal can
+  // resolve no day's probe geometry — `resolveDayConfig` throws and export fails closed.
+  // Phase 2 makes that REPAIRABLE rather than only blocked: surface a commandable rebuild
+  // issue whose `rebuildConfigurationHistory` command reseeds a v1 snapshot from the
+  // animal's current devices. "Real animal" is gated on a `devices` record so this never
+  // false-fires on the minimal animal stubs some callers pass (which have no devices). A
+  // non-array history is NOT handled here — it is the laundering shape already flagged as
+  // `malformed_animal_collection` above (also with a rebuild command) — so the two never
+  // double-flag the same animal.
+  const history = animal.configurationHistory;
+  const historyMissingOrEmpty =
+    history == null || (Array.isArray(history) && history.length === 0);
+  if (isRecord(animal.devices) && historyMissingOrEmpty) {
+    issues.push({
+      code: 'missing_configuration_history',
+      severity: 'error',
+      field: 'configurationHistory',
+      ownerSurface: 'animal',
+      repairStep: 'validation',
+      focusPath: 'configurationHistory',
+      actionLabel: 'Rebuild device configuration history',
+      repairCommand: { type: 'rebuildConfigurationHistory' },
+      // Legacy mirror — consumers read these until Boundary 2 migration.
+      repairSurface: 'animal',
+      step: 'validation',
+      path: 'configurationHistory',
+      message:
+        `This animal's device configuration history is missing or empty, so no recording day ` +
+        `can resolve its probe geometry to export. Rebuild it from the animal's current devices ` +
+        `to clear this error.`,
+    });
+  }
 
   return issues;
 }

@@ -710,6 +710,7 @@ export const SURFACE_BY_CODE = {
   shadowed_geometry_override: 'day',
   malformed_day_collection: 'day',
   malformed_animal_collection: 'animal',
+  missing_configuration_history: 'animal',
   missing_camera: 'day',
   partial_configuration: 'day',
   // No editable in-app target — read-only identity (slash ids). The explanatory

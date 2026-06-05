@@ -350,6 +350,37 @@ describe('DayEditorStepper', () => {
     expect(screen.queryByText(/"cameras" is corrupt/i)).not.toBeInTheDocument();
   });
 
+  // Phase 2: a real animal whose configurationHistory is missing/empty resolves no day —
+  // the merge throws and export fails closed. It must still be REPAIRABLE: a "Rebuild device
+  // configuration history" button executes rebuildConfigurationHistory through the store,
+  // reseeding a v1 snapshot from the animal's current devices, and the issue clears.
+  it('executes a configurationHistory rebuild in place (missing history → Rebuild clears it)', async () => {
+    const user = userEvent.setup();
+    const brokenState = {
+      workspace: {
+        animals: { remy: { ...mockAnimal, configurationHistory: [] } },
+        days: { 'remy-2023-06-22': mockDay },
+        settings: {},
+      },
+    };
+
+    render(
+      <StoreProvider initialState={brokenState}>
+        <DayEditorStepper />
+      </StoreProvider>
+    );
+
+    await user.click(screen.getByRole('button', { name: /^Validation/i }));
+
+    const rebuildButton = screen.getByRole('button', { name: /^rebuild device configuration history$/i });
+    await user.click(rebuildButton);
+
+    expect(
+      screen.queryByRole('button', { name: /^rebuild device configuration history$/i })
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/configuration history is missing or empty/i)).not.toBeInTheDocument();
+  });
+
   it('does not offer a repair button for a slash session_id (read-only identity dead-end)', async () => {
     const user = userEvent.setup();
 
