@@ -365,6 +365,13 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
           fsGuiYamls={getDayFsGuiYamls(day)}
           cameras={cameras}
           epochOptions={[...validEpochSet(tasks)].sort((a, b) => a - b)}
+          dioOptions={[
+            ...new Set(
+              [...dayBehavioralEvents, ...inheritedBehavioralEvents]
+                .map((e) => e?.name)
+                .filter((n) => typeof n === 'string' && n !== '')
+            ),
+          ]}
           onChange={(next) => onFieldUpdate('fs_gui_yamls', next)}
         />
       )}

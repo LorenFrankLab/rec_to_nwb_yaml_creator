@@ -201,7 +201,8 @@ const VIRUS_INJECTION = [
 const FS_GUI_YAMLS = [
   // camera_id is schema-required (and converter-read); state_script_parameters is a
   // legacy UI-only key the corrected new-path export strips.
-  { name: '/path/to/fs_gui.yaml', epochs: [1], power_in_mW: 0.0, dio_output_name: 'out1', camera_id: 0, state_script_parameters: false, pulseLength: 0 },
+  // dio_output_name must match a behavioral_events[].name (the converter indexes by it).
+  { name: '/path/to/fs_gui.yaml', epochs: [1], power_in_mW: 0.0, dio_output_name: 'reward_left', camera_id: 0, state_script_parameters: false, pulseLength: 0 },
 ];
 
 /**

@@ -41,6 +41,8 @@ const FIBER_FIELDS = [
   { name: 'roll_in_deg', label: 'Roll (deg)', type: 'number' },
   { name: 'pitch_in_deg', label: 'Pitch (deg)', type: 'number' },
   { name: 'yaw_in_deg', label: 'Yaw (deg)', type: 'number' },
+  // Coordinate reference — required by trodes_to_nwb (read unconditionally).
+  { name: 'reference', label: 'Coordinate reference', type: 'text' },
 ];
 
 const VIRUS_FIELDS = [
@@ -58,6 +60,8 @@ const VIRUS_FIELDS = [
   { name: 'roll_in_deg', label: 'Roll (deg)', type: 'number' },
   { name: 'pitch_in_deg', label: 'Pitch (deg)', type: 'number' },
   { name: 'yaw_in_deg', label: 'Yaw (deg)', type: 'number' },
+  // Coordinate reference — required by trodes_to_nwb (read unconditionally).
+  { name: 'reference', label: 'Coordinate reference', type: 'text' },
 ];
 
 /**
@@ -67,6 +71,17 @@ const VIRUS_FIELDS = [
 function emptyItem(fields) {
   // Every field starts as '' so the input is controlled and the required check fires.
   return Object.fromEntries(fields.map((f) => [f.name, '']));
+}
+
+/**
+ * True when an array has at least one item carrying a non-empty `name`.
+ * @param items
+ */
+function hasNamedItem(items) {
+  return (
+    Array.isArray(items) &&
+    items.some((it) => typeof it?.name === 'string' && it.name.trim() !== '')
+  );
 }
 
 /** A fresh, enabled-but-empty optogenetics block (one excitation source, no fibers/viruses). */
@@ -160,15 +175,11 @@ export default function OptogeneticsStep({ animal, onUpdate }) {
   // Completeness mirrors the converter gate (and the partial_configuration export rule).
   const completeness = enabled
     ? {
-        // A single source is always pre-seeded, so "present" must mean it has been filled
-        // in (a non-empty name) — otherwise the checklist would claim the source is done
-        // before the user has typed anything.
-        source:
-          opto.opto_excitation_source.length > 0 &&
-          typeof opto.opto_excitation_source[0]?.name === 'string' &&
-          opto.opto_excitation_source[0].name.trim() !== '',
-        fiber: opto.optical_fiber.length > 0,
-        virus: opto.virus_injection.length > 0,
+        // "Present" means filled in (a non-empty name), not just an empty pre-seeded /
+        // added row — otherwise the checklist would read complete before any data exists.
+        source: hasNamedItem(opto.opto_excitation_source),
+        fiber: hasNamedItem(opto.optical_fiber),
+        virus: hasNamedItem(opto.virus_injection),
         software:
           typeof opto.optogenetic_stimulation_software === 'string' &&
           opto.optogenetic_stimulation_software.trim() !== '',

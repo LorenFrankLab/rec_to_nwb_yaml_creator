@@ -27,7 +27,7 @@ import { describe, it, expect } from 'vitest';
 import YAML from 'yaml';
 import fs from 'fs';
 import path from 'path';
-import { validate } from '../../../validation';
+import { validate, schemaValidation } from '../../../validation';
 
 /**
  *
@@ -47,14 +47,14 @@ function loadFixture(category, filename) {
 
 describe('Empty Array Validation (P2)', () => {
   describe('fs_gui_yamls[].epochs empty array bug', () => {
+    // These tests isolate the SCHEMA behavior of fs_gui_yamls[].epochs (minItems), so
+    // they validate with schemaValidation directly. The rules-level requirements that
+    // fs_gui needs complete optogenetics + resolvable camera/epoch/dio references are
+    // covered separately in rulesValidation.test.js.
     it('should REJECT fs_gui_yamls with empty epochs array', () => {
       // ARRANGE: Create YAML with fs_gui_yaml containing empty epochs
       const yaml = {
         ...loadFixture('valid', 'minimal-valid.yml'),
-        // A camera + task so the fs_gui camera_id / epoch references resolve (the
-        // reference-integrity rule is orthogonal to the schema bug under test).
-        cameras: [{ id: 0, meters_per_pixel: 0.001, manufacturer: 'm', model: 'mod', lens: 'l', camera_name: 'c' }],
-        tasks: [{ task_name: 't', task_description: 'd', task_environment: 'e', camera_id: [0], task_epochs: [1, 2, 3] }],
         fs_gui_yamls: [
           {
             name: 'test.yaml',
@@ -67,7 +67,7 @@ describe('Empty Array Validation (P2)', () => {
       };
 
       // ACT: Validate the YAML
-      const issues = validate(yaml);
+      const issues = schemaValidation(yaml);
       const isValid = issues.length === 0;
 
       // ASSERT: Should REJECT empty epochs array (currently FAILS - bug exists)
@@ -83,8 +83,6 @@ describe('Empty Array Validation (P2)', () => {
       // ARRANGE: Valid fs_gui_yaml with one epoch
       const yaml = {
         ...loadFixture('valid', 'minimal-valid.yml'),
-        cameras: [{ id: 0, meters_per_pixel: 0.001, manufacturer: 'm', model: 'mod', lens: 'l', camera_name: 'c' }],
-        tasks: [{ task_name: 't', task_description: 'd', task_environment: 'e', camera_id: [0], task_epochs: [1, 2, 3] }],
         fs_gui_yamls: [
           {
             name: 'test.yaml',
@@ -97,7 +95,7 @@ describe('Empty Array Validation (P2)', () => {
       };
 
       // ACT
-      const issues = validate(yaml);
+      const issues = schemaValidation(yaml);
       const isValid = issues.length === 0;
 
       // ASSERT: Should ACCEPT
@@ -109,8 +107,6 @@ describe('Empty Array Validation (P2)', () => {
       // ARRANGE: Valid fs_gui_yaml with multiple epochs
       const yaml = {
         ...loadFixture('valid', 'minimal-valid.yml'),
-        cameras: [{ id: 0, meters_per_pixel: 0.001, manufacturer: 'm', model: 'mod', lens: 'l', camera_name: 'c' }],
-        tasks: [{ task_name: 't', task_description: 'd', task_environment: 'e', camera_id: [0], task_epochs: [1, 2, 3] }],
         fs_gui_yamls: [
           {
             name: 'test.yaml',
@@ -123,7 +119,7 @@ describe('Empty Array Validation (P2)', () => {
       };
 
       // ACT
-      const issues = validate(yaml);
+      const issues = schemaValidation(yaml);
       const isValid = issues.length === 0;
 
       // ASSERT: Should ACCEPT

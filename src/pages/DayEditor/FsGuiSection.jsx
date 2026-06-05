@@ -21,9 +21,10 @@ function emptyFsGui() {
  * @param {Array} root0.fsGuiYamls - day.fs_gui_yamls.
  * @param {Array} root0.cameras - animal.cameras (id + camera_name) for the camera select.
  * @param {number[]} root0.epochOptions - Task-epoch numbers defined on this day.
+ * @param {string[]} root0.dioOptions - Behavioral-event names for the DIO-output select.
  * @param {Function} root0.onChange - `(nextFsGuiYamls)` updater.
  */
-export default function FsGuiSection({ fsGuiYamls, cameras, epochOptions, onChange }) {
+export default function FsGuiSection({ fsGuiYamls, cameras, epochOptions, dioOptions, onChange }) {
   const items = Array.isArray(fsGuiYamls) ? fsGuiYamls : [];
 
   const addItem = () => onChange([...items, emptyFsGui()]);
@@ -80,13 +81,27 @@ export default function FsGuiSection({ fsGuiYamls, cameras, epochOptions, onChan
             </label>
 
             <label htmlFor={`fsgui-dio-${index}`} className="opto-field">
-              <span>DIO output name</span>
-              <input
-                id={`fsgui-dio-${index}`}
-                type="text"
-                value={item.dio_output_name ?? ''}
-                onChange={(e) => updateItem(index, { dio_output_name: e.target.value })}
-              />
+              <span>DIO output (behavioral event)</span>
+              {dioOptions.length === 0 ? (
+                <input
+                  id={`fsgui-dio-${index}`}
+                  type="text"
+                  value={item.dio_output_name ?? ''}
+                  onChange={(e) => updateItem(index, { dio_output_name: e.target.value })}
+                  placeholder="Add behavioral events first"
+                />
+              ) : (
+                <select
+                  id={`fsgui-dio-${index}`}
+                  value={item.dio_output_name ?? ''}
+                  onChange={(e) => updateItem(index, { dio_output_name: e.target.value })}
+                >
+                  <option value="">— select DIO event —</option>
+                  {dioOptions.map((name) => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              )}
             </label>
 
             <label htmlFor={`fsgui-camera-${index}`} className="opto-field">
@@ -156,6 +171,7 @@ FsGuiSection.propTypes = {
   fsGuiYamls: PropTypes.array,
   cameras: PropTypes.array,
   epochOptions: PropTypes.arrayOf(PropTypes.number),
+  dioOptions: PropTypes.arrayOf(PropTypes.string),
   onChange: PropTypes.func.isRequired,
 };
 
@@ -163,4 +179,5 @@ FsGuiSection.defaultProps = {
   fsGuiYamls: [],
   cameras: [],
   epochOptions: [],
+  dioOptions: [],
 };

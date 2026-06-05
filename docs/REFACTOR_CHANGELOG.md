@@ -65,6 +65,27 @@ Review fixes (code-reviewer, ux-reviewer, silent-failure-hunter), applied in-pha
   incomplete notice now leads with the user consequence ("your exported file will contain no
   optogenetics data") rather than the tool name.
 
+Second review round (converter-contract gaps verified against trodes_to_nwb `main`):
+- **`reference` is converter-required for optical fibers + virus injections.** trodes_to_nwb reads
+  `optical_fiber[].reference` / `virus_injection[].reference` unconditionally (KeyError if missing),
+  but the schema does not require it. Added the field to the editor and a `missing_opto_reference`
+  rule so a UI-clean session can't crash conversion.
+- **Stale `fs_gui_yamls` after opto-off.** FsGUI rows make the converter call
+  `add_optogenetic_epochs`, which dereferences opto lab metadata that only exists when the
+  all-or-nothing gate passed — so FsGUI rows present with incomplete/off optogenetics crashes
+  conversion. Added a `fs_gui_requires_optogenetics` rule (error).
+- **`fs_gui_yamls[].dio_output_name` must name a behavioral event** (the converter indexes
+  `behavioral_events[dio_output_name]`). Added a `dangling_dio_output` rule and made the editor
+  field a controlled select of behavioral-event names; corrected the opto parity fixture
+  (`dio_output_name` now matches a real behavioral event).
+- **Schema-error repair routing.** `deriveSurfaceFromPath` now routes opto/fiber/virus schema
+  errors to the Animal Editor and FsGUI errors to the Day Editor (FsGUI checked before the camera
+  rule, since a `fs_gui_yamls[].camera_id` path contains "camera").
+- **Honest completeness.** The editor's fiber/virus completeness now requires a named row (an
+  empty added row no longer reads "complete").
+- Verified non-issue (no change): opto-on with zero FsGUI protocols is valid — the converter
+  writes the implant metadata and simply logs "no opto epochs".
+
 Gate: full vitest, golden baselines byte-identical, 0 lint errors, clean build. Branch not merged.
 
 ---

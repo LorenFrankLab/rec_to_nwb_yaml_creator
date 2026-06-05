@@ -115,6 +115,35 @@ export const rulesValidation = (model) => {
     });
   }
 
+  // Rule 3c: optical fibers and virus injections must carry a `reference`. trodes_to_nwb
+  // reads `optical_fiber[].reference` / `virus_injection[].reference` UNCONDITIONALLY
+  // (`metadata["reference"]`, KeyError if missing) in make_optical_fiber/make_virus_injection.
+  // The schema does NOT require it and the editor must collect it, so an item lacking a
+  // non-empty reference would crash conversion — block it here.
+  const nonEmptyStr = (v) => typeof v === 'string' && v.trim() !== '';
+  [
+    ['optical_fiber', model.optical_fiber],
+    ['virus_injection', model.virus_injection],
+  ].forEach(([key, items]) => {
+    if (!Array.isArray(items)) return;
+    items.forEach((item, i) => {
+      if (!nonEmptyStr(item?.reference)) {
+        issues.push({
+          path: `${key}[${i}].reference`,
+          field: 'reference',
+          code: 'missing_opto_reference',
+          repairSurface: 'animal',
+          severity: 'error',
+          message:
+            `${key === 'optical_fiber' ? 'Optical fiber' : 'Virus injection'} ${i + 1}` +
+            `${nonEmptyStr(item?.name) ? ` ("${item.name}")` : ''} is missing a coordinate ` +
+            `reference (e.g. "Bregma at the cortical surface"). trodes_to_nwb requires it and ` +
+            `crashes without it.`,
+        });
+      }
+    });
+  });
+
   // Rule 3b: exactly one excitation source. trodes_to_nwb raises a ValueError when
   // opto_excitation_source has more than one entry ("Multiple optogenetic sources are
   // not supported"), so a 2+-source session must block export.
@@ -817,6 +846,41 @@ export const rulesValidation = (model) => {
         if (e !== undefined && e !== null) taskEpochSet.add(e);
       });
     });
+    // Behavioral-event names the FsGUI dio_output_name can point at (the converter
+    // indexes nwbfile...behavioral_events[dio_output_name], a KeyError on a miss).
+    const behavioralEventNames = new Set(
+      (Array.isArray(model.behavioral_events) ? model.behavioral_events : [])
+        .map((e) => e?.name)
+        .filter((n) => typeof n === 'string' && n !== '')
+    );
+
+    // FsGUI epochs make the converter call add_optogenetic_epochs, which dereferences the
+    // optogenetics lab metadata that add_optogenetics only writes when the all-or-nothing
+    // gate passed. So FsGUI rows REQUIRE a complete optogenetics configuration — otherwise
+    // conversion crashes (KeyError on optogenetic_experiment_metadata). This also catches
+    // a stale fs_gui block left behind after optogenetics was turned off.
+    const optoComplete =
+      model.opto_excitation_source?.length > 0 &&
+      model.optical_fiber?.length > 0 &&
+      model.virus_injection?.length > 0 &&
+      typeof model.optogenetic_stimulation_software === 'string' &&
+      model.optogenetic_stimulation_software.trim() !== '';
+    if (!optoComplete) {
+      issues.push({
+        path: 'fs_gui_yamls',
+        field: 'fs_gui_yamls',
+        step: 'epochs',
+        actionLabel: 'Complete or remove FsGUI',
+        code: 'fs_gui_requires_optogenetics',
+        repairSurface: 'day',
+        severity: 'error',
+        message:
+          `FsGUI optogenetics protocols are present, but the animal's optogenetics ` +
+          `configuration is incomplete (or off). trodes_to_nwb crashes converting FsGUI ` +
+          `protocols without the full optogenetics implant metadata. Complete optogenetics ` +
+          `in the Animal Editor, or remove these FsGUI protocols.`,
+      });
+    }
 
     model.fs_gui_yamls.forEach((fsGui, fi) => {
       const cid = fsGui?.camera_id;
@@ -853,6 +917,25 @@ export const rulesValidation = (model) => {
           });
         }
       });
+
+      // dio_output_name must name an existing behavioral (DIO) event — the converter
+      // indexes behavioral_events by it. A blank value is owned by the schema required check.
+      const dio = fsGui?.dio_output_name;
+      if (typeof dio === 'string' && dio.trim() !== '' && !behavioralEventNames.has(dio)) {
+        issues.push({
+          path: `fs_gui_yamls[${fi}].dio_output_name`,
+          field: 'dio_output_name',
+          step: 'epochs',
+          actionLabel: 'Fix FsGUI DIO output',
+          code: 'dangling_dio_output',
+          repairSurface: 'day',
+          severity: 'error',
+          message:
+            `FsGUI protocol ${fi + 1}${fsGui.name ? ` ("${fsGui.name}")` : ''} uses DIO output ` +
+            `"${dio}", which no behavioral event defines. trodes_to_nwb looks up the behavioral ` +
+            `event by this name and fails if it is missing — use an existing behavioral event name.`,
+        });
+      }
     });
   }
 

@@ -52,9 +52,12 @@ describe('OptogeneticsStep', () => {
 
     await user.type(screen.getByLabelText(/setup name/i), 'LED-470');
     await user.click(screen.getByRole('button', { name: /add optical fiber/i }));
+    await user.type(screen.getByLabelText(/fiber implant name/i), 'Fiber 1');
     await user.click(screen.getByRole('button', { name: /add virus injection/i }));
+    await user.type(screen.getByLabelText(/injection name/i), 'Injection 1');
 
-    // Named source + fiber + virus + software all present → the incomplete notice clears.
+    // Named source + named fiber + named virus + software all present → the incomplete
+    // notice clears (empty pre-seeded/added rows do NOT count as complete).
     expect(screen.queryByText(/no optogenetics data/i)).not.toBeInTheDocument();
   });
 

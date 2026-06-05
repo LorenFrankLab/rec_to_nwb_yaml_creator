@@ -775,6 +775,17 @@ function deriveSurfaceFromPath(issue) {
     return 'day';
   }
 
+  // FsGUI protocols are DAY-level (epochs + camera refs live on the day). Route their
+  // schema errors to the Day Editor — and BEFORE the camera check below, since a
+  // `fs_gui_yamls[].camera_id` path contains "camera".
+  if (path.includes('fs_gui')) return 'day';
+
+  // Animal-level optogenetics sections (excitation source, optical fiber, virus injection,
+  // software) are edited in the Animal Editor's Optogenetics step.
+  if (path.includes('opto') || path.includes('virus') || path.includes('fiber')) {
+    return 'animal';
+  }
+
   // Animal-Editor-owned domains: electrode geometry, channel maps, cameras, data-acq devices.
   if (
     path.includes('electrode') ||

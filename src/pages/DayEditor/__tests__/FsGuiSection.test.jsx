@@ -50,7 +50,7 @@ describe('FsGuiSection', () => {
     await user.click(screen.getByRole('button', { name: /add fsgui protocol/i }));
     await user.type(screen.getByLabelText(/protocol file name/i), 'p.yaml');
     await user.type(screen.getByLabelText(/^power/i), '5');
-    await user.type(screen.getByLabelText(/dio output name/i), 'Laser');
+    await user.type(screen.getByLabelText(/dio output/i), 'Laser');
     await user.selectOptions(screen.getByLabelText(/^camera$/i), '1');
     await user.click(screen.getByLabelText(/epoch 2/i));
 
@@ -73,5 +73,35 @@ describe('FsGuiSection', () => {
   it('renders an empty state before any protocol is added', () => {
     render(<Harness />);
     expect(screen.getByText(/no fsgui protocols added/i)).toBeInTheDocument();
+  });
+
+  it('offers the DIO output as a controlled select of behavioral event names', async () => {
+    const user = userEvent.setup();
+    let latest = null;
+    /**
+     *
+     */
+    function Capture() {
+      const [items, setItems] = useState([]);
+      latest = items;
+      return (
+        <FsGuiSection
+          fsGuiYamls={items}
+          cameras={CAMERAS}
+          epochOptions={[1]}
+          dioOptions={['reward_left', 'reward_right']}
+          onChange={setItems}
+        />
+      );
+    }
+    render(<Capture />);
+
+    await user.click(screen.getByRole('button', { name: /add fsgui protocol/i }));
+    // It's a select (not free text) so a dangling DIO name cannot be typed.
+    const dio = screen.getByLabelText(/dio output/i);
+    expect(dio.tagName).toBe('SELECT');
+    await user.selectOptions(dio, 'reward_right');
+
+    expect(latest[0].dio_output_name).toBe('reward_right');
   });
 });
