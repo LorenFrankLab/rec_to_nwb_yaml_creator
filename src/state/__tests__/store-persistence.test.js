@@ -132,6 +132,62 @@ describe('useStore persistence', () => {
     expect(result.current.persistence.saveError).toMatch(/could not save/i);
   });
 
+  it('keeps the unsaved-work guard armed after a failed autosave', () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() => useStore());
+
+    vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceededError');
+    });
+
+    act(() => {
+      result.current.actions.createAnimal('remy', { species: 'Rattus norvegicus' });
+    });
+    act(() => {
+      vi.advanceTimersByTime(600);
+    });
+
+    // The write never succeeded: do NOT report a clean state. The pending-write flag
+    // stays set and saveError is populated, so the beforeunload guard remains armed.
+    expect(result.current.persistence.saveError).toMatch(/could not save/i);
+    expect(result.current.persistence.hasPendingWrite).toBe(true);
+  });
+
+  it('hydrates a structurally-empty blob and surfaces a recovery notice naming the missing sections', () => {
+    // A valid-but-empty workspace blob (e.g. from an aborted/older write) must hydrate
+    // cleanly rather than crash a consumer on Object.keys(undefined).
+    seedBlob({});
+
+    const { result } = renderHook(() => useStore());
+
+    expect(result.current.model.workspace.animals).toEqual({});
+    expect(result.current.model.workspace.days).toEqual({});
+    expect(result.current.persistence.loadNotice).toMatch(/animals/);
+    expect(result.current.persistence.loadNotice).toMatch(/days/);
+  });
+
+  it('recovery notice names only the genuinely-missing section (settings), not present ones', () => {
+    seedBlob({ animals: {}, days: {} }); // only settings absent
+
+    const { result } = renderHook(() => useStore());
+
+    expect(result.current.persistence.loadNotice).toMatch(/settings/);
+    expect(result.current.persistence.loadNotice).not.toMatch(/animals/);
+    expect(result.current.persistence.loadNotice).not.toMatch(/days/);
+  });
+
+  it('discards (not recovers) a corrupt-typed section: discard notice + cleared blob + empty workspace', () => {
+    // A present-but-wrong-typed section is corruption, not absence: the store must route
+    // it to the loud discard path (notice + clear blob), never the recovery path.
+    seedBlob({ animals: ['corrupt'], days: {}, settings: {} });
+
+    const { result } = renderHook(() => useStore());
+
+    expect(result.current.persistence.loadNotice).toMatch(/could not be restored/i);
+    expect(window.localStorage.getItem(WORKSPACE_STORAGE_KEY)).toBeNull();
+    expect(result.current.model.workspace.animals).toEqual({});
+  });
+
   it('exposes persistence.enabled reflecting the flag (on by default)', () => {
     const { result } = renderHook(() => useStore());
     expect(result.current.persistence.enabled).toBe(true);

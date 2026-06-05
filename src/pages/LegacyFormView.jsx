@@ -139,9 +139,13 @@ export function LegacyFormView() {
     // Excluded fields section
     if (hasExclusions) {
       message += `\n\nEXCLUDED (${excludedFields.length}):\n`;
-      message += excludedFields.map(({ field, reason }) =>
-        `  ${formatFieldName(field)}: ${reason}`
-      ).join('\n');
+      message += excludedFields.map(({ field, reason, paths }) => {
+        // Name the exact nested field(s) at fault (e.g. cameras[0].camera_name) so the
+        // user knows precisely what was not carried forward, not just the section. Empty
+        // for type-mismatch / document-level exclusions, which have no sub-paths.
+        const detail = paths && paths.length > 0 ? ` (${paths.join(', ')})` : '';
+        return `  ${formatFieldName(field)}: ${reason}${detail}`;
+      }).join('\n');
     }
 
     setAlertState({

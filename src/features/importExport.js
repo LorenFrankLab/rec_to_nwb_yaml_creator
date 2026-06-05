@@ -17,6 +17,24 @@ import {
 import { emptyFormData, genderAcronym } from '../valueList';
 
 /**
+ * Extracts the top-level form field id from a normalized validation path.
+ *
+ * Partial import excludes by top-level section, so the section parsed here must be a
+ * real `emptyFormData` key. Robust to every path shape `validate` can produce:
+ *   - `cameras[0].camera_name` → `cameras`
+ *   - `subject.weight`         → `subject`
+ *   - `cameras`                → `cameras`
+ *   - `''` / non-string        → `''` (callers filter these out)
+ *
+ * @param {string} issuePath - Normalized issue path (dot + bracket notation).
+ * @returns {string} The top-level field id, or `''` when the path is empty/invalid.
+ */
+function topLevelFieldFromPath(issuePath) {
+  if (typeof issuePath !== 'string' || issuePath.length === 0) return '';
+  return issuePath.split('[')[0].split('.')[0];
+}
+
+/**
  * Import YAML files and prepare form data
  *
  * Parses YAML content, validates against schema and rules, and prepares
@@ -33,7 +51,7 @@ import { emptyFormData, genderAcronym } from '../valueList';
  * @returns {object} [result.importSummary] - Import summary (only present on success)
  * @returns {number} result.importSummary.totalFields - Total fields in YAML file
  * @returns {string[]} result.importSummary.importedFields - Successfully imported field names
- * @returns {Array<{field: string, reason: string}>} result.importSummary.excludedFields - Excluded fields with validation reasons
+ * @returns {Array<{field: string, reason: string, paths: string[]}>} result.importSummary.excludedFields - Excluded fields with the first validation reason and the full nested paths under that section
  * @returns {boolean} result.importSummary.hasExclusions - Whether any fields were excluded
  *
  * @example
@@ -101,6 +119,28 @@ export async function importFiles(file, options = {}) {
         return;
       }
 
+      // A metadata document must be a plain object. An empty file parses to `null`, and
+      // a scalar/list document parses to a primitive/array; either would later throw on
+      // `Object.hasOwn(jsonFileContent, key)` (silently hanging the import promise), so
+      // reject it here with a clear message instead.
+      if (
+        jsonFileContent === null ||
+        typeof jsonFileContent !== 'object' ||
+        Array.isArray(jsonFileContent)
+      ) {
+        // eslint-disable-next-line no-alert
+        window.alert(
+          'The file does not contain a metadata document.\n\n' +
+          'Expected a YAML mapping of metadata fields, but the file was empty or not an object.'
+        );
+        resolve({
+          success: false,
+          error: 'The file does not contain a valid metadata document (expected a YAML mapping).',
+          formData: structuredClone(emptyFormData),
+        });
+        return;
+      }
+
       if (onProgress) {
         onProgress({ stage: 'validating', progress: 50 });
       }
@@ -146,34 +186,36 @@ export async function importFiles(file, options = {}) {
         onProgress({ stage: 'partial-import', progress: 70 });
       }
 
-      // Extract top-level field IDs from paths (e.g., "cameras[0].id" → "cameras")
+      // Extract top-level field IDs from paths (e.g., "cameras[0].id" → "cameras").
+      // A nested-required path such as "cameras[0].camera_name" must resolve to the
+      // real section "cameras" so the invalid section is excluded — not the bare
+      // missing property, which is not a top-level key and would let it slip through.
       const allErrorIds = [
-        ...new Set(
-          issues.map(issue => {
-            const topLevelField = issue.path.split('[')[0].split('.')[0];
-            return topLevelField;
-          })
-        )
+        ...new Set(issues.map(issue => topLevelFieldFromPath(issue.path)).filter(Boolean))
       ];
 
       const formContent = structuredClone(emptyFormData);
       const formContentKeys = Object.keys(formContent);
 
-      // Import only fields that don't have validation errors
-      // and match the expected type
+      // Import only fields that don't have validation errors and match the expected
+      // type. Track what was ACTUALLY assigned (and what was skipped on a type mismatch)
+      // so the summary reports the truth rather than inferring it from presence alone.
+      const importedFields = [];
+      const typeMismatchedFields = [];
       formContentKeys.forEach((key) => {
-        if (
-          !allErrorIds.includes(key) &&
-          Object.hasOwn(jsonFileContent, key)
-        ) {
-          // Check type compatibility before importing
-          const expectedType = typeof formContent[key];
-          const actualType = typeof jsonFileContent[key];
+        if (allErrorIds.includes(key) || !Object.hasOwn(jsonFileContent, key)) {
+          return;
+        }
+        const expectedType = typeof formContent[key];
+        const actualType = typeof jsonFileContent[key];
 
-          // Only import if types match
-          if (expectedType === actualType) {
-            formContent[key] = structuredClone(jsonFileContent[key]);
-          }
+        if (expectedType === actualType) {
+          formContent[key] = structuredClone(jsonFileContent[key]);
+          importedFields.push(key);
+        } else {
+          // Skipped: the YAML value's type doesn't match the form's. Don't claim it was
+          // imported, and don't silently drop it — record it for the excluded summary.
+          typeMismatchedFields.push({ key, expectedType, actualType });
         }
       });
 
@@ -193,16 +235,44 @@ export async function importFiles(file, options = {}) {
       }
 
       // Build import summary
-      const importedFields = formContentKeys.filter(key =>
-        !allErrorIds.includes(key) && Object.hasOwn(jsonFileContent, key)
-      );
+      const excludedFields = allErrorIds.map(fieldId => {
+        const fieldIssues = issues.filter(
+          issue => topLevelFieldFromPath(issue.path) === fieldId
+        );
+        return {
+          field: fieldId,
+          reason: fieldIssues.map(issue => issue.message)[0] || 'Validation error',
+          // The full nested validation paths under this section (e.g.
+          // "cameras[0].camera_name"), so the notice can name the exact field at
+          // fault — not just that "cameras" was dropped.
+          paths: [...new Set(fieldIssues.map(issue => issue.path).filter(Boolean))],
+        };
+      });
 
-      const excludedFields = allErrorIds.map(fieldId => ({
-        field: fieldId,
-        reason: issues
-          .filter(issue => issue.path.split('[')[0].split('.')[0] === fieldId)
-          .map(issue => issue.message)[0] || 'Validation error'
-      }));
+      // Document-level issues (empty top-level field, e.g. a root type error) map to no
+      // form section, so they're dropped from `allErrorIds` above. Surface them in their
+      // own summary entry rather than silently swallowing them — every validation issue
+      // must be accounted for in the summary.
+      const documentLevelIssues = issues.filter(
+        issue => topLevelFieldFromPath(issue.path) === ''
+      );
+      if (documentLevelIssues.length > 0) {
+        excludedFields.push({
+          field: 'document',
+          reason: documentLevelIssues.map(issue => issue.message)[0] || 'Validation error',
+          paths: [...new Set(documentLevelIssues.map(issue => issue.path).filter(Boolean))],
+        });
+      }
+
+      // Fields skipped on a type mismatch are excluded too — surface them so a skipped
+      // field is never silently absent from both the imported and excluded lists.
+      typeMismatchedFields.forEach(({ key, expectedType, actualType }) => {
+        excludedFields.push({
+          field: key,
+          reason: `Type mismatch: expected ${expectedType}, but the file had ${actualType}`,
+          paths: [],
+        });
+      });
 
       resolve({
         success: true,

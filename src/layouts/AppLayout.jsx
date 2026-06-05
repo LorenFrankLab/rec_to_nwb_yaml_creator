@@ -95,9 +95,12 @@ export function AppLayout() {
   const currentRoute = useHashRouter();
   const previousRoute = useRef(currentRoute);
 
-  // Warn before leaving the page while a workspace autosave is still in flight.
+  // Warn before leaving the page while a workspace autosave is still in flight OR a
+  // save has failed. A failed save means the latest edits never reached storage, so
+  // the guard must stay armed even once the pending-write debounce has settled
+  // (including the saveNow path, which sets saveError without re-arming hasPendingWrite).
   const { persistence } = useStoreContext();
-  useUnsavedWorkGuard(persistence.hasPendingWrite);
+  useUnsavedWorkGuard(persistence.hasPendingWrite || !!persistence.saveError);
 
   // Global keyboard shortcuts (mounted once so they work on every route). Step
   // navigation / add are broadcast to whichever stepper is on screen; help opens a

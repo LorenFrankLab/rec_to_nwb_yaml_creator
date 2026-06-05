@@ -6,6 +6,73 @@
 
 ---
 
+## Import & persistence hardening — Phase 7 (June 5, 2026)
+
+Closes the two correctness edges that live OUTSIDE the export chain: partial YAML import
+silently keeping invalid nested objects, and persistence edges that crash on an empty blob or
+drop the unsaved-work guard after a failed autosave. No export-path changes; the 125 golden
+baselines stay byte-identical.
+
+- **Nested schema-error paths are preserved (shared gate improvement).** `schemaValidation`
+  already builds a nested `required` error's full path (`cameras[0].camera_name`) rather than
+  the bare `missingProperty`; added regression tests (camera + top-level) that lock this so the
+  partial-import keying below can never silently regress. This also sharpens the workspace
+  export gate's own messages, not just legacy import.
+- **Partial import excludes the right section and names the exact field.** `importExport`'s
+  top-level extraction is now a robust `topLevelFieldFromPath` helper (handles `a[0].b`, `a.b`,
+  bare `a`, and empty/invalid paths), so a camera missing `camera_name` excludes the whole
+  `cameras` section instead of importing the invalid camera. Each excluded entry now carries the
+  full nested `paths`, and the import-summary notice names both the section (`cameras`) and the
+  nested path (`cameras[0].camera_name`). A real-`validate` integration test (new
+  `one-invalid-camera.yml` fixture) proves the end-to-end behavior. This is the one acknowledged
+  legacy-form exception, justified because the bug silently keeps invalid scientific data.
+- **An empty/incomplete workspace blob hydrates cleanly.** `loadWorkspace` now device-normalizes
+  and then guarantees the required top-level sections (`animals`/`days`/`settings`) via a shared
+  `createDefaultWorkspace` factory (single source of truth, also now the store's hydration
+  fallback). A structurally valid but empty/partial blob (`{schemaVersion, workspace:{}}`) is
+  restored to the default shape and reported via `recovered.missingKeys`; `useWorkspace` surfaces
+  a recovery notice naming the restored sections (kept, not discarded). Belt-and-braces defaults
+  added at the read sites (`AnimalWorkspace`, `Home`, incl. `Home.getDefaultExperimenters`) so no
+  consumer can hit `Object.keys(undefined)`.
+- **A failed autosave no longer drops the unsaved-work guard.** The debounced autosave clears
+  `hasPendingWrite` only on a confirmed write (moved out of the unconditional `finally`), so a
+  throw keeps the flag set and `saveError` populated. `AppLayout` wires the `beforeunload` guard
+  to `hasPendingWrite || !!saveError`, so a failed save still warns before navigation — including
+  the `saveNow` (Ctrl/Cmd+S) path that sets `saveError` without re-arming `hasPendingWrite`.
+
+Deliberately out of scope (per phase plan): persistence-blob forward migration, import-UX rework
+beyond correct exclusion, and any export-path validation changes.
+
+Review fixes (pr-review-toolkit code-reviewer + silent-failure-hunter), applied in-phase:
+- Partial import no longer silently drops a document-level (empty top-level path, e.g. a root
+  type error) validation issue: it is surfaced as a `document` entry so every `validate` issue is
+  accounted for in the summary (the prior `.filter(Boolean)` swallowed it).
+- `loadWorkspace` now distinguishes an ABSENT required section (restore-and-notice) from a
+  PRESENT-but-wrong-typed one (e.g. `animals` as an array). The latter is genuine corruption and
+  is discarded loudly as malformed rather than silently overwritten with `{}` and mislabeled as
+  "missing — your data was loaded".
+- `Home.getDefaultExperimenters` read snake_case settings keys (`default_lab`, …) that never
+  exist at runtime — the canonical settings shape is camelCase (`defaultLab`, …) — so the
+  "use workspace settings" default-experimenter branch silently never fired. Fixed to the
+  canonical keys; the prior test had encoded the wrong (snake_case) shape and was corrected.
+
+Second review round (further findings), applied in-phase:
+- Partial import no longer throws on an empty/non-object document. `YAML.parse('')` is `null`
+  (and a YAML list parses to an array), which previously hit `Object.hasOwn(null, key)` and
+  hung the import promise. A plain-object guard now rejects such a file with a clear message;
+  covered by empty-file and list-document integration tests.
+- The partial-import summary no longer claims a field was imported when it was skipped on a
+  type mismatch. `importedFields` is now built from the fields actually assigned, and a
+  type-mismatched field is surfaced as an excluded entry so it is neither falsely reported
+  imported nor silently dropped.
+- `loadWorkspace` rejects a non-plain-object workspace root (e.g. `workspace: []`) as malformed
+  instead of spreading it into a default-shaped object and reporting it as "missing sections".
+
+Gate: full vitest suite, 125 golden baselines byte-identical, 0 lint errors, clean build.
+Branch not merged.
+
+---
+
 ## Canonical state & repair — Phase 4: summaries never drop corrupt records (June 5, 2026)
 
 The final phase closes the accounting half of the contract: a cross-day summary must never

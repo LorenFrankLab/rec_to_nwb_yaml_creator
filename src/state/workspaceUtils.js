@@ -401,3 +401,29 @@ export function getCurrentDate() {
   const day = String(now.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
+/**
+ * Builds an empty workspace in the canonical default shape: the three required
+ * top-level sections (`animals`, `days`, `settings`) plus `version`/`lastModified`.
+ *
+ * Single source of truth for the "fresh / empty workspace" structure, shared by the
+ * store's hydration fallback and the persistence layer's empty-blob repair, so the
+ * default settings shape can never drift between those two paths.
+ *
+ * @returns {{ version: string, lastModified: string, animals: object, days: object, settings: object }}
+ */
+export function createDefaultWorkspace() {
+  return {
+    version: '1.0.0',
+    lastModified: getCurrentTimestamp(),
+    animals: {},
+    days: {},
+    settings: {
+      defaultLab: '',
+      defaultInstitution: '',
+      defaultExperimenters: [],
+      autoSaveInterval: 30000,
+      shadowExportEnabled: true,
+    },
+  };
+}

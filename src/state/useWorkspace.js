@@ -4,6 +4,7 @@ import {
   formatExperimentDate,
   getCurrentTimestamp,
   getCurrentDate,
+  createDefaultWorkspace,
 } from './workspaceUtils';
 import { FLAGS } from '../featureFlags';
 import { loadWorkspace, saveWorkspace, clearWorkspace } from './persistence';
@@ -38,28 +39,22 @@ export function useWorkspace(initialState = null) {
   // workspace was supplied. Any discard reason is captured for a post-mount notice
   // (we cannot call setState during render).
   const initialDiscardRef = useRef(null);
+  const initialRecoverRef = useRef(null);
 
   const [workspace, setWorkspace] = useState(() => {
-    const fallback = {
-      version: '1.0.0',
-      lastModified: getCurrentTimestamp(),
-      animals: {},
-      days: {},
-      settings: {
-        defaultLab: '',
-        defaultInstitution: '',
-        defaultExperimenters: [],
-        autoSaveInterval: 30000,
-        shadowExportEnabled: true,
-      },
-    };
+    const fallback = createDefaultWorkspace();
 
     if (initialState?.workspace) return normalizeWorkspaceDevices(initialState.workspace); // tests win
     if (!FLAGS.localStoragePersistence) return fallback;
 
     const loaded = loadWorkspace();
     if (loaded == null) return fallback; // clean first run
-    if (loaded.workspace) return loaded.workspace; // hydrated
+    if (loaded.workspace) {
+      // Structurally valid but missing required sections → restored to defaults; the
+      // missing keys drive a recovery notice after mount (not a discard).
+      if (loaded.recovered) initialRecoverRef.current = loaded.recovered;
+      return loaded.workspace; // hydrated (possibly shape-repaired)
+    }
     initialDiscardRef.current = loaded.discarded; // unusable blob → notice after mount
     return fallback;
   });
@@ -87,6 +82,15 @@ export function useWorkspace(initialState = null) {
       );
       initialDiscardRef.current = null;
       clearWorkspace();
+    } else if (initialRecoverRef.current) {
+      // Salvaged a structurally-incomplete blob: its data was kept, only the missing
+      // top-level sections were restored. Name them so the recovery is never silent.
+      const missing = initialRecoverRef.current.missingKeys.join(', ');
+      setLoadNotice(
+        `Saved workspace was missing required sections (${missing}); they were ` +
+          'restored to empty so your existing data could be loaded. Please review before exporting.'
+      );
+      initialRecoverRef.current = null;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -109,10 +113,11 @@ export function useWorkspace(initialState = null) {
         saveWorkspace(workspace);
         setLastSaved(new Date().toISOString());
         setSaveError(null);
+        // Clear the pending flag ONLY on a confirmed write. Leaving it set on failure
+        // keeps the beforeunload guard armed so unsaved work isn't lost on navigation.
+        setHasPendingWrite(false);
       } catch (err) {
         setSaveError(`Could not save workspace: ${err.message}`);
-      } finally {
-        setHasPendingWrite(false);
       }
     }, 500);
 

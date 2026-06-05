@@ -84,6 +84,103 @@ describe('workspace persistence', () => {
     spy.mockRestore();
   });
 
+  it('normalizes a structurally-empty workspace blob to the default shape with a recovery list', () => {
+    window.localStorage.setItem(
+      WORKSPACE_STORAGE_KEY,
+      JSON.stringify({ schemaVersion: WORKSPACE_SCHEMA_VERSION, workspace: {} }),
+    );
+
+    const result = loadWorkspace();
+
+    // Hydrates cleanly: the required sections exist as plain objects so no consumer
+    // hits Object.keys(undefined).
+    expect(result.workspace.animals).toEqual({});
+    expect(result.workspace.days).toEqual({});
+    expect(result.workspace.settings).toBeTypeOf('object');
+    expect(result.workspace.settings).not.toBeNull();
+    // The restored sections are reported for a user-facing recovery notice.
+    expect(result.recovered.missingKeys).toEqual(
+      expect.arrayContaining(['animals', 'days', 'settings']),
+    );
+  });
+
+  it('discards a blob whose workspace root is an array (malformed, not recoverable)', () => {
+    // An array root is genuine root corruption, not an empty/partial object: it must be
+    // malformed, not spread into {} and reported as merely "missing sections".
+    window.localStorage.setItem(
+      WORKSPACE_STORAGE_KEY,
+      JSON.stringify({ schemaVersion: WORKSPACE_SCHEMA_VERSION, workspace: [] }),
+    );
+
+    expect(loadWorkspace()).toEqual({
+      workspace: null,
+      discarded: LOAD_DISCARD_REASON.MALFORMED,
+    });
+  });
+
+  it('discards (does not silently overwrite) a blob whose required section is present but corrupt-typed', () => {
+    // animals present as an array is genuine corruption, not absence: it must surface
+    // loudly as malformed rather than be silently replaced with {} and mislabeled
+    // "missing... your data was loaded" (which would understate destroying real data).
+    window.localStorage.setItem(
+      WORKSPACE_STORAGE_KEY,
+      JSON.stringify({
+        schemaVersion: WORKSPACE_SCHEMA_VERSION,
+        workspace: { animals: ['corrupt'], days: {}, settings: {} },
+      }),
+    );
+
+    expect(loadWorkspace()).toEqual({
+      workspace: null,
+      discarded: LOAD_DISCARD_REASON.MALFORMED,
+    });
+  });
+
+  it('restores only the missing section when a blob is partially shaped', () => {
+    window.localStorage.setItem(
+      WORKSPACE_STORAGE_KEY,
+      JSON.stringify({
+        schemaVersion: WORKSPACE_SCHEMA_VERSION,
+        workspace: { animals: {}, days: {} }, // settings missing
+      }),
+    );
+
+    const result = loadWorkspace();
+
+    expect(result.recovered.missingKeys).toEqual(['settings']);
+    expect(result.workspace.settings).toBeTypeOf('object');
+  });
+
+  it('preserves populated animals/days intact while filling only the missing section', () => {
+    // Data-loss safety net: shape-repair fills an ABSENT section without touching real,
+    // populated data. A regression that overwrote unconditionally (or returned the bare
+    // default) would destroy months of metadata yet pass the empty-blob tests above.
+    const ws = makeTestWorkspace();
+    delete ws.settings; // structurally-incomplete: settings absent, real data present
+    window.localStorage.setItem(
+      WORKSPACE_STORAGE_KEY,
+      JSON.stringify({ schemaVersion: WORKSPACE_SCHEMA_VERSION, workspace: ws }),
+    );
+
+    const result = loadWorkspace();
+
+    // The real animal + day survive untouched (makeTestWorkspace is already normalized,
+    // so it round-trips unchanged); only settings is restored.
+    expect(result.workspace.animals).toEqual(ws.animals);
+    expect(result.workspace.days).toEqual(ws.days);
+    expect(result.recovered.missingKeys).toEqual(['settings']);
+    expect(result.workspace.settings).toBeTypeOf('object');
+  });
+
+  it('does not report recovery for a complete workspace blob', () => {
+    saveWorkspace(makeTestWorkspace());
+
+    const result = loadWorkspace();
+
+    expect(result).not.toHaveProperty('recovered');
+    expect(result.workspace.animals).toHaveProperty('remy');
+  });
+
   it('accepts a blob with the current schemaVersion', () => {
     const ws = makeTestWorkspace();
     window.localStorage.setItem(

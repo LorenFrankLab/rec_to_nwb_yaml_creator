@@ -300,6 +300,97 @@ cameras:
         expect(result.formData.lab).toBe('Test Lab');
       });
 
+      it('does not list a type-mismatched field as imported, and surfaces it as excluded', async () => {
+        // ARRANGE: experimenter_name is a string but the form expects an array, so it is
+        // skipped by the type-match gate. The summary must NOT claim it was imported, and
+        // must not silently drop it either.
+        const yamlContent = `
+lab: Test Lab
+experimenter_name: "Doe, John"
+cameras:
+  - id: 1.5
+`;
+        const file = new File([yamlContent], 'test.yml', { type: 'text/yaml' });
+
+        validate.mockReturnValue([
+          {
+            path: 'cameras[0].id',
+            code: 'type',
+            severity: 'error',
+            message: 'cameras[0].id must be integer',
+          },
+        ]);
+
+        // ACT
+        const result = await importFiles(file);
+
+        // ASSERT
+        expect(result.formData.experimenter_name).toEqual([]); // not actually imported
+        expect(result.importSummary.importedFields).not.toContain('experimenter_name');
+        expect(result.importSummary.importedFields).toContain('lab'); // genuinely imported
+        const mismatch = result.importSummary.excludedFields.find(
+          (entry) => entry.field === 'experimenter_name'
+        );
+        expect(mismatch).toBeDefined();
+        expect(mismatch.reason).toMatch(/type/i);
+      });
+
+      it('surfaces a document-level issue AND a section exclusion together', async () => {
+        // ARRANGE: the three excluded-field accumulation sites (section, document,
+        // type-mismatch) feed one array; a section error and a document-level error must
+        // coexist without shadowing each other.
+        const yamlContent = `
+lab: Test Lab
+cameras:
+  - id: 1.5
+`;
+        const file = new File([yamlContent], 'test.yml', { type: 'text/yaml' });
+
+        validate.mockReturnValue([
+          { path: 'cameras[0].camera_name', code: 'required', severity: 'error', message: 'camera_name is required' },
+          { path: '', code: 'type', severity: 'error', message: 'must be object' },
+        ]);
+
+        // ACT
+        const result = await importFiles(file);
+
+        // ASSERT
+        expect(result.importSummary.hasExclusions).toBe(true);
+        const fields = result.importSummary.excludedFields.map((e) => e.field);
+        expect(fields).toContain('cameras');
+        expect(fields).toContain('document');
+      });
+
+      it('surfaces every type-mismatched field separately (one excluded entry each)', async () => {
+        // ARRANGE: experimenter_name (expects array) as a string AND session_id (expects
+        // string) as a number — both skipped on type mismatch, both must be surfaced.
+        const yamlContent = `
+lab: Test Lab
+experimenter_name: "Doe, John"
+session_id: 12345
+cameras:
+  - id: 1.5
+`;
+        const file = new File([yamlContent], 'test.yml', { type: 'text/yaml' });
+
+        validate.mockReturnValue([
+          { path: 'cameras[0].id', code: 'type', severity: 'error', message: 'cameras[0].id must be integer' },
+        ]);
+
+        // ACT
+        const result = await importFiles(file);
+
+        // ASSERT
+        expect(result.formData.experimenter_name).toEqual([]);
+        expect(result.formData.session_id).toBe('');
+        const mismatched = result.importSummary.excludedFields.filter((e) =>
+          /type mismatch/i.test(e.reason)
+        );
+        expect(mismatched.map((e) => e.field).sort()).toEqual(['experimenter_name', 'session_id']);
+        expect(result.importSummary.importedFields).not.toContain('experimenter_name');
+        expect(result.importSummary.importedFields).not.toContain('session_id');
+      });
+
       it('fixes invalid subject.sex to U if not in valid list (during partial import)', async () => {
         // ARRANGE
         const yamlContent = `
@@ -330,6 +421,35 @@ cameras:
         expect(result.success).toBe(true);
         expect(result.formData.subject.sex).toBe('U'); // Fixed to U during partial import
         expect(result.formData.subject.subject_id).toBe('RAT001');
+      });
+
+      it('surfaces a document-level validation issue (empty path) instead of silently dropping it', async () => {
+        // ARRANGE
+        const yamlContent = `lab: Test Lab`;
+        const file = new File([yamlContent], 'test.yml', { type: 'text/yaml' });
+
+        // A root-level error has an empty top-level field; it must still be reported so
+        // no validation issue is silently swallowed from the partial-import summary.
+        validate.mockReturnValue([
+          {
+            path: '',
+            code: 'type',
+            severity: 'error',
+            message: 'must be object',
+          },
+        ]);
+
+        // ACT
+        const result = await importFiles(file);
+
+        // ASSERT
+        expect(result.success).toBe(true);
+        expect(result.importSummary.hasExclusions).toBe(true);
+        const docEntry = result.importSummary.excludedFields.find(
+          (entry) => entry.field === 'document'
+        );
+        expect(docEntry).toBeDefined();
+        expect(docEntry.reason).toContain('must be object');
       });
 
       it('initializes subject if missing from YAML', async () => {
