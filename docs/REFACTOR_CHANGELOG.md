@@ -6,6 +6,43 @@
 
 ---
 
+## Phase 7 — Converter-truth contracts: the UI shows the world the converter will encode (June 4, 2026)
+
+Four contracts so the app generates/validates exactly what `trodes_to_nwb` will encode, surfaces corruption
+instead of hiding it, and routes repairs to where they're actually fixable. Branch
+`phase-7-converter-truth-contracts` (not merged pending review). Golden + parity byte-identical throughout.
+
+- **Probe Metadata Contract.** New `src/ntrode/probeCatalog.js` makes the `trodes_to_nwb` per-shank
+  electrode-id partitions the source of truth (`getProbeMetadata`/`getProbeShanks`/`getProbeElectrodeIds`/
+  `isProbeCatalogConsistent`). The channel-map generator, geometry helpers, channel-bound validation, and the
+  AnimalEditor channel-map UI all derive from it. Fixes `64c-3s6mm6cm-20um-40um-sl`: its converter metadata
+  partitions 64 electrodes **unevenly** (21/21/22) but the app assumed 20/20/20 and silently dropped ids
+  60–63; it now generates/validates/renders the correct 3-row map. The other 11 probes are byte-identical.
+  Added `inconsistent_probe_catalog` (blocks export and names a probe whose catalog entry is inconsistent).
+  Filed upstream metadata bug [trodes_to_nwb#167](https://github.com/LorenFrankLab/trodes_to_nwb/issues/167)
+  (the file declares `num_shanks: 4` but defines 3 shanks).
+- **Load-Time Orphan Visibility Contract.** Removed the silent workspace epoch-scrub from `useEpochCleanup`:
+  a loaded stale `associated_files`/`associated_video_files` `task_epochs` is now **preserved** (the user sees
+  the value), validation owns it (`orphaned_file` / `orphaned_video`), and the export gate blocks until it's
+  repaired. The editor renders a stale ref as a visible "Missing epoch N" / "Missing camera N" option instead
+  of a blank select. The explicit, user-confirmed destructive-edit cleanup is unchanged; the legacy form's
+  scrub is unchanged.
+- **Repair Routing Contract.** Validation issues carry `repairSurface` (`day` | `animal` | `none`) and a
+  single `repairTargetForIssue` resolver (explicit metadata → per-code map → path/code fallback for AJV
+  issues). Device geometry / channel maps / probe catalog / cameras / data-acq / subject identity route to the
+  **Animal Editor**; task/video/event + day-level bad-channel overrides route to the **Day Editor** step;
+  slash-id identities have no button. Button copy names the destination ("Fix in Animal Editor"). A table test
+  asserts every error code maps to a valid surface.
+- **Normalization Contract.** `deviceNormalization` no longer launders corrupt persisted state into valid-
+  looking YAML at the export/load boundary. `parseExactInteger` accepts an integer or exact integer-string
+  (`"2"`→`2`) and **preserves** everything else (`"2.9"`, `"abc"`, `""`) so schema/rules fire;
+  `normalizeMap` is lossless; `normalizeElectrodeGroup` no longer synthesizes `description`/`targeted_location`
+  or back-fills ids. Creation-time default synthesis moved to `*WithDefaults` helpers used only by AnimalEditor
+  creation. Export now validates the un-laundered resolved state, so `ntrode_id:"abc"`, `map{"0":"2.9"}`, and a
+  missing `targeted_location` all block export. Clean inputs stay byte-identical.
+
+---
+
 ## Phase 6 follow-up — converter-compatibility validation (verified against trodes_to_nwb) (June 4, 2026)
 
 A downstream-focused review (several findings verified against `trodes_to_nwb` source on GitHub) surfaced
