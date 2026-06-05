@@ -270,7 +270,10 @@ export function useWorkspace(initialState = null) {
           if (updates.behavioral_events) {
             updated.behavioral_events = updates.behavioral_events;
           }
-          if (updates.optogenetics) {
+          // Use `!== undefined` (not truthiness) so an explicit `null` CLEARS the
+          // optogenetics block — that is how the editor disables opto, and the export
+          // reads `animal.optogenetics || null`, so a cleared block means no opto.
+          if (updates.optogenetics !== undefined) {
             updated.optogenetics = updates.optogenetics;
           }
 

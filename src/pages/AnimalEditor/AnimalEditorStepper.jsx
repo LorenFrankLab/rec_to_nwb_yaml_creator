@@ -16,6 +16,7 @@ import CopyFromAnimalDialog from './CopyFromAnimalDialog';
 import ChannelMapsStep from './ChannelMapsStep';
 import ChannelMapEditor from './ChannelMapEditor';
 import HardwareConfigStep from './HardwareConfigStep';
+import OptogeneticsStep from './OptogeneticsStep';
 import AlertModal from '../../components/AlertModal';
 import { ConfirmDialog } from '../../components/Modal';
 import { generateChannelMapsForGroup, nextNtrodeId } from '../../utils/channelMapUtils';
@@ -733,6 +734,17 @@ export default function AnimalEditorStepper() {
       ),
     },
     {
+      label: 'Optogenetics',
+      component: (
+        <OptogeneticsStep
+          animal={animal}
+          onUpdate={(updates) => actions.updateAnimal(animalId, updates)}
+        />
+      ),
+    },
+    {
+      // Kept as the final step so its Save/Continue flow (and the stepper's final-step
+      // Save button) is unchanged by the added Optogenetics step.
       label: 'Hardware Config',
       component: (
         <HardwareConfigStep

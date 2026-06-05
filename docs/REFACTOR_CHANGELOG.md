@@ -6,6 +6,55 @@
 
 ---
 
+## Optogenetics correctness — Phase 8 (June 5, 2026)
+
+Made workspace optogenetics sessions configurable and convertible instead of being **silently
+dropped**. trodes_to_nwb gates ALL optogenetics on four keys being present and non-empty, and
+reads several keys whose names differ from the schema, so a partial or schema-shaped opto block
+produced an NWB with no optogenetics at all and no error. Verified against trodes_to_nwb `main`
+(`convert_optogenetics.py`). Legacy golden baselines stay byte-identical (non-opto exports
+unchanged).
+
+- **Converter + schema key spellings emitted together (Task 1).** `mergeDayMetadata` now emits,
+  for an opto session, both `optogenetic_stimulation_software` (converter gate key) and
+  `opto_software` (schema), and both `virus_injection[].volume_in_uL` (converter) and
+  `volume_in_ul` (schema-required) with equal values, derived from whichever the data carried.
+  `opto_software` is emitted only for an opto session, so non-opto exports are byte-identical to
+  legacy.
+- **Schema↔converter key-mismatch decision (Task 2).** The duplicate spellings are a
+  **deliberate, documented compatibility shim**: the converter reads one spelling and the schema
+  declares the other, so emitting only one would fail either app AJV or conversion. We emit both
+  until the bundled schema copy and the converter agree on one canonical spelling, then remove the
+  duplicate in a coordinated cross-repo follow-up. Documented here, in the merge helpers, and in
+  `docs/PIPELINE_REQUIREMENTS.md`. Not silently picked.
+- **All-or-nothing completeness + single source (Task 3).** `rulesValidation` Rule 3 now gates on
+  all FOUR converter-required sections (adds `optogenetic_stimulation_software`), error severity,
+  so a partial opto session is blocked at export instead of converting to an opto-less file. New
+  Rule 3b errors on more than one `opto_excitation_source` (converter `ValueError`).
+- **`fs_gui_yamls` shape (Task 4).** The schema-required, converter-read `camera_id` is added to
+  the emitted key order, and the non-schema UI key `state_script_parameters` is stripped by an
+  explicit sanitizer (`reorderKeys` is lossless and would otherwise preserve it).
+- **Workspace optogenetics editor (Task 0).** New `OptogeneticsStep` (Animal Editor) with an
+  explicit enabled/off control: off means no opto metadata is exported; on reveals and requires the
+  four converter-required animal-level sections (single excitation source, optical fibers, virus
+  injections, software) and surfaces an incomplete state. `updateAnimal` now honors an explicit
+  `optogenetics: null` to disable. New day-level `FsGuiSection` (Day Editor → Epochs, shown only
+  when opto is enabled) edits `day.fs_gui_yamls` with epoch + camera references as controlled
+  choices (no typed dangling refs). Optogenetics is inserted as the Animal Editor step before
+  Hardware Config (which stays the final save step); deep-link routing
+  (`animalEditorStepForFieldPath`) updated for the new step indices.
+- **Parity + round-trip (Task 5).** The new-path opto output deliberately diverges from the
+  (schema-invalid) legacy opto export; the `legacyParity` opto test is retargeted to assert the
+  corrected output is schema-valid + rule-complete while the legacy opto export is not. The opto
+  sample is added to the deferred pre-cutover round-trip checklist in
+  `docs/PIPELINE_REQUIREMENTS.md` (it must prove the NWB actually contains the optogenetics
+  objects — the highest-value opto check, given the silent-drop failure mode).
+
+Gate: full vitest (3829), golden baselines byte-identical, 0 lint errors, clean build. Branch not
+merged.
+
+---
+
 ## Import & persistence hardening — Phase 7 (June 5, 2026)
 
 Closes the two correctness edges that live OUTSIDE the export chain: partial YAML import

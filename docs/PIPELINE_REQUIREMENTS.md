@@ -166,6 +166,19 @@ nwbinspector <file.nwb> --config dandi    # must report ZERO CRITICAL
 dandi validate <file.nwb>                  # must exit 0
 ```
 
+**Pre-cutover round-trip checklist — include an OPTOGENETICS sample.** Optogenetics is the
+highest-value item to round-trip because its failure mode is a *silent* downstream drop:
+trodes_to_nwb gates ALL opto on four keys being present and non-empty
+(`virus_injection`, `opto_excitation_source`, `optical_fiber`,
+`optogenetic_stimulation_software`) and reads `volume_in_uL` / `optogenetic_stimulation_software`
+whose names differ from the schema's `volume_in_ul` / `opto_software`. The app now emits BOTH
+spellings (phase 8) so the YAML passes both AJV and the converter — but only the actual round-trip
+proves the NWB *contains* the optogenetics objects. So the pre-cutover run must, for a complete
+opto sample, additionally confirm the NWB has the Optogenetic ndx objects (excitation source,
+optical fiber, virus injection, the FsGUI opto epochs) — not just "it converted". The
+schema↔converter key-mismatch duplicate (both spellings emitted) is a deliberate compatibility
+shim; remove it only after the bundled schema and converter agree on one canonical spelling.
+
 **Efficient sweep:** dispatch parallel research agents — one per target (local code, trodes_to_nwb,
 spyglass, DANDI) — each told to report *confirmed / contradicted / new* facts with file:line or doc
 citations. That is how the 2026-06-04 verification was done; it covers the surface in one pass.

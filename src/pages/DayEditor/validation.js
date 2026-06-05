@@ -799,7 +799,8 @@ function deriveSurfaceFromPath(issue) {
 export const ANIMAL_EDITOR_STEPS = [
   { index: 0, label: 'Electrode Groups' },
   { index: 1, label: 'Channel Maps' },
-  { index: 2, label: 'Hardware Config' },
+  { index: 2, label: 'Optogenetics' },
+  { index: 3, label: 'Hardware Config' },
 ];
 
 /**
@@ -822,6 +823,12 @@ export function animalEditorStepForFieldPath(fieldPath) {
   // step (the configurationHistory rebuild control is rendered in its corruption banner), so
   // their repairs deep-link there rather than defaulting to Electrode Groups.
   if (path.includes('camera') || path.includes('data_acq') || path.includes('configurationHistory')) {
+    return ANIMAL_EDITOR_STEPS[3];
+  }
+  // Animal-level optogenetics sections (excitation source, optical fiber, virus injection,
+  // software) live on the Optogenetics step. fs_gui paths are day-level and route to the
+  // Day Editor (a different surface), not here.
+  if (path.includes('opto') || path.includes('virus') || path.includes('fiber')) {
     return ANIMAL_EDITOR_STEPS[2];
   }
   // electrode geometry/identity + bare keyword paths (device_type/location/targeted_*).
