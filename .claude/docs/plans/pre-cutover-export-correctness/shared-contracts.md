@@ -10,6 +10,7 @@ without updating this file and every phase that references it.
 - [Validation & export-gate contract](#validation--export-gate-contract)
 - [User mental-model contract](#user-mental-model-contract)
 - [UX mistake-prevention contract](#ux-mistake-prevention-contract)
+- [Domain boundaries & ownership contract](#domain-boundaries--ownership-contract)
 - [Professional UX quality contract](#professional-ux-quality-contract)
 - [Spyglass naming-identity contract](#spyglass-naming-identity-contract)
 - [DANDI conformance contract](#dandi-conformance-contract)
@@ -188,6 +189,24 @@ the UI must make the scientifically dangerous choices hard to make accidentally.
   workspace flows must fail tests when a control is absent, not quietly skip. Phase 10 then triangulates UI,
   workspace state, exported YAML, mistake injection, labels/units, keyboard/viewport behavior, and recovery
   into an executable findings/fix log.
+
+---
+
+## Domain boundaries & ownership contract
+
+Referenced by phase 8.5. Correctness contracts should be owned by domain/state modules, not by whichever
+React page first needed them.
+
+- **Page modules render and dispatch; domain modules decide export truth.** Validation composition, repair
+  ownership/routing, bad-channel converter semantics, override cleanup semantics, and workspace configuration
+  transitions should live in pure helpers or state modules with direct tests.
+- **No sibling page folder owns app-wide behavior.** A Day Editor page may render Day Editor controls, but
+  Animal Editor, Export, RepairActions, and other surfaces should not import app-wide validation/routing from
+  `pages/DayEditor`. Use a shared domain module instead.
+- **Extraction is behavior-preserving before QA.** Phase 8.5 is allowed to move code and add guard tests; it
+  should not redesign export semantics, rewrite the whole store, or remove the legacy path.
+- **Architecture guard tests are part of correctness.** Tests should fail when domain/state modules import
+  page modules or when page modules import app-wide domain behavior from sibling page folders.
 
 ---
 

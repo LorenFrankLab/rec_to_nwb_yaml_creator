@@ -5,6 +5,11 @@ Date: 2026-06-05
 Scope: architecture and maintainability review of the current app structure. This is not a
 bug review and does not replace the phase gates.
 
+Plan disposition: the pre-QA subset of this review is now incorporated as
+[Phase 8.5 — Domain boundaries and ownership cleanup](phase-8-5-domain-boundaries-ownership-cleanup.md).
+Treat the phase file as the executable source of truth. This note remains the architectural rationale and
+should be refreshed at the start of Phase 8.5 before code changes begin.
+
 ## Verdict
 
 The app is moving in the right direction, but it is not yet cleanly organized. The recent
@@ -39,8 +44,9 @@ it should get one follow-up organization pass before the codebase settles.
 ### 1. App-wide validation/routing lives under `pages/DayEditor`
 
 `src/pages/DayEditor/validation.js` is no longer just Day Editor validation. It exports step
-status, issue ownership, repair routing, animal-editor deep-link routing, and the day validation
-composition used by other surfaces such as `ValidationSummary` and `AnimalEditorStepper`.
+status, issue ownership, repair routing, Animal Editor deep-link routing, and the day validation
+composition used by other surfaces such as `ValidationStep`, `ExportStep`, `RepairActions`, and
+`AnimalEditorStepper`.
 
 That means it is domain/workspace validation code living in a page folder.
 
@@ -59,8 +65,10 @@ Several components contain behavior that is really converter/domain logic:
 
 - `src/pages/AnimalEditor/ChannelMapEditor.jsx` embeds multi-shank bad-channel semantics and
   migration rules.
-- `src/pages/DayEditor/DevicesStep.jsx` mirrors malformed/stale override detection and repair
-  behavior.
+- `src/pages/DayEditor/BadChannelsEditor.jsx` owns probe-wide bad-channel selection and later-row
+  migration behavior.
+- `src/pages/DayEditor/DevicesStep.jsx` mirrors malformed/stale/shadowing override detection and
+  repair behavior.
 - `src/pages/AnimalEditor/AnimalEditorStepper.jsx` owns electrode-group/channel-map mutation
   recipes.
 
@@ -118,9 +126,9 @@ Recommended direction:
 
 ## Recommended follow-up phase
 
-Add a short architecture cleanup phase after the current canonical-state-and-repair work:
+Add a short architecture cleanup phase after export-correctness/opto work and before Playwright QA:
 
-### Phase: domain boundaries and ownership cleanup
+### Phase 8.5: domain boundaries and ownership cleanup
 
 Goal: make the current good contracts structural, not convention-based.
 
@@ -131,7 +139,8 @@ Tasks:
    pure domain helpers.
 3. Extract workspace mutations from `useWorkspace` into pure transition functions or a reducer.
 4. Add architecture guard tests for forbidden page-to-page domain imports.
-5. Add or generate schema-aligned types for the workspace/export model.
+5. Add or generate schema-aligned types for the workspace/export model only if type drift is directly
+   blocking the phase; otherwise defer this to post-cutover cleanup.
 
 Acceptance:
 
@@ -140,6 +149,13 @@ Acceptance:
 - The workspace hook owns effects and store wiring, not all domain transitions inline.
 - Existing golden baselines remain byte-identical.
 - Full test suite, lint, build, and Playwright gates still pass.
+
+Scope guard:
+
+- Do this before Phase 9 so browser QA audits a stable architecture.
+- Do not remove the legacy flow in this phase.
+- Do not rewrite the whole store to a reducer in this phase.
+- Do not change export semantics except to preserve existing behavior through purer helpers.
 
 ## Immediate guardrail
 
