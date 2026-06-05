@@ -709,6 +709,7 @@ export const SURFACE_BY_CODE = {
   malformed_device_override: 'day',
   shadowed_geometry_override: 'day',
   malformed_day_collection: 'day',
+  malformed_day_session: 'day',
   malformed_animal_collection: 'animal',
   missing_configuration_history: 'animal',
   missing_camera: 'day',

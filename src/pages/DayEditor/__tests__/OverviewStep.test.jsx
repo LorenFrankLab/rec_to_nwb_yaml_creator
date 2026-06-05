@@ -50,6 +50,26 @@ describe('OverviewStep', () => {
     expect(screen.getByRole('heading', { name: /session metadata/i })).toBeInTheDocument();
   });
 
+  it('surfaces a malformed session with an executable Reset session banner', async () => {
+    const user = userEvent.setup();
+    const onRepair = vi.fn();
+    render(
+      <OverviewStep
+        animal={mockAnimal}
+        day={{ date: '2023-06-22', session: 'corrupt' }}
+        mergedDay={{}}
+        onFieldUpdate={vi.fn()}
+        onSubjectUpdate={vi.fn()}
+        onRepair={onRepair}
+      />
+    );
+    const reset = screen.getByRole('button', { name: /^reset session$/i });
+    await user.click(reset);
+    expect(onRepair).toHaveBeenCalledWith(
+      expect.objectContaining({ repairCommand: { type: 'resetDaySession' } })
+    );
+  });
+
   it('displays inherited fields as read-only when expanded', async () => {
     const user = userEvent.setup();
     render(

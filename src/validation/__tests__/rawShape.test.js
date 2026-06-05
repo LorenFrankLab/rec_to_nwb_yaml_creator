@@ -73,6 +73,26 @@ describe('validateRawDay — malformed day-owned collections', () => {
     expect(validateRawDay(null)).toEqual([]);
   });
 
+  it('flags a malformed (non-record) session with an executable resetDaySession command', () => {
+    const issue = validateRawDay({ session: 'corrupt' }).find((i) => i.code === 'malformed_day_session');
+    expect(issue).toBeTruthy();
+    expect(issue.severity).toBe('error');
+    expect(issue.ownerSurface).toBe('day');
+    expect(issue.repairStep).toBe('overview');
+    expect(issue.field).toBe('session');
+    expect(issue.repairCommand).toEqual({ type: 'resetDaySession' });
+  });
+
+  it('also flags an array-shaped session (the merge would read it as a record)', () => {
+    expect(validateRawDay({ session: [1, 2] }).some((i) => i.code === 'malformed_day_session')).toBe(true);
+  });
+
+  it('does NOT flag a well-formed (record) session, nor an absent one', () => {
+    expect(validateRawDay({ session: { session_id: 's' } }).some((i) => i.code === 'malformed_day_session')).toBe(false);
+    expect(validateRawDay({ session: null }).some((i) => i.code === 'malformed_day_session')).toBe(false);
+    expect(validateRawDay({}).some((i) => i.code === 'malformed_day_session')).toBe(false);
+  });
+
   it('exposes the field spec list so consumers (UI reset controls) share one source', () => {
     expect(RAW_DAY_ARRAY_FIELDS.map((f) => f.key)).toContain('tasks');
     expect(RAW_DAY_ARRAY_FIELDS.every((f) => f.key && f.repairStep && f.label)).toBe(true);

@@ -381,6 +381,33 @@ describe('DayEditorStepper', () => {
     expect(screen.queryByText(/configuration history is missing or empty/i)).not.toBeInTheDocument();
   });
 
+  // Phase 3: a malformed (non-record) day session loses its read-only session_id and
+  // dead-ends. The Overview step shows an executable "Reset session" banner that restores
+  // the canonical session_id through the store.
+  it('executes a session reset in place (malformed session → Reset session clears it)', async () => {
+    const user = userEvent.setup();
+    const corruptState = {
+      workspace: {
+        animals: { remy: mockAnimal },
+        days: { 'remy-2023-06-22': { ...mockDay, session: 'corrupt' } },
+        settings: {},
+      },
+    };
+
+    render(
+      <StoreProvider initialState={corruptState}>
+        <DayEditorStepper />
+      </StoreProvider>
+    );
+
+    // Overview is the default step; the banner is visible immediately.
+    const resetButton = screen.getByRole('button', { name: /^reset session$/i });
+    await user.click(resetButton);
+
+    expect(screen.queryByRole('button', { name: /^reset session$/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/session metadata is corrupt/i)).not.toBeInTheDocument();
+  });
+
   it('does not offer a repair button for a slash session_id (read-only identity dead-end)', async () => {
     const user = userEvent.setup();
 

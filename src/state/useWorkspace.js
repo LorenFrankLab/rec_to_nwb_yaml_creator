@@ -584,9 +584,18 @@ export function useWorkspace(initialState = null) {
           const day = prev.days[dayId];
           const updated = structuredClone(day);
 
-          // Apply updates (deep merge for nested objects)
+          // Apply updates (deep merge for nested objects). Guard the CURRENT session to a
+          // record before spreading: a corrupt import can persist `session` as a scalar/array,
+          // and `{...'corrupt'}` would scatter char-indexed keys into the record. The
+          // resetDaySession repair relies on this to write a clean session over a malformed one.
           if (updates.session) {
-            updated.session = { ...updated.session, ...updates.session };
+            const currentSession =
+              updated.session !== null &&
+              typeof updated.session === 'object' &&
+              !Array.isArray(updated.session)
+                ? updated.session
+                : {};
+            updated.session = { ...currentSession, ...updates.session };
           }
           if (updates.tasks !== undefined) {
             updated.tasks = updates.tasks;

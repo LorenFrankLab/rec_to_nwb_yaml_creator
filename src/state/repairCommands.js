@@ -30,6 +30,7 @@ export const REPAIR_COMMAND_TYPES = Object.freeze([
   'removeDeviceOverrideKey',
   'resetBadChannelOverrides',
   'removeBadChannelOverrideKey',
+  'resetDaySession',
 ]);
 
 /**
@@ -122,6 +123,16 @@ export function applyRepairCommand(command, ctx) {
       const bad = isRecord(overrides.bad_channels) ? { ...overrides.bad_channels } : {};
       delete bad[command.key];
       actions.updateDay(dayId, { deviceOverrides: { ...overrides, bad_channels: bad } });
+      return;
+    }
+    case 'resetDaySession': {
+      // Replace a malformed (non-record) `session` with a fresh record carrying the
+      // canonical read-only session_id (`<animalId>_<YYYYMMDD>`), which the corruption lost
+      // and the user cannot re-enter (the field is read-only). The editable description
+      // fields reset to blank for the user to refill. updateDay guards the malformed current
+      // session before merging, so this writes cleanly.
+      const sessionId = `${ctx.animal?.id ?? ''}_${String(ctx.day?.date ?? '').replace(/-/g, '')}`;
+      actions.updateDay(dayId, { session: { session_id: sessionId } });
       return;
     }
     default:

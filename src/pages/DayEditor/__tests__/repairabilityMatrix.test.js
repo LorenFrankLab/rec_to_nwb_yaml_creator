@@ -45,16 +45,17 @@ const erroringGeometryMerged = () => ({
  *
  * @param {object} command - The issue's repairCommand.
  * @param {object} day - The raw day to repair.
+ * @param animal
  * @returns {object} The day after the command's store write.
  */
-function execDayCommand(command, day) {
+function execDayCommand(command, day, animal) {
   const state = { day: structuredClone(day) };
   const actions = {
     updateDay: (_id, updates) => Object.assign(state.day, updates),
     updateAnimal: vi.fn(),
     rebuildConfigurationHistory: vi.fn(),
   };
-  applyRepairCommand(command, { actions, animalId: 'a', dayId: 'd', day: state.day });
+  applyRepairCommand(command, { actions, animalId: 'a', dayId: 'd', day: state.day, animal });
   return state.day;
 }
 
@@ -132,6 +133,16 @@ const SCENARIOS = [
     command: { type: 'removeBadChannelOverrideKey', key: '1' },
   },
   {
+    name: 'malformed (non-record) day session',
+    code: 'malformed_day_session',
+    owner: 'day',
+    day: { session: 'corrupt', date: '2023-06-22' },
+    merged: baseMerged(),
+    repair: (day) => ({ ...day, session: { session_id: 'remy_20230622' } }),
+    command: { type: 'resetDaySession' },
+    animal: { id: 'remy' },
+  },
+  {
     name: 'shadowed array geometry override whose contents error',
     code: 'shadowed_geometry_override',
     owner: 'day',
@@ -146,7 +157,7 @@ const SCENARIOS = [
 ];
 
 describe('Repairability matrix — every malformed shape is raised, owned, and clears on repair', () => {
-  it.each(SCENARIOS)('$name', ({ code, owner, day, merged, repair, command }) => {
+  it.each(SCENARIOS)('$name', ({ code, owner, day, merged, repair, command, animal }) => {
     // 1. A blocking issue with this code is raised.
     const issue = validateDay(day, merged).find((i) => i.code === code);
     expect(issue, `expected code "${code}" to be raised`).toBeTruthy();
@@ -171,7 +182,7 @@ describe('Repairability matrix — every malformed shape is raised, owned, and c
       expect(issue.repairCommand, `code "${code}" must be navigation-only`).toBeUndefined();
     } else {
       expect(issue.repairCommand, `code "${code}" must carry a repairCommand`).toEqual(command);
-      const executed = execDayCommand(issue.repairCommand, day);
+      const executed = execDayCommand(issue.repairCommand, day, animal);
       expect(executed, 'executing the command must reproduce the documented repair').toEqual(repaired);
       expect(
         validateDay(executed, merged).some((i) => i.code === code),
@@ -254,6 +265,7 @@ describe('Repairability matrix — every malformed shape is raised, owned, and c
         'malformed_animal_collection',
         'malformed_bad_channel_override',
         'malformed_day_collection',
+        'malformed_day_session',
         'malformed_device_override',
         'missing_configuration_history',
         'shadowed_geometry_override',

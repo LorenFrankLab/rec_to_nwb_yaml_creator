@@ -129,6 +129,34 @@ export function validateRawDay(day) {
       );
     }
   }
+
+  // A present-but-non-record `session` (e.g. a restored scalar/array) is corruption the
+  // merge reads through `getDaySession` as `{}` — so the read-only, derived session_id is
+  // LOST and the user cannot re-enter it (the field is read-only), a dead-end. Surface it as
+  // a day-routed, Overview-owned blocker whose `resetDaySession` command rebuilds a clean
+  // session with the canonical session_id. (`null` is "absent", handled by schema-required
+  // checks, not flagged here.)
+  if (day.session != null && !isRecord(day.session)) {
+    issues.push({
+      code: 'malformed_day_session',
+      severity: 'error',
+      field: 'session',
+      ownerSurface: 'day',
+      repairStep: 'overview',
+      focusPath: 'session',
+      actionLabel: 'Reset session',
+      repairCommand: { type: 'resetDaySession' },
+      // Legacy mirror.
+      repairSurface: 'day',
+      step: 'overview',
+      path: 'session',
+      message:
+        `This day's session metadata is corrupt (expected an object), so its read-only ` +
+        `session ID is lost and cannot be re-entered. Reset the session to restore the ` +
+        `canonical session ID, then re-enter the descriptions.`,
+    });
+  }
+
   return issues;
 }
 

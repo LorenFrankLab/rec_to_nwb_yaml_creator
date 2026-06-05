@@ -65,6 +65,36 @@ describe('HardwareConfigStep', () => {
     expect(behavioralEventsHeadings.length).toBeGreaterThan(0);
   });
 
+  it('surfaces a corrupt cameras collection as an executable reset banner (not the empty state alone)', async () => {
+    const user = userEvent.setup();
+    const onRepair = vi.fn();
+    render(
+      <HardwareConfigStep
+        animal={{ ...mockAnimal, cameras: 'nope' }}
+        onFieldUpdate={mockOnFieldUpdate}
+        onRepair={onRepair}
+      />
+    );
+    // The corruption is visible with an executable reset, instead of hiding behind the
+    // "Add First Camera" empty state.
+    const reset = screen.getByRole('button', { name: /^reset cameras$/i });
+    await user.click(reset);
+    expect(onRepair).toHaveBeenCalledWith(
+      expect.objectContaining({ repairCommand: { type: 'resetAnimalCameras' } })
+    );
+  });
+
+  it('surfaces a corrupt data_acq_device as an executable reset banner', () => {
+    render(
+      <HardwareConfigStep
+        animal={{ ...mockAnimal, devices: { data_acq_device: 'bad' } }}
+        onFieldUpdate={mockOnFieldUpdate}
+        onRepair={vi.fn()}
+      />
+    );
+    expect(screen.getByRole('button', { name: /reset data acquisition devices/i })).toBeInTheDocument();
+  });
+
   it('sections have correct elevation styling (cameras=1, data_acq=0, events=1)', () => {
     const { container } = render(
       <HardwareConfigStep

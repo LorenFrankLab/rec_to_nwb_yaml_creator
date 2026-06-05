@@ -6,6 +6,42 @@
 
 ---
 
+## Canonical state & repair — Phase 3: destination repair banners (June 5, 2026)
+
+Phase 2 made an issue's repair button PERFORM the fix. Phase 3 adds the destination-side
+surface so a repair routed to an editor lands on a VISIBLE executable control, not an empty
+state that hides the corruption.
+
+- New shared `src/components/RawCorruptionBanner.jsx`: given the raw `animal`/`day` + a
+  `fields` filter + `onRepair`, it computes the owned raw-shape issues (which already carry
+  `repairCommand` + `actionLabel` + `message` from the validators) and renders one executable
+  reset button per issue. Renders nothing without an executor or owned corruption (no dead
+  controls). It owns no reset logic — a thin, command-driven view over the validators.
+- Animal Editor: `HardwareConfigStep` renders the banner over `cameras` / `data_acq_device` /
+  `configurationHistory`. A corrupt `cameras: "nope"` previously vanished behind CamerasSection's
+  "Add First Camera" empty state; now a "Reset cameras" control sits above it. `onRepair` is
+  threaded from `AnimalEditorStepper` (which owns animal/actions).
+- Day Editor: `OverviewStep` renders the banner for the `session` record. A malformed
+  (non-record) `session` loses its read-only, derived `session_id` (which the user cannot
+  re-type) — a dead-end. New raw-shape issue `malformed_day_session` + `resetDaySession`
+  command rebuild a clean session with the canonical `<animalId>_<YYYYMMDD>` session_id; the
+  editable descriptions reset to blank for the user to refill. The day array collections stay
+  owned by the existing `MalformedCollectionNotice`; the banner owns only the session record.
+- `updateDay` now guards the session-merge: a malformed CURRENT session (e.g. a string) is
+  replaced with `{}` before spreading, so `{...'corrupt'}` can't scatter char-indexed keys
+  (defense-in-depth the reset relies on).
+- DevicesStep (day overrides) and the day array collections (OverviewStep) were already
+  destination-repairable from earlier work, so no new surface was added there.
+- Code-reviewed (pr-review-toolkit:code-reviewer): no Critical/Important findings.
+  Live-verified with Playwright: both banners render at their destinations and clear the
+  corruption (and persist) on click; non-commandable flows unchanged.
+
+Gate: full vitest (3759 pass), 125 golden baselines byte-identical, 0 lint errors, clean
+build. Branch not merged. Phase 4 (ValidationSummary error-rows for corrupt/missing days)
+follows.
+
+---
+
 ## Canonical state & repair — Phase 2: executable repair commands (June 5, 2026)
 
 Phase 1 made the raw → canonical READ boundary shape-safe. Phase 2 closes the

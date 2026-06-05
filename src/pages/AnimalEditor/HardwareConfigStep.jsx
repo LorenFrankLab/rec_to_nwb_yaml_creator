@@ -7,6 +7,7 @@ import CamerasSection from './CamerasSection';
 import CameraModal from './CameraModal';
 import DataAcqSection from './DataAcqSection';
 import BehavioralEventsSection from './BehavioralEventsSection';
+import RawCorruptionBanner from '../../components/RawCorruptionBanner';
 import SaveIndicator from '../DayEditor/SaveIndicator';
 import {
   collectCameraIdentities,
@@ -31,6 +32,7 @@ import './HardwareConfigStep.scss';
  * @param {Function} props.onFieldUpdate - Field update callback from AnimalEditorStepper.
  * @param {Function} props.onNavigateBack - Navigate back to Step 2 (Channel Maps).
  * @param {Function} props.onNavigateNext - Navigate to Step 4 (Optogenetics) or exit.
+ * @param props.onRepair
  * @returns {JSX.Element}
  */
 export default function HardwareConfigStep({
@@ -38,6 +40,7 @@ export default function HardwareConfigStep({
   onFieldUpdate,
   onNavigateBack,
   onNavigateNext,
+  onRepair,
 }) {
   const { model, persistence } = useStoreContext();
 
@@ -129,6 +132,16 @@ export default function HardwareConfigStep({
       </header>
 
       <div className="step-content">
+        {/* Destination repair surface: a corrupt cameras / data_acq_device /
+            configurationHistory would otherwise hide behind a section's empty state. The
+            banner surfaces it with an executable reset, so a repair routed here is never a
+            dead-end. */}
+        <RawCorruptionBanner
+          animal={animal}
+          fields={['cameras', 'data_acq_device', 'configurationHistory']}
+          onRepair={onRepair}
+        />
+
         <section className="section-elevation-1" aria-label="Cameras">
           <CamerasSection
             animal={animal}
@@ -207,9 +220,11 @@ HardwareConfigStep.propTypes = {
   onFieldUpdate: PropTypes.func.isRequired,
   onNavigateBack: PropTypes.func,
   onNavigateNext: PropTypes.func,
+  onRepair: PropTypes.func,
 };
 
 HardwareConfigStep.defaultProps = {
   onNavigateBack: null,
   onNavigateNext: null,
+  onRepair: undefined,
 };

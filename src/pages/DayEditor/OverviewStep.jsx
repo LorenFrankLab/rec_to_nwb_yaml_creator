@@ -5,6 +5,7 @@ import ReadOnlyField from './ReadOnlyField';
 import KeywordsEditor from './KeywordsEditor';
 import DayTechnicalSection from './DayTechnicalSection';
 import MalformedCollectionNotice from './MalformedCollectionNotice';
+import RawCorruptionBanner from '../../components/RawCorruptionBanner';
 import { validateField } from './validation';
 import { isValidSpecies } from '../../validation/dandiSubject';
 import { RAW_DAY_ARRAY_FIELDS } from '../../validation/rawShape';
@@ -37,9 +38,10 @@ const OVERVIEW_STEP_COLLECTIONS = RAW_DAY_ARRAY_FIELDS.filter((f) => f.repairSte
  * @param {Function} props.onFieldUpdate - Callback: (fieldPath, value) => void
  * @param props.onSubjectUpdate
  * @param props.focusRequest
+ * @param props.onRepair
  * @returns {JSX.Element}
  */
-export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, onSubjectUpdate, focusRequest }) {
+export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, onSubjectUpdate, focusRequest, onRepair }) {
   // Tolerate corrupt persisted state: a malformed (null/scalar) `day.session`,
   // `animal.subject`, or `animal.experimenters` must not crash the editor on a raw
   // dereference. Read through the canonical shape-safe selectors (the single place these
@@ -135,6 +137,12 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
         fields={OVERVIEW_STEP_COLLECTIONS}
         onReset={(key) => onFieldUpdate(key, [])}
       />
+
+      {/* A malformed (non-record) session loses its read-only, derived session_id and
+          dead-ends (the field can't be re-entered). Surface an executable "Reset session"
+          that restores the canonical session_id. The day array collections above are owned
+          by MalformedCollectionNotice; this banner owns only the session record. */}
+      <RawCorruptionBanner day={day} fields={['session']} onRepair={onRepair} />
 
       {/* ARIA live region for screen readers */}
       <div
@@ -413,9 +421,11 @@ OverviewStep.propTypes = {
     fieldPath: PropTypes.string,
     token: PropTypes.number,
   }),
+  onRepair: PropTypes.func,
 };
 
 OverviewStep.defaultProps = {
   onSubjectUpdate: () => {},
   focusRequest: null,
+  onRepair: undefined,
 };

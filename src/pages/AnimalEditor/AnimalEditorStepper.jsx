@@ -26,6 +26,7 @@ import {
   normalizeNtrodeMapWithDefaults,
 } from '../../utils/deviceNormalization';
 import { animalEditorStepForFieldPath } from '../DayEditor/validation';
+import { applyRepairCommand } from '../../state/repairCommands';
 import './AnimalEditorStepper.scss';
 
 /**
@@ -480,6 +481,19 @@ export default function AnimalEditorStepper() {
   }
 
   /**
+   * Execute a raw-shape corruption's repair command in place (the destination-side half of
+   * the corruption contract). The animal-owned commands (resetAnimalCameras /
+   * resetDataAcqDevice / rebuildConfigurationHistory) need only `actions` + `animalId` +
+   * `animal`, which this editor owns. Routed to the RawCorruptionBanner in HardwareConfigStep.
+   *
+   * @param {object} issue - A raw-shape issue carrying a `repairCommand`.
+   */
+  function handleRepair(issue) {
+    if (!issue?.repairCommand) return;
+    applyRepairCommand(issue.repairCommand, { actions, animalId, animal });
+  }
+
+  /**
    * Handle copy from animal request
    */
   function handleCopyFromAnimal() {
@@ -726,6 +740,7 @@ export default function AnimalEditorStepper() {
           onFieldUpdate={handleFieldUpdate}
           onNavigateBack={handleBack}
           onNavigateNext={handleSave}
+          onRepair={handleRepair}
         />
       ),
     },

@@ -110,6 +110,24 @@ describe('applyRepairCommand — device-override resets (partial, read current d
   });
 });
 
+describe('applyRepairCommand — reset day session', () => {
+  it('resetDaySession writes a fresh session with the canonical derived session_id', () => {
+    const c = ctx({ animal: { id: 'remy' }, day: { date: '2023-06-22', session: 'corrupt' } });
+    applyRepairCommand({ type: 'resetDaySession' }, c);
+    expect(c.actions.updateDay).toHaveBeenCalledWith('remy-2023-06-22', {
+      session: { session_id: 'remy_20230622' },
+    });
+  });
+
+  it('resetDaySession tolerates a missing animal/date (derives the best session_id it can)', () => {
+    const c = ctx({ animal: undefined, day: undefined });
+    expect(() => applyRepairCommand({ type: 'resetDaySession' }, c)).not.toThrow();
+    expect(c.actions.updateDay).toHaveBeenCalledWith('remy-2023-06-22', {
+      session: { session_id: '_' },
+    });
+  });
+});
+
 describe('applyRepairCommand — robustness', () => {
   it('an unknown command type is a no-op (no write, no throw)', () => {
     const c = ctx();

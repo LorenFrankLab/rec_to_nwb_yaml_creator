@@ -296,6 +296,30 @@ describe('Day State Management', () => {
       expect(result.current.model.workspace.days['remy-2023-06-22'].keywords).toEqual(['replay']);
     });
 
+    it('replaces a malformed (non-record) current session instead of spreading it', () => {
+      // A corrupt import can persist `session` as a scalar/array. A session update must not
+      // spread that (`{...'corrupt'}` would scatter char-indexed keys into the record); the
+      // merge guards the current value to a record first, so the reset writes cleanly.
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Test',
+        });
+      });
+      // Corrupt the persisted session, then update it.
+      act(() => {
+        result.current.model.workspace.days['remy-2023-06-22'].session = 'corrupt';
+        result.current.actions.updateDay('remy-2023-06-22', {
+          session: { session_id: 'remy_20230622' },
+        });
+      });
+      expect(result.current.model.workspace.days['remy-2023-06-22'].session).toEqual({
+        session_id: 'remy_20230622',
+      });
+    });
+
     it('persists fs_gui_yamls (the merge reads them, so a reset must write through)', () => {
       const { result } = renderHook(() => useStore());
       createTestAnimal(result);
