@@ -168,10 +168,12 @@ describe('Phase 6: channel bounds (Task 3)', () => {
     expect(codes(issues)).not.toContain('channel_partition_invalid');
   });
 
-  it('passes a 3-shank probe whose per-shank lists do not tile getChannelCount evenly', () => {
-    // 64c-3s exposes 3×20=60 electrode ids while getChannelCount reports 64. A
-    // correctly-generated (offset, collision-free) map must NOT be flagged — the
-    // partition check is uniqueness, not complete coverage of 0..63.
+  it('errors when a group map does not cover every probe electrode id (64c-3s under-generates)', () => {
+    // The converter indexes hw_channel_map[group][str(electrode_id)] for EVERY
+    // probe electrode 0..getChannelCount-1, so the group's map must cover all of
+    // them. The app's deviceTypeMap for 64c-3s yields only 3×20=60 entries while
+    // the probe has 64 electrodes (ids 0..63) — that map fails conversion, so it
+    // must be flagged (not accepted).
     const dt = '64c-3s6mm6cm-20um-40um-sl';
     expect(deviceTypeMap(dt).length * 3).not.toBe(getChannelCount(dt));
     const model = {
@@ -182,9 +184,7 @@ describe('Phase 6: channel bounds (Task 3)', () => {
         shankNtrode(3, 0, dt, 2),
       ],
     };
-    const c = codes(rulesValidation(model));
-    expect(c).not.toContain('channel_partition_invalid');
-    expect(c).not.toContain('channel_value_out_of_range');
+    expect(codes(rulesValidation(model))).toContain('channel_partition_invalid');
   });
 
   it('errors when two shanks of a multi-shank probe share 0..31 (missing offset)', () => {

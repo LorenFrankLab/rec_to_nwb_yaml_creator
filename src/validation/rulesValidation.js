@@ -41,7 +41,7 @@ export const rulesValidation = (model) => {
 
   // Rule 1: Tasks with camera_ids require cameras to be defined
   // Only trigger if tasks have non-empty camera_id arrays
-  if (!model.cameras && model.tasks?.length > 0) {
+  if (!model.cameras && Array.isArray(model.tasks) && model.tasks.length > 0) {
     const tasksWithCameras = model.tasks.some(task =>
       task.camera_id && Array.isArray(task.camera_id) && task.camera_id.length > 0
     );
@@ -58,7 +58,7 @@ export const rulesValidation = (model) => {
 
   // Rule 2: Associated video files with camera_ids require cameras
   // Only trigger if video files have non-empty camera_id arrays
-  if (!model.cameras && model.associated_video_files?.length > 0) {
+  if (!model.cameras && Array.isArray(model.associated_video_files) && model.associated_video_files.length > 0) {
     const videosWithCameras = model.associated_video_files.some(video =>
       video.camera_id && Array.isArray(video.camera_id) && video.camera_id.length > 0
     );
@@ -96,7 +96,7 @@ export const rulesValidation = (model) => {
   // Rule 4: No duplicate channel mappings in ntrode_electrode_group_channel_map
   // Each ntrode's map object must have unique values (no duplicate physical channels)
   // Hardware constraint: each logical channel must map to a unique physical channel
-  if (model.ntrode_electrode_group_channel_map?.length > 0) {
+  if (Array.isArray(model.ntrode_electrode_group_channel_map) && model.ntrode_electrode_group_channel_map.length > 0) {
     model.ntrode_electrode_group_channel_map.forEach((ntrode) => {
       if (ntrode.map && typeof ntrode.map === 'object') {
         const channelValues = Object.values(ntrode.map);
@@ -127,7 +127,7 @@ export const rulesValidation = (model) => {
   // Rule 5: Sequential channel mappings (no gaps) in ntrode_electrode_group_channel_map
   // Logical channels (keys) must be sequential starting from 0
   // e.g., {0: 0, 1: 1, 2: 2, 3: 3} is valid, but {0: 0, 2: 2} is not (missing channel 1)
-  if (model.ntrode_electrode_group_channel_map?.length > 0) {
+  if (Array.isArray(model.ntrode_electrode_group_channel_map) && model.ntrode_electrode_group_channel_map.length > 0) {
     model.ntrode_electrode_group_channel_map.forEach((ntrode) => {
       if (ntrode.map && typeof ntrode.map === 'object') {
         const logicalChannels = Object.keys(ntrode.map).map(Number).sort((a, b) => a - b);
@@ -159,7 +159,7 @@ export const rulesValidation = (model) => {
   // trodes_to_nwb names the NWB electrode group from this id and Spyglass keys
   // ElectrodeGroup by session + group name, so duplicate ids collapse groups
   // downstream (silent data loss).
-  if (model.electrode_groups?.length > 0) {
+  if (Array.isArray(model.electrode_groups) && model.electrode_groups.length > 0) {
     const seen = new Set();
     const reported = new Set();
     model.electrode_groups.forEach((group) => {
@@ -183,7 +183,7 @@ export const rulesValidation = (model) => {
   // Rule 7: Ntrode ids must be unique across the animal's whole channel map.
   // `ntrode_id` keys the per-day bad-channel overrides and the NWB ntrode, so a
   // duplicate silently misroutes bad channels and collapses ntrodes downstream.
-  if (model.ntrode_electrode_group_channel_map?.length > 0) {
+  if (Array.isArray(model.ntrode_electrode_group_channel_map) && model.ntrode_electrode_group_channel_map.length > 0) {
     const seenNtrodes = new Set();
     const reportedNtrodes = new Set();
     model.ntrode_electrode_group_channel_map.forEach((ntrode) => {
@@ -308,7 +308,7 @@ export const rulesValidation = (model) => {
   //                                   is the channel count of one ntrode/shank)
   // Looked up via the ntrode's electrode group's device_type. Unknown devices
   // (count 0) are skipped here — Task 5 reports them.
-  if (model.ntrode_electrode_group_channel_map?.length > 0) {
+  if (Array.isArray(model.ntrode_electrode_group_channel_map) && model.ntrode_electrode_group_channel_map.length > 0) {
     const groupById = new Map(
       (model.electrode_groups || [])
         .filter((g) => g?.id !== undefined && g?.id !== null)
@@ -394,18 +394,22 @@ export const rulesValidation = (model) => {
       valuesByGroup.get(ntrode.electrode_group_id).values.push(...values);
     });
 
-    // (b) within an electrode group, no electrode id is mapped twice across the
-    // group's ntrodes (a missing per-shank offset makes two shanks collide on the
-    // same ids). We check UNIQUENESS rather than complete coverage of
-    // 0…channelCount-1: per-shank lists don't always tile getChannelCount evenly
-    // (e.g. 64c-3s exposes 3×20=60 ids while getChannelCount reports 64), so a
-    // complete-coverage check would false-positive on a correctly-generated map.
-    // Out-of-range values are caught separately by (a).
-    valuesByGroup.forEach(({ deviceType, values }, groupId) => {
-      const counts = new Map();
-      values.forEach((v) => counts.set(v, (counts.get(v) || 0) + 1));
-      const collisions = [...counts.entries()].filter(([, n]) => n > 1).map(([v]) => v);
-      if (collisions.length > 0) {
+    // (b) within an electrode group, the ntrodes' values must cover EVERY probe
+    // electrode id 0 … channelCount-1 exactly once (complete + unique). The
+    // converter looks up hw_channel_map[group][str(electrode_id)] for every probe
+    // electrode (convert_yaml.add_electrode_groups), so a gap (e.g. a multi-shank
+    // probe whose per-shank lists under-generate, like 64c-3s yielding 60 of 64
+    // ids) or a cross-shank collision (missing per-shank offset) breaks conversion.
+    // Skipped when (a) already flagged an out-of-range value for the group, so a
+    // single mistake yields a single error.
+    valuesByGroup.forEach(({ deviceType, channelCount, values }, groupId) => {
+      const anyOutOfRange = values.some(
+        (v) => !Number.isInteger(v) || v < 0 || v >= channelCount
+      );
+      if (anyOutOfRange) return; // (a) owns this group's error
+      const unique = new Set(values);
+      const covers = values.length === channelCount && unique.size === channelCount;
+      if (!covers) {
         issues.push({
           path: `ntrode_electrode_group_channel_map`,
           field: 'map',
@@ -414,9 +418,9 @@ export const rulesValidation = (model) => {
           code: 'channel_partition_invalid',
           severity: 'error',
           message:
-            `Electrode group ${groupId} ("${deviceType}") maps electrode id(s) ` +
-            `${collisions.join(', ')} more than once across its ntrodes. Each electrode id ` +
-            `must be used once — multi-shank probes offset each shank by its channel count.`,
+            `Electrode group ${groupId} ("${deviceType}") channel map must cover electrode ids ` +
+            `0–${channelCount - 1} exactly once across its ntrodes (no gaps or duplicates). The ` +
+            `converter looks up every probe electrode id, so a missing id fails conversion.`,
         });
       }
     });
@@ -427,7 +431,7 @@ export const rulesValidation = (model) => {
   // string (no trim/case-fold); targeted_location is schema-required and used by
   // trodes_to_nwb as the per-electrode location. Both must be non-empty; a
   // mixed-case duplicate location fragments regions (warning).
-  if (model.electrode_groups?.length > 0) {
+  if (Array.isArray(model.electrode_groups) && model.electrode_groups.length > 0) {
     const nonEmpty = (v) => typeof v === 'string' && v.trim() !== '';
     model.electrode_groups.forEach((group, gi) => {
       if (!nonEmpty(group?.location)) {
@@ -489,7 +493,7 @@ export const rulesValidation = (model) => {
   // Rule 13 (Phase 6, Task 5): device_type is a known/registered probe.
   // An unknown device_type hard-fails downstream (trodes_to_nwb FileNotFoundError
   // loading the probe metadata). Guards copy/CSV-import-introduced values.
-  if (model.electrode_groups?.length > 0) {
+  if (Array.isArray(model.electrode_groups) && model.electrode_groups.length > 0) {
     model.electrode_groups.forEach((group, gi) => {
       const dt = group?.device_type;
       if (dt === undefined || dt === null || dt === '') return; // schema 'required' owns the empty case
@@ -513,7 +517,7 @@ export const rulesValidation = (model) => {
   // Rule 14 (Phase 6, Task 6): behavioral-event names unique within the day.
   // A duplicate dio_event name is a hard Spyglass DIOEvents primary-key violation
   // and a trodes_to_nwb ValueError.
-  if (model.behavioral_events?.length > 0) {
+  if (Array.isArray(model.behavioral_events) && model.behavioral_events.length > 0) {
     const seenNames = new Set();
     const reportedNames = new Set();
     model.behavioral_events.forEach((event) => {
@@ -546,7 +550,7 @@ export const rulesValidation = (model) => {
   //     Rule 9 (Task 1).
   // A task with epochs and no camera is the explicitly-allowed no-camera path (a
   // camera-less epoch is valid; only a *video* needs a backing epoch + camera).
-  if (model.tasks?.length > 0) {
+  if (Array.isArray(model.tasks) && model.tasks.length > 0) {
     const epochOwners = new Map(); // epoch -> count across task rows
     model.tasks.forEach((task) => {
       const epochs = Array.isArray(task?.task_epochs) ? task.task_epochs : [];
@@ -574,7 +578,7 @@ export const rulesValidation = (model) => {
     });
   }
 
-  if (model.associated_video_files?.length > 0) {
+  if (Array.isArray(model.associated_video_files) && model.associated_video_files.length > 0) {
     const taskEpochSet = new Set();
     (model.tasks || []).forEach((task) => {
       (Array.isArray(task?.task_epochs) ? task.task_epochs : []).forEach((e) => {
@@ -654,7 +658,7 @@ export const rulesValidation = (model) => {
   // Every ntrode_electrode_group_channel_map[].electrode_group_id must reference
   // an existing electrode_groups[].id (otherwise the ntrode maps onto nothing
   // and trodes_to_nwb/Spyglass silently drop or misattach the channels).
-  if (model.ntrode_electrode_group_channel_map?.length > 0) {
+  if (Array.isArray(model.ntrode_electrode_group_channel_map) && model.ntrode_electrode_group_channel_map.length > 0) {
     const validGroupIds = new Set(
       (model.electrode_groups || []).map((g) => g?.id).filter((id) => id !== undefined && id !== null)
     );
@@ -672,6 +676,98 @@ export const rulesValidation = (model) => {
           message:
             `Ntrode ${ntrode.ntrode_id} references electrode group id ${egid}, but no ` +
             `electrode group with that id exists. Remove the ntrode or add the group.`,
+        });
+      }
+    });
+  }
+
+  // Rule 17 (Phase 6 follow-up, High 3): behavioral-event DESCRIPTION uniqueness.
+  // trodes_to_nwb (convert_dios) keys DIO channels by behavioral_events[].description
+  // and raises a ValueError on a duplicate description. (Rule 14 covers `name`.)
+  if (Array.isArray(model.behavioral_events) && model.behavioral_events.length > 0) {
+    const seenDesc = new Set();
+    const reportedDesc = new Set();
+    model.behavioral_events.forEach((event) => {
+      const desc = event?.description;
+      if (desc === undefined || desc === null || desc === '') return;
+      if (seenDesc.has(desc) && !reportedDesc.has(desc)) {
+        reportedDesc.add(desc);
+        issues.push({
+          path: 'behavioral_events',
+          field: 'description',
+          step: 'epochs',
+          actionLabel: 'Rename behavioral event description',
+          code: 'duplicate_behavioral_event_description',
+          severity: 'error',
+          message:
+            `Duplicate behavioral event description "${desc}". The converter keys DIO ` +
+            `channels by description and fails on duplicates — each must be unique.`,
+        });
+      }
+      seenDesc.add(desc);
+    });
+  }
+
+  // Rule 18 (Phase 6 follow-up, Medium): camera id uniqueness.
+  // The converter names NWB camera devices `camera_device {id}` and videos
+  // dereference that exact name, so duplicate cameras[].id collide downstream.
+  if (Array.isArray(model.cameras) && model.cameras.length > 0) {
+    const seenCam = new Set();
+    const reportedCam = new Set();
+    model.cameras.forEach((camera) => {
+      const id = camera?.id;
+      if (id === undefined || id === null) return;
+      if (seenCam.has(id) && !reportedCam.has(id)) {
+        reportedCam.add(id);
+        issues.push({
+          path: 'cameras',
+          field: 'id',
+          step: 'devices',
+          actionLabel: 'Use a unique camera id',
+          code: 'duplicate_camera_id',
+          severity: 'error',
+          message:
+            `Duplicate camera id "${id}". Camera ids must be unique — the converter names ` +
+            `each NWB camera device "camera_device ${id}" and videos reference it by id.`,
+        });
+      }
+      seenCam.add(id);
+    });
+  }
+
+  // Rule 19 (Phase 6 follow-up, High 2): multi-shank bad_channels are ignored
+  // downstream. convert_yaml.add_electrode_groups uses ONLY the first ntrode row
+  // matching an electrode group for `bad_channels` (then tests every probe
+  // electrode against it). So bad_channels marked on a *later* row of a multi-row
+  // (multi-shank) group are silently dropped during conversion.
+  if (Array.isArray(model.ntrode_electrode_group_channel_map) &&
+      model.ntrode_electrode_group_channel_map.length > 0) {
+    const firstRowByGroup = new Map();
+    model.ntrode_electrode_group_channel_map.forEach((ntrode) => {
+      const gid = ntrode?.electrode_group_id;
+      if (gid === undefined || gid === null) return;
+      if (!firstRowByGroup.has(gid)) firstRowByGroup.set(gid, ntrode);
+    });
+    const reportedGroups = new Set();
+    model.ntrode_electrode_group_channel_map.forEach((ntrode) => {
+      const gid = ntrode?.electrode_group_id;
+      if (gid === undefined || gid === null) return;
+      const isFirst = firstRowByGroup.get(gid) === ntrode;
+      const hasBad = Array.isArray(ntrode.bad_channels) && ntrode.bad_channels.length > 0;
+      if (!isFirst && hasBad && !reportedGroups.has(gid)) {
+        reportedGroups.add(gid);
+        issues.push({
+          path: `ntrode_electrode_group_channel_map[${ntrode.ntrode_id}]`,
+          field: 'bad_channels',
+          step: 'devices',
+          actionLabel: 'Move bad channels to the first ntrode row',
+          code: 'multishank_bad_channels_ignored',
+          severity: 'error',
+          message:
+            `Bad channels on ntrode ${ntrode.ntrode_id} (electrode group ${gid}) are ignored ` +
+            `during conversion: trodes_to_nwb reads bad_channels only from the group's first ` +
+            `ntrode row. Mark all of this group's bad channels (as probe-local indices) on ` +
+            `that first row.`,
         });
       }
     });

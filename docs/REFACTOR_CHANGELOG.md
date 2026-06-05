@@ -6,6 +6,41 @@
 
 ---
 
+## Phase 6 follow-up — converter-compatibility validation (verified against trodes_to_nwb) (June 4, 2026)
+
+A downstream-focused review (several findings verified against `trodes_to_nwb` source on GitHub) surfaced
+gaps where app-valid YAML could still fail conversion. Added these **error**-severity rules to
+`src/validation/rulesValidation.js` (all carry repair metadata; all gated by the export gate):
+
+- **Channel-map coverage corrected to match the converter (High).** `convert_yaml.add_electrode_groups`
+  indexes `hw_channel_map[group][str(electrode_id)]` for **every** probe electrode `0…N-1`, so a group's
+  channel map must cover all of them. The earlier "uniqueness, not coverage" formulation was wrong: it let
+  the app accept an under-generated map. Rule (b) now requires complete coverage of `0…getChannelCount-1`.
+  **Known limitation surfaced:** `64c-3s6mm6cm-20um-40um-sl` has 64 electrode ids (`0..63`) in the probe
+  metadata, but the app's `deviceTypeMap` yields only 3×20=60, so the generated map is now (correctly)
+  flagged as incomplete and **blocked from export**. Making that probe usable requires reconciling the
+  app's per-shank electrode ids with the converter probe metadata (a device-metadata/generator change,
+  tracked as a follow-up — see "Deferred" below).
+- **Multi-shank `bad_channels` are honored downstream (High).** The converter reads `bad_channels` only
+  from an electrode group's **first** ntrode row, then tests every probe electrode against it. Bad channels
+  on a later row of a multi-row (multi-shank) group are silently dropped, so the app now errors on them and
+  tells the user to mark all of the group's bad channels (probe-local indices) on the first row.
+- **Duplicate DIO descriptions (High).** `convert_dios` keys DIO channels by `behavioral_events[].description`
+  and raises on duplicates; Phase 6 only checked `name`. Added a duplicate-description rule.
+- **Duplicate camera ids (Medium).** The converter names NWB devices `camera_device {id}` and videos
+  dereference that name, so duplicate `cameras[].id` collide. Added a unique-camera-id rule.
+- **Fail-closed on malformed shapes (Medium).** Rule loops are guarded with `Array.isArray`/object checks so
+  a malformed import returns validation issues instead of throwing.
+
+**Deferred (tracked follow-ups, not in this change):** (1) reconcile `64c-3s` (and any probe where the
+per-shank lists don't tile `getChannelCount`) device metadata/generator with the converter probe metadata
+so it can be exported; (2) surface loaded orphaned `associated_video_files[].task_epochs` instead of the
+silent `useEpochCleanup` scrub; (3) review export-boundary normalizers that coerce required device fields
+before validation (could mask corrupt persisted state); (4) route inherited/read-only device-geometry
+repair actions to the Animal Editor rather than the day's Devices step.
+
+---
+
 ## Phase 6 — Validation completeness: task/video reference UX, cross-reference & channel-bound rules (June 4, 2026)
 
 ### New validation rules (`src/validation/rulesValidation.js`, error severity unless noted)
@@ -24,11 +59,12 @@ repair UI can route to and focus the offending object. They flow through `valida
 - **Channel bounds (Task 3).** Per [designs.md#channel-map-semantics] — map **values are probe electrode
   ids, reset per electrode group** (a second tetrode is `0..3`, not `4..7`). Bounds come from the real
   device helpers (`getChannelCount` / `deviceTypeMap`), never hardcoded: (a) every map value is an integer
-  in `[0, getChannelCount(device_type))`; (b) within a group, **no electrode id is mapped twice** across
-  the ntrodes (catches a missing per-shank offset / cross-shank collision — a uniqueness check, not a
-  complete-coverage one, since per-shank lists don't always tile `getChannelCount` evenly, e.g. `64c-3s`
-  exposes 3×20=60 ids while the metadata reports 64); (c) map **keys** are `0…(ntrode channel count − 1)`;
-  (d) `bad_channels` indices are in `[0, count)`. Skipped for unknown devices (Task 5 reports those).
+  in `[0, getChannelCount(device_type))`; (b) within a group, the ntrodes' values **cover every probe
+  electrode id `0…count-1` exactly once** (the converter looks up `hw_channel_map[group][str(electrode_id)]`
+  for every probe electrode, so a gap or collision fails conversion; suppressed for a group already flagged
+  for an out-of-range value, so one mistake yields one error); (c) map **keys** are
+  `0…(ntrode channel count − 1)`; (d) `bad_channels` indices are in `[0, count)`. Skipped for unknown
+  devices (Task 5 reports those).
 - **Non-empty, consistent location (Task 4).** Both `electrode_groups[].location` **and**
   `targeted_location` must be non-empty (error); a mixed-case duplicate `location` across groups
   (e.g. `CA1` vs `ca1`) is a **warning** (Spyglass region fragmentation).
