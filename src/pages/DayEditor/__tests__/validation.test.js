@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateField, computeStepStatus, computeDevicesStatus, groupErrorsByStep, stepIdForIssue, repairTargetForIssue, validateDay } from '../validation';
+import { validateField, computeStepStatus, computeDevicesStatus, groupErrorsByStep, stepIdForIssue, repairTargetForIssue, validateDay, dayOverrideIssues } from '../validation';
 import { makeAnimalWithCamerasAndDay } from './taskFixtures';
 
 describe('stepIdForIssue', () => {
@@ -548,7 +548,8 @@ describe('round-6 review fixes — every malformed day override is surfaced + da
     const day = { deviceOverrides: { bad_channels: { 1: '23' } } };
     const issue = validateDay(day, merged).find((i) => i.code === 'malformed_bad_channel_override');
     expect(issue).toBeTruthy();
-    expect(issue.path).toBe('deviceOverrides.bad_channels');
+    // Key-specific path so repair-focus lands on the clicked ntrode's removal control.
+    expect(issue.path).toBe('deviceOverrides.bad_channels.1');
     expect(repairTargetForIssue(issue).surface).toBe('day');
     expect(computeStepStatus(day, merged).export).toBe('error');
   });
@@ -561,5 +562,57 @@ describe('round-6 review fixes — every malformed day override is surfaced + da
   it('a null/undefined override container is not a blocker', () => {
     expect(validateDay({ deviceOverrides: { bad_channels: null } }, merged).some((i) => i.code === 'malformed_bad_channel_override')).toBe(false);
     expect(validateDay({ deviceOverrides: {} }, merged).some((i) => i.code?.startsWith('malformed_')).valueOf()).toBe(false);
+  });
+});
+
+describe('round-7 review fixes — top-level, shadowed-geometry, and key-specific overrides', () => {
+  const merged = { ntrode_electrode_group_channel_map: [{ ntrode_id: 1, map: { 0: 0 } }] };
+
+  it('surfaces a non-record top-level deviceOverrides (scalar) as a day-routed blocker (was fail-open)', () => {
+    const day = { deviceOverrides: 'corrupt' };
+    const issue = validateDay(day, merged).find((i) => i.code === 'malformed_device_override');
+    expect(issue).toBeTruthy();
+    expect(issue.path).toBe('deviceOverrides');
+    expect(repairTargetForIssue(issue).surface).toBe('day');
+    expect(repairTargetForIssue(issue).step).toBe('devices');
+    expect(computeStepStatus(day, merged).export).toBe('error');
+  });
+
+  it('surfaces a non-record top-level deviceOverrides (array) too', () => {
+    const issues = validateDay({ deviceOverrides: [1, 2] }, merged);
+    expect(issues.some((i) => i.code === 'malformed_device_override' && i.path === 'deviceOverrides')).toBe(true);
+  });
+
+  it('surfaces a shadowed (valid-array) geometry override whose CONTENTS error as a day-routed escape', () => {
+    // A merged with a content-invalid electrode group → schema errors on an electrode_groups
+    // path. With a day-level array geometry override active, those errors mis-route to the
+    // Animal Editor (which edits the snapshot, not the override) → dead-end. Surface a
+    // day-routed removable escape.
+    const erroringMerged = { electrode_groups: [{ id: 0 }], ntrode_electrode_group_channel_map: [] };
+    const day = { deviceOverrides: { electrode_groups: [{ id: 0 }] } };
+    const issue = validateDay(day, erroringMerged).find((i) => i.code === 'shadowed_geometry_override');
+    expect(issue).toBeTruthy();
+    expect(issue.path).toBe('deviceOverrides.electrode_groups');
+    expect(repairTargetForIssue(issue).surface).toBe('day');
+    expect(repairTargetForIssue(issue).step).toBe('devices');
+  });
+
+  it('does NOT surface shadowed_geometry_override for a CLEAN array geometry override (no base errors)', () => {
+    expect(
+      dayOverrideIssues({ deviceOverrides: { electrode_groups: [{ id: 0 }] } }, {}, []).some(
+        (i) => i.code === 'shadowed_geometry_override'
+      )
+    ).toBe(false);
+  });
+
+  it('keys stale + corrupt-value bad_channel issues by ntrode id for precise repair focus', () => {
+    const stale = validateDay({ deviceOverrides: { bad_channels: { 999: [0] } } }, merged).find(
+      (i) => i.code === 'stale_bad_channel_override'
+    );
+    expect(stale.path).toBe('deviceOverrides.bad_channels.999');
+    const corrupt = validateDay({ deviceOverrides: { bad_channels: { 1: '23' } } }, merged).find(
+      (i) => i.code === 'malformed_bad_channel_override'
+    );
+    expect(corrupt.path).toBe('deviceOverrides.bad_channels.1');
   });
 });

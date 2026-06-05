@@ -238,6 +238,41 @@ describe('DayEditorStepper', () => {
     expect(screen.getByRole('button', { name: /^Overview/i })).toHaveAttribute('aria-current', 'step');
   });
 
+  // A corrupt/legacy import can persist a sibling day's `tasks` as a truthy
+  // non-array (e.g. `{}`). The dataset-wide task_description scan must not assume
+  // array-ness of that persisted shape — otherwise `.forEach` throws during render
+  // and crashes the whole Day Editor BEFORE the fail-closed validation UI can
+  // surface the corruption. (Medium)
+  it('does not crash when a sibling day has a corrupt non-array tasks shape', () => {
+    const corruptSiblingState = {
+      workspace: {
+        animals: { remy: mockAnimal },
+        days: {
+          'remy-2023-06-22': mockDay,
+          // Sibling day with a truthy-but-not-array tasks (survives `tasks || []`).
+          'remy-2023-06-23': {
+            ...mockDay,
+            date: '2023-06-23',
+            session: { ...mockDay.session, session_id: 'remy_20230623' },
+            tasks: {},
+          },
+        },
+        settings: {},
+      },
+    };
+
+    expect(() =>
+      render(
+        <StoreProvider initialState={corruptSiblingState}>
+          <DayEditorStepper />
+        </StoreProvider>
+      )
+    ).not.toThrow();
+
+    // The editor renders normally for the valid current day.
+    expect(screen.getByText(/Day Editor: remy - 2023-06-22/i)).toBeInTheDocument();
+  });
+
   it('does not offer a repair button for a slash session_id (read-only identity dead-end)', async () => {
     const user = userEvent.setup();
 

@@ -186,6 +186,11 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
     return o !== null && typeof o === 'object' && !Array.isArray(o) ? o : null;
   }, [day.deviceOverrides]);
 
+  // The WHOLE deviceOverrides is present but not a record (e.g. a restored scalar
+  // "corrupt"): the merge reads override keys off it (all undefined → fail-open to the
+  // snapshot), so it would export as if clean. Offer a whole-override removal.
+  const wholeOverridesMalformed = day.deviceOverrides != null && overridesRecord === null;
+
   const badChannelContainer = overridesRecord?.bad_channels;
   const badChannelContainerIsRecord =
     badChannelContainer !== null && typeof badChannelContainer === 'object' && !Array.isArray(badChannelContainer);
@@ -206,11 +211,16 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
     );
   }, [badChannelContainer, badChannelContainerIsRecord, resolvedNtrodeIds]);
 
-  // Geometry overrides present-but-not-an-array (the merge fell back to the snapshot).
-  const malformedGeometryKeys = useMemo(() => {
+  // Geometry overrides. The app never PRODUCES a day-level geometry override (probe
+  // geometry lives in animal configuration snapshots), so any present one is anomalous:
+  //  - non-array → corrupt, the merge fell back to the snapshot → "remove corrupt …";
+  //  - array → a valid-shaped override that SHADOWS the editable snapshot (its content
+  //    errors otherwise mis-route to the Animal Editor) → "revert to saved configuration".
+  // Both are removed the same way (drop the override key → snapshot governs).
+  const presentGeometryKeys = useMemo(() => {
     if (!overridesRecord) return [];
     return ['electrode_groups', 'ntrode_electrode_group_channel_map'].filter(
-      (k) => overridesRecord[k] != null && !Array.isArray(overridesRecord[k])
+      (k) => overridesRecord[k] != null
     );
   }, [overridesRecord]);
 
@@ -305,11 +315,96 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
     return { errors, warnings };
   }, [badChannels, validateBadChannels]);
 
-  // Empty state: No electrode groups
+  // Override cleanup controls (computed BEFORE the empty-state early return so a day
+  // with malformed overrides but no electrode groups still gets its removal buttons —
+  // otherwise a repair action lands on Devices with no control). The merge declines (or
+  // mis-applies) each shape, so the export rule blocks it but there is no editor row.
+  // Whatever `dayOverrideIssues` flags is removable here; the per-key bad-channel buttons
+  // carry a KEY-SPECIFIC `data-field-path` so repair-focus lands on the clicked ntrode's
+  // control, not the first matching one.
+  const hasOverrideCleanup =
+    wholeOverridesMalformed ||
+    staleOverrideKeys.length > 0 ||
+    corruptValueKeys.length > 0 ||
+    badChannelContainerMalformed ||
+    presentGeometryKeys.length > 0;
+
+  const overrideCleanupSection = hasOverrideCleanup ? (
+    <section className="stale-overrides-section" aria-label="Corrupt or stale device overrides">
+      <p className="field-help-text">
+        Some device overrides on this day are corrupt, stale, or shadow the saved
+        configuration and may block export. Remove them:
+      </p>
+
+      {wholeOverridesMalformed && (
+        <button
+          type="button"
+          className="stale-override-remove"
+          data-field-path="deviceOverrides"
+          onClick={() => onFieldUpdate('deviceOverrides', {})}
+        >
+          Remove corrupt device overrides
+        </button>
+      )}
+
+      {staleOverrideKeys.map((staleKey) => (
+        <button
+          key={`stale-${staleKey}`}
+          type="button"
+          className="stale-override-remove"
+          data-field-path={`deviceOverrides.bad_channels.${staleKey}`}
+          onClick={() => handleRemoveOverrideKey(staleKey)}
+        >
+          Remove stale failed-channel override for ntrode {staleKey}
+        </button>
+      ))}
+
+      {corruptValueKeys.map((key) => (
+        <button
+          key={`corrupt-${key}`}
+          type="button"
+          className="stale-override-remove"
+          data-field-path={`deviceOverrides.bad_channels.${key}`}
+          onClick={() => handleRemoveOverrideKey(key)}
+        >
+          Remove corrupt failed-channel override for ntrode {key}
+        </button>
+      ))}
+
+      {badChannelContainerMalformed && (
+        <button
+          type="button"
+          className="stale-override-remove"
+          data-field-path="deviceOverrides.bad_channels"
+          onClick={() => handleRemoveOverride('bad_channels')}
+        >
+          Remove corrupt failed-channel override
+        </button>
+      )}
+
+      {presentGeometryKeys.map((key) => (
+        <button
+          key={`geom-${key}`}
+          type="button"
+          className="stale-override-remove"
+          data-field-path={`deviceOverrides.${key}`}
+          onClick={() => handleRemoveOverride(key)}
+        >
+          {Array.isArray(overridesRecord[key])
+            ? `Remove ${key} override (revert to saved configuration)`
+            : `Remove corrupt ${key} override`}
+        </button>
+      ))}
+    </section>
+  ) : null;
+
+  // Empty state: No electrode groups. The override cleanup section still renders so a
+  // malformed-override repair is reachable even with no groups configured.
   if (electrodeGroups.length === 0) {
     return (
       <div className="devices-step">
         <h2>Devices Configuration</h2>
+        {overrideCleanupSection}
         <div className="empty-state">
           <p>No electrode groups configured for {animal.id}</p>
           <p className="empty-state-hint">
@@ -382,70 +477,8 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
         </>
       )}
 
-      {/* Malformed / stale override repair controls: the merge declines to apply these,
-          so the export rule blocks but there is no editor row. Each control removes only
-          the offending override (a key, or the whole malformed override) atomically. */}
-      {(staleOverrideKeys.length > 0 ||
-        corruptValueKeys.length > 0 ||
-        badChannelContainerMalformed ||
-        malformedGeometryKeys.length > 0) && (
-        <section
-          className="stale-overrides-section"
-          aria-label="Corrupt or stale device overrides"
-        >
-          <p className="field-help-text">
-            Some device overrides on this day are corrupt or stale. trodes_to_nwb ignores
-            them and they block export. Remove them:
-          </p>
-
-          {staleOverrideKeys.map((staleKey) => (
-            <button
-              key={`stale-${staleKey}`}
-              type="button"
-              className="stale-override-remove"
-              data-field-path="deviceOverrides.bad_channels"
-              onClick={() => handleRemoveOverrideKey(staleKey)}
-            >
-              Remove stale failed-channel override for ntrode {staleKey}
-            </button>
-          ))}
-
-          {corruptValueKeys.map((key) => (
-            <button
-              key={`corrupt-${key}`}
-              type="button"
-              className="stale-override-remove"
-              data-field-path="deviceOverrides.bad_channels"
-              onClick={() => handleRemoveOverrideKey(key)}
-            >
-              Remove corrupt failed-channel override for ntrode {key}
-            </button>
-          ))}
-
-          {badChannelContainerMalformed && (
-            <button
-              type="button"
-              className="stale-override-remove"
-              data-field-path="deviceOverrides.bad_channels"
-              onClick={() => handleRemoveOverride('bad_channels')}
-            >
-              Remove corrupt failed-channel override
-            </button>
-          )}
-
-          {malformedGeometryKeys.map((key) => (
-            <button
-              key={`geom-${key}`}
-              type="button"
-              className="stale-override-remove"
-              data-field-path={`deviceOverrides.${key}`}
-              onClick={() => handleRemoveOverride(key)}
-            >
-              Remove corrupt {key} override
-            </button>
-          ))}
-        </section>
-      )}
+      {/* Malformed / stale / shadowing override repair controls (see overrideCleanupSection). */}
+      {overrideCleanupSection}
 
       {/* Electrode groups (accordion) */}
       <section className="electrode-groups-section" aria-label="Electrode Groups">

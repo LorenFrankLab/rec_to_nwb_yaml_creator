@@ -62,46 +62,94 @@ function isRecord(value) {
 }
 
 /**
- * Surface EVERY malformed/stale `day.deviceOverrides` shape that `resolveDayConfig`
- * cannot faithfully apply, so it becomes a visible, day-routed, export-blocking issue
- * instead of vanishing (fail-open) or being smeared onto the geometry path (which
- * would mis-route to the Animal Editor). This is the validation "shadow" of every
- * refuse-to-apply branch in {@link resolveDayConfig}; the two MUST stay in lockstep —
- * whenever the merge declines a malformed override, this surfaces it.
+ * Surface EVERY malformed/stale/shadowing `day.deviceOverrides` shape that
+ * `resolveDayConfig` cannot faithfully apply (or applies in a way whose errors
+ * mis-route), so it becomes a visible, day-routed, export-blocking, REPAIRABLE issue
+ * instead of vanishing (fail-open), being smeared onto the geometry path (mis-routed
+ * to the Animal Editor), or dead-ending repair. This is the validation "shadow" of
+ * `resolveDayConfig`; the two MUST stay in lockstep — whenever the merge can't honor an
+ * override cleanly, this surfaces a day-routed escape, and {@link DevicesStep} renders a
+ * removal control for it.
  *
  * Covered shapes (all → `day` surface, `devices` step, error severity):
- *  - geometry override (`electrode_groups` / `ntrode_electrode_group_channel_map`)
- *    present but not an array — the merge falls back to the snapshot, so the corrupt
- *    override would otherwise be invisible (`malformed_device_override`);
- *  - `bad_channels` container that is not an ntrode_id→list map (e.g. scalar "2.9")
+ *  - the WHOLE `deviceOverrides` is not a record (e.g. scalar "corrupt"): the merge
+ *    reads `overrides?.x` off it (all undefined → fail-open to the snapshot), so it
+ *    would export as if clean (`malformed_device_override`, path `deviceOverrides`);
+ *  - a geometry override (`electrode_groups` / `ntrode_electrode_group_channel_map`)
+ *    present but not an array — the merge falls back to the snapshot, hiding the
+ *    corruption (`malformed_device_override`, path `deviceOverrides.<key>`);
+ *  - a VALID-SHAPED (array) geometry override whose CONTENTS produce validation errors:
+ *    the merge honors it (a supported feature — it shadows the snapshot), but those
+ *    errors route to the Animal Editor, which edits the SNAPSHOT, not this day's
+ *    override — a dead-end. We add a day-routed removable escape so the user can drop
+ *    the override (`shadowed_geometry_override`, requires `baseIssues`);
+ *  - a `bad_channels` container that is not an ntrode_id→list map (e.g. scalar "2.9")
  *    — the merge ignores it entirely (`malformed_bad_channel_override`);
- *  - a `bad_channels` key with no resolved ntrode — stale/dangling
- *    (`stale_bad_channel_override`);
+ *  - a `bad_channels` key with no resolved ntrode — stale/dangling, keyed by ntrode_id
+ *    for precise repair focus (`stale_bad_channel_override`);
  *  - a `bad_channels` value under a VALID key that is not a list — the merge declines
- *    to apply it (rather than smear a scalar onto the ntrode row, which would surface
- *    as an Animal-Editor schema error the user can't reach there)
+ *    to apply it (rather than smear a scalar onto the ntrode row), keyed by ntrode_id
  *    (`malformed_bad_channel_override`).
+ *
+ * Per-key `bad_channels` issues carry a KEY-SPECIFIC path (`deviceOverrides.bad_channels.<id>`)
+ * so the stepper's repair-focus lands on the clicked ntrode's removal control, not the
+ * first matching one.
  *
  * These issues are folded into `computeStepStatus` (the export gate) AND the rendered
  * repair lists via {@link validateDay}, so a blocking override is always repairable on
- * the Devices step (see {@link DevicesStep} repair controls), never "gated but invisible".
+ * the Devices step, never "gated but invisible" or routed to a dead-end.
  *
  * @param {object} day - The day record (reads `deviceOverrides`).
  * @param {object} mergedDay - Merged metadata (resolved ntrode id set).
- * @returns {Array} Error issues for malformed/stale overrides.
+ * @param {Array} [baseIssues] - The `validate(mergedDay)` issues, used to detect whether
+ *   an active array geometry override's contents are actually erroring (so a CLEAN valid
+ *   override is not flagged). Defaults to empty (skips the shadowed-override check).
+ * @returns {Array} Error issues for malformed/stale/shadowing overrides.
  */
-export function dayOverrideIssues(day, mergedDay) {
+export function dayOverrideIssues(day, mergedDay, baseIssues = []) {
   const overrides = day?.deviceOverrides;
-  if (!isRecord(overrides)) return [];
+  if (overrides == null) return [];
+
+  // The WHOLE container is a scalar/array, not a record. resolveDayConfig reads
+  // `overrides?.electrode_groups` etc. off it (all undefined → fail-open to the
+  // snapshot), so a restored `deviceOverrides: "corrupt"` exports as if nothing were
+  // wrong. Surface + make removable; nothing further can be inspected.
+  if (!isRecord(overrides)) {
+    return [{
+      path: 'deviceOverrides',
+      field: 'deviceOverrides',
+      step: 'devices',
+      repairSurface: 'day',
+      actionLabel: 'Remove device overrides',
+      code: 'malformed_device_override',
+      severity: 'error',
+      message:
+        `This day's device overrides are corrupt (expected an object). They are being ignored ` +
+        `in favor of the saved configuration — remove them to clear this error.`,
+    }];
+  }
 
   const issues = [];
 
-  // Geometry overrides present-but-not-an-array: resolveDayConfig fell back to the
-  // snapshot, silently ignoring the corrupt override. Surface each (null/undefined
-  // means "no override", which is fine — only a present, non-array value is corrupt).
+  // Geometry overrides. The app never PRODUCES day-level geometry overrides (probe
+  // geometry lives in animal configuration snapshots), but `resolveDayConfig` honors a
+  // valid array override (a supported legacy/import feature). So:
+  //  - present-but-not-an-array → corrupt, fail-open hidden → blocking + removable;
+  //  - present array whose CONTENTS error → honored-but-shadowing the snapshot, errors
+  //    mis-route to the Animal Editor → add a day-routed removable escape. A CLEAN valid
+  //    array override is NOT flagged (no dead-end to break).
+  const baseErrors = (Array.isArray(baseIssues) ? baseIssues : []).filter((i) => i?.severity === 'error');
+  const errorPath = (i) => i?.path || i?.instancePath || '';
+  // 'electrode_groups' (with the trailing 's') appears only in electrode-group paths;
+  // the ntrode path is 'ntrode_electrode_group_channel_map' (singular 'electrode_group').
+  const GEOMETRY_DOMAINS = {
+    electrode_groups: (i) => errorPath(i).includes('electrode_groups'),
+    ntrode_electrode_group_channel_map: (i) => errorPath(i).includes('ntrode'),
+  };
   for (const key of ['electrode_groups', 'ntrode_electrode_group_channel_map']) {
     const value = overrides[key];
-    if (value != null && !Array.isArray(value)) {
+    if (value == null) continue;
+    if (!Array.isArray(value)) {
       issues.push({
         path: `deviceOverrides.${key}`,
         field: key,
@@ -113,6 +161,20 @@ export function dayOverrideIssues(day, mergedDay) {
         message:
           `This day's "${key}" device override is corrupt (expected a list of devices). ` +
           `It is being ignored in favor of the saved configuration — remove the override to clear this error.`,
+      });
+    } else if (baseErrors.some(GEOMETRY_DOMAINS[key])) {
+      issues.push({
+        path: `deviceOverrides.${key}`,
+        field: key,
+        step: 'devices',
+        repairSurface: 'day',
+        actionLabel: 'Remove device override',
+        code: 'shadowed_geometry_override',
+        severity: 'error',
+        message:
+          `This day overrides the saved device ${key === 'electrode_groups' ? 'electrode groups' : 'channel map'} ` +
+          `and the override has validation errors. Those errors can't be fixed in the Animal Editor (which edits ` +
+          `the saved configuration, not this day's override). Remove the day override to use the saved configuration.`,
       });
     }
   }
@@ -141,7 +203,7 @@ export function dayOverrideIssues(day, mergedDay) {
       Object.keys(bad).forEach((key) => {
         if (!validNtrodeIds.has(String(key))) {
           issues.push({
-            path: 'deviceOverrides.bad_channels',
+            path: `deviceOverrides.bad_channels.${key}`,
             field: 'bad_channels',
             step: 'devices',
             repairSurface: 'day',
@@ -158,7 +220,7 @@ export function dayOverrideIssues(day, mergedDay) {
           // Animal-Editor schema error on a field the user can't reach there), so the
           // corrupt value is surfaced HERE, keyed to its real owner (the day override).
           issues.push({
-            path: 'deviceOverrides.bad_channels',
+            path: `deviceOverrides.bad_channels.${key}`,
             field: 'bad_channels',
             step: 'devices',
             repairSurface: 'day',
@@ -190,7 +252,11 @@ export function dayOverrideIssues(day, mergedDay) {
  * @returns {Array} All validation issues for the day.
  */
 export function validateDay(day, mergedDay) {
-  return [...validate(mergedDay), ...dayOverrideIssues(day, mergedDay)];
+  // Compute the base (schema + rules) issues once, then pass them to dayOverrideIssues
+  // so it can tell an erroring array geometry override (a dead-end that needs a day-routed
+  // escape) from a clean one (which must NOT be flagged).
+  const base = validate(mergedDay);
+  return [...base, ...dayOverrideIssues(day, mergedDay, base)];
 }
 
 /**
@@ -482,6 +548,7 @@ const SURFACE_BY_CODE = {
   stale_bad_channel_override: 'day',
   malformed_bad_channel_override: 'day',
   malformed_device_override: 'day',
+  shadowed_geometry_override: 'day',
   missing_camera: 'day',
   partial_configuration: 'day',
   // No editable in-app target — read-only identity (slash ids). The explanatory

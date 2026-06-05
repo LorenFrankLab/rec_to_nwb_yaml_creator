@@ -162,6 +162,21 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
     setLocalChannelMaps(updated);
   };
 
+  // Remove ONE invalid bad-channel mark from the row at `ntrodeIndex`.
+  // A loaded `bad_channels` array can carry a value with NO checkbox in the grid: an
+  // out-of-range index or a non-integer like 'abc'. The checkbox grid renders only
+  // valid ids and the toggle handlers preserve invisible current values, so such a
+  // mark can never be cleared by the user — yet it blocks export. This is the only
+  // path that clears it. Strict `!==` filtering removes ONLY this value.
+  const handleRemoveInvalidMark = (ntrodeIndex, value) => {
+    const updated = localChannelMaps.map((map, idx) => {
+      if (idx !== ntrodeIndex) return map;
+      const currentBadChannels = map.bad_channels || [];
+      return { ...map, bad_channels: currentBadChannels.filter((x) => x !== value) };
+    });
+    setLocalChannelMaps(updated);
+  };
+
   // Handle channel map select change
   const handleChannelMapChange = (ntrodeIndex, channelIndex, value) => {
     const parsedValue = value === '' ? -1 : parseInt(value, 10);
@@ -328,6 +343,11 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
   // spans the probe's full electrode-id range 0..N-1, matching the converter.
   const renderProbeWideBadChannels = () => {
     const firstNtrode = localChannelMaps[0];
+    const probeIdSet = new Set(probeElectrodeIds);
+    // First-row marks with no probe-wide checkbox (out-of-range id or non-integer).
+    // They block export but the grid can't uncheck them, so render explicit removal
+    // controls (otherwise an unrepairable dead-end).
+    const invalidMarks = (firstNtrode.bad_channels || []).filter((v) => !probeIdSet.has(v));
     return (
       <fieldset className="bad-channels-fieldset probe-wide-bad-channels">
         <legend>
@@ -362,6 +382,17 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
             </div>
           ))}
         </div>
+        {invalidMarks.map((value) => (
+          <button
+            key={`invalid-${String(value)}`}
+            type="button"
+            className="remove-invalid-mark"
+            onClick={() => handleRemoveInvalidMark(0, value)}
+            aria-label={`Remove invalid failed channel ${value} from ntrode ${firstNtrode.ntrode_id}`}
+          >
+            Remove invalid failed channel {String(value)}
+          </button>
+        ))}
       </fieldset>
     );
   };
@@ -407,6 +438,12 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
 
         {localChannelMaps.map((ntrodeMap, ntrodeIndex) => {
           const channelKeys = channelKeysForRow(ntrodeIndex);
+          // Single-shank marks with no checkbox in this row (out-of-range index or
+          // non-integer). They block export but can't be unchecked, so render explicit
+          // removal controls below the grid. (Multi-shank handles this probe-wide.)
+          const invalidMarks = isMultiShank
+            ? []
+            : (ntrodeMap.bad_channels || []).filter((v) => !channelKeys.includes(v));
           return (
           <fieldset key={ntrodeMap.ntrode_id} className="ntrode-fieldset">
             <legend>Shank #{ntrodeIndex + 1}</legend>
@@ -453,6 +490,17 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
                       </div>
                     ))}
                   </div>
+                  {invalidMarks.map((value) => (
+                    <button
+                      key={`invalid-${String(value)}`}
+                      type="button"
+                      className="remove-invalid-mark"
+                      onClick={() => handleRemoveInvalidMark(ntrodeIndex, value)}
+                      aria-label={`Remove invalid failed channel ${value} from ntrode ${ntrodeMap.ntrode_id}`}
+                    >
+                      Remove invalid failed channel {String(value)}
+                    </button>
+                  ))}
                 </fieldset>
               )}
 

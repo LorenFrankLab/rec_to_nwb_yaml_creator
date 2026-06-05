@@ -70,7 +70,7 @@ describe('DevicesStep — stale bad-channel override repair (Finding 3)', () => 
 
     const control = screen.getByRole('button', { name: /stale failed-channel override for ntrode 999/i });
     expect(control).toBeInTheDocument();
-    expect(control).toHaveAttribute('data-field-path', 'deviceOverrides.bad_channels');
+    expect(control).toHaveAttribute('data-field-path', 'deviceOverrides.bad_channels.999');
   });
 
   it('does NOT render a stale repair control for a key that DOES resolve to an ntrode', () => {
@@ -178,7 +178,7 @@ describe('DevicesStep — malformed override repair (round-6)', () => {
     const user = userEvent.setup();
     renderWith({ bad_channels: { '0': '23' } });
     const control = screen.getByRole('button', { name: /corrupt failed-channel override for ntrode 0/i });
-    expect(control).toHaveAttribute('data-field-path', 'deviceOverrides.bad_channels');
+    expect(control).toHaveAttribute('data-field-path', 'deviceOverrides.bad_channels.0');
     await user.click(control);
     expect(onFieldUpdate).toHaveBeenCalledTimes(1);
     expect(onFieldUpdate).toHaveBeenCalledWith('deviceOverrides.bad_channels', {});
@@ -208,5 +208,69 @@ describe('DevicesStep — malformed override repair (round-6)', () => {
   it('does not render any malformed-override control for clean overrides', () => {
     renderWith({ bad_channels: { '0': [1] } });
     expect(screen.queryByRole('button', { name: /corrupt/i })).toBeNull();
+  });
+});
+
+/**
+ * Round-7 review findings — the override-removal surface, made complete.
+ *   - High 1: a NON-record top-level `deviceOverrides` (scalar/array) fails open in the
+ *     merge and had no removal control. Render one.
+ *   - High 2: a valid-shaped ARRAY geometry override shadows the snapshot; if its
+ *     contents err, the errors mis-route to the Animal Editor. Offer a day-surface revert.
+ *   - Medium 1: the removal controls were skipped in the no-electrode-groups empty state.
+ */
+describe('DevicesStep — round-7 override removal completeness', () => {
+  const ELECTRODE_GROUPS = [
+    {
+      id: 0, location: 'CA1', device_type: 'tetrode_12.5', description: 'Dorsal CA1 tetrode',
+      targeted_location: 'CA1', targeted_x: 2.6, targeted_y: -3.8, targeted_z: 1.5, units: 'mm',
+    },
+  ];
+  const NTRODE_MAP = [
+    { ntrode_id: 0, electrode_group_id: 0, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+  ];
+  const animalWith = (devices) => ({
+    id: 'test-animal',
+    devices,
+    configurationHistory: [{ version: 1, date: '2023-06-22', description: 'Initial', appliedToDays: [], devices }],
+  });
+  const mockAnimal = animalWith({ electrode_groups: ELECTRODE_GROUPS, ntrode_electrode_group_channel_map: NTRODE_MAP });
+  const emptyAnimal = animalWith({ electrode_groups: [], ntrode_electrode_group_channel_map: [] });
+  const baseDay = { id: 'd1', animalId: 'test-animal', date: '2023-06-22', configurationVersion: 1 };
+
+  let onFieldUpdate;
+  beforeEach(() => { onFieldUpdate = vi.fn(); });
+
+  const renderWith = (animal, deviceOverrides) =>
+    render(<DevicesStep animal={animal} day={{ ...baseDay, deviceOverrides }} mergedDay={{ ...animal }} onFieldUpdate={onFieldUpdate} />);
+
+  it('High 1: offers a whole-deviceOverrides removal for a non-record top-level override', async () => {
+    const user = userEvent.setup();
+    renderWith(mockAnimal, 'corrupt');
+    const control = screen.getByRole('button', { name: /remove corrupt device overrides/i });
+    expect(control).toHaveAttribute('data-field-path', 'deviceOverrides');
+    await user.click(control);
+    expect(onFieldUpdate).toHaveBeenCalledTimes(1);
+    expect(onFieldUpdate).toHaveBeenCalledWith('deviceOverrides', {});
+  });
+
+  it('High 2: offers a revert control for a valid-array geometry override (shadows the snapshot)', async () => {
+    const user = userEvent.setup();
+    renderWith(mockAnimal, { electrode_groups: [{ id: 9, location: 'PFC', device_type: 'tetrode_12.5' }] });
+    const control = screen.getByRole('button', { name: /electrode_groups override/i });
+    expect(control).toHaveAttribute('data-field-path', 'deviceOverrides.electrode_groups');
+    await user.click(control);
+    expect(onFieldUpdate).toHaveBeenCalledWith('deviceOverrides', {});
+  });
+
+  it('Medium 1: renders the removal control even when there are NO electrode groups (empty snapshot)', () => {
+    renderWith(emptyAnimal, 'corrupt');
+    // The empty-state early return must NOT swallow the cleanup control.
+    expect(screen.getByRole('button', { name: /remove corrupt device overrides/i })).toBeInTheDocument();
+  });
+
+  it('Medium 1: renders a scalar-container removal even with no electrode groups', () => {
+    renderWith(emptyAnimal, { bad_channels: '2.9' });
+    expect(screen.getByRole('button', { name: /remove corrupt failed-channel override/i })).toBeInTheDocument();
   });
 });

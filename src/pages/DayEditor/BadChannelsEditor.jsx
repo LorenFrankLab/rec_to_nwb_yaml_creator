@@ -100,6 +100,25 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
   };
 
   /**
+   * Remove ONE invalid bad-channel mark (single-shank).
+   *
+   * A loaded/persisted `bad_channels` array can carry a value with NO corresponding
+   * checkbox: an out-of-range probe-local id (99 on a tetrode) or a non-integer
+   * ('abc'). The checkbox grid renders only valid ids and `handleChannelToggle`
+   * carries `currentBadChannels` forward unchanged, so such a value can never be
+   * cleared by the user — yet it blocks export (`bad_channel_out_of_range`). This is
+   * the only path that can clear it. Strict `!==` filtering removes ONLY this value,
+   * leaving valid numeric marks intact.
+   * @param {number|string} ntrodeId - Ntrode ID
+   * @param {*} value - The invalid bad-channel value to remove.
+   */
+  const handleRemoveInvalidMark = (ntrodeId, value) => {
+    const key = String(ntrodeId);
+    const currentBadChannels = badChannels[key] || [];
+    onUpdate(key, currentBadChannels.filter((x) => x !== value));
+  };
+
+  /**
    * Toggle channel map visibility
    * @param {number|string} ntrodeId - Ntrode ID
    */
@@ -193,6 +212,23 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
       onBatchUpdate(next);
     };
 
+    // First-row marks with NO probe-wide checkbox (out-of-range id or non-integer).
+    // These have no checkbox to uncheck and block export via bad_channel_out_of_range,
+    // so they are an unrepairable dead-end without an explicit removal control.
+    const invalidMarks = currentBadChannels.filter((v) => !probeIdSet.has(v));
+
+    /**
+     * Remove ONE invalid first-row mark via the ATOMIC batch path. The Day Editor
+     * rebuilds deviceOverrides wholesale, so a lone `onUpdate` would race; mirror
+     * `handleProbeWideToggle` and emit the WHOLE next map in one `onBatchUpdate`.
+     * @param {*} value - The invalid bad-channel value to remove.
+     */
+    const handleRemoveInvalidMark = (value) => {
+      const next = { ...badChannels };
+      next[firstKey] = currentBadChannels.filter((x) => x !== value);
+      onBatchUpdate(next);
+    };
+
     return (
       <div className="bad-channels-editor">
         <p className="field-help-text">
@@ -254,6 +290,22 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
               />
             ))}
 
+            {/* Removal controls for loaded first-row marks that have no checkbox
+                (out-of-range/corrupt). Without these the value can never be cleared
+                and permanently blocks export. */}
+            {invalidMarks.map((value) => (
+              <button
+                key={`invalid-${String(value)}`}
+                type="button"
+                className="remove-invalid-mark"
+                onClick={() => handleRemoveInvalidMark(value)}
+                aria-label={`Remove invalid failed channel ${value} from ntrode ${firstNtrode.ntrode_id}`}
+                data-field-path={`ntrode_electrode_group_channel_map[${firstNtrode.ntrode_id}]`}
+              >
+                Remove invalid failed channel {String(value)}
+              </button>
+            ))}
+
             {error && (
               <span className="validation-error" role="alert">
                 {error}
@@ -282,6 +334,10 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
         const ntrodeKey = String(ntrodeId);
         const currentBadChannels = badChannels[ntrodeKey] || [];
         const channels = Object.keys(ntrode.map).map(Number).sort((a, b) => a - b);
+        // Marks with no checkbox in this row (out-of-range id or non-integer like
+        // 'abc'). They block export but the grid can't render/uncheck them, so we
+        // surface an explicit removal control below.
+        const invalidMarks = currentBadChannels.filter((v) => !channels.includes(v));
         const error = errors?.[ntrodeKey];
         const warning = warnings?.[ntrodeKey];
 
@@ -316,6 +372,22 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
                   </div>
                 ))}
               </div>
+
+              {/* Removal controls for loaded marks with no checkbox (out-of-range or
+                  non-integer). Without these the value can never be cleared and
+                  permanently blocks export. */}
+              {invalidMarks.map((value) => (
+                <button
+                  key={`invalid-${String(value)}`}
+                  type="button"
+                  className="remove-invalid-mark"
+                  onClick={() => handleRemoveInvalidMark(ntrodeId, value)}
+                  aria-label={`Remove invalid failed channel ${value} from ntrode ${ntrodeId}`}
+                  data-field-path={`ntrode_electrode_group_channel_map[${ntrodeId}]`}
+                >
+                  Remove invalid failed channel {String(value)}
+                </button>
+              ))}
 
               {error && (
                 <span className="validation-error" role="alert">
