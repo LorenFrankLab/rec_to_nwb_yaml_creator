@@ -6,6 +6,40 @@
 
 ---
 
+## Validation contract — apply the contract-review findings (June 5, 2026)
+
+A five-agent review *of the contract itself* (code, tests, silent-failures, comments,
+type-design, vs `modern`) found no data-laundering path but flagged enforceability/coverage
+gaps. All addressed:
+
+- **`normalizeIssue` at the `validateDay` boundary** (type-design finding) — the issue
+  contract was conventional (hand-built literals, three coexisting field generations, a
+  never-read `repairStep`, and resolution that *failed open to Day*). Now every emitted
+  issue is normalized: owner resolved once and stamped as `ownerSurface` (mirrored to the
+  legacy `repairSurface`), a guaranteed `focusPath`, and a day `step`; `repairStep` dropped;
+  an unresolved owner **throws**. The invariant is enforced, not hoped-for. The duplicated
+  geometry/bad-channel classifier is hoisted to one `geometryDomainOf` helper.
+- **Step-status consistency** — the owning step (Epochs / Overview) now badges `error` for a
+  `malformed_day_collection` on its collections, so a step badge can't read green beside its
+  own blocking reset notice.
+- **Repairability-matrix gaps** — added the `malformed_animal_collection` round-trip; pinned
+  the `SURFACE_BY_CODE` routing table directly (each code resolves to its mapped surface, not
+  bypassed by inline fields); extended the coverage guard.
+- **Test gaps** — DayEditorStepper merge-throw tolerance (corrupt `configurationHistory`);
+  tightened the ExportStep cameras-gate test (asserts the repair action renders) and the
+  MalformedCollectionNotice "reset" test (honest naming).
+- **Docs** — reconciled the plan doc with an as-built deviations section; corrected the
+  rawShape over-claim and the `validateDay` JSDoc.
+- **Tolerance** — `csvChannelMapUtils` guards a corrupt scalar `bad_channels`; a corrupt
+  nested `data_acq_device` gets a precise message. Stripped review/plan bookkeeping tags
+  (HIGH review finding / Finding N / P0-/P1- / Phase N) from shipped comments, including
+  pre-existing baseline ones.
+
+Gate: 3630 tests pass (`--test-timeout=30000`), 125 golden baselines byte-identical, 0 lint
+errors, clean build, no plan/review tags in shipped code. Branch not merged.
+
+---
+
 ## Validation contract — wire the gaps the contract reviewer found (June 5, 2026)
 
 The first review *of the contract itself* (not another symptom hunt) found wiring gaps —
