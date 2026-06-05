@@ -5,6 +5,7 @@ import BadChannelsEditor from './BadChannelsEditor';
 import ReconfigWizard from './ReconfigWizard';
 import { reconcileAppliedToDays } from '../../state/configDiff';
 import { resolveDayConfig } from '../../state/workspaceUtils';
+import { getConfigHistory } from '../../state/workspaceSelectors';
 import { getProbeShanks, getProbeElectrodeIds } from '../../ntrode/probeCatalog';
 import './DayEditor.scss';
 
@@ -61,13 +62,15 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
   const reconfig = useMemo(() => {
     if (!reconfigEnabled) return null;
     const version = effectiveConfig.configurationVersion;
-    const snapshot = (animal.configurationHistory || []).find((s) => s.version === version) || null;
+    // Read history through the canonical selector: a corrupt non-array configurationHistory
+    // (`|| []` preserves a string and would throw on `.find`) is rendered as no history.
+    const history = getConfigHistory(animal);
+    const snapshot = history.find((s) => s.version === version) || null;
     const daysById = Object.fromEntries(animalDays.map((d) => [d.id, d]));
     const appliedCount = (reconcileAppliedToDays(animal, daysById)[version] || []).length;
     const idx = animalDays.findIndex((d) => d.id === day.id);
     const prevDay = idx > 0 ? animalDays[idx - 1] : null;
     const candidateDays = idx >= 0 ? animalDays.slice(idx) : [day];
-    const history = animal.configurationHistory || [];
     const latestVersion = history.length > 0 ? history[history.length - 1].version : version;
     return { version, snapshot, appliedCount, prevDay, candidateDays, isLatest: version === latestVersion };
   }, [reconfigEnabled, animal, day, animalDays, effectiveConfig.configurationVersion]);

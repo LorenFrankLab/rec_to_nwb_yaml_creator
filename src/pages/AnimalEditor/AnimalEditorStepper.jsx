@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
+import { getConfigHistory } from '../../state/workspaceSelectors';
 import { useStepperShortcut } from '../../hooks/stepperShortcuts';
 import { useAnimalIdFromUrl } from '../../hooks/useAnimalIdFromUrl';
 import ElectrodeGroupsStep from './ElectrodeGroupsStep';
@@ -223,11 +224,9 @@ export default function AnimalEditorStepper() {
   }
 
   // The editor is a repair destination for malformed persisted state, so it must not
-  // crash on the corruption it exists to fix: `configurationHistory` may be a non-array.
-  // `|| []` would PRESERVE a string and then throw on the `.some`/index/`.length` below.
-  const configurationHistory = Array.isArray(animal.configurationHistory)
-    ? animal.configurationHistory
-    : [];
+  // crash on the corruption it exists to fix. Read history through the canonical selector:
+  // a non-array `configurationHistory` degrades to no history instead of throwing.
+  const configurationHistory = getConfigHistory(animal);
   const latestSnapshot = configurationHistory[configurationHistory.length - 1] || null;
   const latestConfigurationVersion = latestSnapshot?.version ?? null;
   const isReconfigurationEdit = routeContext.context === 'reconfigure';

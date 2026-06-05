@@ -11,6 +11,7 @@
  */
 
 import { resolveDayConfig } from './workspaceUtils';
+import { getConfigHistory } from './workspaceSelectors';
 
 // Re-export so wizard/UI code has a single import surface for config resolution.
 export { resolveDayConfig };
@@ -143,7 +144,7 @@ export function diffProbeConfigs(prevConfig, nextConfig) {
  */
 export function reconcileAppliedToDays(animal, daysById) {
   const byVersion = {};
-  for (const snapshot of animal.configurationHistory || []) {
+  for (const snapshot of getConfigHistory(animal)) {
     byVersion[snapshot.version] = [];
   }
   for (const dayId of animal.days || []) {

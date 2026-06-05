@@ -9,6 +9,7 @@ import AssociatedFilesEditor from './AssociatedFilesEditor';
 import MalformedCollectionNotice from './MalformedCollectionNotice';
 import { useStepperShortcut } from '../../hooks/stepperShortcuts';
 import { RAW_DAY_ARRAY_FIELDS } from '../../validation/rawShape';
+import { getAnimalCameras, getDayTasks } from '../../state/workspaceSelectors';
 import './TasksEpochsStep.scss';
 
 // The day-owned collections this step owns (raw-shape reset surface). Derived from the
@@ -101,8 +102,8 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
   // Tolerate corrupt persisted state: a non-array `tasks` (e.g. `{}` from a bad import)
   // must not crash render (`.map`/`.forEach`); it is surfaced + reset via
   // MalformedCollectionNotice below. Guard ALL day-owned arrays this step iterates.
-  const tasks = Array.isArray(day.tasks) ? day.tasks : [];
-  const cameras = Array.isArray(animal.cameras) ? animal.cameras : [];
+  const tasks = getDayTasks(day);
+  const cameras = getAnimalCameras(animal);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('add');

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
+import { getAnimalCameras } from '../../state/workspaceSelectors';
 import { ConfirmDialog } from '../../components/Modal';
 import CamerasSection from './CamerasSection';
 import CameraModal from './CameraModal';
@@ -45,13 +46,9 @@ export default function HardwareConfigStep({
   const [pendingDelete, setPendingDelete] = useState(null);
 
   // A repair routed to this editor must not dead-end by crashing on the corruption it
-  // exists to fix: `animal.cameras` may be persisted as a non-array. `|| []` would
-  // PRESERVE a string ("nope" || [] === "nope") and pass it to the iterating helpers and
-  // CamerasSection — guard with Array.isArray so every `.find`/`.map`/`.filter` is safe.
-  const cameras = useMemo(
-    () => (Array.isArray(animal.cameras) ? animal.cameras : []),
-    [animal.cameras]
-  );
+  // exists to fix. Read cameras through the canonical selector: a non-array `cameras`
+  // (`|| []` would PRESERVE a string and crash CamerasSection's `.reduce`) renders safely.
+  const cameras = useMemo(() => getAnimalCameras(animal), [animal]);
 
   // Data-acq identities elsewhere in the dataset (plus any other items on this
   // animal), for the DataAcqSection divergent-reuse check.

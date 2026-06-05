@@ -13,6 +13,17 @@ import {
   normalizeElectrodeGroup,
   normalizeNtrodeMap,
 } from '../utils/deviceNormalization';
+import {
+  getAnimalCameras,
+  getAnimalExperimenters,
+  getAnimalSubject,
+  getDaySession,
+  getDayTasks,
+  getDayAssociatedFiles,
+  getDayAssociatedVideos,
+  getDayBehavioralEvents,
+  getDayKeywords,
+} from './workspaceSelectors';
 
 // Canonical key orders, mirroring the legacy `formData` shape in
 // `src/valueList.js` (`defaultYMLValues` / `arrayDefaultValues`). `encodeYaml`
@@ -221,16 +232,16 @@ export function mergeDayMetadata(animal, day) {
     resolveDayConfig(animal, day);
 
   const devices = normalizeDevices(animal.devices);
-  const cameras = Array.isArray(animal.cameras) ? animal.cameras : [];
+  // Raw animal/day fields read through the canonical shape-safe selectors — the single
+  // place these guards live, so the merge can't drift from the editors. A malformed
+  // import still surfaces as a validation issue downstream (normalization never decides
+  // export validity); it just can't crash the merge here.
+  const cameras = getAnimalCameras(animal);
   const opto = animal.optogenetics || null;
-  // Guard nested OBJECT records the same way the array fields are guarded: a
-  // malformed import (e.g. day.session a string, animal.experimenters undefined)
-  // must produce validation issues downstream, not crash the merge here. Missing
-  // leaf fields then surface as schema 'required'/type errors at the export gate.
-  const experimenters = isPlainRecord(animal.experimenters) ? animal.experimenters : {};
-  const session = isPlainRecord(day.session) ? day.session : {};
+  const experimenters = getAnimalExperimenters(animal);
+  const session = getDaySession(day);
   const technical = isPlainRecord(day.technical) ? day.technical : {};
-  const subject = isPlainRecord(animal.subject) ? animal.subject : {};
+  const subject = getAnimalSubject(animal);
 
   // Build the merged object in legacy `defaultYMLValues` key order. keywords /
   // units / default_header_file_path are placed at their canonical positions here
@@ -248,7 +259,7 @@ export function mergeDayMetadata(animal, day) {
       session.experiment_description || animal.experiment_description || '',
     session_description: session.session_description,
     session_id: session.session_id,
-    keywords: Array.isArray(day.keywords) ? day.keywords : [],
+    keywords: getDayKeywords(day),
 
     // === From Animal: Subject (with day weight override) ===
     subject: reorderKeys(
@@ -268,13 +279,13 @@ export function mergeDayMetadata(animal, day) {
     cameras: cameras.map((c) => reorderKeys(c, CAMERA_ORDER)),
 
     // === From Day: Behavioral Protocol ===
-    tasks: (Array.isArray(day.tasks) ? day.tasks : []).map((t) => reorderKeys(t, TASK_ORDER)),
+    tasks: getDayTasks(day).map((t) => reorderKeys(t, TASK_ORDER)),
 
     // === From Day: Data Files ===
-    associated_files: (Array.isArray(day.associated_files) ? day.associated_files : []).map((f) =>
+    associated_files: getDayAssociatedFiles(day).map((f) =>
       reorderKeys(f, ASSOCIATED_FILE_ORDER)
     ),
-    associated_video_files: (Array.isArray(day.associated_video_files) ? day.associated_video_files : []).map((v) =>
+    associated_video_files: getDayAssociatedVideos(day).map((v) =>
       reorderKeys(v, ASSOCIATED_VIDEO_FILE_ORDER)
     ),
 
@@ -285,7 +296,7 @@ export function mergeDayMetadata(animal, day) {
     default_header_file_path: technical.default_header_file_path,
 
     // === From Day: Behavioral Events ===
-    behavioral_events: (Array.isArray(day.behavioral_events) ? day.behavioral_events : []).map((e) =>
+    behavioral_events: getDayBehavioralEvents(day).map((e) =>
       reorderKeys(e, BEHAVIORAL_EVENT_ORDER)
     ),
 
@@ -311,7 +322,7 @@ export function mergeDayMetadata(animal, day) {
   // analog, default_header_file_path non-empty pattern), so emitting an empty value
   // would make a complete day fail validation. `delete` preserves the insertion
   // order of the remaining keys, so the legacy byte order is unaffected.
-  if (!(Array.isArray(day.keywords) && day.keywords.length > 0)) {
+  if (getDayKeywords(day).length === 0) {
     delete merged.keywords;
   }
   if (!(technical.units && Object.keys(technical.units).length > 0)) {

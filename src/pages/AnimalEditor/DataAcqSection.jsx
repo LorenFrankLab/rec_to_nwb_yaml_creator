@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { findIdentityDivergence, DATA_ACQ_DEPENDENT_FIELDS, IDENTITY_FIELD_LABELS } from './identitySafety';
+import { getDataAcqDevices } from '../../state/workspaceSelectors';
 import './DataAcqSection.scss';
 
 const DEVICE_FIELDS = ['name', 'system', 'amplifier', 'adc_circuit'];
@@ -60,7 +61,9 @@ function dependentFields(device) {
  * @returns {JSX.Element}
  */
 export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry = [] }) {
-  const device = (animal.devices?.data_acq_device || [])[0] || {};
+  // Read through the canonical selector: a corrupt non-array data_acq_device degrades to
+  // no device instead of crashing this repair destination.
+  const device = getDataAcqDevices(animal)[0] || {};
   const defaults = animal.technicalDefaults || {};
   const nameInputRef = useRef(null);
 
