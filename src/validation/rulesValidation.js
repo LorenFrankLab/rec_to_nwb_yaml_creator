@@ -82,24 +82,52 @@ export const rulesValidation = (model) => {
     }
   }
 
-  // Rule 3: Optogenetics all-or-nothing configuration
+  // Rule 3: Optogenetics all-or-nothing configuration. trodes_to_nwb gates ALL
+  // optogenetics on FOUR keys each being present and non-empty (convert_optogenetics.py:
+  // virus_injection, opto_excitation_source, optical_fiber, optogenetic_stimulation_software);
+  // if any is missing it logs "No available optogenetic metadata" and silently returns,
+  // producing an NWB with no optogenetics at all. So a partial opto session must block
+  // export rather than convert to an opto-less file.
   const hasOptoSource = model.opto_excitation_source?.length > 0;
   const hasOpticalFiber = model.optical_fiber?.length > 0;
   const hasVirusInjection = model.virus_injection?.length > 0;
-  const optoFieldsPresent = [hasOptoSource, hasOpticalFiber, hasVirusInjection].filter(Boolean).length;
+  // The converter does len() > 0 on the software string, so a non-empty string counts.
+  const hasOptoSoftware =
+    typeof model.optogenetic_stimulation_software === 'string' &&
+    model.optogenetic_stimulation_software.trim() !== '';
+  const optoFieldsPresent = [hasOptoSource, hasOpticalFiber, hasVirusInjection, hasOptoSoftware]
+    .filter(Boolean).length;
 
-  // Partial configuration detected (some but not all fields present)
-  if (optoFieldsPresent > 0 && optoFieldsPresent < 3) {
+  // Partial configuration detected (some but not all FOUR sections present).
+  if (optoFieldsPresent > 0 && optoFieldsPresent < 4) {
     issues.push({
       path: 'optogenetics',
       code: 'partial_configuration',
-      repairSurface: 'day',
+      repairSurface: 'animal',
       severity: 'error',
       message:
-        `Partial optogenetics configuration detected. All fields required: ` +
+        `Partial optogenetics configuration detected. All fields required (or none) — ` +
+        `trodes_to_nwb silently drops ALL optogenetics unless every section is present: ` +
         `opto_excitation_source${hasOptoSource ? ' ✓' : ' ✗'}, ` +
         `optical_fiber${hasOpticalFiber ? ' ✓' : ' ✗'}, ` +
-        `virus_injection${hasVirusInjection ? ' ✓' : ' ✗'}`
+        `virus_injection${hasVirusInjection ? ' ✓' : ' ✗'}, ` +
+        `optogenetic_stimulation_software${hasOptoSoftware ? ' ✓' : ' ✗'}`
+    });
+  }
+
+  // Rule 3b: exactly one excitation source. trodes_to_nwb raises a ValueError when
+  // opto_excitation_source has more than one entry ("Multiple optogenetic sources are
+  // not supported"), so a 2+-source session must block export.
+  if (Array.isArray(model.opto_excitation_source) && model.opto_excitation_source.length > 1) {
+    issues.push({
+      path: 'opto_excitation_source',
+      code: 'multiple_excitation_sources',
+      repairSurface: 'animal',
+      severity: 'error',
+      message:
+        `${model.opto_excitation_source.length} optogenetic excitation sources are defined, ` +
+        `but trodes_to_nwb supports exactly one (it raises an error on more). Keep a single ` +
+        `opto_excitation_source.`
     });
   }
 

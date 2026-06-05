@@ -150,7 +150,10 @@ describe('BUG #6: Empty String Validation for Missing Pattern Fields', () => {
             roll_in_deg: 0, // Required field
             yaw_in_deg: 0 // Required field
           }
-        ]
+        ],
+        // The converter gates opto on all four sections; include the software key so this
+        // is a COMPLETE opto config (the rule otherwise flags it partial).
+        optogenetic_stimulation_software: 'fsgui'
       };
 
       const issues = validate(yaml);

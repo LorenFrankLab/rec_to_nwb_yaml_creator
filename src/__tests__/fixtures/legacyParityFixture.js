@@ -199,7 +199,9 @@ const VIRUS_INJECTION = [
   { name: 'Injection 1', description: 'Viral injection', hemisphere: 'left', location: 'CA1', ap_in_mm: -3.5, ml_in_mm: 2.5, dv_in_mm: -2.5, roll_in_deg: 0.0, pitch_in_deg: 0.0, yaw_in_deg: 0.0, reference: 'Bregma at the cortical surface', virus_name: 'AAV-1-EF1a-DIO-ChRmine-mScarlet-WPRE', titer_in_vg_per_ml: 1e12, volume_in_uL: 0.45 },
 ];
 const FS_GUI_YAMLS = [
-  { name: '/path/to/fs_gui.yaml', epochs: [1], power_in_mW: 0.0, dio_output_name: 'out1', state_script_parameters: false, pulseLength: 0 },
+  // camera_id is schema-required (and converter-read); state_script_parameters is a
+  // legacy UI-only key the corrected new-path export strips.
+  { name: '/path/to/fs_gui.yaml', epochs: [1], power_in_mW: 0.0, dio_output_name: 'out1', camera_id: 0, state_script_parameters: false, pulseLength: 0 },
 ];
 
 /**

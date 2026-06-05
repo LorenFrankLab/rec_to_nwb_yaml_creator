@@ -39,7 +39,10 @@ describe('rulesValidation()', () => {
       const model = createTestYaml({
         opto_excitation_source: [{ opto_excitation_source_name: 'LED' }],
         optical_fiber: [{ fiber_model_number: 'FiberX' }],
-        virus_injection: [{ virus_name: 'AAV' }]
+        virus_injection: [{ virus_name: 'AAV' }],
+        // The converter gate also requires the software key; a complete opto session
+        // carries all four sections.
+        optogenetic_stimulation_software: 'fsgui',
       });
       const issues = rulesValidation(model);
 
@@ -300,18 +303,59 @@ describe('rulesValidation()', () => {
       expect(optoIssue.message).toContain('✗'); // Missing field
     });
 
-    it('should not error when all three fields present', () => {
+    it('should not error when all four converter-required sections present', () => {
+      // The converter gate requires optogenetic_stimulation_software too, so a complete
+      // opto session needs all FOUR sections — not three.
       const model = createTestYaml({
         opto_excitation_source: [{ opto_excitation_source_name: 'LED' }],
         optical_fiber: [{ fiber_model_number: 'FiberX' }],
-        virus_injection: [{ virus_name: 'AAV' }]
+        virus_injection: [{ virus_name: 'AAV' }],
+        optogenetic_stimulation_software: 'fsgui',
       });
       const issues = rulesValidation(model);
 
       expect(issues.some(i => i.code === 'partial_configuration')).toBe(false);
     });
 
-    it('should not error when all three fields absent', () => {
+    it('should error when the three sections are present but software is missing', () => {
+      // trodes_to_nwb gates opto on optogenetic_stimulation_software being non-empty too;
+      // omitting it silently drops the whole optogenetics block.
+      const model = createTestYaml({
+        opto_excitation_source: [{ opto_excitation_source_name: 'LED' }],
+        optical_fiber: [{ fiber_model_number: 'FiberX' }],
+        virus_injection: [{ virus_name: 'AAV' }],
+        optogenetic_stimulation_software: '',
+      });
+      const issues = rulesValidation(model);
+
+      expect(issues).toContainEqual(expect.objectContaining({
+        path: 'optogenetics',
+        code: 'partial_configuration',
+        severity: 'error',
+      }));
+    });
+
+    it('should error when more than one excitation source is defined', () => {
+      // trodes_to_nwb raises a ValueError on >1 opto_excitation_source.
+      const model = createTestYaml({
+        opto_excitation_source: [
+          { opto_excitation_source_name: 'LED-1' },
+          { opto_excitation_source_name: 'LED-2' },
+        ],
+        optical_fiber: [{ fiber_model_number: 'FiberX' }],
+        virus_injection: [{ virus_name: 'AAV' }],
+        optogenetic_stimulation_software: 'fsgui',
+      });
+      const issues = rulesValidation(model);
+
+      expect(issues).toContainEqual(expect.objectContaining({
+        path: 'opto_excitation_source',
+        code: 'multiple_excitation_sources',
+        severity: 'error',
+      }));
+    });
+
+    it('should not error when all four fields absent', () => {
       const model = createTestYaml({
         opto_excitation_source: undefined,
         optical_fiber: undefined,

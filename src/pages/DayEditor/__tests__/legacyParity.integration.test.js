@@ -124,16 +124,19 @@ describe('always-on key set matches legacy (non-optogenetics day)', () => {
   });
 });
 
-describe('optogenetics session byte parity', () => {
-  it('reorders opto/fs_gui items to legacy order — byte-identical to a legacy opto export', () => {
+describe('optogenetics session — corrected new-path output', () => {
+  // The new path is intentionally NOT byte-identical to the legacy opto export. The
+  // legacy export silently omitted the keys trodes_to_nwb needs (`opto_software`,
+  // `volume_in_ul`, fs_gui `camera_id`), so the converter dropped the entire
+  // optogenetics block with no error. The corrected new path emits them — so it
+  // diverges from legacy on purpose, while still reordering items to legacy order.
+  it('reorders scrambled opto items to legacy item order', () => {
     const { animal, day } = buildOptoWorkspace();
+    const merged = mergeDayMetadata(animal, day);
 
-    const legacyBytes = encodeYaml(buildOptoLegacyFormData());
-    const newBytes = encodeYaml(mergeDayMetadata(animal, day));
-
-    // The workspace opto items arrive with scrambled key order; the merge must
-    // reorder them to legacy item order to match byte-for-byte.
-    expect(newBytes).toBe(legacyBytes);
+    expect(Object.keys(merged.opto_excitation_source[0])).toEqual([
+      'name', 'model_name', 'description', 'wavelength_in_nm', 'power_in_W', 'intensity_in_W_per_m2',
+    ]);
   });
 
   it('passes the real optogenetics data through unchanged (no value loss)', () => {
@@ -144,9 +147,35 @@ describe('optogenetics session byte parity', () => {
     expect(merged.optical_fiber[0].excitation_source).toBe('Omicron LuxX+ Blue');
     expect(merged.virus_injection[0].virus_name).toBe('AAV-1-EF1a-DIO-ChRmine-mScarlet-WPRE');
     expect(merged.optogenetic_stimulation_software).toBe('fsgui');
-    expect(Object.keys(merged.opto_excitation_source[0])).toEqual([
-      'name', 'model_name', 'description', 'wavelength_in_nm', 'power_in_W', 'intensity_in_W_per_m2',
-    ]);
+  });
+
+  it('emits the converter+schema compatibility keys and strips the UI-only key', () => {
+    const { animal, day } = buildOptoWorkspace();
+    const merged = mergeDayMetadata(animal, day);
+
+    expect(merged.opto_software).toBe('fsgui');
+    expect(merged.virus_injection[0].volume_in_uL).toBe(0.45);
+    expect(merged.virus_injection[0].volume_in_ul).toBe(0.45);
+    expect(merged.fs_gui_yamls[0]).toHaveProperty('camera_id', 0);
+    expect(merged.fs_gui_yamls[0]).not.toHaveProperty('state_script_parameters');
+  });
+
+  it('is schema-valid and rule-complete, whereas the legacy opto export is not', () => {
+    const { animal, day } = buildOptoWorkspace();
+    const merged = mergeDayMetadata(animal, day);
+
+    // The corrected new-path opto session passes full validation...
+    expect(validate(merged)).toEqual([]);
+    // ...while the legacy opto export is missing volume_in_ul + camera_id, the very
+    // gap that silently dropped opto downstream.
+    expect(validate(buildOptoLegacyFormData()).length).toBeGreaterThan(0);
+  });
+
+  it('round-trips through encode/decode without value loss', () => {
+    const { animal, day } = buildOptoWorkspace();
+    const merged = mergeDayMetadata(animal, day);
+
+    expect(decodeYaml(encodeYaml(merged))).toEqual(merged);
   });
 });
 

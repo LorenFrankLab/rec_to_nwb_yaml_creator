@@ -517,6 +517,69 @@ describe('mergeDayMetadata', () => {
       expect(merged.optical_fiber).toEqual([]);
       expect(merged.virus_injection).toEqual([]);
       expect(merged.optogenetic_stimulation_software).toBe('');
+      // The schema-spelling compatibility key is NOT emitted for a no-opto session, so
+      // the byte-for-byte legacy parity of a non-opto export is preserved.
+      expect(merged).not.toHaveProperty('opto_software');
+    });
+
+    it('emits both converter and schema key spellings for an opto session', () => {
+      // trodes_to_nwb reads `optogenetic_stimulation_software` and `volume_in_uL`; the
+      // schema requires `opto_software` and `volume_in_ul`. Both must be emitted (equal)
+      // so the same YAML passes app AJV and converts without silently dropping opto.
+      const animal = createTestAnimal({
+        optogenetics: {
+          opto_excitation_source: [{ name: 'LED-470' }],
+          optical_fiber: [{ name: 'Fiber1' }],
+          virus_injection: [{ name: 'Injection 1', virus_name: 'AAV-ChR2', volume_in_uL: 0.45 }],
+          optogenetic_stimulation_software: 'fsgui',
+        },
+      });
+      const day = createTestDay();
+      const merged = mergeDayMetadata(animal, day);
+
+      expect(merged.optogenetic_stimulation_software).toBe('fsgui');
+      expect(merged.opto_software).toBe('fsgui');
+
+      expect(merged.virus_injection[0].volume_in_uL).toBe(0.45);
+      expect(merged.virus_injection[0].volume_in_ul).toBe(0.45);
+    });
+
+    it('derives the missing volume spelling from whichever one the data carries', () => {
+      // A session that only stored the schema spelling still gets the converter spelling.
+      const animal = createTestAnimal({
+        optogenetics: {
+          opto_excitation_source: [{ name: 'LED-470' }],
+          optical_fiber: [{ name: 'Fiber1' }],
+          virus_injection: [{ name: 'Injection 1', virus_name: 'AAV-ChR2', volume_in_ul: 1.2 }],
+          optogenetic_stimulation_software: 'fsgui',
+        },
+      });
+      const merged = mergeDayMetadata(animal, createTestDay());
+
+      expect(merged.virus_injection[0].volume_in_uL).toBe(1.2);
+      expect(merged.virus_injection[0].volume_in_ul).toBe(1.2);
+    });
+
+    it('fs_gui_yamls carries camera_id and drops non-schema state_script_parameters', () => {
+      const animal = createTestAnimal();
+      const day = createTestDay({
+        fs_gui_yamls: [
+          {
+            name: 's1.yaml',
+            epochs: [1],
+            power_in_mW: 5,
+            dio_output_name: 'Laser',
+            camera_id: 0,
+            state_script_parameters: false, // non-schema UI-control key
+            pulseLength: 10, // schema key — preserved
+          },
+        ],
+      });
+      const merged = mergeDayMetadata(animal, day);
+
+      expect(merged.fs_gui_yamls[0]).toHaveProperty('camera_id', 0);
+      expect(merged.fs_gui_yamls[0]).toHaveProperty('pulseLength', 10);
+      expect(merged.fs_gui_yamls[0]).not.toHaveProperty('state_script_parameters');
     });
   });
 
