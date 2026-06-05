@@ -290,9 +290,11 @@ describe('ChannelMapEditor', () => {
 
   describe('Probe Metadata Contract: per-shank grids (uneven 64c-3s)', () => {
     // 64c-3s partitions 64 electrodes UNEVENLY across 3 shanks (21/21/22). The
-    // editor must derive each shank's grid from the probe catalog, not from a
-    // single uniform channel array — otherwise shank 3 (22 channels) loses keys
-    // 21 (electrode id 63) for both its Map dropdowns and its Bad Channels grid.
+    // editor must derive each shank's Map grid from the probe catalog, not from a
+    // single uniform channel array — otherwise shank 3 (22 channels) loses key 21
+    // (electrode id 63) from its Map dropdowns. Bad channels for a MULTI-shank probe
+    // are edited as ONE probe-wide selector (0..63), written to the first ntrode row
+    // (converter truth), so electrode id 63 stays reachable there too.
     const group64c3s = {
       id: 2,
       device_type: '64c-3s6mm6cm-20um-40um-sl',
@@ -329,9 +331,16 @@ describe('ChannelMapEditor', () => {
       );
       expect(mapSelectCounts).toEqual([21, 21, 22]);
 
-      // The third shank's last channel (local key 21) must exist for both the
-      // Map dropdown and the Bad Channels checkbox (electrode id 63).
-      expect(screen.getByTestId('bad-channels-checkboxes-2').querySelectorAll('input[type="checkbox"]')).toHaveLength(22);
+      // The third shank's last Map channel (local key 21 → electrode id 63) must
+      // exist as a Map dropdown.
+      const lastFieldsetSelects = fieldsets[2].querySelectorAll('.ntrode-map select');
+      expect(lastFieldsetSelects).toHaveLength(22);
+
+      // Bad channels for this MULTI-shank probe are ONE probe-wide grid (0..63),
+      // written to the first ntrode row (id 0). Electrode id 63 is reachable here.
+      const probeWideBadChannels = screen.getByTestId('bad-channels-checkboxes-0');
+      expect(probeWideBadChannels.querySelectorAll('input[type="checkbox"]')).toHaveLength(64);
+      expect(screen.getByLabelText('Mark electrode 63 as bad for this probe')).toBeInTheDocument();
     });
 
     it('saves without dropping electrode id 63 (no spurious validation error)', () => {

@@ -20,6 +20,15 @@ import './DayEditor.scss';
  * shape the `multishank_bad_channels_ignored` rule expects. Single-shank groups keep
  * the per-row checkbox behavior (row-local == probe-local for one shank).
  *
+ * REPAIR-FOCUS ANCHORS: the bad-channel control carries `data-field-path` set to
+ * `ntrode_electrode_group_channel_map[<ntrode_id>]`, the exact path the
+ * `bad_channel_out_of_range` / `multishank_bad_channels_ignored` validation issues
+ * emit. The Day Editor stepper's focus search uses this to land a repair click on
+ * the offending bad-channel control instead of the broad Devices step. For a
+ * multi-shank group the probe-wide control anchors the FIRST row's id, and additional
+ * focusable anchors cover the other ntrode ids in the group (since either rule may
+ * key the issue by a non-first row) — all landing inside the same probe-wide control.
+ *
  * @param {object} props
  * @param {Array} props.ntrodes - Ntrode channel maps for this electrode group
  * @param {object} props.badChannels - Current bad channels: { [ntrodeId]: [channelNumbers] }
@@ -84,6 +93,9 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, devi
     const currentBadChannels = badChannels[firstKey] || [];
     const error = errors?.[firstKey];
     const warning = warnings?.[firstKey];
+    // Either validation rule may key the issue by a non-first ntrode id; anchor
+    // those to the same probe-wide control so a repair click still lands here.
+    const otherNtrodeIds = ntrodes.slice(1).map((n) => n.ntrode_id);
 
     return (
       <div className="bad-channels-editor">
@@ -104,6 +116,10 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, devi
               className="bad-channels-checkboxes"
               role="group"
               aria-label="Failed electrodes for this multi-shank probe"
+              tabIndex={-1}
+              /* Repair-focus anchor: matches the bad-channel issue path keyed by the
+                 FIRST ntrode row — the row the converter honors. */
+              data-field-path={`ntrode_electrode_group_channel_map[${firstNtrode.ntrode_id}]`}
             >
               {electrodeIds.map((electrodeId) => (
                 <div key={electrodeId} className="checkbox-item">
@@ -119,6 +135,20 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, devi
                 </div>
               ))}
             </div>
+
+            {/* Additional repair-focus anchors for the group's other ntrode ids:
+                the bad_channel_out_of_range / multishank_bad_channels_ignored rules
+                can key the issue by a non-first row, but the repair always happens
+                in this one probe-wide control. These land focus inside it. */}
+            {otherNtrodeIds.map((ntrodeId) => (
+              <span
+                key={`anchor-${ntrodeId}`}
+                tabIndex={-1}
+                aria-hidden="true"
+                className="repair-focus-anchor"
+                data-field-path={`ntrode_electrode_group_channel_map[${ntrodeId}]`}
+              />
+            ))}
 
             {error && (
               <span className="validation-error" role="alert">
@@ -163,6 +193,10 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, devi
                 className="bad-channels-checkboxes"
                 role="group"
                 aria-label={`Failed channels for Shank ${index + 1}`}
+                tabIndex={-1}
+                /* Repair-focus anchor: matches the bad-channel issue path for this
+                   ntrode row so a repair click lands on this control. */
+                data-field-path={`ntrode_electrode_group_channel_map[${ntrodeId}]`}
               >
                 {channels.map(channelNum => (
                   <div key={channelNum} className="checkbox-item">

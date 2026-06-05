@@ -39,6 +39,11 @@ function collectValidEpochs(tasks) {
  * visible "Missing epoch N" unselectable option (never a blank select) and is
  * flagged with `role="alert"`, so the user can re-point it before the day is clean.
  *
+ * REPAIR-FOCUS ANCHOR: each row's epoch `<select>` carries `data-field-path` set to
+ * `associated_files[<index>].task_epochs`, the exact path the `orphaned_file`
+ * validation issue emits. The Day Editor stepper's focus search uses this to land a
+ * repair click on the offending row's epoch control instead of the broad step.
+ *
  * Persisted through `onChange(nextArray)` (the step routes that to
  * `onFieldUpdate('associated_files', nextArray)`).
  *
@@ -140,6 +145,9 @@ export default function AssociatedFilesEditor({ files, tasks, onChange }) {
                   <label htmlFor={`${baseId}-epoch-${index}`}>Task epoch</label>
                   <select
                     id={`${baseId}-epoch-${index}`}
+                    /* Repair-focus anchor: matches the `orphaned_file` issue path so
+                       a repair click lands on this row's epoch control. */
+                    data-field-path={`associated_files[${index}].task_epochs`}
                     value={epoch === '' || epoch == null ? '' : String(epoch)}
                     aria-invalid={epochStale}
                     aria-describedby={epochStale ? staleId : undefined}

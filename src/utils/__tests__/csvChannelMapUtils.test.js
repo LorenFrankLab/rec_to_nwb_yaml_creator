@@ -340,11 +340,87 @@ describe('importChannelMapsFromCSV', () => {
     expect(() => importChannelMapsFromCSV(csv)).toThrow('Missing required columns');
   });
 
-  test('throws error for invalid numeric channel values', () => {
+  test('preserves a non-integer channel value instead of truncating it', () => {
+    // Normalization Contract: a channel cell that is not an exact integer
+    // ("invalid") is PRESERVED verbatim so the downstream channel-bound rules
+    // flag it. Previously parseInt would have truncated junk like "2.9" -> 2 or
+    // thrown on "invalid"; preserving lets validation surface the corruption.
     const csv = `electrode_group_id,device_type,location,ntrode_id,electrode_id,bad_channels,channel_0,channel_1,channel_2,channel_3
 0,tetrode_12.5,CA1,0,0,"",invalid,1,2,3`;
 
-    expect(() => importChannelMapsFromCSV(csv)).toThrow('Invalid numeric value');
+    const result = importChannelMapsFromCSV(csv);
+
+    expect(result[0].map[0]).toBe('invalid');
+    // Clean integer cells in the same row are still coerced to integers.
+    expect(result[0].map[1]).toBe(1);
+  });
+  // --- Normalization Contract: no silent truncation of non-integer cells ---
+  // parseInt('2.9') === 2 / parseInt('63abc') === 63 would launder a corrupt
+  // cell into a plausible channel. The Normalization Contract requires such a
+  // value to be PRESERVED for channel-bound validation to flag (channel values
+  // / bad-channels) or REJECTED with a clear error (structurally-required ints),
+  // never silently truncated.
+
+  test('does NOT silently truncate a non-integer channel value "2.9" to 2', () => {
+    const csv = `electrode_group_id,device_type,location,ntrode_id,bad_channels,channel_0,channel_1,channel_2,channel_3
+0,tetrode_12.5,CA1,0,"",2.9,1,2,3`;
+
+    const result = importChannelMapsFromCSV(csv);
+
+    // Must NOT collapse to the integer 2 (that would be silent truncation).
+    expect(result[0].map[0]).not.toBe(2);
+    // Preserved verbatim so the downstream channel-bound rules surface it.
+    expect(result[0].map[0]).toBe('2.9');
+  });
+
+  test('does NOT silently truncate a junk channel value "63abc" to 63', () => {
+    const csv = `electrode_group_id,device_type,location,ntrode_id,bad_channels,channel_0,channel_1,channel_2,channel_3
+0,tetrode_12.5,CA1,0,"",63abc,1,2,3`;
+
+    const result = importChannelMapsFromCSV(csv);
+
+    expect(result[0].map[0]).not.toBe(63);
+    expect(result[0].map[0]).toBe('63abc');
+  });
+
+  test('does NOT silently truncate a non-integer bad_channel "2.9" to 2', () => {
+    const csv = `electrode_group_id,device_type,location,ntrode_id,bad_channels,channel_0,channel_1,channel_2,channel_3
+0,tetrode_12.5,CA1,0,"2.9",0,1,2,3`;
+
+    const result = importChannelMapsFromCSV(csv);
+
+    expect(result[0].bad_channels).not.toContain(2);
+    expect(result[0].bad_channels).toEqual(['2.9']);
+  });
+
+  test('does NOT silently truncate a junk bad_channel "63abc" to 63', () => {
+    const csv = `electrode_group_id,device_type,location,ntrode_id,bad_channels,channel_0,channel_1,channel_2,channel_3
+0,tetrode_12.5,CA1,0,"63abc",0,1,2,3`;
+
+    const result = importChannelMapsFromCSV(csv);
+
+    expect(result[0].bad_channels).not.toContain(63);
+    expect(result[0].bad_channels).toEqual(['63abc']);
+  });
+
+  test('rejects (does not truncate) a non-integer electrode_group_id "2.9"', () => {
+    const csv = `electrode_group_id,device_type,location,ntrode_id,bad_channels,channel_0,channel_1,channel_2,channel_3
+2.9,tetrode_12.5,CA1,0,"",0,1,2,3`;
+
+    // electrode_group_id is a structurally-required integer; a non-integer cell
+    // must be a clear error naming the cell, not silently floored to 2.
+    expect(() => importChannelMapsFromCSV(csv)).toThrow(/electrode_group_id/);
+    expect(() => importChannelMapsFromCSV(csv)).toThrow('2.9');
+  });
+
+  test('preserves negative exact-integer channel values', () => {
+    const csv = `electrode_group_id,device_type,location,ntrode_id,bad_channels,channel_0,channel_1,channel_2,channel_3
+0,tetrode_12.5,CA1,0,"",-1,1,2,3`;
+
+    const result = importChannelMapsFromCSV(csv);
+
+    // "-1" is an exact integer string -> coerced to the integer -1.
+    expect(result[0].map[0]).toBe(-1);
   });
 });
 

@@ -6,6 +6,7 @@
  */
 
 import { nextNtrodeId } from './channelMapUtils';
+import { parseExactInteger } from './deviceNormalization';
 
 /**
  * Returns the number of channel entries (map keys) in a single channel map.
@@ -217,8 +218,12 @@ export function importChannelMapsFromCSV(csvString, existingMaps = []) {
 
     // Extract values. electrode_group_id is parsed to an integer (schema type).
     const electrode_group_id_str = cells[headers.indexOf('electrode_group_id')];
-    const electrode_group_id = parseInt(electrode_group_id_str, 10);
-    if (isNaN(electrode_group_id)) {
+    // electrode_group_id is a structurally-required integer (schema type). Use
+    // EXACT integer parsing (Normalization Contract): "2" -> 2, but "2.9" /
+    // "63abc" / "" are rejected with a clear, cell-naming error rather than
+    // silently truncated by parseInt ("2.9" -> 2).
+    const electrode_group_id = parseExactInteger(electrode_group_id_str);
+    if (!Number.isInteger(electrode_group_id)) {
       throw new Error(`Invalid numeric value for electrode_group_id at row ${i + 1}: "${electrode_group_id_str}"`);
     }
     const bad_channels_str = cells[headers.indexOf('bad_channels')];
@@ -229,13 +234,10 @@ export function importChannelMapsFromCSV(csvString, existingMaps = []) {
       const values = bad_channels_str.split(',').map(v => v.trim());
       bad_channels = values
         .filter(v => v !== '')
-        .map(v => {
-          const num = parseInt(v, 10);
-          if (isNaN(num)) {
-            throw new Error(`Invalid numeric value in bad_channels at row ${i + 1}: "${v}"`);
-          }
-          return num;
-        });
+        // Exact integer-string -> integer; anything else ("2.9", "63abc") is
+        // PRESERVED unchanged (Normalization Contract) so the channel-bound
+        // rules flag it instead of parseInt silently flooring "2.9" -> 2.
+        .map(v => parseExactInteger(v));
     }
 
     // Parse channel map
@@ -250,14 +252,18 @@ export function importChannelMapsFromCSV(csvString, existingMaps = []) {
         continue;
       }
 
-      const channelNum = parseInt(channelValue, 10);
+      // Exact integer-string -> integer; anything else ("2.9", "63abc") is
+      // PRESERVED unchanged (Normalization Contract) so the channel-bound rules
+      // surface it instead of parseInt silently truncating "2.9" -> 2.
+      const channelNum = parseExactInteger(channelValue);
 
-      if (isNaN(channelNum)) {
-        throw new Error(`Invalid numeric value for channel at row ${i + 1}: "${channelValue}"`);
+      // The channel index comes from an app-generated header ("channel_0" -> 0)
+      // and is a structurally-required integer key; reject (don't truncate) a
+      // malformed header column rather than writing to a corrupt key.
+      const channelIndex = parseExactInteger(headers[index].split('_')[1]);
+      if (!Number.isInteger(channelIndex)) {
+        throw new Error(`Invalid channel column header at row ${i + 1}: "${headers[index]}"`);
       }
-
-      // Extract channel index from header (e.g., "channel_0" → 0)
-      const channelIndex = parseInt(headers[index].split('_')[1], 10);
       map[channelIndex] = channelNum;
     }
 
