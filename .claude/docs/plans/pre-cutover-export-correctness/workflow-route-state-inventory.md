@@ -149,6 +149,10 @@ Categories:
 | `existing_data` | recovered/imported/corrupt repair | `malformed_*`, `missing_configuration_history`, `stale_bad_channel_override`, `shadowed_geometry_override` |
 | `export_preflight` | export-confidence readiness | (readiness state, not an issue code) |
 
-The action label for each category matches the setup-checklist wording (`Set Up Electrodes`,
-`Review Cameras`, `Fix day failed channels`, …) so a user sees the same next-step name in the
-checklist, the Day Devices step, Validation, and Export.
+The workflow framing comes from two places that DO share wording with the setup checklist: the
+category **headings** (`Animal setup`, `Day metadata`, `Day-specific failed channels`, `Existing
+data repair`) shown in Validation and Export, and the **checklist action verbs** (`Set Up
+Electrodes`, `Review Cameras`, …) on the Animal Workspace + Day Devices empty state. The
+individual repair **buttons** keep the canonical `repairTargetForIssue` labels ("Fix in Animal
+Editor → …", "Fix in Devices"), which are a tested routing contract — the category heading above
+them supplies the workflow context, so the button text need not be reworded.

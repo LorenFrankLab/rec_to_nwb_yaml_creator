@@ -6,6 +6,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import DevicesStep from '../DevicesStep';
 import { buildRealisticWorkspace } from '../../../__tests__/fixtures/workspaceBuilders';
 import { mergeDayMetadata } from '../../../state/workspaceUtils';
@@ -46,7 +47,9 @@ describe('Day Devices workflow copy', () => {
     ).toBeInTheDocument();
   });
 
-  it('warns when an unpinned day in a multi-version animal resolves to the latest configuration', () => {
+  it('warns and offers a repairable version pin when an unpinned day resolves to latest', async () => {
+    const user = userEvent.setup();
+    const onFieldUpdate = vi.fn();
     const { animal, day } = buildRealisticWorkspace();
     animal.configurationHistory.push({
       version: 2,
@@ -62,11 +65,16 @@ describe('Day Devices workflow copy', () => {
         animal={animal}
         day={day}
         mergedDay={merged}
-        onFieldUpdate={vi.fn()}
+        onFieldUpdate={onFieldUpdate}
         animalDays={[day]}
         actions={{ createConfigurationSnapshotAndApplyForward: vi.fn() }}
       />
     );
     expect(screen.getByText(/no pinned configuration version/i)).toBeInTheDocument();
+
+    // The warning is repairable: choose a version and pin it (writes day.configurationVersion).
+    await user.selectOptions(screen.getByLabelText(/pin this day to/i), '1');
+    await user.click(screen.getByRole('button', { name: /pin version/i }));
+    expect(onFieldUpdate).toHaveBeenCalledWith('configurationVersion', 1);
   });
 });

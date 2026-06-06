@@ -21,6 +21,7 @@ import { useStoreContext } from '../../state/StoreContext';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { getAnimalDayIds, getAnimalSubject } from '../../state/workspaceSelectors';
 import { computeStepStatus } from '../../domain/validation';
+import { getDayWorkflowStatus } from '../../domain/workflowStatus';
 import { formatDeterministicFilename, downloadYamlFile } from '../../io/yaml';
 import { checkShadowExport } from '../../domain/shadowExport';
 import { isFeatureEnabled } from '../../featureFlags';
@@ -221,6 +222,8 @@ export function ValidationSummary() {
   const [skippedReport, setSkippedReport] = useState([]);
   const [overriddenReport, setOverriddenReport] = useState([]);
   const [failedReport, setFailedReport] = useState([]);
+  // Pending batch export awaiting preflight confirmation: { rows, preflight }.
+  const [pendingExport, setPendingExport] = useState(null);
 
   const clearReports = () => {
     setSkippedReport([]);
@@ -252,16 +255,59 @@ export function ValidationSummary() {
     );
   };
 
+  // Step 1 of batch export: gather the valid days and build a per-day preflight so the batch
+  // path gets the SAME "what will be encoded?" confidence check as the single-day Export step,
+  // instead of one click straight to download. The actual download runs only on confirm.
   const handleExportValidOnly = () => {
     const validRows = rows.filter((row) => row.chip === 'valid');
 
     if (validRows.length === 0) {
       clearReports();
+      setPendingExport(null);
       setActionMessage(
         'No valid days to export. Fix errors or complete the required fields to enable export.'
       );
       return;
     }
+
+    const preflight = validRows.map(({ animal, day }) => {
+      try {
+        const merged = mergeDayMetadata(animal, day);
+        const status = getDayWorkflowStatus(animal, day, merged);
+        const ntrodeMap = merged.ntrode_electrode_group_channel_map || [];
+        const failedChannels = ntrodeMap.reduce((t, n) => t + (n.bad_channels?.length || 0), 0);
+        const optoOn =
+          (merged.opto_excitation_source?.length || 0) > 0 ||
+          (merged.optical_fiber?.length || 0) > 0 ||
+          (merged.virus_injection?.length || 0) > 0;
+        return {
+          dayId: day.id,
+          label: `${subjectLabel(animal)} — ${day.session?.session_id || day.id}`,
+          version: status.configurationVersion,
+          historical: status.isHistoricalConfiguration,
+          unpinned: status.usesUnpinnedConfiguration,
+          groups: (merged.electrode_groups || []).length,
+          failedChannels,
+          cameras: (merged.cameras || []).length,
+          opto: optoOn,
+        };
+      } catch (err) {
+        return { dayId: day.id, label: `${subjectLabel(animal)} — ${day.id}`, error: err.message };
+      }
+    });
+
+    clearReports();
+    setActionMessage('');
+    setPendingExport({ rows: validRows, preflight });
+  };
+
+  const cancelExport = () => setPendingExport(null);
+
+  // Step 2 of batch export: run the actual downloads after the user confirms the preflight.
+  const runExport = () => {
+    if (!pendingExport) return;
+    const { rows: validRows } = pendingExport;
+    setPendingExport(null);
 
     const strict = isFeatureEnabled('shadowExportStrict');
     const skipped = [];
@@ -361,6 +407,46 @@ export function ValidationSummary() {
             <em>Valid</em> status ({counts.valid} {counts.valid === 1 ? 'day' : 'days'}). Days
             with errors or incomplete fields are not exported.
           </p>
+
+          {pendingExport && (
+            <section className="batch-export-preflight" aria-label="Batch export preflight">
+              <h2>Confirm batch export</h2>
+              <p>
+                {pendingExport.rows.length} {pendingExport.rows.length === 1 ? 'day' : 'days'} will
+                be encoded and downloaded. Review what each file will contain before exporting:
+              </p>
+              <ul className="batch-export-preflight-list">
+                {pendingExport.preflight.map((entry) => (
+                  <li key={entry.dayId} className="batch-export-preflight-item">
+                    <span className="batch-export-preflight-label">{entry.label}</span>
+                    {entry.error ? (
+                      <span className="batch-export-preflight-error">
+                        Could not assemble metadata: {entry.error}
+                      </span>
+                    ) : (
+                      <span className="batch-export-preflight-detail">
+                        config v{entry.version ?? '—'}
+                        {entry.historical ? ' (historical)' : ''}
+                        {entry.unpinned ? ' — not pinned, resolved to latest' : ''}; {entry.groups}{' '}
+                        electrode {entry.groups === 1 ? 'group' : 'groups'}, {entry.failedChannels}{' '}
+                        failed {entry.failedChannels === 1 ? 'channel' : 'channels'}; {entry.cameras}{' '}
+                        {entry.cameras === 1 ? 'camera' : 'cameras'}; optogenetics{' '}
+                        {entry.opto ? 'on' : 'off'}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              <div className="batch-export-preflight-actions">
+                <button type="button" className="btn-primary" onClick={runExport}>
+                  Confirm export ({pendingExport.rows.length})
+                </button>
+                <button type="button" onClick={cancelExport}>
+                  Cancel
+                </button>
+              </div>
+            </section>
+          )}
 
           {/* Polite live region for batch-action completion announcements. */}
           <div

@@ -360,13 +360,14 @@ describe('AnimalWorkspace Component (M4) - Initial State', () => {
     });
 
     it('does not show "Edit Devices" button when no animal is selected', () => {
+      // Two animals + no ?animal param → nothing auto-selected (auto-select only fires for a
+      // SOLE animal), so this exercises the genuine no-selection state.
+      window.location.hash = '#/workspace';
       const initialState = {
         workspace: {
           animals: {
-            testanimal: {
-              subject: { subject_id: 'testanimal' },
-              days: [],
-            },
+            testanimal: { subject: { subject_id: 'testanimal' }, days: [] },
+            otheranimal: { subject: { subject_id: 'otheranimal' }, days: [] },
           },
           days: {},
           settings: {},
@@ -383,6 +384,27 @@ describe('AnimalWorkspace Component (M4) - Initial State', () => {
       // Check that "Edit Devices" button/link is not present
       const editDevicesLink = screen.queryByRole('link', { name: /edit devices/i });
       expect(editDevicesLink).not.toBeInTheDocument();
+    });
+
+    it('auto-selects the sole animal so its setup is visible without a click', () => {
+      window.location.hash = '#/workspace';
+      const initialState = {
+        workspace: {
+          animals: { onlyone: { subject: { subject_id: 'onlyone' }, days: [] } },
+          days: {},
+          settings: {},
+        },
+      };
+
+      render(
+        <StoreProvider initialState={initialState}>
+          <AnimalWorkspace />
+        </StoreProvider>
+      );
+
+      // The sole animal is selected on mount (its card is pressed and the setup checklist shows).
+      expect(screen.getByRole('button', { name: /onlyone/i })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('region', { name: /animal setup/i })).toBeInTheDocument();
     });
   });
 });

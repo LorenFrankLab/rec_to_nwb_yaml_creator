@@ -10,12 +10,12 @@
  * (`computeStepStatus` / `validateDay` in `./validation`) plus the shape-safe raw-state reads
  * in `../state/workspaceSelectors`. It NEVER re-implements validation or recomputes a parallel
  * ready/blocked. In particular `readyForExportPreflight` derives from
- * `computeStepStatus(...).export === 'valid'` — the same gate the Export button consults — so a
- * second readiness computation can't drift from the export gate.
+ * `isExportEnabled(computeStepStatus(...))` — the SAME gate the Export button consults (which
+ * folds in the prerequisite-step statuses, not just the `export` status) — so a second
+ * readiness computation can't drift from the export gate.
  *
- * Setup-state categories (`needs_camera_calibration`, `needs_data_acq`, …) are INFORMATIONAL.
- * They never gate export: cameras/data-acq can be legitimately absent. The export gate stays
- * exactly `computeStepStatus(...).export`.
+ * Setup-state categories (missing cameras/data-acq, …) are INFORMATIONAL. They never gate
+ * export: cameras/data-acq can be legitimately absent. The export gate is unchanged.
  */
 
 import { computeStepStatus } from './validation';
@@ -27,6 +27,7 @@ import {
   getAnimalSubject,
   getAnimalDayIds,
   getConfigHistory,
+  getProbeElectrodeGroups,
 } from '../state/workspaceSelectors';
 
 /**
@@ -41,19 +42,43 @@ export const SETUP_STATE = {
 };
 
 /**
- * Whether the animal has electrode/probe geometry configured. Reads `animal.devices` — the
- * SAME source the Animal Editor renders and edits — so a "Review Electrodes" action always
- * lands on a populated editor. Under model B, `animal.devices` mirrors the latest
- * configuration snapshot, so this also matches what the export resolves in normal use; a
- * recovered/imported animal whose `devices` is empty (but a snapshot has geometry) correctly
- * reads as "not set up" here, because the editor would be empty and the honest next action is
- * "Set Up Electrodes", not a review that dead-ends on a blank step.
+ * The latest configuration snapshot's electrode groups (the export source of truth).
+ * @param {object} animal
+ * @returns {Array}
+ */
+function latestSnapshotElectrodeGroups(animal) {
+  const history = getConfigHistory(animal);
+  const latest = history.length > 0 ? history[history.length - 1] : null;
+  return getProbeElectrodeGroups(latest?.devices);
+}
+
+/**
+ * Whether the animal has electrode/probe geometry loaded for editing. Reads `animal.devices` —
+ * the SAME source the Animal Editor renders and edits — so a "Review Electrodes" action always
+ * lands on a populated editor. Under model B, `animal.devices` mirrors the latest configuration
+ * snapshot, so in normal use this also matches what the export resolves.
  *
  * @param {object} animal
  * @returns {boolean}
  */
 export function animalHasElectrodes(animal) {
   return getAnimalElectrodeGroups(animal).length > 0;
+}
+
+/**
+ * The mirror-divergence case (recovered/imported data, or a corrupted blob): the latest
+ * configuration snapshot HAS electrode geometry (so the export encodes electrodes) but
+ * `animal.devices` is empty (so the Animal Editor would render a blank "add your first group"
+ * state). This is NOT "not set up" — the electrodes exist; the editable mirror is stale.
+ * Treated as a repair/sync state so the user re-loads the saved configuration instead of
+ * (dangerously) adding a fresh group that would OVERWRITE the snapshot via the devices→snapshot
+ * mirror in `applyAnimalUpdates`.
+ *
+ * @param {object} animal
+ * @returns {boolean}
+ */
+export function animalElectrodeSetupNeedsSync(animal) {
+  return getAnimalElectrodeGroups(animal).length === 0 && latestSnapshotElectrodeGroups(animal).length > 0;
 }
 
 /**
@@ -150,6 +175,7 @@ export function getAnimalSetupChecklist(animal, { issues = [] } = {}) {
   const subject = getAnimalSubject(animal);
   const electrodeCount = getAnimalElectrodeGroups(animal).length;
   const electrodesPresent = electrodeCount > 0;
+  const electrodesNeedSync = animalElectrodeSetupNeedsSync(animal);
   const cameras = getAnimalCameras(animal);
   const dataAcq = getDataAcqDevices(animal);
   const dayIds = getAnimalDayIds(animal);
@@ -184,11 +210,38 @@ export function getAnimalSetupChecklist(animal, { issues = [] } = {}) {
     return { key, label, state, count, present, summary, action: actionForItem(key, present) };
   };
 
+  // Electrodes are special: a mirror divergence (geometry only in the snapshot) is a
+  // repair/sync state, NOT "not started" — the electrodes exist; the editable mirror is stale.
+  const snapshotElectrodeCount = latestSnapshotElectrodeGroups(animal).length;
+  const electrodesItem = (() => {
+    let state;
+    if (errorAreas.has('electrodes') || electrodesNeedSync) state = SETUP_STATE.HAS_ERRORS;
+    else if (!electrodesPresent) state = SETUP_STATE.NOT_STARTED;
+    else state = SETUP_STATE.NEEDS_REVIEW;
+    const action = electrodesNeedSync
+      ? { label: 'Repair electrode setup', fieldHint: 'electrode_groups' }
+      : actionForItem('electrodes', electrodesPresent);
+    const summary = electrodesNeedSync
+      ? `${snapshotElectrodeCount} in saved configuration (not loaded for editing)`
+      : electrodesPresent
+        ? `${electrodeCount} electrode group${electrodeCount === 1 ? '' : 's'}`
+        : 'Not set up';
+    return {
+      key: 'electrodes',
+      label: 'Electrodes / probes',
+      state,
+      count: electrodesPresent ? electrodeCount : snapshotElectrodeCount,
+      present: electrodesPresent,
+      needsSync: electrodesNeedSync,
+      summary,
+      action,
+    };
+  })();
+
   return [
     item('subject', 'Subject', subjectPresent, SETUP_STATE.COMPLETE, subjectPresent ? 1 : 0,
       subjectPresent ? subject.subject_id : 'Not set'),
-    item('electrodes', 'Electrodes / probes', electrodesPresent, SETUP_STATE.NEEDS_REVIEW, electrodeCount,
-      electrodesPresent ? `${electrodeCount} electrode group${electrodeCount === 1 ? '' : 's'}` : 'Not set up'),
+    electrodesItem,
     item('cameras', 'Cameras / calibration', camerasPresent, SETUP_STATE.NEEDS_REVIEW, cameras.length,
       camerasPresent ? `${cameras.length} camera${cameras.length === 1 ? '' : 's'}` : 'None'),
     item('data_acq', 'Data acquisition', dataAcqPresent, SETUP_STATE.NEEDS_REVIEW, dataAcq.length,

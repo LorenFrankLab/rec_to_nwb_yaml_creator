@@ -1,5 +1,11 @@
 import PropTypes from 'prop-types';
-import { getAnimalElectrodeGroups } from '../../state/workspaceSelectors';
+import {
+  getAnimalElectrodeGroups,
+  getConfigHistory,
+  getProbeElectrodeGroups,
+  getProbeNtrodeMaps,
+} from '../../state/workspaceSelectors';
+import { animalElectrodeSetupNeedsSync } from '../../domain/workflowStatus';
 import { getChannelCount, getShankCount } from '../../utils/deviceTypeUtils';
 import './ElectrodeGroupsStep.scss';
 
@@ -112,6 +118,36 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
       onDelete(group);
     }
   };
+
+  // Mirror-divergence repair state: the saved configuration HAS electrode geometry but the
+  // editable mirror (animal.devices) is empty (recovered/imported data). Offer a safe re-sync
+  // instead of the blank "add your first group" state — adding a group here would OVERWRITE the
+  // saved snapshot via the devices→snapshot mirror.
+  if (animalElectrodeSetupNeedsSync(animal)) {
+    const latest = getConfigHistory(animal).slice(-1)[0];
+    const snapshotGroups = getProbeElectrodeGroups(latest?.devices);
+    const handleLoadSaved = () => {
+      onFieldUpdate('devices', {
+        electrode_groups: snapshotGroups,
+        ntrode_electrode_group_channel_map: getProbeNtrodeMaps(latest?.devices),
+      });
+    };
+    return (
+      <div className="electrode-groups-step">
+        <section className="raw-corruption-banner" role="alert" aria-label="Electrode setup needs repair">
+          <p className="field-help-text">
+            This animal&apos;s saved configuration has {snapshotGroups.length} electrode{' '}
+            {snapshotGroups.length === 1 ? 'group' : 'groups'} that {snapshotGroups.length === 1 ? 'is' : 'are'} not
+            loaded for editing. Load the saved configuration to review or edit it — adding new
+            groups here instead would replace the saved configuration.
+          </p>
+          <button type="button" className="button-primary" onClick={handleLoadSaved}>
+            Load saved electrode configuration
+          </button>
+        </section>
+      </div>
+    );
+  }
 
   // Empty state
   if (electrodeGroups.length === 0) {

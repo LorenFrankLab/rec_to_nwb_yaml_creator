@@ -99,13 +99,21 @@ export function AnimalWorkspace() {
 
   const selectedAnimal = selectedAnimalId ? animals[selectedAnimalId] : null;
 
-  // Read ?animal=<id> URL parameter on mount to auto-select animal
+  // On mount, select an animal so the setup/review state is visible immediately rather than
+  // one click hidden: honor an explicit `?animal=<id>`; with no param, auto-select the SOLE
+  // animal (the unambiguous case). An explicit-but-unknown `?animal` selects nothing (the user
+  // asked for a specific animal — don't substitute a different one).
   useEffect(() => {
     const params = new URLSearchParams(window.location.hash.split('?')[1]);
     const animalParam = params.get('animal');
 
-    if (animalParam && animals[animalParam]) {
-      setSelectedAnimalId(animalParam);
+    if (animalParam) {
+      if (animals[animalParam]) setSelectedAnimalId(animalParam);
+      return;
+    }
+    const ids = Object.keys(animals);
+    if (ids.length === 1) {
+      setSelectedAnimalId(ids[0]);
     }
   }, []); // Run only on mount
 

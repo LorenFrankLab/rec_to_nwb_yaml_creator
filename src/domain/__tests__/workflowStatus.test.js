@@ -70,14 +70,26 @@ describe('getAnimalSetupChecklist', () => {
     expect(electrodes.action.label).toBe('Review Electrodes');
   });
 
-  it('counts electrodes from animal.devices (the source the Animal Editor renders), so Review never dead-ends on an empty editor', () => {
-    // A recovered/imported animal whose geometry is ONLY in the snapshot (animal.devices
-    // empty) must read as not_started → "Set Up Electrodes", not Review-into-an-empty-editor.
+  it('flags a device/snapshot mirror divergence as a repair/sync state (not "not started")', () => {
+    // A recovered animal whose geometry is ONLY in the snapshot (animal.devices empty) must NOT
+    // read as not_started → "Set Up Electrodes" (which would overwrite the snapshot), nor
+    // needs_review → an empty editor. It is a repair/sync state: the electrodes exist, the
+    // editable mirror is stale.
     const { animal } = buildRealisticWorkspace();
     expect(animal.devices.electrode_groups).toEqual([]);
+    expect(animal.configurationHistory[0].devices.electrode_groups.length).toBeGreaterThan(0);
     const electrodes = itemFor(getAnimalSetupChecklist(animal), 'electrodes');
-    expect(electrodes.state).toBe(SETUP_STATE.NOT_STARTED);
-    expect(electrodes.action.label).toBe('Set Up Electrodes');
+    expect(electrodes.state).toBe(SETUP_STATE.HAS_ERRORS);
+    expect(electrodes.needsSync).toBe(true);
+    expect(electrodes.action.label).toBe('Repair electrode setup');
+  });
+
+  it('does not flag a sync divergence for a normal animal (devices mirrors the snapshot)', () => {
+    const { animal } = buildRealisticWorkspace();
+    animal.devices.electrode_groups = animal.configurationHistory[0].devices.electrode_groups;
+    const electrodes = itemFor(getAnimalSetupChecklist(animal), 'electrodes');
+    expect(electrodes.state).toBe(SETUP_STATE.NEEDS_REVIEW);
+    expect(electrodes.needsSync).toBe(false);
   });
 
   it('shows cameras needs_review when present and not_started when absent', () => {

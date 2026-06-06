@@ -152,6 +152,8 @@ describe('ValidationSummary', () => {
     render(<ValidationSummary />);
 
     await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    // Batch export now shows a preflight; confirm it to run the downloads.
+    await user.click(screen.getByRole('button', { name: /confirm export/i }));
 
     // Only the single valid day is shadow-checked and downloaded.
     expect(checkShadowExport).toHaveBeenCalledTimes(1);
@@ -175,6 +177,7 @@ describe('ValidationSummary', () => {
     render(<ValidationSummary />);
 
     await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    await user.click(screen.getByRole('button', { name: /confirm export/i }));
 
     // Skipped, never downloaded.
     expect(downloadYamlFile).not.toHaveBeenCalled();
@@ -202,6 +205,7 @@ describe('ValidationSummary', () => {
     render(<ValidationSummary />);
 
     await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    await user.click(screen.getByRole('button', { name: /confirm export/i }));
 
     expect(downloadYamlFile).toHaveBeenCalledTimes(2);
     // Stable order: sorted by date → 06-22 then 06-23.
@@ -225,6 +229,7 @@ describe('ValidationSummary', () => {
     render(<ValidationSummary />);
 
     await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    await user.click(screen.getByRole('button', { name: /confirm export/i }));
 
     // The override DOWNLOADS the mismatched day...
     expect(downloadYamlFile).toHaveBeenCalledTimes(1);
@@ -255,6 +260,7 @@ describe('ValidationSummary', () => {
     render(<ValidationSummary />);
 
     await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    await user.click(screen.getByRole('button', { name: /confirm export/i }));
 
     // Only the good day downloads; the mismatched day is skipped (not downloaded).
     expect(downloadYamlFile).toHaveBeenCalledTimes(1);
@@ -281,6 +287,34 @@ describe('ValidationSummary', () => {
     expect(checkShadowExport).not.toHaveBeenCalled();
     expect(downloadYamlFile).not.toHaveBeenCalled();
     expect(screen.getByRole('status')).toHaveTextContent(/no valid days to export/i);
+  });
+
+  it('Export Valid Only shows a per-day preflight (config version + contents) before downloading', async () => {
+    const user = userEvent.setup();
+    const { workspace } = makeSummaryWorkspace();
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+    await user.click(screen.getByRole('button', { name: /export valid only/i }));
+
+    // Preflight region appears; nothing has downloaded yet (confidence check, not one-click).
+    const preflight = screen.getByRole('region', { name: /batch export preflight/i });
+    expect(within(preflight).getByText(/config v1/i)).toBeInTheDocument();
+    expect(within(preflight).getByText(/electrode group/i)).toBeInTheDocument();
+    expect(downloadYamlFile).not.toHaveBeenCalled();
+  });
+
+  it('Export Valid Only: cancelling the preflight downloads nothing', async () => {
+    const user = userEvent.setup();
+    const { workspace } = makeSummaryWorkspace();
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+    await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    await user.click(screen.getByRole('button', { name: /cancel/i }));
+
+    expect(screen.queryByRole('region', { name: /batch export preflight/i })).not.toBeInTheDocument();
+    expect(downloadYamlFile).not.toHaveBeenCalled();
   });
 
   it('Validate All announces a singular day for a one-day workspace', async () => {

@@ -87,15 +87,34 @@ the enriched preflight assertions.
 - **Deep-linked repair links.** The Day Devices config-error and missing-channel-map links now
   deep-link to the owning Animal Editor step (`?field=…`) instead of the bare editor.
 
-**Deferred (logged, out of this phase's wording/routing/state scope):**
+**Second-review follow-ups (addressed in-phase — nothing deferred):**
 
-- **Batch export preflight.** `ValidationSummary`'s "Export Valid Only" stays validity-gated (no
-  wrong-data risk) but does not yet show the per-day preflight confidence summary; building a
-  batch-preflight surface is a new feature for Phase 9/11.
-- **Repair-button label rewording.** Repair buttons keep the canonical `repairTargetForIssue`
-  labels ("Fix in Animal Editor → …", "Fix in Devices"), which are a tested routing contract; the
-  workflow-category headings already provide the setup-checklist framing. Rewording the canonical
-  labels is deferred to avoid destabilizing the routing contract.
+- **Electrode authority is unambiguous (device/snapshot mirror divergence).** When the saved
+  configuration has electrode geometry but the editable mirror (`animal.devices`) is empty
+  (recovered/imported data), the checklist shows a **repair/sync** state (not "not started"), and
+  the Animal Editor's Electrode Groups step offers **"Load saved electrode configuration"** instead
+  of a blank "add your first group" — which would have overwritten the snapshot via the
+  devices→snapshot mirror. New helper `animalElectrodeSetupNeedsSync`.
+- **Unpinned day pins are repairable, not just warned.** The Day Devices version bar now offers a
+  **version-pin control** (assign an existing `configurationVersion`) next to the unpinned-multi-
+  version warning, so the wrong-geometry risk is fixable in place. (A hard export-block would be a
+  validation-rule change owned by the correctness phases; the repair control closes the actionable
+  gap surfaced by Phase 8.6.)
+- **Batch export has a preflight.** `ValidationSummary`'s "Export Valid Only" now shows a per-day
+  confirmation listing each day's configuration version (with historical/unpinned flags), probe/
+  failed-channel/camera counts, and optogenetics state before downloading — the same
+  "what will be encoded?" confidence check as the single-day Export step.
+- **Workspace auto-selects the sole animal** so loaded/recovered setup is visible on `#/workspace`
+  without a manual click (auto-select fires only for a single animal; an explicit `?animal=` is
+  always honored).
+- **Docs reconciled.** The readiness gate is documented as `isExportEnabled(computeStepStatus(...))`
+  in the helper, the inventory, and the validation/export-gate contract; the inventory no longer
+  claims the repair *buttons* are reworded.
+
+**Design choice (not a deferral):** repair buttons keep the canonical `repairTargetForIssue` labels
+("Fix in Animal Editor → …", "Fix in Devices") — a tested routing contract. The workflow framing is
+delivered by the category **headings** (Animal setup / Day metadata / …) above them and the
+checklist action **verbs** (Set Up Electrodes / Review Cameras), so there is no functional gap.
 
 ---
 

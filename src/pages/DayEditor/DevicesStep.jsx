@@ -37,6 +37,9 @@ import './DayEditor.scss';
  */
 export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, animalDays = undefined, actions = undefined }) {
   const [wizardOpen, setWizardOpen] = useState(false);
+  // Selected version for the unpinned-day repair control (a day with no pin in a multi-version
+  // animal). Empty string = nothing chosen yet; pinning writes day.configurationVersion.
+  const [pinVersion, setPinVersion] = useState('');
 
   // Render the day's EFFECTIVE (pinned) configuration, not live `animal.devices`.
   // On a historical day, `animal.devices` mirrors the *latest* version, so editing
@@ -461,11 +464,39 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
                 Applied to {reconfig.appliedCount} {reconfig.appliedCount === 1 ? 'day' : 'days'}
               </span>
               {day.configurationVersion == null && getConfigHistory(animal).length > 1 && (
-                <span className="config-version-warning" role="alert">
-                  This day has no pinned configuration version. It is resolved to the latest
-                  (v{reconfig.version}); if it recorded an earlier configuration, reconfigure or
-                  pin the correct version before exporting.
-                </span>
+                <div className="config-version-warning" role="alert">
+                  <span className="config-version-warning-text">
+                    This day has no pinned configuration version. It is resolved to the latest
+                    (v{reconfig.version}); if it recorded an earlier configuration, pin the correct
+                    version before exporting.
+                  </span>
+                  {/* Repairable: assign an existing configuration version to this day. */}
+                  <div className="config-version-pin">
+                    <label htmlFor="pin-config-version">Pin this day to:</label>
+                    <select
+                      id="pin-config-version"
+                      value={pinVersion}
+                      onChange={(e) => setPinVersion(e.target.value)}
+                    >
+                      <option value="">Choose a version…</option>
+                      {getConfigHistory(animal).map((snap) => (
+                        <option key={snap.version} value={snap.version}>
+                          v{snap.version}
+                          {snap.description ? ` — ${snap.description}` : ''}
+                          {snap.date ? ` (${snap.date})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      className="config-version-pin-button"
+                      disabled={pinVersion === ''}
+                      onClick={() => onFieldUpdate('configurationVersion', Number(pinVersion))}
+                    >
+                      Pin version
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
             <button
