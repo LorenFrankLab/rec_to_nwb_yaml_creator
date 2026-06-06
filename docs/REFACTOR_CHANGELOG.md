@@ -278,6 +278,32 @@ paths to the same domain policy:
   (`recordingDayCount`) the rest of the Workspace uses, removing the same-page contradiction with
   recovered-unlinked days.
 
+**Eleventh-review follow-ups — close the last single-day ownership-key edges (addressed in-phase, nothing deferred):**
+
+- **Single-day export no longer bypasses the wrong-owner block.** `DayEditorStepper` now only falls
+  back to the indexing animal when the day declares *no* owner (`day.animalId == null`). A day with a
+  *present-but-unresolvable* `animalId` (e.g. `"ghost"` or an object) stays unresolved → "Animal not
+  found", matching the batch wrong-owner/orphan policy, so it can't be opened and exported under the
+  wrong subject. (New `DayEditorStepper` tests cover both the wrong-owner block and the legitimate
+  recovered-day fallback.)
+- **Reconfiguration is fully threaded by the resolved owner key.** The owner key now flows
+  `DayEditorStepper` → `DevicesStep` → `ReconfigWizard` (new `animalKey` prop). The wizard's snapshot
+  write *and* its post-fork navigation use that `ownerKey` instead of the possibly-stale
+  `day.animalId ?? animal.id`, so a stale record/owner field can no longer misfile the new version
+  onto the wrong animal. (New `ReconfigWizard` test asserts the write + nav use the store key, not the
+  stale fields.)
+- **`statusKey` is collision-proof.** The ValidationSummary per-day status key changed from a
+  `${animalKey}|${dayId}` string (which can't distinguish `('a|b','c')` from `('a','b|c')`) to
+  `JSON.stringify([animalKey, dayId])`, so arbitrary imported ids can't alias one row's recovery
+  status onto another.
+- **`unlinkDayReference` is guarded to wrong-owner only.** The public action now no-ops unless the
+  record exists *and* explicitly belongs to a different animal — an accidental/mistaken call can no
+  longer strand a day this animal owns (or a no-declared-owner day) into recovered-unlinked state.
+  (New state tests cover the wrong-owner unlink, the owned-day no-op, and the unknown-animal no-op.)
+- **`Validate All` names skipped rows.** When a run covers a list that's all recovered/wrong-owner
+  days it now reports `Validated 0 days (N days skipped — not a recording day on this list)` instead
+  of a bare `Validated 0 days`, which read as "nothing to do." (New ValidationSummary test.)
+
 ---
 
 ## Domain boundaries & ownership cleanup — Phase 8.5 (June 5, 2026)

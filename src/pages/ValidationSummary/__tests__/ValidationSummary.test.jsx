@@ -440,6 +440,27 @@ describe('ValidationSummary', () => {
     expect(screen.getByRole('status')).toHaveTextContent(/validated 1 day\./i);
   });
 
+  it('Validate All names skipped rows instead of a bare "Validated 0 days" when nothing is validatable', async () => {
+    const user = userEvent.setup();
+    // remy's only listed day is wrong-owner (belongs to totoro) — not a validatable recording day
+    // for remy. totoro has no rows. So nothing is validatable, but a bare "Validated 0 days" would
+    // misread as "nothing to do" when the truth is the row was deliberately skipped.
+    const { workspace, ids } = makeSummaryWorkspace();
+    delete workspace.days[ids.incompleteDayId];
+    delete workspace.days[ids.errorDayId];
+    workspace.animals.remy.days = [ids.validDayId];
+    workspace.days[ids.validDayId].animalId = 'totoro';
+    workspace.animals.totoro.days = [];
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+    await user.click(screen.getByRole('button', { name: /validate all/i }));
+
+    const status = screen.getByRole('status');
+    expect(status).toHaveTextContent(/validated 0 days/i);
+    expect(status).toHaveTextContent(/1 day skipped/i);
+  });
+
   describe('corrupt workspace shape during initial row construction', () => {
     it('a day whose mergeDayMetadata throws is flagged as an error row, not crashing the whole summary', () => {
       // One good animal/day plus a broken animal whose configurationHistory is

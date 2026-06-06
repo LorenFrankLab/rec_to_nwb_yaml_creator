@@ -243,11 +243,19 @@ export function ValidationSummary() {
     });
     clearReports();
     const total = validatable.length;
-    setActionMessage(
-      failures === 0
-        ? `Validated ${total} ${total === 1 ? 'day' : 'days'}.`
-        : `Validated ${total - failures} of ${total} ${total === 1 ? 'day' : 'days'} (${failures} failed).`
-    );
+    const skipped = rows.length - total;
+    // Name the skipped rows so a run over a list that's all recovered/wrong-owner days doesn't
+    // read as a bare "Validated 0 days" — that implies "nothing to do" when the truth is
+    // "these days were deliberately not validatable from here."
+    const skippedNote =
+      skipped > 0 ? ` (${skipped} ${skipped === 1 ? 'day' : 'days'} skipped — not a recording day on this list)` : '';
+    let body;
+    if (failures === 0) {
+      body = `Validated ${total} ${total === 1 ? 'day' : 'days'}`;
+    } else {
+      body = `Validated ${total - failures} of ${total} ${total === 1 ? 'day' : 'days'} (${failures} failed)`;
+    }
+    setActionMessage(`${body}${skippedNote}.`);
   };
 
   // Step 1 of batch export: gather the valid days and build a per-day preflight so the batch
@@ -322,7 +330,9 @@ export function ValidationSummary() {
     // here — not just one that changed content. Keyed by (animalKey, dayId): under duplicate-index
     // corruption the same day id can appear under two animals with different statuses, so a
     // dayId-only key could let one animal's status mask another's.
-    const statusKey = (animalKey, dayId) => `${animalKey}|${dayId}`;
+    // Tuple key (JSON) so arbitrary imported animal/day ids can't collide — a plain separator
+    // can't distinguish ('a|b','c') from ('a','b|c').
+    const statusKey = (animalKey, dayId) => JSON.stringify([animalKey, dayId]);
     const currentStatusByKey = new Map(
       classifyWorkspaceDays(workspace).map((d) => [statusKey(d.animalKey, d.dayId), d.status])
     );

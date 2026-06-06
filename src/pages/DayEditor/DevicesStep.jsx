@@ -33,9 +33,14 @@ import './DayEditor.scss';
  *   configuration-version indicator + reconfiguration wizard. Omitted in isolated tests.
  * @param {object} [props.actions] - Store actions (`createConfigurationSnapshotAndApplyForward`);
  *   when provided, the reconfiguration wizard is available.
+ * @param props.animalKey
  * @returns {JSX.Element}
  */
-export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, animalDays = undefined, actions = undefined }) {
+export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, animalKey = undefined, animalDays = undefined, actions = undefined }) {
+  // The store OWNER KEY (resolved by DayEditorStepper). Used for animal-editor links and the
+  // reconfiguration write so a stale/missing `animal.id` record field can't misroute them; falls
+  // back to `animal.id` for isolated renders that don't pass it.
+  const ownerKey = animalKey ?? animal?.id;
   const [wizardOpen, setWizardOpen] = useState(false);
   // Selected version for the unpinned-day repair control (a day with no pin in a multi-version
   // animal). Empty string = nothing chosen yet; pinning writes day.configurationVersion.
@@ -397,7 +402,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
             This animal&apos;s device configuration is missing or corrupt, so devices
             can&apos;t be shown for this day.
           </p>
-          <a href={`#/animal/${animal.id}/editor?field=electrode_groups`} className="button-primary">
+          <a href={`#/animal/${ownerKey}/editor?field=electrode_groups`} className="button-primary">
             Configure devices in the Animal Editor
           </a>
         </div>
@@ -418,7 +423,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
             Electrodes/probes are shared animal setup. You can mark failed channels for this
             recording day only after electrodes exist.
           </p>
-          <a href={`#/animal/${animal.id}/editor?field=electrode_groups`} className="button-primary">
+          <a href={`#/animal/${ownerKey}/editor?field=electrode_groups`} className="button-primary">
             Set Up Electrodes
           </a>
         </div>
@@ -434,7 +439,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
           version; probe geometry is edited in the shared animal setup, not here. */}
       <div className="inherited-notice">
         This day uses animal electrode configuration v{effectiveConfig.configurationVersion ?? '—'}.
-        <a href={`#/animal/${animal.id}/editor?field=electrode_groups`}>Edit shared animal electrode setup</a>
+        <a href={`#/animal/${ownerKey}/editor?field=electrode_groups`}>Edit shared animal electrode setup</a>
       </div>
 
       {/* Configuration-version indicator + reconfiguration entry point. The wizard
@@ -518,6 +523,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
             isOpen={wizardOpen}
             onClose={() => setWizardOpen(false)}
             animal={animal}
+            animalKey={ownerKey}
             day={day}
             prevDay={reconfig.prevDay}
             candidateDays={reconfig.candidateDays}
@@ -560,7 +566,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
                   <div className="error-state-inline">
                     <p>⚠ No channel mapping found for this electrode group.</p>
                     <p>This usually indicates data corruption. Please review animal configuration.</p>
-                    <a href={`#/animal/${animal.id}/editor?field=ntrode_electrode_group_channel_map`}>Fix in Animal Editor</a>
+                    <a href={`#/animal/${ownerKey}/editor?field=ntrode_electrode_group_channel_map`}>Fix in Animal Editor</a>
                   </div>
                 </div>
               </details>
@@ -664,6 +670,9 @@ DevicesStep.propTypes = {
   }).isRequired,
   mergedDay: PropTypes.object.isRequired,
   onFieldUpdate: PropTypes.func.isRequired,
+  // The resolved store owner key (from DayEditorStepper); animal-editor links + reconfiguration
+  // use it instead of the possibly-stale `animal.id`. Omitted in isolated renders (falls back).
+  animalKey: PropTypes.string,
   // animalDays + actions are supplied together by DayEditorStepper to enable the
   // configuration-version indicator and reconfiguration wizard; omitting both (e.g.
   // in isolated unit renders) simply hides that section.

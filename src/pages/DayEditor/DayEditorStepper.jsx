@@ -72,7 +72,12 @@ export default function DayEditorStepper() {
   const animalsMap = model.workspace?.animals ?? {};
   let ownerKey = day?.animalId;
   let animal = ownerKey != null ? animalsMap[ownerKey] : null;
-  if (!animal && day) {
+  // Fall back to the indexing animal ONLY when the day declares NO owner (`animalId` absent) —
+  // the legitimate recovered-missing-animalId case. A PRESENT but unresolvable `animalId` (e.g.
+  // "ghost" or {}) means the day belongs to a different/absent animal; it must NOT open under
+  // whichever animal happens to index it (that would let a wrong-owner day export as the wrong
+  // subject). It stays unresolved → "Animal not found", matching the batch wrong-owner/orphan block.
+  if (!animal && day && day.animalId == null) {
     const indexingKey = Object.keys(animalsMap).find((key) =>
       getAnimalDayIds(animalsMap[key]).includes(day.id)
     );
@@ -145,11 +150,11 @@ export default function DayEditorStepper() {
     // geometry, channel maps, cameras, data-acq devices, and subject identity),
     // mirroring the camera-banner link. Day-Editor step targets stay in this stepper.
     if (target === 'animal') {
-      if (animal?.id) {
-        // Encode the field path so the Animal Editor can deep-link to the step that
-        // owns the fix (channel maps / electrode groups / hardware) rather than always
-        // landing on step 0 and dropping the repair target.
-        const base = `#/animal/${encodeURIComponent(animal.id)}/editor`;
+      if (ownerKey != null) {
+        // Navigate by the resolved owner STORE KEY (not the possibly-stale `animal.id` record
+        // field), so the Animal Editor opens the right animal. Encode the field path so it can
+        // deep-link to the step that owns the fix rather than dropping the repair target.
+        const base = `#/animal/${encodeURIComponent(ownerKey)}/editor`;
         window.location.hash = fieldPath
           ? `${base}?field=${encodeURIComponent(fieldPath)}`
           : base;
@@ -163,7 +168,7 @@ export default function DayEditorStepper() {
     } else {
       setFocusRequest(null);
     }
-  }, [animal?.id]);
+  }, [ownerKey]);
 
   useEffect(() => {
     if (!focusRequest) return undefined;
@@ -323,6 +328,7 @@ export default function DayEditorStepper() {
       >
         <CurrentStepComponent
           animal={animal}
+          animalKey={ownerKey}
           day={day}
           mergedDay={mergedDay}
           knownTaskDescriptions={knownTaskDescriptions}

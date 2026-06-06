@@ -578,6 +578,16 @@ export function useWorkspace(initialState = null) {
           if (!animal) return prev;
           const current = getAnimalDayIds(animal);
           if (!current.includes(dayId)) return prev;
+          // Only unlink a genuine WRONG-OWNER reference: the record must exist AND explicitly
+          // belong to a DIFFERENT animal. This guards the public action so an accidental/mistaken
+          // call can't strand a valid day (one this animal owns, or with no declared owner) into
+          // recovered-unlinked state — the repair must only ever drop a misfiled reference.
+          const record = prev.days?.[dayId];
+          const isRecordDay =
+            record !== null && typeof record === 'object' && !Array.isArray(record);
+          if (!isRecordDay || record.animalId == null || record.animalId === animalId) {
+            return prev;
+          }
           return {
             ...prev,
             animals: {

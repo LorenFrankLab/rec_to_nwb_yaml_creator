@@ -98,6 +98,56 @@ describe('DayEditorStepper', () => {
     expect(screen.getByText(/Day not found/i)).toBeInTheDocument();
   });
 
+  // A day whose `animalId` is PRESENT but unresolvable (names a different/absent animal) must NOT
+  // open under whichever animal happens to index it — that would let a wrong-owner day be edited
+  // and exported as the wrong subject. It stays unresolved ("Animal not found"), matching the
+  // batch wrong-owner/orphan block.
+  it('does not resolve a present-but-unresolvable animalId via the indexing animal (no wrong-owner edit)', () => {
+    const wrongOwnerState = {
+      workspace: {
+        animals: {
+          // remy indexes the day, but the day's record claims a different owner ("ghost").
+          remy: { ...mockAnimal, days: ['remy-2023-06-22'] },
+        },
+        days: {
+          'remy-2023-06-22': { ...mockDay, animalId: 'ghost' },
+        },
+        settings: {},
+      },
+    };
+
+    render(
+      <StoreProvider initialState={wrongOwnerState}>
+        <DayEditorStepper />
+      </StoreProvider>
+    );
+
+    expect(screen.getByText(/Animal not found: ghost/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Day Editor: remy/i)).not.toBeInTheDocument();
+  });
+
+  // The legitimate recovered case: a day with NO declared owner (animalId absent) but listed in an
+  // animal's index resolves under that indexing animal, so a recovered import still opens.
+  it('resolves a day with no animalId via the indexing animal (recovered-day recovery)', () => {
+    const recoveredDay = { ...mockDay };
+    delete recoveredDay.animalId;
+    const recoveredState = {
+      workspace: {
+        animals: { remy: { ...mockAnimal, days: ['remy-2023-06-22'] } },
+        days: { 'remy-2023-06-22': recoveredDay },
+        settings: {},
+      },
+    };
+
+    render(
+      <StoreProvider initialState={recoveredState}>
+        <DayEditorStepper />
+      </StoreProvider>
+    );
+
+    expect(screen.getByText(/Day Editor: remy - 2023-06-22/i)).toBeInTheDocument();
+  });
+
   it('shows error when no dayId in URL', () => {
     useDayIdFromUrl.mockReturnValue(null);
 

@@ -37,17 +37,22 @@ import './ReconfigWizard.scss';
  * @param {object|null} [props.prevDay] - The chronologically previous day, or null (for the "stays pinned" note).
  * @param {object[]} props.candidateDays - This day and all chronologically later days (the apply-forward set).
  * @param {object} props.actions - Store actions: `createConfigurationSnapshotAndApplyForward`.
+ * @param props.animalKey
  * @returns {JSX.Element|null}
  */
 export default function ReconfigWizard({
   isOpen,
   onClose,
   animal,
+  animalKey = undefined,
   day,
   prevDay = null,
   candidateDays,
   actions,
 }) {
+  // The store OWNER KEY the reconfiguration writes/navigates by. Prefer the explicit key from the
+  // stepper, then the day's declared owner, then the (possibly stale) `animal.id` record field.
+  const ownerKey = animalKey ?? day?.animalId ?? animal?.id;
   const baseId = useId();
   const titleId = `${baseId}-title`;
   const summaryId = `${baseId}-summary`;
@@ -94,7 +99,7 @@ export default function ReconfigWizard({
       fromDay: day.id,
       movedDays: String(movingDays.length),
     });
-    window.location.hash = `#/animal/${encodeURIComponent(animal.id)}/editor?${params.toString()}`;
+    window.location.hash = `#/animal/${encodeURIComponent(ownerKey)}/editor?${params.toString()}`;
   };
 
   const handleApply = () => {
@@ -117,10 +122,9 @@ export default function ReconfigWizard({
     // together (the contiguous chronological suffix).
     const orderedIds = movingDays.map((d) => d.id);
     // Target the STORE KEY the day declares it belongs to (`day.animalId`) in preference to the
-    // possibly-stale `animal.id` record field, so a stale record id can't misroute the write;
-    // fall back to `animal.id` only when the day carries no owner.
+    // possibly-stale `animal.id` record field, so a stale record id can't misroute the write.
     const newVersion = actions.createConfigurationSnapshotAndApplyForward(
-      day.animalId ?? animal.id,
+      ownerKey,
       {
         date,
         description: description.trim(),
@@ -228,6 +232,8 @@ ReconfigWizard.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   animal: PropTypes.object.isRequired,
+  // The resolved store owner key; the write/navigation use it instead of the stale `animal.id`.
+  animalKey: PropTypes.string,
   day: PropTypes.object.isRequired,
   prevDay: PropTypes.object,
   candidateDays: PropTypes.arrayOf(PropTypes.object).isRequired,

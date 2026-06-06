@@ -519,6 +519,66 @@ describe('Day State Management', () => {
     });
   });
 
+  describe('unlinkDayReference', () => {
+    it('drops a genuine wrong-owner reference from the index but KEEPS the record for its real owner', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result, 'remy');
+      createTestAnimal(result, 'bean');
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+      });
+      // Wrong-owner: bean's index lists remy's day record (record.animalId === 'remy').
+      act(() => {
+        result.current.model.workspace.animals['bean'].days = ['remy-2023-06-22'];
+        result.current.actions.unlinkDayReference('bean', 'remy-2023-06-22');
+      });
+      // The misfiled reference is gone from bean...
+      expect(result.current.model.workspace.animals['bean'].days).toEqual([]);
+      // ...but the record itself survives intact for remy, its true owner.
+      const record = result.current.model.workspace.days['remy-2023-06-22'];
+      expect(record).toBeDefined();
+      expect(record.animalId).toBe('remy');
+    });
+
+    it('is a no-op for a valid owned day — it must never strand a day this animal owns', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result, 'remy');
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+      });
+      // An accidental unlink on remy's OWN day (record.animalId === 'remy') must not remove it.
+      act(() => {
+        result.current.actions.unlinkDayReference('remy', 'remy-2023-06-22');
+      });
+      expect(result.current.model.workspace.animals['remy'].days).toEqual(['remy-2023-06-22']);
+      expect(result.current.model.workspace.days['remy-2023-06-22']).toBeDefined();
+    });
+
+    it('is a no-op for an unknown animal or an id not in the index (no throw)', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result, 'remy');
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+      });
+      expect(() => {
+        act(() => {
+          result.current.actions.unlinkDayReference('ghost', 'x'); // unknown animal
+          result.current.actions.unlinkDayReference('remy', 'no-such-day'); // not in index
+        });
+      }).not.toThrow();
+      expect(result.current.model.workspace.animals['remy'].days).toEqual(['remy-2023-06-22']);
+    });
+  });
+
   describe('removeDayReference', () => {
     it('removes a dangling day reference (missing record) from the animal without throwing', () => {
       const { result } = renderHook(() => useStore());
