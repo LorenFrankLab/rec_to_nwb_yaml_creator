@@ -109,4 +109,16 @@ describe('classifyWorkspaceDays', () => {
     expect(() => classifyWorkspaceDays({})).not.toThrow();
     expect(classifyWorkspaceDays({ animals: {}, days: 'nope' })).toEqual([]);
   });
+
+  it('treats an unindexed record with a non-string animalId as an orphan with a null animalKey', () => {
+    // A corrupt import can persist a non-string `animalId` (object). It must NOT be used as a map
+    // key or surfaced as a React key/child — the orphan carries `animalKey: null` (unknown owner).
+    const objOwner = dayRecord('obj-1', undefined, '2023-06-22');
+    objOwner.animalId = { not: 'a string' };
+    const workspace = { animals: {}, days: { 'obj-1': objOwner } };
+    const [row] = classifyWorkspaceDays(workspace);
+    expect(row.status).toBe(DAY_STATUS.ORPHAN_NO_OWNER);
+    expect(row.ownerPresent).toBe(false);
+    expect(row.animalKey).toBeNull();
+  });
 });

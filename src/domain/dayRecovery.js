@@ -151,8 +151,11 @@ export function classifyWorkspaceDays(workspace) {
 
   for (const [dayId, record] of Object.entries(days)) {
     if (indexed.has(dayId) || !isRecord(record)) continue;
-    const ownerKey = record.animalId;
-    const ownerPresent = isRecord(animalsMap[ownerKey]);
+    // The declared owner is only a usable key (and only resolvable) when it is a string. A corrupt
+    // non-string `animalId` is an unknown owner → `animalKey: null`, so a consuming surface never
+    // receives an object as a React key/child or looks up `animalsMap[{}]`.
+    const ownerKey = typeof record.animalId === 'string' ? record.animalId : null;
+    const ownerPresent = ownerKey != null && isRecord(animalsMap[ownerKey]);
     out.push({
       animalKey: ownerKey,
       dayId,

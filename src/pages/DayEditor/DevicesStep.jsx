@@ -33,7 +33,8 @@ import './DayEditor.scss';
  *   configuration-version indicator + reconfiguration wizard. Omitted in isolated tests.
  * @param {object} [props.actions] - Store actions (`createConfigurationSnapshotAndApplyForward`);
  *   when provided, the reconfiguration wizard is available.
- * @param props.animalKey
+ * @param {string} [props.animalKey] - The resolved store owner key; used for animal-editor links
+ *   and the reconfiguration write instead of the possibly-stale `animal.id`.
  * @returns {JSX.Element}
  */
 export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, animalKey = undefined, animalDays = undefined, actions = undefined }) {

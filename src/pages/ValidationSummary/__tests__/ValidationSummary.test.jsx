@@ -440,6 +440,22 @@ describe('ValidationSummary', () => {
     expect(screen.getByRole('status')).toHaveTextContent(/validated 1 day\./i);
   });
 
+  it('renders an orphan row with a non-string (object) owner without crashing (no object as React child)', () => {
+    // A corrupt import persists an unindexed record whose animalId is an object. The summary must
+    // surface it as an orphan, not throw "objects are not valid as a React child".
+    const { workspace, ids } = makeSummaryWorkspace();
+    delete workspace.days[ids.incompleteDayId];
+    delete workspace.days[ids.errorDayId];
+    workspace.animals.remy.days = [];
+    workspace.animals.totoro.days = [];
+    workspace.days[ids.validDayId].animalId = { not: 'a string' };
+    provideStore(workspace);
+
+    expect(() => render(<ValidationSummary />)).not.toThrow();
+    const row = screen.getByTestId(`day-row-${ids.validDayId}`);
+    expect(within(row).getByText(/no owning animal/i)).toBeInTheDocument();
+  });
+
   it('Validate All names skipped rows instead of a bare "Validated 0 days" when nothing is validatable', async () => {
     const user = userEvent.setup();
     // remy's only listed day is wrong-owner (belongs to totoro) — not a validatable recording day

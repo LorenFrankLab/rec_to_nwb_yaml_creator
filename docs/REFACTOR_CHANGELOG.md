@@ -304,6 +304,32 @@ paths to the same domain policy:
   days it now reports `Validated 0 days (N days skipped — not a recording day on this list)` instead
   of a bare `Validated 0 days`, which read as "nothing to do." (New ValidationSummary test.)
 
+**Twelfth-review follow-ups — finish threading the owner key through repairs + guard non-string owners (addressed in-phase, nothing deferred):**
+
+- **Animal-surface repairs now target the resolved owner key.** `DayEditorStepper.handleRepair`
+  passed `animalId: animal?.id` (the record field), so `resetAnimalCameras` / `resetDataAcqDevice` /
+  `rebuildConfigurationHistory` could no-op or hit the wrong animal for a recovered/stale-id record.
+  It now passes the resolved `ownerKey` (the store key). `resetDaySession`'s id-fallback order also
+  changed to prefer the resolved owner key over the stale `ctx.animal.id` when the day declares no
+  owner (`ctx.day.animalId ?? animalId ?? ctx.animal.id`), and only accepts STRING ids so a corrupt
+  object owner can't poison the session prefix. (New DayEditorStepper + repairCommands tests; the
+  repairabilityMatrix harness now passes the animal's id as the owner key, mirroring production.)
+- **Non-string `day.animalId` can no longer leak into owner-key logic.** `DayEditorStepper` resolves
+  `ownerKey` only when `day.animalId` is a string — an object/number import is treated as "no
+  resolvable owner" → "Animal not found", converging with `dayRecovery`'s WRONG_OWNER/orphan
+  classification instead of phantom-resolving via `animalsMap['[object Object]']`. The
+  `classifyWorkspaceDays` orphan sweep likewise coerces a non-string owner to `animalKey: null`, and
+  `ValidationSummary`'s `subjectLabel` string-coerces its result, so a corrupt owner can never reach
+  React as an object child (which would crash the whole summary). (New DayEditorStepper, dayRecovery,
+  and ValidationSummary tests.)
+- **Day Editor stale-id UX paths fixed.** The "Back to Workspace" link and the header now use the
+  resolved `ownerKey`, not `animal.id`, so a recovered animal whose record id drifted from its store
+  key navigates back to its real workspace selection instead of an empty one.
+- **Targeted lint is clean.** Added the missing JSDoc `@param` types for the new `animalKey` prop on
+  `DevicesStep` and `ReconfigWizard` (full lint: 0 errors, 257 warnings — two fewer than before).
+- **`Validate All` button title** now states that recovered/wrong-owner days are skipped, matching
+  the post-click summary message.
+
 ---
 
 ## Domain boundaries & ownership cleanup — Phase 8.5 (June 5, 2026)

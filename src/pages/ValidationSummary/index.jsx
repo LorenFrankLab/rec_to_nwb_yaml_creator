@@ -131,7 +131,12 @@ function buildRows(workspace) {
   return rows;
 }
 
-const subjectLabel = (animal) => getAnimalSubject(animal).subject_id ?? animal.id;
+// Coerced to a string so a corrupt (object/number) subject_id or animal id can never be returned
+// as a React child (which throws "objects are not valid as a React child").
+const subjectLabel = (animal) => {
+  const id = getAnimalSubject(animal).subject_id ?? animal?.id;
+  return typeof id === 'string' ? id : String(id ?? '');
+};
 
 /**
  * An assertive (`role="alert"`) report of days that were NOT exported normally, with
@@ -443,7 +448,7 @@ export function ValidationSummary() {
             <button
               type="button"
               onClick={handleValidateAll}
-              title="Save each day's current validation status so it persists across reloads and other views."
+              title="Save the current validation status for each recording day so it persists across reloads and other views. Recovered and wrong-owner days are skipped (they aren't this animal's recording days)."
             >
               Validate All
             </button>

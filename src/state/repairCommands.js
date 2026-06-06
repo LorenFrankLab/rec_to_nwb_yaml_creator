@@ -163,10 +163,15 @@ export function applyRepairCommand(command, ctx) {
       // session before merging, so this writes cleanly.
       // The session_id prefix is the day's OWNING animal id. Prefer the day's own `animalId`
       // (the reliable owner — it travels with the record) so a corrupt `animal.id` can't poison
-      // the prefix (e.g. `WRONG_YYYYMMDD`); fall back to the convenience `ctx.animal`/contract
-      // `animalId` only when the day carries no owner. The date is parsed off `dayId`
-      // (`<animalId>-<YYYY-MM-DD>`) when absent.
-      const sessionAnimalId = ctx.day?.animalId ?? ctx.animal?.id ?? animalId ?? '';
+      // the prefix (e.g. `WRONG_YYYYMMDD`). When the day carries no owner, fall back to the
+      // resolved store key `ctx.animalId` (the authoritative owner the caller resolved) BEFORE the
+      // convenience `ctx.animal.id` record field, which can be stale for a recovered record. Only
+      // string ids are eligible — a corrupt non-string owner is skipped, never coerced to
+      // `[object Object]`. The date is parsed off `dayId` (`<animalId>-<YYYY-MM-DD>`) when absent.
+      const sessionAnimalId =
+        [ctx.day?.animalId, animalId, ctx.animal?.id].find(
+          (candidate) => typeof candidate === 'string' && candidate.length > 0
+        ) ?? '';
       const sessionDate = ctx.day?.date ?? String(dayId ?? '').slice(String(sessionAnimalId).length + 1);
       const sessionId = `${sessionAnimalId}_${String(sessionDate).replace(/-/g, '')}`;
       actions.updateDay(dayId, { session: { session_id: sessionId } });

@@ -70,13 +70,18 @@ export default function DayEditorStepper() {
   // `animal.id` field) is the store key used for every animal write below.
   const day = model.workspace?.days?.[dayId];
   const animalsMap = model.workspace?.animals ?? {};
-  let ownerKey = day?.animalId;
+  // The owner key MUST be a string before it is used as a map key. A corrupt import can persist a
+  // non-string `animalId` (object/number); coercing one to a property name would invent a phantom
+  // key (`animalsMap['[object Object]']`) and diverge from dayRecovery's WRONG_OWNER classification.
+  // A non-string owner is therefore treated as "no resolvable owner" (ownerKey = null).
+  let ownerKey = typeof day?.animalId === 'string' ? day.animalId : null;
   let animal = ownerKey != null ? animalsMap[ownerKey] : null;
   // Fall back to the indexing animal ONLY when the day declares NO owner (`animalId` absent) —
   // the legitimate recovered-missing-animalId case. A PRESENT but unresolvable `animalId` (e.g.
-  // "ghost" or {}) means the day belongs to a different/absent animal; it must NOT open under
-  // whichever animal happens to index it (that would let a wrong-owner day export as the wrong
-  // subject). It stays unresolved → "Animal not found", matching the batch wrong-owner/orphan block.
+  // "ghost", an object, or a number) means the day belongs to a different/absent owner; it must NOT
+  // open under whichever animal happens to index it (that would let a wrong-owner day export as the
+  // wrong subject). It stays unresolved → "Animal not found", matching the batch wrong-owner/orphan
+  // block. Only the truly owner-less case (`animalId == null`) takes the indexing-animal fallback.
   if (!animal && day && day.animalId == null) {
     const indexingKey = Object.keys(animalsMap).find((key) =>
       getAnimalDayIds(animalsMap[key]).includes(day.id)
@@ -241,12 +246,15 @@ export default function DayEditorStepper() {
     if (!issue?.repairCommand) return;
     applyRepairCommand(issue.repairCommand, {
       actions,
-      animalId: animal?.id,
+      // The resolved owner STORE KEY, not the possibly-stale `animal.id` record field, so an
+      // ANIMAL-surface repair (resetAnimalCameras / resetDataAcqDevice / rebuildConfigurationHistory)
+      // lands on the right animal even for a recovered record whose id drifted from its store key.
+      animalId: ownerKey,
       dayId,
       day,
       animal,
     });
-  }, [actions, animal, dayId, day]);
+  }, [actions, animal, ownerKey, dayId, day]);
 
   // Subject fields live on the animal, not the day. The Overview step uses this to
   // repair inherited subject metadata (DOB / weight / description / species) in
@@ -296,13 +304,13 @@ export default function DayEditorStepper() {
       <div className="day-editor-header">
         <div className="day-editor-title">
           <a
-            href={`#/workspace?animal=${animal.id}`}
+            href={`#/workspace?animal=${ownerKey}`}
             className="back-button"
             aria-label="Back to workspace"
           >
             ← Back to Workspace
           </a>
-          <h1>Day Editor: {animal.id} - {day.date}</h1>
+          <h1>Day Editor: {ownerKey} - {day.date}</h1>
         </div>
         <SaveIndicator
           enabled={persistence.enabled}

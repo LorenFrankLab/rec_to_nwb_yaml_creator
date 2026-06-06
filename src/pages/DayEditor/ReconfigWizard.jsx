@@ -37,7 +37,8 @@ import './ReconfigWizard.scss';
  * @param {object|null} [props.prevDay] - The chronologically previous day, or null (for the "stays pinned" note).
  * @param {object[]} props.candidateDays - This day and all chronologically later days (the apply-forward set).
  * @param {object} props.actions - Store actions: `createConfigurationSnapshotAndApplyForward`.
- * @param props.animalKey
+ * @param {string} [props.animalKey] - The resolved store owner key; the snapshot write and the
+ *   post-fork navigation use it instead of the possibly-stale `day.animalId`/`animal.id`.
  * @returns {JSX.Element|null}
  */
 export default function ReconfigWizard({
