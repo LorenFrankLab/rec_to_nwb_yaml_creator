@@ -31,7 +31,8 @@ unchanged).
   all FOUR converter-required sections (adds `optogenetic_stimulation_software`), error severity,
   so a partial opto session is blocked at export instead of converting to an opto-less file. New
   Rule 3b errors on more than one `opto_excitation_source` (converter `ValueError`).
-- **`fs_gui_yamls` shape (Task 4).** The schema-required, converter-read `camera_id` is added to
+- **`fs_gui_yamls` shape (Task 4).** The schema-required `camera_id` (the converter reads it for
+  speed/spatial-filter protocols) is added to
   the emitted key order, and the non-schema UI key `state_script_parameters` is stripped by an
   explicit sanitizer (`reorderKeys` is lossless and would otherwise preserve it).
 - **Workspace optogenetics editor (Task 0).** New `OptogeneticsStep` (Animal Editor) with an
@@ -99,6 +100,21 @@ Third review round (consistency/UX correctness):
   backed by the bundled name lists (suggestions), since they are exact trodes_to_nwb device-metadata
   lookup keys; free entry is preserved for labs that add custom device files (the converter's
   catalog isn't bundled here, so hard-validation would false-reject custom devices — deferred).
+
+Comprehensive PR review (code-reviewer, pr-test-analyzer, comment-analyzer,
+silent-failure-hunter): no production defects. Addressed in-phase:
+- **Comment accuracy**: corrected converter failure-mode descriptions — a missing `volume_in_uL`
+  is a KeyError *crash* (not the silent gate-drop, since volume isn't a gate key); the fs_gui
+  reference rule's rationale now names IndexError / silent-epoch-aliasing / camera ValueError; and
+  `camera_id` is described as schema-required and converter-read *only for speed/spatial-filter
+  protocols*. Fixed the AnimalEditorStepper 3→4-step docstring.
+- **Test coverage**: added the `TasksEpochsStep`↔`FsGuiSection` integration gate (hidden when opto
+  off, shown when on, DIO options sourced from day events only); an opto-off-with-stale-fs_gui
+  lifecycle test (merge+validate → `fs_gui_requires_optogenetics`); the structural "exactly one
+  excitation source" invariant; an explicit `optogenetics:null` disable-commit assertion; and the
+  datalist render/free-entry path.
+- **Repair path**: a stale FsGUI epoch (no longer a task epoch) now renders a checkbox (with a fix
+  hint) so it can be unchecked to clear an `orphaned_fs_gui_epoch` error.
 
 Gate: full vitest, golden baselines byte-identical, 0 lint errors, clean build. Branch not merged.
 

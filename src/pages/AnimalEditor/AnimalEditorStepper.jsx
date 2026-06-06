@@ -113,10 +113,12 @@ function useAnimalEditorRouteContext() {
 /**
  * Animal Editor Stepper - Container for multi-step animal device configuration
  *
- * Manages the 3-step workflow for animal-level configuration:
+ * Manages the 4-step workflow for animal-level configuration:
  * 1. Electrode Groups - Configure device types, locations, coordinates
  * 2. Channel Maps - Configure logical-to-hardware channel mappings
- * 3. Hardware Config - Configure cameras, data acquisition device, behavioral events
+ * 3. Optogenetics - Enable/configure the animal-level opto sections (off by default)
+ * 4. Hardware Config - Configure cameras, data acquisition device, behavioral events
+ *    (kept last so its Save/Continue flow is unchanged by the inserted Optogenetics step)
  *
  * Note: Component receives no props - animal ID is obtained from URL via
  * useAnimalIdFromUrl hook.

@@ -127,26 +127,36 @@ export default function FsGuiSection({ fsGuiYamls, cameras, epochOptions, dioOpt
 
           <fieldset className="fs-gui-epochs">
             <legend>Epochs</legend>
-            {epochOptions.length === 0 ? (
-              <p className="help-text">
-                No task epochs defined yet. Add tasks with epochs above first.
-              </p>
-            ) : (
-              epochOptions.map((epoch) => {
-                const checked = Array.isArray(item.epochs) && item.epochs.includes(epoch);
+            {(() => {
+              // Show a checkbox for every available task epoch PLUS any epoch this
+              // protocol already references that is no longer a task epoch (stale, e.g.
+              // after a task renumber) — otherwise the user could not uncheck the stale
+              // value to clear an orphaned_fs_gui_epoch error.
+              const selected = Array.isArray(item.epochs) ? item.epochs : [];
+              const available = new Set(epochOptions);
+              const shown = [...new Set([...epochOptions, ...selected])].sort((a, b) => a - b);
+              if (shown.length === 0) {
+                return (
+                  <p className="help-text">
+                    No task epochs defined yet. Add tasks with epochs above first.
+                  </p>
+                );
+              }
+              return shown.map((epoch) => {
+                const stale = !available.has(epoch);
                 return (
                   <label key={epoch} htmlFor={`fsgui-${index}-epoch-${epoch}`} className="fs-gui-epoch">
                     <input
                       id={`fsgui-${index}-epoch-${epoch}`}
                       type="checkbox"
-                      checked={checked}
+                      checked={selected.includes(epoch)}
                       onChange={(e) => toggleEpoch(index, epoch, e.target.checked)}
                     />
-                    <span>Epoch {epoch}</span>
+                    <span>Epoch {epoch}{stale ? ' (no matching task — uncheck to fix)' : ''}</span>
                   </label>
                 );
-              })
-            )}
+              });
+            })()}
           </fieldset>
 
           <button

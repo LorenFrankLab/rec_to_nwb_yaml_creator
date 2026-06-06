@@ -832,10 +832,12 @@ export const rulesValidation = (model) => {
 
   // Rule 15c: fs_gui_yamls reference integrity (optogenetics, day-level). Each FsGUI
   // protocol's `camera_id` must reference an existing camera and each of its `epochs`
-  // must match a task epoch — otherwise the converter writes an opto protocol pointing
-  // at a camera/epoch that does not exist (or silently drops it). The editor constrains
-  // NEW edits to controlled choices, but an imported/stale value (a deleted camera, a
-  // renumbered epoch) is only caught here.
+  // must match a task epoch — otherwise conversion CRASHES or silently corrupts: an
+  // out-of-range epoch is an IndexError into the epochs table (an in-range WRONG epoch
+  // silently aliases another epoch's start/stop times), and a missing camera raises a
+  // ValueError (the converter reads camera only for speed/spatial-filter protocols). The
+  // editor constrains NEW edits to controlled choices, but an imported/stale value (a
+  // deleted camera, a renumbered epoch) is only caught here.
   if (Array.isArray(model.fs_gui_yamls) && model.fs_gui_yamls.length > 0) {
     const validCameraIdSet = Array.isArray(model.cameras)
       ? new Set(model.cameras.map((c) => c?.id).filter((id) => id !== undefined && id !== null))

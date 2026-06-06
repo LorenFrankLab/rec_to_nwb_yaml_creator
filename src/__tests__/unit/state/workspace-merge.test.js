@@ -20,6 +20,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { mergeDayMetadata } from '../../../state/workspaceUtils';
+import { validate } from '../../../validation';
 
 describe('mergeDayMetadata', () => {
   /**
@@ -558,6 +559,22 @@ describe('mergeDayMetadata', () => {
 
       expect(merged.virus_injection[0].volume_in_uL).toBe(1.2);
       expect(merged.virus_injection[0].volume_in_ul).toBe(1.2);
+    });
+
+    it('blocks export when a stale fs_gui block survives after optogenetics is turned off', () => {
+      // Lifecycle: opto was configured, fs_gui rows were added, then opto is disabled
+      // (optogenetics cleared). The day still carries fs_gui_yamls, which the converter
+      // can't process without opto implant metadata (it KeyErrors). Validation must block.
+      const animal = createTestAnimal({ optogenetics: null });
+      const day = createTestDay({
+        fs_gui_yamls: [
+          { name: 'p.yaml', epochs: [0], power_in_mW: 5, dio_output_name: 'poke_center', camera_id: 0 },
+        ],
+      });
+      const merged = mergeDayMetadata(animal, day);
+
+      expect(merged.fs_gui_yamls).toHaveLength(1); // still exported from the day
+      expect(validate(merged).some((i) => i.code === 'fs_gui_requires_optogenetics')).toBe(true);
     });
 
     it('fs_gui_yamls carries camera_id and drops non-schema state_script_parameters', () => {

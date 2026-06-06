@@ -75,6 +75,37 @@ describe('FsGuiSection', () => {
     expect(screen.getByText(/no fsgui protocols added/i)).toBeInTheDocument();
   });
 
+  it('shows a stale (no-longer-a-task) epoch so it can be unchecked to fix the orphan', async () => {
+    const user = userEvent.setup();
+    let latest = null;
+    /**
+     *
+     */
+    function Capture() {
+      // Protocol references epoch 9, which is NOT in epochOptions (a task was renumbered).
+      const [items, setItems] = useState([
+        { name: 'p', epochs: [9], power_in_mW: 5, dio_output_name: '', camera_id: '' },
+      ]);
+      latest = items;
+      return (
+        <FsGuiSection
+          fsGuiYamls={items}
+          cameras={CAMERAS}
+          epochOptions={[1, 2]}
+          onChange={setItems}
+        />
+      );
+    }
+    render(<Capture />);
+
+    // The stale epoch is rendered (checked) with a fix hint, even though it's not a task epoch.
+    const stale = screen.getByLabelText(/epoch 9/i);
+    expect(stale).toBeChecked();
+    await user.click(stale); // uncheck to clear the orphan
+
+    expect(latest[0].epochs).toEqual([]);
+  });
+
   it('offers the DIO output as a controlled select of behavioral event names', async () => {
     const user = userEvent.setup();
     let latest = null;

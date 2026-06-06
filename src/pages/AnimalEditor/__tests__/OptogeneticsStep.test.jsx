@@ -116,23 +116,65 @@ describe('OptogeneticsStep', () => {
     );
   });
 
-  it('disabling clears optogenetics (commits null), returning to the off state', async () => {
+  it('disabling commits an explicit optogenetics:null and returns to the off state', async () => {
     const user = userEvent.setup();
+    const onUpdate = vi.fn();
     render(
-      <Harness
-        initial={{
-          opto_excitation_source: [{ name: 'LED' }],
-          optical_fiber: [{ name: 'F' }],
-          virus_injection: [{ name: 'V' }],
-          optogenetic_stimulation_software: 'fsgui',
+      <OptogeneticsStep
+        animal={{
+          optogenetics: {
+            opto_excitation_source: [{ name: 'LED' }],
+            optical_fiber: [{ name: 'F' }],
+            virus_injection: [{ name: 'V' }],
+            optogenetic_stimulation_software: 'fsgui',
+          },
         }}
+        onUpdate={onUpdate}
       />
     );
 
     expect(screen.getByRole('checkbox', { name: /has optogenetics/i })).toBeChecked();
     await user.click(screen.getByRole('checkbox', { name: /has optogenetics/i }));
 
-    expect(screen.getByRole('checkbox', { name: /has optogenetics/i })).not.toBeChecked();
-    expect(screen.getByText(/no optogenetics metadata will be exported/i)).toBeInTheDocument();
+    // Must commit explicit null so updateAnimal CLEARS the block (truthiness wouldn't).
+    expect(onUpdate).toHaveBeenCalledWith({ optogenetics: null });
+  });
+
+  it('structurally allows exactly one excitation source (no add control, renders only the first)', () => {
+    render(
+      <OptogeneticsStep
+        animal={{
+          // Even given two imported sources, the editor renders only the first and
+          // offers no way to add another — the converter rejects >1.
+          optogenetics: {
+            opto_excitation_source: [{ name: 'LED-1' }, { name: 'LED-2' }],
+            optical_fiber: [],
+            virus_injection: [],
+            optogenetic_stimulation_software: 'fsgui',
+          },
+        }}
+        onUpdate={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByRole('button', { name: /add excitation source/i })).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/setup name/i)).toHaveValue('LED-1');
+    // Only one "Setup name" field exists (the single source), not one per imported source.
+    expect(screen.getAllByLabelText(/setup name/i)).toHaveLength(1);
+  });
+
+  it('renders device-name fields as datalist-backed inputs (catalog suggestions, free entry)', async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    await user.click(screen.getByRole('checkbox', { name: /has optogenetics/i }));
+
+    const modelInput = screen.getByLabelText(/hardware model name/i);
+    expect(modelInput).toHaveAttribute('list');
+    // A bundled catalog suggestion is offered…
+    const listId = modelInput.getAttribute('list');
+    expect(document.getElementById(listId).querySelector('option[value="Omicron LuxX+ 488-100"]')).toBeInTheDocument();
+    // …but free entry (a custom device file name) is still accepted.
+    await user.type(modelInput, 'Custom Laser X');
+    expect(modelInput).toHaveValue('Custom Laser X');
   });
 });

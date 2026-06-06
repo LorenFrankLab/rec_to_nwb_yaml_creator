@@ -105,12 +105,16 @@ function reorderKeys(obj, order) {
 /**
  * Emit virus_injection items carrying BOTH volume spellings with one value.
  *
- * trodes_to_nwb reads `volume_in_uL` (capital L); the bundled schema requires
- * `volume_in_ul` (lowercase). Emitting both — derived from whichever spelling the
- * stored data carried — lets the same YAML pass app AJV and convert without the
- * converter silently dropping the whole optogenetics block. The duplicate is a
- * deliberate, documented compatibility shim until the schema and converter agree on one
- * canonical spelling (see docs/REFACTOR_CHANGELOG.md and docs/PIPELINE_REQUIREMENTS.md).
+ * trodes_to_nwb reads `volume_in_uL` (capital L) with bracket access in
+ * `make_virus_injection` (a KeyError crash if absent — NOT one of the four all-or-nothing
+ * gate keys, so a missing volume crashes *after* the gate rather than silently dropping
+ * opto); the bundled schema requires `volume_in_ul` (lowercase). Emitting both — derived
+ * from whichever spelling the stored data carried — lets the same YAML pass app AJV and
+ * convert without that crash. The duplicate is a deliberate, documented compatibility
+ * shim until the schema and converter agree on one canonical spelling (see
+ * docs/REFACTOR_CHANGELOG.md and docs/PIPELINE_REQUIREMENTS.md). When BOTH spellings are
+ * present but differ (only reachable from imported data — the editor stores only
+ * `volume_in_uL`), `volume_in_uL` is treated as authoritative.
  *
  * @param {Array} items - Raw virus_injection items.
  * @returns {Array} Reordered items with both `volume_in_uL` and `volume_in_ul` set.
@@ -120,6 +124,7 @@ function emitVirusInjections(items) {
   return items.map((item) => {
     const reordered = reorderKeys(item, VIRUS_INJECTION_ORDER);
     if (!isPlainRecord(reordered)) return reordered;
+    // `volume_in_uL` (converter spelling) wins when both are present (see JSDoc).
     const volume = reordered.volume_in_uL ?? reordered.volume_in_ul;
     if (volume !== undefined) {
       reordered.volume_in_uL = volume;
@@ -134,7 +139,8 @@ function emitVirusInjections(items) {
  *
  * `reorderKeys` is lossless (it preserves keys outside the order template), so a legacy
  * UI-only key like `state_script_parameters` would otherwise survive into the export.
- * Strip it explicitly here. `camera_id` (schema-required, converter-read) stays.
+ * Strip it explicitly here. `camera_id` (schema-required; the converter reads it only for
+ * speed/spatial-filter protocols) stays.
  *
  * @param {Array} items - Raw fs_gui_yamls items.
  * @returns {Array} Reordered, sanitized items.
