@@ -33,14 +33,16 @@ fixed at record time — pinning matches the science.)
   surface. `updateAnimal({ devices })` writes **both** `animal.devices` **and**
   `configurationHistory[latest].devices`, keeping them in sync. *This is the new behavior that fixes the
   P0:* configuring probes now flows into version 1's snapshot, so days pinned to it export the probes.
-- **`createDay`** pins `day.configurationVersion = animal.configurationHistory.length` (the latest
-  version) — already its behavior (`useWorkspace.js:410-433`); now that version actually holds the config.
+- **`createDay`** pins `day.configurationVersion` to the latest snapshot's actual version number (not the
+  history length, so non-contiguous repaired histories still pin to a resolvable version). Now that latest
+  version actually holds the config.
 - **Reconfiguration is fork-before-edit** (the explicit freeze the High-severity review finding asked
   for). The wizard's "Reconfigure from day X" action, run **before** the user edits the new geometry:
-  1. `addConfigurationSnapshot(animal.id, { devices: clone(latest snapshot), … })` → a new version N+1
-     that starts **identical** to the current config (returns N+1 — the v3-plan return-value contract).
-  2. `applyConfigurationForward(animal.id, N+1, [day X … end])` → repoints the chosen days to N+1.
-  3. Set `animal.devices` to mirror version N+1 (the new latest).
+  1. `createConfigurationSnapshotAndApplyForward(animal.id, { devices: clone(latest snapshot), ... }, [day X ... end])`
+     creates a new version N+1 that starts **identical** to the current config and repoints the chosen days
+     to it in one atomic transition.
+  2. `animal.devices` is already the mirror of that cloned latest config. When the user edits geometry after
+     the fork, `updateAnimal({ devices })` writes the mirror and the new latest snapshot together.
 
   Now days **before** X stay pinned to version N (its snapshot frozen with the *old* config), and days
   **X…end** are on N+1. When the user then edits geometry in the Animal Editor, `updateAnimal` writes
@@ -61,10 +63,11 @@ copy-on-write-per-keystroke and no draft layer — the fork is the single, expli
 The Phase-10.5 wizard currently reads already-edited `animal.devices` as `nextConfig` and renders a
 live-vs-snapshot diff. Under model B that diff is dropped (your call: "apply the current configuration to
 days X–Y" with no diff). The wizard becomes a **fork-point selector**: pick the boundary day + the day
-range, confirm, fork (steps 1–3 above); geometry is then edited in the Animal Editor against the new
-latest version. Keep the existing `addConfigurationSnapshot` / `applyConfigurationForward` actions and
-the returned-version contract; only the wizard's call order and its UI change. Keep
-`reconfigWorkflow.integration.test.js` / `ReconfigWizard.test.jsx` green, updated to the model.
+range, confirm, fork with the atomic action above; geometry is then edited in the Animal Editor against the new
+latest version. The public store entry point is `createConfigurationSnapshotAndApplyForward`; the old
+two-action store API (`addConfigurationSnapshot` then `applyConfigurationForward`) has been removed as
+production-dead. Keep the pure transition helpers and `reconfigWorkflow.integration.test.js` /
+`ReconfigWizard.test.jsx` green, updated to the atomic model.
 
 ### What phase 2 must prove
 

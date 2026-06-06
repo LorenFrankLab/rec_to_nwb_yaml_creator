@@ -45,11 +45,14 @@ before extraction, with the exact symbols/targets each task moves:
   - **Task 2 target:** pure `src/domain/badChannels.js` (multi-shank rule, later-row translation,
     probe-wide map build, invalid-mark interpretation, range check) and `src/domain/deviceOverrides.js`
     (`classifyDeviceOverrides`), with a test that the classifier corresponds 1:1 to `dayOverrideIssues`.
-- **Risky workspace transitions live inline in `src/state/useWorkspace.js` (Task 3 targets):** the
-  `updateAnimal` devices branch (mirrors the edit into the latest snapshot, lines ~228-248),
-  `addConfigurationSnapshot`/`applyConfigurationForward`/`rebuildConfigurationHistory`, `createDay`
-  (pins `configurationVersion = getConfigHistory(animal).length`), and `updateDay`'s malformed-session
-  guard. Electrode-group/channel-map mutation recipes live in
+- **At Phase 8.5 start, risky workspace transitions lived inline in `src/state/useWorkspace.js`
+  (Task 3 targets):** the `updateAnimal` devices branch (mirrors the edit into the latest snapshot,
+  lines ~228-248), the reconfiguration snapshot/apply actions, `rebuildConfigurationHistory`, `createDay`,
+  and `updateDay`'s malformed-session guard. The completed Phase 8.5 cleanup moved the transition recipes
+  into `src/state/workspaceTransitions.js`, made the atomic `createConfigurationSnapshotAndApplyForward`
+  the only public reconfiguration action, removed the orphaned two-action store API, and pins new days to
+  the latest snapshot's actual version rather than the history length. Electrode-group/channel-map mutation
+  recipes still live in
   `pages/AnimalEditor/AnimalEditorStepper.jsx` (`handleSaveGroup`, `confirmDeleteGroup`,
   `handleCopyConfirm`, `handleSaveChannelMap`).
   - **Task 3 target:** pure `src/state/workspaceTransitions.js` with the four named transitions;

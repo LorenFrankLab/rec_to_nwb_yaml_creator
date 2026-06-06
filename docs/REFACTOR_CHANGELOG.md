@@ -55,7 +55,8 @@ tested** correctness/design changes on top (not byte-preserving, but the golden 
 byte-identical because none touch the export encoder):
 - **Configuration versions are allocated by `max(version) + 1`, never the count.** A
   non-contiguous imported/repaired history (`[1, 3]`) no longer pins a new day to a
-  non-existent version or appends a duplicate (`createDayRecord`, `addConfigurationSnapshot`).
+  non-existent version or appends a duplicate (`createDayRecord`,
+  `addConfigurationSnapshotToAnimal` / `createSnapshotAndApplyForward`).
 - **An atomic reconfiguration action** `createConfigurationSnapshotAndApplyForward` appends the
   snapshot AND pins the affected days in one transition, replacing the wizard's fragile
   two-action compose (create-snapshot → thread returned version → apply-forward). The orphaned
@@ -1117,8 +1118,10 @@ baselines stay byte-identical** (they don't exercise `mergeDayMetadata`).
 - **Reconfiguration is fork-before-edit.** The wizard no longer shows a live-vs-snapshot
   diff; it forks the current configuration into a new version, confirms which days move
   to it (earlier days stay pinned), and applies it forward — the user then edits the new
-  geometry in the Animal Editor. The `addConfigurationSnapshot` / `applyConfigurationForward`
-  store actions and the returned-version contract are unchanged.
+  geometry in the Animal Editor. At this point the `addConfigurationSnapshot` /
+  `applyConfigurationForward` store actions and returned-version contract were unchanged;
+  Phase 8.5 later removed those public actions in favor of the atomic
+  `createConfigurationSnapshotAndApplyForward` entry point.
 
 > **Known limitation (deferred pre-cutover round-trip):** for an electrode group with
 > multiple ntrode rows, current `trodes_to_nwb` reads only the first row's `bad_channels`
@@ -1202,7 +1205,9 @@ atomic. **YAML export is unchanged — golden baselines stay byte-identical.**
   created version number (from the authoritative store state), and the reconfiguration
   wizard applies the snapshot forward to that exact returned version instead of
   re-deriving it from a possibly-stale `animal` prop — removing the cross-action
-  desync / orphan-snapshot risk. No store public-API keys changed.
+  desync / orphan-snapshot risk. No store public-API keys changed at this step; Phase 8.5
+  later removed the orphaned two-action public API after the wizard moved to the atomic
+  action.
 
 ---
 
@@ -1268,7 +1273,8 @@ later days — without disturbing days that did not change.
 - **Reconfiguration wizard** (`ReconfigWizard`, on the shared accessible `<Modal>`): renders
   the structured diff, versions the current configuration via `addConfigurationSnapshot`,
   and applies it forward to the chosen day and later days. A "no change detected" state
-  disables apply. No `alert()` / `window.confirm()`.
+  disables apply. No `alert()` / `window.confirm()`. Later phases replaced this two-action
+  public path with fork-before-edit plus `createConfigurationSnapshotAndApplyForward`.
 - **Devices step:** a read-only "Configuration version N — applied to M days" indicator and
   the wizard entry point.
 - No change to `encodeYaml`, the schema, the export path, or the four golden fixtures;
