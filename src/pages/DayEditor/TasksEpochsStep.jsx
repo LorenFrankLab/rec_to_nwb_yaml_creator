@@ -365,9 +365,13 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
           fsGuiYamls={getDayFsGuiYamls(day)}
           cameras={cameras}
           epochOptions={[...validEpochSet(tasks)].sort((a, b) => a - b)}
+          // Only the DAY's behavioral events are exported (mergeDayMetadata reads
+          // day.behavioral_events), and the dangling_dio_output rule validates against
+          // those — so offer ONLY day events here. Inherited animal events are reference
+          // only; to use one, add it to this day in the Behavioral Events section above.
           dioOptions={[
             ...new Set(
-              [...dayBehavioralEvents, ...inheritedBehavioralEvents]
+              dayBehavioralEvents
                 .map((e) => e?.name)
                 .filter((n) => typeof n === 'string' && n !== '')
             ),

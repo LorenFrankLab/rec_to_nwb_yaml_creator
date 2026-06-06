@@ -616,6 +616,12 @@ export function stepIdForIssue(issue) {
   if (path.includes('session') || path.includes('subject') || path.includes('experimenter') || path.includes('lab') || path.includes('institution') || path.includes('experiment_description')) {
     return 'overview';
   }
+  // FsGUI protocols are rendered in the Epochs step — route their schema errors there
+  // BEFORE the camera/device check below (a `fs_gui_yamls[].camera_id` path contains
+  // "camera" and would otherwise mis-route to Devices).
+  if (path.includes('fs_gui')) {
+    return 'epochs';
+  }
   // Device-related fields → Devices
   if (
     path.includes('electrode') ||

@@ -1,5 +1,10 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import {
+  optoExcitationModelNames,
+  opticalFiberModelNames,
+  virusNames,
+} from '../../valueList';
 
 /**
  * Workspace optogenetics editor (Animal Editor step).
@@ -20,9 +25,12 @@ import PropTypes from 'prop-types';
  * `onUpdate({ optogenetics })`, mirroring the other Animal Editor sections.
  */
 
+// These names are EXACT lookup keys into trodes_to_nwb's device metadata (a miss raises
+// a ValueError). The bundled catalogs are offered as suggestions (datalist) for
+// discoverability, but free entry is preserved because a lab may add a custom device file.
 const EXCITATION_FIELDS = [
   { name: 'name', label: 'Setup name', type: 'text' },
-  { name: 'model_name', label: 'Hardware model name', type: 'text' },
+  { name: 'model_name', label: 'Hardware model name', type: 'datalist', options: optoExcitationModelNames() },
   { name: 'description', label: 'Description', type: 'text' },
   { name: 'wavelength_in_nm', label: 'Wavelength (nm)', type: 'number' },
   { name: 'power_in_W', label: 'Source power (W)', type: 'number' },
@@ -31,7 +39,7 @@ const EXCITATION_FIELDS = [
 
 const FIBER_FIELDS = [
   { name: 'name', label: 'Fiber implant name', type: 'text' },
-  { name: 'hardware_name', label: 'Fiber hardware model', type: 'text' },
+  { name: 'hardware_name', label: 'Fiber hardware model', type: 'datalist', options: opticalFiberModelNames() },
   { name: 'implanted_fiber_description', label: 'Implant description', type: 'text' },
   { name: 'hemisphere', label: 'Hemisphere', type: 'select', options: ['left', 'right'] },
   { name: 'location', label: 'Location', type: 'text' },
@@ -48,7 +56,7 @@ const FIBER_FIELDS = [
 const VIRUS_FIELDS = [
   { name: 'name', label: 'Injection name', type: 'text' },
   { name: 'description', label: 'Description', type: 'text' },
-  { name: 'virus_name', label: 'Virus name', type: 'text' },
+  { name: 'virus_name', label: 'Virus name', type: 'datalist', options: virusNames() },
   // volume_in_uL is the converter spelling; the export also emits volume_in_ul.
   { name: 'volume_in_uL', label: 'Volume (µL)', type: 'number' },
   { name: 'titer_in_vg_per_ml', label: 'Titer (vg/mL)', type: 'number' },
@@ -74,14 +82,22 @@ function emptyItem(fields) {
 }
 
 /**
- * True when an array has at least one item carrying a non-empty `name`.
- * @param items
+ * True when a value is a non-empty scalar (0 counts as filled; '' / null / undefined do not).
+ * @param value
  */
-function hasNamedItem(items) {
-  return (
-    Array.isArray(items) &&
-    items.some((it) => typeof it?.name === 'string' && it.name.trim() !== '')
-  );
+function isFilled(value) {
+  return value !== undefined && value !== null && String(value).trim() !== '';
+}
+
+/**
+ * True when an array has at least one item with EVERY one of `fields` filled in. Used for
+ * the completeness checklist so it reflects export-readiness (all converter/schema-required
+ * fields present), not merely that a row was added.
+ * @param items
+ * @param fields
+ */
+function hasCompleteItem(items, fields) {
+  return Array.isArray(items) && items.some((it) => fields.every((f) => isFilled(it?.[f.name])));
 }
 
 /** A fresh, enabled-but-empty optogenetics block (one excitation source, no fibers/viruses). */
@@ -145,6 +161,26 @@ export default function OptogeneticsStep({ animal, onUpdate }) {
 
   const renderField = (field, value, onChange, idPrefix) => {
     const id = `${idPrefix}-${field.name}`;
+    if (field.type === 'datalist') {
+      const listId = `${id}-list`;
+      return (
+        <label key={field.name} htmlFor={id} className="opto-field">
+          <span>{field.label}</span>
+          <input
+            id={id}
+            type="text"
+            list={listId}
+            value={value ?? ''}
+            onChange={(e) => onChange(field, e.target.value)}
+          />
+          <datalist id={listId}>
+            {field.options.map((opt) => (
+              <option key={opt} value={opt} />
+            ))}
+          </datalist>
+        </label>
+      );
+    }
     if (field.type === 'select') {
       return (
         <label key={field.name} htmlFor={id} className="opto-field">
@@ -175,11 +211,11 @@ export default function OptogeneticsStep({ animal, onUpdate }) {
   // Completeness mirrors the converter gate (and the partial_configuration export rule).
   const completeness = enabled
     ? {
-        // "Present" means filled in (a non-empty name), not just an empty pre-seeded /
-        // added row — otherwise the checklist would read complete before any data exists.
-        source: hasNamedItem(opto.opto_excitation_source),
-        fiber: hasNamedItem(opto.optical_fiber),
-        virus: hasNamedItem(opto.virus_injection),
+        // "Complete" means a fully-filled row (every required field), not just an added /
+        // named one — so the checklist doesn't read done while required fields are blank.
+        source: hasCompleteItem(opto.opto_excitation_source, EXCITATION_FIELDS),
+        fiber: hasCompleteItem(opto.optical_fiber, FIBER_FIELDS),
+        virus: hasCompleteItem(opto.virus_injection, VIRUS_FIELDS),
         software:
           typeof opto.optogenetic_stimulation_software === 'string' &&
           opto.optogenetic_stimulation_software.trim() !== '',
@@ -217,9 +253,9 @@ export default function OptogeneticsStep({ animal, onUpdate }) {
               optogenetics block otherwise, with no error). Export stays blocked until you
               add: {' '}
               {[
-                !completeness.source && 'an excitation source (with a name)',
-                !completeness.fiber && 'at least one optical fiber',
-                !completeness.virus && 'at least one virus injection',
+                !completeness.source && 'a complete excitation source',
+                !completeness.fiber && 'a complete optical fiber',
+                !completeness.virus && 'a complete virus injection',
                 !completeness.software && 'the stimulation software name',
               ].filter(Boolean).join(', ')}.
             </p>

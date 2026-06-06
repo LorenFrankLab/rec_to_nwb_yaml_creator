@@ -86,6 +86,20 @@ Second review round (converter-contract gaps verified against trodes_to_nwb `mai
 - Verified non-issue (no change): opto-on with zero FsGUI protocols is valid — the converter
   writes the implant metadata and simply logs "no opto epochs".
 
+Third review round (consistency/UX correctness):
+- **DIO select now offers only the DAY's behavioral events** (the exported source the
+  `dangling_dio_output` rule validates against) — it previously also offered inherited animal
+  events, which are not written to the day and would be rejected on export.
+- **`stepIdForIssue` routes fs_gui schema errors to the Epochs step** (where FsGUI is rendered),
+  before the camera check — a blank `fs_gui_yamls[].camera_id` no longer mis-routes to Devices.
+- **Honest completeness**: the editor's checklist now requires a fully-filled row (every
+  converter/schema-required field), not just a named one, so it never reads "done" while required
+  fields are blank.
+- **Catalog discoverability**: `model_name` / `hardware_name` / `virus_name` are datalist inputs
+  backed by the bundled name lists (suggestions), since they are exact trodes_to_nwb device-metadata
+  lookup keys; free entry is preserved for labs that add custom device files (the converter's
+  catalog isn't bundled here, so hard-validation would false-reject custom devices — deferred).
+
 Gate: full vitest, golden baselines byte-identical, 0 lint errors, clean build. Branch not merged.
 
 ---

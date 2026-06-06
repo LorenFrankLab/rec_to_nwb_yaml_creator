@@ -42,22 +42,50 @@ describe('OptogeneticsStep', () => {
     expect(screen.getByLabelText(/optogenetic stimulation software/i)).toHaveValue('fsgui');
   });
 
-  it('shows incomplete until every converter-required section is present, then clears', async () => {
+  it('stays incomplete when sections are only named (required fields still blank)', async () => {
     const user = userEvent.setup();
     render(<Harness />);
 
     await user.click(screen.getByRole('checkbox', { name: /has optogenetics/i }));
-    // Enabled but the source has no name and there's no fiber/virus yet → incomplete.
     expect(screen.getByText(/no optogenetics data/i)).toBeInTheDocument();
 
+    // Naming the rows is NOT enough — the converter/schema-required fields are still blank,
+    // so the checklist must NOT read complete (no false "done" signal).
     await user.type(screen.getByLabelText(/setup name/i), 'LED-470');
     await user.click(screen.getByRole('button', { name: /add optical fiber/i }));
     await user.type(screen.getByLabelText(/fiber implant name/i), 'Fiber 1');
     await user.click(screen.getByRole('button', { name: /add virus injection/i }));
     await user.type(screen.getByLabelText(/injection name/i), 'Injection 1');
 
-    // Named source + named fiber + named virus + software all present → the incomplete
-    // notice clears (empty pre-seeded/added rows do NOT count as complete).
+    expect(screen.getByText(/no optogenetics data/i)).toBeInTheDocument();
+  });
+
+  it('clears the incomplete notice once every required field is filled', () => {
+    const fullSource = {
+      name: 'LED-470', model_name: 'M', description: 'd', wavelength_in_nm: 470,
+      power_in_W: 0.01, intensity_in_W_per_m2: 100,
+    };
+    const fullFiber = {
+      name: 'Fiber 1', hardware_name: 'H', implanted_fiber_description: 'd', hemisphere: 'left',
+      location: 'CA1', ap_in_mm: 1, ml_in_mm: 1, dv_in_mm: 1, roll_in_deg: 0, pitch_in_deg: 0,
+      yaw_in_deg: 0, reference: 'Bregma',
+    };
+    const fullVirus = {
+      name: 'Inj 1', description: 'd', virus_name: 'AAV', volume_in_uL: 0.5, titer_in_vg_per_ml: 1e12,
+      hemisphere: 'left', location: 'CA1', ap_in_mm: 1, ml_in_mm: 1, dv_in_mm: 1, roll_in_deg: 0,
+      pitch_in_deg: 0, yaw_in_deg: 0, reference: 'Bregma',
+    };
+    render(
+      <Harness
+        initial={{
+          opto_excitation_source: [fullSource],
+          optical_fiber: [fullFiber],
+          virus_injection: [fullVirus],
+          optogenetic_stimulation_software: 'fsgui',
+        }}
+      />
+    );
+
     expect(screen.queryByText(/no optogenetics data/i)).not.toBeInTheDocument();
   });
 
