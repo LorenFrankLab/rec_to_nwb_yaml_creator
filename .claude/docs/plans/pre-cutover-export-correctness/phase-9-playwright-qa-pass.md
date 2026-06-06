@@ -25,6 +25,9 @@ localStorage, workflow clarity, and browser-only behavior cannot hide behind uni
 - Phase docs 1–8.7 — especially the validation slices, domain-boundary checks, workflow-clarity states,
   ownership/default/day-configurability states, and UX mistake-prevention
   tests. Phase 9 samples from those flows at the browser level; it does not replace their lower-level tests.
+- [workflow-screen-map.md](workflow-screen-map.md) — the browser-level screen coherence contract.
+  Phase 9 must sample every top-level screen and assert that visible heading, primary action,
+  next/return action, ownership cue, and repair destination match the user's job.
 
 **Contracts referenced:**
 
@@ -53,8 +56,10 @@ localStorage, workflow clarity, and browser-only behavior cannot hide behind uni
   configured cameras with `lens`, data-acq array with `name`, electrode groups + ntrode maps with integer IDs,
   day bad-channel edits, technical day overrides/defaults, tasks/videos, and no obvious `[object Object]` /
   empty required placeholders. The preflight assertions should name which values are shared animal setup,
-  configuration-version data, recording-system defaults, advanced day overrides, catalog selections, and
-  day-only facts.
+  configuration-version data, recording-system defaults, advanced day overrides, catalog selections, task-epoch
+  setup assignments, and day-only facts. If Phase 8.7 chooses day-used camera export, assert the downloaded YAML
+  includes the cameras referenced by that day and excludes unreferenced catalog cameras; if it chooses the
+  all-animal-cameras fallback, assert the UI exposes the all-day blast-radius warning instead.
 - **Task 2.5 — same-day and catch-up workflow smoke.** Add two user-story scenarios, not just field-level
   checks. Same-day: a scientist finishes one recording, creates/reviews one day, confirms task-epoch setup,
   validates, and downloads one YAML without re-entering shared setup. Catch-up: a scientist has multiple days
@@ -69,19 +74,24 @@ localStorage, workflow clarity, and browser-only behavior cannot hide behind uni
   camera name reuse with changed `meters_per_pixel`/`lens` is blocked and offers the new-name path; data-acq
   name reuse with changed dependent fields is blocked; case-only region drift is prevented; task/video camera
   and epoch references use controlled choices and cannot save stale ids; day technical values read as effective
-  recording-system values, do not look like routine day edits, and expose an advanced override plus
-  reset-to-recording-system-default path; behavioral-event editing cannot be mistaken for non-exported animal
-  reference data and inherited/reference events can be used on a day through a visible `Use on this day` path;
-  task-name reuse with different description is blocked with old-vs-new context.
+  recording-system values, do not look like routine day edits, and either route read-only edits to Recording
+  System or expose an advanced one-day override plus reset-to-recording-system-default path; behavioral-event
+  editing cannot be mistaken for non-exported animal reference data and inherited/reference events can be used
+  on a day through a visible `Use on this day` path; task-name reuse with different description is blocked with
+  old-vs-new context.
 - **Task 4.5 — ownership/discoverability scenario smoke.** Add one compact browser scenario or documented
   route-state artifact for each Phase 8.7 attention path: a new user finds electrode setup from the workspace;
   task/video camera empty state routes to `Set Up Cameras`; changing camera zoom/calibration/lens steers to a
   new camera name; data-acq is presented as recording-system setup rather than grouped with cameras; a user
-  sees `raw_data_to_volts` / `times_period_multiplier` as using recording-system defaults, can open an advanced
-  one-day override only when needed, and sees the override marked as this-day-only; an animal-level
+  sees `raw_data_to_volts` / `times_period_multiplier` as using recording-system defaults only when the copied
+  day value matches the current default; either the values are read-only with an `Edit in Recording System`
+  route, or an advanced one-day override exists and is clearly marked as this-day-only; an animal-level
   DIO/reference event is made visible as exported only after `Use on this day`; a multi-epoch day can show
   different rooms/cameras by epoch without implying one day-wide setup; and a user with existing days sees what
-  shared-setup edits affect before saving.
+  shared-setup edits affect before saving. Cross-check the scenario against `workflow-screen-map.md`: each
+  top-level route (`Create Animal`, `Animal Workspace`, `Animal Setup`, `Day Editor`, `Validation Summary`)
+  must have a visible heading that matches the user job, a single dominant primary action for the current
+  state, a visible return/next path, and no repair action that lands on a read-only dead end.
 - **Task 4.6 — lifecycle cleanup smoke.** Add browser coverage or a documented route-state artifact proving
   animal/day deletion is discoverable but secondary: a selected animal exposes `Delete animal...`; ordinary day
   rows expose `Delete recording day...`; confirmations name the affected animal/day and cascade count; exported
@@ -125,11 +135,13 @@ localStorage, workflow clarity, and browser-only behavior cannot hide behind uni
 | Test | Asserts |
 | --- | --- |
 | `workspace happy path downloads corrected YAML` *(Playwright)* | a fully configured workspace day reaches Export, shows preflight, downloads YAML, and the downloaded text includes corrected subject/session, camera/data-acq/device/task/video sections. |
+| `camera export binding or blast-radius fallback is proven` *(Playwright/unit artifact)* | day-used camera export includes referenced task/video/FsGUI cameras and excludes unreferenced catalog cameras, or the documented fallback warns that animal camera catalog changes affect all day exports. |
 | `same-day and catch-up workflows are efficient` *(Playwright/artifact)* | one fresh single-day export and one multi-day catch-up/batch export path are reachable without redundant shared-setup entry; readiness, targeted repair, batch eligibility, and protected naming identities are visible. |
 | `invalid workspace day is fail-closed in browser` *(Playwright)* | stepper click, keyboard next, and download cannot bypass error-severity validation; repair actions navigate/focus as designed. |
 | `identity and reference mistakes are blocked before export` *(Playwright)* | camera/data-acq divergent reuse, task-name divergent reuse, region case drift, and stale task/video refs are blocked or repaired at the editing surface. |
-| `ownership/default/day-configurability is visible` *(Playwright)* | shared setup, configuration version, using recording-system default, advanced day override, catalog selection, task-epoch setup assignment, exported-with-this-day, and day-only facts are distinguishable in the key workspace/day/export routes at the point of action. |
-| `ownership discovery paths are reachable` *(Playwright/artifact)* | `Set Up Electrodes`, `Set Up Cameras`, `Use on this day`, `Override for this day`, `Reset to recording-system default`, `Pin version`, and `Hardware changed starting this day` are present in the states where users naturally look for them. |
+| `ownership/default/day-configurability is visible` *(Playwright)* | shared setup, configuration version, using-recording-system-default or different-from-current-default, optional advanced day override, catalog selection, task-epoch setup assignment, exported-with-this-day, and day-only facts are distinguishable in the key workspace/day/export routes at the point of action. |
+| `ownership discovery paths are reachable` *(Playwright/artifact)* | `Set Up Electrodes`, `Set Up Cameras`, `Use on this day`, `Edit in Recording System` or `Override for this day`, `Reset to recording-system default` when an override exists, `Pin version`, and `Hardware changed starting this day` are present in the states where users naturally look for them. |
+| `screen map coherence is proven` *(Playwright/artifact)* | each top-level route and major step/modal sampled from `workflow-screen-map.md` has the expected visible heading, primary action, ownership cue, next/return action, and repair destination; labels such as `Home`, `Animal Editor`, `Hardware Config`, `Devices`, and `Epochs` are either replaced or visibly disambiguated for the user's job. |
 | `animal/day cleanup is safe and discoverable` *(Playwright/artifact)* | `Delete animal...` and `Delete recording day...` are reachable as secondary destructive actions; confirmations name cascade/export consequences; cancel preserves state; confirm deletes only the intended owned records. |
 | `workspace persistence recovery is browser-safe` *(Playwright)* | reload preserves a valid workspace; empty/malformed blobs recover with a named notice and no crash; failed autosave either keeps the unsaved-work guard active in a browser simulation, or the QA artifact documents why browser simulation is impossible and cites the Phase 7 failed-autosave guard test as alternate proof. |
 | `workspace optogenetics is browser-configurable` *(Playwright)* | opto off/on states, required-field blocking, FsGUI camera/epoch references, opto-on-selected-epochs behavior, and downloaded converter/schema key pairs work through the UI. |

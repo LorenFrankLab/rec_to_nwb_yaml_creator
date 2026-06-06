@@ -24,9 +24,10 @@ For agent invocation, **load only the slice you need**:
    contracts/designs it depends on, tasks, validation slice, fixtures.
 2. **Need shared semantics or user mental model?** [shared-contracts.md](shared-contracts.md).
 3. **Need workflow clarity / electrode setup discoverability?** [workflow-clarity-design.md](workflow-clarity-design.md).
-4. **Need animal-vs-day-vs-epoch ownership / defaults / overrides?** [phase-8-7-ownership-defaults-day-configurability.md](phase-8-7-ownership-defaults-day-configurability.md).
-5. **Need the device-resolution design?** [designs.md](designs.md).
-6. **Need broader scope / risks / rollout / parity policy?** [overview.md](overview.md).
+4. **Need the screen/user-job map?** [workflow-screen-map.md](workflow-screen-map.md).
+5. **Need animal-vs-day-vs-epoch ownership / defaults / overrides?** [phase-8-7-ownership-defaults-day-configurability.md](phase-8-7-ownership-defaults-day-configurability.md).
+6. **Need the device-resolution design?** [designs.md](designs.md).
+7. **Need broader scope / risks / rollout / parity policy?** [overview.md](overview.md).
 
 ## Files
 
@@ -34,6 +35,7 @@ For agent invocation, **load only the slice you need**:
 - [shared-contracts.md](shared-contracts.md) — user mental model, export-resolution source-of-truth, schema device-output, validation/export-gate, UX quality, and parity contracts referenced across phases.
 - [designs.md](designs.md) — the device-resolution model (live config vs. configuration snapshots) — the one genuinely contested design decision.
 - [workflow-clarity-design.md](workflow-clarity-design.md) — required workflow/information-architecture design for making electrode setup, existing-data review, reconfiguration, day-specific failed channels, validation, and export understandable to users.
+- [workflow-screen-map.md](workflow-screen-map.md) — screen-to-user-job contract for every modern route, major step, modal, empty state, repair path, and destructive confirmation.
 - [app-code-organization-review.md](app-code-organization-review.md) — architecture/code-organization follow-up note for domain boundaries, page/module ownership, and type drift; Phase 8.5 refreshes and operationalizes the pre-QA subset.
 - Phases (each ships as a separable PR):
   - [phase-1-export-gate-fail-closed.md](phase-1-export-gate-fail-closed.md) — **safety first:** make the per-day Download gate, the Export step, and keyboard nav all respect full validation, so a schema/rule-invalid day can no longer be exported. No output bytes change.

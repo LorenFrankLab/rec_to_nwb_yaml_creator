@@ -97,6 +97,9 @@ how the model is built and gated, not in the encoder.
   day-specific metadata and failed channels, record hardware changes by day range, then export. A user must
   not have to discover electrode setup by guessing that it lives behind a Day Editor Devices view; see
   [workflow-clarity-design.md](workflow-clarity-design.md).
+- **Screen-to-user-job coherence.** Every modern route, major step, modal, empty state, repair path, and
+  destructive confirmation must have a clear user job, visible heading, primary action, next/return path,
+  ownership cue, and mistake-prevention role; see [workflow-screen-map.md](workflow-screen-map.md).
 
 ### Non-Goals
 
@@ -164,6 +167,12 @@ dev tooling for the phase-9 browser QA pass, phase-10 audit, and phase-11 UX pol
   New animals, existing/imported data, missing electrodes, historical configurations, and reconfiguration
   starts are covered by explicit routes/states and Playwright or QA artifacts
   ([phase 8.6](phase-8-6-workflow-clarity-setup-ux.md), [workflow clarity design](workflow-clarity-design.md)).
+- **Screen coherence:** the modern screens match the scientist's jobs rather than implementation buckets:
+  Create Animal, Animal Workspace, Animal Setup, Day Editor, Validation Summary, reconfiguration, modals,
+  and destructive confirmations each expose a coherent heading, primary action, next/return action, ownership
+  cue, and repair destination. Labels such as `Home`, `Animal Editor`, `Hardware Config`, `Devices`, and
+  `Epochs` are replaced or visibly disambiguated before browser QA
+  ([workflow-screen-map.md](workflow-screen-map.md)).
 - **Scientist workflow fit:** the modern YAML creator supports both common conversion cadences: exporting a
   freshly finished recording the same day, and catching up on several recorded days at once. In both cadences
   the app must prevent silent metadata/naming mistakes, keep repeated setup entry out of the scientist's way,
@@ -204,6 +213,7 @@ dev tooling for the phase-9 browser QA pass, phase-10 audit, and phase-11 UX pol
 | Architecture cleanup changes behavior just before QA | Phase 8.5 is behavior-preserving: extract/move domain logic, add architecture guards, and re-run validation/repair/golden/lint/build gates. Any semantic change must be deliberate, documented, and covered before Phase 9 starts. |
 | Workflow clarity changes accidentally alter export semantics | Phase 8.6 may change wording, setup/readiness state, routing, and empty/review states, but not schema/rule/export semantics. It must build on Phase 8.5 domain helpers and re-run validation/export/golden/lint/build gates before Phase 9. |
 | Users still cannot tell what is animal-level vs. day-level vs. task-epoch-level | Phase 8.7 adds an ownership/default/override matrix and aligns Animal Editor, Day Editor, Validation, and Export around shared setup, configuration versions, recording-system defaults copied into days, advanced day overrides, catalog selections, task-epoch setup assignments, and day-only facts. Ownership cues must appear where users make the edit/selection, not only in help text or docs. Any discovered source-of-truth mismatch must be fixed or logged as `blocks Phase 9`. |
+| Camera catalog UX promises historical stability but export emits all animal cameras | Phase 8.7 Task 5 must resolve the camera export binding before browser QA: either implement day-used camera export from task/video/FsGUI references with baseline/export audit, or explicitly keep the all-animal-cameras fallback and warn that camera catalog changes affect all day exports. |
 | Users cannot clean up test or mistaken animals/days | Phase 8.7 exposes secondary destructive actions for deleting animals and recording days, with cascade/export warnings and cancel/confirm tests. Deletion must remain guarded by the existing state transitions, including preserving wrong-owner day records. |
 
 ## Rollout Strategy

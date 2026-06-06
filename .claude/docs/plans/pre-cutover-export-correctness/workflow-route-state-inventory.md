@@ -1,13 +1,15 @@
 # Workflow route/state inventory (Phase 8.6 Task 0)
 
-[← back to PLAN.md](PLAN.md) · [workflow clarity design](workflow-clarity-design.md) · [mental-model contract](shared-contracts.md#user-mental-model-contract)
+[← back to PLAN.md](PLAN.md) · [workflow clarity design](workflow-clarity-design.md) · [screen map](workflow-screen-map.md) · [mental-model contract](shared-contracts.md#user-mental-model-contract)
 
 Date: 2026-06-05
 
-This is the map the rest of Phase 8.6 implements. For each workflow state it records the
+This is the route/state map the rest of Phase 8.6 implements. For each workflow state it records the
 user's **goal**, the **next safe action** the UI should offer, the **dangerous
 misconception** that the old UI allowed, the **current route/control**, and the **required
 change** (the surface that Phase 8.6 changes and the domain helper it derives from).
+For the screen-level contract across routes, steps, modals, empty states, repair paths, and
+destructive confirmations, use [workflow-screen-map.md](workflow-screen-map.md).
 
 The intended workflow order (from [workflow-clarity-design.md](workflow-clarity-design.md)):
 

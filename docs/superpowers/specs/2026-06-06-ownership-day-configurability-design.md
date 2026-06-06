@@ -2,7 +2,8 @@
 
 Date: 2026-06-06
 Status: validated design (brainstorm output), feeds Phase 8.7
-Related: [.claude/docs/plans/pre-cutover-export-correctness/phase-8-7-ownership-defaults-day-configurability.md](../../../.claude/docs/plans/pre-cutover-export-correctness/phase-8-7-ownership-defaults-day-configurability.md)
+Related: [.claude/docs/plans/pre-cutover-export-correctness/phase-8-7-ownership-defaults-day-configurability.md](../../../.claude/docs/plans/pre-cutover-export-correctness/phase-8-7-ownership-defaults-day-configurability.md),
+[.claude/docs/plans/pre-cutover-export-correctness/workflow-screen-map.md](../../../.claude/docs/plans/pre-cutover-export-correctness/workflow-screen-map.md)
 
 ## Purpose
 
@@ -78,14 +79,26 @@ Every field is one of three kinds:
 Touching already-recorded days is never automatic; it is only ever an explicit, blast-radius-
 named action ("apply to these N days"), reusing the existing reconfiguration-wizard shape.
 
-### Implementation: approach A — immutable-once-referenced (lightest, baseline-safe)
+### Implementation: approach A — immutable-once-referenced catalog, with explicit export binding
 
 Catalogs stay animal-level. Once any day references a physical-configuration identity, its
 identity fields become **append-only**: the UI offers "this is a new camera / recording
 system (recalibrated / swapped)" instead of letting the user mutate the live values. A
 genuine typo-fix on a referenced identity is the rare explicit "correct the N days using
-this" path. No state-shape change, no per-day value copies; referenced values never mutate,
-so the **golden baselines stay byte-identical** in the no-edit case.
+this" path.
+
+For cameras, this approach is only true if the exported session resolves `cameras` from
+the day-owned references (`tasks[].camera_id`, `associated_video_files[].camera_id`,
+`fs_gui_yamls[].camera_id`) rather than blindly exporting the entire animal catalog. The
+current exporter emits all `animal.cameras` for every day, so merely adding camera 1 for a
+future day would change a re-export of an old day by adding an unused camera device. Phase
+8.7 must therefore either:
+
+- implement the day-used camera export binding (preferred UX; past days keep their exported
+  camera set by construction), with a deliberate baseline/export audit; or
+- keep the current all-animal-cameras export as an explicit baseline-safe fallback, in which
+  case adding/editing cameras after recorded days is a blast-radius action that affects all
+  day exports and the UI must not promise historical exports are unchanged.
 
 The heavier alternative (per-day freeze / version cameras + data-acq like electrodes) is
 deferred to its own phase — it changes export resolution and needs baseline regeneration plus
@@ -93,9 +106,11 @@ trodes_to_nwb coordination.
 
 ### Cameras vs data-acq are NOT symmetric (key constraint)
 
-- **Cameras can do approach A cleanly.** Tasks/videos/FsGUI reference a camera by `camera_id`,
-  so a past day keeps pointing at camera 0 while a recalibration becomes camera 1; past
-  exports are unchanged automatically.
+- **Cameras can do approach A cleanly only with day-used export binding.** Tasks/videos/FsGUI
+  reference a camera by `camera_id`, so a past day can keep pointing at camera 0 while a
+  recalibration becomes camera 1; past exports are unchanged automatically only when export
+  emits the cameras referenced by that day. Without that binding, camera catalog changes have
+  all-day blast radius.
 - **Data-acq cannot, today** — `data_acq_device` has *no per-day binding*; it is a single
   animal-level record merged into every day. So "past days keep the old amplifier" is not
   representable. For data-acq, approach A degrades to the *principle only*: it is a single
@@ -103,8 +118,11 @@ trodes_to_nwb coordination.
   warning), and a genuine **mid-study amplifier swap is surfaced as currently unsupported**
   (its own future versioning phase). This is exactly Phase 8.7 Task 3 **option B**, so the
   model and Task 3 now agree. `raw_data_to_volts` / `times_period_multiplier` (rig constants,
-  moved under Recording System) sit here too: edited once, shown as effective per-day values,
-  no silent retroactive reach.
+  moved under Recording System) are recording-system defaults copied into each day at creation:
+  editing the default affects future days only unless the user explicitly applies the change to
+  named existing days. Existing days show their copied effective value, and if it differs from
+  the current default the UI says that plainly rather than pretending the value is still
+  inherited.
 
 ## Within-day setup is task-scoped (not free-floating per epoch)
 
@@ -127,6 +145,11 @@ detail once the user indicates the capability was used.
 
 ## How this maps to the surfaces
 
+The screen-level source of truth is
+[workflow-screen-map.md](../../../.claude/docs/plans/pre-cutover-export-correctness/workflow-screen-map.md).
+This section is the conceptual summary; the screen map is the artifact Phase 8.7/9 use to
+verify routes, step labels, modals, empty states, repair paths, and destructive confirmations.
+
 - **Animal Editor** — owns physical-configuration identities and constant animal facts.
   Information architecture separates Electrodes & Ephys, Recording System (data-acq + rig
   constants), Video Cameras & Calibration, Behavioral Events / DIO, Optogenetics (implanted
@@ -144,22 +167,28 @@ detail once the user indicates the capability was used.
 
 ## Data flow and state implications
 
-- No reducer/store rewrite. Cameras stay an animal catalog referenced by `camera_id`;
-  electrodes stay versioned snapshots pinned by day; technical stays copied-at-creation.
+- No reducer/store rewrite. Cameras stay an animal catalog referenced by `camera_id`, but the
+  implementation must define the export binding explicitly (preferred: export the day-used
+  camera subset; fallback: all-animal-cameras with an all-day blast-radius warning). Electrodes
+  stay versioned snapshots pinned by day; technical stays copied-at-creation.
 - New behavior is guards + flows + a reusable blast-radius dialog, plus a pure domain
   ownership descriptor (`src/domain/workflowOwnership.js`) that maps field paths / section
   ids / issue codes to ownership pattern + label + cue + edit surface + primary action.
 - The descriptor reuses `workflowCategories.js`'s `CATEGORY_BY_CODE` / `SURFACE_BY_CODE` and
   is guarded by a completeness test so no validator code is left unowned. It lives in
   `src/domain/` and does not import from `pages/` (architecture-boundary guard).
-- Export bytes for already-valid days are unchanged; the 4 golden baselines stay
-  byte-identical. The only path that could change export bytes (per-day freeze / versioned
-  data-acq) is explicitly out of scope.
+- Export bytes for already-valid days are unchanged except for a deliberate, reviewed
+  day-used-camera export binding if Phase 8.7 chooses the preferred camera fix. Any such change
+  must be covered by a baseline/export audit. Per-day freeze / versioned data-acq is explicitly
+  out of scope.
 
 ## Error handling and mistake prevention
 
 - Editing a referenced physical identity → "new identity" by default; the rare correction is
   an explicit "apply to these N days" action that enumerates the days.
+- Camera reference detection uses a pure affected-days helper that scans task, video, and
+  FsGUI camera references; the blast-radius dialog and export binding use the same helper so
+  they cannot disagree.
 - Editing a constant animal fact (species/DOB) → blast-radius notice ("affects all N days").
 - Two tasks claiming one epoch → prevented/surfaced `duplicate_task_epoch` (export-blocking).
 - Opto-free day/epoch → valid, no error.
@@ -176,11 +205,31 @@ detail once the user indicates the capability was used.
   days; "new camera identity" on recalibration; Animal Editor IA labels; day technical
   effective-value/override; multi-epoch day with per-task room/camera mapping; opto setup-vs-
   protocol split and opto-free day/epoch; lifecycle delete confirmations.
-- Regression: golden baselines byte-identical; architecture guard green; full suite + lint +
-  build.
+- Regression: golden baselines byte-identical unless the preferred day-used-camera export
+  binding deliberately changes a covered new-path fixture; architecture guard green; full
+  suite + lint + build.
 - Playwright-ready scenario artifacts for both cadences (same-day single export; batch triage
   + validate/export; recalibration→new camera; mid-study amplifier swap shows unsupported
   notice; opto-free day).
+
+## Alternatives considered
+
+- **Preferred: animal camera catalog + day-used camera export subset.** Users define reusable
+  camera identities once, day/task/video/FsGUI rows choose what was used, and export includes
+  only the cameras referenced by that day. This best matches the scientist's mental model and
+  the no-silent-retroactive promise. Cost: deliberate export-resolution change and baseline
+  audit.
+- **Baseline-safe fallback: animal camera catalog exported wholesale.** Minimal implementation
+  and byte-stable for existing baselines, but adding a future camera changes old-day re-exports.
+  If chosen, the UI must show an all-day blast-radius warning and cannot say past exports are
+  unchanged.
+- **Versioned camera snapshots pinned by day.** Strong historical model, like electrodes. Cost:
+  heavier state, reconfiguration UI, export-resolution changes, and more concepts for the user.
+- **Per-day frozen camera copies.** Simple historical export, but duplicates data, makes naming
+  consistency harder, and creates drift between the animal setup catalog and day records.
+- **Full rig/setup profiles pinned to day or epoch.** Potentially elegant for future rooms,
+  cameras, data-acq, opto, and task setup bundles. Too large for Phase 8.7; should wait until
+  the simpler catalog/version/day-fact model has been browser-tested.
 
 ## Scope and sequencing
 

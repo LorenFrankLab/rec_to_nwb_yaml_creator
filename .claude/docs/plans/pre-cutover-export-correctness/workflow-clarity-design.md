@@ -1,6 +1,6 @@
 # Workflow clarity design
 
-[<- back to PLAN.md](PLAN.md) · [shared contracts](shared-contracts.md#user-mental-model-contract)
+[<- back to PLAN.md](PLAN.md) · [screen map](workflow-screen-map.md) · [shared contracts](shared-contracts.md#user-mental-model-contract)
 
 Date: 2026-06-05
 
@@ -12,6 +12,7 @@ expects users to infer the model from scattered surfaces: Workspace, Animal Edit
 Reconfigure, Validation, and Export.
 
 That is not a user problem. It is an information architecture problem.
+The screen-level contract that operationalizes this design is [workflow-screen-map.md](workflow-screen-map.md).
 
 The UI must teach the workflow directly:
 
