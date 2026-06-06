@@ -546,10 +546,15 @@ export function useWorkspace(initialState = null) {
         const animal = workspace.animals[animalId];
         if (!animal) return [];
 
+        // Tolerate corrupt persisted state: keep only resolvable day RECORDS (a dangling ref or
+        // a non-record leftover is dropped — it can't be rendered/edited; ValidationSummary
+        // surfaces it as a repair row), and order by a string-coerced date so a numeric/missing
+        // `date` can't throw in `localeCompare` and blank the Day Editor / reconfiguration list.
+        const orderKey = (value) => (typeof value === 'string' ? value : String(value ?? ''));
         return getAnimalDayIds(animal)
           .map((dayId) => workspace.days[dayId])
-          .filter(Boolean)
-          .sort((a, b) => a.date.localeCompare(b.date));
+          .filter((day) => day !== null && typeof day === 'object' && !Array.isArray(day))
+          .sort((a, b) => orderKey(a.date).localeCompare(orderKey(b.date)));
       },
     }),
     [workspace]

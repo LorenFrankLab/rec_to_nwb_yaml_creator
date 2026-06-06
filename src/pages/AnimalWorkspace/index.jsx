@@ -401,7 +401,27 @@ export function AnimalWorkspace() {
                   <ul className="day-list" role="list">
                     {getAnimalDayIds(selectedAnimal).map((dayId) => {
                       const day = days[dayId];
-                      if (!day) return null;
+                      // A reference that resolves to no record (dangling) must be surfaced, not
+                      // silently dropped — otherwise a recovered day disappears. Show an explicit
+                      // missing-record row consistent with the cross-day Validation summary.
+                      if (!day || typeof day !== 'object' || Array.isArray(day)) {
+                        return (
+                          <li key={dayId} className="day-item day-item-missing">
+                            <div className="day-link day-link-missing" role="alert">
+                              <div className="day-info">
+                                <span className="day-date">{dayId}</span>
+                                <span className="day-session-id">
+                                  Saved record missing or corrupt —{' '}
+                                  <a href="#/validation">review in the validation summary</a>.
+                                </span>
+                              </div>
+                              <div className="day-status">
+                                <span className="status-chip error">Missing record</span>
+                              </div>
+                            </div>
+                          </li>
+                        );
+                      }
 
                       // Guard session/state: a recovered day can carry a malformed (scalar/array)
                       // session or state, which a raw `.session_id`/`.draft` read would crash on.

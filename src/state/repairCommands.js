@@ -161,10 +161,12 @@ export function applyRepairCommand(command, ctx) {
       // and the user cannot re-enter (the field is read-only). The editable description
       // fields reset to blank for the user to refill. updateDay guards the malformed current
       // session before merging, so this writes cleanly.
-      // Prefer the convenience `ctx.animal`/`ctx.day`, but fall back to the contract ids
-      // (`animalId`, and the date parsed off `dayId` which is `<animalId>-<YYYY-MM-DD>`) so a
-      // caller that passes only the documented ids still derives a real session_id.
-      const sessionAnimalId = ctx.animal?.id ?? animalId ?? '';
+      // The session_id prefix is the day's OWNING animal id. Prefer the day's own `animalId`
+      // (the reliable owner — it travels with the record) so a corrupt `animal.id` can't poison
+      // the prefix (e.g. `WRONG_YYYYMMDD`); fall back to the convenience `ctx.animal`/contract
+      // `animalId` only when the day carries no owner. The date is parsed off `dayId`
+      // (`<animalId>-<YYYY-MM-DD>`) when absent.
+      const sessionAnimalId = ctx.day?.animalId ?? ctx.animal?.id ?? animalId ?? '';
       const sessionDate = ctx.day?.date ?? String(dayId ?? '').slice(String(sessionAnimalId).length + 1);
       const sessionId = `${sessionAnimalId}_${String(sessionDate).replace(/-/g, '')}`;
       actions.updateDay(dayId, { session: { session_id: sessionId } });

@@ -90,6 +90,14 @@ clarity.
   wording (`Set Up Electrodes`, `Review Cameras`, `Fix day failed channels`, etc.) and still use
   the canonical repair target from `src/domain/validation.js`.
 
+  > **Implementation note (as shipped):** the workflow framing is delivered by the category
+  > **headings** (Animal setup / Day metadata / …) over each repair group plus the checklist
+  > action **verbs** (`Set Up Electrodes`, `Review Cameras`) on the Workspace + Day Devices empty
+  > state. The per-issue repair **buttons** keep the canonical `repairTargetForIssue` labels
+  > ("Fix in Animal Editor → …", "Fix in Devices") — a tested routing contract — rather than being
+  > reworded per category; the heading above each button supplies the workflow context. See the
+  > Phase 8.6 entry in `docs/REFACTOR_CHANGELOG.md`.
+
 - **Task 7 — preflight alignment.** Make Export preflight echo the setup checklist and Day Devices
   context: animal/day/session, configuration version and historical/current status, probes and
   failed channels, cameras/calibrations, data-acq device, tasks/videos, optogenetics, and unresolved

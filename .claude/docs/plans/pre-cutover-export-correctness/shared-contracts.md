@@ -90,8 +90,9 @@ Referenced by phases 1, 6, 9. The day-level export must be **fail-closed**.
 
 - `validate(model)` (`src/validation/index.js:27`) → array of `{severity, message, field?, step?}`,
   combining `schemaValidation` (AJV) + `rulesValidation`.
-- `computeStepStatus(day, mergedDay)` (`src/pages/DayEditor/validation.js:52`) computes an authoritative
-  `export` status: `'valid'` iff full validation has **zero** error-severity issues (`:68`).
+- `computeStepStatus(day, mergedDay, animal)` (`src/domain/validation.js`, moved out of
+  `pages/DayEditor/validation.js` in Phase 8.5) computes an authoritative `export` status: `'valid'`
+  iff full validation has **zero** error-severity issues.
 - **The export gate is not redundant with the prereq steps.** `computeDevicesStatus` (`:118`) and
   `computeEpochsStatus` (`:94`) derive their status from *completeness*, not from schema/rule errors
   routed to their bucket — so a **device-field schema error** (e.g. an electrode group missing

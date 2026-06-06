@@ -119,6 +119,21 @@ describe('applyRepairCommand — reset day session', () => {
     });
   });
 
+  it('resetDaySession derives the session_id from the day\'s own animalId, not a corrupt animal.id', () => {
+    // The day's `animalId` is the reliable owner; a corrupt animal.id (and ctx animalId) must
+    // NOT poison the session prefix (which would produce e.g. `WRONG_…`).
+    const c = ctx({
+      animal: { id: 'WRONG' },
+      animalId: 'WRONG',
+      day: { animalId: 'remy', date: '2023-06-22', session: 'corrupt' },
+      dayId: 'remy-2023-06-22',
+    });
+    applyRepairCommand({ type: 'resetDaySession' }, c);
+    expect(c.actions.updateDay).toHaveBeenCalledWith('remy-2023-06-22', {
+      session: { session_id: 'remy_20230622' },
+    });
+  });
+
   it('resetDaySession recovers the canonical session_id from ctx.animalId/dayId alone', () => {
     // The executor's documented ctx carries animalId/dayId; animal/day are conveniences.
     // With no animal/day objects it must still derive the canonical session_id from the ids

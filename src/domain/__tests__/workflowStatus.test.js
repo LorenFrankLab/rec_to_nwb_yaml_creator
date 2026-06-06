@@ -15,6 +15,7 @@ import {
 import { buildRealisticWorkspace } from '../../__tests__/fixtures/workspaceBuilders';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { computeStepStatus } from '../validation';
+import { isExportEnabled } from '../stepGate';
 
 /**
  * A minimal freshly-created animal: a subject, an empty initial config snapshot, no days.
@@ -138,16 +139,17 @@ describe('getAnimalSetupChecklist', () => {
 });
 
 describe('getDayWorkflowStatus', () => {
-  it('derives readiness from computeStepStatus(...).export for a clean realistic day', () => {
+  it('derives readiness from the real export gate isExportEnabled(computeStepStatus(...))', () => {
     const { animal, day } = buildRealisticWorkspace();
     const merged = mergeDayMetadata(animal, day);
     const status = getDayWorkflowStatus(animal, day, merged);
 
-    // The single source of truth: it must equal the export gate, not a re-derivation.
-    const exportStatus = computeStepStatus(day, merged, animal).export;
-    expect(status.readyForExportPreflight).toBe(exportStatus === 'valid');
-    expect(status.exportStatus).toBe(exportStatus);
-    expect(status.blockedByRepair).toBe(exportStatus !== 'valid');
+    // The single source of truth: readiness must equal the gate the Export button uses
+    // (export status + all prerequisite steps valid), not a re-derivation off `.export` alone.
+    const stepStatus = computeStepStatus(day, merged, animal);
+    expect(status.readyForExportPreflight).toBe(isExportEnabled(stepStatus));
+    expect(status.exportStatus).toBe(stepStatus.export);
+    expect(status.blockedByRepair).toBe(!isExportEnabled(stepStatus));
   });
 
   it('reports the resolved configuration version and that the latest day is not historical', () => {

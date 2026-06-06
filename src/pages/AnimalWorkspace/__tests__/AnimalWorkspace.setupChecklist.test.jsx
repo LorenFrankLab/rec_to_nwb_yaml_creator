@@ -125,6 +125,15 @@ describe('AnimalWorkspace existing-data review state', () => {
     expect(screen.queryByRole('region', { name: /existing data review/i })).not.toBeInTheDocument();
   });
 
+  it('surfaces a dangling day reference (id with no record) instead of silently dropping it', async () => {
+    // animal.days lists an id whose record is absent from the days map (recovered data).
+    const animal = { ...newAnimal, days: ['newbie-2024-01-02'] };
+    renderWith({ newbie: animal }, {}); // empty days map → the reference is dangling
+    await selectAnimal('newbie');
+    expect(screen.getByText(/saved record missing or corrupt/i)).toBeInTheDocument();
+    expect(screen.getByText(/missing record/i)).toBeInTheDocument();
+  });
+
   it('surfaces a corrupt (non-array) recording-day list instead of laundering it to "no days"', async () => {
     // A recovered animal whose `days` is a string, not a list.
     const corrupt = { ...newAnimal, days: 'nope' };

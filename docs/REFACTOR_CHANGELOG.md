@@ -136,6 +136,30 @@ checklist action **verbs** (Set Up Electrodes / Review Cameras), so there is no 
 - **Changelog/contract docs reconciled** with the final behavior (readiness gate = `isExportEnabled`;
   snapshot-only electrodes = repair/sync state).
 
+**Fifth-review follow-ups — day-reference recovery robustness (addressed in-phase):**
+
+- **Orphaned day records no longer disappear.** `ValidationSummary` adds an orphan sweep over
+  `workspace.days`: any day RECORD not reached through an animal's index (because the animal's `days`
+  is corrupt, missing, or simply doesn't list it) is surfaced as a row ("⚠ not in day list"),
+  resolved against its own `animalId`, and openable — so a recovered record is never lost. (Not
+  raw-flagged into `validateRawAnimal`, because the day *index* corruption shouldn't block export of
+  the day *records*, which are themselves fine.)
+- **Workspace surfaces dangling day references** instead of silently dropping them: a day id that
+  resolves to no record now renders an explicit "Missing record" row linking to the validation
+  summary, matching ValidationSummary's honesty.
+- **Batch export re-validates on confirm.** `runExport` re-resolves each captured row's CURRENT
+  animal/day from the store and re-runs `computeStepStatus`, skipping (and reporting) any day that is
+  no longer present or no longer valid since the preflight was opened — so a stale preflight can't
+  export something that changed underneath it.
+- **`getAnimalDays` is crash-safe.** It now keeps only resolvable day records and orders by a
+  string-coerced date, so a non-record day or numeric/missing `date` can't throw in `localeCompare`
+  and blank the Day Editor / reconfiguration list.
+- **`resetDaySession` uses the day's own `animalId`** for the session-id prefix (then the contract
+  `animalId`, then `ctx.animal?.id` last), so a corrupt `animal.id` can't produce a wrong prefix.
+- **Doc drift cleaned:** the validation/export-gate contract points `computeStepStatus` at
+  `src/domain/validation.js`; `workflowStatus.test.js` asserts readiness against `isExportEnabled(...)`;
+  the phase-doc Task 6 carries an as-shipped note on the repair-label decision.
+
 ---
 
 ## Domain boundaries & ownership cleanup — Phase 8.5 (June 5, 2026)

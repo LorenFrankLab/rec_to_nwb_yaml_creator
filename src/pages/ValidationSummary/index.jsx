@@ -93,6 +93,8 @@ function buildRows(workspace) {
   const daysById = isRecord(workspace?.days) ? workspace.days : {};
 
   const rows = [];
+  // Day ids reached through an animal's index, so the orphan sweep below doesn't double-count.
+  const indexedDayIds = new Set();
   for (const { animalKey, animal } of animals) {
     // A non-array `days` is corrupt persisted state (e.g. `{}` from a bad import).
     // Treat it as "no days" rather than letting `.map` throw and blank the whole
@@ -112,6 +114,7 @@ function buildRows(workspace) {
       );
 
     for (const { dayId, record } of resolved) {
+      indexedDayIds.add(dayId);
       // A reference that does not resolve to a day RECORD (missing id → undefined, or a
       // truthy-but-non-record leftover) cannot be merged/validated. Surface it as a
       // distinct error row keyed by its id, so it is visibly flagged for repair and counted
@@ -147,6 +150,33 @@ function buildRows(workspace) {
       }
     }
   }
+
+  // Orphan sweep: a day RECORD that no animal index reaches (the animal's `days` is corrupt,
+  // missing, or simply doesn't list it) would otherwise DISAPPEAR from the workflow entirely —
+  // a recovered/imported data-loss risk. Surface every such record so it is visible, counted,
+  // and routable to its day editor. Resolved against its own `animalId` (the reliable owner)
+  // when that animal exists; otherwise flagged as an orphan with no owning animal.
+  for (const [dayId, record] of Object.entries(daysById)) {
+    if (indexedDayIds.has(dayId) || !isRecord(record)) continue;
+    const owner = isRecord(workspace?.animals?.[record.animalId])
+      ? workspace.animals[record.animalId]
+      : null;
+    if (!owner) {
+      rows.push({ animal: { id: record.animalId }, animalKey: record.animalId, day: record, chip: 'error', orphaned: true });
+      // eslint-disable-next-line no-console
+      console.error(`[validation-summary] day "${dayId}" is not listed by any animal — flagged as orphaned.`);
+      continue;
+    }
+    try {
+      const chip = deriveChip(computeStepStatus(record, mergeDayMetadata(owner, record), owner));
+      rows.push({ animal: owner, animalKey: record.animalId, day: record, chip, orphaned: true });
+    } catch (err) {
+      rows.push({ animal: owner, animalKey: record.animalId, day: record, chip: 'error', orphaned: true, unreadable: true });
+      // eslint-disable-next-line no-console
+      console.error(`[validation-summary] orphaned day "${dayId}" could not be read:`, err);
+    }
+  }
+
   return rows;
 }
 
@@ -314,8 +344,33 @@ export function ValidationSummary() {
     const failed = [];
     let exported = 0;
 
-    validRows.forEach(({ animal, day }) => {
-      const identity = { dayId: day.id, subjectId: subjectLabel(animal), date: day.date };
+    validRows.forEach(({ animalKey, day: rowDay }) => {
+      // Re-resolve the CURRENT records and RE-VALIDATE before downloading: state may have
+      // changed while the preflight was open, so a day that was valid at preflight time must
+      // not be exported now if it is no longer present or no longer valid.
+      const animal = workspace?.animals?.[animalKey];
+      const day = isRecord(workspace?.days) ? workspace.days[rowDay.id] : undefined;
+      const identity = {
+        dayId: rowDay.id,
+        subjectId: animal ? subjectLabel(animal) : rowDay.id,
+        date: isRecord(day) ? day.date : rowDay.date,
+      };
+
+      if (!animal || !isRecord(day)) {
+        skipped.push({ ...identity, detail: 'No longer present since preflight — not exported.' });
+        return;
+      }
+      let stillValid = false;
+      try {
+        stillValid = deriveChip(computeStepStatus(day, mergeDayMetadata(animal, day), animal)) === 'valid';
+      } catch {
+        stillValid = false;
+      }
+      if (!stillValid) {
+        skipped.push({ ...identity, detail: 'No longer valid since preflight — not exported.' });
+        return;
+      }
+
       try {
         const { ok, yaml, diff } = checkShadowExport(animal, day);
 
@@ -502,9 +557,19 @@ export function ValidationSummary() {
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ animal, animalKey, day, chip, unreadable, missingRecord }, index) => (
+              {rows.map(({ animal, animalKey, day, chip, unreadable, missingRecord, orphaned }, index) => (
                 <tr key={`${day.id ?? 'unknown'}-${index}`} data-testid={`day-row-${day.id}`}>
-                  <td>{subjectLabel(animal)}</td>
+                  <td>
+                    {subjectLabel(animal)}
+                    {orphaned && (
+                      <span
+                        className="validation-summary-orphan-note"
+                        title="This day record is not listed in its animal's recording-day index (the index is corrupt, missing, or doesn't reference it). It is shown here so it isn't lost; open it to review or re-link it."
+                      >
+                        {' '}⚠ not in day list
+                      </span>
+                    )}
+                  </td>
                   <td>{day.date || '—'}</td>
                   <td>{day.session?.session_id || '—'}</td>
                   <td>

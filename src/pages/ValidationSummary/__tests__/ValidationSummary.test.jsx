@@ -304,6 +304,21 @@ describe('ValidationSummary', () => {
     expect(downloadYamlFile).not.toHaveBeenCalled();
   });
 
+  it('surfaces an orphaned day record (a record not in any animal index) instead of losing it', () => {
+    const { workspace, ids } = makeSummaryWorkspace();
+    // Drop the valid day from its animal's index but KEEP the record in workspace.days — a
+    // recovered/corrupt-index scenario that would otherwise make the record disappear.
+    workspace.animals.remy.days = workspace.animals.remy.days.filter((id) => id !== ids.validDayId);
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+
+    const row = screen.getByTestId(`day-row-${ids.validDayId}`);
+    expect(within(row).getByText(/not in day list/i)).toBeInTheDocument();
+    // Still openable in its editor (the record exists), so it is recoverable, not lost.
+    expect(within(row).getByRole('link')).toHaveAttribute('href', `#/day/${ids.validDayId}`);
+  });
+
   it('Export Valid Only: cancelling the preflight downloads nothing', async () => {
     const user = userEvent.setup();
     const { workspace } = makeSummaryWorkspace();

@@ -185,3 +185,11 @@
   padding: 0.5rem 1rem;
   cursor: pointer;
 }
+
+/* Orphaned day record (not in its animal's index) — surfaced so it isn't lost. */
+.validation-summary-orphan-note {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #bf360c;
+  white-space: nowrap;
+}
