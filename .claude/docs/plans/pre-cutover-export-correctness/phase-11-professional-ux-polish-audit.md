@@ -15,7 +15,8 @@ this plan's Phase 11, **not** the separate v3-workspace-cutover Phase 11 default
   export preflight alignment.
 - [workflow-screen-map.md](workflow-screen-map.md) — screen-to-user-job contract for route labels, step labels,
   modals, empty states, repair paths, and destructive confirmations. The polish pass should refine against
-  this map, not rebuild a competing inventory.
+  this map, not rebuild a competing inventory; include its state-specific primary actions and batch-row scan
+  contract.
 - [src/pages/Home](../../../../src/pages/Home), [src/pages/AnimalWorkspace](../../../../src/pages/AnimalWorkspace),
   [src/pages/AnimalEditor](../../../../src/pages/AnimalEditor), and
   [src/pages/DayEditor](../../../../src/pages/DayEditor) — primary workspace screens.
@@ -50,7 +51,9 @@ this plan's Phase 11, **not** the separate v3-workspace-cutover Phase 11 default
   summary, Export/preflight, persistence/recovery notices, opto off/on, and destructive confirmations. Start
   from `workflow-screen-map.md`; mark which mapped states have screenshots and which have direct tests. For
   each screen, record the user's likely goal, the mental model the UI should reinforce, and the most dangerous
-  misconception the screen must prevent.
+  misconception the screen must prevent. Include `#/workspace` with no selected animal, missing setup,
+  setup-complete/no-days, recovered data, invalid days, ready days, historical configuration, reconfiguration,
+  export-blocked, export-ready, and batch row scan states.
 - **Task 2 — design-system and interaction consistency audit.** Compare Add/Edit/Delete/Save/Cancel/Close,
   modal titles/actions, table actions, segmented/checkbox/select/radio controls, validation summaries,
   disabled states, status badges, save indicators, and repair links across screens. Fix small inconsistencies
@@ -107,7 +110,7 @@ this plan's Phase 11, **not** the separate v3-workspace-cutover Phase 11 default
 
 | Test / Artifact | Asserts |
 | --- | --- |
-| `workflow and screen-coherence gate` *(QA artifact + fixes)* | new/existing/imported/historical/reconfiguration states from `workflow-clarity-design.md` and top-level route/step/modal states from `workflow-screen-map.md` expose the correct visible heading, primary next action, ownership cue, return path, and repair destination. |
+| `workflow and screen-coherence gate` *(QA artifact + fixes)* | new/existing/imported/historical/reconfiguration states from `workflow-clarity-design.md` and top-level route/step/modal/batch-row states from `workflow-screen-map.md` expose the correct visible heading, primary next action, ownership cue, return path, and repair destination. |
 | `workspace screen/state mental-model inventory` *(QA artifact)* | every major screen/state from `workflow-screen-map.md` is accounted for with test or screenshot coverage plus user goal, intended mental model, and dangerous misconception. |
 | `interaction consistency checklist` *(QA artifact + fixes)* | common actions, modal patterns, destructive confirmations, disabled states, repair links, and status badges behave consistently. |
 | `form quality checklist` *(QA artifact + fixes)* | high-risk fields have clear labels, units, examples, required/optional state, validation timing, and disabled-state reasons. |

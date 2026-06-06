@@ -29,10 +29,31 @@ safe action, and what will be exported?"
 | --- | --- | --- | --- | --- | --- |
 | Legacy metadata form | `#/` or no hash | Use the frozen pre-workspace editor until cutover | Existing familiar one-page form | Complete/export through legacy path | Confusing legacy safety-net behavior with the modern workspace plan |
 | Create Animal | `#/home` | Create the subject and lab/experimenter defaults | Subject id, species, sex, DOB, genotype, experimenters | `Create Animal`, then go to Workspace | Starting with recording-day fields before the subject exists |
-| Animal Workspace | `#/workspace?animal=<id>` | Operational hub for one animal and batch triage | Which animal, setup readiness, recording days, existing-data warnings, export readiness | `Set Up/Review Animal Setup`, `Add Recording Days`, `Open Validation Summary` | Thinking a recording day owns probes/cameras; exporting recovered/imported data without review |
+| Animal Workspace | `#/workspace` / `#/workspace?animal=<id>` | Operational hub for one animal and batch triage | Selected animal, setup readiness, recording days, existing-data warnings, export readiness | State-specific; see below | Thinking a recording day owns probes/cameras; exporting recovered/imported data without review |
 | Animal Setup | `#/animal/:id/editor` | Define shared physical/setup identities for the animal | Electrodes/probes, channel maps, recording system, cameras/calibration, DIO library, implanted opto setup | Save/review shared setup; create a new identity/version when hardware changes | Editing shared setup while believing it is only changing one day; hiding data-acq inside vague hardware |
 | Day Editor | `#/day/:id` | Describe one recording day for export | Session/day facts, effective setup, tasks/epochs, rooms, cameras, videos/files, opto protocols, failed channels | Validate/export this day or repair the owning section | Re-entering shared setup as if day-owned; missing within-day setup changes |
-| Validation Summary | `#/validation` | Cross-day validation, repair routing, and batch export | Which days are valid/blocked, why, and which repair surface owns the fix | `Validate All`, `Export Valid Only`, or targeted repair | Batch-exporting invalid/wrong-owner/recovered days; losing the single-day/export gate contract |
+| Validation Summary | `#/validation` | Cross-day validation, repair routing, and batch export | Which days are valid/blocked, why, and which repair surface owns the fix | State-specific; see below | Batch-exporting invalid/wrong-owner/recovered days; losing the single-day/export gate contract |
+
+## State-specific primary actions
+
+Each route state should have one dominant next action. Secondary actions can remain visible,
+but they must not compete with the safest next step.
+
+| State | Primary visible action | Secondary actions | Coherence rule |
+| --- | --- | --- | --- |
+| No animals in workspace | `Create Animal` | Legacy form link if still pre-cutover | Do not show empty day/export controls before the user has a subject. |
+| Workspace route with animals but none selected (`#/workspace`) | `Select an animal` | `Create Animal` | The primary nav's Workspace link must land in a useful selector state, not a dead end. |
+| Selected animal, no electrodes/probes | `Set Up Electrodes` | Add day only if clearly marked as draft/not export-ready | The app should not let users hunt for probes inside a recording day. |
+| Selected animal, setup incomplete but electrodes exist | `Finish Animal Setup` / the highest-risk missing setup item | Add/review days | Prioritize the setup item that blocks export or creates the largest silent-science risk. |
+| Selected animal, setup complete, no days | `Add Recording Days` | Review Animal Setup | Once setup is safe, the next job is creating the recorded sessions. |
+| Selected animal, existing/recovered data present | `Review / Repair Existing Data` | Open day, open validation summary | Recovered or imported data must not look silently trusted. |
+| Selected animal, some days invalid | The most actionable repair, or `Open Validation Summary` if multiple days are blocked | Open valid days, add days | A blocked export state should route to the owner of the first meaningful fix. |
+| Selected animal, one ready day | `Open Export` / `Export This Day` | Add days, review setup | Same-day workflow should not require batch tooling. |
+| Selected animal, multiple ready days | `Export Valid Only` | Validate all, inspect day | Catch-up workflow should let users export ready days without opening every day. |
+| Day uses historical configuration | Continue day edits against `Configuration vN` | Reconfigure starting this day | Do not imply latest Animal Setup edits will change this historical day. |
+| Hardware changed starting this day | `Hardware changed starting this day` | Edit day failed channels | Reconfiguration is a timeline event and must name affected days before fork. |
+| Export blocked | First repair action / `Open Validation` | Back to day/setup | Disabled export must never be the only feedback. |
+| Export ready | `Download YAML` | Back to day/workspace | Export is the confidence checkpoint and should summarize what will be encoded. |
 
 ## Same-day path
 
@@ -70,6 +91,22 @@ blockers efficiently.
 Success means the user can scan many days, repair only the few that need attention, and
 export valid days without opening every long form.
 
+### Batch row scan contract
+
+Workspace day rows and Validation Summary rows must expose enough information for catch-up
+work without making the user open every day. At minimum, each row or expandable row summary
+should show:
+
+- recording date and session id;
+- animal/subject label when the view spans animals;
+- configuration version and whether it is latest or historical;
+- camera set/calibration summary, including enough identity detail to detect a zoom or
+  `meters_per_pixel` change;
+- opto state: no opto, implanted but no stimulation, or stimulation on selected epochs;
+- validation/export state: ready, draft, blocked, exported/validated, recovered/corrupt,
+  wrong-owner, or missing record;
+- next repair/export action and the owner it will open.
+
 ## Animal Setup screen contract
 
 User-facing label target: **Animal Setup** or **Shared Animal Setup**, not merely
@@ -78,7 +115,7 @@ step labels, repair destinations, and empty states should use user language.
 
 | Setup area | User job | Screen/step label target | What must be visible | Primary actions |
 | --- | --- | --- | --- | --- |
-| Subject and lab defaults | Correct animal-wide facts | `Subject` / `Experimenters` where present | Blast radius: subject corrections affect all recording days | Save correction; return to Workspace |
+| Animal profile and lab defaults | Correct animal-wide facts | `Animal Profile` / `Subject` / `Experimenters` | Subject id, species, sex, DOB, genotype, subject description, experimenters/lab/institution, and blast radius for corrections that affect all recording days | Save correction; return to Workspace |
 | Electrode groups | Define probes/tetrodes and anatomical locations | `Electrodes & Probes` or `Electrodes & Ephys` | Device type, group id, location/targeted location, configuration version context | Add/edit/copy electrode group |
 | Channel maps | Verify ntrode/electrode mapping | `Channel Maps` | Per-group channel map, local channel ids, failed-channel semantics | Edit/import/export channel maps |
 | Recording system | Define data-acq identity and rig constants | `Recording System` | Data-acq name/system/amplifier/ADC, `raw_data_to_volts`, `times_period_multiplier`, blast radius for all days | Save recording-system defaults; route unsupported mid-study swap to future versioning |
@@ -91,6 +128,12 @@ configuration-versioned ephys setup, latest-version edits affect days pinned to 
 historical days keep their pinned versions. For data-acq today, no per-day binding exists,
 so edits are shared and must announce that limitation.
 
+Home remains the creation surface for a new animal, but it must not be the only discoverable
+place to correct animal profile facts. Phase 8.7 should add or expose an Animal Profile /
+Subject area in Animal Setup; Day Overview may offer inline repair for subject errors, but
+that repair must say it updates shared animal profile fields and should route to the profile
+owner when the user needs a broader edit.
+
 ## Day Editor screen contract
 
 User-facing label target: **Recording Day** or **Day Editor**, with step labels that name
@@ -99,7 +142,7 @@ ask the user to infer ownership from `devices`, `epochs`, or schema terms alone.
 
 | Day step | User job | Label target | What must be visible | Primary actions |
 | --- | --- | --- | --- | --- |
-| Overview | Describe the recording day | `Overview` / `Day Details` | Date, session id, description, weight, header path, subject facts inherited from animal | Save day facts; repair subject facts if inherited values fail |
+| Overview | Describe the recording day | `Overview` / `Day Details` | Date, session id, description, recording-day weight, header path, subject facts inherited from animal | Save day facts; repair subject facts if inherited values fail |
 | Setup and failed channels | Verify effective setup for this day | `Setup & Failed Channels` | Pinned configuration version, historical/latest status, read-only electrodes/probes, cameras summary, day-specific failed channels | Mark failed channels; `Hardware changed starting this day`; route setup fixes to Animal Setup |
 | Tasks, epochs, files | Record what happened by task epoch | `Tasks, Epochs & Files` | Task rows with room/environment, camera(s), epoch set, files/videos, DIO/opto protocol assignments | Add/edit task; attach files/videos; choose camera(s); set opto protocol for selected epochs |
 | Validation | Understand and repair blockers | `Validation` | Issues grouped by user job and repair destination | Click repair action; rerun validation |
@@ -109,6 +152,12 @@ The task row is the user's within-day setup unit. If room/camera/opto differs wi
 day, the UI represents that as separate task rows that partition the epochs. It should not
 offer a day-wide camera/opto choice when the recording story is epoch-specific, and it
 should not create a free-floating per-epoch editor that bypasses the task model.
+
+Weight is a recording-day value for export, even though older/current workspace state may
+store an animal-level subject weight as an initial/default value. The Day Overview should be
+the primary place to review the weight exported for that session; if it falls back to an
+animal-created value, the UI should say that plainly and encourage confirming/updating it
+for the recording day.
 
 ## Specialized flows and modals
 
@@ -131,6 +180,10 @@ should not create a free-floating per-epoch editor that bypasses the task model.
 - The primary navigation should not make `Home` look like the operational hub if it is really
   the create-animal form. After cutover, either Workspace is the home route, or the nav label
   should be `New Animal` / `Create Animal`.
+- The logo/header destination must match the active product mode. Before cutover it may return
+  to the legacy form as a safety net, but modern-route users need a clearly labeled modern
+  Workspace path and must not be bounced into legacy by surprise. After cutover, the logo should
+  return to the modern operational home unless an explicit `Use Legacy Editor` escape is enabled.
 - `Animal Editor` is implementation language. User-facing copy should say `Animal Setup`,
   `Shared setup`, or the concrete setup area.
 - `Hardware Config` is too broad for a scientist's attention. Split or visually separate
@@ -144,6 +197,9 @@ should not create a free-floating per-epoch editor that bypasses the task model.
   target. A repair route that lands on a read-only summary is a dead end.
 - Every screen needs a clear return path: Setup and Day return to Workspace; repair routes
   return or leave a breadcrumb; Validation routes to the owning setup/day screen.
+- Ownership cues should be risk-tiered. Put visible cues at high-risk decisions, summaries,
+  repair destinations, and preflight; do not badge every ordinary field so heavily that the
+  important warnings lose signal.
 
 ## QA acceptance
 
@@ -151,6 +207,9 @@ Phase 8.7 and Phase 9 should prove this map, not just individual controls:
 
 - Each top-level route has one dominant user job, one primary next action, and a route/heading
   label that matches that job.
+- Each state in the state-specific primary-action table has exactly one visually dominant
+  next action and secondary actions do not compete with it.
+- Workspace and Validation rows satisfy the batch row scan contract for catch-up work.
 - Each step/modal names whether the action edits shared setup, a pinned configuration, a
   recording-system default copied into the day, a day/task/epoch fact, or an exported day list.
 - Same-day and catch-up paths can both be completed without redundant setup entry or hidden

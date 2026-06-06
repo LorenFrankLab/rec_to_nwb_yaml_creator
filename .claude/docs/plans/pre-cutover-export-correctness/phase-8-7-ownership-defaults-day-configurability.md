@@ -70,9 +70,10 @@ Full design: [docs/superpowers/specs/2026-06-06-ownership-day-configurability-de
   geometry, channel maps, camera calibration/lens/zoom/model, recording system/amplifier) is
   **append-only — a physical change is a NEW identity/version, never a silent edit of the old
   one**, so past days keep what they recorded; (2) **truly-constant animal fact**
-  (`subject_id`, species, sex, DOB) may propagate as a correction but must **announce its
-  blast radius**; (3) **per-day fact** is local. Touching past days is only ever an explicit
-  "apply to these N days" action (the reconfiguration-wizard shape).
+  (`subject_id`, species, sex, DOB, genotype, subject description) may propagate as a
+  correction but must **announce its blast radius**; (3) **per-day fact** is local,
+  including recording-day weight. Touching past days is only ever an explicit "apply to
+  these N days" action (the reconfiguration-wizard shape).
 - **Implementation = approach A (immutable-once-referenced catalog), with explicit export
   binding.** Catalogs stay animal-level; once a day references an identity, recalibration/swap
   creates a NEW identity rather than mutating the live values. For cameras, this only preserves
@@ -154,6 +155,9 @@ already is.
   recording-system default`, `Different from current recording-system default`,
   `Overridden for this day` only when provenance exists, `Selected from animal catalog`,
   `Used in these epochs`, and `Exported with this day`.
+- **Risk-tier the cues.** Ownership language should be strongest at high-risk decision points,
+  summaries, repair destinations, blast-radius confirmations, and Export/preflight. Do not
+  badge every ordinary field so heavily that the important warnings become visual noise.
 - **Make the primary next action match the user's goal.** Empty states and blocked states
   must expose the setup or repair action the user is looking for: `Set Up Electrodes`,
   `Set Up Cameras`, `Use on this day`, `Override for this day`, `Reset to recording-system
@@ -217,8 +221,8 @@ Task 0 owns the final artifact, but this is the starting contract:
 
 | Field / concept | Primary owner | Day behavior | User danger to prevent |
 | --- | --- | --- | --- |
-| Subject identity (`subject_id`, species, sex, DOB) | Animal setup | Not edited per day | Editing a subject fact while thinking it only changes one session |
-| Weight | Day recording fact | Edited per day; export the actual day value (there is no animal-level weight default) | Reusing a stale weight across sessions |
+| Subject identity/profile (`subject_id`, species, sex, DOB, genotype, subject description) | Animal Profile / Animal setup | Not edited per day except focused repair that clearly updates the shared animal profile | Editing a subject fact while thinking it only changes one session |
+| Weight | Day recording fact for export; animal-created value is only an initial/default/fallback for old state | Day Overview is the primary review/edit surface for the session's exported weight; if falling back to animal subject weight, the UI says so and asks the user to confirm/update the day value | Reusing a stale animal-baseline weight across sessions |
 | Experiment/session description | Day recording fact | Edited per day | Confusing animal description with session description |
 | Probe/electrode geometry | Configuration version | Day pins version | Rewriting historical geometry by editing latest setup |
 | Ntrode/channel map | Configuration version | Day pins version | Same as geometry; wrong channel map is silent scientific corruption |
@@ -236,7 +240,7 @@ Task 0 owns the final artifact, but this is the starting contract:
 
 This is a large phase; treat the tasks as sub-streams that can be implemented and merged
 independently behind the gates, not one monolith. Suggested grouping and order: (A) ownership
-vocabulary + screen map + IA + cues — Tasks 0, 0.5, 1, 2, 9, 10; (B) recording-system/technical source-of-truth —
+vocabulary + screen map + IA + cues — Tasks 0, 0.5, 1, 2, 2.5, 9, 10; (B) recording-system/technical source-of-truth —
 Tasks 3, 4; (C) camera catalog + task-epoch legibility — Tasks 5, 7; (D) behavioral events — Task 6;
 (E) lifecycle cleanup — Task 8; (F) tests/handoff — Task 11. Task 0 (matrix) and Task 0.5 (screen map) gate the rest, and the
 Task 3 decision (data-acq ownership) should be settled early because it shapes B's UI. Each
@@ -257,8 +261,13 @@ audit).
   It is the product-level counterpart to the ownership matrix: for every top-level route,
   step, modal, empty state, repair path, and destructive confirmation, record the user job,
   likely attention target, primary action, next/return path, ownership cue, and dangerous
-  mistake being prevented. If a field is technically owned correctly but appears on the
-  wrong screen, under the wrong heading, or behind a misleading action label, treat that as
+  mistake being prevented. The artifact must include state-specific primary actions for
+  no animals, no selected animal (`#/workspace`), selected animal with missing setup,
+  setup-complete/no-days, existing/recovered data, invalid days, ready days, historical
+  configuration, reconfiguration, export-blocked, and export-ready states. It must also
+  define the Workspace/Validation batch-row scan contract for catch-up work. If a field is
+  technically owned correctly but appears on the wrong screen, under the wrong heading, or
+  behind a misleading action label, treat that as
   a Phase 8.7 issue rather than a cosmetic nit. Reconcile current labels such as `Home`,
   `Animal Editor`, `Hardware Config`, `Devices`, and `Epochs` against the screen map's
   user-facing labels before Phase 9.
@@ -275,10 +284,17 @@ audit).
   `CATEGORY_BY_CODE` <-> `SURFACE_BY_CODE` invariant test) so an ownership descriptor cannot
   drift from — or omit — a code the validators already produce.
 
-- **Task 2 — fix Animal Editor information architecture.** Stop presenting cameras, data
+- **Task 2 — fix Animal Setup / Animal Editor information architecture.** Add or expose an
+  `Animal Profile` / `Subject` area for shared animal facts, or explicitly route to an
+  existing owner if a separate area is not built. Home remains the creation surface, and Day
+  Overview may keep focused inline repair, but Day Overview must not be the only discoverable
+  way to correct shared subject/profile facts. Subject/profile repair must name its blast
+  radius ("updates this animal and all N days") before save.
+
+  Stop presenting cameras, data
   acquisition, and behavioral events as one vague "Hardware & Behavioral Events" bucket.
   Use labels that match the ownership matrix, for example:
-  `Electrodes & Ephys`, `Recording System`, `Video Cameras & Calibration`,
+  `Animal Profile`, `Electrodes & Ephys`, `Recording System`, `Video Cameras & Calibration`,
   `Behavioral Events / DIO`, and `Optogenetics`. Data acquisition belongs with the
   recording/ephys system, not with cameras. Update stepper labels, page headings,
   section headings, aria labels, and primary buttons together so the user does not see
@@ -288,6 +304,15 @@ audit).
   schema editor. Cameras must visibly show the
   identity fields that make a camera different, including `lens` and `meters_per_pixel`,
   in tables/summaries as well as the edit modal.
+
+- **Task 2.5 — make weight ownership unambiguous.** Treat weight as a recording-day value for
+  export. The current model can fall back from `day.session.weight` to `animal.subject.weight`;
+  Phase 8.7 must make the Day Overview the primary review/edit point for the exported session
+  weight and label any animal-created fallback as an initial/default value that needs
+  confirmation. Do not present a shared animal weight as the normal exported value for every
+  day. Tests should cover: a day-owned weight exports; a fallback animal weight is visibly
+  identified as fallback/default; and editing shared subject/profile fields does not imply it
+  changes only one day.
 
 - **Task 3 — implement the decided recording-system ownership.** Audit the current
   `data_acq_device` source of truth against `configurationHistory`, `animal.devices`,
@@ -419,6 +444,9 @@ audit).
   day/epoch, and what will be exported. Cross-check every changed route/step/modal against
   `workflow-screen-map.md`: visible heading, primary action, next/return action, and repair
   target must match the user job for that screen.
+  Workspace and Validation Summary rows must satisfy the batch-row scan contract: date/session,
+  animal when relevant, configuration version, camera/calibration summary, opto state,
+  validation/recovery state, export eligibility, and next repair/export action.
 
 - **Task 11 — tests, QA notes, and Phase 9 handoff.** Add focused unit/component tests for
   the ownership descriptor, Animal Editor section labels, day technical default/review/
@@ -448,20 +476,23 @@ audit).
 | --- | --- |
 | `workflow-ownership-matrix.md` *(artifact)* | every exported workspace section has owner, day behavior, state path, export source, edit surface, repair target, misconception, and test coverage. |
 | `workflow-screen-map.md` *(artifact)* | every top-level route, major step, modal/confirmation, empty state, and repair path has a user job, likely attention target, primary action, next/return action, ownership cue, and mistake-prevention responsibility; current labels are reconciled with target user-facing labels before Phase 9. |
+| `state-specific primary actions` *(artifact/component)* | no animals, no selected animal (`#/workspace`), missing setup, setup-complete/no-days, existing/recovered data, invalid days, ready days, historical configuration, reconfiguration, export-blocked, and export-ready states each expose one dominant next action. |
 | `workflowOwnership helper` *(unit)* | high-risk field paths/issue codes map to one ownership pattern and stable user-facing labels/actions; a completeness test cross-checks issue-code coverage against `CATEGORY_BY_CODE`/`SURFACE_BY_CODE` so no validator code is left unowned. |
 | `camera usage / affected-days helper` *(unit)* | a pure helper scans task, associated-video, and FsGUI camera references; export/preflight and blast-radius UI consume the same result; scalar/array camera refs, duplicate refs, missing refs, and unreferenced catalog cameras are covered. |
 | `Animal Editor IA labels` *(component)* | cameras, recording system/data-acq, behavioral events, opto, and electrodes are separate enough that data-acq is not hidden in a camera-like hardware bucket. |
 | `ownership cues at point of action` *(component)* | shared setup, configuration version, day-only, task-epoch setup assignment, using-recording-system-default, provenance-backed override/different-from-current-default, catalog-selection, and exported-with-this-day cues appear near the relevant controls/actions, not only in docs. |
 | `blast-radius transparency / no silent retroactive` *(component)* | a change reaching past days enumerates them before commit; editing a referenced camera defaults to a NEW identity and either past-day exports are unchanged through day-used camera export or the all-animal-cameras fallback warns all days are affected; editing a constant animal fact (species/DOB) shows it affects all N days; editing data-acq shows it affects all days and a mid-study swap shows the unsupported notice; no edit path silently rewrites an already-recorded day. |
 | `day technical defaults vs overrides` *(component/unit)* | effective day values are visible; copied day values read as using the current default only when equal; values that differ from the current default are labelled honestly; advanced overrides are distinguishable; reset/apply-to-existing-days behavior enumerates affected days; header path remains day-only. |
+| `animal profile and weight ownership` *(component/integration)* | shared subject/profile facts have a discoverable owner and blast-radius copy; Day Overview is the primary review/edit surface for the exported session weight; fallback animal-created weight is labelled as fallback/default rather than silently reused. |
 | `camera catalog identity` *(component/export/unit)* | camera tables/modals/summaries show name/id/lens/`meters_per_pixel`; changed zoom/calibration guidance says to create/use a different camera name; task/video/FsGUI empty states route to `Set Up Cameras`; camera export binding is either day-used subset with baseline audit or explicit all-day blast-radius fallback; a multi-epoch day with different cameras/rooms makes the per-task room/camera/epoch mapping visible, and two tasks claiming the same epoch surfaces the export-blocking `duplicate_task_epoch` error. |
 | `behavioral event ownership` *(component/integration)* | animal-level event editing cannot be mistaken for exported day events; `Use on this day` makes an inherited/reference event appear in the exported day-specific list. |
 | `opto ownership` *(component/integration)* | implanted/surgical opto setup (`optical_fiber`/`virus_injection`/`opto_excitation_source`/software) reads as animal setup; protocol rows (`fs_gui_yamls`) are day-owned but scoped to selected task epochs and OPTIONAL — a day or epoch with no opto protocol is valid and raises no missing-setup/blocking error; the animal-level all-or-nothing opto contract is not applied per day/epoch. |
 | `lifecycle cleanup actions` *(component/unit)* | animal/day delete actions are discoverable but secondary; confirmations name the animal/day, cascade count, exported/validated consequence, and call the existing guarded `deleteAnimal` / `deleteDay` actions. |
 | `repair/preflight ownership wording` *(component)* | Validation, batch preflight, and Export preflight distinguish shared setup, configuration version, catalog selection, task-epoch setup assignment, day override, and day-only facts. |
+| `batch row scan contract` *(component/Playwright-ready)* | Workspace and Validation Summary rows let catch-up users compare days without opening each editor: date/session, animal when relevant, configuration version, camera/calibration summary, opto state, validation/recovery state, export eligibility, and next repair/export action are visible or available in a row expansion. |
 | `scenario artifacts` *(component/Playwright-ready)* | new user finds electrodes; user changes camera zoom and is steered to a new name; user creates a multi-epoch day with different rooms/cameras and can see the setup used by each epoch; user reviews effective recording-system values and either edits them in Recording System or uses an advanced one-day override only when that path exists; user uses an animal DIO event on a day; an opto-implanted animal records a day with no stimulation and another day with opto only on selected epochs without hitting false opto errors; user with existing days sees what shared-setup edits affect; user can clean up a test animal/day through safe destructive controls. |
 | `same-day and catch-up story artifacts` *(component/Playwright-ready)* | same-day conversion shows one fresh recording moving efficiently from day review to export without repeated setup entry; catch-up conversion shows multiple days with readiness, shared-setup review, targeted repair, batch eligibility, and naming-identity risks visible before export. |
-| `golden baselines` *(regression)* | the 4 golden fixtures stay byte-identical unless Task 5 deliberately implements day-used camera export and the audited fixture set proves/updates the expected bytes; versioned data-acq remains a future named exception with regenerated fixtures and trodes_to_nwb coordination. |
+| `golden baselines and new-path fixtures` *(regression)* | the 125 legacy-baseline assertions remain byte-identical; new-path fixtures stay stable unless Task 5 deliberately implements day-used camera export and the audited fixture set proves/updates the expected bytes; versioned data-acq remains a future named exception with regenerated fixtures and trodes_to_nwb coordination. |
 | `npm test`, `npm run lint`, `npm run build` | full gates pass before Phase 9; Phase 9 scenarios are updated to cover ownership/default/override UX. |
 
 ## Review
@@ -472,11 +503,13 @@ audit).
 Confirm: no screen asks the user to infer source of truth from implementation structure; data-acq is not
 grouped with cameras merely because both are animal-level; changed camera calibration/zoom is visibly a
 new identity; within-day setup differences are represented at task-epoch scope rather than flattened into
-a day-wide camera/opto/room choice; day technical values read as effective recording-system values with an
+a day-wide camera/opto/room choice; weight is reviewed as a day-exported value rather than silently reused
+from an animal baseline; day technical values read as effective recording-system values with an
 advanced override path rather than routine day-by-day edits; behavioral events cannot be edited in a
 non-exported place by accident; opto implanted setup and per-epoch protocol are clearly separate and
 opto-free days/epochs are valid, friction-free states (no forced opto, no false missing-setup error);
 animal/day cleanup is discoverable without making
 destructive actions primary; every route/step/modal in `workflow-screen-map.md` has a coherent heading,
-primary action, next/return action, and repair destination; the user's likely attention path has been checked for each high-risk screen; and
+primary action, next/return action, and repair destination; Workspace/Validation rows support catch-up
+comparison; the user's likely attention path has been checked for each high-risk screen; and
 Phase 9 can test the integrated browser flow with stable labels instead of reverse-engineering the app model.

@@ -171,7 +171,10 @@ dev tooling for the phase-9 browser QA pass, phase-10 audit, and phase-11 UX pol
   Create Animal, Animal Workspace, Animal Setup, Day Editor, Validation Summary, reconfiguration, modals,
   and destructive confirmations each expose a coherent heading, primary action, next/return action, ownership
   cue, and repair destination. Labels such as `Home`, `Animal Editor`, `Hardware Config`, `Devices`, and
-  `Epochs` are replaced or visibly disambiguated before browser QA
+  `Epochs` are replaced or visibly disambiguated before browser QA. Workspace/Validation catch-up rows expose
+  enough scan fields to compare days without opening every editor: date/session, animal when relevant,
+  configuration version, camera/calibration summary, opto state, validation/recovery state, export eligibility,
+  and next action
   ([workflow-screen-map.md](workflow-screen-map.md)).
 - **Scientist workflow fit:** the modern YAML creator supports both common conversion cadences: exporting a
   freshly finished recording the same day, and catching up on several recorded days at once. In both cadences
@@ -240,10 +243,12 @@ All open questions are **decided** (2026-06-04):
 2. **DOB precision — DECIDED: midnight-normalize** a date-only value with `new Date(value).toISOString()`
    on save, mirroring legacy `SubjectFields.jsx:96-108`. The schema pattern is unanchored so the
    trailing `Z` passes. No time-of-day input.
-3. **Hardware Config technical fields — DECIDED: per-day with animal-level defaults.** The rig is
-   constant per animal but occasionally varies per day, so `raw_data_to_volts` / `times_period_multiplier`
-   are stored as `animal.technicalDefaults`, seeded into `day.technical` at `createDay`, and overridable per
-   day; `default_header_file_path` is per-day only. The Animal Editor may edit the non-exported defaults,
+3. **Hardware Config technical fields — DECIDED: recording-system defaults copied into days.** The rig
+   constants `raw_data_to_volts` / `times_period_multiplier` are stored as `animal.technicalDefaults`,
+   seeded into `day.technical` at `createDay`, and shown on the day as effective copied recording-system
+   values. They should be read-only by default in normal day editing; any day override is a rare,
+   progressive-disclosure escape that must be explicitly implemented and labelled. `default_header_file_path`
+   is per-day only. The Animal Editor / Recording System may edit the non-exported defaults for future days,
    but `mergeDayMetadata` reads only `day.technical.*`. Phase 3 must also rename the current UI key
    `ephys_to_volt_conversion` to the exported `raw_data_to_volts`.
 4. **`species` input — DECIDED: controlled dropdown of Latin binomials + an "other (binomial)" escape,

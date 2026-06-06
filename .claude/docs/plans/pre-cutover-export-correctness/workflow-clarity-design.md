@@ -19,7 +19,8 @@ The UI must teach the workflow directly:
 1. Create or select an animal.
 2. Configure shared animal hardware, especially electrodes/probes.
 3. Create or import recording days.
-4. Fill day-specific metadata: tasks, videos, files, failed channels, technical values.
+4. Fill day-specific metadata: tasks, videos, files, failed channels, header path, and review effective
+   recording-system technical values.
 5. Record hardware changes as configuration versions starting on a specific day.
 6. Export only after the animal setup and day metadata agree with what will be encoded.
 
@@ -28,8 +29,10 @@ Users should not need to understand `animal.devices`, `configurationHistory`, `d
 
 ## User mental model to preserve
 
-- **Animal setup is shared.** Electrodes/probes, cameras/calibrations, data acquisition hardware, and default
-  technical values belong to the animal/setup unless explicitly changed over time.
+- **Animal setup is shared.** Electrodes/probes, cameras/calibrations, data acquisition hardware, and
+  recording-system technical defaults belong to the animal/setup. New days copy those defaults into the
+  exported day metadata; normal day editing should show the effective values instead of making them feel
+  like routine per-day fields.
 - **A recording day uses a specific hardware configuration.** The day should visibly say which configuration
   version it uses.
 - **Failed channels are day-specific.** Users should understand that failed-channel marks apply to this

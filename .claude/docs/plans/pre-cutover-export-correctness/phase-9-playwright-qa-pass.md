@@ -27,7 +27,8 @@ localStorage, workflow clarity, and browser-only behavior cannot hide behind uni
   tests. Phase 9 samples from those flows at the browser level; it does not replace their lower-level tests.
 - [workflow-screen-map.md](workflow-screen-map.md) — the browser-level screen coherence contract.
   Phase 9 must sample every top-level screen and assert that visible heading, primary action,
-  next/return action, ownership cue, and repair destination match the user's job.
+  next/return action, ownership cue, and repair destination match the user's job, including
+  `#/workspace` with no selected animal and state-specific primary actions.
 
 **Contracts referenced:**
 
@@ -64,8 +65,10 @@ localStorage, workflow clarity, and browser-only behavior cannot hide behind uni
   checks. Same-day: a scientist finishes one recording, creates/reviews one day, confirms task-epoch setup,
   validates, and downloads one YAML without re-entering shared setup. Catch-up: a scientist has multiple days
   waiting, scans readiness, spots which days share setup versus need hardware/camera/opto review, validates or
-  repairs targeted issues, and batch-exports only ready days. The scenarios must name the user's goal, the
-  dangerous mistake being prevented, and the naming identities being protected.
+  repairs targeted issues, and batch-exports only ready days. The catch-up row/table assertions must include
+  date/session, animal when relevant, configuration version, camera/calibration summary, opto state,
+  validation/recovery state, export eligibility, and next repair/export action. The scenarios must name the
+  user's goal, the dangerous mistake being prevented, and the naming identities being protected.
 - **Task 3 — fail-closed + repair navigation.** Add browser coverage proving an invalid day cannot reach or
   use Export by clicking the stepper, keyboard next, or the Download button. The visible error must include a
   repair action; clicking it navigates to the owning step and focuses/highlights the target when metadata
@@ -91,7 +94,10 @@ localStorage, workflow clarity, and browser-only behavior cannot hide behind uni
   shared-setup edits affect before saving. Cross-check the scenario against `workflow-screen-map.md`: each
   top-level route (`Create Animal`, `Animal Workspace`, `Animal Setup`, `Day Editor`, `Validation Summary`)
   must have a visible heading that matches the user job, a single dominant primary action for the current
-  state, a visible return/next path, and no repair action that lands on a read-only dead end.
+  state, a visible return/next path, and no repair action that lands on a read-only dead end. Cover at least
+  no animals, `#/workspace` with animals but none selected, missing setup, setup-complete/no-days,
+  existing/recovered data, invalid days, ready days, historical configuration, reconfiguration,
+  export-blocked, and export-ready states through Playwright or a documented route-state artifact.
 - **Task 4.6 — lifecycle cleanup smoke.** Add browser coverage or a documented route-state artifact proving
   animal/day deletion is discoverable but secondary: a selected animal exposes `Delete animal...`; ordinary day
   rows expose `Delete recording day...`; confirmations name the affected animal/day and cascade count; exported
@@ -136,12 +142,14 @@ localStorage, workflow clarity, and browser-only behavior cannot hide behind uni
 | --- | --- |
 | `workspace happy path downloads corrected YAML` *(Playwright)* | a fully configured workspace day reaches Export, shows preflight, downloads YAML, and the downloaded text includes corrected subject/session, camera/data-acq/device/task/video sections. |
 | `camera export binding or blast-radius fallback is proven` *(Playwright/unit artifact)* | day-used camera export includes referenced task/video/FsGUI cameras and excludes unreferenced catalog cameras, or the documented fallback warns that animal camera catalog changes affect all day exports. |
-| `same-day and catch-up workflows are efficient` *(Playwright/artifact)* | one fresh single-day export and one multi-day catch-up/batch export path are reachable without redundant shared-setup entry; readiness, targeted repair, batch eligibility, and protected naming identities are visible. |
+| `same-day and catch-up workflows are efficient` *(Playwright/artifact)* | one fresh single-day export and one multi-day catch-up/batch export path are reachable without redundant shared-setup entry; readiness, targeted repair, batch eligibility, protected naming identities, and the batch row scan fields are visible. |
 | `invalid workspace day is fail-closed in browser` *(Playwright)* | stepper click, keyboard next, and download cannot bypass error-severity validation; repair actions navigate/focus as designed. |
 | `identity and reference mistakes are blocked before export` *(Playwright)* | camera/data-acq divergent reuse, task-name divergent reuse, region case drift, and stale task/video refs are blocked or repaired at the editing surface. |
 | `ownership/default/day-configurability is visible` *(Playwright)* | shared setup, configuration version, using-recording-system-default or different-from-current-default, optional advanced day override, catalog selection, task-epoch setup assignment, exported-with-this-day, and day-only facts are distinguishable in the key workspace/day/export routes at the point of action. |
 | `ownership discovery paths are reachable` *(Playwright/artifact)* | `Set Up Electrodes`, `Set Up Cameras`, `Use on this day`, `Edit in Recording System` or `Override for this day`, `Reset to recording-system default` when an override exists, `Pin version`, and `Hardware changed starting this day` are present in the states where users naturally look for them. |
 | `screen map coherence is proven` *(Playwright/artifact)* | each top-level route and major step/modal sampled from `workflow-screen-map.md` has the expected visible heading, primary action, ownership cue, next/return action, and repair destination; labels such as `Home`, `Animal Editor`, `Hardware Config`, `Devices`, and `Epochs` are either replaced or visibly disambiguated for the user's job. |
+| `state-specific primary actions are proven` *(Playwright/artifact)* | no animals, no selected animal, missing setup, setup-complete/no-days, existing/recovered data, invalid days, ready days, historical configuration, reconfiguration, export-blocked, and export-ready states each expose one dominant safe next action. |
+| `batch row scan contract is proven` *(Playwright/artifact)* | Workspace and Validation Summary rows expose or expand to date/session, animal when relevant, configuration version, camera/calibration summary, opto state, validation/recovery state, export eligibility, and next repair/export action. |
 | `animal/day cleanup is safe and discoverable` *(Playwright/artifact)* | `Delete animal...` and `Delete recording day...` are reachable as secondary destructive actions; confirmations name cascade/export consequences; cancel preserves state; confirm deletes only the intended owned records. |
 | `workspace persistence recovery is browser-safe` *(Playwright)* | reload preserves a valid workspace; empty/malformed blobs recover with a named notice and no crash; failed autosave either keeps the unsaved-work guard active in a browser simulation, or the QA artifact documents why browser simulation is impossible and cites the Phase 7 failed-autosave guard test as alternate proof. |
 | `workspace optogenetics is browser-configurable` *(Playwright)* | opto off/on states, required-field blocking, FsGUI camera/epoch references, opto-on-selected-epochs behavior, and downloaded converter/schema key pairs work through the UI. |

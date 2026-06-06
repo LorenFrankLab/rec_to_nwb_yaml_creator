@@ -69,9 +69,10 @@ Every field is one of three kinds:
    was true for a span of recordings*. **Append-only: a physical change is a NEW
    identity/version, never a silent edit of the old one.** Already-recorded days keep what
    they actually recorded.
-2. **Truly-constant animal fact** — `subject_id`, species, sex, DOB. The same for the
-   animal's whole life; a change is a *correction* that legitimately applies to every day —
-   but must still announce its blast radius ("this affects all N recording days").
+2. **Truly-constant animal fact** — `subject_id`, species, sex, DOB, genotype, and subject
+   description. The same for the animal's whole life; a change is a *correction* that
+   legitimately applies to every day — but must still announce its blast radius ("this
+   affects all N recording days").
 3. **Per-day fact** — session description, tasks/epochs, room (`task_environment`), failed
    channels, `default_header_file_path`, weight, opto protocol run. Local; no propagation
    question.
@@ -150,17 +151,23 @@ The screen-level source of truth is
 This section is the conceptual summary; the screen map is the artifact Phase 8.7/9 use to
 verify routes, step labels, modals, empty states, repair paths, and destructive confirmations.
 
-- **Animal Editor** — owns physical-configuration identities and constant animal facts.
-  Information architecture separates Electrodes & Ephys, Recording System (data-acq + rig
-  constants), Video Cameras & Calibration, Behavioral Events / DIO, Optogenetics (implanted
-  setup). Editing a referenced identity routes to "new identity" by default.
+- **Animal Setup / Animal Editor** — owns physical-configuration identities and constant
+  animal facts. Information architecture separates Animal Profile / Subject, Electrodes &
+  Ephys, Recording System (data-acq + rig constants), Video Cameras & Calibration,
+  Behavioral Events / DIO, Optogenetics (implanted setup). Home remains the creation surface,
+  but it must not be the only discoverable place to correct shared animal profile facts.
+  Editing a referenced identity routes to "new identity" by default.
 - **Day Editor** — leads with day facts and task-epoch setup; inherited setup shown as
   compact read-only effective-value summaries (collapsed), with progressive-disclosure
-  override by exception. Reconfiguration / "apply to these days" is the only path that reaches
-  other days, and it names them.
+  override by exception. Weight is a recording-day value for export: a current/old
+  animal-level weight may seed or fall back, but the day must make the exported session
+  weight visible and confirmable. Reconfiguration / "apply to these days" is the only path
+  that reaches other days, and it names them.
 - **Animal Workspace** — the batch triage surface: which days are ready, which share setup,
   which differ, recovery/wrong-owner states (from Phase 8.6), and discoverable lifecycle
-  cleanup (delete animal/day) as secondary destructive actions.
+  cleanup (delete animal/day) as secondary destructive actions. Catch-up rows must expose
+  date/session, animal when relevant, configuration version, camera/calibration summary,
+  opto state, validation/recovery state, export eligibility, and next repair/export action.
 - **Validation / Export preflight** — issue copy names the ownership pattern when it prevents
   a mistake; batch and single-day paths agree on language and on the recovery/export policy
   from Phase 8.6.
@@ -170,7 +177,9 @@ verify routes, step labels, modals, empty states, repair paths, and destructive 
 - No reducer/store rewrite. Cameras stay an animal catalog referenced by `camera_id`, but the
   implementation must define the export binding explicitly (preferred: export the day-used
   camera subset; fallback: all-animal-cameras with an all-day blast-radius warning). Electrodes
-  stay versioned snapshots pinned by day; technical stays copied-at-creation.
+  stay versioned snapshots pinned by day; recording-system technical defaults stay copied-at-creation.
+  Weight is resolved as a day/session value for export, with any animal-created value treated as
+  an initial/default/fallback that should be confirmed in the Day Editor.
 - New behavior is guards + flows + a reusable blast-radius dialog, plus a pure domain
   ownership descriptor (`src/domain/workflowOwnership.js`) that maps field paths / section
   ids / issue codes to ownership pattern + label + cue + edit surface + primary action.
@@ -234,11 +243,11 @@ verify routes, step labels, modals, empty states, repair paths, and destructive 
 ## Scope and sequencing
 
 Large phase; implement as independently-mergeable sub-streams behind the gates (each lands
-green on its own): (A) ownership vocabulary + IA + cues; (B) recording-system / technical
-source-of-truth (data-acq = option B); (C) camera catalog + task-epoch legibility +
+green on its own): (A) ownership vocabulary + screen map + IA + cues; (B) recording-system /
+technical source-of-truth (data-acq = option B); (C) camera catalog + task-epoch legibility +
 approach-A immutable-once-referenced cameras; (D) behavioral events; (E) lifecycle cleanup;
-(F) tests/handoff. Task 0 (matrix) gates the rest; the data-acq decision (now settled =
-option B) shapes B.
+(F) tests/handoff. Task 0 (matrix) and the screen map gate the rest; the data-acq decision
+(now settled = option B) shapes B.
 
 ## Deliberately not in this phase
 
@@ -251,5 +260,6 @@ option B) shapes B.
 
 - Versioned data-acq (the heavier "approach B" for the recording system) — its own phase if a
   mid-study amplifier swap must be representable per-day rather than flagged unsupported.
-- Whether batch triage needs an explicit "what differs across these days" diff view, or
-  whether per-day ownership cues + the checklist are enough (revisit after 8.7 browser QA).
+- Whether batch triage needs a richer comparison/diff view beyond the required row scan
+  contract (date/session, config version, cameras/calibration, opto, validation/recovery,
+  export eligibility, next action). Revisit after 8.7 browser QA.

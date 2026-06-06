@@ -29,8 +29,9 @@ in the exported YAML.
 - [User mental-model contract](shared-contracts.md#user-mental-model-contract) — cameras, data-acq hardware,
   and technical defaults should be framed as rig/session facts, with names treated as identities.
 - [Export-resolution source-of-truth contract](shared-contracts.md#export-resolution-source-of-truth-contract)
-  — `data_acq_device` ← `animal.devices.data_acq_device`; `cameras` ← `animal.cameras`; `technical.*` is
-  per-day.
+  — `data_acq_device` ← `animal.devices.data_acq_device`; current Phase 3 camera export reads
+  `animal.cameras` until the Phase 8.7 binding decision; `day.technical.*` is the export source, with
+  `raw_data_to_volts` / `times_period_multiplier` copied from recording-system defaults at day creation.
 - [Spyglass naming-identity contract](shared-contracts.md#spyglass-naming-identity-contract) —
   `camera_name` and `data_acq_device.name` are database identities; reuse-with-divergence is unsafe.
 - [UX mistake-prevention contract](shared-contracts.md#ux-mistake-prevention-contract) — identity drift gets
@@ -81,14 +82,16 @@ matches **no branch and is silently dropped**. Task 0 fixes this before any wiri
   actually persist (Task 0 enables this) **or** remove animal-level editing. The export keeps reading
   `day.behavioral_events`. Whichever, the editor and the export must agree (no write that never reaches
   the model).
-- **Task 3 — technical fields per-day with animal defaults (Q3 decided).** Add
+- **Task 3 — recording-system technical defaults copied into days (Q3 decided).** Add
   `animal.technicalDefaults = { raw_data_to_volts, times_period_multiplier }`, initialized from the current
   hardcoded defaults (`0.195`, `1.5`) or collected values. The Animal Editor may edit these **defaults**
   only; they are not exported directly. `createDay` copies them into `day.technical.raw_data_to_volts` and
   `day.technical.times_period_multiplier`. Move `default_header_file_path` and `units` to per-day editing in
   the Day Editor (where `day.technical` lives and the export reads). Fix the current key mismatch:
   `DataAcqSection` uses `ephys_to_volt_conversion`, but export reads `raw_data_to_volts`; standardize on
-  `raw_data_to_volts`. No field may be edited at one level but read at another.
+  `raw_data_to_volts`. No field may be edited at one level but read at another. Phase 8.7 refines the UX:
+  normal day editing should show these copied rig values as effective/read-only, with a day override only
+  as an explicit advanced escape if implemented.
 - **Task 4 — fixtures + docs.** Update the new-path parity fixtures so a configured session's export
   includes the cameras (with `lens`) and the data-acq **array**; review the byte diff. Gate on the in-app
   schema + DANDI/Spyglass rules (the downstream round-trip is deferred to the pre-cutover task). Update
@@ -111,7 +114,7 @@ matches **no branch and is silently dropped**. Task 0 fixes this before any wiri
 | `Hardware Config edit/delete camera persists` *(integration)* | edit changes the camera; delete removes it; both reflected in the merged export. |
 | `data-acq writes the schema array shape with name` *(integration)* | editing system/amplifier/adc_circuit/name writes `animal.devices.data_acq_device` as a one-element array `[{name, system, amplifier, adc_circuit}]`; `mergeDayMetadata(...).data_acq_device` is that array; `schemaValidation` raises no data-acq error. |
 | `reusing a data-acq name with different dependent fields is identity-safe` *(integration)* | divergent reuse shows old-vs-new system/amplifier/adc_circuit, blocks normal save, and offers a primary "new name" action; identical reuse is allowed. |
-| `technical fields edited per-day with animal defaults` *(integration)* | a new day inherits `raw_data_to_volts` / `times_period_multiplier` from `animal.technicalDefaults`; editing the defaults affects newly created days only; editing a day updates `day.technical` and the export; `ephys_to_volt_conversion` no longer appears in workspace technical state. |
+| `technical defaults copied into day metadata` *(integration)* | a new day inherits `raw_data_to_volts` / `times_period_multiplier` from `animal.technicalDefaults`; editing the defaults affects newly created days only; the day shows the effective copied values and exports from `day.technical`; any editable one-day override is explicit/advanced if implemented; `ephys_to_volt_conversion` no longer appears in workspace technical state. |
 | `phase-3 configured-camera/data-acq sample is schema-valid` *(integration)* | a corrected sample with configured cameras (including `lens`) and the `data_acq_device` array has zero `schemaValidation` errors and passes the in-app DANDI/Spyglass identity rules. |
 | `golden-yaml.baseline.test.js` (existing) | byte-identical — legacy fixtures unchanged. |
 

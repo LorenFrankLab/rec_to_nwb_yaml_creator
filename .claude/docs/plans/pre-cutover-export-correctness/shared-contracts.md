@@ -31,17 +31,18 @@ identity drift can be caught before export (phase 6).
 
 ## Export-resolution source-of-truth contract
 
-Referenced by phases 2, 3. `mergeDayMetadata(animal, day)` (`src/state/workspaceUtils.js:150`) is the
-single bridge from the workspace model to YAML. After this plan, each exported section has exactly one
-defined source of truth:
+Referenced by phases 2, 3, and 8.7. `mergeDayMetadata(animal, day)`
+(`src/state/workspaceUtils.js:150`) is the single bridge from the workspace model to YAML. After the
+owning phase lands, each exported section must have exactly one defined source of truth. Where Phase
+8.7 still owns a binding decision, the row names current behavior and the required cutover resolution:
 
 | Exported key | Source of truth (after fixes) |
 | --- | --- |
 | `electrode_groups` | `day.deviceOverrides.electrode_groups` if present, else `configurationHistory[day.configurationVersion].devices.electrode_groups` (the pinned snapshot; `animal.devices` mirrors the *latest* snapshot — see model B). **Never** an empty initial snapshot when probes are configured. |
 | `ntrode_electrode_group_channel_map` | same resolution as above, **with** `day.deviceOverrides.bad_channels.{ntrode_id}` applied onto each ntrode's `bad_channels` (phase 2). |
 | `data_acq_device` | `animal.devices.data_acq_device` — an **array** of `{name, system, amplifier, adc_circuit}` items (schema `nwb_schema.json:504`, all four required). The Hardware Config step must write this array shape here (phase 3). |
-| `cameras` | `animal.cameras` — each `{id, camera_name, manufacturer, model, lens, meters_per_pixel}` with `lens` **required** (schema `:697`). Hardware Config add/edit/delete writes here (phase 3). |
-| `times_period_multiplier`, `raw_data_to_volts`, `default_header_file_path`, `units` | `day.technical.*` (per-day). **Decision (Q3):** these are per-day; `raw_data_to_volts` / `times_period_multiplier` are seeded from `animal.technicalDefaults` at `createDay` and overridable per day; `default_header_file_path` is per-day. The Animal Editor may edit the non-exported defaults; `mergeDayMetadata` never reads defaults directly (phase 3). |
+| `cameras` | **Current pre-8.7 behavior:** `animal.cameras` — each `{id, camera_name, manufacturer, model, lens, meters_per_pixel}` with `lens` **required** (schema `:697`). Hardware Config add/edit/delete writes the animal catalog here (phase 3). **Phase 8.7 must resolve the export binding before cutover:** preferred is `resolveDayCameraUsage(animal, day)` so the exported `cameras` list contains only cameras referenced by that day's tasks/videos/FsGUI rows; fallback is keeping all `animal.cameras` but showing an all-day blast-radius warning and not promising historical exports are unchanged. |
+| `times_period_multiplier`, `raw_data_to_volts`, `default_header_file_path`, `units` | Export reads `day.technical.*`. `raw_data_to_volts` / `times_period_multiplier` are recording-system defaults copied into `day.technical` at day creation; the UI should show them as effective copied rig values, read-only by default, with only a rare/progressive day override if Phase 8.7 deliberately implements one. `default_header_file_path` and `units` are day-specific. The Animal Editor/Recording System may edit the non-exported defaults for future days; `mergeDayMetadata` never reads defaults directly (phase 3 / phase 8.7). |
 
 **Invariant (do not weaken):** `mergeDayMetadata` already deep-clones its output (v3 Phase 1) and emits
 keys in legacy `formData` order for byte parity. Phases 2–3 change *which values* are emitted, not the
@@ -134,6 +135,10 @@ and ingest into Spyglass.
 - **Screens must map to user jobs.** Every modern route, major step, modal, empty state, repair path, and
   destructive confirmation should have a clear user job, visible heading, primary action, next/return path,
   ownership cue, and mistake-prevention role, as recorded in `workflow-screen-map.md`.
+- **One visible primary action per state.** Screens may expose several commands, but each route state should
+  make the next safest action visually dominant. Workspace and Validation are state machines: no animals,
+  no selected animal, missing setup, existing-data review, invalid days, and export-ready days each need a
+  different primary action.
 - **Existing data needs a review state.** If the workspace already has days, imported metadata, recovered
   configurations, or repaired persisted state, the UI should say what was found and what must be reviewed
   before export. Do not let recovered data look silently trusted or disappear behind empty states.
@@ -148,6 +153,10 @@ and ingest into Spyglass.
   for conversion/publication/ingestion." The preflight summary must answer their real questions: which animal
   and day, which configuration version, which cameras/calibrations, which probes/bad channels, which tasks
   and videos, whether opto is on, and whether downstream identity risks remain.
+- **Batch triage needs comparison, not just status.** When users are catching up on multiple days, Workspace
+  and Validation rows must show enough scan fields to compare days before opening each editor: date/session,
+  animal when relevant, configuration version, camera/calibration set, opto state, validation/recovery state, export
+  eligibility, and next repair action.
 - **Repair should not require knowing the schema.** A scientist should not need DANDI/Spyglass/AJV knowledge
   to fix an issue. Errors should name the affected scientific object, explain the consequence, and route to
   the next safe action.

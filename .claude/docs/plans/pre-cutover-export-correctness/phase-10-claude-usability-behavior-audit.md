@@ -14,7 +14,7 @@ catch confusing or scientifically dangerous behavior that ordinary unit tests ca
 - [phase-9-playwright-qa-pass.md](phase-9-playwright-qa-pass.md) — browser QA harness and Playwright flows.
 - [workflow-screen-map.md](workflow-screen-map.md) — route/step/modal coherence contract. The audit must
   check that each sampled screen's visible heading, primary action, next/return path, ownership cue, and repair
-  destination match the user job.
+  destination match the user job, including the state-specific primary-action table and batch-row scan contract.
 - [src/state/workspaceUtils.js](../../../../src/state/workspaceUtils.js) — `mergeDayMetadata`; used for
   UI/state/export triangulation.
 - [src/validation](../../../../src/validation) and
@@ -47,7 +47,8 @@ catch confusing or scientifically dangerous behavior that ordinary unit tests ca
   canonical entry; subject/DANDI fields; task/video references; fail-closed repair; persistence recovery;
   opto off/on; export preflight/download. Start from `workflow-screen-map.md`, not from component names: every
   top-level route and high-risk modal in the map should appear in at least one scenario or have a documented
-  reason it is out of scope for this audit.
+  reason it is out of scope for this audit. Include the state-specific Workspace/Day/Export states and the
+  catch-up row scan fields.
 - **Task 2 — UI/state/export triangulation.** For each core scenario, use Playwright or a small Node helper to
   capture three views of truth: visible UI summary/labels, `rec_to_nwb_workspace_v1` localStorage state, and
   downloaded/encoded YAML. Fail or record a finding when these disagree (for example, UI shows one camera
@@ -94,7 +95,7 @@ catch confusing or scientifically dangerous behavior that ordinary unit tests ca
 | Test / Artifact | Asserts |
 | --- | --- |
 | `pre-cutover usability scenario/mental-model matrix` *(QA artifact)* | each core scenario has user goal, likely mental model, dangerous misconception, expected UI behavior, workspace state, exported YAML shape, validation/preflight result, and pass/fail status. |
-| `screen-map coherence audit` *(QA artifact + screenshots)* | top-level routes and high-risk modals from `workflow-screen-map.md` have matching visible heading, primary action, next/return path, ownership cue, and repair destination, with any mismatch severity-ranked. |
+| `screen-map coherence audit` *(QA artifact + screenshots)* | top-level routes, state-specific primary actions, batch row scan fields, and high-risk modals from `workflow-screen-map.md` have matching visible heading, primary action, next/return path, ownership cue, and repair destination, with any mismatch severity-ranked. |
 | `UI/state/export triangulation` *(Playwright/helper)* | visible configured values, localStorage state, and exported YAML agree for cameras/calibration, data-acq, devices, subject/session, tasks/videos, and opto. |
 | `mistake injection catches dangerous states early` *(Playwright/helper)* | high-risk mistakes are caught at the editing surface or repair summary before export, with the first catching surface recorded. |
 | `labels and units are scientifically clear` *(audit artifact + screenshots)* | camera calibration/zoom, species, region, configuration version, preflight, and opto state have clear labels/examples and no misleading defaults. |
