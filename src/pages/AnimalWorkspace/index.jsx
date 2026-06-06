@@ -206,10 +206,15 @@ export function AnimalWorkspace() {
    */
   function getExistingDays() {
     if (!selectedAnimal) return [];
-    // Read through the shape-safe selector: a recovered/imported animal can have a malformed or
-    // missing `days`, which a raw `.map` would crash on (especially now the sole animal is
-    // auto-selected on mount).
-    return getAnimalDayIds(selectedAnimal).map((dayId) => days[dayId]?.date).filter(Boolean);
+    // Use the recovery classifier so the calendar's duplicate-date guard accounts for recovered
+    // records too (ok + recovered-unlinked), not just the index — otherwise a recovered day's
+    // date could be re-created as a collision. Tolerates a malformed/missing index.
+    return selectedDayClassification
+      .filter(
+        (d) => d.status === DAY_STATUS.OK || d.status === DAY_STATUS.RECOVERED_UNLINKED
+      )
+      .map((d) => d.record?.date)
+      .filter(Boolean);
   }
 
   return (
@@ -238,7 +243,11 @@ export function AnimalWorkspace() {
             </div>
             {animalIds.map((animalId) => {
               const animal = animals[animalId];
-              const dayCount = getAnimalDayIds(animal).length;
+              // Count day RECORDS present (indexed + recovered), via the recovery classifier, so
+              // a missing/corrupt index doesn't under-count an animal with recovered records.
+              const dayCount = classifyAnimalDays(animalId, animal, days).filter(
+                (d) => d.status === DAY_STATUS.OK || d.status === DAY_STATUS.RECOVERED_UNLINKED
+              ).length;
               const isSelected = animalId === selectedAnimalId;
 
               return (

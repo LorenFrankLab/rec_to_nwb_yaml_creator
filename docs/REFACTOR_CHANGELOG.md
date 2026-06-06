@@ -207,6 +207,33 @@ as ONE domain model and makes every surface consume it.
   guards in `applyDayUpdates` and the Validate-All payload prevent char-key scatter; nothing about
   it reaches the YAML or the export gate.
 
+**Eighth-review follow-ups — extend & enforce the recovery model (addressed in-phase):**
+
+The recovery model exposed a real data-corruption path and some surfaces not yet bound to its
+export policy:
+
+- **New `wrong_owner` status (data-corruption fix).** An index reference whose record EXPLICITLY
+  declares a different animal (`record.animalId` names another animal) was being classified `ok`
+  and exported with the indexing animal's subject/probe metadata — schema-valid YAML for the wrong
+  subject. It is now `wrong_owner`: not exportable, flagged ("belongs to {other}") with a safe
+  unlink repair (`unlinkDayReference`, which preserves the record so it resurfaces under its real
+  owner to be re-linked). An indexed record with NO `animalId` stays `ok` (the index is the
+  authority).
+- **Export policy enforced on EVERY path, from one domain source:**
+  - batch `runExport` now re-derives each day's CURRENT recovery status at confirm (not just
+    "still present/valid"), so a day that became recovered-unlinked / wrong-owner / dangling while
+    the preflight was open is dropped (reported as changed-after-preflight);
+  - single-day `ExportStep` blocks a recovered-unlinked day (record present, not in the index) with
+    a re-link message, so the Day Editor can't bypass the policy the batch path enforces.
+- **Copy no longer equates "Valid" with "exportable":** the Export-Valid-Only title/hint and the
+  completion message say a day must be both valid AND in an animal's day list (recovered days must
+  be re-linked first).
+- **Remaining raw `animal.days` reads moved onto the classifier:** the Workspace sidebar day count
+  and the calendar's existing-date guard now count records present (indexed + recovered) so they
+  agree with the recovered records the main panel shows. (The setup-checklist "Recording days" item
+  still reflects the index count — the helper takes only the animal, not the days map; the Workspace
+  panel + review state are the recovery-aware surfaces.)
+
 ---
 
 ## Domain boundaries & ownership cleanup — Phase 8.5 (June 5, 2026)

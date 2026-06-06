@@ -18,11 +18,12 @@ import {
 const dayRecord = (id, animalId, date) => ({ id, animalId, date, session: { session_id: id } });
 
 describe('isExportableDayStatus', () => {
-  it('permits ONLY ok days (recovered/dangling/no-owner are not auto-exportable)', () => {
+  it('permits ONLY ok days (recovered/dangling/no-owner/wrong-owner are not auto-exportable)', () => {
     expect(isExportableDayStatus(DAY_STATUS.OK)).toBe(true);
     expect(isExportableDayStatus(DAY_STATUS.RECOVERED_UNLINKED)).toBe(false);
     expect(isExportableDayStatus(DAY_STATUS.DANGLING_REFERENCE)).toBe(false);
     expect(isExportableDayStatus(DAY_STATUS.ORPHAN_NO_OWNER)).toBe(false);
+    expect(isExportableDayStatus(DAY_STATUS.WRONG_OWNER)).toBe(false);
   });
 });
 
@@ -56,9 +57,23 @@ describe('classifyAnimalDays', () => {
     ]);
   });
 
-  it('does not claim a record owned by a different animal', () => {
+  it('does not claim a record owned by a different animal (orphan sweep)', () => {
     const days = { 'other-1': dayRecord('other-1', 'other', '2023-06-22') };
     expect(classifyAnimalDays('remy', { id: 'remy', days: [] }, days)).toEqual([]);
+  });
+
+  it('flags an INDEXED record whose animalId names a DIFFERENT animal as wrong_owner (not ok)', () => {
+    // animalA's index points at a record that declares animalB as its owner — exporting it with
+    // animalA's metadata would corrupt the YAML. Must not be ok/exportable.
+    const days = { 'b-1': dayRecord('b-1', 'animalB', '2023-06-22') };
+    const result = classifyAnimalDays('animalA', { id: 'animalA', days: ['b-1'] }, days);
+    expect(result).toEqual([{ dayId: 'b-1', record: days['b-1'], status: DAY_STATUS.WRONG_OWNER }]);
+  });
+
+  it('treats an indexed record with NO animalId as ok (the index is the authority)', () => {
+    const record = { id: 'remy-1', date: '2023-06-22', session: {} }; // no animalId
+    const result = classifyAnimalDays('remy', { id: 'remy', days: ['remy-1'] }, { 'remy-1': record });
+    expect(result).toEqual([{ dayId: 'remy-1', record, status: DAY_STATUS.OK }]);
   });
 });
 
@@ -72,8 +87,10 @@ describe('classifyWorkspaceDays', () => {
         'remy-1': dayRecord('remy-1', 'remy', '2023-06-22'),
         'remy-2': dayRecord('remy-2', 'remy', '2023-06-23'), // record exists, not indexed
         'ghost-1': dayRecord('ghost-1', 'ghost', '2023-06-24'), // owner missing
+        'wrong-1': dayRecord('wrong-1', 'someoneelse', '2023-06-25'), // indexed by remy, owned by other
       },
     };
+    workspace.animals.remy.days = ['remy-1', 'wrong-1'];
     const result = classifyWorkspaceDays(workspace);
     const byId = Object.fromEntries(result.map((r) => [r.dayId, r]));
     expect(byId['remy-1'].status).toBe(DAY_STATUS.OK);
@@ -81,6 +98,9 @@ describe('classifyWorkspaceDays', () => {
     expect(byId['remy-2'].animalKey).toBe('remy');
     expect(byId['ghost-1'].status).toBe(DAY_STATUS.ORPHAN_NO_OWNER);
     expect(byId['ghost-1'].ownerPresent).toBe(false);
+    // Indexed-but-wrong-owner is flagged, not exported as the indexing animal.
+    expect(byId['wrong-1'].status).toBe(DAY_STATUS.WRONG_OWNER);
+    expect(byId['wrong-1'].animalKey).toBe('remy');
     // Indexed rows come before the orphan sweep.
     expect(result[0].dayId).toBe('remy-1');
   });

@@ -44,6 +44,7 @@ describe('useStore public API contract', () => {
       'removeDayReference',
       'removeElectrodeGroupItem',
       'setFormData',
+      'unlinkDayReference',
       'updateAnimal',
       'updateDay',
       'updateFormArray',

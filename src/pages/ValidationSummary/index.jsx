@@ -22,7 +22,11 @@ import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { getAnimalDayIds, getAnimalSubject } from '../../state/workspaceSelectors';
 import { computeStepStatus } from '../../domain/validation';
 import { getDayWorkflowStatus } from '../../domain/workflowStatus';
-import { classifyWorkspaceDays, DAY_STATUS, isExportableDayStatus } from '../../domain/dayRecovery';
+import {
+  classifyWorkspaceDays,
+  DAY_STATUS,
+  isExportableDayStatus,
+} from '../../domain/dayRecovery';
 import { formatDeterministicFilename, downloadYamlFile } from '../../io/yaml';
 import { checkShadowExport } from '../../domain/shadowExport';
 import { isFeatureEnabled } from '../../featureFlags';
@@ -97,6 +101,17 @@ function buildRows(workspace) {
       rows.push({ animal, animalKey, day: record, chip: 'error', status, orphaned: true, ownerMissing: true });
       // eslint-disable-next-line no-console
       console.error(`[validation-summary] day "${dayId}" is not listed by any animal — flagged as orphaned.`);
+      continue;
+    }
+    if (status === DAY_STATUS.WRONG_OWNER) {
+      // Indexed here but the record declares a DIFFERENT owner. Do NOT merge/validate it with
+      // THIS animal (that would compute a chip — and could export — with the wrong subject). Flag
+      // as an error and offer the unlink repair so it resurfaces under its real owner.
+      rows.push({ animal, animalKey, day: record, chip: 'error', status, wrongOwner: true });
+      // eslint-disable-next-line no-console
+      console.error(
+        `[validation-summary] day "${dayId}" is indexed by "${animalKey}" but belongs to "${record.animalId}" — flagged as wrong owner.`
+      );
       continue;
     }
 
@@ -296,6 +311,13 @@ export function ValidationSummary() {
     const stale = [];
     let exported = 0;
 
+    // Re-derive the CURRENT recovery status of every day from the live workspace, so a day that
+    // became recovered_unlinked / wrong_owner / dangling while the preflight was open is dropped
+    // here — not just one that changed content. Export policy is read from the same domain source.
+    const currentStatusById = new Map(
+      classifyWorkspaceDays(workspace).map((d) => [d.dayId, d.status])
+    );
+
     validRows.forEach(({ animalKey, day: rowDay }) => {
       // Re-resolve the CURRENT records and RE-VALIDATE before downloading: state may have
       // changed while the preflight was open, so a day that was valid at preflight time must
@@ -310,6 +332,12 @@ export function ValidationSummary() {
 
       if (!animal || !isRecord(day)) {
         stale.push({ ...identity, detail: 'No longer present since the preflight.' });
+        return;
+      }
+      if (!isExportableDayStatus(currentStatusById.get(rowDay.id))) {
+        // Became recovered-unlinked / wrong-owner / dangling since the preflight — not part of
+        // the animal's recording days anymore, so it must not export from a stale preflight.
+        stale.push({ ...identity, detail: "No longer part of the animal's day list since the preflight." });
         return;
       }
       let stillValid = false;
@@ -363,10 +391,10 @@ export function ValidationSummary() {
     setFailedReport(failed);
     setStaleReport(stale);
 
-    const notValid = rows.length - validRows.length;
+    const notExported = rows.length - validRows.length;
     let message = `Exported ${exported} ${exported === 1 ? 'file' : 'files'}.`;
-    if (notValid > 0) {
-      message += ` ${notValid} ${notValid === 1 ? 'day' : 'days'} not exported (not marked valid).`;
+    if (notExported > 0) {
+      message += ` ${notExported} ${notExported === 1 ? 'day' : 'days'} not exported (not valid, or not in an animal's day list).`;
     }
     setActionMessage(message);
   };
@@ -403,16 +431,17 @@ export function ValidationSummary() {
             <button
               type="button"
               onClick={handleExportValidOnly}
-              title="Download YAML for every day with Valid status. Days with errors or incomplete fields are not exported."
+              title="Download YAML for every valid day that is part of an animal's day list. Days with errors or incomplete fields are not exported; recovered days not in the list must be re-linked first."
             >
               Export Valid Only
             </button>
           </div>
 
           <p className="validation-summary-hint">
-            <strong>Export Valid Only</strong> downloads one YAML file per day with{' '}
-            <em>Valid</em> status ({counts.valid} {counts.valid === 1 ? 'day' : 'days'}). Days
-            with errors or incomplete fields are not exported.
+            <strong>Export Valid Only</strong> downloads one YAML file per day that is both{' '}
+            <em>Valid</em> and part of an animal&apos;s day list. Days with errors or incomplete
+            fields are not exported; a recovered day marked <em>not in day list</em> must be
+            re-linked (&quot;Add to day list&quot;) before it can be exported.
           </p>
 
           {pendingExport && (
@@ -521,7 +550,7 @@ export function ValidationSummary() {
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ animal, animalKey, day, chip, unreadable, missingRecord, orphaned, ownerMissing }, index) => (
+              {rows.map(({ animal, animalKey, day, chip, unreadable, missingRecord, orphaned, ownerMissing, wrongOwner }, index) => (
                 <tr key={`${day.id ?? 'unknown'}-${index}`} data-testid={`day-row-${day.id}`}>
                   <td>
                     {subjectLabel(animal)}
@@ -531,6 +560,14 @@ export function ValidationSummary() {
                         title="This day record is not listed in its animal's recording-day index (the index is corrupt, missing, or doesn't reference it). It is shown here so it isn't lost; open it to review or re-link it."
                       >
                         {' '}⚠ not in day list
+                      </span>
+                    )}
+                    {wrongOwner && (
+                      <span
+                        className="validation-summary-orphan-note"
+                        title={`This day is listed under ${subjectLabel(animal)} but its record belongs to "${day.animalId}". It is NOT exported with this animal's metadata; remove it from this animal so it returns to its real owner.`}
+                      >
+                        {' '}⚠ belongs to {day.animalId}
                       </span>
                     )}
                   </td>
@@ -570,6 +607,17 @@ export function ValidationSummary() {
                         aria-label={`Remove dangling day reference ${day.id} from ${subjectLabel(animal)}`}
                       >
                         Remove day reference
+                      </button>
+                    ) : wrongOwner ? (
+                      // Listed under the wrong animal. The repair unlinks it from THIS animal
+                      // (keeping the record), so it returns to its real owner to be re-linked.
+                      <button
+                        type="button"
+                        className="validation-summary-repair"
+                        onClick={() => actions.unlinkDayReference(animalKey, day.id)}
+                        aria-label={`Remove ${day.date || day.id} from ${subjectLabel(animal)} (it belongs to ${day.animalId})`}
+                      >
+                        Remove from this animal
                       </button>
                     ) : orphaned && ownerMissing ? (
                       // The record exists but its owning animal is gone — "Open editor" would

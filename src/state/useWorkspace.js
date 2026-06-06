@@ -552,6 +552,34 @@ export function useWorkspace(initialState = null) {
       },
 
       /**
+       * Unlink a day reference from an animal's index WITHOUT deleting the day record. The
+       * repair for a `wrong_owner` reference (an animal indexing a record that belongs to a
+       * DIFFERENT animal): dropping the reference must NOT destroy the record (unlike
+       * {@link removeDayReference}, which deletes dangling/corrupt leftovers) — the record is
+       * valid and belongs to someone else, so it survives and resurfaces under its real owner as
+       * `recovered_unlinked`, to be re-linked there. No-op for an unknown animal or absent ref.
+       *
+       * @param {string} animalId - The animal to unlink the reference from.
+       * @param {string} dayId - The day id to unlink (the record is preserved).
+       */
+      unlinkDayReference: (animalId, dayId) => {
+        setWorkspace((prev) => {
+          const animal = prev.animals[animalId];
+          if (!animal) return prev;
+          const current = getAnimalDayIds(animal);
+          if (!current.includes(dayId)) return prev;
+          return {
+            ...prev,
+            animals: {
+              ...prev.animals,
+              [animalId]: { ...animal, days: current.filter((id) => id !== dayId) },
+            },
+            lastModified: getCurrentTimestamp(),
+          };
+        });
+      },
+
+      /**
        * Updates workspace settings
        *
        * @param {object} settings - Partial settings updates

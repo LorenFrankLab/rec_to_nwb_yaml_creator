@@ -51,7 +51,7 @@ function provideStore(workspace) {
     model: { workspace },
     // removeDayReference is present so a missing-record row's repair button never references
     // an undefined action; the dedicated repair test installs its own captured spy.
-    actions: { updateDay, removeDayReference: vi.fn(), relinkDayReference: vi.fn() },
+    actions: { updateDay, removeDayReference: vi.fn(), relinkDayReference: vi.fn(), unlinkDayReference: vi.fn() },
     selectors: {},
     persistence: { enabled: false },
   });
@@ -358,6 +358,27 @@ describe('ValidationSummary', () => {
     const row = screen.getByTestId(`day-row-${ids.validDayId}`);
     await user.click(within(row).getByRole('button', { name: /add .* back to .* day list/i }));
     expect(relinkDayReference).toHaveBeenCalledWith('remy', ids.validDayId);
+  });
+
+  it('flags an indexed wrong-owner record and offers an unlink repair (never exports it as this animal)', async () => {
+    const user = userEvent.setup();
+    const { workspace, ids } = makeSummaryWorkspace();
+    // remy's index points at a record that belongs to totoro — exporting it as remy would corrupt
+    // the YAML (wrong subject/probe). It must be flagged, not silently exported.
+    workspace.days[ids.validDayId].animalId = 'totoro';
+    const unlinkDayReference = vi.fn();
+    useStoreContext.mockReturnValue({
+      model: { workspace },
+      actions: { updateDay: vi.fn(), removeDayReference: vi.fn(), relinkDayReference: vi.fn(), unlinkDayReference },
+      selectors: {},
+      persistence: { enabled: false },
+    });
+
+    render(<ValidationSummary />);
+    const row = screen.getByTestId(`day-row-${ids.validDayId}`);
+    expect(within(row).getByText(/belongs to totoro/i)).toBeInTheDocument();
+    await user.click(within(row).getByRole('button', { name: /remove .* from .* belongs to totoro/i }));
+    expect(unlinkDayReference).toHaveBeenCalledWith('remy', ids.validDayId);
   });
 
   it('does not offer a dead-end "Open editor" for an orphan whose owning animal is gone', () => {

@@ -21,6 +21,12 @@
  *                            recording days — so it is NOT auto-exportable until then.
  *  - `orphan_no_owner`     — a real record whose `animalId` resolves to no animal. Not
  *                            exportable; no in-app repair (re-create/re-import the animal).
+ *  - `wrong_owner`         — an index reference whose record EXPLICITLY declares a DIFFERENT
+ *                            animal as its owner (`record.animalId` names another animal).
+ *                            Merging/exporting it with the indexing animal's metadata would
+ *                            corrupt the YAML (wrong subject/probe), so it is NOT exportable;
+ *                            repair = unlink it from the wrong animal (the record then surfaces
+ *                            under its real owner as `recovered_unlinked`, to re-link there).
  *
  * Export policy: ONLY `ok` days are part of the animal's recording days and eligible for batch /
  * automatic export ({@link isExportableDayStatus}). This is the single place that policy lives.
@@ -42,7 +48,24 @@ export const DAY_STATUS = {
   DANGLING_REFERENCE: 'dangling_reference',
   RECOVERED_UNLINKED: 'recovered_unlinked',
   ORPHAN_NO_OWNER: 'orphan_no_owner',
+  WRONG_OWNER: 'wrong_owner',
 };
+
+/**
+ * The status of an INDEX reference that resolves to a real record: `ok` when the record belongs
+ * to the indexing animal (or carries no `animalId` — the index is then the authority), but
+ * `wrong_owner` when the record EXPLICITLY names a different animal (exporting it with the
+ * indexing animal would corrupt the YAML).
+ *
+ * @param {object} record - The resolved day record (already confirmed to be a record).
+ * @param {string} animalKey - The animal whose index points at it.
+ * @returns {string}
+ */
+function indexedRecordStatus(record, animalKey) {
+  return record.animalId != null && record.animalId !== animalKey
+    ? DAY_STATUS.WRONG_OWNER
+    : DAY_STATUS.OK;
+}
 
 /**
  * Whether a day with this status is part of the animal's recording days and may be batch /
@@ -74,7 +97,7 @@ export function classifyAnimalDays(animalId, animal, daysMap) {
   const result = indexIds.map((dayId) => {
     const record = days[dayId];
     return isRecord(record)
-      ? { dayId, record, status: DAY_STATUS.OK }
+      ? { dayId, record, status: indexedRecordStatus(record, animalId) }
       : { dayId, record: null, status: DAY_STATUS.DANGLING_REFERENCE };
   });
 
@@ -120,7 +143,7 @@ export function classifyWorkspaceDays(workspace) {
       indexed.add(dayId);
       out.push(
         isRecord(record)
-          ? { animalKey, dayId, record, status: DAY_STATUS.OK, ownerPresent: true }
+          ? { animalKey, dayId, record, status: indexedRecordStatus(record, animalKey), ownerPresent: true }
           : { animalKey, dayId, record: null, status: DAY_STATUS.DANGLING_REFERENCE, ownerPresent: true }
       );
     }

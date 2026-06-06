@@ -352,6 +352,18 @@ describe('ExportStep', () => {
     expect(screen.getByRole('button', { name: /download yaml/i })).toBeDisabled();
   });
 
+  it('BLOCKS single-day export for a recovered-unlinked day (record not in the animal index)', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    // The record exists, but the animal's index doesn't list it (recovered/unlinked).
+    animal.days = [];
+
+    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+
+    expect(screen.queryByRole('region', { name: /preflight/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/not in .*day list/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /download yaml/i })).toBeDisabled();
+  });
+
   it('reports unresolved non-blocking warnings in the preflight', () => {
     const { animal, day } = buildRealisticWorkspace();
     // One warning-severity issue (no errors) — the day stays exportable but preflight must
