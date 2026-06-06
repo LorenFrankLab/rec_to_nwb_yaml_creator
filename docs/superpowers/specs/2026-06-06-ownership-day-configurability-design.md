@@ -218,6 +218,29 @@ verify routes, step labels, modals, empty states, repair paths, and destructive 
   calibration/lens/model/data-acq identity/task description steers to a distinct name before
   export.
 
+## Downstream enforcement reality (trodes_to_nwb / DANDI, verified 2026-06-06)
+
+Independent audit confirmed the plan's premises and one overarching fact: **trodes_to_nwb's schema
+check logs but never raises, and its converters degrade gracefully — so almost every constraint is
+SILENT downstream and this app is the real gate.** Specifics that shape the work:
+
+- **Camera subset is safe** (resolved by `id`, only referenced cameras needed); a dangling
+  `camera_id` is a downstream `KeyError`, so the day-used helper must include every referenced id
+  (the `dangling_camera_ref` rule already gates this).
+- **One-epoch-one-task is NOT enforced downstream** — silent in the converter; the app's
+  `duplicate_task_epoch` error is the only gate (the Spyglass TaskEpoch key is the *reason*, not the
+  enforcer).
+- **Opto** four required sections are `optical_fiber`, `virus_injection`, `opto_excitation_source`,
+  `optogenetic_stimulation_software`; a 3-of-4 export is silently dropped downstream — the app's
+  animal-surface `partial_configuration` rule is the gate; opto-free days/epochs are valid.
+- **Rig constants are silent**: `times_period_multiplier` is read by no converter;
+  `raw_data_to_volts` is only a `.rec`-header fallback (a wrong value silently mis-scales volts).
+- **Species** isn't constrained by the schema or the converter, but DANDI rejects non-binomial — the
+  app's `invalid_species` rule is the only gate; surface it at the subject edit point.
+- **DIO `description` uniqueness** is a downstream hard `raise ValueError` — gate it in-app.
+- **`data_acq_device`** is index-named downstream (`dataacq_device{i}`) and `minItems:1` — never apply
+  camera-style subsetting to it.
+
 ## Testing
 
 - `workflowOwnership` unit + completeness cross-check against `CATEGORY_BY_CODE` /

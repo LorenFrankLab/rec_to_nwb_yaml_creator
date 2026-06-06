@@ -93,6 +93,45 @@ Full design: [docs/superpowers/specs/2026-06-06-ownership-day-configurability-de
   days at creation. Editing those defaults affects future days unless the user explicitly applies
   the change to named existing days.
 
+## Downstream enforcement reality (trodes_to_nwb / DANDI) — verified 2026-06-06
+
+Independent audit of trodes_to_nwb `main` (read from GitHub; the local checkout is not readable
+from the agent sandbox) plus the shared schema and this app's rules. The recurring theme: **the
+converter's schema check logs but never raises, and most converters degrade gracefully — so almost
+every constraint below is SILENT downstream and THIS APP is the real gate.** Implement accordingly.
+
+- **Camera export by `id`, subset is safe** — `convert_yaml.py` names devices `"camera_device {id}"`
+  and `convert_position.py` resolves video→camera by `id`, requiring only referenced cameras. The
+  day-used subset is safe and more correct (see Task 5). Caveat: `convert_position.py` does an
+  unchecked device lookup, so a DANGLING `camera_id` is a downstream `KeyError` — `resolveDayCameraUsage`
+  must include every referenced id (it does), and the app's `dangling_camera_ref` rule already gates it.
+- **One-epoch-one-task is NOT enforced downstream.** trodes_to_nwb converts a duplicate-epoch YAML
+  without error; the collision only bites later (Spyglass `TaskEpoch` key, or scientifically). The
+  app's export-blocking `duplicate_task_epoch` rule is the ONLY gate — keep it.
+- **Opto is all-or-nothing and SILENT.** The four required sections are `optical_fiber`,
+  `virus_injection`, `opto_excitation_source`, and **`optogenetic_stimulation_software`** (exact key).
+  A 3-of-4 export makes trodes_to_nwb log "No available optogenetic metadata" and silently produce an
+  NWB with NO opto. The app's animal-surface `partial_configuration` rule is the gate. A day/epoch
+  with zero opto protocol is fully valid downstream.
+- **Rig constants are silent.** `times_period_multiplier` is read by NO converter (schema-required but
+  functionally dead); `raw_data_to_volts` is only a FALLBACK when the `.rec` header lacks scaling — a
+  wrong value silently mis-scales ephys volts. Treat both as protected recording-system constants, not
+  casual day edits (Tasks 3/4).
+- **Species is app-only.** The schema accepts free-text species and trodes_to_nwb does not check it,
+  but DANDI rejects non-binomial species. The app's `invalid_species` (Latin-binomial / NCBI URI) rule
+  is the only gate — surface it at the subject edit point (Task 2).
+- **DIO `description` must be unique** — duplicate `behavioral_events[].description` is a downstream
+  hard `raise ValueError` (one of the few non-silent failures). Gate it in-app (Task 6).
+- **`data_acq_device` is index-named downstream** (`dataacq_device{i}`) and `minItems:1`. Never apply
+  camera-style subset/reorder logic to it (the plan doesn't). The existing `divergent_data_acq_identity`
+  rule already supports Task 3's "amplifier swap = new identity".
+- **Schema top-level `required` is short** (`experimenter_name`, `lab`, `institution`,
+  `data_acq_device`, `raw_data_to_volts`, `times_period_multiplier`). cameras / tasks / opto / units /
+  behavioral_events / videos / fs_gui / top-level weight are NOT top-level required, so the "optional/
+  empty is valid" claims hold. The exporter already emits empty arrays for the list fields and DELETES
+  `units` / `default_header_file_path` / `keywords` when empty (schema rejects present-but-empty). Do
+  not start deleting an empty `cameras` key — keep emitting `[]` (byte-stable).
+
 ## Inputs to read first
 
 - [docs/superpowers/specs/2026-06-06-ownership-day-configurability-design.md](../../../../docs/superpowers/specs/2026-06-06-ownership-day-configurability-design.md)
@@ -290,7 +329,10 @@ audit).
   existing owner if a separate area is not built. Home remains the creation surface, and Day
   Overview may keep focused inline repair, but Day Overview must not be the only discoverable
   way to correct shared subject/profile facts. Subject/profile repair must name its blast
-  radius ("updates this animal and all N days") before save.
+  radius ("updates this animal and all N days") before save. Carry the identity constraints at the
+  edit point: species must be a Latin binomial / NCBI Taxon URI (the app's `invalid_species` rule is
+  the ONLY gate — the schema and trodes_to_nwb accept free text, but DANDI rejects it), and
+  `date_of_birth` must be the schema's ISO-8601 datetime form.
 
   Stop presenting cameras, data
   acquisition, and behavioral events as one vague "Hardware & Behavioral Events" bucket.
@@ -304,16 +346,22 @@ audit).
   but user-facing navigation should read as `Animal Setup` / shared setup, not a detached
   schema editor. Cameras must visibly show the
   identity fields that make a camera different, including `lens` and `meters_per_pixel`,
-  in tables/summaries as well as the edit modal.
+  in tables/summaries as well as the edit modal — note the current `CamerasSection` table OMITS
+  `lens` (shows id/name/manufacturer/model/meters-per-pixel), so adding the `lens` column is a real
+  change, not a relabel.
 
 - **Task 2.5 — make weight ownership unambiguous.** Treat weight as a recording-day value for
   export. The current model can fall back from `day.session.weight` to `animal.subject.weight`;
   Phase 8.7 must make the Day Overview the primary review/edit point for the exported session
   weight and label any animal-created fallback as an initial/default value that needs
   confirmation. Do not present a shared animal weight as the normal exported value for every
-  day. Tests should cover: a day-owned weight exports; a fallback animal weight is visibly
-  identified as fallback/default; and editing shared subject/profile fields does not imply it
-  changes only one day.
+  day. Note this REVERSES the current data flow, not just relabels it: today OverviewStep's weight
+  field writes to `animal.subject.weight` and CLEARS `day.session.weight` (the field is labelled
+  "Animal baseline weight"), so the exported value is currently the animal weight. Task 2.5 must
+  make the day field write `session.weight` (a day update — `applyDayUpdates` already accepts session
+  merges, so no store change), with the animal weight as labelled fallback only. Tests should cover:
+  a day-owned weight exports; a fallback animal weight is visibly identified as fallback/default; and
+  editing shared subject/profile fields does not imply it changes only one day.
 
 - **Task 3 — implement the decided recording-system ownership.** Audit the current
   `data_acq_device` source of truth against `configurationHistory`, `animal.devices`,
@@ -369,7 +417,10 @@ audit).
   Add a pure helper such as `resolveDayCameraUsage(animal, day)` that scans `tasks[].camera_id`,
   `associated_video_files[].camera_id`, and `fs_gui_yamls[].camera_id`, returns the referenced
   camera ids (plus the affected day ids), and is consumed by both export/preflight and the
-  blast-radius UI. `mergeDayMetadata` then emits only those cameras. Verified safe downstream
+  blast-radius UI. `mergeDayMetadata` then emits only those cameras — by FILTERING the full
+  `animal.cameras` objects by referenced id (never reconstructing partial objects; each emitted
+  camera keeps all schema-required item fields, incl. `lens`), and it must keep emitting `cameras: []`
+  for a zero-camera day (do NOT delete the key — that would be a byte change). Verified safe downstream
   (trodes_to_nwb `main`, 2026-06-06): cameras are resolved by their `id` field, never by list
   position — `convert_yaml.py` names devices `"camera_device " + str(camera["id"])`, and
   `convert_position.py` looks up `devices['camera_device ' + str(video["camera_id"])]` and builds
@@ -414,13 +465,18 @@ audit).
   action that copies/selects a reference event into the exported day-specific list. The
   exported day list must stay visible after the action. If there is no real use path,
   remove or hide the animal-level editor before Phase 9 so users cannot edit a
-  non-exported object and think they are done.
+  non-exported object and think they are done. Concrete current-code hazard to fix: the
+  animal-level `BehavioralEventsSection` empty state literally claims events "will be inherited by
+  all recording days" — which is FALSE (animal-level `behavioral_events` is never exported); correct
+  or remove that copy. Also enforce unique `behavioral_events[].description` in-app: a duplicate
+  description is a downstream hard `raise ValueError` (a rare non-silent crash), so gate it here
+  before the user hits a mid-conversion failure.
 
 - **Task 7 — separate opto implanted setup from per-day protocol (and allow opto-free days).**
   Opto is already split in the data model: the implanted/surgical/source/software setup
-  (`optical_fiber`, `virus_injection`, `opto_excitation_source`, stimulation software) is read from
-  `animal.optogenetics`, while the protocol actually run (`fs_gui_yamls`) is read from the day and
-  scoped to selected task epochs. Make the UI match that split: edit the implanted setup ONCE in
+  (`optical_fiber`, `virus_injection`, `opto_excitation_source`, `optogenetic_stimulation_software`)
+  is read from `animal.optogenetics`, while the protocol actually run (`fs_gui_yamls`) is read from
+  the day and scoped to selected task epochs. Make the UI match that split: edit the implanted setup ONCE in
   the Animal Editor Optogenetics step (animal setup); edit the protocol run in the recording day's
   task/epoch flow as an epoch-scoped exported list. Critically, opto on a day or epoch is OPTIONAL —
   an animal can have opto implanted yet run no stimulation on a given day, or only during a subset
@@ -428,10 +484,12 @@ audit).
   missing setup or a blocking error; make "no opto this day" and "no opto for this epoch" friction-free
   explicit states and only prompt for protocol detail once the user indicates opto was run. Respect
   the existing animal-level all-or-nothing opto
-  completeness contract (if any opto setup is present, all required opto setup sections must be
-  present) — that is an animal-SETUP rule, not a per-day requirement, and must not force opto onto a
-  day or epoch. This is the cleanest existing example of the set-once-record-per-epoch pattern; use
-  it as the model the other surfaces follow.
+  completeness contract (the app's `partial_configuration` rule: if any of the four opto setup
+  sections is present, all four must be) — that is an animal-SETUP rule, not a per-day requirement,
+  and must not force opto onto a day or epoch. Keep it gated IN-APP: a 3-of-4 opto export is SILENT
+  downstream (trodes_to_nwb logs "No available optogenetic metadata" and produces an NWB with no
+  opto), so this rule is the only gate. This is the cleanest existing example of the
+  set-once-record-per-epoch pattern; use it as the model the other surfaces follow.
 
 - **Task 8 — add discoverable lifecycle cleanup actions.** The store already exposes
   `deleteAnimal` and `deleteDay`, but ordinary users cannot discover safe animal/day
