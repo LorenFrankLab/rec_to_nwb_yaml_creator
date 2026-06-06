@@ -379,6 +379,33 @@
   background-color: #1976d2;
 }
 
+/* Existing-data review state — recovered/imported data is not silently trusted */
+.existing-data-review {
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid #ffe0b2;
+  border-radius: 6px;
+  background-color: #fff8e1;
+}
+
+.existing-data-review-heading {
+  font-size: 1rem;
+  margin: 0 0 0.25rem;
+}
+
+.existing-data-review-intro {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  color: #5d4037;
+}
+
+.existing-data-review-link {
+  display: inline-block;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--color-primary);
+}
+
 /* Calendar Container */
 .calendar-container {
   margin-bottom: 1.5rem;

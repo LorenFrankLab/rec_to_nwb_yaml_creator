@@ -20,8 +20,11 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
-import { getAnimalDayIds } from '../../state/workspaceSelectors';
+import { getAnimalDayIds, getConfigHistory } from '../../state/workspaceSelectors';
 import { getAnimalSetupChecklist, SETUP_STATE } from '../../domain/workflowStatus';
+import { validateRawAnimal } from '../../validation/rawShape';
+import { applyRepairCommand } from '../../state/repairCommands';
+import RawCorruptionBanner from '../../components/RawCorruptionBanner';
 import { CalendarDayCreator } from '../../components/CalendarDayCreator/CalendarDayCreator';
 import './AnimalWorkspace.css';
 
@@ -82,6 +85,22 @@ export function AnimalWorkspace() {
    */
   function handleSelectAnimal(animalId) {
     setSelectedAnimalId(animalId);
+  }
+
+  /**
+   * Execute a raw-shape corruption repair in place (same executor the editor banners use),
+   * so recovered/imported corruption can be cleared from the review state without leaving the
+   * workspace.
+   *
+   * @param {object} issue - A raw-shape issue carrying a `repairCommand`.
+   */
+  function handleRepair(issue) {
+    if (!issue?.repairCommand || !selectedAnimalId) return;
+    applyRepairCommand(issue.repairCommand, {
+      actions,
+      animalId: selectedAnimalId,
+      animal: selectedAnimal,
+    });
   }
 
   /**
@@ -217,43 +236,76 @@ export function AnimalWorkspace() {
                     Electrode setup is a first-class action here so it is discoverable without
                     opening the Animal Editor or a recording day. */}
                 {(() => {
-                  const checklist = getAnimalSetupChecklist(selectedAnimal);
+                  // Raw-shape corruption for THIS animal (reused, not reinvented): folds into
+                  // the checklist's per-item has_errors AND drives the review state below.
+                  const rawIssues = validateRawAnimal(selectedAnimal);
+                  const checklist = getAnimalSetupChecklist(selectedAnimal, { issues: rawIssues });
                   const electrodes = checklist.find((i) => i.key === 'electrodes');
                   const needsElectrodeSetup = electrodes?.state === SETUP_STATE.NOT_STARTED;
+                  const dayCount = getAnimalDayIds(selectedAnimal).length;
+                  const configCount = getConfigHistory(selectedAnimal).length;
+                  // Existing data needs an explicit review state: recovered/imported setup must
+                  // not look silently trusted. Show it once there ARE recording days to export,
+                  // or whenever raw-shape corruption is present.
+                  const showReview = dayCount > 0 || rawIssues.length > 0;
                   return (
-                    <section className="setup-checklist" aria-label="Animal setup">
-                      <h3 className="setup-checklist-heading">Animal setup</h3>
-                      <p className="setup-checklist-intro">
-                        {needsElectrodeSetup
-                          ? 'Set up shared hardware before creating or exporting recording days. ' +
-                            "Electrodes/probes are configured once for the animal and shared across all of its days."
-                          : 'Shared hardware for this animal. Review recovered or imported setup before exporting.'}
-                      </p>
-                      <ul className="setup-checklist-list">
-                        {checklist.map((item) => {
-                          const href = setupActionHref(selectedAnimalId, item.action);
-                          const isPrimary =
-                            item.key === 'electrodes' && item.state === SETUP_STATE.NOT_STARTED;
-                          return (
-                            <li key={item.key} className={`setup-item setup-item-${item.state}`}>
-                              <span className="setup-item-label">{item.label}</span>
-                              <span className={`setup-state-badge setup-state-${item.state}`}>
-                                {SETUP_STATE_LABEL[item.state]}
-                              </span>
-                              <span className="setup-item-summary">{item.summary}</span>
-                              {href && (
-                                <a
-                                  href={href}
-                                  className={`setup-item-action ${isPrimary ? 'setup-item-action-primary' : ''}`}
-                                >
-                                  {item.action.label}
-                                </a>
-                              )}
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </section>
+                    <>
+                      <section className="setup-checklist" aria-label="Animal setup">
+                        <h3 className="setup-checklist-heading">Animal setup</h3>
+                        <p className="setup-checklist-intro">
+                          {needsElectrodeSetup
+                            ? 'Set up shared hardware before creating or exporting recording days. ' +
+                              "Electrodes/probes are configured once for the animal and shared across all of its days."
+                            : 'Shared hardware for this animal. Review recovered or imported setup before exporting.'}
+                        </p>
+                        <ul className="setup-checklist-list">
+                          {checklist.map((item) => {
+                            const href = setupActionHref(selectedAnimalId, item.action);
+                            const isPrimary =
+                              item.key === 'electrodes' && item.state === SETUP_STATE.NOT_STARTED;
+                            return (
+                              <li key={item.key} className={`setup-item setup-item-${item.state}`}>
+                                <span className="setup-item-label">{item.label}</span>
+                                <span className={`setup-state-badge setup-state-${item.state}`}>
+                                  {SETUP_STATE_LABEL[item.state]}
+                                </span>
+                                <span className="setup-item-summary">{item.summary}</span>
+                                {href && (
+                                  <a
+                                    href={href}
+                                    className={`setup-item-action ${isPrimary ? 'setup-item-action-primary' : ''}`}
+                                  >
+                                    {item.action.label}
+                                  </a>
+                                )}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </section>
+
+                      {showReview && (
+                        <section className="existing-data-review" aria-label="Existing data review">
+                          <h3 className="existing-data-review-heading">Review existing data</h3>
+                          <p className="existing-data-review-intro">
+                            Found {dayCount} recording {dayCount === 1 ? 'day' : 'days'} and{' '}
+                            {configCount} hardware {configCount === 1 ? 'configuration' : 'configurations'} for{' '}
+                            {selectedAnimal.id}. Recovered or imported setup is not assumed correct —
+                            review electrodes and cameras before exporting.
+                          </p>
+                          {/* Reuse the shipped recovery surface: executable resets for corrupt
+                              animal-owned collections. Self-hides when there is no corruption. */}
+                          <RawCorruptionBanner
+                            animal={selectedAnimal}
+                            fields={['cameras', 'data_acq_device', 'configurationHistory']}
+                            onRepair={handleRepair}
+                          />
+                          <a className="existing-data-review-link" href="#/validation">
+                            Open validation summary
+                          </a>
+                        </section>
+                      )}
+                    </>
                   );
                 })()}
 

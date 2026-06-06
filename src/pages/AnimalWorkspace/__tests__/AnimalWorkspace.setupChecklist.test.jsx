@@ -92,3 +92,35 @@ describe('AnimalWorkspace setup checklist', () => {
     expect(screen.queryByRole('link', { name: /set up electrodes/i })).not.toBeInTheDocument();
   });
 });
+
+describe('AnimalWorkspace existing-data review state', () => {
+  it('shows a review state when the animal has recording days', async () => {
+    const animal = { ...newAnimal, days: ['newbie-2024-01-02'] };
+    const days = { 'newbie-2024-01-02': { id: 'newbie-2024-01-02', date: '2024-01-02', session: { session_id: 's' }, state: {} } };
+    renderWith({ newbie: animal }, days);
+    await selectAnimal('newbie');
+    const review = screen.getByRole('region', { name: /existing data review/i });
+    expect(within(review).getByText(/found 1 recording day/i)).toBeInTheDocument();
+    expect(within(review).getByText(/not assumed correct/i)).toBeInTheDocument();
+  });
+
+  it('surfaces corrupt recovered data via the shared RawCorruptionBanner (executable reset)', async () => {
+    // A recovered/imported animal whose cameras collection is corrupt (a string, not a list).
+    const corrupt = { ...configuredAnimal, cameras: 'nope', days: [] };
+    renderWith({ remy: corrupt });
+    await selectAnimal('remy');
+    // Review state appears even without days because there is corruption to repair.
+    expect(screen.getByRole('region', { name: /existing data review/i })).toBeInTheDocument();
+    // The shipped recovery surface (not a parallel one) renders the executable reset.
+    expect(screen.getByRole('alert', { name: /corrupt saved data/i })).toBeInTheDocument();
+    // …and the checklist marks the cameras item as having errors.
+    const camerasItem = screen.getByText('Cameras / calibration').closest('.setup-item');
+    expect(camerasItem.className).toMatch(/setup-item-has_errors/);
+  });
+
+  it('does not show a review state for a fresh animal with no days and no corruption', async () => {
+    renderWith({ newbie: newAnimal });
+    await selectAnimal('newbie');
+    expect(screen.queryByRole('region', { name: /existing data review/i })).not.toBeInTheDocument();
+  });
+});

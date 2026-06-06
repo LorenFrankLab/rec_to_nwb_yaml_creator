@@ -66,7 +66,15 @@ export function animalHasElectrodes(animal) {
  */
 function setupAreaForIssue(issue) {
   const code = issue?.code;
-  const path = (issue?.path || issue?.instancePath || '').toLowerCase();
+  // Raw-shape issues carry `field`/`focusPath` rather than a schema `path`, so fold them in
+  // (e.g. a corrupt `cameras` collection → the Cameras setup item).
+  const path = (
+    issue?.path ||
+    issue?.instancePath ||
+    issue?.focusPath ||
+    issue?.field ||
+    ''
+  ).toLowerCase();
 
   if (code === 'invalid_species' || code === 'subject_id_slash' || code === 'session_id_slash') {
     return 'subject';
