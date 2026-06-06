@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { checkShadowExport, firstLineDiff } from '../shadowExport';
+import { checkShadowExport, firstLineDiff } from '../../../domain/shadowExport';
 import * as yaml from '../../../io/yaml';
 import { makeAnimalWithCamerasAndDay } from './taskFixtures';
 

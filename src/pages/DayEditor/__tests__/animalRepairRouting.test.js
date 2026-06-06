@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { repairTargetForIssue, animalEditorStepForFieldPath } from '../validation';
+import { repairTargetForIssue, animalEditorStepForFieldPath } from '../../../domain/validation';
 
 /**
  * HIGH/UX finding: an animal-surface repair must (a) keep a step-aware label naming the

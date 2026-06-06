@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { rulesValidation } from '../rulesValidation';
-import { computeDevicesStatus } from '../../pages/DayEditor/validation';
+import { computeDevicesStatus } from '../../domain/validation';
 
 /**
  * Boundary 4 — converter-truth validation is SEPARATE from UI-convenience status.

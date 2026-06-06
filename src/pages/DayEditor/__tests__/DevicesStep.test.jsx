@@ -520,7 +520,7 @@ describe('DevicesStep', () => {
     const historicalDay = { ...mockDay, configurationVersion: 1, deviceOverrides: { bad_channels: {} } };
     const wiring = {
       animalDays: [historicalDay],
-      actions: { addConfigurationSnapshot: vi.fn(), applyConfigurationForward: vi.fn() },
+      actions: { createConfigurationSnapshotAndApplyForward: vi.fn() },
     };
 
     it('renders the pinned snapshot ntrode list on a historical day, not live animal.devices', () => {

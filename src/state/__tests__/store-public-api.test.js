@@ -26,9 +26,8 @@ describe('useStore public API contract', () => {
     const { result } = renderHook(() => useStore());
     expect(Object.keys(result.current.actions).sort()).toEqual([
       'addArrayItem',
-      'addConfigurationSnapshot',
-      'applyConfigurationForward',
       'createAnimal',
+      'createConfigurationSnapshotAndApplyForward',
       'createDay',
       'deleteAnimal',
       'deleteDay',

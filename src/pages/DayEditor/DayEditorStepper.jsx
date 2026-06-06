@@ -5,7 +5,7 @@ import { useDayIdFromUrl } from '../../hooks/useDayIdFromUrl';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { getAnimalSubject, getDayTasks } from '../../state/workspaceSelectors';
 import { applyRepairCommand } from '../../state/repairCommands';
-import { computeStepStatus } from './validation';
+import { computeStepStatus } from '../../domain/validation';
 import { isExportEnabled } from './stepGate';
 import StepNavigation from './StepNavigation';
 import SaveIndicator from './SaveIndicator';

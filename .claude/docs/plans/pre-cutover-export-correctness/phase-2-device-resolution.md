@@ -18,10 +18,10 @@ snapshots are the source of truth, `animal.devices` mirrors the latest snapshot,
 - [src/state/workspaceUtils.js:150-249](../../../../src/state/workspaceUtils.js) — `mergeDayMetadata`;
   confirms the ntrode map (`:228`) and electrode groups (`:227`) come solely from `resolveDayConfig`.
 - [src/state/useWorkspace.js:117-174](../../../../src/state/useWorkspace.js) — `createAnimal` initial
-  snapshot (`:164`); [src/state/useWorkspace.js:262-313](../../../../src/state/useWorkspace.js) —
-  `addConfigurationSnapshot` (returns the created version); `:306-356` — `applyConfigurationForward`.
+  snapshot (`:164`); [src/state/useWorkspace.js](../../../../src/state/useWorkspace.js) —
+  `createConfigurationSnapshotAndApplyForward`, the atomic reconfiguration store action.
 - [src/pages/DayEditor/ReconfigWizard.jsx:63-117](../../../../src/pages/DayEditor/ReconfigWizard.jsx) —
-  the diff + apply path that the model change must keep working.
+  the fork-before-edit confirmation path that the model change must keep working.
 - [src/pages/DayEditor/DevicesStep.jsx:54-61,130-140](../../../../src/pages/DayEditor/DevicesStep.jsx) —
   how day bad channels are read (`:60`) and written to `deviceOverrides.bad_channels.{ntrodeId}` (`:137`).
 
@@ -49,10 +49,11 @@ snapshots are the source of truth, `animal.devices` mirrors the latest snapshot,
   mirror; the snapshot is authoritative.)
 - **Task 2 — reconfiguration is fork-before-edit.** Reshape `ReconfigWizard` per
   [designs.md](designs.md#reconfiguration-wizard-reshaping): on "Reconfigure from day X" it forks a new
-  version (`addConfigurationSnapshot` with `devices = clone(latest snapshot)`, returns N+1),
-  `applyConfigurationForward(N+1, [day X…end])`, and points `animal.devices` at the new latest — **before**
-  the user edits geometry. Drop the live-vs-snapshot diff UI. Preserve the two store actions and the
-  returned-version contract. Update `reconfigWorkflow.integration.test.js` / `ReconfigWizard.test.jsx` to
+  version with `createConfigurationSnapshotAndApplyForward(animalId, config, dayIds)`, where `config.devices`
+  is a clone of the latest snapshot and `dayIds` is the affected chronological range. The action creates the
+  snapshot, returns N+1, and repoints the selected days in one atomic transition — **before** the user edits
+  geometry. Drop the live-vs-snapshot diff UI. Do not reintroduce the removed two-action store API; keep the
+  pure transition helpers and update `reconfigWorkflow.integration.test.js` / `ReconfigWizard.test.jsx` to
   the model (earlier days keep the frozen old config; later days get the new one).
 - **Task 3 — day bad-channel merge (Finding B).** In `resolveDayConfig`, after selecting the ntrode list,
   apply `day.deviceOverrides.bad_channels` onto each ntrode's `bad_channels` per
@@ -101,7 +102,7 @@ snapshots are the source of truth, `animal.devices` mirrors the latest snapshot,
 | `missing pinned configuration fails closed` *(unit)* | a day whose `configurationVersion` has no matching snapshot throws an actionable error; it does not fall back to latest/first and export the wrong geometry. |
 | `DevicesStep edits the day's effective ntrode list` *(integration)* | on a historical day, the bad-channel editor renders the pinned snapshot's ntrodes (from `resolveDayConfig`), not live `animal.devices`. |
 | `DevicesStep shows pinned configuration context` *(integration)* | the devices step displays the day configuration version and whether it is latest/historical; the text updates after reconfiguration. |
-| `reconfiguration yields correct per-day config (fork-before-edit)` *(integration)* | reuse `makeReconfigWorkspace`: forking from day X then editing geometry leaves earlier days on the frozen old config and later days on the new one; the two store actions + returned-version contract intact. |
+| `reconfiguration yields correct per-day config (fork-before-edit)` *(integration)* | reuse `makeReconfigWorkspace`: the atomic action forks from day X and pins the affected range; editing geometry afterward leaves earlier days on the frozen old config and later days on the new one; no two-action store API is required. |
 | `reconfiguration confirmation shows affected days` *(integration)* | before fork, the wizard lists the day range that will move to the new version and the earlier days that remain pinned; confirmation happens before geometry edit. |
 | `phase-2 corrected sample is schema-valid` *(integration)* | a schema-shaped sample exercising configured probes + day bad-channel merge has zero `schemaValidation` errors and passes the in-app DANDI/Spyglass rules. |
 | `golden-yaml.baseline.test.js` (existing) | **byte-identical** — these are legacy fixtures and must not change. |

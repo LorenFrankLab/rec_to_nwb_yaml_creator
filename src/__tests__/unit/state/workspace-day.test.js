@@ -202,9 +202,9 @@ describe('Day State Management', () => {
       const { result } = renderHook(() => useStore());
       createTestAnimal(result);
 
-      // Add a second configuration
+      // Add a second configuration (atomic action, applied to no existing days → just appends v2)
       act(() => {
-        result.current.actions.addConfigurationSnapshot('remy', {
+        result.current.actions.createConfigurationSnapshotAndApplyForward('remy', {
           date: '2023-06-15',
           description: 'Adjusted probes',
           devices: {
@@ -215,7 +215,7 @@ describe('Day State Management', () => {
               { ntrode_id: 0, electrode_group_id: 0, map: { 0: 0, 1: 1, 2: 2, 3: 3 }, bad_channels: [] }
             ],
           },
-        });
+        }, []);
       });
 
       act(() => {

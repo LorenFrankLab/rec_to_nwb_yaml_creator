@@ -6,6 +6,77 @@
 
 ---
 
+## Domain boundaries & ownership cleanup — Phase 8.5 (June 5, 2026)
+
+Behavior-preserving architecture hardening before browser QA: move app-wide domain
+behavior out of page components so the export-correctness contracts are STRUCTURAL, not
+conventional. No export-semantic, route, reducer, schema-type, or legacy-path change. The
+125 golden baselines stay byte-identical throughout; every move is proven equivalent by the
+existing suite plus new characterization tests.
+
+- **App-wide validation + repair routing moved to a domain module (Task 1).** The day
+  validation composition, step-status computation, issue ownership/repair routing, and
+  Animal-Editor deep-link routing moved from the page folder
+  `pages/DayEditor/validation.js` into `src/domain/validation.js` (logic byte-identical —
+  file copied, only import paths + fileoverview changed). The encoder-stability shadow-export
+  check moved to `src/domain/shadowExport.js`. `pages/DayEditor/validation.js` now holds only
+  the page-only field-blur helper `validateField`. All consumers (Day Editor steps, Animal
+  Editor, Validation summary, Export) import from `src/domain`; the two cross-page domain
+  imports (`AnimalEditorStepper`, `ValidationSummary` → `DayEditor/validation`) are gone. The
+  phase-8 opto/fs_gui routing moved intact. The `workspaceSelectors.guard` exemption now
+  names `domain/validation.js` (the raw-shape detector). A new contract test locks the issue
+  list, ownership, repair targets, and step statuses for representative valid/invalid days.
+- **Bad-channel + override converter semantics extracted to pure helpers (Task 2).**
+  `src/domain/badChannels.js` owns the converter meaning (multi-shank probe-wide rule,
+  later-row translation/migration, invalid/out-of-range mark interpretation, probe-local
+  range) shared by `BadChannelsEditor`, `ChannelMapEditor`, and `DevicesStep`.
+  `src/domain/deviceOverrides.js` (`classifyDeviceOverrides`) owns the malformed/stale/
+  shadowing override-cleanup decisions — the editing-surface counterpart of the validator's
+  `dayOverrideIssues`, with a test proving they correspond path-for-path and command-for-
+  command. Components now render + dispatch only.
+- **Risky workspace transitions extracted to pure helpers (Task 3).**
+  `src/state/workspaceTransitions.js` owns `applyAnimalUpdates` (mirrors a devices edit into
+  the latest snapshot only), `addConfigurationSnapshotToAnimal`,
+  `applyConfigurationForwardToAnimal` (pins days, keeps `appliedToDays` a partition, throws
+  on a missing version), `rebuildConfigurationHistoryForAnimal` (clears the raw corruption
+  without re-pinning stale days), `createDayRecord` (latest pin + seeded technical), and
+  `applyDayUpdates` (guards a malformed nested session). `useWorkspace` keeps hydration,
+  autosave, debounce, localStorage, the existence-check throws, and the workspaceRef/version-
+  return orchestration; timestamps are passed in rather than read inside each updater.
+- **Architecture guard tests (Task 4).** `src/__tests__/architectureBoundaries.guard.test.js`
+  fails if a domain/state module imports a page, or a page imports app-wide domain behavior
+  from a sibling page folder (only the presentational `DayEditor/SaveIndicator` is
+  allowlisted; relocation deferred). The pure classifier is unit-tested against synthetic
+  reversed imports and run over the real tree; verified it fails end-to-end on an injected
+  reversed import.
+
+The extraction itself is behavior-preserving. Review rounds then made a few **deliberate,
+tested** correctness/design changes on top (not byte-preserving, but the golden baselines stay
+byte-identical because none touch the export encoder):
+- **Configuration versions are allocated by `max(version) + 1`, never the count.** A
+  non-contiguous imported/repaired history (`[1, 3]`) no longer pins a new day to a
+  non-existent version or appends a duplicate (`createDayRecord`,
+  `addConfigurationSnapshotToAnimal` / `createSnapshotAndApplyForward`).
+- **An atomic reconfiguration action** `createConfigurationSnapshotAndApplyForward` appends the
+  snapshot AND pins the affected days in one transition, replacing the wizard's fragile
+  two-action compose (create-snapshot → thread returned version → apply-forward). The orphaned
+  `addConfigurationSnapshot` and `applyConfigurationForward` store actions (now production-dead —
+  the wizard uses the atomic action; days re-pin via `updateDay`'s `configurationVersion`) were
+  removed as YAGNI. The pure transitions (`addConfigurationSnapshotToAnimal`,
+  `applyConfigurationForwardToAnimal`) remain — `createSnapshotAndApplyForward` composes them.
+- **Repair UX:** missing channel maps deep-link to the Channel Maps step; a day-owned device
+  error badges the Devices step (animal-owned schema errors still don't — the gate-non-redundancy
+  contract holds); Validation and Export dedup repair buttons identically; the device-override
+  cleanup copy no longer overstates that a clean shadowing override blocks export.
+
+Final gate: full vitest (3912 pass), 125 golden baselines byte-identical, 0 lint errors, clean
+build. The refreshed architectural inventory and the deferrals (legacy-facade split,
+schema-aligned types, SaveIndicator relocation) are recorded in
+`.claude/docs/plans/pre-cutover-export-correctness/app-code-organization-review.md`. Branch
+not merged.
+
+---
+
 ## Optogenetics correctness — Phase 8 (June 5, 2026)
 
 Made workspace optogenetics sessions configurable and convertible instead of being **silently
@@ -1047,8 +1118,10 @@ baselines stay byte-identical** (they don't exercise `mergeDayMetadata`).
 - **Reconfiguration is fork-before-edit.** The wizard no longer shows a live-vs-snapshot
   diff; it forks the current configuration into a new version, confirms which days move
   to it (earlier days stay pinned), and applies it forward — the user then edits the new
-  geometry in the Animal Editor. The `addConfigurationSnapshot` / `applyConfigurationForward`
-  store actions and the returned-version contract are unchanged.
+  geometry in the Animal Editor. At this point the `addConfigurationSnapshot` /
+  `applyConfigurationForward` store actions and returned-version contract were unchanged;
+  Phase 8.5 later removed those public actions in favor of the atomic
+  `createConfigurationSnapshotAndApplyForward` entry point.
 
 > **Known limitation (deferred pre-cutover round-trip):** for an electrode group with
 > multiple ntrode rows, current `trodes_to_nwb` reads only the first row's `bad_channels`
@@ -1132,7 +1205,9 @@ atomic. **YAML export is unchanged — golden baselines stay byte-identical.**
   created version number (from the authoritative store state), and the reconfiguration
   wizard applies the snapshot forward to that exact returned version instead of
   re-deriving it from a possibly-stale `animal` prop — removing the cross-action
-  desync / orphan-snapshot risk. No store public-API keys changed.
+  desync / orphan-snapshot risk. No store public-API keys changed at this step; Phase 8.5
+  later removed the orphaned two-action public API after the wizard moved to the atomic
+  action.
 
 ---
 
@@ -1198,7 +1273,8 @@ later days — without disturbing days that did not change.
 - **Reconfiguration wizard** (`ReconfigWizard`, on the shared accessible `<Modal>`): renders
   the structured diff, versions the current configuration via `addConfigurationSnapshot`,
   and applies it forward to the chosen day and later days. A "no change detected" state
-  disables apply. No `alert()` / `window.confirm()`.
+  disables apply. No `alert()` / `window.confirm()`. Later phases replaced this two-action
+  public path with fork-before-edit plus `createConfigurationSnapshotAndApplyForward`.
 - **Devices step:** a read-only "Configuration version N — applied to M days" indicator and
   the wizard entry point.
 - No change to `encodeYaml`, the schema, the export path, or the four golden fixtures;

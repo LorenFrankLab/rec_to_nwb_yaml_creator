@@ -8,7 +8,7 @@ import { makeSummaryWorkspace } from '../../../__tests__/helpers/integration-tes
 import { useStoreContext } from '../../../state/StoreContext';
 // The shadow gate and the download side-effect are mocked so the batch tests can
 // assert call counts/arguments without producing real downloads.
-import { checkShadowExport } from '../../DayEditor/shadowExport';
+import { checkShadowExport } from '../../../domain/shadowExport';
 import { downloadYamlFile } from '../../../io/yaml';
 import { isFeatureEnabled } from '../../../featureFlags';
 
@@ -18,7 +18,7 @@ vi.mock('../../../state/StoreContext', () => ({
   useStoreContext: vi.fn(),
 }));
 
-vi.mock('../../DayEditor/shadowExport', () => ({
+vi.mock('../../../domain/shadowExport', () => ({
   checkShadowExport: vi.fn(),
 }));
 

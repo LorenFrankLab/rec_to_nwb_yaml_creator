@@ -13,7 +13,7 @@
  * suites guarantee the OTHER half of the contract: clean inputs stay byte-identical.
  */
 import { describe, it, expect } from 'vitest';
-import { computeStepStatus, validateDay } from '../validation';
+import { computeStepStatus, validateDay } from '../../../domain/validation';
 import { mergeDayMetadata } from '../../../state/workspaceUtils';
 import { buildRealisticWorkspace } from '../../../__tests__/fixtures/workspaceBuilders';
 

@@ -3,11 +3,11 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ExportStep from '../ExportStep';
 import * as yaml from '../../../io/yaml';
-import * as shadow from '../shadowExport';
+import * as shadow from '../../../domain/shadowExport';
 import { overrideFlags, restoreFlags } from '../../../featureFlags';
 import { buildRealisticWorkspace } from '../../../__tests__/fixtures/workspaceBuilders';
 import { mergeDayMetadata } from '../../../state/workspaceUtils';
-import { computeStepStatus } from '../validation';
+import { computeStepStatus } from '../../../domain/validation';
 import { validate } from '../../../validation';
 
 const UNSTABLE = {
@@ -204,6 +204,22 @@ describe('ExportStep', () => {
 
     await user.click(screen.getByRole('button', { name: /fix in animal editor/i }));
     expect(onNavigate).toHaveBeenCalledWith('animal', undefined);
+  });
+
+  it('routes a devices-INCOMPLETE blocker (groups present, missing maps) to the Channel Maps step', async () => {
+    // Electrode groups exist but a group has no channel map → devices 'incomplete'. The
+    // repair must deep-link to Channel Maps (via the ntrode field hint), not drop the user
+    // on Electrode Groups (step 0), where the missing map cannot be fixed.
+    const user = userEvent.setup();
+    const onNavigate = vi.fn();
+    const { animal, day } = buildRealisticWorkspace();
+    // Keep electrode groups; strip only the channel maps.
+    animal.configurationHistory[0].devices.ntrode_electrode_group_channel_map = [];
+
+    render(<ExportStep animal={animal} day={day} onNavigate={onNavigate} />);
+
+    await user.click(screen.getByRole('button', { name: /fix in animal editor/i }));
+    expect(onNavigate).toHaveBeenCalledWith('animal', 'ntrode_electrode_group_channel_map');
   });
 
   it('tolerates a malformed-animal merge throw (corrupt configurationHistory) without crashing', () => {

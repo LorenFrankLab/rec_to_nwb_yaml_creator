@@ -82,11 +82,13 @@ how the model is built and gated, not in the encoder.
   stable dataset-level identities such as camera/data-acq/task names) **as in-app validation rules**.
   The actual Spyglass/DANDI round-trip is **deferred** (no Python/Spyglass environment available now) — see
   the round-trip note below and in [shared-contracts.md](shared-contracts.md).
-- **Pre-QA domain-boundary hardening, browser-level QA, usability/proper-behavior audit, and professional
-  UX polish.** After phases 1–8, Phase 8.5 moves app-wide validation/repair routing and converter semantics
-  out of page modules so the Playwright pass exercises stable domain contracts. Phase 9 then exercises the
-  corrected workspace flows in a real browser, and Claude-executable audits triangulate UI/workspace/export
-  behavior and apply professional UX polish before the v3 cutover consumes this work.
+- **Pre-QA domain-boundary hardening, workflow clarity, browser-level QA, usability/proper-behavior audit, and
+  professional UX polish.** After phases 1–8, Phase 8.5 moves app-wide validation/repair routing and converter
+  semantics out of page modules so the Playwright pass exercises stable domain contracts. Phase 8.6 then makes
+  the user workflow explicit (animal setup first, day metadata second, hardware changes by day range, export
+  confidence last). Phase 9 exercises the corrected workspace flows in a real browser, and Claude-executable
+  audits triangulate UI/workspace/export behavior and apply professional UX polish before the v3 cutover
+  consumes this work.
 - **Workflow clarity and electrode setup discoverability.** The app must make the intended order of operations
   obvious: create/select animal, configure shared hardware/electrodes, create/import recording days, fill
   day-specific metadata and failed channels, record hardware changes by day range, then export. A user must
@@ -158,7 +160,7 @@ dev tooling for the phase-9 browser QA pass, phase-10 audit, and phase-11 UX pol
   metadata second, day-specific failed channels, configuration changes by day range, and export confidence.
   New animals, existing/imported data, missing electrodes, historical configurations, and reconfiguration
   starts are covered by explicit routes/states and Playwright or QA artifacts
-  ([workflow clarity design](workflow-clarity-design.md)).
+  ([phase 8.6](phase-8-6-workflow-clarity-setup-ux.md), [workflow clarity design](workflow-clarity-design.md)).
 - **Domain-boundary stability:** before browser QA, app-wide validation, repair routing, bad-channel
   semantics, override cleanup, and risky workspace transitions live in pure domain/state helpers rather than
   page-local render code. Architecture guard tests prevent sibling page modules from becoming hidden sources
@@ -177,19 +179,20 @@ dev tooling for the phase-9 browser QA pass, phase-10 audit, and phase-11 UX pol
 | Playwright QA becomes brittle or superficial | Phase 9 uses role/label selectors, deterministic workspace fixtures, event/locator waits, and no conditional "if visible" skips for required workspace flows. Visual snapshots stay limited; traces/screenshots are artifacts for debugging. |
 | Automated usability audit misses human confusion | Phase 10 is Claude-executable and catches UI/state/export mismatches, ambiguous labels, unreachable controls, and likely mistake paths. A separate human lab-user dry run is still recommended, but it is outside this Claude-run implementation plan. |
 | UX polish turns into broad redesign | Phase 11 fixes small consistency/content/layout/accessibility issues and logs larger redesigns as scoped follow-ups; it must not change export semantics or become a design-system rewrite. |
-| Users still cannot find electrode setup or the correct workflow order | The workflow-clarity design is a Phase 11 input and gate: animal setup checklist, `Set Up Electrodes` CTA, Day Devices empty state, existing-data review state, reconfiguration context, validation grouping, and preflight alignment must be audited/fixed or logged as `blocks safe use`. |
+| Users still cannot find electrode setup or the correct workflow order | Phase 8.6 implements the workflow-clarity design before browser QA: animal setup checklist, `Set Up Electrodes` CTA, Day Devices empty state, existing-data review state, reconfiguration context, validation grouping, and preflight alignment must be implemented or logged as `blocks Phase 9`. |
 | Architecture cleanup changes behavior just before QA | Phase 8.5 is behavior-preserving: extract/move domain logic, add architecture guards, and re-run validation/repair/golden/lint/build gates. Any semantic change must be deliberate, documented, and covered before Phase 9 starts. |
+| Workflow clarity changes accidentally alter export semantics | Phase 8.6 may change wording, setup/readiness state, routing, and empty/review states, but not schema/rule/export semantics. It must build on Phase 8.5 domain helpers and re-run validation/export/golden/lint/build gates before Phase 9. |
 
 ## Rollout Strategy
 
 Each phase is an independent PR merged to `modern` behind the existing workspace feature flags (still
 off by default). Nothing changes for legacy-form users. The output-changing phases (2–5, 8) update the
 **new-path** parity fixtures/tests deliberately and with review; they never touch the legacy golden
-baselines. Phase 8.5 is the behavior-preserving architecture hardening gate after phases 1–8 and before
-browser QA. Phase 9 is the browser regression QA gate, Phase 10 is the Claude-executable usability/proper-
-behavior audit that recommends whether to proceed to Phase 11, and Phase 11 is the professional UX polish
-audit that makes this plan's cutover recommendation. The separate v3 cutover Phase 11 consumes this work as
-its correctness precondition.
+baselines. Phase 8.5 is the behavior-preserving architecture hardening gate after phases 1–8, and Phase 8.6 is
+the workflow-clarity/setup-UX gate before browser QA. Phase 9 is the browser regression QA gate, Phase 10 is the
+Claude-executable usability/proper-behavior audit that recommends whether to proceed to Phase 11, and Phase 11
+is the professional UX polish audit that makes this plan's cutover recommendation. The separate v3 cutover Phase
+11 consumes this work as its correctness precondition.
 
 ## Open Questions
 
@@ -344,7 +347,7 @@ From driving the running app:
 
 ## Estimated Effort
 
-~11 PRs. Rough diff sizes: phase 1 small–medium (~200 LOC including repair links/preflight); phase 2 medium
+~12 PRs. Rough diff sizes: phase 1 small–medium (~200 LOC including repair links/preflight); phase 2 medium
 (~275 LOC incl. design + fixtures + configuration-version context);
 phase 3 medium–large (~300 LOC — the `updateAnimal` no-op fix, camera/data-acq identity, behavioral-events
 ownership); phase 4 medium (~250 LOC incl. integer-ID sweep + multi-shank offset + stray-key removal);
@@ -352,10 +355,11 @@ phase 5 medium (~250 LOC — subject/session completeness: weight, species, DOB,
 experiment_description); phase 6 large (~450+ LOC of rules + task/video reference UX + the corrected
 channel-bound + Spyglass/DANDI rules + tests); phase 7 small–medium (~150 LOC, re-scoped); phase 8
 medium–large (~300+ LOC — workspace opto UI + key fixes + all-or-nothing validation); phase 8.5 medium
-(~250+ LOC of behavior-preserving extraction + architecture guards); phase 9 medium (~250+ LOC of Playwright
-fixtures/specs + QA runbook/artifacts); phase 10 small–medium (~150+ LOC/scripts plus QA artifact, depending
-how many findings are fixed inline); phase 11 small–medium (~150+ LOC/screenshots/copy/layout/a11y fixes +
-UX polish report, depending how many findings are fixed inline). Test LOC dominates.
+(~250+ LOC of behavior-preserving extraction + architecture guards); phase 8.6 medium (~250+ LOC of workflow
+status helpers + setup/discoverability UX + tests); phase 9 medium (~250+ LOC of Playwright fixtures/specs +
+QA runbook/artifacts); phase 10 small–medium (~150+ LOC/scripts plus QA artifact, depending how many findings
+are fixed inline); phase 11 small–medium (~150+ LOC/screenshots/copy/layout/a11y fixes + UX polish report,
+depending how many findings are fixed inline). Test LOC dominates.
 Each output-changing phase is gated on the in-app schema + DANDI/Spyglass **rules**; the actual
 trodes_to_nwb → NWB Inspector (dandi) → dandi-validate → Spyglass round-trip is deferred to a single
 pre-cutover task (no Python/Spyglass environment now).
@@ -366,7 +370,8 @@ side-by-side comparison modals (phase 3), pinned-config badges + reconfiguration
 controlled region/canonical inputs (phases 4–5), task/video camera + epoch selectors and task-name identity
 checks (phase 6), and the opto enabled-state surface (phase 8) — which can push several phases meaningfully
 above the LOC noted. Phase 8.5 should keep those semantics intact while moving them behind stable domain
-helpers. Phase 9 then verifies those UX paths in browser, including viewport/reachability issues that jsdom
-will miss. Phase 10 adds a scripted Claude-run usability/proper-behavior audit over the integrated experience.
-Phase 11 adds a professional UX polish pass over consistency, accessibility, content, responsive layout, and
-perceived performance. Treat the UX work as first-class scope, not trim.
+helpers. Phase 8.6 then makes the workflow/setup path visible enough for browser QA to test it. Phase 9 verifies
+those UX paths in browser, including viewport/reachability issues that jsdom will miss. Phase 10 adds a scripted
+Claude-run usability/proper-behavior audit over the integrated experience. Phase 11 adds a professional UX
+polish pass over consistency, accessibility, content, responsive layout, and perceived performance. Treat the UX
+work as first-class scope, not trim.

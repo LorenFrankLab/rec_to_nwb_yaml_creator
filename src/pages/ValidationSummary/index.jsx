@@ -20,9 +20,9 @@ import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { getAnimalDayIds, getAnimalSubject } from '../../state/workspaceSelectors';
-import { computeStepStatus } from '../DayEditor/validation';
+import { computeStepStatus } from '../../domain/validation';
 import { formatDeterministicFilename, downloadYamlFile } from '../../io/yaml';
-import { checkShadowExport } from '../DayEditor/shadowExport';
+import { checkShadowExport } from '../../domain/shadowExport';
 import { isFeatureEnabled } from '../../featureFlags';
 import './ValidationSummary.css';
 

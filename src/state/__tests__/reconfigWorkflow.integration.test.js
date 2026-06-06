@@ -1,7 +1,7 @@
 /**
- * Integration tests for the probe-reconfiguration workflow at the store level:
- * creating a snapshot then applying it forward, and proving that days whose
- * resolved configuration is unchanged still export byte-identical YAML.
+ * Integration tests for the probe-reconfiguration workflow at the store level: the atomic
+ * `createConfigurationSnapshotAndApplyForward` (fork + pin in one transition), and proving
+ * that days whose resolved configuration is unchanged still export byte-identical YAML.
  */
 import { describe, it, expect } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
@@ -11,49 +11,65 @@ import { encodeYaml } from '../../io/yaml';
 import { makeReconfigWorkspace } from './fixtures/reconfigWorkspace';
 
 describe('probe reconfiguration workflow [integration]', () => {
-  it('creates a new snapshot and applies it forward from a chosen day', () => {
-    // Start from a single-version baseline: all four days on v1, the live animal
-    // config already advanced to the v2 probe layout (edited in the Animal Editor).
+  it('createConfigurationSnapshotAndApplyForward forks AND pins in one atomic call', () => {
+    // The wizard's path: one action appends the new version and moves the day range onto it,
+    // with no version handed across two actions. Non-contiguous [1,3] history → unique v4.
     const { workspace, animalId, dayIds, v1, v2 } = makeReconfigWorkspace();
     const animal = workspace.animals[animalId];
     animal.configurationHistory = [
-      { version: 1, date: '2023-06-22', description: 'Initial configuration', devices: v1, appliedToDays: [dayIds.day1, dayIds.day2, dayIds.day3, dayIds.day4] },
+      { version: 1, date: '2023-06-22', description: 'Initial', devices: v1, appliedToDays: [dayIds.day1, dayIds.day2, dayIds.day3, dayIds.day4] },
+      { version: 3, date: '2023-06-23', description: 'Imported v3', devices: v2, appliedToDays: [] },
     ];
-    Object.values(workspace.days).forEach((d) => {
-      d.configurationVersion = 1;
-    });
-    animal.devices = { ...animal.devices, ...v2 };
+    Object.values(workspace.days).forEach((d) => { d.configurationVersion = 1; });
 
     const { result } = renderHook(() => useStore({ workspace }));
 
+    let returned;
     act(() => {
-      result.current.actions.addConfigurationSnapshot(animalId, {
-        date: '2023-06-24',
-        description: 'Added CA3 tetrode; remapped shank 2',
-        devices: structuredClone(v2),
-      });
+      returned = result.current.actions.createConfigurationSnapshotAndApplyForward(
+        animalId,
+        { date: '2023-06-24', description: 'Reconfig', devices: structuredClone(v2) },
+        [dayIds.day3, dayIds.day4]
+      );
     });
 
-    // The new snapshot is version 2.
-    const history = () => result.current.model.workspace.animals[animalId].configurationHistory;
-    expect(history()).toHaveLength(2);
-    expect(history()[1].version).toBe(2);
-
-    act(() => {
-      result.current.actions.applyConfigurationForward(animalId, 2, [dayIds.day3, dayIds.day4]);
-    });
-
+    const animalNow = result.current.model.workspace.animals[animalId];
     const days = result.current.model.workspace.days;
-    // Days 1–2 stay v1; days 3–4 adopt v2.
-    expect(days[dayIds.day1].configurationVersion).toBe(1);
-    expect(days[dayIds.day2].configurationVersion).toBe(1);
-    expect(days[dayIds.day3].configurationVersion).toBe(2);
-    expect(days[dayIds.day4].configurationVersion).toBe(2);
+    expect(returned).toBe(4);
+    expect(animalNow.configurationHistory.map((s) => s.version)).toEqual([1, 3, 4]);
+    expect(days[dayIds.day3].configurationVersion).toBe(4);
+    expect(days[dayIds.day4].configurationVersion).toBe(4);
+    // Clean partition: day3/day4 left v1's list for v4.
+    expect(animalNow.configurationHistory[0].appliedToDays.sort()).toEqual([dayIds.day1, dayIds.day2].sort());
+    expect(animalNow.configurationHistory[2].appliedToDays.sort()).toEqual([dayIds.day3, dayIds.day4].sort());
+  });
 
-    // appliedToDays is a partition.
-    const [snap1, snap2] = history();
-    expect(snap1.appliedToDays.sort()).toEqual([dayIds.day1, dayIds.day2].sort());
-    expect(snap2.appliedToDays.sort()).toEqual([dayIds.day3, dayIds.day4].sort());
+  it('createConfigurationSnapshotAndApplyForward reserves DISTINCT versions for two calls in one event', () => {
+    // Two atomic calls before React commits must not both append the same version (which the
+    // first-match resolver would then mis-pin to). Start [1]; A moves day3 → v2, B moves
+    // day4 → v3; history [1,2,3] with each day pinned to the snapshot it actually created.
+    const { workspace, animalId, dayIds, v1, v2 } = makeReconfigWorkspace();
+    const animal = workspace.animals[animalId];
+    animal.configurationHistory = [
+      { version: 1, date: '2023-06-22', description: 'Initial', devices: v1, appliedToDays: [dayIds.day1, dayIds.day2, dayIds.day3, dayIds.day4] },
+    ];
+    Object.values(workspace.days).forEach((d) => { d.configurationVersion = 1; });
+
+    const { result } = renderHook(() => useStore({ workspace }));
+
+    let first;
+    let second;
+    act(() => {
+      first = result.current.actions.createConfigurationSnapshotAndApplyForward(animalId, { date: '2023-06-24', description: 'A', devices: structuredClone(v2) }, [dayIds.day3]);
+      second = result.current.actions.createConfigurationSnapshotAndApplyForward(animalId, { date: '2023-06-25', description: 'B', devices: structuredClone(v2) }, [dayIds.day4]);
+    });
+
+    const animalNow = result.current.model.workspace.animals[animalId];
+    const days = result.current.model.workspace.days;
+    expect([first, second]).toEqual([2, 3]);
+    expect(animalNow.configurationHistory.map((s) => s.version)).toEqual([1, 2, 3]);
+    expect(days[dayIds.day3].configurationVersion).toBe(2);
+    expect(days[dayIds.day4].configurationVersion).toBe(3);
   });
 
   it('keeps export byte-identical for days whose resolved snapshot is unchanged', () => {
@@ -71,11 +87,13 @@ describe('probe reconfiguration workflow [integration]', () => {
       day4: exportFor(dayIds.day4), // v2
     };
 
-    // Move day3 from v2 to v1. This must not reflow any OTHER day's output.
+    // Re-pin day3 from v2 to the existing v1 (via updateDay's configurationVersion — the
+    // surviving re-pin path). This must not reflow any OTHER day's output.
     act(() => {
-      result.current.actions.applyConfigurationForward(animalId, 1, [dayIds.day3]);
+      result.current.actions.updateDay(dayIds.day3, { configurationVersion: 1 });
     });
 
+    expect(result.current.model.workspace.days[dayIds.day3].configurationVersion).toBe(1);
     expect(exportFor(dayIds.day1)).toBe(before.day1);
     expect(exportFor(dayIds.day2)).toBe(before.day2);
     expect(exportFor(dayIds.day4)).toBe(before.day4);
