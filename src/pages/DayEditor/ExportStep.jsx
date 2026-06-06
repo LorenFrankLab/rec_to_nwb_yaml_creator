@@ -75,7 +75,10 @@ export default function ExportStep({ animal, day, onNavigate, onRepair, animalKe
       // mergeDayMetadata throws BY DESIGN on a malformed animal (e.g. missing/non-array
       // configurationHistory). Tolerate it: render with an empty stub so the raw-shape
       // animal validation surfaces the blocking, repairable issue instead of crashing the
-      // whole Export step. Export stays closed (an empty merged fails validation).
+      // whole Export step. Export stays closed (an empty merged fails validation). Log WHY so a
+      // "won't export" report carries the underlying reason instead of only the UI banner text.
+      // eslint-disable-next-line no-console
+      console.error(`[export-step] could not merge day "${day?.id}" with its animal config:`, err);
       return { merged: {}, yaml: '', fileName: '', mergeError: err };
     }
   }, [animal, day]);

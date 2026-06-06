@@ -396,13 +396,25 @@ export function ValidationSummary() {
         return;
       }
       let stillValid = false;
+      let revalidationError = null;
       try {
         stillValid = deriveChip(computeStepStatus(day, mergeDayMetadata(animal, day), animal)) === 'valid';
-      } catch {
+      } catch (err) {
+        // A throw here is NOT "no longer valid" — the day became UNREADABLE (corrupt config). Label
+        // it honestly and log the reason, mirroring the download `failed` branch, rather than
+        // silently mislabeling a crash as a validity change.
         stillValid = false;
+        revalidationError = err;
+        // eslint-disable-next-line no-console
+        console.error(`[validation-summary] could not re-validate day "${day.id}" at export confirm:`, err);
       }
       if (!stillValid) {
-        stale.push({ ...identity, detail: 'No longer valid since the preflight.' });
+        stale.push({
+          ...identity,
+          detail: revalidationError
+            ? `Could not be re-validated since the preflight: ${revalidationError.message}`
+            : 'No longer valid since the preflight.',
+        });
         return;
       }
 

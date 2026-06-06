@@ -856,6 +856,24 @@ describe('unpinned configuration is export-blocking (multi-version animal)', () 
     expect(repairTargetForIssue(issue)).toMatchObject({ surface: 'day', step: 'devices' });
   });
 
+  it('reads "the latest configuration" (not "v undefined") when the latest history entry has no version', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    // A corrupt/legacy second snapshot whose `version` is missing.
+    animal.configurationHistory.push({
+      date: '2023-07-01',
+      description: 'Lowered tetrodes',
+      devices: animal.configurationHistory[0].devices,
+      appliedToDays: [],
+    });
+    delete day.configurationVersion;
+    const merged = mergeDayMetadata(animal, day);
+
+    const issue = validateDay(day, merged, animal).find((i) => i.code === 'unpinned_configuration');
+    expect(issue).toBeDefined();
+    expect(issue.message).toContain('the latest configuration');
+    expect(issue.message).not.toContain('undefined');
+  });
+
   it('does not flag a pinned day, nor an unpinned day in a single-version animal', () => {
     const { animal, day } = buildRealisticWorkspace();
     // Pinned (the fixture pins v1): no issue.

@@ -167,12 +167,18 @@ export function applyRepairCommand(command, ctx) {
       // resolved store key `ctx.animalId` (the authoritative owner the caller resolved) BEFORE the
       // convenience `ctx.animal.id` record field, which can be stale for a recovered record. Only
       // string ids are eligible — a corrupt non-string owner is skipped, never coerced to
-      // `[object Object]`. The date is parsed off `dayId` (`<animalId>-<YYYY-MM-DD>`) when absent.
+      // `[object Object]`.
       const sessionAnimalId =
         [ctx.day?.animalId, animalId, ctx.animal?.id].find(
           (candidate) => typeof candidate === 'string' && candidate.length > 0
         ) ?? '';
-      const sessionDate = ctx.day?.date ?? String(dayId ?? '').slice(String(sessionAnimalId).length + 1);
+      // The date is the day's own `date` when present; otherwise parse the trailing `YYYY-MM-DD`
+      // off the `dayId` BY REGEX, not by slicing at the resolved prefix's LENGTH — the dayId's
+      // embedded prefix is the day's ORIGINAL owner id, which can differ in length from the
+      // resolved `sessionAnimalId` (recovered/wrong-owner record), and a length-based slice would
+      // then yield a wrong date.
+      const dayIdDate = String(dayId ?? '').match(/(\d{4}-\d{2}-\d{2})$/)?.[1] ?? '';
+      const sessionDate = ctx.day?.date ?? dayIdDate;
       const sessionId = `${sessionAnimalId}_${String(sessionDate).replace(/-/g, '')}`;
       actions.updateDay(dayId, { session: { session_id: sessionId } });
       return;

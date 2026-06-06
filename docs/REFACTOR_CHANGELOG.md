@@ -11,9 +11,11 @@
 Pre-QA workflow/information-architecture clarity so the corrected workspace path is
 understandable before browser QA: animal setup first, recording-day metadata second,
 day-specific failed channels, hardware changes by day range, export confidence last. This
-phase changes discoverability, wording, routing, and setup-state presentation only — NOT
-export bytes, schema, validation rules, or converter behavior. The 125 golden baselines stay
-byte-identical; the full suite, lint (0 errors), and build stay green.
+phase changes discoverability, wording, routing, and setup-state presentation, plus ONE new
+export-blocking validation rule (`unpinned_configuration` — see the third-review follow-up
+below) that converts a previously-silent wrong-geometry export into a visible, repairable block.
+It does NOT change export bytes for an already-valid day, the JSON schema, or converter behavior.
+The 125 golden baselines stay byte-identical; the full suite, lint (0 errors), and build stay green.
 
 - **Route/state workflow inventory (Task 0).** `.claude/docs/plans/pre-cutover-export-correctness/workflow-route-state-inventory.md`
   maps every workflow state (new animal, animal with no electrodes, animal with existing days,
@@ -270,7 +272,9 @@ paths to the same domain policy:
   index lists the day) and uses it for `getAnimalDays` and subject repair; `ReconfigWizard` targets
   `day.animalId ?? animal.id`; and the ownership guard in `applyConfigurationForwardToAnimal` now
   takes an explicit `ownerKey` (threaded from the store action) instead of comparing against the
-  possibly-stale `updatedAnimal.id`.
+  possibly-stale `updatedAnimal.id`. **Superseded by the eleventh-review follow-up below:**
+  `ReconfigWizard` now receives an explicit `animalKey` prop and targets the resolved
+  `animalKey ?? day.animalId ?? animal.id` for both the snapshot write and the post-fork navigation.
 - **A recovered day with a missing/stale `animalId` opens** in the Day Editor via the
   indexing-animal fallback, instead of dead-ending on "Animal not found" — so it no longer looks
   usable in the Workspace but unopenable. **Refined by the eleventh-review follow-up below:** only a
@@ -385,6 +389,49 @@ paths to the same domain policy:
   (setup-checklist count → recovery-aware `recordingDayCount`; recovered-day fallback → only the
   no-owner case; `String(...)`-coerced owner → `describeOwner`) now carry an explicit
   "superseded/refined by …" pointer so the audit trail doesn't contradict current behavior.
+
+**Comprehensive multi-agent PR review follow-ups (addressed in-phase, nothing deferred):**
+
+A five-agent review (code / tests / silent-failures / type-design / comments) of the whole branch vs
+`modern` found no Critical data-integrity bug; every Important + Suggestion it raised was fixed here.
+
+- **Changelog accuracy (Critical).** The phase intro claimed it changes "NOT … validation rules"; it
+  adds the `unpinned_configuration` export-blocking rule. The intro now states this explicitly. The
+  tenth-review `ReconfigWizard` note is annotated as superseded by the `animalKey` threading. The
+  `getDayWorkflowStatus` JSDoc no longer says an unpinned config "can export the wrong geometry"
+  (it's now export-BLOCKED; the flag drives copy, not the gate).
+- **`validateDay` JSDoc reattached.** `unpinnedConfigurationIssues` was inserted between `validateDay`'s
+  authoritative docblock and its declaration, leaving it with a stub (4 JSDoc lint warnings). The
+  helper moved above the docblock; lint warnings drop 257 → 253.
+- **Domain enums frozen.** `DAY_STATUS`, `SETUP_STATE`, `WORKFLOW_CATEGORY`/`_ORDER`/`_LABELS`/
+  `CATEGORY_BY_CODE`, and the new `STEP_STATUS` are now `Object.freeze`d, matching the state layer's
+  convention for closed sets (the export policy keys off `DAY_STATUS.OK`).
+- **Second recovery policy named.** `isPresentRecordStatus` (`ok || recovered_unlinked`) replaces the
+  inline predicate repeated across the Animal Workspace, so the "records present" count can't drift
+  from the per-status set (distinct from `isExportableDayStatus`).
+- **Stringly-typed step status named.** A frozen `STEP_STATUS` (`valid/incomplete/error/pending`) in
+  `validation.js` is consumed by `stepGate` and the `getDayWorkflowStatus` fallback (was a magic
+  `'error'` literal), so the gate and workflow helper can't drift from validation's vocabulary.
+- **Swallowed merge errors are now logged.** The fail-closed merge `catch` blocks in
+  `DayEditorStepper`, `ExportStep`, and `AnimalWorkspace` (setup-issue aggregation) now log WHY the
+  merge failed (the day is still surfaced + repairable) so a "won't export" report is diagnosable.
+- **Batch-export confirm honesty.** A day that THROWS during re-validation at confirm time is now
+  reported as "could not be re-validated" (and logged), not mislabeled "no longer valid".
+- **Owner-key robustness.** The indexing-animal fallback matches by the store MAP KEY (`dayId`), not
+  the record's `id` field; `resetDaySession` parses the date off `dayId` by regex (not by the
+  resolved prefix's length, which could desync for a recovered record); a live repair that resolves
+  to a null owner key logs instead of silently no-opping.
+- **Shared classifier typedef.** `classifyAnimalDays`/`classifyWorkspaceDays` document one
+  `DayClassificationRow` shape, with the `animalKey: null` ⇔ `orphan_no_owner` invariant stated at
+  the type.
+- **`unpinned_configuration` message** reads "the latest configuration" instead of "v undefined" when
+  a corrupt history entry has no version.
+- **New tests** for the previously-untested batch-export stale/became-wrong-owner/became-unreadable
+  confirm path, the duplicate-index + non-string-owner classifier cases, the state-layer wrong-owner
+  guards under a non-string owner (`getAnimalDays`, `deleteAnimal`, `applyConfigurationForwardToAnimal`),
+  `applyDayUpdates` state normalization, `isPresentRecordStatus`, the frozen `DAY_STATUS`, and the
+  unpinned-message label. Full suite 4007 → 4021; lint 0 errors / 253 warnings; 125 baselines
+  byte-identical; build clean.
 
 ---
 

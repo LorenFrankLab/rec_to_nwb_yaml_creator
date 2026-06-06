@@ -42,14 +42,34 @@ function isRecord(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-/** The explicit day recovery statuses. @type {Record<string,string>} */
-export const DAY_STATUS = {
+/**
+ * The explicit day recovery statuses. Frozen so this closed set (which the export policy keys off —
+ * `isExportableDayStatus` is `status === DAY_STATUS.OK`) cannot be mutated at runtime, matching the
+ * `Object.freeze` convention the state layer uses for its closed command vocabularies.
+ *
+ * @type {Readonly<Record<string,string>>}
+ */
+export const DAY_STATUS = Object.freeze({
   OK: 'ok',
   DANGLING_REFERENCE: 'dangling_reference',
   RECOVERED_UNLINKED: 'recovered_unlinked',
   ORPHAN_NO_OWNER: 'orphan_no_owner',
   WRONG_OWNER: 'wrong_owner',
-};
+});
+
+/**
+ * A classified day, as returned by {@link classifyWorkspaceDays} (and, minus `animalKey`/
+ * `ownerPresent`, by {@link classifyAnimalDays}). One documented shape so the two classifiers and
+ * any shared row renderer agree.
+ *
+ * @typedef {object} DayClassificationRow
+ * @property {string} dayId - The day's id (store map key).
+ * @property {(object|null)} record - The resolved day record, or `null` for a dangling reference.
+ * @property {string} status - A {@link DAY_STATUS} value.
+ * @property {(string|null)} [animalKey] - The owning animal's STORE KEY. `null` ONLY for an
+ *   `orphan_no_owner` row whose declared owner is missing/non-string. (Workspace-wide rows only.)
+ * @property {boolean} [ownerPresent] - Whether the owning animal exists. (Workspace-wide rows only.)
+ */
 
 /**
  * The status of an INDEX reference that resolves to a real record: `ok` when the record belongs
@@ -80,6 +100,21 @@ export function isExportableDayStatus(status) {
 }
 
 /**
+ * Whether a day with this status counts as an EXISTING record for the animal — i.e. there is a real
+ * record present (whether or not it is currently in the index). This is a DISTINCT policy from
+ * {@link isExportableDayStatus}: a `recovered_unlinked` record exists (so it's counted/shown and not
+ * a free calendar date) but is NOT exportable until re-linked. Centralised here so the
+ * "records present" count (Workspace day count, calendar date guard, setup-checklist
+ * `recordingDayCount`) can't drift from this definition or from the per-status set.
+ *
+ * @param {string} status - A {@link DAY_STATUS} value.
+ * @returns {boolean}
+ */
+export function isPresentRecordStatus(status) {
+  return status === DAY_STATUS.OK || status === DAY_STATUS.RECOVERED_UNLINKED;
+}
+
+/**
  * A human-readable description of a record's DECLARED owner, for a wrong-owner / orphan repair
  * note. A real string id is returned verbatim; a corrupt non-string id (which would otherwise
  * render as "[object Object]" / "undefined") becomes an explicit phrase so the explanation stays
@@ -102,7 +137,8 @@ export function describeOwner(animalId) {
  * @param {string} animalId - The animal's store key (the reliable owner handle).
  * @param {object} animal - The animal record (for its `days` index).
  * @param {object} daysMap - The workspace `days` map.
- * @returns {Array<{ dayId: string, record: (object|null), status: string }>}
+ * @returns {Array<DayClassificationRow>} Per-animal rows carry `{ dayId, record, status }` (the
+ *   `animalKey`/`ownerPresent` of the workspace-wide shape are implicit: the owner is `animalId`).
  */
 export function classifyAnimalDays(animalId, animal, daysMap) {
   const days = isRecord(daysMap) ? daysMap : {};
@@ -133,7 +169,8 @@ export function classifyAnimalDays(animalId, animal, daysMap) {
  * so a corrupt id/date can't throw. The order matches what the Validation summary renders.
  *
  * @param {object} workspace - `{ animals, days }`.
- * @returns {Array<{ animalKey: string, dayId: string, record: (object|null), status: string, ownerPresent: boolean }>}
+ * @returns {Array<DayClassificationRow>} Workspace-wide rows carry the full shape, including
+ *   `animalKey` (the owner store key — `null` ONLY for an `orphan_no_owner` row) and `ownerPresent`.
  */
 export function classifyWorkspaceDays(workspace) {
   const orderKey = (value) => (typeof value === 'string' ? value : String(value ?? ''));

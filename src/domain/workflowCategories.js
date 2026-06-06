@@ -22,39 +22,39 @@ import { repairTargetForIssue } from './validation';
  * for any issue code — no issue maps to it; the Export surface uses it for the preflight
  * section header. The other four are where blocking issues are grouped.
  *
- * @type {Record<string, 'animal_setup'|'day_metadata'|'failed_channels'|'existing_data'|'export_preflight'>}
+ * @type {Readonly<Record<string, 'animal_setup'|'day_metadata'|'failed_channels'|'existing_data'|'export_preflight'>>}
  */
-export const WORKFLOW_CATEGORY = {
+export const WORKFLOW_CATEGORY = Object.freeze({
   ANIMAL_SETUP: 'animal_setup',
   DAY_METADATA: 'day_metadata',
   FAILED_CHANNELS: 'failed_channels',
   EXISTING_DATA: 'existing_data',
   EXPORT_PREFLIGHT: 'export_preflight',
-};
+});
 
 /**
  * Display order for the categories — the workflow order (setup first, export last).
- * @type {string[]}
+ * @type {ReadonlyArray<string>}
  */
-export const WORKFLOW_CATEGORY_ORDER = [
+export const WORKFLOW_CATEGORY_ORDER = Object.freeze([
   WORKFLOW_CATEGORY.ANIMAL_SETUP,
   WORKFLOW_CATEGORY.DAY_METADATA,
   WORKFLOW_CATEGORY.FAILED_CHANNELS,
   WORKFLOW_CATEGORY.EXISTING_DATA,
   WORKFLOW_CATEGORY.EXPORT_PREFLIGHT,
-];
+]);
 
 /**
  * User-facing label for each category, worded to match the setup checklist.
- * @type {Record<string, string>}
+ * @type {Readonly<Record<string, string>>}
  */
-export const WORKFLOW_CATEGORY_LABELS = {
+export const WORKFLOW_CATEGORY_LABELS = Object.freeze({
   animal_setup: 'Animal setup',
   day_metadata: 'Day metadata',
   failed_channels: 'Day-specific failed channels',
   existing_data: 'Existing data repair',
   export_preflight: 'Export / preflight',
-};
+});
 
 /**
  * Authoritative category for each app-rule code (mirrors `SURFACE_BY_CODE`'s coverage). The
@@ -64,9 +64,9 @@ export const WORKFLOW_CATEGORY_LABELS = {
  *  - day-specific failed-channel marks → failed channels;
  *  - corrupt/recovered/stale shapes that need cleanup before trust → existing-data repair.
  *
- * @type {Record<string, string>}
+ * @type {Readonly<Record<string, string>>}
  */
-export const CATEGORY_BY_CODE = {
+export const CATEGORY_BY_CODE = Object.freeze({
   // Shared animal hardware setup (device geometry, channel maps, probe catalog, cameras,
   // data-acq devices) and animal-level optogenetics.
   channel_value_out_of_range: WORKFLOW_CATEGORY.ANIMAL_SETUP,
@@ -121,7 +121,7 @@ export const CATEGORY_BY_CODE = {
   // A recovered/imported day with no pinned configuration version — repaired by pinning a
   // version in the Day Devices step.
   unpinned_configuration: WORKFLOW_CATEGORY.EXISTING_DATA,
-};
+});
 
 /**
  * The workflow category for a validation issue. Prefers the pinned app-rule code; otherwise

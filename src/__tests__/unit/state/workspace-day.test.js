@@ -767,5 +767,28 @@ describe('Day State Management', () => {
       // Only remy's own day is returned — the wrong-owner record must NOT be reconfigurable here.
       expect(days.map((d) => d.id)).toEqual(['remy-2023-06-22']);
     });
+
+    it('excludes a record whose animalId is a non-string (object) — treated as wrong-owner, not ours', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+      });
+      // A corrupt import: the indexed record's animalId is an object (≠ the string store key 'remy').
+      act(() => {
+        result.current.model.workspace.days['intruder'] = {
+          id: 'intruder',
+          animalId: { not: 'a string' },
+          date: '2023-06-23',
+          session: { session_id: 'x' },
+        };
+        result.current.model.workspace.animals['remy'].days = ['remy-2023-06-22', 'intruder'];
+      });
+      const days = result.current.selectors.getAnimalDays('remy');
+      expect(days.map((d) => d.id)).toEqual(['remy-2023-06-22']);
+    });
   });
 });

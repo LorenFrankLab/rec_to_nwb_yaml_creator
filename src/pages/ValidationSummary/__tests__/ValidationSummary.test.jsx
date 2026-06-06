@@ -272,6 +272,67 @@ describe('ValidationSummary', () => {
     expect(alert).not.toHaveTextContent(ids.validDayId);
   });
 
+  it('Export Valid Only: drops a day that became WRONG-OWNER after the preflight (no stale export of the wrong subject)', async () => {
+    const user = userEvent.setup();
+    const { workspace, ids } = makeSummaryWorkspace();
+    delete workspace.animals.totoro;
+    delete workspace.days[ids.incompleteDayId];
+    delete workspace.days[ids.errorDayId];
+    workspace.animals.remy.days = [ids.validDayId];
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+    // Open the preflight while the day is a valid ok recording day...
+    await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    // ...then the record drifts to a different owner before the user confirms (import/corruption).
+    // runExport re-derives recovery status from the LIVE workspace, so this must NOT export as remy.
+    workspace.days[ids.validDayId].animalId = 'someone-else';
+    await user.click(screen.getByRole('button', { name: /confirm export/i }));
+
+    expect(downloadYamlFile).not.toHaveBeenCalled();
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent(/since the preflight/i);
+    expect(alert).toHaveTextContent(ids.validDayId);
+  });
+
+  it('Export Valid Only: drops a day whose record was DELETED after the preflight', async () => {
+    const user = userEvent.setup();
+    const { workspace, ids } = makeSummaryWorkspace();
+    delete workspace.animals.totoro;
+    delete workspace.days[ids.incompleteDayId];
+    delete workspace.days[ids.errorDayId];
+    workspace.animals.remy.days = [ids.validDayId];
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+    await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    delete workspace.days[ids.validDayId]; // gone between preflight and confirm
+    await user.click(screen.getByRole('button', { name: /confirm export/i }));
+
+    expect(downloadYamlFile).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent(/no longer present since the preflight/i);
+  });
+
+  it('Export Valid Only: a day that becomes UNREADABLE after the preflight is reported as "could not be re-validated", not "no longer valid"', async () => {
+    const user = userEvent.setup();
+    const { workspace, ids } = makeSummaryWorkspace();
+    delete workspace.animals.totoro;
+    delete workspace.days[ids.incompleteDayId];
+    delete workspace.days[ids.errorDayId];
+    workspace.animals.remy.days = [ids.validDayId];
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+    await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    // Corrupt the animal's configuration so the re-validation MERGE throws (≠ "no longer valid").
+    workspace.animals.remy.configurationHistory = 'corrupt';
+    await user.click(screen.getByRole('button', { name: /confirm export/i }));
+
+    expect(downloadYamlFile).not.toHaveBeenCalled();
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent(/could not be re-validated since the preflight/i);
+  });
+
   it('Export Valid Only: no valid days short-circuits with a helpful message and no downloads', async () => {
     const user = userEvent.setup();
     // Keep only the error + incomplete days (drop the valid one).

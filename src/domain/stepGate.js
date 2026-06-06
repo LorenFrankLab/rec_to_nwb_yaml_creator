@@ -10,6 +10,8 @@
  * import.
  */
 
+import { STEP_STATUS } from './validation';
+
 /**
  * Steps that must be valid before Export is reachable, in addition to the authoritative
  * `export` status. The data-entry steps gate on completeness; the `export` status gates on
@@ -32,8 +34,8 @@ const EXPORT_PREREQUISITE_STEPS = ['overview', 'devices', 'epochs', 'validation'
  */
 export function isExportEnabled(stepStatus) {
   return (
-    stepStatus?.export === 'valid' &&
-    EXPORT_PREREQUISITE_STEPS.every((stepId) => stepStatus?.[stepId] === 'valid')
+    stepStatus?.export === STEP_STATUS.VALID &&
+    EXPORT_PREREQUISITE_STEPS.every((stepId) => stepStatus?.[stepId] === STEP_STATUS.VALID)
   );
 }
 
@@ -49,7 +51,7 @@ export function isExportEnabled(stepStatus) {
 export function exportBlockReason(stepStatus) {
   if (isExportEnabled(stepStatus)) return null;
   const prerequisitesComplete = EXPORT_PREREQUISITE_STEPS.every(
-    (stepId) => stepStatus?.[stepId] === 'valid'
+    (stepId) => stepStatus?.[stepId] === STEP_STATUS.VALID
   );
   return prerequisitesComplete ? 'validation-errors' : 'incomplete-steps';
 }

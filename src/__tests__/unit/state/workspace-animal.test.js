@@ -409,6 +409,30 @@ describe('Animal State Management', () => {
       expect(result.current.model.workspace.days['totoro-2023-06-01']).toBeDefined();
       expect(result.current.model.workspace.days['totoro-2023-06-01'].animalId).toBe('totoro');
     });
+
+    it('never deletes a record whose animalId is a non-string (object) listed in its index', () => {
+      const { result } = renderHook(() => useStore());
+      act(() => {
+        result.current.actions.createAnimal('remy', {
+          species: 'Rattus norvegicus', sex: 'M', genotype: 'WT', date_of_birth: '2023-01-10T00:00:00Z',
+        });
+      });
+      // remy's index lists a record whose animalId is a corrupt object (≠ the store key 'remy'):
+      // it is NOT remy's, so deleting remy must leave the record intact (only the owner is dropped).
+      act(() => {
+        result.current.model.workspace.days['intruder'] = {
+          id: 'intruder', animalId: { not: 'a string' }, date: '2023-06-01', session: { session_id: 'x' },
+        };
+        result.current.model.workspace.animals['remy'].days = ['intruder'];
+      });
+
+      act(() => {
+        result.current.actions.deleteAnimal('remy');
+      });
+
+      expect(result.current.model.workspace.animals['remy']).toBeUndefined();
+      expect(result.current.model.workspace.days['intruder']).toBeDefined();
+    });
   });
 
   describe('rebuildConfigurationHistory', () => {

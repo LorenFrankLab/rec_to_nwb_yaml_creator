@@ -22,7 +22,7 @@ import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import { getAnimalDayIds, getConfigHistory, getDaySession } from '../../state/workspaceSelectors';
 import { getAnimalSetupChecklist, SETUP_STATE } from '../../domain/workflowStatus';
-import { classifyAnimalDays, DAY_STATUS, describeOwner } from '../../domain/dayRecovery';
+import { classifyAnimalDays, DAY_STATUS, describeOwner, isPresentRecordStatus } from '../../domain/dayRecovery';
 import { validateDay } from '../../domain/validation';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { validateRawAnimal } from '../../validation/rawShape';
@@ -74,8 +74,12 @@ function collectAnimalSetupIssues(animal, days) {
       for (const issue of validateDay(dayRecord, merged, animal)) {
         if (issue.severity === 'error') issues.push(issue);
       }
-    } catch {
-      // Corrupt/missing configuration — surfaced by the review banner; skip aggregation.
+    } catch (err) {
+      // Corrupt/missing configuration — the blocking issue is already surfaced by the review
+      // banner / raw issues, so this aggregation skips the day. Log (debug) so the swallowed
+      // reason is still discoverable rather than vanishing entirely.
+      // eslint-disable-next-line no-console
+      console.debug(`[animal-workspace] skipped setup-issue aggregation for day "${dayId}":`, err);
     }
   }
   return issues;
@@ -216,7 +220,7 @@ export function AnimalWorkspace() {
     // date could be re-created as a collision. Tolerates a malformed/missing index.
     return selectedDayClassification
       .filter(
-        (d) => d.status === DAY_STATUS.OK || d.status === DAY_STATUS.RECOVERED_UNLINKED
+        (d) => isPresentRecordStatus(d.status)
       )
       .map((d) => d.record?.date)
       .filter(Boolean);
@@ -251,7 +255,7 @@ export function AnimalWorkspace() {
               // Count day RECORDS present (indexed + recovered), via the recovery classifier, so
               // a missing/corrupt index doesn't under-count an animal with recovered records.
               const dayCount = classifyAnimalDays(animalId, animal, days).filter(
-                (d) => d.status === DAY_STATUS.OK || d.status === DAY_STATUS.RECOVERED_UNLINKED
+                (d) => isPresentRecordStatus(d.status)
               ).length;
               const isSelected = animalId === selectedAnimalId;
 
@@ -316,7 +320,7 @@ export function AnimalWorkspace() {
                   // recording days" while recovered records render below. The checklist's
                   // "Recording days" item consumes the SAME count so the two never disagree.
                   const dayCount = selectedDayClassification.filter(
-                    (d) => d.status === DAY_STATUS.OK || d.status === DAY_STATUS.RECOVERED_UNLINKED
+                    (d) => isPresentRecordStatus(d.status)
                   ).length;
                   const checklist = getAnimalSetupChecklist(selectedAnimal, {
                     issues: setupIssues,

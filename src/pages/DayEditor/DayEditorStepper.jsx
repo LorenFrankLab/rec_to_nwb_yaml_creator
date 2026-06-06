@@ -84,8 +84,11 @@ export default function DayEditorStepper() {
   // wrong subject). It stays unresolved → "Animal not found", matching the batch wrong-owner/orphan
   // block. Only the truly owner-less case (`animalId == null`) takes the indexing-animal fallback.
   if (!animal && day && day.animalId == null) {
+    // Match by the store MAP KEY (`dayId`, from the URL) — that is what an animal's `days` index
+    // holds. For well-formed data `day.id === dayId`, but a corrupt import can let the record's
+    // own `id` field drift from its map key, so the map key is the reliable membership test.
     const indexingKey = Object.keys(animalsMap).find((key) =>
-      getAnimalDayIds(animalsMap[key]).includes(day.id)
+      getAnimalDayIds(animalsMap[key]).includes(dayId)
     );
     if (indexingKey != null) {
       ownerKey = indexingKey;
@@ -101,10 +104,15 @@ export default function DayEditorStepper() {
     if (!animal || !day) return null;
     try {
       return mergeDayMetadata(animal, day);
-    } catch {
+    } catch (err) {
+      // Tolerated (the gate fails closed + the raw-shape issue is surfaced/repairable), but log
+      // WHY the merge failed so a "this day won't export" report is diagnosable later instead of
+      // the reason being silently lost.
+      // eslint-disable-next-line no-console
+      console.error(`[day-editor] could not merge day "${dayId}" with its animal config:`, err);
       return null;
     }
-  }, [animal, day]);
+  }, [animal, day, dayId]);
 
   // Dataset-wide task_name -> task_description map for the Spyglass task-name
   // identity guard. task_name is an identity across the whole
@@ -245,6 +253,14 @@ export default function DayEditorStepper() {
   // navigating to a destination that may render a blank empty state.
   const handleRepair = useCallback((issue) => {
     if (!issue?.repairCommand) return;
+    // An ANIMAL-surface repair needs a resolved owner key; if it's null (a wrong-owner / non-string
+    // animalId day that never resolved an owner), the executor would no-op. That should be
+    // unreachable from this stepper (such a day renders "Animal not found", not a repair button),
+    // but log if it ever happens so a silently-dead repair click is diagnosable rather than mute.
+    if (ownerKey == null && issue.repairCommand.type && issue.repairSurface === 'animal') {
+      // eslint-disable-next-line no-console
+      console.warn(`[day-editor] repair "${issue.repairCommand.type}" no-op: unresolved animal owner key.`);
+    }
     applyRepairCommand(issue.repairCommand, {
       actions,
       // The resolved owner STORE KEY, not the possibly-stale `animal.id` record field, so an

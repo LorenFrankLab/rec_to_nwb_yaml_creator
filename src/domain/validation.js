@@ -237,26 +237,6 @@ export function dayOverrideIssues(day, mergedDay, baseIssues = []) {
 }
 
 /**
- * The authoritative issue list for a day, and the SINGLE source so the export gate
- * (`computeStepStatus`) and the rendered repair lists (ValidationStep, ExportStep) never
- * diverge — a blocking issue must always be visible and repairable, never "gated but
- * invisible". It folds together, in order:
- *   1. raw-shape issues for the persisted day AND animal ({@link validateRawDay} /
- *      {@link validateRawAnimal}) — Boundary 1, caught before the merge can launder them;
- *   2. schema + rules over the merged model, with day-overridden geometry errors re-tagged
- *      to the day surface by provenance ({@link tagBaseOwnershipByProvenance}) — Boundary 2;
- *   3. the family of malformed/stale/shadowing `deviceOverrides` issues the merge would
- *      otherwise hide ({@link dayOverrideIssues}).
- * Every issue is then run through {@link normalizeIssue} so it carries the canonical
- * ownership contract.
- *
- * @param {object} day - The day record.
- * @param {object} mergedDay - Merged animal + day metadata.
- * @param {object} [animal] - The owning animal (optional); folds raw animal-shape issues
- *   (e.g. a non-array `cameras`) into the gate.
- * @returns {Array} All validation issues for the day (each ownership-normalized).
- */
-/**
  * Export-blocking issue for a day with NO pinned `configurationVersion` in a multi-version
  * animal. `resolveDayConfig` silently resolves such a day to the LATEST snapshot, which can
  * export the wrong probe geometry for a recovered/imported day that actually recorded an
@@ -273,7 +253,11 @@ function unpinnedConfigurationIssues(day, animal) {
   if (!animal || day?.configurationVersion != null) return [];
   const history = getConfigHistory(animal);
   if (history.length <= 1) return [];
-  const latestVersion = history[history.length - 1]?.version;
+  const latestEntry = history[history.length - 1];
+  // The latest snapshot's version, for the message. Guard a malformed history entry so the copy
+  // reads "the latest configuration" rather than "v undefined" when the version is missing.
+  const latestLabel =
+    latestEntry?.version != null ? `the latest (v${latestEntry.version})` : 'the latest configuration';
   return [
     {
       code: 'unpinned_configuration',
@@ -284,17 +268,32 @@ function unpinnedConfigurationIssues(day, animal) {
       focusPath: 'configurationVersion',
       message:
         `This recording day has no pinned hardware configuration version, but this animal has ` +
-        `${history.length} configurations. It would export against the latest (v${latestVersion}). ` +
+        `${history.length} configurations. It would export against ${latestLabel}. ` +
         `Pin the configuration version this day actually recorded before exporting.`,
     },
   ];
 }
 
 /**
+ * The authoritative issue list for a day, and the SINGLE source so the export gate
+ * (`computeStepStatus`) and the rendered repair lists (ValidationStep, ExportStep) never
+ * diverge — a blocking issue must always be visible and repairable, never "gated but
+ * invisible". It folds together, in order:
+ *   1. raw-shape issues for the persisted day AND animal ({@link validateRawDay} /
+ *      {@link validateRawAnimal}) — Boundary 1, caught before the merge can launder them;
+ *   2. schema + rules over the merged model, with day-overridden geometry errors re-tagged
+ *      to the day surface by provenance ({@link tagBaseOwnershipByProvenance}) — Boundary 2;
+ *   3. the family of malformed/stale/shadowing `deviceOverrides` issues the merge would
+ *      otherwise hide ({@link dayOverrideIssues});
+ *   4. the `unpinned_configuration` export-blocker ({@link unpinnedConfigurationIssues}).
+ * Every issue is then run through {@link normalizeIssue} so it carries the canonical
+ * ownership contract.
  *
- * @param day
- * @param mergedDay
- * @param animal
+ * @param {object} day - The day record.
+ * @param {object} mergedDay - Merged animal + day metadata.
+ * @param {object} [animal] - The owning animal (optional); folds raw animal-shape issues
+ *   (e.g. a non-array `cameras`) into the gate.
+ * @returns {Array} All validation issues for the day (each ownership-normalized).
  */
 export function validateDay(day, mergedDay, animal) {
   // Boundary 1: validate the RAW persisted day AND animal shape FIRST — before the merge
@@ -405,6 +404,21 @@ function tagBaseOwnershipByProvenance(issues, prov) {
 }
 
 /**
+ * The closed vocabulary of per-step statuses `computeStepStatus` produces. Named + frozen so the
+ * gate ({@link module:domain/stepGate}) and the workflow-status helper consume the same tokens
+ * instead of re-typing string literals (which can drift). `'pending'` is reserved for steps awaiting
+ * async work.
+ *
+ * @type {Readonly<{VALID:'valid', INCOMPLETE:'incomplete', ERROR:'error', PENDING:'pending'}>}
+ */
+export const STEP_STATUS = Object.freeze({
+  VALID: 'valid',
+  INCOMPLETE: 'incomplete',
+  ERROR: 'error',
+  PENDING: 'pending',
+});
+
+/**
  * Validates entire day and computes step status.
  *
  * @param {object} day - The day record.
@@ -428,8 +442,8 @@ export function computeStepStatus(day, mergedDay, animal) {
     // overview/devices/epochs). It is in error only when that bucket has an
     // error-severity issue; an empty/clean catch-all reports valid so it stops
     // permanently disabling Export.
-    validation: errorsByStep.validation.some(i => i.severity === 'error') ? 'error' : 'valid',
-    export: issues.filter(i => i.severity === 'error').length === 0 ? 'valid' : 'error',
+    validation: errorsByStep.validation.some(i => i.severity === 'error') ? STEP_STATUS.ERROR : STEP_STATUS.VALID,
+    export: issues.filter(i => i.severity === 'error').length === 0 ? STEP_STATUS.VALID : STEP_STATUS.ERROR,
   };
 }
 

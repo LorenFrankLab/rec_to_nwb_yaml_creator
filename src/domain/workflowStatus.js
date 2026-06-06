@@ -18,7 +18,7 @@
  * export: cameras/data-acq can be legitimately absent. The export gate is unchanged.
  */
 
-import { computeStepStatus } from './validation';
+import { computeStepStatus, STEP_STATUS } from './validation';
 import { isExportEnabled } from './stepGate';
 import {
   getAnimalElectrodeGroups,
@@ -31,15 +31,17 @@ import {
 } from '../state/workspaceSelectors';
 
 /**
- * The four checklist-item states from the workflow design.
- * @type {Record<string, 'not_started'|'needs_review'|'has_errors'|'complete'>}
+ * The four checklist-item states from the workflow design. Frozen to match the closed-enum
+ * convention used elsewhere in the domain/state layers (these are informational categories, never an
+ * export gate).
+ * @type {Readonly<Record<string, 'not_started'|'needs_review'|'has_errors'|'complete'>>}
  */
-export const SETUP_STATE = {
+export const SETUP_STATE = Object.freeze({
   NOT_STARTED: 'not_started',
   NEEDS_REVIEW: 'needs_review',
   HAS_ERRORS: 'has_errors',
   COMPLETE: 'complete',
-};
+});
 
 /**
  * The latest configuration snapshot's electrode groups (the export source of truth).
@@ -261,11 +263,13 @@ export function getAnimalSetupChecklist(animal, { issues = [], recordingDayCount
  * the Export button enforces (`isExportEnabled(computeStepStatus(...))`, which folds in the
  * prerequisite-step statuses, not just the `export` status), so it can't drift from the UI.
  *
- * `usesUnpinnedConfiguration` flags the existing-data review risk Phase 8.6 calls out: a day
- * with no pinned `configurationVersion` in a multi-version animal is silently resolved to the
- * latest snapshot by `resolveDayConfig`, which can export the wrong geometry for a recovered
- * day that actually recorded an earlier configuration. (A single-version animal is
- * unambiguous, so it is not flagged.)
+ * `usesUnpinnedConfiguration` flags the existing-data review case Phase 8.6 calls out: a day with
+ * no pinned `configurationVersion` in a multi-version animal would be resolved to the latest
+ * snapshot by `resolveDayConfig` — the wrong geometry for a recovered day that actually recorded an
+ * earlier configuration. As of Phase 8.6 that case is export-BLOCKED by the dedicated
+ * `unpinned_configuration` validation rule (see {@link module:domain/validation}); this flag no
+ * longer guards export — it drives the explanatory review copy and the pin control. (A
+ * single-version animal is unambiguous, so it is not flagged.)
  *
  * @param {object} animal - The owning animal.
  * @param {object} day - The recording day.
@@ -306,7 +310,7 @@ export function getDayWorkflowStatus(animal, day, mergedDay) {
   // Export button is disabled. Without a merged model the day could not be resolved
   // (corrupt/missing configuration) → blocked.
   const stepStatus = mergedDay ? computeStepStatus(day, mergedDay, animal) : null;
-  const exportStatus = stepStatus ? stepStatus.export : 'error';
+  const exportStatus = stepStatus ? stepStatus.export : STEP_STATUS.ERROR;
   const ready = stepStatus ? isExportEnabled(stepStatus) : false;
 
   return {

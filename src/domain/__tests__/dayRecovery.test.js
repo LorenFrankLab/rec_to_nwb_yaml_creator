@@ -11,6 +11,7 @@ import { describe, it, expect } from 'vitest';
 import {
   DAY_STATUS,
   isExportableDayStatus,
+  isPresentRecordStatus,
   classifyAnimalDays,
   classifyWorkspaceDays,
   describeOwner,
@@ -25,6 +26,25 @@ describe('isExportableDayStatus', () => {
     expect(isExportableDayStatus(DAY_STATUS.DANGLING_REFERENCE)).toBe(false);
     expect(isExportableDayStatus(DAY_STATUS.ORPHAN_NO_OWNER)).toBe(false);
     expect(isExportableDayStatus(DAY_STATUS.WRONG_OWNER)).toBe(false);
+  });
+});
+
+describe('DAY_STATUS', () => {
+  it('is frozen (the closed status set the export policy keys off must not be mutable)', () => {
+    expect(Object.isFrozen(DAY_STATUS)).toBe(true);
+  });
+});
+
+describe('isPresentRecordStatus', () => {
+  it('counts ok AND recovered_unlinked as present records (distinct from exportable)', () => {
+    expect(isPresentRecordStatus(DAY_STATUS.OK)).toBe(true);
+    // A recovered record EXISTS (counted/shown) even though it is NOT exportable until re-linked.
+    expect(isPresentRecordStatus(DAY_STATUS.RECOVERED_UNLINKED)).toBe(true);
+    expect(isExportableDayStatus(DAY_STATUS.RECOVERED_UNLINKED)).toBe(false);
+    // Dangling/no-owner/wrong-owner are not "present records for this animal".
+    expect(isPresentRecordStatus(DAY_STATUS.DANGLING_REFERENCE)).toBe(false);
+    expect(isPresentRecordStatus(DAY_STATUS.ORPHAN_NO_OWNER)).toBe(false);
+    expect(isPresentRecordStatus(DAY_STATUS.WRONG_OWNER)).toBe(false);
   });
 });
 
@@ -122,6 +142,41 @@ describe('classifyWorkspaceDays', () => {
   it('tolerates a corrupt animals/days shape without throwing', () => {
     expect(() => classifyWorkspaceDays({})).not.toThrow();
     expect(classifyWorkspaceDays({ animals: {}, days: 'nope' })).toEqual([]);
+  });
+
+  it('flags an INDEXED record whose animalId is a non-string (object) as wrong-owner', () => {
+    // indexedRecordStatus: an indexed record explicitly declaring a DIFFERENT owner is wrong-owner;
+    // an object animalId is `!= null` and `!== animalKey`, so it must classify as wrong-owner (it
+    // then renders through describeOwner downstream), not silently treated as this animal's day.
+    const objOwner = dayRecord('remy-1', undefined, '2023-06-22');
+    objOwner.animalId = { not: 'a string' };
+    const workspace = {
+      animals: { remy: { id: 'remy', days: ['remy-1'] } },
+      days: { 'remy-1': objOwner },
+    };
+    const [row] = classifyWorkspaceDays(workspace);
+    expect(row.status).toBe(DAY_STATUS.WRONG_OWNER);
+    expect(row.animalKey).toBe('remy'); // the INDEXING animal (a real string key)
+  });
+
+  it('emits a row per indexing animal when the SAME dayId is listed by two animals (duplicate index)', () => {
+    // Duplicate-index corruption: a single record listed by two animals. Both produce an indexed
+    // row (the orphan sweep does not double-count it), which is exactly why the batch-export
+    // re-check keys recovery status by (animalKey, dayId) rather than dayId alone.
+    const shared = dayRecord('dup-1', 'remy', '2023-06-22');
+    const workspace = {
+      animals: {
+        remy: { id: 'remy', days: ['dup-1'] },
+        bean: { id: 'bean', days: ['dup-1'] },
+      },
+      days: { 'dup-1': shared },
+    };
+    const rows = classifyWorkspaceDays(workspace).filter((r) => r.dayId === 'dup-1');
+    expect(rows).toHaveLength(2);
+    const byAnimal = Object.fromEntries(rows.map((r) => [r.animalKey, r.status]));
+    // remy owns the record (ok); bean indexes a record that belongs to remy (wrong-owner).
+    expect(byAnimal.remy).toBe(DAY_STATUS.OK);
+    expect(byAnimal.bean).toBe(DAY_STATUS.WRONG_OWNER);
   });
 
   it('treats an unindexed record with a non-string animalId as an orphan with a null animalKey', () => {
