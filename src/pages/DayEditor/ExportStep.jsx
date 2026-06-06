@@ -355,11 +355,11 @@ function buildPreflightSummary(merged, { animalId, date, configurationVersion, i
     },
     { label: 'Optogenetics', value: optoOn ? 'On' : 'Off' },
     {
-      label: 'Unresolved review risk',
+      label: 'Non-blocking warnings',
       value:
         warningCount > 0
-          ? `${warningCount} non-blocking warning${warningCount === 1 ? '' : 's'} to review`
-          : 'No unresolved warnings',
+          ? `${warningCount} warning${warningCount === 1 ? '' : 's'} to review (does not block export)`
+          : 'None',
     },
   ];
 }

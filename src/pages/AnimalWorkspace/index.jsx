@@ -285,13 +285,18 @@ export function AnimalWorkspace() {
                       </section>
 
                       {showReview && (
-                        <section className="existing-data-review" aria-label="Existing data review">
+                        <section
+                          className={`existing-data-review ${rawIssues.length > 0 ? 'existing-data-review-corrupt' : ''}`}
+                          aria-label="Existing data review"
+                        >
                           <h3 className="existing-data-review-heading">Review existing data</h3>
                           <p className="existing-data-review-intro">
                             Found {dayCount} recording {dayCount === 1 ? 'day' : 'days'} and{' '}
                             {configCount} hardware {configCount === 1 ? 'configuration' : 'configurations'} for{' '}
-                            {selectedAnimal.id}. Recovered or imported setup is not assumed correct —
-                            review electrodes and cameras before exporting.
+                            {selectedAnimal.id}.{' '}
+                            {rawIssues.length > 0
+                              ? 'Some saved data is corrupt — repair it below before exporting.'
+                              : 'Review electrodes and cameras before exporting to confirm they match this animal.'}
                           </p>
                           {/* Reuse the shipped recovery surface: executable resets for corrupt
                               animal-owned collections. Self-hides when there is no corruption. */}

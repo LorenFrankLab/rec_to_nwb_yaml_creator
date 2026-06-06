@@ -9,6 +9,7 @@ import { buildRealisticWorkspace } from '../../../__tests__/fixtures/workspaceBu
 import { mergeDayMetadata } from '../../../state/workspaceUtils';
 import { computeStepStatus } from '../../../domain/validation';
 import { validate } from '../../../validation';
+import * as validationModule from '../../../validation';
 
 const UNSTABLE = {
   ok: false,
@@ -291,7 +292,7 @@ describe('ExportStep', () => {
     expect(within(preflight).getByText('Data acquisition')).toBeInTheDocument();
     expect(within(preflight).getByText('Tasks & videos')).toBeInTheDocument();
     expect(within(preflight).getByText('Optogenetics')).toBeInTheDocument();
-    expect(within(preflight).getByText('Unresolved review risk')).toBeInTheDocument();
+    expect(within(preflight).getByText('Non-blocking warnings')).toBeInTheDocument();
 
     // Spot-check derived values: animal/day, 8 electrode groups, 2 cameras, opto off,
     // current (not historical) configuration.
@@ -313,6 +314,37 @@ describe('ExportStep', () => {
 
     const preflight = screen.getByRole('region', { name: /preflight/i });
     expect(within(preflight).getByText(/version 1\b/i)).toBeInTheDocument();
+  });
+
+  it('marks the preflight configuration version as historical when the day pins an older version', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    // Add a newer snapshot; the day still pins v1, so it exports against a historical config.
+    animal.configurationHistory.push({
+      version: 2,
+      date: '2023-07-01',
+      description: 'Lowered tetrodes',
+      devices: animal.configurationHistory[0].devices,
+      appliedToDays: [],
+    });
+
+    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+
+    const preflight = screen.getByRole('region', { name: /preflight/i });
+    expect(within(preflight).getByText(/version 1 \(historical\)/i)).toBeInTheDocument();
+  });
+
+  it('reports unresolved non-blocking warnings in the preflight', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    // One warning-severity issue (no errors) — the day stays exportable but preflight must
+    // surface the unresolved warning so it reads as a confidence check, not a pass/fail dump.
+    vi.spyOn(validationModule, 'validate').mockReturnValue([
+      { severity: 'warning', code: 'epoch_overlap', path: 'tasks[0].task_epochs', message: 'epochs overlap' },
+    ]);
+
+    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+
+    const preflight = screen.getByRole('region', { name: /preflight/i });
+    expect(within(preflight).getByText(/1 warning to review \(does not block export\)/i)).toBeInTheDocument();
   });
 
   it('blocks the download in handleDownload even if the disabled button state is bypassed', async () => {

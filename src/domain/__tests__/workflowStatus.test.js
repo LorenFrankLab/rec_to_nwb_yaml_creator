@@ -95,6 +95,25 @@ describe('getAnimalSetupChecklist', () => {
     expect(electrodes.state).toBe(SETUP_STATE.HAS_ERRORS);
   });
 
+  it('maps subject and data-acq issues to their own checklist items (not just electrodes)', () => {
+    const { animal } = buildRealisticWorkspace();
+    const subjectChecklist = getAnimalSetupChecklist(animal, {
+      issues: [{ code: 'invalid_species', severity: 'error', message: 'bad species' }],
+    });
+    expect(itemFor(subjectChecklist, 'subject').state).toBe(SETUP_STATE.HAS_ERRORS);
+
+    const dataAcqChecklist = getAnimalSetupChecklist(animal, {
+      issues: [{ code: 'divergent_data_acq_identity', severity: 'error', message: 'diverges' }],
+    });
+    expect(itemFor(dataAcqChecklist, 'data_acq').state).toBe(SETUP_STATE.HAS_ERRORS);
+
+    // A corrupt cameras collection (raw-shape issue: field, no schema path) maps to cameras.
+    const cameraChecklist = getAnimalSetupChecklist(animal, {
+      issues: [{ code: 'malformed_animal_collection', severity: 'error', field: 'cameras', message: 'corrupt' }],
+    });
+    expect(itemFor(cameraChecklist, 'cameras').state).toBe(SETUP_STATE.HAS_ERRORS);
+  });
+
   it('does not let an informational missing camera/data-acq block — they stay not_started, never has_errors without an issue', () => {
     const checklist = getAnimalSetupChecklist(newAnimal());
     expect(itemFor(checklist, 'cameras').state).toBe(SETUP_STATE.NOT_STARTED);
@@ -156,5 +175,29 @@ describe('getDayWorkflowStatus', () => {
     expect(status.readyForFailedChannels).toBe(false);
     expect(status.readyForExportPreflight).toBe(false);
     expect(status.blockedByRepair).toBe(true);
+  });
+
+  it('reports blocked through the REAL export gate for a non-null but invalid merged day', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    const merged = mergeDayMetadata(animal, day);
+    // Make the merged model invalid in a way computeStepStatus will flag (blank session).
+    merged.session_id = '';
+    merged.session_description = '';
+    const exportStatus = computeStepStatus(day, merged, animal).export;
+    expect(exportStatus).not.toBe('valid'); // sanity: the gate really blocks
+    const status = getDayWorkflowStatus(animal, day, merged);
+    expect(status.exportStatus).toBe(exportStatus);
+    expect(status.readyForExportPreflight).toBe(false);
+    expect(status.blockedByRepair).toBe(true);
+  });
+
+  it('does not flag a day as historical when the animal has no configuration history', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    animal.configurationHistory = [];
+    // mergeDayMetadata throws with no history, so callers pass null; the status must still be
+    // computed and must NOT falsely mark the day historical (latest version is unknown).
+    const status = getDayWorkflowStatus(animal, day, null);
+    expect(status.latestConfigurationVersion).toBeNull();
+    expect(status.isHistoricalConfiguration).toBe(false);
   });
 });

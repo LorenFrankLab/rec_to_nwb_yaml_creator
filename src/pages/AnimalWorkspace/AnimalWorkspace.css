@@ -379,12 +379,19 @@
   background-color: #1976d2;
 }
 
-/* Existing-data review state — recovered/imported data is not silently trusted */
+/* Existing-data review state — recovered/imported data is not silently trusted.
+   Neutral by default (a calm "review before export" prompt); amber only when there is
+   actual corruption to repair, so the alarming styling isn't trained away on clean data. */
 .existing-data-review {
   margin-bottom: 1.5rem;
   padding: 1rem 1.25rem;
-  border: 1px solid #ffe0b2;
+  border: 1px solid #ddd;
   border-radius: 6px;
+  background-color: #f7f7f7;
+}
+
+.existing-data-review-corrupt {
+  border-color: #ffe0b2;
   background-color: #fff8e1;
 }
 
@@ -396,6 +403,10 @@
 .existing-data-review-intro {
   margin: 0 0 0.5rem;
   font-size: 0.875rem;
+  color: #555;
+}
+
+.existing-data-review-corrupt .existing-data-review-intro {
   color: #5d4037;
 }
 

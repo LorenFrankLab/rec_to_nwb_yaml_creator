@@ -464,6 +464,8 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
             <button
               type="button"
               className="config-reconfig-button"
+              aria-haspopup="dialog"
+              aria-expanded={wizardOpen}
               onClick={() => setWizardOpen(true)}
             >
               Hardware changed starting this day…

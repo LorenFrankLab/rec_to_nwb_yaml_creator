@@ -74,6 +74,12 @@ describe('workflowCategoryForIssue — AJV schema fallback (no app code)', () =>
     expect(workflowCategoryForIssue({ path: 'tasks[0].task_name' })).toBe('day_metadata');
   });
 
+  it('folds a code-less none-surface identity error (slash id) into animal_setup', () => {
+    // A code-less AJV error on subject_id routes to the `none` repair surface; it must still
+    // group under animal setup (the Subject item), not fall through to day metadata.
+    expect(workflowCategoryForIssue({ instancePath: '/subject_id' })).toBe('animal_setup');
+  });
+
   it('never returns export_preflight from an issue (it is a readiness state, not an issue code)', () => {
     for (const code of Object.keys(CATEGORY_BY_CODE)) {
       expect(CATEGORY_BY_CODE[code]).not.toBe('export_preflight');

@@ -101,7 +101,7 @@ describe('AnimalWorkspace existing-data review state', () => {
     await selectAnimal('newbie');
     const review = screen.getByRole('region', { name: /existing data review/i });
     expect(within(review).getByText(/found 1 recording day/i)).toBeInTheDocument();
-    expect(within(review).getByText(/not assumed correct/i)).toBeInTheDocument();
+    expect(within(review).getByText(/review electrodes and cameras before exporting/i)).toBeInTheDocument();
   });
 
   it('surfaces corrupt recovered data via the shared RawCorruptionBanner (executable reset)', async () => {
