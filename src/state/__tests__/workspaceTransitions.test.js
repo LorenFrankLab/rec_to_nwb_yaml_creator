@@ -92,6 +92,58 @@ describe('addConfigurationSnapshotToAnimal', () => {
     expect(animal.configurationHistory).toHaveLength(1); // input untouched
   });
 
+  it('preserves snapshot metadata and normalizes the probe device payload', () => {
+    const animal = { configurationHistory: [{ version: 1, appliedToDays: [] }] };
+    const updated = addConfigurationSnapshotToAnimal(
+      animal,
+      {
+        date: '2023-06-15',
+        description: 'Lowered CA1 tetrodes by 40um',
+        devices: {
+          electrode_groups: [
+            {
+              id: '0',
+              location: ' CA1 ',
+              device_type: 'tetrode_12.5',
+              description: 'CA1 tetrode',
+              targeted_location: ' CA1 ',
+              targeted_z: '1.96',
+              units: ' mm ',
+            },
+          ],
+          ntrode_electrode_group_channel_map: [
+            {
+              ntrode_id: '0',
+              electrode_group_id: '0',
+              map: { 0: '0', 1: '1', 2: '2', 3: '3' },
+              bad_channels: ['2', 2, '3'],
+            },
+          ],
+        },
+      },
+      NOW
+    );
+
+    const snapshot = updated.configurationHistory[1];
+    expect(snapshot.date).toBe('2023-06-15');
+    expect(snapshot.description).toBe('Lowered CA1 tetrodes by 40um');
+    expect(snapshot.devices.electrode_groups[0]).toEqual({
+      id: 0,
+      location: 'CA1',
+      device_type: 'tetrode_12.5',
+      description: 'CA1 tetrode',
+      targeted_location: 'CA1',
+      targeted_z: 1.96,
+      units: 'mm',
+    });
+    expect(snapshot.devices.ntrode_electrode_group_channel_map[0]).toEqual({
+      ntrode_id: 0,
+      electrode_group_id: 0,
+      map: { 0: 0, 1: 1, 2: 2, 3: 3 },
+      bad_channels: [2, 3],
+    });
+  });
+
   it('numbers version 1 when the prior history is corrupt/missing', () => {
     const updated = addConfigurationSnapshotToAnimal(
       { configurationHistory: 'corrupt' },
