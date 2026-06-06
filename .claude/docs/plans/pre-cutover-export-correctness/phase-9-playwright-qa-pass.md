@@ -4,9 +4,9 @@
 
 Goal: prove the corrected workspace path works as a user experience in a real browser before cutover. Phases
 1–8 add the model, validation, export, and UI correctness pieces; Phase 8.5 stabilizes the domain boundaries
-those pieces depend on; this phase exercises the stitched-together flows with Playwright so regressions in
-routing, focus, modals, disabled states, downloads, localStorage, and browser-only behavior cannot hide behind
-unit/integration coverage.
+those pieces depend on; Phase 8.6 makes the user workflow/setup path explicit. This phase exercises the
+stitched-together flows with Playwright so regressions in routing, focus, modals, disabled states, downloads,
+localStorage, workflow clarity, and browser-only behavior cannot hide behind unit/integration coverage.
 
 **Inputs to read first:**
 
@@ -21,7 +21,7 @@ unit/integration coverage.
 - [e2e/baselines](../../../../e2e/baselines) — legacy baseline specs. Keep them as legacy coverage, but do
   not model new workspace QA after their conditional/skip-if-visible style; Phase 9 tests must fail when a
   required workspace control is missing.
-- Phase docs 1–8.5 — especially the validation slices, domain-boundary checks, and UX mistake-prevention
+- Phase docs 1–8.6 — especially the validation slices, domain-boundary checks, workflow-clarity states, and UX mistake-prevention
   tests. Phase 9 samples from those flows at the browser level; it does not replace their lower-level tests.
 
 **Contracts referenced:**
