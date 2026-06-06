@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
-import { getProbeShanks, getProbeElectrodeIds } from '../../ntrode/probeCatalog';
+import { getProbeElectrodeIds } from '../../ntrode/probeCatalog';
+import {
+  isMultiShankGroup,
+  probeElectrodeIdSet,
+  buildProbeWideBadChannelMap,
+  invalidBadChannelMarks,
+  toggleMark,
+} from '../../domain/badChannels';
 import './DayEditor.scss';
 
 /**
@@ -72,10 +79,9 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
     return null;
   }
 
-  // Multi-shank iff the verified catalog reports >1 shank for this device. We also
-  // require >1 ntrode row so a 1-row group never collapses to a degenerate selector.
-  const probeShanks = getProbeShanks(deviceType);
-  const isMultiShank = probeShanks.length > 1 && ntrodes.length > 1;
+  // Multi-shank iff the verified catalog reports >1 shank for this device AND there is
+  // >1 ntrode row (so a 1-row group never collapses to a degenerate selector).
+  const isMultiShank = isMultiShankGroup(deviceType, ntrodes.length);
 
   /**
    * Handle checkbox change for a channel
@@ -85,18 +91,7 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
    */
   const handleChannelToggle = (ntrodeId, channelNum, isChecked) => {
     const key = String(ntrodeId);
-    const currentBadChannels = badChannels[key] || [];
-    let updatedBadChannels;
-
-    if (isChecked) {
-      // Add channel to bad channels
-      updatedBadChannels = [...currentBadChannels, channelNum].sort((a, b) => a - b);
-    } else {
-      // Remove channel from bad channels
-      updatedBadChannels = currentBadChannels.filter(ch => ch !== channelNum);
-    }
-
-    onUpdate(key, updatedBadChannels);
+    onUpdate(key, toggleMark(badChannels[key] || [], channelNum, isChecked));
   };
 
   /**
@@ -151,71 +146,37 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
     );
     const hasLaterRowCorruption = laterRowsWithBad.length > 0;
 
-    // The set of ids the probe-wide selector can actually render/uncheck. A migrated
-    // value MUST be one of these, or it becomes an unrepairable export blocker (no
-    // checkbox to clear it).
-    const probeIdSet = new Set(electrodeIds);
+    // The set of ids the probe-wide selector can render/uncheck, for invalid-mark
+    // detection (the migration translates against the same set internally).
+    const probeIdSet = probeElectrodeIdSet(deviceType);
 
     /**
-     * Translate a later row's stored bad-channel entries (row-local map KEYS) to
-     * probe-local electrode ids via `row.map[key]`. The probe-wide selector and the
-     * converter both speak probe-local ids, so a later row's marks must be carried
-     * over by their mapped id, never by their raw row-local index. When the row's map
-     * lacks the key we fall back to the raw key, but ONLY keep values that are
-     * representable probe electrode ids: an untranslatable, out-of-range mark cannot
-     * correspond to any real electrode, has no probe-wide checkbox, and is ignored by
-     * the converter anyway, so copying it would fabricate an unrepairable first-row
-     * value. We drop those rather than block export on a value the user can't clear.
-     * @param {object} ntrode - A later ntrode row from `ntrodes`.
-     * @returns {number[]} Representable probe-local electrode ids for this row's marks.
-     */
-    const translateLaterRowMarks = (ntrode) => {
-      const stored = badChannels[String(ntrode.ntrode_id)] || [];
-      const map = ntrode.map || {};
-      return stored
-        .map((key) => {
-          const mapped = map[key];
-          return mapped === undefined || mapped === null ? key : mapped;
-        })
-        .filter((id) => probeIdSet.has(id));
-    };
-
-    /**
-     * Probe-wide toggle: compute the ENTIRE new bad_channels map and write it in ONE
-     * atomic `onBatchUpdate` call (the Day Editor replaces deviceOverrides wholesale,
-     * so separate per-ntrode writes would race/clobber). The first row becomes the
-     * UNION of (its toggled selection) and (every later row's TRANSLATED marks), and
-     * every later row is cleared to `[]`. This both edits the selection and repairs
-     * loaded later-row corruption so `multishank_bad_channels_ignored` passes.
+     * Probe-wide toggle: compute the ENTIRE new bad_channels map (the converter meaning —
+     * union the first row's toggled selection with every later row's translated marks and
+     * clear later rows — lives in `buildProbeWideBadChannelMap`) and write it in ONE
+     * atomic `onBatchUpdate` call. The Day Editor replaces deviceOverrides wholesale, so
+     * separate per-ntrode writes would race/clobber; the single write also migrates loaded
+     * later-row corruption so `multishank_bad_channels_ignored` passes.
      * @param {number} electrodeId - Probe-local electrode id.
      * @param {boolean} isChecked - Whether the box was checked.
      */
     const handleProbeWideToggle = (electrodeId, isChecked) => {
-      // 1. First-row selection after toggling this electrode.
-      const firstSelection = isChecked
-        ? [...currentBadChannels, electrodeId]
-        : currentBadChannels.filter((ch) => ch !== electrodeId);
-
-      // 2. Union with translated later-row marks (never dropped).
-      const translated = laterNtrodes.flatMap((n) => translateLaterRowMarks(n));
-      const firstUnion = Array.from(new Set([...firstSelection, ...translated])).sort(
-        (a, b) => a - b
+      onBatchUpdate(
+        buildProbeWideBadChannelMap({
+          badChannels,
+          firstNtrodeId: firstNtrode.ntrode_id,
+          laterNtrodes,
+          electrodeId,
+          isChecked,
+          deviceType,
+        })
       );
-
-      // 3. Build the WHOLE new bad_channels map: first row = union, later rows = [].
-      const next = { ...badChannels };
-      next[firstKey] = firstUnion;
-      laterNtrodes.forEach((n) => {
-        next[String(n.ntrode_id)] = [];
-      });
-
-      onBatchUpdate(next);
     };
 
     // First-row marks with NO probe-wide checkbox (out-of-range id or non-integer).
     // These have no checkbox to uncheck and block export via bad_channel_out_of_range,
     // so they are an unrepairable dead-end without an explicit removal control.
-    const invalidMarks = currentBadChannels.filter((v) => !probeIdSet.has(v));
+    const invalidMarks = invalidBadChannelMarks(currentBadChannels, probeIdSet);
 
     /**
      * Remove ONE invalid first-row mark via the ATOMIC batch path. The Day Editor
@@ -343,7 +304,7 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
         // Marks with no checkbox in this row (out-of-range id or non-integer like
         // 'abc'). They block export but the grid can't render/uncheck them, so we
         // surface an explicit removal control below.
-        const invalidMarks = currentBadChannels.filter((v) => !channels.includes(v));
+        const invalidMarks = invalidBadChannelMarks(currentBadChannels, channels);
         const error = errors?.[ntrodeKey];
         const warning = warnings?.[ntrodeKey];
 

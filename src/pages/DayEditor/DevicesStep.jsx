@@ -7,7 +7,8 @@ import { reconcileAppliedToDays } from '../../state/configDiff';
 import { resolveDayConfig } from '../../state/workspaceUtils';
 import { getConfigHistory } from '../../state/workspaceSelectors';
 import { rawRecord } from '../../components/rawPropTypes';
-import { getProbeShanks, getProbeElectrodeIds } from '../../ntrode/probeCatalog';
+import { isMultiShankGroup, validBadChannelIds } from '../../domain/badChannels';
+import { classifyDeviceOverrides } from '../../domain/deviceOverrides';
 import './DayEditor.scss';
 
 /**
@@ -197,48 +198,21 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
     () => new Set(ntrodeChannelMap.map((n) => String(n.ntrode_id))),
     [ntrodeChannelMap]
   );
-  const overridesRecord = useMemo(() => {
-    const o = day.deviceOverrides;
-    return o !== null && typeof o === 'object' && !Array.isArray(o) ? o : null;
-  }, [day.deviceOverrides]);
-
-  // The WHOLE deviceOverrides is present but not a record (e.g. a restored scalar
-  // "corrupt"): the merge reads override keys off it (all undefined → fail-open to the
-  // snapshot), so it would export as if clean. Offer a whole-override removal.
-  const wholeOverridesMalformed = day.deviceOverrides != null && overridesRecord === null;
-
-  const badChannelContainer = overridesRecord?.bad_channels;
-  const badChannelContainerIsRecord =
-    badChannelContainer !== null && typeof badChannelContainer === 'object' && !Array.isArray(badChannelContainer);
-  // The container is present but not an ntrode→list map (e.g. scalar "2.9"): the whole
-  // override must be removed (there are no per-key controls to render).
-  const badChannelContainerMalformed = badChannelContainer != null && !badChannelContainerIsRecord;
-
-  // Per-key problems, partitioned for distinct labels: stale (no resolved ntrode) vs.
-  // corrupt value (resolved key, non-array value). Both removed by deleting the key.
-  const staleOverrideKeys = useMemo(() => {
-    if (!badChannelContainerIsRecord) return [];
-    return Object.keys(badChannelContainer).filter((key) => !resolvedNtrodeIds.has(String(key)));
-  }, [badChannelContainer, badChannelContainerIsRecord, resolvedNtrodeIds]);
-  const corruptValueKeys = useMemo(() => {
-    if (!badChannelContainerIsRecord) return [];
-    return Object.keys(badChannelContainer).filter(
-      (key) => resolvedNtrodeIds.has(String(key)) && !Array.isArray(badChannelContainer[key])
-    );
-  }, [badChannelContainer, badChannelContainerIsRecord, resolvedNtrodeIds]);
-
-  // Geometry overrides. The app never PRODUCES a day-level geometry override (probe
-  // geometry lives in animal configuration snapshots), so any present one is anomalous:
-  //  - non-array → corrupt, the merge fell back to the snapshot → "remove corrupt …";
-  //  - array → a valid-shaped override that SHADOWS the editable snapshot (its content
-  //    errors otherwise mis-route to the Animal Editor) → "revert to saved configuration".
-  // Both are removed the same way (drop the override key → snapshot governs).
-  const presentGeometryKeys = useMemo(() => {
-    if (!overridesRecord) return [];
-    return ['electrode_groups', 'ntrode_electrode_group_channel_map'].filter(
-      (k) => overridesRecord[k] != null
-    );
-  }, [overridesRecord]);
+  // Malformed / stale / shadowing override classification. The converter-meaning decision
+  // (which shapes the merge can't honor, partitioned for distinct removal labels) lives in
+  // `classifyDeviceOverrides` — the editing-surface counterpart of the validator's
+  // `dayOverrideIssues`. Whatever it flags is rendered with a removal control below.
+  const {
+    overridesRecord,
+    wholeOverridesMalformed,
+    badChannelContainer,
+    badChannelContainerIsRecord,
+    badChannelContainerMalformed,
+    staleOverrideKeys,
+    corruptValueKeys,
+    presentGeometryKeys,
+    hasOverrideCleanup,
+  } = useMemo(() => classifyDeviceOverrides(day, resolvedNtrodeIds), [day, resolvedNtrodeIds]);
 
   /**
    * Remove a single bad-channel override key (stale or corrupt-value) via ONE atomic
@@ -280,18 +254,18 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
     // spanning all shanks (0..N-1), so its valid range is the whole probe, not just
     // that row's map keys. (Matches the probe-wide selector + converter semantics.)
     const group = electrodeGroups.find((g) => g.id === ntrode.electrode_group_id);
-    const probeShanks = getProbeShanks(group?.device_type);
     const groupNtrodes = ntrodeChannelMap.filter(
       (n) => n.electrode_group_id === ntrode.electrode_group_id
     );
     const isMultiShankFirstRow =
-      probeShanks.length > 1 &&
-      groupNtrodes.length > 1 &&
+      isMultiShankGroup(group?.device_type, groupNtrodes.length) &&
       groupNtrodes[0]?.ntrode_id === ntrode.ntrode_id;
 
-    const validChannels = isMultiShankFirstRow
-      ? getProbeElectrodeIds(group.device_type)
-      : Object.keys(ntrode.map).map(Number);
+    const validChannels = validBadChannelIds({
+      deviceType: group?.device_type,
+      isMultiShankFirstRow,
+      rowMap: ntrode.map,
+    });
     const invalidChannels = badChannelArray.filter(ch => !validChannels.includes(ch));
 
     if (invalidChannels.length > 0) {
@@ -337,14 +311,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
   // mis-applies) each shape, so the export rule blocks it but there is no editor row.
   // Whatever `dayOverrideIssues` flags is removable here; the per-key bad-channel buttons
   // carry a KEY-SPECIFIC `data-field-path` so repair-focus lands on the clicked ntrode's
-  // control, not the first matching one.
-  const hasOverrideCleanup =
-    wholeOverridesMalformed ||
-    staleOverrideKeys.length > 0 ||
-    corruptValueKeys.length > 0 ||
-    badChannelContainerMalformed ||
-    presentGeometryKeys.length > 0;
-
+  // control, not the first matching one. `hasOverrideCleanup` comes from the classifier above.
   const overrideCleanupSection = hasOverrideCleanup ? (
     <section className="stale-overrides-section" aria-label="Corrupt or stale device overrides">
       <p className="field-help-text">

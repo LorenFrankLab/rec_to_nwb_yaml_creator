@@ -3,6 +3,14 @@ import PropTypes from 'prop-types';
 import Modal from '../../components/Modal/Modal';
 import { getChannelCount } from '../../utils/deviceTypeUtils';
 import { getProbeShanks, getProbeElectrodeIds } from '../../ntrode/probeCatalog';
+import {
+  isMultiShankGroup,
+  asBadChannelArray,
+  toggleMark,
+  invalidBadChannelMarks,
+  probeElectrodeIdSet,
+  migrateProbeWideChannelMaps,
+} from '../../domain/badChannels';
 import InfoIcon from '../../element/InfoIcon';
 import './ChannelMapEditor.scss';
 
@@ -77,7 +85,7 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
   // Multi-shank iff the verified catalog reports >1 shank AND there is >1 ntrode
   // row (so a degenerate 1-row group never collapses to a probe-wide selector).
   // In multi-shank mode bad_channels are edited probe-wide on the FIRST row only.
-  const isMultiShank = probeShanks.length > 1 && localChannelMaps.length > 1;
+  const isMultiShank = isMultiShankGroup(electrodeGroup.device_type, localChannelMaps.length);
   const probeElectrodeIds = getProbeElectrodeIds(electrodeGroup.device_type); // 0 … N-1
 
   /**
@@ -100,24 +108,13 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
 
   // Handle bad channel checkbox toggle (single-shank: row-local index).
   const handleBadChannelToggle = (ntrodeIndex, channelIndex, isChecked) => {
-    const updated = localChannelMaps.map((map, idx) => {
-      if (idx !== ntrodeIndex) return map;
-
-      // Guard against a preserved corrupt scalar so a toggle never throws; a scalar
-      // is repaired via the whole-value reset, but the user could toggle first.
-      const currentBadChannels = Array.isArray(map.bad_channels) ? map.bad_channels : [];
-      let newBadChannels;
-
-      if (isChecked) {
-        // Add to bad channels
-        newBadChannels = [...currentBadChannels, channelIndex].sort((a, b) => a - b);
-      } else {
-        // Remove from bad channels
-        newBadChannels = currentBadChannels.filter(ch => ch !== channelIndex);
-      }
-
-      return { ...map, bad_channels: newBadChannels };
-    });
+    // `toggleMark` guards a preserved corrupt scalar so a toggle never throws (a scalar is
+    // repaired via the whole-value reset, but the user could toggle first).
+    const updated = localChannelMaps.map((map, idx) =>
+      idx === ntrodeIndex
+        ? { ...map, bad_channels: toggleMark(map.bad_channels, channelIndex, isChecked) }
+        : map
+    );
 
     setLocalChannelMaps(updated);
   };
@@ -136,48 +133,13 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
   // probe-wide checkbox (the converter ignores later-row marks anyway), so copying it
   // would fabricate an unrepairable, export-blocking first-row value — drop those.
   const handleProbeWideBadChannelToggle = (electrodeId, isChecked) => {
-    const probeIdSet = new Set(probeElectrodeIds);
-    // Translate every later row's marks (row-local map keys) to probe-local ids,
-    // keeping only representable ones.
-    const translatedLaterMarks = localChannelMaps.slice(1).flatMap((map) => {
-      const stored = Array.isArray(map.bad_channels) ? map.bad_channels : [];
-      const rowMap = map.map || {};
-      return stored
-        .map((key) => {
-          const mapped = rowMap[key];
-          return mapped === undefined || mapped === null ? key : mapped;
-        })
-        .filter((id) => probeIdSet.has(id));
-    });
-
-    const updated = localChannelMaps.map((map, idx) => {
-      if (idx === 0) {
-        // Guard the first row's bad_channels against a preserved corrupt scalar.
-        const currentBadChannels = Array.isArray(map.bad_channels) ? map.bad_channels : [];
-        const firstSelection = isChecked
-          ? [...currentBadChannels, electrodeId]
-          : currentBadChannels.filter((ch) => ch !== electrodeId);
-        // Union the first-row selection with the translated later-row marks.
-        const merged = Array.from(
-          new Set([...firstSelection, ...translatedLaterMarks])
-        ).sort((a, b) => a - b);
-        return { ...map, bad_channels: merged };
-      }
-      // Later rows: cleared after migrating their representable marks onto the first
-      // row. Clear a non-empty ARRAY (its marks were translated above) AND a preserved
-      // corrupt SCALAR (non-array). A scalar is converter-ignored corruption with no
-      // representable entries to carry over and a hidden grid that cannot reach it, so
-      // an explicit migration toggle is its only repair path — resetting it to [] here
-      // (not laundering it silently on load) unblocks schema validation.
-      const isNonEmptyArray =
-        Array.isArray(map.bad_channels) && map.bad_channels.length > 0;
-      const isScalar = !Array.isArray(map.bad_channels) && map.bad_channels != null;
-      if (isNonEmptyArray || isScalar) {
-        return { ...map, bad_channels: [] };
-      }
-      return map;
-    });
-    setLocalChannelMaps(updated);
+    // The converter meaning — union the first row's toggled selection with every later
+    // row's translated marks and clear later rows (array or preserved corrupt scalar) —
+    // lives in `migrateProbeWideChannelMaps`. Touching the selector therefore also repairs
+    // loaded later-row corruption so `multishank_bad_channels_ignored` passes.
+    setLocalChannelMaps(
+      migrateProbeWideChannelMaps(localChannelMaps, electrodeId, isChecked, electrodeGroup.device_type)
+    );
   };
 
   // Remove ONE invalid bad-channel mark from the row at `ntrodeIndex`.
@@ -223,19 +185,13 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
   // Check if channel is marked as bad (single-shank: row-local index).
   // A row's bad_channels may be a SCALAR from corrupt persisted state (the
   // normalizer preserves it verbatim); guard so a non-array never throws.
-  const isChannelBad = (ntrodeIndex, channelIndex) => {
-    const raw = localChannelMaps[ntrodeIndex]?.bad_channels;
-    const badChannels = Array.isArray(raw) ? raw : [];
-    return badChannels.includes(channelIndex);
-  };
+  const isChannelBad = (ntrodeIndex, channelIndex) =>
+    asBadChannelArray(localChannelMaps[ntrodeIndex]?.bad_channels).includes(channelIndex);
 
   // Check if a probe-wide electrode id is marked bad (multi-shank: first row).
-  // Guard the first row's bad_channels against a preserved corrupt scalar.
-  const isProbeElectrodeBad = (electrodeId) => {
-    const raw = localChannelMaps[0]?.bad_channels;
-    const badChannels = Array.isArray(raw) ? raw : [];
-    return badChannels.includes(electrodeId);
-  };
+  // `asBadChannelArray` guards the first row against a preserved corrupt scalar.
+  const isProbeElectrodeBad = (electrodeId) =>
+    asBadChannelArray(localChannelMaps[0]?.bad_channels).includes(electrodeId);
 
   // Handle Save button click
   const handleSave = () => {
@@ -385,17 +341,13 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
   // spans the probe's full electrode-id range 0..N-1, matching the converter.
   const renderProbeWideBadChannels = () => {
     const firstNtrode = localChannelMaps[0];
-    const probeIdSet = new Set(probeElectrodeIds);
-    // The first row's bad_channels may be a preserved corrupt SCALAR; guard the
-    // iteration. A scalar has no representable entries, so the per-value invalid-mark
-    // controls below stay empty and the whole-value reset control handles it instead.
+    // The first row's bad_channels may be a preserved corrupt SCALAR; `firstBadChannelsIsArray`
+    // gates the whole-value reset control below (a scalar has no per-value marks to remove).
     const firstBadChannelsIsArray = Array.isArray(firstNtrode.bad_channels);
     // First-row marks with no probe-wide checkbox (out-of-range id or non-integer).
     // They block export but the grid can't uncheck them, so render explicit removal
     // controls (otherwise an unrepairable dead-end).
-    const invalidMarks = firstBadChannelsIsArray
-      ? firstNtrode.bad_channels.filter((v) => !probeIdSet.has(v))
-      : [];
+    const invalidMarks = invalidBadChannelMarks(firstNtrode.bad_channels, probeElectrodeIds);
     return (
       <fieldset className="bad-channels-fieldset probe-wide-bad-channels">
         <legend>
@@ -504,9 +456,9 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
           // Single-shank marks with no checkbox in this row (out-of-range index or
           // non-integer). They block export but can't be unchecked, so render explicit
           // removal controls below the grid. (Multi-shank handles this probe-wide.)
-          const invalidMarks = isMultiShank || !rowBadChannelsIsArray
+          const invalidMarks = isMultiShank
             ? []
-            : ntrodeMap.bad_channels.filter((v) => !channelKeys.includes(v));
+            : invalidBadChannelMarks(ntrodeMap.bad_channels, channelKeys);
           // A row that loaded with a scalar bad_channels needs a distinct whole-value
           // reset (single-shank only; multi-shank handles the first row probe-wide).
           const showScalarReset =
