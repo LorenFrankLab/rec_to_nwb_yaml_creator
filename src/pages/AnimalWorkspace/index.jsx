@@ -22,6 +22,8 @@ import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import { getAnimalDayIds, getConfigHistory } from '../../state/workspaceSelectors';
 import { getAnimalSetupChecklist, SETUP_STATE } from '../../domain/workflowStatus';
+import { validateDay } from '../../domain/validation';
+import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { validateRawAnimal } from '../../validation/rawShape';
 import { applyRepairCommand } from '../../state/repairCommands';
 import RawCorruptionBanner from '../../components/RawCorruptionBanner';
@@ -48,6 +50,34 @@ const SETUP_STATE_LABEL = {
 function setupActionHref(animalId, action) {
   if (!action?.fieldHint) return null;
   return `#/animal/${animalId}/editor?field=${action.fieldHint}`;
+}
+
+/**
+ * Collect the error-severity issues that drive the setup checklist's per-item `has_errors`:
+ * the animal's raw-shape corruption PLUS the setup validation errors surfaced by validating
+ * each of its days (electrode geometry, camera/data-acq identity, etc. only manifest through
+ * the merged day). `mergeDayMetadata` throws on a corrupt/missing configuration; that day is
+ * skipped (the corruption is already surfaced by the review banner / raw issues).
+ *
+ * @param {object} animal - The selected animal.
+ * @param {object} days - The workspace `days` record.
+ * @returns {Array} Error-severity validation issues for the animal's setup.
+ */
+function collectAnimalSetupIssues(animal, days) {
+  const issues = [...validateRawAnimal(animal)];
+  for (const dayId of getAnimalDayIds(animal)) {
+    const dayRecord = days[dayId];
+    if (!dayRecord) continue;
+    try {
+      const merged = mergeDayMetadata(animal, dayRecord);
+      for (const issue of validateDay(dayRecord, merged, animal)) {
+        if (issue.severity === 'error') issues.push(issue);
+      }
+    } catch {
+      // Corrupt/missing configuration — surfaced by the review banner; skip aggregation.
+    }
+  }
+  return issues;
 }
 
 /**
@@ -236,10 +266,14 @@ export function AnimalWorkspace() {
                     Electrode setup is a first-class action here so it is discoverable without
                     opening the Animal Editor or a recording day. */}
                 {(() => {
-                  // Raw-shape corruption for THIS animal (reused, not reinvented): folds into
-                  // the checklist's per-item has_errors AND drives the review state below.
+                  // Raw-shape corruption drives the existing-data review state below; the full
+                  // setup-issue set (raw corruption + per-day setup validation errors) drives
+                  // the checklist's per-item has_errors so a real setup error (empty location,
+                  // divergent camera/data-acq identity, …) badges its owning item, not just
+                  // structural corruption.
                   const rawIssues = validateRawAnimal(selectedAnimal);
-                  const checklist = getAnimalSetupChecklist(selectedAnimal, { issues: rawIssues });
+                  const setupIssues = collectAnimalSetupIssues(selectedAnimal, days);
+                  const checklist = getAnimalSetupChecklist(selectedAnimal, { issues: setupIssues });
                   const electrodes = checklist.find((i) => i.key === 'electrodes');
                   const needsElectrodeSetup = electrodes?.state === SETUP_STATE.NOT_STARTED;
                   const dayCount = getAnimalDayIds(selectedAnimal).length;

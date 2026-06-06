@@ -143,8 +143,8 @@ Categories:
 
 | Category | Means | Example codes |
 | --- | --- | --- |
-| `animal_setup` | shared hardware/subject setup | `channel_*`, `empty_location`, `unknown_device_type`, `divergent_camera_identity`, `partial_configuration`, `subject_id_slash` |
-| `day_metadata` | this day's session/tasks/videos/files | `invalid_species`, `dangling_camera_ref`, `duplicate_task_epoch`, `orphaned_video`, AJV session/overview/epoch errors |
+| `animal_setup` | shared hardware/subject setup | `channel_*`, `empty_location`, `unknown_device_type`, `divergent_camera_identity`, `partial_configuration`, `invalid_species`, `subject_id_slash` (subject identity is a setup item) |
+| `day_metadata` | this day's session/tasks/videos/files | `dangling_camera_ref`, `duplicate_task_epoch`, `orphaned_video`, AJV session/task/epoch errors |
 | `failed_channels` | day-specific failed-channel marks | `bad_channel_out_of_range`, `multishank_bad_channels_ignored` |
 | `existing_data` | recovered/imported/corrupt repair | `malformed_*`, `missing_configuration_history`, `stale_bad_channel_override`, `shadowed_geometry_override` |
 | `export_preflight` | export-confidence readiness | (readiness state, not an issue code) |

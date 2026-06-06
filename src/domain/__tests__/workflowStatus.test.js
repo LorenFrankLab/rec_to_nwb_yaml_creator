@@ -62,19 +62,22 @@ describe('getAnimalSetupChecklist', () => {
 
   it('marks present electrode setup needs_review with a "Review Electrodes" action', () => {
     const { animal } = buildRealisticWorkspace();
+    // animal.devices mirrors the latest snapshot in production; populate it so this reflects a
+    // normal configured animal (the parity fixture leaves devices empty for byte parity).
+    animal.devices.electrode_groups = animal.configurationHistory[0].devices.electrode_groups;
     const electrodes = itemFor(getAnimalSetupChecklist(animal), 'electrodes');
     expect(electrodes.state).toBe(SETUP_STATE.NEEDS_REVIEW);
     expect(electrodes.action.label).toBe('Review Electrodes');
   });
 
-  it('detects electrodes present from the latest configuration snapshot, not only animal.devices', () => {
-    // The realistic fixture keeps animal.devices.electrode_groups empty but the latest
-    // snapshot carries the geometry the export resolves — "has electrodes" must read that.
+  it('counts electrodes from animal.devices (the source the Animal Editor renders), so Review never dead-ends on an empty editor', () => {
+    // A recovered/imported animal whose geometry is ONLY in the snapshot (animal.devices
+    // empty) must read as not_started → "Set Up Electrodes", not Review-into-an-empty-editor.
     const { animal } = buildRealisticWorkspace();
     expect(animal.devices.electrode_groups).toEqual([]);
-    expect(itemFor(getAnimalSetupChecklist(animal), 'electrodes').state).toBe(
-      SETUP_STATE.NEEDS_REVIEW
-    );
+    const electrodes = itemFor(getAnimalSetupChecklist(animal), 'electrodes');
+    expect(electrodes.state).toBe(SETUP_STATE.NOT_STARTED);
+    expect(electrodes.action.label).toBe('Set Up Electrodes');
   });
 
   it('shows cameras needs_review when present and not_started when absent', () => {
@@ -189,6 +192,28 @@ describe('getDayWorkflowStatus', () => {
     expect(status.exportStatus).toBe(exportStatus);
     expect(status.readyForExportPreflight).toBe(false);
     expect(status.blockedByRepair).toBe(true);
+  });
+
+  it('flags an unpinned day in a multi-version animal as a configuration review risk', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    animal.configurationHistory.push({
+      version: 2,
+      date: '2023-07-01',
+      description: 'Lowered tetrodes',
+      devices: animal.configurationHistory[0].devices,
+      appliedToDays: [],
+    });
+    delete day.configurationVersion; // unpinned, but two versions exist → ambiguous
+    const merged = mergeDayMetadata(animal, day);
+    expect(getDayWorkflowStatus(animal, day, merged).usesUnpinnedConfiguration).toBe(true);
+  });
+
+  it('does not flag an unpinned day as a risk when the animal has only one configuration', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    delete day.configurationVersion; // unpinned, single version → unambiguous
+    const merged = mergeDayMetadata(animal, day);
+    const status = getDayWorkflowStatus(animal, day, merged);
+    expect(status.usesUnpinnedConfiguration).toBe(false);
   });
 
   it('does not flag a day as historical when the animal has no configuration history', () => {

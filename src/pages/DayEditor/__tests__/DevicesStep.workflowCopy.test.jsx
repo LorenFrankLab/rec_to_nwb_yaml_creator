@@ -45,4 +45,28 @@ describe('Day Devices workflow copy', () => {
       screen.getByRole('link', { name: /edit shared animal electrode setup/i })
     ).toBeInTheDocument();
   });
+
+  it('warns when an unpinned day in a multi-version animal resolves to the latest configuration', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    animal.configurationHistory.push({
+      version: 2,
+      date: '2023-07-01',
+      description: 'Lowered tetrodes',
+      devices: animal.configurationHistory[0].devices,
+      appliedToDays: [],
+    });
+    delete day.configurationVersion; // unpinned → resolves to latest (v2) ambiguously
+    const merged = mergeDayMetadata(animal, day);
+    render(
+      <DevicesStep
+        animal={animal}
+        day={day}
+        mergedDay={merged}
+        onFieldUpdate={vi.fn()}
+        animalDays={[day]}
+        actions={{ createConfigurationSnapshotAndApplyForward: vi.fn() }}
+      />
+    );
+    expect(screen.getByText(/no pinned configuration version/i)).toBeInTheDocument();
+  });
 });

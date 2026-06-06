@@ -483,9 +483,13 @@ describe('DevicesStep', () => {
     const errorMessages = screen.getAllByText(/no channel mapping found/i);
     expect(errorMessages.length).toBeGreaterThan(0);
     expect(errorMessages[0]).toBeInTheDocument();
-    // Check that the fix link uses the new Animal Editor (there are multiple links, one per group)
+    // The fix link deep-links to the Channel Maps step (the owner of the missing map),
+    // not the bare Animal Editor (there are multiple links, one per group).
     const fixLinks = screen.getAllByRole('link', { name: /fix in animal editor/i });
-    expect(fixLinks[0]).toHaveAttribute('href', '#/animal/test-animal/editor');
+    expect(fixLinks[0]).toHaveAttribute(
+      'href',
+      '#/animal/test-animal/editor?field=ntrode_electrode_group_channel_map'
+    );
   });
 
   it('uses aria-label on status badges for accessibility', () => {

@@ -333,6 +333,23 @@ describe('ExportStep', () => {
     expect(within(preflight).getByText(/version 1 \(historical\)/i)).toBeInTheDocument();
   });
 
+  it('warns in preflight when an unpinned day in a multi-version animal resolves to latest', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    animal.configurationHistory.push({
+      version: 2,
+      date: '2023-07-01',
+      description: 'Lowered tetrodes',
+      devices: animal.configurationHistory[0].devices,
+      appliedToDays: [],
+    });
+    delete day.configurationVersion; // unpinned, two versions → silently resolves to latest
+
+    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+
+    const preflight = screen.getByRole('region', { name: /preflight/i });
+    expect(within(preflight).getByText(/not pinned to this day/i)).toBeInTheDocument();
+  });
+
   it('reports unresolved non-blocking warnings in the preflight', () => {
     const { animal, day } = buildRealisticWorkspace();
     // One warning-severity issue (no errors) — the day stays exportable but preflight must

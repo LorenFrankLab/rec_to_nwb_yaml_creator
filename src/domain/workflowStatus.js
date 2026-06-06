@@ -19,6 +19,7 @@
  */
 
 import { computeStepStatus } from './validation';
+import { isExportEnabled } from './stepGate';
 import {
   getAnimalElectrodeGroups,
   getAnimalCameras,
@@ -26,7 +27,6 @@ import {
   getAnimalSubject,
   getAnimalDayIds,
   getConfigHistory,
-  getProbeElectrodeGroups,
 } from '../state/workspaceSelectors';
 
 /**
@@ -41,19 +41,19 @@ export const SETUP_STATE = {
 };
 
 /**
- * Whether the animal has electrode/probe geometry configured. Authoritative source is the
- * configuration the export resolves from (the latest snapshot), with `animal.devices` (the
- * live mirror) as a fallback — so an animal whose geometry lives only in the snapshot (the
- * parity fixtures, and any reconfigured animal) still reads as "has electrodes".
+ * Whether the animal has electrode/probe geometry configured. Reads `animal.devices` — the
+ * SAME source the Animal Editor renders and edits — so a "Review Electrodes" action always
+ * lands on a populated editor. Under model B, `animal.devices` mirrors the latest
+ * configuration snapshot, so this also matches what the export resolves in normal use; a
+ * recovered/imported animal whose `devices` is empty (but a snapshot has geometry) correctly
+ * reads as "not set up" here, because the editor would be empty and the honest next action is
+ * "Set Up Electrodes", not a review that dead-ends on a blank step.
  *
  * @param {object} animal
  * @returns {boolean}
  */
 export function animalHasElectrodes(animal) {
-  if (getAnimalElectrodeGroups(animal).length > 0) return true;
-  const history = getConfigHistory(animal);
-  const latest = history.length > 0 ? history[history.length - 1] : null;
-  return getProbeElectrodeGroups(latest?.devices).length > 0;
+  return getAnimalElectrodeGroups(animal).length > 0;
 }
 
 /**
@@ -148,11 +148,8 @@ function actionForItem(key, present) {
  */
 export function getAnimalSetupChecklist(animal, { issues = [] } = {}) {
   const subject = getAnimalSubject(animal);
-  const electrodesPresent = animalHasElectrodes(animal);
-  const electrodeCount = Math.max(
-    getAnimalElectrodeGroups(animal).length,
-    getProbeElectrodeGroups(getConfigHistory(animal).slice(-1)[0]?.devices).length
-  );
+  const electrodeCount = getAnimalElectrodeGroups(animal).length;
+  const electrodesPresent = electrodeCount > 0;
   const cameras = getAnimalCameras(animal);
   const dataAcq = getDataAcqDevices(animal);
   const dayIds = getAnimalDayIds(animal);
@@ -203,8 +200,15 @@ export function getAnimalSetupChecklist(animal, { issues = [] } = {}) {
 
 /**
  * The day's workflow/readiness status. The configuration version + historical flag come from
- * the day's pin vs. the latest snapshot; readiness comes straight from `computeStepStatus`
- * (the export gate), so it can't drift from what the Export button enforces.
+ * the day's pin vs. the latest snapshot; readiness comes straight from the SAME export gate
+ * the Export button enforces (`isExportEnabled(computeStepStatus(...))`, which folds in the
+ * prerequisite-step statuses, not just the `export` status), so it can't drift from the UI.
+ *
+ * `usesUnpinnedConfiguration` flags the existing-data review risk Phase 8.6 calls out: a day
+ * with no pinned `configurationVersion` in a multi-version animal is silently resolved to the
+ * latest snapshot by `resolveDayConfig`, which can export the wrong geometry for a recovered
+ * day that actually recorded an earlier configuration. (A single-version animal is
+ * unambiguous, so it is not flagged.)
  *
  * @param {object} animal - The owning animal.
  * @param {object} day - The recording day.
@@ -214,6 +218,7 @@ export function getAnimalSetupChecklist(animal, { issues = [] } = {}) {
  *   configurationVersion: (number|null),
  *   latestConfigurationVersion: (number|null),
  *   isHistoricalConfiguration: boolean,
+ *   usesUnpinnedConfiguration: boolean,
  *   hasElectrodes: boolean,
  *   readyForFailedChannels: boolean,
  *   exportStatus: string,
@@ -225,30 +230,37 @@ export function getDayWorkflowStatus(animal, day, mergedDay) {
   const history = getConfigHistory(animal);
   const latest = history.length > 0 ? history[history.length - 1] : null;
   const latestConfigurationVersion = latest && latest.version != null ? latest.version : null;
-  const configurationVersion =
-    day?.configurationVersion != null ? day.configurationVersion : latestConfigurationVersion;
+  const isPinned = day?.configurationVersion != null;
+  const configurationVersion = isPinned ? day.configurationVersion : latestConfigurationVersion;
   const isHistoricalConfiguration =
     configurationVersion != null &&
     latestConfigurationVersion != null &&
     configurationVersion !== latestConfigurationVersion;
+  // A missing pin only ambiguous when more than one version exists.
+  const usesUnpinnedConfiguration = !isPinned && history.length > 1;
 
   const hasElectrodes =
     Boolean(mergedDay) &&
     Array.isArray(mergedDay.electrode_groups) &&
     mergedDay.electrode_groups.length > 0;
 
-  // Readiness is the export gate, not a re-derivation. Without a merged model the day could
-  // not be resolved (corrupt/missing configuration) → blocked.
-  const exportStatus = mergedDay ? computeStepStatus(day, mergedDay, animal).export : 'error';
+  // Readiness is the SAME gate the Export button uses (isExportEnabled folds in the
+  // prerequisite-step statuses, not just `export`), so the helper can't say "ready" while the
+  // Export button is disabled. Without a merged model the day could not be resolved
+  // (corrupt/missing configuration) → blocked.
+  const stepStatus = mergedDay ? computeStepStatus(day, mergedDay, animal) : null;
+  const exportStatus = stepStatus ? stepStatus.export : 'error';
+  const ready = stepStatus ? isExportEnabled(stepStatus) : false;
 
   return {
     configurationVersion,
     latestConfigurationVersion,
     isHistoricalConfiguration,
+    usesUnpinnedConfiguration,
     hasElectrodes,
     readyForFailedChannels: hasElectrodes,
     exportStatus,
-    blockedByRepair: exportStatus !== 'valid',
-    readyForExportPreflight: exportStatus === 'valid',
+    blockedByRepair: !ready,
+    readyForExportPreflight: ready,
   };
 }

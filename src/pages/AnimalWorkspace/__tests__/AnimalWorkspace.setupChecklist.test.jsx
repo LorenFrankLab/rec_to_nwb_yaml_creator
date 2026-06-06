@@ -8,6 +8,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StoreProvider } from '../../../state/StoreContext';
 import { AnimalWorkspace } from '../index';
+import { buildRealisticWorkspace } from '../../../__tests__/fixtures/workspaceBuilders';
 
 const originalHash = window.location.hash;
 afterEach(() => {
@@ -122,5 +123,22 @@ describe('AnimalWorkspace existing-data review state', () => {
     renderWith({ newbie: newAnimal });
     await selectAnimal('newbie');
     expect(screen.queryByRole('region', { name: /existing data review/i })).not.toBeInTheDocument();
+  });
+
+  it('folds a per-day setup-validation error into the checklist item (not just raw corruption)', async () => {
+    // A real setup error (an unknown probe device_type) surfaces only by validating the day's
+    // merged metadata; the workspace must aggregate it so the Electrodes item badges has_errors.
+    const { animal, day } = buildRealisticWorkspace();
+    const badGeometry = animal.configurationHistory[0].devices.electrode_groups.map((g, i) =>
+      i === 0 ? { ...g, device_type: 'totally_unknown_probe' } : g
+    );
+    animal.configurationHistory[0].devices.electrode_groups = badGeometry;
+    animal.devices.electrode_groups = badGeometry; // mirror, so the item also reads as present
+
+    renderWith({ [animal.id]: animal }, { [day.id]: day });
+    await selectAnimal(animal.id);
+
+    const electrodesItem = screen.getByText('Electrodes / probes').closest('.setup-item');
+    expect(electrodesItem.className).toMatch(/setup-item-has_errors/);
   });
 });

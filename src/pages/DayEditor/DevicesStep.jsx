@@ -394,7 +394,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
             This animal&apos;s device configuration is missing or corrupt, so devices
             can&apos;t be shown for this day.
           </p>
-          <a href={`#/animal/${animal.id}/editor`} className="button-primary">
+          <a href={`#/animal/${animal.id}/editor?field=electrode_groups`} className="button-primary">
             Configure devices in the Animal Editor
           </a>
         </div>
@@ -460,6 +460,13 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
               <span className="config-version-applied">
                 Applied to {reconfig.appliedCount} {reconfig.appliedCount === 1 ? 'day' : 'days'}
               </span>
+              {day.configurationVersion == null && getConfigHistory(animal).length > 1 && (
+                <span className="config-version-warning" role="alert">
+                  This day has no pinned configuration version. It is resolved to the latest
+                  (v{reconfig.version}); if it recorded an earlier configuration, reconfigure or
+                  pin the correct version before exporting.
+                </span>
+              )}
             </div>
             <button
               type="button"
@@ -519,7 +526,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
                   <div className="error-state-inline">
                     <p>⚠ No channel mapping found for this electrode group.</p>
                     <p>This usually indicates data corruption. Please review animal configuration.</p>
-                    <a href={`#/animal/${animal.id}/editor`}>Fix in Animal Editor</a>
+                    <a href={`#/animal/${animal.id}/editor?field=ntrode_electrode_group_channel_map`}>Fix in Animal Editor</a>
                   </div>
                 </div>
               </details>

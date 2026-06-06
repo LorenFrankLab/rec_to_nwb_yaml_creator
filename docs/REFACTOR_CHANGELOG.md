@@ -63,6 +63,40 @@ review-state component tests, the Day Devices workflow-copy test, the camera ide
 test, the Animal Editor shared-setup assertion, the Validation category-grouping assertion, and
 the enriched preflight assertions.
 
+**Review follow-ups (addressed in-phase):**
+
+- **Electrode-presence matches the editor (was: Review could dead-end on an empty editor).**
+  `animalHasElectrodes` now reads `animal.devices` — the source the Animal Editor renders — so
+  "Review Electrodes" never lands on a blank step; a recovered animal with geometry only in a
+  snapshot reads as "Set Up Electrodes".
+- **Readiness uses the real export gate.** The export gate moved to `src/domain/stepGate.js`
+  (`pages/DayEditor/stepGate.js` re-exports it for the in-folder consumers); `getDayWorkflowStatus`
+  now derives `readyForExportPreflight` from `isExportEnabled(computeStepStatus(...))` (which folds
+  in the prerequisite-step statuses), so the helper can't say "ready" while Export is disabled.
+- **Unpinned-configuration review risk surfaced.** `getDayWorkflowStatus` adds
+  `usesUnpinnedConfiguration` (a day with no pinned version in a multi-version animal, silently
+  resolved to latest by `resolveDayConfig`); the Day Devices version bar and the Export preflight
+  now warn so a recovered day can't export the wrong geometry unnoticed. Resolution semantics are
+  unchanged (no `resolveDayConfig` change).
+- **Checklist reflects real setup errors.** The Animal Workspace folds per-day setup validation
+  errors (electrode/camera/data-acq/subject) into the checklist's per-item `has_errors`, not just
+  raw-shape corruption.
+- **Accurate inheritance copy.** The Animal Editor subtitle and save confirmation no longer claim
+  all recording days inherit a change — edits apply to the latest configuration; days pinned to an
+  earlier version keep theirs.
+- **Deep-linked repair links.** The Day Devices config-error and missing-channel-map links now
+  deep-link to the owning Animal Editor step (`?field=…`) instead of the bare editor.
+
+**Deferred (logged, out of this phase's wording/routing/state scope):**
+
+- **Batch export preflight.** `ValidationSummary`'s "Export Valid Only" stays validity-gated (no
+  wrong-data risk) but does not yet show the per-day preflight confidence summary; building a
+  batch-preflight surface is a new feature for Phase 9/11.
+- **Repair-button label rewording.** Repair buttons keep the canonical `repairTargetForIssue`
+  labels ("Fix in Animal Editor → …", "Fix in Devices"), which are a tested routing contract; the
+  workflow-category headings already provide the setup-checklist framing. Rewording the canonical
+  labels is deferred to avoid destabilizing the routing contract.
+
 ---
 
 ## Domain boundaries & ownership cleanup — Phase 8.5 (June 5, 2026)
