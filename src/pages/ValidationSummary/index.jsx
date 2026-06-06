@@ -22,6 +22,7 @@ import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { getAnimalDayIds, getAnimalSubject } from '../../state/workspaceSelectors';
 import { computeStepStatus } from '../../domain/validation';
 import { getDayWorkflowStatus } from '../../domain/workflowStatus';
+import { classifyWorkspaceDays, DAY_STATUS, isExportableDayStatus } from '../../domain/dayRecovery';
 import { formatDeterministicFilename, downloadYamlFile } from '../../io/yaml';
 import { checkShadowExport } from '../../domain/shadowExport';
 import { isFeatureEnabled } from '../../featureFlags';
@@ -71,109 +72,44 @@ const isRecord = (value) =>
  * @returns {Array<{ animal: object, day: object, chip: 'valid'|'error'|'incomplete' }>}
  */
 function buildRows(workspace) {
-  // Every sort key here is read from PERSISTED state, which a bad import/migration
-  // can corrupt: an animal id or day date may be missing or a non-string, and
-  // `localeCompare` on a non-string throws. Coerce to a string for ordering only
-  // (never mutating the record) so one malformed key can't throw and blank the
-  // whole multi-day summary.
-  const orderKey = (value) => (typeof value === 'string' ? value : String(value ?? ''));
-
-  // Carry the workspace.animals MAP KEY alongside each animal: it is the reliable store
-  // handle for a repair (e.g. removeDayReference), whereas `animal.id` may be missing/corrupt
-  // (this summary tolerates that). Sort by the key (== id for well-formed data).
-  const animals = Object.entries(workspace?.animals || {})
-    .map(([animalKey, animal]) => ({ animalKey, animal }))
-    .sort((a, b) => orderKey(a.animalKey).localeCompare(orderKey(b.animalKey)));
-
-  // `days` may be absent or a non-record (e.g. an array from a bad migration); indexing a
-  // non-record by id must not deref `undefined[id]` and crash the page. A missing/non-record
-  // map is corruption, not emptiness: every day reference an animal holds then resolves to no
-  // record and is surfaced as an explicit error row below — never laundered into the "No
-  // recording days" empty state, which would hide every referenced day.
-  const daysById = isRecord(workspace?.days) ? workspace.days : {};
-
+  // The day RECOVERY STATUS of every reference/record is decided ONCE in the domain
+  // ({@link classifyWorkspaceDays}) so this surface doesn't re-derive "what kind of day is
+  // this?". buildRows only DECORATES each classified day with its validation chip and the
+  // legacy row flags the table renders. Each row also carries its `status` so the export
+  // policy ({@link isExportableDayStatus}) is read, not re-decided, downstream.
+  const animalsMap = isRecord(workspace?.animals) ? workspace.animals : {};
   const rows = [];
-  // Day ids reached through an animal's index, so the orphan sweep below doesn't double-count.
-  const indexedDayIds = new Set();
-  for (const { animalKey, animal } of animals) {
-    // A non-array `days` is corrupt persisted state (e.g. `{}` from a bad import).
-    // Treat it as "no days" rather than letting `.map` throw and blank the whole
-    // multi-day summary — the rest of the workspace must still render.
-    const dayIds = getAnimalDayIds(animal);
-    // Resolve each reference to its persisted record, KEEPING the reference even when it
-    // doesn't resolve to a record (a dangling/missing id, or a truthy-but-non-record
-    // leftover from a partial migration). A corrupt reference must be surfaced as an error
-    // row below — never dropped — or the accounting would report only the surviving rows
-    // while a corrupt day hides. Order by date (records) with corrupt refs (no date) first.
-    const resolved = dayIds
-      .map((dayId) => ({ dayId, record: daysById[dayId] }))
-      .sort((a, b) =>
-        orderKey(isRecord(a.record) ? a.record.date : '').localeCompare(
-          orderKey(isRecord(b.record) ? b.record.date : '')
-        )
+
+  for (const { animalKey, dayId, record, status } of classifyWorkspaceDays(workspace)) {
+    const animal = isRecord(animalsMap[animalKey]) ? animalsMap[animalKey] : { id: animalKey };
+
+    if (status === DAY_STATUS.DANGLING_REFERENCE) {
+      // Indexed id with no resolvable record — visible, counted, repairable (remove reference).
+      rows.push({ animal, animalKey, day: { id: dayId }, chip: 'error', status, missingRecord: true });
+      // eslint-disable-next-line no-console
+      console.error(
+        `[validation-summary] day reference "${dayId}" does not resolve to a record — flagged as error.`
       );
-
-    for (const { dayId, record } of resolved) {
-      indexedDayIds.add(dayId);
-      // A reference that does not resolve to a day RECORD (missing id → undefined, or a
-      // truthy-but-non-record leftover) cannot be merged/validated. Surface it as a
-      // distinct error row keyed by its id, so it is visibly flagged for repair and counted
-      // — never silently dropped or shown as valid.
-      if (!isRecord(record)) {
-        // A reference resolving to no day record (missing id, or a non-record leftover, or a
-        // wholly-missing days map) is dangling corruption. Surface it as an explicit error
-        // row keyed by its id so it is visible, counted, and repairable — never dropped.
-        rows.push({ animal, animalKey, day: { id: dayId }, chip: 'error', missingRecord: true });
-        // eslint-disable-next-line no-console
-        console.error(
-          `[validation-summary] day reference "${dayId}" does not resolve to a record — flagged as error.`
-        );
-        continue;
-      }
-
-      // mergeDayMetadata throws BY DESIGN on a corrupt animal (missing/empty
-      // configurationHistory, an unresolvable pin, etc.). One unreadable day must
-      // not take down the entire summary and hide every other day — report it as a
-      // distinct error row so it is visibly flagged for repair, never silently
-      // dropped or shown as valid.
-      try {
-        const mergedDay = mergeDayMetadata(animal, record);
-        const chip = deriveChip(computeStepStatus(record, mergedDay, animal));
-        rows.push({ animal, animalKey, day: record, chip });
-      } catch (err) {
-        rows.push({ animal, animalKey, day: record, chip: 'error', unreadable: true });
-        // eslint-disable-next-line no-console
-        console.error(
-          `[validation-summary] could not read day "${record?.id}" — flagged as error:`,
-          err
-        );
-      }
+      continue;
     }
-  }
-
-  // Orphan sweep: a day RECORD that no animal index reaches (the animal's `days` is corrupt,
-  // missing, or simply doesn't list it) would otherwise DISAPPEAR from the workflow entirely —
-  // a recovered/imported data-loss risk. Surface every such record so it is visible, counted,
-  // and routable to its day editor. Resolved against its own `animalId` (the reliable owner)
-  // when that animal exists; otherwise flagged as an orphan with no owning animal.
-  for (const [dayId, record] of Object.entries(daysById)) {
-    if (indexedDayIds.has(dayId) || !isRecord(record)) continue;
-    const owner = isRecord(workspace?.animals?.[record.animalId])
-      ? workspace.animals[record.animalId]
-      : null;
-    if (!owner) {
-      rows.push({ animal: { id: record.animalId }, animalKey: record.animalId, day: record, chip: 'error', orphaned: true, ownerMissing: true });
+    if (status === DAY_STATUS.ORPHAN_NO_OWNER) {
+      // Real record whose owning animal is gone — visible but not auto-exportable; no relink target.
+      rows.push({ animal, animalKey, day: record, chip: 'error', status, orphaned: true, ownerMissing: true });
       // eslint-disable-next-line no-console
       console.error(`[validation-summary] day "${dayId}" is not listed by any animal — flagged as orphaned.`);
       continue;
     }
+
+    // OK or RECOVERED_UNLINKED: a real record → show its validation chip. mergeDayMetadata
+    // throws BY DESIGN on a corrupt animal; one unreadable day must not blank the summary.
+    const orphaned = status === DAY_STATUS.RECOVERED_UNLINKED;
     try {
-      const chip = deriveChip(computeStepStatus(record, mergeDayMetadata(owner, record), owner));
-      rows.push({ animal: owner, animalKey: record.animalId, day: record, chip, orphaned: true });
+      const chip = deriveChip(computeStepStatus(record, mergeDayMetadata(animal, record), animal));
+      rows.push({ animal, animalKey, day: record, chip, status, orphaned });
     } catch (err) {
-      rows.push({ animal: owner, animalKey: record.animalId, day: record, chip: 'error', orphaned: true, unreadable: true });
+      rows.push({ animal, animalKey, day: record, chip: 'error', status, orphaned, unreadable: true });
       // eslint-disable-next-line no-console
-      console.error(`[validation-summary] orphaned day "${dayId}" could not be read:`, err);
+      console.error(`[validation-summary] could not read day "${record?.id}" — flagged as error:`, err);
     }
   }
 
@@ -252,6 +188,9 @@ export function ValidationSummary() {
   const [skippedReport, setSkippedReport] = useState([]);
   const [overriddenReport, setOverriddenReport] = useState([]);
   const [failedReport, setFailedReport] = useState([]);
+  // Days dropped at confirm because they changed since the preflight (gone / no longer valid) —
+  // reported separately from parity skips so they aren't mislabeled "parity check failed".
+  const [staleReport, setStaleReport] = useState([]);
   // Pending batch export awaiting preflight confirmation: { rows, preflight }.
   const [pendingExport, setPendingExport] = useState(null);
 
@@ -259,6 +198,7 @@ export function ValidationSummary() {
     setSkippedReport([]);
     setOverriddenReport([]);
     setFailedReport([]);
+    setStaleReport([]);
   };
 
   const handleValidateAll = () => {
@@ -293,13 +233,20 @@ export function ValidationSummary() {
   // path gets the SAME "what will be encoded?" confidence check as the single-day Export step,
   // instead of one click straight to download. The actual download runs only on confirm.
   const handleExportValidOnly = () => {
-    const validRows = rows.filter((row) => row.chip === 'valid');
+    // Export only days that are BOTH validation-valid AND part of the animal's recording days
+    // by recovery policy (isExportableDayStatus → only `ok`). A recovered-unlinked record is
+    // valid metadata but must be re-linked ("Add to day list") before it is exported, so it is
+    // deliberately excluded here rather than silently shipped from a broken index.
+    const validRows = rows.filter(
+      (row) => row.chip === 'valid' && isExportableDayStatus(row.status)
+    );
 
     if (validRows.length === 0) {
       clearReports();
       setPendingExport(null);
       setActionMessage(
-        'No valid days to export. Fix errors or complete the required fields to enable export.'
+        'No valid days to export. Fix errors, complete the required fields, or re-link recovered ' +
+          'days (Add to day list) to enable export.'
       );
       return;
     }
@@ -346,6 +293,7 @@ export function ValidationSummary() {
     const skipped = [];
     const overridden = [];
     const failed = [];
+    const stale = [];
     let exported = 0;
 
     validRows.forEach(({ animalKey, day: rowDay }) => {
@@ -361,7 +309,7 @@ export function ValidationSummary() {
       };
 
       if (!animal || !isRecord(day)) {
-        skipped.push({ ...identity, detail: 'No longer present since preflight — not exported.' });
+        stale.push({ ...identity, detail: 'No longer present since the preflight.' });
         return;
       }
       let stillValid = false;
@@ -371,7 +319,7 @@ export function ValidationSummary() {
         stillValid = false;
       }
       if (!stillValid) {
-        skipped.push({ ...identity, detail: 'No longer valid since preflight — not exported.' });
+        stale.push({ ...identity, detail: 'No longer valid since the preflight.' });
         return;
       }
 
@@ -413,6 +361,7 @@ export function ValidationSummary() {
     setSkippedReport(skipped);
     setOverriddenReport(overridden);
     setFailedReport(failed);
+    setStaleReport(stale);
 
     const notValid = rows.length - validRows.length;
     let message = `Exported ${exported} ${exported === 1 ? 'file' : 'files'}.`;
@@ -545,6 +494,17 @@ export function ValidationSummary() {
                 : `${failedReport.length} days could not be exported (errors occurred) and were not downloaded:`
             }
             items={failedReport}
+          />
+
+          <ExportReport
+            className="validation-summary-stale"
+            detailLabel="Reason"
+            message={
+              staleReport.length === 1
+                ? '1 day changed after the preflight and was not exported:'
+                : `${staleReport.length} days changed after the preflight and were not exported:`
+            }
+            items={staleReport}
           />
 
           <table className="validation-summary-table">

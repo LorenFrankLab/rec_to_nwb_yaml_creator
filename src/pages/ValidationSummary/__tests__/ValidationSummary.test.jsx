@@ -321,6 +321,27 @@ describe('ValidationSummary', () => {
     expect(within(row).getByRole('button', { name: /add .* back to .* day list/i })).toBeInTheDocument();
   });
 
+  it('Export Valid Only EXCLUDES a recovered-unlinked (orphan) day until it is re-linked', async () => {
+    const user = userEvent.setup();
+    const { workspace, ids } = makeSummaryWorkspace();
+    // Make the incomplete day valid (an OK day) and orphan the valid day (keep the record, drop
+    // it from the index). The orphan's chip is still 'valid', but policy excludes it from export.
+    const fixedDay = workspace.days[ids.incompleteDayId];
+    fixedDay.session = { ...fixedDay.session, session_id: 'remy_20230623' };
+    delete workspace.animals.totoro;
+    delete workspace.days[ids.errorDayId];
+    workspace.animals.remy.days = [ids.incompleteDayId];
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+    await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    await user.click(screen.getByRole('button', { name: /confirm export/i }));
+
+    // Only the OK valid day downloads; the orphaned (recovered-unlinked) valid record is excluded.
+    expect(downloadYamlFile).toHaveBeenCalledTimes(1);
+    expect(downloadYamlFile).toHaveBeenCalledWith('06232023_remy_metadata.yml', 'yaml-bytes');
+  });
+
   it('re-links an orphaned day record into its animal index when the repair is clicked', async () => {
     const user = userEvent.setup();
     const { workspace, ids } = makeSummaryWorkspace();

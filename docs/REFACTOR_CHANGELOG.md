@@ -180,6 +180,33 @@ checklist action **verbs** (Set Up Electrodes / Review Cameras), so there is no 
   `workflow-clarity-design.md`, and the changelog: category headings carry the checklist vocabulary;
   repair buttons keep the canonical `repairTargetForIssue` labels.
 
+**Seventh-review follow-ups — one domain recovery-status model (addressed in-phase):**
+
+The recurring theme across rounds 4–6 was the app conflating "safe to render" with "safe to
+trust": each surface independently coerced corrupt day state and then re-decided what it meant,
+so a local fix could create a new mismatch. This round encodes the abnormal day-reference states
+as ONE domain model and makes every surface consume it.
+
+- **New domain module `src/domain/dayRecovery.js`** assigns every day reference/record exactly one
+  explicit status — `ok`, `dangling_reference`, `recovered_unlinked`, `orphan_no_owner` — with one
+  export policy (`isExportableDayStatus` → only `ok`). `classifyAnimalDays` (per animal) and
+  `classifyWorkspaceDays` (cross-workspace) are the single source.
+- **ValidationSummary** now builds its rows from `classifyWorkspaceDays` (chips/flags/repairs are
+  decorations on the status, not a parallel re-derivation), and **Export Valid Only** filters by
+  `isExportableDayStatus` so a recovered-unlinked record is **excluded from export until re-linked**
+  ("Add to day list") rather than silently shipped from a broken index.
+- **AnimalWorkspace** renders its day list, counts, and review state from `classifyAnimalDays`.
+  The review count now counts the day RECORDS present (indexed + recovered), so a missing/corrupt
+  index no longer reads "Found 0 recording days" while records render below.
+- **Stale-preflight skips** (a day gone/invalid since the preflight opened) are reported in their
+  own bucket ("changed after the preflight"), no longer mislabeled as export-parity failures.
+- **`relinkDayReference`** now verifies the target is a real record owned by the animal.
+- **Decision — malformed `day.state` is harmless UI metadata.** `state` holds the non-exported
+  draft/validated/exported chips, not scientific data; it is normalized to `{}` (a documented,
+  silent reset — the chips simply don't render) and is deliberately NOT a recovery status. The
+  guards in `applyDayUpdates` and the Validate-All payload prevent char-key scatter; nothing about
+  it reaches the YAML or the export gate.
+
 ---
 
 ## Domain boundaries & ownership cleanup — Phase 8.5 (June 5, 2026)

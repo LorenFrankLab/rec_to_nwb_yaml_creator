@@ -22,6 +22,7 @@ import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import { getAnimalDayIds, getConfigHistory, getDaySession } from '../../state/workspaceSelectors';
 import { getAnimalSetupChecklist, SETUP_STATE } from '../../domain/workflowStatus';
+import { classifyAnimalDays, DAY_STATUS } from '../../domain/dayRecovery';
 import { validateDay } from '../../domain/validation';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { validateRawAnimal } from '../../validation/rawShape';
@@ -103,24 +104,17 @@ export function AnimalWorkspace() {
   // "No recording days yet" and hide the problem. Surface it as a corrupt-reference state.
   const selectedDaysCorrupt =
     !!selectedAnimal && selectedAnimal.days != null && !Array.isArray(selectedAnimal.days);
-  // Day RECORDS that belong to the selected animal (by `animalId`) but are NOT in its `days`
-  // index — because the index is missing, corrupt, or simply doesn't list them. Without this,
-  // a missing/corrupt index would show "No recording days yet" and the recovered records would
-  // be hidden. Surface them so they aren't lost. (`isRecord`-guarded; cheap for small workspaces.)
-  const selectedOrphanDayIds = (() => {
-    if (!selectedAnimal) return [];
-    const indexed = new Set(getAnimalDayIds(selectedAnimal));
-    return Object.keys(days).filter((id) => {
-      const record = days[id];
-      return (
-        record !== null &&
-        typeof record === 'object' &&
-        !Array.isArray(record) &&
-        record.animalId === selectedAnimalId &&
-        !indexed.has(id)
-      );
-    });
-  })();
+  // The single domain classifier decides each day's recovery status (ok / dangling_reference /
+  // recovered_unlinked), so the day list, the counts, and the review state all read ONE truth
+  // instead of each re-deriving "what kind of day is this?". Recovered-unlinked records are
+  // surfaced (never laundered into "No recording days yet") and re-linked from the Validation
+  // summary; they are NOT exported until re-linked (see dayRecovery's policy).
+  const selectedDayClassification = selectedAnimal
+    ? classifyAnimalDays(selectedAnimalId, selectedAnimal, days)
+    : [];
+  const selectedOrphanDayIds = selectedDayClassification
+    .filter((d) => d.status === DAY_STATUS.RECOVERED_UNLINKED)
+    .map((d) => d.dayId);
 
   // On mount, select an animal so the setup/review state is visible immediately rather than
   // one click hidden: honor an explicit `?animal=<id>`; with no param, auto-select the SOLE
@@ -306,7 +300,12 @@ export function AnimalWorkspace() {
                   const checklist = getAnimalSetupChecklist(selectedAnimal, { issues: setupIssues });
                   const electrodes = checklist.find((i) => i.key === 'electrodes');
                   const needsElectrodeSetup = electrodes?.state === SETUP_STATE.NOT_STARTED;
-                  const dayCount = getAnimalDayIds(selectedAnimal).length;
+                  // Count the recording-day RECORDS actually present (indexed + recovered), not
+                  // just the index length — otherwise a missing/corrupt index would say "Found 0
+                  // recording days" while recovered records render below.
+                  const dayCount = selectedDayClassification.filter(
+                    (d) => d.status === DAY_STATUS.OK || d.status === DAY_STATUS.RECOVERED_UNLINKED
+                  ).length;
                   const configCount = getConfigHistory(selectedAnimal).length;
                   // Existing data needs an explicit review state: recovered/imported setup must
                   // not look silently trusted. Show it once there ARE recording days to export,
@@ -415,11 +414,10 @@ export function AnimalWorkspace() {
                 )}
 
                 {(() => {
-                  // Show indexed days PLUS orphaned records (records that belong to this animal
-                  // but the index doesn't list — recovered/corrupt-index data) so nothing is
-                  // hidden behind "No recording days yet".
-                  const displayedDayIds = [...getAnimalDayIds(selectedAnimal), ...selectedOrphanDayIds];
-                  if (displayedDayIds.length === 0) {
+                  // Render straight from the domain classification (ok / dangling_reference /
+                  // recovered_unlinked), so the list shows recovered records (never hidden behind
+                  // "No recording days yet") and every row's kind is the single domain truth.
+                  if (selectedDayClassification.length === 0) {
                     return selectedDaysCorrupt ? (
                       /* Corrupt index AND no recoverable records — see the review state above. */
                       <div className="empty-state">
@@ -437,13 +435,10 @@ export function AnimalWorkspace() {
                   return (
                   /* Day List */
                   <ul className="day-list" role="list">
-                    {displayedDayIds.map((dayId) => {
-                      const day = days[dayId];
-                      const isOrphan = selectedOrphanDayIds.includes(dayId);
-                      // A reference that resolves to no record (dangling) must be surfaced, not
-                      // silently dropped — otherwise a recovered day disappears. Show an explicit
-                      // missing-record row consistent with the cross-day Validation summary.
-                      if (!day || typeof day !== 'object' || Array.isArray(day)) {
+                    {selectedDayClassification.map(({ dayId, record, status }) => {
+                      // A dangling reference (no record) is surfaced, not dropped — otherwise a
+                      // recovered day disappears. Consistent with the cross-day Validation summary.
+                      if (status === DAY_STATUS.DANGLING_REFERENCE) {
                         return (
                           <li key={dayId} className="day-item day-item-missing">
                             <div className="day-link day-link-missing" role="alert">
@@ -462,13 +457,14 @@ export function AnimalWorkspace() {
                         );
                       }
 
+                      const isOrphan = status === DAY_STATUS.RECOVERED_UNLINKED;
                       // Guard session/state: a recovered day can carry a malformed (scalar/array)
                       // session or state, which a raw `.session_id`/`.draft` read would crash on.
-                      const date = day.date;
-                      const session = getDaySession(day);
+                      const date = record.date;
+                      const session = getDaySession(record);
                       const state =
-                        day.state && typeof day.state === 'object' && !Array.isArray(day.state)
-                          ? day.state
+                        record.state && typeof record.state === 'object' && !Array.isArray(record.state)
+                          ? record.state
                           : {};
 
                       return (

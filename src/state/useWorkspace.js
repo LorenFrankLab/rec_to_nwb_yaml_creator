@@ -531,7 +531,13 @@ export function useWorkspace(initialState = null) {
           if (!animal) return prev;
           const daysIsRecord =
             prev.days !== null && typeof prev.days === 'object' && !Array.isArray(prev.days);
-          if (!daysIsRecord || !prev.days[dayId]) return prev;
+          if (!daysIsRecord) return prev;
+          // The id must resolve to a real day RECORD that actually belongs to this animal —
+          // never re-link a non-record leftover or a record owned by a different animal.
+          const record = prev.days[dayId];
+          const isRecordDay =
+            record !== null && typeof record === 'object' && !Array.isArray(record);
+          if (!isRecordDay || record.animalId !== animalId) return prev;
           const current = getAnimalDayIds(animal);
           if (current.includes(dayId)) return prev;
           return {
