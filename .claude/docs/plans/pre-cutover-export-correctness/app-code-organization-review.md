@@ -10,6 +10,70 @@ Plan disposition: the pre-QA subset of this review is now incorporated as
 Treat the phase file as the executable source of truth. This note remains the architectural rationale and
 should be refreshed at the start of Phase 8.5 before code changes begin.
 
+## Refreshed inventory at Phase 8.5 start (verified against the branch)
+
+The review below predates phases 1–8 in wording but is structurally accurate. Verified current state
+before extraction, with the exact symbols/targets each task moves:
+
+- **App-wide validation/repair routing lives in `src/pages/DayEditor/validation.js`** (906 lines). It
+  exports `validateDay`, `computeStepStatus`, `computeDevicesStatus`, `computeEpochsStatus`,
+  `dayOverrideIssues`, `groupErrorsByStep`, `stepIdForIssue`, `repairTargetForIssue`,
+  `animalEditorStepForFieldPath`, `STEP_LABELS`, `SURFACE_BY_CODE`, `ANIMAL_EDITOR_STEPS`, plus the
+  page-only field-blur helper `validateField`. Phase 8 added opto/fs_gui routing here
+  (`SURFACE_BY_CODE.partial_configuration/multiple_excitation_sources`, the `fs_gui` branches in
+  `stepIdForIssue`/`deriveSurfaceFromPath`, the Optogenetics entry in `ANIMAL_EDITOR_STEPS`) — that
+  routing moves intact.
+  - **Consumers (verified):** same-folder `DayEditorStepper` (`computeStepStatus`), `ExportStep`
+    (`computeStepStatus`, `validateDay`, `STEP_LABELS`), `OverviewStep` (`validateField` — page-only,
+    stays), `RepairActions` (`repairTargetForIssue`, `STEP_LABELS`), `ValidationStep`
+    (`groupErrorsByStep`, `validateDay`); and the two **cross-page (sibling) importers that are the
+    real violations** — `pages/AnimalEditor/AnimalEditorStepper.jsx`
+    (`animalEditorStepForFieldPath`) and `pages/ValidationSummary/index.jsx` (`computeStepStatus`).
+  - **Task 1 target:** move everything except `validateField` to `src/domain/validation.js`; repoint
+    all consumers (including Day Editor's own) at the domain module; leave `validateField` in
+    `pages/DayEditor/validation.js`.
+- **Bad-channel + override converter semantics live in render bodies (Task 2 targets):**
+  - `pages/DayEditor/BadChannelsEditor.jsx` — multi-shank detection (`getProbeShanks().length > 1 &&
+    ntrodes.length > 1`), later-row mark translation (`translateLaterRowMarks`), the probe-wide
+    migration union (`handleProbeWideToggle`), and invalid-mark detection.
+  - `pages/AnimalEditor/ChannelMapEditor.jsx` — the same multi-shank/translation/migration logic plus
+    `validateChannelMaps` (probe-local range, multi-shank first-row, scalar-tolerance).
+  - `pages/DayEditor/DevicesStep.jsx` — `validateBadChannels` (multi-shank first-row range) and the
+    malformed/stale/shadowing override-cleanup decisions (`wholeOverridesMalformed`,
+    `badChannelContainerMalformed`, `staleOverrideKeys`, `corruptValueKeys`, `presentGeometryKeys`),
+    which **mirror `dayOverrideIssues`**.
+  - **Task 2 target:** pure `src/domain/badChannels.js` (multi-shank rule, later-row translation,
+    probe-wide map build, invalid-mark interpretation, range check) and `src/domain/deviceOverrides.js`
+    (`classifyDeviceOverrides`), with a test that the classifier corresponds 1:1 to `dayOverrideIssues`.
+- **Risky workspace transitions live inline in `src/state/useWorkspace.js` (Task 3 targets):** the
+  `updateAnimal` devices branch (mirrors the edit into the latest snapshot, lines ~228-248),
+  `addConfigurationSnapshot`/`applyConfigurationForward`/`rebuildConfigurationHistory`, `createDay`
+  (pins `configurationVersion = getConfigHistory(animal).length`), and `updateDay`'s malformed-session
+  guard. Electrode-group/channel-map mutation recipes live in
+  `pages/AnimalEditor/AnimalEditorStepper.jsx` (`handleSaveGroup`, `confirmDeleteGroup`,
+  `handleCopyConfirm`, `handleSaveChannelMap`).
+  - **Task 3 target:** pure `src/state/workspaceTransitions.js` with the four named transitions;
+    `useWorkspace` keeps hydration, autosave, debounce, localStorage, the existence-check throws, and
+    the `workspaceRef`/version-return orchestration.
+- **`src/state/repairCommands.js`** is the executable-repair executor (current command set:
+  `resetDayCollection`, `resetAnimalCameras`, `resetDataAcqDevice`, `rebuildConfigurationHistory`,
+  `resetDeviceOverrides`, `removeDeviceOverrideKey`, `resetBadChannelOverrides`,
+  `removeBadChannelOverrideKey`, `resetDaySession`) — already a state-layer module; not moved.
+- **`pages/DayEditor/shadowExport.js`** is pure export-truth behavior (encoder-stability check) that a
+  sibling page (`ValidationSummary`) imports cross-folder. **Task 1/4 target:** move to
+  `src/domain/shadowExport.js` so no page imports export-truth from a sibling page.
+
+### Deferred at Phase 8.5 (recorded, not expanded)
+
+- **Issue #4 (legacy/workspace facade in `store.js`)** — legacy-path relocation/removal is explicitly
+  out of scope for this phase (and gated on the v3 cutover). Not touched.
+- **Issue #5 (schema-aligned types)** — type generation/sync is deferred to post-cutover per the phase
+  scope guard; only done if type drift directly blocks the phase (it does not).
+- **`pages/DayEditor/SaveIndicator.jsx`** is a shared **presentational** component imported by
+  `AnimalEditor/HardwareConfigStep`. It is not app-wide domain behavior, so relocating it to
+  `src/components` is out of this phase's scope; the architecture guard allowlists this single
+  presentational cross-page import and forbids all others.
+
 ## Verdict
 
 The app is moving in the right direction, but it is not yet cleanly organized. The recent
