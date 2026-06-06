@@ -6,6 +6,65 @@
 
 ---
 
+## Workflow clarity & setup UX — Phase 8.6 (June 5, 2026)
+
+Pre-QA workflow/information-architecture clarity so the corrected workspace path is
+understandable before browser QA: animal setup first, recording-day metadata second,
+day-specific failed channels, hardware changes by day range, export confidence last. This
+phase changes discoverability, wording, routing, and setup-state presentation only — NOT
+export bytes, schema, validation rules, or converter behavior. The 125 golden baselines stay
+byte-identical; the full suite, lint (0 errors), and build stay green.
+
+- **Route/state workflow inventory (Task 0).** `.claude/docs/plans/pre-cutover-export-correctness/workflow-route-state-inventory.md`
+  maps every workflow state (new animal, animal with no electrodes, animal with existing days,
+  imported/recovered workspace, historical day, reconfiguration start) to user goal, next safe
+  action, dangerous misconception, current route/control, and the required change.
+- **Workflow-status domain helper (Task 1).** `src/domain/workflowStatus.js` derives the animal
+  setup checklist (`getAnimalSetupChecklist`) and per-day readiness (`getDayWorkflowStatus`)
+  PURELY from the existing `computeStepStatus`/`validateDay` outputs and the shape-safe
+  `workspaceSelectors` reads. `readyForExportPreflight` is `computeStepStatus(...).export ===
+  'valid'` — the same gate the Export button consults — so it cannot drift. Setup-state
+  categories (missing cameras/data-acq) are informational and never gate export.
+- **Workflow-category mapping (Task 6, domain).** `src/domain/workflowCategories.js` maps each
+  issue to one of five user buckets (Animal setup, Day metadata, Day-specific failed channels,
+  Existing data repair, Export/preflight) via a `CATEGORY_BY_CODE` table — the analogue of
+  `SURFACE_BY_CODE`, locked by a table test. Repair actions still route through the canonical
+  `repairTargetForIssue`; no surface re-guesses categories.
+- **Animal Workspace setup checklist (Task 2).** The workspace renders a first-class setup
+  checklist (Subject, Electrodes/probes, Cameras/calibration, Data acquisition, Recording days).
+  Missing electrodes show a prominent `Set Up Electrodes` action (discoverable without opening
+  the Animal Editor); present hardware shows `Review …` actions.
+- **Animal Editor shared-setup framing + camera identity teaching copy (Task 3).** A subtitle
+  frames the editor as shared animal setup used by all recording days. The camera modal
+  proactively teaches the Spyglass identity rule (a different zoom/calibration/lens/model/id
+  needs a different camera name) via `aria-describedby` help text, complementing the existing
+  reactive divergence alert (verified present). The reconfiguration context banner (editing vN,
+  N moved days) already existed and is retained.
+- **Day Devices workflow copy + empty-state routing (Task 4).** The Devices step now says the
+  day "uses animal electrode configuration vN", links to "Edit shared animal electrode setup",
+  marks failed channels "for this recording day" (day-specific), and frames reconfiguration as
+  "Hardware changed starting this day…". The no-electrodes empty state routes to `Set Up
+  Electrodes` (same wording as the workspace) and explains failed channels come after electrodes.
+- **Existing-data review state (Task 5).** When the selected animal has days or raw-shape
+  corruption, the workspace shows an explicit review state (what was found + a link to the
+  validation summary) and REUSES the shipped `RawCorruptionBanner` for executable resets of
+  corrupt animal-owned collections — not a parallel recovery surface. Raw-shape issues also fold
+  into the checklist's per-item `has_errors`. Export stays blocked by the existing gate.
+- **Validation/Export category grouping (Task 6) + preflight alignment (Task 7).** The Validation
+  summary and the Export blocked list group issues by workflow category (`RepairActions` gained
+  an opt-in `groupByCategory`). The Export preflight reads as a confidence check: animal & day,
+  subject & session, configuration version with current/historical status, probes & failed
+  channels, cameras/calibration, data-acq device, tasks/videos, optogenetics, and unresolved
+  (non-blocking) review risk — all derived from the merged day and the domain workflow helper.
+
+New domain modules stay free of page imports (the Phase 8.5 architecture guard scans them).
+Tests added: `workflowStatus`, `workflowCategories`, the Animal Workspace setup-checklist +
+review-state component tests, the Day Devices workflow-copy test, the camera identity-guidance
+test, the Animal Editor shared-setup assertion, the Validation category-grouping assertion, and
+the enriched preflight assertions.
+
+---
+
 ## Domain boundaries & ownership cleanup — Phase 8.5 (June 5, 2026)
 
 Behavior-preserving architecture hardening before browser QA: move app-wide domain

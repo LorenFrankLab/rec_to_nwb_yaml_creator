@@ -282,6 +282,6 @@ describe('DevicesStep configuration-version indicator', () => {
 
     const bar = screen.getByText(/Configuration version 1/).closest('.config-version-bar');
     expect(within(bar).getByText(/Applied to 2 days/)).toBeInTheDocument();
-    expect(within(bar).getByRole('button', { name: /reconfigure devices/i })).toBeInTheDocument();
+    expect(within(bar).getByRole('button', { name: /hardware changed starting this day/i })).toBeInTheDocument();
   });
 });
