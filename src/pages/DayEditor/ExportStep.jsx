@@ -209,9 +209,8 @@ export default function ExportStep({ animal, day, onNavigate, onRepair, animalKe
           {!dayExportable && (
             <p className="export-merge-error">
               This recording day is not in {ownerKey}&apos;s day list (it was recovered but not
-              re-linked), so it can&apos;t be exported yet. Re-link it (&quot;Add to day list&quot;)
-              from the <a href="#/validation">validation summary</a> or the{' '}
-              <a href={`#/workspace?animal=${ownerKey}`}>workspace</a>, then return.
+              re-linked), so it can&apos;t be exported yet. Re-link it with the &quot;Add to day
+              list&quot; action on the <a href="#/validation">validation summary</a>, then return.
             </p>
           )}
           <p className="export-validation-blocked-reason">

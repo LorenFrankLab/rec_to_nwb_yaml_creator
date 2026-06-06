@@ -144,7 +144,11 @@ describe('DayEditorStepper', () => {
       </StoreProvider>
     );
 
-    expect(screen.getByText(/Animal not found/i)).toBeInTheDocument();
+    // The error message reads the corrupt owner through describeOwner — never raw "[object Object]".
+    expect(
+      screen.getByText(/Animal not found: another animal \(unreadable id\)/i)
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/\[object Object\]/)).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /Day Editor:/i })).not.toBeInTheDocument();
   });
 

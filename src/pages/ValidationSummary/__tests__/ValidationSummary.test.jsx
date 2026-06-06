@@ -476,6 +476,10 @@ describe('ValidationSummary', () => {
     expect(updateDay.mock.calls.some((call) => call[0] === ids.validDayId)).toBe(false);
     // It is reported as a failure, not silently counted as validated.
     expect(screen.getByRole('status')).toHaveTextContent(/1 failed/i);
+    // The failure is surfaced in the UI (not console-only): the affected day + its repair path.
+    const report = screen.getByText(/could not be validated/i).closest('[role="alert"]');
+    expect(report).toHaveTextContent(ids.validDayId);
+    expect(report).toHaveTextContent(/saved state is corrupt/i);
   });
 
   it('renders an orphan row with a non-string (object) owner without crashing (no object as React child)', () => {

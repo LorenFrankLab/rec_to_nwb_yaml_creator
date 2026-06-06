@@ -6,6 +6,7 @@ import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { getAnimalSubject, getDayTasks, getAnimalDayIds } from '../../state/workspaceSelectors';
 import { applyRepairCommand } from '../../state/repairCommands';
 import { computeStepStatus } from '../../domain/validation';
+import { describeOwner } from '../../domain/dayRecovery';
 import { isExportEnabled } from './stepGate';
 import StepNavigation from './StepNavigation';
 import SaveIndicator from './SaveIndicator';
@@ -286,7 +287,7 @@ export default function DayEditorStepper() {
   }
 
   if (!animal) {
-    return <ErrorState message={`Animal not found: ${day.animalId}`} />;
+    return <ErrorState message={`Animal not found: ${describeOwner(day.animalId)}`} />;
   }
 
   const CurrentStepComponent = steps.find(s => s.id === currentStep).component;

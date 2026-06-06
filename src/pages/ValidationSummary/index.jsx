@@ -113,7 +113,7 @@ function buildRows(workspace) {
       rows.push({ animal, animalKey, day: record, chip: 'error', status, wrongOwner: true });
       // eslint-disable-next-line no-console
       console.error(
-        `[validation-summary] day "${dayId}" is indexed by "${animalKey}" but belongs to "${record.animalId}" — flagged as wrong owner.`
+        `[validation-summary] day "${dayId}" is indexed by "${animalKey}" but belongs to ${describeOwner(record.animalId)} — flagged as wrong owner.`
       );
       continue;
     }
@@ -214,6 +214,9 @@ export function ValidationSummary() {
   // Days dropped at confirm because they changed since the preflight (gone / no longer valid) —
   // reported separately from parity skips so they aren't mislabeled "parity check failed".
   const [staleReport, setStaleReport] = useState([]);
+  // Days Validate All could not persist (corrupt `day.state` shape, or a write that threw) — named
+  // in the UI with their repair path so imported/recovered corruption isn't console-only.
+  const [validateErrorReport, setValidateErrorReport] = useState([]);
   // Pending batch export awaiting preflight confirmation: { rows, preflight }.
   const [pendingExport, setPendingExport] = useState(null);
 
@@ -222,6 +225,7 @@ export function ValidationSummary() {
     setOverriddenReport([]);
     setFailedReport([]);
     setStaleReport([]);
+    setValidateErrorReport([]);
   };
 
   const handleValidateAll = () => {
@@ -233,15 +237,22 @@ export function ValidationSummary() {
     const validatable = rows.filter((row) => isExportableDayStatus(row.status));
     // Guard each write: a day removed between render and click must not abort the
     // loop and leave the rest unvalidated with no feedback.
-    let failures = 0;
-    validatable.forEach(({ day, chip }) => {
+    // Days that couldn't be persisted, each with the reason — surfaced in the UI (not just the
+    // console) so the repair path for imported/recovered corruption is visible, not murky.
+    const validateErrors = [];
+    validatable.forEach(({ animal, day, chip }) => {
       // A TRUTHY non-record `day.state` (a corrupt import persisting it as a scalar/array) is
       // itself corruption. Do NOT LAUNDER it by coercing to `{}` and stamping `validated` on top —
-      // that would hide the corrupt state behind a bulk action. Skip the write and count it as a
-      // failure; the corruption surfaces (and is repairable) in the Day Editor's raw-shape UI. An
-      // ABSENT state (null/undefined) is not corruption — it initializes cleanly to `{}`.
+      // that would hide the corrupt state behind a bulk action. Skip the write and report it; the
+      // corruption is repairable in the Day Editor's raw-shape UI. An ABSENT state (null/undefined)
+      // is not corruption — it initializes cleanly to `{}`.
       if (day.state != null && !isRecord(day.state)) {
-        failures += 1;
+        validateErrors.push({
+          dayId: day.id,
+          subjectId: animal ? subjectLabel(animal) : day.id,
+          date: day.date || day.id,
+          detail: 'Its saved state is corrupt. Open this day in the Day Editor and use the in-place reset to repair it.',
+        });
         // eslint-disable-next-line no-console
         console.error(
           `[validation-summary] day "${day.id}" has a corrupt state shape; skipped Validate All (repair it in the Day Editor).`
@@ -254,13 +265,20 @@ export function ValidationSummary() {
           state: { ...currentState, validated: chip === 'valid' },
         });
       } catch (err) {
-        failures += 1;
+        validateErrors.push({
+          dayId: day.id,
+          subjectId: animal ? subjectLabel(animal) : day.id,
+          date: day.date || day.id,
+          detail: `Could not save: ${err.message}`,
+        });
         // eslint-disable-next-line no-console
         console.error(`[validation-summary] could not validate day "${day.id}":`, err);
       }
     });
     clearReports();
+    setValidateErrorReport(validateErrors);
     const total = validatable.length;
+    const failures = validateErrors.length;
     const skipped = rows.length - total;
     // Name the skipped rows so a run over a list that's all recovered/wrong-owner days doesn't
     // read as a bare "Validated 0 days" — that implies "nothing to do" when the truth is
@@ -528,6 +546,17 @@ export function ValidationSummary() {
           >
             {actionMessage}
           </div>
+
+          <ExportReport
+            className="validation-summary-validate-errors"
+            detailLabel="Validation error"
+            message={
+              validateErrorReport.length === 1
+                ? '1 day could not be validated and was left unchanged — repair it, then run Validate All again:'
+                : `${validateErrorReport.length} days could not be validated and were left unchanged — repair them, then run Validate All again:`
+            }
+            items={validateErrorReport}
+          />
 
           <ExportReport
             className="validation-summary-skipped"

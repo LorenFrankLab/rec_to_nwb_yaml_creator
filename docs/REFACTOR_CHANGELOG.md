@@ -232,7 +232,9 @@ export policy:
   and the calendar's existing-date guard now count records present (indexed + recovered) so they
   agree with the recovered records the main panel shows. (The setup-checklist "Recording days" item
   still reflects the index count — the helper takes only the animal, not the days map; the Workspace
-  panel + review state are the recovery-aware surfaces.)
+  panel + review state are the recovery-aware surfaces.) **Superseded by the tenth-review follow-up
+  below:** the setup-checklist item is now passed a recovery-aware `recordingDayCount`, so it no
+  longer contradicts the panel.
 
 **Ninth-review follow-ups — enforce the recovery policy on every remaining path:**
 
@@ -271,9 +273,15 @@ paths to the same domain policy:
   possibly-stale `updatedAnimal.id`.
 - **A recovered day with a missing/stale `animalId` opens** in the Day Editor via the
   indexing-animal fallback, instead of dead-ending on "Animal not found" — so it no longer looks
-  usable in the Workspace but unopenable.
+  usable in the Workspace but unopenable. **Refined by the eleventh-review follow-up below:** only a
+  day that declares *no* owner (`animalId == null`) takes the indexing-animal fallback; a
+  *present-but-unresolvable* `animalId` (a different/absent owner, or a non-string) stays unresolved
+  → "Animal not found", matching the wrong-owner/orphan export block.
 - **Wrong-owner UI is corruption-proof:** the displayed owner id is `String(...)`-coerced, so an
   imported object-valued `animalId` renders the repair row instead of throwing in React.
+  **Superseded by the thirteenth-review follow-up below:** the owner is now rendered through the
+  `describeOwner` domain helper (a real id verbatim; a corrupt non-string id → "another animal
+  (unreadable id)"), so the note reads as a usable explanation rather than `[object Object]`.
 - **The setup checklist's "Recording days" count** now consumes the same recovery-aware count
   (`recordingDayCount`) the rest of the Workspace uses, removing the same-page contradiction with
   recovered-unlinked days.
@@ -356,6 +364,27 @@ paths to the same domain policy:
   bulk action. It is now skipped and counted as a failure (it surfaces as a repairable raw-shape
   issue in the Day Editor); an ABSENT state still initializes cleanly. (New ValidationSummary test
   asserts the corrupt-state row is not written and is reported as failed.)
+
+**Fourteenth-review follow-ups — corrupt-owner readability everywhere + repair-path clarity (addressed in-phase, nothing deferred):**
+
+- **The last raw corrupt-owner leaks are closed.** The Day Editor's unresolved-owner error
+  (`Animal not found: …`) and the Validation Summary's wrong-owner diagnostic log both interpolated
+  the raw `animalId`, so an object owner still read as `[object Object]`. Both now go through
+  `describeOwner`, so a corrupt owner reads as "another animal (unreadable id)" in the UI **and** the
+  logs. (New DayEditorStepper test.)
+- **`Validate All` failures are now visible, not console-only.** A day that can't be persisted
+  (corrupt `state`, or a write that throws) is collected into a UI report ("N days could not be
+  validated … repair them, then run Validate All again") with the subject, date, and a per-day
+  reason + repair path — so imported/recovered corruption isn't a murky "1 failed" with the detail
+  hidden in the console. (New ValidationSummary test asserts the affected day + reason render.)
+- **The recovered-day re-link instruction is accurate.** `ExportStep` told the user they could
+  re-link "from the validation summary or the workspace," but the Workspace only *links to* the
+  validation summary — the actual "Add to day list" action lives there. The copy now points only to
+  the validation summary.
+- **Superseded changelog notes annotated.** Three earlier Phase 8.6 notes that later rounds refined
+  (setup-checklist count → recovery-aware `recordingDayCount`; recovered-day fallback → only the
+  no-owner case; `String(...)`-coerced owner → `describeOwner`) now carry an explicit
+  "superseded/refined by …" pointer so the audit trail doesn't contradict current behavior.
 
 ---
 
