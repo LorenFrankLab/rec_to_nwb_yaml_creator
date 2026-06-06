@@ -39,6 +39,9 @@ describe('isMultiShankGroup', () => {
   it('is false for a multi-shank probe collapsed to a single row', () => {
     expect(isMultiShankGroup(MULTI, 1)).toBe(false);
   });
+  it('is false for an unknown/undefined device type (no catalog shanks)', () => {
+    expect(isMultiShankGroup(undefined, 2)).toBe(false);
+  });
 });
 
 describe('asBadChannelArray / toggleMark / unionSortedMarks', () => {
@@ -51,6 +54,10 @@ describe('asBadChannelArray / toggleMark / unionSortedMarks', () => {
     expect(toggleMark([3, 1], 2, true)).toEqual([1, 2, 3]);
     expect(toggleMark([1, 2, 3], 2, false)).toEqual([1, 3]);
     expect(toggleMark('corrupt', 2, true)).toEqual([2]);
+  });
+  it('removes the last mark to an empty list and tolerates unchecking a scalar', () => {
+    expect(toggleMark([2], 2, false)).toEqual([]);
+    expect(toggleMark('corrupt', 2, false)).toEqual([]);
   });
   it('unions into a sorted unique list', () => {
     expect(unionSortedMarks([5, 1], [1, 9])).toEqual([1, 5, 9]);
@@ -65,6 +72,10 @@ describe('translateLaterRowMarks', () => {
   it('drops untranslatable, out-of-range marks (no probe checkbox)', () => {
     // 999 has no map entry and is not a probe id → dropped (not fabricated onto row 1).
     expect(translateLaterRowMarks([999], {}, probeElectrodeIdSet(MULTI))).toEqual([]);
+  });
+  it('keeps a raw key with no map entry when it is itself a representable probe id', () => {
+    // No map entry for 19, but 19 IS a probe electrode id → fall back to the raw key.
+    expect(translateLaterRowMarks([19], {}, probeElectrodeIdSet(MULTI))).toEqual([19]);
   });
 });
 
@@ -127,5 +138,9 @@ describe('validBadChannelIds', () => {
   it('returns the row map keys otherwise (single-shank / later row)', () => {
     expect(validBadChannelIds({ deviceType: SINGLE, isMultiShankFirstRow: false, rowMap: { 0: 0, 1: 1, 2: 2, 3: 3 } }))
       .toEqual([0, 1, 2, 3]);
+  });
+  it('tolerates an undefined device type on the non-multi-shank path (DevicesStep group?.device_type)', () => {
+    expect(validBadChannelIds({ deviceType: undefined, isMultiShankFirstRow: false, rowMap: { 0: 0, 1: 1 } }))
+      .toEqual([0, 1]);
   });
 });

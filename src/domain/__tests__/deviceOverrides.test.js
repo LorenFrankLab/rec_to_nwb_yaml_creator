@@ -88,4 +88,22 @@ describe('override classifier corresponds to dayOverrideIssues', () => {
     expect(controlPaths(day)).toEqual([]);
     expect(issuePaths(day)).toEqual([]);
   });
+
+  // A VALID-shaped (array) geometry override SHADOWS the snapshot. The Devices step always
+  // offers a removal control for it (revert to saved config), but the validator only ERRORS
+  // when the override's CONTENTS error — so it needs the base issues to fire. This documents
+  // that intentional asymmetry (control always; export-blocking issue only when erroring).
+  it('array geometry override: control always offered; issue only when its contents error', () => {
+    const day = { deviceOverrides: { electrode_groups: [{ id: 0 }] } };
+    // Control is offered (the user can revert the shadow)…
+    expect(controlPaths(day)).toEqual(['deviceOverrides.electrode_groups']);
+    // …but a CLEAN array override is not an export error on its own.
+    expect(issuePaths(day)).toEqual([]);
+    // When its contents error, the validator raises a day-routed shadow escape at the same path.
+    const baseErrors = [{ severity: 'error', code: 'empty_location', path: 'electrode_groups[0].location' }];
+    const shadow = dayOverrideIssues(day, mergedDay, baseErrors);
+    expect(shadow.map((i) => ({ code: i.code, path: i.path }))).toEqual([
+      { code: 'shadowed_geometry_override', path: 'deviceOverrides.electrode_groups' },
+    ]);
+  });
 });

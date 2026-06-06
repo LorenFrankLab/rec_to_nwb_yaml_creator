@@ -57,6 +57,13 @@ describe('applyAnimalUpdates', () => {
     const animal = { id: 'remy', optogenetics: { foo: 1 }, configurationHistory: [] };
     expect(applyAnimalUpdates(animal, { optogenetics: null }, NOW).optogenetics).toBeNull();
   });
+
+  it('routes a data_acq_device edit onto animal.devices (the export read location)', () => {
+    const animal = { id: 'remy', devices: emptyDevices(), configurationHistory: [] };
+    const acq = [{ name: 'SpikeGadgets', system: 'MCU', amplifier: 'Intan', adc_circuit: 'Intan' }];
+    const updated = applyAnimalUpdates(animal, { data_acq_device: acq }, NOW);
+    expect(updated.devices.data_acq_device).toEqual(acq);
+  });
 });
 
 describe('addConfigurationSnapshotToAnimal', () => {
@@ -70,6 +77,16 @@ describe('addConfigurationSnapshotToAnimal', () => {
     expect(updated.configurationHistory).toHaveLength(2);
     expect(updated.configurationHistory[1].version).toBe(2);
     expect(animal.configurationHistory).toHaveLength(1); // input untouched
+  });
+
+  it('numbers version 1 when the prior history is corrupt/missing', () => {
+    const updated = addConfigurationSnapshotToAnimal(
+      { configurationHistory: 'corrupt' },
+      { date: '2023-07-01', description: 'rebuild', devices: emptyDevices() },
+      NOW
+    );
+    expect(updated.configurationHistory).toHaveLength(1);
+    expect(updated.configurationHistory[0].version).toBe(1);
   });
 });
 
@@ -93,6 +110,11 @@ describe('applyConfigurationForwardToAnimal', () => {
   it('drops day ids that do not exist in the workspace', () => {
     const { animal } = applyConfigurationForwardToAnimal(base(), days(), 2, ['nope'], NOW);
     expect(animal.configurationHistory[1].appliedToDays).toEqual([]);
+  });
+
+  it('de-duplicates repeated day ids so the usage view is not polluted', () => {
+    const { animal } = applyConfigurationForwardToAnimal(base(), days(), 2, ['d2', 'd2'], NOW);
+    expect(animal.configurationHistory[1].appliedToDays).toEqual(['d2']);
   });
 
   it('throws on a non-existent snapshot version', () => {

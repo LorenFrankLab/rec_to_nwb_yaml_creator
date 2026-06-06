@@ -8,7 +8,6 @@ import {
   asBadChannelArray,
   toggleMark,
   invalidBadChannelMarks,
-  probeElectrodeIdSet,
   migrateProbeWideChannelMaps,
 } from '../../domain/badChannels';
 import InfoIcon from '../../element/InfoIcon';
