@@ -6,6 +6,59 @@
 
 ---
 
+## Domain boundaries & ownership cleanup — Phase 8.5 (June 5, 2026)
+
+Behavior-preserving architecture hardening before browser QA: move app-wide domain
+behavior out of page components so the export-correctness contracts are STRUCTURAL, not
+conventional. No export-semantic, route, reducer, schema-type, or legacy-path change. The
+125 golden baselines stay byte-identical throughout; every move is proven equivalent by the
+existing suite plus new characterization tests.
+
+- **App-wide validation + repair routing moved to a domain module (Task 1).** The day
+  validation composition, step-status computation, issue ownership/repair routing, and
+  Animal-Editor deep-link routing moved from the page folder
+  `pages/DayEditor/validation.js` into `src/domain/validation.js` (logic byte-identical —
+  file copied, only import paths + fileoverview changed). The encoder-stability shadow-export
+  check moved to `src/domain/shadowExport.js`. `pages/DayEditor/validation.js` now holds only
+  the page-only field-blur helper `validateField`. All consumers (Day Editor steps, Animal
+  Editor, Validation summary, Export) import from `src/domain`; the two cross-page domain
+  imports (`AnimalEditorStepper`, `ValidationSummary` → `DayEditor/validation`) are gone. The
+  phase-8 opto/fs_gui routing moved intact. The `workspaceSelectors.guard` exemption now
+  names `domain/validation.js` (the raw-shape detector). A new contract test locks the issue
+  list, ownership, repair targets, and step statuses for representative valid/invalid days.
+- **Bad-channel + override converter semantics extracted to pure helpers (Task 2).**
+  `src/domain/badChannels.js` owns the converter meaning (multi-shank probe-wide rule,
+  later-row translation/migration, invalid/out-of-range mark interpretation, probe-local
+  range) shared by `BadChannelsEditor`, `ChannelMapEditor`, and `DevicesStep`.
+  `src/domain/deviceOverrides.js` (`classifyDeviceOverrides`) owns the malformed/stale/
+  shadowing override-cleanup decisions — the editing-surface counterpart of the validator's
+  `dayOverrideIssues`, with a test proving they correspond path-for-path and command-for-
+  command. Components now render + dispatch only.
+- **Risky workspace transitions extracted to pure helpers (Task 3).**
+  `src/state/workspaceTransitions.js` owns `applyAnimalUpdates` (mirrors a devices edit into
+  the latest snapshot only), `addConfigurationSnapshotToAnimal`,
+  `applyConfigurationForwardToAnimal` (pins days, keeps `appliedToDays` a partition, throws
+  on a missing version), `rebuildConfigurationHistoryForAnimal` (clears the raw corruption
+  without re-pinning stale days), `createDayRecord` (latest pin + seeded technical), and
+  `applyDayUpdates` (guards a malformed nested session). `useWorkspace` keeps hydration,
+  autosave, debounce, localStorage, the existence-check throws, and the workspaceRef/version-
+  return orchestration; timestamps are passed in rather than read inside each updater.
+- **Architecture guard tests (Task 4).** `src/__tests__/architectureBoundaries.guard.test.js`
+  fails if a domain/state module imports a page, or a page imports app-wide domain behavior
+  from a sibling page folder (only the presentational `DayEditor/SaveIndicator` is
+  allowlisted; relocation deferred). The pure classifier is unit-tested against synthetic
+  reversed imports and run over the real tree; verified it fails end-to-end on an injected
+  reversed import.
+
+This is behavior-preserving: the full gate passed before and after — full vitest (3894 pass),
+125 golden baselines byte-identical, 0 lint errors, clean build. The refreshed architectural
+inventory and the deferrals (legacy-facade split, schema-aligned types, SaveIndicator
+relocation) are recorded in
+`.claude/docs/plans/pre-cutover-export-correctness/app-code-organization-review.md`. Branch
+not merged.
+
+---
+
 ## Optogenetics correctness — Phase 8 (June 5, 2026)
 
 Made workspace optogenetics sessions configurable and convertible instead of being **silently

@@ -1,5 +1,5 @@
 /**
- * Architecture guard: enforce the Phase 8.5 domain-boundary contract structurally.
+ * Architecture guard: enforce the domain-boundary ownership contract structurally.
  *
  * Allowed dependency direction only:
  *   - pages → domain/state helpers (the export-truth deciders);

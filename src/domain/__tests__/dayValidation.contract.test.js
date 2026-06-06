@@ -1,6 +1,6 @@
 /**
  * Domain validation contract — preserves the issue list, ownership, repair targets, and
- * step statuses after the Phase 8.5 extraction out of `pages/DayEditor/validation.js`.
+ * step statuses after extracting this app-wide behavior out of `pages/DayEditor/validation.js`.
  *
  * This locks the app-wide day-validation contract at the domain module so a future move or
  * refactor of `src/domain/validation.js` cannot silently change which issues a representative
