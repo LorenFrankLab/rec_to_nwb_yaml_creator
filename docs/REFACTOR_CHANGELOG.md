@@ -160,6 +160,26 @@ checklist action **verbs** (Set Up Electrodes / Review Cameras), so there is no 
   `src/domain/validation.js`; `workflowStatus.test.js` asserts readiness against `isExportEnabled(...)`;
   the phase-doc Task 6 carries an as-shipped note on the repair-label decision.
 
+**Sixth-review follow-ups (addressed in-phase):**
+
+- **Missing `animal.days` no longer hides recovered records in the Workspace.** The Workspace now
+  detects orphaned records (a record whose `animalId` is this animal but the index — missing or
+  corrupt — doesn't list it), shows them in the day list (marked "⚠ not in day list"), and surfaces
+  a review note linking to the validation summary to re-link them.
+- **Orphaned records are relinkable.** New `relinkDayReference(animalId, dayId)` store action adds an
+  orphan back to its animal's index; `ValidationSummary` offers "Add to day list" for an orphan with
+  a present owner, and — for an orphan whose owning animal is gone — replaces the dead-end "Open
+  editor" with a recovery note (re-create/re-import).
+- **Validation step readiness reflects the REAL gate.** "Ready to export" now means
+  `isExportEnabled(computeStepStatus(...))` (export + all prerequisite steps), not just "no errors";
+  a zero-error day with an incomplete step says "complete the required steps" instead of falsely
+  reading ready.
+- **Batch export re-validates on confirm** (carried from the fifth round) and **malformed `day.state`
+  is guarded** against char-key scatter in both `applyDayUpdates` and the Validate-All payload.
+- **Repair-label contract is now single and consistent** across the phase doc Task 6,
+  `workflow-clarity-design.md`, and the changelog: category headings carry the checklist vocabulary;
+  repair buttons keep the canonical `repairTargetForIssue` labels.
+
 ---
 
 ## Domain boundaries & ownership cleanup — Phase 8.5 (June 5, 2026)

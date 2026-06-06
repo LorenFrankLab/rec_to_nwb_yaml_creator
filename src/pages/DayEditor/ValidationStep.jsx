@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import PropTypes from 'prop-types';
-import { validateDay } from '../../domain/validation';
+import { validateDay, computeStepStatus } from '../../domain/validation';
+import { isExportEnabled, exportBlockReason } from '../../domain/stepGate';
 import { groupIssuesByWorkflowCategory } from '../../domain/workflowCategories';
 import { RepairActionButton, isRepairable, repairButtonKey } from './RepairActions';
 import './DayEditor.scss';
@@ -36,7 +37,16 @@ export default function ValidationStep({ day, mergedDay, onNavigate, animal, onR
   const errorCount = bySeverity.error.length;
   const warningCount = bySeverity.warning.length;
   const infoCount = bySeverity.info.length;
-  const ready = errorCount === 0;
+  // Readiness reflects the REAL export gate, not just "no errors": isExportEnabled also requires
+  // every prerequisite step (overview/devices/epochs) to be complete. A day with zero validation
+  // errors but an incomplete step is NOT ready — saying "Ready to export" there is exactly the
+  // confusion this phase removes.
+  const stepStatus = useMemo(
+    () => computeStepStatus(day || {}, mergedDay || {}, animal),
+    [day, mergedDay, animal]
+  );
+  const ready = isExportEnabled(stepStatus);
+  const blockReason = exportBlockReason(stepStatus);
 
   return (
     <div className="day-editor-section validation-step">
@@ -54,8 +64,10 @@ export default function ValidationStep({ day, mergedDay, onNavigate, animal, onR
       >
         <span aria-hidden="true">{ready ? '✓' : '✗'}</span>{' '}
         {ready
-          ? 'Ready to export — no errors found.'
-          : 'Export blocked — resolve all errors below before exporting.'}
+          ? 'Ready to export — all checks pass.'
+          : blockReason === 'incomplete-steps' && errorCount === 0
+            ? 'Export blocked — complete the required steps (shown in the step indicators) before exporting.'
+            : 'Export blocked — resolve all errors below before exporting.'}
       </p>
 
       {issues.length > 0 && (

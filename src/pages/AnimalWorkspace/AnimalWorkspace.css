@@ -255,6 +255,19 @@
   background-color: #fff5f5;
 }
 
+/* Orphaned day record (not in the animal's index) — surfaced so it isn't lost. */
+.day-item-orphan .day-link {
+  border-color: #ffe0b2;
+  background-color: #fff8e1;
+}
+
+.day-orphan-note {
+  margin-left: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #bf360c;
+}
+
 /* Empty States */
 .empty-state {
   text-align: center;

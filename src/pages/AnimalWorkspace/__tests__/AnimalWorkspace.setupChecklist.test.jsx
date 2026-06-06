@@ -134,6 +134,29 @@ describe('AnimalWorkspace existing-data review state', () => {
     expect(screen.getByText(/missing record/i)).toBeInTheDocument();
   });
 
+  it('surfaces recovered records when animal.days is MISSING but day records exist', async () => {
+    // animal.days is undefined (not just non-array); a real record exists in the days map.
+    const animal = { ...newAnimal };
+    delete animal.days;
+    const dayRecord = {
+      id: 'newbie-2024-02-02',
+      animalId: 'newbie',
+      date: '2024-02-02',
+      session: { session_id: 'newbie_20240202' },
+      state: {},
+    };
+    renderWith({ newbie: animal }, { 'newbie-2024-02-02': dayRecord });
+    await selectAnimal('newbie');
+
+    // The record is shown (not "No recording days yet"), flagged as not in the index (the
+    // phrase appears both in the review note and on the day row).
+    expect(screen.getAllByText(/not in day list/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/newbie_20240202/)).toBeInTheDocument();
+    expect(screen.queryByText(/no recording days yet/i)).not.toBeInTheDocument();
+    // The review state appears and points to the validation summary to re-link.
+    expect(screen.getByRole('region', { name: /existing data review/i })).toBeInTheDocument();
+  });
+
   it('surfaces a corrupt (non-array) recording-day list instead of laundering it to "no days"', async () => {
     // A recovered animal whose `days` is a string, not a list.
     const corrupt = { ...newAnimal, days: 'nope' };

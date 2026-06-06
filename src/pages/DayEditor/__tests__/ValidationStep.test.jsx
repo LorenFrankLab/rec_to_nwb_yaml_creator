@@ -63,12 +63,20 @@ describe('ValidationStep', () => {
     expect(screen.getByText(/blocked/i)).toBeInTheDocument();
   });
 
-  it('shows a ready indicator when there are no error-severity issues', () => {
-    vi.spyOn(validation, 'validate').mockReturnValue([]);
-
-    render(<ValidationStep {...baseProps} />);
-
+  it('shows a ready indicator only when the REAL export gate is open (all steps valid)', () => {
+    // A fully-configured, fully-valid day (real validation) passes isExportEnabled.
+    const { animal, day } = buildRealisticWorkspace();
+    const merged = mergeDayMetadata(animal, day);
+    render(<ValidationStep animal={animal} day={day} mergedDay={merged} />);
     expect(screen.getByText(/ready to export/i)).toBeInTheDocument();
+  });
+
+  it('does NOT say ready when there are zero errors but a prerequisite step is incomplete', () => {
+    // No validation errors, but an empty day → overview/devices incomplete → export still gated.
+    vi.spyOn(validation, 'validate').mockReturnValue([]);
+    render(<ValidationStep {...baseProps} />);
+    expect(screen.queryByText(/ready to export/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/complete the required steps/i)).toBeInTheDocument();
   });
 
   it('renders without throwing when mergedDay is undefined', () => {

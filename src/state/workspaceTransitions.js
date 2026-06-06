@@ -366,7 +366,14 @@ export function applyDayUpdates(day, updates, now) {
     updated.deviceOverrides = normalizeDeviceOverrides(updates.deviceOverrides);
   }
   if (updates.state) {
-    updated.state = { ...updated.state, ...updates.state };
+    // Guard a malformed CURRENT state (a corrupt import can persist `state` as a scalar/array):
+    // spreading a string would scatter char-indexed keys. Normalize to a record first so the
+    // update writes clean draft/validated/exported flags over the corruption, not on top of it.
+    const currentState =
+      updated.state !== null && typeof updated.state === 'object' && !Array.isArray(updated.state)
+        ? updated.state
+        : {};
+    updated.state = { ...currentState, ...updates.state };
   }
   // Probe-reconfiguration: point this day at a different snapshot version. Setting it here
   // does NOT eagerly reconcile snapshots' `appliedToDays`; `reconcileAppliedToDays` derives

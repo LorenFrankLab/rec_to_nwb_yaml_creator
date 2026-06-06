@@ -51,7 +51,7 @@ function provideStore(workspace) {
     model: { workspace },
     // removeDayReference is present so a missing-record row's repair button never references
     // an undefined action; the dedicated repair test installs its own captured spy.
-    actions: { updateDay, removeDayReference: vi.fn() },
+    actions: { updateDay, removeDayReference: vi.fn(), relinkDayReference: vi.fn() },
     selectors: {},
     persistence: { enabled: false },
   });
@@ -317,6 +317,40 @@ describe('ValidationSummary', () => {
     expect(within(row).getByText(/not in day list/i)).toBeInTheDocument();
     // Still openable in its editor (the record exists), so it is recoverable, not lost.
     expect(within(row).getByRole('link')).toHaveAttribute('href', `#/day/${ids.validDayId}`);
+    // …and re-linkable: an "Add to day list" repair restores it to the animal's index.
+    expect(within(row).getByRole('button', { name: /add .* back to .* day list/i })).toBeInTheDocument();
+  });
+
+  it('re-links an orphaned day record into its animal index when the repair is clicked', async () => {
+    const user = userEvent.setup();
+    const { workspace, ids } = makeSummaryWorkspace();
+    workspace.animals.remy.days = workspace.animals.remy.days.filter((id) => id !== ids.validDayId);
+    const relinkDayReference = vi.fn();
+    useStoreContext.mockReturnValue({
+      model: { workspace },
+      actions: { updateDay: vi.fn(), removeDayReference: vi.fn(), relinkDayReference },
+      selectors: {},
+      persistence: { enabled: false },
+    });
+
+    render(<ValidationSummary />);
+    const row = screen.getByTestId(`day-row-${ids.validDayId}`);
+    await user.click(within(row).getByRole('button', { name: /add .* back to .* day list/i }));
+    expect(relinkDayReference).toHaveBeenCalledWith('remy', ids.validDayId);
+  });
+
+  it('does not offer a dead-end "Open editor" for an orphan whose owning animal is gone', () => {
+    // A day record whose animalId references no animal: the editor would dead-end.
+    const { workspace, ids } = makeSummaryWorkspace();
+    workspace.days[ids.validDayId].animalId = 'ghost';
+    delete workspace.animals.remy; // the owner is gone
+    workspace.days[ids.incompleteDayId] && delete workspace.days[ids.incompleteDayId];
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+    const row = screen.getByTestId(`day-row-${ids.validDayId}`);
+    expect(within(row).getByText(/no owning animal/i)).toBeInTheDocument();
+    expect(within(row).queryByRole('link', { name: /open editor/i })).not.toBeInTheDocument();
   });
 
   it('Export Valid Only: cancelling the preflight downloads nothing', async () => {

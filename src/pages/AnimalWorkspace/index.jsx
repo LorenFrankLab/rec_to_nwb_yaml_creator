@@ -103,6 +103,24 @@ export function AnimalWorkspace() {
   // "No recording days yet" and hide the problem. Surface it as a corrupt-reference state.
   const selectedDaysCorrupt =
     !!selectedAnimal && selectedAnimal.days != null && !Array.isArray(selectedAnimal.days);
+  // Day RECORDS that belong to the selected animal (by `animalId`) but are NOT in its `days`
+  // index — because the index is missing, corrupt, or simply doesn't list them. Without this,
+  // a missing/corrupt index would show "No recording days yet" and the recovered records would
+  // be hidden. Surface them so they aren't lost. (`isRecord`-guarded; cheap for small workspaces.)
+  const selectedOrphanDayIds = (() => {
+    if (!selectedAnimal) return [];
+    const indexed = new Set(getAnimalDayIds(selectedAnimal));
+    return Object.keys(days).filter((id) => {
+      const record = days[id];
+      return (
+        record !== null &&
+        typeof record === 'object' &&
+        !Array.isArray(record) &&
+        record.animalId === selectedAnimalId &&
+        !indexed.has(id)
+      );
+    });
+  })();
 
   // On mount, select an animal so the setup/review state is visible immediately rather than
   // one click hidden: honor an explicit `?animal=<id>`; with no param, auto-select the SOLE
@@ -293,7 +311,8 @@ export function AnimalWorkspace() {
                   // Existing data needs an explicit review state: recovered/imported setup must
                   // not look silently trusted. Show it once there ARE recording days to export,
                   // or whenever raw-shape corruption OR a corrupt days reference is present.
-                  const hasCorruption = rawIssues.length > 0 || selectedDaysCorrupt;
+                  const hasCorruption =
+                    rawIssues.length > 0 || selectedDaysCorrupt || selectedOrphanDayIds.length > 0;
                   const showReview = dayCount > 0 || hasCorruption;
                   return (
                     <>
@@ -352,8 +371,19 @@ export function AnimalWorkspace() {
                           {selectedDaysCorrupt && (
                             <p className="existing-data-review-corrupt-note" role="alert">
                               This animal&apos;s recording-day list is corrupt (expected a list), so
-                              its recording days can&apos;t be shown. Re-import or recreate this
-                              animal&apos;s data.
+                              its index can&apos;t be read.{' '}
+                              {selectedOrphanDayIds.length > 0
+                                ? 'The recovered day records below are shown from the day store directly.'
+                                : 'Re-import or recreate this animal’s data.'}
+                            </p>
+                          )}
+                          {selectedOrphanDayIds.length > 0 && (
+                            <p className="existing-data-review-corrupt-note" role="alert">
+                              {selectedOrphanDayIds.length} recovered recording{' '}
+                              {selectedOrphanDayIds.length === 1 ? 'day is' : 'days are'} not listed in
+                              this animal&apos;s day index (shown below as &quot;not in day list&quot;).{' '}
+                              <a href="#/validation">Open the validation summary</a> to re-link{' '}
+                              {selectedOrphanDayIds.length === 1 ? 'it' : 'them'}.
                             </p>
                           )}
                           {/* Reuse the shipped recovery surface: executable resets for corrupt
@@ -384,23 +414,32 @@ export function AnimalWorkspace() {
                   </div>
                 )}
 
-                {selectedDaysCorrupt ? (
-                  /* Corrupt day reference — not an empty list. See the review state above. */
-                  <div className="empty-state">
-                    <p>This animal&apos;s recording-day list is corrupt and can&apos;t be shown.</p>
-                    <p>See &quot;Review existing data&quot; above to resolve it.</p>
-                  </div>
-                ) : getAnimalDayIds(selectedAnimal).length === 0 ? (
-                  /* Empty State: No Days */
-                  <div className="empty-state">
-                    <p>No recording days yet.</p>
-                    <p>Add your first recording day to get started.</p>
-                  </div>
-                ) : (
+                {(() => {
+                  // Show indexed days PLUS orphaned records (records that belong to this animal
+                  // but the index doesn't list — recovered/corrupt-index data) so nothing is
+                  // hidden behind "No recording days yet".
+                  const displayedDayIds = [...getAnimalDayIds(selectedAnimal), ...selectedOrphanDayIds];
+                  if (displayedDayIds.length === 0) {
+                    return selectedDaysCorrupt ? (
+                      /* Corrupt index AND no recoverable records — see the review state above. */
+                      <div className="empty-state">
+                        <p>This animal&apos;s recording-day list is corrupt and can&apos;t be shown.</p>
+                        <p>See &quot;Review existing data&quot; above to resolve it.</p>
+                      </div>
+                    ) : (
+                      /* Empty State: No Days */
+                      <div className="empty-state">
+                        <p>No recording days yet.</p>
+                        <p>Add your first recording day to get started.</p>
+                      </div>
+                    );
+                  }
+                  return (
                   /* Day List */
                   <ul className="day-list" role="list">
-                    {getAnimalDayIds(selectedAnimal).map((dayId) => {
+                    {displayedDayIds.map((dayId) => {
                       const day = days[dayId];
+                      const isOrphan = selectedOrphanDayIds.includes(dayId);
                       // A reference that resolves to no record (dangling) must be surfaced, not
                       // silently dropped — otherwise a recovered day disappears. Show an explicit
                       // missing-record row consistent with the cross-day Validation summary.
@@ -433,11 +472,16 @@ export function AnimalWorkspace() {
                           : {};
 
                       return (
-                        <li key={dayId} className="day-item">
+                        <li key={dayId} className={`day-item ${isOrphan ? 'day-item-orphan' : ''}`}>
                           <a href={`#/day/${dayId}`} className="day-link">
                             <div className="day-info">
                               <span className="day-date">{date}</span>
-                              <span className="day-session-id">{session.session_id}</span>
+                              <span className="day-session-id">
+                                {session.session_id}
+                                {isOrphan && (
+                                  <span className="day-orphan-note"> ⚠ not in day list</span>
+                                )}
+                              </span>
                             </div>
                             <div className="day-status">
                               {state.draft && <span className="status-chip draft">Draft</span>}
@@ -449,7 +493,8 @@ export function AnimalWorkspace() {
                       );
                     })}
                   </ul>
-                )}
+                  );
+                })()}
               </div>
             )}
           </section>

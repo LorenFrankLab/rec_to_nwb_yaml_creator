@@ -39,6 +39,7 @@ describe('useStore public API contract', () => {
       'onBlur',
       'onMapInput',
       'rebuildConfigurationHistory',
+      'relinkDayReference',
       'removeArrayItem',
       'removeDayReference',
       'removeElectrodeGroupItem',

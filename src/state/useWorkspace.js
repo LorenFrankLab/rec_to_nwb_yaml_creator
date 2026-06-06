@@ -516,6 +516,36 @@ export function useWorkspace(initialState = null) {
       },
 
       /**
+       * Re-link an ORPHANED day record: add `dayId` back to its owning animal's `days` index.
+       * The repair for a record that exists in `workspace.days` but is not listed by its animal
+       * (the "not in day list" rows the ValidationSummary surfaces, e.g. after a corrupt/missing
+       * index). Deduped; tolerates a corrupt (non-array) index via `getAnimalDayIds`. No-op for an
+       * unknown animal, a missing day record, or an already-linked id.
+       *
+       * @param {string} animalId - The owning animal's id.
+       * @param {string} dayId - The orphaned day record's id to re-link.
+       */
+      relinkDayReference: (animalId, dayId) => {
+        setWorkspace((prev) => {
+          const animal = prev.animals[animalId];
+          if (!animal) return prev;
+          const daysIsRecord =
+            prev.days !== null && typeof prev.days === 'object' && !Array.isArray(prev.days);
+          if (!daysIsRecord || !prev.days[dayId]) return prev;
+          const current = getAnimalDayIds(animal);
+          if (current.includes(dayId)) return prev;
+          return {
+            ...prev,
+            animals: {
+              ...prev.animals,
+              [animalId]: { ...animal, days: [...current, dayId] },
+            },
+            lastModified: getCurrentTimestamp(),
+          };
+        });
+      },
+
+      /**
        * Updates workspace settings
        *
        * @param {object} settings - Partial settings updates

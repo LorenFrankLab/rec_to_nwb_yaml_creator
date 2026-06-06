@@ -162,7 +162,7 @@ function buildRows(workspace) {
       ? workspace.animals[record.animalId]
       : null;
     if (!owner) {
-      rows.push({ animal: { id: record.animalId }, animalKey: record.animalId, day: record, chip: 'error', orphaned: true });
+      rows.push({ animal: { id: record.animalId }, animalKey: record.animalId, day: record, chip: 'error', orphaned: true, ownerMissing: true });
       // eslint-disable-next-line no-console
       console.error(`[validation-summary] day "${dayId}" is not listed by any animal — flagged as orphaned.`);
       continue;
@@ -267,8 +267,12 @@ export function ValidationSummary() {
     let failures = 0;
     rows.forEach(({ day, chip }) => {
       try {
+        // Guard a malformed `day.state` (a corrupt import can persist it as a scalar/array):
+        // spreading a string scatters char-indexed keys. `updateDay`/`applyDayUpdates` guards
+        // the current state too; this keeps the payload itself a clean record.
+        const currentState = isRecord(day.state) ? day.state : {};
         actions.updateDay(day.id, {
-          state: { ...day.state, validated: chip === 'valid' },
+          state: { ...currentState, validated: chip === 'valid' },
         });
       } catch (err) {
         failures += 1;
@@ -557,7 +561,7 @@ export function ValidationSummary() {
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ animal, animalKey, day, chip, unreadable, missingRecord, orphaned }, index) => (
+              {rows.map(({ animal, animalKey, day, chip, unreadable, missingRecord, orphaned, ownerMissing }, index) => (
                 <tr key={`${day.id ?? 'unknown'}-${index}`} data-testid={`day-row-${day.id}`}>
                   <td>
                     {subjectLabel(animal)}
@@ -607,13 +611,34 @@ export function ValidationSummary() {
                       >
                         Remove day reference
                       </button>
+                    ) : orphaned && ownerMissing ? (
+                      // The record exists but its owning animal is gone — "Open editor" would
+                      // dead-end (the Day Editor needs the animal). There is no in-app relink
+                      // target; state the recovery path instead of a dead control.
+                      <span className="validation-summary-orphan-detail">
+                        No owning animal — re-create the animal or re-import its data.
+                      </span>
                     ) : (
-                      <a
-                        href={`#/day/${day.id}`}
-                        aria-label={`Open editor for ${subjectLabel(animal)} ${day.date || day.id}`}
-                      >
-                        Open editor
-                      </a>
+                      <>
+                        <a
+                          href={`#/day/${day.id}`}
+                          aria-label={`Open editor for ${subjectLabel(animal)} ${day.date || day.id}`}
+                        >
+                          Open editor
+                        </a>
+                        {orphaned && (
+                          // The record exists and its owner is present — re-link it into the
+                          // animal's day index so it rejoins the normal workflow.
+                          <button
+                            type="button"
+                            className="validation-summary-repair"
+                            onClick={() => actions.relinkDayReference(animalKey, day.id)}
+                            aria-label={`Add ${day.date || day.id} back to ${subjectLabel(animal)}'s day list`}
+                          >
+                            Add to day list
+                          </button>
+                        )}
+                      </>
                     )}
                   </td>
                 </tr>

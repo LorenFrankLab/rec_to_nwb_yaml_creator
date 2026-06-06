@@ -480,6 +480,45 @@ describe('Day State Management', () => {
     });
   });
 
+  describe('relinkDayReference', () => {
+    it('re-links an orphaned record (present in days, not in the index) back into the animal', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+      });
+      // Orphan it: the record stays in days, but the animal index drops it.
+      act(() => {
+        result.current.model.workspace.animals['remy'].days = [];
+        result.current.actions.relinkDayReference('remy', 'remy-2023-06-22');
+      });
+      expect(result.current.model.workspace.animals['remy'].days).toEqual(['remy-2023-06-22']);
+    });
+
+    it('is a no-op for an unknown animal, a missing record, or an already-linked id', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+      });
+      expect(() => {
+        act(() => {
+          result.current.actions.relinkDayReference('ghost', 'x'); // unknown animal
+          result.current.actions.relinkDayReference('remy', 'no-such-day'); // missing record
+          result.current.actions.relinkDayReference('remy', 'remy-2023-06-22'); // already linked
+        });
+      }).not.toThrow();
+      // The already-linked id is not duplicated.
+      expect(result.current.model.workspace.animals['remy'].days).toEqual(['remy-2023-06-22']);
+    });
+  });
+
   describe('removeDayReference', () => {
     it('removes a dangling day reference (missing record) from the animal without throwing', () => {
       const { result } = renderHook(() => useStore());
