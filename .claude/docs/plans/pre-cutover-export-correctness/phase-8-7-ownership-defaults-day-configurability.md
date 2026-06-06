@@ -16,6 +16,44 @@ controls. It must not silently change export semantics. If this phase discovers 
 field needs a new source-of-truth model, record the decision and either implement the
 smallest covered change or mark it as a blocker before Phase 9.
 
+## User story and product principles
+
+The user is a scientist who has recorded data and needs to convert it to NWB. The YAML
+creator is not the scientific goal; it is the bridge between "we recorded this session"
+and "the NWB/Spyglass/DANDI metadata is correct enough to trust." The modern workspace
+exists for three reasons:
+
+1. **Prevent mistakes** before they become silent converter, Spyglass, DANDI, or scientific
+   identity errors.
+2. **Let the scientist do their job efficiently** whether they export immediately after a
+   recording or catch up on several days at once.
+3. **Enforce consistent naming and identities** so the resulting NWB data can be joined,
+   queried, and interpreted consistently downstream.
+
+Design every ownership decision around two common cadences:
+
+- **Same-day conversion.** The user finishes a recording, creates/reviews that day, confirms
+  what happened in each task epoch, fixes obvious missing metadata, and exports one YAML.
+  The UI should avoid repeated setup entry, make inherited setup easy to verify, and keep
+  the next required action obvious.
+- **Catch-up / batch conversion.** The user has several recorded days waiting. They need to
+  scan which days are ready, which share setup, which changed hardware or camera calibration,
+  which task epochs used different rooms/cameras/opto protocols, and which names would collide
+  downstream. The UI should support review, comparison, batch validation/export, and targeted
+  repair without forcing every day through the same long form when only a few facts differ.
+
+The user's attention is usually on the experiment narrative, not the schema: animal, recording
+day, task epoch, room/environment, cameras/videos, opto/DIO, files, failed channels, and export
+readiness. The app may store animal-level catalogs, day-owned lists, and configuration snapshots,
+but the screen must translate that structure into the user's question: "What did we record, what
+setup was used, what names will this create, and is it safe to export?"
+
+Naming is a first-class UX responsibility. Any field that becomes a downstream identity or join key
+must be presented as such at the edit point, not only at export validation. Reusing a name should
+feel intentionally safe only when the dependent metadata is the same; a changed camera zoom,
+calibration, lens, model, data-acq identity, task description, or other downstream key material
+must steer the user to a distinct name before export.
+
 ## Inputs to read first
 
 - [workflow-clarity-design.md](workflow-clarity-design.md) — the current workflow model:
@@ -330,6 +368,7 @@ sub-stream must land green (full suite, lint, build, byte-identical baselines) o
 | `lifecycle cleanup actions` *(component/unit)* | animal/day delete actions are discoverable but secondary; confirmations name the animal/day, cascade count, exported/validated consequence, and call the existing guarded `deleteAnimal` / `deleteDay` actions. |
 | `repair/preflight ownership wording` *(component)* | Validation, batch preflight, and Export preflight distinguish shared setup, configuration version, catalog selection, task-epoch setup assignment, day override, and day-only facts. |
 | `scenario artifacts` *(component/Playwright-ready)* | new user finds electrodes; user changes camera zoom and is steered to a new name; user creates a multi-epoch day with different rooms/cameras and can see the setup used by each epoch; user reviews effective recording-system values and uses an advanced one-day override only when needed; user uses an animal DIO event on a day; an opto-implanted animal records a day with no stimulation and another day with opto only on selected epochs without hitting false opto errors; user with existing days sees what shared-setup edits affect; user can clean up a test animal/day through safe destructive controls. |
+| `same-day and catch-up story artifacts` *(component/Playwright-ready)* | same-day conversion shows one fresh recording moving efficiently from day review to export without repeated setup entry; catch-up conversion shows multiple days with readiness, shared-setup review, targeted repair, batch eligibility, and naming-identity risks visible before export. |
 | `golden baselines` *(regression)* | the 4 golden fixtures stay byte-identical — this is a labels/IA/copy/source-of-truth-presentation phase; any export-bytes change (only via Task 3 option A) is a named, team-approved exception with regenerated fixtures and trodes_to_nwb coordination. |
 | `npm test`, `npm run lint`, `npm run build` | full gates pass before Phase 9; Phase 9 scenarios are updated to cover ownership/default/override UX. |
 

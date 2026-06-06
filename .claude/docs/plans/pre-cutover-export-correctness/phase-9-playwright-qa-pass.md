@@ -55,6 +55,12 @@ localStorage, workflow clarity, and browser-only behavior cannot hide behind uni
   empty required placeholders. The preflight assertions should name which values are shared animal setup,
   configuration-version data, recording-system defaults, advanced day overrides, catalog selections, and
   day-only facts.
+- **Task 2.5 — same-day and catch-up workflow smoke.** Add two user-story scenarios, not just field-level
+  checks. Same-day: a scientist finishes one recording, creates/reviews one day, confirms task-epoch setup,
+  validates, and downloads one YAML without re-entering shared setup. Catch-up: a scientist has multiple days
+  waiting, scans readiness, spots which days share setup versus need hardware/camera/opto review, validates or
+  repairs targeted issues, and batch-exports only ready days. The scenarios must name the user's goal, the
+  dangerous mistake being prevented, and the naming identities being protected.
 - **Task 3 — fail-closed + repair navigation.** Add browser coverage proving an invalid day cannot reach or
   use Export by clicking the stepper, keyboard next, or the Download button. The visible error must include a
   repair action; clicking it navigates to the owning step and focuses/highlights the target when metadata
@@ -119,6 +125,7 @@ localStorage, workflow clarity, and browser-only behavior cannot hide behind uni
 | Test | Asserts |
 | --- | --- |
 | `workspace happy path downloads corrected YAML` *(Playwright)* | a fully configured workspace day reaches Export, shows preflight, downloads YAML, and the downloaded text includes corrected subject/session, camera/data-acq/device/task/video sections. |
+| `same-day and catch-up workflows are efficient` *(Playwright/artifact)* | one fresh single-day export and one multi-day catch-up/batch export path are reachable without redundant shared-setup entry; readiness, targeted repair, batch eligibility, and protected naming identities are visible. |
 | `invalid workspace day is fail-closed in browser` *(Playwright)* | stepper click, keyboard next, and download cannot bypass error-severity validation; repair actions navigate/focus as designed. |
 | `identity and reference mistakes are blocked before export` *(Playwright)* | camera/data-acq divergent reuse, task-name divergent reuse, region case drift, and stale task/video refs are blocked or repaired at the editing surface. |
 | `ownership/default/day-configurability is visible` *(Playwright)* | shared setup, configuration version, using recording-system default, advanced day override, catalog selection, task-epoch setup assignment, exported-with-this-day, and day-only facts are distinguishable in the key workspace/day/export routes at the point of action. |

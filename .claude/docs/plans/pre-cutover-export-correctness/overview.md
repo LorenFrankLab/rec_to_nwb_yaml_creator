@@ -164,6 +164,10 @@ dev tooling for the phase-9 browser QA pass, phase-10 audit, and phase-11 UX pol
   New animals, existing/imported data, missing electrodes, historical configurations, and reconfiguration
   starts are covered by explicit routes/states and Playwright or QA artifacts
   ([phase 8.6](phase-8-6-workflow-clarity-setup-ux.md), [workflow clarity design](workflow-clarity-design.md)).
+- **Scientist workflow fit:** the modern YAML creator supports both common conversion cadences: exporting a
+  freshly finished recording the same day, and catching up on several recorded days at once. In both cadences
+  the app must prevent silent metadata/naming mistakes, keep repeated setup entry out of the scientist's way,
+  and protect downstream NWB/Spyglass/DANDI identities before export rather than relying on later cleanup.
 - **Ownership/default clarity:** users can tell at the point of action whether each field is shared animal
   setup, a configuration version pinned by the day, a recording-system default copied into the day, an
   advanced day override, an animal catalog item selected by the day/task/video/FsGUI row, a task-epoch setup
