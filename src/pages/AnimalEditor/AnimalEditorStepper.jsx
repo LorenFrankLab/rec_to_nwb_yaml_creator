@@ -26,7 +26,7 @@ import {
   normalizeIdKey,
   normalizeNtrodeMapWithDefaults,
 } from '../../utils/deviceNormalization';
-import { animalEditorStepForFieldPath } from '../DayEditor/validation';
+import { animalEditorStepForFieldPath } from '../../domain/validation';
 import { applyRepairCommand } from '../../state/repairCommands';
 import './AnimalEditorStepper.scss';
 

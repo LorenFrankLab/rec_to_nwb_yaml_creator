@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import PropTypes from 'prop-types';
-import { groupErrorsByStep, validateDay } from './validation';
+import { groupErrorsByStep, validateDay } from '../../domain/validation';
 import { RepairActionButton, STEP_LABELS, isRepairable } from './RepairActions';
 import './DayEditor.scss';
 

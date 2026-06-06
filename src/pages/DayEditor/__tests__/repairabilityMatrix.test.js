@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { validateDay, computeStepStatus, repairTargetForIssue } from '../validation';
+import { validateDay, computeStepStatus, repairTargetForIssue } from '../../../domain/validation';
 import { applyRepairCommand } from '../../../state/repairCommands';
 
 /**

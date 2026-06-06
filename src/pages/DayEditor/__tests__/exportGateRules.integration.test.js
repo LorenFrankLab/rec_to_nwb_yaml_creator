@@ -6,7 +6,7 @@
  * while a warning-severity rule (mixed-case location) leaves export reachable.
  */
 import { describe, it, expect } from 'vitest';
-import { computeStepStatus } from '../validation';
+import { computeStepStatus } from '../../../domain/validation';
 import { mergeDayMetadata } from '../../../state/workspaceUtils';
 import { buildRealisticWorkspace } from '../../../__tests__/fixtures/workspaceBuilders';
 

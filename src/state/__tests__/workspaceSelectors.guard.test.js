@@ -14,8 +14,9 @@ import path from 'node:path';
  * Allowed exceptions (NOT consumers — they DEFINE or DETECT canonical/corrupt state):
  *   - `workspaceSelectors.js` (the guards live here),
  *   - `deviceNormalization.js` (the normalizer that PRODUCES canonical state),
- *   - `validation/` and `pages/DayEditor/validation.js` (raw-shape DETECTION must inspect
- *     the corrupt shape on purpose — a selector would hide it).
+ *   - `validation/` and `domain/validation.js` (raw-shape DETECTION must inspect
+ *     the corrupt shape on purpose — a selector would hide it),
+ *   - `pages/DayEditor/validation.js` (page-only field-blur helper; no raw collection reads).
  */
 
 const srcDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../');
@@ -65,7 +66,7 @@ const isExempt = (file) =>
   file.endsWith('workspaceSelectors.js') ||
   file.endsWith('deviceNormalization.js') ||
   file.includes(`${path.sep}validation${path.sep}`) ||
-  file.endsWith(`DayEditor${path.sep}validation.js`) ||
+  file.endsWith(`domain${path.sep}validation.js`) ||
   file.includes(`${path.sep}__tests__${path.sep}`);
 
 describe('canonical read layer — no ad-hoc `|| []` on raw collection fields', () => {

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { validateField, computeStepStatus, computeDevicesStatus, computeEpochsStatus, groupErrorsByStep, stepIdForIssue, repairTargetForIssue, validateDay, dayOverrideIssues, SURFACE_BY_CODE } from '../validation';
+import { validateField } from '../validation';
+import { computeStepStatus, computeDevicesStatus, computeEpochsStatus, groupErrorsByStep, stepIdForIssue, repairTargetForIssue, validateDay, dayOverrideIssues, SURFACE_BY_CODE } from '../../../domain/validation';
 import { makeAnimalWithCamerasAndDay } from './taskFixtures';
 
 describe('stepIdForIssue', () => {

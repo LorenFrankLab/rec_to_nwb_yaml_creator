@@ -13,7 +13,7 @@ import { renderHook, act } from '@testing-library/react';
 import { useStore } from '../store';
 import { mergeDayMetadata } from '../workspaceUtils';
 import { validate } from '../../validation';
-import { computeStepStatus } from '../../pages/DayEditor/validation';
+import { computeStepStatus } from '../../domain/validation';
 
 /**
  *

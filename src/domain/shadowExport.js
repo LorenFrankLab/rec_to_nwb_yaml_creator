@@ -1,11 +1,11 @@
 /**
  * Pre-download encoder-stability check for the new workspace export path.
  *
- * @module pages/DayEditor/shadowExport
+ * @module domain/shadowExport
  */
-import { encodeYaml } from '../../io/yaml';
-import { mergeDayMetadata } from '../../state/workspaceUtils';
-import { isFeatureEnabled } from '../../featureFlags';
+import { encodeYaml } from '../io/yaml';
+import { mergeDayMetadata } from '../state/workspaceUtils';
+import { isFeatureEnabled } from '../featureFlags';
 
 /**
  * Cheap pre-download encoder-stability check. Recomputes the export YAML and

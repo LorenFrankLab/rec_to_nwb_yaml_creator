@@ -2,10 +2,10 @@ import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { encodeYaml, formatDeterministicFilename, downloadYamlFile } from '../../io/yaml';
 import { mergeDayMetadata, resolveDayConfig } from '../../state/workspaceUtils';
-import { computeStepStatus, validateDay, STEP_LABELS } from './validation';
+import { computeStepStatus, validateDay, STEP_LABELS } from '../../domain/validation';
 import { isExportEnabled } from './stepGate';
 import { isFeatureEnabled } from '../../featureFlags';
-import { checkShadowExport } from './shadowExport';
+import { checkShadowExport } from '../../domain/shadowExport';
 import RepairActions from './RepairActions';
 import './DayEditor.scss';
 

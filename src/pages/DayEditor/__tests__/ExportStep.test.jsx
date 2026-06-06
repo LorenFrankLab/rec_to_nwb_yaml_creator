@@ -3,11 +3,11 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ExportStep from '../ExportStep';
 import * as yaml from '../../../io/yaml';
-import * as shadow from '../shadowExport';
+import * as shadow from '../../../domain/shadowExport';
 import { overrideFlags, restoreFlags } from '../../../featureFlags';
 import { buildRealisticWorkspace } from '../../../__tests__/fixtures/workspaceBuilders';
 import { mergeDayMetadata } from '../../../state/workspaceUtils';
-import { computeStepStatus } from '../validation';
+import { computeStepStatus } from '../../../domain/validation';
 import { validate } from '../../../validation';
 
 const UNSTABLE = {
