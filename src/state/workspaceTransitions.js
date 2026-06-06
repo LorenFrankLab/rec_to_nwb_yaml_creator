@@ -151,14 +151,16 @@ export function addConfigurationSnapshotToAnimal(animal, config, now, version) {
  * @param {string[]} dayIds - Day ids to move onto the new version.
  * @param {string} now - Timestamp to stamp moved days + the animal.
  * @param {number} [version] - The version to assign (defaults to {@link nextConfigurationVersion}).
+ * @param {string} [ownerKey] - The animal's STORE KEY, used for the day-ownership guard so it
+ *   doesn't depend on the (possibly stale) `animal.id` record field. Defaults to `animal.id`.
  * @returns {{ animal: object, days: object, version: number }} The next animal + days map and
  *   the version that was created. (Superset of {@link applyConfigurationForwardToAnimal}'s
  *   `{animal, days}` — the extra `version` is the just-created snapshot.)
  */
-export function createSnapshotAndApplyForward(animal, days, config, dayIds, now, version) {
+export function createSnapshotAndApplyForward(animal, days, config, dayIds, now, version, ownerKey) {
   const created = version ?? nextConfigurationVersion(getConfigHistory(animal));
   const withSnapshot = addConfigurationSnapshotToAnimal(animal, config, now, created);
-  const applied = applyConfigurationForwardToAnimal(withSnapshot, days, created, dayIds, now);
+  const applied = applyConfigurationForwardToAnimal(withSnapshot, days, created, dayIds, now, ownerKey);
   return { animal: applied.animal, days: applied.days, version: created };
 }
 
@@ -172,11 +174,13 @@ export function createSnapshotAndApplyForward(animal, days, config, dayIds, now,
  * @param {number} snapshotVersion - The existing snapshot version to apply.
  * @param {string[]} dayIds - Day ids to move onto that version.
  * @param {string} now - Timestamp to stamp moved days + the animal.
+ * @param {string} [ownerKey] - The animal's STORE KEY for the ownership guard (so it doesn't rely
+ *   on the possibly-stale `animal.id` record field). Defaults to `animal.id`.
  * @returns {{ animal: object, days: object }} The next animal + days map. (Returns NO
  *   `version` — use {@link createSnapshotAndApplyForward} if you also need the created version.)
  * @throws {Error} If `snapshotVersion` does not exist for the animal.
  */
-export function applyConfigurationForwardToAnimal(animal, days, snapshotVersion, dayIds, now) {
+export function applyConfigurationForwardToAnimal(animal, days, snapshotVersion, dayIds, now, ownerKey) {
   const updatedAnimal = structuredClone(animal);
   const history = getConfigHistory(updatedAnimal);
   const target = history.find((s) => s.version === snapshotVersion);
@@ -186,9 +190,20 @@ export function applyConfigurationForwardToAnimal(animal, days, snapshotVersion,
     );
   }
 
-  // Only real, deduped days move — a day id not in the workspace must never leak into
-  // appliedToDays (which would pollute the usage view).
-  const validDayIds = [...new Set(dayIds)].filter((id) => days[id]);
+  // Only real, deduped days that BELONG TO THIS ANIMAL move — a day id not in the workspace must
+  // never leak into appliedToDays, and (defense in depth alongside the OK-only `getAnimalDays`
+  // that feeds the wizard) a record explicitly owned by a DIFFERENT animal must never have its
+  // `configurationVersion` rewritten by this animal's reconfiguration. A record with no
+  // `animalId` is permitted (the index is the authority).
+  const isRecordRow = (value) =>
+    value !== null && typeof value === 'object' && !Array.isArray(value);
+  // Ownership is checked against the STORE KEY (ownerKey), not `updatedAnimal.id`, so a stale/
+  // missing record id can't make the guard pass the wrong days or reject the right ones.
+  const owner = ownerKey ?? updatedAnimal.id;
+  const validDayIds = [...new Set(dayIds)].filter((id) => {
+    const record = days[id];
+    return isRecordRow(record) && (record.animalId == null || record.animalId === owner);
+  });
   const moving = new Set(validDayIds);
 
   // Remove the moving days from EVERY snapshot's list first (clean partition), then add
@@ -366,7 +381,14 @@ export function applyDayUpdates(day, updates, now) {
     updated.deviceOverrides = normalizeDeviceOverrides(updates.deviceOverrides);
   }
   if (updates.state) {
-    updated.state = { ...updated.state, ...updates.state };
+    // Guard a malformed CURRENT state (a corrupt import can persist `state` as a scalar/array):
+    // spreading a string would scatter char-indexed keys. Normalize to a record first so the
+    // update writes clean draft/validated/exported flags over the corruption, not on top of it.
+    const currentState =
+      updated.state !== null && typeof updated.state === 'object' && !Array.isArray(updated.state)
+        ? updated.state
+        : {};
+    updated.state = { ...currentState, ...updates.state };
   }
   // Probe-reconfiguration: point this day at a different snapshot version. Setting it here
   // does NOT eagerly reconcile snapshots' `appliedToDays`; `reconcileAppliedToDays` derives

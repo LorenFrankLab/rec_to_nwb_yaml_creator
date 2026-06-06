@@ -55,7 +55,9 @@ function execDayCommand(command, day, animal) {
     updateAnimal: vi.fn(),
     rebuildConfigurationHistory: vi.fn(),
   };
-  applyRepairCommand(command, { actions, animalId: 'a', dayId: 'd', day: state.day, animal });
+  // In production the executor's `animalId` is the resolved store OWNER KEY, which agrees with the
+  // resolved animal's id; pass the animal's id (not a placeholder) so the harness mirrors that.
+  applyRepairCommand(command, { actions, animalId: animal?.id ?? 'a', dayId: 'd', day: state.day, animal });
   return state.day;
 }
 

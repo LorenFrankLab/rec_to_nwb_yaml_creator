@@ -1,0 +1,164 @@
+/**
+ * @fileoverview Workflow-category mapping for validation/export repair summaries.
+ *
+ * Phase 8.6 Task 6. The Validation and Export surfaces group blocking issues by the user's
+ * workflow stage — animal setup, day metadata, day-specific failed channels, existing-data
+ * repair, export/preflight — so a scientist reads the same five buckets there as on the
+ * Animal Workspace setup checklist. This module decides ONLY the bucket; where a repair
+ * actually routes stays owned by `repairTargetForIssue` (`./validation`). Surfaces render and
+ * route; they never re-guess the category.
+ *
+ * `CATEGORY_BY_CODE` is the analogue of `SURFACE_BY_CODE`: every app-rule code is pinned to a
+ * category and locked by a table test, so a new rule code can't silently fall into the wrong
+ * group. AJV schema issues (no app code) fall back to the canonical repair surface/step.
+ */
+
+import { repairTargetForIssue } from './validation';
+
+/**
+ * The five user-facing workflow categories.
+ *
+ * `export_preflight` is a readiness STATE (the "ready for export" stage), not a destination
+ * for any issue code — no issue maps to it; the Export surface uses it for the preflight
+ * section header. The other four are where blocking issues are grouped.
+ *
+ * @type {Readonly<Record<string, 'animal_setup'|'day_metadata'|'failed_channels'|'existing_data'|'export_preflight'>>}
+ */
+export const WORKFLOW_CATEGORY = Object.freeze({
+  ANIMAL_SETUP: 'animal_setup',
+  DAY_METADATA: 'day_metadata',
+  FAILED_CHANNELS: 'failed_channels',
+  EXISTING_DATA: 'existing_data',
+  EXPORT_PREFLIGHT: 'export_preflight',
+});
+
+/**
+ * Display order for the categories — the workflow order (setup first, export last).
+ * @type {ReadonlyArray<string>}
+ */
+export const WORKFLOW_CATEGORY_ORDER = Object.freeze([
+  WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  WORKFLOW_CATEGORY.DAY_METADATA,
+  WORKFLOW_CATEGORY.FAILED_CHANNELS,
+  WORKFLOW_CATEGORY.EXISTING_DATA,
+  WORKFLOW_CATEGORY.EXPORT_PREFLIGHT,
+]);
+
+/**
+ * User-facing label for each category, worded to match the setup checklist.
+ * @type {Readonly<Record<string, string>>}
+ */
+export const WORKFLOW_CATEGORY_LABELS = Object.freeze({
+  animal_setup: 'Animal setup',
+  day_metadata: 'Day metadata',
+  failed_channels: 'Day-specific failed channels',
+  existing_data: 'Existing data repair',
+  export_preflight: 'Export / preflight',
+});
+
+/**
+ * Authoritative category for each app-rule code (mirrors `SURFACE_BY_CODE`'s coverage). The
+ * mapping follows the user's mental model of WHERE the fix belongs in their workflow:
+ *  - shared hardware/geometry/camera/data-acq/opto + subject identity → animal setup;
+ *  - this day's session/tasks/videos/files/event references → day metadata;
+ *  - day-specific failed-channel marks → failed channels;
+ *  - corrupt/recovered/stale shapes that need cleanup before trust → existing-data repair.
+ *
+ * @type {Readonly<Record<string, string>>}
+ */
+export const CATEGORY_BY_CODE = Object.freeze({
+  // Shared animal hardware setup (device geometry, channel maps, probe catalog, cameras,
+  // data-acq devices) and animal-level optogenetics.
+  channel_value_out_of_range: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  channel_key_out_of_range: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  channel_partition_invalid: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  channel_row_count_mismatch: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  inconsistent_probe_catalog: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  empty_location: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  empty_targeted_location: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  inconsistent_location_case: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  unknown_device_type: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  duplicate_electrode_group_id: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  duplicate_ntrode_id: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  dangling_electrode_group_ref: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  duplicate_channels: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  missing_channels: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  duplicate_camera_id: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  divergent_camera_identity: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  divergent_data_acq_identity: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  partial_configuration: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  multiple_excitation_sources: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  // Subject identity is part of the animal's shared setup (set at animal creation; species is
+  // the one editable in the Day Overview, but it still belongs to the Subject setup item).
+  invalid_species: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  subject_id_slash: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  session_id_slash: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+
+  // This recording day's metadata (tasks, videos, files, behavioral events, camera refs).
+  dangling_camera_ref: WORKFLOW_CATEGORY.DAY_METADATA,
+  duplicate_behavioral_event_name: WORKFLOW_CATEGORY.DAY_METADATA,
+  duplicate_behavioral_event_description: WORKFLOW_CATEGORY.DAY_METADATA,
+  duplicate_task_epoch: WORKFLOW_CATEGORY.DAY_METADATA,
+  orphaned_video: WORKFLOW_CATEGORY.DAY_METADATA,
+  orphaned_file: WORKFLOW_CATEGORY.DAY_METADATA,
+  orphaned_fs_gui_epoch: WORKFLOW_CATEGORY.DAY_METADATA,
+  divergent_task_identity: WORKFLOW_CATEGORY.DAY_METADATA,
+  missing_camera: WORKFLOW_CATEGORY.DAY_METADATA,
+
+  // Day-specific failed (bad) channels.
+  bad_channel_out_of_range: WORKFLOW_CATEGORY.FAILED_CHANNELS,
+  multishank_bad_channels_ignored: WORKFLOW_CATEGORY.FAILED_CHANNELS,
+
+  // Corrupt / recovered / stale shapes that must be cleaned up before the data is trusted.
+  stale_bad_channel_override: WORKFLOW_CATEGORY.EXISTING_DATA,
+  malformed_bad_channel_override: WORKFLOW_CATEGORY.EXISTING_DATA,
+  malformed_device_override: WORKFLOW_CATEGORY.EXISTING_DATA,
+  shadowed_geometry_override: WORKFLOW_CATEGORY.EXISTING_DATA,
+  malformed_day_collection: WORKFLOW_CATEGORY.EXISTING_DATA,
+  malformed_day_session: WORKFLOW_CATEGORY.EXISTING_DATA,
+  malformed_animal_collection: WORKFLOW_CATEGORY.EXISTING_DATA,
+  missing_configuration_history: WORKFLOW_CATEGORY.EXISTING_DATA,
+  // A recovered/imported day with no pinned configuration version — repaired by pinning a
+  // version in the Day Devices step.
+  unpinned_configuration: WORKFLOW_CATEGORY.EXISTING_DATA,
+});
+
+/**
+ * The workflow category for a validation issue. Prefers the pinned app-rule code; otherwise
+ * (AJV schema issues, which carry no app code) derives from the canonical repair target:
+ * an animal/none surface is animal setup, a day surface is day metadata. Day-owned device and
+ * override codes already carry an app code, so the day fallback only ever sees session/task
+ * schema errors — hence day_metadata is the safe default there.
+ *
+ * @param {{code?: string, path?: string, instancePath?: string, step?: string, repairSurface?: string, ownerSurface?: string}} issue
+ * @returns {string} One of the WORKFLOW_CATEGORY values (never `export_preflight`).
+ */
+export function workflowCategoryForIssue(issue) {
+  const byCode = CATEGORY_BY_CODE[issue?.code];
+  if (byCode) return byCode;
+
+  const { surface } = repairTargetForIssue(issue);
+  if (surface === 'animal' || surface === 'none') return WORKFLOW_CATEGORY.ANIMAL_SETUP;
+  return WORKFLOW_CATEGORY.DAY_METADATA;
+}
+
+/**
+ * Group issues into ordered category buckets (empty buckets dropped). Each bucket is
+ * `{ category, label, issues }`, in `WORKFLOW_CATEGORY_ORDER`.
+ *
+ * @param {Array} issues - Validation issues.
+ * @returns {Array<{category: string, label: string, issues: Array}>}
+ */
+export function groupIssuesByWorkflowCategory(issues) {
+  const byCategory = new Map();
+  for (const issue of Array.isArray(issues) ? issues : []) {
+    const category = workflowCategoryForIssue(issue);
+    if (!byCategory.has(category)) byCategory.set(category, []);
+    byCategory.get(category).push(issue);
+  }
+  return WORKFLOW_CATEGORY_ORDER.filter((category) => byCategory.has(category)).map((category) => ({
+    category,
+    label: WORKFLOW_CATEGORY_LABELS[category],
+    issues: byCategory.get(category),
+  }));
+}

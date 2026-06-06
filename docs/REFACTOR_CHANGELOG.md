@@ -6,6 +6,435 @@
 
 ---
 
+## Workflow clarity & setup UX — Phase 8.6 (June 5, 2026)
+
+Pre-QA workflow/information-architecture clarity so the corrected workspace path is
+understandable before browser QA: animal setup first, recording-day metadata second,
+day-specific failed channels, hardware changes by day range, export confidence last. This
+phase changes discoverability, wording, routing, and setup-state presentation, plus ONE new
+export-blocking validation rule (`unpinned_configuration` — see the third-review follow-up
+below) that converts a previously-silent wrong-geometry export into a visible, repairable block.
+It does NOT change export bytes for an already-valid day, the JSON schema, or converter behavior.
+The 125 golden baselines stay byte-identical; the full suite, lint (0 errors), and build stay green.
+
+- **Route/state workflow inventory (Task 0).** `.claude/docs/plans/pre-cutover-export-correctness/workflow-route-state-inventory.md`
+  maps every workflow state (new animal, animal with no electrodes, animal with existing days,
+  imported/recovered workspace, historical day, reconfiguration start) to user goal, next safe
+  action, dangerous misconception, current route/control, and the required change.
+- **Workflow-status domain helper (Task 1).** `src/domain/workflowStatus.js` derives the animal
+  setup checklist (`getAnimalSetupChecklist`) and per-day readiness (`getDayWorkflowStatus`)
+  PURELY from the existing `computeStepStatus`/`validateDay` outputs and the shape-safe
+  `workspaceSelectors` reads. `readyForExportPreflight` is `isExportEnabled(computeStepStatus(...))`
+  — the same gate the Export button consults (export status + all prerequisite steps) — so it
+  cannot drift. Setup-state categories (missing cameras/data-acq) are informational and never gate
+  export. *(Refined in the review rounds below: initially `computeStepStatus(...).export`, then the
+  full `isExportEnabled` gate.)*
+- **Workflow-category mapping (Task 6, domain).** `src/domain/workflowCategories.js` maps each
+  issue to one of five user buckets (Animal setup, Day metadata, Day-specific failed channels,
+  Existing data repair, Export/preflight) via a `CATEGORY_BY_CODE` table — the analogue of
+  `SURFACE_BY_CODE`, locked by a table test. Repair actions still route through the canonical
+  `repairTargetForIssue`; no surface re-guesses categories.
+- **Animal Workspace setup checklist (Task 2).** The workspace renders a first-class setup
+  checklist (Subject, Electrodes/probes, Cameras/calibration, Data acquisition, Recording days).
+  Missing electrodes show a prominent `Set Up Electrodes` action (discoverable without opening
+  the Animal Editor); present hardware shows `Review …` actions.
+- **Animal Editor shared-setup framing + camera identity teaching copy (Task 3).** A subtitle
+  frames the editor as shared animal setup used by all recording days. The camera modal
+  proactively teaches the Spyglass identity rule (a different zoom/calibration/lens/model/id
+  needs a different camera name) via `aria-describedby` help text, complementing the existing
+  reactive divergence alert (verified present). The reconfiguration context banner (editing vN,
+  N moved days) already existed and is retained.
+- **Day Devices workflow copy + empty-state routing (Task 4).** The Devices step now says the
+  day "uses animal electrode configuration vN", links to "Edit shared animal electrode setup",
+  marks failed channels "for this recording day" (day-specific), and frames reconfiguration as
+  "Hardware changed starting this day…". The no-electrodes empty state routes to `Set Up
+  Electrodes` (same wording as the workspace) and explains failed channels come after electrodes.
+- **Existing-data review state (Task 5).** When the selected animal has days or raw-shape
+  corruption, the workspace shows an explicit review state (what was found + a link to the
+  validation summary) and REUSES the shipped `RawCorruptionBanner` for executable resets of
+  corrupt animal-owned collections — not a parallel recovery surface. Raw-shape issues also fold
+  into the checklist's per-item `has_errors`. Export stays blocked by the existing gate.
+- **Validation/Export category grouping (Task 6) + preflight alignment (Task 7).** The Validation
+  summary and the Export blocked list group issues by workflow category (`RepairActions` gained
+  an opt-in `groupByCategory`). The Export preflight reads as a confidence check: animal & day,
+  subject & session, configuration version with current/historical status, probes & failed
+  channels, cameras/calibration, data-acq device, tasks/videos, optogenetics, and unresolved
+  (non-blocking) review risk — all derived from the merged day and the domain workflow helper.
+
+New domain modules stay free of page imports (the Phase 8.5 architecture guard scans them).
+Tests added: `workflowStatus`, `workflowCategories`, the Animal Workspace setup-checklist +
+review-state component tests, the Day Devices workflow-copy test, the camera identity-guidance
+test, the Animal Editor shared-setup assertion, the Validation category-grouping assertion, and
+the enriched preflight assertions.
+
+**Review follow-ups (addressed in-phase):**
+
+- **Electrode-presence matches the editor (was: Review could dead-end on an empty editor).**
+  `animalHasElectrodes` reads `animal.devices` — the source the Animal Editor renders — so
+  "Review Electrodes" never lands on a blank step. *(Superseded below: a recovered animal with
+  geometry only in a snapshot is now a repair/sync state — "Repair electrode setup" with a
+  "Load saved electrode configuration" action — not "Set Up Electrodes", which would have
+  overwritten the snapshot.)*
+- **Readiness uses the real export gate.** The export gate moved to `src/domain/stepGate.js`
+  (`pages/DayEditor/stepGate.js` re-exports it for the in-folder consumers); `getDayWorkflowStatus`
+  now derives `readyForExportPreflight` from `isExportEnabled(computeStepStatus(...))` (which folds
+  in the prerequisite-step statuses), so the helper can't say "ready" while Export is disabled.
+- **Unpinned-configuration review risk surfaced.** `getDayWorkflowStatus` adds
+  `usesUnpinnedConfiguration` (a day with no pinned version in a multi-version animal, silently
+  resolved to latest by `resolveDayConfig`); the Day Devices version bar and the Export preflight
+  now warn so a recovered day can't export the wrong geometry unnoticed. Resolution semantics are
+  unchanged (no `resolveDayConfig` change).
+- **Checklist reflects real setup errors.** The Animal Workspace folds per-day setup validation
+  errors (electrode/camera/data-acq/subject) into the checklist's per-item `has_errors`, not just
+  raw-shape corruption.
+- **Accurate inheritance copy.** The Animal Editor subtitle and save confirmation no longer claim
+  all recording days inherit a change — edits apply to the latest configuration; days pinned to an
+  earlier version keep theirs.
+- **Deep-linked repair links.** The Day Devices config-error and missing-channel-map links now
+  deep-link to the owning Animal Editor step (`?field=…`) instead of the bare editor.
+
+**Second-review follow-ups (addressed in-phase — nothing deferred):**
+
+- **Electrode authority is unambiguous (device/snapshot mirror divergence).** When the saved
+  configuration has electrode geometry but the editable mirror (`animal.devices`) is empty
+  (recovered/imported data), the checklist shows a **repair/sync** state (not "not started"), and
+  the Animal Editor's Electrode Groups step offers **"Load saved electrode configuration"** instead
+  of a blank "add your first group" — which would have overwritten the snapshot via the
+  devices→snapshot mirror. New helper `animalElectrodeSetupNeedsSync`.
+- **Unpinned day pins are repairable, not just warned.** The Day Devices version bar now offers a
+  **version-pin control** (assign an existing `configurationVersion`) next to the unpinned-multi-
+  version warning, so the wrong-geometry risk is fixable in place. (A hard export-block would be a
+  validation-rule change owned by the correctness phases; the repair control closes the actionable
+  gap surfaced by Phase 8.6.)
+- **Batch export has a preflight.** `ValidationSummary`'s "Export Valid Only" now shows a per-day
+  confirmation listing each day's configuration version (with historical/unpinned flags), probe/
+  failed-channel/camera counts, and optogenetics state before downloading — the same
+  "what will be encoded?" confidence check as the single-day Export step.
+- **Workspace auto-selects the sole animal** so loaded/recovered setup is visible on `#/workspace`
+  without a manual click (auto-select fires only for a single animal; an explicit `?animal=` is
+  always honored).
+- **Docs reconciled.** The readiness gate is documented as `isExportEnabled(computeStepStatus(...))`
+  in the helper, the inventory, and the validation/export-gate contract; the inventory no longer
+  claims the repair *buttons* are reworded.
+
+**Design choice (not a deferral):** repair buttons keep the canonical `repairTargetForIssue` labels
+("Fix in Animal Editor → …", "Fix in Devices") — a tested routing contract. The workflow framing is
+delivered by the category **headings** (Animal setup / Day metadata / …) above them and the
+checklist action **verbs** (Set Up Electrodes / Review Cameras), so there is no functional gap.
+
+**Third-review follow-ups (addressed in-phase):**
+
+- **Unpinned configuration is now export-BLOCKING (was warn-only).** A new `unpinned_configuration`
+  validation error (in `validateDay`/`SURFACE_BY_CODE`/`CATEGORY_BY_CODE`) fails the export gate for
+  a day with no pinned `configurationVersion` in a multi-version animal — so neither single-day nor
+  batch export can ship YAML with silently wrong resolved geometry. It routes to the Devices step,
+  where the version-pin control repairs it (issue → ownership → visible action → repair). The
+  now-unreachable preflight/batch "unpinned" notes were removed.
+- **`AnimalWorkspace` reads days through `getAnimalDayIds` / `getDaySession`** (and guards `day.state`)
+  so a recovered/imported animal with malformed/missing `days` can't crash the workspace or hide the
+  review state — important now that the sole animal is auto-selected on mount.
+- **Workspace header relabeled** `Edit Devices` → `Edit Animal Setup` (aria-label "Edit shared animal
+  setup") so it reads as shared setup, not a device-only trap.
+- **Changelog/contract docs reconciled** with the final behavior (readiness gate = `isExportEnabled`;
+  snapshot-only electrodes = repair/sync state).
+
+**Fifth-review follow-ups — day-reference recovery robustness (addressed in-phase):**
+
+- **Orphaned day records no longer disappear.** `ValidationSummary` adds an orphan sweep over
+  `workspace.days`: any day RECORD not reached through an animal's index (because the animal's `days`
+  is corrupt, missing, or simply doesn't list it) is surfaced as a row ("⚠ not in day list"),
+  resolved against its own `animalId`, and openable — so a recovered record is never lost. (Not
+  raw-flagged into `validateRawAnimal`, because the day *index* corruption shouldn't block export of
+  the day *records*, which are themselves fine.)
+- **Workspace surfaces dangling day references** instead of silently dropping them: a day id that
+  resolves to no record now renders an explicit "Missing record" row linking to the validation
+  summary, matching ValidationSummary's honesty.
+- **Batch export re-validates on confirm.** `runExport` re-resolves each captured row's CURRENT
+  animal/day from the store and re-runs `computeStepStatus`, skipping (and reporting) any day that is
+  no longer present or no longer valid since the preflight was opened — so a stale preflight can't
+  export something that changed underneath it.
+- **`getAnimalDays` is crash-safe.** It now keeps only resolvable day records and orders by a
+  string-coerced date, so a non-record day or numeric/missing `date` can't throw in `localeCompare`
+  and blank the Day Editor / reconfiguration list.
+- **`resetDaySession` uses the day's own `animalId`** for the session-id prefix (then the contract
+  `animalId`, then `ctx.animal?.id` last), so a corrupt `animal.id` can't produce a wrong prefix.
+- **Doc drift cleaned:** the validation/export-gate contract points `computeStepStatus` at
+  `src/domain/validation.js`; `workflowStatus.test.js` asserts readiness against `isExportEnabled(...)`;
+  the phase-doc Task 6 carries an as-shipped note on the repair-label decision.
+
+**Sixth-review follow-ups (addressed in-phase):**
+
+- **Missing `animal.days` no longer hides recovered records in the Workspace.** The Workspace now
+  detects orphaned records (a record whose `animalId` is this animal but the index — missing or
+  corrupt — doesn't list it), shows them in the day list (marked "⚠ not in day list"), and surfaces
+  a review note linking to the validation summary to re-link them.
+- **Orphaned records are relinkable.** New `relinkDayReference(animalId, dayId)` store action adds an
+  orphan back to its animal's index; `ValidationSummary` offers "Add to day list" for an orphan with
+  a present owner, and — for an orphan whose owning animal is gone — replaces the dead-end "Open
+  editor" with a recovery note (re-create/re-import).
+- **Validation step readiness reflects the REAL gate.** "Ready to export" now means
+  `isExportEnabled(computeStepStatus(...))` (export + all prerequisite steps), not just "no errors";
+  a zero-error day with an incomplete step says "complete the required steps" instead of falsely
+  reading ready.
+- **Batch export re-validates on confirm** (carried from the fifth round) and **malformed `day.state`
+  is guarded** against char-key scatter in both `applyDayUpdates` and the Validate-All payload.
+- **Repair-label contract is now single and consistent** across the phase doc Task 6,
+  `workflow-clarity-design.md`, and the changelog: category headings carry the checklist vocabulary;
+  repair buttons keep the canonical `repairTargetForIssue` labels.
+
+**Seventh-review follow-ups — one domain recovery-status model (addressed in-phase):**
+
+The recurring theme across rounds 4–6 was the app conflating "safe to render" with "safe to
+trust": each surface independently coerced corrupt day state and then re-decided what it meant,
+so a local fix could create a new mismatch. This round encodes the abnormal day-reference states
+as ONE domain model and makes every surface consume it.
+
+- **New domain module `src/domain/dayRecovery.js`** assigns every day reference/record exactly one
+  explicit status — `ok`, `dangling_reference`, `recovered_unlinked`, `orphan_no_owner` — with one
+  export policy (`isExportableDayStatus` → only `ok`). `classifyAnimalDays` (per animal) and
+  `classifyWorkspaceDays` (cross-workspace) are the single source.
+- **ValidationSummary** now builds its rows from `classifyWorkspaceDays` (chips/flags/repairs are
+  decorations on the status, not a parallel re-derivation), and **Export Valid Only** filters by
+  `isExportableDayStatus` so a recovered-unlinked record is **excluded from export until re-linked**
+  ("Add to day list") rather than silently shipped from a broken index.
+- **AnimalWorkspace** renders its day list, counts, and review state from `classifyAnimalDays`.
+  The review count now counts the day RECORDS present (indexed + recovered), so a missing/corrupt
+  index no longer reads "Found 0 recording days" while records render below.
+- **Stale-preflight skips** (a day gone/invalid since the preflight opened) are reported in their
+  own bucket ("changed after the preflight"), no longer mislabeled as export-parity failures.
+- **`relinkDayReference`** now verifies the target is a real record owned by the animal.
+- **Decision — malformed `day.state` is harmless UI metadata.** `state` holds the non-exported
+  draft/validated/exported chips, not scientific data; it is normalized to `{}` (a documented,
+  silent reset — the chips simply don't render) and is deliberately NOT a recovery status. The
+  guards in `applyDayUpdates` and the Validate-All payload prevent char-key scatter; nothing about
+  it reaches the YAML or the export gate.
+
+**Eighth-review follow-ups — extend & enforce the recovery model (addressed in-phase):**
+
+The recovery model exposed a real data-corruption path and some surfaces not yet bound to its
+export policy:
+
+- **New `wrong_owner` status (data-corruption fix).** An index reference whose record EXPLICITLY
+  declares a different animal (`record.animalId` names another animal) was being classified `ok`
+  and exported with the indexing animal's subject/probe metadata — schema-valid YAML for the wrong
+  subject. It is now `wrong_owner`: not exportable, flagged ("belongs to {other}") with a safe
+  unlink repair (`unlinkDayReference`, which preserves the record so it resurfaces under its real
+  owner to be re-linked). An indexed record with NO `animalId` stays `ok` (the index is the
+  authority).
+- **Export policy enforced on EVERY path, from one domain source:**
+  - batch `runExport` now re-derives each day's CURRENT recovery status at confirm (not just
+    "still present/valid"), so a day that became recovered-unlinked / wrong-owner / dangling while
+    the preflight was open is dropped (reported as changed-after-preflight);
+  - single-day `ExportStep` blocks a recovered-unlinked day (record present, not in the index) with
+    a re-link message, so the Day Editor can't bypass the policy the batch path enforces.
+- **Copy no longer equates "Valid" with "exportable":** the Export-Valid-Only title/hint and the
+  completion message say a day must be both valid AND in an animal's day list (recovered days must
+  be re-linked first).
+- **Remaining raw `animal.days` reads moved onto the classifier:** the Workspace sidebar day count
+  and the calendar's existing-date guard now count records present (indexed + recovered) so they
+  agree with the recovered records the main panel shows. (The setup-checklist "Recording days" item
+  still reflects the index count — the helper takes only the animal, not the days map; the Workspace
+  panel + review state are the recovery-aware surfaces.) **Superseded by the tenth-review follow-up
+  below:** the setup-checklist item is now passed a recovery-aware `recordingDayCount`, so it no
+  longer contradicts the panel.
+
+**Ninth-review follow-ups — enforce the recovery policy on every remaining path:**
+
+The `wrong_owner` status was computed but not yet enforced everywhere. These bind the remaining
+paths to the same domain policy:
+
+- **Reconfiguration can no longer move a wrong-owner day.** `getAnimalDays` now returns only days
+  actually owned by the animal (a record whose `animalId` names a different animal is excluded), and
+  `applyConfigurationForwardToAnimal` adds a defensive ownership filter — so a reconfiguration can't
+  rewrite another animal's day's `configurationVersion`.
+- **Single-day export is key-consistent.** `ExportStep` derives exportability purely from index
+  membership of the animal it was resolved by (`day.animalId`), dropping the dependency on the
+  possibly-stale `animal.id` field — so it agrees with the batch path.
+- **Batch stale-check is keyed by `(animalKey, dayId)`** so duplicate-index corruption can't let one
+  animal's status mask another's at confirm.
+- **`Validate All` skips non-exportable statuses** — it no longer writes a `validated` flag onto a
+  wrong-owner row (which is another animal's record) or a dangling/recovered/orphan row.
+- **The Workspace day list surfaces wrong-owner days** with a "belongs to {other}" warning and an
+  in-place unlink repair, instead of rendering them as ordinary recording days.
+- **Copy:** the empty batch-export message says "No days are ready to export …" rather than "No
+  valid days …", so "valid" (metadata) and "exportable" (valid + in the day list) stay distinct.
+
+**Tenth-review follow-ups — close the remaining ownership-key gaps + a hygiene bug:**
+
+- **Fixed a literal NUL byte** accidentally introduced into `ValidationSummary/index.jsx`'s
+  `statusKey` separator (which made tools treat the file as binary) and removed an unused
+  `getAnimalDayIds` import (the file now passes `eslint --max-warnings=0`).
+- **`deleteAnimal` no longer deletes another animal's day.** It deletes only day records that
+  actually belong to the deleted animal; a wrong-owner index entry (a record owned by a different
+  animal) is left intact.
+- **Reconfiguration uses the store OWNER KEY, not the record's `animal.id`.** `DayEditorStepper`
+  resolves an `ownerKey` (the key the animal was resolved by, with a fallback to the animal whose
+  index lists the day) and uses it for `getAnimalDays` and subject repair; `ReconfigWizard` targets
+  `day.animalId ?? animal.id`; and the ownership guard in `applyConfigurationForwardToAnimal` now
+  takes an explicit `ownerKey` (threaded from the store action) instead of comparing against the
+  possibly-stale `updatedAnimal.id`. **Superseded by the eleventh-review follow-up below:**
+  `ReconfigWizard` now receives an explicit `animalKey` prop and targets the resolved
+  `animalKey ?? day.animalId ?? animal.id` for both the snapshot write and the post-fork navigation.
+- **A recovered day with a missing/stale `animalId` opens** in the Day Editor via the
+  indexing-animal fallback, instead of dead-ending on "Animal not found" — so it no longer looks
+  usable in the Workspace but unopenable. **Refined by the eleventh-review follow-up below:** only a
+  day that declares *no* owner (`animalId == null`) takes the indexing-animal fallback; a
+  *present-but-unresolvable* `animalId` (a different/absent owner, or a non-string) stays unresolved
+  → "Animal not found", matching the wrong-owner/orphan export block.
+- **Wrong-owner UI is corruption-proof:** the displayed owner id is `String(...)`-coerced, so an
+  imported object-valued `animalId` renders the repair row instead of throwing in React.
+  **Superseded by the thirteenth-review follow-up below:** the owner is now rendered through the
+  `describeOwner` domain helper (a real id verbatim; a corrupt non-string id → "another animal
+  (unreadable id)"), so the note reads as a usable explanation rather than `[object Object]`.
+- **The setup checklist's "Recording days" count** now consumes the same recovery-aware count
+  (`recordingDayCount`) the rest of the Workspace uses, removing the same-page contradiction with
+  recovered-unlinked days.
+
+**Eleventh-review follow-ups — close the last single-day ownership-key edges (addressed in-phase, nothing deferred):**
+
+- **Single-day export no longer bypasses the wrong-owner block.** `DayEditorStepper` now only falls
+  back to the indexing animal when the day declares *no* owner (`day.animalId == null`). A day with a
+  *present-but-unresolvable* `animalId` (e.g. `"ghost"` or an object) stays unresolved → "Animal not
+  found", matching the batch wrong-owner/orphan policy, so it can't be opened and exported under the
+  wrong subject. (New `DayEditorStepper` tests cover both the wrong-owner block and the legitimate
+  recovered-day fallback.)
+- **Reconfiguration is fully threaded by the resolved owner key.** The owner key now flows
+  `DayEditorStepper` → `DevicesStep` → `ReconfigWizard` (new `animalKey` prop). The wizard's snapshot
+  write *and* its post-fork navigation use that `ownerKey` instead of the possibly-stale
+  `day.animalId ?? animal.id`, so a stale record/owner field can no longer misfile the new version
+  onto the wrong animal. (New `ReconfigWizard` test asserts the write + nav use the store key, not the
+  stale fields.)
+- **`statusKey` is collision-proof.** The ValidationSummary per-day status key changed from a
+  `${animalKey}|${dayId}` string (which can't distinguish `('a|b','c')` from `('a','b|c')`) to
+  `JSON.stringify([animalKey, dayId])`, so arbitrary imported ids can't alias one row's recovery
+  status onto another.
+- **`unlinkDayReference` is guarded to wrong-owner only.** The public action now no-ops unless the
+  record exists *and* explicitly belongs to a different animal — an accidental/mistaken call can no
+  longer strand a day this animal owns (or a no-declared-owner day) into recovered-unlinked state.
+  (New state tests cover the wrong-owner unlink, the owned-day no-op, and the unknown-animal no-op.)
+- **`Validate All` names skipped rows.** When a run covers a list that's all recovered/wrong-owner
+  days it now reports `Validated 0 days (N days skipped — not a recording day on this list)` instead
+  of a bare `Validated 0 days`, which read as "nothing to do." (New ValidationSummary test.)
+
+**Twelfth-review follow-ups — finish threading the owner key through repairs + guard non-string owners (addressed in-phase, nothing deferred):**
+
+- **Animal-surface repairs now target the resolved owner key.** `DayEditorStepper.handleRepair`
+  passed `animalId: animal?.id` (the record field), so `resetAnimalCameras` / `resetDataAcqDevice` /
+  `rebuildConfigurationHistory` could no-op or hit the wrong animal for a recovered/stale-id record.
+  It now passes the resolved `ownerKey` (the store key). `resetDaySession`'s id-fallback order also
+  changed to prefer the resolved owner key over the stale `ctx.animal.id` when the day declares no
+  owner (`ctx.day.animalId ?? animalId ?? ctx.animal.id`), and only accepts STRING ids so a corrupt
+  object owner can't poison the session prefix. (New DayEditorStepper + repairCommands tests; the
+  repairabilityMatrix harness now passes the animal's id as the owner key, mirroring production.)
+- **Non-string `day.animalId` can no longer leak into owner-key logic.** `DayEditorStepper` resolves
+  `ownerKey` only when `day.animalId` is a string — an object/number import is treated as "no
+  resolvable owner" → "Animal not found", converging with `dayRecovery`'s WRONG_OWNER/orphan
+  classification instead of phantom-resolving via `animalsMap['[object Object]']`. The
+  `classifyWorkspaceDays` orphan sweep likewise coerces a non-string owner to `animalKey: null`, and
+  `ValidationSummary`'s `subjectLabel` string-coerces its result, so a corrupt owner can never reach
+  React as an object child (which would crash the whole summary). (New DayEditorStepper, dayRecovery,
+  and ValidationSummary tests.)
+- **Day Editor stale-id UX paths fixed.** The "Back to Workspace" link and the header now use the
+  resolved `ownerKey`, not `animal.id`, so a recovered animal whose record id drifted from its store
+  key navigates back to its real workspace selection instead of an empty one.
+- **Targeted lint is clean.** Added the missing JSDoc `@param` types for the new `animalKey` prop on
+  `DevicesStep` and `ReconfigWizard` (full lint: 0 errors, 257 warnings — two fewer than before).
+- **`Validate All` button title** now states that recovered/wrong-owner days are skipped, matching
+  the post-click summary message.
+
+**Thirteenth-review follow-ups — finish the owner-key sweep across ALL Day Editor steps + readability/laundering polish (addressed in-phase, nothing deferred):**
+
+- **Every Day Editor step now routes by the resolved owner key, not `animal.id`.** The previous
+  rounds threaded `ownerKey` through reconfiguration and repairs, but `OverviewStep` (breadcrumb +
+  "Edit Animal" links + the derived session-id help text), `TasksEpochsStep` ("Add cameras" link +
+  the TaskModal Animal-Editor link), `ExportStep` (preflight display, recovered-day re-link links,
+  and animal-surface repair routing), and `ValidationStep` (animal-surface repair deep-links) still
+  built handoffs from the possibly-stale `animal.id` record field. All four now accept the
+  `animalKey` prop (already passed by `DayEditorStepper`) and resolve `ownerKey = animalKey ??
+  animal.id`, so a recovered animal whose record id drifted from its store key can no longer route to
+  a wrong/dead Animal Editor while repairing inherited setup. (New DayEditorStepper integration test
+  asserts the header, Back link, and breadcrumb all route by the store key and never leak the stale
+  id; each step keeps its `animal.id` fallback for isolated renders.)
+- **Object-valued owners now read as a human phrase, not `[object Object]`.** Added the domain
+  helper `describeOwner(animalId)` (a real string id verbatim; a corrupt non-string/empty/absent id
+  → `another animal (unreadable id)`), consumed by both the Validation Summary and the Animal
+  Workspace wrong-owner notes + aria-labels. A corrupt owner is now a usable repair explanation, not
+  a meaningless token. (New dayRecovery + ValidationSummary tests.)
+- **The `Validate All` module-header doc** no longer claims it persists status for "every day" — it
+  now describes the recovery-aware behavior (only `ok` recording days; recovered/wrong-owner/dangling
+  rows skipped and named in the result), matching the implementation and the button title.
+- **`Validate All` no longer launders a corrupt `day.state`.** A truthy non-record `state` (a corrupt
+  import) was silently coerced to `{}` and stamped with `validated`, hiding the corruption behind the
+  bulk action. It is now skipped and counted as a failure (it surfaces as a repairable raw-shape
+  issue in the Day Editor); an ABSENT state still initializes cleanly. (New ValidationSummary test
+  asserts the corrupt-state row is not written and is reported as failed.)
+
+**Fourteenth-review follow-ups — corrupt-owner readability everywhere + repair-path clarity (addressed in-phase, nothing deferred):**
+
+- **The last raw corrupt-owner leaks are closed.** The Day Editor's unresolved-owner error
+  (`Animal not found: …`) and the Validation Summary's wrong-owner diagnostic log both interpolated
+  the raw `animalId`, so an object owner still read as `[object Object]`. Both now go through
+  `describeOwner`, so a corrupt owner reads as "another animal (unreadable id)" in the UI **and** the
+  logs. (New DayEditorStepper test.)
+- **`Validate All` failures are now visible, not console-only.** A day that can't be persisted
+  (corrupt `state`, or a write that throws) is collected into a UI report ("N days could not be
+  validated … repair them, then run Validate All again") with the subject, date, and a per-day
+  reason + repair path — so imported/recovered corruption isn't a murky "1 failed" with the detail
+  hidden in the console. (New ValidationSummary test asserts the affected day + reason render.)
+- **The recovered-day re-link instruction is accurate.** `ExportStep` told the user they could
+  re-link "from the validation summary or the workspace," but the Workspace only *links to* the
+  validation summary — the actual "Add to day list" action lives there. The copy now points only to
+  the validation summary.
+- **Superseded changelog notes annotated.** Three earlier Phase 8.6 notes that later rounds refined
+  (setup-checklist count → recovery-aware `recordingDayCount`; recovered-day fallback → only the
+  no-owner case; `String(...)`-coerced owner → `describeOwner`) now carry an explicit
+  "superseded/refined by …" pointer so the audit trail doesn't contradict current behavior.
+
+**Comprehensive multi-agent PR review follow-ups (addressed in-phase, nothing deferred):**
+
+A five-agent review (code / tests / silent-failures / type-design / comments) of the whole branch vs
+`modern` found no Critical data-integrity bug; every Important + Suggestion it raised was fixed here.
+
+- **Changelog accuracy (Critical).** The phase intro claimed it changes "NOT … validation rules"; it
+  adds the `unpinned_configuration` export-blocking rule. The intro now states this explicitly. The
+  tenth-review `ReconfigWizard` note is annotated as superseded by the `animalKey` threading. The
+  `getDayWorkflowStatus` JSDoc no longer says an unpinned config "can export the wrong geometry"
+  (it's now export-BLOCKED; the flag drives copy, not the gate).
+- **`validateDay` JSDoc reattached.** `unpinnedConfigurationIssues` was inserted between `validateDay`'s
+  authoritative docblock and its declaration, leaving it with a stub (4 JSDoc lint warnings). The
+  helper moved above the docblock; lint warnings drop 257 → 253.
+- **Domain enums frozen.** `DAY_STATUS`, `SETUP_STATE`, `WORKFLOW_CATEGORY`/`_ORDER`/`_LABELS`/
+  `CATEGORY_BY_CODE`, and the new `STEP_STATUS` are now `Object.freeze`d, matching the state layer's
+  convention for closed sets (the export policy keys off `DAY_STATUS.OK`).
+- **Second recovery policy named.** `isPresentRecordStatus` (`ok || recovered_unlinked`) replaces the
+  inline predicate repeated across the Animal Workspace, so the "records present" count can't drift
+  from the per-status set (distinct from `isExportableDayStatus`).
+- **Stringly-typed step status named.** A frozen `STEP_STATUS` (`valid/incomplete/error/pending`) in
+  `validation.js` is consumed by `stepGate` and the `getDayWorkflowStatus` fallback (was a magic
+  `'error'` literal), so the gate and workflow helper can't drift from validation's vocabulary.
+- **Swallowed merge errors are now logged.** The fail-closed merge `catch` blocks in
+  `DayEditorStepper`, `ExportStep`, and `AnimalWorkspace` (setup-issue aggregation) now log WHY the
+  merge failed (the day is still surfaced + repairable) so a "won't export" report is diagnosable.
+- **Batch-export confirm honesty.** A day that THROWS during re-validation at confirm time is now
+  reported as "could not be re-validated" (and logged), not mislabeled "no longer valid".
+- **Owner-key robustness.** The indexing-animal fallback matches by the store MAP KEY (`dayId`), not
+  the record's `id` field; `resetDaySession` parses the date off `dayId` by regex (not by the
+  resolved prefix's length, which could desync for a recovered record); a live repair that resolves
+  to a null owner key logs instead of silently no-opping.
+- **Shared classifier typedef.** `classifyAnimalDays`/`classifyWorkspaceDays` document one
+  `DayClassificationRow` shape, with the `animalKey: null` ⇔ `orphan_no_owner` invariant stated at
+  the type.
+- **`unpinned_configuration` message** reads "the latest configuration" instead of "v undefined" when
+  a corrupt history entry has no version.
+- **New tests** for the previously-untested batch-export stale/became-wrong-owner/became-unreadable
+  confirm path, the duplicate-index + non-string-owner classifier cases, the state-layer wrong-owner
+  guards under a non-string owner (`getAnimalDays`, `deleteAnimal`, `applyConfigurationForwardToAnimal`),
+  `applyDayUpdates` state normalization, `isPresentRecordStatus`, the frozen `DAY_STATUS`, and the
+  unpinned-message label. Full suite 4007 → 4021; lint 0 errors / 253 warnings; 125 baselines
+  byte-identical; build clean.
+
+---
+
 ## Domain boundaries & ownership cleanup — Phase 8.5 (June 5, 2026)
 
 Behavior-preserving architecture hardening before browser QA: move app-wide domain

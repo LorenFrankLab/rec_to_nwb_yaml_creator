@@ -294,7 +294,11 @@ export default function AnimalEditorStepper() {
     // Show success message, then navigate once the user dismisses it.
     if (hasDays) {
       showAlert(
-        `Configuration saved. ${dayCount} day${dayCount !== 1 ? 's' : ''} will inherit changes. Close to return to the workspace.`,
+        // Accurate inheritance: device edits apply to the LATEST configuration; days pinned to
+        // an earlier version keep theirs — so we don't claim all N days inherit the change.
+        'Configuration saved to the latest version. Recording days on the latest version will ' +
+          'use these changes; days pinned to an earlier version keep theirs. Close to return to ' +
+          'the workspace.',
         'success',
         () => {
           window.location.hash = `#/workspace?animal=${animalId}&section=devices`;
@@ -782,6 +786,15 @@ export default function AnimalEditorStepper() {
         </a>
         <div className="animal-editor-title">
           <h1>Animal Editor: {animal.id}</h1>
+          {/* Frame the editor as SHARED animal setup, not a detached hardware form, so
+              electrodes/probes are discoverable here and their reuse across days is clear.
+              Device edits apply to the latest configuration; days pinned to an earlier version
+              keep theirs, so we don't overstate that ALL days inherit changes. */}
+          <p className="animal-editor-subtitle">
+            Shared hardware setup for this animal. Electrodes/probes, cameras, and data
+            acquisition configured here apply to the latest configuration and the recording days
+            on it; days pinned to an earlier configuration keep theirs.
+          </p>
           {isReconfigurationEdit && (
             <div
               className={`configuration-edit-context ${contextIsLatest ? '' : 'configuration-edit-context-warning'}`}

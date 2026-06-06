@@ -3,9 +3,10 @@ import { useStoreContext } from '../../state/StoreContext';
 import { useStepperShortcut } from '../../hooks/stepperShortcuts';
 import { useDayIdFromUrl } from '../../hooks/useDayIdFromUrl';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
-import { getAnimalSubject, getDayTasks } from '../../state/workspaceSelectors';
+import { getAnimalSubject, getDayTasks, getAnimalDayIds } from '../../state/workspaceSelectors';
 import { applyRepairCommand } from '../../state/repairCommands';
 import { computeStepStatus } from '../../domain/validation';
+import { describeOwner } from '../../domain/dayRecovery';
 import { isExportEnabled } from './stepGate';
 import StepNavigation from './StepNavigation';
 import SaveIndicator from './SaveIndicator';
@@ -63,9 +64,37 @@ export default function DayEditorStepper() {
     }, [])
   );
 
-  // Get day and animal from store
+  // Get day and animal from store. Resolve the OWNER KEY robustly: normally `day.animalId`, but a
+  // recovered/imported day can have a missing/stale `animalId` while still being listed in some
+  // animal's index — fall back to the animal whose index references this day, so the editor opens
+  // under its real owner instead of dead-ending on "Animal not found". `ownerKey` (not the record's
+  // `animal.id` field) is the store key used for every animal write below.
   const day = model.workspace?.days?.[dayId];
-  const animal = day ? model.workspace?.animals?.[day.animalId] : null;
+  const animalsMap = model.workspace?.animals ?? {};
+  // The owner key MUST be a string before it is used as a map key. A corrupt import can persist a
+  // non-string `animalId` (object/number); coercing one to a property name would invent a phantom
+  // key (`animalsMap['[object Object]']`) and diverge from dayRecovery's WRONG_OWNER classification.
+  // A non-string owner is therefore treated as "no resolvable owner" (ownerKey = null).
+  let ownerKey = typeof day?.animalId === 'string' ? day.animalId : null;
+  let animal = ownerKey != null ? animalsMap[ownerKey] : null;
+  // Fall back to the indexing animal ONLY when the day declares NO owner (`animalId` absent) —
+  // the legitimate recovered-missing-animalId case. A PRESENT but unresolvable `animalId` (e.g.
+  // "ghost", an object, or a number) means the day belongs to a different/absent owner; it must NOT
+  // open under whichever animal happens to index it (that would let a wrong-owner day export as the
+  // wrong subject). It stays unresolved → "Animal not found", matching the batch wrong-owner/orphan
+  // block. Only the truly owner-less case (`animalId == null`) takes the indexing-animal fallback.
+  if (!animal && day && day.animalId == null) {
+    // Match by the store MAP KEY (`dayId`, from the URL) — that is what an animal's `days` index
+    // holds. For well-formed data `day.id === dayId`, but a corrupt import can let the record's
+    // own `id` field drift from its map key, so the map key is the reliable membership test.
+    const indexingKey = Object.keys(animalsMap).find((key) =>
+      getAnimalDayIds(animalsMap[key]).includes(dayId)
+    );
+    if (indexingKey != null) {
+      ownerKey = indexingKey;
+      animal = animalsMap[indexingKey];
+    }
+  }
 
   // Merge animal + day for validation (must be before early returns to follow Rules of Hooks).
   // mergeDayMetadata throws BY DESIGN on a malformed animal (missing/non-array
@@ -75,10 +104,15 @@ export default function DayEditorStepper() {
     if (!animal || !day) return null;
     try {
       return mergeDayMetadata(animal, day);
-    } catch {
+    } catch (err) {
+      // Tolerated (the gate fails closed + the raw-shape issue is surfaced/repairable), but log
+      // WHY the merge failed so a "this day won't export" report is diagnosable later instead of
+      // the reason being silently lost.
+      // eslint-disable-next-line no-console
+      console.error(`[day-editor] could not merge day "${dayId}" with its animal config:`, err);
       return null;
     }
-  }, [animal, day]);
+  }, [animal, day, dayId]);
 
   // Dataset-wide task_name -> task_description map for the Spyglass task-name
   // identity guard. task_name is an identity across the whole
@@ -130,11 +164,11 @@ export default function DayEditorStepper() {
     // geometry, channel maps, cameras, data-acq devices, and subject identity),
     // mirroring the camera-banner link. Day-Editor step targets stay in this stepper.
     if (target === 'animal') {
-      if (animal?.id) {
-        // Encode the field path so the Animal Editor can deep-link to the step that
-        // owns the fix (channel maps / electrode groups / hardware) rather than always
-        // landing on step 0 and dropping the repair target.
-        const base = `#/animal/${encodeURIComponent(animal.id)}/editor`;
+      if (ownerKey != null) {
+        // Navigate by the resolved owner STORE KEY (not the possibly-stale `animal.id` record
+        // field), so the Animal Editor opens the right animal. Encode the field path so it can
+        // deep-link to the step that owns the fix rather than dropping the repair target.
+        const base = `#/animal/${encodeURIComponent(ownerKey)}/editor`;
         window.location.hash = fieldPath
           ? `${base}?field=${encodeURIComponent(fieldPath)}`
           : base;
@@ -148,7 +182,7 @@ export default function DayEditorStepper() {
     } else {
       setFocusRequest(null);
     }
-  }, [animal?.id]);
+  }, [ownerKey]);
 
   useEffect(() => {
     if (!focusRequest) return undefined;
@@ -219,22 +253,35 @@ export default function DayEditorStepper() {
   // navigating to a destination that may render a blank empty state.
   const handleRepair = useCallback((issue) => {
     if (!issue?.repairCommand) return;
+    // An ANIMAL-surface repair needs a resolved owner key; if it's null (a wrong-owner / non-string
+    // animalId day that never resolved an owner), the executor would no-op. That should be
+    // unreachable from this stepper (such a day renders "Animal not found", not a repair button),
+    // but log if it ever happens so a silently-dead repair click is diagnosable rather than mute.
+    if (ownerKey == null && issue.repairCommand.type && issue.repairSurface === 'animal') {
+      // eslint-disable-next-line no-console
+      console.warn(`[day-editor] repair "${issue.repairCommand.type}" no-op: unresolved animal owner key.`);
+    }
     applyRepairCommand(issue.repairCommand, {
       actions,
-      animalId: animal?.id,
+      // The resolved owner STORE KEY, not the possibly-stale `animal.id` record field, so an
+      // ANIMAL-surface repair (resetAnimalCameras / resetDataAcqDevice / rebuildConfigurationHistory)
+      // lands on the right animal even for a recovered record whose id drifted from its store key.
+      animalId: ownerKey,
       dayId,
       day,
       animal,
     });
-  }, [actions, animal, dayId, day]);
+  }, [actions, animal, ownerKey, dayId, day]);
 
   // Subject fields live on the animal, not the day. The Overview step uses this to
   // repair inherited subject metadata (DOB / weight / description / species) in
   // place, writing through to the animal so existing animals can be fixed.
   const handleSubjectUpdate = useCallback((field, value) => {
     if (!animal) return;
-    actions.updateAnimal(animal.id, { subject: { ...getAnimalSubject(animal), [field]: value } });
-  }, [animal, actions]);
+    // Write through the resolved owner STORE KEY, not the possibly stale `animal.id` record
+    // field, so the repair lands on the right animal.
+    actions.updateAnimal(ownerKey, { subject: { ...getAnimalSubject(animal), [field]: value } });
+  }, [animal, ownerKey, actions]);
 
   // Step configuration. Export stays gated by isExportEnabled (every prerequisite
   // step valid, including the now-real Validation step).
@@ -256,14 +303,16 @@ export default function DayEditorStepper() {
   }
 
   if (!animal) {
-    return <ErrorState message={`Animal not found: ${day.animalId}`} />;
+    return <ErrorState message={`Animal not found: ${describeOwner(day.animalId)}`} />;
   }
 
   const CurrentStepComponent = steps.find(s => s.id === currentStep).component;
 
   // The animal's days (sorted by date) power the Devices step's reconfiguration
-  // wizard (version legibility + apply-forward). Computed here where the store is.
-  const animalDays = selectors.getAnimalDays(animal.id);
+  // wizard (version legibility + apply-forward). Computed here where the store is. Use the STORE
+  // KEY the animal was resolved by (`day.animalId`), not the possibly-stale `animal.id` field,
+  // so a corrupt record id can't make reconfiguration read the wrong/empty day list.
+  const animalDays = selectors.getAnimalDays(ownerKey);
 
   return (
     <div className="day-editor-stepper">
@@ -272,13 +321,13 @@ export default function DayEditorStepper() {
       <div className="day-editor-header">
         <div className="day-editor-title">
           <a
-            href={`#/workspace?animal=${animal.id}`}
+            href={`#/workspace?animal=${ownerKey}`}
             className="back-button"
             aria-label="Back to workspace"
           >
             ← Back to Workspace
           </a>
-          <h1>Day Editor: {animal.id} - {day.date}</h1>
+          <h1>Day Editor: {ownerKey} - {day.date}</h1>
         </div>
         <SaveIndicator
           enabled={persistence.enabled}
@@ -304,6 +353,7 @@ export default function DayEditorStepper() {
       >
         <CurrentStepComponent
           animal={animal}
+          animalKey={ownerKey}
           day={day}
           mergedDay={mergedDay}
           knownTaskDescriptions={knownTaskDescriptions}

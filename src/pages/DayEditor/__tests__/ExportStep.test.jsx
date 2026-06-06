@@ -9,6 +9,7 @@ import { buildRealisticWorkspace } from '../../../__tests__/fixtures/workspaceBu
 import { mergeDayMetadata } from '../../../state/workspaceUtils';
 import { computeStepStatus } from '../../../domain/validation';
 import { validate } from '../../../validation';
+import * as validationModule from '../../../validation';
 
 const UNSTABLE = {
   ok: false,
@@ -283,17 +284,23 @@ describe('ExportStep', () => {
 
     const preflight = screen.getByRole('region', { name: /preflight/i });
     // Section labels present, derived from mergedDay (not duplicate component state).
+    expect(within(preflight).getByText('Animal & day')).toBeInTheDocument();
     expect(within(preflight).getByText('Subject & session')).toBeInTheDocument();
     expect(within(preflight).getByText('Configuration version')).toBeInTheDocument();
-    expect(within(preflight).getByText('Cameras')).toBeInTheDocument();
-    expect(within(preflight).getByText('Probes & bad channels')).toBeInTheDocument();
+    expect(within(preflight).getByText('Cameras / calibration')).toBeInTheDocument();
+    expect(within(preflight).getByText('Probes & failed channels')).toBeInTheDocument();
+    expect(within(preflight).getByText('Data acquisition')).toBeInTheDocument();
     expect(within(preflight).getByText('Tasks & videos')).toBeInTheDocument();
     expect(within(preflight).getByText('Optogenetics')).toBeInTheDocument();
+    expect(within(preflight).getByText('Non-blocking warnings')).toBeInTheDocument();
 
-    // Spot-check derived values: 8 electrode groups (+ bad channels), 2 cameras, opto off.
+    // Spot-check derived values: animal/day, 8 electrode groups, 2 cameras, opto off,
+    // current (not historical) configuration.
+    expect(within(preflight).getByText(/remy — 2023-06-22/i)).toBeInTheDocument();
     expect(within(preflight).getByText(/8 electrode groups/i)).toBeInTheDocument();
     expect(within(preflight).getByText(/2 cameras/i)).toBeInTheDocument();
     expect(within(preflight).getByText('Off')).toBeInTheDocument();
+    expect(within(preflight).getByText(/version 1 \(current\)/i)).toBeInTheDocument();
   });
 
   it('reports the resolved configuration version in preflight, not the day-pinned value', () => {
@@ -307,6 +314,68 @@ describe('ExportStep', () => {
 
     const preflight = screen.getByRole('region', { name: /preflight/i });
     expect(within(preflight).getByText(/version 1\b/i)).toBeInTheDocument();
+  });
+
+  it('marks the preflight configuration version as historical when the day pins an older version', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    // Add a newer snapshot; the day still pins v1, so it exports against a historical config.
+    animal.configurationHistory.push({
+      version: 2,
+      date: '2023-07-01',
+      description: 'Lowered tetrodes',
+      devices: animal.configurationHistory[0].devices,
+      appliedToDays: [],
+    });
+
+    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+
+    const preflight = screen.getByRole('region', { name: /preflight/i });
+    expect(within(preflight).getByText(/version 1 \(historical\)/i)).toBeInTheDocument();
+  });
+
+  it('BLOCKS export for an unpinned day in a multi-version animal (no preflight, repair offered)', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    animal.configurationHistory.push({
+      version: 2,
+      date: '2023-07-01',
+      description: 'Lowered tetrodes',
+      devices: animal.configurationHistory[0].devices,
+      appliedToDays: [],
+    });
+    delete day.configurationVersion; // unpinned, two versions → wrong-geometry risk → blocked
+
+    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+
+    // Export is blocked: no preflight, a blocking explanation, and a disabled download.
+    expect(screen.queryByRole('region', { name: /preflight/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/no pinned hardware configuration version/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /download yaml/i })).toBeDisabled();
+  });
+
+  it('BLOCKS single-day export for a recovered-unlinked day (record not in the animal index)', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    // The record exists, but the animal's index doesn't list it (recovered/unlinked).
+    animal.days = [];
+
+    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+
+    expect(screen.queryByRole('region', { name: /preflight/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/not in .*day list/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /download yaml/i })).toBeDisabled();
+  });
+
+  it('reports unresolved non-blocking warnings in the preflight', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    // One warning-severity issue (no errors) — the day stays exportable but preflight must
+    // surface the unresolved warning so it reads as a confidence check, not a pass/fail dump.
+    vi.spyOn(validationModule, 'validate').mockReturnValue([
+      { severity: 'warning', code: 'epoch_overlap', path: 'tasks[0].task_epochs', message: 'epochs overlap' },
+    ]);
+
+    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+
+    const preflight = screen.getByRole('region', { name: /preflight/i });
+    expect(within(preflight).getByText(/1 warning to review \(does not block export\)/i)).toBeInTheDocument();
   });
 
   it('blocks the download in handleDownload even if the disabled button state is bypassed', async () => {

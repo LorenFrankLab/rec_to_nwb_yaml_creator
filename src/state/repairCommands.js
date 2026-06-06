@@ -161,11 +161,24 @@ export function applyRepairCommand(command, ctx) {
       // and the user cannot re-enter (the field is read-only). The editable description
       // fields reset to blank for the user to refill. updateDay guards the malformed current
       // session before merging, so this writes cleanly.
-      // Prefer the convenience `ctx.animal`/`ctx.day`, but fall back to the contract ids
-      // (`animalId`, and the date parsed off `dayId` which is `<animalId>-<YYYY-MM-DD>`) so a
-      // caller that passes only the documented ids still derives a real session_id.
-      const sessionAnimalId = ctx.animal?.id ?? animalId ?? '';
-      const sessionDate = ctx.day?.date ?? String(dayId ?? '').slice(String(sessionAnimalId).length + 1);
+      // The session_id prefix is the day's OWNING animal id. Prefer the day's own `animalId`
+      // (the reliable owner — it travels with the record) so a corrupt `animal.id` can't poison
+      // the prefix (e.g. `WRONG_YYYYMMDD`). When the day carries no owner, fall back to the
+      // resolved store key `ctx.animalId` (the authoritative owner the caller resolved) BEFORE the
+      // convenience `ctx.animal.id` record field, which can be stale for a recovered record. Only
+      // string ids are eligible — a corrupt non-string owner is skipped, never coerced to
+      // `[object Object]`.
+      const sessionAnimalId =
+        [ctx.day?.animalId, animalId, ctx.animal?.id].find(
+          (candidate) => typeof candidate === 'string' && candidate.length > 0
+        ) ?? '';
+      // The date is the day's own `date` when present; otherwise parse the trailing `YYYY-MM-DD`
+      // off the `dayId` BY REGEX, not by slicing at the resolved prefix's LENGTH — the dayId's
+      // embedded prefix is the day's ORIGINAL owner id, which can differ in length from the
+      // resolved `sessionAnimalId` (recovered/wrong-owner record), and a length-based slice would
+      // then yield a wrong date.
+      const dayIdDate = String(dayId ?? '').match(/(\d{4}-\d{2}-\d{2})$/)?.[1] ?? '';
+      const sessionDate = ctx.day?.date ?? dayIdDate;
       const sessionId = `${sessionAnimalId}_${String(sessionDate).replace(/-/g, '')}`;
       actions.updateDay(dayId, { session: { session_id: sessionId } });
       return;

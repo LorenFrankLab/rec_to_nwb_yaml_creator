@@ -97,6 +97,40 @@ describe('ReconfigWizard [integration]', () => {
     expect(window.location.hash).toContain('version=7');
   });
 
+  it('writes and navigates with the resolved animalKey, not the stale animal.id / day.animalId', async () => {
+    const user = userEvent.setup();
+    const { workspace, animalId, dayIds } = makeReconfigWorkspace();
+    // The store KEY (animalKey) is authoritative. Both the record's `id` field and the day's
+    // `animalId` field carry STALE values here; routing the fork by either would misfile the
+    // new version onto the wrong animal. The wizard must use animalKey for the write AND the nav.
+    const animal = { ...structuredClone(workspace.animals[animalId]), id: 'stale-record-id' };
+    const day = { ...workspace.days[dayIds.day3], animalId: 'stale-day-owner' };
+    const candidateDays = [day, workspace.days[dayIds.day4]];
+    const actions = makeActions(5);
+
+    render(
+      <ReconfigWizard
+        isOpen
+        onClose={vi.fn()}
+        animal={animal}
+        animalKey={animalId}
+        day={day}
+        prevDay={workspace.days[dayIds.day2]}
+        candidateDays={candidateDays}
+        actions={actions}
+      />
+    );
+
+    await user.type(screen.getByLabelText(/change description/i), 'Lowered CA1 tetrodes');
+    await user.click(screen.getByRole('button', { name: /create version/i }));
+
+    const [animalArg] = actions.createConfigurationSnapshotAndApplyForward.mock.calls[0];
+    expect(animalArg).toBe(animalId);
+    expect(animalArg).not.toBe('stale-record-id');
+    expect(animalArg).not.toBe('stale-day-owner');
+    expect(window.location.hash).toContain(`#/animal/${animalId}/editor`);
+  });
+
   it('falls back to a date range when the start day is not among the candidate days', async () => {
     const user = userEvent.setup();
     const { workspace, animalId, dayIds } = makeReconfigWorkspace();
@@ -282,6 +316,6 @@ describe('DevicesStep configuration-version indicator', () => {
 
     const bar = screen.getByText(/Configuration version 1/).closest('.config-version-bar');
     expect(within(bar).getByText(/Applied to 2 days/)).toBeInTheDocument();
-    expect(within(bar).getByRole('button', { name: /reconfigure devices/i })).toBeInTheDocument();
+    expect(within(bar).getByRole('button', { name: /hardware changed starting this day/i })).toBeInTheDocument();
   });
 });

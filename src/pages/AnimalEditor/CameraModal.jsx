@@ -125,8 +125,15 @@ function CameraForm({ mode, camera, existingCameras, onSave, onCancel, divergenc
           placeholder="e.g., HomeBox_camera"
           value={formData.camera_name}
           onChange={handleInputChange}
+          aria-describedby="camera_name_help"
           required
         />
+        {/* Proactive Spyglass identity guidance (the divergence alert below is the reactive
+            catch). camera_name is the CameraDevice primary key downstream. */}
+        <span id="camera_name_help" className="help-text">
+          Same name means the same camera. A camera with a different zoom, calibration, lens,
+          model, or id is a different camera — give it a different name.
+        </span>
       </div>
 
       {/* Manufacturer */}

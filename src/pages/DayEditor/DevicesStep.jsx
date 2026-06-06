@@ -33,10 +33,19 @@ import './DayEditor.scss';
  *   configuration-version indicator + reconfiguration wizard. Omitted in isolated tests.
  * @param {object} [props.actions] - Store actions (`createConfigurationSnapshotAndApplyForward`);
  *   when provided, the reconfiguration wizard is available.
+ * @param {string} [props.animalKey] - The resolved store owner key; used for animal-editor links
+ *   and the reconfiguration write instead of the possibly-stale `animal.id`.
  * @returns {JSX.Element}
  */
-export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, animalDays = undefined, actions = undefined }) {
+export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, animalKey = undefined, animalDays = undefined, actions = undefined }) {
+  // The store OWNER KEY (resolved by DayEditorStepper). Used for animal-editor links and the
+  // reconfiguration write so a stale/missing `animal.id` record field can't misroute them; falls
+  // back to `animal.id` for isolated renders that don't pass it.
+  const ownerKey = animalKey ?? animal?.id;
   const [wizardOpen, setWizardOpen] = useState(false);
+  // Selected version for the unpinned-day repair control (a day with no pin in a multi-version
+  // animal). Empty string = nothing chosen yet; pinning writes day.configurationVersion.
+  const [pinVersion, setPinVersion] = useState('');
 
   // Render the day's EFFECTIVE (pinned) configuration, not live `animal.devices`.
   // On a historical day, `animal.devices` mirrors the *latest* version, so editing
@@ -394,7 +403,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
             This animal&apos;s device configuration is missing or corrupt, so devices
             can&apos;t be shown for this day.
           </p>
-          <a href={`#/animal/${animal.id}/editor`} className="button-primary">
+          <a href={`#/animal/${ownerKey}/editor?field=electrode_groups`} className="button-primary">
             Configure devices in the Animal Editor
           </a>
         </div>
@@ -410,12 +419,13 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
         <h2>Devices Configuration</h2>
         {overrideCleanupSection}
         <div className="empty-state">
-          <p>No electrode groups configured for {animal.id}</p>
+          <p>No electrodes are set up for {ownerKey} yet.</p>
           <p className="empty-state-hint">
-            Electrode groups are configured at the animal level and inherited by all days.
+            Electrodes/probes are shared animal setup. You can mark failed channels for this
+            recording day only after electrodes exist.
           </p>
-          <a href={`#/animal/${animal.id}/editor`} className="button-primary">
-            Configure Electrode Groups at Animal Level
+          <a href={`#/animal/${ownerKey}/editor?field=electrode_groups`} className="button-primary">
+            Set Up Electrodes
           </a>
         </div>
       </div>
@@ -426,10 +436,11 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
     <div className="devices-step">
       <h2>Devices Configuration</h2>
 
-      {/* Inherited notice */}
+      {/* This day's relationship to shared animal setup: it USES an animal configuration
+          version; probe geometry is edited in the shared animal setup, not here. */}
       <div className="inherited-notice">
-        Device configuration inherited from Animal
-        <a href={`#/animal/${animal.id}/editor`}>Edit at Animal Level</a>
+        This day uses animal electrode configuration v{effectiveConfig.configurationVersion ?? '—'}.
+        <a href={`#/animal/${ownerKey}/editor?field=electrode_groups`}>Edit shared animal electrode setup</a>
       </div>
 
       {/* Configuration-version indicator + reconfiguration entry point. The wizard
@@ -452,19 +463,59 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
               </span>
               <span className="config-version-applied">
                 {reconfig.isLatest
-                  ? 'Editing day-level bad channels against the latest configuration. Probe geometry is edited in the Animal Editor.'
-                  : 'This is a historical configuration. You are editing day-level bad channels against a pinned past snapshot, not changing probe geometry.'}
+                  ? 'Mark failed channels for this recording day. Probe geometry is shared animal setup — edit it in the Animal Editor.'
+                  : 'This is a historical configuration. Mark failed channels for this recording day against this pinned snapshot; editing the latest animal setup will not change this day unless you reconfigure.'}
               </span>
               <span className="config-version-applied">
                 Applied to {reconfig.appliedCount} {reconfig.appliedCount === 1 ? 'day' : 'days'}
               </span>
+              {day.configurationVersion == null && getConfigHistory(animal).length > 1 && (
+                <div className="config-version-warning" role="alert">
+                  <span className="config-version-warning-text">
+                    This day has no pinned configuration version. It is resolved to the latest
+                    (v{reconfig.version}); if it recorded an earlier configuration, pin the correct
+                    version before exporting.
+                  </span>
+                  {/* Repairable: assign an existing configuration version to this day. The
+                      data-field-path is on the focusable <select> (not the wrapper) so the export
+                      gate's "Fix in Devices" repair-focus actually moves keyboard/SR focus here. */}
+                  <div className="config-version-pin">
+                    <label htmlFor="pin-config-version">Pin this day to:</label>
+                    <select
+                      id="pin-config-version"
+                      data-field-path="configurationVersion"
+                      value={pinVersion}
+                      onChange={(e) => setPinVersion(e.target.value)}
+                    >
+                      <option value="">Choose a version…</option>
+                      {getConfigHistory(animal).map((snap) => (
+                        <option key={snap.version} value={snap.version}>
+                          v{snap.version}
+                          {snap.description ? ` — ${snap.description}` : ''}
+                          {snap.date ? ` (${snap.date})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      className="config-version-pin-button"
+                      disabled={pinVersion === ''}
+                      onClick={() => onFieldUpdate('configurationVersion', Number(pinVersion))}
+                    >
+                      Pin version
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
             <button
               type="button"
               className="config-reconfig-button"
+              aria-haspopup="dialog"
+              aria-expanded={wizardOpen}
               onClick={() => setWizardOpen(true)}
             >
-              Reconfigure devices…
+              Hardware changed starting this day…
             </button>
           </div>
           <ReconfigWizard
@@ -473,6 +524,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
             isOpen={wizardOpen}
             onClose={() => setWizardOpen(false)}
             animal={animal}
+            animalKey={ownerKey}
             day={day}
             prevDay={reconfig.prevDay}
             candidateDays={reconfig.candidateDays}
@@ -483,6 +535,12 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
 
       {/* Malformed / stale / shadowing override repair controls (see overrideCleanupSection). */}
       {overrideCleanupSection}
+
+      {/* Failed channels are day-specific: marks here apply to THIS recording day only. */}
+      <p className="field-help-text devices-failed-channels-intro">
+        Mark failed channels for this recording day. These marks apply to this day only, not to
+        all recordings on this configuration.
+      </p>
 
       {/* Electrode groups (accordion) */}
       <section className="electrode-groups-section" aria-label="Electrode Groups">
@@ -509,7 +567,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
                   <div className="error-state-inline">
                     <p>⚠ No channel mapping found for this electrode group.</p>
                     <p>This usually indicates data corruption. Please review animal configuration.</p>
-                    <a href={`#/animal/${animal.id}/editor`}>Fix in Animal Editor</a>
+                    <a href={`#/animal/${ownerKey}/editor?field=ntrode_electrode_group_channel_map`}>Fix in Animal Editor</a>
                   </div>
                 </div>
               </details>
@@ -613,6 +671,9 @@ DevicesStep.propTypes = {
   }).isRequired,
   mergedDay: PropTypes.object.isRequired,
   onFieldUpdate: PropTypes.func.isRequired,
+  // The resolved store owner key (from DayEditorStepper); animal-editor links + reconfiguration
+  // use it instead of the possibly-stale `animal.id`. Omitted in isolated renders (falls back).
+  animalKey: PropTypes.string,
   // animalDays + actions are supplied together by DayEditorStepper to enable the
   // configuration-version indicator and reconfiguration wizard; omitting both (e.g.
   // in isolated unit renders) simply hides that section.

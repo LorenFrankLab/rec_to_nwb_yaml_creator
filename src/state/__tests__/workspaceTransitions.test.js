@@ -244,6 +244,36 @@ describe('applyConfigurationForwardToAnimal', () => {
     expect(() => applyConfigurationForwardToAnimal(base(), days(), 99, ['d2'], NOW))
       .toThrow(/Configuration version "99" not found/);
   });
+
+  it('never moves a day whose record belongs to a DIFFERENT animal (wrong-owner guard)', () => {
+    // d2's record explicitly belongs to another animal — reconfiguration of "remy" must not
+    // rewrite its configurationVersion or list it under remy's snapshot.
+    const wrongOwnerDays = { d1: { id: 'd1' }, d2: { id: 'd2', animalId: 'someoneelse' } };
+    const { animal, days: nextDays } = applyConfigurationForwardToAnimal(
+      base(),
+      wrongOwnerDays,
+      2,
+      ['d2'],
+      NOW
+    );
+    expect(nextDays.d2.configurationVersion).toBeUndefined();
+    expect(animal.configurationHistory[1].appliedToDays).toEqual([]);
+  });
+
+  it('never moves a day whose record animalId is a non-string (object) — treated as not this animal', () => {
+    // A corrupt object animalId is `!= null` and `!== owner`, so the ownership guard must exclude
+    // it from the reconfiguration just like an explicit different-owner id.
+    const objOwnerDays = { d1: { id: 'd1' }, d2: { id: 'd2', animalId: { not: 'a string' } } };
+    const { animal, days: nextDays } = applyConfigurationForwardToAnimal(
+      base(),
+      objOwnerDays,
+      2,
+      ['d2'],
+      NOW
+    );
+    expect(nextDays.d2.configurationVersion).toBeUndefined();
+    expect(animal.configurationHistory[1].appliedToDays).toEqual([]);
+  });
 });
 
 describe('rebuildConfigurationHistoryForAnimal', () => {
@@ -307,5 +337,26 @@ describe('applyDayUpdates', () => {
     const updated = applyDayUpdates(day, { session: { session_description: 'new' } }, NOW);
     expect(updated.session).toEqual({ session_id: 'a', session_description: 'new' });
     expect(day.session.session_description).toBe('d'); // input untouched
+  });
+
+  it('writes flags over a malformed (scalar) state without scattering char-indexed keys', () => {
+    // A corrupt import can persist `state` as a string; spreading it would scatter `{0:'c',1:'o',…}`.
+    // The update must normalize to a clean record carrying only the written flags.
+    const updated = applyDayUpdates({ id: 'd1', state: 'corrupt' }, { state: { validated: true } }, NOW);
+    expect(updated.state).toEqual({ validated: true });
+  });
+
+  it('writes flags over a malformed (array) state without spreading array indices', () => {
+    const updated = applyDayUpdates({ id: 'd1', state: ['x', 'y'] }, { state: { exported: true } }, NOW);
+    expect(updated.state).toEqual({ exported: true });
+  });
+
+  it('preserves existing flags on a well-formed state', () => {
+    const updated = applyDayUpdates(
+      { id: 'd1', state: { draft: true } },
+      { state: { validated: true } },
+      NOW
+    );
+    expect(updated.state).toEqual({ draft: true, validated: true });
   });
 });

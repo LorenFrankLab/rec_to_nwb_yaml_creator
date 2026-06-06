@@ -381,6 +381,58 @@ describe('Animal State Management', () => {
         });
       }).toThrow(/not found/i);
     });
+
+    it('never deletes a wrong-owner record (a day belonging to another animal listed in its index)', () => {
+      const { result } = renderHook(() => useStore());
+      act(() => {
+        result.current.actions.createAnimal('remy', {
+          species: 'Rattus norvegicus', sex: 'M', genotype: 'WT', date_of_birth: '2023-01-10T00:00:00Z',
+        });
+        result.current.actions.createAnimal('totoro', {
+          species: 'Rattus norvegicus', sex: 'F', genotype: 'WT', date_of_birth: '2023-01-10T00:00:00Z',
+        });
+        result.current.actions.createDay('totoro', '2023-06-01', {
+          session_id: 'totoro_20230601', session_description: 'Totoro day',
+        });
+      });
+      // Corrupt remy's index (separate act, after creation commits) so it lists totoro's day.
+      act(() => {
+        result.current.model.workspace.animals['remy'].days = ['totoro-2023-06-01'];
+      });
+
+      act(() => {
+        result.current.actions.deleteAnimal('remy');
+      });
+
+      // remy is gone, but totoro's real day record must survive (it belongs to totoro).
+      expect(result.current.model.workspace.animals['remy']).toBeUndefined();
+      expect(result.current.model.workspace.days['totoro-2023-06-01']).toBeDefined();
+      expect(result.current.model.workspace.days['totoro-2023-06-01'].animalId).toBe('totoro');
+    });
+
+    it('never deletes a record whose animalId is a non-string (object) listed in its index', () => {
+      const { result } = renderHook(() => useStore());
+      act(() => {
+        result.current.actions.createAnimal('remy', {
+          species: 'Rattus norvegicus', sex: 'M', genotype: 'WT', date_of_birth: '2023-01-10T00:00:00Z',
+        });
+      });
+      // remy's index lists a record whose animalId is a corrupt object (≠ the store key 'remy'):
+      // it is NOT remy's, so deleting remy must leave the record intact (only the owner is dropped).
+      act(() => {
+        result.current.model.workspace.days['intruder'] = {
+          id: 'intruder', animalId: { not: 'a string' }, date: '2023-06-01', session: { session_id: 'x' },
+        };
+        result.current.model.workspace.animals['remy'].days = ['intruder'];
+      });
+
+      act(() => {
+        result.current.actions.deleteAnimal('remy');
+      });
+
+      expect(result.current.model.workspace.animals['remy']).toBeUndefined();
+      expect(result.current.model.workspace.days['intruder']).toBeDefined();
+    });
   });
 
   describe('rebuildConfigurationHistory', () => {

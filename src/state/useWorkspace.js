@@ -250,9 +250,17 @@ export function useWorkspace(initialState = null) {
           const updatedAnimals = { ...prev.animals };
           const updatedDays = { ...prev.days };
 
-          // Delete all days for this animal
+          // Delete only the day records that ACTUALLY BELONG to this animal. A wrong-owner index
+          // entry (a record whose `animalId` names a different animal, accidentally listed here)
+          // must NOT be deleted — that would destroy another animal's real recording day. A record
+          // with no `animalId` is treated as this animal's (the index is the authority).
           getAnimalDayIds(animal).forEach((dayId) => {
-            delete updatedDays[dayId];
+            const record = updatedDays[dayId];
+            const isRecordDay =
+              record !== null && typeof record === 'object' && !Array.isArray(record);
+            if (!isRecordDay || record.animalId == null || record.animalId === animalId) {
+              delete updatedDays[dayId];
+            }
           });
 
           // Delete animal
@@ -300,7 +308,8 @@ export function useWorkspace(initialState = null) {
             config,
             dayIds,
             now,
-            createdVersion
+            createdVersion,
+            animalId // the store KEY drives the day-ownership guard, not the record's id field
           );
           workspaceRef.current = {
             ...workspaceRef.current,
@@ -319,7 +328,8 @@ export function useWorkspace(initialState = null) {
             config,
             dayIds,
             now,
-            createdVersion
+            createdVersion,
+            animalId // the store KEY drives the day-ownership guard, not the record's id field
           );
           return {
             ...prev,
@@ -516,6 +526,80 @@ export function useWorkspace(initialState = null) {
       },
 
       /**
+       * Re-link an ORPHANED day record: add `dayId` back to its owning animal's `days` index.
+       * The repair for a record that exists in `workspace.days` but is not listed by its animal
+       * (the "not in day list" rows the ValidationSummary surfaces, e.g. after a corrupt/missing
+       * index). Deduped; tolerates a corrupt (non-array) index via `getAnimalDayIds`. No-op for an
+       * unknown animal, a missing day record, or an already-linked id.
+       *
+       * @param {string} animalId - The owning animal's id.
+       * @param {string} dayId - The orphaned day record's id to re-link.
+       */
+      relinkDayReference: (animalId, dayId) => {
+        setWorkspace((prev) => {
+          const animal = prev.animals[animalId];
+          if (!animal) return prev;
+          const daysIsRecord =
+            prev.days !== null && typeof prev.days === 'object' && !Array.isArray(prev.days);
+          if (!daysIsRecord) return prev;
+          // The id must resolve to a real day RECORD that actually belongs to this animal —
+          // never re-link a non-record leftover or a record owned by a different animal.
+          const record = prev.days[dayId];
+          const isRecordDay =
+            record !== null && typeof record === 'object' && !Array.isArray(record);
+          if (!isRecordDay || record.animalId !== animalId) return prev;
+          const current = getAnimalDayIds(animal);
+          if (current.includes(dayId)) return prev;
+          return {
+            ...prev,
+            animals: {
+              ...prev.animals,
+              [animalId]: { ...animal, days: [...current, dayId] },
+            },
+            lastModified: getCurrentTimestamp(),
+          };
+        });
+      },
+
+      /**
+       * Unlink a day reference from an animal's index WITHOUT deleting the day record. The
+       * repair for a `wrong_owner` reference (an animal indexing a record that belongs to a
+       * DIFFERENT animal): dropping the reference must NOT destroy the record (unlike
+       * {@link removeDayReference}, which deletes dangling/corrupt leftovers) — the record is
+       * valid and belongs to someone else, so it survives and resurfaces under its real owner as
+       * `recovered_unlinked`, to be re-linked there. No-op for an unknown animal or absent ref.
+       *
+       * @param {string} animalId - The animal to unlink the reference from.
+       * @param {string} dayId - The day id to unlink (the record is preserved).
+       */
+      unlinkDayReference: (animalId, dayId) => {
+        setWorkspace((prev) => {
+          const animal = prev.animals[animalId];
+          if (!animal) return prev;
+          const current = getAnimalDayIds(animal);
+          if (!current.includes(dayId)) return prev;
+          // Only unlink a genuine WRONG-OWNER reference: the record must exist AND explicitly
+          // belong to a DIFFERENT animal. This guards the public action so an accidental/mistaken
+          // call can't strand a valid day (one this animal owns, or with no declared owner) into
+          // recovered-unlinked state — the repair must only ever drop a misfiled reference.
+          const record = prev.days?.[dayId];
+          const isRecordDay =
+            record !== null && typeof record === 'object' && !Array.isArray(record);
+          if (!isRecordDay || record.animalId == null || record.animalId === animalId) {
+            return prev;
+          }
+          return {
+            ...prev,
+            animals: {
+              ...prev.animals,
+              [animalId]: { ...animal, days: current.filter((id) => id !== dayId) },
+            },
+            lastModified: getCurrentTimestamp(),
+          };
+        });
+      },
+
+      /**
        * Updates workspace settings
        *
        * @param {object} settings - Partial settings updates
@@ -546,10 +630,22 @@ export function useWorkspace(initialState = null) {
         const animal = workspace.animals[animalId];
         if (!animal) return [];
 
+        // Tolerate corrupt persisted state AND enforce ownership: keep only resolvable day
+        // RECORDS that actually belong to this animal — a record whose `animalId` names a
+        // DIFFERENT animal (a wrong-owner index entry) must NOT be returned, or reconfiguration
+        // could move another animal's day. A record with no `animalId` is kept (the index is the
+        // authority). Order by a string-coerced date so a numeric/missing `date` can't throw.
+        const orderKey = (value) => (typeof value === 'string' ? value : String(value ?? ''));
         return getAnimalDayIds(animal)
           .map((dayId) => workspace.days[dayId])
-          .filter(Boolean)
-          .sort((a, b) => a.date.localeCompare(b.date));
+          .filter(
+            (day) =>
+              day !== null &&
+              typeof day === 'object' &&
+              !Array.isArray(day) &&
+              (day.animalId == null || day.animalId === animalId)
+          )
+          .sort((a, b) => orderKey(a.date).localeCompare(orderKey(b.date)));
       },
     }),
     [workspace]

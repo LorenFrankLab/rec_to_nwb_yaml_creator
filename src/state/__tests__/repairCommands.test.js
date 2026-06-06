@@ -119,6 +119,51 @@ describe('applyRepairCommand — reset day session', () => {
     });
   });
 
+  it('resetDaySession derives the session_id from the day\'s own animalId, not a corrupt animal.id', () => {
+    // The day's `animalId` is the reliable owner; a corrupt animal.id (and ctx animalId) must
+    // NOT poison the session prefix (which would produce e.g. `WRONG_…`).
+    const c = ctx({
+      animal: { id: 'WRONG' },
+      animalId: 'WRONG',
+      day: { animalId: 'remy', date: '2023-06-22', session: 'corrupt' },
+      dayId: 'remy-2023-06-22',
+    });
+    applyRepairCommand({ type: 'resetDaySession' }, c);
+    expect(c.actions.updateDay).toHaveBeenCalledWith('remy-2023-06-22', {
+      session: { session_id: 'remy_20230622' },
+    });
+  });
+
+  it('resetDaySession prefers the resolved owner key (ctx.animalId) over a stale ctx.animal.id when the day has no owner', () => {
+    // A recovered day carries no `animalId`. The caller passes the resolved store OWNER KEY as
+    // ctx.animalId; the convenience ctx.animal.id record field can be stale. The store key wins.
+    const c = ctx({
+      animal: { id: 'STALE' },
+      animalId: 'remy',
+      day: { date: '2023-06-22', session: 'corrupt' }, // no animalId
+      dayId: 'remy-2023-06-22',
+    });
+    applyRepairCommand({ type: 'resetDaySession' }, c);
+    expect(c.actions.updateDay).toHaveBeenCalledWith('remy-2023-06-22', {
+      session: { session_id: 'remy_20230622' },
+    });
+  });
+
+  it('resetDaySession skips a non-string day.animalId instead of coercing it into the prefix', () => {
+    // A corrupt object `animalId` must not become "[object Object]_…" — it is skipped and the
+    // resolved owner key (ctx.animalId) supplies the prefix.
+    const c = ctx({
+      animal: { id: 'STALE' },
+      animalId: 'remy',
+      day: { animalId: { not: 'a string' }, date: '2023-06-22', session: 'corrupt' },
+      dayId: 'remy-2023-06-22',
+    });
+    applyRepairCommand({ type: 'resetDaySession' }, c);
+    expect(c.actions.updateDay).toHaveBeenCalledWith('remy-2023-06-22', {
+      session: { session_id: 'remy_20230622' },
+    });
+  });
+
   it('resetDaySession recovers the canonical session_id from ctx.animalId/dayId alone', () => {
     // The executor's documented ctx carries animalId/dayId; animal/day are conveniences.
     // With no animal/day objects it must still derive the canonical session_id from the ids

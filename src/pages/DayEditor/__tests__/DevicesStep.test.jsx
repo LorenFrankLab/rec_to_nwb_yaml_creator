@@ -111,7 +111,7 @@ describe('DevicesStep', () => {
     errorSpy.mockRestore();
   });
 
-  it('displays inherited notice with link to edit animal', () => {
+  it('displays the configuration-version notice with a link to shared animal electrode setup', () => {
     render(
       <DevicesStep
         animal={mockAnimal}
@@ -121,11 +121,12 @@ describe('DevicesStep', () => {
       />
     );
 
-    expect(screen.getByText(/device configuration inherited from animal/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /edit at animal level/i })).toHaveAttribute(
-      'href',
-      '#/animal/test-animal/editor'
-    );
+    expect(
+      screen.getByText(/this day uses animal electrode configuration v1/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /edit shared animal electrode setup/i })
+    ).toHaveAttribute('href', '#/animal/test-animal/editor?field=electrode_groups');
   });
 
   it('renders all electrode groups as collapsed details elements', () => {
@@ -320,10 +321,12 @@ describe('DevicesStep', () => {
       />
     );
 
-    expect(screen.getByText(/no electrode groups configured/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /configure electrode groups at animal level/i })).toHaveAttribute(
+    expect(screen.getByText(/no electrodes are set up/i)).toBeInTheDocument();
+    // The empty state routes to electrode setup and explains failed channels come after.
+    expect(screen.getByText(/mark failed channels for this recording day only after electrodes exist/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /set up electrodes/i })).toHaveAttribute(
       'href',
-      '#/animal/test-animal/editor'
+      '#/animal/test-animal/editor?field=electrode_groups'
     );
   });
 
@@ -480,9 +483,13 @@ describe('DevicesStep', () => {
     const errorMessages = screen.getAllByText(/no channel mapping found/i);
     expect(errorMessages.length).toBeGreaterThan(0);
     expect(errorMessages[0]).toBeInTheDocument();
-    // Check that the fix link uses the new Animal Editor (there are multiple links, one per group)
+    // The fix link deep-links to the Channel Maps step (the owner of the missing map),
+    // not the bare Animal Editor (there are multiple links, one per group).
     const fixLinks = screen.getAllByRole('link', { name: /fix in animal editor/i });
-    expect(fixLinks[0]).toHaveAttribute('href', '#/animal/test-animal/editor');
+    expect(fixLinks[0]).toHaveAttribute(
+      'href',
+      '#/animal/test-animal/editor?field=ntrode_electrode_group_channel_map'
+    );
   });
 
   it('uses aria-label on status badges for accessibility', () => {

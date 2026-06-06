@@ -212,4 +212,49 @@ describe('ElectrodeGroupsStep', () => {
     const button = screen.getByLabelText(/Delete electrode group 0/i);
     expect(button).toBeInTheDocument();
   });
+
+  describe('mirror-divergence repair state', () => {
+    // Saved configuration HAS geometry, but the editable mirror (animal.devices) is empty.
+    const divergentAnimal = {
+      id: 'remy',
+      devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [] },
+      configurationHistory: [
+        {
+          version: 1,
+          date: '2023-06-22',
+          description: 'Initial',
+          devices: {
+            electrode_groups: [
+              { id: 0, device_type: 'tetrode_12.5', location: 'CA1', targeted_location: 'CA1', targeted_x: 1, targeted_y: 2, targeted_z: 3, units: 'mm' },
+            ],
+            ntrode_electrode_group_channel_map: [
+              { ntrode_id: 1, electrode_group_id: 0, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+            ],
+          },
+          appliedToDays: [],
+        },
+      ],
+    };
+
+    it('offers a safe re-sync instead of the blank "add your first group" state', () => {
+      render(<ElectrodeGroupsStep animal={divergentAnimal} onFieldUpdate={mockOnFieldUpdate} />);
+      expect(
+        screen.getByRole('alert', { name: /electrode setup needs repair/i })
+      ).toBeInTheDocument();
+      // The dangerous "Add First Electrode Group" is NOT offered (it would overwrite the snapshot).
+      expect(screen.queryByText(/add first electrode group/i)).not.toBeInTheDocument();
+    });
+
+    it('re-syncs animal.devices from the saved snapshot when the user loads it', async () => {
+      const user = userEvent.setup();
+      const onFieldUpdate = vi.fn();
+      render(<ElectrodeGroupsStep animal={divergentAnimal} onFieldUpdate={onFieldUpdate} />);
+      await user.click(screen.getByRole('button', { name: /load saved electrode configuration/i }));
+      expect(onFieldUpdate).toHaveBeenCalledWith('devices', {
+        electrode_groups: divergentAnimal.configurationHistory[0].devices.electrode_groups,
+        ntrode_electrode_group_channel_map:
+          divergentAnimal.configurationHistory[0].devices.ntrode_electrode_group_channel_map,
+      });
+    });
+  });
 });

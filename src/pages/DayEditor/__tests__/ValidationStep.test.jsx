@@ -36,6 +36,20 @@ describe('ValidationStep', () => {
     expect(screen.getByText('tasks[0].task_epochs')).toBeInTheDocument();
   });
 
+  it('groups issues by user workflow category, not by editor step', () => {
+    vi.spyOn(validation, 'validate').mockReturnValue([
+      { severity: 'error', code: 'empty_location', path: 'electrode_groups[0].location', message: 'location is empty' },
+      { severity: 'error', code: 'duplicate_task_epoch', path: 'tasks[0].task_epochs', message: 'duplicate epoch' },
+      { severity: 'error', code: 'bad_channel_out_of_range', path: 'ntrode_electrode_group_channel_map[0].bad_channels', message: 'channel 9 out of range' },
+    ]);
+
+    render(<ValidationStep {...baseProps} onNavigate={vi.fn()} />);
+
+    expect(screen.getByRole('heading', { name: /animal setup/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^day metadata$/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /day-specific failed channels/i })).toBeInTheDocument();
+  });
+
   it('shows a blocked indicator and an error count when errors exist', () => {
     vi.spyOn(validation, 'validate').mockReturnValue([
       { severity: 'error', path: 'session_id', code: 'required', message: 'required' },
@@ -49,12 +63,20 @@ describe('ValidationStep', () => {
     expect(screen.getByText(/blocked/i)).toBeInTheDocument();
   });
 
-  it('shows a ready indicator when there are no error-severity issues', () => {
-    vi.spyOn(validation, 'validate').mockReturnValue([]);
-
-    render(<ValidationStep {...baseProps} />);
-
+  it('shows a ready indicator only when the REAL export gate is open (all steps valid)', () => {
+    // A fully-configured, fully-valid day (real validation) passes isExportEnabled.
+    const { animal, day } = buildRealisticWorkspace();
+    const merged = mergeDayMetadata(animal, day);
+    render(<ValidationStep animal={animal} day={day} mergedDay={merged} />);
     expect(screen.getByText(/ready to export/i)).toBeInTheDocument();
+  });
+
+  it('does NOT say ready when there are zero errors but a prerequisite step is incomplete', () => {
+    // No validation errors, but an empty day → overview/devices incomplete → export still gated.
+    vi.spyOn(validation, 'validate').mockReturnValue([]);
+    render(<ValidationStep {...baseProps} />);
+    expect(screen.queryByText(/ready to export/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/complete the required steps/i)).toBeInTheDocument();
   });
 
   it('renders without throwing when mergedDay is undefined', () => {

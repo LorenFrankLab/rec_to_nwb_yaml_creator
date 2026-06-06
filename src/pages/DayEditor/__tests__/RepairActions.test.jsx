@@ -187,6 +187,64 @@ describe('RepairActions', () => {
     expect(onRepair).toHaveBeenCalledWith(expect.objectContaining({ repairCommand: { type: 'resetDeviceOverrides' } }));
   });
 
+  it('groups issues under workflow-category headings when groupByCategory is set', () => {
+    render(
+      <RepairActions
+        groupByCategory
+        issues={[
+          { code: 'empty_location', path: 'electrode_groups[0].location', message: 'location is empty' },
+          { code: 'duplicate_task_epoch', path: 'tasks[0].task_epochs', message: 'duplicate epoch' },
+          { code: 'bad_channel_out_of_range', path: 'ntrode_electrode_group_channel_map[0].bad_channels', message: 'channel 9 out of range' },
+        ]}
+        onNavigate={vi.fn()}
+      />
+    );
+
+    // Headings in workflow order; every message still renders.
+    expect(screen.getByRole('heading', { name: /animal setup/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^day metadata$/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /day-specific failed channels/i })).toBeInTheDocument();
+    expect(screen.getByText('location is empty')).toBeInTheDocument();
+    expect(screen.getByText('channel 9 out of range')).toBeInTheDocument();
+  });
+
+  it('dedups the shared repair button in grouped mode when issues share a repair target', () => {
+    // Grouped mode keeps ONE shared dedup set across category groups, so two issues that route
+    // to the same override-removal control show one button (every message still renders).
+    render(
+      <RepairActions
+        groupByCategory
+        issues={[
+          {
+            code: 'stale_bad_channel_override',
+            focusPath: 'deviceOverrides.bad_channels',
+            ownerSurface: 'day',
+            step: 'devices',
+            repairCommand: { type: 'resetBadChannelOverrides' },
+            actionLabel: 'Remove failed-channel override',
+            message: 'stale override',
+          },
+          {
+            code: 'malformed_bad_channel_override',
+            focusPath: 'deviceOverrides.bad_channels',
+            ownerSurface: 'day',
+            step: 'devices',
+            repairCommand: { type: 'resetBadChannelOverrides' },
+            actionLabel: 'Remove failed-channel override',
+            message: 'corrupt override',
+          },
+        ]}
+        onNavigate={vi.fn()}
+        onRepair={vi.fn()}
+      />
+    );
+
+    // Both messages render, but the shared repair button appears exactly once.
+    expect(screen.getByText('stale override')).toBeInTheDocument();
+    expect(screen.getByText('corrupt override')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /remove failed-channel override/i })).toHaveLength(1);
+  });
+
   it('does NOT render a fix button for non-repairable identity issues (slash ids)', () => {
     render(
       <RepairActions

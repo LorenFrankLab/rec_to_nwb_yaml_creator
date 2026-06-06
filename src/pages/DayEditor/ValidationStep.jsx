@@ -1,7 +1,9 @@
 import { useMemo } from 'react';
 import PropTypes from 'prop-types';
-import { groupErrorsByStep, validateDay } from '../../domain/validation';
-import { RepairActionButton, STEP_LABELS, isRepairable, repairButtonKey } from './RepairActions';
+import { validateDay, computeStepStatus } from '../../domain/validation';
+import { isExportEnabled, exportBlockReason } from '../../domain/stepGate';
+import { groupIssuesByWorkflowCategory } from '../../domain/workflowCategories';
+import { RepairActionButton, isRepairable, repairButtonKey } from './RepairActions';
 import './DayEditor.scss';
 
 /**
@@ -25,9 +27,15 @@ import './DayEditor.scss';
  * @param {(issue: object) => void} [props.onRepair] - Executes an issue's `repairCommand`
  *   in place (threaded from DayEditorStepper). A commandable issue's button performs the
  *   reset instead of navigating.
+ * @param {string} [props.animalKey] - The resolved store owner key; animal-surface repairs
+ *   deep-link by it instead of the possibly-stale `animal.id` record field.
  * @returns {JSX.Element}
  */
-export default function ValidationStep({ day, mergedDay, onNavigate, animal, onRepair }) {
+export default function ValidationStep({ day, mergedDay, onNavigate, animal, onRepair, animalKey = undefined }) {
+  // The store OWNER KEY (resolved by DayEditorStepper); a stale/missing `animal.id` record field
+  // must not misroute an animal-surface repair deep-link. Falls back to `animal.id` for isolated
+  // renders that don't pass it.
+  const ownerKey = animalKey ?? animal?.id;
   const issues = useMemo(() => validateDay(day || {}, mergedDay || {}, animal), [day, mergedDay, animal]);
 
   const bySeverity = useMemo(() => groupBySeverity(issues), [issues]);
@@ -35,7 +43,16 @@ export default function ValidationStep({ day, mergedDay, onNavigate, animal, onR
   const errorCount = bySeverity.error.length;
   const warningCount = bySeverity.warning.length;
   const infoCount = bySeverity.info.length;
-  const ready = errorCount === 0;
+  // Readiness reflects the REAL export gate, not just "no errors": isExportEnabled also requires
+  // every prerequisite step (overview/devices/epochs) to be complete. A day with zero validation
+  // errors but an incomplete step is NOT ready — saying "Ready to export" there is exactly the
+  // confusion this phase removes.
+  const stepStatus = useMemo(
+    () => computeStepStatus(day || {}, mergedDay || {}, animal),
+    [day, mergedDay, animal]
+  );
+  const ready = isExportEnabled(stepStatus);
+  const blockReason = exportBlockReason(stepStatus);
 
   return (
     <div className="day-editor-section validation-step">
@@ -53,13 +70,15 @@ export default function ValidationStep({ day, mergedDay, onNavigate, animal, onR
       >
         <span aria-hidden="true">{ready ? '✓' : '✗'}</span>{' '}
         {ready
-          ? 'Ready to export — no errors found.'
-          : 'Export blocked — resolve all errors below before exporting.'}
+          ? 'Ready to export — all checks pass.'
+          : blockReason === 'incomplete-steps' && errorCount === 0
+            ? 'Export blocked — complete the required steps (shown in the step indicators) before exporting.'
+            : 'Export blocked — resolve all errors below before exporting.'}
       </p>
 
       {issues.length > 0 && (
         <>
-          <SeveritySection title="Errors" severity="error" issues={bySeverity.error} onNavigate={onNavigate} animalId={animal?.id} onRepair={onRepair} />
+          <SeveritySection title="Errors" severity="error" issues={bySeverity.error} onNavigate={onNavigate} animalId={ownerKey} onRepair={onRepair} />
           <SeveritySection title="Warnings" severity="warning" issues={bySeverity.warning} />
           <SeveritySection title="Info" severity="info" issues={bySeverity.info} />
         </>
@@ -74,6 +93,7 @@ ValidationStep.propTypes = {
   onNavigate: PropTypes.func,
   animal: PropTypes.object,
   onRepair: PropTypes.func,
+  animalKey: PropTypes.string,
 };
 
 ValidationStep.defaultProps = {
@@ -84,7 +104,10 @@ ValidationStep.defaultProps = {
 };
 
 /**
- * Renders one severity group, with its issues bucketed by editor step.
+ * Renders one severity group, with its issues bucketed by user WORKFLOW CATEGORY (Animal
+ * setup, Day metadata, Day-specific failed channels, Existing data repair) so the user reads
+ * the same buckets as the Animal Workspace setup checklist. Repair routing is unchanged — each
+ * button still routes through the canonical `repairTargetForIssue` via `RepairActionButton`.
  * Renders nothing when the group has no issues.
  *
  * @private
@@ -102,8 +125,7 @@ ValidationStep.defaultProps = {
 function SeveritySection({ title, severity, issues, onNavigate, animalId, onRepair }) {
   if (issues.length === 0) return null;
 
-  const byStep = groupErrorsByStep(issues);
-  const stepOrder = ['overview', 'devices', 'epochs', 'validation', 'export'];
+  const byCategory = groupIssuesByWorkflowCategory(issues);
   // Only error-severity issues block export, so only they get a repair action.
   const repairable = severity === 'error' && typeof onNavigate === 'function';
   // Collapse duplicate repair BUTTONS across the whole section (every message still shows),
@@ -114,32 +136,30 @@ function SeveritySection({ title, severity, issues, onNavigate, animalId, onRepa
   return (
     <section className={`validation-group validation-group-${severity}`}>
       <h3>{title} ({issues.length})</h3>
-      {stepOrder
-        .filter((stepId) => byStep[stepId].length > 0)
-        .map((stepId) => (
-          <div key={stepId} className="validation-step-group">
-            <h4>{STEP_LABELS[stepId]}</h4>
-            <ul>
-              {byStep[stepId].map((issue, index) => {
-                let showButton = repairable && isRepairable(issue);
-                if (showButton) {
-                  const key = repairButtonKey(issue);
-                  if (seenRepairKeys.has(key)) showButton = false;
-                  else seenRepairKeys.add(key);
-                }
-                return (
-                  <li key={`${issue.path}-${issue.code}-${index}`} className="validation-issue">
-                    <span className="validation-issue-message">{issue.message}</span>
-                    {issue.path && <code className="validation-issue-path">{issue.path}</code>}
-                    {showButton && (
-                      <RepairActionButton issue={issue} onNavigate={onNavigate} animalId={animalId} onRepair={onRepair} />
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
+      {byCategory.map(({ category, label, issues: categoryIssues }) => (
+        <div key={category} className="validation-step-group validation-category-group">
+          <h4>{label}</h4>
+          <ul>
+            {categoryIssues.map((issue, index) => {
+              let showButton = repairable && isRepairable(issue);
+              if (showButton) {
+                const key = repairButtonKey(issue);
+                if (seenRepairKeys.has(key)) showButton = false;
+                else seenRepairKeys.add(key);
+              }
+              return (
+                <li key={`${issue.path}-${issue.code}-${index}`} className="validation-issue">
+                  <span className="validation-issue-message">{issue.message}</span>
+                  {issue.path && <code className="validation-issue-path">{issue.path}</code>}
+                  {showButton && (
+                    <RepairActionButton issue={issue} onNavigate={onNavigate} animalId={animalId} onRepair={onRepair} />
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
     </section>
   );
 }

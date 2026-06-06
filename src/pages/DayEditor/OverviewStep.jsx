@@ -37,12 +37,18 @@ const OVERVIEW_STEP_COLLECTIONS = RAW_DAY_ARRAY_FIELDS.filter((f) => f.repairSte
  * @param {import('@/state/workspaceTypes').Day} props.day - Day record (editable)
  * @param {object} props.mergedDay - Merged animal + day for validation
  * @param {Function} props.onFieldUpdate - Callback: (fieldPath, value) => void
+ * @param {string} [props.animalKey] - The resolved store owner key; used for Animal Editor links
+ *   and the derived session-id help text instead of the possibly-stale `animal.id` record field.
  * @param props.onSubjectUpdate
  * @param props.focusRequest
  * @param props.onRepair
  * @returns {JSX.Element}
  */
-export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, onSubjectUpdate, focusRequest, onRepair }) {
+export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, animalKey = undefined, onSubjectUpdate, focusRequest, onRepair }) {
+  // The store OWNER KEY (resolved by DayEditorStepper). Animal-editor links and the derived
+  // session_id help text use it so a stale/missing `animal.id` record field can't misroute a
+  // recovered animal's repair; falls back to `animal.id` for isolated renders that don't pass it.
+  const ownerKey = animalKey ?? animal?.id;
   // Tolerate corrupt persisted state: a malformed (null/scalar) `day.session`,
   // `animal.subject`, or `animal.experimenters` must not crash the editor on a raw
   // dereference. Read through the canonical shape-safe selectors (the single place these
@@ -126,7 +132,7 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
   // Breadcrumb items
   const breadcrumbItems = [
     { label: 'Home', href: '#/home' },
-    { label: `Animal: ${animal.id}`, href: `#/animal/${animal.id}/editor` },
+    { label: `Animal: ${ownerKey}`, href: `#/animal/${ownerKey}/editor` },
     { label: `Day: ${day.date}` },
   ];
 
@@ -165,7 +171,7 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
           <ReadOnlyField
             label="Session ID"
             value={session.session_id}
-            helpText={`Auto-generated from animal ID and date: ${animal.id}_${dayDateKey}`}
+            helpText={`Auto-generated from animal ID and date: ${ownerKey}_${dayDateKey}`}
           />
 
           <div className="form-field">
@@ -257,7 +263,7 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
               <div className="inherited-notice">
                 Inherited from Animal — editing these fields updates the animal record
                 shared by all of its recording days, including any already exported.
-                <a href={`#/animal/${animal.id}/editor`}>Edit Animal</a>
+                <a href={`#/animal/${ownerKey}/editor`}>Edit Animal</a>
               </div>
 
               <div className="form-grid">
@@ -359,7 +365,7 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, on
               <h3>Experimenters</h3>
               <div className="inherited-notice">
                 Inherited from Animal
-                <a href={`#/animal/${animal.id}/editor`}>Edit Animal</a>
+                <a href={`#/animal/${ownerKey}/editor`}>Edit Animal</a>
               </div>
 
               <div className="form-grid">
@@ -424,6 +430,7 @@ OverviewStep.propTypes = {
   // config). Not required — a clean-state assumption must not leak into that path.
   mergedDay: PropTypes.object,
   onFieldUpdate: PropTypes.func.isRequired,
+  animalKey: PropTypes.string,
   onSubjectUpdate: PropTypes.func,
   focusRequest: PropTypes.shape({
     fieldPath: PropTypes.string,

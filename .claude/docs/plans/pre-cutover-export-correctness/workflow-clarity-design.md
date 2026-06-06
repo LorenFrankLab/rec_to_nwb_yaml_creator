@@ -129,8 +129,12 @@ Validation and Export should classify issues by user workflow, not only by schem
 - Existing data/repair issue
 - Export/preflight issue
 
-Each issue should route to the next action in the workflow. The preflight summary must show the same
-mental model as the setup checklist: animal setup first, day-specific metadata second, export confidence last.
+Each issue should route to the next action in the workflow. The category **headings** carry the
+setup-checklist vocabulary; the per-issue repair **buttons** keep the canonical `repairTargetForIssue`
+labels and routing ("Fix in Animal Editor → …", "Fix in Devices") rather than being reworded per
+category — the heading above each button supplies the workflow context. (As-shipped contract; see
+the Phase 8.6 Task 6 note.) The preflight summary must show the same mental model as the setup
+checklist: animal setup first, day-specific metadata second, export confidence last.
 
 ## Claude-executable implementation tasks
 

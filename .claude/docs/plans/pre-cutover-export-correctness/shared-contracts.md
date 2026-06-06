@@ -90,19 +90,23 @@ Referenced by phases 1, 6, 9. The day-level export must be **fail-closed**.
 
 - `validate(model)` (`src/validation/index.js:27`) → array of `{severity, message, field?, step?}`,
   combining `schemaValidation` (AJV) + `rulesValidation`.
-- `computeStepStatus(day, mergedDay)` (`src/pages/DayEditor/validation.js:52`) computes an authoritative
-  `export` status: `'valid'` iff full validation has **zero** error-severity issues (`:68`).
+- `computeStepStatus(day, mergedDay, animal)` (`src/domain/validation.js`, moved out of
+  `pages/DayEditor/validation.js` in Phase 8.5) computes an authoritative `export` status: `'valid'`
+  iff full validation has **zero** error-severity issues.
 - **The export gate is not redundant with the prereq steps.** `computeDevicesStatus` (`:118`) and
   `computeEpochsStatus` (`:94`) derive their status from *completeness*, not from schema/rule errors
   routed to their bucket — so a **device-field schema error** (e.g. an electrode group missing
   `description`, a string ID) leaves `devices: 'valid'` while `export: 'error'`. That is the case that
   must drive phase 1's tests (not a blank `session_description`, which trips `overview` completeness and
   blocks via the old prereqs anyway).
-- **The gate (do not weaken):** Download YAML may fire **only** when `computeStepStatus(...).export ===
-  'valid'`. Every reachable path — the Export step button (`ExportStep.jsx`), the step-nav gate
-  (`StepNavigation.jsx:139`, `isExportEnabled`), and keyboard navigation (`DayEditorStepper.jsx` Alt+Arrow)
-  — must consult that single status. `ExportStep`'s download handler re-checks it (defense in depth) in
-  addition to the encoder-stability shadow-export check, which stays.
+- **The gate (do not weaken):** Download YAML may fire **only** when `isExportEnabled(computeStepStatus(...))`
+  is true — i.e. `export === 'valid'` AND every prerequisite step (`overview`/`devices`/`epochs`/`validation`)
+  is `'valid'` (the gate function lives in `src/domain/stepGate.js`; `pages/DayEditor/stepGate.js` re-exports
+  it). Every reachable path — the Export step button (`ExportStep.jsx`), the step-nav gate
+  (`StepNavigation.jsx`), and keyboard navigation (`DayEditorStepper.jsx` Alt+Arrow) — must consult that
+  single function. `ExportStep`'s download handler re-checks it (defense in depth) in addition to the
+  encoder-stability shadow-export check, which stays. (Phase 8.6 also has the workflow-status helper
+  `getDayWorkflowStatus` derive `readyForExportPreflight` from the SAME function so it can't drift.)
 - **Severity policy (unchanged from the v3 plan):** data-entry steps are non-blocking while the user is
   drafting. **Only export** is hard-gated on zero error-severity issues. The new rules in phase 6 are
   **error** severity where they would produce invalid/ambiguous or Spyglass-skipped YAML (dangling camera /

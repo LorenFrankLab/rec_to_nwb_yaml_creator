@@ -98,6 +98,144 @@ describe('DayEditorStepper', () => {
     expect(screen.getByText(/Day not found/i)).toBeInTheDocument();
   });
 
+  // A day whose `animalId` is PRESENT but unresolvable (names a different/absent animal) must NOT
+  // open under whichever animal happens to index it — that would let a wrong-owner day be edited
+  // and exported as the wrong subject. It stays unresolved ("Animal not found"), matching the
+  // batch wrong-owner/orphan block.
+  it('does not resolve a present-but-unresolvable animalId via the indexing animal (no wrong-owner edit)', () => {
+    const wrongOwnerState = {
+      workspace: {
+        animals: {
+          // remy indexes the day, but the day's record claims a different owner ("ghost").
+          remy: { ...mockAnimal, days: ['remy-2023-06-22'] },
+        },
+        days: {
+          'remy-2023-06-22': { ...mockDay, animalId: 'ghost' },
+        },
+        settings: {},
+      },
+    };
+
+    render(
+      <StoreProvider initialState={wrongOwnerState}>
+        <DayEditorStepper />
+      </StoreProvider>
+    );
+
+    expect(screen.getByText(/Animal not found: ghost/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Day Editor: remy/i)).not.toBeInTheDocument();
+  });
+
+  // A non-string `animalId` (corrupt import — e.g. an object) must NOT be coerced into a map key.
+  // It stays unresolved ("Animal not found"), converging with dayRecovery's WRONG_OWNER/orphan
+  // handling, rather than phantom-resolving via `animalsMap['[object Object]']`.
+  it('does not resolve a non-string (object) animalId via key coercion', () => {
+    const objOwnerState = {
+      workspace: {
+        animals: { remy: { ...mockAnimal, days: ['remy-2023-06-22'] } },
+        days: { 'remy-2023-06-22': { ...mockDay, animalId: { not: 'a string' } } },
+        settings: {},
+      },
+    };
+
+    render(
+      <StoreProvider initialState={objOwnerState}>
+        <DayEditorStepper />
+      </StoreProvider>
+    );
+
+    // The error message reads the corrupt owner through describeOwner — never raw "[object Object]".
+    expect(
+      screen.getByText(/Animal not found: another animal \(unreadable id\)/i)
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/\[object Object\]/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /Day Editor:/i })).not.toBeInTheDocument();
+  });
+
+  // An ANIMAL-surface repair must target the resolved store OWNER KEY, not the record's `id` field
+  // (which can drift from the key for a recovered/imported animal). Here the record id is stale; the
+  // rebuild only clears the issue if it was routed to the store key the day is indexed under.
+  it('routes an animal-surface repair to the store key even when the animal record id is stale', async () => {
+    const user = userEvent.setup();
+    const staleIdState = {
+      workspace: {
+        animals: {
+          // Store key is "remy"; the record's own id has drifted to "STALE".
+          remy: { ...mockAnimal, id: 'STALE', configurationHistory: [], days: ['remy-2023-06-22'] },
+        },
+        days: { 'remy-2023-06-22': mockDay },
+        settings: {},
+      },
+    };
+
+    render(
+      <StoreProvider initialState={staleIdState}>
+        <DayEditorStepper />
+      </StoreProvider>
+    );
+
+    await user.click(screen.getByRole('button', { name: /^Validation/i }));
+    await user.click(screen.getByRole('button', { name: /^rebuild device configuration history$/i }));
+
+    // The rebuild cleared the issue → it was applied to the store key "remy" (a write to "STALE"
+    // would have no-opped and left the issue and its button in place).
+    expect(
+      screen.queryByRole('button', { name: /^rebuild device configuration history$/i })
+    ).not.toBeInTheDocument();
+  });
+
+  // The legitimate recovered case: a day with NO declared owner (animalId absent) but listed in an
+  // animal's index resolves under that indexing animal, so a recovered import still opens.
+  it('resolves a day with no animalId via the indexing animal (recovered-day recovery)', () => {
+    const recoveredDay = { ...mockDay };
+    delete recoveredDay.animalId;
+    const recoveredState = {
+      workspace: {
+        animals: { remy: { ...mockAnimal, days: ['remy-2023-06-22'] } },
+        days: { 'remy-2023-06-22': recoveredDay },
+        settings: {},
+      },
+    };
+
+    render(
+      <StoreProvider initialState={recoveredState}>
+        <DayEditorStepper />
+      </StoreProvider>
+    );
+
+    expect(screen.getByText(/Day Editor: remy - 2023-06-22/i)).toBeInTheDocument();
+  });
+
+  // Every Day Editor handoff (header, Back link, and each step's Animal Editor links) must route by
+  // the resolved store OWNER KEY, not the animal record's `id` field, which can drift for a
+  // recovered/imported animal. Here the store key is "remy" but the record id is "STALE".
+  it('routes every handoff by the store owner key, not the stale animal record id', () => {
+    const staleIdState = {
+      workspace: {
+        animals: { remy: { ...mockAnimal, id: 'STALE', days: ['remy-2023-06-22'] } },
+        days: { 'remy-2023-06-22': mockDay }, // day.animalId === 'remy' (the store key)
+        settings: {},
+      },
+    };
+
+    render(
+      <StoreProvider initialState={staleIdState}>
+        <DayEditorStepper />
+      </StoreProvider>
+    );
+
+    // Header + Back link use the store key.
+    expect(screen.getByText(/Day Editor: remy - 2023-06-22/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /back to workspace/i })).toHaveAttribute(
+      'href',
+      '#/workspace?animal=remy'
+    );
+    // The Overview breadcrumb's Animal link routes to the store key, never the stale record id.
+    const animalCrumb = screen.getByRole('link', { name: /Animal: remy/i });
+    expect(animalCrumb).toHaveAttribute('href', '#/animal/remy/editor');
+    expect(screen.queryByText(/STALE/)).not.toBeInTheDocument();
+  });
+
   it('shows error when no dayId in URL', () => {
     useDayIdFromUrl.mockReturnValue(null);
 

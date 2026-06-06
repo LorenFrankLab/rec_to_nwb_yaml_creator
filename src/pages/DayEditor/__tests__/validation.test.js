@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { validateField } from '../validation';
 import { computeStepStatus, computeDevicesStatus, computeEpochsStatus, groupErrorsByStep, stepIdForIssue, repairTargetForIssue, validateDay, dayOverrideIssues, SURFACE_BY_CODE } from '../../../domain/validation';
 import { makeAnimalWithCamerasAndDay } from './taskFixtures';
+import { buildRealisticWorkspace } from '../../../__tests__/fixtures/workspaceBuilders';
+import { mergeDayMetadata } from '../../../state/workspaceUtils';
 
 describe('stepIdForIssue', () => {
   it('routes session/subject issues to the overview step', () => {
@@ -828,5 +830,58 @@ describe('Boundary 2 — ownership by provenance, not path (High 3)', () => {
     expect(issues.some((i) => i.code === 'bad_channel_out_of_range')).toBe(true);
     // ...but the ntrode override is NOT falsely flagged as a shadowed/erroring geometry override.
     expect(issues.some((i) => i.code === 'shadowed_geometry_override')).toBe(false);
+  });
+});
+
+describe('unpinned configuration is export-blocking (multi-version animal)', () => {
+  it('produces an export-blocking, Devices-repairable issue for an unpinned day with >1 version', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    animal.configurationHistory.push({
+      version: 2,
+      date: '2023-07-01',
+      description: 'Lowered tetrodes',
+      devices: animal.configurationHistory[0].devices,
+      appliedToDays: [],
+    });
+    delete day.configurationVersion; // unpinned + two versions → ambiguous resolution
+    const merged = mergeDayMetadata(animal, day);
+
+    const issues = validateDay(day, merged, animal);
+    const issue = issues.find((i) => i.code === 'unpinned_configuration');
+    expect(issue).toBeDefined();
+    expect(issue.severity).toBe('error');
+    // Fails the export gate...
+    expect(computeStepStatus(day, merged, animal).export).toBe('error');
+    // ...and routes to the Devices step (where the version-pin control lives), not a dead end.
+    expect(repairTargetForIssue(issue)).toMatchObject({ surface: 'day', step: 'devices' });
+  });
+
+  it('reads "the latest configuration" (not "v undefined") when the latest history entry has no version', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    // A corrupt/legacy second snapshot whose `version` is missing.
+    animal.configurationHistory.push({
+      date: '2023-07-01',
+      description: 'Lowered tetrodes',
+      devices: animal.configurationHistory[0].devices,
+      appliedToDays: [],
+    });
+    delete day.configurationVersion;
+    const merged = mergeDayMetadata(animal, day);
+
+    const issue = validateDay(day, merged, animal).find((i) => i.code === 'unpinned_configuration');
+    expect(issue).toBeDefined();
+    expect(issue.message).toContain('the latest configuration');
+    expect(issue.message).not.toContain('undefined');
+  });
+
+  it('does not flag a pinned day, nor an unpinned day in a single-version animal', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    // Pinned (the fixture pins v1): no issue.
+    let merged = mergeDayMetadata(animal, day);
+    expect(validateDay(day, merged, animal).some((i) => i.code === 'unpinned_configuration')).toBe(false);
+    // Unpinned but only one version → unambiguous → no issue.
+    delete day.configurationVersion;
+    merged = mergeDayMetadata(animal, day);
+    expect(validateDay(day, merged, animal).some((i) => i.code === 'unpinned_configuration')).toBe(false);
   });
 });

@@ -184,6 +184,14 @@ describe('AnimalEditorStepper', () => {
       expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Animal Editor: remy');
     });
 
+    it('frames the editor as shared animal setup, without overstating that all days inherit', () => {
+      renderWithStore(<AnimalEditorStepper />);
+      expect(screen.getByText(/shared hardware setup for this animal/i)).toBeInTheDocument();
+      // Accurate inheritance: latest configuration + days on it; earlier-pinned days keep theirs.
+      expect(screen.getByText(/apply to the latest configuration/i)).toBeInTheDocument();
+      expect(screen.getByText(/days pinned to an earlier configuration keep theirs/i)).toBeInTheDocument();
+    });
+
     it('does not show reconfiguration context on a normal editor open', () => {
       renderWithStore(<AnimalEditorStepper />);
 
@@ -520,9 +528,11 @@ describe('AnimalEditorStepper', () => {
       const saveButton = screen.getByRole('button', { name: /save configuration/i });
       await user.click(saveButton);
 
-      // Alert shows plural day count; navigation deferred until dismissal.
+      // Alert states the accurate inheritance (latest version, not all days); navigation
+      // deferred until dismissal.
       const alert = await screen.findByRole('alertdialog');
-      expect(alert).toHaveTextContent('Configuration saved. 2 days will inherit changes.');
+      expect(alert).toHaveTextContent(/Configuration saved to the latest version/i);
+      expect(alert).toHaveTextContent(/days pinned to an earlier version keep theirs/i);
 
       await user.click(screen.getByRole('button', { name: /close alert/i }));
       expect(window.location.hash).toBe('#/workspace?animal=remy&section=devices');
@@ -567,9 +577,9 @@ describe('AnimalEditorStepper', () => {
       const saveButton = screen.getByRole('button', { name: /save configuration/i });
       await user.click(saveButton);
 
-      // Alert shows singular "day"; navigation deferred until dismissal.
+      // Same accurate inheritance message regardless of day count; navigation deferred.
       const alert = await screen.findByRole('alertdialog');
-      expect(alert).toHaveTextContent('Configuration saved. 1 day will inherit changes.');
+      expect(alert).toHaveTextContent(/Configuration saved to the latest version/i);
 
       await user.click(screen.getByRole('button', { name: /close alert/i }));
       expect(window.location.hash).toBe('#/workspace?animal=remy&section=devices');

@@ -51,7 +51,7 @@ function provideStore(workspace) {
     model: { workspace },
     // removeDayReference is present so a missing-record row's repair button never references
     // an undefined action; the dedicated repair test installs its own captured spy.
-    actions: { updateDay, removeDayReference: vi.fn() },
+    actions: { updateDay, removeDayReference: vi.fn(), relinkDayReference: vi.fn(), unlinkDayReference: vi.fn() },
     selectors: {},
     persistence: { enabled: false },
   });
@@ -152,6 +152,8 @@ describe('ValidationSummary', () => {
     render(<ValidationSummary />);
 
     await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    // Batch export now shows a preflight; confirm it to run the downloads.
+    await user.click(screen.getByRole('button', { name: /confirm export/i }));
 
     // Only the single valid day is shadow-checked and downloaded.
     expect(checkShadowExport).toHaveBeenCalledTimes(1);
@@ -175,6 +177,7 @@ describe('ValidationSummary', () => {
     render(<ValidationSummary />);
 
     await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    await user.click(screen.getByRole('button', { name: /confirm export/i }));
 
     // Skipped, never downloaded.
     expect(downloadYamlFile).not.toHaveBeenCalled();
@@ -202,6 +205,7 @@ describe('ValidationSummary', () => {
     render(<ValidationSummary />);
 
     await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    await user.click(screen.getByRole('button', { name: /confirm export/i }));
 
     expect(downloadYamlFile).toHaveBeenCalledTimes(2);
     // Stable order: sorted by date → 06-22 then 06-23.
@@ -225,6 +229,7 @@ describe('ValidationSummary', () => {
     render(<ValidationSummary />);
 
     await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    await user.click(screen.getByRole('button', { name: /confirm export/i }));
 
     // The override DOWNLOADS the mismatched day...
     expect(downloadYamlFile).toHaveBeenCalledTimes(1);
@@ -255,6 +260,7 @@ describe('ValidationSummary', () => {
     render(<ValidationSummary />);
 
     await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    await user.click(screen.getByRole('button', { name: /confirm export/i }));
 
     // Only the good day downloads; the mismatched day is skipped (not downloaded).
     expect(downloadYamlFile).toHaveBeenCalledTimes(1);
@@ -264,6 +270,67 @@ describe('ValidationSummary', () => {
     expect(alert).toHaveTextContent(/skipped/i);
     expect(alert).toHaveTextContent(ids.incompleteDayId);
     expect(alert).not.toHaveTextContent(ids.validDayId);
+  });
+
+  it('Export Valid Only: drops a day that became WRONG-OWNER after the preflight (no stale export of the wrong subject)', async () => {
+    const user = userEvent.setup();
+    const { workspace, ids } = makeSummaryWorkspace();
+    delete workspace.animals.totoro;
+    delete workspace.days[ids.incompleteDayId];
+    delete workspace.days[ids.errorDayId];
+    workspace.animals.remy.days = [ids.validDayId];
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+    // Open the preflight while the day is a valid ok recording day...
+    await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    // ...then the record drifts to a different owner before the user confirms (import/corruption).
+    // runExport re-derives recovery status from the LIVE workspace, so this must NOT export as remy.
+    workspace.days[ids.validDayId].animalId = 'someone-else';
+    await user.click(screen.getByRole('button', { name: /confirm export/i }));
+
+    expect(downloadYamlFile).not.toHaveBeenCalled();
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent(/since the preflight/i);
+    expect(alert).toHaveTextContent(ids.validDayId);
+  });
+
+  it('Export Valid Only: drops a day whose record was DELETED after the preflight', async () => {
+    const user = userEvent.setup();
+    const { workspace, ids } = makeSummaryWorkspace();
+    delete workspace.animals.totoro;
+    delete workspace.days[ids.incompleteDayId];
+    delete workspace.days[ids.errorDayId];
+    workspace.animals.remy.days = [ids.validDayId];
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+    await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    delete workspace.days[ids.validDayId]; // gone between preflight and confirm
+    await user.click(screen.getByRole('button', { name: /confirm export/i }));
+
+    expect(downloadYamlFile).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent(/no longer present since the preflight/i);
+  });
+
+  it('Export Valid Only: a day that becomes UNREADABLE after the preflight is reported as "could not be re-validated", not "no longer valid"', async () => {
+    const user = userEvent.setup();
+    const { workspace, ids } = makeSummaryWorkspace();
+    delete workspace.animals.totoro;
+    delete workspace.days[ids.incompleteDayId];
+    delete workspace.days[ids.errorDayId];
+    workspace.animals.remy.days = [ids.validDayId];
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+    await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    // Corrupt the animal's configuration so the re-validation MERGE throws (≠ "no longer valid").
+    workspace.animals.remy.configurationHistory = 'corrupt';
+    await user.click(screen.getByRole('button', { name: /confirm export/i }));
+
+    expect(downloadYamlFile).not.toHaveBeenCalled();
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent(/could not be re-validated since the preflight/i);
   });
 
   it('Export Valid Only: no valid days short-circuits with a helpful message and no downloads', async () => {
@@ -280,7 +347,141 @@ describe('ValidationSummary', () => {
 
     expect(checkShadowExport).not.toHaveBeenCalled();
     expect(downloadYamlFile).not.toHaveBeenCalled();
-    expect(screen.getByRole('status')).toHaveTextContent(/no valid days to export/i);
+    expect(screen.getByRole('status')).toHaveTextContent(/no days are ready to export/i);
+  });
+
+  it('Export Valid Only shows a per-day preflight (config version + contents) before downloading', async () => {
+    const user = userEvent.setup();
+    const { workspace } = makeSummaryWorkspace();
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+    await user.click(screen.getByRole('button', { name: /export valid only/i }));
+
+    // Preflight region appears; nothing has downloaded yet (confidence check, not one-click).
+    const preflight = screen.getByRole('region', { name: /batch export preflight/i });
+    expect(within(preflight).getByText(/config v1/i)).toBeInTheDocument();
+    expect(within(preflight).getByText(/electrode group/i)).toBeInTheDocument();
+    expect(downloadYamlFile).not.toHaveBeenCalled();
+  });
+
+  it('surfaces an orphaned day record (a record not in any animal index) instead of losing it', () => {
+    const { workspace, ids } = makeSummaryWorkspace();
+    // Drop the valid day from its animal's index but KEEP the record in workspace.days — a
+    // recovered/corrupt-index scenario that would otherwise make the record disappear.
+    workspace.animals.remy.days = workspace.animals.remy.days.filter((id) => id !== ids.validDayId);
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+
+    const row = screen.getByTestId(`day-row-${ids.validDayId}`);
+    expect(within(row).getByText(/not in day list/i)).toBeInTheDocument();
+    // Still openable in its editor (the record exists), so it is recoverable, not lost.
+    expect(within(row).getByRole('link')).toHaveAttribute('href', `#/day/${ids.validDayId}`);
+    // …and re-linkable: an "Add to day list" repair restores it to the animal's index.
+    expect(within(row).getByRole('button', { name: /add .* back to .* day list/i })).toBeInTheDocument();
+  });
+
+  it('Export Valid Only EXCLUDES a recovered-unlinked (orphan) day until it is re-linked', async () => {
+    const user = userEvent.setup();
+    const { workspace, ids } = makeSummaryWorkspace();
+    // Make the incomplete day valid (an OK day) and orphan the valid day (keep the record, drop
+    // it from the index). The orphan's chip is still 'valid', but policy excludes it from export.
+    const fixedDay = workspace.days[ids.incompleteDayId];
+    fixedDay.session = { ...fixedDay.session, session_id: 'remy_20230623' };
+    delete workspace.animals.totoro;
+    delete workspace.days[ids.errorDayId];
+    workspace.animals.remy.days = [ids.incompleteDayId];
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+    await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    await user.click(screen.getByRole('button', { name: /confirm export/i }));
+
+    // Only the OK valid day downloads; the orphaned (recovered-unlinked) valid record is excluded.
+    expect(downloadYamlFile).toHaveBeenCalledTimes(1);
+    expect(downloadYamlFile).toHaveBeenCalledWith('06232023_remy_metadata.yml', 'yaml-bytes');
+  });
+
+  it('re-links an orphaned day record into its animal index when the repair is clicked', async () => {
+    const user = userEvent.setup();
+    const { workspace, ids } = makeSummaryWorkspace();
+    workspace.animals.remy.days = workspace.animals.remy.days.filter((id) => id !== ids.validDayId);
+    const relinkDayReference = vi.fn();
+    useStoreContext.mockReturnValue({
+      model: { workspace },
+      actions: { updateDay: vi.fn(), removeDayReference: vi.fn(), relinkDayReference },
+      selectors: {},
+      persistence: { enabled: false },
+    });
+
+    render(<ValidationSummary />);
+    const row = screen.getByTestId(`day-row-${ids.validDayId}`);
+    await user.click(within(row).getByRole('button', { name: /add .* back to .* day list/i }));
+    expect(relinkDayReference).toHaveBeenCalledWith('remy', ids.validDayId);
+  });
+
+  it('Validate All does not write to a wrong-owner row (would corrupt another animal\'s day)', async () => {
+    const user = userEvent.setup();
+    const { workspace, ids } = makeSummaryWorkspace();
+    // remy indexes a record that belongs to totoro.
+    workspace.days[ids.validDayId].animalId = 'totoro';
+    const updateDay = provideStore(workspace);
+
+    render(<ValidationSummary />);
+    await user.click(screen.getByRole('button', { name: /validate all/i }));
+
+    // The wrong-owner day id must NOT be written (it belongs to totoro, not remy).
+    const wroteWrongOwner = updateDay.mock.calls.some((call) => call[0] === ids.validDayId);
+    expect(wroteWrongOwner).toBe(false);
+  });
+
+  it('flags an indexed wrong-owner record and offers an unlink repair (never exports it as this animal)', async () => {
+    const user = userEvent.setup();
+    const { workspace, ids } = makeSummaryWorkspace();
+    // remy's index points at a record that belongs to totoro — exporting it as remy would corrupt
+    // the YAML (wrong subject/probe). It must be flagged, not silently exported.
+    workspace.days[ids.validDayId].animalId = 'totoro';
+    const unlinkDayReference = vi.fn();
+    useStoreContext.mockReturnValue({
+      model: { workspace },
+      actions: { updateDay: vi.fn(), removeDayReference: vi.fn(), relinkDayReference: vi.fn(), unlinkDayReference },
+      selectors: {},
+      persistence: { enabled: false },
+    });
+
+    render(<ValidationSummary />);
+    const row = screen.getByTestId(`day-row-${ids.validDayId}`);
+    expect(within(row).getByText(/belongs to totoro/i)).toBeInTheDocument();
+    await user.click(within(row).getByRole('button', { name: /remove .* from .* belongs to totoro/i }));
+    expect(unlinkDayReference).toHaveBeenCalledWith('remy', ids.validDayId);
+  });
+
+  it('does not offer a dead-end "Open editor" for an orphan whose owning animal is gone', () => {
+    // A day record whose animalId references no animal: the editor would dead-end.
+    const { workspace, ids } = makeSummaryWorkspace();
+    workspace.days[ids.validDayId].animalId = 'ghost';
+    delete workspace.animals.remy; // the owner is gone
+    workspace.days[ids.incompleteDayId] && delete workspace.days[ids.incompleteDayId];
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+    const row = screen.getByTestId(`day-row-${ids.validDayId}`);
+    expect(within(row).getByText(/no owning animal/i)).toBeInTheDocument();
+    expect(within(row).queryByRole('link', { name: /open editor/i })).not.toBeInTheDocument();
+  });
+
+  it('Export Valid Only: cancelling the preflight downloads nothing', async () => {
+    const user = userEvent.setup();
+    const { workspace } = makeSummaryWorkspace();
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+    await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    await user.click(screen.getByRole('button', { name: /cancel/i }));
+
+    expect(screen.queryByRole('region', { name: /batch export preflight/i })).not.toBeInTheDocument();
+    expect(downloadYamlFile).not.toHaveBeenCalled();
   });
 
   it('Validate All announces a singular day for a one-day workspace', async () => {
@@ -298,6 +499,85 @@ describe('ValidationSummary', () => {
     await user.click(screen.getByRole('button', { name: /validate all/i }));
 
     expect(screen.getByRole('status')).toHaveTextContent(/validated 1 day\./i);
+  });
+
+  it('describes a wrong-owner row with a non-string (object) owner readably, not "[object Object]"', () => {
+    // remy indexes a record whose animalId is a corrupt object. The note must read as a usable
+    // explanation, not leak "[object Object]".
+    const { workspace, ids } = makeSummaryWorkspace();
+    delete workspace.days[ids.incompleteDayId];
+    delete workspace.days[ids.errorDayId];
+    workspace.animals.remy.days = [ids.validDayId];
+    workspace.animals.totoro.days = [];
+    workspace.days[ids.validDayId].animalId = { not: 'a string' };
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+    const row = screen.getByTestId(`day-row-${ids.validDayId}`);
+    expect(within(row).getByText(/belongs to another animal \(unreadable id\)/i)).toBeInTheDocument();
+    expect(within(row).queryByText(/\[object Object\]/)).not.toBeInTheDocument();
+  });
+
+  it('Validate All does NOT launder a corrupt day.state — it skips the write and counts it', async () => {
+    const user = userEvent.setup();
+    // An otherwise-valid (exportable) day whose `state` is a corrupt non-record. Validate All must
+    // not coerce it to {} and stamp `validated` (which would hide the corruption); it skips + counts.
+    const { workspace, ids } = makeSummaryWorkspace();
+    delete workspace.days[ids.incompleteDayId];
+    delete workspace.days[ids.errorDayId];
+    workspace.animals.remy.days = [ids.validDayId];
+    workspace.animals.totoro.days = [];
+    workspace.days[ids.validDayId].state = 'corrupt-state-string';
+    const updateDay = provideStore(workspace);
+
+    render(<ValidationSummary />);
+    await user.click(screen.getByRole('button', { name: /validate all/i }));
+
+    // The corrupt-state day's flag was NOT written (no laundering).
+    expect(updateDay.mock.calls.some((call) => call[0] === ids.validDayId)).toBe(false);
+    // It is reported as a failure, not silently counted as validated.
+    expect(screen.getByRole('status')).toHaveTextContent(/1 failed/i);
+    // The failure is surfaced in the UI (not console-only): the affected day + its repair path.
+    const report = screen.getByText(/could not be validated/i).closest('[role="alert"]');
+    expect(report).toHaveTextContent(ids.validDayId);
+    expect(report).toHaveTextContent(/saved state is corrupt/i);
+  });
+
+  it('renders an orphan row with a non-string (object) owner without crashing (no object as React child)', () => {
+    // A corrupt import persists an unindexed record whose animalId is an object. The summary must
+    // surface it as an orphan, not throw "objects are not valid as a React child".
+    const { workspace, ids } = makeSummaryWorkspace();
+    delete workspace.days[ids.incompleteDayId];
+    delete workspace.days[ids.errorDayId];
+    workspace.animals.remy.days = [];
+    workspace.animals.totoro.days = [];
+    workspace.days[ids.validDayId].animalId = { not: 'a string' };
+    provideStore(workspace);
+
+    expect(() => render(<ValidationSummary />)).not.toThrow();
+    const row = screen.getByTestId(`day-row-${ids.validDayId}`);
+    expect(within(row).getByText(/no owning animal/i)).toBeInTheDocument();
+  });
+
+  it('Validate All names skipped rows instead of a bare "Validated 0 days" when nothing is validatable', async () => {
+    const user = userEvent.setup();
+    // remy's only listed day is wrong-owner (belongs to totoro) — not a validatable recording day
+    // for remy. totoro has no rows. So nothing is validatable, but a bare "Validated 0 days" would
+    // misread as "nothing to do" when the truth is the row was deliberately skipped.
+    const { workspace, ids } = makeSummaryWorkspace();
+    delete workspace.days[ids.incompleteDayId];
+    delete workspace.days[ids.errorDayId];
+    workspace.animals.remy.days = [ids.validDayId];
+    workspace.days[ids.validDayId].animalId = 'totoro';
+    workspace.animals.totoro.days = [];
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+    await user.click(screen.getByRole('button', { name: /validate all/i }));
+
+    const status = screen.getByRole('status');
+    expect(status).toHaveTextContent(/validated 0 days/i);
+    expect(status).toHaveTextContent(/1 day skipped/i);
   });
 
   describe('corrupt workspace shape during initial row construction', () => {

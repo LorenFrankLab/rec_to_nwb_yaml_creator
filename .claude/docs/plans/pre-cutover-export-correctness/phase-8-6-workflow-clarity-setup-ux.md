@@ -86,9 +86,14 @@ clarity.
 
 - **Task 6 — validation and export workflow categories.** Group Validation and Export repair
   summaries by user workflow category: Animal setup, Day metadata, Day-specific failed channels,
-  Existing data repair, and Export/preflight. Action labels should match the setup checklist
-  wording (`Set Up Electrodes`, `Review Cameras`, `Fix day failed channels`, etc.) and still use
-  the canonical repair target from `src/domain/validation.js`.
+  Existing data repair, and Export/preflight. The setup-checklist vocabulary is carried by the
+  category **headings** over each repair group (and by the checklist action verbs `Set Up
+  Electrodes` / `Review Cameras` on the Workspace + Day Devices empty state); the per-issue repair
+  **buttons** keep the canonical `repairTargetForIssue` labels and routing from
+  `src/domain/validation.js` ("Fix in Animal Editor → …", "Fix in Devices") — the heading above
+  each button supplies the workflow context, so the button text is not reworded per category. This
+  is the single contract (the `workflow-clarity-design.md` "Validation and Export" section matches
+  it; see also the Phase 8.6 entry in `docs/REFACTOR_CHANGELOG.md`).
 
 - **Task 7 — preflight alignment.** Make Export preflight echo the setup checklist and Day Devices
   context: animal/day/session, configuration version and historical/current status, probes and

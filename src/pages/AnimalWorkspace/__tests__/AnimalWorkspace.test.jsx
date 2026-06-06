@@ -296,8 +296,8 @@ describe('AnimalWorkspace Component (M4) - Initial State', () => {
     });
   });
 
-  describe('Edit Devices Button', () => {
-    it('shows "Edit Devices" button when animal is selected', async () => {
+  describe('Edit Animal Setup Button', () => {
+    it('shows "Edit Animal Setup" button when animal is selected', async () => {
       const user = userEvent.setup();
 
       const initialState = {
@@ -323,12 +323,12 @@ describe('AnimalWorkspace Component (M4) - Initial State', () => {
       const animalButton = screen.getByRole('button', { name: /testanimal/i });
       await user.click(animalButton);
 
-      // Check for "Edit Devices" button/link
-      const editDevicesLink = screen.getByRole('link', { name: /edit devices/i });
+      // Check for "Edit Animal Setup" button/link
+      const editDevicesLink = screen.getByRole('link', { name: /edit animal setup/i });
       expect(editDevicesLink).toBeInTheDocument();
     });
 
-    it('navigates to Animal Editor when "Edit Devices" button is clicked', async () => {
+    it('navigates to Animal Editor when "Edit Animal Setup" button is clicked', async () => {
       const user = userEvent.setup();
 
       const initialState = {
@@ -354,19 +354,20 @@ describe('AnimalWorkspace Component (M4) - Initial State', () => {
       const animalButton = screen.getByRole('button', { name: /testanimal/i });
       await user.click(animalButton);
 
-      // Check the href of the "Edit Devices" button
-      const editDevicesLink = screen.getByRole('link', { name: /edit devices/i });
+      // Check the href of the "Edit Animal Setup" button
+      const editDevicesLink = screen.getByRole('link', { name: /edit animal setup/i });
       expect(editDevicesLink).toHaveAttribute('href', '#/animal/testanimal/editor');
     });
 
-    it('does not show "Edit Devices" button when no animal is selected', () => {
+    it('does not show "Edit Animal Setup" button when no animal is selected', () => {
+      // Two animals + no ?animal param → nothing auto-selected (auto-select only fires for a
+      // SOLE animal), so this exercises the genuine no-selection state.
+      window.location.hash = '#/workspace';
       const initialState = {
         workspace: {
           animals: {
-            testanimal: {
-              subject: { subject_id: 'testanimal' },
-              days: [],
-            },
+            testanimal: { subject: { subject_id: 'testanimal' }, days: [] },
+            otheranimal: { subject: { subject_id: 'otheranimal' }, days: [] },
           },
           days: {},
           settings: {},
@@ -380,9 +381,30 @@ describe('AnimalWorkspace Component (M4) - Initial State', () => {
       );
 
       // No animal selected yet
-      // Check that "Edit Devices" button/link is not present
-      const editDevicesLink = screen.queryByRole('link', { name: /edit devices/i });
+      // Check that "Edit Animal Setup" button/link is not present
+      const editDevicesLink = screen.queryByRole('link', { name: /edit animal setup/i });
       expect(editDevicesLink).not.toBeInTheDocument();
+    });
+
+    it('auto-selects the sole animal so its setup is visible without a click', () => {
+      window.location.hash = '#/workspace';
+      const initialState = {
+        workspace: {
+          animals: { onlyone: { subject: { subject_id: 'onlyone' }, days: [] } },
+          days: {},
+          settings: {},
+        },
+      };
+
+      render(
+        <StoreProvider initialState={initialState}>
+          <AnimalWorkspace />
+        </StoreProvider>
+      );
+
+      // The sole animal is selected on mount (its card is pressed and the setup checklist shows).
+      expect(screen.getByRole('button', { name: /onlyone/i })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('region', { name: /animal setup/i })).toBeInTheDocument();
     });
   });
 });
