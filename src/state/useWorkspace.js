@@ -345,9 +345,29 @@ export function useWorkspace(initialState = null) {
       createConfigurationSnapshotAndApplyForward: (animalId, config, dayIds) => {
         const now = getCurrentTimestamp();
         const current = workspaceRef.current.animals[animalId];
+        // Reserve the version synchronously from the authoritative cached store.
         const createdVersion = current
           ? nextConfigurationVersion(getConfigHistory(current))
           : undefined;
+        if (current) {
+          // Optimistically advance the cached workspace (animal history + day pins) so a second
+          // synchronous call reserves the NEXT version — two calls in one event get distinct
+          // versions, and the second never appends a duplicate the first-match resolver would
+          // mis-pin to. The next render overwrites this with the committed state.
+          const optimistic = createSnapshotAndApplyForward(
+            current,
+            workspaceRef.current.days,
+            config,
+            dayIds,
+            now,
+            createdVersion
+          );
+          workspaceRef.current = {
+            ...workspaceRef.current,
+            animals: { ...workspaceRef.current.animals, [animalId]: optimistic.animal },
+            days: optimistic.days,
+          };
+        }
 
         setWorkspace((prev) => {
           if (!prev.animals[animalId]) {

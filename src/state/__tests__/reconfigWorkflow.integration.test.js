@@ -117,6 +117,34 @@ describe('probe reconfiguration workflow [integration]', () => {
     expect(animalNow.configurationHistory[2].appliedToDays.sort()).toEqual([dayIds.day3, dayIds.day4].sort());
   });
 
+  it('createConfigurationSnapshotAndApplyForward reserves DISTINCT versions for two calls in one event', () => {
+    // Two atomic calls before React commits must not both append the same version (which the
+    // first-match resolver would then mis-pin to). Start [1]; A moves day3 → v2, B moves
+    // day4 → v3; history [1,2,3] with each day pinned to the snapshot it actually created.
+    const { workspace, animalId, dayIds, v1, v2 } = makeReconfigWorkspace();
+    const animal = workspace.animals[animalId];
+    animal.configurationHistory = [
+      { version: 1, date: '2023-06-22', description: 'Initial', devices: v1, appliedToDays: [dayIds.day1, dayIds.day2, dayIds.day3, dayIds.day4] },
+    ];
+    Object.values(workspace.days).forEach((d) => { d.configurationVersion = 1; });
+
+    const { result } = renderHook(() => useStore({ workspace }));
+
+    let first;
+    let second;
+    act(() => {
+      first = result.current.actions.createConfigurationSnapshotAndApplyForward(animalId, { date: '2023-06-24', description: 'A', devices: structuredClone(v2) }, [dayIds.day3]);
+      second = result.current.actions.createConfigurationSnapshotAndApplyForward(animalId, { date: '2023-06-25', description: 'B', devices: structuredClone(v2) }, [dayIds.day4]);
+    });
+
+    const animalNow = result.current.model.workspace.animals[animalId];
+    const days = result.current.model.workspace.days;
+    expect([first, second]).toEqual([2, 3]);
+    expect(animalNow.configurationHistory.map((s) => s.version)).toEqual([1, 2, 3]);
+    expect(days[dayIds.day3].configurationVersion).toBe(2);
+    expect(days[dayIds.day4].configurationVersion).toBe(3);
+  });
+
   it('addConfigurationSnapshot returns DISTINCT versions for two calls in one event (reservation)', () => {
     // Synchronous version reservation: composing the primitive twice before React commits must
     // not return the same stale version. Two adds on [1] → returns 2 then 3, history [1,2,3].
