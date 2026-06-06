@@ -423,10 +423,12 @@ describe('AnimalEditorStepper', () => {
       const user = userEvent.setup();
       renderWithStore(<AnimalEditorStepper />);
 
-      // Navigate to final step (now Step 2)
+      // Navigate to the final step (Hardware Config is Step 4 now that Optogenetics
+      // was inserted before it).
       const nextButton = screen.getByRole('button', { name: /next step/i });
       await user.click(nextButton); // Step 0 -> Step 1
-      await user.click(nextButton); // Step 1 -> Step 2 (final)
+      await user.click(nextButton); // Step 1 -> Step 2 (Optogenetics)
+      await user.click(nextButton); // Step 2 -> Step 3 (final: Hardware Config)
 
       // Check button label changed
       expect(screen.getByRole('button', { name: /save configuration/i })).toBeInTheDocument();
@@ -436,10 +438,12 @@ describe('AnimalEditorStepper', () => {
       const user = userEvent.setup();
       renderWithStore(<AnimalEditorStepper />);
 
-      // Navigate to final step (now Step 2)
+      // Navigate to the final step (Hardware Config is Step 4 now that Optogenetics
+      // was inserted before it).
       const nextButton = screen.getByRole('button', { name: /next step/i });
       await user.click(nextButton); // Step 0 -> Step 1
-      await user.click(nextButton); // Step 1 -> Step 2 (final)
+      await user.click(nextButton); // Step 1 -> Step 2 (Optogenetics)
+      await user.click(nextButton); // Step 2 -> Step 3 (final: Hardware Config)
 
       // Check button is enabled
       const saveButton = screen.getByRole('button', { name: /save configuration/i });
@@ -453,10 +457,12 @@ describe('AnimalEditorStepper', () => {
 
       renderWithStore(<AnimalEditorStepper />);
 
-      // Navigate to final step (now Step 2)
+      // Navigate to the final step (Hardware Config is Step 4 now that Optogenetics
+      // was inserted before it).
       const nextButton = screen.getByRole('button', { name: /next step/i });
       await user.click(nextButton); // Step 0 -> Step 1
-      await user.click(nextButton); // Step 1 -> Step 2 (final)
+      await user.click(nextButton); // Step 1 -> Step 2 (Optogenetics)
+      await user.click(nextButton); // Step 2 -> Step 3 (final: Hardware Config)
 
       // Click Save
       const saveButton = screen.getByRole('button', { name: /save configuration/i });
@@ -503,10 +509,12 @@ describe('AnimalEditorStepper', () => {
 
       renderWithStore(<AnimalEditorStepper />, stateWithDays);
 
-      // Navigate to final step (now Step 2)
+      // Navigate to the final step (Hardware Config is Step 4 now that Optogenetics
+      // was inserted before it).
       const nextButton = screen.getByRole('button', { name: /next step/i });
       await user.click(nextButton); // Step 0 -> Step 1
-      await user.click(nextButton); // Step 1 -> Step 2 (final)
+      await user.click(nextButton); // Step 1 -> Step 2 (Optogenetics)
+      await user.click(nextButton); // Step 2 -> Step 3 (final: Hardware Config)
 
       // Click Save
       const saveButton = screen.getByRole('button', { name: /save configuration/i });
@@ -548,10 +556,12 @@ describe('AnimalEditorStepper', () => {
 
       renderWithStore(<AnimalEditorStepper />, stateWithOneDay);
 
-      // Navigate to final step (now Step 2)
+      // Navigate to the final step (Hardware Config is Step 4 now that Optogenetics
+      // was inserted before it).
       const nextButton = screen.getByRole('button', { name: /next step/i });
       await user.click(nextButton); // Step 0 -> Step 1
-      await user.click(nextButton); // Step 1 -> Step 2 (final)
+      await user.click(nextButton); // Step 1 -> Step 2 (Optogenetics)
+      await user.click(nextButton); // Step 2 -> Step 3 (final: Hardware Config)
 
       // Click Save
       const saveButton = screen.getByRole('button', { name: /save configuration/i });
@@ -570,10 +580,12 @@ describe('AnimalEditorStepper', () => {
 
       renderWithStore(<AnimalEditorStepper />);
 
-      // Navigate to final step (now Step 2)
+      // Navigate to the final step (Hardware Config is Step 4 now that Optogenetics
+      // was inserted before it).
       const nextButton = screen.getByRole('button', { name: /next step/i });
       await user.click(nextButton); // Step 0 -> Step 1
-      await user.click(nextButton); // Step 1 -> Step 2 (final)
+      await user.click(nextButton); // Step 1 -> Step 2 (Optogenetics)
+      await user.click(nextButton); // Step 2 -> Step 3 (final: Hardware Config)
 
       // The "Next" button should now say "Save"
       const saveButton = screen.getByRole('button', { name: /save configuration/i });
@@ -590,10 +602,11 @@ describe('AnimalEditorStepper', () => {
   });
 
   describe('Step indicators', () => {
-    it('shows 3 step indicators with correct labels', () => {
+    it('shows the step indicators with correct labels', () => {
       renderWithStore(<AnimalEditorStepper />);
       expect(screen.getByText('Electrode Groups')).toBeInTheDocument();
       expect(screen.getByText('Channel Maps')).toBeInTheDocument();
+      expect(screen.getByText('Optogenetics')).toBeInTheDocument();
       expect(screen.getByText('Hardware Config')).toBeInTheDocument();
     });
 
@@ -1573,7 +1586,7 @@ describe('AnimalEditorStepper', () => {
   });
 
   describe('HardwareConfigStep Integration (Step 3)', () => {
-    it('renders HardwareConfigStep when on step 2', async () => {
+    it('renders HardwareConfigStep on the final step (after Optogenetics)', async () => {
       const user = userEvent.setup();
       renderWithStore(<AnimalEditorStepper />);
 
@@ -1582,13 +1595,15 @@ describe('AnimalEditorStepper', () => {
       await user.click(nextButton);
       expect(screen.getByTestId('channel-maps-step')).toBeInTheDocument();
 
-      // Navigate to step 2 (Hardware Config)
+      // Step 2 is Optogenetics, then step 3 (final) is Hardware Config.
+      await user.click(nextButton);
+      expect(screen.getByRole('heading', { name: /optogenetics/i })).toBeInTheDocument();
       await user.click(nextButton);
       expect(screen.getByTestId('hardware-config-step')).toBeInTheDocument();
       expect(screen.getByText(/Step 3: Hardware Config/)).toBeInTheDocument();
     });
 
-    it('navigates from Step 2 (Channel Maps) to Step 3 (Hardware Config)', async () => {
+    it('navigates Channel Maps -> Optogenetics -> Hardware Config', async () => {
       const user = userEvent.setup();
       renderWithStore(<AnimalEditorStepper />);
 
@@ -1597,48 +1612,54 @@ describe('AnimalEditorStepper', () => {
       await user.click(nextButton); // Step 0 -> Step 1
       expect(screen.getByTestId('channel-maps-step')).toBeInTheDocument();
 
-      await user.click(nextButton); // Step 1 -> Step 2
+      await user.click(nextButton); // Step 1 -> Step 2 (Optogenetics)
+      expect(screen.getByRole('heading', { name: /optogenetics/i })).toBeInTheDocument();
+
+      await user.click(nextButton); // Step 2 -> Step 3 (Hardware Config)
       expect(screen.getByTestId('hardware-config-step')).toBeInTheDocument();
     });
 
-    it('navigates back from Step 3 to Step 2', async () => {
+    it('navigates back from Hardware Config to Optogenetics', async () => {
       const user = userEvent.setup();
       renderWithStore(<AnimalEditorStepper />);
 
-      // Navigate to step 2 (Hardware Config)
+      // Navigate to the final step (Hardware Config)
       const nextButton = screen.getByRole('button', { name: /next step/i });
       await user.click(nextButton); // Step 0 -> Step 1
-      await user.click(nextButton); // Step 1 -> Step 2
+      await user.click(nextButton); // Step 1 -> Step 2 (Optogenetics)
+      await user.click(nextButton); // Step 2 -> Step 3 (Hardware Config)
       expect(screen.getByTestId('hardware-config-step')).toBeInTheDocument();
 
-      // Navigate back to step 1 (Channel Maps)
+      // Back now lands on Optogenetics (the step before Hardware Config).
       const backButton = screen.getByRole('button', { name: /previous step/i });
       await user.click(backButton);
-      expect(screen.getByTestId('channel-maps-step')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /optogenetics/i })).toBeInTheDocument();
     });
 
-    it('Step 3 is now the final step (Save button shown)', async () => {
+    it('Hardware Config is the final step (Save button shown)', async () => {
       const user = userEvent.setup();
       renderWithStore(<AnimalEditorStepper />);
 
-      // Navigate to final step (Step 2 = Hardware Config)
+      // Navigate to the final step (Hardware Config).
       const nextButton = screen.getByRole('button', { name: /next step/i });
       await user.click(nextButton); // Step 0 -> Step 1
-      await user.click(nextButton); // Step 1 -> Step 2 (final)
+      await user.click(nextButton); // Step 1 -> Step 2 (Optogenetics)
+      await user.click(nextButton); // Step 2 -> Step 3 (final: Hardware Config)
 
       // Check button label changed to Save
       expect(screen.getByRole('button', { name: /save configuration/i })).toBeInTheDocument();
     });
 
-    it('Continue button from Step 3 saves and exits', async () => {
+    it('Continue button from the final step saves and exits', async () => {
       const user = userEvent.setup();
 
       renderWithStore(<AnimalEditorStepper />);
 
-      // Navigate to step 2 (Hardware Config)
+      // Navigate to the final step (Hardware Config).
       const nextButton = screen.getByRole('button', { name: /next step/i });
       await user.click(nextButton); // Step 0 -> Step 1
-      await user.click(nextButton); // Step 1 -> Step 2
+      await user.click(nextButton); // Step 1 -> Step 2 (Optogenetics)
+      await user.click(nextButton); // Step 2 -> Step 3 (final: Hardware Config)
 
       // Click Save
       const saveButton = screen.getByRole('button', { name: /save configuration/i });
@@ -1674,8 +1695,9 @@ describe('AnimalEditorStepper', () => {
 
       renderWithStore(<AnimalEditorStepper />, state);
 
-      // Navigate to step 2
+      // Navigate to the final step (Hardware Config), past Optogenetics.
       const nextButton = screen.getByRole('button', { name: /next step/i });
+      await user.click(nextButton);
       await user.click(nextButton);
       await user.click(nextButton);
 

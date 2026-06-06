@@ -6,6 +6,7 @@ import TaskModal from './TaskModal';
 import BehavioralEventsDisplay from './BehavioralEventsDisplay';
 import AssociatedVideosEditor from './AssociatedVideosEditor';
 import AssociatedFilesEditor from './AssociatedFilesEditor';
+import FsGuiSection from './FsGuiSection';
 import MalformedCollectionNotice from './MalformedCollectionNotice';
 import { useStepperShortcut } from '../../hooks/stepperShortcuts';
 import { RAW_DAY_ARRAY_FIELDS } from '../../validation/rawShape';
@@ -16,6 +17,7 @@ import {
   getDayAssociatedVideos,
   getDayAssociatedFiles,
   getDayBehavioralEvents,
+  getDayFsGuiYamls,
 } from '../../state/workspaceSelectors';
 import './TasksEpochsStep.scss';
 
@@ -354,6 +356,29 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
           onDayEventsChange={(events) => onFieldUpdate('behavioral_events', events)}
         />
       </section>
+
+      {/* FsGUI optogenetics protocols are day-owned and only meaningful when the animal
+          has optogenetics enabled. They reference this day's epochs + the animal's
+          cameras as controlled choices. */}
+      {animal?.optogenetics != null && (
+        <FsGuiSection
+          fsGuiYamls={getDayFsGuiYamls(day)}
+          cameras={cameras}
+          epochOptions={[...validEpochSet(tasks)].sort((a, b) => a - b)}
+          // Only the DAY's behavioral events are exported (mergeDayMetadata reads
+          // day.behavioral_events), and the dangling_dio_output rule validates against
+          // those — so offer ONLY day events here. Inherited animal events are reference
+          // only; to use one, add it to this day in the Behavioral Events section above.
+          dioOptions={[
+            ...new Set(
+              dayBehavioralEvents
+                .map((e) => e?.name)
+                .filter((n) => typeof n === 'string' && n !== '')
+            ),
+          ]}
+          onChange={(next) => onFieldUpdate('fs_gui_yamls', next)}
+        />
+      )}
 
       <TaskModal
         isOpen={modalOpen}

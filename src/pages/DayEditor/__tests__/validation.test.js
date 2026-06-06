@@ -24,6 +24,13 @@ describe('stepIdForIssue', () => {
     expect(stepIdForIssue({ path: 'tasks[0].task_name' })).toBe('epochs');
   });
 
+  it('routes fs_gui issues to the epochs step, even a camera_id path (before the camera rule)', () => {
+    // FsGUI is rendered in the Epochs step; a blank fs_gui_yamls[].camera_id schema error
+    // must NOT mis-route to Devices just because the path contains "camera".
+    expect(stepIdForIssue({ path: 'fs_gui_yamls[0].camera_id' })).toBe('epochs');
+    expect(stepIdForIssue({ path: 'fs_gui_yamls[0].dio_output_name' })).toBe('epochs');
+  });
+
   it('routes anything unrecognized to the validation catch-all step', () => {
     expect(stepIdForIssue({ path: 'description' })).toBe('validation');
   });

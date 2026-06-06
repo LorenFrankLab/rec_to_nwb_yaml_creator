@@ -22,12 +22,18 @@ describe('animalEditorStepForFieldPath', () => {
     expect(animalEditorStepForFieldPath('ntrode_electrode_group_channel_map[0].map')).toMatchObject({ index: 1 });
   });
 
-  it('maps camera / data-acq / configuration-history paths to the Hardware Config step (2)', () => {
-    expect(animalEditorStepForFieldPath('cameras[0].lens')).toMatchObject({ index: 2, label: 'Hardware Config' });
-    expect(animalEditorStepForFieldPath('data_acq_device[0].name')).toMatchObject({ index: 2 });
+  it('maps camera / data-acq / configuration-history paths to the Hardware Config step (3)', () => {
+    expect(animalEditorStepForFieldPath('cameras[0].lens')).toMatchObject({ index: 3, label: 'Hardware Config' });
+    expect(animalEditorStepForFieldPath('data_acq_device[0].name')).toMatchObject({ index: 3 });
     // The configurationHistory rebuild control lives in the Hardware Config banner, so its
     // repair must deep-link there (not default to Electrode Groups).
-    expect(animalEditorStepForFieldPath('configurationHistory')).toMatchObject({ index: 2, label: 'Hardware Config' });
+    expect(animalEditorStepForFieldPath('configurationHistory')).toMatchObject({ index: 3, label: 'Hardware Config' });
+  });
+
+  it('maps animal-level optogenetics paths to the Optogenetics step (2)', () => {
+    expect(animalEditorStepForFieldPath('opto_excitation_source[0].name')).toMatchObject({ index: 2, label: 'Optogenetics' });
+    expect(animalEditorStepForFieldPath('virus_injection[0].volume_in_ul')).toMatchObject({ index: 2 });
+    expect(animalEditorStepForFieldPath('optical_fiber[0].location')).toMatchObject({ index: 2 });
   });
 
   it('defaults to the Electrode Groups step for an unknown/empty path', () => {
@@ -36,7 +42,7 @@ describe('animalEditorStepForFieldPath', () => {
   });
 
   it('normalizes AJV instancePath-style slashes', () => {
-    expect(animalEditorStepForFieldPath('/cameras/0/lens')).toMatchObject({ index: 2 });
+    expect(animalEditorStepForFieldPath('/cameras/0/lens')).toMatchObject({ index: 3 });
     expect(animalEditorStepForFieldPath('/ntrode_electrode_group_channel_map/0')).toMatchObject({ index: 1 });
   });
 });

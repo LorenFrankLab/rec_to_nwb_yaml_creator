@@ -49,7 +49,13 @@ const NTRODE_ORDER = ['ntrode_id', 'electrode_group_id', 'bad_channels', 'map'];
 const OPTO_EXCITATION_SOURCE_ORDER = ['name', 'model_name', 'description', 'wavelength_in_nm', 'power_in_W', 'intensity_in_W_per_m2'];
 const OPTICAL_FIBER_ORDER = ['name', 'hardware_name', 'implanted_fiber_description', 'location', 'hemisphere', 'ap_in_mm', 'ml_in_mm', 'dv_in_mm', 'roll_in_deg', 'pitch_in_deg', 'yaw_in_deg', 'reference', 'excitation_source'];
 const VIRUS_INJECTION_ORDER = ['name', 'description', 'hemisphere', 'location', 'ap_in_mm', 'ml_in_mm', 'dv_in_mm', 'roll_in_deg', 'pitch_in_deg', 'yaw_in_deg', 'reference', 'virus_name', 'titer_in_vg_per_ml', 'volume_in_uL'];
-const FS_GUI_YAML_ORDER = ['name', 'epochs', 'power_in_mW', 'dio_output_name', 'state_script_parameters', 'pulseLength'];
+// camera_id is schema-required (nwb_schema.json fs_gui_yamls item) and read by the
+// converter; state_script_parameters is a legacy UI-control key with no schema property
+// and is dropped by the sanitizer below (reorderKeys is lossless, so listing it out of
+// the order is not enough).
+const FS_GUI_YAML_ORDER = ['name', 'epochs', 'power_in_mW', 'dio_output_name', 'camera_id', 'pulseLength'];
+// fs_gui UI-control keys with no schema property; explicitly stripped from exported items.
+const FS_GUI_NON_SCHEMA_KEYS = ['state_script_parameters'];
 
 /**
  * Whether `value` is a plain object record (not null, not an array). Used to guard
@@ -94,6 +100,59 @@ function reorderKeys(obj, order) {
     if (!Object.hasOwn(result, key)) result[key] = obj[key];
   }
   return result;
+}
+
+/**
+ * Emit virus_injection items carrying BOTH volume spellings with one value.
+ *
+ * trodes_to_nwb reads `volume_in_uL` (capital L) with bracket access in
+ * `make_virus_injection` (a KeyError crash if absent — NOT one of the four all-or-nothing
+ * gate keys, so a missing volume crashes *after* the gate rather than silently dropping
+ * opto); the bundled schema requires `volume_in_ul` (lowercase). Emitting both — derived
+ * from whichever spelling the stored data carried — lets the same YAML pass app AJV and
+ * convert without that crash. The duplicate is a deliberate, documented compatibility
+ * shim until the schema and converter agree on one canonical spelling (see
+ * docs/REFACTOR_CHANGELOG.md and docs/PIPELINE_REQUIREMENTS.md). When BOTH spellings are
+ * present but differ (only reachable from imported data — the editor stores only
+ * `volume_in_uL`), `volume_in_uL` is treated as authoritative.
+ *
+ * @param {Array} items - Raw virus_injection items.
+ * @returns {Array} Reordered items with both `volume_in_uL` and `volume_in_ul` set.
+ */
+function emitVirusInjections(items) {
+  if (!Array.isArray(items)) return items;
+  return items.map((item) => {
+    const reordered = reorderKeys(item, VIRUS_INJECTION_ORDER);
+    if (!isPlainRecord(reordered)) return reordered;
+    // `volume_in_uL` (converter spelling) wins when both are present (see JSDoc).
+    const volume = reordered.volume_in_uL ?? reordered.volume_in_ul;
+    if (volume !== undefined) {
+      reordered.volume_in_uL = volume;
+      reordered.volume_in_ul = volume;
+    }
+    return reordered;
+  });
+}
+
+/**
+ * Emit fs_gui_yamls items reordered and stripped of non-schema UI-control keys.
+ *
+ * `reorderKeys` is lossless (it preserves keys outside the order template), so a legacy
+ * UI-only key like `state_script_parameters` would otherwise survive into the export.
+ * Strip it explicitly here. `camera_id` (schema-required; the converter reads it only for
+ * speed/spatial-filter protocols) stays.
+ *
+ * @param {Array} items - Raw fs_gui_yamls items.
+ * @returns {Array} Reordered, sanitized items.
+ */
+function emitFsGuiYamls(items) {
+  if (!Array.isArray(items)) return items;
+  return items.map((item) => {
+    const reordered = reorderKeys(item, FS_GUI_YAML_ORDER);
+    if (!isPlainRecord(reordered)) return reordered;
+    FS_GUI_NON_SCHEMA_KEYS.forEach((key) => delete reordered[key]);
+    return reordered;
+  });
 }
 
 /**
@@ -317,9 +376,13 @@ export function mergeDayMetadata(animal, day) {
     // also byte-identical to a legacy opto export. ===
     opto_excitation_source: opto ? reorderItems(opto.opto_excitation_source, OPTO_EXCITATION_SOURCE_ORDER) : [],
     optical_fiber: opto ? reorderItems(opto.optical_fiber, OPTICAL_FIBER_ORDER) : [],
-    virus_injection: opto ? reorderItems(opto.virus_injection, VIRUS_INJECTION_ORDER) : [],
-    fs_gui_yamls: getDayFsGuiYamls(day).length > 0 ? reorderItems(getDayFsGuiYamls(day), FS_GUI_YAML_ORDER) : [],
+    virus_injection: opto ? emitVirusInjections(opto.virus_injection) : [],
+    fs_gui_yamls: getDayFsGuiYamls(day).length > 0 ? emitFsGuiYamls(getDayFsGuiYamls(day)) : [],
+    // Converter gate key (trodes_to_nwb reads this) + schema spelling (`opto_software`),
+    // emitted with the same value for an opto session. `opto_software` is deleted below
+    // for a no-opto session so non-opto exports stay byte-identical to legacy.
     optogenetic_stimulation_software: opto ? opto.optogenetic_stimulation_software : '',
+    opto_software: opto ? opto.optogenetic_stimulation_software : '',
 
     // === From Configuration Version (or Day Override): Electrode Groups ===
     electrode_groups: electrodeGroups.map((g) => reorderKeys(g, ELECTRODE_GROUP_ORDER)),
@@ -339,6 +402,12 @@ export function mergeDayMetadata(animal, day) {
   }
   if (!technical.default_header_file_path) {
     delete merged.default_header_file_path;
+  }
+  // The schema-spelling opto software key is a compatibility duplicate only meaningful
+  // for an opto session; drop it when there is no optogenetics so a non-opto export is
+  // byte-identical to the legacy formData shape (which has no `opto_software`).
+  if (!opto) {
+    delete merged.opto_software;
   }
 
   // Return owned data: the assignments above alias nested animal/config arrays and

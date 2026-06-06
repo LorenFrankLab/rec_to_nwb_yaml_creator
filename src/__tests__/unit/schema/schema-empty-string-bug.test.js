@@ -123,7 +123,8 @@ describe('BUG #6: Empty String Validation for Missing Pattern Fields', () => {
             dv_in_mm: 2.0,
             roll_in_deg: 0,
             pitch_in_deg: 0,
-            yaw_in_deg: 0
+            yaw_in_deg: 0,
+            reference: 'Bregma at the cortical surface' // required by the converter
           }
         ],
         opto_excitation_source: [
@@ -148,9 +149,13 @@ describe('BUG #6: Empty String Validation for Missing Pattern Fields', () => {
             dv_in_mm: 2.0,
             pitch_in_deg: 0, // Required field
             roll_in_deg: 0, // Required field
-            yaw_in_deg: 0 // Required field
+            yaw_in_deg: 0, // Required field
+            reference: 'Bregma at the cortical surface' // required by the converter
           }
-        ]
+        ],
+        // The converter gates opto on all four sections; include the software key so this
+        // is a COMPLETE opto config (the rule otherwise flags it partial).
+        optogenetic_stimulation_software: 'fsgui'
       };
 
       const issues = validate(yaml);

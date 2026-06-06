@@ -16,6 +16,7 @@ import CopyFromAnimalDialog from './CopyFromAnimalDialog';
 import ChannelMapsStep from './ChannelMapsStep';
 import ChannelMapEditor from './ChannelMapEditor';
 import HardwareConfigStep from './HardwareConfigStep';
+import OptogeneticsStep from './OptogeneticsStep';
 import AlertModal from '../../components/AlertModal';
 import { ConfirmDialog } from '../../components/Modal';
 import { generateChannelMapsForGroup, nextNtrodeId } from '../../utils/channelMapUtils';
@@ -112,10 +113,12 @@ function useAnimalEditorRouteContext() {
 /**
  * Animal Editor Stepper - Container for multi-step animal device configuration
  *
- * Manages the 3-step workflow for animal-level configuration:
+ * Manages the 4-step workflow for animal-level configuration:
  * 1. Electrode Groups - Configure device types, locations, coordinates
  * 2. Channel Maps - Configure logical-to-hardware channel mappings
- * 3. Hardware Config - Configure cameras, data acquisition device, behavioral events
+ * 3. Optogenetics - Enable/configure the animal-level opto sections (off by default)
+ * 4. Hardware Config - Configure cameras, data acquisition device, behavioral events
+ *    (kept last so its Save/Continue flow is unchanged by the inserted Optogenetics step)
  *
  * Note: Component receives no props - animal ID is obtained from URL via
  * useAnimalIdFromUrl hook.
@@ -733,6 +736,17 @@ export default function AnimalEditorStepper() {
       ),
     },
     {
+      label: 'Optogenetics',
+      component: (
+        <OptogeneticsStep
+          animal={animal}
+          onUpdate={(updates) => actions.updateAnimal(animalId, updates)}
+        />
+      ),
+    },
+    {
+      // Kept as the final step so its Save/Continue flow (and the stepper's final-step
+      // Save button) is unchanged by the added Optogenetics step.
       label: 'Hardware Config',
       component: (
         <HardwareConfigStep

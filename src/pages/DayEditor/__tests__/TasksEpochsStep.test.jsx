@@ -23,6 +23,39 @@ function renderStep(overrides = {}) {
   return { animal, day, onFieldUpdate };
 }
 
+describe('TasksEpochsStep — FsGUI optogenetics gate', () => {
+  it('hides the FsGUI section when the animal has no optogenetics', () => {
+    renderStep(); // fixture default: optogenetics undefined
+    expect(screen.queryByRole('heading', { name: /fsgui optogenetics protocols/i })).not.toBeInTheDocument();
+  });
+
+  it('shows the FsGUI section only when optogenetics is enabled on the animal', () => {
+    renderStep({ animal: { optogenetics: { opto_excitation_source: [{ name: 'LED' }] } } });
+    expect(screen.getByRole('heading', { name: /fsgui optogenetics protocols/i })).toBeInTheDocument();
+  });
+
+  it('offers ONLY the day’s behavioral events as DIO outputs (not inherited animal events)', () => {
+    renderStep({
+      animal: {
+        optogenetics: { opto_excitation_source: [{ name: 'LED' }] },
+        behavioral_events: [{ name: 'inherited_only', description: 'd' }],
+      },
+      // Seed an existing protocol so the DIO control renders (the spy harness doesn't
+      // round-trip an Add through the store).
+      day: {
+        behavioral_events: [{ name: 'day_event', description: 'd' }],
+        fs_gui_yamls: [{ name: 'p', epochs: [], power_in_mW: '', dio_output_name: '', camera_id: '' }],
+      },
+    });
+
+    const dio = screen.getByLabelText(/dio output/i);
+    // The exported source is day events, which the dangling_dio_output rule validates
+    // against — so the select must offer the day event and NOT the inherited-only one.
+    expect(within(dio).getByRole('option', { name: 'day_event' })).toBeInTheDocument();
+    expect(within(dio).queryByRole('option', { name: 'inherited_only' })).not.toBeInTheDocument();
+  });
+});
+
 describe('TasksEpochsStep', () => {
   it('shows a non-blocking camera info banner when the animal has no cameras', async () => {
     const user = userEvent.setup();

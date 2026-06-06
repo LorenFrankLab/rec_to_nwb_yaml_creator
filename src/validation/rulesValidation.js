@@ -82,24 +82,81 @@ export const rulesValidation = (model) => {
     }
   }
 
-  // Rule 3: Optogenetics all-or-nothing configuration
+  // Rule 3: Optogenetics all-or-nothing configuration. trodes_to_nwb gates ALL
+  // optogenetics on FOUR keys each being present and non-empty (convert_optogenetics.py:
+  // virus_injection, opto_excitation_source, optical_fiber, optogenetic_stimulation_software);
+  // if any is missing it logs "No available optogenetic metadata" and silently returns,
+  // producing an NWB with no optogenetics at all. So a partial opto session must block
+  // export rather than convert to an opto-less file.
   const hasOptoSource = model.opto_excitation_source?.length > 0;
   const hasOpticalFiber = model.optical_fiber?.length > 0;
   const hasVirusInjection = model.virus_injection?.length > 0;
-  const optoFieldsPresent = [hasOptoSource, hasOpticalFiber, hasVirusInjection].filter(Boolean).length;
+  // The converter does len() > 0 on the software string, so a non-empty string counts.
+  const hasOptoSoftware =
+    typeof model.optogenetic_stimulation_software === 'string' &&
+    model.optogenetic_stimulation_software.trim() !== '';
+  const optoFieldsPresent = [hasOptoSource, hasOpticalFiber, hasVirusInjection, hasOptoSoftware]
+    .filter(Boolean).length;
 
-  // Partial configuration detected (some but not all fields present)
-  if (optoFieldsPresent > 0 && optoFieldsPresent < 3) {
+  // Partial configuration detected (some but not all FOUR sections present).
+  if (optoFieldsPresent > 0 && optoFieldsPresent < 4) {
     issues.push({
       path: 'optogenetics',
       code: 'partial_configuration',
-      repairSurface: 'day',
+      repairSurface: 'animal',
       severity: 'error',
       message:
-        `Partial optogenetics configuration detected. All fields required: ` +
+        `Partial optogenetics configuration detected. All fields required (or none) — ` +
+        `trodes_to_nwb silently drops ALL optogenetics unless every section is present: ` +
         `opto_excitation_source${hasOptoSource ? ' ✓' : ' ✗'}, ` +
         `optical_fiber${hasOpticalFiber ? ' ✓' : ' ✗'}, ` +
-        `virus_injection${hasVirusInjection ? ' ✓' : ' ✗'}`
+        `virus_injection${hasVirusInjection ? ' ✓' : ' ✗'}, ` +
+        `optogenetic_stimulation_software${hasOptoSoftware ? ' ✓' : ' ✗'}`
+    });
+  }
+
+  // Rule 3c: optical fibers and virus injections must carry a `reference`. trodes_to_nwb
+  // reads `optical_fiber[].reference` / `virus_injection[].reference` UNCONDITIONALLY
+  // (`metadata["reference"]`, KeyError if missing) in make_optical_fiber/make_virus_injection.
+  // The schema does NOT require it and the editor must collect it, so an item lacking a
+  // non-empty reference would crash conversion — block it here.
+  const nonEmptyStr = (v) => typeof v === 'string' && v.trim() !== '';
+  [
+    ['optical_fiber', model.optical_fiber],
+    ['virus_injection', model.virus_injection],
+  ].forEach(([key, items]) => {
+    if (!Array.isArray(items)) return;
+    items.forEach((item, i) => {
+      if (!nonEmptyStr(item?.reference)) {
+        issues.push({
+          path: `${key}[${i}].reference`,
+          field: 'reference',
+          code: 'missing_opto_reference',
+          repairSurface: 'animal',
+          severity: 'error',
+          message:
+            `${key === 'optical_fiber' ? 'Optical fiber' : 'Virus injection'} ${i + 1}` +
+            `${nonEmptyStr(item?.name) ? ` ("${item.name}")` : ''} is missing a coordinate ` +
+            `reference (e.g. "Bregma at the cortical surface"). trodes_to_nwb requires it and ` +
+            `crashes without it.`,
+        });
+      }
+    });
+  });
+
+  // Rule 3b: exactly one excitation source. trodes_to_nwb raises a ValueError when
+  // opto_excitation_source has more than one entry ("Multiple optogenetic sources are
+  // not supported"), so a 2+-source session must block export.
+  if (Array.isArray(model.opto_excitation_source) && model.opto_excitation_source.length > 1) {
+    issues.push({
+      path: 'opto_excitation_source',
+      code: 'multiple_excitation_sources',
+      repairSurface: 'animal',
+      severity: 'error',
+      message:
+        `${model.opto_excitation_source.length} optogenetic excitation sources are defined, ` +
+        `but trodes_to_nwb supports exactly one (it raises an error on more). Keep a single ` +
+        `opto_excitation_source.`
     });
   }
 
@@ -768,6 +825,117 @@ export const rulesValidation = (model) => {
           message:
             `Associated file ${fi + 1}${file.name ? ` ("${file.name}")` : ''} references task ` +
             `epoch ${epoch}, which no task defines. Point it at an existing epoch or remove it.`,
+        });
+      }
+    });
+  }
+
+  // Rule 15c: fs_gui_yamls reference integrity (optogenetics, day-level). Each FsGUI
+  // protocol's `camera_id` must reference an existing camera and each of its `epochs`
+  // must match a task epoch — otherwise conversion CRASHES or silently corrupts: an
+  // out-of-range epoch is an IndexError into the epochs table (an in-range WRONG epoch
+  // silently aliases another epoch's start/stop times), and a missing camera raises a
+  // ValueError (the converter reads camera only for speed/spatial-filter protocols). The
+  // editor constrains NEW edits to controlled choices, but an imported/stale value (a
+  // deleted camera, a renumbered epoch) is only caught here.
+  if (Array.isArray(model.fs_gui_yamls) && model.fs_gui_yamls.length > 0) {
+    const validCameraIdSet = Array.isArray(model.cameras)
+      ? new Set(model.cameras.map((c) => c?.id).filter((id) => id !== undefined && id !== null))
+      : new Set();
+    const taskEpochSet = new Set();
+    (Array.isArray(model.tasks) ? model.tasks : []).forEach((task) => {
+      (Array.isArray(task?.task_epochs) ? task.task_epochs : []).forEach((e) => {
+        if (e !== undefined && e !== null) taskEpochSet.add(e);
+      });
+    });
+    // Behavioral-event names the FsGUI dio_output_name can point at (the converter
+    // indexes nwbfile...behavioral_events[dio_output_name], a KeyError on a miss).
+    const behavioralEventNames = new Set(
+      (Array.isArray(model.behavioral_events) ? model.behavioral_events : [])
+        .map((e) => e?.name)
+        .filter((n) => typeof n === 'string' && n !== '')
+    );
+
+    // FsGUI epochs make the converter call add_optogenetic_epochs, which dereferences the
+    // optogenetics lab metadata that add_optogenetics only writes when the all-or-nothing
+    // gate passed. So FsGUI rows REQUIRE a complete optogenetics configuration — otherwise
+    // conversion crashes (KeyError on optogenetic_experiment_metadata). This also catches
+    // a stale fs_gui block left behind after optogenetics was turned off.
+    const optoComplete =
+      model.opto_excitation_source?.length > 0 &&
+      model.optical_fiber?.length > 0 &&
+      model.virus_injection?.length > 0 &&
+      typeof model.optogenetic_stimulation_software === 'string' &&
+      model.optogenetic_stimulation_software.trim() !== '';
+    if (!optoComplete) {
+      issues.push({
+        path: 'fs_gui_yamls',
+        field: 'fs_gui_yamls',
+        step: 'epochs',
+        actionLabel: 'Complete or remove FsGUI',
+        code: 'fs_gui_requires_optogenetics',
+        repairSurface: 'day',
+        severity: 'error',
+        message:
+          `FsGUI optogenetics protocols are present, but the animal's optogenetics ` +
+          `configuration is incomplete (or off). trodes_to_nwb crashes converting FsGUI ` +
+          `protocols without the full optogenetics implant metadata. Complete optogenetics ` +
+          `in the Animal Editor, or remove these FsGUI protocols.`,
+      });
+    }
+
+    model.fs_gui_yamls.forEach((fsGui, fi) => {
+      const cid = fsGui?.camera_id;
+      // Blank/empty camera_id is an incomplete row owned by the schema required check.
+      if (cid !== undefined && cid !== null && cid !== '' && !validCameraIdSet.has(cid)) {
+        issues.push({
+          path: `fs_gui_yamls[${fi}].camera_id`,
+          field: 'camera_id',
+          step: 'epochs',
+          actionLabel: 'Fix FsGUI camera',
+          code: 'dangling_camera_ref',
+          repairSurface: 'day',
+          severity: 'error',
+          message:
+            `FsGUI protocol ${fi + 1}${fsGui.name ? ` ("${fsGui.name}")` : ''} references camera id ` +
+            `${cid}, but no camera with that id is defined. Pick an existing camera or restore it.`,
+        });
+      }
+
+      (Array.isArray(fsGui?.epochs) ? fsGui.epochs : []).forEach((epoch) => {
+        if (epoch === undefined || epoch === null || epoch === '') return;
+        if (!taskEpochSet.has(epoch)) {
+          issues.push({
+            path: `fs_gui_yamls[${fi}].epochs`,
+            field: 'epochs',
+            step: 'epochs',
+            actionLabel: 'Fix FsGUI epochs',
+            code: 'orphaned_fs_gui_epoch',
+            repairSurface: 'day',
+            severity: 'error',
+            message:
+              `FsGUI protocol ${fi + 1}${fsGui.name ? ` ("${fsGui.name}")` : ''} references task epoch ` +
+              `${epoch}, which no task defines. Point it at an existing epoch or remove it.`,
+          });
+        }
+      });
+
+      // dio_output_name must name an existing behavioral (DIO) event — the converter
+      // indexes behavioral_events by it. A blank value is owned by the schema required check.
+      const dio = fsGui?.dio_output_name;
+      if (typeof dio === 'string' && dio.trim() !== '' && !behavioralEventNames.has(dio)) {
+        issues.push({
+          path: `fs_gui_yamls[${fi}].dio_output_name`,
+          field: 'dio_output_name',
+          step: 'epochs',
+          actionLabel: 'Fix FsGUI DIO output',
+          code: 'dangling_dio_output',
+          repairSurface: 'day',
+          severity: 'error',
+          message:
+            `FsGUI protocol ${fi + 1}${fsGui.name ? ` ("${fsGui.name}")` : ''} uses DIO output ` +
+            `"${dio}", which no behavioral event defines. trodes_to_nwb looks up the behavioral ` +
+            `event by this name and fails if it is missing — use an existing behavioral event name.`,
         });
       }
     });

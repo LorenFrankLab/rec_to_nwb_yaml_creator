@@ -38,8 +38,12 @@ describe('rulesValidation()', () => {
     it('should return empty array when all optogenetics fields present', () => {
       const model = createTestYaml({
         opto_excitation_source: [{ opto_excitation_source_name: 'LED' }],
-        optical_fiber: [{ fiber_model_number: 'FiberX' }],
-        virus_injection: [{ virus_name: 'AAV' }]
+        // Fibers/virus injections need a coordinate `reference` (the converter reads it).
+        optical_fiber: [{ fiber_model_number: 'FiberX', reference: 'Bregma' }],
+        virus_injection: [{ virus_name: 'AAV', reference: 'Bregma' }],
+        // The converter gate also requires the software key; a complete opto session
+        // carries all four sections.
+        optogenetic_stimulation_software: 'fsgui',
       });
       const issues = rulesValidation(model);
 
@@ -300,18 +304,181 @@ describe('rulesValidation()', () => {
       expect(optoIssue.message).toContain('✗'); // Missing field
     });
 
-    it('should not error when all three fields present', () => {
+    it('should not error when all four converter-required sections present', () => {
+      // The converter gate requires optogenetic_stimulation_software too, so a complete
+      // opto session needs all FOUR sections — not three.
       const model = createTestYaml({
         opto_excitation_source: [{ opto_excitation_source_name: 'LED' }],
         optical_fiber: [{ fiber_model_number: 'FiberX' }],
-        virus_injection: [{ virus_name: 'AAV' }]
+        virus_injection: [{ virus_name: 'AAV' }],
+        optogenetic_stimulation_software: 'fsgui',
       });
       const issues = rulesValidation(model);
 
       expect(issues.some(i => i.code === 'partial_configuration')).toBe(false);
     });
 
-    it('should not error when all three fields absent', () => {
+    it('should error when the three sections are present but software is missing', () => {
+      // trodes_to_nwb gates opto on optogenetic_stimulation_software being non-empty too;
+      // omitting it silently drops the whole optogenetics block.
+      const model = createTestYaml({
+        opto_excitation_source: [{ opto_excitation_source_name: 'LED' }],
+        optical_fiber: [{ fiber_model_number: 'FiberX' }],
+        virus_injection: [{ virus_name: 'AAV' }],
+        optogenetic_stimulation_software: '',
+      });
+      const issues = rulesValidation(model);
+
+      expect(issues).toContainEqual(expect.objectContaining({
+        path: 'optogenetics',
+        code: 'partial_configuration',
+        severity: 'error',
+      }));
+    });
+
+    it('should error when more than one excitation source is defined', () => {
+      // trodes_to_nwb raises a ValueError on >1 opto_excitation_source.
+      const model = createTestYaml({
+        opto_excitation_source: [
+          { opto_excitation_source_name: 'LED-1' },
+          { opto_excitation_source_name: 'LED-2' },
+        ],
+        optical_fiber: [{ fiber_model_number: 'FiberX' }],
+        virus_injection: [{ virus_name: 'AAV' }],
+        optogenetic_stimulation_software: 'fsgui',
+      });
+      const issues = rulesValidation(model);
+
+      expect(issues).toContainEqual(expect.objectContaining({
+        path: 'opto_excitation_source',
+        code: 'multiple_excitation_sources',
+        severity: 'error',
+      }));
+    });
+
+    it('errors on an fs_gui_yamls camera_id that no camera defines (dangling ref)', () => {
+      const model = {
+        cameras: [{ id: 0 }],
+        tasks: [{ task_name: 't', task_epochs: [1] }],
+        fs_gui_yamls: [{ name: 'p.yaml', epochs: [1], camera_id: 42 }],
+      };
+      const issues = rulesValidation(model);
+
+      expect(issues).toContainEqual(expect.objectContaining({
+        code: 'dangling_camera_ref',
+        path: expect.stringContaining('fs_gui_yamls'),
+        severity: 'error',
+      }));
+    });
+
+    it('errors on an fs_gui_yamls epoch that no task defines (orphaned epoch)', () => {
+      const model = {
+        cameras: [{ id: 0 }],
+        tasks: [{ task_name: 't', task_epochs: [1] }],
+        fs_gui_yamls: [{ name: 'p.yaml', epochs: [99], camera_id: 0 }],
+      };
+      const issues = rulesValidation(model);
+
+      expect(issues).toContainEqual(expect.objectContaining({
+        code: 'orphaned_fs_gui_epoch',
+        path: expect.stringContaining('fs_gui_yamls'),
+        severity: 'error',
+      }));
+    });
+
+    it('passes for fs_gui_yamls with valid camera + epoch references', () => {
+      const model = {
+        cameras: [{ id: 0 }],
+        tasks: [{ task_name: 't', task_epochs: [1, 2] }],
+        fs_gui_yamls: [{ name: 'p.yaml', epochs: [1, 2], camera_id: 0 }],
+      };
+      const issues = rulesValidation(model);
+
+      expect(issues.some(i => i.code === 'dangling_camera_ref')).toBe(false);
+      expect(issues.some(i => i.code === 'orphaned_fs_gui_epoch')).toBe(false);
+    });
+
+    it('errors when an optical_fiber lacks a reference (converter reads it unconditionally)', () => {
+      const model = {
+        opto_excitation_source: [{ name: 'LED' }],
+        optical_fiber: [{ name: 'F' }], // no reference
+        virus_injection: [{ name: 'V', reference: 'Bregma' }],
+        optogenetic_stimulation_software: 'fsgui',
+      };
+      const issues = rulesValidation(model);
+      expect(issues).toContainEqual(expect.objectContaining({
+        code: 'missing_opto_reference',
+        path: expect.stringContaining('optical_fiber'),
+        severity: 'error',
+      }));
+    });
+
+    it('errors when a virus_injection lacks a reference', () => {
+      const model = {
+        opto_excitation_source: [{ name: 'LED' }],
+        optical_fiber: [{ name: 'F', reference: 'Bregma' }],
+        virus_injection: [{ name: 'V' }], // no reference
+        optogenetic_stimulation_software: 'fsgui',
+      };
+      const issues = rulesValidation(model);
+      expect(issues).toContainEqual(expect.objectContaining({
+        code: 'missing_opto_reference',
+        path: expect.stringContaining('virus_injection'),
+      }));
+    });
+
+    it('errors when fs_gui_yamls exist but optogenetics is not fully configured', () => {
+      // FsGUI epochs make the converter call add_optogenetic_epochs, which crashes if the
+      // opto implant metadata (the all-or-nothing gate) was not written.
+      const model = {
+        cameras: [{ id: 0 }],
+        tasks: [{ task_name: 't', task_epochs: [1] }],
+        behavioral_events: [{ name: 'laser' }],
+        fs_gui_yamls: [{ name: 'p.yaml', epochs: [1], camera_id: 0, dio_output_name: 'laser' }],
+        // No opto sections → opto is off, but fs_gui rows exist.
+      };
+      const issues = rulesValidation(model);
+      expect(issues).toContainEqual(expect.objectContaining({
+        code: 'fs_gui_requires_optogenetics',
+        severity: 'error',
+      }));
+    });
+
+    it('errors when fs_gui dio_output_name has no matching behavioral event', () => {
+      const model = {
+        cameras: [{ id: 0 }],
+        tasks: [{ task_name: 't', task_epochs: [1] }],
+        behavioral_events: [{ name: 'reward_left' }],
+        opto_excitation_source: [{ name: 'LED' }],
+        optical_fiber: [{ name: 'F', reference: 'Bregma' }],
+        virus_injection: [{ name: 'V', reference: 'Bregma' }],
+        optogenetic_stimulation_software: 'fsgui',
+        fs_gui_yamls: [{ name: 'p.yaml', epochs: [1], camera_id: 0, dio_output_name: 'nope' }],
+      };
+      const issues = rulesValidation(model);
+      expect(issues).toContainEqual(expect.objectContaining({
+        code: 'dangling_dio_output',
+        path: expect.stringContaining('fs_gui_yamls'),
+        severity: 'error',
+      }));
+    });
+
+    it('accepts a complete opto + fs_gui session with valid references and dio name', () => {
+      const model = {
+        cameras: [{ id: 0 }],
+        tasks: [{ task_name: 't', task_epochs: [1] }],
+        behavioral_events: [{ name: 'laser' }],
+        opto_excitation_source: [{ name: 'LED' }],
+        optical_fiber: [{ name: 'F', reference: 'Bregma' }],
+        virus_injection: [{ name: 'V', reference: 'Bregma' }],
+        optogenetic_stimulation_software: 'fsgui',
+        fs_gui_yamls: [{ name: 'p.yaml', epochs: [1], camera_id: 0, dio_output_name: 'laser' }],
+      };
+      const issues = rulesValidation(model);
+      expect(issues.some(i => ['missing_opto_reference', 'fs_gui_requires_optogenetics', 'dangling_dio_output'].includes(i.code))).toBe(false);
+    });
+
+    it('should not error when all four fields absent', () => {
       const model = createTestYaml({
         opto_excitation_source: undefined,
         optical_fiber: undefined,

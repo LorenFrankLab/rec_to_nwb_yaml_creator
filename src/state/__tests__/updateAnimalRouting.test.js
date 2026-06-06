@@ -81,6 +81,29 @@ describe('updateAnimal routes animal-level Hardware Config fields', () => {
 
     expect(animalOf(result, animalId).behavioral_events).toEqual(events);
   });
+
+  it('sets and then CLEARS animal.optogenetics (disabling opto removes it entirely)', () => {
+    const { workspace, animalId } = makeWorkspace();
+    const { result } = renderHook(() => useStore({ workspace }));
+
+    const opto = {
+      opto_excitation_source: [{ name: 'LED-470' }],
+      optical_fiber: [],
+      virus_injection: [],
+      optogenetic_stimulation_software: 'fsgui',
+    };
+    act(() => {
+      result.current.actions.updateAnimal(animalId, { optogenetics: opto });
+    });
+    expect(animalOf(result, animalId).optogenetics).toEqual(opto);
+
+    // Disabling opto passes an explicit null; it must clear the block, not be ignored
+    // (the merge reads `animal.optogenetics || null`, so null === no opto exported).
+    act(() => {
+      result.current.actions.updateAnimal(animalId, { optogenetics: null });
+    });
+    expect(animalOf(result, animalId).optogenetics).toBeNull();
+  });
 });
 
 describe('createDay seeds day.technical from animal.technicalDefaults', () => {

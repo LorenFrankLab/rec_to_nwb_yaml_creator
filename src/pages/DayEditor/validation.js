@@ -616,6 +616,12 @@ export function stepIdForIssue(issue) {
   if (path.includes('session') || path.includes('subject') || path.includes('experimenter') || path.includes('lab') || path.includes('institution') || path.includes('experiment_description')) {
     return 'overview';
   }
+  // FsGUI protocols are rendered in the Epochs step — route their schema errors there
+  // BEFORE the camera/device check below (a `fs_gui_yamls[].camera_id` path contains
+  // "camera" and would otherwise mis-route to Devices).
+  if (path.includes('fs_gui')) {
+    return 'epochs';
+  }
   // Device-related fields → Devices
   if (
     path.includes('electrode') ||
@@ -701,6 +707,7 @@ export const SURFACE_BY_CODE = {
   duplicate_task_epoch: 'day',
   orphaned_video: 'day',
   orphaned_file: 'day',
+  orphaned_fs_gui_epoch: 'day',
   divergent_task_identity: 'day',
   bad_channel_out_of_range: 'day',
   multishank_bad_channels_ignored: 'day',
@@ -713,7 +720,10 @@ export const SURFACE_BY_CODE = {
   malformed_animal_collection: 'animal',
   missing_configuration_history: 'animal',
   missing_camera: 'day',
-  partial_configuration: 'day',
+  // Optogenetics sections live on the Animal Editor's Optogenetics step (the rule also
+  // sets repairSurface:'animal' explicitly; this keeps the authoritative table in sync).
+  partial_configuration: 'animal',
+  multiple_excitation_sources: 'animal',
   // No editable in-app target — read-only identity (slash ids). The explanatory
   // message states the remedy (recreate the animal); a "Fix in …" button would
   // dead-end on a disabled control.
@@ -771,6 +781,17 @@ function deriveSurfaceFromPath(issue) {
     return 'day';
   }
 
+  // FsGUI protocols are DAY-level (epochs + camera refs live on the day). Route their
+  // schema errors to the Day Editor — and BEFORE the camera check below, since a
+  // `fs_gui_yamls[].camera_id` path contains "camera".
+  if (path.includes('fs_gui')) return 'day';
+
+  // Animal-level optogenetics sections (excitation source, optical fiber, virus injection,
+  // software) are edited in the Animal Editor's Optogenetics step.
+  if (path.includes('opto') || path.includes('virus') || path.includes('fiber')) {
+    return 'animal';
+  }
+
   // Animal-Editor-owned domains: electrode geometry, channel maps, cameras, data-acq devices.
   if (
     path.includes('electrode') ||
@@ -799,7 +820,8 @@ function deriveSurfaceFromPath(issue) {
 export const ANIMAL_EDITOR_STEPS = [
   { index: 0, label: 'Electrode Groups' },
   { index: 1, label: 'Channel Maps' },
-  { index: 2, label: 'Hardware Config' },
+  { index: 2, label: 'Optogenetics' },
+  { index: 3, label: 'Hardware Config' },
 ];
 
 /**
@@ -822,6 +844,12 @@ export function animalEditorStepForFieldPath(fieldPath) {
   // step (the configurationHistory rebuild control is rendered in its corruption banner), so
   // their repairs deep-link there rather than defaulting to Electrode Groups.
   if (path.includes('camera') || path.includes('data_acq') || path.includes('configurationHistory')) {
+    return ANIMAL_EDITOR_STEPS[3];
+  }
+  // Animal-level optogenetics sections (excitation source, optical fiber, virus injection,
+  // software) live on the Optogenetics step. fs_gui paths are day-level and route to the
+  // Day Editor (a different surface), not here.
+  if (path.includes('opto') || path.includes('virus') || path.includes('fiber')) {
     return ANIMAL_EDITOR_STEPS[2];
   }
   // electrode geometry/identity + bare keyword paths (device_type/location/targeted_*).
