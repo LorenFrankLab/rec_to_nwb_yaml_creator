@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
   generateDayId,
-  formatExperimentDate,
   getCurrentTimestamp,
   getCurrentDate,
   createDefaultWorkspace,
@@ -10,15 +9,20 @@ import { FLAGS } from '../featureFlags';
 import { loadWorkspace, saveWorkspace, clearWorkspace } from './persistence';
 import {
   getAnimalDayIds,
-  getAnimalDevices,
   getConfigHistory,
 } from './workspaceSelectors';
 import {
-  normalizeDeviceOverrides,
   normalizeDevices,
-  normalizeProbeConfigDevices,
   normalizeWorkspaceDevices,
 } from '../utils/deviceNormalization';
+import {
+  applyAnimalUpdates,
+  addConfigurationSnapshotToAnimal,
+  applyConfigurationForwardToAnimal,
+  rebuildConfigurationHistoryForAnimal,
+  createDayRecord,
+  applyDayUpdates,
+} from './workspaceTransitions';
 
 /**
  * Owns the workspace slice of the store: multi-animal/day state, its localStorage
@@ -215,69 +219,9 @@ export function useWorkspace(initialState = null) {
             throw new Error(`Animal "${animalId}" not found`);
           }
 
-          const animal = prev.animals[animalId];
-          const updated = structuredClone(animal);
-
-          // Apply updates (deep merge for nested objects)
-          if (updates.subject) {
-            updated.subject = { ...updated.subject, ...updates.subject };
-          }
-          if (updates.experimenters) {
-            updated.experimenters = { ...updated.experimenters, ...updates.experimenters };
-          }
-          if (updates.devices) {
-            updated.devices = normalizeDevices({ ...getAnimalDevices(updated), ...updates.devices });
-            // `animal.devices` is the editor's mirror of the LATEST configuration
-            // snapshot, which is the authoritative source the export resolves. Write
-            // the edit into that snapshot too, so probes configured after animal
-            // creation actually reach `resolveDayConfig` (otherwise the day exports
-            // empty electrode_groups). Reconfiguration forks a new latest version
-            // BEFORE editing, so this only ever rewrites the current latest — never a
-            // historical, frozen snapshot.
-            const history = getConfigHistory(updated);
-            if (history.length > 0) {
-              const latest = history[history.length - 1];
-              latest.devices = {
-                ...latest.devices,
-                electrode_groups: structuredClone(updated.devices.electrode_groups),
-                ntrode_electrode_group_channel_map: structuredClone(
-                  updated.devices.ntrode_electrode_group_channel_map
-                ),
-              };
-            }
-          }
-          if (updates.cameras) {
-            updated.cameras = updates.cameras;
-          }
-          // Data-acq hardware is an animal-level device. The export reads
-          // `animal.devices.data_acq_device`, so route the update there (a write to a
-          // top-level `data_acq_device` would never reach the export).
-          if (updates.data_acq_device) {
-            updated.devices = normalizeDevices({
-              ...getAnimalDevices(updated),
-              data_acq_device: updates.data_acq_device,
-            });
-          }
-          // Animal-level technical DEFAULTS only (seeded into each day's `technical` at
-          // createDay and overridable per day). These are never exported directly — the
-          // exported values live on `day.technical` — so there is no `animal.technical`.
-          if (updates.technicalDefaults) {
-            updated.technicalDefaults = { ...updated.technicalDefaults, ...updates.technicalDefaults };
-          }
-          // Animal-level behavioral events are an editable reference; the exported
-          // source is the day's `behavioral_events`. Persist them so the editor and the
-          // model agree (previously this write was silently dropped).
-          if (updates.behavioral_events) {
-            updated.behavioral_events = updates.behavioral_events;
-          }
-          // Use `!== undefined` (not truthiness) so an explicit `null` CLEARS the
-          // optogenetics block — that is how the editor disables opto, and the export
-          // reads `animal.optogenetics || null`, so a cleared block means no opto.
-          if (updates.optogenetics !== undefined) {
-            updated.optogenetics = updates.optogenetics;
-          }
-
-          updated.lastModified = getCurrentTimestamp();
+          // Pure transition: applies the updates and mirrors a `devices` edit into the
+          // latest configuration snapshot (see workspaceTransitions.applyAnimalUpdates).
+          const updated = applyAnimalUpdates(prev.animals[animalId], updates, getCurrentTimestamp());
 
           return {
             ...prev,
@@ -351,20 +295,11 @@ export function useWorkspace(initialState = null) {
             throw new Error(`Animal "${animalId}" not found`);
           }
 
-          const animal = prev.animals[animalId];
-          const updated = structuredClone(animal);
-          const history = getConfigHistory(updated);
-
-          const newVersion = {
-            version: history.length + 1,
-            date: config.date,
-            description: config.description,
-            devices: normalizeProbeConfigDevices(config.devices),
-            appliedToDays: [],
-          };
-
-          updated.configurationHistory = [...history, newVersion];
-          updated.lastModified = getCurrentTimestamp();
+          const updated = addConfigurationSnapshotToAnimal(
+            prev.animals[animalId],
+            config,
+            getCurrentTimestamp()
+          );
 
           return {
             ...prev,
@@ -398,49 +333,22 @@ export function useWorkspace(initialState = null) {
             throw new Error(`Animal "${animalId}" not found`);
           }
 
-          const animal = structuredClone(prev.animals[animalId]);
-          const history = getConfigHistory(animal);
-          const target = history.find((s) => s.version === snapshotVersion);
-          if (!target) {
-            throw new Error(
-              `Configuration version "${snapshotVersion}" not found for animal "${animalId}"`
-            );
-          }
-
           const now = getCurrentTimestamp();
-          // Only real, deduped days move — a day id not in the workspace must never
-          // leak into appliedToDays (which would pollute the usage view).
-          const validDayIds = [...new Set(dayIds)].filter((id) => prev.days[id]);
-          const moving = new Set(validDayIds);
-
-          // (3) Remove the moving days from EVERY snapshot's list first, so the
-          // result is a clean partition regardless of stale stored lists.
-          history.forEach((snapshot) => {
-            snapshot.appliedToDays = (snapshot.appliedToDays || []).filter((id) => !moving.has(id));
-          });
-          // (2) Add them to the target snapshot's list (dedup, stable order).
-          target.appliedToDays = [
-            ...target.appliedToDays.filter((id) => !moving.has(id)),
-            ...validDayIds,
-          ];
-          animal.configurationHistory = history;
-
-          // (1) Point each listed day at the target version.
-          const updatedDays = { ...prev.days };
-          validDayIds.forEach((dayId) => {
-            updatedDays[dayId] = {
-              ...structuredClone(prev.days[dayId]),
-              configurationVersion: snapshotVersion,
-              lastModified: now,
-            };
-          });
-
-          animal.lastModified = now;
+          // Pure transition: moves the days onto the version and keeps appliedToDays a
+          // clean partition (see workspaceTransitions.applyConfigurationForwardToAnimal).
+          // Throws if the snapshot version does not exist (same timing as before).
+          const { animal, days } = applyConfigurationForwardToAnimal(
+            prev.animals[animalId],
+            prev.days,
+            snapshotVersion,
+            dayIds,
+            now
+          );
 
           return {
             ...prev,
             animals: { ...prev.animals, [animalId]: animal },
-            days: updatedDays,
+            days,
             lastModified: now,
           };
         });
@@ -468,30 +376,14 @@ export function useWorkspace(initialState = null) {
         setWorkspace((prev) => {
           if (!prev.animals[animalId]) return prev;
 
-          const animal = prev.animals[animalId];
-          const updated = structuredClone(animal);
-          const devices = getAnimalDevices(updated);
           const now = getCurrentTimestamp();
-
-          updated.configurationHistory = [
-            {
-              version: 1,
-              date: getCurrentDate(),
-              description: 'Rebuilt configuration',
-              devices: {
-                electrode_groups: structuredClone(
-                  Array.isArray(devices.electrode_groups) ? devices.electrode_groups : []
-                ),
-                ntrode_electrode_group_channel_map: structuredClone(
-                  Array.isArray(devices.ntrode_electrode_group_channel_map)
-                    ? devices.ntrode_electrode_group_channel_map
-                    : []
-                ),
-              },
-              appliedToDays: [],
-            },
-          ];
-          updated.lastModified = now;
+          // Pure transition: rebuilds history to a single v1 snapshot from current devices
+          // (see workspaceTransitions.rebuildConfigurationHistoryForAnimal).
+          const updated = rebuildConfigurationHistoryForAnimal(
+            prev.animals[animalId],
+            now,
+            getCurrentDate()
+          );
 
           return {
             ...prev,
@@ -524,40 +416,9 @@ export function useWorkspace(initialState = null) {
           const animal = prev.animals[animalId];
           const now = getCurrentTimestamp();
 
-          const day = {
-            id: dayId,
-            animalId,
-            date,
-            experimentDate: formatExperimentDate(date),
-            session: {
-              session_id: session.session_id,
-              session_description: session.session_description,
-              experiment_description: session.experiment_description,
-              weight: session.weight,
-            },
-            keywords: [],
-            tasks: [],
-            behavioral_events: [],
-            associated_files: [],
-            associated_video_files: [],
-            technical: {
-              // Seeded from the animal's technical DEFAULTS (the rig is constant per
-              // animal but occasionally varies per day, so these are overridable on the
-              // day). Falls back to the standard values when no defaults are set.
-              times_period_multiplier: animal.technicalDefaults?.times_period_multiplier ?? 1.5,
-              raw_data_to_volts: animal.technicalDefaults?.raw_data_to_volts ?? 0.195,
-              default_header_file_path: '',
-              units: undefined,
-            },
-            state: {
-              draft: true,
-              validated: false,
-              exported: false,
-            },
-            created: now,
-            lastModified: now,
-            configurationVersion: getConfigHistory(animal).length, // Latest version
-          };
+          // Pure transition: builds the day pinned to the latest configuration version,
+          // technical seeded from the animal defaults (see workspaceTransitions.createDayRecord).
+          const day = createDayRecord(animal, animalId, dayId, date, session, now);
 
           const updatedAnimal = { ...animal, days: [...getAnimalDayIds(animal), dayId] };
 
@@ -589,65 +450,9 @@ export function useWorkspace(initialState = null) {
             throw new Error(`Day "${dayId}" not found`);
           }
 
-          const day = prev.days[dayId];
-          const updated = structuredClone(day);
-
-          // Apply updates (deep merge for nested objects). Guard the CURRENT session to a
-          // record before spreading: a corrupt import can persist `session` as a scalar/array,
-          // and `{...'corrupt'}` would scatter char-indexed keys into the record. The
-          // resetDaySession repair relies on this to write a clean session over a malformed one.
-          if (updates.session) {
-            const currentSession =
-              updated.session !== null &&
-              typeof updated.session === 'object' &&
-              !Array.isArray(updated.session)
-                ? updated.session
-                : {};
-            updated.session = { ...currentSession, ...updates.session };
-          }
-          if (updates.tasks !== undefined) {
-            updated.tasks = updates.tasks;
-          }
-          if (updates.behavioral_events !== undefined) {
-            updated.behavioral_events = updates.behavioral_events;
-          }
-          if (updates.associated_files !== undefined) {
-            updated.associated_files = updates.associated_files;
-          }
-          if (updates.associated_video_files !== undefined) {
-            updated.associated_video_files = updates.associated_video_files;
-          }
-          // FsGUI protocol files are a day-owned collection the export merge reads
-          // (workspaceUtils `mergeDayMetadata`). Without this branch a write — including
-          // the raw-shape `resetDayCollection` repair — would be silently dropped, so the
-          // corruption it is meant to clear would persist.
-          if (updates.fs_gui_yamls !== undefined) {
-            updated.fs_gui_yamls = updates.fs_gui_yamls;
-          }
-          if (updates.technical) {
-            updated.technical = { ...updated.technical, ...updates.technical };
-          }
-          if (updates.deviceOverrides) {
-            updated.deviceOverrides = normalizeDeviceOverrides(updates.deviceOverrides);
-          }
-          if (updates.state) {
-            updated.state = { ...updated.state, ...updates.state };
-          }
-          // Probe-reconfiguration: point this day at a different configuration
-          // snapshot version. NOTE: setting it here does NOT reconcile snapshots'
-          // `appliedToDays` — use applyConfigurationForward (which the reconfig wizard
-          // calls) when the stored partition must stay in sync; `reconcileAppliedToDays`
-          // derives the trustworthy view from each day's version regardless.
-          if (updates.configurationVersion !== undefined) {
-            updated.configurationVersion = updates.configurationVersion;
-          }
-          // Day-level keywords (written by the Overview keywords editor through the
-          // stepper). Without this branch the user's keywords are silently dropped.
-          if (updates.keywords !== undefined) {
-            updated.keywords = updates.keywords;
-          }
-
-          updated.lastModified = getCurrentTimestamp();
+          // Pure transition: applies the updates, guarding a malformed nested session
+          // (see workspaceTransitions.applyDayUpdates).
+          const updated = applyDayUpdates(prev.days[dayId], updates, getCurrentTimestamp());
 
           return {
             ...prev,
