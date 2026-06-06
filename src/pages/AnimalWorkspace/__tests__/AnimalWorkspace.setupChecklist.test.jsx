@@ -125,6 +125,20 @@ describe('AnimalWorkspace existing-data review state', () => {
     expect(screen.queryByRole('region', { name: /existing data review/i })).not.toBeInTheDocument();
   });
 
+  it('surfaces a corrupt (non-array) recording-day list instead of laundering it to "no days"', async () => {
+    // A recovered animal whose `days` is a string, not a list.
+    const corrupt = { ...newAnimal, days: 'nope' };
+    renderWith({ newbie: corrupt });
+    await selectAnimal('newbie');
+
+    // The review state appears and explains the corrupt day reference (not "no recording days").
+    const review = screen.getByRole('region', { name: /existing data review/i });
+    expect(within(review).getByText(/recording-day list is corrupt/i)).toBeInTheDocument();
+    // The day-list area says "corrupt", not the misleading "No recording days yet".
+    expect(screen.getByText(/recording-day list is corrupt and can.?t be shown/i)).toBeInTheDocument();
+    expect(screen.queryByText(/no recording days yet/i)).not.toBeInTheDocument();
+  });
+
   it('folds a per-day setup-validation error into the checklist item (not just raw corruption)', async () => {
     // A real setup error (an unknown probe device_type) surfaces only by validating the day's
     // merged metadata; the workspace must aggregate it so the Electrodes item badges has_errors.

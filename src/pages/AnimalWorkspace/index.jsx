@@ -98,6 +98,11 @@ export function AnimalWorkspace() {
   const hasAnimals = animalIds.length > 0;
 
   const selectedAnimal = selectedAnimalId ? animals[selectedAnimalId] : null;
+  // A recovered/imported animal can carry a malformed (non-array) `days`. `getAnimalDayIds`
+  // safely reads it as [], so without this explicit flag the workspace would launder it to
+  // "No recording days yet" and hide the problem. Surface it as a corrupt-reference state.
+  const selectedDaysCorrupt =
+    !!selectedAnimal && selectedAnimal.days != null && !Array.isArray(selectedAnimal.days);
 
   // On mount, select an animal so the setup/review state is visible immediately rather than
   // one click hidden: honor an explicit `?animal=<id>`; with no param, auto-select the SOLE
@@ -287,8 +292,9 @@ export function AnimalWorkspace() {
                   const configCount = getConfigHistory(selectedAnimal).length;
                   // Existing data needs an explicit review state: recovered/imported setup must
                   // not look silently trusted. Show it once there ARE recording days to export,
-                  // or whenever raw-shape corruption is present.
-                  const showReview = dayCount > 0 || rawIssues.length > 0;
+                  // or whenever raw-shape corruption OR a corrupt days reference is present.
+                  const hasCorruption = rawIssues.length > 0 || selectedDaysCorrupt;
+                  const showReview = dayCount > 0 || hasCorruption;
                   return (
                     <>
                       <section className="setup-checklist" aria-label="Animal setup">
@@ -327,7 +333,7 @@ export function AnimalWorkspace() {
 
                       {showReview && (
                         <section
-                          className={`existing-data-review ${rawIssues.length > 0 ? 'existing-data-review-corrupt' : ''}`}
+                          className={`existing-data-review ${hasCorruption ? 'existing-data-review-corrupt' : ''}`}
                           aria-label="Existing data review"
                         >
                           <h3 className="existing-data-review-heading">Review existing data</h3>
@@ -335,10 +341,21 @@ export function AnimalWorkspace() {
                             Found {dayCount} recording {dayCount === 1 ? 'day' : 'days'} and{' '}
                             {configCount} hardware {configCount === 1 ? 'configuration' : 'configurations'} for{' '}
                             {selectedAnimal.id}.{' '}
-                            {rawIssues.length > 0
-                              ? 'Some saved data is corrupt — repair it below before exporting.'
+                            {hasCorruption
+                              ? 'Some saved data is corrupt — resolve it before exporting.'
                               : 'Review electrodes and cameras before exporting to confirm they match this animal.'}
                           </p>
+                          {/* Corrupt recording-day reference: the list isn't an array, so the days
+                              can't be shown. Not folded into the day export gate (the day RECORDS
+                              are fine; only the animal's index is corrupt) — surfaced here for
+                              re-import/recreation. */}
+                          {selectedDaysCorrupt && (
+                            <p className="existing-data-review-corrupt-note" role="alert">
+                              This animal&apos;s recording-day list is corrupt (expected a list), so
+                              its recording days can&apos;t be shown. Re-import or recreate this
+                              animal&apos;s data.
+                            </p>
+                          )}
                           {/* Reuse the shipped recovery surface: executable resets for corrupt
                               animal-owned collections. Self-hides when there is no corruption. */}
                           <RawCorruptionBanner
@@ -367,7 +384,13 @@ export function AnimalWorkspace() {
                   </div>
                 )}
 
-                {getAnimalDayIds(selectedAnimal).length === 0 ? (
+                {selectedDaysCorrupt ? (
+                  /* Corrupt day reference — not an empty list. See the review state above. */
+                  <div className="empty-state">
+                    <p>This animal&apos;s recording-day list is corrupt and can&apos;t be shown.</p>
+                    <p>See &quot;Review existing data&quot; above to resolve it.</p>
+                  </div>
+                ) : getAnimalDayIds(selectedAnimal).length === 0 ? (
                   /* Empty State: No Days */
                   <div className="empty-state">
                     <p>No recording days yet.</p>

@@ -3,7 +3,8 @@
  * checklist and day readiness purely from existing validation outputs
  * (`computeStepStatus` / `validateDay`) and the shape-safe `workspaceSelectors` reads — it
  * never re-implements validation or recomputes a parallel ready/blocked. `getDayWorkflowStatus`
- * MUST derive `readyForExportPreflight` from `computeStepStatus(...).export === 'valid'`.
+ * MUST derive `readyForExportPreflight` from the SAME export gate the Export button uses —
+ * `isExportEnabled(computeStepStatus(...))` (export status + all prerequisite steps valid).
  */
 import { describe, it, expect } from 'vitest';
 import {

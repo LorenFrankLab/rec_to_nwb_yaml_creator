@@ -296,7 +296,7 @@ describe('AnimalWorkspace Component (M4) - Initial State', () => {
     });
   });
 
-  describe('Edit Devices Button', () => {
+  describe('Edit Animal Setup Button', () => {
     it('shows "Edit Animal Setup" button when animal is selected', async () => {
       const user = userEvent.setup();
 
@@ -323,7 +323,7 @@ describe('AnimalWorkspace Component (M4) - Initial State', () => {
       const animalButton = screen.getByRole('button', { name: /testanimal/i });
       await user.click(animalButton);
 
-      // Check for "Edit Devices" button/link
+      // Check for "Edit Animal Setup" button/link
       const editDevicesLink = screen.getByRole('link', { name: /edit animal setup/i });
       expect(editDevicesLink).toBeInTheDocument();
     });
@@ -354,7 +354,7 @@ describe('AnimalWorkspace Component (M4) - Initial State', () => {
       const animalButton = screen.getByRole('button', { name: /testanimal/i });
       await user.click(animalButton);
 
-      // Check the href of the "Edit Devices" button
+      // Check the href of the "Edit Animal Setup" button
       const editDevicesLink = screen.getByRole('link', { name: /edit animal setup/i });
       expect(editDevicesLink).toHaveAttribute('href', '#/animal/testanimal/editor');
     });
@@ -381,7 +381,7 @@ describe('AnimalWorkspace Component (M4) - Initial State', () => {
       );
 
       // No animal selected yet
-      // Check that "Edit Devices" button/link is not present
+      // Check that "Edit Animal Setup" button/link is not present
       const editDevicesLink = screen.queryByRole('link', { name: /edit animal setup/i });
       expect(editDevicesLink).not.toBeInTheDocument();
     });

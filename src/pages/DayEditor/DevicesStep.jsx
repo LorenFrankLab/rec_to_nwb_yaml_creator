@@ -471,11 +471,13 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
                     version before exporting.
                   </span>
                   {/* Repairable: assign an existing configuration version to this day. The
-                      data-field-path anchors the export gate's "Fix in Devices" repair focus. */}
-                  <div className="config-version-pin" data-field-path="configurationVersion">
+                      data-field-path is on the focusable <select> (not the wrapper) so the export
+                      gate's "Fix in Devices" repair-focus actually moves keyboard/SR focus here. */}
+                  <div className="config-version-pin">
                     <label htmlFor="pin-config-version">Pin this day to:</label>
                     <select
                       id="pin-config-version"
+                      data-field-path="configurationVersion"
                       value={pinVersion}
                       onChange={(e) => setPinVersion(e.target.value)}
                     >

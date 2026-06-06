@@ -410,6 +410,13 @@
   color: #5d4037;
 }
 
+.existing-data-review-corrupt-note {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #c62828;
+}
+
 .existing-data-review-link {
   display: inline-block;
   margin-top: 0.5rem;
