@@ -17,11 +17,10 @@ import './ReconfigWizard.scss';
  * app pins each day to a frozen configuration snapshot. Reconfiguration therefore
  * **forks a new version before** the geometry is edited:
  *
- *   1. `addConfigurationSnapshot` clones the current latest configuration into a new
- *      version (returns its assigned number, which is applied forward verbatim).
- *   2. `applyConfigurationForward` repoints the affected day range (this day onward) to
- *      that new version.
- *   3. `animal.devices` already mirrors the new latest (the new version is a clone of
+ *   1. `createConfigurationSnapshotAndApplyForward` clones the current latest configuration
+ *      into a new version AND repoints the affected day range (this day onward) onto it, in
+ *      one atomic transition (no version handed across two actions).
+ *   2. `animal.devices` already mirrors the new latest (the new version is a clone of
  *      the old latest it mirrored), so editing geometry afterward in the Animal Editor
  *      writes only the new version — earlier days keep their frozen configuration *by
  *      construction*.
@@ -37,7 +36,7 @@ import './ReconfigWizard.scss';
  * @param {object} props.day - The day being reconfigured (the earliest day to move).
  * @param {object|null} [props.prevDay] - The chronologically previous day, or null (for the "stays pinned" note).
  * @param {object[]} props.candidateDays - This day and all chronologically later days (the apply-forward set).
- * @param {object} props.actions - Store actions: `addConfigurationSnapshot`, `applyConfigurationForward`.
+ * @param {object} props.actions - Store actions: `createConfigurationSnapshotAndApplyForward`.
  * @returns {JSX.Element|null}
  */
 export default function ReconfigWizard({
@@ -112,18 +111,20 @@ export default function ReconfigWizard({
       return;
     }
 
-    // Fork the current configuration into a new version, then move the affected range
-    // onto it. The store assigns the version from its authoritative state and returns
-    // it, so we apply forward to exactly the snapshot we just created.
-    const newVersion = actions.addConfigurationSnapshot(animal.id, {
-      date,
-      description: description.trim(),
-      devices: structuredClone(latestDevices),
-    });
-    // Apply the contiguous chronological suffix. Hardware reconfiguration is a
-    // physical change, so day X and every later candidate day move together.
+    // Fork the current configuration into a new version AND move the affected range onto it
+    // in ONE atomic transition (no version handed across two actions). Hardware
+    // reconfiguration is a physical change, so day X and every later candidate day move
+    // together (the contiguous chronological suffix).
     const orderedIds = movingDays.map((d) => d.id);
-    actions.applyConfigurationForward(animal.id, newVersion, orderedIds);
+    const newVersion = actions.createConfigurationSnapshotAndApplyForward(
+      animal.id,
+      {
+        date,
+        description: description.trim(),
+        devices: structuredClone(latestDevices),
+      },
+      orderedIds
+    );
 
     onClose();
     navigateToAnimalEditor(newVersion);
@@ -228,7 +229,6 @@ ReconfigWizard.propTypes = {
   prevDay: PropTypes.object,
   candidateDays: PropTypes.arrayOf(PropTypes.object).isRequired,
   actions: PropTypes.shape({
-    addConfigurationSnapshot: PropTypes.func.isRequired,
-    applyConfigurationForward: PropTypes.func.isRequired,
+    createConfigurationSnapshotAndApplyForward: PropTypes.func.isRequired,
   }).isRequired,
 };

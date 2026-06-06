@@ -110,14 +110,17 @@ export function nextConfigurationVersion(history) {
  * @param {object} animal - The current animal record.
  * @param {object} config - `{ date, description, devices }` for the new snapshot.
  * @param {string} now - Timestamp to stamp `lastModified`.
+ * @param {number} [version] - The version to assign. Defaults to
+ *   {@link nextConfigurationVersion}. Pass an explicit value so a caller that reserved the
+ *   version synchronously appends exactly that version (return === appended, no re-derive).
  * @returns {object} The next animal record.
  */
-export function addConfigurationSnapshotToAnimal(animal, config, now) {
+export function addConfigurationSnapshotToAnimal(animal, config, now, version) {
   const updated = structuredClone(animal);
   const history = getConfigHistory(updated);
 
   const newVersion = {
-    version: nextConfigurationVersion(history),
+    version: version ?? nextConfigurationVersion(history),
     date: config.date,
     description: config.description,
     devices: normalizeProbeConfigDevices(config.devices),
@@ -127,6 +130,30 @@ export function addConfigurationSnapshotToAnimal(animal, config, now) {
   updated.configurationHistory = [...history, newVersion];
   updated.lastModified = now;
   return updated;
+}
+
+/**
+ * Atomic reconfiguration transition: append a NEW configuration snapshot AND apply it forward
+ * to a set of days, deriving the version ONCE inside this single transition. This replaces the
+ * fragile two-step compose (create-snapshot → read returned version → apply-forward), which
+ * handed a version across two store actions and could target the wrong snapshot when the
+ * returned version was stale. The snapshot and the day pins move together, so there is no
+ * cross-action handoff to get wrong.
+ *
+ * @param {object} animal - The current animal record.
+ * @param {object} days - The full `days` map (read-only; not mutated).
+ * @param {object} config - `{ date, description, devices }` for the new snapshot.
+ * @param {string[]} dayIds - Day ids to move onto the new version.
+ * @param {string} now - Timestamp to stamp moved days + the animal.
+ * @param {number} [version] - The version to assign (defaults to {@link nextConfigurationVersion}).
+ * @returns {{ animal: object, days: object, version: number }} The next animal + days map and
+ *   the version that was created.
+ */
+export function createSnapshotAndApplyForward(animal, days, config, dayIds, now, version) {
+  const created = version ?? nextConfigurationVersion(getConfigHistory(animal));
+  const withSnapshot = addConfigurationSnapshotToAnimal(animal, config, now, created);
+  const applied = applyConfigurationForwardToAnimal(withSnapshot, days, created, dayIds, now);
+  return { animal: applied.animal, days: applied.days, version: created };
 }
 
 /**

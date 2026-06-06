@@ -50,10 +50,25 @@ existing suite plus new characterization tests.
   reversed imports and run over the real tree; verified it fails end-to-end on an injected
   reversed import.
 
-This is behavior-preserving: the full gate passed before and after — full vitest (3894 pass),
-125 golden baselines byte-identical, 0 lint errors, clean build. The refreshed architectural
-inventory and the deferrals (legacy-facade split, schema-aligned types, SaveIndicator
-relocation) are recorded in
+The extraction itself is behavior-preserving. Review rounds then made a few **deliberate,
+tested** correctness/design changes on top (not byte-preserving, but the golden baselines stay
+byte-identical because none touch the export encoder):
+- **Configuration versions are allocated by `max(version) + 1`, never the count.** A
+  non-contiguous imported/repaired history (`[1, 3]`) no longer pins a new day to a
+  non-existent version or appends a duplicate (`createDayRecord`, `addConfigurationSnapshot`).
+- **An atomic reconfiguration action** `createConfigurationSnapshotAndApplyForward` appends the
+  snapshot AND pins the affected days in one transition, replacing the wizard's fragile
+  two-action compose (create-snapshot → thread returned version → apply-forward). The standalone
+  `addConfigurationSnapshot` primitive now reserves its version synchronously so even a composed
+  call returns a distinct, correct version.
+- **Repair UX:** missing channel maps deep-link to the Channel Maps step; a day-owned device
+  error badges the Devices step (animal-owned schema errors still don't — the gate-non-redundancy
+  contract holds); Validation and Export dedup repair buttons identically; the device-override
+  cleanup copy no longer overstates that a clean shadowing override blocks export.
+
+Final gate: full vitest (3912 pass), 125 golden baselines byte-identical, 0 lint errors, clean
+build. The refreshed architectural inventory and the deferrals (legacy-facade split,
+schema-aligned types, SaveIndicator relocation) are recorded in
 `.claude/docs/plans/pre-cutover-export-correctness/app-code-organization-review.md`. Branch
 not merged.
 

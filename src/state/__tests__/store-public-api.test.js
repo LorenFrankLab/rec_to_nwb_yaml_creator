@@ -29,6 +29,7 @@ describe('useStore public API contract', () => {
       'addConfigurationSnapshot',
       'applyConfigurationForward',
       'createAnimal',
+      'createConfigurationSnapshotAndApplyForward',
       'createDay',
       'deleteAnimal',
       'deleteDay',

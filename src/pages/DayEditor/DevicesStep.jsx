@@ -31,8 +31,8 @@ import './DayEditor.scss';
  * @param {Function} props.onFieldUpdate - Callback: (fieldPath, value) => void
  * @param {object[]} [props.animalDays] - The animal's days (sorted by date); enables the
  *   configuration-version indicator + reconfiguration wizard. Omitted in isolated tests.
- * @param {object} [props.actions] - Store actions (`addConfigurationSnapshot`,
- *   `applyConfigurationForward`); when provided, the reconfiguration wizard is available.
+ * @param {object} [props.actions] - Store actions (`createConfigurationSnapshotAndApplyForward`);
+ *   when provided, the reconfiguration wizard is available.
  * @returns {JSX.Element}
  */
 export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, animalDays = undefined, actions = undefined }) {
@@ -618,7 +618,6 @@ DevicesStep.propTypes = {
   // in isolated unit renders) simply hides that section.
   animalDays: PropTypes.arrayOf(PropTypes.object),
   actions: PropTypes.shape({
-    addConfigurationSnapshot: PropTypes.func,
-    applyConfigurationForward: PropTypes.func,
+    createConfigurationSnapshotAndApplyForward: PropTypes.func,
   }),
 };

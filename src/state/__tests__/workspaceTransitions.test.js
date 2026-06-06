@@ -14,6 +14,7 @@ import {
   createDayRecord,
   applyDayUpdates,
   nextConfigurationVersion,
+  createSnapshotAndApplyForward,
 } from '../workspaceTransitions';
 
 const NOW = '2026-06-05T00:00:00.000Z';
@@ -108,6 +109,44 @@ describe('nextConfigurationVersion', () => {
     expect(nextConfigurationVersion([{ version: 1 }, { version: 2 }])).toBe(3);
     expect(nextConfigurationVersion([])).toBe(1);
     expect(nextConfigurationVersion('corrupt')).toBe(1);
+  });
+});
+
+describe('createSnapshotAndApplyForward', () => {
+  const animal = () => ({
+    id: 'remy',
+    configurationHistory: [{ version: 1, appliedToDays: ['d1', 'd2'] }],
+  });
+  const days = () => ({ d1: { id: 'd1' }, d2: { id: 'd2' } });
+
+  it('appends a new version AND pins the given days to it in one transition', () => {
+    const result = createSnapshotAndApplyForward(
+      animal(),
+      days(),
+      { date: '2023-07-01', description: 'reconfig', devices: emptyDevices() },
+      ['d2'],
+      NOW
+    );
+    expect(result.version).toBe(2);
+    expect(result.animal.configurationHistory.map((s) => s.version)).toEqual([1, 2]);
+    // The new version owns the moved day; v1 keeps the rest (clean partition).
+    expect(result.animal.configurationHistory[1].appliedToDays).toEqual(['d2']);
+    expect(result.animal.configurationHistory[0].appliedToDays).toEqual(['d1']);
+    expect(result.days.d2.configurationVersion).toBe(2);
+  });
+
+  it('allocates a UNIQUE version for a non-contiguous history ([1,3] -> 4) and pins to it', () => {
+    const result = createSnapshotAndApplyForward(
+      { id: 'remy', configurationHistory: [{ version: 1, appliedToDays: [] }, { version: 3, appliedToDays: [] }] },
+      days(),
+      { date: '2023-07-01', description: 'reconfig', devices: emptyDevices() },
+      ['d1', 'd2'],
+      NOW
+    );
+    expect(result.version).toBe(4);
+    expect(result.animal.configurationHistory.map((s) => s.version)).toEqual([1, 3, 4]);
+    expect(result.days.d1.configurationVersion).toBe(4);
+    expect(result.days.d2.configurationVersion).toBe(4);
   });
 });
 

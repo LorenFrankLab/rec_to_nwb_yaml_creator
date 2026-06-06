@@ -19,6 +19,7 @@ import {
   applyAnimalUpdates,
   addConfigurationSnapshotToAnimal,
   applyConfigurationForwardToAnimal,
+  createSnapshotAndApplyForward,
   rebuildConfigurationHistoryForAnimal,
   createDayRecord,
   applyDayUpdates,
@@ -269,17 +270,16 @@ export function useWorkspace(initialState = null) {
       },
 
       /**
-       * Adds a new configuration snapshot to track probe changes and returns the created
-       * version number. Both the appended snapshot and this return value use the same
-       * deterministic allocation — `max(existing version) + 1` ({@link nextConfigurationVersion})
-       * — so the returned version always matches the snapshot the updater appends, and is
-       * unique even for a non-contiguous history. The reconfiguration wizard then applies the
-       * snapshot forward to exactly the version it just created.
+       * Append a new configuration snapshot (a low-level primitive) and return the created
+       * version. Prefer {@link createConfigurationSnapshotAndApplyForward} for the
+       * reconfiguration flow — it appends AND pins the affected days in one transition, so no
+       * version is handed across two actions.
        *
-       * Contract: the return is authoritative for a SINGLE add per React commit (the wizard's
-       * create-then-apply path — it never queues two adds before the state commits). It is
-       * derived from the authoritative committed store (`workspaceRef`) because React batches
-       * the updater, whose result is not available synchronously when this action returns.
+       * The version is RESERVED synchronously: it is `max(existing version) + 1`
+       * ({@link nextConfigurationVersion}), passed explicitly to the append helper, and the
+       * cached workspace (`workspaceRef`) is advanced optimistically so two calls in the same
+       * event reserve DISTINCT versions (the return is always the version actually appended,
+       * never a stale guess or a duplicate of a non-contiguous history).
        *
        * @param {string} animalId - Animal identifier
        * @param {object} config - Configuration data (date, description, devices)
@@ -287,9 +287,63 @@ export function useWorkspace(initialState = null) {
        * @throws {Error} If animal does not exist
        */
       addConfigurationSnapshot: (animalId, config) => {
-        // Derive the created version from the authoritative current store with the SAME
-        // allocation the updater's helper uses (max+1), so the return matches the appended
-        // snapshot for the wizard's single-add-per-commit path.
+        const now = getCurrentTimestamp();
+        const current = workspaceRef.current.animals[animalId];
+        // Reserve the version synchronously from the authoritative cached store.
+        const createdVersion = current
+          ? nextConfigurationVersion(getConfigHistory(current))
+          : undefined;
+        if (current) {
+          // Optimistically advance the cached workspace so a second synchronous call reserves
+          // the NEXT version (distinct returns; no stale guess across queued calls). The next
+          // render overwrites this with the committed state.
+          workspaceRef.current = {
+            ...workspaceRef.current,
+            animals: {
+              ...workspaceRef.current.animals,
+              [animalId]: addConfigurationSnapshotToAnimal(current, config, now, createdVersion),
+            },
+          };
+        }
+
+        setWorkspace((prev) => {
+          if (!prev.animals[animalId]) {
+            throw new Error(`Animal "${animalId}" not found`);
+          }
+          // Append the RESERVED version explicitly so return === appended (no independent
+          // re-derive between caller and updater).
+          const updated = addConfigurationSnapshotToAnimal(
+            prev.animals[animalId],
+            config,
+            now,
+            createdVersion
+          );
+          return {
+            ...prev,
+            animals: { ...prev.animals, [animalId]: updated },
+            lastModified: updated.lastModified,
+          };
+        });
+
+        return createdVersion;
+      },
+
+      /**
+       * Atomic reconfiguration: create a new configuration snapshot AND apply it forward to a
+       * set of days in ONE transition. The public entry point for the reconfiguration wizard.
+       * The version is derived once inside the transition and used for both the snapshot and
+       * the day pins, so — unlike composing {@link addConfigurationSnapshot} with
+       * {@link applyConfigurationForward} — there is no version handed across two actions to go
+       * stale. The returned version (for display/navigation) is the version created.
+       *
+       * @param {string} animalId - Animal identifier.
+       * @param {object} config - `{ date, description, devices }` for the new snapshot.
+       * @param {string[]} dayIds - Day ids to move onto the new version.
+       * @returns {number} The version number created.
+       * @throws {Error} If animal does not exist.
+       */
+      createConfigurationSnapshotAndApplyForward: (animalId, config, dayIds) => {
+        const now = getCurrentTimestamp();
         const current = workspaceRef.current.animals[animalId];
         const createdVersion = current
           ? nextConfigurationVersion(getConfigHistory(current))
@@ -299,20 +353,19 @@ export function useWorkspace(initialState = null) {
           if (!prev.animals[animalId]) {
             throw new Error(`Animal "${animalId}" not found`);
           }
-
-          const updated = addConfigurationSnapshotToAnimal(
+          const { animal, days } = createSnapshotAndApplyForward(
             prev.animals[animalId],
+            prev.days,
             config,
-            getCurrentTimestamp()
+            dayIds,
+            now,
+            createdVersion
           );
-
           return {
             ...prev,
-            animals: {
-              ...prev.animals,
-              [animalId]: updated,
-            },
-            lastModified: updated.lastModified,
+            animals: { ...prev.animals, [animalId]: animal },
+            days,
+            lastModified: now,
           };
         });
 

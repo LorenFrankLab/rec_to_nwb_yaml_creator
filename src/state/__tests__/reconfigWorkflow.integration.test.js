@@ -84,6 +84,61 @@ describe('probe reconfiguration workflow [integration]', () => {
     expect(returned).toBe(4);
   });
 
+  it('createConfigurationSnapshotAndApplyForward forks AND pins in one atomic call', () => {
+    // The wizard's path: one action appends the new version and moves the day range onto it,
+    // with no version handed across two actions. Non-contiguous [1,3] history → unique v4.
+    const { workspace, animalId, dayIds, v1, v2 } = makeReconfigWorkspace();
+    const animal = workspace.animals[animalId];
+    animal.configurationHistory = [
+      { version: 1, date: '2023-06-22', description: 'Initial', devices: v1, appliedToDays: [dayIds.day1, dayIds.day2, dayIds.day3, dayIds.day4] },
+      { version: 3, date: '2023-06-23', description: 'Imported v3', devices: v2, appliedToDays: [] },
+    ];
+    Object.values(workspace.days).forEach((d) => { d.configurationVersion = 1; });
+
+    const { result } = renderHook(() => useStore({ workspace }));
+
+    let returned;
+    act(() => {
+      returned = result.current.actions.createConfigurationSnapshotAndApplyForward(
+        animalId,
+        { date: '2023-06-24', description: 'Reconfig', devices: structuredClone(v2) },
+        [dayIds.day3, dayIds.day4]
+      );
+    });
+
+    const animalNow = result.current.model.workspace.animals[animalId];
+    const days = result.current.model.workspace.days;
+    expect(returned).toBe(4);
+    expect(animalNow.configurationHistory.map((s) => s.version)).toEqual([1, 3, 4]);
+    expect(days[dayIds.day3].configurationVersion).toBe(4);
+    expect(days[dayIds.day4].configurationVersion).toBe(4);
+    // Clean partition: day3/day4 left v1's list for v4.
+    expect(animalNow.configurationHistory[0].appliedToDays.sort()).toEqual([dayIds.day1, dayIds.day2].sort());
+    expect(animalNow.configurationHistory[2].appliedToDays.sort()).toEqual([dayIds.day3, dayIds.day4].sort());
+  });
+
+  it('addConfigurationSnapshot returns DISTINCT versions for two calls in one event (reservation)', () => {
+    // Synchronous version reservation: composing the primitive twice before React commits must
+    // not return the same stale version. Two adds on [1] → returns 2 then 3, history [1,2,3].
+    const { workspace, animalId, v1, v2 } = makeReconfigWorkspace();
+    const animal = workspace.animals[animalId];
+    animal.configurationHistory = [
+      { version: 1, date: '2023-06-22', description: 'Initial', devices: v1, appliedToDays: [] },
+    ];
+
+    const { result } = renderHook(() => useStore({ workspace }));
+
+    let first;
+    let second;
+    act(() => {
+      first = result.current.actions.addConfigurationSnapshot(animalId, { date: '2023-06-24', description: 'A', devices: structuredClone(v2) });
+      second = result.current.actions.addConfigurationSnapshot(animalId, { date: '2023-06-25', description: 'B', devices: structuredClone(v2) });
+    });
+
+    expect([first, second]).toEqual([2, 3]);
+    expect(result.current.model.workspace.animals[animalId].configurationHistory.map((s) => s.version)).toEqual([1, 2, 3]);
+  });
+
   it('keeps export byte-identical for days whose resolved snapshot is unchanged', () => {
     const { workspace, animalId, dayIds } = makeReconfigWorkspace();
     const { result } = renderHook(() => useStore({ workspace }));

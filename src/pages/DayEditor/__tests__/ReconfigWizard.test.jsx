@@ -6,17 +6,16 @@ import DevicesStep from '../DevicesStep';
 import { makeReconfigWorkspace } from '../../../state/__tests__/fixtures/reconfigWorkspace';
 
 /**
- * Build mocked store actions the wizard calls. `addConfigurationSnapshot` returns the
- * created version (as the real store action does), which the wizard threads into
- * `applyConfigurationForward`.
+ * Build the mocked store action the wizard calls. `createConfigurationSnapshotAndApplyForward`
+ * appends the snapshot AND pins the day range in one transition, returning the created version
+ * (used only for the post-fork navigation).
  *
  * @param {number} [createdVersion] - Version the store reports for the new snapshot.
- * @returns {{ addConfigurationSnapshot: import('vitest').Mock, applyConfigurationForward: import('vitest').Mock }}
+ * @returns {{ createConfigurationSnapshotAndApplyForward: import('vitest').Mock }}
  */
 function makeActions(createdVersion = 3) {
   return {
-    addConfigurationSnapshot: vi.fn().mockReturnValue(createdVersion),
-    applyConfigurationForward: vi.fn(),
+    createConfigurationSnapshotAndApplyForward: vi.fn().mockReturnValue(createdVersion),
   };
 }
 
@@ -50,22 +49,21 @@ describe('ReconfigWizard [integration]', () => {
     await user.type(screen.getByLabelText(/change description/i), 'Lowered CA1 tetrodes');
     await user.click(screen.getByRole('button', { name: /create version/i }));
 
-    // Forks the CURRENT latest configuration (v2 = groups 0,1,2) into a new version...
-    expect(actions.addConfigurationSnapshot).toHaveBeenCalledTimes(1);
-    const [animalArg, configArg] = actions.addConfigurationSnapshot.mock.calls[0];
+    // Forks the CURRENT latest configuration (v2 = groups 0,1,2) AND applies it forward to
+    // the full chronological suffix in ONE atomic call (no version handed across two actions).
+    expect(actions.createConfigurationSnapshotAndApplyForward).toHaveBeenCalledTimes(1);
+    const [animalArg, configArg, dayIdsArg] = actions.createConfigurationSnapshotAndApplyForward.mock.calls[0];
     expect(animalArg).toBe(animalId);
     expect(configArg.description).toBe('Lowered CA1 tetrodes');
     expect(configArg.devices.electrode_groups.map((g) => g.id)).toEqual([0, 1, 2]);
-
-    // ...then applies the returned version (3) forward to the full chronological suffix.
-    expect(actions.applyConfigurationForward).toHaveBeenCalledWith(animalId, 3, [dayIds.day3, dayIds.day4]);
+    expect(dayIdsArg).toEqual([dayIds.day3, dayIds.day4]);
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(window.location.hash).toBe(
       `#/animal/${animalId}/editor?context=reconfigure&version=3&fromDay=${dayIds.day3}&movedDays=2`
     );
   });
 
-  it('applies forward using the version the store returns, not a prop-derived number', async () => {
+  it('navigates using the version the store returns, not a prop-derived number', async () => {
     const user = userEvent.setup();
     const { workspace, animalId, dayIds } = makeReconfigWorkspace();
     const animal = workspace.animals[animalId];
@@ -91,7 +89,12 @@ describe('ReconfigWizard [integration]', () => {
     await user.type(screen.getByLabelText(/change description/i), 'Lowered CA1 tetrodes');
     await user.click(screen.getByRole('button', { name: /create version/i }));
 
-    expect(actions.applyConfigurationForward).toHaveBeenCalledWith(animalId, 7, [dayIds.day3, dayIds.day4]);
+    expect(actions.createConfigurationSnapshotAndApplyForward).toHaveBeenCalledWith(
+      animalId,
+      expect.objectContaining({ description: 'Lowered CA1 tetrodes' }),
+      [dayIds.day3, dayIds.day4]
+    );
+    expect(window.location.hash).toContain('version=7');
   });
 
   it('falls back to a date range when the start day is not among the candidate days', async () => {
@@ -127,7 +130,11 @@ describe('ReconfigWizard [integration]', () => {
     await user.type(screen.getByLabelText(/change description/i), 'Lowered CA1 tetrodes');
     await user.click(screen.getByRole('button', { name: /create version/i }));
 
-    expect(actions.applyConfigurationForward).toHaveBeenCalledWith(animalId, 3, expectedIds);
+    expect(actions.createConfigurationSnapshotAndApplyForward).toHaveBeenCalledWith(
+      animalId,
+      expect.objectContaining({ description: 'Lowered CA1 tetrodes' }),
+      expectedIds
+    );
     // Sanity: the range excludes earlier days and is non-empty.
     expect(expectedIds).toContain(dayIds.day3);
     expect(expectedIds).toContain(dayIds.day4);
@@ -189,7 +196,7 @@ describe('ReconfigWizard [integration]', () => {
     // No description → blocked with an error, nothing forked.
     await user.click(screen.getByRole('button', { name: /create version/i }));
     expect(screen.getByRole('alert')).toHaveTextContent(/description/i);
-    expect(actions.addConfigurationSnapshot).not.toHaveBeenCalled();
+    expect(actions.createConfigurationSnapshotAndApplyForward).not.toHaveBeenCalled();
   });
 
   it('refuses to fork when no candidate days are available', async () => {
@@ -215,7 +222,7 @@ describe('ReconfigWizard [integration]', () => {
     await user.click(screen.getByRole('button', { name: /create version/i }));
 
     expect(screen.getByRole('alert')).toHaveTextContent(/no recording days/i);
-    expect(actions.addConfigurationSnapshot).not.toHaveBeenCalled();
+    expect(actions.createConfigurationSnapshotAndApplyForward).not.toHaveBeenCalled();
   });
 
   it('refuses to fork an empty configuration (no probes to version)', async () => {
@@ -246,7 +253,7 @@ describe('ReconfigWizard [integration]', () => {
     await user.click(screen.getByRole('button', { name: /create version/i }));
 
     expect(screen.getByRole('alert')).toHaveTextContent(/configure probes/i);
-    expect(actions.addConfigurationSnapshot).not.toHaveBeenCalled();
+    expect(actions.createConfigurationSnapshotAndApplyForward).not.toHaveBeenCalled();
   });
 });
 
