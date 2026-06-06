@@ -92,14 +92,26 @@ For cameras, this approach is only true if the exported session resolves `camera
 the day-owned references (`tasks[].camera_id`, `associated_video_files[].camera_id`,
 `fs_gui_yamls[].camera_id`) rather than blindly exporting the entire animal catalog. The
 current exporter emits all `animal.cameras` for every day, so merely adding camera 1 for a
-future day would change a re-export of an old day by adding an unused camera device. Phase
-8.7 must therefore either:
+future day would change a re-export of an old day by adding an unused camera device.
 
-- implement the day-used camera export binding (preferred UX; past days keep their exported
-  camera set by construction), with a deliberate baseline/export audit; or
-- keep the current all-animal-cameras export as an explicit baseline-safe fallback, in which
-  case adding/editing cameras after recorded days is a blast-radius action that affects all
-  day exports and the UI must not promise historical exports are unchanged.
+**Decision (trodes_to_nwb-verified, 2026-06-06): implement the day-used camera export
+binding** via a pure `resolveDayCameraUsage(animal, day)` helper consumed by export/preflight
+and the blast-radius UI. This is verified safe downstream: trodes_to_nwb resolves cameras by
+the `id` field, never by list position — `convert_yaml.py` names devices
+`"camera_device " + str(camera["id"])`, and `convert_position.py` looks up
+`devices['camera_device ' + str(video["camera_id"])]` and builds
+`{camera['id']: camera['meters_per_pixel'] ...}` from whatever is in the list, requiring only
+the referenced cameras. So emitting only the day-used subset cannot shift or corrupt the
+mapping and is the more correct NWB semantics. It is byte-identical on every current
+golden/legacy fixture (all six reference all their cameras), so the legacy baselines do not
+move; only real-data days that left a catalog camera unused change, in the correct direction.
+
+Guard (pre-existing): `convert_position.py` hard-looks-up `devices['camera_device {id}']`
+with no existence check, so a *dangling* `camera_id` would `KeyError`. `resolveDayCameraUsage`
+must include every referenced id (it does by construction) — so the subset export is strictly
+safer than today. The all-animal-cameras export is kept only as a deliberate **scoping**
+fallback (if the export-bridge change is deferred), not a correctness hedge; if used, the UI
+must say camera catalog changes affect all day exports.
 
 The heavier alternative (per-day freeze / version cameras + data-acq like electrodes) is
 deferred to its own phase — it changes export resolution and needs baseline regeneration plus
@@ -107,11 +119,11 @@ trodes_to_nwb coordination.
 
 ### Cameras vs data-acq are NOT symmetric (key constraint)
 
-- **Cameras can do approach A cleanly only with day-used export binding.** Tasks/videos/FsGUI
-  reference a camera by `camera_id`, so a past day can keep pointing at camera 0 while a
-  recalibration becomes camera 1; past exports are unchanged automatically only when export
-  emits the cameras referenced by that day. Without that binding, camera catalog changes have
-  all-day blast radius.
+- **Cameras do approach A cleanly with the day-used export binding (decided above).**
+  Tasks/videos/FsGUI reference a camera by `camera_id`, so a past day keeps pointing at camera 0
+  while a recalibration becomes camera 1; past exports are unchanged because export emits the
+  cameras referenced by that day. (Without the binding, camera catalog changes would have all-day
+  blast radius — which is why the binding is the decision, not the fallback.)
 - **Data-acq cannot, today** — `data_acq_device` has *no per-day binding*; it is a single
   animal-level record merged into every day. So "past days keep the old amplifier" is not
   representable. For data-acq, approach A degrades to the *principle only*: it is a single

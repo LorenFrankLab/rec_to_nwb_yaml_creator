@@ -78,13 +78,14 @@ Full design: [docs/superpowers/specs/2026-06-06-ownership-day-configurability-de
   binding.** Catalogs stay animal-level; once a day references an identity, recalibration/swap
   creates a NEW identity rather than mutating the live values. For cameras, this only preserves
   historical exports if export emits the day-used camera subset; the current merge emits all
-  `animal.cameras`, so Task 5 must either implement the preferred day-used export binding with
-  a baseline/export audit, or choose the baseline-safe fallback and warn that camera catalog
-  changes affect all day exports. The heavier per-day-freeze / versioned-snapshot alternative
-  is deferred to its own phase.
-- **Cameras vs data-acq are not symmetric.** Cameras can do approach A cleanly only once the
-  day-used export binding is fixed (`camera_id` references; recalibration = new camera, past
-  days unchanged). Data-acq has NO
+  `animal.cameras`. DECISION: Task 5 implements the day-used camera export binding as the default —
+  verified safe downstream (trodes_to_nwb resolves cameras by `id`, not list position, and requires
+  only the referenced cameras) and byte-identical on every current golden fixture (all reference all
+  their cameras). The all-animal-cameras export is kept only as a deliberate scoping fallback, not a
+  correctness hedge. The heavier per-day-freeze / versioned-snapshot alternative is deferred to its
+  own phase.
+- **Cameras vs data-acq are not symmetric.** Cameras do approach A cleanly with the day-used export
+  binding (`camera_id` references; recalibration = new camera, past days unchanged). Data-acq has NO
   per-day binding, so it follows the principle only: a single shared recording-system
   identity, editing it shows it affects ALL days, and a mid-study amplifier swap is surfaced
   as currently unsupported — i.e. **Task 3 is decided as option B**, and the rig constants
@@ -362,13 +363,32 @@ audit).
   First resolve the export-binding mismatch: current `mergeDayMetadata` exports the whole
   `animal.cameras` catalog for every day, so adding a new camera for a future recording changes
   a re-export of old days by adding an unused camera device. Approach A's "past days keep what
-  they used" promise is true only if export emits the day-used camera subset. Preferred fix:
-  add a pure helper such as `resolveDayCameraUsage(animal, day)` that scans `tasks[].camera_id`,
-  `associated_video_files[].camera_id`, and `fs_gui_yamls[].camera_id`, returns referenced camera
-  ids plus affected day ids, and is used by both export/preflight and blast-radius UI. Update the
-  source-of-truth docs/tests accordingly and run a baseline/export audit. If Phase 8.7 deliberately
-  keeps the baseline-safe all-animal-cameras export, the UI must say camera catalog changes affect
-  all day exports and must not promise old-day exports are unchanged.
+  they used" promise is true only if export emits the day-used camera subset.
+
+  DECISION (trodes_to_nwb-verified): implement the day-used camera export binding as the default.
+  Add a pure helper such as `resolveDayCameraUsage(animal, day)` that scans `tasks[].camera_id`,
+  `associated_video_files[].camera_id`, and `fs_gui_yamls[].camera_id`, returns the referenced
+  camera ids (plus the affected day ids), and is consumed by both export/preflight and the
+  blast-radius UI. `mergeDayMetadata` then emits only those cameras. Verified safe downstream
+  (trodes_to_nwb `main`, 2026-06-06): cameras are resolved by their `id` field, never by list
+  position — `convert_yaml.py` names devices `"camera_device " + str(camera["id"])`, and
+  `convert_position.py` looks up `devices['camera_device ' + str(video["camera_id"])]` and builds
+  `{camera['id']: camera['meters_per_pixel'] ...}` from whatever is in the list, requiring only the
+  referenced cameras. So dropping UNreferenced cameras cannot shift or corrupt the mapping and is
+  the more correct NWB semantics (a camera unused that session should not become a device). It is
+  also byte-identical on every current golden/legacy fixture — all six reference all their cameras —
+  so the legacy baselines do not move; only real-data days that left a catalog camera unused change,
+  and in the correct direction.
+
+  Guard to preserve (pre-existing, not introduced): `convert_position.py` does a hard
+  `devices['camera_device {id}']` lookup with no existence check, so a DANGLING `camera_id`
+  (referenced but absent from the emitted `cameras`) would `KeyError` mid-conversion.
+  `resolveDayCameraUsage` must therefore include EVERY referenced id (it does by construction), and
+  the app's existing camera-reference validation already guards this — the subset export is strictly
+  safer than today, never worse. The all-animal-cameras export remains available only as a
+  deliberate SCOPING fallback (if the export-bridge change is deferred), not as a correctness hedge;
+  if chosen, the UI must say camera catalog changes affect all day exports and must not promise
+  old-day exports are unchanged.
 
   Apply the approach-A immutable-once-referenced rule after that decision: once any day references
   a camera, recalibrating/changing its identity is a NEW camera by default, not a silent edit of
@@ -465,8 +485,11 @@ audit).
 - A reducer/store rewrite.
 - Changing legacy-form behavior.
 - Adding new scientific device types.
-- Changing export bytes for already-valid sessions except a deliberate, reviewed day-used-camera
-  export-binding fix from Task 5. Versioned data-acq remains out of scope.
+- Changing export bytes for already-valid sessions except the decided day-used-camera export-binding
+  fix from Task 5 — which is verified byte-identical on every current golden/legacy fixture (all
+  reference all their cameras) and trodes_to_nwb-safe, so no baseline is expected to move; it changes
+  only real-data days that left a catalog camera unused, in the correct direction. Versioned data-acq
+  remains out of scope.
 - Human usability testing. Phase 10/11 can recommend it, but this phase must be executable
   by Claude Code with code inspection, tests, and browser-ready route states.
 
@@ -481,10 +504,10 @@ audit).
 | `camera usage / affected-days helper` *(unit)* | a pure helper scans task, associated-video, and FsGUI camera references; export/preflight and blast-radius UI consume the same result; scalar/array camera refs, duplicate refs, missing refs, and unreferenced catalog cameras are covered. |
 | `Animal Editor IA labels` *(component)* | cameras, recording system/data-acq, behavioral events, opto, and electrodes are separate enough that data-acq is not hidden in a camera-like hardware bucket. |
 | `ownership cues at point of action` *(component)* | shared setup, configuration version, day-only, task-epoch setup assignment, using-recording-system-default, provenance-backed override/different-from-current-default, catalog-selection, and exported-with-this-day cues appear near the relevant controls/actions, not only in docs. |
-| `blast-radius transparency / no silent retroactive` *(component)* | a change reaching past days enumerates them before commit; editing a referenced camera defaults to a NEW identity and either past-day exports are unchanged through day-used camera export or the all-animal-cameras fallback warns all days are affected; editing a constant animal fact (species/DOB) shows it affects all N days; editing data-acq shows it affects all days and a mid-study swap shows the unsupported notice; no edit path silently rewrites an already-recorded day. |
+| `blast-radius transparency / no silent retroactive` *(component)* | a change reaching past days enumerates them before commit; editing a referenced camera defaults to a NEW identity and past-day exports are unchanged via the day-used camera export binding (or, if the binding is deferred, the all-animal-cameras fallback warns all days are affected); editing a constant animal fact (species/DOB) shows it affects all N days; editing data-acq shows it affects all days and a mid-study swap shows the unsupported notice; no edit path silently rewrites an already-recorded day. |
 | `day technical defaults vs overrides` *(component/unit)* | effective day values are visible; copied day values read as using the current default only when equal; values that differ from the current default are labelled honestly; advanced overrides are distinguishable; reset/apply-to-existing-days behavior enumerates affected days; header path remains day-only. |
 | `animal profile and weight ownership` *(component/integration)* | shared subject/profile facts have a discoverable owner and blast-radius copy; Day Overview is the primary review/edit surface for the exported session weight; fallback animal-created weight is labelled as fallback/default rather than silently reused. |
-| `camera catalog identity` *(component/export/unit)* | camera tables/modals/summaries show name/id/lens/`meters_per_pixel`; changed zoom/calibration guidance says to create/use a different camera name; task/video/FsGUI empty states route to `Set Up Cameras`; camera export binding is either day-used subset with baseline audit or explicit all-day blast-radius fallback; a multi-epoch day with different cameras/rooms makes the per-task room/camera/epoch mapping visible, and two tasks claiming the same epoch surfaces the export-blocking `duplicate_task_epoch` error. |
+| `camera catalog identity` *(component/export/unit)* | camera tables/modals/summaries show name/id/lens/`meters_per_pixel`; changed zoom/calibration guidance says to create/use a different camera name; task/video/FsGUI empty states route to `Set Up Cameras`; camera export binding is the day-used subset (verified baseline-identical on current fixtures and trodes_to_nwb-safe; all-catalog fallback only if deferred); a multi-epoch day with different cameras/rooms makes the per-task room/camera/epoch mapping visible, and two tasks claiming the same epoch surfaces the export-blocking `duplicate_task_epoch` error. |
 | `behavioral event ownership` *(component/integration)* | animal-level event editing cannot be mistaken for exported day events; `Use on this day` makes an inherited/reference event appear in the exported day-specific list. |
 | `opto ownership` *(component/integration)* | implanted/surgical opto setup (`optical_fiber`/`virus_injection`/`opto_excitation_source`/software) reads as animal setup; protocol rows (`fs_gui_yamls`) are day-owned but scoped to selected task epochs and OPTIONAL — a day or epoch with no opto protocol is valid and raises no missing-setup/blocking error; the animal-level all-or-nothing opto contract is not applied per day/epoch. |
 | `lifecycle cleanup actions` *(component/unit)* | animal/day delete actions are discoverable but secondary; confirmations name the animal/day, cascade count, exported/validated consequence, and call the existing guarded `deleteAnimal` / `deleteDay` actions. |
@@ -492,7 +515,7 @@ audit).
 | `batch row scan contract` *(component/Playwright-ready)* | Workspace and Validation Summary rows let catch-up users compare days without opening each editor: date/session, animal when relevant, configuration version, camera/calibration summary, opto state, validation/recovery state, export eligibility, and next repair/export action are visible or available in a row expansion. |
 | `scenario artifacts` *(component/Playwright-ready)* | new user finds electrodes; user changes camera zoom and is steered to a new name; user creates a multi-epoch day with different rooms/cameras and can see the setup used by each epoch; user reviews effective recording-system values and either edits them in Recording System or uses an advanced one-day override only when that path exists; user uses an animal DIO event on a day; an opto-implanted animal records a day with no stimulation and another day with opto only on selected epochs without hitting false opto errors; user with existing days sees what shared-setup edits affect; user can clean up a test animal/day through safe destructive controls. |
 | `same-day and catch-up story artifacts` *(component/Playwright-ready)* | same-day conversion shows one fresh recording moving efficiently from day review to export without repeated setup entry; catch-up conversion shows multiple days with readiness, shared-setup review, targeted repair, batch eligibility, and naming-identity risks visible before export. |
-| `golden baselines and new-path fixtures` *(regression)* | the 125 legacy-baseline assertions remain byte-identical; new-path fixtures stay stable unless Task 5 deliberately implements day-used camera export and the audited fixture set proves/updates the expected bytes; versioned data-acq remains a future named exception with regenerated fixtures and trodes_to_nwb coordination. |
+| `golden baselines and new-path fixtures` *(regression)* | the 125 legacy-baseline assertions remain byte-identical — INCLUDING after the Task 5 day-used camera export binding, since every current golden/legacy fixture references all its cameras (verified 2026-06-06), so the day-used subset equals the full catalog for them; a regression test should assert `resolveDayCameraUsage` returns the full set for the golden fixtures. Versioned data-acq remains a future named exception with regenerated fixtures and trodes_to_nwb coordination. |
 | `npm test`, `npm run lint`, `npm run build` | full gates pass before Phase 9; Phase 9 scenarios are updated to cover ownership/default/override UX. |
 
 ## Review
