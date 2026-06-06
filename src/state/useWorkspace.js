@@ -610,14 +610,21 @@ export function useWorkspace(initialState = null) {
         const animal = workspace.animals[animalId];
         if (!animal) return [];
 
-        // Tolerate corrupt persisted state: keep only resolvable day RECORDS (a dangling ref or
-        // a non-record leftover is dropped — it can't be rendered/edited; ValidationSummary
-        // surfaces it as a repair row), and order by a string-coerced date so a numeric/missing
-        // `date` can't throw in `localeCompare` and blank the Day Editor / reconfiguration list.
+        // Tolerate corrupt persisted state AND enforce ownership: keep only resolvable day
+        // RECORDS that actually belong to this animal — a record whose `animalId` names a
+        // DIFFERENT animal (a wrong-owner index entry) must NOT be returned, or reconfiguration
+        // could move another animal's day. A record with no `animalId` is kept (the index is the
+        // authority). Order by a string-coerced date so a numeric/missing `date` can't throw.
         const orderKey = (value) => (typeof value === 'string' ? value : String(value ?? ''));
         return getAnimalDayIds(animal)
           .map((dayId) => workspace.days[dayId])
-          .filter((day) => day !== null && typeof day === 'object' && !Array.isArray(day))
+          .filter(
+            (day) =>
+              day !== null &&
+              typeof day === 'object' &&
+              !Array.isArray(day) &&
+              (day.animalId == null || day.animalId === animalId)
+          )
           .sort((a, b) => orderKey(a.date).localeCompare(orderKey(b.date)));
       },
     }),

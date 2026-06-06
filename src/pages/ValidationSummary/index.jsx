@@ -217,10 +217,16 @@ export function ValidationSummary() {
   };
 
   const handleValidateAll = () => {
+    // Only persist the validated flag for days that are part of an animal's recording days
+    // (recovery status `ok`). A wrong-owner row carries ANOTHER animal's record — writing its
+    // validated flag from this animal's row would corrupt that animal's day (and duplicate-index
+    // row order could clear the real owner's flag); dangling/recovered/orphan rows aren't
+    // exportable recording days either. So they are skipped here.
+    const validatable = rows.filter((row) => isExportableDayStatus(row.status));
     // Guard each write: a day removed between render and click must not abort the
     // loop and leave the rest unvalidated with no feedback.
     let failures = 0;
-    rows.forEach(({ day, chip }) => {
+    validatable.forEach(({ day, chip }) => {
       try {
         // Guard a malformed `day.state` (a corrupt import can persist it as a scalar/array):
         // spreading a string scatters char-indexed keys. `updateDay`/`applyDayUpdates` guards
@@ -236,7 +242,7 @@ export function ValidationSummary() {
       }
     });
     clearReports();
-    const total = rows.length;
+    const total = validatable.length;
     setActionMessage(
       failures === 0
         ? `Validated ${total} ${total === 1 ? 'day' : 'days'}.`
@@ -260,8 +266,8 @@ export function ValidationSummary() {
       clearReports();
       setPendingExport(null);
       setActionMessage(
-        'No valid days to export. Fix errors, complete the required fields, or re-link recovered ' +
-          'days (Add to day list) to enable export.'
+        'No days are ready to export. Fix errors, complete the required fields, or re-link ' +
+          'recovered days (Add to day list) to make a day exportable.'
       );
       return;
     }
@@ -313,9 +319,12 @@ export function ValidationSummary() {
 
     // Re-derive the CURRENT recovery status of every day from the live workspace, so a day that
     // became recovered_unlinked / wrong_owner / dangling while the preflight was open is dropped
-    // here — not just one that changed content. Export policy is read from the same domain source.
-    const currentStatusById = new Map(
-      classifyWorkspaceDays(workspace).map((d) => [d.dayId, d.status])
+    // here — not just one that changed content. Keyed by (animalKey, dayId): under duplicate-index
+    // corruption the same day id can appear under two animals with different statuses, so a
+    // dayId-only key could let one animal's status mask another's.
+    const statusKey = (animalKey, dayId) => `${animalKey} ${dayId}`;
+    const currentStatusByKey = new Map(
+      classifyWorkspaceDays(workspace).map((d) => [statusKey(d.animalKey, d.dayId), d.status])
     );
 
     validRows.forEach(({ animalKey, day: rowDay }) => {
@@ -334,7 +343,7 @@ export function ValidationSummary() {
         stale.push({ ...identity, detail: 'No longer present since the preflight.' });
         return;
       }
-      if (!isExportableDayStatus(currentStatusById.get(rowDay.id))) {
+      if (!isExportableDayStatus(currentStatusByKey.get(statusKey(animalKey, rowDay.id)))) {
         // Became recovered-unlinked / wrong-owner / dangling since the preflight — not part of
         // the animal's recording days anymore, so it must not export from a stale preflight.
         stale.push({ ...identity, detail: "No longer part of the animal's day list since the preflight." });

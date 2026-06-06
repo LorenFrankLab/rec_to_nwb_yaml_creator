@@ -115,6 +115,11 @@ export function AnimalWorkspace() {
   const selectedOrphanDayIds = selectedDayClassification
     .filter((d) => d.status === DAY_STATUS.RECOVERED_UNLINKED)
     .map((d) => d.dayId);
+  // Days indexed by THIS animal whose record belongs to a different animal (wrong owner). Surfaced
+  // with a repair so the user can unlink them, not silently shown as ordinary recording days.
+  const selectedWrongOwnerDayIds = selectedDayClassification
+    .filter((d) => d.status === DAY_STATUS.WRONG_OWNER)
+    .map((d) => d.dayId);
 
   // On mount, select an animal so the setup/review state is visible immediately rather than
   // one click hidden: honor an explicit `?animal=<id>`; with no param, auto-select the SOLE
@@ -320,7 +325,10 @@ export function AnimalWorkspace() {
                   // not look silently trusted. Show it once there ARE recording days to export,
                   // or whenever raw-shape corruption OR a corrupt days reference is present.
                   const hasCorruption =
-                    rawIssues.length > 0 || selectedDaysCorrupt || selectedOrphanDayIds.length > 0;
+                    rawIssues.length > 0 ||
+                    selectedDaysCorrupt ||
+                    selectedOrphanDayIds.length > 0 ||
+                    selectedWrongOwnerDayIds.length > 0;
                   const showReview = dayCount > 0 || hasCorruption;
                   return (
                     <>
@@ -394,6 +402,15 @@ export function AnimalWorkspace() {
                               {selectedOrphanDayIds.length === 1 ? 'it' : 'them'}.
                             </p>
                           )}
+                          {selectedWrongOwnerDayIds.length > 0 && (
+                            <p className="existing-data-review-corrupt-note" role="alert">
+                              {selectedWrongOwnerDayIds.length} day{' '}
+                              {selectedWrongOwnerDayIds.length === 1 ? 'is' : 'are'} listed here but
+                              belong to a different animal (shown below as &quot;belongs to …&quot;).
+                              They are not exported with this animal — remove them from this
+                              animal&apos;s list.
+                            </p>
+                          )}
                           {/* Reuse the shipped recovery surface: executable resets for corrupt
                               animal-owned collections. Self-hides when there is no corruption. */}
                           <RawCorruptionBanner
@@ -460,6 +477,35 @@ export function AnimalWorkspace() {
                               </div>
                               <div className="day-status">
                                 <span className="status-chip error">Missing record</span>
+                              </div>
+                            </div>
+                          </li>
+                        );
+                      }
+
+                      // Wrong owner: indexed here but the record belongs to another animal. Don't
+                      // render it as an ordinary recording day (that implies it's this animal's and
+                      // exportable). Surface a warning + an in-place unlink repair.
+                      if (status === DAY_STATUS.WRONG_OWNER) {
+                        return (
+                          <li key={dayId} className="day-item day-item-missing">
+                            <div className="day-link day-link-missing" role="alert">
+                              <div className="day-info">
+                                <span className="day-date">{record.date || dayId}</span>
+                                <span className="day-session-id">
+                                  Belongs to {record.animalId} — listed here by mistake; not exported
+                                  with this animal.
+                                </span>
+                              </div>
+                              <div className="day-status">
+                                <button
+                                  type="button"
+                                  className="btn-secondary"
+                                  onClick={() => actions.unlinkDayReference(selectedAnimalId, dayId)}
+                                  aria-label={`Remove ${record.date || dayId} from ${selectedAnimalId} (belongs to ${record.animalId})`}
+                                >
+                                  Remove from this animal
+                                </button>
                               </div>
                             </div>
                           </li>

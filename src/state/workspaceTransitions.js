@@ -186,9 +186,19 @@ export function applyConfigurationForwardToAnimal(animal, days, snapshotVersion,
     );
   }
 
-  // Only real, deduped days move — a day id not in the workspace must never leak into
-  // appliedToDays (which would pollute the usage view).
-  const validDayIds = [...new Set(dayIds)].filter((id) => days[id]);
+  // Only real, deduped days that BELONG TO THIS ANIMAL move — a day id not in the workspace must
+  // never leak into appliedToDays, and (defense in depth alongside the OK-only `getAnimalDays`
+  // that feeds the wizard) a record explicitly owned by a DIFFERENT animal must never have its
+  // `configurationVersion` rewritten by this animal's reconfiguration. A record with no
+  // `animalId` is permitted (the index is the authority).
+  const isRecordRow = (value) =>
+    value !== null && typeof value === 'object' && !Array.isArray(value);
+  const validDayIds = [...new Set(dayIds)].filter((id) => {
+    const record = days[id];
+    return (
+      isRecordRow(record) && (record.animalId == null || record.animalId === updatedAnimal.id)
+    );
+  });
   const moving = new Set(validDayIds);
 
   // Remove the moving days from EVERY snapshot's list first (clean partition), then add

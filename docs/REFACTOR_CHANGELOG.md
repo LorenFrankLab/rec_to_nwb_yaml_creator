@@ -234,6 +234,27 @@ export policy:
   still reflects the index count — the helper takes only the animal, not the days map; the Workspace
   panel + review state are the recovery-aware surfaces.)
 
+**Ninth-review follow-ups — enforce the recovery policy on every remaining path:**
+
+The `wrong_owner` status was computed but not yet enforced everywhere. These bind the remaining
+paths to the same domain policy:
+
+- **Reconfiguration can no longer move a wrong-owner day.** `getAnimalDays` now returns only days
+  actually owned by the animal (a record whose `animalId` names a different animal is excluded), and
+  `applyConfigurationForwardToAnimal` adds a defensive ownership filter — so a reconfiguration can't
+  rewrite another animal's day's `configurationVersion`.
+- **Single-day export is key-consistent.** `ExportStep` derives exportability purely from index
+  membership of the animal it was resolved by (`day.animalId`), dropping the dependency on the
+  possibly-stale `animal.id` field — so it agrees with the batch path.
+- **Batch stale-check is keyed by `(animalKey, dayId)`** so duplicate-index corruption can't let one
+  animal's status mask another's at confirm.
+- **`Validate All` skips non-exportable statuses** — it no longer writes a `validated` flag onto a
+  wrong-owner row (which is another animal's record) or a dangling/recovered/orphan row.
+- **The Workspace day list surfaces wrong-owner days** with a "belongs to {other}" warning and an
+  in-place unlink repair, instead of rendering them as ordinary recording days.
+- **Copy:** the empty batch-export message says "No days are ready to export …" rather than "No
+  valid days …", so "valid" (metadata) and "exportable" (valid + in the day list) stay distinct.
+
 ---
 
 ## Domain boundaries & ownership cleanup — Phase 8.5 (June 5, 2026)

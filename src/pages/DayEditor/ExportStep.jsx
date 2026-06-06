@@ -5,7 +5,6 @@ import { mergeDayMetadata, resolveDayConfig } from '../../state/workspaceUtils';
 import { getAnimalDayIds } from '../../state/workspaceSelectors';
 import { computeStepStatus, validateDay, STEP_LABELS } from '../../domain/validation';
 import { getDayWorkflowStatus } from '../../domain/workflowStatus';
-import { DAY_STATUS, isExportableDayStatus } from '../../domain/dayRecovery';
 import { isExportEnabled } from './stepGate';
 import { isFeatureEnabled } from '../../featureFlags';
 import { checkShadowExport } from '../../domain/shadowExport';
@@ -90,17 +89,16 @@ export default function ExportStep({ animal, day, onNavigate, onRepair }) {
   // the stepper would refuse to reach.
   const stepStatus = useMemo(() => computeStepStatus(day, merged, animal), [day, merged, animal]);
   const exportGateOpen = useMemo(() => isExportEnabled(stepStatus), [stepStatus]);
-  // Recovery policy (same domain source as the batch path): a day must be part of the animal's
-  // recording-day index to export. A recovered-unlinked day (record present, not in the index) is
-  // blocked here too, so the single-day path can't bypass the policy the batch path enforces.
-  const dayRecoveryStatus = useMemo(() => {
-    if (!getAnimalDayIds(animal).includes(day.id)) return DAY_STATUS.RECOVERED_UNLINKED;
-    if (day.animalId != null && animal?.id != null && day.animalId !== animal.id) {
-      return DAY_STATUS.WRONG_OWNER;
-    }
-    return DAY_STATUS.OK;
-  }, [animal, day]);
-  const dayExportable = isExportableDayStatus(dayRecoveryStatus);
+  // Recovery policy (same as the batch path): a day must be part of its animal's recording-day
+  // index to export. The Day Editor resolves `animal` BY `day.animalId`, so this animal is the
+  // day's owner by construction (no wrong-owner case here, and no dependency on the possibly-stale
+  // `animal.id` field — membership is read straight off the resolved animal's index). A
+  // recovered-unlinked day (record present, not in the index) is blocked here too, so the
+  // single-day path can't bypass the policy the batch path enforces.
+  const dayExportable = useMemo(
+    () => getAnimalDayIds(animal).includes(day.id),
+    [animal, day]
+  );
   const exportBlocked = validationErrors.length > 0 || !exportGateOpen || !dayExportable;
 
   // Step-status blockers (a prerequisite step not 'valid' — e.g. Devices 'error' for

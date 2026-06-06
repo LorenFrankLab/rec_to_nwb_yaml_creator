@@ -683,5 +683,29 @@ describe('Day State Management', () => {
       expect(days[1].date).toBe('2023-06-24');
       expect(days[2].date).toBe('2023-06-25');
     });
+
+    it('excludes a wrong-owner record (indexed here but belonging to another animal)', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+      });
+      // Corrupt the index: remy lists a day whose record belongs to a different animal.
+      act(() => {
+        result.current.model.workspace.days['intruder'] = {
+          id: 'intruder',
+          animalId: 'someoneelse',
+          date: '2023-06-23',
+          session: { session_id: 'x' },
+        };
+        result.current.model.workspace.animals['remy'].days = ['remy-2023-06-22', 'intruder'];
+      });
+      const days = result.current.selectors.getAnimalDays('remy');
+      // Only remy's own day is returned — the wrong-owner record must NOT be reconfigurable here.
+      expect(days.map((d) => d.id)).toEqual(['remy-2023-06-22']);
+    });
   });
 });

@@ -244,6 +244,21 @@ describe('applyConfigurationForwardToAnimal', () => {
     expect(() => applyConfigurationForwardToAnimal(base(), days(), 99, ['d2'], NOW))
       .toThrow(/Configuration version "99" not found/);
   });
+
+  it('never moves a day whose record belongs to a DIFFERENT animal (wrong-owner guard)', () => {
+    // d2's record explicitly belongs to another animal — reconfiguration of "remy" must not
+    // rewrite its configurationVersion or list it under remy's snapshot.
+    const wrongOwnerDays = { d1: { id: 'd1' }, d2: { id: 'd2', animalId: 'someoneelse' } };
+    const { animal, days: nextDays } = applyConfigurationForwardToAnimal(
+      base(),
+      wrongOwnerDays,
+      2,
+      ['d2'],
+      NOW
+    );
+    expect(nextDays.d2.configurationVersion).toBeUndefined();
+    expect(animal.configurationHistory[1].appliedToDays).toEqual([]);
+  });
 });
 
 describe('rebuildConfigurationHistoryForAnimal', () => {

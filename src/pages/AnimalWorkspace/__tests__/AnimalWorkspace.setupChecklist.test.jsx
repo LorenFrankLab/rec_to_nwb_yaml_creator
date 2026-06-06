@@ -157,6 +157,22 @@ describe('AnimalWorkspace existing-data review state', () => {
     expect(screen.getByRole('region', { name: /existing data review/i })).toBeInTheDocument();
   });
 
+  it('surfaces a wrong-owner indexed day with an unlink repair, not as an ordinary day', async () => {
+    // newbie's index lists a record that belongs to a different animal.
+    const animal = { ...newAnimal, days: ['intruder'] };
+    const days = {
+      intruder: { id: 'intruder', animalId: 'someoneelse', date: '2024-03-03', session: { session_id: 'x' } },
+    };
+    renderWith({ newbie: animal }, days);
+    // The sole animal auto-selects on mount; no need to click (clicking by /newbie/i would now
+    // also match the unlink button's label below).
+    expect(screen.getByText(/belongs to someoneelse/i)).toBeInTheDocument();
+    // It is repairable in place (unlink from this animal) — not shown as a normal export-ready day.
+    expect(
+      screen.getByRole('button', { name: /remove .* from newbie .*belongs to someoneelse/i })
+    ).toBeInTheDocument();
+  });
+
   it('surfaces a corrupt (non-array) recording-day list instead of laundering it to "no days"', async () => {
     // A recovered animal whose `days` is a string, not a list.
     const corrupt = { ...newAnimal, days: 'nope' };

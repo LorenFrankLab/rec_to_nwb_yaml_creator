@@ -286,7 +286,7 @@ describe('ValidationSummary', () => {
 
     expect(checkShadowExport).not.toHaveBeenCalled();
     expect(downloadYamlFile).not.toHaveBeenCalled();
-    expect(screen.getByRole('status')).toHaveTextContent(/no valid days to export/i);
+    expect(screen.getByRole('status')).toHaveTextContent(/no days are ready to export/i);
   });
 
   it('Export Valid Only shows a per-day preflight (config version + contents) before downloading', async () => {
@@ -358,6 +358,21 @@ describe('ValidationSummary', () => {
     const row = screen.getByTestId(`day-row-${ids.validDayId}`);
     await user.click(within(row).getByRole('button', { name: /add .* back to .* day list/i }));
     expect(relinkDayReference).toHaveBeenCalledWith('remy', ids.validDayId);
+  });
+
+  it('Validate All does not write to a wrong-owner row (would corrupt another animal\'s day)', async () => {
+    const user = userEvent.setup();
+    const { workspace, ids } = makeSummaryWorkspace();
+    // remy indexes a record that belongs to totoro.
+    workspace.days[ids.validDayId].animalId = 'totoro';
+    const updateDay = provideStore(workspace);
+
+    render(<ValidationSummary />);
+    await user.click(screen.getByRole('button', { name: /validate all/i }));
+
+    // The wrong-owner day id must NOT be written (it belongs to totoro, not remy).
+    const wroteWrongOwner = updateDay.mock.calls.some((call) => call[0] === ids.validDayId);
+    expect(wroteWrongOwner).toBe(false);
   });
 
   it('flags an indexed wrong-owner record and offers an unlink repair (never exports it as this animal)', async () => {
