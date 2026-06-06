@@ -202,6 +202,36 @@ describe('DayEditorStepper', () => {
     expect(screen.getByText(/Day Editor: remy - 2023-06-22/i)).toBeInTheDocument();
   });
 
+  // Every Day Editor handoff (header, Back link, and each step's Animal Editor links) must route by
+  // the resolved store OWNER KEY, not the animal record's `id` field, which can drift for a
+  // recovered/imported animal. Here the store key is "remy" but the record id is "STALE".
+  it('routes every handoff by the store owner key, not the stale animal record id', () => {
+    const staleIdState = {
+      workspace: {
+        animals: { remy: { ...mockAnimal, id: 'STALE', days: ['remy-2023-06-22'] } },
+        days: { 'remy-2023-06-22': mockDay }, // day.animalId === 'remy' (the store key)
+        settings: {},
+      },
+    };
+
+    render(
+      <StoreProvider initialState={staleIdState}>
+        <DayEditorStepper />
+      </StoreProvider>
+    );
+
+    // Header + Back link use the store key.
+    expect(screen.getByText(/Day Editor: remy - 2023-06-22/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /back to workspace/i })).toHaveAttribute(
+      'href',
+      '#/workspace?animal=remy'
+    );
+    // The Overview breadcrumb's Animal link routes to the store key, never the stale record id.
+    const animalCrumb = screen.getByRole('link', { name: /Animal: remy/i });
+    expect(animalCrumb).toHaveAttribute('href', '#/animal/remy/editor');
+    expect(screen.queryByText(/STALE/)).not.toBeInTheDocument();
+  });
+
   it('shows error when no dayId in URL', () => {
     useDayIdFromUrl.mockReturnValue(null);
 

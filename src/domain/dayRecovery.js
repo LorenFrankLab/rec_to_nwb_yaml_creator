@@ -80,6 +80,21 @@ export function isExportableDayStatus(status) {
 }
 
 /**
+ * A human-readable description of a record's DECLARED owner, for a wrong-owner / orphan repair
+ * note. A real string id is returned verbatim; a corrupt non-string id (which would otherwise
+ * render as "[object Object]" / "undefined") becomes an explicit phrase so the explanation stays
+ * usable instead of leaking a meaningless token to the user.
+ *
+ * @param {*} animalId - The record's declared `animalId` (may be corrupt/non-string/absent).
+ * @returns {string}
+ */
+export function describeOwner(animalId) {
+  return typeof animalId === 'string' && animalId.length > 0
+    ? animalId
+    : 'another animal (unreadable id)';
+}
+
+/**
  * Classify every day belonging to ONE animal: each index reference (ok / dangling) followed by
  * any record that belongs to the animal but is not in its index (recovered_unlinked). Tolerates
  * a corrupt/missing index (read through `getAnimalDayIds`) and a non-record days map.

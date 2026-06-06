@@ -27,9 +27,15 @@ import './DayEditor.scss';
  * @param {(issue: object) => void} [props.onRepair] - Executes an issue's `repairCommand`
  *   in place (threaded from DayEditorStepper). A commandable issue's button performs the
  *   reset instead of navigating.
+ * @param {string} [props.animalKey] - The resolved store owner key; animal-surface repairs
+ *   deep-link by it instead of the possibly-stale `animal.id` record field.
  * @returns {JSX.Element}
  */
-export default function ValidationStep({ day, mergedDay, onNavigate, animal, onRepair }) {
+export default function ValidationStep({ day, mergedDay, onNavigate, animal, onRepair, animalKey = undefined }) {
+  // The store OWNER KEY (resolved by DayEditorStepper); a stale/missing `animal.id` record field
+  // must not misroute an animal-surface repair deep-link. Falls back to `animal.id` for isolated
+  // renders that don't pass it.
+  const ownerKey = animalKey ?? animal?.id;
   const issues = useMemo(() => validateDay(day || {}, mergedDay || {}, animal), [day, mergedDay, animal]);
 
   const bySeverity = useMemo(() => groupBySeverity(issues), [issues]);
@@ -72,7 +78,7 @@ export default function ValidationStep({ day, mergedDay, onNavigate, animal, onR
 
       {issues.length > 0 && (
         <>
-          <SeveritySection title="Errors" severity="error" issues={bySeverity.error} onNavigate={onNavigate} animalId={animal?.id} onRepair={onRepair} />
+          <SeveritySection title="Errors" severity="error" issues={bySeverity.error} onNavigate={onNavigate} animalId={ownerKey} onRepair={onRepair} />
           <SeveritySection title="Warnings" severity="warning" issues={bySeverity.warning} />
           <SeveritySection title="Info" severity="info" issues={bySeverity.info} />
         </>
@@ -87,6 +93,7 @@ ValidationStep.propTypes = {
   onNavigate: PropTypes.func,
   animal: PropTypes.object,
   onRepair: PropTypes.func,
+  animalKey: PropTypes.string,
 };
 
 ValidationStep.defaultProps = {

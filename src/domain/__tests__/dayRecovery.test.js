@@ -13,6 +13,7 @@ import {
   isExportableDayStatus,
   classifyAnimalDays,
   classifyWorkspaceDays,
+  describeOwner,
 } from '../dayRecovery';
 
 const dayRecord = (id, animalId, date) => ({ id, animalId, date, session: { session_id: id } });
@@ -24,6 +25,19 @@ describe('isExportableDayStatus', () => {
     expect(isExportableDayStatus(DAY_STATUS.DANGLING_REFERENCE)).toBe(false);
     expect(isExportableDayStatus(DAY_STATUS.ORPHAN_NO_OWNER)).toBe(false);
     expect(isExportableDayStatus(DAY_STATUS.WRONG_OWNER)).toBe(false);
+  });
+});
+
+describe('describeOwner', () => {
+  it('returns a real string id verbatim', () => {
+    expect(describeOwner('totoro')).toBe('totoro');
+  });
+
+  it('describes a corrupt non-string / empty / absent owner as an unreadable phrase', () => {
+    expect(describeOwner({ not: 'a string' })).toBe('another animal (unreadable id)');
+    expect(describeOwner('')).toBe('another animal (unreadable id)');
+    expect(describeOwner(undefined)).toBe('another animal (unreadable id)');
+    expect(describeOwner(42)).toBe('another animal (unreadable id)');
   });
 });
 

@@ -5,8 +5,10 @@
  * SAME validation the Day Editor uses ({@link mergeDayMetadata} + {@link computeStepStatus}),
  * surfaces valid / error / incomplete counts, and offers two batch actions:
  *
- * - **Validate All** recomputes status for every day and persists the outcome onto
- *   `day.state.validated` (via `actions.updateDay`) so reload and other views agree.
+ * - **Validate All** recomputes status for every animal's RECORDING day (recovery status `ok`)
+ *   and persists the outcome onto `day.state.validated` (via `actions.updateDay`) so reload and
+ *   other views agree. Recovered/wrong-owner/dangling rows are intentionally skipped (they aren't
+ *   the animal's recording days) and the result message names how many were skipped.
  * - **Export Valid Only** downloads each fully-valid day's YAML, routing EVERY file
  *   through the same byte-for-byte shadow-export parity gate the single-day Export
  *   step uses ({@link checkShadowExport}); a day that fails parity in strict mode is
@@ -26,6 +28,7 @@ import {
   classifyWorkspaceDays,
   DAY_STATUS,
   isExportableDayStatus,
+  describeOwner,
 } from '../../domain/dayRecovery';
 import { formatDeterministicFilename, downloadYamlFile } from '../../io/yaml';
 import { checkShadowExport } from '../../domain/shadowExport';
@@ -232,10 +235,20 @@ export function ValidationSummary() {
     // loop and leave the rest unvalidated with no feedback.
     let failures = 0;
     validatable.forEach(({ day, chip }) => {
+      // A TRUTHY non-record `day.state` (a corrupt import persisting it as a scalar/array) is
+      // itself corruption. Do NOT LAUNDER it by coercing to `{}` and stamping `validated` on top —
+      // that would hide the corrupt state behind a bulk action. Skip the write and count it as a
+      // failure; the corruption surfaces (and is repairable) in the Day Editor's raw-shape UI. An
+      // ABSENT state (null/undefined) is not corruption — it initializes cleanly to `{}`.
+      if (day.state != null && !isRecord(day.state)) {
+        failures += 1;
+        // eslint-disable-next-line no-console
+        console.error(
+          `[validation-summary] day "${day.id}" has a corrupt state shape; skipped Validate All (repair it in the Day Editor).`
+        );
+        return;
+      }
       try {
-        // Guard a malformed `day.state` (a corrupt import can persist it as a scalar/array):
-        // spreading a string scatters char-indexed keys. `updateDay`/`applyDayUpdates` guards
-        // the current state too; this keeps the payload itself a clean record.
         const currentState = isRecord(day.state) ? day.state : {};
         actions.updateDay(day.id, {
           state: { ...currentState, validated: chip === 'valid' },
@@ -589,9 +602,9 @@ export function ValidationSummary() {
                     {wrongOwner && (
                       <span
                         className="validation-summary-orphan-note"
-                        title={`This day is listed under ${subjectLabel(animal)} but its record belongs to "${day.animalId}". It is NOT exported with this animal's metadata; remove it from this animal so it returns to its real owner.`}
+                        title={`This day is listed under ${subjectLabel(animal)} but its record belongs to ${describeOwner(day.animalId)}. It is NOT exported with this animal's metadata; remove it from this animal so it returns to its real owner.`}
                       >
-                        {' '}⚠ belongs to {String(day.animalId)}
+                        {' '}⚠ belongs to {describeOwner(day.animalId)}
                       </span>
                     )}
                   </td>
@@ -639,7 +652,7 @@ export function ValidationSummary() {
                         type="button"
                         className="validation-summary-repair"
                         onClick={() => actions.unlinkDayReference(animalKey, day.id)}
-                        aria-label={`Remove ${day.date || day.id} from ${subjectLabel(animal)} (it belongs to ${day.animalId})`}
+                        aria-label={`Remove ${day.date || day.id} from ${subjectLabel(animal)} (it belongs to ${describeOwner(day.animalId)})`}
                       >
                         Remove from this animal
                       </button>

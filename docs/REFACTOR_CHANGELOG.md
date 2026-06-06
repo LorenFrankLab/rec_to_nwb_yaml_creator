@@ -330,6 +330,33 @@ paths to the same domain policy:
 - **`Validate All` button title** now states that recovered/wrong-owner days are skipped, matching
   the post-click summary message.
 
+**Thirteenth-review follow-ups — finish the owner-key sweep across ALL Day Editor steps + readability/laundering polish (addressed in-phase, nothing deferred):**
+
+- **Every Day Editor step now routes by the resolved owner key, not `animal.id`.** The previous
+  rounds threaded `ownerKey` through reconfiguration and repairs, but `OverviewStep` (breadcrumb +
+  "Edit Animal" links + the derived session-id help text), `TasksEpochsStep` ("Add cameras" link +
+  the TaskModal Animal-Editor link), `ExportStep` (preflight display, recovered-day re-link links,
+  and animal-surface repair routing), and `ValidationStep` (animal-surface repair deep-links) still
+  built handoffs from the possibly-stale `animal.id` record field. All four now accept the
+  `animalKey` prop (already passed by `DayEditorStepper`) and resolve `ownerKey = animalKey ??
+  animal.id`, so a recovered animal whose record id drifted from its store key can no longer route to
+  a wrong/dead Animal Editor while repairing inherited setup. (New DayEditorStepper integration test
+  asserts the header, Back link, and breadcrumb all route by the store key and never leak the stale
+  id; each step keeps its `animal.id` fallback for isolated renders.)
+- **Object-valued owners now read as a human phrase, not `[object Object]`.** Added the domain
+  helper `describeOwner(animalId)` (a real string id verbatim; a corrupt non-string/empty/absent id
+  → `another animal (unreadable id)`), consumed by both the Validation Summary and the Animal
+  Workspace wrong-owner notes + aria-labels. A corrupt owner is now a usable repair explanation, not
+  a meaningless token. (New dayRecovery + ValidationSummary tests.)
+- **The `Validate All` module-header doc** no longer claims it persists status for "every day" — it
+  now describes the recovery-aware behavior (only `ok` recording days; recovered/wrong-owner/dangling
+  rows skipped and named in the result), matching the implementation and the button title.
+- **`Validate All` no longer launders a corrupt `day.state`.** A truthy non-record `state` (a corrupt
+  import) was silently coerced to `{}` and stamped with `validated`, hiding the corruption behind the
+  bulk action. It is now skipped and counted as a failure (it surfaces as a repairable raw-shape
+  issue in the Day Editor); an ABSENT state still initializes cleanly. (New ValidationSummary test
+  asserts the corrupt-state row is not written and is reported as failed.)
+
 ---
 
 ## Domain boundaries & ownership cleanup — Phase 8.5 (June 5, 2026)

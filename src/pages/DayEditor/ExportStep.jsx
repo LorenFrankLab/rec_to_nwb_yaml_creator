@@ -38,9 +38,16 @@ import './DayEditor.scss';
  * @param {(issue: object) => void} [props.onRepair] - Executes an issue's `repairCommand`
  *   in place (threaded from DayEditorStepper) so a commandable corruption in the blocked
  *   list resets without leaving the Export step.
+ * @param {string} [props.animalKey] - The resolved store owner key; used for the preflight
+ *   display, the recovered-day re-link links, and animal-surface repair routing instead of the
+ *   possibly-stale `animal.id` record field.
  * @returns {JSX.Element}
  */
-export default function ExportStep({ animal, day, onNavigate, onRepair }) {
+export default function ExportStep({ animal, day, onNavigate, onRepair, animalKey = undefined }) {
+  // The store OWNER KEY (resolved by DayEditorStepper); a stale/missing `animal.id` record field
+  // must not misroute a recovered animal's re-link/repair links. Falls back to `animal.id` for
+  // isolated renders that don't pass it.
+  const ownerKey = animalKey ?? animal?.id;
   const [showPreview, setShowPreview] = useState(false);
   const [blockingError, setBlockingError] = useState(null);
   const [overrideWarning, setOverrideWarning] = useState(null);
@@ -141,13 +148,13 @@ export default function ExportStep({ animal, day, onNavigate, onRepair }) {
       (issue) => issue.severity === 'warning'
     ).length;
     return buildPreflightSummary(merged, {
-      animalId: animal?.id,
+      animalId: ownerKey,
       date: day?.date,
       configurationVersion,
       isHistorical: isHistoricalConfiguration,
       warningCount,
     });
-  }, [animal, day, merged, exportBlocked]);
+  }, [animal, day, merged, exportBlocked, ownerKey]);
 
   const handleDownload = () => {
     // Defense in depth: validation gates the download before the encoder check.
@@ -201,10 +208,10 @@ export default function ExportStep({ animal, day, onNavigate, onRepair }) {
           )}
           {!dayExportable && (
             <p className="export-merge-error">
-              This recording day is not in {animal?.id}&apos;s day list (it was recovered but not
+              This recording day is not in {ownerKey}&apos;s day list (it was recovered but not
               re-linked), so it can&apos;t be exported yet. Re-link it (&quot;Add to day list&quot;)
               from the <a href="#/validation">validation summary</a> or the{' '}
-              <a href={`#/workspace?animal=${animal?.id}`}>workspace</a>, then return.
+              <a href={`#/workspace?animal=${ownerKey}`}>workspace</a>, then return.
             </p>
           )}
           <p className="export-validation-blocked-reason">
@@ -218,7 +225,7 @@ export default function ExportStep({ animal, day, onNavigate, onRepair }) {
             <RepairActions
               issues={validationErrors}
               onNavigate={onNavigate}
-              animalId={animal?.id}
+              animalId={ownerKey}
               onRepair={onRepair}
               groupByCategory
             />
@@ -393,6 +400,7 @@ ExportStep.propTypes = {
   day: PropTypes.object.isRequired,
   onNavigate: PropTypes.func,
   onRepair: PropTypes.func,
+  animalKey: PropTypes.string,
 };
 
 ExportStep.defaultProps = {

@@ -440,6 +440,44 @@ describe('ValidationSummary', () => {
     expect(screen.getByRole('status')).toHaveTextContent(/validated 1 day\./i);
   });
 
+  it('describes a wrong-owner row with a non-string (object) owner readably, not "[object Object]"', () => {
+    // remy indexes a record whose animalId is a corrupt object. The note must read as a usable
+    // explanation, not leak "[object Object]".
+    const { workspace, ids } = makeSummaryWorkspace();
+    delete workspace.days[ids.incompleteDayId];
+    delete workspace.days[ids.errorDayId];
+    workspace.animals.remy.days = [ids.validDayId];
+    workspace.animals.totoro.days = [];
+    workspace.days[ids.validDayId].animalId = { not: 'a string' };
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+    const row = screen.getByTestId(`day-row-${ids.validDayId}`);
+    expect(within(row).getByText(/belongs to another animal \(unreadable id\)/i)).toBeInTheDocument();
+    expect(within(row).queryByText(/\[object Object\]/)).not.toBeInTheDocument();
+  });
+
+  it('Validate All does NOT launder a corrupt day.state — it skips the write and counts it', async () => {
+    const user = userEvent.setup();
+    // An otherwise-valid (exportable) day whose `state` is a corrupt non-record. Validate All must
+    // not coerce it to {} and stamp `validated` (which would hide the corruption); it skips + counts.
+    const { workspace, ids } = makeSummaryWorkspace();
+    delete workspace.days[ids.incompleteDayId];
+    delete workspace.days[ids.errorDayId];
+    workspace.animals.remy.days = [ids.validDayId];
+    workspace.animals.totoro.days = [];
+    workspace.days[ids.validDayId].state = 'corrupt-state-string';
+    const updateDay = provideStore(workspace);
+
+    render(<ValidationSummary />);
+    await user.click(screen.getByRole('button', { name: /validate all/i }));
+
+    // The corrupt-state day's flag was NOT written (no laundering).
+    expect(updateDay.mock.calls.some((call) => call[0] === ids.validDayId)).toBe(false);
+    // It is reported as a failure, not silently counted as validated.
+    expect(screen.getByRole('status')).toHaveTextContent(/1 failed/i);
+  });
+
   it('renders an orphan row with a non-string (object) owner without crashing (no object as React child)', () => {
     // A corrupt import persists an unindexed record whose animalId is an object. The summary must
     // surface it as an orphan, not throw "objects are not valid as a React child".

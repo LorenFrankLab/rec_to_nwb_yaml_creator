@@ -105,9 +105,15 @@ function clearOrphans(entries, valid) {
  *   task_description across the workspace (excluding this day's tasks), for the
  *   Spyglass task-name identity guard in the modal.
  * @param {Function} props.onFieldUpdate - `(fieldPath, value)` updater.
+ * @param {string} [props.animalKey] - The resolved store owner key; used for Animal Editor links
+ *   instead of the possibly-stale `animal.id` record field.
  * @returns {JSX.Element}
  */
-export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, onFieldUpdate }) {
+export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, onFieldUpdate, animalKey = undefined }) {
+  // The store OWNER KEY (resolved by DayEditorStepper). Animal-editor links use it so a
+  // stale/missing `animal.id` record field can't misroute a recovered animal; falls back to
+  // `animal.id` for isolated renders that don't pass it.
+  const ownerKey = animalKey ?? animal?.id;
   // Tolerate corrupt persisted state: a non-array `tasks` (e.g. `{}` from a bad import)
   // must not crash render (`.map`/`.forEach`); it is surfaced + reset via
   // MalformedCollectionNotice below. Guard ALL day-owned arrays this step iterates.
@@ -311,7 +317,7 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
             enable video linking and spatial tracking for your tasks.
           </div>
           <div className="camera-info-actions">
-            <a href={`#/animal/${animal.id}/editor`} className="button-secondary">
+            <a href={`#/animal/${ownerKey}/editor`} className="button-secondary">
               Add cameras
             </a>
             <button
@@ -388,7 +394,7 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
         cameras={cameras}
         inheritedEvents={inheritedBehavioralEvents}
         knownTaskDescriptions={dayKnownDescriptions}
-        animalId={animal.id}
+        animalId={ownerKey}
         onSave={handleSaveTask}
         onCancel={handleCancel}
       />
@@ -426,6 +432,7 @@ TasksEpochsStep.propTypes = {
   knownTaskDescriptions: PropTypes.object,
   mergedDay: PropTypes.object,
   onFieldUpdate: PropTypes.func.isRequired,
+  animalKey: PropTypes.string,
 };
 
 TasksEpochsStep.defaultProps = {

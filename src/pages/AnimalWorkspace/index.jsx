@@ -22,7 +22,7 @@ import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import { getAnimalDayIds, getConfigHistory, getDaySession } from '../../state/workspaceSelectors';
 import { getAnimalSetupChecklist, SETUP_STATE } from '../../domain/workflowStatus';
-import { classifyAnimalDays, DAY_STATUS } from '../../domain/dayRecovery';
+import { classifyAnimalDays, DAY_STATUS, describeOwner } from '../../domain/dayRecovery';
 import { validateDay } from '../../domain/validation';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { validateRawAnimal } from '../../validation/rawShape';
@@ -497,7 +497,7 @@ export function AnimalWorkspace() {
                               <div className="day-info">
                                 <span className="day-date">{record.date || dayId}</span>
                                 <span className="day-session-id">
-                                  Belongs to {String(record.animalId)} — listed here by mistake; not
+                                  Belongs to {describeOwner(record.animalId)} — listed here by mistake; not
                                   exported with this animal.
                                 </span>
                               </div>
@@ -506,7 +506,7 @@ export function AnimalWorkspace() {
                                   type="button"
                                   className="btn-secondary"
                                   onClick={() => actions.unlinkDayReference(selectedAnimalId, dayId)}
-                                  aria-label={`Remove ${record.date || dayId} from ${selectedAnimalId} (belongs to ${record.animalId})`}
+                                  aria-label={`Remove ${record.date || dayId} from ${selectedAnimalId} (belongs to ${describeOwner(record.animalId)})`}
                                 >
                                   Remove from this animal
                                 </button>

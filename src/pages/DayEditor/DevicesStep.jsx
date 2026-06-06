@@ -419,7 +419,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
         <h2>Devices Configuration</h2>
         {overrideCleanupSection}
         <div className="empty-state">
-          <p>No electrodes are set up for {animal.id} yet.</p>
+          <p>No electrodes are set up for {ownerKey} yet.</p>
           <p className="empty-state-hint">
             Electrodes/probes are shared animal setup. You can mark failed channels for this
             recording day only after electrodes exist.
