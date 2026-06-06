@@ -111,7 +111,7 @@ describe('DevicesStep', () => {
     errorSpy.mockRestore();
   });
 
-  it('displays inherited notice with link to edit animal', () => {
+  it('displays the configuration-version notice with a link to shared animal electrode setup', () => {
     render(
       <DevicesStep
         animal={mockAnimal}
@@ -121,11 +121,12 @@ describe('DevicesStep', () => {
       />
     );
 
-    expect(screen.getByText(/device configuration inherited from animal/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /edit at animal level/i })).toHaveAttribute(
-      'href',
-      '#/animal/test-animal/editor'
-    );
+    expect(
+      screen.getByText(/this day uses animal electrode configuration v1/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /edit shared animal electrode setup/i })
+    ).toHaveAttribute('href', '#/animal/test-animal/editor?field=electrode_groups');
   });
 
   it('renders all electrode groups as collapsed details elements', () => {
@@ -320,10 +321,12 @@ describe('DevicesStep', () => {
       />
     );
 
-    expect(screen.getByText(/no electrode groups configured/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /configure electrode groups at animal level/i })).toHaveAttribute(
+    expect(screen.getByText(/no electrodes are set up/i)).toBeInTheDocument();
+    // The empty state routes to electrode setup and explains failed channels come after.
+    expect(screen.getByText(/mark failed channels for this recording day only after electrodes exist/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /set up electrodes/i })).toHaveAttribute(
       'href',
-      '#/animal/test-animal/editor'
+      '#/animal/test-animal/editor?field=electrode_groups'
     );
   });
 

@@ -229,7 +229,7 @@ export function AnimalWorkspace() {
                             "Electrodes/probes are configured once for the animal and shared across all of its days."
                           : 'Shared hardware for this animal. Review recovered or imported setup before exporting.'}
                       </p>
-                      <ul className="setup-checklist-list" role="list">
+                      <ul className="setup-checklist-list">
                         {checklist.map((item) => {
                           const href = setupActionHref(selectedAnimalId, item.action);
                           const isPrimary =

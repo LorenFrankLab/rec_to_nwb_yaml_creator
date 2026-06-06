@@ -410,12 +410,13 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
         <h2>Devices Configuration</h2>
         {overrideCleanupSection}
         <div className="empty-state">
-          <p>No electrode groups configured for {animal.id}</p>
+          <p>No electrodes are set up for {animal.id} yet.</p>
           <p className="empty-state-hint">
-            Electrode groups are configured at the animal level and inherited by all days.
+            Electrodes/probes are shared animal setup. You can mark failed channels for this
+            recording day only after electrodes exist.
           </p>
-          <a href={`#/animal/${animal.id}/editor`} className="button-primary">
-            Configure Electrode Groups at Animal Level
+          <a href={`#/animal/${animal.id}/editor?field=electrode_groups`} className="button-primary">
+            Set Up Electrodes
           </a>
         </div>
       </div>
@@ -426,10 +427,11 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
     <div className="devices-step">
       <h2>Devices Configuration</h2>
 
-      {/* Inherited notice */}
+      {/* This day's relationship to shared animal setup: it USES an animal configuration
+          version; probe geometry is edited in the shared animal setup, not here. */}
       <div className="inherited-notice">
-        Device configuration inherited from Animal
-        <a href={`#/animal/${animal.id}/editor`}>Edit at Animal Level</a>
+        This day uses animal electrode configuration v{effectiveConfig.configurationVersion ?? '—'}.
+        <a href={`#/animal/${animal.id}/editor?field=electrode_groups`}>Edit shared animal electrode setup</a>
       </div>
 
       {/* Configuration-version indicator + reconfiguration entry point. The wizard
@@ -452,8 +454,8 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
               </span>
               <span className="config-version-applied">
                 {reconfig.isLatest
-                  ? 'Editing day-level bad channels against the latest configuration. Probe geometry is edited in the Animal Editor.'
-                  : 'This is a historical configuration. You are editing day-level bad channels against a pinned past snapshot, not changing probe geometry.'}
+                  ? 'Mark failed channels for this recording day. Probe geometry is shared animal setup — edit it in the Animal Editor.'
+                  : 'This is a historical configuration. Mark failed channels for this recording day against this pinned snapshot; editing the latest animal setup will not change this day unless you reconfigure.'}
               </span>
               <span className="config-version-applied">
                 Applied to {reconfig.appliedCount} {reconfig.appliedCount === 1 ? 'day' : 'days'}
@@ -464,7 +466,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
               className="config-reconfig-button"
               onClick={() => setWizardOpen(true)}
             >
-              Reconfigure devices…
+              Hardware changed starting this day…
             </button>
           </div>
           <ReconfigWizard
@@ -483,6 +485,12 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
 
       {/* Malformed / stale / shadowing override repair controls (see overrideCleanupSection). */}
       {overrideCleanupSection}
+
+      {/* Failed channels are day-specific: marks here apply to THIS recording day only. */}
+      <p className="field-help-text devices-failed-channels-intro">
+        Mark failed channels for this recording day. These marks apply to this day only, not to
+        all recordings on this configuration.
+      </p>
 
       {/* Electrode groups (accordion) */}
       <section className="electrode-groups-section" aria-label="Electrode Groups">
