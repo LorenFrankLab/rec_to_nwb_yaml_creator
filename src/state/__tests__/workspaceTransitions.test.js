@@ -13,6 +13,7 @@ import {
   rebuildConfigurationHistoryForAnimal,
   createDayRecord,
   applyDayUpdates,
+  nextConfigurationVersion,
 } from '../workspaceTransitions';
 
 const NOW = '2026-06-05T00:00:00.000Z';
@@ -87,6 +88,26 @@ describe('addConfigurationSnapshotToAnimal', () => {
     );
     expect(updated.configurationHistory).toHaveLength(1);
     expect(updated.configurationHistory[0].version).toBe(1);
+  });
+
+  it('allocates max(version)+1 so a non-contiguous history never duplicates a version', () => {
+    // [1, 3] must append 4, not another 3 — a duplicate would let first-match resolution
+    // (applyConfigurationForward / resolveDayConfig) target the wrong snapshot.
+    const updated = addConfigurationSnapshotToAnimal(
+      { configurationHistory: [{ version: 1, appliedToDays: [] }, { version: 3, appliedToDays: [] }] },
+      { date: '2023-07-01', description: 'reconfig', devices: emptyDevices() },
+      NOW
+    );
+    expect(updated.configurationHistory.map((s) => s.version)).toEqual([1, 3, 4]);
+  });
+});
+
+describe('nextConfigurationVersion', () => {
+  it('returns max(version)+1, and 1 for an empty/corrupt history', () => {
+    expect(nextConfigurationVersion([{ version: 1 }, { version: 3 }])).toBe(4);
+    expect(nextConfigurationVersion([{ version: 1 }, { version: 2 }])).toBe(3);
+    expect(nextConfigurationVersion([])).toBe(1);
+    expect(nextConfigurationVersion('corrupt')).toBe(1);
   });
 });
 

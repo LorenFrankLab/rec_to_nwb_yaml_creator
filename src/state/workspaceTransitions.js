@@ -85,9 +85,27 @@ export function applyAnimalUpdates(animal, updates, now) {
 }
 
 /**
+ * The next configuration version to allocate for an animal's history: `max(existing) + 1`
+ * (or 1 for an empty/missing history). Using the max — not the count — guarantees a UNIQUE
+ * version even for a non-contiguous imported/repaired history (e.g. `[1, 3]` → 4, not a
+ * duplicate 3), so `applyConfigurationForward`/`resolveDayConfig`'s first-match `.find()`
+ * can never resolve to the wrong snapshot.
+ *
+ * @param {Array} history - The animal's configuration history (any shape tolerated).
+ * @returns {number} The next version number.
+ */
+export function nextConfigurationVersion(history) {
+  const versions = (Array.isArray(history) ? history : [])
+    .map((s) => s?.version)
+    .filter((v) => Number.isFinite(v));
+  return versions.length > 0 ? Math.max(...versions) + 1 : 1;
+}
+
+/**
  * Append a new configuration snapshot to an animal's history and return the next animal
- * record. The version is `history.length + 1` (sequential). Used by the reconfiguration
- * wizard's create-then-apply flow.
+ * record. The version is `max(existing version) + 1` (see {@link nextConfigurationVersion})
+ * so it is unique even for a non-contiguous history. Used by the reconfiguration wizard's
+ * create-then-apply flow.
  *
  * @param {object} animal - The current animal record.
  * @param {object} config - `{ date, description, devices }` for the new snapshot.
@@ -99,7 +117,7 @@ export function addConfigurationSnapshotToAnimal(animal, config, now) {
   const history = getConfigHistory(updated);
 
   const newVersion = {
-    version: history.length + 1,
+    version: nextConfigurationVersion(history),
     date: config.date,
     description: config.description,
     devices: normalizeProbeConfigDevices(config.devices),

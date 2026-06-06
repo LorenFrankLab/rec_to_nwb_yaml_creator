@@ -22,6 +22,7 @@ import {
   rebuildConfigurationHistoryForAnimal,
   createDayRecord,
   applyDayUpdates,
+  nextConfigurationVersion,
 } from './workspaceTransitions';
 
 /**
@@ -268,11 +269,17 @@ export function useWorkspace(initialState = null) {
       },
 
       /**
-       * Adds a new configuration snapshot to track probe changes and returns the
-       * created version number. The version is assigned from the authoritative store
-       * state inside the `setWorkspace` updater (not from a possibly-stale caller
-       * snapshot), so the reconfiguration wizard can apply the snapshot forward to
-       * exactly the version it just created — no cross-action re-derivation.
+       * Adds a new configuration snapshot to track probe changes and returns the created
+       * version number. Both the appended snapshot and this return value use the same
+       * deterministic allocation — `max(existing version) + 1` ({@link nextConfigurationVersion})
+       * — so the returned version always matches the snapshot the updater appends, and is
+       * unique even for a non-contiguous history. The reconfiguration wizard then applies the
+       * snapshot forward to exactly the version it just created.
+       *
+       * Contract: the return is authoritative for a SINGLE add per React commit (the wizard's
+       * create-then-apply path — it never queues two adds before the state commits). It is
+       * derived from the authoritative committed store (`workspaceRef`) because React batches
+       * the updater, whose result is not available synchronously when this action returns.
        *
        * @param {string} animalId - Animal identifier
        * @param {object} config - Configuration data (date, description, devices)
@@ -280,15 +287,13 @@ export function useWorkspace(initialState = null) {
        * @throws {Error} If animal does not exist
        */
       addConfigurationSnapshot: (animalId, config) => {
-        // The version is assigned from `prev` inside the updater so sequential adds
-        // number correctly (1→2→3). The returned value is derived from the authoritative
-        // current store (workspaceRef) rather than the deferred updater, because React
-        // batches the updater and its result is not available when this action returns.
-        // For a single add per tick — the wizard's create-then-apply path — the two
-        // agree: no intervening update changes the history length between them.
+        // Derive the created version from the authoritative current store with the SAME
+        // allocation the updater's helper uses (max+1), so the return matches the appended
+        // snapshot for the wizard's single-add-per-commit path.
         const current = workspaceRef.current.animals[animalId];
-        const currentHistory = getConfigHistory(current);
-        const createdVersion = current ? currentHistory.length + 1 : undefined;
+        const createdVersion = current
+          ? nextConfigurationVersion(getConfigHistory(current))
+          : undefined;
 
         setWorkspace((prev) => {
           if (!prev.animals[animalId]) {

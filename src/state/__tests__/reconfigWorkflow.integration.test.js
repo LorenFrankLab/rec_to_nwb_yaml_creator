@@ -56,6 +56,34 @@ describe('probe reconfiguration workflow [integration]', () => {
     expect(snap2.appliedToDays.sort()).toEqual([dayIds.day3, dayIds.day4].sort());
   });
 
+  it('returns and appends a UNIQUE version for a non-contiguous history ([1,3] -> 4)', () => {
+    // A repaired/imported history can skip a version. addConfigurationSnapshot must allocate
+    // max+1 (4), not the count+1 (3) — a duplicate 3 would let applyConfigurationForward /
+    // resolveDayConfig first-match resolve to the wrong snapshot. The returned version must
+    // match the appended one so the wizard applies days onto the snapshot it just created.
+    const { workspace, animalId, v1, v2 } = makeReconfigWorkspace();
+    const animal = workspace.animals[animalId];
+    animal.configurationHistory = [
+      { version: 1, date: '2023-06-22', description: 'Initial', devices: v1, appliedToDays: [] },
+      { version: 3, date: '2023-06-23', description: 'Imported v3', devices: v2, appliedToDays: [] },
+    ];
+
+    const { result } = renderHook(() => useStore({ workspace }));
+
+    let returned;
+    act(() => {
+      returned = result.current.actions.addConfigurationSnapshot(animalId, {
+        date: '2023-06-24',
+        description: 'Next reconfig',
+        devices: structuredClone(v2),
+      });
+    });
+
+    const history = result.current.model.workspace.animals[animalId].configurationHistory;
+    expect(history.map((s) => s.version)).toEqual([1, 3, 4]);
+    expect(returned).toBe(4);
+  });
+
   it('keeps export byte-identical for days whose resolved snapshot is unchanged', () => {
     const { workspace, animalId, dayIds } = makeReconfigWorkspace();
     const { result } = renderHook(() => useStore({ workspace }));
