@@ -54,8 +54,41 @@ feel intentionally safe only when the dependent metadata is the same; a changed 
 calibration, lens, model, data-acq identity, task description, or other downstream key material
 must steer the user to a distinct name before export.
 
+## Design decisions (from the 2026-06-06 brainstorm)
+
+Full design: [docs/superpowers/specs/2026-06-06-ownership-day-configurability-design.md](../../../../docs/superpowers/specs/2026-06-06-ownership-day-configurability-design.md). The decisions that bind this phase:
+
+- **Both cadences are first-class.** Same-day conversion and batch catch-up each get a real
+  path; neither is the stepchild (operator varies by lab).
+- **Headline user-facing promise: blast-radius transparency + no silent retroactive change.**
+  Any change that reaches beyond the day in front of you names exactly which days it affects,
+  before you commit; nothing silently rewrites already-recorded days. The six ownership
+  patterns become INTERNAL vocabulary — the user experiences only "today-only edit" vs "heads
+  up, this touches these N days (enumerated)". Silent retroactive change is the worst failure
+  mode (the user won't notice it).
+- **Identity model.** Three kinds of field: (1) **physical-configuration identity** (electrode
+  geometry, channel maps, camera calibration/lens/zoom/model, recording system/amplifier) is
+  **append-only — a physical change is a NEW identity/version, never a silent edit of the old
+  one**, so past days keep what they recorded; (2) **truly-constant animal fact**
+  (`subject_id`, species, sex, DOB) may propagate as a correction but must **announce its
+  blast radius**; (3) **per-day fact** is local. Touching past days is only ever an explicit
+  "apply to these N days" action (the reconfiguration-wizard shape).
+- **Implementation = approach A (immutable-once-referenced).** Catalogs stay animal-level;
+  once a day references an identity, recalibration/swap creates a NEW identity rather than
+  mutating the live values. No state-shape change, no per-day value copies; referenced values
+  never mutate, so the golden baselines stay byte-identical. The heavier per-day-freeze /
+  versioned-snapshot alternative is deferred to its own phase.
+- **Cameras vs data-acq are not symmetric.** Cameras do approach A cleanly (`camera_id`
+  per-day references; recalibration = new camera, past days unchanged). Data-acq has NO
+  per-day binding, so it follows the principle only: a single shared recording-system
+  identity, editing it shows it affects ALL days, and a mid-study amplifier swap is surfaced
+  as currently unsupported — i.e. **Task 3 is decided as option B**, and the rig constants
+  (`raw_data_to_volts` / `times_period_multiplier`) live under Recording System with it.
+
 ## Inputs to read first
 
+- [docs/superpowers/specs/2026-06-06-ownership-day-configurability-design.md](../../../../docs/superpowers/specs/2026-06-06-ownership-day-configurability-design.md)
+  — the validated design this phase implements.
 - [workflow-clarity-design.md](workflow-clarity-design.md) — the current workflow model:
   animal setup, recording-day metadata, failed channels, reconfiguration, and export
   confidence.
@@ -235,11 +268,15 @@ sub-stream must land green (full suite, lint, build, byte-identical baselines) o
   notice for mid-study recording-system changes. Do not leave this as a quiet follow-up
   while browser QA proceeds.
 
-  Default preference for THIS phase: option B (animal-wide/shared + unsupported-change notice),
-  which is UI-only and keeps the golden baselines byte-identical. Option A (a versioned data-acq
-  source) changes how `data_acq_device` resolves in `mergeDayMetadata`, can change export bytes, and
-  needs golden-baseline regeneration plus trodes_to_nwb coordination — scope it as its own follow-up,
-  not inside this UX phase.
+  DECISION (from the brainstorm): option B (animal-wide/shared recording-system identity + a
+  visible blast-radius notice that editing it affects ALL days + an explicit "currently
+  unsupported" notice for a mid-study amplifier swap). Data-acq has no per-day binding, so the
+  append-only identity model cannot keep "past days kept the old amplifier" without versioning;
+  option B honors the no-silent-retroactive principle while staying UI-only and byte-identical.
+  Option A (a versioned data-acq source pinned per day) is the only way to represent a mid-study
+  swap directly; it changes `mergeDayMetadata` resolution, can change export bytes, and needs
+  golden-baseline regeneration plus trodes_to_nwb coordination — scoped as its own future phase,
+  not here.
 
   The Recording System owner also holds `raw_data_to_volts` and `times_period_multiplier` — amplifier
   and clock constants that do not change day to day. Edit them ONCE here, not in a floating
@@ -264,7 +301,12 @@ sub-stream must land green (full suite, lint, build, byte-identical baselines) o
 - **Task 5 — clarify camera catalog vs task-epoch/day usage.** Anywhere a task/video/FsGUI/day
   refers to a camera, say that the day-owned task/video/FsGUI/epoch row is selecting from the
   animal camera catalog. The camera editor must explain at the moment of edit that a different
-  zoom/calibration/lens/model/id is a different camera identity. Existing camera tables/summaries
+  zoom/calibration/lens/model/id is a different camera identity. Apply the approach-A
+  immutable-once-referenced rule: once any day references a camera, recalibrating/changing its
+  identity is a NEW camera (the default action), NOT a silent edit of the live values — so past
+  days keep the camera they actually used. A genuine correction to a referenced camera is the
+  rare explicit "apply to the N days using this camera" action that enumerates the affected
+  days; an unreferenced camera is freely editable. Existing camera tables/summaries
   must show enough identity detail that users can tell cameras apart without opening every row.
   Task/video/FsGUI camera empty states must offer `Set Up Cameras` and explain that cameras are
   shared animal catalog entries selected by recording-day tasks, videos, and opto/FsGUI protocols.
@@ -361,6 +403,7 @@ sub-stream must land green (full suite, lint, build, byte-identical baselines) o
 | `workflowOwnership helper` *(unit)* | high-risk field paths/issue codes map to one ownership pattern and stable user-facing labels/actions; a completeness test cross-checks issue-code coverage against `CATEGORY_BY_CODE`/`SURFACE_BY_CODE` so no validator code is left unowned. |
 | `Animal Editor IA labels` *(component)* | cameras, recording system/data-acq, behavioral events, opto, and electrodes are separate enough that data-acq is not hidden in a camera-like hardware bucket. |
 | `ownership cues at point of action` *(component)* | shared setup, configuration version, day-only, task-epoch setup assignment, using-recording-system-default, overridden, catalog-selection, and exported-with-this-day cues appear near the relevant controls/actions, not only in docs. |
+| `blast-radius transparency / no silent retroactive` *(component)* | a change reaching past days enumerates them before commit; editing a referenced camera defaults to a NEW identity (past days unchanged); editing a constant animal fact (species/DOB) shows it affects all N days; editing data-acq shows it affects all days and a mid-study swap shows the unsupported notice; no edit path silently rewrites an already-recorded day. |
 | `day technical defaults vs overrides` *(component/unit)* | effective day values are visible; default-backed values do not look like routine day edits; advanced overrides are distinguishable; reset to recording-system default updates only the day value; header path remains day-only. |
 | `camera catalog identity` *(component)* | camera tables/modals/summaries show name/id/lens/`meters_per_pixel`; changed zoom/calibration guidance says to create/use a different camera name; task/video/FsGUI empty states route to `Set Up Cameras`; a multi-epoch day with different cameras/rooms makes the per-task room/camera/epoch mapping visible, and two tasks claiming the same epoch surfaces the export-blocking `duplicate_task_epoch` error. |
 | `behavioral event ownership` *(component/integration)* | animal-level event editing cannot be mistaken for exported day events; `Use on this day` makes an inherited/reference event appear in the exported day-specific list. |
