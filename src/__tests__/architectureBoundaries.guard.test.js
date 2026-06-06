@@ -54,10 +54,11 @@ export function importViolation(fromRel, toRel, allowlist = CROSS_PAGE_ALLOWLIST
 }
 
 /**
- * Extract the specifiers of all static/dynamic imports + re-exports in `text`.
+ * Extract the specifiers of all static/dynamic imports + re-exports in `text`. Exported so the
+ * real-tree scan's whole correctness (it rests on this extractor) can be locked by a unit test.
  * @param text
  */
-function importSpecifiers(text) {
+export function importSpecifiers(text) {
   const specs = [];
   const patterns = [
     /\bimport\s+[^'"]*?\bfrom\s*['"]([^'"]+)['"]/g, // import x from 'y'
@@ -117,6 +118,22 @@ describe('architecture boundaries — classifier (synthetic)', () => {
     expect(importViolation('domain/validation.js', 'validation/index')).toBeNull();
     expect(importViolation('domain/shadowExport.js', 'io/yaml')).toBeNull();
     expect(importViolation('domain/badChannels.js', 'ntrode/probeCatalog')).toBeNull();
+  });
+
+  it('importSpecifiers extracts every import form the real-tree scan relies on', () => {
+    const src = [
+      "import a from './a';",
+      "import { b, c } from '../b';",
+      "import {\n  d,\n  e,\n} from '@/domain/validation';", // multi-line named
+      "import defaultExp, { f } from './mix';", // default + named
+      "import * as ns from '../ns';", // namespace
+      "import './side-effect';", // bare side-effect
+      "export { g } from './reexport';", // re-export
+      "const x = await import('./dynamic');", // dynamic
+    ].join('\n');
+    expect(importSpecifiers(src).sort()).toEqual(
+      ['./a', '../b', '@/domain/validation', './mix', '../ns', './side-effect', './reexport', './dynamic'].sort()
+    );
   });
 
   it('resolves the @/* alias so an aliased page import cannot bypass the guard', () => {

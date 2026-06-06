@@ -167,6 +167,14 @@ describe('probe reconfiguration workflow [integration]', () => {
     expect(result.current.model.workspace.animals[animalId].configurationHistory.map((s) => s.version)).toEqual([1, 2, 3]);
   });
 
+  it('applyConfigurationForward throws through the store on a non-existent snapshot version', () => {
+    const { workspace, animalId, dayIds } = makeReconfigWorkspace();
+    const { result } = renderHook(() => useStore({ workspace }));
+    expect(() =>
+      act(() => result.current.actions.applyConfigurationForward(animalId, 99, [dayIds.day1]))
+    ).toThrow(/Configuration version "99" not found/);
+  });
+
   it('keeps export byte-identical for days whose resolved snapshot is unchanged', () => {
     const { workspace, animalId, dayIds } = makeReconfigWorkspace();
     const { result } = renderHook(() => useStore({ workspace }));

@@ -161,13 +161,18 @@ export function buildProbeWideBadChannelMap({
  * to `[]` when they carry a non-empty array OR a preserved corrupt scalar (both are
  * converter-ignored corruption the hidden later-row grid can't otherwise repair).
  *
- * @param {Array} channelMaps - The group's local channel-map rows (each with `bad_channels`/`map`).
- * @param {number} electrodeId - The probe-local electrode id toggled.
- * @param {boolean} isChecked - Whether the box was checked.
- * @param {string} deviceType - The group's device type (for the probe id set).
+ * Takes an options object (not positional args) to match its Day-Editor twin
+ * {@link buildProbeWideBadChannelMap} and make the same-typed `electrodeId`/`isChecked`
+ * non-transposable.
+ *
+ * @param {object} params
+ * @param {Array} params.channelMaps - The group's local channel-map rows (each with `bad_channels`/`map`).
+ * @param {number} params.electrodeId - The probe-local electrode id toggled.
+ * @param {boolean} params.isChecked - Whether the box was checked.
+ * @param {string} params.deviceType - The group's device type (for the probe id set).
  * @returns {Array} The next channel-map rows.
  */
-export function migrateProbeWideChannelMaps(channelMaps, electrodeId, isChecked, deviceType) {
+export function migrateProbeWideChannelMaps({ channelMaps, electrodeId, isChecked, deviceType }) {
   const probeIdSet = probeElectrodeIdSet(deviceType);
   const translatedLaterMarks = channelMaps
     .slice(1)

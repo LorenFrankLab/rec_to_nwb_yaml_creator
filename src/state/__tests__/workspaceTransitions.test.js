@@ -60,6 +60,17 @@ describe('applyAnimalUpdates', () => {
     expect(applyAnimalUpdates(animal, { optogenetics: null }, NOW).optogenetics).toBeNull();
   });
 
+  it('applies a devices edit to animal.devices even with no configuration history (no mirror)', () => {
+    const animal = { id: 'remy', devices: emptyDevices(), configurationHistory: [] };
+    const updated = applyAnimalUpdates(
+      animal,
+      { devices: { ...emptyDevices(), electrode_groups: [{ id: 0 }] } },
+      NOW
+    );
+    expect(updated.devices.electrode_groups).toHaveLength(1);
+    expect(updated.configurationHistory).toEqual([]); // nothing to mirror into
+  });
+
   it('routes a data_acq_device edit onto animal.devices (the export read location)', () => {
     const animal = { id: 'remy', devices: emptyDevices(), configurationHistory: [] };
     const acq = [{ name: 'SpikeGadgets', system: 'MCU', amplifier: 'Intan', adc_circuit: 'Intan' }];

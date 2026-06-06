@@ -118,26 +118,19 @@ const ChannelMapEditor = ({ electrodeGroup, channelMaps, onSave, onCancel }) => 
     setLocalChannelMaps(updated);
   };
 
-  // Handle probe-wide bad-channel toggle (multi-shank: probe-local id 0..N-1,
-  // written to the group's FIRST ntrode row — the only row the converter honors).
-  // MIGRATION: editing the probe-wide selection MIGRATES every
-  // later row's marks onto the first row, then CLEARS the later rows. A group loaded
-  // with later-row corruption (which the converter ignores and the export rule blocks
-  // on) is otherwise a repair dead-end here, because the later-row controls are hidden.
-  // A later row's bad_channels entries are KEYS into that row's `map` (row-local
-  // indices); the probe-local id is `row.map[key]`. We TRANSLATE each entry to its
-  // mapped id (falling back to the raw key when the map lacks it) and UNION it onto the
-  // first row so multishank_bad_channels_ignored then passes. We keep ONLY values that
-  // are representable probe electrode ids: an untranslatable, out-of-range mark has no
-  // probe-wide checkbox (the converter ignores later-row marks anyway), so copying it
-  // would fabricate an unrepairable, export-blocking first-row value — drop those.
+  // Probe-wide bad-channel toggle (multi-shank): edits the first row's probe-local selection
+  // and migrates every later row's marks onto it (trodes_to_nwb honors the first row only).
+  // The converter meaning — translate, union, clear later rows — lives in
+  // `migrateProbeWideChannelMaps` (see ../../domain/badChannels); touching the selector
+  // therefore also repairs loaded later-row corruption so `multishank_bad_channels_ignored` passes.
   const handleProbeWideBadChannelToggle = (electrodeId, isChecked) => {
-    // The converter meaning — union the first row's toggled selection with every later
-    // row's translated marks and clear later rows (array or preserved corrupt scalar) —
-    // lives in `migrateProbeWideChannelMaps`. Touching the selector therefore also repairs
-    // loaded later-row corruption so `multishank_bad_channels_ignored` passes.
     setLocalChannelMaps(
-      migrateProbeWideChannelMaps(localChannelMaps, electrodeId, isChecked, electrodeGroup.device_type)
+      migrateProbeWideChannelMaps({
+        channelMaps: localChannelMaps,
+        electrodeId,
+        isChecked,
+        deviceType: electrodeGroup.device_type,
+      })
     );
   };
 

@@ -13,19 +13,6 @@ import { validate } from '../validation';
 import { validateRawDay, validateRawAnimal } from '../validation/rawShape';
 
 /**
- * Validates entire day and computes step status.
- *
- * @param {import('@/state/workspaceTypes').Day} day - Day record
- * @param {object} mergedDay - Merged animal + day metadata
- * @returns {object} Status map: { stepId: 'valid'|'incomplete'|'error'|'pending' }
- *
- * @example
- * const status = computeStepStatus(day, mergedDay);
- * if (status.overview === 'error') {
- *   console.log('Overview step has validation errors');
- * }
- */
-/**
  * Whether `value` is a plain object record (not null, not an array). Mirrors the
  * helper in `workspaceUtils.js` — used to tell a well-formed override container/map
  * from a malformed (scalar/array) one.

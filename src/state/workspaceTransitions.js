@@ -27,8 +27,11 @@ import {
  * clears opto (how the editor disables it).
  *
  * @param {object} animal - The current animal record.
- * @param {object} updates - Partial updates (subject/experimenters/devices/cameras/
- *   data_acq_device/technicalDefaults/behavioral_events/optogenetics).
+ * @param {object} updates - Partial updates; recognized keys: `subject`, `experimenters`,
+ *   `devices` (also mirrored into the latest snapshot), `cameras`, `data_acq_device` (routed
+ *   onto `devices.data_acq_device`), `technicalDefaults`, `behavioral_events`, `optogenetics`.
+ *   Note: `optogenetics: null` CLEARS opto (uses `!== undefined`, not truthiness); all other
+ *   keys are applied only when truthy.
  * @param {string} now - Timestamp to stamp `lastModified`.
  * @returns {object} The next animal record (deep-cloned; input not mutated).
  */
@@ -95,9 +98,11 @@ export function applyAnimalUpdates(animal, updates, now) {
  * @returns {number} The next version number.
  */
 export function nextConfigurationVersion(history) {
+  // Versions are integers; ignore any non-integer (a corrupt import like `2.5` must not
+  // yield a fractional next version such as `3.5`).
   const versions = (Array.isArray(history) ? history : [])
     .map((s) => s?.version)
-    .filter((v) => Number.isFinite(v));
+    .filter((v) => Number.isInteger(v));
   return versions.length > 0 ? Math.max(...versions) + 1 : 1;
 }
 
@@ -147,7 +152,8 @@ export function addConfigurationSnapshotToAnimal(animal, config, now, version) {
  * @param {string} now - Timestamp to stamp moved days + the animal.
  * @param {number} [version] - The version to assign (defaults to {@link nextConfigurationVersion}).
  * @returns {{ animal: object, days: object, version: number }} The next animal + days map and
- *   the version that was created.
+ *   the version that was created. (Superset of {@link applyConfigurationForwardToAnimal}'s
+ *   `{animal, days}` — the extra `version` is the just-created snapshot.)
  */
 export function createSnapshotAndApplyForward(animal, days, config, dayIds, now, version) {
   const created = version ?? nextConfigurationVersion(getConfigHistory(animal));
@@ -166,7 +172,8 @@ export function createSnapshotAndApplyForward(animal, days, config, dayIds, now,
  * @param {number} snapshotVersion - The existing snapshot version to apply.
  * @param {string[]} dayIds - Day ids to move onto that version.
  * @param {string} now - Timestamp to stamp moved days + the animal.
- * @returns {{ animal: object, days: object }} The next animal + days map.
+ * @returns {{ animal: object, days: object }} The next animal + days map. (Returns NO
+ *   `version` — use {@link createSnapshotAndApplyForward} if you also need the created version.)
  * @throws {Error} If `snapshotVersion` does not exist for the animal.
  */
 export function applyConfigurationForwardToAnimal(animal, days, snapshotVersion, dayIds, now) {
@@ -313,7 +320,12 @@ export function createDayRecord(animal, animalId, dayId, date, session, now) {
  * resetDaySession repair relies on this to write a clean session over a malformed one.
  *
  * @param {object} day - The current day record.
- * @param {object} updates - Partial updates.
+ * @param {object} updates - Partial updates; recognized keys: `session` (deep-merged, with the
+ *   malformed-guard above), `technical` (deep-merged), `state` (deep-merged), `deviceOverrides`
+ *   (normalized), and the replace-on-`!== undefined` collections `tasks`, `behavioral_events`,
+ *   `associated_files`, `associated_video_files`, `fs_gui_yamls`, `keywords`, plus
+ *   `configurationVersion`. Note: setting `configurationVersion` here re-pins the day but does
+ *   NOT reconcile snapshots' `appliedToDays` — use `applyConfigurationForward` for that.
  * @param {string} now - Timestamp to stamp `lastModified`.
  * @returns {object} The next day record (deep-cloned; input not mutated).
  */

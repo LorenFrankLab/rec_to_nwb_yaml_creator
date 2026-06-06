@@ -296,7 +296,10 @@ export function useWorkspace(initialState = null) {
         if (current) {
           // Optimistically advance the cached workspace so a second synchronous call reserves
           // the NEXT version (distinct returns; no stale guess across queued calls). The next
-          // render overwrites this with the committed state.
+          // render overwrites this with the committed state. Invariant: this only REPLACES an
+          // existing animal (never adds/removes a key), so it can't diverge from committed
+          // state — unless an animal-REMOVING action (deleteAnimal) were composed in the same
+          // synchronous tick, which no UI path does.
           workspaceRef.current = {
             ...workspaceRef.current,
             animals: {
@@ -353,7 +356,9 @@ export function useWorkspace(initialState = null) {
           // Optimistically advance the cached workspace (animal history + day pins) so a second
           // synchronous call reserves the NEXT version — two calls in one event get distinct
           // versions, and the second never appends a duplicate the first-match resolver would
-          // mis-pin to. The next render overwrites this with the committed state.
+          // mis-pin to. The next render overwrites this with the committed state. Same invariant
+          // as addConfigurationSnapshot: it only replaces existing keys, so it can't diverge from
+          // committed state unless an animal/day-removing action is composed in the same tick.
           const optimistic = createSnapshotAndApplyForward(
             current,
             workspaceRef.current.days,

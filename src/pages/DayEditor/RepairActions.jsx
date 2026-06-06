@@ -2,7 +2,7 @@ import PropTypes from 'prop-types';
 import { repairTargetForIssue, STEP_LABELS } from '../../domain/validation';
 
 // Re-export STEP_LABELS so existing importers (ValidationStep) keep working while the
-// source of truth lives in validation.js (alongside the routing it labels).
+// source of truth lives in domain/validation.js (alongside the routing it labels).
 export { STEP_LABELS };
 
 /**

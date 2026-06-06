@@ -119,12 +119,12 @@ describe('buildProbeWideBadChannelMap (Day Editor map shape)', () => {
 
 describe('migrateProbeWideChannelMaps (Animal Editor row shape)', () => {
   it('unions onto the first row and clears later rows (array marks)', () => {
-    const next = migrateProbeWideChannelMaps(twoShankRows([2], [3]), 5, true, MULTI);
+    const next = migrateProbeWideChannelMaps({ channelMaps: twoShankRows([2], [3]), electrodeId: 5, isChecked: true, deviceType: MULTI });
     expect(next[0].bad_channels).toEqual([2, 5, 19]);
     expect(next[1].bad_channels).toEqual([]);
   });
   it('clears a later-row corrupt scalar during migration', () => {
-    const next = migrateProbeWideChannelMaps(twoShankRows([], 'corrupt'), 1, true, MULTI);
+    const next = migrateProbeWideChannelMaps({ channelMaps: twoShankRows([], 'corrupt'), electrodeId: 1, isChecked: true, deviceType: MULTI });
     expect(next[0].bad_channels).toEqual([1]);
     expect(next[1].bad_channels).toEqual([]);
   });
