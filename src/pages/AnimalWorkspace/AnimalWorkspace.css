@@ -272,6 +272,113 @@
   background-color: #1976d2;
 }
 
+/* Setup checklist — shared animal hardware, the operational home for setup */
+.setup-checklist {
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background-color: #fafafa;
+}
+
+.setup-checklist-heading {
+  font-size: 1.05rem;
+  margin: 0 0 0.25rem;
+}
+
+.setup-checklist-intro {
+  margin: 0 0 0.75rem;
+  font-size: 0.875rem;
+  color: #555;
+}
+
+.setup-checklist-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.setup-item {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1fr) auto minmax(6rem, 1.5fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background-color: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+.setup-item-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.setup-item-summary {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.setup-state-badge {
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  white-space: nowrap;
+  justify-self: start;
+}
+
+.setup-state-not_started {
+  background-color: #fff3e0;
+  color: #e65100;
+}
+
+.setup-state-needs_review {
+  background-color: #fff8e1;
+  color: #f9a825;
+}
+
+.setup-state-has_errors {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.setup-state-complete {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.setup-item-action {
+  justify-self: end;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: 4px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.setup-item-action:hover {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.setup-item-action-primary {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.setup-item-action-primary:hover {
+  background-color: #1976d2;
+}
+
 /* Calendar Container */
 .calendar-container {
   margin-bottom: 1.5rem;

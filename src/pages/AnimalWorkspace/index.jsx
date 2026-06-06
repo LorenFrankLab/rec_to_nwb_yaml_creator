@@ -21,8 +21,31 @@ import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import { getAnimalDayIds } from '../../state/workspaceSelectors';
+import { getAnimalSetupChecklist, SETUP_STATE } from '../../domain/workflowStatus';
 import { CalendarDayCreator } from '../../components/CalendarDayCreator/CalendarDayCreator';
 import './AnimalWorkspace.css';
+
+/** User-facing label for each setup-checklist item state. */
+const SETUP_STATE_LABEL = {
+  [SETUP_STATE.NOT_STARTED]: 'Not started',
+  [SETUP_STATE.NEEDS_REVIEW]: 'Needs review',
+  [SETUP_STATE.HAS_ERRORS]: 'Has errors',
+  [SETUP_STATE.COMPLETE]: 'Complete',
+};
+
+/**
+ * The Animal Editor route an action targets, deep-linked to the owning step via the field
+ * hint (`?field=…`, resolved by `animalEditorStepForFieldPath`). Items with no editor target
+ * (subject, days) return null and render as a state row without a button.
+ *
+ * @param {string} animalId
+ * @param {{ fieldHint: (string|null) }} action
+ * @returns {string|null}
+ */
+function setupActionHref(animalId, action) {
+  if (!action?.fieldHint) return null;
+  return `#/animal/${animalId}/editor?field=${action.fieldHint}`;
+}
 
 /**
  * AnimalWorkspace Component
@@ -189,6 +212,50 @@ export function AnimalWorkspace() {
                     </button>
                   </div>
                 </header>
+
+                {/* Setup checklist — shared animal hardware, the operational home for setup.
+                    Electrode setup is a first-class action here so it is discoverable without
+                    opening the Animal Editor or a recording day. */}
+                {(() => {
+                  const checklist = getAnimalSetupChecklist(selectedAnimal);
+                  const electrodes = checklist.find((i) => i.key === 'electrodes');
+                  const needsElectrodeSetup = electrodes?.state === SETUP_STATE.NOT_STARTED;
+                  return (
+                    <section className="setup-checklist" aria-label="Animal setup">
+                      <h3 className="setup-checklist-heading">Animal setup</h3>
+                      <p className="setup-checklist-intro">
+                        {needsElectrodeSetup
+                          ? 'Set up shared hardware before creating or exporting recording days. ' +
+                            "Electrodes/probes are configured once for the animal and shared across all of its days."
+                          : 'Shared hardware for this animal. Review recovered or imported setup before exporting.'}
+                      </p>
+                      <ul className="setup-checklist-list" role="list">
+                        {checklist.map((item) => {
+                          const href = setupActionHref(selectedAnimalId, item.action);
+                          const isPrimary =
+                            item.key === 'electrodes' && item.state === SETUP_STATE.NOT_STARTED;
+                          return (
+                            <li key={item.key} className={`setup-item setup-item-${item.state}`}>
+                              <span className="setup-item-label">{item.label}</span>
+                              <span className={`setup-state-badge setup-state-${item.state}`}>
+                                {SETUP_STATE_LABEL[item.state]}
+                              </span>
+                              <span className="setup-item-summary">{item.summary}</span>
+                              {href && (
+                                <a
+                                  href={href}
+                                  className={`setup-item-action ${isPrimary ? 'setup-item-action-primary' : ''}`}
+                                >
+                                  {item.action.label}
+                                </a>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </section>
+                  );
+                })()}
 
                 {/* Calendar for creating multiple days */}
                 {showCalendar && (
