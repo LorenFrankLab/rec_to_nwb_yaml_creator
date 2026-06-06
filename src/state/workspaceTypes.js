@@ -206,7 +206,8 @@
  *
  * **Invariant:** across an animal's `configurationHistory`, the `appliedToDays`
  * lists are disjoint — each day id appears in at most one snapshot's list.
- * `applyConfigurationForward` maintains this partition.
+ * `applyConfigurationForwardToAnimal` maintains this partition; `reconcileAppliedToDays`
+ * derives the trustworthy view from each day's version regardless.
  *
  * @typedef {object} ConfigurationSnapshot
  * @property {string} date - Date this config became active (YYYY-MM-DD)

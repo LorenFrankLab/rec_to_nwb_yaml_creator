@@ -104,7 +104,7 @@ describe('addConfigurationSnapshotToAnimal', () => {
 
   it('allocates max(version)+1 so a non-contiguous history never duplicates a version', () => {
     // [1, 3] must append 4, not another 3 — a duplicate would let first-match resolution
-    // (applyConfigurationForward / resolveDayConfig) target the wrong snapshot.
+    // (applyConfigurationForwardToAnimal / resolveDayConfig) target the wrong snapshot.
     const updated = addConfigurationSnapshotToAnimal(
       { configurationHistory: [{ version: 1, appliedToDays: [] }, { version: 3, appliedToDays: [] }] },
       { date: '2023-07-01', description: 'reconfig', devices: emptyDevices() },

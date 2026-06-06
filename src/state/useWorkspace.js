@@ -17,8 +17,6 @@ import {
 } from '../utils/deviceNormalization';
 import {
   applyAnimalUpdates,
-  addConfigurationSnapshotToAnimal,
-  applyConfigurationForwardToAnimal,
   createSnapshotAndApplyForward,
   rebuildConfigurationHistoryForAnimal,
   createDayRecord,
@@ -270,74 +268,11 @@ export function useWorkspace(initialState = null) {
       },
 
       /**
-       * Append a new configuration snapshot (a low-level primitive) and return the created
-       * version. Prefer {@link createConfigurationSnapshotAndApplyForward} for the
-       * reconfiguration flow — it appends AND pins the affected days in one transition, so no
-       * version is handed across two actions.
-       *
-       * The version is RESERVED synchronously: it is `max(existing version) + 1`
-       * ({@link nextConfigurationVersion}), passed explicitly to the append helper, and the
-       * cached workspace (`workspaceRef`) is advanced optimistically so two calls in the same
-       * event reserve DISTINCT versions (the return is always the version actually appended,
-       * never a stale guess or a duplicate of a non-contiguous history).
-       *
-       * @param {string} animalId - Animal identifier
-       * @param {object} config - Configuration data (date, description, devices)
-       * @returns {number} The version number assigned to the created snapshot.
-       * @throws {Error} If animal does not exist
-       */
-      addConfigurationSnapshot: (animalId, config) => {
-        const now = getCurrentTimestamp();
-        const current = workspaceRef.current.animals[animalId];
-        // Reserve the version synchronously from the authoritative cached store.
-        const createdVersion = current
-          ? nextConfigurationVersion(getConfigHistory(current))
-          : undefined;
-        if (current) {
-          // Optimistically advance the cached workspace so a second synchronous call reserves
-          // the NEXT version (distinct returns; no stale guess across queued calls). The next
-          // render overwrites this with the committed state. Invariant: this only REPLACES an
-          // existing animal (never adds/removes a key), so it can't diverge from committed
-          // state — unless an animal-REMOVING action (deleteAnimal) were composed in the same
-          // synchronous tick, which no UI path does.
-          workspaceRef.current = {
-            ...workspaceRef.current,
-            animals: {
-              ...workspaceRef.current.animals,
-              [animalId]: addConfigurationSnapshotToAnimal(current, config, now, createdVersion),
-            },
-          };
-        }
-
-        setWorkspace((prev) => {
-          if (!prev.animals[animalId]) {
-            throw new Error(`Animal "${animalId}" not found`);
-          }
-          // Append the RESERVED version explicitly so return === appended (no independent
-          // re-derive between caller and updater).
-          const updated = addConfigurationSnapshotToAnimal(
-            prev.animals[animalId],
-            config,
-            now,
-            createdVersion
-          );
-          return {
-            ...prev,
-            animals: { ...prev.animals, [animalId]: updated },
-            lastModified: updated.lastModified,
-          };
-        });
-
-        return createdVersion;
-      },
-
-      /**
        * Atomic reconfiguration: create a new configuration snapshot AND apply it forward to a
-       * set of days in ONE transition. The public entry point for the reconfiguration wizard.
-       * The version is derived once inside the transition and used for both the snapshot and
-       * the day pins, so — unlike composing {@link addConfigurationSnapshot} with
-       * {@link applyConfigurationForward} — there is no version handed across two actions to go
-       * stale. The returned version (for display/navigation) is the version created.
+       * set of days in ONE transition. The single public entry point for reconfiguration
+       * (the wizard's path). The version is derived once inside the transition and used for
+       * both the snapshot and the day pins, so there is no version handed across two actions
+       * to go stale. The returned version (for display/navigation) is the version created.
        *
        * @param {string} animalId - Animal identifier.
        * @param {object} config - `{ date, description, devices }` for the new snapshot.
@@ -356,8 +291,8 @@ export function useWorkspace(initialState = null) {
           // Optimistically advance the cached workspace (animal history + day pins) so a second
           // synchronous call reserves the NEXT version — two calls in one event get distinct
           // versions, and the second never appends a duplicate the first-match resolver would
-          // mis-pin to. The next render overwrites this with the committed state. Same invariant
-          // as addConfigurationSnapshot: it only replaces existing keys, so it can't diverge from
+          // mis-pin to. The next render overwrites this with the committed state. Invariant: this
+          // only replaces existing keys (never adds/removes one), so it can't diverge from
           // committed state unless an animal/day-removing action is composed in the same tick.
           const optimistic = createSnapshotAndApplyForward(
             current,
@@ -395,46 +330,6 @@ export function useWorkspace(initialState = null) {
         });
 
         return createdVersion;
-      },
-
-      /**
-       * Applies an EXISTING configuration snapshot forward to a set of days: points each
-       * listed day at `snapshotVersion` and keeps each snapshot's `appliedToDays` a
-       * partition (a day appears in at most one snapshot's list). A standalone primitive for
-       * re-pinning days onto an already-created version. The reconfiguration wizard does NOT
-       * use this — it creates and applies in one transition via
-       * {@link createConfigurationSnapshotAndApplyForward} (no version handed across actions).
-       *
-       * @param {string} animalId - Animal identifier.
-       * @param {number} snapshotVersion - Existing snapshot version to apply.
-       * @param {string[]} dayIds - Day ids to move onto that version.
-       * @throws {Error} If the animal or the snapshot version does not exist.
-       */
-      applyConfigurationForward: (animalId, snapshotVersion, dayIds) => {
-        setWorkspace((prev) => {
-          if (!prev.animals[animalId]) {
-            throw new Error(`Animal "${animalId}" not found`);
-          }
-
-          const now = getCurrentTimestamp();
-          // Pure transition: moves the days onto the version and keeps appliedToDays a
-          // clean partition (see workspaceTransitions.applyConfigurationForwardToAnimal).
-          // Throws if the snapshot version does not exist (same timing as before).
-          const { animal, days } = applyConfigurationForwardToAnimal(
-            prev.animals[animalId],
-            prev.days,
-            snapshotVersion,
-            dayIds,
-            now
-          );
-
-          return {
-            ...prev,
-            animals: { ...prev.animals, [animalId]: animal },
-            days,
-            lastModified: now,
-          };
-        });
       },
 
       /**

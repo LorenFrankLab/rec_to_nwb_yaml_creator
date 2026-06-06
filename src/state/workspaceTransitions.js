@@ -91,8 +91,8 @@ export function applyAnimalUpdates(animal, updates, now) {
  * The next configuration version to allocate for an animal's history: `max(existing) + 1`
  * (or 1 for an empty/missing history). Using the max — not the count — guarantees a UNIQUE
  * version even for a non-contiguous imported/repaired history (e.g. `[1, 3]` → 4, not a
- * duplicate 3), so `applyConfigurationForward`/`resolveDayConfig`'s first-match `.find()`
- * can never resolve to the wrong snapshot.
+ * duplicate 3), so `applyConfigurationForwardToAnimal`/`resolveDayConfig`'s first-match
+ * `.find()` can never resolve to the wrong snapshot.
  *
  * @param {Array} history - The animal's configuration history (any shape tolerated).
  * @returns {number} The next version number.
@@ -325,7 +325,8 @@ export function createDayRecord(animal, animalId, dayId, date, session, now) {
  *   (normalized), and the replace-on-`!== undefined` collections `tasks`, `behavioral_events`,
  *   `associated_files`, `associated_video_files`, `fs_gui_yamls`, `keywords`, plus
  *   `configurationVersion`. Note: setting `configurationVersion` here re-pins the day but does
- *   NOT reconcile snapshots' `appliedToDays` — use `applyConfigurationForward` for that.
+ *   NOT eagerly reconcile snapshots' `appliedToDays` — `reconcileAppliedToDays` derives the
+ *   trustworthy view from each day's version.
  * @param {string} now - Timestamp to stamp `lastModified`.
  * @returns {object} The next day record (deep-cloned; input not mutated).
  */
@@ -368,7 +369,8 @@ export function applyDayUpdates(day, updates, now) {
     updated.state = { ...updated.state, ...updates.state };
   }
   // Probe-reconfiguration: point this day at a different snapshot version. Setting it here
-  // does NOT reconcile snapshots' `appliedToDays` — use applyConfigurationForward for that.
+  // does NOT eagerly reconcile snapshots' `appliedToDays`; `reconcileAppliedToDays` derives
+  // the trustworthy view from each day's version.
   if (updates.configurationVersion !== undefined) {
     updated.configurationVersion = updates.configurationVersion;
   }

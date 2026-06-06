@@ -58,9 +58,11 @@ byte-identical because none touch the export encoder):
   non-existent version or appends a duplicate (`createDayRecord`, `addConfigurationSnapshot`).
 - **An atomic reconfiguration action** `createConfigurationSnapshotAndApplyForward` appends the
   snapshot AND pins the affected days in one transition, replacing the wizard's fragile
-  two-action compose (create-snapshot → thread returned version → apply-forward). The standalone
-  `addConfigurationSnapshot` primitive now reserves its version synchronously so even a composed
-  call returns a distinct, correct version.
+  two-action compose (create-snapshot → thread returned version → apply-forward). The orphaned
+  `addConfigurationSnapshot` and `applyConfigurationForward` store actions (now production-dead —
+  the wizard uses the atomic action; days re-pin via `updateDay`'s `configurationVersion`) were
+  removed as YAGNI. The pure transitions (`addConfigurationSnapshotToAnimal`,
+  `applyConfigurationForwardToAnimal`) remain — `createSnapshotAndApplyForward` composes them.
 - **Repair UX:** missing channel maps deep-link to the Channel Maps step; a day-owned device
   error badges the Devices step (animal-owned schema errors still don't — the gate-non-redundancy
   contract holds); Validation and Export dedup repair buttons identically; the device-override
