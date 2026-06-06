@@ -283,17 +283,23 @@ describe('ExportStep', () => {
 
     const preflight = screen.getByRole('region', { name: /preflight/i });
     // Section labels present, derived from mergedDay (not duplicate component state).
+    expect(within(preflight).getByText('Animal & day')).toBeInTheDocument();
     expect(within(preflight).getByText('Subject & session')).toBeInTheDocument();
     expect(within(preflight).getByText('Configuration version')).toBeInTheDocument();
-    expect(within(preflight).getByText('Cameras')).toBeInTheDocument();
-    expect(within(preflight).getByText('Probes & bad channels')).toBeInTheDocument();
+    expect(within(preflight).getByText('Cameras / calibration')).toBeInTheDocument();
+    expect(within(preflight).getByText('Probes & failed channels')).toBeInTheDocument();
+    expect(within(preflight).getByText('Data acquisition')).toBeInTheDocument();
     expect(within(preflight).getByText('Tasks & videos')).toBeInTheDocument();
     expect(within(preflight).getByText('Optogenetics')).toBeInTheDocument();
+    expect(within(preflight).getByText('Unresolved review risk')).toBeInTheDocument();
 
-    // Spot-check derived values: 8 electrode groups (+ bad channels), 2 cameras, opto off.
+    // Spot-check derived values: animal/day, 8 electrode groups, 2 cameras, opto off,
+    // current (not historical) configuration.
+    expect(within(preflight).getByText(/remy — 2023-06-22/i)).toBeInTheDocument();
     expect(within(preflight).getByText(/8 electrode groups/i)).toBeInTheDocument();
     expect(within(preflight).getByText(/2 cameras/i)).toBeInTheDocument();
     expect(within(preflight).getByText('Off')).toBeInTheDocument();
+    expect(within(preflight).getByText(/version 1 \(current\)/i)).toBeInTheDocument();
   });
 
   it('reports the resolved configuration version in preflight, not the day-pinned value', () => {

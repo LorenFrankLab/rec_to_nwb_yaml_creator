@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import PropTypes from 'prop-types';
-import { groupErrorsByStep, validateDay } from '../../domain/validation';
-import { RepairActionButton, STEP_LABELS, isRepairable, repairButtonKey } from './RepairActions';
+import { validateDay } from '../../domain/validation';
+import { groupIssuesByWorkflowCategory } from '../../domain/workflowCategories';
+import { RepairActionButton, isRepairable, repairButtonKey } from './RepairActions';
 import './DayEditor.scss';
 
 /**
@@ -84,7 +85,10 @@ ValidationStep.defaultProps = {
 };
 
 /**
- * Renders one severity group, with its issues bucketed by editor step.
+ * Renders one severity group, with its issues bucketed by user WORKFLOW CATEGORY (Animal
+ * setup, Day metadata, Day-specific failed channels, Existing data repair) so the user reads
+ * the same buckets as the Animal Workspace setup checklist. Repair routing is unchanged — each
+ * button still routes through the canonical `repairTargetForIssue` via `RepairActionButton`.
  * Renders nothing when the group has no issues.
  *
  * @private
@@ -102,8 +106,7 @@ ValidationStep.defaultProps = {
 function SeveritySection({ title, severity, issues, onNavigate, animalId, onRepair }) {
   if (issues.length === 0) return null;
 
-  const byStep = groupErrorsByStep(issues);
-  const stepOrder = ['overview', 'devices', 'epochs', 'validation', 'export'];
+  const byCategory = groupIssuesByWorkflowCategory(issues);
   // Only error-severity issues block export, so only they get a repair action.
   const repairable = severity === 'error' && typeof onNavigate === 'function';
   // Collapse duplicate repair BUTTONS across the whole section (every message still shows),
@@ -114,32 +117,30 @@ function SeveritySection({ title, severity, issues, onNavigate, animalId, onRepa
   return (
     <section className={`validation-group validation-group-${severity}`}>
       <h3>{title} ({issues.length})</h3>
-      {stepOrder
-        .filter((stepId) => byStep[stepId].length > 0)
-        .map((stepId) => (
-          <div key={stepId} className="validation-step-group">
-            <h4>{STEP_LABELS[stepId]}</h4>
-            <ul>
-              {byStep[stepId].map((issue, index) => {
-                let showButton = repairable && isRepairable(issue);
-                if (showButton) {
-                  const key = repairButtonKey(issue);
-                  if (seenRepairKeys.has(key)) showButton = false;
-                  else seenRepairKeys.add(key);
-                }
-                return (
-                  <li key={`${issue.path}-${issue.code}-${index}`} className="validation-issue">
-                    <span className="validation-issue-message">{issue.message}</span>
-                    {issue.path && <code className="validation-issue-path">{issue.path}</code>}
-                    {showButton && (
-                      <RepairActionButton issue={issue} onNavigate={onNavigate} animalId={animalId} onRepair={onRepair} />
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
+      {byCategory.map(({ category, label, issues: categoryIssues }) => (
+        <div key={category} className="validation-step-group validation-category-group">
+          <h4>{label}</h4>
+          <ul>
+            {categoryIssues.map((issue, index) => {
+              let showButton = repairable && isRepairable(issue);
+              if (showButton) {
+                const key = repairButtonKey(issue);
+                if (seenRepairKeys.has(key)) showButton = false;
+                else seenRepairKeys.add(key);
+              }
+              return (
+                <li key={`${issue.path}-${issue.code}-${index}`} className="validation-issue">
+                  <span className="validation-issue-message">{issue.message}</span>
+                  {issue.path && <code className="validation-issue-path">{issue.path}</code>}
+                  {showButton && (
+                    <RepairActionButton issue={issue} onNavigate={onNavigate} animalId={animalId} onRepair={onRepair} />
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
     </section>
   );
 }

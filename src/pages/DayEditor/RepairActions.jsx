@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { repairTargetForIssue, STEP_LABELS } from '../../domain/validation';
+import { groupIssuesByWorkflowCategory } from '../../domain/workflowCategories';
 
 // Re-export STEP_LABELS so existing importers (ValidationStep) keep working while the
 // source of truth lives in domain/validation.js (alongside the routing it labels).
@@ -69,9 +70,12 @@ export function repairButtonKey(issue) {
  *   `repairCommand`, its button PERFORMS the reset instead of navigating to a destination
  *   that may show a blank empty state. Threaded from DayEditorStepper, which owns the
  *   animal/day/actions the executor needs.
+ * @param {boolean} [props.groupByCategory] - When true, issues are grouped under user
+ *   workflow-category headings (Animal setup, Day metadata, …) — the same buckets as the
+ *   Validation summary and the Animal Workspace setup checklist. Routing is unchanged.
  * @returns {JSX.Element|null}
  */
-export default function RepairActions({ issues, onNavigate, animalId, onRepair }) {
+export default function RepairActions({ issues, onNavigate, animalId, onRepair, groupByCategory }) {
   if (!issues || issues.length === 0) return null;
 
   // Several issues can share ONE underlying fix — e.g. a corrupt day geometry override
@@ -79,31 +83,45 @@ export default function RepairActions({ issues, onNavigate, animalId, onRepair }
   // routing to the same remove-override control. Render every message (each explains a
   // distinct symptom) but COLLAPSE the repair button to one per unique (surface, target),
   // so the user isn't shown a stack of identical "Fix in …" buttons for a single repair.
+  // The dedup set is shared across category groups so a fix shown in one group isn't
+  // re-buttoned in another.
   const seenTargets = new Set();
+
+  const renderItem = (issue, index, keyPrefix) => {
+    let showButton = isRepairable(issue);
+    if (showButton) {
+      const key = repairButtonKey(issue);
+      if (seenTargets.has(key)) showButton = false;
+      else seenTargets.add(key);
+    }
+    return (
+      <li key={`${keyPrefix}${issue.path}-${issue.code}-${index}`} className="repair-action-item">
+        <span className="repair-action-message">{issue.message}</span>
+        {showButton && (
+          <RepairActionButton issue={issue} onNavigate={onNavigate} animalId={animalId} onRepair={onRepair} />
+        )}
+      </li>
+    );
+  };
+
+  if (groupByCategory) {
+    return (
+      <div className="repair-action-groups">
+        {groupIssuesByWorkflowCategory(issues).map(({ category, label, issues: categoryIssues }) => (
+          <div key={category} className="repair-action-group">
+            <h4 className="repair-action-group-heading">{label}</h4>
+            <ul className="repair-action-list">
+              {categoryIssues.map((issue, index) => renderItem(issue, index, `${category}-`))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <ul className="repair-action-list">
-      {issues.map((issue, index) => {
-        let showButton = isRepairable(issue);
-        if (showButton) {
-          const key = repairButtonKey(issue);
-          if (seenTargets.has(key)) showButton = false;
-          else seenTargets.add(key);
-        }
-        return (
-          <li key={`${issue.path}-${issue.code}-${index}`} className="repair-action-item">
-            <span className="repair-action-message">{issue.message}</span>
-            {showButton && (
-              <RepairActionButton
-                issue={issue}
-                onNavigate={onNavigate}
-                animalId={animalId}
-                onRepair={onRepair}
-              />
-            )}
-          </li>
-        );
-      })}
+      {issues.map((issue, index) => renderItem(issue, index, ''))}
     </ul>
   );
 }
@@ -200,9 +218,11 @@ RepairActions.propTypes = {
   onNavigate: PropTypes.func.isRequired,
   animalId: PropTypes.string,
   onRepair: PropTypes.func,
+  groupByCategory: PropTypes.bool,
 };
 
 RepairActions.defaultProps = {
   animalId: undefined,
   onRepair: undefined,
+  groupByCategory: false,
 };

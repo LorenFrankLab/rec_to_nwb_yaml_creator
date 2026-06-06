@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { encodeYaml, formatDeterministicFilename, downloadYamlFile } from '../../io/yaml';
 import { mergeDayMetadata, resolveDayConfig } from '../../state/workspaceUtils';
 import { computeStepStatus, validateDay, STEP_LABELS } from '../../domain/validation';
+import { getDayWorkflowStatus } from '../../domain/workflowStatus';
 import { isExportEnabled } from './stepGate';
 import { isFeatureEnabled } from '../../featureFlags';
 import { checkShadowExport } from '../../domain/shadowExport';
@@ -119,7 +120,20 @@ export default function ExportStep({ animal, day, onNavigate, onRepair }) {
     // Use the version of the snapshot actually resolved into `merged` (which may
     // differ from the day's pin when stale), so preflight matches the encoded YAML.
     const { configurationVersion } = resolveDayConfig(animal, day);
-    return buildPreflightSummary(merged, configurationVersion);
+    // Historical/current status + any non-blocking warnings come from the same domain
+    // helpers the rest of the workflow uses, so preflight reads as a confidence check
+    // (conversion/DANDI/Spyglass), not only a schema summary.
+    const { isHistoricalConfiguration } = getDayWorkflowStatus(animal, day, merged);
+    const warningCount = validateDay(day, merged, animal).filter(
+      (issue) => issue.severity === 'warning'
+    ).length;
+    return buildPreflightSummary(merged, {
+      animalId: animal?.id,
+      date: day?.date,
+      configurationVersion,
+      isHistorical: isHistoricalConfiguration,
+      warningCount,
+    });
   }, [animal, day, merged, exportBlocked]);
 
   const handleDownload = () => {
@@ -185,6 +199,7 @@ export default function ExportStep({ animal, day, onNavigate, onRepair }) {
               onNavigate={onNavigate}
               animalId={animal?.id}
               onRepair={onRepair}
+              groupByCategory
             />
           )}
           {validationErrors.length === 0 && blockingSteps.length > 0 && (
@@ -277,26 +292,31 @@ export default function ExportStep({ animal, day, onNavigate, onRepair }) {
 
 /**
  * Build the read-only preflight summary rows from the merged day that will be
- * encoded. This is the user's final confidence check before download: which
- * subject/session, configuration version, cameras, probes/bad channels,
- * tasks/videos, and whether optogenetics is on.
+ * encoded. This is the user's final confidence check before download — phrased as the
+ * setup-checklist / Day Devices context, not a schema dump: which animal/day/session, which
+ * configuration version (and whether it is current or historical), probes & failed channels,
+ * cameras/calibration, data-acquisition device, tasks/videos, optogenetics state, and any
+ * unresolved (non-blocking) review risk.
  *
- * Scaffold: rows are derived from whatever the merged day already carries today.
- * Later phases enrich the underlying data (configuration version, camera
- * calibration, optogenetics state, downstream identity warnings) without changing
- * this derivation — it always reads the merged day, never duplicate state.
+ * Rows always read the merged day (the same object that will be encoded) plus the workflow
+ * context the caller resolves from the domain helpers — never duplicate component state.
  *
  * @param {object} merged - The merged day metadata about to be encoded.
- * @param {number|undefined} configurationVersion - The version of the snapshot
- *   actually resolved into `merged` (from {@link resolveDayConfig}).
+ * @param {object} ctx - Workflow context for the summary.
+ * @param {string} [ctx.animalId] - The owning animal id.
+ * @param {string} [ctx.date] - The recording day's date.
+ * @param {number} [ctx.configurationVersion] - The version of the snapshot resolved into
+ *   `merged` (from {@link resolveDayConfig}).
+ * @param {boolean} [ctx.isHistorical] - Whether that version is historical (not the latest).
+ * @param {number} [ctx.warningCount] - Count of non-blocking warnings still to review.
  * @returns {Array<{label: string, value: string}>}
  */
-function buildPreflightSummary(merged, configurationVersion) {
+function buildPreflightSummary(merged, { animalId, date, configurationVersion, isHistorical, warningCount } = {}) {
   const subjectId = merged.subject?.subject_id || '—';
   const sessionId = merged.session_id || '—';
 
   const ntrodeMap = merged.ntrode_electrode_group_channel_map || [];
-  const badChannelCount = ntrodeMap.reduce(
+  const failedChannelCount = ntrodeMap.reduce(
     (total, ntrode) => total + (ntrode.bad_channels?.length || 0),
     0
   );
@@ -306,22 +326,41 @@ function buildPreflightSummary(merged, configurationVersion) {
     (merged.optical_fiber?.length || 0) > 0 ||
     (merged.virus_injection?.length || 0) > 0;
 
+  const dataAcq = merged.data_acq_device || [];
+  const dataAcqValue = dataAcq.length
+    ? `${dataAcq.length} device${dataAcq.length === 1 ? '' : 's'} (${
+        dataAcq.map((d) => d?.name).filter(Boolean).join(', ') || 'unnamed'
+      })`
+    : 'None';
+
   return [
+    { label: 'Animal & day', value: `${animalId || '—'} — ${date || '—'}` },
     { label: 'Subject & session', value: `${subjectId} — session ${sessionId}` },
     {
       label: 'Configuration version',
-      value: configurationVersion != null ? `Version ${configurationVersion}` : '—',
+      value:
+        configurationVersion != null
+          ? `Version ${configurationVersion} (${isHistorical ? 'historical' : 'current'})`
+          : '—',
     },
-    { label: 'Cameras', value: `${(merged.cameras || []).length} cameras` },
     {
-      label: 'Probes & bad channels',
-      value: `${(merged.electrode_groups || []).length} electrode groups, ${badChannelCount} bad channels`,
+      label: 'Probes & failed channels',
+      value: `${(merged.electrode_groups || []).length} electrode groups, ${failedChannelCount} failed channels`,
     },
+    { label: 'Cameras / calibration', value: `${(merged.cameras || []).length} cameras` },
+    { label: 'Data acquisition', value: dataAcqValue },
     {
       label: 'Tasks & videos',
       value: `${(merged.tasks || []).length} tasks, ${(merged.associated_video_files || []).length} videos`,
     },
     { label: 'Optogenetics', value: optoOn ? 'On' : 'Off' },
+    {
+      label: 'Unresolved review risk',
+      value:
+        warningCount > 0
+          ? `${warningCount} non-blocking warning${warningCount === 1 ? '' : 's'} to review`
+          : 'No unresolved warnings',
+    },
   ];
 }
 

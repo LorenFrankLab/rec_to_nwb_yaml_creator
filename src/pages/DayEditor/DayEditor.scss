@@ -1450,6 +1450,18 @@
 /* ===========================================================================
    Repair actions (shared by the Export step and the Validation summary)
    =========================================================================== */
+.repair-action-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.repair-action-group-heading {
+  margin: 0.5rem 0 0.25rem;
+  font-size: 0.875rem;
+  color: #555;
+}
+
 .repair-action-list {
   list-style: none;
   margin: 0;
