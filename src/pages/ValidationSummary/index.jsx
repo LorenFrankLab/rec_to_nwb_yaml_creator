@@ -19,7 +19,7 @@ import { useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
-import { getAnimalDayIds, getAnimalSubject } from '../../state/workspaceSelectors';
+import { getAnimalSubject } from '../../state/workspaceSelectors';
 import { computeStepStatus } from '../../domain/validation';
 import { getDayWorkflowStatus } from '../../domain/workflowStatus';
 import {
@@ -322,7 +322,7 @@ export function ValidationSummary() {
     // here — not just one that changed content. Keyed by (animalKey, dayId): under duplicate-index
     // corruption the same day id can appear under two animals with different statuses, so a
     // dayId-only key could let one animal's status mask another's.
-    const statusKey = (animalKey, dayId) => `${animalKey} ${dayId}`;
+    const statusKey = (animalKey, dayId) => `${animalKey}|${dayId}`;
     const currentStatusByKey = new Map(
       classifyWorkspaceDays(workspace).map((d) => [statusKey(d.animalKey, d.dayId), d.status])
     );
@@ -576,7 +576,7 @@ export function ValidationSummary() {
                         className="validation-summary-orphan-note"
                         title={`This day is listed under ${subjectLabel(animal)} but its record belongs to "${day.animalId}". It is NOT exported with this animal's metadata; remove it from this animal so it returns to its real owner.`}
                       >
-                        {' '}⚠ belongs to {day.animalId}
+                        {' '}⚠ belongs to {String(day.animalId)}
                       </span>
                     )}
                   </td>

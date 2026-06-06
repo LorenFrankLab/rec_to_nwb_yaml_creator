@@ -311,15 +311,19 @@ export function AnimalWorkspace() {
                   // structural corruption.
                   const rawIssues = validateRawAnimal(selectedAnimal);
                   const setupIssues = collectAnimalSetupIssues(selectedAnimal, days);
-                  const checklist = getAnimalSetupChecklist(selectedAnimal, { issues: setupIssues });
-                  const electrodes = checklist.find((i) => i.key === 'electrodes');
-                  const needsElectrodeSetup = electrodes?.state === SETUP_STATE.NOT_STARTED;
                   // Count the recording-day RECORDS actually present (indexed + recovered), not
                   // just the index length — otherwise a missing/corrupt index would say "Found 0
-                  // recording days" while recovered records render below.
+                  // recording days" while recovered records render below. The checklist's
+                  // "Recording days" item consumes the SAME count so the two never disagree.
                   const dayCount = selectedDayClassification.filter(
                     (d) => d.status === DAY_STATUS.OK || d.status === DAY_STATUS.RECOVERED_UNLINKED
                   ).length;
+                  const checklist = getAnimalSetupChecklist(selectedAnimal, {
+                    issues: setupIssues,
+                    recordingDayCount: dayCount,
+                  });
+                  const electrodes = checklist.find((i) => i.key === 'electrodes');
+                  const needsElectrodeSetup = electrodes?.state === SETUP_STATE.NOT_STARTED;
                   const configCount = getConfigHistory(selectedAnimal).length;
                   // Existing data needs an explicit review state: recovered/imported setup must
                   // not look silently trusted. Show it once there ARE recording days to export,
@@ -493,8 +497,8 @@ export function AnimalWorkspace() {
                               <div className="day-info">
                                 <span className="day-date">{record.date || dayId}</span>
                                 <span className="day-session-id">
-                                  Belongs to {record.animalId} — listed here by mistake; not exported
-                                  with this animal.
+                                  Belongs to {String(record.animalId)} — listed here by mistake; not
+                                  exported with this animal.
                                 </span>
                               </div>
                               <div className="day-status">

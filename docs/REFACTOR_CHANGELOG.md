@@ -255,6 +255,29 @@ paths to the same domain policy:
 - **Copy:** the empty batch-export message says "No days are ready to export …" rather than "No
   valid days …", so "valid" (metadata) and "exportable" (valid + in the day list) stay distinct.
 
+**Tenth-review follow-ups — close the remaining ownership-key gaps + a hygiene bug:**
+
+- **Fixed a literal NUL byte** accidentally introduced into `ValidationSummary/index.jsx`'s
+  `statusKey` separator (which made tools treat the file as binary) and removed an unused
+  `getAnimalDayIds` import (the file now passes `eslint --max-warnings=0`).
+- **`deleteAnimal` no longer deletes another animal's day.** It deletes only day records that
+  actually belong to the deleted animal; a wrong-owner index entry (a record owned by a different
+  animal) is left intact.
+- **Reconfiguration uses the store OWNER KEY, not the record's `animal.id`.** `DayEditorStepper`
+  resolves an `ownerKey` (the key the animal was resolved by, with a fallback to the animal whose
+  index lists the day) and uses it for `getAnimalDays` and subject repair; `ReconfigWizard` targets
+  `day.animalId ?? animal.id`; and the ownership guard in `applyConfigurationForwardToAnimal` now
+  takes an explicit `ownerKey` (threaded from the store action) instead of comparing against the
+  possibly-stale `updatedAnimal.id`.
+- **A recovered day with a missing/stale `animalId` opens** in the Day Editor via the
+  indexing-animal fallback, instead of dead-ending on "Animal not found" — so it no longer looks
+  usable in the Workspace but unopenable.
+- **Wrong-owner UI is corruption-proof:** the displayed owner id is `String(...)`-coerced, so an
+  imported object-valued `animalId` renders the repair row instead of throwing in React.
+- **The setup checklist's "Recording days" count** now consumes the same recovery-aware count
+  (`recordingDayCount`) the rest of the Workspace uses, removing the same-page contradiction with
+  recovered-unlinked days.
+
 ---
 
 ## Domain boundaries & ownership cleanup — Phase 8.5 (June 5, 2026)

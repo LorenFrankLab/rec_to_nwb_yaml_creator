@@ -116,8 +116,11 @@ export default function ReconfigWizard({
     // reconfiguration is a physical change, so day X and every later candidate day move
     // together (the contiguous chronological suffix).
     const orderedIds = movingDays.map((d) => d.id);
+    // Target the STORE KEY the day declares it belongs to (`day.animalId`) in preference to the
+    // possibly-stale `animal.id` record field, so a stale record id can't misroute the write;
+    // fall back to `animal.id` only when the day carries no owner.
     const newVersion = actions.createConfigurationSnapshotAndApplyForward(
-      animal.id,
+      day.animalId ?? animal.id,
       {
         date,
         description: description.trim(),

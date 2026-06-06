@@ -250,9 +250,17 @@ export function useWorkspace(initialState = null) {
           const updatedAnimals = { ...prev.animals };
           const updatedDays = { ...prev.days };
 
-          // Delete all days for this animal
+          // Delete only the day records that ACTUALLY BELONG to this animal. A wrong-owner index
+          // entry (a record whose `animalId` names a different animal, accidentally listed here)
+          // must NOT be deleted — that would destroy another animal's real recording day. A record
+          // with no `animalId` is treated as this animal's (the index is the authority).
           getAnimalDayIds(animal).forEach((dayId) => {
-            delete updatedDays[dayId];
+            const record = updatedDays[dayId];
+            const isRecordDay =
+              record !== null && typeof record === 'object' && !Array.isArray(record);
+            if (!isRecordDay || record.animalId == null || record.animalId === animalId) {
+              delete updatedDays[dayId];
+            }
           });
 
           // Delete animal
@@ -300,7 +308,8 @@ export function useWorkspace(initialState = null) {
             config,
             dayIds,
             now,
-            createdVersion
+            createdVersion,
+            animalId // the store KEY drives the day-ownership guard, not the record's id field
           );
           workspaceRef.current = {
             ...workspaceRef.current,
@@ -319,7 +328,8 @@ export function useWorkspace(initialState = null) {
             config,
             dayIds,
             now,
-            createdVersion
+            createdVersion,
+            animalId // the store KEY drives the day-ownership guard, not the record's id field
           );
           return {
             ...prev,

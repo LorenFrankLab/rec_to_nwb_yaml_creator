@@ -131,6 +131,16 @@ describe('getAnimalSetupChecklist', () => {
     expect(itemFor(cameraChecklist, 'cameras').state).toBe(SETUP_STATE.HAS_ERRORS);
   });
 
+  it('uses the recovery-aware recordingDayCount for the Recording days item when supplied', () => {
+    const animal = newAnimal(); // no indexed days
+    // The caller supplies a recovery-aware count (e.g. recovered records not in the index).
+    const days = itemFor(getAnimalSetupChecklist(animal, { recordingDayCount: 2 }), 'days');
+    expect(days.count).toBe(2);
+    expect(days.state).toBe(SETUP_STATE.COMPLETE);
+    // Without the override it falls back to the raw index length (0 here).
+    expect(itemFor(getAnimalSetupChecklist(animal), 'days').count).toBe(0);
+  });
+
   it('does not let an informational missing camera/data-acq block — they stay not_started, never has_errors without an issue', () => {
     const checklist = getAnimalSetupChecklist(newAnimal());
     expect(itemFor(checklist, 'cameras').state).toBe(SETUP_STATE.NOT_STARTED);

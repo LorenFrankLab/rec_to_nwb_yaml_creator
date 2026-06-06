@@ -166,19 +166,23 @@ function actionForItem(key, present) {
  *  - a supplied error-severity issue mapped to the item → `has_errors` (overrides the above).
  *
  * @param {object} animal - The animal record.
- * @param {{ issues?: Array }} [options] - Optional validation issues (already computed by the
- *   caller via `validateDay`) used only to upgrade items to `has_errors`. The checklist never
- *   computes validation itself.
+ * @param {{ issues?: Array, recordingDayCount?: number }} [options] - `issues`: validation issues
+ *   (already computed by the caller via `validateDay`) used only to upgrade items to `has_errors`;
+ *   the checklist never computes validation itself. `recordingDayCount`: a recovery-aware count of
+ *   the animal's recording-day RECORDS (indexed + recovered) from the caller's
+ *   `classifyAnimalDays`; when omitted, the Recording Days item falls back to the raw `days` index
+ *   length. Passing it keeps the checklist count consistent with the rest of the Workspace.
  * @returns {Array<{ key: string, label: string, state: string, count: number, present: boolean, action: { label: string, fieldHint: (string|null) } }>}
  */
-export function getAnimalSetupChecklist(animal, { issues = [] } = {}) {
+export function getAnimalSetupChecklist(animal, { issues = [], recordingDayCount } = {}) {
   const subject = getAnimalSubject(animal);
   const electrodeCount = getAnimalElectrodeGroups(animal).length;
   const electrodesPresent = electrodeCount > 0;
   const electrodesNeedSync = animalElectrodeSetupNeedsSync(animal);
   const cameras = getAnimalCameras(animal);
   const dataAcq = getDataAcqDevices(animal);
-  const dayIds = getAnimalDayIds(animal);
+  const dayCount =
+    typeof recordingDayCount === 'number' ? recordingDayCount : getAnimalDayIds(animal).length;
 
   // Which items carry an error-severity issue (per-item has_errors).
   const errorAreas = new Set(
@@ -191,7 +195,7 @@ export function getAnimalSetupChecklist(animal, { issues = [] } = {}) {
   const subjectPresent = Boolean(subject.subject_id);
   const camerasPresent = cameras.length > 0;
   const dataAcqPresent = dataAcq.length > 0;
-  const daysPresent = dayIds.length > 0;
+  const daysPresent = dayCount > 0;
 
   /**
    * @param {string} key
@@ -246,8 +250,8 @@ export function getAnimalSetupChecklist(animal, { issues = [] } = {}) {
       camerasPresent ? `${cameras.length} camera${cameras.length === 1 ? '' : 's'}` : 'None'),
     item('data_acq', 'Data acquisition', dataAcqPresent, SETUP_STATE.NEEDS_REVIEW, dataAcq.length,
       dataAcqPresent ? `${dataAcq.length} device${dataAcq.length === 1 ? '' : 's'}` : 'None'),
-    item('days', 'Recording days', daysPresent, SETUP_STATE.COMPLETE, dayIds.length,
-      daysPresent ? `${dayIds.length} day${dayIds.length === 1 ? '' : 's'}` : 'None'),
+    item('days', 'Recording days', daysPresent, SETUP_STATE.COMPLETE, dayCount,
+      daysPresent ? `${dayCount} day${dayCount === 1 ? '' : 's'}` : 'None'),
   ];
 }
 
