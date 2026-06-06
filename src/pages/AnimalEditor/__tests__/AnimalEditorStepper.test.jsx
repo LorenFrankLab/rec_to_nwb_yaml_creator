@@ -184,6 +184,12 @@ describe('AnimalEditorStepper', () => {
       expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Animal Editor: remy');
     });
 
+    it('frames the editor as shared animal setup used by all recording days', () => {
+      renderWithStore(<AnimalEditorStepper />);
+      expect(screen.getByText(/shared hardware setup for this animal/i)).toBeInTheDocument();
+      expect(screen.getByText(/used by all of remy's recording days/i)).toBeInTheDocument();
+    });
+
     it('does not show reconfiguration context on a normal editor open', () => {
       renderWithStore(<AnimalEditorStepper />);
 

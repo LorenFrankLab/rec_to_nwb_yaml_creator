@@ -782,6 +782,12 @@ export default function AnimalEditorStepper() {
         </a>
         <div className="animal-editor-title">
           <h1>Animal Editor: {animal.id}</h1>
+          {/* Frame the editor as SHARED animal setup, not a detached hardware form, so
+              electrodes/probes are discoverable here and their reuse across days is clear. */}
+          <p className="animal-editor-subtitle">
+            Shared hardware setup for this animal. Electrodes/probes, cameras, and data
+            acquisition configured here are used by all of {animal.id}&apos;s recording days.
+          </p>
           {isReconfigurationEdit && (
             <div
               className={`configuration-edit-context ${contextIsLatest ? '' : 'configuration-edit-context-warning'}`}
