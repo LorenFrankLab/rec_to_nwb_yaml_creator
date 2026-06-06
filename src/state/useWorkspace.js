@@ -393,12 +393,12 @@ export function useWorkspace(initialState = null) {
       },
 
       /**
-       * Applies a configuration snapshot forward to a set of days: points each
-       * listed day at `snapshotVersion` and keeps each snapshot's `appliedToDays`
-       * a partition (a day appears in at most one snapshot's list). Used by the
-       * reconfiguration wizard AFTER it has created the snapshot via
-       * {@link addConfigurationSnapshot}; creation and assignment stay separate so
-       * each action's `setWorkspace` is self-contained.
+       * Applies an EXISTING configuration snapshot forward to a set of days: points each
+       * listed day at `snapshotVersion` and keeps each snapshot's `appliedToDays` a
+       * partition (a day appears in at most one snapshot's list). A standalone primitive for
+       * re-pinning days onto an already-created version. The reconfiguration wizard does NOT
+       * use this — it creates and applies in one transition via
+       * {@link createConfigurationSnapshotAndApplyForward} (no version handed across actions).
        *
        * @param {string} animalId - Animal identifier.
        * @param {number} snapshotVersion - Existing snapshot version to apply.

@@ -104,8 +104,8 @@ export function nextConfigurationVersion(history) {
 /**
  * Append a new configuration snapshot to an animal's history and return the next animal
  * record. The version is `max(existing version) + 1` (see {@link nextConfigurationVersion})
- * so it is unique even for a non-contiguous history. Used by the reconfiguration wizard's
- * create-then-apply flow.
+ * so it is unique even for a non-contiguous history. The atomic reconfiguration transition
+ * {@link createSnapshotAndApplyForward} composes this with the forward-apply in one step.
  *
  * @param {object} animal - The current animal record.
  * @param {object} config - `{ date, description, devices }` for the new snapshot.
