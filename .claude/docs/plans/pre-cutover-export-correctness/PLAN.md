@@ -1,6 +1,6 @@
 # Pre-cutover Export Correctness Implementation Plan
 
-**Status:** Phases 1–5 are recorded as complete in this plan snapshot (export gate fails closed; device resolution / day bad-channel merge; Hardware Config wiring + identity safety; schema-valid device output — integer IDs end-to-end, required device fields, per-shank offsets, no stray keys, ntrode-/group-ID uniqueness; subject/session completeness + DANDI — weight/description collected, timestamp DOB, Latin-binomial species + no-slash ids, required `experiment_description`, and an in-Overview subject repair surface). Later phase implementation status should be verified from the current branch and changelog; Phase 8.5 is the pre-QA domain-boundary hardening gate and Phase 8.6 is the pre-QA workflow-clarity/setup-UX gate. Note: an interim refinement made electrode-group `location` optional in the editor and then reverted to required-with-targeted-default per lab decision (see overview.md / REFACTOR_CHANGELOG).
+**Status:** Phases 1–5 are recorded as complete in this plan snapshot (export gate fails closed; device resolution / day bad-channel merge; Hardware Config wiring + identity safety; schema-valid device output — integer IDs end-to-end, required device fields, per-shank offsets, no stray keys, ntrode-/group-ID uniqueness; subject/session completeness + DANDI — weight/description collected, timestamp DOB, Latin-binomial species + no-slash ids, required `experiment_description`, and an in-Overview subject repair surface). Later phase implementation status should be verified from the current branch and changelog; Phase 8.5 is the pre-QA domain-boundary hardening gate, Phase 8.6 is the pre-QA workflow-clarity/setup-UX gate, and Phase 8.7 is the pre-QA ownership/default/day-configurability gate. Note: an interim refinement made electrode-group `location` optional in the editor and then reverted to required-with-targeted-default per lab decision (see overview.md / REFACTOR_CHANGELOG).
 
 The new multi-page workspace UI can currently hand `trodes_to_nwb` a YAML file that is
 silently wrong — missing electrode probes, missing day-level bad-channel marks, schema-invalid
@@ -8,7 +8,8 @@ device IDs, or a date-of-birth the schema rejects — with no error shown to the
 closes those export-correctness defects so the workspace path produces valid, complete metadata,
 and hardens the surrounding import and persistence edges. **Scope note:** phases 1–8 are the
 export-correctness fixes; Phase 8.5 is behavior-preserving pre-QA architecture hardening; Phase 8.6
-makes the user workflow and setup UX understandable before browser QA; phases 9–11
+makes the user workflow and setup UX understandable; Phase 8.7 makes field ownership, defaults, and
+day-level configurability explicit before browser QA; phases 9–11
 extend the plan to pre-cutover **QA and UX readiness** (browser regression QA, a Claude-executable
 usability/behavior audit, and a professional-UX-polish audit) so the workspace is not only correct but
 coherent and safe for repeated scientific use. It is the correctness
@@ -23,8 +24,9 @@ For agent invocation, **load only the slice you need**:
    contracts/designs it depends on, tasks, validation slice, fixtures.
 2. **Need shared semantics or user mental model?** [shared-contracts.md](shared-contracts.md).
 3. **Need workflow clarity / electrode setup discoverability?** [workflow-clarity-design.md](workflow-clarity-design.md).
-4. **Need the device-resolution design?** [designs.md](designs.md).
-5. **Need broader scope / risks / rollout / parity policy?** [overview.md](overview.md).
+4. **Need animal-vs-day-vs-epoch ownership / defaults / overrides?** [phase-8-7-ownership-defaults-day-configurability.md](phase-8-7-ownership-defaults-day-configurability.md).
+5. **Need the device-resolution design?** [designs.md](designs.md).
+6. **Need broader scope / risks / rollout / parity policy?** [overview.md](overview.md).
 
 ## Files
 
@@ -44,6 +46,7 @@ For agent invocation, **load only the slice you need**:
   - [phase-8-optogenetics-correctness.md](phase-8-optogenetics-correctness.md) — **P1 (opto sessions):** add/verify the workspace opto entry path, fix the trodes_to_nwb opto key mismatches (`optogenetic_stimulation_software`, `volume_in_uL`) with a schema-safe transition, and validate all-or-nothing completeness so an opto session isn't silently dropped.
   - [phase-8-5-domain-boundaries-ownership-cleanup.md](phase-8-5-domain-boundaries-ownership-cleanup.md) — **pre-QA architecture hardening:** move app-wide validation/repair routing and converter semantics out of page modules, extract the riskiest workspace transitions into pure helpers, and add architecture guard tests before Playwright verifies the integrated path.
   - [phase-8-6-workflow-clarity-setup-ux.md](phase-8-6-workflow-clarity-setup-ux.md) — **pre-QA workflow clarity:** add a domain-backed setup/readiness model and align Animal Workspace, Animal Editor, Day Devices, reconfiguration, Validation, and Export around the user's workflow so electrode setup and existing-data review are discoverable before Playwright QA.
-  - [phase-9-playwright-qa-pass.md](phase-9-playwright-qa-pass.md) — **browser regression QA:** add a Playwright workspace regression suite and runbook that exercise the corrected Phases 1–8.6 flows in a real browser: mistake-prevention UX, repair navigation, export gating/preflight/download, persistence recovery, workflow clarity, and opto on/off behavior.
+  - [phase-8-7-ownership-defaults-day-configurability.md](phase-8-7-ownership-defaults-day-configurability.md) — **pre-QA ownership/defaults clarity:** add an ownership matrix and align Animal Editor, Day Editor, validation, and preflight around shared setup, configuration versions, recording-system defaults copied into days, advanced day overrides, catalog selections, task-epoch setup assignments, and day-only recording facts.
+  - [phase-9-playwright-qa-pass.md](phase-9-playwright-qa-pass.md) — **browser regression QA:** add a Playwright workspace regression suite and runbook that exercise the corrected Phases 1–8.7 flows in a real browser: mistake-prevention UX, repair navigation, export gating/preflight/download, persistence recovery, workflow clarity, ownership/defaults clarity, and opto on/off behavior.
   - [phase-10-claude-usability-behavior-audit.md](phase-10-claude-usability-behavior-audit.md) — **Claude-executable usability/proper-behavior audit:** run scripted scenario matrices, mistake injection, UI/state/export triangulation, keyboard/viewport checks, and produce a findings/fix log before cutover.
   - [phase-11-professional-ux-polish-audit.md](phase-11-professional-ux-polish-audit.md) — **professional UX polish audit (not the v3 cutover phase):** run a Claude-executable workflow-clarity, design-system, interaction-consistency, accessibility, content, responsive-layout, and perceived-performance pass with fixes/findings.
