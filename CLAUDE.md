@@ -14,7 +14,7 @@ Run the setup command:
 ```
 
 This command will:
-1. Verify Node.js version matches `.nvmrc` (v20.19.5)
+1. Verify Node.js version matches `.nvmrc` (v26.0.0)
 2. Switch to correct version using nvm
 3. Install exact dependency versions from `package-lock.json`
 4. Verify environment is ready
@@ -48,7 +48,7 @@ npm test -- --version  # Should run without errors
 
 You'll see:
 ```
-✓ Environment ready: Node v20.19.5, dependencies installed
+✓ Environment ready: Node v26.0.0, dependencies installed
 ✓ Ready to proceed with development tasks
 ```
 
@@ -301,7 +301,7 @@ When making changes to this app that affect YAML output:
 ```bash
 /setup                 # Automated environment verification (recommended)
 nvm use                # Switch to Node version from .nvmrc
-node --version         # Check current Node version (should match .nvmrc: v20.19.5)
+node --version         # Check current Node version (should match .nvmrc: v26.0.0)
 npm install            # Install exact dependency versions from package-lock.json
 ```
 
