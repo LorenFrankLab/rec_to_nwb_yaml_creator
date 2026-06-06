@@ -217,7 +217,11 @@ describe('getDayWorkflowStatus', () => {
     });
     delete day.configurationVersion; // unpinned, but two versions exist → ambiguous
     const merged = mergeDayMetadata(animal, day);
-    expect(getDayWorkflowStatus(animal, day, merged).usesUnpinnedConfiguration).toBe(true);
+    const status = getDayWorkflowStatus(animal, day, merged);
+    expect(status.usesUnpinnedConfiguration).toBe(true);
+    // …and it is export-BLOCKING (the gate folds in the unpinned validation error).
+    expect(status.readyForExportPreflight).toBe(false);
+    expect(status.blockedByRepair).toBe(true);
   });
 
   it('does not flag an unpinned day as a risk when the animal has only one configuration', () => {

@@ -20,7 +20,7 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
-import { getAnimalDayIds, getConfigHistory } from '../../state/workspaceSelectors';
+import { getAnimalDayIds, getConfigHistory, getDaySession } from '../../state/workspaceSelectors';
 import { getAnimalSetupChecklist, SETUP_STATE } from '../../domain/workflowStatus';
 import { validateDay } from '../../domain/validation';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
@@ -189,7 +189,10 @@ export function AnimalWorkspace() {
    */
   function getExistingDays() {
     if (!selectedAnimal) return [];
-    return selectedAnimal.days.map((dayId) => days[dayId]?.date).filter(Boolean);
+    // Read through the shape-safe selector: a recovered/imported animal can have a malformed or
+    // missing `days`, which a raw `.map` would crash on (especially now the sole animal is
+    // auto-selected on mount).
+    return getAnimalDayIds(selectedAnimal).map((dayId) => days[dayId]?.date).filter(Boolean);
   }
 
   return (
@@ -252,12 +255,8 @@ export function AnimalWorkspace() {
                     Recording Days for {selectedAnimal.id}
                   </h2>
                   <div className="day-actions">
-                    <a
-                      href={`#/animal/${selectedAnimalId}/editor`}
-                      className="btn-secondary"
-                      aria-label="Edit Devices"
-                    >
-                      Edit Devices
+                    <a href={`#/animal/${selectedAnimalId}/editor`} className="btn-secondary">
+                      Edit Animal Setup
                     </a>
                     <button
                       className="btn-primary"
@@ -368,7 +367,7 @@ export function AnimalWorkspace() {
                   </div>
                 )}
 
-                {selectedAnimal.days.length === 0 ? (
+                {getAnimalDayIds(selectedAnimal).length === 0 ? (
                   /* Empty State: No Days */
                   <div className="empty-state">
                     <p>No recording days yet.</p>
@@ -377,11 +376,18 @@ export function AnimalWorkspace() {
                 ) : (
                   /* Day List */
                   <ul className="day-list" role="list">
-                    {selectedAnimal.days.map((dayId) => {
+                    {getAnimalDayIds(selectedAnimal).map((dayId) => {
                       const day = days[dayId];
                       if (!day) return null;
 
-                      const { date, session, state } = day;
+                      // Guard session/state: a recovered day can carry a malformed (scalar/array)
+                      // session or state, which a raw `.session_id`/`.draft` read would crash on.
+                      const date = day.date;
+                      const session = getDaySession(day);
+                      const state =
+                        day.state && typeof day.state === 'object' && !Array.isArray(day.state)
+                          ? day.state
+                          : {};
 
                       return (
                         <li key={dayId} className="day-item">

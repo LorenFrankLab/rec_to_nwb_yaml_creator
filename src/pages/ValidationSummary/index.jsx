@@ -285,7 +285,6 @@ export function ValidationSummary() {
           label: `${subjectLabel(animal)} — ${day.session?.session_id || day.id}`,
           version: status.configurationVersion,
           historical: status.isHistoricalConfiguration,
-          unpinned: status.usesUnpinnedConfiguration,
           groups: (merged.electrode_groups || []).length,
           failedChannels,
           cameras: (merged.cameras || []).length,
@@ -426,8 +425,7 @@ export function ValidationSummary() {
                     ) : (
                       <span className="batch-export-preflight-detail">
                         config v{entry.version ?? '—'}
-                        {entry.historical ? ' (historical)' : ''}
-                        {entry.unpinned ? ' — not pinned, resolved to latest' : ''}; {entry.groups}{' '}
+                        {entry.historical ? ' (historical)' : ''}; {entry.groups}{' '}
                         electrode {entry.groups === 1 ? 'group' : 'groups'}, {entry.failedChannels}{' '}
                         failed {entry.failedChannels === 1 ? 'channel' : 'channels'}; {entry.cameras}{' '}
                         {entry.cameras === 1 ? 'camera' : 'cameras'}; optogenetics{' '}

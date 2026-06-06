@@ -11,6 +11,7 @@
 
 import { validate } from '../validation';
 import { validateRawDay, validateRawAnimal } from '../validation/rawShape';
+import { getConfigHistory } from '../state/workspaceSelectors';
 
 /**
  * Whether `value` is a plain object record (not null, not an array). Mirrors the
@@ -255,6 +256,46 @@ export function dayOverrideIssues(day, mergedDay, baseIssues = []) {
  *   (e.g. a non-array `cameras`) into the gate.
  * @returns {Array} All validation issues for the day (each ownership-normalized).
  */
+/**
+ * Export-blocking issue for a day with NO pinned `configurationVersion` in a multi-version
+ * animal. `resolveDayConfig` silently resolves such a day to the LATEST snapshot, which can
+ * export the wrong probe geometry for a recovered/imported day that actually recorded an
+ * earlier configuration. `createDay` always pins, so this only arises from legacy/recovered
+ * data — and now that the Day Devices step offers an in-place version-pin control, it is safe
+ * to fail closed rather than merely warn. Routes to the Devices step (where the pin control
+ * lives) so the disabled-export state links to a real repair.
+ *
+ * @param {object} day - The day record.
+ * @param {object} [animal] - The owning animal (for the configuration history).
+ * @returns {Array} A single error issue, or `[]` when pinned / single-version / no animal.
+ */
+function unpinnedConfigurationIssues(day, animal) {
+  if (!animal || day?.configurationVersion != null) return [];
+  const history = getConfigHistory(animal);
+  if (history.length <= 1) return [];
+  const latestVersion = history[history.length - 1]?.version;
+  return [
+    {
+      code: 'unpinned_configuration',
+      severity: 'error',
+      step: 'devices',
+      repairSurface: 'day',
+      field: 'configurationVersion',
+      focusPath: 'configurationVersion',
+      message:
+        `This recording day has no pinned hardware configuration version, but this animal has ` +
+        `${history.length} configurations. It would export against the latest (v${latestVersion}). ` +
+        `Pin the configuration version this day actually recorded before exporting.`,
+    },
+  ];
+}
+
+/**
+ *
+ * @param day
+ * @param mergedDay
+ * @param animal
+ */
 export function validateDay(day, mergedDay, animal) {
   // Boundary 1: validate the RAW persisted day AND animal shape FIRST — before the merge
   // launders a corrupt collection (`tasks: {}`, `animal.cameras: "nope"`) into an empty
@@ -276,9 +317,13 @@ export function validateDay(day, mergedDay, animal) {
   // Stamp every issue with the canonical ownership contract (normalizeIssue) so consumers
   // read `ownerSurface`/`step`/`focusPath` directly — never re-inferring — and an issue
   // with no resolvable owner throws loudly instead of silently routing to the Day Editor.
-  return [...raw, ...rawAnimal, ...taggedBase, ...dayOverrideIssues(day, mergedDay, base)].map(
-    normalizeIssue
-  );
+  return [
+    ...raw,
+    ...rawAnimal,
+    ...taggedBase,
+    ...dayOverrideIssues(day, mergedDay, base),
+    ...unpinnedConfigurationIssues(day, animal),
+  ].map(normalizeIssue);
 }
 
 /**
@@ -694,6 +739,7 @@ export const SURFACE_BY_CODE = {
   shadowed_geometry_override: 'day',
   malformed_day_collection: 'day',
   malformed_day_session: 'day',
+  unpinned_configuration: 'day',
   malformed_animal_collection: 'animal',
   missing_configuration_history: 'animal',
   missing_camera: 'day',

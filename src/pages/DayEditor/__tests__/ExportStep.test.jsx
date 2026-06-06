@@ -333,7 +333,7 @@ describe('ExportStep', () => {
     expect(within(preflight).getByText(/version 1 \(historical\)/i)).toBeInTheDocument();
   });
 
-  it('warns in preflight when an unpinned day in a multi-version animal resolves to latest', () => {
+  it('BLOCKS export for an unpinned day in a multi-version animal (no preflight, repair offered)', () => {
     const { animal, day } = buildRealisticWorkspace();
     animal.configurationHistory.push({
       version: 2,
@@ -342,12 +342,14 @@ describe('ExportStep', () => {
       devices: animal.configurationHistory[0].devices,
       appliedToDays: [],
     });
-    delete day.configurationVersion; // unpinned, two versions → silently resolves to latest
+    delete day.configurationVersion; // unpinned, two versions → wrong-geometry risk → blocked
 
     render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
 
-    const preflight = screen.getByRole('region', { name: /preflight/i });
-    expect(within(preflight).getByText(/not pinned to this day/i)).toBeInTheDocument();
+    // Export is blocked: no preflight, a blocking explanation, and a disabled download.
+    expect(screen.queryByRole('region', { name: /preflight/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/no pinned hardware configuration version/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /download yaml/i })).toBeDisabled();
   });
 
   it('reports unresolved non-blocking warnings in the preflight', () => {

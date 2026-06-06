@@ -297,7 +297,7 @@ describe('AnimalWorkspace Component (M4) - Initial State', () => {
   });
 
   describe('Edit Devices Button', () => {
-    it('shows "Edit Devices" button when animal is selected', async () => {
+    it('shows "Edit Animal Setup" button when animal is selected', async () => {
       const user = userEvent.setup();
 
       const initialState = {
@@ -324,11 +324,11 @@ describe('AnimalWorkspace Component (M4) - Initial State', () => {
       await user.click(animalButton);
 
       // Check for "Edit Devices" button/link
-      const editDevicesLink = screen.getByRole('link', { name: /edit devices/i });
+      const editDevicesLink = screen.getByRole('link', { name: /edit animal setup/i });
       expect(editDevicesLink).toBeInTheDocument();
     });
 
-    it('navigates to Animal Editor when "Edit Devices" button is clicked', async () => {
+    it('navigates to Animal Editor when "Edit Animal Setup" button is clicked', async () => {
       const user = userEvent.setup();
 
       const initialState = {
@@ -355,11 +355,11 @@ describe('AnimalWorkspace Component (M4) - Initial State', () => {
       await user.click(animalButton);
 
       // Check the href of the "Edit Devices" button
-      const editDevicesLink = screen.getByRole('link', { name: /edit devices/i });
+      const editDevicesLink = screen.getByRole('link', { name: /edit animal setup/i });
       expect(editDevicesLink).toHaveAttribute('href', '#/animal/testanimal/editor');
     });
 
-    it('does not show "Edit Devices" button when no animal is selected', () => {
+    it('does not show "Edit Animal Setup" button when no animal is selected', () => {
       // Two animals + no ?animal param → nothing auto-selected (auto-select only fires for a
       // SOLE animal), so this exercises the genuine no-selection state.
       window.location.hash = '#/workspace';
@@ -382,7 +382,7 @@ describe('AnimalWorkspace Component (M4) - Initial State', () => {
 
       // No animal selected yet
       // Check that "Edit Devices" button/link is not present
-      const editDevicesLink = screen.queryByRole('link', { name: /edit devices/i });
+      const editDevicesLink = screen.queryByRole('link', { name: /edit animal setup/i });
       expect(editDevicesLink).not.toBeInTheDocument();
     });
 

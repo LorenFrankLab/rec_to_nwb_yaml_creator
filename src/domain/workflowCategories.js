@@ -118,6 +118,9 @@ export const CATEGORY_BY_CODE = {
   malformed_day_session: WORKFLOW_CATEGORY.EXISTING_DATA,
   malformed_animal_collection: WORKFLOW_CATEGORY.EXISTING_DATA,
   missing_configuration_history: WORKFLOW_CATEGORY.EXISTING_DATA,
+  // A recovered/imported day with no pinned configuration version — repaired by pinning a
+  // version in the Day Devices step.
+  unpinned_configuration: WORKFLOW_CATEGORY.EXISTING_DATA,
 };
 
 /**

@@ -470,8 +470,9 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
                     (v{reconfig.version}); if it recorded an earlier configuration, pin the correct
                     version before exporting.
                   </span>
-                  {/* Repairable: assign an existing configuration version to this day. */}
-                  <div className="config-version-pin">
+                  {/* Repairable: assign an existing configuration version to this day. The
+                      data-field-path anchors the export gate's "Fix in Devices" repair focus. */}
+                  <div className="config-version-pin" data-field-path="configurationVersion">
                     <label htmlFor="pin-config-version">Pin this day to:</label>
                     <select
                       id="pin-config-version"

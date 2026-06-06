@@ -120,14 +120,12 @@ export default function ExportStep({ animal, day, onNavigate, onRepair }) {
     // Use the version of the snapshot actually resolved into `merged` (which may
     // differ from the day's pin when stale), so preflight matches the encoded YAML.
     const { configurationVersion } = resolveDayConfig(animal, day);
-    // Historical/current status, the unpinned-configuration review risk, and any non-blocking
-    // warnings come from the same domain helpers the rest of the workflow uses, so preflight
-    // reads as a confidence check (conversion/DANDI/Spyglass), not only a schema summary.
-    const { isHistoricalConfiguration, usesUnpinnedConfiguration } = getDayWorkflowStatus(
-      animal,
-      day,
-      merged
-    );
+    // Historical/current status + any non-blocking warnings come from the same domain helpers
+    // the rest of the workflow uses, so preflight reads as a confidence check
+    // (conversion/DANDI/Spyglass), not only a schema summary. (An unpinned configuration in a
+    // multi-version animal is now export-BLOCKING, so it never reaches preflight — it surfaces
+    // in the blocked repair list instead.)
+    const { isHistoricalConfiguration } = getDayWorkflowStatus(animal, day, merged);
     const warningCount = validateDay(day, merged, animal).filter(
       (issue) => issue.severity === 'warning'
     ).length;
@@ -136,7 +134,6 @@ export default function ExportStep({ animal, day, onNavigate, onRepair }) {
       date: day?.date,
       configurationVersion,
       isHistorical: isHistoricalConfiguration,
-      usesUnpinnedConfiguration,
       warningCount,
     });
   }, [animal, day, merged, exportBlocked]);
@@ -313,14 +310,12 @@ export default function ExportStep({ animal, day, onNavigate, onRepair }) {
  * @param {number} [ctx.configurationVersion] - The version of the snapshot resolved into
  *   `merged` (from {@link resolveDayConfig}).
  * @param {boolean} [ctx.isHistorical] - Whether that version is historical (not the latest).
- * @param {boolean} [ctx.usesUnpinnedConfiguration] - Whether the day has no pinned version in a
- *   multi-version animal (silently resolved to the latest — a review risk).
  * @param {number} [ctx.warningCount] - Count of non-blocking warnings still to review.
  * @returns {Array<{label: string, value: string}>}
  */
 function buildPreflightSummary(
   merged,
-  { animalId, date, configurationVersion, isHistorical, usesUnpinnedConfiguration, warningCount } = {}
+  { animalId, date, configurationVersion, isHistorical, warningCount } = {}
 ) {
   const subjectId = merged.subject?.subject_id || '—';
   const sessionId = merged.session_id || '—';
@@ -350,9 +345,7 @@ function buildPreflightSummary(
       label: 'Configuration version',
       value:
         configurationVersion != null
-          ? `Version ${configurationVersion} (${isHistorical ? 'historical' : 'current'})${
-              usesUnpinnedConfiguration ? ' — not pinned to this day; resolved to latest, review' : ''
-            }`
+          ? `Version ${configurationVersion} (${isHistorical ? 'historical' : 'current'})`
           : '—',
     },
     {

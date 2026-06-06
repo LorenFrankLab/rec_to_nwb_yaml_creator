@@ -22,9 +22,11 @@ byte-identical; the full suite, lint (0 errors), and build stay green.
 - **Workflow-status domain helper (Task 1).** `src/domain/workflowStatus.js` derives the animal
   setup checklist (`getAnimalSetupChecklist`) and per-day readiness (`getDayWorkflowStatus`)
   PURELY from the existing `computeStepStatus`/`validateDay` outputs and the shape-safe
-  `workspaceSelectors` reads. `readyForExportPreflight` is `computeStepStatus(...).export ===
-  'valid'` — the same gate the Export button consults — so it cannot drift. Setup-state
-  categories (missing cameras/data-acq) are informational and never gate export.
+  `workspaceSelectors` reads. `readyForExportPreflight` is `isExportEnabled(computeStepStatus(...))`
+  — the same gate the Export button consults (export status + all prerequisite steps) — so it
+  cannot drift. Setup-state categories (missing cameras/data-acq) are informational and never gate
+  export. *(Refined in the review rounds below: initially `computeStepStatus(...).export`, then the
+  full `isExportEnabled` gate.)*
 - **Workflow-category mapping (Task 6, domain).** `src/domain/workflowCategories.js` maps each
   issue to one of five user buckets (Animal setup, Day metadata, Day-specific failed channels,
   Existing data repair, Export/preflight) via a `CATEGORY_BY_CODE` table — the analogue of
@@ -66,9 +68,11 @@ the enriched preflight assertions.
 **Review follow-ups (addressed in-phase):**
 
 - **Electrode-presence matches the editor (was: Review could dead-end on an empty editor).**
-  `animalHasElectrodes` now reads `animal.devices` — the source the Animal Editor renders — so
-  "Review Electrodes" never lands on a blank step; a recovered animal with geometry only in a
-  snapshot reads as "Set Up Electrodes".
+  `animalHasElectrodes` reads `animal.devices` — the source the Animal Editor renders — so
+  "Review Electrodes" never lands on a blank step. *(Superseded below: a recovered animal with
+  geometry only in a snapshot is now a repair/sync state — "Repair electrode setup" with a
+  "Load saved electrode configuration" action — not "Set Up Electrodes", which would have
+  overwritten the snapshot.)*
 - **Readiness uses the real export gate.** The export gate moved to `src/domain/stepGate.js`
   (`pages/DayEditor/stepGate.js` re-exports it for the in-folder consumers); `getDayWorkflowStatus`
   now derives `readyForExportPreflight` from `isExportEnabled(computeStepStatus(...))` (which folds
@@ -115,6 +119,22 @@ the enriched preflight assertions.
 ("Fix in Animal Editor → …", "Fix in Devices") — a tested routing contract. The workflow framing is
 delivered by the category **headings** (Animal setup / Day metadata / …) above them and the
 checklist action **verbs** (Set Up Electrodes / Review Cameras), so there is no functional gap.
+
+**Third-review follow-ups (addressed in-phase):**
+
+- **Unpinned configuration is now export-BLOCKING (was warn-only).** A new `unpinned_configuration`
+  validation error (in `validateDay`/`SURFACE_BY_CODE`/`CATEGORY_BY_CODE`) fails the export gate for
+  a day with no pinned `configurationVersion` in a multi-version animal — so neither single-day nor
+  batch export can ship YAML with silently wrong resolved geometry. It routes to the Devices step,
+  where the version-pin control repairs it (issue → ownership → visible action → repair). The
+  now-unreachable preflight/batch "unpinned" notes were removed.
+- **`AnimalWorkspace` reads days through `getAnimalDayIds` / `getDaySession`** (and guards `day.state`)
+  so a recovered/imported animal with malformed/missing `days` can't crash the workspace or hide the
+  review state — important now that the sole animal is auto-selected on mount.
+- **Workspace header relabeled** `Edit Devices` → `Edit Animal Setup` (aria-label "Edit shared animal
+  setup") so it reads as shared setup, not a device-only trap.
+- **Changelog/contract docs reconciled** with the final behavior (readiness gate = `isExportEnabled`;
+  snapshot-only electrodes = repair/sync state).
 
 ---
 
