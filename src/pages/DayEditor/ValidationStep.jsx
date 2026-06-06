@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { groupErrorsByStep, validateDay } from '../../domain/validation';
-import { RepairActionButton, STEP_LABELS, isRepairable } from './RepairActions';
+import { RepairActionButton, STEP_LABELS, isRepairable, repairButtonKey } from './RepairActions';
 import './DayEditor.scss';
 
 /**
@@ -106,6 +106,10 @@ function SeveritySection({ title, severity, issues, onNavigate, animalId, onRepa
   const stepOrder = ['overview', 'devices', 'epochs', 'validation', 'export'];
   // Only error-severity issues block export, so only they get a repair action.
   const repairable = severity === 'error' && typeof onNavigate === 'function';
+  // Collapse duplicate repair BUTTONS across the whole section (every message still shows),
+  // matching the Export step's RepairActions so the two surfaces behave identically when
+  // several issues share one underlying fix.
+  const seenRepairKeys = new Set();
 
   return (
     <section className={`validation-group validation-group-${severity}`}>
@@ -116,15 +120,23 @@ function SeveritySection({ title, severity, issues, onNavigate, animalId, onRepa
           <div key={stepId} className="validation-step-group">
             <h4>{STEP_LABELS[stepId]}</h4>
             <ul>
-              {byStep[stepId].map((issue, index) => (
-                <li key={`${issue.path}-${issue.code}-${index}`} className="validation-issue">
-                  <span className="validation-issue-message">{issue.message}</span>
-                  {issue.path && <code className="validation-issue-path">{issue.path}</code>}
-                  {repairable && isRepairable(issue) && (
-                    <RepairActionButton issue={issue} onNavigate={onNavigate} animalId={animalId} onRepair={onRepair} />
-                  )}
-                </li>
-              ))}
+              {byStep[stepId].map((issue, index) => {
+                let showButton = repairable && isRepairable(issue);
+                if (showButton) {
+                  const key = repairButtonKey(issue);
+                  if (seenRepairKeys.has(key)) showButton = false;
+                  else seenRepairKeys.add(key);
+                }
+                return (
+                  <li key={`${issue.path}-${issue.code}-${index}`} className="validation-issue">
+                    <span className="validation-issue-message">{issue.message}</span>
+                    {issue.path && <code className="validation-issue-path">{issue.path}</code>}
+                    {showButton && (
+                      <RepairActionButton issue={issue} onNavigate={onNavigate} animalId={animalId} onRepair={onRepair} />
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ))}

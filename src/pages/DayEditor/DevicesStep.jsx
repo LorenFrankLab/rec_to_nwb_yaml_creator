@@ -315,8 +315,9 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
   const overrideCleanupSection = hasOverrideCleanup ? (
     <section className="stale-overrides-section" aria-label="Corrupt or stale device overrides">
       <p className="field-help-text">
-        Some device overrides on this day are corrupt, stale, or shadow the saved
-        configuration and may block export. Remove them:
+        This day has device overrides that need review. Corrupt or stale overrides block
+        export; a shadowing override replaces the saved configuration for this day only.
+        Remove any you did not intend:
       </p>
 
       {wholeOverridesMalformed && (

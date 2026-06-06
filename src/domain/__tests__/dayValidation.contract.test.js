@@ -89,9 +89,13 @@ describe('domain validation module preserves the issue list', () => {
     ]);
 
     // The export gate fails closed; the owning data-entry steps badge per ownership.
+    // Devices is 'error' here because the stale override is DAY-owned and its repair control
+    // renders on the Devices step. (An ANIMAL-owned device SCHEMA error — like the
+    // channel_value_out_of_range above — would NOT change the Devices badge: that is the
+    // gate-non-redundancy contract, exercised by the export-gate isolation fixture.)
     expect(computeStepStatus(dayWithStaleOverride, merged, animal)).toEqual({
       overview: 'valid',
-      devices: 'valid', // schema/override errors don't change device completeness (gate non-redundancy)
+      devices: 'error',
       epochs: 'error',
       validation: 'valid',
       export: 'error',

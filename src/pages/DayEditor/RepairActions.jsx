@@ -21,6 +21,27 @@ export function isRepairable(issue) {
 }
 
 /**
+ * The dedup key for an issue's repair BUTTON. Several issues can share one underlying fix
+ * (e.g. a corrupt day geometry override produces both the retagged base schema errors AND a
+ * `shadowed_geometry_override`, all routing to the same remove-override control). Collapsing
+ * by this key shows every message but only one button per unique (surface, step, focus,
+ * command). The executable command is part of the key so two issues sharing a destination
+ * but carrying DIFFERENT repairCommands (a per-ntrode removal vs a whole-overrides reset) are
+ * not collapsed. Shared by the Export step (via {@link RepairActions}) and the Validation
+ * summary so both surfaces dedup identically.
+ *
+ * @param {object} issue - A validation issue.
+ * @returns {string} The dedup key.
+ */
+export function repairButtonKey(issue) {
+  const { surface, step } = repairTargetForIssue(issue);
+  const command = issue.repairCommand
+    ? `${issue.repairCommand.type}:${issue.repairCommand.key ?? issue.repairCommand.field ?? ''}`
+    : '';
+  return `${surface}:${step ?? ''}:${issue.focusPath || issue.path || ''}:${command}`;
+}
+
+/**
  * Shared repair-action list for export-blocking validation issues.
  *
  * Each issue is rendered with its user-facing message and (when {@link isRepairable})
@@ -59,21 +80,13 @@ export default function RepairActions({ issues, onNavigate, animalId, onRepair }
   // distinct symptom) but COLLAPSE the repair button to one per unique (surface, target),
   // so the user isn't shown a stack of identical "Fix in …" buttons for a single repair.
   const seenTargets = new Set();
-  const repairKey = (issue) => {
-    const { surface, step } = repairTargetForIssue(issue);
-    // Include the executable command in the key: two issues can share a (surface, step,
-    // focusPath) yet carry DIFFERENT repairCommands (e.g. a per-ntrode bad-channel removal vs
-    // a whole-overrides reset on the same path). Collapsing those would drop one real fix.
-    const command = issue.repairCommand ? `${issue.repairCommand.type}:${issue.repairCommand.key ?? issue.repairCommand.field ?? ''}` : '';
-    return `${surface}:${step ?? ''}:${issue.focusPath || issue.path || ''}:${command}`;
-  };
 
   return (
     <ul className="repair-action-list">
       {issues.map((issue, index) => {
         let showButton = isRepairable(issue);
         if (showButton) {
-          const key = repairKey(issue);
+          const key = repairButtonKey(issue);
           if (seenTargets.has(key)) showButton = false;
           else seenTargets.add(key);
         }

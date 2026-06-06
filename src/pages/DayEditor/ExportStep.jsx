@@ -98,13 +98,21 @@ export default function ExportStep({ animal, day, onNavigate, onRepair }) {
   // on its day step.
   const blockingSteps = useMemo(() => {
     if (validationErrors.length > 0) return [];
+    const groups = merged.electrode_groups || [];
     return ['overview', 'devices', 'epochs', 'validation']
       .filter((s) => stepStatus[s] !== 'valid')
-      .map((step) => ({
-        step,
-        owner: step === 'devices' && stepStatus.devices === 'incomplete' ? 'animal' : 'day',
-      }));
-  }, [validationErrors.length, stepStatus]);
+      .map((step) => {
+        if (step === 'devices' && stepStatus.devices === 'incomplete') {
+          // Geometry is animal-owned. Route to the Animal-Editor step that owns the gap:
+          // no electrode groups → Electrode Groups (the default step 0, no field hint);
+          // groups present but a group has no channel map → Channel Maps (field hint so the
+          // deep-link lands there instead of dropping the user on step 0).
+          const field = groups.length === 0 ? undefined : 'ntrode_electrode_group_channel_map';
+          return { step, owner: 'animal', field };
+        }
+        return { step, owner: 'day', field: undefined };
+      });
+  }, [validationErrors.length, stepStatus, merged]);
 
   const preflight = useMemo(() => {
     if (exportBlocked) return null;
@@ -181,13 +189,13 @@ export default function ExportStep({ animal, day, onNavigate, onRepair }) {
           )}
           {validationErrors.length === 0 && blockingSteps.length > 0 && (
             <div className="export-step-blockers">
-              {blockingSteps.map(({ step, owner }) => (
+              {blockingSteps.map(({ step, owner, field }) => (
                 <button
                   key={step}
                   type="button"
                   className="repair-action-button"
                   data-repair-surface={owner}
-                  onClick={() => onNavigate?.(owner === 'animal' ? 'animal' : step, undefined)}
+                  onClick={() => onNavigate?.(owner === 'animal' ? 'animal' : step, field)}
                 >
                   {owner === 'animal' ? 'Fix in Animal Editor' : `Fix in ${STEP_LABELS[step] || step}`}
                 </button>

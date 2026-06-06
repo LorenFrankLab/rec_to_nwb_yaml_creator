@@ -389,7 +389,7 @@ export function computeStepStatus(day, mergedDay, animal) {
 
   return {
     overview: getStepStatus(errorsByStep.overview, day.session),
-    devices: computeDevicesStatus(day, mergedDay),
+    devices: computeDevicesStatus(day, mergedDay, errorsByStep.devices),
     epochs: computeEpochsStatus(day, errorsByStep.epochs),
     // (errorsByStep.epochs is scoped to task-path errors inside computeEpochsStatus)
     // The validation step owns the catch-all bucket (anything not routed to
@@ -453,12 +453,27 @@ export function computeEpochsStatus(day, epochErrors) {
  * @param {object} day - Day record (retained for call-site compatibility).
  * @param {object} mergedDay - Merged metadata (reads electrode_groups +
  *   ntrode_electrode_group_channel_map, including effective ntrode.bad_channels).
+ * @param {Array} [deviceErrors] - Issues routed to the Devices step (from
+ *   `groupErrorsByStep`). A DAY-owned error here (e.g. a stale/malformed device override,
+ *   an out-of-range day bad channel) badges the step 'error' because its repair control
+ *   renders ON this step — consistent with how `computeEpochsStatus`/`getStepStatus` badge
+ *   their own step's repairable errors. ANIMAL-owned device schema errors routed here for
+ *   grouping are deliberately NOT folded in: they are not day-repairable, and the export
+ *   gate (not the badge) catches them — the documented "the gate is not redundant with the
+ *   prereq steps" contract.
  * @returns {'incomplete'|'error'|'valid'}
  *   - `'incomplete'`: no electrode groups, or any group has no channel mapping.
- *   - `'error'`: any group has all its channels marked bad (group inactive).
+ *   - `'error'`: a day-owned Devices error, or any group has all its channels marked bad.
  *   - `'valid'`: otherwise (bad-channel warnings are non-blocking).
  */
-export function computeDevicesStatus(day, mergedDay) {
+export function computeDevicesStatus(day, mergedDay, deviceErrors = []) {
+  // A day-owned, Devices-step-repairable error must badge the step 'error' so a green badge
+  // never sits beside its own blocking repair control. (Animal-owned errors excluded — see
+  // the param doc / gate-non-redundancy contract.)
+  if ((deviceErrors || []).some((i) => i.severity === 'error' && i.ownerSurface === 'day')) {
+    return 'error';
+  }
+
   const groups = mergedDay?.electrode_groups || [];
   const ntrodeMap = mergedDay?.ntrode_electrode_group_channel_map || [];
 
