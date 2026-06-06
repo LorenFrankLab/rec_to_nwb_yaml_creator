@@ -73,14 +73,18 @@ function importSpecifiers(text) {
 }
 
 /**
- * Resolve a relative specifier to a src-relative POSIX path with the extension stripped.
+ * Resolve a specifier to a src-relative POSIX path with the extension stripped. Handles both
+ * relative specifiers and the `@/*` → `src/*` alias (configured in jsconfig.json /
+ * vitest.config.js), so an aliased `@/pages/...` import cannot bypass the guard. Returns null
+ * for bare modules (react, prop-types, …), which are out of scope.
  * @param fromRel
  * @param spec
  */
-function resolveToSrcRel(fromRel, spec) {
+export function resolveToSrcRel(fromRel, spec) {
+  const stripExt = (p) => p.replace(/\.(jsx?|tsx?)$/, '');
+  if (spec.startsWith('@/')) return stripExt(spec.slice(2)); // alias → src-relative
   if (!spec.startsWith('.')) return null; // bare module (react, prop-types, …) — out of scope
-  const joined = path.posix.normalize(path.posix.join(path.posix.dirname(fromRel), spec));
-  return joined.replace(/\.(jsx?|tsx?)$/, '');
+  return stripExt(path.posix.normalize(path.posix.join(path.posix.dirname(fromRel), spec)));
 }
 
 describe('architecture boundaries — classifier (synthetic)', () => {
@@ -113,6 +117,16 @@ describe('architecture boundaries — classifier (synthetic)', () => {
     expect(importViolation('domain/validation.js', 'validation/index')).toBeNull();
     expect(importViolation('domain/shadowExport.js', 'io/yaml')).toBeNull();
     expect(importViolation('domain/badChannels.js', 'ntrode/probeCatalog')).toBeNull();
+  });
+
+  it('resolves the @/* alias so an aliased page import cannot bypass the guard', () => {
+    expect(resolveToSrcRel('domain/validation.js', '@/pages/DayEditor/ExportStep'))
+      .toBe('pages/DayEditor/ExportStep');
+    // …and the resolved alias path is then caught as a reversed import.
+    expect(importViolation('domain/validation.js', resolveToSrcRel('domain/validation.js', '@/pages/DayEditor/ExportStep')))
+      .toEqual({ rule: 'domain-or-state-imports-page' });
+    // A bare module still resolves to null (out of scope).
+    expect(resolveToSrcRel('domain/validation.js', 'react')).toBeNull();
   });
 });
 

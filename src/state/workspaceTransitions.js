@@ -219,6 +219,13 @@ export function rebuildConfigurationHistoryForAnimal(animal, now, today) {
  * @returns {object} The new day record.
  */
 export function createDayRecord(animal, animalId, dayId, date, session, now) {
+  // Pin to the latest snapshot's ACTUAL version, not the count. An imported/repaired
+  // history can be non-contiguous (e.g. [1, 3]) — there the count (2) names no real
+  // snapshot, and `resolveDayConfig` (which matches by `version`) would fail closed on a
+  // brand-new day. The last element is the latest snapshot everywhere else in the model
+  // (mirroring in applyAnimalUpdates, the reconfig latest in DevicesStep).
+  const history = getConfigHistory(animal);
+  const latestVersion = history.length > 0 ? history[history.length - 1].version : 0;
   return {
     id: dayId,
     animalId,
@@ -250,7 +257,7 @@ export function createDayRecord(animal, animalId, dayId, date, session, now) {
     },
     created: now,
     lastModified: now,
-    configurationVersion: getConfigHistory(animal).length, // Latest version
+    configurationVersion: latestVersion,
   };
 }
 

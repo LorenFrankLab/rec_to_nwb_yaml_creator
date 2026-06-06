@@ -151,10 +151,18 @@ describe('createDayRecord', () => {
       configurationHistory: [{ version: 1 }, { version: 2 }],
     };
     const day = createDayRecord(animal, 'remy', 'remy-2023-06-22', '2023-06-22', { session_id: 's' }, NOW);
-    expect(day.configurationVersion).toBe(2); // latest = history length
+    expect(day.configurationVersion).toBe(2); // latest snapshot's version
     expect(day.technical.raw_data_to_volts).toBe(0.3);
     expect(day.technical.times_period_multiplier).toBe(2);
     expect(day.state).toEqual({ draft: true, validated: false, exported: false });
+  });
+
+  it('pins to the latest snapshot VERSION, not the count, for a non-contiguous history', () => {
+    // An imported/repaired history can skip a version. The count (2) names no real
+    // snapshot; the latest version (3) is the one resolveDayConfig can resolve.
+    const animal = { configurationHistory: [{ version: 1 }, { version: 3 }] };
+    const day = createDayRecord(animal, 'remy', 'd', '2023-06-22', {}, NOW);
+    expect(day.configurationVersion).toBe(3);
   });
 
   it('falls back to standard technical values when no defaults are set', () => {
