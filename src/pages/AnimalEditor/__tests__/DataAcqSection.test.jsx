@@ -71,9 +71,12 @@ describe('DataAcqSection', () => {
     // not imply a day-level edit exists.
     render(<DataAcqSection animal={animal} onFieldUpdate={onFieldUpdate} />);
 
-    expect(screen.getByText(/one recording system per animal/i)).toBeInTheDocument();
+    // The bold lead scopes the "no per-day version" claim to the IDENTITY (the rig-constant
+    // defaults below are per-day overridable, so it must not be read as covering them).
+    expect(screen.getByText(/one recording-system identity per animal/i)).toBeInTheDocument();
     expect(screen.getByText(/mid-study hardware change/i)).toBeInTheDocument();
-    expect(screen.getByText(/can't be represented per day/i)).toBeInTheDocument();
+    // Punctuation-agnostic (the copy uses an apostrophe rendered from &apos;).
+    expect(screen.getByText(/represented per day/i)).toBeInTheDocument();
     // The no-silent-retroactive point: there is no way to keep earlier days on the old hardware.
     expect(screen.getByText(/no way to keep earlier days on the old hardware/i)).toBeInTheDocument();
     // Framed as a future capability, not a current day-level control.

@@ -171,11 +171,13 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
           instead of implying a day-level edit exists. Per-day recording-system versioning is a
           separate future phase. */}
       <div className="recording-system-blast-radius" role="note">
-        <strong>One recording system per animal — no per-day version yet.</strong> A mid-study
-        hardware change (for example, swapping the amplifier or acquisition device for later
-        sessions) can&apos;t be represented per day in this app yet: the device identity below is
-        shared, so editing it changes every one of this animal&apos;s recording days — there is no
-        way to keep earlier days on the old hardware. Per-day recording-system versioning is a
+        {/* Scope the bold lead to the IDENTITY, not the whole section — the rig-constant defaults
+            below ARE per-day overridable, so "no per-day version" must not be read as covering them. */}
+        <strong>One recording-system identity per animal — no per-day version yet.</strong> A
+        mid-study hardware change (for example, swapping the amplifier or acquisition device for
+        later sessions) can&apos;t be represented per day in this app yet: the device identity below
+        is shared, so editing it changes every one of this animal&apos;s recording days — there is
+        no way to keep earlier days on the old hardware. Per-day recording-system versioning is a
         planned future capability.
       </div>
 
