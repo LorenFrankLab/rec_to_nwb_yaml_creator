@@ -750,8 +750,10 @@ export default function AnimalEditorStepper() {
     },
     {
       // Kept as the final step so its Save/Continue flow (and the stepper's final-step
-      // Save button) is unchanged by the added Optogenetics step.
-      label: 'Hardware Config',
+      // Save button) is unchanged by the added Optogenetics step. Phase 8.7 Task 2: the
+      // user-facing label names the three shared-setup areas it holds (recording system +
+      // cameras + behavioral/DIO events) instead of the over-broad "Hardware Config".
+      label: 'Recording System, Cameras & DIO',
       component: (
         <HardwareConfigStep
           animal={animal}
@@ -786,14 +788,16 @@ export default function AnimalEditorStepper() {
         </a>
         <div className="animal-editor-title">
           <h1>Animal Editor: {animal.id}</h1>
-          {/* Frame the editor as SHARED animal setup, not a detached hardware form, so
-              electrodes/probes are discoverable here and their reuse across days is clear.
-              Device edits apply to the latest configuration; days pinned to an earlier version
-              keep theirs, so we don't overstate that ALL days inherit changes. */}
+          {/* Frame the editor as SHARED animal setup, not a detached hardware form. Phase 8.7
+              Task 2: be honest about blast radius per ownership kind — electrodes/probes are
+              VERSIONED (each day keeps the configuration it was pinned to), but cameras and the
+              recording system are shared animal-level setup with no per-day binding today, so
+              editing them affects ALL recording days. (The day-used camera export binding —
+              Task 5 — will later let past days keep the cameras they referenced.) */}
           <p className="animal-editor-subtitle">
-            Shared hardware setup for this animal. Electrodes/probes, cameras, and data
-            acquisition configured here apply to the latest configuration and the recording days
-            on it; days pinned to an earlier configuration keep theirs.
+            Shared setup for this animal. Electrodes/probes are versioned — each recording day
+            keeps the configuration it was pinned to. Cameras and the recording system are shared
+            animal-level setup: editing them affects all recording days.
           </p>
           {isReconfigurationEdit && (
             <div

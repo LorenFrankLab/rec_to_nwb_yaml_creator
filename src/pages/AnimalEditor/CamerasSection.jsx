@@ -7,7 +7,9 @@ import './CamerasSection.scss';
  * CamerasSection - Camera configuration section for Animal Editor
  *
  * Provides CRUD interface for cameras with table view.
- * Displays camera metadata: ID, name, manufacturer, model, meters_per_pixel.
+ * Displays camera metadata: ID, name, manufacturer, model, lens, meters_per_pixel — the
+ * identity fields that distinguish one camera from another (a changed lens/calibration is a
+ * different camera identity downstream, so they are visible in the table, not just the modal).
  * Status badges indicate validation state (✓ complete, ⚠ warnings).
  *
  * Integration with CameraModal for add/edit operations (handled by parent).
@@ -167,6 +169,7 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
             <th>Name</th>
             <th>Manufacturer</th>
             <th>Model</th>
+            <th>Lens</th>
             <th>Meters/Pixel</th>
             <th>Status</th>
             <th>Actions</th>
@@ -179,6 +182,7 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
               <td data-label="Name">{camera.camera_name || ''}</td>
               <td data-label="Manufacturer">{camera.manufacturer || ''}</td>
               <td data-label="Model">{camera.model || ''}</td>
+              <td data-label="Lens">{camera.lens || ''}</td>
               <td data-label="Meters/Pixel">{camera.meters_per_pixel}</td>
               <td data-label="Status">
                 {(() => {

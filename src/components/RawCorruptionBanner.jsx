@@ -4,8 +4,8 @@ import { validateRawAnimal, validateRawDay } from '../validation/rawShape';
 /**
  * RawCorruptionBanner — the destination-side surface for raw-shape corruption.
  *
- * A repair routed to an editor ("Fix in Animal Editor → Hardware Config" for a corrupt
- * `cameras`) must land on a VISIBLE reset control, not an empty "Add First Camera" state
+ * A repair routed to an editor ("Fix in Animal Editor → Recording System, Cameras & DIO" for a
+ * corrupt `cameras`) must land on a VISIBLE reset control, not an empty "Add First Camera" state
  * that hides the corruption behind a laundered `[]`. Given the raw `animal`/`day`, this
  * computes the owned raw-shape issues — which already carry executable `repairCommand`s and
  * human `actionLabel`s from the validation layer (see {@link validateRawAnimal} /

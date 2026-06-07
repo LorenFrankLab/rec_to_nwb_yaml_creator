@@ -6,6 +6,35 @@
 
 ---
 
+## Ownership defaults & day configurability — Phase 8.7 Task 2a: Animal Editor IA labels + camera lens column (June 6, 2026)
+
+First implementation increment of sub-stream A's information-architecture work (Task 2, part a).
+Baseline-safe UI/IA + label changes; no export-byte change, no store change. Full suite (4061),
+125 golden baselines byte-identical, architecture guard, lint (0 errors), and build all green.
+
+- **Renamed the over-broad "Hardware Config" step → `Recording System, Cameras & DIO`** in both
+  the Animal Editor stepper ([AnimalEditorStepper.jsx](../src/pages/AnimalEditor/AnimalEditorStepper.jsx))
+  and `ANIMAL_EDITOR_STEPS` ([validation.js](../src/domain/validation.js)) so the stepper nav label
+  and the repair-button copy ("Fix in Animal Editor → …") stay consistent.
+- **Gave the bundled step three ownership-named sections** ([HardwareConfigStep.jsx](../src/pages/AnimalEditor/HardwareConfigStep.jsx)):
+  `Video Cameras & Calibration`, `Recording System`, `Behavioral Events / DIO` (aria-labels + the
+  data-acq heading renamed from `Data Acquisition Device` → `Recording System`), so data acquisition
+  reads as the recording/ephys system rather than being lumped with cameras. Separate *steps* are
+  deferred; within-step separation is done.
+- **Added the missing camera `lens` column** to the cameras table ([CamerasSection.jsx](../src/pages/AnimalEditor/CamerasSection.jsx))
+  — `lens` is a camera identity field (a changed lens is a different camera downstream), so it is now
+  visible in the table, not only in the edit modal.
+- **Corrected the Animal Setup subtitle overpromise** (flagged in review): it no longer claims
+  cameras/data-acq are versioned per day. New honest copy distinguishes versioned electrodes/probes
+  (each day keeps its pinned configuration) from shared cameras + recording system (editing affects
+  all recording days) — matching the actual export behavior until Task 5's camera binding lands.
+- Updated the affected component/routing tests to the new labels and added a `lens`-column test;
+  refreshed the screen-map reconciliation table to mark these items done.
+
+Still open in Task 2: the Animal Profile / Subject surface with species (Latin binomial) and
+`date_of_birth` (ISO-8601) constraints at the edit point and subject-correction blast-radius copy
+(Task 2b), plus the remaining step-label relabels.
+
 ## Ownership defaults & day configurability — Phase 8.7 sub-stream A foundation (June 6, 2026)
 
 Foundation for the ownership/blast-radius UX (sub-stream A: ownership vocabulary + artifacts).

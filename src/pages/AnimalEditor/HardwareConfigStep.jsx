@@ -19,7 +19,7 @@ import {
 import './HardwareConfigStep.scss';
 
 /**
- * HardwareConfigStep - Animal Editor Step 3: Cameras, Hardware & Behavioral Events.
+ * HardwareConfigStep - Animal Editor final step: Recording System, Cameras & DIO Events.
  *
  * Owns camera add/edit/delete (the buttons were previously inert): it opens
  * {@link CameraModal}, enforces the dataset-wide Spyglass `camera_name` identity
@@ -123,7 +123,7 @@ export default function HardwareConfigStep({
   return (
     <div className="hardware-config-step">
       <header className="step-header">
-        <h2>Cameras, Hardware & Behavioral Events</h2>
+        <h2>Recording System, Cameras & DIO Events</h2>
         <SaveIndicator
           enabled={persistence.enabled}
           lastSaved={persistence.lastSaved}
@@ -143,7 +143,11 @@ export default function HardwareConfigStep({
           onRepair={onRepair}
         />
 
-        <section className="section-elevation-1" aria-label="Cameras">
+        {/* Phase 8.7 Task 2: data acquisition belongs with the RECORDING SYSTEM (ephys),
+            not lumped with cameras — give each area its own ownership-named section so the
+            user can tell shared recording-system setup, the camera catalog, and the DIO event
+            library apart. */}
+        <section className="section-elevation-1" aria-label="Video Cameras & Calibration">
           <CamerasSection
             animal={animal}
             onFieldUpdate={onFieldUpdate}
@@ -153,7 +157,7 @@ export default function HardwareConfigStep({
           />
         </section>
 
-        <section className="section-elevation-0" aria-label="Data acquisition device">
+        <section className="section-elevation-0" aria-label="Recording System">
           <DataAcqSection
             animal={animal}
             onFieldUpdate={onFieldUpdate}
@@ -161,7 +165,7 @@ export default function HardwareConfigStep({
           />
         </section>
 
-        <section className="section-elevation-1" aria-label="Behavioral events">
+        <section className="section-elevation-1" aria-label="Behavioral Events / DIO">
           <BehavioralEventsSection
             animal={animal}
             onFieldUpdate={onFieldUpdate}

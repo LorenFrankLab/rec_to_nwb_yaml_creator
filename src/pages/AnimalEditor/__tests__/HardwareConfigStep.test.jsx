@@ -45,7 +45,7 @@ describe('HardwareConfigStep', () => {
     vi.clearAllMocks();
   });
 
-  it('renders all 3 sections (Cameras, Data Acq, Behavioral Events)', () => {
+  it('renders all 3 sections (Cameras, Recording System, Behavioral Events)', () => {
     render(
       <HardwareConfigStep
         animal={mockAnimal}
@@ -55,11 +55,13 @@ describe('HardwareConfigStep', () => {
       />
     );
 
-    // Check for specific section headings (use getAllByText to handle multiple matches)
+    // Check for specific section headings (use getAllByText to handle multiple matches).
+    // Phase 8.7 Task 2: data-acq now reads as "Recording System" (separated from cameras).
     const cameraHeadings = screen.getAllByText(/Cameras/i);
     expect(cameraHeadings.length).toBeGreaterThan(0);
 
-    expect(screen.getByText(/Data Acquisition Device/i)).toBeInTheDocument();
+    const recordingSystemHeadings = screen.getAllByText(/Recording System/i);
+    expect(recordingSystemHeadings.length).toBeGreaterThan(0);
 
     const behavioralEventsHeadings = screen.getAllByText(/Behavioral Events/i);
     expect(behavioralEventsHeadings.length).toBeGreaterThan(0);

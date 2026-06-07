@@ -866,7 +866,9 @@ export const ANIMAL_EDITOR_STEPS = [
   { index: 0, label: 'Electrode Groups' },
   { index: 1, label: 'Channel Maps' },
   { index: 2, label: 'Optogenetics' },
-  { index: 3, label: 'Hardware Config' },
+  // Phase 8.7 Task 2: matches the stepper's user-facing label for this step (camera /
+  // data-acq / configurationHistory repairs deep-link here), replacing "Hardware Config".
+  { index: 3, label: 'Recording System, Cameras & DIO' },
 ];
 
 /**

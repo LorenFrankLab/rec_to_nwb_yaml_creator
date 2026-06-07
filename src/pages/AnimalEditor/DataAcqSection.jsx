@@ -151,8 +151,11 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
   return (
     <div className="data-acq-section">
       <header className="section-header">
-        <h2>Data Acquisition Device</h2>
-        <p>Configure your recording hardware and technical parameters.</p>
+        <h2>Recording System</h2>
+        <p>
+          Shared recording-system identity for this animal — the data-acquisition device and
+          technical parameters. Editing this affects all recording days.
+        </p>
       </header>
 
       <form className="data-acq-form">

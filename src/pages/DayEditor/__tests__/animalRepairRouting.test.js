@@ -22,12 +22,13 @@ describe('animalEditorStepForFieldPath', () => {
     expect(animalEditorStepForFieldPath('ntrode_electrode_group_channel_map[0].map')).toMatchObject({ index: 1 });
   });
 
-  it('maps camera / data-acq / configuration-history paths to the Hardware Config step (3)', () => {
-    expect(animalEditorStepForFieldPath('cameras[0].lens')).toMatchObject({ index: 3, label: 'Hardware Config' });
+  it('maps camera / data-acq / configuration-history paths to the Recording System step (3)', () => {
+    // Phase 8.7 Task 2: step 3's user-facing label is "Recording System, Cameras & DIO".
+    expect(animalEditorStepForFieldPath('cameras[0].lens')).toMatchObject({ index: 3, label: 'Recording System, Cameras & DIO' });
     expect(animalEditorStepForFieldPath('data_acq_device[0].name')).toMatchObject({ index: 3 });
-    // The configurationHistory rebuild control lives in the Hardware Config banner, so its
-    // repair must deep-link there (not default to Electrode Groups).
-    expect(animalEditorStepForFieldPath('configurationHistory')).toMatchObject({ index: 3, label: 'Hardware Config' });
+    // The configurationHistory rebuild control lives in this step's banner, so its repair must
+    // deep-link there (not default to Electrode Groups).
+    expect(animalEditorStepForFieldPath('configurationHistory')).toMatchObject({ index: 3, label: 'Recording System, Cameras & DIO' });
   });
 
   it('maps animal-level optogenetics paths to the Optogenetics step (2)', () => {
@@ -67,13 +68,13 @@ describe('repairTargetForIssue — step-aware Animal Editor labels', () => {
     expect(target.label).toBe('Fix in Animal Editor → Electrode Groups');
   });
 
-  it('labels a camera issue "Fix in Animal Editor → Hardware Config"', () => {
+  it('labels a camera issue "Fix in Animal Editor → Recording System, Cameras & DIO"', () => {
     const target = repairTargetForIssue({
       code: 'duplicate_camera_id',
       path: 'cameras[1].id',
       repairSurface: 'animal',
     });
-    expect(target.label).toBe('Fix in Animal Editor → Hardware Config');
+    expect(target.label).toBe('Fix in Animal Editor → Recording System, Cameras & DIO');
   });
 
   it('does NOT add a step suffix for day-surface or none-surface issues', () => {
