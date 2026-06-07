@@ -744,6 +744,11 @@ export const SURFACE_BY_CODE = {
   orphaned_video: 'day',
   orphaned_file: 'day',
   orphaned_fs_gui_epoch: 'day',
+  // FsGUI (day opto protocol) day-surface rules: a dangling DIO output reference and an
+  // FsGUI block present while the animal's opto setup is incomplete/off. Both carry an
+  // explicit repairSurface:'day' (step 'epochs') at their emit sites in rulesValidation.js.
+  dangling_dio_output: 'day',
+  fs_gui_requires_optogenetics: 'day',
   divergent_task_identity: 'day',
   bad_channel_out_of_range: 'day',
   multishank_bad_channels_ignored: 'day',
@@ -761,6 +766,9 @@ export const SURFACE_BY_CODE = {
   // sets repairSurface:'animal' explicitly; this keeps the authoritative table in sync).
   partial_configuration: 'animal',
   multiple_excitation_sources: 'animal',
+  // Optical-fiber / virus-injection coordinate reference, required by trodes_to_nwb and
+  // collected only in the Animal Editor Optogenetics step (explicit repairSurface:'animal').
+  missing_opto_reference: 'animal',
   // No editable in-app target — read-only identity (slash ids). The explanatory
   // message states the remedy (recreate the animal); a "Fix in …" button would
   // dead-end on a disabled control.

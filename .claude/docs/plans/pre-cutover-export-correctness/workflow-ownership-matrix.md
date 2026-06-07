@@ -47,6 +47,17 @@ cleaned up before it is trusted. It exists so every validator issue code resolve
 descriptor (the completeness invariant in `workflowOwnership.js`); see
 [Issue-code ownership](#issue-code-ownership-derived-not-re-tabled).
 
+**One PRIMARY pattern per field; a few sections are genuinely composite.** Each FIELD resolves
+to exactly one pattern (that is what `ownershipForIssue` / `ownershipForFieldPath` return — the
+primary). A few SECTIONS span two patterns because they bundle distinct fields: a `tasks[]` row is
+`task_epoch_assignment` for its room/camera/epoch assignment but its task-name *identity* and
+files are `day_fact`; the opto protocol (`fs_gui_yamls[]`) is `task_epoch_assignment` for its
+epoch scoping and `day_exported_list` for being exported from the day. Where a row below shows
+`A (+ B)`, **A is the primary** the helper returns; B is the secondary noted for the UI. The
+camera split is the same idea across surfaces: the catalog *identity* (animal surface) and the
+day *selection* (day surface) are both `animal_catalog_reference`, but `reachesBeyondDay` differs
+by surface (editing the identity reaches referencing days; selecting on a day is day-local).
+
 ## Field / section ownership matrix
 
 State paths use the workspace shape in [`src/state/workspaceTypes.js`](../../../../src/state/workspaceTypes.js):
@@ -61,7 +72,7 @@ State paths use the workspace shape in [`src/state/workspaceTypes.js`](../../../
 | Field / concept | Pattern | Day behavior | State path | Export source | Edit surface | Repair target | User label | Ownership cue | Primary next action | Misconception to prevent | Attention target | Test coverage |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `subject_id` | `animal_setup` (constant identity) | Not edited per day; a correction announces it affects **all N days** | `animal.subject.subject_id` | merge → top-level `subject_id` | Animal Setup → Animal Profile (read-only identity; recreate to change) | `repairTargetForIssue` → `none` (slash) / `animal` | Animal Profile / Subject | `Shared setup` | Fix shared animal setup | Editing a subject fact thinking it changes one session | Animal Profile; Day Overview inline repair | `workflowOwnership` unit; Animal Editor IA labels; animal-profile component |
-| species, sex, DOB, genotype, subject description | `animal_setup` (constant fact) | Correction propagates; **blast radius announced** ("affects all N days") | `animal.subject.{species,sex,date_of_birth,genotype,description}` | merge → top-level subject fields | Animal Setup → Animal Profile; Day Overview inline repair (must name shared scope) | `animal` (species: `invalid_species`); DOB schema → `day`/overview | Animal Profile | `Shared setup` | Fix shared animal setup | Thinking a Day Overview subject edit is day-local | Animal Profile; Day Overview | `invalid_species` ownership; blast-radius component; DOB format test |
+| species, sex, DOB, genotype, subject description | `animal_setup` (constant fact) | Correction propagates; **blast radius announced** ("affects all N days") | `animal.subject.{species,sex,date_of_birth,genotype,description}` | merge → top-level subject fields | Animal Setup → Animal Profile; Day Overview inline repair (must name shared scope) | `day` / Overview — `invalid_species` and the subject-field schema errors route to the Day Overview step (`SURFACE_BY_CODE['invalid_species'] = 'day'`, repairable inline), even though OWNERSHIP is animal-wide (this is the orthogonal "edit surface ≠ blast radius" case the helper encodes) | Animal Profile | `Shared setup` | Fix shared animal setup | Thinking a Day Overview subject edit is day-local | Animal Profile; Day Overview | `invalid_species` ownership (pattern animal_setup, surface day, reachesBeyondDay true); blast-radius component; DOB format test |
 | Weight | `day_fact` (animal value is fallback only) | Day Overview is the primary review/edit surface for the **exported session weight**; animal value is a labelled initial/fallback to confirm | `day.session.weight` (export) ← falls back to `animal.subject.weight` | merge → `subject.weight` | Day Editor → Overview | `day` / overview | Recording-day weight | `This day only` | Fix this day's recording weight | Reusing a stale animal-baseline weight across sessions | Day Overview | weight ownership integration (Task 2.5) |
 
 ### Physical-configuration identities (append-only)
@@ -80,6 +91,7 @@ State paths use the workspace shape in [`src/state/workspaceTypes.js`](../../../
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `raw_data_to_volts`, `times_period_multiplier` | `setup_default_to_day` | Default copied into `day.technical` at creation; export reads the **day** value. Editing the default affects **future** days unless applied to named existing days | default `animal.technicalDefaults.*` → `day.technical.*` | merge → `day.technical.*` | Animal Setup → Recording System (default); rare day override | `animal` (default) / `day` (override) | Recording System constants | `Using recording-system default` / `Different from current recording-system default` | Override this day's technical value (rare) | Treating rig constants as routine day fields; assuming editing the default rewrites existing days | Day Technical section (read-only effective value); Recording System | day-technical default/override component (Task 4) |
 | `default_header_file_path` | `day_fact` | Edited per day | `day.technical.default_header_file_path` | merge → `default_header_file_path` | Day Editor → Setup/Technical | `day` / devices | Day header file path | `This day only` | Fix this day's header path | Treating a recording file path as shared animal setup | Day Technical/Setup section | day-technical header-path test (Task 4) |
+| `units` (`analog`, `behavioral_events` unit strings) | `setup_default_to_day` | Near-constant copied into `day.technical`; rarely changes day to day. The exporter **deletes the key when empty** (schema rejects present-but-empty) and must keep doing so | `day.technical.units` | merge → `units` (omitted when empty) | Day Editor → Setup/Technical (with recording-system default) | `day` / devices | Recording units | `Using recording-system default` | Override this day's units (rare) | Treating units as a routine per-day field; emitting an empty `units` (byte/ schema regression) | Day Technical section | merge `units` delete-when-empty (baseline); Task 4 |
 
 ### Day facts, catalogs referenced per day, and exported lists
 

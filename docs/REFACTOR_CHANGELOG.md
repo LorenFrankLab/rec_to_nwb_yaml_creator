@@ -50,9 +50,41 @@ day-used camera export binding (Task 5) are later sub-streams, deliberately out 
   exactly `repairTargetForIssue`'s (never re-decided). The module lives in `src/domain/` and does
   not import from `pages/` (architecture-boundary guard stays green).
 
+### Review round 1 fixes (code-review, same day)
+
+- **Closed the validator-code coverage hole (High).** Three live rule codes —
+  `dangling_dio_output`, `fs_gui_requires_optogenetics`, `missing_opto_reference` — were emitted by
+  `rulesValidation` but absent from `SURFACE_BY_CODE` and `CATEGORY_BY_CODE` (a pre-existing Phase 8.6
+  gap the new ownership layer inherited). Added all three to both authoritative tables (FsGUI codes →
+  day/day_metadata, opto reference → animal/animal_setup) and to `PATTERN_REFINEMENT_BY_CODE`
+  (FsGUI → task_epoch_assignment). The table-key completeness tests couldn't catch this, so added a
+  **source-scan guard** that extracts every emitted app code from the rule sources — both
+  `code: '<literal>'` properties AND the `identityDivergences(...)` positional `'divergent_*_identity'`
+  args (the `divergent_*` family is built non-literally, so a `code:`-only scan missed it) — and
+  asserts each is owned by SURFACE_BY_CODE, CATEGORY_BY_CODE, and the ownership descriptor, with a
+  sanity floor against a vacuous scan.
+- **Made path resolution robust to documented state paths (High).** `ownershipForFieldPath` keyed off
+  the leading token only, so the matrix's own state paths (`day.technical.raw_data_to_volts`,
+  `animal.cameras[0].lens`, `day.tasks[0].camera_id`, `day.configurationVersion`) mis-resolved.
+  Replaced the leading-token lookup with an ordered whole-path keyword scan that strips the
+  `animal.`/`day.` state-shape prefix and resolves nested fields; covered by new state-path tests.
+- **Made `reachesBeyondDay` repair-scope-aware (High).** It was pattern-level, so a day-side camera
+  selection (`dangling_camera_ref`/`missing_camera`) or day pin (`unpinned_configuration`) falsely
+  read as "touches N days". It is now computed per issue from the edit surface: an `animal`-surface
+  fix reaches referencing days; a `day`-surface fix is day-local EXCEPT a constant animal fact edited
+  from the Day Overview (species/DOB). The pattern default is retained for field/section descriptors.
+- **Doc-consistency fixes.** Phase plan "six ownership patterns" → "seven"; matrix now states one
+  PRIMARY pattern per field and flags the genuinely-composite sections (tasks, opto protocol, camera
+  identity-vs-selection); added the `units` row; corrected the `invalid_species` repair target to
+  `day`/Overview (matching `SURFACE_BY_CODE`, with ownership still animal-wide). Recorded two UI-copy
+  findings owned by later sub-streams in the screen-map reconciliation table: the Animal Setup
+  subtitle overpromising camera/data-acq per-day versioning (Tasks 3/5) and opto preflight/batch
+  status reporting implant metadata instead of day protocol state (Tasks 7/10).
+
 ### Test results
 
-- Full suite: 4051 tests passing (248 files), +30 from the new ownership descriptor.
+- Full suite: 4058 tests passing (248 files), +37 from the new ownership descriptor (30 initial + 7
+  in the review round).
 - Golden baselines: 125/125 byte-identical.
 - Architecture-boundary guard: green (no domain→page import introduced).
 - Lint: 0 errors (pre-existing JSDoc warnings only). Build: succeeds.

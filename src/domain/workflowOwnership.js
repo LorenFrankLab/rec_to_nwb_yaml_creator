@@ -173,10 +173,13 @@ export const PATTERN_REFINEMENT_BY_CODE = Object.freeze({
   dangling_camera_ref: OWNERSHIP_PATTERN.ANIMAL_CATALOG_REFERENCE,
   missing_camera: OWNERSHIP_PATTERN.ANIMAL_CATALOG_REFERENCE,
 
-  // day_metadata → task_epoch_assignment: room/camera/opto scoped to the task's epochs.
+  // day_metadata → task_epoch_assignment: room/camera/opto scoped to the task's epochs,
+  // including the day FsGUI (opto protocol) reference rules.
   duplicate_task_epoch: OWNERSHIP_PATTERN.TASK_EPOCH_ASSIGNMENT,
   divergent_task_identity: OWNERSHIP_PATTERN.TASK_EPOCH_ASSIGNMENT,
   orphaned_fs_gui_epoch: OWNERSHIP_PATTERN.TASK_EPOCH_ASSIGNMENT,
+  dangling_dio_output: OWNERSHIP_PATTERN.TASK_EPOCH_ASSIGNMENT,
+  fs_gui_requires_optogenetics: OWNERSHIP_PATTERN.TASK_EPOCH_ASSIGNMENT,
 
   // day_metadata → day_exported_list: behavioral events export from the day, not the library.
   duplicate_behavioral_event_name: OWNERSHIP_PATTERN.DAY_EXPORTED_LIST,
@@ -188,51 +191,129 @@ export const PATTERN_REFINEMENT_BY_CODE = Object.freeze({
 });
 
 /**
- * Leading path token / section id → ownership pattern, for `ownershipForFieldPath` and
- * `ownershipForSection` (the path/section dimension the helper provides alongside issue codes).
- * Order does not matter; lookup is by the normalized leading token (see {@link sectionToken}).
+ * Ordered keyword → ownership-pattern scan, used to resolve a field PATH or section id (the
+ * path/section dimension the helper provides alongside issue codes). Unlike a leading-token
+ * lookup, this scans the WHOLE normalized path so it is robust to:
+ *   - state-shape prefixes (`animal.cameras[0].lens`, `day.technical.raw_data_to_volts`,
+ *     `day.configurationVersion`) — the prefix is stripped first;
+ *   - nested fields (`technical.raw_data_to_volts` resolves to the rig-constant pattern, not the
+ *     `technical` container).
+ * ORDER MATTERS — earlier entries win. Specifics that would be shadowed by a broader keyword come
+ * first: `weight` before `subject`; the rig constants before everything (they live under
+ * `technical`); `fs_gui`/`tasks` before `camera` (a `tasks[].camera_id` / `fs_gui_yamls[].camera_id`
+ * is a task-epoch assignment, not a catalog identity edit).
  *
- * @type {Readonly<Record<string, string>>}
+ * @type {ReadonlyArray<[string, string]>}
  */
-const PATTERN_BY_SECTION = Object.freeze({
-  electrode_groups: OWNERSHIP_PATTERN.CONFIGURATION_VERSION,
-  ntrode_electrode_group_channel_map: OWNERSHIP_PATTERN.CONFIGURATION_VERSION,
-  cameras: OWNERSHIP_PATTERN.ANIMAL_CATALOG_REFERENCE,
-  data_acq_device: OWNERSHIP_PATTERN.ANIMAL_SETUP,
-  optogenetics: OWNERSHIP_PATTERN.ANIMAL_SETUP,
-  opto_excitation_source: OWNERSHIP_PATTERN.ANIMAL_SETUP,
-  optical_fiber: OWNERSHIP_PATTERN.ANIMAL_SETUP,
-  virus_injection: OWNERSHIP_PATTERN.ANIMAL_SETUP,
-  optogenetic_stimulation_software: OWNERSHIP_PATTERN.ANIMAL_SETUP,
-  fs_gui_yamls: OWNERSHIP_PATTERN.TASK_EPOCH_ASSIGNMENT,
-  tasks: OWNERSHIP_PATTERN.TASK_EPOCH_ASSIGNMENT,
-  behavioral_events: OWNERSHIP_PATTERN.DAY_EXPORTED_LIST,
-  associated_video_files: OWNERSHIP_PATTERN.DAY_FACT,
-  subject: OWNERSHIP_PATTERN.ANIMAL_SETUP,
-  subject_id: OWNERSHIP_PATTERN.ANIMAL_SETUP,
-  species: OWNERSHIP_PATTERN.ANIMAL_SETUP,
-  sex: OWNERSHIP_PATTERN.ANIMAL_SETUP,
-  genotype: OWNERSHIP_PATTERN.ANIMAL_SETUP,
-  date_of_birth: OWNERSHIP_PATTERN.ANIMAL_SETUP,
-  raw_data_to_volts: OWNERSHIP_PATTERN.SETUP_DEFAULT_TO_DAY,
-  times_period_multiplier: OWNERSHIP_PATTERN.SETUP_DEFAULT_TO_DAY,
-  default_header_file_path: OWNERSHIP_PATTERN.DAY_FACT,
-  weight: OWNERSHIP_PATTERN.DAY_FACT,
-  session: OWNERSHIP_PATTERN.DAY_FACT,
-  session_description: OWNERSHIP_PATTERN.DAY_FACT,
-  session_id: OWNERSHIP_PATTERN.DAY_FACT,
-});
+const PATTERN_BY_PATH_KEYWORD = Object.freeze([
+  // Day-exported session value even under the inherited subject record (subject.weight).
+  ['weight', OWNERSHIP_PATTERN.DAY_FACT],
+  // Recording-system rig constants copied into day.technical.
+  ['raw_data_to_volts', OWNERSHIP_PATTERN.SETUP_DEFAULT_TO_DAY],
+  ['times_period_multiplier', OWNERSHIP_PATTERN.SETUP_DEFAULT_TO_DAY],
+  // Day-only header path (also lives under technical, but is a day fact).
+  ['default_header_file_path', OWNERSHIP_PATTERN.DAY_FACT],
+  // Day FsGUI (opto protocol) and tasks — BEFORE camera, since both carry `camera_id`.
+  ['fs_gui', OWNERSHIP_PATTERN.TASK_EPOCH_ASSIGNMENT],
+  ['task', OWNERSHIP_PATTERN.TASK_EPOCH_ASSIGNMENT],
+  // Day exported behavioral-events / DIO list.
+  ['behavioral_event', OWNERSHIP_PATTERN.DAY_EXPORTED_LIST],
+  ['dio_output', OWNERSHIP_PATTERN.TASK_EPOCH_ASSIGNMENT],
+  // Day video/file lists.
+  ['associated_video', OWNERSHIP_PATTERN.DAY_FACT],
+  ['associated_file', OWNERSHIP_PATTERN.DAY_FACT],
+  // Animal camera catalog identity (and its calibration/lens fields).
+  ['camera', OWNERSHIP_PATTERN.ANIMAL_CATALOG_REFERENCE],
+  ['meters_per_pixel', OWNERSHIP_PATTERN.ANIMAL_CATALOG_REFERENCE],
+  ['lens', OWNERSHIP_PATTERN.ANIMAL_CATALOG_REFERENCE],
+  // Versioned physical config: channel maps (ntrode) before electrode, then the pin itself.
+  ['ntrode', OWNERSHIP_PATTERN.CONFIGURATION_VERSION],
+  ['electrode', OWNERSHIP_PATTERN.CONFIGURATION_VERSION],
+  ['configuration', OWNERSHIP_PATTERN.CONFIGURATION_VERSION],
+  // Shared recording system (data-acq, option B).
+  ['data_acq', OWNERSHIP_PATTERN.ANIMAL_SETUP],
+  // Animal-level optogenetics implanted setup.
+  ['opto', OWNERSHIP_PATTERN.ANIMAL_SETUP],
+  ['virus', OWNERSHIP_PATTERN.ANIMAL_SETUP],
+  ['fiber', OWNERSHIP_PATTERN.ANIMAL_SETUP],
+  // Constant subject/animal facts.
+  ['subject', OWNERSHIP_PATTERN.ANIMAL_SETUP],
+  ['species', OWNERSHIP_PATTERN.ANIMAL_SETUP],
+  ['genotype', OWNERSHIP_PATTERN.ANIMAL_SETUP],
+  ['date_of_birth', OWNERSHIP_PATTERN.ANIMAL_SETUP],
+  // Per-day session facts.
+  ['session', OWNERSHIP_PATTERN.DAY_FACT],
+]);
+
+/**
+ * Normalize a dotted/AJV/section string for keyword scanning: strip a leading slash, convert
+ * AJV `/`-separators to `.`, lowercase, and drop a leading `animal.` / `day.` state-shape prefix
+ * so a documented state path (`animal.cameras[0].lens`) scans the same as an export path
+ * (`cameras[0].lens`).
+ *
+ * @param {string} [pathOrSection]
+ * @returns {string}
+ */
+function normalizePath(pathOrSection) {
+  return String(pathOrSection || '')
+    .replace(/^\//, '')
+    .replace(/\//g, '.')
+    .toLowerCase()
+    .replace(/^(animal|day)\./, '');
+}
+
+/**
+ * Resolve the ownership pattern for a field path or section id via the ordered keyword scan,
+ * falling back to the workflow-category default (then `day_fact`) when nothing matches.
+ *
+ * @param {string} [pathOrSection]
+ * @returns {string} A valid {@link OWNERSHIP_PATTERN}.
+ */
+function patternForPath(pathOrSection) {
+  const normalized = normalizePath(pathOrSection);
+  for (const [keyword, pattern] of PATTERN_BY_PATH_KEYWORD) {
+    if (normalized.includes(keyword)) return pattern;
+  }
+  return (
+    CATEGORY_DEFAULT_PATTERN[workflowCategoryForIssue({ path: pathOrSection })] ||
+    OWNERSHIP_PATTERN.DAY_FACT
+  );
+}
+
+/**
+ * Whether correcting THIS issue can reach days other than the one in front of the user (the
+ * headline "today-only edit" vs "touches these N days" switch). Edit surface and ownership are
+ * orthogonal, so this is computed per issue rather than read from the pattern default:
+ *   - an `animal`-surface fix edits the shared/catalog/config item → reaches the days using it;
+ *   - a `day`-surface fix is day-local (picking a camera for this day, pinning this day, a day
+ *     fact) — EXCEPT a constant animal fact editable from the Day Overview (species/DOB, pattern
+ *     `animal_setup`), which still propagates to all days;
+ *   - a `none`-surface (read-only identity) keeps the pattern's inherent reach.
+ *
+ * @param {string} pattern - The resolved {@link OWNERSHIP_PATTERN}.
+ * @param {'day'|'animal'|'none'} editSurface
+ * @returns {boolean}
+ */
+function issueReachesBeyondDay(pattern, editSurface) {
+  if (editSurface === 'animal') return true;
+  if (editSurface === 'none') return OWNERSHIP_PATTERN_META[pattern].reachesBeyondDay;
+  // day surface: local repair unless it is a constant animal fact edited from the day.
+  return pattern === OWNERSHIP_PATTERN.ANIMAL_SETUP;
+}
 
 /**
  * Build the full descriptor for a resolved pattern + edit surface. The cue/label/etc. come
  * from {@link OWNERSHIP_PATTERN_META}; the edit surface is passed in (always derived from
- * `repairTargetForIssue`, never re-decided here).
+ * `repairTargetForIssue`, never re-decided here). `reachesBeyondDay` defaults to the pattern's
+ * inherent reach (used when describing a FIELD/section); an issue may override it with the
+ * surface-aware {@link issueReachesBeyondDay}.
  *
  * @param {string} pattern - A valid {@link OWNERSHIP_PATTERN}.
  * @param {'day'|'animal'|'none'} editSurface
+ * @param {boolean} [reachesBeyondDay] - Override for the pattern default.
  * @returns {{pattern: string, label: string, cue: string, altCue?: string, dayBehavior: string, primaryAction: string, reachesBeyondDay: boolean, editSurface: string}}
  */
-function buildDescriptor(pattern, editSurface) {
+function buildDescriptor(pattern, editSurface, reachesBeyondDay) {
   const meta = OWNERSHIP_PATTERN_META[pattern] || OWNERSHIP_PATTERN_META[OWNERSHIP_PATTERN.DAY_FACT];
   return {
     pattern,
@@ -241,7 +322,7 @@ function buildDescriptor(pattern, editSurface) {
     ...(meta.altCue ? { altCue: meta.altCue } : {}),
     dayBehavior: meta.dayBehavior,
     primaryAction: meta.primaryAction,
-    reachesBeyondDay: meta.reachesBeyondDay,
+    reachesBeyondDay: typeof reachesBeyondDay === 'boolean' ? reachesBeyondDay : meta.reachesBeyondDay,
     editSurface,
   };
 }
@@ -249,8 +330,9 @@ function buildDescriptor(pattern, editSurface) {
 /**
  * The ownership descriptor for a validation issue. The edit surface is reused verbatim from
  * `repairTargetForIssue`; the pattern is the per-code refinement when present, else the issue's
- * workflow-category default. Robust to a null/empty issue (falls back to the day-metadata
- * default, matching `workflowCategoryForIssue`'s own day fallback).
+ * workflow-category default; `reachesBeyondDay` is the surface-aware repair scope (so a day-side
+ * camera selection or config pin does not falsely warn "touches N days"). Robust to a null/empty
+ * issue (falls back to the day-metadata default, matching `workflowCategoryForIssue`).
  *
  * @param {{code?: string, path?: string, instancePath?: string, step?: string, repairSurface?: string, ownerSurface?: string}} [issue]
  * @returns {{pattern: string, label: string, cue: string, altCue?: string, dayBehavior: string, primaryAction: string, reachesBeyondDay: boolean, editSurface: string}}
@@ -263,48 +345,24 @@ export function ownershipForIssue(issue) {
     refined ||
     CATEGORY_DEFAULT_PATTERN[workflowCategoryForIssue(safeIssue)] ||
     OWNERSHIP_PATTERN.DAY_FACT;
-  return buildDescriptor(pattern, editSurface);
+  return buildDescriptor(pattern, editSurface, issueReachesBeyondDay(pattern, editSurface));
 }
 
 /**
- * Normalize a dotted/AJV/section string to its leading token (the section the field belongs
- * to). `"/cameras/0/lens"` and `"cameras[0].lens"` both → `"cameras"`; `"subject.weight"` →
- * `"subject"`. A bare token (`"raw_data_to_volts"`) is returned as-is.
- *
- * @param {string} [pathOrSection]
- * @returns {string}
- */
-function sectionToken(pathOrSection) {
-  return String(pathOrSection || '')
-    .replace(/^\//, '')
-    .replace(/\//g, '.')
-    .split(/[.[]/)[0];
-}
-
-/**
- * The ownership descriptor for a field path (dotted app path or AJV instancePath). Resolves the
- * pattern from the leading section token; the edit surface is reused from `repairTargetForIssue`
- * (path derivation). For `weight`/`session.weight`, the leading token resolves directly; the
- * special-case below keeps `subject.weight` a day fact even though `subject` alone is animal setup.
+ * The ownership descriptor for a field path (dotted app path, AJV instancePath, or a documented
+ * state path like `day.technical.raw_data_to_volts`). The pattern is resolved by the whole-path
+ * keyword scan; the edit surface is reused from `repairTargetForIssue` (path derivation).
  *
  * @param {string} [fieldPath]
  * @returns {{pattern: string, label: string, cue: string, altCue?: string, dayBehavior: string, primaryAction: string, reachesBeyondDay: boolean, editSurface: string}}
  */
 export function ownershipForFieldPath(fieldPath) {
-  const normalized = String(fieldPath || '').replace(/^\//, '').replace(/\//g, '.');
-  // Weight is a day-exported session value even when it sits under the inherited subject record.
-  const token = /(^|\.)weight$/.test(normalized) ? 'weight' : sectionToken(fieldPath);
-  const pattern =
-    PATTERN_BY_SECTION[token] ||
-    CATEGORY_DEFAULT_PATTERN[workflowCategoryForIssue({ path: fieldPath })] ||
-    OWNERSHIP_PATTERN.DAY_FACT;
-  const editSurface = repairTargetForIssue({ path: fieldPath }).surface;
-  return buildDescriptor(pattern, editSurface);
+  return buildDescriptor(patternForPath(fieldPath), repairTargetForIssue({ path: fieldPath }).surface);
 }
 
 /**
  * The ownership descriptor for a known section id (e.g. `"cameras"`, `"data_acq_device"`,
- * `"electrode_groups"`). Unknown sections fall back to the day-metadata default. The edit
+ * `"electrode_groups"`). Unknown sections fall back to the workflow-category default. The edit
  * surface is reused from `repairTargetForIssue` so a section descriptor and an issue descriptor
  * on the same domain cannot disagree.
  *
@@ -312,11 +370,5 @@ export function ownershipForFieldPath(fieldPath) {
  * @returns {{pattern: string, label: string, cue: string, altCue?: string, dayBehavior: string, primaryAction: string, reachesBeyondDay: boolean, editSurface: string}}
  */
 export function ownershipForSection(sectionId) {
-  const token = sectionToken(sectionId);
-  const pattern =
-    PATTERN_BY_SECTION[token] ||
-    CATEGORY_DEFAULT_PATTERN[workflowCategoryForIssue({ path: sectionId })] ||
-    OWNERSHIP_PATTERN.DAY_FACT;
-  const editSurface = repairTargetForIssue({ path: sectionId }).surface;
-  return buildDescriptor(pattern, editSurface);
+  return buildDescriptor(patternForPath(sectionId), repairTargetForIssue({ path: sectionId }).surface);
 }

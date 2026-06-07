@@ -62,8 +62,10 @@ Full design: [docs/superpowers/specs/2026-06-06-ownership-day-configurability-de
   path; neither is the stepchild (operator varies by lab).
 - **Headline user-facing promise: blast-radius transparency + no silent retroactive change.**
   Any change that reaches beyond the day in front of you names exactly which days it affects,
-  before you commit; nothing silently rewrites already-recorded days. The six ownership
-  patterns become INTERNAL vocabulary — the user experiences only "today-only edit" vs "heads
+  before you commit; nothing silently rewrites already-recorded days. The seven ownership
+  patterns (see the "Ownership rule for every task" section below and
+  [workflow-ownership-matrix.md](workflow-ownership-matrix.md)) become INTERNAL vocabulary —
+  the user experiences only "today-only edit" vs "heads
   up, this touches these N days (enumerated)". Silent retroactive change is the worst failure
   mode (the user won't notice it).
 - **Identity model.** Three kinds of field: (1) **physical-configuration identity** (electrode

@@ -10,6 +10,9 @@
  * the refinement may not name a stale code.
  */
 import { describe, it, expect } from 'vitest';
+import { readFileSync, readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 import {
   OWNERSHIP_PATTERN,
   OWNERSHIP_PATTERN_META,
@@ -19,7 +22,7 @@ import {
   ownershipForFieldPath,
   ownershipForSection,
 } from '../workflowOwnership';
-import { SURFACE_BY_CODE } from '../validation';
+import { SURFACE_BY_CODE, repairTargetForIssue } from '../validation';
 import { CATEGORY_BY_CODE, WORKFLOW_CATEGORY } from '../workflowCategories';
 
 const ALL_PATTERNS = new Set(Object.values(OWNERSHIP_PATTERN));
@@ -87,10 +90,70 @@ describe('completeness invariant — no validator code left unowned', () => {
     }
   });
 
-  it('the edit surface always equals repairTargetForIssue (never re-decided)', async () => {
-    const { repairTargetForIssue } = await import('../validation');
+  it('the edit surface always equals repairTargetForIssue (never re-decided)', () => {
     for (const code of Object.keys(SURFACE_BY_CODE)) {
       expect(ownershipForIssue({ code }).editSurface).toBe(repairTargetForIssue({ code }).surface);
+    }
+  });
+});
+
+/**
+ * The table-key invariants above only prove the tables are self-consistent. This guard closes
+ * the real hole: a validator code that the rules EMIT but no table lists would be silently
+ * unowned (it happened — `dangling_dio_output`, `fs_gui_requires_optogenetics`,
+ * `missing_opto_reference`). It scans the rule sources for both emission forms used in this
+ * codebase — `code: '<literal>'` object properties and the `identityDivergences(...)` positional
+ * `'divergent_*_identity'` args — and asserts every emitted app code is owned by all three
+ * tables. AJV keyword codes (`required`/`pattern`/`type`, produced as `error.keyword`, never as a
+ * hardcoded literal) are intentionally NOT covered here: they carry no app code and route via
+ * path derivation.
+ */
+describe('completeness invariant — every EMITTED validator code is owned (source scan)', () => {
+  const domainDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../');
+  const validationDir = path.resolve(domainDir, '../validation');
+
+  /**
+   * Collect hardcoded app-rule code literals from a tree's non-test `.js` sources.
+   * @param dir
+   */
+  function emittedCodesIn(dir) {
+    const codes = new Set();
+    const files = readdirSync(dir, { recursive: true })
+      .map((rel) => String(rel).split(path.sep).join('/'))
+      .filter((rel) => /\.js$/.test(rel) && !rel.includes('__tests__/') && !rel.includes('__mocks__/'));
+    for (const rel of files) {
+      const text = readFileSync(path.join(dir, rel), 'utf8');
+      // Form 1: `code: 'snake_case'` object property.
+      for (const m of text.matchAll(/\bcode:\s*'([a-z][a-z_]+)'/g)) codes.add(m[1]);
+      // Form 2: positional `'divergent_*_identity'` arg to the identityDivergences helper.
+      for (const m of text.matchAll(/'(divergent_[a-z_]+_identity)'/g)) codes.add(m[1]);
+    }
+    return codes;
+  }
+
+  const emitted = new Set([...emittedCodesIn(domainDir), ...emittedCodesIn(validationDir)]);
+
+  it('found a sane number of emitted codes (guards against a vacuous scan)', () => {
+    expect(emitted.size).toBeGreaterThan(40);
+  });
+
+  it('every emitted app code is in SURFACE_BY_CODE, CATEGORY_BY_CODE, and ownership', () => {
+    const unowned = [];
+    for (const code of emitted) {
+      if (SURFACE_BY_CODE[code] === undefined) unowned.push(`${code} (SURFACE_BY_CODE)`);
+      if (CATEGORY_BY_CODE[code] === undefined) unowned.push(`${code} (CATEGORY_BY_CODE)`);
+      const descriptor = ownershipForIssue({ code });
+      if (!ALL_PATTERNS.has(descriptor.pattern)) unowned.push(`${code} (ownership)`);
+    }
+    expect(unowned, `emitted codes missing from a table:\n${unowned.join('\n')}`).toEqual([]);
+  });
+
+  it('catches the three FsGUI/opto codes the original table-only scan missed', () => {
+    for (const code of ['dangling_dio_output', 'fs_gui_requires_optogenetics', 'missing_opto_reference']) {
+      expect(emitted.has(code), `${code} not found by source scan`).toBe(true);
+      expect(SURFACE_BY_CODE[code]).toBeDefined();
+      expect(CATEGORY_BY_CODE[code]).toBeDefined();
+      expectWellFormedDescriptor(ownershipForIssue({ code }));
     }
   });
 });
@@ -117,10 +180,23 @@ describe('ownershipForIssue — pattern refinement', () => {
     }
   });
 
-  it('task-epoch and fs_gui-epoch codes are task-epoch assignments', () => {
-    for (const code of ['duplicate_task_epoch', 'divergent_task_identity', 'orphaned_fs_gui_epoch']) {
+  it('task-epoch, fs_gui-epoch, and FsGUI DIO/opto-gate codes are task-epoch assignments', () => {
+    for (const code of [
+      'duplicate_task_epoch',
+      'divergent_task_identity',
+      'orphaned_fs_gui_epoch',
+      'dangling_dio_output',
+      'fs_gui_requires_optogenetics',
+    ]) {
       expect(ownershipForIssue({ code }).pattern, code).toBe(OWNERSHIP_PATTERN.TASK_EPOCH_ASSIGNMENT);
     }
+  });
+
+  it('the missing opto coordinate reference is shared animal setup', () => {
+    expect(ownershipForIssue({ code: 'missing_opto_reference' }).pattern).toBe(
+      OWNERSHIP_PATTERN.ANIMAL_SETUP
+    );
+    expect(ownershipForIssue({ code: 'missing_opto_reference' }).editSurface).toBe('animal');
   });
 
   it('behavioral-event codes are a day-exported list', () => {
@@ -191,6 +267,23 @@ describe('ownershipForIssue — edit surface and blast radius are orthogonal', (
     expect(ownershipForIssue({ code: 'divergent_data_acq_identity' }).reachesBeyondDay).toBe(true);
     expect(ownershipForIssue({ code: 'empty_location' }).reachesBeyondDay).toBe(true);
   });
+
+  it('a DAY-side repair of a catalog/config issue is day-local (does not warn "touches N days")', () => {
+    // Selecting a camera for this day, or pinning this day, are day-local even though the
+    // PATTERN (catalog/config) is animal-owned. reachesBeyondDay must follow the repair scope.
+    for (const code of ['dangling_camera_ref', 'missing_camera', 'unpinned_configuration']) {
+      const descriptor = ownershipForIssue({ code });
+      expect(descriptor.editSurface, code).toBe('day');
+      expect(descriptor.reachesBeyondDay, code).toBe(false);
+    }
+  });
+
+  it('an ANIMAL-side repair of the same catalog/config domain DOES reach beyond the day', () => {
+    // Editing the catalog identity / geometry itself reaches the days that reference/pin it.
+    expect(ownershipForIssue({ code: 'divergent_camera_identity' }).reachesBeyondDay).toBe(true);
+    expect(ownershipForIssue({ code: 'duplicate_camera_id' }).reachesBeyondDay).toBe(true);
+    expect(ownershipForIssue({ code: 'channel_value_out_of_range' }).reachesBeyondDay).toBe(true);
+  });
 });
 
 describe('ownershipForIssue — AJV schema fallback (no app code)', () => {
@@ -257,6 +350,34 @@ describe('ownershipForFieldPath', () => {
   it('returns a well-formed descriptor for an unmapped path', () => {
     expectWellFormedDescriptor(ownershipForFieldPath('something_unmapped'));
     expectWellFormedDescriptor(ownershipForFieldPath(''));
+  });
+
+  it('resolves the state-shape paths the matrix documents (animal./day. prefixes, nested fields)', () => {
+    // These are the canonical state paths in workflow-ownership-matrix.md — a future agent may
+    // pass them verbatim. A leading-token lookup would mis-resolve them all to day/animal facts.
+    expect(ownershipForFieldPath('day.technical.raw_data_to_volts').pattern).toBe(
+      OWNERSHIP_PATTERN.SETUP_DEFAULT_TO_DAY
+    );
+    expect(ownershipForFieldPath('day.technical.times_period_multiplier').pattern).toBe(
+      OWNERSHIP_PATTERN.SETUP_DEFAULT_TO_DAY
+    );
+    expect(ownershipForFieldPath('day.technical.default_header_file_path').pattern).toBe(
+      OWNERSHIP_PATTERN.DAY_FACT
+    );
+    expect(ownershipForFieldPath('animal.cameras[0].lens').pattern).toBe(
+      OWNERSHIP_PATTERN.ANIMAL_CATALOG_REFERENCE
+    );
+    expect(ownershipForFieldPath('day.tasks[0].camera_id').pattern).toBe(
+      OWNERSHIP_PATTERN.TASK_EPOCH_ASSIGNMENT
+    );
+    expect(ownershipForFieldPath('day.configurationVersion').pattern).toBe(
+      OWNERSHIP_PATTERN.CONFIGURATION_VERSION
+    );
+    expect(ownershipForFieldPath('animal.devices.data_acq_device[0].amplifier').pattern).toBe(
+      OWNERSHIP_PATTERN.ANIMAL_SETUP
+    );
+    expect(ownershipForFieldPath('animal.subject.species').pattern).toBe(OWNERSHIP_PATTERN.ANIMAL_SETUP);
+    expect(ownershipForFieldPath('day.session.weight').pattern).toBe(OWNERSHIP_PATTERN.DAY_FACT);
   });
 });
 
