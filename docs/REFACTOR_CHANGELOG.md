@@ -31,6 +31,17 @@ Baseline-safe UI/IA + label changes; no export-byte change, no store change. Ful
 - Updated the affected component/routing tests to the new labels and added a `lens`-column test;
   refreshed the screen-map reconciliation table to mark these items done.
 
+**Review fix (code-reviewer, same day).** The 2a `Recording System` section header overstated
+blast radius: it said the section edits "the data-acquisition device **and technical parameters**.
+Editing this affects all recording days," but the technical-parameter defaults
+(`raw_data_to_volts` / `times_period_multiplier`) are `setup_default_to_day` — they seed NEW days
+only (`animal.technicalDefaults` → `day.technical` at `createDay`); existing days keep their copied
+values. The blanket claim contradicted the section's own inner copy and the ownership matrix.
+Corrected the header to scope "affects all recording days" to the device identity and state the
+defaults' future-days-only reach, and added a `DataAcqSection` test pinning the two distinct blast
+radii so it can't regress. Also refreshed two stale "Hardware Config" internal comments (the step is
+index 3, not 2).
+
 Still open in Task 2: the Animal Profile / Subject surface with species (Latin binomial) and
 `date_of_birth` (ISO-8601) constraints at the edit point and subject-correction blast-radius copy
 (Task 2b), plus the remaining step-label relabels.

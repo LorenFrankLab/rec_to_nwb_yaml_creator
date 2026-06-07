@@ -117,8 +117,9 @@ function useAnimalEditorRouteContext() {
  * 1. Electrode Groups - Configure device types, locations, coordinates
  * 2. Channel Maps - Configure logical-to-hardware channel mappings
  * 3. Optogenetics - Enable/configure the animal-level opto sections (off by default)
- * 4. Hardware Config - Configure cameras, data acquisition device, behavioral events
- *    (kept last so its Save/Continue flow is unchanged by the inserted Optogenetics step)
+ * 4. Recording System, Cameras & DIO - Configure the recording system (data-acq device +
+ *    technical defaults), cameras, and behavioral/DIO events (kept last so its Save/Continue
+ *    flow is unchanged by the inserted Optogenetics step)
  *
  * Note: Component receives no props - animal ID is obtained from URL via
  * useAnimalIdFromUrl hook.

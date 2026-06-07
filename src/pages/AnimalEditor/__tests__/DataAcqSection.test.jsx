@@ -40,6 +40,30 @@ describe('DataAcqSection', () => {
     expect(screen.getByDisplayValue('Intan')).toBeInTheDocument();
   });
 
+  it('states DIFFERENT blast radii for the device identity (all days) vs the technical defaults (future days)', () => {
+    // Phase 8.7: the section edits two things with different ownership — the data-acq device
+    // identity (animal_setup → reaches all days) and the technical-parameter defaults
+    // (setup_default_to_day → seed NEW days only; existing days keep their copied value). The
+    // header must not blanket-claim "affects all recording days" for both (the original 2a copy
+    // did, contradicting the inner "seed … new recording days" copy and the ownership matrix).
+    render(<DataAcqSection animal={animal} onFieldUpdate={onFieldUpdate} />);
+
+    // Device identity reaches all days.
+    expect(
+      screen.getByText(/data-acquisition device identity.*affects all recording days/is)
+    ).toBeInTheDocument();
+    // Technical defaults reach future days only — existing days keep their values.
+    expect(screen.getByText(/seed each new recording day/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/editing them affects future days only; existing days keep their values/i)
+    ).toBeInTheDocument();
+    // The blanket overstatement (device "and technical parameters … affects all recording days")
+    // must be gone.
+    expect(
+      screen.queryByText(/device and\s+technical parameters\. editing this affects all recording days/i)
+    ).not.toBeInTheDocument();
+  });
+
   it('writes the data-acq device as a one-element array including name on blur', async () => {
     render(<DataAcqSection animal={draftAnimal} onFieldUpdate={onFieldUpdate} />);
 

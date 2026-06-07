@@ -152,9 +152,16 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
     <div className="data-acq-section">
       <header className="section-header">
         <h2>Recording System</h2>
+        {/* Phase 8.7: the two things edited here have DIFFERENT blast radii — say so, don't
+            blanket-claim "affects all days". The data-acq device identity is live
+            (animal.devices.data_acq_device, merged into every day) so it reaches all days; the
+            technical defaults only seed NEW days at creation (animal.technicalDefaults), so
+            existing days keep their copied day.technical values. */}
         <p>
-          Shared recording-system identity for this animal — the data-acquisition device and
-          technical parameters. Editing this affects all recording days.
+          Shared recording-system setup for this animal. The data-acquisition device identity
+          (name, system, amplifier, ADC) is shared — editing it affects all recording days. The
+          technical defaults below seed each new recording day and are overridable per day, so
+          editing them affects future days only; existing days keep their values.
         </p>
       </header>
 
