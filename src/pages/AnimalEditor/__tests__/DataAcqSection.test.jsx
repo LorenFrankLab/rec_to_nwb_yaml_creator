@@ -64,6 +64,22 @@ describe('DataAcqSection', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('surfaces the option-B limitation: a mid-study recording-system/amplifier swap is not representable per day', () => {
+    // Phase 8.7 Task 3 (decided option B): data-acq has NO per-day binding — mergeDayMetadata
+    // reads animal.devices.data_acq_device live into every day — so a genuine mid-study hardware
+    // change can't be kept off earlier days. The UI must NAME this limitation (no-silent-retroactive),
+    // not imply a day-level edit exists.
+    render(<DataAcqSection animal={animal} onFieldUpdate={onFieldUpdate} />);
+
+    expect(screen.getByText(/one recording system per animal/i)).toBeInTheDocument();
+    expect(screen.getByText(/mid-study hardware change/i)).toBeInTheDocument();
+    expect(screen.getByText(/can't be represented per day/i)).toBeInTheDocument();
+    // The no-silent-retroactive point: there is no way to keep earlier days on the old hardware.
+    expect(screen.getByText(/no way to keep earlier days on the old hardware/i)).toBeInTheDocument();
+    // Framed as a future capability, not a current day-level control.
+    expect(screen.getByText(/future capability/i)).toBeInTheDocument();
+  });
+
   it('writes the data-acq device as a one-element array including name on blur', async () => {
     render(<DataAcqSection animal={draftAnimal} onFieldUpdate={onFieldUpdate} />);
 

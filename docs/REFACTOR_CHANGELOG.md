@@ -6,6 +6,33 @@
 
 ---
 
+## Ownership defaults & day configurability — Phase 8.7 Task 3: recording-system ownership (option B) (June 6, 2026)
+
+Implements the decided option-B recording-system contract. UI-only — no export, store, or routing
+change; the 125 golden baselines stay byte-identical and the full suite (4073), architecture guard,
+lint (0 errors), and build stay green.
+
+- **Audit (confirmed the model):** `mergeDayMetadata` reads `getDataAcqDevices(animal)` LIVE
+  ([workspaceUtils.js:342](../src/state/workspaceUtils.js)) into every day — `data_acq_device` is
+  animal-wide and un-versioned (unlike electrode geometry, which `resolveDayConfig` pins per day via
+  `configurationHistory`). So a genuine mid-study amplifier/acquisition swap cannot be represented
+  per day, and option B (single shared identity, not a versioned per-day source) is the accurate model.
+- **Mid-study-swap "currently unsupported" notice** (the new Task 3 piece) added to the Recording
+  System section ([DataAcqSection.jsx](../src/pages/AnimalEditor/DataAcqSection.jsx)): "One recording
+  system per animal — no per-day version yet. A mid-study hardware change … can't be represented per
+  day in this app yet: the device identity below is shared, so editing it changes every one of this
+  animal's recording days — there is no way to keep earlier days on the old hardware. Per-day
+  recording-system versioning is a planned future capability." This honors the no-silent-retroactive
+  promise and stops the UI implying a day-level recording-system edit exists.
+- The supporting pieces were already in place: the data-acq identity blast-radius copy ("editing it
+  affects all recording days") and the future-days-only framing of the rig-constant defaults
+  (`raw_data_to_volts`/`times_period_multiplier` seed new days) landed in Task 2a; the
+  `divergent_data_acq_identity` identity-safety rule (reuse a name with different hardware → steer to
+  a new name) pre-dates 8.7. The DAY-side effective-value display (`Using recording-system default`
+  vs `Different from current default`) is Task 4.
+- Added a `DataAcqSection` test asserting the limitation notice (names the per-day-version gap, the
+  mid-study swap, the no-earlier-days-kept point, and the future-capability framing).
+
 ## Ownership defaults & day configurability — Phase 8.7 Task 2c: finish the Animal Setup relabels (June 6, 2026)
 
 Closes out Task 2's remaining user-facing relabels (the IA section split + lens column landed in 2a;

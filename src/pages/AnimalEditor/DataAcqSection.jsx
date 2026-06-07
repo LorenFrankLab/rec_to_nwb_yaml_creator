@@ -165,6 +165,20 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
         </p>
       </header>
 
+      {/* Phase 8.7 Task 3 (decided option B): data-acq has NO per-day binding — the export reads
+          animal.devices.data_acq_device live into every day — so a genuine mid-study hardware
+          change can't be kept off earlier days. Name that limitation (no-silent-retroactive)
+          instead of implying a day-level edit exists. Per-day recording-system versioning is a
+          separate future phase. */}
+      <div className="recording-system-blast-radius" role="note">
+        <strong>One recording system per animal — no per-day version yet.</strong> A mid-study
+        hardware change (for example, swapping the amplifier or acquisition device for later
+        sessions) can&apos;t be represented per day in this app yet: the device identity below is
+        shared, so editing it changes every one of this animal&apos;s recording days — there is no
+        way to keep earlier days on the old hardware. Per-day recording-system versioning is a
+        planned future capability.
+      </div>
+
       <form className="data-acq-form">
         {/* Name (Spyglass identity) */}
         <div className="form-group">

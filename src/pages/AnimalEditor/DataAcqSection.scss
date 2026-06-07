@@ -236,3 +236,20 @@
     th, td { padding: 0.2rem 0.4rem; text-align: left; border-bottom: 1px solid #ffe0b2; }
   }
 }
+
+/* Phase 8.7 Task 3: option-B limitation notice — one recording system per animal, no per-day
+   version (a mid-study amplifier swap is not representable per day yet). */
+.recording-system-blast-radius {
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.8rem;
+  background: #fff7e6;
+  border-left: 3px solid #e0a106;
+  border-radius: 3px;
+  font-size: 0.85rem;
+  color: #5a4a13;
+
+  strong {
+    display: block;
+    margin-bottom: 0.2rem;
+  }
+}
