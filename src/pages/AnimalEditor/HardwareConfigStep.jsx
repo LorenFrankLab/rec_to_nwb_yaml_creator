@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
-import { getAnimalCameras } from '../../state/workspaceSelectors';
+import { getAnimalCameras, getAnimalDayIds } from '../../state/workspaceSelectors';
+import { findCameraAffectedDays } from '../../state/cameraUsage';
 import { ConfirmDialog } from '../../components/Modal';
 import CamerasSection from './CamerasSection';
 import CameraModal from './CameraModal';
+import CameraReferenceDialog from './CameraReferenceDialog';
 import DataAcqSection from './DataAcqSection';
 import BehavioralEventsSection from './BehavioralEventsSection';
 import RawCorruptionBanner from '../../components/RawCorruptionBanner';
@@ -14,6 +16,7 @@ import {
   collectCameraIdentities,
   collectDataAcqIdentities,
   findIdentityDivergence,
+  cameraIdentityChanged,
   CAMERA_DEPENDENT_FIELDS,
 } from './identitySafety';
 import './HardwareConfigStep.scss';
@@ -47,12 +50,21 @@ export default function HardwareConfigStep({
 
   const [cameraModal, setCameraModal] = useState({ open: false, mode: 'add', camera: null });
   const [cameraDivergence, setCameraDivergence] = useState(null);
+  // Phase 8.7 Task 5b: pending decision when editing a camera that recording days reference.
+  const [cameraRefDecision, setCameraRefDecision] = useState(null);
   const [pendingDelete, setPendingDelete] = useState(null);
 
   // A repair routed to this editor must not dead-end by crashing on the corruption it
   // exists to fix. Read cameras through the canonical selector: a non-array `cameras`
   // (`|| []` would PRESERVE a string and crash CamerasSection's `.reduce`) renders safely.
   const cameras = useMemo(() => getAnimalCameras(animal), [animal]);
+
+  // This animal's recording-day records (for the camera blast-radius: which days reference a
+  // camera being edited). Read shape-safely from the workspace day map.
+  const animalDays = useMemo(
+    () => getAnimalDayIds(animal).map((id) => model.workspace?.days?.[id]).filter(Boolean),
+    [animal, model.workspace]
+  );
 
   // Data-acq identities elsewhere in the dataset (plus any other items on this
   // animal), for the DataAcqSection divergent-reuse check.
@@ -106,11 +118,52 @@ export default function HardwareConfigStep({
       return; // Block: a divergent reuse must get a new name.
     }
 
+    // Phase 8.7 Task 5b (immutable-once-referenced): editing the identity of a camera that
+    // recording days already reference would silently rewrite those days' exports (the day-used
+    // export binding now emits this camera per day). Intercept and let the user choose: a NEW
+    // camera (keeps those days unchanged) or an explicit correction that updates the named days.
+    if (cameraModal.mode === 'edit' && cameraModal.camera) {
+      const original = cameraModal.camera;
+      const affectedIds = findCameraAffectedDays(animalDays, original.id);
+      if (affectedIds.length > 0 && cameraIdentityChanged(original, cameraData)) {
+        const affectedDays = affectedIds.map((id) => ({
+          id,
+          date: animalDays.find((d) => d.id === id)?.date,
+        }));
+        setCameraRefDecision({ camera: cameraData, original, affectedDays });
+        return; // Defer the write until the user decides.
+      }
+    }
+
     const next =
       cameraModal.mode === 'edit' && cameraModal.camera
         ? cameras.map((c) => (c.id === cameraModal.camera.id ? cameraData : c))
         : [...cameras, cameraData];
     onFieldUpdate('cameras', next);
+    closeCameraModal();
+  };
+
+  /** Next free numeric camera id (max existing + 1). */
+  const nextCameraId = () =>
+    cameras.reduce((max, c) => Math.max(max, typeof c.id === 'number' ? c.id : -1), -1) + 1;
+
+  /**
+   * Decision: keep the affected days unchanged — the edited values become a NEW camera, the
+   * original is left as-is (immutable-once-referenced default).
+   */
+  const handleCreateNewCamera = () => {
+    if (!cameraRefDecision) return;
+    onFieldUpdate('cameras', [...cameras, { ...cameraRefDecision.camera, id: nextCameraId() }]);
+    setCameraRefDecision(null);
+    closeCameraModal();
+  };
+
+  /** Decision: overwrite the camera in place — explicitly updating the affected days. */
+  const handleCorrectCamera = () => {
+    if (!cameraRefDecision) return;
+    const { original, camera: edited } = cameraRefDecision;
+    onFieldUpdate('cameras', cameras.map((c) => (c.id === original.id ? edited : c)));
+    setCameraRefDecision(null);
     closeCameraModal();
   };
 
@@ -194,6 +247,15 @@ export default function HardwareConfigStep({
           onUseNewName={() => setCameraDivergence(null)}
         />
       )}
+
+      <CameraReferenceDialog
+        isOpen={cameraRefDecision != null}
+        camera={cameraRefDecision?.original}
+        affectedDays={cameraRefDecision?.affectedDays || []}
+        onCreateNew={handleCreateNewCamera}
+        onCorrect={handleCorrectCamera}
+        onCancel={() => setCameraRefDecision(null)}
+      />
 
       <ConfirmDialog
         isOpen={pendingDelete != null}

@@ -448,6 +448,91 @@ describe('HardwareConfigStep', () => {
       ]);
     });
 
+    // Phase 8.7 Task 5b: editing the identity of a camera that recording days REFERENCE must not
+    // silently rewrite those days' exports — offer a new-camera (default) vs explicit-correction
+    // decision that names the affected days.
+    describe('immutable-once-referenced cameras', () => {
+      const referencedAnimal = {
+        id: 'remy',
+        cameras: [{ id: 0, camera_name: 'overhead', manufacturer: 'Allied', model: 'Mako', lens: '8mm', meters_per_pixel: 0.001 }],
+        devices: {},
+        behavioral_events: [],
+        days: ['remy-d1'],
+      };
+      const referencingDays = {
+        'remy-d1': { id: 'remy-d1', animalId: 'remy', date: '2023-06-22', tasks: [{ camera_id: [0] }] },
+      };
+
+      /**
+       * Open edit, rename (to clear the same-name identity-safety block), recalibrate, save.
+       * @param user
+       */
+      async function editReferencedCamera(user) {
+        await user.click(screen.getByRole('button', { name: /^edit$/i }));
+        const name = screen.getByLabelText(/^camera name$/i);
+        await user.clear(name);
+        await user.type(name, 'overhead_zoomed');
+        const mpp = screen.getByLabelText(/meters per pixel/i);
+        await user.clear(mpp);
+        await user.type(mpp, '0.002');
+        await user.click(screen.getByRole('button', { name: /save camera/i }));
+      }
+
+      it('intercepts the identity edit with a decision that names the affected day (no write yet)', async () => {
+        const user = userEvent.setup();
+        const onFieldUpdate = vi.fn();
+        renderSeeded({ animals: { remy: referencedAnimal }, days: referencingDays }, referencedAnimal, onFieldUpdate);
+
+        await editReferencedCamera(user);
+
+        const dialog = screen.getByRole('alertdialog');
+        expect(dialog).toHaveTextContent(/used by 1 recording day/i);
+        expect(dialog).toHaveTextContent('2023-06-22');
+        expect(onFieldUpdate).not.toHaveBeenCalled();
+      });
+
+      it('"Create a new camera" appends a new camera (new id) and leaves the original (affected days unchanged)', async () => {
+        const user = userEvent.setup();
+        const onFieldUpdate = vi.fn();
+        renderSeeded({ animals: { remy: referencedAnimal }, days: referencingDays }, referencedAnimal, onFieldUpdate);
+
+        await editReferencedCamera(user);
+        await user.click(screen.getByRole('button', { name: /create a new camera/i }));
+
+        expect(onFieldUpdate).toHaveBeenCalledWith('cameras', [
+          { id: 0, camera_name: 'overhead', manufacturer: 'Allied', model: 'Mako', lens: '8mm', meters_per_pixel: 0.001 },
+          { id: 1, camera_name: 'overhead_zoomed', manufacturer: 'Allied', model: 'Mako', lens: '8mm', meters_per_pixel: 0.002 },
+        ]);
+      });
+
+      it('"Correct this camera" overwrites in place (explicitly updates the affected day)', async () => {
+        const user = userEvent.setup();
+        const onFieldUpdate = vi.fn();
+        renderSeeded({ animals: { remy: referencedAnimal }, days: referencingDays }, referencedAnimal, onFieldUpdate);
+
+        await editReferencedCamera(user);
+        await user.click(screen.getByRole('button', { name: /correct this camera/i }));
+
+        expect(onFieldUpdate).toHaveBeenCalledWith('cameras', [
+          { id: 0, camera_name: 'overhead_zoomed', manufacturer: 'Allied', model: 'Mako', lens: '8mm', meters_per_pixel: 0.002 },
+        ]);
+      });
+
+      it('does NOT intercept when the camera is unreferenced by any day (saves directly)', async () => {
+        const user = userEvent.setup();
+        const onFieldUpdate = vi.fn();
+        // Same animal, but no days reference camera 0.
+        renderSeeded({ animals: { remy: { ...referencedAnimal, days: [] } }, days: {} }, { ...referencedAnimal, days: [] }, onFieldUpdate);
+
+        await editReferencedCamera(user);
+
+        expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+        expect(onFieldUpdate).toHaveBeenCalledWith('cameras', [
+          { id: 0, camera_name: 'overhead_zoomed', manufacturer: 'Allied', model: 'Mako', lens: '8mm', meters_per_pixel: 0.002 },
+        ]);
+      });
+    });
+
     it('deletes a camera after confirmation', async () => {
       const user = userEvent.setup();
       const onFieldUpdate = vi.fn();

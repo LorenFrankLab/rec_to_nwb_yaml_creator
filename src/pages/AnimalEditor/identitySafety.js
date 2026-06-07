@@ -71,6 +71,30 @@ export const IDENTITY_FIELD_LABELS = {
 /** Dependent fields that define a camera's identity beyond its `camera_name`. */
 export const CAMERA_DEPENDENT_FIELDS = ['id', 'meters_per_pixel', 'lens', 'model', 'manufacturer'];
 
+/**
+ * The fields whose change makes a camera a DIFFERENT identity (name + calibration/hardware). The
+ * `id` is excluded — it keys the catalog item and is not user-meaningful identity here; a changed
+ * `id` on an in-place edit is handled separately. Used by the immutable-once-referenced rule
+ * (Phase 8.7 Task 5b): changing any of these on a camera that recording days already reference is a
+ * NEW camera by default, not a silent retroactive edit of those days' exports.
+ *
+ * @type {ReadonlyArray<string>}
+ */
+export const CAMERA_IDENTITY_FIELDS = ['camera_name', 'meters_per_pixel', 'lens', 'model', 'manufacturer'];
+
+/**
+ * Whether an edited camera differs from the original in any identity field (treating
+ * null/undefined/'' as equivalent so "absent" vs "blank" is not a spurious change).
+ *
+ * @param {object} original - The saved camera.
+ * @param {object} edited - The edited camera data.
+ * @returns {boolean}
+ */
+export function cameraIdentityChanged(original, edited) {
+  const norm = (v) => (v === null || v === undefined ? '' : v);
+  return CAMERA_IDENTITY_FIELDS.some((field) => norm(original?.[field]) !== norm(edited?.[field]));
+}
+
 /** Dependent fields that define a data-acq device's identity beyond its `name`. */
 export const DATA_ACQ_DEPENDENT_FIELDS = ['system', 'amplifier', 'adc_circuit'];
 

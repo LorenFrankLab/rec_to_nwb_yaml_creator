@@ -6,6 +6,33 @@
 
 ---
 
+## Ownership defaults & day configurability — Phase 8.7 Task 5b: immutable-once-referenced cameras (June 7, 2026)
+
+Applies approach A's immutable-once-referenced rule now that export emits the day-used camera subset
+(5a): editing the IDENTITY of a camera that recording days already reference would silently rewrite
+those days' exports, so the change is presented as a choice that NAMES the affected days first. UI-only
+— no export/store change; 125 golden baselines byte-identical; full suite (4099), architecture guard,
+lint (0 errors), and build green.
+
+- **`cameraIdentityChanged(original, edited)`** + `CAMERA_IDENTITY_FIELDS`
+  ([identitySafety.js](../src/pages/AnimalEditor/identitySafety.js)): true when a camera's name /
+  calibration / lens / model / manufacturer changes (id excluded; null/undefined/"" normalized).
+- **`CameraReferenceDialog`** ([new](../src/pages/AnimalEditor/CameraReferenceDialog.jsx)): an
+  `alertdialog` that enumerates the affected recording days and offers **Create a new camera**
+  (default/recommended — the edited values become a new catalog camera, the original is untouched, so
+  the referencing days keep what they recorded) vs **Correct this camera** (overwrite in place,
+  explicitly updating all N days, including any already exported) vs Cancel.
+- **`HardwareConfigStep`** intercepts a camera EDIT save: when the camera being edited is referenced by
+  ≥1 day (via the new `findCameraAffectedDays` blast-radius helper from 5a's `cameraUsage`) AND an
+  identity field changed, it defers the write and opens the decision dialog; an UNreferenced camera (or
+  a no-op edit) still saves directly, and the pre-existing same-name divergence guard is unchanged.
+  "Create a new camera" appends with the next free id; "Correct" replaces in place.
+- Tests: `cameraIdentityChanged` unit cases; 4 HardwareConfigStep flow tests (decision named + no write
+  yet; create-new appends/keeps original; correct overwrites; unreferenced saves directly).
+
+Still open in Task 5: the catalog-selection + task→room/cameras/epochs legibility copy and empty
+states (5c).
+
 ## Ownership defaults & day configurability — Phase 8.7 Task 5a: day-used camera export binding (June 7, 2026)
 
 The one Phase 8.7 change that touches export SEMANTICS — implemented carefully and verified
