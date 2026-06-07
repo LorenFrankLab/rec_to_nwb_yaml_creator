@@ -27,6 +27,16 @@ function Harness({ epochOptions = [1, 2] }) {
 }
 
 describe('FsGuiSection', () => {
+  it('frames "no opto this day" as a normal, valid state (Task 7 — opto is optional/epoch-scoped)', () => {
+    render(<Harness />);
+    // The empty state must NOT read as missing setup — an opto-free day is valid and friction-free.
+    expect(screen.getByText(/no optogenetic stimulation recorded for this day/i)).toBeInTheDocument();
+    expect(screen.getByText(/normal, valid state/i)).toBeInTheDocument();
+    expect(screen.getByText(/add a protocol only if opto was run/i)).toBeInTheDocument();
+    // It points to the animal implanted setup as the separate, set-once surface.
+    expect(screen.getByText(/separate from the animal.s implanted setup/i)).toBeInTheDocument();
+  });
+
   it('adds a protocol and edits its fields, committing through onChange', async () => {
     const user = userEvent.setup();
     let latest = null;
@@ -72,7 +82,7 @@ describe('FsGuiSection', () => {
 
   it('renders an empty state before any protocol is added', () => {
     render(<Harness />);
-    expect(screen.getByText(/no fsgui protocols added/i)).toBeInTheDocument();
+    expect(screen.getByText(/no optogenetic stimulation recorded for this day/i)).toBeInTheDocument();
   });
 
   it('shows a stale (no-longer-a-task) epoch so it can be unchecked to fix the orphan', async () => {

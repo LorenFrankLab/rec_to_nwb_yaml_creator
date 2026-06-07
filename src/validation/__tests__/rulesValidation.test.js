@@ -478,6 +478,28 @@ describe('rulesValidation()', () => {
       expect(issues.some(i => ['missing_opto_reference', 'fs_gui_requires_optogenetics', 'dangling_dio_output'].includes(i.code))).toBe(false);
     });
 
+    it('accepts an opto-implanted animal with an opto-free day (no fs_gui this day)', () => {
+      // Phase 8.7 Task 7: opto is a complete IMPLANTED setup (all-or-nothing) PLUS a per-day,
+      // epoch-scoped protocol (fs_gui_yamls). A day that ran no stimulation carries the implant
+      // metadata but no fs_gui rows — that must be valid, not "missing opto".
+      const model = {
+        cameras: [{ id: 0 }],
+        tasks: [{ task_name: 't', task_epochs: [1] }],
+        behavioral_events: [{ name: 'laser' }],
+        opto_excitation_source: [{ name: 'LED' }],
+        optical_fiber: [{ name: 'F', reference: 'Bregma' }],
+        virus_injection: [{ name: 'V', reference: 'Bregma' }],
+        optogenetic_stimulation_software: 'fsgui',
+        fs_gui_yamls: [], // no stimulation run this day — a normal, valid state
+      };
+      const issues = rulesValidation(model);
+      expect(
+        issues.some((i) =>
+          ['partial_configuration', 'missing_opto_reference', 'fs_gui_requires_optogenetics', 'dangling_dio_output'].includes(i.code)
+        )
+      ).toBe(false);
+    });
+
     it('should not error when all four fields absent', () => {
       const model = createTestYaml({
         opto_excitation_source: undefined,

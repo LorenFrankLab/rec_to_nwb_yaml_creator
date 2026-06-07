@@ -26,12 +26,12 @@ function renderStep(overrides = {}) {
 describe('TasksEpochsStep — FsGUI optogenetics gate', () => {
   it('hides the FsGUI section when the animal has no optogenetics', () => {
     renderStep(); // fixture default: optogenetics undefined
-    expect(screen.queryByRole('heading', { name: /fsgui optogenetics protocols/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /optogenetics run this day/i })).not.toBeInTheDocument();
   });
 
   it('shows the FsGUI section only when optogenetics is enabled on the animal', () => {
     renderStep({ animal: { optogenetics: { opto_excitation_source: [{ name: 'LED' }] } } });
-    expect(screen.getByRole('heading', { name: /fsgui optogenetics protocols/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /optogenetics run this day/i })).toBeInTheDocument();
   });
 
   it('offers ONLY the day’s behavioral events as DIO outputs (not inherited animal events)', () => {

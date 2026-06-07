@@ -225,7 +225,19 @@ export default function OptogeneticsStep({ animal, onUpdate }) {
 
   return (
     <section className="opto-step" aria-labelledby="opto-heading">
-      <h2 id="opto-heading">Optogenetics</h2>
+      <h2 id="opto-heading">Optogenetics Setup</h2>
+
+      {/* Phase 8.7 Task 7: make the set-once-vs-per-day split explicit. This step is the animal's
+          IMPLANTED setup (surgery/virus/source/software), edited once for the animal. What was
+          actually STIMULATED is recorded per recording day in that day's Epochs step (FsGUI
+          protocols), scoped to selected epochs — and is OPTIONAL: an opto-implanted animal can run
+          no stimulation on a day, or only during some epochs, and that is a normal, valid state. */}
+      <p className="help-text">
+        This is the animal&apos;s <strong>implanted opto setup</strong> (excitation source, optical
+        fiber, virus injection, stimulation software) — set it once here. What was actually
+        stimulated is recorded per recording day in that day&apos;s Epochs step, scoped to the epochs
+        it ran; a day or epoch with no stimulation needs nothing here.
+      </p>
 
       <label className="opto-enable" htmlFor="opto-enabled">
         <input

@@ -2,9 +2,35 @@
 
 **Purpose:** Track all changes made during the refactoring milestones.
 
-**Last Updated:** June 6, 2026
+**Last Updated:** June 7, 2026
 
 ---
+
+## Ownership defaults & day configurability — Phase 8.7 Task 7: opto setup vs. per-day protocol (June 7, 2026)
+
+Makes the two-layer optogenetics model explicit in the UI: the animal's **implanted setup** (excitation
+source, optical fiber, virus injection, stimulation software — all-or-nothing) is set ONCE in the Animal
+Editor; what was **actually stimulated** is recorded per recording day in that day's Epochs step, scoped
+to the epochs it ran. A day or epoch with no stimulation is a normal, valid state — not "missing opto".
+UI/copy-only — no export/store change; the data model already split these surfaces. 125 golden baselines
+byte-identical; full suite (4120), lint (0 errors), and build green.
+
+- **Animal Editor opto step reframed** ([OptogeneticsStep.jsx](../src/pages/AnimalEditor/OptogeneticsStep.jsx)):
+  heading `Optogenetics` → `Optogenetics Setup` plus an intro that names it the animal's implanted setup
+  ("set it once here") and points to the per-day Epochs step for what was actually stimulated.
+- **Day FsGUI section reframed as the optional, epoch-scoped protocol**
+  ([FsGuiSection.jsx](../src/pages/DayEditor/FsGuiSection.jsx)): heading `FsGUI optogenetics protocols` →
+  `Optogenetics run this day (FsGUI protocols)`; help text distinguishes it from the implanted setup; the
+  empty state now reads **"No optogenetic stimulation recorded for this day — a normal, valid state"**
+  instead of the neutral "No FsGUI protocols added", so an opto-free day is friction-free rather than
+  reading as an unfinished form.
+- **Invariant pinned in validation tests** ([rulesValidation.test.js](../src/validation/__tests__/rulesValidation.test.js)):
+  an opto-implanted animal with an opto-free day (complete implant metadata, empty `fs_gui_yamls`) raises
+  none of `partial_configuration` / `missing_opto_reference` / `fs_gui_requires_optogenetics` /
+  `dangling_dio_output`. (`fs_gui_requires_optogenetics` still fires only when fs_gui rows exist without
+  the implant — that direction is unchanged.)
+- Tests: FsGuiSection friction-free empty-state copy + "separate from implanted setup" pointer; updated the
+  heading assertions in `TasksEpochsStep.test.jsx` and the pre-existing empty-state test to the new copy.
 
 ## Ownership defaults & day configurability — Phase 8.7 Task 6: behavioral-events ownership (June 7, 2026)
 
