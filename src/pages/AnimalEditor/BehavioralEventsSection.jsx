@@ -191,7 +191,7 @@ export default function BehavioralEventsSection({ animal, onFieldUpdate }) {
         <p className="empty-state-hint">
           This is a reusable <strong>library</strong> for the animal — these events are templates and
           are NOT exported on their own. Add one to a recording day with &ldquo;Use on this day&rdquo;
-          in that day&apos;s Tasks &amp; Epochs step; only the day&apos;s own events are exported.
+          in that day&apos;s Epochs step; only the day&apos;s own events are exported.
         </p>
         <button className="button-primary" onClick={handleAddClick}>
           Add First Behavioral Event

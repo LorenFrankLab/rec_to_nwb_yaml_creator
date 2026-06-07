@@ -53,6 +53,20 @@ describe('BehavioralEventsDisplay', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/description "nose poke".*more than one|unique description/i);
   });
 
+  it('does NOT flag descriptions that differ only by trailing whitespace (matches the export gate)', () => {
+    // The converter keys DIO by the raw description, so "nose poke" and "nose poke " are distinct.
+    // The inline gate must use the same raw-string semantics as the validator (no trim) — flagging
+    // these would tell the user to "fix" a non-problem the export gate doesn't see.
+    render(
+      <BehavioralEventsDisplay
+        inheritedEvents={[]}
+        dayEvents={[{ name: 'a', description: 'nose poke' }, { name: 'b', description: 'nose poke ' }]}
+        onDayEventsChange={vi.fn()}
+      />
+    );
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('renders inherited events with a lock cue and no edit/delete controls', () => {
     render(
       <BehavioralEventsDisplay

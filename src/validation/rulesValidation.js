@@ -6,6 +6,7 @@
 
 import { isValidSpecies, idHasSlash } from './dandiSubject';
 import { duplicateTaskEpochs } from './taskEpochs';
+import { duplicateBehavioralEventDescriptions } from './behavioralEvents';
 import { getChannelCount, validateDeviceType } from '../utils/deviceTypeUtils';
 import {
   getProbeShanks,
@@ -1013,27 +1014,21 @@ export const rulesValidation = (model) => {
   // trodes_to_nwb (convert_dios) keys DIO channels by behavioral_events[].description
   // and raises a ValueError on a duplicate description. (Rule 14 covers `name`.)
   if (Array.isArray(model.behavioral_events) && model.behavioral_events.length > 0) {
-    const seenDesc = new Set();
-    const reportedDesc = new Set();
-    model.behavioral_events.forEach((event) => {
-      const desc = event?.description;
-      if (desc === undefined || desc === null || desc === '') return;
-      if (seenDesc.has(desc) && !reportedDesc.has(desc)) {
-        reportedDesc.add(desc);
-        issues.push({
-          path: 'behavioral_events',
-          field: 'description',
-          step: 'epochs',
-          actionLabel: 'Rename behavioral event description',
-          code: 'duplicate_behavioral_event_description',
-          repairSurface: 'day',
-          severity: 'error',
-          message:
-            `Duplicate behavioral event description "${desc}". The converter keys DIO ` +
-            `channels by description and fails on duplicates — each must be unique.`,
-        });
-      }
-      seenDesc.add(desc);
+    // Shared helper so the inline day-event gate (BehavioralEventsDisplay) can never drift from
+    // this export gate — raw-string compare, exactly as the converter keys descriptions.
+    duplicateBehavioralEventDescriptions(model.behavioral_events).forEach((desc) => {
+      issues.push({
+        path: 'behavioral_events',
+        field: 'description',
+        step: 'epochs',
+        actionLabel: 'Rename behavioral event description',
+        code: 'duplicate_behavioral_event_description',
+        repairSurface: 'day',
+        severity: 'error',
+        message:
+          `Duplicate behavioral event description "${desc}". The converter keys DIO ` +
+          `channels by description and fails on duplicates — each must be unique.`,
+      });
     });
   }
 

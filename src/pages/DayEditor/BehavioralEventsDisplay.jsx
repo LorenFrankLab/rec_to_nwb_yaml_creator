@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
+import { duplicateBehavioralEventDescriptions } from '../../validation/behavioralEvents';
 import './BehavioralEventsDisplay.scss';
 
 /**
@@ -42,15 +43,9 @@ export default function BehavioralEventsDisplay({
   // event isn't offered for "Use on this day" twice.
   const dayNames = new Set(dayItems.map((e) => e.name));
   // A duplicate DESCRIPTION among the exported day events is a downstream hard `raise ValueError`
-  // in trodes_to_nwb — surface it inline (the export-blocking rule gates it, but flag it here too).
-  const descriptionCounts = dayItems.reduce((acc, e) => {
-    const desc = (e.description || '').trim();
-    if (desc !== '') acc.set(desc, (acc.get(desc) || 0) + 1);
-    return acc;
-  }, new Map());
-  const duplicateDescriptions = [...descriptionCounts.entries()]
-    .filter(([, count]) => count > 1)
-    .map(([desc]) => desc);
+  // in trodes_to_nwb — surfaced inline via the SAME helper the export-blocking rule uses, so the
+  // inline gate and the export gate can never disagree (raw-string compare, no trim).
+  const duplicateDescriptions = [...duplicateBehavioralEventDescriptions(dayItems)];
 
   /**
    * Copy an inherited (library) event into this day's exported event list.
