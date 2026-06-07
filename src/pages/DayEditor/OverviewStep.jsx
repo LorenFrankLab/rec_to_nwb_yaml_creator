@@ -229,6 +229,45 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, an
             )}
           </div>
 
+          {/* Phase 8.7 Task 2.5: weight is a RECORDING-DAY fact for export. The Day Overview is
+              the primary review/edit surface for the exported session weight — it writes
+              `session.weight` (the merge prefers it over the animal baseline). An animal-created
+              weight is only an initial/fallback value, labelled as such and confirmable here; it
+              is no longer silently reused as the normal exported value for every day, and editing
+              the day weight no longer mutates the shared animal record. */}
+          <div className="form-field">
+            <label htmlFor="session-weight">Recording-day weight (grams)</label>
+            <input
+              id="session-weight"
+              type="number"
+              min="0"
+              step="any"
+              name="session.weight"
+              data-field-path="session.weight"
+              key={`session-weight-${session.weight ?? ''}`}
+              defaultValue={session.weight ?? ''}
+              placeholder={
+                typeof subject.weight === 'number'
+                  ? `${subject.weight} (animal baseline)`
+                  : 'e.g. 450'
+              }
+              onBlur={(e) =>
+                onFieldUpdate(
+                  'session.weight',
+                  e.target.value === '' ? undefined : Number(e.target.value)
+                )
+              }
+            />
+            <span className="field-help-text">
+              {session.weight !== undefined
+                ? 'Weight recorded for this session — the value exported for this day.'
+                : typeof subject.weight === 'number'
+                  ? `No weight set for this day — the animal baseline (${subject.weight} g) will be `
+                    + `exported as a fallback. Enter this session's weight to set it for this day.`
+                  : 'Enter the weight recorded for this session (exported for this day).'}
+            </span>
+          </div>
+
           <KeywordsEditor
             value={keywords}
             onChange={(keywords) => onFieldUpdate('keywords', keywords)}
@@ -258,10 +297,11 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, an
 
         {showInherited && (
           <div id="inherited-metadata-content" className="inherited-metadata-content">
-            {/* Subject Information. Identity fields are read-only; the fields a
-                recording-day scientist commonly needs to repair (date of birth,
-                weight, description, species) are editable here and write through to
-                the animal so existing animals can be fixed without leaving the day. */}
+            {/* Subject Information. Identity fields are read-only; the constant subject facts a
+                recording-day scientist commonly needs to repair (date of birth, species,
+                description) are editable here and write through to the animal so existing animals
+                can be fixed without leaving the day. Weight is NOT here — it is a recording-day
+                fact edited in Session Metadata above (Phase 8.7 Task 2.5). */}
             <div className="inherited-section">
               <h3>Subject Information</h3>
               <div className="inherited-notice">
@@ -292,30 +332,6 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, an
                       )
                     }
                   />
-                </div>
-
-                <div className="form-field">
-                  <label htmlFor="subject-weight">Weight (grams)</label>
-                  <input
-                    id="subject-weight"
-                    type="number"
-                    min="0"
-                    step="any"
-                    data-field-path="subject.weight"
-                    key={`weight-${subject.weight ?? ''}`}
-                    defaultValue={subject.weight ?? ''}
-                    onBlur={(e) => {
-                      onSubjectUpdate('weight', e.target.value === '' ? undefined : Number(e.target.value));
-                      // The export prefers a day-level weight override over the animal
-                      // weight, so a stale/invalid day override (only ever set via import)
-                      // would defeat this repair. Clear it so the weight just entered is
-                      // the value that's exported.
-                      if (session.weight !== undefined) {
-                        onFieldUpdate('session.weight', undefined);
-                      }
-                    }}
-                  />
-                  <span className="field-help-text">Animal baseline weight, in grams.</span>
                 </div>
 
                 <div className="form-field">

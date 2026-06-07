@@ -381,41 +381,63 @@ describe('OverviewStep', () => {
       expect(onSubjectUpdate).toHaveBeenCalledWith('date_of_birth', new Date('2024-02-03').toISOString());
     });
 
-    it('writes an edited weight as a number', async () => {
-      const onSubjectUpdate = vi.fn();
-      const user = await expand(onSubjectUpdate);
-
-      const weight = screen.getByLabelText(/weight/i);
-      await user.type(weight, '450');
-      await user.tab();
-
-      expect(onSubjectUpdate).toHaveBeenCalledWith('weight', 450);
-    });
-
-    it('clears a day-level weight override on repair so the edited weight is exported', async () => {
+    // Phase 8.7 Task 2.5: weight is a recording-DAY fact. The Day Overview weight field lives in
+    // Session Metadata (always visible) and writes `session.weight` (the exported value), NOT the
+    // shared animal weight; an animal-created weight is only a labelled fallback.
+    it('writes the recording-day weight to session.weight (day-owned), not the animal', async () => {
       const user = userEvent.setup();
-      const onSubjectUpdate = vi.fn();
       const onFieldUpdate = vi.fn();
-      // A day with an (import-only) weight override that the export would prefer.
-      const dayWithWeightOverride = { ...mockDay, session: { ...mockDay.session, weight: 999 } };
+      const onSubjectUpdate = vi.fn();
       render(
         <OverviewStep
           animal={mockAnimal}
-          day={dayWithWeightOverride}
+          day={mockDay}
           mergedDay={mockMergedDay}
           onFieldUpdate={onFieldUpdate}
           onSubjectUpdate={onSubjectUpdate}
         />
       );
-      await user.click(screen.getByRole('button', { name: /inherited subject metadata/i }));
-
-      const weight = screen.getByLabelText(/weight/i);
+      const weight = screen.getByLabelText(/recording-day weight/i);
       await user.type(weight, '450');
       await user.tab();
 
-      expect(onSubjectUpdate).toHaveBeenCalledWith('weight', 450);
-      // The stale day override is cleared so the just-entered weight is what's exported.
-      expect(onFieldUpdate).toHaveBeenCalledWith('session.weight', undefined);
+      expect(onFieldUpdate).toHaveBeenCalledWith('session.weight', 450);
+      // Editing the day weight must NOT mutate the shared animal record.
+      expect(onSubjectUpdate).not.toHaveBeenCalledWith('weight', expect.anything());
+    });
+
+    it('shows the day-owned weight and labels it as the value exported for this day', () => {
+      const dayWithWeight = { ...mockDay, session: { ...mockDay.session, weight: 500 } };
+      render(
+        <OverviewStep
+          animal={mockAnimal}
+          day={dayWithWeight}
+          mergedDay={mockMergedDay}
+          onFieldUpdate={vi.fn()}
+          onSubjectUpdate={vi.fn()}
+        />
+      );
+      expect(screen.getByLabelText(/recording-day weight/i)).toHaveValue(500);
+      expect(screen.getByText(/value exported for this day/i)).toBeInTheDocument();
+    });
+
+    it('identifies the animal baseline as a fallback (named) when no day weight is set', () => {
+      const animalWithWeight = { ...mockAnimal, subject: { ...mockAnimal.subject, weight: 450 } };
+      const dayNoWeight = { ...mockDay, session: { ...mockDay.session, weight: undefined } };
+      render(
+        <OverviewStep
+          animal={animalWithWeight}
+          day={dayNoWeight}
+          mergedDay={mockMergedDay}
+          onFieldUpdate={vi.fn()}
+          onSubjectUpdate={vi.fn()}
+        />
+      );
+      // Empty input + the fallback explicitly named, not silently reused as the day's own value.
+      expect(screen.getByLabelText(/recording-day weight/i)).toHaveValue(null);
+      expect(
+        screen.getByText(/animal baseline \(450 g\) will be exported as a fallback/i)
+      ).toBeInTheDocument();
     });
 
     it('shows an inline error when an edited species is not a valid binomial', async () => {
@@ -447,8 +469,9 @@ describe('OverviewStep', () => {
     });
 
     it('auto-expands the inherited section when a subject field is the repair target', () => {
-      // The repair routes here with focusRequest.fieldPath = 'subject.weight'; the
-      // section must open so the control is actually rendered (and focusable).
+      // The repair routes here with focusRequest.fieldPath = 'subject.species'; the
+      // section must open so the control is actually rendered (and focusable). (Weight is no
+      // longer a subject field — it is a day fact in Session Metadata, Phase 8.7 Task 2.5.)
       render(
         <OverviewStep
           animal={mockAnimal}
@@ -456,13 +479,13 @@ describe('OverviewStep', () => {
           mergedDay={mockMergedDay}
           onFieldUpdate={vi.fn()}
           onSubjectUpdate={vi.fn()}
-          focusRequest={{ fieldPath: 'subject.weight', token: 1 }}
+          focusRequest={{ fieldPath: 'subject.species', token: 1 }}
         />
       );
 
       // Without any click, the subject fields are visible because the section opened.
       expect(screen.getByText('Subject Information')).toBeInTheDocument();
-      expect(document.querySelector('[data-field-path="subject.weight"]')).toBeInTheDocument();
+      expect(document.querySelector('[data-field-path="subject.species"]')).toBeInTheDocument();
     });
 
     it('does not auto-expand for a non-subject focus target', () => {
@@ -482,7 +505,9 @@ describe('OverviewStep', () => {
     it('exposes data-field-path anchors so a subject validation error can focus the field', async () => {
       await expand(vi.fn());
 
-      for (const path of ['subject.date_of_birth', 'subject.weight', 'subject.species', 'subject.description']) {
+      // Weight is no longer a subject anchor here — it is a day fact (session.weight) in
+      // Session Metadata (Phase 8.7 Task 2.5).
+      for (const path of ['subject.date_of_birth', 'subject.species', 'subject.description']) {
         expect(document.querySelector(`[data-field-path="${path}"]`)).toBeInTheDocument();
       }
     });

@@ -6,6 +6,32 @@
 
 ---
 
+## Ownership defaults & day configurability — Phase 8.7 Task 2.5: weight is a recording-day fact (June 6, 2026)
+
+Reverses the weight data flow so the Day Overview owns the exported session weight, with the
+animal-created value as a labelled fallback only. **No export-byte or store change** — the export
+merge already resolved `session.weight ?? subject.weight` ([workspaceUtils.js:333](../src/state/workspaceUtils.js)),
+so this is purely a UI write-path relocation; the 125 golden baselines stay byte-identical and the
+full suite (4072), architecture guard, lint (0 errors), and build stay green.
+
+- **Relocated the weight field** ([OverviewStep.jsx](../src/pages/DayEditor/OverviewStep.jsx)) from
+  the collapsed "inherited subject metadata" section to the always-visible Session Metadata section,
+  reframed as `Recording-day weight (grams)`. It now writes `session.weight` (a day update — no store
+  change, `applyDayUpdates` already accepts session merges) and **no longer mutates
+  `animal.subject.weight` or clears the day value**. Previously the field wrote the animal weight and
+  cleared `session.weight`, so the exported value was silently the animal baseline for every day.
+- **The animal weight is now a labelled fallback.** When the day has no `session.weight`, the input
+  is empty and the help text names the fallback explicitly ("the animal baseline (N g) will be
+  exported as a fallback — enter this session's weight to set it for this day"), with the baseline
+  also shown as the input placeholder. When a day weight is set, the cue reads "the value exported
+  for this day." This matches the ownership matrix (weight = `day_fact`, animal value is fallback).
+- **Weight left the Animal Profile (2b) and the inherited-subject section deliberately** — it is a
+  per-day fact, not a constant animal fact, and is no longer editable as a shared animal value from
+  the Day Overview.
+- Updated the OverviewStep weight tests to the new behavior (day-owned write to `session.weight`,
+  no animal mutation, day-owned display, fallback explicitly named) and removed `subject.weight` from
+  the subject-focus/anchor tests (it is no longer a subject field). Screen map updated.
+
 ## Ownership defaults & day configurability — Phase 8.7 Task 2b: Animal Profile surface (June 6, 2026)
 
 Second IA increment of sub-stream A: a discoverable owner for the animal's constant subject facts,
