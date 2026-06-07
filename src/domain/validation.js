@@ -167,7 +167,7 @@ export function dayOverrideIssues(day, mergedDay, baseIssues = []) {
         severity: 'error',
         message:
           `This day overrides the saved device ${key === 'electrode_groups' ? 'electrode groups' : 'channel map'} ` +
-          `and the override has validation errors. Those errors can't be fixed in the Animal Editor (which edits ` +
+          `and the override has validation errors. Those errors can't be fixed in Animal Setup (which edits ` +
           `the saved configuration, not this day's override). Remove the day override to use the saved configuration.`,
       });
     }

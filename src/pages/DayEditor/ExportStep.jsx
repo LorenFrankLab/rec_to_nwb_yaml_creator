@@ -206,7 +206,7 @@ export default function ExportStep({ animal, day, onNavigate, onRepair, animalKe
           {mergeError && (
             <p className="export-merge-error">
               This day&apos;s metadata could not be assembled — its animal&apos;s device
-              configuration is missing or corrupt. Repair it in the Animal Editor, then return.
+              configuration is missing or corrupt. Repair it in Animal Setup, then return.
             </p>
           )}
           {!dayExportable && (

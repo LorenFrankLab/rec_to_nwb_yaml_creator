@@ -272,7 +272,7 @@ function TaskForm({
           {(cameras || []).length === 0 ? (
             <div className="inline-info" role="status">
               No cameras are defined for this animal. Cameras are optional, but they
-              link video and spatial tracking. You can add them in the Animal Editor;
+              link video and spatial tracking. You can add them in Animal Setup;
               this task will still save without them.
             </div>
           ) : (
@@ -308,7 +308,7 @@ function TaskForm({
                 This task references camera id{missingCameraIds.length > 1 ? 's' : ''}{' '}
                 {missingCameraIds.join(', ')} not defined for this animal. Remove the
                 reference{missingCameraIds.length > 1 ? 's' : ''} or restore the camera in
-                the Animal Editor before saving.
+                Animal Setup before saving.
               </p>
               <button
                 type="button"

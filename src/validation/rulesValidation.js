@@ -880,7 +880,7 @@ export const rulesValidation = (model) => {
           `FsGUI optogenetics protocols are present, but the animal's optogenetics ` +
           `configuration is incomplete (or off). trodes_to_nwb crashes converting FsGUI ` +
           `protocols without the full optogenetics implant metadata. Complete optogenetics ` +
-          `in the Animal Editor, or remove these FsGUI protocols.`,
+          `in Animal Setup, or remove these FsGUI protocols.`,
       });
     }
 

@@ -29,6 +29,17 @@ byte-identical, architecture guard, lint (0 errors), and build all green.
   across the Animal Editor, Day Editor repair, and routing suites; refreshed the screen-map
   reconciliation rows to mark these done. Task 2 (a/b/2.5/c) is now complete.
 
+**Review fix (code-reviewer + Task-2 adherence audit, same day).** The relabel verified correct and
+all 8 Task 2 requirements MET, but the reviewer caught a CLASS of missed user-facing strings: the
+page reads "Animal Setup" while several assistive-tech announcers / button labels / validation
+messages still said "Animal Editor". Swept all genuinely user-facing occurrences (left internal
+route ids, component names, testids, SCSS classes, and JSDoc/comments as-is): the AppLayout
+`aria-live` route announcer value and the Suspense fallback (`Loading Animal Setup…`); the Day Editor
+deep-link prose in `DevicesStep` (button + bad-channel tooltip), `ExportStep`, `TaskModal`,
+`ReconfigWizard`; and the two user-visible validation messages (`validation.js` shadowed-override,
+`rulesValidation.js` FsGUI-requires-opto) — all now say "in Animal Setup". Updated the one test that
+asserted the old DevicesStep link text.
+
 ## Ownership defaults & day configurability — Phase 8.7 Task 2.5: weight is a recording-day fact (June 6, 2026)
 
 Reverses the weight data flow so the Day Overview owns the exported session weight, with the
