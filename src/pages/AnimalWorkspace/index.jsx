@@ -29,7 +29,18 @@ import { validateRawAnimal } from '../../validation/rawShape';
 import { applyRepairCommand } from '../../state/repairCommands';
 import RawCorruptionBanner from '../../components/RawCorruptionBanner';
 import { CalendarDayCreator } from '../../components/CalendarDayCreator/CalendarDayCreator';
+import { ConfirmDialog } from '../../components/Modal';
 import './AnimalWorkspace.css';
+
+/**
+ * Shared "what deletion does NOT touch" caveat for any day/animal that has been validated or
+ * exported. The store only holds workspace metadata — it never had the downloaded artifacts —
+ * so deleting here cannot and does not remove them. Naming each downstream artifact keeps the
+ * user from believing local cleanup also unpublishes data.
+ */
+const DOWNSTREAM_NOT_DELETED_NOTE =
+  ' This removes workspace metadata only — it does not delete any YAML you already downloaded, ' +
+  'or any NWB file, DANDI asset, or Spyglass rows produced from it.';
 
 /** User-facing label for each setup-checklist item state. */
 const SETUP_STATE_LABEL = {
@@ -86,6 +97,20 @@ function collectAnimalSetupIssues(animal, days) {
 }
 
 /**
+ * Whether a day record has been validated or exported — i.e. it may have produced a downloaded
+ * YAML / downstream NWB. Drives whether a delete confirmation shows the "downloaded artifacts are
+ * not deleted" caveat. Tolerates a malformed (non-object) `state` on a recovered record.
+ *
+ * @param {object} record - A day record.
+ * @returns {boolean} True if the day is validated or exported.
+ */
+function dayHasArtifacts(record) {
+  const state = record?.state;
+  if (!state || typeof state !== 'object' || Array.isArray(state)) return false;
+  return !!state.validated || !!state.exported;
+}
+
+/**
  * AnimalWorkspace Component
  *
  * Main workspace view for managing animals and their recording days.
@@ -95,6 +120,10 @@ export function AnimalWorkspace() {
   const { model, actions, selectors } = useStoreContext();
   const [selectedAnimalId, setSelectedAnimalId] = useState(null);
   const [showCalendar, setShowCalendar] = useState(false);
+  // Pending destructive confirms (null when closed). Animal: the id to delete. Day: a small
+  // descriptor of the row (so the confirm can name it even after the store row changes).
+  const [pendingDeleteAnimalId, setPendingDeleteAnimalId] = useState(null);
+  const [pendingDeleteDay, setPendingDeleteDay] = useState(null);
 
   // Default the required sections so a workspace that somehow reaches here without them
   // renders its empty state instead of crashing on Object.keys(undefined).
@@ -125,6 +154,16 @@ export function AnimalWorkspace() {
     .filter((d) => d.status === DAY_STATUS.WRONG_OWNER)
     .map((d) => d.dayId);
 
+  // Cascade preview for "Delete animal": the days the store's guarded `deleteAnimal` will
+  // actually remove are the present records owned by this animal (OK + recovered-unlinked),
+  // NEVER the wrong-owner records (those belong to another animal and the store preserves them).
+  // Counting from the same predicate the store guard uses keeps the confirmation honest.
+  const selectedDeletableDays = selectedDayClassification.filter(
+    (d) => isPresentRecordStatus(d.status) && d.status !== DAY_STATUS.WRONG_OWNER
+  );
+  const selectedOwnedDayCount = selectedDeletableDays.length;
+  const selectedOwnedHasArtifacts = selectedDeletableDays.some((d) => dayHasArtifacts(d.record));
+
   // On mount, select an animal so the setup/review state is visible immediately rather than
   // one click hidden: honor an explicit `?animal=<id>`; with no param, auto-select the SOLE
   // animal (the unambiguous case). An explicit-but-unknown `?animal` selects nothing (the user
@@ -149,6 +188,29 @@ export function AnimalWorkspace() {
    */
   function handleSelectAnimal(animalId) {
     setSelectedAnimalId(animalId);
+  }
+
+  /**
+   * Commit the pending animal deletion through the store's guarded `deleteAnimal` (which
+   * preserves wrong-owner records), then clear the now-stale selection so the view falls back
+   * to the animal picker instead of pointing at a deleted animal.
+   */
+  function confirmDeleteAnimal() {
+    const animalId = pendingDeleteAnimalId;
+    setPendingDeleteAnimalId(null);
+    if (!animalId) return;
+    actions.deleteAnimal(animalId);
+    if (animalId === selectedAnimalId) setSelectedAnimalId(null);
+  }
+
+  /**
+   * Commit the pending recording-day deletion through the store's `deleteDay`.
+   */
+  function confirmDeleteDay() {
+    const target = pendingDeleteDay;
+    setPendingDeleteDay(null);
+    if (!target?.dayId) return;
+    actions.deleteDay(target.dayId);
   }
 
   /**
@@ -548,17 +610,106 @@ export function AnimalWorkspace() {
                               {state.exported && <span className="status-chip exported">Exported</span>}
                             </div>
                           </a>
+                          {/* Lifecycle cleanup (Task 8): a secondary/destructive delete, OUTSIDE
+                              the navigation link (not nested in the <a>) so it can't be hit while
+                              opening the day. Only on ordinary (OK) rows — recovered/wrong-owner
+                              rows have their own repair paths above. */}
+                          {status === DAY_STATUS.OK && (
+                            <div className="day-item-actions">
+                              <button
+                                type="button"
+                                className="btn-danger-text"
+                                onClick={() =>
+                                  setPendingDeleteDay({
+                                    dayId,
+                                    date,
+                                    sessionId: session.session_id,
+                                    hasArtifacts: dayHasArtifacts(record),
+                                  })
+                                }
+                                aria-label={`Delete recording day ${date || dayId}…`}
+                              >
+                                Delete day…
+                              </button>
+                            </div>
+                          )}
                         </li>
                       );
                     })}
                   </ul>
                   );
                 })()}
+
+                {/* Lifecycle cleanup (Task 8): a secondary/destructive animal delete, set apart
+                    in its own zone at the foot of the section — discoverable in the animal's
+                    management area, never adjacent to the primary setup/export actions. */}
+                <footer className="workspace-danger-zone">
+                  {/* Accessible name is "Delete this animal" (no id): the button lives under this
+                      animal's "Recording Days for X" heading, and the destructive confirm names the
+                      specific animal + cascade. Embedding the id here would also collide with the
+                      sidebar animal-card's name for assistive tech / tests. */}
+                  <button
+                    type="button"
+                    className="btn-danger-text"
+                    onClick={() => setPendingDeleteAnimalId(selectedAnimalId)}
+                    aria-label="Delete this animal…"
+                  >
+                    Delete animal…
+                  </button>
+                </footer>
               </div>
             )}
           </section>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={pendingDeleteAnimalId != null}
+        title="Delete animal?"
+        message={
+          pendingDeleteAnimalId != null ? (
+            <>
+              Delete <strong>{pendingDeleteAnimalId}</strong> and its {selectedOwnedDayCount}{' '}
+              {selectedOwnedDayCount === 1 ? 'recording day' : 'recording days'}? This removes the
+              animal and the recording days it owns from this workspace and from export lists.
+              {selectedWrongOwnerDayIds.length > 0 &&
+                ` ${selectedWrongOwnerDayIds.length} day ${
+                  selectedWrongOwnerDayIds.length === 1 ? 'record' : 'records'
+                } listed here by mistake (belonging to another animal) will be preserved.`}
+              {selectedOwnedHasArtifacts && DOWNSTREAM_NOT_DELETED_NOTE} This cannot be undone.
+            </>
+          ) : (
+            ''
+          )
+        }
+        confirmLabel="Delete animal"
+        cancelLabel="Cancel"
+        destructive
+        onConfirm={confirmDeleteAnimal}
+        onCancel={() => setPendingDeleteAnimalId(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={pendingDeleteDay != null}
+        title="Delete recording day?"
+        message={
+          pendingDeleteDay != null ? (
+            <>
+              Delete recording day <strong>{pendingDeleteDay.date || pendingDeleteDay.dayId}</strong>
+              {pendingDeleteDay.sessionId ? ` (${pendingDeleteDay.sessionId})` : ''}? This removes it
+              from this workspace and from export lists.
+              {pendingDeleteDay.hasArtifacts && DOWNSTREAM_NOT_DELETED_NOTE} This cannot be undone.
+            </>
+          ) : (
+            ''
+          )
+        }
+        confirmLabel="Delete day"
+        cancelLabel="Cancel"
+        destructive
+        onConfirm={confirmDeleteDay}
+        onCancel={() => setPendingDeleteDay(null)}
+      />
     </main>
   );
 }

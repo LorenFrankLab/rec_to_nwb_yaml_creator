@@ -6,6 +6,37 @@
 
 ---
 
+## Ownership defaults & day configurability — Phase 8.7 Task 8: discoverable lifecycle cleanup (June 7, 2026)
+
+Adds discoverable, SAFE animal/day deletion to the Animal Workspace. The store already exposed
+guarded `deleteAnimal` / `deleteDay`, but nothing surfaced them — ordinary users had no way to
+clean up a mistaken animal or day. UI-only — no store/export change; 125 golden baselines
+byte-identical; full suite (4127), lint (0 errors), and build green.
+
+- **`Delete animal…`** ([AnimalWorkspace/index.jsx](../src/pages/AnimalWorkspace/index.jsx)): a
+  secondary/destructive action in its own danger zone at the foot of the selected-animal section —
+  discoverable in the animal's management area but deliberately set apart from the primary
+  setup/export actions, never adjacent to them.
+- **`Delete day…`**: a secondary/destructive action on each ordinary (OK) day row, rendered
+  OUTSIDE the navigation `<a>` (a real sibling button, not nested in the link) so it can't be hit
+  while opening the day. Recovered/wrong-owner rows keep their existing repair paths and get no
+  delete button.
+- **Honest confirmations** (destructive `alertdialog`): name the animal/day + session, the cascade
+  count, and the consequence (removed from this workspace and from export lists). When a day was
+  validated or exported, the confirm adds that this removes **workspace metadata only — it does not
+  delete any already-downloaded YAML, or any NWB file, DANDI asset, or Spyglass rows**. The animal
+  confirm computes its cascade count from the SAME predicate the store's `deleteAnimal` guard uses
+  (present, owned days — excluding wrong-owner records) and notes that wrong-owner records listed
+  by mistake are preserved.
+- After deleting the selected animal, the selection resets to the animal picker rather than
+  pointing at a deleted animal.
+- Tests ([AnimalWorkspace.lifecycle.test.jsx](../src/pages/AnimalWorkspace/__tests__/AnimalWorkspace.lifecycle.test.jsx)):
+  discoverable secondary actions; confirm names + cascade count; confirm/cancel paths; the
+  downloaded-artifacts caveat for exported days; the day-delete button is not nested in the link;
+  wrong-owner records excluded from the cascade and noted as preserved. The animal-delete trigger's
+  accessible name is "Delete this animal" (no id) so it doesn't collide with the sidebar animal-card
+  for assistive tech — the specific name + cascade live in the confirm dialog.
+
 ## Ownership defaults & day configurability — Phase 8.7 Task 7: opto setup vs. per-day protocol (June 7, 2026)
 
 Makes the two-layer optogenetics model explicit in the UI: the animal's **implanted setup** (excitation
