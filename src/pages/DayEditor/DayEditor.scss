@@ -1666,3 +1666,33 @@
 .config-reconfig-button {
   min-height: 44px;
 }
+
+/* Phase 8.7 Task 4: rig constants shown as effective, read-only recording-system values on the
+   day; the header path / units below stay day-only editable fields. */
+.day-technical-section {
+  .rig-constants {
+    padding: 0.5rem 0.7rem;
+    margin-bottom: 0.75rem;
+    background: #f4f7fa;
+    border-left: 3px solid #9aa7b4;
+    border-radius: 3px;
+
+    .readonly-field {
+      .field-label { font-weight: 600; font-size: 0.85rem; }
+      .readonly-value { font-family: monospace; padding: 0.15rem 0; }
+    }
+
+    .rig-constants-edit-link { grid-column: 1 / -1; margin: 0.25rem 0 0; }
+  }
+
+  .ownership-cue {
+    margin-left: 0.4rem;
+    padding: 0.05rem 0.4rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #4a5568;
+    background: #e6ebf0;
+    border-radius: 3px;
+    vertical-align: middle;
+  }
+}

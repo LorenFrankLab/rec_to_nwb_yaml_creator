@@ -6,6 +6,32 @@
 
 ---
 
+## Ownership defaults & day configurability — Phase 8.7 Task 4: day technical values as effective recording-system values (June 7, 2026)
+
+Makes the Day Editor technical section show the rig constants as effective recording-system values
+instead of hiding them. UI-only and ADDITIVE — no export, store, or routing change; the 125 golden
+baselines stay byte-identical and the full suite (4077), architecture guard, lint (0 errors), and
+build stay green.
+
+- **Found the real gap:** `DayTechnicalSection` previously rendered ONLY `default_header_file_path`
+  and `units` — the rig constants (`raw_data_to_volts` / `times_period_multiplier`) that the export
+  actually reads from `day.technical` were not shown at all. This is exactly the "don't show only
+  header/units while implying day-specific numeric values exist" hazard the plan flags.
+- **Rig constants now shown as effective, READ-ONLY recording-system values**
+  ([DayTechnicalSection.jsx](../src/pages/DayEditor/DayTechnicalSection.jsx)), labelled against the
+  CURRENT recording-system default (`animal.technicalDefaults`): `Using recording-system default`
+  when the day's copied value still matches, or `Different from current recording-system default
+  (current default: X)` when it differs (e.g. the default was changed after the day was created —
+  the day keeps what it recorded; no silent retroactive relabel). An `Edit in Recording System`
+  deep-link routes editing to the owner (it is not a routine day edit). No day-level override is
+  built — the Task 3 audit confirmed rig constants don't change day-to-day, and none existed before,
+  so this is purely additive (no capability removed) per the plan's read-only option.
+- **`default_header_file_path` framed as day-only:** carries a `This day only` ownership cue and
+  stays editable; `units` unchanged. `OverviewStep` now passes `recordingSystemDefaults` +
+  `animalKey` so the section can compute the comparison and the deep-link.
+- Added rig-constant tests (effective values + using-default/differs cues + the Recording System
+  deep-link + header-path-still-day-only); existing header/units tests unchanged.
+
 ## Ownership defaults & day configurability — Phase 8.7 Task 3: recording-system ownership (option B) (June 6, 2026)
 
 Implements the decided option-B recording-system contract. UI-only — no export, store, or routing

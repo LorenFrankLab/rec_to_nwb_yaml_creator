@@ -278,7 +278,12 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, an
 
       {/* Per-day technical parameters (default header path + units) live on
           day.technical, where the export reads them. */}
-      <DayTechnicalSection technical={day.technical} onFieldUpdate={onFieldUpdate} />
+      <DayTechnicalSection
+        technical={day.technical}
+        onFieldUpdate={onFieldUpdate}
+        recordingSystemDefaults={animal?.technicalDefaults}
+        animalKey={ownerKey}
+      />
 
       {/* Collapsible Inherited Metadata */}
       <section className="inherited-metadata-section">

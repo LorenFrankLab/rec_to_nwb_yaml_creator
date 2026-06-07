@@ -64,4 +64,67 @@ describe('DayTechnicalSection', () => {
 
     expect(onFieldUpdate).toHaveBeenCalledWith('technical.units', undefined);
   });
+
+  // Phase 8.7 Task 4: the rig constants (raw_data_to_volts / times_period_multiplier) are
+  // recording-system defaults copied into the day — shown here as effective, READ-ONLY values
+  // (not routine day edits), labelled against the CURRENT recording-system default.
+  describe('rig constants (effective recording-system values)', () => {
+    const DEFAULTS = { raw_data_to_volts: 0.195, times_period_multiplier: 1.5 };
+
+    it('shows the effective values and reads "Using recording-system default" when they match', () => {
+      render(
+        <DayTechnicalSection
+          technical={{ raw_data_to_volts: 0.195, times_period_multiplier: 1.5, default_header_file_path: '' }}
+          recordingSystemDefaults={DEFAULTS}
+          animalKey="remy"
+          onFieldUpdate={vi.fn()}
+        />
+      );
+      expect(screen.getByText('0.195')).toBeInTheDocument();
+      expect(screen.getByText('1.5')).toBeInTheDocument();
+      expect(screen.getAllByText(/using recording-system default/i).length).toBe(2);
+      // Not editable here — there is no number input for the rig constants.
+      expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
+    });
+
+    it('labels a day value that no longer matches the current default (no silent retroactive)', () => {
+      render(
+        <DayTechnicalSection
+          technical={{ raw_data_to_volts: 0.195, times_period_multiplier: 1.5 }}
+          // The recording-system default was changed to 0.2 AFTER this day was created; the day
+          // keeps its copied 0.195 and must say so, not silently read as "using default".
+          recordingSystemDefaults={{ raw_data_to_volts: 0.2, times_period_multiplier: 1.5 }}
+          animalKey="remy"
+          onFieldUpdate={vi.fn()}
+        />
+      );
+      expect(screen.getByText('0.195')).toBeInTheDocument();
+      expect(
+        screen.getByText(/different from current recording-system default \(current default: 0\.2\)/i)
+      ).toBeInTheDocument();
+      // The unchanged one still reads as using the default.
+      expect(screen.getByText(/using recording-system default/i)).toBeInTheDocument();
+    });
+
+    it('routes editing of the rig constants to Recording System (not a day edit)', () => {
+      render(
+        <DayTechnicalSection technical={DEFAULTS} recordingSystemDefaults={DEFAULTS} animalKey="remy" onFieldUpdate={vi.fn()} />
+      );
+      const link = screen.getByRole('link', { name: /edit in recording system/i });
+      expect(link.getAttribute('href')).toMatch(/#\/animal\/remy\/editor/);
+    });
+
+    it('keeps default_header_file_path a day-only, editable fact', async () => {
+      const user = userEvent.setup();
+      const onFieldUpdate = vi.fn();
+      render(
+        <DayTechnicalSection technical={DEFAULTS} recordingSystemDefaults={DEFAULTS} animalKey="remy" onFieldUpdate={onFieldUpdate} />
+      );
+      expect(screen.getByText(/this day only/i)).toBeInTheDocument();
+      const input = screen.getByLabelText(/default header file path/i);
+      await user.type(input, '/d/h.trodesconf');
+      await user.tab();
+      expect(onFieldUpdate).toHaveBeenCalledWith('technical.default_header_file_path', '/d/h.trodesconf');
+    });
+  });
 });
