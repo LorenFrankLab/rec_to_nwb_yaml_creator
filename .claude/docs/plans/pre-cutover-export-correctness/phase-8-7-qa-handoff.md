@@ -40,7 +40,7 @@ already-recorded day.
 | `lifecycle cleanup actions` (component/unit) | [AnimalWorkspace.lifecycle.test.jsx](../../../../src/pages/AnimalWorkspace/__tests__/AnimalWorkspace.lifecycle.test.jsx) |
 | `repair/preflight ownership wording` (component) | [IssueOwnershipHint.test.jsx](../../../../src/pages/DayEditor/__tests__/IssueOwnershipHint.test.jsx), RepairActions + ValidationStep tests |
 | `batch row scan contract` (component) | [ValidationSummary.test.jsx](../../../../src/pages/ValidationSummary/__tests__/ValidationSummary.test.jsx) (Setup column), [ExportStep.test.jsx](../../../../src/pages/DayEditor/__tests__/ExportStep.test.jsx) (preflight), [optoStatus.test.js](../../../../src/domain/__tests__/optoStatus.test.js) |
-| `golden baselines` (regression) | [src/__tests__/baselines/](../../../../src/__tests__/baselines/) — 125 assertions byte-identical; `resolveDayCameraUsage` full-set regression in cameraUsage.test.js |
+| `golden baselines` (regression) | [src/__tests__/baselines/](../../../../src/__tests__/baselines/) — all baseline assertions byte-identical (`npx vitest run baselines` for the live count); the byte-level "no baseline moves on the camera binding" guarantee actually lives in the `legacyParity`/`exportParity` integration suites (they call `mergeDayMetadata`; the golden baselines do not), backed by the `resolveDayCameraUsage` full-catalog unit pin in cameraUsage.test.js |
 
 ## Deferred / unresolved ownership decisions (carry into Phase 9+)
 
@@ -54,6 +54,40 @@ already-recorded day.
 3. **Opto preflight vs. editor copy** is now consistent (Task 10 shared `describeDayOptoState`), but
    the three-state label wording is new — Phase 9 should eyeball it in-browser against the FsGUI
    editor copy for tone match.
+
+## Whole-branch PR review (vs modern) — outcomes
+
+A 5-agent review (code / tests / silent-failure / comments / type-design) ran against the full branch.
+One Critical was found and **fixed**; the rest were Important/Suggestion. Accepted (not fixed) items
+and their rationale:
+
+- **[FIXED — Critical] `deleteDay` silent corruption.** An OK day can carry a record with no
+  `animalId` (corrupt import; the index is the authority). The store action read
+  `prev.animals[record.animalId]`, writing a junk `animals[undefined]` entry and leaving a dangling
+  reference — silently. Fixed: `deleteDay(dayId, ownerAnimalId?)` resolves the owner robustly
+  (explicit owner → record.animalId → index scan) and never indexes by undefined; the UI passes
+  `selectedAnimalId`. Regression test in workspace-day.test.js.
+- **[FIXED — Important] Camera-binding strictness guard.** Added a rulesValidation test pinning that
+  `dangling_camera_ref` is type-EXACT (so a mistyped ref blocks export), which is what makes the
+  day-used camera export narrowing safe — if the rule is ever relaxed to type-lenient the test fails.
+- **[FIXED — Suggestions] Cross-reference comments on `CAMERA_DEPENDENT_FIELDS` vs
+  `CAMERA_IDENTITY_FIELDS`; replaced the hardcoded golden-baseline count in this doc with a live-count
+  pointer (per CLAUDE.md "don't hard-code totals").**
+- **[ACCEPTED] IMPLANTED_NO_STIM / STIMULATED opto labels are unit-tested but not asserted to RENDER
+  in ExportStep/ValidationSummary.** `describeDayOptoState` has exhaustive unit coverage of all three
+  states; both summaries render `opto.label` through the identical expression proven by the
+  "No optogenetics" integration assertion, so a per-state render regression is near-impossible. The
+  ExportStep preflight only shows for non-blocked days (an opto-free implanted day needs a full
+  4-section implant fixture), so the integration assertion is deferred to **Phase 9 scenario 6**
+  (browser), which samples both the opto-free and stimulated days directly.
+- **[ACCEPTED] `collectAnimalSetupIssues` downgrades a merge failure to `console.debug`** so a day
+  pinned to a missing configuration version can leave the animal's setup checklist greener than
+  reality. The day is still flagged in its own editor; the aggregate under-report is cosmetic. Small
+  follow-up: push a synthetic "could not read day X config" issue (or `console.error`).
+- **[ACCEPTED — staged] `OWNERSHIP_PATTERN_META.cue/altCue/dayBehavior/label` and `OPTO_STATE.state`
+  are computed but not yet consumed by production UI** (only `primaryAction`/`label` are). They are
+  the single-source vocabulary for future ownership UI; the completeness test asserts they exist, but
+  no UI test guards their wording until they're wired in.
 
 ## Exact Phase 9 browser scenarios to sample
 
@@ -88,5 +122,5 @@ visually (jsdom proves the logic; the browser pass proves it reads right and not
 
 ## Gates (all green at handoff)
 
-`npx vitest run` (full suite), `npx vitest run baselines` (125 byte-identical), `npm run lint`
+`npx vitest run` (full suite), `npx vitest run baselines` (all byte-identical), `npm run lint`
 (0 errors), `npm run build`. Run before merging Phase 8.7 and again at the start of Phase 9.

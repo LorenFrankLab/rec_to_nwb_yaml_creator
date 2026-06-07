@@ -213,7 +213,10 @@ export function AnimalWorkspace() {
     const target = pendingDeleteDay;
     setPendingDeleteDay(null);
     if (!target?.dayId) return;
-    actions.deleteDay(target.dayId);
+    // Pass the owning animal explicitly: the delete button only renders on this selected animal's
+    // OK rows, and an OK row can have a record with no `animalId` (corrupt import) — the store
+    // would otherwise fail to clean the index. The UI knows the owner, so name it.
+    actions.deleteDay(target.dayId, selectedAnimalId);
   }
 
   /**

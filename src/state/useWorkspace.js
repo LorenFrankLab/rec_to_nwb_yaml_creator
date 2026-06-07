@@ -454,33 +454,50 @@ export function useWorkspace(initialState = null) {
       },
 
       /**
-       * Deletes a recording day
+       * Deletes a recording day and removes its id from the owning animal's index.
        *
-       * @param {string} dayId - Day identifier
-       * @throws {Error} If day does not exist
+       * The owning animal is resolved robustly rather than trusting `record.animalId`: a
+       * corrupt/partial import can leave an OK day (the index is the authority) with no `animalId`,
+       * and `prev.animals[undefined]` would then write a junk `animals[undefined]` entry AND leave
+       * a dangling reference in the real owner's index. Prefer the caller-supplied `ownerAnimalId`,
+       * then the record's `animalId`, then a scan of which animal indexes this day.
+       *
+       * @param {string} dayId - Day identifier.
+       * @param {string} [ownerAnimalId] - The owning animal id when the caller knows it (the UI
+       *   deletes from a selected animal). Used in preference to the record's `animalId`.
+       * @throws {Error} If day does not exist.
        */
-      deleteDay: (dayId) => {
+      deleteDay: (dayId, ownerAnimalId) => {
         setWorkspace((prev) => {
           if (!prev.days[dayId]) {
             throw new Error(`Day "${dayId}" not found`);
           }
 
-          const day = prev.days[dayId];
-          const animal = prev.animals[day.animalId];
-          const updatedAnimal = {
-            ...animal,
-            days: getAnimalDayIds(animal).filter((id) => id !== dayId),
-          };
+          const record = prev.days[dayId];
+          // Resolve the owner to a REAL animal key; never index by undefined/null.
+          const ownerKey =
+            ownerAnimalId != null && prev.animals[ownerAnimalId]
+              ? ownerAnimalId
+              : record.animalId != null && prev.animals[record.animalId]
+                ? record.animalId
+                : Object.keys(prev.animals).find((aid) =>
+                    getAnimalDayIds(prev.animals[aid]).includes(dayId)
+                  );
 
           const updatedDays = { ...prev.days };
           delete updatedDays[dayId];
 
+          const updatedAnimals = { ...prev.animals };
+          if (ownerKey != null && updatedAnimals[ownerKey]) {
+            updatedAnimals[ownerKey] = {
+              ...updatedAnimals[ownerKey],
+              days: getAnimalDayIds(updatedAnimals[ownerKey]).filter((id) => id !== dayId),
+            };
+          }
+
           return {
             ...prev,
-            animals: {
-              ...prev.animals,
-              [day.animalId]: updatedAnimal,
-            },
+            animals: updatedAnimals,
             days: updatedDays,
             lastModified: getCurrentTimestamp(),
           };

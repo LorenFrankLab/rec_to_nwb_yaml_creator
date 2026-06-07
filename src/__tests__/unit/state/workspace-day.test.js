@@ -478,6 +478,45 @@ describe('Day State Management', () => {
         });
       }).toThrow(/day.*not found/i);
     });
+
+    it('cleans the owning animal index for a corrupt day whose record has no animalId', () => {
+      // A corrupt/partial import can leave a day indexed under its animal with NO `animalId` on
+      // the record (the index is the authority — dayRecovery classifies it OK). deleteDay must
+      // still remove the id from the owning animal's index and must NOT write a junk
+      // `animals[undefined]`/`animals["undefined"]` entry or leave a dangling reference.
+      const initialState = {
+        workspace: {
+          animals: {
+            remy: {
+              id: 'remy',
+              subject: { subject_id: 'remy' },
+              days: ['remy-2023-06-22', 'remy-2023-06-23'],
+            },
+          },
+          days: {
+            // No animalId on the record being deleted (the corrupt shape).
+            'remy-2023-06-22': { id: 'remy-2023-06-22', date: '2023-06-22', session: { session_id: 's1' } },
+            'remy-2023-06-23': { id: 'remy-2023-06-23', animalId: 'remy', date: '2023-06-23', session: { session_id: 's2' } },
+          },
+          settings: {},
+        },
+      };
+      const { result } = renderHook(() => useStore(initialState));
+
+      act(() => {
+        result.current.actions.deleteDay('remy-2023-06-22', 'remy');
+      });
+
+      const { animals, days } = result.current.model.workspace;
+      // Record gone, sibling intact.
+      expect(days['remy-2023-06-22']).toBeUndefined();
+      expect(days['remy-2023-06-23']).toBeDefined();
+      // No dangling reference left in the owning animal's index.
+      expect(animals.remy.days).toEqual(['remy-2023-06-23']);
+      // No junk animal keyed by the missing animalId.
+      expect(animals).not.toHaveProperty('undefined');
+      expect(Object.keys(animals)).toEqual(['remy']);
+    });
   });
 
   describe('relinkDayReference', () => {

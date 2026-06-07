@@ -68,7 +68,15 @@ export const IDENTITY_FIELD_LABELS = {
   adc_circuit: 'ADC circuit',
 };
 
-/** Dependent fields that define a camera's identity beyond its `camera_name`. */
+/**
+ * Dependent fields that define a camera's identity beyond its `camera_name`, keyed by `id` for the
+ * Spyglass divergent-reuse registry (same name + different dependents = a divergence).
+ *
+ * NOTE: distinct from {@link CAMERA_IDENTITY_FIELDS} (below) on purpose — that one INCLUDES
+ * `camera_name` and EXCLUDES `id` because it answers a different question (does an in-place edit make
+ * this a new identity?). Don't "harmonize" the two: dropping `id` here would break the divergence
+ * registry; adding `id` there would break the immutable-once-referenced gate.
+ */
 export const CAMERA_DEPENDENT_FIELDS = ['id', 'meters_per_pixel', 'lens', 'model', 'manufacturer'];
 
 /**
@@ -78,6 +86,8 @@ export const CAMERA_DEPENDENT_FIELDS = ['id', 'meters_per_pixel', 'lens', 'model
  * detection (there is no separate handling because none is reachable). Used by the immutable-once-referenced rule
  * (Phase 8.7 Task 5b): changing any of these on a camera that recording days already reference is a
  * NEW camera by default, not a silent retroactive edit of those days' exports.
+ *
+ * NOTE: distinct from {@link CAMERA_DEPENDENT_FIELDS} (above) — see the note there.
  *
  * @type {ReadonlyArray<string>}
  */
