@@ -17,6 +17,7 @@ import ChannelMapsStep from './ChannelMapsStep';
 import ChannelMapEditor from './ChannelMapEditor';
 import HardwareConfigStep from './HardwareConfigStep';
 import OptogeneticsStep from './OptogeneticsStep';
+import AnimalProfileSection from './AnimalProfileSection';
 import AlertModal from '../../components/AlertModal';
 import { ConfirmDialog } from '../../components/Modal';
 import { generateChannelMapsForGroup, nextNtrodeId } from '../../utils/channelMapUtils';
@@ -814,6 +815,17 @@ export default function AnimalEditorStepper() {
           )}
         </div>
       </div>
+
+      {/* Phase 8.7 Task 2b: the discoverable owner for constant subject facts (species, sex, DOB,
+          genotype, description). Sits outside the device stepper (not a numbered step), so it
+          does not shift step indices; editing here names its animal-wide blast radius before save.
+          The Day Overview keeps inline subject repair, but is no longer the ONLY way to correct
+          shared subject facts. */}
+      <AnimalProfileSection
+        animal={animal}
+        dayCount={getAnimalDayIds(animal).length}
+        onSave={(subject) => actions.updateAnimal(animalId, { subject })}
+      />
 
       {/* Step indicators */}
       <nav className="animal-editor-step-nav" aria-label="Configuration steps">

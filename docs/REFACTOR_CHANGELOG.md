@@ -6,6 +6,38 @@
 
 ---
 
+## Ownership defaults & day configurability — Phase 8.7 Task 2b: Animal Profile surface (June 6, 2026)
+
+Second IA increment of sub-stream A: a discoverable owner for the animal's constant subject facts,
+so the Day Overview is no longer the only place to correct them. Baseline-safe (no export-byte or
+store change). Full suite (4070), 125 golden baselines byte-identical, architecture guard, lint
+(0 errors), and build all green.
+
+- **New `AnimalProfileSection`** ([src/pages/AnimalEditor/AnimalProfileSection.jsx](../src/pages/AnimalEditor/AnimalProfileSection.jsx)),
+  wired into the Animal Editor as a collapsible section ABOVE the device stepper (deliberately not a
+  numbered step, so step indices/deep-link routing are unchanged). It owns the constant subject
+  facts: `subject_id` (read-only identity — recreate the animal to change), species, sex,
+  date_of_birth, genotype, description. **Weight is intentionally excluded** — it is a per-day
+  recording fact (Task 2.5), not a constant animal fact.
+- **Identity constraints at the edit point.** Species shows the Latin-binomial / NCBI-Taxonomy-URI
+  guidance and blocks a non-conformant value before the animal-wide write (the app's
+  `invalid_species` rule is the only DANDI gate, reusing `isValidSpecies`); DOB shows the ISO-8601
+  expectation and is encoded to ISO on save.
+- **Blast-radius transparency before save.** Editing here is animal-wide, so the section names the
+  reach ("this animal and all N recording days, including any already exported") both as a
+  persistent notice at the edit point AND in a `ConfirmDialog` before committing; only the changed
+  subject fields are written (`updateAnimal(id, { subject })` shallow-merges). Save is disabled when
+  nothing changed (no accidental animal-wide write).
+- **Day Overview inherited-notice now names the count.** [OverviewStep.jsx](../src/pages/DayEditor/OverviewStep.jsx)
+  already routed inherited-subject edits to the animal with a qualitative notice; it now names "all
+  N recording days" too, so both correction surfaces state the blast radius.
+- Added a focused `AnimalProfileSection` component test (8 cases: read-only identity, species/DOB
+  guidance, blast-radius naming + confirm, species gate blocks save, ISO DOB encoding, dirty/disabled
+  save, singular/plural copy). Updated the screen-map Animal-Setup contract to mark this done.
+
+Still open in Task 2: the remaining step-label relabels (Electrode Groups → Electrodes & Ephys,
+etc.); the Animal Editor route/title `Animal Editor` → `Animal Setup` user-facing relabel.
+
 ## Ownership defaults & day configurability — Phase 8.7 Task 2a: Animal Editor IA labels + camera lens column (June 6, 2026)
 
 First implementation increment of sub-stream A's information-architecture work (Task 2, part a).

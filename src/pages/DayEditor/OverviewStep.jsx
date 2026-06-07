@@ -16,6 +16,7 @@ import {
   getAnimalSubject,
   getAnimalExperimenters,
   getExperimenterNames,
+  getAnimalDayIds,
 } from '../../state/workspaceSelectors';
 
 // The day-owned collections this step owns (raw-shape reset surface).
@@ -56,6 +57,9 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, an
   // blank/crashed step.
   const session = getDaySession(day);
   const subject = getAnimalSubject(animal);
+  // Phase 8.7 Task 2b: name the blast radius (count) for the inherited-subject edits below — a
+  // subject correction reaches every recording day this animal owns, not just this one.
+  const animalDayCount = getAnimalDayIds(animal).length;
   const experimenters = getAnimalExperimenters(animal);
   const experimenterNames = getExperimenterNames(animal);
   const keywords = getDayKeywords(day);
@@ -262,7 +266,8 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, an
               <h3>Subject Information</h3>
               <div className="inherited-notice">
                 Inherited from Animal — editing these fields updates the animal record
-                shared by all of its recording days, including any already exported.
+                shared by all {animalDayCount} recording day{animalDayCount === 1 ? '' : 's'},
+                including any already exported.
                 <a href={`#/animal/${ownerKey}/editor`}>Edit Animal</a>
               </div>
 

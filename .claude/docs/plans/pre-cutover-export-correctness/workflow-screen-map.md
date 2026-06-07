@@ -129,10 +129,13 @@ historical days keep their pinned versions. For data-acq today, no per-day bindi
 so edits are shared and must announce that limitation.
 
 Home remains the creation surface for a new animal, but it must not be the only discoverable
-place to correct animal profile facts. Phase 8.7 should add or expose an Animal Profile /
-Subject area in Animal Setup; Day Overview may offer inline repair for subject errors, but
-that repair must say it updates shared animal profile fields and should route to the profile
-owner when the user needs a broader edit.
+place to correct animal profile facts. **Done (Task 2b ✓):** the Animal Editor now renders an
+`AnimalProfileSection` (collapsible, above the device stepper) owning the constant subject facts
+(species with Latin-binomial/NCBI guidance, sex, DOB with ISO-8601 note, genotype, description;
+`subject_id` read-only) — it names its blast radius ("this animal and all N recording days,
+including any already exported") at the edit point AND in a confirmation before commit. Weight is
+deliberately excluded (a per-day fact — Task 2.5). The Day Overview keeps inline subject repair and
+its inherited-notice now names the day count N too, so it is no longer the only correction path.
 
 ## Day Editor screen contract
 
