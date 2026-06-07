@@ -129,9 +129,11 @@ describe('DayTechnicalSection', () => {
           onFieldUpdate={vi.fn()}
         />
       );
-      expect(screen.getAllByText(/not set for this day — required for export/i)).toHaveLength(2);
-      // It must NOT claim "using recording-system default" for an unset value.
+      expect(screen.getAllByText(/missing on this recording day — required for export/i)).toHaveLength(2);
+      // It must NOT claim "using recording-system default" for an unset value, nor steer to the
+      // animal default (which doesn't backfill an existing day).
       expect(screen.queryByText(/using recording-system default/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/set the recording-system default/i)).not.toBeInTheDocument();
     });
 
     it('keeps default_header_file_path a day-only, editable fact', async () => {

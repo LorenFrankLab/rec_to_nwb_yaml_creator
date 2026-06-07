@@ -252,12 +252,12 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, an
                   ? `${subject.weight} (animal baseline)`
                   : 'e.g. 450'
               }
-              onBlur={(e) =>
-                onFieldUpdate(
-                  'session.weight',
-                  e.target.value === '' ? undefined : Number(e.target.value)
-                )
-              }
+              onBlur={(e) => {
+                // Guard against NaN reaching state from a partially-valid number entry — write
+                // undefined (the fallback) rather than a NaN weight on the primary export path.
+                const value = e.target.valueAsNumber;
+                onFieldUpdate('session.weight', Number.isFinite(value) ? value : undefined);
+              }}
             />
             <span id="session-weight-help" className="field-help-text">
               {session.weight !== undefined

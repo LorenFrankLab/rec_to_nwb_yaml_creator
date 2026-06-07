@@ -87,7 +87,8 @@ describe('resolveDayCameraUsage', () => {
 
   it('returns the FULL catalog when every camera is referenced (the golden-fixture case → baselines unchanged)', () => {
     // Every golden/legacy fixture references all its cameras, so the day-used subset equals the
-    // full catalog and the 125 byte-identical baselines do not move.
+    // full catalog and the byte-identical export baselines do not move. (The merge byte-parity is
+    // carried by workspace-merge.test.js; this just pins the helper's full-catalog behavior.)
     const day = { tasks: [{ camera_id: [0, 1] }], fs_gui_yamls: [{ camera_id: 2 }] };
     expect(resolveDayCameraUsage(animal, day)).toEqual(animal.cameras);
   });

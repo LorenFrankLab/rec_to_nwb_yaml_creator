@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
 import { ConfirmDialog } from '../../components/Modal';
+import { duplicateTaskEpochs } from '../../validation/taskEpochs';
 import './TasksTable.scss';
 
 const REQUIRED_STRING_FIELDS = [
@@ -162,20 +163,10 @@ export default function TasksTable({
     );
   }
 
-  // Epoch numbers claimed by more than one task — each must belong to exactly one task
-  // (the export-blocking duplicate_task_epoch rule), surfaced inline per row below (Task 5c).
-  const epochCounts = {};
-  for (const task of tasks) {
-    (Array.isArray(task?.task_epochs) ? task.task_epochs : []).forEach((epoch) => {
-      const key = Number(epoch);
-      epochCounts[key] = (epochCounts[key] || 0) + 1;
-    });
-  }
-  const duplicateEpochs = new Set(
-    Object.entries(epochCounts)
-      .filter(([, count]) => count > 1)
-      .map(([epoch]) => Number(epoch))
-  );
+  // Epoch numbers claimed by more than one task — each must belong to exactly one task. The SAME
+  // helper drives the export-blocking duplicate_task_epoch rule, so the inline badge and the gate
+  // can never disagree (incl. the `1` vs `"1"` mixed-type case). Surfaced inline per row below.
+  const duplicateEpochs = duplicateTaskEpochs(tasks);
 
   return (
     <div className="tasks-table-section">

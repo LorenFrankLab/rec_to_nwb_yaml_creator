@@ -73,8 +73,9 @@ export const CAMERA_DEPENDENT_FIELDS = ['id', 'meters_per_pixel', 'lens', 'model
 
 /**
  * The fields whose change makes a camera a DIFFERENT identity (name + calibration/hardware). The
- * `id` is excluded — it keys the catalog item and is not user-meaningful identity here; a changed
- * `id` on an in-place edit is handled separately. Used by the immutable-once-referenced rule
+ * `id` is excluded because it is the immutable catalog key, rendered read-only in the camera modal
+ * (`CameraModal`) — it cannot change on an in-place edit, so it never needs identity-change
+ * detection (there is no separate handling because none is reachable). Used by the immutable-once-referenced rule
  * (Phase 8.7 Task 5b): changing any of these on a camera that recording days already reference is a
  * NEW camera by default, not a silent retroactive edit of those days' exports.
  *

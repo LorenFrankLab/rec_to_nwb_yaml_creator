@@ -303,9 +303,10 @@ export function mergeDayMetadata(animal, day) {
   // export validity); it just can't crash the merge here.
   // Phase 8.7 Task 5: export only the cameras THIS day used (filtered from the full catalog
   // objects), so a future catalog camera never leaks into a re-export of an old day. Byte-
-  // identical for any day that references all its cameras (every golden/legacy fixture does);
-  // a day that left a catalog camera unused now correctly drops it. `cameras: []` is preserved
-  // for a zero-camera day. Resolves downstream by `id`, so dropping unreferenced cameras is safe.
+  // identical for any day that references all its cameras (the workspace-merge parity fixture and
+  // every golden fixture do — so no baseline moves); a day that left a catalog camera unused now
+  // correctly drops it. `cameras: []` is preserved for a zero-camera day. Resolves downstream by
+  // `id`, so dropping unreferenced cameras is safe.
   const dayCameras = resolveDayCameraUsage(animal, day);
   const opto = animal.optogenetics || null;
   const experimenters = getAnimalExperimenters(animal);

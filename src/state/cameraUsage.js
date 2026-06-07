@@ -75,8 +75,9 @@ export function referencedCameraKeys(day) {
  *
  * NB: this FILTERS, so it emits exactly the referenced ids that RESOLVE to a catalog camera — a
  * DANGLING id (referenced but absent from the catalog) is necessarily OMITTED, not included. That
- * is safe: the export-blocking `dangling_camera_ref` rule fires first (its valid-id set is this
- * same subset), so a dangling reference never reaches a real export file.
+ * is safe: the export-blocking `dangling_camera_ref` rule gates export at least as strictly (it
+ * matches ids by exact type, so it can only be MORE eager to block than this String-normalized
+ * resolver), so a dangling reference never reaches a real export file.
  *
  * @param {object} animal - The owning animal (read shape-safely via `getAnimalCameras`).
  * @param {object} day - The recording day.

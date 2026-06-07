@@ -566,6 +566,22 @@ describe('HardwareConfigStep', () => {
         expect(dialog).toHaveTextContent('2023-06-23');
       });
 
+      it('shows the decision conservatively when a referencing day could not be loaded (no silent edit)', async () => {
+        const user = userEvent.setup();
+        const onFieldUpdate = vi.fn();
+        // The animal's index lists a day that is NOT in the days map (dangling/unrecovered) — we
+        // can't read its camera references, so the immutable-once-referenced guard must not be
+        // silently skipped.
+        const danglingAnimal = { ...referencedAnimal, days: ['remy-missing'] };
+        renderSeeded({ animals: { remy: danglingAnimal }, days: {} }, danglingAnimal, onFieldUpdate);
+
+        await editReferencedCamera(user);
+
+        const dialog = screen.getByRole('alertdialog');
+        expect(dialog).toHaveTextContent(/couldn.t be loaded/i);
+        expect(onFieldUpdate).not.toHaveBeenCalled();
+      });
+
       it('saves a no-identity-change edit directly even when referenced (no decision)', async () => {
         const user = userEvent.setup();
         const onFieldUpdate = vi.fn();

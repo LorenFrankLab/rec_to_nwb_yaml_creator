@@ -60,11 +60,15 @@ export default function HardwareConfigStep({
   const cameras = useMemo(() => getAnimalCameras(animal), [animal]);
 
   // This animal's recording-day records (for the camera blast-radius: which days reference a
-  // camera being edited). Read shape-safely from the workspace day map.
-  const animalDays = useMemo(
-    () => getAnimalDayIds(animal).map((id) => model.workspace?.days?.[id]).filter(Boolean),
-    [animal, model.workspace]
-  );
+  // camera being edited). Read shape-safely from the workspace day map. `hasUnresolvableDays`
+  // flags an index entry we could NOT load — we can't read its camera references, so we must not
+  // silently take the "no day references this camera" fast-path (that would defeat the
+  // no-silent-retroactive guard if a dangling day is the only referencer and is later recovered).
+  const { animalDays, hasUnresolvableDays } = useMemo(() => {
+    const ids = getAnimalDayIds(animal);
+    const resolved = ids.map((id) => model.workspace?.days?.[id]).filter(Boolean);
+    return { animalDays: resolved, hasUnresolvableDays: resolved.length < ids.length };
+  }, [animal, model.workspace]);
 
   // Data-acq identities elsewhere in the dataset (plus any other items on this
   // animal), for the DataAcqSection divergent-reuse check.
@@ -125,12 +129,14 @@ export default function HardwareConfigStep({
     if (cameraModal.mode === 'edit' && cameraModal.camera) {
       const original = cameraModal.camera;
       const affectedIds = findCameraAffectedDays(animalDays, original.id);
-      if (affectedIds.length > 0 && cameraIdentityChanged(original, cameraData)) {
+      // Conservative: if any day record couldn't be resolved, we can't rule out that it references
+      // this camera, so don't take the silent fast-path — let the user decide (new vs correct).
+      if ((affectedIds.length > 0 || hasUnresolvableDays) && cameraIdentityChanged(original, cameraData)) {
         const affectedDays = affectedIds.map((id) => ({
           id,
           date: animalDays.find((d) => d.id === id)?.date,
         }));
-        setCameraRefDecision({ camera: cameraData, original, affectedDays });
+        setCameraRefDecision({ camera: cameraData, original, affectedDays, hasUnresolvableDays });
         // Close the edit modal so ONLY the decision dialog is active — never two stacked
         // aria-modal dialogs (a11y) — and so the decision's Cancel/Escape both abort cleanly to
         // a single, consistent end state (nothing open, nothing written).
@@ -256,6 +262,7 @@ export default function HardwareConfigStep({
         isOpen={cameraRefDecision != null}
         camera={cameraRefDecision?.original}
         affectedDays={cameraRefDecision?.affectedDays || []}
+        hasUnresolvableDays={cameraRefDecision?.hasUnresolvableDays || false}
         onCreateNew={handleCreateNewCamera}
         onCorrect={handleCorrectCamera}
         onCancel={() => setCameraRefDecision(null)}

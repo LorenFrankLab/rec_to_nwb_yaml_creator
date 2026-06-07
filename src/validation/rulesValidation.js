@@ -5,6 +5,7 @@
  */
 
 import { isValidSpecies, idHasSlash } from './dandiSubject';
+import { duplicateTaskEpochs } from './taskEpochs';
 import { getChannelCount, validateDeviceType } from '../utils/deviceTypeUtils';
 import {
   getProbeShanks,
@@ -742,31 +743,21 @@ export const rulesValidation = (model) => {
   // A task with epochs and no camera is the explicitly-allowed no-camera path (a
   // camera-less epoch is valid; only a *video* needs a backing epoch + camera).
   if (Array.isArray(model.tasks) && model.tasks.length > 0) {
-    const epochOwners = new Map(); // epoch -> count across task rows
-    model.tasks.forEach((task) => {
-      const epochs = Array.isArray(task?.task_epochs) ? task.task_epochs : [];
-      epochs.forEach((e) => {
-        if (e === undefined || e === null) return;
-        epochOwners.set(e, (epochOwners.get(e) || 0) + 1);
+    // Number-normalized via the shared helper so a corrupt mixed-type epoch (`1` vs `"1"`) is the
+    // SAME epoch — it is downstream — and the inline task-table badge can never drift from this gate.
+    duplicateTaskEpochs(model.tasks).forEach((epoch) => {
+      issues.push({
+        path: 'tasks',
+        field: 'task_epochs',
+        step: 'epochs',
+        actionLabel: 'Fix task epochs',
+        code: 'duplicate_task_epoch',
+        repairSurface: 'day',
+        severity: 'error',
+        message:
+          `Task epoch ${epoch} is used by more than one task. Each epoch belongs to a ` +
+          `single task — duplicates collide on the Spyglass TaskEpoch key.`,
       });
-    });
-    const reportedEpochs = new Set();
-    epochOwners.forEach((count, epoch) => {
-      if (count > 1 && !reportedEpochs.has(epoch)) {
-        reportedEpochs.add(epoch);
-        issues.push({
-          path: 'tasks',
-          field: 'task_epochs',
-          step: 'epochs',
-          actionLabel: 'Fix task epochs',
-          code: 'duplicate_task_epoch',
-          repairSurface: 'day',
-          severity: 'error',
-          message:
-            `Task epoch ${epoch} is used by more than one task. Each epoch belongs to a ` +
-            `single task — duplicates collide on the Spyglass TaskEpoch key.`,
-        });
-      }
     });
   }
 

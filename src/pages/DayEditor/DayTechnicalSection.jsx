@@ -66,7 +66,10 @@ export default function DayTechnicalSection({ technical, onFieldUpdate, recordin
   const mult = resolveRigConstant(technical, recordingSystemDefaults, 'times_period_multiplier');
   const rigCue = (c) => {
     if (c.status === 'unset') {
-      return 'Not set for this day — required for export. Set the recording-system default.';
+      // Honest, no misleading remedy: these are read-only here and editing the animal default does
+      // NOT backfill an existing day (days keep their copied value), so don't steer there. The
+      // export gate (schema-required) blocks it; the user repairs/re-imports the corrupt day.
+      return 'Missing on this recording day — required for export. This day has no recording-system value (likely a corrupt/partial import).';
     }
     return c.status === 'default'
       ? 'Using recording-system default'
