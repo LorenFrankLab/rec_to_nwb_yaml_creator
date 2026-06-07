@@ -688,10 +688,11 @@ export default function AnimalEditorStepper() {
         .filter(map => normalizeIdKey(map.electrode_group_id) === normalizeIdKey(editingGroupId))
     : [];
 
-  // Step configuration
+  // Step configuration. Phase 8.7 Task 2c: user-facing step labels use scientist language
+  // (the screen-map targets) rather than schema/implementation terms.
   const steps = [
     {
-      label: 'Electrode Groups',
+      label: 'Electrodes & Ephys',
       component: (
         <ElectrodeGroupsStep
           animal={animal}
@@ -742,7 +743,7 @@ export default function AnimalEditorStepper() {
       ),
     },
     {
-      label: 'Optogenetics',
+      label: 'Optogenetics Setup',
       component: (
         <OptogeneticsStep
           animal={animal}
@@ -789,7 +790,7 @@ export default function AnimalEditorStepper() {
           ← Back to Workspace
         </a>
         <div className="animal-editor-title">
-          <h1>Animal Editor: {animal.id}</h1>
+          <h1>Animal Setup: {animal.id}</h1>
           {/* Frame the editor as SHARED animal setup, not a detached hardware form. Phase 8.7
               Task 2: be honest about blast radius per ownership kind — electrodes/probes are
               VERSIONED (each day keeps the configuration it was pinned to), but cameras and the

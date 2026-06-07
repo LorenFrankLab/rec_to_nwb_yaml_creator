@@ -8,7 +8,7 @@ import { repairTargetForIssue, animalEditorStepForFieldPath } from '../../../dom
  */
 describe('animalEditorStepForFieldPath', () => {
   it('maps electrode-group geometry paths to the Electrode Groups step (0)', () => {
-    expect(animalEditorStepForFieldPath('electrode_groups[0].location')).toMatchObject({ index: 0, label: 'Electrode Groups' });
+    expect(animalEditorStepForFieldPath('electrode_groups[0].location')).toMatchObject({ index: 0, label: 'Electrodes & Ephys' });
     expect(animalEditorStepForFieldPath('electrode_groups[2].device_type')).toMatchObject({ index: 0 });
     expect(animalEditorStepForFieldPath('electrode_groups[1].targeted_x')).toMatchObject({ index: 0 });
     // bare property paths (AJV "required" artifacts) still route by keyword
@@ -32,7 +32,7 @@ describe('animalEditorStepForFieldPath', () => {
   });
 
   it('maps animal-level optogenetics paths to the Optogenetics step (2)', () => {
-    expect(animalEditorStepForFieldPath('opto_excitation_source[0].name')).toMatchObject({ index: 2, label: 'Optogenetics' });
+    expect(animalEditorStepForFieldPath('opto_excitation_source[0].name')).toMatchObject({ index: 2, label: 'Optogenetics Setup' });
     expect(animalEditorStepForFieldPath('virus_injection[0].volume_in_ul')).toMatchObject({ index: 2 });
     expect(animalEditorStepForFieldPath('optical_fiber[0].location')).toMatchObject({ index: 2 });
   });
@@ -49,32 +49,32 @@ describe('animalEditorStepForFieldPath', () => {
 });
 
 describe('repairTargetForIssue — step-aware Animal Editor labels', () => {
-  it('labels a channel-map issue "Fix in Animal Editor → Channel Maps"', () => {
+  it('labels a channel-map issue "Fix in Animal Setup → Channel Maps"', () => {
     const target = repairTargetForIssue({
       code: 'channel_value_out_of_range',
       path: 'ntrode_electrode_group_channel_map[3]',
       repairSurface: 'animal',
     });
     expect(target.surface).toBe('animal');
-    expect(target.label).toBe('Fix in Animal Editor → Channel Maps');
+    expect(target.label).toBe('Fix in Animal Setup → Channel Maps');
   });
 
-  it('labels an electrode-group issue "Fix in Animal Editor → Electrode Groups"', () => {
+  it('labels an electrode-group issue "Fix in Animal Setup → Electrodes & Ephys"', () => {
     const target = repairTargetForIssue({
       code: 'empty_location',
       path: 'electrode_groups[0].location',
       repairSurface: 'animal',
     });
-    expect(target.label).toBe('Fix in Animal Editor → Electrode Groups');
+    expect(target.label).toBe('Fix in Animal Setup → Electrodes & Ephys');
   });
 
-  it('labels a camera issue "Fix in Animal Editor → Recording System, Cameras & DIO"', () => {
+  it('labels a camera issue "Fix in Animal Setup → Recording System, Cameras & DIO"', () => {
     const target = repairTargetForIssue({
       code: 'duplicate_camera_id',
       path: 'cameras[1].id',
       repairSurface: 'animal',
     });
-    expect(target.label).toBe('Fix in Animal Editor → Recording System, Cameras & DIO');
+    expect(target.label).toBe('Fix in Animal Setup → Recording System, Cameras & DIO');
   });
 
   it('does NOT add a step suffix for day-surface or none-surface issues', () => {

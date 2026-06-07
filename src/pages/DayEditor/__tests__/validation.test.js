@@ -788,7 +788,7 @@ describe('Boundary 2 — ownership by provenance, not path (High 3)', () => {
     // The merged electrode group is content-invalid (schema error on an electrode_groups
     // path). Because the DAY supplies that geometry (deviceOverrides.electrode_groups is an
     // array), the error is owned by the day override — fixing the animal snapshot can't
-    // clear it. So it must route to the day surface, not "Fix in Animal Editor".
+    // clear it. So it must route to the day surface, not "Fix in Animal Setup".
     const erroringMerged = { electrode_groups: [{ id: 0 }], ntrode_electrode_group_channel_map: [] };
     const day = { deviceOverrides: { electrode_groups: [{ id: 0 }] } };
     const geometryErrors = validateDay(day, erroringMerged).filter(

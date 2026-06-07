@@ -6,6 +6,29 @@
 
 ---
 
+## Ownership defaults & day configurability — Phase 8.7 Task 2c: finish the Animal Setup relabels (June 6, 2026)
+
+Closes out Task 2's remaining user-facing relabels (the IA section split + lens column landed in 2a;
+the Animal Profile surface in 2b). Pure label/copy change — no behavior, export, or routing change
+(deep-link routing resolves by step INDEX, not label). Full suite (4072), 125 golden baselines
+byte-identical, architecture guard, lint (0 errors), and build all green.
+
+- **Animal Editor step labels → scientist language** ([AnimalEditorStepper.jsx](../src/pages/AnimalEditor/AnimalEditorStepper.jsx)
+  + [validation.js `ANIMAL_EDITOR_STEPS`](../src/domain/validation.js), kept in sync): `Electrode Groups`
+  → `Electrodes & Ephys`, `Optogenetics` → `Optogenetics Setup` (and `Hardware Config` →
+  `Recording System, Cameras & DIO` from 2a). `Channel Maps` already matched the target.
+- **Page title** `Animal Editor: {id}` → `Animal Setup: {id}` — "Animal Editor" was implementation
+  language; the screen map wants the page to read as shared Animal Setup. The `#/animal/:id/editor`
+  route and component names stay as internal identifiers.
+- **Repair-button copy** `Fix in Animal Editor →` → `Fix in Animal Setup →`, generated once in
+  `repairTargetForIssue` ([validation.js](../src/domain/validation.js)) and used by the Day Editor
+  Devices/Export/Validation repair surfaces (the two hardcoded "Fix in Animal Editor" links in
+  [DevicesStep.jsx](../src/pages/DayEditor/DevicesStep.jsx) / [ExportStep.jsx](../src/pages/DayEditor/ExportStep.jsx)
+  updated too), so the repair destination reads in user language consistently with the page title.
+- Updated the affected test assertions (title, repair-button name matchers, step-label/route labels)
+  across the Animal Editor, Day Editor repair, and routing suites; refreshed the screen-map
+  reconciliation rows to mark these done. Task 2 (a/b/2.5/c) is now complete.
+
 ## Ownership defaults & day configurability — Phase 8.7 Task 2.5: weight is a recording-day fact (June 6, 2026)
 
 Reverses the weight data flow so the Day Overview owns the exported session weight, with the

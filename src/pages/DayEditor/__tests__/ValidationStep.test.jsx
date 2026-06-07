@@ -118,7 +118,7 @@ describe('ValidationStep', () => {
     render(<ValidationStep {...baseProps} animal={{ id: 'remy' }} onNavigate={onNavigate} />);
 
     // The button names the Animal Editor (the editable owner), not the Devices step.
-    await user.click(screen.getByRole('button', { name: /fix in animal editor/i }));
+    await user.click(screen.getByRole('button', { name: /fix in animal setup/i }));
     expect(screen.queryByRole('button', { name: /fix in devices/i })).not.toBeInTheDocument();
 
     expect(onNavigate).toHaveBeenCalledWith('animal', 'electrode_groups[0].targeted_x');

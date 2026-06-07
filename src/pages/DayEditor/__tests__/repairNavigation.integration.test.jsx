@@ -74,7 +74,7 @@ describe('Day editor repair-action navigation (integration)', () => {
     await user.click(screen.getByRole('button', { name: /^Validation/ }));
     // The empty-location error is one of potentially several animal-surface repairs;
     // any of them hands off to the same Animal Editor route.
-    const [animalFix] = screen.getAllByRole('button', { name: /fix in animal editor/i });
+    const [animalFix] = screen.getAllByRole('button', { name: /fix in animal setup/i });
     await user.click(animalFix);
 
     // Handed off to the Animal Editor route for this animal (no dead-end in the Day Editor).
@@ -98,7 +98,7 @@ describe('Day editor repair-action navigation (integration)', () => {
     );
 
     await user.click(screen.getByRole('button', { name: /^Validation/ }));
-    const [animalFix] = screen.getAllByRole('button', { name: /fix in animal editor/i });
+    const [animalFix] = screen.getAllByRole('button', { name: /fix in animal setup/i });
     await user.click(animalFix);
 
     // The field query param carries the (URL-encoded) issue path.

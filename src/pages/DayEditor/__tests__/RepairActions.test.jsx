@@ -58,7 +58,7 @@ describe('RepairActions', () => {
       />
     );
 
-    const button = screen.getByRole('button', { name: /fix in animal editor/i });
+    const button = screen.getByRole('button', { name: /fix in animal setup/i });
     await user.click(button);
     // The animal surface routes via the 'animal' sentinel so the Day Editor handler
     // can hand off to the Animal Editor route; the field target is preserved.
@@ -76,7 +76,7 @@ describe('RepairActions', () => {
       />
     );
 
-    await user.click(screen.getByRole('button', { name: /fix in animal editor/i }));
+    await user.click(screen.getByRole('button', { name: /fix in animal setup/i }));
     expect(onNavigate).toHaveBeenCalledWith('animal', 'electrode_groups[0].targeted_x');
   });
 
@@ -153,7 +153,7 @@ describe('RepairActions', () => {
     render(<RepairActions issues={[issue]} onNavigate={onNavigate} animalId="remy" />);
 
     // With no executor wired, the commandable issue still routes to its editable owner.
-    const button = screen.getByRole('button', { name: /fix in animal editor/i });
+    const button = screen.getByRole('button', { name: /fix in animal setup/i });
     await user.click(button);
     expect(onNavigate).toHaveBeenCalledWith('animal', 'cameras');
   });

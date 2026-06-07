@@ -181,7 +181,7 @@ describe('AnimalEditorStepper', () => {
   describe('Animal validation', () => {
     it('renders stepper when animal exists', () => {
       renderWithStore(<AnimalEditorStepper />);
-      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Animal Editor: remy');
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Animal Setup: remy');
     });
 
     it('frames the editor as shared animal setup with honest per-kind blast radius', () => {
@@ -619,9 +619,9 @@ describe('AnimalEditorStepper', () => {
   describe('Step indicators', () => {
     it('shows the step indicators with correct labels', () => {
       renderWithStore(<AnimalEditorStepper />);
-      expect(screen.getByText('Electrode Groups')).toBeInTheDocument();
+      expect(screen.getByText('Electrodes & Ephys')).toBeInTheDocument();
       expect(screen.getByText('Channel Maps')).toBeInTheDocument();
-      expect(screen.getByText('Optogenetics')).toBeInTheDocument();
+      expect(screen.getByText('Optogenetics Setup')).toBeInTheDocument();
       // Phase 8.7 Task 2: "Hardware Config" → ownership-named label for the step.
       expect(screen.getByText('Recording System, Cameras & DIO')).toBeInTheDocument();
     });
@@ -630,7 +630,7 @@ describe('AnimalEditorStepper', () => {
       renderWithStore(<AnimalEditorStepper />);
       const nav = screen.getByRole('navigation', { name: /configuration steps/i });
       const electrodeGroupsStep = nav.querySelector('.active');
-      expect(electrodeGroupsStep).toHaveTextContent('Electrode Groups');
+      expect(electrodeGroupsStep).toHaveTextContent('Electrodes & Ephys');
     });
   });
 
@@ -638,7 +638,7 @@ describe('AnimalEditorStepper', () => {
     it('has proper heading with animal ID', () => {
       renderWithStore(<AnimalEditorStepper />);
       const heading = screen.getByRole('heading', { level: 1 });
-      expect(heading).toHaveTextContent('Animal Editor: remy');
+      expect(heading).toHaveTextContent('Animal Setup: remy');
     });
 
     it('navigation has proper aria-label', () => {

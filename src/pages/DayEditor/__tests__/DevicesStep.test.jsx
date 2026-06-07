@@ -485,7 +485,7 @@ describe('DevicesStep', () => {
     expect(errorMessages[0]).toBeInTheDocument();
     // The fix link deep-links to the Channel Maps step (the owner of the missing map),
     // not the bare Animal Editor (there are multiple links, one per group).
-    const fixLinks = screen.getAllByRole('link', { name: /fix in animal editor/i });
+    const fixLinks = screen.getAllByRole('link', { name: /fix in animal setup/i });
     expect(fixLinks[0]).toHaveAttribute(
       'href',
       '#/animal/test-animal/editor?field=ntrode_electrode_group_channel_map'

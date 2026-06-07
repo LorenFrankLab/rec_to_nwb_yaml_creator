@@ -242,7 +242,7 @@ export default function ExportStep({ animal, day, onNavigate, onRepair, animalKe
                   data-repair-surface={owner}
                   onClick={() => onNavigate?.(owner === 'animal' ? 'animal' : step, field)}
                 >
-                  {owner === 'animal' ? 'Fix in Animal Editor' : `Fix in ${STEP_LABELS[step] || step}`}
+                  {owner === 'animal' ? 'Fix in Animal Setup' : `Fix in ${STEP_LABELS[step] || step}`}
                 </button>
               ))}
             </div>

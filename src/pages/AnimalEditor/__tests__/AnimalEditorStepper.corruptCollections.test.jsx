@@ -85,7 +85,7 @@ describe('AnimalEditorStepper — tolerates corrupt persisted collections', () =
       );
     }).not.toThrow();
 
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Animal Editor: remy');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Animal Setup: remy');
   });
 
   it('does not throw when configurationHistory is corrupt without a version param', () => {

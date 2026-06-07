@@ -311,7 +311,7 @@ export function validateDay(day, mergedDay, animal) {
   // WHERE the merged geometry came from — the animal snapshot (animal-owned, edit there)
   // or a day-level override (day-owned, the snapshot is the wrong editor). Re-tag base
   // geometry errors to the day when the day overrides that geometry, so they don't
-  // dead-end on "Fix in Animal Editor".
+  // dead-end on "Fix in Animal Setup".
   const taggedBase = tagBaseOwnershipByProvenance(base, dayGeometryProvenance(day));
   // Stamp every issue with the canonical ownership contract (normalizeIssue) so consumers
   // read `ownerSurface`/`step`/`focusPath` directly — never re-inferring — and an issue
@@ -863,9 +863,10 @@ function deriveSurfaceFromPath(issue) {
  * @type {Array<{ index: number, label: string }>}
  */
 export const ANIMAL_EDITOR_STEPS = [
-  { index: 0, label: 'Electrode Groups' },
+  // Phase 8.7 Task 2c: labels match the stepper's user-facing step labels (scientist language).
+  { index: 0, label: 'Electrodes & Ephys' },
   { index: 1, label: 'Channel Maps' },
-  { index: 2, label: 'Optogenetics' },
+  { index: 2, label: 'Optogenetics Setup' },
   // Phase 8.7 Task 2: matches the stepper's user-facing label for this step (camera /
   // data-acq / configurationHistory repairs deep-link here), replacing "Hardware Config".
   { index: 3, label: 'Recording System, Cameras & DIO' },
@@ -916,7 +917,7 @@ export function animalEditorStepForFieldPath(fieldPath) {
  *
  * For `day`, the owning step is {@link stepIdForIssue} (which itself honors an explicit
  * `issue.step`); the label is "Fix in {StepLabel}". For `animal`, the label is
- * "Fix in Animal Editor". For `none`, no button is rendered (the label is informational).
+ * "Fix in Animal Setup". For `none`, no button is rendered (the label is informational).
  *
  * @param {{code?: string, path?: string, instancePath?: string, step?: string, repairSurface?: string}} issue
  * @returns {{surface: 'day'|'animal'|'none', step: string|null, label: string}}
@@ -939,7 +940,7 @@ export function repairTargetForIssue(issue) {
   if (surface === 'animal') {
     // Step-aware label so the user knows which Animal Editor step the fix lives in.
     const { label: stepLabel } = animalEditorStepForFieldPath(issue?.path || issue?.instancePath);
-    return { surface: 'animal', step: null, label: `Fix in Animal Editor → ${stepLabel}` };
+    return { surface: 'animal', step: null, label: `Fix in Animal Setup → ${stepLabel}` };
   }
   if (surface === 'none') {
     return { surface: 'none', step: null, label: 'No in-app fix' };
