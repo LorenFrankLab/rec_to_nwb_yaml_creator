@@ -106,12 +106,32 @@ describe('DayTechnicalSection', () => {
       expect(screen.getByText(/using recording-system default/i)).toBeInTheDocument();
     });
 
-    it('routes editing of the rig constants to Recording System (not a day edit)', () => {
+    it('routes editing of the rig constants to the Recording System step (not a day edit)', () => {
       render(
         <DayTechnicalSection technical={DEFAULTS} recordingSystemDefaults={DEFAULTS} animalKey="remy" onFieldUpdate={vi.fn()} />
       );
       const link = screen.getByRole('link', { name: /edit in recording system/i });
-      expect(link.getAttribute('href')).toMatch(/#\/animal\/remy\/editor/);
+      // Pin the field target: ?field=data_acq_device deep-links to the Recording System step
+      // (animalEditorStepForFieldPath: path.includes('data_acq') → step 3). A wrong keyword would
+      // mis-route, so the component's field choice is load-bearing.
+      expect(link.getAttribute('href')).toBe('#/animal/remy/editor?field=data_acq_device');
+    });
+
+    it('flags a rig constant that is not set on the day (defense-in-depth: would fail export)', () => {
+      // createDayRecord always seeds these, so an absent value only arises from corrupt/migrated
+      // state — the export reads day.technical[field] directly with no omit-guard, so undefined
+      // fails the schema's required check. Surface that, don't falsely reassure "using default".
+      render(
+        <DayTechnicalSection
+          technical={{ default_header_file_path: '' }}
+          recordingSystemDefaults={DEFAULTS}
+          animalKey="remy"
+          onFieldUpdate={vi.fn()}
+        />
+      );
+      expect(screen.getAllByText(/not set for this day — required for export/i)).toHaveLength(2);
+      // It must NOT claim "using recording-system default" for an unset value.
+      expect(screen.queryByText(/using recording-system default/i)).not.toBeInTheDocument();
     });
 
     it('keeps default_header_file_path a day-only, editable fact', async () => {

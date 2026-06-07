@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
 
-/** Fallback rig-constant values (match `createDayRecord` / the schema defaults). */
+/** Fallback rig-constant values (match `createDayRecord`'s seeding fallbacks, not the schema
+ *  `default` of 0.0 — these are the app's seeded values). */
 const RIG_FALLBACK = { raw_data_to_volts: 0.195, times_period_multiplier: 1.5 };
 
 /**
@@ -10,23 +11,23 @@ const RIG_FALLBACK = { raw_data_to_volts: 0.195, times_period_multiplier: 1.5 };
  * if the default later changed the day legitimately differs — say so honestly ("Different from
  * current recording-system default"), never silently relabel it as "using default".
  *
+ * Returns one of three statuses. `'unset'` (defense-in-depth): `createDayRecord` always seeds these,
+ * so an absent day value only arises from corrupt/migrated persisted state — and the export reads
+ * `day.technical[field]` directly with NO empty-omit guard, so an undefined value fails the schema's
+ * required check. Surface that honestly rather than falsely reassuring "using default".
+ *
  * @param {object} technical - The day's `technical` block.
  * @param {object} defaults - The animal's `technicalDefaults`.
  * @param {string} field - `'raw_data_to_volts'` | `'times_period_multiplier'`.
- * @returns {{ display: number, matchesDefault: boolean, currentDefault: number }}
+ * @returns {{ display: (number|string), status: 'default'|'differs'|'unset', currentDefault: number }}
  */
 function resolveRigConstant(technical, defaults, field) {
   const dayVal = technical?.[field];
   const currentDefault =
     typeof defaults?.[field] === 'number' ? defaults[field] : RIG_FALLBACK[field];
   const hasDay = typeof dayVal === 'number';
-  return {
-    display: hasDay ? dayVal : currentDefault,
-    // No per-field override provenance is stored, so "matches" is the only thing we can assert
-    // honestly: an unset day value (a fresh day) reads as the default; a set value is compared.
-    matchesDefault: !hasDay || dayVal === currentDefault,
-    currentDefault,
-  };
+  const status = !hasDay ? 'unset' : dayVal === currentDefault ? 'default' : 'differs';
+  return { display: hasDay ? dayVal : '—', status, currentDefault };
 }
 
 /**
@@ -63,10 +64,14 @@ export default function DayTechnicalSection({ technical, onFieldUpdate, recordin
 
   const raw = resolveRigConstant(technical, recordingSystemDefaults, 'raw_data_to_volts');
   const mult = resolveRigConstant(technical, recordingSystemDefaults, 'times_period_multiplier');
-  const rigCue = (c) =>
-    c.matchesDefault
+  const rigCue = (c) => {
+    if (c.status === 'unset') {
+      return 'Not set for this day — required for export. Set the recording-system default.';
+    }
+    return c.status === 'default'
       ? 'Using recording-system default'
       : `Different from current recording-system default (current default: ${c.currentDefault})`;
+  };
 
   const change = (key, value) => setLocal((prev) => ({ ...prev, [key]: value }));
 
@@ -96,7 +101,9 @@ export default function DayTechnicalSection({ technical, onFieldUpdate, recordin
   return (
     <section className="day-editor-section day-technical-section">
       <details>
-        <summary>Technical parameters (this day)</summary>
+        {/* Not "(this day)": this section mixes recording-system values (the read-only rig
+            constants) with genuine day-only facts (header path, units), each labelled in place. */}
+        <summary>Technical parameters</summary>
 
         {/* Recording-system rig constants — effective, READ-ONLY values for this day (copied
             from the recording-system defaults at creation). Not routine day edits; edit the
