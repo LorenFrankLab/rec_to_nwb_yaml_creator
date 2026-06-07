@@ -27,15 +27,23 @@ describe('IssueOwnershipHint', () => {
     expect(screen.queryByText(/affects more than this day/i)).not.toBeInTheDocument();
   });
 
+  it('names the recovered-data action for a corrupt/recovered-shape issue', () => {
+    // malformed_day_collection is a real existing-data code → recovered_data pattern.
+    render(<IssueOwnershipHint issue={{ code: 'malformed_day_collection', path: '' }} />);
+    expect(screen.getByText('Repair recovered data')).toBeInTheDocument();
+  });
+
   it('renders the descriptor primaryAction verbatim and gates the reach cue on reachesBeyondDay', () => {
-    // Drive several representative codes and assert the hint mirrors ownershipForIssue exactly,
-    // so the rendered copy can never drift from the single ownership descriptor source.
+    // Drive several representative codes — one per distinct ownership pattern reachable here — and
+    // assert the hint mirrors ownershipForIssue exactly, so the rendered copy can never drift from
+    // the single ownership descriptor source. (Each code is a REAL validator code so the mapping,
+    // not just the rendering, is exercised.)
     const codes = [
-      'empty_location',
-      'dangling_camera_ref',
-      'duplicate_behavioral_event_description',
-      'unpinned_configuration',
-      'raw_corruption',
+      'empty_location', // configuration_version (animal) — reaches beyond the day
+      'dangling_camera_ref', // animal_catalog_reference (day) — local
+      'duplicate_behavioral_event_description', // day_exported_list — local
+      'unpinned_configuration', // configuration_version (day) — local
+      'malformed_day_collection', // recovered_data — local
     ];
     for (const code of codes) {
       const issue = { code, path: '' };

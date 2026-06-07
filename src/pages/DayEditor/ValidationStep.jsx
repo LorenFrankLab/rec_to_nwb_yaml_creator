@@ -152,7 +152,11 @@ function SeveritySection({ title, severity, issues, onNavigate, animalId, onRepa
                 <li key={`${issue.path}-${issue.code}-${index}`} className="validation-issue">
                   <span className="validation-issue-message">{issue.message}</span>
                   {issue.path && <code className="validation-issue-path">{issue.path}</code>}
-                  <IssueOwnershipHint issue={issue} />
+                  {/* Ownership hint only on export-blocking errors — the same gate as the repair
+                      button. A non-blocking warning/info already carries its own specific advice;
+                      adding a generic pattern action + the emphasized cross-day cue there would be
+                      noise (and can read as contradicting the advisory's own actionLabel). */}
+                  {severity === 'error' && <IssueOwnershipHint issue={issue} />}
                   {showButton && (
                     <RepairActionButton issue={issue} onNavigate={onNavigate} animalId={animalId} onRepair={onRepair} />
                   )}

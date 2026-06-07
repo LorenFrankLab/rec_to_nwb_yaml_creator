@@ -26,7 +26,10 @@ baselines byte-identical; full suite (4136), lint (0 errors), and build green.
 - **Wired into both issue surfaces, identically**: the Day Editor's `ValidationStep`
   ([ValidationStep.jsx](../src/pages/DayEditor/ValidationStep.jsx)) and the shared `RepairActions`
   ([RepairActions.jsx](../src/pages/DayEditor/RepairActions.jsx)) list used by the blocked-Export
-  preflight. Both now render the hint per issue.
+  preflight. The hint shows only on **export-blocking errors** (the same gate as the repair button):
+  a non-blocking warning/info already carries its own specific advice, so adding a generic pattern
+  action + the emphasized cross-day cue there would be noise (and could read as contradicting the
+  advisory). `RepairActions` only ever receives blocking errors, so it always renders the hint.
 - **Blast-radius is surface-aware, not pattern-default**: e.g. a `dangling_camera_ref` (selecting
   the camera used on this day) is a day-local repair and shows NO cross-day cue, while an
   `empty_location` (versioned probe geometry) shows "Pin or fix the configuration version · Affects
