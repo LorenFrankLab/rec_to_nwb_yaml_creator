@@ -55,6 +55,16 @@ describe('describeDayOptoState', () => {
     expect(result.label).toMatch(/stimulation on epoch 3\b/i);
   });
 
+  it('orders epochs numerically even for corrupt string epochs (deterministic display)', () => {
+    // The helper runs on unvalidated state; a bad import can carry string epochs. The order must
+    // still be deterministic (numeric), not the NaN-driven order of a string subtraction.
+    const merged = {
+      opto_excitation_source: [{ name: 'LED' }],
+      fs_gui_yamls: [{ name: 'p.yaml', epochs: ['10', '2', '1'] }],
+    };
+    expect(describeDayOptoState(merged).label).toMatch(/stimulation on epochs 1, 2, 10\b/i);
+  });
+
   it('reports generic stimulation when fs_gui protocols carry no epoch list', () => {
     const merged = { opto_excitation_source: [{ name: 'LED' }], fs_gui_yamls: [{ name: 'p.yaml' }] };
     const result = describeDayOptoState(merged);

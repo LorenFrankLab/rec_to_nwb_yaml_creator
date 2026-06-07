@@ -44,9 +44,12 @@ export function describeDayOptoState(mergedDay) {
   const fsGui = asArray(day.fs_gui_yamls);
 
   if (fsGui.length > 0) {
+    // Numeric-coercing sort so a corrupt import with string epochs ("2") still orders
+    // deterministically — the helper runs on unvalidated workspace state, so it can't assume the
+    // schema's integer epochs. (The validator flags such data separately; this is display-only.)
     const epochs = [
       ...new Set(fsGui.flatMap((protocol) => asArray(protocol?.epochs))),
-    ].sort((a, b) => a - b);
+    ].sort((a, b) => Number(a) - Number(b));
     const label =
       epochs.length > 0
         ? `Stimulation on epoch${epochs.length === 1 ? '' : 's'} ${epochs.join(', ')}`
