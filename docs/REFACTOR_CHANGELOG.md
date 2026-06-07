@@ -81,10 +81,26 @@ day-used camera export binding (Task 5) are later sub-streams, deliberately out 
   subtitle overpromising camera/data-acq per-day versioning (Tasks 3/5) and opto preflight/batch
   status reporting implant metadata instead of day protocol state (Tasks 7/10).
 
+### Review round 2 fixes (code-review, same day)
+
+- **Encoded `units` in the helper (Medium).** The matrix classified `units` as
+  `setup_default_to_day`, but the keyword scan had no `units` entry, so `day.technical.units` fell
+  through to a generic day fact — the wrong cue for Task 4's technical/defaults UI. Added a `units`
+  keyword to the scan, placed AFTER `electrode` so an electrode-group `units` subfield stays
+  `configuration_version`; added tests for both `day.technical.units` (setup-default) and
+  `electrode_groups[0].units` (configuration-version, the ordering guard).
+- **Corrected two stale `repairTargetForIssue` fixtures (Medium).** In
+  `src/pages/DayEditor/__tests__/validation.test.js`, `invalid_species` was an ANIMAL_CODES fixture
+  with `repairSurface:'animal'` and `partial_configuration` a DAY_CODES fixture with
+  `repairSurface:'day'` — both contradicting what the rules emit (`invalid_species` → `'day'`/Overview;
+  `partial_configuration` → `'animal'`/Optogenetics). They only passed because an explicit
+  `repairSurface` wins, so they asserted inputs production never produces. Moved each fixture to the
+  correct array with the production surface/step, so the tests now lock the real routing contract.
+
 ### Test results
 
-- Full suite: 4058 tests passing (248 files), +37 from the new ownership descriptor (30 initial + 7
-  in the review round).
+- Full suite: 4059 tests passing (248 files), +38 from the new ownership descriptor across the
+  foundation + two review rounds.
 - Golden baselines: 125/125 byte-identical.
 - Architecture-boundary guard: green (no domain→page import introduced).
 - Lint: 0 errors (pre-existing JSDoc warnings only). Build: succeeds.

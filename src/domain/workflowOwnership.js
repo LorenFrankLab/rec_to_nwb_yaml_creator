@@ -230,6 +230,10 @@ const PATTERN_BY_PATH_KEYWORD = Object.freeze([
   ['ntrode', OWNERSHIP_PATTERN.CONFIGURATION_VERSION],
   ['electrode', OWNERSHIP_PATTERN.CONFIGURATION_VERSION],
   ['configuration', OWNERSHIP_PATTERN.CONFIGURATION_VERSION],
+  // Recording-system units (analog / behavioral_events unit strings) copied into day.technical.
+  // MUST come AFTER `electrode`, since an electrode group also carries a `units` subfield that
+  // belongs to the versioned config, not the recording-system default.
+  ['units', OWNERSHIP_PATTERN.SETUP_DEFAULT_TO_DAY],
   // Shared recording system (data-acq, option B).
   ['data_acq', OWNERSHIP_PATTERN.ANIMAL_SETUP],
   // Animal-level optogenetics implanted setup.

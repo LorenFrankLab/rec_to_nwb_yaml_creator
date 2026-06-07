@@ -327,12 +327,26 @@ describe('ownershipForFieldPath', () => {
     );
   });
 
-  it('maps rig constants to the recording-system default → day-value pattern', () => {
+  it('maps rig constants and recording-system units to the default → day-value pattern', () => {
     expect(ownershipForFieldPath('raw_data_to_volts').pattern).toBe(
       OWNERSHIP_PATTERN.SETUP_DEFAULT_TO_DAY
     );
     expect(ownershipForFieldPath('times_period_multiplier').pattern).toBe(
       OWNERSHIP_PATTERN.SETUP_DEFAULT_TO_DAY
+    );
+    expect(ownershipForFieldPath('day.technical.units').pattern).toBe(
+      OWNERSHIP_PATTERN.SETUP_DEFAULT_TO_DAY
+    );
+    expect(ownershipForFieldPath('technical.units.analog').pattern).toBe(
+      OWNERSHIP_PATTERN.SETUP_DEFAULT_TO_DAY
+    );
+  });
+
+  it('keeps an electrode-group `units` subfield with the versioned configuration (ordering guard)', () => {
+    // `units` also appears on electrode_groups; `electrode` must win so the config snapshot
+    // owns it, not the recording-system default. Locks the keyword-scan order.
+    expect(ownershipForFieldPath('electrode_groups[0].units').pattern).toBe(
+      OWNERSHIP_PATTERN.CONFIGURATION_VERSION
     );
   });
 
