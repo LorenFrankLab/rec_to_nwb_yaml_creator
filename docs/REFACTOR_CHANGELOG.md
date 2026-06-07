@@ -6,6 +6,28 @@
 
 ---
 
+## Ownership defaults & day configurability — Phase 8.7 Task 11: QA handoff + coverage map (June 7, 2026)
+
+Closes Phase 8.7. The focused unit/component tests for every acceptance row were added with their
+owning tasks (1–10); this task verifies coverage and writes the Phase 9 handoff. Docs-only — no
+code change.
+
+- **Phase 8.7 → Phase 9 QA handoff** ([phase-8-7-qa-handoff.md](../.claude/docs/plans/pre-cutover-export-correctness/phase-8-7-qa-handoff.md)):
+  consolidates the source-of-truth artifacts (ownership matrix, screen map, ownership descriptor),
+  a per-acceptance-row **coverage map** (which jsdom/Vitest test proves each row), the deferred/
+  unresolved ownership decisions (versioned data-acq; Workspace day-row scan fields; opto label
+  tone), and the **exact Phase 9 browser scenarios** to sample (same-day, catch-up, setup-repair,
+  reconfiguration, destructive-cleanup, opto-free-day paths) with concrete routes + expected copy.
+- Verified the named regression from the acceptance matrix exists: `resolveDayCameraUsage` returns
+  the full catalog for the golden fixtures (so the 125 byte-identical baselines can't move on the
+  Task 5 camera-export binding) — [cameraUsage.test.js](../src/state/__tests__/cameraUsage.test.js).
+- Confirmed the Phase 9 plan ([phase-9-playwright-qa-pass.md](../.claude/docs/plans/pre-cutover-export-correctness/phase-9-playwright-qa-pass.md))
+  already carries the 8.7 ownership/discoverability (Task 4.5) and lifecycle-cleanup (Task 4.6)
+  browser passes; the handoff feeds them concrete scenarios.
+
+Final Phase 8.7 gate: full suite (4147), 125 golden baselines byte-identical, lint (0 errors),
+build — all green.
+
 ## Ownership defaults & day configurability — Phase 8.7 Task 10: honest opto state + scan fields in summaries (June 7, 2026)
 
 Makes the status/preflight summaries agree on the day-protocol optogenetics state and adds the
