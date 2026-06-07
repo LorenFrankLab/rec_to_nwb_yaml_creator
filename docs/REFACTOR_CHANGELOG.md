@@ -31,9 +31,18 @@ store change). Full suite (4070), 125 golden baselines byte-identical, architect
 - **Day Overview inherited-notice now names the count.** [OverviewStep.jsx](../src/pages/DayEditor/OverviewStep.jsx)
   already routed inherited-subject edits to the animal with a qualitative notice; it now names "all
   N recording days" too, so both correction surfaces state the blast radius.
-- Added a focused `AnimalProfileSection` component test (8 cases: read-only identity, species/DOB
-  guidance, blast-radius naming + confirm, species gate blocks save, ISO DOB encoding, dirty/disabled
-  save, singular/plural copy). Updated the screen-map Animal-Setup contract to mark this done.
+- Added a focused `AnimalProfileSection` component test (now 9 cases: read-only identity,
+  species/DOB guidance, blast-radius naming + confirm, species gate blocks save, ISO DOB encoding,
+  dirty/disabled save, singular/plural copy, and the DOB future-date cap). Updated the screen-map
+  Animal-Setup contract to mark this done.
+
+**Review fix (code-reviewer, same day).** The DOB picker's `max` was set to `2999-12-31`, allowing a
+future birth date to be written animal-wide — a regression versus the two sibling surfaces
+(AnimalCreationForm and the Day Overview DOB field both cap at today) and unguarded by any downstream
+validation. Corrected the cap to today (`new Date().toISOString().split('T')[0]`) and added a guard
+test asserting the DOB `max` equals today. (Everything else the reviewer scrutinized — DOB timezone
+round-trip, blast-radius copy accuracy, species empty-allow gate, dirty-tracking, accessibility,
+two-surface consistency — verified clean.)
 
 Still open in Task 2: the remaining step-label relabels (Electrode Groups → Electrodes & Ephys,
 etc.); the Animal Editor route/title `Animal Editor` → `Animal Setup` user-facing relabel.

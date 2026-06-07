@@ -176,7 +176,10 @@ export default function AnimalProfileSection({ animal, dayCount, onSave }) {
                 id="profile-dob"
                 type="date"
                 value={form.date_of_birth}
-                max={new Date('2999-12-31').toISOString().split('T')[0]}
+                // A birth date can't be in the future — cap at today, matching the creation form
+                // (AnimalCreationForm) and the Day Overview DOB field. (DOB has no downstream
+                // future-date guard, so this UI cap is the only protection.)
+                max={new Date().toISOString().split('T')[0]}
                 onChange={(e) => setField('date_of_birth', e.target.value)}
               />
               <span className="field-help-text">

@@ -111,6 +111,15 @@ describe('AnimalProfileSection', () => {
     expect(payload.date_of_birth).toMatch(/^2022-12-25T/);
   });
 
+  it('caps the date-of-birth picker at today (no future birth dates), matching the sibling surfaces', async () => {
+    // DOB has no downstream future-date guard, so this UI cap is the only protection — it must
+    // match AnimalCreationForm / OverviewStep (max = today), not allow a far-future date.
+    render(<AnimalProfileSection animal={animal} dayCount={3} onSave={onSave} />);
+    await expand();
+    const today = new Date().toISOString().split('T')[0];
+    expect(screen.getByLabelText(/Date of Birth/i)).toHaveAttribute('max', today);
+  });
+
   it('disables save when nothing has changed (no accidental animal-wide write)', async () => {
     render(<AnimalProfileSection animal={animal} dayCount={3} onSave={onSave} />);
     await expand();
