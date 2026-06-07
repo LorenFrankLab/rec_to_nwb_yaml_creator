@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 import { repairTargetForIssue, STEP_LABELS } from '../../domain/validation';
 import { groupIssuesByWorkflowCategory } from '../../domain/workflowCategories';
+import IssueOwnershipHint from './IssueOwnershipHint';
 
 // Re-export STEP_LABELS so existing importers (ValidationStep) keep working while the
 // source of truth lives in domain/validation.js (alongside the routing it labels).
@@ -97,6 +98,7 @@ export default function RepairActions({ issues, onNavigate, animalId, onRepair, 
     return (
       <li key={`${keyPrefix}${issue.path}-${issue.code}-${index}`} className="repair-action-item">
         <span className="repair-action-message">{issue.message}</span>
+        <IssueOwnershipHint issue={issue} />
         {showButton && (
           <RepairActionButton issue={issue} onNavigate={onNavigate} animalId={animalId} onRepair={onRepair} />
         )}

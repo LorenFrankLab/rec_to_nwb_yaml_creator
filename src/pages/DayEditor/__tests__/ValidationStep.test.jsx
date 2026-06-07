@@ -50,6 +50,19 @@ describe('ValidationStep', () => {
     expect(screen.getByRole('heading', { name: /day-specific failed channels/i })).toBeInTheDocument();
   });
 
+  it('shows the ownership-pattern hint (and cross-day reach) next to errors (Task 9)', () => {
+    vi.spyOn(validation, 'validate').mockReturnValue([
+      { severity: 'error', code: 'empty_location', path: 'electrode_groups[0].location', message: 'location is empty' },
+    ]);
+
+    render(<ValidationStep {...baseProps} onNavigate={vi.fn()} />);
+
+    // The probe/location error names the configuration-version ownership and flags that fixing it
+    // reaches past this day — without changing the workflow-category grouping or the repair route.
+    expect(screen.getByText('Pin or fix the configuration version')).toBeInTheDocument();
+    expect(screen.getByText(/affects more than this day/i)).toBeInTheDocument();
+  });
+
   it('shows a blocked indicator and an error count when errors exist', () => {
     vi.spyOn(validation, 'validate').mockReturnValue([
       { severity: 'error', path: 'session_id', code: 'required', message: 'required' },

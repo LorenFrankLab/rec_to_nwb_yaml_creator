@@ -6,6 +6,36 @@
 
 ---
 
+## Ownership defaults & day configurability — Phase 8.7 Task 9: ownership-pattern naming in issue copy (June 7, 2026)
+
+Validation and Export issue copy now names the OWNERSHIP PATTERN — the safe next action and, when
+it matters, the cross-day blast radius — so a scientist reads what KIND of fix an error is and
+whether correcting it reaches beyond the day in front of them. Grouping (Phase 8.6 workflow
+categories) and repair routing (`repairTargetForIssue` → "Fix in Animal Setup → …" / "Fix in …")
+are unchanged; this is purely additive vocabulary. UI-only — no store/export change; 125 golden
+baselines byte-identical; full suite (4136), lint (0 errors), and build green.
+
+- **New shared `IssueOwnershipHint`** ([IssueOwnershipHint.jsx](../src/pages/DayEditor/IssueOwnershipHint.jsx)):
+  renders, next to an issue's message, the ownership pattern's `primaryAction` ("Fix shared animal
+  setup", "Pin or fix the configuration version", "Override this day's technical value", "Select the
+  item used on this day", "Repair recovered data", …) plus an emphasized **"Affects more than this
+  day"** cue when the repair's surface-aware scope reaches past the day. The copy is read verbatim
+  from the single ownership descriptor (`ownershipForIssue`, Task 1), so the issue copy can never
+  drift from the ownership matrix. It does NOT route or regroup — those stay on `RepairActionButton`
+  and the workflow category.
+- **Wired into both issue surfaces, identically**: the Day Editor's `ValidationStep`
+  ([ValidationStep.jsx](../src/pages/DayEditor/ValidationStep.jsx)) and the shared `RepairActions`
+  ([RepairActions.jsx](../src/pages/DayEditor/RepairActions.jsx)) list used by the blocked-Export
+  preflight. Both now render the hint per issue.
+- **Blast-radius is surface-aware, not pattern-default**: e.g. a `dangling_camera_ref` (selecting
+  the camera used on this day) is a day-local repair and shows NO cross-day cue, while an
+  `empty_location` (versioned probe geometry) shows "Pin or fix the configuration version · Affects
+  more than this day". This reuses `issueReachesBeyondDay` so the cue matches the actual repair
+  scope rather than over-warning.
+- Tests: `IssueOwnershipHint` unit (representative codes + descriptor-mirroring + null robustness +
+  pattern data-attr); `RepairActions` and `ValidationStep` integration asserting the hint appears
+  with routing/grouping intact.
+
 ## Ownership defaults & day configurability — Phase 8.7 Task 8: discoverable lifecycle cleanup (June 7, 2026)
 
 Adds discoverable, SAFE animal/day deletion to the Animal Workspace. The store already exposed

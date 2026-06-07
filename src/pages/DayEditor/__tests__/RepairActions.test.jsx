@@ -4,6 +4,34 @@ import userEvent from '@testing-library/user-event';
 import RepairActions from '../RepairActions';
 
 describe('RepairActions', () => {
+  // Phase 8.7 Task 9: every issue carries an ownership-pattern hint (the safe next action +
+  // cross-day reach) alongside its message — without changing routing or grouping.
+  it('renders the ownership-pattern hint next to each issue (animal-setup reaches beyond the day)', () => {
+    render(
+      <RepairActions
+        issues={[{ path: 'electrode_groups[0].location', code: 'empty_location', repairSurface: 'animal', message: 'Electrode group 0 has an empty location.' }]}
+        onNavigate={vi.fn()}
+        animalId="remy"
+      />
+    );
+    // Ownership pattern named, and the cross-day blast radius flagged (a shared/versioned fix).
+    expect(screen.getByText('Pin or fix the configuration version')).toBeInTheDocument();
+    expect(screen.getByText(/affects more than this day/i)).toBeInTheDocument();
+    // Routing is unchanged — the repair button still names the canonical animal-surface target.
+    expect(screen.getByRole('button', { name: /fix in animal setup →/i })).toBeInTheDocument();
+  });
+
+  it('flags a day-local repair without a cross-day reach cue', () => {
+    render(
+      <RepairActions
+        issues={[{ path: 'session_description', code: 'required', message: 'session description is required' }]}
+        onNavigate={vi.fn()}
+      />
+    );
+    expect(screen.getByText(/Fix this day.s recording facts/i)).toBeInTheDocument();
+    expect(screen.queryByText(/affects more than this day/i)).not.toBeInTheDocument();
+  });
+
   it('renders a "Fix in <step>" button for a day-surface issue and routes to its step', async () => {
     const user = userEvent.setup();
     const onNavigate = vi.fn();
