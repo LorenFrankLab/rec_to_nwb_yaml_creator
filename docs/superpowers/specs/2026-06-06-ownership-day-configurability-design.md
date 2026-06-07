@@ -95,8 +95,8 @@ current exporter emits all `animal.cameras` for every day, so merely adding came
 future day would change a re-export of an old day by adding an unused camera device.
 
 **Decision (trodes_to_nwb-verified, 2026-06-06): implement the day-used camera export
-binding** via a pure `resolveDayCameraUsage(animal, day)` helper consumed by export/preflight
-and the blast-radius UI. This is verified safe downstream: trodes_to_nwb resolves cameras by
+binding** via a pure `resolveDayCameraUsage(animal, day)` helper consumed by export/preflight,
+plus a separate affected-days helper for camera edit/correction blast-radius UI. This is verified safe downstream: trodes_to_nwb resolves cameras by
 the `id` field, never by list position — `convert_yaml.py` names devices
 `"camera_device " + str(camera["id"])`, and `convert_position.py` looks up
 `devices['camera_device ' + str(video["camera_id"])]` and builds
@@ -109,9 +109,9 @@ move; only real-data days that left a catalog camera unused change, in the corre
 Guard (pre-existing): `convert_position.py` hard-looks-up `devices['camera_device {id}']`
 with no existence check, so a *dangling* `camera_id` would `KeyError`. `resolveDayCameraUsage`
 must include every referenced id (it does by construction) — so the subset export is strictly
-safer than today. The all-animal-cameras export is kept only as a deliberate **scoping**
-fallback (if the export-bridge change is deferred), not a correctness hedge; if used, the UI
-must say camera catalog changes affect all day exports.
+safer than today. Keeping the all-animal-cameras export is a deferred/incomplete state, not an
+alternate successful Phase 8.7 outcome; if the export-bridge change cannot land, mark the phase
+as blocking Phase 9 and make the UI say camera catalog changes affect all day exports.
 
 The heavier alternative (per-day freeze / version cameras + data-acq like electrodes) is
 deferred to its own phase — it changes export resolution and needs baseline regeneration plus
@@ -186,9 +186,9 @@ verify routes, step labels, modals, empty states, repair paths, and destructive 
 
 ## Data flow and state implications
 
-- No reducer/store rewrite. Cameras stay an animal catalog referenced by `camera_id`, but the
-  implementation must define the export binding explicitly (preferred: export the day-used
-  camera subset; fallback: all-animal-cameras with an all-day blast-radius warning). Electrodes
+- No reducer/store rewrite. Cameras stay an animal catalog referenced by `camera_id`, and the
+  implementation must use the day-used camera subset as the export binding. Keeping all animal
+  cameras is only a deferred/incomplete state if the export-bridge change cannot land. Electrodes
   stay versioned snapshots pinned by day; recording-system technical defaults stay copied-at-creation.
   Weight is resolved as a day/session value for export, with any animal-created value treated as
   an initial/default/fallback that should be confirmed in the Day Editor.
@@ -258,15 +258,15 @@ SILENT downstream and this app is the real gate.** Specifics that shape the work
 
 ## Alternatives considered
 
-- **Preferred: animal camera catalog + day-used camera export subset.** Users define reusable
+- **Decided: animal camera catalog + day-used camera export subset.** Users define reusable
   camera identities once, day/task/video/FsGUI rows choose what was used, and export includes
   only the cameras referenced by that day. This best matches the scientist's mental model and
   the no-silent-retroactive promise. Cost: deliberate export-resolution change and baseline
   audit.
-- **Baseline-safe fallback: animal camera catalog exported wholesale.** Minimal implementation
-  and byte-stable for existing baselines, but adding a future camera changes old-day re-exports.
-  If chosen, the UI must show an all-day blast-radius warning and cannot say past exports are
-  unchanged.
+- **Rejected as a successful Phase 8.7 outcome: animal camera catalog exported wholesale.**
+  Minimal implementation and byte-stable for existing baselines, but adding a future camera changes
+  old-day re-exports. If the export-bridge change is deferred, mark Phase 8.7 incomplete/blocking
+  Phase 9 and show an all-day blast-radius warning until the binding is fixed.
 - **Versioned camera snapshots pinned by day.** Strong historical model, like electrodes. Cost:
   heavier state, reconfiguration UI, export-resolution changes, and more concepts for the user.
 - **Per-day frozen camera copies.** Simple historical export, but duplicates data, makes naming

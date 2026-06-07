@@ -58,9 +58,9 @@ localStorage, workflow clarity, and browser-only behavior cannot hide behind uni
   day bad-channel edits, technical day overrides/defaults, tasks/videos, and no obvious `[object Object]` /
   empty required placeholders. The preflight assertions should name which values are shared animal setup,
   configuration-version data, recording-system defaults, advanced day overrides, catalog selections, task-epoch
-  setup assignments, and day-only facts. If Phase 8.7 chooses day-used camera export, assert the downloaded YAML
-  includes the cameras referenced by that day and excludes unreferenced catalog cameras; if it chooses the
-  all-animal-cameras fallback, assert the UI exposes the all-day blast-radius warning instead.
+  setup assignments, and day-only facts. Assert the downloaded YAML uses Phase 8.7's required day-used
+  camera export binding: it includes the cameras referenced by that day and excludes unreferenced catalog
+  cameras.
 - **Task 2.5 — same-day and catch-up workflow smoke.** Add two user-story scenarios, not just field-level
   checks. Same-day: a scientist finishes one recording, creates/reviews one day, confirms task-epoch setup,
   validates, and downloads one YAML without re-entering shared setup. Catch-up: a scientist has multiple days
@@ -141,7 +141,7 @@ localStorage, workflow clarity, and browser-only behavior cannot hide behind uni
 | Test | Asserts |
 | --- | --- |
 | `workspace happy path downloads corrected YAML` *(Playwright)* | a fully configured workspace day reaches Export, shows preflight, downloads YAML, and the downloaded text includes corrected subject/session, camera/data-acq/device/task/video sections. |
-| `camera export binding or blast-radius fallback is proven` *(Playwright/unit artifact)* | day-used camera export includes referenced task/video/FsGUI cameras and excludes unreferenced catalog cameras, or the documented fallback warns that animal camera catalog changes affect all day exports. |
+| `day-used camera export binding is proven` *(Playwright/unit artifact)* | day-used camera export includes referenced task/video/FsGUI cameras and excludes unreferenced catalog cameras; a separate affected-days helper supports camera edit blast-radius warnings. |
 | `same-day and catch-up workflows are efficient` *(Playwright/artifact)* | one fresh single-day export and one multi-day catch-up/batch export path are reachable without redundant shared-setup entry; readiness, targeted repair, batch eligibility, protected naming identities, and the batch row scan fields are visible. |
 | `invalid workspace day is fail-closed in browser` *(Playwright)* | stepper click, keyboard next, and download cannot bypass error-severity validation; repair actions navigate/focus as designed. |
 | `identity and reference mistakes are blocked before export` *(Playwright)* | camera/data-acq divergent reuse, task-name divergent reuse, region case drift, and stale task/video refs are blocked or repaired at the editing surface. |

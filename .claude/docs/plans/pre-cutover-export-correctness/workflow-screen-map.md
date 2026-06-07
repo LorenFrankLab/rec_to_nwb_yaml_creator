@@ -201,6 +201,32 @@ for the recording day.
   repair destinations, and preflight; do not badge every ordinary field so heavily that the
   important warnings lose signal.
 
+## Current label reconciliation (verified against code 2026-06-06)
+
+These are the **actual** strings rendered today (with file:line), the **target** user-facing
+label, and the later Phase 8.7 sub-stream that owns the change. This subsection makes the map
+*current*: the labels above describe the target, this table pins where the code stands so a
+relabel task and Phase 9 QA reconcile against reality, not guesswork. The ownership cue for each
+control comes from [`workflow-ownership-matrix.md`](workflow-ownership-matrix.md) /
+[`src/domain/workflowOwnership.js`](../../../../src/domain/workflowOwnership.js); this foundation
+sub-stream (Tasks 0/0.5/1) does **not** relabel anything.
+
+| Surface | Current string (file:line) | Target user-facing label | Owning sub-stream |
+| --- | --- | --- | --- |
+| Primary nav | `Home`, `Workspace` ([AppLayout.jsx:241-251](../../../../src/layouts/AppLayout.jsx)) | `Create Animal`/`New Animal` for Home; `Workspace` ok | Task 2 / nav (post-cutover) |
+| Logo/header link | `#/` with aria-label `Return to metadata form` ([AppLayout.jsx:213](../../../../src/layouts/AppLayout.jsx)) | clearly-labeled modern Workspace path; no surprise legacy bounce | nav (post-cutover) |
+| Animal editor route/title | `Animal Editor` ([AnimalEditor](../../../../src/pages/AnimalEditor/)) | `Animal Setup` / `Shared Animal Setup` | Task 2 |
+| Animal editor steps | `Electrode Groups`, `Channel Maps`, `Optogenetics`, `Hardware Config` ([AnimalEditorStepper.jsx:690-765](../../../../src/pages/AnimalEditor/AnimalEditorStepper.jsx)) | `Electrodes & Ephys`, `Channel Maps`, `Optogenetics Setup`, split of `Hardware Config` | Task 2 |
+| Hardware Config step heading | `Cameras, Hardware & Behavioral Events` ([HardwareConfigStep.jsx:126](../../../../src/pages/AnimalEditor/HardwareConfigStep.jsx)) | split into `Recording System`, `Video Cameras & Calibration`, `Behavioral Events / DIO`; data-acq belongs with the recording/ephys system, **not** cameras | Task 2 |
+| Data-acq section | `Data Acquisition Device` ([DataAcqSection.jsx:154](../../../../src/pages/AnimalEditor/DataAcqSection.jsx)) | `Recording System` (with `raw_data_to_volts`/`times_period_multiplier`) | Tasks 2/3 |
+| Cameras table | columns id/name/manufacturer/model/`meters_per_pixel` ([CamerasSection.jsx:153](../../../../src/pages/AnimalEditor/CamerasSection.jsx)) — **omits `lens`** | add `lens` column; show identity fields that make a camera different | Task 2 (real change, not a relabel) |
+| Behavioral-events empty state | claims events "will be inherited by all recording days" ([BehavioralEventsSection.jsx:187](../../../../src/pages/AnimalEditor/BehavioralEventsSection.jsx)) — **FALSE** (never exported) | reusable library/template; `Use on this day` from the day | Task 6 (correctness fix) |
+| Day editor steps | `Overview`, `Devices`, `Epochs`, `Validation`, `Export` ([DayEditorStepper.jsx:288-294](../../../../src/pages/DayEditor/DayEditorStepper.jsx)) | `Day Details`, `Setup & Failed Channels`, `Tasks, Epochs & Files`, `Validation`, `Export` | Tasks 2/4/5 |
+| Day technical section | `Technical parameters (this day)` ([DayTechnicalSection.jsx:58](../../../../src/pages/DayEditor/DayTechnicalSection.jsx)) | effective recording-system values; `Using recording-system default` vs `Different from current recording-system default` | Task 4 |
+| Day tasks/epochs heading | `Tasks & Epochs` ([TasksEpochsStep.jsx:299](../../../../src/pages/DayEditor/TasksEpochsStep.jsx)) | make tasks/rooms/cameras/files/opto discoverable; per-task room·cameras·epochs mapping | Task 5 |
+| Workspace weight field | writes `animal.subject.weight`, labelled `Animal baseline weight` (OverviewStep) | Day Overview owns the exported session weight (`day.session.weight`); animal value is fallback only | Task 2.5 |
+| Lifecycle cleanup | only wrong-owner `Remove from this animal` ([AnimalWorkspace/index.jsx:512](../../../../src/pages/AnimalWorkspace/index.jsx)); **no** discoverable `Delete animal`/`Delete recording day` | secondary/destructive `Delete animal…` / `Delete recording day…` with cascade-count confirmation | Task 8 |
+
 ## QA acceptance
 
 Phase 8.7 and Phase 9 should prove this map, not just individual controls:

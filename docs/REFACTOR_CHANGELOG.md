@@ -2,7 +2,60 @@
 
 **Purpose:** Track all changes made during the refactoring milestones.
 
-**Last Updated:** June 5, 2026
+**Last Updated:** June 6, 2026
+
+---
+
+## Ownership defaults & day configurability — Phase 8.7 sub-stream A foundation (June 6, 2026)
+
+Foundation for the ownership/blast-radius UX (sub-stream A: ownership vocabulary + artifacts).
+This increment is **baseline-safe and changes no export bytes**: it adds two planning artifacts
+and one pure domain helper, with no touch to `mergeDayMetadata`, the export bridge, or any page.
+The 125 golden baselines stay byte-identical; the full suite (4051 tests), the architecture-boundary
+guard, lint (0 errors), and build all stay green. The net-new IA builds (Tasks 2/2.5/4) and the
+day-used camera export binding (Task 5) are later sub-streams, deliberately out of this increment.
+
+- **Ownership matrix artifact (Task 0).** `.claude/docs/plans/pre-cutover-export-correctness/workflow-ownership-matrix.md`
+  reconciles the plan's expected matrix into the field-level source of truth: for every exported
+  workspace section (plus high-risk non-exported setup) it pins one of the seven internal
+  ownership patterns and records owner, day behavior, state path, export source, edit surface,
+  repair target, user-facing label, ownership cue, primary next action, dangerous misconception,
+  likely attention target, and test coverage. The seven patterns are INTERNAL; the user sees only
+  "today-only edit" vs "touches these N days (enumerated)". Includes the issue-code ownership
+  contract (category → default pattern + sparse refinement) and the downstream "this app is the
+  gate" reality.
+- **Screen-map reconciliation (Task 0.5).** Added a "Current label reconciliation (verified
+  against code 2026-06-06)" table to `workflow-screen-map.md` pinning the ACTUAL current strings
+  (with file:line) against their target user-facing labels and the owning later sub-stream — e.g.
+  `Hardware Config` step heading is really `Cameras, Hardware & Behavioral Events`
+  ([HardwareConfigStep.jsx:126](../src/pages/AnimalEditor/HardwareConfigStep.jsx)); the cameras
+  table omits `lens` ([CamerasSection.jsx:153](../src/pages/AnimalEditor/CamerasSection.jsx)); the
+  animal-level behavioral-events empty state falsely claims events are "inherited by all recording
+  days"; the Day `Devices`/`Epochs` steps and the `Animal Editor` route use implementation
+  language. No relabeling done in this sub-stream — the table is the reconciliation contract for
+  Tasks 2/4/5/6/8 and Phase 9 QA.
+- **Ownership descriptor helper (Task 1).** `src/domain/workflowOwnership.js` is a pure helper
+  mapping a validation issue / field path / section id → ownership pattern + plain-language label +
+  visible cue + day-behavior copy + suggested primary action + edit surface, plus a
+  `reachesBeyondDay` boolean that drives the headline two-state ("today-only" vs "touches N days").
+  Per the plan it does **not** spin up a third `code → meaning` table: it reuses
+  `repairTargetForIssue` for the edit surface and `workflowCategoryForIssue`/`CATEGORY_BY_CODE` for
+  the workflow category, then maps each category to a default ownership pattern and applies a
+  SPARSE `PATTERN_REFINEMENT_BY_CODE` only where ownership is finer than the category default
+  (geometry/channel → configuration_version; cameras → animal_catalog_reference; task/fs_gui-epoch →
+  task_epoch_assignment; behavioral events → day_exported_list; unpinned config → configuration_version).
+  A completeness test (`src/domain/__tests__/workflowOwnership.test.js`, 30 tests) mirrors the
+  existing `CATEGORY_BY_CODE` ↔ `SURFACE_BY_CODE` invariant: every validator code resolves to a
+  well-formed descriptor, the refinement names no stale code, and the edit surface is always
+  exactly `repairTargetForIssue`'s (never re-decided). The module lives in `src/domain/` and does
+  not import from `pages/` (architecture-boundary guard stays green).
+
+### Test results
+
+- Full suite: 4051 tests passing (248 files), +30 from the new ownership descriptor.
+- Golden baselines: 125/125 byte-identical.
+- Architecture-boundary guard: green (no domain→page import introduced).
+- Lint: 0 errors (pre-existing JSDoc warnings only). Build: succeeds.
 
 ---
 
