@@ -5,6 +5,7 @@ import { mergeDayMetadata, resolveDayConfig } from '../../state/workspaceUtils';
 import { getAnimalDayIds } from '../../state/workspaceSelectors';
 import { computeStepStatus, validateDay, STEP_LABELS } from '../../domain/validation';
 import { getDayWorkflowStatus } from '../../domain/workflowStatus';
+import { describeDayOptoState } from '../../domain/optoStatus';
 import { isExportEnabled } from './stepGate';
 import { isFeatureEnabled } from '../../featureFlags';
 import { checkShadowExport } from '../../domain/shadowExport';
@@ -354,10 +355,10 @@ function buildPreflightSummary(
     0
   );
 
-  const optoOn =
-    (merged.opto_excitation_source?.length || 0) > 0 ||
-    (merged.optical_fiber?.length || 0) > 0 ||
-    (merged.virus_injection?.length || 0) > 0;
+  // Day-protocol opto state (Task 10): the honest three-state read — "No optogenetics" /
+  // "Implanted, no stimulation this day" / "Stimulation on epoch(s) …" — not a binary On/Off
+  // derived only from the implant. Shared with the Validation summary so the two never disagree.
+  const opto = describeDayOptoState(merged);
 
   const dataAcq = merged.data_acq_device || [];
   const dataAcqValue = dataAcq.length
@@ -386,7 +387,7 @@ function buildPreflightSummary(
       label: 'Tasks & videos',
       value: `${(merged.tasks || []).length} tasks, ${(merged.associated_video_files || []).length} videos`,
     },
-    { label: 'Optogenetics', value: optoOn ? 'On' : 'Off' },
+    { label: 'Optogenetics', value: opto.label },
     {
       label: 'Non-blocking warnings',
       value:

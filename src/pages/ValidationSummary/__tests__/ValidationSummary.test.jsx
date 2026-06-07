@@ -82,6 +82,19 @@ describe('ValidationSummary', () => {
     expect(within(incompleteRow).getByText('Incomplete')).toBeInTheDocument();
   });
 
+  it('shows batch-row scan fields (config version + opto state) on a readable row (Task 10)', () => {
+    const { workspace, ids } = makeSummaryWorkspace();
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+
+    // The valid row carries the scan detail so days are comparable before opening each editor:
+    // the pinned configuration version and the day-protocol opto state (not a binary on/off).
+    const validRow = screen.getByTestId(`day-row-${ids.validDayId}`);
+    expect(within(validRow).getByText(/config v\d/i)).toBeInTheDocument();
+    expect(within(validRow).getByText(/no optogenetics|implanted, no stimulation|stimulation on epoch/i)).toBeInTheDocument();
+  });
+
   it('counts reflect chip breakdown', () => {
     const { workspace } = makeSummaryWorkspace();
     provideStore(workspace);

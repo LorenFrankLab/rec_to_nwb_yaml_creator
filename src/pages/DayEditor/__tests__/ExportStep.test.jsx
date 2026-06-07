@@ -294,12 +294,13 @@ describe('ExportStep', () => {
     expect(within(preflight).getByText('Optogenetics')).toBeInTheDocument();
     expect(within(preflight).getByText('Non-blocking warnings')).toBeInTheDocument();
 
-    // Spot-check derived values: animal/day, 8 electrode groups, 2 cameras, opto off,
-    // current (not historical) configuration.
+    // Spot-check derived values: animal/day, 8 electrode groups, 2 cameras, opto state
+    // (no optogenetics — Task 10's day-protocol three-state, not a binary "Off"), current
+    // (not historical) configuration.
     expect(within(preflight).getByText(/remy — 2023-06-22/i)).toBeInTheDocument();
     expect(within(preflight).getByText(/8 electrode groups/i)).toBeInTheDocument();
     expect(within(preflight).getByText(/2 cameras/i)).toBeInTheDocument();
-    expect(within(preflight).getByText('Off')).toBeInTheDocument();
+    expect(within(preflight).getByText(/no optogenetics/i)).toBeInTheDocument();
     expect(within(preflight).getByText(/version 1 \(current\)/i)).toBeInTheDocument();
   });
 

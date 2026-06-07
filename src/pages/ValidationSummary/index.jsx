@@ -24,6 +24,7 @@ import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { getAnimalSubject } from '../../state/workspaceSelectors';
 import { computeStepStatus } from '../../domain/validation';
 import { getDayWorkflowStatus } from '../../domain/workflowStatus';
+import { describeDayOptoState } from '../../domain/optoStatus';
 import {
   classifyWorkspaceDays,
   DAY_STATUS,
@@ -122,8 +123,19 @@ function buildRows(workspace) {
     // throws BY DESIGN on a corrupt animal; one unreadable day must not blank the summary.
     const orphaned = status === DAY_STATUS.RECOVERED_UNLINKED;
     try {
-      const chip = deriveChip(computeStepStatus(record, mergeDayMetadata(animal, record), animal));
-      rows.push({ animal, animalKey, day: record, chip, status, orphaned });
+      const merged = mergeDayMetadata(animal, record);
+      const chip = deriveChip(computeStepStatus(record, merged, animal));
+      // Batch-row scan fields (Task 10): the configuration version pinned, the camera count, and
+      // the day-protocol opto state — so days can be compared before opening each editor. Computed
+      // here (where the merge already succeeded) so the table reads, never re-derives.
+      const workflow = getDayWorkflowStatus(animal, record, merged);
+      const scan = {
+        version: workflow.configurationVersion,
+        historical: workflow.isHistoricalConfiguration,
+        cameras: (merged.cameras || []).length,
+        opto: describeDayOptoState(merged).label,
+      };
+      rows.push({ animal, animalKey, day: record, chip, status, orphaned, scan });
     } catch (err) {
       rows.push({ animal, animalKey, day: record, chip: 'error', status, orphaned, unreadable: true });
       // eslint-disable-next-line no-console
@@ -322,10 +334,10 @@ export function ValidationSummary() {
         const status = getDayWorkflowStatus(animal, day, merged);
         const ntrodeMap = merged.ntrode_electrode_group_channel_map || [];
         const failedChannels = ntrodeMap.reduce((t, n) => t + (n.bad_channels?.length || 0), 0);
-        const optoOn =
-          (merged.opto_excitation_source?.length || 0) > 0 ||
-          (merged.optical_fiber?.length || 0) > 0 ||
-          (merged.virus_injection?.length || 0) > 0;
+        // Day-protocol opto state (Task 10), shared with the single-day Export preflight so the two
+        // agree: an opto-implanted animal with an opto-free day reads "implanted, no stimulation",
+        // not "on".
+        const opto = describeDayOptoState(merged).label;
         return {
           dayId: day.id,
           label: `${subjectLabel(animal)} — ${day.session?.session_id || day.id}`,
@@ -334,7 +346,7 @@ export function ValidationSummary() {
           groups: (merged.electrode_groups || []).length,
           failedChannels,
           cameras: (merged.cameras || []).length,
-          opto: optoOn,
+          opto,
         };
       } catch (err) {
         return { dayId: day.id, label: `${subjectLabel(animal)} — ${day.id}`, error: err.message };
@@ -532,8 +544,7 @@ export function ValidationSummary() {
                         {entry.historical ? ' (historical)' : ''}; {entry.groups}{' '}
                         electrode {entry.groups === 1 ? 'group' : 'groups'}, {entry.failedChannels}{' '}
                         failed {entry.failedChannels === 1 ? 'channel' : 'channels'}; {entry.cameras}{' '}
-                        {entry.cameras === 1 ? 'camera' : 'cameras'}; optogenetics{' '}
-                        {entry.opto ? 'on' : 'off'}
+                        {entry.cameras === 1 ? 'camera' : 'cameras'}; {entry.opto}
                       </span>
                     )}
                   </li>
@@ -623,12 +634,13 @@ export function ValidationSummary() {
                 <th scope="col">Animal</th>
                 <th scope="col">Date</th>
                 <th scope="col">Session</th>
+                <th scope="col">Setup</th>
                 <th scope="col">Status</th>
                 <th scope="col">Editor</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ animal, animalKey, day, chip, unreadable, missingRecord, orphaned, ownerMissing, wrongOwner }, index) => (
+              {rows.map(({ animal, animalKey, day, chip, scan, unreadable, missingRecord, orphaned, ownerMissing, wrongOwner }, index) => (
                 <tr key={`${day.id ?? 'unknown'}-${index}`} data-testid={`day-row-${day.id}`}>
                   <td>
                     {subjectLabel(animal)}
@@ -651,6 +663,23 @@ export function ValidationSummary() {
                   </td>
                   <td>{day.date || '—'}</td>
                   <td>{day.session?.session_id || '—'}</td>
+                  <td>
+                    {/* Scan fields (Task 10): pinned configuration version, camera count, and the
+                        day-protocol opto state — so days can be compared at a glance. Absent for
+                        unreadable/missing/wrong-owner rows (no trustworthy merge), shown as "—". */}
+                    {scan ? (
+                      <span className="validation-summary-scan">
+                        config v{scan.version ?? '—'}
+                        {scan.historical ? ' (historical)' : ''}
+                        {' · '}
+                        {scan.cameras} {scan.cameras === 1 ? 'camera' : 'cameras'}
+                        {' · '}
+                        {scan.opto}
+                      </span>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
                   <td>
                     {/* An unreadable day (its config could not be resolved) OR a reference
                         that resolves to no day record is shown as an error chip with an

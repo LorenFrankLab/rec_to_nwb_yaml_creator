@@ -6,6 +6,31 @@
 
 ---
 
+## Ownership defaults & day configurability — Phase 8.7 Task 10: honest opto state + scan fields in summaries (June 7, 2026)
+
+Makes the status/preflight summaries agree on the day-protocol optogenetics state and adds the
+batch-row scan fields the triage contract requires. UI-only — no store/export change; 125 golden
+baselines byte-identical; full suite (4146), lint (0 errors), and build green.
+
+- **Honest three-state opto reporting** — new shared `describeDayOptoState(mergedDay)`
+  ([optoStatus.js](../src/domain/optoStatus.js)) returns **No optogenetics** / **Implanted, no
+  stimulation this day** / **Stimulation on epoch(s) …** (epochs de-duped + sorted across the day's
+  `fs_gui_yamls`). This replaces the binary "On/Off" that both the single-day Export preflight
+  ([ExportStep.jsx](../src/pages/DayEditor/ExportStep.jsx)) and the batch Export preflight
+  ([ValidationSummary/index.jsx](../src/pages/ValidationSummary/index.jsx)) independently derived
+  from the animal IMPLANT metadata alone. That binary reported "On" for an opto-implanted animal
+  that ran no stimulation on a day — directly contradicting Task 7's "no stimulation this day is a
+  normal, valid state". The two summaries now read the SAME helper, so they cannot disagree. (Closes
+  the opto-reporting item deferred from Task 7.)
+- **Batch-row scan fields on the Validation Summary rows** — each readable day row now shows a
+  **Setup** column: the pinned configuration version (with a `(historical)` marker), the camera
+  count, and the day-protocol opto state — so days are comparable before opening each editor, per
+  the batch-row scan contract. Computed in `buildRows` where the merge already succeeded (the table
+  reads, never re-derives); unreadable/missing/wrong-owner rows show `—` (no trustworthy merge).
+- Tests: `describeDayOptoState` unit (all three states + epoch formatting + fs_gui-without-implant +
+  null robustness); updated the Export preflight assertion from "Off" to "No optogenetics"; new
+  Validation Summary assertion that a readable row shows the config-version + opto scan fields.
+
 ## Ownership defaults & day configurability — Phase 8.7 Task 9: ownership-pattern naming in issue copy (June 7, 2026)
 
 Validation and Export issue copy now names the OWNERSHIP PATTERN — the safe next action and, when
