@@ -131,6 +131,10 @@ export default function HardwareConfigStep({
           date: animalDays.find((d) => d.id === id)?.date,
         }));
         setCameraRefDecision({ camera: cameraData, original, affectedDays });
+        // Close the edit modal so ONLY the decision dialog is active — never two stacked
+        // aria-modal dialogs (a11y) — and so the decision's Cancel/Escape both abort cleanly to
+        // a single, consistent end state (nothing open, nothing written).
+        closeCameraModal();
         return; // Defer the write until the user decides.
       }
     }

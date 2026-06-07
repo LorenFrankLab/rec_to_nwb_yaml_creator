@@ -531,6 +531,55 @@ describe('HardwareConfigStep', () => {
           { id: 0, camera_name: 'overhead_zoomed', manufacturer: 'Allied', model: 'Mako', lens: '8mm', meters_per_pixel: 0.002 },
         ]);
       });
+
+      it('Cancel aborts cleanly — no write, and exactly one modal is ever active (no stacked dialogs)', async () => {
+        const user = userEvent.setup();
+        const onFieldUpdate = vi.fn();
+        renderSeeded({ animals: { remy: referencedAnimal }, days: referencingDays }, referencedAnimal, onFieldUpdate);
+
+        await editReferencedCamera(user);
+        // While the decision is shown, the edit modal is closed — only ONE modal role is active.
+        expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+        await user.click(screen.getByRole('button', { name: /^cancel$/i }));
+        expect(onFieldUpdate).not.toHaveBeenCalled();
+        expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      });
+
+      it('enumerates ALL affected days (multi-day) before the decision', async () => {
+        const user = userEvent.setup();
+        const onFieldUpdate = vi.fn();
+        const animalTwoDays = { ...referencedAnimal, days: ['remy-d1', 'remy-d2'] };
+        const twoDays = {
+          'remy-d1': { id: 'remy-d1', animalId: 'remy', date: '2023-06-22', tasks: [{ camera_id: [0] }] },
+          'remy-d2': { id: 'remy-d2', animalId: 'remy', date: '2023-06-23', associated_video_files: [{ camera_id: 0 }] },
+        };
+        renderSeeded({ animals: { remy: animalTwoDays }, days: twoDays }, animalTwoDays, onFieldUpdate);
+
+        await editReferencedCamera(user);
+
+        const dialog = screen.getByRole('alertdialog');
+        expect(dialog).toHaveTextContent(/used by 2 recording days/i);
+        expect(dialog).toHaveTextContent('2023-06-22');
+        expect(dialog).toHaveTextContent('2023-06-23');
+      });
+
+      it('saves a no-identity-change edit directly even when referenced (no decision)', async () => {
+        const user = userEvent.setup();
+        const onFieldUpdate = vi.fn();
+        renderSeeded({ animals: { remy: referencedAnimal }, days: referencingDays }, referencedAnimal, onFieldUpdate);
+
+        // Open edit and save WITHOUT changing any identity field.
+        await user.click(screen.getByRole('button', { name: /^edit$/i }));
+        await user.click(screen.getByRole('button', { name: /save camera/i }));
+
+        expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+        expect(onFieldUpdate).toHaveBeenCalledWith('cameras', [
+          { id: 0, camera_name: 'overhead', manufacturer: 'Allied', model: 'Mako', lens: '8mm', meters_per_pixel: 0.001 },
+        ]);
+      });
     });
 
     it('deletes a camera after confirmation', async () => {
