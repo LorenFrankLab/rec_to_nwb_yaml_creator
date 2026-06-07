@@ -13,8 +13,8 @@ import {
   normalizeElectrodeGroup,
   normalizeNtrodeMap,
 } from '../utils/deviceNormalization';
+import { resolveDayCameraUsage } from './cameraUsage';
 import {
-  getAnimalCameras,
   getConfigHistory,
   getDataAcqDevices,
   getAnimalDevices,
@@ -301,7 +301,13 @@ export function mergeDayMetadata(animal, day) {
   // place these guards live, so the merge can't drift from the editors. A malformed
   // import still surfaces as a validation issue downstream (normalization never decides
   // export validity); it just can't crash the merge here.
-  const cameras = getAnimalCameras(animal);
+  // Phase 8.7 Task 5: export only the cameras THIS day used (filtered from the full catalog
+  // objects), so a future catalog camera never leaks into a re-export of an old day. Byte-
+  // identical for any day that references all its cameras (the workspace-merge parity fixture and
+  // every golden fixture do — so no baseline moves); a day that left a catalog camera unused now
+  // correctly drops it. `cameras: []` is preserved for a zero-camera day. Resolves downstream by
+  // `id`, so dropping unreferenced cameras is safe.
+  const dayCameras = resolveDayCameraUsage(animal, day);
   const opto = animal.optogenetics || null;
   const experimenters = getAnimalExperimenters(animal);
   const session = getDaySession(day);
@@ -343,8 +349,8 @@ export function mergeDayMetadata(animal, day) {
       reorderKeys(d, DATA_ACQ_DEVICE_ORDER)
     ),
 
-    // === From Animal: Cameras ===
-    cameras: cameras.map((c) => reorderKeys(c, CAMERA_ORDER)),
+    // === From Animal catalog, filtered to the day's used cameras (Task 5) ===
+    cameras: dayCameras.map((c) => reorderKeys(c, CAMERA_ORDER)),
 
     // === From Day: Behavioral Protocol ===
     tasks: getDayTasks(day).map((t) => reorderKeys(t, TASK_ORDER)),

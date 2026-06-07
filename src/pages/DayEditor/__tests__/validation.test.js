@@ -418,7 +418,9 @@ describe('repairTargetForIssue (Repair Routing Contract)', () => {
     { code: 'duplicate_camera_id', issue: { code: 'duplicate_camera_id', path: 'cameras', field: 'id', step: 'devices', repairSurface: 'animal' } },
     { code: 'divergent_camera_identity', issue: { code: 'divergent_camera_identity', path: 'cameras', field: 'camera_name', step: 'devices', repairSurface: 'animal' } },
     { code: 'divergent_data_acq_identity', issue: { code: 'divergent_data_acq_identity', path: 'data_acq_device', field: 'name', step: 'devices', repairSurface: 'animal' } },
-    { code: 'invalid_species', issue: { code: 'invalid_species', path: 'subject.species', repairSurface: 'animal' } },
+    // Optogenetics completeness lives on the Animal Editor Optogenetics step — the rule emits
+    // repairSurface:'animal' (rulesValidation.js), so this fixture must assert the animal surface.
+    { code: 'partial_configuration', issue: { code: 'partial_configuration', path: 'optogenetics', repairSurface: 'animal' } },
   ];
 
   const DAY_CODES = [
@@ -433,7 +435,9 @@ describe('repairTargetForIssue (Repair Routing Contract)', () => {
     { code: 'multishank_bad_channels_ignored', step: 'devices', issue: { code: 'multishank_bad_channels_ignored', path: 'ntrode_electrode_group_channel_map[1]', field: 'bad_channels', step: 'devices', repairSurface: 'day' } },
     { code: 'stale_bad_channel_override', step: 'devices', issue: { code: 'stale_bad_channel_override', path: 'deviceOverrides.bad_channels', field: 'bad_channels', step: 'devices', repairSurface: 'day' } },
     { code: 'missing_camera', step: 'epochs', issue: { code: 'missing_camera', path: 'tasks', repairSurface: 'day' } },
-    { code: 'partial_configuration', step: 'validation', issue: { code: 'partial_configuration', path: 'optogenetics', repairSurface: 'day' } },
+    // DANDI species check is repairable inline in the Day Overview — the rule emits
+    // repairSurface:'day' (rulesValidation.js) and the subject.species path routes to Overview.
+    { code: 'invalid_species', step: 'overview', issue: { code: 'invalid_species', path: 'subject.species', repairSurface: 'day' } },
   ];
 
   const NONE_CODES = [
@@ -784,7 +788,7 @@ describe('Boundary 2 — ownership by provenance, not path (High 3)', () => {
     // The merged electrode group is content-invalid (schema error on an electrode_groups
     // path). Because the DAY supplies that geometry (deviceOverrides.electrode_groups is an
     // array), the error is owned by the day override — fixing the animal snapshot can't
-    // clear it. So it must route to the day surface, not "Fix in Animal Editor".
+    // clear it. So it must route to the day surface, not "Fix in Animal Setup".
     const erroringMerged = { electrode_groups: [{ id: 0 }], ntrode_electrode_group_channel_map: [] };
     const day = { deviceOverrides: { electrode_groups: [{ id: 0 }] } };
     const geometryErrors = validateDay(day, erroringMerged).filter(

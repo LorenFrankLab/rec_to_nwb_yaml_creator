@@ -1,13 +1,15 @@
 # Workflow route/state inventory (Phase 8.6 Task 0)
 
-[← back to PLAN.md](PLAN.md) · [workflow clarity design](workflow-clarity-design.md) · [mental-model contract](shared-contracts.md#user-mental-model-contract)
+[← back to PLAN.md](PLAN.md) · [workflow clarity design](workflow-clarity-design.md) · [screen map](workflow-screen-map.md) · [mental-model contract](shared-contracts.md#user-mental-model-contract)
 
 Date: 2026-06-05
 
-This is the map the rest of Phase 8.6 implements. For each workflow state it records the
+This is the route/state map the rest of Phase 8.6 implements. For each workflow state it records the
 user's **goal**, the **next safe action** the UI should offer, the **dangerous
 misconception** that the old UI allowed, the **current route/control**, and the **required
 change** (the surface that Phase 8.6 changes and the domain helper it derives from).
+For the screen-level contract across routes, steps, modals, empty states, repair paths, and
+destructive confirmations, use [workflow-screen-map.md](workflow-screen-map.md).
 
 The intended workflow order (from [workflow-clarity-design.md](workflow-clarity-design.md)):
 
@@ -23,7 +25,8 @@ Routes (hash router, `src/hooks/useHashRouter.js`):
 | Hash | View | Component |
 | --- | --- | --- |
 | `#/home` | home | `pages/Home` |
-| `#/workspace?animal=<id>` | workspace | `pages/AnimalWorkspace` |
+| `#/workspace` | workspace | `pages/AnimalWorkspace` |
+| `#/workspace?animal=<id>` | workspace (selected animal) | `pages/AnimalWorkspace` |
 | `#/animal/:id/editor?context=reconfigure&version=<n>&fromDay=<id>&movedDays=<n>` | animal-editor | `pages/AnimalEditor` |
 | `#/day/:id` | day | `pages/DayEditor` |
 | `#/validation` | validation | `pages/ValidationSummary` |
@@ -36,6 +39,19 @@ shape-safe reads in `src/state/workspaceSelectors.js`. No surface recomputes rea
 re-guesses a category.
 
 ---
+
+## 0. Workspace route with animals but none selected
+
+- **Goal:** choose which animal's recordings to work on.
+- **Next safe action:** select an animal from the list, or create a new animal if the intended
+  subject is absent.
+- **Dangerous misconception:** "`Workspace` is empty or broken" when the user arrived from the
+  primary nav without an `?animal=` query and no animal is selected yet.
+- **Current route/control:** `#/workspace` is accepted by `useHashRouter`; the primary nav links
+  there; `AnimalWorkspace` renders "Select an animal to view and manage recording days."
+- **Required change (Phase 8.7 / screen map):** keep this as a first-class route state in
+  [workflow-screen-map.md](workflow-screen-map.md). The dominant action is **Select an animal**,
+  with **Create Animal** secondary. Do not show day/export controls until an animal is selected.
 
 ## 1. New animal, no days
 

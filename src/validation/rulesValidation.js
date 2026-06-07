@@ -5,6 +5,8 @@
  */
 
 import { isValidSpecies, idHasSlash } from './dandiSubject';
+import { duplicateTaskEpochs } from './taskEpochs';
+import { duplicateBehavioralEventDescriptions } from './behavioralEvents';
 import { getChannelCount, validateDeviceType } from '../utils/deviceTypeUtils';
 import {
   getProbeShanks,
@@ -742,31 +744,21 @@ export const rulesValidation = (model) => {
   // A task with epochs and no camera is the explicitly-allowed no-camera path (a
   // camera-less epoch is valid; only a *video* needs a backing epoch + camera).
   if (Array.isArray(model.tasks) && model.tasks.length > 0) {
-    const epochOwners = new Map(); // epoch -> count across task rows
-    model.tasks.forEach((task) => {
-      const epochs = Array.isArray(task?.task_epochs) ? task.task_epochs : [];
-      epochs.forEach((e) => {
-        if (e === undefined || e === null) return;
-        epochOwners.set(e, (epochOwners.get(e) || 0) + 1);
+    // Number-normalized via the shared helper so a corrupt mixed-type epoch (`1` vs `"1"`) is the
+    // SAME epoch — it is downstream — and the inline task-table badge can never drift from this gate.
+    duplicateTaskEpochs(model.tasks).forEach((epoch) => {
+      issues.push({
+        path: 'tasks',
+        field: 'task_epochs',
+        step: 'epochs',
+        actionLabel: 'Fix task epochs',
+        code: 'duplicate_task_epoch',
+        repairSurface: 'day',
+        severity: 'error',
+        message:
+          `Task epoch ${epoch} is used by more than one task. Each epoch belongs to a ` +
+          `single task — duplicates collide on the Spyglass TaskEpoch key.`,
       });
-    });
-    const reportedEpochs = new Set();
-    epochOwners.forEach((count, epoch) => {
-      if (count > 1 && !reportedEpochs.has(epoch)) {
-        reportedEpochs.add(epoch);
-        issues.push({
-          path: 'tasks',
-          field: 'task_epochs',
-          step: 'epochs',
-          actionLabel: 'Fix task epochs',
-          code: 'duplicate_task_epoch',
-          repairSurface: 'day',
-          severity: 'error',
-          message:
-            `Task epoch ${epoch} is used by more than one task. Each epoch belongs to a ` +
-            `single task — duplicates collide on the Spyglass TaskEpoch key.`,
-        });
-      }
     });
   }
 
@@ -880,7 +872,7 @@ export const rulesValidation = (model) => {
           `FsGUI optogenetics protocols are present, but the animal's optogenetics ` +
           `configuration is incomplete (or off). trodes_to_nwb crashes converting FsGUI ` +
           `protocols without the full optogenetics implant metadata. Complete optogenetics ` +
-          `in the Animal Editor, or remove these FsGUI protocols.`,
+          `in Animal Setup, or remove these FsGUI protocols.`,
       });
     }
 
@@ -1022,27 +1014,21 @@ export const rulesValidation = (model) => {
   // trodes_to_nwb (convert_dios) keys DIO channels by behavioral_events[].description
   // and raises a ValueError on a duplicate description. (Rule 14 covers `name`.)
   if (Array.isArray(model.behavioral_events) && model.behavioral_events.length > 0) {
-    const seenDesc = new Set();
-    const reportedDesc = new Set();
-    model.behavioral_events.forEach((event) => {
-      const desc = event?.description;
-      if (desc === undefined || desc === null || desc === '') return;
-      if (seenDesc.has(desc) && !reportedDesc.has(desc)) {
-        reportedDesc.add(desc);
-        issues.push({
-          path: 'behavioral_events',
-          field: 'description',
-          step: 'epochs',
-          actionLabel: 'Rename behavioral event description',
-          code: 'duplicate_behavioral_event_description',
-          repairSurface: 'day',
-          severity: 'error',
-          message:
-            `Duplicate behavioral event description "${desc}". The converter keys DIO ` +
-            `channels by description and fails on duplicates — each must be unique.`,
-        });
-      }
-      seenDesc.add(desc);
+    // Shared helper so the inline day-event gate (BehavioralEventsDisplay) can never drift from
+    // this export gate — raw-string compare, exactly as the converter keys descriptions.
+    duplicateBehavioralEventDescriptions(model.behavioral_events).forEach((desc) => {
+      issues.push({
+        path: 'behavioral_events',
+        field: 'description',
+        step: 'epochs',
+        actionLabel: 'Rename behavioral event description',
+        code: 'duplicate_behavioral_event_description',
+        repairSurface: 'day',
+        severity: 'error',
+        message:
+          `Duplicate behavioral event description "${desc}". The converter keys DIO ` +
+          `channels by description and fails on duplicates — each must be unique.`,
+      });
     });
   }
 

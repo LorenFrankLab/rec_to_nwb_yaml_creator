@@ -82,6 +82,21 @@ describe('ValidationSummary', () => {
     expect(within(incompleteRow).getByText('Incomplete')).toBeInTheDocument();
   });
 
+  it('shows batch-row scan fields (config version + opto state) on a readable row (Task 10)', () => {
+    const { workspace, ids } = makeSummaryWorkspace();
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+
+    // The valid row carries the scan detail so days are comparable before opening each editor:
+    // the pinned configuration version and the day-protocol opto state (not a binary on/off). The
+    // realistic fixture has no optogenetics, so the exact day-protocol state must read that way
+    // (asserting the precise state, not just "some opto label", catches a mis-reported state).
+    const validRow = screen.getByTestId(`day-row-${ids.validDayId}`);
+    expect(within(validRow).getByText(/config v\d/i)).toBeInTheDocument();
+    expect(within(validRow).getByText(/no optogenetics/i)).toBeInTheDocument();
+  });
+
   it('counts reflect chip breakdown', () => {
     const { workspace } = makeSummaryWorkspace();
     provideStore(workspace);

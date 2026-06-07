@@ -1,6 +1,6 @@
 # Phase 10 — Claude-executable usability & proper-behavior audit
 
-[← back to PLAN.md](PLAN.md) · [overview](overview.md) · [shared-contracts](shared-contracts.md#ux-mistake-prevention-contract)
+[← back to PLAN.md](PLAN.md) · [overview](overview.md) · [screen map](workflow-screen-map.md) · [shared-contracts](shared-contracts.md#ux-mistake-prevention-contract)
 
 Goal: give Claude Code an executable integrated audit for usability and proper behavior before the professional
 UX polish gate. This is not a human usability study. It is a scripted, artifact-producing audit that uses the
@@ -12,6 +12,9 @@ catch confusing or scientifically dangerous behavior that ordinary unit tests ca
 - Phase docs 1–9 — especially each validation slice, the user mental-model contract, and the UX
   mistake-prevention contract.
 - [phase-9-playwright-qa-pass.md](phase-9-playwright-qa-pass.md) — browser QA harness and Playwright flows.
+- [workflow-screen-map.md](workflow-screen-map.md) — route/step/modal coherence contract. The audit must
+  check that each sampled screen's visible heading, primary action, next/return path, ownership cue, and repair
+  destination match the user job, including the state-specific primary-action table and batch-row scan contract.
 - [src/state/workspaceUtils.js](../../../../src/state/workspaceUtils.js) — `mergeDayMetadata`; used for
   UI/state/export triangulation.
 - [src/validation](../../../../src/validation) and
@@ -42,7 +45,10 @@ catch confusing or scientifically dangerous behavior that ordinary unit tests ca
   goal, likely user mental model, dangerous misconception, and UI prevention/repair behavior. Cover at least:
   create animal/session; configure probes; camera same-name/different-zoom; data-acq identity; region
   canonical entry; subject/DANDI fields; task/video references; fail-closed repair; persistence recovery;
-  opto off/on; export preflight/download.
+  opto off/on; export preflight/download. Start from `workflow-screen-map.md`, not from component names: every
+  top-level route and high-risk modal in the map should appear in at least one scenario or have a documented
+  reason it is out of scope for this audit. Include the state-specific Workspace/Day/Export states and the
+  catch-up row scan fields.
 - **Task 2 — UI/state/export triangulation.** For each core scenario, use Playwright or a small Node helper to
   capture three views of truth: visible UI summary/labels, `rec_to_nwb_workspace_v1` localStorage state, and
   downloaded/encoded YAML. Fail or record a finding when these disagree (for example, UI shows one camera
@@ -56,8 +62,10 @@ catch confusing or scientifically dangerous behavior that ordinary unit tests ca
   Playwright locators and screenshots for ambiguous scientific fields. Required checks: `meters_per_pixel`
   includes unit/context; camera name guidance makes changed zoom/calibration imply new name; species examples
   are Latin binomial/NCBI URI, not `Rat`; region fields show canonical choices; preflight identifies the
-  configuration version and camera calibrations; opto enabled/off state is unmistakable. Fix small copy/label
-  issues in the owning phase's code when obvious; otherwise log findings with file/route/screenshot.
+  configuration version and camera calibrations; opto enabled/off state is unmistakable; route and step labels
+  match the screen map's jobs (`Create Animal`, `Animal Workspace`, `Animal Setup`, `Day Editor`, `Validation
+  Summary`, and the day/setup step labels). Fix small copy/label issues in the owning phase's code when
+  obvious; otherwise log findings with file/route/screenshot.
 - **Task 5 — keyboard, focus, and narrow-viewport behavior.** Drive the highest-risk dialogs and repair flows
   by keyboard only, then repeat at a narrow viewport. Assert focus lands in the expected control after repair
   navigation, modals trap/restore focus, primary safe actions are reachable, disabled buttons expose a reason,
@@ -87,6 +95,7 @@ catch confusing or scientifically dangerous behavior that ordinary unit tests ca
 | Test / Artifact | Asserts |
 | --- | --- |
 | `pre-cutover usability scenario/mental-model matrix` *(QA artifact)* | each core scenario has user goal, likely mental model, dangerous misconception, expected UI behavior, workspace state, exported YAML shape, validation/preflight result, and pass/fail status. |
+| `screen-map coherence audit` *(QA artifact + screenshots)* | top-level routes, state-specific primary actions, batch row scan fields, and high-risk modals from `workflow-screen-map.md` have matching visible heading, primary action, next/return path, ownership cue, and repair destination, with any mismatch severity-ranked. |
 | `UI/state/export triangulation` *(Playwright/helper)* | visible configured values, localStorage state, and exported YAML agree for cameras/calibration, data-acq, devices, subject/session, tasks/videos, and opto. |
 | `mistake injection catches dangerous states early` *(Playwright/helper)* | high-risk mistakes are caught at the editing surface or repair summary before export, with the first catching surface recorded. |
 | `labels and units are scientifically clear` *(audit artifact + screenshots)* | camera calibration/zoom, species, region, configuration version, preflight, and opto state have clear labels/examples and no misleading defaults. |
@@ -106,5 +115,6 @@ hardware fields, task-name reuse with changed description, and opto partial/comp
 `pr-review-toolkit:code-reviewer`; `ux-reviewer`; `pr-review-toolkit:silent-failure-hunter`. Confirm: the
 audit is executable by Claude Code from a clean checkout; required scenarios do not silently skip; artifacts
 are useful for debugging; findings are severity-ranked and tied to files/routes/screenshots; dangerous
-confusion blocks handoff to Phase 11 and the cutover path; manual human usability testing is recommended
+confusion blocks handoff to Phase 11 and the cutover path; screen-map mismatches are treated as usability
+findings rather than cosmetic copy nits; manual human usability testing is recommended
 separately but not required to execute this phase.

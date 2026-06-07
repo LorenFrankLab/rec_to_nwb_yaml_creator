@@ -3,7 +3,31 @@ import {
   findIdentityDivergence,
   collectCameraIdentities,
   collectDataAcqIdentities,
+  cameraIdentityChanged,
 } from '../identitySafety';
+
+describe('cameraIdentityChanged (Phase 8.7 Task 5b)', () => {
+  const cam = { id: 0, camera_name: 'overhead', manufacturer: 'Allied', model: 'Mako', lens: '8mm', meters_per_pixel: 0.001 };
+
+  it('is false when nothing identity-relevant changed', () => {
+    expect(cameraIdentityChanged(cam, { ...cam })).toBe(false);
+    // id is NOT an identity field — changing only the id is not an identity change.
+    expect(cameraIdentityChanged(cam, { ...cam, id: 5 })).toBe(false);
+  });
+
+  it('is true when calibration / lens / model / manufacturer / name changes', () => {
+    expect(cameraIdentityChanged(cam, { ...cam, meters_per_pixel: 0.002 })).toBe(true);
+    expect(cameraIdentityChanged(cam, { ...cam, lens: '6mm' })).toBe(true);
+    expect(cameraIdentityChanged(cam, { ...cam, model: 'ace' })).toBe(true);
+    expect(cameraIdentityChanged(cam, { ...cam, manufacturer: 'Basler' })).toBe(true);
+    expect(cameraIdentityChanged(cam, { ...cam, camera_name: 'overhead_zoomed' })).toBe(true);
+  });
+
+  it('treats null/undefined/"" as equivalent (no spurious change)', () => {
+    expect(cameraIdentityChanged({ ...cam, lens: undefined }, { ...cam, lens: '' })).toBe(false);
+    expect(cameraIdentityChanged({ ...cam, model: null }, { ...cam, model: '' })).toBe(false);
+  });
+});
 
 describe('findIdentityDivergence', () => {
   const registry = [

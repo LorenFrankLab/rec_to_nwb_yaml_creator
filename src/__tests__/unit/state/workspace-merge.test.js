@@ -127,7 +127,11 @@ describe('mergeDayMetadata', () => {
   describe('Basic Merging', () => {
     it('merges animal and day into complete metadata', () => {
       const animal = createTestAnimal();
-      const day = createTestDay();
+      // Phase 8.7 Task 5: export emits the cameras the DAY uses (referenced from the animal
+      // catalog), so the day must reference camera 0 for it to appear.
+      const day = createTestDay({
+        associated_video_files: [{ name: 'run.h264', camera_id: 0, task_epochs: [1] }],
+      });
 
       const merged = mergeDayMetadata(animal, day);
 
@@ -333,14 +337,20 @@ describe('mergeDayMetadata', () => {
   });
 
   describe('Device Overrides', () => {
-    it('uses animal cameras if day has no override', () => {
+    it('exports the day-used cameras from the animal catalog (both, when both are referenced)', () => {
       const animal = createTestAnimal({
         cameras: [
           { id: 0, meters_per_pixel: 0.00085, manufacturer: 'Allied Vision', model: 'Mako G-158' },
           { id: 1, meters_per_pixel: 0.00090, manufacturer: 'Basler', model: 'ace' },
         ],
       });
-      const day = createTestDay();
+      // The day uses BOTH cameras (Task 5: export is the day-used subset of the catalog).
+      const day = createTestDay({
+        associated_video_files: [
+          { name: 'a.h264', camera_id: 0, task_epochs: [0] },
+          { name: 'b.h264', camera_id: 1, task_epochs: [1] },
+        ],
+      });
 
       const merged = mergeDayMetadata(animal, day);
 
@@ -348,13 +358,16 @@ describe('mergeDayMetadata', () => {
       expect(merged.cameras[1].manufacturer).toBe('Basler');
     });
 
-    it('ignores legacy day camera overrides and uses animal cameras as source of truth', () => {
+    it('ignores legacy day camera overrides and uses the animal catalog as the source of truth', () => {
       const animal = createTestAnimal({
         cameras: [
           { id: 0, meters_per_pixel: 0.00085, manufacturer: 'Allied Vision', model: 'Mako G-158' },
         ],
       });
       const day = createTestDay({
+        // The day references camera 0 (so it is exported) and carries a LEGACY camera override
+        // that must be ignored — the catalog object wins, not the override.
+        associated_video_files: [{ name: 'v.h264', camera_id: 0, task_epochs: [0] }],
         deviceOverrides: {
           cameras: [
             { id: 0, meters_per_pixel: 0.00090, manufacturer: 'Override Camera', model: 'OC-1' },
@@ -366,6 +379,18 @@ describe('mergeDayMetadata', () => {
 
       expect(merged.cameras).toHaveLength(1);
       expect(merged.cameras[0].manufacturer).toBe('Allied Vision');
+    });
+
+    it('exports cameras: [] for a day that references no camera (Task 5 — no catalog leak)', () => {
+      // A future catalog camera must not appear in a day that did not use any camera.
+      const animal = createTestAnimal({
+        cameras: [{ id: 0, meters_per_pixel: 0.00085, manufacturer: 'Allied Vision', model: 'Mako G-158' }],
+      });
+      const day = createTestDay({ tasks: [{ task_name: 's', task_description: 'd', task_epochs: [0] }], associated_video_files: [] });
+
+      const merged = mergeDayMetadata(animal, day);
+
+      expect(merged.cameras).toEqual([]); // key preserved, empty — never deleted
     });
 
     it('uses day electrode groups if override specified', () => {

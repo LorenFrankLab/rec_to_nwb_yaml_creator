@@ -2,7 +2,563 @@
 
 **Purpose:** Track all changes made during the refactoring milestones.
 
-**Last Updated:** June 5, 2026
+**Last Updated:** June 7, 2026
+
+---
+
+## Ownership defaults & day configurability — Phase 8.7 Task 11: QA handoff + coverage map (June 7, 2026)
+
+Closes Phase 8.7. The focused unit/component tests for every acceptance row were added with their
+owning tasks (1–10); this task verifies coverage and writes the Phase 9 handoff. Docs-only — no
+code change.
+
+- **Phase 8.7 → Phase 9 QA handoff** ([phase-8-7-qa-handoff.md](../.claude/docs/plans/pre-cutover-export-correctness/phase-8-7-qa-handoff.md)):
+  consolidates the source-of-truth artifacts (ownership matrix, screen map, ownership descriptor),
+  a per-acceptance-row **coverage map** (which jsdom/Vitest test proves each row), the deferred/
+  unresolved ownership decisions (versioned data-acq; Workspace day-row scan fields; opto label
+  tone), and the **exact Phase 9 browser scenarios** to sample (same-day, catch-up, setup-repair,
+  reconfiguration, destructive-cleanup, opto-free-day paths) with concrete routes + expected copy.
+- Verified the named regression from the acceptance matrix exists: `resolveDayCameraUsage` returns
+  the full catalog for the golden fixtures (so the 125 byte-identical baselines can't move on the
+  Task 5 camera-export binding) — [cameraUsage.test.js](../src/state/__tests__/cameraUsage.test.js).
+- Confirmed the Phase 9 plan ([phase-9-playwright-qa-pass.md](../.claude/docs/plans/pre-cutover-export-correctness/phase-9-playwright-qa-pass.md))
+  already carries the 8.7 ownership/discoverability (Task 4.5) and lifecycle-cleanup (Task 4.6)
+  browser passes; the handoff feeds them concrete scenarios.
+
+Final Phase 8.7 gate: full suite (4147), 125 golden baselines byte-identical, lint (0 errors),
+build — all green.
+
+## Ownership defaults & day configurability — Phase 8.7 Task 10: honest opto state + scan fields in summaries (June 7, 2026)
+
+Makes the status/preflight summaries agree on the day-protocol optogenetics state and adds the
+batch-row scan fields the triage contract requires. UI-only — no store/export change; 125 golden
+baselines byte-identical; full suite (4146), lint (0 errors), and build green.
+
+- **Honest three-state opto reporting** — new shared `describeDayOptoState(mergedDay)`
+  ([optoStatus.js](../src/domain/optoStatus.js)) returns **No optogenetics** / **Implanted, no
+  stimulation this day** / **Stimulation on epoch(s) …** (epochs de-duped + sorted across the day's
+  `fs_gui_yamls`). This replaces the binary "On/Off" that both the single-day Export preflight
+  ([ExportStep.jsx](../src/pages/DayEditor/ExportStep.jsx)) and the batch Export preflight
+  ([ValidationSummary/index.jsx](../src/pages/ValidationSummary/index.jsx)) independently derived
+  from the animal IMPLANT metadata alone. That binary reported "On" for an opto-implanted animal
+  that ran no stimulation on a day — directly contradicting Task 7's "no stimulation this day is a
+  normal, valid state". The two summaries now read the SAME helper, so they cannot disagree. (Closes
+  the opto-reporting item deferred from Task 7.)
+- **Batch-row scan fields on the Validation Summary rows** — each readable day row now shows a
+  **Setup** column: the pinned configuration version (with a `(historical)` marker), the camera
+  count, and the day-protocol opto state — so days are comparable before opening each editor, per
+  the batch-row scan contract. Computed in `buildRows` where the merge already succeeded (the table
+  reads, never re-derives); unreadable/missing/wrong-owner rows show `—` (no trustworthy merge).
+- Tests: `describeDayOptoState` unit (all three states + epoch formatting + fs_gui-without-implant +
+  null robustness); updated the Export preflight assertion from "Off" to "No optogenetics"; new
+  Validation Summary assertion that a readable row shows the config-version + opto scan fields.
+
+## Ownership defaults & day configurability — Phase 8.7 Task 9: ownership-pattern naming in issue copy (June 7, 2026)
+
+Validation and Export issue copy now names the OWNERSHIP PATTERN — the safe next action and, when
+it matters, the cross-day blast radius — so a scientist reads what KIND of fix an error is and
+whether correcting it reaches beyond the day in front of them. Grouping (Phase 8.6 workflow
+categories) and repair routing (`repairTargetForIssue` → "Fix in Animal Setup → …" / "Fix in …")
+are unchanged; this is purely additive vocabulary. UI-only — no store/export change; 125 golden
+baselines byte-identical; full suite (4136), lint (0 errors), and build green.
+
+- **New shared `IssueOwnershipHint`** ([IssueOwnershipHint.jsx](../src/pages/DayEditor/IssueOwnershipHint.jsx)):
+  renders, next to an issue's message, the ownership pattern's `primaryAction` ("Fix shared animal
+  setup", "Pin or fix the configuration version", "Override this day's technical value", "Select the
+  item used on this day", "Repair recovered data", …) plus an emphasized **"Affects more than this
+  day"** cue when the repair's surface-aware scope reaches past the day. The copy is read verbatim
+  from the single ownership descriptor (`ownershipForIssue`, Task 1), so the issue copy can never
+  drift from the ownership matrix. It does NOT route or regroup — those stay on `RepairActionButton`
+  and the workflow category.
+- **Wired into both issue surfaces, identically**: the Day Editor's `ValidationStep`
+  ([ValidationStep.jsx](../src/pages/DayEditor/ValidationStep.jsx)) and the shared `RepairActions`
+  ([RepairActions.jsx](../src/pages/DayEditor/RepairActions.jsx)) list used by the blocked-Export
+  preflight. The hint shows only on **export-blocking errors** (the same gate as the repair button):
+  a non-blocking warning/info already carries its own specific advice, so adding a generic pattern
+  action + the emphasized cross-day cue there would be noise (and could read as contradicting the
+  advisory). `RepairActions` only ever receives blocking errors, so it always renders the hint.
+- **Blast-radius is surface-aware, not pattern-default**: e.g. a `dangling_camera_ref` (selecting
+  the camera used on this day) is a day-local repair and shows NO cross-day cue, while an
+  `empty_location` (versioned probe geometry) shows "Pin or fix the configuration version · Affects
+  more than this day". This reuses `issueReachesBeyondDay` so the cue matches the actual repair
+  scope rather than over-warning.
+- Tests: `IssueOwnershipHint` unit (representative codes + descriptor-mirroring + null robustness +
+  pattern data-attr); `RepairActions` and `ValidationStep` integration asserting the hint appears
+  with routing/grouping intact.
+
+## Ownership defaults & day configurability — Phase 8.7 Task 8: discoverable lifecycle cleanup (June 7, 2026)
+
+Adds discoverable, SAFE animal/day deletion to the Animal Workspace. The store already exposed
+guarded `deleteAnimal` / `deleteDay`, but nothing surfaced them — ordinary users had no way to
+clean up a mistaken animal or day. UI-only — no store/export change; 125 golden baselines
+byte-identical; full suite (4127), lint (0 errors), and build green.
+
+- **`Delete animal…`** ([AnimalWorkspace/index.jsx](../src/pages/AnimalWorkspace/index.jsx)): a
+  secondary/destructive action in its own danger zone at the foot of the selected-animal section —
+  discoverable in the animal's management area but deliberately set apart from the primary
+  setup/export actions, never adjacent to them.
+- **`Delete day…`**: a secondary/destructive action on each ordinary (OK) day row, rendered
+  OUTSIDE the navigation `<a>` (a real sibling button, not nested in the link) so it can't be hit
+  while opening the day. Recovered/wrong-owner rows keep their existing repair paths and get no
+  delete button.
+- **Honest confirmations** (destructive `alertdialog`): name the animal/day + session, the cascade
+  count, and the consequence (removed from this workspace and from export lists). When a day was
+  validated or exported, the confirm adds that this removes **workspace metadata only — it does not
+  delete any already-downloaded YAML, or any NWB file, DANDI asset, or Spyglass rows**. The animal
+  confirm computes its cascade count from the SAME predicate the store's `deleteAnimal` guard uses
+  (present, owned days — excluding wrong-owner records) and notes that wrong-owner records listed
+  by mistake are preserved.
+- After deleting the selected animal, the selection resets to the animal picker rather than
+  pointing at a deleted animal.
+- Tests ([AnimalWorkspace.lifecycle.test.jsx](../src/pages/AnimalWorkspace/__tests__/AnimalWorkspace.lifecycle.test.jsx)):
+  discoverable secondary actions; confirm names + cascade count; confirm/cancel paths; the
+  downloaded-artifacts caveat for exported days; the day-delete button is not nested in the link;
+  wrong-owner records excluded from the cascade and noted as preserved; and recovered-unlinked
+  records excluded from the count (the store leaves them) and disclosed as remaining. The
+  animal-delete trigger's accessible name is "Delete this animal" (no id) so it doesn't collide
+  with the sidebar animal-card for assistive tech — the specific name + cascade live in the confirm
+  dialog.
+- **Cascade count matches what the store actually removes.** The store's `deleteAnimal` walks the
+  animal's day INDEX only, so it deletes exactly the `OK` days (index-resident, record present,
+  owned). The confirmation counts `OK` days only — it does NOT count wrong-owner records (preserved)
+  or recovered-unlinked records (not in the index, so they survive as orphans). The surviving
+  recovered records are disclosed in the confirm with a pointer to resolve them in the validation
+  summary, rather than being silently left behind under a now-deleted animal.
+
+## Ownership defaults & day configurability — Phase 8.7 Task 7: opto setup vs. per-day protocol (June 7, 2026)
+
+Makes the two-layer optogenetics model explicit in the UI: the animal's **implanted setup** (excitation
+source, optical fiber, virus injection, stimulation software — all-or-nothing) is set ONCE in the Animal
+Editor; what was **actually stimulated** is recorded per recording day in that day's Epochs step, scoped
+to the epochs it ran. A day or epoch with no stimulation is a normal, valid state — not "missing opto".
+UI/copy-only — no export/store change; the data model already split these surfaces. 125 golden baselines
+byte-identical; full suite (4120), lint (0 errors), and build green.
+
+- **Animal Editor opto step reframed** ([OptogeneticsStep.jsx](../src/pages/AnimalEditor/OptogeneticsStep.jsx)):
+  heading `Optogenetics` → `Optogenetics Setup` plus an intro that names it the animal's implanted setup
+  ("set it once here") and points to the per-day Epochs step for what was actually stimulated.
+- **Day FsGUI section reframed as the optional, epoch-scoped protocol**
+  ([FsGuiSection.jsx](../src/pages/DayEditor/FsGuiSection.jsx)): heading `FsGUI optogenetics protocols` →
+  `Optogenetics run this day (FsGUI protocols)`; help text distinguishes it from the implanted setup; the
+  empty state now reads **"No optogenetic stimulation recorded for this day — a normal, valid state"**
+  instead of the neutral "No FsGUI protocols added", so an opto-free day is friction-free rather than
+  reading as an unfinished form.
+- **Invariant pinned in validation tests** ([rulesValidation.test.js](../src/validation/__tests__/rulesValidation.test.js)):
+  an opto-implanted animal with an opto-free day (complete implant metadata, empty `fs_gui_yamls`) raises
+  none of `partial_configuration` / `missing_opto_reference` / `fs_gui_requires_optogenetics` /
+  `dangling_dio_output`. (`fs_gui_requires_optogenetics` still fires only when fs_gui rows exist without
+  the implant — that direction is unchanged.)
+- Tests: FsGuiSection friction-free empty-state copy + "separate from implanted setup" pointer; updated the
+  heading assertions in `TasksEpochsStep.test.jsx` and the pre-existing empty-state test to the new copy.
+
+## Ownership defaults & day configurability — Phase 8.7 Task 6: behavioral-events ownership (June 7, 2026)
+
+Makes the behavioral-events (DIO) UI match the ownership model: animal-level events are a reusable
+LIBRARY (templates, never exported on their own); only a day's own `behavioral_events` export. UI-only
+— no export/store change; 125 golden baselines byte-identical; full suite (4113), lint (0 errors),
+and build green.
+
+- **Fixed the false copy + reframed the animal-level section** ([BehavioralEventsSection.jsx](../src/pages/AnimalEditor/BehavioralEventsSection.jsx)):
+  the empty state literally claimed events "will be inherited by all recording days" — FALSE
+  (animal `behavioral_events` is never exported). Now framed as a `Behavioral Events / DIO library`
+  of reusable templates that are not exported until a day selects one.
+- **`Use on this day`** ([BehavioralEventsDisplay.jsx](../src/pages/DayEditor/BehavioralEventsDisplay.jsx)):
+  each inherited (library) event now has a per-event action that copies it into the day's exported
+  event list; hidden once the day already uses it. The exported day list stays visible (it already did).
+- **Unique-description gate surfaced inline:** a duplicate `description` among the exported day events
+  is a downstream hard `raise ValueError` in trodes_to_nwb (one of the few non-silent crashes). The
+  export-blocking `duplicate_behavioral_event_description` rule gates it; now it is also flagged inline
+  (`role="alert"`) at the edit point so the user fixes it before hitting a mid-conversion failure.
+- Tests: Use-on-this-day copies into the exported list + is hidden once used; duplicate-description
+  inline error; updated the "inherited rows carry no controls" test to "no edit/delete (the copy action
+  is allowed)".
+
+## Ownership defaults & day configurability — Phase 8.7 Task 5c: camera/task-epoch legibility (June 7, 2026)
+
+Makes the within-day setup legible at the TASK level and the camera-catalog model explicit. UI-only
+— no export/store change; 125 golden baselines byte-identical; full suite (4104), lint (0 errors),
+and build green. Task 5 (a/b/c) is now complete.
+
+- **Per-task room·cameras·epochs mapping** ([TasksTable.jsx](../src/pages/DayEditor/TasksTable.jsx)):
+  added the missing **Room** (`task_environment`) column next to the existing Cameras and Epochs
+  columns, so each task reads as one room with its cameras and the epochs it covers — the model's way
+  of expressing "different rooms/cameras across epochs" (separate task rows partitioning the epochs).
+- **`duplicate_task_epoch` surfaced inline as a prevented error:** the table computes the epochs
+  claimed by more than one task and `getStatus` now returns a ❌ "Epoch N also used by another task —
+  each epoch belongs to exactly one task" on every colliding task, so the export-blocking collision is
+  visible at the task, not only at export. (The rule itself is unchanged.)
+- **Catalog-selection copy:** the tasks caption and empty state say cameras are selected from the
+  animal's shared camera catalog and every epoch belongs to exactly one task; the day's camera
+  empty-state banner now offers **`Set Up Cameras`** and explains cameras are shared animal-catalog
+  entries that this day's tasks/videos/opto-FsGUI protocols select from.
+- Tests: Room column + the duplicate-epoch collision (both rows ❌ + the message); existing
+  task/camera/epoch/status tests unchanged.
+
+## Ownership defaults & day configurability — Phase 8.7 Task 5b: immutable-once-referenced cameras (June 7, 2026)
+
+Applies approach A's immutable-once-referenced rule now that export emits the day-used camera subset
+(5a): editing the IDENTITY of a camera that recording days already reference would silently rewrite
+those days' exports, so the change is presented as a choice that NAMES the affected days first. UI-only
+— no export/store change; 125 golden baselines byte-identical; full suite (4099), architecture guard,
+lint (0 errors), and build green.
+
+- **`cameraIdentityChanged(original, edited)`** + `CAMERA_IDENTITY_FIELDS`
+  ([identitySafety.js](../src/pages/AnimalEditor/identitySafety.js)): true when a camera's name /
+  calibration / lens / model / manufacturer changes (id excluded; null/undefined/"" normalized).
+- **`CameraReferenceDialog`** ([new](../src/pages/AnimalEditor/CameraReferenceDialog.jsx)): an
+  `alertdialog` that enumerates the affected recording days and offers **Create a new camera**
+  (default/recommended — the edited values become a new catalog camera, the original is untouched, so
+  the referencing days keep what they recorded) vs **Correct this camera** (overwrite in place,
+  explicitly updating all N days, including any already exported) vs Cancel.
+- **`HardwareConfigStep`** intercepts a camera EDIT save: when the camera being edited is referenced by
+  ≥1 day (via the new `findCameraAffectedDays` blast-radius helper from 5a's `cameraUsage`) AND an
+  identity field changed, it defers the write and opens the decision dialog; an UNreferenced camera (or
+  a no-op edit) still saves directly, and the pre-existing same-name divergence guard is unchanged.
+  "Create a new camera" appends with the next free id; "Correct" replaces in place.
+- Tests: `cameraIdentityChanged` unit cases; 4 HardwareConfigStep flow tests (decision named + no write
+  yet; create-new appends/keeps original; correct overwrites; unreferenced saves directly).
+
+Still open in Task 5: the catalog-selection + task→room/cameras/epochs legibility copy and empty
+states (5c).
+
+## Ownership defaults & day configurability — Phase 8.7 Task 5a: day-used camera export binding (June 7, 2026)
+
+The one Phase 8.7 change that touches export SEMANTICS — implemented carefully and verified
+byte-identical. The export now emits only the cameras a day actually used, so a new catalog camera
+for a future recording can no longer leak into a re-export of an old day (approach A's "past days
+keep what they used" promise). The 125 golden/legacy baselines stay byte-identical (every fixture
+references all its cameras → the day-used subset equals the full catalog); full suite (4092),
+architecture guard, lint (0 errors), and build green.
+
+- **New pure module** [`src/state/cameraUsage.js`](../src/state/cameraUsage.js):
+  - `resolveDayCameraUsage(animal, day)` — scans `tasks[].camera_id` (array),
+    `associated_video_files[].camera_id` (scalar), and `fs_gui_yamls[].camera_id` (scalar) and
+    returns the day-used camera objects, FILTERED from the full `animal.cameras` catalog (never
+    reconstructed — each keeps `lens` and all schema-required fields), in catalog order. A
+    zero-reference day → `[]`. Shape-tolerant (corrupt non-array collections/ids degrade to empty),
+    and a dangling reference is simply omitted (the `dangling_camera_ref` rule blocks export first).
+  - `findCameraAffectedDays(days, cameraId)` — the separate blast-radius helper (kept out of the
+    single-day export helper) returning the ids of days that reference a camera, for the
+    immutable-once-referenced "apply to these N days" confirmations (5b).
+  - `referencedCameraKeys(day)` — the shared id-collection primitive (numeric/string ids normalized).
+- **`mergeDayMetadata`** ([workspaceUtils.js](../src/state/workspaceUtils.js)) now emits
+  `resolveDayCameraUsage(animal, day)` instead of the whole `animal.cameras`, preserving key order
+  and `cameras: []`. Verified safe downstream (trodes_to_nwb resolves cameras by `id`, not list
+  position), so dropping unreferenced cameras cannot shift/corrupt the device mapping and is more
+  correct (an unused camera should not become a device).
+- **Tests:** 13 `cameraUsage` unit tests (array/scalar refs, dedupe, unreferenced-dropped,
+  dangling-omitted, corrupt shapes, fs_gui-only, the full-catalog golden-fixture case); updated the
+  3 merge tests that encoded the old "export all animal cameras" behavior to reference the cameras
+  they expect (realistic), and added a `cameras: []`-for-a-no-camera-day test.
+
+Still open in Task 5: the camera blast-radius / immutable-once-referenced UI (5b) and the
+catalog-selection + task→room/cameras/epochs legibility copy (5c).
+
+## Ownership defaults & day configurability — Phase 8.7 Task 4: day technical values as effective recording-system values (June 7, 2026)
+
+Makes the Day Editor technical section show the rig constants as effective recording-system values
+instead of hiding them. UI-only and ADDITIVE — no export, store, or routing change; the 125 golden
+baselines stay byte-identical and the full suite (4077), architecture guard, lint (0 errors), and
+build stay green.
+
+- **Found the real gap:** `DayTechnicalSection` previously rendered ONLY `default_header_file_path`
+  and `units` — the rig constants (`raw_data_to_volts` / `times_period_multiplier`) that the export
+  actually reads from `day.technical` were not shown at all. This is exactly the "don't show only
+  header/units while implying day-specific numeric values exist" hazard the plan flags.
+- **Rig constants now shown as effective, READ-ONLY recording-system values**
+  ([DayTechnicalSection.jsx](../src/pages/DayEditor/DayTechnicalSection.jsx)), labelled against the
+  CURRENT recording-system default (`animal.technicalDefaults`): `Using recording-system default`
+  when the day's copied value still matches, or `Different from current recording-system default
+  (current default: X)` when it differs (e.g. the default was changed after the day was created —
+  the day keeps what it recorded; no silent retroactive relabel). An `Edit in Recording System`
+  deep-link routes editing to the owner (it is not a routine day edit). No day-level override is
+  built — the Task 3 audit confirmed rig constants don't change day-to-day, and none existed before,
+  so this is purely additive (no capability removed) per the plan's read-only option.
+- **`default_header_file_path` framed as day-only:** carries a `This day only` ownership cue and
+  stays editable; `units` unchanged. `OverviewStep` now passes `recordingSystemDefaults` +
+  `animalKey` so the section can compute the comparison and the deep-link.
+- Added rig-constant tests (effective values + using-default/differs cues + the Recording System
+  deep-link + header-path-still-day-only); existing header/units tests unchanged.
+
+## Ownership defaults & day configurability — Phase 8.7 Task 3: recording-system ownership (option B) (June 6, 2026)
+
+Implements the decided option-B recording-system contract. UI-only — no export, store, or routing
+change; the 125 golden baselines stay byte-identical and the full suite (4073), architecture guard,
+lint (0 errors), and build stay green.
+
+- **Audit (confirmed the model):** `mergeDayMetadata` reads `getDataAcqDevices(animal)` LIVE
+  ([workspaceUtils.js:342](../src/state/workspaceUtils.js)) into every day — `data_acq_device` is
+  animal-wide and un-versioned (unlike electrode geometry, which `resolveDayConfig` pins per day via
+  `configurationHistory`). So a genuine mid-study amplifier/acquisition swap cannot be represented
+  per day, and option B (single shared identity, not a versioned per-day source) is the accurate model.
+- **Mid-study-swap "currently unsupported" notice** (the new Task 3 piece) added to the Recording
+  System section ([DataAcqSection.jsx](../src/pages/AnimalEditor/DataAcqSection.jsx)): "One recording
+  system per animal — no per-day version yet. A mid-study hardware change … can't be represented per
+  day in this app yet: the device identity below is shared, so editing it changes every one of this
+  animal's recording days — there is no way to keep earlier days on the old hardware. Per-day
+  recording-system versioning is a planned future capability." This honors the no-silent-retroactive
+  promise and stops the UI implying a day-level recording-system edit exists.
+- The supporting pieces were already in place: the data-acq identity blast-radius copy ("editing it
+  affects all recording days") and the future-days-only framing of the rig-constant defaults
+  (`raw_data_to_volts`/`times_period_multiplier` seed new days) landed in Task 2a; the
+  `divergent_data_acq_identity` identity-safety rule (reuse a name with different hardware → steer to
+  a new name) pre-dates 8.7. The DAY-side effective-value display (`Using recording-system default`
+  vs `Different from current default`) is Task 4.
+- Added a `DataAcqSection` test asserting the limitation notice (names the per-day-version gap, the
+  mid-study swap, the no-earlier-days-kept point, and the future-capability framing).
+
+## Ownership defaults & day configurability — Phase 8.7 Task 2c: finish the Animal Setup relabels (June 6, 2026)
+
+Closes out Task 2's remaining user-facing relabels (the IA section split + lens column landed in 2a;
+the Animal Profile surface in 2b). Pure label/copy change — no behavior, export, or routing change
+(deep-link routing resolves by step INDEX, not label). Full suite (4072), 125 golden baselines
+byte-identical, architecture guard, lint (0 errors), and build all green.
+
+- **Animal Editor step labels → scientist language** ([AnimalEditorStepper.jsx](../src/pages/AnimalEditor/AnimalEditorStepper.jsx)
+  + [validation.js `ANIMAL_EDITOR_STEPS`](../src/domain/validation.js), kept in sync): `Electrode Groups`
+  → `Electrodes & Ephys`, `Optogenetics` → `Optogenetics Setup` (and `Hardware Config` →
+  `Recording System, Cameras & DIO` from 2a). `Channel Maps` already matched the target.
+- **Page title** `Animal Editor: {id}` → `Animal Setup: {id}` — "Animal Editor" was implementation
+  language; the screen map wants the page to read as shared Animal Setup. The `#/animal/:id/editor`
+  route and component names stay as internal identifiers.
+- **Repair-button copy** `Fix in Animal Editor →` → `Fix in Animal Setup →`, generated once in
+  `repairTargetForIssue` ([validation.js](../src/domain/validation.js)) and used by the Day Editor
+  Devices/Export/Validation repair surfaces (the two hardcoded "Fix in Animal Editor" links in
+  [DevicesStep.jsx](../src/pages/DayEditor/DevicesStep.jsx) / [ExportStep.jsx](../src/pages/DayEditor/ExportStep.jsx)
+  updated too), so the repair destination reads in user language consistently with the page title.
+- Updated the affected test assertions (title, repair-button name matchers, step-label/route labels)
+  across the Animal Editor, Day Editor repair, and routing suites; refreshed the screen-map
+  reconciliation rows to mark these done. Task 2 (a/b/2.5/c) is now complete.
+
+**Review fix (code-reviewer + Task-2 adherence audit, same day).** The relabel verified correct and
+all 8 Task 2 requirements MET, but the reviewer caught a CLASS of missed user-facing strings: the
+page reads "Animal Setup" while several assistive-tech announcers / button labels / validation
+messages still said "Animal Editor". Swept all genuinely user-facing occurrences (left internal
+route ids, component names, testids, SCSS classes, and JSDoc/comments as-is): the AppLayout
+`aria-live` route announcer value and the Suspense fallback (`Loading Animal Setup…`); the Day Editor
+deep-link prose in `DevicesStep` (button + bad-channel tooltip), `ExportStep`, `TaskModal`,
+`ReconfigWizard`; and the two user-visible validation messages (`validation.js` shadowed-override,
+`rulesValidation.js` FsGUI-requires-opto) — all now say "in Animal Setup". Updated the one test that
+asserted the old DevicesStep link text.
+
+## Ownership defaults & day configurability — Phase 8.7 Task 2.5: weight is a recording-day fact (June 6, 2026)
+
+Reverses the weight data flow so the Day Overview owns the exported session weight, with the
+animal-created value as a labelled fallback only. **No export-byte or store change** — the export
+merge already resolved `session.weight ?? subject.weight` ([workspaceUtils.js:333](../src/state/workspaceUtils.js)),
+so this is purely a UI write-path relocation; the 125 golden baselines stay byte-identical and the
+full suite (4072), architecture guard, lint (0 errors), and build stay green.
+
+- **Relocated the weight field** ([OverviewStep.jsx](../src/pages/DayEditor/OverviewStep.jsx)) from
+  the collapsed "inherited subject metadata" section to the always-visible Session Metadata section,
+  reframed as `Recording-day weight (grams)`. It now writes `session.weight` (a day update — no store
+  change, `applyDayUpdates` already accepts session merges) and **no longer mutates
+  `animal.subject.weight` or clears the day value**. Previously the field wrote the animal weight and
+  cleared `session.weight`, so the exported value was silently the animal baseline for every day.
+- **The animal weight is now a labelled fallback.** When the day has no `session.weight`, the input
+  is empty and the help text names the fallback explicitly ("the animal baseline (N g) will be
+  exported as a fallback — enter this session's weight to set it for this day"), with the baseline
+  also shown as the input placeholder. When a day weight is set, the cue reads "the value exported
+  for this day." This matches the ownership matrix (weight = `day_fact`, animal value is fallback).
+- **Weight left the Animal Profile (2b) and the inherited-subject section deliberately** — it is a
+  per-day fact, not a constant animal fact, and is no longer editable as a shared animal value from
+  the Day Overview.
+- Updated the OverviewStep weight tests to the new behavior (day-owned write to `session.weight`,
+  no animal mutation, day-owned display, fallback explicitly named) and removed `subject.weight` from
+  the subject-focus/anchor tests (it is no longer a subject field). Screen map updated.
+
+## Ownership defaults & day configurability — Phase 8.7 Task 2b: Animal Profile surface (June 6, 2026)
+
+Second IA increment of sub-stream A: a discoverable owner for the animal's constant subject facts,
+so the Day Overview is no longer the only place to correct them. Baseline-safe (no export-byte or
+store change). Full suite (4070), 125 golden baselines byte-identical, architecture guard, lint
+(0 errors), and build all green.
+
+- **New `AnimalProfileSection`** ([src/pages/AnimalEditor/AnimalProfileSection.jsx](../src/pages/AnimalEditor/AnimalProfileSection.jsx)),
+  wired into the Animal Editor as a collapsible section ABOVE the device stepper (deliberately not a
+  numbered step, so step indices/deep-link routing are unchanged). It owns the constant subject
+  facts: `subject_id` (read-only identity — recreate the animal to change), species, sex,
+  date_of_birth, genotype, description. **Weight is intentionally excluded** — it is a per-day
+  recording fact (Task 2.5), not a constant animal fact.
+- **Identity constraints at the edit point.** Species shows the Latin-binomial / NCBI-Taxonomy-URI
+  guidance and blocks a non-conformant value before the animal-wide write (the app's
+  `invalid_species` rule is the only DANDI gate, reusing `isValidSpecies`); DOB shows the ISO-8601
+  expectation and is encoded to ISO on save.
+- **Blast-radius transparency before save.** Editing here is animal-wide, so the section names the
+  reach ("this animal and all N recording days, including any already exported") both as a
+  persistent notice at the edit point AND in a `ConfirmDialog` before committing; only the changed
+  subject fields are written (`updateAnimal(id, { subject })` shallow-merges). Save is disabled when
+  nothing changed (no accidental animal-wide write).
+- **Day Overview inherited-notice now names the count.** [OverviewStep.jsx](../src/pages/DayEditor/OverviewStep.jsx)
+  already routed inherited-subject edits to the animal with a qualitative notice; it now names "all
+  N recording days" too, so both correction surfaces state the blast radius.
+- Added a focused `AnimalProfileSection` component test (now 9 cases: read-only identity,
+  species/DOB guidance, blast-radius naming + confirm, species gate blocks save, ISO DOB encoding,
+  dirty/disabled save, singular/plural copy, and the DOB future-date cap). Updated the screen-map
+  Animal-Setup contract to mark this done.
+
+**Review fix (code-reviewer, same day).** The DOB picker's `max` was set to `2999-12-31`, allowing a
+future birth date to be written animal-wide — a regression versus the two sibling surfaces
+(AnimalCreationForm and the Day Overview DOB field both cap at today) and unguarded by any downstream
+validation. Corrected the cap to today (`new Date().toISOString().split('T')[0]`) and added a guard
+test asserting the DOB `max` equals today. (Everything else the reviewer scrutinized — DOB timezone
+round-trip, blast-radius copy accuracy, species empty-allow gate, dirty-tracking, accessibility,
+two-surface consistency — verified clean.)
+
+Still open in Task 2: the remaining step-label relabels (Electrode Groups → Electrodes & Ephys,
+etc.); the Animal Editor route/title `Animal Editor` → `Animal Setup` user-facing relabel.
+
+## Ownership defaults & day configurability — Phase 8.7 Task 2a: Animal Editor IA labels + camera lens column (June 6, 2026)
+
+First implementation increment of sub-stream A's information-architecture work (Task 2, part a).
+Baseline-safe UI/IA + label changes; no export-byte change, no store change. Full suite (4061),
+125 golden baselines byte-identical, architecture guard, lint (0 errors), and build all green.
+
+- **Renamed the over-broad "Hardware Config" step → `Recording System, Cameras & DIO`** in both
+  the Animal Editor stepper ([AnimalEditorStepper.jsx](../src/pages/AnimalEditor/AnimalEditorStepper.jsx))
+  and `ANIMAL_EDITOR_STEPS` ([validation.js](../src/domain/validation.js)) so the stepper nav label
+  and the repair-button copy ("Fix in Animal Editor → …") stay consistent.
+- **Gave the bundled step three ownership-named sections** ([HardwareConfigStep.jsx](../src/pages/AnimalEditor/HardwareConfigStep.jsx)):
+  `Video Cameras & Calibration`, `Recording System`, `Behavioral Events / DIO` (aria-labels + the
+  data-acq heading renamed from `Data Acquisition Device` → `Recording System`), so data acquisition
+  reads as the recording/ephys system rather than being lumped with cameras. Separate *steps* are
+  deferred; within-step separation is done.
+- **Added the missing camera `lens` column** to the cameras table ([CamerasSection.jsx](../src/pages/AnimalEditor/CamerasSection.jsx))
+  — `lens` is a camera identity field (a changed lens is a different camera downstream), so it is now
+  visible in the table, not only in the edit modal.
+- **Corrected the Animal Setup subtitle overpromise** (flagged in review): it no longer claims
+  cameras/data-acq are versioned per day. New honest copy distinguishes versioned electrodes/probes
+  (each day keeps its pinned configuration) from shared cameras + recording system (editing affects
+  all recording days) — matching the actual export behavior until Task 5's camera binding lands.
+- Updated the affected component/routing tests to the new labels and added a `lens`-column test;
+  refreshed the screen-map reconciliation table to mark these items done.
+
+**Review fix (code-reviewer, same day).** The 2a `Recording System` section header overstated
+blast radius: it said the section edits "the data-acquisition device **and technical parameters**.
+Editing this affects all recording days," but the technical-parameter defaults
+(`raw_data_to_volts` / `times_period_multiplier`) are `setup_default_to_day` — they seed NEW days
+only (`animal.technicalDefaults` → `day.technical` at `createDay`); existing days keep their copied
+values. The blanket claim contradicted the section's own inner copy and the ownership matrix.
+Corrected the header to scope "affects all recording days" to the device identity and state the
+defaults' future-days-only reach, and added a `DataAcqSection` test pinning the two distinct blast
+radii so it can't regress. Also refreshed two stale "Hardware Config" internal comments (the step is
+index 3, not 2).
+
+Still open in Task 2: the Animal Profile / Subject surface with species (Latin binomial) and
+`date_of_birth` (ISO-8601) constraints at the edit point and subject-correction blast-radius copy
+(Task 2b), plus the remaining step-label relabels.
+
+## Ownership defaults & day configurability — Phase 8.7 sub-stream A foundation (June 6, 2026)
+
+Foundation for the ownership/blast-radius UX (sub-stream A: ownership vocabulary + artifacts).
+This increment is **baseline-safe and changes no export bytes**: it adds two planning artifacts
+and one pure domain helper, with no touch to `mergeDayMetadata`, the export bridge, or any page.
+The 125 golden baselines stay byte-identical; the full suite (4051 tests), the architecture-boundary
+guard, lint (0 errors), and build all stay green. The net-new IA builds (Tasks 2/2.5/4) and the
+day-used camera export binding (Task 5) are later sub-streams, deliberately out of this increment.
+
+- **Ownership matrix artifact (Task 0).** `.claude/docs/plans/pre-cutover-export-correctness/workflow-ownership-matrix.md`
+  reconciles the plan's expected matrix into the field-level source of truth: for every exported
+  workspace section (plus high-risk non-exported setup) it pins one of the seven internal
+  ownership patterns and records owner, day behavior, state path, export source, edit surface,
+  repair target, user-facing label, ownership cue, primary next action, dangerous misconception,
+  likely attention target, and test coverage. The seven patterns are INTERNAL; the user sees only
+  "today-only edit" vs "touches these N days (enumerated)". Includes the issue-code ownership
+  contract (category → default pattern + sparse refinement) and the downstream "this app is the
+  gate" reality.
+- **Screen-map reconciliation (Task 0.5).** Added a "Current label reconciliation (verified
+  against code 2026-06-06)" table to `workflow-screen-map.md` pinning the ACTUAL current strings
+  (with file:line) against their target user-facing labels and the owning later sub-stream — e.g.
+  `Hardware Config` step heading is really `Cameras, Hardware & Behavioral Events`
+  ([HardwareConfigStep.jsx:126](../src/pages/AnimalEditor/HardwareConfigStep.jsx)); the cameras
+  table omits `lens` ([CamerasSection.jsx:153](../src/pages/AnimalEditor/CamerasSection.jsx)); the
+  animal-level behavioral-events empty state falsely claims events are "inherited by all recording
+  days"; the Day `Devices`/`Epochs` steps and the `Animal Editor` route use implementation
+  language. No relabeling done in this sub-stream — the table is the reconciliation contract for
+  Tasks 2/4/5/6/8 and Phase 9 QA.
+- **Ownership descriptor helper (Task 1).** `src/domain/workflowOwnership.js` is a pure helper
+  mapping a validation issue / field path / section id → ownership pattern + plain-language label +
+  visible cue + day-behavior copy + suggested primary action + edit surface, plus a
+  `reachesBeyondDay` boolean that drives the headline two-state ("today-only" vs "touches N days").
+  Per the plan it does **not** spin up a third `code → meaning` table: it reuses
+  `repairTargetForIssue` for the edit surface and `workflowCategoryForIssue`/`CATEGORY_BY_CODE` for
+  the workflow category, then maps each category to a default ownership pattern and applies a
+  SPARSE `PATTERN_REFINEMENT_BY_CODE` only where ownership is finer than the category default
+  (geometry/channel → configuration_version; cameras → animal_catalog_reference; task/fs_gui-epoch →
+  task_epoch_assignment; behavioral events → day_exported_list; unpinned config → configuration_version).
+  A completeness test (`src/domain/__tests__/workflowOwnership.test.js`, 30 tests) mirrors the
+  existing `CATEGORY_BY_CODE` ↔ `SURFACE_BY_CODE` invariant: every validator code resolves to a
+  well-formed descriptor, the refinement names no stale code, and the edit surface is always
+  exactly `repairTargetForIssue`'s (never re-decided). The module lives in `src/domain/` and does
+  not import from `pages/` (architecture-boundary guard stays green).
+
+### Review round 1 fixes (code-review, same day)
+
+- **Closed the validator-code coverage hole (High).** Three live rule codes —
+  `dangling_dio_output`, `fs_gui_requires_optogenetics`, `missing_opto_reference` — were emitted by
+  `rulesValidation` but absent from `SURFACE_BY_CODE` and `CATEGORY_BY_CODE` (a pre-existing Phase 8.6
+  gap the new ownership layer inherited). Added all three to both authoritative tables (FsGUI codes →
+  day/day_metadata, opto reference → animal/animal_setup) and to `PATTERN_REFINEMENT_BY_CODE`
+  (FsGUI → task_epoch_assignment). The table-key completeness tests couldn't catch this, so added a
+  **source-scan guard** that extracts every emitted app code from the rule sources — both
+  `code: '<literal>'` properties AND the `identityDivergences(...)` positional `'divergent_*_identity'`
+  args (the `divergent_*` family is built non-literally, so a `code:`-only scan missed it) — and
+  asserts each is owned by SURFACE_BY_CODE, CATEGORY_BY_CODE, and the ownership descriptor, with a
+  sanity floor against a vacuous scan.
+- **Made path resolution robust to documented state paths (High).** `ownershipForFieldPath` keyed off
+  the leading token only, so the matrix's own state paths (`day.technical.raw_data_to_volts`,
+  `animal.cameras[0].lens`, `day.tasks[0].camera_id`, `day.configurationVersion`) mis-resolved.
+  Replaced the leading-token lookup with an ordered whole-path keyword scan that strips the
+  `animal.`/`day.` state-shape prefix and resolves nested fields; covered by new state-path tests.
+- **Made `reachesBeyondDay` repair-scope-aware (High).** It was pattern-level, so a day-side camera
+  selection (`dangling_camera_ref`/`missing_camera`) or day pin (`unpinned_configuration`) falsely
+  read as "touches N days". It is now computed per issue from the edit surface: an `animal`-surface
+  fix reaches referencing days; a `day`-surface fix is day-local EXCEPT a constant animal fact edited
+  from the Day Overview (species/DOB). The pattern default is retained for field/section descriptors.
+- **Doc-consistency fixes.** Phase plan "six ownership patterns" → "seven"; matrix now states one
+  PRIMARY pattern per field and flags the genuinely-composite sections (tasks, opto protocol, camera
+  identity-vs-selection); added the `units` row; corrected the `invalid_species` repair target to
+  `day`/Overview (matching `SURFACE_BY_CODE`, with ownership still animal-wide). Recorded two UI-copy
+  findings owned by later sub-streams in the screen-map reconciliation table: the Animal Setup
+  subtitle overpromising camera/data-acq per-day versioning (Tasks 3/5) and opto preflight/batch
+  status reporting implant metadata instead of day protocol state (Tasks 7/10).
+
+### Review round 2 fixes (code-review, same day)
+
+- **Encoded `units` in the helper (Medium).** The matrix classified `units` as
+  `setup_default_to_day`, but the keyword scan had no `units` entry, so `day.technical.units` fell
+  through to a generic day fact — the wrong cue for Task 4's technical/defaults UI. Added a `units`
+  keyword to the scan, placed AFTER `electrode` so an electrode-group `units` subfield stays
+  `configuration_version`; added tests for both `day.technical.units` (setup-default) and
+  `electrode_groups[0].units` (configuration-version, the ordering guard).
+- **Corrected two stale `repairTargetForIssue` fixtures (Medium).** In
+  `src/pages/DayEditor/__tests__/validation.test.js`, `invalid_species` was an ANIMAL_CODES fixture
+  with `repairSurface:'animal'` and `partial_configuration` a DAY_CODES fixture with
+  `repairSurface:'day'` — both contradicting what the rules emit (`invalid_species` → `'day'`/Overview;
+  `partial_configuration` → `'animal'`/Optogenetics). They only passed because an explicit
+  `repairSurface` wins, so they asserted inputs production never produces. Moved each fixture to the
+  correct array with the production surface/step, so the tests now lock the real routing contract.
+
+### Review round 3 fix (code-review, same day)
+
+- **Reclassified `units` as a day fact, not a recording-system default (Medium).** Round 2
+  reconciled the `units` helper/matrix toward `setup_default_to_day`, but that was the wrong
+  direction: `shared-contracts.md` correctly states `units` is day-specific, and the model confirms
+  it — day creation seeds `units: undefined` and there is no `animal.technicalDefaults.units` to
+  copy (workspaceTransitions.js), unlike `raw_data_to_volts`/`times_period_multiplier` which ARE
+  seeded from animal defaults. Fixed the helper (`units` → `day_fact`, kept after `electrode` so an
+  electrode-group `units` subfield stays `configuration_version`), the matrix row (now `day_fact` /
+  `This day only`, with a group note that `day.technical` mixes copied defaults and day facts), and
+  the tests. `shared-contracts.md` needed no change — the matrix/helper now agree with it. This is a
+  reconcile-toward-the-truth fix, not a make-the-docs-match fix.
+
+### Test results
+
+- Full suite: 4060 tests passing (248 files), +39 from the new ownership descriptor across the
+  foundation + three review rounds.
+- Golden baselines: 125/125 byte-identical.
+- Architecture-boundary guard: green (no domain→page import introduced).
+- Lint: 0 errors (pre-existing JSDoc warnings only). Build: succeeds.
 
 ---
 

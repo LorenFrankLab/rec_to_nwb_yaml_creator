@@ -193,3 +193,10 @@
   color: #bf360c;
   white-space: nowrap;
 }
+
+/* Batch-row scan detail (config version · cameras · opto state) — muted so it reads as
+   at-a-glance context, not a primary value. */
+.validation-summary-scan {
+  font-size: 0.8125rem;
+  color: #555;
+}

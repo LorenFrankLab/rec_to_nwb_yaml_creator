@@ -105,7 +105,7 @@ export default function ReconfigWizard({
 
   const handleApply = () => {
     if (latestDevices.electrode_groups.length === 0) {
-      setError('Configure probes in the Animal Editor before creating a new configuration version.');
+      setError('Configure probes in Animal Setup before creating a new configuration version.');
       return;
     }
     if (!description.trim()) {
@@ -155,7 +155,7 @@ export default function ReconfigWizard({
       <p id={summaryId} className="reconfig-summary">
         This creates a new configuration version starting {day.date}. This day and
         all later listed days move to the new version; earlier days keep their current configuration.
-        After confirming, edit the new probe geometry in the Animal Editor — only the
+        After confirming, edit the new probe geometry in Animal Setup — only the
         new version (and the days on it) changes.
       </p>
 

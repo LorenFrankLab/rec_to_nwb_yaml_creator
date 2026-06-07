@@ -9,6 +9,64 @@ const inherited = [
 ];
 
 describe('BehavioralEventsDisplay', () => {
+  // Phase 8.7 Task 6: inherited events are a reusable LIBRARY; "Use on this day" copies one into
+  // the exported day list (the only behavioral_events that export). Duplicate descriptions in the
+  // exported list are a downstream hard crash — gate them inline.
+  it('offers "Use on this day" for an inherited event and copies it into the exported day list', async () => {
+    const user = userEvent.setup();
+    const onDayEventsChange = vi.fn();
+    render(
+      <BehavioralEventsDisplay inheritedEvents={inherited} dayEvents={[]} onDayEventsChange={onDayEventsChange} />
+    );
+    const list = screen.getByRole('list', { name: /inherited behavioral events/i });
+    const rewardRow = within(list).getByText('reward_well').closest('li');
+    await user.click(within(rewardRow).getByRole('button', { name: /use reward_well on this day/i }));
+    expect(onDayEventsChange).toHaveBeenCalledWith([
+      { name: 'reward_well', description: 'Reward delivered at well' },
+    ]);
+  });
+
+  it('hides "Use on this day" for an inherited event already used on the day', () => {
+    render(
+      <BehavioralEventsDisplay
+        inheritedEvents={inherited}
+        dayEvents={[{ name: 'reward_well', description: 'Reward delivered at well' }]}
+        onDayEventsChange={vi.fn()}
+      />
+    );
+    const list = screen.getByRole('list', { name: /inherited behavioral events/i });
+    const rewardRow = within(list).getByText('reward_well').closest('li');
+    expect(within(rewardRow).queryByRole('button', { name: /use reward_well on this day/i })).not.toBeInTheDocument();
+  });
+
+  it('flags a duplicate description among the exported day events (downstream hard crash)', () => {
+    render(
+      <BehavioralEventsDisplay
+        inheritedEvents={[]}
+        dayEvents={[
+          { name: 'poke_a', description: 'nose poke' },
+          { name: 'poke_b', description: 'nose poke' },
+        ]}
+        onDayEventsChange={vi.fn()}
+      />
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent(/description "nose poke".*more than one|unique description/i);
+  });
+
+  it('does NOT flag descriptions that differ only by trailing whitespace (matches the export gate)', () => {
+    // The converter keys DIO by the raw description, so "nose poke" and "nose poke " are distinct.
+    // The inline gate must use the same raw-string semantics as the validator (no trim) — flagging
+    // these would tell the user to "fix" a non-problem the export gate doesn't see.
+    render(
+      <BehavioralEventsDisplay
+        inheritedEvents={[]}
+        dayEvents={[{ name: 'a', description: 'nose poke' }, { name: 'b', description: 'nose poke ' }]}
+        onDayEventsChange={vi.fn()}
+      />
+    );
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('renders inherited events with a lock cue and no edit/delete controls', () => {
     render(
       <BehavioralEventsDisplay
@@ -22,8 +80,9 @@ describe('BehavioralEventsDisplay', () => {
     expect(within(list).getByText('reward_well')).toBeInTheDocument();
     expect(within(list).getByText('stim_trigger')).toBeInTheDocument();
 
-    // Inherited rows expose an accessible "read-only" cue and carry no controls.
-    expect(within(list).queryByRole('button')).not.toBeInTheDocument();
+    // Inherited rows are NOT editable here (no edit/delete) — only a "Use on this day" copy
+    // action (Task 6). They keep the accessible "read-only" cue.
+    expect(within(list).queryByRole('button', { name: /edit|delete|remove/i })).not.toBeInTheDocument();
     expect(within(list).getAllByText(/inherited, read-only/i)).toHaveLength(2);
   });
 

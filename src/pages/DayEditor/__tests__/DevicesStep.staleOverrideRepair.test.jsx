@@ -282,6 +282,6 @@ describe('DevicesStep — round-7 override removal completeness', () => {
       render(<DevicesStep animal={corruptAnimal} day={baseDay} mergedDay={{}} onFieldUpdate={onFieldUpdate} />)
     ).not.toThrow();
     expect(screen.getByText(/device configuration is missing or corrupt/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /configure devices in the animal editor/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /configure devices in animal setup/i })).toBeInTheDocument();
   });
 });

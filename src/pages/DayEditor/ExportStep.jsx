@@ -5,6 +5,7 @@ import { mergeDayMetadata, resolveDayConfig } from '../../state/workspaceUtils';
 import { getAnimalDayIds } from '../../state/workspaceSelectors';
 import { computeStepStatus, validateDay, STEP_LABELS } from '../../domain/validation';
 import { getDayWorkflowStatus } from '../../domain/workflowStatus';
+import { describeDayOptoState } from '../../domain/optoStatus';
 import { isExportEnabled } from './stepGate';
 import { isFeatureEnabled } from '../../featureFlags';
 import { checkShadowExport } from '../../domain/shadowExport';
@@ -206,7 +207,7 @@ export default function ExportStep({ animal, day, onNavigate, onRepair, animalKe
           {mergeError && (
             <p className="export-merge-error">
               This day&apos;s metadata could not be assembled — its animal&apos;s device
-              configuration is missing or corrupt. Repair it in the Animal Editor, then return.
+              configuration is missing or corrupt. Repair it in Animal Setup, then return.
             </p>
           )}
           {!dayExportable && (
@@ -242,7 +243,7 @@ export default function ExportStep({ animal, day, onNavigate, onRepair, animalKe
                   data-repair-surface={owner}
                   onClick={() => onNavigate?.(owner === 'animal' ? 'animal' : step, field)}
                 >
-                  {owner === 'animal' ? 'Fix in Animal Editor' : `Fix in ${STEP_LABELS[step] || step}`}
+                  {owner === 'animal' ? 'Fix in Animal Setup' : `Fix in ${STEP_LABELS[step] || step}`}
                 </button>
               ))}
             </div>
@@ -354,10 +355,10 @@ function buildPreflightSummary(
     0
   );
 
-  const optoOn =
-    (merged.opto_excitation_source?.length || 0) > 0 ||
-    (merged.optical_fiber?.length || 0) > 0 ||
-    (merged.virus_injection?.length || 0) > 0;
+  // Day-protocol opto state (Task 10): the honest three-state read — "No optogenetics" /
+  // "Implanted, no stimulation this day" / "Stimulation on epoch(s) …" — not a binary On/Off
+  // derived only from the implant. Shared with the Validation summary so the two never disagree.
+  const opto = describeDayOptoState(merged);
 
   const dataAcq = merged.data_acq_device || [];
   const dataAcqValue = dataAcq.length
@@ -386,7 +387,7 @@ function buildPreflightSummary(
       label: 'Tasks & videos',
       value: `${(merged.tasks || []).length} tasks, ${(merged.associated_video_files || []).length} videos`,
     },
-    { label: 'Optogenetics', value: optoOn ? 'On' : 'Off' },
+    { label: 'Optogenetics', value: opto.label },
     {
       label: 'Non-blocking warnings',
       value:

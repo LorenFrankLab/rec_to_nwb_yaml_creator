@@ -5,7 +5,7 @@
  * handles routing between different views (Home, Workspace, Day Editor, etc.).
  *
  * All original form functionality has been extracted to LegacyFormView.jsx
- * and is rendered when the route is #/ or #/legacy.
+ * and is rendered when the route is #/ or the hash is empty.
  *
  * @module App
  */

@@ -32,7 +32,7 @@ const baseAnimal = (overrides) => ({
 
 beforeEach(() => {
   useAnimalIdFromUrl.mockReturnValue('remy');
-  // ?field=cameras deep-links to the Hardware Config step (index 2), where the banner lives.
+  // ?field=cameras deep-links to the "Recording System, Cameras & DIO" step (index 3), where the banner lives.
   window.location.hash = '#/animal/remy/editor?field=cameras';
 });
 

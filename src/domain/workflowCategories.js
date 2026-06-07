@@ -88,6 +88,8 @@ export const CATEGORY_BY_CODE = Object.freeze({
   divergent_data_acq_identity: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   partial_configuration: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   multiple_excitation_sources: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  // Optical-fiber / virus-injection coordinate reference is part of the animal's opto setup.
+  missing_opto_reference: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   // Subject identity is part of the animal's shared setup (set at animal creation; species is
   // the one editable in the Day Overview, but it still belongs to the Subject setup item).
   invalid_species: WORKFLOW_CATEGORY.ANIMAL_SETUP,
@@ -102,6 +104,9 @@ export const CATEGORY_BY_CODE = Object.freeze({
   orphaned_video: WORKFLOW_CATEGORY.DAY_METADATA,
   orphaned_file: WORKFLOW_CATEGORY.DAY_METADATA,
   orphaned_fs_gui_epoch: WORKFLOW_CATEGORY.DAY_METADATA,
+  // Day FsGUI (opto protocol) reference rules — the fix lives in the day's epochs/FsGUI flow.
+  dangling_dio_output: WORKFLOW_CATEGORY.DAY_METADATA,
+  fs_gui_requires_optogenetics: WORKFLOW_CATEGORY.DAY_METADATA,
   divergent_task_identity: WORKFLOW_CATEGORY.DAY_METADATA,
   missing_camera: WORKFLOW_CATEGORY.DAY_METADATA,
 

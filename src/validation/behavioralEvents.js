@@ -1,0 +1,26 @@
+/**
+ * @fileoverview Shared behavioral-event description collision detection (Phase 8.7 Task 6 review fix).
+ *
+ * trodes_to_nwb (`convert_dios`) keys DIO channels by `behavioral_events[].description` and raises a
+ * `ValueError` on a duplicate. The export-blocking `duplicate_behavioral_event_description` rule and
+ * the inline day-event gate must agree on what "the same description" means, so both use this one
+ * helper. Descriptions are compared as RAW strings (no trim) — exactly as the converter keys them, so
+ * `"x"` and `"x "` are DIFFERENT (not a collision) and a whitespace-only `"  "` IS a real value.
+ */
+
+/**
+ * The set of descriptions used by more than one behavioral event. Raw-string compare; skips only an
+ * absent description (undefined/null/'' — a blank description is not a collision). Shape-tolerant.
+ *
+ * @param {Array<{description?: *}>} events - Behavioral events (the exported day list).
+ * @returns {Set<string>} Descriptions appearing on ≥2 events.
+ */
+export function duplicateBehavioralEventDescriptions(events) {
+  const counts = new Map();
+  (Array.isArray(events) ? events : []).forEach((event) => {
+    const desc = event?.description;
+    if (desc === undefined || desc === null || desc === '') return;
+    counts.set(desc, (counts.get(desc) || 0) + 1);
+  });
+  return new Set([...counts.entries()].filter(([, count]) => count > 1).map(([desc]) => desc));
+}

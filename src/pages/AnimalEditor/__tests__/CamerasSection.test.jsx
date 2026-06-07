@@ -69,7 +69,7 @@ describe('CamerasSection', () => {
   });
 
   describe('Table Display', () => {
-    it('should display cameras with all columns (ID, name, manufacturer, model, m/px, status)', () => {
+    it('should display cameras with all columns (ID, name, manufacturer, model, lens, m/px, status)', () => {
       render(
         <CamerasSection
           animal={mockAnimal}
@@ -92,6 +92,18 @@ describe('CamerasSection', () => {
       expect(screen.getAllByText('G-146B').length).toBeGreaterThan(0); // Multiple cameras can have same model
       expect(screen.getByText('0.000842')).toBeInTheDocument();
       expect(screen.getByText('0.001')).toBeInTheDocument();
+    });
+
+    it('shows the lens column — a camera identity field that distinguishes cameras (Phase 8.7 Task 2)', () => {
+      // `lens` is part of a camera's downstream identity (a changed lens is a different
+      // camera); it must be visible in the table, not only in the edit modal.
+      render(<CamerasSection animal={mockAnimal} onFieldUpdate={mockOnFieldUpdate} />);
+
+      const table = screen.getByRole('table');
+      const headers = within(table).getAllByRole('columnheader').map((h) => h.textContent);
+      expect(headers).toContain('Lens');
+      // Both fixture cameras use a 16mm lens — the value is rendered in the rows.
+      expect(within(table).getAllByText('16mm').length).toBe(2);
     });
   });
 

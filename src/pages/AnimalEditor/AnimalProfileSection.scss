@@ -1,0 +1,90 @@
+/* Animal Profile section (Phase 8.7 Task 2b) — the discoverable owner for constant subject facts. */
+.animal-profile-section {
+  margin: 0.75rem 0 1rem;
+  border: 1px solid #d8dde3;
+  border-radius: 6px;
+  background: #fbfcfd;
+
+  .animal-profile-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.6rem 0.85rem;
+    background: none;
+    border: none;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+
+    .toggle-icon {
+      font-size: 0.7rem;
+      color: #5a6470;
+    }
+
+    .animal-profile-summary {
+      margin-left: 0.5rem;
+      font-weight: 400;
+      color: #5a6470;
+      font-size: 0.85rem;
+    }
+  }
+
+  .animal-profile-content {
+    padding: 0 0.85rem 0.85rem;
+  }
+
+  .animal-profile-blast-radius {
+    margin: 0 0 0.85rem;
+    padding: 0.5rem 0.7rem;
+    background: #fff7e6;
+    border-left: 3px solid #e0a106;
+    border-radius: 3px;
+    font-size: 0.85rem;
+    color: #5a4a13;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.85rem;
+  }
+
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+
+    label,
+    .field-label {
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+
+    .readonly-value {
+      padding: 0.35rem 0;
+      font-family: monospace;
+    }
+
+    .field-help-text {
+      font-size: 0.78rem;
+      color: #6b7480;
+    }
+
+    .validation-error {
+      font-size: 0.8rem;
+      color: #c0392b;
+    }
+
+    input[aria-invalid='true'] {
+      border-color: #c0392b;
+    }
+  }
+
+  .animal-profile-actions {
+    margin-top: 0.85rem;
+    display: flex;
+    justify-content: flex-end;
+  }
+}

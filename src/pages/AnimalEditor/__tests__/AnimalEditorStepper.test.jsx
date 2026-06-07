@@ -181,15 +181,20 @@ describe('AnimalEditorStepper', () => {
   describe('Animal validation', () => {
     it('renders stepper when animal exists', () => {
       renderWithStore(<AnimalEditorStepper />);
-      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Animal Editor: remy');
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Animal Setup: remy');
     });
 
-    it('frames the editor as shared animal setup, without overstating that all days inherit', () => {
+    it('frames the editor as shared animal setup with honest per-kind blast radius', () => {
       renderWithStore(<AnimalEditorStepper />);
-      expect(screen.getByText(/shared hardware setup for this animal/i)).toBeInTheDocument();
-      // Accurate inheritance: latest configuration + days on it; earlier-pinned days keep theirs.
-      expect(screen.getByText(/apply to the latest configuration/i)).toBeInTheDocument();
-      expect(screen.getByText(/days pinned to an earlier configuration keep theirs/i)).toBeInTheDocument();
+      expect(screen.getByText(/shared setup for this animal/i)).toBeInTheDocument();
+      // Phase 8.7 Task 2: electrodes/probes are versioned (each day keeps its pinned config);
+      // cameras and the recording system are shared and affect ALL recording days (no false
+      // "days pinned earlier keep theirs" claim for cameras/data-acq, which is not true today).
+      expect(screen.getByText(/electrodes\/probes are versioned/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/cameras and the recording system are shared animal-level setup/i)
+      ).toBeInTheDocument();
+      expect(screen.getByText(/editing them affects all recording days/i)).toBeInTheDocument();
     });
 
     it('does not show reconfiguration context on a normal editor open', () => {
@@ -614,17 +619,18 @@ describe('AnimalEditorStepper', () => {
   describe('Step indicators', () => {
     it('shows the step indicators with correct labels', () => {
       renderWithStore(<AnimalEditorStepper />);
-      expect(screen.getByText('Electrode Groups')).toBeInTheDocument();
+      expect(screen.getByText('Electrodes & Ephys')).toBeInTheDocument();
       expect(screen.getByText('Channel Maps')).toBeInTheDocument();
-      expect(screen.getByText('Optogenetics')).toBeInTheDocument();
-      expect(screen.getByText('Hardware Config')).toBeInTheDocument();
+      expect(screen.getByText('Optogenetics Setup')).toBeInTheDocument();
+      // Phase 8.7 Task 2: "Hardware Config" → ownership-named label for the step.
+      expect(screen.getByText('Recording System, Cameras & DIO')).toBeInTheDocument();
     });
 
     it('marks active step visually', () => {
       renderWithStore(<AnimalEditorStepper />);
       const nav = screen.getByRole('navigation', { name: /configuration steps/i });
       const electrodeGroupsStep = nav.querySelector('.active');
-      expect(electrodeGroupsStep).toHaveTextContent('Electrode Groups');
+      expect(electrodeGroupsStep).toHaveTextContent('Electrodes & Ephys');
     });
   });
 
@@ -632,7 +638,7 @@ describe('AnimalEditorStepper', () => {
     it('has proper heading with animal ID', () => {
       renderWithStore(<AnimalEditorStepper />);
       const heading = screen.getByRole('heading', { level: 1 });
-      expect(heading).toHaveTextContent('Animal Editor: remy');
+      expect(heading).toHaveTextContent('Animal Setup: remy');
     });
 
     it('navigation has proper aria-label', () => {

@@ -17,6 +17,7 @@ import ChannelMapsStep from './ChannelMapsStep';
 import ChannelMapEditor from './ChannelMapEditor';
 import HardwareConfigStep from './HardwareConfigStep';
 import OptogeneticsStep from './OptogeneticsStep';
+import AnimalProfileSection from './AnimalProfileSection';
 import AlertModal from '../../components/AlertModal';
 import { ConfirmDialog } from '../../components/Modal';
 import { generateChannelMapsForGroup, nextNtrodeId } from '../../utils/channelMapUtils';
@@ -117,8 +118,9 @@ function useAnimalEditorRouteContext() {
  * 1. Electrode Groups - Configure device types, locations, coordinates
  * 2. Channel Maps - Configure logical-to-hardware channel mappings
  * 3. Optogenetics - Enable/configure the animal-level opto sections (off by default)
- * 4. Hardware Config - Configure cameras, data acquisition device, behavioral events
- *    (kept last so its Save/Continue flow is unchanged by the inserted Optogenetics step)
+ * 4. Recording System, Cameras & DIO - Configure the recording system (data-acq device +
+ *    technical defaults), cameras, and behavioral/DIO events (kept last so its Save/Continue
+ *    flow is unchanged by the inserted Optogenetics step)
  *
  * Note: Component receives no props - animal ID is obtained from URL via
  * useAnimalIdFromUrl hook.
@@ -686,10 +688,11 @@ export default function AnimalEditorStepper() {
         .filter(map => normalizeIdKey(map.electrode_group_id) === normalizeIdKey(editingGroupId))
     : [];
 
-  // Step configuration
+  // Step configuration. Phase 8.7 Task 2c: user-facing step labels use scientist language
+  // (the screen-map targets) rather than schema/implementation terms.
   const steps = [
     {
-      label: 'Electrode Groups',
+      label: 'Electrodes & Ephys',
       component: (
         <ElectrodeGroupsStep
           animal={animal}
@@ -740,7 +743,7 @@ export default function AnimalEditorStepper() {
       ),
     },
     {
-      label: 'Optogenetics',
+      label: 'Optogenetics Setup',
       component: (
         <OptogeneticsStep
           animal={animal}
@@ -750,8 +753,10 @@ export default function AnimalEditorStepper() {
     },
     {
       // Kept as the final step so its Save/Continue flow (and the stepper's final-step
-      // Save button) is unchanged by the added Optogenetics step.
-      label: 'Hardware Config',
+      // Save button) is unchanged by the added Optogenetics step. Phase 8.7 Task 2: the
+      // user-facing label names the three shared-setup areas it holds (recording system +
+      // cameras + behavioral/DIO events) instead of the over-broad "Hardware Config".
+      label: 'Recording System, Cameras & DIO',
       component: (
         <HardwareConfigStep
           animal={animal}
@@ -785,15 +790,17 @@ export default function AnimalEditorStepper() {
           ← Back to Workspace
         </a>
         <div className="animal-editor-title">
-          <h1>Animal Editor: {animal.id}</h1>
-          {/* Frame the editor as SHARED animal setup, not a detached hardware form, so
-              electrodes/probes are discoverable here and their reuse across days is clear.
-              Device edits apply to the latest configuration; days pinned to an earlier version
-              keep theirs, so we don't overstate that ALL days inherit changes. */}
+          <h1>Animal Setup: {animal.id}</h1>
+          {/* Frame the editor as SHARED animal setup, not a detached hardware form. Phase 8.7
+              Task 2: be honest about blast radius per ownership kind — electrodes/probes are
+              VERSIONED (each day keeps the configuration it was pinned to), but cameras and the
+              recording system are shared animal-level setup with no per-day binding today, so
+              editing them affects ALL recording days. (The day-used camera export binding —
+              Task 5 — will later let past days keep the cameras they referenced.) */}
           <p className="animal-editor-subtitle">
-            Shared hardware setup for this animal. Electrodes/probes, cameras, and data
-            acquisition configured here apply to the latest configuration and the recording days
-            on it; days pinned to an earlier configuration keep theirs.
+            Shared setup for this animal. Electrodes/probes are versioned — each recording day
+            keeps the configuration it was pinned to. Cameras and the recording system are shared
+            animal-level setup: editing them affects all recording days.
           </p>
           {isReconfigurationEdit && (
             <div
@@ -809,6 +816,17 @@ export default function AnimalEditorStepper() {
           )}
         </div>
       </div>
+
+      {/* Phase 8.7 Task 2b: the discoverable owner for constant subject facts (species, sex, DOB,
+          genotype, description). Sits outside the device stepper (not a numbered step), so it
+          does not shift step indices; editing here names its animal-wide blast radius before save.
+          The Day Overview keeps inline subject repair, but is no longer the ONLY way to correct
+          shared subject facts. */}
+      <AnimalProfileSection
+        animal={animal}
+        dayCount={getAnimalDayIds(animal).length}
+        onSave={(subject) => actions.updateAnimal(animalId, { subject })}
+      />
 
       {/* Step indicators */}
       <nav className="animal-editor-step-nav" aria-label="Configuration steps">

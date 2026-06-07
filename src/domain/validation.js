@@ -167,7 +167,7 @@ export function dayOverrideIssues(day, mergedDay, baseIssues = []) {
         severity: 'error',
         message:
           `This day overrides the saved device ${key === 'electrode_groups' ? 'electrode groups' : 'channel map'} ` +
-          `and the override has validation errors. Those errors can't be fixed in the Animal Editor (which edits ` +
+          `and the override has validation errors. Those errors can't be fixed in Animal Setup (which edits ` +
           `the saved configuration, not this day's override). Remove the day override to use the saved configuration.`,
       });
     }
@@ -311,7 +311,7 @@ export function validateDay(day, mergedDay, animal) {
   // WHERE the merged geometry came from — the animal snapshot (animal-owned, edit there)
   // or a day-level override (day-owned, the snapshot is the wrong editor). Re-tag base
   // geometry errors to the day when the day overrides that geometry, so they don't
-  // dead-end on "Fix in Animal Editor".
+  // dead-end on "Fix in Animal Setup".
   const taggedBase = tagBaseOwnershipByProvenance(base, dayGeometryProvenance(day));
   // Stamp every issue with the canonical ownership contract (normalizeIssue) so consumers
   // read `ownerSurface`/`step`/`focusPath` directly — never re-inferring — and an issue
@@ -744,6 +744,11 @@ export const SURFACE_BY_CODE = {
   orphaned_video: 'day',
   orphaned_file: 'day',
   orphaned_fs_gui_epoch: 'day',
+  // FsGUI (day opto protocol) day-surface rules: a dangling DIO output reference and an
+  // FsGUI block present while the animal's opto setup is incomplete/off. Both carry an
+  // explicit repairSurface:'day' (step 'epochs') at their emit sites in rulesValidation.js.
+  dangling_dio_output: 'day',
+  fs_gui_requires_optogenetics: 'day',
   divergent_task_identity: 'day',
   bad_channel_out_of_range: 'day',
   multishank_bad_channels_ignored: 'day',
@@ -761,6 +766,9 @@ export const SURFACE_BY_CODE = {
   // sets repairSurface:'animal' explicitly; this keeps the authoritative table in sync).
   partial_configuration: 'animal',
   multiple_excitation_sources: 'animal',
+  // Optical-fiber / virus-injection coordinate reference, required by trodes_to_nwb and
+  // collected only in the Animal Editor Optogenetics step (explicit repairSurface:'animal').
+  missing_opto_reference: 'animal',
   // No editable in-app target — read-only identity (slash ids). The explanatory
   // message states the remedy (recreate the animal); a "Fix in …" button would
   // dead-end on a disabled control.
@@ -855,10 +863,13 @@ function deriveSurfaceFromPath(issue) {
  * @type {Array<{ index: number, label: string }>}
  */
 export const ANIMAL_EDITOR_STEPS = [
-  { index: 0, label: 'Electrode Groups' },
+  // Phase 8.7 Task 2c: labels match the stepper's user-facing step labels (scientist language).
+  { index: 0, label: 'Electrodes & Ephys' },
   { index: 1, label: 'Channel Maps' },
-  { index: 2, label: 'Optogenetics' },
-  { index: 3, label: 'Hardware Config' },
+  { index: 2, label: 'Optogenetics Setup' },
+  // Phase 8.7 Task 2: matches the stepper's user-facing label for this step (camera /
+  // data-acq / configurationHistory repairs deep-link here), replacing "Hardware Config".
+  { index: 3, label: 'Recording System, Cameras & DIO' },
 ];
 
 /**
@@ -906,7 +917,7 @@ export function animalEditorStepForFieldPath(fieldPath) {
  *
  * For `day`, the owning step is {@link stepIdForIssue} (which itself honors an explicit
  * `issue.step`); the label is "Fix in {StepLabel}". For `animal`, the label is
- * "Fix in Animal Editor". For `none`, no button is rendered (the label is informational).
+ * "Fix in Animal Setup". For `none`, no button is rendered (the label is informational).
  *
  * @param {{code?: string, path?: string, instancePath?: string, step?: string, repairSurface?: string}} issue
  * @returns {{surface: 'day'|'animal'|'none', step: string|null, label: string}}
@@ -929,7 +940,7 @@ export function repairTargetForIssue(issue) {
   if (surface === 'animal') {
     // Step-aware label so the user knows which Animal Editor step the fix lives in.
     const { label: stepLabel } = animalEditorStepForFieldPath(issue?.path || issue?.instancePath);
-    return { surface: 'animal', step: null, label: `Fix in Animal Editor → ${stepLabel}` };
+    return { surface: 'animal', step: null, label: `Fix in Animal Setup → ${stepLabel}` };
   }
   if (surface === 'none') {
     return { surface: 'none', step: null, label: 'No in-app fix' };

@@ -50,6 +50,33 @@ describe('ValidationStep', () => {
     expect(screen.getByRole('heading', { name: /day-specific failed channels/i })).toBeInTheDocument();
   });
 
+  it('shows the ownership-pattern hint (and cross-day reach) next to errors (Task 9)', () => {
+    vi.spyOn(validation, 'validate').mockReturnValue([
+      { severity: 'error', code: 'empty_location', path: 'electrode_groups[0].location', message: 'location is empty' },
+    ]);
+
+    render(<ValidationStep {...baseProps} onNavigate={vi.fn()} />);
+
+    // The probe/location error names the configuration-version ownership and flags that fixing it
+    // reaches past this day — without changing the workflow-category grouping or the repair route.
+    expect(screen.getByText('Pin or fix the configuration version')).toBeInTheDocument();
+    expect(screen.getByText(/affects more than this day/i)).toBeInTheDocument();
+  });
+
+  it('suppresses the ownership-pattern hint for non-blocking warnings/info (Task 9)', () => {
+    // A warning carries its own specific advice and no repair button; the generic pattern action
+    // and the emphasized cross-day cue would be noise (and could contradict the advisory).
+    vi.spyOn(validation, 'validate').mockReturnValue([
+      { severity: 'warning', code: 'inconsistent_location_case', path: 'electrode_groups[0].location', message: 'location capitalization is inconsistent' },
+    ]);
+
+    render(<ValidationStep {...baseProps} onNavigate={vi.fn()} />);
+
+    expect(screen.getByText('location capitalization is inconsistent')).toBeInTheDocument();
+    expect(screen.queryByText('Pin or fix the configuration version')).not.toBeInTheDocument();
+    expect(screen.queryByText(/affects more than this day/i)).not.toBeInTheDocument();
+  });
+
   it('shows a blocked indicator and an error count when errors exist', () => {
     vi.spyOn(validation, 'validate').mockReturnValue([
       { severity: 'error', path: 'session_id', code: 'required', message: 'required' },
@@ -118,7 +145,7 @@ describe('ValidationStep', () => {
     render(<ValidationStep {...baseProps} animal={{ id: 'remy' }} onNavigate={onNavigate} />);
 
     // The button names the Animal Editor (the editable owner), not the Devices step.
-    await user.click(screen.getByRole('button', { name: /fix in animal editor/i }));
+    await user.click(screen.getByRole('button', { name: /fix in animal setup/i }));
     expect(screen.queryByRole('button', { name: /fix in devices/i })).not.toBeInTheDocument();
 
     expect(onNavigate).toHaveBeenCalledWith('animal', 'electrode_groups[0].targeted_x');

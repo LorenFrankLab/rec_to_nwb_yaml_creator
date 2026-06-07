@@ -40,6 +40,49 @@ describe('DataAcqSection', () => {
     expect(screen.getByDisplayValue('Intan')).toBeInTheDocument();
   });
 
+  it('states DIFFERENT blast radii for the device identity (all days) vs the technical defaults (future days)', () => {
+    // Phase 8.7: the section edits two things with different ownership — the data-acq device
+    // identity (animal_setup → reaches all days) and the technical-parameter defaults
+    // (setup_default_to_day → seed NEW days only; existing days keep their copied value). The
+    // header must not blanket-claim "affects all recording days" for both (the original 2a copy
+    // did, contradicting the inner "seed … new recording days" copy and the ownership matrix).
+    render(<DataAcqSection animal={animal} onFieldUpdate={onFieldUpdate} />);
+
+    // Device identity reaches all days.
+    expect(
+      screen.getByText(/data-acquisition device identity.*affects all recording days/is)
+    ).toBeInTheDocument();
+    // Technical defaults reach future days only — existing days keep their values.
+    expect(screen.getByText(/seed each new recording day/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/editing them affects future days only; existing days keep their values/i)
+    ).toBeInTheDocument();
+    // The blanket overstatement (device "and technical parameters … affects all recording days")
+    // must be gone.
+    expect(
+      screen.queryByText(/device and\s+technical parameters\. editing this affects all recording days/i)
+    ).not.toBeInTheDocument();
+  });
+
+  it('surfaces the option-B limitation: a mid-study recording-system/amplifier swap is not representable per day', () => {
+    // Phase 8.7 Task 3 (decided option B): data-acq has NO per-day binding — mergeDayMetadata
+    // reads animal.devices.data_acq_device live into every day — so a genuine mid-study hardware
+    // change can't be kept off earlier days. The UI must NAME this limitation (no-silent-retroactive),
+    // not imply a day-level edit exists.
+    render(<DataAcqSection animal={animal} onFieldUpdate={onFieldUpdate} />);
+
+    // The bold lead scopes the "no per-day version" claim to the IDENTITY (the rig-constant
+    // defaults below are per-day overridable, so it must not be read as covering them).
+    expect(screen.getByText(/one recording-system identity per animal/i)).toBeInTheDocument();
+    expect(screen.getByText(/mid-study hardware change/i)).toBeInTheDocument();
+    // Punctuation-agnostic (the copy uses an apostrophe rendered from &apos;).
+    expect(screen.getByText(/represented per day/i)).toBeInTheDocument();
+    // The no-silent-retroactive point: there is no way to keep earlier days on the old hardware.
+    expect(screen.getByText(/no way to keep earlier days on the old hardware/i)).toBeInTheDocument();
+    // Framed as a future capability, not a current day-level control.
+    expect(screen.getByText(/future capability/i)).toBeInTheDocument();
+  });
+
   it('writes the data-acq device as a one-element array including name on blur', async () => {
     render(<DataAcqSection animal={draftAnimal} onFieldUpdate={onFieldUpdate} />);
 

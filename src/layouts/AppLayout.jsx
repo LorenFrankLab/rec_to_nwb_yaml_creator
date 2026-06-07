@@ -36,7 +36,7 @@ function getViewName(view) {
     workspace: 'Animal Workspace',
     day: 'Day Editor',
     validation: 'Validation Summary',
-    'animal-editor': 'Animal Editor',
+    'animal-editor': 'Animal Setup',
   };
   return viewNames[view] || view;
 }
@@ -167,7 +167,7 @@ export function AppLayout() {
 
       case 'animal-editor':
         return (
-          <Suspense fallback={<div>Loading Animal Editor...</div>}>
+          <Suspense fallback={<div>Loading Animal Setup...</div>}>
             <AnimalEditor />
           </Suspense>
         );

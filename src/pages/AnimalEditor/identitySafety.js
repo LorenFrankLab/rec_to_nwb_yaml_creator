@@ -68,8 +68,43 @@ export const IDENTITY_FIELD_LABELS = {
   adc_circuit: 'ADC circuit',
 };
 
-/** Dependent fields that define a camera's identity beyond its `camera_name`. */
+/**
+ * Dependent fields that define a camera's identity beyond its `camera_name`, keyed by `id` for the
+ * Spyglass divergent-reuse registry (same name + different dependents = a divergence).
+ *
+ * NOTE: distinct from {@link CAMERA_IDENTITY_FIELDS} (below) on purpose — that one INCLUDES
+ * `camera_name` and EXCLUDES `id` because it answers a different question (does an in-place edit make
+ * this a new identity?). Don't "harmonize" the two: dropping `id` here would break the divergence
+ * registry; adding `id` there would break the immutable-once-referenced gate.
+ */
 export const CAMERA_DEPENDENT_FIELDS = ['id', 'meters_per_pixel', 'lens', 'model', 'manufacturer'];
+
+/**
+ * The fields whose change makes a camera a DIFFERENT identity (name + calibration/hardware). The
+ * `id` is excluded because it is the immutable catalog key, rendered read-only in the camera modal
+ * (`CameraModal`) — it cannot change on an in-place edit, so it never needs identity-change
+ * detection (there is no separate handling because none is reachable). Used by the immutable-once-referenced rule
+ * (Phase 8.7 Task 5b): changing any of these on a camera that recording days already reference is a
+ * NEW camera by default, not a silent retroactive edit of those days' exports.
+ *
+ * NOTE: distinct from {@link CAMERA_DEPENDENT_FIELDS} (above) — see the note there.
+ *
+ * @type {ReadonlyArray<string>}
+ */
+export const CAMERA_IDENTITY_FIELDS = ['camera_name', 'meters_per_pixel', 'lens', 'model', 'manufacturer'];
+
+/**
+ * Whether an edited camera differs from the original in any identity field (treating
+ * null/undefined/'' as equivalent so "absent" vs "blank" is not a spurious change).
+ *
+ * @param {object} original - The saved camera.
+ * @param {object} edited - The edited camera data.
+ * @returns {boolean}
+ */
+export function cameraIdentityChanged(original, edited) {
+  const norm = (v) => (v === null || v === undefined ? '' : v);
+  return CAMERA_IDENTITY_FIELDS.some((field) => norm(original?.[field]) !== norm(edited?.[field]));
+}
 
 /** Dependent fields that define a data-acq device's identity beyond its `name`. */
 export const DATA_ACQ_DEPENDENT_FIELDS = ['system', 'amplifier', 'adc_circuit'];

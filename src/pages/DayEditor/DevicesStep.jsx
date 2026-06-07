@@ -404,7 +404,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
             can&apos;t be shown for this day.
           </p>
           <a href={`#/animal/${ownerKey}/editor?field=electrode_groups`} className="button-primary">
-            Configure devices in the Animal Editor
+            Configure devices in Animal Setup
           </a>
         </div>
       </div>
@@ -463,7 +463,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
               </span>
               <span className="config-version-applied">
                 {reconfig.isLatest
-                  ? 'Mark failed channels for this recording day. Probe geometry is shared animal setup — edit it in the Animal Editor.'
+                  ? 'Mark failed channels for this recording day. Probe geometry is shared animal setup — edit it in Animal Setup.'
                   : 'This is a historical configuration. Mark failed channels for this recording day against this pinned snapshot; editing the latest animal setup will not change this day unless you reconfigure.'}
               </span>
               <span className="config-version-applied">
@@ -567,7 +567,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
                   <div className="error-state-inline">
                     <p>⚠ No channel mapping found for this electrode group.</p>
                     <p>This usually indicates data corruption. Please review animal configuration.</p>
-                    <a href={`#/animal/${ownerKey}/editor?field=ntrode_electrode_group_channel_map`}>Fix in Animal Editor</a>
+                    <a href={`#/animal/${ownerKey}/editor?field=ntrode_electrode_group_channel_map`}>Fix in Animal Setup</a>
                   </div>
                 </div>
               </details>

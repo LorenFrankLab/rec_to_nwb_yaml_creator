@@ -203,7 +203,7 @@ describe('ExportStep', () => {
 
     render(<ExportStep animal={animal} day={day} onNavigate={onNavigate} />);
 
-    await user.click(screen.getByRole('button', { name: /fix in animal editor/i }));
+    await user.click(screen.getByRole('button', { name: /fix in animal setup/i }));
     expect(onNavigate).toHaveBeenCalledWith('animal', undefined);
   });
 
@@ -219,7 +219,7 @@ describe('ExportStep', () => {
 
     render(<ExportStep animal={animal} day={day} onNavigate={onNavigate} />);
 
-    await user.click(screen.getByRole('button', { name: /fix in animal editor/i }));
+    await user.click(screen.getByRole('button', { name: /fix in animal setup/i }));
     expect(onNavigate).toHaveBeenCalledWith('animal', 'ntrode_electrode_group_channel_map');
   });
 
@@ -259,7 +259,7 @@ describe('ExportStep', () => {
     // the Animal Editor (not a dead-end disabled button with no surfaced fix).
     expect(screen.getByRole('button', { name: /download yaml/i })).toBeDisabled();
     expect(screen.getByText(/cameras.*is corrupt|corrupt.*list/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /fix in animal editor/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /fix in animal setup/i })).toBeInTheDocument();
   });
 
   it('offers a repair action per error that routes to the editable owner with the field target', async () => {
@@ -271,7 +271,7 @@ describe('ExportStep', () => {
 
     // The targeted_x type error is device geometry — editable only in the Animal Editor —
     // so the repair routes to the 'animal' surface, not the Day-Editor Devices step.
-    const repairButton = screen.getByRole('button', { name: /fix in animal editor/i });
+    const repairButton = screen.getByRole('button', { name: /fix in animal setup/i });
     await user.click(repairButton);
 
     expect(onNavigate).toHaveBeenCalledWith('animal', expect.stringContaining('electrode_groups'));
@@ -294,12 +294,13 @@ describe('ExportStep', () => {
     expect(within(preflight).getByText('Optogenetics')).toBeInTheDocument();
     expect(within(preflight).getByText('Non-blocking warnings')).toBeInTheDocument();
 
-    // Spot-check derived values: animal/day, 8 electrode groups, 2 cameras, opto off,
-    // current (not historical) configuration.
+    // Spot-check derived values: animal/day, 8 electrode groups, 2 cameras, opto state
+    // (no optogenetics — Task 10's day-protocol three-state, not a binary "Off"), current
+    // (not historical) configuration.
     expect(within(preflight).getByText(/remy — 2023-06-22/i)).toBeInTheDocument();
     expect(within(preflight).getByText(/8 electrode groups/i)).toBeInTheDocument();
     expect(within(preflight).getByText(/2 cameras/i)).toBeInTheDocument();
-    expect(within(preflight).getByText('Off')).toBeInTheDocument();
+    expect(within(preflight).getByText(/no optogenetics/i)).toBeInTheDocument();
     expect(within(preflight).getByText(/version 1 \(current\)/i)).toBeInTheDocument();
   });
 

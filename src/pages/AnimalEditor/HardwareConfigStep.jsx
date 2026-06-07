@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
-import { getAnimalCameras } from '../../state/workspaceSelectors';
+import { getAnimalCameras, getAnimalDayIds } from '../../state/workspaceSelectors';
+import { findCameraAffectedDays } from '../../state/cameraUsage';
 import { ConfirmDialog } from '../../components/Modal';
 import CamerasSection from './CamerasSection';
 import CameraModal from './CameraModal';
+import CameraReferenceDialog from './CameraReferenceDialog';
 import DataAcqSection from './DataAcqSection';
 import BehavioralEventsSection from './BehavioralEventsSection';
 import RawCorruptionBanner from '../../components/RawCorruptionBanner';
@@ -14,12 +16,13 @@ import {
   collectCameraIdentities,
   collectDataAcqIdentities,
   findIdentityDivergence,
+  cameraIdentityChanged,
   CAMERA_DEPENDENT_FIELDS,
 } from './identitySafety';
 import './HardwareConfigStep.scss';
 
 /**
- * HardwareConfigStep - Animal Editor Step 3: Cameras, Hardware & Behavioral Events.
+ * HardwareConfigStep - Animal Editor final step: Recording System, Cameras & DIO Events.
  *
  * Owns camera add/edit/delete (the buttons were previously inert): it opens
  * {@link CameraModal}, enforces the dataset-wide Spyglass `camera_name` identity
@@ -47,12 +50,25 @@ export default function HardwareConfigStep({
 
   const [cameraModal, setCameraModal] = useState({ open: false, mode: 'add', camera: null });
   const [cameraDivergence, setCameraDivergence] = useState(null);
+  // Phase 8.7 Task 5b: pending decision when editing a camera that recording days reference.
+  const [cameraRefDecision, setCameraRefDecision] = useState(null);
   const [pendingDelete, setPendingDelete] = useState(null);
 
   // A repair routed to this editor must not dead-end by crashing on the corruption it
   // exists to fix. Read cameras through the canonical selector: a non-array `cameras`
   // (`|| []` would PRESERVE a string and crash CamerasSection's `.reduce`) renders safely.
   const cameras = useMemo(() => getAnimalCameras(animal), [animal]);
+
+  // This animal's recording-day records (for the camera blast-radius: which days reference a
+  // camera being edited). Read shape-safely from the workspace day map. `hasUnresolvableDays`
+  // flags an index entry we could NOT load — we can't read its camera references, so we must not
+  // silently take the "no day references this camera" fast-path (that would defeat the
+  // no-silent-retroactive guard if a dangling day is the only referencer and is later recovered).
+  const { animalDays, hasUnresolvableDays } = useMemo(() => {
+    const ids = getAnimalDayIds(animal);
+    const resolved = ids.map((id) => model.workspace?.days?.[id]).filter(Boolean);
+    return { animalDays: resolved, hasUnresolvableDays: resolved.length < ids.length };
+  }, [animal, model.workspace]);
 
   // Data-acq identities elsewhere in the dataset (plus any other items on this
   // animal), for the DataAcqSection divergent-reuse check.
@@ -106,11 +122,58 @@ export default function HardwareConfigStep({
       return; // Block: a divergent reuse must get a new name.
     }
 
+    // Phase 8.7 Task 5b (immutable-once-referenced): editing the identity of a camera that
+    // recording days already reference would silently rewrite those days' exports (the day-used
+    // export binding now emits this camera per day). Intercept and let the user choose: a NEW
+    // camera (keeps those days unchanged) or an explicit correction that updates the named days.
+    if (cameraModal.mode === 'edit' && cameraModal.camera) {
+      const original = cameraModal.camera;
+      const affectedIds = findCameraAffectedDays(animalDays, original.id);
+      // Conservative: if any day record couldn't be resolved, we can't rule out that it references
+      // this camera, so don't take the silent fast-path — let the user decide (new vs correct).
+      if ((affectedIds.length > 0 || hasUnresolvableDays) && cameraIdentityChanged(original, cameraData)) {
+        const affectedDays = affectedIds.map((id) => ({
+          id,
+          date: animalDays.find((d) => d.id === id)?.date,
+        }));
+        setCameraRefDecision({ camera: cameraData, original, affectedDays, hasUnresolvableDays });
+        // Close the edit modal so ONLY the decision dialog is active — never two stacked
+        // aria-modal dialogs (a11y) — and so the decision's Cancel/Escape both abort cleanly to
+        // a single, consistent end state (nothing open, nothing written).
+        closeCameraModal();
+        return; // Defer the write until the user decides.
+      }
+    }
+
     const next =
       cameraModal.mode === 'edit' && cameraModal.camera
         ? cameras.map((c) => (c.id === cameraModal.camera.id ? cameraData : c))
         : [...cameras, cameraData];
     onFieldUpdate('cameras', next);
+    closeCameraModal();
+  };
+
+  /** Next free numeric camera id (max existing + 1). */
+  const nextCameraId = () =>
+    cameras.reduce((max, c) => Math.max(max, typeof c.id === 'number' ? c.id : -1), -1) + 1;
+
+  /**
+   * Decision: keep the affected days unchanged — the edited values become a NEW camera, the
+   * original is left as-is (immutable-once-referenced default).
+   */
+  const handleCreateNewCamera = () => {
+    if (!cameraRefDecision) return;
+    onFieldUpdate('cameras', [...cameras, { ...cameraRefDecision.camera, id: nextCameraId() }]);
+    setCameraRefDecision(null);
+    closeCameraModal();
+  };
+
+  /** Decision: overwrite the camera in place — explicitly updating the affected days. */
+  const handleCorrectCamera = () => {
+    if (!cameraRefDecision) return;
+    const { original, camera: edited } = cameraRefDecision;
+    onFieldUpdate('cameras', cameras.map((c) => (c.id === original.id ? edited : c)));
+    setCameraRefDecision(null);
     closeCameraModal();
   };
 
@@ -123,7 +186,7 @@ export default function HardwareConfigStep({
   return (
     <div className="hardware-config-step">
       <header className="step-header">
-        <h2>Cameras, Hardware & Behavioral Events</h2>
+        <h2>Recording System, Cameras & DIO Events</h2>
         <SaveIndicator
           enabled={persistence.enabled}
           lastSaved={persistence.lastSaved}
@@ -143,7 +206,11 @@ export default function HardwareConfigStep({
           onRepair={onRepair}
         />
 
-        <section className="section-elevation-1" aria-label="Cameras">
+        {/* Phase 8.7 Task 2: data acquisition belongs with the RECORDING SYSTEM (ephys),
+            not lumped with cameras — give each area its own ownership-named section so the
+            user can tell shared recording-system setup, the camera catalog, and the DIO event
+            library apart. */}
+        <section className="section-elevation-1" aria-label="Video Cameras & Calibration">
           <CamerasSection
             animal={animal}
             onFieldUpdate={onFieldUpdate}
@@ -153,7 +220,7 @@ export default function HardwareConfigStep({
           />
         </section>
 
-        <section className="section-elevation-0" aria-label="Data acquisition device">
+        <section className="section-elevation-0" aria-label="Recording System">
           <DataAcqSection
             animal={animal}
             onFieldUpdate={onFieldUpdate}
@@ -161,7 +228,7 @@ export default function HardwareConfigStep({
           />
         </section>
 
-        <section className="section-elevation-1" aria-label="Behavioral events">
+        <section className="section-elevation-1" aria-label="Behavioral Events / DIO">
           <BehavioralEventsSection
             animal={animal}
             onFieldUpdate={onFieldUpdate}
@@ -190,6 +257,16 @@ export default function HardwareConfigStep({
           onUseNewName={() => setCameraDivergence(null)}
         />
       )}
+
+      <CameraReferenceDialog
+        isOpen={cameraRefDecision != null}
+        camera={cameraRefDecision?.original}
+        affectedDays={cameraRefDecision?.affectedDays || []}
+        hasUnresolvableDays={cameraRefDecision?.hasUnresolvableDays || false}
+        onCreateNew={handleCreateNewCamera}
+        onCorrect={handleCorrectCamera}
+        onCancel={() => setCameraRefDecision(null)}
+      />
 
       <ConfirmDialog
         isOpen={pendingDelete != null}

@@ -1,14 +1,45 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
 
+/** Fallback rig-constant values (match `createDayRecord`'s seeding fallbacks, not the schema
+ *  `default` of 0.0 — these are the app's seeded values). */
+const RIG_FALLBACK = { raw_data_to_volts: 0.195, times_period_multiplier: 1.5 };
+
 /**
- * DayTechnicalSection - per-day technical parameters editor (Day Editor / Overview).
+ * Resolve a rig constant's EFFECTIVE day value (what export reads) and how it relates to the
+ * CURRENT recording-system default. Phase 8.7 Task 4: a day keeps the value copied at creation, so
+ * if the default later changed the day legitimately differs — say so honestly ("Different from
+ * current recording-system default"), never silently relabel it as "using default".
  *
- * These values live on `day.technical` and are read there by the export:
- * `default_header_file_path` (a path string) and `units` (`{analog, behavioral_events}`).
- * They are per-day (unlike `raw_data_to_volts` / `times_period_multiplier`, which are
- * seeded from the animal's technical defaults), so they are edited here where the day
- * lives — not at the animal level.
+ * Returns one of three statuses. `'unset'` (defense-in-depth): `createDayRecord` always seeds these,
+ * so an absent day value only arises from corrupt/migrated persisted state — and the export reads
+ * `day.technical[field]` directly with NO empty-omit guard, so an undefined value fails the schema's
+ * required check. Surface that honestly rather than falsely reassuring "using default".
+ *
+ * @param {object} technical - The day's `technical` block.
+ * @param {object} defaults - The animal's `technicalDefaults`.
+ * @param {string} field - `'raw_data_to_volts'` | `'times_period_multiplier'`.
+ * @returns {{ display: (number|string), status: 'default'|'differs'|'unset', currentDefault: number }}
+ */
+function resolveRigConstant(technical, defaults, field) {
+  const dayVal = technical?.[field];
+  const currentDefault =
+    typeof defaults?.[field] === 'number' ? defaults[field] : RIG_FALLBACK[field];
+  const hasDay = typeof dayVal === 'number';
+  const status = !hasDay ? 'unset' : dayVal === currentDefault ? 'default' : 'differs';
+  return { display: hasDay ? dayVal : '—', status, currentDefault };
+}
+
+/**
+ * DayTechnicalSection - per-day technical parameters (Day Editor / Overview).
+ *
+ * Mixes two ownership kinds that both live on `day.technical` (Phase 8.7 Task 4):
+ *  - `raw_data_to_volts` / `times_period_multiplier` are recording-system DEFAULTS copied into the
+ *    day at creation. They are shown as effective, READ-ONLY values labelled against the current
+ *    recording-system default (`Using recording-system default` vs `Different from current
+ *    recording-system default`) with an `Edit in Recording System` link — they are not routine day
+ *    edits, and a day keeps what it recorded (no silent retroactive change).
+ *  - `default_header_file_path` and `units` are genuine DAY-ONLY facts, edited here.
  *
  * `units` is written as a whole object, and cleared to `undefined` when both fields are
  * blank so the export omits it (the schema rejects a present-but-empty `units`) rather
@@ -18,14 +49,32 @@ import PropTypes from 'prop-types';
  * @param {object} props.technical - The day's `technical` block.
  * @param {(fieldPath: string, value: *) => void} props.onFieldUpdate - Day field updater
  *   (dot-path, e.g. `technical.default_header_file_path`).
+ * @param {object} [props.recordingSystemDefaults] - The animal's `technicalDefaults`, for the
+ *   effective-value comparison. Falls back to the standard rig values when absent.
+ * @param {string} [props.animalKey] - The owning animal's store key, for the `Edit in Recording
+ *   System` deep-link. The link is omitted when absent.
  * @returns {JSX.Element}
  */
-export default function DayTechnicalSection({ technical, onFieldUpdate }) {
+export default function DayTechnicalSection({ technical, onFieldUpdate, recordingSystemDefaults = undefined, animalKey = undefined }) {
   const [local, setLocal] = useState({
     default_header_file_path: technical?.default_header_file_path || '',
     analog: technical?.units?.analog || '',
     behavioral_events: technical?.units?.behavioral_events || '',
   });
+
+  const raw = resolveRigConstant(technical, recordingSystemDefaults, 'raw_data_to_volts');
+  const mult = resolveRigConstant(technical, recordingSystemDefaults, 'times_period_multiplier');
+  const rigCue = (c) => {
+    if (c.status === 'unset') {
+      // Honest, no misleading remedy: these are read-only here and editing the animal default does
+      // NOT backfill an existing day (days keep their copied value), so don't steer there. The
+      // export gate (schema-required) blocks it; the user repairs/re-imports the corrupt day.
+      return 'Missing on this recording day — required for export. This day has no recording-system value (likely a corrupt/partial import).';
+    }
+    return c.status === 'default'
+      ? 'Using recording-system default'
+      : `Different from current recording-system default (current default: ${c.currentDefault})`;
+  };
 
   const change = (key, value) => setLocal((prev) => ({ ...prev, [key]: value }));
 
@@ -55,10 +104,38 @@ export default function DayTechnicalSection({ technical, onFieldUpdate }) {
   return (
     <section className="day-editor-section day-technical-section">
       <details>
-        <summary>Technical parameters (this day)</summary>
+        {/* Not "(this day)": this section mixes recording-system values (the read-only rig
+            constants) with genuine day-only facts (header path, units), each labelled in place. */}
+        <summary>Technical parameters</summary>
+
+        {/* Recording-system rig constants — effective, READ-ONLY values for this day (copied
+            from the recording-system defaults at creation). Not routine day edits; edit the
+            default in Recording System (it affects future days). A day keeps the value it
+            recorded, so a default changed later reads as "different", never silently inherited. */}
+        <div className="form-grid rig-constants" aria-label="Recording-system values (effective for this day)">
+          <div className="form-field readonly-field">
+            <span className="field-label">Raw data to volts</span>
+            <span className="readonly-value">{raw.display}</span>
+            <span className="field-help-text">{rigCue(raw)}</span>
+          </div>
+          <div className="form-field readonly-field">
+            <span className="field-label">Times period multiplier</span>
+            <span className="readonly-value">{mult.display}</span>
+            <span className="field-help-text">{rigCue(mult)}</span>
+          </div>
+          {animalKey && (
+            <p className="rig-constants-edit-link field-help-text">
+              These are recording-system constants —{' '}
+              <a href={`#/animal/${animalKey}/editor?field=data_acq_device`}>Edit in Recording System</a>.
+            </p>
+          )}
+        </div>
+
         <div className="form-grid">
           <div className="form-field">
-            <label htmlFor="default-header-file-path">Default header file path</label>
+            <label htmlFor="default-header-file-path">
+              Default header file path <span className="ownership-cue">This day only</span>
+            </label>
             <input
               id="default-header-file-path"
               type="text"
@@ -113,14 +190,23 @@ export default function DayTechnicalSection({ technical, onFieldUpdate }) {
 DayTechnicalSection.propTypes = {
   technical: PropTypes.shape({
     default_header_file_path: PropTypes.string,
+    raw_data_to_volts: PropTypes.number,
+    times_period_multiplier: PropTypes.number,
     units: PropTypes.shape({
       analog: PropTypes.string,
       behavioral_events: PropTypes.string,
     }),
   }),
   onFieldUpdate: PropTypes.func.isRequired,
+  recordingSystemDefaults: PropTypes.shape({
+    raw_data_to_volts: PropTypes.number,
+    times_period_multiplier: PropTypes.number,
+  }),
+  animalKey: PropTypes.string,
 };
 
 DayTechnicalSection.defaultProps = {
   technical: {},
+  recordingSystemDefaults: undefined,
+  animalKey: undefined,
 };

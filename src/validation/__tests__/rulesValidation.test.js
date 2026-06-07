@@ -398,6 +398,21 @@ describe('rulesValidation()', () => {
       expect(issues.some(i => i.code === 'orphaned_fs_gui_epoch')).toBe(false);
     });
 
+    it('blocks a type-mismatched camera reference (rule is type-strict — backs the day-used export narrowing)', () => {
+      // LOAD-BEARING COUPLING: `mergeDayMetadata` now exports only the day-used camera subset
+      // (resolveDayCameraUsage), which matches refs String-normalized. That narrowing is only safe
+      // because `dangling_camera_ref` is type-EXACT (validCameraIds.has(cid)) and therefore at least
+      // as eager to BLOCK as the resolver is to resolve — so a mistyped ref can never silently export
+      // WITHOUT its camera. If this rule is ever relaxed to type-lenient, this test must fail to flag
+      // that the export narrowing is no longer backed by a block. (Camera id "0" string vs 0 number.)
+      const model = {
+        cameras: [{ id: 0 }],
+        tasks: [{ task_name: 't', task_epochs: [1], camera_id: ['0'] }],
+      };
+      const issues = rulesValidation(model);
+      expect(issues.some((i) => i.code === 'dangling_camera_ref')).toBe(true);
+    });
+
     it('errors when an optical_fiber lacks a reference (converter reads it unconditionally)', () => {
       const model = {
         opto_excitation_source: [{ name: 'LED' }],
@@ -476,6 +491,28 @@ describe('rulesValidation()', () => {
       };
       const issues = rulesValidation(model);
       expect(issues.some(i => ['missing_opto_reference', 'fs_gui_requires_optogenetics', 'dangling_dio_output'].includes(i.code))).toBe(false);
+    });
+
+    it('accepts an opto-implanted animal with an opto-free day (no fs_gui this day)', () => {
+      // Phase 8.7 Task 7: opto is a complete IMPLANTED setup (all-or-nothing) PLUS a per-day,
+      // epoch-scoped protocol (fs_gui_yamls). A day that ran no stimulation carries the implant
+      // metadata but no fs_gui rows — that must be valid, not "missing opto".
+      const model = {
+        cameras: [{ id: 0 }],
+        tasks: [{ task_name: 't', task_epochs: [1] }],
+        behavioral_events: [{ name: 'laser' }],
+        opto_excitation_source: [{ name: 'LED' }],
+        optical_fiber: [{ name: 'F', reference: 'Bregma' }],
+        virus_injection: [{ name: 'V', reference: 'Bregma' }],
+        optogenetic_stimulation_software: 'fsgui',
+        fs_gui_yamls: [], // no stimulation run this day — a normal, valid state
+      };
+      const issues = rulesValidation(model);
+      expect(
+        issues.some((i) =>
+          ['partial_configuration', 'missing_opto_reference', 'fs_gui_requires_optogenetics', 'dangling_dio_output'].includes(i.code)
+        )
+      ).toBe(false);
     });
 
     it('should not error when all four fields absent', () => {

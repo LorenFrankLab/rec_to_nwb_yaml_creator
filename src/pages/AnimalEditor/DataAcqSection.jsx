@@ -151,9 +151,35 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
   return (
     <div className="data-acq-section">
       <header className="section-header">
-        <h2>Data Acquisition Device</h2>
-        <p>Configure your recording hardware and technical parameters.</p>
+        <h2>Recording System</h2>
+        {/* Phase 8.7: the two things edited here have DIFFERENT blast radii — say so, don't
+            blanket-claim "affects all days". The data-acq device identity is live
+            (animal.devices.data_acq_device, merged into every day) so it reaches all days; the
+            technical defaults only seed NEW days at creation (animal.technicalDefaults), so
+            existing days keep their copied day.technical values. */}
+        <p>
+          Shared recording-system setup for this animal. The data-acquisition device identity
+          (name, system, amplifier, ADC) is shared — editing it affects all recording days. The
+          technical defaults below seed each new recording day and are overridable per day, so
+          editing them affects future days only; existing days keep their values.
+        </p>
       </header>
+
+      {/* Phase 8.7 Task 3 (decided option B): data-acq has NO per-day binding — the export reads
+          animal.devices.data_acq_device live into every day — so a genuine mid-study hardware
+          change can't be kept off earlier days. Name that limitation (no-silent-retroactive)
+          instead of implying a day-level edit exists. Per-day recording-system versioning is a
+          separate future phase. */}
+      <div className="recording-system-blast-radius" role="note">
+        {/* Scope the bold lead to the IDENTITY, not the whole section — the rig-constant defaults
+            below ARE per-day overridable, so "no per-day version" must not be read as covering them. */}
+        <strong>One recording-system identity per animal — no per-day version yet.</strong> A
+        mid-study hardware change (for example, swapping the amplifier or acquisition device for
+        later sessions) can&apos;t be represented per day in this app yet: the device identity below
+        is shared, so editing it changes every one of this animal&apos;s recording days — there is
+        no way to keep earlier days on the old hardware. Per-day recording-system versioning is a
+        planned future capability.
+      </div>
 
       <form className="data-acq-form">
         {/* Name (Spyglass identity) */}

@@ -7,15 +7,19 @@ function emptyFsGui() {
 }
 
 /**
- * Day-level FsGUI optogenetics protocol editor.
+ * Day-level FsGUI optogenetics protocol editor — the opto stimulation actually RUN
+ * on this recording day, distinct from the animal's implanted opto setup (edited once
+ * in the Animal Editor's Optogenetics Setup step).
  *
  * `fs_gui_yamls` are a DAY-owned collection (one entry per protocol file) that the
  * export reads from `day.fs_gui_yamls`. Each entry references this day's task epochs and
  * one of the animal's cameras — both controlled choices here (a checkbox list of known
  * epochs, a select of known camera ids) so a scientist can't type a dangling reference.
  *
- * Only rendered when the animal has optogenetics enabled; FsGUI protocols are
- * meaningless without it.
+ * This protocol is OPTIONAL and epoch-scoped: an opto-implanted animal that ran no
+ * stimulation on a given day (or only some epochs) is a normal, valid state. Only
+ * rendered when the animal has optogenetics enabled — without an implant there is
+ * nothing to stimulate.
  *
  * @param {object} root0 - Props.
  * @param {Array} root0.fsGuiYamls - day.fs_gui_yamls.
@@ -42,14 +46,20 @@ export default function FsGuiSection({ fsGuiYamls, cameras, epochOptions, dioOpt
 
   return (
     <section className="fs-gui-section" aria-labelledby="fs-gui-heading">
-      <h3 id="fs-gui-heading">FsGUI optogenetics protocols</h3>
+      <h3 id="fs-gui-heading">Optogenetics run this day (FsGUI protocols)</h3>
       <p className="help-text">
-        One entry per FsGUI protocol YAML used this day. Each protocol applies to the
-        task epochs you select and the camera that defines its spatial filters.
+        The opto stimulation <strong>actually run</strong> on this recording day — separate from the
+        animal&apos;s implanted setup (edited once in Animal Setup → Optogenetics Setup). One entry
+        per FsGUI protocol YAML; each applies to the task epochs you select and the camera that
+        defines its spatial filters. This is optional and epoch-scoped.
       </p>
 
       {items.length === 0 && (
-        <p className="empty-message">No FsGUI protocols added.</p>
+        <p className="empty-message">
+          <strong>No optogenetic stimulation recorded for this day.</strong> That is a normal, valid
+          state — an opto-implanted animal often runs no stimulation on a given day, or only during
+          some epochs. Add a protocol only if opto was run.
+        </p>
       )}
 
       {items.map((item, index) => (
