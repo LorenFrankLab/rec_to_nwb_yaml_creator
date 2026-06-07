@@ -194,4 +194,33 @@ describe('AnimalWorkspace lifecycle cleanup — wrong-owner preservation', () =>
     // And the wrong-owner record is called out as preserved.
     expect(within(dialog).getByText(/preserved|belong/i)).toBeInTheDocument();
   });
+
+  it('excludes recovered-unlinked records from the cascade count (the store leaves them) and notes they remain', async () => {
+    const user = userEvent.setup();
+    // remy's INDEX lists only the OK day; a second record belongs to remy but is NOT in the index
+    // (recovered-unlinked). The store's deleteAnimal walks the index only, so it would NOT delete
+    // that record — the confirmation must not count it as a deleted "recording day".
+    const animals = {
+      remy: { ...remy, days: ['remy-2023-06-22'] },
+    };
+    const days = {
+      'remy-2023-06-22': remyDays['remy-2023-06-22'],
+      'remy-2023-06-25': {
+        animalId: 'remy',
+        date: '2023-06-25',
+        session: { session_id: 'remy_20230625' },
+        state: { draft: true },
+      },
+    };
+    renderWith(animals, days);
+    await selectAnimal('remy');
+
+    await user.click(screen.getByRole('button', { name: /delete this animal/i }));
+    const dialog = screen.getByRole('alertdialog');
+    // Count is the ONE indexed (OK) day — NOT two.
+    expect(within(dialog).getByText(/its 1 recording day/i)).toBeInTheDocument();
+    expect(within(dialog).queryByText(/its 2 recording days/i)).not.toBeInTheDocument();
+    // The surviving recovered record is disclosed, not silently left behind.
+    expect(within(dialog).getByText(/recovered day record.*remain in the workspace/i)).toBeInTheDocument();
+  });
 });

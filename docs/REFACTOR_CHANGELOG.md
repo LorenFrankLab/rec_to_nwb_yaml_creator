@@ -33,9 +33,17 @@ byte-identical; full suite (4127), lint (0 errors), and build green.
 - Tests ([AnimalWorkspace.lifecycle.test.jsx](../src/pages/AnimalWorkspace/__tests__/AnimalWorkspace.lifecycle.test.jsx)):
   discoverable secondary actions; confirm names + cascade count; confirm/cancel paths; the
   downloaded-artifacts caveat for exported days; the day-delete button is not nested in the link;
-  wrong-owner records excluded from the cascade and noted as preserved. The animal-delete trigger's
-  accessible name is "Delete this animal" (no id) so it doesn't collide with the sidebar animal-card
-  for assistive tech — the specific name + cascade live in the confirm dialog.
+  wrong-owner records excluded from the cascade and noted as preserved; and recovered-unlinked
+  records excluded from the count (the store leaves them) and disclosed as remaining. The
+  animal-delete trigger's accessible name is "Delete this animal" (no id) so it doesn't collide
+  with the sidebar animal-card for assistive tech — the specific name + cascade live in the confirm
+  dialog.
+- **Cascade count matches what the store actually removes.** The store's `deleteAnimal` walks the
+  animal's day INDEX only, so it deletes exactly the `OK` days (index-resident, record present,
+  owned). The confirmation counts `OK` days only — it does NOT count wrong-owner records (preserved)
+  or recovered-unlinked records (not in the index, so they survive as orphans). The surviving
+  recovered records are disclosed in the confirm with a pointer to resolve them in the validation
+  summary, rather than being silently left behind under a now-deleted animal.
 
 ## Ownership defaults & day configurability — Phase 8.7 Task 7: opto setup vs. per-day protocol (June 7, 2026)
 

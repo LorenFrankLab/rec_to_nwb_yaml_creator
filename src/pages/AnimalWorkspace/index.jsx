@@ -154,12 +154,15 @@ export function AnimalWorkspace() {
     .filter((d) => d.status === DAY_STATUS.WRONG_OWNER)
     .map((d) => d.dayId);
 
-  // Cascade preview for "Delete animal": the days the store's guarded `deleteAnimal` will
-  // actually remove are the present records owned by this animal (OK + recovered-unlinked),
-  // NEVER the wrong-owner records (those belong to another animal and the store preserves them).
-  // Counting from the same predicate the store guard uses keeps the confirmation honest.
+  // Cascade preview for "Delete animal". The store's guarded `deleteAnimal` walks ONLY the
+  // animal's day INDEX (`getAnimalDayIds`), so it removes exactly the OK days (index-resident,
+  // record present, owned). It does NOT touch wrong-owner records (preserved — they belong to
+  // another animal) NOR recovered-unlinked records (those are not in the index, so they survive
+  // as orphans). The count must therefore be OK-only — counting recovered-unlinked here would
+  // promise a deletion the store does not perform. The surviving recovered records get their own
+  // honest note below.
   const selectedDeletableDays = selectedDayClassification.filter(
-    (d) => isPresentRecordStatus(d.status) && d.status !== DAY_STATUS.WRONG_OWNER
+    (d) => d.status === DAY_STATUS.OK
   );
   const selectedOwnedDayCount = selectedDeletableDays.length;
   const selectedOwnedHasArtifacts = selectedDeletableDays.some((d) => dayHasArtifacts(d.record));
@@ -676,6 +679,10 @@ export function AnimalWorkspace() {
                 ` ${selectedWrongOwnerDayIds.length} day ${
                   selectedWrongOwnerDayIds.length === 1 ? 'record' : 'records'
                 } listed here by mistake (belonging to another animal) will be preserved.`}
+              {selectedOrphanDayIds.length > 0 &&
+                ` ${selectedOrphanDayIds.length} recovered day ${
+                  selectedOrphanDayIds.length === 1 ? 'record' : 'records'
+                } not in this animal's day list will remain in the workspace (resolve them from the validation summary).`}
               {selectedOwnedHasArtifacts && DOWNSTREAM_NOT_DELETED_NOTE} This cannot be undone.
             </>
           ) : (
