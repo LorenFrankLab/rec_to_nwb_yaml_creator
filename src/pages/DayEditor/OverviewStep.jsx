@@ -246,6 +246,7 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, an
               data-field-path="session.weight"
               key={`session-weight-${session.weight ?? ''}`}
               defaultValue={session.weight ?? ''}
+              aria-describedby="session-weight-help"
               placeholder={
                 typeof subject.weight === 'number'
                   ? `${subject.weight} (animal baseline)`
@@ -258,7 +259,7 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, an
                 )
               }
             />
-            <span className="field-help-text">
+            <span id="session-weight-help" className="field-help-text">
               {session.weight !== undefined
                 ? 'Weight recorded for this session — the value exported for this day.'
                 : typeof subject.weight === 'number'

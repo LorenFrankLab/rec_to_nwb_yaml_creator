@@ -88,7 +88,9 @@
  * @property {string} genotype - Genetic background
  * @property {string} date_of_birth - ISO datetime string
  * @property {string} description - Subject description
- * @property {number} [weight] - Weight in grams (optional, may change daily)
+ * @property {number} [weight] - Animal BASELINE weight in grams (optional). This is an
+ *   initial/fallback value only; the per-session exported weight is the day-owned
+ *   `Day.session.weight` (Phase 8.7 Task 2.5), which the export prefers over this baseline.
  * @property {string} [age] - Age string (optional, computed from DOB)
  */
 

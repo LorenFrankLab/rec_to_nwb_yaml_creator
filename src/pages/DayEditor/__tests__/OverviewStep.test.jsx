@@ -434,10 +434,13 @@ describe('OverviewStep', () => {
         />
       );
       // Empty input + the fallback explicitly named, not silently reused as the day's own value.
-      expect(screen.getByLabelText(/recording-day weight/i)).toHaveValue(null);
+      const weightInput = screen.getByLabelText(/recording-day weight/i);
+      expect(weightInput).toHaveValue(null);
       expect(
         screen.getByText(/animal baseline \(450 g\) will be exported as a fallback/i)
       ).toBeInTheDocument();
+      // The fallback cue (which weight will export) is announced to screen readers.
+      expect(weightInput).toHaveAttribute('aria-describedby', 'session-weight-help');
     });
 
     it('shows an inline error when an edited species is not a valid binomial', async () => {
