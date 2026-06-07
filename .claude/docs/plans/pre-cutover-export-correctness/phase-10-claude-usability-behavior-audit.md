@@ -7,6 +7,12 @@ UX polish gate. This is not a human usability study. It is a scripted, artifact-
 codebase, Playwright, screenshots/traces, localStorage inspection, exported YAML, and the phase contracts to
 catch confusing or scientifically dangerous behavior that ordinary unit tests can miss.
 
+> **Sequencing note (tabbed-workspace-ia redesign):** this audit runs **after** the
+> [tabbed-workspace-ia](../tabbed-workspace-ia/overview.md) redesign (Phases 0–5) and scores against the
+> **tabbed IA**. `workflow-screen-map.md` is **rewritten to the tabbed IA by tabbed Phase 5** — audit
+> the tabbed routes/nav/⋮-menus/empty-states against that updated map, not the stepper. Don't audit an
+> IA that's being replaced.
+
 **Inputs to read first:**
 
 - Phase docs 1–9 — especially each validation slice, the user mental-model contract, and the UX

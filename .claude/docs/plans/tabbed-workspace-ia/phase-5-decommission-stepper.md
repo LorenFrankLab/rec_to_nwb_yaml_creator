@@ -38,10 +38,20 @@ is ready to be the post-cutover landing.
   nav + `aria-current`, per-tab content, ⋮ menus, modals); axe pass; confirm per-route landmark
   uniqueness, focus management across tab changes, and **scroll restoration** (returning to a long tab
   resets or restores scroll; SR focus lands on the panel heading).
-- **Task 5.5 — QA + handoff.** Write a handoff note (like the Phase 8.7 one): the new IA map, the
-  route table, a coverage map (which test proves which tab/affordance), and the exact browser scenarios
-  for the v3-cutover Playwright pass (Phase 9 of that plan). Explicitly confirm the hub is ready to be
-  the **default route** so v3-cutover Phase 11 can flip `#/` → workspace onto a finished IA.
+- **Task 5.5 — Update `workflow-screen-map.md` to the tabbed IA.** The screen map
+  ([.claude/docs/plans/pre-cutover-export-correctness/workflow-screen-map.md](../pre-cutover-export-correctness/workflow-screen-map.md))
+  is the contract pre-cutover Phases **10 and 11** score against. Rewrite its route/step/modal rows for
+  the tabbed IA: the `#/animal/:id/:tab` routes, the section **nav** (links + `aria-current`), the
+  per-animal and per-day **⋮ menus**, the create-animal panel, the new empty/loading/cold-deep-link
+  states, and the per-tab ownership cues + scope descriptors. Without this, 10/11 audit a stale map.
+- **Task 5.6 — Supply the unified browser scenarios.** Produce the **tab-based** ownership /
+  discoverability / lifecycle / repair browser scenarios that pre-cutover **Phase 9 (Tasks 4.5/4.6)**
+  will run — replacing the stepper-IA scenarios there. One scenario source, keyed to the new routes.
+- **Task 5.7 — QA + handoff.** Write a handoff note (like the Phase 8.7 one): the new IA map, the route
+  table, a coverage map (which test proves which tab/affordance), and a pointer to the updated screen
+  map + the unified scenarios. State explicitly that **pre-cutover 9/10/11 now run against this tabbed
+  IA** (per the overview's sequencing) and that the hub is ready to be the **default route** so
+  v3-cutover Phase 11 can flip `#/` → workspace onto a finished, audited IA.
 
 ## Acceptance
 
@@ -50,7 +60,10 @@ is ready to be the post-cutover landing.
 - Stepper tests migrated/removed with no net coverage loss for the underlying setup behavior.
 - Full keyboard + axe pass on the tabbed hub; full suite, lint, build green; **125 baselines
   byte-identical**.
-- Handoff note written; v3-cutover Phase 11 unblocked to flip the landing route onto the tabbed hub.
+- `workflow-screen-map.md` rewritten to the tabbed IA; the unified tab-based browser scenarios exist
+  and are referenced by pre-cutover Phase 9.
+- Handoff note written; **pre-cutover Phases 9/10/11 run against this tabbed IA**; v3-cutover Phase 11
+  unblocked to flip the landing route onto the finished, audited hub.
 
 ## Exit
 

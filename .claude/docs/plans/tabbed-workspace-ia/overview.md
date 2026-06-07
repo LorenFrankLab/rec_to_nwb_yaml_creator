@@ -150,12 +150,38 @@ the extraction (tested).
 ## Relationship to existing plans
 
 - **v3-workspace-cutover** owns the **default-route flip** (Phase 11) and the persistent top-nav
-  (Phase 2). This redesign is **additive and flag-gated**, so it can land **before** that cutover
-  (users then land on the good IA) or **after** (ship cutover first). Recommendation: land Phase 0
-  immediately; sequence Phases 1–5 to finish **before** the v3-cutover default-route flip, so the
-  first impression is the tabbed hub, not the current scrolling pane.
+  (Phase 2). This redesign is **additive and flag-gated**, so it lands **before** that cutover (so the
+  first impression after cutover is the tabbed hub, not the current scrolling pane). Land Phase 0
+  immediately; finish Phases 1–5 before the default-route flip.
 - **pre-cutover-export-correctness** (Phase 8.7, just completed) supplies the ownership model this
   redesign must preserve — the tabs are the natural home for its ownership cues.
+
+### Sequencing vs. pre-cutover Phases 9/10/11 (decided: tabs first)
+
+Pre-cutover Phases **9 (Playwright browser QA)**, **10 (usability/behavior audit, scored against
+`workflow-screen-map.md`)**, and **11 (professional UX polish)** all audit the UI surface and the
+screen map — exactly what this redesign rewrites. So **this redesign (Phases 0–5) runs FIRST**, and
+pre-cutover 9/10/11 then audit/polish the **final tabbed IA** once, against the updated screen map.
+Running 9/10/11 on the current stepper IA first would validate an IA being replaced and score against
+a screen map about to be rewritten.
+
+Because this redesign is **UI-only (125 baselines byte-identical, export untouched)**, the
+*export-correctness substance* of pre-cutover 9/10 (validation gates + the deferred
+`trodes_to_nwb → nwbinspector --config dandi → dandi validate` round-trip) is IA-agnostic and MAY run
+early/in parallel to prove scientific-data safety without waiting on the IA rebuild. Three concrete
+reconciliations carry into the phases:
+
+1. **Screen-map ownership.** This redesign **updates `workflow-screen-map.md`** (new tab routes, the
+   section nav, ⋮ menus, empty/loading/cold-deep-link states) in **Phase 5**, so pre-cutover 10/11
+   score against the real surface, not a stale map.
+2. **Unified browser scenarios.** Phase 5 supplies the **tab-based** ownership/lifecycle/repair browser
+   scenarios that pre-cutover **Phase 9 (Tasks 4.5/4.6)** then runs — one scenario source, not two
+   competing sets written for different IAs.
+3. **A11y is built once.** The nav-tabs / ⋮-menu / focus-management a11y is implemented in these phases
+   and **audited** (not re-implemented) by pre-cutover Phase 11 and v3-cutover Phase 10 (a11y-keyboard).
+
+Full target order: `8.7 → tabbed 0 → (export-safety substance of 9/10, parallel) → tabbed 1–5
+(updates the screen map) → pre-cutover 9/10/11 UX on the tabbed IA → v3-cutover Phase 11 cutover`.
 
 ## Resolved decisions
 

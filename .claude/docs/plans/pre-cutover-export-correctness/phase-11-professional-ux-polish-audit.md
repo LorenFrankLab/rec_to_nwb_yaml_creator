@@ -7,6 +7,12 @@ cutover. Phase 10 proves behavior is correct and recoverable; this phase proves 
 predictable, accessible, and visually/interactionally consistent enough for repeated scientific use. This is
 this plan's Phase 11, **not** the separate v3-workspace-cutover Phase 11 default-route flip.
 
+> **Sequencing note (tabbed-workspace-ia redesign):** this polish pass runs **after** the
+> [tabbed-workspace-ia](../tabbed-workspace-ia/overview.md) redesign (Phases 0–5) and polishes the
+> **tabbed IA**. The accessibility of the section nav / ⋮ menus / focus-across-tabs is **built in the
+> tabbed phases** — this phase **audits and refines** it, it does not re-implement it. Refine against
+> the tabbed-IA `workflow-screen-map.md` (updated by tabbed Phase 5).
+
 **Inputs to read first:**
 
 - Phase docs 1–10, especially Phase 9/10 artifacts and any screenshots/traces/finding logs.
