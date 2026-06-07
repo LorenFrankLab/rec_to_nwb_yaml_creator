@@ -36,7 +36,7 @@ vi.mock('../ElectrodeGroupsStep', () => ({
 vi.mock('../ChannelMapsStep', () => ({
   default: ({ animal, onEditChannelMap }) => (
     <div data-testid="channel-maps-step">
-      <h2>Step 2: Channel Maps</h2>
+      <h2>Channel Maps</h2>
       <div>ChannelMapsStep for {animal.id}</div>
       {animal.devices?.ntrode_electrode_group_channel_map?.map(channelMap => (
         <div key={channelMap.electrode_group_id}>
@@ -1313,7 +1313,7 @@ describe('AnimalEditorStepper', () => {
       await user.click(nextButton);
 
       expect(screen.getByTestId('channel-maps-step')).toBeInTheDocument();
-      expect(screen.getByText(/Step 2: Channel Maps/)).toBeInTheDocument();
+      expect(screen.getByText('Channel Maps', { selector: 'h2' })).toBeInTheDocument();
     });
 
     it('opens channel map editor when group clicked', async () => {

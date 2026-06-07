@@ -38,6 +38,8 @@ describe('ChannelMapsStep', () => {
     expect(screen.getByText('—', { selector: '[data-label="Channels"]' })).toBeInTheDocument();
     expect(screen.getByText('—', { selector: '[data-label="Shanks"]' })).toBeInTheDocument();
     expect(screen.queryByText('0', { selector: '[data-label="Channels"]' })).not.toBeInTheDocument();
+    // Bad-channel cell uses the same catalog denominator → em dash for an unknown device.
+    expect(screen.getByText('0 bad / —', { selector: '[data-label="Bad Channels"]' })).toBeInTheDocument();
   });
 
   it('shows the shank count from the catalog (uneven 64c-3s = 3 shanks)', () => {
@@ -141,7 +143,7 @@ describe('ChannelMapsStep', () => {
 
     render(<ChannelMapsStep animal={emptyAnimal} onEditChannelMap={mockOnEditChannelMap} />);
 
-    expect(screen.getByText(/Add electrode groups in Step 1 before configuring channel maps/i)).toBeInTheDocument();
+    expect(screen.getByText(/Add electrode groups before mapping channels/i)).toBeInTheDocument();
   });
 
   it.each([
@@ -160,7 +162,7 @@ describe('ChannelMapsStep', () => {
     expect(() =>
       render(<ChannelMapsStep animal={corruptAnimal} onEditChannelMap={mockOnEditChannelMap} />)
     ).not.toThrow();
-    expect(screen.getByText(/Add electrode groups in Step 1 before configuring channel maps/i)).toBeInTheDocument();
+    expect(screen.getByText(/Add electrode groups before mapping channels/i)).toBeInTheDocument();
   });
 
   it.each([
@@ -187,5 +189,47 @@ describe('ChannelMapsStep', () => {
 
     expect(screen.getByText('CA1')).toBeInTheDocument();
     expect(screen.getByText('CA3')).toBeInTheDocument();
+  });
+
+  // Phase 0 (tabbed-workspace-ia quick wins): copy + bad-channel count.
+  it('names the section "Channel Maps" without a "Step N:" wizard prefix', () => {
+    render(<ChannelMapsStep animal={mockAnimal} onEditChannelMap={mockOnEditChannelMap} />);
+
+    expect(screen.getByRole('heading', { name: 'Channel Maps' })).toBeInTheDocument();
+    expect(screen.queryByText(/Step 2:/)).not.toBeInTheDocument();
+  });
+
+  it('intro names BOTH jobs: mapping channels to positions AND marking bad channels', () => {
+    render(<ChannelMapsStep animal={mockAnimal} onEditChannelMap={mockOnEditChannelMap} />);
+
+    expect(screen.getByText(/map each probe channel to its electrode position/i)).toBeInTheDocument();
+    expect(screen.getByText(/bad channels are the ones to exclude from analysis/i)).toBeInTheDocument();
+  });
+
+  it('surfaces the bad-channel count per group as "N bad / total"', () => {
+    const animal = {
+      id: 'remy',
+      devices: {
+        electrode_groups: [
+          { id: 0, device_type: 'tetrode_12.5', location: 'CA1' },
+        ],
+        ntrode_electrode_group_channel_map: [
+          { ntrode_id: 0, electrode_group_id: 0, map: { 0: 0, 1: 1, 2: 2, 3: 3 }, bad_channels: [1, 2] },
+        ],
+      },
+    };
+    render(<ChannelMapsStep animal={animal} onEditChannelMap={mockOnEditChannelMap} />);
+
+    expect(
+      screen.getByText('2 bad / 4', { selector: '[data-label="Bad Channels"]' })
+    ).toBeInTheDocument();
+  });
+
+  it('shows "0 bad" for groups with no bad channels (count visible in every row state)', () => {
+    render(<ChannelMapsStep animal={mockAnimal} onEditChannelMap={mockOnEditChannelMap} />);
+
+    // Both tetrode groups have no bad channels → "0 bad / 4" per row.
+    const cells = screen.getAllByText(/0 bad \/ 4/, { selector: '[data-label="Bad Channels"]' });
+    expect(cells.length).toBe(2);
   });
 });
