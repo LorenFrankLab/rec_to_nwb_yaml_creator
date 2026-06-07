@@ -327,24 +327,25 @@ describe('ownershipForFieldPath', () => {
     );
   });
 
-  it('maps rig constants and recording-system units to the default → day-value pattern', () => {
+  it('maps rig constants (seeded from animal defaults) to the default → day-value pattern', () => {
     expect(ownershipForFieldPath('raw_data_to_volts').pattern).toBe(
       OWNERSHIP_PATTERN.SETUP_DEFAULT_TO_DAY
     );
     expect(ownershipForFieldPath('times_period_multiplier').pattern).toBe(
       OWNERSHIP_PATTERN.SETUP_DEFAULT_TO_DAY
     );
-    expect(ownershipForFieldPath('day.technical.units').pattern).toBe(
-      OWNERSHIP_PATTERN.SETUP_DEFAULT_TO_DAY
-    );
-    expect(ownershipForFieldPath('technical.units.analog').pattern).toBe(
-      OWNERSHIP_PATTERN.SETUP_DEFAULT_TO_DAY
-    );
+  });
+
+  it('maps day.technical.units to a day fact (no animal default exists; seeded undefined)', () => {
+    // Unlike the rig constants, day creation seeds `units: undefined` — there is no
+    // animal.technicalDefaults.units to copy — so it is day-specific (matches shared-contracts.md).
+    expect(ownershipForFieldPath('day.technical.units').pattern).toBe(OWNERSHIP_PATTERN.DAY_FACT);
+    expect(ownershipForFieldPath('technical.units.analog').pattern).toBe(OWNERSHIP_PATTERN.DAY_FACT);
   });
 
   it('keeps an electrode-group `units` subfield with the versioned configuration (ordering guard)', () => {
     // `units` also appears on electrode_groups; `electrode` must win so the config snapshot
-    // owns it, not the recording-system default. Locks the keyword-scan order.
+    // owns it, not the day-technical units. Locks the keyword-scan order.
     expect(ownershipForFieldPath('electrode_groups[0].units').pattern).toBe(
       OWNERSHIP_PATTERN.CONFIGURATION_VERSION
     );

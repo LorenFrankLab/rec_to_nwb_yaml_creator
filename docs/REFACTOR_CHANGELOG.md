@@ -97,10 +97,23 @@ day-used camera export binding (Task 5) are later sub-streams, deliberately out 
   `repairSurface` wins, so they asserted inputs production never produces. Moved each fixture to the
   correct array with the production surface/step, so the tests now lock the real routing contract.
 
+### Review round 3 fix (code-review, same day)
+
+- **Reclassified `units` as a day fact, not a recording-system default (Medium).** Round 2
+  reconciled the `units` helper/matrix toward `setup_default_to_day`, but that was the wrong
+  direction: `shared-contracts.md` correctly states `units` is day-specific, and the model confirms
+  it — day creation seeds `units: undefined` and there is no `animal.technicalDefaults.units` to
+  copy (workspaceTransitions.js), unlike `raw_data_to_volts`/`times_period_multiplier` which ARE
+  seeded from animal defaults. Fixed the helper (`units` → `day_fact`, kept after `electrode` so an
+  electrode-group `units` subfield stays `configuration_version`), the matrix row (now `day_fact` /
+  `This day only`, with a group note that `day.technical` mixes copied defaults and day facts), and
+  the tests. `shared-contracts.md` needed no change — the matrix/helper now agree with it. This is a
+  reconcile-toward-the-truth fix, not a make-the-docs-match fix.
+
 ### Test results
 
-- Full suite: 4059 tests passing (248 files), +38 from the new ownership descriptor across the
-  foundation + two review rounds.
+- Full suite: 4060 tests passing (248 files), +39 from the new ownership descriptor across the
+  foundation + three review rounds.
 - Golden baselines: 125/125 byte-identical.
 - Architecture-boundary guard: green (no domain→page import introduced).
 - Lint: 0 errors (pre-existing JSDoc warnings only). Build: succeeds.
