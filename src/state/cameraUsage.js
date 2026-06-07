@@ -73,6 +73,11 @@ export function referencedCameraKeys(day) {
  * (the export keeps `cameras: []`, never deletes the key). Shape-safe: a corrupt non-array
  * `animal.cameras` degrades to `[]`.
  *
+ * NB: this FILTERS, so it emits exactly the referenced ids that RESOLVE to a catalog camera — a
+ * DANGLING id (referenced but absent from the catalog) is necessarily OMITTED, not included. That
+ * is safe: the export-blocking `dangling_camera_ref` rule fires first (its valid-id set is this
+ * same subset), so a dangling reference never reaches a real export file.
+ *
  * @param {object} animal - The owning animal (read shape-safely via `getAnimalCameras`).
  * @param {object} day - The recording day.
  * @returns {Array<object>} The day-used camera objects, in catalog order.
