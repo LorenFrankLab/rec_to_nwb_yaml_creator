@@ -6,6 +6,39 @@
 
 ---
 
+## Ownership defaults & day configurability — Phase 8.7 Task 5a: day-used camera export binding (June 7, 2026)
+
+The one Phase 8.7 change that touches export SEMANTICS — implemented carefully and verified
+byte-identical. The export now emits only the cameras a day actually used, so a new catalog camera
+for a future recording can no longer leak into a re-export of an old day (approach A's "past days
+keep what they used" promise). The 125 golden/legacy baselines stay byte-identical (every fixture
+references all its cameras → the day-used subset equals the full catalog); full suite (4092),
+architecture guard, lint (0 errors), and build green.
+
+- **New pure module** [`src/state/cameraUsage.js`](../src/state/cameraUsage.js):
+  - `resolveDayCameraUsage(animal, day)` — scans `tasks[].camera_id` (array),
+    `associated_video_files[].camera_id` (scalar), and `fs_gui_yamls[].camera_id` (scalar) and
+    returns the day-used camera objects, FILTERED from the full `animal.cameras` catalog (never
+    reconstructed — each keeps `lens` and all schema-required fields), in catalog order. A
+    zero-reference day → `[]`. Shape-tolerant (corrupt non-array collections/ids degrade to empty),
+    and a dangling reference is simply omitted (the `dangling_camera_ref` rule blocks export first).
+  - `findCameraAffectedDays(days, cameraId)` — the separate blast-radius helper (kept out of the
+    single-day export helper) returning the ids of days that reference a camera, for the
+    immutable-once-referenced "apply to these N days" confirmations (5b).
+  - `referencedCameraKeys(day)` — the shared id-collection primitive (numeric/string ids normalized).
+- **`mergeDayMetadata`** ([workspaceUtils.js](../src/state/workspaceUtils.js)) now emits
+  `resolveDayCameraUsage(animal, day)` instead of the whole `animal.cameras`, preserving key order
+  and `cameras: []`. Verified safe downstream (trodes_to_nwb resolves cameras by `id`, not list
+  position), so dropping unreferenced cameras cannot shift/corrupt the device mapping and is more
+  correct (an unused camera should not become a device).
+- **Tests:** 13 `cameraUsage` unit tests (array/scalar refs, dedupe, unreferenced-dropped,
+  dangling-omitted, corrupt shapes, fs_gui-only, the full-catalog golden-fixture case); updated the
+  3 merge tests that encoded the old "export all animal cameras" behavior to reference the cameras
+  they expect (realistic), and added a `cameras: []`-for-a-no-camera-day test.
+
+Still open in Task 5: the camera blast-radius / immutable-once-referenced UI (5b) and the
+catalog-selection + task→room/cameras/epochs legibility copy (5c).
+
 ## Ownership defaults & day configurability — Phase 8.7 Task 4: day technical values as effective recording-system values (June 7, 2026)
 
 Makes the Day Editor technical section show the rig constants as effective recording-system values
