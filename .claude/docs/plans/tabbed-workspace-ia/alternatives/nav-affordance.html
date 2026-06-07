@@ -1,0 +1,112 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Nav affordance — making setup items read as buttons</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --paper:#f4f1ea;--paper2:#efeae0;--surf:#fbfaf6;--raised:#fff;--line:#ddd7c9;--line2:#c8c1ae;
+  --ink:#1c1b18;--ink2:#46443d;--ink3:#6a6557;
+  --teal:#0d5c63;--tealb:#0e7d86;--tealw:#e3eeee;--teal-soft:#eef4f4;--red:#b3261e;
+  --sans:'IBM Plex Sans',system-ui,sans-serif;--mono:'IBM Plex Mono',monospace;
+}
+*{box-sizing:border-box}html,body{margin:0}
+body{font-family:var(--sans);color:var(--ink);font-size:14px;-webkit-font-smoothing:antialiased;
+  background:repeating-linear-gradient(0deg,transparent,transparent 27px,rgba(0,0,0,.012) 27px,rgba(0,0,0,.012) 28px),var(--paper);
+  padding:1.8rem}
+.cols{display:grid;grid-template-columns:repeat(3,1fr);gap:1.4rem;max-width:1000px;margin:0 auto}
+.col h3{font-size:14px;margin:0 0 .15rem;font-weight:700}
+.col p{font-size:11.5px;color:var(--ink2);margin:0 0 .8rem;line-height:1.45;min-height:46px}
+.snav{border:1px solid var(--line);border-radius:12px;padding:.85rem .7rem;background:linear-gradient(var(--paper2),var(--surf) 200px)}
+.grp{margin-bottom:1rem}.grp:last-child{margin-bottom:0}
+.glabel{font-family:var(--mono);font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink3);padding:0 .55rem .4rem}
+.count{font-family:var(--mono);font-size:11px;color:var(--ink3)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--red);flex:none}
+.on{background:var(--teal-soft);border-color:#cfe0e0 !important;color:var(--teal);font-weight:600;box-shadow:inset 3px 0 0 var(--teal)}
+.on .count{color:var(--teal)}
+
+/* base item */
+.it{display:flex;align-items:center;gap:.5rem;text-decoration:none;color:var(--ink);padding:.5rem .6rem;border-radius:8px;
+  font-size:13.5px;font-weight:500;margin-bottom:3px;border:1px solid transparent;position:relative}
+.it .nm{flex:1}
+.it .chev{color:var(--line2);font-size:13px;font-weight:600}
+.it:hover{background:var(--surf);border-color:var(--line)}
+
+/* ---- T1: chevron + hairline ---- */
+.t1 .it{border-bottom:1px solid var(--line);border-radius:0;margin-bottom:0;padding-left:.55rem}
+.t1 .grp .it:last-child{border-bottom:none}
+.t1 .it.on{border-radius:8px;border-bottom-color:#cfe0e0}
+
+/* ---- T2: counts (consistent with Day work) — items are plain, every row carries a right-side value ---- */
+/* uses base .it; just always shows a .count or dot on the right */
+
+/* ---- T3: tiles ---- */
+.t3 .it{background:var(--raised);border:1px solid var(--line);margin-bottom:5px;box-shadow:0 1px 0 rgba(0,0,0,.03)}
+.t3 .it:hover{border-color:var(--teal);box-shadow:0 2px 6px -3px rgba(0,0,0,.25)}
+.t3 .it.on{box-shadow:inset 3px 0 0 var(--teal),0 1px 0 rgba(0,0,0,.03)}
+</style></head>
+<body>
+<div class="cols">
+
+  <!-- ============ T1: chevron ============ -->
+  <div class="col">
+    <h3>A · Chevron + dividers</h3>
+    <p>A trailing &rsaquo; on every row is the classic "this navigates somewhere" signifier; hairlines make them read as a list of rows.</p>
+    <nav class="snav t1">
+      <div class="grp"><div class="glabel">Day work</div>
+        <a class="it on"><span class="nm">Recording Days</span><span class="count">4</span><span class="chev">›</span></a>
+        <a class="it"><span class="nm">Export &amp; batch checks</span><span class="count">3 ready</span><span class="chev">›</span></a>
+      </div>
+      <div class="grp"><div class="glabel">Animal setup</div>
+        <a class="it"><span class="nm">Electrode Groups</span><span class="chev">›</span></a>
+        <a class="it"><span class="nm">Channel Maps</span><span class="chev">›</span></a>
+        <a class="it"><span class="nm">Recording System</span><span class="chev">›</span></a>
+        <a class="it"><span class="nm">Cameras</span><span class="dot"></span><span class="chev">›</span></a>
+        <a class="it"><span class="nm">DIO</span><span class="chev">›</span></a>
+        <a class="it"><span class="nm">Optogenetics</span><span class="chev">›</span></a>
+      </div>
+    </nav>
+  </div>
+
+  <!-- ============ T2: counts ============ -->
+  <div class="col">
+    <h3>B · Counts (matches Day work)</h3>
+    <p>Every setup row gets the same right-aligned value the Day-work rows already have. The whole nav becomes one consistent set of "rows that lead to content."</p>
+    <nav class="snav t2">
+      <div class="grp"><div class="glabel">Day work</div>
+        <a class="it on"><span class="nm">Recording Days</span><span class="count">4</span></a>
+        <a class="it"><span class="nm">Export &amp; batch checks</span><span class="count">3 ready</span></a>
+      </div>
+      <div class="grp"><div class="glabel">Animal setup</div>
+        <a class="it"><span class="nm">Electrode Groups</span><span class="count">8</span></a>
+        <a class="it"><span class="nm">Channel Maps</span><span class="count">8</span></a>
+        <a class="it"><span class="nm">Recording System</span><span class="count">1</span></a>
+        <a class="it"><span class="nm">Cameras</span><span class="dot"></span><span class="count">2</span></a>
+        <a class="it"><span class="nm">DIO</span><span class="count">3</span></a>
+        <a class="it"><span class="nm">Optogenetics</span><span class="count">off</span></a>
+      </div>
+    </nav>
+  </div>
+
+  <!-- ============ T3: tiles ============ -->
+  <div class="col">
+    <h3>C · Pressable tiles</h3>
+    <p>Each row sits on its own raised surface with a border — the whole group reads as a stack of buttons even before you hover.</p>
+    <nav class="snav t3">
+      <div class="grp"><div class="glabel">Day work</div>
+        <a class="it on"><span class="nm">Recording Days</span><span class="count">4</span></a>
+        <a class="it"><span class="nm">Export &amp; batch checks</span><span class="count">3 ready</span></a>
+      </div>
+      <div class="grp"><div class="glabel">Animal setup</div>
+        <a class="it"><span class="nm">Electrode Groups</span><span class="count">8</span></a>
+        <a class="it"><span class="nm">Channel Maps</span><span class="count">8</span></a>
+        <a class="it"><span class="nm">Recording System</span><span class="count">1</span></a>
+        <a class="it"><span class="nm">Cameras</span><span class="dot"></span><span class="count">2</span></a>
+        <a class="it"><span class="nm">DIO</span><span class="count">3</span></a>
+        <a class="it"><span class="nm">Optogenetics</span><span class="count">off</span></a>
+      </div>
+    </nav>
+  </div>
+
+</div>
+</body></html>

@@ -1,0 +1,132 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Animal selector — dropdown open</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --paper:#f4f1ea;--paper2:#efeae0;--surf:#fbfaf6;--raised:#fff;--line:#ddd7c9;--line2:#c8c1ae;
+  --ink:#1c1b18;--ink2:#46443d;--ink3:#6a6557;
+  --teal:#0d5c63;--tealw:#e3eeee;--teal-soft:#eef4f4;--amber:#9a5b0b;--green:#1f7a43;--blue:#1976d2;
+  --red:#b3261e;--redw:#f6e0de;
+  --sans:'IBM Plex Sans',system-ui,sans-serif;--mono:'IBM Plex Mono',monospace;
+}
+*{box-sizing:border-box}html,body{margin:0}
+body{font-family:var(--sans);color:var(--ink);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased;background:#e7e2d6;padding:1.6rem}
+.mono{font-family:var(--mono)}
+.screen-label{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7d7868;margin:0 .3rem .5rem}
+.screen-label b{font-family:var(--sans);font-size:16px;text-transform:none;letter-spacing:-.01em;color:#332f27;font-weight:700}
+.win{position:relative;background:repeating-linear-gradient(0deg,transparent,transparent 27px,rgba(0,0,0,.012) 27px,rgba(0,0,0,.012) 28px),var(--paper);border:1px solid #cfc8b6;border-radius:12px;overflow:hidden;box-shadow:0 10px 30px -16px rgba(0,0,0,.4)}
+.top{display:flex;align-items:center;gap:1rem;height:50px;padding:0 1.1rem;border-bottom:1px solid var(--line);background:linear-gradient(var(--surf),var(--paper2));position:relative;z-index:30}
+.brand{font-family:var(--mono);font-weight:600;color:var(--teal);font-size:14px}.brand::before{content:"◖ "}
+.crumb{display:flex;align-items:center;gap:.5rem;margin-left:.4rem;font-size:13px;position:relative}
+.crumb a{color:var(--ink3);text-decoration:none;font-weight:500}.crumb .sepc{color:var(--line2)}
+.selector{display:inline-flex;align-items:center;gap:.4rem;background:var(--raised);border:1px solid var(--teal);border-radius:8px;padding:.3rem .55rem;font-weight:700;color:var(--ink);box-shadow:0 0 0 3px var(--teal-soft)}
+.selector .av{width:17px;height:17px;border-radius:5px;background:var(--tealw);color:var(--teal);display:grid;place-items:center;font-family:var(--mono);font-size:9px;font-weight:600}
+.selector .chev{color:var(--teal);font-size:10px}
+.topnav{margin-left:auto;display:flex;align-items:center;gap:.3rem}
+.topnav a{text-decoration:none;font-size:12.5px;font-weight:500;padding:.38rem .65rem;border-radius:7px}
+.topnav a.batch{border:1px solid var(--line2);background:var(--raised);color:var(--ink2)}
+.topnav a.ghost{color:var(--ink3);font-family:var(--mono);font-size:11px}
+/* dropdown */
+.ddl{position:absolute;top:38px;left:62px;width:266px;background:var(--raised);border:1px solid var(--line2);border-radius:11px;box-shadow:0 16px 40px -14px rgba(0,0,0,.5);padding:.4rem;z-index:40}
+.ddl .lbl{font-family:var(--mono);font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink3);padding:.25rem .5rem .35rem}
+.ddl .di{display:flex;align-items:center;gap:.6rem;padding:.5rem .55rem;border-radius:8px;cursor:pointer;position:relative}
+.ddl .di:hover{background:var(--paper2)}
+.ddl .di.sel{background:var(--teal-soft);box-shadow:inset 3px 0 0 var(--teal)}
+.ddl .di .av{width:24px;height:24px;border-radius:6px;background:var(--tealw);color:var(--teal);display:grid;place-items:center;font-family:var(--mono);font-size:10px;font-weight:600;flex:none}
+.ddl .di.sel .av{background:var(--teal);color:#fff}
+.ddl .di .nm{font-weight:600;font-size:13.5px}
+.ddl .di.sel .nm{color:var(--teal)}
+.ddl .di .ct{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink3)}
+.ddl .di .new-badge{font-family:var(--mono);font-size:10px;color:var(--amber);background:#f6ead2;border-radius:4px;padding:.05rem .35rem}
+.ddl .di .kebab{width:24px;height:24px;border-radius:6px;border:1px solid transparent;background:transparent;color:var(--ink3);font-size:14px;flex:none}
+.ddl .di:hover .kebab{border-color:var(--line)}
+.ddl .di.sel .kebab{color:var(--teal)}
+.ddl .sep{height:1px;background:var(--line);margin:.35rem .3rem}
+.ddl .new{display:flex;align-items:center;gap:.6rem;padding:.5rem .55rem;border-radius:8px;color:var(--teal);font-family:var(--sans);font-weight:600;font-size:13.5px;cursor:pointer}
+.ddl .new:hover{background:var(--teal-soft)}
+.ddl .new .plus{width:24px;height:24px;border-radius:6px;border:1.5px dashed var(--line2);display:grid;place-items:center;color:var(--teal);font-family:var(--mono);flex:none}
+/* nested row menu */
+.rmenu{position:absolute;top:8px;left:272px;width:172px;background:var(--raised);border:1px solid var(--line2);border-radius:10px;box-shadow:0 14px 34px -12px rgba(0,0,0,.5);padding:.3rem;z-index:50}
+.rmenu .mi{display:flex;align-items:center;gap:.5rem;padding:.46rem .5rem;border-radius:7px;font-size:13px;font-weight:500;cursor:pointer}
+.rmenu .mi:hover{background:var(--paper2)}.rmenu .mi .ic{width:15px;text-align:center;color:var(--ink3)}
+.rmenu .sep{height:1px;background:var(--line);margin:.25rem .2rem}
+.rmenu .mi.danger{color:var(--red)}.rmenu .mi.danger .ic{color:var(--red)}
+.rmenu .mi.danger:hover{background:var(--redw)}
+/* page behind */
+.ahead{display:flex;align-items:center;gap:.9rem;padding:.85rem 1.4rem .65rem;border-bottom:1px solid var(--line)}
+.ahead h1{font-size:23px;font-weight:700;letter-spacing:-.025em;margin:0}
+.ahead .idb{font-family:var(--mono);font-size:10px;color:var(--ink3);border:1px solid var(--line);border-radius:4px;padding:.06rem .36rem}
+.ahead .facts{font-family:var(--mono);font-size:12px;color:var(--ink2)}
+.ahead .akebab{margin-left:auto;border:1px solid var(--line);background:var(--raised);border-radius:7px;width:29px;height:29px;color:var(--ink3);font-size:15px}
+.shell{display:grid;grid-template-columns:222px 1fr}
+.snav{border-right:1px solid var(--line);padding:.9rem .65rem;background:linear-gradient(var(--paper2),transparent 200px)}
+.snav .grp{margin-bottom:1rem}
+.glabel{font-family:var(--mono);font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink3);padding:0 .5rem .35rem}
+.navitem{display:flex;align-items:center;gap:.5rem;color:var(--ink);padding:.46rem .5rem;font-size:13.5px;font-weight:500;border-bottom:1px solid var(--line)}
+.navitem:last-child{border-bottom:none}
+.navitem .nm{flex:1}.navitem .count{font-family:var(--mono);font-size:11px;color:var(--ink3)}.navitem .chev{color:var(--ink3);font-size:13px;font-weight:600}
+.navitem.on{background:var(--teal-soft);border:1px solid #cfe0e0;border-radius:8px;color:var(--teal);font-weight:600;box-shadow:inset 3px 0 0 var(--teal)}
+.navitem.on .count,.navitem.on .chev{color:var(--teal)}
+.dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--red)}
+.canvas{padding:1.1rem 1.5rem 2rem}
+.phead{display:flex;align-items:baseline;justify-content:space-between}
+.phead h2{font-size:19px;font-weight:700;margin:0}
+.addbtn{font-family:var(--sans);font-weight:600;font-size:12.5px;background:var(--teal);color:#fff;border:none;border-radius:8px;padding:.45rem .8rem}.addbtn::before{content:"+ ";font-family:var(--mono)}
+.psub{color:var(--ink3);font-size:12.5px;margin:.5rem 0 1rem}
+.scrim{position:absolute;inset:50px 0 0 0;background:rgba(28,27,24,.06);z-index:20}
+</style></head>
+<body>
+
+<div class="screen-label">Animal selector <b>dropdown open — switch animal · per-row ⋮ · + New animal…</b></div>
+<div class="win">
+  <div class="top"><span class="brand">rec→nwb</span>
+    <div class="crumb"><a>Workspace</a><span class="sepc">▸</span>
+      <span class="selector"><span class="av">re</span> remy <span class="chev">▴</span></span>
+      <!-- open dropdown -->
+      <div class="ddl" role="listbox" aria-label="Switch animal">
+        <div class="lbl">Animals</div>
+        <div class="di sel"><span class="av">re</span><span class="nm">remy</span>
+          <span class="ct">5 days</span><button class="kebab" aria-label="remy actions">⋮</button>
+          <!-- nested per-row menu -->
+          <div class="rmenu" role="menu">
+            <div class="mi"><span class="ic">⇨</span>Open</div>
+            <div class="mi"><span class="ic">✎</span>Rename…</div>
+            <div class="sep"></div>
+            <div class="mi danger"><span class="ic">🗑</span>Delete animal…</div>
+          </div>
+        </div>
+        <div class="di"><span class="av" style="background:#e7eef0">to</span><span class="nm">totoro</span>
+          <span class="ct">1 day</span><button class="kebab">⋮</button></div>
+        <div class="di"><span class="av" style="background:#efe9da;color:var(--amber)">ne</span><span class="nm">newbie</span>
+          <span class="new-badge">new</span><span class="ct" style="margin-left:.5rem">0 days</span><button class="kebab">⋮</button></div>
+        <div class="sep"></div>
+        <div class="new"><span class="plus">+</span>New animal…</div>
+      </div>
+    </div>
+    <nav class="topnav"><a class="batch">All animals · Batch Export</a><a class="ghost">legacy →</a></nav></div>
+
+  <!-- page behind (remy) -->
+  <div class="ahead"><h1>remy</h1><span class="idb">subject_id</span><span class="facts">Rattus norvegicus · male</span><button class="akebab">⋮</button></div>
+  <div class="shell">
+    <nav class="snav">
+      <div class="grp"><div class="glabel">Day work</div>
+        <div class="navitem on"><span class="nm">Recording Days</span><span class="count">5</span><span class="chev">›</span></div>
+        <div class="navitem"><span class="nm">Validation &amp; Export</span><span class="count">3 ready</span><span class="chev">›</span></div></div>
+      <div class="grp"><div class="glabel">Animal setup</div>
+        <div class="navitem"><span class="nm">Electrode Groups</span><span class="count">8</span><span class="chev">›</span></div>
+        <div class="navitem"><span class="nm">Channel Maps</span><span class="count">8</span><span class="chev">›</span></div>
+        <div class="navitem"><span class="nm">Recording System</span><span class="count">1</span><span class="chev">›</span></div>
+        <div class="navitem"><span class="nm">Cameras</span><span class="dot"></span><span class="count">2</span><span class="chev">›</span></div>
+        <div class="navitem"><span class="nm">DIO</span><span class="count">3</span><span class="chev">›</span></div>
+        <div class="navitem"><span class="nm">Optogenetics</span><span class="count">off</span><span class="chev">›</span></div></div>
+    </nav>
+    <main class="canvas">
+      <div class="phead"><h2>Recording Days</h2><button class="addbtn">Add Recording Days</button></div>
+      <p class="psub">Each row is one recording day, newest first.</p>
+    </main>
+  </div>
+  <div class="scrim"></div>
+</div>
+</body></html>

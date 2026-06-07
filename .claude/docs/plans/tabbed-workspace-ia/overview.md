@@ -25,27 +25,37 @@ most of the requested changes are facets of it.
 
 ```text
 Workspace  (the hub — also the post-cutover landing route, owned by v3-cutover Phase 11)
-├─ Animal picker (left rail): list of animals; "+ New Animal"; per-animal ⋮ menu (Rename / Delete…)
-└─ Selected animal → TAB BAR (a navigation landmark — links with aria-current, NOT a role=tablist):
-   ── Day work ──
-   ├─ Recording Days        day list + "Add Recording Days" (in this tab's header) + per-day ⋮/Delete
-   ├─ Validation & Export   this animal's per-day readiness + export (batch lives at chrome level)
-   ── Animal setup (revisitable; scope descriptor under each name) ──
-   ├─ Electrode Groups      versioned physical identity — "a change here creates a new config version"
-   ├─ Channel Maps          channel mapping + bad-channel marking — "edit any time"
-   ├─ Recording System      data-acq identity + technical defaults — "shared across ALL days"
-   ├─ Cameras               camera catalog — "referenced per day"
-   ├─ DIO                   behavioral-events library — "opt in per day"
-   └─ Optogenetics          implanted opto setup — status chip when unused (opto-free is valid)
-   (Subject/profile facts: a small header on the animal view, not a tab — see Phase 3.)
+├─ Top chrome: object-selector "Workspace ▸ <animal> ▾" (animal switcher + "+ New animal…")
+│              · "All animals · Batch Export" (chrome-level batch) · legacy escape
+└─ Selected animal:
+   ├─ Header band: name · subject_id · species · sex · ⋮ (Rename / Delete…)
+   └─ LEFT section-nav (navigation landmark — aria-current links, NOT role=tablist; row = name · count · ›):
+      ── Day work ──
+      ├─ Recording Days        day list + "Add Recording Days" (in this view's header) + per-day ⋮/Delete
+      ├─ Validation & Export   this animal's per-day readiness + export (batch lives at chrome level)
+      ── Animal setup (revisitable; scope descriptor under each name) ──
+      ├─ Electrode Groups      versioned physical identity — "a change here creates a new config version"
+      ├─ Channel Maps          channel mapping + bad-channel marking — "edit any time"
+      ├─ Recording System      data-acq identity + technical defaults — "shared across ALL days"
+      ├─ Cameras               camera catalog — "referenced per day"
+      ├─ DIO                   behavioral-events library — "opt in per day"
+      └─ Optogenetics          implanted opto setup — status chip when unused (opto-free is valid)
+      (Subject/profile facts: the header band above, not a nav item — see Phase 3.)
 ```
+
+> **Navigation placement (decided this pass):** sections live in a **grouped LEFT section-nav**, and the
+> animal is switched via a **top object-selector**, NOT a top tab bar over a left animal rail (that pairing
+> is a double-sidebar anti-pattern). See the **Layout — DECIDED** section below for the full rationale, the
+> row contract, and the affordance treatment. Routing/a11y/extraction are unchanged — throughout these docs,
+> read **"tab"** as **"left section-nav item."**
 
 Routing (decided): keep the animal hub at `#/workspace` (picker + empty state). Selecting an animal
 opens the tabbed view at a **linkable per-tab route** `#/animal/:id/:tab` — e.g. `#/animal/remy/days`,
 `#/animal/remy/cameras`. This **replaces** `#/animal/:id/editor` (the stepper). `#/day/:id` is
-unchanged. `#/animal/:id` (no tab) redirects to the default tab `days`. The tab bar is a **navigation
-landmark** (links + `aria-current="page"`), not a WAI-ARIA `role="tablist"` — each tab is its own
-route, so nav semantics are the honest fit and avoid the tablist-vs-link spec tension.
+unchanged. `#/animal/:id` (no tab) redirects to the default tab `days`. The section-nav (placed on the
+LEFT — see Layout — DECIDED) is a **navigation landmark** (links + `aria-current="page"`), not a
+WAI-ARIA `role="tablist"` — each section is its own route, so nav semantics are the honest fit and
+avoid the tablist-vs-link spec tension.
 
 **Electrode Groups and Channel Maps are SEPARATE tabs** (decided): electrode-group identity is
 versioned/append-once-referenced (a change forks a configuration version), while channel maps /
@@ -198,6 +208,41 @@ Full target order: `8.7 → tabbed 0 → (export-safety substance of 9/10, paral
    routine bad-channel edits). ✅
 7. **No mandatory setup gate** — a behavior-only day with no electrodes is valid; the Recording Days tab
    shows what *this day* needs to export, never a blanket "set up electrodes first." ✅
+8. **Setup guidance is preserved, not lost to tabs** — the current app's checklist tells a new user what
+   to add (subject / electrodes / cameras / recording system / DIO). Tabs alone would lose that, so a
+   **prominent first-run "Set up this animal" checklist** shows on the Recording Days view while setup is
+   incomplete, collapsing once established (Phase 2.3), and never-configured sections wear a neutral
+   **hollow ○ "todo" ring** in the section-nav. Guidance is strong; it is still not a hard gate (decision
+   7 holds). ✅ **Reconciled with decision 11 (dots are blocking-only):** the section-nav does NOT carry
+   ambient green "done" / amber "review" completion dots (they manufactured anxiety on established
+   animals and duplicated the removed canvas strip). Onboarding signal = hollow ○ on never-configured +
+   the first-run checklist; established-animal signal = blocking-red only. *(from prototype review —
+   equal-looking empty tabs hid the "what do I need to add?" affordance; the interactive design pass then
+   showed colored completion dots over-corrected into ambient homework.)*
+9. **Navigation placement: top object-selector + left grouped section-nav** — NOT a top tab bar over a
+   left animal rail (double-sidebar anti-pattern). The animal is switched from a top `Workspace ▸ <animal> ▾`
+   dropdown; the sections are a grouped left nav. Routing (`#/animal/:id/:tab`), nav-landmark a11y
+   (decision 5), scope descriptors, and the Phase 3 extraction all carry over. See Layout — DECIDED. ✅
+10. **Section-nav row affordance: name · count · chevron, grouped, with dividers** — each row carries a
+    right-aligned **count** (information scent: 8 electrode groups, 2 cameras, …) and a trailing **›**
+    so it reads as a navigable button at rest. Icons were tried and dropped (abstract glyphs weren't
+    recognizable). Active row = teal fill + inset bar. ✅
+11. **Status dots are blocking-only** — a section-nav row shows a colored dot ONLY when it **blocks
+    export** (red). No ambient green/amber completion dots. Three states: never-configured ○ (neutral
+    todo) · configured-and-fine (no dot) · blocks-export ● red. ✅
+12. **Recording-day row = triage, not inspection** — bare **date** (anchor) + muted **session description**
+    (if present) + one **plain-language status** (`Draft` / `Ready to export` / `Exported` / `Needs
+    fixing — {reason}`) + one **action** + a conditional **older-electrode-setup flag** (only when the day
+    is pinned to a non-current config version). `session_id`, camera count, opto state, and the raw config
+    version NUMBER move OFF the row into the day / export preflight (the dense "scan line" is retired).
+    Date-ordered, newest-first for now. ✅
+13. **Animal delete gets a type-to-confirm gate; day delete does not** — deleting an animal is the
+    highest-blast-radius, irreversible action (wipes the whole shared setup + every recording day at once),
+    so its confirm disables "Delete animal" until the user types the animal `id`. Per-day delete keeps the
+    plain Cancel/Delete confirm — the asymmetry is deliberate (friction matched to stakes; routine actions
+    must not train users to ignore confirms). Presentation layer over the existing `deleteAnimal`; cascade
+    + downloaded-artifacts caveat unchanged. Shared by the header ⋮ and the selector-dropdown row. ✅
+    *(Phase 4 Task 4.1a — a deliberate divergence from "reuse the Phase 8.7 confirm verbatim," animal-only.)*
 
 ## Review outcomes (UX + front-end, folded in)
 
@@ -217,6 +262,121 @@ Two independent reviews ran against the draft. Both endorsed the core tabs-over-
   (Phase 5). The tab-a11y tension is resolved by decision 5 (nav + `aria-current`, not tablist).
   Net-new ⋮ menu widget; tab widget owns focus across `:tab` changes; one `#main-content`; loading/
   mid-load + unsaved-modal-on-tab-switch states specified per phase.
+
+## Layout — DECIDED (top object-selector + grouped left section-nav)
+
+> **Status:** **decided** after an interactive design pass. Reference renders — the committed source is the
+> HTML in [alternatives/](alternatives/); open any file in a browser to view it. (PNG previews are generated
+> locally into `screenshots/` and are **gitignored** — not committed, to keep history lean.)
+>
+> - [recommended-left-nav.html](alternatives/recommended-left-nav.html) — the canonical full screen
+>   (chrome, section-nav, Recording Days);
+> - [row-treatments.html](alternatives/row-treatments.html) — the day-row contract (decision 12);
+> - [nav-affordance.html](alternatives/nav-affordance.html) — the nav-item affordance study (decision 10);
+> - [other-screens.html](alternatives/other-screens.html) — Electrode Groups, Cameras, Validation & Export,
+>   and the new-animal first-run state;
+> - [other-screens-2.html](alternatives/other-screens-2.html) — Channel Maps, Recording System, DIO,
+>   Optogenetics (unused);
+> - [delete-animal.html](alternatives/delete-animal.html) — the ⋮ menu + type-to-confirm delete (decision 13);
+> - [selector-dropdown.html](alternatives/selector-dropdown.html) — the animal switcher open (per-row ⋮ /
+>   Rename / Delete · "+ New animal…").
+>
+> This **supersedes** the earlier "Layout 1 — left rail + top tabs" working assumption. The four-layout
+> exploration (left rail + top tabs / animal→sections tree / status dashboard / Days·Setup·Export
+> mode-switch) is **closed**, and its superseded skin/layout/nav explorations have been removed from
+> `alternatives/`. **Every destination and chrome state is now drawn.**
+
+The committed structure is a **top object-selector for the animal + a grouped LEFT section-nav** (decision
+9). It deliberately is **not** a top tab bar over a left animal rail — that pairing puts two competing
+columns on the left (double-sidebar anti-pattern) and pushes 8 sections past the ≤5-peer guideline for top
+tabs. Promoting the animal switcher to a top selector frees the left column for one clean section-nav.
+
+### Chrome (top bar)
+
+- Brand · **object-selector** `Workspace ▸ <animal> ▾` — a dropdown animal switcher that REPLACES the left
+  animal rail. Lists animals with a per-row day count + **"+ New animal…"**.
+- Right: **All animals · Batch Export** (chrome-level cross-animal batch, decision 2) · `legacy →` escape.
+
+### Animal header band
+
+Name · `subject_id` badge · **species · sex**. **No DOB**, **no "shared setup · affects all days" cue**
+(both removed as clutter this pass). A `⋮` menu carries Rename / Delete animal (decision 6 / Phase 4).
+
+### Left section-nav (replaces the top tab bar — same routes, same a11y)
+Grouped under `glabel` headers; each row = **name · count · ›** with hairline dividers, so every row reads
+as a navigable button at rest (decision 10 — information scent + chevron signifier; icons were tried and
+dropped). Active row = teal fill + `inset 3px` bar.
+
+- **Day work**: Recording Days (count) · Validation & Export (N ready)
+- **Animal setup**: Electrode Groups (n) · Channel Maps (n) · Recording System (n) · Cameras (n) · DIO (n)
+  · Optogenetics (off / used)
+
+Only **placement** changed from the "tab" decisions — routing (`#/animal/:id/:tab`), nav-landmark +
+`aria-current` a11y (decision 5), per-section scope descriptors, and the Phase 3 host-wiring extraction all
+carry over. **Read "tab" as "left section-nav item" throughout the phase docs.**
+
+### Status dots — blocking-only (decision 11)
+
+A nav row shows a **red dot only when that section blocks export** (e.g. a camera missing meters/pixel). No
+amber "review" or green "done" dots on an established animal (they manufactured ambient anxiety and
+duplicated the now-removed canvas setup strip). New-animal onboarding survives via a neutral **hollow ○
+todo ring** on never-configured sections + the first-run checklist (decision 8 / Phase 2.3). The per-row
+**count** conveys neutral setup state without a colored dot.
+
+### Recording-day row contract (decision 12 — Phase 2)
+
+A list row is for **triage, not inspection**; it answers three questions and no more:
+
+- **which day** → **bare date** (anchor; date-ordered, newest-first for now) + the day's **session
+  description** muted underneath *only when present* (bare date alone reads fine — the description is a
+  recognition aid, never a hole when absent);
+- **what's my job** → one **plain-language status**: `Draft — not yet validated` / `Ready to export` /
+  `Exported` / `Needs fixing — {reason}` (blocking reason inline, in the scientist's words);
+- **how do I act** → one affordance: **open** / **Fix in {section} →**.
+- Conditional: an amber **older-electrode-setup flag**, shown ONLY when the day is pinned to a non-current
+  configuration version ("recorded before you lowered the CA1 tetrodes (Jun 20)") — the one silent-bite
+  triage must surface unprompted (the valid-but-wrong defense, in plain language — requirement 1/3).
+
+**Moved OFF the row → into the day / export preflight** (inspection, not triage): `session_id`/filename,
+camera count, opto state, and the raw **config version NUMBER** ("v2" is meaningless to a scientist —
+surface the dated description instead, Phase 3.4). This **retires the dense "scan line"** (`config v2 · N
+cameras · opto-state`), which over-served day-to-day diffing at the cost of legibility; the diff power
+relocates to the per-day effective-setup review (requirement 1) / an opt-in "Compare days."
+
+> **Parked (not decided):** whether **blocked days float to the top** of the day list regardless of date so
+> "needs me" always beats "newest." Date-order (newest-first) holds for now.
+
+The cross-cutting correctness requirements below hold under this layout (they were always layout-independent).
+
+## Cross-cutting correctness requirements (from the journey/failure analysis)
+
+The deeper finding — see [user-journeys-failure-analysis.md](user-journeys-failure-analysis.md) (three
+cadences, a mistake/recovery table per cadence, a hypothesis tree with confidence + a calibration log) —
+is that **the highest-severity residual risk is layout-independent.** Most bad *values* are already
+prevented or canonicalized (controlled `device_type`/`species`/refs; region snapped to canonical on save).
+The irreducible residual is **valid-but-wrong**: a value that passes every rule but is semantically wrong
+(wrong camera/version/day; misattribution after time passes) — which **no validation can catch, only
+review.** These requirements therefore matter more than the layout choice and must be first-class:
+
+1. **Mandatory "effective setup for *this day*" review** — distinct from the animal's *current* setup tabs.
+   A historical day is pinned to an older config version; the setup tabs show the latest. The day context
+   must surface what *that day* actually used (pinned version, referenced cameras, electrodes, failed
+   channels) — read-only, clearly labelled vs. "current shared setup." (Builds on Phase 8.7's
+   `DayTechnicalSection`/effective values; the Validation & Export tab is its home — Phase 3.3.)
+2. **Close the warning-escape on export** — verified: export gates on errors, **not warnings**, and a
+   batch export can ride a non-blocking warning (e.g. an imported region-case issue) across N days. Batch
+   export must require **explicit acknowledgement** of warnings, not just a count. (Phase 3.3 / export flow.)
+3. **Configuration-version boundaries legible** — "changed [date] — days before use v1, after use v2" — to
+   blunt wrong-version attribution. (Phase 3.4, already listed.)
+4. **Reduce day↔setup round-trips** — let the day editor's reference pickers **create-new in place**
+   ("+ set up a camera" from the day's camera selector) so logging a day doesn't force a trip out to the
+   Cameras tab and back. (Day-editor enhancement; note the boundary — `#/day/:id` is the separate
+   drill-down per decision 4, so this is a *coordinating* requirement, flagged not owned here.)
+5. **Surface the DIO "Use on this day" opt-in** — an animal library event not opted-into a day is silently
+   absent from export; weakly surfaced today. (Phase 2 / day editor.)
+6. **Reinforce the blast-radius signal on setup tabs** — Layout 1's day/setup seam is a tab-group label, so
+   lean on the Phase 8.7 ownership cues + a persistent "shared setup — affects all days" affordance when a
+   setup tab is active. (Phase 3.)
 
 ## Per-phase detail
 

@@ -1,0 +1,237 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Other screens 2 — channel maps, recording system, DIO, optogenetics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --paper:#f4f1ea;--paper2:#efeae0;--surf:#fbfaf6;--raised:#fff;--line:#ddd7c9;--line2:#c8c1ae;
+  --ink:#1c1b18;--ink2:#46443d;--ink3:#6a6557;
+  --teal:#0d5c63;--tealb:#0e7d86;--tealw:#e3eeee;--teal-soft:#eef4f4;
+  --amber:#9a5b0b;--amberw:#f6ead2;--green:#1f7a43;--greenw:#dcefe1;--blue:#1976d2;--bluew:#e3f2fd;
+  --red:#b3261e;--redw:#f6e0de;
+  --sans:'IBM Plex Sans',system-ui,sans-serif;--mono:'IBM Plex Mono',monospace;
+}
+*{box-sizing:border-box}html,body{margin:0}
+body{font-family:var(--sans);color:var(--ink);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased;background:#e7e2d6;padding:1.6rem}
+.mono{font-family:var(--mono)}
+.screen-label{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7d7868;margin:1.6rem .3rem .5rem}
+.screen-label:first-child{margin-top:0}
+.screen-label b{font-family:var(--sans);font-size:16px;text-transform:none;letter-spacing:-.01em;color:#332f27;font-weight:700}
+.win{background:repeating-linear-gradient(0deg,transparent,transparent 27px,rgba(0,0,0,.012) 27px,rgba(0,0,0,.012) 28px),var(--paper);border:1px solid #cfc8b6;border-radius:12px;overflow:hidden;box-shadow:0 10px 30px -16px rgba(0,0,0,.4)}
+.top{display:flex;align-items:center;gap:1rem;height:50px;padding:0 1.1rem;border-bottom:1px solid var(--line);background:linear-gradient(var(--surf),var(--paper2))}
+.brand{font-family:var(--mono);font-weight:600;color:var(--teal);font-size:14px}.brand::before{content:"◖ "}
+.crumb{display:flex;align-items:center;gap:.5rem;margin-left:.4rem;font-size:13px}
+.crumb a{color:var(--ink3);text-decoration:none;font-weight:500}.crumb .sepc{color:var(--line2)}
+.selector{display:inline-flex;align-items:center;gap:.4rem;background:var(--raised);border:1px solid var(--line2);border-radius:8px;padding:.3rem .55rem;font-weight:700;color:var(--ink)}
+.selector .av{width:17px;height:17px;border-radius:5px;background:var(--tealw);color:var(--teal);display:grid;place-items:center;font-family:var(--mono);font-size:9px;font-weight:600}
+.selector .chev{color:var(--ink3);font-size:10px}
+.topnav{margin-left:auto;display:flex;align-items:center;gap:.3rem}
+.topnav a{text-decoration:none;font-size:12.5px;font-weight:500;padding:.38rem .65rem;border-radius:7px}
+.topnav a.batch{border:1px solid var(--line2);background:var(--raised);color:var(--ink2)}
+.topnav a.ghost{color:var(--ink3);font-family:var(--mono);font-size:11px}
+.ahead{display:flex;align-items:center;gap:.9rem;padding:.85rem 1.4rem .65rem;border-bottom:1px solid var(--line)}
+.ahead h1{font-size:23px;font-weight:700;letter-spacing:-.025em;margin:0;line-height:1}
+.ahead .idb{font-family:var(--mono);font-size:10px;color:var(--ink3);border:1px solid var(--line);border-radius:4px;padding:.06rem .36rem}
+.ahead .facts{font-family:var(--mono);font-size:12px;color:var(--ink2)}
+.ahead .akebab{margin-left:auto;border:1px solid var(--line);background:var(--raised);border-radius:7px;width:29px;height:29px;color:var(--ink3);font-size:15px}
+.shell{display:grid;grid-template-columns:222px 1fr}
+.snav{border-right:1px solid var(--line);padding:.9rem .65rem;background:linear-gradient(var(--paper2),transparent 200px)}
+.snav .grp{margin-bottom:1rem}
+.glabel{font-family:var(--mono);font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink3);padding:0 .5rem .35rem}
+.navitem{display:flex;align-items:center;gap:.5rem;text-decoration:none;color:var(--ink);padding:.46rem .5rem;font-size:13.5px;font-weight:500;border:1px solid transparent;border-bottom:1px solid var(--line)}
+.navitem:last-child{border-bottom:1px solid transparent}
+.navitem .nm{flex:1}.navitem .count{font-family:var(--mono);font-size:11px;color:var(--ink3)}
+.navitem .chev{color:var(--ink3);font-size:13px;font-weight:600}
+.navitem.on{background:var(--teal-soft);border:1px solid #cfe0e0;border-radius:8px;color:var(--teal);font-weight:600;box-shadow:inset 3px 0 0 var(--teal)}
+.navitem.on .count,.navitem.on .chev{color:var(--teal)}
+.dot{width:8px;height:8px;border-radius:50%;flex:none}.d-err{background:var(--red)}
+.canvas{padding:1.1rem 1.5rem 1.8rem}
+.phead{display:flex;align-items:baseline;justify-content:space-between;gap:1rem}
+.phead h2{font-size:19px;font-weight:700;letter-spacing:-.02em;margin:0}
+.scope{font-family:var(--mono);font-size:11px;color:var(--ink3);margin:.2rem 0 0}
+.addbtn{font-family:var(--sans);font-weight:600;font-size:12.5px;background:var(--teal);color:#fff;border:none;border-radius:8px;padding:.45rem .8rem;white-space:nowrap}
+.addbtn::before{content:"+ ";font-family:var(--mono)}
+.sbtn{font-family:var(--sans);font-weight:600;font-size:12px;background:var(--raised);color:var(--ink2);border:1px solid var(--line2);border-radius:7px;padding:.4rem .7rem}
+.ctx{display:flex;gap:.6rem;align-items:flex-start;background:var(--surf);border:1px solid var(--line);border-left:3px solid var(--teal);border-radius:8px;padding:.6rem .8rem;margin:1rem 0;font-size:12.5px;color:var(--ink2)}
+.ctx.warnote{border-left-color:var(--amber);background:var(--amberw);color:#6f4408}
+.ctx b{color:var(--teal)}.ctx.warnote b{color:#6f4408}
+.rows{display:flex;flex-direction:column;gap:.4rem}
+.row{display:grid;grid-template-columns:1fr auto;gap:1rem;align-items:center;padding:.55rem .8rem;background:var(--raised);border:1px solid var(--line);border-radius:8px}
+.row .t{font-weight:600;font-size:13.5px}.row .m{font-family:var(--mono);font-size:11px;color:var(--ink3);margin-top:.12rem}
+.tag{font-family:var(--mono);font-size:10px;padding:.12rem .42rem;border-radius:4px;font-weight:500}
+.t-loc{background:var(--tealw);color:var(--teal)}.t-dev{background:#efe9da;color:var(--amber)}
+.mini{font-family:var(--mono);font-size:10.5px;color:var(--teal);text-decoration:none;border:1px solid var(--line);padding:.24rem .55rem;border-radius:6px}
+.toolbar{display:flex;gap:.4rem;margin-bottom:.8rem}
+/* channel map grid */
+.cmrow{background:var(--raised);border:1px solid var(--line);border-radius:8px;padding:.6rem .8rem;margin-bottom:.4rem}
+.cmhead{display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem}
+.cmhead .t{font-weight:600;font-size:13.5px}
+.cmap{display:grid;grid-template-columns:repeat(8,1fr);gap:.3rem;max-width:430px}
+.cell{font-family:var(--mono);font-size:10.5px;text-align:center;padding:.3rem .1rem;border:1px solid var(--line);border-radius:5px;background:var(--surf);color:var(--ink2)}
+.cell .c{display:block;color:var(--ink3);font-size:8.5px}
+.cell.bad{background:var(--redw);border-color:#e3b5b1;color:var(--red)}
+.cmkey{font-family:var(--mono);font-size:10px;color:var(--ink3);margin-top:.4rem}
+.badchip{font-family:var(--mono);font-size:10px;background:var(--redw);color:var(--red);border-radius:4px;padding:.08rem .4rem}
+/* form (recording system) */
+.form{background:var(--raised);border:1px solid var(--line);border-radius:10px;padding:.3rem 1rem}
+.frow{display:grid;grid-template-columns:200px 1fr;gap:1rem;align-items:center;padding:.6rem 0;border-bottom:1px solid var(--line)}
+.frow:last-child{border-bottom:none}
+.frow .lab{font-size:12.5px;color:var(--ink2);font-weight:600}
+.frow .val{font-family:var(--mono);font-size:12.5px;color:var(--ink);background:var(--surf);border:1px solid var(--line);border-radius:6px;padding:.34rem .55rem}
+.sub{font-size:13px;font-weight:700;color:var(--ink2);margin:1rem 0 .5rem}
+/* opto empty */
+.opto-empty{display:flex;flex-direction:column;align-items:flex-start;gap:.7rem;padding:1.6rem;border:1.5px dashed var(--line2);border-radius:12px;background:var(--surf);margin-top:1rem}
+.chip-unused{display:inline-flex;align-items:center;gap:.4rem;font-family:var(--mono);font-size:11px;color:var(--ink3);background:var(--paper2);border:1px solid var(--line);border-radius:20px;padding:.2rem .6rem}
+.chip-unused .pd{width:7px;height:7px;border-radius:50%;background:var(--line2)}
+.opto-empty h3{margin:0;font-size:16px}.opto-empty p{margin:0;color:var(--ink2);font-size:13px;max-width:560px}
+.opto-parts{font-family:var(--mono);font-size:11px;color:var(--ink3)}
+</style></head>
+<body>
+
+<!-- ========== helper: nav markup repeated; only the active item + dot differ per screen ========== -->
+
+<!-- ============================= 5 · CHANNEL MAPS ============================= -->
+<div class="screen-label">Screen 5 <b>Channel Maps — routine edit section (map channels, mark bad channels)</b></div>
+<div class="win">
+  <div class="top"><span class="brand">rec→nwb</span><div class="crumb"><a>Workspace</a><span class="sepc">▸</span><span class="selector"><span class="av">re</span> remy <span class="chev">▾</span></span></div>
+    <nav class="topnav"><a class="batch">All animals · Batch Export</a><a class="ghost">legacy →</a></nav></div>
+  <div class="ahead"><h1>remy</h1><span class="idb">subject_id</span><span class="facts">Rattus norvegicus · male</span><button class="akebab">⋮</button></div>
+  <div class="shell">
+    <nav class="snav">
+      <div class="grp"><div class="glabel">Day work</div>
+        <a class="navitem"><span class="nm">Recording Days</span><span class="count">5</span><span class="chev">›</span></a>
+        <a class="navitem"><span class="nm">Validation &amp; Export</span><span class="count">3 ready</span><span class="chev">›</span></a></div>
+      <div class="grp"><div class="glabel">Animal setup</div>
+        <a class="navitem"><span class="nm">Electrode Groups</span><span class="count">8</span><span class="chev">›</span></a>
+        <a class="navitem on"><span class="nm">Channel Maps</span><span class="count">8</span><span class="chev">›</span></a>
+        <a class="navitem"><span class="nm">Recording System</span><span class="count">1</span><span class="chev">›</span></a>
+        <a class="navitem"><span class="nm">Cameras</span><span class="dot d-err"></span><span class="count">2</span><span class="chev">›</span></a>
+        <a class="navitem"><span class="nm">DIO</span><span class="count">3</span><span class="chev">›</span></a>
+        <a class="navitem"><span class="nm">Optogenetics</span><span class="count">off</span><span class="chev">›</span></a></div>
+    </nav>
+    <main class="canvas">
+      <div class="phead"><div><h2>Channel Maps</h2><p class="scope">Edit any time — map each channel to its position, and mark bad channels</p></div></div>
+      <div class="ctx"><div>≣</div><div><b>Routine edits.</b> Unlike electrode positions, remapping channels or marking a channel bad does <b>not</b> fork a configuration version. <span class="mono">map</span> values are probe electrode IDs, reset per electrode group.</div></div>
+      <div class="toolbar"><button class="sbtn">⇪ Import CSV</button><button class="sbtn">⇩ Export CSV</button></div>
+      <div class="cmrow">
+        <div class="cmhead"><span class="t">Electrode group 0</span><span class="tag t-loc">CA1</span><span class="tag t-dev">tetrode_12.5</span><span class="badchip">1 bad channel</span></div>
+        <div class="cmap">
+          <div class="cell">0<span class="c">→0</span></div><div class="cell">1<span class="c">→1</span></div><div class="cell bad">2<span class="c">bad</span></div><div class="cell">3<span class="c">→3</span></div>
+        </div>
+        <div class="cmkey">channel → probe electrode id · bad channels excluded downstream</div>
+      </div>
+      <div class="cmrow">
+        <div class="cmhead"><span class="t">Electrode group 1</span><span class="tag t-loc">CA1</span><span class="tag t-dev">tetrode_12.5</span></div>
+        <div class="cmap">
+          <div class="cell">0<span class="c">→0</span></div><div class="cell">1<span class="c">→1</span></div><div class="cell">2<span class="c">→2</span></div><div class="cell">3<span class="c">→3</span></div>
+        </div>
+      </div>
+      <div class="row" style="opacity:.62;margin-top:.4rem"><div><div class="mono" style="font-weight:500;font-size:12px">…6 more electrode groups</div></div><div></div></div>
+    </main>
+  </div>
+</div>
+
+<!-- ============================= 6 · RECORDING SYSTEM ============================= -->
+<div class="screen-label">Screen 6 <b>Recording System — shared-across-all-days form (the honesty caveat)</b></div>
+<div class="win">
+  <div class="top"><span class="brand">rec→nwb</span><div class="crumb"><a>Workspace</a><span class="sepc">▸</span><span class="selector"><span class="av">re</span> remy <span class="chev">▾</span></span></div>
+    <nav class="topnav"><a class="batch">All animals · Batch Export</a><a class="ghost">legacy →</a></nav></div>
+  <div class="ahead"><h1>remy</h1><span class="idb">subject_id</span><span class="facts">Rattus norvegicus · male</span><button class="akebab">⋮</button></div>
+  <div class="shell">
+    <nav class="snav">
+      <div class="grp"><div class="glabel">Day work</div>
+        <a class="navitem"><span class="nm">Recording Days</span><span class="count">5</span><span class="chev">›</span></a>
+        <a class="navitem"><span class="nm">Validation &amp; Export</span><span class="count">3 ready</span><span class="chev">›</span></a></div>
+      <div class="grp"><div class="glabel">Animal setup</div>
+        <a class="navitem"><span class="nm">Electrode Groups</span><span class="count">8</span><span class="chev">›</span></a>
+        <a class="navitem"><span class="nm">Channel Maps</span><span class="count">8</span><span class="chev">›</span></a>
+        <a class="navitem on"><span class="nm">Recording System</span><span class="count">1</span><span class="chev">›</span></a>
+        <a class="navitem"><span class="nm">Cameras</span><span class="dot d-err"></span><span class="count">2</span><span class="chev">›</span></a>
+        <a class="navitem"><span class="nm">DIO</span><span class="count">3</span><span class="chev">›</span></a>
+        <a class="navitem"><span class="nm">Optogenetics</span><span class="count">off</span><span class="chev">›</span></a></div>
+    </nav>
+    <main class="canvas">
+      <div class="phead"><div><h2>Recording System</h2><p class="scope">Shared across ALL days — one per animal, no per-day version</p></div></div>
+      <div class="ctx warnote"><div>▤</div><div><b>Applies to every day.</b> This animal has one recording system; a change here affects all 5 days. Per-day recording systems are a future capability — for now there is no per-day override.</div></div>
+      <div class="sub">Data acquisition device</div>
+      <div class="form">
+        <div class="frow"><div class="lab">Device name</div><div class="val">SpikeGadgets</div></div>
+        <div class="frow"><div class="lab">System</div><div class="val">MCU</div></div>
+        <div class="frow"><div class="lab">Amplifier</div><div class="val">Intan</div></div>
+        <div class="frow"><div class="lab">ADC circuit</div><div class="val">Intan RHD2164</div></div>
+      </div>
+      <div class="sub">Technical defaults</div>
+      <div class="form">
+        <div class="frow"><div class="lab">Raw sampling rate</div><div class="val">30000 Hz</div></div>
+        <div class="frow"><div class="lab">Default header file path</div><div class="val">/data/remy/.trodesconf</div></div>
+        <div class="frow"><div class="lab">Times period multiplier</div><div class="val">1.5</div></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ============================= 7 · DIO ============================= -->
+<div class="screen-label">Screen 7 <b>DIO — behavioral-events library (opt in per day)</b></div>
+<div class="win">
+  <div class="top"><span class="brand">rec→nwb</span><div class="crumb"><a>Workspace</a><span class="sepc">▸</span><span class="selector"><span class="av">re</span> remy <span class="chev">▾</span></span></div>
+    <nav class="topnav"><a class="batch">All animals · Batch Export</a><a class="ghost">legacy →</a></nav></div>
+  <div class="ahead"><h1>remy</h1><span class="idb">subject_id</span><span class="facts">Rattus norvegicus · male</span><button class="akebab">⋮</button></div>
+  <div class="shell">
+    <nav class="snav">
+      <div class="grp"><div class="glabel">Day work</div>
+        <a class="navitem"><span class="nm">Recording Days</span><span class="count">5</span><span class="chev">›</span></a>
+        <a class="navitem"><span class="nm">Validation &amp; Export</span><span class="count">3 ready</span><span class="chev">›</span></a></div>
+      <div class="grp"><div class="glabel">Animal setup</div>
+        <a class="navitem"><span class="nm">Electrode Groups</span><span class="count">8</span><span class="chev">›</span></a>
+        <a class="navitem"><span class="nm">Channel Maps</span><span class="count">8</span><span class="chev">›</span></a>
+        <a class="navitem"><span class="nm">Recording System</span><span class="count">1</span><span class="chev">›</span></a>
+        <a class="navitem"><span class="nm">Cameras</span><span class="dot d-err"></span><span class="count">2</span><span class="chev">›</span></a>
+        <a class="navitem on"><span class="nm">DIO</span><span class="count">3</span><span class="chev">›</span></a>
+        <a class="navitem"><span class="nm">Optogenetics</span><span class="count">off</span><span class="chev">›</span></a></div>
+    </nav>
+    <main class="canvas">
+      <div class="phead"><div><h2>DIO</h2><p class="scope">Behavioral-events library — a day opts in via “Use on this day”</p></div><button class="addbtn">Add DIO event</button></div>
+      <div class="ctx"><div>⚡</div><div><b>Library, opt-in per day.</b> Defining an event here makes it <b>available</b>; a day includes it only when you turn on “Use on this day” in that day’s editor. An event not opted-in is simply absent from that day’s export.</div></div>
+      <div class="rows">
+        <div class="row"><div><div class="t">Din1 <span class="mono" style="font-size:11px;color:var(--ink3);font-weight:400">· reward well 1</span></div><div class="m">digital input · used on 4 days</div></div><div class="actions"><a class="mini">edit</a></div></div>
+        <div class="row"><div><div class="t">Din2 <span class="mono" style="font-size:11px;color:var(--ink3);font-weight:400">· reward well 2</span></div><div class="m">digital input · used on 4 days</div></div><div class="actions"><a class="mini">edit</a></div></div>
+        <div class="row"><div><div class="t">Dout1 <span class="mono" style="font-size:11px;color:var(--ink3);font-weight:400">· house light</span></div><div class="m">digital output · used on 2 days</div></div><div class="actions"><a class="mini">edit</a></div></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ============================= 8 · OPTOGENETICS (unused) ============================= -->
+<div class="screen-label">Screen 8 <b>Optogenetics — unused state (status chip so an empty section ≠ error)</b></div>
+<div class="win">
+  <div class="top"><span class="brand">rec→nwb</span><div class="crumb"><a>Workspace</a><span class="sepc">▸</span><span class="selector"><span class="av">re</span> remy <span class="chev">▾</span></span></div>
+    <nav class="topnav"><a class="batch">All animals · Batch Export</a><a class="ghost">legacy →</a></nav></div>
+  <div class="ahead"><h1>remy</h1><span class="idb">subject_id</span><span class="facts">Rattus norvegicus · male</span><button class="akebab">⋮</button></div>
+  <div class="shell">
+    <nav class="snav">
+      <div class="grp"><div class="glabel">Day work</div>
+        <a class="navitem"><span class="nm">Recording Days</span><span class="count">5</span><span class="chev">›</span></a>
+        <a class="navitem"><span class="nm">Validation &amp; Export</span><span class="count">3 ready</span><span class="chev">›</span></a></div>
+      <div class="grp"><div class="glabel">Animal setup</div>
+        <a class="navitem"><span class="nm">Electrode Groups</span><span class="count">8</span><span class="chev">›</span></a>
+        <a class="navitem"><span class="nm">Channel Maps</span><span class="count">8</span><span class="chev">›</span></a>
+        <a class="navitem"><span class="nm">Recording System</span><span class="count">1</span><span class="chev">›</span></a>
+        <a class="navitem"><span class="nm">Cameras</span><span class="dot d-err"></span><span class="count">2</span><span class="chev">›</span></a>
+        <a class="navitem"><span class="nm">DIO</span><span class="count">3</span><span class="chev">›</span></a>
+        <a class="navitem on"><span class="nm">Optogenetics</span><span class="count">off</span><span class="chev">›</span></a></div>
+    </nav>
+    <main class="canvas">
+      <div class="phead"><div><h2>Optogenetics</h2><p class="scope">Implanted opto setup — excitation source, optical fiber, virus injection, FsGUI</p></div></div>
+      <div class="opto-empty">
+        <span class="chip-unused"><span class="pd"></span>Not used — no stimulation for this animal</span>
+        <h3>This animal has no optogenetics setup</h3>
+        <p>That’s a normal, valid state — most animals are not opto. Nothing here blocks export, and your recording days won’t show a stimulation state. Add a setup only if this animal was implanted with an optical fiber and stimulated.</p>
+        <p class="opto-parts">When used, this section holds: excitation source · optical fiber (coordinates) · virus injection · FsGUI protocols (per-epoch power)</p>
+        <button class="addbtn" style="margin-top:.2rem">Add optogenetics setup</button>
+      </div>
+    </main>
+  </div>
+</div>
+
+</body></html>

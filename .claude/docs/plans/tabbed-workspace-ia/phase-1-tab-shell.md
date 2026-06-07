@@ -3,6 +3,13 @@
 **Introduce the tabbed animal view scaffold and the per-tab routing, hosting only the existing
 Recording Days pane to start.** Additive and flag-gated — the stepper route stays alive as a fallback.
 
+> **Placement locked (overview → Layout — DECIDED, decisions 9–11):** the section-nav is a **grouped LEFT
+> nav** (two groups: Day work / Animal setup; row = name · count · ›; blocking-only red dots; active = teal
+> fill + inset bar), and the **animal is switched from a top object-selector**, not a left animal rail. The
+> a11y contract here (navigation landmark + `aria-current` links, NOT `role=tablist`) is unchanged by the
+> placement. "TabBar" below = the left section-nav component. Reference render:
+> [alternatives/recommended-left-nav.html](alternatives/recommended-left-nav.html).
+
 ## Goal
 
 An accessible animal view at `#/animal/:id/:tab` whose tab bar is a **navigation landmark** (links +
@@ -37,6 +44,15 @@ re-hosted unchanged in the `days` tab. No setup migration yet (Phase 3), no life
   ([AppLayout.jsx:125-141](../../../../src/layouts/AppLayout.jsx)) only fires when the `view` changes —
   it will NOT fire on a `:tab` change (same `view`). `AnimalView` must move focus to the active panel's
   heading and announce the section on tab navigation itself.
+- **Task 1.1c — The tab bar IS the checklist (per-tab completion state).** Each setup tab carries a
+  completion indicator — `not-started` (hollow) / `complete` (filled) / `needs-review` (amber) /
+  `has-errors` (red) — driven by the same `getAnimalSetupChecklist` domain source
+  ([workflowStatus.js](../../../../src/domain/workflowStatus.js)) the workspace checklist already uses.
+  This is **load-bearing, not decoration:** the current app's checklist is what tells a new user "you
+  must add subject / electrodes / cameras / data-acq / DIO." Equal-looking empty tabs would silently
+  lose that guidance — the dots restore it as persistent ambient awareness (you always see which setup
+  is done vs. not). The indicator must carry an accessible text label (e.g. `aria-label="Cameras — not
+  started"`), not color alone. Pair with the first-run checklist panel (Phase 2).
 - **Task 1.2 — Host the Recording Days pane in the `days` tab.** Render the existing day-management
   pane (the `selectedAnimal` branch of [AnimalWorkspace/index.jsx](../../../../src/pages/AnimalWorkspace/index.jsx))
   inside the `days` `TabPanel`, unchanged in behavior. Extract it into a `RecordingDaysTab` component if
@@ -53,6 +69,10 @@ re-hosted unchanged in the `days` tab. No setup migration yet (Phase 3), no life
 - **Task 1.5 — Cold deep-link / mid-load state.** A deep-link to `#/animal/remy/days` before the store
   hydrates from persistence must show a loading state, NOT the stepper's current "Animal not found"
   error path (which would wrongly fire on a cold load). Define the loading/empty/not-found trichotomy.
+- **Task 1.6 — Responsive tab bar.** 8 tabs fit a wide window but must degrade cleanly on narrow ones:
+  below ~1040px the tab row becomes a **single horizontally-scrollable row** (no multi-row wrapping
+  scramble), the rail narrows, and day rows reflow their action cluster below the scan line. (Verified
+  in the prototype — keep the tab dots + names; the scope descriptors may truncate.)
 
 ## Acceptance
 

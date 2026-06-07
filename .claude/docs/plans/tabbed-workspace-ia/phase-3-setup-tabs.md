@@ -51,6 +51,17 @@ profile facts (`AnimalProfileSection`) and the reconfiguration context render as
   by `animalKey` (a thin refactor; "reuse, don't re-derive" still holds for the validation logic). Name
   it **"This animal — readiness & export"**; the chrome-level batch screen is **"All animals — batch
   export"** (Phase 4). Each surface shows its scope in a persistent header ("Showing: remy — 4 days").
+- **Task 3.3a — Mandatory "effective setup for THIS day" review** *(the valid-but-wrong defense — see
+  [journeys analysis](user-journeys-failure-analysis.md))*. The top residual risk is a value that passes
+  every rule but is semantically wrong (wrong camera/version/day, misattribution after time passes) — only
+  REVIEW catches it. Each day's row/preflight must surface what *that day actually used* — pinned config
+  version, referenced cameras, electrodes, failed channels — **read-only and clearly distinct from the
+  animal's *current* setup tabs** (a historical day is pinned to an older version; the setup tabs show the
+  latest). Builds on Phase 8.7's `DayTechnicalSection`/effective values + the batch-row scan contract.
+- **Task 3.3b — Close the warning-escape on export.** Verified: the export gate keys on `severity ==='error'`
+  only; warnings (`inconsistent_location_case` on imports, orphaned video/file) **do not block** and can
+  ride a **batch** export across N days. Batch/valid-only export must require an **explicit acknowledgement**
+  of outstanding warnings (not just a count), so a silent downstream issue can't multiply across days.
 - **Task 3.4 — Config-version legibility.** Wherever a configuration version appears (this tab, the
   Recording Days strip), show human-readable context: "Electrode configuration changed on [date] — days
   before use v1, days after use v2," so a scientist isn't left decoding "v2."
