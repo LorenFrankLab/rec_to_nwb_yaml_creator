@@ -21,9 +21,12 @@ const REQUIRED_STRING_FIELDS = [
  *
  * @param {object} task Task record.
  * @param {Array} cameras Animal cameras.
+ * @param {Set<number>} [duplicateEpochs] Epoch numbers claimed by more than one task (Task 5c):
+ *   a collision is the export-blocking `duplicate_task_epoch` error, surfaced inline so the user
+ *   sees it at the task — each epoch belongs to exactly one task — not only at export.
  * @returns {{glyph: '✓'|'⚠'|'❌', label: string}}
  */
-function getStatus(task, cameras) {
+function getStatus(task, cameras, duplicateEpochs = new Set()) {
   const blankFields = REQUIRED_STRING_FIELDS.filter(({ key }) => {
     const value = task[key];
     return value === undefined || value === null || String(value).trim() === '';
@@ -40,6 +43,17 @@ function getStatus(task, cameras) {
   // task_epochs as a string) must not crash the status badge — treat it as empty.
   const cameraIds = Array.isArray(task.camera_id) ? task.camera_id : [];
   const taskEpochs = Array.isArray(task.task_epochs) ? task.task_epochs : [];
+
+  // Export-blocking: two tasks cannot share an epoch (Spyglass keys TaskEpoch by session+epoch).
+  const collidingEpochs = taskEpochs.filter((e) => duplicateEpochs.has(Number(e)));
+  if (collidingEpochs.length > 0) {
+    return {
+      glyph: '❌',
+      label:
+        `Epoch ${collidingEpochs.join(', ')} also used by another task — ` +
+        `each epoch belongs to exactly one task`,
+    };
+  }
   const referencesMissingCamera = cameraIds.some(
     (id) => !availableIds.has(Number(id))
   );
@@ -138,7 +152,8 @@ export default function TasksTable({
           the cameras that recorded it, and the epochs it spanned.
         </p>
         <p className="empty-state-hint">
-          Each task inherits this animal&apos;s cameras and behavioral events.
+          Each task selects its cameras from this animal&apos;s shared camera catalog; every epoch
+          belongs to exactly one task.
         </p>
         <button type="button" className="button-primary" onClick={onAdd}>
           Add First Task
@@ -147,11 +162,29 @@ export default function TasksTable({
     );
   }
 
+  // Epoch numbers claimed by more than one task — each must belong to exactly one task
+  // (the export-blocking duplicate_task_epoch rule), surfaced inline per row below (Task 5c).
+  const epochCounts = {};
+  for (const task of tasks) {
+    (Array.isArray(task?.task_epochs) ? task.task_epochs : []).forEach((epoch) => {
+      const key = Number(epoch);
+      epochCounts[key] = (epochCounts[key] || 0) + 1;
+    });
+  }
+  const duplicateEpochs = new Set(
+    Object.entries(epochCounts)
+      .filter(([, count]) => count > 1)
+      .map(([epoch]) => Number(epoch))
+  );
+
   return (
     <div className="tasks-table-section">
       <header className="section-header">
         <h2>Tasks</h2>
-        <p>Define the behavioral tasks recorded on this day.</p>
+        <p>
+          Each task is one room with its cameras and the epochs it covers. Cameras are selected
+          from this animal&apos;s shared camera catalog; every epoch belongs to exactly one task.
+        </p>
       </header>
 
       <div className="table-actions">
@@ -164,6 +197,7 @@ export default function TasksTable({
         <thead>
           <tr>
             <th scope="col">Task</th>
+            <th scope="col">Room</th>
             <th scope="col">Cameras</th>
             <th scope="col">Epochs</th>
             <th scope="col">Status</th>
@@ -172,7 +206,7 @@ export default function TasksTable({
         </thead>
         <tbody>
           {tasks.map((task, index) => {
-            const status = getStatus(task, cameras);
+            const status = getStatus(task, cameras, duplicateEpochs);
             // A malformed child array (camera_id/task_epochs as a scalar) in loaded
             // state must render as empty here, not throw on `.join`/`.length`, so the
             // corrupt task stays visible and editable for repair.
@@ -181,6 +215,7 @@ export default function TasksTable({
             return (
               <tr key={index}>
                 <td data-label="Task">{task.task_name || <em>unnamed</em>}</td>
+                <td data-label="Room">{task.task_environment || '—'}</td>
                 <td data-label="Cameras">
                   {cameraIds.length === 0 ? '—' : cameraIds.join(', ')}
                 </td>

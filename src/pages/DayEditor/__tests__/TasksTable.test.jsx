@@ -43,6 +43,31 @@ describe('TasksTable', () => {
     expect(within(row).getByText('✓')).toBeInTheDocument();
   });
 
+  it('shows the Room (task_environment) column — the task → room/cameras/epochs mapping (Task 5c)', () => {
+    renderTable({ tasks: [completeTask] });
+    const table = screen.getByRole('table');
+    const headers = within(table).getAllByRole('columnheader').map((h) => h.textContent);
+    expect(headers).toEqual(expect.arrayContaining(['Task', 'Room', 'Cameras', 'Epochs', 'Status', 'Actions']));
+    const row = screen.getByRole('row', { name: /sleep/i });
+    expect(within(row).getByText('HomeBox')).toBeInTheDocument(); // room
+    expect(within(row).getByText('1')).toBeInTheDocument(); // camera id 1
+    expect(within(row).getByText('1, 2')).toBeInTheDocument(); // epochs
+  });
+
+  it('surfaces a duplicate task-epoch collision as a ❌ prevented error on BOTH tasks (Task 5c)', () => {
+    // Each epoch belongs to exactly one task (duplicate_task_epoch is export-blocking). Epoch 2
+    // is claimed by both tasks → both rows must show the prevented error inline, not silently.
+    const sleep = { ...completeTask, task_name: 'sleep', task_epochs: [1, 2] };
+    const run = { ...completeTask, task_name: 'run', camera_id: [0], task_epochs: [2, 3] };
+    renderTable({ tasks: [sleep, run] });
+
+    const sleepRow = screen.getByRole('row', { name: /sleep/i });
+    const runRow = screen.getByRole('row', { name: /run/i });
+    expect(within(sleepRow).getByText('❌')).toBeInTheDocument();
+    expect(within(runRow).getByText('❌')).toBeInTheDocument();
+    expect(within(sleepRow).getByText(/epoch 2 .*another task|each epoch belongs to exactly one task/i)).toBeInTheDocument();
+  });
+
   it('shows a ⚠ status for a task with no epochs', () => {
     renderTable({ tasks: [{ ...completeTask, task_epochs: [] }] });
     const row = screen.getByRole('row', { name: /sleep/i });

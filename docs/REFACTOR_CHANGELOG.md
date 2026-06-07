@@ -6,6 +6,27 @@
 
 ---
 
+## Ownership defaults & day configurability — Phase 8.7 Task 5c: camera/task-epoch legibility (June 7, 2026)
+
+Makes the within-day setup legible at the TASK level and the camera-catalog model explicit. UI-only
+— no export/store change; 125 golden baselines byte-identical; full suite (4104), lint (0 errors),
+and build green. Task 5 (a/b/c) is now complete.
+
+- **Per-task room·cameras·epochs mapping** ([TasksTable.jsx](../src/pages/DayEditor/TasksTable.jsx)):
+  added the missing **Room** (`task_environment`) column next to the existing Cameras and Epochs
+  columns, so each task reads as one room with its cameras and the epochs it covers — the model's way
+  of expressing "different rooms/cameras across epochs" (separate task rows partitioning the epochs).
+- **`duplicate_task_epoch` surfaced inline as a prevented error:** the table computes the epochs
+  claimed by more than one task and `getStatus` now returns a ❌ "Epoch N also used by another task —
+  each epoch belongs to exactly one task" on every colliding task, so the export-blocking collision is
+  visible at the task, not only at export. (The rule itself is unchanged.)
+- **Catalog-selection copy:** the tasks caption and empty state say cameras are selected from the
+  animal's shared camera catalog and every epoch belongs to exactly one task; the day's camera
+  empty-state banner now offers **`Set Up Cameras`** and explains cameras are shared animal-catalog
+  entries that this day's tasks/videos/opto-FsGUI protocols select from.
+- Tests: Room column + the duplicate-epoch collision (both rows ❌ + the message); existing
+  task/camera/epoch/status tests unchanged.
+
 ## Ownership defaults & day configurability — Phase 8.7 Task 5b: immutable-once-referenced cameras (June 7, 2026)
 
 Applies approach A's immutable-once-referenced rule now that export emits the day-used camera subset

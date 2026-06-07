@@ -313,12 +313,14 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
         >
           <span className="camera-info-icon" aria-hidden="true">📹</span>
           <div className="camera-info-text">
-            This animal has no cameras configured. Cameras are optional, but they
-            enable video linking and spatial tracking for your tasks.
+            This animal has no cameras configured. Cameras are shared animal-catalog entries that
+            this day&apos;s tasks, videos, and opto/FsGUI protocols select from — set them up once
+            for the animal, then choose them here. They are optional, but enable video linking and
+            spatial tracking.
           </div>
           <div className="camera-info-actions">
             <a href={`#/animal/${ownerKey}/editor`} className="button-secondary">
-              Add cameras
+              Set Up Cameras
             </a>
             <button
               type="button"
