@@ -189,7 +189,9 @@ export default function BehavioralEventsSection({ animal, onFieldUpdate }) {
           Behavioral events are DIO (digital input/output) channels that record experimental events: rewards, choices, triggers, and synchronization signals.
         </p>
         <p className="empty-state-hint">
-          Define event names and descriptions. These will be inherited by all recording days for this animal.
+          This is a reusable <strong>library</strong> for the animal — these events are templates and
+          are NOT exported on their own. Add one to a recording day with &ldquo;Use on this day&rdquo;
+          in that day&apos;s Tasks &amp; Epochs step; only the day&apos;s own events are exported.
         </p>
         <button className="button-primary" onClick={handleAddClick}>
           Add First Behavioral Event
@@ -202,8 +204,12 @@ export default function BehavioralEventsSection({ animal, onFieldUpdate }) {
   return (
     <div className="behavioral-events-section">
       <header className="section-header">
-        <h2>Behavioral Events</h2>
-        <p>Define DIO events for experimental triggers and synchronization.</p>
+        <h2>Behavioral Events / DIO library</h2>
+        <p>
+          A reusable library of DIO events for this animal. These are templates — they are NOT
+          exported until a recording day selects one with &ldquo;Use on this day&rdquo;; only that
+          day&apos;s own events are exported.
+        </p>
       </header>
 
       <div className="table-actions">

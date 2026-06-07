@@ -38,6 +38,28 @@ export default function BehavioralEventsDisplay({
   const duplicateNames = dayItems
     .map((e) => e.name)
     .filter((name) => inheritedNames.has(name));
+  // The day events are what export (day.behavioral_events). Day names already used, so a library
+  // event isn't offered for "Use on this day" twice.
+  const dayNames = new Set(dayItems.map((e) => e.name));
+  // A duplicate DESCRIPTION among the exported day events is a downstream hard `raise ValueError`
+  // in trodes_to_nwb — surface it inline (the export-blocking rule gates it, but flag it here too).
+  const descriptionCounts = dayItems.reduce((acc, e) => {
+    const desc = (e.description || '').trim();
+    if (desc !== '') acc.set(desc, (acc.get(desc) || 0) + 1);
+    return acc;
+  }, new Map());
+  const duplicateDescriptions = [...descriptionCounts.entries()]
+    .filter(([, count]) => count > 1)
+    .map(([desc]) => desc);
+
+  /**
+   * Copy an inherited (library) event into this day's exported event list.
+   * @param {{name: string, description: string}} event
+   */
+  function handleUseOnThisDay(event) {
+    if (!onDayEventsChange) return;
+    onDayEventsChange([...dayItems, { name: event.name, description: event.description || '' }]);
+  }
 
   /**
    * Begin adding a day-specific event.
@@ -87,6 +109,18 @@ export default function BehavioralEventsDisplay({
                   <span className="inherited-event-description">{event.description}</span>
                 )}
                 <span className="sr-only"> (inherited, read-only)</span>
+                {/* Library → exported: copy this reference event into the day's exported list.
+                    Hidden once the day already uses it (by name). */}
+                {!readOnly && !dayNames.has(event.name) && (
+                  <button
+                    type="button"
+                    className="button-small"
+                    onClick={() => handleUseOnThisDay(event)}
+                    aria-label={`Use ${event.name} on this day`}
+                  >
+                    Use on this day
+                  </button>
+                )}
               </li>
             ))}
           </ul>
@@ -102,6 +136,18 @@ export default function BehavioralEventsDisplay({
               {duplicateNames.map((name) => (
                 `"${name}" matches an inherited animal-level event; only this day-specific entry is exported with this day.`
               )).join(' ')}
+            </div>
+          )}
+
+          {duplicateDescriptions.length > 0 && (
+            <div className="inline-error" role="alert">
+              {duplicateDescriptions
+                .map(
+                  (desc) =>
+                    `The description "${desc}" is used by more than one day event. trodes_to_nwb ` +
+                    `requires a unique description per event — rename one before export.`
+                )
+                .join(' ')}
             </div>
           )}
 

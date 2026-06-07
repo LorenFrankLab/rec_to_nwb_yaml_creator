@@ -6,6 +6,28 @@
 
 ---
 
+## Ownership defaults & day configurability — Phase 8.7 Task 6: behavioral-events ownership (June 7, 2026)
+
+Makes the behavioral-events (DIO) UI match the ownership model: animal-level events are a reusable
+LIBRARY (templates, never exported on their own); only a day's own `behavioral_events` export. UI-only
+— no export/store change; 125 golden baselines byte-identical; full suite (4113), lint (0 errors),
+and build green.
+
+- **Fixed the false copy + reframed the animal-level section** ([BehavioralEventsSection.jsx](../src/pages/AnimalEditor/BehavioralEventsSection.jsx)):
+  the empty state literally claimed events "will be inherited by all recording days" — FALSE
+  (animal `behavioral_events` is never exported). Now framed as a `Behavioral Events / DIO library`
+  of reusable templates that are not exported until a day selects one.
+- **`Use on this day`** ([BehavioralEventsDisplay.jsx](../src/pages/DayEditor/BehavioralEventsDisplay.jsx)):
+  each inherited (library) event now has a per-event action that copies it into the day's exported
+  event list; hidden once the day already uses it. The exported day list stays visible (it already did).
+- **Unique-description gate surfaced inline:** a duplicate `description` among the exported day events
+  is a downstream hard `raise ValueError` in trodes_to_nwb (one of the few non-silent crashes). The
+  export-blocking `duplicate_behavioral_event_description` rule gates it; now it is also flagged inline
+  (`role="alert"`) at the edit point so the user fixes it before hitting a mid-conversion failure.
+- Tests: Use-on-this-day copies into the exported list + is hidden once used; duplicate-description
+  inline error; updated the "inherited rows carry no controls" test to "no edit/delete (the copy action
+  is allowed)".
+
 ## Ownership defaults & day configurability — Phase 8.7 Task 5c: camera/task-epoch legibility (June 7, 2026)
 
 Makes the within-day setup legible at the TASK level and the camera-catalog model explicit. UI-only
