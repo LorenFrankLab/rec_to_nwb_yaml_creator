@@ -55,10 +55,22 @@ completeness overview rather than a competing pane.
   reason inline); one **action** (`open` / `Fix in {section} →` deep-linking via Phase 3a); and a
   conditional amber **older-electrode-setup flag** ONLY when the day is pinned to a non-current
   `configurationVersion` (plain-language, dated — "recorded before {description} ({date})", Phase 3.4).
+  - **Derivation note (not a pure read of an existing helper):** `getDayWorkflowStatus`
+    ([workflowStatus.js:179+](../../../../src/domain/workflowStatus.js)) yields the version number +
+    `isHistoricalConfiguration` boolean, but NOT the dated phrase. The phrase requires joining the day's
+    version to the **next** `ConfigurationSnapshot.{date, description}` in `animal.configurationHistory`
+    (the change that superseded this day's config) — new presentational code, but read-only (the snapshot
+    carries both fields — [workspaceTypes.js:215-217](../../../../src/state/workspaceTypes.js)). No store
+    or export change.
   - **Retire the dense scan line.** `session_id`/filename, **camera count**, **opto state**, and the raw
     **config-version number** move OFF the row — they are inspection detail surfaced inside the day / at
     export preflight (requirement 1), not triage. (This supersedes the Phase 8.7 Task 10 batch-row scan as
     a *row* surface; the scan fields still exist for the per-day effective-setup review.)
+    - **HARD DEPENDENCY:** retiring the scan line is only *safe* because that detail relocates to the
+      **mandatory per-day effective-setup review** (Phase 3 **Task 3.3a** — the valid-but-wrong defense the
+      journeys analysis hinges on). If 3.3a does not ship, this row change WEAKENS the least-defensible
+      failure class. So **2.5's scan-line removal must not land before 3.3a's review exists** — treat 3.3a
+      as a blocking prerequisite, not a parallel nicety.
   - Status is **display-only** over the existing `deriveChip(computeStepStatus(...))` + `describeDayOptoState`
     — no new validation, no store change. List stays **date-ordered (newest-first)**; "blocked floats to
     top" is parked (overview).

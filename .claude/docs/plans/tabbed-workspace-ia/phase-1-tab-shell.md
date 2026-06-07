@@ -44,23 +44,34 @@ re-hosted unchanged in the `days` tab. No setup migration yet (Phase 3), no life
   ([AppLayout.jsx:125-141](../../../../src/layouts/AppLayout.jsx)) only fires when the `view` changes —
   it will NOT fire on a `:tab` change (same `view`). `AnimalView` must move focus to the active panel's
   heading and announce the section on tab navigation itself.
-- **Task 1.1c — The tab bar IS the checklist (per-tab completion state).** Each setup tab carries a
-  completion indicator — `not-started` (hollow) / `complete` (filled) / `needs-review` (amber) /
-  `has-errors` (red) — driven by the same `getAnimalSetupChecklist` domain source
-  ([workflowStatus.js](../../../../src/domain/workflowStatus.js)) the workspace checklist already uses.
-  This is **load-bearing, not decoration:** the current app's checklist is what tells a new user "you
-  must add subject / electrodes / cameras / data-acq / DIO." Equal-looking empty tabs would silently
-  lose that guidance — the dots restore it as persistent ambient awareness (you always see which setup
-  is done vs. not). The indicator must carry an accessible text label (e.g. `aria-label="Cameras — not
-  started"`), not color alone. Pair with the first-run checklist panel (Phase 2).
+- **Task 1.1c — Section-nav status: blocking-only dots + a hollow-○ onboarding ring (decision 11).**
+  **Superseded the old four-state dot design.** A section-nav row shows a colored dot **only when that
+  section blocks export** (red), plus a neutral **hollow ○ "todo" ring** on a **never-configured** section
+  (onboarding). **No green "done" or amber "review" ambient dots** — they manufactured anxiety on
+  established animals and duplicated the (removed) canvas strip (decision 11). The row's right-aligned
+  **count** (decision 10) carries neutral setup state instead. The indicator must carry an accessible
+  text label (`aria-label="Cameras — blocks export"` / `"Electrode Groups — not set up"`), not colour
+  alone. Pair with the first-run checklist panel (Phase 2.3).
+  - **Derivation reality (correcting the earlier "display change only" claim):** `getAnimalSetupChecklist`
+    ([workflowStatus.js:179](../../../../src/domain/workflowStatus.js)) returns exactly **5 items —
+    `subject, electrodes, cameras, data_acq, days`** — with `electrodes` **combined** (not split) and
+    **no DIO / Channel Maps / Optogenetics item**. So the hollow-○ "not set up" state for **Channel Maps,
+    DIO, and Optogenetics**, and the split of `electrodes` into **Electrode Groups vs Channel Maps**
+    (decision 6), require **new (trivial) per-section derivation** — this is NOT "display change only."
+    The *counts* are all derivable read-only from existing selectors (`getAnimalElectrodeGroups`,
+    `getAnimalCameras`, `getDataAcqDevices`, **`getAnimalBehavioralEvents`** for DIO —
+    [workspaceSelectors.js](../../../../src/state/workspaceSelectors.js)); only the per-section
+    *todo-state* needs the new glue. Owner: this task (define a `getAnimalSectionStatus(animal, section)`
+    helper) — still UI/derivation-only, no store/export change.
 - **Task 1.2 — Host the Recording Days pane in the `days` tab.** Render the existing day-management
   pane (the `selectedAnimal` branch of [AnimalWorkspace/index.jsx](../../../../src/pages/AnimalWorkspace/index.jsx))
   inside the `days` `TabPanel`, unchanged in behavior. Extract it into a `RecordingDaysTab` component if
   that keeps `AnimalWorkspace` and `AnimalView` from duplicating it; otherwise import it.
 - **Task 1.3 — Picker → route.** The Workspace animal cards navigate to `#/animal/:id/days` instead of
   setting local state. The Workspace remains the picker + empty state; `AnimalView` owns the selected
-  animal. (The left-rail picker can render in `AnimalView` too so the animal list persists beside the
-  tabs — decide layout: persistent left rail vs. picker-then-tabs. Recommend persistent left rail.)
+  animal. **No persistent left animal rail (decision 9):** inside `AnimalView` the animal is switched via
+  the **top object-selector** (`Workspace ▸ <animal> ▾`), which frees the left column for the single
+  section-nav. (The selector dropdown is the net-new switcher — its a11y is specified in Phase 4.)
 - **Task 1.4 — Landmark/a11y contract.** Preserve per-route landmark uniqueness (the v3-cutover nav
   contract): **exactly one `#main-content`** per rendered route — during the transition the stepper and
   `AnimalView` both render `<main id="main-content">` today, and `AppLayout`'s focus effect targets that
@@ -69,10 +80,13 @@ re-hosted unchanged in the `days` tab. No setup migration yet (Phase 3), no life
 - **Task 1.5 — Cold deep-link / mid-load state.** A deep-link to `#/animal/remy/days` before the store
   hydrates from persistence must show a loading state, NOT the stepper's current "Animal not found"
   error path (which would wrongly fire on a cold load). Define the loading/empty/not-found trichotomy.
-- **Task 1.6 — Responsive tab bar.** 8 tabs fit a wide window but must degrade cleanly on narrow ones:
-  below ~1040px the tab row becomes a **single horizontally-scrollable row** (no multi-row wrapping
-  scramble), the rail narrows, and day rows reflow their action cluster below the scan line. (Verified
-  in the prototype — keep the tab dots + names; the scope descriptors may truncate.)
+- **Task 1.6 — Responsive section-nav.** The section-nav is a **vertical LEFT column** (decision 9), not a
+  top tab row — so the narrow-window degrade is **collapse, not horizontal scroll**: below ~1040px the
+  left nav collapses to a toggle/drawer (an off-canvas panel or a compact icon-less list), the canvas
+  takes full width, and day rows reflow their action cluster below the status line. Keep the group
+  headers + counts + blocking dot when collapsed; the per-section scope descriptors may truncate. (The
+  earlier "single horizontally-scrollable tab row" spec was for the superseded top-tab layout — do not
+  build it.)
 
 ## Acceptance
 

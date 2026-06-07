@@ -13,7 +13,8 @@ is ready to be the post-cutover landing.
 
 - **Task 5.1 — Retire the stepper route.** Remove `#/animal/:id/editor` from the resolver
   ([AppLayout.jsx](../../../../src/layouts/AppLayout.jsx)) (or 301-style redirect it to
-  `#/animal/:id/electrodes` for any stale bookmarks/deep-links), and delete
+  `#/animal/:id/days` — the default tab — for any stale bookmarks/deep-links; note the tab key is
+  `electrode-groups`, **not** `electrodes`, so don't redirect to a non-existent route), and delete
   [AnimalEditorStepper.jsx](../../../../src/pages/AnimalEditor/AnimalEditorStepper.jsx) once nothing
   imports it. The section components it hosted survive (they're now in tabs).
 - **Task 5.2 — Re-home the stepper tests (bigger than it sounds).** `AnimalEditorStepper.test.jsx` is
@@ -31,9 +32,9 @@ is ready to be the post-cutover landing.
   `#/workspace?animal=…&action=create-day&section=devices` ([AnimalEditorStepper.jsx:289-320](../../../../src/pages/AnimalEditor/AnimalEditorStepper.jsx));
   tabs autosave continuously via `updateAnimal`, so there's no terminal Save/Continue moment. Remove the
   `?action`/`?section` handshake and its success `AlertModal` once nothing reads them (confirm
-  `AnimalWorkspace` mount only consumes `?animal=`). Specify **unsaved-modal-on-tab-switch** behavior:
-  an open `CameraModal`/`ChannelMapEditor` with pending edits must not be silently dropped when the user
-  navigates tabs — either block the switch or hoist the modal above the panels.
+  `AnimalWorkspace` mount only consumes `?animal=`). *(The **unsaved-modal-on-section-switch** guard moved
+  EARLIER — to Phase 3 Task 3.6 — because sections are switchable from Phase 1 and the modals are extracted
+  in Phase 3, so the gap opens well before this phase.)*
 - **Task 5.4 — Accessibility + visual pass.** Full keyboard walkthrough of the tabbed hub (the section
   nav + `aria-current`, per-tab content, ⋮ menus, modals); axe pass; confirm per-route landmark
   uniqueness, focus management across tab changes, and **scroll restoration** (returning to a long tab

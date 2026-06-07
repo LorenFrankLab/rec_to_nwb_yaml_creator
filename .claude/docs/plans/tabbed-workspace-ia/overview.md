@@ -235,7 +235,9 @@ Full target order: `8.7 → tabbed 0 → (export-safety substance of 9/10, paral
     fixing — {reason}`) + one **action** + a conditional **older-electrode-setup flag** (only when the day
     is pinned to a non-current config version). `session_id`, camera count, opto state, and the raw config
     version NUMBER move OFF the row into the day / export preflight (the dense "scan line" is retired).
-    Date-ordered, newest-first for now. ✅
+    Date-ordered, newest-first for now. **Depends on Task 3.3a** (the mandatory per-day effective-setup
+    review) shipping — that's where the retired scan detail relocates; removing it from the row before 3.3a
+    exists would regress the valid-but-wrong defense (requirement 1). ✅
 13. **Animal delete gets a type-to-confirm gate; day delete does not** — deleting an animal is the
     highest-blast-radius, irreversible action (wipes the whole shared setup + every recording day at once),
     so its confirm disables "Delete animal" until the user types the animal `id`. Per-day delete keeps the

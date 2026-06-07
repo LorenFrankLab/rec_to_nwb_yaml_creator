@@ -8,11 +8,25 @@ genuinely changes.
 
 ## Why it's bigger than it looks
 
-- **`#/animal/:id/editor?field=…` emitters in 4+ source files**, not just `validation.js`:
-  [DevicesStep.jsx](../../../../src/pages/DayEditor/DevicesStep.jsx) (`?field=electrode_groups`,
-  `?field=ntrode_electrode_group_channel_map`), [DayTechnicalSection.jsx](../../../../src/pages/DayEditor/DayTechnicalSection.jsx)
-  (`?field=data_acq_device`), the builder in [AnimalWorkspace/index.jsx](../../../../src/pages/AnimalWorkspace/index.jsx),
-  plus `validation.js` itself.
+- **`#/animal/:id/editor` emitters span 7 source files / ~13 call sites** (full enumeration via
+  `grep -rn '/editor' src/`, excluding tests). They split into two kinds — **`?field=` repair deep-links**
+  AND **bare `/editor` "Edit Animal" / breadcrumb links** (the latter were NOT in the earlier "4 files"
+  list and would route to a **dead/redirected route after Phase 5** if missed):
+  - [AnimalWorkspace/index.jsx:64](../../../../src/pages/AnimalWorkspace/index.jsx) — the `?field=${fieldHint}`
+    repair builder; **:361** — the bare `Edit Animal Setup` link.
+  - [DevicesStep.jsx:406,427,443](../../../../src/pages/DayEditor/DevicesStep.jsx) (`?field=electrode_groups`),
+    **:570** (`?field=ntrode_electrode_group_channel_map`).
+  - [DayTechnicalSection.jsx:129](../../../../src/pages/DayEditor/DayTechnicalSection.jsx) (`?field=data_acq_device`).
+  - **[ReconfigWizard.jsx:103](../../../../src/pages/DayEditor/ReconfigWizard.jsx)** — `…/editor?${params}`, a
+    **param-carrying deep-link** (the reconfiguration flow). **Highest-risk miss** — drops the reconfig
+    context if not migrated; verify which params it sends and where they must land.
+  - **[OverviewStep.jsx:139,317,395](../../../../src/pages/DayEditor/OverviewStep.jsx)** — breadcrumb + two
+    `Edit Animal` links (bare).
+  - **[DayEditorStepper.jsx:171](../../../../src/pages/DayEditor/DayEditorStepper.jsx)** — bare `/editor` base.
+  - **[TasksEpochsStep.jsx:322](../../../../src/pages/DayEditor/TasksEpochsStep.jsx)** — bare `/editor` link.
+  - Plus `validation.js`'s `animalEditorStepForFieldPath` (the resolver itself, below).
+  Bare links with no `?field` should land on a sensible default tab (`days` or the relevant setup tab),
+  not 404/redirect-bounce.
 - **`useAnimalIdFromUrl` hard-matches `/editor`** (handled in Phase 1, but every repair consumer depends
   on the new parse).
 - **The granularity changes.** `ANIMAL_EDITOR_STEPS` ([validation.js:865](../../../../src/domain/validation.js))
@@ -21,7 +35,13 @@ genuinely changes.
   (electrode-groups / channel-maps). So `animalEditorStepForFieldPath` must resolve a field to the
   RIGHT tab — camera fields → `cameras`, data-acq fields → `recording-system`, channel fields →
   `channel-maps`, geometry/location → `electrode-groups`. This is a deliberate **improvement** in
-  routing precision, not a no-op rename. Repair labels referenced by tests
+  routing precision, not a no-op rename. **DIO is asymmetric — it's a NEW branch, not a split:**
+  `animalEditorStepForFieldPath` ([validation.js:887](../../../../src/domain/validation.js)) has **no
+  `behavioral_events`/`dio` case today** — it routes `ntrode→channel-maps`, `camera|data_acq|configurationHistory→`
+  the combined step, `opto→`opto, and **everything else falls through to electrodes (step 0)**. So a DIO
+  repair currently mis-routes to Electrodes; the `dio` tab needs an **authored** mapping + a check that a
+  DIO-field repair emitter even exists to target it (if none does, the `dio` branch is forward-looking).
+  Repair labels referenced by tests
   ([ExportStep.jsx](../../../../src/pages/DayEditor/ExportStep.jsx), `RawCorruptionBanner.jsx`,
   `animalRepairRouting.test.js`) shift accordingly.
 - **The `?field=…` scroll-to-and-highlight context must survive.** Today the stepper deep-links to a
@@ -31,11 +51,16 @@ genuinely changes.
 
 ## Tasks
 
-- **Task 3a.1 — Enumerate + rewrite every `?field=` emitter** to `#/animal/:id/:tab?field=…`.
+- **Task 3a.1 — Rewrite every `/editor` emitter** (the 7 files / ~13 sites above) — both `?field=` repair
+  deep-links → `#/animal/:id/:tab?field=…` AND bare `/editor` links → a sensible default tab. Re-run
+  `grep -rn '/editor' src/` to confirm none are missed; pay special attention to `ReconfigWizard.jsx`'s
+  param-carrying deep-link (preserve its params to the right destination).
 - **Task 3a.2 — Redesign `ANIMAL_EDITOR_STEPS` → a tab-keyed map** and rewrite `animalEditorStepForFieldPath`
-  so each field path resolves to its owning tab (the new finer granularity). Keep `repairTargetForIssue`'s
-  surface/label *contract* (the ownership-pattern hints from Phase 8.7 Task 9 stay) — only the target
-  URL + step→tab labels change.
+  so each field path resolves to its owning tab (the new finer granularity), **adding the missing
+  `behavioral_events`/`dio` branch** (today it falls through to electrodes) and **splitting the combined
+  camera+data_acq case** into `cameras` vs `recording-system`. Keep `repairTargetForIssue`'s surface/label
+  *contract* (the ownership-pattern hints from Phase 8.7 Task 9 stay) — only the target URL + step→tab
+  labels change.
 - **Task 3a.3 — Preserve `?field=` highlight** end-to-end on the destination tab (scroll + highlight the
   control), matching today's stepper behavior.
 - **Task 3a.4 — Sweep the tests.** `animalRepairRouting.test.js` and the ~19 route-referencing test

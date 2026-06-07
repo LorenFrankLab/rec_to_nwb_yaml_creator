@@ -58,16 +58,31 @@ profile facts (`AnimalProfileSection`) and the reconfiguration context render as
   version, referenced cameras, electrodes, failed channels — **read-only and clearly distinct from the
   animal's *current* setup tabs** (a historical day is pinned to an older version; the setup tabs show the
   latest). Builds on Phase 8.7's `DayTechnicalSection`/effective values + the batch-row scan contract.
+  **This is a hard prerequisite for Phase 2 Task 2.5 / decision 12** (retiring the day-row scan line): the
+  scan detail relocates HERE, so this review must exist before the row loses it — otherwise the
+  valid-but-wrong defense regresses.
 - **Task 3.3b — Close the warning-escape on export.** Verified: the export gate keys on `severity ==='error'`
   only; warnings (`inconsistent_location_case` on imports, orphaned video/file) **do not block** and can
   ride a **batch** export across N days. Batch/valid-only export must require an **explicit acknowledgement**
   of outstanding warnings (not just a count), so a silent downstream issue can't multiply across days.
+  - **Derivation note:** `deriveChip(computeStepStatus(...))` ([ValidationSummary/index.jsx:50-55](../../../../src/pages/ValidationSummary/index.jsx))
+    is **3-state (`valid`/`error`/`incomplete`) with no "warning" notion**, and `buildRows` does NOT carry
+    warnings today. Surfacing per-day outstanding warnings into the batch preflight means plumbing
+    `validateDay(...).filter(severity === 'warning')` (the per-day filter [ExportStep.jsx:151](../../../../src/pages/DayEditor/ExportStep.jsx)
+    already does) into the batch flow / an extended `buildRows`. Still UI-layer + read-only over the
+    existing validators — but it is **new plumbing, not a free read** of the current chip.
 - **Task 3.4 — Config-version legibility.** Wherever a configuration version appears (this tab, the
   Recording Days strip), show human-readable context: "Electrode configuration changed on [date] — days
   before use v1, days after use v2," so a scientist isn't left decoding "v2."
 - **Task 3.5 — Subject/profile + reconfig home.** Re-home `AnimalProfileSection` (subject facts, with
   its Phase 8.7 blast-radius confirm) and the `isReconfigurationEdit` context banner (`?context=…`) onto
   the `AnimalView` header / a route-context equivalent — they have no tab and must not be lost.
+- **Task 3.6 — Unsaved-edit guard on section switch (moved up from Phase 5).** Once the modals
+  (`CameraModal`/`ChannelMapEditor`) are extracted into switchable section-nav panels *here*, an open
+  modal with pending edits must not be silently dropped when the user changes sections (the nav exists
+  from Phase 1, so the gap opens as soon as these modals live under it — earlier than Phase 5). Either
+  block the section switch with a confirm or hoist the modal above the panels. Specify and test this in
+  the phase that introduces the switchable modals, not at decommission time.
 
 > Repair deep-link routing (the `?field=…` migration, `ANIMAL_EDITOR_STEPS` → tab-keyed map, the
 > camera-vs-recording-system granularity change) is **Phase 3a** — it's wider than this phase and

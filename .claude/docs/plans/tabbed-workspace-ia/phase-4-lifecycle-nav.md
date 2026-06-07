@@ -54,6 +54,19 @@ in the chrome nav.
 - **Task 4.4 — Cross-animal batch export lives at chrome level.** The per-animal Validation & Export tab
   (Phase 3.3) handles one animal; `#/validation` remains the home for batch/cross-animal export and the
   batch preflight. Make their relationship explicit (the tab links up to the batch screen).
+- **Task 4.5 — Animal-selector dropdown widget + a11y (net-new — decision 9).** The top object-selector
+  (`Workspace ▸ <animal> ▾`) is a **disclosure popup, NOT a `role="listbox"` and NOT a `role="menu"`**
+  (an early mockup used listbox-with-buttons-plus-nested-menu — that ARIA is invalid: options/menuitems
+  can't host secondary controls). Spec:
+  - Trigger = a `<button aria-haspopup="true" aria-expanded aria-controls>`; the popup is a labelled
+    region (`aria-label="Switch animal"`).
+  - Each row has a **primary switch control** (a link/button → `#/animal/:id/days`, the current animal
+    marked `aria-current`) **and a secondary ⋮ `menubutton`** (`aria-haspopup="menu"`) opening that
+    animal's `role="menu"` (Open / Rename… / Delete animal… — the SAME dialog as the header ⋮, incl. the
+    decision-13 type-to-confirm). "+ New animal…" is a `<button>` (opens Task 4.2's create panel).
+  - Keyboard: Esc closes; Up/Down move between rows; the ⋮ submenu has its own roving focus + Esc.
+    Open/close moves focus correctly (into the popup on open, back to the trigger on close). No focus trap.
+  - Reference render: [alternatives/selector-dropdown.html](alternatives/selector-dropdown.html).
 
 ## Acceptance
 
@@ -69,5 +82,8 @@ in the chrome nav.
 
 - **Menu a11y.** The ⋮ menu needs proper `aria` menu semantics + keyboard (Esc/arrows) — write tests
   first. A bare div-on-click is not acceptable.
+- **Selector-dropdown a11y (Task 4.5).** Two net-new popup widgets nest here (the switcher disclosure +
+  per-row ⋮ menu). Use the disclosure-with-links pattern, NOT listbox/menu-with-controls; get focus
+  management and the nested submenu right (the earlier mockup's `role="listbox"` was invalid).
 - **Home consolidation scope.** Folding create-animal into a modal may be larger than the rest of Phase
   4; it's acceptable to split it into 4a (⋮ + nav) and 4b (create-animal modal) if needed.
