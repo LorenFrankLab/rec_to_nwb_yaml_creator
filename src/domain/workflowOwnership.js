@@ -171,6 +171,8 @@ export const PATTERN_REFINEMENT_BY_CODE = Object.freeze({
 
   // day_metadata → animal_catalog_reference: the day side of a camera reference (selection).
   dangling_camera_ref: OWNERSHIP_PATTERN.ANIMAL_CATALOG_REFERENCE,
+  // The day side of a recording-system reference (which catalog system this day used) — same shape.
+  dangling_data_acq_ref: OWNERSHIP_PATTERN.ANIMAL_CATALOG_REFERENCE,
   missing_camera: OWNERSHIP_PATTERN.ANIMAL_CATALOG_REFERENCE,
 
   // day_metadata → task_epoch_assignment: room/camera/opto scoped to the task's epochs,

@@ -98,6 +98,9 @@ export const CATEGORY_BY_CODE = Object.freeze({
 
   // This recording day's metadata (tasks, videos, files, behavioral events, camera refs).
   dangling_camera_ref: WORKFLOW_CATEGORY.DAY_METADATA,
+  // The day's chosen recording system (data_acq_device_name) points at a catalog entry that no longer
+  // exists — fixed in the day's setup (which system it used). Day metadata, like the camera ref.
+  dangling_data_acq_ref: WORKFLOW_CATEGORY.DAY_METADATA,
   duplicate_behavioral_event_name: WORKFLOW_CATEGORY.DAY_METADATA,
   duplicate_behavioral_event_description: WORKFLOW_CATEGORY.DAY_METADATA,
   duplicate_task_epoch: WORKFLOW_CATEGORY.DAY_METADATA,

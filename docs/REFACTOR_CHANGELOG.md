@@ -4,6 +4,31 @@
 
 **Last Updated:** June 8, 2026
 
+## Pre-merge review remediation — block the dangling recording-system reference (June 8, 2026)
+
+A pre-merge review (vs `modern`) flagged ONE Critical issue across three independent reviewers: a day's
+`data_acq_device_name` reference could **silently substitute the wrong recording system** into the
+export. If the referenced catalog system was renamed/removed (or a stale import), `resolveDayDataAcqDevice`
+silently fell back to `catalog[0]` — a *different* Spyglass `DataAcquisitionDevice` identity — with a
+clean validation. Unlike the camera path (`dangling_camera_ref`) and `resolveDayConfig` (fails closed),
+the data-acq path laundered the dangle.
+
+- **Fix:** new `danglingDataAcqRefIssue(day, animal)` in [validation.js](../src/domain/validation.js),
+  folded into `validateDay`. A present-but-unresolvable `data_acq_device_name` is now a **day-routed,
+  Devices-step, export-blocking, repairable** issue (`dangling_data_acq_ref`) — caught at the RAW
+  boundary (the reference is consumed by the merge, so the merged-model rules can't see it). An UNSET
+  reference is still the documented "use the animal default" path and is not flagged. Registered in
+  `SURFACE_BY_CODE` / `CATEGORY_BY_CODE` / the ownership-pattern map (the completeness invariant caught
+  the missing registrations); + contract tests (dangling blocked, existing-name clean).
+- **Comment rot** from the Phase-5 stepper deletion: `AnimalSwitcher` JSDoc (Rename… → Edit profile…),
+  `AnimalView` "the legacy stepper uses…" (→ "extracted from the removed stepper"), `useReconfigContext`
+  JSDoc example (the removed `/editor` route → `electrode-groups`).
+
+Deferred (noted, not merge-blocking): reconcile day references on catalog rename/delete (prevent, vs
+the gate just added); a precise empty-catalog blocker (already gated by schema `minItems:1`); a
+two-system/two-day golden parity fixture. Full suite (4266) green, 125 baselines byte-identical, lint
+0 errors, build OK.
+
 ---
 
 ## Recording system — per-day acquisition device (1/n): merge foundation (June 8, 2026)

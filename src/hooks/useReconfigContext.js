@@ -22,9 +22,9 @@ function parseIntegerParam(raw) {
 }
 
 /**
- * Parse transient animal-editor route context from a hash string.
+ * Parse transient animal-view route context from a hash string.
  *
- * @param {string} hash - Current window hash (e.g. `#/animal/remy/editor?context=reconfigure`).
+ * @param {string} hash - Current window hash (e.g. `#/animal/remy/electrode-groups?context=reconfigure`).
  * @returns {{context: string|null, version: number|null, fromDayId: string|null, movedDays: number|null, field: string|null}}
  */
 export function parseReconfigContext(hash) {

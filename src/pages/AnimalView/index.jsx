@@ -210,12 +210,12 @@ export function AnimalView({ animalId, tab }) {
   const [profileOpen, setProfileOpen] = useState(false);
 
   // Shared store-bound field-update + repair callbacks for the `{ animal, onFieldUpdate }` setup
-  // containers (recording-system / cameras / dio), the corruption banner, and the profile save —
-  // the same wiring the legacy stepper uses, so logic is never forked.
+  // containers (recording-system / cameras / dio), the corruption banner, and the profile save — the
+  // wiring extracted from the removed legacy stepper (Phase 5), now the single owner of this logic.
   const { handleFieldUpdate, handleRepair } = useAnimalFieldUpdate(animalId);
 
-  // Transient reconfiguration context from the hash (`?context=reconfigure&version=…`) — the same
-  // parser the legacy stepper reads, so the header banner can't drift from the stepper's.
+  // Transient reconfiguration context from the hash (`?context=reconfigure&version=…`), parsed by the
+  // shared useReconfigContext hook — the single source for the header banner (no per-surface forks).
   const routeContext = useReconfigContext();
 
   // Phase 3a.5: which setup tabs hold an export-blocking error (for the section-nav red dot). Reuses

@@ -12,7 +12,7 @@ import './AnimalSwitcher.css';
  * forbid options/menuitems that host secondary controls). The trigger is a `button[aria-haspopup]`;
  * the popup is a labelled `role="group"` whose rows each carry a PRIMARY switch link (→
  * `#/animal/:id/days`, the current animal `aria-current`) plus a SECONDARY ⋮ menubutton (the shared
- * {@link OverflowMenu}, its own `role="menu"`: Open / Rename… / Delete animal…). A trailing
+ * {@link OverflowMenu}, its own `role="menu"`: Open / Edit profile… / Delete animal…). A trailing
  * "+ New animal…" button opens the create panel. Keyboard: Esc closes + returns focus to the
  * trigger; Up/Down rove between the rows (and the new-animal button); focus enters the popup on open;
  * an outside click closes. No focus trap — the nested ⋮ owns its own roving focus + Esc.

@@ -15,6 +15,7 @@ import {
   repairTargetForIssue,
 } from '../validation';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
+import { getDataAcqDevices } from '../../state/workspaceSelectors';
 import { buildRealisticWorkspace } from '../../__tests__/fixtures/workspaceBuilders';
 
 /**
@@ -46,6 +47,30 @@ describe('domain validation module preserves the issue list', () => {
       validation: 'valid',
       export: 'valid',
     });
+  });
+
+  it('a day referencing a non-existent recording system is BLOCKED (dangling_data_acq_ref, day/devices)', () => {
+    // Guards the silent-substitution path: resolveDayDataAcqDevice would fall back to catalog[0] and
+    // export a DIFFERENT acquisition device than the day recorded on. This must be surfaced, not laundered.
+    const { animal, day } = buildRealisticWorkspace();
+    const dayRef = { ...day, data_acq_device_name: 'Ghost rig (renamed/removed)' };
+    const merged = mergeDayMetadata(animal, dayRef);
+
+    const issues = validateDay(dayRef, merged, animal);
+    const issue = issues.find((i) => i.code === 'dangling_data_acq_ref');
+    expect(issue).toBeTruthy();
+    expect(issue.ownerSurface).toBe('day');
+    expect(issue.step).toBe('devices');
+    expect(issue.severity).toBe('error');
+  });
+
+  it('a day referencing an EXISTING recording system by name is clean (no dangling issue)', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    const realName = getDataAcqDevices(animal)[0].name;
+    const dayRef = { ...day, data_acq_device_name: realName };
+    const merged = mergeDayMetadata(animal, dayRef);
+
+    expect(validateDay(dayRef, merged, animal).some((i) => i.code === 'dangling_data_acq_ref')).toBe(false);
   });
 
   it('a day with a channel, camera, and stale-override fault yields the exact contract', () => {
