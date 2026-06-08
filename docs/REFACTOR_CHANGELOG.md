@@ -6,6 +6,52 @@
 
 ---
 
+## Tabbed workspace IA — Phase 3-5: per-animal Validation & Export tab + effective-day review (June 8, 2026)
+
+Makes the `export` tab real — a per-animal slice of the Validation Summary plus the mandatory
+"effective setup for THIS day" review (the valid-but-wrong defense). From the
+[phase-3-5 doc](../.claude/docs/plans/tabbed-workspace-ia/phase-3-5-validation-export-tab.md). After
+this, all seven AnimalView tabs are real (no placeholders left). **UI-only — no store/export/schema
+change**; export output unchanged (125 golden baselines byte-identical); full suite (4257), lint (0
+errors), build all green. TDD throughout; four independently-green commits; code-reviewer pass (no
+findings). The standalone workspace Validation Summary page is byte-unchanged.
+
+- **`buildAnimalRows(workspace, animalKey)`** ([ValidationSummary/index.jsx](../src/pages/ValidationSummary/index.jsx)):
+  a FILTER over the now-exported `buildRows`, so the per-animal tab's readiness chips are exactly what
+  the workspace-global summary computes — a filter, never a parallel validation path.
+- **Parameterized `ValidationSummary` with an optional `animalKey`.** When set it scopes rows via
+  `buildAnimalRows`, renders a "This animal — readiness & export · Showing: {id} — {N} days" header
+  instead of the page h1, and renders a `<section>` rather than a second `<main id="main-content">`
+  (AnimalView owns the page landmark). The counts / Validate All / Export Valid Only / preflight /
+  reports / table all run off the scoped rows unchanged, so `runExport` is **reused** for the animal's
+  valid days. All scoped-only behavior is gated behind the prop. AnimalView renders
+  `<ValidationSummary animalKey={animalId}>` for the `export` tab (the last placeholder); allowlisted in
+  the architecture guard.
+- **Reuse-not-rederive extractions:** `buildPreflightSummary` → [src/domain/preflightSummary.js](../src/domain/preflightSummary.js)
+  (ExportStep imports it back) and `resolveRigConstant` + `RIG_FALLBACK` →
+  [src/domain/rigConstants.js](../src/domain/rigConstants.js) (DayTechnicalSection imports it back) —
+  both verbatim, byte-identical (their host tests pass unchanged).
+- **Config-version legibility (Task 3.4, validation slice).** The SCOPED Setup cell shows dated context
+  ("config from `<date>` (historical — vN)") via `getConfigHistory`, not a bare "vN". The unscoped cell
+  is unchanged.
+- **Effective-setup-for-this-day review (Task 3.3a — the valid-but-wrong defense).** New
+  [EffectiveDayReview](../src/pages/ValidationSummary/EffectiveDayReview.jsx) renders, read-only inside
+  the scoped Setup-cell expander, what a day ACTUALLY used — pinned version + dated description,
+  electrode groups, failed channels, cameras, rig constants — from `buildPreflightSummary` +
+  `resolveRigConstant`, labelled "What this day used (read-only)", distinct from the animal's current
+  setup tabs. A day pinned to v1 (animal latest v2) shows v1's values (the merge resolves the pinned
+  config); the merge is crash-guarded so a corrupt day can't blank the tab. **This is the surface the
+  day-row scan line (overview decision 12) will later relocate into — unblocking its retirement.**
+- **Deliberately deferred (per the phase doc):** retiring the `RecordingDaysTab` day-row scan line
+  (a follow-on now that this destination exists); the warning-ack on export → 3-6; the chrome-level
+  "All animals — batch export" → Phase 4; repair-button re-routing to tabs → Phase 3a (hints still link
+  the legacy editor).
+- New tests: [buildAnimalRows.test.jsx](../src/pages/ValidationSummary/__tests__/buildAnimalRows.test.jsx),
+  [AnimalView.exportTab.test.jsx](../src/pages/AnimalView/__tests__/AnimalView.exportTab.test.jsx)
+  (scoped header + only-this-animal rows + single #main-content + export reuse), and
+  [AnimalView.effectiveDay.test.jsx](../src/pages/AnimalView/__tests__/AnimalView.effectiveDay.test.jsx)
+  (dated legibility + v1-pinned effective review).
+
 ## Tabbed workspace IA — Phase 3-4: subject profile + reconfiguration context on the AnimalView header (June 8, 2026)
 
 Re-homes the subject-facts editor and the reconfiguration context banner onto the tabbed Animal View
