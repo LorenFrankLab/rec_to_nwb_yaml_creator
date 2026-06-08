@@ -45,7 +45,8 @@ describe('CopyFromAnimalDialog', () => {
         onCancel={vi.fn()}
       />
     );
-    const dialog = screen.getByRole('dialog', { name: /copy electrode groups/i });
+    // With all sections offerable by default, the dialog uses the generic title.
+    const dialog = screen.getByRole('dialog', { name: /copy from animal/i });
     expect(dialog).toHaveAttribute('aria-modal', 'true');
     // The other animal (bean, which has groups) is offered as a source.
     expect(screen.getByRole('radio', { name: /bean/i })).toBeInTheDocument();
@@ -186,5 +187,215 @@ describe('CopyFromAnimalDialog', () => {
       },
     ]);
     expect(ntrode_electrode_group_channel_map[0]).not.toHaveProperty('electrode_id');
+  });
+});
+
+describe('CopyFromAnimalDialog — multi-section copy', () => {
+  // A source animal with electrode groups, cameras, AND a recording system.
+  const multiSource = {
+    target: {
+      subject: { subject_id: 'target' },
+      devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [], data_acq_device: [] },
+      cameras: [],
+    },
+    source: {
+      subject: { subject_id: 'source' },
+      devices: {
+        electrode_groups: [{ id: 0, device_type: 'tetrode_12.5', location: 'CA1' }],
+        ntrode_electrode_group_channel_map: [
+          { ntrode_id: 0, electrode_group_id: 0, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+        ],
+        data_acq_device: [
+          { name: 'acq1', system: 'SpikeGadgets', amplifier: 'Intan', adc_circuit: 'Intan' },
+        ],
+      },
+      cameras: [
+        { id: 0, camera_name: 'overhead', meters_per_pixel: 0.001, lens: '16mm', model: 'X', manufacturer: 'Y' },
+      ],
+    },
+  };
+
+  it('offers a section checklist (electrode groups, cameras, recording system) when source has all three', () => {
+    render(
+      <CopyFromAnimalDialog
+        open
+        currentAnimalId="target"
+        animals={multiSource}
+        onCopy={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+    expect(screen.getByRole('dialog', { name: /copy from animal/i })).toBeInTheDocument();
+    // Section checkboxes appear only after a source is selected.
+    expect(screen.queryByRole('checkbox', { name: /cameras/i })).not.toBeInTheDocument();
+  });
+
+  it('copies cameras only when electrodes + recording system are unchecked', async () => {
+    const user = userEvent.setup();
+    const onCopy = vi.fn();
+    render(
+      <CopyFromAnimalDialog
+        open
+        currentAnimalId="target"
+        animals={multiSource}
+        onCopy={onCopy}
+        onCancel={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole('radio', { name: /source/i }));
+    await user.click(screen.getByRole('checkbox', { name: /electrode groups/i }));
+    await user.click(screen.getByRole('checkbox', { name: /recording system/i }));
+    await user.click(screen.getByRole('button', { name: /^copy$/i }));
+
+    expect(onCopy).toHaveBeenCalledTimes(1);
+    const payload = onCopy.mock.calls[0][0];
+    expect(payload.cameras).toHaveLength(1);
+    expect(payload.cameras[0].camera_name).toBe('overhead');
+    expect(payload).not.toHaveProperty('electrode_groups');
+    expect(payload).not.toHaveProperty('ntrode_electrode_group_channel_map');
+    expect(payload).not.toHaveProperty('data_acq_device');
+  });
+
+  it('copies the recording system catalog, deep-cloned from the source', async () => {
+    const user = userEvent.setup();
+    const onCopy = vi.fn();
+    render(
+      <CopyFromAnimalDialog
+        open
+        currentAnimalId="target"
+        animals={multiSource}
+        onCopy={onCopy}
+        onCancel={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole('radio', { name: /source/i }));
+    await user.click(screen.getByRole('checkbox', { name: /electrode groups/i }));
+    await user.click(screen.getByRole('checkbox', { name: /cameras/i }));
+    await user.click(screen.getByRole('button', { name: /^copy$/i }));
+
+    const payload = onCopy.mock.calls[0][0];
+    expect(payload.data_acq_device).toHaveLength(1);
+    expect(payload.data_acq_device[0].name).toBe('acq1');
+    // Deep clone: not the same reference as the source catalog or its members.
+    expect(payload.data_acq_device).not.toBe(multiSource.source.devices.data_acq_device);
+    expect(payload.data_acq_device[0]).not.toBe(multiSource.source.devices.data_acq_device[0]);
+  });
+
+  it('blocks the whole copy and surfaces a camera-name divergence alert', async () => {
+    const user = userEvent.setup();
+    const onCopy = vi.fn();
+    // A third animal reuses "overhead" with a DIFFERENT meters_per_pixel → divergence.
+    const animalsWithConflict = {
+      ...multiSource,
+      other: {
+        subject: { subject_id: 'other' },
+        devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [], data_acq_device: [] },
+        cameras: [
+          { id: 5, camera_name: 'overhead', meters_per_pixel: 0.002, lens: '16mm', model: 'X', manufacturer: 'Y' },
+        ],
+      },
+    };
+    render(
+      <CopyFromAnimalDialog
+        open
+        currentAnimalId="target"
+        animals={animalsWithConflict}
+        onCopy={onCopy}
+        onCancel={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole('radio', { name: /source/i }));
+    // Keep cameras checked; copy.
+    await user.click(screen.getByRole('button', { name: /^copy$/i }));
+
+    expect(onCopy).not.toHaveBeenCalled();
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent(/overhead/);
+  });
+
+  it('blocks the whole copy and surfaces a data-acq-name divergence alert', async () => {
+    const user = userEvent.setup();
+    const onCopy = vi.fn();
+    // A third animal reuses "acq1" with a DIFFERENT amplifier → divergence.
+    const animalsWithConflict = {
+      ...multiSource,
+      other: {
+        subject: { subject_id: 'other' },
+        devices: {
+          electrode_groups: [],
+          ntrode_electrode_group_channel_map: [],
+          data_acq_device: [
+            { name: 'acq1', system: 'SpikeGadgets', amplifier: 'OTHER', adc_circuit: 'Intan' },
+          ],
+        },
+        cameras: [],
+      },
+    };
+    render(
+      <CopyFromAnimalDialog
+        open
+        currentAnimalId="target"
+        animals={animalsWithConflict}
+        onCopy={onCopy}
+        onCancel={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole('radio', { name: /source/i }));
+    await user.click(screen.getByRole('button', { name: /^copy$/i }));
+
+    expect(onCopy).not.toHaveBeenCalled();
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent(/acq1/);
+  });
+
+  it('clears the divergence alert when the section selection changes', async () => {
+    const user = userEvent.setup();
+    const onCopy = vi.fn();
+    const animalsWithConflict = {
+      ...multiSource,
+      other: {
+        subject: { subject_id: 'other' },
+        devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [], data_acq_device: [] },
+        cameras: [
+          { id: 5, camera_name: 'overhead', meters_per_pixel: 0.002, lens: '16mm', model: 'X', manufacturer: 'Y' },
+        ],
+      },
+    };
+    render(
+      <CopyFromAnimalDialog
+        open
+        currentAnimalId="target"
+        animals={animalsWithConflict}
+        onCopy={onCopy}
+        onCancel={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole('radio', { name: /source/i }));
+    await user.click(screen.getByRole('button', { name: /^copy$/i }));
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+
+    // Unchecking cameras (the diverging section) clears the alert.
+    await user.click(screen.getByRole('checkbox', { name: /cameras/i }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('pins to electrode-groups-only wording when availableSections restricts to electrodes', () => {
+    render(
+      <CopyFromAnimalDialog
+        open
+        currentAnimalId="target"
+        animals={multiSource}
+        availableSections={['electrode_groups']}
+        onCopy={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+    // Electrode-only host keeps its original title; no section checklist.
+    expect(screen.getByRole('dialog', { name: /copy electrode groups/i })).toBeInTheDocument();
   });
 });

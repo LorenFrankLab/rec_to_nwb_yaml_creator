@@ -310,6 +310,7 @@ export default function ElectrodeGroupsContainer({ animalId, addRef, onPendingEd
         open={copyDialogOpen}
         currentAnimalId={animalId}
         animals={model.workspace.animals}
+        availableSections={['electrode_groups']}
         onCopy={handleCopyConfirm}
         onCancel={handleCopyCancel}
       />
