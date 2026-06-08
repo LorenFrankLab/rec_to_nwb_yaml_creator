@@ -85,4 +85,43 @@ describe('RecordingDaysTab — duplicate day row action', () => {
     expect(dup.session.session_id).toBe('remy_20230630');
     expect(captured.model.workspace.animals.remy.days).toContain('remy-2023-06-30');
   });
+
+  it('choosing a colliding date surfaces the collision error, keeps the dialog open, and creates nothing', () => {
+    renderPane('remy', { remy: animal }, { 'remy-2023-06-22': sourceDay });
+
+    fireEvent.click(screen.getByRole('button', { name: /duplicate recording day/i }));
+
+    // The source day already occupies 2023-06-22 — choose it to force a collision.
+    const dateInput = screen.getByLabelText(/new date/i);
+    fireEvent.change(dateInput, { target: { value: '2023-06-22' } });
+
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /^duplicate day$/i }));
+    });
+
+    // Collision message is surfaced in an alert and the dialog stays open (the date input is still there).
+    expect(screen.getByRole('alert')).toHaveTextContent(/already has a day on 2023-06-22/i);
+    expect(screen.getByLabelText(/new date/i)).toBeInTheDocument();
+
+    // No new day was written: the store still holds only the original source day.
+    expect(Object.keys(captured.model.workspace.days)).toEqual(['remy-2023-06-22']);
+    expect(captured.model.workspace.animals.remy.days).toEqual(['remy-2023-06-22']);
+  });
+
+  it('confirming with no date selected surfaces the empty-date guard and creates nothing', () => {
+    renderPane('remy', { remy: animal }, { 'remy-2023-06-22': sourceDay });
+
+    fireEvent.click(screen.getByRole('button', { name: /duplicate recording day/i }));
+
+    // Confirm without choosing a date (the input starts empty).
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /^duplicate day$/i }));
+    });
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/choose a date for the new day/i);
+    expect(screen.getByLabelText(/new date/i)).toBeInTheDocument();
+
+    expect(Object.keys(captured.model.workspace.days)).toEqual(['remy-2023-06-22']);
+    expect(captured.model.workspace.animals.remy.days).toEqual(['remy-2023-06-22']);
+  });
 });

@@ -634,7 +634,7 @@ export function RecordingDaysTab({ animalId }) {
         onClose={cancelDuplicateDay}
         title="Duplicate recording day"
         titleId="duplicate-day-title"
-        role="dialog"
+        describedById="duplicate-day-desc"
       >
         <form
           onSubmit={(e) => {
@@ -642,7 +642,7 @@ export function RecordingDaysTab({ animalId }) {
             confirmDuplicateDay();
           }}
         >
-          <p>
+          <p id="duplicate-day-desc">
             Clone{' '}
             <strong>{pendingDuplicateDay?.date || pendingDuplicateDay?.dayId}</strong> to a new
             date. The new day reproduces this day&apos;s tasks, behavioral events, keywords,

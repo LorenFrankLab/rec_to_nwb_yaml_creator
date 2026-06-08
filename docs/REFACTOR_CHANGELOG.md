@@ -23,8 +23,10 @@ and clones the day on confirm. A duplicate reproduces its source **exactly**.
 - **Guards:** throws on an absent source day, an absent owning animal, or a colliding target date; the
   UI also blocks a colliding date (against the animal's present days) before delegating and surfaces a
   store throw inside the dialog rather than swallowing it.
-- **Merge-neutral:** a duplicated day exports **byte-identical** YAML to its source — golden baselines
-  unchanged.
+- **Merge-neutral:** the duplicate is created through the unchanged `mergeDayMetadata` → `encodeYaml`
+  seam, so the existing golden baselines stay **byte-identical** (unchanged). The duplicate's own YAML
+  is not byte-identical to its source — its date-derived fields (the `session_id` and the experiment
+  date) differ — but everything else reproduces the source.
 
 ## Carry-forward day creation (June 8, 2026)
 
