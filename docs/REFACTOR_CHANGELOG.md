@@ -6,6 +6,52 @@
 
 ---
 
+## Tabbed workspace IA — Phase 2: Recording Days tab polish (June 7, 2026)
+
+Polishes the `days`-tab content from the [tabbed-workspace-ia](../.claude/docs/plans/tabbed-workspace-ia/phase-2-recording-days-tab.md)
+redesign (Phase 1 already extracted the pane + hosted it at `#/animal/:id/days`): day-row legibility
+(decision 12) and first-run onboarding (decision 8). **UI-only — no store/export/schema change**; 125
+golden baselines byte-identical; full suite (4209), lint (0 errors), build all green. TDD throughout
+(failing tests written first); each task an independently-green commit; code-reviewer pass per chunk.
+
+- **Task 2.1 — removed the "Edit Animal Setup" link** from the day-tab header
+  ([RecordingDaysTab.jsx](../src/pages/AnimalWorkspace/RecordingDaysTab.jsx)). Under the tabbed IA the
+  animal's setup lives in the left section-nav tabs, so the jump-away stepper link is redundant; the
+  primary "Add Recording Days" action stays.
+- **Tasks 2.5a/2.5b/2.6 — day-row triage contract** (decision 12). Each row is now *triage, not
+  inspection*: bare **date** anchor + the **session description** muted underneath *only when present*
+  (truncated by CSS, full text on `title`) + **one plain-language status** replacing the
+  Draft/Validated/Exported chip cluster. `session_id` moved OFF the row (its filename value belongs in the
+  day/preflight). The status comes from a new read-only domain helper
+  **`getDayRowStatus(animal, day, mergedDay)`** ([workflowStatus.js](../src/domain/workflowStatus.js)):
+  the stored-state mapping is display-only (`draft → "Draft — not yet validated"`, `validated → "Ready to
+  export"`, `exported → "Exported"`), but a **LIVE blocking issue wins** and reads `Needs fixing —
+  {reason}` so a day that went stale (validated/exported before a referenced camera broke) is honest, not
+  falsely green. The live read reuses `validateDay` — the SAME error set the export gate consumes — no new
+  validation; per-row `mergeDayMetadata` is wrapped so a corrupt config surfaces as a needs-fixing row,
+  never a crash.
+- **Task 2.3 — first-run "Set up this animal" card** (decision 8), replacing the in-pane setup checklist.
+  For a new/under-configured animal the days tab leads with a per-section card over the **six
+  `getAnimalSectionStatus` sections** (Electrode Groups · Channel Maps · Recording System · Cameras · DIO ·
+  Optogenetics) — the SAME source as the section-nav hollow-○ rings, so "todo" isn't signalled three ways.
+  Honest, **non-gating** framing ("if ephys / if video / if behavioral events"); behavior-only days raise
+  no electrode warning. Each item links to its setup **tab** with a per-section accessible name ("Set up
+  Cameras", not a non-unique "Set up →"). The card disappears once the animal is **established**
+  (`subjectPresent && dayCount > 0`); the ambient nav rings then carry the signal. **Subject is omitted**
+  (it lives in the header band / gets its own tab in Phase 3 — it has no `getAnimalSectionStatus` key). The
+  separate **"Review existing data"** state (recovered/imported review) is kept verbatim.
+- **Retained, now production-unused:** `getAnimalSetupChecklist` + `SETUP_STATE`
+  ([workflowStatus.js](../src/domain/workflowStatus.js)) stay as a fully-tested domain helper — the card
+  reframes the *pane section*, not the domain helper, which is the likely consumer for Phase 3's setup tabs.
+  Dead checklist CSS/JSX/helpers removed from the pane (bundle −727 B).
+- **Deferred (tracked):** per-day ⋮ menu → Phase 4; `Fix in {section} →` row action → Phase 3a;
+  older-electrode-setup flag → Phase 3/3a. The inline "Delete day…" button is unchanged.
+- New tests: `getDayRowStatus` ([workflowStatus.test.js](../src/domain/__tests__/workflowStatus.test.js)),
+  the day-row contract ([RecordingDaysTab.dayRow.test.jsx](../src/pages/AnimalWorkspace/__tests__/RecordingDaysTab.dayRow.test.jsx)),
+  the setup card ([RecordingDaysTab.setupCard.test.jsx](../src/pages/AnimalWorkspace/__tests__/RecordingDaysTab.setupCard.test.jsx));
+  the obsolete in-pane setup-checklist tests were retired (the card supersedes them) and the surviving
+  "Review existing data" tests kept.
+
 ## Tabbed workspace IA — Phase 0: setup-screen copy quick wins (June 7, 2026)
 
 First (copy-only, IA-risk-free) phase of the [tabbed-workspace-ia](../.claude/docs/plans/tabbed-workspace-ia/overview.md)

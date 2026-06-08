@@ -15,10 +15,10 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
-import { getAnimalDayIds, getConfigHistory, getDaySession } from '../../state/workspaceSelectors';
-import { getAnimalSetupChecklist, getDayRowStatus, SETUP_STATE } from '../../domain/workflowStatus';
+import { getAnimalSubject, getConfigHistory, getDaySession } from '../../state/workspaceSelectors';
+import { getDayRowStatus } from '../../domain/workflowStatus';
+import { getAnimalSectionStatus, SECTION_STATUS } from '../../domain/sectionStatus';
 import { classifyAnimalDays, DAY_STATUS, describeOwner, isPresentRecordStatus } from '../../domain/dayRecovery';
-import { validateDay } from '../../domain/validation';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { validateRawAnimal } from '../../validation/rawShape';
 import { applyRepairCommand } from '../../state/repairCommands';
@@ -36,59 +36,20 @@ const DOWNSTREAM_NOT_DELETED_NOTE =
   ' This removes workspace metadata only — it does not delete any YAML you already downloaded, ' +
   'or any NWB file, DANDI asset, or Spyglass rows produced from it.';
 
-/** User-facing label for each setup-checklist item state. */
-const SETUP_STATE_LABEL = {
-  [SETUP_STATE.NOT_STARTED]: 'Not started',
-  [SETUP_STATE.NEEDS_REVIEW]: 'Needs review',
-  [SETUP_STATE.HAS_ERRORS]: 'Has errors',
-  [SETUP_STATE.COMPLETE]: 'Complete',
-};
-
 /**
- * The Animal Editor route an action targets, deep-linked to the owning step via the field
- * hint (`?field=…`, resolved by `animalEditorStepForFieldPath`). Items with no editor target
- * (subject, days) return null and render as a state row without a button.
- *
- * @param {string} animalId
- * @param {{ fieldHint: (string|null) }} action
- * @returns {string|null}
+ * The first-run "Set up this animal" card sections, in the same order and with the same keys as
+ * the section-nav "Animal setup" group (so the card and the nav rings read ONE truth via
+ * {@link getAnimalSectionStatus}). The `hint` states honestly WHEN a section applies — none is
+ * mandatory, because a behavior-only day needs no electrodes (overview decision 7).
  */
-function setupActionHref(animalId, action) {
-  if (!action?.fieldHint) return null;
-  return `#/animal/${animalId}/editor?field=${action.fieldHint}`;
-}
-
-/**
- * Collect the error-severity issues that drive the setup checklist's per-item `has_errors`:
- * the animal's raw-shape corruption PLUS the setup validation errors surfaced by validating
- * each of its days (electrode geometry, camera/data-acq identity, etc. only manifest through
- * the merged day). `mergeDayMetadata` throws on a corrupt/missing configuration; that day is
- * skipped (the corruption is already surfaced by the review banner / raw issues).
- *
- * @param {object} animal - The selected animal.
- * @param {object} days - The workspace `days` record.
- * @returns {Array} Error-severity validation issues for the animal's setup.
- */
-function collectAnimalSetupIssues(animal, days) {
-  const issues = [...validateRawAnimal(animal)];
-  for (const dayId of getAnimalDayIds(animal)) {
-    const dayRecord = days[dayId];
-    if (!dayRecord) continue;
-    try {
-      const merged = mergeDayMetadata(animal, dayRecord);
-      for (const issue of validateDay(dayRecord, merged, animal)) {
-        if (issue.severity === 'error') issues.push(issue);
-      }
-    } catch (err) {
-      // Corrupt/missing configuration — the blocking issue is already surfaced by the review
-      // banner / raw issues, so this aggregation skips the day. Log (debug) so the swallowed
-      // reason is still discoverable rather than vanishing entirely.
-      // eslint-disable-next-line no-console
-      console.debug(`[animal-workspace] skipped setup-issue aggregation for day "${dayId}":`, err);
-    }
-  }
-  return issues;
-}
+const SETUP_CARD_SECTIONS = [
+  { key: 'electrode-groups', label: 'Electrode Groups', hint: 'if ephys' },
+  { key: 'channel-maps', label: 'Channel Maps', hint: 'if ephys' },
+  { key: 'recording-system', label: 'Recording System', hint: 'data acquisition' },
+  { key: 'cameras', label: 'Cameras', hint: 'if video' },
+  { key: 'dio', label: 'DIO', hint: 'if behavioral events' },
+  { key: 'optogenetics', label: 'Optogenetics', hint: 'if opto' },
+];
 
 /**
  * Whether a day record has been validated or exported — i.e. it may have produced a downloaded
@@ -286,31 +247,29 @@ export function RecordingDaysTab({ animalId }) {
           </div>
         </header>
 
-        {/* Setup checklist — shared animal hardware, the operational home for setup.
-            Electrode setup is a first-class action here so it is discoverable without
-            opening the Animal Editor or a recording day. */}
+        {/* First-run "Set up this animal" card + the (separate) existing-data review state.
+            The card is the LOUD onboarding affordance for a new/under-configured animal; it
+            reads the SAME per-section todo state as the section-nav hollow-○ rings
+            (getAnimalSectionStatus), so "todo" is not signalled three ways. It is honest and
+            NON-gating (behavior-only days are valid) and disappears once the animal is
+            established. The "Review existing data" state is a different concern (recovered/
+            imported review) and is kept verbatim. */}
         {(() => {
-          // Raw-shape corruption drives the existing-data review state below; the full
-          // setup-issue set (raw corruption + per-day setup validation errors) drives
-          // the checklist's per-item has_errors so a real setup error (empty location,
-          // divergent camera/data-acq identity, …) badges its owning item, not just
-          // structural corruption.
+          // Raw-shape corruption drives the existing-data review state below.
           const rawIssues = validateRawAnimal(selectedAnimal);
-          const setupIssues = collectAnimalSetupIssues(selectedAnimal, days);
           // Count the recording-day RECORDS actually present (indexed + recovered), not
           // just the index length — otherwise a missing/corrupt index would say "Found 0
-          // recording days" while recovered records render below. The checklist's
-          // "Recording days" item consumes the SAME count so the two never disagree.
+          // recording days" while recovered records render below.
           const dayCount = selectedDayClassification.filter(
             (d) => isPresentRecordStatus(d.status)
           ).length;
-          const checklist = getAnimalSetupChecklist(selectedAnimal, {
-            issues: setupIssues,
-            recordingDayCount: dayCount,
-          });
-          const electrodes = checklist.find((i) => i.key === 'electrodes');
-          const needsElectrodeSetup = electrodes?.state === SETUP_STATE.NOT_STARTED;
           const configCount = getConfigHistory(selectedAnimal).length;
+          // The card is the first-run onboarding affordance: show it until the animal is
+          // ESTABLISHED — a subject is set AND it has at least one recording day. Behavior-only
+          // days are valid, so "established" does NOT require any particular hardware section
+          // (the never-configured sections keep their neutral todo state in the card + nav).
+          const subjectPresent = Boolean(getAnimalSubject(selectedAnimal).subject_id);
+          const showSetupCard = !(subjectPresent && dayCount > 0);
           // Existing data needs an explicit review state: recovered/imported setup must
           // not look silently trusted. Show it once there ARE recording days to export,
           // or whenever raw-shape corruption OR a corrupt days reference is present.
@@ -322,39 +281,42 @@ export function RecordingDaysTab({ animalId }) {
           const showReview = dayCount > 0 || hasCorruption;
           return (
             <>
-              <section className="setup-checklist" aria-label="Animal setup">
-                <h3 className="setup-checklist-heading">Animal setup</h3>
-                <p className="setup-checklist-intro">
-                  {needsElectrodeSetup
-                    ? 'Set up shared hardware before creating or exporting recording days. ' +
-                      "Electrodes/probes are configured once for the animal and shared across all of its days."
-                    : 'Shared hardware for this animal. Review recovered or imported setup before exporting.'}
-                </p>
-                <ul className="setup-checklist-list">
-                  {checklist.map((item) => {
-                    const href = setupActionHref(selectedAnimalId, item.action);
-                    const isPrimary =
-                      item.key === 'electrodes' && item.state === SETUP_STATE.NOT_STARTED;
-                    return (
-                      <li key={item.key} className={`setup-item setup-item-${item.state}`}>
-                        <span className="setup-item-label">{item.label}</span>
-                        <span className={`setup-state-badge setup-state-${item.state}`}>
-                          {SETUP_STATE_LABEL[item.state]}
-                        </span>
-                        <span className="setup-item-summary">{item.summary}</span>
-                        {href && (
+              {showSetupCard && (
+                <section className="setup-card" aria-label="Set up this animal">
+                  <h3 className="setup-card-heading">Set up this animal</h3>
+                  <p className="setup-card-intro">
+                    Configure the shared hardware this animal&apos;s recording days will
+                    reference. Add only what your recordings use — a behavior-only day needs no
+                    electrodes, and each section is referenced per day.
+                  </p>
+                  <ul className="setup-card-list">
+                    {SETUP_CARD_SECTIONS.map((section) => {
+                      const todo =
+                        getAnimalSectionStatus(selectedAnimal, section.key) ===
+                        SECTION_STATUS.TODO;
+                      return (
+                        <li
+                          key={section.key}
+                          className={`setup-card-item ${todo ? 'setup-card-item-todo' : 'setup-card-item-done'}`}
+                        >
+                          <span className="setup-card-item-name">{section.label}</span>
+                          <span className="setup-card-item-hint">{section.hint}</span>
+                          <span className="setup-card-item-state">{todo ? 'To do' : 'Done'}</span>
                           <a
-                            href={href}
-                            className={`setup-item-action ${isPrimary ? 'setup-item-action-primary' : ''}`}
+                            className="setup-card-item-action"
+                            href={`#/animal/${selectedAnimalId}/${section.key}`}
+                            // A links-list reader hears six actions; name each by its section
+                            // ("Set up Cameras", not a non-unique "Set up →"). The arrow is decorative.
+                            aria-label={`${todo ? 'Set up' : 'Review'} ${section.label}`}
                           >
-                            {item.action.label}
+                            {todo ? 'Set up' : 'Review'} <span aria-hidden="true">→</span>
                           </a>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </section>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              )}
 
               {showReview && (
                 <section

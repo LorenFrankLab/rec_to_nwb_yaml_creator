@@ -1,13 +1,14 @@
 /**
- * Animal Workspace setup checklist (Phase 8.6 Task 2). The workspace is the operational home:
- * it surfaces a first-class setup checklist so electrode setup is discoverable WITHOUT opening
- * the Animal Editor, and existing/imported setup invites review instead of looking trusted.
+ * Animal Workspace "Review existing data" state (originally Phase 8.6 Task 2). Recovered/imported
+ * setup must invite review instead of looking silently trusted: this surface counts the days +
+ * hardware configs, flags corrupt collections, and offers the executable RawCorruptionBanner
+ * reset. (The first-run setup CHECKLIST this file once tested was replaced in Phase 2 Task 2.3 by
+ * the "Set up this animal" card — covered in RecordingDaysTab.setupCard.test.jsx.)
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { StoreProvider } from '../../../state/StoreContext';
 import { RecordingDaysTab } from '../RecordingDaysTab';
-import { buildRealisticWorkspace } from '../../../__tests__/fixtures/workspaceBuilders';
 
 const originalHash = window.location.hash;
 afterEach(() => {
@@ -51,39 +52,9 @@ const configuredAnimal = {
   days: [],
 };
 
-describe('AnimalWorkspace setup checklist', () => {
-  it('lists the five setup items for the selected animal', async () => {
-    renderPane('newbie', { newbie: newAnimal });
-    const checklist = screen.getByRole('region', { name: /animal setup/i });
-    // Exact item labels (avoid matching the intro paragraph or the action buttons).
-    expect(within(checklist).getByText('Subject')).toBeInTheDocument();
-    expect(within(checklist).getByText('Electrodes / probes')).toBeInTheDocument();
-    expect(within(checklist).getByText('Cameras / calibration')).toBeInTheDocument();
-    expect(within(checklist).getByText('Data acquisition')).toBeInTheDocument();
-    expect(within(checklist).getByText('Recording days')).toBeInTheDocument();
-  });
-
-  it('offers "Set Up Electrodes" as the primary action for a new animal, linking to the Animal Editor', async () => {
-    renderPane('newbie', { newbie: newAnimal });
-    const action = screen.getByRole('link', { name: /set up electrodes/i });
-    expect(action).toBeInTheDocument();
-    expect(action.getAttribute('href')).toMatch(/#\/animal\/newbie\/editor/);
-  });
-
-  it('still shows "Set Up Electrodes" for an animal that has days but no electrodes', async () => {
-    const animal = { ...newAnimal, days: ['newbie-2024-01-02'] };
-    const days = { 'newbie-2024-01-02': { id: 'newbie-2024-01-02', date: '2024-01-02', session: { session_id: 's' }, state: {} } };
-    renderPane('newbie', { newbie: animal }, days);
-    expect(screen.getByRole('link', { name: /set up electrodes/i })).toBeInTheDocument();
-  });
-
-  it('invites review (not setup) when electrode and camera setup already exist', async () => {
-    renderPane('remy', { remy: configuredAnimal });
-    expect(screen.getByRole('link', { name: /review electrodes/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /review cameras/i })).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /set up electrodes/i })).not.toBeInTheDocument();
-  });
-});
+// The first-run "Animal setup" checklist this file used to test was replaced in Phase 2 (Task
+// 2.3) by the "Set up this animal" card — see RecordingDaysTab.setupCard.test.jsx. This file now
+// covers the SEPARATE "Review existing data" state, which is unchanged by that reframe.
 
 describe('AnimalWorkspace existing-data review state', () => {
   it('shows a review state when the animal has recording days', async () => {
@@ -103,9 +74,6 @@ describe('AnimalWorkspace existing-data review state', () => {
     expect(screen.getByRole('region', { name: /existing data review/i })).toBeInTheDocument();
     // The shipped recovery surface (not a parallel one) renders the executable reset.
     expect(screen.getByRole('alert', { name: /corrupt saved data/i })).toBeInTheDocument();
-    // …and the checklist marks the cameras item as having errors.
-    const camerasItem = screen.getByText('Cameras / calibration').closest('.setup-item');
-    expect(camerasItem.className).toMatch(/setup-item-has_errors/);
   });
 
   it('does not show a review state for a fresh animal with no days and no corruption', async () => {
@@ -173,19 +141,4 @@ describe('AnimalWorkspace existing-data review state', () => {
     expect(screen.queryByText(/no recording days yet/i)).not.toBeInTheDocument();
   });
 
-  it('folds a per-day setup-validation error into the checklist item (not just raw corruption)', async () => {
-    // A real setup error (an unknown probe device_type) surfaces only by validating the day's
-    // merged metadata; the workspace must aggregate it so the Electrodes item badges has_errors.
-    const { animal, day } = buildRealisticWorkspace();
-    const badGeometry = animal.configurationHistory[0].devices.electrode_groups.map((g, i) =>
-      i === 0 ? { ...g, device_type: 'totally_unknown_probe' } : g
-    );
-    animal.configurationHistory[0].devices.electrode_groups = badGeometry;
-    animal.devices.electrode_groups = badGeometry; // mirror, so the item also reads as present
-
-    renderPane(animal.id, { [animal.id]: animal }, { [day.id]: day });
-
-    const electrodesItem = screen.getByText('Electrodes / probes').closest('.setup-item');
-    expect(electrodesItem.className).toMatch(/setup-item-has_errors/);
-  });
 });

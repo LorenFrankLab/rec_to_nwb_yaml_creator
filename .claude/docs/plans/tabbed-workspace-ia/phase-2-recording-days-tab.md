@@ -55,8 +55,12 @@ original draft.
   filename) belongs in the day / preflight. Confirm no row test asserts the `session_id` string first.
 - **Task 2.3 — First-run "Set up this animal" card, de-duped against the nav rings.** For a NEW/
   under-configured animal, lead the days tab with a prominent **"Set up this animal"** card: a per-section
-  grid (Subject · Recording System · Electrode Groups · Channel Maps · Cameras · DIO · Optogenetics), each
-  showing todo-vs-done via **`getAnimalSectionStatus`** + a "Set up →" link to that section's tab. Honest,
+  grid of the **six `getAnimalSectionStatus` sections** (Electrode Groups · Channel Maps · Recording
+  System · Cameras · DIO · Optogenetics), each showing todo-vs-done via **`getAnimalSectionStatus`** + a
+  "Set up →" link to that section's tab. **Subject is intentionally OMITTED** (build decision): it has no
+  `getAnimalSectionStatus` key and no section-nav tab — it lives in the animal **header band** and gets its
+  own home in Phase 3, so including it here would fork the "one truth, de-duped with the nav rings"
+  property. Honest,
   non-gating framing ("Electrode Groups — if ephys", "Cameras — if video", "DIO — if behavioral events");
   **behavior-only days are valid** (no "set up electrodes first" gate; an electrode-free day shows no
   electrode warning).
@@ -87,9 +91,10 @@ original draft.
 - Each day row: **bare date (anchor) + muted session description (if present) + one plain-language status**;
   no `session_id`, no status-chip cluster. The draft/validated/exported mapping is display-only; if the
   live `Needs fixing` state lands here, it's read-only over `computeStepStatus` (no validation/store change).
-- A new/under-configured animal leads with the **"Set up this animal"** card (per-section via
-  `getAnimalSectionStatus`, honest if-ephys/if-video framing, links to tabs); it's de-duped against the nav
-  rings and **absent once established**. Behavior-only days raise no electrode warning.
+- A new/under-configured animal leads with the **"Set up this animal"** card (the six
+  `getAnimalSectionStatus` sections — Subject omitted; honest if-ephys/if-video framing; links to the
+  section tabs); it's de-duped against the nav rings and **absent once established** (build rule:
+  `showSetupCard = !(subjectPresent && dayCount > 0)`). Behavior-only days raise no electrode warning.
 - All Phase 8.7 day guarantees intact: recovered/orphan/wrong-owner rows + repairs; both delete confirms +
   cascade/caveat copy; `deleteDay(dayId, ownerAnimalId)` still passed the owner.
 - Full suite, lint, build green; **125 golden baselines byte-identical** (UI-only — no store/export change).
