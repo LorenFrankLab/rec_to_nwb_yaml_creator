@@ -1,57 +1,21 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import {
   getAnimalDayIds,
-  getAnimalDevices,
-  getAnimalElectrodeGroups,
-  getAnimalNtrodeMaps,
   getConfigHistory,
 } from '../../state/workspaceSelectors';
 import { useStepperShortcut } from '../../hooks/stepperShortcuts';
 import { useAnimalIdFromUrl } from '../../hooks/useAnimalIdFromUrl';
-import ElectrodeGroupsStep from './ElectrodeGroupsStep';
-import ElectrodeGroupModal from './ElectrodeGroupModal';
-import CopyFromAnimalDialog from './CopyFromAnimalDialog';
-import ChannelMapsStep from './ChannelMapsStep';
-import ChannelMapEditor from './ChannelMapEditor';
 import HardwareConfigStep from './HardwareConfigStep';
+import ElectrodeGroupsContainer from './wiring/ElectrodeGroupsContainer';
+import ChannelMapsContainer from './wiring/ChannelMapsContainer';
 import OptogeneticsContainer from './wiring/OptogeneticsContainer';
 import AnimalProfileSection from './AnimalProfileSection';
 import AlertModal from '../../components/AlertModal';
-import { ConfirmDialog } from '../../components/Modal';
-import { generateChannelMapsForGroup, nextNtrodeId } from '../../utils/channelMapUtils';
-import { downloadChannelMapsCSV, importChannelMapsFromCSV } from '../../utils/csvChannelMapUtils';
-import {
-  normalizeElectrodeGroupWithDefaults,
-  normalizeIdKey,
-  normalizeNtrodeMapWithDefaults,
-} from '../../utils/deviceNormalization';
 import { animalEditorStepForFieldPath } from '../../domain/validation';
 import { applyRepairCommand } from '../../state/repairCommands';
 import './AnimalEditorStepper.scss';
-
-/**
- * Generate the next sequential electrode group ID.
- * Finds the max existing ID and increments by 1. IDs are integers end-to-end
- * (schema requires `integer`); string-typed legacy ids are parsed defensively.
- * @param {Array} existingGroups - Current electrode groups
- * @returns {number} Next integer ID (e.g., 0, 1, 2...)
- */
-function generateNextElectrodeGroupId(existingGroups) {
-  if (!existingGroups || existingGroups.length === 0) {
-    return 0;
-  }
-
-  const maxId = Math.max(
-    ...existingGroups.map(g => {
-      const parsed = parseInt(g.id, 10);
-      return isNaN(parsed) ? 0 : parsed;
-    })
-  );
-
-  return maxId + 1;
-}
 
 /**
  * Parse a query parameter as a non-negative integer. Blank, signed, decimal, and
@@ -143,12 +107,6 @@ export default function AnimalEditorStepper() {
     const initial = parseAnimalEditorRouteContext(window.location.hash);
     return initial.field ? animalEditorStepForFieldPath(initial.field).index : 0;
   });
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState('add');
-  const [editingGroup, setEditingGroup] = useState(null);
-  const [editorOpen, setEditorOpen] = useState(false);
-  const [editingGroupId, setEditingGroupId] = useState(null);
-  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
   // If a NEW repair field arrives while the editor is already mounted (a hashchange to a
   // different `?field=` rather than a fresh route mount), jump to that field's owning
   // step. Keyed on the field string so plain step navigation (which never changes the
@@ -160,10 +118,8 @@ export default function AnimalEditorStepper() {
       setActiveStep(animalEditorStepForFieldPath(routeContext.field).index);
     }
   }, [routeContext.field]);
-  const csvFileInputRef = useRef(null);
   // In-app feedback replacing native alert()/confirm().
   const [alertState, setAlertState] = useState({ isOpen: false, message: '', type: 'info', title: 'Alert', onClose: null });
-  const [pendingDeleteGroup, setPendingDeleteGroup] = useState(null);
 
   // Global Alt+Arrow shortcuts advance/retreat the stepper. Declared before the
   // early returns below to satisfy the Rules of Hooks; the step count is filled in
@@ -208,22 +164,6 @@ export default function AnimalEditorStepper() {
     if (deferred) deferred();
   }
 
-  // Canonical region list seeded from regions already used across the workspace,
-  // so the electrode-group modal can offer them and snap case-only variants.
-  // Memoized (and declared before the early returns, per the Rules of Hooks) so a
-  // fresh array reference doesn't defeat the modal's BrainRegionAutocomplete memo.
-  // Renders on every workspace; a persisted `electrode_groups` may be a non-array, and
-  // `|| []` would PRESERVE it and throw on the `.flatMap`. Read through the canonical
-  // selector so a single corrupt animal can't crash this region-collection sweep.
-  const knownRegions = useMemo(() => [
-    ...new Set(
-      Object.values(model.workspace.animals || {})
-        .flatMap((a) => getAnimalElectrodeGroups(a))
-        .flatMap((g) => [g.location, g.targeted_location])
-        .filter((r) => typeof r === 'string' && r.trim() !== '')
-    ),
-  ], [model.workspace.animals]);
-
   // Validate animal exists
   const animal = animalId ? model.workspace.animals[animalId] : null;
 
@@ -234,10 +174,6 @@ export default function AnimalEditorStepper() {
   if (!animal) {
     return <AnimalEditorError message={`Animal "${animalId}" not found.`} />;
   }
-
-  const animalDevices = getAnimalDevices(animal);
-  const electrodeGroups = getAnimalElectrodeGroups(animal);
-  const ntrodeMaps = getAnimalNtrodeMaps(animal);
 
   // The editor is a repair destination for malformed persisted state, so it must not
   // crash on the corruption it exists to fix. Read history through the canonical selector:
@@ -319,164 +255,6 @@ export default function AnimalEditorStepper() {
     }
   }
 
-  // Electrode groups modal handlers
-  /**
-   * Open modal in add mode
-   */
-  function handleAddGroup() {
-    setModalMode('add');
-    setEditingGroup(null);
-    setModalOpen(true);
-  }
-
-  /**
-   * Open modal in edit mode with selected group
-   * @param {number|string|object} groupIdOrGroup - Electrode group ID (integer) or full group object
-   */
-  function handleEditGroup(groupIdOrGroup) {
-    setModalMode('edit');
-    // Resolve by id (integer or legacy string) via lookup; only treat an actual
-    // object as the group itself. A bare integer id must not be mistaken for the group.
-    const group = typeof groupIdOrGroup === 'object' && groupIdOrGroup !== null
-      ? groupIdOrGroup
-      : electrodeGroups.find(
-          (g) => normalizeIdKey(g.id) === normalizeIdKey(groupIdOrGroup)
-        );
-    setEditingGroup(group);
-    setModalOpen(true);
-  }
-
-  /**
-   * Save electrode group (add or edit)
-   * Auto-generates channel maps if device_type changed (like old app)
-   * Supports bulk creation via count parameter (add mode only)
-   * @param {object} groupData - Form data from modal (includes count for add mode)
-   */
-  function handleSaveGroup(groupData) {
-    const isAdding = modalMode === 'add';
-    const count = groupData.count || 1;
-
-    // Remove count from group data (not part of electrode group schema)
-    const { count: _, ...groupDataWithoutCount } = groupData;
-
-    let updatedGroups;
-    let groupsToGenerateMapsFor = [];
-
-    if (isAdding) {
-      // Add mode: create 'count' identical electrode groups with integer IDs
-      const newGroups = [];
-      const startId = generateNextElectrodeGroupId(electrodeGroups);
-
-      for (let i = 0; i < count; i++) {
-        const groupId = startId + i;
-        const newGroup = normalizeElectrodeGroupWithDefaults(
-          { ...groupDataWithoutCount, id: groupId },
-          groupId
-        );
-        newGroups.push(newGroup);
-        groupsToGenerateMapsFor.push(newGroup);
-      }
-
-      updatedGroups = [...electrodeGroups, ...newGroups];
-    } else {
-      // Edit mode: update single existing group
-      const groupId = editingGroup.id;
-      const normalizedGroup = normalizeElectrodeGroupWithDefaults(
-        { ...groupDataWithoutCount, id: groupId },
-        groupId
-      );
-      updatedGroups = electrodeGroups.map(g =>
-        normalizeIdKey(g.id) === normalizeIdKey(editingGroup.id) ? normalizedGroup : g
-      );
-
-      // Check if device_type changed
-      const deviceTypeChanged = editingGroup.device_type !== normalizedGroup.device_type;
-      if (deviceTypeChanged) {
-        groupsToGenerateMapsFor.push(normalizedGroup);
-      }
-    }
-
-    // Auto-generate channel maps for new/changed groups
-    let updatedChannelMaps = ntrodeMaps;
-
-    if (groupsToGenerateMapsFor.length > 0) {
-      // Remove old maps for the groups we're regenerating; keep the rest.
-      const groupIds = new Set(groupsToGenerateMapsFor.map(g => normalizeIdKey(g.id)));
-      const retainedMaps = updatedChannelMaps.filter(
-        map => !groupIds.has(normalizeIdKey(map.electrode_group_id))
-      );
-
-      // New ntrode IDs start after the current max across the animal, so an
-      // incremental add never collides with an existing ntrode.
-      let startNtrodeId = nextNtrodeId(retainedMaps);
-      const generatedMaps = [];
-      for (const group of groupsToGenerateMapsFor) {
-        const groupMaps = generateChannelMapsForGroup(group, startNtrodeId);
-        generatedMaps.push(...groupMaps);
-        startNtrodeId += groupMaps.length;
-      }
-
-      updatedChannelMaps = retainedMaps.concat(generatedMaps);
-    }
-
-    actions.updateAnimal(animalId, {
-      devices: {
-        ...animalDevices,
-        electrode_groups: updatedGroups,
-        ntrode_electrode_group_channel_map: updatedChannelMaps,
-      },
-    });
-
-    setModalOpen(false);
-
-    // Show success message for bulk creation
-    if (isAdding && count > 1) {
-      showAlert(`Successfully created ${count} identical electrode groups`, 'success');
-    }
-  }
-
-  /**
-   * Cancel modal without saving
-   */
-  function handleCancelModal() {
-    setModalOpen(false);
-  }
-
-  /**
-   * Request deletion of an electrode group — opens a confirmation dialog.
-   * @param {object} group - Electrode group to delete
-   */
-  function handleDeleteGroup(group) {
-    setPendingDeleteGroup(group);
-  }
-
-  /**
-   * Perform the deletion once confirmed, removing the group and its channel maps.
-   */
-  function confirmDeleteGroup() {
-    const group = pendingDeleteGroup;
-    setPendingDeleteGroup(null);
-    if (!group) return;
-
-    // Remove from electrode_groups array
-    const deletingGroupId = normalizeIdKey(group.id);
-    const updatedGroups = electrodeGroups.filter(
-      g => normalizeIdKey(g.id) !== deletingGroupId
-    );
-
-    // Also remove associated channel maps
-    const updatedChannelMaps = ntrodeMaps
-      .filter(map => normalizeIdKey(map.electrode_group_id) !== deletingGroupId);
-
-    actions.updateAnimal(animalId, {
-      devices: {
-        ...animalDevices,
-        electrode_groups: updatedGroups,
-        ntrode_electrode_group_channel_map: updatedChannelMaps,
-      },
-    });
-  }
-
   /**
    * Handle field updates from step components
    * @param {string} field - Field name (e.g., "cameras", "data_acq_device", "behavioral_events")
@@ -502,245 +280,18 @@ export default function AnimalEditorStepper() {
     applyRepairCommand(issue.repairCommand, { actions, animalId, animal });
   }
 
-  /**
-   * Handle copy from animal request
-   */
-  function handleCopyFromAnimal() {
-    setCopyDialogOpen(true);
-  }
-
-  /**
-   * Handle copy from animal execution
-   * @param {object} data - Copied electrode groups and channel maps
-   */
-  function handleCopyConfirm(data) {
-    const { sourceAnimalName, electrode_groups, ntrode_electrode_group_channel_map } = data;
-
-    // Append copied data to existing data
-    const existingGroups = electrodeGroups;
-    const existingMaps = ntrodeMaps;
-
-    const updatedGroups = [...existingGroups, ...electrode_groups]
-      .map((group, index) => normalizeElectrodeGroupWithDefaults(group, index));
-    const updatedMaps = [...existingMaps, ...ntrode_electrode_group_channel_map]
-      .map((map, index) => normalizeNtrodeMapWithDefaults(map, index));
-
-    actions.updateAnimal(animalId, {
-      devices: {
-        ...animalDevices,
-        electrode_groups: updatedGroups,
-        ntrode_electrode_group_channel_map: updatedMaps,
-      },
-    });
-
-    setCopyDialogOpen(false);
-
-    // Show success message
-    const groupCount = electrode_groups.length;
-    showAlert(
-      `Successfully copied ${groupCount} electrode ${groupCount === 1 ? 'group' : 'groups'} from ${sourceAnimalName}`,
-      'success'
-    );
-  }
-
-  /**
-   * Handle copy from animal cancellation
-   */
-  function handleCopyCancel() {
-    setCopyDialogOpen(false);
-  }
-
-  // Channel maps handlers
-  /**
-   * Open channel map editor for specific electrode group
-   * @param {number} groupId - Integer electrode group ID
-   */
-  function handleEditChannelMap(groupId) {
-    setEditingGroupId(groupId);
-    setEditorOpen(true);
-  }
-
-  /**
-   * Save channel map changes
-   * @param {Array} updatedMaps - Updated channel maps for the editing group
-   */
-  function handleSaveChannelMap(updatedMaps) {
-    // Get all channel maps
-    const allChannelMaps = ntrodeMaps;
-
-    // Remove old maps for this group and add updated ones
-    const editingKey = normalizeIdKey(editingGroupId);
-    const otherMaps = allChannelMaps.filter(
-      map => normalizeIdKey(map.electrode_group_id) !== editingKey
-    );
-    const newChannelMaps = [...otherMaps, ...updatedMaps]
-      .map((map, index) => normalizeNtrodeMapWithDefaults(map, index));
-
-    actions.updateAnimal(animalId, {
-      devices: {
-        ...animalDevices,
-        ntrode_electrode_group_channel_map: newChannelMaps,
-      },
-    });
-
-    setEditorOpen(false);
-    setEditingGroupId(null);
-  }
-
-  /**
-   * Cancel channel map editor without saving
-   */
-  function handleCancelChannelMapEditor() {
-    setEditorOpen(false);
-    setEditingGroupId(null);
-  }
-
-  /**
-   * Export channel maps to CSV file
-   */
-  function handleExportCSV() {
-    const channelMaps = ntrodeMaps;
-
-    if (channelMaps.length === 0) {
-      showAlert(
-        'No channel maps to export. Channel maps are automatically created when you add electrode groups with device types.',
-        'info'
-      );
-      return;
-    }
-
-    downloadChannelMapsCSV(channelMaps, electrodeGroups, `${animalId}_channel_maps.csv`);
-  }
-
-  /**
-   * Trigger file input for CSV import
-   */
-  function handleImportCSV() {
-    csvFileInputRef.current?.click();
-  }
-
-  /**
-   * Handle CSV file selection and import
-   * @param {Event} event - File input change event.
-   */
-  function handleCSVFileSelect(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const csvContent = e.target?.result;
-        // CSV import fully replaces the channel map (see the store update below), so
-        // the imported ntrode ids are renumbered from 0 — no `existingMaps` to avoid
-        // colliding with. The collision-safe `existingMaps` parameter exists for an
-        // additive caller, which this is not.
-        const importedMaps = importChannelMapsFromCSV(csvContent);
-
-        // Validate imported maps match existing electrode groups
-        const electrodeGroupIds = new Set(
-          electrodeGroups.map((g) => normalizeIdKey(g.id))
-        );
-        const invalidGroups = importedMaps.filter(
-          (map) => !electrodeGroupIds.has(normalizeIdKey(map.electrode_group_id))
-        );
-
-        if (invalidGroups.length > 0) {
-          const invalidIds = [...new Set(invalidGroups.map((m) => m.electrode_group_id))].join(', ');
-          showAlert(
-            `Cannot import CSV. The following electrode group IDs in the CSV do not exist: ${invalidIds}. Please ensure electrode groups are created before importing channel maps.`,
-            'error'
-          );
-          return;
-        }
-
-        // Update animal with imported maps
-        actions.updateAnimal(animalId, {
-          devices: {
-            ...animalDevices,
-            ntrode_electrode_group_channel_map: importedMaps,
-          },
-        });
-
-        showAlert(`Successfully imported ${importedMaps.length} channel maps from CSV.`, 'success');
-      } catch (error) {
-        showAlert(`Failed to import CSV: ${error.message}`, 'error');
-      }
-
-      // Reset file input
-      event.target.value = '';
-    };
-
-    reader.readAsText(file);
-  }
-
-  // Get electrode group for editor. Compare against null, not truthiness — an
-  // integer group id of 0 is falsy but valid.
-  const editingElectrodeGroup = editingGroupId != null
-    ? electrodeGroups.find(
-        g => normalizeIdKey(g.id) === normalizeIdKey(editingGroupId)
-      )
-    : null;
-
-  // Get channel maps for editing group
-  const editingChannelMaps = editingGroupId != null
-    ? ntrodeMaps
-        .filter(map => normalizeIdKey(map.electrode_group_id) === normalizeIdKey(editingGroupId))
-    : [];
-
   // Step configuration. Phase 8.7 Task 2c: user-facing step labels use scientist language
   // (the screen-map targets) rather than schema/implementation terms.
   const steps = [
     {
       label: 'Electrodes & Ephys',
-      component: (
-        <ElectrodeGroupsStep
-          animal={animal}
-          onFieldUpdate={handleFieldUpdate}
-          onAdd={handleAddGroup}
-          onEdit={handleEditGroup}
-          onDelete={handleDeleteGroup}
-          onCopy={handleCopyFromAnimal}
-        />
-      ),
+      // `addRef` lets the container register its "add group" handler so the stepper's Alt+N
+      // shortcut still adds a group on this step (the container owns the add modal now).
+      component: <ElectrodeGroupsContainer animalId={animalId} addRef={addHandlerRef} />,
     },
     {
       label: 'Channel Maps',
-      component: (
-        <div>
-          <ChannelMapsStep
-            animal={animal}
-            onEditChannelMap={handleEditChannelMap}
-          />
-          <div className="action-buttons" style={{ marginTop: '1rem' }}>
-            <p className="help-text" style={{ marginBottom: '0.5rem', color: '#666' }}>
-              Channel maps are automatically generated when you select a device type for an electrode group.
-              Use the buttons below to export or import channel maps as CSV.
-            </p>
-            <button
-              onClick={handleExportCSV}
-              className="action-button btn-secondary"
-              aria-label="Export channel maps to CSV"
-            >
-              Export to CSV
-            </button>
-            <button
-              onClick={handleImportCSV}
-              className="action-button btn-secondary"
-              aria-label="Import channel maps from CSV"
-            >
-              Import from CSV
-            </button>
-            <input
-              ref={csvFileInputRef}
-              type="file"
-              accept=".csv"
-              style={{ display: 'none' }}
-              onChange={handleCSVFileSelect}
-            />
-          </div>
-        </div>
-      ),
+      component: <ChannelMapsContainer animalId={animalId} />,
     },
     {
       label: 'Optogenetics Setup',
@@ -766,11 +317,11 @@ export default function AnimalEditorStepper() {
 
   // Check if we're on the final step
   const isOnFinalStep = activeStep === steps.length - 1;
-  // Keep the shortcut handler's step count + add target current (the ref + hook are
-  // declared up top, before the early returns, to satisfy the Rules of Hooks). Alt+N
-  // adds an electrode group on the Electrode Groups step (0); other steps have no add.
+  // Keep the shortcut handler's step count current (the ref + hook are declared up top,
+  // before the early returns, to satisfy the Rules of Hooks). The Alt+N "add" target is
+  // registered into `addHandlerRef` by ElectrodeGroupsContainer while it is mounted (step 0),
+  // and cleared on unmount — so other steps have no add target.
   stepCountRef.current = steps.length;
-  addHandlerRef.current = activeStep === 0 ? handleAddGroup : null;
 
   return (
     <div className="animal-editor-stepper">
@@ -892,49 +443,6 @@ export default function AnimalEditorStepper() {
           {isOnFinalStep ? 'Save' : 'Next'}
         </button>
       </div>
-
-      {/* Electrode Groups Modal */}
-      <ElectrodeGroupModal
-        isOpen={modalOpen}
-        mode={modalMode}
-        group={editingGroup}
-        knownRegions={knownRegions}
-        onSave={handleSaveGroup}
-        onCancel={handleCancelModal}
-      />
-
-      {/* Channel Map Editor Modal */}
-      {editorOpen && editingElectrodeGroup && (
-        <ChannelMapEditor
-          electrodeGroup={editingElectrodeGroup}
-          channelMaps={editingChannelMaps}
-          onSave={handleSaveChannelMap}
-          onCancel={handleCancelChannelMapEditor}
-        />
-      )}
-
-      {/* Copy from Animal Dialog */}
-      <CopyFromAnimalDialog
-        open={copyDialogOpen}
-        currentAnimalId={animalId}
-        animals={model.workspace.animals}
-        onCopy={handleCopyConfirm}
-        onCancel={handleCopyCancel}
-      />
-
-      <ConfirmDialog
-        isOpen={!!pendingDeleteGroup}
-        title="Delete electrode group?"
-        message={
-          pendingDeleteGroup
-            ? `Delete electrode group "${pendingDeleteGroup.location}" (${pendingDeleteGroup.device_type})? This cannot be undone.`
-            : ''
-        }
-        confirmLabel="Delete"
-        destructive
-        onConfirm={confirmDeleteGroup}
-        onCancel={() => setPendingDeleteGroup(null)}
-      />
 
       <AlertModal
         isOpen={alertState.isOpen}
