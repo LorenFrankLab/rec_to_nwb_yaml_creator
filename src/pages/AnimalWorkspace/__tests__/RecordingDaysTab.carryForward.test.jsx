@@ -7,7 +7,7 @@
  * we read the ACTUAL store state the action wrote, not a render-time snapshot).
  */
 import { describe, it, expect, afterEach } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent, waitFor } from '@testing-library/react';
 import { StoreProvider, useStoreContext } from '../../../state/StoreContext';
 import { RecordingDaysTab } from '../RecordingDaysTab';
 
@@ -111,5 +111,73 @@ describe('Carry-forward day creation toggle', () => {
     });
     const newDay = captured.model.workspace.days['remy-2023-06-23'];
     expect(newDay.tasks).toEqual([{ task_name: 'W-track', task_epochs: [1] }]);
+  });
+
+  // Drive day creation through the component's REAL handleCreateDays (the calendar's onCreateDays
+  // callback), NOT actions.createDay directly, so we cover the component's actual carry-forward
+  // mapping `{ carryForwardFromDayId: carryForward && mostRecentDayId ? mostRecentDayId : undefined }`.
+  // The calendar's displayed month is clock-dependent, so we select the always-present "(today)"
+  // gridcell — today's ISO date (never 2023-06-22, so it can't collide with the prior day).
+  /**
+   * Open the calendar, select today's date, and click "Create" — exercising the rendered
+   * RecordingDaysTab → CalendarDayCreator → handleCreateDays path. Returns today's day id.
+   * @returns {Promise<string>} The id of the day that creation will produce (`remy-YYYY-MM-DD`).
+   */
+  async function createTodayViaCalendar() {
+    fireEvent.click(screen.getByRole('button', { name: /show calendar/i }));
+    const todayCell = screen
+      .getAllByRole('gridcell')
+      .find((btn) => /\(today\)/i.test(btn.getAttribute('aria-label') || '') && !btn.disabled);
+    expect(todayCell).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(todayCell);
+    });
+    const createBtn = await screen.findByRole('button', { name: /create 1 recording day/i });
+    await act(async () => {
+      fireEvent.click(createBtn);
+    });
+    const now = new Date();
+    const isoToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
+      now.getDate()
+    ).padStart(2, '0')}`;
+    return `remy-${isoToday}`;
+  }
+
+  it('with the toggle OFF, creating a day via the calendar UI starts blank (no carried tasks)', async () => {
+    renderPane('remy', { remy: animalWithDay }, { 'remy-2023-06-22': priorDay });
+    // Flip the carry-forward checkbox OFF through the rendered control.
+    const toggle = screen.getByRole('checkbox', {
+      name: /start each new day from the last day \(2023-06-22\)/i,
+    });
+    expect(toggle).toBeChecked();
+    fireEvent.click(toggle);
+    expect(toggle).not.toBeChecked();
+
+    const newDayId = await createTodayViaCalendar();
+
+    await waitFor(() => {
+      expect(captured.model.workspace.days[newDayId]).toBeDefined();
+    });
+    // Toggle OFF ⇒ component passes carryForwardFromDayId: undefined ⇒ no tasks carried.
+    expect(captured.model.workspace.days[newDayId].tasks).toEqual([]);
+  });
+
+  it('with the toggle ON, creating a day via the calendar UI carries the prior day tasks', async () => {
+    renderPane('remy', { remy: animalWithDay }, { 'remy-2023-06-22': priorDay });
+    // Default ON; create through the same real UI path without touching the store action.
+    expect(
+      screen.getByRole('checkbox', {
+        name: /start each new day from the last day \(2023-06-22\)/i,
+      })
+    ).toBeChecked();
+
+    const newDayId = await createTodayViaCalendar();
+
+    await waitFor(() => {
+      expect(captured.model.workspace.days[newDayId]).toBeDefined();
+    });
+    expect(captured.model.workspace.days[newDayId].tasks).toEqual([
+      { task_name: 'W-track', task_epochs: [1] },
+    ]);
   });
 });

@@ -92,8 +92,9 @@ export const getAnimalDayIds = (animal) => asArray(animal?.days);
  * The id of the animal's latest-dated day present in `days`, or null. Day dates are `YYYY-MM-DD`
  * (lexicographic compare == chronological). Tolerates a corrupt animal, a missing `days` map, a
  * dangling id, or a record without a string `date`.
- * @param animal
- * @param days
+ * @param {object} animal
+ * @param {object} days
+ * @returns {string|null}
  */
 export const getMostRecentDayId = (animal, days) => {
   const present = getAnimalDayIds(animal)
