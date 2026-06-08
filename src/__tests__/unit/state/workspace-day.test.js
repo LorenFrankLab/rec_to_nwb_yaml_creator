@@ -1113,5 +1113,34 @@ describe('Day State Management', () => {
         });
       }).toThrow(/already exists/i);
     });
+
+    it('throws when the source record names an animal that does not exist, writing no junk entry', () => {
+      // A corrupt/partial import can leave a day record whose animalId points at no animal.
+      // Duplicating it must fail closed (throw before any write) rather than spread a junk
+      // `animals.ghost`/`animals.undefined` entry while resolving the owning animal.
+      const initialState = {
+        workspace: {
+          animals: {
+            remy: { id: 'remy', subject: { subject_id: 'remy' }, days: [] },
+          },
+          days: {
+            orphan: { id: 'orphan', animalId: 'ghost', date: '2023-06-22', session: { session_id: 's1' } },
+          },
+          settings: {},
+        },
+      };
+      const { result } = renderHook(() => useStore(initialState));
+
+      expect(() => {
+        act(() => {
+          result.current.actions.duplicateDay('orphan', '2023-06-23');
+        });
+      }).toThrow(/not found/i);
+
+      const { animals } = result.current.model.workspace;
+      expect(Object.keys(animals)).toEqual(['remy']);
+      expect(animals).not.toHaveProperty('ghost');
+      expect(animals).not.toHaveProperty('undefined');
+    });
   });
 });
