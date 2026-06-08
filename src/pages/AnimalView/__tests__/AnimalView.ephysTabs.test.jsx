@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StoreProvider, useStoreContext } from '../../../state/StoreContext';
 import { AnimalView } from '../index';
@@ -136,6 +136,62 @@ describe('AnimalView — electrode-groups tab (Phase 3-2)', () => {
     expect(new Set(maps.map((m) => m.ntrode_id)).size).toBe(4);
     // Each shank's map resets to LOCAL electrode ids (keys 0..N-1), not global hardware channels.
     expect(Object.keys(maps[0].map)).toEqual(expect.arrayContaining(['0', '1', '2', '3']));
+  });
+});
+
+describe('AnimalView — electrode-groups config-version legibility (Task 3.4, ephys slice)', () => {
+  beforeEach(() => {
+    delete window.location;
+    window.location = { hash: '#/animal/remy/electrode-groups' };
+  });
+  afterEach(() => {
+    window.location = { hash: '' };
+  });
+
+  /**
+   * A multi-version animal: config forked from v1 (2023-06-22) to v2 (2023-07-10).
+   * @returns {object} The remy animal record with a two-version configurationHistory.
+   */
+  function buildMultiVersionAnimal() {
+    const animal = buildConfiguredAnimal();
+    animal.configurationHistory = [
+      {
+        version: 1,
+        date: '2023-06-22',
+        description: 'Initial configuration',
+        devices: { electrode_groups: [{ id: 0, device_type: 'tetrode_12.5', location: 'CA1' }], ntrode_electrode_group_channel_map: [] },
+        appliedToDays: [],
+      },
+      {
+        version: 2,
+        date: '2023-07-10',
+        description: 'Lowered CA1 tetrodes by 40um',
+        devices: { electrode_groups: [{ id: 0, device_type: 'tetrode_12.5', location: 'CA1' }], ntrode_electrode_group_channel_map: [] },
+        appliedToDays: [],
+      },
+    ];
+    return animal;
+  }
+
+  it('shows dated, human-readable config-change context (not a bare "v2") for a multi-version animal', () => {
+    renderView('electrode-groups', buildMultiVersionAnimal());
+    const context = screen.getByRole('note', { name: /electrode configuration history/i });
+    // The reconfiguration date is surfaced, with which versions apply before/after.
+    expect(within(context).getByText(/changed on 2023-07-10/i)).toBeInTheDocument();
+    expect(within(context).getByText(/use v1/i)).toBeInTheDocument();
+    expect(within(context).getByText(/use v2/i)).toBeInTheDocument();
+  });
+
+  it('does not show the config-version context for a single-version animal', () => {
+    renderView('electrode-groups'); // default fixture has one configuration version
+    expect(screen.queryByRole('note', { name: /electrode configuration history/i })).not.toBeInTheDocument();
+  });
+
+  it('does not show the config-version context on the channel-maps tab', () => {
+    delete window.location;
+    window.location = { hash: '#/animal/remy/channel-maps' };
+    renderView('channel-maps', buildMultiVersionAnimal());
+    expect(screen.queryByRole('note', { name: /electrode configuration history/i })).not.toBeInTheDocument();
   });
 });
 

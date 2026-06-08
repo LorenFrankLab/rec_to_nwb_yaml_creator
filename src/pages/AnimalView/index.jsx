@@ -20,6 +20,7 @@ import { getAnimalSectionStatus, SECTION_STATUS } from '../../domain/sectionStat
 import { RecordingDaysTab } from '../AnimalWorkspace/RecordingDaysTab';
 import ElectrodeGroupsContainer from '../AnimalEditor/wiring/ElectrodeGroupsContainer';
 import ChannelMapsContainer from '../AnimalEditor/wiring/ChannelMapsContainer';
+import ConfigVersionContext from './ConfigVersionContext';
 import './AnimalView.css';
 
 /**
@@ -69,14 +70,20 @@ const TAB_LABEL = Object.fromEntries(
  *
  * @param {string} tab - The active tab (route `:tab` segment).
  * @param {string} animalId - The animal whose section to render.
+ * @param {object} animal - The resolved animal record (for config-version legibility).
  * @returns {React.Element}
  */
-function renderPanel(tab, animalId) {
+function renderPanel(tab, animalId, animal) {
   switch (tab) {
     case 'days':
       return <RecordingDaysTab animalId={animalId} />;
     case 'electrode-groups':
-      return <ElectrodeGroupsContainer animalId={animalId} />;
+      return (
+        <>
+          <ConfigVersionContext animal={animal} />
+          <ElectrodeGroupsContainer animalId={animalId} />
+        </>
+      );
     case 'channel-maps':
       return <ChannelMapsContainer animalId={animalId} />;
     default:
@@ -204,7 +211,7 @@ export function AnimalView({ animalId, tab }) {
               {TAB_SCOPE[tab]}
             </p>
           )}
-          {renderPanel(tab, animalId)}
+          {renderPanel(tab, animalId, animal)}
         </section>
       </div>
     </main>
