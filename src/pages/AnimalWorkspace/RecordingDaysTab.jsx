@@ -15,7 +15,12 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
-import { getAnimalSubject, getConfigHistory, getDaySession } from '../../state/workspaceSelectors';
+import {
+  getAnimalSubject,
+  getConfigHistory,
+  getDaySession,
+  getMostRecentDayId,
+} from '../../state/workspaceSelectors';
 import { getDayRowStatus } from '../../domain/workflowStatus';
 import { getAnimalSectionStatus, getAnimalBlockingSections, SECTION_STATUS } from '../../domain/sectionStatus';
 import {
@@ -69,10 +74,17 @@ export function RecordingDaysTab({ animalId }) {
   // confirm can name it even after the store row changes). Animal delete moved to the AnimalView
   // header ⋮ in Phase 4 (the shared type-to-confirm AnimalDeleteDialog), so it no longer lives here.
   const [pendingDeleteDay, setPendingDeleteDay] = useState(null);
+  // Carry-forward day creation: default ON. When on, a new day seeds its day-owned content
+  // (tasks, behavioral events, keywords, technical params, experiment description, weight) from
+  // the animal's most recent existing day — reviewable per day. Opt out to start blank.
+  const [carryForward, setCarryForward] = useState(true);
 
   const { animals = {}, days = {} } = model.workspace;
 
   const selectedAnimal = selectedAnimalId ? animals[selectedAnimalId] : null;
+  // The animal's latest-dated existing day — the carry-forward source. null when there is none
+  // (so the toggle is hidden and creation falls back to a blank day).
+  const mostRecentDayId = getMostRecentDayId(selectedAnimal, days);
   // A recovered/imported animal can carry a malformed (non-array) `days`. `getAnimalDayIds`
   // safely reads it as [], so without this explicit flag the workspace would launder it to
   // "No recording days yet" and hide the problem. Surface it as a corrupt-reference state.
@@ -147,10 +159,15 @@ export function RecordingDaysTab({ animalId }) {
       }
 
       try {
-        actions.createDay(selectedAnimalId, date, {
-          session_id: sessionId,
-          session_description: `Recording session for ${selectedAnimalId} on ${date}`,
-        });
+        actions.createDay(
+          selectedAnimalId,
+          date,
+          {
+            session_id: sessionId,
+            session_description: `Recording session for ${selectedAnimalId} on ${date}`,
+          },
+          { carryForwardFromDayId: carryForward && mostRecentDayId ? mostRecentDayId : undefined }
+        );
         existingIds.add(dayId);
       } catch (error) {
         console.error(`Failed to create day ${date}:`, error);
@@ -204,6 +221,17 @@ export function RecordingDaysTab({ animalId }) {
             >
               {showCalendar ? 'Hide Calendar' : 'Add Recording Days'}
             </button>
+            {mostRecentDayId && (
+              <label className="carry-forward-toggle">
+                <input
+                  type="checkbox"
+                  checked={carryForward}
+                  onChange={(e) => setCarryForward(e.target.checked)}
+                />
+                Start each new day from the last day ({days[mostRecentDayId]?.date}) — review &amp;
+                adjust per day
+              </label>
+            )}
           </div>
         </header>
 

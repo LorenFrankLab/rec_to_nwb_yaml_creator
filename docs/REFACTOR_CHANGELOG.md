@@ -4,6 +4,28 @@
 
 **Last Updated:** June 8, 2026
 
+## Carry-forward day creation (June 8, 2026)
+
+A new recording day now defaults its day-owned content from the animal's most recent existing day,
+so consecutive days in a multi-day experiment don't have to be re-entered by hand. The carry is
+**reviewable** and controlled by a **default-ON toggle** on the Recording Days tab ("Start each new
+day from the last day (…) — review & adjust per day"); the toggle only appears once a prior day
+exists, and opting out creates a blank day exactly as before.
+
+- **Carried (day-owned):** `tasks`, `behavioral_events`, `keywords`, `technical` (the technical
+  params), and `session.experiment_description` / `session.weight`. Each is **deep-cloned** from the
+  source via `structuredClone`, so the new day never aliases the prior day's objects.
+- **Never carried:** `session_id` / `session_description` (always date-derived from the caller) and
+  `associated_files` / `associated_video_files` (session-specific, always empty). **Bad channels are
+  explicitly not carried.**
+- **Selector:** new `getMostRecentDayId(animal, days)` ([workspaceSelectors.js](../src/state/workspaceSelectors.js))
+  resolves the animal's latest-dated present day (lexicographic `YYYY-MM-DD` compare), tolerating a
+  corrupt animal / missing days map / dangling id / record without a string `date` (→ null).
+- **Merge-neutral:** a carried day exports **byte-identical** YAML to a hand-entered one — golden
+  baselines unchanged. All new params are **trailing-optional** (`createDayRecord(..., carryFrom)`,
+  `createDay(..., options)`), so no existing call site changes behavior (`carryFrom = null` reproduces
+  today's blank-day output exactly).
+
 ## Pre-merge review remediation — block the dangling recording-system reference (June 8, 2026)
 
 A pre-merge review (vs `modern`) flagged ONE Critical issue across three independent reviewers: a day's
