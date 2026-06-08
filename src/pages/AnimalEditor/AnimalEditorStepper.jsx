@@ -1,10 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
-import {
-  getAnimalDayIds,
-  getConfigHistory,
-} from '../../state/workspaceSelectors';
+import { getAnimalDayIds } from '../../state/workspaceSelectors';
 import { useStepperShortcut } from '../../hooks/stepperShortcuts';
 import { useAnimalIdFromUrl } from '../../hooks/useAnimalIdFromUrl';
 import HardwareConfigStep from './HardwareConfigStep';
@@ -14,67 +11,15 @@ import OptogeneticsContainer from './wiring/OptogeneticsContainer';
 import AnimalProfileSection from './AnimalProfileSection';
 import AlertModal from '../../components/AlertModal';
 import RawCorruptionBanner from '../../components/RawCorruptionBanner';
+import ReconfigurationContextBanner from '../../components/ReconfigurationContextBanner';
+import { parseReconfigContext, useReconfigContext } from '../../hooks/useReconfigContext';
 import { animalEditorStepForFieldPath } from '../../domain/validation';
 import { applyRepairCommand } from '../../state/repairCommands';
 import './AnimalEditorStepper.scss';
 
-/**
- * Parse a query parameter as a non-negative integer. Blank, signed, decimal, and
- * non-numeric values are treated as absent rather than becoming `0` or `NaN`.
- *
- * @param {string|null} value - Raw query parameter value.
- * @returns {number|null} Parsed integer, or null when absent/invalid.
- */
-function parseIntegerParam(value) {
-  const trimmed = value?.trim();
-  if (!trimmed || !/^\d+$/.test(trimmed)) return null;
-  const parsed = Number.parseInt(trimmed, 10);
-  return Number.isSafeInteger(parsed) ? parsed : null;
-}
-
-/**
- * Parse transient Animal Editor route context from the hash query string.
- *
- * @param {string} hash - Current window hash.
- * @returns {{context: string|null, version: number|null, fromDayId: string|null, movedDays: number|null}}
- */
-function parseAnimalEditorRouteContext(hash) {
-  const query = (hash || '').split('?')[1] || '';
-  const params = new URLSearchParams(query);
-  const movedDays = parseIntegerParam(params.get('movedDays'));
-
-  return {
-    context: params.get('context'),
-    version: parseIntegerParam(params.get('version')),
-    fromDayId: params.get('fromDay'),
-    movedDays: movedDays > 0 ? movedDays : null,
-    field: params.get('field'),
-  };
-}
-
-/**
- * Track route query context while the editor is mounted.
- *
- * @returns {{context: string|null, version: number|null, fromDayId: string|null, movedDays: number|null}}
- */
-function useAnimalEditorRouteContext() {
-  const [routeContext, setRouteContext] = useState(() => (
-    typeof window === 'undefined'
-      ? { context: null, version: null, fromDayId: null, movedDays: null, field: null }
-      : parseAnimalEditorRouteContext(window.location.hash)
-  ));
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-    const handleHashChange = () => {
-      setRouteContext(parseAnimalEditorRouteContext(window.location.hash));
-    };
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
-
-  return routeContext;
-}
+// Route-context parsing (`?context=reconfigure&version=&fromDay=&movedDays=` + `?field=`) and the
+// reconfiguration banner are shared with the tabbed Animal View — see
+// ../../hooks/useReconfigContext + ../../components/ReconfigurationContextBanner.
 
 /**
  * Animal Editor Stepper - Container for multi-step animal device configuration
@@ -98,14 +43,14 @@ function useAnimalEditorRouteContext() {
  */
 export default function AnimalEditorStepper() {
   const animalId = useAnimalIdFromUrl();
-  const routeContext = useAnimalEditorRouteContext();
+  const routeContext = useReconfigContext();
   const { model, actions } = useStoreContext();
   // Deep-link: a repair routed here as `?field=<path>` opens the Animal Editor on the
   // step that owns that field (channel maps / electrode groups / hardware) instead of
   // dropping the target and landing on step 0. Read at mount via the initializer.
   const [activeStep, setActiveStep] = useState(() => {
     if (typeof window === 'undefined') return 0;
-    const initial = parseAnimalEditorRouteContext(window.location.hash);
+    const initial = parseReconfigContext(window.location.hash);
     return initial.field ? animalEditorStepForFieldPath(initial.field).index : 0;
   });
   // If a NEW repair field arrives while the editor is already mounted (a hashchange to a
@@ -175,25 +120,6 @@ export default function AnimalEditorStepper() {
   if (!animal) {
     return <AnimalEditorError message={`Animal "${animalId}" not found.`} />;
   }
-
-  // The editor is a repair destination for malformed persisted state, so it must not
-  // crash on the corruption it exists to fix. Read history through the canonical selector:
-  // a non-array `configurationHistory` degrades to no history instead of throwing.
-  const configurationHistory = getConfigHistory(animal);
-  const latestSnapshot = configurationHistory[configurationHistory.length - 1] || null;
-  const latestConfigurationVersion = latestSnapshot?.version ?? null;
-  const isReconfigurationEdit = routeContext.context === 'reconfigure';
-  const routeVersionExists = routeContext.version != null &&
-    configurationHistory.some((snapshot) => snapshot.version === routeContext.version);
-  const contextVersion = routeVersionExists ? routeContext.version : latestConfigurationVersion;
-  const contextIsLatest = contextVersion != null && contextVersion === latestConfigurationVersion;
-  const sourceDay = routeContext.fromDayId ? model.workspace.days?.[routeContext.fromDayId] : null;
-  const sourceContextText = sourceDay
-    ? ` for reconfiguration starting ${sourceDay.date}.`
-    : ' after reconfiguration fork.';
-  const movedDaysText = routeContext.movedDays != null
-    ? ` Moved ${routeContext.movedDays} ${routeContext.movedDays === 1 ? 'day' : 'days'} to this version.`
-    : '';
 
   // Step navigation handlers
   /**
@@ -348,18 +274,11 @@ export default function AnimalEditorStepper() {
             keeps the configuration it was pinned to. Cameras and the recording system are shared
             animal-level setup: editing them affects all recording days.
           </p>
-          {isReconfigurationEdit && (
-            <div
-              className={`configuration-edit-context ${contextIsLatest ? '' : 'configuration-edit-context-warning'}`}
-              role="status"
-            >
-              {contextIsLatest
-                ? `Editing latest configuration v${contextVersion}`
-                : `Review configuration v${contextVersion ?? 'unknown'}; current latest is v${latestConfigurationVersion ?? 'unknown'}`}
-              {sourceContextText}
-              {movedDaysText}
-            </div>
-          )}
+          <ReconfigurationContextBanner
+            animal={animal}
+            routeContext={routeContext}
+            days={model.workspace.days}
+          />
         </div>
       </div>
 

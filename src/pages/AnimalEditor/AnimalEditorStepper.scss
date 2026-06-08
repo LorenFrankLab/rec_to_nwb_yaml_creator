@@ -54,22 +54,8 @@
   text-align: right;
 }
 
-.configuration-edit-context {
-  padding: 0.35rem 0.6rem;
-  color: #1b5e20;
-  background-color: #e8f5e9;
-  border: 1px solid #a5d6a7;
-  border-radius: 4px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  line-height: 1.35;
-}
-
-.configuration-edit-context-warning {
-  color: #8a3b00;
-  background-color: #fff3e0;
-  border-color: #ffcc80;
-}
+/* .configuration-edit-context styles moved to
+   ../../components/ReconfigurationContextBanner.css (shared with the tabbed Animal View). */
 
 .back-button {
   display: inline-flex;
