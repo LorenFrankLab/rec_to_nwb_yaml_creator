@@ -125,11 +125,16 @@ the extraction (tested).
 - **Phase 2 — Recording Days tab.** "Add Recording Days" in the tab header; per-day delete → per-row ⋮
   menu; the setup checklist becomes a **"what this day needs to export"** strip — NOT a "set up
   electrodes first" gate (behavior-only days are valid).
-- **Phase 3 — Setup tabs (the big one).** EXTRACT the host wiring into per-tab containers; split
-  **Electrode Groups** and **Channel Maps** into separate tabs; Recording System / Cameras / DIO /
-  Optogenetics tabs (each with a scope descriptor under its name); a home for subject/profile facts
-  (`AnimalProfileSection`) and the reconfiguration context; the per-animal **Validation & Export** tab
-  (a `buildRows`-filtered-by-animal view). Apply the recording-system honesty caveat + opto status chip.
+- **Phase 3 — Setup tabs (the big one — ships as SIX PRs).** EXTRACT the host wiring into per-tab
+  containers; split **Electrode Groups** and **Channel Maps** into separate tabs; Recording System /
+  Cameras / DIO / Optogenetics tabs (each with a scope descriptor under its name); a home for subject/
+  profile facts (`AnimalProfileSection`) and the reconfiguration context; the per-animal **Validation &
+  Export** tab (a `buildRows`-filtered-by-animal view) + the mandatory per-day effective-setup review; the
+  warning-acknowledgement on export. Apply the recording-system honesty caveat + opto status chip.
+  Decomposed into [3-1 extract](phase-3-1-extract-wiring.md) → [3-2 ephys tabs](phase-3-2-ephys-tabs.md) →
+  [3-3 catalog tabs](phase-3-3-catalog-tabs.md) → [3-4 profile/context](phase-3-4-profile-context.md) →
+  [3-5 validation/export + per-day review](phase-3-5-validation-export-tab.md) →
+  [3-6 warning-ack](phase-3-6-warning-ack.md); see the [Phase 3 charter](phase-3-setup-tabs.md).
 - **Phase 3a — Repair-routing migration (tracked workstream).** Enumerate every `#/animal/:id/editor?field=…`
   emitter (`validation.js`, `DevicesStep.jsx`, `DayTechnicalSection.jsx`, `AnimalWorkspace/index.jsx`, …),
   redesign `ANIMAL_EDITOR_STEPS` → a **tab-keyed** map (camera and recording-system now resolve to
@@ -235,9 +240,10 @@ Full target order: `8.7 → tabbed 0 → (export-safety substance of 9/10, paral
     fixing — {reason}`) + one **action** + a conditional **older-electrode-setup flag** (only when the day
     is pinned to a non-current config version). `session_id`, camera count, opto state, and the raw config
     version NUMBER move OFF the row into the day / export preflight (the dense "scan line" is retired).
-    Date-ordered, newest-first for now. **Depends on Task 3.3a** (the mandatory per-day effective-setup
-    review) shipping — that's where the retired scan detail relocates; removing it from the row before 3.3a
-    exists would regress the valid-but-wrong defense (requirement 1). ✅
+    Date-ordered, newest-first for now. **Depends on the per-day effective-setup review** (Task 3.3a, now
+    shipped in [phase 3-5](phase-3-5-validation-export-tab.md)) — that's where the retired scan detail
+    relocates; removing it from the row before that review exists would regress the valid-but-wrong defense
+    (requirement 1). ✅
 13. **Animal delete gets a type-to-confirm gate; day delete does not** — deleting an animal is the
     highest-blast-radius, irreversible action (wipes the whole shared setup + every recording day at once),
     so its confirm disables "Delete animal" until the user types the animal `id`. Per-day delete keeps the
@@ -383,6 +389,9 @@ review.** These requirements therefore matter more than the layout choice and mu
 ## Per-phase detail
 
 See [phase-0-quick-wins.md](phase-0-quick-wins.md), [phase-1-tab-shell.md](phase-1-tab-shell.md),
-[phase-2-recording-days-tab.md](phase-2-recording-days-tab.md), [phase-3-setup-tabs.md](phase-3-setup-tabs.md),
-[phase-3a-repair-routing.md](phase-3a-repair-routing.md), [phase-4-lifecycle-nav.md](phase-4-lifecycle-nav.md),
-[phase-5-decommission-stepper.md](phase-5-decommission-stepper.md).
+[phase-2-recording-days-tab.md](phase-2-recording-days-tab.md), and the **Phase 3 charter**
+[phase-3-setup-tabs.md](phase-3-setup-tabs.md) — which routes to its six sub-phases
+[3-1](phase-3-1-extract-wiring.md) · [3-2](phase-3-2-ephys-tabs.md) · [3-3](phase-3-3-catalog-tabs.md) ·
+[3-4](phase-3-4-profile-context.md) · [3-5](phase-3-5-validation-export-tab.md) ·
+[3-6](phase-3-6-warning-ack.md) — then [phase-3a-repair-routing.md](phase-3a-repair-routing.md),
+[phase-4-lifecycle-nav.md](phase-4-lifecycle-nav.md), [phase-5-decommission-stepper.md](phase-5-decommission-stepper.md).
