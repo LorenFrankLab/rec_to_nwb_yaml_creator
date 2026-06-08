@@ -111,6 +111,28 @@
   line-height: 1;
 }
 
+/* Decision 10: right-aligned item count (information scent) + a trailing › so each row reads as a
+   navigable button at rest. Both are aria-hidden visual cues. */
+.section-nav-count {
+  flex: none;
+  font-family: var(--mono-font, monospace);
+  font-size: 0.7rem;
+  color: #6a6557;
+}
+
+.section-nav-chev {
+  flex: none;
+  color: #9a9384;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.section-nav-item.is-active .section-nav-count,
+.section-nav-item.is-active .section-nav-chev {
+  color: #0d5c63;
+}
+
 .animal-view-panel {
   padding: 1.1rem 1.5rem 2rem;
   min-width: 0;

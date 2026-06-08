@@ -6,6 +6,25 @@
 
 ---
 
+## Tabbed workspace IA — Phase 4 deferred (1/2): section-nav count + chevron affordance (June 8, 2026)
+
+Adds the **decision 10** section-nav row affordance — each AnimalView left-nav row now reads
+`name · count · ›` so it carries information scent (8 electrode groups, 2 cameras, "3 ready") and
+signals it's navigable at rest. The first of the two Phase-4 deferred pieces (the other is the top
+object-selector dropdown, Task 4.5). **UI-only — no export/schema change**; 125 golden baselines
+byte-identical; full suite (4319), lint (0 errors), build green. TDD; code-reviewer pass (no findings).
+
+- **`getAnimalSetupCounts(animal)`** ([sectionStatus.js](../src/domain/sectionStatus.js)) returns the
+  per-setup-section item counts (electrode-groups / channel-maps / recording-system / cameras / dio)
+  via the shape-safe selectors (malformed animal → 0, never a crash).
+- **[AnimalView](../src/pages/AnimalView/index.jsx)** renders a trailing **count + › chevron** on every
+  nav row, BOTH `aria-hidden` — the link's accessible name (and the existing blocking-● / todo-○
+  aria-labels) are unchanged, so SR users and name-based queries are unaffected. Day-work counts read
+  the SAME sources as the rest of the view: `days` = present day records (`classifyAnimalDays`),
+  `export` = "N ready" (`buildAnimalRows` valid days, can't drift from the export tab). A never-
+  configured section shows the ○ ring IN the count slot (no bare "0"); a blocking section keeps its
+  red ● AND shows its count (e.g. Cameras ● 2). Opto shows "used" when configured, ○ when not.
+
 ## Tabbed workspace IA — Phase 4b: create-animal as an inline workspace panel (June 8, 2026)
 
 Folds animal creation INTO the workspace: "+ New Animal" (and the empty-state create action) now

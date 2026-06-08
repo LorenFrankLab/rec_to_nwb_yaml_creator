@@ -16,7 +16,13 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import { getAnimalSubject, getAnimalDayIds } from '../../state/workspaceSelectors';
-import { getAnimalSectionStatus, getAnimalBlockingSections, SECTION_STATUS } from '../../domain/sectionStatus';
+import { classifyAnimalDays, isPresentRecordStatus } from '../../domain/dayRecovery';
+import {
+  getAnimalSectionStatus,
+  getAnimalBlockingSections,
+  getAnimalSetupCounts,
+  SECTION_STATUS,
+} from '../../domain/sectionStatus';
 import { useReconfigContext } from '../../hooks/useReconfigContext';
 import { ConfirmDialog } from '../../components/Modal';
 import OverflowMenu from '../../components/OverflowMenu';
@@ -33,7 +39,7 @@ import DioContainer from '../AnimalEditor/wiring/DioContainer';
 import OptogeneticsContainer from '../AnimalEditor/wiring/OptogeneticsContainer';
 import { useAnimalFieldUpdate } from '../AnimalEditor/wiring/useAnimalFieldUpdate';
 import ConfigVersionContext from './ConfigVersionContext';
-import { ValidationSummary } from '../ValidationSummary';
+import { ValidationSummary, buildAnimalRows } from '../ValidationSummary';
 import './AnimalView.css';
 
 /**
@@ -216,6 +222,31 @@ export function AnimalView({ animalId, tab }) {
     () => getAnimalBlockingSections(animal, model.workspace.days),
     [animal, model.workspace.days]
   );
+
+  // Decision 10: each section-nav row carries a right-aligned count (information scent). The setup
+  // counts are cheap selector reads; the day-work counts come from the SAME sources the rest of the
+  // view uses — `classifyAnimalDays` (present day records) and the export validator's per-animal
+  // rows (`buildAnimalRows`, "N ready" = valid days) — so the nav can never disagree with the days
+  // tab / the export tab. Memoized off the animal + days.
+  const sectionCounts = useMemo(() => {
+    if (!animal) return null;
+    const dayCount = classifyAnimalDays(animalId, animal, model.workspace.days).filter((d) =>
+      isPresentRecordStatus(d.status)
+    ).length;
+    const readyCount = buildAnimalRows(model.workspace, animalId).filter(
+      (r) => r.chip === 'valid'
+    ).length;
+    return {
+      days: String(dayCount),
+      export: `${readyCount} ready`,
+      ...Object.fromEntries(
+        Object.entries(getAnimalSetupCounts(animal)).map(([k, n]) => [k, String(n)])
+      ),
+      // Opto is "used" when configured; the never-configured case shows the ○ todo ring instead (so
+      // an unused-opto row reads as a valid empty state, not a "0").
+      optogenetics: 'used',
+    };
+  }, [animal, animalId, model.workspace]);
 
   const panelRef = useRef(null);
   const isFirstRender = useRef(true);
@@ -416,14 +447,23 @@ export function AnimalView({ animalId, tab }) {
                     onClick={(event) => handleNavClick(event, item.key)}
                   >
                     <span className="section-nav-item-name">{item.label}</span>
-                    {isBlocking ? (
-                      // Red ● on a section with an export-blocking error (decision 11 / 3a.5).
+                    {/* Decision 10 trailing affordance: name · [● blocking] · count · › — all
+                        aria-hidden visual "information scent" (the link's accessible name still
+                        carries the blocking/todo meaning via aria-label, so SR users are unaffected
+                        and name-based queries stay stable). A blocking section keeps its red ● AND
+                        shows its count (e.g. Cameras ● 2); a never-configured section shows the
+                        neutral hollow-○ ring IN the count slot (no bare "0"). */}
+                    {isBlocking && (
                       <span className="section-nav-blocking" aria-hidden="true">●</span>
-                    ) : isTodo ? (
-                      // Neutral hollow-○ "todo" ring on a never-configured setup section
-                      // (decision 11) — colour-free, signals "not set up yet" without anxiety.
+                    )}
+                    {isTodo ? (
                       <span className="section-nav-todo" aria-hidden="true">○</span>
-                    ) : null}
+                    ) : (
+                      <span className="section-nav-count" aria-hidden="true">
+                        {sectionCounts?.[item.key]}
+                      </span>
+                    )}
+                    <span className="section-nav-chev" aria-hidden="true">›</span>
                   </a>
                 );
               })}

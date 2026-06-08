@@ -145,6 +145,56 @@ describe('AnimalView — section-nav status (Task 1.1c)', () => {
   });
 });
 
+describe('AnimalView — section-nav count + chevron affordance (decision 10)', () => {
+  const configuredRemy = {
+    ...remy,
+    devices: {
+      electrode_groups: [
+        { id: 0, device_type: 'tetrode_12.5', location: 'CA1' },
+        { id: 1, device_type: 'tetrode_12.5', location: 'CA1' },
+      ],
+      ntrode_electrode_group_channel_map: [{ ntrode_id: 0, electrode_group_id: 0, map: { 0: 0 } }],
+      data_acq_device: [{ name: 'SpikeGadgets' }],
+    },
+    cameras: [{ id: 0, camera_name: 'overhead' }],
+    behavioral_events: [{ name: 'Din1' }],
+  };
+
+  it('shows the per-setup-section item count and a trailing chevron, hidden from assistive tech', () => {
+    renderView('days', { animals: { remy: configuredRemy } });
+    const eg = screen.getByRole('link', { name: /^electrode groups$/i });
+    // The count is visual "information scent" (aria-hidden) so it does NOT change the link's
+    // accessible name (the `^electrode groups$` query above still resolves).
+    const count = within(eg).getByText('2');
+    expect(count).toHaveAttribute('aria-hidden', 'true');
+    const chev = within(eg).getByText('›');
+    expect(chev).toHaveAttribute('aria-hidden', 'true');
+    // Cameras has exactly one camera.
+    expect(within(screen.getByRole('link', { name: /^cameras$/i })).getByText('1')).toBeInTheDocument();
+  });
+
+  it('shows the recording-day count and a validation "N ready" count', () => {
+    // remy owns one present day record → Recording Days count "1". The "ready" figure comes from
+    // the export validator (buildAnimalRows), so assert its shape (a number + "ready"), not a fixed
+    // value the fixture doesn't pin.
+    renderView('days', { animals: { remy: configuredRemy } });
+    expect(within(screen.getByRole('link', { name: /^recording days$/i })).getByText('1')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('link', { name: /validation & export/i })).getByText(/\d+ ready/i)
+    ).toBeInTheDocument();
+  });
+
+  it('never-configured setup sections keep the ○ ring (no numeric count)', () => {
+    renderView('days'); // bare remy
+    const eg = screen.getByRole('link', { name: /electrode groups — not set up/i });
+    // The todo ring stands in for the count; no "0" is shown.
+    expect(within(eg).queryByText('0')).not.toBeInTheDocument();
+    expect(within(eg).getByText('○')).toBeInTheDocument();
+    // The chevron is still present on a todo row.
+    expect(within(eg).getByText('›')).toBeInTheDocument();
+  });
+});
+
 describe('AnimalView — tab panels (Task 1.2)', () => {
   it('hosts the Recording Days pane in the days tab', () => {
     renderView('days');

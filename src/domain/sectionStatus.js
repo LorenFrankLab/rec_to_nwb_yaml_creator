@@ -73,6 +73,25 @@ export function getAnimalSectionStatus(animal, sectionKey) {
 }
 
 /**
+ * Per-setup-section item counts for the section-nav "information scent" (decision 10: name · count
+ * · ›). Day-work sections (`days`, `export`) are absent — their counts (day count / "N ready")
+ * depend on the workspace day map + the export validator and are computed by the view. Read through
+ * the shape-safe selectors, so a malformed/recovered animal yields 0 rather than crashing.
+ *
+ * @param {object} animal - The animal record.
+ * @returns {{ 'electrode-groups': number, 'channel-maps': number, 'recording-system': number, cameras: number, dio: number }}
+ */
+export function getAnimalSetupCounts(animal) {
+  return {
+    'electrode-groups': getAnimalElectrodeGroups(animal).length,
+    'channel-maps': getAnimalNtrodeMaps(animal).length,
+    'recording-system': getDataAcqDevices(animal).length,
+    cameras: getAnimalCameras(animal).length,
+    dio: getAnimalBehavioralEvents(animal).length,
+  };
+}
+
+/**
  * The set of animal-setup TAB keys that hold an export-BLOCKING error (Phase 3a.5 — the section-nav
  * red dot). Validates each of the animal's recording days with the SAME validator the export gate
  * uses ({@link validateDay}), keeps only error-severity issues whose owner is the animal setup
