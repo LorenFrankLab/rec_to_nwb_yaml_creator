@@ -53,9 +53,13 @@ function generateNextElectrodeGroupId(existingGroups) {
  * @param {{ current: (Function|null) }} [props.addRef] - Optional ref the host (the temporary
  *   stepper) uses to invoke "add group" from its Alt+N shortcut; registered while mounted,
  *   cleared on unmount. The tabbed Animal View omits it.
+ * @param {Function} [props.onPendingEditsChange] - Called with `true` while the add/edit
+ *   ElectrodeGroupModal is open (an in-progress edit the user could lose) and `false` otherwise /
+ *   on unmount. The tabbed AnimalView consults this to guard a section-nav switch (charter
+ *   decision 2); the temporary stepper omits it (no nav under it), so its path is byte-unchanged.
  * @returns {JSX.Element|null}
  */
-export default function ElectrodeGroupsContainer({ animalId, addRef }) {
+export default function ElectrodeGroupsContainer({ animalId, addRef, onPendingEditsChange }) {
   const { model, actions } = useStoreContext();
   const animal = animalId ? model.workspace.animals[animalId] : null;
 
@@ -68,6 +72,13 @@ export default function ElectrodeGroupsContainer({ animalId, addRef }) {
   const knownRegions = useKnownRegions();
   const { showAlert, alertElement } = useAnimalAlert();
   const { handleFieldUpdate } = useAnimalFieldUpdate(animalId);
+
+  // Report "has pending edits" (the add/edit modal being open) to a host that guards navigation.
+  // Cleanup resets to false on unmount so a host doesn't hold a stale `true` after the tab is left.
+  useEffect(() => {
+    onPendingEditsChange?.(modalOpen);
+    return () => onPendingEditsChange?.(false);
+  }, [modalOpen, onPendingEditsChange]);
 
   // Register the "add group" handler with the host's Alt+N shortcut ref while mounted. The
   // handler only calls stable setState setters, so a one-time registration is sufficient.
@@ -325,8 +336,10 @@ export default function ElectrodeGroupsContainer({ animalId, addRef }) {
 ElectrodeGroupsContainer.propTypes = {
   animalId: PropTypes.string.isRequired,
   addRef: PropTypes.shape({ current: PropTypes.any }),
+  onPendingEditsChange: PropTypes.func,
 };
 
 ElectrodeGroupsContainer.defaultProps = {
   addRef: undefined,
+  onPendingEditsChange: undefined,
 };

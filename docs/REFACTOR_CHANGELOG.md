@@ -2,9 +2,55 @@
 
 **Purpose:** Track all changes made during the refactoring milestones.
 
-**Last Updated:** June 7, 2026
+**Last Updated:** June 8, 2026
 
 ---
+
+## Tabbed workspace IA — Phase 3-2: ephys tabs + unsaved-edit guard (June 8, 2026)
+
+Mounts the two hardest-wired setup containers extracted in Phase 3-1 into their tabs in the tabbed
+Animal View, replacing the Phase-1 placeholder, and lands the unsaved-edit guard. From the
+[phase-3-2 doc](../.claude/docs/plans/tabbed-workspace-ia/phase-3-2-ephys-tabs.md) /
+[charter](../.claude/docs/plans/tabbed-workspace-ia/phase-3-setup-tabs.md). **UI-only — no
+store/export/schema change**; 125 golden baselines byte-identical; full suite (4226), lint (0 errors),
+build all green. TDD throughout (failing tests written first); three independently-green commits;
+code-reviewer pass on the cumulative diff. The legacy `AnimalEditorStepper` still hosts the same
+containers and is byte-unchanged (parallel-running invariant).
+
+- **Mount the ephys containers** ([AnimalView/index.jsx](../src/pages/AnimalView/index.jsx)). A
+  `renderPanel()` switch routes `electrode-groups` → `ElectrodeGroupsContainer` and `channel-maps` →
+  `ChannelMapsContainer` (the shared 3-1 wiring at `src/pages/AnimalEditor/wiring/`), replacing the
+  placeholder; the single `#main-content` and the `:tab` panel-focus effect are preserved. Each tab shows
+  a **scope descriptor** under the panel heading (electrode-groups → "Versioned identity — a change here
+  forks a configuration version"; channel-maps → "Edit any time — map channels, mark bad channels"). The
+  channel-map auto-regen on a `device_type` change is proven unchanged through the tab path (same assertion
+  as 3-1's characterization, now via the real container + modal).
+- **Architecture allowlist** ([architectureBoundaries.guard.test.js](../src/__tests__/architectureBoundaries.guard.test.js)):
+  AnimalView (a page) now imports `pages/AnimalEditor/wiring/{ElectrodeGroups,ChannelMaps}Container`, so
+  both were added to `CROSS_PAGE_ALLOWLIST` — deliberately shared "extract, don't fork" wiring that owns no
+  app-wide domain logic, same rationale as the already-allowlisted `RecordingDaysTab`.
+- **Config-version legibility** (Task 3.4, ephys slice) — new
+  [ConfigVersionContext.jsx](../src/pages/AnimalView/ConfigVersionContext.jsx). When an animal has more
+  than one electrode configuration version, the electrode-groups panel shows a plain-language timeline
+  ("Electrode configuration changed on `<date>` — earlier recording days use v1, this and later days use
+  v2") sourced from `getConfigHistory`, instead of a bare "v2". Single-version animals render nothing;
+  never shown on the channel-maps tab. Informational framing (left rule, muted text), not a warning.
+- **Unsaved-edit guard** (charter decision 2). Both ephys containers gained an optional
+  `onPendingEditsChange` prop — `true` while their editor/modal is open, `false` otherwise / on unmount
+  (no-op when the prop is absent, so the stepper path is byte-unchanged). `AnimalView` owns the
+  section-nav: a click toward ANOTHER tab while a container reports pending edits is intercepted and raises
+  a "Discard unsaved changes?" `ConfirmDialog` (reusing the existing Modal primitive — focus-trapped,
+  keyboard-accessible). Confirm navigates + drops the edit; cancel keeps the tab + editor. A modifier /
+  non-primary click (open-in-new-tab) is **not** intercepted (it never discards the edit in this document).
+- **Deliberately deferred (per the phase doc):** the other four setup tabs (recording-system, cameras,
+  dio, optogenetics), the AnimalView-level 3-field corruption banner, and the subject/profile + reconfig
+  header all remain in [3-3](../.claude/docs/plans/tabbed-workspace-ia/phase-3-3-catalog-tabs.md) /
+  [3-4](../.claude/docs/plans/tabbed-workspace-ia/phase-3-4-profile-context.md); repair `?field=` deep
+  links still target the legacy stepper until Phase 3a. The `default` case of `renderPanel()` keeps the
+  Phase-1 placeholder for those tabs.
+- New tests: [AnimalView.ephysTabs.test.jsx](../src/pages/AnimalView/__tests__/AnimalView.ephysTabs.test.jsx)
+  (mount + scope descriptors + channel-regen-through-tab + config-version legibility + the unsaved-edit
+  guard, exercising a real dirty `ChannelMapEditor`, including the container-unmount → guard-reset path).
 
 ## Tabbed workspace IA — Phase 2: Recording Days tab polish (June 7, 2026)
 

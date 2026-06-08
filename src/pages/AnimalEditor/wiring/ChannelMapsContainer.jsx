@@ -6,7 +6,7 @@
  * AnimalEditorStepper so both the (temporary) stepper-hosted step and the tabbed Animal View use
  * one implementation.
  */
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../../state/StoreContext';
 import {
@@ -23,9 +23,13 @@ import { useAnimalAlert } from './useAnimalAlert';
 /**
  * @param {object} props
  * @param {string} props.animalId - The animal whose channel maps to edit.
+ * @param {Function} [props.onPendingEditsChange] - Called with `true` while the ChannelMapEditor is
+ *   open (an in-progress edit the user could lose) and `false` otherwise / on unmount. The tabbed
+ *   AnimalView consults this to guard a section-nav switch (charter decision 2); the temporary
+ *   stepper omits it (no nav under it), so the stepper path is byte-unchanged.
  * @returns {JSX.Element|null}
  */
-export default function ChannelMapsContainer({ animalId }) {
+export default function ChannelMapsContainer({ animalId, onPendingEditsChange }) {
   const { model, actions } = useStoreContext();
   const animal = animalId ? model.workspace.animals[animalId] : null;
 
@@ -33,6 +37,13 @@ export default function ChannelMapsContainer({ animalId }) {
   const [editingGroupId, setEditingGroupId] = useState(null);
   const csvFileInputRef = useRef(null);
   const { showAlert, alertElement } = useAnimalAlert();
+
+  // Report "has pending edits" (the editor being open) to a host that guards navigation. Cleanup
+  // resets to false on unmount so a host doesn't hold a stale `true` after the tab is left.
+  useEffect(() => {
+    onPendingEditsChange?.(editorOpen);
+    return () => onPendingEditsChange?.(false);
+  }, [editorOpen, onPendingEditsChange]);
 
   if (!animal) return null;
 
@@ -208,4 +219,9 @@ export default function ChannelMapsContainer({ animalId }) {
 
 ChannelMapsContainer.propTypes = {
   animalId: PropTypes.string.isRequired,
+  onPendingEditsChange: PropTypes.func,
+};
+
+ChannelMapsContainer.defaultProps = {
+  onPendingEditsChange: undefined,
 };

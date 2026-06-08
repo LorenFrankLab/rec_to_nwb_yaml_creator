@@ -224,3 +224,82 @@ describe('AnimalView — channel-maps tab (Phase 3-2)', () => {
     expect(screen.getByRole('heading', { name: /channel map editor/i })).toBeInTheDocument();
   });
 });
+
+describe('AnimalView — unsaved-edit guard (charter decision 2)', () => {
+  beforeEach(() => {
+    delete window.location;
+    window.location = { hash: '#/animal/remy/channel-maps' };
+  });
+  afterEach(() => {
+    window.location = { hash: '' };
+  });
+
+  /**
+   * Render the channel-maps tab and open the ChannelMapEditor so there are pending edits.
+   * @returns {object} The userEvent instance for driving subsequent interactions.
+   */
+  async function renderWithOpenEditor() {
+    const user = userEvent.setup();
+    renderView('channel-maps');
+    await user.click(screen.getByRole('button', { name: /edit channel map for electrode group 0/i }));
+    expect(screen.getByRole('heading', { name: /channel map editor/i })).toBeInTheDocument();
+    return user;
+  }
+
+  it('intercepts a section-nav switch with a discard confirm when an editor is open', async () => {
+    const user = await renderWithOpenEditor();
+    await user.click(screen.getByRole('link', { name: /^electrode groups$/i }));
+    expect(screen.getByRole('alertdialog', { name: /discard unsaved changes/i })).toBeInTheDocument();
+  });
+
+  it('does NOT intercept when no editor is open (normal nav, no confirm)', async () => {
+    const user = userEvent.setup();
+    renderView('channel-maps');
+    await user.click(screen.getByRole('link', { name: /^electrode groups$/i }));
+    expect(screen.queryByRole('alertdialog', { name: /discard unsaved changes/i })).not.toBeInTheDocument();
+  });
+
+  it('cancel keeps the tab and the open editor', async () => {
+    const user = await renderWithOpenEditor();
+    await user.click(screen.getByRole('link', { name: /^electrode groups$/i }));
+    await user.click(screen.getByRole('button', { name: /keep editing/i }));
+    expect(screen.queryByRole('alertdialog', { name: /discard unsaved changes/i })).not.toBeInTheDocument();
+    // Editor still open; route unchanged.
+    expect(screen.getByRole('heading', { name: /channel map editor/i })).toBeInTheDocument();
+    expect(window.location.hash).toBe('#/animal/remy/channel-maps');
+  });
+
+  it('confirm navigates to the target tab and dismisses the guard', async () => {
+    const user = await renderWithOpenEditor();
+    await user.click(screen.getByRole('link', { name: /^electrode groups$/i }));
+    await user.click(screen.getByRole('button', { name: /discard changes/i }));
+    expect(screen.queryByRole('alertdialog', { name: /discard unsaved changes/i })).not.toBeInTheDocument();
+    expect(window.location.hash).toBe('#/animal/remy/electrode-groups');
+  });
+
+  it('resets pending edits when the tab actually changes (container unmount), so the next nav is unguarded', async () => {
+    const user = userEvent.setup();
+    const animal = buildConfiguredAnimal();
+    const { rerender } = render(
+      <StoreProvider initialState={{ workspace: { animals: { remy: animal }, days, settings: {} } }}>
+        <AnimalView animalId="remy" tab="channel-maps" />
+      </StoreProvider>
+    );
+    // Open the editor → pending edits true.
+    await user.click(screen.getByRole('button', { name: /edit channel map for electrode group 0/i }));
+    expect(screen.getByRole('heading', { name: /channel map editor/i })).toBeInTheDocument();
+
+    // Simulate the router driving the tab change (as a guard-confirm or external nav would): the
+    // ChannelMapsContainer unmounts, and its cleanup must reset the shell's pending-edits flag.
+    rerender(
+      <StoreProvider initialState={{ workspace: { animals: { remy: animal }, days, settings: {} } }}>
+        <AnimalView animalId="remy" tab="electrode-groups" />
+      </StoreProvider>
+    );
+    expect(screen.queryByRole('heading', { name: /channel map editor/i })).not.toBeInTheDocument();
+
+    // From the new tab with no open editor, navigating away must NOT raise the discard guard.
+    await user.click(screen.getByRole('link', { name: /^channel maps$/i }));
+    expect(screen.queryByRole('alertdialog', { name: /discard unsaved changes/i })).not.toBeInTheDocument();
+  });
+});

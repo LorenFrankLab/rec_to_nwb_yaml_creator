@@ -12,11 +12,12 @@
  * route-change focus fires only on `view` change, not `:tab` (Task 1.1b).
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import { getAnimalSubject } from '../../state/workspaceSelectors';
 import { getAnimalSectionStatus, SECTION_STATUS } from '../../domain/sectionStatus';
+import { ConfirmDialog } from '../../components/Modal';
 import { RecordingDaysTab } from '../AnimalWorkspace/RecordingDaysTab';
 import ElectrodeGroupsContainer from '../AnimalEditor/wiring/ElectrodeGroupsContainer';
 import ChannelMapsContainer from '../AnimalEditor/wiring/ChannelMapsContainer';
@@ -71,9 +72,11 @@ const TAB_LABEL = Object.fromEntries(
  * @param {string} tab - The active tab (route `:tab` segment).
  * @param {string} animalId - The animal whose section to render.
  * @param {object} animal - The resolved animal record (for config-version legibility).
+ * @param {Function} onPendingEditsChange - Pending-edit reporter the setup containers call so the
+ *   shell can guard a section-nav switch (charter decision 2).
  * @returns {React.Element}
  */
-function renderPanel(tab, animalId, animal) {
+function renderPanel(tab, animalId, animal, onPendingEditsChange) {
   switch (tab) {
     case 'days':
       return <RecordingDaysTab animalId={animalId} />;
@@ -81,11 +84,11 @@ function renderPanel(tab, animalId, animal) {
       return (
         <>
           <ConfigVersionContext animal={animal} />
-          <ElectrodeGroupsContainer animalId={animalId} />
+          <ElectrodeGroupsContainer animalId={animalId} onPendingEditsChange={onPendingEditsChange} />
         </>
       );
     case 'channel-maps':
-      return <ChannelMapsContainer animalId={animalId} />;
+      return <ChannelMapsContainer animalId={animalId} onPendingEditsChange={onPendingEditsChange} />;
     default:
       return (
         <div className="section-placeholder">
@@ -114,6 +117,14 @@ export function AnimalView({ animalId, tab }) {
 
   const panelRef = useRef(null);
   const isFirstRender = useRef(true);
+
+  // Unsaved-edit guard (charter decision 2). A setup container reports `true` while its
+  // editor/modal is open; the shell owns the section-nav, so it intercepts a link to ANOTHER tab
+  // and asks the user to confirm discarding before allowing the route to change. `setPendingEdits`
+  // is a stable useState setter, so passing it as the container's `onPendingEditsChange` doesn't
+  // thrash the container's reporting effect.
+  const [pendingEdits, setPendingEdits] = useState(false);
+  const [pendingNavTab, setPendingNavTab] = useState(null);
 
   // Task 1.1b: AppLayout focuses #main-content on `view` change (legacy -> animal-view), but a
   // `:tab` change keeps the same view, so AppLayout won't fire. Move focus to the panel on tab
@@ -162,6 +173,32 @@ export function AnimalView({ animalId, tab }) {
   const subject = getAnimalSubject(animal);
   const facts = [subject.species, subject.sex].filter(Boolean).join(' · ');
 
+  /**
+   * Intercept a section-nav activation when the active setup container has pending edits, so a
+   * switch to ANOTHER tab is confirmed before the route changes (charter decision 2). Same-tab
+   * clicks and the no-pending-edits case fall through to the link's normal hash navigation.
+   * @param {React.MouseEvent} event - The anchor click.
+   * @param {string} targetKey - The :tab the link points at.
+   */
+  const handleNavClick = (event, targetKey) => {
+    if (targetKey === tab || !pendingEdits) return;
+    // Let the browser handle a modifier / non-primary click (open-in-new-tab etc.) — that opens a
+    // SEPARATE document and never discards the edit in THIS one, so it must not be intercepted.
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+      return;
+    }
+    event.preventDefault();
+    setPendingNavTab(targetKey);
+  };
+
+  /** Confirm the discard: drop the edit, clear the guard, and navigate to the queued tab. */
+  const confirmDiscardAndNavigate = () => {
+    const target = pendingNavTab;
+    setPendingNavTab(null);
+    setPendingEdits(false);
+    if (target) window.location.hash = `#/animal/${animalId}/${target}`;
+  };
+
   return (
     <main id="main-content" tabIndex="-1" role="main" aria-labelledby="animal-view-heading">
       <header className="animal-view-header">
@@ -186,6 +223,7 @@ export function AnimalView({ animalId, tab }) {
                     aria-current={active ? 'page' : undefined}
                     // The hollow-○ ring is decorative; the accessible name carries the meaning.
                     aria-label={isTodo ? `${item.label} — not set up` : undefined}
+                    onClick={(event) => handleNavClick(event, item.key)}
                   >
                     <span className="section-nav-item-name">{item.label}</span>
                     {isTodo && (
@@ -211,9 +249,20 @@ export function AnimalView({ animalId, tab }) {
               {TAB_SCOPE[tab]}
             </p>
           )}
-          {renderPanel(tab, animalId, animal)}
+          {renderPanel(tab, animalId, animal, setPendingEdits)}
         </section>
       </div>
+
+      <ConfirmDialog
+        isOpen={pendingNavTab != null}
+        title="Discard unsaved changes?"
+        message="You have unsaved changes in this editor. Leaving this section will discard them."
+        confirmLabel="Discard changes"
+        cancelLabel="Keep editing"
+        destructive
+        onConfirm={confirmDiscardAndNavigate}
+        onCancel={() => setPendingNavTab(null)}
+      />
     </main>
   );
 }
