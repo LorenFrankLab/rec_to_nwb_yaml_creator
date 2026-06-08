@@ -136,6 +136,33 @@ describe('OverflowMenu — selection & dismissal', () => {
   });
 });
 
+describe('OverflowMenu — key propagation (nesting safety)', () => {
+  it('does not bubble its handled keys (Esc / arrows) to an ancestor keydown handler', async () => {
+    const parentKeyDown = vi.fn();
+    const user = userEvent.setup();
+    render(
+      // The menu may be nested inside another keyboard widget (e.g. the animal switcher popup),
+      // whose ancestor keydown must NOT also fire when the menu consumes Esc/arrows.
+      <div onKeyDown={parentKeyDown}>
+        <OverflowMenu
+          label="Actions for remy"
+          items={[
+            { key: 'open', label: 'Open', onSelect: () => {} },
+            { key: 'delete', label: 'Delete animal…', onSelect: () => {} },
+          ]}
+        />
+      </div>
+    );
+
+    await user.click(screen.getByRole('button', { name: /actions for remy/i }));
+    parentKeyDown.mockClear();
+
+    await user.keyboard('{ArrowDown}');
+    await user.keyboard('{Escape}');
+    expect(parentKeyDown).not.toHaveBeenCalled();
+  });
+});
+
 describe('OverflowMenu — disabled items', () => {
   it('marks a disabled item aria-disabled, does not fire its onSelect, and skips it in arrow nav', async () => {
     const { onRename, user } = renderMenu({ disableMiddle: true });

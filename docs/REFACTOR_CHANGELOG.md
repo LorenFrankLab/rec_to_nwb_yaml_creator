@@ -6,6 +6,35 @@
 
 ---
 
+## Tabbed workspace IA — Phase 4 deferred (2/2): top object-selector dropdown (June 8, 2026)
+
+Adds the **Task 4.5 / decision 9** top object-selector `Workspace ▸ <animal> ▾` — an animal switcher
+in the chrome — completing the two deferred Phase-4 pieces. **UI-only — no export/schema change**; 125
+golden baselines byte-identical; full suite (4335), lint (0 errors), build green. TDD throughout;
+code-reviewer pass (no blocking findings). Per the session decisions, the selector renders **only on
+the animal route** (where there's a current animal to switch from), and its create/delete actions
+**reuse the existing page surfaces** (one create panel, one delete dialog) rather than duplicating
+hosts.
+
+- **NEW [AnimalSwitcher.jsx](../src/components/AnimalSwitcher.jsx)** (+ css + test): a DISCLOSURE
+  popup (NOT a listbox/menu — those forbid options that host secondary controls). Trigger =
+  `button[aria-haspopup][aria-expanded][aria-controls]`; popup = `role="group" aria-label="Switch
+  animal"`; each row = a primary switch link (→ `#/animal/:id/days`, current `aria-current`) + a day
+  count + the shared {@link OverflowMenu} ⋮ (Open / Rename… (disabled) / Delete animal…). "+ New
+  animal…" is a button. Keyboard: Esc closes + returns focus to the trigger; Up/Down rove between the
+  row links + the new-animal button (the ⋮ triggers are reached by Tab, not the arrows); focus enters
+  the popup onto the current animal on open; outside-click closes; no focus trap.
+- **[OverflowMenu](../src/components/OverflowMenu.jsx)** now `stopPropagation`s the keys it handles, so
+  a nested ⋮ menu's Esc/arrows/activation don't bubble to the switcher popup (transparent for the
+  picker/header ⋮ mounts, which have no ancestor keyboard handler).
+- **[AppLayout](../src/layouts/AppLayout.jsx)** mounts the switcher in the primary nav ONLY on the
+  `animal-view` route (when the animal exists), and hosts the single shared `AnimalDeleteDialog`
+  (a row's Delete → `actions.deleteAnimal`; deleting the viewed animal → the existing "Animal not
+  found" guard). "+ New animal…" routes to `#/workspace?create=1`.
+- **[AnimalWorkspace](../src/pages/AnimalWorkspace/index.jsx)** honors the `#/workspace?create=1`
+  handshake: it auto-opens the Phase-4b inline create panel and strips the transient param (one create
+  home; mutually exclusive with the `?animal=` handshake).
+
 ## Tabbed workspace IA — Phase 4 deferred (1/2): section-nav count + chevron affordance (June 8, 2026)
 
 Adds the **decision 10** section-nav row affordance — each AnimalView left-nav row now reads

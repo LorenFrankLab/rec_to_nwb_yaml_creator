@@ -78,6 +78,14 @@ export function AnimalWorkspace() {
       // router (useHashRouter) explicitly.
       window.history.replaceState(null, '', `#/animal/${animalParam}/days`);
       window.dispatchEvent(new HashChangeEvent('hashchange'));
+      return;
+    }
+    // `#/workspace?create=1` handshake (Task 4.5): the top selector's "+ New animal…" routes here to
+    // open the inline create panel (Phase 4b), so create has ONE home. Strip the transient param so
+    // Back / a reload doesn't reopen the panel.
+    if (params.get('create') === '1') {
+      setShowCreate(true);
+      window.history.replaceState(null, '', '#/workspace');
     }
   }, []); // Run only on mount
 

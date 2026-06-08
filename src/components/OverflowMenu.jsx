@@ -110,9 +110,12 @@ export default function OverflowMenu({ label, items, buttonClassName }) {
   const handleTriggerKeyDown = (e) => {
     if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
+      // Don't let an ancestor keyboard widget (e.g. the animal-switcher popup) also act on the key.
+      e.stopPropagation();
       openMenu('first');
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
+      e.stopPropagation();
       openMenu('last');
     }
   };
@@ -122,30 +125,38 @@ export default function OverflowMenu({ label, items, buttonClassName }) {
    * @param {React.KeyboardEvent} e - The keydown event.
    */
   const handleMenuKeyDown = (e) => {
+    // Every key the menu acts on is also stopped from bubbling, so an ancestor keyboard widget
+    // (e.g. the animal-switcher popup) doesn't double-handle the menu's Esc / arrows / activation.
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
+        e.stopPropagation();
         moveActive(1);
         break;
       case 'ArrowUp':
         e.preventDefault();
+        e.stopPropagation();
         moveActive(-1);
         break;
       case 'Home':
         e.preventDefault();
+        e.stopPropagation();
         setActiveIndex(firstEnabled);
         break;
       case 'End':
         e.preventDefault();
+        e.stopPropagation();
         setActiveIndex(lastEnabled);
         break;
       case 'Enter':
       case ' ':
         e.preventDefault();
+        e.stopPropagation();
         selectItem(activeIndex);
         break;
       case 'Escape':
         e.preventDefault();
+        e.stopPropagation();
         closeMenu(true);
         break;
       case 'Tab':

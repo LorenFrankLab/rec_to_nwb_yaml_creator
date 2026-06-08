@@ -91,6 +91,15 @@ describe('AnimalWorkspace — inline create-animal panel', () => {
     expect(window.location.hash).toBe('#/animal/bean/days');
   });
 
+  it('auto-opens the create panel on the #/workspace?create=1 handshake (from the top selector)', () => {
+    window.location.hash = '#/workspace?create=1';
+    renderPicker();
+    // The selector's "+ New animal…" routes here; the panel opens without a click.
+    expect(screen.getByRole('form', { name: /animal creation form/i })).toBeInTheDocument();
+    // The transient ?create=1 is stripped so Back / reload doesn't reopen it.
+    expect(window.location.hash).toBe('#/workspace');
+  });
+
   it('cancelling the panel creates nothing and returns to the picker', async () => {
     const user = userEvent.setup();
     renderPicker();
