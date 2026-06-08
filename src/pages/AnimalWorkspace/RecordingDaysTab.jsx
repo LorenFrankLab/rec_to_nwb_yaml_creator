@@ -17,7 +17,7 @@ import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import { getAnimalSubject, getConfigHistory, getDaySession } from '../../state/workspaceSelectors';
 import { getDayRowStatus } from '../../domain/workflowStatus';
-import { getAnimalSectionStatus, SECTION_STATUS } from '../../domain/sectionStatus';
+import { getAnimalSectionStatus, getAnimalBlockingSections, SECTION_STATUS } from '../../domain/sectionStatus';
 import {
   classifyAnimalDays,
   DAY_STATUS,
@@ -230,6 +230,9 @@ export function RecordingDaysTab({ animalId }) {
           // (the never-configured sections keep their neutral todo state in the card + nav).
           const subjectPresent = Boolean(getAnimalSubject(selectedAnimal).subject_id);
           const showSetupCard = !(subjectPresent && dayCount > 0);
+          // Which setup sections hold an export-blocking error — the SAME source the section-nav red
+          // ● reads (no second mapping), so the card's per-section state can't contradict the nav.
+          const setupBlockingSections = getAnimalBlockingSections(selectedAnimal, days);
           // Existing data needs an explicit review state: recovered/imported setup must
           // not look silently trusted. Show it once there ARE recording days to export,
           // or whenever raw-shape corruption OR a corrupt days reference is present.
@@ -251,25 +254,34 @@ export function RecordingDaysTab({ animalId }) {
                   </p>
                   <ul className="setup-card-list">
                     {SETUP_CARD_SECTIONS.map((section) => {
+                      // Three honest states that AGREE with the section-nav (decision 11): a section
+                      // that holds an export-BLOCKING error reads "Needs fixing" (never "Done"), so
+                      // the onboarding card can't tell the user a section is fine while the nav shows
+                      // it red. Blocking outranks the neutral never-configured "To do".
+                      const blocking = setupBlockingSections.has(section.key);
                       const todo =
-                        getAnimalSectionStatus(selectedAnimal, section.key) ===
-                        SECTION_STATUS.TODO;
+                        !blocking &&
+                        getAnimalSectionStatus(selectedAnimal, section.key) === SECTION_STATUS.TODO;
+                      const stateLabel = blocking ? 'Needs fixing' : todo ? 'To do' : 'Done';
+                      const actionVerb = blocking ? 'Fix' : todo ? 'Set up' : 'Review';
+                      const itemModifier = blocking
+                        ? 'setup-card-item-blocking'
+                        : todo
+                          ? 'setup-card-item-todo'
+                          : 'setup-card-item-done';
                       return (
-                        <li
-                          key={section.key}
-                          className={`setup-card-item ${todo ? 'setup-card-item-todo' : 'setup-card-item-done'}`}
-                        >
+                        <li key={section.key} className={`setup-card-item ${itemModifier}`}>
                           <span className="setup-card-item-name">{section.label}</span>
                           <span className="setup-card-item-hint">{section.hint}</span>
-                          <span className="setup-card-item-state">{todo ? 'To do' : 'Done'}</span>
+                          <span className="setup-card-item-state">{stateLabel}</span>
                           <a
                             className="setup-card-item-action"
                             href={`#/animal/${selectedAnimalId}/${section.key}`}
                             // A links-list reader hears six actions; name each by its section
                             // ("Set up Cameras", not a non-unique "Set up →"). The arrow is decorative.
-                            aria-label={`${todo ? 'Set up' : 'Review'} ${section.label}`}
+                            aria-label={`${actionVerb} ${section.label}`}
                           >
-                            {todo ? 'Set up' : 'Review'} <span aria-hidden="true">→</span>
+                            {actionVerb} <span aria-hidden="true">→</span>
                           </a>
                         </li>
                       );

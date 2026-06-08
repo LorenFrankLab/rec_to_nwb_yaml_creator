@@ -12,6 +12,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { StoreProvider } from '../../../state/StoreContext';
+import { buildRealisticWorkspace } from '../../../__tests__/fixtures/workspaceBuilders';
 import { RecordingDaysTab } from '../RecordingDaysTab';
 
 const originalHash = window.location.hash;
@@ -101,6 +102,27 @@ describe('Set up this animal card — first-run onboarding', () => {
     const dio = within(card).getByText('DIO').closest('.setup-card-item');
     expect(cameras.className).not.toMatch(/setup-card-item-todo/);
     expect(dio.className).toMatch(/setup-card-item-todo/);
+  });
+
+  it('marks a configured section "Needs fixing" (NOT "Done") when it holds an export-blocking error', () => {
+    // The card and the section-nav must agree: a section that is present (so "Done" by mere
+    // presence) but holds an export-BLOCKING error (red ● in the nav) must not read "Done" in the
+    // card. Scenario: an under-configured animal (no subject → card shows) whose day pins a config
+    // with an empty electrode-group location (an export-blocking error attributed to electrode-groups).
+    const { animal, day } = buildRealisticWorkspace();
+    animal.subject.subject_id = ''; // card shows despite the day
+    // Present in the working devices → "Done" by presence...
+    animal.devices.electrode_groups = [
+      { id: 0, location: 'CA1', device_type: 'tetrode_12.5', targeted_location: 'CA1' },
+    ];
+    // ...but the day's PINNED config has the export-blocking empty location.
+    animal.configurationHistory[0].devices.electrode_groups[0].location = '';
+    renderPane('remy', { remy: animal }, { [day.id]: day });
+
+    const card = screen.getByRole('region', { name: /set up this animal/i });
+    const eg = within(card).getByText('Electrode Groups').closest('.setup-card-item');
+    expect(within(eg).getByText(/needs fixing/i)).toBeInTheDocument();
+    expect(within(eg).queryByText(/^done$/i)).not.toBeInTheDocument();
   });
 
   it('frames optional sections honestly (if ephys / if video / if behavioral events), never as a gate', () => {

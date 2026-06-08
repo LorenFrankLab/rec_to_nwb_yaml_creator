@@ -22,19 +22,16 @@ export function Home() {
     // uses, so both entry points produce identical animals.
     const { animalId, subject, metadata } = buildAnimalFromForm(formData);
 
-    try {
-      // createAnimal applies the workspace update synchronously from the caller's
-      // perspective; navigate immediately rather than via a setTimeout that could
-      // fire before the entity exists. (Duplicate-id validation lives inside the
-      // store updater and is not surfaced to this catch — a known gap, not relied on
-      // here; the form already enforces id uniqueness before submit.)
-      actions.createAnimal(animalId, subject, metadata);
-      window.location.hash = `#/workspace?animal=${animalId}`;
-    } catch (error) {
-      console.error('Failed to create animal:', error);
-      // Error is re-thrown to be handled by form
-      throw error;
-    }
+    // Defense-in-depth: the store's createAnimal throws on a duplicate id, but it does so from
+    // inside a React state updater — that throw can't be caught here, so an unconditional navigate
+    // would falsely land the user "in the new animal" while the create failed. The form already
+    // enforces uniqueness; this guard (reading the same animals map) keeps a future form regression
+    // from becoming a silent false-success. On collision we don't navigate — the form owns the
+    // user-facing "already exists" message.
+    if (model.workspace.animals?.[animalId]) return;
+
+    actions.createAnimal(animalId, subject, metadata);
+    window.location.hash = `#/workspace?animal=${animalId}`;
   };
 
   const animals = model.workspace.animals || {};

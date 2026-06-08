@@ -61,6 +61,11 @@ export function AnimalWorkspace() {
    */
   const handleCreate = (formData) => {
     const { animalId, subject, metadata } = buildAnimalFromForm(formData);
+    // Defense-in-depth (same as Home): the store throws on a duplicate id from inside a React
+    // updater, which can't be caught here — so guard before navigating, or a regressed form check
+    // would silently navigate "into the new animal" while the create failed. The form already
+    // enforces uniqueness; on collision we don't create or navigate.
+    if (animals[animalId]) return;
     actions.createAnimal(animalId, subject, metadata);
     window.location.hash = `#/animal/${animalId}/days`;
   };

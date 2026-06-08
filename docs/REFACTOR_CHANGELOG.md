@@ -23,6 +23,16 @@ revisitable-not-linear goal. It also surfaced fixable items, remediated here acr
   [dayRecovery.js](../src/domain/dayRecovery.js) and are imported by the cascade, the day-tab, the
   picker cards, the section-nav, and the animal switcher — so the delete copy + the "N days" count
   can't drift between surfaces.
+- **Bug: setup card could say "Done" over an export-blocking section.** The first-run "Set up this
+  animal" card derived its per-section state from presence only, so a section with an export-BLOCKING
+  error (red ● in the section-nav) read "Done" in the card — two surfaces, opposite signals. The card
+  now reads `getAnimalBlockingSections` (the SAME source the nav ● reads) and shows a third state
+  "Needs fixing" / "Fix →" for a blocking section, so the onboarding card can't contradict the nav.
+- **Bug (defense-in-depth): create could falsely "succeed" into navigation.** Both create entry points
+  (`Home`, the workspace inline panel) navigated UNCONDITIONALLY after `createAnimal` — but the store
+  throws on a duplicate id from inside a React updater, a throw the caller can't catch, so a regressed
+  form uniqueness-check would silently land the user "in the new animal" while the create failed. Both
+  now guard on the same animals map before navigating (the form still owns the user-facing message).
 
 ## Tabbed workspace IA — Phase 4 deferred (2/2): top object-selector dropdown (June 8, 2026)
 
