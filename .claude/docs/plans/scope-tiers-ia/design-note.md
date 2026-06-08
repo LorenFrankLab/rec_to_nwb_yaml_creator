@@ -142,7 +142,7 @@ keys — that preserves legacy parity + the baselines.
 | Dataset tier | new route + `workspace.sharedHardware` + merge resolution | useWorkspace + **merge** | 🟡 Yes |
 | Import from existing | new importer (inverse of merge) + workspace entry | new `decomposeYaml` + createAnimal/Day | 🟢 No (round-trip parity) |
 
-See **[implementation-plan.md](implementation-plan.md)** for the phased build (incl. the YAML importer).
+See **[workspace-roadmap](../workspace-roadmap/PLAN.md)** for the phased build (incl. the YAML importer).
 
 ## Data-entry efficiency (2026-06-08)
 
@@ -188,6 +188,6 @@ the hybrid tabbed editor (decided) + the dataset tier.
   Mockups: `mockup-dataset-tier.html`, `mockup-tabbed-day-editor-interactive.html`, `mockup-efficiency-patterns.html`.
 - 2026-06-08: Verified legacy↔workspace relationship (two independent stores, shared I/O+validation
   contract, `mergeDayMetadata` parity bridge, import legacy-only). Captured the architecture + the
-  merge-seam integration map above. Wrote the phased **[implementation-plan.md](implementation-plan.md)**
+  merge-seam integration map above. Wrote the phased **[workspace-roadmap](../workspace-roadmap/PLAN.md)**
   including a YAML **importer** (Phase C — round-trip byte-identical as the correctness gate). Nothing
   built yet from the plan; awaiting a go on the first phase.
