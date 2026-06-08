@@ -39,7 +39,11 @@ export function AnimalWorkspace() {
     const params = new URLSearchParams(window.location.hash.split('?')[1]);
     const animalParam = params.get('animal');
     if (animalParam && animals[animalParam]) {
-      window.location.hash = `#/animal/${animalParam}/days`;
+      // REPLACE (not push) the transient handshake URL so Back doesn't bounce the user back into
+      // this redirect and forward again. replaceState doesn't fire `hashchange`, so notify the
+      // router (useHashRouter) explicitly.
+      window.history.replaceState(null, '', `#/animal/${animalParam}/days`);
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
     }
   }, []); // Run only on mount
 
