@@ -10,7 +10,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { StoreProvider } from '../../../state/StoreContext';
+import { StoreProvider, useStoreContext } from '../../../state/StoreContext';
 import { AnimalView } from '../index';
 
 /**
@@ -86,6 +86,48 @@ describe('AnimalView — catalog/library tabs render (Phase 3-3)', () => {
   it('renders the optogenetics container, not the placeholder', () => {
     renderView('optogenetics');
     expect(screen.queryByText(PLACEHOLDER)).not.toBeInTheDocument();
+  });
+});
+
+describe('AnimalView — catalog containers persist edits to the store (GAP-A)', () => {
+  beforeEach(() => {
+    delete window.location;
+    window.location = { hash: '#/animal/remy/recording-system' };
+  });
+  afterEach(() => {
+    window.location = { hash: '' };
+  });
+
+  /** Live-store probe: exposes remy's data-acq devices for assertions. */
+  function DataAcqProbe() {
+    const { model } = useStoreContext();
+    return (
+      <pre data-testid="data-acq">
+        {JSON.stringify(model.workspace.animals.remy?.devices?.data_acq_device || [])}
+      </pre>
+    );
+  }
+
+  it('writes a recording-system (data-acq name) edit through the container to the store', async () => {
+    // The catalog containers' real job is wiring the store callback (useAnimalFieldUpdate); the
+    // presentational sections test against a MOCKED callback, so this pins the actual container→store
+    // seam — a regression that drops/mis-shapes the write would otherwise render green.
+    const user = userEvent.setup();
+    render(
+      <StoreProvider initialState={{ workspace: { animals: { remy: buildAnimal() }, days: {}, settings: {} } }}>
+        <AnimalView animalId="remy" tab="recording-system" />
+        <DataAcqProbe />
+      </StoreProvider>
+    );
+
+    const nameField = screen.getByLabelText(/^name/i);
+    await user.clear(nameField);
+    await user.type(nameField, 'SpikeGadgets_MCU');
+    await user.tab(); // blur commits the device through the container's store callback
+
+    const devices = JSON.parse(screen.getByTestId('data-acq').textContent);
+    expect(devices).toHaveLength(1);
+    expect(devices[0].name).toBe('SpikeGadgets_MCU');
   });
 });
 

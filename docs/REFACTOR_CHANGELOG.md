@@ -45,6 +45,17 @@ revisitable-not-linear goal. It also surfaced fixable items, remediated here acr
   decision 11); a blocking opto config is already surfaced by the red ● (validation maps opto field
   paths to the optogenetics tab), and whether *partial* opto is itself flagged is a separate
   validation-correctness question, not a nav-label fix.
+- **Phase-5 coverage migration (the test blocker).** Four data-dangerous behaviors lived ONLY in
+  `ElectrodeGroupsContainer` and were pinned ONLY by the 1724-line legacy stepper test suite (which
+  Phase 5 deletes), so deleting it would have lost coverage. New
+  [ElectrodeGroupsContainer.test.jsx](../src/pages/AnimalEditor/wiring/__tests__/ElectrodeGroupsContainer.test.jsx)
+  re-pins them directly against the REAL container + a live store: bulk-add (count loop + sequential
+  ids + per-group channel-map generation + success toast), electrode-group delete → channel-map
+  CASCADE, next-electrode-group-id (max + 1, gaps tolerated), and copy-from-animal append/re-normalize.
+  Plus a GAP-A store-write test proving a recording-system (data-acq) edit persists through the
+  catalog container's `useAnimalFieldUpdate` seam (the sections test against a mocked callback), and a
+  `getAnimalDeleteCascade` unit test pinning the wrong-owner / recovered-unlinked exclusions directly.
+  **Phase 5 can now delete the stepper test suite without coverage loss.**
 
 ## Tabbed workspace IA — Phase 4 deferred (2/2): top object-selector dropdown (June 8, 2026)
 
