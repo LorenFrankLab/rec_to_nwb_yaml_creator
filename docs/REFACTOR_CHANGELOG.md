@@ -23,7 +23,14 @@ which data it recorded). So an animal recorded on different rigs over its life i
   now states that trodes_to_nwb *iterates* the array (`dataacq_device{i}`) but multiple-in-one-YAML do
   NOT raise and are meaningless — the meaningful unit is one device per session.
 
-The day-side override UI and the animal-tab simplification follow in subsequent commits.
+**Model correction (catalog + per-day selection).** Per further design feedback, the recording system
+is a **catalog** (the animal owns a list of systems you `+ Add` to, like the Cameras tab), and each day
+**references which one** it used (`day.data_acq_device_name`), defaulting to the first/only. The merge
+([resolveDayDataAcqDevice](../src/state/workspaceUtils.js)) now emits **exactly one** device — the
+referenced catalog entry (resolved LIVE, so editing that system propagates) or the first — never the
+whole catalog. Byte-identical for a one-system animal with an unreferenced day (every golden fixture).
+This supersedes the earlier free-form `day.data_acq_device` override. The catalog list UI (animal tab)
+and the per-day selector (Day Editor) follow in subsequent commits.
 
 ## Tabbed workspace IA — post-Phase-5 UX: relocate the animal profile to the header ⋮ (June 8, 2026)
 

@@ -182,48 +182,59 @@ describe('mergeDayMetadata', () => {
     });
   });
 
-  describe('Recording system: per-day acquisition device with animal default', () => {
-    it('inherits the animal-level recording system when the day has no device of its own', () => {
-      const animal = createTestAnimal();
-      const day = createTestDay(); // no day.data_acq_device
-      const merged = mergeDayMetadata(animal, day);
+  describe('Recording system: catalog + per-day selection', () => {
+    /** An animal with a two-system recording catalog. */
+    function catalogAnimal() {
+      return createTestAnimal({
+        devices: {
+          ...createTestAnimal().devices,
+          data_acq_device: [
+            { name: 'SpikeGadgets', system: 'SpikeGadgets', amplifier: 'Intan', adc_circuit: 'Intan' },
+            { name: 'Neuropixels rig', system: 'OpenEphys', amplifier: 'IMEC', adc_circuit: 'IMEC' },
+          ],
+        },
+      });
+    }
+
+    it('exports exactly ONE device — the catalog default (first) — for an unreferenced day', () => {
+      const merged = mergeDayMetadata(catalogAnimal(), createTestDay());
       expect(merged.data_acq_device).toEqual([
         { name: 'SpikeGadgets', system: 'SpikeGadgets', amplifier: 'Intan', adc_circuit: 'Intan' },
       ]);
     });
 
-    it('exports the DAY\'s own recording system when the session used different hardware', () => {
-      // trodes_to_nwb records one acquisition system per session — a day recorded on a different
-      // rig carries its OWN device (a different YAML with a different device), not the animal default.
-      const animal = createTestAnimal();
-      const day = createTestDay({
-        data_acq_device: [
-          { name: 'Neuropixels rig', system: 'OpenEphys', amplifier: 'IMEC', adc_circuit: 'IMEC' },
-        ],
-      });
-      const merged = mergeDayMetadata(animal, day);
+    it('exports the catalog system the day references by name (one device, not all)', () => {
+      const day = createTestDay({ data_acq_device_name: 'Neuropixels rig' });
+      const merged = mergeDayMetadata(catalogAnimal(), day);
       expect(merged.data_acq_device).toEqual([
         { name: 'Neuropixels rig', system: 'OpenEphys', amplifier: 'IMEC', adc_circuit: 'IMEC' },
       ]);
     });
 
-    it('falls back to the animal default for an empty / malformed day device list', () => {
-      const animal = createTestAnimal();
-      expect(mergeDayMetadata(animal, createTestDay({ data_acq_device: [] })).data_acq_device)
-        .toHaveLength(1);
-      expect(mergeDayMetadata(animal, createTestDay({ data_acq_device: 'corrupt' })).data_acq_device)
-        .toEqual([
-          { name: 'SpikeGadgets', system: 'SpikeGadgets', amplifier: 'Intan', adc_circuit: 'Intan' },
-        ]);
+    it('resolves the referenced system LIVE from the catalog (an edit to it propagates)', () => {
+      const animal = catalogAnimal();
+      animal.devices.data_acq_device[1].amplifier = 'IMEC v2'; // edit the catalog entry
+      const merged = mergeDayMetadata(animal, createTestDay({ data_acq_device_name: 'Neuropixels rig' }));
+      expect(merged.data_acq_device[0].amplifier).toBe('IMEC v2');
     });
 
-    it('reorders the day device keys to the canonical export order', () => {
-      const animal = createTestAnimal();
-      const day = createTestDay({
-        // Keys out of order on the day record must export in canonical name/system/amplifier/adc order.
-        data_acq_device: [{ adc_circuit: 'IMEC', amplifier: 'IMEC', system: 'OpenEphys', name: 'NP' }],
+    it('falls back to the first catalog entry for a dangling / unset reference', () => {
+      expect(
+        mergeDayMetadata(catalogAnimal(), createTestDay({ data_acq_device_name: 'deleted system' }))
+          .data_acq_device
+      ).toEqual([
+        { name: 'SpikeGadgets', system: 'SpikeGadgets', amplifier: 'Intan', adc_circuit: 'Intan' },
+      ]);
+    });
+
+    it('emits the device in canonical key order', () => {
+      const animal = createTestAnimal({
+        devices: {
+          ...createTestAnimal().devices,
+          data_acq_device: [{ adc_circuit: 'IMEC', amplifier: 'IMEC', system: 'OpenEphys', name: 'NP' }],
+        },
       });
-      const merged = mergeDayMetadata(animal, day);
+      const merged = mergeDayMetadata(animal, createTestDay());
       expect(Object.keys(merged.data_acq_device[0])).toEqual(['name', 'system', 'amplifier', 'adc_circuit']);
     });
   });
