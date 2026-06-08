@@ -31,6 +31,7 @@ import DioContainer from '../AnimalEditor/wiring/DioContainer';
 import OptogeneticsContainer from '../AnimalEditor/wiring/OptogeneticsContainer';
 import { useAnimalFieldUpdate } from '../AnimalEditor/wiring/useAnimalFieldUpdate';
 import ConfigVersionContext from './ConfigVersionContext';
+import { ValidationSummary } from '../ValidationSummary';
 import './AnimalView.css';
 
 /**
@@ -113,6 +114,10 @@ function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdat
       );
     case 'channel-maps':
       return <ChannelMapsContainer animalId={animalId} onPendingEditsChange={onPendingEditsChange} />;
+    case 'export':
+      // The per-animal Validation & Export surface — a scoped slice of the workspace Validation
+      // Summary (readiness + repairs + export for THIS animal). Renders without its own <main>.
+      return <ValidationSummary animalKey={animalId} />;
     case 'recording-system':
       return <RecordingSystemContainer animal={animal} onFieldUpdate={onFieldUpdate} />;
     case 'cameras':

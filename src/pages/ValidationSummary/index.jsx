@@ -216,14 +216,28 @@ ExportReport.propTypes = {
 };
 
 /**
+ * Validation Summary — workspace-global by default, or scoped to one animal when `animalKey` is
+ * given (the per-animal "Validation & Export" tab, Phase 3-5). The scoped mode is a FILTER over the
+ * same rows + the same batch actions (validate / export-valid / preflight) — never a forked
+ * validation path. When scoped it renders WITHOUT its own `<main id="main-content">` (the embedding
+ * AnimalView already owns the page landmark) and swaps the page heading for a scoped header.
+ *
+ * @param {object} props
+ * @param {string} [props.animalKey] - When set, show only this animal's rows in an embeddable
+ *   section; when omitted, the standalone workspace-global page.
  * @returns {JSX.Element}
  */
-export function ValidationSummary() {
+export function ValidationSummary({ animalKey } = {}) {
   const { model, actions } = useStoreContext();
   const workspace = model.workspace;
+  const scoped = animalKey != null;
 
-  // Recomputed from the workspace on every render — chips/counts are always current.
-  const rows = useMemo(() => buildRows(workspace), [workspace]);
+  // Recomputed from the workspace on every render — chips/counts are always current. Scoped mode is
+  // a pure filter (buildAnimalRows) so its chips are identical to the global summary's.
+  const rows = useMemo(
+    () => (scoped ? buildAnimalRows(workspace, animalKey) : buildRows(workspace)),
+    [workspace, scoped, animalKey]
+  );
 
   const counts = useMemo(() => {
     const acc = { valid: 0, error: 0, incomplete: 0 };
@@ -496,15 +510,38 @@ export function ValidationSummary() {
 
   const hasDays = rows.length > 0;
 
+  // Scoped (embedded in AnimalView) renders a section + a scoped header — NOT a second
+  // `<main id="main-content">` (AnimalView owns the page landmark) and NOT the page-level h1.
+  const Wrapper = scoped ? 'section' : 'main';
+  const wrapperProps = scoped
+    ? { className: 'validation-summary validation-summary--scoped', 'aria-label': 'Validation and export for this animal' }
+    : { id: 'main-content', tabIndex: '-1', role: 'main', 'aria-labelledby': 'validation-heading' };
+
   return (
-    <main id="main-content" tabIndex="-1" role="main" aria-labelledby="validation-heading">
-      <h1 id="validation-heading">Validation Summary</h1>
+    <Wrapper {...wrapperProps}>
+      {scoped ? (
+        <header className="validation-summary-scoped-header">
+          <h2>This animal — readiness &amp; export</h2>
+          <p className="validation-summary-scoped-subhead" data-testid="validation-scope">
+            Showing: {animalKey} — {rows.length} {rows.length === 1 ? 'day' : 'days'}
+          </p>
+        </header>
+      ) : (
+        <h1 id="validation-heading">Validation Summary</h1>
+      )}
 
       {!hasDays ? (
-        <p className="validation-summary-empty">
-          No recording days yet. Create an animal and a recording day to see its
-          validation status here. <a href="#/workspace">Go to Workspace</a>.
-        </p>
+        scoped ? (
+          <p className="validation-summary-empty">
+            This animal has no recording days yet. Add a recording day to see its readiness and
+            export here.
+          </p>
+        ) : (
+          <p className="validation-summary-empty">
+            No recording days yet. Create an animal and a recording day to see its
+            validation status here. <a href="#/workspace">Go to Workspace</a>.
+          </p>
+        )
       ) : (
         <>
           <p data-testid="summary-counts" className="validation-summary-counts">
@@ -778,8 +815,16 @@ export function ValidationSummary() {
           </table>
         </>
       )}
-    </main>
+    </Wrapper>
   );
 }
+
+ValidationSummary.propTypes = {
+  animalKey: PropTypes.string,
+};
+
+ValidationSummary.defaultProps = {
+  animalKey: undefined,
+};
 
 export default ValidationSummary;
