@@ -36,7 +36,7 @@ Replace the Day Editor's linear stepper shell with a **tabbed section-nav** matc
 | Next ▸ + keyboard | "Next ▸" and Alt+→ advance through the order; Alt+← retreats |
 | focus management | focus moves to the panel on section change (a11y) |
 | no behaviour regression in steps | existing OverviewStep/DevicesStep/etc. tests still pass unchanged |
-| baselines | 125 byte-identical (UI only) |
+| baselines | byte-identical (UI only) |
 
 ## Fixtures
 

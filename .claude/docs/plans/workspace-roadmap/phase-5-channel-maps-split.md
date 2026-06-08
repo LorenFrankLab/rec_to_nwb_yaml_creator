@@ -11,7 +11,7 @@ The animal **Channel Maps** tab becomes wiring/mapping only; **bad-channel marki
 - `src/state/workspaceUtils.js` — `resolveDayConfig` + the `deviceOverrides.bad_channels` application block (≈ :234); and where the animal-base `bad_channels` (from the config snapshot's ntrode map) currently enter the resolved map. **This is the merge change.**
 - `src/state/workspaceTransitions.js:288` — `createDayRecord(..., carryFrom)` (phase 1) — ADD the config-version-guarded bad-channel carry here.
 - `src/state/useWorkspace.js` hydration / `src/domain/dayRecovery.js` / `src/utils/deviceNormalization.js` — the existing load-time normalization/recovery path is where the one-time migration belongs.
-- **Verify first:** which baseline/golden fixtures (`src/__tests__/fixtures/golden/`, the workspace-merge fixtures) carry animal-base `bad_channels` (`bad_channels` on a config-snapshot ntrode row). If NONE do, the merge change is baseline-neutral without migrating fixtures, and the migration only touches real persisted data.
+- **Verified:** golden fixtures DO carry non-empty animal-base `bad_channels` on config-snapshot ntrode rows — `src/__tests__/fixtures/golden/realistic-session.yml` (lines 155, 180) and `workspace-export.realistic.yml` (lines 192, 217). So the migration-byte-identity gate is **exercised by the committed corpus** — the migration must move those marks down to day overrides while preserving the exported bytes. The byte-identical baseline check is mandatory, not optional.
 
 **Contracts referenced:** [`createDayRecord(..., carryFrom)`](shared-contracts.md#createdayrecordanimal-animalid-dayid-date-session-now-carryfrom--null--referenced-by-phase-1-phase-5) — the config-version-guarded bad-channel carry rule.
 
@@ -39,7 +39,7 @@ The animal **Channel Maps** tab becomes wiring/mapping only; **bad-channel marki
 | carry-forward same config | new day pins same version → carries the prior day's `bad_channels` |
 | carry-forward across config change | source pinned a DIFFERENT version → bad_channels NOT carried |
 | animal tab mapping-only | `ChannelMapEditor` no longer exposes bad-channel editing |
-| baselines | `npx vitest run baselines` → 125 byte-identical (with fixtures verified base-free or migrated) |
+| baselines | `npx vitest run baselines` → byte-identical (with fixtures verified base-free or migrated) |
 
 ## Fixtures
 

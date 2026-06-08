@@ -15,7 +15,7 @@ Make the workspace faster to enter data into and able to ingest existing data, w
 
 The full legacy↔workspace relationship, the merge-seam integration map, and the data-entry efficiency audit live in [../scope-tiers-ia/design-note.md](../scope-tiers-ia/design-note.md). Mockups of the proposed UI: [../scope-tiers-ia/mockup-efficiency-patterns.html](../scope-tiers-ia/mockup-efficiency-patterns.html), [../scope-tiers-ia/mockup-tabbed-day-editor-interactive.html](../scope-tiers-ia/mockup-tabbed-day-editor-interactive.html), [../scope-tiers-ia/mockup-dataset-tier.html](../scope-tiers-ia/mockup-dataset-tier.html). The single fact every phase depends on:
 
-**The export seam is `mergeDayMetadata(animal, day) → encodeYaml`** (`src/state/workspaceUtils.js`). One workspace day exports byte-identical YAML to the legacy form for the same session. The 125 golden-baseline assertions (`npx vitest run baselines`) lock that output. So:
+**The export seam is `mergeDayMetadata(animal, day) → encodeYaml`** (`src/state/workspaceUtils.js`). One workspace day exports byte-identical YAML to the legacy form for the same session. The golden-baseline assertions (`npx vitest run baselines`) lock that output. So:
 
 - **🟢 merge-neutral** changes (UI/state that don't alter the emitted YAML) leave baselines untouched — phases 1, 2, 3, 4, 6, 7.
 - **🟡 merge-changing** changes (alter the emitted YAML) must keep it **byte-identical for existing data** (no fixture exercises the new path) AND migrate existing data — phase 5.
@@ -26,7 +26,7 @@ Express new structure as *what the merge resolves*, never as new exported keys.
 
 - Day creation: `src/state/workspaceTransitions.js:288` (`createDayRecord`) ← `src/state/useWorkspace.js:392` (`createDay`) ← `src/pages/AnimalWorkspace/RecordingDaysTab.jsx:131` (`handleCreateDays`, the create loop ≈ 150).
 - Day-owned selectors: `src/state/workspaceSelectors.js:89-112` (`getAnimalDayIds`, `getDaySession`, `getDayTasks`, `getDayBehavioralEvents`, `getDayKeywords`, …).
-- Copy-from-animal: `src/pages/AnimalEditor/CopyFromAnimalDialog.jsx:26` (props `open/currentAnimalId/animals/onCopy/onCancel`; `handleCopy` at :89 emits `onCopy({ electrode_groups, ntrode_electrode_group_channel_map })` ≈ :127); wired in `src/pages/AnimalEditor/wiring/ElectrodeGroupsContainer.jsx:309` (`onCopy={handleCopyConfirm}`).
+- Copy-from-animal: `src/pages/AnimalEditor/CopyFromAnimalDialog.jsx:26` (props `open/currentAnimalId/animals/onCopy/onCancel`; `handleCopy` at :89 emits `onCopy({ electrode_groups, ntrode_electrode_group_channel_map })` ≈ :127); `handleCopyConfirm` is defined at `src/pages/AnimalEditor/wiring/ElectrodeGroupsContainer.jsx:256`, wired via the dialog render at `:309-313`.
 - Cameras-used: `src/state/cameraUsage.js` (`referencedCameraKeys`, `resolveDayCameraUsage`) — usage is INFERRED from `tasks[].camera_id` / `associated_video_files[].camera_id` / `fs_gui_yamls[].camera_id`.
 - Bad channels: day overrides in `src/pages/DayEditor/BadChannelsEditor.jsx` (checkbox grid) written to `day.deviceOverrides.bad_channels.<ntrodeId>`; the animal-level base is edited in `src/pages/AnimalEditor/ChannelMapEditor.jsx` (`bad_channels` on each group's first ntrode row); the merge applies the day override onto the resolved ntrode map in `src/state/workspaceUtils.js` (`resolveDayConfig` + the `deviceOverrides.bad_channels` block ≈ :234).
 - Import (legacy): `src/features/importExport.js` (`importFiles`, parse + `validate`) → `setFormData`; the inverse target is `mergeDayMetadata` in `src/state/workspaceUtils.js`.

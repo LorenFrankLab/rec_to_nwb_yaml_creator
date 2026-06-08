@@ -7,7 +7,7 @@ Today "Copy from animal" copies only electrode groups + channel maps. Extend it 
 **Inputs to read first:**
 
 - `src/pages/AnimalEditor/CopyFromAnimalDialog.jsx:26` — props `{ open, currentAnimalId, animals, onCopy, onCancel }`; `handleCopy` (:89) emits `onCopy({ electrode_groups, ntrode_electrode_group_channel_map })` (≈ :127). Add selectable sections (checkboxes) + include cameras / data_acq_device in the emitted payload.
-- `src/pages/AnimalEditor/wiring/ElectrodeGroupsContainer.jsx:309` — renders the dialog; `handleCopyConfirm` (≈ :313) applies via `actions.updateAnimal(animalId, { devices: {...} })`.
+- `src/pages/AnimalEditor/wiring/ElectrodeGroupsContainer.jsx` — `handleCopyConfirm` is defined at `:256` (applies via `actions.updateAnimal(animalId, { devices: {...} })`); the dialog render + `onCopy={handleCopyConfirm}` wiring is at `:309-313`.
 - `src/pages/AnimalEditor/identitySafety.js` — `collectCameraIdentities` / `collectDataAcqIdentities` + `findIdentityDivergence` (run on the copied cameras / data_acq_device).
 - `src/state/workspaceSelectors.js` — `getAnimalCameras`, `getDataAcqDevices` (read the source animal's catalogs).
 
@@ -31,7 +31,7 @@ Today "Copy from animal" copies only electrode groups + channel maps. Extend it 
 | copy recording system | `data_acq_device` catalog copied (deep clone) |
 | copy electrode groups (regression) | existing behaviour intact — new ids remapped |
 | divergence on copy | a copied camera/data-acq name that diverges from the dataset surfaces the guard; write blocked |
-| baselines | 125 byte-identical |
+| baselines | byte-identical |
 
 ## Fixtures
 
