@@ -435,6 +435,83 @@ export function useWorkspace(initialState = null) {
       },
 
       /**
+       * Duplicates an existing recording day to a new date ("same protocol, next session").
+       *
+       * The duplicate reproduces the source EXACTLY: day-owned content (tasks,
+       * behavioral_events, keywords, technical, session.experiment_description / weight) is
+       * deep-cloned via {@link createDayRecord}'s carry path, while session_id /
+       * session_description are date-derived from the new date (session_description defaults to
+       * the source's). The duplicate pins the SOURCE's `configurationVersion` (NOT the animal's
+       * latest) and carries the source's `deviceOverrides` (bad channels) directly — both are
+       * always safe because a duplicate is, by construction, the same configuration as its source.
+       *
+       * @param {string} sourceDayId - The day to clone.
+       * @param {string} newDate - Date in YYYY-MM-DD for the new day.
+       * @throws {Error} If the source day or its animal does not exist, or the target day already exists.
+       */
+      duplicateDay: (sourceDayId, newDate) => {
+        setWorkspace((prev) => {
+          const source = prev.days[sourceDayId];
+          if (!source) {
+            throw new Error(`Day "${sourceDayId}" not found`);
+          }
+
+          const animalId = source.animalId;
+          const animal = prev.animals[animalId];
+          if (!animal) {
+            throw new Error(`Animal "${animalId}" not found`);
+          }
+
+          const dayId = generateDayId(animalId, newDate);
+          if (prev.days[dayId]) {
+            throw new Error(`Day "${dayId}" already exists`);
+          }
+
+          const now = getCurrentTimestamp();
+
+          // Carry day-owned content from the source (deep-cloned by createDayRecord), with a
+          // date-derived session id and the source's session description.
+          const built = createDayRecord(
+            animal,
+            animalId,
+            dayId,
+            newDate,
+            {
+              session_id: `${animalId}_${newDate.replace(/-/g, '')}`,
+              session_description: source.session?.session_description ?? '',
+            },
+            now,
+            source
+          );
+          // A duplicate is the SAME configuration version as its source by construction, so we
+          // override createDayRecord's latest-pin with the source's version and carry the
+          // source's bad-channel overrides directly (no version guard needed).
+          const day = {
+            ...built,
+            configurationVersion: source.configurationVersion,
+            deviceOverrides: source.deviceOverrides
+              ? structuredClone(source.deviceOverrides)
+              : built.deviceOverrides,
+          };
+
+          const updatedAnimal = { ...animal, days: [...getAnimalDayIds(animal), dayId] };
+
+          return {
+            ...prev,
+            animals: {
+              ...prev.animals,
+              [animalId]: updatedAnimal,
+            },
+            days: {
+              ...prev.days,
+              [dayId]: day,
+            },
+            lastModified: now,
+          };
+        });
+      },
+
+      /**
        * Updates day metadata
        *
        * @param {string} dayId - Day identifier
