@@ -6,7 +6,7 @@
  * tabs, and the loading/not-found guard (Task 1.5-lite).
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StoreProvider } from '../../../state/StoreContext';
@@ -102,10 +102,13 @@ describe('AnimalView — URL canonicalization', () => {
     expect(window.location.hash).toBe('#/animal/remy/days');
   });
 
-  it('leaves an already-canonical URL untouched', () => {
+  it('does not rewrite an already-canonical URL (no spurious replaceState)', () => {
     window.location.hash = '#/animal/remy/cameras';
+    const spy = vi.spyOn(window.history, 'replaceState');
     renderView('cameras');
     expect(window.location.hash).toBe('#/animal/remy/cameras');
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
   });
 });
 

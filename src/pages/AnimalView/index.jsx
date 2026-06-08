@@ -81,7 +81,9 @@ export function AnimalView({ animalId, tab }) {
   // Canonicalize the URL: parseHashRoute resolves a bare `#/animal/:id` or an unknown tab to
   // `days`, so REPLACE the address bar to the canonical `#/animal/:id/:tab` to match what's
   // rendered (a tidy, bookmarkable URL). replaceState only — the view already shows the resolved
-  // tab, so no `hashchange` is dispatched and there's no redirect loop.
+  // tab, so no `hashchange` is dispatched and there's no redirect loop (every canonical tab is in
+  // ANIMAL_VIEW_TABS, so a canonical write is self-stable). Pressing Back onto a non-canonical
+  // entry rewrites THAT entry too — intended: a `banana`/no-tab URL should not be revisitable.
   useEffect(() => {
     if (!animalId) return;
     const literalPath = window.location.hash.slice(1).split('?')[0];
