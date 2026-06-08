@@ -69,4 +69,13 @@ describe('AnimalView — ?field= repair-landing highlight (Phase 3a.3)', () => {
     expect(anchor).toBeInTheDocument();
     expect(anchor).not.toHaveClass('repair-target-highlight');
   });
+
+  it('degrades silently when ?field= matches no section anchor on the tab', async () => {
+    // A field that belongs to a different tab's anchor — nothing on the cameras tab matches it.
+    window.location = { hash: '#/animal/remy/cameras?field=electrode_groups' };
+    renderView('cameras');
+    // The cameras anchor is present but never highlighted; no crash.
+    await waitFor(() => expect(screen.getByTestId('panel-scope-cameras')).toBeInTheDocument());
+    expect(document.querySelector('.repair-target-highlight')).toBeNull();
+  });
 });

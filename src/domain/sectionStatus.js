@@ -102,7 +102,9 @@ export function getAnimalBlockingSections(animal, days) {
     for (const issue of validateDay(day, merged, animal)) {
       if (issue.severity !== 'error') continue;
       if (repairTargetForIssue(issue).surface !== 'animal') continue;
-      const { tab } = animalSetupTabForFieldPath(issue.focusPath || issue.path || issue.instancePath);
+      // Attribute via the SAME field input repairTargetForIssue uses for its tab label
+      // (`path || instancePath`), so the dot's tab and the repair button's label can never diverge.
+      const { tab } = animalSetupTabForFieldPath(issue.path || issue.instancePath);
       blocking.add(tab);
     }
   }
