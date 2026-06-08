@@ -79,7 +79,7 @@ const isRecord = (value) =>
  * @param {object} workspace - `model.workspace` ({ animals, days }).
  * @returns {Array<{ animal: object, day: object, chip: 'valid'|'error'|'incomplete' }>}
  */
-function buildRows(workspace) {
+export function buildRows(workspace) {
   // The day RECOVERY STATUS of every reference/record is decided ONCE in the domain
   // ({@link classifyWorkspaceDays}) so this surface doesn't re-derive "what kind of day is
   // this?". buildRows only DECORATES each classified day with its validation chip and the
@@ -144,6 +144,22 @@ function buildRows(workspace) {
   }
 
   return rows;
+}
+
+/**
+ * Animal-scoped slice of {@link buildRows}: the per-animal Validation & Export tab's row set.
+ *
+ * A FILTER over the workspace-global rows, NOT a parallel validation path — the readiness chips are
+ * exactly what the unscoped summary computes for those days, so the two can never drift. Keyed on
+ * `animalKey` (the index key a day is listed under), so a wrong-owner / duplicate-index row scopes
+ * to the animal it's LISTED under, matching how the global table groups it.
+ *
+ * @param {object} workspace - `model.workspace` ({ animals, days }).
+ * @param {string} animalKey - The animal whose rows to keep.
+ * @returns {Array<{ animal: object, animalKey: string, day: object, chip: 'valid'|'error'|'incomplete' }>}
+ */
+export function buildAnimalRows(workspace, animalKey) {
+  return buildRows(workspace).filter((row) => row.animalKey === animalKey);
 }
 
 // Coerced to a string so a corrupt (object/number) subject_id or animal id can never be returned
