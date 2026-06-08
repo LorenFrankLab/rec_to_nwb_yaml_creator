@@ -44,6 +44,29 @@ describe('useAnimalIdFromUrl', () => {
     expect(result.current).toBe('remy');
   });
 
+  // Phase 1 (tabbed-workspace-ia): the hook must also resolve the new tabbed routes,
+  // not only the legacy /editor stepper — every repair/consumer depends on it.
+  it.each(['days', 'cameras', 'electrode-groups', 'channel-maps'])(
+    'extracts animal ID from the tabbed route #/animal/:id/%s',
+    (tab) => {
+      window.location.hash = `#/animal/remy/${tab}`;
+      const { result } = renderHook(() => useAnimalIdFromUrl());
+      expect(result.current).toBe('remy');
+    }
+  );
+
+  it('extracts animal ID from a bare #/animal/:id (defaults to days tab)', () => {
+    window.location.hash = '#/animal/bean';
+    const { result } = renderHook(() => useAnimalIdFromUrl());
+    expect(result.current).toBe('bean');
+  });
+
+  it('extracts animal ID from a tabbed route carrying a ?field= repair deep-link', () => {
+    window.location.hash = '#/animal/remy/cameras?field=meters_per_pixel';
+    const { result } = renderHook(() => useAnimalIdFromUrl());
+    expect(result.current).toBe('remy');
+  });
+
   it('decodes URL-encoded animal IDs with spaces', () => {
     window.location.hash = '#/animal/bean%20whiskey/editor';
     const { result } = renderHook(() => useAnimalIdFromUrl());

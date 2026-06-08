@@ -10,10 +10,34 @@
 import { useState, useEffect } from 'react';
 
 /**
+ * Canonical tab keys for the tabbed animal view (Phase 1 — tabbed-workspace-ia).
+ * `days` is the default. Order is the section-nav display order. Any other `:tab`
+ * segment normalizes to `days` (redirect-to-days).
+ *
+ * @type {string[]}
+ */
+export const ANIMAL_VIEW_TABS = [
+  'days',
+  'export',
+  'electrode-groups',
+  'channel-maps',
+  'recording-system',
+  'cameras',
+  'dio',
+  'optogenetics',
+];
+
+/**
+ * The default tab for the animal view when none (or an unknown one) is given.
+ * @type {string}
+ */
+export const DEFAULT_ANIMAL_VIEW_TAB = 'days';
+
+/**
  * Route information object
  * @typedef {object} RouteInfo
- * @property {'home'|'workspace'|'day'|'validation'|'animal-editor'|'legacy'} view - Current view name
- * @property {Object.<string, string>} params - Route parameters (e.g., {id: '123'})
+ * @property {'home'|'workspace'|'day'|'validation'|'animal-editor'|'animal-view'|'legacy'} view - Current view name
+ * @property {Object.<string, string>} params - Route parameters (e.g., {id: '123'} or {animalId, tab})
  * @property {boolean} [isUnknownRoute] - True if route was not recognized
  */
 
@@ -65,7 +89,10 @@ export function parseHashRoute(hash = typeof window !== 'undefined' ? window.loc
     return { view: 'validation', params: {} };
   }
 
-  // Pattern match for /animal/:id/editor (without query parameters)
+  // Pattern match for /animal/:id/editor (without query parameters).
+  // MUST be matched before the generic /animal/:id/:tab below — the legacy stepper route
+  // stays alive during the tabbed-workspace-ia transition (Phase 1), and `editor` is
+  // otherwise a valid-looking :tab segment.
   const animalEditorMatch = pathWithoutQuery.match(/^\/animal\/([^/]+)\/editor$/);
   if (animalEditorMatch) {
     const animalId = animalEditorMatch[1];
@@ -80,6 +107,25 @@ export function parseHashRoute(hash = typeof window !== 'undefined' ? window.loc
       view: 'animal-editor',
       params: { animalId }
     };
+  }
+
+  // Pattern match for the tabbed animal view (Phase 1 — tabbed-workspace-ia):
+  // /animal/:id/:tab and the bare /animal/:id (which defaults to the `days` tab).
+  // An unknown/unsupported tab normalizes to `days` (redirect-to-days).
+  const animalTabMatch = pathWithoutQuery.match(/^\/animal\/([^/]+)\/([^/]+)$/);
+  const animalNoTabMatch = pathWithoutQuery.match(/^\/animal\/([^/]+)$/);
+  if (animalTabMatch || animalNoTabMatch) {
+    const animalId = (animalTabMatch || animalNoTabMatch)[1];
+
+    // Validate ID is not empty or whitespace
+    if (!animalId || animalId.trim() === '') {
+      console.warn('Invalid animal ID in route:', cleanHash);
+      return { view: 'legacy', params: {} };
+    }
+
+    const rawTab = animalTabMatch ? animalTabMatch[2] : 'days';
+    const tab = ANIMAL_VIEW_TABS.includes(rawTab) ? rawTab : 'days';
+    return { view: 'animal-view', params: { animalId, tab } };
   }
 
   // Pattern match for /day/:id (without query parameters)
