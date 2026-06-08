@@ -98,6 +98,52 @@ a dedicated design pass (brainstorming skill) + meticulous baseline preservation
   the Spyglass identity field (`camera_name`, data-acq `name`, `task_name`).
 - Migration: existing per-animal data must convert losslessly to whatever tier moves.
 
+## Architecture & integration with the legacy app (verified 2026-06-08)
+
+Two architectures coexist (confirmed by code audit):
+
+- **LEGACY (feature-frozen):** `useLegacyForm` flat `formData`, route `#/`, **not persisted**,
+  `exportAll(formData) → encodeYaml`, `importFile → setFormData` (the ONLY YAML import path).
+- **WORKSPACE (active):** `useWorkspace` animals → days → config versions, **persisted to localStorage**,
+  `mergeDayMetadata(animal, day) → encodeYaml`.
+
+They are **two independent stores** (composed as siblings in `store.js`; no sync — editing one never
+touches the other). They share **only the I/O + validation contract**: `encodeYaml` (`io/yaml.js`),
+`nwb_schema.json`, `validate()` (schema + rules), and `valueList.js` key order. **That shared layer is
+exactly what the 125 golden baselines lock.** The workspace adds *day-level* validation (`validateDay`,
+`computeStepStatus`) on top of the shared schema rules — additive, not a fork. Only the form *controls*
+(`element/*`) are legacy-only; `io` / `validation` / `schema` / `valueList` / `utils` are shared.
+
+**The bridge — `mergeDayMetadata`** flattens an animal+day into a dict *isomorphic to legacy
+`formData`*, so **one workspace day exports byte-identical YAML to the legacy form** for the same
+session. This parity is the whole game (and what makes a YAML importer tractable — see the plan).
+
+**Gaps:** YAML import is **legacy-only** — there is no path to import a YAML *into* the workspace, and
+no legacy↔workspace converter. Relevant to onboarding efficiency + the held cutover.
+
+**The integration seam is the merge.** Every feature is either:
+
+- 🟢 **MERGE-NEUTRAL** (UI/state only; baselines untouched; low risk): hybrid day editor, carry-forward,
+  duplicate-day, copy-from-animal, per-day cameras-used checklist.
+- 🟡 **MERGE-CHANGING** (alters the emitted YAML; TDD + byte-identical baselines + migration): task
+  catalog, channel-maps split, dataset tier.
+
+**Design rule:** express new structure as *"what `mergeDayMetadata` resolves"*, NOT as new exported
+keys — that preserves legacy parity + the baselines.
+
+| Mockup element | Lands on | Touches | Merge output? |
+| --- | --- | --- | --- |
+| Hybrid tabbed editor | `DayEditorStepper` shell → section-nav (step components stay) | UI only | 🟢 No |
+| Carry-forward / duplicate / bulk | `CalendarDayCreator` + `RecordingDaysTab` + `createDay`/`createDayRecord`; new `duplicateDay` | useWorkspace | 🟢 No |
+| Per-day cameras-used | new day control → `resolveDayCameraUsage` | `updateDay` | 🟢 No (same resolved set) |
+| Extend copy-from-animal | `CopyFromAnimalDialog` + Cameras/RecordingSystem containers | `updateAnimal` | 🟢 No |
+| Task-type catalog | new catalog + `TasksEpochsStep`; merge inlines | useWorkspace + **merge** | 🟡 Yes |
+| Channel-maps split | `ChannelMapEditor` (drop bad-ch) + day `BadChannelsEditor`; `resolveDayConfig` | **merge** | 🟡 Yes |
+| Dataset tier | new route + `workspace.sharedHardware` + merge resolution | useWorkspace + **merge** | 🟡 Yes |
+| Import from existing | new importer (inverse of merge) + workspace entry | new `decomposeYaml` + createAnimal/Day | 🟢 No (round-trip parity) |
+
+See **[implementation-plan.md](implementation-plan.md)** for the phased build (incl. the YAML importer).
+
 ## Data-entry efficiency (2026-06-08)
 
 North star (user): **"the user can add information in the most efficient way possible."** Days are the
@@ -140,3 +186,8 @@ the hybrid tabbed editor (decided) + the dataset tier.
   on `modern`. Design answers: **hybrid** tabbed day-editor preferred; channel-maps **split** approved;
   dataset-tier + day-editor mockups requested; cutover (front door) **held**. Efficiency emphasized.
   Mockups: `mockup-dataset-tier.html`, `mockup-tabbed-day-editor-interactive.html`, `mockup-efficiency-patterns.html`.
+- 2026-06-08: Verified legacy↔workspace relationship (two independent stores, shared I/O+validation
+  contract, `mergeDayMetadata` parity bridge, import legacy-only). Captured the architecture + the
+  merge-seam integration map above. Wrote the phased **[implementation-plan.md](implementation-plan.md)**
+  including a YAML **importer** (Phase C — round-trip byte-identical as the correctness gate). Nothing
+  built yet from the plan; awaiting a go on the first phase.
