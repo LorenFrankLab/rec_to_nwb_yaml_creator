@@ -175,7 +175,7 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
   return (
     <div className="electrode-groups-step">
       <header className="step-header">
-        <h2>Step 1: Electrode Groups</h2>
+        <h2>Electrodes &amp; Ephys</h2>
         <p>Configure the electrode groups for this animal.</p>
       </header>
 

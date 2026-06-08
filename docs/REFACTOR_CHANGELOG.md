@@ -6,6 +6,27 @@
 
 ---
 
+## Tabbed workspace IA — Phase 0: setup-screen copy quick wins (June 7, 2026)
+
+First (copy-only, IA-risk-free) phase of the [tabbed-workspace-ia](../.claude/docs/plans/tabbed-workspace-ia/overview.md)
+redesign — independent of the tab restructure, lands before it. Makes the Channel Maps screen name
+what the scientist is actually doing and stops the setup panels reading as a one-time wizard. UI copy +
+one read-only derived count; **no store/export change** — 125 golden baselines byte-identical; full
+suite (4154), lint (0 errors), build all green. TDD: new-copy assertions written red first, then the
+components.
+
+- **Channel Maps copy** ([ChannelMapsStep.jsx](../src/pages/AnimalEditor/ChannelMapsStep.jsx)): heading
+  `Step 2: Channel Maps` → **`Channel Maps`**; intro now names BOTH jobs — *"Map each probe channel to
+  its electrode position, and mark dead/bad channels…"*. Empty-state copy de-references "Step 1".
+- **Per-group bad-channel count** (firm Phase 0 requirement): a new scannable **`N bad / total`** column,
+  summed read-only across each group's ntrode `bad_channels` (denominator = catalog `getChannelCount`),
+  visible in every row state.
+- **De-steppered the Electrodes heading** ([ElectrodeGroupsStep.jsx](../src/pages/AnimalEditor/ElectrodeGroupsStep.jsx)):
+  `Step 1: Electrode Groups` → **`Electrodes & Ephys`** (matches the existing step-nav label). Stepper
+  *navigation* untouched (Phase 1+ replaces it) — only the in-panel `<h2>`.
+- Tests updated for the new copy (`ChannelMapsStep`, `ElectrodeGroupsStep`, `AnimalEditorStepper` mock,
+  `shortcuts.integration`); +5 new assertions (heading/intro/bad-count, de-stepper).
+
 ## Ownership defaults & day configurability — Phase 8.7 Task 11: QA handoff + coverage map (June 7, 2026)
 
 Closes Phase 8.7. The focused unit/component tests for every acceptance row were added with their
