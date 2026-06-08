@@ -81,9 +81,9 @@ export function RecordingDaysTab({ animalId }) {
   // verbatim from AnimalWorkspace (lowest-risk extraction; the 34 workspace tests pin it).
   const selectedAnimalId = animalId;
   const [showCalendar, setShowCalendar] = useState(false);
-  // Pending destructive confirms (null when closed). Animal: the id to delete. Day: a small
-  // descriptor of the row (so the confirm can name it even after the store row changes).
-  const [pendingDeleteAnimalId, setPendingDeleteAnimalId] = useState(null);
+  // Pending per-day delete confirm (null when closed): a small descriptor of the row (so the
+  // confirm can name it even after the store row changes). Animal delete moved to the AnimalView
+  // header ⋮ in Phase 4 (the shared type-to-confirm AnimalDeleteDialog), so it no longer lives here.
   const [pendingDeleteDay, setPendingDeleteDay] = useState(null);
 
   const { animals = {}, days = {} } = model.workspace;
@@ -110,30 +110,6 @@ export function RecordingDaysTab({ animalId }) {
   const selectedWrongOwnerDayIds = selectedDayClassification
     .filter((d) => d.status === DAY_STATUS.WRONG_OWNER)
     .map((d) => d.dayId);
-
-  // Cascade preview for "Delete animal". The store's guarded `deleteAnimal` walks ONLY the
-  // animal's day INDEX (`getAnimalDayIds`), so it removes exactly the OK days (index-resident,
-  // record present, owned). It does NOT touch wrong-owner records (preserved — they belong to
-  // another animal) NOR recovered-unlinked records (those are not in the index, so they survive
-  // as orphans). The count must therefore be OK-only — counting recovered-unlinked here would
-  // promise a deletion the store does not perform. The surviving recovered records get their own
-  // honest note below.
-  const selectedDeletableDays = selectedDayClassification.filter(
-    (d) => d.status === DAY_STATUS.OK
-  );
-  const selectedOwnedDayCount = selectedDeletableDays.length;
-  const selectedOwnedHasArtifacts = selectedDeletableDays.some((d) => dayHasArtifacts(d.record));
-
-  /**
-   * Commit the pending animal deletion through the store's guarded `deleteAnimal` (which
-   * preserves wrong-owner records). The host owns selection, so there is nothing to clear here.
-   */
-  function confirmDeleteAnimal() {
-    const id = pendingDeleteAnimalId;
-    setPendingDeleteAnimalId(null);
-    if (!id) return;
-    actions.deleteAnimal(id);
-  }
 
   /**
    * Commit the pending recording-day deletion through the store's `deleteDay`.
@@ -540,55 +516,7 @@ export function RecordingDaysTab({ animalId }) {
           </ul>
           );
         })()}
-
-        {/* Lifecycle cleanup (Task 8): a secondary/destructive animal delete, set apart
-            in its own zone at the foot of the section — discoverable in the animal's
-            management area, never adjacent to the primary setup/export actions. */}
-        <footer className="workspace-danger-zone">
-          {/* Accessible name is "Delete this animal" (no id): the button lives under this
-              animal's "Recording Days for X" heading, and the destructive confirm names the
-              specific animal + cascade. Embedding the id here would also collide with the
-              sidebar animal-card's name for assistive tech / tests. */}
-          <button
-            type="button"
-            className="btn-danger-text"
-            onClick={() => setPendingDeleteAnimalId(selectedAnimalId)}
-            aria-label="Delete this animal…"
-          >
-            Delete animal…
-          </button>
-        </footer>
       </div>
-
-      <ConfirmDialog
-        isOpen={pendingDeleteAnimalId != null}
-        title="Delete animal?"
-        message={
-          pendingDeleteAnimalId != null ? (
-            <>
-              Delete <strong>{pendingDeleteAnimalId}</strong> and its {selectedOwnedDayCount}{' '}
-              {selectedOwnedDayCount === 1 ? 'recording day' : 'recording days'}? This removes the
-              animal and the recording days it owns from this workspace and from export lists.
-              {selectedWrongOwnerDayIds.length > 0 &&
-                ` ${selectedWrongOwnerDayIds.length} day ${
-                  selectedWrongOwnerDayIds.length === 1 ? 'record' : 'records'
-                } listed here by mistake (belonging to another animal) will be preserved.`}
-              {selectedOrphanDayIds.length > 0 &&
-                ` ${selectedOrphanDayIds.length} recovered day ${
-                  selectedOrphanDayIds.length === 1 ? 'record' : 'records'
-                } not in this animal's day list will remain in the workspace (resolve them from the validation summary).`}
-              {selectedOwnedHasArtifacts && DOWNSTREAM_NOT_DELETED_NOTE} This cannot be undone.
-            </>
-          ) : (
-            ''
-          )
-        }
-        confirmLabel="Delete animal"
-        cancelLabel="Cancel"
-        destructive
-        onConfirm={confirmDeleteAnimal}
-        onCancel={() => setPendingDeleteAnimalId(null)}
-      />
 
       <ConfirmDialog
         isOpen={pendingDeleteDay != null}

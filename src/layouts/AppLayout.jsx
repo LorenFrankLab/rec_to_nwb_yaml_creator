@@ -249,16 +249,19 @@ export function AppLayout() {
       {currentRoute.view !== 'legacy' && (
         <nav className="primary-nav" role="navigation" aria-label="Primary">
           <a
-            href="#/home"
-            aria-current={currentRoute.view === 'home' ? 'page' : undefined}
-          >
-            Home
-          </a>
-          <a
             href="#/workspace"
             aria-current={currentRoute.view === 'workspace' ? 'page' : undefined}
           >
             Workspace
+          </a>
+          {/* Batch / cross-animal Validation & Export is the chrome-level home for the preflight
+              (Task 4.3/4.4); the per-animal export tab links UP to it. The redundant standalone
+              "Home" entry is dropped — create-animal now lives in the workspace picker. */}
+          <a
+            href="#/validation"
+            aria-current={currentRoute.view === 'validation' ? 'page' : undefined}
+          >
+            Validation &amp; Export
           </a>
           {isFeatureEnabled('showLegacyToggle') && (
             <a href="#/" className="legacy-toggle">

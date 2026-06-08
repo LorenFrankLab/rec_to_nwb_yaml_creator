@@ -566,6 +566,12 @@ export function ValidationSummary({ animalKey } = {}) {
           <p className="validation-summary-scoped-subhead" data-testid="validation-scope">
             Showing: {animalKey} — {rows.length} {rows.length === 1 ? 'day' : 'days'}
           </p>
+          {/* This tab handles ONE animal; the cross-animal batch preflight + export lives at the
+              chrome-level Validation & Export screen (Task 4.4) — link up to it so the relationship
+              is explicit, not hidden. */}
+          <p className="validation-summary-scoped-uplink">
+            <a href="#/validation">Validate &amp; export all animals →</a>
+          </p>
         </header>
       ) : (
         <h1 id="validation-heading">Validation Summary</h1>

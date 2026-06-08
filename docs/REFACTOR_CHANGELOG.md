@@ -6,6 +6,44 @@
 
 ---
 
+## Tabbed workspace IA — Phase 4a: per-animal ⋮ lifecycle menu + nav cleanup (June 8, 2026)
+
+Puts animal lifecycle (delete) into a discoverable, accessible per-animal `⋮` overflow menu on both
+the picker cards and the Animal View header, and de-duplicates the chrome nav. Scope is **Option 3**
+(the goal delivered on the EXISTING card-list picker at `#/workspace`); the doc's net-new top
+object-selector dropdown (Task 4.5) and the left-nav count-chips/chevrons are **deferred**. From the
+[phase-4 doc](../.claude/docs/plans/tabbed-workspace-ia/phase-4-lifecycle-nav.md). **UI-only — no
+store/export/schema change**; 125 golden baselines byte-identical; full suite (4299), lint (0 errors),
+build all green. TDD throughout; code-reviewer pass (no blocking findings). Builds on the Phase-4
+foundation commit (`f2fce6c`: `getAnimalDeleteCascade` + the type-to-confirm `AnimalDeleteDialog`),
+which is now wired to real triggers.
+
+- **4.1 — reusable accessible `⋮` overflow menu.** New
+  [OverflowMenu.jsx](../src/components/OverflowMenu.jsx) (+ css + test) implements the WAI-ARIA
+  menu-button pattern (NOT a div-on-click): `button[aria-haspopup="menu"]` with `aria-expanded` /
+  `aria-controls` → a `role="menu"` of `role="menuitem"` rows; opening moves focus into the menu;
+  Arrow Up/Down wrap, Home/End jump, Esc closes + returns focus to the trigger, Tab closes,
+  outside-click (pointerdown) closes; a disabled item is `aria-disabled` (perceivable/focusable) and
+  skipped by both nav and activation. Items: `{ key, label, onSelect, disabled }`.
+- **4.1 — mounted on both surfaces.** Each animal card in
+  [AnimalWorkspace/index.jsx](../src/pages/AnimalWorkspace/index.jsx) is now a row container whose
+  navigation `<a>` and `⋮` menu are SIBLINGS (a menu button can't nest in the link), and the
+  [AnimalView](../src/pages/AnimalView/index.jsx) header band carries the same menu. Items: Open /
+  Rename… (disabled placeholder) / Delete animal…. Delete opens the shared `AnimalDeleteDialog`
+  (type-to-confirm) → `actions.deleteAnimal`; deleting the viewed animal falls through to the existing
+  "Animal not found" guard (no stranding).
+- **4.1 — removed the day-tab danger zone.** The `workspace-danger-zone` footer + its animal-delete
+  `ConfirmDialog` + the now-dead `pendingDeleteAnimalId` / `confirmDeleteAnimal` / cascade locals are
+  gone from [RecordingDaysTab.jsx](../src/pages/AnimalWorkspace/RecordingDaysTab.jsx); that logic now
+  lives in `getAnimalDeleteCascade` / `AnimalDeleteDialog`. **Per-day delete is unchanged.**
+- **4.3 — nav cleanup.** [AppLayout.jsx](../src/layouts/AppLayout.jsx) primary nav drops the redundant
+  standalone **Home** entry (create-animal moves into the workspace in 4b) and adds **Validation &
+  Export → `#/validation`**. Net primary nav: `Workspace · Validation & Export` (+ the flag-gated
+  legacy toggle). `#/home` stays a live route.
+- **4.4 — batch export discoverable from the per-animal tab.** The scoped per-animal Validation &
+  Export tab ([ValidationSummary](../src/pages/ValidationSummary/index.jsx)) now links UP to the
+  cross-animal batch screen (`#/validation`), making the one-animal-vs-all relationship explicit.
+
 ## Tabbed workspace IA — Phase 3a: repair-routing migration to the tabbed Animal View (June 8, 2026)
 
 Re-points every repair / navigation deep-link from the legacy `#/animal/:id/editor` stepper route at

@@ -52,20 +52,18 @@
   color: white;
 }
 
-/* The card is an <a> link to #/animal/:id/days (Phase 1). Reset link styling so it reads as a
-   card, not underlined link text. */
+/* The card is a row: a flex-filling <a> link to #/animal/:id/days plus a trailing ⋮ menu
+   (Phase 4). The card chrome (border/background/hover) lives on the container so the whole row
+   reads as one card, while the link keeps the reset link styling. */
 .animal-card {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
   width: 100%;
-  padding: 0.75rem;
   margin-bottom: 0.5rem;
   border: 1px solid #ccc;
   border-radius: 4px;
   background: white;
-  cursor: pointer;
-  text-align: left;
-  text-decoration: none;
-  color: inherit;
   transition: background-color 0.2s, border-color 0.2s;
 }
 
@@ -74,9 +72,26 @@
   border-color: #999;
 }
 
-.animal-card:focus-visible {
+.animal-card:focus-within {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
+}
+
+/* The navigation link fills the card and resets link styling so it reads as a card, not
+   underlined link text. */
+.animal-card-link {
+  flex: 1;
+  min-width: 0;
+  padding: 0.75rem;
+  text-align: left;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* Keep the ⋮ trigger out of the card padding so it doesn't crowd the day count. */
+.animal-card-menu {
+  margin-right: 0.5rem;
 }
 
 .animal-name {
@@ -353,15 +368,6 @@
 .btn-danger-text:focus-visible {
   outline: 2px solid #c62828;
   outline-offset: 2px;
-}
-
-/* Animal-level delete sits apart at the foot of the section, away from primary actions. */
-.workspace-danger-zone {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 2rem;
-  padding-top: 1rem;
-  border-top: 1px solid #eee;
 }
 
 /* Empty States */

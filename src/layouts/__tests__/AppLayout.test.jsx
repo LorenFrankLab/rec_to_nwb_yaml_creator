@@ -448,21 +448,24 @@ describe('AppLayout', () => {
       expect(screen.queryByRole('navigation', { name: /primary/i })).not.toBeInTheDocument();
     });
 
-    it('renders Home and Workspace links on non-legacy routes', () => {
-      window.location.hash = '#/home';
+    it('renders Workspace and Validation & Export links on non-legacy routes (no standalone Home)', () => {
+      window.location.hash = '#/workspace';
       render(<AppLayout />);
 
       const nav = screen.getByRole('navigation', { name: /primary/i });
       expect(nav).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /^home$/i })).toHaveAttribute('href', '#/home');
       expect(screen.getByRole('link', { name: /^workspace$/i })).toHaveAttribute('href', '#/workspace');
+      // Batch Validation & Export is now discoverable in the chrome nav (Task 4.3/4.4).
+      expect(screen.getByRole('link', { name: /validation & export/i })).toHaveAttribute('href', '#/validation');
+      // The redundant standalone Home entry is gone — create-animal now lives in the workspace.
+      expect(screen.queryByRole('link', { name: /^home$/i })).not.toBeInTheDocument();
     });
 
     it('marks the current route link with aria-current=page', () => {
-      window.location.hash = '#/workspace';
+      window.location.hash = '#/validation';
       render(<AppLayout />);
-      expect(screen.getByRole('link', { name: /^workspace$/i })).toHaveAttribute('aria-current', 'page');
-      expect(screen.getByRole('link', { name: /^home$/i })).not.toHaveAttribute('aria-current');
+      expect(screen.getByRole('link', { name: /validation & export/i })).toHaveAttribute('aria-current', 'page');
+      expect(screen.getByRole('link', { name: /^workspace$/i })).not.toHaveAttribute('aria-current');
     });
 
     it('hides the "Use Legacy Editor" toggle while showLegacyToggle is off', () => {

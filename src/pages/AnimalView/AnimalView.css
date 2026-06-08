@@ -34,6 +34,12 @@
   color: #46443d;
 }
 
+/* Per-animal lifecycle ⋮ menu, pushed to the trailing edge of the header band (Phase 4). */
+.animal-view-header-actions {
+  margin-left: auto;
+  align-self: center;
+}
+
 .animal-view-body {
   display: grid;
   grid-template-columns: 230px 1fr;

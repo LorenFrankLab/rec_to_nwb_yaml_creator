@@ -19,6 +19,8 @@ import { getAnimalSubject, getAnimalDayIds } from '../../state/workspaceSelector
 import { getAnimalSectionStatus, getAnimalBlockingSections, SECTION_STATUS } from '../../domain/sectionStatus';
 import { useReconfigContext } from '../../hooks/useReconfigContext';
 import { ConfirmDialog } from '../../components/Modal';
+import OverflowMenu from '../../components/OverflowMenu';
+import AnimalDeleteDialog from '../../components/AnimalDeleteDialog';
 import { RecordingDaysTab } from '../AnimalWorkspace/RecordingDaysTab';
 import RawCorruptionBanner from '../../components/RawCorruptionBanner';
 import ReconfigurationContextBanner from '../../components/ReconfigurationContextBanner';
@@ -189,9 +191,14 @@ function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdat
  * @returns {React.Element}
  */
 export function AnimalView({ animalId, tab }) {
-  const { model } = useStoreContext();
+  const { model, actions } = useStoreContext();
   const { animals = {} } = model.workspace;
   const animal = animalId ? animals[animalId] : null;
+
+  // Whether the header ⋮'s type-to-confirm animal-delete dialog is open. Deleting the viewed animal
+  // leaves the route pointing at a now-missing id, which the not-found guard below handles (no
+  // stranding). The shared AnimalDeleteDialog owns the cascade copy + the typed-id gate.
+  const [animalDeleteOpen, setAnimalDeleteOpen] = useState(false);
 
   // Shared store-bound field-update + repair callbacks for the `{ animal, onFieldUpdate }` setup
   // containers (recording-system / cameras / dio), the corruption banner, and the profile save —
@@ -332,6 +339,28 @@ export function AnimalView({ animalId, tab }) {
         <h1 id="animal-view-heading">{animal.id}</h1>
         <span className="animal-view-idbadge">subject_id</span>
         {facts && <span className="animal-view-facts">{facts}</span>}
+        {/* Per-animal lifecycle ⋮ — the SAME reusable menu + type-to-confirm dialog as the picker
+            card, so animal delete reads one truth from either surface (Task 4.1). */}
+        <div className="animal-view-header-actions">
+          <OverflowMenu
+            label={`Actions for ${animal.id}`}
+            items={[
+              {
+                key: 'open',
+                label: 'Open',
+                onSelect: () => {
+                  window.location.hash = `#/animal/${animalId}/days`;
+                },
+              },
+              { key: 'rename', label: 'Rename…', onSelect: () => {}, disabled: true },
+              {
+                key: 'delete',
+                label: 'Delete animal…',
+                onSelect: () => setAnimalDeleteOpen(true),
+              },
+            ]}
+          />
+        </div>
       </header>
 
       {/* Subject facts + reconfiguration context belong in the header band (NOT a tab — Phase 3-4):
@@ -435,6 +464,18 @@ export function AnimalView({ animalId, tab }) {
         destructive
         onConfirm={confirmDiscardAndNavigate}
         onCancel={() => setPendingNavTab(null)}
+      />
+
+      <AnimalDeleteDialog
+        isOpen={animalDeleteOpen}
+        animalId={animalId}
+        animal={animal}
+        days={model.workspace.days}
+        onConfirm={() => {
+          setAnimalDeleteOpen(false);
+          actions.deleteAnimal(animalId);
+        }}
+        onCancel={() => setAnimalDeleteOpen(false)}
       />
     </main>
   );

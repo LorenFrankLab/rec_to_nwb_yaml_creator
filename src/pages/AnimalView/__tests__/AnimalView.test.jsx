@@ -177,9 +177,12 @@ describe('AnimalView — not-found guard (Task 1.5)', () => {
   it('falls back to "Animal not found" after deleting the viewed (sole) animal — no perpetual loading', async () => {
     const user = userEvent.setup();
     renderView('days'); // remy is the only animal
-    // Danger-zone delete inside the hosted RecordingDaysTab, then confirm.
-    await user.click(screen.getByRole('button', { name: /delete this animal/i }));
-    await user.click(screen.getByRole('button', { name: /^delete animal$/i }));
+    // Animal delete lives in the header ⋮ menu (Phase 4) → type-to-confirm dialog, then confirm.
+    await user.click(screen.getByRole('button', { name: /actions for remy/i }));
+    await user.click(screen.getByRole('menuitem', { name: /delete animal/i }));
+    const dialog = screen.getByRole('alertdialog');
+    await user.type(within(dialog).getByRole('textbox', { name: /type .* to confirm/i }), 'remy');
+    await user.click(within(dialog).getByRole('button', { name: /^delete animal$/i }));
     expect(await screen.findByRole('heading', { name: /animal not found/i })).toBeInTheDocument();
     expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
   });

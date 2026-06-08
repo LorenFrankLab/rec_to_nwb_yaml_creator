@@ -174,14 +174,16 @@ describe('ARIA Landmarks', () => {
       expect(screen.getByRole('link', { name: /^workspace$/i })).toBeInTheDocument();
     });
 
-    it('Workspace: one main + one #main-content, a navigation landmark, escape to Home', () => {
+    it('Workspace: one main + one #main-content, a navigation landmark with batch Validation & Export', () => {
       overrideFlags({ animalWorkspace: true });
       const { container } = renderRoute('#/workspace');
 
       expect(container.querySelectorAll('[role="main"]')).toHaveLength(1);
       expect(container.querySelectorAll('#main-content')).toHaveLength(1);
       expect(container.querySelector('[role="navigation"]')).toBeTruthy();
-      expect(screen.getByRole('link', { name: /^home$/i })).toBeInTheDocument();
+      // Phase 4 dropped the standalone Home nav entry; the primary nav now exposes the cross-animal
+      // batch Validation & Export screen alongside the Workspace hub.
+      expect(screen.getByRole('link', { name: /validation & export/i })).toBeInTheDocument();
     });
 
     it('DayEditor: one main + one #main-content + one banner/contentinfo; back-to-workspace link', async () => {

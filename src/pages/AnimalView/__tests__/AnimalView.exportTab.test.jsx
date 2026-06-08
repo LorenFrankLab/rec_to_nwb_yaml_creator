@@ -61,6 +61,14 @@ describe('AnimalView — Validation & Export tab (Phase 3-5)', () => {
     expect(screen.queryByTestId('day-row-totoro-2023-06-22')).not.toBeInTheDocument();
   });
 
+  it('links up to the cross-animal batch Validation & Export screen (Task 4.4)', () => {
+    const { workspace } = makeSummaryWorkspace();
+    renderExportTab('remy', workspace);
+    // The per-animal tab handles ONE animal; it makes the batch screen explicit by linking to it.
+    const uplink = screen.getByRole('link', { name: /all animals|batch|workspace validation/i });
+    expect(uplink).toHaveAttribute('href', '#/validation');
+  });
+
   it('does not render a second #main-content (AnimalView owns the page landmark)', () => {
     const { workspace } = makeSummaryWorkspace();
     renderExportTab('remy', workspace);

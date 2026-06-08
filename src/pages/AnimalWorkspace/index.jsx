@@ -11,9 +11,11 @@
  * @see docs/animal_hierarchy.md for data model
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
 import { classifyAnimalDays, isPresentRecordStatus } from '../../domain/dayRecovery';
+import OverflowMenu from '../../components/OverflowMenu';
+import AnimalDeleteDialog from '../../components/AnimalDeleteDialog';
 import './AnimalWorkspace.css';
 
 /**
@@ -23,13 +25,26 @@ import './AnimalWorkspace.css';
  * navigates to that animal's days route (the animal experience lives at `#/animal/:id/:tab`).
  */
 export function AnimalWorkspace() {
-  const { model } = useStoreContext();
+  const { model, actions } = useStoreContext();
 
   // Default the required sections so a workspace that somehow reaches here without them
   // renders its empty state instead of crashing on Object.keys(undefined).
   const { animals = {}, days = {} } = model.workspace;
   const animalIds = Object.keys(animals);
   const hasAnimals = animalIds.length > 0;
+
+  // The animal id whose delete dialog is open (null when closed). Deleting is the highest-blast-
+  // radius action, so it routes through the shared type-to-confirm AnimalDeleteDialog rather than a
+  // menu-adjacent button. A single dialog instance serves whichever card's ⋮ opened it.
+  const [pendingDeleteAnimalId, setPendingDeleteAnimalId] = useState(null);
+  const pendingDeleteAnimal = pendingDeleteAnimalId ? animals[pendingDeleteAnimalId] : null;
+
+  /** Commit the pending animal deletion through the store's guarded deleteAnimal, then close. */
+  const confirmDeleteAnimal = () => {
+    const id = pendingDeleteAnimalId;
+    setPendingDeleteAnimalId(null);
+    if (id) actions.deleteAnimal(id);
+  };
 
   // Handshake: `#/workspace?animal=<id>` (e.g. after creating a day) jumps straight to that
   // animal's days route. An unknown/absent `?animal` is ignored — the picker is shown. (Unlike
@@ -78,16 +93,51 @@ export function AnimalWorkspace() {
             ).length;
 
             return (
-              <a key={animalId} className="animal-card" href={`#/animal/${animalId}/days`}>
-                <div className="animal-name">{animalId}</div>
-                <div className="animal-day-count">
-                  {dayCount} {dayCount === 1 ? 'day' : 'days'}
-                </div>
-              </a>
+              <div key={animalId} className="animal-card">
+                {/* The card link and the ⋮ menu are SIBLINGS: a menu button can't be nested in the
+                    navigation <a> (interactive-in-interactive), and keeping them apart means the
+                    destructive Delete can't be hit while opening the animal. */}
+                <a className="animal-card-link" href={`#/animal/${animalId}/days`}>
+                  <div className="animal-name">{animalId}</div>
+                  <div className="animal-day-count">
+                    {dayCount} {dayCount === 1 ? 'day' : 'days'}
+                  </div>
+                </a>
+                <OverflowMenu
+                  label={`Actions for ${animalId}`}
+                  buttonClassName="animal-card-menu"
+                  items={[
+                    {
+                      key: 'open',
+                      label: 'Open',
+                      onSelect: () => {
+                        window.location.hash = `#/animal/${animalId}/days`;
+                      },
+                    },
+                    // Rename is a committed placeholder this phase (Task 4.1) — disabled, not hidden,
+                    // so the eventual home for it is discoverable.
+                    { key: 'rename', label: 'Rename…', onSelect: () => {}, disabled: true },
+                    {
+                      key: 'delete',
+                      label: 'Delete animal…',
+                      onSelect: () => setPendingDeleteAnimalId(animalId),
+                    },
+                  ]}
+                />
+              </div>
             );
           })}
         </nav>
       )}
+
+      <AnimalDeleteDialog
+        isOpen={pendingDeleteAnimalId != null}
+        animalId={pendingDeleteAnimalId}
+        animal={pendingDeleteAnimal}
+        days={days}
+        onConfirm={confirmDeleteAnimal}
+        onCancel={() => setPendingDeleteAnimalId(null)}
+      />
     </main>
   );
 }

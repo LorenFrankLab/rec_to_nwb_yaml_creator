@@ -213,10 +213,15 @@
 }
 
 .validation-summary-scoped-subhead {
-  margin: 0 0 1rem;
+  margin: 0 0 0.25rem;
   font-family: var(--mono-font, monospace);
   font-size: 0.8rem;
   color: #6a6557;
+}
+
+.validation-summary-scoped-uplink {
+  margin: 0 0 1rem;
+  font-size: 0.8rem;
 }
 
 .validation-summary-effective > summary {
