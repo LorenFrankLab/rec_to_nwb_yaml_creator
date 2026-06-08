@@ -6,6 +6,49 @@
 
 ---
 
+## Tabbed workspace IA — Phase 3a: repair-routing migration to the tabbed Animal View (June 8, 2026)
+
+Re-points every repair / navigation deep-link from the legacy `#/animal/:id/editor` stepper route at
+the new per-tab routes — making the seven tabs the real repair destination and unblocking Phase 5's
+deletion of the stepper. From the
+[phase-3a doc](../.claude/docs/plans/tabbed-workspace-ia/phase-3a-repair-routing.md). **UI/routing-only
+— no store/export/schema change**; 125 golden baselines byte-identical; full suite (4277), lint (0
+errors), build all green. TDD throughout; code-reviewer pass (no blocking findings). The legacy
+`/editor` route + stepper STAY LIVE until Phase 5 — only the emitters move.
+
+- **3a.2 — field→tab resolver.** New `ANIMAL_SETUP_TABS` + `animalSetupTabForFieldPath(fieldPath)` →
+  `{ tab, label }` in [validation.js](../src/domain/validation.js): the canonical field→section
+  attribution for the tabbed IA, FINER than the legacy 4-step `animalEditorStepForFieldPath` (kept
+  unchanged for the still-live stepper). camera→`cameras`, data-acq→`recording-system`,
+  ntrode→`channel-maps`, opto→`optogenetics`, behavioral/DIO→`dio` (a NEW branch — DIO repairs
+  previously mis-routed to Electrodes), electrode geometry + configurationHistory→`electrode-groups`.
+  `repairTargetForIssue` now labels animal repairs by TAB ("Fix in Animal Setup → Cameras" / "→
+  Recording System").
+- **3a.1 — re-point every emitter.** The dynamic Day-Editor animal-surface repair handoff
+  ([DayEditorStepper.jsx](../src/pages/DayEditor/DayEditorStepper.jsx)) → `#/animal/:id/:tab?field=…`
+  (resolved by the new resolver; no field → `/days`); DevicesStep / DayTechnicalSection hardcoded
+  field links → their owning tab; **ReconfigWizard's param-carrying deep-link → `/electrode-groups?context=reconfigure&…`
+  with params preserved** (so the Phase 3-4 reconfig banner that reads them finally renders in prod);
+  bare "Edit Animal" / breadcrumb links → `/days`.
+- **3a.3 — `?field=` repair-landing highlight.** [AnimalView](../src/pages/AnimalView/index.jsx) reads
+  `?field=` and scrolls to + briefly highlights the section anchor (`data-field-path`, prefix-matched
+  with indices stripped) on the destination tab, mirroring the Day Editor's `.repair-target-highlight`;
+  degrades silently when no anchor matches (there was no pre-existing field-highlight to preserve).
+- **3a.5 — section-nav blocking-red dot.** `getAnimalBlockingSections(animal, days)`
+  ([sectionStatus.js](../src/domain/sectionStatus.js)) validates the animal's days with the SAME
+  validator the export gate uses, keeps error-severity animal-surface issues, and attributes each to a
+  tab via the SAME resolver + field input as the repair routing (no second mapping). AnimalView renders
+  a red ● "— blocks export" on those nav items, outranking the hollow-○ "not set up" ring — colour PLUS
+  the accessible name, never colour alone.
+- **Deliberately retained:** the legacy `/editor` route definitions (router / AppLayout /
+  useAnimalIdFromUrl) and the stepper itself stay until Phase 5; the legacy `animalEditorStepForFieldPath`
+  step resolver is unchanged (the frozen stepper still works).
+- Emitter + label tests swept to the tab URLs; new tests:
+  [AnimalView.fieldHighlight.test.jsx](../src/pages/AnimalView/__tests__/AnimalView.fieldHighlight.test.jsx),
+  [AnimalView.blockingDot.test.jsx](../src/pages/AnimalView/__tests__/AnimalView.blockingDot.test.jsx),
+  and the `animalSetupTabForFieldPath` cases in
+  [animalRepairRouting.test.js](../src/pages/DayEditor/__tests__/animalRepairRouting.test.js).
+
 ## Tabbed workspace IA — Phase 3-6: warning acknowledgement on export (June 8, 2026)
 
 Closes the warning-escape on batch / valid-only export. From the
