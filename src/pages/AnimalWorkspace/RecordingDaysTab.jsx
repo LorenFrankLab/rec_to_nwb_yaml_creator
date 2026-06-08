@@ -36,7 +36,7 @@ import { validateRawAnimal } from '../../validation/rawShape';
 import { applyRepairCommand } from '../../state/repairCommands';
 import RawCorruptionBanner from '../../components/RawCorruptionBanner';
 import { CalendarDayCreator } from '../../components/CalendarDayCreator/CalendarDayCreator';
-import { ConfirmDialog } from '../../components/Modal';
+import { ConfirmDialog, Modal } from '../../components/Modal';
 
 /**
  * The first-run "Set up this animal" card sections, in the same order and with the same keys as
@@ -74,6 +74,12 @@ export function RecordingDaysTab({ animalId }) {
   // confirm can name it even after the store row changes). Animal delete moved to the AnimalView
   // header ⋮ in Phase 4 (the shared type-to-confirm AnimalDeleteDialog), so it no longer lives here.
   const [pendingDeleteDay, setPendingDeleteDay] = useState(null);
+  // Pending per-day DUPLICATE (null when closed): the source row descriptor (dayId/date). The
+  // single-date picker writes its chosen date into `duplicateDate`; `duplicateError` surfaces a
+  // collision or a store throw inside the dialog (mirroring how create errors are surfaced).
+  const [pendingDuplicateDay, setPendingDuplicateDay] = useState(null);
+  const [duplicateDate, setDuplicateDate] = useState('');
+  const [duplicateError, setDuplicateError] = useState('');
   // Carry-forward day creation: default ON. When on, a new day seeds its day-owned content
   // (tasks, behavioral events, keywords, technical params, experiment description, weight) from
   // the animal's most recent existing day — reviewable per day. Opt out to start blank.
@@ -118,6 +124,49 @@ export function RecordingDaysTab({ animalId }) {
     // OK rows, and an OK row can have a record with no `animalId` (corrupt import) — the store
     // would otherwise fail to clean the index. The UI knows the owner, so name it.
     actions.deleteDay(target.dayId, selectedAnimalId);
+  }
+
+  /**
+   * Open the single-date duplicate picker for a source row (resets any prior chosen date/error).
+   *
+   * @param {object} source - `{ dayId, date }` descriptor of the row to clone.
+   */
+  function openDuplicateDay(source) {
+    setDuplicateDate('');
+    setDuplicateError('');
+    setPendingDuplicateDay(source);
+  }
+
+  /** Close the duplicate picker without duplicating. */
+  function cancelDuplicateDay() {
+    setPendingDuplicateDay(null);
+    setDuplicateDate('');
+    setDuplicateError('');
+  }
+
+  /**
+   * Commit the pending duplication through the store's `duplicateDay`. Validates the chosen date
+   * against the animal's existing days (collision guard) before delegating; the store's own
+   * throws are caught and surfaced in the dialog rather than swallowed (mirrors create errors).
+   */
+  function confirmDuplicateDay() {
+    const source = pendingDuplicateDay;
+    if (!source?.dayId) return;
+    if (!duplicateDate) {
+      setDuplicateError('Choose a date for the new day.');
+      return;
+    }
+    // Collision guard: the chosen date must not already be a present day for this animal.
+    if (getExistingDays().includes(duplicateDate)) {
+      setDuplicateError(`This animal already has a day on ${duplicateDate}.`);
+      return;
+    }
+    try {
+      actions.duplicateDay(source.dayId, duplicateDate);
+      cancelDuplicateDay();
+    } catch (error) {
+      setDuplicateError(error.message);
+    }
   }
 
   /**
@@ -527,6 +576,14 @@ export function RecordingDaysTab({ animalId }) {
                     <div className="day-item-actions">
                       <button
                         type="button"
+                        className="btn-secondary-text"
+                        onClick={() => openDuplicateDay({ dayId, date })}
+                        aria-label={`Duplicate recording day ${date || dayId}…`}
+                      >
+                        Duplicate day…
+                      </button>
+                      <button
+                        type="button"
                         className="btn-danger-text"
                         onClick={() =>
                           setPendingDeleteDay({
@@ -571,6 +628,53 @@ export function RecordingDaysTab({ animalId }) {
         onConfirm={confirmDeleteDay}
         onCancel={() => setPendingDeleteDay(null)}
       />
+
+      <Modal
+        isOpen={pendingDuplicateDay != null}
+        onClose={cancelDuplicateDay}
+        title="Duplicate recording day"
+        titleId="duplicate-day-title"
+        role="dialog"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            confirmDuplicateDay();
+          }}
+        >
+          <p>
+            Clone{' '}
+            <strong>{pendingDuplicateDay?.date || pendingDuplicateDay?.dayId}</strong> to a new
+            date. The new day reproduces this day&apos;s tasks, behavioral events, keywords,
+            technical settings, configuration version, and bad-channel overrides.
+          </p>
+          <label htmlFor="duplicate-day-date">
+            New date
+            <input
+              id="duplicate-day-date"
+              type="date"
+              value={duplicateDate}
+              onChange={(e) => {
+                setDuplicateDate(e.target.value);
+                setDuplicateError('');
+              }}
+            />
+          </label>
+          {duplicateError && (
+            <p role="alert" className="form-error">
+              {duplicateError}
+            </p>
+          )}
+          <div className="modal-actions">
+            <button type="button" className="btn-secondary" onClick={cancelDuplicateDay}>
+              Cancel
+            </button>
+            <button type="submit" className="btn-primary">
+              Duplicate day
+            </button>
+          </div>
+        </form>
+      </Modal>
     </>
   );
 }

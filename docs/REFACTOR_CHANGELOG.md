@@ -4,6 +4,28 @@
 
 **Last Updated:** June 8, 2026
 
+## Duplicate day (June 8, 2026)
+
+An existing recording day can now be **duplicated to a new date** ("same protocol, next session")
+from a "Duplicate day…" control on each day row (Recording Days tab); it opens a single-date picker
+and clones the day on confirm. A duplicate reproduces its source **exactly**.
+
+- **Action:** new `duplicateDay(sourceDayId, newDate)` store action ([useWorkspace.js](../src/state/useWorkspace.js)).
+  It builds the new day via the existing `createDayRecord` carry path (so `tasks`,
+  `behavioral_events`, `keywords`, `technical`, and `session.experiment_description` / `session.weight`
+  are **deep-cloned** from the source), derives a date-based `session_id`, and carries the source's
+  `session_description`.
+- **Reproduces the source exactly:** the duplicate pins the **source's** `configurationVersion` (NOT
+  the animal's latest) and carries the source's `deviceOverrides` (bad channels), `structuredClone`d
+  so the duplicate never aliases the source. Because a duplicate is, by construction, the same
+  configuration as its source, carrying its bad-channel overrides is always safe — no version guard
+  is needed.
+- **Guards:** throws on an absent source day, an absent owning animal, or a colliding target date; the
+  UI also blocks a colliding date (against the animal's present days) before delegating and surfaces a
+  store throw inside the dialog rather than swallowing it.
+- **Merge-neutral:** a duplicated day exports **byte-identical** YAML to its source — golden baselines
+  unchanged.
+
 ## Carry-forward day creation (June 8, 2026)
 
 A new recording day now defaults its day-owned content from the animal's most recent existing day,
