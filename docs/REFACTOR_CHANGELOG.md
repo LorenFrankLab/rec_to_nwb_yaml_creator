@@ -6,6 +6,42 @@
 
 ---
 
+## Tabbed workspace IA — Phase 3-4: subject profile + reconfiguration context on the AnimalView header (June 8, 2026)
+
+Re-homes the subject-facts editor and the reconfiguration context banner onto the tabbed Animal View
+header — they are **not tabs** (header band, visible from every `:tab`), and must survive the legacy
+stepper's Phase 5 decommission. From the
+[phase-3-4 doc](../.claude/docs/plans/tabbed-workspace-ia/phase-3-4-profile-context.md). **UI-only — no
+store/export/schema change**; 125 golden baselines byte-identical; full suite (4249), lint (0 errors),
+build all green. TDD throughout; two independently-green commits; code-reviewer pass (no findings). The
+legacy `AnimalEditorStepper` keeps its own copies (parallel-running invariant until Phase 5).
+
+- **Extracted the reconfig-context parser + banner into shared modules** so the stepper and AnimalView
+  render ONE implementation (no drift): [src/hooks/useReconfigContext.js](../src/hooks/useReconfigContext.js)
+  (the `?context=reconfigure&version=&fromDay=&movedDays=` + `?field=` hash parser + its hashchange hook)
+  and [src/components/ReconfigurationContextBanner.jsx](../src/components/ReconfigurationContextBanner.jsx)
+  (+ its CSS, moved verbatim from `AnimalEditorStepper.scss`). `AnimalEditorStepper` now consumes both —
+  its local `parseAnimalEditorRouteContext` / `useAnimalEditorRouteContext` / inline reconfig-derivation /
+  inline banner JSX were removed; behavior is byte-identical (the stepper's reconfig-copy + `?field=`
+  deep-link tests pass unchanged).
+- **Rendered `AnimalProfileSection` + the reconfig banner in the AnimalView header**
+  ([AnimalView/index.jsx](../src/pages/AnimalView/index.jsx)). The profile keeps its own blast-radius
+  `ConfirmDialog`; `dayCount = getAnimalDayIds(animal).length` (the SAME count the stepper passes, so the
+  "affects N days" confirm copy is byte-identical — NOT a recovery-aware count); `onSave →
+  handleFieldUpdate('subject', subject)` == `updateAnimal(animalId, { subject })`. The reconfig banner
+  reads the same params via `useReconfigContext` and shows the same green "editing latest vN" / amber
+  "review vN — current latest is vM" copy.
+- **Architecture allowlist** ([architectureBoundaries.guard.test.js](../src/__tests__/architectureBoundaries.guard.test.js)):
+  added `pages/AnimalEditor/AnimalProfileSection` (AnimalView imports it cross-page; a shared
+  presentational form owning no app-wide domain logic).
+- **Deliberately deferred (per the phase doc):** the `ReconfigWizard` emitter still deep-links to
+  `/editor` (re-pointing to a tab route is [Phase 3a](../.claude/docs/plans/tabbed-workspace-ia/phase-3a-repair-routing.md)),
+  so the AnimalView header banner is wired + unit-tested but has no live production trigger yet; the
+  stepper's profile/banner are NOT deleted (Phase 5). Validation & Export tab → 3-5; warning-escape → 3-6.
+- New tests: [ReconfigurationContextBanner.test.jsx](../src/components/__tests__/ReconfigurationContextBanner.test.jsx)
+  (latest/non-latest/hidden copy) and [AnimalView.profileHeader.test.jsx](../src/pages/AnimalView/__tests__/AnimalView.profileHeader.test.jsx)
+  (profile on the header across tabs + blast-radius confirm → updateAnimal; reconfig warning banner).
+
 ## Tabbed workspace IA — Phase 3-3: catalog/library tabs + corruption-banner hoist + opto chip (June 8, 2026)
 
 Mounts the remaining four setup containers (recording-system, cameras, dio, optogenetics) into the
