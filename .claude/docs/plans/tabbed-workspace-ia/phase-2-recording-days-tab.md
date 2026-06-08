@@ -1,97 +1,102 @@
-# Phase 2 — Recording Days tab
+# Phase 2 — Recording Days tab (re-scoped after Phase 1)
 
-**Finalize the day list as a first-class tab and make its actions/affordances consistent.**
+**Polish the `days`-tab content: day-row legibility + first-run onboarding.** Phase 1 already did the
+heavy lifting this phase originally assumed (extracting the pane, hosting it in the tab, the empty/
+recovered states, and the onboarding *signal*), so Phase 2 is now **smaller and more focused** than the
+original draft.
 
-> **Layout locked (overview → Layout — DECIDED, decisions 9–12):** this is a **left section-nav item**, not
-> a top tab. The day **row contract is decided** — see Task 2.5. The reference render is
+> **Layout locked (overview → Layout — DECIDED, decisions 9–12).** Reference renders:
 > [alternatives/recommended-left-nav.html](alternatives/recommended-left-nav.html) /
 > [alternatives/row-treatments.html](alternatives/row-treatments.html).
 
-## Goal
+## What Phase 1 already delivered (do NOT redo)
 
-The `days` tab reads as "the recording days for this animal," with "Add Recording Days" in the tab
-header, per-day delete on a consistent ⋮ affordance, and the setup checklist reframed as a tab-
-completeness overview rather than a competing pane.
+- The recording-days pane is **[src/pages/AnimalWorkspace/RecordingDaysTab.jsx](../../../../src/pages/AnimalWorkspace/RecordingDaysTab.jsx)**
+  (shared via the architecture cross-page allowlist), hosted by `AnimalView` at `#/animal/:id/days`.
+  **"Add Recording Days" is already in its header.**
+- The empty-days state, the recovered / orphan / wrong-owner day rows and their repairs, and BOTH delete
+  confirms (animal + day, with the downloaded-artifacts caveat) carried over **verbatim** — Phase 8.7
+  guarantees intact.
+- The section-nav already shows the onboarding signal: **hollow-○ todo rings** via
+  [getAnimalSectionStatus](../../../../src/domain/sectionStatus.js) (decision 11).
 
-## Tasks
+## Corrected premises (the original draft was stale — read before trusting old task text)
 
-- **Task 2.1 — "Add Recording Days" in the tab header.** Keep the calendar toggle button
-  ([AnimalWorkspace/index.jsx:364-371](../../../../src/pages/AnimalWorkspace/index.jsx)) but anchored in
-  the Recording Days tab's own header, not a shared workspace header. (Functionally it already lives in
-  the day header; this scopes it to the tab and drops the now-redundant "Edit Animal Setup" link — that
-  destination is now the sibling tabs.)
-- **Task 2.2 — Per-day delete via ⋮ menu.** Replace the inline `Delete day…` text button
-  ([index.jsx:623-641](../../../../src/pages/AnimalWorkspace/index.jsx)) with a per-row ⋮ overflow menu
-  (Delete recording day…, future: Duplicate). Same destructive `ConfirmDialog` (named day + cascade +
-  the downloaded-artifacts caveat) — **reuse the Phase 8.7 confirm verbatim**, only the trigger
-  affordance changes. This unifies the day-delete and animal-delete patterns (Phase 4 gives animals the
-  same ⋮). **Discoverability for non-developers:** the ⋮ trigger carries a visible tooltip ("More
-  actions"), is keyboard-operable (`role="menu"`, Enter/Esc/arrows), the destructive item reads
-  "Delete this day…" and is colour-differentiated. (Consider a labelled "More" affordance over a bare
-  ⋮ glyph for this audience — A/B in the browser pass.)
-- **Task 2.3 — Setup guidance: a prominent first-run checklist that collapses when established.** The
-  current "Animal setup" checklist ([index.jsx:410-443](../../../../src/pages/AnimalWorkspace/index.jsx))
-  is what makes "you need to add subject / electrodes / cameras / recording system / DIO" unmistakable;
-  the tabbed IA must **keep that guidance, not lose it to equal-looking empty tabs.** So:
-  - **When setup is incomplete** (esp. a new animal with no days), the Recording Days tab leads with a
-    prominent **"Set up this animal"** card: a per-item grid (Subject / Recording System / Electrode
-    Groups / Channel Maps / Cameras / DIO) each showing state (`not started` / `complete` / `needs
-    review`) and a **"Set up →"** CTA linking to its tab. It pairs with the section-nav's neutral
-    **hollow ○ "todo" rings** on never-configured sections (decision 11 — NOT colored completion dots).
-  - **When established** (setup done, days exist), it collapses to the compact strip linking to the tabs.
-  - **Behavior-only stays honest (decided):** the card frames items as "only the pieces your sessions
-    use" (`Electrode Groups — if ephys`, `Cameras — if video`, `DIO — if behavioral events`), and the
-    per-day readiness reflects what *that day's content* needs to export — never a hard gate or a blanket
-    "set up electrodes first." A behavior-only, electrode-free day shows no electrode warning.
-  - All states read from the same `getAnimalSetupChecklist`
-    ([workflowStatus.js](../../../../src/domain/workflowStatus.js)) — display change only.
-- **Task 2.4 — Empty/first-run state.** When the animal has no days, the tab guides to "Add Recording
-  Days"; when setup is incomplete, the checklist strip points at the missing tab. Preserve the existing
-  recovered/orphan/wrong-owner day rows and their repairs (Phase 8.7) unchanged.
-- **Task 2.5 — Day-row contract (decided — overview decision 12).** Each healthy day row is **triage, not
-  inspection**: bare **date** (anchor) + the day's **`session.session_description`** muted underneath *only
-  when present* (truncate with ellipsis); one **plain-language status** derived from the Phase 8.7 chip
-  (`Draft — not yet validated` / `Ready to export` / `Exported` / `Needs fixing — {reason}`, the blocking
-  reason inline); one **action** (`open` / `Fix in {section} →` deep-linking via Phase 3a); and a
-  conditional amber **older-electrode-setup flag** ONLY when the day is pinned to a non-current
-  `configurationVersion` (plain-language, dated — "recorded before {description} ({date})", Phase 3.4).
-  - **Derivation note (not a pure read of an existing helper):** `getDayWorkflowStatus`
-    ([workflowStatus.js:179+](../../../../src/domain/workflowStatus.js)) yields the version number +
-    `isHistoricalConfiguration` boolean, but NOT the dated phrase. The phrase requires joining the day's
-    version to the **next** `ConfigurationSnapshot.{date, description}` in `animal.configurationHistory`
-    (the change that superseded this day's config) — new presentational code, but read-only (the snapshot
-    carries both fields — [workspaceTypes.js:215-217](../../../../src/state/workspaceTypes.js)). No store
-    or export change.
-  - **Retire the dense scan line.** `session_id`/filename, **camera count**, **opto state**, and the raw
-    **config-version number** move OFF the row — they are inspection detail surfaced inside the day / at
-    export preflight (requirement 1), not triage. (This supersedes the Phase 8.7 Task 10 batch-row scan as
-    a *row* surface; the scan fields still exist for the per-day effective-setup review.)
-    - **HARD DEPENDENCY:** retiring the scan line is only *safe* because that detail relocates to the
-      **mandatory per-day effective-setup review** (Phase 3 **Task 3.3a** — the valid-but-wrong defense the
-      journeys analysis hinges on). If 3.3a does not ship, this row change WEAKENS the least-defensible
-      failure class. So **2.5's scan-line removal must not land before 3.3a's review exists** — treat 3.3a
-      as a blocking prerequisite, not a parallel nicety.
-  - Status is **display-only** over the existing `deriveChip(computeStepStatus(...))` + `describeDayOptoState`
-    — no new validation, no store change. List stays **date-ordered (newest-first)**; "blocked floats to
-    top" is parked (overview).
-- **Task 2.6 — Recording-day row: no `session_id` on the row.** Inside a single animal the `remy_20230622`
-  string is just the date restated with the animal prefix (redundant in-context); its only value is the
-  downstream filename, which belongs in the day / preflight. Confirm no row test asserts the session_id
-  string before removing it from the row surface.
+1. **File/line refs that pointed at `AnimalWorkspace/index.jsx` now target `RecordingDaysTab.jsx`** (the
+   pane moved in Phase 1; `AnimalWorkspace` is now a ~90-line picker).
+2. **"All states read from `getAnimalSetupChecklist` — display change only" is FALSE.** That helper has
+   **5** items (subject / electrodes / cameras / data_acq / days), not the 6 split sections. Use Phase 1's
+   **`getAnimalSectionStatus`** for the per-section todo state.
+3. **The "dense scan line" the old Task 2.5 wanted to "retire" was never in these rows.** `config v2 · N
+   cameras · opto` lived in the **ValidationSummary batch rows** (Phase 8.7 Task 10); the days-tab rows only
+   ever showed `date + session_id + state chips` ([RecordingDaysTab.jsx:524-533](../../../../src/pages/AnimalWorkspace/RecordingDaysTab.jsx)).
+   Retiring that scan line + its "hard dependency on Task 3.3a" belongs to **Phase 3.3** (the per-animal
+   Validation & Export tab), NOT here.
 
-## Acceptance
+## Tasks — DO NOW (independent, real value)
 
-- The Recording Days tab shows the day list + "Add Recording Days" in its header; per-day delete is a ⋮
-  menu using the existing destructive confirm; the checklist strip links to the setup tabs.
-- Each day row matches the decided contract (date · description-if-present · plain status · one action ·
-  conditional older-setup flag); the dense scan line / `session_id` are gone from the row; status is
-  display-only over the existing chip derivation (no validation/store change).
-- All Phase 8.7 day-row guarantees intact: recovered/orphan/wrong-owner rows still surface with their
-  repairs; delete cascade/caveat copy unchanged; `deleteDay(dayId, ownerAnimalId)` still passed the
-  owner.
-- Full suite (updated for the ⋮ affordance), lint, build green; **125 baselines byte-identical**.
+- **Task 2.1 — Remove the "Edit Animal Setup" link from the day-tab header.**
+  [RecordingDaysTab.jsx:279](../../../../src/pages/AnimalWorkspace/RecordingDaysTab.jsx) still has it
+  (extracted verbatim); its destinations are the setup tabs now. Drop it; keep "Add Recording Days".
+- **Task 2.5a — Plain-language day-row status.** Replace the `Draft / Validated / Exported` status-chip
+  cluster ([RecordingDaysTab.jsx:531-533](../../../../src/pages/AnimalWorkspace/RecordingDaysTab.jsx)) with
+  ONE plain-language status. The stored-state mapping is **display-only** (`draft → "Draft — not yet
+  validated"`, `validated && !exported → "Ready to export"`, `exported → "Exported"`).
+  - **Live "Needs fixing — {reason}" is the one new bit:** today the row shows *stored* flags, which can go
+    stale (a day validated before a camera broke still reads "Validated"). An honest `Needs fixing` needs a
+    per-row read of `computeStepStatus(record, mergeDayMetadata(animal, record), animal)` — **read-only**,
+    the SAME validation `collectAnimalSetupIssues` already runs at the animal level; just per-row. If that
+    grows the task, it MAY slip to Phase 3.3 (which validates per day anyway) — decide at build time, but
+    prefer doing it here so the row is honest.
+- **Task 2.5b — Muted session description.** Show `session.session_description` muted under the date *only
+  when present* (truncate with ellipsis) — a recognition aid. Bare date alone must still read fine.
+- **Task 2.6 — Drop `session_id` from the row.** [:524](../../../../src/pages/AnimalWorkspace/RecordingDaysTab.jsx)
+  — inside one animal it's just the date with the animal prefix (redundant); its only value (the downstream
+  filename) belongs in the day / preflight. Confirm no row test asserts the `session_id` string first.
+- **Task 2.3 — First-run "Set up this animal" card, de-duped against the nav rings.** For a NEW/
+  under-configured animal, lead the days tab with a prominent **"Set up this animal"** card: a per-section
+  grid (Subject · Recording System · Electrode Groups · Channel Maps · Cameras · DIO · Optogenetics), each
+  showing todo-vs-done via **`getAnimalSectionStatus`** + a "Set up →" link to that section's tab. Honest,
+  non-gating framing ("Electrode Groups — if ephys", "Cameras — if video", "DIO — if behavioral events");
+  **behavior-only days are valid** (no "set up electrodes first" gate; an electrode-free day shows no
+  electrode warning).
+  - **Reconcile with the section-nav (don't show "todo" three ways):** the card is the LOUD first-run
+    affordance; the nav rings are the persistent ambient one. **When established** (setup done + days
+    exist), the card disappears — the nav rings + setup tabs suffice; do **not** add a redundant
+    "established strip".
+  - This **replaces/reframes** the existing in-pane `getAnimalSetupChecklist` "Animal setup" section
+    ([:310](../../../../src/pages/AnimalWorkspace/RecordingDaysTab.jsx)). Keep the separate **"Review
+    existing data"** state (recovered/imported review) — that's a different concern from onboarding.
+
+## Tasks — DEFER / MERGE (depend on later phases — do NOT build standalone here)
+
+- **Per-day delete via ⋮ menu** (orig. Task 2.2) → **merge into Phase 4 (Task 4.1's ⋮ widget).** The
+  current inline "Delete day…" button stays until the shared, accessible `role="menu"` widget is built
+  once; then BOTH day- and animal-delete adopt it (consistent affordance, one widget, one a11y pass).
+  Building a net-new menu for a single action, standalone, isn't worth it.
+- **`Fix in {section} →` row action** (part of orig. Task 2.5) → **after Phase 3a** (repair-routing-to-tabs).
+  Until then a `needs-fixing` row links to the day editor as today.
+- **Older-electrode-setup flag** (part of orig. Task 2.5) → **with Phase 3.4 / 3a.** Needs new derivation
+  (join the day's `configurationVersion` to the *next* `ConfigurationSnapshot.{date,description}`); valuable
+  (the silent-bite defense) but it pairs naturally with the config-version legibility work in Phase 3, and
+  it does not block the legibility work here.
+
+## Acceptance (re-scoped)
+
+- Day-tab header: "Add Recording Days", **no** "Edit Animal Setup" link.
+- Each day row: **bare date (anchor) + muted session description (if present) + one plain-language status**;
+  no `session_id`, no status-chip cluster. The draft/validated/exported mapping is display-only; if the
+  live `Needs fixing` state lands here, it's read-only over `computeStepStatus` (no validation/store change).
+- A new/under-configured animal leads with the **"Set up this animal"** card (per-section via
+  `getAnimalSectionStatus`, honest if-ephys/if-video framing, links to tabs); it's de-duped against the nav
+  rings and **absent once established**. Behavior-only days raise no electrode warning.
+- All Phase 8.7 day guarantees intact: recovered/orphan/wrong-owner rows + repairs; both delete confirms +
+  cascade/caveat copy; `deleteDay(dayId, ownerAnimalId)` still passed the owner.
+- Full suite, lint, build green; **125 golden baselines byte-identical** (UI-only — no store/export change).
 
 ## Notes
 
-- This phase removes the day pane's "Edit Animal Setup" link (its destinations are now tabs) — confirm
-  no test depends on it before deleting.
+- Deferred-and-tracked: per-day ⋮ (Phase 4), `Fix in {section}` action (Phase 3a), older-setup flag
+  (Phase 3/3a). The day-row scan-line retirement is Phase 3.3 (ValidationSummary), not this phase.
+- Reuse, don't re-derive: status over `computeStepStatus` (the day editor's own gate), per-section state
+  over `getAnimalSectionStatus`. No new validation logic, no store/export touch.
