@@ -74,6 +74,17 @@ export default function OverflowMenu({ label, items, buttonClassName }) {
     return () => document.removeEventListener('pointerdown', onPointerDown);
   }, [open]);
 
+  // Close on route change (this app is hash-routed). Navigation that does NOT pass through an
+  // outside pointerdown — back/forward, a keyboard-activated link, or programmatic routing — must
+  // still dismiss the menu; otherwise the absolutely-positioned dropdown lingers over the next
+  // view and intercepts its first click (observed in the browser walkthrough).
+  useEffect(() => {
+    if (!open) return undefined;
+    const onHashChange = () => setOpen(false);
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, [open]);
+
   /**
    * Step the active item to the next/previous ENABLED item, wrapping at the ends.
    * @param {number} direction - +1 for next, -1 for previous.

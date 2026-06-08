@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import OverflowMenu from '../OverflowMenu';
 
@@ -132,6 +132,20 @@ describe('OverflowMenu — selection & dismissal', () => {
     await user.click(screen.getByRole('button', { name: /actions for remy/i }));
     expect(screen.getByRole('menu')).toBeInTheDocument();
     await user.click(document.body);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  it('closes on route change (hashchange) so it cannot linger over the next view and intercept clicks', async () => {
+    const { user } = renderMenu();
+    await user.click(screen.getByRole('button', { name: /actions for remy/i }));
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+
+    // Navigation that does NOT pass through an outside pointerdown (back/forward, a keyboard-activated
+    // link, programmatic routing) must still dismiss the menu — otherwise the dropdown overlays the
+    // new view and eats the next click (observed in the browser walkthrough).
+    act(() => {
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    });
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 });
