@@ -81,6 +81,34 @@ describe('DevicesStep', () => {
     mockOnFieldUpdate = vi.fn();
   });
 
+  it('per-day recording-system selector writes day.data_acq_device_name (2+ systems)', async () => {
+    const user = userEvent.setup();
+    const twoSystemAnimal = {
+      ...mockAnimal,
+      devices: {
+        ...mockAnimal.devices,
+        data_acq_device: [
+          { name: 'SpikeGadgets_MCU', system: 'SpikeGadgets', amplifier: 'Intan', adc_circuit: 'Intan' },
+          { name: 'Neuropixels_rig', system: 'Open Ephys', amplifier: 'IMEC', adc_circuit: 'IMEC' },
+        ],
+      },
+    };
+    render(
+      <DevicesStep
+        animal={twoSystemAnimal}
+        day={mockDay}
+        mergedDay={mockMergedDay}
+        onFieldUpdate={mockOnFieldUpdate}
+      />
+    );
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: /recording system used this day/i }),
+      'Neuropixels_rig'
+    );
+    expect(mockOnFieldUpdate).toHaveBeenCalledWith('data_acq_device_name', 'Neuropixels_rig');
+  });
+
   it('renders section heading', () => {
     render(
       <DevicesStep

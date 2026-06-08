@@ -3,9 +3,10 @@ import PropTypes from 'prop-types';
 import ReadOnlyDeviceInfo from './ReadOnlyDeviceInfo';
 import BadChannelsEditor from './BadChannelsEditor';
 import ReconfigWizard from './ReconfigWizard';
+import DayRecordingSystem from './DayRecordingSystem';
 import { reconcileAppliedToDays } from '../../state/configDiff';
 import { resolveDayConfig } from '../../state/workspaceUtils';
-import { getConfigHistory } from '../../state/workspaceSelectors';
+import { getConfigHistory, getDataAcqDevices } from '../../state/workspaceSelectors';
 import { rawRecord } from '../../components/rawPropTypes';
 import { isMultiShankGroup, validBadChannelIds } from '../../domain/badChannels';
 import { classifyDeviceOverrides } from '../../domain/deviceOverrides';
@@ -65,6 +66,17 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
     }
   }, [animal, day]);
   const electrodeGroups = effectiveConfig.electrode_groups;
+
+  // The per-day recording-system selector (shown in every day setup — a behaviour-only day with no
+  // electrodes still exports an acquisition device). The animal owns the catalog; this day references
+  // one by name. Rendered in both the empty-state and the main return.
+  const recordingSystemPicker = (
+    <DayRecordingSystem
+      catalog={getDataAcqDevices(animal)}
+      selectedName={typeof day.data_acq_device_name === 'string' ? day.data_acq_device_name : undefined}
+      onSelect={(name) => onFieldUpdate('data_acq_device_name', name)}
+    />
+  );
 
   // Configuration-version legibility (only when wired with store actions + the
   // animal's days, i.e. inside the real Day Editor — not in isolated unit renders).
@@ -417,6 +429,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
     return (
       <div className="devices-step">
         <h2>Devices Configuration</h2>
+        {recordingSystemPicker}
         {overrideCleanupSection}
         <div className="empty-state">
           <p>No electrodes are set up for {ownerKey} yet.</p>
@@ -435,6 +448,8 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
   return (
     <div className="devices-step">
       <h2>Devices Configuration</h2>
+
+      {recordingSystemPicker}
 
       {/* This day's relationship to shared animal setup: it USES an animal configuration
           version; probe geometry is edited in the shared animal setup, not here. */}

@@ -1696,3 +1696,26 @@
     vertical-align: middle;
   }
 }
+
+/* Per-day recording-system selector (DayRecordingSystem) — the day picks one catalog system. */
+.day-recording-system {
+  margin: 0 0 1rem;
+  padding: 0.75rem;
+  border: 1px solid #d8dde3;
+  border-radius: 6px;
+  background: #fbfcfd;
+}
+.day-recording-system h3 {
+  margin: 0 0 0.4rem;
+  font-size: 1rem;
+}
+.day-recording-system label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-bottom: 0.2rem;
+}
+.day-recording-system select {
+  min-width: 16rem;
+  max-width: 100%;
+}

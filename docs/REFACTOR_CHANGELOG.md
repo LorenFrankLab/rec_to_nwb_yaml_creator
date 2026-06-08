@@ -46,6 +46,17 @@ reads "Animal-wide catalog — each recording day uses one" (the old "no per-day
 `DataAcqSection.test.jsx` rewritten for the catalog; full suite (4256) green, 125 baselines byte-
 identical, lint 0 errors, build OK. The per-day selector (Day Editor) is the last piece.
 
+### 4/n — per-day selector in the Day Editor (feature complete)
+
+New [DayRecordingSystem](../src/pages/DayEditor/DayRecordingSystem.jsx) in the Day Editor's Devices
+step: with **one** catalog system it's read-only (no choice); with **2+** it's a dropdown — `Default
+(first: …)` + each system by name — writing the chosen system's name to `day.data_acq_device_name`
+(or clearing it back to the default). Mounted in both `DevicesStep` branches (so a behaviour-only day
+with no electrodes still selects its acquisition device). The reference resolves live at export via
+`resolveDayDataAcqDevice`. This completes the recording-system catalog feature: **add several systems
+on the animal, each day uses one, each YAML carries exactly one device** — matching trodes_to_nwb.
+Full suite (4263) green, 125 baselines byte-identical, lint 0 errors, build OK.
+
 ## Tabbed workspace IA — post-Phase-5 UX: relocate the animal profile to the header ⋮ (June 8, 2026)
 
 The animal-wide subject-facts editor was an always-visible collapsible **in the header band on every
