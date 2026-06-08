@@ -157,3 +157,11 @@
     border-bottom: 1px solid var(--border-color, #ddd7c9);
   }
 }
+
+/* Phase 3a.3: transient cue on the section a ?field= repair deep-link lands on. Mirrors the Day
+   Editor's .repair-target-highlight so the two repair surfaces look consistent. */
+[data-field-path].repair-target-highlight {
+  outline: 3px solid #f9a825;
+  outline-offset: 2px;
+  border-radius: 3px;
+}

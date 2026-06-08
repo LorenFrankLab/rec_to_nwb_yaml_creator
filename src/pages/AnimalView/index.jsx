@@ -87,6 +87,30 @@ const TAB_LABEL = Object.fromEntries(
 const CORRUPTION_BANNER_FIELDS = ['cameras', 'data_acq_device', 'configurationHistory'];
 
 /**
+ * The primary schema field each setup tab owns, used as the `data-field-path` anchor a `?field=`
+ * repair deep-link scrolls to and highlights (Phase 3a.3). A requested field matches a tab's anchor
+ * when, with array indices stripped, it equals or is prefixed by the anchor (so
+ * `data_acq_device[0].name` matches `data_acq_device`).
+ *
+ * @type {Record<string, string>}
+ */
+const TAB_FIELD_ANCHOR = {
+  'electrode-groups': 'electrode_groups',
+  'channel-maps': 'ntrode_electrode_group_channel_map',
+  'recording-system': 'data_acq_device',
+  cameras: 'cameras',
+  dio: 'behavioral_events',
+  optogenetics: 'opto_excitation_source',
+};
+
+/**
+ * Strip array indices so a specific field path can be matched against a coarse section anchor.
+ * @param {string} value - A field path or anchor.
+ * @returns {string} The path with `[i]` / `.i` index segments removed.
+ */
+const normalizeFieldPath = (value) => String(value || '').replace(/\[\d+\]/g, '').replace(/\.\d+/g, '');
+
+/**
  * Render the active tab's panel content. The `days` tab hosts the shared RecordingDaysTab; the
  * setup tabs host their extracted containers (Phase 3-2/3-3); only `export` still shows the
  * Phase-1 placeholder until its sub-phase (3-5) lands.
@@ -200,6 +224,38 @@ export function AnimalView({ animalId, tab }) {
     }
     panelRef.current?.focus();
   }, [tab, animalId]);
+
+  // Phase 3a.3: a repair deep-link (`?field=…`) lands on the owning tab — orient the user by
+  // scrolling to and briefly highlighting the section that field belongs to, matching the Day
+  // Editor's repair-target highlight. With no matching section anchor it degrades silently (the
+  // panel-focus effect above already lands them on the tab content). The panel ref scopes the
+  // query so it never matches an anchor outside this animal's panel.
+  useEffect(() => {
+    const field = routeContext.field;
+    if (!field) return undefined;
+    let highlighted = null;
+    let removeTimer = null;
+    const raf = requestAnimationFrame(() => {
+      const panel = panelRef.current;
+      if (!panel) return;
+      const requested = normalizeFieldPath(field);
+      const match = Array.from(panel.querySelectorAll('[data-field-path]')).find((el) => {
+        const anchor = normalizeFieldPath(el.getAttribute('data-field-path'));
+        return anchor !== '' && (requested === anchor || requested.startsWith(anchor));
+      });
+      if (!match) return;
+      if (typeof match.scrollIntoView === 'function') match.scrollIntoView({ block: 'nearest' });
+      match.classList.add('repair-target-highlight');
+      highlighted = match;
+      // Transient cue: drop it so it doesn't read as a persistent state.
+      removeTimer = setTimeout(() => match.classList.remove('repair-target-highlight'), 2000);
+    });
+    return () => {
+      cancelAnimationFrame(raf);
+      if (removeTimer) clearTimeout(removeTimer);
+      if (highlighted) highlighted.classList.remove('repair-target-highlight');
+    };
+  }, [routeContext.field, tab, animalId]);
 
   // Canonicalize the URL: parseHashRoute resolves a bare `#/animal/:id` or an unknown tab to
   // `days`, so REPLACE the address bar to the canonical `#/animal/:id/:tab` to match what's
@@ -338,13 +394,16 @@ export function AnimalView({ animalId, tab }) {
               {TAB_SCOPE[tab]}
             </p>
           )}
-          {renderPanel({
-            tab,
-            animalId,
-            animal,
-            onPendingEditsChange: setPendingEdits,
-            onFieldUpdate: handleFieldUpdate,
-          })}
+          {/* `data-field-path` marks the section a `?field=` repair deep-link highlights (3a.3). */}
+          <div data-field-path={TAB_FIELD_ANCHOR[tab]}>
+            {renderPanel({
+              tab,
+              animalId,
+              animal,
+              onPendingEditsChange: setPendingEdits,
+              onFieldUpdate: handleFieldUpdate,
+            })}
+          </div>
         </section>
       </div>
 
