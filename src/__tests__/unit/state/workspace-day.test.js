@@ -164,6 +164,72 @@ describe('Day State Management', () => {
       expect(animal.days).toEqual(['remy-2023-06-22', 'remy-2023-06-23']);
     });
 
+    it('with carryForwardFromDayId: new day copies the prior day tasks', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+      });
+      // Give the prior day some carryable content.
+      act(() => {
+        result.current.actions.updateDay('remy-2023-06-22', {
+          tasks: [{ task_name: 'W-track', task_epochs: [1] }],
+        });
+      });
+      act(() => {
+        result.current.actions.createDay(
+          'remy',
+          '2023-06-23',
+          { session_id: 'remy_20230623', session_description: 'Day 2' },
+          { carryForwardFromDayId: 'remy-2023-06-22' }
+        );
+      });
+
+      const day2 = result.current.model.workspace.days['remy-2023-06-23'];
+      expect(day2.tasks).toEqual([{ task_name: 'W-track', task_epochs: [1] }]);
+    });
+
+    it('with no options: new day tasks stay empty (back-compat)', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+      });
+      act(() => {
+        result.current.actions.updateDay('remy-2023-06-22', {
+          tasks: [{ task_name: 'W-track', task_epochs: [1] }],
+        });
+      });
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-23', {
+          session_id: 'remy_20230623',
+          session_description: 'Day 2',
+        });
+      });
+      expect(result.current.model.workspace.days['remy-2023-06-23'].tasks).toEqual([]);
+    });
+
+    it('with an unknown carryForwardFromDayId: builds a blank day (no throw)', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay(
+          'remy',
+          '2023-06-23',
+          { session_id: 'remy_20230623', session_description: 'Day 2' },
+          { carryForwardFromDayId: 'remy-9999-99-99' }
+        );
+      });
+      expect(result.current.model.workspace.days['remy-2023-06-23'].tasks).toEqual([]);
+    });
+
     it('throws error if animal does not exist', () => {
       const { result } = renderHook(() => useStore());
 

@@ -11,7 +11,13 @@
  */
 
 import { formatExperimentDate } from './workspaceUtils';
-import { getAnimalDevices, getConfigHistory } from './workspaceSelectors';
+import {
+  getAnimalDevices,
+  getConfigHistory,
+  getDayTasks,
+  getDayKeywords,
+  getDayBehavioralEvents,
+} from './workspaceSelectors';
 import {
   normalizeDeviceOverrides,
   normalizeDevices,
@@ -277,15 +283,23 @@ export function rebuildConfigurationHistoryForAnimal(animal, now, today) {
  * `technical` seeded from the animal's technical defaults. The caller owns id generation and
  * the existence check.
  *
+ * When `carryFrom` (a prior day record) is supplied, the day-owned content is SEEDED from it —
+ * deep-cloned so the new record never aliases the source. Carried: tasks, behavioral_events,
+ * keywords, technical, and session.experiment_description / session.weight (each overridable by
+ * the caller's `session`). NEVER carried: session_id / session_description (date-derived, always
+ * from the caller) and associated_files / associated_video_files (session-specific, always empty).
+ * Bad channels are intentionally not part of this carry-forward.
+ *
  * @param {object} animal - The owning animal (for technicalDefaults + the latest pin).
  * @param {string} animalId - The owning animal id.
  * @param {string} dayId - The (already-validated) new day id.
  * @param {string} date - Date in YYYY-MM-DD.
  * @param {object} session - Session metadata (session_id, session_description, etc.).
  * @param {string} now - Timestamp for created/lastModified.
+ * @param {object|null} [carryFrom] - A prior day record to seed day-owned content from, or null.
  * @returns {object} The new day record.
  */
-export function createDayRecord(animal, animalId, dayId, date, session, now) {
+export function createDayRecord(animal, animalId, dayId, date, session, now, carryFrom = null) {
   // Pin to the latest snapshot's ACTUAL version, not the count. An imported/repaired
   // history can be non-contiguous (e.g. [1, 3]) — there the count (2) names no real
   // snapshot, and `resolveDayConfig` (which matches by `version`) would fail closed on a
@@ -293,30 +307,46 @@ export function createDayRecord(animal, animalId, dayId, date, session, now) {
   // (mirroring in applyAnimalUpdates, the reconfig latest in DevicesStep).
   const history = getConfigHistory(animal);
   const latestVersion = history.length > 0 ? history[history.length - 1].version : 0;
+
+  // Animal-defaults technical seed: the no-carry path, and the fallback when carryFrom has no
+  // technical record. Kept verbatim so a blank day stays byte-identical to today's output.
+  const defaultTechnical = {
+    // Seeded from the animal's technical DEFAULTS (overridable per day); falls back to
+    // the standard values when no defaults are set.
+    times_period_multiplier: animal.technicalDefaults?.times_period_multiplier ?? 1.5,
+    raw_data_to_volts: animal.technicalDefaults?.raw_data_to_volts ?? 0.195,
+    default_header_file_path: '',
+    units: undefined,
+  };
+  const carryTechnical =
+    carryFrom &&
+    carryFrom.technical !== null &&
+    typeof carryFrom.technical === 'object' &&
+    !Array.isArray(carryFrom.technical);
+
   return {
     id: dayId,
     animalId,
     date,
     experimentDate: formatExperimentDate(date),
     session: {
+      // Always date-derived from the caller — never carried.
       session_id: session.session_id,
       session_description: session.session_description,
-      experiment_description: session.experiment_description,
-      weight: session.weight,
+      // Prefer the caller's value when defined, else the carried value (else undefined).
+      experiment_description:
+        session.experiment_description !== undefined
+          ? session.experiment_description
+          : carryFrom?.session?.experiment_description,
+      weight: session.weight !== undefined ? session.weight : carryFrom?.session?.weight,
     },
-    keywords: [],
-    tasks: [],
-    behavioral_events: [],
+    keywords: carryFrom ? structuredClone(getDayKeywords(carryFrom)) : [],
+    tasks: carryFrom ? structuredClone(getDayTasks(carryFrom)) : [],
+    behavioral_events: carryFrom ? structuredClone(getDayBehavioralEvents(carryFrom)) : [],
+    // Session-specific — never carried.
     associated_files: [],
     associated_video_files: [],
-    technical: {
-      // Seeded from the animal's technical DEFAULTS (overridable per day); falls back to
-      // the standard values when no defaults are set.
-      times_period_multiplier: animal.technicalDefaults?.times_period_multiplier ?? 1.5,
-      raw_data_to_volts: animal.technicalDefaults?.raw_data_to_volts ?? 0.195,
-      default_header_file_path: '',
-      units: undefined,
-    },
+    technical: carryTechnical ? structuredClone(carryFrom.technical) : defaultTechnical,
     state: {
       draft: true,
       validated: false,

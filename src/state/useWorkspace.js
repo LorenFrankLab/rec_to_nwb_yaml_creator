@@ -387,9 +387,13 @@ export function useWorkspace(initialState = null) {
        * @param {string} animalId - Parent animal identifier
        * @param {string} date - Date in YYYY-MM-DD format
        * @param {object} session - Session metadata (session_id, session_description, etc.)
+       * @param {object} [options] - Creation options.
+       * @param {string} [options.carryForwardFromDayId] - If set, seed the new day's day-owned
+       *   content (tasks, behavioral_events, keywords, technical, session.experiment_description /
+       *   weight) from this prior day. An unknown id resolves to a blank day (no throw).
        * @throws {Error} If animal does not exist or day already exists
        */
-      createDay: (animalId, date, session) => {
+      createDay: (animalId, date, session, options = {}) => {
         setWorkspace((prev) => {
           if (!prev.animals[animalId]) {
             throw new Error(`Animal "${animalId}" not found`);
@@ -404,9 +408,14 @@ export function useWorkspace(initialState = null) {
           const animal = prev.animals[animalId];
           const now = getCurrentTimestamp();
 
+          // Resolve the optional carry-forward source. An unknown id → null → blank day.
+          const carryFrom = options.carryForwardFromDayId
+            ? prev.days[options.carryForwardFromDayId] || null
+            : null;
+
           // Pure transition: builds the day pinned to the latest configuration version,
           // technical seeded from the animal defaults (see workspaceTransitions.createDayRecord).
-          const day = createDayRecord(animal, animalId, dayId, date, session, now);
+          const day = createDayRecord(animal, animalId, dayId, date, session, now, carryFrom);
 
           const updatedAnimal = { ...animal, days: [...getAnimalDayIds(animal), dayId] };
 

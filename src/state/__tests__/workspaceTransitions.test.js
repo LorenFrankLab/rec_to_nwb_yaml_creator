@@ -324,6 +324,91 @@ describe('createDayRecord', () => {
     expect(day.technical.times_period_multiplier).toBe(1.5);
     expect(day.configurationVersion).toBe(0);
   });
+
+  it('with no carryFrom: tasks/keywords/behavioral_events empty, no experiment_description (back-compat)', () => {
+    const animal = { configurationHistory: [] };
+    const day = createDayRecord(animal, 'remy', 'd', '2023-06-22', { session_id: 's' }, NOW);
+    expect(day.tasks).toEqual([]);
+    expect(day.keywords).toEqual([]);
+    expect(day.behavioral_events).toEqual([]);
+    expect(day.session.experiment_description).toBeUndefined();
+    expect(day.technical.times_period_multiplier).toBe(1.5);
+  });
+
+  describe('carry-forward from a prior day', () => {
+    const carryFrom = {
+      session: { experiment_description: 'Chronic recording', weight: 485 },
+      keywords: ['hippocampus', 'spatial'],
+      tasks: [{ task_name: 'W-track', task_epochs: [1, 3] }],
+      behavioral_events: [{ description: 'Poke1', name: 'poke1' }],
+      technical: { raw_data_to_volts: 0.42, times_period_multiplier: 3, units: { analog: 'unit' } },
+    };
+    const animal = { configurationHistory: [{ version: 2 }] };
+    const session = { session_id: 'remy_20230623', session_description: 'Day 2' };
+
+    it('seeds tasks/behavioral_events/keywords/technical from the source', () => {
+      const day = createDayRecord(animal, 'remy', 'd', '2023-06-23', session, NOW, carryFrom);
+      expect(day.tasks).toEqual(carryFrom.tasks);
+      expect(day.behavioral_events).toEqual(carryFrom.behavioral_events);
+      expect(day.keywords).toEqual(carryFrom.keywords);
+      expect(day.technical).toEqual(carryFrom.technical);
+    });
+
+    it('deep-clones carried fields (no shared reference with the source)', () => {
+      const day = createDayRecord(animal, 'remy', 'd', '2023-06-23', session, NOW, carryFrom);
+      expect(day.tasks).not.toBe(carryFrom.tasks);
+      expect(day.technical).not.toBe(carryFrom.technical);
+      // Mutating the result must not affect the source.
+      day.tasks[0].task_name = 'changed';
+      day.technical.raw_data_to_volts = 0;
+      expect(carryFrom.tasks[0].task_name).toBe('W-track');
+      expect(carryFrom.technical.raw_data_to_volts).toBe(0.42);
+    });
+
+    it('carries experiment_description and weight from the source when the caller omits them', () => {
+      const day = createDayRecord(animal, 'remy', 'd', '2023-06-23', session, NOW, carryFrom);
+      expect(day.session.experiment_description).toBe('Chronic recording');
+      expect(day.session.weight).toBe(485);
+    });
+
+    it('prefers the caller experiment_description/weight over the source when provided', () => {
+      const day = createDayRecord(
+        animal,
+        'remy',
+        'd',
+        '2023-06-23',
+        { ...session, experiment_description: 'Override', weight: 500 },
+        NOW,
+        carryFrom
+      );
+      expect(day.session.experiment_description).toBe('Override');
+      expect(day.session.weight).toBe(500);
+    });
+
+    it('ALWAYS takes session_id/session_description from the caller, never the source', () => {
+      const day = createDayRecord(animal, 'remy', 'd', '2023-06-23', session, NOW, carryFrom);
+      expect(day.session.session_id).toBe('remy_20230623');
+      expect(day.session.session_description).toBe('Day 2');
+    });
+
+    it('never carries associated_files / associated_video_files (always empty)', () => {
+      const withFiles = {
+        ...carryFrom,
+        associated_files: [{ name: 'f1' }],
+        associated_video_files: [{ name: 'v1' }],
+      };
+      const day = createDayRecord(animal, 'remy', 'd', '2023-06-23', session, NOW, withFiles);
+      expect(day.associated_files).toEqual([]);
+      expect(day.associated_video_files).toEqual([]);
+    });
+
+    it('falls back to the animal-defaults technical when the source has no technical record', () => {
+      const noTech = { ...carryFrom, technical: undefined };
+      const day = createDayRecord(animal, 'remy', 'd', '2023-06-23', session, NOW, noTech);
+      expect(day.technical.times_period_multiplier).toBe(1.5);
+      expect(day.technical.raw_data_to_volts).toBe(0.195);
+    });
+  });
 });
 
 describe('applyDayUpdates', () => {
