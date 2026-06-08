@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Interactive mockup — tabbed Day Editor</title>
+<style>
+  :root{
+    --line:#d8dde3; --muted:#6b7480; --ink:#1c2530; --accent:#1d6fb8; --accentBg:#eaf2fb;
+    --bg:#f5f7f9; --ok:#2c5d2c; --okBg:#e6f4e6; --warn:#b9770a; --warnBg:#fcf2e0; --err:#c0392b; --errBg:#fbeceb;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink);background:var(--bg)}
+  header.app{display:flex;align-items:center;gap:.8rem;padding:.55rem 1rem;background:#fff;border-bottom:1px solid var(--line)}
+  header.app .logo{width:24px;height:24px;border-radius:5px;background:#13324d}
+  header.app nav{display:flex;gap:.2rem}
+  header.app nav a{padding:.3rem .6rem;border-radius:6px;text-decoration:none;color:var(--ink);font-weight:600;font-size:.9rem}
+  header.app nav a.active{background:var(--accentBg);color:var(--accent)}
+  .demoflag{margin-left:auto;font-size:.72rem;color:var(--muted);border:1px dashed var(--line);padding:.15rem .5rem;border-radius:99px}
+
+  .dayhead{display:flex;align-items:center;gap:.8rem;padding:.6rem 1rem;background:#fff;border-bottom:1px solid var(--line)}
+  .dayhead .back{font-size:.8rem;color:var(--accent);text-decoration:none}
+  .dayhead h1{font-size:1.05rem;margin:0}
+  .saved{margin-left:auto;font-size:.78rem;color:var(--ok);display:flex;align-items:center;gap:.3rem}
+
+  .shell{display:grid;grid-template-columns:230px 1fr;max-width:1080px;margin:1rem auto;gap:1rem;padding:0 1rem}
+  nav.sec{background:#fff;border:1px solid var(--line);border-radius:10px;padding:.5rem;height:max-content}
+  nav.sec .grp{font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:.5rem .45rem .2rem}
+  nav.sec button{display:flex;align-items:center;gap:.45rem;width:100%;text-align:left;border:none;background:none;
+    padding:.45rem .5rem;border-radius:7px;cursor:pointer;color:var(--ink);font:inherit}
+  nav.sec button:hover{background:#f1f5f9}
+  nav.sec button.cur{background:var(--accentBg);color:var(--accent);font-weight:600}
+  nav.sec .st{margin-left:auto;font-size:.95rem;line-height:1}
+  .st.ok{color:var(--ok)} .st.warn{color:var(--warn)} .st.err{color:var(--err)}
+  nav.sec .count{margin-left:auto;font-size:.72rem;background:var(--errBg);color:var(--err);border-radius:99px;padding:.02rem .4rem;font-weight:700}
+
+  main.panel{background:#fff;border:1px solid var(--line);border-radius:10px;padding:1.1rem 1.2rem;min-height:330px}
+  main.panel h2{margin:.1rem 0 .2rem;font-size:1.15rem}
+  main.panel .scope{color:var(--muted);font-size:.84rem;margin:0 0 1rem}
+  .field{margin:0 0 .8rem}
+  .field label{display:block;font-weight:600;font-size:.85rem;margin-bottom:.2rem}
+  .field input,.field textarea,.field select{width:100%;border:1px solid var(--line);border-radius:6px;padding:.4rem .55rem;font:inherit;background:#fff}
+  .field input:disabled{background:#f4f6f8;color:var(--muted)}
+  .field .err-inp{border-color:#e3b3ae;background:#fff7f6}
+  .hint{font-size:.78rem;color:var(--muted);margin-top:.2rem}
+  .ro{background:#f4f6f8;border:1px solid var(--line);border-radius:6px;padding:.4rem .55rem;color:#33414f;font-size:.88rem}
+  .badge{display:inline-block;font-size:.7rem;font-weight:700;text-transform:uppercase;padding:.05rem .4rem;border-radius:3px;background:var(--okBg);color:var(--ok)}
+  table{border-collapse:collapse;width:100%;font-size:.88rem}
+  th,td{text-align:left;padding:.35rem .5rem;border-bottom:1px solid var(--line)}
+  th{font-size:.72rem;text-transform:uppercase;color:var(--muted)}
+  .inherit{font-size:.78rem;color:var(--muted);background:#f7f9fb;border-left:3px solid #cdd7e1;padding:.4rem .6rem;border-radius:4px;margin:.2rem 0 .8rem}
+  .footer{display:flex;align-items:center;margin-top:1.1rem;padding-top:.8rem;border-top:1px solid var(--line)}
+  .footer .next{margin-left:auto;background:var(--accent);color:#fff;border:none;border-radius:7px;padding:.45rem .9rem;font:inherit;font-weight:600;cursor:pointer}
+  .footer .opt{font-size:.76rem;color:var(--muted)}
+  .issue{display:flex;align-items:center;gap:.6rem;border:1px solid var(--errBg);background:#fffafa;border-radius:7px;padding:.5rem .7rem;margin:.4rem 0}
+  .issue .x{color:var(--err);font-weight:700}
+  .issue .fix{margin-left:auto;color:var(--accent);background:none;border:1px solid var(--line);border-radius:6px;padding:.2rem .55rem;cursor:pointer;font:inherit;font-size:.82rem}
+  .exportbtn{background:#1f7a3d;color:#fff;border:none;border-radius:7px;padding:.5rem 1rem;font:inherit;font-weight:600;cursor:pointer}
+  .exportbtn:disabled{background:#cbd5dd;color:#7c8a98;cursor:not-allowed}
+  .note{background:#fff7e6;border-left:3px solid #e0a106;padding:.55rem .75rem;border-radius:4px;color:#5a4a13;font-size:.83rem;max-width:1080px;margin:.2rem auto 1.4rem;padding-left:.75rem}
+  .pill{display:inline-block;font-size:.78rem;padding:.1rem .5rem;border:1px solid var(--line);border-radius:99px;background:#fafbfc}
+  .empty{color:var(--muted);font-size:.88rem;border:1px dashed var(--line);border-radius:7px;padding:.7rem;text-align:center}
+</style>
+</head>
+<body>
+<header class="app">
+  <div class="logo"></div>
+  <nav><a href="#" >Workspace</a><a class="active" href="#">remy ▾</a><a href="#">Validation &amp; Export</a></nav>
+  <span class="demoflag">interactive mockup — clickable</span>
+</header>
+
+<div class="dayhead">
+  <a class="back" href="#">← Workspace</a>
+  <h1>remy — 2026-06-22</h1>
+  <span class="saved">✓ Saved 12s ago</span>
+</div>
+
+<div class="shell">
+  <nav class="sec" aria-label="Day sections" id="secnav">
+    <div class="grp">Session</div>
+    <button data-tab="overview" class="cur">Overview <span class="st" data-st="overview"></span></button>
+    <button data-tab="files">Files &amp; Weight <span class="st ok" data-st="files">✓</span></button>
+    <div class="grp">Recording</div>
+    <button data-tab="devices">Devices &amp; Failed Channels <span class="st ok" data-st="devices">✓</span></button>
+    <button data-tab="epochs">Tasks &amp; Epochs <span class="st" data-st="epochs"></span></button>
+    <div class="grp">Finish</div>
+    <button data-tab="export">Validation &amp; Export <span class="st" data-st="export"></span></button>
+  </nav>
+
+  <main class="panel" id="panel" tabindex="-1"></main>
+</div>
+
+<div class="note">
+  <b>The hybrid:</b> jump to any section freely (expert path), or use <b>“Next ▸”</b> to walk it in order (guided path).
+  Per-section status (✓ ⚠ ✗) replaces the wizard’s step rail; <b>Export stays blocked</b> until 0 to fix — the safety gate
+  survives without forcing a linear order. Try: open <i>Overview</i>, type an Experiment Description, watch its badge flip to ✓
+  and the Export count drop. Then open <i>Tasks &amp; Epochs</i> and “Add a task”.
+</div>
+
+<script>
+  // --- mock day state ---
+  const state = {
+    experimentDescription: '',   // empty → Overview error
+    hasTask: false,              // no tasks → Epochs error
+  };
+
+  function overviewOk(){ return state.experimentDescription.trim() !== ''; }
+  function epochsOk(){ return state.hasTask; }
+  function issues(){
+    const out = [];
+    if(!overviewOk()) out.push({tab:'overview', label:'Experiment Description is required', where:'Overview'});
+    if(!epochsOk())   out.push({tab:'epochs',   label:'At least one task/epoch is required', where:'Tasks & Epochs'});
+    return out;
+  }
+
+  const panels = {
+    overview(){
+      return `
+        <h2>Overview <span class="badge" style="background:#eef2f6;color:#33414f">Session</span></h2>
+        <p class="scope">The session’s own facts. Subject + recording system are inherited from the animal.</p>
+        <div class="field"><label>Session ID <span class="hint" style="display:inline">(inherited, read-only)</span></label>
+          <div class="ro">remy_20260622</div></div>
+        <div class="field"><label>Session Description *</label>
+          <input value="Recording session for remy on 2026-06-22"></div>
+        <div class="field"><label>Experiment Description *</label>
+          <input id="expDesc" class="${overviewOk()?'':'err-inp'}" placeholder="e.g., Chronic tetrode recording during spatial navigation" value="${state.experimentDescription.replace(/"/g,'&quot;')}">
+          <div class="hint">${overviewOk()? 'Looks good.' : 'Required for export and written to the NWB file.'}</div></div>
+        <div class="field"><label>Recording-day weight (grams)</label>
+          <input placeholder="(animal baseline 450 g used as fallback)">
+          <div class="hint">No weight set for this day — the animal baseline (450 g) will be exported as a fallback.</div></div>
+        ${footer('files')}`;
+    },
+    files(){
+      return `
+        <h2>Files &amp; Weight</h2>
+        <p class="scope">Associated data/video files for this session (optional).</p>
+        <div class="empty">No associated files yet — optional. <span class="pill">+ Add file</span> <span class="pill">+ Add video</span></div>
+        ${footer('devices')}`;
+    },
+    devices(){
+      return `
+        <h2>Devices &amp; Failed Channels</h2>
+        <p class="scope">Which recording system this session used, and any channels that failed this day.</p>
+        <div class="field"><label>Recording system used this day</label>
+          <div class="ro">SpikeGadgets <span class="hint" style="display:inline">· one system → one device in the YAML. Add more on the animal’s Recording System tab to choose per day.</span></div></div>
+        <div class="inherit">Electrodes/probes are <b>shared animal setup</b> (inherited). This animal is behavior-only (no electrodes), so there are no channels to mark. <span class="pill">Set up electrodes →</span></div>
+        <p class="hint"><b>Note for the design:</b> in the “Split” model, <i>bad-channel marking</i> lives here (per day); the animal’s Channel Maps tab is wiring-only.</p>
+        ${footer('epochs')}`;
+    },
+    epochs(){
+      const body = epochsOk()
+        ? `<table><tr><th>Task</th><th>Description</th><th>Epochs</th></tr>
+             <tr><td>w-track</td><td>Spatial alternation</td><td>1, 2</td></tr></table>`
+        : `<div class="empty">No tasks yet. <button class="fix" id="addTask">+ Add a task</button></div>`;
+      return `
+        <h2>Tasks &amp; Epochs</h2>
+        <p class="scope">The behavioral tasks run this session and their epoch numbers.</p>
+        ${body}
+        ${footer('export')}`;
+    },
+    export(){
+      const iss = issues();
+      const ok = iss.length === 0;
+      const list = ok
+        ? `<div class="empty" style="border-style:solid;color:var(--ok)">✓ Everything checks out — ready to export.</div>`
+        : iss.map(i=>`<div class="issue"><span class="x">✗</span><span>${i.label} <span class="hint" style="display:inline">(${i.where})</span></span>
+             <button class="fix" data-goto="${i.tab}">Fix →</button></div>`).join('');
+      return `
+        <h2>Validation &amp; Export</h2>
+        <p class="scope">${ok? 'No issues.' : iss.length + ' to fix before this day can be exported.'}</p>
+        ${list}
+        <div class="footer">
+          <span class="opt">${ok? 'Generates {YYYYMMDD}_remy.metadata.yml' : 'Export is blocked until 0 issues remain.'}</span>
+          <button class="exportbtn" ${ok?'':'disabled'} style="margin-left:auto">⬇ Export YAML</button>
+        </div>`;
+    },
+  };
+
+  function footer(nextTab){
+    return `<div class="footer"><span class="opt">Jump anywhere on the left, or →</span>
+      <button class="next" data-next="${nextTab}">Next ▸</button></div>`;
+  }
+
+  function setBadges(){
+    const map = {
+      overview: overviewOk()? ['ok','✓'] : ['err','✗'],
+      epochs:   epochsOk()?   ['ok','✓'] : ['err','✗'],
+    };
+    for(const [tab,[cls,glyph]] of Object.entries(map)){
+      const el = document.querySelector(`[data-st="${tab}"]`);
+      el.className = 'st ' + cls; el.textContent = glyph;
+    }
+    // export badge = count
+    const n = issues().length;
+    const ex = document.querySelector('[data-st="export"]');
+    if(n===0){ ex.className='st ok'; ex.textContent='✓'; }
+    else { ex.className='count'; ex.textContent=n + ' to fix'; }
+  }
+
+  let current = 'overview';
+  function render(tab){
+    current = tab;
+    document.querySelectorAll('#secnav button').forEach(b=>b.classList.toggle('cur', b.dataset.tab===tab));
+    const panel = document.getElementById('panel');
+    panel.innerHTML = panels[tab]();
+    panel.focus();
+    wire();
+    setBadges();
+  }
+  function wire(){
+    const exp = document.getElementById('expDesc');
+    if(exp) exp.addEventListener('input', e=>{ state.experimentDescription = e.target.value; setBadges();
+      e.target.classList.toggle('err-inp', !overviewOk()); });
+    const add = document.getElementById('addTask');
+    if(add) add.addEventListener('click', ()=>{ state.hasTask = true; render('epochs'); });
+    document.querySelectorAll('[data-next]').forEach(b=>b.addEventListener('click', ()=>render(b.dataset.next)));
+    document.querySelectorAll('[data-goto]').forEach(b=>b.addEventListener('click', ()=>render(b.dataset.goto)));
+  }
+  document.querySelectorAll('#secnav button').forEach(b=>b.addEventListener('click', ()=>render(b.dataset.tab)));
+  render('overview');
+</script>
+</body>
+</html>
