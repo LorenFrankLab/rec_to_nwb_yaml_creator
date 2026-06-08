@@ -13,7 +13,7 @@ import './Breadcrumb.css';
  *
  * @example
  * <Breadcrumb items={[
- *   { label: 'Home', href: '#/' },
+ *   { label: 'Workspace', href: '#/workspace' },
  *   { label: 'Animal: remy', href: '#/animal/remy' },
  *   { label: 'Day: 2023-06-22' }
  * ]} />

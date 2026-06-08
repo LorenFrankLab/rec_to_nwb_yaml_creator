@@ -241,11 +241,20 @@ export function AppLayout() {
         className="visually-hidden"
       />
 
-      {/* Header with logo */}
+      {/* Header with logo. The logo is the in-app "home": on the frozen legacy form (`#/`) it returns
+          to the form, but on the new-model routes (workspace / animal / day / validation) it goes to
+          the WORKSPACE — clicking it must not dump the user back into the legacy form. This does NOT
+          change the default `#/` landing (a fresh visit still renders legacy); only the in-app target. */}
       <div className="home-region" role="banner">
-        <a href="#/" aria-label="Return to metadata form">
-          <img src={logo} alt="Loren Frank Lab logo" />
-        </a>
+        {currentRoute.view === 'legacy' ? (
+          <a href="#/" aria-label="Return to metadata form">
+            <img src={logo} alt="Loren Frank Lab logo" />
+          </a>
+        ) : (
+          <a href="#/workspace" aria-label="Go to workspace">
+            <img src={logo} alt="Loren Frank Lab logo" />
+          </a>
+        )}
         <button
           ref={shortcutsTriggerRef}
           type="button"

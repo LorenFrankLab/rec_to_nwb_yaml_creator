@@ -133,9 +133,10 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, an
   // Count validation errors for ARIA announcement
   const errorCount = Object.values(fieldErrors).filter(Boolean).length;
 
-  // Breadcrumb items
+  // Breadcrumb items. The top crumb is the WORKSPACE (the new-model home / animal list), not the
+  // orphaned `#/home` page or the legacy form — keep the in-app trail inside the new model.
   const breadcrumbItems = [
-    { label: 'Home', href: '#/home' },
+    { label: 'Workspace', href: '#/workspace' },
     { label: `Animal: ${ownerKey}`, href: `#/animal/${ownerKey}/days` },
     { label: `Day: ${day.date}` },
   ];

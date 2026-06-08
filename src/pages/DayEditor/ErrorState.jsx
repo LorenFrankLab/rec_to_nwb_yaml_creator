@@ -16,8 +16,6 @@ export default function ErrorState({ message }) {
       <p>{message}</p>
       <p>
         <a href="#/workspace">Return to Workspace</a>
-        {' · '}
-        <a href="#/home">Go to Home</a>
       </p>
     </main>
   );

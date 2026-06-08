@@ -85,6 +85,22 @@ describe('AppLayout', () => {
       expect(screen.getByTestId('workspace-view')).toBeInTheDocument();
     });
 
+    it('banner logo returns to the metadata form ONLY on the legacy route', () => {
+      window.location.hash = '#/';
+      render(<AppLayout />);
+      expect(screen.getByRole('link', { name: /return to metadata form/i })).toHaveAttribute('href', '#/');
+    });
+
+    it('banner logo goes to the WORKSPACE (not the legacy form) on the new-model routes', () => {
+      window.location.hash = '#/workspace';
+      render(<AppLayout />);
+      // The in-app "home" of the new model is the workspace — clicking the logo from the workspace/
+      // animal/day pages must not dump the user back into the frozen legacy form.
+      const logo = screen.getByRole('link', { name: /go to workspace/i });
+      expect(logo).toHaveAttribute('href', '#/workspace');
+      expect(screen.queryByRole('link', { name: /return to metadata form/i })).not.toBeInTheDocument();
+    });
+
     it('renders day editor view for #/day/:id', () => {
       window.location.hash = '#/day/remy-2023-06-22';
       render(<AppLayout />);
