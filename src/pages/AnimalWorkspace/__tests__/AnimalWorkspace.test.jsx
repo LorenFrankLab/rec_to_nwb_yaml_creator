@@ -55,11 +55,12 @@ describe('AnimalWorkspace picker — Initial State', () => {
       expect(screen.getByText(/no animals/i)).toBeInTheDocument();
     });
 
-    it('provides link to create first animal', () => {
+    it('provides a button to create the first animal (opens the inline panel, not a #/home link)', () => {
       renderWorkspace();
-      const createLink = screen.getByRole('link', { name: /create.*animal/i });
-      expect(createLink).toBeInTheDocument();
-      expect(createLink).toHaveAttribute('href', expect.stringMatching(/#\/?home/i));
+      // Phase 4b: create lives IN the workspace as an inline panel — no route to #/home.
+      const createButton = screen.getByRole('button', { name: /create.*animal/i });
+      expect(createButton).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: /create.*animal/i })).not.toBeInTheDocument();
     });
 
     it('renders with proper ARIA landmarks', () => {
@@ -136,7 +137,7 @@ describe('AnimalWorkspace picker — Initial State', () => {
   });
 
   describe('Create New Animal', () => {
-    it('shows "New Animal" link in the picker', () => {
+    it('shows a "New Animal" button in the picker (opens the inline panel, not a #/home link)', () => {
       renderWorkspace({
         workspace: {
           animals: { testanimal: { subject: { subject_id: 'testanimal' }, days: [] } },
@@ -144,9 +145,10 @@ describe('AnimalWorkspace picker — Initial State', () => {
           settings: {},
         },
       });
-      const createButton = screen.getByRole('link', { name: /create new animal/i });
+      const createButton = screen.getByRole('button', { name: /create new animal/i });
       expect(createButton).toBeInTheDocument();
-      expect(createButton).toHaveAttribute('href', '#/home');
+      // Phase 4b: it's a button that opens the inline form, no longer a link to #/home.
+      expect(screen.queryByRole('link', { name: /create new animal/i })).not.toBeInTheDocument();
     });
 
     it('does not render the per-animal "Edit Animal Setup" link (that lives in the animal view)', () => {

@@ -6,6 +6,36 @@
 
 ---
 
+## Tabbed workspace IA — Phase 4b: create-animal as an inline workspace panel (June 8, 2026)
+
+Folds animal creation INTO the workspace: "+ New Animal" (and the empty-state create action) now
+open the existing `AnimalCreationForm` as an inline panel on the picker instead of routing to a
+separate `#/home` screen, so first-animal creation uses the same pattern as everything else. On
+success the workspace lands on the new animal's days route (`#/animal/:id/days`). This is the
+**Phase-5 blocker** — the Home/stepper split can't be removed until create lives in the workspace.
+From the [phase-4 doc](../.claude/docs/plans/tabbed-workspace-ia/phase-4-lifecycle-nav.md) Task 4.2.
+**UI/glue-only — no export/schema change**; 125 golden baselines byte-identical; full suite (4313),
+lint (0 errors), build all green. TDD throughout; code-reviewer pass (no blocking findings). `#/home`
+stays a live route.
+
+- **Shared create glue (no fork).** New [animalCreation.js](../src/domain/animalCreation.js):
+  `buildAnimalFromForm(formData)` → `{ animalId, subject, metadata }` and
+  `getDefaultExperimenters(workspace)`, extracted VERBATIM from the Home container so the Home route
+  and the workspace panel build IDENTICAL animals (same subject shape, `description` auto-gen,
+  `device.name: ['Trodes']` seed, technical defaults). [Home/index.jsx](../src/pages/Home/index.jsx)
+  refactored to consume them — its behavior (incl. the `#/workspace?animal=` navigation) is unchanged.
+- **Inline panel on the picker.** [AnimalWorkspace/index.jsx](../src/pages/AnimalWorkspace/index.jsx)
+  hosts `AnimalCreationForm` in a `<section>` when create is open; the create affordances are now
+  `<button>`s (was `<a href="#/home">`). `handleCreate` → `actions.createAnimal` → navigate to
+  `#/animal/:id/days`; cancel closes the panel. Duplicate-id prevention is preserved (the form
+  validates uniqueness against `existingAnimals`).
+- **Defense-in-depth.** `getDefaultExperimenters` reads the most-recent animal's experimenters through
+  the shape-safe `getAnimalExperimenters` selector, so a recovered/imported animal missing
+  `experimenters` can't crash the picker (which now computes defaults during render over ALL animals).
+- **Arch guard.** Allowlisted `pages/Home/AnimalCreationForm` as a permitted cross-page presentational
+  import (the form owns no app-wide domain logic; a neutral relocation to `src/components` can follow
+  when Home is removed in Phase 5).
+
 ## Tabbed workspace IA — Phase 4a: per-animal ⋮ lifecycle menu + nav cleanup (June 8, 2026)
 
 Puts animal lifecycle (delete) into a discoverable, accessible per-animal `⋮` overflow menu on both

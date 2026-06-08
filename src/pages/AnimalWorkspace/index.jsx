@@ -14,8 +14,10 @@
 import React, { useEffect, useState } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
 import { classifyAnimalDays, isPresentRecordStatus } from '../../domain/dayRecovery';
+import { buildAnimalFromForm, getDefaultExperimenters } from '../../domain/animalCreation';
 import OverflowMenu from '../../components/OverflowMenu';
 import AnimalDeleteDialog from '../../components/AnimalDeleteDialog';
+import AnimalCreationForm from '../Home/AnimalCreationForm';
 import './AnimalWorkspace.css';
 
 /**
@@ -39,11 +41,28 @@ export function AnimalWorkspace() {
   const [pendingDeleteAnimalId, setPendingDeleteAnimalId] = useState(null);
   const pendingDeleteAnimal = pendingDeleteAnimalId ? animals[pendingDeleteAnimalId] : null;
 
+  // Whether the inline create-animal panel is open (Task 4.2). Create lives IN the workspace — an
+  // inline panel on the picker, not a route to a separate `#/home` screen — so first-animal creation
+  // uses the same pattern as everything else (this unblocks Phase 5's Home/stepper removal).
+  const [showCreate, setShowCreate] = useState(false);
+
   /** Commit the pending animal deletion through the store's guarded deleteAnimal, then close. */
   const confirmDeleteAnimal = () => {
     const id = pendingDeleteAnimalId;
     setPendingDeleteAnimalId(null);
     if (id) actions.deleteAnimal(id);
+  };
+
+  /**
+   * Create the animal from the inline panel's form submission (the SAME builder Home uses), then
+   * land on the new animal's days route. createAnimal applies synchronously, so navigating
+   * immediately is safe.
+   * @param {object} formData - The processed AnimalCreationForm payload.
+   */
+  const handleCreate = (formData) => {
+    const { animalId, subject, metadata } = buildAnimalFromForm(formData);
+    actions.createAnimal(animalId, subject, metadata);
+    window.location.hash = `#/animal/${animalId}/days`;
   };
 
   // Handshake: `#/workspace?animal=<id>` (e.g. after creating a day) jumps straight to that
@@ -66,23 +85,43 @@ export function AnimalWorkspace() {
     <main id="main-content" tabIndex="-1" role="main" aria-labelledby="workspace-heading">
       <h1 id="workspace-heading">Animal Workspace</h1>
 
-      {!hasAnimals ? (
+      {showCreate ? (
+        /* Inline create-animal panel (Task 4.2): the existing AnimalCreationForm, hosted ON the
+           picker. On success we navigate to the new animal's days route; cancel just closes it. */
+        <section className="create-animal-panel" aria-label="Create animal">
+          <AnimalCreationForm
+            onSubmit={handleCreate}
+            onCancel={() => setShowCreate(false)}
+            defaultExperimenters={getDefaultExperimenters(model.workspace)}
+            existingAnimals={animals}
+          />
+        </section>
+      ) : !hasAnimals ? (
         /* Empty State: No Animals */
         <div className="empty-state" role="region" aria-label="Empty workspace">
           <p className="empty-message">No animals created yet.</p>
           <p>Create your first animal to start managing recording sessions.</p>
-          <a href="#/home" className="create-animal-link">
+          <button
+            type="button"
+            className="create-animal-link"
+            onClick={() => setShowCreate(true)}
+          >
             Create Animal
-          </a>
+          </button>
         </div>
       ) : (
         /* Animal picker: each card links to the animal's tabbed view. */
         <nav className="animal-list" aria-label="Animal list">
           <div className="animal-list-header">
             <h2>Animals</h2>
-            <a href="#/home" className="btn-create-animal" aria-label="Create new animal">
+            <button
+              type="button"
+              className="btn-create-animal"
+              aria-label="Create new animal"
+              onClick={() => setShowCreate(true)}
+            >
               + New Animal
-            </a>
+            </button>
           </div>
           {animalIds.map((animalId) => {
             const animal = animals[animalId];

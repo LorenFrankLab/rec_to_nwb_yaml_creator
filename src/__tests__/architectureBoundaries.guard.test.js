@@ -60,6 +60,11 @@ const CROSS_PAGE_ALLOWLIST = new Set([
   // export-truth deciders it consumes (mergeDayMetadata, computeStepStatus, shadowExport) live in
   // domain/state; the page composes them like any page.
   'pages/ValidationSummary/index',
+  // Phase 4b: the workspace's inline "+ New Animal" panel hosts the SAME presentational
+  // AnimalCreationForm as the Home route (no fork) — the shared subject/metadata builder lives in
+  // domain/animalCreation. The form owns no app-wide domain logic; relocating it to src/components
+  // can follow when Home is removed in Phase 5.
+  'pages/Home/AnimalCreationForm',
 ]);
 
 /**
