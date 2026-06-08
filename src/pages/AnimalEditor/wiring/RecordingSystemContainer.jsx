@@ -19,10 +19,12 @@ import { collectDataAcqIdentities } from '../identitySafety';
  */
 export default function RecordingSystemContainer({ animal, onFieldUpdate }) {
   const { model } = useStoreContext();
-  // Data-acq identities elsewhere in the dataset (plus any other items on this animal), for the
-  // DataAcqSection divergent-reuse check.
+  // Data-acq identities elsewhere in the dataset, for the DataAcqSection divergent-reuse check.
+  // Exclude this animal's ENTIRE catalog (not just index 0): intra-catalog name collisions are caught
+  // by the editor's own uniqueness check, so the cross-animal registry must carry only OTHER animals'
+  // systems — otherwise editing one catalog entry could spuriously diverge against a sibling entry.
   const dataAcqRegistry = useMemo(
-    () => collectDataAcqIdentities(model.workspace, { animalId: animal.id, index: 0 }),
+    () => collectDataAcqIdentities(model.workspace, { animalId: animal.id }),
     [model.workspace, animal.id]
   );
   return (

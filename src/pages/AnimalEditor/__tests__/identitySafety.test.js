@@ -125,4 +125,27 @@ describe('collectDataAcqIdentities', () => {
 
     expect(collectDataAcqIdentities(multiDeviceWorkspace, { animalId: 'remy', index: 0 }).map((e) => e.name)).toEqual(['OE']);
   });
+
+  it('excludes the ENTIRE catalog of the edited animal when no index is given', () => {
+    // The animal owns a multi-entry catalog now; the divergence registry the Recording System editor
+    // consumes must exclude ALL of the current animal's own systems (intra-catalog name collisions are
+    // caught by the editor's own uniqueness check) — otherwise editing entry N could spuriously diverge
+    // against sibling entry M.
+    const multiDeviceWorkspace = {
+      animals: {
+        remy: {
+          id: 'remy',
+          devices: {
+            data_acq_device: [
+              { name: 'SG', system: 'SpikeGadgets', amplifier: 'Intan', adc_circuit: 'Intan' },
+              { name: 'OE', system: 'Open Ephys', amplifier: 'Intan', adc_circuit: 'Intan' },
+            ],
+          },
+        },
+        jaq: { id: 'jaq', devices: { data_acq_device: [{ name: 'NP', system: 'Open Ephys', amplifier: 'IMEC', adc_circuit: 'IMEC' }] } },
+      },
+    };
+
+    expect(collectDataAcqIdentities(multiDeviceWorkspace, { animalId: 'remy' }).map((e) => e.name)).toEqual(['NP']);
+  });
 });
