@@ -36,6 +36,7 @@ afterEach(() => {
 function renderSwitcher(overrides = {}) {
   const onRequestDelete = vi.fn();
   const onRequestCreate = vi.fn();
+  const onRequestEditProfile = vi.fn();
   const user = userEvent.setup();
   render(
     <AnimalSwitcher
@@ -44,10 +45,11 @@ function renderSwitcher(overrides = {}) {
       days={days}
       onRequestDelete={onRequestDelete}
       onRequestCreate={onRequestCreate}
+      onRequestEditProfile={onRequestEditProfile}
       {...overrides}
     />
   );
-  return { onRequestDelete, onRequestCreate, user };
+  return { onRequestDelete, onRequestCreate, onRequestEditProfile, user };
 }
 
 describe('AnimalSwitcher — trigger', () => {
@@ -97,7 +99,7 @@ describe('AnimalSwitcher — rows', () => {
 });
 
 describe('AnimalSwitcher — per-row ⋮ menu', () => {
-  it('each row has a ⋮ menubutton with Open / Delete animal… (no dead Rename placeholder)', async () => {
+  it('each row has a ⋮ menubutton with Open / Edit profile… / Delete animal… (no dead Rename)', async () => {
     const { user } = renderSwitcher();
     await user.click(screen.getByRole('button', { name: /switch animal/i }));
 
@@ -107,9 +109,20 @@ describe('AnimalSwitcher — per-row ⋮ menu', () => {
 
     const menu = screen.getByRole('menu', { name: /totoro actions/i });
     expect(within(menu).getByRole('menuitem', { name: /^open$/i })).toBeInTheDocument();
+    expect(within(menu).getByRole('menuitem', { name: /edit profile/i })).toBeInTheDocument();
     expect(within(menu).getByRole('menuitem', { name: /delete animal/i })).toBeInTheDocument();
     // The disabled "Rename…" placeholder is gone — a permanently-dead menu item is user friction.
     expect(within(menu).queryByRole('menuitem', { name: /rename/i })).not.toBeInTheDocument();
+  });
+
+  it('row Edit profile… requests the profile editor for THAT animal and closes the popup', async () => {
+    const { onRequestEditProfile, user } = renderSwitcher();
+    await user.click(screen.getByRole('button', { name: /switch animal/i }));
+    await user.click(screen.getByRole('button', { name: /totoro actions/i }));
+    await user.click(screen.getByRole('menuitem', { name: /edit profile/i }));
+
+    expect(onRequestEditProfile).toHaveBeenCalledWith('totoro');
+    expect(screen.queryByRole('group', { name: /switch animal/i })).not.toBeInTheDocument();
   });
 
   it('row Delete animal… requests the delete for THAT animal and closes the popup', async () => {

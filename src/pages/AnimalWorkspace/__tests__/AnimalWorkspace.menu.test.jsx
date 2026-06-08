@@ -58,9 +58,20 @@ describe('AnimalWorkspace picker — per-animal ⋮ menu', () => {
     await user.click(trigger);
     const menu = screen.getByRole('menu');
     expect(within(menu).getByRole('menuitem', { name: /^open$/i })).toBeInTheDocument();
+    expect(within(menu).getByRole('menuitem', { name: /edit profile/i })).toBeInTheDocument();
     expect(within(menu).getByRole('menuitem', { name: /delete animal/i })).toBeInTheDocument();
     // No dead "Rename…" placeholder (a permanently-disabled menu item is user friction).
     expect(within(menu).queryByRole('menuitem', { name: /rename/i })).not.toBeInTheDocument();
+  });
+
+  it('Edit profile… opens the shared profile dialog for that animal', async () => {
+    const user = userEvent.setup();
+    renderPicker();
+    await user.click(screen.getByRole('button', { name: /actions for remy/i }));
+    await user.click(screen.getByRole('menuitem', { name: /edit profile/i }));
+
+    const dialog = screen.getByRole('dialog', { name: /edit animal profile/i });
+    expect(within(dialog).getByLabelText(/species/i)).toBeInTheDocument();
   });
 
   it('the card link still navigates to the animal days route (menu is a sibling, not nested)', () => {

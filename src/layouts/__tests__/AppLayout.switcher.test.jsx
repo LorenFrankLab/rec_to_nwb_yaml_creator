@@ -109,6 +109,19 @@ describe('AppLayout — switcher lifecycle wiring', () => {
     expect(window.location.hash).toBe('#/workspace');
   });
 
+  it('a row Edit profile… opens the shared profile dialog hosted by AppLayout', async () => {
+    const user = userEvent.setup();
+    renderAt('#/animal/remy/days');
+
+    await user.click(screen.getByRole('button', { name: /switch animal/i }));
+    await user.click(screen.getByRole('button', { name: /totoro actions/i }));
+    await user.click(screen.getByRole('menuitem', { name: /edit profile/i }));
+
+    // The shared AnimalProfileDialog opens for totoro (a Modal dialog with the subject form).
+    const dialog = screen.getByRole('dialog', { name: /edit animal profile/i });
+    expect(within(dialog).getByLabelText(/species/i)).toBeInTheDocument();
+  });
+
   it('"+ New animal…" routes to the workspace create handshake (#/workspace?create=1)', async () => {
     const user = userEvent.setup();
     renderAt('#/animal/remy/days');

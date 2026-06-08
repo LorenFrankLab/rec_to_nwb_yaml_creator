@@ -27,6 +27,8 @@ import './AnimalSwitcher.css';
  * @param {object} props.days - The workspace days map (for per-row day counts).
  * @param {Function} props.onRequestDelete - Called with an animal id when a row's Delete is chosen.
  * @param {Function} props.onRequestCreate - Called when "+ New animal…" is chosen.
+ * @param {Function} props.onRequestEditProfile - Called with an animal id when a row's Edit
+ *   profile… is chosen.
  * @returns {JSX.Element}
  */
 export default function AnimalSwitcher({
@@ -35,6 +37,7 @@ export default function AnimalSwitcher({
   days,
   onRequestDelete,
   onRequestCreate,
+  onRequestEditProfile,
 }) {
   const popupId = useId();
   const [open, setOpen] = useState(false);
@@ -172,6 +175,14 @@ export default function AnimalSwitcher({
                       },
                     },
                     {
+                      key: 'edit-profile',
+                      label: 'Edit profile…',
+                      onSelect: () => {
+                        close(false);
+                        onRequestEditProfile(animalId);
+                      },
+                    },
+                    {
                       key: 'delete',
                       label: 'Delete animal…',
                       onSelect: () => {
@@ -213,6 +224,7 @@ AnimalSwitcher.propTypes = {
   days: PropTypes.object,
   onRequestDelete: PropTypes.func.isRequired,
   onRequestCreate: PropTypes.func.isRequired,
+  onRequestEditProfile: PropTypes.func.isRequired,
 };
 
 AnimalSwitcher.defaultProps = {

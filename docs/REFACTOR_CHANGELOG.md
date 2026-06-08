@@ -25,6 +25,13 @@ baselines byte-identical; full suite (4248), lint (0 errors), build green. TDD.
 - The legacy `AnimalProfileSection` (+ scss + test) is deleted — it was AnimalView-only after the
   Phase-5 stepper removal — and its `CROSS_PAGE_ALLOWLIST` entry dropped (the dialog lives in
   `src/components`, needs no allowlist).
+- **Reachable from every per-animal ⋮.** "Edit profile…" is now a menu item in the top object-selector
+  (animal dropdown) rows AND the picker cards too — not just the AnimalView header — so an animal's
+  shared subject facts are editable from wherever the animal is listed, without navigating to it. The
+  shared `AnimalProfileDialog` is hosted in `AppLayout` (switcher) and `AnimalWorkspace` (cards),
+  mirroring the existing shared-delete-dialog pattern; each `onSave` → `actions.updateAnimal(id,
+  { subject })`, identical to the header path. Per-animal ⋮ vocabulary is now consistent:
+  `Open · Edit profile… · Delete animal…` (header omits Open).
 
 ## Tabbed workspace IA — Phase 5: decommission the legacy Animal Editor stepper (June 8, 2026)
 

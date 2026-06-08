@@ -15,8 +15,10 @@ import React, { useEffect, useState } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
 import { getPresentDayCount } from '../../domain/dayRecovery';
 import { buildAnimalFromForm, getDefaultExperimenters } from '../../domain/animalCreation';
+import { getAnimalDayIds } from '../../state/workspaceSelectors';
 import OverflowMenu from '../../components/OverflowMenu';
 import AnimalDeleteDialog from '../../components/AnimalDeleteDialog';
+import AnimalProfileDialog from '../../components/AnimalProfileDialog';
 import AnimalCreationForm from '../Home/AnimalCreationForm';
 import './AnimalWorkspace.css';
 
@@ -40,6 +42,10 @@ export function AnimalWorkspace() {
   // menu-adjacent button. A single dialog instance serves whichever card's ⋮ opened it.
   const [pendingDeleteAnimalId, setPendingDeleteAnimalId] = useState(null);
   const pendingDeleteAnimal = pendingDeleteAnimalId ? animals[pendingDeleteAnimalId] : null;
+  // The animal whose "Edit profile…" dialog is open (from a card ⋮) — same dialog as the header /
+  // switcher, so subject facts are editable from wherever an animal is listed.
+  const [pendingProfileAnimalId, setPendingProfileAnimalId] = useState(null);
+  const pendingProfileAnimal = pendingProfileAnimalId ? animals[pendingProfileAnimalId] : null;
 
   // Whether the inline create-animal panel is open (Task 4.2). Create lives IN the workspace — an
   // inline panel on the picker, not a route to a separate `#/home` screen — so first-animal creation
@@ -165,6 +171,11 @@ export function AnimalWorkspace() {
                       },
                     },
                     {
+                      key: 'edit-profile',
+                      label: 'Edit profile…',
+                      onSelect: () => setPendingProfileAnimalId(animalId),
+                    },
+                    {
                       key: 'delete',
                       label: 'Delete animal…',
                       onSelect: () => setPendingDeleteAnimalId(animalId),
@@ -184,6 +195,14 @@ export function AnimalWorkspace() {
         days={days}
         onConfirm={confirmDeleteAnimal}
         onCancel={() => setPendingDeleteAnimalId(null)}
+      />
+
+      <AnimalProfileDialog
+        isOpen={pendingProfileAnimalId != null}
+        animal={pendingProfileAnimal}
+        dayCount={pendingProfileAnimal ? getAnimalDayIds(pendingProfileAnimal).length : 0}
+        onSave={(subject) => actions.updateAnimal(pendingProfileAnimalId, { subject })}
+        onClose={() => setPendingProfileAnimalId(null)}
       />
     </main>
   );

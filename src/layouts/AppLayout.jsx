@@ -17,6 +17,8 @@ import { emitStepperShortcut } from '../hooks/stepperShortcuts';
 import { ShortcutsHelp } from '../components/ShortcutsHelp';
 import AnimalSwitcher from '../components/AnimalSwitcher';
 import AnimalDeleteDialog from '../components/AnimalDeleteDialog';
+import AnimalProfileDialog from '../components/AnimalProfileDialog';
+import { getAnimalDayIds } from '../state/workspaceSelectors';
 import { Home } from '../pages/Home';
 import { AnimalWorkspace } from '../pages/AnimalWorkspace';
 import { DayEditor } from '../pages/DayEditor';
@@ -110,6 +112,10 @@ export function AppLayout() {
   const { animals = {}, days = {} } = model?.workspace || {};
   const [pendingDeleteAnimalId, setPendingDeleteAnimalId] = useState(null);
   const pendingDeleteAnimal = pendingDeleteAnimalId ? animals[pendingDeleteAnimalId] : null;
+  // The animal whose "Edit profile…" dialog is open (from a switcher row ⋮). Hosted here so the
+  // dropdown can edit any animal's shared subject facts without navigating to it.
+  const [pendingProfileAnimalId, setPendingProfileAnimalId] = useState(null);
+  const pendingProfileAnimal = pendingProfileAnimalId ? animals[pendingProfileAnimalId] : null;
   const confirmDeleteAnimal = () => {
     const id = pendingDeleteAnimalId;
     setPendingDeleteAnimalId(null);
@@ -284,6 +290,7 @@ export function AppLayout() {
                 days={days}
                 onRequestDelete={setPendingDeleteAnimalId}
                 onRequestCreate={requestCreateAnimal}
+                onRequestEditProfile={setPendingProfileAnimalId}
               />
             </>
           )}
@@ -334,6 +341,16 @@ export function AppLayout() {
         days={days}
         onConfirm={confirmDeleteAnimal}
         onCancel={() => setPendingDeleteAnimalId(null)}
+      />
+
+      {/* Shared animal-profile editor for the top object-selector's row ⋮ (edit any animal's subject
+          facts from the dropdown). Same dialog the AnimalView header ⋮ uses. */}
+      <AnimalProfileDialog
+        isOpen={pendingProfileAnimalId != null}
+        animal={pendingProfileAnimal}
+        dayCount={pendingProfileAnimal ? getAnimalDayIds(pendingProfileAnimal).length : 0}
+        onSave={(subject) => actions.updateAnimal(pendingProfileAnimalId, { subject })}
+        onClose={() => setPendingProfileAnimalId(null)}
       />
 
       {/* Footer */}
