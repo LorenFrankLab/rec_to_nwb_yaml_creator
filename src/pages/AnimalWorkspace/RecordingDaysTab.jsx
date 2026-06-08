@@ -275,9 +275,6 @@ export function RecordingDaysTab({ animalId }) {
             Recording Days for {selectedAnimal.id}
           </h2>
           <div className="day-actions">
-            <a href={`#/animal/${selectedAnimalId}/editor`} className="btn-secondary">
-              Edit Animal Setup
-            </a>
             <button
               className="btn-primary"
               onClick={handleToggleCalendar}

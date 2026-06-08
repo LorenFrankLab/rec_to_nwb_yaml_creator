@@ -187,11 +187,12 @@ describe('Recording-days pane (hosted by AnimalView at the route)', () => {
     });
   });
 
-  describe('Edit Animal Setup link', () => {
-    it('links to the Animal Editor for the animal', () => {
+  describe('Edit Animal Setup link (Task 2.1 — removed)', () => {
+    it('does not render an "Edit Animal Setup" link in the day-tab header (its destinations are the setup tabs now)', () => {
       renderPane('testanimal', { testanimal });
-      const editLink = screen.getByRole('link', { name: /edit animal setup/i });
-      expect(editLink).toHaveAttribute('href', '#/animal/testanimal/editor');
+      expect(screen.queryByRole('link', { name: /edit animal setup/i })).not.toBeInTheDocument();
+      // The primary "Add Recording Days" action stays.
+      expect(screen.getByRole('button', { name: /show calendar/i })).toHaveTextContent(/add recording days/i);
     });
   });
 });
