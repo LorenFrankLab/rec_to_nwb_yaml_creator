@@ -6,6 +6,57 @@
 
 ---
 
+## Tabbed workspace IA — Phase 3-3: catalog/library tabs + corruption-banner hoist + opto chip (June 8, 2026)
+
+Mounts the remaining four setup containers (recording-system, cameras, dio, optogenetics) into the
+tabbed Animal View and hoists the 3-field corruption banner to the shell level. From the
+[phase-3-3 doc](../.claude/docs/plans/tabbed-workspace-ia/phase-3-3-catalog-tabs.md) /
+[charter](../.claude/docs/plans/tabbed-workspace-ia/phase-3-setup-tabs.md). After this phase, all six
+setup tabs (+ `days`) are real; only `export` remains a placeholder (→ 3-5). **UI-only — no
+store/export/schema change**; 125 golden baselines byte-identical; full suite (4241), lint (0 errors),
+build all green. TDD throughout; three independently-green commits; code-reviewer pass on the
+cumulative diff (no findings). The legacy `AnimalEditorStepper` stays live and is non-regressed.
+
+- **Mount the four catalog/library containers** ([AnimalView/index.jsx](../src/pages/AnimalView/index.jsx)).
+  `renderPanel()` (now a ctx-object) routes recording-system → `RecordingSystemContainer`, cameras →
+  `CamerasContainer`, dio → `DioContainer`, optogenetics → `OptogeneticsContainer`. The first three take
+  `{ animal, onFieldUpdate }`, fed by the shared `useAnimalFieldUpdate` hook (one implementation, same
+  wiring the stepper uses); optogenetics self-resolves from `animalId`. Scope descriptors:
+  recording-system → "Shared across ALL days (no per-day version)" (Task 3.2 honesty — deliberately NOT
+  framed as apply-per-day); cameras → "Catalog — referenced per day"; dio → "Library — opt in per day".
+- **Optogenetics status chip.** When `getAnimalSectionStatus(animal,'optogenetics') === TODO` (the public
+  API — the private `hasOptogenetics` is not imported), the opto tab shows a neutral "Not used — no
+  stimulation" chip so an empty opto tab reads as a valid state, not missing setup.
+- **Hoist the 3-field RawCorruptionBanner to the host shell** (charter decision 1). The banner covers
+  `cameras` / `data_acq_device` / `configurationHistory`, which now span THREE setup tabs, so a per-tab
+  (or per-step) render could hide a sibling field's corruption behind a tab/step the user isn't on.
+  Removed from [HardwareConfigStep](../src/pages/AnimalEditor/HardwareConfigStep.jsx) (+ its `onRepair`
+  prop); re-homed once in [AnimalEditorStepper](../src/pages/AnimalEditor/AnimalEditorStepper.jsx) above
+  the step indicators (the legacy stepper now surfaces corruption from EVERY step, not just the hardware
+  step — strictly more visible, no regression); rendered once in `AnimalView` above the tab panels. It
+  self-hides when clean. The two HardwareConfigStep banner unit tests were replaced by a relocation guard;
+  end-to-end repair is covered at the stepper + AnimalView levels.
+- **Architecture allowlist** ([architectureBoundaries.guard.test.js](../src/__tests__/architectureBoundaries.guard.test.js)):
+  added the four containers + the `useAnimalFieldUpdate` hook to `CROSS_PAGE_ALLOWLIST` (same
+  extract-don't-fork rationale as the ephys containers).
+- **Unsaved-edit guard extended to the CameraModal** (charter decision 2, which names the CameraModal).
+  Now that cameras is mounted under the section-nav, `CamerasContainer` gained an optional
+  `onPendingEditsChange` prop (reports `cameraModal.open`; false on unmount; no-op when absent → stepper
+  byte-unchanged), wired into AnimalView's existing guard. A section-nav switch with an open Add/Edit
+  Camera modal raises the same "Discard unsaved changes?" ConfirmDialog; the identity-safety /
+  immutable-once-referenced flows are untouched. (The modal-guard class is now bounded to ephys + cameras;
+  recording-system / dio / optogenetics edit inline and persist immediately, so they hold no modal edits.)
+- **Deliberately deferred (per the phase doc):** the `export` tab + per-day effective-setup review
+  ([3-5](../.claude/docs/plans/tabbed-workspace-ia/phase-3-5-validation-export-tab.md)); the
+  subject/profile header + reconfig banner ([3-4](../.claude/docs/plans/tabbed-workspace-ia/phase-3-4-profile-context.md));
+  the warning-escape on export ([3-6](../.claude/docs/plans/tabbed-workspace-ia/phase-3-6-warning-ack.md));
+  repair `?field=` landing granularity ([Phase 3a](../.claude/docs/plans/tabbed-workspace-ia/phase-3a-repair-routing.md)).
+- New tests: [AnimalView.catalogTabs.test.jsx](../src/pages/AnimalView/__tests__/AnimalView.catalogTabs.test.jsx)
+  (four containers render + scope descriptors + opto chip + the camera-modal guard) and
+  [AnimalView.corruptionBanner.test.jsx](../src/pages/AnimalView/__tests__/AnimalView.corruptionBanner.test.jsx)
+  (banner visible once from a non-owning tab); plus a stepper-level hoist test in
+  [AnimalEditorStepper.repairBanner.test.jsx](../src/pages/AnimalEditor/__tests__/AnimalEditorStepper.repairBanner.test.jsx).
+
 ## Tabbed workspace IA — Phase 3-2: ephys tabs + unsaved-edit guard (June 8, 2026)
 
 Mounts the two hardest-wired setup containers extracted in Phase 3-1 into their tabs in the tabbed
