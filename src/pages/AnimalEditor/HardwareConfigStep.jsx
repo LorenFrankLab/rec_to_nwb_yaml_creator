@@ -1,6 +1,5 @@
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
-import RawCorruptionBanner from '../../components/RawCorruptionBanner';
 import { rawArray } from '../../components/rawPropTypes';
 import SaveIndicator from '../DayEditor/SaveIndicator';
 import CamerasContainer from './wiring/CamerasContainer';
@@ -18,11 +17,15 @@ import './HardwareConfigStep.scss';
  * without forking the logic.
  *
  * @param {object} props
+ * The 3-field corruption banner (cameras / data_acq_device / configurationHistory) no longer
+ * renders here: it is hoisted to the host shell (AnimalEditorStepper for the legacy stepper,
+ * AnimalView for the tabbed view) so a corrupt sibling field can't hide behind a step/tab the user
+ * isn't on (charter decision 1).
+ *
  * @param {object} props.animal - Animal record.
  * @param {Function} props.onFieldUpdate - Field update callback from AnimalEditorStepper.
  * @param {Function} props.onNavigateBack - Navigate back to Step 2 (Channel Maps).
  * @param {Function} props.onNavigateNext - Navigate to Step 4 (Optogenetics) or exit.
- * @param props.onRepair
  * @returns {JSX.Element}
  */
 export default function HardwareConfigStep({
@@ -30,7 +33,6 @@ export default function HardwareConfigStep({
   onFieldUpdate,
   onNavigateBack,
   onNavigateNext,
-  onRepair,
 }) {
   const { persistence } = useStoreContext();
 
@@ -47,16 +49,9 @@ export default function HardwareConfigStep({
       </header>
 
       <div className="step-content">
-        {/* Destination repair surface: a corrupt cameras / data_acq_device /
-            configurationHistory would otherwise hide behind a section's empty state. The
-            banner surfaces it with an executable reset, so a repair routed here is never a
-            dead-end. (Phase 3 moves this banner to the AnimalView level so it spans the split
-            setup tabs; for now it stays here for the legacy stepper.) */}
-        <RawCorruptionBanner
-          animal={animal}
-          fields={['cameras', 'data_acq_device', 'configurationHistory']}
-          onRepair={onRepair}
-        />
+        {/* The 3-field corruption banner is hoisted to the host shell (AnimalEditorStepper /
+            AnimalView) so a corrupt sibling field can't hide behind a step/tab the user isn't on
+            (charter decision 1). It no longer renders per-step here. */}
 
         {/* Phase 8.7 Task 2: data acquisition belongs with the RECORDING SYSTEM (ephys), not
             lumped with cameras — give each area its own ownership-named section so the user can
@@ -100,11 +95,9 @@ HardwareConfigStep.propTypes = {
   onFieldUpdate: PropTypes.func.isRequired,
   onNavigateBack: PropTypes.func,
   onNavigateNext: PropTypes.func,
-  onRepair: PropTypes.func,
 };
 
 HardwareConfigStep.defaultProps = {
   onNavigateBack: null,
   onNavigateNext: null,
-  onRepair: undefined,
 };

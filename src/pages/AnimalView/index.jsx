@@ -19,6 +19,7 @@ import { getAnimalSubject } from '../../state/workspaceSelectors';
 import { getAnimalSectionStatus, SECTION_STATUS } from '../../domain/sectionStatus';
 import { ConfirmDialog } from '../../components/Modal';
 import { RecordingDaysTab } from '../AnimalWorkspace/RecordingDaysTab';
+import RawCorruptionBanner from '../../components/RawCorruptionBanner';
 import ElectrodeGroupsContainer from '../AnimalEditor/wiring/ElectrodeGroupsContainer';
 import ChannelMapsContainer from '../AnimalEditor/wiring/ChannelMapsContainer';
 import RecordingSystemContainer from '../AnimalEditor/wiring/RecordingSystemContainer';
@@ -73,6 +74,13 @@ const SECTION_GROUPS = [
 const TAB_LABEL = Object.fromEntries(
   SECTION_GROUPS.flatMap((g) => g.items).map((i) => [i.key, i.label])
 );
+
+/**
+ * Animal raw-collection fields whose corruption the AnimalView-level banner owns. These three span
+ * THREE different setup tabs (cameras / recording-system / config history), so the banner must live
+ * ABOVE the panels — a per-tab render would hide a sibling field's corruption (charter decision 1).
+ */
+const CORRUPTION_BANNER_FIELDS = ['cameras', 'data_acq_device', 'configurationHistory'];
 
 /**
  * Render the active tab's panel content. The `days` tab hosts the shared RecordingDaysTab; the
@@ -150,7 +158,7 @@ export function AnimalView({ animalId, tab }) {
   // Shared store-bound field-update + repair callbacks for the `{ animal, onFieldUpdate }` setup
   // containers (recording-system / cameras / dio) and the corruption banner — the same wiring the
   // legacy stepper uses, so logic is never forked.
-  const { handleFieldUpdate } = useAnimalFieldUpdate(animalId);
+  const { handleFieldUpdate, handleRepair } = useAnimalFieldUpdate(animalId);
 
   const panelRef = useRef(null);
   const isFirstRender = useRef(true);
@@ -243,6 +251,16 @@ export function AnimalView({ animalId, tab }) {
         <span className="animal-view-idbadge">subject_id</span>
         {facts && <span className="animal-view-facts">{facts}</span>}
       </header>
+
+      {/* Charter decision 1: the 3-field corruption banner lives ABOVE the tab panels (not per-tab)
+          so corruption in cameras / data_acq_device / configurationHistory — now split across three
+          setup tabs — is visible from every tab, never hidden behind a sibling field's closed tab.
+          Self-hides when clean. */}
+      <RawCorruptionBanner
+        animal={animal}
+        fields={CORRUPTION_BANNER_FIELDS}
+        onRepair={handleRepair}
+      />
 
       <div className="animal-view-body">
         <nav className="section-nav" aria-label="Animal sections">

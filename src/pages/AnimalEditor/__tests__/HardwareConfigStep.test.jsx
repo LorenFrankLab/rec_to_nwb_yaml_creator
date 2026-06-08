@@ -67,36 +67,24 @@ describe('HardwareConfigStep', () => {
     expect(behavioralEventsHeadings.length).toBeGreaterThan(0);
   });
 
-  it('surfaces a corrupt cameras collection as an executable reset banner (not the empty state alone)', async () => {
-    const user = userEvent.setup();
-    const onRepair = vi.fn();
-    render(
-      <HardwareConfigStep
-        animal={{ ...mockAnimal, cameras: 'nope' }}
-        onFieldUpdate={mockOnFieldUpdate}
-        onRepair={onRepair}
-      />
-    );
-    // The corruption is visible with an executable reset, instead of hiding behind the
-    // "Add First Camera" empty state.
-    const reset = screen.getByRole('button', { name: /^reset cameras$/i });
-    await user.click(reset);
-    expect(onRepair).toHaveBeenCalledWith(
-      expect.objectContaining({ repairCommand: { type: 'resetAnimalCameras' } })
-    );
-  });
-
-  it('surfaces a corrupt data_acq_device as an executable reset banner — without prop-type warnings', () => {
+  // The 3-field corruption banner was HOISTED to the host shell (AnimalEditorStepper /
+  // AnimalView) so a corrupt sibling field can't hide behind a step/tab the user isn't on
+  // (charter decision 1, Phase 3-3). HardwareConfigStep no longer renders it; the end-to-end
+  // repair behavior now lives in AnimalEditorStepper.repairBanner.test.jsx and
+  // AnimalView.corruptionBanner.test.jsx.
+  it('no longer renders the corruption banner itself (hoisted to the shell, decision 1)', () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     render(
       <HardwareConfigStep
         animal={{ ...mockAnimal, cameras: 'nope', devices: { data_acq_device: 'bad' } }}
         onFieldUpdate={mockOnFieldUpdate}
-        onRepair={vi.fn()}
       />
     );
-    expect(screen.getByRole('button', { name: /reset data acquisition devices/i })).toBeInTheDocument();
-    // Corrupt animal hardware is first-class state here, so no React warnings on render.
+    // The reset controls are not here anymore; they render at the shell level.
+    expect(screen.queryByRole('button', { name: /^reset cameras$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /reset data acquisition devices/i })).not.toBeInTheDocument();
+    // Corrupt animal hardware is still first-class state here (the containers tolerate it), so no
+    // React warnings on render.
     expect(errorSpy).not.toHaveBeenCalled();
     errorSpy.mockRestore();
   });

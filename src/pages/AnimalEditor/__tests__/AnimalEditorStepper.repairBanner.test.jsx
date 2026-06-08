@@ -54,6 +54,20 @@ describe('AnimalEditorStepper — RawCorruptionBanner end-to-end repair', () => 
     expect(screen.queryByText(/"cameras" is corrupt/i)).not.toBeInTheDocument();
   });
 
+  it('shows the corruption banner from a NON-hardware step (hoisted above the steps, decision 1)', () => {
+    // No ?field= deep-link → the stepper opens on step 0 (Electrodes & Ephys), NOT the old
+    // hardware step where the banner used to live. Hoisting it above the steps means a corrupt
+    // cameras is visible here too, instead of hiding until the user reaches the hardware step.
+    window.location.hash = '#/animal/remy/editor';
+    const initialState = { workspace: { animals: { remy: baseAnimal({ cameras: 'nope' }) }, days: {}, settings: {} } };
+    render(
+      <StoreProvider initialState={initialState}>
+        <AnimalEditorStepper />
+      </StoreProvider>
+    );
+    expect(screen.getByRole('button', { name: /^reset cameras$/i })).toBeInTheDocument();
+  });
+
   it('executes Reset data acquisition devices through the real store and clears the banner', async () => {
     const user = userEvent.setup();
     const initialState = {

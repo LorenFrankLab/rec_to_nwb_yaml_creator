@@ -13,6 +13,7 @@ import ChannelMapsContainer from './wiring/ChannelMapsContainer';
 import OptogeneticsContainer from './wiring/OptogeneticsContainer';
 import AnimalProfileSection from './AnimalProfileSection';
 import AlertModal from '../../components/AlertModal';
+import RawCorruptionBanner from '../../components/RawCorruptionBanner';
 import { animalEditorStepForFieldPath } from '../../domain/validation';
 import { applyRepairCommand } from '../../state/repairCommands';
 import './AnimalEditorStepper.scss';
@@ -271,7 +272,7 @@ export default function AnimalEditorStepper() {
    * Execute a raw-shape corruption's repair command in place (the destination-side half of
    * the corruption contract). The animal-owned commands (resetAnimalCameras /
    * resetDataAcqDevice / rebuildConfigurationHistory) need only `actions` + `animalId` +
-   * `animal`, which this editor owns. Routed to the RawCorruptionBanner in HardwareConfigStep.
+   * `animal`, which this editor owns. Routed to the shell-level RawCorruptionBanner below.
    *
    * @param {object} issue - A raw-shape issue carrying a `repairCommand`.
    */
@@ -309,7 +310,6 @@ export default function AnimalEditorStepper() {
           onFieldUpdate={handleFieldUpdate}
           onNavigateBack={handleBack}
           onNavigateNext={handleSave}
-          onRepair={handleRepair}
         />
       ),
     },
@@ -372,6 +372,16 @@ export default function AnimalEditorStepper() {
         animal={animal}
         dayCount={getAnimalDayIds(animal).length}
         onSave={(subject) => actions.updateAnimal(animalId, { subject })}
+      />
+
+      {/* Charter decision 1: the 3-field corruption banner is hoisted ABOVE the steps (was per-step
+          in HardwareConfigStep) so corruption in cameras / data_acq_device / configurationHistory is
+          visible from EVERY step, not hidden until the user reaches the hardware step. Self-hides
+          when clean. */}
+      <RawCorruptionBanner
+        animal={animal}
+        fields={['cameras', 'data_acq_device', 'configurationHistory']}
+        onRepair={handleRepair}
       />
 
       {/* Step indicators */}
