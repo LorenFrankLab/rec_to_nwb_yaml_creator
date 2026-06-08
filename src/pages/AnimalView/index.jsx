@@ -15,11 +15,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
-import { getAnimalSubject } from '../../state/workspaceSelectors';
+import { getAnimalSubject, getAnimalDayIds } from '../../state/workspaceSelectors';
 import { getAnimalSectionStatus, SECTION_STATUS } from '../../domain/sectionStatus';
+import { useReconfigContext } from '../../hooks/useReconfigContext';
 import { ConfirmDialog } from '../../components/Modal';
 import { RecordingDaysTab } from '../AnimalWorkspace/RecordingDaysTab';
 import RawCorruptionBanner from '../../components/RawCorruptionBanner';
+import ReconfigurationContextBanner from '../../components/ReconfigurationContextBanner';
+import AnimalProfileSection from '../AnimalEditor/AnimalProfileSection';
 import ElectrodeGroupsContainer from '../AnimalEditor/wiring/ElectrodeGroupsContainer';
 import ChannelMapsContainer from '../AnimalEditor/wiring/ChannelMapsContainer';
 import RecordingSystemContainer from '../AnimalEditor/wiring/RecordingSystemContainer';
@@ -162,9 +165,13 @@ export function AnimalView({ animalId, tab }) {
   const animal = animalId ? animals[animalId] : null;
 
   // Shared store-bound field-update + repair callbacks for the `{ animal, onFieldUpdate }` setup
-  // containers (recording-system / cameras / dio) and the corruption banner — the same wiring the
-  // legacy stepper uses, so logic is never forked.
+  // containers (recording-system / cameras / dio), the corruption banner, and the profile save —
+  // the same wiring the legacy stepper uses, so logic is never forked.
   const { handleFieldUpdate, handleRepair } = useAnimalFieldUpdate(animalId);
+
+  // Transient reconfiguration context from the hash (`?context=reconfigure&version=…`) — the same
+  // parser the legacy stepper reads, so the header banner can't drift from the stepper's.
+  const routeContext = useReconfigContext();
 
   const panelRef = useRef(null);
   const isFirstRender = useRef(true);
@@ -257,6 +264,22 @@ export function AnimalView({ animalId, tab }) {
         <span className="animal-view-idbadge">subject_id</span>
         {facts && <span className="animal-view-facts">{facts}</span>}
       </header>
+
+      {/* Subject facts + reconfiguration context belong in the header band (NOT a tab — Phase 3-4):
+          visible regardless of which setup tab is open. Same AnimalProfileSection (with its
+          blast-radius confirm) and shared ReconfigurationContextBanner the legacy stepper renders.
+          dayCount uses getAnimalDayIds(animal).length — the SAME count the stepper passes — so the
+          "affects N days" confirm copy is byte-identical. */}
+      <ReconfigurationContextBanner
+        animal={animal}
+        routeContext={routeContext}
+        days={model.workspace.days}
+      />
+      <AnimalProfileSection
+        animal={animal}
+        dayCount={getAnimalDayIds(animal).length}
+        onSave={(subject) => handleFieldUpdate('subject', subject)}
+      />
 
       {/* Charter decision 1: the 3-field corruption banner lives ABOVE the tab panels (not per-tab)
           so corruption in cameras / data_acq_device / configurationHistory — now split across three

@@ -52,6 +52,9 @@ const CROSS_PAGE_ALLOWLIST = new Set([
   'pages/AnimalEditor/wiring/DioContainer',
   'pages/AnimalEditor/wiring/OptogeneticsContainer',
   'pages/AnimalEditor/wiring/useAnimalFieldUpdate',
+  // Phase 3-4: the subject-facts editor, re-homed onto the AnimalView header (not a tab). A shared
+  // presentational form (its own expand/confirm state); owns no app-wide domain logic.
+  'pages/AnimalEditor/AnimalProfileSection',
 ]);
 
 /**
