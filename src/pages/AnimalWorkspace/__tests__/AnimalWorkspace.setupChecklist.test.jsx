@@ -108,8 +108,12 @@ describe('AnimalWorkspace existing-data review state', () => {
     expect(screen.getAllByText(/not in day list/i).length).toBeGreaterThan(0);
     expect(screen.getByRole('link', { name: /2024-02-02/i })).toBeInTheDocument();
     expect(screen.queryByText(/no recording days yet/i)).not.toBeInTheDocument();
-    // The review state appears and points to the validation summary to re-link.
-    expect(screen.getByRole('region', { name: /existing data review/i })).toBeInTheDocument();
+    // The review state appears and points to THIS animal's own Validation & Export tab to re-link
+    // (not the cross-animal batch screen) — "go review this" stays within the animal you're in.
+    const review = screen.getByRole('region', { name: /existing data review/i });
+    within(review)
+      .getAllByRole('link')
+      .forEach((link) => expect(link).toHaveAttribute('href', '#/animal/newbie/export'));
   });
 
   it('surfaces a wrong-owner indexed day with an unlink repair, not as an ordinary day', async () => {

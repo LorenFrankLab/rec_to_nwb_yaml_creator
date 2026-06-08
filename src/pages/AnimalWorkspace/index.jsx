@@ -164,9 +164,6 @@ export function AnimalWorkspace() {
                         window.location.hash = `#/animal/${animalId}/days`;
                       },
                     },
-                    // Rename is a committed placeholder this phase (Task 4.1) — disabled, not hidden,
-                    // so the eventual home for it is discoverable.
-                    { key: 'rename', label: 'Rename…', onSelect: () => {}, disabled: true },
                     {
                       key: 'delete',
                       label: 'Delete animal…',

@@ -98,6 +98,10 @@ describe('AnimalWorkspace lifecycle cleanup — Delete animal', () => {
 
     await user.click(trigger);
     expect(screen.getByRole('menuitem', { name: /delete animal/i })).toBeInTheDocument();
+    // The header ⋮ omits a redundant "Open" (you are already viewing this animal) and the dead
+    // "Rename…" placeholder — only the real lifecycle action remains.
+    expect(screen.queryByRole('menuitem', { name: /^open$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: /rename/i })).not.toBeInTheDocument();
   });
 
   it('confirms with the animal name and recording-day cascade count, then deletes (type-to-confirm)', async () => {
@@ -115,10 +119,10 @@ describe('AnimalWorkspace lifecycle cleanup — Delete animal', () => {
     await user.type(within(dialog).getByRole('textbox', { name: /type .* to confirm/i }), 'remy');
     await user.click(confirm);
 
-    // remy is gone: the view falls back to the non-stranding "Animal not found" state, and its
-    // day rows are no longer shown. (That deleting remy preserves totoro is the store's guarantee,
-    // covered by the deleteAnimal store tests — not re-asserted through this single-animal view.)
-    expect(screen.getByRole('heading', { name: /animal not found/i })).toBeInTheDocument();
+    // Deleting the viewed animal navigates to the picker (the deliberate-delete success landing),
+    // not the "Animal not found" 404-like state; its day rows are gone. (That deleting remy
+    // preserves totoro is the store's guarantee, covered by the deleteAnimal store tests.)
+    expect(window.location.hash).toBe('#/workspace');
     expect(screen.queryByText('2023-06-22')).not.toBeInTheDocument();
   });
 

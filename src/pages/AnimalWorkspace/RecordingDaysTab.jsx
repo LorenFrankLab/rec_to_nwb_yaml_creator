@@ -322,8 +322,10 @@ export function RecordingDaysTab({ animalId }) {
                       {selectedOrphanDayIds.length} recovered recording{' '}
                       {selectedOrphanDayIds.length === 1 ? 'day is' : 'days are'} not listed in
                       this animal&apos;s day index (shown below as &quot;not in day list&quot;).{' '}
-                      <a href="#/validation">Open the validation summary</a> to re-link{' '}
-                      {selectedOrphanDayIds.length === 1 ? 'it' : 'them'}.
+                      <a href={`#/animal/${selectedAnimalId}/export`}>
+                        Open this animal&apos;s Validation &amp; Export
+                      </a>{' '}
+                      to re-link {selectedOrphanDayIds.length === 1 ? 'it' : 'them'}.
                     </p>
                   )}
                   {selectedWrongOwnerDayIds.length > 0 && (
@@ -342,8 +344,11 @@ export function RecordingDaysTab({ animalId }) {
                     fields={['cameras', 'data_acq_device', 'configurationHistory']}
                     onRepair={handleRepair}
                   />
-                  <a className="existing-data-review-link" href="#/validation">
-                    Open validation summary
+                  <a
+                    className="existing-data-review-link"
+                    href={`#/animal/${selectedAnimalId}/export`}
+                  >
+                    Open this animal&apos;s Validation &amp; Export
                   </a>
                 </section>
               )}
@@ -396,7 +401,10 @@ export function RecordingDaysTab({ animalId }) {
                         <span className="day-date">{dayId}</span>
                         <span className="day-session-id">
                           Saved record missing or corrupt —{' '}
-                          <a href="#/validation">review in the validation summary</a>.
+                          <a href={`#/animal/${selectedAnimalId}/export`}>
+                            review in this animal&apos;s Validation &amp; Export
+                          </a>
+                          .
                         </span>
                       </div>
                       <div className="day-status">

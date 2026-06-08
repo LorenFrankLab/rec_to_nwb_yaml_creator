@@ -116,7 +116,15 @@ export function AppLayout() {
   const confirmDeleteAnimal = () => {
     const id = pendingDeleteAnimalId;
     setPendingDeleteAnimalId(null);
-    if (id) actions.deleteAnimal(id);
+    if (!id) return;
+    actions.deleteAnimal(id);
+    // If the deleted animal is the one currently being viewed, its route now points at a gone
+    // animal — go to the picker rather than land on AnimalView's "Animal not found" (which reads
+    // like an error for a deliberate delete). Deleting a NON-current animal from the switcher
+    // leaves the user where they are.
+    if (currentRoute.view === 'animal-view' && currentRoute.params.animalId === id) {
+      window.location.hash = '#/workspace';
+    }
   };
   /** "+ New animal…" from the switcher → the workspace's inline create panel (Phase 4b handshake). */
   const requestCreateAnimal = () => {

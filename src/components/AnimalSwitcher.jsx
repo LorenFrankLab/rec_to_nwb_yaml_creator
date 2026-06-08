@@ -171,7 +171,6 @@ export default function AnimalSwitcher({
                         window.location.hash = `#/animal/${animalId}/days`;
                       },
                     },
-                    { key: 'rename', label: 'Rename…', onSelect: () => {}, disabled: true },
                     {
                       key: 'delete',
                       label: 'Delete animal…',

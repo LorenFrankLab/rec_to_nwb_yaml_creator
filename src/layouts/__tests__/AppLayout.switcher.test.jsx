@@ -95,6 +95,21 @@ describe('AppLayout — switcher lifecycle wiring', () => {
     expect(screen.getByRole('button', { name: /remy actions/i })).toBeInTheDocument();
   });
 
+  it('deleting the CURRENTLY-VIEWED animal navigates to the picker (not "Animal not found")', async () => {
+    const user = userEvent.setup();
+    renderAt('#/animal/remy/days'); // viewing remy
+
+    await user.click(screen.getByRole('button', { name: /switch animal/i }));
+    await user.click(screen.getByRole('button', { name: /remy actions/i }));
+    await user.click(screen.getByRole('menuitem', { name: /delete animal/i }));
+    const dialog = screen.getByRole('alertdialog', { name: /delete animal/i });
+    await user.type(within(dialog).getByRole('textbox', { name: /type .* to confirm/i }), 'remy');
+    await user.click(within(dialog).getByRole('button', { name: /^delete animal$/i }));
+
+    // The route moves to the picker — a deliberate delete shouldn't strand you on a 404-like screen.
+    expect(window.location.hash).toBe('#/workspace');
+  });
+
   it('"+ New animal…" routes to the workspace create handshake (#/workspace?create=1)', async () => {
     const user = userEvent.setup();
     renderAt('#/animal/remy/days');

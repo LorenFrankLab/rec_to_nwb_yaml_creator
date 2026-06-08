@@ -178,9 +178,10 @@ describe('AnimalView — section-nav count + chevron affordance (decision 10)', 
     // the export validator (buildAnimalRows), so assert its shape (a number + "ready"), not a fixed
     // value the fixture doesn't pin.
     renderView('days', { animals: { remy: configuredRemy } });
-    expect(within(screen.getByRole('link', { name: /^recording days$/i })).getByText('1')).toBeInTheDocument();
+    const nav = screen.getByRole('navigation', { name: /animal sections/i });
+    expect(within(within(nav).getByRole('link', { name: /^recording days$/i })).getByText('1')).toBeInTheDocument();
     expect(
-      within(screen.getByRole('link', { name: /validation & export/i })).getByText(/\d+ ready/i)
+      within(within(nav).getByRole('link', { name: /validation & export/i })).getByText(/\d+ ready/i)
     ).toBeInTheDocument();
   });
 

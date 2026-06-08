@@ -97,7 +97,7 @@ describe('AnimalSwitcher — rows', () => {
 });
 
 describe('AnimalSwitcher — per-row ⋮ menu', () => {
-  it('each row has a ⋮ menubutton with Open / Rename… (disabled) / Delete animal…', async () => {
+  it('each row has a ⋮ menubutton with Open / Delete animal… (no dead Rename placeholder)', async () => {
     const { user } = renderSwitcher();
     await user.click(screen.getByRole('button', { name: /switch animal/i }));
 
@@ -107,8 +107,9 @@ describe('AnimalSwitcher — per-row ⋮ menu', () => {
 
     const menu = screen.getByRole('menu', { name: /totoro actions/i });
     expect(within(menu).getByRole('menuitem', { name: /^open$/i })).toBeInTheDocument();
-    expect(within(menu).getByRole('menuitem', { name: /rename/i })).toHaveAttribute('aria-disabled', 'true');
     expect(within(menu).getByRole('menuitem', { name: /delete animal/i })).toBeInTheDocument();
+    // The disabled "Rename…" placeholder is gone — a permanently-dead menu item is user friction.
+    expect(within(menu).queryByRole('menuitem', { name: /rename/i })).not.toBeInTheDocument();
   });
 
   it('row Delete animal… requests the delete for THAT animal and closes the popup', async () => {

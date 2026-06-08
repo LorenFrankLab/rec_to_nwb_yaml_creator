@@ -33,6 +33,18 @@ revisitable-not-linear goal. It also surfaced fixable items, remediated here acr
   throws on a duplicate id from inside a React updater, a throw the caller can't catch, so a regressed
   form uniqueness-check would silently land the user "in the new animal" while the create failed. Both
   now guard on the same animals map before navigating (the form still owns the user-facing message).
+- **UX polish cluster.** (1) Deleting the *currently-viewed* animal (from the header ⋮ or the
+  switcher) now navigates to the picker instead of landing on AnimalView's "Animal not found" (which
+  read like a 404 for a deliberate delete); deleting a non-current animal from the switcher leaves you
+  in place. (2) The header ⋮ drops the redundant "Open" (you're already viewing the animal). (3) The
+  dead disabled "Rename…" placeholder is removed from all three ⋮ menus (picker card / header /
+  switcher) — a permanently-disabled item is user friction; it returns when Rename ships. (4) The
+  in-animal "review existing data" links now point at THIS animal's own Validation & Export tab
+  (`#/animal/:id/export`) instead of the cross-animal batch screen, so "go review this" stays within
+  the animal. (5) Opto's nav label ("used"/○) is kept intentionally (matches the committed mockup +
+  decision 11); a blocking opto config is already surfaced by the red ● (validation maps opto field
+  paths to the optogenetics tab), and whether *partial* opto is itself flagged is a separate
+  validation-correctness question, not a nav-label fix.
 
 ## Tabbed workspace IA — Phase 4 deferred (2/2): top object-selector dropdown (June 8, 2026)
 

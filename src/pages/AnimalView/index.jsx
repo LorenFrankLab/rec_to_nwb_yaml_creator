@@ -374,14 +374,8 @@ export function AnimalView({ animalId, tab }) {
           <OverflowMenu
             label={`Actions for ${animal.id}`}
             items={[
-              {
-                key: 'open',
-                label: 'Open',
-                onSelect: () => {
-                  window.location.hash = `#/animal/${animalId}/days`;
-                },
-              },
-              { key: 'rename', label: 'Rename…', onSelect: () => {}, disabled: true },
+              // Only the real lifecycle action: no redundant "Open" (you're already viewing this
+              // animal) and no dead "Rename…" placeholder.
               {
                 key: 'delete',
                 label: 'Delete animal…',
@@ -512,6 +506,10 @@ export function AnimalView({ animalId, tab }) {
         onConfirm={() => {
           setAnimalDeleteOpen(false);
           actions.deleteAnimal(animalId);
+          // We just deleted the animal we're viewing, so the route now points at a gone animal.
+          // Navigate to the picker instead of letting this view fall to its "Animal not found"
+          // state — that reads like a 404/error for what was a deliberate delete.
+          window.location.hash = '#/workspace';
         }}
         onCancel={() => setAnimalDeleteOpen(false)}
       />
