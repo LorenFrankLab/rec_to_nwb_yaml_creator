@@ -45,10 +45,6 @@ vi.mock('../../pages/LegacyFormView', () => ({
   ),
 }));
 
-vi.mock('../../pages/AnimalEditor', () => ({
-  default: () => <main id="main-content" tabIndex="-1" role="main" data-testid="animal-editor-view">Animal Editor View</main>,
-}));
-
 describe('AppLayout', () => {
   let originalLocation;
 
@@ -100,12 +96,6 @@ describe('AppLayout', () => {
       window.location.hash = '#/validation';
       render(<AppLayout />);
       expect(screen.getByTestId('validation-view')).toBeInTheDocument();
-    });
-
-    it('renders animal editor view for #/animal/:id/editor', async () => {
-      window.location.hash = '#/animal/remy/editor';
-      render(<AppLayout />);
-      expect(await screen.findByTestId('animal-editor-view')).toBeInTheDocument();
     });
 
     it('renders legacy view for unknown routes', () => {
@@ -164,29 +154,19 @@ describe('AppLayout', () => {
       });
     });
 
-    it('navigates from workspace to animal editor', async () => {
+    it('navigates from workspace to validation and back', async () => {
       window.location.hash = '#/workspace';
       render(<AppLayout />);
       expect(screen.getByTestId('workspace-view')).toBeInTheDocument();
 
-      // Navigate to animal editor
-      window.location.hash = '#/animal/remy/editor';
+      window.location.hash = '#/validation';
       window.dispatchEvent(new HashChangeEvent('hashchange'));
-
       await waitFor(() => {
-        expect(screen.getByTestId('animal-editor-view')).toBeInTheDocument();
+        expect(screen.getByTestId('validation-view')).toBeInTheDocument();
       });
-    });
 
-    it('navigates back from animal editor to workspace', async () => {
-      window.location.hash = '#/animal/remy/editor';
-      render(<AppLayout />);
-      expect(screen.getByTestId('animal-editor-view')).toBeInTheDocument();
-
-      // Navigate back to workspace
       window.location.hash = '#/workspace';
       window.dispatchEvent(new HashChangeEvent('hashchange'));
-
       await waitFor(() => {
         expect(screen.getByTestId('workspace-view')).toBeInTheDocument();
       });
@@ -377,18 +357,18 @@ describe('AppLayout', () => {
   });
 
   describe('view isolation', () => {
-    it('renders only animal editor view when route is animal-editor', () => {
-      window.location.hash = '#/animal/remy/editor';
+    it('renders only the validation view when route is validation', () => {
+      window.location.hash = '#/validation';
       render(<AppLayout />);
 
-      // Should render animal editor
-      expect(screen.getByTestId('animal-editor-view')).toBeInTheDocument();
+      // Should render the validation view
+      expect(screen.getByTestId('validation-view')).toBeInTheDocument();
 
       // Should NOT render other views
       expect(screen.queryByTestId('workspace-view')).not.toBeInTheDocument();
       expect(screen.queryByTestId('day-editor-view')).not.toBeInTheDocument();
       expect(screen.queryByTestId('home-view')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('validation-view')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('legacy-view')).not.toBeInTheDocument();
     });
   });
 

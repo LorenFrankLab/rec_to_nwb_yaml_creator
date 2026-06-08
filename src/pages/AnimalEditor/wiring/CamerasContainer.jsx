@@ -5,9 +5,9 @@
  * `camera_name` identity (a divergent reuse is blocked with a side-by-side comparison), applies
  * the immutable-once-referenced rule (editing the identity of a camera that recording days
  * reference surfaces a NEW-vs-CORRECT decision instead of silently rewriting those days' exports),
- * and persists via the `onFieldUpdate('cameras', …)` contract. Extracted verbatim from
- * HardwareConfigStep so both the (temporary) stepper-hosted step and the tabbed Animal View use
- * one implementation.
+ * and persists via the `onFieldUpdate('cameras', …)` contract. Hosted by the tabbed Animal View's
+ * cameras tab. (Originally extracted from the legacy stepper's HardwareConfigStep for a shared
+ * implementation; the stepper was removed in Phase 5.)
  */
 import React, { useState, useMemo, useEffect } from 'react';
 import PropTypes from 'prop-types';

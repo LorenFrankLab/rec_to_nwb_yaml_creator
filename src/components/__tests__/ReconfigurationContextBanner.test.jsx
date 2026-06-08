@@ -1,10 +1,9 @@
 /**
  * Unit tests for the shared ReconfigurationContextBanner (Phase 3-4 — tabbed-workspace-ia).
  *
- * This is the single implementation the legacy Animal Editor stepper and the tabbed Animal View
- * both render, so the reconfiguration copy can't drift between hosts. These pin the component's
- * contract directly; AnimalEditorStepper.test.jsx + AnimalView.profileHeader.test.jsx prove each
- * host consumes it.
+ * This is the single implementation the tabbed Animal View renders (the legacy Animal Editor stepper
+ * was removed in Phase 5). These pin the component's contract directly;
+ * AnimalView.profileHeader.test.jsx proves the host consumes it.
  */
 
 import { describe, it, expect } from 'vitest';

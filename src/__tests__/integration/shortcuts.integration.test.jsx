@@ -109,18 +109,7 @@ describe('global shortcuts + help (integration)', () => {
     expect(screen.getByRole('dialog', { name: /keyboard shortcuts/i })).toBeInTheDocument();
   });
 
-  it('Alt+ArrowRight and Alt+N drive the AnimalEditor stepper', async () => {
-    await renderRoute('#/animal/remy/editor');
-    await screen.findByRole('heading', { name: /electrodes & ephys/i });
-
-    // Alt+N on step 1 opens the add-electrode-group dialog.
-    fireEvent.keyDown(document.body, { key: 'n', altKey: true });
-    expect(await screen.findByRole('dialog', { name: /add electrode group/i })).toBeInTheDocument();
-    fireEvent.keyDown(document, { key: 'Escape' });
-    await act(async () => { await Promise.resolve(); });
-
-    // Alt+ArrowRight advances to Channel Maps.
-    fireEvent.keyDown(document.body, { key: 'ArrowRight', altKey: true });
-    expect(await screen.findByRole('heading', { name: /^channel maps$/i })).toBeInTheDocument();
-  });
+  // The AnimalEditor stepper (and its Alt+N / Alt+Arrow step shortcuts) was removed in Phase 5;
+  // the tabbed Animal View uses section-nav links + per-section add buttons, not stepper shortcuts.
+  // The Day Editor stepper shortcuts above remain the live stepper-shortcut surface.
 });

@@ -138,18 +138,18 @@ describe('architecture boundaries — classifier (synthetic)', () => {
   });
 
   it('flags a page importing app-wide behavior from a sibling page folder', () => {
-    expect(importViolation('pages/AnimalEditor/AnimalEditorStepper.jsx', 'pages/DayEditor/validation'))
+    expect(importViolation('pages/AnimalView/index.jsx', 'pages/DayEditor/validation'))
       .toEqual({ rule: 'page-imports-sibling-page' });
   });
 
   it('allows pages → domain and pages → state (the permitted direction)', () => {
     expect(importViolation('pages/DayEditor/ExportStep.jsx', 'domain/validation')).toBeNull();
-    expect(importViolation('pages/AnimalEditor/AnimalEditorStepper.jsx', 'state/repairCommands')).toBeNull();
+    expect(importViolation('pages/AnimalView/index.jsx', 'state/repairCommands')).toBeNull();
   });
 
   it('allows a same-folder page import and the allowlisted presentational component', () => {
     expect(importViolation('pages/DayEditor/ExportStep.jsx', 'pages/DayEditor/RepairActions')).toBeNull();
-    expect(importViolation('pages/AnimalEditor/HardwareConfigStep.jsx', 'pages/DayEditor/SaveIndicator')).toBeNull();
+    expect(importViolation('pages/AnimalView/index.jsx', 'pages/AnimalEditor/wiring/CamerasContainer')).toBeNull();
   });
 
   it('allows domain → core validation / io / utils', () => {

@@ -2,9 +2,9 @@
  * ChannelMapsContainer — the channel-map view + editor + CSV import/export wiring.
  *
  * Owns opening/saving the per-group {@link ChannelMapEditor} and CSV export/import (with the
- * import-time validation that every imported `electrode_group_id` exists). Extracted verbatim from
- * AnimalEditorStepper so both the (temporary) stepper-hosted step and the tabbed Animal View use
- * one implementation.
+ * import-time validation that every imported `electrode_group_id` exists). Hosted by the tabbed
+ * Animal View's channel-maps tab. (Originally extracted from the legacy Animal Editor stepper for a
+ * shared implementation; the stepper was removed in Phase 5.)
  */
 import React, { useState, useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';

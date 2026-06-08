@@ -6,6 +6,39 @@
 
 ---
 
+## Tabbed workspace IA — Phase 5: decommission the legacy Animal Editor stepper (June 8, 2026)
+
+Removes the now-redundant Animal Editor wizard and its `#/animal/:id/editor` route — the tabs
+(Phases 1–4) own all setup, so the stepper was dead weight and a second source of truth. From the
+[phase-5 doc](../.claude/docs/plans/tabbed-workspace-ia/phase-5-decommission-stepper.md) (Tasks
+5.1–5.3b). **UI/routing/test-only — no export/schema change**; 125 golden baselines byte-identical;
+full suite (4240) / lint (0 errors) / build green. Code-reviewer pass: no blocking findings (deletion
+safety + coverage migration verified). The required test-coverage migration landed FIRST (the
+ElectrodeGroupsContainer + CamerasContainer + recording-system + cascade tests in the prior commits),
+so deleting the stepper's ~2150-line test suite loses no behavior coverage.
+
+- **Route retired (Task 5.1).** Removed the `animal-editor` branch from
+  [useHashRouter.js](../src/hooks/useHashRouter.js) and the lazy import + `case 'animal-editor'` render
+  + title-map entry + `lazy`/`Suspense` imports from [AppLayout.jsx](../src/layouts/AppLayout.jsx). A
+  stale `#/animal/:id/editor` bookmark now resolves to the tabbed view's `days` tab (a graceful
+  redirect — `editor` isn't an `ANIMAL_VIEW_TABS` segment — not a dead route).
+- **Stepper deleted (Tasks 5.1/5.3b).** Removed `AnimalEditorStepper.jsx`(+scss),
+  `HardwareConfigStep.jsx`(+scss), `pages/AnimalEditor/index.jsx` (the route page), the orphaned
+  `useAnimalIdFromUrl.js` hook, and the `?action`/`?section` post-save handshake (which the stepper
+  alone emitted; `AnimalWorkspace` reads only `?animal=`/`?create=1`). The hosted section/wiring
+  components (`AnimalProfileSection`, `wiring/*Container`, `useAnimalFieldUpdate`, the section/modal
+  components) SURVIVE — the tabbed `AnimalView` imports them.
+- **Tests re-homed/removed (Task 5.2).** Deleted the stepper suites + `HardwareConfigStep.test` +
+  `index.test` + `useAnimalIdFromUrl.test`; updated the editor-route-mounting tests (`useHashRouter`,
+  `AppLayout`, the aria-landmarks + shortcuts + axe integration tests) to the new redirect behavior or
+  removed the stepper-specific ones; updated the architecture-guard string-literal examples; removed
+  two dead `vi.mock('../../pages/AnimalEditor')`; swept stale "stepper-hosted" comments off the wiring
+  containers.
+- **Follow-ups (not in this commit):** the larger Phase-5 doc tasks — the full keyboard/axe pass on
+  the tabbed hub (5.4), the `workflow-screen-map.md` rewrite (5.5), the unified tab-based browser
+  scenarios (5.6), and the QA handoff note (5.7) — remain as separate deliverables before the v3
+  cutover flips the landing route.
+
 ## Tabbed workspace IA — pre-Phase-5 review remediation (June 8, 2026)
 
 A thorough multi-agent review (deletion safety, spec fulfillment, UX coherence, code/error/test) ran

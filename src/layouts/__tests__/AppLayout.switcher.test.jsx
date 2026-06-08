@@ -22,7 +22,6 @@ vi.mock('../../pages/ValidationSummary', () => ({
   ValidationSummary: () => <main id="main-content">Validation</main>,
 }));
 vi.mock('../../pages/LegacyFormView', () => ({ LegacyFormView: () => <main id="main-content">Legacy</main> }));
-vi.mock('../../pages/AnimalEditor', () => ({ default: () => <main id="main-content">Editor</main> }));
 vi.mock('../../pages/AnimalView', () => ({
   AnimalView: ({ animalId }) => <main id="main-content" data-testid="animal-view">Animal {animalId}</main>,
 }));

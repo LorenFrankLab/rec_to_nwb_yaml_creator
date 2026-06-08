@@ -3,8 +3,8 @@
  *
  * BehavioralEventsSection is already self-contained (it owns its inline edit/delete), so this is
  * a thin container that gives DIO the same `{ animal, onFieldUpdate }` interface as the other
- * setup sections — one implementation for both the (temporary) stepper-hosted HardwareConfigStep
- * and the tabbed Animal View.
+ * setup sections. Hosted by the tabbed Animal View's DIO tab (the legacy stepper that originally
+ * shared this container was removed in Phase 5).
  */
 import React from 'react';
 import PropTypes from 'prop-types';

@@ -7,7 +7,7 @@
  * @module layouts/AppLayout
  */
 
-import React, { useEffect, useRef, useState, lazy, Suspense } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useHashRouter } from '../hooks/useHashRouter';
 import { isFeatureEnabled } from '../featureFlags';
 import { useStoreContext } from '../state/StoreContext';
@@ -24,8 +24,6 @@ import { ValidationSummary } from '../pages/ValidationSummary';
 import { AnimalView } from '../pages/AnimalView';
 import { LegacyFormView } from '../pages/LegacyFormView';
 import logo from '../logo.png';
-// Lazy load Animal Editor to avoid loading all its dependencies for tests that don't use it
-const AnimalEditor = lazy(() => import('../pages/AnimalEditor'));
 
 /**
  * Get view name for screen reader announcements
@@ -39,7 +37,6 @@ function getViewName(view) {
     workspace: 'Animal Workspace',
     day: 'Day Editor',
     validation: 'Validation Summary',
-    'animal-editor': 'Animal Setup',
     'animal-view': 'Animal',
   };
   return viewNames[view] || view;
@@ -90,7 +87,7 @@ function handleSkipLinkClick(e, targetId) {
  * - #/home -> Home
  * - #/workspace -> AnimalWorkspace
  * - #/day/:id -> DayEditor
- * - #/animal/:id/editor -> AnimalEditor
+ * - #/animal/:id/:tab -> AnimalView (tabbed animal workspace)
  * - #/validation -> ValidationSummary
  *
  * @returns {React.Element} Rendered layout with current view
@@ -174,7 +171,7 @@ export function AppLayout() {
    *
    * Routing contract (see shared-contracts "Feature flags & routing"): the default
    * route (`#/`) renders the legacy form, and the new workspace routes (`#/home`,
-   * `#/workspace`, `#/day/:id`, `#/animal/:id/editor`, `#/validation`) render their
+   * `#/workspace`, `#/day/:id`, `#/animal/:id/:tab`, `#/validation`) render their
    * views and remain reachable for development regardless of the feature flags.
    * The cutover (a single switch in a later phase) flips `animalWorkspace` /
    * `newDayEditor` on and changes the *default* route to the workspace; nothing else
@@ -193,13 +190,6 @@ export function AppLayout() {
 
       case 'day':
         return <DayEditor dayId={currentRoute.params.id} />;
-
-      case 'animal-editor':
-        return (
-          <Suspense fallback={<div>Loading Animal Setup...</div>}>
-            <AnimalEditor />
-          </Suspense>
-        );
 
       case 'animal-view':
         return (

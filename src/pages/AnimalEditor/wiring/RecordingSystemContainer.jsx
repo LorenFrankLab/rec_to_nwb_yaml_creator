@@ -2,8 +2,8 @@
  * RecordingSystemContainer — the data-acquisition device + technical defaults section.
  *
  * Owns the dataset-wide data-acq identity registry (so DataAcqSection can flag a divergent reuse
- * of a device name) and renders DataAcqSection. One implementation for both the (temporary)
- * stepper-hosted HardwareConfigStep and the tabbed Animal View.
+ * of a device name) and renders DataAcqSection. Hosted by the tabbed Animal View's recording-system
+ * tab (the legacy stepper's HardwareConfigStep that originally shared this was removed in Phase 5).
  */
 import React, { useMemo } from 'react';
 import PropTypes from 'prop-types';

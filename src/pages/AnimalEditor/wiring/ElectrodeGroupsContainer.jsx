@@ -2,9 +2,9 @@
  * ElectrodeGroupsContainer — the versioned electrode-group section + its wiring.
  *
  * Owns add/edit/delete of electrode groups (including the channel-map AUTO-REGENERATION when a
- * group's device_type changes), copy-from-animal, and the group modals. Extracted verbatim from
- * AnimalEditorStepper so both the (temporary) stepper-hosted step and the tabbed Animal View use
- * one implementation; the store mutation is identical whichever host renders it.
+ * group's device_type changes), copy-from-animal, and the group modals. Hosted by the tabbed
+ * Animal View's electrode-groups tab. (Originally extracted from the legacy Animal Editor stepper so
+ * both hosts shared one implementation; the stepper was removed in Phase 5.)
  */
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';

@@ -7,7 +7,7 @@
  * the unit-level contrast check; these tests cover structure/ARIA/labelling.
  */
 import { describe, it, expect, afterEach } from 'vitest';
-import { render, screen, waitFor, act, cleanup } from '@testing-library/react';
+import { render, screen, act, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { App } from '../../App';
@@ -71,10 +71,10 @@ describe('axe-a11y (configured workspace, all routes)', () => {
     await expectNoViolations(container);
   });
 
-  it('AnimalEditor has no violations', async () => {
-    const { container } = await renderRoute(`#/animal/${ANIMAL_ID}/editor`);
-    // Lazy-loaded; wait for the editor's main content.
-    await waitFor(() => expect(screen.getByRole('main')).toBeInTheDocument());
+  it('AnimalView (tabbed animal workspace) has no violations', async () => {
+    // Phase 5: the stepper/editor route is gone; the animal is configured via the tabbed Animal View.
+    const { container } = await renderRoute(`#/animal/${ANIMAL_ID}/electrode-groups`);
+    await screen.findByRole('main');
     await expectNoViolations(container);
   });
 
