@@ -20,14 +20,49 @@ import path from 'node:path';
 const srcDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../');
 
 /**
- * Shared presentational components that legitimately cross page folders. These are NOT
- * app-wide domain behavior (no validation/repair/converter logic); relocating them to
- * `src/components` is deferred (out of this phase's scope). Any OTHER cross-page import — and
- * any domain/state → page import — is a violation.
+ * Modules that legitimately cross page folders. These are NOT app-wide domain behavior (no
+ * validation/repair/converter logic); relocating them to `src/components` is deferred (out of
+ * this phase's scope). Any OTHER cross-page import — and any domain/state → page import — is a
+ * violation.
+ *
+ * - `pages/DayEditor/SaveIndicator` — a small shared presentational component.
+ * - `pages/AnimalWorkspace/RecordingDaysTab` — the per-animal recording-days pane, DELIBERATELY
+ *   shared (Phase 1 — tabbed-workspace-ia) so the legacy Workspace and the new tabbed
+ *   `AnimalView` render ONE implementation instead of forking it (the "extract, don't fork"
+ *   contract). It owns no domain logic — it composes selectors/domain like any page. Lives under
+ *   AnimalWorkspace (its origin); a neutral relocation can follow when `src/components` opens up.
+ * - `pages/AnimalEditor/wiring/*` — the extracted animal-setup section containers + their shared
+ *   store-binding hook (Phase 3-1), DELIBERATELY shared so the still-live legacy stepper and the
+ *   new tabbed `AnimalView` render ONE implementation of the setup wiring instead of forking it
+ *   (same "extract, don't fork" contract). They own no app-wide domain logic — they compose
+ *   selectors + tested utils (channel-map regen, CSV, identity-safety) and `state/repairCommands`
+ *   like any page. They live under AnimalEditor (their origin); a neutral relocation can follow
+ *   when `src/components` opens up. Phase 3-2 added the two ephys containers; Phase 3-3 adds the
+ *   four catalog/library containers + the `useAnimalFieldUpdate` hook that feeds them.
  *
  * @type {Set<string>}
  */
-const CROSS_PAGE_ALLOWLIST = new Set(['pages/DayEditor/SaveIndicator']);
+const CROSS_PAGE_ALLOWLIST = new Set([
+  'pages/DayEditor/SaveIndicator',
+  'pages/AnimalWorkspace/RecordingDaysTab',
+  'pages/AnimalEditor/wiring/ElectrodeGroupsContainer',
+  'pages/AnimalEditor/wiring/ChannelMapsContainer',
+  'pages/AnimalEditor/wiring/RecordingSystemContainer',
+  'pages/AnimalEditor/wiring/CamerasContainer',
+  'pages/AnimalEditor/wiring/DioContainer',
+  'pages/AnimalEditor/wiring/OptogeneticsContainer',
+  'pages/AnimalEditor/wiring/useAnimalFieldUpdate',
+  // Phase 3-5: the per-animal Validation & Export tab renders <ValidationSummary animalKey=…> — the
+  // SAME component as the standalone page, scoped by a filter (buildAnimalRows), not a fork. The
+  // export-truth deciders it consumes (mergeDayMetadata, computeStepStatus, shadowExport) live in
+  // domain/state; the page composes them like any page.
+  'pages/ValidationSummary/index',
+  // Phase 4b: the workspace's inline "+ New Animal" panel hosts the SAME presentational
+  // AnimalCreationForm as the Home route (no fork) — the shared subject/metadata builder lives in
+  // domain/animalCreation. The form owns no app-wide domain logic; relocating it to src/components
+  // can follow when Home is removed in Phase 5.
+  'pages/Home/AnimalCreationForm',
+]);
 
 /**
  * Decide whether an import from `fromRel` to `toRel` (both src-relative POSIX paths, `toRel`
@@ -100,18 +135,18 @@ describe('architecture boundaries — classifier (synthetic)', () => {
   });
 
   it('flags a page importing app-wide behavior from a sibling page folder', () => {
-    expect(importViolation('pages/AnimalEditor/AnimalEditorStepper.jsx', 'pages/DayEditor/validation'))
+    expect(importViolation('pages/AnimalView/index.jsx', 'pages/DayEditor/validation'))
       .toEqual({ rule: 'page-imports-sibling-page' });
   });
 
   it('allows pages → domain and pages → state (the permitted direction)', () => {
     expect(importViolation('pages/DayEditor/ExportStep.jsx', 'domain/validation')).toBeNull();
-    expect(importViolation('pages/AnimalEditor/AnimalEditorStepper.jsx', 'state/repairCommands')).toBeNull();
+    expect(importViolation('pages/AnimalView/index.jsx', 'state/repairCommands')).toBeNull();
   });
 
   it('allows a same-folder page import and the allowlisted presentational component', () => {
     expect(importViolation('pages/DayEditor/ExportStep.jsx', 'pages/DayEditor/RepairActions')).toBeNull();
-    expect(importViolation('pages/AnimalEditor/HardwareConfigStep.jsx', 'pages/DayEditor/SaveIndicator')).toBeNull();
+    expect(importViolation('pages/AnimalView/index.jsx', 'pages/AnimalEditor/wiring/CamerasContainer')).toBeNull();
   });
 
   it('allows domain → core validation / io / utils', () => {

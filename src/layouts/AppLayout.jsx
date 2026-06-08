@@ -7,7 +7,7 @@
  * @module layouts/AppLayout
  */
 
-import React, { useEffect, useRef, useState, lazy, Suspense } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useHashRouter } from '../hooks/useHashRouter';
 import { isFeatureEnabled } from '../featureFlags';
 import { useStoreContext } from '../state/StoreContext';
@@ -15,14 +15,17 @@ import { useUnsavedWorkGuard } from '../hooks/useUnsavedWorkGuard';
 import useGlobalShortcuts from '../hooks/useGlobalShortcuts';
 import { emitStepperShortcut } from '../hooks/stepperShortcuts';
 import { ShortcutsHelp } from '../components/ShortcutsHelp';
+import AnimalSwitcher from '../components/AnimalSwitcher';
+import AnimalDeleteDialog from '../components/AnimalDeleteDialog';
+import AnimalProfileDialog from '../components/AnimalProfileDialog';
+import { getAnimalDayIds } from '../state/workspaceSelectors';
 import { Home } from '../pages/Home';
 import { AnimalWorkspace } from '../pages/AnimalWorkspace';
 import { DayEditor } from '../pages/DayEditor';
 import { ValidationSummary } from '../pages/ValidationSummary';
+import { AnimalView } from '../pages/AnimalView';
 import { LegacyFormView } from '../pages/LegacyFormView';
 import logo from '../logo.png';
-// Lazy load Animal Editor to avoid loading all its dependencies for tests that don't use it
-const AnimalEditor = lazy(() => import('../pages/AnimalEditor'));
 
 /**
  * Get view name for screen reader announcements
@@ -36,7 +39,7 @@ function getViewName(view) {
     workspace: 'Animal Workspace',
     day: 'Day Editor',
     validation: 'Validation Summary',
-    'animal-editor': 'Animal Setup',
+    'animal-view': 'Animal',
   };
   return viewNames[view] || view;
 }
@@ -86,7 +89,7 @@ function handleSkipLinkClick(e, targetId) {
  * - #/home -> Home
  * - #/workspace -> AnimalWorkspace
  * - #/day/:id -> DayEditor
- * - #/animal/:id/editor -> AnimalEditor
+ * - #/animal/:id/:tab -> AnimalView (tabbed animal workspace)
  * - #/validation -> ValidationSummary
  *
  * @returns {React.Element} Rendered layout with current view
@@ -99,8 +102,37 @@ export function AppLayout() {
   // save has failed. A failed save means the latest edits never reached storage, so
   // the guard must stay armed even once the pending-write debounce has settled
   // (including the saveNow path, which sets saveError without re-arming hasPendingWrite).
-  const { persistence } = useStoreContext();
+  const { persistence, model, actions } = useStoreContext();
   useUnsavedWorkGuard(persistence.hasPendingWrite || !!persistence.saveError);
+
+  // Top object-selector lifecycle (Task 4.5). The switcher (chrome) delegates delete UP to here so
+  // ONE shared type-to-confirm dialog serves it (and "+ New animal…" routes to the workspace's
+  // single inline create panel) — neither host is duplicated. `pendingDeleteAnimalId` is the animal
+  // a switcher row asked to delete (null when closed).
+  const { animals = {}, days = {} } = model?.workspace || {};
+  const [pendingDeleteAnimalId, setPendingDeleteAnimalId] = useState(null);
+  const pendingDeleteAnimal = pendingDeleteAnimalId ? animals[pendingDeleteAnimalId] : null;
+  // The animal whose "Edit profile…" dialog is open (from a switcher row ⋮). Hosted here so the
+  // dropdown can edit any animal's shared subject facts without navigating to it.
+  const [pendingProfileAnimalId, setPendingProfileAnimalId] = useState(null);
+  const pendingProfileAnimal = pendingProfileAnimalId ? animals[pendingProfileAnimalId] : null;
+  const confirmDeleteAnimal = () => {
+    const id = pendingDeleteAnimalId;
+    setPendingDeleteAnimalId(null);
+    if (!id) return;
+    actions.deleteAnimal(id);
+    // If the deleted animal is the one currently being viewed, its route now points at a gone
+    // animal — go to the picker rather than land on AnimalView's "Animal not found" (which reads
+    // like an error for a deliberate delete). Deleting a NON-current animal from the switcher
+    // leaves the user where they are.
+    if (currentRoute.view === 'animal-view' && currentRoute.params.animalId === id) {
+      window.location.hash = '#/workspace';
+    }
+  };
+  /** "+ New animal…" from the switcher → the workspace's inline create panel (Phase 4b handshake). */
+  const requestCreateAnimal = () => {
+    window.location.hash = '#/workspace?create=1';
+  };
 
   // Global keyboard shortcuts (mounted once so they work on every route). Step
   // navigation / add are broadcast to whichever stepper is on screen; help opens a
@@ -145,7 +177,7 @@ export function AppLayout() {
    *
    * Routing contract (see shared-contracts "Feature flags & routing"): the default
    * route (`#/`) renders the legacy form, and the new workspace routes (`#/home`,
-   * `#/workspace`, `#/day/:id`, `#/animal/:id/editor`, `#/validation`) render their
+   * `#/workspace`, `#/day/:id`, `#/animal/:id/:tab`, `#/validation`) render their
    * views and remain reachable for development regardless of the feature flags.
    * The cutover (a single switch in a later phase) flips `animalWorkspace` /
    * `newDayEditor` on and changes the *default* route to the workspace; nothing else
@@ -165,11 +197,12 @@ export function AppLayout() {
       case 'day':
         return <DayEditor dayId={currentRoute.params.id} />;
 
-      case 'animal-editor':
+      case 'animal-view':
         return (
-          <Suspense fallback={<div>Loading Animal Setup...</div>}>
-            <AnimalEditor />
-          </Suspense>
+          <AnimalView
+            animalId={currentRoute.params.animalId}
+            tab={currentRoute.params.tab}
+          />
         );
 
       case 'validation':
@@ -239,16 +272,36 @@ export function AppLayout() {
       {currentRoute.view !== 'legacy' && (
         <nav className="primary-nav" role="navigation" aria-label="Primary">
           <a
-            href="#/home"
-            aria-current={currentRoute.view === 'home' ? 'page' : undefined}
-          >
-            Home
-          </a>
-          <a
             href="#/workspace"
             aria-current={currentRoute.view === 'workspace' ? 'page' : undefined}
           >
             Workspace
+          </a>
+          {/* Task 4.5: on an animal route, the top object-selector switches the CURRENT animal
+              (`Workspace ▸ <animal> ▾`). Its lifecycle delegates up to AppLayout's shared delete
+              dialog + the workspace create handshake. Elsewhere there is no current animal, so the
+              selector is omitted and the plain nav stands. */}
+          {currentRoute.view === 'animal-view' && animals[currentRoute.params.animalId] && (
+            <>
+              <span className="primary-nav-sep" aria-hidden="true">▸</span>
+              <AnimalSwitcher
+                currentAnimalId={currentRoute.params.animalId}
+                animals={animals}
+                days={days}
+                onRequestDelete={setPendingDeleteAnimalId}
+                onRequestCreate={requestCreateAnimal}
+                onRequestEditProfile={setPendingProfileAnimalId}
+              />
+            </>
+          )}
+          {/* Batch / cross-animal Validation & Export is the chrome-level home for the preflight
+              (Task 4.3/4.4); the per-animal export tab links UP to it. The redundant standalone
+              "Home" entry is dropped — create-animal now lives in the workspace picker. */}
+          <a
+            href="#/validation"
+            aria-current={currentRoute.view === 'validation' ? 'page' : undefined}
+          >
+            Validation &amp; Export
           </a>
           {isFeatureEnabled('showLegacyToggle') && (
             <a href="#/" className="legacy-toggle">
@@ -276,6 +329,29 @@ export function AppLayout() {
 
       {/* Main content area - views provide their own <main> element */}
       {renderView()}
+
+      {/* Shared animal-delete dialog for the top object-selector (Task 4.5). Hosted once in chrome
+          so a switcher row's Delete uses the SAME type-to-confirm + cascade copy as the picker/header
+          ⋮ menus. Deleting the currently-viewed animal leaves the route on a now-missing id, which
+          AnimalView's "Animal not found" guard handles. */}
+      <AnimalDeleteDialog
+        isOpen={pendingDeleteAnimalId != null}
+        animalId={pendingDeleteAnimalId}
+        animal={pendingDeleteAnimal}
+        days={days}
+        onConfirm={confirmDeleteAnimal}
+        onCancel={() => setPendingDeleteAnimalId(null)}
+      />
+
+      {/* Shared animal-profile editor for the top object-selector's row ⋮ (edit any animal's subject
+          facts from the dropdown). Same dialog the AnimalView header ⋮ uses. */}
+      <AnimalProfileDialog
+        isOpen={pendingProfileAnimalId != null}
+        animal={pendingProfileAnimal}
+        dayCount={pendingProfileAnimal ? getAnimalDayIds(pendingProfileAnimal).length : 0}
+        onSave={(subject) => actions.updateAnimal(pendingProfileAnimalId, { subject })}
+        onClose={() => setPendingProfileAnimalId(null)}
+      />
 
       {/* Footer */}
       <footer className="footer" role="contentinfo">

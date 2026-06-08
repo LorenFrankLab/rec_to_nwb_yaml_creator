@@ -59,7 +59,7 @@ describe('ReconfigWizard [integration]', () => {
     expect(dayIdsArg).toEqual([dayIds.day3, dayIds.day4]);
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(window.location.hash).toBe(
-      `#/animal/${animalId}/editor?context=reconfigure&version=3&fromDay=${dayIds.day3}&movedDays=2`
+      `#/animal/${animalId}/electrode-groups?context=reconfigure&version=3&fromDay=${dayIds.day3}&movedDays=2`
     );
   });
 
@@ -128,7 +128,7 @@ describe('ReconfigWizard [integration]', () => {
     expect(animalArg).toBe(animalId);
     expect(animalArg).not.toBe('stale-record-id');
     expect(animalArg).not.toBe('stale-day-owner');
-    expect(window.location.hash).toContain(`#/animal/${animalId}/editor`);
+    expect(window.location.hash).toContain(`#/animal/${animalId}/electrode-groups`);
   });
 
   it('falls back to a date range when the start day is not among the candidate days', async () => {

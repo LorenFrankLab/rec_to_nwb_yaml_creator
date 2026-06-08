@@ -81,6 +81,34 @@ describe('DevicesStep', () => {
     mockOnFieldUpdate = vi.fn();
   });
 
+  it('per-day recording-system selector writes day.data_acq_device_name (2+ systems)', async () => {
+    const user = userEvent.setup();
+    const twoSystemAnimal = {
+      ...mockAnimal,
+      devices: {
+        ...mockAnimal.devices,
+        data_acq_device: [
+          { name: 'SpikeGadgets_MCU', system: 'SpikeGadgets', amplifier: 'Intan', adc_circuit: 'Intan' },
+          { name: 'Neuropixels_rig', system: 'Open Ephys', amplifier: 'IMEC', adc_circuit: 'IMEC' },
+        ],
+      },
+    };
+    render(
+      <DevicesStep
+        animal={twoSystemAnimal}
+        day={mockDay}
+        mergedDay={mockMergedDay}
+        onFieldUpdate={mockOnFieldUpdate}
+      />
+    );
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: /recording system used this day/i }),
+      'Neuropixels_rig'
+    );
+    expect(mockOnFieldUpdate).toHaveBeenCalledWith('data_acq_device_name', 'Neuropixels_rig');
+  });
+
   it('renders section heading', () => {
     render(
       <DevicesStep
@@ -126,7 +154,7 @@ describe('DevicesStep', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: /edit shared animal electrode setup/i })
-    ).toHaveAttribute('href', '#/animal/test-animal/editor?field=electrode_groups');
+    ).toHaveAttribute('href', '#/animal/test-animal/electrode-groups?field=electrode_groups');
   });
 
   it('renders all electrode groups as collapsed details elements', () => {
@@ -326,7 +354,7 @@ describe('DevicesStep', () => {
     expect(screen.getByText(/mark failed channels for this recording day only after electrodes exist/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /set up electrodes/i })).toHaveAttribute(
       'href',
-      '#/animal/test-animal/editor?field=electrode_groups'
+      '#/animal/test-animal/electrode-groups?field=electrode_groups'
     );
   });
 
@@ -488,7 +516,7 @@ describe('DevicesStep', () => {
     const fixLinks = screen.getAllByRole('link', { name: /fix in animal setup/i });
     expect(fixLinks[0]).toHaveAttribute(
       'href',
-      '#/animal/test-animal/editor?field=ntrode_electrode_group_channel_map'
+      '#/animal/test-animal/channel-maps?field=ntrode_electrode_group_channel_map'
     );
   });
 

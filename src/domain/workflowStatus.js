@@ -18,7 +18,7 @@
  * export: cameras/data-acq can be legitimately absent. The export gate is unchanged.
  */
 
-import { computeStepStatus, STEP_STATUS } from './validation';
+import { computeStepStatus, validateDay, STEP_STATUS } from './validation';
 import { isExportEnabled } from './stepGate';
 import {
   getAnimalElectrodeGroups,
@@ -255,6 +255,60 @@ export function getAnimalSetupChecklist(animal, { issues = [], recordingDayCount
     item('days', 'Recording days', daysPresent, SETUP_STATE.COMPLETE, dayCount,
       daysPresent ? `${dayCount} day${dayCount === 1 ? '' : 's'}` : 'None'),
   ];
+}
+
+/**
+ * The first blocking (error-severity) reason a day cannot export, in the validation layer's
+ * own words — or null when the day has no blocking issue. Reuses {@link validateDay} (the SAME
+ * error set the export gate's `computeStepStatus(...).export` and the animal-level
+ * `collectAnimalSetupIssues` consume); it does NOT re-derive validation. A null `mergedDay`
+ * (the merge threw on a corrupt/missing configuration) is itself a blocking reason.
+ *
+ * @param {object} animal - The owning animal.
+ * @param {object} day - The recording day record.
+ * @param {object|null} mergedDay - `mergeDayMetadata(animal, day)`, or null if it threw.
+ * @returns {string|null} The blocking reason, or null when nothing blocks export.
+ */
+function firstBlockingReason(animal, day, mergedDay) {
+  if (!mergedDay) return 'recording day configuration could not be loaded';
+  let issues;
+  try {
+    issues = validateDay(day, mergedDay, animal);
+  } catch (err) {
+    // Validation itself failed on this record — treat as blocking rather than silently clean.
+    // eslint-disable-next-line no-console
+    console.debug(`[workflow-status] could not validate day "${day?.id}":`, err);
+    return 'recording day could not be validated';
+  }
+  const firstError = issues.find((i) => i?.severity === 'error');
+  return firstError ? firstError.message || 'see the validation summary' : null;
+}
+
+/**
+ * The plain-language status for a recording-day LIST row (decision 12 — the row is triage, not
+ * inspection). One of four mutually-exclusive states:
+ *   - `needs_fixing` — the day has a LIVE blocking issue (overrides every stored flag, so a day
+ *     validated/exported before a referenced camera broke reads the honest current state, not a
+ *     stale "Exported"). The reason is the blocking issue's own message.
+ *   - `exported` / `ready` / `draft` — the stored-state mapping, used only when nothing blocks:
+ *     `state.exported → Exported`, `state.validated → Ready to export`, else `Draft`.
+ *
+ * Read-only over the existing validation + stored state; computes no new validation and never
+ * mutates. A malformed (non-object) `state` reads as a draft.
+ *
+ * @param {object} animal - The owning animal.
+ * @param {object} day - The recording day record.
+ * @param {object|null} mergedDay - `mergeDayMetadata(animal, day)`, or null if it threw.
+ * @returns {{ variant: 'needs_fixing'|'exported'|'ready'|'draft', label: string }}
+ */
+export function getDayRowStatus(animal, day, mergedDay) {
+  const reason = firstBlockingReason(animal, day, mergedDay);
+  if (reason) return { variant: 'needs_fixing', label: `Needs fixing — ${reason}` };
+  const state =
+    day?.state && typeof day.state === 'object' && !Array.isArray(day.state) ? day.state : {};
+  if (state.exported) return { variant: 'exported', label: 'Exported' };
+  if (state.validated) return { variant: 'ready', label: 'Ready to export' };
+  return { variant: 'draft', label: 'Draft — not yet validated' };
 }
 
 /**

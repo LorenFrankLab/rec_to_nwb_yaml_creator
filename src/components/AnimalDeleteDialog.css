@@ -1,0 +1,23 @@
+/* AnimalDeleteDialog (Phase 4) — the type-to-confirm gate field below the cascade message. Inherits
+   the shared .confirm-dialog look from ConfirmDialog.scss; only the typed field is bespoke. */
+.animal-delete-confirm-field {
+  margin: 0.85rem 0 0.25rem;
+  font-size: 0.85rem;
+  color: #46443d;
+}
+
+.animal-delete-confirm-name {
+  font-family: var(--mono-font, monospace);
+}
+
+.animal-delete-confirm-field input {
+  display: block;
+  margin-top: 0.3rem;
+  width: 100%;
+  font-family: var(--mono-font, monospace);
+  font-size: 0.9rem;
+  border: 1px solid var(--border-color, #ddd7c9);
+  border-radius: 7px;
+  padding: 0.45rem 0.6rem;
+  box-sizing: border-box;
+}

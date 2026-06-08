@@ -200,3 +200,66 @@
   font-size: 0.8125rem;
   color: #555;
 }
+
+/* Phase 3-5: per-animal Validation & Export tab. The scoped header replaces the page h1; the
+   Setup cell becomes an expander whose body is the read-only effective-setup-for-this-day review. */
+.validation-summary--scoped {
+  min-width: 0;
+}
+
+.validation-summary-scoped-header h2 {
+  margin: 0 0 0.15rem;
+  font-size: 1.15rem;
+}
+
+.validation-summary-scoped-subhead {
+  margin: 0 0 0.25rem;
+  font-family: var(--mono-font, monospace);
+  font-size: 0.8rem;
+  color: #6a6557;
+}
+
+.validation-summary-scoped-uplink {
+  margin: 0 0 1rem;
+  font-size: 0.8rem;
+}
+
+.validation-summary-effective > summary {
+  cursor: pointer;
+}
+
+.effective-day-review {
+  margin: 0.5rem 0 0.25rem;
+  padding: 0.5rem 0.7rem;
+  border-left: 3px solid #cfe0e0;
+  background: #f7fafa;
+  border-radius: 0 6px 6px 0;
+}
+
+.effective-day-review-caption {
+  margin: 0 0 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #46443d;
+}
+
+.effective-day-review-list {
+  margin: 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.1rem 0.6rem;
+  font-size: 0.8rem;
+}
+
+.effective-day-review-row {
+  display: contents;
+}
+
+.effective-day-review-list dt {
+  color: #6a6557;
+}
+
+.effective-day-review-list dd {
+  margin: 0;
+  color: #2b2a25;
+}

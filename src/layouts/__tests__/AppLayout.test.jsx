@@ -45,10 +45,6 @@ vi.mock('../../pages/LegacyFormView', () => ({
   ),
 }));
 
-vi.mock('../../pages/AnimalEditor', () => ({
-  default: () => <main id="main-content" tabIndex="-1" role="main" data-testid="animal-editor-view">Animal Editor View</main>,
-}));
-
 describe('AppLayout', () => {
   let originalLocation;
 
@@ -100,12 +96,6 @@ describe('AppLayout', () => {
       window.location.hash = '#/validation';
       render(<AppLayout />);
       expect(screen.getByTestId('validation-view')).toBeInTheDocument();
-    });
-
-    it('renders animal editor view for #/animal/:id/editor', async () => {
-      window.location.hash = '#/animal/remy/editor';
-      render(<AppLayout />);
-      expect(await screen.findByTestId('animal-editor-view')).toBeInTheDocument();
     });
 
     it('renders legacy view for unknown routes', () => {
@@ -164,29 +154,19 @@ describe('AppLayout', () => {
       });
     });
 
-    it('navigates from workspace to animal editor', async () => {
+    it('navigates from workspace to validation and back', async () => {
       window.location.hash = '#/workspace';
       render(<AppLayout />);
       expect(screen.getByTestId('workspace-view')).toBeInTheDocument();
 
-      // Navigate to animal editor
-      window.location.hash = '#/animal/remy/editor';
+      window.location.hash = '#/validation';
       window.dispatchEvent(new HashChangeEvent('hashchange'));
-
       await waitFor(() => {
-        expect(screen.getByTestId('animal-editor-view')).toBeInTheDocument();
+        expect(screen.getByTestId('validation-view')).toBeInTheDocument();
       });
-    });
 
-    it('navigates back from animal editor to workspace', async () => {
-      window.location.hash = '#/animal/remy/editor';
-      render(<AppLayout />);
-      expect(screen.getByTestId('animal-editor-view')).toBeInTheDocument();
-
-      // Navigate back to workspace
       window.location.hash = '#/workspace';
       window.dispatchEvent(new HashChangeEvent('hashchange'));
-
       await waitFor(() => {
         expect(screen.getByTestId('workspace-view')).toBeInTheDocument();
       });
@@ -377,18 +357,18 @@ describe('AppLayout', () => {
   });
 
   describe('view isolation', () => {
-    it('renders only animal editor view when route is animal-editor', () => {
-      window.location.hash = '#/animal/remy/editor';
+    it('renders only the validation view when route is validation', () => {
+      window.location.hash = '#/validation';
       render(<AppLayout />);
 
-      // Should render animal editor
-      expect(screen.getByTestId('animal-editor-view')).toBeInTheDocument();
+      // Should render the validation view
+      expect(screen.getByTestId('validation-view')).toBeInTheDocument();
 
       // Should NOT render other views
       expect(screen.queryByTestId('workspace-view')).not.toBeInTheDocument();
       expect(screen.queryByTestId('day-editor-view')).not.toBeInTheDocument();
       expect(screen.queryByTestId('home-view')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('validation-view')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('legacy-view')).not.toBeInTheDocument();
     });
   });
 
@@ -448,21 +428,24 @@ describe('AppLayout', () => {
       expect(screen.queryByRole('navigation', { name: /primary/i })).not.toBeInTheDocument();
     });
 
-    it('renders Home and Workspace links on non-legacy routes', () => {
-      window.location.hash = '#/home';
+    it('renders Workspace and Validation & Export links on non-legacy routes (no standalone Home)', () => {
+      window.location.hash = '#/workspace';
       render(<AppLayout />);
 
       const nav = screen.getByRole('navigation', { name: /primary/i });
       expect(nav).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /^home$/i })).toHaveAttribute('href', '#/home');
       expect(screen.getByRole('link', { name: /^workspace$/i })).toHaveAttribute('href', '#/workspace');
+      // Batch Validation & Export is now discoverable in the chrome nav (Task 4.3/4.4).
+      expect(screen.getByRole('link', { name: /validation & export/i })).toHaveAttribute('href', '#/validation');
+      // The redundant standalone Home entry is gone — create-animal now lives in the workspace.
+      expect(screen.queryByRole('link', { name: /^home$/i })).not.toBeInTheDocument();
     });
 
     it('marks the current route link with aria-current=page', () => {
-      window.location.hash = '#/workspace';
+      window.location.hash = '#/validation';
       render(<AppLayout />);
-      expect(screen.getByRole('link', { name: /^workspace$/i })).toHaveAttribute('aria-current', 'page');
-      expect(screen.getByRole('link', { name: /^home$/i })).not.toHaveAttribute('aria-current');
+      expect(screen.getByRole('link', { name: /validation & export/i })).toHaveAttribute('aria-current', 'page');
+      expect(screen.getByRole('link', { name: /^workspace$/i })).not.toHaveAttribute('aria-current');
     });
 
     it('hides the "Use Legacy Editor" toggle while showLegacyToggle is off', () => {

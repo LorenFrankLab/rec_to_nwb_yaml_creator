@@ -21,9 +21,11 @@ import { useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
-import { getAnimalSubject } from '../../state/workspaceSelectors';
-import { computeStepStatus } from '../../domain/validation';
+import { getAnimalSubject, getConfigHistory } from '../../state/workspaceSelectors';
+import EffectiveDayReview from './EffectiveDayReview';
+import { computeStepStatus, validateDay } from '../../domain/validation';
 import { getDayWorkflowStatus } from '../../domain/workflowStatus';
+import WarningAcknowledgement from '../../components/WarningAcknowledgement';
 import { describeDayOptoState } from '../../domain/optoStatus';
 import {
   classifyWorkspaceDays,
@@ -79,7 +81,7 @@ const isRecord = (value) =>
  * @param {object} workspace - `model.workspace` ({ animals, days }).
  * @returns {Array<{ animal: object, day: object, chip: 'valid'|'error'|'incomplete' }>}
  */
-function buildRows(workspace) {
+export function buildRows(workspace) {
   // The day RECOVERY STATUS of every reference/record is decided ONCE in the domain
   // ({@link classifyWorkspaceDays}) so this surface doesn't re-derive "what kind of day is
   // this?". buildRows only DECORATES each classified day with its validation chip and the
@@ -146,12 +148,46 @@ function buildRows(workspace) {
   return rows;
 }
 
+/**
+ * Animal-scoped slice of {@link buildRows}: the per-animal Validation & Export tab's row set.
+ *
+ * A FILTER over the workspace-global rows, NOT a parallel validation path — the readiness chips are
+ * exactly what the unscoped summary computes for those days, so the two can never drift. Keyed on
+ * `animalKey` (the index key a day is listed under), so a wrong-owner / duplicate-index row scopes
+ * to the animal it's LISTED under, matching how the global table groups it.
+ *
+ * @param {object} workspace - `model.workspace` ({ animals, days }).
+ * @param {string} animalKey - The animal whose rows to keep.
+ * @returns {Array<{ animal: object, animalKey: string, day: object, chip: 'valid'|'error'|'incomplete' }>}
+ */
+export function buildAnimalRows(workspace, animalKey) {
+  return buildRows(workspace).filter((row) => row.animalKey === animalKey);
+}
+
 // Coerced to a string so a corrupt (object/number) subject_id or animal id can never be returned
 // as a React child (which throws "objects are not valid as a React child").
 const subjectLabel = (animal) => {
   const id = getAnimalSubject(animal).subject_id ?? animal?.id;
   return typeof id === 'string' ? id : String(id ?? '');
 };
+
+/**
+ * Human-readable dated config context for a day's pinned configuration version (Task 3.4 — the
+ * validation-slice legibility), e.g. "config from 2023-06-01 (historical — v1)" instead of a bare
+ * "v1". Falls back to the bare version when the snapshot has no date (corrupt/old history).
+ *
+ * @param {object} animal - The owning animal (its `configurationHistory` supplies the version date).
+ * @param {number|null} version - The pinned configuration version.
+ * @param {boolean} historical - Whether that version is not the animal's latest.
+ * @returns {string}
+ */
+function datedConfigContext(animal, version, historical) {
+  const snapshot = getConfigHistory(animal).find((s) => s.version === version);
+  if (snapshot?.date) {
+    return `config from ${snapshot.date}${historical ? ` (historical — v${version})` : ''}`;
+  }
+  return `config v${version ?? '—'}${historical ? ' (historical)' : ''}`;
+}
 
 /**
  * An assertive (`role="alert"`) report of days that were NOT exported normally, with
@@ -200,14 +236,28 @@ ExportReport.propTypes = {
 };
 
 /**
+ * Validation Summary — workspace-global by default, or scoped to one animal when `animalKey` is
+ * given (the per-animal "Validation & Export" tab, Phase 3-5). The scoped mode is a FILTER over the
+ * same rows + the same batch actions (validate / export-valid / preflight) — never a forked
+ * validation path. When scoped it renders WITHOUT its own `<main id="main-content">` (the embedding
+ * AnimalView already owns the page landmark) and swaps the page heading for a scoped header.
+ *
+ * @param {object} props
+ * @param {string} [props.animalKey] - When set, show only this animal's rows in an embeddable
+ *   section; when omitted, the standalone workspace-global page.
  * @returns {JSX.Element}
  */
-export function ValidationSummary() {
+export function ValidationSummary({ animalKey } = {}) {
   const { model, actions } = useStoreContext();
   const workspace = model.workspace;
+  const scoped = animalKey != null;
 
-  // Recomputed from the workspace on every render — chips/counts are always current.
-  const rows = useMemo(() => buildRows(workspace), [workspace]);
+  // Recomputed from the workspace on every render — chips/counts are always current. Scoped mode is
+  // a pure filter (buildAnimalRows) so its chips are identical to the global summary's.
+  const rows = useMemo(
+    () => (scoped ? buildAnimalRows(workspace, animalKey) : buildRows(workspace)),
+    [workspace, scoped, animalKey]
+  );
 
   const counts = useMemo(() => {
     const acc = { valid: 0, error: 0, incomplete: 0 };
@@ -229,8 +279,11 @@ export function ValidationSummary() {
   // Days Validate All could not persist (corrupt `day.state` shape, or a write that threw) — named
   // in the UI with their repair path so imported/recovered corruption isn't console-only.
   const [validateErrorReport, setValidateErrorReport] = useState([]);
-  // Pending batch export awaiting preflight confirmation: { rows, preflight }.
+  // Pending batch export awaiting preflight confirmation: { rows, preflight, warningItems }.
   const [pendingExport, setPendingExport] = useState(null);
+  // Phase 3-6: explicit acknowledgement of outstanding non-blocking warnings before the download
+  // proceeds. Reset whenever a new preflight opens / closes so it can't carry across exports.
+  const [warningsAcknowledged, setWarningsAcknowledged] = useState(false);
 
   const clearReports = () => {
     setSkippedReport([]);
@@ -321,6 +374,7 @@ export function ValidationSummary() {
     if (validRows.length === 0) {
       clearReports();
       setPendingExport(null);
+      setWarningsAcknowledged(false);
       setActionMessage(
         'No days are ready to export. Fix errors, complete the required fields, or re-link ' +
           'recovered days (Add to day list) to make a day exportable.'
@@ -338,6 +392,9 @@ export function ValidationSummary() {
         // agree: an opto-implanted animal with an opto-free day reads "implanted, no stimulation",
         // not "on".
         const opto = describeDayOptoState(merged).label;
+        // Phase 3-6: the day's outstanding non-blocking warnings (same predicate the single-day
+        // Export step uses). These don't block the gate; they require explicit acknowledgement.
+        const warnings = validateDay(day, merged, animal).filter((i) => i.severity === 'warning');
         return {
           dayId: day.id,
           label: `${subjectLabel(animal)} — ${day.session?.session_id || day.id}`,
@@ -347,24 +404,38 @@ export function ValidationSummary() {
           failedChannels,
           cameras: (merged.cameras || []).length,
           opto,
+          warnings,
         };
       } catch (err) {
         return { dayId: day.id, label: `${subjectLabel(animal)} — ${day.id}`, error: err.message };
       }
     });
 
+    // The acknowledgement set: one entry per day that carries outstanding warnings.
+    const warningItems = preflight
+      .filter((entry) => entry.warnings && entry.warnings.length > 0)
+      .map((entry) => ({ key: entry.dayId, label: entry.label, warnings: entry.warnings }));
+
     clearReports();
     setActionMessage('');
-    setPendingExport({ rows: validRows, preflight });
+    setWarningsAcknowledged(false);
+    setPendingExport({ rows: validRows, preflight, warningItems });
   };
 
-  const cancelExport = () => setPendingExport(null);
+  const cancelExport = () => {
+    setPendingExport(null);
+    setWarningsAcknowledged(false);
+  };
 
   // Step 2 of batch export: run the actual downloads after the user confirms the preflight.
   const runExport = () => {
     if (!pendingExport) return;
+    // Defense-in-depth: outstanding warnings must be explicitly acknowledged before any download.
+    // The Confirm button is also disabled until then; this guards a programmatic/edge call too.
+    if (pendingExport.warningItems.length > 0 && !warningsAcknowledged) return;
     const { rows: validRows } = pendingExport;
     setPendingExport(null);
+    setWarningsAcknowledged(false);
 
     const strict = isFeatureEnabled('shadowExportStrict');
     const skipped = [];
@@ -480,15 +551,44 @@ export function ValidationSummary() {
 
   const hasDays = rows.length > 0;
 
+  // Scoped (embedded in AnimalView) renders a section + a scoped header — NOT a second
+  // `<main id="main-content">` (AnimalView owns the page landmark) and NOT the page-level h1.
+  const Wrapper = scoped ? 'section' : 'main';
+  const wrapperProps = scoped
+    ? { className: 'validation-summary validation-summary--scoped', 'aria-label': 'Validation and export for this animal' }
+    : { id: 'main-content', tabIndex: '-1', role: 'main', 'aria-labelledby': 'validation-heading' };
+
   return (
-    <main id="main-content" tabIndex="-1" role="main" aria-labelledby="validation-heading">
-      <h1 id="validation-heading">Validation Summary</h1>
+    <Wrapper {...wrapperProps}>
+      {scoped ? (
+        <header className="validation-summary-scoped-header">
+          <h2>This animal — readiness &amp; export</h2>
+          <p className="validation-summary-scoped-subhead" data-testid="validation-scope">
+            Showing: {animalKey} — {rows.length} {rows.length === 1 ? 'day' : 'days'}
+          </p>
+          {/* This tab handles ONE animal; the cross-animal batch preflight + export lives at the
+              chrome-level Validation & Export screen (Task 4.4) — link up to it so the relationship
+              is explicit, not hidden. */}
+          <p className="validation-summary-scoped-uplink">
+            <a href="#/validation">Validate &amp; export all animals →</a>
+          </p>
+        </header>
+      ) : (
+        <h1 id="validation-heading">Validation Summary</h1>
+      )}
 
       {!hasDays ? (
-        <p className="validation-summary-empty">
-          No recording days yet. Create an animal and a recording day to see its
-          validation status here. <a href="#/workspace">Go to Workspace</a>.
-        </p>
+        scoped ? (
+          <p className="validation-summary-empty">
+            This animal has no recording days yet. Add a recording day to see its readiness and
+            export here.
+          </p>
+        ) : (
+          <p className="validation-summary-empty">
+            No recording days yet. Create an animal and a recording day to see its
+            validation status here. <a href="#/workspace">Go to Workspace</a>.
+          </p>
+        )
       ) : (
         <>
           <p data-testid="summary-counts" className="validation-summary-counts">
@@ -550,8 +650,20 @@ export function ValidationSummary() {
                   </li>
                 ))}
               </ul>
+              {/* Phase 3-6: outstanding non-blocking warnings must be explicitly acknowledged before
+                  the download proceeds — a silent warning can otherwise ride the export across days. */}
+              <WarningAcknowledgement
+                items={pendingExport.warningItems}
+                acknowledged={warningsAcknowledged}
+                onChange={setWarningsAcknowledged}
+              />
               <div className="batch-export-preflight-actions">
-                <button type="button" className="btn-primary" onClick={runExport}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={runExport}
+                  disabled={pendingExport.warningItems.length > 0 && !warningsAcknowledged}
+                >
                   Confirm export ({pendingExport.rows.length})
                 </button>
                 <button type="button" onClick={cancelExport}>
@@ -666,16 +778,32 @@ export function ValidationSummary() {
                   <td>
                     {/* Scan fields (Task 10): pinned configuration version, camera count, and the
                         day-protocol opto state — so days can be compared at a glance. Absent for
-                        unreadable/missing/wrong-owner rows (no trustworthy merge), shown as "—". */}
+                        unreadable/missing/wrong-owner rows (no trustworthy merge), shown as "—".
+                        In the SCOPED per-animal tab, the cell becomes an expander whose summary reads
+                        the dated config context (Task 3.4) and whose body is the read-only
+                        effective-setup-for-this-day review (Task 3.3a). */}
                     {scan ? (
-                      <span className="validation-summary-scan">
-                        config v{scan.version ?? '—'}
-                        {scan.historical ? ' (historical)' : ''}
-                        {' · '}
-                        {scan.cameras} {scan.cameras === 1 ? 'camera' : 'cameras'}
-                        {' · '}
-                        {scan.opto}
-                      </span>
+                      scoped ? (
+                        <details className="validation-summary-effective" data-testid={`effective-${day.id}`}>
+                          <summary className="validation-summary-scan">
+                            {datedConfigContext(animal, scan.version, scan.historical)}
+                            {' · '}
+                            {scan.cameras} {scan.cameras === 1 ? 'camera' : 'cameras'}
+                            {' · '}
+                            {scan.opto}
+                          </summary>
+                          <EffectiveDayReview animal={animal} day={day} />
+                        </details>
+                      ) : (
+                        <span className="validation-summary-scan">
+                          config v{scan.version ?? '—'}
+                          {scan.historical ? ' (historical)' : ''}
+                          {' · '}
+                          {scan.cameras} {scan.cameras === 1 ? 'camera' : 'cameras'}
+                          {' · '}
+                          {scan.opto}
+                        </span>
+                      )
                     ) : (
                       '—'
                     )}
@@ -762,8 +890,16 @@ export function ValidationSummary() {
           </table>
         </>
       )}
-    </main>
+    </Wrapper>
   );
 }
+
+ValidationSummary.propTypes = {
+  animalKey: PropTypes.string,
+};
+
+ValidationSummary.defaultProps = {
+  animalKey: undefined,
+};
 
 export default ValidationSummary;

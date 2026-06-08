@@ -114,7 +114,7 @@ describe('DayTechnicalSection', () => {
       // Pin the field target: ?field=data_acq_device deep-links to the Recording System step
       // (animalEditorStepForFieldPath: path.includes('data_acq') → step 3). A wrong keyword would
       // mis-route, so the component's field choice is load-bearing.
-      expect(link.getAttribute('href')).toBe('#/animal/remy/editor?field=data_acq_device');
+      expect(link.getAttribute('href')).toBe('#/animal/remy/recording-system?field=data_acq_device');
     });
 
     it('flags a rig constant that is not set on the day (defense-in-depth: would fail export)', () => {

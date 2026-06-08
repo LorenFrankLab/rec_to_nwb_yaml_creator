@@ -15,9 +15,46 @@ import {
   classifyAnimalDays,
   classifyWorkspaceDays,
   describeOwner,
+  getPresentDayCount,
+  dayHasArtifacts,
 } from '../dayRecovery';
 
 const dayRecord = (id, animalId, date) => ({ id, animalId, date, session: { session_id: id } });
+
+describe('getPresentDayCount', () => {
+  it('counts only the present day records (OK + recovered), not dangling/wrong-owner index entries', () => {
+    const animal = { id: 'remy', days: ['remy-1', 'remy-2', 'remy-missing', 'totoro-1'] };
+    const days = {
+      'remy-1': dayRecord('remy-1', 'remy', '2023-06-22'),
+      'remy-2': dayRecord('remy-2', 'remy', '2023-06-23'),
+      // 'remy-missing' is indexed but has no record (dangling reference).
+      'totoro-1': dayRecord('totoro-1', 'totoro', '2023-07-01'), // wrong owner
+    };
+    expect(getPresentDayCount('remy', animal, days)).toBe(2);
+  });
+
+  it('is 0 for an animal with no present records', () => {
+    expect(getPresentDayCount('remy', { id: 'remy', days: [] }, {})).toBe(0);
+  });
+
+  it('tolerates a malformed animal (non-array days) → 0', () => {
+    expect(getPresentDayCount('remy', { id: 'remy', days: 'nope' }, {})).toBe(0);
+  });
+});
+
+describe('dayHasArtifacts', () => {
+  it('is true when the day is validated or exported', () => {
+    expect(dayHasArtifacts({ state: { exported: true } })).toBe(true);
+    expect(dayHasArtifacts({ state: { validated: true } })).toBe(true);
+  });
+
+  it('is false for a draft / missing / malformed state', () => {
+    expect(dayHasArtifacts({ state: { draft: true } })).toBe(false);
+    expect(dayHasArtifacts({})).toBe(false);
+    expect(dayHasArtifacts({ state: 'corrupt' })).toBe(false);
+    expect(dayHasArtifacts({ state: ['array'] })).toBe(false);
+  });
+});
 
 describe('isExportableDayStatus', () => {
   it('permits ONLY ok days (recovered/dangling/no-owner/wrong-owner are not auto-exportable)', () => {

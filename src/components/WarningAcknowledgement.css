@@ -1,0 +1,38 @@
+/**
+ * WarningAcknowledgement (Phase 3-6) — the pre-export review of outstanding non-blocking warnings.
+ * Amber, informational framing (warnings don't block; they ask for a conscious look).
+ */
+
+.export-warning-ack {
+  margin: 0.75rem 0;
+  padding: 0.6rem 0.85rem;
+  border-left: 3px solid #ffcc80;
+  background: #fff8ef;
+  border-radius: 0 6px 6px 0;
+}
+
+.export-warning-ack-lead {
+  margin: 0 0 0.4rem;
+  font-size: 0.85rem;
+  color: #6a4a1b;
+}
+
+.export-warning-ack-list {
+  margin: 0 0 0.5rem;
+  padding-left: 1.1rem;
+  font-size: 0.82rem;
+  color: #46443d;
+}
+
+.export-warning-ack-day {
+  margin: 0.2rem 0;
+}
+
+.export-warning-ack-confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #2b2a25;
+}

@@ -2,9 +2,623 @@
 
 **Purpose:** Track all changes made during the refactoring milestones.
 
-**Last Updated:** June 7, 2026
+**Last Updated:** June 8, 2026
+
+## Pre-merge review remediation — block the dangling recording-system reference (June 8, 2026)
+
+A pre-merge review (vs `modern`) flagged ONE Critical issue across three independent reviewers: a day's
+`data_acq_device_name` reference could **silently substitute the wrong recording system** into the
+export. If the referenced catalog system was renamed/removed (or a stale import), `resolveDayDataAcqDevice`
+silently fell back to `catalog[0]` — a *different* Spyglass `DataAcquisitionDevice` identity — with a
+clean validation. Unlike the camera path (`dangling_camera_ref`) and `resolveDayConfig` (fails closed),
+the data-acq path laundered the dangle.
+
+- **Fix:** new `danglingDataAcqRefIssue(day, animal)` in [validation.js](../src/domain/validation.js),
+  folded into `validateDay`. A present-but-unresolvable `data_acq_device_name` is now a **day-routed,
+  Devices-step, export-blocking, repairable** issue (`dangling_data_acq_ref`) — caught at the RAW
+  boundary (the reference is consumed by the merge, so the merged-model rules can't see it). An UNSET
+  reference is still the documented "use the animal default" path and is not flagged. Registered in
+  `SURFACE_BY_CODE` / `CATEGORY_BY_CODE` / the ownership-pattern map (the completeness invariant caught
+  the missing registrations); + contract tests (dangling blocked, existing-name clean).
+- **Comment rot** from the Phase-5 stepper deletion: `AnimalSwitcher` JSDoc (Rename… → Edit profile…),
+  `AnimalView` "the legacy stepper uses…" (→ "extracted from the removed stepper"), `useReconfigContext`
+  JSDoc example (the removed `/editor` route → `electrode-groups`).
+
+Deferred (noted, not merge-blocking): reconcile day references on catalog rename/delete (prevent, vs
+the gate just added); a precise empty-catalog blocker (already gated by schema `minItems:1`); a
+two-system/two-day golden parity fixture. Full suite (4266) green, 125 baselines byte-identical, lint
+0 errors, build OK.
 
 ---
+
+## Recording system — per-day acquisition device (1/n): merge foundation (June 8, 2026)
+
+Recording system becomes a **per-day** fact with an animal-level default. trodes_to_nwb records ONE
+acquisition system per session (a .rec → one YAML → one NWBFile), and multiple `data_acq_device`
+entries in one YAML are scientifically meaningless (each attaches to the session with no link to
+which data it recorded). So an animal recorded on different rigs over its life is modelled by
+**different days/YAMLs each carrying their own single device**, not multiple devices in one YAML.
+
+- **Merge precedence** ([workspaceUtils.js](../src/state/workspaceUtils.js) `mergeDayMetadata`): a
+  day's `data_acq_device` (if a non-empty array) exports verbatim; otherwise the day inherits the
+  animal-level default. Byte-identical for any day without a per-day device — **125 golden baselines
+  unchanged** (every fixture inherits the animal). + merge unit tests (own-device, inherit, malformed
+  fallback, canonical key order).
+- **Doc fix** ([PIPELINE_REQUIREMENTS.md](../docs/PIPELINE_REQUIREMENTS.md)): the `data_acq_device` row
+  now states that trodes_to_nwb *iterates* the array (`dataacq_device{i}`) but multiple-in-one-YAML do
+  NOT raise and are meaningless — the meaningful unit is one device per session.
+
+**Model correction (catalog + per-day selection).** Per further design feedback, the recording system
+is a **catalog** (the animal owns a list of systems you `+ Add` to, like the Cameras tab), and each day
+**references which one** it used (`day.data_acq_device_name`), defaulting to the first/only. The merge
+([resolveDayDataAcqDevice](../src/state/workspaceUtils.js)) now emits **exactly one** device — the
+referenced catalog entry (resolved LIVE, so editing that system propagates) or the first — never the
+whole catalog. Byte-identical for a one-system animal with an unreferenced day (every golden fixture).
+This supersedes the earlier free-form `day.data_acq_device` override. The catalog list UI (animal tab)
+and the per-day selector (Day Editor) follow in subsequent commits.
+
+### 3/n — animal Recording System tab becomes an add/edit/delete catalog LIST
+
+[DataAcqSection](../src/pages/AnimalEditor/DataAcqSection.jsx) was a single-device form; it's now a
+**catalog list** consistent with the Cameras tab: each system is a row (`name · system · amplifier ·
+adc_circuit`) with Edit/Delete, a **`+ Add recording system`** editor, and a **Default** badge on the
+first (the entry unreferenced days inherit). Guards: **name-uniqueness within the catalog** (the name
+is the Spyglass `DataAcquisitionDevice` identity) and the existing cross-animal divergent-reuse block
+(same name + different hardware elsewhere in the dataset → side-by-side comparison, write blocked).
+The last system can't be deleted (schema `minItems: 1`). The technical-defaults (`raw_data_to_volts` /
+`times_period_multiplier`) "Advanced Settings" block is unchanged. `TAB_SCOPE['recording-system']` now
+reads "Animal-wide catalog — each recording day uses one" (the old "no per-day version" was false).
+`DataAcqSection.test.jsx` rewritten for the catalog; full suite (4256) green, 125 baselines byte-
+identical, lint 0 errors, build OK. The per-day selector (Day Editor) is the last piece.
+
+### 4/n — per-day selector in the Day Editor (feature complete)
+
+New [DayRecordingSystem](../src/pages/DayEditor/DayRecordingSystem.jsx) in the Day Editor's Devices
+step: with **one** catalog system it's read-only (no choice); with **2+** it's a dropdown — `Default
+(first: …)` + each system by name — writing the chosen system's name to `day.data_acq_device_name`
+(or clearing it back to the default). Mounted in both `DevicesStep` branches (so a behaviour-only day
+with no electrodes still selects its acquisition device). The reference resolves live at export via
+`resolveDayDataAcqDevice`. This completes the recording-system catalog feature: **add several systems
+on the animal, each day uses one, each YAML carries exactly one device** — matching trodes_to_nwb.
+Full suite (4263) green, 125 baselines byte-identical, lint 0 errors, build OK.
+
+### 5/n — Recording System tab matches the Cameras tab (table + modal)
+
+UX-consistency follow-up: the catalog rendered as a `<ul>` + inline editor, visually/interactionally
+unlike the Cameras tab. Reworked [DataAcqSection](../src/pages/AnimalEditor/DataAcqSection.jsx) to
+mirror Cameras exactly — `section-header` → `table-actions` (`+ Add Recording System`) → a `<table>`
+(`Name / System / Amplifier / ADC Circuit / Role / Actions`) with Edit/Delete per row + a **Default**
+badge on the first, an empty state (icon + "Add First…"), and a **modal** editor (shared `Modal`, like
+`CameraModal`) instead of the inline form. Reuses the `cameras-table` / `table-actions` / `button-small`
+classes so the two tabs render identically. Validation/labels/aria unchanged — behaviour tests carried
+over. Full suite (4264) green, 125 baselines byte-identical, lint 0 errors, build OK.
+
+## Tabbed workspace IA — post-Phase-5 UX: relocate the animal profile to the header ⋮ (June 8, 2026)
+
+The animal-wide subject-facts editor was an always-visible collapsible **in the header band on every
+tab**, redundant next to the read-only `species · sex` the header already shows. It is genuinely
+useful (the only animal-level correction home for species/sex/DOB/genotype/description — they merge
+into every day's export), so it is **relocated, not removed**: into an on-demand dialog opened from
+the header **⋮ → "Edit profile…"**. The ⋮ now reads `Edit profile… · Delete animal…` — a coherent
+animal-lifecycle menu — and the header declutters. **UI-only — no export/schema change**; 125 golden
+baselines byte-identical; full suite (4248), lint (0 errors), build green. TDD.
+
+- New [AnimalProfileDialog.jsx](../src/components/AnimalProfileDialog.jsx) (Modal-based) ports the
+  form verbatim — `subject_id` read-only, species DANDI-binomial gate, DOB ISO + future-date cap,
+  only-changed-fields save, and the blast-radius **confirm before an animal-wide write** (names "this
+  animal and all N recording days, including already exported").
+- [AnimalView](../src/pages/AnimalView/index.jsx) opens it from the header ⋮; the inline
+  `AnimalProfileSection` render is gone (the read-only facts stay in the header `h1`/badge).
+- The legacy `AnimalProfileSection` (+ scss + test) is deleted — it was AnimalView-only after the
+  Phase-5 stepper removal — and its `CROSS_PAGE_ALLOWLIST` entry dropped (the dialog lives in
+  `src/components`, needs no allowlist).
+- **Reachable from every per-animal ⋮.** "Edit profile…" is now a menu item in the top object-selector
+  (animal dropdown) rows AND the picker cards too — not just the AnimalView header — so an animal's
+  shared subject facts are editable from wherever the animal is listed, without navigating to it. The
+  shared `AnimalProfileDialog` is hosted in `AppLayout` (switcher) and `AnimalWorkspace` (cards),
+  mirroring the existing shared-delete-dialog pattern; each `onSave` → `actions.updateAnimal(id,
+  { subject })`, identical to the header path. Per-animal ⋮ vocabulary is now consistent:
+  `Open · Edit profile… · Delete animal…` (header omits Open).
+
+## Tabbed workspace IA — Phase 5: decommission the legacy Animal Editor stepper (June 8, 2026)
+
+Removes the now-redundant Animal Editor wizard and its `#/animal/:id/editor` route — the tabs
+(Phases 1–4) own all setup, so the stepper was dead weight and a second source of truth. From the
+[phase-5 doc](../.claude/docs/plans/tabbed-workspace-ia/phase-5-decommission-stepper.md) (Tasks
+5.1–5.3b). **UI/routing/test-only — no export/schema change**; 125 golden baselines byte-identical;
+full suite (4240) / lint (0 errors) / build green. Code-reviewer pass: no blocking findings (deletion
+safety + coverage migration verified). The required test-coverage migration landed FIRST (the
+ElectrodeGroupsContainer + CamerasContainer + recording-system + cascade tests in the prior commits),
+so deleting the stepper's ~2150-line test suite loses no behavior coverage.
+
+- **Route retired (Task 5.1).** Removed the `animal-editor` branch from
+  [useHashRouter.js](../src/hooks/useHashRouter.js) and the lazy import + `case 'animal-editor'` render
+  + title-map entry + `lazy`/`Suspense` imports from [AppLayout.jsx](../src/layouts/AppLayout.jsx). A
+  stale `#/animal/:id/editor` bookmark now resolves to the tabbed view's `days` tab (a graceful
+  redirect — `editor` isn't an `ANIMAL_VIEW_TABS` segment — not a dead route).
+- **Stepper deleted (Tasks 5.1/5.3b).** Removed `AnimalEditorStepper.jsx`(+scss),
+  `HardwareConfigStep.jsx`(+scss), `pages/AnimalEditor/index.jsx` (the route page), the orphaned
+  `useAnimalIdFromUrl.js` hook, and the `?action`/`?section` post-save handshake (which the stepper
+  alone emitted; `AnimalWorkspace` reads only `?animal=`/`?create=1`). The hosted section/wiring
+  components (`AnimalProfileSection`, `wiring/*Container`, `useAnimalFieldUpdate`, the section/modal
+  components) SURVIVE — the tabbed `AnimalView` imports them.
+- **Tests re-homed/removed (Task 5.2).** Deleted the stepper suites + `HardwareConfigStep.test` +
+  `index.test` + `useAnimalIdFromUrl.test`; updated the editor-route-mounting tests (`useHashRouter`,
+  `AppLayout`, the aria-landmarks + shortcuts + axe integration tests) to the new redirect behavior or
+  removed the stepper-specific ones; updated the architecture-guard string-literal examples; removed
+  two dead `vi.mock('../../pages/AnimalEditor')`; swept stale "stepper-hosted" comments off the wiring
+  containers.
+- **Follow-ups (not in this commit):** the larger Phase-5 doc tasks — the full keyboard/axe pass on
+  the tabbed hub (5.4), the `workflow-screen-map.md` rewrite (5.5), the unified tab-based browser
+  scenarios (5.6), and the QA handoff note (5.7) — remain as separate deliverables before the v3
+  cutover flips the landing route.
+
+## Tabbed workspace IA — pre-Phase-5 review remediation (June 8, 2026)
+
+A thorough multi-agent review (deletion safety, spec fulfillment, UX coherence, code/error/test) ran
+before the final Phase 5 (stepper decommission). It confirmed: nothing the tabs still need would be
+deleted (the hosted section/wiring components survive — only the stepper shell + dead `/editor` route
+go), all Phase 0–4 acceptance criteria + the 13 decisions are delivered, and the IA matches the
+revisitable-not-linear goal. It also surfaced fixable items, remediated here across small commits.
+**UI/refactor-only — no export/schema change**; 125 golden baselines byte-identical throughout.
+
+- **Dedup (fork→extract debt the per-commit reviews couldn't see).** The legally-load-bearing
+  "we did NOT delete your downloaded YAML/NWB/DANDI/Spyglass" caveat (`DOWNSTREAM_NOT_DELETED_NOTE`)
+  and the `dayHasArtifacts` predicate were each DEFINED TWICE (domain + RecordingDaysTab); the
+  present-day-count expression was inlined at four call-sites. Now single-sourced:
+  `dayHasArtifacts` + new `getPresentDayCount(animalId, animal, days)` live in
+  [dayRecovery.js](../src/domain/dayRecovery.js) and are imported by the cascade, the day-tab, the
+  picker cards, the section-nav, and the animal switcher — so the delete copy + the "N days" count
+  can't drift between surfaces.
+- **Bug: setup card could say "Done" over an export-blocking section.** The first-run "Set up this
+  animal" card derived its per-section state from presence only, so a section with an export-BLOCKING
+  error (red ● in the section-nav) read "Done" in the card — two surfaces, opposite signals. The card
+  now reads `getAnimalBlockingSections` (the SAME source the nav ● reads) and shows a third state
+  "Needs fixing" / "Fix →" for a blocking section, so the onboarding card can't contradict the nav.
+- **Bug (defense-in-depth): create could falsely "succeed" into navigation.** Both create entry points
+  (`Home`, the workspace inline panel) navigated UNCONDITIONALLY after `createAnimal` — but the store
+  throws on a duplicate id from inside a React updater, a throw the caller can't catch, so a regressed
+  form uniqueness-check would silently land the user "in the new animal" while the create failed. Both
+  now guard on the same animals map before navigating (the form still owns the user-facing message).
+- **UX polish cluster.** (1) Deleting the *currently-viewed* animal (from the header ⋮ or the
+  switcher) now navigates to the picker instead of landing on AnimalView's "Animal not found" (which
+  read like a 404 for a deliberate delete); deleting a non-current animal from the switcher leaves you
+  in place. (2) The header ⋮ drops the redundant "Open" (you're already viewing the animal). (3) The
+  dead disabled "Rename…" placeholder is removed from all three ⋮ menus (picker card / header /
+  switcher) — a permanently-disabled item is user friction; it returns when Rename ships. (4) The
+  in-animal "review existing data" links now point at THIS animal's own Validation & Export tab
+  (`#/animal/:id/export`) instead of the cross-animal batch screen, so "go review this" stays within
+  the animal. (5) Opto's nav label ("used"/○) is kept intentionally (matches the committed mockup +
+  decision 11); a blocking opto config is already surfaced by the red ● (validation maps opto field
+  paths to the optogenetics tab), and whether *partial* opto is itself flagged is a separate
+  validation-correctness question, not a nav-label fix.
+- **Phase-5 coverage migration (the test blocker).** Four data-dangerous behaviors lived ONLY in
+  `ElectrodeGroupsContainer` and were pinned ONLY by the 1724-line legacy stepper test suite (which
+  Phase 5 deletes), so deleting it would have lost coverage. New
+  [ElectrodeGroupsContainer.test.jsx](../src/pages/AnimalEditor/wiring/__tests__/ElectrodeGroupsContainer.test.jsx)
+  re-pins them directly against the REAL container + a live store: bulk-add (count loop + sequential
+  ids + per-group channel-map generation + success toast), electrode-group delete → channel-map
+  CASCADE, next-electrode-group-id (max + 1, gaps tolerated), and copy-from-animal append/re-normalize.
+  Plus a GAP-A store-write test proving a recording-system (data-acq) edit persists through the
+  catalog container's `useAnimalFieldUpdate` seam (the sections test against a mocked callback), and a
+  `getAnimalDeleteCascade` unit test pinning the wrong-owner / recovered-unlinked exclusions directly.
+  **Phase 5 can now delete the stepper test suite without coverage loss.**
+
+## Tabbed workspace IA — Phase 4 deferred (2/2): top object-selector dropdown (June 8, 2026)
+
+Adds the **Task 4.5 / decision 9** top object-selector `Workspace ▸ <animal> ▾` — an animal switcher
+in the chrome — completing the two deferred Phase-4 pieces. **UI-only — no export/schema change**; 125
+golden baselines byte-identical; full suite (4335), lint (0 errors), build green. TDD throughout;
+code-reviewer pass (no blocking findings). Per the session decisions, the selector renders **only on
+the animal route** (where there's a current animal to switch from), and its create/delete actions
+**reuse the existing page surfaces** (one create panel, one delete dialog) rather than duplicating
+hosts.
+
+- **NEW [AnimalSwitcher.jsx](../src/components/AnimalSwitcher.jsx)** (+ css + test): a DISCLOSURE
+  popup (NOT a listbox/menu — those forbid options that host secondary controls). Trigger =
+  `button[aria-haspopup][aria-expanded][aria-controls]`; popup = `role="group" aria-label="Switch
+  animal"`; each row = a primary switch link (→ `#/animal/:id/days`, current `aria-current`) + a day
+  count + the shared {@link OverflowMenu} ⋮ (Open / Rename… (disabled) / Delete animal…). "+ New
+  animal…" is a button. Keyboard: Esc closes + returns focus to the trigger; Up/Down rove between the
+  row links + the new-animal button (the ⋮ triggers are reached by Tab, not the arrows); focus enters
+  the popup onto the current animal on open; outside-click closes; no focus trap.
+- **[OverflowMenu](../src/components/OverflowMenu.jsx)** now `stopPropagation`s the keys it handles, so
+  a nested ⋮ menu's Esc/arrows/activation don't bubble to the switcher popup (transparent for the
+  picker/header ⋮ mounts, which have no ancestor keyboard handler).
+- **[AppLayout](../src/layouts/AppLayout.jsx)** mounts the switcher in the primary nav ONLY on the
+  `animal-view` route (when the animal exists), and hosts the single shared `AnimalDeleteDialog`
+  (a row's Delete → `actions.deleteAnimal`; deleting the viewed animal → the existing "Animal not
+  found" guard). "+ New animal…" routes to `#/workspace?create=1`.
+- **[AnimalWorkspace](../src/pages/AnimalWorkspace/index.jsx)** honors the `#/workspace?create=1`
+  handshake: it auto-opens the Phase-4b inline create panel and strips the transient param (one create
+  home; mutually exclusive with the `?animal=` handshake).
+
+## Tabbed workspace IA — Phase 4 deferred (1/2): section-nav count + chevron affordance (June 8, 2026)
+
+Adds the **decision 10** section-nav row affordance — each AnimalView left-nav row now reads
+`name · count · ›` so it carries information scent (8 electrode groups, 2 cameras, "3 ready") and
+signals it's navigable at rest. The first of the two Phase-4 deferred pieces (the other is the top
+object-selector dropdown, Task 4.5). **UI-only — no export/schema change**; 125 golden baselines
+byte-identical; full suite (4319), lint (0 errors), build green. TDD; code-reviewer pass (no findings).
+
+- **`getAnimalSetupCounts(animal)`** ([sectionStatus.js](../src/domain/sectionStatus.js)) returns the
+  per-setup-section item counts (electrode-groups / channel-maps / recording-system / cameras / dio)
+  via the shape-safe selectors (malformed animal → 0, never a crash).
+- **[AnimalView](../src/pages/AnimalView/index.jsx)** renders a trailing **count + › chevron** on every
+  nav row, BOTH `aria-hidden` — the link's accessible name (and the existing blocking-● / todo-○
+  aria-labels) are unchanged, so SR users and name-based queries are unaffected. Day-work counts read
+  the SAME sources as the rest of the view: `days` = present day records (`classifyAnimalDays`),
+  `export` = "N ready" (`buildAnimalRows` valid days, can't drift from the export tab). A never-
+  configured section shows the ○ ring IN the count slot (no bare "0"); a blocking section keeps its
+  red ● AND shows its count (e.g. Cameras ● 2). Opto shows "used" when configured, ○ when not.
+
+## Tabbed workspace IA — Phase 4b: create-animal as an inline workspace panel (June 8, 2026)
+
+Folds animal creation INTO the workspace: "+ New Animal" (and the empty-state create action) now
+open the existing `AnimalCreationForm` as an inline panel on the picker instead of routing to a
+separate `#/home` screen, so first-animal creation uses the same pattern as everything else. On
+success the workspace lands on the new animal's days route (`#/animal/:id/days`). This is the
+**Phase-5 blocker** — the Home/stepper split can't be removed until create lives in the workspace.
+From the [phase-4 doc](../.claude/docs/plans/tabbed-workspace-ia/phase-4-lifecycle-nav.md) Task 4.2.
+**UI/glue-only — no export/schema change**; 125 golden baselines byte-identical; full suite (4313),
+lint (0 errors), build all green. TDD throughout; code-reviewer pass (no blocking findings). `#/home`
+stays a live route.
+
+- **Shared create glue (no fork).** New [animalCreation.js](../src/domain/animalCreation.js):
+  `buildAnimalFromForm(formData)` → `{ animalId, subject, metadata }` and
+  `getDefaultExperimenters(workspace)`, extracted VERBATIM from the Home container so the Home route
+  and the workspace panel build IDENTICAL animals (same subject shape, `description` auto-gen,
+  `device.name: ['Trodes']` seed, technical defaults). [Home/index.jsx](../src/pages/Home/index.jsx)
+  refactored to consume them — its behavior (incl. the `#/workspace?animal=` navigation) is unchanged.
+- **Inline panel on the picker.** [AnimalWorkspace/index.jsx](../src/pages/AnimalWorkspace/index.jsx)
+  hosts `AnimalCreationForm` in a `<section>` when create is open; the create affordances are now
+  `<button>`s (was `<a href="#/home">`). `handleCreate` → `actions.createAnimal` → navigate to
+  `#/animal/:id/days`; cancel closes the panel. Duplicate-id prevention is preserved (the form
+  validates uniqueness against `existingAnimals`).
+- **Defense-in-depth.** `getDefaultExperimenters` reads the most-recent animal's experimenters through
+  the shape-safe `getAnimalExperimenters` selector, so a recovered/imported animal missing
+  `experimenters` can't crash the picker (which now computes defaults during render over ALL animals).
+- **Arch guard.** Allowlisted `pages/Home/AnimalCreationForm` as a permitted cross-page presentational
+  import (the form owns no app-wide domain logic; a neutral relocation to `src/components` can follow
+  when Home is removed in Phase 5).
+
+## Tabbed workspace IA — Phase 4a: per-animal ⋮ lifecycle menu + nav cleanup (June 8, 2026)
+
+Puts animal lifecycle (delete) into a discoverable, accessible per-animal `⋮` overflow menu on both
+the picker cards and the Animal View header, and de-duplicates the chrome nav. Scope is **Option 3**
+(the goal delivered on the EXISTING card-list picker at `#/workspace`); the doc's net-new top
+object-selector dropdown (Task 4.5) and the left-nav count-chips/chevrons are **deferred**. From the
+[phase-4 doc](../.claude/docs/plans/tabbed-workspace-ia/phase-4-lifecycle-nav.md). **UI-only — no
+store/export/schema change**; 125 golden baselines byte-identical; full suite (4299), lint (0 errors),
+build all green. TDD throughout; code-reviewer pass (no blocking findings). Builds on the Phase-4
+foundation commit (`f2fce6c`: `getAnimalDeleteCascade` + the type-to-confirm `AnimalDeleteDialog`),
+which is now wired to real triggers.
+
+- **4.1 — reusable accessible `⋮` overflow menu.** New
+  [OverflowMenu.jsx](../src/components/OverflowMenu.jsx) (+ css + test) implements the WAI-ARIA
+  menu-button pattern (NOT a div-on-click): `button[aria-haspopup="menu"]` with `aria-expanded` /
+  `aria-controls` → a `role="menu"` of `role="menuitem"` rows; opening moves focus into the menu;
+  Arrow Up/Down wrap, Home/End jump, Esc closes + returns focus to the trigger, Tab closes,
+  outside-click (pointerdown) closes; a disabled item is `aria-disabled` (perceivable/focusable) and
+  skipped by both nav and activation. Items: `{ key, label, onSelect, disabled }`.
+- **4.1 — mounted on both surfaces.** Each animal card in
+  [AnimalWorkspace/index.jsx](../src/pages/AnimalWorkspace/index.jsx) is now a row container whose
+  navigation `<a>` and `⋮` menu are SIBLINGS (a menu button can't nest in the link), and the
+  [AnimalView](../src/pages/AnimalView/index.jsx) header band carries the same menu. Items: Open /
+  Rename… (disabled placeholder) / Delete animal…. Delete opens the shared `AnimalDeleteDialog`
+  (type-to-confirm) → `actions.deleteAnimal`; deleting the viewed animal falls through to the existing
+  "Animal not found" guard (no stranding).
+- **4.1 — removed the day-tab danger zone.** The `workspace-danger-zone` footer + its animal-delete
+  `ConfirmDialog` + the now-dead `pendingDeleteAnimalId` / `confirmDeleteAnimal` / cascade locals are
+  gone from [RecordingDaysTab.jsx](../src/pages/AnimalWorkspace/RecordingDaysTab.jsx); that logic now
+  lives in `getAnimalDeleteCascade` / `AnimalDeleteDialog`. **Per-day delete is unchanged.**
+- **4.3 — nav cleanup.** [AppLayout.jsx](../src/layouts/AppLayout.jsx) primary nav drops the redundant
+  standalone **Home** entry (create-animal moves into the workspace in 4b) and adds **Validation &
+  Export → `#/validation`**. Net primary nav: `Workspace · Validation & Export` (+ the flag-gated
+  legacy toggle). `#/home` stays a live route.
+- **4.4 — batch export discoverable from the per-animal tab.** The scoped per-animal Validation &
+  Export tab ([ValidationSummary](../src/pages/ValidationSummary/index.jsx)) now links UP to the
+  cross-animal batch screen (`#/validation`), making the one-animal-vs-all relationship explicit.
+
+## Tabbed workspace IA — Phase 3a: repair-routing migration to the tabbed Animal View (June 8, 2026)
+
+Re-points every repair / navigation deep-link from the legacy `#/animal/:id/editor` stepper route at
+the new per-tab routes — making the seven tabs the real repair destination and unblocking Phase 5's
+deletion of the stepper. From the
+[phase-3a doc](../.claude/docs/plans/tabbed-workspace-ia/phase-3a-repair-routing.md). **UI/routing-only
+— no store/export/schema change**; 125 golden baselines byte-identical; full suite (4277), lint (0
+errors), build all green. TDD throughout; code-reviewer pass (no blocking findings). The legacy
+`/editor` route + stepper STAY LIVE until Phase 5 — only the emitters move.
+
+- **3a.2 — field→tab resolver.** New `ANIMAL_SETUP_TABS` + `animalSetupTabForFieldPath(fieldPath)` →
+  `{ tab, label }` in [validation.js](../src/domain/validation.js): the canonical field→section
+  attribution for the tabbed IA, FINER than the legacy 4-step `animalEditorStepForFieldPath` (kept
+  unchanged for the still-live stepper). camera→`cameras`, data-acq→`recording-system`,
+  ntrode→`channel-maps`, opto→`optogenetics`, behavioral/DIO→`dio` (a NEW branch — DIO repairs
+  previously mis-routed to Electrodes), electrode geometry + configurationHistory→`electrode-groups`.
+  `repairTargetForIssue` now labels animal repairs by TAB ("Fix in Animal Setup → Cameras" / "→
+  Recording System").
+- **3a.1 — re-point every emitter.** The dynamic Day-Editor animal-surface repair handoff
+  ([DayEditorStepper.jsx](../src/pages/DayEditor/DayEditorStepper.jsx)) → `#/animal/:id/:tab?field=…`
+  (resolved by the new resolver; no field → `/days`); DevicesStep / DayTechnicalSection hardcoded
+  field links → their owning tab; **ReconfigWizard's param-carrying deep-link → `/electrode-groups?context=reconfigure&…`
+  with params preserved** (so the Phase 3-4 reconfig banner that reads them finally renders in prod);
+  bare "Edit Animal" / breadcrumb links → `/days`.
+- **3a.3 — `?field=` repair-landing highlight.** [AnimalView](../src/pages/AnimalView/index.jsx) reads
+  `?field=` and scrolls to + briefly highlights the section anchor (`data-field-path`, prefix-matched
+  with indices stripped) on the destination tab, mirroring the Day Editor's `.repair-target-highlight`;
+  degrades silently when no anchor matches (there was no pre-existing field-highlight to preserve).
+- **3a.5 — section-nav blocking-red dot.** `getAnimalBlockingSections(animal, days)`
+  ([sectionStatus.js](../src/domain/sectionStatus.js)) validates the animal's days with the SAME
+  validator the export gate uses, keeps error-severity animal-surface issues, and attributes each to a
+  tab via the SAME resolver + field input as the repair routing (no second mapping). AnimalView renders
+  a red ● "— blocks export" on those nav items, outranking the hollow-○ "not set up" ring — colour PLUS
+  the accessible name, never colour alone.
+- **Deliberately retained:** the legacy `/editor` route definitions (router / AppLayout /
+  useAnimalIdFromUrl) and the stepper itself stay until Phase 5; the legacy `animalEditorStepForFieldPath`
+  step resolver is unchanged (the frozen stepper still works).
+- Emitter + label tests swept to the tab URLs; new tests:
+  [AnimalView.fieldHighlight.test.jsx](../src/pages/AnimalView/__tests__/AnimalView.fieldHighlight.test.jsx),
+  [AnimalView.blockingDot.test.jsx](../src/pages/AnimalView/__tests__/AnimalView.blockingDot.test.jsx),
+  and the `animalSetupTabForFieldPath` cases in
+  [animalRepairRouting.test.js](../src/pages/DayEditor/__tests__/animalRepairRouting.test.js).
+
+## Tabbed workspace IA — Phase 3-6: warning acknowledgement on export (June 8, 2026)
+
+Closes the warning-escape on batch / valid-only export. From the
+[phase-3-6 doc](../.claude/docs/plans/tabbed-workspace-ia/phase-3-6-warning-ack.md). The export gate
+keys on **error** severity only, so non-blocking **warnings** (e.g. an imported
+`inconsistent_location_case`) could ride an export across N days unnoticed. This requires an explicit,
+content-explicit acknowledgement before the download proceeds. **Behavior change to the export UX
+(call-out below) — but export OUTPUT and gate semantics are unchanged**; 125 golden baselines
+byte-identical; full suite (4261), lint (0 errors), build all green. TDD throughout; code-reviewer
+pass (no findings). Completes Phase 3 (all six sub-phases done).
+
+- **New reusable [WarningAcknowledgement](../src/components/WarningAcknowledgement.jsx) component**
+  (in `src/components`, so both export surfaces — the per-animal Validation & Export tab now, the
+  chrome-level batch screen in Phase 4 — share it). It lists each affected day → its warning messages
+  (content-explicit, not a bare count) and a checkbox the user must check.
+- **Plumbed per-day warnings into the export preflight** ([ValidationSummary/index.jsx](../src/pages/ValidationSummary/index.jsx)):
+  `validateDay(day, merged, animal).filter(i => i.severity === 'warning')` — the EXACT predicate the
+  single-day Export step uses, read-only over the existing validators (no new/parallel validation, no
+  new rules), computed off the same merged day the preflight already builds.
+- **Gated the download** behind the acknowledgement: the "Confirm export" button is `disabled` until
+  outstanding warnings are acknowledged, with a defense-in-depth early-return in `runExport`. The
+  acknowledged flag resets on every preflight open / cancel / run (and the no-valid-rows early return),
+  so it can't carry across exports. Zero outstanding warnings → no extra step (unchanged flow).
+- **The export GATE is unchanged** (deliberately): warnings still don't block (a warning-only day is
+  still `valid` / exportable once acknowledged), errors still do. No warning→error promotion, no new
+  rules, no batch screen — those stay out of scope.
+- **UX call-out:** a valid-only / animal export that carries outstanding warnings now requires the
+  reviewer to tick "I've reviewed these warnings" before files download. Clean exports are unaffected.
+- New tests: [WarningAcknowledgement.test.jsx](../src/components/__tests__/WarningAcknowledgement.test.jsx)
+  (component contract) and [AnimalView.warningAck.test.jsx](../src/pages/AnimalView/__tests__/AnimalView.warningAck.test.jsx)
+  (warnings surfaced; acknowledgement gates the download; cancel aborts; no-warning export proceeds).
+
+## Tabbed workspace IA — Phase 3-5: per-animal Validation & Export tab + effective-day review (June 8, 2026)
+
+Makes the `export` tab real — a per-animal slice of the Validation Summary plus the mandatory
+"effective setup for THIS day" review (the valid-but-wrong defense). From the
+[phase-3-5 doc](../.claude/docs/plans/tabbed-workspace-ia/phase-3-5-validation-export-tab.md). After
+this, all seven AnimalView tabs are real (no placeholders left). **UI-only — no store/export/schema
+change**; export output unchanged (125 golden baselines byte-identical); full suite (4257), lint (0
+errors), build all green. TDD throughout; four independently-green commits; code-reviewer pass (no
+findings). The standalone workspace Validation Summary page is byte-unchanged.
+
+- **`buildAnimalRows(workspace, animalKey)`** ([ValidationSummary/index.jsx](../src/pages/ValidationSummary/index.jsx)):
+  a FILTER over the now-exported `buildRows`, so the per-animal tab's readiness chips are exactly what
+  the workspace-global summary computes — a filter, never a parallel validation path.
+- **Parameterized `ValidationSummary` with an optional `animalKey`.** When set it scopes rows via
+  `buildAnimalRows`, renders a "This animal — readiness & export · Showing: {id} — {N} days" header
+  instead of the page h1, and renders a `<section>` rather than a second `<main id="main-content">`
+  (AnimalView owns the page landmark). The counts / Validate All / Export Valid Only / preflight /
+  reports / table all run off the scoped rows unchanged, so `runExport` is **reused** for the animal's
+  valid days. All scoped-only behavior is gated behind the prop. AnimalView renders
+  `<ValidationSummary animalKey={animalId}>` for the `export` tab (the last placeholder); allowlisted in
+  the architecture guard.
+- **Reuse-not-rederive extractions:** `buildPreflightSummary` → [src/domain/preflightSummary.js](../src/domain/preflightSummary.js)
+  (ExportStep imports it back) and `resolveRigConstant` + `RIG_FALLBACK` →
+  [src/domain/rigConstants.js](../src/domain/rigConstants.js) (DayTechnicalSection imports it back) —
+  both verbatim, byte-identical (their host tests pass unchanged).
+- **Config-version legibility (Task 3.4, validation slice).** The SCOPED Setup cell shows dated context
+  ("config from `<date>` (historical — vN)") via `getConfigHistory`, not a bare "vN". The unscoped cell
+  is unchanged.
+- **Effective-setup-for-this-day review (Task 3.3a — the valid-but-wrong defense).** New
+  [EffectiveDayReview](../src/pages/ValidationSummary/EffectiveDayReview.jsx) renders, read-only inside
+  the scoped Setup-cell expander, what a day ACTUALLY used — pinned version + dated description,
+  electrode groups, failed channels, cameras, rig constants — from `buildPreflightSummary` +
+  `resolveRigConstant`, labelled "What this day used (read-only)", distinct from the animal's current
+  setup tabs. A day pinned to v1 (animal latest v2) shows v1's values (the merge resolves the pinned
+  config); the merge is crash-guarded so a corrupt day can't blank the tab. **This is the surface the
+  day-row scan line (overview decision 12) will later relocate into — unblocking its retirement.**
+- **Deliberately deferred (per the phase doc):** retiring the `RecordingDaysTab` day-row scan line
+  (a follow-on now that this destination exists); the warning-ack on export → 3-6; the chrome-level
+  "All animals — batch export" → Phase 4; repair-button re-routing to tabs → Phase 3a (hints still link
+  the legacy editor).
+- New tests: [buildAnimalRows.test.jsx](../src/pages/ValidationSummary/__tests__/buildAnimalRows.test.jsx),
+  [AnimalView.exportTab.test.jsx](../src/pages/AnimalView/__tests__/AnimalView.exportTab.test.jsx)
+  (scoped header + only-this-animal rows + single #main-content + export reuse), and
+  [AnimalView.effectiveDay.test.jsx](../src/pages/AnimalView/__tests__/AnimalView.effectiveDay.test.jsx)
+  (dated legibility + v1-pinned effective review).
+
+## Tabbed workspace IA — Phase 3-4: subject profile + reconfiguration context on the AnimalView header (June 8, 2026)
+
+Re-homes the subject-facts editor and the reconfiguration context banner onto the tabbed Animal View
+header — they are **not tabs** (header band, visible from every `:tab`), and must survive the legacy
+stepper's Phase 5 decommission. From the
+[phase-3-4 doc](../.claude/docs/plans/tabbed-workspace-ia/phase-3-4-profile-context.md). **UI-only — no
+store/export/schema change**; 125 golden baselines byte-identical; full suite (4249), lint (0 errors),
+build all green. TDD throughout; two independently-green commits; code-reviewer pass (no findings). The
+legacy `AnimalEditorStepper` keeps its own copies (parallel-running invariant until Phase 5).
+
+- **Extracted the reconfig-context parser + banner into shared modules** so the stepper and AnimalView
+  render ONE implementation (no drift): [src/hooks/useReconfigContext.js](../src/hooks/useReconfigContext.js)
+  (the `?context=reconfigure&version=&fromDay=&movedDays=` + `?field=` hash parser + its hashchange hook)
+  and [src/components/ReconfigurationContextBanner.jsx](../src/components/ReconfigurationContextBanner.jsx)
+  (+ its CSS, moved verbatim from `AnimalEditorStepper.scss`). `AnimalEditorStepper` now consumes both —
+  its local `parseAnimalEditorRouteContext` / `useAnimalEditorRouteContext` / inline reconfig-derivation /
+  inline banner JSX were removed; behavior is byte-identical (the stepper's reconfig-copy + `?field=`
+  deep-link tests pass unchanged).
+- **Rendered `AnimalProfileSection` + the reconfig banner in the AnimalView header**
+  ([AnimalView/index.jsx](../src/pages/AnimalView/index.jsx)). The profile keeps its own blast-radius
+  `ConfirmDialog`; `dayCount = getAnimalDayIds(animal).length` (the SAME count the stepper passes, so the
+  "affects N days" confirm copy is byte-identical — NOT a recovery-aware count); `onSave →
+  handleFieldUpdate('subject', subject)` == `updateAnimal(animalId, { subject })`. The reconfig banner
+  reads the same params via `useReconfigContext` and shows the same green "editing latest vN" / amber
+  "review vN — current latest is vM" copy.
+- **Architecture allowlist** ([architectureBoundaries.guard.test.js](../src/__tests__/architectureBoundaries.guard.test.js)):
+  added `pages/AnimalEditor/AnimalProfileSection` (AnimalView imports it cross-page; a shared
+  presentational form owning no app-wide domain logic).
+- **Deliberately deferred (per the phase doc):** the `ReconfigWizard` emitter still deep-links to
+  `/editor` (re-pointing to a tab route is [Phase 3a](../.claude/docs/plans/tabbed-workspace-ia/phase-3a-repair-routing.md)),
+  so the AnimalView header banner is wired + unit-tested but has no live production trigger yet; the
+  stepper's profile/banner are NOT deleted (Phase 5). Validation & Export tab → 3-5; warning-escape → 3-6.
+- New tests: [ReconfigurationContextBanner.test.jsx](../src/components/__tests__/ReconfigurationContextBanner.test.jsx)
+  (latest/non-latest/hidden copy) and [AnimalView.profileHeader.test.jsx](../src/pages/AnimalView/__tests__/AnimalView.profileHeader.test.jsx)
+  (profile on the header across tabs + blast-radius confirm → updateAnimal; reconfig warning banner).
+
+## Tabbed workspace IA — Phase 3-3: catalog/library tabs + corruption-banner hoist + opto chip (June 8, 2026)
+
+Mounts the remaining four setup containers (recording-system, cameras, dio, optogenetics) into the
+tabbed Animal View and hoists the 3-field corruption banner to the shell level. From the
+[phase-3-3 doc](../.claude/docs/plans/tabbed-workspace-ia/phase-3-3-catalog-tabs.md) /
+[charter](../.claude/docs/plans/tabbed-workspace-ia/phase-3-setup-tabs.md). After this phase, all six
+setup tabs (+ `days`) are real; only `export` remains a placeholder (→ 3-5). **UI-only — no
+store/export/schema change**; 125 golden baselines byte-identical; full suite (4241), lint (0 errors),
+build all green. TDD throughout; three independently-green commits; code-reviewer pass on the
+cumulative diff (no findings). The legacy `AnimalEditorStepper` stays live and is non-regressed.
+
+- **Mount the four catalog/library containers** ([AnimalView/index.jsx](../src/pages/AnimalView/index.jsx)).
+  `renderPanel()` (now a ctx-object) routes recording-system → `RecordingSystemContainer`, cameras →
+  `CamerasContainer`, dio → `DioContainer`, optogenetics → `OptogeneticsContainer`. The first three take
+  `{ animal, onFieldUpdate }`, fed by the shared `useAnimalFieldUpdate` hook (one implementation, same
+  wiring the stepper uses); optogenetics self-resolves from `animalId`. Scope descriptors:
+  recording-system → "Shared across ALL days (no per-day version)" (Task 3.2 honesty — deliberately NOT
+  framed as apply-per-day); cameras → "Catalog — referenced per day"; dio → "Library — opt in per day".
+- **Optogenetics status chip.** When `getAnimalSectionStatus(animal,'optogenetics') === TODO` (the public
+  API — the private `hasOptogenetics` is not imported), the opto tab shows a neutral "Not used — no
+  stimulation" chip so an empty opto tab reads as a valid state, not missing setup.
+- **Hoist the 3-field RawCorruptionBanner to the host shell** (charter decision 1). The banner covers
+  `cameras` / `data_acq_device` / `configurationHistory`, which now span THREE setup tabs, so a per-tab
+  (or per-step) render could hide a sibling field's corruption behind a tab/step the user isn't on.
+  Removed from [HardwareConfigStep](../src/pages/AnimalEditor/HardwareConfigStep.jsx) (+ its `onRepair`
+  prop); re-homed once in [AnimalEditorStepper](../src/pages/AnimalEditor/AnimalEditorStepper.jsx) above
+  the step indicators (the legacy stepper now surfaces corruption from EVERY step, not just the hardware
+  step — strictly more visible, no regression); rendered once in `AnimalView` above the tab panels. It
+  self-hides when clean. The two HardwareConfigStep banner unit tests were replaced by a relocation guard;
+  end-to-end repair is covered at the stepper + AnimalView levels.
+- **Architecture allowlist** ([architectureBoundaries.guard.test.js](../src/__tests__/architectureBoundaries.guard.test.js)):
+  added the four containers + the `useAnimalFieldUpdate` hook to `CROSS_PAGE_ALLOWLIST` (same
+  extract-don't-fork rationale as the ephys containers).
+- **Unsaved-edit guard extended to the CameraModal** (charter decision 2, which names the CameraModal).
+  Now that cameras is mounted under the section-nav, `CamerasContainer` gained an optional
+  `onPendingEditsChange` prop (reports `cameraModal.open`; false on unmount; no-op when absent → stepper
+  byte-unchanged), wired into AnimalView's existing guard. A section-nav switch with an open Add/Edit
+  Camera modal raises the same "Discard unsaved changes?" ConfirmDialog; the identity-safety /
+  immutable-once-referenced flows are untouched. (The modal-guard class is now bounded to ephys + cameras;
+  recording-system / dio / optogenetics edit inline and persist immediately, so they hold no modal edits.)
+- **Deliberately deferred (per the phase doc):** the `export` tab + per-day effective-setup review
+  ([3-5](../.claude/docs/plans/tabbed-workspace-ia/phase-3-5-validation-export-tab.md)); the
+  subject/profile header + reconfig banner ([3-4](../.claude/docs/plans/tabbed-workspace-ia/phase-3-4-profile-context.md));
+  the warning-escape on export ([3-6](../.claude/docs/plans/tabbed-workspace-ia/phase-3-6-warning-ack.md));
+  repair `?field=` landing granularity ([Phase 3a](../.claude/docs/plans/tabbed-workspace-ia/phase-3a-repair-routing.md)).
+- New tests: [AnimalView.catalogTabs.test.jsx](../src/pages/AnimalView/__tests__/AnimalView.catalogTabs.test.jsx)
+  (four containers render + scope descriptors + opto chip + the camera-modal guard) and
+  [AnimalView.corruptionBanner.test.jsx](../src/pages/AnimalView/__tests__/AnimalView.corruptionBanner.test.jsx)
+  (banner visible once from a non-owning tab); plus a stepper-level hoist test in
+  [AnimalEditorStepper.repairBanner.test.jsx](../src/pages/AnimalEditor/__tests__/AnimalEditorStepper.repairBanner.test.jsx).
+
+## Tabbed workspace IA — Phase 3-2: ephys tabs + unsaved-edit guard (June 8, 2026)
+
+Mounts the two hardest-wired setup containers extracted in Phase 3-1 into their tabs in the tabbed
+Animal View, replacing the Phase-1 placeholder, and lands the unsaved-edit guard. From the
+[phase-3-2 doc](../.claude/docs/plans/tabbed-workspace-ia/phase-3-2-ephys-tabs.md) /
+[charter](../.claude/docs/plans/tabbed-workspace-ia/phase-3-setup-tabs.md). **UI-only — no
+store/export/schema change**; 125 golden baselines byte-identical; full suite (4226), lint (0 errors),
+build all green. TDD throughout (failing tests written first); three independently-green commits;
+code-reviewer pass on the cumulative diff. The legacy `AnimalEditorStepper` still hosts the same
+containers and is byte-unchanged (parallel-running invariant).
+
+- **Mount the ephys containers** ([AnimalView/index.jsx](../src/pages/AnimalView/index.jsx)). A
+  `renderPanel()` switch routes `electrode-groups` → `ElectrodeGroupsContainer` and `channel-maps` →
+  `ChannelMapsContainer` (the shared 3-1 wiring at `src/pages/AnimalEditor/wiring/`), replacing the
+  placeholder; the single `#main-content` and the `:tab` panel-focus effect are preserved. Each tab shows
+  a **scope descriptor** under the panel heading (electrode-groups → "Versioned identity — a change here
+  forks a configuration version"; channel-maps → "Edit any time — map channels, mark bad channels"). The
+  channel-map auto-regen on a `device_type` change is proven unchanged through the tab path (same assertion
+  as 3-1's characterization, now via the real container + modal).
+- **Architecture allowlist** ([architectureBoundaries.guard.test.js](../src/__tests__/architectureBoundaries.guard.test.js)):
+  AnimalView (a page) now imports `pages/AnimalEditor/wiring/{ElectrodeGroups,ChannelMaps}Container`, so
+  both were added to `CROSS_PAGE_ALLOWLIST` — deliberately shared "extract, don't fork" wiring that owns no
+  app-wide domain logic, same rationale as the already-allowlisted `RecordingDaysTab`.
+- **Config-version legibility** (Task 3.4, ephys slice) — new
+  [ConfigVersionContext.jsx](../src/pages/AnimalView/ConfigVersionContext.jsx). When an animal has more
+  than one electrode configuration version, the electrode-groups panel shows a plain-language timeline
+  ("Electrode configuration changed on `<date>` — earlier recording days use v1, this and later days use
+  v2") sourced from `getConfigHistory`, instead of a bare "v2". Single-version animals render nothing;
+  never shown on the channel-maps tab. Informational framing (left rule, muted text), not a warning.
+- **Unsaved-edit guard** (charter decision 2). Both ephys containers gained an optional
+  `onPendingEditsChange` prop — `true` while their editor/modal is open, `false` otherwise / on unmount
+  (no-op when the prop is absent, so the stepper path is byte-unchanged). `AnimalView` owns the
+  section-nav: a click toward ANOTHER tab while a container reports pending edits is intercepted and raises
+  a "Discard unsaved changes?" `ConfirmDialog` (reusing the existing Modal primitive — focus-trapped,
+  keyboard-accessible). Confirm navigates + drops the edit; cancel keeps the tab + editor. A modifier /
+  non-primary click (open-in-new-tab) is **not** intercepted (it never discards the edit in this document).
+- **Deliberately deferred (per the phase doc):** the other four setup tabs (recording-system, cameras,
+  dio, optogenetics), the AnimalView-level 3-field corruption banner, and the subject/profile + reconfig
+  header all remain in [3-3](../.claude/docs/plans/tabbed-workspace-ia/phase-3-3-catalog-tabs.md) /
+  [3-4](../.claude/docs/plans/tabbed-workspace-ia/phase-3-4-profile-context.md); repair `?field=` deep
+  links still target the legacy stepper until Phase 3a. The `default` case of `renderPanel()` keeps the
+  Phase-1 placeholder for those tabs.
+- New tests: [AnimalView.ephysTabs.test.jsx](../src/pages/AnimalView/__tests__/AnimalView.ephysTabs.test.jsx)
+  (mount + scope descriptors + channel-regen-through-tab + config-version legibility + the unsaved-edit
+  guard, exercising a real dirty `ChannelMapEditor`, including the container-unmount → guard-reset path).
+
+## Tabbed workspace IA — Phase 2: Recording Days tab polish (June 7, 2026)
+
+Polishes the `days`-tab content from the [tabbed-workspace-ia](../.claude/docs/plans/tabbed-workspace-ia/phase-2-recording-days-tab.md)
+redesign (Phase 1 already extracted the pane + hosted it at `#/animal/:id/days`): day-row legibility
+(decision 12) and first-run onboarding (decision 8). **UI-only — no store/export/schema change**; 125
+golden baselines byte-identical; full suite (4209), lint (0 errors), build all green. TDD throughout
+(failing tests written first); each task an independently-green commit; code-reviewer pass per chunk.
+
+- **Task 2.1 — removed the "Edit Animal Setup" link** from the day-tab header
+  ([RecordingDaysTab.jsx](../src/pages/AnimalWorkspace/RecordingDaysTab.jsx)). Under the tabbed IA the
+  animal's setup lives in the left section-nav tabs, so the jump-away stepper link is redundant; the
+  primary "Add Recording Days" action stays.
+- **Tasks 2.5a/2.5b/2.6 — day-row triage contract** (decision 12). Each row is now *triage, not
+  inspection*: bare **date** anchor + the **session description** muted underneath *only when present*
+  (truncated by CSS, full text on `title`) + **one plain-language status** replacing the
+  Draft/Validated/Exported chip cluster. `session_id` moved OFF the row (its filename value belongs in the
+  day/preflight). The status comes from a new read-only domain helper
+  **`getDayRowStatus(animal, day, mergedDay)`** ([workflowStatus.js](../src/domain/workflowStatus.js)):
+  the stored-state mapping is display-only (`draft → "Draft — not yet validated"`, `validated → "Ready to
+  export"`, `exported → "Exported"`), but a **LIVE blocking issue wins** and reads `Needs fixing —
+  {reason}` so a day that went stale (validated/exported before a referenced camera broke) is honest, not
+  falsely green. The live read reuses `validateDay` — the SAME error set the export gate consumes — no new
+  validation; per-row `mergeDayMetadata` is wrapped so a corrupt config surfaces as a needs-fixing row,
+  never a crash.
+- **Task 2.3 — first-run "Set up this animal" card** (decision 8), replacing the in-pane setup checklist.
+  For a new/under-configured animal the days tab leads with a per-section card over the **six
+  `getAnimalSectionStatus` sections** (Electrode Groups · Channel Maps · Recording System · Cameras · DIO ·
+  Optogenetics) — the SAME source as the section-nav hollow-○ rings, so "todo" isn't signalled three ways.
+  Honest, **non-gating** framing ("if ephys / if video / if behavioral events"); behavior-only days raise
+  no electrode warning. Each item links to its setup **tab** with a per-section accessible name ("Set up
+  Cameras", not a non-unique "Set up →"). The card disappears once the animal is **established**
+  (`subjectPresent && dayCount > 0`); the ambient nav rings then carry the signal. **Subject is omitted**
+  (it lives in the header band / gets its own tab in Phase 3 — it has no `getAnimalSectionStatus` key). The
+  separate **"Review existing data"** state (recovered/imported review) is kept verbatim.
+- **Retained, now production-unused:** `getAnimalSetupChecklist` + `SETUP_STATE`
+  ([workflowStatus.js](../src/domain/workflowStatus.js)) stay as a fully-tested domain helper — the card
+  reframes the *pane section*, not the domain helper, which is the likely consumer for Phase 3's setup tabs.
+  Dead checklist CSS/JSX/helpers removed from the pane (bundle −727 B).
+- **Deferred (tracked):** per-day ⋮ menu → Phase 4; `Fix in {section} →` row action → Phase 3a;
+  older-electrode-setup flag → Phase 3/3a. The inline "Delete day…" button is unchanged.
+- New tests: `getDayRowStatus` ([workflowStatus.test.js](../src/domain/__tests__/workflowStatus.test.js)),
+  the day-row contract ([RecordingDaysTab.dayRow.test.jsx](../src/pages/AnimalWorkspace/__tests__/RecordingDaysTab.dayRow.test.jsx)),
+  the setup card ([RecordingDaysTab.setupCard.test.jsx](../src/pages/AnimalWorkspace/__tests__/RecordingDaysTab.setupCard.test.jsx));
+  the obsolete in-pane setup-checklist tests were retired (the card supersedes them) and the surviving
+  "Review existing data" tests kept.
 
 ## Tabbed workspace IA — Phase 0: setup-screen copy quick wins (June 7, 2026)
 

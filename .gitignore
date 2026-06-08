@@ -136,3 +136,6 @@ docs/_build/
 
 # Claude Code scheduled-task runtime lock
 .claude/scheduled_tasks.lock
+
+# Brainstorm research notes (local-only, gitignored)
+docs/brainstorm/

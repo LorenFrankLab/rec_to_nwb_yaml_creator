@@ -3,9 +3,10 @@ import PropTypes from 'prop-types';
 import ReadOnlyDeviceInfo from './ReadOnlyDeviceInfo';
 import BadChannelsEditor from './BadChannelsEditor';
 import ReconfigWizard from './ReconfigWizard';
+import DayRecordingSystem from './DayRecordingSystem';
 import { reconcileAppliedToDays } from '../../state/configDiff';
 import { resolveDayConfig } from '../../state/workspaceUtils';
-import { getConfigHistory } from '../../state/workspaceSelectors';
+import { getConfigHistory, getDataAcqDevices } from '../../state/workspaceSelectors';
 import { rawRecord } from '../../components/rawPropTypes';
 import { isMultiShankGroup, validBadChannelIds } from '../../domain/badChannels';
 import { classifyDeviceOverrides } from '../../domain/deviceOverrides';
@@ -65,6 +66,17 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
     }
   }, [animal, day]);
   const electrodeGroups = effectiveConfig.electrode_groups;
+
+  // The per-day recording-system selector (shown in every day setup — a behaviour-only day with no
+  // electrodes still exports an acquisition device). The animal owns the catalog; this day references
+  // one by name. Rendered in both the empty-state and the main return.
+  const recordingSystemPicker = (
+    <DayRecordingSystem
+      catalog={getDataAcqDevices(animal)}
+      selectedName={typeof day.data_acq_device_name === 'string' ? day.data_acq_device_name : undefined}
+      onSelect={(name) => onFieldUpdate('data_acq_device_name', name)}
+    />
+  );
 
   // Configuration-version legibility (only when wired with store actions + the
   // animal's days, i.e. inside the real Day Editor — not in isolated unit renders).
@@ -403,7 +415,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
             This animal&apos;s device configuration is missing or corrupt, so devices
             can&apos;t be shown for this day.
           </p>
-          <a href={`#/animal/${ownerKey}/editor?field=electrode_groups`} className="button-primary">
+          <a href={`#/animal/${ownerKey}/electrode-groups?field=electrode_groups`} className="button-primary">
             Configure devices in Animal Setup
           </a>
         </div>
@@ -417,6 +429,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
     return (
       <div className="devices-step">
         <h2>Devices Configuration</h2>
+        {recordingSystemPicker}
         {overrideCleanupSection}
         <div className="empty-state">
           <p>No electrodes are set up for {ownerKey} yet.</p>
@@ -424,7 +437,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
             Electrodes/probes are shared animal setup. You can mark failed channels for this
             recording day only after electrodes exist.
           </p>
-          <a href={`#/animal/${ownerKey}/editor?field=electrode_groups`} className="button-primary">
+          <a href={`#/animal/${ownerKey}/electrode-groups?field=electrode_groups`} className="button-primary">
             Set Up Electrodes
           </a>
         </div>
@@ -436,11 +449,13 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
     <div className="devices-step">
       <h2>Devices Configuration</h2>
 
+      {recordingSystemPicker}
+
       {/* This day's relationship to shared animal setup: it USES an animal configuration
           version; probe geometry is edited in the shared animal setup, not here. */}
       <div className="inherited-notice">
         This day uses animal electrode configuration v{effectiveConfig.configurationVersion ?? '—'}.
-        <a href={`#/animal/${ownerKey}/editor?field=electrode_groups`}>Edit shared animal electrode setup</a>
+        <a href={`#/animal/${ownerKey}/electrode-groups?field=electrode_groups`}>Edit shared animal electrode setup</a>
       </div>
 
       {/* Configuration-version indicator + reconfiguration entry point. The wizard
@@ -567,7 +582,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
                   <div className="error-state-inline">
                     <p>⚠ No channel mapping found for this electrode group.</p>
                     <p>This usually indicates data corruption. Please review animal configuration.</p>
-                    <a href={`#/animal/${ownerKey}/editor?field=ntrode_electrode_group_channel_map`}>Fix in Animal Setup</a>
+                    <a href={`#/animal/${ownerKey}/channel-maps?field=ntrode_electrode_group_channel_map`}>Fix in Animal Setup</a>
                   </div>
                 </div>
               </details>

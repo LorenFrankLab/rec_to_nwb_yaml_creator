@@ -5,7 +5,7 @@ import { useDayIdFromUrl } from '../../hooks/useDayIdFromUrl';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { getAnimalSubject, getDayTasks, getAnimalDayIds } from '../../state/workspaceSelectors';
 import { applyRepairCommand } from '../../state/repairCommands';
-import { computeStepStatus } from '../../domain/validation';
+import { computeStepStatus, animalSetupTabForFieldPath } from '../../domain/validation';
 import { describeOwner } from '../../domain/dayRecovery';
 import { isExportEnabled } from './stepGate';
 import StepNavigation from './StepNavigation';
@@ -166,12 +166,13 @@ export default function DayEditorStepper() {
     if (target === 'animal') {
       if (ownerKey != null) {
         // Navigate by the resolved owner STORE KEY (not the possibly-stale `animal.id` record
-        // field), so the Animal Editor opens the right animal. Encode the field path so it can
-        // deep-link to the step that owns the fix rather than dropping the repair target.
-        const base = `#/animal/${encodeURIComponent(ownerKey)}/editor`;
+        // field), so the tabbed Animal View opens the right animal. Re-point at the SETUP TAB that
+        // owns the fix (tabbed IA) and carry `?field=` so the destination can highlight the control;
+        // with no field, land on the animal home (`days`).
+        const animalBase = `#/animal/${encodeURIComponent(ownerKey)}`;
         window.location.hash = fieldPath
-          ? `${base}?field=${encodeURIComponent(fieldPath)}`
-          : base;
+          ? `${animalBase}/${animalSetupTabForFieldPath(fieldPath).tab}?field=${encodeURIComponent(fieldPath)}`
+          : `${animalBase}/days`;
       }
       return;
     }

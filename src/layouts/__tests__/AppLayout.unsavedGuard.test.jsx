@@ -38,9 +38,6 @@ vi.mock('../../pages/ValidationSummary', () => ({
 vi.mock('../../pages/LegacyFormView', () => ({
   LegacyFormView: () => <main id="main-content" role="main">Legacy</main>,
 }));
-vi.mock('../../pages/AnimalEditor', () => ({
-  default: () => <main id="main-content" role="main">Animal Editor</main>,
-}));
 
 describe('AppLayout unsaved-work guard wiring', () => {
   let originalLocation;

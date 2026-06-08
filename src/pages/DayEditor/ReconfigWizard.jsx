@@ -100,7 +100,10 @@ export default function ReconfigWizard({
       fromDay: day.id,
       movedDays: String(movingDays.length),
     });
-    window.location.hash = `#/animal/${encodeURIComponent(ownerKey)}/editor?${params.toString()}`;
+    // Land on the electrode-groups tab — reconfiguration forks the VERSIONED electrode config, and
+    // AnimalView reads `?context=reconfigure&…` there (the Phase 3-4 reconfig banner + the dated
+    // ConfigVersionContext both live on that tab). The params are preserved verbatim.
+    window.location.hash = `#/animal/${encodeURIComponent(ownerKey)}/electrode-groups?${params.toString()}`;
   };
 
   const handleApply = () => {

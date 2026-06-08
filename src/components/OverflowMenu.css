@@ -1,0 +1,68 @@
+/* OverflowMenu — reusable ⋮ menu-button (Phase 4, Task 4.1). */
+
+.overflow-menu {
+  position: relative;
+  display: inline-block;
+}
+
+.overflow-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: #444;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.overflow-menu-trigger:hover {
+  background: #f0f0f0;
+}
+
+.overflow-menu-trigger:focus-visible,
+.overflow-menu-item:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 1px;
+}
+
+.overflow-menu-list {
+  position: absolute;
+  right: 0;
+  z-index: 20;
+  min-width: 12rem;
+  margin: 0.25rem 0 0;
+  padding: 0.25rem;
+  list-style: none;
+  background: #fff;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+}
+
+.overflow-menu-item {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  text-align: left;
+  color: #1a1a1a;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.overflow-menu-item:hover:not([aria-disabled='true']) {
+  background: #f0f4ff;
+}
+
+.overflow-menu-item[aria-disabled='true'] {
+  color: #9aa0a6;
+  cursor: default;
+}

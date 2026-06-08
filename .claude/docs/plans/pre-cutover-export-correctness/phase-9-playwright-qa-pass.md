@@ -9,6 +9,14 @@ ownership/default/day-configurability explicit. This phase exercises the
 stitched-together flows with Playwright so regressions in routing, focus, modals, disabled states, downloads,
 localStorage, workflow clarity, and browser-only behavior cannot hide behind unit/integration coverage.
 
+> **Sequencing note (tabbed-workspace-ia redesign):** this phase runs **after** the
+> [tabbed-workspace-ia](../tabbed-workspace-ia/overview.md) redesign (Phases 0–5) and exercises the
+> **tabbed IA** (`#/animal/:id/:tab`, the section nav, ⋮ menus), not the stepper. The ownership /
+> discoverability / lifecycle browser scenarios (Tasks 4.5/4.6) are **supplied by tabbed Phase 5**
+> (keyed to the tab routes) — use those, don't author stepper-IA scenarios. The redesign is UI-only
+> (baselines byte-identical), so the **export-correctness substance** here (validation gates + the NWB
+> round-trip) is IA-agnostic and MAY be verified early/in parallel with the IA rebuild.
+
 **Inputs to read first:**
 
 - [playwright.config.js](../../../../playwright.config.js) — existing Playwright setup (`testDir: ./e2e`,

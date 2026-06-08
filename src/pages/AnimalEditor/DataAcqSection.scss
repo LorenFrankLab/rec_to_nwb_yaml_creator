@@ -9,6 +9,26 @@
  * - Mobile responsive
  */
 
+/* Catalog table (add/edit/delete recording systems) — mirrors the Cameras tab (`.cameras-table`,
+   `.table-actions`, the empty state, `button-small`/`button-danger` row actions, and the modal). */
+.data-acq-table .recording-system-default-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #2c5d2c;
+  background: #e6f4e6;
+  border-radius: 3px;
+  padding: 0.08rem 0.4rem;
+}
+
+.recording-system-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
 .data-acq-section {
   // Elevation 0 (gray background)
   background-color: var(--color-surface-variant, #f5f5f5);

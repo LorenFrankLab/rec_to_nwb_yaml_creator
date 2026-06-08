@@ -507,43 +507,45 @@ describe('integration scenarios', () => {
     });
   });
 
-  it('parses #/animal/:id/editor route', () => {
+  it('redirects a stale #/animal/:id/editor bookmark to the tabbed days tab (Phase 5)', () => {
+    // The legacy stepper route was removed in Phase 5; `editor` is no longer a special segment, so
+    // it resolves like any unknown tab — to the animal-view `days` tab (a graceful redirect).
     window.location.hash = '#/animal/remy/editor';
     const { result } = renderHook(() => useHashRouter());
 
-    expect(result.current.view).toBe('animal-editor');
-    expect(result.current.params.animalId).toBe('remy');
+    expect(result.current.view).toBe('animal-view');
+    expect(result.current.params).toEqual({ animalId: 'remy', tab: 'days' });
   });
 
-  it('parses animal editor route with query params', () => {
+  it('redirects a stale editor route with query params to the days tab', () => {
     window.location.hash = '#/animal/bean/editor?step=groups';
     const { result } = renderHook(() => useHashRouter());
 
-    expect(result.current.view).toBe('animal-editor');
-    expect(result.current.params.animalId).toBe('bean');
+    expect(result.current.view).toBe('animal-view');
+    expect(result.current.params).toEqual({ animalId: 'bean', tab: 'days' });
   });
 });
 
-describe('animal editor route edge cases', () => {
+describe('stale editor route → days redirect (Phase 5)', () => {
   describe('valid animal IDs', () => {
     it('handles complex alphanumeric IDs with hyphens and underscores', () => {
       expect(parseHashRoute('#/animal/remy-2023_batch-1/editor')).toEqual({
-        view: 'animal-editor',
-        params: { animalId: 'remy-2023_batch-1' }
+        view: 'animal-view',
+        params: { animalId: 'remy-2023_batch-1', tab: 'days' }
       });
     });
 
     it('handles numeric-only IDs', () => {
       expect(parseHashRoute('#/animal/12345/editor')).toEqual({
-        view: 'animal-editor',
-        params: { animalId: '12345' }
+        view: 'animal-view',
+        params: { animalId: '12345', tab: 'days' }
       });
     });
 
     it('handles uppercase IDs', () => {
       expect(parseHashRoute('#/animal/BEAN/editor')).toEqual({
-        view: 'animal-editor',
-        params: { animalId: 'BEAN' }
+        view: 'animal-view',
+        params: { animalId: 'BEAN', tab: 'days' }
       });
     });
   });
@@ -561,10 +563,13 @@ describe('animal editor route edge cases', () => {
       expect(result.params).toEqual({});
     });
 
-    it('rejects #/animal/remy with missing /editor suffix', () => {
-      const result = parseHashRoute('#/animal/remy');
-      expect(result.view).toBe('legacy');
-      expect(result.params).toEqual({});
+    it('treats #/animal/remy (no tab) as the tabbed view, defaulting to the days tab', () => {
+      // Phase 1 (tabbed-workspace-ia): a bare animal route is the tabbed view, not a
+      // rejected route — it resolves to the default `days` tab (redirect-to-days).
+      expect(parseHashRoute('#/animal/remy')).toEqual({
+        view: 'animal-view',
+        params: { animalId: 'remy', tab: 'days' },
+      });
     });
 
     it('rejects #/animal/remy/editor/extra with trailing segments', () => {
@@ -600,5 +605,64 @@ describe('animal editor route edge cases', () => {
         '/animal//editor'
       );
     });
+  });
+});
+
+describe('tabbed animal-view route (Phase 1 — tabbed-workspace-ia)', () => {
+  it.each([
+    'days',
+    'export',
+    'electrode-groups',
+    'channel-maps',
+    'recording-system',
+    'cameras',
+    'dio',
+    'optogenetics',
+  ])('parses #/animal/remy/%s into the animal-view with that tab', (tab) => {
+    expect(parseHashRoute(`#/animal/remy/${tab}`)).toEqual({
+      view: 'animal-view',
+      params: { animalId: 'remy', tab },
+    });
+  });
+
+  it('defaults a bare #/animal/:id (no tab) to the days tab', () => {
+    expect(parseHashRoute('#/animal/bean')).toEqual({
+      view: 'animal-view',
+      params: { animalId: 'bean', tab: 'days' },
+    });
+  });
+
+  it('normalizes an unknown tab to days (redirect-to-days)', () => {
+    expect(parseHashRoute('#/animal/remy/banana')).toEqual({
+      view: 'animal-view',
+      params: { animalId: 'remy', tab: 'days' },
+    });
+  });
+
+  it('strips query params while keeping the tab (repair deep-links carry ?field=)', () => {
+    expect(parseHashRoute('#/animal/remy/cameras?field=meters_per_pixel')).toEqual({
+      view: 'animal-view',
+      params: { animalId: 'remy', tab: 'cameras' },
+    });
+  });
+
+  it('redirects the removed #/animal/:id/editor stepper route to the days tab (Phase 5)', () => {
+    expect(parseHashRoute('#/animal/remy/editor')).toEqual({
+      view: 'animal-view',
+      params: { animalId: 'remy', tab: 'days' },
+    });
+  });
+
+  it('preserves complex IDs and decodes nothing here (raw id passed through)', () => {
+    expect(parseHashRoute('#/animal/remy-2023_batch-1/channel-maps')).toEqual({
+      view: 'animal-view',
+      params: { animalId: 'remy-2023_batch-1', tab: 'channel-maps' },
+    });
+  });
+
+  it('rejects a whitespace-only animal ID even with a valid tab', () => {
+    const result = parseHashRoute('#/animal/   /days');
+    expect(result.view).toBe('legacy');
+    expect(result.params).toEqual({});
   });
 });

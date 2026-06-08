@@ -152,26 +152,28 @@
     }
   }
 
-  // Action button in table
+  // Action button in table — neutral/grey to match the Edit buttons on the Electrode Groups,
+  // Cameras, and Recording System tabs (those use the standard grey `.button-small`; this tab must
+  // not stand out blue).
   .button-small {
     padding: 0.4rem 1rem;
     font-size: 0.875rem;
     font-weight: 500;
-    background-color: var(--color-primary);
-    color: white;
-    border: none;
+    background-color: var(--color-grey-100);
+    color: var(--color-grey-900);
+    border: 1px solid var(--color-grey-300);
     border-radius: 4px;
     cursor: pointer;
     transition: all 0.2s ease;
     font-family: inherit;
 
-    &:hover {
-      background-color: #1976d2;
-      box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+    &:hover:not(:disabled) {
+      background-color: var(--color-grey-200);
+      border-color: var(--color-grey-600);
     }
 
-    &:active {
-      background-color: #0d47a1;
+    &:active:not(:disabled) {
+      background-color: var(--color-grey-300);
       transform: translateY(1px);
     }
 

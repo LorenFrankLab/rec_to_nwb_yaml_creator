@@ -58,6 +58,11 @@ body {
   margin-left: auto;
 }
 
+/* Separator between the "Workspace" link and the animal object-selector (Task 4.5). */
+.primary-nav-sep {
+  color: #9a9384;
+}
+
 /* Notice shown when a previously-saved workspace could not be restored. */
 .load-notice {
   display: flex;

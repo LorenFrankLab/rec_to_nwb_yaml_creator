@@ -1,16 +1,17 @@
-import { useState, useRef } from 'react';
+import { useState, useId } from 'react';
 import PropTypes from 'prop-types';
 import { findIdentityDivergence, DATA_ACQ_DEPENDENT_FIELDS, IDENTITY_FIELD_LABELS } from './identitySafety';
 import { getDataAcqDevices } from '../../state/workspaceSelectors';
 import { rawArray } from '../../components/rawPropTypes';
+import Modal from '../../components/Modal/Modal';
 import './DataAcqSection.scss';
 
 const DEVICE_FIELDS = ['name', 'system', 'amplifier', 'adc_circuit'];
-const REQUIRED_DEVICE_FIELDS = DEVICE_FIELDS;
 
 /**
- *
- * @param fields
+ * Normalize a device's four string fields (trimmed).
+ * @param {object} fields - Raw device fields.
+ * @returns {object} Normalized {name, system, amplifier, adc_circuit}.
  */
 function normalizeDeviceFields(fields) {
   return {
@@ -22,167 +23,182 @@ function normalizeDeviceFields(fields) {
 }
 
 /**
- *
- * @param device
+ * Whether all four device fields are present.
+ * @param {object} device - Normalized device.
+ * @returns {boolean}
  */
 function isCompleteDevice(device) {
-  return REQUIRED_DEVICE_FIELDS.every((field) => device[field]);
+  return DEVICE_FIELDS.every((field) => device[field]);
 }
 
 /**
- *
- * @param device
+ * The identity-dependent fields of a device (everything but the name).
+ * @param {object} device - A device.
+ * @returns {object} {system, amplifier, adc_circuit}.
  */
 function dependentFields(device) {
   return Object.fromEntries(DATA_ACQ_DEPENDENT_FIELDS.map((field) => [field, device[field]]));
 }
 
+const BLANK_DEVICE = { name: '', system: 'SpikeGadgets', amplifier: '', adc_circuit: '' };
+
 /**
- * DataAcqSection - Data Acquisition Device + technical defaults (Animal Editor).
+ * DataAcqSection — the animal's Recording System CATALOG + technical defaults (Animal View tab).
  *
- * The export reads `animal.devices.data_acq_device` as an ARRAY of
- * `{name, system, amplifier, adc_circuit}` (schema-required), so this section edits a
- * single device but persists it as a one-element array via
- * `onFieldUpdate('data_acq_device', [item])`. `name` is a Spyglass
- * `DataAcquisitionDevice` identity: reusing it elsewhere in the dataset with different
- * `system`/`amplifier`/`adc_circuit` is blocked here with a side-by-side comparison and
- * a steer to a new name.
+ * Mirrors the Cameras tab: a table of acquisition systems with `+ Add` / Edit / Delete and a modal
+ * editor. The animal owns a LIST (`devices.data_acq_device`); each recording day references the ONE
+ * it used (Day Editor); the first catalog entry is the default unreferenced days inherit. `name` is
+ * the Spyglass `DataAcquisitionDevice` identity — unique within the catalog, and a same-name-
+ * different-hardware reuse elsewhere in the dataset is blocked with a side-by-side comparison.
  *
- * Technical DEFAULTS (`raw_data_to_volts`, `times_period_multiplier`) are edited here as
- * `animal.technicalDefaults` (seeded into each day's `technical` at createDay,
- * overridable per day). They are never exported directly. Per-day technical values
- * (`default_header_file_path`, `units`) are edited in the Day Editor, where the export
- * reads `day.technical`.
+ * The technical DEFAULTS (`raw_data_to_volts`, `times_period_multiplier`) are animal-level
+ * (`animal.technicalDefaults`, seeded into each day's `technical`); never exported directly.
  *
  * @param {object} props
  * @param {object} props.animal - Animal record (`devices.data_acq_device`, `technicalDefaults`).
- * @param {Function} props.onFieldUpdate - Field update callback.
- * @param {Array<{name: string, fields: object, label: string}>} [props.dataAcqRegistry] -
- *   Data-acq identities elsewhere in the dataset, for divergent-reuse detection.
+ * @param {Function} props.onFieldUpdate - Field update callback (field, value).
+ * @param {Array<{name: string, fields: object, label: string}>} [props.dataAcqRegistry] - Data-acq
+ *   identities elsewhere in the dataset, for divergent-reuse detection.
  * @returns {JSX.Element}
  */
 export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry = [] }) {
-  // Read through the canonical selector: a corrupt non-array data_acq_device degrades to
-  // no device instead of crashing this repair destination.
-  const device = getDataAcqDevices(animal)[0] || {};
+  const catalog = getDataAcqDevices(animal);
   const defaults = animal.technicalDefaults || {};
-  const nameInputRef = useRef(null);
+  const titleId = useId();
 
-  const [localState, setLocalState] = useState({
-    name: device.name || '',
-    system: device.system || 'SpikeGadgets',
-    amplifier: device.amplifier || '',
-    adc_circuit: device.adc_circuit || '',
+  // The open add/edit modal (null when closed). `index` is the edited catalog position.
+  const [editing, setEditing] = useState(null);
+  const [error, setError] = useState('');
+  const [divergence, setDivergence] = useState(null);
+
+  // Technical defaults: local state committed on blur (independent of the device editor).
+  const [tech, setTech] = useState({
     raw_data_to_volts: defaults.raw_data_to_volts ?? 0.195,
     times_period_multiplier: defaults.times_period_multiplier ?? 1.5,
   });
-  // Set when the current device fields would reuse another device's name with
-  // divergent dependent values. Blocks the save until resolved.
-  const [divergence, setDivergence] = useState(null);
-  const [deviceError, setDeviceError] = useState('');
+  const commitTech = (next) =>
+    onFieldUpdate('technicalDefaults', {
+      raw_data_to_volts: next.raw_data_to_volts,
+      times_period_multiplier: next.times_period_multiplier,
+    });
 
-  const handleFieldChange = (field, value) => {
-    setLocalState((prev) => ({ ...prev, [field]: value }));
+  const openAdd = () => {
+    setError('');
+    setDivergence(null);
+    setEditing({ mode: 'add', index: null, fields: { ...BLANK_DEVICE } });
   };
+  const openEdit = (index) => {
+    setError('');
+    setDivergence(null);
+    setEditing({ mode: 'edit', index, fields: { ...normalizeDeviceFields(catalog[index]) } });
+  };
+  const closeEditor = () => {
+    setEditing(null);
+    setError('');
+    setDivergence(null);
+  };
+  const setEditorField = (field, value) =>
+    setEditing((prev) => ({ ...prev, fields: { ...prev.fields, [field]: value } }));
 
-  /**
-   * Persist the device (as a one-element array) unless its name diverges from an
-   * existing data-acq identity; persist technical defaults directly.
-   *
-   * @param {string} field - The blurred field.
-   * @param {object} nextState - The latest local state (post-change).
-   */
-  const commit = (field, nextState) => {
-    if (DEVICE_FIELDS.includes(field)) {
-      const candidate = normalizeDeviceFields(nextState);
-      if (!isCompleteDevice(candidate)) {
-        setDivergence(null);
-        setDeviceError('Complete name, system, amplifier, and ADC circuit before saving this device.');
-        return;
-      }
-
-      const savedDevice = normalizeDeviceFields(device);
-      const savedIdentity = isCompleteDevice(savedDevice)
-        ? [{
-            name: savedDevice.name,
-            label: `${animal.id} data-acq device saved identity`,
-            fields: dependentFields(savedDevice),
-          }]
-        : [];
-      const conflict = findIdentityDivergence(
-        candidate.name,
-        dependentFields(candidate),
-        savedIdentity
-      ) || findIdentityDivergence(
-        candidate.name,
-        dependentFields(candidate),
-        dataAcqRegistry
-      );
-      if (conflict) {
-        setDivergence(conflict);
-        setDeviceError('');
-        return; // Block: do not write a divergent reuse.
-      }
+  const saveEditor = () => {
+    const candidate = normalizeDeviceFields(editing.fields);
+    if (!isCompleteDevice(candidate)) {
       setDivergence(null);
-      setDeviceError('');
-      onFieldUpdate('data_acq_device', [candidate]);
+      setError('Complete name, system, amplifier, and ADC circuit before saving.');
       return;
     }
-    onFieldUpdate('technicalDefaults', {
-      raw_data_to_volts: nextState.raw_data_to_volts,
-      times_period_multiplier: nextState.times_period_multiplier,
-    });
+    // Name-uniqueness within the catalog (the name IS the Spyglass identity) — excluding the edited row.
+    const clashesInCatalog = catalog.some(
+      (d, i) => i !== editing.index && normalizeDeviceFields(d).name === candidate.name
+    );
+    if (clashesInCatalog) {
+      setDivergence(null);
+      setError('That name is already in the catalog. Each recording system must have a unique name.');
+      return;
+    }
+    // Cross-dataset divergence: the same name used on another animal with DIFFERENT hardware.
+    const conflict = findIdentityDivergence(candidate.name, dependentFields(candidate), dataAcqRegistry);
+    if (conflict) {
+      setError('');
+      setDivergence(conflict);
+      return;
+    }
+    const next =
+      editing.mode === 'add'
+        ? [...catalog, candidate]
+        : catalog.map((d, i) => (i === editing.index ? candidate : d));
+    onFieldUpdate('data_acq_device', next);
+    closeEditor();
   };
 
-  // Commit on blur from the current local state. `commit` has side effects
-  // (onFieldUpdate / setDivergence), so it must run outside any setState updater —
-  // a state updater must stay pure (React may call it more than once).
-  const handleBlur = (field) => {
-    commit(field, localState);
-  };
-
-  const handleUseNewName = () => {
-    setDivergence(null);
-    if (nameInputRef.current) nameInputRef.current.focus();
+  const deleteAt = (index) => {
+    // Schema requires at least one device — never delete the last.
+    if (catalog.length <= 1) return;
+    onFieldUpdate('data_acq_device', catalog.filter((_, i) => i !== index));
   };
 
   const isValidPositive = (value) => value > 0;
 
-  return (
-    <div className="data-acq-section">
-      <header className="section-header">
-        <h2>Recording System</h2>
-        {/* Phase 8.7: the two things edited here have DIFFERENT blast radii — say so, don't
-            blanket-claim "affects all days". The data-acq device identity is live
-            (animal.devices.data_acq_device, merged into every day) so it reaches all days; the
-            technical defaults only seed NEW days at creation (animal.technicalDefaults), so
-            existing days keep their copied day.technical values. */}
-        <p>
-          Shared recording-system setup for this animal. The data-acquisition device identity
-          (name, system, amplifier, ADC) is shared — editing it affects all recording days. The
-          technical defaults below seed each new recording day and are overridable per day, so
-          editing them affects future days only; existing days keep their values.
+  const technicalDefaults = (
+    <details className="advanced-settings">
+      <summary>Advanced Settings</summary>
+      <div className="advanced-content">
+        <p className="help-text">
+          These seed the technical defaults for new recording days and can be overridden per day.
+          Typical values are 0.195 (raw data to volts) and 1.5 (times period multiplier); change them
+          only if instructed by your recording-system vendor or pipeline maintainer — incorrect values
+          can corrupt data.
         </p>
-      </header>
 
-      {/* Phase 8.7 Task 3 (decided option B): data-acq has NO per-day binding — the export reads
-          animal.devices.data_acq_device live into every day — so a genuine mid-study hardware
-          change can't be kept off earlier days. Name that limitation (no-silent-retroactive)
-          instead of implying a day-level edit exists. Per-day recording-system versioning is a
-          separate future phase. */}
-      <div className="recording-system-blast-radius" role="note">
-        {/* Scope the bold lead to the IDENTITY, not the whole section — the rig-constant defaults
-            below ARE per-day overridable, so "no per-day version" must not be read as covering them. */}
-        <strong>One recording-system identity per animal — no per-day version yet.</strong> A
-        mid-study hardware change (for example, swapping the amplifier or acquisition device for
-        later sessions) can&apos;t be represented per day in this app yet: the device identity below
-        is shared, so editing it changes every one of this animal&apos;s recording days — there is
-        no way to keep earlier days on the old hardware. Per-day recording-system versioning is a
-        planned future capability.
+        <div className="form-group">
+          <label htmlFor="raw_data_to_volts">Raw Data to Volts</label>
+          <input
+            type="number"
+            id="raw_data_to_volts"
+            value={Number.isFinite(tech.raw_data_to_volts) ? tech.raw_data_to_volts : ''}
+            onChange={(e) => setTech((p) => ({ ...p, raw_data_to_volts: parseFloat(e.target.value) }))}
+            onBlur={() => commitTech(tech)}
+            step="0.0001"
+            min="0"
+            aria-invalid={!isValidPositive(tech.raw_data_to_volts)}
+            aria-describedby="raw-data-help"
+          />
+          <small id="raw-data-help" className="help-text">
+            Conversion factor for electrophysiology signals (must be &gt; 0)
+          </small>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="times_period_multiplier">Times Period Multiplier</label>
+          <input
+            type="number"
+            id="times_period_multiplier"
+            value={Number.isFinite(tech.times_period_multiplier) ? tech.times_period_multiplier : ''}
+            onChange={(e) => setTech((p) => ({ ...p, times_period_multiplier: parseFloat(e.target.value) }))}
+            onBlur={() => commitTech(tech)}
+            step="0.0001"
+            min="0"
+            aria-invalid={!isValidPositive(tech.times_period_multiplier)}
+            aria-describedby="times-help"
+          />
+          <small id="times-help" className="help-text">
+            Timestamp multiplier (must be &gt; 0)
+          </small>
+        </div>
       </div>
+    </details>
+  );
 
-      <form className="data-acq-form">
-        {/* Name (Spyglass identity) */}
+  // Shared add/edit modal (mirrors CameraModal). isOpen is driven by `editing`.
+  const editorModal = (
+    <Modal
+      isOpen={editing != null}
+      onClose={closeEditor}
+      title={editing?.mode === 'add' ? 'Add recording system' : 'Edit recording system'}
+      titleId={titleId}
+      className="recording-system-modal"
+    >
+      <form className="data-acq-form" aria-label="Recording system editor">
         <div className="form-group">
           <label htmlFor="data_acq_name">
             Name <span className="required">*</span>
@@ -190,10 +206,8 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
           <input
             type="text"
             id="data_acq_name"
-            ref={nameInputRef}
-            value={localState.name}
-            onChange={(e) => handleFieldChange('name', e.target.value)}
-            onBlur={() => handleBlur('name')}
+            value={editing?.fields.name ?? ''}
+            onChange={(e) => setEditorField('name', e.target.value)}
             placeholder="e.g., SpikeGadgets_MCU"
             required
           />
@@ -202,16 +216,14 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
           </small>
         </div>
 
-        {/* System Dropdown */}
         <div className="form-group">
           <label htmlFor="system">
             System <span className="required">*</span>
           </label>
           <select
             id="system"
-            value={localState.system}
-            onChange={(e) => handleFieldChange('system', e.target.value)}
-            onBlur={() => handleBlur('system')}
+            value={editing?.fields.system ?? 'SpikeGadgets'}
+            onChange={(e) => setEditorField('system', e.target.value)}
             required
           >
             <option value="SpikeGadgets">SpikeGadgets</option>
@@ -221,7 +233,6 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
           </select>
         </div>
 
-        {/* Amplifier */}
         <div className="form-group">
           <label htmlFor="amplifier">
             Amplifier <span className="required">*</span>
@@ -229,15 +240,13 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
           <input
             type="text"
             id="amplifier"
-            value={localState.amplifier}
-            onChange={(e) => handleFieldChange('amplifier', e.target.value)}
-            onBlur={() => handleBlur('amplifier')}
+            value={editing?.fields.amplifier ?? ''}
+            onChange={(e) => setEditorField('amplifier', e.target.value)}
             placeholder="e.g., Intan RHD2000"
             required
           />
         </div>
 
-        {/* ADC Circuit */}
         <div className="form-group">
           <label htmlFor="adc_circuit">
             ADC Circuit <span className="required">*</span>
@@ -245,25 +254,25 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
           <input
             type="text"
             id="adc_circuit"
-            value={localState.adc_circuit}
-            onChange={(e) => handleFieldChange('adc_circuit', e.target.value)}
-            onBlur={() => handleBlur('adc_circuit')}
+            value={editing?.fields.adc_circuit ?? ''}
+            onChange={(e) => setEditorField('adc_circuit', e.target.value)}
             placeholder="e.g., Intan"
             required
           />
         </div>
 
-        {deviceError && (
+        {error && (
           <div className="validation-error" role="alert">
-            {deviceError}
+            {error}
           </div>
         )}
 
         {divergence && (
           <div className="identity-divergence" role="alert">
             <p className="identity-divergence-title">
-              The name “{localState.name.trim()}” is already used by {divergence.existing.label} with
-              different hardware. The same data-acq name must mean the same device.
+              The name “{(editing?.fields.name ?? '').trim()}” is already used by{' '}
+              {divergence.existing.label} with different hardware. The same data-acq name must mean the
+              same device.
             </p>
             <table className="identity-divergence-table">
               <thead>
@@ -274,89 +283,127 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
                   <tr key={field}>
                     <td>{IDENTITY_FIELD_LABELS[field] || field}</td>
                     <td>{String(divergence.existing.fields[field] ?? '')}</td>
-                    <td>{String(localState[field] ?? '')}</td>
+                    <td>{String(editing?.fields[field] ?? '')}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <button type="button" className="button-primary" onClick={handleUseNewName}>
-              Use a new name
-            </button>
           </div>
         )}
 
-        {/* Technical defaults (seeded into new days) */}
-        <details className="advanced-settings">
-          <summary>Advanced Settings</summary>
-          <div className="advanced-content">
-            <p className="help-text">
-              These seed the technical defaults for new recording days and can be overridden per day.
-              Typical values are 0.195 (raw data to volts) and 1.5 (times period multiplier); change them
-              only if instructed by your recording-system vendor or pipeline maintainer — incorrect values
-              can corrupt data.
-            </p>
-
-            <div className="form-group">
-              <label htmlFor="raw_data_to_volts">Raw Data to Volts</label>
-              <input
-                type="number"
-                id="raw_data_to_volts"
-                value={Number.isFinite(localState.raw_data_to_volts) ? localState.raw_data_to_volts : ''}
-                onChange={(e) => handleFieldChange('raw_data_to_volts', parseFloat(e.target.value))}
-                onBlur={() => handleBlur('raw_data_to_volts')}
-                step="0.0001"
-                min="0"
-                aria-invalid={!isValidPositive(localState.raw_data_to_volts)}
-                aria-describedby="raw-data-help"
-              />
-              <small id="raw-data-help" className="help-text">
-                Conversion factor for electrophysiology signals (must be &gt; 0)
-              </small>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="times_period_multiplier">Times Period Multiplier</label>
-              <input
-                type="number"
-                id="times_period_multiplier"
-                value={Number.isFinite(localState.times_period_multiplier) ? localState.times_period_multiplier : ''}
-                onChange={(e) => handleFieldChange('times_period_multiplier', parseFloat(e.target.value))}
-                onBlur={() => handleBlur('times_period_multiplier')}
-                step="0.0001"
-                min="0"
-                aria-invalid={!isValidPositive(localState.times_period_multiplier)}
-                aria-describedby="times-help"
-              />
-              <small id="times-help" className="help-text">
-                Timestamp multiplier (must be &gt; 0)
-              </small>
-            </div>
-          </div>
-        </details>
+        <div className="recording-system-editor-actions">
+          <button type="button" className="button-secondary" onClick={closeEditor}>
+            Cancel
+          </button>
+          <button type="button" className="button-primary" onClick={saveEditor}>
+            Save recording system
+          </button>
+        </div>
       </form>
+    </Modal>
+  );
+
+  // Empty state (mirrors CamerasSection).
+  if (catalog.length === 0) {
+    return (
+      <div className="data-acq-section">
+        <div className="cameras-section empty-state">
+          <div className="empty-state-icon">🎛️</div>
+          <h3>No Recording System Configured</h3>
+          <p>
+            The recording systems this animal was recorded on. Each recording day uses one; the first
+            is the default a day inherits when it hasn&apos;t chosen its own.
+          </p>
+          <button type="button" className="button-primary add-recording-system" onClick={openAdd}>
+            Add First Recording System
+          </button>
+        </div>
+        {technicalDefaults}
+        {editorModal}
+      </div>
+    );
+  }
+
+  return (
+    <div className="data-acq-section">
+      <header className="section-header">
+        <h2>Recording System</h2>
+        <p>
+          The recording systems this animal was recorded on. Each recording day uses one (chosen in
+          the day&apos;s setup); the first here is the default a day inherits when it hasn&apos;t
+          chosen its own. A single .rec session is recorded by one acquisition system — an animal
+          recorded on different rigs over time is captured by different days, each using one of these.
+        </p>
+      </header>
+
+      <div className="table-actions">
+        <button type="button" className="button-primary add-recording-system" onClick={openAdd}>
+          + Add Recording System
+        </button>
+      </div>
+
+      <table className="data-acq-table cameras-table" role="table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>System</th>
+            <th>Amplifier</th>
+            <th>ADC Circuit</th>
+            <th>Role</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {catalog.map((device, index) => {
+            const d = normalizeDeviceFields(device);
+            return (
+              <tr key={`${d.name}-${index}`}>
+                <td data-label="Name">{d.name || '(unnamed)'}</td>
+                <td data-label="System">{d.system}</td>
+                <td data-label="Amplifier">{d.amplifier}</td>
+                <td data-label="ADC Circuit">{d.adc_circuit}</td>
+                <td data-label="Role">
+                  {index === 0 && <span className="recording-system-default-badge">Default</span>}
+                </td>
+                <td data-label="Actions">
+                  <button
+                    type="button"
+                    className="button-small"
+                    onClick={() => openEdit(index)}
+                    aria-label={`Edit recording system ${d.name}`}
+                  >
+                    Edit
+                  </button>
+                  {/* Always present (consistent with the Electrode Groups / Cameras tabs), but
+                      disabled for the last system — the schema requires at least one. */}
+                  <button
+                    type="button"
+                    className="button-small button-danger"
+                    onClick={() => deleteAt(index)}
+                    disabled={catalog.length <= 1}
+                    title={catalog.length <= 1 ? 'The animal must have at least one recording system' : undefined}
+                    aria-label={`Delete recording system ${d.name}`}
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+
+      {technicalDefaults}
+      {editorModal}
     </div>
   );
 }
 
 DataAcqSection.propTypes = {
   animal: PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    devices: PropTypes.shape({
-      // Tolerant: a repair destination — a corrupt non-array data_acq_device is the state it
-      // surfaces (read through getDataAcqDevices), so it must not warn on it.
-      data_acq_device: rawArray(
-        PropTypes.shape({
-          name: PropTypes.string,
-          system: PropTypes.string,
-          amplifier: PropTypes.string,
-          adc_circuit: PropTypes.string,
-        })
-      ),
-    }),
-    technicalDefaults: PropTypes.shape({
-      raw_data_to_volts: PropTypes.number,
-      times_period_multiplier: PropTypes.number,
-    }),
+    id: PropTypes.string,
+    devices: PropTypes.shape({ data_acq_device: rawArray(PropTypes.object) }),
+    technicalDefaults: PropTypes.object,
   }).isRequired,
   onFieldUpdate: PropTypes.func.isRequired,
   dataAcqRegistry: PropTypes.arrayOf(PropTypes.object),

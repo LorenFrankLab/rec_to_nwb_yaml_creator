@@ -11,7 +11,7 @@
 
 import { validate } from '../validation';
 import { validateRawDay, validateRawAnimal } from '../validation/rawShape';
-import { getConfigHistory } from '../state/workspaceSelectors';
+import { getConfigHistory, getDataAcqDevices } from '../state/workspaceSelectors';
 
 /**
  * Whether `value` is a plain object record (not null, not an array). Mirrors the
@@ -295,6 +295,48 @@ function unpinnedConfigurationIssues(day, animal) {
  *   (e.g. a non-array `cameras`) into the gate.
  * @returns {Array} All validation issues for the day (each ownership-normalized).
  */
+/**
+ * Export-blocking issue for a day whose `data_acq_device_name` references a recording system that is
+ * no longer in the animal's catalog (renamed, removed, or a stale import). {@link resolveDayDataAcqDevice}
+ * would SILENTLY fall back to the first catalog entry — exporting a DIFFERENT acquisition device than
+ * the day recorded on (a wrong Spyglass `DataAcquisitionDevice` identity, which is irreversible once in
+ * the NWB/Spyglass record). The reference is consumed during the merge, so the merged-model rules can't
+ * see it; this catches it at the RAW boundary, mirroring `dangling_camera_ref` / `dangling_electrode_group_ref`.
+ *
+ * An UNSET reference is the documented "use the animal default (first)" path and is NOT flagged.
+ *
+ * @param {object} day - The day record (`data_acq_device_name`).
+ * @param {object} [animal] - The owning animal (its `data_acq_device` catalog).
+ * @returns {Array} Zero or one issue (day-routed, Devices step, error).
+ */
+export function danglingDataAcqRefIssue(day, animal) {
+  const name = day?.data_acq_device_name;
+  if (typeof name !== 'string' || name.trim() === '') return []; // unset → animal default: fine
+  if (getDataAcqDevices(animal).some((d) => d?.name === name)) return []; // resolves: fine
+  return [
+    {
+      path: 'data_acq_device',
+      field: 'data_acq_device',
+      step: 'devices',
+      actionLabel: 'Fix recording system',
+      code: 'dangling_data_acq_ref',
+      repairSurface: 'day',
+      severity: 'error',
+      message:
+        `This recording day was set to use recording system "${name}", but no recording system with ` +
+        `that name exists for this animal anymore (it was renamed or removed). Without a fix the export ` +
+        `would silently use a different system. Pick an existing recording system for this day in its ` +
+        `setup, or restore "${name}" on the animal's Recording System tab.`,
+    },
+  ];
+}
+
+/**
+ *
+ * @param day
+ * @param mergedDay
+ * @param animal
+ */
 export function validateDay(day, mergedDay, animal) {
   // Boundary 1: validate the RAW persisted day AND animal shape FIRST — before the merge
   // launders a corrupt collection (`tasks: {}`, `animal.cameras: "nope"`) into an empty
@@ -322,6 +364,7 @@ export function validateDay(day, mergedDay, animal) {
     ...taggedBase,
     ...dayOverrideIssues(day, mergedDay, base),
     ...unpinnedConfigurationIssues(day, animal),
+    ...danglingDataAcqRefIssue(day, animal),
   ].map(normalizeIssue);
 }
 
@@ -738,6 +781,7 @@ export const SURFACE_BY_CODE = {
   // optogenetics completeness).
   invalid_species: 'day',
   dangling_camera_ref: 'day',
+  dangling_data_acq_ref: 'day',
   duplicate_behavioral_event_name: 'day',
   duplicate_behavioral_event_description: 'day',
   duplicate_task_epoch: 'day',
@@ -905,6 +949,55 @@ export function animalEditorStepForFieldPath(fieldPath) {
 }
 
 /**
+ * The animal-setup TABS (tabbed-workspace-ia) a field path can own, keyed by route `:tab` segment,
+ * with the user-facing label (matching {@link SECTION_GROUPS} in AnimalView's section-nav). This is
+ * the finer-grained successor to {@link ANIMAL_EDITOR_STEPS}: the legacy editor's combined
+ * "Recording System, Cameras & DIO" step is THREE tabs here, and its Electrodes step is TWO. It is
+ * the single field→section attribution shared by repair routing AND the section-nav blocking dot.
+ *
+ * @type {Record<string, string>}
+ */
+export const ANIMAL_SETUP_TABS = {
+  'electrode-groups': 'Electrode Groups',
+  'channel-maps': 'Channel Maps',
+  'recording-system': 'Recording System',
+  cameras: 'Cameras',
+  dio: 'DIO',
+  optogenetics: 'Optogenetics',
+};
+
+/**
+ * Resolve which animal-setup TAB owns a field path (for re-pointing a repair deep-link at the
+ * tabbed Animal View and for the section-nav blocking dot). Finer than
+ * {@link animalEditorStepForFieldPath}: camera fields → `cameras`, data-acq → `recording-system`,
+ * channel maps → `channel-maps`, behavioral/DIO → `dio` (a NEW branch the step resolver lacked),
+ * optogenetics → `optogenetics`, and electrode geometry/identity + the configuration history (the
+ * versioned electrode config) → `electrode-groups` (the default). AJV instancePath slashes are
+ * normalized first; `ntrode` is checked before `electrode` (the ntrode path contains
+ * "electrode_group"), and `fs_gui` is day-level so it never lands on an animal tab.
+ *
+ * @param {string} [fieldPath] - Issue path (dotted app path or AJV instancePath).
+ * @returns {{ tab: string, label: string }} The owning tab key + label (defaults to electrode-groups).
+ */
+export function animalSetupTabForFieldPath(fieldPath) {
+  const path = String(fieldPath || '').replace(/^\//, '').replace(/\//g, '.');
+  const result = (tab) => ({ tab, label: ANIMAL_SETUP_TABS[tab] });
+
+  if (path.includes('ntrode')) return result('channel-maps');
+  if (path.includes('camera') || path.includes('meters_per_pixel') || path.includes('lens')) {
+    return result('cameras');
+  }
+  if (path.includes('data_acq')) return result('recording-system');
+  if (path.includes('opto') || path.includes('virus') || path.includes('fiber')) {
+    return result('optogenetics');
+  }
+  if (path.includes('behavioral_event') || path.includes('dio')) return result('dio');
+  // electrode geometry/identity, configurationHistory (the versioned electrode config), and bare
+  // keyword paths (device_type / location / targeted_*) all live on the electrode-groups tab.
+  return result('electrode-groups');
+}
+
+/**
  * The single source of truth for routing a repair action to the editable OWNER of a
  * problem (Repair Routing Contract). Returns the surface to navigate to, the Day-Editor
  * step (for `day` surface) or `null` (for `animal`/`none`), and the button label.
@@ -938,9 +1031,10 @@ export function repairTargetForIssue(issue) {
   }
 
   if (surface === 'animal') {
-    // Step-aware label so the user knows which Animal Editor step the fix lives in.
-    const { label: stepLabel } = animalEditorStepForFieldPath(issue?.path || issue?.instancePath);
-    return { surface: 'animal', step: null, label: `Fix in Animal Setup → ${stepLabel}` };
+    // Tab-aware label so the user knows which animal-setup TAB the fix lives in (the tabbed IA's
+    // finer granularity: cameras vs recording-system vs channel-maps vs electrode-groups …).
+    const { label: tabLabel } = animalSetupTabForFieldPath(issue?.path || issue?.instancePath);
+    return { surface: 'animal', step: null, label: `Fix in Animal Setup → ${tabLabel}` };
   }
   if (surface === 'none') {
     return { surface: 'none', step: null, label: 'No in-app fix' };

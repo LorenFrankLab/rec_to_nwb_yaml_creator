@@ -1,69 +1,70 @@
 /**
- * @file Tests for AnimalWorkspace component (M4)
+ * @file Tests for AnimalWorkspace — the animal PICKER (Phase 1 — tabbed-workspace-ia).
  *
- * Tests the Animal Workspace MVP UI that manages animals and days.
- * Following TDD - these tests define the expected behavior before implementation.
- *
- * Test Structure:
- * - Initial State: Workspace renders with expected UI elements
- * - Empty States: Appropriate messages when no animals/days exist
- * - URL Parameters: Auto-select animal from ?animal= parameter
- *
- * @see docs/ANIMAL_WORKSPACE_DESIGN.md for UI mockups
- * @see docs/animal_hierarchy.md for data model
+ * After the tab-shell conversion the Workspace is a pure picker: animal cards are LINKS to
+ * `#/animal/:id/days` (no inline pane, no local selection). Pane-behavior (calendar, the
+ * "Edit Animal Setup" header link) is verified against the extracted RecordingDaysTab, which
+ * AnimalView hosts at the route.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StoreProvider } from '../../../state/StoreContext';
 import { AnimalWorkspace } from '../index';
+import { RecordingDaysTab } from '../RecordingDaysTab';
 
-describe('AnimalWorkspace Component (M4) - Initial State', () => {
+/**
+ * Render the Workspace picker seeded with the given animals/days.
+ * @param {object} [initialState] - StoreProvider initial state (omit for an empty workspace).
+ * @returns {object} render result
+ */
+function renderWorkspace(initialState) {
+  return render(
+    <StoreProvider initialState={initialState}>
+      <AnimalWorkspace />
+    </StoreProvider>
+  );
+}
+
+/**
+ * Render the recording-days pane for one animal directly (its real host is AnimalView at the
+ * route; pane behavior is the same component).
+ * @param {string} animalId - The animal whose pane to render.
+ * @param {object} animals - workspace.animals
+ * @param {object} [days] - workspace.days
+ * @returns {object} render result
+ */
+function renderPane(animalId, animals, days = {}) {
+  return render(
+    <StoreProvider initialState={{ workspace: { animals, days, settings: {} } }}>
+      <RecordingDaysTab animalId={animalId} />
+    </StoreProvider>
+  );
+}
+
+describe('AnimalWorkspace picker — Initial State', () => {
   describe('Empty Workspace', () => {
     it('renders main heading', () => {
-      render(
-        <StoreProvider>
-          <AnimalWorkspace />
-        </StoreProvider>
-      );
-
-      // Verify heading
+      renderWorkspace();
       expect(screen.getByRole('heading', { name: /animal workspace/i })).toBeInTheDocument();
     });
 
     it('shows empty state message when no animals exist', () => {
-      render(
-        <StoreProvider>
-          <AnimalWorkspace />
-        </StoreProvider>
-      );
-
-      // Verify empty state message
+      renderWorkspace();
       expect(screen.getByText(/no animals/i)).toBeInTheDocument();
     });
 
-    it('provides link to create first animal', () => {
-      render(
-        <StoreProvider>
-          <AnimalWorkspace />
-        </StoreProvider>
-      );
-
-      // Should have link to Home view for animal creation
-      const createLink = screen.getByRole('link', { name: /create.*animal/i });
-      expect(createLink).toBeInTheDocument();
-      expect(createLink).toHaveAttribute('href', expect.stringMatching(/#\/?home/i));
+    it('provides a button to create the first animal (opens the inline panel, not a #/home link)', () => {
+      renderWorkspace();
+      // Phase 4b: create lives IN the workspace as an inline panel — no route to #/home.
+      const createButton = screen.getByRole('button', { name: /create.*animal/i });
+      expect(createButton).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: /create.*animal/i })).not.toBeInTheDocument();
     });
 
     it('renders with proper ARIA landmarks', () => {
-      const { container } = render(
-        <StoreProvider>
-          <AnimalWorkspace />
-        </StoreProvider>
-      );
-
-      // Verify main landmark with correct ID
+      const { container } = renderWorkspace();
       const main = container.querySelector('main#main-content');
       expect(main).toBeInTheDocument();
       expect(main).toHaveAttribute('role', 'main');
@@ -71,299 +72,87 @@ describe('AnimalWorkspace Component (M4) - Initial State', () => {
     });
   });
 
-  describe('URL Parameter Handling', () => {
-    let originalHash;
-
-    beforeEach(() => {
-      // Save original hash
-      originalHash = window.location.hash;
-    });
-
-    afterEach(() => {
-      // Restore original hash
-      window.location.hash = originalHash;
-    });
-
-    it('auto-selects animal from ?animal= URL parameter', () => {
-      // Set URL parameter
-      window.location.hash = '#/workspace?animal=testanimal';
-
-      // Create initial state with an animal
-      const initialState = {
+  describe('Animal cards link to the tabbed view', () => {
+    it('renders each animal as a link to #/animal/:id/days', () => {
+      renderWorkspace({
         workspace: {
-          animals: {
-            testanimal: {
-              subject: {
-                subject_id: 'testanimal',
-                species: 'Rattus norvegicus',
-                sex: 'M',
-              },
-              days: [],
-            },
-          },
+          animals: { remy: { subject: { subject_id: 'remy' }, days: [] } },
           days: {},
           settings: {},
         },
-      };
-
-      render(
-        <StoreProvider initialState={initialState}>
-          <AnimalWorkspace />
-        </StoreProvider>
-      );
-
-      // Verify animal is selected (button should have aria-pressed="true")
-      const animalButton = screen.getByRole('button', { name: /testanimal/i });
-      expect(animalButton).toHaveAttribute('aria-pressed', 'true');
+      });
+      const card = screen.getByRole('link', { name: /remy/i });
+      expect(card).toHaveAttribute('href', '#/animal/remy/days');
     });
 
-    it('does not auto-select if animal does not exist', () => {
-      // Set URL parameter for non-existent animal
-      window.location.hash = '#/workspace?animal=nonexistent';
-
-      // Create initial state with a different animal
-      const initialState = {
-        workspace: {
-          animals: {
-            otheranimal: {
-              subject: {
-                subject_id: 'otheranimal',
-                species: 'Rattus norvegicus',
-                sex: 'M',
-              },
-              days: [],
-            },
-          },
-          days: {},
-          settings: {},
-        },
-      };
-
-      render(
-        <StoreProvider initialState={initialState}>
-          <AnimalWorkspace />
-        </StoreProvider>
-      );
-
-      // Verify no animal is selected
-      const animalButton = screen.getByRole('button', { name: /otheranimal/i });
-      expect(animalButton).toHaveAttribute('aria-pressed', 'false');
-    });
-  });
-
-  describe('Recording Day Creation with Calendar', () => {
-    let originalHash;
-
-    beforeEach(() => {
-      originalHash = window.location.hash;
-    });
-
-    afterEach(() => {
-      window.location.hash = originalHash;
-    });
-
-    it('shows button to open calendar for adding days', async () => {
-      const user = userEvent.setup();
-
-      const initialState = {
-        workspace: {
-          animals: {
-            testanimal: {
-              subject: { subject_id: 'testanimal' },
-              days: [],
-            },
-          },
-          days: {},
-          settings: {},
-        },
-      };
-
-      render(
-        <StoreProvider initialState={initialState}>
-          <AnimalWorkspace />
-        </StoreProvider>
-      );
-
-      // Select animal
-      const animalButton = screen.getByRole('button', { name: /testanimal/i });
-      await user.click(animalButton);
-
-      // Check for "Add Recording Days" button (aria-label is "Show calendar")
-      const addButton = screen.getByRole('button', { name: /show calendar/i });
-      expect(addButton).toBeInTheDocument();
-      // Button text should be "Add Recording Days"
-      expect(addButton).toHaveTextContent(/add recording days/i);
-    });
-
-    it('opens calendar when button is clicked', async () => {
-      const user = userEvent.setup();
-
-      const initialState = {
-        workspace: {
-          animals: {
-            testanimal: {
-              subject: { subject_id: 'testanimal' },
-              days: [],
-            },
-          },
-          days: {},
-          settings: {},
-        },
-      };
-
-      render(
-        <StoreProvider initialState={initialState}>
-          <AnimalWorkspace />
-        </StoreProvider>
-      );
-
-      // Select animal
-      const animalButton = screen.getByRole('button', { name: /testanimal/i });
-      await user.click(animalButton);
-
-      // Click "Add Recording Days" button
-      const addButton = screen.getByRole('button', { name: /show calendar/i });
-      await user.click(addButton);
-
-      // Calendar should appear
-      expect(screen.getByRole('dialog', { name: /recording days calendar/i })).toBeInTheDocument();
-    });
-
-    it('hides calendar when close button is clicked', async () => {
-      const user = userEvent.setup();
-
-      const initialState = {
-        workspace: {
-          animals: {
-            testanimal: {
-              subject: { subject_id: 'testanimal' },
-              days: [],
-            },
-          },
-          days: {},
-          settings: {},
-        },
-      };
-
-      render(
-        <StoreProvider initialState={initialState}>
-          <AnimalWorkspace />
-        </StoreProvider>
-      );
-
-      // Select animal
-      const animalButton = screen.getByRole('button', { name: /testanimal/i });
-      await user.click(animalButton);
-
-      // Open calendar
-      const addButton = screen.getByRole('button', { name: /show calendar/i });
-      await user.click(addButton);
-
-      // Close calendar
-      const closeButton = screen.getByRole('button', { name: /close calendar/i });
-      await user.click(closeButton);
-
-      // Calendar should be hidden
-      expect(screen.queryByRole('dialog', { name: /recording days calendar/i })).not.toBeInTheDocument();
-    });
-  });
-
-  describe('Create New Animal Button', () => {
-    it('shows "New Animal" button in animal list sidebar', () => {
-      const initialState = {
-        workspace: {
-          animals: {
-            testanimal: {
-              subject: { subject_id: 'testanimal' },
-              days: [],
-            },
-          },
-          days: {},
-          settings: {},
-        },
-      };
-
-      render(
-        <StoreProvider initialState={initialState}>
-          <AnimalWorkspace />
-        </StoreProvider>
-      );
-
-      // Check for the "New Animal" button/link
-      const createButton = screen.getByRole('link', { name: /create new animal/i });
-      expect(createButton).toBeInTheDocument();
-      expect(createButton).toHaveAttribute('href', '#/home');
-    });
-  });
-
-  describe('Edit Animal Setup Button', () => {
-    it('shows "Edit Animal Setup" button when animal is selected', async () => {
-      const user = userEvent.setup();
-
-      const initialState = {
-        workspace: {
-          animals: {
-            testanimal: {
-              subject: { subject_id: 'testanimal' },
-              days: [],
-            },
-          },
-          days: {},
-          settings: {},
-        },
-      };
-
-      render(
-        <StoreProvider initialState={initialState}>
-          <AnimalWorkspace />
-        </StoreProvider>
-      );
-
-      // Select animal
-      const animalButton = screen.getByRole('button', { name: /testanimal/i });
-      await user.click(animalButton);
-
-      // Check for "Edit Animal Setup" button/link
-      const editDevicesLink = screen.getByRole('link', { name: /edit animal setup/i });
-      expect(editDevicesLink).toBeInTheDocument();
-    });
-
-    it('navigates to Animal Editor when "Edit Animal Setup" button is clicked', async () => {
-      const user = userEvent.setup();
-
-      const initialState = {
-        workspace: {
-          animals: {
-            testanimal: {
-              subject: { subject_id: 'testanimal' },
-              days: [],
-            },
-          },
-          days: {},
-          settings: {},
-        },
-      };
-
-      render(
-        <StoreProvider initialState={initialState}>
-          <AnimalWorkspace />
-        </StoreProvider>
-      );
-
-      // Select animal
-      const animalButton = screen.getByRole('button', { name: /testanimal/i });
-      await user.click(animalButton);
-
-      // Check the href of the "Edit Animal Setup" button
-      const editDevicesLink = screen.getByRole('link', { name: /edit animal setup/i });
-      expect(editDevicesLink).toHaveAttribute('href', '#/animal/testanimal/editor');
-    });
-
-    it('does not show "Edit Animal Setup" button when no animal is selected', () => {
-      // Two animals + no ?animal param → nothing auto-selected (auto-select only fires for a
-      // SOLE animal), so this exercises the genuine no-selection state.
+    it('shows the sole animal as a card link to its days route (no auto-open)', () => {
       window.location.hash = '#/workspace';
-      const initialState = {
+      renderWorkspace({
+        workspace: {
+          animals: { onlyone: { subject: { subject_id: 'onlyone' }, days: [] } },
+          days: {},
+          settings: {},
+        },
+      });
+      // The picker stays reachable (so "+ New Animal" is always available); the sole animal is a
+      // link, not auto-opened into the tabbed view.
+      expect(screen.getByRole('link', { name: /onlyone/i })).toHaveAttribute('href', '#/animal/onlyone/days');
+      expect(screen.queryByRole('region', { name: /animal setup/i })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('?animal= handshake → route navigation', () => {
+    let originalHash;
+    beforeEach(() => {
+      originalHash = window.location.hash;
+    });
+    afterEach(() => {
+      window.location.hash = originalHash;
+    });
+
+    it('navigates to the animal days route when ?animal= names an existing animal', () => {
+      window.location.hash = '#/workspace?animal=testanimal';
+      renderWorkspace({
+        workspace: {
+          animals: { testanimal: { subject: { subject_id: 'testanimal' }, days: [] } },
+          days: {},
+          settings: {},
+        },
+      });
+      expect(window.location.hash).toBe('#/animal/testanimal/days');
+    });
+
+    it('does not navigate when ?animal= names an unknown animal (shows the picker)', () => {
+      window.location.hash = '#/workspace?animal=nonexistent';
+      renderWorkspace({
+        workspace: {
+          animals: { otheranimal: { subject: { subject_id: 'otheranimal' }, days: [] } },
+          days: {},
+          settings: {},
+        },
+      });
+      expect(window.location.hash).toBe('#/workspace?animal=nonexistent');
+      expect(screen.getByRole('link', { name: /otheranimal/i })).toHaveAttribute('href', '#/animal/otheranimal/days');
+    });
+  });
+
+  describe('Create New Animal', () => {
+    it('shows a "New Animal" button in the picker (opens the inline panel, not a #/home link)', () => {
+      renderWorkspace({
+        workspace: {
+          animals: { testanimal: { subject: { subject_id: 'testanimal' }, days: [] } },
+          days: {},
+          settings: {},
+        },
+      });
+      const createButton = screen.getByRole('button', { name: /create new animal/i });
+      expect(createButton).toBeInTheDocument();
+      // Phase 4b: it's a button that opens the inline form, no longer a link to #/home.
+      expect(screen.queryByRole('link', { name: /create new animal/i })).not.toBeInTheDocument();
+    });
+
+    it('does not render the per-animal "Edit Animal Setup" link (that lives in the animal view)', () => {
+      renderWorkspace({
         workspace: {
           animals: {
             testanimal: { subject: { subject_id: 'testanimal' }, days: [] },
@@ -372,39 +161,40 @@ describe('AnimalWorkspace Component (M4) - Initial State', () => {
           days: {},
           settings: {},
         },
-      };
+      });
+      expect(screen.queryByRole('link', { name: /edit animal setup/i })).not.toBeInTheDocument();
+    });
+  });
+});
 
-      render(
-        <StoreProvider initialState={initialState}>
-          <AnimalWorkspace />
-        </StoreProvider>
-      );
+describe('Recording-days pane (hosted by AnimalView at the route)', () => {
+  const testanimal = { subject: { subject_id: 'testanimal' }, days: [] };
 
-      // No animal selected yet
-      // Check that "Edit Animal Setup" button/link is not present
-      const editDevicesLink = screen.queryByRole('link', { name: /edit animal setup/i });
-      expect(editDevicesLink).not.toBeInTheDocument();
+  describe('Calendar', () => {
+    it('shows an "Add Recording Days" button that opens the calendar', async () => {
+      const user = userEvent.setup();
+      renderPane('testanimal', { testanimal });
+      const addButton = screen.getByRole('button', { name: /show calendar/i });
+      expect(addButton).toHaveTextContent(/add recording days/i);
+      await user.click(addButton);
+      expect(screen.getByRole('dialog', { name: /recording days calendar/i })).toBeInTheDocument();
     });
 
-    it('auto-selects the sole animal so its setup is visible without a click', () => {
-      window.location.hash = '#/workspace';
-      const initialState = {
-        workspace: {
-          animals: { onlyone: { subject: { subject_id: 'onlyone' }, days: [] } },
-          days: {},
-          settings: {},
-        },
-      };
+    it('hides the calendar when the close button is clicked', async () => {
+      const user = userEvent.setup();
+      renderPane('testanimal', { testanimal });
+      await user.click(screen.getByRole('button', { name: /show calendar/i }));
+      await user.click(screen.getByRole('button', { name: /close calendar/i }));
+      expect(screen.queryByRole('dialog', { name: /recording days calendar/i })).not.toBeInTheDocument();
+    });
+  });
 
-      render(
-        <StoreProvider initialState={initialState}>
-          <AnimalWorkspace />
-        </StoreProvider>
-      );
-
-      // The sole animal is selected on mount (its card is pressed and the setup checklist shows).
-      expect(screen.getByRole('button', { name: /onlyone/i })).toHaveAttribute('aria-pressed', 'true');
-      expect(screen.getByRole('region', { name: /animal setup/i })).toBeInTheDocument();
+  describe('Edit Animal Setup link (Task 2.1 — removed)', () => {
+    it('does not render an "Edit Animal Setup" link in the day-tab header (its destinations are the setup tabs now)', () => {
+      renderPane('testanimal', { testanimal });
+      expect(screen.queryByRole('link', { name: /edit animal setup/i })).not.toBeInTheDocument();
+      // The primary "Add Recording Days" action stays.
+      expect(screen.getByRole('button', { name: /show calendar/i })).toHaveTextContent(/add recording days/i);
     });
   });
 });

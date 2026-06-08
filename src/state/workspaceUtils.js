@@ -253,6 +253,25 @@ export function resolveDayConfig(animal, day) {
 }
 
 /**
+ * Resolve the ONE acquisition device a day exports from the animal's recording-system catalog.
+ *
+ * The animal owns a catalog (`animal.devices.data_acq_device`); a day references which one it used by
+ * name (`day.data_acq_device_name`). The export carries exactly one device (trodes_to_nwb records one
+ * acquisition system per session): the referenced catalog entry (resolved live, so editing that system
+ * propagates), or the first catalog entry when the day is unreferenced / the reference is dangling.
+ *
+ * @param {object} animal - The animal record (its `devices.data_acq_device` catalog).
+ * @param {object} day - The day record (its optional `data_acq_device_name` reference).
+ * @returns {Array<object>} A one-element (or empty) `data_acq_device` array in canonical key order.
+ */
+export function resolveDayDataAcqDevice(animal, day) {
+  const catalog = getDataAcqDevices(animal);
+  const dayName = typeof day?.data_acq_device_name === 'string' ? day.data_acq_device_name : '';
+  const chosen = (dayName && catalog.find((d) => d?.name === dayName)) || catalog[0];
+  return chosen ? [reorderKeys(chosen, DATA_ACQ_DEVICE_ORDER)] : [];
+}
+
+/**
  * Merges animal defaults with day-specific data to produce complete NWB metadata.
  *
  * This is the MOST CRITICAL function in the workspace architecture - it must produce
@@ -341,13 +360,15 @@ export function mergeDayMetadata(animal, day) {
       SUBJECT_ORDER
     ),
 
-    // === From Animal: Data Acquisition ===
-    // Read from RAW animal (not the normalized `devices` above): byte-safe ONLY because
-    // normalizeDevices does not transform data_acq_device items (it structuredClones them).
-    // If the normalizer ever starts normalizing these, route this through `devices` instead.
-    data_acq_device: getDataAcqDevices(animal).map((d) =>
-      reorderKeys(d, DATA_ACQ_DEVICE_ORDER)
-    ),
+    // === Recording System: the ONE catalog system this day used ===
+    // The animal owns a CATALOG of recording systems (`animal.devices.data_acq_device`); a day picks
+    // ONE it was recorded on, referenced by name (`day.data_acq_device_name`), defaulting to the first
+    // catalog entry when unreferenced. trodes_to_nwb records one acquisition system per session, so the
+    // export carries exactly ONE device — the referenced one (resolved live from the catalog so an
+    // edit to that system propagates), or the first. Byte-identical for a one-system animal with an
+    // unreferenced day (every golden fixture). Read RAW (not the normalized `devices`): byte-safe ONLY
+    // because normalizeDevices does not transform data_acq_device items (it structuredClones them).
+    data_acq_device: resolveDayDataAcqDevice(animal, day),
 
     // === From Animal catalog, filtered to the day's used cameras (Task 5) ===
     cameras: dayCameras.map((c) => reorderKeys(c, CAMERA_ORDER)),

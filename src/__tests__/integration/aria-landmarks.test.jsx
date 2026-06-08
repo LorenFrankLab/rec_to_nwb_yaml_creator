@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { StoreProvider } from '../../state/StoreContext';
 import { App } from '../../App';
 import { overrideFlags, restoreFlags } from '../../featureFlags';
@@ -174,14 +174,16 @@ describe('ARIA Landmarks', () => {
       expect(screen.getByRole('link', { name: /^workspace$/i })).toBeInTheDocument();
     });
 
-    it('Workspace: one main + one #main-content, a navigation landmark, escape to Home', () => {
+    it('Workspace: one main + one #main-content, a navigation landmark with batch Validation & Export', () => {
       overrideFlags({ animalWorkspace: true });
       const { container } = renderRoute('#/workspace');
 
       expect(container.querySelectorAll('[role="main"]')).toHaveLength(1);
       expect(container.querySelectorAll('#main-content')).toHaveLength(1);
       expect(container.querySelector('[role="navigation"]')).toBeTruthy();
-      expect(screen.getByRole('link', { name: /^home$/i })).toBeInTheDocument();
+      // Phase 4 dropped the standalone Home nav entry; the primary nav now exposes the cross-animal
+      // batch Validation & Export screen alongside the Workspace hub.
+      expect(screen.getByRole('link', { name: /validation & export/i })).toBeInTheDocument();
     });
 
     it('DayEditor: one main + one #main-content + one banner/contentinfo; back-to-workspace link', async () => {
@@ -201,23 +203,6 @@ describe('ARIA Landmarks', () => {
       // Exactly one step is marked current for assistive tech.
       const current = container.querySelectorAll('[aria-current="step"]');
       expect(current).toHaveLength(1);
-    });
-
-    it('AnimalEditor: exactly one main + one #main-content (duplicate removed); back-to-workspace link', async () => {
-      overrideFlags({ animalWorkspace: true });
-      const { container } = renderRoute('#/animal/remy/editor');
-
-      // AnimalEditor is lazy-loaded behind Suspense.
-      await waitFor(() => {
-        expect(container.querySelectorAll('[role="main"]')).toHaveLength(1);
-      });
-      expect(container.querySelectorAll('#main-content')).toHaveLength(1);
-      // Stepper header/footer are plain divs → AppLayout owns the only banner/contentinfo.
-      expect(container.querySelectorAll('[role="banner"], header')).toHaveLength(1);
-      expect(container.querySelectorAll('[role="contentinfo"], footer')).toHaveLength(1);
-      expect(screen.getByRole('link', { name: /back to workspace/i })).toBeInTheDocument();
-      // Exactly one step is marked current for assistive tech.
-      expect(container.querySelectorAll('[aria-current="step"]')).toHaveLength(1);
     });
 
     it('keeps the default route (#/) on the legacy form even with flags enabled', () => {

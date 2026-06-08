@@ -5,7 +5,7 @@ import { mergeDayMetadata, resolveDayConfig } from '../../state/workspaceUtils';
 import { getAnimalDayIds } from '../../state/workspaceSelectors';
 import { computeStepStatus, validateDay, STEP_LABELS } from '../../domain/validation';
 import { getDayWorkflowStatus } from '../../domain/workflowStatus';
-import { describeDayOptoState } from '../../domain/optoStatus';
+import { buildPreflightSummary } from '../../domain/preflightSummary';
 import { isExportEnabled } from './stepGate';
 import { isFeatureEnabled } from '../../featureFlags';
 import { checkShadowExport } from '../../domain/shadowExport';
@@ -319,83 +319,6 @@ export default function ExportStep({ animal, day, onNavigate, onRepair, animalKe
       )}
     </div>
   );
-}
-
-/**
- * Build the read-only preflight summary rows from the merged day that will be
- * encoded. This is the user's final confidence check before download — phrased as the
- * setup-checklist / Day Devices context, not a schema dump: which animal/day/session, which
- * configuration version (and whether it is current or historical), probes & failed channels,
- * cameras/calibration, data-acquisition device, tasks/videos, optogenetics state, and any
- * unresolved (non-blocking) review risk.
- *
- * Rows always read the merged day (the same object that will be encoded) plus the workflow
- * context the caller resolves from the domain helpers — never duplicate component state.
- *
- * @param {object} merged - The merged day metadata about to be encoded.
- * @param {object} ctx - Workflow context for the summary.
- * @param {string} [ctx.animalId] - The owning animal id.
- * @param {string} [ctx.date] - The recording day's date.
- * @param {number} [ctx.configurationVersion] - The version of the snapshot resolved into
- *   `merged` (from {@link resolveDayConfig}).
- * @param {boolean} [ctx.isHistorical] - Whether that version is historical (not the latest).
- * @param {number} [ctx.warningCount] - Count of non-blocking warnings still to review.
- * @returns {Array<{label: string, value: string}>}
- */
-function buildPreflightSummary(
-  merged,
-  { animalId, date, configurationVersion, isHistorical, warningCount } = {}
-) {
-  const subjectId = merged.subject?.subject_id || '—';
-  const sessionId = merged.session_id || '—';
-
-  const ntrodeMap = merged.ntrode_electrode_group_channel_map || [];
-  const failedChannelCount = ntrodeMap.reduce(
-    (total, ntrode) => total + (ntrode.bad_channels?.length || 0),
-    0
-  );
-
-  // Day-protocol opto state (Task 10): the honest three-state read — "No optogenetics" /
-  // "Implanted, no stimulation this day" / "Stimulation on epoch(s) …" — not a binary On/Off
-  // derived only from the implant. Shared with the Validation summary so the two never disagree.
-  const opto = describeDayOptoState(merged);
-
-  const dataAcq = merged.data_acq_device || [];
-  const dataAcqValue = dataAcq.length
-    ? `${dataAcq.length} device${dataAcq.length === 1 ? '' : 's'} (${
-        dataAcq.map((d) => d?.name).filter(Boolean).join(', ') || 'unnamed'
-      })`
-    : 'None';
-
-  return [
-    { label: 'Animal & day', value: `${animalId || '—'} — ${date || '—'}` },
-    { label: 'Subject & session', value: `${subjectId} — session ${sessionId}` },
-    {
-      label: 'Configuration version',
-      value:
-        configurationVersion != null
-          ? `Version ${configurationVersion} (${isHistorical ? 'historical' : 'current'})`
-          : '—',
-    },
-    {
-      label: 'Probes & failed channels',
-      value: `${(merged.electrode_groups || []).length} electrode groups, ${failedChannelCount} failed channels`,
-    },
-    { label: 'Cameras / calibration', value: `${(merged.cameras || []).length} cameras` },
-    { label: 'Data acquisition', value: dataAcqValue },
-    {
-      label: 'Tasks & videos',
-      value: `${(merged.tasks || []).length} tasks, ${(merged.associated_video_files || []).length} videos`,
-    },
-    { label: 'Optogenetics', value: opto.label },
-    {
-      label: 'Non-blocking warnings',
-      value:
-        warningCount > 0
-          ? `${warningCount} warning${warningCount === 1 ? '' : 's'} to review (does not block export)`
-          : 'None',
-    },
-  ];
 }
 
 ExportStep.propTypes = {

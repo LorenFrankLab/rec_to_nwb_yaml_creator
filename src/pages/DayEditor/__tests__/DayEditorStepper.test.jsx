@@ -232,7 +232,7 @@ describe('DayEditorStepper', () => {
     );
     // The Overview breadcrumb's Animal link routes to the store key, never the stale record id.
     const animalCrumb = screen.getByRole('link', { name: /Animal: remy/i });
-    expect(animalCrumb).toHaveAttribute('href', '#/animal/remy/editor');
+    expect(animalCrumb).toHaveAttribute('href', '#/animal/remy/days');
     expect(screen.queryByText(/STALE/)).not.toBeInTheDocument();
   });
 
@@ -403,7 +403,7 @@ describe('DayEditorStepper', () => {
 
     // Stays in the Day Editor and lands on the Overview step (the editable owner),
     // not the Animal Editor.
-    expect(window.location.hash).not.toBe('#/animal/remy/editor');
+    expect(window.location.hash).not.toBe('#/animal/remy/days');
     expect(screen.getByRole('button', { name: /^Overview/i })).toHaveAttribute('aria-current', 'step');
   });
 

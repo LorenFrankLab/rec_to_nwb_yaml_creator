@@ -79,7 +79,7 @@ describe('Day editor repair-action navigation (integration)', () => {
 
     // Handed off to the Animal Editor route for this animal (no dead-end in the Day Editor).
     // The field is encoded so the Animal Editor can deep-link to the owning step.
-    expect(window.location.hash).toMatch(new RegExp(`^#/animal/${animal.id}/editor\\?`));
+    expect(window.location.hash).toMatch(new RegExp(`^#/animal/${animal.id}/electrode-groups\\?`));
     expect(window.location.hash).toContain('field=');
   });
 

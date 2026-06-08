@@ -2,128 +2,133 @@
  * @vitest-environment jsdom
  */
 
+/**
+ * DataAcqSection — the animal's Recording System CATALOG (a list of acquisition systems, like the
+ * Cameras catalog). An animal recorded on different rigs over its life accumulates several systems
+ * here; each recording day references the one it used (Day Editor). The first is the default days
+ * inherit when unreferenced. `name` is the Spyglass `DataAcquisitionDevice` identity — unique within
+ * the catalog, and a same-name-different-hardware reuse (here or elsewhere in the dataset) is blocked.
+ * The technical defaults (raw_data_to_volts / times_period_multiplier) are animal-level and seed each
+ * new day's `technical`.
+ */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import DataAcqSection from '../DataAcqSection';
 
-describe('DataAcqSection', () => {
-  let user;
-  let onFieldUpdate;
+const sg = { name: 'SpikeGadgets_MCU', system: 'SpikeGadgets', amplifier: 'Intan RHD2000', adc_circuit: 'Intan' };
+const np = { name: 'Neuropixels_rig', system: 'Open Ephys', amplifier: 'IMEC', adc_circuit: 'IMEC' };
 
-  const animal = {
+/**
+ * Build an animal with the given recording-system catalog.
+ * @param {Array} catalog - data_acq_device entries.
+ * @returns {object} animal
+ */
+function animalWith(catalog) {
+  return {
     id: 'remy',
-    devices: {
-      data_acq_device: [
-        { name: 'SpikeGadgets_MCU', system: 'SpikeGadgets', amplifier: 'Intan RHD2000', adc_circuit: 'Intan' },
-      ],
-    },
+    devices: { data_acq_device: catalog },
     technicalDefaults: { raw_data_to_volts: 0.195, times_period_multiplier: 1.5 },
   };
-  const draftAnimal = {
-    id: 'remy',
-    devices: { data_acq_device: [] },
-    technicalDefaults: { raw_data_to_volts: 0.195, times_period_multiplier: 1.5 },
-  };
+}
 
-  beforeEach(() => {
-    user = userEvent.setup();
-    onFieldUpdate = vi.fn();
+let user;
+let onFieldUpdate;
+beforeEach(() => {
+  user = userEvent.setup();
+  onFieldUpdate = vi.fn();
+});
+
+describe('DataAcqSection — catalog list', () => {
+  it('lists every recording system in the catalog and marks the first as the default', () => {
+    render(<DataAcqSection animal={animalWith([sg, np])} onFieldUpdate={onFieldUpdate} />);
+    expect(screen.getByText('SpikeGadgets_MCU')).toBeInTheDocument();
+    expect(screen.getByText('Neuropixels_rig')).toBeInTheDocument();
+    // The first catalog entry is the default days inherit when unreferenced.
+    const firstRow = screen.getByText('SpikeGadgets_MCU').closest('tr');
+    expect(within(firstRow).getByText(/default/i)).toBeInTheDocument();
   });
 
-  it('populates the device fields (incl. name) from the data_acq_device array', () => {
-    render(<DataAcqSection animal={animal} onFieldUpdate={onFieldUpdate} />);
+  it('adds a recording system to the catalog (appended), via the Add editor', async () => {
+    render(<DataAcqSection animal={animalWith([sg])} onFieldUpdate={onFieldUpdate} />);
+    await user.click(screen.getByRole('button', { name: /add recording system/i }));
+    await user.type(screen.getByLabelText(/^Name/i), 'Neuropixels_rig');
+    await user.selectOptions(screen.getByRole('combobox', { name: /system/i }), 'Open Ephys');
+    await user.type(screen.getByLabelText(/Amplifier/i), 'IMEC');
+    await user.type(screen.getByLabelText(/ADC Circuit/i), 'IMEC');
+    await user.click(screen.getByRole('button', { name: /save recording system/i }));
 
-    expect(screen.getByDisplayValue('SpikeGadgets_MCU')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('SpikeGadgets')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Intan RHD2000')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Intan')).toBeInTheDocument();
+    await waitFor(() => expect(onFieldUpdate).toHaveBeenCalledWith('data_acq_device', [sg, np]));
   });
 
-  it('states DIFFERENT blast radii for the device identity (all days) vs the technical defaults (future days)', () => {
-    // Phase 8.7: the section edits two things with different ownership — the data-acq device
-    // identity (animal_setup → reaches all days) and the technical-parameter defaults
-    // (setup_default_to_day → seed NEW days only; existing days keep their copied value). The
-    // header must not blanket-claim "affects all recording days" for both (the original 2a copy
-    // did, contradicting the inner "seed … new recording days" copy and the ownership matrix).
-    render(<DataAcqSection animal={animal} onFieldUpdate={onFieldUpdate} />);
+  it('edits an existing system in place', async () => {
+    render(<DataAcqSection animal={animalWith([sg, np])} onFieldUpdate={onFieldUpdate} />);
+    await user.click(screen.getByRole('button', { name: /edit recording system Neuropixels_rig/i }));
+    const amp = screen.getByLabelText(/Amplifier/i);
+    await user.clear(amp);
+    await user.type(amp, 'IMEC v2');
+    await user.click(screen.getByRole('button', { name: /save recording system/i }));
 
-    // Device identity reaches all days.
-    expect(
-      screen.getByText(/data-acquisition device identity.*affects all recording days/is)
-    ).toBeInTheDocument();
-    // Technical defaults reach future days only — existing days keep their values.
-    expect(screen.getByText(/seed each new recording day/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(/editing them affects future days only; existing days keep their values/i)
-    ).toBeInTheDocument();
-    // The blanket overstatement (device "and technical parameters … affects all recording days")
-    // must be gone.
-    expect(
-      screen.queryByText(/device and\s+technical parameters\. editing this affects all recording days/i)
-    ).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(onFieldUpdate).toHaveBeenCalledWith('data_acq_device', [sg, { ...np, amplifier: 'IMEC v2' }])
+    );
   });
 
-  it('surfaces the option-B limitation: a mid-study recording-system/amplifier swap is not representable per day', () => {
-    // Phase 8.7 Task 3 (decided option B): data-acq has NO per-day binding — mergeDayMetadata
-    // reads animal.devices.data_acq_device live into every day — so a genuine mid-study hardware
-    // change can't be kept off earlier days. The UI must NAME this limitation (no-silent-retroactive),
-    // not imply a day-level edit exists.
-    render(<DataAcqSection animal={animal} onFieldUpdate={onFieldUpdate} />);
-
-    // The bold lead scopes the "no per-day version" claim to the IDENTITY (the rig-constant
-    // defaults below are per-day overridable, so it must not be read as covering them).
-    expect(screen.getByText(/one recording-system identity per animal/i)).toBeInTheDocument();
-    expect(screen.getByText(/mid-study hardware change/i)).toBeInTheDocument();
-    // Punctuation-agnostic (the copy uses an apostrophe rendered from &apos;).
-    expect(screen.getByText(/represented per day/i)).toBeInTheDocument();
-    // The no-silent-retroactive point: there is no way to keep earlier days on the old hardware.
-    expect(screen.getByText(/no way to keep earlier days on the old hardware/i)).toBeInTheDocument();
-    // Framed as a future capability, not a current day-level control.
-    expect(screen.getByText(/future capability/i)).toBeInTheDocument();
+  it('deletes a system from the catalog (when more than one remains)', async () => {
+    render(<DataAcqSection animal={animalWith([sg, np])} onFieldUpdate={onFieldUpdate} />);
+    await user.click(screen.getByRole('button', { name: /delete recording system Neuropixels_rig/i }));
+    expect(onFieldUpdate).toHaveBeenCalledWith('data_acq_device', [sg]);
   });
 
-  it('writes the data-acq device as a one-element array including name on blur', async () => {
-    render(<DataAcqSection animal={draftAnimal} onFieldUpdate={onFieldUpdate} />);
-
-    await user.type(screen.getByLabelText(/^Name/i), 'SpikeGadgets_MCU');
-    const amplifier = screen.getByLabelText(/Amplifier/i);
-    await user.type(amplifier, 'Intan RHD2132');
-    const adcCircuit = screen.getByLabelText(/ADC Circuit/i);
-    await user.type(adcCircuit, 'Intan');
-    await user.tab(); // commit after all required fields are present
-
-    await waitFor(() => expect(onFieldUpdate).toHaveBeenCalledWith('data_acq_device', [
-      { name: 'SpikeGadgets_MCU', system: 'SpikeGadgets', amplifier: 'Intan RHD2132', adc_circuit: 'Intan' },
-    ]));
+  it('shows the Delete button for the last system but DISABLED (schema requires at least one)', () => {
+    render(<DataAcqSection animal={animalWith([sg])} onFieldUpdate={onFieldUpdate} />);
+    // Consistent with Electrode Groups / Cameras (Delete always present), but disabled for the last
+    // entry so the catalog can't drop below the schema's minItems:1.
+    const del = screen.getByRole('button', { name: /delete recording system/i });
+    expect(del).toBeDisabled();
   });
 
-  it('keeps incomplete data-acq edits local instead of writing schema-invalid records', async () => {
-    render(<DataAcqSection animal={draftAnimal} onFieldUpdate={onFieldUpdate} />);
+  it('blocks adding a second system with a name already in the catalog', async () => {
+    render(<DataAcqSection animal={animalWith([sg])} onFieldUpdate={onFieldUpdate} />);
+    await user.click(screen.getByRole('button', { name: /add recording system/i }));
+    await user.type(screen.getByLabelText(/^Name/i), 'SpikeGadgets_MCU'); // duplicate
+    await user.selectOptions(screen.getByRole('combobox', { name: /system/i }), 'Open Ephys');
+    await user.type(screen.getByLabelText(/Amplifier/i), 'IMEC');
+    await user.type(screen.getByLabelText(/ADC Circuit/i), 'IMEC');
+    await user.click(screen.getByRole('button', { name: /save recording system/i }));
 
-    await user.type(screen.getByLabelText(/^Name/i), 'SpikeGadgets_MCU');
-    await user.tab();
-
-    expect(screen.getByRole('alert')).toHaveTextContent(/complete name, system, amplifier, and adc circuit/i);
+    expect(screen.getByRole('alert')).toHaveTextContent(/already (used|in the catalog)/i);
     expect(onFieldUpdate).not.toHaveBeenCalledWith('data_acq_device', expect.anything());
   });
 
-  it('blocks changing saved data-acq hardware under the same name', async () => {
-    render(<DataAcqSection animal={animal} onFieldUpdate={onFieldUpdate} />);
+  it('blocks a divergent name reuse against another animal (Spyglass identity)', async () => {
+    const registry = [
+      { name: 'SHARED', label: 'jaq data-acq device', fields: { system: 'Open Ephys', amplifier: 'Intan', adc_circuit: 'Intan' } },
+    ];
+    render(<DataAcqSection animal={animalWith([sg])} onFieldUpdate={onFieldUpdate} dataAcqRegistry={registry} />);
+    await user.click(screen.getByRole('button', { name: /add recording system/i }));
+    await user.type(screen.getByLabelText(/^Name/i), 'SHARED');
+    await user.selectOptions(screen.getByRole('combobox', { name: /system/i }), 'SpikeGadgets'); // differs from registry's Open Ephys
+    await user.type(screen.getByLabelText(/Amplifier/i), 'Intan');
+    await user.type(screen.getByLabelText(/ADC Circuit/i), 'Intan');
+    await user.click(screen.getByRole('button', { name: /save recording system/i }));
 
-    const amplifier = screen.getByLabelText(/Amplifier/i);
-    await user.clear(amplifier);
-    await user.type(amplifier, 'Intan RHD2132');
-    await user.tab();
-
-    expect(screen.getByRole('alert')).toHaveTextContent(/saved identity/i);
-    expect(screen.getByRole('alert')).toHaveTextContent(/Amplifier/i);
+    expect(screen.getByRole('alert')).toHaveTextContent(/different hardware|saved identity|already used by/i);
     expect(onFieldUpdate).not.toHaveBeenCalledWith('data_acq_device', expect.anything());
   });
 
-  it('edits technical defaults (raw_data_to_volts) via technicalDefaults, not technical', async () => {
-    render(<DataAcqSection animal={animal} onFieldUpdate={onFieldUpdate} />);
+  it('does not write an incomplete system', async () => {
+    render(<DataAcqSection animal={animalWith([sg])} onFieldUpdate={onFieldUpdate} />);
+    await user.click(screen.getByRole('button', { name: /add recording system/i }));
+    await user.type(screen.getByLabelText(/^Name/i), 'Partial');
+    await user.click(screen.getByRole('button', { name: /save recording system/i }));
+    expect(onFieldUpdate).not.toHaveBeenCalledWith('data_acq_device', expect.anything());
+  });
+});
 
+describe('DataAcqSection — technical defaults (animal-level)', () => {
+  it('edits raw_data_to_volts via technicalDefaults (not technical)', async () => {
+    render(<DataAcqSection animal={animalWith([sg])} onFieldUpdate={onFieldUpdate} />);
     await user.click(screen.getByText(/Advanced Settings/i));
     const rawData = screen.getByLabelText(/Raw Data to Volts/i);
     await user.clear(rawData);
@@ -135,43 +140,13 @@ describe('DataAcqSection', () => {
       expect(call).toBeTruthy();
       expect(call[1].raw_data_to_volts).toBe(0.25);
     });
-    // The old animal-level key is gone.
-    expect(screen.queryByLabelText(/Ephys to Volt/i)).not.toBeInTheDocument();
   });
 
-  it('no longer edits the per-day default header file path at the animal level', () => {
-    render(<DataAcqSection animal={animal} onFieldUpdate={onFieldUpdate} />);
-    expect(screen.queryByLabelText(/Default Header File/i)).not.toBeInTheDocument();
-  });
-
-  it('blocks a divergent data-acq name reuse and offers a new-name action', async () => {
-    const dataAcqRegistry = [
-      { name: 'SHARED', label: 'jaq data-acq device', fields: { system: 'Open Ephys', amplifier: 'Intan', adc_circuit: 'Intan' } },
-    ];
-    render(<DataAcqSection animal={animal} onFieldUpdate={onFieldUpdate} dataAcqRegistry={dataAcqRegistry} />);
-
-    const nameInput = screen.getByLabelText(/^Name/i);
-    await user.clear(nameInput);
-    await user.type(nameInput, 'SHARED'); // same name, but this animal's system is SpikeGadgets ≠ Open Ephys
-    await user.tab();
-
-    // Divergence is surfaced and the write is blocked.
-    expect(screen.getByRole('alert')).toHaveTextContent(/already used by jaq data-acq device/i);
-    expect(onFieldUpdate).not.toHaveBeenCalledWith('data_acq_device', expect.anything());
-    expect(screen.getByRole('button', { name: /use a new name/i })).toBeInTheDocument();
-  });
-
-  it('allows an identical data-acq name reuse (same dependent fields)', async () => {
-    const dataAcqRegistry = [
-      { name: 'SpikeGadgets_MCU', label: 'jaq data-acq device', fields: { system: 'SpikeGadgets', amplifier: 'Intan RHD2000', adc_circuit: 'Intan' } },
-    ];
-    render(<DataAcqSection animal={animal} onFieldUpdate={onFieldUpdate} dataAcqRegistry={dataAcqRegistry} />);
-
-    const amplifier = screen.getByLabelText(/Amplifier/i);
-    await user.click(amplifier);
-    await user.tab();
-
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    await waitFor(() => expect(onFieldUpdate).toHaveBeenCalledWith('data_acq_device', expect.any(Array)));
+  it('frames the catalog as the animal default a day can override (per-day recording system)', () => {
+    render(<DataAcqSection animal={animalWith([sg])} onFieldUpdate={onFieldUpdate} />);
+    expect(screen.getByText(/recording systems this animal was recorded on/i)).toBeInTheDocument();
+    expect(screen.getByText(/each recording day uses one/i)).toBeInTheDocument();
+    // The old "future capability / no per-day version" framing is gone.
+    expect(screen.queryByText(/future capability/i)).not.toBeInTheDocument();
   });
 });

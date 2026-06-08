@@ -162,6 +162,39 @@ export function classifyAnimalDays(animalId, animal, daysMap) {
 }
 
 /**
+ * The number of day RECORDS present for an animal (OK + recovered-unlinked), via the recovery
+ * classifier. The single source of this count so every surface that shows "N days" — the picker
+ * cards, the section-nav, the animal switcher, the recording-days header — can't drift from each
+ * other or from {@link isPresentRecordStatus}.
+ *
+ * @param {string} animalId - The animal's store key.
+ * @param {object} animal - The animal record.
+ * @param {object} daysMap - The workspace day map.
+ * @returns {number} The count of present day records.
+ */
+export function getPresentDayCount(animalId, animal, daysMap) {
+  return classifyAnimalDays(animalId, animal, daysMap).filter((d) =>
+    isPresentRecordStatus(d.status)
+  ).length;
+}
+
+/**
+ * Whether a day record has been validated or exported — i.e. it may have produced a downloaded
+ * YAML / downstream NWB. Drives whether a delete confirmation shows the "downloaded artifacts are
+ * not deleted" caveat. Tolerates a malformed (non-object) `state` on a recovered record. The single
+ * home for this predicate so the animal-delete cascade and the per-day delete confirm can't disagree
+ * about whether the caveat applies.
+ *
+ * @param {object} record - A day record.
+ * @returns {boolean} True if the day is validated or exported.
+ */
+export function dayHasArtifacts(record) {
+  const state = record?.state;
+  if (!state || typeof state !== 'object' || Array.isArray(state)) return false;
+  return !!state.validated || !!state.exported;
+}
+
+/**
  * Classify every day across the whole workspace into a flat, table-ordered list: animals by
  * store key, each animal's index references by record date (corrupt refs — no date — first),
  * then a final orphan sweep over every record not reached by an index (recovered_unlinked when

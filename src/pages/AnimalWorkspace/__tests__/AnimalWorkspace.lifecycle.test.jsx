@@ -1,16 +1,17 @@
 /**
- * Animal Workspace lifecycle cleanup (Phase 8.7 Task 8). Ordinary users must be able to
- * discover SAFE animal/day deletion from the workspace — the store already exposes guarded
- * `deleteAnimal` / `deleteDay`, but nothing surfaced them. These actions must be secondary/
- * destructive (never adjacent to the primary setup/export action), and their confirmations
- * must name the animal/day, the cascade count, and the consequence — including that deleting
- * local workspace metadata does NOT delete an already-downloaded YAML / NWB / DANDI / Spyglass.
+ * Animal Workspace lifecycle cleanup (Phase 8.7 Task 8 → Phase 4 Task 4.1). Ordinary users must
+ * be able to discover SAFE animal/day deletion — the store already exposes guarded `deleteAnimal`
+ * / `deleteDay`, but nothing surfaced them. As of Phase 4, animal delete lives in the AnimalView
+ * header's ⋮ overflow menu (not a day-tab danger zone) and routes through the type-to-confirm
+ * AnimalDeleteDialog; per-day delete keeps its plain in-row confirm. Confirmations still name the
+ * animal/day, the cascade count, and the consequence — including that deleting local workspace
+ * metadata does NOT delete an already-downloaded YAML / NWB / DANDI / Spyglass.
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StoreProvider } from '../../../state/StoreContext';
-import { AnimalWorkspace } from '../index';
+import { AnimalView } from '../../AnimalView';
 
 const originalHash = window.location.hash;
 afterEach(() => {
@@ -18,15 +19,30 @@ afterEach(() => {
 });
 
 /**
- * Render the workspace seeded with the given animals/days.
+ * Open the animal-delete dialog from the AnimalView header ⋮ menu.
+ * @param {object} user - userEvent session.
+ * @returns {Promise<HTMLElement>} the open alertdialog.
+ */
+async function openAnimalDeleteDialog(user) {
+  await user.click(screen.getByRole('button', { name: /actions for remy/i }));
+  await user.click(screen.getByRole('menuitem', { name: /delete animal/i }));
+  return screen.getByRole('alertdialog');
+}
+
+/**
+ * Render the tabbed animal view for one animal (Phase 1 — the delete actions live in the
+ * extracted pane, now hosted by AnimalView, which also owns the post-delete "Animal not found"
+ * fallback). Cross-animal survival (e.g. "totoro remains") is the store's concern, covered by
+ * the deleteAnimal store tests — here we verify the UI triggers + confirm copy + fallback.
+ * @param {string} animalId - The animal whose view to render.
  * @param {object} animals - workspace.animals
  * @param {object} [days] - workspace.days
  * @returns {object} render result
  */
-function renderWith(animals, days = {}) {
+function renderView(animalId, animals, days = {}) {
   return render(
     <StoreProvider initialState={{ workspace: { animals, days, settings: {} } }}>
-      <AnimalWorkspace />
+      <AnimalView animalId={animalId} tab="days" />
     </StoreProvider>
   );
 }
@@ -69,67 +85,64 @@ const totoro = {
   days: [],
 };
 
-/**
- * Select an animal by name in the sidebar.
- * @param {string} name - Animal id.
- */
-async function selectAnimal(name) {
-  await userEvent.click(screen.getByRole('button', { name: new RegExp(`^${name}`, 'i') }));
-}
-
 describe('AnimalWorkspace lifecycle cleanup — Delete animal', () => {
-  it('exposes a discoverable, secondary Delete animal action for the selected animal', async () => {
-    renderWith({ remy, totoro }, remyDays);
-    await selectAnimal('remy');
+  it('exposes a discoverable per-animal ⋮ menu in the header with a Delete animal action', async () => {
+    const user = userEvent.setup();
+    renderView('remy', { remy, totoro }, remyDays);
 
-    const deleteBtn = screen.getByRole('button', { name: /delete this animal/i });
-    expect(deleteBtn).toBeInTheDocument();
-    // Secondary/destructive — NOT the primary action, and not the same control as
-    // "Add Recording Days" / "Edit Animal Setup".
-    expect(deleteBtn).not.toHaveClass('btn-primary');
-    expect(deleteBtn.textContent).not.toMatch(/add recording days|edit animal setup/i);
+    const trigger = screen.getByRole('button', { name: /actions for remy/i });
+    expect(trigger).toHaveAttribute('aria-haspopup', 'menu');
+    // Destructive delete lives in the menu — NOT a primary control, and the old day-tab danger
+    // zone is gone.
+    expect(screen.queryByRole('button', { name: /delete this animal/i })).not.toBeInTheDocument();
+
+    await user.click(trigger);
+    expect(screen.getByRole('menuitem', { name: /delete animal/i })).toBeInTheDocument();
+    // The header ⋮ omits a redundant "Open" (you are already viewing this animal) and the dead
+    // "Rename…" placeholder — only the real lifecycle action remains.
+    expect(screen.queryByRole('menuitem', { name: /^open$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: /rename/i })).not.toBeInTheDocument();
   });
 
-  it('confirms with the animal name and recording-day cascade count, then deletes', async () => {
+  it('confirms with the animal name and recording-day cascade count, then deletes (type-to-confirm)', async () => {
     const user = userEvent.setup();
-    renderWith({ remy, totoro }, remyDays);
-    await selectAnimal('remy');
+    renderView('remy', { remy, totoro }, remyDays);
 
-    await user.click(screen.getByRole('button', { name: /delete this animal/i }));
+    const dialog = await openAnimalDeleteDialog(user);
 
     // A destructive confirm (alertdialog) names the animal + its 2 recording days.
-    const dialog = screen.getByRole('alertdialog');
-    expect(within(dialog).getByText(/remy/)).toBeInTheDocument();
     expect(within(dialog).getByText(/2 recording days/i)).toBeInTheDocument();
 
-    await user.click(within(dialog).getByRole('button', { name: /^delete animal$/i }));
+    // The gate: Delete is disabled until the id is typed exactly.
+    const confirm = within(dialog).getByRole('button', { name: /^delete animal$/i });
+    expect(confirm).toBeDisabled();
+    await user.type(within(dialog).getByRole('textbox', { name: /type .* to confirm/i }), 'remy');
+    await user.click(confirm);
 
-    // remy and its days are gone; totoro survives.
-    expect(screen.queryByRole('button', { name: /^remy/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^totoro/i })).toBeInTheDocument();
-    // Selection reset — the deleted animal is no longer shown as selected.
+    // Deleting the viewed animal navigates to the picker (the deliberate-delete success landing),
+    // not the "Animal not found" 404-like state; its day rows are gone. (That deleting remy
+    // preserves totoro is the store's guarantee, covered by the deleteAnimal store tests.)
+    expect(window.location.hash).toBe('#/workspace');
     expect(screen.queryByText('2023-06-22')).not.toBeInTheDocument();
   });
 
   it('leaves the animal intact when the confirm is cancelled', async () => {
     const user = userEvent.setup();
-    renderWith({ remy, totoro }, remyDays);
-    await selectAnimal('remy');
+    renderView('remy', { remy, totoro }, remyDays);
 
-    await user.click(screen.getByRole('button', { name: /delete this animal/i }));
-    await user.click(screen.getByRole('button', { name: /^cancel$/i }));
+    const dialog = await openAnimalDeleteDialog(user);
+    await user.click(within(dialog).getByRole('button', { name: /^cancel$/i }));
 
-    expect(screen.getByRole('button', { name: /^remy/i })).toBeInTheDocument();
+    // The animal is intact: still its days pane (not the "Animal not found" fallback).
+    expect(screen.queryByRole('heading', { name: /animal not found/i })).not.toBeInTheDocument();
     expect(screen.getByText('2023-06-22')).toBeInTheDocument();
   });
 
   it('warns that deleting does not remove already-downloaded YAML / NWB / DANDI / Spyglass', async () => {
     const user = userEvent.setup();
-    renderWith({ remy, totoro }, remyDays); // remy has an exported day
-    await selectAnimal('remy');
+    renderView('remy', { remy, totoro }, remyDays); // remy has an exported day
 
-    await user.click(screen.getByRole('button', { name: /delete this animal/i }));
-    const dialog = screen.getByRole('alertdialog');
+    const dialog = await openAnimalDeleteDialog(user);
     expect(within(dialog).getByText(/already downloaded|does not delete/i)).toBeInTheDocument();
     expect(within(dialog).getByText(/NWB|DANDI|Spyglass/i)).toBeInTheDocument();
   });
@@ -138,8 +151,7 @@ describe('AnimalWorkspace lifecycle cleanup — Delete animal', () => {
 describe('AnimalWorkspace lifecycle cleanup — Delete recording day', () => {
   it('exposes a Delete recording day action on an ordinary day row and deletes on confirm', async () => {
     const user = userEvent.setup();
-    renderWith({ remy }, remyDays);
-    await selectAnimal('remy');
+    renderView('remy', { remy }, remyDays);
 
     // The delete action is a real button, separate from the navigation link (not nested in it).
     const deleteDayBtn = screen.getByRole('button', { name: /delete recording day 2023-06-23/i });
@@ -158,8 +170,7 @@ describe('AnimalWorkspace lifecycle cleanup — Delete recording day', () => {
 
   it('warns downloaded files are not deleted when the day was exported', async () => {
     const user = userEvent.setup();
-    renderWith({ remy }, remyDays);
-    await selectAnimal('remy');
+    renderView('remy', { remy }, remyDays);
 
     await user.click(screen.getByRole('button', { name: /delete recording day 2023-06-22/i }));
     const dialog = screen.getByRole('alertdialog');
@@ -184,11 +195,9 @@ describe('AnimalWorkspace lifecycle cleanup — wrong-owner preservation', () =>
         state: { draft: true },
       },
     };
-    renderWith(animals, days);
-    await selectAnimal('remy');
+    renderView('remy', animals, days);
 
-    await user.click(screen.getByRole('button', { name: /delete this animal/i }));
-    const dialog = screen.getByRole('alertdialog');
+    const dialog = await openAnimalDeleteDialog(user);
     // Cascade count is the ONE owned day, not two.
     expect(within(dialog).getByText(/1 recording day/i)).toBeInTheDocument();
     // And the wrong-owner record is called out as preserved.
@@ -212,11 +221,9 @@ describe('AnimalWorkspace lifecycle cleanup — wrong-owner preservation', () =>
         state: { draft: true },
       },
     };
-    renderWith(animals, days);
-    await selectAnimal('remy');
+    renderView('remy', animals, days);
 
-    await user.click(screen.getByRole('button', { name: /delete this animal/i }));
-    const dialog = screen.getByRole('alertdialog');
+    const dialog = await openAnimalDeleteDialog(user);
     // Count is the ONE indexed (OK) day — NOT two.
     expect(within(dialog).getByText(/its 1 recording day/i)).toBeInTheDocument();
     expect(within(dialog).queryByText(/its 2 recording days/i)).not.toBeInTheDocument();
