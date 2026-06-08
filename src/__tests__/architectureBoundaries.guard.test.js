@@ -31,13 +31,14 @@ const srcDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../')
  *   `AnimalView` render ONE implementation instead of forking it (the "extract, don't fork"
  *   contract). It owns no domain logic — it composes selectors/domain like any page. Lives under
  *   AnimalWorkspace (its origin); a neutral relocation can follow when `src/components` opens up.
- * - `pages/AnimalEditor/wiring/{ElectrodeGroupsContainer,ChannelMapsContainer}` — the extracted
- *   animal-setup section containers (Phase 3-1), DELIBERATELY shared so the still-live legacy
- *   stepper and the new tabbed `AnimalView` render ONE implementation of the ephys-setup wiring
- *   instead of forking it (same "extract, don't fork" contract). They own no app-wide domain
- *   logic — they compose selectors + tested utils (channel-map regen, CSV) like any page. They
- *   live under AnimalEditor (their origin); a neutral relocation can follow when `src/components`
- *   opens up. Later sub-phases (3-3) add the remaining setup containers here.
+ * - `pages/AnimalEditor/wiring/*` — the extracted animal-setup section containers + their shared
+ *   store-binding hook (Phase 3-1), DELIBERATELY shared so the still-live legacy stepper and the
+ *   new tabbed `AnimalView` render ONE implementation of the setup wiring instead of forking it
+ *   (same "extract, don't fork" contract). They own no app-wide domain logic — they compose
+ *   selectors + tested utils (channel-map regen, CSV, identity-safety) and `state/repairCommands`
+ *   like any page. They live under AnimalEditor (their origin); a neutral relocation can follow
+ *   when `src/components` opens up. Phase 3-2 added the two ephys containers; Phase 3-3 adds the
+ *   four catalog/library containers + the `useAnimalFieldUpdate` hook that feeds them.
  *
  * @type {Set<string>}
  */
@@ -46,6 +47,11 @@ const CROSS_PAGE_ALLOWLIST = new Set([
   'pages/AnimalWorkspace/RecordingDaysTab',
   'pages/AnimalEditor/wiring/ElectrodeGroupsContainer',
   'pages/AnimalEditor/wiring/ChannelMapsContainer',
+  'pages/AnimalEditor/wiring/RecordingSystemContainer',
+  'pages/AnimalEditor/wiring/CamerasContainer',
+  'pages/AnimalEditor/wiring/DioContainer',
+  'pages/AnimalEditor/wiring/OptogeneticsContainer',
+  'pages/AnimalEditor/wiring/useAnimalFieldUpdate',
 ]);
 
 /**

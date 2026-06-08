@@ -126,6 +126,19 @@
   font-style: italic;
 }
 
+/* Neutral status chip (e.g. unused optogenetics): an empty-but-valid section says so plainly,
+   so it doesn't read as missing/erroring setup. Quiet, colour-free pill. */
+.animal-view-status-chip {
+  display: inline-block;
+  margin: 0 0 1rem;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.8rem;
+  color: #46443d;
+  background: #f1efe9;
+  border: 1px solid var(--border-color, #ddd7c9);
+  border-radius: 999px;
+}
+
 .section-placeholder {
   color: #46443d;
 }

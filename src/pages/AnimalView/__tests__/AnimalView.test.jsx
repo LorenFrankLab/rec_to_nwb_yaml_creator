@@ -151,8 +151,9 @@ describe('AnimalView — tab panels (Task 1.2)', () => {
     expect(screen.getByRole('heading', { name: /recording days for remy/i })).toBeInTheDocument();
   });
 
-  it('renders a placeholder (not the days pane) for a not-yet-extracted setup tab', () => {
-    renderView('cameras');
+  it('renders a placeholder (not the days pane) for a not-yet-extracted tab (export, → 3-5)', () => {
+    // The setup tabs are all extracted now (3-2/3-3); `export` is the only remaining placeholder.
+    renderView('export');
     expect(screen.queryByRole('heading', { name: /recording days for remy/i })).not.toBeInTheDocument();
     // Placeholder points the user at the still-live Animal Editor for now.
     const link = screen.getByRole('link', { name: /animal setup/i });

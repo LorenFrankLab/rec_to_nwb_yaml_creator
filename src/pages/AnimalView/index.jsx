@@ -21,6 +21,11 @@ import { ConfirmDialog } from '../../components/Modal';
 import { RecordingDaysTab } from '../AnimalWorkspace/RecordingDaysTab';
 import ElectrodeGroupsContainer from '../AnimalEditor/wiring/ElectrodeGroupsContainer';
 import ChannelMapsContainer from '../AnimalEditor/wiring/ChannelMapsContainer';
+import RecordingSystemContainer from '../AnimalEditor/wiring/RecordingSystemContainer';
+import CamerasContainer from '../AnimalEditor/wiring/CamerasContainer';
+import DioContainer from '../AnimalEditor/wiring/DioContainer';
+import OptogeneticsContainer from '../AnimalEditor/wiring/OptogeneticsContainer';
+import { useAnimalFieldUpdate } from '../AnimalEditor/wiring/useAnimalFieldUpdate';
 import ConfigVersionContext from './ConfigVersionContext';
 import './AnimalView.css';
 
@@ -32,6 +37,11 @@ import './AnimalView.css';
 const TAB_SCOPE = {
   'electrode-groups': 'Versioned identity — a change here forks a configuration version.',
   'channel-maps': 'Edit any time — map channels, mark bad channels.',
+  // Recording system is honest about its blast radius (Task 3.2): it is animal-level setup with NO
+  // per-day version, so editing it affects every day. Deliberately NOT framed as "apply per day".
+  'recording-system': 'Shared across ALL days (no per-day version).',
+  cameras: 'Catalog — referenced per day.',
+  dio: 'Library — opt in per day.',
 };
 
 /**
@@ -66,17 +76,20 @@ const TAB_LABEL = Object.fromEntries(
 
 /**
  * Render the active tab's panel content. The `days` tab hosts the shared RecordingDaysTab; the
- * ephys setup tabs host their extracted containers (Phase 3-2); the rest still show the Phase-1
- * placeholder pointing at the still-live Animal Editor until their sub-phase lands.
+ * setup tabs host their extracted containers (Phase 3-2/3-3); only `export` still shows the
+ * Phase-1 placeholder until its sub-phase (3-5) lands.
  *
- * @param {string} tab - The active tab (route `:tab` segment).
- * @param {string} animalId - The animal whose section to render.
- * @param {object} animal - The resolved animal record (for config-version legibility).
- * @param {Function} onPendingEditsChange - Pending-edit reporter the setup containers call so the
- *   shell can guard a section-nav switch (charter decision 2).
+ * @param {object} ctx - Panel context.
+ * @param {string} ctx.tab - The active tab (route `:tab` segment).
+ * @param {string} ctx.animalId - The animal whose section to render.
+ * @param {object} ctx.animal - The resolved animal record (for config-version legibility / status).
+ * @param {Function} ctx.onPendingEditsChange - Pending-edit reporter the setup containers call so
+ *   the shell can guard a section-nav switch (charter decision 2).
+ * @param {Function} ctx.onFieldUpdate - Field-update callback the `{ animal, onFieldUpdate }`
+ *   containers (recording-system / cameras / dio) persist through.
  * @returns {React.Element}
  */
-function renderPanel(tab, animalId, animal, onPendingEditsChange) {
+function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdate }) {
   switch (tab) {
     case 'days':
       return <RecordingDaysTab animalId={animalId} />;
@@ -89,6 +102,25 @@ function renderPanel(tab, animalId, animal, onPendingEditsChange) {
       );
     case 'channel-maps':
       return <ChannelMapsContainer animalId={animalId} onPendingEditsChange={onPendingEditsChange} />;
+    case 'recording-system':
+      return <RecordingSystemContainer animal={animal} onFieldUpdate={onFieldUpdate} />;
+    case 'cameras':
+      return <CamerasContainer animal={animal} onFieldUpdate={onFieldUpdate} />;
+    case 'dio':
+      return <DioContainer animal={animal} onFieldUpdate={onFieldUpdate} />;
+    case 'optogenetics':
+      return (
+        <>
+          {getAnimalSectionStatus(animal, 'optogenetics') === SECTION_STATUS.TODO && (
+            // An unconfigured opto tab is a VALID state, not an error — a neutral chip says so, so
+            // the empty section doesn't read as missing setup (charter tab→content map).
+            <p className="animal-view-status-chip" data-testid="opto-status-chip">
+              Not used — no stimulation
+            </p>
+          )}
+          <OptogeneticsContainer animalId={animalId} />
+        </>
+      );
     default:
       return (
         <div className="section-placeholder">
@@ -114,6 +146,11 @@ export function AnimalView({ animalId, tab }) {
   const { model } = useStoreContext();
   const { animals = {} } = model.workspace;
   const animal = animalId ? animals[animalId] : null;
+
+  // Shared store-bound field-update + repair callbacks for the `{ animal, onFieldUpdate }` setup
+  // containers (recording-system / cameras / dio) and the corruption banner — the same wiring the
+  // legacy stepper uses, so logic is never forked.
+  const { handleFieldUpdate } = useAnimalFieldUpdate(animalId);
 
   const panelRef = useRef(null);
   const isFirstRender = useRef(true);
@@ -249,7 +286,13 @@ export function AnimalView({ animalId, tab }) {
               {TAB_SCOPE[tab]}
             </p>
           )}
-          {renderPanel(tab, animalId, animal, setPendingEdits)}
+          {renderPanel({
+            tab,
+            animalId,
+            animal,
+            onPendingEditsChange: setPendingEdits,
+            onFieldUpdate: handleFieldUpdate,
+          })}
         </section>
       </div>
 
