@@ -21,7 +21,8 @@ import { useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
-import { getAnimalSubject } from '../../state/workspaceSelectors';
+import { getAnimalSubject, getConfigHistory } from '../../state/workspaceSelectors';
+import EffectiveDayReview from './EffectiveDayReview';
 import { computeStepStatus } from '../../domain/validation';
 import { getDayWorkflowStatus } from '../../domain/workflowStatus';
 import { describeDayOptoState } from '../../domain/optoStatus';
@@ -168,6 +169,24 @@ const subjectLabel = (animal) => {
   const id = getAnimalSubject(animal).subject_id ?? animal?.id;
   return typeof id === 'string' ? id : String(id ?? '');
 };
+
+/**
+ * Human-readable dated config context for a day's pinned configuration version (Task 3.4 — the
+ * validation-slice legibility), e.g. "config from 2023-06-01 (historical — v1)" instead of a bare
+ * "v1". Falls back to the bare version when the snapshot has no date (corrupt/old history).
+ *
+ * @param {object} animal - The owning animal (its `configurationHistory` supplies the version date).
+ * @param {number|null} version - The pinned configuration version.
+ * @param {boolean} historical - Whether that version is not the animal's latest.
+ * @returns {string}
+ */
+function datedConfigContext(animal, version, historical) {
+  const snapshot = getConfigHistory(animal).find((s) => s.version === version);
+  if (snapshot?.date) {
+    return `config from ${snapshot.date}${historical ? ` (historical — v${version})` : ''}`;
+  }
+  return `config v${version ?? '—'}${historical ? ' (historical)' : ''}`;
+}
 
 /**
  * An assertive (`role="alert"`) report of days that were NOT exported normally, with
@@ -719,16 +738,32 @@ export function ValidationSummary({ animalKey } = {}) {
                   <td>
                     {/* Scan fields (Task 10): pinned configuration version, camera count, and the
                         day-protocol opto state — so days can be compared at a glance. Absent for
-                        unreadable/missing/wrong-owner rows (no trustworthy merge), shown as "—". */}
+                        unreadable/missing/wrong-owner rows (no trustworthy merge), shown as "—".
+                        In the SCOPED per-animal tab, the cell becomes an expander whose summary reads
+                        the dated config context (Task 3.4) and whose body is the read-only
+                        effective-setup-for-this-day review (Task 3.3a). */}
                     {scan ? (
-                      <span className="validation-summary-scan">
-                        config v{scan.version ?? '—'}
-                        {scan.historical ? ' (historical)' : ''}
-                        {' · '}
-                        {scan.cameras} {scan.cameras === 1 ? 'camera' : 'cameras'}
-                        {' · '}
-                        {scan.opto}
-                      </span>
+                      scoped ? (
+                        <details className="validation-summary-effective" data-testid={`effective-${day.id}`}>
+                          <summary className="validation-summary-scan">
+                            {datedConfigContext(animal, scan.version, scan.historical)}
+                            {' · '}
+                            {scan.cameras} {scan.cameras === 1 ? 'camera' : 'cameras'}
+                            {' · '}
+                            {scan.opto}
+                          </summary>
+                          <EffectiveDayReview animal={animal} day={day} />
+                        </details>
+                      ) : (
+                        <span className="validation-summary-scan">
+                          config v{scan.version ?? '—'}
+                          {scan.historical ? ' (historical)' : ''}
+                          {' · '}
+                          {scan.cameras} {scan.cameras === 1 ? 'camera' : 'cameras'}
+                          {' · '}
+                          {scan.opto}
+                        </span>
+                      )
                     ) : (
                       '—'
                     )}

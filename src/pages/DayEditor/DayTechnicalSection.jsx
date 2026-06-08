@@ -1,34 +1,6 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
-
-/** Fallback rig-constant values (match `createDayRecord`'s seeding fallbacks, not the schema
- *  `default` of 0.0 — these are the app's seeded values). */
-const RIG_FALLBACK = { raw_data_to_volts: 0.195, times_period_multiplier: 1.5 };
-
-/**
- * Resolve a rig constant's EFFECTIVE day value (what export reads) and how it relates to the
- * CURRENT recording-system default. Phase 8.7 Task 4: a day keeps the value copied at creation, so
- * if the default later changed the day legitimately differs — say so honestly ("Different from
- * current recording-system default"), never silently relabel it as "using default".
- *
- * Returns one of three statuses. `'unset'` (defense-in-depth): `createDayRecord` always seeds these,
- * so an absent day value only arises from corrupt/migrated persisted state — and the export reads
- * `day.technical[field]` directly with NO empty-omit guard, so an undefined value fails the schema's
- * required check. Surface that honestly rather than falsely reassuring "using default".
- *
- * @param {object} technical - The day's `technical` block.
- * @param {object} defaults - The animal's `technicalDefaults`.
- * @param {string} field - `'raw_data_to_volts'` | `'times_period_multiplier'`.
- * @returns {{ display: (number|string), status: 'default'|'differs'|'unset', currentDefault: number }}
- */
-function resolveRigConstant(technical, defaults, field) {
-  const dayVal = technical?.[field];
-  const currentDefault =
-    typeof defaults?.[field] === 'number' ? defaults[field] : RIG_FALLBACK[field];
-  const hasDay = typeof dayVal === 'number';
-  const status = !hasDay ? 'unset' : dayVal === currentDefault ? 'default' : 'differs';
-  return { display: hasDay ? dayVal : '—', status, currentDefault };
-}
+import { resolveRigConstant } from '../../domain/rigConstants';
 
 /**
  * DayTechnicalSection - per-day technical parameters (Day Editor / Overview).
