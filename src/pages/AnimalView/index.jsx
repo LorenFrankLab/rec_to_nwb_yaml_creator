@@ -18,7 +18,19 @@ import { useStoreContext } from '../../state/StoreContext';
 import { getAnimalSubject } from '../../state/workspaceSelectors';
 import { getAnimalSectionStatus, SECTION_STATUS } from '../../domain/sectionStatus';
 import { RecordingDaysTab } from '../AnimalWorkspace/RecordingDaysTab';
+import ElectrodeGroupsContainer from '../AnimalEditor/wiring/ElectrodeGroupsContainer';
+import ChannelMapsContainer from '../AnimalEditor/wiring/ChannelMapsContainer';
 import './AnimalView.css';
+
+/**
+ * Per-tab scope descriptor shown under the panel heading: the one-line framing of a section's
+ * ownership/blast-radius (charter "tab → content map"). Only tabs extracted so far carry an
+ * entry; later sub-phases add the rest.
+ */
+const TAB_SCOPE = {
+  'electrode-groups': 'Versioned identity — a change here forks a configuration version.',
+  'channel-maps': 'Edit any time — map channels, mark bad channels.',
+};
 
 /**
  * Section-nav structure: grouped, in display order. Keys are the route `:tab` segments
@@ -49,6 +61,36 @@ const SECTION_GROUPS = [
 const TAB_LABEL = Object.fromEntries(
   SECTION_GROUPS.flatMap((g) => g.items).map((i) => [i.key, i.label])
 );
+
+/**
+ * Render the active tab's panel content. The `days` tab hosts the shared RecordingDaysTab; the
+ * ephys setup tabs host their extracted containers (Phase 3-2); the rest still show the Phase-1
+ * placeholder pointing at the still-live Animal Editor until their sub-phase lands.
+ *
+ * @param {string} tab - The active tab (route `:tab` segment).
+ * @param {string} animalId - The animal whose section to render.
+ * @returns {React.Element}
+ */
+function renderPanel(tab, animalId) {
+  switch (tab) {
+    case 'days':
+      return <RecordingDaysTab animalId={animalId} />;
+    case 'electrode-groups':
+      return <ElectrodeGroupsContainer animalId={animalId} />;
+    case 'channel-maps':
+      return <ChannelMapsContainer animalId={animalId} />;
+    default:
+      return (
+        <div className="section-placeholder">
+          <h2>{TAB_LABEL[tab] || 'Section'}</h2>
+          <p>
+            This section moves here in a later phase. For now, configure it in{' '}
+            <a href={`#/animal/${animalId}/editor`}>Animal Setup</a>.
+          </p>
+        </div>
+      );
+  }
+}
 
 /**
  * AnimalView component.
@@ -157,17 +199,12 @@ export function AnimalView({ animalId, tab }) {
           tabIndex="-1"
           ref={panelRef}
         >
-          {tab === 'days' ? (
-            <RecordingDaysTab animalId={animalId} />
-          ) : (
-            <div className="section-placeholder">
-              <h2>{TAB_LABEL[tab] || 'Section'}</h2>
-              <p>
-                This section moves here in a later phase. For now, configure it in{' '}
-                <a href={`#/animal/${animalId}/editor`}>Animal Setup</a>.
-              </p>
-            </div>
+          {TAB_SCOPE[tab] && (
+            <p className="animal-view-panel-scope" data-testid={`panel-scope-${tab}`}>
+              {TAB_SCOPE[tab]}
+            </p>
           )}
+          {renderPanel(tab, animalId)}
         </section>
       </div>
     </main>

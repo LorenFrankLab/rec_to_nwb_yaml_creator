@@ -117,6 +117,15 @@
   outline-offset: -2px;
 }
 
+/* Per-tab scope descriptor: the section's ownership/blast-radius framing, shown under the panel
+   heading (charter "tab → content map"). Quiet, secondary text — context, not a warning. */
+.animal-view-panel-scope {
+  margin: 0 0 1rem;
+  font-size: 0.82rem;
+  color: #6a6557;
+  font-style: italic;
+}
+
 .section-placeholder {
   color: #46443d;
 }
