@@ -1,30 +1,29 @@
 /**
- * Animal Workspace View - Multi-Day Management (M4)
+ * Animal Workspace View — the animal PICKER (Phase 1 — tabbed-workspace-ia).
  *
- * The legacy hub: an animal picker (left rail) + the per-animal recording-days pane. The pane
- * itself lives in {@link RecordingDaysTab} (extracted in Phase 1 — tabbed-workspace-ia — so the
- * new `#/animal/:id/days` route can render the same implementation without forking). This shell
- * owns only animal SELECTION; everything about a selected animal's days is the tab's concern.
+ * After the tab-shell conversion the Workspace is a pure picker + empty state: each animal card
+ * is a LINK to `#/animal/:id/days`, where the tabbed {@link AnimalView} owns that animal's days
+ * and setup. The per-animal recording-days pane lives in {@link RecordingDaysTab} (hosted by
+ * AnimalView). Selecting an animal navigates to the route rather than rendering inline, so the
+ * pane has exactly one home.
  *
  * @see docs/ANIMAL_WORKSPACE_DESIGN.md for UI mockups
  * @see docs/animal_hierarchy.md for data model
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
 import { classifyAnimalDays, isPresentRecordStatus } from '../../domain/dayRecovery';
-import { RecordingDaysTab } from './RecordingDaysTab';
 import './AnimalWorkspace.css';
 
 /**
  * AnimalWorkspace Component
  *
- * Main workspace view for managing animals and their recording days.
- * Supports URL parameter ?animal=<id> to auto-select an animal on load.
+ * The animal picker. Supports the post-create-day handshake `#/workspace?animal=<id>`, which now
+ * navigates to that animal's days route (the animal experience lives at `#/animal/:id/:tab`).
  */
 export function AnimalWorkspace() {
   const { model } = useStoreContext();
-  const [selectedAnimalId, setSelectedAnimalId] = useState(null);
 
   // Default the required sections so a workspace that somehow reaches here without them
   // renders its empty state instead of crashing on Object.keys(undefined).
@@ -32,33 +31,17 @@ export function AnimalWorkspace() {
   const animalIds = Object.keys(animals);
   const hasAnimals = animalIds.length > 0;
 
-  const selectedAnimal = selectedAnimalId ? animals[selectedAnimalId] : null;
-
-  // On mount, select an animal so the setup/review state is visible immediately rather than
-  // one click hidden: honor an explicit `?animal=<id>`; with no param, auto-select the SOLE
-  // animal (the unambiguous case). An explicit-but-unknown `?animal` selects nothing (the user
-  // asked for a specific animal — don't substitute a different one).
+  // Handshake: `#/workspace?animal=<id>` (e.g. after creating a day) jumps straight to that
+  // animal's days route. An unknown/absent `?animal` is ignored — the picker is shown. (Unlike
+  // the old inline pane, a SOLE animal is NOT auto-opened: the picker stays reachable so "+ New
+  // Animal" is always available; the user opens an animal by clicking its card.)
   useEffect(() => {
     const params = new URLSearchParams(window.location.hash.split('?')[1]);
     const animalParam = params.get('animal');
-
-    if (animalParam) {
-      if (animals[animalParam]) setSelectedAnimalId(animalParam);
-      return;
-    }
-    const ids = Object.keys(animals);
-    if (ids.length === 1) {
-      setSelectedAnimalId(ids[0]);
+    if (animalParam && animals[animalParam]) {
+      window.location.hash = `#/animal/${animalParam}/days`;
     }
   }, []); // Run only on mount
-
-  /**
-   * Handle animal selection
-   * @param {string} animalId - Animal identifier to select
-   */
-  function handleSelectAnimal(animalId) {
-    setSelectedAnimalId(animalId);
-  }
 
   return (
     <main id="main-content" tabIndex="-1" role="main" aria-labelledby="workspace-heading">
@@ -74,53 +57,32 @@ export function AnimalWorkspace() {
           </a>
         </div>
       ) : (
-        /* Main Content: Animal List + Day Management */
-        <div className="workspace-content">
-          {/* Animal List Sidebar */}
-          <nav className="animal-list" aria-label="Animal list">
-            <div className="animal-list-header">
-              <h2>Animals</h2>
-              <a href="#/home" className="btn-create-animal" aria-label="Create new animal">
-                + New Animal
+        /* Animal picker: each card links to the animal's tabbed view. */
+        <nav className="animal-list" aria-label="Animal list">
+          <div className="animal-list-header">
+            <h2>Animals</h2>
+            <a href="#/home" className="btn-create-animal" aria-label="Create new animal">
+              + New Animal
+            </a>
+          </div>
+          {animalIds.map((animalId) => {
+            const animal = animals[animalId];
+            // Count day RECORDS present (indexed + recovered), via the recovery classifier, so
+            // a missing/corrupt index doesn't under-count an animal with recovered records.
+            const dayCount = classifyAnimalDays(animalId, animal, days).filter(
+              (d) => isPresentRecordStatus(d.status)
+            ).length;
+
+            return (
+              <a key={animalId} className="animal-card" href={`#/animal/${animalId}/days`}>
+                <div className="animal-name">{animalId}</div>
+                <div className="animal-day-count">
+                  {dayCount} {dayCount === 1 ? 'day' : 'days'}
+                </div>
               </a>
-            </div>
-            {animalIds.map((animalId) => {
-              const animal = animals[animalId];
-              // Count day RECORDS present (indexed + recovered), via the recovery classifier, so
-              // a missing/corrupt index doesn't under-count an animal with recovered records.
-              const dayCount = classifyAnimalDays(animalId, animal, days).filter(
-                (d) => isPresentRecordStatus(d.status)
-              ).length;
-              const isSelected = animalId === selectedAnimalId;
-
-              return (
-                <button
-                  key={animalId}
-                  className={`animal-card ${isSelected ? 'selected' : ''}`}
-                  onClick={() => handleSelectAnimal(animalId)}
-                  aria-pressed={isSelected}
-                >
-                  <div className="animal-name">{animalId}</div>
-                  <div className="animal-day-count">
-                    {dayCount} {dayCount === 1 ? 'day' : 'days'}
-                  </div>
-                </button>
-              );
-            })}
-          </nav>
-
-          {/* Day List Main Area */}
-          <section className="day-management" aria-labelledby="day-list-heading">
-            {!selectedAnimal ? (
-              /* Prompt to select animal */
-              <div className="empty-state">
-                <p>Select an animal to view and manage recording days.</p>
-              </div>
-            ) : (
-              <RecordingDaysTab animalId={selectedAnimalId} />
-            )}
-          </section>
-        </div>
+            );
+          })}
+        </nav>
       )}
     </main>
   );
