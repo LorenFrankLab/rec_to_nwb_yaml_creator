@@ -80,10 +80,12 @@ describe('DataAcqSection — catalog list', () => {
     expect(onFieldUpdate).toHaveBeenCalledWith('data_acq_device', [sg]);
   });
 
-  it('does not allow deleting the last system (schema requires at least one)', () => {
+  it('shows the Delete button for the last system but DISABLED (schema requires at least one)', () => {
     render(<DataAcqSection animal={animalWith([sg])} onFieldUpdate={onFieldUpdate} />);
-    // With one system there is no delete control (or it is disabled) — the catalog must keep ≥ 1.
-    expect(screen.queryByRole('button', { name: /delete recording system/i })).not.toBeInTheDocument();
+    // Consistent with Electrode Groups / Cameras (Delete always present), but disabled for the last
+    // entry so the catalog can't drop below the schema's minItems:1.
+    const del = screen.getByRole('button', { name: /delete recording system/i });
+    expect(del).toBeDisabled();
   });
 
   it('blocks adding a second system with a name already in the catalog', async () => {

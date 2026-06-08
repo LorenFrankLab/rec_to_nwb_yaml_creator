@@ -374,16 +374,18 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
                   >
                     Edit
                   </button>
-                  {catalog.length > 1 && (
-                    <button
-                      type="button"
-                      className="button-small button-danger"
-                      onClick={() => deleteAt(index)}
-                      aria-label={`Delete recording system ${d.name}`}
-                    >
-                      Delete
-                    </button>
-                  )}
+                  {/* Always present (consistent with the Electrode Groups / Cameras tabs), but
+                      disabled for the last system — the schema requires at least one. */}
+                  <button
+                    type="button"
+                    className="button-small button-danger"
+                    onClick={() => deleteAt(index)}
+                    disabled={catalog.length <= 1}
+                    title={catalog.length <= 1 ? 'The animal must have at least one recording system' : undefined}
+                    aria-label={`Delete recording system ${d.name}`}
+                  >
+                    Delete
+                  </button>
                 </td>
               </tr>
             );
