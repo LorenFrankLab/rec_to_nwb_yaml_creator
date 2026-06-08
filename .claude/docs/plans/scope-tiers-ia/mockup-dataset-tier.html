@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mockup — dataset / animal / day tiers (shared hardware)</title>
+<style>
+  :root { --line:#d8dde3; --muted:#6b7480; --ink:#1c2530; --accent:#1d6fb8; --done:#2c5d2c; --doneBg:#e6f4e6; --bg:#f5f7f9; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.5 -apple-system,Segoe UI,Roboto,sans-serif; color:var(--ink); background:var(--bg); }
+  header.app { display:flex; align-items:center; gap:1rem; padding:.6rem 1rem; background:#fff; border-bottom:1px solid var(--line); }
+  header.app .logo { width:26px;height:26px;border-radius:5px;background:#13324d; }
+  nav.primary { display:flex; gap:.25rem; margin-left:.5rem; }
+  nav.primary a { padding:.35rem .7rem; border-radius:6px; color:var(--ink); text-decoration:none; font-weight:600; }
+  nav.primary a.active { background:#eaf2fb; color:var(--accent); }
+  nav.primary a.new { outline:2px dashed var(--accent); outline-offset:1px; }
+  .wrap { max-width:1100px; margin:1.25rem auto; padding:0 1rem; }
+  .note { background:#fff7e6; border-left:3px solid #e0a106; padding:.5rem .7rem; border-radius:4px; color:#5a4a13; font-size:.86rem; margin:.5rem 0 1rem; }
+  .tier { border:1px solid var(--line); border-radius:10px; background:#fff; margin:0 0 1rem; overflow:hidden; }
+  .tier > h2 { margin:0; padding:.6rem .9rem; font-size:.78rem; letter-spacing:.06em; text-transform:uppercase; color:#fff; }
+  .tier.dataset > h2 { background:#13324d; }
+  .tier.animal > h2 { background:#3a6ea5; }
+  .tier.day > h2 { background:#6b8fb5; }
+  .tier .body { padding:.9rem; }
+  .tier .scope { font-size:.8rem; color:var(--muted); margin:-.3rem 0 .7rem; }
+  table { border-collapse:collapse; width:100%; font-size:.88rem; background:#fff; }
+  th,td { text-align:left; padding:.4rem .55rem; border-bottom:1px solid var(--line); }
+  th { font-size:.74rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+  .badge { font-size:.7rem; font-weight:700; text-transform:uppercase; padding:.06rem .4rem; border-radius:3px; background:var(--doneBg); color:var(--done); }
+  .ref { font-size:.78rem; color:var(--accent); }
+  .pill { display:inline-block; font-size:.78rem; padding:.12rem .5rem; border:1px solid var(--line); border-radius:99px; background:#fafbfc; }
+  .row { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
+  .arrow { color:var(--muted); text-align:center; font-size:1.3rem; margin:.1rem 0; }
+  .legacy { opacity:.55; }
+  h1 { font-size:1.3rem; margin:.2rem 0 .1rem; }
+  .sub { color:var(--muted); margin:0 0 1rem; }
+  .cols { display:grid; grid-template-columns:1fr 1fr; gap:.9rem; }
+  .card { border:1px solid var(--line); border-radius:8px; padding:.7rem .8rem; background:#fbfcfd; }
+  .card h3 { margin:.1rem 0 .4rem; font-size:.95rem; }
+  .k { color:var(--muted); font-size:.8rem; }
+  code { background:#eef2f6; padding:.05rem .3rem; border-radius:3px; font-size:.82rem; }
+  .annot { font-size:.8rem; color:var(--accent); margin:.3rem 0 0; }
+</style>
+</head>
+<body>
+<header class="app">
+  <div class="logo"></div>
+  <nav class="primary">
+    <a class="active" href="#">Workspace</a>
+    <a class="new" href="#">Shared Hardware ✦</a>
+    <a href="#">Validation &amp; Export</a>
+  </nav>
+</header>
+
+<div class="wrap">
+  <h1>Proposed model: three tiers — dataset / animal / day</h1>
+  <p class="sub">✦ = new. The only structural addition is a <b>dataset-level "Shared Hardware"</b> area. Everything else
+    is a re-parenting of things that already exist, plus reference dropdowns instead of re-typed copies.</p>
+
+  <div class="note">
+    <b>Why:</b> recording systems, cameras, DIO event types and opto hardware are physically shared across animals in a
+    rig. Today they're stored <i>per animal</i> and kept consistent by cross-animal "divergence" guards — the guards are
+    the tell that the data wants to live one level up. Store once here; animals/days <b>reference</b> it. No divergence is
+    even possible, and a fix (e.g. a camera calibration) propagates to every animal at once.
+  </div>
+
+  <!-- DATASET TIER -->
+  <div class="tier dataset">
+    <h2>Dataset · Shared Hardware (the rig)</h2>
+    <div class="body">
+      <p class="scope">Set up once for the lab/dataset. Each item is the single source of truth; animals &amp; days point at it by name/id.</p>
+      <div class="cols">
+        <div class="card">
+          <h3>Recording Systems <span class="k">(catalog)</span></h3>
+          <table>
+            <tr><th>Name</th><th>System</th><th>Amplifier</th><th></th></tr>
+            <tr><td>SpikeGadgets</td><td>SpikeGadgets</td><td>Intan</td><td><span class="badge">default</span></td></tr>
+            <tr><td>Neuropixels_rig</td><td>Open Ephys</td><td>IMEC</td><td></td></tr>
+          </table>
+        </div>
+        <div class="card">
+          <h3>Cameras <span class="k">(catalog)</span></h3>
+          <table>
+            <tr><th>Name</th><th>Model</th><th>m/px</th></tr>
+            <tr><td>overhead_run</td><td>Mako G-158</td><td>0.0008</td></tr>
+            <tr><td>sleep_box</td><td>Flir BFS</td><td>0.0012</td></tr>
+          </table>
+        </div>
+        <div class="card">
+          <h3>DIO event types <span class="k">(catalog)</span></h3>
+          <div class="row"><span class="pill">poke_center</span><span class="pill">pump_left</span><span class="pill">pump_right</span></div>
+        </div>
+        <div class="card">
+          <h3>Optogenetics hardware <span class="k">(catalog)</span></h3>
+          <div class="row"><span class="pill">473nm laser</span><span class="pill">200µm fiber</span></div>
+        </div>
+      </div>
+      <p class="annot">Replaces "store per animal + divergence guard" with "store once + reference". The Recording-System
+        catalog we just built moves <i>here</i> (it's the same table, one tier up).</p>
+    </div>
+  </div>
+  <div class="arrow">▼ referenced by</div>
+
+  <!-- ANIMAL TIER -->
+  <div class="tier animal">
+    <h2>Animal · the subject + implant — <code>remy</code></h2>
+    <div class="body">
+      <p class="scope">Animal-specific, per surgery. Versioned. The only hardware that's truly per-animal is the implant.</p>
+      <div class="cols">
+        <div class="card">
+          <h3>Subject</h3>
+          <div class="k">Rattus norvegicus · M · Wild-type · DOB 2023-01-15</div>
+        </div>
+        <div class="card">
+          <h3>Electrode Groups + Channel <u>Mapping</u> <span class="k">(versioned)</span></h3>
+          <div class="k">8× tetrode_12.5 · CA1/PFC · wiring map v2</div>
+          <p class="annot">Mapping only — <b>bad channels move to the day</b> (see Split, below).</p>
+        </div>
+        <div class="card">
+          <h3>Uses (references into Shared Hardware)</h3>
+          <div class="row"><span class="k">Recording systems:</span> <span class="pill">SpikeGadgets ▾</span> <span class="pill">Neuropixels_rig ▾</span></div>
+          <div class="row" style="margin-top:.3rem"><span class="k">Cameras:</span> <span class="pill">overhead_run ▾</span> <span class="pill">sleep_box ▾</span></div>
+          <p class="annot">Dropdowns that pick from the dataset catalogs — no re-typing, no divergence.</p>
+        </div>
+        <div class="card">
+          <h3>Task types <span class="k">(catalog — optional move)</span></h3>
+          <div class="row"><span class="pill">sleep</span><span class="pill">w-track</span><span class="pill">open-field</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="arrow">▼ each day references one of each</div>
+
+  <!-- DAY TIER -->
+  <div class="tier day">
+    <h2>Day · the session — <code>remy / 2023-06-22</code></h2>
+    <div class="body">
+      <p class="scope">Per recording. Picks <i>which</i> shared hardware it used + the facts unique to the session.</p>
+      <table>
+        <tr><th>Recording system used</th><td><span class="pill">SpikeGadgets ▾</span> <span class="k">(one per session → one device in the YAML)</span></td></tr>
+        <tr><th>Cameras used</th><td><span class="pill">overhead_run</span> <span class="pill">sleep_box</span></td></tr>
+        <tr><th>Tasks + epoch order</th><td>sleep [0] · w-track [1,2] · sleep [3]</td></tr>
+        <tr><th>Bad channels</th><td>tetrode 5: ch 2,3 — <b>marked here, this session only</b></td></tr>
+        <tr><th>Files / weight / keywords</th><td>…</td></tr>
+      </table>
+      <p class="annot">Export inlines the referenced catalog entries → byte-identical YAML to today for the common case.</p>
+    </div>
+  </div>
+
+  <div class="note legacy" style="opacity:1">
+    <b>Migration:</b> existing per-animal cameras/data-acq/dio/opto are lifted into the dataset catalog and de-duplicated by
+    identity (they're already supposed to be identical across animals — that's what the divergence guards enforce). Days/animals
+    gain a name reference. Golden baselines stay byte-identical because the export still inlines the same values.
+  </div>
+</div>
+</body>
+</html>

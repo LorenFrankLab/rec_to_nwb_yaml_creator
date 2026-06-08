@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mockup — Day Editor: stepper (today) vs tabbed (proposed)</title>
+<style>
+  :root { --line:#d8dde3; --muted:#6b7480; --ink:#1c2530; --accent:#1d6fb8; --bg:#f5f7f9; --warn:#b9770a; --err:#c0392b; --ok:#2c5d2c; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.5 -apple-system,Segoe UI,Roboto,sans-serif; color:var(--ink); background:var(--bg); }
+  .wrap { max-width:1180px; margin:1.2rem auto; padding:0 1rem; }
+  h1 { font-size:1.3rem; margin:.2rem 0 .1rem; }
+  .sub { color:var(--muted); margin:0 0 1.2rem; }
+  .cols { display:grid; grid-template-columns:1fr 1fr; gap:1.1rem; align-items:start; }
+  .panel { border:1px solid var(--line); border-radius:10px; background:#fff; overflow:hidden; }
+  .panel > h2 { margin:0; padding:.55rem .85rem; font-size:.82rem; letter-spacing:.04em; text-transform:uppercase; border-bottom:1px solid var(--line); }
+  .panel.today > h2 { background:#fbeceb; color:#8a2a22; }
+  .panel.proposed > h2 { background:#eaf3ec; color:#1f5130; }
+  .dayhead { padding:.6rem .85rem; border-bottom:1px solid var(--line); }
+  .dayhead b { font-size:1rem; }
+  .crumb { font-size:.78rem; color:var(--muted); }
+
+  /* stepper */
+  .stepper { display:flex; gap:.25rem; padding:.6rem .85rem; border-bottom:1px solid var(--line); overflow:auto; }
+  .step { flex:1; min-width:92px; text-align:center; padding:.4rem .3rem; border-radius:7px; font-size:.8rem; border:1px solid transparent; }
+  .step .n { display:inline-flex; width:20px;height:20px; border-radius:50%; background:#e6ebf0; color:#4a5663; align-items:center; justify-content:center; font-weight:700; font-size:.74rem; margin-right:.25rem; }
+  .step.cur { background:#eaf2fb; border-color:#bcd6f0; }
+  .step.cur .n { background:var(--accent); color:#fff; }
+  .step.err .s { color:var(--err); } .step.warn .s { color:var(--warn); } .step.ok .s { color:var(--ok); }
+  .step .s { display:block; font-size:.7rem; margin-top:.15rem; }
+  .step.locked { opacity:.5; }
+
+  /* tabbed (section nav like the animal view) */
+  .tabwrap { display:grid; grid-template-columns:200px 1fr; }
+  .secnav { border-right:1px solid var(--line); padding:.5rem; background:#fbfcfd; }
+  .secnav .grp { font-size:.7rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:.4rem .4rem .2rem; }
+  .secnav a { display:flex; align-items:center; gap:.4rem; padding:.4rem .5rem; border-radius:6px; text-decoration:none; color:var(--ink); font-size:.88rem; }
+  .secnav a.cur { background:#eaf2fb; color:var(--accent); font-weight:600; }
+  .secnav a .st { margin-left:auto; font-size:.85rem; }
+  .err{color:var(--err)} .warn{color:var(--warn)} .ok{color:var(--ok)}
+  .body { padding:.85rem; min-height:170px; }
+  .field { margin:0 0 .6rem; }
+  .field label { display:block; font-size:.8rem; font-weight:600; }
+  .field .inp { border:1px solid var(--line); border-radius:6px; padding:.3rem .5rem; background:#fff; color:var(--muted); font-size:.85rem; }
+  .field .inp.req { border-color:#e3b3ae; }
+  .hint { font-size:.76rem; color:var(--muted); }
+  .note { background:#fff7e6; border-left:3px solid #e0a106; padding:.5rem .7rem; border-radius:4px; color:#5a4a13; font-size:.84rem; margin:1.1rem 0 0; }
+  ul.tradeoff { margin:.4rem 0 0; padding-left:1.1rem; font-size:.86rem; }
+  ul.tradeoff li { margin:.15rem 0; }
+  .lockmsg { font-size:.78rem; color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Day Editor — current stepper vs. tabbed (matching the Animal view)</h1>
+  <p class="sub">Same content, two paradigms. The Animal view is already a tabbed section-nav; the Day editor is the last
+    place that's still a linear wizard. The question is whether one consistent model is better than two.</p>
+
+  <div class="cols">
+
+    <!-- TODAY: STEPPER -->
+    <div class="panel today">
+      <h2>Today · linear stepper (wizard)</h2>
+      <div class="dayhead">
+        <div class="crumb">Home › Animal: remy › Day: 2026-06-22</div>
+        <b>Day Editor: remy — 2026-06-22</b>
+      </div>
+      <div class="stepper">
+        <div class="step cur err"><span class="n">1</span>Overview<span class="s err">✗ errors</span></div>
+        <div class="step warn"><span class="n">2</span>Devices<span class="s warn">⚠ incomplete</span></div>
+        <div class="step warn"><span class="n">3</span>Epochs<span class="s warn">⚠ incomplete</span></div>
+        <div class="step ok"><span class="n">4</span>Validation<span class="s ok">✓</span></div>
+        <div class="step locked"><span class="n">5</span>Export<span class="s">🔒 locked</span></div>
+      </div>
+      <div class="body">
+        <div class="field"><label>Session Description *</label><div class="inp">Recording session for remy…</div></div>
+        <div class="field"><label>Experiment Description *</label><div class="inp req">&nbsp;</div><div class="hint">Required for export.</div></div>
+        <p class="lockmsg">▸ "Export" stays <b>locked</b> until earlier steps pass. Movement is implicitly linear (1→5).</p>
+      </div>
+      <div style="padding:.6rem .85rem;border-top:1px solid var(--line)">
+        <ul class="tradeoff">
+          <li><b>+</b> Guides a first-time user through a session in order.</li>
+          <li><b>+</b> "Export locked" makes readiness obvious.</li>
+          <li><b>−</b> Different mental model from the Animal tabs (two paradigms to learn).</li>
+          <li><b>−</b> Re-visiting one field (e.g. fix Experiment Description) feels like "going back a step".</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- PROPOSED: TABBED -->
+    <div class="panel proposed">
+      <h2>Proposed · tabbed section-nav (like the Animal view)</h2>
+      <div class="dayhead">
+        <div class="crumb">remy ▸ 2026-06-22</div>
+        <b>remy — 2026-06-22</b>
+      </div>
+      <div class="tabwrap">
+        <nav class="secnav">
+          <div class="grp">Session</div>
+          <a class="cur" href="#">Overview <span class="st err">✗</span></a>
+          <a href="#">Files &amp; Weight <span class="st ok">✓</span></a>
+          <div class="grp">Recording</div>
+          <a href="#">Devices &amp; Failed Channels <span class="st warn">⚠</span></a>
+          <a href="#">Tasks &amp; Epochs <span class="st warn">⚠</span></a>
+          <div class="grp">Finish</div>
+          <a href="#">Validation &amp; Export <span class="st err">✗ 2 to fix</span></a>
+        </nav>
+        <div class="body">
+          <div class="field"><label>Session Description *</label><div class="inp">Recording session for remy…</div></div>
+          <div class="field"><label>Experiment Description *</label><div class="inp req">&nbsp;</div><div class="hint">Required for export.</div></div>
+          <p class="lockmsg">Jump to any section freely. Per-tab status (✓ ⚠ ✗) shows what's left; "Validation &amp; Export"
+            names the count to fix. No forced order, no "locked" step — the same status model as the Animal tabs.</p>
+        </div>
+      </div>
+      <div style="padding:.6rem .85rem;border-top:1px solid var(--line)">
+        <ul class="tradeoff">
+          <li><b>+</b> One consistent model: Animal <i>and</i> Day are tabbed section-navs.</li>
+          <li><b>+</b> Fix-one-field is a direct jump, not a back-step.</li>
+          <li><b>+</b> Status lives on each tab; Export is a tab that says "2 to fix" instead of a locked gate.</li>
+          <li><b>−</b> Loses the explicit "do these in order" hand-holding for a brand-new user.</li>
+          <li><b>~</b> Mitigation: keep a "Next ▸" affordance on each tab for those who want the guided path.</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="note">
+    <b>Note:</b> this is purely an <i>interaction</i> change — the steps, fields, validation, and export are identical. It's
+    about whether the Day editor should feel like the Animal view (tabs, free navigation, per-section status) or stay a
+    guided wizard. Lowest-risk version: adopt the tab shell + per-tab status, but keep an optional "Next ▸" button so the
+    linear path still exists for new users.
+  </div>
+</div>
+</body>
+</html>
