@@ -41,10 +41,14 @@ export function buildAnimalFromForm(formData) {
       lab: formData.lab,
       institution: formData.institution,
     },
-    // Devices auto-created empty (configured later in Day Editor). `device.name` is schema-required
-    // (minItems: 1), so seed it with the legacy default.
+    // Electrodes/cameras are configured later. The recording system is seeded with the lab-standard
+    // rig (the value every golden fixture uses) so a new animal starts with ONE — consistent with the
+    // schema's `data_acq_device` minItems:1 and the Recording System tab's "must keep at least one"
+    // rule. Editable (or extendable to several) on that tab. `device.name` is likewise schema-required.
     devices: {
-      data_acq_device: [],
+      data_acq_device: [
+        { name: 'SpikeGadgets', system: 'SpikeGadgets', amplifier: 'Intan', adc_circuit: 'Intan' },
+      ],
       device: { name: ['Trodes'] },
       electrode_groups: [],
       ntrode_electrode_group_channel_map: [],

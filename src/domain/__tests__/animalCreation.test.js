@@ -60,7 +60,12 @@ describe('buildAnimalFromForm', () => {
       institution: 'UCSF',
     });
     expect(metadata.devices).toEqual({
-      data_acq_device: [],
+      // Seeded with the lab-standard recording system (every golden fixture uses it) so a new animal
+      // starts with one — consistent with "every animal needs ≥1 recording system". Editable on the
+      // Recording System tab.
+      data_acq_device: [
+        { name: 'SpikeGadgets', system: 'SpikeGadgets', amplifier: 'Intan', adc_circuit: 'Intan' },
+      ],
       device: { name: ['Trodes'] },
       electrode_groups: [],
       ntrode_electrode_group_channel_map: [],
