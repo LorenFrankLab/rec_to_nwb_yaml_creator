@@ -5,9 +5,8 @@
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { StoreProvider } from '../../../state/StoreContext';
-import { AnimalWorkspace } from '../index';
+import { RecordingDaysTab } from '../RecordingDaysTab';
 import { buildRealisticWorkspace } from '../../../__tests__/fixtures/workspaceBuilders';
 
 const originalHash = window.location.hash;
@@ -16,14 +15,18 @@ afterEach(() => {
 });
 
 /**
- *
- * @param animals
- * @param days
+ * Render the recording-days pane for one animal directly (Phase 1 — the pane was extracted to
+ * RecordingDaysTab and the legacy Workspace picker now navigates to the route, so these
+ * pane-behavior tests host the component itself instead of clicking a picker card).
+ * @param {string} animalId - The animal whose pane to render.
+ * @param {object} animals - workspace.animals
+ * @param {object} [days] - workspace.days
+ * @returns {object} render result
  */
-function renderWith(animals, days = {}) {
+function renderPane(animalId, animals, days = {}) {
   return render(
     <StoreProvider initialState={{ workspace: { animals, days, settings: {} } }}>
-      <AnimalWorkspace />
+      <RecordingDaysTab animalId={animalId} />
     </StoreProvider>
   );
 }
@@ -48,18 +51,9 @@ const configuredAnimal = {
   days: [],
 };
 
-/**
- *
- * @param name
- */
-async function selectAnimal(name) {
-  await userEvent.click(screen.getByRole('button', { name: new RegExp(name, 'i') }));
-}
-
 describe('AnimalWorkspace setup checklist', () => {
   it('lists the five setup items for the selected animal', async () => {
-    renderWith({ newbie: newAnimal });
-    await selectAnimal('newbie');
+    renderPane('newbie', { newbie: newAnimal });
     const checklist = screen.getByRole('region', { name: /animal setup/i });
     // Exact item labels (avoid matching the intro paragraph or the action buttons).
     expect(within(checklist).getByText('Subject')).toBeInTheDocument();
@@ -70,8 +64,7 @@ describe('AnimalWorkspace setup checklist', () => {
   });
 
   it('offers "Set Up Electrodes" as the primary action for a new animal, linking to the Animal Editor', async () => {
-    renderWith({ newbie: newAnimal });
-    await selectAnimal('newbie');
+    renderPane('newbie', { newbie: newAnimal });
     const action = screen.getByRole('link', { name: /set up electrodes/i });
     expect(action).toBeInTheDocument();
     expect(action.getAttribute('href')).toMatch(/#\/animal\/newbie\/editor/);
@@ -80,14 +73,12 @@ describe('AnimalWorkspace setup checklist', () => {
   it('still shows "Set Up Electrodes" for an animal that has days but no electrodes', async () => {
     const animal = { ...newAnimal, days: ['newbie-2024-01-02'] };
     const days = { 'newbie-2024-01-02': { id: 'newbie-2024-01-02', date: '2024-01-02', session: { session_id: 's' }, state: {} } };
-    renderWith({ newbie: animal }, days);
-    await selectAnimal('newbie');
+    renderPane('newbie', { newbie: animal }, days);
     expect(screen.getByRole('link', { name: /set up electrodes/i })).toBeInTheDocument();
   });
 
   it('invites review (not setup) when electrode and camera setup already exist', async () => {
-    renderWith({ remy: configuredAnimal });
-    await selectAnimal('remy');
+    renderPane('remy', { remy: configuredAnimal });
     expect(screen.getByRole('link', { name: /review electrodes/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /review cameras/i })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /set up electrodes/i })).not.toBeInTheDocument();
@@ -98,8 +89,7 @@ describe('AnimalWorkspace existing-data review state', () => {
   it('shows a review state when the animal has recording days', async () => {
     const animal = { ...newAnimal, days: ['newbie-2024-01-02'] };
     const days = { 'newbie-2024-01-02': { id: 'newbie-2024-01-02', date: '2024-01-02', session: { session_id: 's' }, state: {} } };
-    renderWith({ newbie: animal }, days);
-    await selectAnimal('newbie');
+    renderPane('newbie', { newbie: animal }, days);
     const review = screen.getByRole('region', { name: /existing data review/i });
     expect(within(review).getByText(/found 1 recording day/i)).toBeInTheDocument();
     expect(within(review).getByText(/review electrodes and cameras before exporting/i)).toBeInTheDocument();
@@ -108,8 +98,7 @@ describe('AnimalWorkspace existing-data review state', () => {
   it('surfaces corrupt recovered data via the shared RawCorruptionBanner (executable reset)', async () => {
     // A recovered/imported animal whose cameras collection is corrupt (a string, not a list).
     const corrupt = { ...configuredAnimal, cameras: 'nope', days: [] };
-    renderWith({ remy: corrupt });
-    await selectAnimal('remy');
+    renderPane('remy', { remy: corrupt });
     // Review state appears even without days because there is corruption to repair.
     expect(screen.getByRole('region', { name: /existing data review/i })).toBeInTheDocument();
     // The shipped recovery surface (not a parallel one) renders the executable reset.
@@ -120,16 +109,14 @@ describe('AnimalWorkspace existing-data review state', () => {
   });
 
   it('does not show a review state for a fresh animal with no days and no corruption', async () => {
-    renderWith({ newbie: newAnimal });
-    await selectAnimal('newbie');
+    renderPane('newbie', { newbie: newAnimal });
     expect(screen.queryByRole('region', { name: /existing data review/i })).not.toBeInTheDocument();
   });
 
   it('surfaces a dangling day reference (id with no record) instead of silently dropping it', async () => {
     // animal.days lists an id whose record is absent from the days map (recovered data).
     const animal = { ...newAnimal, days: ['newbie-2024-01-02'] };
-    renderWith({ newbie: animal }, {}); // empty days map → the reference is dangling
-    await selectAnimal('newbie');
+    renderPane('newbie', { newbie: animal }, {}); // empty days map → the reference is dangling
     expect(screen.getByText(/saved record missing or corrupt/i)).toBeInTheDocument();
     expect(screen.getByText(/missing record/i)).toBeInTheDocument();
   });
@@ -145,8 +132,7 @@ describe('AnimalWorkspace existing-data review state', () => {
       session: { session_id: 'newbie_20240202' },
       state: {},
     };
-    renderWith({ newbie: animal }, { 'newbie-2024-02-02': dayRecord });
-    await selectAnimal('newbie');
+    renderPane('newbie', { newbie: animal }, { 'newbie-2024-02-02': dayRecord });
 
     // The record is shown (not "No recording days yet"), flagged as not in the index (the
     // phrase appears both in the review note and on the day row).
@@ -163,7 +149,7 @@ describe('AnimalWorkspace existing-data review state', () => {
     const days = {
       intruder: { id: 'intruder', animalId: 'someoneelse', date: '2024-03-03', session: { session_id: 'x' } },
     };
-    renderWith({ newbie: animal }, days);
+    renderPane('newbie', { newbie: animal }, days);
     // The sole animal auto-selects on mount; no need to click (clicking by /newbie/i would now
     // also match the unlink button's label below).
     expect(screen.getByText(/belongs to someoneelse/i)).toBeInTheDocument();
@@ -176,8 +162,7 @@ describe('AnimalWorkspace existing-data review state', () => {
   it('surfaces a corrupt (non-array) recording-day list instead of laundering it to "no days"', async () => {
     // A recovered animal whose `days` is a string, not a list.
     const corrupt = { ...newAnimal, days: 'nope' };
-    renderWith({ newbie: corrupt });
-    await selectAnimal('newbie');
+    renderPane('newbie', { newbie: corrupt });
 
     // The review state appears and explains the corrupt day reference (not "no recording days").
     const review = screen.getByRole('region', { name: /existing data review/i });
@@ -197,8 +182,7 @@ describe('AnimalWorkspace existing-data review state', () => {
     animal.configurationHistory[0].devices.electrode_groups = badGeometry;
     animal.devices.electrode_groups = badGeometry; // mirror, so the item also reads as present
 
-    renderWith({ [animal.id]: animal }, { [day.id]: day });
-    await selectAnimal(animal.id);
+    renderPane(animal.id, { [animal.id]: animal }, { [day.id]: day });
 
     const electrodesItem = screen.getByText('Electrodes / probes').closest('.setup-item');
     expect(electrodesItem.className).toMatch(/setup-item-has_errors/);

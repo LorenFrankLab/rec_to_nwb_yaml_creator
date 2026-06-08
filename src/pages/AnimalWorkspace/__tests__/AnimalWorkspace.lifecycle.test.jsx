@@ -10,7 +10,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StoreProvider } from '../../../state/StoreContext';
-import { AnimalWorkspace } from '../index';
+import { AnimalView } from '../../AnimalView';
 
 const originalHash = window.location.hash;
 afterEach(() => {
@@ -18,15 +18,19 @@ afterEach(() => {
 });
 
 /**
- * Render the workspace seeded with the given animals/days.
+ * Render the tabbed animal view for one animal (Phase 1 — the delete actions live in the
+ * extracted pane, now hosted by AnimalView, which also owns the post-delete "Animal not found"
+ * fallback). Cross-animal survival (e.g. "totoro remains") is the store's concern, covered by
+ * the deleteAnimal store tests — here we verify the UI triggers + confirm copy + fallback.
+ * @param {string} animalId - The animal whose view to render.
  * @param {object} animals - workspace.animals
  * @param {object} [days] - workspace.days
  * @returns {object} render result
  */
-function renderWith(animals, days = {}) {
+function renderView(animalId, animals, days = {}) {
   return render(
     <StoreProvider initialState={{ workspace: { animals, days, settings: {} } }}>
-      <AnimalWorkspace />
+      <AnimalView animalId={animalId} tab="days" />
     </StoreProvider>
   );
 }
@@ -69,18 +73,9 @@ const totoro = {
   days: [],
 };
 
-/**
- * Select an animal by name in the sidebar.
- * @param {string} name - Animal id.
- */
-async function selectAnimal(name) {
-  await userEvent.click(screen.getByRole('button', { name: new RegExp(`^${name}`, 'i') }));
-}
-
 describe('AnimalWorkspace lifecycle cleanup — Delete animal', () => {
   it('exposes a discoverable, secondary Delete animal action for the selected animal', async () => {
-    renderWith({ remy, totoro }, remyDays);
-    await selectAnimal('remy');
+    renderView('remy', { remy, totoro }, remyDays);
 
     const deleteBtn = screen.getByRole('button', { name: /delete this animal/i });
     expect(deleteBtn).toBeInTheDocument();
@@ -92,8 +87,7 @@ describe('AnimalWorkspace lifecycle cleanup — Delete animal', () => {
 
   it('confirms with the animal name and recording-day cascade count, then deletes', async () => {
     const user = userEvent.setup();
-    renderWith({ remy, totoro }, remyDays);
-    await selectAnimal('remy');
+    renderView('remy', { remy, totoro }, remyDays);
 
     await user.click(screen.getByRole('button', { name: /delete this animal/i }));
 
@@ -104,29 +98,28 @@ describe('AnimalWorkspace lifecycle cleanup — Delete animal', () => {
 
     await user.click(within(dialog).getByRole('button', { name: /^delete animal$/i }));
 
-    // remy and its days are gone; totoro survives.
-    expect(screen.queryByRole('button', { name: /^remy/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^totoro/i })).toBeInTheDocument();
-    // Selection reset — the deleted animal is no longer shown as selected.
+    // remy is gone: the view falls back to the non-stranding "Animal not found" state, and its
+    // day rows are no longer shown. (That deleting remy preserves totoro is the store's guarantee,
+    // covered by the deleteAnimal store tests — not re-asserted through this single-animal view.)
+    expect(screen.getByRole('heading', { name: /animal not found/i })).toBeInTheDocument();
     expect(screen.queryByText('2023-06-22')).not.toBeInTheDocument();
   });
 
   it('leaves the animal intact when the confirm is cancelled', async () => {
     const user = userEvent.setup();
-    renderWith({ remy, totoro }, remyDays);
-    await selectAnimal('remy');
+    renderView('remy', { remy, totoro }, remyDays);
 
     await user.click(screen.getByRole('button', { name: /delete this animal/i }));
     await user.click(screen.getByRole('button', { name: /^cancel$/i }));
 
-    expect(screen.getByRole('button', { name: /^remy/i })).toBeInTheDocument();
+    // The animal is intact: still its days pane (not the "Animal not found" fallback).
+    expect(screen.queryByRole('heading', { name: /animal not found/i })).not.toBeInTheDocument();
     expect(screen.getByText('2023-06-22')).toBeInTheDocument();
   });
 
   it('warns that deleting does not remove already-downloaded YAML / NWB / DANDI / Spyglass', async () => {
     const user = userEvent.setup();
-    renderWith({ remy, totoro }, remyDays); // remy has an exported day
-    await selectAnimal('remy');
+    renderView('remy', { remy, totoro }, remyDays); // remy has an exported day
 
     await user.click(screen.getByRole('button', { name: /delete this animal/i }));
     const dialog = screen.getByRole('alertdialog');
@@ -138,8 +131,7 @@ describe('AnimalWorkspace lifecycle cleanup — Delete animal', () => {
 describe('AnimalWorkspace lifecycle cleanup — Delete recording day', () => {
   it('exposes a Delete recording day action on an ordinary day row and deletes on confirm', async () => {
     const user = userEvent.setup();
-    renderWith({ remy }, remyDays);
-    await selectAnimal('remy');
+    renderView('remy', { remy }, remyDays);
 
     // The delete action is a real button, separate from the navigation link (not nested in it).
     const deleteDayBtn = screen.getByRole('button', { name: /delete recording day 2023-06-23/i });
@@ -158,8 +150,7 @@ describe('AnimalWorkspace lifecycle cleanup — Delete recording day', () => {
 
   it('warns downloaded files are not deleted when the day was exported', async () => {
     const user = userEvent.setup();
-    renderWith({ remy }, remyDays);
-    await selectAnimal('remy');
+    renderView('remy', { remy }, remyDays);
 
     await user.click(screen.getByRole('button', { name: /delete recording day 2023-06-22/i }));
     const dialog = screen.getByRole('alertdialog');
@@ -184,8 +175,7 @@ describe('AnimalWorkspace lifecycle cleanup — wrong-owner preservation', () =>
         state: { draft: true },
       },
     };
-    renderWith(animals, days);
-    await selectAnimal('remy');
+    renderView('remy', animals, days);
 
     await user.click(screen.getByRole('button', { name: /delete this animal/i }));
     const dialog = screen.getByRole('alertdialog');
@@ -212,8 +202,7 @@ describe('AnimalWorkspace lifecycle cleanup — wrong-owner preservation', () =>
         state: { draft: true },
       },
     };
-    renderWith(animals, days);
-    await selectAnimal('remy');
+    renderView('remy', animals, days);
 
     await user.click(screen.getByRole('button', { name: /delete this animal/i }));
     const dialog = screen.getByRole('alertdialog');
