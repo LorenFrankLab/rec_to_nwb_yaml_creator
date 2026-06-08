@@ -88,6 +88,22 @@ export const getExperimenterNames = (animal) =>
 /** @param {object} animal @returns {Array} The animal's day ids (always an array). */
 export const getAnimalDayIds = (animal) => asArray(animal?.days);
 
+/**
+ * The id of the animal's latest-dated day present in `days`, or null. Day dates are `YYYY-MM-DD`
+ * (lexicographic compare == chronological). Tolerates a corrupt animal, a missing `days` map, a
+ * dangling id, or a record without a string `date`.
+ * @param animal
+ * @param days
+ */
+export const getMostRecentDayId = (animal, days) => {
+  const present = getAnimalDayIds(animal)
+    .map((id) => (days && typeof days === 'object' ? days[id] : undefined))
+    .filter((d) => d && typeof d.id === 'string' && typeof d.date === 'string');
+  if (present.length === 0) return null;
+  present.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  return present[0].id;
+};
+
 // ── Day-owned collections / records ─────────────────────────────────────────────────
 
 /** @param {object} day @returns {object} The day's session record (always a record). */

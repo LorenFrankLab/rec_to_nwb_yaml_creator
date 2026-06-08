@@ -13,6 +13,7 @@ import {
   getAnimalExperimenters,
   getExperimenterNames,
   getAnimalDayIds,
+  getMostRecentDayId,
   getDaySession,
   getDayTasks,
   getDayAssociatedVideos,
@@ -102,5 +103,43 @@ describe('workspaceSelectors — record fields are always safe records', () => {
     expect(getExperimenterNames({ experimenters: { experimenter_name: 'x' } })).toEqual([]);
     expect(getExperimenterNames({ experimenters: { experimenter_name: ['A'] } })).toEqual(['A']);
     expect(getExperimenterNames({ experimenters: 'corrupt' })).toEqual([]);
+  });
+});
+
+describe('getMostRecentDayId — latest-dated present day', () => {
+  const animal = { days: ['remy-2023-06-20', 'remy-2023-06-21', 'remy-2023-06-22'] };
+  const days = {
+    'remy-2023-06-20': { id: 'remy-2023-06-20', date: '2023-06-20' },
+    'remy-2023-06-21': { id: 'remy-2023-06-21', date: '2023-06-21' },
+    'remy-2023-06-22': { id: 'remy-2023-06-22', date: '2023-06-22' },
+  };
+
+  it('returns the id of the latest-dated day regardless of index order', () => {
+    expect(getMostRecentDayId(animal, days)).toBe('remy-2023-06-22');
+    // Index order does not matter — chronology is decided by `date`.
+    const shuffled = { days: ['remy-2023-06-22', 'remy-2023-06-20', 'remy-2023-06-21'] };
+    expect(getMostRecentDayId(shuffled, days)).toBe('remy-2023-06-22');
+  });
+
+  it('returns null for an animal with no days', () => {
+    expect(getMostRecentDayId({ days: [] }, days)).toBe(null);
+  });
+
+  it('returns null when the indexed id is dangling (no record present)', () => {
+    expect(getMostRecentDayId({ days: ['remy-2023-06-22'] }, {})).toBe(null);
+  });
+
+  it('returns null (no throw) for a null animal', () => {
+    expect(getMostRecentDayId(null, days)).toBe(null);
+  });
+
+  it('tolerates a missing days map and records without a string date', () => {
+    expect(getMostRecentDayId(animal, undefined)).toBe(null);
+    const partial = {
+      'remy-2023-06-20': { id: 'remy-2023-06-20', date: '2023-06-20' },
+      'remy-2023-06-21': { id: 'remy-2023-06-21', date: 42 }, // corrupt date, skipped
+      'remy-2023-06-22': { id: 'remy-2023-06-22' }, // no date, skipped
+    };
+    expect(getMostRecentDayId(animal, partial)).toBe('remy-2023-06-20');
   });
 });
