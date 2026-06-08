@@ -65,6 +65,13 @@ genuinely changes.
   control), matching today's stepper behavior.
 - **Task 3a.4 — Sweep the tests.** `animalRepairRouting.test.js` and the ~19 route-referencing test
   files: update to tab URLs + the new finer labels.
+- **Task 3a.5 — Wire the section-nav BLOCKING-red dot (carried over from Phase 1 Task 1.1c).** Phase 1
+  ships only the hollow-○ todo ring (`getAnimalSectionStatus` → `todo`/`none` in
+  [src/domain/sectionStatus.js](../../../../src/domain/sectionStatus.js)). Once this phase has the
+  field-path→section attribution, extend that helper (or a sibling) to return a `blocking` state when an
+  export-blocking error attributes to a section, and render it as the red dot in `AnimalView`'s section-nav
+  (decision 11; accessible name "— blocks export"). **Reuse the SAME attribution** as the repair routing —
+  no second mapping.
 
 ## Acceptance
 

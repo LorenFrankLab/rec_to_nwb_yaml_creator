@@ -93,6 +93,18 @@
   flex: 1;
 }
 
+/* Neutral hollow-○ "todo" ring on a never-configured setup section (decision 11). Colour-free
+   on purpose — it signals "not set up yet" without the anxiety of a warning colour; the
+   accessible name carries "— not set up". */
+.section-nav-todo {
+  flex: none;
+  width: 0.75rem;
+  text-align: center;
+  color: #6a6557;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
 .animal-view-panel {
   padding: 1.1rem 1.5rem 2rem;
   min-width: 0;

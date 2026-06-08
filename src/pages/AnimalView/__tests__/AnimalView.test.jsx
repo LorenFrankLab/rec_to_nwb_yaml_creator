@@ -6,7 +6,7 @@
  * tabs, and the loading/not-found guard (Task 1.5-lite).
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StoreProvider } from '../../../state/StoreContext';
@@ -78,6 +78,67 @@ describe('AnimalView — section nav (Task 1.1)', () => {
     const nav = screen.getByRole('navigation', { name: /animal sections/i });
     expect(within(nav).getByText('Day work')).toBeInTheDocument();
     expect(within(nav).getByText('Animal setup')).toBeInTheDocument();
+  });
+});
+
+describe('AnimalView — URL canonicalization', () => {
+  let originalHash;
+  beforeEach(() => {
+    originalHash = window.location.hash;
+  });
+  afterEach(() => {
+    window.location.hash = originalHash;
+  });
+
+  it('replaces a bare #/animal/:id URL with the canonical #/animal/:id/days', () => {
+    window.location.hash = '#/animal/remy';
+    renderView('days'); // the router resolves the bare URL to the days tab
+    expect(window.location.hash).toBe('#/animal/remy/days');
+  });
+
+  it('replaces an unknown-tab URL with the canonical resolved tab', () => {
+    window.location.hash = '#/animal/remy/banana';
+    renderView('days'); // unknown tab resolves to days
+    expect(window.location.hash).toBe('#/animal/remy/days');
+  });
+
+  it('leaves an already-canonical URL untouched', () => {
+    window.location.hash = '#/animal/remy/cameras';
+    renderView('cameras');
+    expect(window.location.hash).toBe('#/animal/remy/cameras');
+  });
+});
+
+describe('AnimalView — section-nav status (Task 1.1c)', () => {
+  const configuredRemy = {
+    ...remy,
+    devices: {
+      electrode_groups: [{ id: 0, device_type: 'tetrode_12.5', location: 'CA1' }],
+      ntrode_electrode_group_channel_map: [{ ntrode_id: 0, electrode_group_id: 0, map: { 0: 0 } }],
+      data_acq_device: [{ name: 'SpikeGadgets' }],
+    },
+    cameras: [{ id: 0, camera_name: 'overhead' }],
+    behavioral_events: [{ name: 'Din1' }],
+    optogenetics: { opto_excitation_source: [{ name: 'laser' }] },
+  };
+
+  it('shows a "not set up" todo ring on never-configured setup sections (the bare remy fixture)', () => {
+    renderView('days'); // remy has empty devices / cameras / behavioral_events
+    expect(screen.getByRole('link', { name: /electrode groups — not set up/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /cameras — not set up/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /optogenetics — not set up/i })).toBeInTheDocument();
+  });
+
+  it('does not mark the day-work sections as todo', () => {
+    renderView('days');
+    expect(screen.getByRole('link', { name: /^recording days$/i })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /recording days — not set up/i })).not.toBeInTheDocument();
+  });
+
+  it('clears the todo ring once a section is configured', () => {
+    renderView('days', { animals: { remy: configuredRemy } });
+    expect(screen.queryByRole('link', { name: /cameras — not set up/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^cameras$/i })).toBeInTheDocument();
   });
 });
 

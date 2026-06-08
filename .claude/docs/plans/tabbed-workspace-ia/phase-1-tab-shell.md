@@ -63,6 +63,13 @@ re-hosted unchanged in the `days` tab. No setup migration yet (Phase 3), no life
     [workspaceSelectors.js](../../../../src/state/workspaceSelectors.js)); only the per-section
     *todo-state* needs the new glue. Owner: this task (define a `getAnimalSectionStatus(animal, section)`
     helper) — still UI/derivation-only, no store/export change.
+  - **Phase 1 scope (shipped):** the **hollow-○ todo ring** only — `getAnimalSectionStatus`
+    ([src/domain/sectionStatus.js](../../../../src/domain/sectionStatus.js)) returns `todo` for a
+    never-configured setup section (empty electrode-groups / channel-maps / recording-system / cameras /
+    DIO / optogenetics, via existing selectors), else `none`. Rendered as a colour-free `○` with an
+    accessible "— not set up" name. The **blocking-red** state is deferred to **Phase 3a**: it needs the
+    per-section validation attribution (which export-blocking error belongs to which section) that 3a
+    builds for repair routing — there is no honest way to compute it before that mapping exists.
 - **Task 1.2 — Host the Recording Days pane in the `days` tab.** Render the existing day-management
   pane (the `selectedAnimal` branch of [AnimalWorkspace/index.jsx](../../../../src/pages/AnimalWorkspace/index.jsx))
   inside the `days` `TabPanel`, unchanged in behavior. Extract it into a `RecordingDaysTab` component if

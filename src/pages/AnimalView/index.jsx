@@ -16,6 +16,7 @@ import React, { useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import { getAnimalSubject } from '../../state/workspaceSelectors';
+import { getAnimalSectionStatus, SECTION_STATUS } from '../../domain/sectionStatus';
 import { RecordingDaysTab } from '../AnimalWorkspace/RecordingDaysTab';
 import './AnimalView.css';
 
@@ -77,6 +78,19 @@ export function AnimalView({ animalId, tab }) {
     panelRef.current?.focus();
   }, [tab, animalId]);
 
+  // Canonicalize the URL: parseHashRoute resolves a bare `#/animal/:id` or an unknown tab to
+  // `days`, so REPLACE the address bar to the canonical `#/animal/:id/:tab` to match what's
+  // rendered (a tidy, bookmarkable URL). replaceState only — the view already shows the resolved
+  // tab, so no `hashchange` is dispatched and there's no redirect loop.
+  useEffect(() => {
+    if (!animalId) return;
+    const literalPath = window.location.hash.slice(1).split('?')[0];
+    const canonical = `/animal/${animalId}/${tab}`;
+    if (literalPath !== canonical && literalPath.startsWith(`/animal/${animalId}`)) {
+      window.history.replaceState(null, '', `#${canonical}`);
+    }
+  }, [animalId, tab]);
+
   if (!animal) {
     // Task 1.5: the store hydrates SYNCHRONOUSLY (useWorkspace's useState initializer reads
     // localStorage before first render — see useWorkspace.js), so there is no async cold-load
@@ -112,14 +126,22 @@ export function AnimalView({ animalId, tab }) {
               <div className="section-nav-group-label">{group.label}</div>
               {group.items.map((item) => {
                 const active = tab === item.key;
+                const isTodo = getAnimalSectionStatus(animal, item.key) === SECTION_STATUS.TODO;
                 return (
                   <a
                     key={item.key}
                     href={`#/animal/${animalId}/${item.key}`}
                     className={`section-nav-item ${active ? 'is-active' : ''}`}
                     aria-current={active ? 'page' : undefined}
+                    // The hollow-○ ring is decorative; the accessible name carries the meaning.
+                    aria-label={isTodo ? `${item.label} — not set up` : undefined}
                   >
                     <span className="section-nav-item-name">{item.label}</span>
+                    {isTodo && (
+                      // Neutral hollow-○ "todo" ring on a never-configured setup section
+                      // (decision 11) — colour-free, signals "not set up yet" without anxiety.
+                      <span className="section-nav-todo" aria-hidden="true">○</span>
+                    )}
                   </a>
                 );
               })}
