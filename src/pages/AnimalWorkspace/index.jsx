@@ -11,7 +11,6 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import { classifyAnimalDays, isPresentRecordStatus } from '../../domain/dayRecovery';
 import { RecordingDaysTab } from './RecordingDaysTab';

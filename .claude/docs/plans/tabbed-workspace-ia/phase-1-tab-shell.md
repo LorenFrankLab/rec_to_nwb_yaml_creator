@@ -95,7 +95,9 @@ re-hosted unchanged in the `days` tab. No setup migration yet (Phase 3), no life
   heading on tab change.
 - Deep-linking to a tab works; back/forward moves between tabs; `#/animal/remy` redirects to `…/days`;
   `useAnimalIdFromUrl` resolves the new shape.
-- A cold deep-link shows a loading state, not "Animal not found"; exactly one `#main-content`.
+- A deep-link to a missing animal shows a non-stranding "Animal not found" (with a Back-to-Workspace
+  link), never a perpetual "Loading…" — the store hydrates SYNCHRONOUSLY (no async cold-load gap), so an
+  empty/emptied workspace is genuinely empty, not loading. Exactly one `#main-content`.
 - The stepper (`#/animal/:id/editor`) still works (fallback during transition).
 - Behind `animalWorkspace`; legacy unaffected. Full suite + new nav a11y tests + lint + build green;
   **125 baselines byte-identical** (no export/store touch).
@@ -108,3 +110,8 @@ re-hosted unchanged in the `days` tab. No setup migration yet (Phase 3), no life
   Mitigate drift by extracting one shared `RecordingDaysTab` imported in both.
 - Nav-as-tabs a11y: ensure `aria-current` is the only "selected" signal (no `role="tab"` leakage), and
   that focus management on tab change is owned here (not by AppLayout). Write these tests first (TDD).
+- **Cross-page coupling via the shared `RecordingDaysTab`.** It lives under `pages/AnimalWorkspace/` and is
+  imported by `AnimalView` through the `CROSS_PAGE_ALLOWLIST` (architectureBoundaries guard). This is
+  intentional ("extract, don't fork"), but **track relocating it to a neutral home** (e.g. `src/components/`)
+  when that opens up, so the allowlist doesn't silently accumulate page→page coupling. (Follow-up — Phase 5
+  cleanup or whenever `src/components` relocation is in scope.)

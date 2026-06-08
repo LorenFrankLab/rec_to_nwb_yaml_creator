@@ -8,6 +8,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { StoreProvider } from '../../../state/StoreContext';
 import { AnimalView } from '../index';
 
@@ -95,15 +96,27 @@ describe('AnimalView — tab panels (Task 1.2)', () => {
   });
 });
 
-describe('AnimalView — loading / not-found guard (Task 1.5)', () => {
+describe('AnimalView — not-found guard (Task 1.5)', () => {
   it('shows "Animal not found" when the id is absent but other animals exist', () => {
     renderView('days', { animalId: 'ghost', animals: { remy } });
     expect(screen.getByRole('heading', { name: /animal not found/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /back to workspace/i })).toHaveAttribute('href', '#/workspace');
   });
 
-  it('shows a loading state when the workspace has no animals yet (cold load)', () => {
+  it('shows "Animal not found" (never a perpetual "Loading…") for an empty workspace', () => {
+    // The store hydrates synchronously, so an empty workspace is genuinely empty, not loading.
     renderView('days', { animalId: 'remy', animals: {} });
-    expect(screen.getByRole('heading', { name: /loading/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /animal not found/i })).toBeInTheDocument();
+    expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
+  });
+
+  it('falls back to "Animal not found" after deleting the viewed (sole) animal — no perpetual loading', async () => {
+    const user = userEvent.setup();
+    renderView('days'); // remy is the only animal
+    // Danger-zone delete inside the hosted RecordingDaysTab, then confirm.
+    await user.click(screen.getByRole('button', { name: /delete this animal/i }));
+    await user.click(screen.getByRole('button', { name: /^delete animal$/i }));
+    expect(await screen.findByRole('heading', { name: /animal not found/i })).toBeInTheDocument();
+    expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
   });
 });

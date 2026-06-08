@@ -98,8 +98,11 @@
   min-width: 0;
 }
 
-.animal-view-panel:focus {
-  outline: none;
+/* The panel is focused programmatically on tab change (Task 1.1b). Keep a visible focus
+   cue for sighted keyboard users (WCAG 2.4.7) rather than suppressing the outline. */
+.animal-view-panel:focus-visible {
+  outline: 2px solid #0d5c63;
+  outline-offset: -2px;
 }
 
 .section-placeholder {

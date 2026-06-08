@@ -78,21 +78,18 @@ export function AnimalView({ animalId, tab }) {
   }, [tab, animalId]);
 
   if (!animal) {
-    // Task 1.5 (lite): a cold deep-link can arrive before the store hydrates (no animals at all)
-    // -> "Loading"; an id that's simply absent while others exist -> "Animal not found". Never
-    // the stepper's bare "Animal not found" crash path on a cold load.
-    const hasAnyAnimal = Object.keys(animals).length > 0;
+    // Task 1.5: the store hydrates SYNCHRONOUSLY (useWorkspace's useState initializer reads
+    // localStorage before first render — see useWorkspace.js), so there is no async cold-load
+    // gap: a missing animal genuinely doesn't exist (bad deep-link, or the viewed animal was
+    // just deleted). Show a non-stranding "not found" with a way out for ALL of those — never a
+    // perpetual "Loading…" (an emptied-after-delete workspace would otherwise hang there).
     return (
       <main id="main-content" tabIndex="-1" role="main" aria-labelledby="animal-view-heading">
-        <h1 id="animal-view-heading">{hasAnyAnimal ? 'Animal not found' : 'Loading…'}</h1>
-        {hasAnyAnimal ? (
-          <p>
-            No animal “{animalId}” in this workspace.{' '}
-            <a href="#/workspace">Back to Workspace</a>.
-          </p>
-        ) : (
-          <p>Loading workspace…</p>
-        )}
+        <h1 id="animal-view-heading">Animal not found</h1>
+        <p>
+          No animal “{animalId}” in this workspace.{' '}
+          <a href="#/workspace">Back to Workspace</a>.
+        </p>
       </main>
     );
   }
