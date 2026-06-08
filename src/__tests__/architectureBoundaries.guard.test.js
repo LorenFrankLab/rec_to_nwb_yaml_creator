@@ -20,14 +20,24 @@ import path from 'node:path';
 const srcDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../');
 
 /**
- * Shared presentational components that legitimately cross page folders. These are NOT
- * app-wide domain behavior (no validation/repair/converter logic); relocating them to
- * `src/components` is deferred (out of this phase's scope). Any OTHER cross-page import — and
- * any domain/state → page import — is a violation.
+ * Modules that legitimately cross page folders. These are NOT app-wide domain behavior (no
+ * validation/repair/converter logic); relocating them to `src/components` is deferred (out of
+ * this phase's scope). Any OTHER cross-page import — and any domain/state → page import — is a
+ * violation.
+ *
+ * - `pages/DayEditor/SaveIndicator` — a small shared presentational component.
+ * - `pages/AnimalWorkspace/RecordingDaysTab` — the per-animal recording-days pane, DELIBERATELY
+ *   shared (Phase 1 — tabbed-workspace-ia) so the legacy Workspace and the new tabbed
+ *   `AnimalView` render ONE implementation instead of forking it (the "extract, don't fork"
+ *   contract). It owns no domain logic — it composes selectors/domain like any page. Lives under
+ *   AnimalWorkspace (its origin); a neutral relocation can follow when `src/components` opens up.
  *
  * @type {Set<string>}
  */
-const CROSS_PAGE_ALLOWLIST = new Set(['pages/DayEditor/SaveIndicator']);
+const CROSS_PAGE_ALLOWLIST = new Set([
+  'pages/DayEditor/SaveIndicator',
+  'pages/AnimalWorkspace/RecordingDaysTab',
+]);
 
 /**
  * Decide whether an import from `fromRel` to `toRel` (both src-relative POSIX paths, `toRel`

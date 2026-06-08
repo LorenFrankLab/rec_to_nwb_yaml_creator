@@ -19,6 +19,7 @@ import { Home } from '../pages/Home';
 import { AnimalWorkspace } from '../pages/AnimalWorkspace';
 import { DayEditor } from '../pages/DayEditor';
 import { ValidationSummary } from '../pages/ValidationSummary';
+import { AnimalView } from '../pages/AnimalView';
 import { LegacyFormView } from '../pages/LegacyFormView';
 import logo from '../logo.png';
 // Lazy load Animal Editor to avoid loading all its dependencies for tests that don't use it
@@ -37,6 +38,7 @@ function getViewName(view) {
     day: 'Day Editor',
     validation: 'Validation Summary',
     'animal-editor': 'Animal Setup',
+    'animal-view': 'Animal',
   };
   return viewNames[view] || view;
 }
@@ -170,6 +172,14 @@ export function AppLayout() {
           <Suspense fallback={<div>Loading Animal Setup...</div>}>
             <AnimalEditor />
           </Suspense>
+        );
+
+      case 'animal-view':
+        return (
+          <AnimalView
+            animalId={currentRoute.params.animalId}
+            tab={currentRoute.params.tab}
+          />
         );
 
       case 'validation':
