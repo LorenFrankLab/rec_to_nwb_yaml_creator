@@ -182,6 +182,52 @@ describe('mergeDayMetadata', () => {
     });
   });
 
+  describe('Recording system: per-day acquisition device with animal default', () => {
+    it('inherits the animal-level recording system when the day has no device of its own', () => {
+      const animal = createTestAnimal();
+      const day = createTestDay(); // no day.data_acq_device
+      const merged = mergeDayMetadata(animal, day);
+      expect(merged.data_acq_device).toEqual([
+        { name: 'SpikeGadgets', system: 'SpikeGadgets', amplifier: 'Intan', adc_circuit: 'Intan' },
+      ]);
+    });
+
+    it('exports the DAY\'s own recording system when the session used different hardware', () => {
+      // trodes_to_nwb records one acquisition system per session — a day recorded on a different
+      // rig carries its OWN device (a different YAML with a different device), not the animal default.
+      const animal = createTestAnimal();
+      const day = createTestDay({
+        data_acq_device: [
+          { name: 'Neuropixels rig', system: 'OpenEphys', amplifier: 'IMEC', adc_circuit: 'IMEC' },
+        ],
+      });
+      const merged = mergeDayMetadata(animal, day);
+      expect(merged.data_acq_device).toEqual([
+        { name: 'Neuropixels rig', system: 'OpenEphys', amplifier: 'IMEC', adc_circuit: 'IMEC' },
+      ]);
+    });
+
+    it('falls back to the animal default for an empty / malformed day device list', () => {
+      const animal = createTestAnimal();
+      expect(mergeDayMetadata(animal, createTestDay({ data_acq_device: [] })).data_acq_device)
+        .toHaveLength(1);
+      expect(mergeDayMetadata(animal, createTestDay({ data_acq_device: 'corrupt' })).data_acq_device)
+        .toEqual([
+          { name: 'SpikeGadgets', system: 'SpikeGadgets', amplifier: 'Intan', adc_circuit: 'Intan' },
+        ]);
+    });
+
+    it('reorders the day device keys to the canonical export order', () => {
+      const animal = createTestAnimal();
+      const day = createTestDay({
+        // Keys out of order on the day record must export in canonical name/system/amplifier/adc order.
+        data_acq_device: [{ adc_circuit: 'IMEC', amplifier: 'IMEC', system: 'OpenEphys', name: 'NP' }],
+      });
+      const merged = mergeDayMetadata(animal, day);
+      expect(Object.keys(merged.data_acq_device[0])).toEqual(['name', 'system', 'amplifier', 'adc_circuit']);
+    });
+  });
+
   describe('Behavioral events are day-only (animal events are reference-only)', () => {
     it('does not export the animal behavioral_events with the day', () => {
       // The animal carries its own behavioral_events; the day carries one of its own.

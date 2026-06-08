@@ -6,6 +6,25 @@
 
 ---
 
+## Recording system — per-day acquisition device (1/n): merge foundation (June 8, 2026)
+
+Recording system becomes a **per-day** fact with an animal-level default. trodes_to_nwb records ONE
+acquisition system per session (a .rec → one YAML → one NWBFile), and multiple `data_acq_device`
+entries in one YAML are scientifically meaningless (each attaches to the session with no link to
+which data it recorded). So an animal recorded on different rigs over its life is modelled by
+**different days/YAMLs each carrying their own single device**, not multiple devices in one YAML.
+
+- **Merge precedence** ([workspaceUtils.js](../src/state/workspaceUtils.js) `mergeDayMetadata`): a
+  day's `data_acq_device` (if a non-empty array) exports verbatim; otherwise the day inherits the
+  animal-level default. Byte-identical for any day without a per-day device — **125 golden baselines
+  unchanged** (every fixture inherits the animal). + merge unit tests (own-device, inherit, malformed
+  fallback, canonical key order).
+- **Doc fix** ([PIPELINE_REQUIREMENTS.md](../docs/PIPELINE_REQUIREMENTS.md)): the `data_acq_device` row
+  now states that trodes_to_nwb *iterates* the array (`dataacq_device{i}`) but multiple-in-one-YAML do
+  NOT raise and are meaningless — the meaningful unit is one device per session.
+
+The day-side override UI and the animal-tab simplification follow in subsequent commits.
+
 ## Tabbed workspace IA — post-Phase-5 UX: relocate the animal profile to the header ⋮ (June 8, 2026)
 
 The animal-wide subject-facts editor was an always-visible collapsible **in the header band on every

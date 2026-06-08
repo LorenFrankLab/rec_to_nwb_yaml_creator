@@ -341,13 +341,16 @@ export function mergeDayMetadata(animal, day) {
       SUBJECT_ORDER
     ),
 
-    // === From Animal: Data Acquisition ===
-    // Read from RAW animal (not the normalized `devices` above): byte-safe ONLY because
+    // === Recording System: the DAY's own acquisition device(s) if set, else the animal default ===
+    // trodes_to_nwb records ONE acquisition system per session, so a day that used different hardware
+    // carries its OWN device (a different YAML with a different device); otherwise it inherits the
+    // animal-level default. Byte-identical for any day without a per-day device (every golden fixture
+    // has none → inherits the animal). Read RAW (not the normalized `devices`): byte-safe ONLY because
     // normalizeDevices does not transform data_acq_device items (it structuredClones them).
-    // If the normalizer ever starts normalizing these, route this through `devices` instead.
-    data_acq_device: getDataAcqDevices(animal).map((d) =>
-      reorderKeys(d, DATA_ACQ_DEVICE_ORDER)
-    ),
+    data_acq_device: (Array.isArray(day.data_acq_device) && day.data_acq_device.length > 0
+      ? day.data_acq_device
+      : getDataAcqDevices(animal)
+    ).map((d) => reorderKeys(d, DATA_ACQ_DEVICE_ORDER)),
 
     // === From Animal catalog, filtered to the day's used cameras (Task 5) ===
     cameras: dayCameras.map((c) => reorderKeys(c, CAMERA_ORDER)),
