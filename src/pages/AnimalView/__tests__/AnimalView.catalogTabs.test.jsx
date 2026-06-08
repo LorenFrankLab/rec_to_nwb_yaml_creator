@@ -9,6 +9,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { StoreProvider } from '../../../state/StoreContext';
 import { AnimalView } from '../index';
 
@@ -136,5 +137,50 @@ describe('AnimalView — optogenetics status chip (Phase 3-3)', () => {
     });
     renderView('optogenetics', animal);
     expect(screen.queryByText(/not used — no stimulation/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('AnimalView — unsaved-edit guard extends to the CameraModal (charter decision 2)', () => {
+  beforeEach(() => {
+    delete window.location;
+    window.location = { hash: '#/animal/remy/cameras' };
+  });
+  afterEach(() => {
+    window.location = { hash: '' };
+  });
+
+  /**
+   * Render the cameras tab and open the CameraModal so there are pending edits.
+   * @returns {object} The userEvent instance for driving subsequent interactions.
+   */
+  async function renderWithOpenCameraModal() {
+    const user = userEvent.setup();
+    renderView('cameras');
+    await user.click(screen.getByRole('button', { name: /add camera/i }));
+    expect(screen.getByRole('heading', { name: /add camera/i })).toBeInTheDocument();
+    return user;
+  }
+
+  it('intercepts a section-nav switch with the discard confirm when the CameraModal is open', async () => {
+    const user = await renderWithOpenCameraModal();
+    await user.click(screen.getByRole('link', { name: /^recording system$/i }));
+    expect(screen.getByRole('alertdialog', { name: /discard unsaved changes/i })).toBeInTheDocument();
+  });
+
+  it('cancel keeps the cameras tab and the open CameraModal', async () => {
+    const user = await renderWithOpenCameraModal();
+    await user.click(screen.getByRole('link', { name: /^recording system$/i }));
+    await user.click(screen.getByRole('button', { name: /keep editing/i }));
+    expect(screen.queryByRole('alertdialog', { name: /discard unsaved changes/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /add camera/i })).toBeInTheDocument();
+    expect(window.location.hash).toBe('#/animal/remy/cameras');
+  });
+
+  it('confirm navigates away and dismisses the guard', async () => {
+    const user = await renderWithOpenCameraModal();
+    await user.click(screen.getByRole('link', { name: /^recording system$/i }));
+    await user.click(screen.getByRole('button', { name: /discard changes/i }));
+    expect(screen.queryByRole('alertdialog', { name: /discard unsaved changes/i })).not.toBeInTheDocument();
+    expect(window.location.hash).toBe('#/animal/remy/recording-system');
   });
 });

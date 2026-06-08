@@ -113,7 +113,13 @@ function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdat
     case 'recording-system':
       return <RecordingSystemContainer animal={animal} onFieldUpdate={onFieldUpdate} />;
     case 'cameras':
-      return <CamerasContainer animal={animal} onFieldUpdate={onFieldUpdate} />;
+      return (
+        <CamerasContainer
+          animal={animal}
+          onFieldUpdate={onFieldUpdate}
+          onPendingEditsChange={onPendingEditsChange}
+        />
+      );
     case 'dio':
       return <DioContainer animal={animal} onFieldUpdate={onFieldUpdate} />;
     case 'optogenetics':

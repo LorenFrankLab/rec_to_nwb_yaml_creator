@@ -9,7 +9,7 @@
  * HardwareConfigStep so both the (temporary) stepper-hosted step and the tabbed Animal View use
  * one implementation.
  */
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../../state/StoreContext';
 import { getAnimalCameras, getAnimalDayIds } from '../../../state/workspaceSelectors';
@@ -30,9 +30,13 @@ import {
  * @param {object} props
  * @param {object} props.animal - Animal record.
  * @param {Function} props.onFieldUpdate - Field-update callback (writes `cameras`).
+ * @param {Function} [props.onPendingEditsChange] - Called with `true` while the add/edit
+ *   CameraModal is open (an in-progress edit the user could lose) and `false` otherwise / on
+ *   unmount. The tabbed AnimalView consults this to guard a section-nav switch (charter
+ *   decision 2); the temporary stepper omits it (no nav under it), so its path is byte-unchanged.
  * @returns {JSX.Element}
  */
-export default function CamerasContainer({ animal, onFieldUpdate }) {
+export default function CamerasContainer({ animal, onFieldUpdate, onPendingEditsChange }) {
   const { model } = useStoreContext();
 
   const [cameraModal, setCameraModal] = useState({ open: false, mode: 'add', camera: null });
@@ -40,6 +44,13 @@ export default function CamerasContainer({ animal, onFieldUpdate }) {
   // Phase 8.7 Task 5b: pending decision when editing a camera that recording days reference.
   const [cameraRefDecision, setCameraRefDecision] = useState(null);
   const [pendingDelete, setPendingDelete] = useState(null);
+
+  // Report "has pending edits" (the add/edit CameraModal being open) to a host that guards
+  // navigation. Cleanup resets to false on unmount so a host doesn't hold a stale `true`.
+  useEffect(() => {
+    onPendingEditsChange?.(cameraModal.open);
+    return () => onPendingEditsChange?.(false);
+  }, [cameraModal.open, onPendingEditsChange]);
 
   // A repair routed here must not dead-end by crashing on the corruption it exists to fix. Read
   // cameras through the canonical selector: a non-array `cameras` renders safely.
@@ -218,4 +229,9 @@ CamerasContainer.propTypes = {
     cameras: rawArray(PropTypes.object),
   }).isRequired,
   onFieldUpdate: PropTypes.func.isRequired,
+  onPendingEditsChange: PropTypes.func,
+};
+
+CamerasContainer.defaultProps = {
+  onPendingEditsChange: undefined,
 };
