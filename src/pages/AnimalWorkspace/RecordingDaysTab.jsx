@@ -16,7 +16,7 @@ import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import { getAnimalDayIds, getConfigHistory, getDaySession } from '../../state/workspaceSelectors';
-import { getAnimalSetupChecklist, SETUP_STATE } from '../../domain/workflowStatus';
+import { getAnimalSetupChecklist, getDayRowStatus, SETUP_STATE } from '../../domain/workflowStatus';
 import { classifyAnimalDays, DAY_STATUS, describeOwner, isPresentRecordStatus } from '../../domain/dayRecovery';
 import { validateDay } from '../../domain/validation';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
@@ -503,31 +503,50 @@ export function RecordingDaysTab({ animalId }) {
               }
 
               const isOrphan = status === DAY_STATUS.RECOVERED_UNLINKED;
-              // Guard session/state: a recovered day can carry a malformed (scalar/array)
-              // session or state, which a raw `.session_id`/`.draft` read would crash on.
+              // Guard session: a recovered day can carry a malformed (scalar/array) session,
+              // which a raw `.session_description` read would crash on (getDaySession → {}).
               const date = record.date;
               const session = getDaySession(record);
-              const state =
-                record.state && typeof record.state === 'object' && !Array.isArray(record.state)
-                  ? record.state
-                  : {};
+              // Decision 12: the row is triage. session description rides under the date ONLY
+              // when present (a recognition aid, never a hole when absent), truncated by CSS.
+              const sessionDescription =
+                typeof session.session_description === 'string'
+                  ? session.session_description.trim()
+                  : '';
+              // ONE plain-language status, read-only over the SAME export gate the day editor
+              // uses (per row), so a day that went stale (validated/exported before a referenced
+              // camera broke) reads the honest "Needs fixing", not a stale flag. mergeDayMetadata
+              // throws on a corrupt/missing configuration — caught here and surfaced as a
+              // needs-fixing row by getDayRowStatus(…, null), never a crash.
+              let mergedDay = null;
+              try {
+                mergedDay = mergeDayMetadata(selectedAnimal, record);
+              } catch (err) {
+                // eslint-disable-next-line no-console
+                console.debug(`[recording-days] could not merge day "${dayId}" for status:`, err);
+              }
+              const rowStatus = getDayRowStatus(selectedAnimal, record, mergedDay);
 
               return (
                 <li key={dayId} className={`day-item ${isOrphan ? 'day-item-orphan' : ''}`}>
                   <a href={`#/day/${dayId}`} className="day-link">
                     <div className="day-info">
-                      <span className="day-date">{date}</span>
-                      <span className="day-session-id">
-                        {session.session_id}
+                      <span className="day-date">
+                        {date}
                         {isOrphan && (
                           <span className="day-orphan-note"> ⚠ not in day list</span>
                         )}
                       </span>
+                      {sessionDescription && (
+                        <span className="day-session-desc" title={sessionDescription}>
+                          {sessionDescription}
+                        </span>
+                      )}
                     </div>
                     <div className="day-status">
-                      {state.draft && <span className="status-chip draft">Draft</span>}
-                      {state.validated && <span className="status-chip validated">Validated</span>}
-                      {state.exported && <span className="status-chip exported">Exported</span>}
+                      <span className={`day-row-status day-row-status-${rowStatus.variant}`}>
+                        {rowStatus.label}
+                      </span>
                     </div>
                   </a>
                   {/* Lifecycle cleanup (Task 8): a secondary/destructive delete, OUTSIDE

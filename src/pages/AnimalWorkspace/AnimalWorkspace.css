@@ -223,9 +223,59 @@
   color: #666;
 }
 
+/* Decision 12: the muted session description under the date (recognition aid), truncated to one
+   line — the full text stays available via the element's `title`. */
+.day-session-desc {
+  font-size: 0.8125rem;
+  color: #6a6557;
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 26rem;
+}
+
 .day-status {
   display: flex;
   gap: 0.5rem;
+}
+
+/* Decision 12: ONE plain-language day status (replaces the Draft/Validated/Exported chip
+   cluster). A leading dot keys the variant by colour without relying on colour alone (the words
+   carry the meaning). */
+.day-row-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.day-row-status::before {
+  content: '';
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  flex: none;
+  background-color: currentColor;
+}
+
+.day-row-status-draft {
+  color: #6a6557;
+  font-weight: 500;
+}
+
+.day-row-status-ready {
+  color: #1f7a43;
+}
+
+.day-row-status-exported {
+  color: #1976d2;
+}
+
+.day-row-status-needs_fixing {
+  color: #b3261e;
 }
 
 .status-chip {

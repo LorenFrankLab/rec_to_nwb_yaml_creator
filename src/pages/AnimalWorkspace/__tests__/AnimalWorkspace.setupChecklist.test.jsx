@@ -135,9 +135,10 @@ describe('AnimalWorkspace existing-data review state', () => {
     renderPane('newbie', { newbie: animal }, { 'newbie-2024-02-02': dayRecord });
 
     // The record is shown (not "No recording days yet"), flagged as not in the index (the
-    // phrase appears both in the review note and on the day row).
+    // phrase appears both in the review note and on the day row). The row's identity is its
+    // date now — session_id moved off the row (Task 2.6).
     expect(screen.getAllByText(/not in day list/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/newbie_20240202/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /2024-02-02/i })).toBeInTheDocument();
     expect(screen.queryByText(/no recording days yet/i)).not.toBeInTheDocument();
     // The review state appears and points to the validation summary to re-link.
     expect(screen.getByRole('region', { name: /existing data review/i })).toBeInTheDocument();
