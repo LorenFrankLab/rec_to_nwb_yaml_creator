@@ -69,22 +69,35 @@ describe('AnimalView — subject profile in the header (Phase 3-4)', () => {
     window.location = { hash: '' };
   });
 
-  it('renders the Animal Profile section on a setup tab', () => {
+  /**
+   * Open the header ⋮ → "Edit profile…" to reveal the profile dialog.
+   * @param {object} user - userEvent session.
+   */
+  async function openProfile(user) {
+    await user.click(screen.getByRole('button', { name: /actions for remy/i }));
+    await user.click(screen.getByRole('menuitem', { name: /edit profile/i }));
+  }
+
+  it('offers "Edit profile…" in the header ⋮ on a setup tab', async () => {
+    const user = userEvent.setup();
     renderView('electrode-groups');
-    expect(screen.getByRole('button', { name: /animal profile/i })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /actions for remy/i }));
+    expect(screen.getByRole('menuitem', { name: /edit profile/i })).toBeInTheDocument();
   });
 
-  it('also renders the Animal Profile section on a different tab (it is header, not a tab)', () => {
+  it('offers "Edit profile…" on a different tab too (header ⋮, not a tab)', async () => {
+    const user = userEvent.setup();
     delete window.location;
     window.location = { hash: '#/animal/remy/cameras' };
     renderView('cameras');
-    expect(screen.getByRole('button', { name: /animal profile/i })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /actions for remy/i }));
+    expect(screen.getByRole('menuitem', { name: /edit profile/i })).toBeInTheDocument();
   });
 
   it('editing + confirming the blast-radius writes the subject via updateAnimal', async () => {
     const user = userEvent.setup();
     renderView('electrode-groups');
-    await user.click(screen.getByRole('button', { name: /animal profile/i })); // expand
+    await openProfile(user);
     const speciesInput = screen.getByLabelText(/^species$/i);
     await user.clear(speciesInput);
     await user.type(speciesInput, 'Mus musculus');

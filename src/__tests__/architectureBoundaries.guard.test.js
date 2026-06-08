@@ -52,9 +52,6 @@ const CROSS_PAGE_ALLOWLIST = new Set([
   'pages/AnimalEditor/wiring/DioContainer',
   'pages/AnimalEditor/wiring/OptogeneticsContainer',
   'pages/AnimalEditor/wiring/useAnimalFieldUpdate',
-  // Phase 3-4: the subject-facts editor, re-homed onto the AnimalView header (not a tab). A shared
-  // presentational form (its own expand/confirm state); owns no app-wide domain logic.
-  'pages/AnimalEditor/AnimalProfileSection',
   // Phase 3-5: the per-animal Validation & Export tab renders <ValidationSummary animalKey=…> — the
   // SAME component as the standalone page, scoped by a filter (buildAnimalRows), not a fork. The
   // export-truth deciders it consumes (mergeDayMetadata, computeStepStatus, shadowExport) live in

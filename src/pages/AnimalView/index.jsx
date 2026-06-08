@@ -27,10 +27,10 @@ import { useReconfigContext } from '../../hooks/useReconfigContext';
 import { ConfirmDialog } from '../../components/Modal';
 import OverflowMenu from '../../components/OverflowMenu';
 import AnimalDeleteDialog from '../../components/AnimalDeleteDialog';
+import AnimalProfileDialog from '../../components/AnimalProfileDialog';
 import { RecordingDaysTab } from '../AnimalWorkspace/RecordingDaysTab';
 import RawCorruptionBanner from '../../components/RawCorruptionBanner';
 import ReconfigurationContextBanner from '../../components/ReconfigurationContextBanner';
-import AnimalProfileSection from '../AnimalEditor/AnimalProfileSection';
 import ElectrodeGroupsContainer from '../AnimalEditor/wiring/ElectrodeGroupsContainer';
 import ChannelMapsContainer from '../AnimalEditor/wiring/ChannelMapsContainer';
 import RecordingSystemContainer from '../AnimalEditor/wiring/RecordingSystemContainer';
@@ -205,6 +205,9 @@ export function AnimalView({ animalId, tab }) {
   // leaves the route pointing at a now-missing id, which the not-found guard below handles (no
   // stranding). The shared AnimalDeleteDialog owns the cascade copy + the typed-id gate.
   const [animalDeleteOpen, setAnimalDeleteOpen] = useState(false);
+  // Whether the header ⋮'s "Edit profile…" dialog is open. The animal-wide subject facts editor
+  // moved off the header band into this on-demand dialog (it cluttered every tab).
+  const [profileOpen, setProfileOpen] = useState(false);
 
   // Shared store-bound field-update + repair callbacks for the `{ animal, onFieldUpdate }` setup
   // containers (recording-system / cameras / dio), the corruption banner, and the profile save —
@@ -374,8 +377,11 @@ export function AnimalView({ animalId, tab }) {
           <OverflowMenu
             label={`Actions for ${animal.id}`}
             items={[
-              // Only the real lifecycle action: no redundant "Open" (you're already viewing this
-              // animal) and no dead "Rename…" placeholder.
+              {
+                key: 'profile',
+                label: 'Edit profile…',
+                onSelect: () => setProfileOpen(true),
+              },
               {
                 key: 'delete',
                 label: 'Delete animal…',
@@ -386,20 +392,14 @@ export function AnimalView({ animalId, tab }) {
         </div>
       </header>
 
-      {/* Subject facts + reconfiguration context belong in the header band (NOT a tab — Phase 3-4):
-          visible regardless of which setup tab is open. Same AnimalProfileSection (with its
-          blast-radius confirm) and shared ReconfigurationContextBanner the legacy stepper renders.
-          dayCount uses getAnimalDayIds(animal).length — the SAME count the stepper passes — so the
-          "affects N days" confirm copy is byte-identical. */}
+      {/* Reconfiguration context belongs in the header band (NOT a tab — Phase 3-4): visible
+          regardless of which setup tab is open. The animal-wide subject-facts EDITOR moved off the
+          band into the header ⋮'s "Edit profile…" dialog (it cluttered every tab); the read-only
+          facts stay in the header h1/badge above. */}
       <ReconfigurationContextBanner
         animal={animal}
         routeContext={routeContext}
         days={model.workspace.days}
-      />
-      <AnimalProfileSection
-        animal={animal}
-        dayCount={getAnimalDayIds(animal).length}
-        onSave={(subject) => handleFieldUpdate('subject', subject)}
       />
 
       {/* Charter decision 1: the 3-field corruption banner lives ABOVE the tab panels (not per-tab)
@@ -496,6 +496,14 @@ export function AnimalView({ animalId, tab }) {
         destructive
         onConfirm={confirmDiscardAndNavigate}
         onCancel={() => setPendingNavTab(null)}
+      />
+
+      <AnimalProfileDialog
+        isOpen={profileOpen}
+        animal={animal}
+        dayCount={getAnimalDayIds(animal).length}
+        onSave={(subject) => handleFieldUpdate('subject', subject)}
+        onClose={() => setProfileOpen(false)}
       />
 
       <AnimalDeleteDialog

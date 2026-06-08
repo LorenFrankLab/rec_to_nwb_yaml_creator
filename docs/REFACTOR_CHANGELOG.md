@@ -6,6 +6,26 @@
 
 ---
 
+## Tabbed workspace IA — post-Phase-5 UX: relocate the animal profile to the header ⋮ (June 8, 2026)
+
+The animal-wide subject-facts editor was an always-visible collapsible **in the header band on every
+tab**, redundant next to the read-only `species · sex` the header already shows. It is genuinely
+useful (the only animal-level correction home for species/sex/DOB/genotype/description — they merge
+into every day's export), so it is **relocated, not removed**: into an on-demand dialog opened from
+the header **⋮ → "Edit profile…"**. The ⋮ now reads `Edit profile… · Delete animal…` — a coherent
+animal-lifecycle menu — and the header declutters. **UI-only — no export/schema change**; 125 golden
+baselines byte-identical; full suite (4248), lint (0 errors), build green. TDD.
+
+- New [AnimalProfileDialog.jsx](../src/components/AnimalProfileDialog.jsx) (Modal-based) ports the
+  form verbatim — `subject_id` read-only, species DANDI-binomial gate, DOB ISO + future-date cap,
+  only-changed-fields save, and the blast-radius **confirm before an animal-wide write** (names "this
+  animal and all N recording days, including already exported").
+- [AnimalView](../src/pages/AnimalView/index.jsx) opens it from the header ⋮; the inline
+  `AnimalProfileSection` render is gone (the read-only facts stay in the header `h1`/badge).
+- The legacy `AnimalProfileSection` (+ scss + test) is deleted — it was AnimalView-only after the
+  Phase-5 stepper removal — and its `CROSS_PAGE_ALLOWLIST` entry dropped (the dialog lives in
+  `src/components`, needs no allowlist).
+
 ## Tabbed workspace IA — Phase 5: decommission the legacy Animal Editor stepper (June 8, 2026)
 
 Removes the now-redundant Animal Editor wizard and its `#/animal/:id/editor` route — the tabs

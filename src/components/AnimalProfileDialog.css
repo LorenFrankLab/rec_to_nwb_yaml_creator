@@ -1,0 +1,56 @@
+/* AnimalProfileDialog — the animal-wide subject-facts editor (opened from the AnimalView header ⋮).
+   The Modal provides the shell; these style the form within it. Ported from AnimalProfileSection. */
+
+.animal-profile-dialog .animal-profile-blast-radius {
+  margin: 0 0 0.85rem;
+  padding: 0.5rem 0.7rem;
+  background: #fff7e6;
+  border-left: 3px solid #e0a106;
+  border-radius: 3px;
+  font-size: 0.85rem;
+  color: #5a4a13;
+}
+
+.animal-profile-dialog .form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.85rem;
+}
+
+.animal-profile-dialog .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.animal-profile-dialog .form-field label,
+.animal-profile-dialog .form-field .field-label {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.animal-profile-dialog .form-field .readonly-value {
+  padding: 0.35rem 0;
+  font-family: monospace;
+}
+
+.animal-profile-dialog .form-field .field-help-text {
+  font-size: 0.78rem;
+  color: #6b7480;
+}
+
+.animal-profile-dialog .form-field .validation-error {
+  font-size: 0.8rem;
+  color: #c0392b;
+}
+
+.animal-profile-dialog .form-field input[aria-invalid='true'] {
+  border-color: #c0392b;
+}
+
+.animal-profile-dialog .form-actions {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
