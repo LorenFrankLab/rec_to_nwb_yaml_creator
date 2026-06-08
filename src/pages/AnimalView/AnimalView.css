@@ -165,3 +165,14 @@
   outline-offset: 2px;
   border-radius: 3px;
 }
+
+/* Red ● on a section that holds an export-blocking error (decision 11 / Phase 3a.5). Colour PLUS
+   the accessible name "— blocks export" (the dot is aria-hidden) so it never relies on colour alone. */
+.section-nav-blocking {
+  flex: none;
+  width: 0.75rem;
+  text-align: center;
+  color: #c0392b;
+  font-size: 0.7rem;
+  line-height: 1;
+}

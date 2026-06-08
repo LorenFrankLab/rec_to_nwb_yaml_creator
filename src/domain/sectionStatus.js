@@ -18,9 +18,12 @@ import {
   getDataAcqDevices,
   getAnimalCameras,
   getAnimalBehavioralEvents,
+  getAnimalDayIds,
 } from '../state/workspaceSelectors';
+import { mergeDayMetadata } from '../state/workspaceUtils';
+import { validateDay, repairTargetForIssue, animalSetupTabForFieldPath } from './validation';
 
-/** Section status values. `blocking` is reserved for Phase 3a (see file header). */
+/** Section status values. `blocking` (Phase 3a.5) is computed separately — see getAnimalBlockingSections. */
 export const SECTION_STATUS = {
   TODO: 'todo',
   NONE: 'none',
@@ -67,4 +70,41 @@ export function getAnimalSectionStatus(animal, sectionKey) {
   // Day-work sections (and any unknown key) carry no setup todo.
   if (!isConfigured) return SECTION_STATUS.NONE;
   return isConfigured(animal) ? SECTION_STATUS.NONE : SECTION_STATUS.TODO;
+}
+
+/**
+ * The set of animal-setup TAB keys that hold an export-BLOCKING error (Phase 3a.5 — the section-nav
+ * red dot). Validates each of the animal's recording days with the SAME validator the export gate
+ * uses ({@link validateDay}), keeps only error-severity issues whose owner is the animal setup
+ * ({@link repairTargetForIssue} surface `animal`), and attributes each to its owning tab via the
+ * SAME resolver the repair routing uses ({@link animalSetupTabForFieldPath}) — no second mapping.
+ * Read-only over the existing validators; a day whose config can't be merged is skipped (its
+ * corruption surfaces via the raw-shape banner, not here).
+ *
+ * @param {object} animal - The animal record.
+ * @param {object} [days] - The workspace day map (`model.workspace.days`).
+ * @returns {Set<string>} Tab keys (e.g. `electrode-groups`, `cameras`) with a blocking error.
+ */
+export function getAnimalBlockingSections(animal, days) {
+  const blocking = new Set();
+  if (!animal) return blocking;
+
+  for (const dayId of getAnimalDayIds(animal)) {
+    const day = days?.[dayId];
+    if (!day) continue;
+    let merged;
+    try {
+      merged = mergeDayMetadata(animal, day);
+    } catch {
+      // Unreadable day config — its corruption is surfaced by the raw-shape banner, not the dot.
+      continue;
+    }
+    for (const issue of validateDay(day, merged, animal)) {
+      if (issue.severity !== 'error') continue;
+      if (repairTargetForIssue(issue).surface !== 'animal') continue;
+      const { tab } = animalSetupTabForFieldPath(issue.focusPath || issue.path || issue.instancePath);
+      blocking.add(tab);
+    }
+  }
+  return blocking;
 }

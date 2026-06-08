@@ -248,20 +248,20 @@ describe('AnimalView — unsaved-edit guard (charter decision 2)', () => {
 
   it('intercepts a section-nav switch with a discard confirm when an editor is open', async () => {
     const user = await renderWithOpenEditor();
-    await user.click(screen.getByRole('link', { name: /^electrode groups$/i }));
+    await user.click(screen.getByRole('link', { name: /^electrode groups/i }));
     expect(screen.getByRole('alertdialog', { name: /discard unsaved changes/i })).toBeInTheDocument();
   });
 
   it('does NOT intercept when no editor is open (normal nav, no confirm)', async () => {
     const user = userEvent.setup();
     renderView('channel-maps');
-    await user.click(screen.getByRole('link', { name: /^electrode groups$/i }));
+    await user.click(screen.getByRole('link', { name: /^electrode groups/i }));
     expect(screen.queryByRole('alertdialog', { name: /discard unsaved changes/i })).not.toBeInTheDocument();
   });
 
   it('cancel keeps the tab and the open editor', async () => {
     const user = await renderWithOpenEditor();
-    await user.click(screen.getByRole('link', { name: /^electrode groups$/i }));
+    await user.click(screen.getByRole('link', { name: /^electrode groups/i }));
     await user.click(screen.getByRole('button', { name: /keep editing/i }));
     expect(screen.queryByRole('alertdialog', { name: /discard unsaved changes/i })).not.toBeInTheDocument();
     // Editor still open; route unchanged.
@@ -271,7 +271,7 @@ describe('AnimalView — unsaved-edit guard (charter decision 2)', () => {
 
   it('confirm navigates to the target tab and dismisses the guard', async () => {
     const user = await renderWithOpenEditor();
-    await user.click(screen.getByRole('link', { name: /^electrode groups$/i }));
+    await user.click(screen.getByRole('link', { name: /^electrode groups/i }));
     await user.click(screen.getByRole('button', { name: /discard changes/i }));
     expect(screen.queryByRole('alertdialog', { name: /discard unsaved changes/i })).not.toBeInTheDocument();
     expect(window.location.hash).toBe('#/animal/remy/electrode-groups');
@@ -299,7 +299,7 @@ describe('AnimalView — unsaved-edit guard (charter decision 2)', () => {
     expect(screen.queryByRole('heading', { name: /channel map editor/i })).not.toBeInTheDocument();
 
     // From the new tab with no open editor, navigating away must NOT raise the discard guard.
-    await user.click(screen.getByRole('link', { name: /^channel maps$/i }));
+    await user.click(screen.getByRole('link', { name: /^channel maps/i }));
     expect(screen.queryByRole('alertdialog', { name: /discard unsaved changes/i })).not.toBeInTheDocument();
   });
 });

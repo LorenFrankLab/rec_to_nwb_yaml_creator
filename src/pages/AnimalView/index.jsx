@@ -12,11 +12,11 @@
  * route-change focus fires only on `view` change, not `:tab` (Task 1.1b).
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import { getAnimalSubject, getAnimalDayIds } from '../../state/workspaceSelectors';
-import { getAnimalSectionStatus, SECTION_STATUS } from '../../domain/sectionStatus';
+import { getAnimalSectionStatus, getAnimalBlockingSections, SECTION_STATUS } from '../../domain/sectionStatus';
 import { useReconfigContext } from '../../hooks/useReconfigContext';
 import { ConfirmDialog } from '../../components/Modal';
 import { RecordingDaysTab } from '../AnimalWorkspace/RecordingDaysTab';
@@ -202,6 +202,14 @@ export function AnimalView({ animalId, tab }) {
   // parser the legacy stepper reads, so the header banner can't drift from the stepper's.
   const routeContext = useReconfigContext();
 
+  // Phase 3a.5: which setup tabs hold an export-blocking error (for the section-nav red dot). Reuses
+  // the export validator + the repair-routing attribution — no second mapping. Memoized off the
+  // animal + days so it recomputes only when the data changes.
+  const blockingSections = useMemo(
+    () => getAnimalBlockingSections(animal, model.workspace.days),
+    [animal, model.workspace.days]
+  );
+
   const panelRef = useRef(null);
   const isFirstRender = useRef(true);
 
@@ -359,23 +367,34 @@ export function AnimalView({ animalId, tab }) {
               <div className="section-nav-group-label">{group.label}</div>
               {group.items.map((item) => {
                 const active = tab === item.key;
-                const isTodo = getAnimalSectionStatus(animal, item.key) === SECTION_STATUS.TODO;
+                // A BLOCKING export error (red ●) outranks a never-configured TODO (hollow ○): the
+                // blocker is the more urgent signal, and the accessible name carries the meaning.
+                const isBlocking = blockingSections.has(item.key);
+                const isTodo =
+                  !isBlocking && getAnimalSectionStatus(animal, item.key) === SECTION_STATUS.TODO;
+                const ariaLabel = isBlocking
+                  ? `${item.label} — blocks export`
+                  : isTodo
+                    ? `${item.label} — not set up`
+                    : undefined;
                 return (
                   <a
                     key={item.key}
                     href={`#/animal/${animalId}/${item.key}`}
                     className={`section-nav-item ${active ? 'is-active' : ''}`}
                     aria-current={active ? 'page' : undefined}
-                    // The hollow-○ ring is decorative; the accessible name carries the meaning.
-                    aria-label={isTodo ? `${item.label} — not set up` : undefined}
+                    aria-label={ariaLabel}
                     onClick={(event) => handleNavClick(event, item.key)}
                   >
                     <span className="section-nav-item-name">{item.label}</span>
-                    {isTodo && (
+                    {isBlocking ? (
+                      // Red ● on a section with an export-blocking error (decision 11 / 3a.5).
+                      <span className="section-nav-blocking" aria-hidden="true">●</span>
+                    ) : isTodo ? (
                       // Neutral hollow-○ "todo" ring on a never-configured setup section
                       // (decision 11) — colour-free, signals "not set up yet" without anxiety.
                       <span className="section-nav-todo" aria-hidden="true">○</span>
-                    )}
+                    ) : null}
                   </a>
                 );
               })}
