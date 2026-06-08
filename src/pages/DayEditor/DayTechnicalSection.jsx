@@ -98,7 +98,7 @@ export default function DayTechnicalSection({ technical, onFieldUpdate, recordin
           {animalKey && (
             <p className="rig-constants-edit-link field-help-text">
               These are recording-system constants —{' '}
-              <a href={`#/animal/${animalKey}/editor?field=data_acq_device`}>Edit in Recording System</a>.
+              <a href={`#/animal/${animalKey}/recording-system?field=data_acq_device`}>Edit in Recording System</a>.
             </p>
           )}
         </div>

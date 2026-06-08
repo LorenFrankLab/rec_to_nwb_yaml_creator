@@ -403,7 +403,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
             This animal&apos;s device configuration is missing or corrupt, so devices
             can&apos;t be shown for this day.
           </p>
-          <a href={`#/animal/${ownerKey}/editor?field=electrode_groups`} className="button-primary">
+          <a href={`#/animal/${ownerKey}/electrode-groups?field=electrode_groups`} className="button-primary">
             Configure devices in Animal Setup
           </a>
         </div>
@@ -424,7 +424,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
             Electrodes/probes are shared animal setup. You can mark failed channels for this
             recording day only after electrodes exist.
           </p>
-          <a href={`#/animal/${ownerKey}/editor?field=electrode_groups`} className="button-primary">
+          <a href={`#/animal/${ownerKey}/electrode-groups?field=electrode_groups`} className="button-primary">
             Set Up Electrodes
           </a>
         </div>
@@ -440,7 +440,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
           version; probe geometry is edited in the shared animal setup, not here. */}
       <div className="inherited-notice">
         This day uses animal electrode configuration v{effectiveConfig.configurationVersion ?? '—'}.
-        <a href={`#/animal/${ownerKey}/editor?field=electrode_groups`}>Edit shared animal electrode setup</a>
+        <a href={`#/animal/${ownerKey}/electrode-groups?field=electrode_groups`}>Edit shared animal electrode setup</a>
       </div>
 
       {/* Configuration-version indicator + reconfiguration entry point. The wizard
@@ -567,7 +567,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
                   <div className="error-state-inline">
                     <p>⚠ No channel mapping found for this electrode group.</p>
                     <p>This usually indicates data corruption. Please review animal configuration.</p>
-                    <a href={`#/animal/${ownerKey}/editor?field=ntrode_electrode_group_channel_map`}>Fix in Animal Setup</a>
+                    <a href={`#/animal/${ownerKey}/channel-maps?field=ntrode_electrode_group_channel_map`}>Fix in Animal Setup</a>
                   </div>
                 </div>
               </details>

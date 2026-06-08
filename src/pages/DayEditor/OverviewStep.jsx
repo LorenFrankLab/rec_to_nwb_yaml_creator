@@ -136,7 +136,7 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, an
   // Breadcrumb items
   const breadcrumbItems = [
     { label: 'Home', href: '#/home' },
-    { label: `Animal: ${ownerKey}`, href: `#/animal/${ownerKey}/editor` },
+    { label: `Animal: ${ownerKey}`, href: `#/animal/${ownerKey}/days` },
     { label: `Day: ${day.date}` },
   ];
 
@@ -314,7 +314,7 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, an
                 Inherited from Animal — editing these fields updates the animal record
                 shared by all {animalDayCount} recording day{animalDayCount === 1 ? '' : 's'},
                 including any already exported.
-                <a href={`#/animal/${ownerKey}/editor`}>Edit Animal</a>
+                <a href={`#/animal/${ownerKey}/days`}>Edit Animal</a>
               </div>
 
               <div className="form-grid">
@@ -392,7 +392,7 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, an
               <h3>Experimenters</h3>
               <div className="inherited-notice">
                 Inherited from Animal
-                <a href={`#/animal/${ownerKey}/editor`}>Edit Animal</a>
+                <a href={`#/animal/${ownerKey}/days`}>Edit Animal</a>
               </div>
 
               <div className="form-grid">

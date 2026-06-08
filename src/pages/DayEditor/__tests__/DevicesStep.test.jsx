@@ -126,7 +126,7 @@ describe('DevicesStep', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: /edit shared animal electrode setup/i })
-    ).toHaveAttribute('href', '#/animal/test-animal/editor?field=electrode_groups');
+    ).toHaveAttribute('href', '#/animal/test-animal/electrode-groups?field=electrode_groups');
   });
 
   it('renders all electrode groups as collapsed details elements', () => {
@@ -326,7 +326,7 @@ describe('DevicesStep', () => {
     expect(screen.getByText(/mark failed channels for this recording day only after electrodes exist/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /set up electrodes/i })).toHaveAttribute(
       'href',
-      '#/animal/test-animal/editor?field=electrode_groups'
+      '#/animal/test-animal/electrode-groups?field=electrode_groups'
     );
   });
 
@@ -488,7 +488,7 @@ describe('DevicesStep', () => {
     const fixLinks = screen.getAllByRole('link', { name: /fix in animal setup/i });
     expect(fixLinks[0]).toHaveAttribute(
       'href',
-      '#/animal/test-animal/editor?field=ntrode_electrode_group_channel_map'
+      '#/animal/test-animal/channel-maps?field=ntrode_electrode_group_channel_map'
     );
   });
 

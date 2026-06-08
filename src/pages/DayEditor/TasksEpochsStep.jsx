@@ -319,7 +319,7 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
             spatial tracking.
           </div>
           <div className="camera-info-actions">
-            <a href={`#/animal/${ownerKey}/editor`} className="button-secondary">
+            <a href={`#/animal/${ownerKey}/days`} className="button-secondary">
               Set Up Cameras
             </a>
             <button

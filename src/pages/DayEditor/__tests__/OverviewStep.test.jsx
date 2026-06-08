@@ -222,7 +222,7 @@ describe('OverviewStep', () => {
       const editLinks = screen.getAllByText(/Edit Animal/i);
       expect(editLinks.length).toBeGreaterThan(0);
       // Must resolve to the Animal Editor route, not the unknown-route → legacy fallback.
-      expect(editLinks[0]).toHaveAttribute('href', '#/animal/remy/editor');
+      expect(editLinks[0]).toHaveAttribute('href', '#/animal/remy/days');
     });
   });
 
@@ -238,11 +238,12 @@ describe('OverviewStep', () => {
     );
 
     const animalCrumb = screen.getByRole('link', { name: /Animal: remy/i });
-    expect(animalCrumb).toHaveAttribute('href', '#/animal/remy/editor');
+    expect(animalCrumb).toHaveAttribute('href', '#/animal/remy/days');
 
-    // parseHashRoute on that href yields the animal-editor view (not isUnknownRoute legacy).
-    const route = parseHashRoute('#/animal/remy/editor');
-    expect(route.view).toBe('animal-editor');
+    // parseHashRoute on that href yields the tabbed animal-view (Phase 3a re-points the breadcrumb
+    // off the legacy /editor route), not isUnknownRoute legacy.
+    const route = parseHashRoute('#/animal/remy/days');
+    expect(route.view).toBe('animal-view');
     expect(route.isUnknownRoute).toBeFalsy();
   });
 

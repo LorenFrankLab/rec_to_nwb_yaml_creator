@@ -149,7 +149,7 @@ function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdat
           <h2>{TAB_LABEL[tab] || 'Section'}</h2>
           <p>
             This section moves here in a later phase. For now, configure it in{' '}
-            <a href={`#/animal/${animalId}/editor`}>Animal Setup</a>.
+            <a href={`#/animal/${animalId}/days`}>Animal Setup</a>.
           </p>
         </div>
       );
