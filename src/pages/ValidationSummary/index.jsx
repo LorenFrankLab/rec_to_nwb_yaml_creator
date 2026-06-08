@@ -23,8 +23,9 @@ import { useStoreContext } from '../../state/StoreContext';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { getAnimalSubject, getConfigHistory } from '../../state/workspaceSelectors';
 import EffectiveDayReview from './EffectiveDayReview';
-import { computeStepStatus } from '../../domain/validation';
+import { computeStepStatus, validateDay } from '../../domain/validation';
 import { getDayWorkflowStatus } from '../../domain/workflowStatus';
+import WarningAcknowledgement from '../../components/WarningAcknowledgement';
 import { describeDayOptoState } from '../../domain/optoStatus';
 import {
   classifyWorkspaceDays,
@@ -278,8 +279,11 @@ export function ValidationSummary({ animalKey } = {}) {
   // Days Validate All could not persist (corrupt `day.state` shape, or a write that threw) — named
   // in the UI with their repair path so imported/recovered corruption isn't console-only.
   const [validateErrorReport, setValidateErrorReport] = useState([]);
-  // Pending batch export awaiting preflight confirmation: { rows, preflight }.
+  // Pending batch export awaiting preflight confirmation: { rows, preflight, warningItems }.
   const [pendingExport, setPendingExport] = useState(null);
+  // Phase 3-6: explicit acknowledgement of outstanding non-blocking warnings before the download
+  // proceeds. Reset whenever a new preflight opens / closes so it can't carry across exports.
+  const [warningsAcknowledged, setWarningsAcknowledged] = useState(false);
 
   const clearReports = () => {
     setSkippedReport([]);
@@ -387,6 +391,9 @@ export function ValidationSummary({ animalKey } = {}) {
         // agree: an opto-implanted animal with an opto-free day reads "implanted, no stimulation",
         // not "on".
         const opto = describeDayOptoState(merged).label;
+        // Phase 3-6: the day's outstanding non-blocking warnings (same predicate the single-day
+        // Export step uses). These don't block the gate; they require explicit acknowledgement.
+        const warnings = validateDay(day, merged, animal).filter((i) => i.severity === 'warning');
         return {
           dayId: day.id,
           label: `${subjectLabel(animal)} — ${day.session?.session_id || day.id}`,
@@ -396,24 +403,38 @@ export function ValidationSummary({ animalKey } = {}) {
           failedChannels,
           cameras: (merged.cameras || []).length,
           opto,
+          warnings,
         };
       } catch (err) {
         return { dayId: day.id, label: `${subjectLabel(animal)} — ${day.id}`, error: err.message };
       }
     });
 
+    // The acknowledgement set: one entry per day that carries outstanding warnings.
+    const warningItems = preflight
+      .filter((entry) => entry.warnings && entry.warnings.length > 0)
+      .map((entry) => ({ key: entry.dayId, label: entry.label, warnings: entry.warnings }));
+
     clearReports();
     setActionMessage('');
-    setPendingExport({ rows: validRows, preflight });
+    setWarningsAcknowledged(false);
+    setPendingExport({ rows: validRows, preflight, warningItems });
   };
 
-  const cancelExport = () => setPendingExport(null);
+  const cancelExport = () => {
+    setPendingExport(null);
+    setWarningsAcknowledged(false);
+  };
 
   // Step 2 of batch export: run the actual downloads after the user confirms the preflight.
   const runExport = () => {
     if (!pendingExport) return;
+    // Defense-in-depth: outstanding warnings must be explicitly acknowledged before any download.
+    // The Confirm button is also disabled until then; this guards a programmatic/edge call too.
+    if (pendingExport.warningItems.length > 0 && !warningsAcknowledged) return;
     const { rows: validRows } = pendingExport;
     setPendingExport(null);
+    setWarningsAcknowledged(false);
 
     const strict = isFeatureEnabled('shadowExportStrict');
     const skipped = [];
@@ -622,8 +643,20 @@ export function ValidationSummary({ animalKey } = {}) {
                   </li>
                 ))}
               </ul>
+              {/* Phase 3-6: outstanding non-blocking warnings must be explicitly acknowledged before
+                  the download proceeds — a silent warning can otherwise ride the export across days. */}
+              <WarningAcknowledgement
+                items={pendingExport.warningItems}
+                acknowledged={warningsAcknowledged}
+                onChange={setWarningsAcknowledged}
+              />
               <div className="batch-export-preflight-actions">
-                <button type="button" className="btn-primary" onClick={runExport}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={runExport}
+                  disabled={pendingExport.warningItems.length > 0 && !warningsAcknowledged}
+                >
                   Confirm export ({pendingExport.rows.length})
                 </button>
                 <button type="button" onClick={cancelExport}>
