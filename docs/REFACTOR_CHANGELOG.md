@@ -57,6 +57,17 @@ with no electrodes still selects its acquisition device). The reference resolves
 on the animal, each day uses one, each YAML carries exactly one device** — matching trodes_to_nwb.
 Full suite (4263) green, 125 baselines byte-identical, lint 0 errors, build OK.
 
+### 5/n — Recording System tab matches the Cameras tab (table + modal)
+
+UX-consistency follow-up: the catalog rendered as a `<ul>` + inline editor, visually/interactionally
+unlike the Cameras tab. Reworked [DataAcqSection](../src/pages/AnimalEditor/DataAcqSection.jsx) to
+mirror Cameras exactly — `section-header` → `table-actions` (`+ Add Recording System`) → a `<table>`
+(`Name / System / Amplifier / ADC Circuit / Role / Actions`) with Edit/Delete per row + a **Default**
+badge on the first, an empty state (icon + "Add First…"), and a **modal** editor (shared `Modal`, like
+`CameraModal`) instead of the inline form. Reuses the `cameras-table` / `table-actions` / `button-small`
+classes so the two tabs render identically. Validation/labels/aria unchanged — behaviour tests carried
+over. Full suite (4264) green, 125 baselines byte-identical, lint 0 errors, build OK.
+
 ## Tabbed workspace IA — post-Phase-5 UX: relocate the animal profile to the header ⋮ (June 8, 2026)
 
 The animal-wide subject-facts editor was an always-visible collapsible **in the header band on every

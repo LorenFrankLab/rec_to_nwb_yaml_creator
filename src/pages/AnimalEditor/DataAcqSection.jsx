@@ -1,8 +1,9 @@
-import { useState, useRef } from 'react';
+import { useState, useId } from 'react';
 import PropTypes from 'prop-types';
 import { findIdentityDivergence, DATA_ACQ_DEPENDENT_FIELDS, IDENTITY_FIELD_LABELS } from './identitySafety';
 import { getDataAcqDevices } from '../../state/workspaceSelectors';
 import { rawArray } from '../../components/rawPropTypes';
+import Modal from '../../components/Modal/Modal';
 import './DataAcqSection.scss';
 
 const DEVICE_FIELDS = ['name', 'system', 'amplifier', 'adc_circuit'];
@@ -44,15 +45,14 @@ const BLANK_DEVICE = { name: '', system: 'SpikeGadgets', amplifier: '', adc_circ
 /**
  * DataAcqSection — the animal's Recording System CATALOG + technical defaults (Animal View tab).
  *
- * The animal owns a LIST of acquisition systems (`devices.data_acq_device`, like the Cameras catalog):
- * an animal recorded on different rigs over its life accumulates several here. Each recording day
- * references the ONE it used (Day Editor); the first catalog entry is the default unreferenced days
- * inherit. `name` is the Spyglass `DataAcquisitionDevice` identity — unique within the catalog, and a
- * same-name-different-hardware reuse elsewhere in the dataset is blocked with a side-by-side comparison.
+ * Mirrors the Cameras tab: a table of acquisition systems with `+ Add` / Edit / Delete and a modal
+ * editor. The animal owns a LIST (`devices.data_acq_device`); each recording day references the ONE
+ * it used (Day Editor); the first catalog entry is the default unreferenced days inherit. `name` is
+ * the Spyglass `DataAcquisitionDevice` identity — unique within the catalog, and a same-name-
+ * different-hardware reuse elsewhere in the dataset is blocked with a side-by-side comparison.
  *
  * The technical DEFAULTS (`raw_data_to_volts`, `times_period_multiplier`) are animal-level
- * (`animal.technicalDefaults`, seeded into each day's `technical` at createDay, overridable per day);
- * they are never exported directly.
+ * (`animal.technicalDefaults`, seeded into each day's `technical`); never exported directly.
  *
  * @param {object} props
  * @param {object} props.animal - Animal record (`devices.data_acq_device`, `technicalDefaults`).
@@ -62,12 +62,11 @@ const BLANK_DEVICE = { name: '', system: 'SpikeGadgets', amplifier: '', adc_circ
  * @returns {JSX.Element}
  */
 export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry = [] }) {
-  // Read the catalog through the canonical selector: a corrupt non-array degrades to [].
   const catalog = getDataAcqDevices(animal);
   const defaults = animal.technicalDefaults || {};
-  const nameInputRef = useRef(null);
+  const titleId = useId();
 
-  // The open add/edit editor (null when the list is shown). `index` is the edited catalog position.
+  // The open add/edit modal (null when closed). `index` is the edited catalog position.
   const [editing, setEditing] = useState(null);
   const [error, setError] = useState('');
   const [divergence, setDivergence] = useState(null);
@@ -93,7 +92,7 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
     setDivergence(null);
     setEditing({ mode: 'edit', index, fields: { ...normalizeDeviceFields(catalog[index]) } });
   };
-  const cancelEdit = () => {
+  const closeEditor = () => {
     setEditing(null);
     setError('');
     setDivergence(null);
@@ -108,8 +107,7 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
       setError('Complete name, system, amplifier, and ADC circuit before saving.');
       return;
     }
-    // Name-uniqueness within the catalog (the name IS the Spyglass identity) — excluding the row being
-    // edited. Two systems can't share a name.
+    // Name-uniqueness within the catalog (the name IS the Spyglass identity) — excluding the edited row.
     const clashesInCatalog = catalog.some(
       (d, i) => i !== editing.index && normalizeDeviceFields(d).name === candidate.name
     );
@@ -130,7 +128,7 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
         ? [...catalog, candidate]
         : catalog.map((d, i) => (i === editing.index ? candidate : d));
     onFieldUpdate('data_acq_device', next);
-    cancelEdit();
+    closeEditor();
   };
 
   const deleteAt = (index) => {
@@ -140,6 +138,191 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
   };
 
   const isValidPositive = (value) => value > 0;
+
+  const technicalDefaults = (
+    <details className="advanced-settings">
+      <summary>Advanced Settings</summary>
+      <div className="advanced-content">
+        <p className="help-text">
+          These seed the technical defaults for new recording days and can be overridden per day.
+          Typical values are 0.195 (raw data to volts) and 1.5 (times period multiplier); change them
+          only if instructed by your recording-system vendor or pipeline maintainer — incorrect values
+          can corrupt data.
+        </p>
+
+        <div className="form-group">
+          <label htmlFor="raw_data_to_volts">Raw Data to Volts</label>
+          <input
+            type="number"
+            id="raw_data_to_volts"
+            value={Number.isFinite(tech.raw_data_to_volts) ? tech.raw_data_to_volts : ''}
+            onChange={(e) => setTech((p) => ({ ...p, raw_data_to_volts: parseFloat(e.target.value) }))}
+            onBlur={() => commitTech(tech)}
+            step="0.0001"
+            min="0"
+            aria-invalid={!isValidPositive(tech.raw_data_to_volts)}
+            aria-describedby="raw-data-help"
+          />
+          <small id="raw-data-help" className="help-text">
+            Conversion factor for electrophysiology signals (must be &gt; 0)
+          </small>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="times_period_multiplier">Times Period Multiplier</label>
+          <input
+            type="number"
+            id="times_period_multiplier"
+            value={Number.isFinite(tech.times_period_multiplier) ? tech.times_period_multiplier : ''}
+            onChange={(e) => setTech((p) => ({ ...p, times_period_multiplier: parseFloat(e.target.value) }))}
+            onBlur={() => commitTech(tech)}
+            step="0.0001"
+            min="0"
+            aria-invalid={!isValidPositive(tech.times_period_multiplier)}
+            aria-describedby="times-help"
+          />
+          <small id="times-help" className="help-text">
+            Timestamp multiplier (must be &gt; 0)
+          </small>
+        </div>
+      </div>
+    </details>
+  );
+
+  // Shared add/edit modal (mirrors CameraModal). isOpen is driven by `editing`.
+  const editorModal = (
+    <Modal
+      isOpen={editing != null}
+      onClose={closeEditor}
+      title={editing?.mode === 'add' ? 'Add recording system' : 'Edit recording system'}
+      titleId={titleId}
+      className="recording-system-modal"
+    >
+      <form className="data-acq-form" aria-label="Recording system editor">
+        <div className="form-group">
+          <label htmlFor="data_acq_name">
+            Name <span className="required">*</span>
+          </label>
+          <input
+            type="text"
+            id="data_acq_name"
+            value={editing?.fields.name ?? ''}
+            onChange={(e) => setEditorField('name', e.target.value)}
+            placeholder="e.g., SpikeGadgets_MCU"
+            required
+          />
+          <small className="help-text">
+            Identifies this acquisition device. The same name must mean the same hardware.
+          </small>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="system">
+            System <span className="required">*</span>
+          </label>
+          <select
+            id="system"
+            value={editing?.fields.system ?? 'SpikeGadgets'}
+            onChange={(e) => setEditorField('system', e.target.value)}
+            required
+          >
+            <option value="SpikeGadgets">SpikeGadgets</option>
+            <option value="Open Ephys">Open Ephys</option>
+            <option value="Intan">Intan</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="amplifier">
+            Amplifier <span className="required">*</span>
+          </label>
+          <input
+            type="text"
+            id="amplifier"
+            value={editing?.fields.amplifier ?? ''}
+            onChange={(e) => setEditorField('amplifier', e.target.value)}
+            placeholder="e.g., Intan RHD2000"
+            required
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="adc_circuit">
+            ADC Circuit <span className="required">*</span>
+          </label>
+          <input
+            type="text"
+            id="adc_circuit"
+            value={editing?.fields.adc_circuit ?? ''}
+            onChange={(e) => setEditorField('adc_circuit', e.target.value)}
+            placeholder="e.g., Intan"
+            required
+          />
+        </div>
+
+        {error && (
+          <div className="validation-error" role="alert">
+            {error}
+          </div>
+        )}
+
+        {divergence && (
+          <div className="identity-divergence" role="alert">
+            <p className="identity-divergence-title">
+              The name “{(editing?.fields.name ?? '').trim()}” is already used by{' '}
+              {divergence.existing.label} with different hardware. The same data-acq name must mean the
+              same device.
+            </p>
+            <table className="identity-divergence-table">
+              <thead>
+                <tr><th>Field</th><th>Existing</th><th>This device</th></tr>
+              </thead>
+              <tbody>
+                {divergence.differingFields.map((field) => (
+                  <tr key={field}>
+                    <td>{IDENTITY_FIELD_LABELS[field] || field}</td>
+                    <td>{String(divergence.existing.fields[field] ?? '')}</td>
+                    <td>{String(editing?.fields[field] ?? '')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <div className="recording-system-editor-actions">
+          <button type="button" className="button-secondary" onClick={closeEditor}>
+            Cancel
+          </button>
+          <button type="button" className="button-primary" onClick={saveEditor}>
+            Save recording system
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+
+  // Empty state (mirrors CamerasSection).
+  if (catalog.length === 0) {
+    return (
+      <div className="data-acq-section">
+        <div className="cameras-section empty-state">
+          <div className="empty-state-icon">🎛️</div>
+          <h3>No Recording System Configured</h3>
+          <p>
+            The recording systems this animal was recorded on. Each recording day uses one; the first
+            is the default a day inherits when it hasn&apos;t chosen its own.
+          </p>
+          <button type="button" className="button-primary add-recording-system" onClick={openAdd}>
+            Add First Recording System
+          </button>
+        </div>
+        {technicalDefaults}
+        {editorModal}
+      </div>
+    );
+  }
 
   return (
     <div className="data-acq-section">
@@ -153,207 +336,63 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
         </p>
       </header>
 
-      {/* The catalog list */}
-      <ul className="recording-system-list">
-        {catalog.length === 0 && (
-          <li className="recording-system-empty">No recording system yet — add the one this animal was recorded on.</li>
-        )}
-        {catalog.map((device, index) => {
-          const d = normalizeDeviceFields(device);
-          return (
-            <li key={`${d.name}-${index}`} className="recording-system-row">
-              <div className="recording-system-identity">
-                <span className="recording-system-name">{d.name || '(unnamed)'}</span>
-                {index === 0 && <span className="recording-system-default-badge">Default</span>}
-                <span className="recording-system-meta">
-                  {[d.system, d.amplifier, d.adc_circuit].filter(Boolean).join(' · ')}
-                </span>
-              </div>
-              <div className="recording-system-actions">
-                <button
-                  type="button"
-                  className="button-small"
-                  onClick={() => openEdit(index)}
-                  aria-label={`Edit recording system ${d.name}`}
-                >
-                  Edit
-                </button>
-                {catalog.length > 1 && (
+      <div className="table-actions">
+        <button type="button" className="button-primary add-recording-system" onClick={openAdd}>
+          + Add Recording System
+        </button>
+      </div>
+
+      <table className="data-acq-table cameras-table" role="table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>System</th>
+            <th>Amplifier</th>
+            <th>ADC Circuit</th>
+            <th>Role</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {catalog.map((device, index) => {
+            const d = normalizeDeviceFields(device);
+            return (
+              <tr key={`${d.name}-${index}`}>
+                <td data-label="Name">{d.name || '(unnamed)'}</td>
+                <td data-label="System">{d.system}</td>
+                <td data-label="Amplifier">{d.amplifier}</td>
+                <td data-label="ADC Circuit">{d.adc_circuit}</td>
+                <td data-label="Role">
+                  {index === 0 && <span className="recording-system-default-badge">Default</span>}
+                </td>
+                <td data-label="Actions">
                   <button
                     type="button"
-                    className="button-small button-danger"
-                    onClick={() => deleteAt(index)}
-                    aria-label={`Delete recording system ${d.name}`}
+                    className="button-small"
+                    onClick={() => openEdit(index)}
+                    aria-label={`Edit recording system ${d.name}`}
                   >
-                    Delete
+                    Edit
                   </button>
-                )}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+                  {catalog.length > 1 && (
+                    <button
+                      type="button"
+                      className="button-small button-danger"
+                      onClick={() => deleteAt(index)}
+                      aria-label={`Delete recording system ${d.name}`}
+                    >
+                      Delete
+                    </button>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
 
-      {!editing && (
-        <button type="button" className="button-secondary add-recording-system" onClick={openAdd}>
-          + Add recording system
-        </button>
-      )}
-
-      {/* Add / edit editor */}
-      {editing && (
-        <form className="data-acq-form recording-system-editor" aria-label="Recording system editor">
-          <div className="form-group">
-            <label htmlFor="data_acq_name">
-              Name <span className="required">*</span>
-            </label>
-            <input
-              type="text"
-              id="data_acq_name"
-              ref={nameInputRef}
-              value={editing.fields.name}
-              onChange={(e) => setEditorField('name', e.target.value)}
-              placeholder="e.g., SpikeGadgets_MCU"
-              required
-            />
-            <small className="help-text">
-              Identifies this acquisition device. The same name must mean the same hardware.
-            </small>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="system">
-              System <span className="required">*</span>
-            </label>
-            <select
-              id="system"
-              value={editing.fields.system}
-              onChange={(e) => setEditorField('system', e.target.value)}
-              required
-            >
-              <option value="SpikeGadgets">SpikeGadgets</option>
-              <option value="Open Ephys">Open Ephys</option>
-              <option value="Intan">Intan</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="amplifier">
-              Amplifier <span className="required">*</span>
-            </label>
-            <input
-              type="text"
-              id="amplifier"
-              value={editing.fields.amplifier}
-              onChange={(e) => setEditorField('amplifier', e.target.value)}
-              placeholder="e.g., Intan RHD2000"
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="adc_circuit">
-              ADC Circuit <span className="required">*</span>
-            </label>
-            <input
-              type="text"
-              id="adc_circuit"
-              value={editing.fields.adc_circuit}
-              onChange={(e) => setEditorField('adc_circuit', e.target.value)}
-              placeholder="e.g., Intan"
-              required
-            />
-          </div>
-
-          {error && (
-            <div className="validation-error" role="alert">
-              {error}
-            </div>
-          )}
-
-          {divergence && (
-            <div className="identity-divergence" role="alert">
-              <p className="identity-divergence-title">
-                The name “{editing.fields.name.trim()}” is already used by {divergence.existing.label}{' '}
-                with different hardware. The same data-acq name must mean the same device.
-              </p>
-              <table className="identity-divergence-table">
-                <thead>
-                  <tr><th>Field</th><th>Existing</th><th>This device</th></tr>
-                </thead>
-                <tbody>
-                  {divergence.differingFields.map((field) => (
-                    <tr key={field}>
-                      <td>{IDENTITY_FIELD_LABELS[field] || field}</td>
-                      <td>{String(divergence.existing.fields[field] ?? '')}</td>
-                      <td>{String(editing.fields[field] ?? '')}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          <div className="recording-system-editor-actions">
-            <button type="button" className="button-secondary" onClick={cancelEdit}>
-              Cancel
-            </button>
-            <button type="button" className="button-primary" onClick={saveEditor}>
-              Save recording system
-            </button>
-          </div>
-        </form>
-      )}
-
-      {/* Technical defaults (seeded into new days) */}
-      <details className="advanced-settings">
-        <summary>Advanced Settings</summary>
-        <div className="advanced-content">
-          <p className="help-text">
-            These seed the technical defaults for new recording days and can be overridden per day.
-            Typical values are 0.195 (raw data to volts) and 1.5 (times period multiplier); change them
-            only if instructed by your recording-system vendor or pipeline maintainer — incorrect values
-            can corrupt data.
-          </p>
-
-          <div className="form-group">
-            <label htmlFor="raw_data_to_volts">Raw Data to Volts</label>
-            <input
-              type="number"
-              id="raw_data_to_volts"
-              value={Number.isFinite(tech.raw_data_to_volts) ? tech.raw_data_to_volts : ''}
-              onChange={(e) => setTech((p) => ({ ...p, raw_data_to_volts: parseFloat(e.target.value) }))}
-              onBlur={() => commitTech(tech)}
-              step="0.0001"
-              min="0"
-              aria-invalid={!isValidPositive(tech.raw_data_to_volts)}
-              aria-describedby="raw-data-help"
-            />
-            <small id="raw-data-help" className="help-text">
-              Conversion factor for electrophysiology signals (must be &gt; 0)
-            </small>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="times_period_multiplier">Times Period Multiplier</label>
-            <input
-              type="number"
-              id="times_period_multiplier"
-              value={Number.isFinite(tech.times_period_multiplier) ? tech.times_period_multiplier : ''}
-              onChange={(e) => setTech((p) => ({ ...p, times_period_multiplier: parseFloat(e.target.value) }))}
-              onBlur={() => commitTech(tech)}
-              step="0.0001"
-              min="0"
-              aria-invalid={!isValidPositive(tech.times_period_multiplier)}
-              aria-describedby="times-help"
-            />
-            <small id="times-help" className="help-text">
-              Timestamp multiplier (must be &gt; 0)
-            </small>
-          </div>
-        </div>
-      </details>
+      {technicalDefaults}
+      {editorModal}
     </div>
   );
 }

@@ -67,8 +67,10 @@ describe('AnimalView — catalog/library tabs render (Phase 3-3)', () => {
   it('renders the recording-system container, not the placeholder', () => {
     renderView('recording-system');
     expect(screen.queryByText(PLACEHOLDER)).not.toBeInTheDocument();
-    // DataAcqSection lists the catalog system by name (the catalog list, not a single-device form).
-    expect(screen.getByText('SpikeGadgets')).toBeInTheDocument();
+    // DataAcqSection renders the catalog as a table with an Add control (the catalog list, not a
+    // single-device form). The seeded system name appears in the table.
+    expect(screen.getByRole('button', { name: /add recording system/i })).toBeInTheDocument();
+    expect(screen.getAllByText('SpikeGadgets').length).toBeGreaterThan(0);
   });
 
   it('renders the cameras container, not the placeholder', () => {

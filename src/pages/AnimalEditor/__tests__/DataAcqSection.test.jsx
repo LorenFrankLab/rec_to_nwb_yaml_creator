@@ -45,7 +45,7 @@ describe('DataAcqSection — catalog list', () => {
     expect(screen.getByText('SpikeGadgets_MCU')).toBeInTheDocument();
     expect(screen.getByText('Neuropixels_rig')).toBeInTheDocument();
     // The first catalog entry is the default days inherit when unreferenced.
-    const firstRow = screen.getByText('SpikeGadgets_MCU').closest('.recording-system-row');
+    const firstRow = screen.getByText('SpikeGadgets_MCU').closest('tr');
     expect(within(firstRow).getByText(/default/i)).toBeInTheDocument();
   });
 
