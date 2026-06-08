@@ -374,6 +374,7 @@ export function ValidationSummary({ animalKey } = {}) {
     if (validRows.length === 0) {
       clearReports();
       setPendingExport(null);
+      setWarningsAcknowledged(false);
       setActionMessage(
         'No days are ready to export. Fix errors, complete the required fields, or re-link ' +
           'recovered days (Add to day list) to make a day exportable.'

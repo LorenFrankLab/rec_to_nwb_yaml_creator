@@ -6,6 +6,38 @@
 
 ---
 
+## Tabbed workspace IA — Phase 3-6: warning acknowledgement on export (June 8, 2026)
+
+Closes the warning-escape on batch / valid-only export. From the
+[phase-3-6 doc](../.claude/docs/plans/tabbed-workspace-ia/phase-3-6-warning-ack.md). The export gate
+keys on **error** severity only, so non-blocking **warnings** (e.g. an imported
+`inconsistent_location_case`) could ride an export across N days unnoticed. This requires an explicit,
+content-explicit acknowledgement before the download proceeds. **Behavior change to the export UX
+(call-out below) — but export OUTPUT and gate semantics are unchanged**; 125 golden baselines
+byte-identical; full suite (4261), lint (0 errors), build all green. TDD throughout; code-reviewer
+pass (no findings). Completes Phase 3 (all six sub-phases done).
+
+- **New reusable [WarningAcknowledgement](../src/components/WarningAcknowledgement.jsx) component**
+  (in `src/components`, so both export surfaces — the per-animal Validation & Export tab now, the
+  chrome-level batch screen in Phase 4 — share it). It lists each affected day → its warning messages
+  (content-explicit, not a bare count) and a checkbox the user must check.
+- **Plumbed per-day warnings into the export preflight** ([ValidationSummary/index.jsx](../src/pages/ValidationSummary/index.jsx)):
+  `validateDay(day, merged, animal).filter(i => i.severity === 'warning')` — the EXACT predicate the
+  single-day Export step uses, read-only over the existing validators (no new/parallel validation, no
+  new rules), computed off the same merged day the preflight already builds.
+- **Gated the download** behind the acknowledgement: the "Confirm export" button is `disabled` until
+  outstanding warnings are acknowledged, with a defense-in-depth early-return in `runExport`. The
+  acknowledged flag resets on every preflight open / cancel / run (and the no-valid-rows early return),
+  so it can't carry across exports. Zero outstanding warnings → no extra step (unchanged flow).
+- **The export GATE is unchanged** (deliberately): warnings still don't block (a warning-only day is
+  still `valid` / exportable once acknowledged), errors still do. No warning→error promotion, no new
+  rules, no batch screen — those stay out of scope.
+- **UX call-out:** a valid-only / animal export that carries outstanding warnings now requires the
+  reviewer to tick "I've reviewed these warnings" before files download. Clean exports are unaffected.
+- New tests: [WarningAcknowledgement.test.jsx](../src/components/__tests__/WarningAcknowledgement.test.jsx)
+  (component contract) and [AnimalView.warningAck.test.jsx](../src/pages/AnimalView/__tests__/AnimalView.warningAck.test.jsx)
+  (warnings surfaced; acknowledgement gates the download; cancel aborts; no-warning export proceeds).
+
 ## Tabbed workspace IA — Phase 3-5: per-animal Validation & Export tab + effective-day review (June 8, 2026)
 
 Makes the `export` tab real — a per-animal slice of the Validation Summary plus the mandatory
