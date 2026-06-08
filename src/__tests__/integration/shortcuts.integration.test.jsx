@@ -111,7 +111,7 @@ describe('global shortcuts + help (integration)', () => {
 
   it('Alt+ArrowRight and Alt+N drive the AnimalEditor stepper', async () => {
     await renderRoute('#/animal/remy/editor');
-    await screen.findByRole('heading', { name: /step 1: electrode groups/i });
+    await screen.findByRole('heading', { name: /electrodes & ephys/i });
 
     // Alt+N on step 1 opens the add-electrode-group dialog.
     fireEvent.keyDown(document.body, { key: 'n', altKey: true });
@@ -121,6 +121,6 @@ describe('global shortcuts + help (integration)', () => {
 
     // Alt+ArrowRight advances to Channel Maps.
     fireEvent.keyDown(document.body, { key: 'ArrowRight', altKey: true });
-    expect(await screen.findByRole('heading', { name: /step 2: channel maps/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /^channel maps$/i })).toBeInTheDocument();
   });
 });

@@ -16,9 +16,10 @@ function formatGeometryCount(count) {
 }
 
 /**
- * ChannelMapsStep - Step 2 of Animal Editor
+ * ChannelMapsStep - the Channel Maps section of the Animal Editor.
  *
- * Provides read-only table view of channel map summaries for all electrode groups.
+ * Provides read-only table view of channel map summaries for all electrode groups —
+ * the channel→position mapping status and the bad-channel count per group.
  *
  * @param {object} props
  * @param {object} props.animal - Animal record with devices.electrode_groups and ntrode_electrode_group_channel_map
@@ -64,6 +65,21 @@ export default function ChannelMapsStep({ animal, onEditChannelMap }) {
   }
 
   /**
+   * Count channels marked bad for an electrode group, summed across its ntrode maps.
+   * Bad channels are probe-local indices excluded from downstream analysis.
+   * @param {object} group - Electrode group
+   * @returns {number} Total bad-channel count for the group (0 when none/unmapped).
+   */
+  function getBadChannelCount(group) {
+    return channelMaps
+      .filter((map) => map.electrode_group_id === group.id)
+      .reduce(
+        (sum, map) => sum + (Array.isArray(map.bad_channels) ? map.bad_channels.length : 0),
+        0
+      );
+  }
+
+  /**
    * Handle edit button click
    * @param {number} groupId - Electrode group ID
    */
@@ -80,7 +96,7 @@ export default function ChannelMapsStep({ animal, onEditChannelMap }) {
         <div className="empty-state-icon">🗺️</div>
         <h3>No Electrode Groups Configured</h3>
         <p>
-          Add electrode groups in Step 1 before configuring channel maps.
+          Add electrode groups before mapping channels and marking bad channels.
         </p>
       </div>
     );
@@ -90,8 +106,12 @@ export default function ChannelMapsStep({ animal, onEditChannelMap }) {
   return (
     <div className="channel-maps-step" data-testid="channel-maps-step">
       <header className="step-header">
-        <h2>Step 2: Channel Maps</h2>
-        <p>Configure channel mappings for each electrode group.</p>
+        <h2>Channel Maps</h2>
+        <p>
+          Map each probe channel to its electrode position, and mark dead/bad channels. The map
+          records which hardware channel reads which contact on the probe; bad channels are the
+          ones to exclude from analysis.
+        </p>
         <div className="badge-legend">
           <span><span className="status-badge status-✓" aria-label="All channels mapped">✓</span> All channels mapped</span>
           <span><span className="status-badge status-⚠" aria-label="Partially mapped">⚠</span> Partially mapped</span>
@@ -108,6 +128,7 @@ export default function ChannelMapsStep({ animal, onEditChannelMap }) {
             <th>Channels</th>
             <th>Shanks</th>
             <th>Map Status</th>
+            <th>Bad Channels</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -123,6 +144,12 @@ export default function ChannelMapsStep({ animal, onEditChannelMap }) {
                 <span className={`status-badge status-${getMapStatus(group)}`}>
                   {getMapStatus(group)}
                 </span>
+              </td>
+              {/* Denominator is the catalog per-group channel count (same basis as the Channels
+                  column), NOT the count of currently-mapped channels — keep these consistent so a
+                  future edit doesn't switch one to summing ntrode map sizes. */}
+              <td data-label="Bad Channels">
+                {getBadChannelCount(group)} bad / {formatGeometryCount(getChannelCount(group.device_type))}
               </td>
               <td data-label="Actions">
                 <button
