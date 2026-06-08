@@ -905,6 +905,55 @@ export function animalEditorStepForFieldPath(fieldPath) {
 }
 
 /**
+ * The animal-setup TABS (tabbed-workspace-ia) a field path can own, keyed by route `:tab` segment,
+ * with the user-facing label (matching {@link SECTION_GROUPS} in AnimalView's section-nav). This is
+ * the finer-grained successor to {@link ANIMAL_EDITOR_STEPS}: the legacy editor's combined
+ * "Recording System, Cameras & DIO" step is THREE tabs here, and its Electrodes step is TWO. It is
+ * the single field→section attribution shared by repair routing AND the section-nav blocking dot.
+ *
+ * @type {Record<string, string>}
+ */
+export const ANIMAL_SETUP_TABS = {
+  'electrode-groups': 'Electrode Groups',
+  'channel-maps': 'Channel Maps',
+  'recording-system': 'Recording System',
+  cameras: 'Cameras',
+  dio: 'DIO',
+  optogenetics: 'Optogenetics',
+};
+
+/**
+ * Resolve which animal-setup TAB owns a field path (for re-pointing a repair deep-link at the
+ * tabbed Animal View and for the section-nav blocking dot). Finer than
+ * {@link animalEditorStepForFieldPath}: camera fields → `cameras`, data-acq → `recording-system`,
+ * channel maps → `channel-maps`, behavioral/DIO → `dio` (a NEW branch the step resolver lacked),
+ * optogenetics → `optogenetics`, and electrode geometry/identity + the configuration history (the
+ * versioned electrode config) → `electrode-groups` (the default). AJV instancePath slashes are
+ * normalized first; `ntrode` is checked before `electrode` (the ntrode path contains
+ * "electrode_group"), and `fs_gui` is day-level so it never lands on an animal tab.
+ *
+ * @param {string} [fieldPath] - Issue path (dotted app path or AJV instancePath).
+ * @returns {{ tab: string, label: string }} The owning tab key + label (defaults to electrode-groups).
+ */
+export function animalSetupTabForFieldPath(fieldPath) {
+  const path = String(fieldPath || '').replace(/^\//, '').replace(/\//g, '.');
+  const result = (tab) => ({ tab, label: ANIMAL_SETUP_TABS[tab] });
+
+  if (path.includes('ntrode')) return result('channel-maps');
+  if (path.includes('camera') || path.includes('meters_per_pixel') || path.includes('lens')) {
+    return result('cameras');
+  }
+  if (path.includes('data_acq')) return result('recording-system');
+  if (path.includes('opto') || path.includes('virus') || path.includes('fiber')) {
+    return result('optogenetics');
+  }
+  if (path.includes('behavioral_event') || path.includes('dio')) return result('dio');
+  // electrode geometry/identity, configurationHistory (the versioned electrode config), and bare
+  // keyword paths (device_type / location / targeted_*) all live on the electrode-groups tab.
+  return result('electrode-groups');
+}
+
+/**
  * The single source of truth for routing a repair action to the editable OWNER of a
  * problem (Repair Routing Contract). Returns the surface to navigate to, the Day-Editor
  * step (for `day` surface) or `null` (for `animal`/`none`), and the button label.
@@ -938,9 +987,10 @@ export function repairTargetForIssue(issue) {
   }
 
   if (surface === 'animal') {
-    // Step-aware label so the user knows which Animal Editor step the fix lives in.
-    const { label: stepLabel } = animalEditorStepForFieldPath(issue?.path || issue?.instancePath);
-    return { surface: 'animal', step: null, label: `Fix in Animal Setup → ${stepLabel}` };
+    // Tab-aware label so the user knows which animal-setup TAB the fix lives in (the tabbed IA's
+    // finer granularity: cameras vs recording-system vs channel-maps vs electrode-groups …).
+    const { label: tabLabel } = animalSetupTabForFieldPath(issue?.path || issue?.instancePath);
+    return { surface: 'animal', step: null, label: `Fix in Animal Setup → ${tabLabel}` };
   }
   if (surface === 'none') {
     return { surface: 'none', step: null, label: 'No in-app fix' };
