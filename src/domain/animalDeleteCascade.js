@@ -13,25 +13,12 @@
  *
  * @module domain/animalDeleteCascade
  */
-import { classifyAnimalDays, DAY_STATUS } from './dayRecovery';
+import { classifyAnimalDays, dayHasArtifacts, DAY_STATUS } from './dayRecovery';
 
 /** The metadata-only caveat appended when a deletable day may have produced downloaded artifacts. */
 export const DOWNSTREAM_NOT_DELETED_NOTE =
   ' This removes workspace metadata only — it does not delete any YAML you already downloaded, ' +
   'or any NWB file, DANDI asset, or Spyglass rows produced from it.';
-
-/**
- * Whether a day record has been validated or exported — i.e. it may have produced a downloaded
- * YAML / downstream NWB. Tolerates a malformed (non-object) `state` on a recovered record.
- *
- * @param {object} record - A day record.
- * @returns {boolean} True if the day is validated or exported.
- */
-function dayHasArtifacts(record) {
-  const state = record?.state;
-  if (!state || typeof state !== 'object' || Array.isArray(state)) return false;
-  return !!state.validated || !!state.exported;
-}
 
 /**
  * Compute the delete cascade for an animal.

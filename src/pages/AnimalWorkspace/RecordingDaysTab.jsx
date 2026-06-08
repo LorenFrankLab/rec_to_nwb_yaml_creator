@@ -18,23 +18,20 @@ import { useStoreContext } from '../../state/StoreContext';
 import { getAnimalSubject, getConfigHistory, getDaySession } from '../../state/workspaceSelectors';
 import { getDayRowStatus } from '../../domain/workflowStatus';
 import { getAnimalSectionStatus, SECTION_STATUS } from '../../domain/sectionStatus';
-import { classifyAnimalDays, DAY_STATUS, describeOwner, isPresentRecordStatus } from '../../domain/dayRecovery';
+import {
+  classifyAnimalDays,
+  DAY_STATUS,
+  dayHasArtifacts,
+  describeOwner,
+  isPresentRecordStatus,
+} from '../../domain/dayRecovery';
+import { DOWNSTREAM_NOT_DELETED_NOTE } from '../../domain/animalDeleteCascade';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { validateRawAnimal } from '../../validation/rawShape';
 import { applyRepairCommand } from '../../state/repairCommands';
 import RawCorruptionBanner from '../../components/RawCorruptionBanner';
 import { CalendarDayCreator } from '../../components/CalendarDayCreator/CalendarDayCreator';
 import { ConfirmDialog } from '../../components/Modal';
-
-/**
- * Shared "what deletion does NOT touch" caveat for any day/animal that has been validated or
- * exported. The store only holds workspace metadata — it never had the downloaded artifacts —
- * so deleting here cannot and does not remove them. Naming each downstream artifact keeps the
- * user from believing local cleanup also unpublishes data.
- */
-const DOWNSTREAM_NOT_DELETED_NOTE =
-  ' This removes workspace metadata only — it does not delete any YAML you already downloaded, ' +
-  'or any NWB file, DANDI asset, or Spyglass rows produced from it.';
 
 /**
  * The first-run "Set up this animal" card sections, in the same order and with the same keys as
@@ -51,19 +48,6 @@ const SETUP_CARD_SECTIONS = [
   { key: 'optogenetics', label: 'Optogenetics', hint: 'if opto' },
 ];
 
-/**
- * Whether a day record has been validated or exported — i.e. it may have produced a downloaded
- * YAML / downstream NWB. Drives whether a delete confirmation shows the "downloaded artifacts are
- * not deleted" caveat. Tolerates a malformed (non-object) `state` on a recovered record.
- *
- * @param {object} record - A day record.
- * @returns {boolean} True if the day is validated or exported.
- */
-function dayHasArtifacts(record) {
-  const state = record?.state;
-  if (!state || typeof state !== 'object' || Array.isArray(state)) return false;
-  return !!state.validated || !!state.exported;
-}
 
 /**
  * RecordingDaysTab Component

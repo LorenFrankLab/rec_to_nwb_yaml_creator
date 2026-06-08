@@ -16,7 +16,7 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import { getAnimalSubject, getAnimalDayIds } from '../../state/workspaceSelectors';
-import { classifyAnimalDays, isPresentRecordStatus } from '../../domain/dayRecovery';
+import { getPresentDayCount } from '../../domain/dayRecovery';
 import {
   getAnimalSectionStatus,
   getAnimalBlockingSections,
@@ -230,9 +230,7 @@ export function AnimalView({ animalId, tab }) {
   // tab / the export tab. Memoized off the animal + days.
   const sectionCounts = useMemo(() => {
     if (!animal) return null;
-    const dayCount = classifyAnimalDays(animalId, animal, model.workspace.days).filter((d) =>
-      isPresentRecordStatus(d.status)
-    ).length;
+    const dayCount = getPresentDayCount(animalId, animal, model.workspace.days);
     const readyCount = buildAnimalRows(model.workspace, animalId).filter(
       (r) => r.chip === 'valid'
     ).length;

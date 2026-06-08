@@ -13,7 +13,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
-import { classifyAnimalDays, isPresentRecordStatus } from '../../domain/dayRecovery';
+import { getPresentDayCount } from '../../domain/dayRecovery';
 import { buildAnimalFromForm, getDefaultExperimenters } from '../../domain/animalCreation';
 import OverflowMenu from '../../components/OverflowMenu';
 import AnimalDeleteDialog from '../../components/AnimalDeleteDialog';
@@ -133,11 +133,9 @@ export function AnimalWorkspace() {
           </div>
           {animalIds.map((animalId) => {
             const animal = animals[animalId];
-            // Count day RECORDS present (indexed + recovered), via the recovery classifier, so
-            // a missing/corrupt index doesn't under-count an animal with recovered records.
-            const dayCount = classifyAnimalDays(animalId, animal, days).filter(
-              (d) => isPresentRecordStatus(d.status)
-            ).length;
+            // Count day RECORDS present (indexed + recovered), via the shared recovery count, so a
+            // missing/corrupt index doesn't under-count an animal with recovered records.
+            const dayCount = getPresentDayCount(animalId, animal, days);
 
             return (
               <div key={animalId} className="animal-card">

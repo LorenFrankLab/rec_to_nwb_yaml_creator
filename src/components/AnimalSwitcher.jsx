@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
-import { classifyAnimalDays, isPresentRecordStatus } from '../domain/dayRecovery';
+import { getPresentDayCount } from '../domain/dayRecovery';
 import OverflowMenu from './OverflowMenu';
 import './AnimalSwitcher.css';
 
@@ -95,14 +95,11 @@ export default function AnimalSwitcher({
   };
 
   /**
-   * Day RECORDS present for an animal (indexed + recovered), via the recovery classifier.
+   * Day RECORDS present for an animal (indexed + recovered), via the shared recovery count.
    * @param {string} animalId - The animal whose present-day records to count.
    * @returns {number} The count of present day records.
    */
-  const dayCountFor = (animalId) =>
-    classifyAnimalDays(animalId, animals[animalId], days).filter((d) =>
-      isPresentRecordStatus(d.status)
-    ).length;
+  const dayCountFor = (animalId) => getPresentDayCount(animalId, animals[animalId], days);
 
   return (
     <div className="animal-switcher">

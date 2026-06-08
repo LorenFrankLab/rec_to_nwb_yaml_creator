@@ -6,6 +6,24 @@
 
 ---
 
+## Tabbed workspace IA — pre-Phase-5 review remediation (June 8, 2026)
+
+A thorough multi-agent review (deletion safety, spec fulfillment, UX coherence, code/error/test) ran
+before the final Phase 5 (stepper decommission). It confirmed: nothing the tabs still need would be
+deleted (the hosted section/wiring components survive — only the stepper shell + dead `/editor` route
+go), all Phase 0–4 acceptance criteria + the 13 decisions are delivered, and the IA matches the
+revisitable-not-linear goal. It also surfaced fixable items, remediated here across small commits.
+**UI/refactor-only — no export/schema change**; 125 golden baselines byte-identical throughout.
+
+- **Dedup (fork→extract debt the per-commit reviews couldn't see).** The legally-load-bearing
+  "we did NOT delete your downloaded YAML/NWB/DANDI/Spyglass" caveat (`DOWNSTREAM_NOT_DELETED_NOTE`)
+  and the `dayHasArtifacts` predicate were each DEFINED TWICE (domain + RecordingDaysTab); the
+  present-day-count expression was inlined at four call-sites. Now single-sourced:
+  `dayHasArtifacts` + new `getPresentDayCount(animalId, animal, days)` live in
+  [dayRecovery.js](../src/domain/dayRecovery.js) and are imported by the cascade, the day-tab, the
+  picker cards, the section-nav, and the animal switcher — so the delete copy + the "N days" count
+  can't drift between surfaces.
+
 ## Tabbed workspace IA — Phase 4 deferred (2/2): top object-selector dropdown (June 8, 2026)
 
 Adds the **Task 4.5 / decision 9** top object-selector `Workspace ▸ <animal> ▾` — an animal switcher
