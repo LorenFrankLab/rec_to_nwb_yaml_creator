@@ -98,7 +98,45 @@ a dedicated design pass (brainstorming skill) + meticulous baseline preservation
   the Spyglass identity field (`camera_name`, data-acq `name`, `task_name`).
 - Migration: existing per-animal data must convert losslessly to whatever tier moves.
 
+## Data-entry efficiency (2026-06-08)
+
+North star (user): **"the user can add information in the most efficient way possible."** Days are the
+high-frequency unit and ~90% repeat day-to-day, so efficiency = **minimize keystrokes per day** by
+pushing work up a ladder: **inherit (animal/dataset) → carry-forward (last day) → smart-default → quick-enter the deltas.**
+
+**Audit — what already exists (do NOT rebuild):**
+- Bad-channel marking is already a compact **checkbox grid** (`BadChannelsEditor.jsx`; probe-wide + per-ntrode).
+- Cameras & recording-system are already **catalog + per-day reference** (`cameraUsage.js`; `data_acq_device_name`).
+- **Type-+-Enter** quick-add exists for simple lists (`ListElement.jsx` — keywords, experimenters, regions).
+- **Keyboard shortcuts** exist (`ShortcutsHelp.jsx` — Ctrl/Cmd+S, Alt+←/→, Alt+N add-row, ?, Esc).
+- **Copy-from-animal** exists but **only electrode groups + channel maps** (`CopyFromAnimalDialog.jsx`).
+
+**Gaps mocked in [mockup-efficiency-patterns.html](mockup-efficiency-patterns.html):**
+1. **Carry-forward / duplicate-day / bulk-template** — *biggest win.* New days are blank except tech
+   defaults (`workspaceTransitions.js:312`); duplicate-day ABSENT; calendar makes N blank days. Proposed:
+   new day **starts from your last day** (reviewable, with a "blank" opt-out), a **Duplicate day** row
+   action, and a bulk "start from last day" on calendar-selected dates.
+2. **Task-type catalog** — tasks are re-typed inline every day (ABSENT catalog; Spyglass divergence risk).
+   Proposed: define task types once → each day **picks + orders** epochs (quick-add). Overlaps the tier decision.
+3. **Per-day "cameras used" checklist** — implicit today (a camera is "used" only if a task/video references
+   it). Proposed: explicit day-level checklist that drives export + narrows downstream pickers.
+4. **Extend copy-from-animal** to cameras + recording system (today: electrode/channel-map only). Largely
+   moot if the dataset tier is adopted.
+
+**UX principles applied:** recognition over recall (pick/confirm, don't retype); smart defaults that are
+**visible + overridable** (never a silent auto-fill of scientific data — carry-forward is reviewable with an
+opt-out); explicit over implicit; consistency-by-construction (one definition ⇒ no divergence); edit-once
+correction (catalog edit propagates); reversibility; progressive disclosure; keyboard-first for power users.
+
+**Efficiency sequencing (impact ÷ effort):** ① carry-forward/duplicate (high, self-contained) → ③ cameras-used
++ ④ copy-from-animal (small) → ② task catalog (medium, overlaps the tier decision). Larger structural pieces:
+the hybrid tabbed editor (decided) + the dataset tier.
+
 ## Decision log
 
 - 2026-06-08: User chose **"discuss / capture for later"** over building any of the four. This note is
   the capture. Nothing scheduled.
+- 2026-06-08: Concrete issues 1 (⋮ menu) + 3 (in-app nav, scoped to NOT change the default landing) fixed
+  on `modern`. Design answers: **hybrid** tabbed day-editor preferred; channel-maps **split** approved;
+  dataset-tier + day-editor mockups requested; cutover (front door) **held**. Efficiency emphasized.
+  Mockups: `mockup-dataset-tier.html`, `mockup-tabbed-day-editor-interactive.html`, `mockup-efficiency-patterns.html`.

@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mockup — data-entry efficiency patterns</title>
+<style>
+  :root{--line:#d8dde3;--muted:#6b7480;--ink:#1c2530;--accent:#1d6fb8;--accentBg:#eaf2fb;--bg:#f5f7f9;
+    --ok:#2c5d2c;--okBg:#e6f4e6;--warn:#b9770a;--warnBg:#fcf2e0;--err:#c0392b;--gap:#7a3ea8;--gapBg:#f1e9f7}
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.55 -apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink);background:var(--bg)}
+  .wrap{max-width:1080px;margin:1.2rem auto;padding:0 1rem}
+  h1{font-size:1.45rem;margin:.2rem 0 .2rem}
+  .lead{color:var(--muted);margin:0 0 1rem;max-width:70ch}
+  .model{display:flex;gap:.4rem;flex-wrap:wrap;margin:.6rem 0 1rem;font-size:.85rem}
+  .model .b{background:#fff;border:1px solid var(--line);border-radius:99px;padding:.25rem .7rem}
+  .model .b b{color:var(--accent)}
+  .model .arr{color:var(--muted);align-self:center}
+  .exists{background:var(--okBg);border-left:3px solid var(--ok);padding:.55rem .8rem;border-radius:5px;font-size:.85rem;margin:0 0 1.4rem}
+  .sec{background:#fff;border:1px solid var(--line);border-radius:12px;margin:0 0 1.3rem;overflow:hidden}
+  .sec > h2{margin:0;padding:.65rem .95rem;font-size:1rem;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:.5rem}
+  .tag{font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:.1rem .45rem;border-radius:99px}
+  .tag.gap{background:var(--gapBg);color:var(--gap)} .tag.partial{background:var(--warnBg);color:var(--warn)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:1px solid var(--line)}
+  .grid > div{padding:.85rem .95rem}
+  .grid > div:first-child{border-right:1px solid var(--line);background:#fbfcfd}
+  .lbl{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 .5rem;font-weight:700}
+  .lbl.today{color:#8a2a22} .lbl.prop{color:#1f5130}
+  .why{padding:.7rem .95rem;background:#fafbfc;font-size:.86rem}
+  .why b{color:var(--accent)}
+  /* widget bits */
+  .row{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+  .pill{display:inline-block;font-size:.78rem;padding:.12rem .55rem;border:1px solid var(--line);border-radius:99px;background:#fafbfc}
+  .pill.sel{background:var(--accentBg);border-color:#bcd6f0;color:var(--accent);font-weight:600}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:6px;padding:.3rem .6rem;font:inherit;font-size:.83rem;cursor:pointer}
+  .btn.pri{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+  .btn.gap{background:var(--gap);color:#fff;border-color:var(--gap)}
+  table{border-collapse:collapse;width:100%;font-size:.85rem}
+  th,td{text-align:left;padding:.3rem .5rem;border-bottom:1px solid var(--line)}
+  th{font-size:.68rem;text-transform:uppercase;color:var(--muted)}
+  .blank{color:var(--muted);font-style:italic}
+  .chk{display:flex;align-items:center;gap:.4rem;padding:.2rem 0;font-size:.88rem}
+  .card2{border:1px solid var(--line);border-radius:8px;padding:.6rem .7rem;background:#fff}
+  .badge{font-size:.66rem;font-weight:700;text-transform:uppercase;padding:.05rem .4rem;border-radius:3px;background:var(--okBg);color:var(--ok)}
+  .src{font-size:.76rem;color:var(--muted)}
+  .mini{font-size:.78rem;color:var(--muted)}
+  input.txt{border:1px solid var(--line);border-radius:5px;padding:.25rem .45rem;font:inherit;font-size:.83rem}
+  .review{background:var(--warnBg);border-left:3px solid var(--warn);padding:.45rem .65rem;border-radius:4px;font-size:.82rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Data-entry efficiency — proposed patterns</h1>
+  <p class="lead">North star: <b>minimize keystrokes per recording day</b> (days are the high-frequency unit and ~90% repeat
+    day-to-day). Each pattern pushes work up this ladder — turning <i>typing</i> into <i>confirming</i>:</p>
+  <div class="model">
+    <span class="b"><b>1 · Inherit</b> (animal/dataset)</span><span class="arr">→</span>
+    <span class="b"><b>2 · Carry forward</b> (last day)</span><span class="arr">→</span>
+    <span class="b"><b>3 · Smart-default</b> (common case)</span><span class="arr">→</span>
+    <span class="b"><b>4 · Quick-enter</b> the deltas</span>
+  </div>
+  <div class="exists">
+    <b>Already good — not re-built:</b> bad-channel marking is already a compact <b>checkbox grid</b>; cameras &amp;
+    recording-system are already <b>catalog + per-day reference</b>; <b>type-+-Enter</b> quick-add exists for simple lists
+    (keywords, experimenters); keyboard shortcuts exist (Ctrl+S, Alt+←/→, Alt+N add-row, ?). These patterns are the model we
+    extend below.
+  </div>
+
+  <!-- 1. CARRY FORWARD -->
+  <div class="sec">
+    <h2>① Day creation — carry-forward, duplicate, bulk <span class="tag gap">biggest win</span></h2>
+    <div class="grid">
+      <div>
+        <p class="lbl today">Today</p>
+        <p class="mini">A new day (even N at once via the calendar) comes up <b>blank</b> — only tech defaults inherit.
+          Tasks, cameras, epochs, weight = empty → immediately “Needs fixing”.</p>
+        <table>
+          <tr><th>2026-06-22 (new)</th></tr>
+          <tr><td class="blank">tasks: —  cameras: —  epochs: —  weight: —</td></tr>
+        </table>
+        <p class="src">workspaceTransitions.js:312 — seeds only times_period_multiplier / raw_data_to_volts.</p>
+      </div>
+      <div>
+        <p class="lbl prop">Proposed</p>
+        <div class="card2">
+          <div class="row" style="justify-content:space-between">
+            <b>Add recording days</b><span class="mini">3 dates selected</span>
+          </div>
+          <div class="row" style="margin:.5rem 0">
+            <span class="mini">Start each from:</span>
+            <label class="row" style="gap:.3rem"><input type="radio" name="cf" checked> last day <span class="pill sel">2026-06-21 ▾</span></label>
+            <label class="row" style="gap:.3rem"><input type="radio" name="cf"> blank</label>
+          </div>
+          <div class="review">Carries forward <b>tasks, cameras-used, epoch shape, weight</b> from 2026-06-21.
+            <b>Review &amp; adjust per day</b> — nothing exported until you confirm.</div>
+          <div class="row" style="margin-top:.5rem"><button class="btn pri">Create 3 days</button></div>
+        </div>
+        <p class="mini" style="margin:.5rem 0 0">Plus, on any day row: <button class="btn">⋯</button> → <b>Duplicate day…</b> (clone to a new date).</p>
+      </div>
+    </div>
+    <div class="why"><b>Why (UX):</b> <b>smart defaults from context</b> + <b>recognition over recall</b> — day N+1 ≈ day N, so
+      default it and let the user tweak deltas. Critical for scientific data: the carry-forward is <b>visible and reviewable</b>
+      (not a silent auto-fill that propagates a stale value), with a one-click <b>“blank”</b> opt-out and per-day edit. Duplicate-day
+      is the standard “clone a row” affordance.</div>
+  </div>
+
+  <!-- 2. TASK CATALOG -->
+  <div class="sec">
+    <h2>② Tasks — a task-type catalog you pick from <span class="tag gap">absent today</span></h2>
+    <div class="grid">
+      <div>
+        <p class="lbl today">Today</p>
+        <p class="mini">Tasks are a <b>per-day inline list</b> — name + description <b>re-typed every day</b>. Drift between
+          days (“w-track” vs “W track”) → Spyglass <code>task_name</code>/description <b>divergence error</b>.</p>
+        <table>
+          <tr><th>Task name</th><th>Description</th><th>Epochs</th></tr>
+          <tr><td><input class="txt" value="w-track"></td><td><input class="txt" value="Spatial alternation"></td><td><input class="txt" style="width:54px" value="1,2"></td></tr>
+        </table>
+        <p class="src">day.tasks[] — flat, day-owned (TasksTable.jsx). No reuse.</p>
+      </div>
+      <div>
+        <p class="lbl prop">Proposed</p>
+        <p class="mini"><b>Define task types once</b> (animal/dataset catalog), then each day <b>picks + orders</b> epochs.</p>
+        <div class="card2" style="margin-bottom:.5rem">
+          <span class="mini">Task types (catalog)</span>
+          <div class="row" style="margin-top:.3rem"><span class="pill">sleep</span><span class="pill">w-track</span><span class="pill">open-field</span><span class="btn">+ New type</span></div>
+        </div>
+        <div class="card2">
+          <span class="mini">This day · epochs</span>
+          <table>
+            <tr><td>0</td><td><span class="pill sel">sleep ▾</span></td></tr>
+            <tr><td>1</td><td><span class="pill sel">w-track ▾</span></td></tr>
+            <tr><td>2</td><td><span class="pill sel">w-track ▾</span></td></tr>
+          </table>
+          <div class="row" style="margin-top:.3rem"><input class="txt" placeholder="pick a task type… (type + Enter)"></div>
+        </div>
+      </div>
+    </div>
+    <div class="why"><b>Why (UX):</b> <b>recognition over recall</b> (pick, don’t retype) + <b>consistency by construction</b>
+      (one definition ⇒ no divergence) + <b>edit-once correction</b> (fix a description in the catalog, every day updates).
+      Per-day epoch entry stays a fast inline quick-add (type-ahead + Enter). Mirrors the cameras/recording-system catalog model.</div>
+  </div>
+
+  <!-- 3. CAMERAS USED -->
+  <div class="sec">
+    <h2>③ Per-day “cameras used” checklist <span class="tag partial">implicit today</span></h2>
+    <div class="grid">
+      <div>
+        <p class="lbl today">Today</p>
+        <p class="mini">No upfront selection — a camera counts as “used” <b>only if</b> a task or video row happens to
+          reference its id. Easy to forget to attach one; nothing shows the day’s camera set at a glance.</p>
+        <p class="src">resolveDayCameraUsage — inferred from task.camera_id / video.camera_id.</p>
+      </div>
+      <div>
+        <p class="lbl prop">Proposed</p>
+        <div class="card2">
+          <span class="mini">Cameras used this day</span>
+          <div class="chk"><input type="checkbox" checked> overhead_run</div>
+          <div class="chk"><input type="checkbox"> sleep_box</div>
+          <p class="mini" style="margin:.3rem 0 0">Drives the export set; task/video camera pickers then offer only the day’s chosen cameras.</p>
+        </div>
+      </div>
+    </div>
+    <div class="why"><b>Why (UX):</b> <b>explicit over implicit</b> — one glance shows the day’s cameras; fewer “forgot to attach
+      the camera” omissions; and it <b>narrows downstream pickers</b> (a video’s camera dropdown only lists what the day used). Keeps the
+      catalog-by-reference model, just adds the missing day-level entry point.</div>
+  </div>
+
+  <!-- 4. COPY FROM ANIMAL -->
+  <div class="sec">
+    <h2>④ Extend “Copy from animal” to cameras + recording system <span class="tag partial">half-built</span></h2>
+    <div class="grid">
+      <div>
+        <p class="lbl today">Today</p>
+        <p class="mini">“Copy from animal” exists, but only for <b>electrode groups + channel maps</b>. Cameras and the
+          recording system are added by hand on every new animal that shares the same rig.</p>
+        <p class="src">CopyFromAnimalDialog.jsx (electrode groups + channel maps only).</p>
+      </div>
+      <div>
+        <p class="lbl prop">Proposed</p>
+        <div class="card2">
+          <span class="mini">Copy from <span class="pill sel">remy ▾</span></span>
+          <div class="chk"><input type="checkbox" checked> Electrode groups + channel maps</div>
+          <div class="chk"><input type="checkbox" checked> Cameras <span class="badge">new</span></div>
+          <div class="chk"><input type="checkbox" checked> Recording system <span class="badge">new</span></div>
+          <div class="row" style="margin-top:.4rem"><button class="btn pri">Copy</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="why"><b>Why (UX):</b> a lab’s rig (cameras, acquisition system) is shared across animals — copy it once instead of
+      re-entering. (If we adopt the <b>dataset tier</b>, this need largely disappears: the rig is defined once and every animal
+      references it — see <code>mockup-dataset-tier.html</code>. Copy-from-animal is the lower-effort interim.)</div>
+  </div>
+
+  <p class="lead" style="margin-top:.4rem"><b>Sequencing by impact ÷ effort:</b> ① carry-forward / duplicate-day is the
+    highest-leverage and self-contained; ③ cameras-used and ④ copy-from-animal are small; ② task catalog is medium and overlaps
+    the tier decision. The hybrid tabbed editor (<code>mockup-tabbed-day-editor-interactive.html</code>) and the dataset tier
+    (<code>mockup-dataset-tier.html</code>) are the two larger structural pieces.</p>
+</div>
+</body>
+</html>
