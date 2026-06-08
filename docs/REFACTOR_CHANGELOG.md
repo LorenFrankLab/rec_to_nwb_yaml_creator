@@ -32,6 +32,20 @@ whole catalog. Byte-identical for a one-system animal with an unreferenced day (
 This supersedes the earlier free-form `day.data_acq_device` override. The catalog list UI (animal tab)
 and the per-day selector (Day Editor) follow in subsequent commits.
 
+### 3/n — animal Recording System tab becomes an add/edit/delete catalog LIST
+
+[DataAcqSection](../src/pages/AnimalEditor/DataAcqSection.jsx) was a single-device form; it's now a
+**catalog list** consistent with the Cameras tab: each system is a row (`name · system · amplifier ·
+adc_circuit`) with Edit/Delete, a **`+ Add recording system`** editor, and a **Default** badge on the
+first (the entry unreferenced days inherit). Guards: **name-uniqueness within the catalog** (the name
+is the Spyglass `DataAcquisitionDevice` identity) and the existing cross-animal divergent-reuse block
+(same name + different hardware elsewhere in the dataset → side-by-side comparison, write blocked).
+The last system can't be deleted (schema `minItems: 1`). The technical-defaults (`raw_data_to_volts` /
+`times_period_multiplier`) "Advanced Settings" block is unchanged. `TAB_SCOPE['recording-system']` now
+reads "Animal-wide catalog — each recording day uses one" (the old "no per-day version" was false).
+`DataAcqSection.test.jsx` rewritten for the catalog; full suite (4256) green, 125 baselines byte-
+identical, lint 0 errors, build OK. The per-day selector (Day Editor) is the last piece.
+
 ## Tabbed workspace IA — post-Phase-5 UX: relocate the animal profile to the header ⋮ (June 8, 2026)
 
 The animal-wide subject-facts editor was an always-visible collapsible **in the header band on every

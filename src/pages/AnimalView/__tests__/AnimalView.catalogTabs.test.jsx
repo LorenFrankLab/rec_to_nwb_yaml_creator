@@ -67,8 +67,8 @@ describe('AnimalView — catalog/library tabs render (Phase 3-3)', () => {
   it('renders the recording-system container, not the placeholder', () => {
     renderView('recording-system');
     expect(screen.queryByText(PLACEHOLDER)).not.toBeInTheDocument();
-    // DataAcqSection surfaces the seeded device name in its section (name + system both carry it).
-    expect(screen.getAllByDisplayValue('SpikeGadgets').length).toBeGreaterThan(0);
+    // DataAcqSection lists the catalog system by name (the catalog list, not a single-device form).
+    expect(screen.getByText('SpikeGadgets')).toBeInTheDocument();
   });
 
   it('renders the cameras container, not the placeholder', () => {
@@ -120,10 +120,12 @@ describe('AnimalView — catalog containers persist edits to the store (GAP-A)',
       </StoreProvider>
     );
 
+    // Open the catalog row's editor, rename, save — the write flows through the container's callback.
+    await user.click(screen.getByRole('button', { name: /edit recording system SpikeGadgets/i }));
     const nameField = screen.getByLabelText(/^name/i);
     await user.clear(nameField);
     await user.type(nameField, 'SpikeGadgets_MCU');
-    await user.tab(); // blur commits the device through the container's store callback
+    await user.click(screen.getByRole('button', { name: /save recording system/i }));
 
     const devices = JSON.parse(screen.getByTestId('data-acq').textContent);
     expect(devices).toHaveLength(1);
@@ -140,10 +142,11 @@ describe('AnimalView — catalog tab scope descriptors (Phase 3-3)', () => {
     window.location = { hash: '' };
   });
 
-  it('recording-system honesty: "shared across all days", no per-day framing', () => {
+  it('recording-system scope: animal-wide catalog, each day uses one', () => {
     renderView('recording-system');
-    expect(screen.getByText(/shared across all days/i)).toBeInTheDocument();
-    expect(screen.queryByText(/apply.*per day|apply to days as needed/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/animal-wide catalog.*each recording day uses one/i)).toBeInTheDocument();
+    // No longer the false "no per-day version" framing.
+    expect(screen.queryByText(/no per-day version/i)).not.toBeInTheDocument();
   });
 
   it('cameras scope descriptor', () => {

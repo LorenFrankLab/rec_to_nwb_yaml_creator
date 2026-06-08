@@ -50,9 +50,9 @@ import './AnimalView.css';
 const TAB_SCOPE = {
   'electrode-groups': 'Versioned identity — a change here forks a configuration version.',
   'channel-maps': 'Edit any time — map channels, mark bad channels.',
-  // Recording system is honest about its blast radius (Task 3.2): it is animal-level setup with NO
-  // per-day version, so editing it affects every day. Deliberately NOT framed as "apply per day".
-  'recording-system': 'Shared across ALL days (no per-day version).',
+  // Recording system is an animal-wide CATALOG of acquisition systems; each recording day uses one
+  // (chosen in the day's setup), defaulting to the first. Mirrors the cameras catalog framing.
+  'recording-system': 'Animal-wide catalog — each recording day uses one.',
   cameras: 'Catalog — referenced per day.',
   dio: 'Library — opt in per day.',
 };
