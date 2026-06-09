@@ -22,6 +22,7 @@ import {
 } from '../state/workspaceSelectors';
 import { mergeDayMetadata } from '../state/workspaceUtils';
 import { validateDay, repairTargetForIssue, animalSetupTabForFieldPath } from './validation';
+import { optoFieldsPresence } from './optoCompleteness';
 
 /** Section status values. `blocking` (Phase 3a.5) is computed separately — see getAnimalBlockingSections. */
 export const SECTION_STATUS = {
@@ -56,13 +57,9 @@ export const OPTO_COMPLETENESS = {
 export function getAnimalOptoCompleteness(animal) {
   const opto = animal?.optogenetics;
   if (!opto || typeof opto !== 'object' || Array.isArray(opto)) return OPTO_COMPLETENESS.NONE;
-  const present = [
-    Array.isArray(opto.opto_excitation_source) && opto.opto_excitation_source.length > 0,
-    Array.isArray(opto.optical_fiber) && opto.optical_fiber.length > 0,
-    Array.isArray(opto.virus_injection) && opto.virus_injection.length > 0,
-    typeof opto.optogenetic_stimulation_software === 'string' &&
-      opto.optogenetic_stimulation_software.trim() !== '',
-  ].filter(Boolean).length;
+  // SAME shared predicate as the export gate (rulesValidation `partial_configuration`), reading the
+  // NESTED animal.optogenetics.* — so the nav count and the gate can never disagree.
+  const present = optoFieldsPresence(opto).count;
   if (present === 0) return OPTO_COMPLETENESS.NONE;
   if (present === 4) return OPTO_COMPLETENESS.COMPLETE;
   return OPTO_COMPLETENESS.PARTIAL;
