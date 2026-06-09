@@ -43,5 +43,17 @@ The inverse of `mergeDayMetadata`. Uses the SAME inheritance contract the merge 
 - `configuration` ← `electrode_groups` + `ntrode_electrode_group_channel_map` (→ one configuration snapshot/version).
 - animal-owned opto: `opto_excitation_source`, `optical_fiber`, `virus_injection`, `optogenetic_stimulation_software` (→ `animalFacts.optogenetics`). `experiment_description` is exported as `session.experiment_description || animal.experiment_description` — a flat YAML's single value is recoverable to only ONE owner; assign it to `dayFacts` (round-trips byte-identically because the day value alone reproduces the output). The original animal-vs-day split is unrecoverable; this is an accepted attribution choice.
 
-**Correctness gate (do not weaken):** for every golden fixture `f`,
+**Correctness gate (do not weaken):** for every fixture `f` **that is a genuine `mergeDayMetadata` output**,
 `encodeYaml(mergeDayMetadata(...recompose(decomposeYaml(decodeYaml(f))))) === f` byte-for-byte. Phase 6a builds and proves `decomposeYaml`; phase 6b consumes it for multi-file reconciliation + the import UI.
+
+> **Corpus correction (verified during phase-6a execution):** the four committed *legacy* golden fixtures
+> (`realistic-session.yml`, `minimal-valid.yml`, `20230622_sample_metadata.yml`, `…ProbeReconfig.yml`) are
+> **NOT** `mergeDayMetadata` fixed points — they are legacy-format files whose baseline test only asserts
+> `decodeYaml→encodeYaml` (encoder determinism), and `realistic-session.yml` is a *deliberately known-invalid*
+> workspace (globally-incrementing channel map) the merge intentionally does not reproduce
+> (see `src/pages/DayEditor/__tests__/exportParity.integration.test.js`). The round-trip corpus is therefore
+> **genuine merge outputs**: `f = encodeYaml(mergeDayMetadata(animal, day))` over representative workspaces
+> (realistic via `buildRealisticWorkspace`, probe-reconfig via `makeReconfigWorkspace` with a non-latest-pinned
+> day, an inline opto animal, and a minimal animal/day), plus the committed `golden/workspace-export.realistic.yml`
+> snapshot (which *is* a captured merge output). This fulfills the phase's stated intent — "data that re-merges
+> to the original" — and is byte-exact; it does not weaken the gate.
