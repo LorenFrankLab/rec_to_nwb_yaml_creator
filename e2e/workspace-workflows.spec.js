@@ -12,13 +12,13 @@
 import { test, expect } from '@playwright/test';
 import {
   resetWorkspace,
-  seedWorkspace,
+  seedAndOpen,
   buildConfiguredWorkspaceBlob,
   captureDownload,
+  ANIMAL_ID,
+  DAY_ID,
 } from './helpers/workspace';
 
-const ANIMAL_ID = 'remy';
-const DAY_ID = 'remy-2023-06-22';
 const EXPECTED_FILENAME = '06222023_remy_metadata.yml';
 
 /**
@@ -58,11 +58,8 @@ test.describe('Workspace export workflows', () => {
   test('same-day: a prepared animal exports one day without re-entering shared setup', async ({
     page,
   }) => {
-    await seedWorkspace(page, buildConfiguredWorkspaceBlob());
-
     // Go straight from the day to its export — never through an electrode/camera setup form.
-    await page.goto(`/#/day/${DAY_ID}`);
-    await page.reload();
+    await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
     await expect(
       page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
     ).toBeVisible();
@@ -108,11 +105,8 @@ test.describe('Workspace export workflows', () => {
       experimentDate: '06232023',
       sessionId: 'remy_20230623',
     });
-    await seedWorkspace(page, blob);
-
     // The per-animal Validation & Export tab is the catch-up surface.
-    await page.goto(`/#/animal/${ANIMAL_ID}/export`);
-    await page.reload();
+    await seedAndOpen(page, blob, `/#/animal/${ANIMAL_ID}/export`);
     await expect(
       page.getByRole('heading', { level: 2, name: 'This animal — readiness & export' }),
     ).toBeVisible();
@@ -178,10 +172,7 @@ test.describe('Workspace export workflows', () => {
         day.session.experiment_description = '';
       },
     });
-    await seedWorkspace(page, blob);
-
-    await page.goto(`/#/animal/${ANIMAL_ID}/export`);
-    await page.reload();
+    await seedAndOpen(page, blob, `/#/animal/${ANIMAL_ID}/export`);
     await expect(
       page.getByRole('heading', { level: 2, name: 'This animal — readiness & export' }),
     ).toBeVisible();

@@ -34,6 +34,22 @@ export const STORAGE_KEY = 'rec_to_nwb_workspace_v1';
 export const SCHEMA_VERSION = 2;
 
 /**
+ * The animal id seeded by {@link buildConfiguredWorkspaceBlob} (via
+ * `buildRealisticWorkspace()`'s `animalId`). Kept here so the specs share ONE source of
+ * truth instead of re-declaring the literal per file.
+ * @type {string}
+ */
+export const ANIMAL_ID = 'remy';
+
+/**
+ * The recording-day id seeded by {@link buildConfiguredWorkspaceBlob} (via
+ * `buildRealisticWorkspace()`'s `dayId`). Shared with the specs, same rationale as
+ * {@link ANIMAL_ID}.
+ * @type {string}
+ */
+export const DAY_ID = 'remy-2023-06-22';
+
+/**
  * Clear the persisted workspace and land on a clean, fully re-hydrated picker.
  *
  * Removes the key, then reloads from a fresh document so the in-memory store
@@ -83,6 +99,28 @@ export async function seedWorkspace(page, blob) {
   // a fresh document that re-initializes the store from the now-seeded blob.
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Animal Workspace' })).toBeVisible();
+}
+
+/**
+ * Seed a workspace blob and land on the given hash route with a fresh document so the store
+ * hydrates from the seed.
+ *
+ * Composes {@link seedWorkspace} (which already does the seed → reload → picker-visible dance)
+ * with a hash navigation to `route` plus a full `reload()`. The trailing reload is load-bearing
+ * for the same reason {@link seedWorkspace} reloads: a same-document hash nav can keep a stale
+ * store, whereas a fresh document re-initializes it from the seeded blob. Callers assert their
+ * own landing heading/URL after this resolves (no built-in post-nav wait), matching the inline
+ * `seedWorkspace → goto → reload` triad the specs previously repeated.
+ *
+ * @param {import('@playwright/test').Page} page - The Playwright page.
+ * @param {{ schemaVersion: number, workspace: object }} blob - Loader-ready blob.
+ * @param {string} hashRoute - Hash route to land on (e.g. `/#/animal/remy/cameras`).
+ * @returns {Promise<void>} Resolves once the fresh document has loaded on `hashRoute`.
+ */
+export async function seedAndOpen(page, blob, hashRoute) {
+  await seedWorkspace(page, blob);
+  await page.goto(hashRoute);
+  await page.reload(); // fresh document → store hydrates from the seeded blob
 }
 
 /**

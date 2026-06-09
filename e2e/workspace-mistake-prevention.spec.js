@@ -30,27 +30,30 @@
 import { test, expect } from '@playwright/test';
 import {
   resetWorkspace,
-  seedWorkspace,
+  seedAndOpen,
   buildConfiguredWorkspaceBlob,
+  ANIMAL_ID,
+  DAY_ID,
 } from './helpers/workspace';
 
-/** The seeded animal + day ids from buildConfiguredWorkspaceBlob(). */
-const ANIMAL_ID = 'remy';
-const DAY_ID = 'remy-2023-06-22';
-
 /**
- * Seed a workspace blob and land on the given hash route with a fresh document so the store
- * hydrates from the seed (a same-URL hash nav would keep a stale store — see helper docs).
+ * Robustly open a `<details>` disclosure by its summary and assert its content is revealed.
  *
- * @param {import('@playwright/test').Page} page - The Playwright page.
- * @param {{ schemaVersion: number, workspace: object }} blob - Loader-ready blob.
- * @param {string} route - Hash route to land on (e.g. `/#/animal/remy/cameras`).
- * @returns {Promise<void>}
+ * Headless Chromium intermittently swallows the first synthetic click on a `<summary>`, so this
+ * clicks the summary, then — only if the content has not appeared — falls back to a keyboard
+ * Enter on the summary. The unconditional `toBeVisible()` makes a disclosure that never opens
+ * hard-fail (rather than silently passing a later content assertion against a hidden node).
+ *
+ * @param {import('@playwright/test').Locator} summaryLocator - The `<summary>` (or its text) to toggle.
+ * @param {import('@playwright/test').Locator} contentLocator - A node revealed once the disclosure opens.
+ * @returns {Promise<void>} Resolves once the content is visible.
  */
-async function seedAndOpen(page, blob, route) {
-  await seedWorkspace(page, blob);
-  await page.goto(route);
-  await page.reload();
+async function openDetails(summaryLocator, contentLocator) {
+  await summaryLocator.click();
+  if (!(await contentLocator.isVisible().catch(() => false))) {
+    await summaryLocator.press('Enter');
+  }
+  await expect(contentLocator).toBeVisible();
 }
 
 test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
@@ -237,15 +240,10 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     const taskDialog = page.getByRole('dialog', { name: 'Add Task' });
     await expect(taskDialog).toBeVisible();
     // The Cameras section is a collapsible <details>; open it via its summary to reveal the
-    // controlled checkbox set (focus the summary, then toggle with the keyboard so the disclosure
-    // reliably opens in headless Chromium).
+    // controlled checkbox set.
     const camerasSummary = taskDialog.getByText('Cameras', { exact: true });
-    await camerasSummary.click();
     const cameraChoices = taskDialog.getByRole('group', { name: 'Cameras used in this task' });
-    if (!(await cameraChoices.isVisible().catch(() => false))) {
-      await camerasSummary.press('Enter');
-    }
-    await expect(cameraChoices).toBeVisible();
+    await openDetails(camerasSummary, cameraChoices);
     await expect(cameraChoices.getByRole('checkbox', { name: /overhead_camera/ })).toBeVisible();
     await expect(cameraChoices.getByRole('checkbox', { name: /side_camera/ })).toBeVisible();
   });
@@ -344,12 +342,14 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     ).toBeVisible();
 
     // The Overview section hosts the Technical parameters block as a collapsible <details>; expand
-    // it by clicking its summary text, then assert the effective recording-system values.
+    // it via the same robust open pattern, asserting a revealed value, then check the rest.
     await page.getByRole('button', { name: /^Overview — / }).click();
-    await page.getByText('Technical parameters', { exact: true }).click();
+    await openDetails(
+      page.getByText('Technical parameters', { exact: true }),
+      page.getByText('Raw data to volts', { exact: true }),
+    );
 
     // The rig constants are presented as effective recording-system values for this day.
-    await expect(page.getByText('Raw data to volts', { exact: true })).toBeVisible();
     await expect(page.getByText('Times period multiplier', { exact: true })).toBeVisible();
 
     // They are READ-ONLY effective values, NOT routine editable day fields: there is no

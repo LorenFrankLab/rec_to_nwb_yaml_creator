@@ -19,14 +19,13 @@
 import { test, expect } from '@playwright/test';
 import {
   resetWorkspace,
-  seedWorkspace,
+  seedAndOpen,
   buildConfiguredWorkspaceBlob,
   captureDownload,
+  ANIMAL_ID,
+  DAY_ID,
 } from './helpers/workspace';
 
-/** The seeded animal + day ids from buildConfiguredWorkspaceBlob(). */
-const ANIMAL_ID = 'remy';
-const DAY_ID = 'remy-2023-06-22';
 const EXPECTED_FILENAME = '06222023_remy_metadata.yml';
 
 test.describe('Browser export of a configured recording day', () => {
@@ -37,10 +36,7 @@ test.describe('Browser export of a configured recording day', () => {
   test('per-day Export step shows a preflight summary and downloads corrected YAML', async ({
     page,
   }) => {
-    await seedWorkspace(page, buildConfiguredWorkspaceBlob());
-
-    await page.goto(`/#/day/${DAY_ID}`);
-    await page.reload(); // fresh document → store hydrates from the seeded blob
+    await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
     await expect(
       page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
     ).toBeVisible();
@@ -86,10 +82,7 @@ test.describe('Browser export of a configured recording day', () => {
   test('per-animal Validation & Export tab batch-exports the valid day with a preflight', async ({
     page,
   }) => {
-    await seedWorkspace(page, buildConfiguredWorkspaceBlob());
-
-    await page.goto(`/#/animal/${ANIMAL_ID}/export`);
-    await page.reload();
+    await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/animal/${ANIMAL_ID}/export`);
     await expect(
       page.getByRole('heading', { level: 2, name: 'This animal — readiness & export' }),
     ).toBeVisible();
@@ -131,10 +124,7 @@ test.describe('Browser export of a configured recording day', () => {
       lens: 'Fujinon HF16HA-1B',
       camera_name: 'UNUSED_camera',
     });
-    await seedWorkspace(page, blob);
-
-    await page.goto(`/#/day/${DAY_ID}`);
-    await page.reload();
+    await seedAndOpen(page, blob, `/#/day/${DAY_ID}`);
     await page.getByRole('button', { name: /^Export — / }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Export YAML' })).toBeVisible();
 

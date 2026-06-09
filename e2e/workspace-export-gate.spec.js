@@ -27,13 +27,11 @@
 import { test, expect } from '@playwright/test';
 import {
   resetWorkspace,
-  seedWorkspace,
+  seedAndOpen,
   buildConfiguredWorkspaceBlob,
+  ANIMAL_ID,
+  DAY_ID,
 } from './helpers/workspace';
-
-/** The seeded animal + day ids from buildConfiguredWorkspaceBlob(). */
-const ANIMAL_ID = 'remy';
-const DAY_ID = 'remy-2023-06-22';
 
 /**
  * Bounded window for the "no download fires" backstops. A download would arrive ~immediately if
@@ -66,9 +64,7 @@ function buildInvalidCameraBlob() {
  * @returns {Promise<void>} Resolves once the Export YAML heading is visible.
  */
 async function openInvalidDayExportStep(page) {
-  await seedWorkspace(page, buildInvalidCameraBlob());
-  await page.goto(`/#/day/${DAY_ID}`);
-  await page.reload(); // fresh document → store hydrates from the seeded blob
+  await seedAndOpen(page, buildInvalidCameraBlob(), `/#/day/${DAY_ID}`);
   await expect(
     page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
   ).toBeVisible();
@@ -124,9 +120,7 @@ test.describe('Fail-closed export gate + repair navigation', () => {
   test('keyboard navigation (Alt+→) into the Export step cannot bypass the gate', async ({
     page,
   }) => {
-    await seedWorkspace(page, buildInvalidCameraBlob());
-    await page.goto(`/#/day/${DAY_ID}`);
-    await page.reload();
+    await seedAndOpen(page, buildInvalidCameraBlob(), `/#/day/${DAY_ID}`);
     await expect(
       page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
     ).toBeVisible();
@@ -161,9 +155,7 @@ test.describe('Fail-closed export gate + repair navigation', () => {
   test('per-animal "Export Valid Only" excludes the error day and downloads nothing', async ({
     page,
   }) => {
-    await seedWorkspace(page, buildInvalidCameraBlob());
-    await page.goto(`/#/animal/${ANIMAL_ID}/export`);
-    await page.reload();
+    await seedAndOpen(page, buildInvalidCameraBlob(), `/#/animal/${ANIMAL_ID}/export`);
     await expect(
       page.getByRole('heading', { level: 2, name: 'This animal — readiness & export' }),
     ).toBeVisible();
