@@ -8,7 +8,7 @@
  * back to the layer the merge reads it from, then rebuilds a minimal animal + day
  * whose re-merge reproduces the original flat model byte-for-byte.
  *
- * Two stages so phase-6b can reuse the second:
+ * Two stages; the second is exercised by the import round-trip gate:
  *   1. {@link decomposeYaml} — validate + attribute → a typed result carrying
  *      `animalFacts` / `dayFacts` / `configuration` (no live store coupling).
  *   2. {@link recomposeDayModel} — rebuild the minimal `{ animal, day }` in the exact
@@ -72,6 +72,10 @@ function decomposeOptogenetics(flatModel) {
  * `severity === 'error'`, returns `{ ok: false, issues }` and NO partial result —
  * a corrupt import must be rejected wholesale, never half-attributed. On success
  * returns `{ ok: true, subjectId, animalFacts, dayFacts, configuration }`.
+ *
+ * NOTE: an `ok: true` result may still have `subjectId: undefined` — a model can pass
+ * validation yet carry no `subject.subject_id`, making it un-attributable to an animal.
+ * `planImport` re-checks this and routes such a file to `unimportable`.
  *
  * Ownership: on success the returned pieces are DEEP-CLONED from the input (the
  * function `structuredClone`s `flatModel` once, after the rejection check, and
@@ -200,7 +204,10 @@ export function decomposeYaml(flatModel) {
 
 /**
  * Rebuild the minimal `{ animal, day }` the export merge reads, from a successful
- * {@link decomposeYaml} result. Exported so phase-6b (import-into-store) can reuse it.
+ * {@link decomposeYaml} result. Exported for the import round-trip gate
+ * (`yamlImport.roundtrip.test.js`), which proves `decomposeYaml` inverts the merge:
+ * `recomposeDayModel(decomposeYaml(decodeYaml(f)))` re-merges to exactly `f`. The
+ * importer itself builds its plan directly from `decomposeYaml` and does NOT call this.
  *
  * The shapes here are intentionally minimal but EXACT — every field the merge reads
  * is placed where the merge (and its selectors / `resolveDayConfig` /

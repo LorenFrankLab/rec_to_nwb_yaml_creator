@@ -31,6 +31,10 @@ export function valuesEqual(a, b) {
 /**
  * Find a divergent reuse of `name` in a registry of existing identities.
  *
+ * Compares ONLY the keys present in `candidateFields` (candidate and registry entries
+ * are assumed to share a key set); a registry entry's `label` is carried for display,
+ * not compared.
+ *
  * @param {string} name - The candidate identity name (e.g. camera_name).
  * @param {Record<string, *>} candidateFields - The candidate's dependent fields.
  * @param {Array<{name: string, fields: Record<string, *>, label?: string}>} registry -
