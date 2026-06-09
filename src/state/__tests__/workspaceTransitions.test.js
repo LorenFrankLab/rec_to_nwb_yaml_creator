@@ -459,4 +459,9 @@ describe('applyDayUpdates', () => {
     );
     expect(updated.data_acq_device_name).toBeUndefined();
   });
+
+  it('persists cameras_used (the explicit per-day cameras-used checklist)', () => {
+    const updated = applyDayUpdates({ id: 'd1' }, { cameras_used: [1] }, NOW);
+    expect(updated.cameras_used).toEqual([1]);
+  });
 });

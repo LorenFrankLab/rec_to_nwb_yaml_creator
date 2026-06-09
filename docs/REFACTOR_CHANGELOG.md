@@ -4,6 +4,18 @@
 
 **Last Updated:** June 8, 2026
 
+## Per-day "cameras used" checklist (June 8, 2026)
+
+The Day Editor's Devices step now shows an explicit, glanceable **cameras-used checklist** of the
+animal's camera catalog. A camera already referenced by a task, video, or FsGUI protocol is shown
+**checked and disabled** (used regardless); a non-referenced camera is a free checkbox whose state
+is stored in an optional `day.cameras_used` array.
+
+- **Additive & baseline-safe:** `day.cameras_used` is **UNIONed** with the inferred task/video/fs-gui
+  camera references in `referencedCameraKeys`. Only explicit *additions* are stored (referenced
+  cameras are covered by the union), so with no checklist changes the field stays absent and the
+  exported camera set is unchanged — the golden baselines remain **byte-identical**.
+
 ## Fix: per-day recording-system selection now persists (June 8, 2026)
 
 **Bug fix.** For an animal with 2+ acquisition systems, the Day Editor's per-day recording-system

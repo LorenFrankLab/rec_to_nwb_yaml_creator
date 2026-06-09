@@ -46,6 +46,21 @@ describe('referencedCameraKeys', () => {
     const keys = referencedCameraKeys({ tasks: [{ camera_id: [1] }], associated_video_files: [{ camera_id: '1' }] });
     expect([...keys]).toEqual(['1']);
   });
+
+  it('unions the explicit day.cameras_used set (no task/video/fs-gui reference needed)', () => {
+    expect([...referencedCameraKeys({ cameras_used: [1] })]).toEqual(['1']);
+  });
+
+  it('is identical to today when cameras_used is absent (additive regression)', () => {
+    // Existing data carries no cameras_used; the field adds nothing — same key set as without it.
+    const day = { tasks: [{ camera_id: [0, 1] }], associated_video_files: [{ camera_id: 0 }] };
+    expect([...referencedCameraKeys(day)].sort()).toEqual(['0', '1']);
+  });
+
+  it('tolerates a non-array cameras_used (no throw, adds nothing)', () => {
+    expect([...referencedCameraKeys({ cameras_used: 'nope' })]).toEqual([]);
+    expect([...referencedCameraKeys({ cameras_used: 5 })]).toEqual([]);
+  });
 });
 
 describe('resolveDayCameraUsage', () => {
@@ -83,6 +98,12 @@ describe('resolveDayCameraUsage', () => {
   it('includes a camera referenced only by an fs_gui protocol', () => {
     const day = { fs_gui_yamls: [{ camera_id: 2 }] };
     expect(resolveDayCameraUsage(animal, day).map((c) => c.id)).toEqual([2]);
+  });
+
+  it('exports the union of explicit cameras_used and inferred references, in catalog order', () => {
+    // Camera 1 is referenced by a task; camera 2 is only in the explicit set. Both export.
+    const day = { tasks: [{ camera_id: [1] }], cameras_used: [2] };
+    expect(resolveDayCameraUsage(animal, day).map((c) => c.id)).toEqual([1, 2]);
   });
 
   it('returns the FULL catalog when every camera is referenced (the golden-fixture case → baselines unchanged)', () => {

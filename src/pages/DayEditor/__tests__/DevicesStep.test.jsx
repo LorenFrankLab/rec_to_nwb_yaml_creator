@@ -109,6 +109,58 @@ describe('DevicesStep', () => {
     expect(mockOnFieldUpdate).toHaveBeenCalledWith('data_acq_device_name', 'Neuropixels_rig');
   });
 
+  describe('cameras-used checklist', () => {
+    const CAMERAS = [
+      { id: 0, camera_name: 'box', manufacturer: 'M', model: 'G', lens: '16mm', meters_per_pixel: 0.001 },
+      { id: 1, camera_name: 'track', manufacturer: 'M', model: 'G', lens: '25mm', meters_per_pixel: 0.002 },
+      { id: 2, camera_name: 'overhead', manufacturer: 'M', model: 'G', lens: '50mm', meters_per_pixel: 0.003 },
+    ];
+    const animalWithCameras = { ...mockAnimal, cameras: CAMERAS };
+
+    it('renders the animal full camera catalog as a checklist', () => {
+      render(
+        <DevicesStep
+          animal={animalWithCameras}
+          day={mockDay}
+          mergedDay={mockMergedDay}
+          onFieldUpdate={mockOnFieldUpdate}
+        />
+      );
+      expect(screen.getByRole('checkbox', { name: /box/i })).toBeInTheDocument();
+      expect(screen.getByRole('checkbox', { name: /track/i })).toBeInTheDocument();
+      expect(screen.getByRole('checkbox', { name: /overhead/i })).toBeInTheDocument();
+    });
+
+    it('shows a task-referenced camera as checked and disabled', () => {
+      const dayWithTaskCamera = { ...mockDay, tasks: [{ camera_id: [1] }] };
+      render(
+        <DevicesStep
+          animal={animalWithCameras}
+          day={dayWithTaskCamera}
+          mergedDay={mockMergedDay}
+          onFieldUpdate={mockOnFieldUpdate}
+        />
+      );
+      const referenced = screen.getByRole('checkbox', { name: /track/i });
+      expect(referenced).toBeChecked();
+      expect(referenced).toBeDisabled();
+    });
+
+    it('checking a non-referenced camera writes cameras_used with that id', async () => {
+      const user = userEvent.setup();
+      render(
+        <DevicesStep
+          animal={animalWithCameras}
+          day={mockDay}
+          mergedDay={mockMergedDay}
+          onFieldUpdate={mockOnFieldUpdate}
+        />
+      );
+      await user.click(screen.getByRole('checkbox', { name: /overhead/i }));
+      expect(mockOnFieldUpdate).toHaveBeenCalledWith('cameras_used', [2]);
+    });
+  });
+
   it('renders section heading', () => {
     render(
       <DevicesStep

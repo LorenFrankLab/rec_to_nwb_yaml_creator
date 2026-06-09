@@ -33,8 +33,10 @@ function cameraKey(id) {
 
 /**
  * The set of camera-id keys a single day references, across tasks (array `camera_id`), associated
- * video files (scalar), and FsGUI protocols (scalar). Shape-tolerant: non-array collections and
- * null/undefined ids are skipped, never thrown on.
+ * video files (scalar), FsGUI protocols (scalar), and the explicit `day.cameras_used` set (UNIONed
+ * on top — an additive, glanceable day-level checklist). Shape-tolerant: non-array collections and
+ * null/undefined ids are skipped, never thrown on. With `cameras_used` absent (all existing data)
+ * the union adds nothing, so the exported camera set is unchanged.
  *
  * @param {object} day - A recording-day record.
  * @returns {Set<string>} Normalized camera-id keys.
@@ -62,6 +64,11 @@ export function referencedCameraKeys(day) {
 
   const fsGui = Array.isArray(day?.fs_gui_yamls) ? day.fs_gui_yamls : [];
   for (const protocol of fsGui) add(protocol?.camera_id);
+
+  // UNION the explicit per-day "cameras used" set on top of the inferred references. For existing
+  // data (`cameras_used` absent/non-array) this adds nothing, so the export is identical to today.
+  const explicit = Array.isArray(day?.cameras_used) ? day.cameras_used : [];
+  explicit.forEach(add);
 
   return keys;
 }

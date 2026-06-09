@@ -371,7 +371,9 @@ export function createDayRecord(animal, animalId, dayId, date, session, now, car
  *   `associated_files`, `associated_video_files`, `fs_gui_yamls`, `keywords`, plus
  *   `configurationVersion`, plus `data_acq_device_name` (the per-day recording-system choice —
  *   the one key matched by a PRESENCE check rather than `!== undefined`, so clearing it to
- *   `undefined` to revert to the animal default persists instead of being silently dropped).
+ *   `undefined` to revert to the animal default persists instead of being silently dropped), plus
+ *   `cameras_used` (the explicit per-day cameras-used set, UNIONed with inferred camera references;
+ *   `!== undefined` like the other collections — cleared to `[]`, never to undefined).
  *   Note: setting `configurationVersion` here re-pins the day but does
  *   NOT eagerly reconcile snapshots' `appliedToDays` — `reconcileAppliedToDays` derives the
  *   trustworthy view from each day's version.
@@ -439,6 +441,13 @@ export function applyDayUpdates(day, updates, now) {
   // key that supports clear-to-undefined.
   if ('data_acq_device_name' in updates) {
     updated.data_acq_device_name = updates.data_acq_device_name;
+  }
+  // Explicit per-day "cameras used" set (UNIONed with the inferred task/video/fs-gui references by
+  // `referencedCameraKeys`). `!== undefined` like the other collections — it is cleared to `[]`,
+  // never to undefined. Absent for all existing data (the baseline-safe default), so the export
+  // stays byte-identical when no checklist additions are made.
+  if (updates.cameras_used !== undefined) {
+    updated.cameras_used = updates.cameras_used;
   }
 
   updated.lastModified = now;

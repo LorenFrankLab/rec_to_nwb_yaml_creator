@@ -6,7 +6,8 @@ import ReconfigWizard from './ReconfigWizard';
 import DayRecordingSystem from './DayRecordingSystem';
 import { reconcileAppliedToDays } from '../../state/configDiff';
 import { resolveDayConfig } from '../../state/workspaceUtils';
-import { getConfigHistory, getDataAcqDevices } from '../../state/workspaceSelectors';
+import { getConfigHistory, getDataAcqDevices, getAnimalCameras } from '../../state/workspaceSelectors';
+import { referencedCameraKeys } from '../../state/cameraUsage';
 import { rawRecord } from '../../components/rawPropTypes';
 import { isMultiShankGroup, validBadChannelIds } from '../../domain/badChannels';
 import { classifyDeviceOverrides } from '../../domain/deviceOverrides';
@@ -77,6 +78,81 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
       onSelect={(name) => onFieldUpdate('data_acq_device_name', name)}
     />
   );
+
+  // Per-day "cameras used" checklist. A camera REFERENCED by a task/video/fs-gui row is used
+  // regardless (shown checked + disabled). A non-referenced camera is a free checkbox whose
+  // checked state = its id is in the explicit `day.cameras_used` set. Toggling writes ONLY the
+  // explicit additions (referenced cameras are covered by the union and need not be stored), so
+  // `cameras_used` stays absent/empty for all existing data and the export stays byte-identical.
+  const animalCameras = getAnimalCameras(animal);
+  const referencedKeys = useMemo(() => referencedCameraKeys(day), [day]);
+  const explicitCameraIds = useMemo(
+    () => (Array.isArray(day.cameras_used) ? day.cameras_used : []),
+    [day.cameras_used]
+  );
+  const explicitKeySet = useMemo(
+    () => new Set(explicitCameraIds.map((id) => String(id))),
+    [explicitCameraIds]
+  );
+
+  /**
+   * Toggle a NON-referenced camera in the explicit cameras-used set. Rebuilds the set from the
+   * full catalog so it stores the ids (in catalog order) of every currently-checked non-referenced
+   * camera — referenced cameras are intentionally excluded (covered by the union).
+   * @param {*} cameraId - The catalog camera id being toggled.
+   * @param {boolean} checked - The next checked state.
+   */
+  const handleCameraUsedToggle = useCallback(
+    (cameraId, checked) => {
+      const next = new Set(explicitCameraIds.map((id) => String(id)));
+      if (checked) next.add(String(cameraId));
+      else next.delete(String(cameraId));
+      // Preserve original id types/order by filtering the catalog, never stringifying into the array.
+      const nextIds = animalCameras
+        .filter(
+          (camera) =>
+            !referencedKeys.has(String(camera?.id)) && next.has(String(camera?.id))
+        )
+        .map((camera) => camera.id);
+      onFieldUpdate('cameras_used', nextIds);
+    },
+    [animalCameras, explicitCameraIds, referencedKeys, onFieldUpdate]
+  );
+
+  const camerasUsedSection =
+    animalCameras.length > 0 ? (
+      <section className="cameras-used-section" aria-label="Cameras used this day">
+        <h3>Cameras used this day</h3>
+        <p className="field-help-text">
+          Check the cameras this recording day used. A camera already referenced by a task, video,
+          or FsGUI protocol is used regardless and shown checked.
+        </p>
+        <ul className="cameras-used-list">
+          {animalCameras.map((camera) => {
+            const key = String(camera?.id);
+            const referenced = referencedKeys.has(key);
+            const checked = referenced || explicitKeySet.has(key);
+            const label = `${camera?.camera_name ?? '(unnamed)'} (id ${camera?.id})`;
+            return (
+              <li key={key}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={referenced}
+                    onChange={(e) => handleCameraUsedToggle(camera.id, e.target.checked)}
+                  />
+                  {label}
+                  {referenced && (
+                    <span className="cameras-used-hint"> — used by a task/video</span>
+                  )}
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    ) : null;
 
   // Configuration-version legibility (only when wired with store actions + the
   // animal's days, i.e. inside the real Day Editor — not in isolated unit renders).
@@ -430,6 +506,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
       <div className="devices-step">
         <h2>Devices Configuration</h2>
         {recordingSystemPicker}
+        {camerasUsedSection}
         {overrideCleanupSection}
         <div className="empty-state">
           <p>No electrodes are set up for {ownerKey} yet.</p>
@@ -450,6 +527,8 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
       <h2>Devices Configuration</h2>
 
       {recordingSystemPicker}
+
+      {camerasUsedSection}
 
       {/* This day's relationship to shared animal setup: it USES an animal configuration
           version; probe geometry is edited in the shared animal setup, not here. */}
@@ -650,6 +729,8 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
 DevicesStep.propTypes = {
   animal: PropTypes.shape({
     id: PropTypes.string.isRequired,
+    // Animal-level camera catalog (optional); rendered as the per-day cameras-used checklist.
+    cameras: PropTypes.arrayOf(PropTypes.object),
     devices: PropTypes.shape({
       electrode_groups: PropTypes.arrayOf(
         PropTypes.shape({
