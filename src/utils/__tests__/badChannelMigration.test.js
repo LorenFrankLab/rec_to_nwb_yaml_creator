@@ -520,6 +520,99 @@ describe('migrateBadChannelsToDays — corrupt-container day blocks its snapshot
   });
 });
 
+describe('migrateBadChannelsToDays — corrupt per-value on a based ntrode blocks its snapshot strip', () => {
+  it('a corrupt non-array value on a BASED ntrode stays byte-identical (base NOT stripped)', () => {
+    // The override container is a valid RECORD, but ntrode 1's value is a corrupt
+    // NON-array scalar ('2.9') while its snapshot base is the non-empty array [2].
+    // The UNCHANGED merge DECLINES the non-array override and keeps the base [2].
+    // If the migration strips that base to [], the merge then declines '2.9' and
+    // falls back to the now-empty base → exports [] — the [2] mark is silently LOST.
+    const animal = {
+      id: 'a',
+      subject: { subject_id: 'a', species: 'Rattus norvegicus', sex: 'M' },
+      devices: { data_acq_device: [{ name: 'SpikeGadgets' }], device: { name: ['Trodes'] } },
+      experimenters: { experimenter_name: ['X, Y'], lab: 'Frank', institution: 'UCSF' },
+      cameras: [],
+      configurationHistory: [
+        {
+          version: 1,
+          devices: {
+            electrode_groups: [{ id: 0, location: 'CA1', device_type: 'tetrode_12.5' }],
+            ntrode_electrode_group_channel_map: [
+              { ntrode_id: 1, electrode_group_id: 0, bad_channels: [2], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+            ],
+          },
+        },
+      ],
+    };
+    const day = {
+      id: 'd',
+      animalId: 'a',
+      configurationVersion: 1,
+      session: { session_id: 's', session_description: 'd', experiment_description: 'e' },
+      // Valid record container, but a corrupt NON-array value on the BASED ntrode 1.
+      deviceOverrides: { bad_channels: { 1: '2.9' } },
+    };
+    const workspace = { animals: { a: animal }, days: { d: day } };
+
+    const before = encodeYaml(mergeDayMetadata(animal, day));
+    const migrated = migrateBadChannelsToDays(workspace);
+    const after = encodeYaml(mergeDayMetadata(migrated.animals.a, migrated.days.d));
+    expect(after).toBe(before);
+    // The corrupt value is preserved verbatim (never laundered into [2]).
+    expect(migrated.days.d.deviceOverrides.bad_channels['1']).toBe('2.9');
+    // The snapshot base is left intact (NOT stripped) so the merge keeps exporting [2].
+    const snap = migrated.animals.a.configurationHistory[0];
+    expect(snap.devices.ntrode_electrode_group_channel_map[0].bad_channels).toEqual([2]);
+  });
+
+  it('a corrupt non-array value on an EMPTY-base ntrode does not lose data (byte-identical)', () => {
+    // Here the based ntrode's base is EMPTY ([]). A corrupt non-array override value
+    // ('2.9') is still declined by the merge → effective is [] either way. Stripping
+    // an already-empty base is a no-op, so byte-identity must hold regardless of
+    // whether the snapshot is blocked (over-blocking here is acceptable).
+    const animal = {
+      id: 'a',
+      subject: { subject_id: 'a', species: 'Rattus norvegicus', sex: 'M' },
+      devices: { data_acq_device: [{ name: 'SpikeGadgets' }], device: { name: ['Trodes'] } },
+      experimenters: { experimenter_name: ['X, Y'], lab: 'Frank', institution: 'UCSF' },
+      cameras: [],
+      configurationHistory: [
+        {
+          version: 1,
+          devices: {
+            electrode_groups: [
+              { id: 0, location: 'CA1', device_type: 'tetrode_12.5' },
+              { id: 1, location: 'CA1', device_type: 'tetrode_12.5' },
+            ],
+            ntrode_electrode_group_channel_map: [
+              // ntrode 1: EMPTY base, corrupt override value.
+              { ntrode_id: 1, electrode_group_id: 0, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+              // ntrode 2: non-empty base, no override → must still move down cleanly.
+              { ntrode_id: 2, electrode_group_id: 1, bad_channels: [3], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+            ],
+          },
+        },
+      ],
+    };
+    const day = {
+      id: 'd',
+      animalId: 'a',
+      configurationVersion: 1,
+      session: { session_id: 's', session_description: 'd', experiment_description: 'e' },
+      deviceOverrides: { bad_channels: { 1: '2.9' } },
+    };
+    const workspace = { animals: { a: animal }, days: { d: day } };
+
+    const before = encodeYaml(mergeDayMetadata(animal, day));
+    const migrated = migrateBadChannelsToDays(workspace);
+    const after = encodeYaml(mergeDayMetadata(migrated.animals.a, migrated.days.d));
+    expect(after).toBe(before);
+    // The corrupt value is preserved verbatim.
+    expect(migrated.days.d.deviceOverrides.bad_channels['1']).toBe('2.9');
+  });
+});
+
 describe('normalizeWorkspaceDevices runs the migration at load', () => {
   it('a loaded realistic workspace exports byte-identical to its pre-load merge', () => {
     const { workspace } = realisticWorkspace();
