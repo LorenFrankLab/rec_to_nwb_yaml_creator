@@ -1,0 +1,156 @@
+/* ImportYamlDialog layout. Button styling (.btn-primary / .btn-secondary) is shared from
+   AnimalWorkspace.css; this file owns only the import-specific structure. */
+
+.import-yaml-dialog {
+  max-width: 640px;
+  width: 100%;
+}
+
+.import-pick code {
+  font-size: 0.85em;
+  background: #f0f0f0;
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+}
+
+.import-drop-zone {
+  border: 2px dashed #b0b0b0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  margin: 1rem 0;
+  background: #fafafa;
+}
+
+.import-drop-zone.is-dragging {
+  border-color: #2a6db5;
+  background: #eef5fc;
+}
+
+.import-drop-or {
+  color: #777;
+  margin: 0.5rem 0;
+}
+
+.import-file-label {
+  display: inline-block;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid #2a6db5;
+  border-radius: 4px;
+  color: #2a6db5;
+  cursor: pointer;
+}
+
+/* The native file input is visually hidden but accessible (label + aria-label drive it). */
+.import-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.import-summary {
+  font-weight: 600;
+}
+
+.import-animal-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.import-animal-card {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+}
+
+.import-animal-name {
+  margin: 0 0 0.25rem;
+  font-size: 1.1rem;
+}
+
+.import-animal-meta {
+  margin: 0 0 0.5rem;
+  color: #444;
+}
+
+.import-config-versions {
+  margin: 0 0 0.5rem;
+  padding-left: 1.25rem;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.import-divergences {
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+}
+
+.import-divergences li {
+  background: #fff7e6;
+  border-left: 3px solid #e0a106;
+  padding: 0.4rem 0.6rem;
+  margin-bottom: 0.3rem;
+  border-radius: 3px;
+  font-size: 0.9rem;
+}
+
+.import-resolution {
+  border: 1px solid #d99;
+  background: #fdf2f2;
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.import-resolution legend {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.import-resolution-option {
+  display: block;
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+}
+
+.import-unimportable {
+  margin-top: 1rem;
+  border: 1px solid #d99;
+  background: #fdf2f2;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+}
+
+.import-unimportable h3 {
+  margin: 0.5rem 0;
+  font-size: 1rem;
+}
+
+.import-unimportable ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.import-unimportable-name {
+  font-weight: 600;
+  margin-right: 0.5rem;
+}
+
+.import-unimportable-reason {
+  color: #a33;
+}
+
+.import-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
