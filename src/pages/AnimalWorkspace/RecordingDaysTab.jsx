@@ -16,11 +16,21 @@ import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import {
+  getAnimalCameras,
+  getAnimalDevices,
+  getAnimalElectrodeGroups,
+  getAnimalNtrodeMaps,
   getAnimalSubject,
   getConfigHistory,
+  getDataAcqDevices,
   getDaySession,
   getMostRecentDayId,
 } from '../../state/workspaceSelectors';
+import {
+  normalizeElectrodeGroupWithDefaults,
+  normalizeNtrodeMapWithDefaults,
+} from '../../utils/deviceNormalization';
+import CopyFromAnimalDialog from '../AnimalEditor/CopyFromAnimalDialog';
 import { getDayRowStatus } from '../../domain/workflowStatus';
 import { getAnimalSectionStatus, getAnimalBlockingSections, SECTION_STATUS } from '../../domain/sectionStatus';
 import {
@@ -84,6 +94,10 @@ export function RecordingDaysTab({ animalId }) {
   // (tasks, behavioral events, keywords, technical params, experiment description, weight) from
   // the animal's most recent existing day — reviewable per day. Opt out to start blank.
   const [carryForward, setCarryForward] = useState(true);
+  // Whether the "Copy from another animal…" dialog is open. The shared hardware (electrode groups,
+  // cameras, recording system) a lab uses is the same across animals, so a new/under-configured
+  // animal can seed its catalogs from another animal here.
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
 
   const { animals = {}, days = {} } = model.workspace;
 
@@ -249,9 +263,63 @@ export function RecordingDaysTab({ animalId }) {
       .filter(Boolean);
   }
 
+  /**
+   * Apply a copy-from-animal payload to the selected animal in ONE store update. The payload (from
+   * {@link CopyFromAnimalDialog}) carries only the checked sections. Electrode groups/maps are
+   * appended to the animal's existing catalogs and re-normalized exactly like the Electrode Groups
+   * tab does; the recording-system catalog is appended; cameras are appended. The common case is a
+   * fresh/under-configured target with empty catalogs, where appending equals replacing.
+   *
+   * @param {object} payload - `{ electrode_groups?, ntrode_electrode_group_channel_map?, cameras?, data_acq_device? }`.
+   */
+  function handleCopyConfirm(payload) {
+    const update = {};
+
+    const hasDeviceSection =
+      Array.isArray(payload.electrode_groups) ||
+      Array.isArray(payload.ntrode_electrode_group_channel_map) ||
+      Array.isArray(payload.data_acq_device);
+
+    if (hasDeviceSection) {
+      const devices = { ...getAnimalDevices(selectedAnimal) };
+
+      if (Array.isArray(payload.electrode_groups)) {
+        devices.electrode_groups = [
+          ...getAnimalElectrodeGroups(selectedAnimal),
+          ...payload.electrode_groups,
+        ].map(normalizeElectrodeGroupWithDefaults);
+      }
+      if (Array.isArray(payload.ntrode_electrode_group_channel_map)) {
+        devices.ntrode_electrode_group_channel_map = [
+          ...getAnimalNtrodeMaps(selectedAnimal),
+          ...payload.ntrode_electrode_group_channel_map,
+        ].map(normalizeNtrodeMapWithDefaults);
+      }
+      if (Array.isArray(payload.data_acq_device)) {
+        devices.data_acq_device = [
+          ...getDataAcqDevices(selectedAnimal),
+          ...payload.data_acq_device,
+        ];
+      }
+
+      update.devices = devices;
+    }
+
+    if (Array.isArray(payload.cameras)) {
+      update.cameras = [...getAnimalCameras(selectedAnimal), ...payload.cameras];
+    }
+
+    actions.updateAnimal(selectedAnimalId, update);
+    setCopyDialogOpen(false);
+  }
+
   // The host renders this only for a present animal; guard defensively so a stale/cold id
   // resolves to nothing rather than crashing on `selectedAnimal.id`.
   if (!selectedAnimal) return null;
+
+  // Whether there is at least one OTHER animal whose shared hardware could be copied here.
+  const hasOtherAnimals =
+    Object.keys(animals).filter((id) => id !== selectedAnimalId).length > 0;
 
   return (
     <>
@@ -329,6 +397,16 @@ export function RecordingDaysTab({ animalId }) {
                     reference. Add only what your recordings use — a behavior-only day needs no
                     electrodes, and each section is referenced per day.
                   </p>
+                  {hasOtherAnimals && (
+                    <button
+                      type="button"
+                      className="setup-card-copy-button button-secondary"
+                      onClick={() => setCopyDialogOpen(true)}
+                      aria-label="Copy from another animal — electrode groups, cameras, recording system"
+                    >
+                      Copy from another animal…
+                    </button>
+                  )}
                   <ul className="setup-card-list">
                     {SETUP_CARD_SECTIONS.map((section) => {
                       // Three honest states that AGREE with the section-nav (decision 11): a section
@@ -675,6 +753,14 @@ export function RecordingDaysTab({ animalId }) {
           </div>
         </form>
       </Modal>
+
+      <CopyFromAnimalDialog
+        open={copyDialogOpen}
+        currentAnimalId={selectedAnimalId}
+        animals={animals}
+        onCopy={handleCopyConfirm}
+        onCancel={() => setCopyDialogOpen(false)}
+      />
     </>
   );
 }

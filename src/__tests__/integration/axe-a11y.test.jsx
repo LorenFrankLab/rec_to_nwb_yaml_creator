@@ -134,7 +134,7 @@ describe('axe-a11y (configured workspace, all routes)', () => {
           onCancel={() => {}}
         />
       );
-      await screen.findByRole('dialog', { name: /copy electrode groups/i });
+      await screen.findByRole('dialog', { name: /copy from animal/i });
       await expectNoViolations(container);
     });
 

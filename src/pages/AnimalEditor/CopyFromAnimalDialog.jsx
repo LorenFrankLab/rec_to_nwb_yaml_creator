@@ -118,7 +118,8 @@ export default function CopyFromAnimalDialog({
 
   /**
    * Whether a source animal has content for ANY offerable section (so it can be selected).
-   * @param animal
+   * @param {object} animal - A source-animal descriptor.
+   * @returns {boolean}
    */
   function animalHasAnyContent(animal) {
     return offerableSections.some((s) => sectionHasContent(animal, s));
@@ -131,11 +132,11 @@ export default function CopyFromAnimalDialog({
     [offerableSections, selectedAnimal]
   );
 
-  // Whether a section is checked. Until the user toggles, all offerable-with-content sections
-  // default checked (checkedSections === null means "defaults").
   /**
-   *
-   * @param section
+   * Whether a section is checked. Until the user toggles, all offerable-with-content sections
+   * default checked (checkedSections === null means "defaults").
+   * @param {string} section - A section key.
+   * @returns {boolean}
    */
   function isChecked(section) {
     if (checkedSections === null) return true;

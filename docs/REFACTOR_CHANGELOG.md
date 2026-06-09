@@ -4,6 +4,27 @@
 
 **Last Updated:** June 8, 2026
 
+## Copy from another animal — cameras + recording system (June 8, 2026)
+
+"Copy from animal" now covers an animal's **cameras** catalog and **recording-system**
+(`data_acq_device`) catalog in addition to electrode groups + channel maps — a lab's rig is shared
+across animals. A generalized "Copy from another animal…" control on the **"Set up this animal"**
+setup card (Recording Days tab) opens the dialog; on confirm it writes ALL checked catalogs to the
+target animal in a **single** `updateAnimal` update.
+
+- **Section checklist:** the dialog offers a per-source checklist of the sections the selected source
+  actually has content for ("Electrode groups + channel maps", "Cameras", "Recording system"), all
+  checked by default; only the checked sections are copied. Electrode groups/maps keep the exact
+  new-id remapping; cameras and recording-system devices are **deep-cloned** (`structuredClone`) as-is.
+- **Identity-guarded:** before emitting, every copied camera/data-acq name is checked against the rest
+  of the workspace. A name reused elsewhere with **different** dependent fields (a Spyglass identity
+  divergence) surfaces an `identity-divergence` alert listing the conflicting name(s) + differing
+  fields and **blocks the whole copy** — no divergent name is written.
+- **Existing electrode host unchanged:** the Electrode Groups tab's "Copy from animal" button pins to
+  electrodes-only (`availableSections={['electrode_groups']}`), preserving its wording and behavior.
+- **Merge-neutral:** copied catalogs are animal-level data that already flow through the unchanged
+  `mergeDayMetadata` → `encodeYaml` export seam, so the golden baselines stay **byte-identical**.
+
 ## Duplicate day (June 8, 2026)
 
 An existing recording day can now be **duplicated to a new date** ("same protocol, next session")
