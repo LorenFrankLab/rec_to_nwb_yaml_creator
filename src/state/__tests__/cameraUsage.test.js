@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   referencedCameraKeys,
+  inferredCameraKeys,
   resolveDayCameraUsage,
   findCameraAffectedDays,
 } from '../cameraUsage';
@@ -60,6 +61,31 @@ describe('referencedCameraKeys', () => {
   it('tolerates a non-array cameras_used (no throw, adds nothing)', () => {
     expect([...referencedCameraKeys({ cameras_used: 'nope' })]).toEqual([]);
     expect([...referencedCameraKeys({ cameras_used: 5 })]).toEqual([]);
+  });
+});
+
+describe('inferredCameraKeys vs referencedCameraKeys (the split)', () => {
+  it('inferredCameraKeys does NOT include cameras_used ids while referencedCameraKeys DOES', () => {
+    // A camera present ONLY in the explicit cameras_used set (no task/video/fs-gui reference).
+    const day = { cameras_used: [2] };
+    expect([...inferredCameraKeys(day)]).toEqual([]); // inferred = task/video/fs-gui only
+    expect([...referencedCameraKeys(day)]).toEqual(['2']); // referenced = inferred ∪ explicit
+  });
+
+  it('inferredCameraKeys still collects task/video/fs-gui references', () => {
+    const day = {
+      tasks: [{ camera_id: [0] }],
+      associated_video_files: [{ camera_id: 1 }],
+      fs_gui_yamls: [{ camera_id: 2 }],
+      cameras_used: [3],
+    };
+    expect([...inferredCameraKeys(day)].sort()).toEqual(['0', '1', '2']); // 3 excluded
+    expect([...referencedCameraKeys(day)].sort()).toEqual(['0', '1', '2', '3']);
+  });
+
+  it('inferredCameraKeys is shape-tolerant like referencedCameraKeys', () => {
+    expect([...inferredCameraKeys({})]).toEqual([]);
+    expect([...inferredCameraKeys(null)]).toEqual([]);
   });
 });
 

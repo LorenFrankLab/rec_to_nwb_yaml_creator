@@ -159,6 +159,58 @@ describe('DevicesStep', () => {
       await user.click(screen.getByRole('checkbox', { name: /overhead/i }));
       expect(mockOnFieldUpdate).toHaveBeenCalledWith('cameras_used', [2]);
     });
+
+    it('shows a pre-existing explicit (non-referenced) camera as checked AND enabled, no task/video hint', () => {
+      const dayWithExplicit = { ...mockDay, cameras_used: [2] };
+      render(
+        <DevicesStep
+          animal={animalWithCameras}
+          day={dayWithExplicit}
+          mergedDay={mockMergedDay}
+          onFieldUpdate={mockOnFieldUpdate}
+        />
+      );
+      const explicit = screen.getByRole('checkbox', { name: /overhead/i });
+      expect(explicit).toBeChecked();
+      // It is NOT task-referenced, so it must remain uncheckable (enabled) and unlabeled.
+      expect(explicit).toBeEnabled();
+      expect(screen.queryByText(/used by a task\/video/i)).not.toBeInTheDocument();
+    });
+
+    it('unchecking a pre-existing explicit camera writes cameras_used as []', async () => {
+      const user = userEvent.setup();
+      const dayWithExplicit = { ...mockDay, cameras_used: [2] };
+      render(
+        <DevicesStep
+          animal={animalWithCameras}
+          day={dayWithExplicit}
+          mergedDay={mockMergedDay}
+          onFieldUpdate={mockOnFieldUpdate}
+        />
+      );
+      await user.click(screen.getByRole('checkbox', { name: /overhead/i }));
+      expect(mockOnFieldUpdate).toHaveBeenCalledWith('cameras_used', []);
+    });
+
+    it('excludes a task-referenced camera id from the explicit cameras_used write', async () => {
+      const user = userEvent.setup();
+      // Camera A (id 0, "box") is task-referenced (checked+disabled); camera B (id 2, "overhead")
+      // is free. Toggling B on must write only [2] — A's id is covered by the union, not stored.
+      const dayWithTaskA = { ...mockDay, tasks: [{ camera_id: [0] }] };
+      render(
+        <DevicesStep
+          animal={animalWithCameras}
+          day={dayWithTaskA}
+          mergedDay={mockMergedDay}
+          onFieldUpdate={mockOnFieldUpdate}
+        />
+      );
+      const referencedA = screen.getByRole('checkbox', { name: /box/i });
+      expect(referencedA).toBeChecked();
+      expect(referencedA).toBeDisabled();
+      await user.click(screen.getByRole('checkbox', { name: /overhead/i }));
+      expect(mockOnFieldUpdate).toHaveBeenCalledWith('cameras_used', [2]);
+    });
   });
 
   it('renders section heading', () => {

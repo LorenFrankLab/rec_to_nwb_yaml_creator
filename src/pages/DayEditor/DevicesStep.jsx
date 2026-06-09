@@ -7,7 +7,7 @@ import DayRecordingSystem from './DayRecordingSystem';
 import { reconcileAppliedToDays } from '../../state/configDiff';
 import { resolveDayConfig } from '../../state/workspaceUtils';
 import { getConfigHistory, getDataAcqDevices, getAnimalCameras } from '../../state/workspaceSelectors';
-import { referencedCameraKeys } from '../../state/cameraUsage';
+import { inferredCameraKeys } from '../../state/cameraUsage';
 import { rawRecord } from '../../components/rawPropTypes';
 import { isMultiShankGroup, validBadChannelIds } from '../../domain/badChannels';
 import { classifyDeviceOverrides } from '../../domain/deviceOverrides';
@@ -79,13 +79,16 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
     />
   );
 
-  // Per-day "cameras used" checklist. A camera REFERENCED by a task/video/fs-gui row is used
-  // regardless (shown checked + disabled). A non-referenced camera is a free checkbox whose
-  // checked state = its id is in the explicit `day.cameras_used` set. Toggling writes ONLY the
-  // explicit additions (referenced cameras are covered by the union and need not be stored), so
+  // Per-day "cameras used" checklist. A camera INFERRED-referenced by a task/video/fs-gui row is
+  // used regardless (shown checked + disabled — it cannot be unchecked here). A non-inferred camera
+  // is a free checkbox whose checked state = its id is in the explicit `day.cameras_used` set, and
+  // it stays ENABLED so the user can toggle it. The disabled/hint decision MUST use the INFERRED
+  // set (not the export union, which folds in `cameras_used`) — otherwise checking a free camera
+  // would immediately disable it and the user could never uncheck it. Toggling writes ONLY the
+  // explicit additions (inferred cameras are covered by the union and need not be stored), so
   // `cameras_used` stays absent/empty for all existing data and the export stays byte-identical.
   const animalCameras = getAnimalCameras(animal);
-  const referencedKeys = useMemo(() => referencedCameraKeys(day), [day]);
+  const referencedKeys = useMemo(() => inferredCameraKeys(day), [day]);
   const explicitCameraIds = useMemo(
     () => (Array.isArray(day.cameras_used) ? day.cameras_used : []),
     [day.cameras_used]
@@ -764,6 +767,10 @@ DevicesStep.propTypes = {
     // detects and offers removal for each. rawRecord tolerates a non-record (scalar/array)
     // value too, so the PropType never warns on the corruption it exists to surface.
     deviceOverrides: rawRecord({}),
+    // The explicit per-day "cameras used" checklist set (optional). Holds catalog camera ids of
+    // cameras the day used but that are NOT inferred from a task/video/fs-gui row. Ids preserve
+    // their source type (numeric or string from a corrupt import).
+    cameras_used: PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.number, PropTypes.string])),
   }).isRequired,
   mergedDay: PropTypes.object.isRequired,
   onFieldUpdate: PropTypes.func.isRequired,

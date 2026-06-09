@@ -508,6 +508,38 @@
   color: var(--color-grey-900);
 }
 
+/* Cameras-used checklist (per-day camera selection) */
+.cameras-used-section {
+  margin-top: var(--spacing-lg);
+}
+
+.cameras-used-list {
+  list-style: none;
+  margin: var(--spacing-sm) 0 0;
+  padding: 0;
+}
+
+.cameras-used-list li {
+  margin-bottom: var(--spacing-xs);
+}
+
+.cameras-used-list label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  cursor: pointer;
+}
+
+.cameras-used-list input[disabled] + * {
+  cursor: default;
+}
+
+.cameras-used-hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-grey-600);
+  font-style: italic;
+}
+
 /* Electrode Groups Section */
 .electrode-groups-section {
   margin-top: var(--spacing-lg);

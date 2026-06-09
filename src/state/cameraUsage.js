@@ -32,16 +32,18 @@ function cameraKey(id) {
 }
 
 /**
- * The set of camera-id keys a single day references, across tasks (array `camera_id`), associated
- * video files (scalar), FsGUI protocols (scalar), and the explicit `day.cameras_used` set (UNIONed
- * on top — an additive, glanceable day-level checklist). Shape-tolerant: non-array collections and
- * null/undefined ids are skipped, never thrown on. With `cameras_used` absent (all existing data)
- * the union adds nothing, so the exported camera set is unchanged.
+ * The set of camera-id keys a single day INFERS from its task/video/fs-gui rows: tasks (array
+ * `camera_id`), associated video files (scalar `camera_id`), and FsGUI protocols (scalar
+ * `camera_id`). This is the "the day demonstrably used this camera" set — it does NOT include the
+ * explicit `day.cameras_used` checklist set. Use this (not `referencedCameraKeys`) to decide which
+ * cameras-used checkboxes are non-negotiable (rendered checked + disabled): a user must be able to
+ * uncheck a camera they only explicitly added, so the disabled decision must ignore `cameras_used`.
+ * Shape-tolerant: non-array collections and null/undefined ids are skipped, never thrown on.
  *
  * @param {object} day - A recording-day record.
- * @returns {Set<string>} Normalized camera-id keys.
+ * @returns {Set<string>} Normalized camera-id keys inferred from task/video/fs-gui references.
  */
-export function referencedCameraKeys(day) {
+export function inferredCameraKeys(day) {
   const keys = new Set();
   const add = (id) => {
     const key = cameraKey(id);
@@ -65,10 +67,30 @@ export function referencedCameraKeys(day) {
   const fsGui = Array.isArray(day?.fs_gui_yamls) ? day.fs_gui_yamls : [];
   for (const protocol of fsGui) add(protocol?.camera_id);
 
+  return keys;
+}
+
+/**
+ * The set of camera-id keys a single day references for EXPORT: the inferred references
+ * (`inferredCameraKeys`) UNIONed with the explicit `day.cameras_used` set (an additive, glanceable
+ * day-level checklist). Shape-tolerant. With `cameras_used` absent (all existing data) the union
+ * adds nothing, so the exported camera set is unchanged. This is the export/blast-radius set — for
+ * the cameras-used CHECKBOX disabled/hint decision use `inferredCameraKeys` instead, so an
+ * explicitly-added camera stays uncheckable.
+ *
+ * @param {object} day - A recording-day record.
+ * @returns {Set<string>} Normalized camera-id keys.
+ */
+export function referencedCameraKeys(day) {
+  const keys = inferredCameraKeys(day);
+
   // UNION the explicit per-day "cameras used" set on top of the inferred references. For existing
   // data (`cameras_used` absent/non-array) this adds nothing, so the export is identical to today.
   const explicit = Array.isArray(day?.cameras_used) ? day.cameras_used : [];
-  explicit.forEach(add);
+  for (const id of explicit) {
+    const key = cameraKey(id);
+    if (key !== null) keys.add(key);
+  }
 
   return keys;
 }
