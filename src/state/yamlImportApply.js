@@ -9,7 +9,8 @@
  *   - `createConfigurationSnapshotAndApplyForward` appends each later config version and
  *     re-pins the days that use it (atomic),
  *   - `updateDay` writes the day-owned content `createDay` does not take (tasks, files,
- *     behavioral_events, fs_gui_yamls, technical, keywords, data_acq_device_name, cameras_used).
+ *     behavioral_events, fs_gui_yamls, technical, keywords, data_acq_device_name, cameras_used,
+ *     deviceOverrides — the day-owned bad-channel marks).
  *
  * Conflict animals (already in the workspace) follow the caller's per-subject resolution:
  * `'add'` (default) layers the plan's days onto the existing animal, `'skip'` writes nothing,
@@ -283,5 +284,10 @@ function dayOwnedUpdates(day) {
     technical: day.technical,
     data_acq_device_name: day.data_acq_device_name,
     cameras_used: day.cameras_used,
+    // Bad channels are DAY-OWNED: write the per-ntrode override onto the day so the
+    // export merge (`resolveDayConfig`, which reads the day override ONLY) preserves
+    // them immediately — no reliance on the load-time base→day migration. Undefined
+    // when the source carried no marks; `applyDayUpdates` ignores a falsy value.
+    deviceOverrides: day.deviceOverrides,
   };
 }

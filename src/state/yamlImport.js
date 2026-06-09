@@ -86,8 +86,10 @@ function decomposeOptogenetics(flatModel) {
  *   data_acq_device catalog / cameras / device / optogenetics (null when absent).
  * - dayFacts ← session (description, id, experiment_description, weight) / keywords /
  *   tasks / associated_files / associated_video_files / behavioral_events / technical
- *   params / fs_gui_yamls (DAY-owned) / data_acq_device_name / cameras_used.
- * - configuration ← electrode_groups + ntrode_electrode_group_channel_map.
+ *   params / fs_gui_yamls (DAY-owned) / data_acq_device_name / cameras_used /
+ *   deviceOverrides.bad_channels (DAY-owned — extracted from the ntrode rows).
+ * - configuration ← electrode_groups + ntrode_electrode_group_channel_map (with
+ *   bad_channels emptied — they are day-owned, not snapshot-base).
  *
  * @param {object} flatModel - Decoded flat YAML metadata (a `mergeDayMetadata` output).
  * @returns {{ ok: true, subjectId: (string|undefined), animalFacts: object, dayFacts: object, configuration: object }
@@ -107,6 +109,27 @@ export function decomposeYaml(flatModel) {
   const model = structuredClone(flatModel);
 
   const subjectId = model.subject?.subject_id;
+
+  // Bad channels are DAY-OWNED: the export merge (`resolveDayConfig`) reads each
+  // ntrode's effective `bad_channels` from `day.deviceOverrides.bad_channels`
+  // ONLY — never from the config-snapshot base. Attribute the flat model's marks
+  // to the day override up front (keyed by `ntrode_id`, only non-empty arrays get
+  // an entry) and EMPTY the snapshot base rows, so the recomposed model is
+  // self-consistent without depending on the load-time base→day migration. This
+  // matches the post-migration shape the merge expects.
+  const importedNtrodes = Array.isArray(model.ntrode_electrode_group_channel_map)
+    ? model.ntrode_electrode_group_channel_map
+    : [];
+  const dayBadChannels = {};
+  for (const ntrode of importedNtrodes) {
+    if (ntrode === null || typeof ntrode !== 'object') continue;
+    const marks = ntrode.bad_channels;
+    if (Array.isArray(marks) && marks.length > 0) {
+      dayBadChannels[String(ntrode.ntrode_id)] = [...marks];
+    }
+    // Strip the base row's marks so the config snapshot carries none (day-owned).
+    ntrode.bad_channels = [];
+  }
 
   // The animal's data_acq_device CATALOG is the one device the flat model carries
   // (the merge exports exactly one); the day references it by name. Keep both in
@@ -160,6 +183,11 @@ export function decomposeYaml(flatModel) {
     // cameras_used pins exactly the exported camera set in catalog order (landmine 3),
     // so `resolveDayCameraUsage` re-emits exactly these cameras.
     cameras_used: (model.cameras ?? []).map((camera) => camera.id),
+    // Bad channels are DAY-OWNED (the merge reads only the day override). Carry the
+    // per-ntrode marks extracted above; `undefined` when none so recompose can omit
+    // an empty override entirely.
+    deviceOverrides:
+      Object.keys(dayBadChannels).length > 0 ? { bad_channels: dayBadChannels } : undefined,
   };
 
   const configuration = {
@@ -193,6 +221,9 @@ export function decomposeYaml(flatModel) {
  *     genuine merge output.
  *  8. Omitted-when-empty fields (`keywords`/`units`/`default_header_file_path`) are passed
  *     through so the merge re-omits them.
+ *  9. `bad_channels` are DAY-OWNED on `day.deviceOverrides.bad_channels` (keyed by
+ *     `ntrode_id`); the snapshot base rows are empty. The merge reads the day override
+ *     only, so this reproduces the source marks without the load-time migration.
  *
  * Precondition: pass a SUCCESSFUL ({@link decomposeYaml} `ok: true`) result. A
  * failed result (`ok: false`) is rejected up front with a clear error rather than
@@ -260,6 +291,13 @@ export function recomposeDayModel(decomposed) {
     cameras_used: dayFacts.cameras_used,
     configurationVersion: 1,
   };
+
+  // Bad channels are DAY-OWNED (landmine 9): the merge reads `bad_channels` from the
+  // day override ONLY, so place the decomposed per-ntrode marks here. Omitted when
+  // the source carried none, so the override stays absent (and the merge re-emits []).
+  if (dayFacts.deviceOverrides) {
+    day.deviceOverrides = dayFacts.deviceOverrides;
+  }
 
   return { animal, day };
 }

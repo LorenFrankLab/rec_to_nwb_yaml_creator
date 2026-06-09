@@ -110,6 +110,8 @@ function toIsoDate(yyyy, mm, dd) {
  * @property {object} technical
  * @property {(string|undefined)} data_acq_device_name
  * @property {number[]} cameras_used
+ * @property {({ bad_channels: Record<string, number[]> }|undefined)} deviceOverrides - Day-owned
+ *   bad-channel override (keyed by ntrode_id), or undefined when the source carried none.
  * @property {number} configurationVersion - Which configVersion this day pins.
  */
 
@@ -379,6 +381,12 @@ function buildPlanDay(entry, configurationVersion) {
     technical: structuredClone(dayFacts.technical ?? {}),
     data_acq_device_name: dayFacts.data_acq_device_name,
     cameras_used: structuredClone(dayFacts.cameras_used ?? []),
+    // Bad channels are DAY-OWNED — carry the decomposed per-ntrode override so the
+    // executor writes it onto the day (the export merge reads it from there only).
+    // Omitted (undefined) when the source carried no marks.
+    deviceOverrides: dayFacts.deviceOverrides
+      ? structuredClone(dayFacts.deviceOverrides)
+      : undefined,
     configurationVersion,
   };
 }
