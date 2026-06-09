@@ -2,7 +2,34 @@
 
 **Purpose:** Track all changes made during the refactoring milestones.
 
-**Last Updated:** June 8, 2026
+**Last Updated:** June 9, 2026
+
+## Bad channels are day-owned, carried forward, and monotonic (June 9, 2026)
+
+Split bad-channel ownership out of the animal hardware configuration and down to the recording day.
+The **exported YAML is byte-identical** for existing data (`bad_channels` still on the ntrode rows in the
+output); only the app's internal ownership + editing model changed.
+
+- **Day-owned storage.** A channel is now marked failed *per recording day* in the Day Editor's "Failed
+  Channels", stored at `day.deviceOverrides.bad_channels`. The animal-level **Channel Maps tab is now
+  wiring/mapping only** — it no longer edits bad channels and no longer carries a per-config "baseline".
+- **Load-time migration.** Legacy marks living on the configuration-snapshot bases are migrated down to the
+  owning days at load, so existing workspaces re-export byte-for-byte identically (no YAML diff).
+- **Export merge reads the day override ONLY.** `mergeDayMetadata` resolves each day's day-owned bad-channel
+  set into the ntrode rows it writes — the only source of truth for export.
+- **Config-version-guarded carry-forward.** Creating a new day seeds its marks from the prior
+  same-`configurationVersion` day (a probe reconfiguration legitimately resets channels, so different
+  versions are never compared); the user can then add the newly-failed channels.
+- **Monotonic enforcement.** Bad channels accumulate across same-config days. Un-marking a channel that was
+  bad on an earlier same-config day triggers an in-context confirm and records an off-export acknowledgment
+  in `day.state.badChannelRemovalAcks` (which the export merge never reads, so an ack clears the block
+  without altering the YAML). An **unacknowledged regression blocks export** via the
+  `bad_channel_unfailed_without_ack` validation rule. Pure helpers in
+  `src/domain/badChannelMonotonicity.js` are shared by the confirm UI and the export-block rule.
+- **Perf note.** The recording-days list computes each row's monotonicity status by reducing the animal's
+  same-config days (`priorBadChannels`); the list's `selectedAnimalDays` input is now memoized so it is built
+  once per data change instead of per row. The per-row prior-set reduction remains O(days); a future pass
+  could precompute one cumulative per-version prior-bad map for very long (200+ day) chronic studies.
 
 ## YAML import UI — pick → preview → confirm on the workspace (June 8, 2026)
 

@@ -40,6 +40,20 @@ What it does:
 > device the existing animal doesn't have, that gap is surfaced later as an export check, so you can
 > reconcile the catalogs first.
 
+## Marking bad channels
+
+Bad (failed) channels are marked **per recording day** in the Day Editor, under **Failed Channels** —
+not on the animal-level Channel Maps tab (which is for wiring/mapping only).
+
+- **A new day starts from the previous day's marks.** When you add a recording day, it carries forward the
+  failed channels from the most recent earlier day that used the **same hardware configuration**, so you
+  only need to add channels that **newly** failed. (A probe reconfiguration starts a fresh configuration,
+  so its days do not inherit the old configuration's marks.)
+- **Bad channels accumulate (they don't heal).** A channel that failed on an earlier day stays failed on
+  later same-configuration days. If you **un-mark** a channel that was failed on an earlier day, the app
+  asks you to confirm — and until you either restore the mark or acknowledge the removal, that day **cannot
+  be exported**.
+
 ## Requirements
 
 - **Node.js `20.19.5`** — the version pinned in [`.nvmrc`](.nvmrc). Other Node majors are untested
