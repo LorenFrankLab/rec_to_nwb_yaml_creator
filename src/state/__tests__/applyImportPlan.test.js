@@ -63,7 +63,9 @@ describe('applyImportPlan — fresh import', () => {
     const { result } = renderHook(() => useStore());
     let summary;
     act(() => {
-      summary = applyImportPlan(plan, result.current.actions);
+      summary = applyImportPlan(plan, result.current.actions, {
+        workspace: result.current.model.workspace,
+      });
     });
 
     expect(summary.createdAnimals).toEqual(['remy']);
@@ -99,7 +101,10 @@ describe('applyImportPlan — conflict resolutions', () => {
 
     let summary;
     act(() => {
-      summary = applyImportPlan(plan, result.current.actions, { remy: 'skip' });
+      summary = applyImportPlan(plan, result.current.actions, {
+        workspace: result.current.model.workspace,
+        resolutions: { remy: 'skip' },
+      });
     });
 
     expect(summary.skipped).toEqual(['remy']);
@@ -120,7 +125,10 @@ describe('applyImportPlan — conflict resolutions', () => {
 
     let summary;
     act(() => {
-      summary = applyImportPlan(plan, result.current.actions, { remy: 'add' });
+      summary = applyImportPlan(plan, result.current.actions, {
+        workspace: result.current.model.workspace,
+        resolutions: { remy: 'add' },
+      });
     });
 
     expect(summary.createdAnimals).toEqual([]);
@@ -143,7 +151,10 @@ describe('applyImportPlan — conflict resolutions', () => {
 
     let summary;
     act(() => {
-      summary = applyImportPlan(plan, result.current.actions, { remy: 'replace' });
+      summary = applyImportPlan(plan, result.current.actions, {
+        workspace: result.current.model.workspace,
+        resolutions: { remy: 'replace' },
+      });
     });
 
     expect(summary.createdAnimals).toEqual(['remy']);
@@ -154,11 +165,61 @@ describe('applyImportPlan — conflict resolutions', () => {
   });
 });
 
-describe('applyImportPlan — resilience', () => {
-  it('records a per-animal failure (synchronous action error) without aborting the others', () => {
-    // `actions` is an injected dependency of applyImportPlan. Stub one whose createAnimal
-    // throws SYNCHRONOUSLY for 'remy' but succeeds for 'totoro', to prove the executor
-    // isolates a per-animal failure (catch + record) and still applies the rest.
+describe('applyImportPlan — resilience (real store)', () => {
+  it("conflict→'add' day-id collision is pre-flighted: the colliding animal is recorded in failed (no uncaught throw) and the clean animal still imports", () => {
+    // Drive the REAL store (not a synchronous stub). Seed an animal + a day so that one
+    // planned animal ('remy', conflict→'add') will collide on a duplicate day id — which
+    // would make `createDay` throw INSIDE its setWorkspace reducer (escaping the synchronous
+    // try/catch and crashing the render) if it were issued. Pre-flight must catch it first.
+    const { result } = renderHook(() => useStore());
+    act(() => {
+      result.current.actions.createAnimal('remy', { subject_id: 'remy' });
+      result.current.actions.createDay('remy', '2023-06-22', { session_id: 'seeded' });
+    });
+
+    // Plan: the colliding 'remy' day AND a second, clean animal ('totoro').
+    const plan = planImport(
+      [
+        makeFile({ subjectId: 'remy', date: '2023-06-22' }),
+        makeFile({ subjectId: 'totoro', date: '2024-01-15' }),
+      ],
+      result.current.model.workspace
+    );
+
+    let summary;
+    // MUST NOT throw/crash the render.
+    act(() => {
+      summary = applyImportPlan(plan, result.current.actions, {
+        workspace: result.current.model.workspace,
+        resolutions: { remy: 'add' },
+      });
+    });
+
+    // The colliding animal is recorded as failed with a clear reason, and SKIPPED.
+    expect(summary.failed.map((f) => f.subjectId)).toContain('remy');
+    const remyFailure = summary.failed.find((f) => f.subjectId === 'remy');
+    expect(remyFailure.reason).toMatch(/already exists/i);
+    expect(summary.createdDays).not.toContain('remy-2023-06-22');
+
+    // The clean animal IS imported (animal + day present in the store).
+    expect(summary.createdAnimals).toContain('totoro');
+    const ws = result.current.model.workspace;
+    expect(ws.animals.totoro).toBeTruthy();
+    expect(ws.days['totoro-2024-01-15']).toBeTruthy();
+
+    // The seeded day is untouched.
+    expect(ws.days['remy-2023-06-22'].session.session_id).toBe('seeded');
+  });
+
+  it('new-animal collision (subjectId already exists) is pre-flighted: recorded in failed, clean animal still imports', () => {
+    const { result } = renderHook(() => useStore());
+    act(() => {
+      result.current.actions.createAnimal('remy', { subject_id: 'remy' });
+    });
+
+    // Plan against an EMPTY workspace so 'remy' is planned as a NEW animal (conflict 'none'),
+    // but the live store already has 'remy' — `createAnimal` would throw. Pre-flight must
+    // catch it.
     const plan = planImport(
       [
         makeFile({ subjectId: 'remy', date: '2023-06-22' }),
@@ -167,22 +228,16 @@ describe('applyImportPlan — resilience', () => {
       createDefaultWorkspace()
     );
 
-    const created = [];
-    const stubActions = {
-      createAnimal: (animalId) => {
-        if (animalId === 'remy') throw new Error('boom');
-        created.push(animalId);
-      },
-      createDay: () => {},
-      createConfigurationSnapshotAndApplyForward: () => {},
-      updateDay: () => {},
-    };
+    let summary;
+    act(() => {
+      summary = applyImportPlan(plan, result.current.actions, {
+        workspace: result.current.model.workspace,
+      });
+    });
 
-    const summary = applyImportPlan(plan, stubActions);
-
-    expect(summary.createdAnimals).toContain('totoro');
-    expect(summary.createdAnimals).not.toContain('remy');
     expect(summary.failed.map((f) => f.subjectId)).toContain('remy');
-    expect(created).toContain('totoro');
+    expect(summary.createdAnimals).not.toContain('remy');
+    expect(summary.createdAnimals).toContain('totoro');
+    expect(result.current.model.workspace.days['totoro-2024-01-15']).toBeTruthy();
   });
 });

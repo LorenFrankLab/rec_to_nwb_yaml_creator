@@ -131,7 +131,9 @@ describe('YAML import round-trip (genuine merge corpus → plan → apply → re
     const { result } = renderHook(() => useStore());
     let summary;
     act(() => {
-      summary = applyImportPlan(plan, result.current.actions);
+      summary = applyImportPlan(plan, result.current.actions, {
+        workspace: result.current.model.workspace,
+      });
     });
     expect(summary.failed).toEqual([]);
     expect(summary.createdAnimals).toEqual(['remy']);

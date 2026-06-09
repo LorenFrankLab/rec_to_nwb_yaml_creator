@@ -15,8 +15,16 @@
  * `'add'` (default) layers the plan's days onto the existing animal, `'skip'` writes nothing,
  * `'replace'` deletes the existing animal then recreates it from the plan.
  *
- * Resilience: each animal is applied in its own try/catch, so one animal's failure is recorded
- * and never aborts the others.
+ * Resilience: the store actions throw INSIDE their `setWorkspace((prev) => { throw ... })`
+ * updater, which React invokes during its reducer phase — so a throw ESCAPES a synchronous
+ * try/catch around the action call and crashes the render. A `try/catch` alone therefore can
+ * NOT isolate a per-animal failure. The real guarantee is a SYNCHRONOUS PRE-FLIGHT
+ * (`preflightAnimal`) against the CURRENT workspace snapshot BEFORE issuing any write: an
+ * animal whose preconditions would make a store action throw (e.g. a duplicate day id in
+ * conflict→'add', or a new-animal subjectId that already exists) is recorded in `failed` and
+ * SKIPPED, never written. Because nothing mutates the store between pre-flight and the writes
+ * within one call, this makes "one animal's failure never aborts the others" actually true.
+ * The surrounding try/catch is kept only as a backstop.
  *
  * @module state/yamlImportApply
  */
@@ -24,16 +32,78 @@
 import { generateDayId } from './workspaceUtils';
 
 /**
+ * Pre-flight a single planned animal against the CURRENT workspace snapshot (read-only),
+ * returning a failure reason if issuing its writes would make a store action throw, or `null`
+ * if it is safe to apply. Mirrors the throw conditions in the store actions:
+ *  - new-animal (resolution `'create'`): the `subjectId` must NOT already exist as an animal
+ *    (would collide with `createAnimal`); none of its planned day ids may already exist.
+ *  - conflict→`'add'`: the target existing animal must exist; none of the new day ids may
+ *    collide with an existing day.
+ *  - conflict→`'replace'`: safe — `deleteAnimal` removes the existing animal (and its days)
+ *    before any recreate, so no collision is possible.
+ *
+ * @param {import('./yamlImportPlan').ImportPlanAnimal} animalPlan
+ * @param {'create'|'add'|'replace'} resolution
+ * @param {object} workspace - The current workspace slice (`{ animals, days }`), read-only.
+ * @returns {(string|null)} A failure reason, or `null` when safe to apply.
+ */
+function preflightAnimal(animalPlan, resolution, workspace) {
+  const animals = workspace?.animals ?? {};
+  const days = workspace?.days ?? {};
+  const { subjectId } = animalPlan;
+
+  if (resolution === 'replace') {
+    // deleteAnimal removes the existing animal + its days first, so recreate cannot collide.
+    if (!animalPlan.existingAnimalId || !animals[animalPlan.existingAnimalId]) {
+      return `Animal "${subjectId}" no longer exists to replace.`;
+    }
+    return null;
+  }
+
+  if (resolution === 'add') {
+    const targetId = animalPlan.existingAnimalId;
+    if (!targetId || !animals[targetId]) {
+      return `Animal "${subjectId}" no longer exists to add days to.`;
+    }
+    for (const day of animalPlan.days) {
+      const dayId = generateDayId(targetId, day.date);
+      if (days[dayId]) {
+        return `Day "${dayId}" already exists; cannot add it to animal "${targetId}".`;
+      }
+    }
+    return null;
+  }
+
+  // resolution === 'create' (new animal).
+  if (animals[subjectId]) {
+    return `Animal "${subjectId}" already exists; cannot import it as a new animal.`;
+  }
+  for (const day of animalPlan.days) {
+    const dayId = generateDayId(subjectId, day.date);
+    if (days[dayId]) {
+      return `Day "${dayId}" already exists; cannot create animal "${subjectId}".`;
+    }
+  }
+  return null;
+}
+
+/**
  * Apply a planned import to the live store.
  *
  * @param {import('./yamlImportPlan').ImportPlan} plan - The plan from `planImport`.
  * @param {object} actions - The store's workspace actions (createAnimal, createDay,
  *   createConfigurationSnapshotAndApplyForward, updateDay, updateAnimal, deleteAnimal).
- * @param {Record<string, ('add'|'skip'|'replace')>} [resolutions] - Per-subject overrides of
- *   `defaultResolution` for conflict animals.
- * @returns {{ createdAnimals: string[], createdDays: string[], skipped: string[], failed: Array<{ subjectId: string, error: string }> }}
+ * @param {object} [options] - Apply options.
+ * @param {object} [options.workspace] - The CURRENT workspace snapshot (`{ animals, days }`),
+ *   read-only. Used to PRE-FLIGHT each animal's preconditions before issuing any write, so a
+ *   collision is recorded in `failed` instead of throwing out of a store action's reducer and
+ *   crashing the render. Defaults to an empty workspace (no pre-flight guarantees).
+ * @param {Record<string, ('add'|'skip'|'replace')>} [options.resolutions] - Per-subject
+ *   overrides of `defaultResolution` for conflict animals.
+ * @returns {{ createdAnimals: string[], createdDays: string[], skipped: string[], failed: Array<{ subjectId: string, reason: string }> }}
+ *   Failures are RECORDED, never thrown.
  */
-export function applyImportPlan(plan, actions, resolutions = {}) {
+export function applyImportPlan(plan, actions, { workspace = { animals: {}, days: {} }, resolutions = {} } = {}) {
   const createdAnimals = [];
   const createdDays = [];
   const skipped = [];
@@ -51,6 +121,15 @@ export function applyImportPlan(plan, actions, resolutions = {}) {
       continue;
     }
 
+    // PRE-FLIGHT (synchronous, read-only): catch any precondition that would make a store
+    // action throw out of its reducer. Nothing mutates the store between this check and the
+    // writes below within one call, so SKIPPING here actually isolates the failure.
+    const reason = preflightAnimal(animalPlan, resolution, workspace);
+    if (reason !== null) {
+      failed.push({ subjectId, reason });
+      continue;
+    }
+
     try {
       if (resolution === 'replace') {
         // Replace: delete the existing animal (+ its days) then recreate from the plan.
@@ -65,7 +144,8 @@ export function applyImportPlan(plan, actions, resolutions = {}) {
         applyNewAnimal(animalPlan, actions, createdAnimals, createdDays);
       }
     } catch (error) {
-      failed.push({ subjectId, error: error?.message ?? String(error) });
+      // Backstop only: pre-flight should already have caught any throwing precondition.
+      failed.push({ subjectId, reason: error?.message ?? String(error) });
     }
   }
 
