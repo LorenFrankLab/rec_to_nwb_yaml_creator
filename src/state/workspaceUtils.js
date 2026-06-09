@@ -17,6 +17,7 @@ import { resolveDayCameraUsage } from './cameraUsage';
 import {
   getConfigHistory,
   getDataAcqDevices,
+  getDayDataAcqDeviceName,
   getAnimalDevices,
   getAnimalExperimenters,
   getAnimalSubject,
@@ -168,8 +169,13 @@ function emitFsGuiYamls(items) {
  * probe geometry. An unpinned day (no `configurationVersion`) uses the latest
  * snapshot, the editor default. Each ntrode's `bad_channels` come from the day's
  * `deviceOverrides.bad_channels` ONLY (the load-time migration has moved any base
- * marks down into the day); the snapshot base is never read as a fallback.
- * Factoring this here keeps the merge and the reconfiguration wizard from diverging.
+ * marks down into the day); the snapshot base is never read as a fallback. Bad channels
+ * are resolved from `deviceOverrides.bad_channels` ONLY — NEVER from a `bad_channels` array
+ * baked into an override ntrode ROW (override rows are geometry-only). A row that does carry
+ * non-empty `bad_channels` with no matching `deviceOverrides.bad_channels` entry is surfaced
+ * as an export blocker by `dayOverrideIssues` (`bad_channels_on_override_row_ignored`) rather
+ * than silently dropped here. Factoring this here keeps the merge and the reconfiguration
+ * wizard from diverging.
  *
  * Returns normalized owned device objects; callers that persist the result can do so
  * without carrying legacy string IDs or non-schema electrode keys forward.
@@ -271,7 +277,9 @@ export function resolveDayConfig(animal, day) {
  */
 export function resolveDayDataAcqDevice(animal, day) {
   const catalog = getDataAcqDevices(animal);
-  const dayName = typeof day?.data_acq_device_name === 'string' ? day.data_acq_device_name : '';
+  // Route the day's reference through the guarded selector (string or undefined); the `|| ''`
+  // keeps the falsy/empty handling byte-identical to the prior inline read.
+  const dayName = getDayDataAcqDeviceName(day) || '';
   const chosen = (dayName && catalog.find((d) => d?.name === dayName)) || catalog[0];
   return chosen ? [reorderKeys(chosen, DATA_ACQ_DEVICE_ORDER)] : [];
 }
