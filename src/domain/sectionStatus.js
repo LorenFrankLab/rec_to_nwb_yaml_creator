@@ -30,6 +30,45 @@ export const SECTION_STATUS = {
 };
 
 /**
+ * Optogenetics completeness classification for the section-nav count slot. Mirrors the export rule
+ * {@link module:validation/rulesValidation} `partial_configuration` (rulesValidation.js): opto is
+ * gated on FOUR fields each being present and non-empty.
+ */
+export const OPTO_COMPLETENESS = {
+  COMPLETE: 'complete',
+  PARTIAL: 'partial',
+  NONE: 'none',
+};
+
+/**
+ * Classify an animal's optogenetics setup as COMPLETE, PARTIAL, or NONE, using the SAME four-field
+ * definition as the export rule's `partial_configuration` (rulesValidation.js ~lines 93-104):
+ * `opto_excitation_source` / `optical_fiber` / `virus_injection` each a non-empty array, and
+ * `optogenetic_stimulation_software` a non-empty (trimmed) string.
+ *
+ * COMPLETE → all four present. PARTIAL → some-but-not-all. NONE → none (the never-configured case
+ * the hollow-○ todo path owns). Shape-safe: a malformed `optogenetics` yields NONE rather than
+ * throwing.
+ *
+ * @param {object} animal - The animal record.
+ * @returns {string} One of {@link OPTO_COMPLETENESS}.
+ */
+export function getAnimalOptoCompleteness(animal) {
+  const opto = animal?.optogenetics;
+  if (!opto || typeof opto !== 'object' || Array.isArray(opto)) return OPTO_COMPLETENESS.NONE;
+  const present = [
+    Array.isArray(opto.opto_excitation_source) && opto.opto_excitation_source.length > 0,
+    Array.isArray(opto.optical_fiber) && opto.optical_fiber.length > 0,
+    Array.isArray(opto.virus_injection) && opto.virus_injection.length > 0,
+    typeof opto.optogenetic_stimulation_software === 'string' &&
+      opto.optogenetic_stimulation_software.trim() !== '',
+  ].filter(Boolean).length;
+  if (present === 0) return OPTO_COMPLETENESS.NONE;
+  if (present === 4) return OPTO_COMPLETENESS.COMPLETE;
+  return OPTO_COMPLETENESS.PARTIAL;
+}
+
+/**
  * Whether an animal has any optogenetics setup. Opto is an optional config holding
  * excitation-source / optical-fiber / virus-injection lists; "configured" means any is non-empty.
  * (`animal.optogenetics` is not a selector-owned raw collection, so it is read directly.)
