@@ -18,7 +18,7 @@
  * (the export bridge) and by the camera edit/correction blast-radius UI.
  */
 
-import { getAnimalCameras } from './workspaceSelectors';
+import { getAnimalCameras, getDayCamerasUsed } from './workspaceSelectors';
 
 /**
  * Normalize a camera id to a comparison key so a numeric `1` and a string `"1"` match (corrupt
@@ -86,7 +86,7 @@ export function referencedCameraKeys(day) {
 
   // UNION the explicit per-day "cameras used" set on top of the inferred references. For existing
   // data (`cameras_used` absent/non-array) this adds nothing, so the export is identical to today.
-  const explicit = Array.isArray(day?.cameras_used) ? day.cameras_used : [];
+  const explicit = getDayCamerasUsed(day);
   for (const id of explicit) {
     const key = cameraKey(id);
     if (key !== null) keys.add(key);

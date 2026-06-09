@@ -127,3 +127,21 @@ export const getDayKeywords = (day) => asArray(day?.keywords);
 
 /** @param {object} day @returns {Array} The day's FsGUI protocol files. */
 export const getDayFsGuiYamls = (day) => asArray(day?.fs_gui_yamls);
+
+/** @param {object} day @returns {Array} The day's used-camera ids (always an array). */
+export const getDayCamerasUsed = (day) => asArray(day?.cameras_used);
+
+/**
+ * @param {object} day
+ * @returns {Record<string, number[]>} The day's per-ntrode bad-channel overrides as a
+ *   record (always a record — `{}` when absent/corrupt). Bad channels are day-owned.
+ */
+export const getDayBadChannelOverrides = (day) => asRecord(day?.deviceOverrides?.bad_channels);
+
+/**
+ * @param {object} day
+ * @returns {(string|undefined)} The day's recording-system catalog reference, or `undefined`
+ *   when absent/non-string.
+ */
+export const getDayDataAcqDeviceName = (day) =>
+  typeof day?.data_acq_device_name === 'string' ? day.data_acq_device_name : undefined;

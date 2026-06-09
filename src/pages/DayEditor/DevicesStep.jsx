@@ -6,7 +6,13 @@ import ReconfigWizard from './ReconfigWizard';
 import DayRecordingSystem from './DayRecordingSystem';
 import { reconcileAppliedToDays } from '../../state/configDiff';
 import { resolveDayConfig } from '../../state/workspaceUtils';
-import { getConfigHistory, getDataAcqDevices, getAnimalCameras } from '../../state/workspaceSelectors';
+import {
+  getConfigHistory,
+  getDataAcqDevices,
+  getAnimalCameras,
+  getDayCamerasUsed,
+  getDayDataAcqDeviceName,
+} from '../../state/workspaceSelectors';
 import { inferredCameraKeys } from '../../state/cameraUsage';
 import { rawRecord } from '../../components/rawPropTypes';
 import { isMultiShankGroup, validBadChannelIds } from '../../domain/badChannels';
@@ -74,7 +80,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
   const recordingSystemPicker = (
     <DayRecordingSystem
       catalog={getDataAcqDevices(animal)}
-      selectedName={typeof day.data_acq_device_name === 'string' ? day.data_acq_device_name : undefined}
+      selectedName={getDayDataAcqDeviceName(day)}
       onSelect={(name) => onFieldUpdate('data_acq_device_name', name)}
     />
   );
@@ -89,10 +95,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
   // `cameras_used` stays absent/empty for all existing data and the export stays byte-identical.
   const animalCameras = getAnimalCameras(animal);
   const inferredKeys = useMemo(() => inferredCameraKeys(day), [day]);
-  const explicitCameraIds = useMemo(
-    () => (Array.isArray(day.cameras_used) ? day.cameras_used : []),
-    [day.cameras_used]
-  );
+  const explicitCameraIds = useMemo(() => getDayCamerasUsed(day), [day]);
   const explicitKeySet = useMemo(
     () => new Set(explicitCameraIds.map((id) => String(id))),
     [explicitCameraIds]

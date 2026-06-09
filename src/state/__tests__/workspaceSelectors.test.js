@@ -21,6 +21,9 @@ import {
   getDayBehavioralEvents,
   getDayKeywords,
   getDayFsGuiYamls,
+  getDayCamerasUsed,
+  getDayBadChannelOverrides,
+  getDayDataAcqDeviceName,
 } from '../workspaceSelectors';
 
 /**
@@ -54,6 +57,7 @@ describe('workspaceSelectors — array fields are always safe arrays', () => {
     ['getDayBehavioralEvents', getDayBehavioralEvents, (v) => ({ behavioral_events: v })],
     ['getDayKeywords', getDayKeywords, (v) => ({ keywords: v })],
     ['getDayFsGuiYamls', getDayFsGuiYamls, (v) => ({ fs_gui_yamls: v })],
+    ['getDayCamerasUsed', getDayCamerasUsed, (v) => ({ cameras_used: v })],
   ];
 
   it.each(arraySelectors)('%s returns [] for every corrupt shape', (_name, selector, wrap) => {
@@ -103,6 +107,29 @@ describe('workspaceSelectors — record fields are always safe records', () => {
     expect(getExperimenterNames({ experimenters: { experimenter_name: 'x' } })).toEqual([]);
     expect(getExperimenterNames({ experimenters: { experimenter_name: ['A'] } })).toEqual(['A']);
     expect(getExperimenterNames({ experimenters: 'corrupt' })).toEqual([]);
+  });
+
+  it('getDayBadChannelOverrides returns {} for scalar/array/null deviceOverrides or bad_channels', () => {
+    for (const bad of ['corrupt', 42, null, [1], undefined]) {
+      expect(getDayBadChannelOverrides({ deviceOverrides: bad })).toEqual({});
+      expect(getDayBadChannelOverrides({ deviceOverrides: { bad_channels: bad } })).toEqual({});
+    }
+    expect(getDayBadChannelOverrides(undefined)).toEqual({});
+    expect(getDayBadChannelOverrides(null)).toEqual({});
+    expect(
+      getDayBadChannelOverrides({ deviceOverrides: { bad_channels: { 0: [2, 3] } } })
+    ).toEqual({ 0: [2, 3] });
+  });
+});
+
+describe('workspaceSelectors — string-or-undefined day fields', () => {
+  it('getDayDataAcqDeviceName returns the string only when it is a string, else undefined', () => {
+    expect(getDayDataAcqDeviceName({ data_acq_device_name: 'SpikeGadgets' })).toBe('SpikeGadgets');
+    for (const bad of [42, null, [1], {}, undefined]) {
+      expect(getDayDataAcqDeviceName({ data_acq_device_name: bad })).toBeUndefined();
+    }
+    expect(getDayDataAcqDeviceName(undefined)).toBeUndefined();
+    expect(getDayDataAcqDeviceName(null)).toBeUndefined();
   });
 });
 
