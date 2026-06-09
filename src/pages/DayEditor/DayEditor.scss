@@ -62,6 +62,17 @@
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
+  /* `width: 100%` + the padding must stay INSIDE the grid track, or the panel overflows its
+     1fr column (≈48px of padding) and forces a horizontal scrollbar. border-box folds the
+     padding into the 100%. (The page is otherwise content-box, so set it explicitly here.) */
+  box-sizing: border-box;
+  /* In the `.day-editor-body` grid (230px 1fr), the panel is the 1fr track. A grid track's
+     `1fr` is `minmax(auto, 1fr)`, so WITHOUT this it cannot shrink below its content's
+     min-content width — wide content (the Export YAML <pre>, the channel-map tables) then
+     blows the track WIDER than its share (e.g. 230px 1248px), overflowing the container and
+     breaking the nav/panel layout. `min-width: 0` holds the track at its 1fr share so wide
+     content stays inside it, mirroring AnimalView's `.animal-view-panel`. */
+  min-width: 0;
 }
 
 /* ===== Tabbed section nav (replaces the old linear stepper nav) =====
