@@ -1,6 +1,6 @@
 # Workspace Enhancements Roadmap
 
-**Status:** Not started.
+**Status:** COMPLETE — all phases (1, 2, 3, 4, 6a, 6b, 5, 7) implemented, reviewed, and merged to `modern` (merge commit `c044e8c`, 2026-06-09). Only the decision-gated open questions in [overview.md](overview.md) (D-TIER, D-CUTOVER, D-CATALOG-MERGE) remain — not part of this roadmap.
 
 One-paragraph summary: the post-merge workspace roadmap — data-entry efficiency wins, the channel-maps split, a YAML importer, and the hybrid tabbed Day Editor — sequenced by export-merge risk. Each phase ships as an independent PR. The decision-gated work (task catalog, dataset tier, cutover) is parked in [overview.md](overview.md) as open questions, not detailed, because their designs aren't settled.
 
