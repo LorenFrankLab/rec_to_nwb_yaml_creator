@@ -365,6 +365,140 @@ export function normalizeDeviceOverrides(overrides) {
   return normalized;
 }
 
+/**
+ * Select the configuration snapshot a day resolves against, EXACTLY mirroring
+ * `resolveDayConfig`'s selection so the migration and the merge agree:
+ *  - a day that pins a `configurationVersion` resolves THAT snapshot by `version`;
+ *  - an unpinned day (no `configurationVersion`) resolves the LATEST snapshot.
+ * Returns `null` when there is no usable snapshot (no history, or a pin with no
+ * matching version) — the migration then leaves the day to the existing repair path.
+ *
+ * @param {object} animal - The animal record.
+ * @param {object} day - The day record.
+ * @returns {object|null} The matching snapshot, or `null` when none resolves.
+ */
+function selectSnapshotForDay(animal, day) {
+  const history = Array.isArray(animal?.configurationHistory)
+    ? animal.configurationHistory
+    : [];
+  if (history.length === 0) return null;
+
+  const hasPin = day?.configurationVersion != null;
+  const snapshot = hasPin
+    ? history.find((c) => c && c.version === day.configurationVersion)
+    : history[history.length - 1];
+
+  return isPlainObject(snapshot) ? snapshot : null;
+}
+
+/**
+ * One-time, idempotent, load-time MIGRATION: move config-snapshot ("base")
+ * bad-channel marks DOWN into each day's `deviceOverrides.bad_channels`, making
+ * bad channels day-owned WITHOUT changing the exported YAML for any existing data
+ * when fed through the UNCHANGED `resolveDayConfig` merge.
+ *
+ * `resolveDayConfig` applies bad-channels with REPLACE (not union) semantics: for
+ * each ntrode, the effective `bad_channels` is the day override for that
+ * `ntrode_id` IF present and well-formed, ELSE the snapshot base. The migration
+ * preserves that per-ntrode resolution exactly:
+ *  - For each ntrode in the day's resolved snapshot: if the day override ALREADY
+ *    has that `ntrode_id` key, leave it untouched (the override already wins —
+ *    this also preserves a corrupt scalar override verbatim, never laundering it).
+ *    Otherwise, if the snapshot base `bad_channels` for that ntrode is a non-empty
+ *    array, set `day.deviceOverrides.bad_channels[ntrodeId]` to a copy of it.
+ *  - Then strip `bad_channels` off the snapshots' ntrode rows (set to `[]`).
+ *
+ * Net effect with the unchanged merge: an ntrode that had an override still
+ * resolves to that override; an ntrode that relied on base now resolves to the
+ * moved override (base is `[]`) → SAME effective set → byte-identical export.
+ *
+ * It is a NO-OP when no snapshot carries non-empty base `bad_channels` (the
+ * overwhelming majority of fixtures), which is also the idempotency guarantee:
+ * after one run the snapshots are base-free, so a second run does nothing.
+ *
+ * Shape-safe: a missing/corrupt animal or snapshot, or a non-array snapshot ntrode
+ * map, is skipped (left to the existing repair path), never crashed on. Operates on
+ * an already-cloned `normalized` workspace — the caller owns the clone.
+ *
+ * @param {object} normalized - An ALREADY-CLONED workspace (mutated in place).
+ * @returns {object} The same workspace, with base marks moved down.
+ */
+function applyBadChannelMigration(normalized) {
+  if (!isPlainObject(normalized)) return normalized;
+  const animals = normalized.animals || {};
+  const days = normalized.days || {};
+
+  Object.values(days).forEach((day) => {
+    if (!isPlainObject(day)) return;
+    const animal = animals[day.animalId];
+    if (!isPlainObject(animal)) return; // missing/corrupt animal → repair path
+
+    const snapshot = selectSnapshotForDay(animal, day);
+    if (!snapshot) return; // no usable snapshot (no history / dangling pin)
+
+    const baseNtrodes = snapshot.devices?.ntrode_electrode_group_channel_map;
+    if (!Array.isArray(baseNtrodes)) return; // corrupt snapshot map → repair path
+
+    // Collect the base marks to move down, keyed by canonical ntrode_id string.
+    const toMove = [];
+    baseNtrodes.forEach((ntrode) => {
+      if (!isPlainObject(ntrode)) return;
+      const base = ntrode.bad_channels;
+      if (Array.isArray(base) && base.length > 0) {
+        toMove.push([normalizeIdKey(ntrode.ntrode_id), base]);
+      }
+    });
+
+    if (toMove.length === 0) return; // no base to move — NO-OP (idempotency)
+
+    // Ensure the day owns a bad_channels override record we can extend. Only
+    // create/extend when the existing override is a plain record (or absent); a
+    // corrupt non-record override is left untouched for the repair path.
+    const existing = day.deviceOverrides?.bad_channels;
+    if (existing != null && !isPlainObject(existing)) {
+      // Corrupt container — still strip the (now-moved-nowhere) base below so the
+      // snapshot becomes base-free, but do NOT write into the corrupt container.
+    } else {
+      if (!isPlainObject(day.deviceOverrides)) {
+        day.deviceOverrides = {};
+      }
+      if (!isPlainObject(day.deviceOverrides.bad_channels)) {
+        day.deviceOverrides.bad_channels = {};
+      }
+      const target = day.deviceOverrides.bad_channels;
+      toMove.forEach(([ntrodeId, base]) => {
+        // REPLACE precedence: an existing override (incl. a corrupt scalar) wins —
+        // never overwrite it, never launder it.
+        if (!Object.hasOwn(target, ntrodeId)) {
+          target[ntrodeId] = [...base];
+        }
+      });
+    }
+
+    // Strip the base off the snapshot ntrode rows that carried it.
+    baseNtrodes.forEach((ntrode) => {
+      if (isPlainObject(ntrode) && Array.isArray(ntrode.bad_channels) && ntrode.bad_channels.length > 0) {
+        ntrode.bad_channels = [];
+      }
+    });
+  });
+
+  return normalized;
+}
+
+/**
+ * Public migration entry: deep-clones the workspace, then moves config-snapshot
+ * bad-channel marks down into each day (see {@link applyBadChannelMigration}).
+ * A no-op (deep-equal clone) for a base-free workspace. Idempotent.
+ *
+ * @param {object} workspace - Workspace to migrate (not mutated).
+ * @returns {object} A migrated deep clone (or the input unchanged when not an object).
+ */
+export function migrateBadChannelsToDays(workspace) {
+  if (!isPlainObject(workspace)) return workspace;
+  return applyBadChannelMigration(structuredClone(workspace));
+}
+
 export function normalizeWorkspaceDevices(workspace) {
   if (!isPlainObject(workspace)) return workspace;
 
@@ -406,5 +540,9 @@ export function normalizeWorkspaceDevices(workspace) {
     }
   });
 
-  return normalized;
+  // After per-snapshot / per-day normalization, move any config-snapshot base
+  // bad-channel marks DOWN into the owning day's overrides (a no-op for the
+  // base-free majority). Runs last so the moved values come from already-
+  // normalized snapshots and land in already-normalized override records.
+  return applyBadChannelMigration(normalized);
 }
