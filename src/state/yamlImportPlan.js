@@ -412,7 +412,7 @@ export function planImport(decodedFiles, existingWorkspace) {
   /** @type {Map<string, Array<object>>} subjectId → date-ordered file entries */
   const bySubject = new Map();
   /**
-   * `${subjectId} ${date}` → the sourceName of the FIRST (input/source order) file that
+   * `${subjectId} ${date}` → the sourceName of the FIRST (input/source order) file that
    * claimed that (subject, date). Used to dedup intra-plan duplicates so `planImport` never
    * emits two days with the same `generateDayId` for one subject (which would otherwise make
    * the executor's second `createDay` throw inside the store reducer and crash the render).
