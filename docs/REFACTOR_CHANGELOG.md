@@ -4,6 +4,16 @@
 
 **Last Updated:** June 8, 2026
 
+## Fix: per-day recording-system selection now persists (June 8, 2026)
+
+**Bug fix.** For an animal with 2+ acquisition systems, the Day Editor's per-day recording-system
+selector let the user choose which system a day used — but the choice was **silently dropped** by the
+day-update allow-list (`applyDayUpdates`), so it never reached the store. As a result the export
+(`mergeDayMetadata`, which reads `day.data_acq_device_name`) fell back to the catalog default —
+potentially emitting the **wrong** acquisition device. The selection now persists, and clearing it
+back to the animal default (the "Default" option, which writes `undefined`) is supported via a
+presence check rather than a `!== undefined` guard.
+
 ## Copy from another animal — cameras + recording system (June 8, 2026)
 
 "Copy from animal" now covers an animal's **cameras** catalog and **recording-system**

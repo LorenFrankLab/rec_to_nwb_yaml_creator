@@ -362,6 +362,31 @@ describe('Day State Management', () => {
       expect(result.current.model.workspace.days['remy-2023-06-22'].keywords).toEqual(['replay']);
     });
 
+    it('persists data_acq_device_name through updateDay and clears it back to undefined', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Test',
+        });
+      });
+
+      act(() => {
+        result.current.actions.updateDay('remy-2023-06-22', { data_acq_device_name: 'X' });
+      });
+      expect(result.current.model.workspace.days['remy-2023-06-22'].data_acq_device_name).toBe('X');
+
+      // Clearing to undefined (the "Default" option) persists, reverting to the animal default.
+      act(() => {
+        result.current.actions.updateDay('remy-2023-06-22', { data_acq_device_name: undefined });
+      });
+      expect(
+        result.current.model.workspace.days['remy-2023-06-22'].data_acq_device_name
+      ).toBeUndefined();
+    });
+
     it('replaces a malformed (non-record) current session instead of spreading it', () => {
       // A corrupt import can persist `session` as a scalar/array. A session update must not
       // spread that (`{...'corrupt'}` would scatter char-indexed keys into the record); the

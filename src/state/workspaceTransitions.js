@@ -369,7 +369,10 @@ export function createDayRecord(animal, animalId, dayId, date, session, now, car
  *   malformed-guard above), `technical` (deep-merged), `state` (deep-merged), `deviceOverrides`
  *   (normalized), and the replace-on-`!== undefined` collections `tasks`, `behavioral_events`,
  *   `associated_files`, `associated_video_files`, `fs_gui_yamls`, `keywords`, plus
- *   `configurationVersion`. Note: setting `configurationVersion` here re-pins the day but does
+ *   `configurationVersion`, plus `data_acq_device_name` (the per-day recording-system choice —
+ *   the one key matched by a PRESENCE check rather than `!== undefined`, so clearing it to
+ *   `undefined` to revert to the animal default persists instead of being silently dropped).
+ *   Note: setting `configurationVersion` here re-pins the day but does
  *   NOT eagerly reconcile snapshots' `appliedToDays` — `reconcileAppliedToDays` derives the
  *   trustworthy view from each day's version.
  * @param {string} now - Timestamp to stamp `lastModified`.
@@ -428,6 +431,14 @@ export function applyDayUpdates(day, updates, now) {
   }
   if (updates.keywords !== undefined) {
     updated.keywords = updates.keywords;
+  }
+  // Per-day recording-system selection (`day.data_acq_device_name`, read by `mergeDayMetadata`).
+  // PRESENCE check, NOT `!== undefined`: the "Default" option clears back to the animal default by
+  // writing `data_acq_device_name: undefined`, and that clear MUST persist (a `!== undefined` guard
+  // would silently drop it, leaving the day pinned to a stale system). This is the one allow-list
+  // key that supports clear-to-undefined.
+  if ('data_acq_device_name' in updates) {
+    updated.data_acq_device_name = updates.data_acq_device_name;
   }
 
   updated.lastModified = now;

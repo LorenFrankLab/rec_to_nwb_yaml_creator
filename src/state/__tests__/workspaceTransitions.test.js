@@ -444,4 +444,19 @@ describe('applyDayUpdates', () => {
     );
     expect(updated.state).toEqual({ draft: true, validated: true });
   });
+
+  it('persists data_acq_device_name (per-day recording-system selection)', () => {
+    const updated = applyDayUpdates({ id: 'd1' }, { data_acq_device_name: 'SpikeGadgets' }, NOW);
+    expect(updated.data_acq_device_name).toBe('SpikeGadgets');
+  });
+
+  it('clears data_acq_device_name to undefined (back to the animal default)', () => {
+    // Uses a PRESENCE check, not `!== undefined`, so the "Default" option's clear persists.
+    const updated = applyDayUpdates(
+      { id: 'd1', data_acq_device_name: 'B' },
+      { data_acq_device_name: undefined },
+      NOW
+    );
+    expect(updated.data_acq_device_name).toBeUndefined();
+  });
 });
