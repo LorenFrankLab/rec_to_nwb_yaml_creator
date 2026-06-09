@@ -85,14 +85,15 @@ describe('axe-a11y (configured workspace, all routes)', () => {
   });
 
   describe('DayEditor steps', () => {
-    const steps = ['Overview', 'Devices', 'Epochs', 'Validation', 'Export'];
+    // Section-nav display labels (richer than the bare step ids since the 5 components are unchanged).
+    const steps = ['Overview', 'Devices & Failed Channels', 'Tasks & Epochs', 'Validation', 'Export'];
 
     it.each(steps)('step %s has no violations', async (stepLabel) => {
       const user = userEvent.setup();
       const { container } = await renderRoute(`#/day/${DAY_ID}`);
       await screen.findByRole('heading', { name: /day editor/i });
 
-      // Navigate to the requested step via its StepNavigation button.
+      // Navigate to the requested section via its section-nav button.
       const stepButton = screen.getByRole('button', { name: new RegExp(`^${stepLabel}`, 'i') });
       await user.click(stepButton);
 

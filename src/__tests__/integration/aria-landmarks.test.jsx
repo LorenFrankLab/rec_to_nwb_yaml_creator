@@ -200,8 +200,12 @@ describe('ARIA Landmarks', () => {
       expect(container.querySelectorAll('[role="banner"], header')).toHaveLength(1);
       expect(container.querySelectorAll('[role="contentinfo"], footer')).toHaveLength(1);
 
-      // Exactly one step is marked current for assistive tech.
-      const current = container.querySelectorAll('[aria-current="step"]');
+      // Exactly one SECTION is marked current within the section-nav (tabbed section-nav
+      // mirrors AnimalView: aria-current="page"). Scoped to the section-nav so the
+      // breadcrumb's own aria-current="page" (its trailing page) isn't counted.
+      const sectionNav = container.querySelector('.section-nav');
+      expect(sectionNav).toBeTruthy();
+      const current = sectionNav.querySelectorAll('[aria-current="page"]');
       expect(current).toHaveLength(1);
     });
 

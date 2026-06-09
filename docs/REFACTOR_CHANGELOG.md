@@ -4,6 +4,33 @@
 
 **Last Updated:** June 9, 2026
 
+## Tabbed Day Editor navigation (June 9, 2026)
+
+Replaced the Day Editor's LINEAR stepper navigation shell with a TABBED section-nav that mirrors
+AnimalView's grouped `section-nav`. **UI-only and merge-neutral** — no change to YAML output (golden
+baselines stay byte-identical) and the five step components (`OverviewStep` / `DevicesStep` /
+`TasksEpochsStep` / `ValidationStep` / `ExportStep`) and their internals are unchanged.
+
+- **Free section navigation.** The Day Editor is no longer a wizard. The five sections are grouped
+  (Session: Overview · Recording: Devices & Failed Channels, Tasks & Epochs · Finish: Validation,
+  Export) into a new `DayEditorSectionNav` component of `<button>`s (local `currentStep` state, not
+  routes — the editor stays a single `#/day/:id` route). The active item carries `aria-current="page"`
+  (mirroring AnimalView). Every section — including Export — is freely reachable.
+- **Export gate preserved as a blocked ACTION, not a nav lock.** The nav-level export gate
+  (`aria-disabled` no-op on the Export tab) and the keyboard fail-close in the Alt+→ handler were
+  removed. The gate survives inside `ExportStep`, which independently computes
+  `isExportEnabled`/`exportBlocked` and hard-stops `handleDownload` while the day is invalid (defense in
+  depth). The Export nav item still shows its status glyph (✗/⚠) so the block stays visible.
+- **Next ▸ / ◂ Prev affordance + keyboard.** A visible pager below the panel and the existing global
+  Alt+←/→ shortcuts advance/retreat through the order overview→devices→epochs→validation→export — now
+  freely into Export.
+- **Focus + repair.** Focus moves to the panel (`#main-content`) on a section change (mirroring
+  AnimalView), skipping the initial mount; the repair-focus path (`focusRequest`) still routes a repair
+  to its owning section and highlights the targeted field.
+- **Removed.** The old `StepNavigation` linear-stepper component and its dedicated test were deleted;
+  the status icon/label helpers moved into `DayEditorSectionNav`. The old `.step-navigation` /
+  `.step-*` SCSS was replaced with section-nav + pager styles.
+
 ## Bad channels are day-owned, carried forward, and monotonic (June 9, 2026)
 
 Split bad-channel ownership out of the animal hardware configuration and down to the recording day.

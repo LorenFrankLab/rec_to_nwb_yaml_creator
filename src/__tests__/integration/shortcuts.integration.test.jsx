@@ -73,8 +73,8 @@ describe('global shortcuts + help (integration)', () => {
     await renderRoute(`#/day/${DAY_ID}`);
     await screen.findByRole('heading', { name: /day editor/i });
 
-    // Go to the Epochs step.
-    await user.click(screen.getByRole('button', { name: /^Epochs/i }));
+    // Go to the Epochs section (richer section-nav label).
+    await user.click(screen.getByRole('button', { name: /^Tasks & Epochs/i }));
     await screen.findByRole('heading', { name: /tasks & epochs/i });
 
     // Alt+N opens the add-task dialog (the step's add target).
