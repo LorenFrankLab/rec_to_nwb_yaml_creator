@@ -17,6 +17,7 @@ import {
   getDayTasks,
   getDayKeywords,
   getDayBehavioralEvents,
+  getDayBadChannelOverrides,
 } from './workspaceSelectors';
 import {
   normalizeDeviceOverrides,
@@ -284,11 +285,20 @@ export function rebuildConfigurationHistoryForAnimal(animal, now, today) {
  * the existence check.
  *
  * When `carryFrom` (a prior day record) is supplied, the day-owned content is SEEDED from it —
- * deep-cloned so the new record never aliases the source. Carried: tasks, behavioral_events,
- * keywords, technical, and session.experiment_description / session.weight (each overridable by
- * the caller's `session`). NEVER carried: session_id / session_description (date-derived, always
- * from the caller) and associated_files / associated_video_files (session-specific, always empty).
- * Bad channels are intentionally not part of this carry-forward.
+ * deep-cloned so the new record never aliases the source.
+ *
+ * Carried from `carryFrom`: tasks, behavioral_events, keywords, technical,
+ * session.experiment_description, session.weight (each session field overridable by the caller's
+ * `session`), AND `deviceOverrides.bad_channels` — but ONLY when the source pins the SAME (latest)
+ * configuration version the new day pins. Bad channels are ntrode-id-keyed; if the source pins an
+ * OLDER version the probe was reconfigured since, so those marks would target the WRONG electrodes
+ * on the new config and are dropped as stale. ONLY `bad_channels` is carried — never a whole-map
+ * `electrode_groups` / `ntrode_electrode_group_channel_map` override — and an empty bad-channel map
+ * adds NO `deviceOverrides` container (a blank day stays byte-identical to today's output).
+ *
+ * Never carried: session_id / session_description (date-derived, always from the caller),
+ * associated_files / associated_video_files / fs_gui_yamls / cameras_used (session-specific, left
+ * unset/empty).
  *
  * @param {object} animal - The owning animal (for technicalDefaults + the latest pin).
  * @param {string} animalId - The owning animal id.
@@ -324,6 +334,21 @@ export function createDayRecord(animal, animalId, dayId, date, session, now, car
     typeof carryFrom.technical === 'object' &&
     !Array.isArray(carryFrom.technical);
 
+  // Bad-channel carry-forward, guarded by config version. Bad channels are MONOTONIC across a
+  // study and ntrode-id-keyed. They are safe to carry ONLY when the source pins the SAME version
+  // the new day pins (this latest one): the marks then still name the same electrodes. If the
+  // source pins an older version the probe was reconfigured in between, so its marks are STALE
+  // and must NOT be carried. We carry ONLY bad_channels (never a whole-map override), and skip an
+  // empty map so a no-op carry stays byte-identical to a hand-entered/blank day.
+  const carriedBadChannels =
+    carryFrom && carryFrom.configurationVersion === latestVersion
+      ? getDayBadChannelOverrides(carryFrom)
+      : {};
+  const deviceOverrides =
+    Object.keys(carriedBadChannels).length > 0
+      ? { bad_channels: structuredClone(carriedBadChannels) }
+      : undefined;
+
   return {
     id: dayId,
     animalId,
@@ -347,6 +372,9 @@ export function createDayRecord(animal, animalId, dayId, date, session, now, car
     associated_files: [],
     associated_video_files: [],
     technical: carryTechnical ? structuredClone(carryFrom.technical) : defaultTechnical,
+    // Only present when guarded bad-channel carry produced a non-empty map (see above); a blank
+    // day omits the key entirely so it stays byte-identical to today's output.
+    ...(deviceOverrides ? { deviceOverrides } : {}),
     state: {
       draft: true,
       validated: false,

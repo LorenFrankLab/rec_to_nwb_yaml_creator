@@ -409,6 +409,83 @@ describe('createDayRecord', () => {
       expect(day.technical.raw_data_to_volts).toBe(0.195);
     });
   });
+
+  describe('bad-channel carry-forward (config-version-guarded)', () => {
+    const session = { session_id: 'remy_20230623', session_description: 'Day 2' };
+
+    it('carries bad_channels (cloned, not aliased) when the source pins the SAME (latest) config version', () => {
+      // The new day pins the animal's latest version (3); the source already pins 3, so its
+      // ntrode-id-keyed marks still target the right electrodes → carried.
+      const animal = { configurationHistory: [{ version: 1 }, { version: 3 }] };
+      const carryFrom = {
+        configurationVersion: 3,
+        deviceOverrides: { bad_channels: { 1: [2] } },
+      };
+      const day = createDayRecord(animal, 'remy', 'd', '2023-06-23', session, NOW, carryFrom);
+      expect(day.configurationVersion).toBe(3);
+      expect(day.deviceOverrides.bad_channels).toEqual({ 1: [2] });
+      // Cloned, not aliased: the new day must never share the source's override object.
+      expect(day.deviceOverrides.bad_channels).not.toBe(carryFrom.deviceOverrides.bad_channels);
+      day.deviceOverrides.bad_channels[1].push(99);
+      expect(carryFrom.deviceOverrides.bad_channels[1]).toEqual([2]);
+    });
+
+    it('does NOT carry bad_channels when the source pins an OLDER config version (stale after reconfiguration)', () => {
+      // The probe was reconfigured (latest is 3); the source pins 1, so its marks would target
+      // the WRONG electrodes on the new config → the guard drops them.
+      const animal = { configurationHistory: [{ version: 1 }, { version: 3 }] };
+      const carryFrom = {
+        configurationVersion: 1,
+        deviceOverrides: { bad_channels: { 1: [2] } },
+      };
+      const day = createDayRecord(animal, 'remy', 'd', '2023-06-23', session, NOW, carryFrom);
+      expect(day.configurationVersion).toBe(3);
+      // No stale marks: either no deviceOverrides at all, or empty bad_channels.
+      const carried = day.deviceOverrides?.bad_channels ?? {};
+      expect(carried).toEqual({});
+    });
+
+    it('adds NO deviceOverrides container when the source has no bad channels (byte-identical to no-carry)', () => {
+      const animal = { configurationHistory: [{ version: 2 }] };
+      const noBad = createDayRecord(
+        animal,
+        'remy',
+        'd',
+        '2023-06-23',
+        session,
+        NOW,
+        { configurationVersion: 2, deviceOverrides: { bad_channels: {} } }
+      );
+      const absent = createDayRecord(
+        animal,
+        'remy',
+        'd',
+        '2023-06-23',
+        session,
+        NOW,
+        { configurationVersion: 2 }
+      );
+      const blank = createDayRecord(animal, 'remy', 'd', '2023-06-23', session, NOW);
+      expect(noBad.deviceOverrides).toBeUndefined();
+      expect(absent.deviceOverrides).toBeUndefined();
+      expect(blank.deviceOverrides).toBeUndefined();
+    });
+
+    it('carries ONLY bad_channels, never a whole-map electrode_groups override', () => {
+      const animal = { configurationHistory: [{ version: 2 }] };
+      const carryFrom = {
+        configurationVersion: 2,
+        deviceOverrides: {
+          bad_channels: { 0: [1] },
+          electrode_groups: [{ id: 0, location: 'CA1' }],
+        },
+      };
+      const day = createDayRecord(animal, 'remy', 'd', '2023-06-23', session, NOW, carryFrom);
+      expect(day.deviceOverrides.bad_channels).toEqual({ 0: [1] });
+      expect(day.deviceOverrides.electrode_groups).toBeUndefined();
+      expect(Object.keys(day.deviceOverrides)).toEqual(['bad_channels']);
+    });
+  });
 });
 
 describe('applyDayUpdates', () => {

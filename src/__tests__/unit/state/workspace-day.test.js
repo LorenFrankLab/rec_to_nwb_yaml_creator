@@ -218,6 +218,82 @@ describe('Day State Management', () => {
       expect(result.current.model.workspace.days['remy-2023-06-23'].tasks).toEqual([]);
     });
 
+    it('with carryForwardFromDayId from a SAME-config source: carries bad channels (cloned)', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+      });
+      // Source pins the latest version (1) and owns a bad-channel override.
+      act(() => {
+        result.current.actions.updateDay('remy-2023-06-22', {
+          deviceOverrides: { bad_channels: { 0: [2] } },
+        });
+      });
+      act(() => {
+        result.current.actions.createDay(
+          'remy',
+          '2023-06-23',
+          { session_id: 'remy_20230623', session_description: 'Day 2' },
+          { carryForwardFromDayId: 'remy-2023-06-22' }
+        );
+      });
+
+      const source = result.current.model.workspace.days['remy-2023-06-22'];
+      const day2 = result.current.model.workspace.days['remy-2023-06-23'];
+      expect(day2.deviceOverrides.bad_channels).toEqual({ 0: [2] });
+      // Cloned, not aliased.
+      expect(day2.deviceOverrides.bad_channels).not.toBe(source.deviceOverrides.bad_channels);
+    });
+
+    it('with carryForwardFromDayId ACROSS a config change: drops the stale bad channels', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+      });
+      // Source (v1) owns a bad-channel override.
+      act(() => {
+        result.current.actions.updateDay('remy-2023-06-22', {
+          deviceOverrides: { bad_channels: { 0: [2] } },
+        });
+      });
+      // Reconfigure: the animal's latest is now v2, but the source stays pinned to v1.
+      act(() => {
+        result.current.actions.createConfigurationSnapshotAndApplyForward('remy', {
+          date: '2023-06-15',
+          description: 'Adjusted probes',
+          devices: {
+            electrode_groups: [
+              { id: 0, location: 'CA1', device_type: 'tetrode_12.5', description: 'adjusted' },
+            ],
+            ntrode_electrode_group_channel_map: [
+              { ntrode_id: 0, electrode_group_id: 0, map: { 0: 0, 1: 1, 2: 2, 3: 3 }, bad_channels: [] },
+            ],
+          },
+        }, []);
+      });
+      act(() => {
+        result.current.actions.createDay(
+          'remy',
+          '2023-06-23',
+          { session_id: 'remy_20230623', session_description: 'Day 2' },
+          { carryForwardFromDayId: 'remy-2023-06-22' }
+        );
+      });
+
+      const day2 = result.current.model.workspace.days['remy-2023-06-23'];
+      // New day pins the latest (2); the v1 marks are stale and must be dropped.
+      expect(day2.configurationVersion).toBe(2);
+      expect(day2.deviceOverrides?.bad_channels ?? {}).toEqual({});
+    });
+
     it('with an unknown carryForwardFromDayId: builds a blank day (no throw)', () => {
       const { result } = renderHook(() => useStore());
       createTestAnimal(result);
