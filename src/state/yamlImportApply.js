@@ -42,12 +42,19 @@ import { generateDayId } from './workspaceUtils';
  *  - conflict→`'replace'`: safe — `deleteAnimal` removes the existing animal (and its days)
  *    before any recreate, so no collision is possible.
  *
+ * Defense in depth: `reservedDayIds` accumulates the day ids that earlier-passed animals in
+ * the SAME `applyImportPlan` call will write. An intra-plan duplicate id (a plan that — despite
+ * `planImport`'s dedup — still carries two days resolving to the same id) is failed-closed here,
+ * so the executor never issues a `createDay` whose throw would escape the reducer.
+ *
  * @param {import('./yamlImportPlan').ImportPlanAnimal} animalPlan
  * @param {'create'|'add'|'replace'} resolution
  * @param {object} workspace - The current workspace slice (`{ animals, days }`), read-only.
+ * @param {Set<string>} reservedDayIds - Day ids already reserved by earlier-passed animals in
+ *   this same call (read-only here; the caller commits the animal's ids on success).
  * @returns {(string|null)} A failure reason, or `null` when safe to apply.
  */
-function preflightAnimal(animalPlan, resolution, workspace) {
+function preflightAnimal(animalPlan, resolution, workspace, reservedDayIds) {
   const animals = workspace?.animals ?? {};
   const days = workspace?.days ?? {};
   const { subjectId } = animalPlan;
@@ -60,29 +67,27 @@ function preflightAnimal(animalPlan, resolution, workspace) {
     return null;
   }
 
+  // For 'add' the target is the existing animal; for 'create' it is the new subjectId.
+  const targetId = resolution === 'add' ? animalPlan.existingAnimalId : subjectId;
+
   if (resolution === 'add') {
-    const targetId = animalPlan.existingAnimalId;
     if (!targetId || !animals[targetId]) {
       return `Animal "${subjectId}" no longer exists to add days to.`;
     }
-    for (const day of animalPlan.days) {
-      const dayId = generateDayId(targetId, day.date);
-      if (days[dayId]) {
-        return `Day "${dayId}" already exists; cannot add it to animal "${targetId}".`;
-      }
-    }
-    return null;
-  }
-
-  // resolution === 'create' (new animal).
-  if (animals[subjectId]) {
+  } else if (animals[subjectId]) {
+    // resolution === 'create' (new animal).
     return `Animal "${subjectId}" already exists; cannot import it as a new animal.`;
   }
+
+  const seenInThisAnimal = new Set();
   for (const day of animalPlan.days) {
-    const dayId = generateDayId(subjectId, day.date);
-    if (days[dayId]) {
-      return `Day "${dayId}" already exists; cannot create animal "${subjectId}".`;
+    const dayId = generateDayId(targetId, day.date);
+    if (days[dayId] || reservedDayIds.has(dayId) || seenInThisAnimal.has(dayId)) {
+      return resolution === 'add'
+        ? `Day "${dayId}" already exists; cannot add it to animal "${targetId}".`
+        : `Day "${dayId}" already exists; cannot create animal "${subjectId}".`;
     }
+    seenInThisAnimal.add(dayId);
   }
   return null;
 }
@@ -108,6 +113,9 @@ export function applyImportPlan(plan, actions, { workspace = { animals: {}, days
   const createdDays = [];
   const skipped = [];
   const failed = [];
+  // Day ids reserved by earlier-passed animals in THIS call (defense in depth: lets pre-flight
+  // reject an intra-plan duplicate day id even if a caller hands us a plan that wasn't deduped).
+  const reservedDayIds = new Set();
 
   for (const animalPlan of plan.animals) {
     const { subjectId } = animalPlan;
@@ -124,10 +132,15 @@ export function applyImportPlan(plan, actions, { workspace = { animals: {}, days
     // PRE-FLIGHT (synchronous, read-only): catch any precondition that would make a store
     // action throw out of its reducer. Nothing mutates the store between this check and the
     // writes below within one call, so SKIPPING here actually isolates the failure.
-    const reason = preflightAnimal(animalPlan, resolution, workspace);
+    const reason = preflightAnimal(animalPlan, resolution, workspace, reservedDayIds);
     if (reason !== null) {
       failed.push({ subjectId, reason });
       continue;
+    }
+    // Reserve this animal's day ids so a later animal in the same call can't collide with them.
+    const targetId = resolution === 'add' ? animalPlan.existingAnimalId : subjectId;
+    for (const day of animalPlan.days) {
+      reservedDayIds.add(generateDayId(targetId, day.date));
     }
 
     try {

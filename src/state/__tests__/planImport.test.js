@@ -227,6 +227,35 @@ describe('planImport — unimportable files', () => {
   });
 });
 
+describe('planImport — intra-plan duplicate (subject, date)', () => {
+  it('keeps ONE day and pushes the duplicate (same subject + same resolved date) to unimportable', () => {
+    // Two files resolving to the SAME subject AND the SAME recording date (e.g. a .yml and a
+    // .yaml of the same session). Without dedup these would produce two days with the same id.
+    const first = makeFile({ subjectId: 'remy', date: '2023-06-22' });
+    const second = makeFile({ subjectId: 'remy', date: '2023-06-22' });
+    second.sourceName = '06222023_remy_metadata.yaml';
+
+    const plan = planImport([first, second], createDefaultWorkspace());
+
+    const remy = plan.animals.find((a) => a.subjectId === 'remy');
+    // Exactly ONE day for that (subject, date) — never two with the same id.
+    expect(remy.days).toHaveLength(1);
+    expect(remy.days[0].date).toBe('2023-06-22');
+    // The first-by-source-order file is the one kept.
+    expect(remy.days[0].sourceName).toBe(first.sourceName);
+
+    // The duplicate is recorded as unimportable with a reason naming the collision.
+    const dup = plan.unimportable.find((u) => u.sourceName === second.sourceName);
+    expect(dup).toBeTruthy();
+    expect(dup.reason).toMatch(/2023-06-22/);
+    expect(dup.reason).toMatch(/remy/);
+    expect(dup.reason).toMatch(/duplicate/i);
+
+    // Summary day count reflects the single retained day.
+    expect(plan.summary.dayCount).toBe(1);
+  });
+});
+
 describe('planImport — purity', () => {
   it('does not mutate or alias the input decodedFiles or workspace', () => {
     const files = [makeFile({ subjectId: 'remy', date: '2023-06-22' })];

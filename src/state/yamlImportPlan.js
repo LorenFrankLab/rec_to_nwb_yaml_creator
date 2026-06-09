@@ -45,7 +45,7 @@ import { getAnimalCameras, getDataAcqDevices } from './workspaceSelectors';
 export function extractRecordingDate(flatModel, sourceName) {
   // PRIMARY: filename {mmddYYYY}_{subject}_metadata.yml.
   if (typeof sourceName === 'string') {
-    const match = sourceName.match(/(\d{2})(\d{2})(\d{4})_.+_metadata\.ya?ml$/i);
+    const match = sourceName.match(/^(\d{2})(\d{2})(\d{4})_.+_metadata\.ya?ml$/i);
     if (match) {
       const [, mm, dd, yyyy] = match;
       const iso = toIsoDate(yyyy, mm, dd);
@@ -403,6 +403,14 @@ export function planImport(decodedFiles, existingWorkspace) {
   const unimportable = [];
   /** @type {Map<string, Array<object>>} subjectId → date-ordered file entries */
   const bySubject = new Map();
+  /**
+   * `${subjectId} ${date}` → the sourceName of the FIRST (input/source order) file that
+   * claimed that (subject, date). Used to dedup intra-plan duplicates so `planImport` never
+   * emits two days with the same `generateDayId` for one subject (which would otherwise make
+   * the executor's second `createDay` throw inside the store reducer and crash the render).
+   * @type {Map<string, string>}
+   */
+  const keptByDayKey = new Map();
 
   for (const file of files) {
     const sourceName = file?.sourceName;
@@ -436,6 +444,20 @@ export function planImport(decodedFiles, existingWorkspace) {
       });
       continue;
     }
+
+    // Intra-plan dedup: two ok+dated files resolving to the SAME (subject, date) would yield
+    // two days with the same id. Keep the FIRST (input/source order); send the rest to
+    // unimportable naming the collision.
+    const dayKey = `${subjectId} ${date}`;
+    const keptSourceName = keptByDayKey.get(dayKey);
+    if (keptSourceName !== undefined) {
+      unimportable.push({
+        sourceName,
+        reason: `Duplicate recording date ${date} for subject "${subjectId}" (already provided by ${keptSourceName}).`,
+      });
+      continue;
+    }
+    keptByDayKey.set(dayKey, sourceName);
 
     const entry = {
       sourceName,

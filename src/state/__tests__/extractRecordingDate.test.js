@@ -39,6 +39,16 @@ describe('extractRecordingDate', () => {
     expect(extractRecordingDate({ session_id: 'remy_20230632' }, 'x.yml')).toBeNull();
   });
 
+  it('does not misparse a leading-digit-prefixed filename (regex is start-anchored)', () => {
+    // A pathological leading prefix must NOT let an interior 8-digit run match. With no
+    // session_id fallback this resolves to null rather than a bogus interior date.
+    expect(extractRecordingDate({}, '1306222023_remy_metadata.yml')).toBeNull();
+    // With a valid session_id, it falls through to that fallback instead of misparsing.
+    expect(
+      extractRecordingDate({ session_id: 'remy_20230622' }, '1306222023_remy_metadata.yml')
+    ).toBe('2023-06-22');
+  });
+
   it('never throws on a non-object flatModel or odd sourceName', () => {
     expect(extractRecordingDate(null, null)).toBeNull();
     expect(extractRecordingDate(undefined, 123)).toBeNull();

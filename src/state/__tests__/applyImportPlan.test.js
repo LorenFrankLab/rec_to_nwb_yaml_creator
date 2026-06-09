@@ -211,6 +211,61 @@ describe('applyImportPlan — resilience (real store)', () => {
     expect(ws.days['remy-2023-06-22'].session.session_id).toBe('seeded');
   });
 
+  it('two files with the SAME subject + SAME date do not crash the render: plan dedups, exactly one day is created', () => {
+    // Two files resolving to the same (subject, date). Pre-dedup, planImport would emit two
+    // days with the same generateDayId — the second createDay would throw INSIDE setWorkspace's
+    // reducer (escaping the synchronous try/catch and crashing the render). The plan-level
+    // dedup must prevent that, so applying the plan against a REAL store does NOT throw and
+    // creates the single day.
+    const first = makeFile({ subjectId: 'remy', date: '2023-06-22' });
+    const second = makeFile({ subjectId: 'remy', date: '2023-06-22' });
+    second.sourceName = '06222023_remy_metadata.yaml';
+
+    const plan = planImport([first, second], createDefaultWorkspace());
+
+    const { result } = renderHook(() => useStore());
+    let summary;
+    // MUST NOT throw / crash the render.
+    act(() => {
+      summary = applyImportPlan(plan, result.current.actions, {
+        workspace: result.current.model.workspace,
+      });
+    });
+
+    expect(summary.failed).toEqual([]);
+    expect(summary.createdAnimals).toEqual(['remy']);
+    expect(summary.createdDays).toEqual(['remy-2023-06-22']);
+
+    const ws = result.current.model.workspace;
+    expect(ws.animals.remy.days).toEqual(['remy-2023-06-22']);
+    expect(ws.days['remy-2023-06-22']).toBeTruthy();
+  });
+
+  it('fails-closed (defense in depth) on a hand-crafted plan with two animals sharing a day id', () => {
+    // A future caller could hand the executor a plan whose two animals resolve to the same day
+    // id (e.g. same subjectId under different conflict shapes). Pre-flight must reserve earlier
+    // day ids and reject the collision instead of issuing a throwing createDay.
+    const base = planImport([makeFile({ subjectId: 'remy', date: '2023-06-22' })], createDefaultWorkspace());
+    const dupPlan = {
+      ...base,
+      animals: [base.animals[0], structuredClone(base.animals[0])],
+    };
+
+    const { result } = renderHook(() => useStore());
+    let summary;
+    act(() => {
+      summary = applyImportPlan(dupPlan, result.current.actions, {
+        workspace: result.current.model.workspace,
+      });
+    });
+
+    // First animal creates the day; the duplicate is recorded in failed (no throw).
+    expect(summary.createdAnimals).toEqual(['remy']);
+    expect(summary.createdDays).toEqual(['remy-2023-06-22']);
+    expect(summary.failed).toHaveLength(1);
+    expect(summary.failed[0].reason).toMatch(/already exists/i);
+  });
+
   it('new-animal collision (subjectId already exists) is pre-flighted: recorded in failed, clean animal still imports', () => {
     const { result } = renderHook(() => useStore());
     act(() => {
