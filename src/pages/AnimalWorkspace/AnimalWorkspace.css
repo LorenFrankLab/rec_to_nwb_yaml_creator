@@ -208,9 +208,16 @@
 /* The navigation card grows; the lifecycle action sits beside it (not inside the link). */
 .day-link {
   flex: 1;
+  /* A flex item defaults to `min-width: auto`, so it won't shrink below its content's
+     min-content width. Without this, the row-status's long "Needs fixing — <reason>" text
+     (white-space wrapping relaxed below) keeps the card wide and pushes the Duplicate/Delete
+     actions off the panel at common laptop widths (horizontal scroll). `min-width: 0` lets the
+     card shrink so the row stays inside the panel. */
+  min-width: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 0.75rem;
   padding: 1rem;
   border: 1px solid #ddd;
   border-radius: 4px;
@@ -229,6 +236,9 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  /* Allow the info column to shrink so the session-desc ellipsis works and the column doesn't
+     force the card wide (pairs with `.day-link { min-width: 0 }`). */
+  min-width: 0;
 }
 
 .day-date {
@@ -256,6 +266,10 @@
 .day-status {
   display: flex;
   gap: 0.5rem;
+  /* The status sits at the card's right; cap it so a long "Needs fixing — <reason>" wraps within
+     the card instead of forcing the whole row wider than the panel. */
+  min-width: 0;
+  flex-shrink: 1;
 }
 
 /* Decision 12: ONE plain-language day status (replaces the Draft/Validated/Exported chip
@@ -263,11 +277,14 @@
    carry the meaning). */
 .day-row-status {
   display: inline-flex;
-  align-items: center;
+  align-items: baseline;
   gap: 0.4rem;
   font-size: 0.8125rem;
   font-weight: 600;
-  white-space: nowrap;
+  /* Allow the long "Needs fixing — <reason>" label to WRAP rather than stay a single unshrinkable
+     nowrap line that forces the row wider than the panel (overflow / horizontal scroll at common
+     widths). The leading dot stays on the first line via `align-items: baseline`. */
+  min-width: 0;
 }
 
 .day-row-status::before {
