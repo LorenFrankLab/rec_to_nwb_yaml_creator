@@ -433,6 +433,93 @@ describe('migrateBadChannelsToDays — shape-safe', () => {
   });
 });
 
+describe('migrateBadChannelsToDays — corrupt-container day blocks its snapshot strip', () => {
+  it('a corrupt non-record override container day stays byte-identical (base NOT stripped)', () => {
+    // The day's `deviceOverrides.bad_channels` is a CORRUPT non-record container
+    // (a scalar string, not an object). The UNCHANGED merge ignores the override
+    // wholesale and falls back to the snapshot base [2]. If the migration strips
+    // that base, the export silently drops to [] — the [2] mark is LOST.
+    const animal = {
+      id: 'a',
+      subject: { subject_id: 'a', species: 'Rattus norvegicus', sex: 'M' },
+      devices: { data_acq_device: [{ name: 'SpikeGadgets' }], device: { name: ['Trodes'] } },
+      experimenters: { experimenter_name: ['X, Y'], lab: 'Frank', institution: 'UCSF' },
+      cameras: [],
+      configurationHistory: [
+        {
+          version: 1,
+          devices: {
+            electrode_groups: [{ id: 0, location: 'CA1', device_type: 'tetrode_12.5' }],
+            ntrode_electrode_group_channel_map: [
+              { ntrode_id: 1, electrode_group_id: 0, bad_channels: [2], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+            ],
+          },
+        },
+      ],
+    };
+    const day = {
+      id: 'd',
+      animalId: 'a',
+      configurationVersion: 1,
+      session: { session_id: 's', session_description: 'd', experiment_description: 'e' },
+      // Corrupt non-record container: a bare scalar, NOT a { ntrodeId: [...] } record.
+      deviceOverrides: { bad_channels: '2.9' },
+    };
+    const workspace = { animals: { a: animal }, days: { d: day } };
+
+    const before = encodeYaml(mergeDayMetadata(animal, day));
+    const migrated = migrateBadChannelsToDays(workspace);
+    const after = encodeYaml(mergeDayMetadata(migrated.animals.a, migrated.days.d));
+    expect(after).toBe(before);
+  });
+
+  it('a shared snapshot is NOT stripped when one day on it has a corrupt container (both days byte-identical)', () => {
+    // Two days pin the SAME version 1 snapshot whose ntrode 1 base is [2].
+    //  - dayA is clean (no override) → relies on the base.
+    //  - dayB has a CORRUPT non-record container → merge ignores it, falls back to base.
+    // The migration must NOT strip the shared snapshot base, because dayB cannot
+    // materialize it into a readable override. Stripping it would silently change
+    // BOTH days' exports (dayA's override holds, but dayB's [2] → []).
+    const makeDevices = () => ({
+      electrode_groups: [{ id: 0, location: 'CA1', device_type: 'tetrode_12.5' }],
+      ntrode_electrode_group_channel_map: [
+        { ntrode_id: 1, electrode_group_id: 0, bad_channels: [2], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+      ],
+    });
+    const animal = {
+      id: 'a',
+      subject: { subject_id: 'a', species: 'Rattus norvegicus', sex: 'M' },
+      devices: { data_acq_device: [{ name: 'SpikeGadgets' }], device: { name: ['Trodes'] } },
+      experimenters: { experimenter_name: ['X, Y'], lab: 'Frank', institution: 'UCSF' },
+      cameras: [],
+      configurationHistory: [{ version: 1, devices: makeDevices() }],
+    };
+    const dayA = {
+      id: 'dA',
+      animalId: 'a',
+      configurationVersion: 1,
+      session: { session_id: 'sA', session_description: 'dA', experiment_description: 'e' },
+      // No override → relies on the shared snapshot base.
+    };
+    const dayB = {
+      id: 'dB',
+      animalId: 'a',
+      configurationVersion: 1,
+      session: { session_id: 'sB', session_description: 'dB', experiment_description: 'e' },
+      // Corrupt non-record container → merge ignores → falls back to base.
+      deviceOverrides: { bad_channels: '2.9' },
+    };
+    const workspace = { animals: { a: animal }, days: { dA: dayA, dB: dayB } };
+
+    const before = encodeAllDays(workspace);
+    const migrated = migrateBadChannelsToDays(workspace);
+    const after = encodeAllDays(migrated);
+
+    expect(after.dA).toBe(before.dA);
+    expect(after.dB).toBe(before.dB);
+  });
+});
+
 describe('normalizeWorkspaceDevices runs the migration at load', () => {
   it('a loaded realistic workspace exports byte-identical to its pre-load merge', () => {
     const { workspace } = realisticWorkspace();
