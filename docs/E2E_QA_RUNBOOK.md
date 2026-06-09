@@ -140,6 +140,51 @@ CI does not run. Anything else is a real regression.
 
 ---
 
+## Findings surfaced for follow-up (owning phases, not this QA pass)
+
+The QA pass's job is browser coverage + this runbook; it fixes only clear targeted bugs (the import
+file-picker silent-failure below) and **records** the remaining app-UX issues it surfaced so the
+owning phases can pick them up. None of these block the workspace suite (all 61 tests green); they
+are tracked here so they are not lost.
+
+- **FIXED in this pass (silent data-loss bug).** Workspace YAML import via the **file picker** did
+  nothing in a real browser: `ImportYamlDialog.onInputChange` cleared `e.target.value` before
+  awaiting `handleFiles`, emptying the live `FileList`. Fixed by snapshotting
+  `Array.from(e.target.files ?? [])` before the clear; pinned by the file-picker test in
+  `workspace-persistence-recovery.spec.js`. (Drag-drop was never affected.)
+- **Opto section-nav count is static `'used'` regardless of completeness**
+  (`src/pages/AnimalView/index.jsx`, the `sectionCounts` memo). An animal with a *started but
+  incomplete* opto implant shows "used" in the section-nav while the day's export is blocked by the
+  all-or-nothing `partial_configuration` rule — the nav contradicts the export gate for a real,
+  reachable state. The honest status is the preflight/export gate (which the opto spec asserts).
+  Recommended follow-up (owning: opto/ownership phase): make the opto nav count/blocking-dot reflect
+  completeness, and add an ownership spec that opens a partial-opto blob and asserts the blocking ●.
+- **Import preview names the damaged file + AJV reason but offers no remediation path.** A
+  structurally-valid YAML that fails validation (e.g. missing `data_acq_device`) shows a disabled
+  Confirm button and a bare "Validation failed: must have required property" with no "what to add"
+  guidance. Better than the silent failure it replaced, but the *how-to-fix* half of the
+  mistake-prevention contract is missing. Follow-up (owning: import-hardening phase): map the AJV
+  message to a human remediation sentence.
+- **Import `ResultPhase` reports counts only ("Imported 2 animals and 14 recording days"), not
+  identities.** At a moment of maximum data consequence (bulk import of an experiment series) the
+  user cannot confirm *which* animal ids / day dates landed. Follow-up: render the `createdAnimals`
+  identities in the result screen.
+- **Dead `handleNavClick` discard-confirm guard.** The section-nav unsaved-edit discard confirm is
+  unreachable because every setup editor that reports `pendingEdits` is a focus-trapping `Modal`
+  whose overlay intercepts the nav click (the `workspace-ownership.spec.js` spec asserts this *actual*
+  behavior). The guard would only fire for a future **inline** (non-modal) editor, whose discard
+  dialog has never been browser-QA'd. Follow-up: either remove the dead path or add a unit test for it.
+- **First-run "Set up this animal" card "Needs fixing" state is unreachable** (mutually exclusive
+  with the established-animal blocking ●, since the blocking dot needs ≥1 day but the card only shows
+  for a no-day animal). Mild — users still reach the blocking ● and the in-animal export tab.
+- **Legacy `e2e/baselines/` is an anti-pattern island.** `import-export.spec.js` /
+  `form-interaction.spec.js` use `if (isVisible)`-then-skip bodies, fixed `waitForTimeout` sleeps,
+  CSS-class selectors, and leftover `console.log` — the opposite of the workspace-suite discipline.
+  They are pre-existing legacy coverage for the frozen form; do **not** cite them as precedent for new
+  specs. Follow-up: quarantine or rewrite them in a dedicated legacy-lane cleanup.
+
+---
+
 ## Optional: cross-browser / manual screenshot review
 
 Firefox and WebKit projects are commented out in `playwright.config.js`. To do a one-off

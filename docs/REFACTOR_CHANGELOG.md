@@ -36,6 +36,13 @@ hygiene around it. Runbook: [docs/E2E_QA_RUNBOOK.md](E2E_QA_RUNBOOK.md).
   app-behavior change) — legacy coverage is green again. `baselines/visual-regression.spec.js` (7
   tests) is local-only (CI-ignored); its snapshots are intentionally stale from the workspace UI
   overhaul and are left for a deliberate `--update-snapshots` review rather than blind regeneration.
+- **App-UX findings surfaced for follow-up (owning phases).** The QA pass recorded — but did not
+  speculatively fix — several app-UX issues for their owning phases: the opto section-nav count reads
+  a static "used" even for an incomplete (export-blocked) implant; the YAML import preview names the
+  damaged file/AJV reason but offers no remediation guidance; the import result screen reports counts
+  not identities; the `handleNavClick` discard-confirm guard is dead behind focus-trapping modals; and
+  the first-run setup card's "Needs fixing" state is unreachable. Full list with file references and
+  recommended fixes in the runbook's "Findings surfaced for follow-up" section.
 
 ## Tabbed Day Editor navigation (June 9, 2026)
 
