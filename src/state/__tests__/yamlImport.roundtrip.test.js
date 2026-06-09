@@ -19,8 +19,29 @@ import fs from 'fs';
 import path from 'path';
 import { encodeYaml, decodeYaml } from '../../io/yaml';
 import { mergeDayMetadata } from '../workspaceUtils';
+import { normalizeWorkspaceDevices } from '../../utils/deviceNormalization';
 import { decomposeYaml, recomposeDayModel } from '../yamlImport';
 import { buildRealisticWorkspace } from '../../__tests__/fixtures/workspaceBuilders';
+
+/**
+ * Re-merge a recomposed animal+day through the real LOAD path. `recomposeDayModel`
+ * places imported channel-map `bad_channels` on the configuration snapshot (its base),
+ * but the export merge resolves bad_channels from the DAY OVERRIDE only. The load step
+ * (`normalizeWorkspaceDevices`, which runs the bad-channel migration) is what moves
+ * those base marks down into the day override — so a faithful round-trip re-merges
+ * through it, exactly as production hydration does.
+ *
+ * @param {object} animal - Recomposed animal.
+ * @param {object} day - Recomposed day.
+ * @returns {string} The encoded YAML of the loaded merge.
+ */
+function reExport(animal, day) {
+  const loaded = normalizeWorkspaceDevices({
+    animals: { [animal.id]: animal },
+    days: { [day.id]: day },
+  });
+  return encodeYaml(mergeDayMetadata(loaded.animals[animal.id], loaded.days[day.id]));
+}
 
 const TS = '2023-06-22T12:00:00.000Z';
 
@@ -412,7 +433,10 @@ describe('yamlImport round-trip (genuine merge outputs)', () => {
       const r = decomposeYaml(decodeYaml(f));
       expect(r.ok).toBe(true);
       const { animal: a2, day: d2 } = recomposeDayModel(r);
-      expect(encodeYaml(mergeDayMetadata(a2, d2))).toBe(f);
+      // Re-merge through the real load path (see reExport): the bad-channel migration
+      // moves imported snapshot-base marks down into the day override, which the
+      // day-only merge then reads back — reproducing the original bytes.
+      expect(reExport(a2, d2)).toBe(f);
     });
   }
 });

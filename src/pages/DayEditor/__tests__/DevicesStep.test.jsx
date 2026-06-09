@@ -394,26 +394,26 @@ describe('DevicesStep', () => {
     expect(mockOnFieldUpdate).toHaveBeenCalledWith('deviceOverrides.bad_channels.0', [1]);
   });
 
-  it('renders inherited snapshot bad channels and preserves them when editing', async () => {
+  it('renders inherited (migrated-down) bad channels and preserves them when editing', async () => {
     const user = userEvent.setup();
-    const inheritedNtrodeMap = [
-      { ...NTRODE_MAP[0], bad_channels: [1] },
-      NTRODE_MAP[1],
-    ];
+    // `resolveDayConfig` now reads bad_channels from the DAY OVERRIDE ONLY (the
+    // load-time migration moves a snapshot base mark DOWN into the day override), so
+    // the inherited mark on ntrode 0 reaches the user through
+    // `deviceOverrides.bad_channels[0]`, not via the snapshot base.
     const animalWithInheritedBadChannels = {
       ...mockAnimal,
       devices: {
         ...mockAnimal.devices,
-        ntrode_electrode_group_channel_map: inheritedNtrodeMap,
+        ntrode_electrode_group_channel_map: NTRODE_MAP,
       },
       configurationHistory: historyFor({
         electrode_groups: ELECTRODE_GROUPS,
-        ntrode_electrode_group_channel_map: inheritedNtrodeMap,
+        ntrode_electrode_group_channel_map: NTRODE_MAP,
       }),
     };
     const dayWithoutOverride = {
       ...mockDay,
-      deviceOverrides: { bad_channels: {} },
+      deviceOverrides: { bad_channels: { 0: [1] } },
     };
 
     render(

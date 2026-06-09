@@ -55,6 +55,12 @@ describe('schema-valid device output (workspace export)', () => {
   it('normalizes legacy snapshot device keys at the export boundary', () => {
     const { animal, day } = buildRealisticWorkspace();
     animal.devices.device = { name: [] };
+    // bad_channels resolve from the DAY OVERRIDE ONLY (the snapshot base `['2']` below
+    // is intentionally ignored by the merge — the load-time migration is what moves a
+    // base mark down into the day override). Set the day override so the exported row
+    // carries the mark [2]; the rest of this test exercises snapshot key/coord/id
+    // normalization at the export boundary.
+    day.deviceOverrides = { bad_channels: { 1: [2] } };
     animal.configurationHistory[0].devices = {
       electrode_groups: [
         {

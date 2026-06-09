@@ -166,9 +166,10 @@ function emitFsGuiYamls(items) {
  * matching snapshot is persisted-state corruption and **fails closed** (throws) — it
  * never silently falls back to a different version, which would export the wrong
  * probe geometry. An unpinned day (no `configurationVersion`) uses the latest
- * snapshot, the editor default. Day-level `deviceOverrides.bad_channels` are merged
- * onto the resolved ntrode map. Factoring this here keeps the merge and the
- * reconfiguration wizard from diverging.
+ * snapshot, the editor default. Each ntrode's `bad_channels` come from the day's
+ * `deviceOverrides.bad_channels` ONLY (the load-time migration has moved any base
+ * marks down into the day); the snapshot base is never read as a fallback.
+ * Factoring this here keeps the merge and the reconfiguration wizard from diverging.
  *
  * Returns normalized owned device objects; callers that persist the result can do so
  * without carrying legacy string IDs or non-schema electrode keys forward.
@@ -220,26 +221,30 @@ export function resolveDayConfig(animal, day) {
     ? day.deviceOverrides.ntrode_electrode_group_channel_map
     : getProbeNtrodeMaps(config.devices);
 
-  // Apply day-level bad-channel overrides onto the resolved ntrode map. The override
-  // map is keyed by ntrode_id; a present, WELL-FORMED (array) entry REPLACES that
-  // ntrode's `bad_channels`. Anything malformed is NOT applied to the geometry row:
-  //  - a non-record container (e.g. scalar "2.9") is ignored wholesale;
-  //  - a non-array value under a valid key is declined (the base row is kept) — we do
-  //    NOT smear the scalar onto the row, because that surfaces as an Animal-Editor
-  //    schema error on a field the user can't reach there. The corruption is instead
-  //    surfaced by `dayOverrideIssues` as a day-routed blocker (which reads the raw
-  //    override directly), so it is neither laundered nor hidden — just routed to its
-  //    real owner. An override keyed to an absent ntrode_id is likewise left to
-  //    `dayOverrideIssues`, not applied here.
+  // Resolve each ntrode's effective `bad_channels` from the DAY OVERRIDE ONLY —
+  // never from the snapshot base. The load-time migration
+  // (`migrateBadChannelsToDays`) has already moved any config-snapshot base marks
+  // DOWN into `day.deviceOverrides.bad_channels` (and emptied the snapshot bases)
+  // for all well-formed data, so reading the override exclusively yields the same
+  // effective set the old base-reading merge produced — byte-identical for that
+  // data. The override map is keyed by ntrode_id; per ntrode:
+  //  - a present, WELL-FORMED (array) value → use it (replaces the row's marks);
+  //  - anything else — an ABSENT key, a non-array value under a valid key, or a
+  //    corrupt/absent container — resolves to `[]`. The snapshot base is NOT
+  //    consulted as a fallback (the migration already emptied it; the only data
+  //    whose output changes is a corrupt-override day, whose base is deliberately
+  //    no longer applied — those days are export-gated / repair-surfaced).
+  //
+  // Corruption is NOT smeared onto the geometry row here (a non-array value
+  // becomes `[]`, never the raw scalar) — `dayOverrideIssues` reads the RAW
+  // override directly and surfaces the corruption as a day-routed blocker, so it
+  // is neither laundered into the export nor hidden, just routed to its owner.
   const overrides = day.deviceOverrides?.bad_channels;
   const baseArray = Array.isArray(baseNtrodes) ? baseNtrodes : [];
-  const ntrodes = isPlainRecord(overrides)
-    ? baseArray.map((n) => {
-        if (!Object.hasOwn(overrides, String(n.ntrode_id))) return n;
-        const ov = overrides[String(n.ntrode_id)];
-        return Array.isArray(ov) ? { ...n, bad_channels: [...ov] } : n;
-      })
-    : baseArray;
+  const ntrodes = baseArray.map((n) => {
+    const ov = isPlainRecord(overrides) ? overrides[String(n.ntrode_id)] : undefined;
+    return { ...n, bad_channels: Array.isArray(ov) ? [...ov] : [] };
+  });
 
   return {
     electrode_groups: (Array.isArray(electrodeGroups) ? electrodeGroups : []).map((group, index) =>
