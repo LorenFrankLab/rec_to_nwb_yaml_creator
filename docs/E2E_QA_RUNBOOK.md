@@ -140,48 +140,55 @@ CI does not run. Anything else is a real regression.
 
 ---
 
-## Findings surfaced for follow-up (owning phases, not this QA pass)
+## Findings surfaced by the QA pass — dispositions
 
-The QA pass's job is browser coverage + this runbook; it fixes only clear targeted bugs (the import
-file-picker silent-failure below) and **records** the remaining app-UX issues it surfaced so the
-owning phases can pick them up. None of these block the workspace suite (all 61 tests green); they
-are tracked here so they are not lost.
+The QA pass surfaced several app-UX issues beyond the browser coverage. Each was triaged and either
+**fixed** (with a test), **corrected** (the finding was overstated — the disposition records the
+verified reality), or **annotated**. None blocked the workspace suite.
 
-- **FIXED in this pass (silent data-loss bug).** Workspace YAML import via the **file picker** did
-  nothing in a real browser: `ImportYamlDialog.onInputChange` cleared `e.target.value` before
+- **FIXED — silent data-loss bug (import file picker).** Workspace YAML import via the **file picker**
+  did nothing in a real browser: `ImportYamlDialog.onInputChange` cleared `e.target.value` before
   awaiting `handleFiles`, emptying the live `FileList`. Fixed by snapshotting
   `Array.from(e.target.files ?? [])` before the clear; pinned by the file-picker test in
   `workspace-persistence-recovery.spec.js`. (Drag-drop was never affected.)
-- **Opto section-nav count is static `'used'` regardless of completeness**
-  (`src/pages/AnimalView/index.jsx`, the `sectionCounts` memo). An animal with a *started but
-  incomplete* opto implant shows "used" in the section-nav while the day's export is blocked by the
-  all-or-nothing `partial_configuration` rule — the nav contradicts the export gate for a real,
-  reachable state. The honest status is the preflight/export gate (which the opto spec asserts).
-  Recommended follow-up (owning: opto/ownership phase): make the opto nav count/blocking-dot reflect
-  completeness, and add an ownership spec that opens a partial-opto blob and asserts the blocking ●.
-- **Import preview names the damaged file + AJV reason but offers no remediation path.** A
-  structurally-valid YAML that fails validation (e.g. missing `data_acq_device`) shows a disabled
-  Confirm button and a bare "Validation failed: must have required property" with no "what to add"
-  guidance. Better than the silent failure it replaced, but the *how-to-fix* half of the
-  mistake-prevention contract is missing. Follow-up (owning: import-hardening phase): map the AJV
-  message to a human remediation sentence.
-- **Import `ResultPhase` reports counts only ("Imported 2 animals and 14 recording days"), not
-  identities.** At a moment of maximum data consequence (bulk import of an experiment series) the
-  user cannot confirm *which* animal ids / day dates landed. Follow-up: render the `createdAnimals`
-  identities in the result screen.
-- **Dead `handleNavClick` discard-confirm guard.** The section-nav unsaved-edit discard confirm is
-  unreachable because every setup editor that reports `pendingEdits` is a focus-trapping `Modal`
-  whose overlay intercepts the nav click (the `workspace-ownership.spec.js` spec asserts this *actual*
-  behavior). The guard would only fire for a future **inline** (non-modal) editor, whose discard
-  dialog has never been browser-QA'd. Follow-up: either remove the dead path or add a unit test for it.
-- **First-run "Set up this animal" card "Needs fixing" state is unreachable** (mutually exclusive
-  with the established-animal blocking ●, since the blocking dot needs ≥1 day but the card only shows
-  for a no-day animal). Mild — users still reach the blocking ● and the in-animal export tab.
-- **Legacy `e2e/baselines/` is an anti-pattern island.** `import-export.spec.js` /
+- **FIXED — optogenetics section-nav count honesty** (`src/pages/AnimalView/index.jsx`,
+  `src/domain/sectionStatus.js`). *Correction to the original framing:* the section-nav already
+  signals an incomplete-but-started opto config with a red ● and accessible name
+  "Optogenetics — blocks export" (the blocking dot is computed from the export validator, and the
+  `partial_configuration` rule attributes to the `optogenetics` tab — verified). The only defect was
+  the **decorative count** still reading `'used'` next to the ●. Now derived from a new
+  `getAnimalOptoCompleteness` helper (same four-field definition as the export rule): **complete →
+  `used`**, **partial → `incomplete`** (agrees with the ●), **none → the hollow-○ "not set up" path**.
+  Pinned by `AnimalView.optoCount.test.jsx` + `sectionStatus.test.js`.
+- **FIXED — import preview remediation hints.** Each un-importable file now shows, alongside the raw
+  reason, a plain-language "what to fix" hint derived from the AJV-style message (e.g. missing
+  required property → "Add the missing field: `data_acq_device`."; a value failure with a path →
+  "Fix the value at `<path>`: …"; otherwise a generic instruction). Presentation-only (the parser is
+  untouched); pinned by `ImportYamlDialog.test.jsx`.
+- **FIXED — import result names created identities.** The result phase now lists, per created animal,
+  its id and the day dates added (regrouped from `createdDays`) instead of counts only. Pinned by
+  `ImportYamlDialog.test.jsx`.
+- **FIXED (kept as a latent safety net + pinned) — `handleNavClick` discard guard.** Confirmed
+  unreachable in the shipped UI: all three setup editors that report `pendingEdits`
+  (electrode-groups, channel-maps via `ChannelMapEditor`, cameras) are focus-trapping shared
+  `Modal`s whose overlay intercepts the nav click. The guard is correct, intentional safety code for
+  a **future inline (non-modal)** setup editor, so it was **not removed**; instead a clarifying
+  comment was added and the decision was extracted to a pure `shouldInterceptNavDiscard` + pinned by
+  `AnimalView.navDiscardGuard.test.jsx` (intercept-and-confirm; "Keep editing" cancels, "Discard
+  changes" proceeds).
+- **CORRECTED — first-run "Set up this animal" card "Needs fixing" state.** Not dead code: the setup
+  card renders when `!(subjectPresent && dayCount > 0)`, so it shows for an animal that has recording
+  days **but a missing/empty subject** (a recovery/corruption state) — and in exactly that case
+  `getAnimalBlockingSections` (day-derived) can be non-empty, so "Needs fixing" **is** reachable and
+  correct. The common new-animal path (subject present, no days) cannot have a day-derived export
+  blocker, so it correctly shows "To do"/"Set up", not "Needs fixing". No code change; the original
+  "unreachable" finding was overstated.
+- **ANNOTATED — legacy `e2e/baselines/` anti-pattern island.** `import-export.spec.js` /
   `form-interaction.spec.js` use `if (isVisible)`-then-skip bodies, fixed `waitForTimeout` sleeps,
   CSS-class selectors, and leftover `console.log` — the opposite of the workspace-suite discipline.
-  They are pre-existing legacy coverage for the frozen form; do **not** cite them as precedent for new
-  specs. Follow-up: quarantine or rewrite them in a dedicated legacy-lane cleanup.
+  They are pre-existing legacy coverage for the frozen single-page form. Each now carries a header
+  banner marking it **frozen legacy coverage, not a pattern reference**; a full rewrite/quarantine
+  remains a dedicated legacy-lane cleanup (out of this QA pass's scope).
 
 ---
 

@@ -9,6 +9,14 @@
  *
  * IMPORTANT: This is a BASELINE test documenting current behavior.
  * Tests capture file operations as-is, including any quirks.
+ *
+ * ⚠️ FROZEN LEGACY-FORM COVERAGE — NOT A PATTERN REFERENCE. This spec targets the frozen
+ * single-page legacy form, and predates the workspace QA discipline. It uses anti-patterns the
+ * `e2e/workspace-*.spec.js` suite deliberately forbids: `if (isVisible)`-then-skip bodies, fixed
+ * `waitForTimeout` sleeps, and CSS-class/attribute selectors for app controls. Do NOT copy this
+ * style for new specs — see `docs/E2E_QA_RUNBOOK.md` and any `e2e/workspace-*.spec.js` for the
+ * required role/accessible-name selectors, fail-when-absent assertions, and event-based waits.
+ * Kept only as legacy regression coverage; a rewrite/quarantine is tracked in the runbook.
  */
 
 import { test, expect } from '@playwright/test';

@@ -36,13 +36,22 @@ hygiene around it. Runbook: [docs/E2E_QA_RUNBOOK.md](E2E_QA_RUNBOOK.md).
   app-behavior change) — legacy coverage is green again. `baselines/visual-regression.spec.js` (7
   tests) is local-only (CI-ignored); its snapshots are intentionally stale from the workspace UI
   overhaul and are left for a deliberate `--update-snapshots` review rather than blind regeneration.
-- **App-UX findings surfaced for follow-up (owning phases).** The QA pass recorded — but did not
-  speculatively fix — several app-UX issues for their owning phases: the opto section-nav count reads
-  a static "used" even for an incomplete (export-blocked) implant; the YAML import preview names the
-  damaged file/AJV reason but offers no remediation guidance; the import result screen reports counts
-  not identities; the `handleNavClick` discard-confirm guard is dead behind focus-trapping modals; and
-  the first-run setup card's "Needs fixing" state is unreachable. Full list with file references and
-  recommended fixes in the runbook's "Findings surfaced for follow-up" section.
+- **App-UX findings surfaced by the QA pass — triaged and resolved.** Beyond the browser coverage,
+  the pass surfaced several app-UX issues and dispositioned each (full table with file references in
+  the runbook's "Findings surfaced by the QA pass — dispositions" section):
+  - *Fixed:* optogenetics section-nav count now reads `used`/`incomplete`/(none) honestly via a new
+    `getAnimalOptoCompleteness` helper instead of a static `used` (the blocking ● already fired
+    correctly; only the decorative count was dishonest).
+  - *Fixed:* the YAML import preview now shows a plain-language remediation hint per un-importable file
+    (presentation-only; derived from the AJV message), and the import result phase names the created
+    animal ids + day dates instead of counts only.
+  - *Fixed / kept:* the `handleNavClick` discard-confirm guard is confirmed a latent safety net for a
+    future inline (non-modal) editor — retained with a clarifying comment and pinned by a new unit test
+    (`AnimalView.navDiscardGuard.test.jsx`) rather than removed.
+  - *Corrected:* the first-run setup card's "Needs fixing" state is NOT unreachable — it shows for an
+    animal with days but a missing subject (a recovery state); no code change.
+  - *Annotated:* the legacy `e2e/baselines/` specs now carry a header banner marking them frozen
+    legacy coverage, not a pattern reference for new specs.
 
 ## Tabbed Day Editor navigation (June 9, 2026)
 
