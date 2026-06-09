@@ -74,7 +74,10 @@ export default function ImportYamlDialog({ onClose }) {
    * @param {object} e - The change event.
    */
   const onInputChange = async (e) => {
-    const { files } = e.target;
+    // `e.target.files` is a *live* FileList — clearing `e.target.value` (so re-picking the
+    // SAME file re-fires onChange) empties it in real browsers. Snapshot into a stable
+    // File[] BEFORE clearing, then hand that to handleFiles (which already Array.from()s).
+    const files = Array.from(e.target.files ?? []);
     e.target.value = '';
     await handleFiles(files);
   };

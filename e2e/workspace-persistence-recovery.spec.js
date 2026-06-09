@@ -266,14 +266,9 @@ test.describe('Workspace persistence & recovery', () => {
       '',
     ].join('\n');
 
-    // Exercise the DROP path (the drag-and-drop zone), NOT the hidden file <input>. The
-    // file-picker path is broken in real browsers: ImportYamlDialog.onInputChange captures
-    // `e.target.files` then sets `e.target.value = ''` BEFORE awaiting handleFiles, which
-    // empties the captured live FileList in Chromium, so `handleFiles` receives zero files
-    // and the preview never advances (verified live: the dialog stays on the pick phase
-    // after setInputFiles). The drop handler does not clear value first, so it is the
-    // user-drivable path that reaches the preview. (The picker bug is a real `src/`
-    // production defect, documented in the report; not fixed here under the QA-only scope.)
+    // Exercise the DROP path (the drag-and-drop zone). This covers the un-importable list
+    // via the drop handler; the file-picker (<input>) path is covered separately by the
+    // "FILE PICKER advances the preview" test below.
     const dropZone = dialog.getByRole('button', {
       name: 'Drop YAML files here, or use the file picker below',
     });
@@ -298,5 +293,64 @@ test.describe('Workspace persistence & recovery', () => {
     // Nothing is written until confirm: cancelling leaves the workspace empty.
     await page.getByRole('button', { name: 'Cancel' }).click();
     await expect(page.getByText('No animals created yet.')).toBeVisible();
+  });
+
+  test('importing a valid YAML through the FILE PICKER advances the preview (not zero files)', async ({
+    page,
+  }) => {
+    // Regression guard for the in-browser file-picker bug: ImportYamlDialog.onInputChange
+    // captured the live `e.target.files` FileList then cleared `e.target.value` BEFORE
+    // awaiting handleFiles, which empties that live list in a real browser, so the picker
+    // imported zero files and the preview never advanced. Drives the REAL picker path
+    // (setInputFiles → onChange) and asserts the preview advances with the parsed animal.
+    await resetWorkspace(page);
+    await page.getByRole('button', { name: /import yaml/i }).first().click();
+    const dialog = page.getByRole('dialog', { name: 'Import YAML files' });
+    await expect(dialog).toBeVisible();
+
+    // A valid, importable single-day YAML (proper {mmddYYYY}_{subject}_metadata.yml name
+    // and all required animal-level fields present).
+    const validYaml = [
+      'experimenter_name:',
+      '  - Doe, Jane',
+      'lab: Frank',
+      'institution: University of California, San Francisco',
+      'experiment_description: Picker-path import fixture',
+      'session_description: Valid import via file picker',
+      'session_id: pickerrat_20230622',
+      'subject:',
+      '  description: Subject',
+      '  genotype: Wild Type',
+      '  species: Rattus norvegicus',
+      '  sex: M',
+      '  subject_id: pickerrat',
+      '  weight: 400',
+      '  date_of_birth: 2023-01-10T00:00:00',
+      '  age: P164',
+      'data_acq_device:',
+      '  - name: SpikeGadgets',
+      '    system: SpikeGadgets',
+      '    amplifier: Intan',
+      '    adc_circuit: Intan',
+      'times_period_multiplier: 1.5',
+      'raw_data_to_volts: 0.195',
+      '',
+    ].join('\n');
+
+    // Drive the hidden multi-file <input> directly — this is exactly the change event the
+    // "Choose YAML files" label triggers. setInputFiles fires onChange/onInputChange.
+    await dialog.getByLabel('Choose YAML files to import').setInputFiles({
+      name: '06222023_pickerrat_metadata.yml',
+      mimeType: 'text/yaml',
+      buffer: Buffer.from(validYaml),
+    });
+
+    // The preview phase must advance and show the parsed animal — NOT stay stuck on pick
+    // (which is what the bug caused: zero files → handleFiles returns early → no preview).
+    const preview = page.getByRole('region', { name: 'Import preview' });
+    await expect(preview).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Animal pickerrat' })).toBeVisible();
+    await expect(preview).toContainText('1 animal');
+    await expect(preview).toContainText('1 recording day');
   });
 });
