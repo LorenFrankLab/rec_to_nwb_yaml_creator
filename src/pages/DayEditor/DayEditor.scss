@@ -85,19 +85,21 @@
   align-items: start;
 }
 
-/* Base section-nav layout (kept self-contained so the Day Editor doesn't depend on
-   AnimalView.css being loaded; the selectors match AnimalView's and the rules are
-   compatible). */
-.section-nav {
+/* Section-nav layout — SCOPED under `.day-editor-body`. These class NAMES are shared with
+   AnimalView's section-nav, but AnimalView ships its own (different) rules for them; leaving
+   these global let the Day Editor's `width: 100%` item rule leak onto AnimalView and overflow
+   its nav past the divider into the panel. Scoping keeps the Day Editor's nav self-contained and
+   off AnimalView's. */
+.day-editor-body .section-nav {
   border-right: 1px solid var(--color-grey-200);
   padding: 1rem 0.7rem;
 }
 
-.section-nav-group {
+.day-editor-body .section-nav-group {
   margin-bottom: 1.1rem;
 }
 
-.section-nav-group-label {
+.day-editor-body .section-nav-group-label {
   font-size: 0.6rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;
@@ -105,11 +107,14 @@
   padding: 0 0.55rem 0.4rem;
 }
 
-.section-nav-item {
+.day-editor-body .section-nav-item {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   width: 100%;
+  /* width:100% fills the 230px nav column; without border-box the padding would push the item
+     past the column (the grid has no gap, so it would overlap the panel content). */
+  box-sizing: border-box;
   padding: 0.5rem 0.55rem;
   font-size: 0.9rem;
   font-weight: 500;
@@ -122,12 +127,12 @@
   color: inherit;
 }
 
-.section-nav-item:hover {
+.day-editor-body .section-nav-item:hover {
   background: var(--color-grey-100);
   border-radius: 8px;
 }
 
-.section-nav-item.is-active {
+.day-editor-body .section-nav-item.is-active {
   background: var(--color-primary-light);
   border: 1px solid var(--color-primary);
   border-radius: 8px;
@@ -135,36 +140,36 @@
   box-shadow: inset 3px 0 0 var(--color-primary);
 }
 
-.section-nav-item:focus-visible {
+.day-editor-body .section-nav-item:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: -2px;
 }
 
-.section-nav-item-name {
+.day-editor-body .section-nav-item-name {
   flex: 1;
 }
 
-.section-nav-count {
+.day-editor-body .section-nav-count {
   flex: none;
   font-size: 0.7rem;
   color: var(--color-grey-600);
 }
 
-.section-nav-status-icon {
+.day-editor-body .section-nav-status-icon {
   flex: none;
   font-size: 1rem;
   line-height: 1;
 }
 
-.section-nav-item.step-valid .section-nav-status-icon {
+.day-editor-body .section-nav-item.step-valid .section-nav-status-icon {
   color: var(--color-success);
 }
 
-.section-nav-item.step-incomplete .section-nav-status-icon {
+.day-editor-body .section-nav-item.step-incomplete .section-nav-status-icon {
   color: var(--color-warning);
 }
 
-.section-nav-item.step-error .section-nav-status-icon {
+.day-editor-body .section-nav-item.step-error .section-nav-status-icon {
   color: var(--color-error);
 }
 
@@ -416,7 +421,7 @@
     grid-template-columns: 1fr;
   }
 
-  .section-nav {
+  .day-editor-body .section-nav {
     border-right: none;
     border-bottom: 1px solid var(--color-grey-200);
   }
