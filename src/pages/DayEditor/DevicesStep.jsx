@@ -88,7 +88,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
   // explicit additions (inferred cameras are covered by the union and need not be stored), so
   // `cameras_used` stays absent/empty for all existing data and the export stays byte-identical.
   const animalCameras = getAnimalCameras(animal);
-  const referencedKeys = useMemo(() => inferredCameraKeys(day), [day]);
+  const inferredKeys = useMemo(() => inferredCameraKeys(day), [day]);
   const explicitCameraIds = useMemo(
     () => (Array.isArray(day.cameras_used) ? day.cameras_used : []),
     [day.cameras_used]
@@ -114,12 +114,12 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
       const nextIds = animalCameras
         .filter(
           (camera) =>
-            !referencedKeys.has(String(camera?.id)) && next.has(String(camera?.id))
+            !inferredKeys.has(String(camera?.id)) && next.has(String(camera?.id))
         )
         .map((camera) => camera.id);
       onFieldUpdate('cameras_used', nextIds);
     },
-    [animalCameras, explicitCameraIds, referencedKeys, onFieldUpdate]
+    [animalCameras, explicitCameraIds, inferredKeys, onFieldUpdate]
   );
 
   const camerasUsedSection =
@@ -133,7 +133,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
         <ul className="cameras-used-list">
           {animalCameras.map((camera) => {
             const key = String(camera?.id);
-            const referenced = referencedKeys.has(key);
+            const referenced = inferredKeys.has(key);
             const checked = referenced || explicitKeySet.has(key);
             const label = `${camera?.camera_name ?? '(unnamed)'} (id ${camera?.id})`;
             return (
