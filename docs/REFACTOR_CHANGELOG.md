@@ -4,6 +4,45 @@
 
 **Last Updated:** June 8, 2026
 
+## Internal YAML import core — pure plan + resilient executor (June 8, 2026)
+
+Added an internal (non-UI) YAML import core: a **pure** reconciliation that turns a set of parsed
+metadata YAML files into an import plan, plus an executor that writes the plan into the workspace
+store.
+
+- `extractRecordingDate` derives a recording day's ISO date from the
+  `{mmddYYYY}_{subject}_metadata.yml` filename (primary) or a `{subject}_{YYYYMMDD}` `session_id`
+  (fallback), rejecting invalid calendar dates.
+- `planImport` (pure) decomposes each file, groups files by subject, infers configuration versions
+  (distinct electrode configs in date order), resolves animal-level facts with a documented default
+  policy, and surfaces every cross-file disagreement as an explicit `divergence` flag rather than a
+  silent pick. Conflicts with existing workspace animals are flagged (never overwritten silently).
+- `applyImportPlan` writes a plan into the live store via the existing workspace actions, supporting
+  per-subject `add` / `skip` / `replace` conflict resolutions.
+- Extracted the pure identity-divergence helper (`findIdentityDivergence`) into
+  `src/state/identityDivergence.js` so both the animal-editor page layer and the state-layer import
+  reconciler share one implementation without crossing the page/state boundary.
+- **Import round-trip gate:** a multi-day / multi-config-version workspace exported per day and
+  re-imported through `planImport` → `applyImportPlan` re-exports byte-for-byte identically.
+
+### Fix: per-animal import isolation is now real (synchronous pre-flight)
+
+The documented "one animal's failure never aborts the others" guarantee was **false** in production.
+The store actions (`createAnimal` / `createDay` / `createConfigurationSnapshotAndApplyForward`) throw
+**inside** their `setWorkspace((prev) => { throw ... })` updater, which React invokes during its
+reducer phase — so the throw **escapes** `applyImportPlan`'s synchronous `try/catch` and crashes the
+render. A real collision (e.g. a duplicate day id in conflict→`add`, or a new-animal `subjectId` that
+already exists) would abort the **entire** import as an uncaught React error.
+
+`applyImportPlan` now **PRE-FLIGHTS** each planned animal **synchronously** against the current
+workspace snapshot **before** issuing any write: an animal whose preconditions would make a store
+action throw is recorded in `failed` (with a clear reason) and **skipped**, never written. Because
+nothing mutates the store between pre-flight and the writes within one call, isolation is now actually
+true. The signature is `applyImportPlan(plan, actions, { workspace, resolutions })` (the current
+workspace is required for the pre-flight); the surrounding `try/catch` is kept only as a backstop. The
+resilience test now drives the **real** store (`useStore`) with a seeded collision rather than a
+synchronous-throwing stub, proving the guarantee against the production store path.
+
 ## Internal YAML-decompose module (June 8, 2026)
 
 Added an internal module (`src/state/yamlImport.js`) that **decomposes** a flat NWB YAML model back
