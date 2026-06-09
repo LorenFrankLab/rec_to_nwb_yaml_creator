@@ -163,13 +163,14 @@ ImportYamlDialog.propTypes = {
  * generic instruction when the shape is unrecognized. The raw reason is still shown alongside the
  * hint by the caller, so nothing is hidden.
  *
- * Mapping (honest, derived from the AJV-style messages the validator emits):
+ * Mapping (honest, derived from the messages the plan/validator actually emit). The plan builds a
+ * value-failure reason as `Validation failed: <message>`, where `<message>` is the validator's
+ * already-sanitized AJV message (e.g. `must match pattern "..."`) WITHOUT a leading instancePath —
+ * so we only recognize the two shapes that genuinely appear:
  *  - `must have required property 'X'` (one or more) → "Add the missing field: `X`." listing all
  *    reported missing props.
- *  - a value failure that carries a path (`<path> <message>`, e.g. AJV's
- *    `/subject/species must match pattern ...`) → "Fix the value at `<path>`: `<message>`."
  *  - anything else → a generic "Open this file and correct the reported problem before
- *    re-importing." (the raw reason is shown separately by the caller).
+ *    re-importing." (the raw reason is still shown separately by the caller, so nothing is hidden).
  *
  * @param {string} [reason] - The un-importable entry's raw reason string.
  * @returns {string} A plain-language remediation hint (never empty).
@@ -187,16 +188,6 @@ export function remediationHint(reason) {
   if (requiredProps.length > 0) {
     const fields = requiredProps.map((p) => `\`${p}\``).join(', ');
     return `Add the missing field${requiredProps.length === 1 ? '' : 's'}: ${fields}.`;
-  }
-
-  // A value failure AJV reports as `<instancePath> <message>` (e.g. a pattern/type/enum miss).
-  // The plan wraps it as `Validation failed: <instancePath> <message>`. Pull the path + message
-  // back out so we can point the user at the exact field without inventing requirements.
-  const valueMatch = raw.match(
-    /Validation failed:\s*(\/\S+)\s+(must (?:match pattern|be|have).+)$/
-  );
-  if (valueMatch) {
-    return `Fix the value at \`${valueMatch[1]}\`: ${valueMatch[2]}`;
   }
 
   return 'Open this file and correct the reported problem before re-importing.';
