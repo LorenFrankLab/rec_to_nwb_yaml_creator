@@ -12,43 +12,10 @@
 
 import { getAnimalCameras, getDataAcqDevices } from '../../state/workspaceSelectors';
 
-/**
- * Compare two dependent-field values for identity purposes. Numbers compare
- * numerically; everything else compares as trimmed strings so `'8mm'` vs `'8mm'`
- * matches and `0.001` vs `0.001` matches, while absent vs present differ.
- *
- * @param {*} a - First value.
- * @param {*} b - Second value.
- * @returns {boolean} True when the two values are equivalent.
- */
-function valuesEqual(a, b) {
-  if (typeof a === 'number' && typeof b === 'number') return a === b;
-  return String(a ?? '').trim() === String(b ?? '').trim();
-}
-
-/**
- * Find a divergent reuse of `name` in a registry of existing identities.
- *
- * @param {string} name - The candidate identity name (e.g. camera_name).
- * @param {Record<string, *>} candidateFields - The candidate's dependent fields.
- * @param {Array<{name: string, fields: Record<string, *>, label?: string}>} registry -
- *   Existing identities the candidate is checked against.
- * @returns {{existing: object, differingFields: string[]}|null} The conflicting entry
- *   and the dependent fields that differ, or null when the name is unused or its reuse
- *   is identical (a safe reuse).
- */
-export function findIdentityDivergence(name, candidateFields, registry) {
-  const normalizedName = String(name ?? '').trim();
-  if (!normalizedName) return null;
-  for (const entry of registry) {
-    if (String(entry.name ?? '').trim() !== normalizedName) continue;
-    const differingFields = Object.keys(candidateFields).filter(
-      (key) => !valuesEqual(candidateFields[key], entry.fields[key])
-    );
-    if (differingFields.length > 0) return { existing: entry, differingFields };
-  }
-  return null;
-}
+// The pure identity-divergence core lives in `state/` so both this page-layer editing surface
+// and state-layer consumers (the YAML import reconciler) share ONE implementation without a
+// reversed page→state import. Re-exported here so existing importers of this module are unchanged.
+export { findIdentityDivergence } from '../../state/identityDivergence';
 
 /**
  * Human-readable labels for the dependent fields shown in a divergence comparison,
