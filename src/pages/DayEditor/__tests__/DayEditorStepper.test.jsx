@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StoreProvider } from '../../../state/StoreContext';
 import DayEditorStepper from '../DayEditorStepper';
@@ -7,6 +7,7 @@ import DayEditorStepper from '../DayEditorStepper';
 import { useDayIdFromUrl } from '../../../hooks/useDayIdFromUrl';
 import { emitStepperShortcut } from '../../../hooks/stepperShortcuts';
 import { act } from '@testing-library/react';
+import { buildRealisticWorkspace } from '../../../__tests__/fixtures/workspaceBuilders';
 
 // Mock the hook
 vi.mock('../../../hooks/useDayIdFromUrl', () => ({
@@ -694,6 +695,46 @@ describe('DayEditorStepper', () => {
       expect(main).not.toHaveFocus(); // initial mount does not steal focus
       await user.click(screen.getByRole('button', { name: /Devices & Failed Channels/i }));
       expect(main).toHaveFocus();
+    });
+
+    // Regression: the section-change focus must keep working AFTER a field-targeted repair.
+    // A repair sets `focusRequest` (consumed once by the repair-focus effect to focus the
+    // field). `focusRequest` is sticky — it is only cleared on a no-field navigate — so the
+    // section-change effect must NOT key its skip off `focusRequest` (that self-disables the
+    // a11y focus for the rest of the session). A consume-once skip is used instead.
+    it('still moves focus to the panel on a plain section change AFTER a field-targeted repair', async () => {
+      const user = userEvent.setup();
+      const { animal, day } = buildRealisticWorkspace();
+      // A blank session description is an Overview error with a focusable repair anchor.
+      day.session.session_description = '';
+      useDayIdFromUrl.mockReturnValue(day.id);
+
+      render(
+        <StoreProvider
+          initialState={{
+            workspace: {
+              animals: { [animal.id]: animal },
+              days: { [day.id]: day },
+              settings: {},
+            },
+          }}
+        >
+          <DayEditorStepper />
+        </StoreProvider>
+      );
+
+      // Trigger a field-targeted repair: route to Overview + focus the session-description
+      // field. This sets the sticky `focusRequest`.
+      await user.click(screen.getByRole('button', { name: /^Validation/ }));
+      await user.click(screen.getByRole('button', { name: /fix in overview/i }));
+      const textarea = screen.getByRole('textbox', { name: /session description/i });
+      await waitFor(() => expect(textarea).toHaveFocus());
+
+      // Now do a PLAIN section switch (no fieldPath). Focus must move to the panel — the
+      // sticky `focusRequest` must NOT bail this out (the pre-fix bug stranded focus here).
+      const main = document.getElementById('main-content');
+      await user.click(screen.getByRole('button', { name: /Devices & Failed Channels/i }));
+      await waitFor(() => expect(main).toHaveFocus());
     });
   });
 });

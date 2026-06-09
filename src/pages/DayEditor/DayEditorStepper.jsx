@@ -209,13 +209,26 @@ export default function DayEditorStepper() {
   // repair-focus effect below owns focus instead (it lands on the specific control), so this
   // generic effect must not fight it — it only fires for a plain section switch.
   const isFirstSectionRender = useRef(true);
+  // Skip the section-change focus EXACTLY ONCE, set only by a field-targeted repair
+  // navigation (the repair-focus effect below owns focusing the specific control then).
+  // We must NOT skip based on `focusRequest` itself: `focusRequest` is sticky (it is only
+  // cleared on a no-field navigate), so keying the skip off it would permanently disable
+  // this a11y focus after the first repair, stranding keyboard/SR users at the top on every
+  // later plain section switch. The ref consumes the skip once and never gets stuck.
+  const skipNextSectionFocusRef = useRef(false);
   useEffect(() => {
     if (isFirstSectionRender.current) {
       isFirstSectionRender.current = false;
-      return;
+      return undefined;
     }
-    if (focusRequest) return; // repair-focus effect handles focus for a targeted repair.
+    if (skipNextSectionFocusRef.current) {
+      // A field-targeted repair just navigated here; the repair-focus effect will land on
+      // the specific control. Consume the skip so the NEXT plain switch focuses the panel.
+      skipNextSectionFocusRef.current = false;
+      return undefined;
+    }
     document.getElementById('main-content')?.focus();
+    return undefined;
   }, [currentStep, focusRequest]);
   const handleStepNavigate = useCallback((target, fieldPath) => {
     // An 'animal' target routes to the Animal Editor (the editable owner of device
@@ -236,6 +249,10 @@ export default function DayEditorStepper() {
     }
     setCurrentStep(target);
     if (fieldPath) {
+      // The repair-focus effect will own focusing this specific field — skip the generic
+      // section-change focus exactly once so the two don't fight (and so the field, not the
+      // panel, receives focus). The skip is consumed in the section-change effect.
+      skipNextSectionFocusRef.current = true;
       focusTokenRef.current += 1;
       setFocusRequest({ fieldPath, token: focusTokenRef.current });
     } else {
