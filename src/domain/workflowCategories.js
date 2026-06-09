@@ -116,6 +116,7 @@ export const CATEGORY_BY_CODE = Object.freeze({
   // Day-specific failed (bad) channels.
   bad_channel_out_of_range: WORKFLOW_CATEGORY.FAILED_CHANNELS,
   multishank_bad_channels_ignored: WORKFLOW_CATEGORY.FAILED_CHANNELS,
+  bad_channel_unfailed_without_ack: WORKFLOW_CATEGORY.FAILED_CHANNELS,
 
   // Corrupt / recovered / stale shapes that must be cleaned up before the data is trusted.
   stale_bad_channel_override: WORKFLOW_CATEGORY.EXISTING_DATA,

@@ -12,6 +12,7 @@
 import { validate } from '../validation';
 import { validateRawDay, validateRawAnimal } from '../validation/rawShape';
 import { getConfigHistory, getDataAcqDevices } from '../state/workspaceSelectors';
+import { badChannelRegressions } from './badChannelMonotonicity';
 
 /**
  * Whether `value` is a plain object record (not null, not an array). Mirrors the
@@ -332,12 +333,59 @@ export function danglingDataAcqRefIssue(day, animal) {
 }
 
 /**
+ * Export-blocking issues for a day that silently "un-fails" bad channels — drops a channel that
+ * was bad on an EARLIER same-`configurationVersion` recording day without an off-export
+ * acknowledgment. Bad channels are MONOTONIC across a study (hardware does not heal): a later
+ * day's effective bad set should never be a strict subset of an earlier same-config day's. The
+ * effective sets are read day-owned ({@link getDayBadChannelOverrides}), so this catches the
+ * regression the export merge would otherwise emit verbatim (a quietly recovered channel that
+ * was actually dead — corrupting downstream analysis).
+ *
+ * The config-version boundary is HONORED ({@link badChannelRegressions} never compares across
+ * versions): a probe reconfiguration legitimately resets channels. Each regressing ntrode yields
+ * one day-routed, Devices-step, error issue carrying an `acknowledgeBadChannelRemovals` repair
+ * command — so the block is clearable by acknowledging the removal (an override), not only by
+ * restoring the channel. With no cross-day context (`animalDays` empty) there is nothing to
+ * compare, so this is a no-op — preserving every existing single-day call site.
+ *
+ * @param {object} day - The day being checked.
+ * @param {object} [animal] - The owning animal.
+ * @param {Array} [animalDays] - The animal's day records (for the earlier same-config union).
+ * @returns {Array} Zero or more error issues (one per regressing ntrode).
+ */
+export function badChannelUnfailIssues(day, animal, animalDays = []) {
+  const regressions = badChannelRegressions(animal, day, animalDays);
+  return Object.keys(regressions).map((ntrodeId) => {
+    const channels = regressions[ntrodeId];
+    return {
+      path: `deviceOverrides.bad_channels.${ntrodeId}`,
+      field: 'bad_channels',
+      step: 'devices',
+      repairSurface: 'day',
+      actionLabel: 'Acknowledge un-marking',
+      code: 'bad_channel_unfailed_without_ack',
+      severity: 'error',
+      repairCommand: {
+        type: 'acknowledgeBadChannelRemovals',
+        acks: { [ntrodeId]: channels },
+      },
+      message:
+        `Channel${channels.length === 1 ? '' : 's'} ${channels.join(', ')} on ntrode ${ntrodeId} ` +
+        `${channels.length === 1 ? 'was' : 'were'} marked bad on an earlier recording day with the ` +
+        `same probe configuration; bad channels are monotonic. Re-mark ${channels.length === 1 ? 'it' : 'them'}, ` +
+        `or acknowledge the removal.`,
+    };
+  });
+}
+
+/**
  *
  * @param day
  * @param mergedDay
  * @param animal
+ * @param animalDays
  */
-export function validateDay(day, mergedDay, animal) {
+export function validateDay(day, mergedDay, animal, animalDays = []) {
   // Boundary 1: validate the RAW persisted day AND animal shape FIRST — before the merge
   // launders a corrupt collection (`tasks: {}`, `animal.cameras: "nope"`) into an empty
   // export default that the merged-model validation below would see as clean. These block
@@ -365,6 +413,7 @@ export function validateDay(day, mergedDay, animal) {
     ...dayOverrideIssues(day, mergedDay, base),
     ...unpinnedConfigurationIssues(day, animal),
     ...danglingDataAcqRefIssue(day, animal),
+    ...badChannelUnfailIssues(day, animal, animalDays),
   ].map(normalizeIssue);
 }
 
@@ -468,10 +517,12 @@ export const STEP_STATUS = Object.freeze({
  * @param {object} mergedDay - Merged animal + day metadata.
  * @param {object} [animal] - The owning animal (optional); folds raw animal-shape issues
  *   (e.g. a non-array `cameras`) into the export gate.
+ * @param {Array} [animalDays] - The animal's day records (optional); enables the bad-channel
+ *   monotonicity export-block. Empty/omitted → no cross-day comparison (back-compat).
  * @returns {object} Status map per step.
  */
-export function computeStepStatus(day, mergedDay, animal) {
-  const issues = validateDay(day, mergedDay, animal);
+export function computeStepStatus(day, mergedDay, animal, animalDays = []) {
+  const issues = validateDay(day, mergedDay, animal, animalDays);
 
   // Group errors by step
   const errorsByStep = groupErrorsByStep(issues);
@@ -796,6 +847,7 @@ export const SURFACE_BY_CODE = {
   divergent_task_identity: 'day',
   bad_channel_out_of_range: 'day',
   multishank_bad_channels_ignored: 'day',
+  bad_channel_unfailed_without_ack: 'day',
   stale_bad_channel_override: 'day',
   malformed_bad_channel_override: 'day',
   malformed_device_override: 'day',

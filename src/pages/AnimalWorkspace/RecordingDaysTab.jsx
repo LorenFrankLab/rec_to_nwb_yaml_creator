@@ -118,6 +118,14 @@ export function RecordingDaysTab({ animalId }) {
   const selectedDayClassification = selectedAnimal
     ? classifyAnimalDays(selectedAnimalId, selectedAnimal, days)
     : [];
+  // The animal's exportable day RECORDS (OK status), sorted by date — the cross-day context the
+  // bad-channel monotonicity export gate needs to know which channels were marked bad on an
+  // earlier same-config day. Mirrors the `getAnimalDays` selector's OK-only, date-sorted view so
+  // a row's "Needs fixing — …un-failed…" status matches the Day Editor's gate.
+  const selectedAnimalDays = selectedDayClassification
+    .filter((d) => d.status === DAY_STATUS.OK && d.record)
+    .map((d) => d.record)
+    .sort((a, b) => String(a?.date ?? '').localeCompare(String(b?.date ?? '')));
   const selectedOrphanDayIds = selectedDayClassification
     .filter((d) => d.status === DAY_STATUS.RECOVERED_UNLINKED)
     .map((d) => d.dayId);
@@ -622,7 +630,7 @@ export function RecordingDaysTab({ animalId }) {
                 // eslint-disable-next-line no-console
                 console.debug(`[recording-days] could not merge day "${dayId}" for status:`, err);
               }
-              const rowStatus = getDayRowStatus(selectedAnimal, record, mergedDay);
+              const rowStatus = getDayRowStatus(selectedAnimal, record, mergedDay, selectedAnimalDays);
 
               return (
                 <li key={dayId} className={`day-item ${isOrphan ? 'day-item-orphan' : ''}`}>

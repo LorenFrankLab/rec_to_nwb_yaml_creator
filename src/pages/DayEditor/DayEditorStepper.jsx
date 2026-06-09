@@ -136,6 +136,13 @@ export default function DayEditorStepper() {
     return map;
   }, [model.workspace?.days, dayId]);
 
+  // The animal's days (sorted by date), resolved by the STORE KEY the animal was indexed by.
+  // Powers the Devices step's reconfiguration wizard AND the bad-channel monotonicity export
+  // gate (the earlier same-config bad set this day must not silently un-fail). Computed before
+  // the step-status memo so the gate sees the cross-day context; `getAnimalDays` returns [] for
+  // a missing/unresolved owner, so this is safe before the null-checks below.
+  const animalDays = selectors.getAnimalDays(ownerKey);
+
   // Compute step validation status (must be before early returns to follow Rules of Hooks)
   const stepStatus = useMemo(() => {
     if (!day || !mergedDay) {
@@ -147,8 +154,8 @@ export default function DayEditorStepper() {
         export: 'error',
       };
     }
-    return computeStepStatus(day, mergedDay, animal);
-  }, [day, mergedDay, animal]);
+    return computeStepStatus(day, mergedDay, animal, animalDays);
+  }, [day, mergedDay, animal, animalDays]);
   // Keep the keyboard handler's view of the gate current (it reads this ref at
   // fire time rather than closing over a stale status).
   stepStatusRef.current = stepStatus;
@@ -308,12 +315,6 @@ export default function DayEditorStepper() {
   }
 
   const CurrentStepComponent = steps.find(s => s.id === currentStep).component;
-
-  // The animal's days (sorted by date) power the Devices step's reconfiguration
-  // wizard (version legibility + apply-forward). Computed here where the store is. Use the STORE
-  // KEY the animal was resolved by (`day.animalId`), not the possibly-stale `animal.id` field,
-  // so a corrupt record id can't make reconfiguration read the wrong/empty day list.
-  const animalDays = selectors.getAnimalDays(ownerKey);
 
   return (
     <div className="day-editor-stepper">
