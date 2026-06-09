@@ -174,6 +174,41 @@ export function dayOverrideIssues(day, mergedDay, baseIssues = []) {
     }
   }
 
+  // Whole-map ntrode override rows are GEOMETRY ONLY. `resolveDayConfig` resolves each
+  // ntrode's effective bad channels from `deviceOverrides.bad_channels` (keyed by ntrode_id)
+  // EXCLUSIVELY — it never reads a `bad_channels` array baked into an override ROW. So a
+  // restored/hand-edited override row carrying a non-empty `bad_channels` with no matching
+  // `deviceOverrides.bad_channels[ntrode_id]` entry would have those marks SILENTLY zeroed at
+  // export. No in-app path writes such a row (import routes geometry to the snapshot and bad
+  // channels to `deviceOverrides.bad_channels`), but older/hand-edited persisted JSON can hit
+  // it — surface it as an export blocker rather than drop the marks. The fix is to move those
+  // marks into the day's bad-channel overrides (`deviceOverrides.bad_channels`).
+  const ntrodeOverride = overrides.ntrode_electrode_group_channel_map;
+  const badChannelsMap = isRecord(overrides.bad_channels) ? overrides.bad_channels : {};
+  if (Array.isArray(ntrodeOverride)) {
+    ntrodeOverride.forEach((row) => {
+      const rowBad = row?.bad_channels;
+      if (!Array.isArray(rowBad) || rowBad.length === 0) return;
+      const id = String(row?.ntrode_id);
+      const covered = Array.isArray(badChannelsMap[id]) && badChannelsMap[id].length > 0;
+      if (covered) return;
+      issues.push({
+        path: `deviceOverrides.bad_channels.${id}`,
+        field: 'bad_channels',
+        step: 'devices',
+        repairSurface: 'day',
+        actionLabel: 'Move failed channels to day overrides',
+        code: 'bad_channels_on_override_row_ignored',
+        severity: 'error',
+        message:
+          `This day's channel-map override carries failed channels on ntrode "${id}", but failed ` +
+          `channels on an override row are IGNORED at export (they are resolved only from the day's ` +
+          `failed-channel overrides). Move them into this day's failed-channel overrides so they are ` +
+          `not silently lost.`,
+      });
+    });
+  }
+
   const bad = overrides.bad_channels;
   if (bad != null) {
     if (!isRecord(bad)) {
@@ -379,11 +414,18 @@ export function badChannelUnfailIssues(day, animal, animalDays = []) {
 }
 
 /**
+ * The authoritative validation issue list for a day (see the contract note above
+ * {@link computeStepStatus}'s caller chain). The SINGLE source the export gate and the
+ * rendered repair lists share, so a blocking issue is never gated-but-invisible.
  *
- * @param day
- * @param mergedDay
- * @param animal
- * @param animalDays
+ * @param {object} day - The day record.
+ * @param {object} mergedDay - Merged animal + day metadata.
+ * @param {object} [animal] - The owning animal (optional); folds raw animal-shape issues
+ *   (e.g. a non-array `cameras`) into the export gate.
+ * @param {Array} [animalDays] - The animal's day records (optional); enables the bad-channel
+ *   monotonicity export-block (cross-day comparison against earlier same-config days).
+ *   Empty/omitted → no cross-day comparison (back-compat).
+ * @returns {Array} All validation issues for the day (each ownership-normalized).
  */
 export function validateDay(day, mergedDay, animal, animalDays = []) {
   // Boundary 1: validate the RAW persisted day AND animal shape FIRST — before the merge
@@ -848,6 +890,7 @@ export const SURFACE_BY_CODE = {
   bad_channel_out_of_range: 'day',
   multishank_bad_channels_ignored: 'day',
   bad_channel_unfailed_without_ack: 'day',
+  bad_channels_on_override_row_ignored: 'day',
   stale_bad_channel_override: 'day',
   malformed_bad_channel_override: 'day',
   malformed_device_override: 'day',
