@@ -19,11 +19,10 @@ import './DayEditor.scss';
  * shows the resolved download filename and an optional YAML preview, and lets the
  * user download the file.
  *
- * Export fails closed. The step is normally only reachable once the day is fully
- * valid (the StepNavigation export gate and the keyboard gate both consult the same
- * authoritative status), but this component re-checks that SAME authoritative gate
- * itself as defense in depth: it both re-validates the merged day (per-error repair
- * actions) AND consults isExportEnabled(computeStepStatus(...)), which folds in
+ * Export fails closed. The Export section is freely reachable in the tabbed Day Editor
+ * (navigation no longer gates it), so this component is the SOLE authoritative gate: it
+ * both re-validates the merged day (per-error repair actions) AND consults
+ * isExportEnabled(computeStepStatus(...)), which folds in
  * step-level failures a flat validate() pass misses — e.g. a Devices "all channels
  * bad" status. If any error-severity issue exists OR the authoritative gate is
  * closed it surfaces the blocking reason and refuses to download. Only when the day
