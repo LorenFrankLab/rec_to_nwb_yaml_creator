@@ -114,14 +114,18 @@ export const DATA_ACQ_DEPENDENT_FIELDS = ['system', 'amplifier', 'adc_circuit'];
  * excluding the camera currently being edited when requested.
  *
  * @param {object} workspace - The workspace slice (`{ animals }`).
- * @param {{animalId: string, id: number}|null} [exclude] - The camera being edited.
+ * @param {{animalId: string, id?: number}|null} [exclude] - The camera (or whole animal) being
+ *   edited. With `id`, only that one camera is excluded; with `animalId` alone (`id` omitted), the
+ *   animal's ENTIRE camera catalog is excluded — mirroring {@link collectDataAcqIdentities}, so a
+ *   caller comparing a whole copied catalog against the rest of the workspace isn't tripped by the
+ *   target's own cameras.
  * @returns {Array<{name: string, fields: Record<string, *>, label: string}>}
  */
 export function collectCameraIdentities(workspace, exclude = null) {
   const registry = [];
   for (const animal of Object.values(workspace?.animals || {})) {
     for (const camera of getAnimalCameras(animal)) {
-      if (exclude && animal.id === exclude.animalId && camera.id === exclude.id) continue;
+      if (exclude && animal.id === exclude.animalId && (exclude.id == null || camera.id === exclude.id)) continue;
       registry.push({
         name: camera.camera_name,
         label: `${animal.id} camera ${camera.id}`,
