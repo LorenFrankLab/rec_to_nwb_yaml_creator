@@ -85,7 +85,11 @@ function currentOverrides(day) {
 /**
  * Execute a serializable repair command against the store.
  *
- * @param {{type?: string, field?: string, key?: string}} command - The repair command.
+ * @param {{type?: string, field?: string, key?: string, acks?: Record<string, number[]>}} command
+ *   The serializable repair command. Per `type`: `resetDayCollection` carries `field` (the
+ *   collection to clear); `removeDeviceOverrideKey` / `removeBadChannelOverrideKey` carry `key`
+ *   (the override/ntrode key to drop); `acknowledgeBadChannelRemovals` carries `acks`
+ *   (`{ [ntrodeId: string]: number[] }`, the deliberate un-marks to record off-export).
  * @param {object} ctx - Execution context.
  * @param {object} ctx.actions - Store actions (`updateDay` / `updateAnimal` /
  *   `rebuildConfigurationHistory`).

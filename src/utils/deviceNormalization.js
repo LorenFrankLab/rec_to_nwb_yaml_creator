@@ -392,6 +392,19 @@ function selectSnapshotForDay(animal, day) {
 }
 
 /**
+ * Stable key for a snapshot in the block-set: a day's resolved `(animalId, version)`.
+ * Mirrors how a day selects its snapshot, so every day landing on the SAME snapshot
+ * version shares the same key.
+ *
+ * @param {string} animalId - The day's animal id.
+ * @param {*} version - The resolved snapshot's `version`.
+ * @returns {string} Composite block-set key.
+ */
+function snapshotKey(animalId, version) {
+  return `${animalId} ${version}`;
+}
+
+/**
  * One-time, idempotent, load-time MIGRATION: move config-snapshot ("base")
  * bad-channel marks DOWN into each day's `deviceOverrides.bad_channels`, making
  * bad channels DAY-OWNED. `resolveDayConfig` is now a DAY-OVERRIDE-ONLY merge: it
@@ -437,19 +450,6 @@ function selectSnapshotForDay(animal, day) {
  * @param {object} normalized - An ALREADY-CLONED workspace (mutated in place).
  * @returns {object} The same workspace, with base marks moved down.
  */
-/**
- * Stable key for a snapshot in the block-set: a day's resolved `(animalId, version)`.
- * Mirrors how a day selects its snapshot, so every day landing on the SAME snapshot
- * version shares the same key.
- *
- * @param {string} animalId - The day's animal id.
- * @param {*} version - The resolved snapshot's `version`.
- * @returns {string} Composite block-set key.
- */
-function snapshotKey(animalId, version) {
-  return `${animalId} ${version}`;
-}
-
 function applyBadChannelMigration(normalized) {
   if (!isPlainObject(normalized)) return normalized;
   const animals = normalized.animals || {};

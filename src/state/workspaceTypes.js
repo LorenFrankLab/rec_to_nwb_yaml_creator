@@ -380,6 +380,9 @@
  * @property {boolean} exported - true if YAML file generated
  * @property {string} [exportedAt] - ISO timestamp of export
  * @property {ValidationIssue[]} [validationErrors] - Current validation errors
+ * @property {Record<string, number[]>} [badChannelRemovalAcks] - Off-export acknowledgments of
+ *   deliberate bad-channel un-marks, keyed by ntrode id (string); lives ONLY in state, never read
+ *   by the export merge.
  */
 
 /**
