@@ -60,8 +60,10 @@ export default function ImportYamlDialog({ onClose }) {
     setPlan(nextPlan);
     // Seed resolutions with each conflict animal's default so the control reflects state.
     const seeded = {};
-    for (const animal of nextPlan.animals) {
-      if (animal.conflict === 'exists') seeded[animal.subjectId] = animal.defaultResolution;
+    for (const animalPlan of nextPlan.animals) {
+      if (animalPlan.conflict === 'exists') {
+        seeded[animalPlan.subjectId] = animalPlan.defaultResolution;
+      }
     }
     setResolutions(seeded);
     setPhase('preview');
@@ -268,11 +270,11 @@ function PreviewPhase({
       </p>
 
       <div className="import-animal-cards">
-        {plan.animals.map((animal) => (
+        {plan.animals.map((animalPlan) => (
           <AnimalCard
-            key={animal.subjectId}
-            animal={animal}
-            resolution={resolutions[animal.subjectId]}
+            key={animalPlan.subjectId}
+            animalPlan={animalPlan}
+            resolution={resolutions[animalPlan.subjectId]}
             setResolution={setResolution}
           />
         ))}
@@ -324,17 +326,18 @@ PreviewPhase.propTypes = {
  * the per-animal resolution control.
  *
  * @param {object} props - Component props.
- * @param {object} props.animal - The planned animal (ImportPlanAnimal).
+ * @param {object} props.animalPlan - The planned animal (an ImportPlanAnimal, NOT a workspace
+ *   animal record — its `days` is the plan's day list, not a workspace day-id array).
  * @param {string} [props.resolution] - The chosen resolution for a conflict animal.
  * @param {Function} props.setResolution - Set this animal's resolution.
  * @returns {JSX.Element}
  */
-function AnimalCard({ animal, resolution, setResolution }) {
-  const dayCount = animal.days.length;
-  const versionCount = animal.configVersions.length;
+function AnimalCard({ animalPlan, resolution, setResolution }) {
+  const dayCount = animalPlan.days.length;
+  const versionCount = animalPlan.configVersions.length;
   return (
-    <div className="import-animal-card" role="group" aria-label={`Animal ${animal.subjectId}`}>
-      <h3 className="import-animal-name">{animal.subjectId}</h3>
+    <div className="import-animal-card" role="group" aria-label={`Animal ${animalPlan.subjectId}`}>
+      <h3 className="import-animal-name">{animalPlan.subjectId}</h3>
       <p className="import-animal-meta">
         {dayCount} recording day{dayCount === 1 ? '' : 's'} ·{' '}
         {versionCount} hardware configuration{versionCount === 1 ? '' : 's'}
@@ -342,7 +345,7 @@ function AnimalCard({ animal, resolution, setResolution }) {
 
       {versionCount > 0 && (
         <ul className="import-config-versions">
-          {animal.configVersions.map((cv) => (
+          {animalPlan.configVersions.map((cv) => (
             <li key={cv.version}>
               Configuration {cv.version} (from {cv.date})
             </li>
@@ -350,9 +353,9 @@ function AnimalCard({ animal, resolution, setResolution }) {
         </ul>
       )}
 
-      {animal.divergences.length > 0 && (
+      {animalPlan.divergences.length > 0 && (
         <ul className="import-divergences">
-          {animal.divergences.map((d, i) => (
+          {animalPlan.divergences.map((d, i) => (
             <li key={`${d.field}-${i}`} role="alert">
               <strong>{d.field}:</strong> {d.detail}
             </li>
@@ -360,10 +363,10 @@ function AnimalCard({ animal, resolution, setResolution }) {
         </ul>
       )}
 
-      {animal.conflict === 'exists' && (
+      {animalPlan.conflict === 'exists' && (
         <fieldset className="import-resolution" role="alert">
           <legend>
-            An animal named “{animal.subjectId}” already exists in the workspace. Choose how to
+            An animal named “{animalPlan.subjectId}” already exists in the workspace. Choose how to
             import these files:
           </legend>
           {[
@@ -374,10 +377,10 @@ function AnimalCard({ animal, resolution, setResolution }) {
             <label key={opt.value} className="import-resolution-option">
               <input
                 type="radio"
-                name={`resolution-${animal.subjectId}`}
+                name={`resolution-${animalPlan.subjectId}`}
                 value={opt.value}
                 checked={(resolution ?? 'add') === opt.value}
-                onChange={() => setResolution(animal.subjectId, opt.value)}
+                onChange={() => setResolution(animalPlan.subjectId, opt.value)}
               />
               {opt.label}
             </label>
@@ -389,7 +392,7 @@ function AnimalCard({ animal, resolution, setResolution }) {
 }
 
 AnimalCard.propTypes = {
-  animal: PropTypes.object.isRequired,
+  animalPlan: PropTypes.object.isRequired,
   resolution: PropTypes.string,
   setResolution: PropTypes.func.isRequired,
 };
