@@ -4,6 +4,32 @@
 
 **Last Updated:** June 8, 2026
 
+## YAML import UI — pick → preview → confirm on the workspace (June 8, 2026)
+
+Added the user-facing YAML-import flow on top of the existing reconcile core (`planImport` /
+`applyImportPlan`), so users can bring existing `{mmddYYYY}_{subject}_metadata.yml` files into the
+workspace as animals + recording days.
+
+- **Parse helper** (`src/features/importYaml.js`, `parseImportFiles`): reads + decodes the chosen
+  `File[]` into the `{ decodedFiles, parseFailures }` shape `planImport` consumes. A file that fails
+  to read, fails to parse, or decodes to a non-object document is collected into `parseFailures` with
+  a reason — never thrown — so every un-importable file is visible.
+- **Import dialog** (`src/pages/AnimalWorkspace/ImportYamlDialog.jsx`): a two-phase modal. The **pick**
+  phase offers a multi-file `<input>` and a drag-and-drop zone; on selection it parses the files,
+  reconciles them against the live workspace via `planImport`, and advances to **preview**. The
+  preview shows a summary line, one card per planned animal (recording-day count, hardware-configuration
+  count with each version's date, and divergence flags rendered as alerts), a per-animal **Add / Skip /
+  Replace** control for animals that already exist, and an un-importable section listing every parse
+  failure ++ `plan.unimportable` with its reason. **Confirm** writes via `applyImportPlan` (honoring the
+  chosen per-animal resolutions) and shows a brief result; **Cancel** writes nothing.
+- **Workspace entry point**: an **Import YAML…** button on the Animal Workspace — in the populated
+  picker header beside **+ New Animal**, and in the empty state beside **Create Animal** — toggles the
+  dialog. The create flow is unchanged.
+- **Scope (deliberate):** editing happens *after* import in the normal editors; `add` does not
+  auto-union the plan's catalogs into the existing animal (the core leaves the existing animal's
+  catalogs authoritative — a day referencing a missing camera/device surfaces later as an export
+  check). User-facing docs added to the README ("Importing existing YAML files").
+
 ## Internal YAML import core — pure plan + resilient executor (June 8, 2026)
 
 Added an internal (non-UI) YAML import core: a **pure** reconciliation that turns a set of parsed
