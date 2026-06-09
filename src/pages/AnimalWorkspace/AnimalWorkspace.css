@@ -434,6 +434,11 @@
   color: #555;
 }
 
+/* Sits between the intro and the section list; base look comes from .button-secondary. */
+.setup-card-copy-button {
+  margin: 0 0 0.75rem;
+}
+
 .setup-card-list {
   list-style: none;
   padding: 0;

@@ -81,10 +81,62 @@
     }
   }
 
+  // "Choose what to copy" checklist (multi-section host).
+  .copy-section-list {
+    margin: 1rem 0 0;
+    padding: 0.75rem 1rem 1rem;
+    border: 1px solid #dadce0;
+    border-radius: 4px;
+
+    legend {
+      padding: 0 0.375rem;
+      font-weight: 500;
+      color: #202124;
+    }
+  }
+
+  .copy-section-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0;
+    cursor: pointer;
+    color: #202124;
+
+    input[type="checkbox"] {
+      cursor: pointer;
+    }
+  }
+
   .modal-actions {
     display: flex;
     gap: 1rem;
     justify-content: flex-end;
     margin-top: 1.5rem;
+  }
+}
+
+// Identity-divergence alert styling.
+//
+// The same `.identity-divergence*` markup is also styled by CameraModal.scss / DataAcqSection.scss
+// (top-level, unscoped rules). Those only load when their components mount, so we keep a local copy
+// here rather than depending on a sibling module's stylesheet being bundled — the dialog must look
+// right on its own. Visuals match the shared rules to avoid drift.
+.identity-divergence {
+  margin: 0.75rem 0;
+  padding: 0.75rem 0.875rem;
+  background: #fff3e0;
+  border-left: 4px solid #e65100;
+  border-radius: 4px;
+
+  .identity-divergence-title { margin: 0 0 0.5rem; color: #e65100; font-weight: 600; }
+
+  .identity-divergence-table {
+    width: 100%;
+    margin-bottom: 0.5rem;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+
+    th, td { padding: 0.2rem 0.4rem; text-align: left; border-bottom: 1px solid #ffe0b2; }
   }
 }

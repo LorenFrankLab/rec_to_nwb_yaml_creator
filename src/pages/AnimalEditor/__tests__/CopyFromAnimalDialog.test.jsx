@@ -384,6 +384,72 @@ describe('CopyFromAnimalDialog — multi-section copy', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
+  it('does NOT offer the Cameras section when the target already has cameras', async () => {
+    const user = userEvent.setup();
+    // Target already has a camera catalog → copying cameras would append and risk an
+    // intra-animal duplicate camera id, so the Cameras section must not be offered.
+    const animalsTargetHasCameras = {
+      ...multiSource,
+      target: {
+        subject: { subject_id: 'target' },
+        devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [], data_acq_device: [] },
+        cameras: [
+          { id: 9, camera_name: 'existing', meters_per_pixel: 0.003, lens: '8mm', model: 'Z', manufacturer: 'W' },
+        ],
+      },
+    };
+    render(
+      <CopyFromAnimalDialog
+        open
+        currentAnimalId="target"
+        animals={animalsTargetHasCameras}
+        onCopy={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole('radio', { name: /source/i }));
+    // Electrode groups + recording system still offered; Cameras suppressed.
+    expect(screen.getByRole('checkbox', { name: /electrode groups/i })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /recording system/i })).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: /cameras/i })).not.toBeInTheDocument();
+  });
+
+  it('does NOT offer the Recording system section when the target already has a recording system', async () => {
+    const user = userEvent.setup();
+    // Target already has a data_acq_device catalog → copying would append and risk an
+    // intra-animal duplicate device name, so the Recording system section must not be offered.
+    const animalsTargetHasDataAcq = {
+      ...multiSource,
+      target: {
+        subject: { subject_id: 'target' },
+        devices: {
+          electrode_groups: [],
+          ntrode_electrode_group_channel_map: [],
+          data_acq_device: [
+            { name: 'existingAcq', system: 'SpikeGadgets', amplifier: 'Intan', adc_circuit: 'Intan' },
+          ],
+        },
+        cameras: [],
+      },
+    };
+    render(
+      <CopyFromAnimalDialog
+        open
+        currentAnimalId="target"
+        animals={animalsTargetHasDataAcq}
+        onCopy={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole('radio', { name: /source/i }));
+    // Electrode groups + cameras still offered; Recording system suppressed.
+    expect(screen.getByRole('checkbox', { name: /electrode groups/i })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /cameras/i })).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: /recording system/i })).not.toBeInTheDocument();
+  });
+
   it('pins to electrode-groups-only wording when availableSections restricts to electrodes', () => {
     render(
       <CopyFromAnimalDialog

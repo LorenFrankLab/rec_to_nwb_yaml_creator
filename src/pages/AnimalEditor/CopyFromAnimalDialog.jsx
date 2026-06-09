@@ -103,7 +103,17 @@ export default function CopyFromAnimalDialog({
   }, [availableAnimals, selectedAnimalId]);
 
   /**
-   * Whether a given offerable section has content on a source animal.
+   * Whether a given offerable section has content on a source animal AND is safe to offer given
+   * the current (target) animal's existing catalog.
+   *
+   * Asymmetry by design: cameras and data_acq_device are identity-keyed catalogs (camera `id`,
+   * device `name`) and are deep-cloned as-is — `normalizeDevices` does NOT re-id or dedupe them,
+   * so appending into a non-empty catalog can create an intra-animal duplicate identity (data
+   * corruption that the whole-object `uniqueItems` schema check does not catch). We therefore only
+   * offer to SEED them into an EMPTY target catalog. Electrode groups are re-ID'd to the target's
+   * next ids on copy, so appending is already collision-safe and is offered whenever the source has
+   * them (matching the electrode-groups-tab copy host).
+   *
    * @param {object} animal - A source-animal descriptor.
    * @param {string} section - A section key.
    * @returns {boolean}
@@ -111,8 +121,12 @@ export default function CopyFromAnimalDialog({
   function sectionHasContent(animal, section) {
     if (!animal) return false;
     if (section === 'electrode_groups') return animal.electrodeGroups.length > 0;
-    if (section === 'cameras') return animal.cameras.length > 0;
-    if (section === 'data_acq_device') return animal.dataAcqDevices.length > 0;
+    if (section === 'cameras') {
+      return animal.cameras.length > 0 && getAnimalCameras(currentAnimal).length === 0;
+    }
+    if (section === 'data_acq_device') {
+      return animal.dataAcqDevices.length > 0 && getDataAcqDevices(currentAnimal).length === 0;
+    }
     return false;
   }
 
@@ -128,8 +142,12 @@ export default function CopyFromAnimalDialog({
   // The offerable sections the SELECTED source actually has content for (these are the checklist).
   const sourceSections = useMemo(
     () => offerableSections.filter((s) => sectionHasContent(selectedAnimal, s)),
+    // sectionHasContent is a stable in-component function that reads only its args plus
+    // currentAnimal; currentAnimal is itself memoized on [animals, currentAnimalId], so it is
+    // listed explicitly here and the function reference is intentionally omitted (re-created each
+    // render, would defeat the memo).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [offerableSections, selectedAnimal]
+    [offerableSections, selectedAnimal, currentAnimal]
   );
 
   /**
@@ -416,7 +434,6 @@ export default function CopyFromAnimalDialog({
                       type="checkbox"
                       checked={isChecked(section)}
                       onChange={() => toggleSection(section)}
-                      aria-label={SECTION_LABELS[section]}
                     />
                     <span>{SECTION_LABELS[section]}</span>
                   </label>
