@@ -62,6 +62,14 @@ const CROSS_PAGE_ALLOWLIST = new Set([
   // domain/animalCreation. The form owns no app-wide domain logic; relocating it to src/components
   // can follow when Home is removed in Phase 5.
   'pages/Home/AnimalCreationForm',
+  // The "Copy from another animal…" dialog: DELIBERATELY shared so the Electrode Groups tab's
+  // copy host (pages/AnimalEditor/wiring/ElectrodeGroupsContainer, same page) AND the per-animal
+  // Recording Days setup card (pages/AnimalWorkspace/RecordingDaysTab) render ONE implementation
+  // instead of forking it ("extract, don't fork"). It owns no app-wide domain logic — it composes
+  // selectors + the tested identity-safety utils (collect*/findIdentityDivergence) + device
+  // normalizers like any page. Lives under AnimalEditor (its origin); a neutral relocation to
+  // src/components can follow when that opens up.
+  'pages/AnimalEditor/CopyFromAnimalDialog',
 ]);
 
 /**

@@ -55,6 +55,14 @@ a `nwb_schema.json` fix across both repos.
 `tetrode_12.5`, `A1x32-6mm-50-177-H32_21mm`, eight `128c-4s*` variants, `32c-2s8mm6cm-20um-40um-dl`,
 `64c-3s6mm6cm-20um-40um-sl`, `64c-4s6mm6cm-20um-40um-dl`, `NET-EBL-128ch-single-shank`.
 
+**`bad_channels` — where the app stores them (exported contract unchanged).** The converter reads
+`bad_channels` from the ntrode-map rows (table above) exactly as before. Internally, the **workspace app
+now owns bad channels per recording day** (`day.deviceOverrides.bad_channels` in the Day Editor's "Failed
+Channels"), not on the hardware-configuration snapshot. The export merge resolves the day's bad-channel set
+into the ntrode rows it writes, so the **emitted YAML is byte-identical** for existing data — only the app's
+editing model moved to day-ownership (carry-forward to the next same-config day; monotonic, with an
+unacknowledged un-mark export-blocked). Nothing downstream (trodes_to_nwb / DANDI / Spyglass) sees a change.
+
 ---
 
 ## 2. DANDI conformance

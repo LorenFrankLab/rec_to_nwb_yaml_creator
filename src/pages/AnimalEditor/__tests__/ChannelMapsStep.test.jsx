@@ -38,8 +38,6 @@ describe('ChannelMapsStep', () => {
     expect(screen.getByText('—', { selector: '[data-label="Channels"]' })).toBeInTheDocument();
     expect(screen.getByText('—', { selector: '[data-label="Shanks"]' })).toBeInTheDocument();
     expect(screen.queryByText('0', { selector: '[data-label="Channels"]' })).not.toBeInTheDocument();
-    // Bad-channel cell uses the same catalog denominator → em dash for an unknown device.
-    expect(screen.getByText('0 bad / —', { selector: '[data-label="Bad Channels"]' })).toBeInTheDocument();
   });
 
   it('shows the shank count from the catalog (uneven 64c-3s = 3 shanks)', () => {
@@ -191,7 +189,6 @@ describe('ChannelMapsStep', () => {
     expect(screen.getByText('CA3')).toBeInTheDocument();
   });
 
-  // Phase 0 (tabbed-workspace-ia quick wins): copy + bad-channel count.
   it('names the section "Channel Maps" without a "Step N:" wizard prefix', () => {
     render(<ChannelMapsStep animal={mockAnimal} onEditChannelMap={mockOnEditChannelMap} />);
 
@@ -199,14 +196,18 @@ describe('ChannelMapsStep', () => {
     expect(screen.queryByText(/Step 2:/)).not.toBeInTheDocument();
   });
 
-  it('intro names BOTH jobs: mapping channels to positions AND marking bad channels', () => {
+  it('intro describes wiring (mapping channels to positions) and defers bad channels to the Day Editor', () => {
     render(<ChannelMapsStep animal={mockAnimal} onEditChannelMap={mockOnEditChannelMap} />);
 
     expect(screen.getByText(/map each probe channel to its electrode position/i)).toBeInTheDocument();
-    expect(screen.getByText(/bad channels are the ones to exclude from analysis/i)).toBeInTheDocument();
+    // Bad channels are day-owned now — the intro must point users to the Day Editor, not
+    // describe an animal-level bad-channel job here.
+    expect(screen.getByText(/marked per recording day in the day editor/i)).toBeInTheDocument();
   });
 
-  it('surfaces the bad-channel count per group as "N bad / total"', () => {
+  // Bad channels are day-owned: the animal Channel Maps table must NOT carry a bad-channel
+  // column or count. Pinned against re-introduction.
+  it('renders no "Bad Channels" column or count', () => {
     const animal = {
       id: 'remy',
       devices: {
@@ -220,16 +221,8 @@ describe('ChannelMapsStep', () => {
     };
     render(<ChannelMapsStep animal={animal} onEditChannelMap={mockOnEditChannelMap} />);
 
-    expect(
-      screen.getByText('2 bad / 4', { selector: '[data-label="Bad Channels"]' })
-    ).toBeInTheDocument();
-  });
-
-  it('shows "0 bad" for groups with no bad channels (count visible in every row state)', () => {
-    render(<ChannelMapsStep animal={mockAnimal} onEditChannelMap={mockOnEditChannelMap} />);
-
-    // Both tetrode groups have no bad channels → "0 bad / 4" per row.
-    const cells = screen.getAllByText(/0 bad \/ 4/, { selector: '[data-label="Bad Channels"]' });
-    expect(cells.length).toBe(2);
+    expect(screen.queryByRole('columnheader', { name: /bad channels/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/bad \//i)).not.toBeInTheDocument();
+    expect(document.querySelector('[data-label="Bad Channels"]')).toBeNull();
   });
 });

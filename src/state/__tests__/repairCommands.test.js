@@ -110,6 +110,35 @@ describe('applyRepairCommand — device-override resets (partial, read current d
   });
 });
 
+describe('applyRepairCommand — acknowledge bad-channel removals (off-export ack)', () => {
+  it('writes the acknowledged channels into day.state.badChannelRemovalAcks', () => {
+    const c = ctx({ day: { state: { draft: true } } });
+    applyRepairCommand({ type: 'acknowledgeBadChannelRemovals', acks: { 1: [2, 0] } }, c);
+    expect(c.actions.updateDay).toHaveBeenCalledWith('remy-2023-06-22', {
+      state: { badChannelRemovalAcks: { 1: [0, 2] } },
+    });
+  });
+
+  it('UNIONs onto existing acks (preserving a prior partial acknowledgment)', () => {
+    const c = ctx({ day: { state: { badChannelRemovalAcks: { 1: [0], 2: [5] } } } });
+    applyRepairCommand({ type: 'acknowledgeBadChannelRemovals', acks: { 1: [1] } }, c);
+    expect(c.actions.updateDay).toHaveBeenCalledWith('remy-2023-06-22', {
+      state: { badChannelRemovalAcks: { 1: [0, 1], 2: [5] } },
+    });
+  });
+
+  it('tolerates a malformed current state and a missing payload (no throw)', () => {
+    const c = ctx({ day: { state: 'corrupt' } });
+    applyRepairCommand({ type: 'acknowledgeBadChannelRemovals', acks: { 1: [0] } }, c);
+    expect(c.actions.updateDay).toHaveBeenCalledWith('remy-2023-06-22', {
+      state: { badChannelRemovalAcks: { 1: [0] } },
+    });
+    const c2 = ctx();
+    applyRepairCommand({ type: 'acknowledgeBadChannelRemovals' }, c2);
+    expect(c2.actions.updateDay).not.toHaveBeenCalled();
+  });
+});
+
 describe('applyRepairCommand — reset day session', () => {
   it('resetDaySession writes a fresh session with the canonical derived session_id', () => {
     const c = ctx({ animal: { id: 'remy' }, day: { date: '2023-06-22', session: 'corrupt' } });
@@ -219,6 +248,7 @@ describe('applyRepairCommand — robustness', () => {
       resetDayCollection: { field: 'tasks' },
       removeDeviceOverrideKey: { key: 'electrode_groups' },
       removeBadChannelOverrideKey: { key: '1' },
+      acknowledgeBadChannelRemovals: { acks: { 1: [0] } },
     };
     for (const type of REPAIR_COMMAND_TYPES) {
       const c = ctx({ day: { deviceOverrides: { electrode_groups: 'x', bad_channels: { 1: [0] } } } });
@@ -238,6 +268,7 @@ describe('applyRepairCommand — robustness', () => {
       resetDayCollection: { field: 'tasks' },
       removeDeviceOverrideKey: { key: 'electrode_groups' },
       removeBadChannelOverrideKey: { key: '1' },
+      acknowledgeBadChannelRemovals: { acks: { 1: [0] } },
     };
     for (const type of REPAIR_COMMAND_TYPES) {
       const c = ctx({ animalId: undefined, dayId: undefined, day: undefined, animal: undefined });

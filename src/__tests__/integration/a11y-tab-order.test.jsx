@@ -29,10 +29,17 @@ describe('tab order through the DayEditor stepper', () => {
     });
     await screen.findByRole('heading', { name: /day editor/i });
 
-    const labels = [...container.querySelectorAll('.step-button .step-label')].map((el) =>
-      el.textContent.trim()
+    const labels = [...container.querySelectorAll('.section-nav-item .section-nav-item-name')].map(
+      (el) => el.textContent.trim()
     );
-    expect(labels).toEqual(['Overview', 'Devices', 'Epochs', 'Validation', 'Export']);
+    // Tabbed section-nav: 5 sections in sequence (richer display labels, DOM order preserved).
+    expect(labels).toEqual([
+      'Overview',
+      'Devices & Failed Channels',
+      'Tasks & Epochs',
+      'Validation',
+      'Export',
+    ]);
   });
 
   it('no interactive control uses a positive tabindex', async () => {

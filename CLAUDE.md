@@ -371,6 +371,18 @@ is retained as a frozen safety net. Don't mix them (`workspace.*` vs `formData.*
   ([src/state/workspaceUtils.js](src/state/workspaceUtils.js)) → `encodeYaml`. The phased plans and their
   shared contracts live in [.claude/docs/plans/](.claude/docs/plans/).
 
+  **Bad channels are day-owned in the workspace model.** The animal-level Channel Maps tab is
+  wiring/mapping only; a channel is *marked failed per recording day* in the Day Editor ("Failed
+  Channels"), stored at `day.deviceOverrides.bad_channels`. A new day **carries forward** the prior
+  same-`configurationVersion` day's marks (a probe reconfiguration resets them — different versions are
+  never compared). Marks are **monotonic**: un-marking a channel that was bad on an earlier same-config
+  day prompts an in-context confirm and records an off-export acknowledgment in
+  `day.state.badChannelRemovalAcks`; an unacknowledged regression **blocks export**
+  (`bad_channel_unfailed_without_ack`). The export merge reads bad channels from the day override ONLY —
+  the **exported YAML shape is unchanged** (`bad_channels` still on the ntrode rows); only the app's
+  internal ownership moved from the config snapshot down to the day. See
+  [src/domain/badChannelMonotonicity.js](src/domain/badChannelMonotonicity.js).
+
 ### State Management
 
 The application uses React hooks (`useState`, `useEffect`) for state management with a single centralized form state object (`formData`) in [App.js](src/App.js). State updates flow through wrapper functions:

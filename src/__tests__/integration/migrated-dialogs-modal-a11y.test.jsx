@@ -37,7 +37,7 @@ const DIALOGS = [
   },
   {
     name: 'CopyFromAnimalDialog',
-    accessibleName: /copy electrode groups/i,
+    accessibleName: /copy from animal/i,
     render: (onClose) => (
       <CopyFromAnimalDialog
         open

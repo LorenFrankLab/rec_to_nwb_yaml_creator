@@ -12,10 +12,25 @@
  * so each host owns its single `#main-content`.
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
-import { getAnimalSubject, getConfigHistory, getDaySession } from '../../state/workspaceSelectors';
+import {
+  getAnimalCameras,
+  getAnimalDevices,
+  getAnimalElectrodeGroups,
+  getAnimalNtrodeMaps,
+  getAnimalSubject,
+  getConfigHistory,
+  getDataAcqDevices,
+  getDaySession,
+  getMostRecentDayId,
+} from '../../state/workspaceSelectors';
+import {
+  normalizeElectrodeGroupWithDefaults,
+  normalizeNtrodeMapWithDefaults,
+} from '../../utils/deviceNormalization';
+import CopyFromAnimalDialog from '../AnimalEditor/CopyFromAnimalDialog';
 import { getDayRowStatus } from '../../domain/workflowStatus';
 import { getAnimalSectionStatus, getAnimalBlockingSections, SECTION_STATUS } from '../../domain/sectionStatus';
 import {
@@ -31,7 +46,7 @@ import { validateRawAnimal } from '../../validation/rawShape';
 import { applyRepairCommand } from '../../state/repairCommands';
 import RawCorruptionBanner from '../../components/RawCorruptionBanner';
 import { CalendarDayCreator } from '../../components/CalendarDayCreator/CalendarDayCreator';
-import { ConfirmDialog } from '../../components/Modal';
+import { ConfirmDialog, Modal } from '../../components/Modal';
 
 /**
  * The first-run "Set up this animal" card sections, in the same order and with the same keys as
@@ -69,10 +84,27 @@ export function RecordingDaysTab({ animalId }) {
   // confirm can name it even after the store row changes). Animal delete moved to the AnimalView
   // header ⋮ in Phase 4 (the shared type-to-confirm AnimalDeleteDialog), so it no longer lives here.
   const [pendingDeleteDay, setPendingDeleteDay] = useState(null);
+  // Pending per-day DUPLICATE (null when closed): the source row descriptor (dayId/date). The
+  // single-date picker writes its chosen date into `duplicateDate`; `duplicateError` surfaces a
+  // collision or a store throw inside the dialog (mirroring how create errors are surfaced).
+  const [pendingDuplicateDay, setPendingDuplicateDay] = useState(null);
+  const [duplicateDate, setDuplicateDate] = useState('');
+  const [duplicateError, setDuplicateError] = useState('');
+  // Carry-forward day creation: default ON. When on, a new day seeds its day-owned content
+  // (tasks, behavioral events, keywords, technical params, experiment description, weight) from
+  // the animal's most recent existing day — reviewable per day. Opt out to start blank.
+  const [carryForward, setCarryForward] = useState(true);
+  // Whether the "Copy from another animal…" dialog is open. The shared hardware (electrode groups,
+  // cameras, recording system) a lab uses is the same across animals, so a new/under-configured
+  // animal can seed its catalogs from another animal here.
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
 
   const { animals = {}, days = {} } = model.workspace;
 
   const selectedAnimal = selectedAnimalId ? animals[selectedAnimalId] : null;
+  // The animal's latest-dated existing day — the carry-forward source. null when there is none
+  // (so the toggle is hidden and creation falls back to a blank day).
+  const mostRecentDayId = getMostRecentDayId(selectedAnimal, days);
   // A recovered/imported animal can carry a malformed (non-array) `days`. `getAnimalDayIds`
   // safely reads it as [], so without this explicit flag the workspace would launder it to
   // "No recording days yet" and hide the problem. Surface it as a corrupt-reference state.
@@ -83,9 +115,30 @@ export function RecordingDaysTab({ animalId }) {
   // instead of each re-deriving "what kind of day is this?". Recovered-unlinked records are
   // surfaced (never laundered into "No recording days yet") and re-linked from the Validation
   // summary; they are NOT exported until re-linked (see dayRecovery's policy).
-  const selectedDayClassification = selectedAnimal
-    ? classifyAnimalDays(selectedAnimalId, selectedAnimal, days)
-    : [];
+  const selectedDayClassification = useMemo(
+    () => (selectedAnimal ? classifyAnimalDays(selectedAnimalId, selectedAnimal, days) : []),
+    [selectedAnimalId, selectedAnimal, days]
+  );
+  // The animal's exportable day RECORDS (OK status), sorted by date — the cross-day context the
+  // bad-channel monotonicity export gate needs to know which channels were marked bad on an
+  // earlier same-config day. Mirrors the `getAnimalDays` selector's OK-only, date-sorted view so
+  // a row's "Needs fixing — …un-failed…" status matches the Day Editor's gate.
+  //
+  // Memoized so it is a STABLE array built once per data change, not rebuilt for every row in the
+  // list render below. The per-row `getDayRowStatus(...)` call still reduces this array to compute
+  // each day's prior same-config bad-channel union (`priorBadChannels`), so the bad-channel
+  // monotonicity status is O(days) per row → O(days²) for the whole list. That is acceptable for
+  // realistic day counts; for very long chronic studies (CLAUDE.md notes 200+ days) a future pass
+  // could precompute one cumulative per-version prior-bad map and hand each row only its own slice.
+  // Memoizing the inputs (here) avoids the redundant rebuild without changing monotonicity SEMANTICS.
+  const selectedAnimalDays = useMemo(
+    () =>
+      selectedDayClassification
+        .filter((d) => d.status === DAY_STATUS.OK && d.record)
+        .map((d) => d.record)
+        .sort((a, b) => String(a?.date ?? '').localeCompare(String(b?.date ?? ''))),
+    [selectedDayClassification]
+  );
   const selectedOrphanDayIds = selectedDayClassification
     .filter((d) => d.status === DAY_STATUS.RECOVERED_UNLINKED)
     .map((d) => d.dayId);
@@ -106,6 +159,49 @@ export function RecordingDaysTab({ animalId }) {
     // OK rows, and an OK row can have a record with no `animalId` (corrupt import) — the store
     // would otherwise fail to clean the index. The UI knows the owner, so name it.
     actions.deleteDay(target.dayId, selectedAnimalId);
+  }
+
+  /**
+   * Open the single-date duplicate picker for a source row (resets any prior chosen date/error).
+   *
+   * @param {object} source - `{ dayId, date }` descriptor of the row to clone.
+   */
+  function openDuplicateDay(source) {
+    setDuplicateDate('');
+    setDuplicateError('');
+    setPendingDuplicateDay(source);
+  }
+
+  /** Close the duplicate picker without duplicating. */
+  function cancelDuplicateDay() {
+    setPendingDuplicateDay(null);
+    setDuplicateDate('');
+    setDuplicateError('');
+  }
+
+  /**
+   * Commit the pending duplication through the store's `duplicateDay`. Validates the chosen date
+   * against the animal's existing days (collision guard) before delegating; the store's own
+   * throws are caught and surfaced in the dialog rather than swallowed (mirrors create errors).
+   */
+  function confirmDuplicateDay() {
+    const source = pendingDuplicateDay;
+    if (!source?.dayId) return;
+    if (!duplicateDate) {
+      setDuplicateError('Choose a date for the new day.');
+      return;
+    }
+    // Collision guard: the chosen date must not already be a present day for this animal.
+    if (getExistingDays().includes(duplicateDate)) {
+      setDuplicateError(`This animal already has a day on ${duplicateDate}.`);
+      return;
+    }
+    try {
+      actions.duplicateDay(source.dayId, duplicateDate);
+      cancelDuplicateDay();
+    } catch (error) {
+      setDuplicateError(error.message);
+    }
   }
 
   /**
@@ -147,10 +243,15 @@ export function RecordingDaysTab({ animalId }) {
       }
 
       try {
-        actions.createDay(selectedAnimalId, date, {
-          session_id: sessionId,
-          session_description: `Recording session for ${selectedAnimalId} on ${date}`,
-        });
+        actions.createDay(
+          selectedAnimalId,
+          date,
+          {
+            session_id: sessionId,
+            session_description: `Recording session for ${selectedAnimalId} on ${date}`,
+          },
+          { carryForwardFromDayId: carryForward && mostRecentDayId ? mostRecentDayId : undefined }
+        );
         existingIds.add(dayId);
       } catch (error) {
         console.error(`Failed to create day ${date}:`, error);
@@ -183,9 +284,63 @@ export function RecordingDaysTab({ animalId }) {
       .filter(Boolean);
   }
 
+  /**
+   * Apply a copy-from-animal payload to the selected animal in ONE store update. The payload (from
+   * {@link CopyFromAnimalDialog}) carries only the checked sections. Electrode groups/maps are
+   * appended to the animal's existing catalogs and re-normalized exactly like the Electrode Groups
+   * tab does; the recording-system catalog is appended; cameras are appended. The common case is a
+   * fresh/under-configured target with empty catalogs, where appending equals replacing.
+   *
+   * @param {object} payload - `{ electrode_groups?, ntrode_electrode_group_channel_map?, cameras?, data_acq_device? }`.
+   */
+  function handleCopyConfirm(payload) {
+    const update = {};
+
+    const hasDeviceSection =
+      Array.isArray(payload.electrode_groups) ||
+      Array.isArray(payload.ntrode_electrode_group_channel_map) ||
+      Array.isArray(payload.data_acq_device);
+
+    if (hasDeviceSection) {
+      const devices = { ...getAnimalDevices(selectedAnimal) };
+
+      if (Array.isArray(payload.electrode_groups)) {
+        devices.electrode_groups = [
+          ...getAnimalElectrodeGroups(selectedAnimal),
+          ...payload.electrode_groups,
+        ].map(normalizeElectrodeGroupWithDefaults);
+      }
+      if (Array.isArray(payload.ntrode_electrode_group_channel_map)) {
+        devices.ntrode_electrode_group_channel_map = [
+          ...getAnimalNtrodeMaps(selectedAnimal),
+          ...payload.ntrode_electrode_group_channel_map,
+        ].map(normalizeNtrodeMapWithDefaults);
+      }
+      if (Array.isArray(payload.data_acq_device)) {
+        devices.data_acq_device = [
+          ...getDataAcqDevices(selectedAnimal),
+          ...payload.data_acq_device,
+        ];
+      }
+
+      update.devices = devices;
+    }
+
+    if (Array.isArray(payload.cameras)) {
+      update.cameras = [...getAnimalCameras(selectedAnimal), ...payload.cameras];
+    }
+
+    actions.updateAnimal(selectedAnimalId, update);
+    setCopyDialogOpen(false);
+  }
+
   // The host renders this only for a present animal; guard defensively so a stale/cold id
   // resolves to nothing rather than crashing on `selectedAnimal.id`.
   if (!selectedAnimal) return null;
+
+  // Whether there is at least one OTHER animal whose shared hardware could be copied here.
+  const hasOtherAnimals =
+    Object.keys(animals).filter((id) => id !== selectedAnimalId).length > 0;
 
   return (
     <>
@@ -204,6 +359,17 @@ export function RecordingDaysTab({ animalId }) {
             >
               {showCalendar ? 'Hide Calendar' : 'Add Recording Days'}
             </button>
+            {mostRecentDayId && (
+              <label className="carry-forward-toggle">
+                <input
+                  type="checkbox"
+                  checked={carryForward}
+                  onChange={(e) => setCarryForward(e.target.checked)}
+                />
+                Start each new day from the last day ({days[mostRecentDayId]?.date}) — review &amp;
+                adjust per day
+              </label>
+            )}
           </div>
         </header>
 
@@ -252,6 +418,16 @@ export function RecordingDaysTab({ animalId }) {
                     reference. Add only what your recordings use — a behavior-only day needs no
                     electrodes, and each section is referenced per day.
                   </p>
+                  {hasOtherAnimals && (
+                    <button
+                      type="button"
+                      className="setup-card-copy-button button-secondary"
+                      onClick={() => setCopyDialogOpen(true)}
+                      aria-label="Copy from another animal — electrode groups, cameras, recording system"
+                    >
+                      Copy from another animal…
+                    </button>
+                  )}
                   <ul className="setup-card-list">
                     {SETUP_CARD_SECTIONS.map((section) => {
                       // Three honest states that AGREE with the section-nav (decision 11): a section
@@ -467,7 +643,7 @@ export function RecordingDaysTab({ animalId }) {
                 // eslint-disable-next-line no-console
                 console.debug(`[recording-days] could not merge day "${dayId}" for status:`, err);
               }
-              const rowStatus = getDayRowStatus(selectedAnimal, record, mergedDay);
+              const rowStatus = getDayRowStatus(selectedAnimal, record, mergedDay, selectedAnimalDays);
 
               return (
                 <li key={dayId} className={`day-item ${isOrphan ? 'day-item-orphan' : ''}`}>
@@ -497,6 +673,14 @@ export function RecordingDaysTab({ animalId }) {
                       rows have their own repair paths above. */}
                   {status === DAY_STATUS.OK && (
                     <div className="day-item-actions">
+                      <button
+                        type="button"
+                        className="btn-secondary-text"
+                        onClick={() => openDuplicateDay({ dayId, date })}
+                        aria-label={`Duplicate recording day ${date || dayId}…`}
+                      >
+                        Duplicate day…
+                      </button>
                       <button
                         type="button"
                         className="btn-danger-text"
@@ -542,6 +726,61 @@ export function RecordingDaysTab({ animalId }) {
         destructive
         onConfirm={confirmDeleteDay}
         onCancel={() => setPendingDeleteDay(null)}
+      />
+
+      <Modal
+        isOpen={pendingDuplicateDay != null}
+        onClose={cancelDuplicateDay}
+        title="Duplicate recording day"
+        titleId="duplicate-day-title"
+        describedById="duplicate-day-desc"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            confirmDuplicateDay();
+          }}
+        >
+          <p id="duplicate-day-desc">
+            Clone{' '}
+            <strong>{pendingDuplicateDay?.date || pendingDuplicateDay?.dayId}</strong> to a new
+            date. The new day reproduces this day&apos;s tasks, behavioral events, keywords,
+            technical settings, configuration version, and bad-channel overrides.
+          </p>
+          <label htmlFor="duplicate-day-date">
+            New date
+            <input
+              id="duplicate-day-date"
+              type="date"
+              value={duplicateDate}
+              onChange={(e) => {
+                setDuplicateDate(e.target.value);
+                setDuplicateError('');
+              }}
+            />
+          </label>
+          {duplicateError && (
+            <p role="alert" className="form-error">
+              {duplicateError}
+            </p>
+          )}
+          <div className="modal-actions">
+            <button type="button" className="btn-secondary" onClick={cancelDuplicateDay}>
+              Cancel
+            </button>
+            <button type="submit" className="btn-primary">
+              Duplicate day
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <CopyFromAnimalDialog
+        open={copyDialogOpen}
+        currentAnimalId={selectedAnimalId}
+        animals={animals}
+        onCopy={handleCopyConfirm}
+        onCancel={() => setCopyDialogOpen(false)}
       />
     </>
   );

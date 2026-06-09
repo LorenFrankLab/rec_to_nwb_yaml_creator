@@ -154,16 +154,16 @@ describe('resolveDayConfig applies day bad-channel overrides', () => {
     expect(ntrodes.some((n) => n.ntrode_id === 99)).toBe(false);
   });
 
-  it('does NOT smear a non-array override value onto the ntrode row (leaves the base bad_channels)', () => {
+  it('does NOT smear a non-array override value onto the ntrode row (resolves to [])', () => {
     // A corrupt scalar override value under a VALID key must not be applied to the
     // geometry row: doing so produces an Animal-Editor-routed schema error on a field
-    // the user can't reach there. The merge declines it (leaving the snapshot's
-    // bad_channels intact); `dayOverrideIssues` surfaces the corrupt override as a
-    // day-routed blocker instead.
+    // the user can't reach there. The merge resolves it to [] (it reads the day
+    // override only; a non-array value is not used and the snapshot base is not read);
+    // `dayOverrideIssues` surfaces the corrupt override as a day-routed blocker instead.
     const day = { id: 'd', configurationVersion: 1, deviceOverrides: { bad_channels: { 1: '23' } } };
     const { ntrode_electrode_group_channel_map: ntrodes } = resolveDayConfig(animal, day);
     const ntrode1 = ntrodes.find((n) => n.ntrode_id === 1);
-    expect(ntrode1.bad_channels).toEqual([]); // base value preserved, scalar NOT applied
+    expect(ntrode1.bad_channels).toEqual([]); // non-array value not applied → []
     expect(ntrode1.bad_channels).not.toBe('23');
   });
 
@@ -192,14 +192,16 @@ describe('mergeDayMetadata exports the configured probes and merged bad channels
     );
   });
 
-  it('applies day bad-channel overrides into the exported ntrode map', () => {
+  it('applies day bad-channel overrides into the exported ntrode map (day-only; base not read)', () => {
     const { animal, day } = buildRealisticWorkspace();
     day.deviceOverrides = { bad_channels: { 1: [1, 2] } };
     const merged = mergeDayMetadata(animal, day);
 
     expect(merged.ntrode_electrode_group_channel_map.find((n) => n.ntrode_id === 1).bad_channels).toEqual([1, 2]);
-    // A different ntrode keeps its snapshot bad_channels (ntrode 3 has [2]).
-    expect(merged.ntrode_electrode_group_channel_map.find((n) => n.ntrode_id === 3).bad_channels).toEqual([2]);
+    // ntrode 3 has a snapshot base [2] but NO day override → resolves to [] (the
+    // merge now reads bad_channels from the day override ONLY; the load-time
+    // migration is what moves a base mark down onto the day's override).
+    expect(merged.ntrode_electrode_group_channel_map.find((n) => n.ntrode_id === 3).bad_channels).toEqual([]);
   });
 
   it('produces schema-valid output for an already-valid-shaped configured session', () => {

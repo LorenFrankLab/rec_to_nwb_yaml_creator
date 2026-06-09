@@ -365,6 +365,231 @@ export function normalizeDeviceOverrides(overrides) {
   return normalized;
 }
 
+/**
+ * Select the configuration snapshot a day resolves against, EXACTLY mirroring
+ * `resolveDayConfig`'s selection so the migration and the merge agree:
+ *  - a day that pins a `configurationVersion` resolves THAT snapshot by `version`;
+ *  - an unpinned day (no `configurationVersion`) resolves the LATEST snapshot.
+ * Returns `null` when there is no usable snapshot (no history, or a pin with no
+ * matching version) — the migration then leaves the day to the existing repair path.
+ *
+ * @param {object} animal - The animal record.
+ * @param {object} day - The day record.
+ * @returns {object|null} The matching snapshot, or `null` when none resolves.
+ */
+function selectSnapshotForDay(animal, day) {
+  const history = Array.isArray(animal?.configurationHistory)
+    ? animal.configurationHistory
+    : [];
+  if (history.length === 0) return null;
+
+  const hasPin = day?.configurationVersion != null;
+  const snapshot = hasPin
+    ? history.find((c) => c && c.version === day.configurationVersion)
+    : history[history.length - 1];
+
+  return isPlainObject(snapshot) ? snapshot : null;
+}
+
+/**
+ * Stable key for a snapshot in the block-set: a day's resolved `(animalId, version)`.
+ * Mirrors how a day selects its snapshot, so every day landing on the SAME snapshot
+ * version shares the same key.
+ *
+ * @param {string} animalId - The day's animal id.
+ * @param {*} version - The resolved snapshot's `version`.
+ * @returns {string} Composite block-set key.
+ */
+function snapshotKey(animalId, version) {
+  return `${animalId} ${version}`;
+}
+
+/**
+ * One-time, idempotent, load-time MIGRATION: move config-snapshot ("base")
+ * bad-channel marks DOWN into each day's `deviceOverrides.bad_channels`, making
+ * bad channels DAY-OWNED. `resolveDayConfig` is now a DAY-OVERRIDE-ONLY merge: it
+ * reads each ntrode's effective `bad_channels` from `day.deviceOverrides.bad_channels`
+ * and NEVER consults the snapshot base as a fallback (a non-array/absent/corrupt
+ * override resolves to `[]`). This migration backfills that day override from the
+ * old per-snapshot base so the day-only merge yields the SAME effective set for all
+ * well-formed data → byte-identical export.
+ *
+ * Per-ntrode, for each ntrode in the day's resolved snapshot:
+ *  - If the day override ALREADY has that `ntrode_id` key, leave it untouched (it
+ *    already owns the marks — and a corrupt non-array value is preserved verbatim,
+ *    never laundered). Otherwise, if the snapshot base `bad_channels` for that
+ *    ntrode is a non-empty array, copy it into `day.deviceOverrides.bad_channels[ntrodeId]`.
+ *  - Then strip `bad_channels` off a snapshot's ntrode rows (set to `[]`). A
+ *    snapshot's base is shared by every day pinned to its version, so it is only
+ *    stripped once EVERY dependent day's base has been losslessly materialized.
+ *
+ * A day BLOCKS its snapshot's strip when its override CANNOT be losslessly
+ * materialized — either (1) `deviceOverrides.bad_channels` is a CORRUPT non-record
+ * container, or (2) the container is a record but a non-empty-base ntrode carries a
+ * present NON-array (corrupt) override value. For a blocked snapshot the migration
+ * does NOT strip the base — NOT because the merge re-reads it (the day-only merge
+ * never does), but to avoid LAUNDERING the corruption: the day's corrupt override is
+ * left in place so the export gate (`dayOverrideIssues` / `classifyDeviceOverrides`)
+ * still surfaces it and BLOCKS export. The retained base is forensic/repair state,
+ * NOT an export fallback — the corrupt-override day resolves to `[]` for that ntrode
+ * and stays export-gated until repaired.
+ *
+ * Net effect: an ntrode that had a day override keeps it; an ntrode that previously
+ * relied on base now reads the moved-down override (base is `[]`) → SAME effective
+ * set → byte-identical export for well-formed data.
+ *
+ * It is a NO-OP when no snapshot carries non-empty base `bad_channels` (the
+ * overwhelming majority of fixtures), which is also the idempotency guarantee:
+ * after one run the unblocked snapshots are base-free, so a second run has nothing
+ * to move.
+ *
+ * Shape-safe: a missing/corrupt animal or snapshot, or a non-array snapshot ntrode
+ * map, is skipped (left to the existing repair path), never crashed on. Operates on
+ * an already-cloned `normalized` workspace — the caller owns the clone.
+ *
+ * @param {object} normalized - An ALREADY-CLONED workspace (mutated in place).
+ * @returns {object} The same workspace, with base marks moved down.
+ */
+function applyBadChannelMigration(normalized) {
+  if (!isPlainObject(normalized)) return normalized;
+  const animals = normalized.animals || {};
+  const days = normalized.days || {};
+
+  // The merge is DAY-OVERRIDE-ONLY: `resolveDayConfig` reads each ntrode's
+  // bad_channels from `day.deviceOverrides.bad_channels` and NEVER falls back to the
+  // snapshot base. So once a day's base is losslessly materialized into a (record)
+  // override, the base is dead weight and the snapshot's base is safe to strip.
+  // A snapshot's base is shared by EVERY day pinned to its version, so it is stripped
+  // only once EVERY dependent day's base has been materialized. TWO distinct shapes
+  // BLOCK a snapshot's strip — in both, the day override CANNOT be losslessly
+  // materialized, so the migration keeps the base as forensic/repair state (NOT as an
+  // export fallback — the merge never reads it) to avoid laundering the corruption:
+  //   1. CORRUPT CONTAINER — `deviceOverrides.bad_channels` is a non-record
+  //      (e.g. scalar "2.9"): there is no writable record to materialize the base into.
+  //      The merge resolves this day to [] for every ntrode and export-gates it.
+  //   2. CORRUPT NON-ARRAY VALUE on a BASED ntrode — the container is a record but
+  //      a non-empty-base ntrode's override value is present and NOT an array
+  //      (e.g. { 1: "2.9" } over base [2]): overwriting that corrupt value with the
+  //      base would launder the corruption the export gate needs to surface, so we
+  //      leave it (the merge resolves that ntrode to [] and export-gates the day).
+  // Two passes:
+  //   Pass 1 — materialize base→day-override for materializable days, and record
+  //            the resolved (animalId, version) of any day that can't.
+  //   Pass 2 — strip a snapshot's base ONLY if no dependent day blocked it.
+  const blockedSnapshots = new Set();
+
+  // Pass 1: materialize + detect blockers (per day).
+  Object.values(days).forEach((day) => {
+    if (!isPlainObject(day)) return;
+    const animal = animals[day.animalId];
+    if (!isPlainObject(animal)) return; // missing/corrupt animal → repair path
+
+    const snapshot = selectSnapshotForDay(animal, day);
+    if (!snapshot) return; // no usable snapshot (no history / dangling pin)
+
+    const baseNtrodes = snapshot.devices?.ntrode_electrode_group_channel_map;
+    if (!Array.isArray(baseNtrodes)) return; // corrupt snapshot map → repair path
+
+    // Collect the base marks to move down, keyed by canonical ntrode_id string.
+    const toMove = [];
+    baseNtrodes.forEach((ntrode) => {
+      if (!isPlainObject(ntrode)) return;
+      const base = ntrode.bad_channels;
+      if (Array.isArray(base) && base.length > 0) {
+        toMove.push([normalizeIdKey(ntrode.ntrode_id), base]);
+      }
+    });
+
+    if (toMove.length === 0) return; // no base to move — NO-OP (idempotency)
+
+    // A corrupt non-record override container CANNOT be safely materialized — there
+    // is no writable record to move the base into. Record this day's resolved
+    // snapshot as blocked so Pass 2 leaves its base intact (forensic/repair state,
+    // NOT an export fallback — the day-only merge resolves this day to [] and
+    // export-gates it), and do NOT write into the corrupt container.
+    const existing = day.deviceOverrides?.bad_channels;
+    if (existing != null && !isPlainObject(existing)) {
+      blockedSnapshots.add(snapshotKey(day.animalId, snapshot.version));
+      return;
+    }
+
+    // The container is a record (or absent). A CORRUPT NON-ARRAY value on a BASED
+    // ntrode (present, non-array, over a non-empty base) blocks the strip: we must
+    // NOT overwrite that corrupt value with the base — doing so would launder the
+    // very corruption the export gate needs to surface (the day-only merge already
+    // resolves this ntrode to [] and export-gates the day). So block this snapshot's
+    // strip (base kept as forensic/repair state, never read by the merge), while
+    // still materializing the OTHER (clean / absent-key) based ntrodes below.
+    const hasCorruptValueOnBasedNtrode = toMove.some(([ntrodeId]) => {
+      if (!isPlainObject(existing)) return false; // absent container → nothing corrupt
+      if (!Object.hasOwn(existing, ntrodeId)) return false; // absent key → materializable
+      return !Array.isArray(existing[ntrodeId]); // present non-array value → corrupt
+    });
+    if (hasCorruptValueOnBasedNtrode) {
+      blockedSnapshots.add(snapshotKey(day.animalId, snapshot.version));
+    }
+
+    // Materialize base→override for each ntrode the override lacks, ensuring the
+    // override container is a record.
+    if (!isPlainObject(day.deviceOverrides)) {
+      day.deviceOverrides = {};
+    }
+    if (!isPlainObject(day.deviceOverrides.bad_channels)) {
+      day.deviceOverrides.bad_channels = {};
+    }
+    const target = day.deviceOverrides.bad_channels;
+    toMove.forEach(([ntrodeId, base]) => {
+      // REPLACE precedence: an existing override (incl. a corrupt non-array value) wins —
+      // never overwrite it, never launder it. Only an ABSENT key is materialized.
+      if (!Object.hasOwn(target, ntrodeId)) {
+        target[ntrodeId] = [...base];
+      }
+    });
+  });
+
+  // Pass 2: strip each snapshot's base ONLY if no dependent day blocked it. The
+  // day-only merge never reads the base, so an unblocked snapshot's stripped base is
+  // dead weight; a blocked snapshot keeps its base as forensic/repair state for the
+  // export gate, not as a merge fallback.
+  Object.entries(animals).forEach(([animalId, animal]) => {
+    if (!isPlainObject(animal)) return;
+    const history = Array.isArray(animal.configurationHistory)
+      ? animal.configurationHistory
+      : [];
+    history.forEach((snapshot) => {
+      if (!isPlainObject(snapshot)) return;
+      if (blockedSnapshots.has(snapshotKey(animalId, snapshot.version))) return;
+
+      const baseNtrodes = snapshot.devices?.ntrode_electrode_group_channel_map;
+      if (!Array.isArray(baseNtrodes)) return;
+      baseNtrodes.forEach((ntrode) => {
+        if (
+          isPlainObject(ntrode) &&
+          Array.isArray(ntrode.bad_channels) &&
+          ntrode.bad_channels.length > 0
+        ) {
+          ntrode.bad_channels = [];
+        }
+      });
+    });
+  });
+
+  return normalized;
+}
+
+/**
+ * Public migration entry: deep-clones the workspace, then moves config-snapshot
+ * bad-channel marks down into each day (see {@link applyBadChannelMigration}).
+ * A no-op (deep-equal clone) for a base-free workspace. Idempotent.
+ *
+ * @param {object} workspace - Workspace to migrate (not mutated).
+ * @returns {object} A migrated deep clone (or the input unchanged when not an object).
+ */
+export function migrateBadChannelsToDays(workspace) {
+  if (!isPlainObject(workspace)) return workspace;
+  return applyBadChannelMigration(structuredClone(workspace));
+}
+
 export function normalizeWorkspaceDevices(workspace) {
   if (!isPlainObject(workspace)) return workspace;
 
@@ -406,5 +631,9 @@ export function normalizeWorkspaceDevices(workspace) {
     }
   });
 
-  return normalized;
+  // After per-snapshot / per-day normalization, move any config-snapshot base
+  // bad-channel marks DOWN into the owning day's overrides (a no-op for the
+  // base-free majority). Runs last so the moved values come from already-
+  // normalized snapshots and land in already-normalized override records.
+  return applyBadChannelMigration(normalized);
 }

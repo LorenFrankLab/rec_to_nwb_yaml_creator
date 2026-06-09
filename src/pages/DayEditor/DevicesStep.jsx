@@ -6,10 +6,18 @@ import ReconfigWizard from './ReconfigWizard';
 import DayRecordingSystem from './DayRecordingSystem';
 import { reconcileAppliedToDays } from '../../state/configDiff';
 import { resolveDayConfig } from '../../state/workspaceUtils';
-import { getConfigHistory, getDataAcqDevices } from '../../state/workspaceSelectors';
+import {
+  getConfigHistory,
+  getDataAcqDevices,
+  getAnimalCameras,
+  getDayCamerasUsed,
+  getDayDataAcqDeviceName,
+} from '../../state/workspaceSelectors';
+import { inferredCameraKeys } from '../../state/cameraUsage';
 import { rawRecord } from '../../components/rawPropTypes';
 import { isMultiShankGroup, validBadChannelIds } from '../../domain/badChannels';
 import { classifyDeviceOverrides } from '../../domain/deviceOverrides';
+import { priorBadChannels, getBadChannelRemovalAcks } from '../../domain/badChannelMonotonicity';
 import './DayEditor.scss';
 
 /**
@@ -73,10 +81,85 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
   const recordingSystemPicker = (
     <DayRecordingSystem
       catalog={getDataAcqDevices(animal)}
-      selectedName={typeof day.data_acq_device_name === 'string' ? day.data_acq_device_name : undefined}
+      selectedName={getDayDataAcqDeviceName(day)}
       onSelect={(name) => onFieldUpdate('data_acq_device_name', name)}
     />
   );
+
+  // Per-day "cameras used" checklist. A camera INFERRED-referenced by a task/video/fs-gui row is
+  // used regardless (shown checked + disabled — it cannot be unchecked here). A non-inferred camera
+  // is a free checkbox whose checked state = its id is in the explicit `day.cameras_used` set, and
+  // it stays ENABLED so the user can toggle it. The disabled/hint decision MUST use the INFERRED
+  // set (not the export union, which folds in `cameras_used`) — otherwise checking a free camera
+  // would immediately disable it and the user could never uncheck it. Toggling writes ONLY the
+  // explicit additions (inferred cameras are covered by the union and need not be stored), so
+  // `cameras_used` stays absent/empty for all existing data and the export stays byte-identical.
+  const animalCameras = getAnimalCameras(animal);
+  const inferredKeys = useMemo(() => inferredCameraKeys(day), [day]);
+  const explicitCameraIds = useMemo(() => getDayCamerasUsed(day), [day]);
+  const explicitKeySet = useMemo(
+    () => new Set(explicitCameraIds.map((id) => String(id))),
+    [explicitCameraIds]
+  );
+
+  /**
+   * Toggle a NON-referenced camera in the explicit cameras-used set. Rebuilds the set from the
+   * full catalog so it stores the ids (in catalog order) of every currently-checked non-referenced
+   * camera — referenced cameras are intentionally excluded (covered by the union).
+   * @param {*} cameraId - The catalog camera id being toggled.
+   * @param {boolean} checked - The next checked state.
+   */
+  const handleCameraUsedToggle = useCallback(
+    (cameraId, checked) => {
+      const next = new Set(explicitCameraIds.map((id) => String(id)));
+      if (checked) next.add(String(cameraId));
+      else next.delete(String(cameraId));
+      // Preserve original id types/order by filtering the catalog, never stringifying into the array.
+      const nextIds = animalCameras
+        .filter(
+          (camera) =>
+            !inferredKeys.has(String(camera?.id)) && next.has(String(camera?.id))
+        )
+        .map((camera) => camera.id);
+      onFieldUpdate('cameras_used', nextIds);
+    },
+    [animalCameras, explicitCameraIds, inferredKeys, onFieldUpdate]
+  );
+
+  const camerasUsedSection =
+    animalCameras.length > 0 ? (
+      <section className="cameras-used-section" aria-label="Cameras used this day">
+        <h3>Cameras used this day</h3>
+        <p className="field-help-text">
+          Check the cameras this recording day used. A camera already referenced by a task, video,
+          or FsGUI protocol is used regardless and shown checked.
+        </p>
+        <ul className="cameras-used-list">
+          {animalCameras.map((camera) => {
+            const key = String(camera?.id);
+            const referenced = inferredKeys.has(key);
+            const checked = referenced || explicitKeySet.has(key);
+            const label = `${camera?.camera_name ?? '(unnamed)'} (id ${camera?.id})`;
+            return (
+              <li key={key}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={referenced}
+                    onChange={(e) => handleCameraUsedToggle(camera.id, e.target.checked)}
+                  />
+                  {label}
+                  {referenced && (
+                    <span className="cameras-used-hint"> — used by a task/video</span>
+                  )}
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    ) : null;
 
   // Configuration-version legibility (only when wired with store actions + the
   // animal's days, i.e. inside the real Day Editor — not in isolated unit renders).
@@ -203,6 +286,38 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
   const handleBadChannelsBatchUpdate = useCallback((badChannelsObject) => {
     onFieldUpdate('deviceOverrides.bad_channels', badChannelsObject);
   }, [onFieldUpdate]);
+
+  // Bad-channel monotonicity: channels that were bad on an EARLIER same-config day and are NOT
+  // yet acknowledged for THIS day. Un-marking one is a monotonicity exception, so BadChannelsEditor
+  // intercepts it with a confirm prompt. (Channels already acked are filtered out so a re-toggle
+  // after an ack doesn't re-prompt.) Empty when there is no cross-day context (isolated renders).
+  const priorBadByNtrode = useMemo(() => {
+    const prior = priorBadChannels(animal, day, Array.isArray(animalDays) ? animalDays : []);
+    const acks = getBadChannelRemovalAcks(day);
+    const result = {};
+    Object.keys(prior).forEach((ntrodeId) => {
+      const acked = new Set(Array.isArray(acks[ntrodeId]) ? acks[ntrodeId] : []);
+      const remaining = prior[ntrodeId].filter((ch) => !acked.has(ch));
+      if (remaining.length > 0) result[ntrodeId] = remaining;
+    });
+    return result;
+  }, [animal, day, animalDays]);
+
+  /**
+   * Record an OFF-EXPORT acknowledgment that this day deliberately un-marks `channel` on
+   * `ntrodeId` (a channel that was bad on an earlier same-config day). Written to
+   * `day.state.badChannelRemovalAcks.<ntrodeId>` (never read by the export merge), UNIONed with
+   * any existing acks so a prior acknowledgment is preserved. This clears the
+   * `bad_channel_unfailed_without_ack` export block without restoring the channel.
+   * @param {string} ntrodeId - The ntrode id (stringified).
+   * @param {number} channel - The probe-local channel/electrode id being un-marked.
+   */
+  const handleAcknowledgeRemoval = useCallback((ntrodeId, channel) => {
+    const existing = getBadChannelRemovalAcks(day)[ntrodeId];
+    const prior = Array.isArray(existing) ? existing : [];
+    const next = Array.from(new Set([...prior, channel])).sort((a, b) => a - b);
+    onFieldUpdate(`state.badChannelRemovalAcks.${ntrodeId}`, next);
+  }, [day, onFieldUpdate]);
 
   // MALFORMED / STALE OVERRIDE REPAIR: the merge declines to apply
   // any malformed `deviceOverrides` shape, so each blocks export (via `dayOverrideIssues`)
@@ -430,6 +545,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
       <div className="devices-step">
         <h2>Devices Configuration</h2>
         {recordingSystemPicker}
+        {camerasUsedSection}
         {overrideCleanupSection}
         <div className="empty-state">
           <p>No electrodes are set up for {ownerKey} yet.</p>
@@ -450,6 +566,8 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
       <h2>Devices Configuration</h2>
 
       {recordingSystemPicker}
+
+      {camerasUsedSection}
 
       {/* This day's relationship to shared animal setup: it USES an animal configuration
           version; probe geometry is edited in the shared animal setup, not here. */}
@@ -626,6 +744,8 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
                   badChannels={badChannels}
                   onUpdate={handleBadChannelsUpdate}
                   onBatchUpdate={handleBadChannelsBatchUpdate}
+                  priorBadByNtrode={priorBadByNtrode}
+                  onAcknowledgeRemoval={handleAcknowledgeRemoval}
                   errors={errors}
                   warnings={warnings}
                 />
@@ -650,6 +770,8 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
 DevicesStep.propTypes = {
   animal: PropTypes.shape({
     id: PropTypes.string.isRequired,
+    // Animal-level camera catalog (optional); rendered as the per-day cameras-used checklist.
+    cameras: PropTypes.arrayOf(PropTypes.object),
     devices: PropTypes.shape({
       electrode_groups: PropTypes.arrayOf(
         PropTypes.shape({
@@ -683,6 +805,10 @@ DevicesStep.propTypes = {
     // detects and offers removal for each. rawRecord tolerates a non-record (scalar/array)
     // value too, so the PropType never warns on the corruption it exists to surface.
     deviceOverrides: rawRecord({}),
+    // The explicit per-day "cameras used" checklist set (optional). Holds catalog camera ids of
+    // cameras the day used but that are NOT inferred from a task/video/fs-gui row. Ids preserve
+    // their source type (numeric or string from a corrupt import).
+    cameras_used: PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.number, PropTypes.string])),
   }).isRequired,
   mergedDay: PropTypes.object.isRequired,
   onFieldUpdate: PropTypes.func.isRequired,

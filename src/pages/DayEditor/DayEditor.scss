@@ -62,113 +62,140 @@
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
+  /* `width: 100%` + the padding must stay INSIDE the grid track, or the panel overflows its
+     1fr column (≈48px of padding) and forces a horizontal scrollbar. border-box folds the
+     padding into the 100%. (The page is otherwise content-box, so set it explicitly here.) */
+  box-sizing: border-box;
+  /* In the `.day-editor-body` grid (230px 1fr), the panel is the 1fr track. A grid track's
+     `1fr` is `minmax(auto, 1fr)`, so WITHOUT this it cannot shrink below its content's
+     min-content width — wide content (the Export YAML <pre>, the channel-map tables) then
+     blows the track WIDER than its share (e.g. 230px 1248px), overflowing the container and
+     breaking the nav/panel layout. `min-width: 0` holds the track at its 1fr share so wide
+     content stays inside it, mirroring AnimalView's `.animal-view-panel`. */
+  min-width: 0;
 }
 
-/* ===== Step Navigation ===== */
+/* ===== Tabbed section nav (replaces the old linear stepper nav) =====
+   Mirrors AnimalView's grouped section-nav: a LEFT nav of free-navigation buttons + the
+   panel. The Day Editor is a single route, so items are buttons (local state), not links. */
 
-.step-navigation {
-  background-color: var(--color-white);
-  border-bottom: 2px solid var(--color-grey-200);
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+.day-editor-body {
+  display: grid;
+  grid-template-columns: 230px 1fr;
+  align-items: start;
 }
 
-.step-list {
+/* Section-nav layout — SCOPED under `.day-editor-body`. These class NAMES are shared with
+   AnimalView's section-nav, but AnimalView ships its own (different) rules for them; leaving
+   these global let the Day Editor's `width: 100%` item rule leak onto AnimalView and overflow
+   its nav past the divider into the panel. Scoping keeps the Day Editor's nav self-contained and
+   off AnimalView's. */
+.day-editor-body .section-nav {
+  border-right: 1px solid var(--color-grey-200);
+  padding: 1rem 0.7rem;
+}
+
+.day-editor-body .section-nav-group {
+  margin-bottom: 1.1rem;
+}
+
+.day-editor-body .section-nav-group-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--color-grey-600);
+  padding: 0 0.55rem 0.4rem;
+}
+
+.day-editor-body .section-nav-item {
   display: flex;
-  list-style: none;
-  padding: 0;
-  margin: 0;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  /* width:100% fills the 230px nav column; without border-box the padding would push the item
+     past the column (the grid has no gap, so it would overlap the panel content). */
+  box-sizing: border-box;
+  padding: 0.5rem 0.55rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border: 1px solid transparent;
+  border-bottom: 1px solid var(--color-grey-200);
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  color: inherit;
 }
 
-.step-item {
+.day-editor-body .section-nav-item:hover {
+  background: var(--color-grey-100);
+  border-radius: 8px;
+}
+
+.day-editor-body .section-nav-item.is-active {
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary);
+  border-radius: 8px;
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--color-primary);
+}
+
+.day-editor-body .section-nav-item:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+.day-editor-body .section-nav-item-name {
   flex: 1;
 }
 
-.step-button {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-md);
-  border: none;
-  background: transparent;
-  border-bottom: 3px solid transparent;
-  cursor: pointer;
-  font-size: var(--font-size-sm);
-  font-family: inherit;
-  transition: all var(--transition-standard);
-  color: var(--color-grey-900);
-}
-
-.step-number {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background-color: var(--color-grey-200);
+.day-editor-body .section-nav-count {
+  flex: none;
+  font-size: 0.7rem;
   color: var(--color-grey-600);
-  font-size: 0.75rem;
-  font-weight: 600;
 }
 
-.step-item.current .step-number {
-  background-color: var(--color-primary);
-  color: var(--color-white);
+.day-editor-body .section-nav-status-icon {
+  flex: none;
+  font-size: 1rem;
+  line-height: 1;
 }
 
-.step-item.step-valid .step-number {
-  background-color: var(--color-success);
-  color: var(--color-white);
+.day-editor-body .section-nav-item.step-valid .section-nav-status-icon {
+  color: var(--color-success);
 }
 
-.step-item.step-error .step-number {
-  background-color: var(--color-error);
-  color: var(--color-white);
+.day-editor-body .section-nav-item.step-incomplete .section-nav-status-icon {
+  color: var(--color-warning);
 }
 
-.step-item.current .step-button {
-  border-bottom-color: var(--color-primary);
-  background-color: var(--color-primary-light);
-  font-weight: 600;
+.day-editor-body .section-nav-item.step-error .section-nav-status-icon {
+  color: var(--color-error);
 }
 
-.step-button:hover:not(:disabled):not([aria-disabled='true']) {
-  background-color: var(--color-grey-100);
+/* Free-navigation pager below the panel. */
+.day-editor-section-pager {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-lg);
 }
 
-.step-button:focus {
-  outline: 2px solid var(--color-primary);
-  outline-offset: -2px;
-  z-index: 1;
+.day-editor-pager-prev,
+.day-editor-pager-next {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-family: inherit;
+  cursor: pointer;
 }
 
-/* Disabled steps use aria-disabled (not the native disabled attribute) so screen
-   readers can still reach and announce them; style both for parity. */
-.step-button:disabled,
-.step-button[aria-disabled='true'] {
+.day-editor-pager-prev:disabled,
+.day-editor-pager-next:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.step-status-icon {
-  font-size: 1rem;
-}
-
-.step-item.step-valid .step-status-icon {
-  color: var(--color-success);
-}
-
-.step-item.step-incomplete .step-status-icon {
-  color: var(--color-warning);
-}
-
-.step-item.step-error .step-status-icon {
-  color: var(--color-error);
+.day-editor-pager-next {
+  margin-left: auto;
 }
 
 /* ===== Save Indicator ===== */
@@ -389,18 +416,14 @@
 /* ===== Responsive ===== */
 
 @media (max-width: 768px) {
-  .step-list {
-    flex-direction: column;
+  /* Collapse the two-column nav+panel layout to a single stacked column. */
+  .day-editor-body {
+    grid-template-columns: 1fr;
   }
 
-  .step-button {
-    justify-content: flex-start;
-    border-bottom: none;
-    border-left: 3px solid transparent;
-  }
-
-  .step-item.current .step-button {
-    border-left-color: var(--color-primary);
+  .day-editor-body .section-nav {
+    border-right: none;
+    border-bottom: 1px solid var(--color-grey-200);
   }
 
   .form-grid {
@@ -506,6 +529,38 @@
   font-weight: 500;
   margin-bottom: var(--spacing-md);
   color: var(--color-grey-900);
+}
+
+/* Cameras-used checklist (per-day camera selection) */
+.cameras-used-section {
+  margin-top: var(--spacing-lg);
+}
+
+.cameras-used-list {
+  list-style: none;
+  margin: var(--spacing-sm) 0 0;
+  padding: 0;
+}
+
+.cameras-used-list li {
+  margin-bottom: var(--spacing-xs);
+}
+
+.cameras-used-list label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  cursor: pointer;
+}
+
+.cameras-used-list input[disabled] + * {
+  cursor: default;
+}
+
+.cameras-used-hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-grey-600);
+  font-style: italic;
 }
 
 /* Electrode Groups Section */

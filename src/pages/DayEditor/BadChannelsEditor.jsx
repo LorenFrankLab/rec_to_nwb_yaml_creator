@@ -8,6 +8,7 @@ import {
   invalidBadChannelMarks,
   toggleMark,
 } from '../../domain/badChannels';
+import ConfirmDialog from '../../components/Modal/ConfirmDialog';
 import './DayEditor.scss';
 
 /**
@@ -70,18 +71,70 @@ import './DayEditor.scss';
  *   probe-wide selector for multi-shank probes (via the verified probe catalog).
  * @param {object} props.errors - Validation errors: { [ntrodeId]: errorMessage }
  * @param {object} props.warnings - Validation warnings: { [ntrodeId]: warningMessage }
+ * @param {object} [props.priorBadByNtrode] - `{ [ntrodeId]: number[] }` of channels that were
+ *   bad on an EARLIER same-config day and are NOT yet acknowledged for this day. Un-marking one
+ *   of these is a monotonicity exception, so it is intercepted with a confirm prompt (bad
+ *   channels normally only accumulate). Channels absent here un-mark immediately (a normal
+ *   correction of a mark added this day).
+ * @param {Function} [props.onAcknowledgeRemoval] - Callback `(ntrodeId, channel) => void`,
+ *   invoked on confirm to record the OFF-EXPORT acknowledgment so the export gate won't block.
  * @returns {JSX.Element}
  */
-export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBatchUpdate, deviceType, errors, warnings }) {
+export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBatchUpdate, deviceType, errors, warnings, priorBadByNtrode, onAcknowledgeRemoval }) {
   const [expandedMaps, setExpandedMaps] = useState({});
+  // A pending prior-bad un-mark awaiting confirmation: `{ ntrodeId, channel, apply }`. `apply`
+  // is the deferred un-mark write (single-shank `onUpdate`, or the multi-shank batch). null when
+  // no prompt is open. Confirm → record the ack + run `apply`; cancel → discard (channel stays bad).
+  const [pendingUnmark, setPendingUnmark] = useState(null);
 
   if (!ntrodes || ntrodes.length === 0) {
     return null;
   }
 
+  /**
+   * Whether un-marking `channel` on `ntrodeId` is a monotonicity exception that must be
+   * confirmed: it was bad on an earlier same-config day and is not yet acknowledged.
+   * @param {string} key - Stringified ntrode id.
+   * @param {number} channel - The channel/electrode id being un-marked.
+   * @returns {boolean}
+   */
+  const isPriorBadUnmark = (key, channel) =>
+    Array.isArray(priorBadByNtrode?.[key]) && priorBadByNtrode[key].includes(channel);
+
+  /**
+   * Confirm the pending prior-bad un-mark: record the off-export acknowledgment, run the
+   * deferred un-mark write, then close the prompt.
+   */
+  const confirmPendingUnmark = () => {
+    if (!pendingUnmark) return;
+    onAcknowledgeRemoval?.(pendingUnmark.ntrodeId, pendingUnmark.channel);
+    pendingUnmark.apply();
+    setPendingUnmark(null);
+  };
+
   // Multi-shank iff the verified catalog reports >1 shank for this device AND there is
   // >1 ntrode row (so a 1-row group never collapses to a degenerate selector).
   const isMultiShank = isMultiShankGroup(deviceType, ntrodes.length);
+
+  // Shared confirm prompt for a prior-bad un-mark (rendered in both the single- and multi-shank
+  // returns). Not destructive — un-failing is a correction; just deliberate.
+  const unmarkConfirm = (
+    <ConfirmDialog
+      isOpen={pendingUnmark !== null}
+      destructive={false}
+      title="Un-mark a previously failed channel?"
+      message={
+        pendingUnmark
+          ? `Channel ${pendingUnmark.channel} was marked bad on an earlier recording day with the ` +
+            `same probe configuration. Bad channels normally only accumulate. Un-mark it for this day?`
+          : ''
+      }
+      confirmLabel="Un-mark it"
+      cancelLabel="Keep it marked"
+      onConfirm={confirmPendingUnmark}
+      onCancel={() => setPendingUnmark(null)}
+    />
+  );
 
   /**
    * Handle checkbox change for a channel
@@ -91,7 +144,15 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
    */
   const handleChannelToggle = (ntrodeId, channelNum, isChecked) => {
     const key = String(ntrodeId);
-    onUpdate(key, toggleMark(badChannels[key] || [], channelNum, isChecked));
+    const apply = () => onUpdate(key, toggleMark(badChannels[key] || [], channelNum, isChecked));
+    // Un-marking (isChecked === false) a channel that was bad on an earlier same-config day is a
+    // monotonicity exception — defer the write behind a confirm prompt. Marking, and un-marking a
+    // not-prior-bad channel, apply immediately.
+    if (!isChecked && isPriorBadUnmark(key, channelNum)) {
+      setPendingUnmark({ ntrodeId: key, channel: channelNum, apply });
+      return;
+    }
+    apply();
   };
 
   /**
@@ -161,16 +222,25 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
      * @param {boolean} isChecked - Whether the box was checked.
      */
     const handleProbeWideToggle = (electrodeId, isChecked) => {
-      onBatchUpdate(
-        buildProbeWideBadChannelMap({
-          badChannels,
-          firstNtrodeId: firstNtrode.ntrode_id,
-          laterNtrodes,
-          electrodeId,
-          isChecked,
-          deviceType,
-        })
-      );
+      const apply = () =>
+        onBatchUpdate(
+          buildProbeWideBadChannelMap({
+            badChannels,
+            firstNtrodeId: firstNtrode.ntrode_id,
+            laterNtrodes,
+            electrodeId,
+            isChecked,
+            deviceType,
+          })
+        );
+      // Un-marking a probe-local electrode id that was bad on an earlier same-config day (keyed
+      // by the FIRST ntrode row — the row the converter honors) is a monotonicity exception:
+      // defer behind the confirm prompt. Marking applies immediately.
+      if (!isChecked && isPriorBadUnmark(firstKey, electrodeId)) {
+        setPendingUnmark({ ntrodeId: firstKey, channel: electrodeId, apply });
+        return;
+      }
+      apply();
     };
 
     // First-row marks with NO probe-wide checkbox (out-of-range id or non-integer).
@@ -192,6 +262,7 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
 
     return (
       <div className="bad-channels-editor">
+        {unmarkConfirm}
         <p className="field-help-text">
           Only mark channels with hardware failures. Analysis quality issues should be handled during spike sorting.
         </p>
@@ -292,6 +363,7 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
 
   return (
     <div className="bad-channels-editor">
+      {unmarkConfirm}
       <p className="field-help-text">
         Only mark channels with hardware failures. Analysis quality issues should be handled during spike sorting.
       </p>
@@ -433,6 +505,8 @@ BadChannelsEditor.propTypes = {
   deviceType: PropTypes.string,
   errors: PropTypes.object,
   warnings: PropTypes.object,
+  priorBadByNtrode: PropTypes.objectOf(PropTypes.arrayOf(PropTypes.number)),
+  onAcknowledgeRemoval: PropTypes.func,
 };
 
 BadChannelsEditor.defaultProps = {
@@ -440,4 +514,6 @@ BadChannelsEditor.defaultProps = {
   deviceType: undefined,
   errors: {},
   warnings: {},
+  priorBadByNtrode: {},
+  onAcknowledgeRemoval: undefined,
 };

@@ -90,6 +90,23 @@ describe('collectCameraIdentities', () => {
     const registry = collectCameraIdentities(workspace, { animalId: 'remy', id: 0 });
     expect(registry.map((e) => e.name)).toEqual(['side']);
   });
+
+  it('excludes the whole catalog of the edited animal when no camera id is given', () => {
+    const multiCameraWorkspace = {
+      animals: {
+        remy: {
+          id: 'remy',
+          cameras: [
+            { id: 0, camera_name: 'overhead', meters_per_pixel: 0.001 },
+            { id: 1, camera_name: 'side', meters_per_pixel: 0.0012 },
+          ],
+        },
+        jaq: { id: 'jaq', cameras: [{ id: 0, camera_name: 'arena', meters_per_pixel: 0.0011 }] },
+      },
+    };
+    const registry = collectCameraIdentities(multiCameraWorkspace, { animalId: 'remy' });
+    expect(registry.map((e) => e.name)).toEqual(['arena']);
+  });
 });
 
 describe('collectDataAcqIdentities', () => {

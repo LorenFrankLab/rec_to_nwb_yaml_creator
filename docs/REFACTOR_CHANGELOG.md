@@ -2,7 +2,226 @@
 
 **Purpose:** Track all changes made during the refactoring milestones.
 
-**Last Updated:** June 8, 2026
+**Last Updated:** June 9, 2026
+
+## Tabbed Day Editor navigation (June 9, 2026)
+
+Replaced the Day Editor's LINEAR stepper navigation shell with a TABBED section-nav that mirrors
+AnimalView's grouped `section-nav`. **UI-only and merge-neutral** — no change to YAML output (golden
+baselines stay byte-identical) and the five step components (`OverviewStep` / `DevicesStep` /
+`TasksEpochsStep` / `ValidationStep` / `ExportStep`) and their internals are unchanged.
+
+- **Free section navigation.** The Day Editor is no longer a wizard. The five sections are grouped
+  (Session: Overview · Recording: Devices & Failed Channels, Tasks & Epochs · Finish: Validation,
+  Export) into a new `DayEditorSectionNav` component of `<button>`s (local `currentStep` state, not
+  routes — the editor stays a single `#/day/:id` route). The active item carries `aria-current="page"`
+  (mirroring AnimalView). Every section — including Export — is freely reachable.
+- **Export gate preserved as a blocked ACTION, not a nav lock.** The nav-level export gate
+  (`aria-disabled` no-op on the Export tab) and the keyboard fail-close in the Alt+→ handler were
+  removed. The gate survives inside `ExportStep`, which independently computes
+  `isExportEnabled`/`exportBlocked` and hard-stops `handleDownload` while the day is invalid (defense in
+  depth). The Export nav item still shows its status glyph (✗/⚠) so the block stays visible.
+- **Next ▸ / ◂ Prev affordance + keyboard.** A visible pager below the panel and the existing global
+  Alt+←/→ shortcuts advance/retreat through the order overview→devices→epochs→validation→export — now
+  freely into Export.
+- **Focus + repair.** Focus moves to the panel (`#main-content`) on a section change (mirroring
+  AnimalView), skipping the initial mount; the repair-focus path (`focusRequest`) still routes a repair
+  to its owning section and highlights the targeted field.
+- **Removed.** The old `StepNavigation` linear-stepper component and its dedicated test were deleted;
+  the status icon/label helpers moved into `DayEditorSectionNav`. The old `.step-navigation` /
+  `.step-*` SCSS was replaced with section-nav + pager styles.
+
+## Bad channels are day-owned, carried forward, and monotonic (June 9, 2026)
+
+Split bad-channel ownership out of the animal hardware configuration and down to the recording day.
+The **exported YAML is byte-identical** for existing data (`bad_channels` still on the ntrode rows in the
+output); only the app's internal ownership + editing model changed.
+
+- **Day-owned storage.** A channel is now marked failed *per recording day* in the Day Editor's "Failed
+  Channels", stored at `day.deviceOverrides.bad_channels`. The animal-level **Channel Maps tab is now
+  wiring/mapping only** — it no longer edits bad channels and no longer carries a per-config "baseline".
+- **Load-time migration.** Legacy marks living on the configuration-snapshot bases are migrated down to the
+  owning days at load, so existing workspaces re-export byte-for-byte identically (no YAML diff).
+- **Export merge reads the day override ONLY.** `mergeDayMetadata` resolves each day's day-owned bad-channel
+  set into the ntrode rows it writes — the only source of truth for export.
+- **Config-version-guarded carry-forward.** Creating a new day seeds its marks from the prior
+  same-`configurationVersion` day (a probe reconfiguration legitimately resets channels, so different
+  versions are never compared); the user can then add the newly-failed channels.
+- **Monotonic enforcement.** Bad channels accumulate across same-config days. Un-marking a channel that was
+  bad on an earlier same-config day triggers an in-context confirm and records an off-export acknowledgment
+  in `day.state.badChannelRemovalAcks` (which the export merge never reads, so an ack clears the block
+  without altering the YAML). An **unacknowledged regression blocks export** via the
+  `bad_channel_unfailed_without_ack` validation rule. Pure helpers in
+  `src/domain/badChannelMonotonicity.js` are shared by the confirm UI and the export-block rule.
+- **Perf note.** The recording-days list computes each row's monotonicity status by reducing the animal's
+  same-config days (`priorBadChannels`); the list's `selectedAnimalDays` input is now memoized so it is built
+  once per data change instead of per row. The per-row prior-set reduction remains O(days); a future pass
+  could precompute one cumulative per-version prior-bad map for very long (200+ day) chronic studies.
+
+## YAML import UI — pick → preview → confirm on the workspace (June 8, 2026)
+
+Added the user-facing YAML-import flow on top of the existing reconcile core (`planImport` /
+`applyImportPlan`), so users can bring existing `{mmddYYYY}_{subject}_metadata.yml` files into the
+workspace as animals + recording days.
+
+- **Parse helper** (`src/features/importYaml.js`, `parseImportFiles`): reads + decodes the chosen
+  `File[]` into the `{ decodedFiles, parseFailures }` shape `planImport` consumes. A file that fails
+  to read, fails to parse, or decodes to a non-object document is collected into `parseFailures` with
+  a reason — never thrown — so every un-importable file is visible.
+- **Import dialog** (`src/pages/AnimalWorkspace/ImportYamlDialog.jsx`): a two-phase modal. The **pick**
+  phase offers a multi-file `<input>` and a drag-and-drop zone; on selection it parses the files,
+  reconciles them against the live workspace via `planImport`, and advances to **preview**. The
+  preview shows a summary line, one card per planned animal (recording-day count, hardware-configuration
+  count with each version's date, and divergence flags rendered as alerts), a per-animal **Add / Skip /
+  Replace** control for animals that already exist, and an un-importable section listing every parse
+  failure ++ `plan.unimportable` with its reason. **Confirm** writes via `applyImportPlan` (honoring the
+  chosen per-animal resolutions) and shows a brief result; **Cancel** writes nothing.
+- **Workspace entry point**: an **Import YAML…** button on the Animal Workspace — in the populated
+  picker header beside **+ New Animal**, and in the empty state beside **Create Animal** — toggles the
+  dialog. The create flow is unchanged.
+- **Scope (deliberate):** editing happens *after* import in the normal editors; `add` does not
+  auto-union the plan's catalogs into the existing animal (the core leaves the existing animal's
+  catalogs authoritative — a day referencing a missing camera/device surfaces later as an export
+  check). User-facing docs added to the README ("Importing existing YAML files").
+
+## Internal YAML import core — pure plan + resilient executor (June 8, 2026)
+
+Added an internal (non-UI) YAML import core: a **pure** reconciliation that turns a set of parsed
+metadata YAML files into an import plan, plus an executor that writes the plan into the workspace
+store.
+
+- `extractRecordingDate` derives a recording day's ISO date from the
+  `{mmddYYYY}_{subject}_metadata.yml` filename (primary) or a `{subject}_{YYYYMMDD}` `session_id`
+  (fallback), rejecting invalid calendar dates.
+- `planImport` (pure) decomposes each file, groups files by subject, infers configuration versions
+  (distinct electrode configs in date order), resolves animal-level facts with a documented default
+  policy, and surfaces every cross-file disagreement as an explicit `divergence` flag rather than a
+  silent pick. Conflicts with existing workspace animals are flagged (never overwritten silently).
+- `applyImportPlan` writes a plan into the live store via the existing workspace actions, supporting
+  per-subject `add` / `skip` / `replace` conflict resolutions.
+- Extracted the pure identity-divergence helper (`findIdentityDivergence`) into
+  `src/state/identityDivergence.js` so both the animal-editor page layer and the state-layer import
+  reconciler share one implementation without crossing the page/state boundary.
+- **Import round-trip gate:** a multi-day / multi-config-version workspace exported per day and
+  re-imported through `planImport` → `applyImportPlan` re-exports byte-for-byte identically.
+
+### Fix: per-animal import isolation is now real (synchronous pre-flight)
+
+The documented "one animal's failure never aborts the others" guarantee was **false** in production.
+The store actions (`createAnimal` / `createDay` / `createConfigurationSnapshotAndApplyForward`) throw
+**inside** their `setWorkspace((prev) => { throw ... })` updater, which React invokes during its
+reducer phase — so the throw **escapes** `applyImportPlan`'s synchronous `try/catch` and crashes the
+render. A real collision (e.g. a duplicate day id in conflict→`add`, or a new-animal `subjectId` that
+already exists) would abort the **entire** import as an uncaught React error.
+
+`applyImportPlan` now **PRE-FLIGHTS** each planned animal **synchronously** against the current
+workspace snapshot **before** issuing any write: an animal whose preconditions would make a store
+action throw is recorded in `failed` (with a clear reason) and **skipped**, never written. Because
+nothing mutates the store between pre-flight and the writes within one call, isolation is now actually
+true. The signature is `applyImportPlan(plan, actions, { workspace, resolutions })` (the current
+workspace is required for the pre-flight); the surrounding `try/catch` is kept only as a backstop. The
+resilience test now drives the **real** store (`useStore`) with a seeded collision rather than a
+synchronous-throwing stub, proving the guarantee against the production store path.
+
+## Internal YAML-decompose module (June 8, 2026)
+
+Added an internal module (`src/state/yamlImport.js`) that **decomposes** a flat NWB YAML model back
+into the layered animal/day facts the export merge reads — the inverse of `mergeDayMetadata`.
+`decomposeYaml` validates first and rejects any error-severity input wholesale (`{ ok: false, issues }`,
+never a partial result); `recomposeDayModel` rebuilds the minimal `{ animal, day }` in the exact shapes
+the merge consumes. Proven by a **byte-identical round-trip** gate over genuine merge outputs
+(`encodeYaml(mergeDayMetadata(...))`) — realistic, non-latest probe-config pin, optogenetics, minimal,
+and a committed merge-output snapshot. No UI yet; the merge and golden fixtures are unchanged, so the
+golden baselines remain byte-identical.
+
+## Per-day "cameras used" checklist (June 8, 2026)
+
+The Day Editor's Devices step now shows an explicit, glanceable **cameras-used checklist** of the
+animal's camera catalog. A camera already referenced by a task, video, or FsGUI protocol is shown
+**checked and disabled** (used regardless); a non-referenced camera is a free checkbox whose state
+is stored in an optional `day.cameras_used` array.
+
+- **Additive & baseline-safe:** `day.cameras_used` is **UNIONed** with the inferred task/video/fs-gui
+  camera references in `referencedCameraKeys`. Only explicit *additions* are stored (referenced
+  cameras are covered by the union), so with no checklist changes the field stays absent and the
+  exported camera set is unchanged — the golden baselines remain **byte-identical**.
+
+## Fix: per-day recording-system selection now persists (June 8, 2026)
+
+**Bug fix.** For an animal with 2+ acquisition systems, the Day Editor's per-day recording-system
+selector let the user choose which system a day used — but the choice was **silently dropped** by the
+day-update allow-list (`applyDayUpdates`), so it never reached the store. As a result the export
+(`mergeDayMetadata`, which reads `day.data_acq_device_name`) fell back to the catalog default —
+potentially emitting the **wrong** acquisition device. The selection now persists, and clearing it
+back to the animal default (the "Default" option, which writes `undefined`) is supported via a
+presence check rather than a `!== undefined` guard.
+
+## Copy from another animal — cameras + recording system (June 8, 2026)
+
+"Copy from animal" now covers an animal's **cameras** catalog and **recording-system**
+(`data_acq_device`) catalog in addition to electrode groups + channel maps — a lab's rig is shared
+across animals. A generalized "Copy from another animal…" control on the **"Set up this animal"**
+setup card (Recording Days tab) opens the dialog; on confirm it writes ALL checked catalogs to the
+target animal in a **single** `updateAnimal` update.
+
+- **Section checklist:** the dialog offers a per-source checklist of the sections the selected source
+  actually has content for ("Electrode groups + channel maps", "Cameras", "Recording system"), all
+  checked by default; only the checked sections are copied. Electrode groups/maps keep the exact
+  new-id remapping; cameras and recording-system devices are **deep-cloned** (`structuredClone`) as-is.
+- **Identity-guarded:** before emitting, every copied camera/data-acq name is checked against the rest
+  of the workspace. A name reused elsewhere with **different** dependent fields (a Spyglass identity
+  divergence) surfaces an `identity-divergence` alert listing the conflicting name(s) + differing
+  fields and **blocks the whole copy** — no divergent name is written.
+- **Existing electrode host unchanged:** the Electrode Groups tab's "Copy from animal" button pins to
+  electrodes-only (`availableSections={['electrode_groups']}`), preserving its wording and behavior.
+- **Merge-neutral:** copied catalogs are animal-level data that already flow through the unchanged
+  `mergeDayMetadata` → `encodeYaml` export seam, so the golden baselines stay **byte-identical**.
+
+## Duplicate day (June 8, 2026)
+
+An existing recording day can now be **duplicated to a new date** ("same protocol, next session")
+from a "Duplicate day…" control on each day row (Recording Days tab); it opens a single-date picker
+and clones the day on confirm. A duplicate reproduces its source **exactly**.
+
+- **Action:** new `duplicateDay(sourceDayId, newDate)` store action ([useWorkspace.js](../src/state/useWorkspace.js)).
+  It builds the new day via the existing `createDayRecord` carry path (so `tasks`,
+  `behavioral_events`, `keywords`, `technical`, and `session.experiment_description` / `session.weight`
+  are **deep-cloned** from the source), derives a date-based `session_id`, and carries the source's
+  `session_description`.
+- **Reproduces the source exactly:** the duplicate pins the **source's** `configurationVersion` (NOT
+  the animal's latest) and carries the source's `deviceOverrides` (bad channels), `structuredClone`d
+  so the duplicate never aliases the source. Because a duplicate is, by construction, the same
+  configuration as its source, carrying its bad-channel overrides is always safe — no version guard
+  is needed.
+- **Guards:** throws on an absent source day, an absent owning animal, or a colliding target date; the
+  UI also blocks a colliding date (against the animal's present days) before delegating and surfaces a
+  store throw inside the dialog rather than swallowing it.
+- **Merge-neutral:** the duplicate is created through the unchanged `mergeDayMetadata` → `encodeYaml`
+  seam, so the existing golden baselines stay **byte-identical** (unchanged). The duplicate's own YAML
+  is not byte-identical to its source — its date-derived fields (the `session_id` and the experiment
+  date) differ — but everything else reproduces the source.
+
+## Carry-forward day creation (June 8, 2026)
+
+A new recording day now defaults its day-owned content from the animal's most recent existing day,
+so consecutive days in a multi-day experiment don't have to be re-entered by hand. The carry is
+**reviewable** and controlled by a **default-ON toggle** on the Recording Days tab ("Start each new
+day from the last day (…) — review & adjust per day"); the toggle only appears once a prior day
+exists, and opting out creates a blank day exactly as before.
+
+- **Carried (day-owned):** `tasks`, `behavioral_events`, `keywords`, `technical` (the technical
+  params), and `session.experiment_description` / `session.weight`. Each is **deep-cloned** from the
+  source via `structuredClone`, so the new day never aliases the prior day's objects.
+- **Never carried:** `session_id` / `session_description` (always date-derived from the caller) and
+  `associated_files` / `associated_video_files` (session-specific, always empty). **Bad channels are
+  explicitly not carried.**
+- **Selector:** new `getMostRecentDayId(animal, days)` ([workspaceSelectors.js](../src/state/workspaceSelectors.js))
+  resolves the animal's latest-dated present day (lexicographic `YYYY-MM-DD` compare), tolerating a
+  corrupt animal / missing days map / dangling id / record without a string `date` (→ null).
+- **Merge-neutral:** a carried day exports **byte-identical** YAML to a hand-entered one — golden
+  baselines unchanged. All new params are **trailing-optional** (`createDayRecord(..., carryFrom)`,
+  `createDay(..., options)`), so no existing call site changes behavior (`carryFrom = null` reproduces
+  today's blank-day output exactly).
 
 ## Pre-merge review remediation — block the dangling recording-system reference (June 8, 2026)
 

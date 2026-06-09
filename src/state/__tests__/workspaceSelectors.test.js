@@ -13,6 +13,7 @@ import {
   getAnimalExperimenters,
   getExperimenterNames,
   getAnimalDayIds,
+  getMostRecentDayId,
   getDaySession,
   getDayTasks,
   getDayAssociatedVideos,
@@ -20,6 +21,9 @@ import {
   getDayBehavioralEvents,
   getDayKeywords,
   getDayFsGuiYamls,
+  getDayCamerasUsed,
+  getDayBadChannelOverrides,
+  getDayDataAcqDeviceName,
 } from '../workspaceSelectors';
 
 /**
@@ -53,6 +57,7 @@ describe('workspaceSelectors — array fields are always safe arrays', () => {
     ['getDayBehavioralEvents', getDayBehavioralEvents, (v) => ({ behavioral_events: v })],
     ['getDayKeywords', getDayKeywords, (v) => ({ keywords: v })],
     ['getDayFsGuiYamls', getDayFsGuiYamls, (v) => ({ fs_gui_yamls: v })],
+    ['getDayCamerasUsed', getDayCamerasUsed, (v) => ({ cameras_used: v })],
   ];
 
   it.each(arraySelectors)('%s returns [] for every corrupt shape', (_name, selector, wrap) => {
@@ -102,5 +107,66 @@ describe('workspaceSelectors — record fields are always safe records', () => {
     expect(getExperimenterNames({ experimenters: { experimenter_name: 'x' } })).toEqual([]);
     expect(getExperimenterNames({ experimenters: { experimenter_name: ['A'] } })).toEqual(['A']);
     expect(getExperimenterNames({ experimenters: 'corrupt' })).toEqual([]);
+  });
+
+  it('getDayBadChannelOverrides returns {} for scalar/array/null deviceOverrides or bad_channels', () => {
+    for (const bad of ['corrupt', 42, null, [1], undefined]) {
+      expect(getDayBadChannelOverrides({ deviceOverrides: bad })).toEqual({});
+      expect(getDayBadChannelOverrides({ deviceOverrides: { bad_channels: bad } })).toEqual({});
+    }
+    expect(getDayBadChannelOverrides(undefined)).toEqual({});
+    expect(getDayBadChannelOverrides(null)).toEqual({});
+    expect(
+      getDayBadChannelOverrides({ deviceOverrides: { bad_channels: { 0: [2, 3] } } })
+    ).toEqual({ 0: [2, 3] });
+  });
+});
+
+describe('workspaceSelectors — string-or-undefined day fields', () => {
+  it('getDayDataAcqDeviceName returns the string only when it is a string, else undefined', () => {
+    expect(getDayDataAcqDeviceName({ data_acq_device_name: 'SpikeGadgets' })).toBe('SpikeGadgets');
+    for (const bad of [42, null, [1], {}, undefined]) {
+      expect(getDayDataAcqDeviceName({ data_acq_device_name: bad })).toBeUndefined();
+    }
+    expect(getDayDataAcqDeviceName(undefined)).toBeUndefined();
+    expect(getDayDataAcqDeviceName(null)).toBeUndefined();
+  });
+});
+
+describe('getMostRecentDayId — latest-dated present day', () => {
+  const animal = { days: ['remy-2023-06-20', 'remy-2023-06-21', 'remy-2023-06-22'] };
+  const days = {
+    'remy-2023-06-20': { id: 'remy-2023-06-20', date: '2023-06-20' },
+    'remy-2023-06-21': { id: 'remy-2023-06-21', date: '2023-06-21' },
+    'remy-2023-06-22': { id: 'remy-2023-06-22', date: '2023-06-22' },
+  };
+
+  it('returns the id of the latest-dated day regardless of index order', () => {
+    expect(getMostRecentDayId(animal, days)).toBe('remy-2023-06-22');
+    // Index order does not matter — chronology is decided by `date`.
+    const shuffled = { days: ['remy-2023-06-22', 'remy-2023-06-20', 'remy-2023-06-21'] };
+    expect(getMostRecentDayId(shuffled, days)).toBe('remy-2023-06-22');
+  });
+
+  it('returns null for an animal with no days', () => {
+    expect(getMostRecentDayId({ days: [] }, days)).toBe(null);
+  });
+
+  it('returns null when the indexed id is dangling (no record present)', () => {
+    expect(getMostRecentDayId({ days: ['remy-2023-06-22'] }, {})).toBe(null);
+  });
+
+  it('returns null (no throw) for a null animal', () => {
+    expect(getMostRecentDayId(null, days)).toBe(null);
+  });
+
+  it('tolerates a missing days map and records without a string date', () => {
+    expect(getMostRecentDayId(animal, undefined)).toBe(null);
+    const partial = {
+      'remy-2023-06-20': { id: 'remy-2023-06-20', date: '2023-06-20' },
+      'remy-2023-06-21': { id: 'remy-2023-06-21', date: 42 }, // corrupt date, skipped
+      'remy-2023-06-22': { id: 'remy-2023-06-22' }, // no date, skipped
+    };
+    expect(getMostRecentDayId(animal, partial)).toBe('remy-2023-06-20');
   });
 });

@@ -88,6 +88,23 @@ export const getExperimenterNames = (animal) =>
 /** @param {object} animal @returns {Array} The animal's day ids (always an array). */
 export const getAnimalDayIds = (animal) => asArray(animal?.days);
 
+/**
+ * The id of the animal's latest-dated day present in `days`, or null. Day dates are `YYYY-MM-DD`
+ * (lexicographic compare == chronological). Tolerates a corrupt animal, a missing `days` map, a
+ * dangling id, or a record without a string `date`.
+ * @param {object} animal
+ * @param {object} days
+ * @returns {string|null}
+ */
+export const getMostRecentDayId = (animal, days) => {
+  const present = getAnimalDayIds(animal)
+    .map((id) => (days && typeof days === 'object' ? days[id] : undefined))
+    .filter((d) => d && typeof d.id === 'string' && typeof d.date === 'string');
+  if (present.length === 0) return null;
+  present.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  return present[0].id;
+};
+
 // ── Day-owned collections / records ─────────────────────────────────────────────────
 
 /** @param {object} day @returns {object} The day's session record (always a record). */
@@ -110,3 +127,21 @@ export const getDayKeywords = (day) => asArray(day?.keywords);
 
 /** @param {object} day @returns {Array} The day's FsGUI protocol files. */
 export const getDayFsGuiYamls = (day) => asArray(day?.fs_gui_yamls);
+
+/** @param {object} day @returns {Array} The day's used-camera ids (always an array). */
+export const getDayCamerasUsed = (day) => asArray(day?.cameras_used);
+
+/**
+ * @param {object} day
+ * @returns {Record<string, number[]>} The day's per-ntrode bad-channel overrides as a
+ *   record (always a record — `{}` when absent/corrupt). Bad channels are day-owned.
+ */
+export const getDayBadChannelOverrides = (day) => asRecord(day?.deviceOverrides?.bad_channels);
+
+/**
+ * @param {object} day
+ * @returns {(string|undefined)} The day's recording-system catalog reference, or `undefined`
+ *   when absent/non-string.
+ */
+export const getDayDataAcqDeviceName = (day) =>
+  typeof day?.data_acq_device_name === 'string' ? day.data_acq_device_name : undefined;

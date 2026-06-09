@@ -93,7 +93,12 @@ describe('Normalization Contract: export gate sees un-laundered state', () => {
 
   it('a corrupt bad_channels entry blocks export and is NOT floored to an integer', () => {
     const { animal, day } = buildRealisticWorkspace();
-    snapshotDevices(animal).ntrode_electrode_group_channel_map[0].bad_channels = ['2.9'];
+    // bad_channels are resolved from the DAY OVERRIDE ONLY now (a snapshot base mark is
+    // moved down into the day's override at load), so place the corrupt entry on the day
+    // override — a well-formed ARRAY whose element is the corrupt "2.9". The merge uses
+    // the array verbatim (it never floors the element), so the channel rule still flags it.
+    const ntrodeId = snapshotDevices(animal).ntrode_electrode_group_channel_map[0].ntrode_id;
+    day.deviceOverrides = { bad_channels: { [ntrodeId]: ['2.9'] } };
 
     const merged = mergeDayMetadata(animal, day);
 
@@ -163,12 +168,23 @@ describe('mergeDayMetadata tolerates malformed day shapes (fail-closed, no crash
 });
 
 describe('Normalization Contract round 4: non-array bad_channels + malformed objects', () => {
-  it('a non-array bad_channels ("2.9") is preserved (not laundered to []) and blocks export', () => {
+  it('a non-array bad_channels override value resolves to [] on the row but blocks export via a day-routed issue', () => {
     const { animal, day } = buildRealisticWorkspace();
-    snapshotDevices(animal).ntrode_electrode_group_channel_map[0].bad_channels = '2.9';
+    // bad_channels resolve from the DAY OVERRIDE ONLY. A non-array override value
+    // ("2.9") is NOT used and is NOT smeared onto the geometry row — the row resolves to
+    // a clean [] (so no Animal-Editor-routed schema error on a field the user can't
+    // reach). The corruption is preserved verbatim in the RAW override and surfaced as a
+    // day-routed `malformed_bad_channel_override` blocker, which closes the export gate.
+    const ntrodeId = snapshotDevices(animal).ntrode_electrode_group_channel_map[0].ntrode_id;
+    day.deviceOverrides = { bad_channels: { [ntrodeId]: '2.9' } };
     const merged = mergeDayMetadata(animal, day);
-    // Preserved verbatim (not coerced to a clean []) so the schema array-type check fires.
-    expect(merged.ntrode_electrode_group_channel_map[0].bad_channels).toBe('2.9');
+    // Row resolves to a clean [] (the non-array value is not applied/smeared).
+    expect(merged.ntrode_electrode_group_channel_map[0].bad_channels).toEqual([]);
+    // The raw override still carries the corruption for the day-routed issue to surface.
+    expect(day.deviceOverrides.bad_channels[ntrodeId]).toBe('2.9');
+    const issue = validateDay(day, merged).find((i) => i.code === 'malformed_bad_channel_override');
+    expect(issue).toBeTruthy();
+    expect(issue.repairSurface).toBe('day');
     expect(computeStepStatus(day, merged).export).toBe('error');
   });
 

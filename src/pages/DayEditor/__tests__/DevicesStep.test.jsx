@@ -109,6 +109,110 @@ describe('DevicesStep', () => {
     expect(mockOnFieldUpdate).toHaveBeenCalledWith('data_acq_device_name', 'Neuropixels_rig');
   });
 
+  describe('cameras-used checklist', () => {
+    const CAMERAS = [
+      { id: 0, camera_name: 'box', manufacturer: 'M', model: 'G', lens: '16mm', meters_per_pixel: 0.001 },
+      { id: 1, camera_name: 'track', manufacturer: 'M', model: 'G', lens: '25mm', meters_per_pixel: 0.002 },
+      { id: 2, camera_name: 'overhead', manufacturer: 'M', model: 'G', lens: '50mm', meters_per_pixel: 0.003 },
+    ];
+    const animalWithCameras = { ...mockAnimal, cameras: CAMERAS };
+
+    it('renders the animal full camera catalog as a checklist', () => {
+      render(
+        <DevicesStep
+          animal={animalWithCameras}
+          day={mockDay}
+          mergedDay={mockMergedDay}
+          onFieldUpdate={mockOnFieldUpdate}
+        />
+      );
+      expect(screen.getByRole('checkbox', { name: /box/i })).toBeInTheDocument();
+      expect(screen.getByRole('checkbox', { name: /track/i })).toBeInTheDocument();
+      expect(screen.getByRole('checkbox', { name: /overhead/i })).toBeInTheDocument();
+    });
+
+    it('shows a task-referenced camera as checked and disabled', () => {
+      const dayWithTaskCamera = { ...mockDay, tasks: [{ camera_id: [1] }] };
+      render(
+        <DevicesStep
+          animal={animalWithCameras}
+          day={dayWithTaskCamera}
+          mergedDay={mockMergedDay}
+          onFieldUpdate={mockOnFieldUpdate}
+        />
+      );
+      const referenced = screen.getByRole('checkbox', { name: /track/i });
+      expect(referenced).toBeChecked();
+      expect(referenced).toBeDisabled();
+    });
+
+    it('checking a non-referenced camera writes cameras_used with that id', async () => {
+      const user = userEvent.setup();
+      render(
+        <DevicesStep
+          animal={animalWithCameras}
+          day={mockDay}
+          mergedDay={mockMergedDay}
+          onFieldUpdate={mockOnFieldUpdate}
+        />
+      );
+      await user.click(screen.getByRole('checkbox', { name: /overhead/i }));
+      expect(mockOnFieldUpdate).toHaveBeenCalledWith('cameras_used', [2]);
+    });
+
+    it('shows a pre-existing explicit (non-referenced) camera as checked AND enabled, no task/video hint', () => {
+      const dayWithExplicit = { ...mockDay, cameras_used: [2] };
+      render(
+        <DevicesStep
+          animal={animalWithCameras}
+          day={dayWithExplicit}
+          mergedDay={mockMergedDay}
+          onFieldUpdate={mockOnFieldUpdate}
+        />
+      );
+      const explicit = screen.getByRole('checkbox', { name: /overhead/i });
+      expect(explicit).toBeChecked();
+      // It is NOT task-referenced, so it must remain uncheckable (enabled) and unlabeled.
+      expect(explicit).toBeEnabled();
+      expect(screen.queryByText(/used by a task\/video/i)).not.toBeInTheDocument();
+    });
+
+    it('unchecking a pre-existing explicit camera writes cameras_used as []', async () => {
+      const user = userEvent.setup();
+      const dayWithExplicit = { ...mockDay, cameras_used: [2] };
+      render(
+        <DevicesStep
+          animal={animalWithCameras}
+          day={dayWithExplicit}
+          mergedDay={mockMergedDay}
+          onFieldUpdate={mockOnFieldUpdate}
+        />
+      );
+      await user.click(screen.getByRole('checkbox', { name: /overhead/i }));
+      expect(mockOnFieldUpdate).toHaveBeenCalledWith('cameras_used', []);
+    });
+
+    it('excludes a task-referenced camera id from the explicit cameras_used write', async () => {
+      const user = userEvent.setup();
+      // Camera A (id 0, "box") is task-referenced (checked+disabled); camera B (id 2, "overhead")
+      // is free. Toggling B on must write only [2] — A's id is covered by the union, not stored.
+      const dayWithTaskA = { ...mockDay, tasks: [{ camera_id: [0] }] };
+      render(
+        <DevicesStep
+          animal={animalWithCameras}
+          day={dayWithTaskA}
+          mergedDay={mockMergedDay}
+          onFieldUpdate={mockOnFieldUpdate}
+        />
+      );
+      const referencedA = screen.getByRole('checkbox', { name: /box/i });
+      expect(referencedA).toBeChecked();
+      expect(referencedA).toBeDisabled();
+      await user.click(screen.getByRole('checkbox', { name: /overhead/i }));
+      expect(mockOnFieldUpdate).toHaveBeenCalledWith('cameras_used', [2]);
+    });
+  });
+
   it('renders section heading', () => {
     render(
       <DevicesStep
@@ -290,26 +394,26 @@ describe('DevicesStep', () => {
     expect(mockOnFieldUpdate).toHaveBeenCalledWith('deviceOverrides.bad_channels.0', [1]);
   });
 
-  it('renders inherited snapshot bad channels and preserves them when editing', async () => {
+  it('renders inherited (migrated-down) bad channels and preserves them when editing', async () => {
     const user = userEvent.setup();
-    const inheritedNtrodeMap = [
-      { ...NTRODE_MAP[0], bad_channels: [1] },
-      NTRODE_MAP[1],
-    ];
+    // `resolveDayConfig` now reads bad_channels from the DAY OVERRIDE ONLY (the
+    // load-time migration moves a snapshot base mark DOWN into the day override), so
+    // the inherited mark on ntrode 0 reaches the user through
+    // `deviceOverrides.bad_channels[0]`, not via the snapshot base.
     const animalWithInheritedBadChannels = {
       ...mockAnimal,
       devices: {
         ...mockAnimal.devices,
-        ntrode_electrode_group_channel_map: inheritedNtrodeMap,
+        ntrode_electrode_group_channel_map: NTRODE_MAP,
       },
       configurationHistory: historyFor({
         electrode_groups: ELECTRODE_GROUPS,
-        ntrode_electrode_group_channel_map: inheritedNtrodeMap,
+        ntrode_electrode_group_channel_map: NTRODE_MAP,
       }),
     };
     const dayWithoutOverride = {
       ...mockDay,
-      deviceOverrides: { bad_channels: {} },
+      deviceOverrides: { bad_channels: { 0: [1] } },
     };
 
     render(

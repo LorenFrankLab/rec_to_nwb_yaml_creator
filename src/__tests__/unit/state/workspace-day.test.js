@@ -17,6 +17,8 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useStore } from '../../../state/store';
+import { mergeDayMetadata } from '../../../state/workspaceUtils';
+import { encodeYaml } from '../../../io/yaml';
 
 describe('Day State Management', () => {
   /**
@@ -164,6 +166,148 @@ describe('Day State Management', () => {
       expect(animal.days).toEqual(['remy-2023-06-22', 'remy-2023-06-23']);
     });
 
+    it('with carryForwardFromDayId: new day copies the prior day tasks', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+      });
+      // Give the prior day some carryable content.
+      act(() => {
+        result.current.actions.updateDay('remy-2023-06-22', {
+          tasks: [{ task_name: 'W-track', task_epochs: [1] }],
+        });
+      });
+      act(() => {
+        result.current.actions.createDay(
+          'remy',
+          '2023-06-23',
+          { session_id: 'remy_20230623', session_description: 'Day 2' },
+          { carryForwardFromDayId: 'remy-2023-06-22' }
+        );
+      });
+
+      const day2 = result.current.model.workspace.days['remy-2023-06-23'];
+      expect(day2.tasks).toEqual([{ task_name: 'W-track', task_epochs: [1] }]);
+    });
+
+    it('with no options: new day tasks stay empty (back-compat)', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+      });
+      act(() => {
+        result.current.actions.updateDay('remy-2023-06-22', {
+          tasks: [{ task_name: 'W-track', task_epochs: [1] }],
+        });
+      });
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-23', {
+          session_id: 'remy_20230623',
+          session_description: 'Day 2',
+        });
+      });
+      expect(result.current.model.workspace.days['remy-2023-06-23'].tasks).toEqual([]);
+    });
+
+    it('with carryForwardFromDayId from a SAME-config source: carries bad channels (cloned)', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+      });
+      // Source pins the latest version (1) and owns a bad-channel override.
+      act(() => {
+        result.current.actions.updateDay('remy-2023-06-22', {
+          deviceOverrides: { bad_channels: { 0: [2] } },
+        });
+      });
+      act(() => {
+        result.current.actions.createDay(
+          'remy',
+          '2023-06-23',
+          { session_id: 'remy_20230623', session_description: 'Day 2' },
+          { carryForwardFromDayId: 'remy-2023-06-22' }
+        );
+      });
+
+      const source = result.current.model.workspace.days['remy-2023-06-22'];
+      const day2 = result.current.model.workspace.days['remy-2023-06-23'];
+      expect(day2.deviceOverrides.bad_channels).toEqual({ 0: [2] });
+      // Cloned, not aliased.
+      expect(day2.deviceOverrides.bad_channels).not.toBe(source.deviceOverrides.bad_channels);
+    });
+
+    it('with carryForwardFromDayId ACROSS a config change: drops the stale bad channels', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+      });
+      // Source (v1) owns a bad-channel override.
+      act(() => {
+        result.current.actions.updateDay('remy-2023-06-22', {
+          deviceOverrides: { bad_channels: { 0: [2] } },
+        });
+      });
+      // Reconfigure: the animal's latest is now v2, but the source stays pinned to v1.
+      act(() => {
+        result.current.actions.createConfigurationSnapshotAndApplyForward('remy', {
+          date: '2023-06-15',
+          description: 'Adjusted probes',
+          devices: {
+            electrode_groups: [
+              { id: 0, location: 'CA1', device_type: 'tetrode_12.5', description: 'adjusted' },
+            ],
+            ntrode_electrode_group_channel_map: [
+              { ntrode_id: 0, electrode_group_id: 0, map: { 0: 0, 1: 1, 2: 2, 3: 3 }, bad_channels: [] },
+            ],
+          },
+        }, []);
+      });
+      act(() => {
+        result.current.actions.createDay(
+          'remy',
+          '2023-06-23',
+          { session_id: 'remy_20230623', session_description: 'Day 2' },
+          { carryForwardFromDayId: 'remy-2023-06-22' }
+        );
+      });
+
+      const day2 = result.current.model.workspace.days['remy-2023-06-23'];
+      // New day pins the latest (2); the v1 marks are stale and must be dropped.
+      expect(day2.configurationVersion).toBe(2);
+      expect(day2.deviceOverrides?.bad_channels ?? {}).toEqual({});
+    });
+
+    it('with an unknown carryForwardFromDayId: builds a blank day (no throw)', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay(
+          'remy',
+          '2023-06-23',
+          { session_id: 'remy_20230623', session_description: 'Day 2' },
+          { carryForwardFromDayId: 'remy-9999-99-99' }
+        );
+      });
+      expect(result.current.model.workspace.days['remy-2023-06-23'].tasks).toEqual([]);
+    });
+
     it('throws error if animal does not exist', () => {
       const { result } = renderHook(() => useStore());
 
@@ -294,6 +438,48 @@ describe('Day State Management', () => {
         });
       });
       expect(result.current.model.workspace.days['remy-2023-06-22'].keywords).toEqual(['replay']);
+    });
+
+    it('persists data_acq_device_name through updateDay and clears it back to undefined', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Test',
+        });
+      });
+
+      act(() => {
+        result.current.actions.updateDay('remy-2023-06-22', { data_acq_device_name: 'X' });
+      });
+      expect(result.current.model.workspace.days['remy-2023-06-22'].data_acq_device_name).toBe('X');
+
+      // Clearing to undefined (the "Default" option) persists, reverting to the animal default.
+      act(() => {
+        result.current.actions.updateDay('remy-2023-06-22', { data_acq_device_name: undefined });
+      });
+      expect(
+        result.current.model.workspace.days['remy-2023-06-22'].data_acq_device_name
+      ).toBeUndefined();
+    });
+
+    it('persists cameras_used through updateDay (the explicit cameras-used checklist)', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Test',
+        });
+      });
+
+      act(() => {
+        result.current.actions.updateDay('remy-2023-06-22', { cameras_used: [1] });
+      });
+      expect(result.current.model.workspace.days['remy-2023-06-22'].cameras_used).toEqual([1]);
     });
 
     it('replaces a malformed (non-record) current session instead of spreading it', () => {
@@ -828,6 +1014,312 @@ describe('Day State Management', () => {
       });
       const days = result.current.selectors.getAnimalDays('remy');
       expect(days.map((d) => d.id)).toEqual(['remy-2023-06-22']);
+    });
+  });
+
+  describe('duplicateDay', () => {
+    /**
+     * Seed a source day with carryable day-owned content plus bad-channel overrides.
+     * @param result
+     * @param dayId
+     */
+    function seedSourceDay(result, dayId = 'remy-2023-06-22') {
+      act(() => {
+        result.current.actions.updateDay(dayId, {
+          tasks: [{ task_name: 'W-track', task_epochs: [1] }],
+          behavioral_events: [{ description: 'Din1', name: 'light1' }],
+          keywords: ['spatial', 'w-track'],
+          technical: { times_period_multiplier: 2.5, raw_data_to_volts: 0.42 },
+          session: { experiment_description: 'Chronic recording', weight: 485 },
+          deviceOverrides: {
+            bad_channels: { 0: [2, 3] },
+          },
+        });
+      });
+    }
+
+    it('clones day-owned content (cloned, not aliased) into the new day', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+      });
+      seedSourceDay(result);
+
+      act(() => {
+        result.current.actions.duplicateDay('remy-2023-06-22', '2023-06-23');
+      });
+
+      const source = result.current.model.workspace.days['remy-2023-06-22'];
+      const dup = result.current.model.workspace.days['remy-2023-06-23'];
+
+      expect(dup).toBeDefined();
+      expect(dup.tasks).toEqual(source.tasks);
+      expect(dup.behavioral_events).toEqual(source.behavioral_events);
+      expect(dup.keywords).toEqual(source.keywords);
+      expect(dup.technical.times_period_multiplier).toBe(2.5);
+      expect(dup.technical.raw_data_to_volts).toBe(0.42);
+      expect(dup.session.experiment_description).toBe('Chronic recording');
+      expect(dup.session.weight).toBe(485);
+
+      // Cloned, not aliased: mutating the duplicate must not touch the source.
+      expect(dup.tasks).not.toBe(source.tasks);
+      expect(dup.behavioral_events).not.toBe(source.behavioral_events);
+      dup.tasks[0].task_name = 'CHANGED';
+      expect(source.tasks[0].task_name).toBe('W-track');
+    });
+
+    it('pins the SOURCE configuration version, not the latest', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      // Source day is created against version 1.
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+      });
+      // Add a version 2 (applied to no days) so the animal's LATEST is now 2,
+      // while the source day stays pinned to 1.
+      act(() => {
+        result.current.actions.createConfigurationSnapshotAndApplyForward('remy', {
+          date: '2023-06-15',
+          description: 'Adjusted probes',
+          devices: {
+            electrode_groups: [
+              { id: 0, location: 'CA1', device_type: 'tetrode_12.5', description: 'adjusted' },
+            ],
+            ntrode_electrode_group_channel_map: [
+              { ntrode_id: 0, electrode_group_id: 0, map: { 0: 0, 1: 1, 2: 2, 3: 3 }, bad_channels: [] },
+            ],
+          },
+        }, []);
+      });
+
+      expect(result.current.model.workspace.days['remy-2023-06-22'].configurationVersion).toBe(1);
+
+      act(() => {
+        result.current.actions.duplicateDay('remy-2023-06-22', '2023-06-23');
+      });
+
+      // The duplicate is the SAME version as its source (1), NOT the latest (2).
+      expect(result.current.model.workspace.days['remy-2023-06-23'].configurationVersion).toBe(1);
+    });
+
+    it('carries bad-channel overrides (cloned, not aliased) even from a non-latest source', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+      });
+      seedSourceDay(result);
+      // Fork a later version so the source is non-latest.
+      act(() => {
+        result.current.actions.createConfigurationSnapshotAndApplyForward('remy', {
+          date: '2023-06-15',
+          description: 'Adjusted probes',
+          devices: {
+            electrode_groups: [
+              { id: 0, location: 'CA1', device_type: 'tetrode_12.5', description: 'adjusted' },
+            ],
+            ntrode_electrode_group_channel_map: [
+              { ntrode_id: 0, electrode_group_id: 0, map: { 0: 0, 1: 1, 2: 2, 3: 3 }, bad_channels: [] },
+            ],
+          },
+        }, []);
+      });
+
+      act(() => {
+        result.current.actions.duplicateDay('remy-2023-06-22', '2023-06-23');
+      });
+
+      const source = result.current.model.workspace.days['remy-2023-06-22'];
+      const dup = result.current.model.workspace.days['remy-2023-06-23'];
+
+      expect(dup.configurationVersion).toBe(1);
+      expect(dup.deviceOverrides).toEqual(source.deviceOverrides);
+      expect(dup.deviceOverrides).not.toBe(source.deviceOverrides);
+    });
+
+    it('re-exports the duplicate with the SAME ntrode bad_channels as the source (day-owned, byte-level)', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+      });
+      // Source pins NON-latest version 1 and owns a bad-channel override on ntrode 1.
+      act(() => {
+        result.current.actions.updateDay('remy-2023-06-22', {
+          deviceOverrides: { bad_channels: { 1: [2] } },
+        });
+      });
+      act(() => {
+        result.current.actions.createConfigurationSnapshotAndApplyForward('remy', {
+          date: '2023-06-15',
+          description: 'Adjusted probes',
+          devices: {
+            electrode_groups: [
+              { id: 0, location: 'CA1', device_type: 'tetrode_12.5', description: 'adjusted' },
+            ],
+            ntrode_electrode_group_channel_map: [
+              { ntrode_id: 0, electrode_group_id: 0, map: { 0: 0, 1: 1, 2: 2, 3: 3 }, bad_channels: [] },
+            ],
+          },
+        }, []);
+      });
+
+      act(() => {
+        result.current.actions.duplicateDay('remy-2023-06-22', '2023-06-23');
+      });
+
+      const animal = result.current.model.workspace.animals['remy'];
+      const source = result.current.model.workspace.days['remy-2023-06-22'];
+      const dup = result.current.model.workspace.days['remy-2023-06-23'];
+
+      // The duplicate keeps the source's NON-latest pin.
+      expect(dup.configurationVersion).toBe(source.configurationVersion);
+      expect(dup.configurationVersion).toBe(1);
+
+      // Re-export both: the ntrode bad_channels in the merged YAML must match byte-for-byte
+      // (bad channels are day-owned; the merge reads only the day override).
+      const ntrodesOf = (day) =>
+        mergeDayMetadata(animal, day).ntrode_electrode_group_channel_map.map((n) => ({
+          ntrode_id: n.ntrode_id,
+          bad_channels: n.bad_channels,
+        }));
+      expect(ntrodesOf(dup)).toEqual(ntrodesOf(source));
+
+      // And the encoded YAML for those rows is identical (the strongest guard).
+      const badChannelLines = (day) =>
+        encodeYaml(mergeDayMetadata(animal, day))
+          .split('\n')
+          .filter((line) => line.includes('bad_channels'));
+      expect(badChannelLines(dup)).toEqual(badChannelLines(source));
+    });
+
+    it('derives session_id from the new date and session_description from the source', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'W-track spatial alternation',
+        });
+      });
+
+      act(() => {
+        result.current.actions.duplicateDay('remy-2023-06-22', '2023-06-23');
+      });
+
+      const dup = result.current.model.workspace.days['remy-2023-06-23'];
+      // session_id is date-derived, NOT carried from the source.
+      expect(dup.session.session_id).toBe('remy_20230623');
+      // session_description is carried from the source.
+      expect(dup.session.session_description).toBe('W-track spatial alternation');
+    });
+
+    it('derives an empty session_description when the source has none', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: '',
+        });
+      });
+
+      act(() => {
+        result.current.actions.duplicateDay('remy-2023-06-22', '2023-06-23');
+      });
+
+      expect(
+        result.current.model.workspace.days['remy-2023-06-23'].session.session_description
+      ).toBe('');
+    });
+
+    it('adds the new day id to the owning animal index', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+      });
+
+      act(() => {
+        result.current.actions.duplicateDay('remy-2023-06-22', '2023-06-23');
+      });
+
+      expect(result.current.model.workspace.animals['remy'].days).toContain('remy-2023-06-23');
+    });
+
+    it('throws if the source day does not exist', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      expect(() => {
+        act(() => {
+          result.current.actions.duplicateDay('remy-9999-99-99', '2023-06-23');
+        });
+      }).toThrow(/not found/i);
+    });
+
+    it('throws if the target date already exists for the animal', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+        result.current.actions.createDay('remy', '2023-06-23', {
+          session_id: 'remy_20230623',
+          session_description: 'Day 2',
+        });
+      });
+      expect(() => {
+        act(() => {
+          result.current.actions.duplicateDay('remy-2023-06-22', '2023-06-23');
+        });
+      }).toThrow(/already exists/i);
+    });
+
+    it('throws when the source record names an animal that does not exist, writing no junk entry', () => {
+      // A corrupt/partial import can leave a day record whose animalId points at no animal.
+      // Duplicating it must fail closed (throw before any write) rather than spread a junk
+      // `animals.ghost`/`animals.undefined` entry while resolving the owning animal.
+      const initialState = {
+        workspace: {
+          animals: {
+            remy: { id: 'remy', subject: { subject_id: 'remy' }, days: [] },
+          },
+          days: {
+            orphan: { id: 'orphan', animalId: 'ghost', date: '2023-06-22', session: { session_id: 's1' } },
+          },
+          settings: {},
+        },
+      };
+      const { result } = renderHook(() => useStore(initialState));
+
+      expect(() => {
+        act(() => {
+          result.current.actions.duplicateDay('orphan', '2023-06-23');
+        });
+      }).toThrow(/not found/i);
+
+      const { animals } = result.current.model.workspace;
+      expect(Object.keys(animals)).toEqual(['remy']);
+      expect(animals).not.toHaveProperty('ghost');
+      expect(animals).not.toHaveProperty('undefined');
     });
   });
 });

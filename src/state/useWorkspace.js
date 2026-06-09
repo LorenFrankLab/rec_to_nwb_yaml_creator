@@ -387,9 +387,13 @@ export function useWorkspace(initialState = null) {
        * @param {string} animalId - Parent animal identifier
        * @param {string} date - Date in YYYY-MM-DD format
        * @param {object} session - Session metadata (session_id, session_description, etc.)
+       * @param {object} [options] - Creation options.
+       * @param {string} [options.carryForwardFromDayId] - If set, seed the new day's day-owned
+       *   content (tasks, behavioral_events, keywords, technical, session.experiment_description /
+       *   weight) from this prior day. An unknown id resolves to a blank day (no throw).
        * @throws {Error} If animal does not exist or day already exists
        */
-      createDay: (animalId, date, session) => {
+      createDay: (animalId, date, session, options = {}) => {
         setWorkspace((prev) => {
           if (!prev.animals[animalId]) {
             throw new Error(`Animal "${animalId}" not found`);
@@ -404,9 +408,94 @@ export function useWorkspace(initialState = null) {
           const animal = prev.animals[animalId];
           const now = getCurrentTimestamp();
 
+          // Resolve the optional carry-forward source. An unknown id → null → blank day.
+          const carryFrom = options.carryForwardFromDayId
+            ? prev.days[options.carryForwardFromDayId] || null
+            : null;
+
           // Pure transition: builds the day pinned to the latest configuration version,
           // technical seeded from the animal defaults (see workspaceTransitions.createDayRecord).
-          const day = createDayRecord(animal, animalId, dayId, date, session, now);
+          const day = createDayRecord(animal, animalId, dayId, date, session, now, carryFrom);
+
+          const updatedAnimal = { ...animal, days: [...getAnimalDayIds(animal), dayId] };
+
+          return {
+            ...prev,
+            animals: {
+              ...prev.animals,
+              [animalId]: updatedAnimal,
+            },
+            days: {
+              ...prev.days,
+              [dayId]: day,
+            },
+            lastModified: now,
+          };
+        });
+      },
+
+      /**
+       * Duplicates an existing recording day to a new date ("same protocol, next session").
+       *
+       * This is NOT a byte-exact clone of the source day. CARRIED (deep-cloned via
+       * {@link createDayRecord}'s carry path, plus the explicit config/override copy below):
+       * tasks, behavioral_events, keywords, technical, session.experiment_description /
+       * session.weight, the SOURCE's `configurationVersion` (NOT the animal's latest), and the
+       * source's `deviceOverrides` (bad channels) — the config pin + overrides are always safe
+       * because a duplicate is, by construction, the same configuration as its source.
+       * NOT carried: session_id / session_description are date-derived from the new date
+       * (session_description defaults to the source's); and `associated_files`,
+       * `associated_video_files`, `fs_gui_yamls`, and `cameras_used` start empty/unset (they are
+       * session-specific and must be re-entered for the new day).
+       *
+       * @param {string} sourceDayId - The day to clone.
+       * @param {string} newDate - Date in YYYY-MM-DD for the new day.
+       * @throws {Error} If the source day or its animal does not exist, or the target day already exists.
+       */
+      duplicateDay: (sourceDayId, newDate) => {
+        setWorkspace((prev) => {
+          const source = prev.days[sourceDayId];
+          if (!source) {
+            throw new Error(`Day "${sourceDayId}" not found`);
+          }
+
+          const animalId = source.animalId;
+          const animal = prev.animals[animalId];
+          if (!animal) {
+            throw new Error(`Animal "${animalId}" not found`);
+          }
+
+          const dayId = generateDayId(animalId, newDate);
+          if (prev.days[dayId]) {
+            throw new Error(`Day "${dayId}" already exists`);
+          }
+
+          const now = getCurrentTimestamp();
+
+          // Carry day-owned content from the source (deep-cloned by createDayRecord), with a
+          // date-derived session id and the source's session description.
+          const built = createDayRecord(
+            animal,
+            animalId,
+            dayId,
+            newDate,
+            {
+              session_id: `${animalId}_${newDate.replace(/-/g, '')}`,
+              session_description: source.session?.session_description ?? '',
+            },
+            now,
+            source
+          );
+          // A duplicate is the SAME configuration version as its source by construction, so we
+          // override createDayRecord's latest-pin with the source's version and carry the
+          // source's bad-channel overrides directly (no version guard needed).
+          const day = {
+            ...built,
+            configurationVersion: source.configurationVersion,
+            deviceOverrides: source.deviceOverrides
+              ? structuredClone(source.deviceOverrides)
+              : built.deviceOverrides,
+          };
 
           const updatedAnimal = { ...animal, days: [...getAnimalDayIds(animal), dayId] };
 

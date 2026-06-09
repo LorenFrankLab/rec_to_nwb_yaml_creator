@@ -20,6 +20,7 @@ import OverflowMenu from '../../components/OverflowMenu';
 import AnimalDeleteDialog from '../../components/AnimalDeleteDialog';
 import AnimalProfileDialog from '../../components/AnimalProfileDialog';
 import AnimalCreationForm from '../Home/AnimalCreationForm';
+import ImportYamlDialog from './ImportYamlDialog';
 import './AnimalWorkspace.css';
 
 /**
@@ -51,6 +52,11 @@ export function AnimalWorkspace() {
   // inline panel on the picker, not a route to a separate `#/home` screen — so first-animal creation
   // uses the same pattern as everything else (this unblocks Phase 5's Home/stepper removal).
   const [showCreate, setShowCreate] = useState(false);
+
+  // Whether the YAML-import dialog is open. Import lives in the workspace beside create — it brings
+  // existing {mmddYYYY}_{subject}_metadata.yml files in as animals + days through the reconcile
+  // core, and (unlike create) never writes until the user confirms its preview.
+  const [showImport, setShowImport] = useState(false);
 
   /** Commit the pending animal deletion through the store's guarded deleteAnimal, then close. */
   const confirmDeleteAnimal = () => {
@@ -127,20 +133,37 @@ export function AnimalWorkspace() {
           >
             Create Animal
           </button>
+          <button
+            type="button"
+            className="import-yaml-link"
+            onClick={() => setShowImport(true)}
+          >
+            Import YAML…
+          </button>
         </div>
       ) : (
         /* Animal picker: each card links to the animal's tabbed view. */
         <nav className="animal-list" aria-label="Animal list">
           <div className="animal-list-header">
             <h2>Animals</h2>
-            <button
-              type="button"
-              className="btn-create-animal"
-              aria-label="Create new animal"
-              onClick={() => setShowCreate(true)}
-            >
-              + New Animal
-            </button>
+            <div className="animal-list-actions">
+              <button
+                type="button"
+                className="btn-import-yaml"
+                aria-label="Import YAML files"
+                onClick={() => setShowImport(true)}
+              >
+                Import YAML…
+              </button>
+              <button
+                type="button"
+                className="btn-create-animal"
+                aria-label="Create new animal"
+                onClick={() => setShowCreate(true)}
+              >
+                + New Animal
+              </button>
+            </div>
           </div>
           {animalIds.map((animalId) => {
             const animal = animals[animalId];
@@ -196,6 +219,8 @@ export function AnimalWorkspace() {
         onConfirm={confirmDeleteAnimal}
         onCancel={() => setPendingDeleteAnimalId(null)}
       />
+
+      {showImport && <ImportYamlDialog onClose={() => setShowImport(false)} />}
 
       <AnimalProfileDialog
         isOpen={pendingProfileAnimalId != null}

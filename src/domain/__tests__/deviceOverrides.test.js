@@ -89,6 +89,59 @@ describe('override classifier corresponds to dayOverrideIssues', () => {
     expect(issuePaths(day)).toEqual([]);
   });
 
+  // A whole-map ntrode override ROW that carries a non-empty baked-in `bad_channels`, with no
+  // matching `deviceOverrides.bad_channels[ntrode_id]` entry, would have those marks SILENTLY
+  // zeroed by `resolveDayConfig` (which reads bad channels from `deviceOverrides.bad_channels`
+  // ONLY). No in-app path writes such an override today, but a hand-edited/older persisted JSON
+  // could — so the validator must surface it as an export-blocking error rather than drop it.
+  it('override ntrode row with bad_channels and no matching bad_channels entry: blocking issue', () => {
+    const day = {
+      deviceOverrides: {
+        ntrode_electrode_group_channel_map: [
+          { ntrode_id: 1, map: { 0: 0, 1: 1, 2: 2, 3: 3 }, bad_channels: [2] },
+        ],
+      },
+    };
+    const issues = dayOverrideIssues(day, mergedDay);
+    const ignored = issues.filter((i) => i.code === 'bad_channels_on_override_row_ignored');
+    expect(ignored).toHaveLength(1);
+    expect(ignored[0]).toMatchObject({
+      code: 'bad_channels_on_override_row_ignored',
+      severity: 'error',
+      step: 'devices',
+      repairSurface: 'day',
+    });
+  });
+
+  it('override ntrode row whose bad_channels ARE covered by a bad_channels entry: no issue', () => {
+    const day = {
+      deviceOverrides: {
+        ntrode_electrode_group_channel_map: [
+          { ntrode_id: 1, map: { 0: 0, 1: 1, 2: 2, 3: 3 }, bad_channels: [2] },
+        ],
+        bad_channels: { 1: [2] },
+      },
+    };
+    const ignored = dayOverrideIssues(day, mergedDay).filter(
+      (i) => i.code === 'bad_channels_on_override_row_ignored'
+    );
+    expect(ignored).toEqual([]);
+  });
+
+  it('override ntrode row with empty bad_channels: no issue', () => {
+    const day = {
+      deviceOverrides: {
+        ntrode_electrode_group_channel_map: [
+          { ntrode_id: 1, map: { 0: 0, 1: 1, 2: 2, 3: 3 }, bad_channels: [] },
+        ],
+      },
+    };
+    const ignored = dayOverrideIssues(day, mergedDay).filter(
+      (i) => i.code === 'bad_channels_on_override_row_ignored'
+    );
+    expect(ignored).toEqual([]);
+  });
+
   // A VALID-shaped (array) geometry override SHADOWS the snapshot. The Devices step always
   // offers a removal control for it (revert to saved config), but the validator only ERRORS
   // when the override's CONTENTS error — so it needs the base issues to fire. This documents

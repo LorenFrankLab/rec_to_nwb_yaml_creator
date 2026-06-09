@@ -262,6 +262,8 @@
  * @property {AssociatedFile[]} associated_files - Data files
  * @property {AssociatedVideoFile[]} associated_video_files - Video files
  * @property {FsGuiYaml[]} [fs_gui_yamls] - FsGUI protocol files
+ * @property {Array<number|string>} [cameras_used] - Day-owned set of camera ids used this session
+ * @property {string} [data_acq_device_name] - Day-owned name referencing the animal's recording-system catalog entry
  * @property {TechnicalParameters} technical - Technical recording parameters
  * @property {DeviceOverrides} [deviceOverrides] - Device overrides (if different from animal default)
  * @property {DayState} state - Workspace state (draft, validated, exported)
@@ -364,6 +366,7 @@
  * @typedef {object} DeviceOverrides
  * @property {ElectrodeGroup[]} [electrode_groups] - Override electrode groups
  * @property {NtrodeMap[]} [ntrode_electrode_group_channel_map] - Override channel maps
+ * @property {Record<string, number[]>} [bad_channels] - Day-owned per-ntrode bad-channel marks, keyed by ntrode_id (string); the SOLE owner of bad channels (the merge reads these, never the snapshot base).
  */
 
 /**
@@ -377,6 +380,9 @@
  * @property {boolean} exported - true if YAML file generated
  * @property {string} [exportedAt] - ISO timestamp of export
  * @property {ValidationIssue[]} [validationErrors] - Current validation errors
+ * @property {Record<string, number[]>} [badChannelRemovalAcks] - Off-export acknowledgments of
+ *   deliberate bad-channel un-marks, keyed by ntrode id (string); lives ONLY in state, never read
+ *   by the export merge.
  */
 
 /**

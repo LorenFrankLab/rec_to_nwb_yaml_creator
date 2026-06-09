@@ -37,7 +37,7 @@ Build the inverse of the export merge: a pure function that decomposes one flat 
 
 ## Fixtures
 
-The committed golden fixtures ARE the import corpus — no new data needed. Add one synthesized two-config edge if the probe-reconfig fixture doesn't already cover a day pinned to a non-latest version.
+**Corrected during execution (see [shared-contracts.md](shared-contracts.md#decomposeyamlflatmodel--subjectid-animalfacts-dayfacts-configuration--referenced-by-phase-6a-phase-6b) corpus note):** the committed *legacy* golden fixtures are NOT `mergeDayMetadata` fixed points (their baseline test only checks `decode→encode`; `realistic-session.yml` is a known-invalid workspace the merge won't reproduce). The round-trip corpus is **genuine merge outputs** — `f = encodeYaml(mergeDayMetadata(animal, day))` over: `buildRealisticWorkspace()` (realistic, no opto), `makeReconfigWorkspace()` (a day pinned to a non-latest config version), an inline opto animal (exercises optogenetics attribution + the `opto_software` presence signal), and a minimal animal/day — plus the committed `golden/workspace-export.realistic.yml` snapshot (a captured merge output).
 
 ## Review
 

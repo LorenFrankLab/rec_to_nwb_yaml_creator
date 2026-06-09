@@ -41,9 +41,15 @@ function buildExportErrorWorkspace() {
  */
 function buildAllChannelsBadWorkspace() {
   const { animal, day } = buildRealisticWorkspace();
+  // The merge resolves bad_channels from the DAY OVERRIDE ONLY (a snapshot base mark
+  // is moved down into the day's override by the load-time migration). To mark every
+  // channel of group 0's ntrode bad, set the day override — not the snapshot base,
+  // which the merge no longer reads. Group 0 is ntrode_id 1 in the realistic map.
+  const badByNtrode = {};
   animal.configurationHistory[0].devices.ntrode_electrode_group_channel_map.forEach((n) => {
-    if (n.electrode_group_id === 0) n.bad_channels = [0, 1, 2, 3];
+    if (n.electrode_group_id === 0) badByNtrode[n.ntrode_id] = [0, 1, 2, 3];
   });
+  day.deviceOverrides = { bad_channels: badByNtrode };
   return { animal, day };
 }
 

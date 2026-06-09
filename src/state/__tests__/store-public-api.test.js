@@ -32,6 +32,7 @@ describe('useStore public API contract', () => {
       'deleteAnimal',
       'deleteDay',
       'duplicateArrayItem',
+      'duplicateDay',
       'duplicateElectrodeGroupItem',
       'handleChange',
       'itemSelected',

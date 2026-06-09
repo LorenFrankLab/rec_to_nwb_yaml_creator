@@ -324,6 +324,168 @@ describe('createDayRecord', () => {
     expect(day.technical.times_period_multiplier).toBe(1.5);
     expect(day.configurationVersion).toBe(0);
   });
+
+  it('with no carryFrom: tasks/keywords/behavioral_events empty, no experiment_description (back-compat)', () => {
+    const animal = { configurationHistory: [] };
+    const day = createDayRecord(animal, 'remy', 'd', '2023-06-22', { session_id: 's' }, NOW);
+    expect(day.tasks).toEqual([]);
+    expect(day.keywords).toEqual([]);
+    expect(day.behavioral_events).toEqual([]);
+    expect(day.session.experiment_description).toBeUndefined();
+    expect(day.technical.times_period_multiplier).toBe(1.5);
+  });
+
+  describe('carry-forward from a prior day', () => {
+    const carryFrom = {
+      session: { experiment_description: 'Chronic recording', weight: 485 },
+      keywords: ['hippocampus', 'spatial'],
+      tasks: [{ task_name: 'W-track', task_epochs: [1, 3] }],
+      behavioral_events: [{ description: 'Poke1', name: 'poke1' }],
+      technical: { raw_data_to_volts: 0.42, times_period_multiplier: 3, units: { analog: 'unit' } },
+    };
+    const animal = { configurationHistory: [{ version: 2 }] };
+    const session = { session_id: 'remy_20230623', session_description: 'Day 2' };
+
+    it('seeds tasks/behavioral_events/keywords/technical from the source', () => {
+      const day = createDayRecord(animal, 'remy', 'd', '2023-06-23', session, NOW, carryFrom);
+      expect(day.tasks).toEqual(carryFrom.tasks);
+      expect(day.behavioral_events).toEqual(carryFrom.behavioral_events);
+      expect(day.keywords).toEqual(carryFrom.keywords);
+      expect(day.technical).toEqual(carryFrom.technical);
+    });
+
+    it('deep-clones carried fields (no shared reference with the source)', () => {
+      const day = createDayRecord(animal, 'remy', 'd', '2023-06-23', session, NOW, carryFrom);
+      expect(day.tasks).not.toBe(carryFrom.tasks);
+      expect(day.technical).not.toBe(carryFrom.technical);
+      // Mutating the result must not affect the source.
+      day.tasks[0].task_name = 'changed';
+      day.technical.raw_data_to_volts = 0;
+      expect(carryFrom.tasks[0].task_name).toBe('W-track');
+      expect(carryFrom.technical.raw_data_to_volts).toBe(0.42);
+    });
+
+    it('carries experiment_description and weight from the source when the caller omits them', () => {
+      const day = createDayRecord(animal, 'remy', 'd', '2023-06-23', session, NOW, carryFrom);
+      expect(day.session.experiment_description).toBe('Chronic recording');
+      expect(day.session.weight).toBe(485);
+    });
+
+    it('prefers the caller experiment_description/weight over the source when provided', () => {
+      const day = createDayRecord(
+        animal,
+        'remy',
+        'd',
+        '2023-06-23',
+        { ...session, experiment_description: 'Override', weight: 500 },
+        NOW,
+        carryFrom
+      );
+      expect(day.session.experiment_description).toBe('Override');
+      expect(day.session.weight).toBe(500);
+    });
+
+    it('ALWAYS takes session_id/session_description from the caller, never the source', () => {
+      const day = createDayRecord(animal, 'remy', 'd', '2023-06-23', session, NOW, carryFrom);
+      expect(day.session.session_id).toBe('remy_20230623');
+      expect(day.session.session_description).toBe('Day 2');
+    });
+
+    it('never carries associated_files / associated_video_files (always empty)', () => {
+      const withFiles = {
+        ...carryFrom,
+        associated_files: [{ name: 'f1' }],
+        associated_video_files: [{ name: 'v1' }],
+      };
+      const day = createDayRecord(animal, 'remy', 'd', '2023-06-23', session, NOW, withFiles);
+      expect(day.associated_files).toEqual([]);
+      expect(day.associated_video_files).toEqual([]);
+    });
+
+    it('falls back to the animal-defaults technical when the source has no technical record', () => {
+      const noTech = { ...carryFrom, technical: undefined };
+      const day = createDayRecord(animal, 'remy', 'd', '2023-06-23', session, NOW, noTech);
+      expect(day.technical.times_period_multiplier).toBe(1.5);
+      expect(day.technical.raw_data_to_volts).toBe(0.195);
+    });
+  });
+
+  describe('bad-channel carry-forward (config-version-guarded)', () => {
+    const session = { session_id: 'remy_20230623', session_description: 'Day 2' };
+
+    it('carries bad_channels (cloned, not aliased) when the source pins the SAME (latest) config version', () => {
+      // The new day pins the animal's latest version (3); the source already pins 3, so its
+      // ntrode-id-keyed marks still target the right electrodes → carried.
+      const animal = { configurationHistory: [{ version: 1 }, { version: 3 }] };
+      const carryFrom = {
+        configurationVersion: 3,
+        deviceOverrides: { bad_channels: { 1: [2] } },
+      };
+      const day = createDayRecord(animal, 'remy', 'd', '2023-06-23', session, NOW, carryFrom);
+      expect(day.configurationVersion).toBe(3);
+      expect(day.deviceOverrides.bad_channels).toEqual({ 1: [2] });
+      // Cloned, not aliased: the new day must never share the source's override object.
+      expect(day.deviceOverrides.bad_channels).not.toBe(carryFrom.deviceOverrides.bad_channels);
+      day.deviceOverrides.bad_channels[1].push(99);
+      expect(carryFrom.deviceOverrides.bad_channels[1]).toEqual([2]);
+    });
+
+    it('does NOT carry bad_channels when the source pins an OLDER config version (stale after reconfiguration)', () => {
+      // The probe was reconfigured (latest is 3); the source pins 1, so its marks would target
+      // the WRONG electrodes on the new config → the guard drops them.
+      const animal = { configurationHistory: [{ version: 1 }, { version: 3 }] };
+      const carryFrom = {
+        configurationVersion: 1,
+        deviceOverrides: { bad_channels: { 1: [2] } },
+      };
+      const day = createDayRecord(animal, 'remy', 'd', '2023-06-23', session, NOW, carryFrom);
+      expect(day.configurationVersion).toBe(3);
+      // No stale marks: either no deviceOverrides at all, or empty bad_channels.
+      const carried = day.deviceOverrides?.bad_channels ?? {};
+      expect(carried).toEqual({});
+    });
+
+    it('adds NO deviceOverrides container when the source has no bad channels (byte-identical to no-carry)', () => {
+      const animal = { configurationHistory: [{ version: 2 }] };
+      const noBad = createDayRecord(
+        animal,
+        'remy',
+        'd',
+        '2023-06-23',
+        session,
+        NOW,
+        { configurationVersion: 2, deviceOverrides: { bad_channels: {} } }
+      );
+      const absent = createDayRecord(
+        animal,
+        'remy',
+        'd',
+        '2023-06-23',
+        session,
+        NOW,
+        { configurationVersion: 2 }
+      );
+      const blank = createDayRecord(animal, 'remy', 'd', '2023-06-23', session, NOW);
+      expect(noBad.deviceOverrides).toBeUndefined();
+      expect(absent.deviceOverrides).toBeUndefined();
+      expect(blank.deviceOverrides).toBeUndefined();
+    });
+
+    it('carries ONLY bad_channels, never a whole-map electrode_groups override', () => {
+      const animal = { configurationHistory: [{ version: 2 }] };
+      const carryFrom = {
+        configurationVersion: 2,
+        deviceOverrides: {
+          bad_channels: { 0: [1] },
+          electrode_groups: [{ id: 0, location: 'CA1' }],
+        },
+      };
+      const day = createDayRecord(animal, 'remy', 'd', '2023-06-23', session, NOW, carryFrom);
+      expect(day.deviceOverrides.bad_channels).toEqual({ 0: [1] });
+      expect(day.deviceOverrides.electrode_groups).toBeUndefined();
+      expect(Object.keys(day.deviceOverrides)).toEqual(['bad_channels']);
+    });
+  });
 });
 
 describe('applyDayUpdates', () => {
@@ -358,5 +520,25 @@ describe('applyDayUpdates', () => {
       NOW
     );
     expect(updated.state).toEqual({ draft: true, validated: true });
+  });
+
+  it('persists data_acq_device_name (per-day recording-system selection)', () => {
+    const updated = applyDayUpdates({ id: 'd1' }, { data_acq_device_name: 'SpikeGadgets' }, NOW);
+    expect(updated.data_acq_device_name).toBe('SpikeGadgets');
+  });
+
+  it('clears data_acq_device_name to undefined (back to the animal default)', () => {
+    // Uses a PRESENCE check, not `!== undefined`, so the "Default" option's clear persists.
+    const updated = applyDayUpdates(
+      { id: 'd1', data_acq_device_name: 'B' },
+      { data_acq_device_name: undefined },
+      NOW
+    );
+    expect(updated.data_acq_device_name).toBeUndefined();
+  });
+
+  it('persists cameras_used (the explicit per-day cameras-used checklist)', () => {
+    const updated = applyDayUpdates({ id: 'd1' }, { cameras_used: [1] }, NOW);
+    expect(updated.cameras_used).toEqual([1]);
   });
 });

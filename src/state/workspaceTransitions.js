@@ -11,7 +11,14 @@
  */
 
 import { formatExperimentDate } from './workspaceUtils';
-import { getAnimalDevices, getConfigHistory } from './workspaceSelectors';
+import {
+  getAnimalDevices,
+  getConfigHistory,
+  getDayTasks,
+  getDayKeywords,
+  getDayBehavioralEvents,
+  getDayBadChannelOverrides,
+} from './workspaceSelectors';
 import {
   normalizeDeviceOverrides,
   normalizeDevices,
@@ -277,15 +284,32 @@ export function rebuildConfigurationHistoryForAnimal(animal, now, today) {
  * `technical` seeded from the animal's technical defaults. The caller owns id generation and
  * the existence check.
  *
+ * When `carryFrom` (a prior day record) is supplied, the day-owned content is SEEDED from it —
+ * deep-cloned so the new record never aliases the source.
+ *
+ * Carried from `carryFrom`: tasks, behavioral_events, keywords, technical,
+ * session.experiment_description, session.weight (each session field overridable by the caller's
+ * `session`), AND `deviceOverrides.bad_channels` — but ONLY when the source pins the SAME (latest)
+ * configuration version the new day pins. Bad channels are ntrode-id-keyed; if the source pins an
+ * OLDER version the probe was reconfigured since, so those marks would target the WRONG electrodes
+ * on the new config and are dropped as stale. ONLY `bad_channels` is carried — never a whole-map
+ * `electrode_groups` / `ntrode_electrode_group_channel_map` override — and an empty bad-channel map
+ * adds NO `deviceOverrides` container (a blank day stays byte-identical to today's output).
+ *
+ * Never carried: session_id / session_description (date-derived, always from the caller),
+ * associated_files / associated_video_files / fs_gui_yamls / cameras_used (session-specific, left
+ * unset/empty).
+ *
  * @param {object} animal - The owning animal (for technicalDefaults + the latest pin).
  * @param {string} animalId - The owning animal id.
  * @param {string} dayId - The (already-validated) new day id.
  * @param {string} date - Date in YYYY-MM-DD.
  * @param {object} session - Session metadata (session_id, session_description, etc.).
  * @param {string} now - Timestamp for created/lastModified.
+ * @param {object|null} [carryFrom] - A prior day record to seed day-owned content from, or null.
  * @returns {object} The new day record.
  */
-export function createDayRecord(animal, animalId, dayId, date, session, now) {
+export function createDayRecord(animal, animalId, dayId, date, session, now, carryFrom = null) {
   // Pin to the latest snapshot's ACTUAL version, not the count. An imported/repaired
   // history can be non-contiguous (e.g. [1, 3]) — there the count (2) names no real
   // snapshot, and `resolveDayConfig` (which matches by `version`) would fail closed on a
@@ -293,30 +317,69 @@ export function createDayRecord(animal, animalId, dayId, date, session, now) {
   // (mirroring in applyAnimalUpdates, the reconfig latest in DevicesStep).
   const history = getConfigHistory(animal);
   const latestVersion = history.length > 0 ? history[history.length - 1].version : 0;
+
+  // Animal-defaults technical seed: the no-carry path, and the fallback when carryFrom has no
+  // technical record. Kept verbatim so a blank day stays byte-identical to today's output.
+  const defaultTechnical = {
+    // Seeded from the animal's technical DEFAULTS (overridable per day); falls back to
+    // the standard values when no defaults are set.
+    times_period_multiplier: animal.technicalDefaults?.times_period_multiplier ?? 1.5,
+    raw_data_to_volts: animal.technicalDefaults?.raw_data_to_volts ?? 0.195,
+    default_header_file_path: '',
+    units: undefined,
+  };
+  const carryTechnical =
+    carryFrom &&
+    carryFrom.technical !== null &&
+    typeof carryFrom.technical === 'object' &&
+    !Array.isArray(carryFrom.technical);
+
+  // Bad-channel carry-forward, guarded by config version. Bad channels are MONOTONIC across a
+  // study and ntrode-id-keyed. They are safe to carry ONLY when the source pins the SAME version
+  // the new day pins (this latest one): the marks then still name the same electrodes. If the
+  // source pins an older version the probe was reconfigured in between, so its marks are STALE
+  // and must NOT be carried. We carry ONLY bad_channels (never a whole-map override), and skip an
+  // empty map so a no-op carry stays byte-identical to a hand-entered/blank day.
+  const carriedBadChannels =
+    carryFrom && carryFrom.configurationVersion === latestVersion
+      ? getDayBadChannelOverrides(carryFrom)
+      : {};
+  const deviceOverrides =
+    Object.keys(carriedBadChannels).length > 0
+      ? { bad_channels: structuredClone(carriedBadChannels) }
+      : undefined;
+
   return {
     id: dayId,
     animalId,
     date,
     experimentDate: formatExperimentDate(date),
     session: {
+      // Always date-derived from the caller — never carried.
       session_id: session.session_id,
       session_description: session.session_description,
-      experiment_description: session.experiment_description,
-      weight: session.weight,
+      // Prefer the caller's value when defined, else the carried value (else undefined).
+      experiment_description:
+        session.experiment_description !== undefined
+          ? session.experiment_description
+          : carryFrom?.session?.experiment_description,
+      weight: session.weight !== undefined ? session.weight : carryFrom?.session?.weight,
     },
-    keywords: [],
-    tasks: [],
-    behavioral_events: [],
+    keywords: carryFrom ? structuredClone(getDayKeywords(carryFrom)) : [],
+    tasks: carryFrom ? structuredClone(getDayTasks(carryFrom)) : [],
+    behavioral_events: carryFrom ? structuredClone(getDayBehavioralEvents(carryFrom)) : [],
+    // Session-specific — never carried.
     associated_files: [],
     associated_video_files: [],
-    technical: {
-      // Seeded from the animal's technical DEFAULTS (overridable per day); falls back to
-      // the standard values when no defaults are set.
-      times_period_multiplier: animal.technicalDefaults?.times_period_multiplier ?? 1.5,
-      raw_data_to_volts: animal.technicalDefaults?.raw_data_to_volts ?? 0.195,
-      default_header_file_path: '',
-      units: undefined,
-    },
+    technical: carryTechnical ? structuredClone(carryFrom.technical) : defaultTechnical,
+    // Only present when guarded bad-channel carry produced a non-empty map (see above); a blank
+    // day omits the key entirely so it stays byte-identical to today's output.
+    ...(deviceOverrides ? { deviceOverrides } : {}),
+    // `state.badChannelRemovalAcks` (off-export acknowledgments of deliberate bad-channel
+    // un-marks) is intentionally ABSENT on a fresh day: the monotonicity helpers and the
+    // acknowledge repair command treat an absent container as "no acks" and create it on demand
+    // via `applyDayUpdates`'s `state` deep-merge. Keeping it absent leaves a new day's persisted
+    // shape unchanged. `mergeDayMetadata` never reads `state`, so it is invisible to the export.
     state: {
       draft: true,
       validated: false,
@@ -339,7 +402,12 @@ export function createDayRecord(animal, animalId, dayId, date, session, now) {
  *   malformed-guard above), `technical` (deep-merged), `state` (deep-merged), `deviceOverrides`
  *   (normalized), and the replace-on-`!== undefined` collections `tasks`, `behavioral_events`,
  *   `associated_files`, `associated_video_files`, `fs_gui_yamls`, `keywords`, plus
- *   `configurationVersion`. Note: setting `configurationVersion` here re-pins the day but does
+ *   `configurationVersion`, plus `data_acq_device_name` (the per-day recording-system choice —
+ *   the one key matched by a PRESENCE check rather than `!== undefined`, so clearing it to
+ *   `undefined` to revert to the animal default persists instead of being silently dropped), plus
+ *   `cameras_used` (the explicit per-day cameras-used set, UNIONed with inferred camera references;
+ *   `!== undefined` like the other collections — cleared to `[]`, never to undefined).
+ *   Note: setting `configurationVersion` here re-pins the day but does
  *   NOT eagerly reconcile snapshots' `appliedToDays` — `reconcileAppliedToDays` derives the
  *   trustworthy view from each day's version.
  * @param {string} now - Timestamp to stamp `lastModified`.
@@ -398,6 +466,21 @@ export function applyDayUpdates(day, updates, now) {
   }
   if (updates.keywords !== undefined) {
     updated.keywords = updates.keywords;
+  }
+  // Per-day recording-system selection (`day.data_acq_device_name`, read by `mergeDayMetadata`).
+  // PRESENCE check, NOT `!== undefined`: the "Default" option clears back to the animal default by
+  // writing `data_acq_device_name: undefined`, and that clear MUST persist (a `!== undefined` guard
+  // would silently drop it, leaving the day pinned to a stale system). This is the one allow-list
+  // key that supports clear-to-undefined.
+  if ('data_acq_device_name' in updates) {
+    updated.data_acq_device_name = updates.data_acq_device_name;
+  }
+  // Explicit per-day "cameras used" set (UNIONed with the inferred task/video/fs-gui references by
+  // `referencedCameraKeys`). `!== undefined` like the other collections — it is cleared to `[]`,
+  // never to undefined. Absent for all existing data (the baseline-safe default), so the export
+  // stays byte-identical when no checklist additions are made.
+  if (updates.cameras_used !== undefined) {
+    updated.cameras_used = updates.cameras_used;
   }
 
   updated.lastModified = now;

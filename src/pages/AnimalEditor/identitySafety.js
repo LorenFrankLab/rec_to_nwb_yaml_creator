@@ -12,43 +12,10 @@
 
 import { getAnimalCameras, getDataAcqDevices } from '../../state/workspaceSelectors';
 
-/**
- * Compare two dependent-field values for identity purposes. Numbers compare
- * numerically; everything else compares as trimmed strings so `'8mm'` vs `'8mm'`
- * matches and `0.001` vs `0.001` matches, while absent vs present differ.
- *
- * @param {*} a - First value.
- * @param {*} b - Second value.
- * @returns {boolean} True when the two values are equivalent.
- */
-function valuesEqual(a, b) {
-  if (typeof a === 'number' && typeof b === 'number') return a === b;
-  return String(a ?? '').trim() === String(b ?? '').trim();
-}
-
-/**
- * Find a divergent reuse of `name` in a registry of existing identities.
- *
- * @param {string} name - The candidate identity name (e.g. camera_name).
- * @param {Record<string, *>} candidateFields - The candidate's dependent fields.
- * @param {Array<{name: string, fields: Record<string, *>, label?: string}>} registry -
- *   Existing identities the candidate is checked against.
- * @returns {{existing: object, differingFields: string[]}|null} The conflicting entry
- *   and the dependent fields that differ, or null when the name is unused or its reuse
- *   is identical (a safe reuse).
- */
-export function findIdentityDivergence(name, candidateFields, registry) {
-  const normalizedName = String(name ?? '').trim();
-  if (!normalizedName) return null;
-  for (const entry of registry) {
-    if (String(entry.name ?? '').trim() !== normalizedName) continue;
-    const differingFields = Object.keys(candidateFields).filter(
-      (key) => !valuesEqual(candidateFields[key], entry.fields[key])
-    );
-    if (differingFields.length > 0) return { existing: entry, differingFields };
-  }
-  return null;
-}
+// The pure identity-divergence core lives in `state/` so both this page-layer editing surface
+// and state-layer consumers (the YAML import reconciler) share ONE implementation without a
+// reversed page→state import. Re-exported here so existing importers of this module are unchanged.
+export { findIdentityDivergence } from '../../state/identityDivergence';
 
 /**
  * Human-readable labels for the dependent fields shown in a divergence comparison,
@@ -114,14 +81,18 @@ export const DATA_ACQ_DEPENDENT_FIELDS = ['system', 'amplifier', 'adc_circuit'];
  * excluding the camera currently being edited when requested.
  *
  * @param {object} workspace - The workspace slice (`{ animals }`).
- * @param {{animalId: string, id: number}|null} [exclude] - The camera being edited.
+ * @param {{animalId: string, id?: number}|null} [exclude] - The camera (or whole animal) being
+ *   edited. With `id`, only that one camera is excluded; with `animalId` alone (`id` omitted), the
+ *   animal's ENTIRE camera catalog is excluded — mirroring {@link collectDataAcqIdentities}, so a
+ *   caller comparing a whole copied catalog against the rest of the workspace isn't tripped by the
+ *   target's own cameras.
  * @returns {Array<{name: string, fields: Record<string, *>, label: string}>}
  */
 export function collectCameraIdentities(workspace, exclude = null) {
   const registry = [];
   for (const animal of Object.values(workspace?.animals || {})) {
     for (const camera of getAnimalCameras(animal)) {
-      if (exclude && animal.id === exclude.animalId && camera.id === exclude.id) continue;
+      if (exclude && animal.id === exclude.animalId && (exclude.id == null || camera.id === exclude.id)) continue;
       registry.push({
         name: camera.camera_name,
         label: `${animal.id} camera ${camera.id}`,

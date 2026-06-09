@@ -37,22 +37,22 @@ afterEach(() => {
 });
 
 describe('status conveyed without relying on color', () => {
-  it('each DayEditor step button pairs its status icon with screen-reader text', async () => {
+  it('each DayEditor section button pairs its status glyph with an accessible status name', async () => {
     const { container } = await renderRoute(`#/day/${DAY_ID}`);
     await screen.findByRole('heading', { name: /day editor/i });
 
-    const stepButtons = container.querySelectorAll('.step-button');
-    expect(stepButtons.length).toBeGreaterThan(0);
+    const sectionButtons = container.querySelectorAll('.section-nav-item');
+    expect(sectionButtons.length).toBeGreaterThan(0);
 
-    stepButtons.forEach((button) => {
-      // The decorative status emoji is hidden from AT...
-      const icon = button.querySelector('.step-status-icon');
+    sectionButtons.forEach((button) => {
+      // The decorative status glyph is hidden from AT (shape, not color-only)...
+      const icon = button.querySelector('.section-nav-status-icon');
       expect(icon).not.toBeNull();
       expect(icon).toHaveAttribute('aria-hidden', 'true');
-      // ...and a screen-reader-only text label conveys the same status.
-      const srText = button.querySelector('.sr-only');
-      expect(srText).not.toBeNull();
-      expect(srText.textContent.trim().length).toBeGreaterThan(0);
+      // ...and the status is folded into the button's accessible name (aria-label),
+      // mirroring AnimalView's section-nav, so the meaning is never color-only.
+      const ariaLabel = button.getAttribute('aria-label') || '';
+      expect(/complete|incomplete|has errors|not started/i.test(ariaLabel)).toBe(true);
     });
   });
 

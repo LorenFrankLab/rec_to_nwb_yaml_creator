@@ -1,10 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StoreProvider } from '../../../state/StoreContext';
 import DayEditorStepper from '../DayEditorStepper';
 
 import { useDayIdFromUrl } from '../../../hooks/useDayIdFromUrl';
+import { emitStepperShortcut } from '../../../hooks/stepperShortcuts';
+import { act } from '@testing-library/react';
+import { buildRealisticWorkspace } from '../../../__tests__/fixtures/workspaceBuilders';
 
 // Mock the hook
 vi.mock('../../../hooks/useDayIdFromUrl', () => ({
@@ -404,7 +407,8 @@ describe('DayEditorStepper', () => {
     // Stays in the Day Editor and lands on the Overview step (the editable owner),
     // not the Animal Editor.
     expect(window.location.hash).not.toBe('#/animal/remy/days');
-    expect(screen.getByRole('button', { name: /^Overview/i })).toHaveAttribute('aria-current', 'step');
+    // The tabbed section-nav mirrors AnimalView: the active item carries aria-current="page".
+    expect(screen.getByRole('button', { name: /^Overview/i })).toHaveAttribute('aria-current', 'page');
   });
 
   // A corrupt/legacy import can persist a sibling day's `tasks` as a truthy
@@ -587,5 +591,150 @@ describe('DayEditorStepper', () => {
     expect(
       within(slashIssue.closest('li')).queryByRole('button', { name: /fix in/i })
     ).not.toBeInTheDocument();
+  });
+
+  // ── Tabbed section-nav (replaces the linear stepper shell) ────────────────────────────
+  describe('tabbed section-nav', () => {
+    const renderEditor = () =>
+      render(
+        <StoreProvider initialState={mockInitialState}>
+          <DayEditorStepper />
+        </StoreProvider>
+      );
+
+    it('renders a single section-nav navigation landmark labelled for the day editor', () => {
+      renderEditor();
+      const navs = screen.getAllByRole('navigation');
+      // The breadcrumb (inside OverviewStep) is a separate nav; the section-nav is its own.
+      expect(navs.some((n) => /day editor sections/i.test(n.getAttribute('aria-label') || ''))).toBe(true);
+    });
+
+    it('renders all five sections with their status glyph', () => {
+      const { container } = renderEditor();
+      const nav = container.querySelector('.section-nav');
+      const items = nav.querySelectorAll('.section-nav-item');
+      expect(items).toHaveLength(5);
+      // Every item carries a status glyph span (computeStepStatus-driven).
+      items.forEach((item) => {
+        expect(item.querySelector('.section-nav-status-icon')).not.toBeNull();
+      });
+    });
+
+    it('freely navigates to ANY section on click — Devices, Epochs, Validation, Export', async () => {
+      const user = userEvent.setup();
+      renderEditor();
+
+      await user.click(screen.getByRole('button', { name: /Devices & Failed Channels/i }));
+      expect(screen.getByText(/Devices Configuration/i)).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: /Tasks & Epochs/i }));
+      // Epochs (TasksEpochsStep) renders the tasks table region.
+      expect(screen.getByRole('button', { name: /^Tasks & Epochs/i })).toHaveAttribute('aria-current', 'page');
+
+      await user.click(screen.getByRole('button', { name: /^Export/i }));
+      // Export is freely reachable — ExportStep renders.
+      expect(screen.getByRole('heading', { name: /Export YAML/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^Export/i })).toHaveAttribute('aria-current', 'page');
+    });
+
+    it('tracks aria-current on the active section', async () => {
+      const user = userEvent.setup();
+      renderEditor();
+      expect(screen.getByRole('button', { name: /^Overview/i })).toHaveAttribute('aria-current', 'page');
+      await user.click(screen.getByRole('button', { name: /Devices & Failed Channels/i }));
+      expect(screen.getByRole('button', { name: /Devices & Failed Channels/i })).toHaveAttribute(
+        'aria-current',
+        'page'
+      );
+      expect(screen.getByRole('button', { name: /^Overview/i })).not.toHaveAttribute('aria-current');
+    });
+
+    // Export gate survives: the tab is REACHABLE, but ExportStep's own download action stays
+    // disabled while the day is invalid (the mock day has empty devices → blocking errors).
+    it('reaches Export but keeps the download disabled while the day is invalid', async () => {
+      const user = userEvent.setup();
+      renderEditor();
+      await user.click(screen.getByRole('button', { name: /^Export/i }));
+      expect(screen.getByRole('button', { name: /download yaml/i })).toBeDisabled();
+      // The Export nav item still shows its blocking glyph so the block is visible.
+      const exportNav = screen.getByRole('button', { name: /^Export/i });
+      expect(exportNav.querySelector('.section-nav-status-icon').textContent).toBe('✗');
+    });
+
+    it('advances and retreats with the Next ▸ / ◂ Prev pager — into Export', async () => {
+      const user = userEvent.setup();
+      renderEditor();
+      const next = screen.getByRole('button', { name: /^Next ▸$/ });
+      await user.click(next); // overview → devices
+      expect(screen.getByRole('button', { name: /Devices & Failed Channels/i })).toHaveAttribute('aria-current', 'page');
+      await user.click(next); // → epochs
+      await user.click(next); // → validation
+      await user.click(next); // → export
+      expect(screen.getByRole('button', { name: /^Export/i })).toHaveAttribute('aria-current', 'page');
+      // Pager retreats too.
+      await user.click(screen.getByRole('button', { name: /^◂ Prev$/ }));
+      expect(screen.getByRole('button', { name: /^Validation/i })).toHaveAttribute('aria-current', 'page');
+    });
+
+    it('advances into Export via the Alt+→ keyboard shortcut (no export fail-close)', () => {
+      renderEditor();
+      // overview → devices → epochs → validation → export (no gating on Export).
+      for (let i = 0; i < 4; i += 1) {
+        act(() => emitStepperShortcut('next'));
+      }
+      expect(screen.getByRole('button', { name: /^Export/i })).toHaveAttribute('aria-current', 'page');
+      // Alt+← retreats.
+      act(() => emitStepperShortcut('prev'));
+      expect(screen.getByRole('button', { name: /^Validation/i })).toHaveAttribute('aria-current', 'page');
+    });
+
+    it('moves focus to the panel (#main-content) on a section change', async () => {
+      const user = userEvent.setup();
+      renderEditor();
+      const main = document.getElementById('main-content');
+      expect(main).not.toHaveFocus(); // initial mount does not steal focus
+      await user.click(screen.getByRole('button', { name: /Devices & Failed Channels/i }));
+      expect(main).toHaveFocus();
+    });
+
+    // Regression: the section-change focus must keep working AFTER a field-targeted repair.
+    // A repair sets `focusRequest` (consumed once by the repair-focus effect to focus the
+    // field). `focusRequest` is sticky — it is only cleared on a no-field navigate — so the
+    // section-change effect must NOT key its skip off `focusRequest` (that self-disables the
+    // a11y focus for the rest of the session). A consume-once skip is used instead.
+    it('still moves focus to the panel on a plain section change AFTER a field-targeted repair', async () => {
+      const user = userEvent.setup();
+      const { animal, day } = buildRealisticWorkspace();
+      // A blank session description is an Overview error with a focusable repair anchor.
+      day.session.session_description = '';
+      useDayIdFromUrl.mockReturnValue(day.id);
+
+      render(
+        <StoreProvider
+          initialState={{
+            workspace: {
+              animals: { [animal.id]: animal },
+              days: { [day.id]: day },
+              settings: {},
+            },
+          }}
+        >
+          <DayEditorStepper />
+        </StoreProvider>
+      );
+
+      // Trigger a field-targeted repair: route to Overview + focus the session-description
+      // field. This sets the sticky `focusRequest`.
+      await user.click(screen.getByRole('button', { name: /^Validation/ }));
+      await user.click(screen.getByRole('button', { name: /fix in overview/i }));
+      const textarea = screen.getByRole('textbox', { name: /session description/i });
+      await waitFor(() => expect(textarea).toHaveFocus());
+
+      // Now do a PLAIN section switch (no fieldPath). Focus must move to the panel — the
+      // sticky `focusRequest` must NOT bail this out (the pre-fix bug stranded focus here).
+      const main = document.getElementById('main-content');
+      await user.click(screen.getByRole('button', { name: /Devices & Failed Channels/i }));
+      await waitFor(() => expect(main).toHaveFocus());
+    });
   });
 });

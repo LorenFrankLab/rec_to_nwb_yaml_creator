@@ -26,11 +26,31 @@ import fs from 'fs';
 import path from 'path';
 import { encodeYaml, decodeYaml, formatDeterministicFilename } from '../../../io/yaml';
 import { mergeDayMetadata } from '../../../state/workspaceUtils';
+import { normalizeWorkspaceDevices } from '../../../utils/deviceNormalization';
 import { validate } from '../../../validation';
 import {
   buildRealisticWorkspace,
   REALISTIC_ALWAYS_ON_KEYS,
 } from '../../../__tests__/fixtures/workspaceBuilders';
+
+/**
+ * Build the realistic animal+day and run the real LOAD normalization on it
+ * (`normalizeWorkspaceDevices`, which includes the bad-channel migration that
+ * moves snapshot base marks DOWN into the day override). The export merge resolves
+ * bad_channels from the day override only, so a faithful new-path export goes
+ * through this load step — exactly as production does. Returns the migrated
+ * animal+day.
+ *
+ * @returns {{ animal: object, day: object }}
+ */
+function buildLoadedRealistic() {
+  const { animal, day } = buildRealisticWorkspace();
+  const loaded = normalizeWorkspaceDevices({
+    animals: { [animal.id]: animal },
+    days: { [day.id]: day },
+  });
+  return { animal: loaded.animals[animal.id], day: loaded.days[day.id] };
+}
 
 const goldenDir = path.join(__dirname, '../../../__tests__/fixtures/golden');
 const realisticFixture = fs.readFileSync(path.join(goldenDir, 'realistic-session.yml'), 'utf8');
@@ -82,8 +102,13 @@ describe('export parity (new workspace path)', () => {
     expect(channelIssues).toEqual([]);
   });
 
-  it('builds → exports byte-identical to the checked-in new-path snapshot', () => {
-    const { animal, day } = buildRealisticWorkspace();
+  it('builds → loads → exports byte-identical to the checked-in new-path snapshot', () => {
+    // Go through the real load step (normalizeWorkspaceDevices): its bad-channel
+    // migration moves the snapshot base marks down into the day override, which the
+    // day-only merge then reads — reproducing the checked-in snapshot's marks. (A merge
+    // of the UN-loaded builder would read [] for those ntrodes, since the merge no
+    // longer reads the snapshot base; loading is what production always does.)
+    const { animal, day } = buildLoadedRealistic();
 
     const yaml = encodeYaml(mergeDayMetadata(animal, day));
 

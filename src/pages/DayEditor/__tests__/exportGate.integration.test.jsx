@@ -50,7 +50,7 @@ describe('Day editor export gate (integration)', () => {
     Element.prototype.scrollIntoView = vi.fn();
   });
 
-  it('enables the Export tab and reaches the Export step when every step is valid', async () => {
+  it('reaches the Export step and enables the download when every step is valid', async () => {
     const user = userEvent.setup();
     const { animal, day } = buildRealisticWorkspace();
     useDayIdFromUrl.mockReturnValue(day.id);
@@ -61,18 +61,22 @@ describe('Day editor export gate (integration)', () => {
       </StoreProvider>
     );
 
+    // Export is a freely reachable tab — never nav-locked.
     const exportButton = screen.getByRole('button', { name: /^Export/ });
     expect(exportButton).not.toHaveAttribute('aria-disabled', 'true');
 
     await user.click(exportButton);
 
-    // ExportStep rendered: the resolved filename is shown.
+    // ExportStep rendered: the resolved filename is shown and the download is enabled.
     expect(screen.getByText(/06222023_remy_metadata\.yml/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /download yaml/i })).toBeEnabled();
   });
 
-  it('disables the Export tab when a prerequisite step is invalid', () => {
+  it('reaches the Export step but blocks the download when a prerequisite step is invalid', async () => {
+    const user = userEvent.setup();
     const { animal, day } = buildRealisticWorkspace();
-    // No tasks → epochs incomplete → export gated (isExportEnabled unchanged).
+    // No tasks → epochs incomplete. The nav no longer gates reaching Export; ExportStep
+    // self-gates the DOWNLOAD action instead.
     const incompleteDay = { ...day, tasks: [] };
     useDayIdFromUrl.mockReturnValue(day.id);
 
@@ -82,13 +86,14 @@ describe('Day editor export gate (integration)', () => {
       </StoreProvider>
     );
 
-    expect(screen.getByRole('button', { name: /^Export/ })).toHaveAttribute(
-      'aria-disabled',
-      'true'
-    );
+    const exportButton = screen.getByRole('button', { name: /^Export/ });
+    expect(exportButton).not.toHaveAttribute('aria-disabled', 'true');
+    await user.click(exportButton);
+
+    expect(screen.getByRole('button', { name: /download yaml/i })).toBeDisabled();
   });
 
-  it('keeps the Export tab locked and does not navigate to it on a day that is valid in every step but has an export-blocking schema error', async () => {
+  it('reaches the Export step on a day with an export-blocking schema error but keeps the download blocked', async () => {
     const user = userEvent.setup();
     const { animal, day } = buildExportErrorWorkspace();
     useDayIdFromUrl.mockReturnValue(day.id);
@@ -100,15 +105,16 @@ describe('Day editor export gate (integration)', () => {
     );
 
     const exportButton = screen.getByRole('button', { name: /^Export/ });
-    expect(exportButton).toHaveAttribute('aria-disabled', 'true');
-
+    // Freely reachable — the gate is the download action, not the tab.
+    expect(exportButton).not.toHaveAttribute('aria-disabled', 'true');
     await user.click(exportButton);
 
-    // Click is swallowed: the Export step (its filename line) never renders.
-    expect(screen.queryByText(/06222023_remy_metadata\.yml/)).not.toBeInTheDocument();
+    // ExportStep renders (filename line present) but its self-gate keeps the download disabled.
+    expect(screen.getByText(/06222023_remy_metadata\.yml/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /download yaml/i })).toBeDisabled();
   });
 
-  it('does not advance into Export via the keyboard stepper shortcut on an export-blocked day', async () => {
+  it('advances into Export via the keyboard stepper shortcut even on an export-blocked day (download stays blocked)', async () => {
     const user = userEvent.setup();
     const { animal, day } = buildExportErrorWorkspace();
     useDayIdFromUrl.mockReturnValue(day.id);
@@ -119,15 +125,15 @@ describe('Day editor export gate (integration)', () => {
       </StoreProvider>
     );
 
-    // Reach the (reachable) Validation step first.
+    // Reach the Validation step first.
     await user.click(screen.getByRole('button', { name: /^Validation/ }));
     expect(screen.getByText('Validation Summary')).toBeInTheDocument();
 
-    // Alt+Right from Validation must NOT cross into Export on an export-blocked day.
+    // Alt+Right now crosses freely into Export (no keyboard fail-close); ExportStep self-gates.
     act(() => emitStepperShortcut('next'));
 
-    expect(screen.getByText('Validation Summary')).toBeInTheDocument();
-    expect(screen.queryByText(/06222023_remy_metadata\.yml/)).not.toBeInTheDocument();
+    expect(screen.getByText(/06222023_remy_metadata\.yml/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /download yaml/i })).toBeDisabled();
   });
 
   it('advances from Validation into Export via the keyboard stepper shortcut on a valid day', async () => {

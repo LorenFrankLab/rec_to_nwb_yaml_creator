@@ -30,6 +30,7 @@ export const REPAIR_COMMAND_TYPES = Object.freeze([
   'removeDeviceOverrideKey',
   'resetBadChannelOverrides',
   'removeBadChannelOverrideKey',
+  'acknowledgeBadChannelRemovals',
   'resetDaySession',
 ]);
 
@@ -49,6 +50,7 @@ const COMMAND_SURFACE = Object.freeze({
   removeDeviceOverrideKey: 'day',
   resetBadChannelOverrides: 'day',
   removeBadChannelOverrideKey: 'day',
+  acknowledgeBadChannelRemovals: 'day',
   resetDaySession: 'day',
   resetAnimalCameras: 'animal',
   resetDataAcqDevice: 'animal',
@@ -83,7 +85,11 @@ function currentOverrides(day) {
 /**
  * Execute a serializable repair command against the store.
  *
- * @param {{type?: string, field?: string, key?: string}} command - The repair command.
+ * @param {{type?: string, field?: string, key?: string, acks?: Record<string, number[]>}} command
+ *   The serializable repair command. Per `type`: `resetDayCollection` carries `field` (the
+ *   collection to clear); `removeDeviceOverrideKey` / `removeBadChannelOverrideKey` carry `key`
+ *   (the override/ntrode key to drop); `acknowledgeBadChannelRemovals` carries `acks`
+ *   (`{ [ntrodeId: string]: number[] }`, the deliberate un-marks to record off-export).
  * @param {object} ctx - Execution context.
  * @param {object} ctx.actions - Store actions (`updateDay` / `updateAnimal` /
  *   `rebuildConfigurationHistory`).
@@ -153,6 +159,29 @@ export function applyRepairCommand(command, ctx) {
       const bad = isRecord(overrides.bad_channels) ? { ...overrides.bad_channels } : {};
       delete bad[command.key];
       actions.updateDay(dayId, { deviceOverrides: { ...overrides, bad_channels: bad } });
+      return;
+    }
+    case 'acknowledgeBadChannelRemovals': {
+      // Record an OFF-EXPORT acknowledgment that the day deliberately un-marks channels that
+      // were bad on an earlier same-config day, clearing the `bad_channel_unfailed_without_ack`
+      // export block WITHOUT restoring the channels (an override, not a repair-by-restore). The
+      // ack lives only in `day.state.badChannelRemovalAcks` — never read by the export merge —
+      // so the exported YAML is byte-identical. `command.acks` is a `{ [ntrodeId]: number[] }`
+      // record; merge it (per-ntrode UNION) onto any existing acks so a partial prior ack is
+      // preserved. A malformed/absent payload is a no-op.
+      if (!isRecord(command.acks)) return;
+      const current = day?.state;
+      const existing =
+        isRecord(current) && isRecord(current.badChannelRemovalAcks)
+          ? current.badChannelRemovalAcks
+          : {};
+      const merged = { ...existing };
+      for (const ntrodeId of Object.keys(command.acks)) {
+        const add = Array.isArray(command.acks[ntrodeId]) ? command.acks[ntrodeId] : [];
+        const prior = Array.isArray(merged[ntrodeId]) ? merged[ntrodeId] : [];
+        merged[ntrodeId] = Array.from(new Set([...prior, ...add])).sort((a, b) => a - b);
+      }
+      actions.updateDay(dayId, { state: { badChannelRemovalAcks: merged } });
       return;
     }
     case 'resetDaySession': {

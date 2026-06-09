@@ -10,6 +10,50 @@ There are placeholders in text boxes describing what input is expected; after op
 
 You can get the link for this page at - https://lorenfranklab.github.io/rec_to_nwb_yaml_creator/
 
+## Importing existing YAML files
+
+If you already have `{mmddYYYY}_{subject}_metadata.yml` files (for example, from previous recording
+sessions), you can bring them straight into the workspace instead of re-entering them by hand. Use
+the **Import YAML…** button on the Animal Workspace (it appears beside **+ New Animal**, and beside
+**Create Animal** in the empty state).
+
+What it does:
+
+- **Each file becomes a recording day, grouped into animals by subject id.** The recording date is
+  read from the file name (`{mmddYYYY}_{subject}_metadata.yml`), or from the `session_id` if the file
+  name doesn't carry it.
+- **Configuration differences across dates become hardware-configuration versions.** If a subject's
+  files describe different electrode configurations on different dates, the import creates a numbered
+  configuration version for each distinct configuration (version 1 = earliest), and pins each day to
+  the version it used.
+- **Disagreements and conflicts are shown for review before anything is written.** The preview flags
+  *divergences* (for example, files that disagree on cameras, experimenters, or subject details — the
+  import unions catalogs and takes the latest-dated value for scalars, but tells you it did so), and
+  flags any animal that **already exists** in the workspace so you can choose to **add** the imported
+  days to it, **skip** it, or **replace** it. Files that can't be imported (unparseable, missing a
+  subject id or date, or failing validation) are listed with the reason — nothing fails silently.
+- **Nothing is written until you press Confirm.** The preview is read-only; **Cancel** writes nothing.
+  After importing, edit the animals and days in the normal editors as usual.
+
+> Note: when you **add** imported days to an animal that already exists, the existing animal's shared
+> catalogs (cameras, recording systems) are left untouched. If an imported day references a camera or
+> device the existing animal doesn't have, that gap is surfaced later as an export check, so you can
+> reconcile the catalogs first.
+
+## Marking bad channels
+
+Bad (failed) channels are marked **per recording day** in the Day Editor, under **Failed Channels** —
+not on the animal-level Channel Maps tab (which is for wiring/mapping only).
+
+- **A new day starts from the previous day's marks.** When you add a recording day, it carries forward the
+  failed channels from the most recent earlier day that used the **same hardware configuration**, so you
+  only need to add channels that **newly** failed. (A probe reconfiguration starts a fresh configuration,
+  so its days do not inherit the old configuration's marks.)
+- **Bad channels accumulate (they don't heal).** A channel that failed on an earlier day stays failed on
+  later same-configuration days. If you **un-mark** a channel that was failed on an earlier day, the app
+  asks you to confirm — and until you either restore the mark or acknowledge the removal, that day **cannot
+  be exported**.
+
 ## Requirements
 
 - **Node.js `20.19.5`** — the version pinned in [`.nvmrc`](.nvmrc). Other Node majors are untested

@@ -14,11 +14,13 @@ import ChannelMapEditor from '../ChannelMapEditor';
  * Allows users to configure mapping between logical electrode channels
  * (from Trodes) and hardware channel IDs.
  *
- * LEGACY LAYOUT MATCH: Tests verify exact layout from original ChannelMap.jsx:
+ * WIRING-ONLY: this editor edits only the channel→hardware `map` assignments.
+ * Bad channels are owned per recording day (Day Editor's BadChannelsEditor) and are
+ * neither displayed nor edited here. Tests verify:
  * - Fieldset with "Shank #N" legend
  * - Readonly "Ntrode Id" field with InfoIcon
- * - "Bad Channels" checkbox grid (NOT comma-separated input)
  * - "Map" section with select dropdowns (NOT number inputs)
+ * - NO bad-channel control of any kind renders
  */
 
 describe('ChannelMapEditor', () => {
@@ -127,8 +129,14 @@ describe('ChannelMapEditor', () => {
       expect(ntrodeIdInput1).toBeDisabled();
     });
 
-    it('should show bad channels checkbox grid for each ntrode', () => {
-      render(
+  });
+
+  // Bad channels are owned per recording day, not at the animal level. This editor is
+  // wiring-only: it must render NO bad-channel control (checkbox grid, probe-wide
+  // selector, repair button, or "Bad Channels" label). Pinned against re-introduction.
+  describe('No bad-channel UI (day-owned; wiring-only editor)', () => {
+    it('renders no bad-channel control for a single-shank group', () => {
+      const { container } = render(
         <ChannelMapEditor
           electrodeGroup={mockElectrodeGroup}
           channelMaps={mockChannelMaps}
@@ -137,16 +145,40 @@ describe('ChannelMapEditor', () => {
         />
       );
 
-      // Legacy layout uses individual checkboxes, NOT comma-separated input
-      const badChannelsCheckboxes0 = screen.getByTestId('bad-channels-checkboxes-0');
-      const badChannelsCheckboxes1 = screen.getByTestId('bad-channels-checkboxes-1');
+      // No checkbox grid testids, no checkboxes at all, no "Bad Channels" label/heading.
+      expect(screen.queryByTestId('bad-channels-checkboxes-0')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('bad-channels-checkboxes-1')).not.toBeInTheDocument();
+      expect(container.querySelectorAll('input[type="checkbox"]')).toHaveLength(0);
+      expect(screen.queryByText(/bad channel/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/mark.*as bad/i)).not.toBeInTheDocument();
+    });
 
-      expect(badChannelsCheckboxes0).toBeInTheDocument();
-      expect(badChannelsCheckboxes1).toBeInTheDocument();
+    it('renders no probe-wide bad-channel selector for a multi-shank group', () => {
+      const group64c3s = {
+        id: 2,
+        device_type: '64c-3s6mm6cm-20um-40um-sl',
+        location: 'CA1',
+        units: 'mm',
+      };
+      const shankMap = (offset, len) =>
+        Object.fromEntries(Array.from({ length: len }, (_, i) => [i, offset + i]));
+      const maps = [
+        { electrode_group_id: 2, ntrode_id: 0, bad_channels: [], map: shankMap(0, 21) },
+        { electrode_group_id: 2, ntrode_id: 1, bad_channels: [], map: shankMap(21, 21) },
+        { electrode_group_id: 2, ntrode_id: 2, bad_channels: [], map: shankMap(42, 22) },
+      ];
+      const { container } = render(
+        <ChannelMapEditor
+          electrodeGroup={group64c3s}
+          channelMaps={maps}
+          onSave={() => {}}
+          onCancel={() => {}}
+        />
+      );
 
-      // Ntrode 1 should have channel 1 checked (from mock bad_channels: [1])
-      const channel1Checkbox = screen.getByLabelText('Mark channel 1 as bad for ntrode 1');
-      expect(channel1Checkbox).toBeChecked();
+      expect(screen.queryByTestId('bad-channels-checkboxes-0')).not.toBeInTheDocument();
+      expect(container.querySelectorAll('input[type="checkbox"]')).toHaveLength(0);
+      expect(screen.queryByText(/bad channel/i)).not.toBeInTheDocument();
     });
   });
 
@@ -220,33 +252,6 @@ describe('ChannelMapEditor', () => {
     });
   });
 
-  describe('Update bad_channels (Legacy Layout)', () => {
-    it('should update bad_channels when checkbox toggled', async () => {
-      render(
-        <ChannelMapEditor
-          electrodeGroup={mockElectrodeGroup}
-          channelMaps={mockChannelMaps}
-          onSave={() => {}}
-          onCancel={() => {}}
-        />
-      );
-
-      // Legacy layout uses checkboxes, NOT comma-separated text input
-      const channel0Checkbox = screen.getByLabelText('Mark channel 0 as bad for ntrode 0');
-      const channel2Checkbox = screen.getByLabelText('Mark channel 2 as bad for ntrode 0');
-
-      expect(channel0Checkbox).not.toBeChecked();
-      expect(channel2Checkbox).not.toBeChecked();
-
-      // Toggle checkboxes
-      await user.click(channel0Checkbox);
-      await user.click(channel2Checkbox);
-
-      expect(channel0Checkbox).toBeChecked();
-      expect(channel2Checkbox).toBeChecked();
-    });
-  });
-
   describe('Save button behavior', () => {
     it('should call onSave with updated maps', async () => {
       const onSave = vi.fn();
@@ -292,9 +297,8 @@ describe('ChannelMapEditor', () => {
     // 64c-3s partitions 64 electrodes UNEVENLY across 3 shanks (21/21/22). The
     // editor must derive each shank's Map grid from the probe catalog, not from a
     // single uniform channel array — otherwise shank 3 (22 channels) loses key 21
-    // (electrode id 63) from its Map dropdowns. Bad channels for a MULTI-shank probe
-    // are edited as ONE probe-wide selector (0..63), written to the first ntrode row
-    // (converter truth), so electrode id 63 stays reachable there too.
+    // (electrode id 63) from its Map dropdowns. (Bad channels are day-owned and not
+    // edited here.)
     const group64c3s = {
       id: 2,
       device_type: '64c-3s6mm6cm-20um-40um-sl',
@@ -335,12 +339,6 @@ describe('ChannelMapEditor', () => {
       // exist as a Map dropdown.
       const lastFieldsetSelects = fieldsets[2].querySelectorAll('.ntrode-map select');
       expect(lastFieldsetSelects).toHaveLength(22);
-
-      // Bad channels for this MULTI-shank probe are ONE probe-wide grid (0..63),
-      // written to the first ntrode row (id 0). Electrode id 63 is reachable here.
-      const probeWideBadChannels = screen.getByTestId('bad-channels-checkboxes-0');
-      expect(probeWideBadChannels.querySelectorAll('input[type="checkbox"]')).toHaveLength(64);
-      expect(screen.getByLabelText('Mark electrode 63 as bad for this probe')).toBeInTheDocument();
     });
 
     it('saves without dropping electrode id 63 (no spurious validation error)', () => {
