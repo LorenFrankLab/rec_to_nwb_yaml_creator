@@ -73,6 +73,14 @@ function decomposeOptogenetics(flatModel) {
  * a corrupt import must be rejected wholesale, never half-attributed. On success
  * returns `{ ok: true, subjectId, animalFacts, dayFacts, configuration }`.
  *
+ * Ownership: on success the returned pieces are DEEP-CLONED from the input (the
+ * function `structuredClone`s `flatModel` once, after the rejection check, and
+ * attributes everything from the clone). The returned `animalFacts` / `dayFacts` /
+ * `configuration` therefore OWN their nested arrays/objects — they do not alias
+ * `flatModel`. A consumer may mutate the result without corrupting the caller's
+ * input (and vice-versa), mirroring `mergeDayMetadata`'s own `structuredClone`
+ * boundary. The rejection path does NOT clone (no need to clone rejected input).
+ *
  * Attribution (mirrors the merge's read sources — see the merge JSDoc):
  * - animalFacts ← experimenters / subject (incl. weight, which the day overrides) /
  *   data_acq_device catalog / cameras / device / optogenetics (null when absent).
@@ -93,65 +101,70 @@ export function decomposeYaml(flatModel) {
     return { ok: false, issues };
   }
 
-  const subjectId = flatModel.subject?.subject_id;
+  // Deep-clone once (only after the rejection check passes) so the returned pieces
+  // OWN their nested arrays/objects rather than aliasing the caller's `flatModel`.
+  // Mirrors `mergeDayMetadata`'s final `structuredClone(merged)` ownership boundary.
+  const model = structuredClone(flatModel);
+
+  const subjectId = model.subject?.subject_id;
 
   // The animal's data_acq_device CATALOG is the one device the flat model carries
   // (the merge exports exactly one); the day references it by name. Keep both in
   // sync so the re-merge resolves the same single device.
-  const dataAcqDevice = flatModel.data_acq_device ?? [];
+  const dataAcqDevice = model.data_acq_device ?? [];
 
   const animalFacts = {
     experimenters: {
-      experimenter_name: flatModel.experimenter_name,
-      lab: flatModel.lab,
-      institution: flatModel.institution,
+      experimenter_name: model.experimenter_name,
+      lab: model.lab,
+      institution: model.institution,
     },
-    subject: flatModel.subject,
+    subject: model.subject,
     devices: {
       data_acq_device: dataAcqDevice,
-      device: flatModel.device,
+      device: model.device,
     },
-    cameras: flatModel.cameras ?? [],
-    optogenetics: decomposeOptogenetics(flatModel),
+    cameras: model.cameras ?? [],
+    optogenetics: decomposeOptogenetics(model),
   };
 
   const dayFacts = {
     session: {
-      session_description: flatModel.session_description,
-      session_id: flatModel.session_id,
+      session_description: model.session_description,
+      session_id: model.session_id,
       // experiment_description is attributed to the DAY (landmine 5); the animal-level
       // default is left undefined so the merge's `day || animal || ''` re-emits this.
-      experiment_description: flatModel.experiment_description,
+      experiment_description: model.experiment_description,
       // weight is a day override of the subject weight (landmine 4).
-      weight: flatModel.subject?.weight,
+      weight: model.subject?.weight,
     },
     // keywords is OMITTED-when-empty by the merge; recompose with `?? []` so the
     // merge re-omits when it was absent (landmine 8).
-    keywords: flatModel.keywords ?? [],
-    tasks: flatModel.tasks ?? [],
-    associated_files: flatModel.associated_files ?? [],
-    associated_video_files: flatModel.associated_video_files ?? [],
-    behavioral_events: flatModel.behavioral_events ?? [],
+    keywords: model.keywords ?? [],
+    tasks: model.tasks ?? [],
+    associated_files: model.associated_files ?? [],
+    associated_video_files: model.associated_video_files ?? [],
+    behavioral_events: model.behavioral_events ?? [],
     technical: {
       // units / default_header_file_path are OMITTED-when-empty by the merge; pass
       // through as-is (units may be undefined; header defaults to '') so it re-omits.
-      units: flatModel.units,
-      times_period_multiplier: flatModel.times_period_multiplier,
-      raw_data_to_volts: flatModel.raw_data_to_volts,
-      default_header_file_path: flatModel.default_header_file_path ?? '',
+      units: model.units,
+      times_period_multiplier: model.times_period_multiplier,
+      raw_data_to_volts: model.raw_data_to_volts,
+      default_header_file_path: model.default_header_file_path ?? '',
     },
     // fs_gui_yamls is DAY-owned (landmine 2) — never inside optogenetics.
-    fs_gui_yamls: flatModel.fs_gui_yamls ?? [],
+    fs_gui_yamls: model.fs_gui_yamls ?? [],
     // The day references its single recording system by name; the catalog above holds it.
     data_acq_device_name: dataAcqDevice?.[0]?.name,
     // cameras_used pins exactly the exported camera set in catalog order (landmine 3),
     // so `resolveDayCameraUsage` re-emits exactly these cameras.
-    cameras_used: (flatModel.cameras ?? []).map((camera) => camera.id),
+    cameras_used: (model.cameras ?? []).map((camera) => camera.id),
   };
 
   const configuration = {
-    electrode_groups: flatModel.electrode_groups ?? [],
-    ntrode_electrode_group_channel_map: flatModel.ntrode_electrode_group_channel_map ?? [],
+    electrode_groups: model.electrode_groups ?? [],
+    ntrode_electrode_group_channel_map: model.ntrode_electrode_group_channel_map ?? [],
   };
 
   return { ok: true, subjectId, animalFacts, dayFacts, configuration };
@@ -181,12 +194,21 @@ export function decomposeYaml(flatModel) {
  *  8. Omitted-when-empty fields (`keywords`/`units`/`default_header_file_path`) are passed
  *     through so the merge re-omits them.
  *
- * @param {{ subjectId: (string|undefined), animalFacts: object, dayFacts: object, configuration: object }} decomposed
+ * Precondition: pass a SUCCESSFUL ({@link decomposeYaml} `ok: true`) result. A
+ * failed result (`ok: false`) is rejected up front with a clear error rather than
+ * throwing an opaque destructuring error deeper in the function.
+ *
+ * @param {{ ok?: boolean, subjectId: (string|undefined), animalFacts: object, dayFacts: object, configuration: object }} decomposed
  *   A successful decompose result.
  * @returns {{ animal: object, day: object }} The minimal animal + day re-mergeable to the
  *   original flat model.
+ * @throws {Error} If handed a failed (`ok: false`) decompose result.
  */
-export function recomposeDayModel({ subjectId, animalFacts, dayFacts, configuration }) {
+export function recomposeDayModel(decomposed) {
+  if (decomposed?.ok === false) {
+    throw new Error('recomposeDayModel requires a successful decomposeYaml result');
+  }
+  const { subjectId, animalFacts, dayFacts, configuration } = decomposed;
   const animalId = subjectId ?? 'imported-animal';
   // Identity-only placeholders: the merge never reads day.date / ids / timestamps,
   // so any stable value is fine and keeps the result deterministic.

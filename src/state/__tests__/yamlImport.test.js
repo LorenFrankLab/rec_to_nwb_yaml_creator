@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import { encodeYaml, decodeYaml } from '../../io/yaml';
 import { mergeDayMetadata } from '../workspaceUtils';
-import { decomposeYaml } from '../yamlImport';
+import { decomposeYaml, recomposeDayModel } from '../yamlImport';
 import { buildRealisticWorkspace } from '../../__tests__/fixtures/workspaceBuilders';
 
 /**
@@ -127,6 +127,49 @@ describe('decomposeYaml attribution', () => {
     // fs_gui_yamls is DAY-owned, never inside optogenetics.
     expect('fs_gui_yamls' in opto).toBe(false);
     expect(result.dayFacts.fs_gui_yamls).toEqual(flat.fs_gui_yamls);
+  });
+});
+
+describe('decomposeYaml ownership (deep-cloned, non-aliasing output)', () => {
+  it('returns pieces that do not alias the input model', () => {
+    const { flat, result } = decomposeRealistic();
+    // Nested objects/arrays are owned copies, not references into the input.
+    expect(result.animalFacts.subject).not.toBe(flat.subject);
+    expect(result.animalFacts.cameras).not.toBe(flat.cameras);
+    expect(result.dayFacts.tasks).not.toBe(flat.tasks);
+    expect(result.configuration.electrode_groups).not.toBe(flat.electrode_groups);
+    // ...but they remain structurally equal.
+    expect(result.animalFacts.subject).toEqual(flat.subject);
+    expect(result.dayFacts.tasks).toEqual(flat.tasks);
+    expect(result.configuration.electrode_groups).toEqual(flat.electrode_groups);
+  });
+
+  it('mutating a returned piece does not corrupt the caller input', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    const input = decodeYaml(encodeYaml(mergeDayMetadata(animal, day)));
+    const result = decomposeYaml(input);
+    expect(result.ok).toBe(true);
+
+    const tasksBefore = structuredClone(input.tasks);
+    const weightBefore = input.subject.weight;
+
+    // Mutate returned pieces (an array and a nested scalar).
+    result.dayFacts.tasks.push({ task_name: 'INJECTED' });
+    result.animalFacts.subject.weight = -999;
+
+    // The caller's input object is untouched.
+    expect(input.tasks).toEqual(tasksBefore);
+    expect(input.subject.weight).toBe(weightBefore);
+  });
+});
+
+describe('recomposeDayModel guard', () => {
+  it('throws a clear error when handed a failed decompose result', () => {
+    const failed = decomposeYaml({});
+    expect(failed.ok).toBe(false);
+    expect(() => recomposeDayModel(failed)).toThrow(
+      'recomposeDayModel requires a successful decomposeYaml result'
+    );
   });
 });
 
