@@ -157,6 +157,52 @@ ImportYamlDialog.propTypes = {
 };
 
 /**
+ * Derive a short, human-readable remediation hint ("what to fix") from an un-importable file's
+ * raw `reason` string. PRESENTATION-ONLY and data-driven: it reads ONLY the single reason string
+ * the plan/parse layer already exposes (it adds no requirements of its own), and falls back to a
+ * generic instruction when the shape is unrecognized. The raw reason is still shown alongside the
+ * hint by the caller, so nothing is hidden.
+ *
+ * Mapping (honest, derived from the AJV-style messages the validator emits):
+ *  - `must have required property 'X'` (one or more) → "Add the missing field: `X`." listing all
+ *    reported missing props.
+ *  - a value failure that carries a path (`<path> <message>`, e.g. AJV's
+ *    `/subject/species must match pattern ...`) → "Fix the value at `<path>`: `<message>`."
+ *  - anything else → a generic "Open this file and correct the reported problem before
+ *    re-importing." (the raw reason is shown separately by the caller).
+ *
+ * @param {string} [reason] - The un-importable entry's raw reason string.
+ * @returns {string} A plain-language remediation hint (never empty).
+ */
+export function remediationHint(reason) {
+  const raw = typeof reason === 'string' ? reason : '';
+
+  // Collect every `must have required property 'X'` occurrence (a file may report several).
+  const requiredProps = [];
+  const requiredRe = /must have required property '([^']+)'/g;
+  let match;
+  while ((match = requiredRe.exec(raw)) !== null) {
+    if (!requiredProps.includes(match[1])) requiredProps.push(match[1]);
+  }
+  if (requiredProps.length > 0) {
+    const fields = requiredProps.map((p) => `\`${p}\``).join(', ');
+    return `Add the missing field${requiredProps.length === 1 ? '' : 's'}: ${fields}.`;
+  }
+
+  // A value failure AJV reports as `<instancePath> <message>` (e.g. a pattern/type/enum miss).
+  // The plan wraps it as `Validation failed: <instancePath> <message>`. Pull the path + message
+  // back out so we can point the user at the exact field without inventing requirements.
+  const valueMatch = raw.match(
+    /Validation failed:\s*(\/\S+)\s+(must (?:match pattern|be|have).+)$/
+  );
+  if (valueMatch) {
+    return `Fix the value at \`${valueMatch[1]}\`: ${valueMatch[2]}`;
+  }
+
+  return 'Open this file and correct the reported problem before re-importing.';
+}
+
+/**
  * PICK phase: the multi-file input + drop zone.
  *
  * @param {object} props - Component props.
@@ -291,6 +337,8 @@ function PreviewPhase({
               <li key={`${entry.sourceName}-${i}`}>
                 <span className="import-unimportable-name">{entry.sourceName}</span>
                 <span className="import-unimportable-reason">{entry.reason}</span>
+                {/* Presentation-only "what to fix", derived from the raw reason string above. */}
+                <span className="import-unimportable-hint">{remediationHint(entry.reason)}</span>
               </li>
             ))}
           </ul>
@@ -401,6 +449,55 @@ AnimalCard.propTypes = {
 };
 
 /**
+ * Group the result's created day ids under their created animal, for naming WHICH animals/days
+ * landed (not just counts). PRESENTATION-ONLY — reads only the result fields the executor already
+ * exposes (`createdAnimals`, `createdDays`). A created day id is `generateDayId`'s
+ * `<animalId>-<ISO date>`; the animal id may itself contain hyphens, so we split on the LAST
+ * `-<YYYY-MM-DD>` to recover the date, and attribute each day to the longest created-animal id that
+ * prefixes it (handles ids that share a prefix). Days whose animal id isn't in `createdAnimals`
+ * (e.g. a conflict→'add' onto an existing animal) get their own entry so no created day is unnamed.
+ *
+ * @param {string[]} createdAnimals - Created animal subject ids.
+ * @param {string[]} createdDays - Created day ids (`<animalId>-<ISO date>`).
+ * @returns {Array<{ animalId: string, dates: string[] }>} Per-animal entries in stable order.
+ */
+function groupCreatedDaysByAnimal(createdAnimals = [], createdDays = []) {
+  const order = [];
+  const byAnimal = new Map();
+  const ensure = (animalId) => {
+    if (!byAnimal.has(animalId)) {
+      byAnimal.set(animalId, []);
+      order.push(animalId);
+    }
+    return byAnimal.get(animalId);
+  };
+
+  // Seed in created order so an animal with zero matched days (shouldn't happen, but be honest)
+  // is still named.
+  for (const animalId of createdAnimals) ensure(animalId);
+
+  // Candidate animal ids: the created animals, longest first so a more specific prefix wins.
+  const candidates = [...createdAnimals].sort((a, b) => b.length - a.length);
+
+  for (const dayId of createdDays) {
+    // Recover the trailing ISO date (`-YYYY-MM-DD`); the rest is the animal id.
+    const m = dayId.match(/^(.*)-(\d{4}-\d{2}-\d{2})$/);
+    const datePart = m ? m[2] : '';
+    let animalId = m ? m[1] : dayId;
+    // Prefer an exact created-animal match (handles animal ids that themselves end in a date).
+    const exact = candidates.find((c) => c === animalId);
+    if (!exact) {
+      const prefix = candidates.find((c) => dayId.startsWith(`${c}-`));
+      if (prefix) animalId = prefix;
+    }
+    const dates = ensure(animalId);
+    if (datePart && !dates.includes(datePart)) dates.push(datePart);
+  }
+
+  return order.map((animalId) => ({ animalId, dates: byAnimal.get(animalId) }));
+}
+
+/**
  * RESULT phase: a brief summary of what was written, plus any failures.
  *
  * @param {object} props - Component props.
@@ -410,6 +507,13 @@ AnimalCard.propTypes = {
  */
 function ResultPhase({ result, onClose }) {
   const { createdAnimals, createdDays, skipped, failed } = result;
+  // What the result object EXPOSES: `createdAnimals` is the list of created animal subject ids,
+  // and `createdDays` is the list of created day ids, each formatted by `generateDayId` as
+  // `<animalId>-<ISO date>` (e.g. `remy-2023-06-22`). It carries no separate per-animal day list,
+  // so we group the day ids back under each created animal by their `<animalId>-` prefix and show
+  // the trailing date. (A conflict→'add' import writes days but no new animal — those day ids are
+  // still in `createdDays`; we surface any such animal id too so no created day is unnamed.)
+  const createdByAnimal = groupCreatedDaysByAnimal(createdAnimals, createdDays);
   return (
     <section className="import-result" aria-label="Import result">
       <p>
@@ -417,6 +521,22 @@ function ResultPhase({ result, onClose }) {
         {createdDays.length} recording day{createdDays.length === 1 ? '' : 's'}.
         {skipped.length > 0 ? ` Skipped ${skipped.length} animal${skipped.length === 1 ? '' : 's'}.` : ''}
       </p>
+
+      {createdByAnimal.length > 0 && (
+        <ul className="import-result-created">
+          {createdByAnimal.map(({ animalId, dates }) => (
+            <li key={animalId}>
+              <span className="import-result-animal">{animalId}</span>
+              {dates.length > 0 && (
+                <>
+                  {' — '}
+                  <span className="import-result-dates">{dates.join(', ')}</span>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
 
       {failed.length > 0 && (
         <section aria-label="Import failures">

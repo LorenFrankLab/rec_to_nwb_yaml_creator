@@ -265,4 +265,50 @@ describe('ImportYamlDialog — preview/confirm flow', () => {
     expect(screen.getByTestId('day-ids').textContent).toContain('remy-2023-06-22');
     expect(screen.getByTestId('day-ids').textContent).toContain('totoro-2023-07-01');
   });
+
+  it('un-importable file shows BOTH the raw reason AND a remediation hint naming the missing field', async () => {
+    const user = userEvent.setup();
+    const good = buildFor('remy', '2023-06-22');
+    // A file that decodes to a valid object but FAILS schema validation: drop a required
+    // root field (`data_acq_device`). AJV reports `must have required property
+    // 'data_acq_device'`, so the plan's reason is `Validation failed: must have required
+    // property 'data_acq_device'`.
+    const r = buildFor('remy', '2023-06-25');
+    const merged = merge(r.animal, r.day);
+    delete merged.data_acq_device;
+    const badYaml = encodeYaml(merged);
+    const bad = makeFile('06252023_remy_metadata.yml', badYaml);
+
+    render(<Harness initialState={{ workspace: { animals: {}, days: {}, settings: {} } }} />);
+    await pickFiles(user, [fileFor(good.animal, good.day), bad]);
+
+    const unimportable = screen.getByRole('region', {
+      name: /could not be imported|un-?importable/i,
+    });
+    // The raw reason is still shown (never hidden).
+    expect(
+      within(unimportable).getByText(/must have required property 'data_acq_device'/i)
+    ).toBeInTheDocument();
+    // PLUS a human remediation hint that names the field to add.
+    const hint = within(unimportable).getByText(/add the missing field/i);
+    expect(hint).toBeInTheDocument();
+    expect(hint.textContent).toMatch(/data_acq_device/);
+  });
+
+  it('result screen names the created animal id and its day dates', async () => {
+    const user = userEvent.setup();
+    const r1 = buildFor('remy', '2023-06-22');
+    const r2 = buildFor('remy', '2023-06-25');
+
+    render(<Harness initialState={{ workspace: { animals: {}, days: {}, settings: {} } }} />);
+    await pickFiles(user, [fileFor(r1.animal, r1.day), fileFor(r2.animal, r2.day)]);
+    await user.click(screen.getByRole('button', { name: /^confirm import$|^confirm$/i }));
+
+    const resultRegion = await screen.findByRole('region', { name: /import result/i });
+    // The created animal id is named (not just a count).
+    expect(within(resultRegion).getByText(/remy/)).toBeInTheDocument();
+    // Both day dates are shown.
+    expect(within(resultRegion).getByText(/2023-06-22/)).toBeInTheDocument();
+    expect(within(resultRegion).getByText(/2023-06-25/)).toBeInTheDocument();
+  });
 });

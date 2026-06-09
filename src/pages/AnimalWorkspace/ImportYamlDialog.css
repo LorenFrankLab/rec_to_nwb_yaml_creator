@@ -148,6 +148,41 @@
   color: #a33;
 }
 
+/* The remediation hint ("what to fix"), shown under the raw reason. */
+.import-unimportable-hint {
+  display: block;
+  margin-top: 0.15rem;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.import-unimportable-hint code {
+  font-size: 0.85em;
+  background: #fbe2e2;
+  padding: 0.05em 0.3em;
+  border-radius: 3px;
+}
+
+/* RESULT phase: the named created animals + their day dates. */
+.import-result-created {
+  margin: 0 0 0.75rem;
+  padding-left: 1.25rem;
+  max-height: 14rem;
+  overflow-y: auto;
+}
+
+.import-result-created li {
+  margin-bottom: 0.25rem;
+}
+
+.import-result-animal {
+  font-weight: 600;
+}
+
+.import-result-dates {
+  color: #444;
+}
+
 .import-actions {
   display: flex;
   justify-content: flex-end;
