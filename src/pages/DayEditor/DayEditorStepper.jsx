@@ -5,10 +5,9 @@ import { useDayIdFromUrl } from '../../hooks/useDayIdFromUrl';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { getAnimalSubject, getDayTasks, getAnimalDayIds } from '../../state/workspaceSelectors';
 import { applyRepairCommand } from '../../state/repairCommands';
-import { computeStepStatus, animalSetupTabForFieldPath } from '../../domain/validation';
+import { computeStepStatus, animalSetupTabForFieldPath, validateDay } from '../../domain/validation';
 import { describeOwner } from '../../domain/dayRecovery';
-import { isExportEnabled } from './stepGate';
-import StepNavigation from './StepNavigation';
+import DayEditorSectionNav from './DayEditorSectionNav';
 import SaveIndicator from './SaveIndicator';
 import OverviewStep from './OverviewStep';
 import DevicesStep from './DevicesStep';
@@ -18,14 +17,49 @@ import ExportStep from './ExportStep';
 import ErrorState from './ErrorState';
 
 /**
- * Day Editor Stepper - Container for multi-step session metadata editing
+ * Section-nav structure: the five sections grouped for the tabbed nav, in display order.
+ * Labels are display-only (richer than the bare step ids) — the `id` is the step key used
+ * for `currentStep`, `computeStepStatus`, and the component lookup. The 5 components are
+ * unchanged: 5 nav items, never split.
+ */
+const SECTION_GROUPS = [
+  { label: 'Session', items: [{ id: 'overview', label: 'Overview' }] },
+  {
+    label: 'Recording',
+    items: [
+      { id: 'devices', label: 'Devices & Failed Channels' },
+      { id: 'epochs', label: 'Tasks & Epochs' },
+    ],
+  },
+  {
+    label: 'Finish',
+    items: [
+      { id: 'validation', label: 'Validation' },
+      { id: 'export', label: 'Export' },
+    ],
+  },
+];
+
+/**
+ * Day Editor - Container for tabbed session metadata editing.
  *
- * Manages the day editor workflow with 5 steps:
- * 1. Overview - Session metadata
- * 2. Devices - Electrode groups, cameras
- * 3. Epochs - Tasks, behavioral events
- * 4. Validation - Summary of all validation issues
- * 5. Export - Download YAML file (gated until all prerequisite steps valid)
+ * This is NOT a linear stepper: the day editor is a single route (`#/day/:id`) whose
+ * active section is LOCAL STATE (`currentStep`), and a grouped section-nav (mirroring
+ * AnimalView's `section-nav`) lets the user move FREELY between the five sections — no
+ * wizard gating. The five sections (rendered by the same five components) are:
+ *   1. Overview   - Session metadata
+ *   2. Devices    - Electrode groups, channel maps, failed channels
+ *   3. Epochs     - Tasks, behavioral events
+ *   4. Validation - Summary of all validation issues
+ *   5. Export     - Download YAML file
+ *
+ * The export gate is NOT a nav lock — Export is a freely reachable tab. The gate survives
+ * inside ExportStep itself, which independently computes `isExportEnabled`/`exportBlocked`
+ * and hard-stops `handleDownload` while the day is invalid (defense in depth). The Export
+ * nav item shows its status glyph (✗/⚠) so the block stays visible.
+ *
+ * A visible "Next ▸"/"◂ Prev" affordance and the global Alt+←/→ shortcuts advance/retreat
+ * through the order overview→devices→epochs→validation→export (Export included).
  *
  * @returns {JSX.Element}
  *
@@ -38,30 +72,24 @@ export default function DayEditorStepper() {
   const dayId = useDayIdFromUrl();
   const [currentStep, setCurrentStep] = useState('overview');
 
-  // Global Alt+Arrow shortcuts advance/retreat this stepper. The step order is
-  // fixed, so a ref captures it once and the handler stays stable.
+  // Global Alt+Arrow shortcuts advance/retreat the active section. The section order is
+  // fixed, so a ref captures it once and the handler stays stable. Export is now a freely
+  // reachable tab (its DOWNLOAD action self-gates in ExportStep), so there is NO keyboard
+  // fail-close here — Alt+→ advances all the way into Export.
   const stepOrderRef = useRef(['overview', 'devices', 'epochs', 'validation', 'export']);
-  // Latest validation status, read by the keyboard handler at fire time so the
-  // shortcut respects the SAME export gate as the click path (no advancing into a
-  // gated Export). Updated each render below, after stepStatus is computed.
-  const stepStatusRef = useRef(null);
+  const goToStep = useCallback((direction) => {
+    setCurrentStep((cur) => {
+      const ids = stepOrderRef.current;
+      const idx = ids.indexOf(cur);
+      if (direction === 'next') return ids[Math.min(idx + 1, ids.length - 1)];
+      if (direction === 'prev') return ids[Math.max(idx - 1, 0)];
+      return cur;
+    });
+  }, []);
   useStepperShortcut(
     useCallback((action) => {
-      setCurrentStep((cur) => {
-        const ids = stepOrderRef.current;
-        const idx = ids.indexOf(cur);
-        if (action === 'next') {
-          const nextId = ids[Math.min(idx + 1, ids.length - 1)];
-          // Fail closed: never let the keyboard cross into Export while it is gated.
-          if (nextId === 'export' && !isExportEnabled(stepStatusRef.current)) {
-            return cur;
-          }
-          return nextId;
-        }
-        if (action === 'prev') return ids[Math.max(idx - 1, 0)];
-        return cur;
-      });
-    }, [])
+      if (action === 'next' || action === 'prev') goToStep(action);
+    }, [goToStep])
   );
 
   // Get day and animal from store. Resolve the OWNER KEY robustly: normally `day.animalId`, but a
@@ -156,9 +184,16 @@ export default function DayEditorStepper() {
     }
     return computeStepStatus(day, mergedDay, animal, animalDays);
   }, [day, mergedDay, animal, animalDays]);
-  // Keep the keyboard handler's view of the gate current (it reads this ref at
-  // fire time rather than closing over a stale status).
-  stepStatusRef.current = stepStatus;
+
+  // To-fix count shown on the Validation nav item: the number of blocking (error-severity)
+  // issues the day still has. Cheap reuse of the same validator ExportStep gates on, so the
+  // nav scent can never disagree with the export block.
+  const toFixCount = useMemo(() => {
+    if (!day || !mergedDay) return 0;
+    return validateDay(day, mergedDay, animal, animalDays).filter(
+      (issue) => issue.severity === 'error'
+    ).length;
+  }, [day, mergedDay, animal, animalDays]);
 
   // Repair-action navigation. A repair routes to the step that owns the fix and,
   // when a field target is available, focuses/highlights that control after the
@@ -166,6 +201,22 @@ export default function DayEditorStepper() {
   // itself (focusing the main content region).
   const [focusRequest, setFocusRequest] = useState(null);
   const focusTokenRef = useRef(0);
+
+  // Mirror AnimalView's focus-on-section-change: move focus onto the panel (#main-content)
+  // when the active section changes, so keyboard/SR users land on the new content rather
+  // than being stranded at the top. Skip the initial mount (AppLayout/route owns mount
+  // focus). When a repair routed here WITH a field target (`focusRequest` set), the
+  // repair-focus effect below owns focus instead (it lands on the specific control), so this
+  // generic effect must not fight it — it only fires for a plain section switch.
+  const isFirstSectionRender = useRef(true);
+  useEffect(() => {
+    if (isFirstSectionRender.current) {
+      isFirstSectionRender.current = false;
+      return;
+    }
+    if (focusRequest) return; // repair-focus effect handles focus for a targeted repair.
+    document.getElementById('main-content')?.focus();
+  }, [currentStep, focusRequest]);
   const handleStepNavigate = useCallback((target, fieldPath) => {
     // An 'animal' target routes to the Animal Editor (the editable owner of device
     // geometry, channel maps, cameras, data-acq devices, and subject identity),
@@ -291,15 +342,16 @@ export default function DayEditorStepper() {
     actions.updateAnimal(ownerKey, { subject: { ...getAnimalSubject(animal), [field]: value } });
   }, [animal, ownerKey, actions]);
 
-  // Step configuration. Export stays gated by isExportEnabled (every prerequisite
-  // step valid, including the now-real Validation step).
-  const steps = [
-    { id: 'overview', label: 'Overview', component: OverviewStep },
-    { id: 'devices', label: 'Devices', component: DevicesStep },
-    { id: 'epochs', label: 'Epochs', component: TasksEpochsStep },
-    { id: 'validation', label: 'Validation', component: ValidationStep },
-    { id: 'export', label: 'Export', component: ExportStep },
-  ];
+  // Section → component lookup. The five sections and their internals are unchanged; only
+  // the navigation shell is tabbed now. Labels here are display-only (the nav may use
+  // richer labels), so they must NOT be relied on as ids.
+  const STEP_COMPONENTS = {
+    overview: OverviewStep,
+    devices: DevicesStep,
+    epochs: TasksEpochsStep,
+    validation: ValidationStep,
+    export: ExportStep,
+  };
 
   // Early returns AFTER all hooks (Rules of Hooks requirement)
   if (!dayId) {
@@ -314,7 +366,11 @@ export default function DayEditorStepper() {
     return <ErrorState message={`Animal not found: ${describeOwner(day.animalId)}`} />;
   }
 
-  const CurrentStepComponent = steps.find(s => s.id === currentStep).component;
+  const CurrentStepComponent = STEP_COMPONENTS[currentStep];
+  const stepOrder = stepOrderRef.current;
+  const currentIndex = stepOrder.indexOf(currentStep);
+  const hasPrev = currentIndex > 0;
+  const hasNext = currentIndex < stepOrder.length - 1;
 
   return (
     <div className="day-editor-stepper">
@@ -339,35 +395,59 @@ export default function DayEditorStepper() {
         />
       </div>
 
-      <StepNavigation
-        steps={steps}
-        currentStep={currentStep}
-        stepStatus={stepStatus}
-        onNavigate={handleStepNavigate}
-      />
-
-      <main
-        id="main-content"
-        className="day-editor-content"
-        role="main"
-        aria-label="Day editor"
-        tabIndex="-1"
-      >
-        <CurrentStepComponent
-          animal={animal}
-          animalKey={ownerKey}
-          day={day}
-          mergedDay={mergedDay}
-          knownTaskDescriptions={knownTaskDescriptions}
-          onFieldUpdate={handleFieldUpdate}
-          onSubjectUpdate={handleSubjectUpdate}
-          onNavigate={handleStepNavigate}
-          onRepair={handleRepair}
-          focusRequest={focusRequest}
-          animalDays={animalDays}
-          actions={actions}
+      <div className="day-editor-body">
+        <DayEditorSectionNav
+          groups={SECTION_GROUPS}
+          currentStep={currentStep}
+          stepStatus={stepStatus}
+          onNavigate={(id) => setCurrentStep(id)}
+          toFixCount={toFixCount}
         />
-      </main>
+
+        <main
+          id="main-content"
+          className="day-editor-content"
+          role="main"
+          aria-label="Day editor"
+          tabIndex="-1"
+        >
+          <CurrentStepComponent
+            animal={animal}
+            animalKey={ownerKey}
+            day={day}
+            mergedDay={mergedDay}
+            knownTaskDescriptions={knownTaskDescriptions}
+            onFieldUpdate={handleFieldUpdate}
+            onSubjectUpdate={handleSubjectUpdate}
+            onNavigate={handleStepNavigate}
+            onRepair={handleRepair}
+            focusRequest={focusRequest}
+            animalDays={animalDays}
+            actions={actions}
+          />
+
+          {/* Free-navigation affordance: advances/retreats through the fixed section order
+              (Export included — its DOWNLOAD action self-gates in ExportStep, not here). */}
+          <div className="day-editor-section-pager">
+            <button
+              type="button"
+              className="day-editor-pager-prev"
+              onClick={() => goToStep('prev')}
+              disabled={!hasPrev}
+            >
+              ◂ Prev
+            </button>
+            <button
+              type="button"
+              className="day-editor-pager-next"
+              onClick={() => goToStep('next')}
+              disabled={!hasNext}
+            >
+              Next ▸
+            </button>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

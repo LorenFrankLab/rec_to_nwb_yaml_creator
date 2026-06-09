@@ -64,111 +64,122 @@
   width: 100%;
 }
 
-/* ===== Step Navigation ===== */
+/* ===== Tabbed section nav (replaces the old linear stepper nav) =====
+   Mirrors AnimalView's grouped section-nav: a LEFT nav of free-navigation buttons + the
+   panel. The Day Editor is a single route, so items are buttons (local state), not links. */
 
-.step-navigation {
-  background-color: var(--color-white);
-  border-bottom: 2px solid var(--color-grey-200);
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+.day-editor-body {
+  display: grid;
+  grid-template-columns: 230px 1fr;
+  align-items: start;
 }
 
-.step-list {
+/* Base section-nav layout (kept self-contained so the Day Editor doesn't depend on
+   AnimalView.css being loaded; the selectors match AnimalView's and the rules are
+   compatible). */
+.section-nav {
+  border-right: 1px solid var(--color-grey-200);
+  padding: 1rem 0.7rem;
+}
+
+.section-nav-group {
+  margin-bottom: 1.1rem;
+}
+
+.section-nav-group-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--color-grey-600);
+  padding: 0 0.55rem 0.4rem;
+}
+
+.section-nav-item {
   display: flex;
-  list-style: none;
-  padding: 0;
-  margin: 0;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.55rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border: 1px solid transparent;
+  border-bottom: 1px solid var(--color-grey-200);
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  color: inherit;
 }
 
-.step-item {
+.section-nav-item:hover {
+  background: var(--color-grey-100);
+  border-radius: 8px;
+}
+
+.section-nav-item.is-active {
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary);
+  border-radius: 8px;
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--color-primary);
+}
+
+.section-nav-item:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+.section-nav-item-name {
   flex: 1;
 }
 
-.step-button {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-md);
-  border: none;
-  background: transparent;
-  border-bottom: 3px solid transparent;
-  cursor: pointer;
-  font-size: var(--font-size-sm);
-  font-family: inherit;
-  transition: all var(--transition-standard);
-  color: var(--color-grey-900);
-}
-
-.step-number {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background-color: var(--color-grey-200);
+.section-nav-count {
+  flex: none;
+  font-size: 0.7rem;
   color: var(--color-grey-600);
-  font-size: 0.75rem;
-  font-weight: 600;
 }
 
-.step-item.current .step-number {
-  background-color: var(--color-primary);
-  color: var(--color-white);
+.section-nav-status-icon {
+  flex: none;
+  font-size: 1rem;
+  line-height: 1;
 }
 
-.step-item.step-valid .step-number {
-  background-color: var(--color-success);
-  color: var(--color-white);
+.section-nav-item.step-valid .section-nav-status-icon {
+  color: var(--color-success);
 }
 
-.step-item.step-error .step-number {
-  background-color: var(--color-error);
-  color: var(--color-white);
+.section-nav-item.step-incomplete .section-nav-status-icon {
+  color: var(--color-warning);
 }
 
-.step-item.current .step-button {
-  border-bottom-color: var(--color-primary);
-  background-color: var(--color-primary-light);
-  font-weight: 600;
+.section-nav-item.step-error .section-nav-status-icon {
+  color: var(--color-error);
 }
 
-.step-button:hover:not(:disabled):not([aria-disabled='true']) {
-  background-color: var(--color-grey-100);
+/* Free-navigation pager below the panel. */
+.day-editor-section-pager {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-lg);
 }
 
-.step-button:focus {
-  outline: 2px solid var(--color-primary);
-  outline-offset: -2px;
-  z-index: 1;
+.day-editor-pager-prev,
+.day-editor-pager-next {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-family: inherit;
+  cursor: pointer;
 }
 
-/* Disabled steps use aria-disabled (not the native disabled attribute) so screen
-   readers can still reach and announce them; style both for parity. */
-.step-button:disabled,
-.step-button[aria-disabled='true'] {
+.day-editor-pager-prev:disabled,
+.day-editor-pager-next:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.step-status-icon {
-  font-size: 1rem;
-}
-
-.step-item.step-valid .step-status-icon {
-  color: var(--color-success);
-}
-
-.step-item.step-incomplete .step-status-icon {
-  color: var(--color-warning);
-}
-
-.step-item.step-error .step-status-icon {
-  color: var(--color-error);
+.day-editor-pager-next {
+  margin-left: auto;
 }
 
 /* ===== Save Indicator ===== */
@@ -389,18 +400,14 @@
 /* ===== Responsive ===== */
 
 @media (max-width: 768px) {
-  .step-list {
-    flex-direction: column;
+  /* Collapse the two-column nav+panel layout to a single stacked column. */
+  .day-editor-body {
+    grid-template-columns: 1fr;
   }
 
-  .step-button {
-    justify-content: flex-start;
-    border-bottom: none;
-    border-left: 3px solid transparent;
-  }
-
-  .step-item.current .step-button {
-    border-left-color: var(--color-primary);
+  .section-nav {
+    border-right: none;
+    border-bottom: 1px solid var(--color-grey-200);
   }
 
   .form-grid {
