@@ -21,58 +21,11 @@ import {
   seedWorkspace,
   createAnimalViaUI,
   buildConfiguredWorkspaceBlob,
+  makeEmptyAnimal,
+  FIXED_TIMESTAMP,
   ANIMAL_ID,
   DAY_ID,
 } from './helpers/workspace';
-
-const TS = '2023-06-22T12:00:00.000Z';
-
-/**
- * Build a minimal behavior-only animal record (valid subject, empty catalogs, base config, no days)
- * for the lifecycle scenarios that just need a SECOND animal to switch to / delete. Mirrors the
- * shape `createAnimal` (src/state/useWorkspace.js) writes; verified to hydrate cleanly.
- *
- * @param {string} id - The animal store key + subject_id.
- * @returns {object} A loader-ready animal record.
- */
-function makeAnimal(id) {
-  return {
-    id,
-    subject: {
-      description: 'Subject',
-      genotype: 'Wild Type',
-      species: 'Rattus norvegicus',
-      sex: 'M',
-      subject_id: id,
-      weight: 400,
-      date_of_birth: '2023-01-10T00:00:00',
-      age: 'P164',
-    },
-    devices: {
-      data_acq_device: [],
-      device: { name: ['Trodes'] },
-      electrode_groups: [],
-      ntrode_electrode_group_channel_map: [],
-    },
-    cameras: [],
-    experimenters: { experimenter_name: ['Doe, Jane'], lab: 'Frank', institution: 'UCSF' },
-    technicalDefaults: { raw_data_to_volts: 0.195, times_period_multiplier: 1.5 },
-    optogenetics: undefined,
-    behavioral_events: [],
-    days: [],
-    created: TS,
-    lastModified: TS,
-    configurationHistory: [
-      {
-        version: 1,
-        date: '2023-06-22',
-        description: 'Initial configuration',
-        devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [] },
-        appliedToDays: [],
-      },
-    ],
-  };
-}
 
 /**
  * The top object-selector (AnimalSwitcher) trigger on an animal route.
@@ -93,7 +46,7 @@ test.describe('Animal lifecycle — create & switch', () => {
   }) => {
     // Seed one animal so the populated-picker "+ New Animal" button (aria-label "Create new animal")
     // is the create entry point.
-    await seedWorkspace(page, buildConfiguredWorkspaceBlob({ animals: { remy: makeAnimal('remy') } }));
+    await seedWorkspace(page, buildConfiguredWorkspaceBlob({ animals: { remy: makeEmptyAnimal('remy') } }));
     await page.goto('/#/workspace');
     await page.reload();
     await expect(page.getByRole('heading', { level: 1, name: 'Animal Workspace' })).toBeVisible();
@@ -118,7 +71,7 @@ test.describe('Animal lifecycle — create & switch', () => {
   }) => {
     await seedWorkspace(
       page,
-      buildConfiguredWorkspaceBlob({ animals: { remy: makeAnimal('remy'), totoro: makeAnimal('totoro') } })
+      buildConfiguredWorkspaceBlob({ animals: { remy: makeEmptyAnimal('remy'), totoro: makeEmptyAnimal('totoro') } })
     );
     await page.goto(`/#/animal/${ANIMAL_ID}/days`);
     await page.reload();
@@ -151,7 +104,7 @@ test.describe('Animal lifecycle — create & switch', () => {
   test('the picker-card / switcher-row / header ⋮ menus carry no dead "Rename…" placeholder', async ({
     page,
   }) => {
-    await seedWorkspace(page, buildConfiguredWorkspaceBlob({ animals: { remy: makeAnimal('remy') } }));
+    await seedWorkspace(page, buildConfiguredWorkspaceBlob({ animals: { remy: makeEmptyAnimal('remy') } }));
 
     // Picker card ⋮: Open / Edit profile… / Delete animal…
     await page.goto('/#/workspace');
@@ -184,7 +137,7 @@ test.describe('Animal lifecycle — destructive delete confirms', () => {
   }) => {
     // remy (current) + a second animal with one VALIDATED/EXPORTED day so the cascade copy names a
     // day count AND the downloaded-artifacts caveat.
-    const other = makeAnimal('totoro');
+    const other = makeEmptyAnimal('totoro');
     other.days = ['totoro-2023-06-22'];
     const otherDay = {
       id: 'totoro-2023-06-22',
@@ -198,11 +151,11 @@ test.describe('Animal lifecycle — destructive delete confirms', () => {
       associated_video_files: [],
       technical: { times_period_multiplier: 1.5, raw_data_to_volts: 0.195, default_header_file_path: '', units: undefined },
       state: { draft: false, validated: true, exported: true },
-      created: TS,
-      lastModified: TS,
+      created: FIXED_TIMESTAMP,
+      lastModified: FIXED_TIMESTAMP,
       configurationVersion: 1,
     };
-    const blob = buildConfiguredWorkspaceBlob({ animals: { remy: makeAnimal('remy'), totoro: other } });
+    const blob = buildConfiguredWorkspaceBlob({ animals: { remy: makeEmptyAnimal('remy'), totoro: other } });
     blob.workspace.days['totoro-2023-06-22'] = otherDay;
     await seedWorkspace(page, blob);
     await page.goto(`/#/animal/${ANIMAL_ID}/days`);
@@ -242,7 +195,7 @@ test.describe('Animal lifecycle — destructive delete confirms', () => {
   }) => {
     await seedWorkspace(
       page,
-      buildConfiguredWorkspaceBlob({ animals: { remy: makeAnimal('remy'), totoro: makeAnimal('totoro') } })
+      buildConfiguredWorkspaceBlob({ animals: { remy: makeEmptyAnimal('remy'), totoro: makeEmptyAnimal('totoro') } })
     );
     await page.goto(`/#/animal/${ANIMAL_ID}/days`);
     await page.reload();
@@ -290,24 +243,49 @@ test.describe('Day lifecycle — plain delete confirm + cleanup coherence', () =
     await expect(page.getByRole('button', { name: /^Delete recording day/ })).toBeVisible();
   });
 
-  test('a validated/exported day adds the downloaded-artifacts caveat; Confirm removes only that day', async ({
+  test('a validated/exported day adds the downloaded-artifacts caveat; Confirm removes ONLY that day (a sibling day survives)', async ({
     page,
   }) => {
-    // Mark the seeded day validated+exported so the artifacts caveat appears.
+    // Seed TWO days so "only that day" is actually provable: the original seeded day
+    // (2023-06-22, marked validated+exported so the artifacts caveat appears) plus a SIBLING day on
+    // a different date (2023-06-23) registered in both `animal.days` and `workspace.days`. Distinct
+    // dates give each row a distinct day-link href + a distinct "Delete recording day <date>…"
+    // accessible name, so we target one without ambiguity.
     const blob = buildConfiguredWorkspaceBlob();
     blob.workspace.days[DAY_ID].state = { draft: false, validated: true, exported: true };
+
+    const SIBLING_ID = 'remy-2023-06-23';
+    blob.workspace.days[SIBLING_ID] = {
+      ...structuredClone(blob.workspace.days[DAY_ID]),
+      id: SIBLING_ID,
+      date: '2023-06-23',
+      experimentDate: '06232023',
+      state: { draft: false, validated: true, exported: false },
+    };
+    blob.workspace.animals[ANIMAL_ID].days = [DAY_ID, SIBLING_ID];
+
     await seedWorkspace(page, blob);
     await page.goto(`/#/animal/${ANIMAL_ID}/days`);
     await page.reload();
 
-    await page.getByRole('button', { name: /^Delete recording day/ }).click();
+    // Both day rows are present before the delete (target by the day-link href — the row's stable id).
+    const targetLink = page.locator(`a[href="#/day/${DAY_ID}"]`);
+    const siblingLink = page.locator(`a[href="#/day/${SIBLING_ID}"]`);
+    await expect(targetLink).toBeVisible();
+    await expect(siblingLink).toBeVisible();
+
+    // Delete the 2023-06-22 day specifically (its own accessible-named delete button).
+    await page.getByRole('button', { name: 'Delete recording day 2023-06-22…' }).click();
     const dialog = page.getByRole('alertdialog', { name: 'Delete recording day?' });
     await expect(dialog).toBeVisible();
     await expect(dialog.getByText(/does not delete any YAML you already downloaded/)).toBeVisible();
 
-    // Confirm removes that day — the empty-day state replaces it.
+    // Confirm removes ONLY that day: (a) the deleted day's row is GONE, (b) the sibling SURVIVES.
     await dialog.getByRole('button', { name: 'Delete day' }).click();
     await expect(dialog).toBeHidden();
-    await expect(page.getByText('No recording days yet.')).toBeVisible();
+    await expect(targetLink).toHaveCount(0);
+    await expect(siblingLink).toBeVisible();
+    // The empty-state is NOT shown (a day still exists) — proves we didn't wipe the list.
+    await expect(page.getByText('No recording days yet.')).toHaveCount(0);
   });
 });

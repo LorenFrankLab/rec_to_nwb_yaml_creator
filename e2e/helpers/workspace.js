@@ -124,6 +124,69 @@ export async function seedAndOpen(page, blob, hashRoute) {
 }
 
 /**
+ * Fixed timestamp stamped onto harness-built animal/day records so seeds are deterministic.
+ * @type {string}
+ */
+export const FIXED_TIMESTAMP = '2023-06-22T12:00:00.000Z';
+
+/**
+ * Build an empty-but-valid animal record (valid subject, empty device/camera catalogs, a base
+ * configuration history, no recording days) for specs that just need a second/behavior-only animal
+ * to switch to, delete, or hydrate. Mirrors the shape `createAnimal` (src/state/useWorkspace.js)
+ * writes; verified to hydrate cleanly on `#/animal/:id/days` (every setup section reads the neutral
+ * ○ "not set up" todo state, the first-run "Set up this animal" card shows, and no day is required).
+ *
+ * `overrides` shallow-merges over the top-level record (e.g. `{ days, configurationHistory }`) and a
+ * nested `subject` is shallow-merged over the default subject so a caller can tweak one field (e.g.
+ * `{ subject: { description: 'Behavior-only subject' } }`) without re-declaring the whole subject.
+ *
+ * @param {string} id - The animal store key + subject_id.
+ * @param {object} [overrides] - Shallow overrides merged onto the record (nested `subject` merges too).
+ * @returns {object} A loader-ready animal record.
+ */
+export function makeEmptyAnimal(id, overrides = {}) {
+  const { subject: subjectOverride, ...rest } = overrides;
+  return {
+    id,
+    subject: {
+      description: 'Subject',
+      genotype: 'Wild Type',
+      species: 'Rattus norvegicus',
+      sex: 'M',
+      subject_id: id,
+      weight: 400,
+      date_of_birth: '2023-01-10T00:00:00',
+      age: 'P164',
+      ...subjectOverride,
+    },
+    devices: {
+      data_acq_device: [],
+      device: { name: ['Trodes'] },
+      electrode_groups: [],
+      ntrode_electrode_group_channel_map: [],
+    },
+    cameras: [],
+    experimenters: { experimenter_name: ['Doe, Jane'], lab: 'Frank', institution: 'UCSF' },
+    technicalDefaults: { raw_data_to_volts: 0.195, times_period_multiplier: 1.5 },
+    optogenetics: undefined,
+    behavioral_events: [],
+    days: [],
+    created: FIXED_TIMESTAMP,
+    lastModified: FIXED_TIMESTAMP,
+    configurationHistory: [
+      {
+        version: 1,
+        date: '2023-06-22',
+        description: 'Initial configuration',
+        devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [] },
+        appliedToDays: [],
+      },
+    ],
+    ...rest,
+  };
+}
+
+/**
  * Build a persistable workspace blob from the realistic animal + day fixture.
  *
  * Reuses `buildRealisticWorkspace()` (a pure, side-effect-free, fixed-timestamp data

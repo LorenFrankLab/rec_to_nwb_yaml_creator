@@ -31,6 +31,7 @@ import {
   seedWorkspace,
   seedAndOpen,
   buildConfiguredWorkspaceBlob,
+  makeEmptyAnimal,
   ANIMAL_ID,
   DAY_ID,
 } from './helpers/workspace';
@@ -47,53 +48,17 @@ const TAB_SCOPE = {
 };
 
 /**
- * Build a behavior-only second animal `totoro` with ZERO setup (no electrode groups, channel maps,
- * recording system, or cameras) but a valid subject + a base configuration history, mirroring the
- * shape `createAnimal` (src/state/useWorkspace.js) writes. Verified to hydrate cleanly on
- * `#/animal/totoro/days` (every setup section reads the neutral ○ "not set up" todo state, the
- * first-run "Set up this animal" card shows, and no day is required).
+ * A behavior-only second animal `totoro` with ZERO setup (no electrode groups, channel maps,
+ * recording system, or cameras) but a valid subject + a base configuration history. Built from the
+ * shared {@link makeEmptyAnimal} (which mirrors what `createAnimal` writes) with only the subject
+ * description tweaked. Verified to hydrate cleanly on `#/animal/totoro/days` (every setup section
+ * reads the neutral ○ "not set up" todo state, the first-run "Set up this animal" card shows, and no
+ * day is required).
  *
  * @returns {object} A loader-ready `totoro` animal record.
  */
-function buildBehaviorOnlyAnimal() {
-  const TS = '2023-06-22T12:00:00.000Z';
-  return {
-    id: 'totoro',
-    subject: {
-      description: 'Behavior-only subject',
-      genotype: 'Wild Type',
-      species: 'Rattus norvegicus',
-      sex: 'M',
-      subject_id: 'totoro',
-      weight: 400,
-      date_of_birth: '2023-01-10T00:00:00',
-      age: 'P164',
-    },
-    devices: {
-      data_acq_device: [],
-      device: { name: ['Trodes'] },
-      electrode_groups: [],
-      ntrode_electrode_group_channel_map: [],
-    },
-    cameras: [],
-    experimenters: { experimenter_name: ['Doe, Jane'], lab: 'Frank', institution: 'UCSF' },
-    technicalDefaults: { raw_data_to_volts: 0.195, times_period_multiplier: 1.5 },
-    optogenetics: undefined,
-    behavioral_events: [],
-    days: [],
-    created: TS,
-    lastModified: TS,
-    configurationHistory: [
-      {
-        version: 1,
-        date: '2023-06-22',
-        description: 'Initial configuration',
-        devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [] },
-        appliedToDays: [],
-      },
-    ],
-  };
-}
+const buildBehaviorOnlyAnimal = () =>
+  makeEmptyAnimal('totoro', { subject: { description: 'Behavior-only subject' } });
 
 /**
  * The AnimalView section-nav (the navigation landmark) locator.
