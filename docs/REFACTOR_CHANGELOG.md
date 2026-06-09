@@ -4,6 +4,17 @@
 
 **Last Updated:** June 8, 2026
 
+## Internal YAML-decompose module (June 8, 2026)
+
+Added an internal module (`src/state/yamlImport.js`) that **decomposes** a flat NWB YAML model back
+into the layered animal/day facts the export merge reads — the inverse of `mergeDayMetadata`.
+`decomposeYaml` validates first and rejects any error-severity input wholesale (`{ ok: false, issues }`,
+never a partial result); `recomposeDayModel` rebuilds the minimal `{ animal, day }` in the exact shapes
+the merge consumes. Proven by a **byte-identical round-trip** gate over genuine merge outputs
+(`encodeYaml(mergeDayMetadata(...))`) — realistic, non-latest probe-config pin, optogenetics, minimal,
+and a committed merge-output snapshot. No UI yet; the merge and golden fixtures are unchanged, so the
+golden baselines remain byte-identical.
+
 ## Per-day "cameras used" checklist (June 8, 2026)
 
 The Day Editor's Devices step now shows an explicit, glanceable **cameras-used checklist** of the
