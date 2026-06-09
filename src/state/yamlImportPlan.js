@@ -120,7 +120,7 @@ function toIsoDate(yyyy, mm, dd) {
  * @property {string} subjectId
  * @property {'none'|'exists'} conflict
  * @property {(string|null)} existingAnimalId
- * @property {'add'} defaultResolution
+ * @property {('add'|null)} defaultResolution - `'add'` for a conflicting (`conflict: 'exists'`) animal; `null` for a new (`conflict: 'none'`) animal (its resolution is unused — a new animal is always created).
  * @property {object} subject - Resolved subject scalar facts (latest-date-wins).
  * @property {object} experimenters - Resolved experimenters (latest-date-wins).
  * @property {(object|null)} optogenetics - Resolved opto (latest-date-wins) or null.
@@ -424,7 +424,19 @@ export function planImport(decodedFiles, existingWorkspace) {
     const sourceName = file?.sourceName;
     const flatModel = file?.flatModel;
 
-    const decomposed = decomposeYaml(flatModel);
+    // Per-file resilience: a single pathological file must NOT abort the whole import
+    // preview. If decompose/validate THROWS on this file (e.g. a malformed parse with a
+    // throwing accessor), route it to `unimportable` with a clear reason and continue.
+    let decomposed;
+    try {
+      decomposed = decomposeYaml(flatModel);
+    } catch (error) {
+      unimportable.push({
+        sourceName,
+        reason: `Could not analyze file: ${error?.message ?? String(error)}`,
+      });
+      continue;
+    }
     if (!decomposed.ok) {
       const reason = decomposed.issues?.find((i) => i.severity === 'error')?.message
         ? `Validation failed: ${decomposed.issues.find((i) => i.severity === 'error').message}`
@@ -496,7 +508,11 @@ export function planImport(decodedFiles, existingWorkspace) {
       subjectId,
       conflict: existingAnimalId ? 'exists' : 'none',
       existingAnimalId: existingAnimalId ?? null,
-      defaultResolution: 'add',
+      // Only a conflicting ('exists') animal has a meaningful default action ('add' the
+      // imported days to the existing animal); a new ('none') animal is always created, so
+      // its resolution is unused (`null`, not a dead 'add' literal). The executor/dialog
+      // read this field only when `conflict === 'exists'`.
+      defaultResolution: existingAnimalId ? 'add' : null,
       subject: facts.subject,
       experimenters: facts.experimenters,
       optogenetics: facts.optogenetics,

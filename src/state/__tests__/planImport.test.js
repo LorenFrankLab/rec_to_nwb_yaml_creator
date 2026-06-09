@@ -225,6 +225,33 @@ describe('planImport — unimportable files', () => {
     const remy = plan.animals.find((a) => a.subjectId === 'remy');
     expect(remy.days).toHaveLength(1);
   });
+
+  it('routes a file whose analysis THROWS to unimportable and keeps planning the rest', () => {
+    const valid = makeFile({ subjectId: 'remy', date: '2023-06-22' });
+    // A pathological flat model: reading `subject` throws (e.g. a corrupt proxy/getter
+    // from a malformed parse). decompose → validate accesses it and throws. The whole
+    // import preview must NOT abort — this one file is routed to unimportable.
+    const pathological = { sourceName: 'pathological.yml', flatModel: {} };
+    Object.defineProperty(pathological.flatModel, 'subject', {
+      enumerable: true,
+      get() {
+        throw new Error('boom from getter');
+      },
+    });
+
+    let plan;
+    expect(() => {
+      plan = planImport([valid, pathological], createDefaultWorkspace());
+    }).not.toThrow();
+
+    const bad = plan.unimportable.find((u) => u.sourceName === 'pathological.yml');
+    expect(bad).toBeDefined();
+    expect(bad.reason).toMatch(/could not analyze file/i);
+    expect(bad.reason).toMatch(/boom from getter/);
+    // The valid file is still planned.
+    const remy = plan.animals.find((a) => a.subjectId === 'remy');
+    expect(remy.days).toHaveLength(1);
+  });
 });
 
 describe('planImport — intra-plan duplicate (subject, date)', () => {
