@@ -12,7 +12,7 @@
  * so each host owns its single `#main-content`.
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import {
@@ -115,17 +115,30 @@ export function RecordingDaysTab({ animalId }) {
   // instead of each re-deriving "what kind of day is this?". Recovered-unlinked records are
   // surfaced (never laundered into "No recording days yet") and re-linked from the Validation
   // summary; they are NOT exported until re-linked (see dayRecovery's policy).
-  const selectedDayClassification = selectedAnimal
-    ? classifyAnimalDays(selectedAnimalId, selectedAnimal, days)
-    : [];
+  const selectedDayClassification = useMemo(
+    () => (selectedAnimal ? classifyAnimalDays(selectedAnimalId, selectedAnimal, days) : []),
+    [selectedAnimalId, selectedAnimal, days]
+  );
   // The animal's exportable day RECORDS (OK status), sorted by date — the cross-day context the
   // bad-channel monotonicity export gate needs to know which channels were marked bad on an
   // earlier same-config day. Mirrors the `getAnimalDays` selector's OK-only, date-sorted view so
   // a row's "Needs fixing — …un-failed…" status matches the Day Editor's gate.
-  const selectedAnimalDays = selectedDayClassification
-    .filter((d) => d.status === DAY_STATUS.OK && d.record)
-    .map((d) => d.record)
-    .sort((a, b) => String(a?.date ?? '').localeCompare(String(b?.date ?? '')));
+  //
+  // Memoized so it is a STABLE array built once per data change, not rebuilt for every row in the
+  // list render below. The per-row `getDayRowStatus(...)` call still reduces this array to compute
+  // each day's prior same-config bad-channel union (`priorBadChannels`), so the bad-channel
+  // monotonicity status is O(days) per row → O(days²) for the whole list. That is acceptable for
+  // realistic day counts; for very long chronic studies (CLAUDE.md notes 200+ days) a future pass
+  // could precompute one cumulative per-version prior-bad map and hand each row only its own slice.
+  // Memoizing the inputs (here) avoids the redundant rebuild without changing monotonicity SEMANTICS.
+  const selectedAnimalDays = useMemo(
+    () =>
+      selectedDayClassification
+        .filter((d) => d.status === DAY_STATUS.OK && d.record)
+        .map((d) => d.record)
+        .sort((a, b) => String(a?.date ?? '').localeCompare(String(b?.date ?? ''))),
+    [selectedDayClassification]
+  );
   const selectedOrphanDayIds = selectedDayClassification
     .filter((d) => d.status === DAY_STATUS.RECOVERED_UNLINKED)
     .map((d) => d.dayId);
