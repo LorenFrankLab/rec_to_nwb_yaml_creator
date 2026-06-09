@@ -375,6 +375,11 @@ export function createDayRecord(animal, animalId, dayId, date, session, now, car
     // Only present when guarded bad-channel carry produced a non-empty map (see above); a blank
     // day omits the key entirely so it stays byte-identical to today's output.
     ...(deviceOverrides ? { deviceOverrides } : {}),
+    // `state.badChannelRemovalAcks` (off-export acknowledgments of deliberate bad-channel
+    // un-marks) is intentionally ABSENT on a fresh day: the monotonicity helpers and the
+    // acknowledge repair command treat an absent container as "no acks" and create it on demand
+    // via `applyDayUpdates`'s `state` deep-merge. Keeping it absent leaves a new day's persisted
+    // shape unchanged. `mergeDayMetadata` never reads `state`, so it is invisible to the export.
     state: {
       draft: true,
       validated: false,

@@ -17,6 +17,7 @@ import { inferredCameraKeys } from '../../state/cameraUsage';
 import { rawRecord } from '../../components/rawPropTypes';
 import { isMultiShankGroup, validBadChannelIds } from '../../domain/badChannels';
 import { classifyDeviceOverrides } from '../../domain/deviceOverrides';
+import { priorBadChannels, getBadChannelRemovalAcks } from '../../domain/badChannelMonotonicity';
 import './DayEditor.scss';
 
 /**
@@ -285,6 +286,38 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
   const handleBadChannelsBatchUpdate = useCallback((badChannelsObject) => {
     onFieldUpdate('deviceOverrides.bad_channels', badChannelsObject);
   }, [onFieldUpdate]);
+
+  // Bad-channel monotonicity: channels that were bad on an EARLIER same-config day and are NOT
+  // yet acknowledged for THIS day. Un-marking one is a monotonicity exception, so BadChannelsEditor
+  // intercepts it with a confirm prompt. (Channels already acked are filtered out so a re-toggle
+  // after an ack doesn't re-prompt.) Empty when there is no cross-day context (isolated renders).
+  const priorBadByNtrode = useMemo(() => {
+    const prior = priorBadChannels(animal, day, Array.isArray(animalDays) ? animalDays : []);
+    const acks = getBadChannelRemovalAcks(day);
+    const result = {};
+    Object.keys(prior).forEach((ntrodeId) => {
+      const acked = new Set(Array.isArray(acks[ntrodeId]) ? acks[ntrodeId] : []);
+      const remaining = prior[ntrodeId].filter((ch) => !acked.has(ch));
+      if (remaining.length > 0) result[ntrodeId] = remaining;
+    });
+    return result;
+  }, [animal, day, animalDays]);
+
+  /**
+   * Record an OFF-EXPORT acknowledgment that this day deliberately un-marks `channel` on
+   * `ntrodeId` (a channel that was bad on an earlier same-config day). Written to
+   * `day.state.badChannelRemovalAcks.<ntrodeId>` (never read by the export merge), UNIONed with
+   * any existing acks so a prior acknowledgment is preserved. This clears the
+   * `bad_channel_unfailed_without_ack` export block without restoring the channel.
+   * @param {string} ntrodeId - The ntrode id (stringified).
+   * @param {number} channel - The probe-local channel/electrode id being un-marked.
+   */
+  const handleAcknowledgeRemoval = useCallback((ntrodeId, channel) => {
+    const existing = getBadChannelRemovalAcks(day)[ntrodeId];
+    const prior = Array.isArray(existing) ? existing : [];
+    const next = Array.from(new Set([...prior, channel])).sort((a, b) => a - b);
+    onFieldUpdate(`state.badChannelRemovalAcks.${ntrodeId}`, next);
+  }, [day, onFieldUpdate]);
 
   // MALFORMED / STALE OVERRIDE REPAIR: the merge declines to apply
   // any malformed `deviceOverrides` shape, so each blocks export (via `dayOverrideIssues`)
@@ -711,6 +744,8 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
                   badChannels={badChannels}
                   onUpdate={handleBadChannelsUpdate}
                   onBatchUpdate={handleBadChannelsBatchUpdate}
+                  priorBadByNtrode={priorBadByNtrode}
+                  onAcknowledgeRemoval={handleAcknowledgeRemoval}
                   errors={errors}
                   warnings={warnings}
                 />
