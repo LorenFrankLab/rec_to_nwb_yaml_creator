@@ -41,9 +41,13 @@ import './DayEditor.scss';
  * @param {string} [props.animalKey] - The resolved store owner key; used for the preflight
  *   display, the recovered-day re-link links, and animal-surface repair routing instead of the
  *   possibly-stale `animal.id` record field.
+ * @param {Array} [props.animalDays] - The animal's recording-day records (threaded from
+ *   {@link DayEditorStepper}). Required by the cross-day bad-channel monotonicity export-block:
+ *   without it that rule is a no-op, so a day that silently un-fails an earlier same-config bad
+ *   channel would download clean. Defaults to `[]` for isolated single-day renders (back-compat).
  * @returns {JSX.Element}
  */
-export default function ExportStep({ animal, day, onNavigate, onRepair, animalKey = undefined }) {
+export default function ExportStep({ animal, day, onNavigate, onRepair, animalKey = undefined, animalDays = [] }) {
   // The store OWNER KEY (resolved by DayEditorStepper); a stale/missing `animal.id` record field
   // must not misroute a recovered animal's re-link/repair links. Falls back to `animal.id` for
   // isolated renders that don't pass it.
@@ -85,10 +89,12 @@ export default function ExportStep({ animal, day, onNavigate, onRepair, animalKe
 
   // Authoritative export gate, re-checked here (defense in depth): the day may not
   // be downloaded while any error-severity validation issue remains. Pass `animal` so
-  // raw animal-shape corruption (e.g. `cameras: "nope"`) is part of the gate.
+  // raw animal-shape corruption (e.g. `cameras: "nope"`) is part of the gate, and
+  // `animalDays` so the cross-day bad-channel monotonicity block (a day that silently
+  // un-fails an earlier same-config bad channel) is enforced here, not just in display paths.
   const validationErrors = useMemo(
-    () => validateDay(day, merged, animal).filter((issue) => issue.severity === 'error'),
-    [day, merged, animal]
+    () => validateDay(day, merged, animal, animalDays).filter((issue) => issue.severity === 'error'),
+    [day, merged, animal, animalDays]
   );
   // The authoritative export gate the stepper uses (isExportEnabled over the full
   // computeStepStatus map): it folds in step-level statuses — notably
@@ -97,7 +103,10 @@ export default function ExportStep({ animal, day, onNavigate, onRepair, animalKe
   // Consulting it here keeps the directly-mounted ExportStep's gate exactly as
   // strict as the stepper's, so a directly-mounted ExportStep cannot download a day
   // the stepper would refuse to reach.
-  const stepStatus = useMemo(() => computeStepStatus(day, merged, animal), [day, merged, animal]);
+  const stepStatus = useMemo(
+    () => computeStepStatus(day, merged, animal, animalDays),
+    [day, merged, animal, animalDays]
+  );
   const exportGateOpen = useMemo(() => isExportEnabled(stepStatus), [stepStatus]);
   // Recovery policy (same as the batch path): a day must be part of its animal's recording-day
   // index to export. The Day Editor resolves `animal` BY `day.animalId`, so this animal is the
@@ -146,8 +155,8 @@ export default function ExportStep({ animal, day, onNavigate, onRepair, animalKe
     // (conversion/DANDI/Spyglass), not only a schema summary. (An unpinned configuration in a
     // multi-version animal is now export-BLOCKING, so it never reaches preflight — it surfaces
     // in the blocked repair list instead.)
-    const { isHistoricalConfiguration } = getDayWorkflowStatus(animal, day, merged);
-    const warningCount = validateDay(day, merged, animal).filter(
+    const { isHistoricalConfiguration } = getDayWorkflowStatus(animal, day, merged, animalDays);
+    const warningCount = validateDay(day, merged, animal, animalDays).filter(
       (issue) => issue.severity === 'warning'
     ).length;
     return buildPreflightSummary(merged, {
@@ -157,7 +166,7 @@ export default function ExportStep({ animal, day, onNavigate, onRepair, animalKe
       isHistorical: isHistoricalConfiguration,
       warningCount,
     });
-  }, [animal, day, merged, exportBlocked, ownerKey]);
+  }, [animal, day, merged, exportBlocked, ownerKey, animalDays]);
 
   const handleDownload = () => {
     // Defense in depth: validation gates the download before the encoder check.
@@ -326,9 +335,12 @@ ExportStep.propTypes = {
   onNavigate: PropTypes.func,
   onRepair: PropTypes.func,
   animalKey: PropTypes.string,
+  // eslint-disable-next-line react/forbid-prop-types
+  animalDays: PropTypes.array,
 };
 
 ExportStep.defaultProps = {
   onNavigate: () => {},
   onRepair: undefined,
+  animalDays: [],
 };

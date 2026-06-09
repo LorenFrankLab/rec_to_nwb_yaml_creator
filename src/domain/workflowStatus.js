@@ -334,6 +334,9 @@ export function getDayRowStatus(animal, day, mergedDay, animalDays = []) {
  * @param {object} day - The recording day.
  * @param {object|null} mergedDay - `mergeDayMetadata(animal, day)`, or null when it could not
  *   be resolved (corrupt/missing configuration) — treated as blocked, not ready.
+ * @param {Array} [animalDays] - The animal's day records; forwarded to the export gate so the
+ *   cross-day bad-channel monotonicity block (a day that silently un-fails an earlier same-config
+ *   bad channel) folds into readiness, matching the Export button. Omitted → back-compat no-op.
  * @returns {{
  *   configurationVersion: (number|null),
  *   latestConfigurationVersion: (number|null),
@@ -346,7 +349,7 @@ export function getDayRowStatus(animal, day, mergedDay, animalDays = []) {
  *   readyForExportPreflight: boolean
  * }}
  */
-export function getDayWorkflowStatus(animal, day, mergedDay) {
+export function getDayWorkflowStatus(animal, day, mergedDay, animalDays = []) {
   const history = getConfigHistory(animal);
   const latest = history.length > 0 ? history[history.length - 1] : null;
   const latestConfigurationVersion = latest && latest.version != null ? latest.version : null;
@@ -368,7 +371,7 @@ export function getDayWorkflowStatus(animal, day, mergedDay) {
   // prerequisite-step statuses, not just `export`), so the helper can't say "ready" while the
   // Export button is disabled. Without a merged model the day could not be resolved
   // (corrupt/missing configuration) → blocked.
-  const stepStatus = mergedDay ? computeStepStatus(day, mergedDay, animal) : null;
+  const stepStatus = mergedDay ? computeStepStatus(day, mergedDay, animal, animalDays) : null;
   const exportStatus = stepStatus ? stepStatus.export : STEP_STATUS.ERROR;
   const ready = stepStatus ? isExportEnabled(stepStatus) : false;
 
