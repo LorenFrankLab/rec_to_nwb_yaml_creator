@@ -48,6 +48,74 @@ function buildSourceYamlWithBadChannels() {
   );
 }
 
+/**
+ * Build a same-animal variant of the realistic source YAML with a DISTINCT recording date
+ * (`session_id` suffix, which the importer uses to derive the day) and DISTINCT per-ntrode
+ * bad channels — the device geometry is left identical so both files resolve to ONE animal
+ * and ONE configuration version. Re-encoded through the canonical encoder so the returned
+ * YAML is itself in encoder-normal form (the byte-identity target after re-export).
+ *
+ * @param {string} baseYaml - A realistic source YAML (from {@link buildSourceYamlWithBadChannels}).
+ * @param {string} dateSuffix - The `YYYYMMDD` to stamp into `session_id` (drives the day date).
+ * @param {Record<number, number[]>} badByNtrodeId - Bad channels to set, keyed by `ntrode_id`.
+ * @returns {string} The variant source YAML.
+ */
+function buildVariant(baseYaml, dateSuffix, badByNtrodeId) {
+  const model = decodeYaml(baseYaml);
+  model.session_id = `remy_${dateSuffix}`;
+  // Overwrite EVERY ntrode's bad channels deterministically: the ones named in the map get
+  // their distinct marks, all others are cleared — so each file carries exactly its own set.
+  model.ntrode_electrode_group_channel_map = model.ntrode_electrode_group_channel_map.map((n) => ({
+    ...n,
+    bad_channels: Array.isArray(badByNtrodeId[n.ntrode_id]) ? [...badByNtrodeId[n.ntrode_id]] : [],
+  }));
+  return encodeYaml(model);
+}
+
+describe('multi-file in-session YAML import preserves per-day bad channels on re-export', () => {
+  it('imports two same-animal days with DISTINCT bad channels and re-exports each byte-identically', () => {
+    const baseYaml = buildSourceYamlWithBadChannels();
+    // Two same-animal (same subject_id "remy"), same-geometry days with DISTINCT bad channels.
+    const yamlA = buildVariant(baseYaml, '20230622', { 3: [2], 6: [3] });
+    const yamlB = buildVariant(baseYaml, '20230623', { 1: [0], 2: [1, 3] });
+    expect(yamlA).not.toBe(yamlB); // distinct sources
+
+    const decodedFiles = [
+      { sourceName: '06222023_remy_metadata.yml', flatModel: decodeYaml(yamlA) },
+      { sourceName: '06232023_remy_metadata.yml', flatModel: decodeYaml(yamlB) },
+    ];
+
+    const { result } = renderHook(() => useStore());
+    const plan = planImport(decodedFiles, result.current.model.workspace);
+    act(() => {
+      applyImportPlan(plan, result.current.actions, {
+        workspace: result.current.model.workspace,
+      });
+    });
+
+    // ONE animal, TWO days — no reload, no re-hydrate, no save.
+    const ws = result.current.model.workspace;
+    const animalKeys = Object.keys(ws.animals);
+    expect(animalKeys).toHaveLength(1);
+    const importedAnimal = ws.animals[animalKeys[0]];
+    const dayIds = Object.keys(ws.days);
+    expect(dayIds).toHaveLength(2);
+
+    // Re-export EACH imported day and match it back to its OWN source by session_id (the
+    // distinct date). Per-day bad channels must survive the multi-file in-session import.
+    const sourceBySessionId = {
+      [decodeYaml(yamlA).session_id]: yamlA,
+      [decodeYaml(yamlB).session_id]: yamlB,
+    };
+    expect(Object.keys(sourceBySessionId)).toHaveLength(2);
+    dayIds.forEach((dayId) => {
+      const reExported = encodeYaml(mergeDayMetadata(importedAnimal, ws.days[dayId]));
+      const sessionId = decodeYaml(reExported).session_id;
+      expect(reExported).toBe(sourceBySessionId[sessionId]);
+    });
+  });
+});
+
 describe('in-session YAML import preserves bad channels on immediate re-export', () => {
   it('re-exports byte-identically without a reload (no reliance on the load-time migration)', () => {
     const sourceYaml = buildSourceYamlWithBadChannels();

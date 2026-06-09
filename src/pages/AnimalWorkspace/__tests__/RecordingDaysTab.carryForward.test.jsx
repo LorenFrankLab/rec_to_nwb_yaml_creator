@@ -180,4 +180,40 @@ describe('Carry-forward day creation toggle', () => {
       { task_name: 'W-track', task_epochs: [1] },
     ]);
   });
+
+  // Carry-forward via the real UI must also carry the prior day's DAY-OWNED device overrides
+  // (`deviceOverrides.bad_channels`, carried by createDayRecord when the source pins the SAME
+  // config version — which the carry-forward path satisfies). `cameras_used` is session-specific
+  // and createDayRecord deliberately does NOT carry it — pin that intended behavior too.
+  it('with the toggle ON, the calendar UI carries bad_channels but NOT cameras_used', async () => {
+    const priorWithOverridesAndCameras = {
+      ...priorDay,
+      deviceOverrides: { bad_channels: { 1: [2] } },
+      cameras_used: [0],
+    };
+    renderPane(
+      'remy',
+      { remy: animalWithDay },
+      { 'remy-2023-06-22': priorWithOverridesAndCameras }
+    );
+    expect(
+      screen.getByRole('checkbox', {
+        name: /start each new day from the last day \(2023-06-22\)/i,
+      })
+    ).toBeChecked();
+
+    const newDayId = await createTodayViaCalendar();
+
+    await waitFor(() => {
+      expect(captured.model.workspace.days[newDayId]).toBeDefined();
+    });
+    const created = captured.model.workspace.days[newDayId];
+    // bad_channels carries (same config version) — and is a distinct clone, not an alias.
+    expect(created.deviceOverrides).toEqual({ bad_channels: { 1: [2] } });
+    expect(created.deviceOverrides.bad_channels).not.toBe(
+      priorWithOverridesAndCameras.deviceOverrides.bad_channels
+    );
+    // cameras_used is session-specific: NOT carried (left unset/empty).
+    expect(created.cameras_used ?? []).toEqual([]);
+  });
 });
