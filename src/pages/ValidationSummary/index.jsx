@@ -73,6 +73,28 @@ const isRecord = (value) =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 
 /**
+ * Per-animal cross-day context for the bad-channel monotonicity export-block: a map from
+ * `animalKey` to that animal's OK-status recording-day RECORDS, date-sorted — the SAME OK-only,
+ * date-ordered view `getAnimalDays` returns and the Day Editor threads into its export gate.
+ * Without this context the monotonicity rule is a no-op, so a day that silently un-fails an
+ * earlier same-config bad channel reads "valid" here while the row badge says "Needs fixing".
+ *
+ * @param {object} workspace - `model.workspace` ({ animals, days }).
+ * @returns {Record<string, object[]>} `{ [animalKey]: dateSortedOkDayRecords }`.
+ */
+function buildAnimalDaysByKey(workspace) {
+  const byKey = {};
+  for (const { animalKey, record, status } of classifyWorkspaceDays(workspace)) {
+    if (status !== DAY_STATUS.OK || !isRecord(record)) continue;
+    (byKey[animalKey] ||= []).push(record);
+  }
+  for (const key of Object.keys(byKey)) {
+    byKey[key].sort((a, b) => String(a?.date ?? '').localeCompare(String(b?.date ?? '')));
+  }
+  return byKey;
+}
+
+/**
  * Flatten every day across all animals into a deterministic, table-ordered list.
  *
  * Order: animals by id, then each animal's days by date — the same order the table
@@ -89,6 +111,11 @@ export function buildRows(workspace) {
   // policy ({@link isExportableDayStatus}) is read, not re-decided, downstream.
   const animalsMap = isRecord(workspace?.animals) ? workspace.animals : {};
   const rows = [];
+
+  // Cross-day context for the bad-channel monotonicity export-block, built ONCE per render (not
+  // per row) so the chip, the workflow status, and the batch re-validation all feed the rule its
+  // required context and therefore agree with the per-day "Needs fixing" row badge.
+  const animalDaysByKey = buildAnimalDaysByKey(workspace);
 
   for (const { animalKey, dayId, record, status } of classifyWorkspaceDays(workspace)) {
     const animal = isRecord(animalsMap[animalKey]) ? animalsMap[animalKey] : { id: animalKey };
@@ -124,13 +151,16 @@ export function buildRows(workspace) {
     // OK or RECOVERED_UNLINKED: a real record → show its validation chip. mergeDayMetadata
     // throws BY DESIGN on a corrupt animal; one unreadable day must not blank the summary.
     const orphaned = status === DAY_STATUS.RECOVERED_UNLINKED;
+    // The animal's OK-status day records (date-sorted) — the cross-day context the bad-channel
+    // monotonicity block needs so the chip agrees with the row badge.
+    const animalDays = animalDaysByKey[animalKey] || [];
     try {
       const merged = mergeDayMetadata(animal, record);
-      const chip = deriveChip(computeStepStatus(record, merged, animal));
+      const chip = deriveChip(computeStepStatus(record, merged, animal, animalDays));
       // Batch-row scan fields (Task 10): the configuration version pinned, the camera count, and
       // the day-protocol opto state — so days can be compared before opening each editor. Computed
       // here (where the merge already succeeded) so the table reads, never re-derives.
-      const workflow = getDayWorkflowStatus(animal, record, merged);
+      const workflow = getDayWorkflowStatus(animal, record, merged, animalDays);
       const scan = {
         version: workflow.configurationVersion,
         historical: workflow.isHistoricalConfiguration,
@@ -382,10 +412,14 @@ export function ValidationSummary({ animalKey } = {}) {
       return;
     }
 
-    const preflight = validRows.map(({ animal, day }) => {
+    // Same per-animal cross-day context the chips use, so the preflight's workflow status and
+    // warning set fold in the bad-channel monotonicity block consistently with the gate.
+    const animalDaysByKey = buildAnimalDaysByKey(workspace);
+    const preflight = validRows.map(({ animal, animalKey: rowAnimalKey, day }) => {
+      const animalDays = animalDaysByKey[rowAnimalKey] || [];
       try {
         const merged = mergeDayMetadata(animal, day);
-        const status = getDayWorkflowStatus(animal, day, merged);
+        const status = getDayWorkflowStatus(animal, day, merged, animalDays);
         const ntrodeMap = merged.ntrode_electrode_group_channel_map || [];
         const failedChannels = ntrodeMap.reduce((t, n) => t + (n.bad_channels?.length || 0), 0);
         // Day-protocol opto state (Task 10), shared with the single-day Export preflight so the two
@@ -394,7 +428,7 @@ export function ValidationSummary({ animalKey } = {}) {
         const opto = describeDayOptoState(merged).label;
         // Phase 3-6: the day's outstanding non-blocking warnings (same predicate the single-day
         // Export step uses). These don't block the gate; they require explicit acknowledgement.
-        const warnings = validateDay(day, merged, animal).filter((i) => i.severity === 'warning');
+        const warnings = validateDay(day, merged, animal, animalDays).filter((i) => i.severity === 'warning');
         return {
           dayId: day.id,
           label: `${subjectLabel(animal)} — ${day.session?.session_id || day.id}`,
@@ -455,6 +489,10 @@ export function ValidationSummary({ animalKey } = {}) {
     const currentStatusByKey = new Map(
       classifyWorkspaceDays(workspace).map((d) => [statusKey(d.animalKey, d.dayId), d.status])
     );
+    // Re-derive the per-animal cross-day context from the LIVE workspace so the final
+    // re-validation enforces the bad-channel monotonicity block (a regressing day must not slip
+    // through the batch gate even if it was 'valid' at preflight time).
+    const animalDaysByKey = buildAnimalDaysByKey(workspace);
 
     validRows.forEach(({ animalKey, day: rowDay }) => {
       // Re-resolve the CURRENT records and RE-VALIDATE before downloading: state may have
@@ -481,7 +519,9 @@ export function ValidationSummary({ animalKey } = {}) {
       let stillValid = false;
       let revalidationError = null;
       try {
-        stillValid = deriveChip(computeStepStatus(day, mergeDayMetadata(animal, day), animal)) === 'valid';
+        const animalDays = animalDaysByKey[animalKey] || [];
+        stillValid =
+          deriveChip(computeStepStatus(day, mergeDayMetadata(animal, day), animal, animalDays)) === 'valid';
       } catch (err) {
         // A throw here is NOT "no longer valid" — the day became UNREADABLE (corrupt config). Label
         // it honestly and log the reason, mirroring the download `failed` branch, rather than
