@@ -411,6 +411,55 @@
   background-color: #1976d2;
 }
 
+/* Empty-state "Import YAML…" — secondary affordance beside the loud "Create Animal" button. */
+.import-yaml-link {
+  display: inline-block;
+  margin-top: 1rem;
+  margin-left: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background-color: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: 4px;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.import-yaml-link:hover {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+/* Picker header actions: "Import YAML…" + "+ New Animal" sit together at the right. */
+.animal-list-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Same outlined look as .btn-create-animal so the two header actions read as a pair. */
+.btn-import-yaml {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.375rem 0.75rem;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-primary);
+  background-color: transparent;
+  border: 1px solid var(--color-primary);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+  white-space: nowrap;
+}
+
+.btn-import-yaml:hover {
+  background-color: var(--color-primary);
+  color: white;
+}
+
 /* First-run "Set up this animal" card (Task 2.3) — the LOUD onboarding affordance, shown until
    the animal is established. A prominent (teal-edged) card so it leads the tab for a new animal;
    it disappears once setup + days exist, so its weight is acceptable. */

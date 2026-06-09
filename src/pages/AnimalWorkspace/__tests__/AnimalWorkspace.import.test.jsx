@@ -1,0 +1,71 @@
+/**
+ * The workspace's "Import YAML…" entry point. It must be reachable both from the empty state
+ * (beside "Create Animal") and from the populated picker header (beside "+ New Animal"), and
+ * clicking it opens the ImportYamlDialog. The existing create flow stays unchanged.
+ */
+import { describe, it, expect, afterEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { StoreProvider } from '../../../state/StoreContext';
+import { AnimalWorkspace } from '../index';
+
+const originalHash = window.location.hash;
+afterEach(() => {
+  window.location.hash = originalHash;
+});
+
+const existing = {
+  id: 'remy',
+  subject: { subject_id: 'remy', species: 'Rattus norvegicus', sex: 'M' },
+  devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [], data_acq_device: [] },
+  cameras: [],
+  configurationHistory: [],
+  days: [],
+};
+
+/**
+ * Render the picker with the given animals.
+ * @param {object} [animals] - workspace.animals (default: one existing animal).
+ * @returns {object} render result
+ */
+function renderPicker(animals = { remy: existing }) {
+  return render(
+    <StoreProvider initialState={{ workspace: { animals, days: {}, settings: {} } }}>
+      <AnimalWorkspace />
+    </StoreProvider>
+  );
+}
+
+describe('AnimalWorkspace — Import YAML entry point', () => {
+  it('shows an "Import YAML…" button in the populated picker header and opens the dialog', async () => {
+    const user = userEvent.setup();
+    renderPicker();
+
+    const trigger = screen.getByRole('button', { name: /import yaml/i });
+    expect(trigger).toBeInTheDocument();
+    // The dialog is not shown until the trigger is used.
+    expect(screen.queryByRole('dialog', { name: /import yaml files/i })).not.toBeInTheDocument();
+
+    await user.click(trigger);
+    expect(screen.getByRole('dialog', { name: /import yaml files/i })).toBeInTheDocument();
+  });
+
+  it('shows an "Import YAML…" button in the empty state and opens the dialog', async () => {
+    const user = userEvent.setup();
+    renderPicker({});
+
+    const trigger = screen.getByRole('button', { name: /import yaml/i });
+    expect(trigger).toBeInTheDocument();
+
+    await user.click(trigger);
+    expect(screen.getByRole('dialog', { name: /import yaml files/i })).toBeInTheDocument();
+  });
+
+  it('the create flow is unchanged (the create button still opens the creation form)', async () => {
+    const user = userEvent.setup();
+    renderPicker();
+
+    await user.click(screen.getByRole('button', { name: /new animal/i }));
+    expect(screen.getByRole('form', { name: /animal creation form/i })).toBeInTheDocument();
+  });
+});
