@@ -17,6 +17,8 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useStore } from '../../../state/store';
+import { mergeDayMetadata } from '../../../state/workspaceUtils';
+import { encodeYaml } from '../../../io/yaml';
 
 describe('Day State Management', () => {
   /**
@@ -1067,6 +1069,65 @@ describe('Day State Management', () => {
       expect(dup.configurationVersion).toBe(1);
       expect(dup.deviceOverrides).toEqual(source.deviceOverrides);
       expect(dup.deviceOverrides).not.toBe(source.deviceOverrides);
+    });
+
+    it('re-exports the duplicate with the SAME ntrode bad_channels as the source (day-owned, byte-level)', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+      });
+      // Source pins NON-latest version 1 and owns a bad-channel override on ntrode 1.
+      act(() => {
+        result.current.actions.updateDay('remy-2023-06-22', {
+          deviceOverrides: { bad_channels: { 1: [2] } },
+        });
+      });
+      act(() => {
+        result.current.actions.createConfigurationSnapshotAndApplyForward('remy', {
+          date: '2023-06-15',
+          description: 'Adjusted probes',
+          devices: {
+            electrode_groups: [
+              { id: 0, location: 'CA1', device_type: 'tetrode_12.5', description: 'adjusted' },
+            ],
+            ntrode_electrode_group_channel_map: [
+              { ntrode_id: 0, electrode_group_id: 0, map: { 0: 0, 1: 1, 2: 2, 3: 3 }, bad_channels: [] },
+            ],
+          },
+        }, []);
+      });
+
+      act(() => {
+        result.current.actions.duplicateDay('remy-2023-06-22', '2023-06-23');
+      });
+
+      const animal = result.current.model.workspace.animals['remy'];
+      const source = result.current.model.workspace.days['remy-2023-06-22'];
+      const dup = result.current.model.workspace.days['remy-2023-06-23'];
+
+      // The duplicate keeps the source's NON-latest pin.
+      expect(dup.configurationVersion).toBe(source.configurationVersion);
+      expect(dup.configurationVersion).toBe(1);
+
+      // Re-export both: the ntrode bad_channels in the merged YAML must match byte-for-byte
+      // (bad channels are day-owned; the merge reads only the day override).
+      const ntrodesOf = (day) =>
+        mergeDayMetadata(animal, day).ntrode_electrode_group_channel_map.map((n) => ({
+          ntrode_id: n.ntrode_id,
+          bad_channels: n.bad_channels,
+        }));
+      expect(ntrodesOf(dup)).toEqual(ntrodesOf(source));
+
+      // And the encoded YAML for those rows is identical (the strongest guard).
+      const badChannelLines = (day) =>
+        encodeYaml(mergeDayMetadata(animal, day))
+          .split('\n')
+          .filter((line) => line.includes('bad_channels'));
+      expect(badChannelLines(dup)).toEqual(badChannelLines(source));
     });
 
     it('derives session_id from the new date and session_description from the source', () => {

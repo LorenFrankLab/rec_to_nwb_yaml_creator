@@ -437,13 +437,16 @@ export function useWorkspace(initialState = null) {
       /**
        * Duplicates an existing recording day to a new date ("same protocol, next session").
        *
-       * The duplicate reproduces the source EXACTLY: day-owned content (tasks,
-       * behavioral_events, keywords, technical, session.experiment_description / weight) is
-       * deep-cloned via {@link createDayRecord}'s carry path, while session_id /
-       * session_description are date-derived from the new date (session_description defaults to
-       * the source's). The duplicate pins the SOURCE's `configurationVersion` (NOT the animal's
-       * latest) and carries the source's `deviceOverrides` (bad channels) directly — both are
-       * always safe because a duplicate is, by construction, the same configuration as its source.
+       * This is NOT a byte-exact clone of the source day. CARRIED (deep-cloned via
+       * {@link createDayRecord}'s carry path, plus the explicit config/override copy below):
+       * tasks, behavioral_events, keywords, technical, session.experiment_description /
+       * session.weight, the SOURCE's `configurationVersion` (NOT the animal's latest), and the
+       * source's `deviceOverrides` (bad channels) — the config pin + overrides are always safe
+       * because a duplicate is, by construction, the same configuration as its source.
+       * NOT carried: session_id / session_description are date-derived from the new date
+       * (session_description defaults to the source's); and `associated_files`,
+       * `associated_video_files`, `fs_gui_yamls`, and `cameras_used` start empty/unset (they are
+       * session-specific and must be re-entered for the new day).
        *
        * @param {string} sourceDayId - The day to clone.
        * @param {string} newDate - Date in YYYY-MM-DD for the new day.
