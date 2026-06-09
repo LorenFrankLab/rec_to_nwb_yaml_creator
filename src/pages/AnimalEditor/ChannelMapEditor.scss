@@ -88,56 +88,6 @@
     }
   }
 
-  /* Bad Channels fieldset */
-  .bad-channels-fieldset {
-    padding: 1rem;
-    background: #fffef0;
-    border: 1px solid #f0e68c;
-    border-radius: 4px;
-    position: relative;
-    z-index: 1;
-
-    legend {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0 0.5rem;
-      font-weight: 500;
-      font-size: 0.95rem;
-      color: #666;
-      position: relative;
-      z-index: 1;
-    }
-
-    /* Ensure checkbox list is interactive */
-    .checkbox-list {
-      position: relative;
-      z-index: 10;
-      pointer-events: auto !important;
-    }
-
-    .checkbox-list-item {
-      position: relative;
-      z-index: 10;
-      pointer-events: auto !important;
-
-      input[type='checkbox'] {
-        position: relative;
-        z-index: 100;
-        pointer-events: auto !important;
-        cursor: pointer;
-        margin-right: 0.25rem;
-      }
-
-      label {
-        position: relative;
-        z-index: 10;
-        pointer-events: auto !important;
-        cursor: pointer;
-      }
-    }
-  }
-
   /* Map field styling */
   .map-field {
     label {
