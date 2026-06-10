@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { nextInstanceNumber, mergeTemplateRows } from '../behavioralEventSet';
+import {
+  nextInstanceNumber,
+  mergeTemplateRows,
+  isStandardEventName,
+} from '../behavioralEventSet';
 import { duplicateBehavioralEventDescriptions } from '../../validation/behavioralEvents';
 
 /**
@@ -116,5 +120,35 @@ describe('mergeTemplateRows', () => {
     const names = merged.map((e) => e.name);
     expect(new Set(names).size).toBe(names.length);
     expect(duplicateBehavioralEventDescriptions(merged).size).toBe(0);
+  });
+});
+
+describe('isStandardEventName', () => {
+  const SUGGESTIONS = ['Home box camera', 'Poke', 'Light', 'Pump', 'Run Camera Ticks', 'Sleep'];
+
+  it('accepts an exact (case-insensitive) suggestion match', () => {
+    expect(isStandardEventName('Poke', SUGGESTIONS)).toBe(true);
+    expect(isStandardEventName('poke', SUGGESTIONS)).toBe(true);
+  });
+
+  it('accepts a numbered variant of a suggestion (the auto-numbering/template output)', () => {
+    // The app generates these, so they must not be flagged as "not a standard event name".
+    expect(isStandardEventName('Poke1', SUGGESTIONS)).toBe(true);
+    expect(isStandardEventName('Light12', SUGGESTIONS)).toBe(true);
+    expect(isStandardEventName('Home box camera1', SUGGESTIONS)).toBe(true);
+  });
+
+  it('rejects a free-typed name that is neither a suggestion nor a numbered variant', () => {
+    expect(isStandardEventName('beam_break', SUGGESTIONS)).toBe(false);
+    expect(isStandardEventName('reward_left', SUGGESTIONS)).toBe(false);
+  });
+
+  it('does not accept a numbered string for a label that is not a suggestion', () => {
+    expect(isStandardEventName('Widget3', SUGGESTIONS)).toBe(false);
+  });
+
+  it('treats an empty / whitespace name as standard (gated elsewhere as required, not nudged)', () => {
+    expect(isStandardEventName('', SUGGESTIONS)).toBe(true);
+    expect(isStandardEventName('   ', SUGGESTIONS)).toBe(true);
   });
 });

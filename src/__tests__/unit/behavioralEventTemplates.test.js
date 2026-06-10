@@ -33,15 +33,22 @@ describe('behavioralEventTemplates', () => {
     ]);
   });
 
-  it('the "6 pumps" set is Pump1…Pump6 on Dout1…Dout6', () => {
+  it('the "6 pumps" set is Pump1…Pump6 on Dout7…Dout12 (distinct Dout range from lights, matching real data Pump1=Dout7)', () => {
     expect(byId('pumps-6').rows).toEqual([
-      { name: 'Pump1', description: 'Dout1' },
-      { name: 'Pump2', description: 'Dout2' },
-      { name: 'Pump3', description: 'Dout3' },
-      { name: 'Pump4', description: 'Dout4' },
-      { name: 'Pump5', description: 'Dout5' },
-      { name: 'Pump6', description: 'Dout6' },
+      { name: 'Pump1', description: 'Dout7' },
+      { name: 'Pump2', description: 'Dout8' },
+      { name: 'Pump3', description: 'Dout9' },
+      { name: 'Pump4', description: 'Dout10' },
+      { name: 'Pump5', description: 'Dout11' },
+      { name: 'Pump6', description: 'Dout12' },
     ]);
+  });
+
+  it('the light and pump output sets occupy DISJOINT Dout ranges so applying both composes (no collision)', () => {
+    const lightDescriptions = byId('lights-6').rows.map((r) => r.description);
+    const pumpDescriptions = byId('pumps-6').rows.map((r) => r.description);
+    const overlap = lightDescriptions.filter((d) => pumpDescriptions.includes(d));
+    expect(overlap).toEqual([]);
   });
 
   it('every template has a stable id, a human label, and non-empty rows', () => {

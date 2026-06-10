@@ -49,6 +49,11 @@ import './SuggestionCombobox.scss';
  * @param {boolean} [props.warnOffList] - When true, show a gentle nudge while the list is
  *   closed and the value matches no suggestion (case-insensitive).
  * @param {string} [props.offListMessage] - Custom text for the off-list nudge.
+ * @param {(value: string, suggestions: string[]) => boolean} [props.acceptsValue] - Optional
+ *   predicate that decides whether the trimmed value counts as "on-list" for the off-list nudge.
+ *   Defaults to a case-insensitive exact match against `suggestions`; pass a broader predicate to
+ *   accept e.g. a numbered variant ("Poke1" of the standard "Poke") so the app's own generated
+ *   values don't trip the nudge.
  * @returns {JSX.Element}
  */
 export default function SuggestionCombobox({
@@ -67,6 +72,7 @@ export default function SuggestionCombobox({
   inputRef,
   warnOffList,
   offListMessage,
+  acceptsValue,
   ...inputProps
 }) {
   const id = useStableId(providedId, 'combobox');
@@ -126,9 +132,12 @@ export default function SuggestionCombobox({
   // when the list is CLOSED, so it appears after the user has settled on a value rather than
   // flickering on every keystroke while they browse/type.
   const trimmedValue = (value ?? '').trim();
-  const isOffList =
-    trimmedValue !== '' &&
-    !suggestions.some((s) => s.toLowerCase() === trimmedValue.toLowerCase());
+  // A value is "on-list" by a custom predicate when given (e.g. accept "Poke1" as a numbered
+  // variant of "Poke"), else by a case-insensitive exact match against the suggestions.
+  const valueAccepted = acceptsValue
+    ? acceptsValue(trimmedValue, suggestions)
+    : suggestions.some((s) => s.toLowerCase() === trimmedValue.toLowerCase());
+  const isOffList = trimmedValue !== '' && !valueAccepted;
   const showOffListWarning = warnOffList && !open && isOffList;
 
   // Tie the off-list nudge to the input for screen readers, MERGING with any caller-provided
@@ -317,6 +326,7 @@ SuggestionCombobox.propTypes = {
   inputRef: PropTypes.oneOfType([PropTypes.func, PropTypes.shape({ current: PropTypes.any })]),
   warnOffList: PropTypes.bool,
   offListMessage: PropTypes.string,
+  acceptsValue: PropTypes.func,
 };
 
 SuggestionCombobox.defaultProps = {
@@ -334,4 +344,5 @@ SuggestionCombobox.defaultProps = {
   inputRef: undefined,
   warnOffList: false,
   offListMessage: undefined,
+  acceptsValue: undefined,
 };

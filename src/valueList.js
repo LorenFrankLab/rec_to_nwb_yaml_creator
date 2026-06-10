@@ -918,23 +918,24 @@ export const behavioralEventsNames = () => {
 };
 
 /**
- * Build a contiguous run of behavioral-event rows for a standard-set template.
+ * Build a run of behavioral-event rows for a standard-set template.
  *
- * Names use the no-separator `Label<n>` convention verified against real lab YAMLs (0 of 1864 real
- * names use `Label_<digits>`); the number is a per-label INSTANCE count, never the DIO channel
- * index. Descriptions are well-formed `Din`/`Dout<n>` lines via {@link joinDioDescription} — a
- * sensible default channel range the user re-points per row as their rig requires.
+ * The event NAME and the DIO CHANNEL are decoupled (the load-bearing §2 fact: a name's number is a
+ * per-label INSTANCE count, NOT the channel index — e.g. real data has `Pump1` on `Dout7`). So the
+ * names run `Label1…Label{count}` (no separator — 0 of 1864 real names use `Label_<digits>`) while
+ * the channels run `{type}{channelStart}…{type}{channelStart+count-1}` via {@link joinDioDescription}.
+ * Channels are a sensible default the user re-points per row.
  *
- * @param {string} label - The event label (e.g. `"Poke"`).
+ * @param {string} label - The event label (e.g. `"Pump"`).
  * @param {string} type - The DIO type (`"Din"` or `"Dout"`).
- * @param {number} start - First instance/line number (inclusive).
- * @param {number} end - Last instance/line number (inclusive).
+ * @param {number} channelStart - First DIO line number (e.g. `7` → `Dout7`).
+ * @param {number} count - How many rows to build.
  * @returns {Array<{name: string, description: string}>} The template rows.
  */
-const rangeRows = (label, type, start, end) => {
+const rangeRows = (label, type, channelStart, count) => {
   const rows = [];
-  for (let n = start; n <= end; n += 1) {
-    rows.push({ name: `${label}${n}`, description: joinDioDescription(type, n) });
+  for (let i = 0; i < count; i += 1) {
+    rows.push({ name: `${label}${i + 1}`, description: joinDioDescription(type, channelStart + i) });
   }
   return rows;
 };
@@ -951,8 +952,11 @@ const rangeRows = (label, type, start, end) => {
  */
 export const behavioralEventTemplates = () => [
   { id: 'pokes-6', label: '6 pokes (Din1–6)', rows: rangeRows('Poke', 'Din', 1, 6) },
+  // Lights and pumps are both outputs (Dout); they occupy DISJOINT default ranges so applying both
+  // composes without a description collision. Pumps start at Dout7 to match real lab data (Pump1 =
+  // Dout7). All channels are a starting point the user re-points to their rig.
   { id: 'lights-6', label: '6 lights (Dout1–6)', rows: rangeRows('Light', 'Dout', 1, 6) },
-  { id: 'pumps-6', label: '6 pumps (Dout1–6)', rows: rangeRows('Pump', 'Dout', 1, 6) },
+  { id: 'pumps-6', label: '6 pumps (Dout7–12)', rows: rangeRows('Pump', 'Dout', 7, 6) },
 ];
 
 /**

@@ -313,6 +313,36 @@ describe('SuggestionCombobox', () => {
       expect(screen.queryByRole('status')).not.toBeInTheDocument();
     });
 
+    it('treats a value accepted by a custom acceptsValue predicate as on-list (no warning)', () => {
+      // A caller can broaden what counts as "on-list" — e.g. accept a numbered variant "Poke1" of
+      // the standard label "Poke" — so the nudge does not fire on a value the app itself generates.
+      render(
+        <SuggestionCombobox
+          value="Poke1"
+          onChange={() => {}}
+          suggestions={SUGGESTIONS}
+          aria-label="Event"
+          warnOffList
+          acceptsValue={(val, sugg) => sugg.some((s) => new RegExp(`^${s}\\d+$`, 'i').test(val))}
+        />
+      );
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    });
+
+    it('still warns (via acceptsValue) for a value the predicate rejects', () => {
+      render(
+        <SuggestionCombobox
+          value="beam_break"
+          onChange={() => {}}
+          suggestions={SUGGESTIONS}
+          aria-label="Event"
+          warnOffList
+          acceptsValue={(val, sugg) => sugg.some((s) => new RegExp(`^${s}\\d+$`, 'i').test(val))}
+        />
+      );
+      expect(screen.getByRole('status')).toBeInTheDocument();
+    });
+
     it('does not warn at all when warnOffList is not set', () => {
       render(
         <SuggestionCombobox

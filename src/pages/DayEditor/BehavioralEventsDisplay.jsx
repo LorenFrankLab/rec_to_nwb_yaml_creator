@@ -7,7 +7,11 @@ import {
   behavioralEventTemplates,
 } from '../../valueList';
 import { splitDioDescription, joinDioDescription } from '../../utils/dioDescription';
-import { nextInstanceNumber, mergeTemplateRows } from '../../utils/behavioralEventSet';
+import {
+  nextInstanceNumber,
+  mergeTemplateRows,
+  isStandardEventName,
+} from '../../utils/behavioralEventSet';
 import SuggestionCombobox from '../../components/SuggestionCombobox';
 import OverflowMenu from '../../components/OverflowMenu';
 import { ConfirmDialog } from '../../components/Modal';
@@ -330,13 +334,14 @@ export default function BehavioralEventsDisplay({ dayEvents, onDayEventsChange }
               onChange={(v) => handleFieldChange('name', v)}
               onSelect={handleNameSelected}
               suggestions={behavioralEventsNames()}
+              acceptsValue={isStandardEventName}
               onKeyDown={handleKeyDown}
               placeholder="event_name"
               autoFocus
               aria-invalid={!!validationError}
               aria-describedby={describedBy}
               warnOffList
-              offListMessage="Not a standard event name. Pick a suggestion for consistency, or keep a custom name (e.g. numbered variants like “Poke1”)."
+              offListMessage="Not a standard event name. Pick a suggestion (and its auto-numbered variant, e.g. “Poke1”) for consistency, or keep a custom name."
             />
             <p id={hintId} className="dio-day-event-hint">
               becomes the DIO event&apos;s name in the NWB file

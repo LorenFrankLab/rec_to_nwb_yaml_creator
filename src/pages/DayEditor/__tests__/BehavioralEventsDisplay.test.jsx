@@ -269,6 +269,33 @@ describe('BehavioralEventsDisplay — per-label auto-numbering (onSelect)', () =
   });
 });
 
+describe('BehavioralEventsDisplay — off-list nudge respects numbered variants', () => {
+  it('does NOT nudge an auto-numbered name like "Poke1" as non-standard', async () => {
+    const user = userEvent.setup();
+    render(
+      <ControlledHarness initialDayEvents={[{ name: 'Poke1', description: 'Din1' }]} spy={vi.fn()} />
+    );
+
+    await user.click(screen.getByRole('button', { name: /^edit$/i }));
+    // "Poke1" is a numbered variant of the standard "Poke" — the app generates it, so it must not
+    // be flagged "not a standard event name".
+    expect(screen.queryByText(/not a standard event name/i)).not.toBeInTheDocument();
+  });
+
+  it('still nudges a free-typed off-list name like "beam_break"', async () => {
+    const user = userEvent.setup();
+    render(
+      <ControlledHarness
+        initialDayEvents={[{ name: 'beam_break', description: 'Din1' }]}
+        spy={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /^edit$/i }));
+    expect(screen.getByText(/not a standard event name/i)).toBeInTheDocument();
+  });
+});
+
 describe('BehavioralEventsDisplay — standard-set templates', () => {
   it('applies a standard set into an empty day (Poke1…Poke6 as Input rows)', async () => {
     const user = userEvent.setup();

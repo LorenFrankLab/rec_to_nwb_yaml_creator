@@ -42,6 +42,26 @@ export function nextInstanceNumber(label, events) {
 }
 
 /**
+ * Whether `name` is a "standard" behavioral-event name for off-list nudging: an exact
+ * (case-insensitive) match to a suggested label, OR a numbered instance of one — the no-separator
+ * `Label<n>` convention the picker auto-generates and the templates emit (e.g. "Poke1" for "Poke").
+ * Without this, the off-list nudge would fire on the app's OWN generated names. An empty/whitespace
+ * name is treated as standard here (it is gated separately as "required", not nudged as off-list).
+ *
+ * @param {string} name - The event name to test.
+ * @param {string[]} suggestions - The standard event-name labels.
+ * @returns {boolean} True when the name is a standard label or a numbered variant of one.
+ */
+export function isStandardEventName(name, suggestions) {
+  const value = (name ?? '').trim().toLowerCase();
+  if (value === '') return true;
+  return (Array.isArray(suggestions) ? suggestions : []).some((suggestion) => {
+    const label = String(suggestion).toLowerCase();
+    return value === label || new RegExp(`^${escapeRegExp(label)}\\d+$`).test(value);
+  });
+}
+
+/**
  * Merge a standard-set template's rows into a day's behavioral-event set.
  *
  * A row is added only if neither its `name` nor its `description` already appears in the set (or
