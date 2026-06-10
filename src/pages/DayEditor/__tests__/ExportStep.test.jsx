@@ -203,6 +203,29 @@ describe('ExportStep', () => {
     expect(shadowSpy).not.toHaveBeenCalled();
   });
 
+  it('does not imply validation errors when export is blocked only by an incomplete prerequisite step', () => {
+    // 0 error-severity validation issues, but the gate is closed by computeStepStatus
+    // (all channels bad). The blocked reason must NOT claim "validation error(s)" exist; it
+    // must point the user to the required setup shown below instead.
+    const { animal, day } = buildAllChannelsBadWorkspace();
+
+    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+
+    const blocked = screen.getByRole('alert');
+    expect(within(blocked).getByText(/complete the required setup shown below before exporting/i)).toBeInTheDocument();
+    // It must not falsely imply validation errors exist when there are none.
+    expect(within(blocked).queryByText(/validation error/i)).not.toBeInTheDocument();
+  });
+
+  it('keeps the "Resolve N validation errors" message when there ARE error-severity issues', () => {
+    const { animal, day } = buildExportErrorWorkspace();
+
+    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+
+    const blocked = screen.getByRole('alert');
+    expect(within(blocked).getByText(/resolve \d+ validation error/i)).toBeInTheDocument();
+  });
+
   it('offers a repair action for a STEP-STATUS-only blocker (all channels bad) with no validate() error', async () => {
     // Boundary 3 / Medium-1: the gate is closed via computeStepStatus.devices === 'error'
     // (all channels bad), but validate(merged) has no error — so the OLD ExportStep showed

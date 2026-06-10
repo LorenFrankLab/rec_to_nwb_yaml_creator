@@ -66,24 +66,14 @@ export function getAnimalOptoCompleteness(animal) {
 }
 
 /**
- * Whether an animal has any optogenetics setup. Opto is an optional config holding
- * excitation-source / optical-fiber / virus-injection lists; "configured" means any is non-empty.
- * (`animal.optogenetics` is not a selector-owned raw collection, so it is read directly.)
- *
- * @param {object} animal - The animal record.
- * @returns {boolean} True if any optogenetics setup is present.
- */
-function hasOptogenetics(animal) {
-  const opto = animal?.optogenetics;
-  if (!opto || typeof opto !== 'object' || Array.isArray(opto)) return false;
-  return ['opto_excitation_source', 'optical_fiber', 'virus_injection'].some(
-    (key) => Array.isArray(opto[key]) && opto[key].length > 0
-  );
-}
-
-/**
  * Map of setup-section key → predicate "is this section configured for the animal?".
  * Day-work sections (`days`, `export`) are absent — they never carry a setup todo.
+ *
+ * Optogenetics is "configured" ONLY when its setup is COMPLETE (all four export-gated fields
+ * present), using the SAME {@link getAnimalOptoCompleteness} classification the section-nav count
+ * uses. A PARTIAL opto (toggle on, some-but-not-all fields) therefore reads TODO on the setup card
+ * — agreeing with both the nav's "incomplete" count and the export gate — instead of a misleading
+ * "Done" that contradicts them.
  */
 const SETUP_SECTION_IS_CONFIGURED = {
   'electrode-groups': (animal) => getAnimalElectrodeGroups(animal).length > 0,
@@ -91,7 +81,8 @@ const SETUP_SECTION_IS_CONFIGURED = {
   'recording-system': (animal) => getDataAcqDevices(animal).length > 0,
   cameras: (animal) => getAnimalCameras(animal).length > 0,
   dio: (animal) => getAnimalBehavioralEvents(animal).length > 0,
-  optogenetics: hasOptogenetics,
+  optogenetics: (animal) =>
+    getAnimalOptoCompleteness(animal) === OPTO_COMPLETENESS.COMPLETE,
 };
 
 /**

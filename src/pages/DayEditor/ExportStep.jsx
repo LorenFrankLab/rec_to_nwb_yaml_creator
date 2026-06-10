@@ -230,7 +230,10 @@ export default function ExportStep({ animal, day, onNavigate, onRepair, animalKe
               ? `Resolve ${validationErrors.length} validation ${
                   validationErrors.length === 1 ? 'error' : 'errors'
                 } before exporting.`
-              : 'Resolve the blocking device/step issue before exporting.'}
+              : // 0 error-severity validation issues, but export is gated by an incomplete
+                // prerequisite step (or a raw-shape repair shown above). Don't imply validation
+                // errors exist when none do — point the user to the required setup below.
+                'Complete the required setup shown below before exporting.'}
           </p>
           {validationErrors.length > 0 && (
             <RepairActions

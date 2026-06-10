@@ -27,7 +27,12 @@ const configuredAnimal = {
   },
   cameras: [{ id: 0, camera_name: 'overhead' }],
   behavioral_events: [{ name: 'Din1' }],
-  optogenetics: { opto_excitation_source: [{ name: 'laser' }], optical_fiber: [], virus_injection: [] },
+  optogenetics: {
+    opto_excitation_source: [{ name: 'laser' }],
+    optical_fiber: [{ name: 'fiber' }],
+    virus_injection: [{ name: 'virus' }],
+    optogenetic_stimulation_software: 'fsgui',
+  },
   days: ['remy-2023-06-22'],
 };
 
@@ -51,11 +56,30 @@ describe('getAnimalSectionStatus', () => {
     expect(getAnimalSectionStatus(bareAnimal, 'export')).toBe(SECTION_STATUS.NONE);
   });
 
-  it('treats optogenetics as configured only when a sub-list is non-empty', () => {
+  it('treats optogenetics as configured only when the four-field opto setup is COMPLETE', () => {
+    // Empty opto → never configured → TODO (the hollow-○ onboarding ring).
     expect(getAnimalSectionStatus({ ...bareAnimal, optogenetics: {} }, 'optogenetics')).toBe(SECTION_STATUS.TODO);
-    expect(
-      getAnimalSectionStatus({ ...bareAnimal, optogenetics: { optical_fiber: [{ name: 'f' }] } }, 'optogenetics')
-    ).toBe(SECTION_STATUS.NONE);
+
+    // PARTIAL opto (some-but-not-all of the four export-gated fields): the section-nav count
+    // reads "incomplete" via getAnimalOptoCompleteness !== COMPLETE, so the setup card must AGREE
+    // and read TODO — not "Done". A single non-empty sub-list is NOT enough.
+    const partialOpto = { optical_fiber: [{ name: 'f' }] };
+    expect(getAnimalOptoCompleteness({ optogenetics: partialOpto })).toBe(OPTO_COMPLETENESS.PARTIAL);
+    expect(getAnimalSectionStatus({ ...bareAnimal, optogenetics: partialOpto }, 'optogenetics')).toBe(
+      SECTION_STATUS.TODO
+    );
+
+    // COMPLETE opto (all four fields present) → configured → NONE.
+    const completeOpto = {
+      opto_excitation_source: [{ name: 'laser' }],
+      optical_fiber: [{ name: 'fiber' }],
+      virus_injection: [{ name: 'virus' }],
+      optogenetic_stimulation_software: 'fsgui',
+    };
+    expect(getAnimalOptoCompleteness({ optogenetics: completeOpto })).toBe(OPTO_COMPLETENESS.COMPLETE);
+    expect(getAnimalSectionStatus({ ...bareAnimal, optogenetics: completeOpto }, 'optogenetics')).toBe(
+      SECTION_STATUS.NONE
+    );
   });
 
   it('is robust to corrupt collections (treats them as not configured, never throws)', () => {
