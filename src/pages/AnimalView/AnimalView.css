@@ -73,9 +73,17 @@ main.error-state .error-state-action:focus-visible {
   color: #46443d;
 }
 
-/* Per-animal lifecycle ⋮ menu, pushed to the trailing edge of the header band (Phase 4). */
-.animal-view-header-actions {
+/* Save-confidence cue (the shared SaveIndicator), grouped with the ⋮ menu at the trailing edge of
+   the header band. `margin-left: auto` here absorbs the free space, pushing the save indicator AND
+   the actions block to the right together; `align-self: center` keeps it on the baseline-aligned
+   row. Scoped under the AnimalView header so the global SaveIndicator styles aren't altered. */
+.animal-view-header-save {
   margin-left: auto;
+  align-self: center;
+}
+
+/* Per-animal lifecycle ⋮ menu, sitting just after the save cue at the trailing edge (Phase 4). */
+.animal-view-header-actions {
   align-self: center;
 }
 

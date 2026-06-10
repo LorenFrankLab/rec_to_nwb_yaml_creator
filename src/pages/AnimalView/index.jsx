@@ -31,6 +31,7 @@ import OverflowMenu from '../../components/OverflowMenu';
 import AnimalDeleteDialog from '../../components/AnimalDeleteDialog';
 import AnimalProfileDialog from '../../components/AnimalProfileDialog';
 import { RecordingDaysTab } from '../AnimalWorkspace/RecordingDaysTab';
+import SaveIndicator from '../DayEditor/SaveIndicator';
 import RawCorruptionBanner from '../../components/RawCorruptionBanner';
 import ReconfigurationContextBanner from '../../components/ReconfigurationContextBanner';
 import ElectrodeGroupsContainer from '../AnimalEditor/wiring/ElectrodeGroupsContainer';
@@ -237,7 +238,7 @@ function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdat
  * @returns {React.Element}
  */
 export function AnimalView({ animalId, tab }) {
-  const { model, actions } = useStoreContext();
+  const { model, actions, persistence } = useStoreContext();
   const { animals = {} } = model.workspace;
   const animal = animalId ? animals[animalId] : null;
 
@@ -439,6 +440,19 @@ export function AnimalView({ animalId, tab }) {
         <h1 id="animal-view-heading">{animal.id}</h1>
         <span className="animal-view-idbadge">animal ID</span>
         {facts && <span className="animal-view-facts">{facts}</span>}
+        {/* Save-confidence cue — the SAME shared SaveIndicator the Day Editor shows, reading the
+            SAME workspace persistence state (`useStoreContext().persistence`), so an animal-level
+            setup edit gets the same "Saving… / Saved" feedback day edits already get. It is NOT an
+            optimistic local timestamp; it reflects real autosave outcomes (display-only — no export
+            bytes, no validation rule). Lives in the header band so it shows on every tab. */}
+        <div className="animal-view-header-save">
+          <SaveIndicator
+            enabled={persistence.enabled}
+            lastSaved={persistence.lastSaved}
+            error={persistence.saveError}
+            pending={persistence.hasPendingWrite}
+          />
+        </div>
         {/* Per-animal lifecycle ⋮ — the SAME reusable menu + type-to-confirm dialog as the picker
             card, so animal delete reads one truth from either surface (Task 4.1). */}
         <div className="animal-view-header-actions">
