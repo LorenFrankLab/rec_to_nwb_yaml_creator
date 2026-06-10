@@ -10,6 +10,15 @@
  * `#/validation` at 390×844, opens the batch preflight, and asserts the document never scrolls wider
  * than its client width.
  *
+ * Page-doesn't-overflow alone is NOT enough: a regression that hid the wide table off-screen with no
+ * scroll affordance would also keep the page narrow while making the rightmost columns unreachable.
+ * So this spec ALSO asserts the table is reachable via INNER horizontal scroll — the scroll wrapper
+ * is genuinely scrollable (`scrollWidth > clientWidth`) and scrolling it to the end brings the last
+ * column ("Editor") into the viewport — while the PAGE still has no horizontal overflow. (Measured:
+ * at 390px the dense 6-column table is ~1157px wide vs a ~374px wrapper, so there IS real inner
+ * scroll to reach; if a future layout change made the table fit, this assertion would correctly fail
+ * and should be re-evaluated rather than weakened.)
+ *
  * QA discipline: role/route selectors only; wait on locators/URLs (never sleeps); reset + seed per
  * test for independence; viewport set BEFORE navigation.
  */
@@ -82,9 +91,10 @@ test.describe('Validation & Export — narrow viewport layout', () => {
 
     // The cross-animal page heading and the day table are present.
     await expect(page.getByRole('heading', { level: 1, name: 'Validation Summary' })).toBeVisible();
-    await expect(
-      page.getByRole('table', { name: 'Recording days across all animals with validation status' }),
-    ).toBeVisible();
+    const table = page.getByRole('table', {
+      name: 'Recording days across all animals with validation status',
+    });
+    await expect(table).toBeVisible();
 
     const pageOverflow = async () =>
       page.evaluate(() => {
@@ -93,6 +103,46 @@ test.describe('Validation & Export — narrow viewport layout', () => {
       });
 
     // No horizontal PAGE overflow with just the table on screen (it scrolls within its own box).
+    expect(await pageOverflow()).toBeLessThanOrEqual(1);
+
+    // The dense 6-column table is genuinely wider than this phone viewport (verified ~1157px vs a
+    // ~374px wrapper), so the fix must keep its content REACHABLE via inner horizontal scroll — not
+    // merely keep the page narrow by hiding the overflow. Resolve the scroll wrapper from the table's
+    // own DOM (closest .validation-summary-table-scroll). This class is the scroll-affordance
+    // mechanism, used here as the sanctioned framework-scroll exception (analogous to
+    // .repair-target-highlight); the anchor is still the role-located <table>, not a CSS lookup of
+    // the table itself.
+    const innerScroll = table.locator('xpath=ancestor::div[contains(@class,"validation-summary-table-scroll")][1]');
+    await expect(innerScroll).toBeVisible();
+
+    // Genuinely scrollable: the table content is wider than its container, so there is content to
+    // scroll TO (this is what a "hidden off-screen, no scroll" regression would break). Polled so a
+    // not-yet-settled first layout doesn't read a transiently-equal width.
+    await expect
+      .poll(async () =>
+        innerScroll.evaluate((el) => el.scrollWidth - el.clientWidth),
+      )
+      .toBeGreaterThan(0);
+
+    // The rightmost column ("Editor") starts OFF-screen at the initial (scrollLeft=0) position...
+    const lastHeader = table.getByRole('columnheader', { name: 'Editor' });
+    const viewportWidth = NARROW.width;
+    await expect
+      .poll(async () => lastHeader.evaluate((el) => el.getBoundingClientRect().left))
+      .toBeGreaterThan(viewportWidth);
+
+    // ...and scrolling the inner container to its end brings it WITHIN the viewport — reachable.
+    await innerScroll.evaluate((el) => {
+      el.scrollLeft = el.scrollWidth;
+    });
+    await expect
+      .poll(async () => lastHeader.evaluate((el) => el.getBoundingClientRect().right))
+      .toBeLessThanOrEqual(viewportWidth + 1);
+    const headerLeftAfter = await lastHeader.evaluate((el) => el.getBoundingClientRect().left);
+    expect(headerLeftAfter).toBeGreaterThanOrEqual(0);
+    expect(headerLeftAfter).toBeLessThan(viewportWidth);
+
+    // Inner-scrolling the table must NOT have introduced any horizontal PAGE overflow.
     expect(await pageOverflow()).toBeLessThanOrEqual(1);
 
     // Open the batch preflight (its long session-name values previously pushed the page wide).
