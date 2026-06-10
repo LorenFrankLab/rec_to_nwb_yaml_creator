@@ -167,14 +167,16 @@ describe('BehavioralEventsDisplay — day wiring table (Inputs / Outputs)', () =
     expect(screen.getByRole('button', { name: /^save$/i })).toBeDisabled();
   });
 
-  it('accepts a multi-word suggested name like "Home box camera" (the schema allows spaces)', async () => {
+  it('accepts a multi-word suggested name with spaces (the schema allows spaces)', async () => {
     const user = userEvent.setup();
     const spy = vi.fn();
     render(<ControlledHarness initialDayEvents={[{ name: '', description: 'Din1' }]} spy={spy} />);
 
     await user.click(screen.getByRole('button', { name: /^edit$/i }));
-    // Select a suggested name that contains spaces (the schema's own default name is
-    // "Home box camera"); the editor must not reject a name the export accepts.
+    // Pick a suggested name that contains spaces (the schema's own default name is
+    // "Home box camera"); the editor must not reject a name the export accepts. Picking a known
+    // label auto-numbers it (first instance → "1"), so the saved name is "Home box camera1" — still
+    // a multi-word name with spaces, which must validate and save.
     await user.click(screen.getByLabelText('Event'));
     await user.click(screen.getByRole('option', { name: 'Home box camera' }));
 
@@ -182,7 +184,7 @@ describe('BehavioralEventsDisplay — day wiring table (Inputs / Outputs)', () =
     const save = screen.getByRole('button', { name: /^save$/i });
     expect(save).toBeEnabled();
     await user.click(save);
-    expect(spy).toHaveBeenLastCalledWith([{ name: 'Home box camera', description: 'Din1' }]);
+    expect(spy).toHaveBeenLastCalledWith([{ name: 'Home box camera1', description: 'Din1' }]);
   });
 
   it('warns that editing an Other-group event (analog/prose description) will rewrite it', async () => {
@@ -196,5 +198,124 @@ describe('BehavioralEventsDisplay — day wiring table (Inputs / Outputs)', () =
     // mentions "isn't a standard Din/Dout line").
     const warning = screen.getByText(/editing the controls will rewrite it/i);
     expect(warning).toHaveTextContent('Accel5');
+  });
+});
+
+describe('BehavioralEventsDisplay — per-label auto-numbering (onSelect)', () => {
+  it('picking a known name into a pokeless set auto-numbers it to Poke1', async () => {
+    const user = userEvent.setup();
+    render(<ControlledHarness initialDayEvents={[]} spy={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: /add input event/i }));
+    await user.click(screen.getByLabelText('Event'));
+    await user.click(screen.getByRole('option', { name: 'Poke' }));
+
+    expect(screen.getByLabelText('Event')).toHaveValue('Poke1');
+  });
+
+  it('picking the same name again yields the next instance number (Poke2)', async () => {
+    const user = userEvent.setup();
+    render(
+      <ControlledHarness initialDayEvents={[{ name: 'Poke1', description: 'Din2' }]} spy={vi.fn()} />
+    );
+
+    await user.click(screen.getByRole('button', { name: /add input event/i }));
+    await user.click(screen.getByLabelText('Event'));
+    await user.click(screen.getByRole('option', { name: 'Poke' }));
+
+    expect(screen.getByLabelText('Event')).toHaveValue('Poke2');
+  });
+
+  it('numbers each label on an independent counter (Light into a Poke-only set is Light1)', async () => {
+    const user = userEvent.setup();
+    render(
+      <ControlledHarness initialDayEvents={[{ name: 'Poke1', description: 'Din2' }]} spy={vi.fn()} />
+    );
+
+    await user.click(screen.getByRole('button', { name: /add input event/i }));
+    await user.click(screen.getByLabelText('Event'));
+    await user.click(screen.getByRole('option', { name: 'Light' }));
+
+    expect(screen.getByLabelText('Event')).toHaveValue('Light1');
+  });
+
+  it('derives the number from the label, not the DIO channel (Pump on Dout7 → Pump1)', async () => {
+    const user = userEvent.setup();
+    render(
+      <ControlledHarness initialDayEvents={[{ name: '', description: 'Dout7' }]} spy={vi.fn()} />
+    );
+
+    await user.click(screen.getByRole('button', { name: /^edit$/i }));
+    await user.click(screen.getByLabelText('Event'));
+    await user.click(screen.getByRole('option', { name: 'Pump' }));
+
+    expect(screen.getByLabelText('Event')).toHaveValue('Pump1');
+  });
+
+  it('keeps a typed name verbatim — typing routes through onChange, never auto-numbering', async () => {
+    const user = userEvent.setup();
+    render(
+      <ControlledHarness initialDayEvents={[{ name: '', description: 'Din1' }]} spy={vi.fn()} />
+    );
+
+    await user.click(screen.getByRole('button', { name: /^edit$/i }));
+    const eventField = screen.getByLabelText('Event');
+    await user.clear(eventField);
+    await user.type(eventField, 'Poke');
+
+    // A free-typed "Poke" stays "Poke" — it is NOT promoted to "Poke1" (that only happens on an
+    // explicit pick from the suggestions).
+    expect(eventField).toHaveValue('Poke');
+  });
+});
+
+describe('BehavioralEventsDisplay — standard-set templates', () => {
+  it('applies a standard set into an empty day (Poke1…Poke6 as Input rows)', async () => {
+    const user = userEvent.setup();
+    const spy = vi.fn();
+    render(<ControlledHarness initialDayEvents={[]} spy={spy} />);
+
+    await user.click(screen.getByRole('button', { name: /add a standard set/i }));
+    await user.click(screen.getByRole('menuitem', { name: /6 pokes/i }));
+
+    expect(spy).toHaveBeenLastCalledWith([
+      { name: 'Poke1', description: 'Din1' },
+      { name: 'Poke2', description: 'Din2' },
+      { name: 'Poke3', description: 'Din3' },
+      { name: 'Poke4', description: 'Din4' },
+      { name: 'Poke5', description: 'Din5' },
+      { name: 'Poke6', description: 'Din6' },
+    ]);
+    const inputs = screen.getByRole('table', { name: /inputs \(din\)/i });
+    expect(within(inputs).getByText('Poke1')).toBeInTheDocument();
+    expect(within(inputs).getByText('Poke6')).toBeInTheDocument();
+  });
+
+  it('re-applying a template is collision-safe: skips existing rows, never duplicates', async () => {
+    const user = userEvent.setup();
+    const spy = vi.fn();
+    render(
+      <ControlledHarness initialDayEvents={[{ name: 'Poke1', description: 'Din1' }]} spy={spy} />
+    );
+
+    await user.click(screen.getByRole('button', { name: /add a standard set/i }));
+    await user.click(screen.getByRole('menuitem', { name: /6 pokes/i }));
+
+    const merged = spy.mock.calls.at(-1)[0];
+    // Poke1 appears exactly once (skipped, not duplicated); the rest are appended.
+    expect(merged.filter((e) => e.name === 'Poke1')).toHaveLength(1);
+    expect(merged.map((e) => e.name)).toEqual([
+      'Poke1',
+      'Poke2',
+      'Poke3',
+      'Poke4',
+      'Poke5',
+      'Poke6',
+    ]);
+    // No duplicate name or description in the result (Rule 14 / Rule 17 safe).
+    const names = merged.map((e) => e.name);
+    expect(new Set(names).size).toBe(names.length);
+    const descriptions = merged.map((e) => e.description);
+    expect(new Set(descriptions).size).toBe(descriptions.length);
   });
 });

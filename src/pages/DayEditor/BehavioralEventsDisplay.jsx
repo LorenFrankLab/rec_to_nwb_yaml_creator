@@ -1,9 +1,15 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
 import { duplicateBehavioralEventDescriptions } from '../../validation/behavioralEvents';
-import { behavioralEventsDescription, behavioralEventsNames } from '../../valueList';
+import {
+  behavioralEventsDescription,
+  behavioralEventsNames,
+  behavioralEventTemplates,
+} from '../../valueList';
 import { splitDioDescription, joinDioDescription } from '../../utils/dioDescription';
+import { nextInstanceNumber, mergeTemplateRows } from '../../utils/behavioralEventSet';
 import SuggestionCombobox from '../../components/SuggestionCombobox';
+import OverflowMenu from '../../components/OverflowMenu';
 import { ConfirmDialog } from '../../components/Modal';
 import InfoIcon from '../../element/InfoIcon';
 import './BehavioralEventsDisplay.scss';
@@ -57,6 +63,8 @@ export default function BehavioralEventsDisplay({ dayEvents, onDayEventsChange }
   const [validationError, setValidationError] = useState(null);
   const [validationWarning, setValidationWarning] = useState(null);
   const [pendingDeleteIndex, setPendingDeleteIndex] = useState(null);
+  // A transient summary of the last standard-set template that was applied (names added vs skipped).
+  const [templateSummary, setTemplateSummary] = useState(null);
 
   // A duplicate DESCRIPTION among the exported day events is a downstream hard `raise ValueError`
   // in trodes_to_nwb — surfaced inline via the SAME helper the export-blocking rule uses, so the
@@ -137,6 +145,19 @@ export default function BehavioralEventsDisplay({ dayEvents, onDayEventsChange }
   }
 
   /**
+   * Auto-number a name PICKED from the suggestions: `Poke` → `Poke1`, the next pick `Poke2`, etc.
+   * The number is the next per-label instance count among the OTHER day events (so the row being
+   * edited never counts itself), derived only from the names — never from the DIO channel index.
+   * Typing a name does not route here (it goes through `onChange`), so free text stays verbatim.
+   *
+   * @param {string} label - The picked suggestion (e.g. "Poke").
+   */
+  function handleNameSelected(label) {
+    const others = dayItems.filter((_, index) => index !== editingIndex);
+    handleFieldChange('name', `${label}${nextInstanceNumber(label, others)}`);
+  }
+
+  /**
    * Commit the edit.
    */
   function handleSave() {
@@ -187,6 +208,43 @@ export default function BehavioralEventsDisplay({ dayEvents, onDayEventsChange }
     if (index == null) return;
     onDayEventsChange(dayItems.filter((_, i) => i !== index));
   }
+
+  /**
+   * Apply a standard-set template, merging its rows into the day set. Rows whose name OR description
+   * already exists are skipped, so applying (or re-applying) a template is idempotent and can never
+   * introduce a duplicate name (Rule 14) or description (Rule 17). A short summary of what was added
+   * vs skipped is surfaced inline.
+   * @param {{label: string, rows: Array<{name: string, description: string}>}} template
+   */
+  function applyTemplate(template) {
+    const { merged, added, skipped } = mergeTemplateRows(dayItems, template.rows);
+    onDayEventsChange(merged);
+    setTemplateSummary({
+      label: template.label,
+      added: added.map((row) => row.name),
+      skipped: skipped.map((row) => row.name),
+    });
+  }
+
+  // Standard-set template menu items (shared between the empty-state CTA and the day-level actions).
+  const templateMenuItems = behavioralEventTemplates().map((template) => ({
+    key: template.id,
+    label: template.label,
+    onSelect: () => applyTemplate(template),
+  }));
+
+  const templateMenu = (
+    <OverflowMenu
+      label="Add a standard set of behavioral events"
+      buttonClassName="dio-standard-set-trigger"
+      triggerContent={
+        <>
+          + add a standard set <span aria-hidden="true">▾</span>
+        </>
+      }
+      items={templateMenuItems}
+    />
+  );
 
   // Partition the day events into direction groups, preserving each event's flat array index
   // (edit/delete operate on the stored flat array).
@@ -270,6 +328,7 @@ export default function BehavioralEventsDisplay({ dayEvents, onDayEventsChange }
               className={validationError ? 'error' : validationWarning ? 'warning' : ''}
               value={editingEvent?.name || ''}
               onChange={(v) => handleFieldChange('name', v)}
+              onSelect={handleNameSelected}
               suggestions={behavioralEventsNames()}
               onKeyDown={handleKeyDown}
               placeholder="event_name"
@@ -400,11 +459,26 @@ export default function BehavioralEventsDisplay({ dayEvents, onDayEventsChange }
         <strong>Dout</strong> = outputs (things you drive).
       </p>
 
-      {dayItems.length === 0 && (
-        <p className="dio-wiring-empty">
-          No behavioral events on this day yet. Add the inputs (sensors) and outputs
-          (lights, pumps) your rig uses.
-        </p>
+      {dayItems.length === 0 ? (
+        <div className="dio-wiring-empty">
+          <p>
+            No behavioral events on this day yet. Add the inputs (sensors) and outputs
+            (lights, pumps) your rig uses, or start from a standard set.
+          </p>
+          <div className="table-actions">{templateMenu}</div>
+        </div>
+      ) : (
+        <div className="table-actions dio-day-actions">{templateMenu}</div>
+      )}
+
+      {templateSummary && (
+        <div className="inline-info" role="status">
+          {templateSummary.added.length > 0
+            ? `Added ${templateSummary.added.join(', ')}.`
+            : `Nothing added — every event in “${templateSummary.label}” was already present.`}
+          {templateSummary.skipped.length > 0 &&
+            ` Skipped ${templateSummary.skipped.length} already present: ${templateSummary.skipped.join(', ')}.`}
+        </div>
       )}
 
       {duplicateDescriptions.length > 0 && (

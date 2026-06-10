@@ -58,6 +58,28 @@ describe('OverflowMenu — trigger semantics', () => {
     expect(trigger).toHaveAttribute('aria-controls', menu.id);
     expect(within(menu).getAllByRole('menuitem')).toHaveLength(3);
   });
+
+  it('renders the default ⋮ glyph when no triggerContent is given', () => {
+    renderMenu();
+    expect(screen.getByRole('button', { name: /actions for remy/i })).toHaveTextContent('⋮');
+  });
+
+  it('renders custom triggerContent (a labelled text trigger) instead of the ⋮ glyph', () => {
+    render(
+      <OverflowMenu
+        label="Add a standard set"
+        triggerContent={
+          <>
+            + add a standard set <span aria-hidden="true">▾</span>
+          </>
+        }
+        items={[{ key: 'pokes', label: '6 pokes', onSelect: vi.fn() }]}
+      />
+    );
+    const trigger = screen.getByRole('button', { name: /add a standard set/i });
+    expect(trigger).toHaveTextContent('+ add a standard set');
+    expect(trigger).not.toHaveTextContent('⋮');
+  });
 });
 
 describe('OverflowMenu — keyboard & focus', () => {

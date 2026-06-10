@@ -189,4 +189,42 @@ describe('TasksEpochsStep', () => {
       { name: '', description: 'Din1' },
     ]);
   });
+
+  it('remounts the behavioral-events editor when the day changes, dropping in-progress edit state', async () => {
+    const user = userEvent.setup();
+    // The behavioral-events editor holds per-day transient UI state (the in-progress row edit, the
+    // standard-set apply summary). Switching to a different day must NOT carry that state over —
+    // it is keyed by day id so a different day remounts a fresh editor.
+    const a = makeAnimalWithCamerasAndDay({
+      day: { id: 'day-a', behavioral_events: [{ name: 'Poke1', description: 'Din1' }] },
+    });
+    const { rerender } = render(
+      <TasksEpochsStep
+        animal={a.animal}
+        day={a.day}
+        mergedDay={a.mergedDay}
+        onFieldUpdate={vi.fn()}
+      />
+    );
+
+    // Enter the row editor on day A — Save/Cancel appear.
+    const inputs = screen.getByRole('table', { name: /inputs \(din\)/i });
+    await user.click(within(inputs).getByRole('button', { name: /^edit$/i }));
+    expect(screen.getByRole('button', { name: /^save$/i })).toBeInTheDocument();
+
+    // Switch to a different day: the editor remounts read-only (no lingering Save from day A).
+    const b = makeAnimalWithCamerasAndDay({
+      day: { id: 'day-b', behavioral_events: [{ name: 'Poke1', description: 'Din1' }] },
+    });
+    rerender(
+      <TasksEpochsStep
+        animal={b.animal}
+        day={b.day}
+        mergedDay={b.mergedDay}
+        onFieldUpdate={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByRole('button', { name: /^save$/i })).not.toBeInTheDocument();
+  });
 });

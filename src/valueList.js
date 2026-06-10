@@ -1,3 +1,5 @@
+import { joinDioDescription } from './utils/dioDescription';
+
 /**
  * Default YML values
  */
@@ -914,6 +916,44 @@ export const behavioralEventsNames = () => {
     ],
   ];
 };
+
+/**
+ * Build a contiguous run of behavioral-event rows for a standard-set template.
+ *
+ * Names use the no-separator `Label<n>` convention verified against real lab YAMLs (0 of 1864 real
+ * names use `Label_<digits>`); the number is a per-label INSTANCE count, never the DIO channel
+ * index. Descriptions are well-formed `Din`/`Dout<n>` lines via {@link joinDioDescription} — a
+ * sensible default channel range the user re-points per row as their rig requires.
+ *
+ * @param {string} label - The event label (e.g. `"Poke"`).
+ * @param {string} type - The DIO type (`"Din"` or `"Dout"`).
+ * @param {number} start - First instance/line number (inclusive).
+ * @param {number} end - Last instance/line number (inclusive).
+ * @returns {Array<{name: string, description: string}>} The template rows.
+ */
+const rangeRows = (label, type, start, end) => {
+  const rows = [];
+  for (let n = start; n <= end; n += 1) {
+    rows.push({ name: `${label}${n}`, description: joinDioDescription(type, n) });
+  }
+  return rows;
+};
+
+/**
+ * Standard-set templates for bulk-adding a canonical day of behavioral (DIO) events.
+ *
+ * Each template is a named set of `{ name, description }` rows. Applying one MERGES its rows into a
+ * day's set, skipping any row whose name or description already exists, so it never creates a
+ * duplicate. Keep the labels/counts editable here in one place.
+ *
+ * @returns {Array<{id: string, label: string, rows: Array<{name: string, description: string}>}>}
+ *   The available templates, in display order.
+ */
+export const behavioralEventTemplates = () => [
+  { id: 'pokes-6', label: '6 pokes (Din1–6)', rows: rangeRows('Poke', 'Din', 1, 6) },
+  { id: 'lights-6', label: '6 lights (Dout1–6)', rows: rangeRows('Light', 'Dout', 1, 6) },
+  { id: 'pumps-6', label: '6 pumps (Dout1–6)', rows: rangeRows('Pump', 'Dout', 1, 6) },
+];
 
 /**
  * Valid DIO `description` types for a behavioral event.

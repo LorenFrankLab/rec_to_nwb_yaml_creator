@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Standard-set templates for behavioral events (DIO).** The Day Editor's wiring table
+  now has a **"+ add a standard set ▾"** menu (also surfaced as the empty-day call to
+  action) that bulk-adds a canonical set in one click — e.g. *6 pokes* → `Poke1…Poke6`
+  on `Din1…Din6`, *6 lights*/*6 pumps* → `Light1…Light6`/`Pump1…Pump6` on `Dout1…Dout6`.
+  Applying a template **merges** its rows into the day's set, skipping any row whose name
+  or description already exists, so re-applying it (or applying into a non-empty day) is
+  idempotent and can never create a duplicate name (Rule 14) or description (Rule 17); a
+  short inline summary reports what was added vs skipped. The channel ranges are a
+  sensible default the user re-points per row.
+- **Per-label auto-numbering when picking a behavioral-event name.** Picking a known name
+  from the **Event** field's suggestions now appends the next per-label instance number —
+  picking *Poke* into a set with no pokes yields `Poke1`, the next `Poke2`, and *Light* is
+  counted independently (`Light1`). The number uses the no-separator `Label<n>` convention
+  (verified against real lab YAMLs) and is a **per-label instance count, not the DIO
+  channel index** (a pump wired to `Dout7` is still `Pump1`). **Typing a name stays
+  verbatim** — free text (e.g. `beam_break`) is never auto-numbered — so unnumbered single
+  events are entered by typing rather than picking. The exported YAML shape
+  (`behavioral_events: [{ description, name }]`) is unchanged.
+
 ### Removed
 
 - **Retired the animal-level behavioral-events (DIO) library.** Behavioral events are

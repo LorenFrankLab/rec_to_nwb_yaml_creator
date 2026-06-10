@@ -33,10 +33,33 @@
   }
 
   .dio-wiring-empty {
-    font-style: italic;
     color: var(--color-grey-600, #666);
     font-size: var(--font-size-sm, 0.875rem);
     margin: 0 0 var(--spacing-md, 1rem) 0;
+
+    p {
+      font-style: italic;
+      margin: 0 0 var(--spacing-xs, 0.25rem) 0;
+    }
+  }
+
+  /* Day-level actions row (the standard-set menu). */
+  .dio-day-actions {
+    margin: 0 0 var(--spacing-sm, 0.5rem) 0;
+  }
+
+  /* Labelled text trigger for the standard-set menu — overrides OverflowMenu's fixed-size icon
+     trigger (more specific than `.overflow-menu-trigger`, so it wins regardless of load order). */
+  .dio-standard-set-trigger {
+    width: auto;
+    height: auto;
+    padding: var(--spacing-xs, 0.25rem) var(--spacing-sm, 0.5rem);
+    font-size: var(--font-size-sm, 0.875rem);
+    color: var(--color-grey-900, #333);
+    background: var(--color-white, #fff);
+    border: 1px solid var(--color-grey-300, #bdbdbd);
+    border-radius: 4px;
+    white-space: nowrap;
   }
 
   .dio-day-event-hint {
@@ -139,4 +162,15 @@
   border-radius: 3px;
   font-size: 0.85rem;
   color: #e65100;
+}
+
+/* Non-blocking informational note (e.g. the standard-set apply summary). */
+.behavioral-events-display .inline-info {
+  margin: 0.4rem 0;
+  padding: 0.4rem 0.6rem;
+  background: #e8f0fe;
+  border-left: 3px solid #2563eb;
+  border-radius: 3px;
+  font-size: 0.85rem;
+  color: #1a3a7a;
 }
