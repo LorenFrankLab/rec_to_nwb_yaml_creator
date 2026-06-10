@@ -339,6 +339,16 @@ export function AnimalView({ animalId, tab }) {
       if (typeof match.scrollIntoView === 'function') match.scrollIntoView({ block: 'nearest' });
       match.classList.add('repair-target-highlight');
       highlighted = match;
+      // Move focus to where the fix happens, not the panel wrapper. The section anchor is a
+      // structural <div>, so focus the first focusable control within it (matching the Day
+      // Editor, which focuses the owning control). A setup table with no inline input still
+      // exposes an "Edit"/action button, so this lands keyboard/SR users inside the section.
+      // If the section somehow has no focusable control, keep the existing panel focus.
+      const focusTarget = match.querySelector(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), ' +
+          'textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusTarget && typeof focusTarget.focus === 'function') focusTarget.focus();
       // Transient cue: drop it so it doesn't read as a persistent state.
       removeTimer = setTimeout(() => match.classList.remove('repair-target-highlight'), 2000);
     });

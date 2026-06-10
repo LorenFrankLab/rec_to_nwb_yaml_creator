@@ -82,7 +82,7 @@ describe('CamerasSection', () => {
       expect(screen.getByText(/Name/i)).toBeInTheDocument();
       expect(screen.getByText(/Manufacturer/i)).toBeInTheDocument();
       expect(screen.getByText(/Model/i)).toBeInTheDocument();
-      expect(screen.getByText(/Meters\/Pixel/i)).toBeInTheDocument();
+      expect(screen.getByText(/Meters per Pixel/i)).toBeInTheDocument();
       expect(screen.getByText(/Status/i)).toBeInTheDocument();
 
       // Check camera data is displayed

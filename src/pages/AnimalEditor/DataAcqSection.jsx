@@ -151,7 +151,7 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
         </p>
 
         <div className="form-group">
-          <label htmlFor="raw_data_to_volts">Raw Data to Volts</label>
+          <label htmlFor="raw_data_to_volts">Raw Data to Volts (V/bit)</label>
           <input
             type="number"
             id="raw_data_to_volts"
@@ -164,12 +164,14 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
             aria-describedby="raw-data-help"
           />
           <small id="raw-data-help" className="help-text">
-            Conversion factor for electrophysiology signals (must be &gt; 0)
+            Conversion factor applied to each raw ADC sample to get volts (must be &gt; 0).
+            Default 0.195 for SpikeGadgets/Intan rigs — do not change without pipeline-maintainer
+            guidance.
           </small>
         </div>
 
         <div className="form-group">
-          <label htmlFor="times_period_multiplier">Times Period Multiplier</label>
+          <label htmlFor="times_period_multiplier">Timestamp Scaling Factor</label>
           <input
             type="number"
             id="times_period_multiplier"
@@ -182,7 +184,8 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
             aria-describedby="times-help"
           />
           <small id="times-help" className="help-text">
-            Timestamp multiplier (must be &gt; 0)
+            Scales the hardware clock period to derive absolute timestamps (must be &gt; 0).
+            Default 1.5 for SpikeGadgets rigs — do not change without guidance.
           </small>
         </div>
       </div>

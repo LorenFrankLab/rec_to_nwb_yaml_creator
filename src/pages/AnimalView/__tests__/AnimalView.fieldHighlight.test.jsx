@@ -54,6 +54,26 @@ describe('AnimalView — ?field= repair-landing highlight (Phase 3a.3)', () => {
     );
   });
 
+  it('moves focus into the highlighted section (first focusable control), not the panel wrapper', async () => {
+    window.location = { hash: '#/animal/remy/electrode-groups?field=electrode_groups' };
+    renderView('electrode-groups');
+    const anchor = await waitFor(() => {
+      const el = document.querySelector('[data-field-path="electrode_groups"]');
+      expect(el).toHaveClass('repair-target-highlight');
+      return el;
+    });
+    // Focus must land on a focusable control WITHIN the highlighted section, not on the
+    // section/panel wrapper itself — so keyboard/SR users land where the fix happens.
+    await waitFor(() => {
+      const active = document.activeElement;
+      expect(active).not.toBeNull();
+      expect(anchor.contains(active)).toBe(true);
+      expect(
+        active.matches('a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])')
+      ).toBe(true);
+    });
+  });
+
   it('matches a specific field path against the section anchor (data_acq_device[0].name → recording-system)', async () => {
     window.location = { hash: '#/animal/remy/recording-system?field=data_acq_device%5B0%5D.name' };
     renderView('recording-system');
