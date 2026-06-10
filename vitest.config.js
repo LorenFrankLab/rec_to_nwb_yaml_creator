@@ -43,10 +43,12 @@ export default defineConfig({
     exclude: ['node_modules/', 'build/', 'dist/'],
     // Global per-test budget for the no-coverage run (the `npm test` correctness gate).
     // Heavy App-render integration tests are ~3s without coverage, so 30s is a wide
-    // margin even on slow CI cores. The coverage run needs more headroom because v8
-    // instrumentation ~triples per-test wall-clock — `test:coverage` raises this to
-    // 60s via --testTimeout (see package.json). Per-test `{ timeout }` overrides were
-    // removed in favor of these two central budgets (see the integration test files).
+    // margin even on slow CI cores. The coverage run needs much more headroom: v8
+    // instrumentation ~triples per-test wall-clock locally, and on the 4-core CI runner
+    // the heaviest test (complete-session export) was observed >60s once slow cores +
+    // oversubscription stack on top — so `test:coverage` raises this to 120s via
+    // --testTimeout (see package.json). Per-test `{ timeout }` overrides were removed in
+    // favor of these two central budgets (see the integration test files).
     testTimeout: 30000,
     hookTimeout: 10000,
   },

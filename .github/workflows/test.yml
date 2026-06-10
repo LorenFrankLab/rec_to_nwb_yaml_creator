@@ -47,8 +47,9 @@ jobs:
 
   # Coverage + threshold enforcement, isolated from the correctness gate. Runs in
   # parallel (no `needs:`) so coverage feedback is not delayed. The `test:coverage`
-  # script raises testTimeout to 60s to size the per-test budget to coverage's ~3x
-  # instrumentation cost on the constrained runner (see package.json).
+  # script raises testTimeout to 120s to size the per-test budget to coverage's cost
+  # on the constrained 4-core runner — v8 instrumentation ~triples per-test wall-clock
+  # and slow cores + oversubscription pushed the heaviest test past 60s (see package.json).
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
@@ -143,33 +144,42 @@ jobs:
           ref: main
           path: trodes_to_nwb
 
-      - name: Compare nwb_schema.json
+      - name: Compare nwb_schema.json (ignoring app-only version field)
         run: |
-          cd rec_to_nwb_yaml_creator
-          SCHEMA_HASH=$(sha256sum src/nwb_schema.json | cut -d' ' -f1)
-          echo "Web app schema hash: $SCHEMA_HASH"
+          WEBAPP_SCHEMA="rec_to_nwb_yaml_creator/src/nwb_schema.json"
+          PYTHON_SCHEMA="trodes_to_nwb/src/trodes_to_nwb/nwb_schema.json"
 
-          cd ../trodes_to_nwb
-          if [ -f "src/trodes_to_nwb/nwb_schema.json" ]; then
-            PYTHON_SCHEMA_HASH=$(sha256sum src/trodes_to_nwb/nwb_schema.json | cut -d' ' -f1)
-            echo "Python package schema hash: $PYTHON_SCHEMA_HASH"
-
-            if [ "$SCHEMA_HASH" != "$PYTHON_SCHEMA_HASH" ]; then
-              echo "❌ Schema mismatch detected!"
-              echo "Web app hash:    $SCHEMA_HASH"
-              echo "Python pkg hash: $PYTHON_SCHEMA_HASH (main branch)"
-              echo ""
-              echo "The nwb_schema.json files are out of sync between repositories."
-              echo "Please ensure the web app schema matches:"
-              echo "https://github.com/LorenFrankLab/trodes_to_nwb/blob/main/src/trodes_to_nwb/nwb_schema.json"
-              exit 1
-            fi
-
-            echo "✅ Schemas are synchronized"
-          else
+          if [ ! -f "$PYTHON_SCHEMA" ]; then
             echo "⚠️ Warning: trodes_to_nwb schema file not found at expected location"
             echo "Skipping schema sync check"
+            exit 0
           fi
+
+          # The web app stamps a top-level `version` field on its schema for its own
+          # version-drift tooling (scripts/check-schema-version.mjs, run in the `test`
+          # gate); trodes_to_nwb's copy does not carry that field. Both behaviours are
+          # intentional, so a raw byte comparison is mutually unsatisfiable. Compare the
+          # SUBSTANTIVE schema instead: strip the app-only `version` key from both and
+          # canonicalize (sorted keys) before hashing. Any real drift in
+          # properties/required/types/definitions still fails the gate.
+          WEBAPP_HASH=$(jq -S 'del(.version)' "$WEBAPP_SCHEMA" | sha256sum | cut -d' ' -f1)
+          PYTHON_HASH=$(jq -S 'del(.version)' "$PYTHON_SCHEMA" | sha256sum | cut -d' ' -f1)
+          echo "Web app schema hash (sans version):    $WEBAPP_HASH"
+          echo "Python pkg schema hash (sans version): $PYTHON_HASH (main branch)"
+
+          if [ "$WEBAPP_HASH" != "$PYTHON_HASH" ]; then
+            echo "❌ Schema mismatch detected (beyond the app-only version field)!"
+            echo ""
+            echo "The substantive nwb_schema.json content is out of sync between repositories."
+            echo "Diff (web app vs trodes_to_nwb main, version field ignored):"
+            diff <(jq -S 'del(.version)' "$WEBAPP_SCHEMA") <(jq -S 'del(.version)' "$PYTHON_SCHEMA") || true
+            echo ""
+            echo "Please ensure the web app schema matches:"
+            echo "https://github.com/LorenFrankLab/trodes_to_nwb/blob/main/src/trodes_to_nwb/nwb_schema.json"
+            exit 1
+          fi
+
+          echo "✅ Schemas are synchronized (ignoring the app-only version field)"
 
   build:
     name: Build Application
