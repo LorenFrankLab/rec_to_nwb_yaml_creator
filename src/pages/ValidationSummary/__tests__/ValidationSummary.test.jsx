@@ -152,6 +152,35 @@ describe('ValidationSummary', () => {
     expect(within(validRow).getByText(/config v1 \(historical\)/i)).toBeInTheDocument();
   });
 
+  it('surfaces the session description in a batch row when the day has one', () => {
+    const { workspace, ids } = makeSummaryWorkspace();
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+
+    // The realistic fixture's valid day carries a session_description; it must be visible in the
+    // row (previously the Session column bound session_id only and the description was hidden).
+    const validRow = screen.getByTestId(`day-row-${ids.validDayId}`);
+    expect(
+      within(validRow).getByText(/Day 45 of chronic recording, W-track alternation/i)
+    ).toBeInTheDocument();
+  });
+
+  it('does not render a whitespace-only session description (shows the session id, no stray blank)', () => {
+    const { workspace, ids } = makeSummaryWorkspace();
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+
+    // The error day has a whitespace-only session_description ('   '); it must NOT be surfaced as a
+    // description line. The session id still shows.
+    const errorRow = screen.getByTestId(`day-row-${ids.errorDayId}`);
+    expect(
+      within(errorRow).queryByTestId(`session-description-${ids.errorDayId}`)
+    ).not.toBeInTheDocument();
+    expect(within(errorRow).getByText('remy_20230622')).toBeInTheDocument();
+  });
+
   it('counts reflect chip breakdown', () => {
     const { workspace } = makeSummaryWorkspace();
     provideStore(workspace);

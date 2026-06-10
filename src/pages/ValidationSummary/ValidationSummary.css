@@ -194,6 +194,13 @@
   white-space: nowrap;
 }
 
+/* Session description under the session id — secondary context, so muted and on its own line. */
+.validation-summary-session-description {
+  display: block;
+  font-size: 0.8125rem;
+  color: #555;
+}
+
 /* Batch-row scan detail (config version · cameras · opto state) — muted so it reads as
    at-a-glance context, not a primary value. */
 .validation-summary-scan {

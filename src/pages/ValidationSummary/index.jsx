@@ -188,9 +188,17 @@ export function buildRows(workspace) {
       // the day-protocol opto state — so days can be compared before opening each editor. Computed
       // here (where the merge already succeeded) so the table reads, never re-derives.
       const workflow = getDayWorkflowStatus(animal, record, merged, animalDays);
+      const sessionDescriptionRaw = record.session?.session_description;
+      const sessionDescription =
+        typeof sessionDescriptionRaw === 'string' && sessionDescriptionRaw.trim()
+          ? sessionDescriptionRaw.trim()
+          : '';
       const scan = {
         version: workflow.configurationVersion,
         historical: workflow.isHistoricalConfiguration,
+        // The day's session description (trimmed, empty when blank/whitespace-only) — surfaced in the
+        // row so it isn't hidden behind the session id alone.
+        sessionDescription,
         cameras: (merged.cameras || []).length,
         // Day-used camera calibration (name + meters_per_pixel) from the SAME camera set the count
         // is derived from, so a re-calibrated camera is visible without opening the editor.
@@ -866,7 +874,17 @@ export function ValidationSummary({ animalKey } = {}) {
                     )}
                   </td>
                   <td>{day.date || '—'}</td>
-                  <td>{day.session?.session_id || '—'}</td>
+                  <td>
+                    {day.session?.session_id || '—'}
+                    {scan?.sessionDescription && (
+                      <span
+                        className="validation-summary-session-description"
+                        data-testid={`session-description-${day.id}`}
+                      >
+                        {scan.sessionDescription}
+                      </span>
+                    )}
+                  </td>
                   <td>
                     {/* Scan fields (Task 10): pinned configuration version, camera count, and the
                         day-protocol opto state — so days can be compared at a glance. Absent for
