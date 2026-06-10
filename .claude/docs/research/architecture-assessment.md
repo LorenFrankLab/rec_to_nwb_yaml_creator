@@ -1,0 +1,108 @@
+# Architecture & refactor-safety assessment — rec_to_nwb_yaml_creator
+
+**Date:** 2026-06-10 · **Branch:** `modern` · Companion to
+[design-feedback-evaluation.md](./design-feedback-evaluation.md) and [ux-principles.md](./ux-principles.md).
+
+Goal (user's words): *"make sure the code is following best practices for a web application of this kind …
+that we can refactor things safely in the future and more easily make changes."* Based on three
+read-only codebase investigations (state/layering, component organization, tooling/types/tests) +
+web-grounded current best practice.
+
+## Headline verdict
+
+**The foundations are genuinely good — better than the F6 styling sprawl suggests. Refactor-safety ≈ 7/10.**
+The codebase already does several things most React apps don't: it **enforces layer boundaries with a
+test**, keeps business logic **pure and React-free**, and **locks the data contract with golden
+baselines + contract tests**. The weak spots are concentrated and addressable: **no static types**,
+**a handful of oversized files/components**, **~2,000 LOC of legacy dead-weight**, **CSS with no scoping
+or enforced tokens** (F6), and **deferred lint debt that weakens the build gate**.
+
+### What's already strong (keep / build on)
+
+- **Enforced architecture boundaries.** `src/__tests__/architectureBoundaries.guard.test.js` scans the
+  real tree and fails the build on forbidden imports (domain/state → pages; page → sibling page, minus an
+  allowlist). This is a rare, high-value guardrail — *the dependency direction can't silently rot.*
+- **Pure, layered core.** `domain/`, `validation/`, `io/`, and the export builders in
+  `state/workspaceUtils.js` are **React-free pure functions**. `io/yaml.js` is a thin deterministic codec.
+  Clean unidirectional flow: components → `useStoreContext` → actions/selectors → pure transitions → persistence.
+- **Strong test seams that survive refactors.** 4,522 tests / 299 files / 80% coverage threshold. The
+  *contract* tests are the gold: `golden-yaml.baseline.test.js` (byte-identical export over 4 fixtures),
+  `store-public-api.test.js` (locks the action/selector surface), `dayValidation.contract.test.js` (pins
+  issue codes/ownership/step), plus Playwright e2e. These catch the renames/key-reorders that a type
+  system would — *at test time.*
+- **Solid CI:** parallel unit/coverage/e2e + a schema-sync check against trodes_to_nwb.
+
+### What makes change hard today (the gaps)
+
+| Gap | Evidence | Why it bites refactoring |
+| --- | --- | --- |
+| **No static types** | 100% JS; `jsconfig.json` `checkJs:false`; PropTypes on ~31% of components; JSDoc typedefs exist (`state/workspaceTypes.js`) but are *unenforced* | Rename a domain fn or change an `Animal`/`Day` shape → **silent until a test happens to exercise it.** No safe IDE rename, no null-safety. Tooling agent scored type-safety **2/10**. |
+| **Oversized files/components** | `domain/validation.js` 1142 · `validation/rulesValidation.js` 1108 · `valueList.js` 1073 · `ValidationSummary/index.jsx` 1033 · `DevicesStep.jsx` 825 · `OptogeneticsFields.jsx` 826 · `RecordingDaysTab.jsx` 822 · `useWorkspace.js` 793 | High intrinsic load to change; many concerns per file; merge-conflict magnets. |
+| **~2,000 LOC legacy dead-weight** | `OptogeneticsFields.jsx` (826, imported only by `LegacyFormView`), `element/*`, `*Fields`, `LegacyFormView.jsx` — parallel to the workspace path | Every workspace UX/styling change risks needing a legacy twin; or the legacy code rots unmaintained. |
+| **CSS: no scoping, partial tokens** (= F6) | Global CSS, `.button-primary` redefined in 6 files, two different error icons, ~60% token adoption, mixed `.css`/`.scss` | Visual inconsistency *and* fragile edits — changing a shared style can leak across components. |
+| **Build-gate weakened** | CI builds with `CI=false`; 275 ESLint warnings tolerated; no `tsc` step | Problems are warned, not enforced; drift accumulates. |
+| **Coupled critical pair** | `resolveDayConfig` (`workspaceUtils.js:192`) ↔ `dayOverrideIssues` (`validation.js:100`) must stay in lock-step, by-comment only | A change to one without the other = silent export corruption (only golden baselines catch some of it). |
+| **Prop-drilling in Day Editor** | `DayEditorStepper` → `DevicesStep` (7 props) → `BadChannelsEditor`/`ReconfigWizard` | Signature changes cascade across 5 components; container pattern exists only in `AnimalEditor/wiring/`. |
+| **Persistence migration gap** | `persistence.js` discards on `schemaVersion` mismatch; no forward migration (= Post-v3 #6) | Any persisted-shape change risks discarding real user data — **release-gating.** |
+
+## Target architecture & guardrails (where to steer)
+
+Grounded in current best practice (feature-based organization, container/presentational split, design
+tokens + scoped CSS, incremental typing, contract tests) — adapted to what already exists here, *not* a
+rewrite. The bar is "follows best practices for a web app of this kind" + "safe, easy future change."
+
+1. **Static types, incrementally (highest leverage).** TS supports `.ts`/`.js` side-by-side. Type the
+   **pure core first** where ROI is highest and churn lowest: `io/` → `state/workspaceTypes` +
+   `workspaceUtils`/`useWorkspace` → `domain/`+`validation/`. The JSDoc typedefs in `workspaceTypes.js`
+   convert almost directly to interfaces. Add a `tsc --noEmit` CI gate. *(Alternative if TS is rejected:
+   set `checkJs:true` + enforce JSDoc `@type` via ESLint + fail CI on warnings — weaker, but real.)*
+2. **CSS: design tokens + scoping by construction.** Centralize tokens (extend the existing `index.css`
+   `:root` with grey scale, `--radius-*`, `--shadow-*`, and a **z-index scale** — which also fixes F3's
+   root smell), then adopt **CSS Modules** (CRA-native) for component styles so collisions are
+   *impossible*, keeping a lean global layer for layout/typography. Enforce with stylelint. This is the
+   structural fix for F6.
+3. **Tame the oversized units.** Split `domain/validation.js` into composer / override-validation /
+   step-routing; extract a **shared device-override merge module** so `resolveDayConfig` and
+   `dayOverrideIssues` can't drift; break `OptogeneticsFields`, `ValidationSummary`, `DevicesStep`,
+   `RecordingDaysTab` into sub-components. All behavior-preserving, guarded by the existing contract/golden tests.
+4. **Decide the legacy path's fate** (see decisions). Sunsetting deletes ~2,000 LOC and removes the
+   "must I update the legacy twin?" tax; keeping it frozen is the conservative safety-net choice.
+5. **Spread the container/presentational pattern** from `AnimalEditor/wiring/` to the Day Editor (a
+   `DayEditorContext` to kill the 7-prop drill).
+6. **Re-arm the build gate** once lint debt is paid: `CI=true` build + `tsc` + stylelint.
+7. **Persistence migration framework** (Post-v3 #6) before any persisted-shape change.
+
+**Crucial constraint:** every structural refactor must keep the **golden baselines byte-identical** and
+the **contract tests green** — they are exactly what makes this safe. The `resolveDayConfig`/
+`mergeDayMetadata`/`validateDay` trio is the minefield; touch only with baselines + a trodes_to_nwb
+integration check.
+
+## Prioritized refactor-safety investments (ROI-ranked)
+
+| # | Investment | Effort | Payoff | Notes |
+| --- | --- | --- | --- | --- |
+| 1 | **Incremental TS on the pure core** (io → state → domain/validation) | ~4–5 d | Eliminates a whole bug class; safe IDE rename; self-documenting | Tooling agent's #1 rec; typedefs already exist |
+| 2 | **Design tokens + CSS Modules** (F6) | med–high | Consistency by construction; safe style edits; fixes F3 z-index | Stylelint to enforce |
+| 3 | **Pay lint debt + re-arm build gate** | low–med | Build catches drift again | Prereq for trusting CI |
+| 4 | **Split the 5 oversized files/components** | med | Lower change-cost; fewer conflicts | Guarded by contract/golden tests |
+| 5 | **Shared device-override merge module** | low–med | Removes the silent-drift coupling | Pairs `resolveDayConfig`/`dayOverrideIssues` |
+| 6 | **Persistence forward-migration** (#6) | low–med | Unblocks persisted-shape changes safely | Release-gating |
+| 7 | **Sunset legacy path** (if approved) | med | −2,000 LOC maintenance | Tied to the held front-door cutover |
+| 8 | **DayEditorContext (kill prop-drill)** | low–med | Easier Day Editor changes | Extend existing container pattern |
+
+## How this intersects with the F1–F6 design changes
+
+- **F1 (remove channel maps)** also lets us delete the legacy `ntrode/ChannelMap.jsx` and the
+  `ChannelMapEditor`/container/step (#3 split benefit). Merge-neutral.
+- **F4 (Tasks & Epochs)** lands on the *biggest, most prop-drilled* components — do the **#4 split +
+  #8 DayEditorContext** here so the UX redesign rides on a cleaner structure (don't redesign on top of an
+  825-LOC monolith).
+- **F6 (styling)** *is* investment **#2** — the design-token + CSS-Modules decision is the F6 fix.
+- **F2/F3** are tiny and ride on top regardless; F3's z-index magic numbers are subsumed by the token scale.
+- **F5 (DIO Type+Index)** is a small component change; do it after (or alongside) the element-control decision.
+
+## Sources
+
+- [My approach to React app architecture in 2025 — LaunchDarkly](https://launchdarkly.com/docs/blog/react-architecture-2025) · [React Architecture Patterns & Best Practices — GeeksforGeeks](https://www.geeksforgeeks.org/reactjs/react-architecture-pattern-and-best-practices/)
+- [Managing Global Styles in React with Design Tokens — UXPin](https://www.uxpin.com/studio/blog/managing-global-styles-in-react-with-design-tokens/) · [Scalable CSS Architecture — dev.to](https://dev.to/zeeshanali0704/frontend-system-design-scalable-css-architecture-472n) · [CSS Architecture: BEM → Tailwind → Tokens — Superflex](https://www.superflex.ai/blog/css-architecture)
+- [Gradual TypeScript Adoption in React — Medium](https://mazenadel19.medium.com/gradual-typescript-adoption-in-react-1bdb2b363722) · [Incremental JS→TS migration — Mixmax](https://www.mixmax.com/engineering/incremental-migration-from-javascript-to-typescript-in-our-largest-service)
