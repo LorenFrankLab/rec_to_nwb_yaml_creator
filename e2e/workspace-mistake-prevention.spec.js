@@ -320,10 +320,11 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     // The day exposes a "Use on this day" path that promotes a library event into the exported list.
     await inherited.getByRole('button', { name: 'Use lib_poke on this day' }).click();
 
-    // The promoted event now appears in the DAY-specific (exported) list.
-    const dayList = page.getByRole('list', { name: 'Day-specific behavioral events' });
-    await expect(dayList).toBeVisible();
-    await expect(dayList.getByText('lib_poke')).toBeVisible();
+    // The promoted event now appears in the day's exported wiring table. Its prose description
+    // ("Nose poke (animal-level reference)") isn't a Din/Dout line, so it lands in the "Other"
+    // group of the table.
+    const otherTable = page.getByRole('table', { name: 'Other' });
+    await expect(otherTable.getByText('lib_poke')).toBeVisible();
     // And the "Use on this day" affordance for that event is gone (it is now used by the day).
     await expect(
       inherited.getByRole('button', { name: 'Use lib_poke on this day' }),

@@ -2,7 +2,10 @@
  * BehavioralEventsDisplay styling.
  *
  * Reuses DayEditor CSS variables and the shared inline-warning / button-small /
- * button-secondary conventions. Inherited events are visually marked read-only.
+ * button-primary conventions. Inherited (animal) events are visually marked read-only;
+ * the day's own events are edited as a wiring table grouped into Inputs (Din) / Outputs (Dout).
+ * All structural class names are scoped under `.behavioral-events-display` because imported
+ * stylesheets apply app-wide.
  */
 
 .behavioral-events-display {
@@ -27,22 +30,17 @@
     margin: 0 0 var(--spacing-sm, 0.5rem) 0;
   }
 
-  .inherited-events-list,
-  .day-events-list {
+  .inherited-events-list {
     list-style: none;
     margin: 0 0 var(--spacing-md, 1rem) 0;
     padding: 0;
   }
 
-  .inherited-event,
-  .day-event {
+  .inherited-event {
     display: flex;
     align-items: baseline;
     gap: var(--spacing-sm, 0.5rem);
     padding: var(--spacing-xs, 0.25rem) 0;
-  }
-
-  .inherited-event {
     color: var(--color-grey-700, #616161);
   }
 
@@ -50,63 +48,133 @@
     flex: none;
   }
 
-  .inherited-event-name,
-  .day-event-name {
+  .inherited-event-name {
     font-weight: 600;
   }
 
-  .inherited-event-description,
-  .day-event-description {
+  .inherited-event-description {
     color: var(--color-grey-600, #666);
     font-size: var(--font-size-sm, 0.875rem);
   }
 
-  .day-specific-events {
+  /* ---- Day wiring table (Inputs / Outputs) ---- */
+
+  .day-wiring {
     margin-top: var(--spacing-md, 1rem);
-  }
 
-  .day-specific-events-heading {
-    font-size: var(--font-size-base, 1rem);
-    font-weight: 500;
-    margin: 0 0 var(--spacing-sm, 0.5rem) 0;
-    color: var(--color-grey-900, #333);
-  }
+    .section-header {
+      margin-bottom: var(--spacing-sm, 0.5rem);
 
-  .day-event-editor {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--spacing-sm, 0.5rem);
-    align-items: flex-end;
-  }
+      h4 {
+        font-size: var(--font-size-base, 1rem);
+        font-weight: 600;
+        margin: 0;
+        color: var(--color-grey-900, #333);
+      }
 
-  .day-event-field {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-xs, 0.25rem);
-    font-size: var(--font-size-sm, 0.875rem);
-
-    input {
-      padding: 0.5rem;
-      border: 1px solid var(--color-grey-300, #bdbdbd);
-      border-radius: 4px;
-      font-size: var(--font-size-base, 1rem);
-      font-family: inherit;
-      min-height: 44px;
-
-      &:focus {
-        outline: 2px solid var(--color-primary, var(--color-primary));
-        outline-offset: 1px;
+      p {
+        margin: var(--spacing-xs, 0.25rem) 0 0 0;
+        color: var(--color-grey-600, #666);
+        font-size: var(--font-size-sm, 0.875rem);
       }
     }
   }
 
-  .day-event-actions {
+  .dio-direction-legend {
+    margin: 0 0 var(--spacing-sm, 0.5rem) 0;
+    font-size: var(--font-size-sm, 0.875rem);
+    color: var(--color-grey-700, #616161);
+  }
+
+  .dio-wiring-empty {
+    font-style: italic;
+    color: var(--color-grey-600, #666);
+    font-size: var(--font-size-sm, 0.875rem);
+    margin: 0 0 var(--spacing-md, 1rem) 0;
+  }
+
+  .dio-day-event-hint {
+    margin: var(--spacing-xs, 0.25rem) 0 0 0;
+    font-size: var(--font-size-sm, 0.875rem);
+    color: var(--color-grey-600, #666);
+  }
+
+  .dio-direction-group {
+    margin-bottom: var(--spacing-md, 1rem);
+
+    .table-actions {
+      margin: var(--spacing-xs, 0.25rem) 0 var(--spacing-sm, 0.5rem) 0;
+    }
+  }
+
+  .dio-wiring-table {
+    width: 100%;
+    border-collapse: collapse;
+
+    th,
+    td {
+      text-align: left;
+      padding: var(--spacing-xs, 0.25rem) var(--spacing-sm, 0.5rem);
+      vertical-align: top;
+      border-bottom: 1px solid var(--color-grey-200, #eee);
+    }
+
+    th {
+      font-size: var(--font-size-sm, 0.875rem);
+      font-weight: 600;
+      color: var(--color-grey-700, #616161);
+    }
+
+    .dio-wiring-empty-row {
+      color: var(--color-grey-600, #666);
+    }
+  }
+
+  /* Guided Type + line-index cluster (kept self-contained so this component does not depend
+     on the animal editor's stylesheet, which is removed in a later phase). */
+  .dio-description-fields {
     display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
     gap: var(--spacing-sm, 0.5rem);
+
+    .dio-description-fields__control {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--spacing-xs, 0.25rem);
+
+      label {
+        font-size: var(--font-size-sm, 0.875rem);
+        font-weight: 600;
+        color: var(--color-grey-700, #616161);
+        white-space: nowrap;
+      }
+    }
+
+    select {
+      padding: var(--spacing-sm, 0.5rem);
+      border: 1px solid var(--color-grey-300, #bdbdbd);
+      border-radius: 4px;
+      font-size: var(--font-size-base, 1rem);
+      font-family: inherit;
+      background-color: var(--color-white, #fff);
+      min-height: 44px;
+
+      &:focus {
+        outline: 2px solid var(--color-primary, #2196f3);
+        outline-offset: 1px;
+      }
+    }
+
+    input[type='number'] {
+      width: 5rem;
+      min-height: 44px;
+    }
   }
 }
 
-/* Phase 8.7 Task 6: duplicate-description error (export-blocking, distinct from the name warning). */
+/* Inline gates: duplicate-description error (export-blocking) + non-blocking warnings. Scoped
+   to this component so the cues are present without relying on another stylesheet. */
 .behavioral-events-display .inline-error {
   margin: 0.4rem 0;
   padding: 0.4rem 0.6rem;
@@ -115,4 +183,14 @@
   border-radius: 3px;
   font-size: 0.85rem;
   color: #7a241c;
+}
+
+.behavioral-events-display .inline-warning {
+  margin: 0.4rem 0;
+  padding: 0.4rem 0.6rem;
+  background: var(--color-warning-light, #fff3e0);
+  border-left: 3px solid #ff9800;
+  border-radius: 3px;
+  font-size: 0.85rem;
+  color: #e65100;
 }

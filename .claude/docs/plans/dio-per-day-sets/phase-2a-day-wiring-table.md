@@ -70,6 +70,13 @@ exported YAML (golden baselines stay byte-identical).
   "carried from" date from the immediately-earlier same-`configurationVersion` day in
   `getAnimalDays(animal)` (same logic the bad-channels carry-forward note uses), or omit the date
   clause if none exists.
+  **Status (shipped):** the default view IS the carried-forward set (it shows `day.behavioral_events`,
+  which `createDayRecord` seeds from the carry source) and the explainer says so generically
+  ("A new day carries forward the previous day's set — edit only if you rewired the rig."). The
+  explicit "carried forward from **{date}**" clause is **deferred** — naming the source date needs
+  the animal's day RECORDS (date + `configurationVersion`), which `TasksEpochsStep` doesn't have
+  (only `animal` + the current `day`); wiring it cleanly means threading the days map through
+  `DayEditor`, out of scope for this phase. Pick it up when that plumbing exists.
 
 - **a11y polish** ([§5.3](PLAN.md#5-ux-design-the-heart)): every Type/Index control keeps an
   explicit `aria-label`; the Din/Dout legend is associated (e.g. `aria-describedby` from the group

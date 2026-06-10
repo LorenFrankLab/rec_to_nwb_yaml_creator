@@ -51,6 +51,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Per-day behavioral-events (DIO) wiring table.** The recording-day editor now
+  presents the day's behavioral events as a wiring table grouped into **Inputs
+  (Din)** and **Outputs (Dout)** (plus an **Other** group for any imported
+  non-standard channel), reading like the physical rig. Each row maps a hardware
+  **DIO channel** (the `description`) to an **Event** (the `name`, which "becomes the
+  DIO event's name in the NWB file"), edited via the guided Type/line-index controls.
+  A text legend (Din = inputs, Dout = outputs), per-field hints, and an explainer
+  ("edit only if you rewired the rig") accompany it; rows delete through the shared
+  confirmation dialog. The animal's inherited library is still shown above as
+  read-only reference. The exported YAML shape is unchanged.
 - **Off-list combobox warning is now linked to its input** via `aria-describedby`
   (merged with any caller-provided value), so screen readers associate the
   standard-options nudge with the field.

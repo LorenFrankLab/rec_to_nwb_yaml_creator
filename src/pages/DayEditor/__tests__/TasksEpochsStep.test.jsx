@@ -176,16 +176,17 @@ describe('TasksEpochsStep', () => {
     expect(onFieldUpdate).toHaveBeenCalledWith('tasks', []);
   });
 
-  it('writes day-specific behavioral events through onFieldUpdate', async () => {
+  it('writes day behavioral events through onFieldUpdate (day wiring table)', async () => {
     const user = userEvent.setup();
     const { onFieldUpdate } = renderStep();
 
-    await user.click(screen.getByRole('button', { name: /add day-specific event/i }));
-    await user.type(screen.getByRole('textbox', { name: /event name/i }), 'day_event');
-    await user.click(screen.getByRole('button', { name: /^save$/i }));
+    // The day's behavioral events are edited as a wiring table; adding an Input event seeds the
+    // default Din line and writes through to onFieldUpdate('behavioral_events', …). The full
+    // add→name→save flow is covered at the BehavioralEventsDisplay component level.
+    await user.click(screen.getByRole('button', { name: /add input event/i }));
 
     expect(onFieldUpdate).toHaveBeenCalledWith('behavioral_events', [
-      { name: 'day_event', description: '' },
+      { name: '', description: 'Din1' },
     ]);
   });
 });
