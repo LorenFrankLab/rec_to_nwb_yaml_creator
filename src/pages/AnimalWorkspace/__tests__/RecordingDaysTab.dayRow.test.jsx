@@ -95,4 +95,17 @@ describe('RecordingDaysTab — day row contract (decision 12)', () => {
     // The stale "Exported" must NOT be shown.
     expect(screen.queryByText('Exported')).not.toBeInTheDocument();
   });
+
+  it('humanizes a raw schema key in the "Needs fixing" reason (display only)', () => {
+    // S1 audit finding: the day-row status must not leak a raw snake_case schema key.
+    // Empty a required string field so its blocking message leads with the key, and assert
+    // the row sentence-cases it ("Experiment description …" not "experiment_description …").
+    renderRealistic((day) => {
+      day.state = { draft: false, validated: false, exported: false };
+      day.session.experiment_description = '   '; // whitespace-only → empty-pattern violation
+    });
+    const status = screen.getByText(/^Needs fixing — Experiment description/);
+    expect(status).toBeInTheDocument();
+    expect(status).not.toHaveTextContent('experiment_description');
+  });
 });

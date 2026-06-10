@@ -63,7 +63,7 @@ describe('status conveyed without relying on color', () => {
     // Navigate to Devices via the global Alt+ArrowRight shortcut.
     const { fireEvent } = await import('@testing-library/react');
     fireEvent.keyDown(document.body, { key: 'ArrowRight', altKey: true });
-    await screen.findByRole('heading', { name: /devices configuration/i });
+    await screen.findByRole('heading', { name: /setup & failed channels/i });
 
     const badges = container.querySelectorAll('.status-badge');
     expect(badges.length).toBeGreaterThan(0);
