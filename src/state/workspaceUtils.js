@@ -404,9 +404,12 @@ export function mergeDayMetadata(animal, day) {
     default_header_file_path: technical.default_header_file_path,
 
     // === From Day: Behavioral Events ===
-    behavioral_events: getDayBehavioralEvents(day).map((e) =>
-      reorderKeys(e, BEHAVIORAL_EVENT_ORDER)
-    ),
+    // A blank (whitespace-only or empty) name marks an UNUSED hardware channel in the DIO editor —
+    // it is never a real event, so it is excluded from the exported YAML (the schema requires a
+    // non-empty name). Existing fixtures have no blank names, so this is byte-identical for them.
+    behavioral_events: getDayBehavioralEvents(day)
+      .filter((e) => typeof e?.name === 'string' && e.name.trim() !== '')
+      .map((e) => reorderKeys(e, BEHAVIORAL_EVENT_ORDER)),
 
     // === From Animal: Device ===
     device: reorderKeys(devices.device, DEVICE_ORDER),

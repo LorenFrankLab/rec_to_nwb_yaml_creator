@@ -1,18 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import {
   nextInstanceNumber,
-  mergeTemplateRows,
   isStandardEventName,
+  setChannelName,
 } from '../behavioralEventSet';
-import { duplicateBehavioralEventDescriptions } from '../../validation/behavioralEvents';
 
 /**
  * Pure authoring helpers for a day's behavioral-event (DIO) set:
  *  - `nextInstanceNumber` picks the next per-label instance number for auto-numbering a picked name
  *    (`Poke` → `Poke1`/`Poke2`/…), independent per label and never derived from the channel.
- *  - `mergeTemplateRows` merges a standard-set template into the day set, skipping any row whose
- *    name OR description already exists, so it can never introduce a Rule 14 (duplicate name) or
- *    Rule 17 (duplicate description) collision.
+ *  - `isStandardEventName` decides whether a name is a standard label or a numbered variant.
+ *  - `setChannelName` names a hardware channel in the day set: add, update, or (blank) remove.
  */
 describe('nextInstanceNumber', () => {
   it('is 1 for a label with no existing instances', () => {
@@ -60,66 +58,41 @@ describe('nextInstanceNumber', () => {
   });
 });
 
-describe('mergeTemplateRows', () => {
-  const pokes = [
-    { name: 'Poke1', description: 'Din1' },
-    { name: 'Poke2', description: 'Din2' },
-    { name: 'Poke3', description: 'Din3' },
-  ];
-
-  it('adds every row when the day set is empty', () => {
-    const { merged, added, skipped } = mergeTemplateRows([], pokes);
-    expect(merged).toEqual(pokes);
-    expect(added).toEqual(pokes);
-    expect(skipped).toEqual([]);
+describe('setChannelName', () => {
+  it('adds an event when naming a channel that has none', () => {
+    expect(setChannelName([], 'Din1', 'Poke1')).toEqual([{ description: 'Din1', name: 'Poke1' }]);
   });
 
-  it('appends to a non-empty set without disturbing existing rows', () => {
-    const existing = [{ name: 'Pump1', description: 'Dout7' }];
-    const { merged } = mergeTemplateRows(existing, pokes);
-    expect(merged).toEqual([{ name: 'Pump1', description: 'Dout7' }, ...pokes]);
-  });
-
-  it('is idempotent: re-applying skips rows whose name AND description already exist', () => {
-    const { merged, added, skipped } = mergeTemplateRows(pokes, pokes);
-    expect(merged).toEqual(pokes);
-    expect(added).toEqual([]);
-    expect(skipped).toEqual(pokes);
-  });
-
-  it('skips a row whose description collides even when its name is new (Rule 17 safe)', () => {
-    const existing = [{ name: 'Other', description: 'Din1' }];
-    const { merged, added, skipped } = mergeTemplateRows(existing, [
-      { name: 'Poke1', description: 'Din1' },
+  it('updates the name of an existing channel in place, preserving position and other fields', () => {
+    const events = [
+      { description: 'Din1', name: 'Poke1', comments: 'left' },
+      { description: 'Dout7', name: 'Pump1' },
+    ];
+    expect(setChannelName(events, 'Din1', 'Beam1')).toEqual([
+      { description: 'Din1', name: 'Beam1', comments: 'left' },
+      { description: 'Dout7', name: 'Pump1' },
     ]);
-    expect(added).toEqual([]);
-    expect(skipped).toEqual([{ name: 'Poke1', description: 'Din1' }]);
-    expect(merged).toEqual(existing);
   });
 
-  it('skips a row whose name collides even when its description is new (Rule 14 safe)', () => {
-    const existing = [{ name: 'Poke1', description: 'Dout9' }];
-    const { added, skipped } = mergeTemplateRows(existing, [
-      { name: 'Poke1', description: 'Din1' },
-    ]);
-    expect(added).toEqual([]);
-    expect(skipped).toEqual([{ name: 'Poke1', description: 'Din1' }]);
+  it('removes the channel from the set when the name is blanked (unused → not exported)', () => {
+    const events = [
+      { description: 'Din1', name: 'Poke1' },
+      { description: 'Dout7', name: 'Pump1' },
+    ];
+    expect(setChannelName(events, 'Din1', '')).toEqual([{ description: 'Dout7', name: 'Pump1' }]);
+    expect(setChannelName(events, 'Din1', '   ')).toEqual([{ description: 'Dout7', name: 'Pump1' }]);
   });
 
-  it('dedups within the applied batch (a second row reusing a description is skipped)', () => {
-    const { added } = mergeTemplateRows([], [
-      { name: 'A', description: 'Din1' },
-      { name: 'B', description: 'Din1' },
-    ]);
-    expect(added).toEqual([{ name: 'A', description: 'Din1' }]);
+  it('blanking a channel that is not in the set is a no-op', () => {
+    const events = [{ description: 'Din1', name: 'Poke1' }];
+    expect(setChannelName(events, 'Din5', '')).toEqual(events);
   });
 
-  it('produces a set with NO duplicate name or description after a partial-overlap merge', () => {
-    const existing = [{ name: 'Poke1', description: 'Din1' }];
-    const { merged } = mergeTemplateRows(existing, pokes);
-    const names = merged.map((e) => e.name);
-    expect(new Set(names).size).toBe(names.length);
-    expect(duplicateBehavioralEventDescriptions(merged).size).toBe(0);
+  it('does not mutate the input array', () => {
+    const events = [{ description: 'Din1', name: 'Poke1' }];
+    const next = setChannelName(events, 'Din2', 'Light1');
+    expect(events).toEqual([{ description: 'Din1', name: 'Poke1' }]);
+    expect(next).not.toBe(events);
   });
 });
 

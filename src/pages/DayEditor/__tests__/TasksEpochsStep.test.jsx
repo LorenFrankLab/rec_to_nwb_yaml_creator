@@ -176,55 +176,19 @@ describe('TasksEpochsStep', () => {
     expect(onFieldUpdate).toHaveBeenCalledWith('tasks', []);
   });
 
-  it('writes day behavioral events through onFieldUpdate (day wiring table)', async () => {
+  it('writes day behavioral events through onFieldUpdate (channel grid)', async () => {
     const user = userEvent.setup();
     const { onFieldUpdate } = renderStep();
 
-    // The day's behavioral events are edited as a wiring table; adding an Input event seeds the
-    // default Din line and writes through to onFieldUpdate('behavioral_events', …). The full
-    // add→name→save flow is covered at the BehavioralEventsDisplay component level.
-    await user.click(screen.getByRole('button', { name: /add input event/i }));
+    // The day's behavioral events are edited as a channel grid; naming a Din channel writes through
+    // to onFieldUpdate('behavioral_events', …). Picking a suggestion is a single action (robust to
+    // the bare-spy harness that doesn't thread the value back); the full grid behavior is covered at
+    // the BehavioralEventsDisplay component level.
+    await user.click(screen.getByLabelText('Event for Din1'));
+    await user.click(screen.getByRole('option', { name: 'Poke' }));
 
-    expect(onFieldUpdate).toHaveBeenCalledWith('behavioral_events', [
-      { name: '', description: 'Din1' },
+    expect(onFieldUpdate).toHaveBeenLastCalledWith('behavioral_events', [
+      { description: 'Din1', name: 'Poke1' },
     ]);
-  });
-
-  it('remounts the behavioral-events editor when the day changes, dropping in-progress edit state', async () => {
-    const user = userEvent.setup();
-    // The behavioral-events editor holds per-day transient UI state (the in-progress row edit, the
-    // standard-set apply summary). Switching to a different day must NOT carry that state over —
-    // it is keyed by day id so a different day remounts a fresh editor.
-    const a = makeAnimalWithCamerasAndDay({
-      day: { id: 'day-a', behavioral_events: [{ name: 'Poke1', description: 'Din1' }] },
-    });
-    const { rerender } = render(
-      <TasksEpochsStep
-        animal={a.animal}
-        day={a.day}
-        mergedDay={a.mergedDay}
-        onFieldUpdate={vi.fn()}
-      />
-    );
-
-    // Enter the row editor on day A — Save/Cancel appear.
-    const inputs = screen.getByRole('table', { name: /inputs \(din\)/i });
-    await user.click(within(inputs).getByRole('button', { name: /^edit$/i }));
-    expect(screen.getByRole('button', { name: /^save$/i })).toBeInTheDocument();
-
-    // Switch to a different day: the editor remounts read-only (no lingering Save from day A).
-    const b = makeAnimalWithCamerasAndDay({
-      day: { id: 'day-b', behavioral_events: [{ name: 'Poke1', description: 'Din1' }] },
-    });
-    rerender(
-      <TasksEpochsStep
-        animal={b.animal}
-        day={b.day}
-        mergedDay={b.mergedDay}
-        onFieldUpdate={vi.fn()}
-      />
-    );
-
-    expect(screen.queryByRole('button', { name: /^save$/i })).not.toBeInTheDocument();
   });
 });

@@ -307,13 +307,15 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     await page.getByRole('button', { name: /^Tasks & Epochs — / }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Tasks & Epochs' })).toBeVisible();
 
-    // Day events render in the direction-grouped wiring table.
+    // Day events overlay onto their channels in the direction-grouped hardware grid: the name is
+    // the VALUE of the channel's field (Din1 under Inputs, Dout7 under Outputs). `exact` so
+    // "Event for Din1" doesn't also match "Event for Din10…19".
     await expect(
-      page.getByRole('table', { name: /inputs \(din\)/i }).getByText('Poke1'),
-    ).toBeVisible();
+      page.getByRole('table', { name: /inputs \(din\)/i }).getByLabel('Event for Din1', { exact: true }),
+    ).toHaveValue('Poke1');
     await expect(
-      page.getByRole('table', { name: /outputs \(dout\)/i }).getByText('Pump1'),
-    ).toBeVisible();
+      page.getByRole('table', { name: /outputs \(dout\)/i }).getByLabel('Event for Dout7', { exact: true }),
+    ).toHaveValue('Pump1');
 
     // The retired animal-level library surfaces are gone.
     await expect(page.getByRole('list', { name: 'Inherited behavioral events' })).toHaveCount(0);

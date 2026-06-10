@@ -9,31 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Standard-set template for behavioral events (DIO).** The Day Editor's wiring table now
-  has a **"+ add a standard set ▾"** menu (also the empty-day call to action) that adds the
-  lab's canonical behavioral-event set in one click: 6 pokes on `Din1–6`,
-  `Run_Camera_Ticks` on `Din13`, 6 lights on `Dout1–6`, and 6 pumps on `Dout7–12` — the
-  exact 19-event set every session in the recorded corpus uses (98 files, 4 subjects), in
-  order. The number in a name is a per-label instance count, **not** the channel (`Pump1`
-  is `Dout7`). The channels assume an ECU board (`Din1–32`/`Dout1–32`) and are a
-  re-pointable starting point; the digital lines are board-dependent, so for a different
-  board or wiring add rows directly and let auto-numbering name them. Applying the set
-  **merges** its rows into the day, skipping any row whose name or description already
-  exists, so re-applying it (or applying into a non-empty day) is idempotent and can never
-  create a duplicate name (Rule 14) or description (Rule 17); a short inline summary reports
-  what was added vs skipped.
+- **Behavioral-events (DIO) editor is now the ECU hardware channel grid.** The Day Editor
+  presents every digital channel of the SpikeGadgets ECU — **Inputs `Din1–32`** and
+  **Outputs `Dout1–32`** (the board's real range, verified against Trodes `.trodesconf`) —
+  and you type the event name for the channels your rig uses on this day. Which channel
+  carries which event is a per-experiment wiring choice, so there is no baked-in preset; the
+  grid just mirrors the hardware. **A blank channel is unused and is excluded from the
+  exported YAML** (the schema requires a non-empty name). **Event names must be unique** — a
+  duplicate is flagged inline and blocks export (it would collide on the Spyglass
+  `DIOEvents` primary key). A new day carries the previous day's names forward, so you fill
+  the grid in once per experiment and edit only on a rewire. An imported event whose channel
+  isn't a standard `Din`/`Dout` line is preserved in an **"Other"** group rather than
+  dropped. The exported YAML shape (`behavioral_events: [{ description, name }]`, named
+  events only) is unchanged.
 - **Per-label auto-numbering when picking a behavioral-event name.** Picking a known name
-  from the **Event** field's suggestions now appends the next per-label instance number —
-  picking *Poke* into a set with no pokes yields `Poke1`, the next `Poke2`, and *Light* is
-  counted independently (`Light1`). The number uses the no-separator `Label<n>` convention
-  (verified against real lab YAMLs) and is a **per-label instance count, not the DIO
-  channel index** (a pump wired to `Dout7` is still `Pump1`). **Typing a name stays
-  verbatim** — free text (e.g. `beam_break`) is never auto-numbered — so unnumbered single
-  events are entered by typing rather than picking. A numbered variant the app itself
-  generates (`Poke1`, `Light1`, …) is recognized as a standard name, so it no longer trips
-  the "not a standard event name" nudge — that nudge now fires only for genuinely off-list
-  custom names. The exported YAML shape (`behavioral_events: [{ description, name }]`) is
-  unchanged.
+  from a channel's suggestions appends the next per-label instance number — picking *Poke*
+  with no pokes yet yields `Poke1`, the next `Poke2`, and *Light* is counted independently
+  (`Light1`). The number uses the no-separator `Label<n>` convention (verified against real
+  lab YAMLs) and is a **per-label instance count, not the DIO channel index** (a pump on
+  `Dout7` is still `Pump1`). **Typing a name stays verbatim** — free text (e.g. `beam_break`)
+  is never auto-numbered. A numbered variant the app itself generates (`Poke1`, `Light1`, …)
+  is recognized as a standard name, so it does not trip the "not a standard event name"
+  nudge — that fires only for genuinely off-list custom names.
 
 ### Removed
 

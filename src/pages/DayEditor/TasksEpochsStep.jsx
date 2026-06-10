@@ -356,11 +356,7 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
       />
 
       <section className="behavioral-events-block">
-        {/* Key by day id so switching days remounts the editor: its transient UI state
-            (in-progress edit, the standard-set apply summary) belongs to one day and must not
-            carry over. Edits within a day don't change day.id, so they never remount. */}
         <BehavioralEventsDisplay
-          key={day?.id}
           dayEvents={dayBehavioralEvents}
           onDayEventsChange={(events) => onFieldUpdate('behavioral_events', events)}
         />

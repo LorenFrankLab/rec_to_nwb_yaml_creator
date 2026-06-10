@@ -1,5 +1,3 @@
-import { joinDioDescription } from './utils/dioDescription';
-
 /**
  * Default YML values
  */
@@ -917,57 +915,6 @@ export const behavioralEventsNames = () => {
     ],
   ];
 };
-
-/**
- * Build a run of behavioral-event rows for a standard-set template.
- *
- * The event NAME and the DIO CHANNEL are decoupled (the load-bearing §2 fact: a name's number is a
- * per-label INSTANCE count, NOT the channel index — e.g. real data has `Pump1` on `Dout7`). So the
- * names run `Label1…Label{count}` (no separator — 0 of 1864 real names use `Label_<digits>`) while
- * the channels run `{type}{channelStart}…{type}{channelStart+count-1}` via {@link joinDioDescription}.
- * Channels are a sensible default the user re-points per row.
- *
- * @param {string} label - The event label (e.g. `"Pump"`).
- * @param {string} type - The DIO type (`"Din"` or `"Dout"`).
- * @param {number} channelStart - First DIO line number (e.g. `7` → `Dout7`).
- * @param {number} count - How many rows to build.
- * @returns {Array<{name: string, description: string}>} The template rows.
- */
-const rangeRows = (label, type, channelStart, count) => {
-  const rows = [];
-  for (let i = 0; i < count; i += 1) {
-    rows.push({ name: `${label}${i + 1}`, description: joinDioDescription(type, channelStart + i) });
-  }
-  return rows;
-};
-
-/**
- * Standard-set templates for bulk-adding a canonical day of behavioral (DIO) events.
- *
- * One template, grounded in the real recorded data: across the 98-file lab corpus (4 subjects)
- * every session uses the SAME 19-event set, in this order — 6 pokes on `Din1–6`, `Run_Camera_Ticks`
- * on `Din13`, 6 lights on `Dout1–6`, 6 pumps on `Dout7–12`. Applying it MERGES the rows into a
- * day's set, skipping any row whose name or description already exists, so it never creates a
- * duplicate. The channels assume an ECU board (`Din1–32`/`Dout1–32`) and are a re-pointable
- * starting point — for a different board/wiring (the digital lines are board-dependent), add rows
- * directly and let per-label auto-numbering name them. Return an array so more named sets can be
- * added later.
- *
- * @returns {Array<{id: string, label: string, rows: Array<{name: string, description: string}>}>}
- *   The available templates, in display order.
- */
-export const behavioralEventTemplates = () => [
-  {
-    id: 'standard-wtrack',
-    label: 'Standard W-track set (6 pokes, 6 lights, 6 pumps + camera ticks)',
-    rows: [
-      ...rangeRows('Poke', 'Din', 1, 6),
-      { name: 'Run_Camera_Ticks', description: 'Din13' },
-      ...rangeRows('Light', 'Dout', 1, 6),
-      ...rangeRows('Pump', 'Dout', 7, 6),
-    ],
-  },
-];
 
 /**
  * Valid DIO `description` types for a behavioral event.

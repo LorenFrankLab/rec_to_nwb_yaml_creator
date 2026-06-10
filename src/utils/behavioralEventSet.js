@@ -62,32 +62,29 @@ export function isStandardEventName(name, suggestions) {
 }
 
 /**
- * Merge a standard-set template's rows into a day's behavioral-event set.
+ * Set the event NAME for one hardware channel in a day's behavioral-event set.
  *
- * A row is added only if neither its `name` nor its `description` already appears in the set (or
- * earlier in the same batch); otherwise it is skipped. This makes applying a template idempotent
- * and structurally unable to introduce a duplicate `name` (Rule 14) or duplicate `description`
- * (Rule 17) — applying into a non-empty day, or re-applying the same template, never collides.
+ * The DIO editor presents every hardware channel; an event exists only for a NAMED channel. So this
+ * helper:
+ *  - removes the channel's event when `name` is blank (empty/whitespace) — a blank channel is unused
+ *    and is not exported;
+ *  - updates the existing event's name in place (preserving its position and any other fields, e.g.
+ *    `comments`) when the channel already has one;
+ *  - appends a new `{ description, name }` when the channel is being named for the first time.
  *
- * @param {Array<{name: string, description: string}>} existing - The current day events.
- * @param {Array<{name: string, description: string}>} rows - The template rows to merge in.
- * @returns {{merged: Array<{name: string, description: string}>, added: Array, skipped: Array}}
- *   The resulting set plus the rows that were added vs skipped (for an inline summary).
+ * @param {Array<{name: string, description: string}>} events - The current day events.
+ * @param {string} description - The hardware channel (e.g. `"Din1"`).
+ * @param {string} name - The event name; blank removes the channel.
+ * @returns {Array<{name: string, description: string}>} The next day events (a new array).
  */
-export function mergeTemplateRows(existing, rows) {
-  const base = Array.isArray(existing) ? existing : [];
-  const names = new Set(base.map((event) => event?.name));
-  const descriptions = new Set(base.map((event) => event?.description));
-  const added = [];
-  const skipped = [];
-  (Array.isArray(rows) ? rows : []).forEach((row) => {
-    if (names.has(row.name) || descriptions.has(row.description)) {
-      skipped.push(row);
-      return;
-    }
-    added.push(row);
-    names.add(row.name);
-    descriptions.add(row.description);
-  });
-  return { merged: [...base, ...added], added, skipped };
+export function setChannelName(events, description, name) {
+  const base = Array.isArray(events) ? events : [];
+  const isBlank = typeof name !== 'string' || name.trim() === '';
+  if (isBlank) {
+    return base.filter((event) => event?.description !== description);
+  }
+  if (base.some((event) => event?.description === description)) {
+    return base.map((event) => (event?.description === description ? { ...event, name } : event));
+  }
+  return [...base, { description, name }];
 }

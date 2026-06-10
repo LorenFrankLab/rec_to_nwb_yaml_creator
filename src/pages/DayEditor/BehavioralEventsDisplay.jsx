@@ -1,57 +1,58 @@
-import { useState } from 'react';
 import PropTypes from 'prop-types';
-import { duplicateBehavioralEventDescriptions } from '../../validation/behavioralEvents';
 import {
-  behavioralEventsDescription,
-  behavioralEventsNames,
-  behavioralEventTemplates,
-} from '../../valueList';
-import { splitDioDescription, joinDioDescription } from '../../utils/dioDescription';
+  duplicateBehavioralEventDescriptions,
+  duplicateBehavioralEventNames,
+} from '../../validation/behavioralEvents';
+import { behavioralEventsNames } from '../../valueList';
 import {
   nextInstanceNumber,
-  mergeTemplateRows,
   isStandardEventName,
+  setChannelName,
 } from '../../utils/behavioralEventSet';
 import SuggestionCombobox from '../../components/SuggestionCombobox';
-import OverflowMenu from '../../components/OverflowMenu';
-import { ConfirmDialog } from '../../components/Modal';
-import InfoIcon from '../../element/InfoIcon';
 import './BehavioralEventsDisplay.scss';
 
-// Reserved words that nudge a warning: they work but may collide with system events.
-const RESERVED_WORDS = ['reward', 'choice', 'start', 'end', 'trigger', 'sync'];
-
 /**
- * Direction grouping for a day's behavioral (DIO) events. The direction is read from the
- * description's recognized type: Din → an input the animal triggers (poke, beam break); Dout →
- * an output you drive (light, pump, opto). An unrecognized/analog description (e.g. an imported
- * "Accel5") falls into "Other" so it is never dropped.
+ * The SpikeGadgets ECU exposes a fixed digital I/O space: Din1…Din32 (inputs) and Dout1…Dout32
+ * (outputs), verified against Trodes `.trodesconf` configs. The board determines the space — a
+ * no-ECU board has no Din/Dout — but trodes_to_nwb only consumes the ECU digital stream, so the
+ * authoring grid presents the full ECU range. Which channel carries which event is a per-experiment
+ * wiring choice, so the editor presents every channel and the user names only the ones they use.
  */
+const ECU_DIGITAL_CHANNELS = 32;
+
 const GROUPS = [
+  { type: 'Din', heading: 'Inputs (Din)', blurb: 'Sensors the animal triggers — pokes, beam breaks.' },
   {
-    key: 'Din',
-    seed: 'Din1',
-    heading: 'Inputs (Din)',
-    blurb: 'Sensors the animal triggers — pokes, beam breaks.',
-    addLabel: 'Add input event',
-  },
-  {
-    key: 'Dout',
-    seed: 'Dout1',
+    type: 'Dout',
     heading: 'Outputs (Dout)',
     blurb: 'Things you drive — lights, pumps, optogenetics.',
-    addLabel: 'Add output event',
   },
 ];
 
 /**
- * BehavioralEventsDisplay — the per-day behavioral-events (DIO) editor.
+ * The ordered channel ids for a direction, e.g. ["Din1", … "Din32"].
+ * @param type
+ */
+const channelsFor = (type) =>
+  Array.from({ length: ECU_DIGITAL_CHANNELS }, (_, i) => `${type}${i + 1}`);
+
+/**
+ * Sanitize a channel id for use in an element id.
+ * @param description
+ */
+const channelId = (description) => String(description).replace(/[^a-zA-Z0-9_-]/g, '-');
+
+/**
+ * BehavioralEventsDisplay — the per-day behavioral-events (DIO) editor, presented as the ECU's
+ * hardware channel grid.
  *
- * The day owns its set of events and they are what export (`day.behavioral_events`); there is no
- * separate animal-level library. The set is presented as a wiring table grouped into Inputs (Din)
- * and Outputs (Dout), reading like the physical rig. Each row maps a hardware DIO channel (the
- * `description`, e.g. "Din1") to a semantic event identity (the `name`, e.g. "Poke1"). A new day
- * carries the previous day's set forward; this editor edits it in place.
+ * Every digital channel (Din1–32 inputs, Dout1–32 outputs) is a row; the user types the event NAME
+ * for the channels their rig uses and leaves the rest blank. A named channel is a real event
+ * (`day.behavioral_events`); a blank channel is unused and is NOT written to the exported YAML.
+ * Event names must be unique (a duplicate collides on the Spyglass DIOEvents primary key). A new day
+ * carries the previous day's names forward; this editor edits them in place. An imported event whose
+ * channel isn't a standard Din/Dout line is preserved in an "Other" group rather than dropped.
  *
  * @param {object} props
  * @param {Array<{name: string, description: string}>} props.dayEvents - The day's exported events.
@@ -59,388 +60,122 @@ const GROUPS = [
  * @returns {JSX.Element}
  */
 export default function BehavioralEventsDisplay({ dayEvents, onDayEventsChange }) {
-  // Tolerate corrupt persisted state: a non-array events list (`{}`) must not crash `.map`.
+  // Tolerate corrupt persisted state: a non-array events list (`{}`) must not crash.
   const dayItems = Array.isArray(dayEvents) ? dayEvents : [];
 
-  const [editingIndex, setEditingIndex] = useState(null);
-  const [editingEvent, setEditingEvent] = useState(null);
-  const [validationError, setValidationError] = useState(null);
-  const [validationWarning, setValidationWarning] = useState(null);
-  const [pendingDeleteIndex, setPendingDeleteIndex] = useState(null);
-  // A transient summary of the last standard-set template that was applied (names added vs skipped).
-  const [templateSummary, setTemplateSummary] = useState(null);
-
-  // A duplicate DESCRIPTION among the exported day events is a downstream hard `raise ValueError`
-  // in trodes_to_nwb — surfaced inline via the SAME helper the export-blocking rule uses, so the
-  // inline gate and the export gate can never disagree (raw-string compare, no trim).
-  const duplicateDescriptions = [...duplicateBehavioralEventDescriptions(dayItems)];
-
-  /**
-   * Validate an event name against the day set (Rule 14: names unique within the day).
-   *
-   * The only format requirement is the schema's: a non-empty, non-whitespace-only string
-   * (`behavioral_events[].name` pattern `^(.|\s)*\S(.|\s)*$`; its own default is the multi-word
-   * "Home box camera"). We deliberately do NOT impose a programming-identifier rule — spaces and
-   * other characters the schema accepts must not be rejected here, or a suggested name (e.g.
-   * "Home box camera", "Run Camera Ticks") would error.
-   *
-   * @param {string} name - Candidate name.
-   * @param {number} currentIndex - Index being edited (excluded from the duplicate check).
-   * @returns {{error: string|null, warning: string|null}}
-   */
-  function validateEventName(name, currentIndex) {
-    const result = { error: null, warning: null };
-    if (!name || name.trim() === '') {
-      result.error = 'Event name is required';
-      return result;
+  // Channel → event lookup so each grid row can show its current name (first wins on a corrupt
+  // duplicate-description import; the duplicate is surfaced by the banner below).
+  const byDescription = new Map();
+  dayItems.forEach((event) => {
+    if (event && typeof event.description === 'string' && !byDescription.has(event.description)) {
+      byDescription.set(event.description, event);
     }
-    const isDuplicate = dayItems.some(
-      (event, index) => index !== currentIndex && event.name === name
-    );
-    if (isDuplicate) {
-      result.error = 'Event name must be unique within this day';
-      return result;
-    }
-    if (RESERVED_WORDS.some((reserved) => name.toLowerCase().includes(reserved))) {
-      result.warning =
-        'This name contains a common reserved word. It will work but may conflict with system events.';
-    }
-    return result;
-  }
-
-  /**
-   * Append a new event seeded to the group's default DIO line and open it for editing.
-   * @param {{seed: string}} group - The direction group ({@link GROUPS}).
-   */
-  function handleAdd(group) {
-    const newEvent = { name: '', description: group.seed };
-    const next = [...dayItems, newEvent];
-    onDayEventsChange(next);
-    setEditingIndex(next.length - 1);
-    setEditingEvent({ ...newEvent });
-    setValidationError(null);
-    setValidationWarning(null);
-  }
-
-  /**
-   * Begin editing the day event at `index`.
-   * @param {number} index
-   */
-  function handleEdit(index) {
-    setEditingIndex(index);
-    setEditingEvent({ ...dayItems[index] });
-    setValidationError(null);
-    setValidationWarning(null);
-  }
-
-  /**
-   * Update a field of the event being edited; revalidate the name.
-   * @param {string} field - 'name' or 'description'.
-   * @param {string} value
-   */
-  function handleFieldChange(field, value) {
-    const updated = { ...editingEvent, [field]: value };
-    setEditingEvent(updated);
-    if (field === 'name') {
-      const validation = validateEventName(value, editingIndex);
-      setValidationError(validation.error);
-      setValidationWarning(validation.warning);
-    }
-  }
-
-  /**
-   * Auto-number a name PICKED from the suggestions: `Poke` → `Poke1`, the next pick `Poke2`, etc.
-   * The number is the next per-label instance count among the OTHER day events (so the row being
-   * edited never counts itself), derived only from the names — never from the DIO channel index.
-   * Typing a name does not route here (it goes through `onChange`), so free text stays verbatim.
-   *
-   * @param {string} label - The picked suggestion (e.g. "Poke").
-   */
-  function handleNameSelected(label) {
-    const others = dayItems.filter((_, index) => index !== editingIndex);
-    handleFieldChange('name', `${label}${nextInstanceNumber(label, others)}`);
-  }
-
-  /**
-   * Commit the edit.
-   */
-  function handleSave() {
-    if (editingIndex === null || editingEvent === null) return;
-    const validation = validateEventName(editingEvent.name, editingIndex);
-    if (validation.error) {
-      setValidationError(validation.error);
-      return;
-    }
-    const next = [...dayItems];
-    next[editingIndex] = editingEvent;
-    onDayEventsChange(next);
-    setEditingIndex(null);
-    setEditingEvent(null);
-    setValidationError(null);
-    setValidationWarning(null);
-  }
-
-  /**
-   * Cancel editing (a freshly-added row stays, as in the animal editor).
-   */
-  function handleCancel() {
-    setEditingIndex(null);
-    setEditingEvent(null);
-    setValidationError(null);
-    setValidationWarning(null);
-  }
-
-  /**
-   * Keyboard: Enter saves (unless invalid), Escape cancels.
-   * @param {KeyboardEvent} e
-   */
-  function handleKeyDown(e) {
-    if (e.key === 'Escape') {
-      handleCancel();
-    } else if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
-      e.preventDefault();
-      if (!validationError) handleSave();
-    }
-  }
-
-  /**
-   * Remove the pending day event once confirmed.
-   */
-  function confirmDelete() {
-    const index = pendingDeleteIndex;
-    setPendingDeleteIndex(null);
-    if (index == null) return;
-    onDayEventsChange(dayItems.filter((_, i) => i !== index));
-  }
-
-  /**
-   * Apply a standard-set template, merging its rows into the day set. Rows whose name OR description
-   * already exists are skipped, so applying (or re-applying) a template is idempotent and can never
-   * introduce a duplicate name (Rule 14) or description (Rule 17). A short summary of what was added
-   * vs skipped is surfaced inline.
-   * @param {{label: string, rows: Array<{name: string, description: string}>}} template
-   */
-  function applyTemplate(template) {
-    const { merged, added, skipped } = mergeTemplateRows(dayItems, template.rows);
-    onDayEventsChange(merged);
-    setTemplateSummary({
-      label: template.label,
-      added: added.map((row) => row.name),
-      skipped: skipped.map((row) => row.name),
-    });
-  }
-
-  // Standard-set template menu items (shared between the empty-state CTA and the day-level actions).
-  const templateMenuItems = behavioralEventTemplates().map((template) => ({
-    key: template.id,
-    label: template.label,
-    onSelect: () => applyTemplate(template),
-  }));
-
-  const templateMenu = (
-    <OverflowMenu
-      label="Add a standard set of behavioral events"
-      buttonClassName="dio-standard-set-trigger"
-      triggerContent={
-        <>
-          + add a standard set <span aria-hidden="true">▾</span>
-        </>
-      }
-      items={templateMenuItems}
-    />
-  );
-
-  // Partition the day events into direction groups, preserving each event's flat array index
-  // (edit/delete operate on the stored flat array).
-  const grouped = { Din: [], Dout: [], Other: [] };
-  dayItems.forEach((event, index) => {
-    const { type } = splitDioDescription(event.description ?? '');
-    if (type === 'Din') grouped.Din.push({ event, index });
-    else if (type === 'Dout') grouped.Dout.push({ event, index });
-    else grouped.Other.push({ event, index });
   });
 
+  // A duplicate NAME collides on the Spyglass DIOEvents primary key; a duplicate DESCRIPTION is a
+  // trodes_to_nwb ValueError. Both are surfaced inline via the SAME helpers the export rules use, so
+  // the inline gate and the export gate can never disagree.
+  const duplicateNames = duplicateBehavioralEventNames(dayItems);
+  const duplicateDescriptions = [...duplicateBehavioralEventDescriptions(dayItems)];
+
+  // Events whose description is not a standard ECU channel (e.g. an imported analog/prose line, or a
+  // channel outside 1–32) — shown in an "Other" group so they are never silently dropped.
+  const gridDescriptions = new Set(GROUPS.flatMap((g) => channelsFor(g.type)));
+  const otherEvents = dayItems.filter(
+    (e) => !(e && typeof e.description === 'string' && gridDescriptions.has(e.description))
+  );
+
   /**
-   * Render one day-event row (read-only or, when it is the row being edited, the guided editor).
-   * @param {{event: object, index: number}} entry
+   * Set the event name for a channel (blank removes it from the set).
+   * @param {string} description - The channel id (e.g. "Din1").
+   * @param {string} name - The event name.
+   */
+  function nameChannel(description, name) {
+    onDayEventsChange(setChannelName(dayItems, description, name));
+  }
+
+  /**
+   * Auto-number a PICKED name for a channel: `Poke` → `Poke1`, the next pick `Poke2`, …. The number
+   * is the next per-label instance among the OTHER channels' events — never the channel index.
+   * @param {string} description - The channel being named.
+   * @param {string} label - The picked suggestion.
+   */
+  function selectName(description, label) {
+    const others = dayItems.filter((e) => e?.description !== description);
+    nameChannel(description, `${label}${nextInstanceNumber(label, others)}`);
+  }
+
+  /**
+   * Render the editable Event-name cell for one channel.
+   * @param {string} description - The channel id.
+   * @param {string} name - The current event name ('' when unused).
    * @returns {JSX.Element}
    */
-  function renderRow({ event, index }) {
-    if (editingIndex === index) {
-      const dioTypes = behavioralEventsDescription();
-      const { type: splitType, index: dioIndex } = splitDioDescription(
-        editingEvent?.description ?? ''
-      );
-      const dioType = dioTypes.includes(splitType) ? splitType : dioTypes[0];
-      const stored = editingEvent?.description ?? '';
-      const willRewrite = stored !== '' && joinDioDescription(dioType, dioIndex) !== stored;
-      const errId = `dio-day-name-error-${index}`;
-      const hintId = `dio-day-name-hint-${index}`;
-      // Associate both the "becomes the NWB name" hint and (when present) the error with the
-      // Event field; SuggestionCombobox merges these with its own off-list nudge id.
-      const describedBy = [hintId, validationError ? errId : null].filter(Boolean).join(' ');
-
-      return (
-        <tr key={index} className="editing-row">
-          <td data-label="DIO channel">
-            <div className="dio-description-fields">
-              <span className="dio-description-fields__control">
-                <label htmlFor={`dio-day-type-${index}`}>Type</label>
-                <select
-                  id={`dio-day-type-${index}`}
-                  aria-label="DIO type"
-                  value={dioType}
-                  onChange={(e) =>
-                    handleFieldChange('description', joinDioDescription(e.target.value, dioIndex))
-                  }
-                  onKeyDown={handleKeyDown}
-                >
-                  {dioTypes.map((typeOption) => (
-                    <option key={typeOption} value={typeOption}>
-                      {typeOption}
-                    </option>
-                  ))}
-                </select>
-              </span>
-              <span className="dio-description-fields__control">
-                <label htmlFor={`dio-day-index-${index}`}>Index</label>
-                <input
-                  id={`dio-day-index-${index}`}
-                  aria-label="DIO line index"
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={dioIndex}
-                  onChange={(e) =>
-                    handleFieldChange('description', joinDioDescription(dioType, e.target.value))
-                  }
-                  onKeyDown={handleKeyDown}
-                />
-              </span>
-              <InfoIcon infoText="DIO line name, e.g. Din1" />
-            </div>
-            {willRewrite && (
-              <div className="inline-warning" role="status">
-                {`This event's description ("${stored}") isn't a standard Din/Dout line; ` +
-                  'editing the controls will rewrite it.'}
-              </div>
-            )}
-          </td>
-          <td data-label="Event">
-            <SuggestionCombobox
-              aria-label="Event"
-              className={validationError ? 'error' : validationWarning ? 'warning' : ''}
-              value={editingEvent?.name || ''}
-              onChange={(v) => handleFieldChange('name', v)}
-              onSelect={handleNameSelected}
-              suggestions={behavioralEventsNames()}
-              acceptsValue={isStandardEventName}
-              onKeyDown={handleKeyDown}
-              placeholder="event_name"
-              autoFocus
-              aria-invalid={!!validationError}
-              aria-describedby={describedBy}
-              warnOffList
-              offListMessage="Not a standard event name. Pick a suggestion (and its auto-numbered variant, e.g. “Poke1”) for consistency, or keep a custom name."
-            />
-            <p id={hintId} className="dio-day-event-hint">
-              becomes the DIO event&apos;s name in the NWB file
-            </p>
-            {validationError && (
-              <div id={errId} className="inline-error" role="alert">
-                {validationError}
-              </div>
-            )}
-            {validationWarning && !validationError && (
-              <div className="inline-warning" role="status">
-                {validationWarning}
-              </div>
-            )}
-          </td>
-          <td data-label="Actions">
-            <button
-              type="button"
-              className="button-small button-primary"
-              onClick={handleSave}
-              disabled={!!validationError}
-            >
-              Save
-            </button>
-            <button type="button" className="button-small" onClick={handleCancel}>
-              Cancel
-            </button>
-          </td>
-        </tr>
-      );
-    }
-
+  function renderNameField(description, name) {
+    const isDuplicate = name.trim() !== '' && duplicateNames.has(name);
+    const errorId = `dio-dup-name-${channelId(description)}`;
     return (
-      <tr key={index}>
-        <td data-label="DIO channel">{event.description || <em>no channel</em>}</td>
-        <td data-label="Event">{event.name || <em>unnamed</em>}</td>
-        <td data-label="Actions">
-          <button type="button" className="button-small" onClick={() => handleEdit(index)}>
-            Edit
-          </button>
-          <button
-            type="button"
-            className="button-small button-danger"
-            onClick={() => setPendingDeleteIndex(index)}
-            aria-label={`Delete ${event.name || 'behavioral event'}`}
-          >
-            Delete
-          </button>
-        </td>
-      </tr>
+      <>
+        <SuggestionCombobox
+          aria-label={`Event for ${description}`}
+          value={name}
+          onChange={(value) => nameChannel(description, value)}
+          onSelect={(label) => selectName(description, label)}
+          suggestions={behavioralEventsNames()}
+          acceptsValue={isStandardEventName}
+          placeholder="(unused)"
+          className={isDuplicate ? 'error' : ''}
+          aria-invalid={isDuplicate || undefined}
+          aria-describedby={isDuplicate ? errorId : undefined}
+          warnOffList
+          offListMessage="Not a standard event name. Pick a suggestion for consistency, or keep a custom name."
+        />
+        {isDuplicate && (
+          <div id={errorId} className="inline-error" role="alert">
+            {`The name "${name}" is used by more than one channel — each behavioral event name must `}
+            be unique.
+          </div>
+        )}
+      </>
     );
   }
 
   /**
-   * Render one direction group as a section + table (+ add button).
-   * @param {object} group - A {@link GROUPS} entry.
+   * Render one direction's full channel table (all 32 rows).
+   * @param {{type: string, heading: string, blurb: string}} group
    * @returns {JSX.Element}
    */
   function renderGroup(group) {
-    const rows = grouped[group.key];
     return (
-      <div className="dio-direction-group" key={group.key}>
+      <div className="dio-direction-group" key={group.type}>
         <header className="section-header">
-          <h4 id={`dio-group-${group.key}`}>{group.heading}</h4>
+          <h4 id={`dio-group-${group.type}`}>{group.heading}</h4>
           <p>{group.blurb}</p>
         </header>
-        <div className="table-actions">
-          <button
-            type="button"
-            className="button-primary"
-            onClick={() => handleAdd(group)}
-            aria-label={group.addLabel}
-          >
-            + Add event
-          </button>
-        </div>
         <table
           className="dio-wiring-table"
-          role="table"
           aria-label={group.heading}
           aria-describedby="dio-direction-legend"
         >
           <thead>
             <tr>
-              <th>DIO channel</th>
-              <th>Event</th>
-              <th>Actions</th>
+              <th scope="col">DIO channel</th>
+              <th scope="col">Event name</th>
             </tr>
           </thead>
           <tbody>
-            {rows.length === 0 ? (
-              <tr>
-                <td colSpan={3} className="dio-wiring-empty-row">
-                  <em>No {group.key === 'Din' ? 'input' : 'output'} events yet.</em>
-                </td>
-              </tr>
-            ) : (
-              rows.map(renderRow)
-            )}
+            {channelsFor(group.type).map((description) => {
+              const name = byDescription.get(description)?.name ?? '';
+              return (
+                <tr
+                  key={description}
+                  className={name.trim() !== '' ? 'dio-row-named' : 'dio-row-unused'}
+                >
+                  <td data-label="DIO channel">{description}</td>
+                  <td data-label="Event name">{renderNameField(description, name)}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -452,8 +187,10 @@ export default function BehavioralEventsDisplay({ dayEvents, onDayEventsChange }
       <header className="section-header">
         <h3>Behavioral events — how your hardware maps to the SpikeGadgets ECU</h3>
         <p>
-          Each row maps a hardware DIO channel to the event it records. A new day carries forward
-          the previous day&apos;s set — edit only if you rewired the rig.
+          Every digital channel on the ECU is listed below. Type the event name for the channels
+          your rig uses on this day; leave the rest blank — blank channels aren&apos;t written to the
+          file. The name you enter becomes the DIO event&apos;s name in the NWB file. A new day
+          carries the previous day&apos;s names forward, so edit only if you rewired the rig.
         </p>
       </header>
 
@@ -461,38 +198,16 @@ export default function BehavioralEventsDisplay({ dayEvents, onDayEventsChange }
           meaning is in text, not a color/emoji alone (WCAG 1.4.1). */}
       <p id="dio-direction-legend" className="dio-direction-legend">
         <strong>Din</strong> = inputs (sensors the animal triggers).{' '}
-        <strong>Dout</strong> = outputs (things you drive).
+        <strong>Dout</strong> = outputs (things you drive). Names must be unique.
       </p>
-
-      {dayItems.length === 0 ? (
-        <div className="dio-wiring-empty">
-          <p>
-            No behavioral events on this day yet. Add the inputs (sensors) and outputs
-            (lights, pumps) your rig uses, or start from a standard set.
-          </p>
-          <div className="table-actions">{templateMenu}</div>
-        </div>
-      ) : (
-        <div className="table-actions dio-day-actions">{templateMenu}</div>
-      )}
-
-      {templateSummary && (
-        <div className="inline-info" role="status">
-          {templateSummary.added.length > 0
-            ? `Added ${templateSummary.added.join(', ')}.`
-            : `Nothing added — every event in “${templateSummary.label}” was already present.`}
-          {templateSummary.skipped.length > 0 &&
-            ` Skipped ${templateSummary.skipped.length} already present: ${templateSummary.skipped.join(', ')}.`}
-        </div>
-      )}
 
       {duplicateDescriptions.length > 0 && (
         <div className="inline-error" role="alert">
           {duplicateDescriptions
             .map(
               (desc) =>
-                `The description "${desc}" is used by more than one day event. trodes_to_nwb ` +
-                `requires a unique description per event — rename one before export.`
+                `The channel "${desc}" is used by more than one event. trodes_to_nwb requires a ` +
+                `unique channel per event — rename one before export.`
             )
             .join(' ')}
         </div>
@@ -500,46 +215,40 @@ export default function BehavioralEventsDisplay({ dayEvents, onDayEventsChange }
 
       {GROUPS.map(renderGroup)}
 
-      {grouped.Other.length > 0 && (
+      {otherEvents.length > 0 && (
         <div className="dio-direction-group">
           <header className="section-header">
             <h4>Other</h4>
             <p>
-              Events whose channel isn&apos;t a standard Din/Dout line (e.g. an imported analog
-              description). Re-point them to a Din/Dout line.
+              Imported events whose channel isn&apos;t a standard Din/Dout line. Re-point one by
+              naming the matching Din/Dout channel above and clearing the name here.
             </p>
           </header>
           <table
             className="dio-wiring-table"
-            role="table"
             aria-label="Other"
             aria-describedby="dio-direction-legend"
           >
             <thead>
               <tr>
-                <th>DIO channel</th>
-                <th>Event</th>
-                <th>Actions</th>
+                <th scope="col">DIO channel</th>
+                <th scope="col">Event name</th>
               </tr>
             </thead>
-            <tbody>{grouped.Other.map(renderRow)}</tbody>
+            <tbody>
+              {otherEvents.map((event, i) => (
+                // A corrupt import can repeat a description, so disambiguate the row key by index.
+                <tr key={`${event.description || '(no channel)'}-${i}`}>
+                  <td data-label="DIO channel">{event.description || <em>no channel</em>}</td>
+                  <td data-label="Event name">
+                    {renderNameField(event.description || '', event.name ?? '')}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
           </table>
         </div>
       )}
-
-      <ConfirmDialog
-        isOpen={pendingDeleteIndex != null}
-        title="Delete behavioral event?"
-        message={
-          pendingDeleteIndex != null && dayItems[pendingDeleteIndex]
-            ? `Delete behavioral event "${dayItems[pendingDeleteIndex].name || '(unnamed event)'}"? This removes it from this recording day.`
-            : ''
-        }
-        confirmLabel="Delete"
-        destructive
-        onConfirm={confirmDelete}
-        onCancel={() => setPendingDeleteIndex(null)}
-      />
     </div>
   );
 }

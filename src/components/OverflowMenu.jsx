@@ -21,12 +21,9 @@ import './OverflowMenu.css';
  * @param {Array<{key: string, label: string, onSelect: Function, disabled?: boolean}>} props.items -
  *   The menu items, in display order.
  * @param {string} [props.buttonClassName] - Extra class on the trigger button.
- * @param {React.ReactNode} [props.triggerContent] - Visible trigger content. Defaults to the ⋮
- *   glyph; pass e.g. a "+ add a standard set ▾" label to use the menu as a labelled action button.
- *   The accessible name still comes from `label`.
  * @returns {JSX.Element}
  */
-export default function OverflowMenu({ label, items, buttonClassName, triggerContent }) {
+export default function OverflowMenu({ label, items, buttonClassName }) {
   const menuId = useId();
   const [open, setOpen] = useState(false);
   // Index of the item that owns focus while the menu is open (a roving focus target).
@@ -195,7 +192,7 @@ export default function OverflowMenu({ label, items, buttonClassName, triggerCon
         onClick={() => (open ? closeMenu(false) : openMenu('first'))}
         onKeyDown={handleTriggerKeyDown}
       >
-        {triggerContent ?? <span aria-hidden="true">⋮</span>}
+        <span aria-hidden="true">⋮</span>
       </button>
 
       {open && (
@@ -244,10 +241,8 @@ OverflowMenu.propTypes = {
     })
   ).isRequired,
   buttonClassName: PropTypes.string,
-  triggerContent: PropTypes.node,
 };
 
 OverflowMenu.defaultProps = {
   buttonClassName: undefined,
-  triggerContent: undefined,
 };
