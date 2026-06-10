@@ -3,22 +3,33 @@ import PropTypes from 'prop-types';
 /**
  * Save Indicator - Truthful visual feedback for workspace persistence status.
  *
- * Status is derived entirely from real persistence state, never from an optimistic
- * local timestamp:
+ * Takes the WHOLE workspace `persistence` slice (`useStoreContext().persistence`) and derives
+ * its display state internally, so the persistence→indicator field mapping lives in exactly ONE
+ * place (a field rename only edits this component, never the call sites). Status is derived from
+ * real persistence state, never from an optimistic local timestamp:
  * - `enabled === false`: persistence is off, so the indicator must NOT claim "Saved";
  *   it shows a muted "Not saved (in memory)".
- * - `error`: a write failed; shows the error.
- * - `pending`: a debounced write is in flight; shows "Saving…".
+ * - `saveError`: a write failed; shows the error.
+ * - `hasPendingWrite`: a debounced write is in flight; shows "Saving…".
  * - `lastSaved`: a write succeeded; shows "Saved <time ago>".
  *
  * @param {object} props
- * @param {boolean} props.enabled - Whether localStorage persistence is active.
- * @param {string|null} props.lastSaved - ISO timestamp of the last confirmed write.
- * @param {string|null} props.error - Error message if the last write failed.
- * @param {boolean} props.pending - Whether a debounced write is currently in flight.
+ * @param {object} props.persistence - The workspace persistence slice, with fields
+ *   `enabled` (boolean — localStorage persistence active), `lastSaved` (ISO string|null — last
+ *   confirmed write), `saveError` (string|null — last write's failure message), and
+ *   `hasPendingWrite` (boolean — a debounced write is in flight).
  * @returns {JSX.Element|null}
  */
-export default function SaveIndicator({ enabled, lastSaved, error, pending }) {
+export default function SaveIndicator({ persistence }) {
+  const {
+    enabled = true,
+    lastSaved = null,
+    saveError = null,
+    hasPendingWrite = false,
+  } = persistence ?? {};
+  const error = saveError;
+  const pending = hasPendingWrite;
+
   // Persistence off: never claim "Saved" for in-memory-only state.
   if (!enabled) {
     return (
@@ -96,15 +107,14 @@ function formatTimeAgo(isoTimestamp) {
 }
 
 SaveIndicator.propTypes = {
-  enabled: PropTypes.bool,
-  lastSaved: PropTypes.string,
-  error: PropTypes.string,
-  pending: PropTypes.bool,
+  persistence: PropTypes.shape({
+    enabled: PropTypes.bool,
+    lastSaved: PropTypes.string,
+    saveError: PropTypes.string,
+    hasPendingWrite: PropTypes.bool,
+  }),
 };
 
 SaveIndicator.defaultProps = {
-  enabled: true,
-  lastSaved: null,
-  error: null,
-  pending: false,
+  persistence: null,
 };

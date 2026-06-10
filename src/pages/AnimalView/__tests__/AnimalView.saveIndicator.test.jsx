@@ -9,10 +9,16 @@
  * This is a DISPLAY-ONLY confidence cue (edits already autosave; the unsaved-work guard already
  * protects tab close). It touches no export bytes and no validation rule.
  *
- * The store is mocked here (mirroring AppLayout.unsavedGuard.test.jsx) so the persistence state
- * the indicator reflects is controlled deterministically, instead of waiting on the real debounced
- * autosave. An unknown tab renders the lightweight placeholder panel, keeping the heavy setup
- * containers out of the way so the header wiring is exercised in isolation.
+ * The store is mocked here (mirroring AppLayout.unsavedGuard.test.jsx) because the live persistence
+ * state (lastSaved / saveError / hasPendingWrite) is only produced by the REAL debounced (500ms,
+ * async) autosave and cannot be deterministically seeded through the real StoreProvider in jsdom.
+ * To still close the "AnimalView hardcodes an empty/constant persistence" seam, each test below
+ * asserts a DISTINCT state (pending → "Saving…", lastSaved → "Saved", saveError → the error alert):
+ * a hardcoded `persistence={{}}` (or any constant) could satisfy at most one of these, so the set
+ * proves AnimalView forwards the ACTUAL context persistence object, not a constant.
+ *
+ * An unknown tab renders the lightweight placeholder panel, keeping the heavy setup containers out
+ * of the way so the header wiring is exercised in isolation.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';

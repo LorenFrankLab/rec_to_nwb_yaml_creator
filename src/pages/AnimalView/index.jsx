@@ -43,6 +43,7 @@ import OptogeneticsContainer from '../AnimalEditor/wiring/OptogeneticsContainer'
 import { useAnimalFieldUpdate } from '../AnimalEditor/wiring/useAnimalFieldUpdate';
 import ConfigVersionContext from './ConfigVersionContext';
 import { ValidationSummary, buildAnimalRows } from '../ValidationSummary';
+import '../../components/ErrorState.css';
 import './AnimalView.css';
 
 /**
@@ -446,12 +447,7 @@ export function AnimalView({ animalId, tab }) {
             optimistic local timestamp; it reflects real autosave outcomes (display-only — no export
             bytes, no validation rule). Lives in the header band so it shows on every tab. */}
         <div className="animal-view-header-save">
-          <SaveIndicator
-            enabled={persistence.enabled}
-            lastSaved={persistence.lastSaved}
-            error={persistence.saveError}
-            pending={persistence.hasPendingWrite}
-          />
+          <SaveIndicator persistence={persistence} />
         </div>
         {/* Per-animal lifecycle ⋮ — the SAME reusable menu + type-to-confirm dialog as the picker
             card, so animal delete reads one truth from either surface (Task 4.1). */}
