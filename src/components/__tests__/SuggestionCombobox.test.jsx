@@ -109,6 +109,33 @@ describe('SuggestionCombobox', () => {
       expect(onChange).toHaveBeenLastCalledWith('light1');
       expect(screen.getByRole('combobox')).toHaveValue('light1');
     });
+
+    it('routes an explicit pick through onSelect (not onChange) when onSelect is provided', async () => {
+      const onChange = vi.fn();
+      const onSelect = vi.fn();
+      render(
+        <SuggestionCombobox
+          value=""
+          onChange={onChange}
+          onSelect={onSelect}
+          suggestions={SUGGESTIONS}
+          aria-label="Event name"
+        />
+      );
+      await user.click(screen.getByRole('combobox'));
+      await user.click(screen.getByRole('option', { name: 'Poke' }));
+      // The pick goes to onSelect so the caller can transform it (e.g. append an index);
+      // onChange is reserved for typing.
+      expect(onSelect).toHaveBeenCalledWith('Poke');
+      expect(onChange).not.toHaveBeenCalledWith('Poke');
+    });
+
+    it('falls back to onChange for a pick when onSelect is absent', async () => {
+      const { onChange } = renderControlled();
+      await user.click(screen.getByRole('combobox'));
+      await user.click(screen.getByRole('option', { name: 'Poke' }));
+      expect(onChange).toHaveBeenLastCalledWith('Poke');
+    });
   });
 
   describe('Toggle button', () => {

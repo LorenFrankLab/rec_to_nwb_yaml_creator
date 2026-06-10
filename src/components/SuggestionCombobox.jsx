@@ -42,6 +42,9 @@ import './SuggestionCombobox.scss';
  * @param {(e: KeyboardEvent) => void} [props.onKeyDown] - Passthrough for keys the combobox
  *   does not consume (e.g. Enter/Escape when the list is closed).
  * @param {(e: FocusEvent) => void} [props.onBlur] - Called when focus leaves the control.
+ * @param {(option: string) => void} [props.onSelect] - Called instead of `onChange` when a
+ *   suggestion is explicitly picked (click/Enter), so the caller can transform it (e.g. append a
+ *   DIO index). Falls back to `onChange` when omitted.
  * @param {object} [props.inputRef] - Ref forwarded to the input.
  * @param {boolean} [props.warnOffList] - When true, show a gentle nudge while the list is
  *   closed and the value matches no suggestion (case-insensitive).
@@ -60,6 +63,7 @@ export default function SuggestionCombobox({
   className,
   onKeyDown,
   onBlur,
+  onSelect,
   inputRef,
   warnOffList,
   offListMessage,
@@ -140,10 +144,13 @@ export default function SuggestionCombobox({
 
   const selectOption = useCallback(
     (option) => {
-      onChange(option);
+      // An explicit pick routes through onSelect when provided (so the caller can transform it,
+      // e.g. append a DIO index), otherwise falls back to onChange. Typing always uses onChange.
+      if (onSelect) onSelect(option);
+      else onChange(option);
       closeList();
     },
-    [onChange, closeList]
+    [onSelect, onChange, closeList]
   );
 
   const handleKeyDown = (e) => {
@@ -294,6 +301,7 @@ SuggestionCombobox.propTypes = {
   className: PropTypes.string,
   onKeyDown: PropTypes.func,
   onBlur: PropTypes.func,
+  onSelect: PropTypes.func,
   inputRef: PropTypes.oneOfType([PropTypes.func, PropTypes.shape({ current: PropTypes.any })]),
   warnOffList: PropTypes.bool,
   offListMessage: PropTypes.string,
@@ -310,6 +318,7 @@ SuggestionCombobox.defaultProps = {
   className: undefined,
   onKeyDown: undefined,
   onBlur: undefined,
+  onSelect: undefined,
   inputRef: undefined,
   warnOffList: false,
   offListMessage: undefined,

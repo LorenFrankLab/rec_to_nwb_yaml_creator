@@ -37,6 +37,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   combobox, offering the catalog of common names (`Home box camera`, `Poke`,
   `Light`, `Pump`, `Run Camera Ticks`, `Sleep`) and warning when a non-standard
   name is entered. Free entry is retained; the stored value is unchanged.
+- **Index-based name construction for DIO events.** Picking a name suggestion
+  appends the DIO line index (`Poke` on `Din2` → `Poke_2`), and an auto-built name
+  keeps its number in sync when the index changes — mirroring the lab convention
+  (`Light_1`/`Din1`, `Light_2`/`Din2`) and keeping the Spyglass DIO event name (its
+  primary key) unique without manual numbering. Free-typed names are left untouched.
 - **Off-list warning for brain regions.** The brain-region autocomplete
   (`BrainRegionAutocomplete`, used in the Electrode Group editor) now uses the same
   combobox and warns when a region is not one of the standard options — reinforcing

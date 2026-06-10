@@ -247,7 +247,7 @@ describe('BehavioralEventsSection', () => {
       );
     });
 
-    it('picks a suggested name from the combobox and saves it', async () => {
+    it('picks a suggested name and appends the DIO line index (Light + Din1 -> Light_1)', async () => {
       render(
         <BehavioralEventsSection animal={dioAnimal} onFieldUpdate={mockOnFieldUpdate} />
       );
@@ -255,11 +255,74 @@ describe('BehavioralEventsSection', () => {
       await user.click(screen.getByRole('button', { name: /^Edit$/i }));
       await user.click(screen.getByDisplayValue('light1'));
       await user.click(screen.getByRole('option', { name: 'Light' }));
+      // The DIO line index (Din1 → 1) disambiguates the picked label, matching the lab
+      // convention (Light_1, Light_2) and keeping the Spyglass DIO name unique.
+      expect(screen.getByDisplayValue('Light_1')).toBeInTheDocument();
       await user.click(screen.getByRole('button', { name: /^Save$/i }));
 
       expect(mockOnFieldUpdate).toHaveBeenCalledWith('behavioral_events', [
-        { name: 'Light', description: 'Din1' },
+        { name: 'Light_1', description: 'Din1' },
       ]);
+    });
+
+    it('uses the current DIO line index for the picked name (Poke + Din2 -> Poke_2)', async () => {
+      const animal = { id: 'remy', behavioral_events: [{ name: '', description: 'Din2' }] };
+      render(<BehavioralEventsSection animal={animal} onFieldUpdate={mockOnFieldUpdate} />);
+
+      await user.click(screen.getByRole('button', { name: /^Edit$/i }));
+      await user.click(screen.getByLabelText('Event name'));
+      await user.click(screen.getByRole('option', { name: 'Poke' }));
+
+      expect(screen.getByDisplayValue('Poke_2')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /^Save$/i }));
+      expect(mockOnFieldUpdate).toHaveBeenCalledWith('behavioral_events', [
+        { name: 'Poke_2', description: 'Din2' },
+      ]);
+    });
+
+    it('free-typing a name does NOT append an index (only an explicit pick does)', async () => {
+      const animal = { id: 'remy', behavioral_events: [{ name: '', description: 'Din1' }] };
+      render(<BehavioralEventsSection animal={animal} onFieldUpdate={mockOnFieldUpdate} />);
+
+      await user.click(screen.getByRole('button', { name: /^Edit$/i }));
+      const nameInput = screen.getByLabelText('Event name');
+      await user.type(nameInput, 'beam_break');
+      await user.click(screen.getByRole('button', { name: /^Save$/i }));
+
+      expect(mockOnFieldUpdate).toHaveBeenCalledWith('behavioral_events', [
+        { name: 'beam_break', description: 'Din1' },
+      ]);
+    });
+
+    it('keeps an auto-built name in sync when the DIO line index changes (Poke_1 -> Poke_2)', async () => {
+      const animal = { id: 'remy', behavioral_events: [{ name: '', description: 'Din1' }] };
+      render(<BehavioralEventsSection animal={animal} onFieldUpdate={mockOnFieldUpdate} />);
+
+      await user.click(screen.getByRole('button', { name: /^Edit$/i }));
+      // Pick "Poke" at index 1 → "Poke_1".
+      await user.click(screen.getByLabelText('Event name'));
+      await user.click(screen.getByRole('option', { name: 'Poke' }));
+      expect(screen.getByDisplayValue('Poke_1')).toBeInTheDocument();
+
+      // Change the DIO line index to 2 → the auto-built name follows: "Poke_2".
+      const indexInput = screen.getByLabelText('DIO line index');
+      await user.clear(indexInput);
+      await user.type(indexInput, '2');
+      expect(screen.getByDisplayValue('Poke_2')).toBeInTheDocument();
+    });
+
+    it('does NOT touch a free-typed name when the DIO line index changes', async () => {
+      const animal = { id: 'remy', behavioral_events: [{ name: '', description: 'Din1' }] };
+      render(<BehavioralEventsSection animal={animal} onFieldUpdate={mockOnFieldUpdate} />);
+
+      await user.click(screen.getByRole('button', { name: /^Edit$/i }));
+      const nameInput = screen.getByLabelText('Event name');
+      await user.type(nameInput, 'beam_break'); // not a "{known}_{number}" auto-name
+      const indexInput = screen.getByLabelText('DIO line index');
+      await user.clear(indexInput);
+      await user.type(indexInput, '5');
+
+      expect(screen.getByDisplayValue('beam_break')).toBeInTheDocument();
     });
   });
 
