@@ -149,7 +149,7 @@ describe('BehavioralEventsSection', () => {
       // Type new values
       await user.clear(nameInput);
       await user.type(nameInput, 'reward_center');
-      await user.selectOptions(screen.getByLabelText(/DIO type/i), 'Accel');
+      await user.selectOptions(screen.getByLabelText(/DIO type/i), 'Dout');
       const indexInput = screen.getByLabelText(/DIO line index/i);
       await user.clear(indexInput);
       await user.type(indexInput, '5');
@@ -164,7 +164,7 @@ describe('BehavioralEventsSection', () => {
         expect.arrayContaining([
           expect.objectContaining({
             name: 'reward_center',
-            description: 'Accel5',
+            description: 'Dout5',
           }),
         ])
       );
@@ -213,7 +213,7 @@ describe('BehavioralEventsSection', () => {
       ]);
     });
 
-    it('offers every recognized DIO type in the Type dropdown', async () => {
+    it('offers only the valid DIO types (Din/Dout) in the Type dropdown', async () => {
       render(
         <BehavioralEventsSection animal={dioAnimal} onFieldUpdate={mockOnFieldUpdate} />
       );
@@ -221,8 +221,14 @@ describe('BehavioralEventsSection', () => {
       await user.click(screen.getByRole('button', { name: /^Edit$/i }));
 
       const typeSelect = screen.getByLabelText(/DIO type/i);
-      ['Din', 'Dout', 'Accel', 'Gyro', 'Mag'].forEach((type) => {
+      // Only Din/Dout are valid DIO `description` types; the analog channels
+      // (Accel/Gyro/Mag) are NOT digital I/O and would fail trodes_to_nwb's
+      // get_digitalsignal("ECU_digital", …) lookup.
+      ['Din', 'Dout'].forEach((type) => {
         expect(within(typeSelect).getByRole('option', { name: type })).toBeInTheDocument();
+      });
+      ['Accel', 'Gyro', 'Mag'].forEach((type) => {
+        expect(within(typeSelect).queryByRole('option', { name: type })).not.toBeInTheDocument();
       });
     });
 
@@ -247,7 +253,7 @@ describe('BehavioralEventsSection', () => {
       );
     });
 
-    it('picks a suggested name and appends the DIO line index (Light + Din1 -> Light_1)', async () => {
+    it('picks a suggested name from the combobox and stores it verbatim (no index suffix)', async () => {
       render(
         <BehavioralEventsSection animal={dioAnimal} onFieldUpdate={mockOnFieldUpdate} />
       );
@@ -255,74 +261,30 @@ describe('BehavioralEventsSection', () => {
       await user.click(screen.getByRole('button', { name: /^Edit$/i }));
       await user.click(screen.getByDisplayValue('light1'));
       await user.click(screen.getByRole('option', { name: 'Light' }));
-      // The DIO line index (Din1 → 1) disambiguates the picked label, matching the lab
-      // convention (Light_1, Light_2) and keeping the Spyglass DIO name unique.
-      expect(screen.getByDisplayValue('Light_1')).toBeInTheDocument();
+      // The picked name is the user-owned semantic identity; it is stored exactly as
+      // chosen and is NEVER derived from / suffixed with the DIO channel index. Real
+      // data proves the number is a fixed per-label instance, not the channel (e.g.
+      // senor's Poke3 kept its name when its channel moved Din3 → Din18).
+      expect(screen.getByDisplayValue('Light')).toBeInTheDocument();
       await user.click(screen.getByRole('button', { name: /^Save$/i }));
 
       expect(mockOnFieldUpdate).toHaveBeenCalledWith('behavioral_events', [
-        { name: 'Light_1', description: 'Din1' },
+        { name: 'Light', description: 'Din1' },
       ]);
     });
 
-    it('uses the current DIO line index for the picked name (Poke + Din2 -> Poke_2)', async () => {
-      const animal = { id: 'remy', behavioral_events: [{ name: '', description: 'Din2' }] };
+    it('does not crash when editing an event whose stored description is an analog channel', async () => {
+      // A legacy/imported event might carry an analog description (Accel/Gyro/Mag),
+      // which is no longer a recognized DIO type. The editor must degrade gracefully:
+      // the Type control falls back to the first valid type (Din), the numeric index is
+      // still parsed, and nothing throws (plan §9 S3 — real-data impact is zero).
+      const animal = { id: 'remy', behavioral_events: [{ name: 'imu', description: 'Accel5' }] };
       render(<BehavioralEventsSection animal={animal} onFieldUpdate={mockOnFieldUpdate} />);
 
       await user.click(screen.getByRole('button', { name: /^Edit$/i }));
-      await user.click(screen.getByLabelText('Event name'));
-      await user.click(screen.getByRole('option', { name: 'Poke' }));
 
-      expect(screen.getByDisplayValue('Poke_2')).toBeInTheDocument();
-      await user.click(screen.getByRole('button', { name: /^Save$/i }));
-      expect(mockOnFieldUpdate).toHaveBeenCalledWith('behavioral_events', [
-        { name: 'Poke_2', description: 'Din2' },
-      ]);
-    });
-
-    it('free-typing a name does NOT append an index (only an explicit pick does)', async () => {
-      const animal = { id: 'remy', behavioral_events: [{ name: '', description: 'Din1' }] };
-      render(<BehavioralEventsSection animal={animal} onFieldUpdate={mockOnFieldUpdate} />);
-
-      await user.click(screen.getByRole('button', { name: /^Edit$/i }));
-      const nameInput = screen.getByLabelText('Event name');
-      await user.type(nameInput, 'beam_break');
-      await user.click(screen.getByRole('button', { name: /^Save$/i }));
-
-      expect(mockOnFieldUpdate).toHaveBeenCalledWith('behavioral_events', [
-        { name: 'beam_break', description: 'Din1' },
-      ]);
-    });
-
-    it('keeps an auto-built name in sync when the DIO line index changes (Poke_1 -> Poke_2)', async () => {
-      const animal = { id: 'remy', behavioral_events: [{ name: '', description: 'Din1' }] };
-      render(<BehavioralEventsSection animal={animal} onFieldUpdate={mockOnFieldUpdate} />);
-
-      await user.click(screen.getByRole('button', { name: /^Edit$/i }));
-      // Pick "Poke" at index 1 → "Poke_1".
-      await user.click(screen.getByLabelText('Event name'));
-      await user.click(screen.getByRole('option', { name: 'Poke' }));
-      expect(screen.getByDisplayValue('Poke_1')).toBeInTheDocument();
-
-      // Change the DIO line index to 2 → the auto-built name follows: "Poke_2".
-      const indexInput = screen.getByLabelText('DIO line index');
-      await user.clear(indexInput);
-      await user.type(indexInput, '2');
-      expect(screen.getByDisplayValue('Poke_2')).toBeInTheDocument();
-    });
-
-    it('does NOT touch a free-typed name when the DIO line index changes', async () => {
-      const animal = { id: 'remy', behavioral_events: [{ name: '', description: 'Din1' }] };
-      render(<BehavioralEventsSection animal={animal} onFieldUpdate={mockOnFieldUpdate} />);
-
-      await user.click(screen.getByRole('button', { name: /^Edit$/i }));
-      const nameInput = screen.getByLabelText('Event name');
-      await user.type(nameInput, 'beam_break'); // not a "{known}_{number}" auto-name
-      const indexInput = screen.getByLabelText('DIO line index');
-      await user.clear(indexInput);
-      await user.type(indexInput, '5');
-
-      expect(screen.getByDisplayValue('beam_break')).toBeInTheDocument();
+      expect(screen.getByLabelText(/DIO type/i)).toHaveValue('Din');
+      expect(screen.getByLabelText(/DIO line index/i)).toHaveValue(5);
     });
   });
 

@@ -20,46 +20,6 @@ import './BehavioralEventsSection.scss';
  * @param {Function} props.onFieldUpdate - Field update callback
  * @returns {JSX.Element}
  */
-/**
- * Build a behavioral-event name from a picked suggestion plus the DIO line index, so several
- * events of the same kind get distinct, downstream-valid names — e.g. picking "Poke" on Din2
- * yields "Poke_2", mirroring the lab convention (Light_1, Light_2) and keeping the Spyglass DIO
- * event name (its primary key) unique. A blank / non-numeric index yields the bare label.
- *
- * @param {string} label - The picked suggestion (e.g. "Poke").
- * @param {number|string} index - The DIO line index (from {@link splitDioDescription}).
- * @returns {string} The constructed event name.
- */
-function buildEventName(label, index) {
-  return Number.isFinite(index) ? `${label}_${index}` : label;
-}
-
-/**
- * If `name` is an auto-built `{knownSuggestion}_{number}` (e.g. "Poke_1"), return it with the
- * numeric suffix retargeted to `newIndex` so the name keeps tracking the DIO line index ("Poke_1"
- * → "Poke_2"). Returns null — leave the name untouched — for a free-typed name (no
- * `{knownSuggestion}_{digits}` shape, e.g. "beam_break", "light1", "reward_left") or when
- * `newIndex` is not a finite number (the index field is mid-edit / blank).
- *
- * @param {string} name - The current event name.
- * @param {number|string} newIndex - The new DIO line index.
- * @returns {string|null} The retargeted name, or null to leave it unchanged.
- */
-function followDioIndexInName(name, newIndex) {
-  if (!Number.isFinite(newIndex)) return null;
-  const match = (name ?? '').match(/^(.+)_\d+$/);
-  if (match && behavioralEventsNames().includes(match[1])) {
-    return `${match[1]}_${newIndex}`;
-  }
-  return null;
-}
-
-/**
- *
- * @param root0
- * @param root0.animal
- * @param root0.onFieldUpdate
- */
 export default function BehavioralEventsSection({ animal, onFieldUpdate }) {
   const events = getAnimalBehavioralEvents(animal);
   const [editingIndex, setEditingIndex] = useState(null);
@@ -209,34 +169,6 @@ export default function BehavioralEventsSection({ animal, onFieldUpdate }) {
   };
 
   /**
-   * Handle the DIO line-index control changing: update the `description` and, when the name was
-   * auto-built from a suggestion (`{known}_{number}`), keep its numeric suffix tracking the index
-   * (the index is the DIO channel — its number disambiguates same-kind events). A free-typed name
-   * is left untouched. Re-validates the name when it follows.
-   *
-   * @param {string} rawIndex - The raw value from the line-index input.
-   */
-  const handleDioIndexChange = (rawIndex) => {
-    const dioTypes = behavioralEventsDescription();
-    const { type: splitType } = splitDioDescription(editingEvent?.description ?? '');
-    const dioType = dioTypes.includes(splitType) ? splitType : dioTypes[0];
-    const newDescription = joinDioDescription(dioType, rawIndex);
-    const { index: newIndex } = splitDioDescription(newDescription);
-
-    const followedName = followDioIndexInName(editingEvent?.name ?? '', newIndex);
-    setEditingEvent({
-      ...editingEvent,
-      description: newDescription,
-      ...(followedName !== null ? { name: followedName } : {}),
-    });
-    if (followedName !== null) {
-      const validation = validateEventName(followedName, editingIndex);
-      setValidationError(validation.error);
-      setValidationWarning(validation.warning);
-    }
-  };
-
-  /**
    * Handle keyboard events
    * @param {KeyboardEvent} e
    */
@@ -326,9 +258,6 @@ export default function BehavioralEventsSection({ animal, onFieldUpdate }) {
                       className={validationError ? 'error' : validationWarning ? 'warning' : ''}
                       value={editingEvent?.name || ''}
                       onChange={(v) => handleFieldChange('name', v)}
-                      onSelect={(option) =>
-                        handleFieldChange('name', buildEventName(option, dioIndex))
-                      }
                       suggestions={behavioralEventsNames()}
                       onKeyDown={handleKeyDown}
                       placeholder="event_name"
@@ -383,7 +312,12 @@ export default function BehavioralEventsSection({ animal, onFieldUpdate }) {
                           min="0"
                           step="1"
                           value={dioIndex}
-                          onChange={(e) => handleDioIndexChange(e.target.value)}
+                          onChange={(e) =>
+                            handleFieldChange(
+                              'description',
+                              joinDioDescription(dioType, e.target.value)
+                            )
+                          }
                           onKeyDown={handleKeyDown}
                         />
                       </span>

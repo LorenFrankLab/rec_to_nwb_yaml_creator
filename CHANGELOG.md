@@ -15,15 +15,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stored array is now canonically sorted by `date` (ascending, ISO `YYYY-MM-DD`)
   on write, so every reader sees days in chronological order. The exported YAML is
   unchanged.
+- **DIO `description` types restricted to the valid digital I/O lines (`Din`/`Dout`).**
+  The Type dropdown previously also offered `Accel`/`Gyro`/`Mag`, but those are
+  **analog** IMU channels, not digital I/O — a DIO `description` is looked up against
+  the `.rec` `ECU_digital` stream during conversion (trodes_to_nwb
+  `get_digitalsignal("ECU_digital", …)`), so an analog value would fail that lookup.
+  An existing analog `description` no longer crashes the editor: the Type control
+  degrades gracefully to `Din` while preserving the parsed line index. The exported
+  YAML shape is unchanged.
 
 ### Changed
 
 - **Restored guided DIO Type + line-index entry (F5).** The Behavioral Events /
   DIO library editor now enters a DIO event's `description` through a **Type**
-  dropdown (`Din`/`Dout`/`Accel`/`Gyro`/`Mag`) plus a numeric **DIO line index**
-  control, instead of a single free-text box — recognition over recall, and it
-  prevents a silently malformed DIO line name. The stored and exported
-  `description` string is unchanged (e.g. `"Din1"`).
+  dropdown (`Din`/`Dout`) plus a numeric **DIO line index** control, instead of a
+  single free-text box — recognition over recall, and it prevents a silently
+  malformed DIO line name. The stored and exported `description` string is unchanged
+  (e.g. `"Din1"`).
 
 ### Added
 
@@ -37,11 +45,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   combobox, offering the catalog of common names (`Home box camera`, `Poke`,
   `Light`, `Pump`, `Run Camera Ticks`, `Sleep`) and warning when a non-standard
   name is entered. Free entry is retained; the stored value is unchanged.
-- **Index-based name construction for DIO events.** Picking a name suggestion
-  appends the DIO line index (`Poke` on `Din2` → `Poke_2`), and an auto-built name
-  keeps its number in sync when the index changes — mirroring the lab convention
-  (`Light_1`/`Din1`, `Light_2`/`Din2`) and keeping the Spyglass DIO event name (its
-  primary key) unique without manual numbering. Free-typed names are left untouched.
 - **Off-list warning for brain regions.** The brain-region autocomplete
   (`BrainRegionAutocomplete`, used in the Electrode Group editor) now uses the same
   combobox and warns when a region is not one of the standard options — reinforcing

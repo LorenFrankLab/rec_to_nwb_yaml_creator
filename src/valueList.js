@@ -916,12 +916,20 @@ export const behavioralEventsNames = () => {
 };
 
 /**
- * List of Behavioral events descriptions
+ * Valid DIO `description` types for a behavioral event.
  *
- * @returns Behavioral events descriptions
+ * Only the digital I/O lines are valid: the exported `description` (e.g. `"Din1"`) is
+ * looked up against the `.rec` `ECU_digital` stream during conversion
+ * (trodes_to_nwb `get_digitalsignal("ECU_digital", …)`), so it must be a real ECU
+ * *digital* channel. `Din` are inputs (sensors the animal triggers); `Dout` are outputs
+ * (things you drive — lights, pumps, opto). `Accel`/`Gyro`/`Mag` are ANALOG IMU channels,
+ * not digital I/O, so they are intentionally excluded — selecting one would emit a
+ * `description` that fails the digital-signal lookup downstream.
+ *
+ * @returns {string[]} The valid DIO description types.
  */
 export const behavioralEventsDescription = () => {
-  return [...['Din', 'Dout', 'Accel', 'Gyro', 'Mag']];
+  return [...['Din', 'Dout']];
 };
 
 /**

@@ -3,10 +3,10 @@ import { behavioralEventsDescription } from '../valueList';
 /**
  * Parse/join helpers for a behavioral-event (DIO) `description` string.
  *
- * The exported `description` (e.g. `"Din1"`) is the hardware DIO line name: a recognized type
- * (`Din`/`Dout`/`Accel`/`Gyro`/`Mag`) immediately followed by a line index. The workspace editor
- * collects it through a Type dropdown + a numeric line-index control rather than free text
- * (recognition over recall; prevents a silently malformed line name).
+ * The exported `description` (e.g. `"Din1"`) is the hardware DIO line name: a recognized digital
+ * I/O type (`Din`/`Dout`) immediately followed by a line index. The workspace editor collects it
+ * through a Type dropdown + a numeric line-index control rather than free text (recognition over
+ * recall; prevents a silently malformed line name).
  *
  * This logic is COPIED from the legacy, frozen `SelectInputPairElement.splitTextNumber` and its
  * inline join (`` `${type}${index}` ``) — duplicated here on purpose so the legacy file stays
