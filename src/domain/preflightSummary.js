@@ -11,6 +11,45 @@
  */
 import { describeDayOptoState } from './optoStatus';
 
+// How many cameras to spell out inline before collapsing the rest into "+K more".
+const MAX_CAMERAS_INLINE = 4;
+
+/**
+ * Pluralize a count noun (no inflection of the count itself).
+ *
+ * @param {number} count - The quantity.
+ * @param {string} noun - The singular noun (e.g. "electrode group").
+ * @returns {string} The noun, pluralized when count !== 1.
+ */
+function pluralize(count, noun) {
+  return count === 1 ? noun : `${noun}s`;
+}
+
+/**
+ * Render the camera-calibration row value: each day-used camera's name + meters_per_pixel, so a
+ * recalibration is visible at the download gate. Falls back to a plain count when there are no
+ * cameras, and truncates to the first few when there are many.
+ *
+ * @param {Array<object>} cameras - The day-used camera objects (already the export's subset).
+ * @returns {string} The row value.
+ */
+function describeCameras(cameras) {
+  const list = Array.isArray(cameras) ? cameras : [];
+  if (list.length === 0) {
+    return '0 cameras';
+  }
+
+  const describe = (camera) => {
+    const name = camera?.camera_name || `camera ${camera?.id ?? '?'}`;
+    const mpp = camera?.meters_per_pixel;
+    return mpp == null ? name : `${name} (${mpp} m/px)`;
+  };
+
+  const shown = list.slice(0, MAX_CAMERAS_INLINE).map(describe).join(', ');
+  const remaining = list.length - MAX_CAMERAS_INLINE;
+  return remaining > 0 ? `${shown} +${remaining} more` : shown;
+}
+
 /**
  * Build the labelled preflight rows for a merged day.
  *
@@ -41,6 +80,13 @@ export function buildPreflightSummary(
   // derived only from the implant. Shared with the Validation summary so the two never disagree.
   const opto = describeDayOptoState(merged);
 
+  const electrodeGroupCount = (merged.electrode_groups || []).length;
+
+  // The merged day's `cameras` IS the day-used set the export emits (workspaceUtils resolves it via
+  // resolveDayCameraUsage before encoding), so the preflight reads exactly what downloads. Show each
+  // camera's name + calibration so a meters_per_pixel/zoom change is visible at the download gate.
+  const cameras = merged.cameras || [];
+
   const dataAcq = merged.data_acq_device || [];
   const dataAcqValue = dataAcq.length
     ? `${dataAcq.length} device${dataAcq.length === 1 ? '' : 's'} (${
@@ -60,9 +106,9 @@ export function buildPreflightSummary(
     },
     {
       label: 'Probes & failed channels',
-      value: `${(merged.electrode_groups || []).length} electrode groups, ${failedChannelCount} failed channels`,
+      value: `${electrodeGroupCount} ${pluralize(electrodeGroupCount, 'electrode group')}, ${failedChannelCount} ${pluralize(failedChannelCount, 'failed channel')}`,
     },
-    { label: 'Cameras / calibration', value: `${(merged.cameras || []).length} cameras` },
+    { label: 'Cameras / calibration', value: describeCameras(cameras) },
     { label: 'Data acquisition', value: dataAcqValue },
     {
       label: 'Tasks & videos',

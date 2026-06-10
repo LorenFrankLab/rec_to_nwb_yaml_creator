@@ -85,6 +85,48 @@ function sanitizeMessage(message, instancePath) {
     return 'Date of birth needs to comply with ISO 8601 format';
   }
 
+  // Humanize raw AJV "required property" jargon — the export-blocked UI must let users repair a
+  // missing field WITHOUT understanding the schema. Presentation only: this rewrites the message
+  // text, never which errors are produced.
+  const requiredMatch = message.match(/^must have required property '(.+)'$/);
+  if (requiredMatch) {
+    const prop = requiredMatch[1];
+    if (Object.prototype.hasOwnProperty.call(REQUIRED_PROP_LABELS, prop)) {
+      return REQUIRED_PROP_LABELS[prop];
+    }
+    return `${humanizeKey(prop)} is required`;
+  }
+
   // Return original message for all other cases
   return message;
 }
+
+/**
+ * Friendly labels for high-traffic required properties. Keys are the schema property names; values
+ * are full user-facing sentences. Any property not listed falls back to `humanizeKey`.
+ */
+const REQUIRED_PROP_LABELS = {
+  task_environment: 'Task environment (room/apparatus) is required',
+  camera_id: 'A camera selection is required',
+  data_acq_device: 'A data acquisition device is required',
+  meters_per_pixel: 'Camera meters-per-pixel calibration is required',
+  targeted_location: 'A brain region/location is required',
+  location: 'A brain region/location is required',
+};
+
+/**
+ * Humanize a snake_case schema key into sentence case (e.g. `some_prop` → "Some prop").
+ *
+ * @param {string} key - The raw schema property name.
+ * @returns {string} The sentence-cased, space-separated label.
+ */
+function humanizeKey(key) {
+  const words = String(key).replace(/_/g, ' ').trim();
+  if (!words) {
+    return key;
+  }
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+// Exposed for unit testing the presentation-only message humanization in isolation.
+export const __testSanitizeMessage = sanitizeMessage;

@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { schemaValidation } from '../schemaValidation';
+import { schemaValidation, __testSanitizeMessage } from '../schemaValidation';
 import { createTestYaml } from '../../__tests__/helpers/test-utils';
 
 describe('schemaValidation()', () => {
@@ -348,6 +348,57 @@ describe('schemaValidation()', () => {
       expect(typeIssue).toBeDefined();
       expect(typeIssue.message).toBeTruthy();
       expect(typeIssue.message).not.toContain('cannot be empty');
+    });
+
+    it('humanizes a known required-property message to a friendly label', () => {
+      // data_acq_device is a known high-traffic required field; the raw AJV jargon
+      // "must have required property 'data_acq_device'" must never reach the UI.
+      const model = { ...createTestYaml(), data_acq_device: undefined };
+      const issues = schemaValidation(model);
+
+      const issue = issues.find(i => i.path === 'data_acq_device' && i.code === 'required');
+      expect(issue).toBeDefined();
+      expect(issue.message).toBe('A data acquisition device is required');
+      expect(issue.message).not.toContain('must have required property');
+    });
+
+    it('humanizes a nested required location into a brain-region message', () => {
+      const model = createTestYaml({
+        electrode_groups: [{
+          id: 0,
+          device_type: 'tetrode_12.5',
+          description: 'CA1 tetrode',
+          targeted_x: 1,
+          targeted_y: 2,
+          targeted_z: 3,
+          units: 'mm',
+          targeted_location: 'CA1',
+          // location omitted → required violation
+        }]
+      });
+      const issues = schemaValidation(model);
+
+      const issue = issues.find(i => i.code === 'required' && /location/.test(i.path));
+      expect(issue).toBeDefined();
+      expect(issue.message).toBe('A brain region/location is required');
+    });
+
+    it('humanizes an unknown required property into a sentence-cased generic form', () => {
+      // Synthesize an unknown-prop required message to verify the generic fallback
+      // (the snake_case key is humanized: underscores → spaces, sentence-cased).
+      const out = __testSanitizeMessage(
+        "must have required property 'some_other_prop'",
+        ''
+      );
+      expect(out).toBe('Some other prop is required');
+    });
+
+    it('leaves pattern and date-of-birth humanization unchanged', () => {
+      const emptyLab = __testSanitizeMessage("must match pattern \"^(.|\\s)*\\S(.|\\s)*$\"", '/lab');
+      expect(emptyLab).toContain('cannot be empty');
+
+      const dob = __testSanitizeMessage('must match format "date-time"', '/subject/date_of_birth');
+      expect(dob).toContain('ISO 8601');
     });
   });
 
