@@ -41,7 +41,13 @@ export default defineConfig({
     },
     include: ['src/**/*.{test,spec}.{js,jsx}'],
     exclude: ['node_modules/', 'build/', 'dist/'],
-    testTimeout: 15000,  // Increased from 10000 for slower CI environments
+    // Global per-test budget for the no-coverage run (the `npm test` correctness gate).
+    // Heavy App-render integration tests are ~3s without coverage, so 30s is a wide
+    // margin even on slow CI cores. The coverage run needs more headroom because v8
+    // instrumentation ~triples per-test wall-clock — `test:coverage` raises this to
+    // 60s via --testTimeout (see package.json). Per-test `{ timeout }` overrides were
+    // removed in favor of these two central budgets (see the integration test files).
+    testTimeout: 30000,
     hookTimeout: 10000,
   },
   resolve: {

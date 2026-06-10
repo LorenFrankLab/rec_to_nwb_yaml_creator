@@ -267,7 +267,7 @@ describe('End-to-End Session Creation Workflow', () => {
    * - Form validates with complete data
    * - Exported YAML includes all fields
    */
-  it('creates complete session with all optional fields', { timeout: 60000 }, async () => {
+  it('creates complete session with all optional fields', async () => {
     // ARRANGE
     const user = userEvent.setup();
     render(
@@ -555,7 +555,7 @@ describe('End-to-End Session Creation Workflow', () => {
    * - Camera fields are populated
    * - Camera array structure is correct
    */
-  it('adds cameras with auto-incrementing IDs', { timeout: 30000 }, async () => {
+  it('adds cameras with auto-incrementing IDs', async () => {
     // ARRANGE
     const user = userEvent.setup();
     render(
@@ -628,7 +628,7 @@ describe('End-to-End Session Creation Workflow', () => {
    * - Task epochs are formatted correctly
    * - Task structure is valid
    */
-  it('adds tasks with camera references', { timeout: 30000 }, async () => {
+  it('adds tasks with camera references', async () => {
     // ARRANGE
     const user = userEvent.setup();
     render(
@@ -693,7 +693,7 @@ describe('End-to-End Session Creation Workflow', () => {
    * - Event structure is correct
    * - Events array is formatted properly
    */
-  it('adds behavioral events', { timeout: 30000 }, async () => {
+  it('adds behavioral events', async () => {
     // ARRANGE
     const user = userEvent.setup();
     render(
@@ -764,7 +764,7 @@ describe('End-to-End Session Creation Workflow', () => {
    * - Electrode group fields are populated
    * - Electrode group structure is correct
    */
-  it('adds electrode groups with device types', { timeout: 30000 }, async () => {
+  it('adds electrode groups with device types', async () => {
     // ARRANGE
     const user = userEvent.setup();
     render(
@@ -824,7 +824,7 @@ describe('End-to-End Session Creation Workflow', () => {
    * - Ntrode structure is correct
    * - Ntrode IDs are assigned properly
    */
-  it('triggers ntrode generation when device type selected', { timeout: 30000 }, async () => {
+  it('triggers ntrode generation when device type selected', async () => {
     // ARRANGE
     const user = userEvent.setup();
     render(
@@ -890,7 +890,7 @@ describe('End-to-End Session Creation Workflow', () => {
    * - Exported YAML is well-formed
    * - All sections are present in export
    */
-  it('validates and exports complete session as valid YAML', { timeout: 60000 }, async () => {
+  it('validates and exports complete session as valid YAML', async () => {
     // ARRANGE
     const user = userEvent.setup();
     render(

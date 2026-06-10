@@ -11,6 +11,14 @@ permissions:
   pull-requests: write
 
 jobs:
+  # Fast, deterministic correctness gate — runs WITHOUT coverage instrumentation.
+  # Coverage's v8 instrumentation roughly triples per-test wall-clock (measured:
+  # heavy App-render integration tests go ~3s -> ~10s under coverage), which on the
+  # 4-core CI runner stacks with CPU oversubscription and nondeterministically pushes
+  # whichever heavy test gets starved past its timeout. Keeping coverage off this gate
+  # makes it fast (heavy tests ~3s, large margin) and the failing-test set stable.
+  # The slow coverage run lives in the separate `coverage` job below so it never flaps
+  # this gate or the e2e/integration/build jobs that depend on it.
   test:
     name: Unit & Integration Tests
     runs-on: ubuntu-latest
@@ -33,6 +41,30 @@ jobs:
 
       - name: Run linter
         run: npm run lint
+
+      - name: Run all tests (no coverage)
+        run: npm test -- run
+
+  # Coverage + threshold enforcement, isolated from the correctness gate. Runs in
+  # parallel (no `needs:`) so coverage feedback is not delayed. The `test:coverage`
+  # script raises testTimeout to 60s to size the per-test budget to coverage's ~3x
+  # instrumentation cost on the constrained runner (see package.json).
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Run all tests with coverage
         run: npm run test:coverage -- run

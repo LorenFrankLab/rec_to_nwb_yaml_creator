@@ -75,7 +75,7 @@ describe('Sample Metadata Modification Workflow', () => {
    * - YAML is parsed correctly
    * - Form fields are populated with sample data
    */
-  it('imports sample metadata through file upload', { timeout: 30000 }, async () => {
+  it('imports sample metadata through file upload', async () => {
     // ARRANGE
     const user = userEvent.setup();
     const { container } = render(
@@ -119,7 +119,7 @@ describe('Sample Metadata Modification Workflow', () => {
     expect(taskNameInputs).toHaveLength(2);
     expect(taskNameInputs[0]).toHaveValue('Sleep');
     expect(taskNameInputs[1]).toHaveValue('Run');
-  }, 15000); // 15 second timeout - imports YAML file
+  });
 
   /**
    * Test 2: Modify experimenter name
@@ -128,7 +128,7 @@ describe('Sample Metadata Modification Workflow', () => {
    * - User can modify existing experimenter names
    * - New values are stored in form state
    */
-  it('modifies experimenter name after import', { timeout: 30000 }, async () => {
+  it('modifies experimenter name after import', async () => {
     // ARRANGE
     const user = userEvent.setup();
     const { container } = render(
@@ -160,7 +160,7 @@ describe('Sample Metadata Modification Workflow', () => {
    * Note: This test types long strings and may take 8-10 seconds
    * Timeout increased to 15s to prevent flakes when running with full suite
    */
-  it('modifies subject information after import', { timeout: 30000 }, async () => {
+  it('modifies subject information after import', async () => {
     // ARRANGE
     const user = userEvent.setup();
     const { container } = render(
@@ -196,7 +196,7 @@ describe('Sample Metadata Modification Workflow', () => {
     expect(speciesInputs[0]).toHaveValue('Rattus norvegicus');
     const sexInputs = screen.getAllByLabelText(/sex/i);
     expect(sexInputs[0]).toHaveValue('M');
-  }, 15000); // 15 second timeout to prevent flakes in full test suite
+  });
 
   /**
    * Test 4: Add new camera
@@ -206,7 +206,7 @@ describe('Sample Metadata Modification Workflow', () => {
    * - Camera IDs auto-increment correctly
    * - New camera appears in form
    */
-  it('adds new camera to imported metadata', { timeout: 30000 }, async () => {
+  it('adds new camera to imported metadata', async () => {
     // ARRANGE
     const user = userEvent.setup();
     const { container } = render(
@@ -234,7 +234,7 @@ describe('Sample Metadata Modification Workflow', () => {
     const cameraIdInputs = screen.getAllByLabelText(/^camera id$/i);
     expect(cameraIdInputs).toHaveLength(3);
     expect(cameraIdInputs[2]).toHaveValue(2); // IDs: 0, 1, 2
-  }, 15000); // 15 second timeout - imports YAML file
+  });
 
   /**
    * Test 5: Add new task
@@ -244,7 +244,7 @@ describe('Sample Metadata Modification Workflow', () => {
    * - New task appears in form
    * - Task can reference existing cameras
    */
-  it('adds new task to imported metadata', { timeout: 30000 }, async () => {
+  it('adds new task to imported metadata', async () => {
     // ARRANGE
     const user = userEvent.setup();
     const { container } = render(
@@ -281,7 +281,7 @@ describe('Sample Metadata Modification Workflow', () => {
    * - Electrode group ID auto-increments
    * - New electrode group appears in form
    */
-  it('adds new electrode group to imported metadata', { timeout: 30000 }, async () => {
+  it('adds new electrode group to imported metadata', async () => {
     // ARRANGE
     const user = userEvent.setup();
     const { container } = render(
@@ -315,7 +315,7 @@ describe('Sample Metadata Modification Workflow', () => {
    * - Export functionality works after import
    * - Blob contains YAML content
    */
-  it('re-exports metadata with modifications preserved', { timeout: 30000 }, async () => {
+  it('re-exports metadata with modifications preserved', async () => {
     // ARRANGE
     const user = userEvent.setup();
     const { container } = render(
@@ -370,7 +370,7 @@ describe('Sample Metadata Modification Workflow', () => {
    * - All modifications are preserved through round-trip
    * - No data loss during import/export cycle
    */
-  it('preserves all modifications through import-modify-export-import round-trip', { timeout: 30000 }, async () => {
+  it('preserves all modifications through import-modify-export-import round-trip', async () => {
     // ARRANGE
     const user = userEvent.setup();
     render(
@@ -440,5 +440,5 @@ describe('Sample Metadata Modification Workflow', () => {
     // Verify other data still intact
     expect(screen.getByLabelText(/^lab$/i)).toHaveValue('Test Lab');
     expect(screen.getByLabelText(/institution/i)).toHaveValue('Test University');
-  }, 15000); // 15 second timeout - imports YAML multiple times
+  });
 });
