@@ -2,7 +2,6 @@ import { useState, useId } from 'react';
 import PropTypes from 'prop-types';
 import Modal from '../../components/Modal/Modal';
 import TaskEpochsEditor from './TaskEpochsEditor';
-import BehavioralEventsDisplay from './BehavioralEventsDisplay';
 import './TaskModal.scss';
 
 /**
@@ -24,7 +23,6 @@ import './TaskModal.scss';
  * @param {object|null} props.task Task being edited (edit mode).
  * @param {Array} props.existingTasks Sibling tasks in the day (identity check).
  * @param {Array} props.cameras Animal cameras (multi-select options).
- * @param {Array} props.inheritedEvents Animal behavioral events (read-only display).
  * @param {object} props.knownTaskDescriptions Map of task_name -> canonical
  *   task_description across the whole workspace/dataset, excluding the task being
  *   edited. Drives the Spyglass task-identity guard.
@@ -37,7 +35,6 @@ function TaskForm({
   task,
   existingTasks,
   cameras,
-  inheritedEvents,
   knownTaskDescriptions,
   animalId,
   onSave,
@@ -323,13 +320,6 @@ function TaskForm({
         </div>
       </details>
 
-      <details>
-        <summary>Behavioral events (inherited)</summary>
-        <div className="task-modal-section-body">
-          <BehavioralEventsDisplay inheritedEvents={inheritedEvents} readOnly />
-        </div>
-      </details>
-
       <details open>
         <summary>Task epochs</summary>
         <div className="task-modal-section-body">
@@ -365,7 +355,6 @@ TaskForm.propTypes = {
   task: PropTypes.object,
   existingTasks: PropTypes.array.isRequired,
   cameras: PropTypes.array,
-  inheritedEvents: PropTypes.array,
   knownTaskDescriptions: PropTypes.object,
   animalId: PropTypes.string,
   onSave: PropTypes.func.isRequired,
@@ -375,7 +364,6 @@ TaskForm.propTypes = {
 TaskForm.defaultProps = {
   task: null,
   cameras: [],
-  inheritedEvents: [],
   knownTaskDescriptions: {},
   animalId: undefined,
 };
@@ -391,7 +379,6 @@ TaskForm.defaultProps = {
  * @param {object|null} props.task Task being edited (edit mode).
  * @param {Array} props.existingTasks Sibling tasks in the day (identity check).
  * @param {Array} props.cameras Animal cameras (multi-select options).
- * @param {Array} props.inheritedEvents Animal behavioral events (read-only display).
  * @param {object} [props.knownTaskDescriptions] Map of task_name -> canonical
  *   task_description across the workspace/dataset (excluding the task being edited).
  * @param {string} [props.animalId] Parent animal id (for the Animal Editor link).
@@ -405,7 +392,6 @@ const TaskModal = ({
   task = null,
   existingTasks = [],
   cameras = [],
-  inheritedEvents = [],
   knownTaskDescriptions = {},
   animalId,
   onSave,
@@ -423,7 +409,6 @@ const TaskModal = ({
       task={task}
       existingTasks={existingTasks}
       cameras={cameras}
-      inheritedEvents={inheritedEvents}
       knownTaskDescriptions={knownTaskDescriptions}
       animalId={animalId}
       onSave={onSave}
@@ -438,7 +423,6 @@ TaskModal.propTypes = {
   task: PropTypes.object,
   existingTasks: PropTypes.array,
   cameras: PropTypes.array,
-  inheritedEvents: PropTypes.array,
   knownTaskDescriptions: PropTypes.object,
   animalId: PropTypes.string,
   onSave: PropTypes.func.isRequired,
@@ -450,7 +434,6 @@ TaskModal.defaultProps = {
   task: null,
   existingTasks: [],
   cameras: [],
-  inheritedEvents: [],
   knownTaskDescriptions: {},
   animalId: undefined,
 };

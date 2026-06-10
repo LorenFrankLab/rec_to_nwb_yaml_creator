@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **Retired the animal-level behavioral-events (DIO) library.** Behavioral events are
+  now a single **day-owned** set (the only ones exported); the animal-level "library"
+  authoring surface (the **DIO** tab in the Animal view) and the Day Editor's "Use on
+  this day" inherited-copy path are removed, ending the confusing animal-vs-day split.
+  Existing days keep their own events (no exported data is lost — export already reads
+  `day.behavioral_events`). `animal.behavioral_events` is retained-but-unused (vestigial)
+  in the persisted blob for compatibility; no workspace schema version bump. An old
+  `#/animal/:id/dio` URL resolves to the animal's default tab. The exported YAML shape
+  is unchanged.
+
 ### Fixed
 
 - **Recording days now stay date-ordered (F2).** `createDay` and `duplicateDay`

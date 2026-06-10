@@ -1057,7 +1057,6 @@ export const ANIMAL_SETUP_TABS = {
   'channel-maps': 'Channel Maps',
   'recording-system': 'Recording System',
   cameras: 'Cameras',
-  dio: 'DIO',
   optogenetics: 'Optogenetics',
 };
 
@@ -1065,8 +1064,8 @@ export const ANIMAL_SETUP_TABS = {
  * Resolve which animal-setup TAB owns a field path (for re-pointing a repair deep-link at the
  * tabbed Animal View and for the section-nav blocking dot). Finer than
  * {@link animalEditorStepForFieldPath}: camera fields → `cameras`, data-acq → `recording-system`,
- * channel maps → `channel-maps`, behavioral/DIO → `dio` (a NEW branch the step resolver lacked),
- * optogenetics → `optogenetics`, and electrode geometry/identity + the configuration history (the
+ * channel maps → `channel-maps`, optogenetics → `optogenetics`, and electrode geometry/identity +
+ * the configuration history (the
  * versioned electrode config) → `electrode-groups` (the default). AJV instancePath slashes are
  * normalized first; `ntrode` is checked before `electrode` (the ntrode path contains
  * "electrode_group"), and `fs_gui` is day-level so it never lands on an animal tab.
@@ -1086,7 +1085,8 @@ export function animalSetupTabForFieldPath(fieldPath) {
   if (path.includes('opto') || path.includes('virus') || path.includes('fiber')) {
     return result('optogenetics');
   }
-  if (path.includes('behavioral_event') || path.includes('dio')) return result('dio');
+  // (Behavioral-event / DIO issues are day-owned — they resolve to the `day` surface, so they
+  //  never reach this animal-tab resolver. There is no DIO animal tab.)
   // electrode geometry/identity, configurationHistory (the versioned electrode config), and bare
   // keyword paths (device_type / location / targeted_*) all live on the electrode-groups tab.
   return result('electrode-groups');

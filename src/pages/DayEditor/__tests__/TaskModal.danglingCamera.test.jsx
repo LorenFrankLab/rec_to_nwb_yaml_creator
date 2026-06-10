@@ -14,7 +14,6 @@ const cameras = [
   { id: 1, camera_name: 'sleepbox', meters_per_pixel: 0.0012, lens: '8mm' },
 ];
 
-const inheritedEvents = [{ name: 'reward_well', description: 'Reward' }];
 
 /**
  * Render an edit-mode TaskModal carrying a dangling camera reference.
@@ -36,7 +35,6 @@ function renderEditModal(props = {}) {
       }}
       existingTasks={[]}
       cameras={cameras}
-      inheritedEvents={inheritedEvents}
       onSave={onSave}
       onCancel={vi.fn()}
       {...props}
@@ -114,7 +112,6 @@ describe('TaskModal dangling camera references (Task 0a)', () => {
         task={null}
         existingTasks={[]}
         cameras={cameras}
-        inheritedEvents={inheritedEvents}
         onSave={onSave}
         onCancel={vi.fn()}
       />

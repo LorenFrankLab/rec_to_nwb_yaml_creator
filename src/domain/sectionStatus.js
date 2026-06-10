@@ -17,7 +17,6 @@ import {
   getAnimalNtrodeMaps,
   getDataAcqDevices,
   getAnimalCameras,
-  getAnimalBehavioralEvents,
   getAnimalDayIds,
 } from '../state/workspaceSelectors';
 import { mergeDayMetadata } from '../state/workspaceUtils';
@@ -80,7 +79,6 @@ const SETUP_SECTION_IS_CONFIGURED = {
   'channel-maps': (animal) => getAnimalNtrodeMaps(animal).length > 0,
   'recording-system': (animal) => getDataAcqDevices(animal).length > 0,
   cameras: (animal) => getAnimalCameras(animal).length > 0,
-  dio: (animal) => getAnimalBehavioralEvents(animal).length > 0,
   optogenetics: (animal) =>
     getAnimalOptoCompleteness(animal) === OPTO_COMPLETENESS.COMPLETE,
 };
@@ -106,7 +104,7 @@ export function getAnimalSectionStatus(animal, sectionKey) {
  * the shape-safe selectors, so a malformed/recovered animal yields 0 rather than crashing.
  *
  * @param {object} animal - The animal record.
- * @returns {{ 'electrode-groups': number, 'channel-maps': number, 'recording-system': number, cameras: number, dio: number }}
+ * @returns {{ 'electrode-groups': number, 'channel-maps': number, 'recording-system': number, cameras: number }}
  */
 export function getAnimalSetupCounts(animal) {
   return {
@@ -114,7 +112,6 @@ export function getAnimalSetupCounts(animal) {
     'channel-maps': getAnimalNtrodeMaps(animal).length,
     'recording-system': getDataAcqDevices(animal).length,
     cameras: getAnimalCameras(animal).length,
-    dio: getAnimalBehavioralEvents(animal).length,
   };
 }
 

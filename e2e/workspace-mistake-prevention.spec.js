@@ -17,8 +17,8 @@
  *    from controlled selects/checkboxes of known cameras/epochs — a stale id cannot be typed in.
  *  - Task-name divergence (Day → Tasks & Epochs → Task modal): reusing a known `task_name` with a
  *    different `task_description` is blocked with old-vs-new context.
- *  - Behavioral-events library (Day → Tasks & Epochs): animal-level events read as a non-exported
- *    library, and the day exposes a "Use on this day" path to copy one into the exported list.
+ *  - Behavioral events (Day → Tasks & Epochs): a day-owned DIO wiring table grouped into Inputs
+ *    (Din) / Outputs (Dout); there is no animal-level library or "Use on this day" path.
  *  - Day technical read-only / route-to-Recording-System (Day → Overview → Technical parameters):
  *    `raw_data_to_volts` / `times_period_multiplier` are presented as effective recording-system
  *    values (read-only), with an "Edit in Recording System" link rather than a routine day edit.
@@ -291,44 +291,33 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     await expect(dialog.getByRole('button', { name: 'Save task' })).toBeDisabled();
   });
 
-  test('behavioral events: animal-level events are a non-exported library with a "Use on this day" path', async ({
+  test('behavioral events: the day owns a DIO wiring table grouped into Inputs/Outputs (no animal library)', async ({
     page,
   }) => {
-    // Seed animal-level (library) behavioral events. The realistic animal has none, so add two.
-    // These are reference-only (not exported) until used on a day. The Day Editor must surface a
-    // "Use on this day" control that copies a library event into the day's exported events.
+    // Behavioral events are day-owned (the only ones exported); there is no animal-level library
+    // and no "Use on this day" path. The Day Editor presents them as a wiring table grouped by
+    // direction (Inputs = Din, Outputs = Dout).
     const blob = buildConfiguredWorkspaceBlob();
-    blob.workspace.animals[ANIMAL_ID].behavioral_events = [
-      { name: 'lib_poke', description: 'Nose poke (animal-level reference)' },
-      { name: 'lib_pump', description: 'Reward pump (animal-level reference)' },
+    blob.workspace.days[DAY_ID].behavioral_events = [
+      { name: 'Poke1', description: 'Din1' },
+      { name: 'Pump1', description: 'Dout7' },
     ];
-    // Clear the day's own behavioral events so the library events are offered (not already used).
-    blob.workspace.days[DAY_ID].behavioral_events = [];
 
     await seedAndOpen(page, blob, `/#/day/${DAY_ID}`);
     await page.getByRole('button', { name: /^Tasks & Epochs — / }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Tasks & Epochs' })).toBeVisible();
 
-    // The inherited (library) list reads as reference-only / not written to the day.
-    const inherited = page.getByRole('list', { name: 'Inherited behavioral events' });
-    await expect(inherited).toBeVisible();
+    // Day events render in the direction-grouped wiring table.
     await expect(
-      page.getByText(/defined on the animal for reference\. They are\s+not written to this day/),
+      page.getByRole('table', { name: /inputs \(din\)/i }).getByText('Poke1'),
     ).toBeVisible();
-    await expect(inherited.getByText('lib_poke')).toBeVisible();
-
-    // The day exposes a "Use on this day" path that promotes a library event into the exported list.
-    await inherited.getByRole('button', { name: 'Use lib_poke on this day' }).click();
-
-    // The promoted event now appears in the day's exported wiring table. Its prose description
-    // ("Nose poke (animal-level reference)") isn't a Din/Dout line, so it lands in the "Other"
-    // group of the table.
-    const otherTable = page.getByRole('table', { name: 'Other' });
-    await expect(otherTable.getByText('lib_poke')).toBeVisible();
-    // And the "Use on this day" affordance for that event is gone (it is now used by the day).
     await expect(
-      inherited.getByRole('button', { name: 'Use lib_poke on this day' }),
-    ).toHaveCount(0);
+      page.getByRole('table', { name: /outputs \(dout\)/i }).getByText('Pump1'),
+    ).toBeVisible();
+
+    // The retired animal-level library surfaces are gone.
+    await expect(page.getByRole('list', { name: 'Inherited behavioral events' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /use .* on this day/i })).toHaveCount(0);
   });
 
   test('day technical values: rig constants read as effective recording-system values, not routine day edits', async ({

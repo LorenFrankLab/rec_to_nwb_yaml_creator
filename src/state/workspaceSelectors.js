@@ -36,7 +36,15 @@ const asRecord = (value) =>
 /** @param {object} animal @returns {Array} The animal's cameras (always an array). */
 export const getAnimalCameras = (animal) => asArray(animal?.cameras);
 
-/** @param {object} animal @returns {Array} The animal's behavioral events. */
+/**
+ * VESTIGIAL: the animal-level behavioral-events library was retired — behavioral events are now
+ * day-owned (`day.behavioral_events`, the only ones exported). `animal.behavioral_events` is left
+ * in the persisted blob for backward/forward compatibility but is no longer read by the app. This
+ * selector is retained (no consumer beyond its own test) so a future migration could relocate the
+ * field; see `.claude/docs/plans/dio-per-day-sets/phase-2b-retire-animal-library.md`.
+ *
+ * @param {object} animal @returns {Array} The animal's (vestigial) behavioral events.
+ */
 export const getAnimalBehavioralEvents = (animal) => asArray(animal?.behavioral_events);
 
 /** @param {object} animal @returns {Array} The animal's configuration history. */

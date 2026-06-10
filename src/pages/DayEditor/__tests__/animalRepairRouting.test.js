@@ -64,10 +64,6 @@ describe('animalSetupTabForFieldPath — field → animal-setup TAB (tabbed IA)'
     expect(animalSetupTabForFieldPath('data_acq_device[0].name')).toEqual({ tab: 'recording-system', label: 'Recording System' });
   });
 
-  it('maps behavioral-event / DIO paths to the dio tab (a NEW branch the step resolver lacked)', () => {
-    expect(animalSetupTabForFieldPath('behavioral_events[0].name')).toEqual({ tab: 'dio', label: 'DIO' });
-  });
-
   it('maps optogenetics paths to the optogenetics tab', () => {
     expect(animalSetupTabForFieldPath('opto_excitation_source[0].name')).toEqual({ tab: 'optogenetics', label: 'Optogenetics' });
     expect(animalSetupTabForFieldPath('virus_injection[0].volume_in_ul')).toMatchObject({ tab: 'optogenetics' });

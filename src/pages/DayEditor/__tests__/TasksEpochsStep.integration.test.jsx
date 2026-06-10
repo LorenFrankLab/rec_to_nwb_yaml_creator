@@ -97,7 +97,7 @@ describe('Tasks & Epochs step (integration)', () => {
     expect(document.activeElement).toBe(addButton);
   });
 
-  it('inheritance: shows the animal cameras and behavioral events, and saves camera ids that reference the animal', async () => {
+  it('inheritance: shows the animal cameras and saves camera ids that reference the animal', async () => {
     const user = userEvent.setup();
     const { animal } = renderStepper();
     await goToEpochs(user);
@@ -114,11 +114,6 @@ describe('Tasks & Epochs step (integration)', () => {
           name: new RegExp(`${camera.id}.*${camera.camera_name}`, 'i'),
         })
       ).toBeInTheDocument();
-    });
-
-    // Inherited behavioral events appear (read-only).
-    animal.behavioral_events.forEach((event) => {
-      expect(within(dialog).getByText(event.name)).toBeInTheDocument();
     });
 
     // Select the first animal camera and save.

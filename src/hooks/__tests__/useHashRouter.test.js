@@ -616,7 +616,6 @@ describe('tabbed animal-view route (Phase 1 — tabbed-workspace-ia)', () => {
     'channel-maps',
     'recording-system',
     'cameras',
-    'dio',
     'optogenetics',
   ])('parses #/animal/remy/%s into the animal-view with that tab', (tab) => {
     expect(parseHashRoute(`#/animal/remy/${tab}`)).toEqual({
@@ -634,6 +633,15 @@ describe('tabbed animal-view route (Phase 1 — tabbed-workspace-ia)', () => {
 
   it('normalizes an unknown tab to days (redirect-to-days)', () => {
     expect(parseHashRoute('#/animal/remy/banana')).toEqual({
+      view: 'animal-view',
+      params: { animalId: 'remy', tab: 'days' },
+    });
+  });
+
+  it('redirects the retired #/animal/:id/dio tab to days (library retired)', () => {
+    // The DIO tab was removed when the animal-level behavioral-events library was retired;
+    // a stale `dio` URL resolves to the default tab like any unknown tab.
+    expect(parseHashRoute('#/animal/remy/dio')).toEqual({
       view: 'animal-view',
       params: { animalId: 'remy', tab: 'days' },
     });

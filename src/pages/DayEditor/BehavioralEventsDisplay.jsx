@@ -8,8 +8,7 @@ import { ConfirmDialog } from '../../components/Modal';
 import InfoIcon from '../../element/InfoIcon';
 import './BehavioralEventsDisplay.scss';
 
-// Reserved words that nudge a warning (shared intent with the animal editor): they work but may
-// collide with system events.
+// Reserved words that nudge a warning: they work but may collide with system events.
 const RESERVED_WORDS = ['reward', 'choice', 'start', 'end', 'trigger', 'sync'];
 
 /**
@@ -22,7 +21,6 @@ const GROUPS = [
   {
     key: 'Din',
     seed: 'Din1',
-    tableLabel: 'Inputs (Din)',
     heading: 'Inputs (Din)',
     blurb: 'Sensors the animal triggers — pokes, beam breaks.',
     addLabel: 'Add input event',
@@ -30,7 +28,6 @@ const GROUPS = [
   {
     key: 'Dout',
     seed: 'Dout1',
-    tableLabel: 'Outputs (Dout)',
     heading: 'Outputs (Dout)',
     blurb: 'Things you drive — lights, pumps, optogenetics.',
     addLabel: 'Add output event',
@@ -40,27 +37,19 @@ const GROUPS = [
 /**
  * BehavioralEventsDisplay — the per-day behavioral-events (DIO) editor.
  *
- * The day owns its set of events and they are what export (`day.behavioral_events`). The set is
- * presented as a wiring table grouped into Inputs (Din) and Outputs (Dout), reading like the
- * physical rig. Each row maps a hardware DIO channel (the `description`, e.g. "Din1") to a
- * semantic event identity (the `name`, e.g. "Poke1"). The animal's inherited library is shown
- * above as read-only reference with a "Use on this day" copy action.
+ * The day owns its set of events and they are what export (`day.behavioral_events`); there is no
+ * separate animal-level library. The set is presented as a wiring table grouped into Inputs (Din)
+ * and Outputs (Dout), reading like the physical rig. Each row maps a hardware DIO channel (the
+ * `description`, e.g. "Din1") to a semantic event identity (the `name`, e.g. "Poke1"). A new day
+ * carries the previous day's set forward; this editor edits it in place.
  *
  * @param {object} props
- * @param {Array<{name: string, description: string}>} props.inheritedEvents - Animal events (reference).
  * @param {Array<{name: string, description: string}>} props.dayEvents - The day's exported events.
  * @param {Function} props.onDayEventsChange - Called with the next day-events array.
- * @param {boolean} [props.readOnly] - When true, render only the inherited reference list.
  * @returns {JSX.Element}
  */
-export default function BehavioralEventsDisplay({
-  inheritedEvents,
-  dayEvents,
-  onDayEventsChange,
-  readOnly,
-}) {
+export default function BehavioralEventsDisplay({ dayEvents, onDayEventsChange }) {
   // Tolerate corrupt persisted state: a non-array events list (`{}`) must not crash `.map`.
-  const events = Array.isArray(inheritedEvents) ? inheritedEvents : [];
   const dayItems = Array.isArray(dayEvents) ? dayEvents : [];
 
   const [editingIndex, setEditingIndex] = useState(null);
@@ -69,12 +58,6 @@ export default function BehavioralEventsDisplay({
   const [validationWarning, setValidationWarning] = useState(null);
   const [pendingDeleteIndex, setPendingDeleteIndex] = useState(null);
 
-  const inheritedNames = new Set(events.map((e) => e.name));
-  const duplicateNames = dayItems
-    .map((e) => e.name)
-    .filter((name) => inheritedNames.has(name));
-  // Day names already used, so a library event isn't offered for "Use on this day" twice.
-  const dayNames = new Set(dayItems.map((e) => e.name));
   // A duplicate DESCRIPTION among the exported day events is a downstream hard `raise ValueError`
   // in trodes_to_nwb — surfaced inline via the SAME helper the export-blocking rule uses, so the
   // inline gate and the export gate can never disagree (raw-string compare, no trim).
@@ -82,6 +65,13 @@ export default function BehavioralEventsDisplay({
 
   /**
    * Validate an event name against the day set (Rule 14: names unique within the day).
+   *
+   * The only format requirement is the schema's: a non-empty, non-whitespace-only string
+   * (`behavioral_events[].name` pattern `^(.|\s)*\S(.|\s)*$`; its own default is the multi-word
+   * "Home box camera"). We deliberately do NOT impose a programming-identifier rule — spaces and
+   * other characters the schema accepts must not be rejected here, or a suggested name (e.g.
+   * "Home box camera", "Run Camera Ticks") would error.
+   *
    * @param {string} name - Candidate name.
    * @param {number} currentIndex - Index being edited (excluded from the duplicate check).
    * @returns {{error: string|null, warning: string|null}}
@@ -90,11 +80,6 @@ export default function BehavioralEventsDisplay({
     const result = { error: null, warning: null };
     if (!name || name.trim() === '') {
       result.error = 'Event name is required';
-      return result;
-    }
-    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)) {
-      result.error =
-        'Event name must contain only letters, numbers, and underscores (cannot start with a number)';
       return result;
     }
     const isDuplicate = dayItems.some(
@@ -109,15 +94,6 @@ export default function BehavioralEventsDisplay({
         'This name contains a common reserved word. It will work but may conflict with system events.';
     }
     return result;
-  }
-
-  /**
-   * Copy an inherited (library) event into this day's exported event list.
-   * @param {{name: string, description: string}} event
-   */
-  function handleUseOnThisDay(event) {
-    if (!onDayEventsChange) return;
-    onDayEventsChange([...dayItems, { name: event.name, description: event.description || '' }]);
   }
 
   /**
@@ -381,7 +357,7 @@ export default function BehavioralEventsDisplay({
         <table
           className="dio-wiring-table"
           role="table"
-          aria-label={group.tableLabel}
+          aria-label={group.heading}
           aria-describedby="dio-direction-legend"
         >
           <thead>
@@ -409,118 +385,66 @@ export default function BehavioralEventsDisplay({
 
   return (
     <div className="behavioral-events-display">
-      <h3 className="behavioral-events-display-heading">Behavioral events (inherited)</h3>
-      {events.length === 0 ? (
-        <p className="behavioral-events-display-empty">
-          No behavioral events are defined for this animal.
+      <header className="section-header">
+        <h3>Behavioral events — how your hardware maps to the SpikeGadgets ECU</h3>
+        <p>
+          Each row maps a hardware DIO channel to the event it records. A new day carries forward
+          the previous day&apos;s set — edit only if you rewired the rig.
         </p>
-      ) : (
-        <>
-          <p className="behavioral-events-display-note">
-            These behavioral events are defined on the animal for reference. They are
-            not written to this day&apos;s metadata.
-            {!readOnly && ' Only the day-specific events below are exported with this recording day.'}
-          </p>
-          <ul className="inherited-events-list" aria-label="Inherited behavioral events">
-            {events.map((event) => (
-              <li key={event.name} className="inherited-event">
-                <span className="lock-icon" aria-hidden="true">🔒</span>
-                <span className="inherited-event-name">{event.name}</span>
-                {event.description && (
-                  <span className="inherited-event-description">{event.description}</span>
-                )}
-                <span className="sr-only"> (inherited, read-only)</span>
-                {!readOnly && !dayNames.has(event.name) && (
-                  <button
-                    type="button"
-                    className="button-small"
-                    onClick={() => handleUseOnThisDay(event)}
-                    aria-label={`Use ${event.name} on this day`}
-                  >
-                    Use on this day
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
-        </>
+      </header>
+
+      {/* Programmatically-associated legend (referenced by each table's aria-describedby);
+          meaning is in text, not a color/emoji alone (WCAG 1.4.1). */}
+      <p id="dio-direction-legend" className="dio-direction-legend">
+        <strong>Din</strong> = inputs (sensors the animal triggers).{' '}
+        <strong>Dout</strong> = outputs (things you drive).
+      </p>
+
+      {dayItems.length === 0 && (
+        <p className="dio-wiring-empty">
+          No behavioral events on this day yet. Add the inputs (sensors) and outputs
+          (lights, pumps) your rig uses.
+        </p>
       )}
 
-      {!readOnly && (
-        <div className="day-wiring">
+      {duplicateDescriptions.length > 0 && (
+        <div className="inline-error" role="alert">
+          {duplicateDescriptions
+            .map(
+              (desc) =>
+                `The description "${desc}" is used by more than one day event. trodes_to_nwb ` +
+                `requires a unique description per event — rename one before export.`
+            )
+            .join(' ')}
+        </div>
+      )}
+
+      {GROUPS.map(renderGroup)}
+
+      {grouped.Other.length > 0 && (
+        <div className="dio-direction-group">
           <header className="section-header">
-            <h4>Behavioral events — how your hardware maps to the SpikeGadgets ECU</h4>
+            <h4>Other</h4>
             <p>
-              Each row maps a hardware DIO channel to the event it records. A new day carries
-              forward the previous day&apos;s set — edit only if you rewired the rig.
+              Events whose channel isn&apos;t a standard Din/Dout line (e.g. an imported analog
+              description). Re-point them to a Din/Dout line.
             </p>
           </header>
-
-          {/* Programmatically-associated legend (referenced by each table's aria-describedby);
-              meaning is in text, not a color/emoji alone (WCAG 1.4.1). */}
-          <p id="dio-direction-legend" className="dio-direction-legend">
-            <strong>Din</strong> = inputs (sensors the animal triggers).{' '}
-            <strong>Dout</strong> = outputs (things you drive).
-          </p>
-
-          {dayItems.length === 0 && (
-            <p className="dio-wiring-empty">
-              No behavioral events on this day yet. Add the inputs (sensors) and outputs
-              (lights, pumps) your rig uses.
-            </p>
-          )}
-
-          {duplicateNames.length > 0 && (
-            <div className="inline-warning" role="status">
-              {duplicateNames
-                .map(
-                  (name) =>
-                    `"${name}" matches an inherited animal-level event; only this day-specific entry is exported with this day.`
-                )
-                .join(' ')}
-            </div>
-          )}
-
-          {duplicateDescriptions.length > 0 && (
-            <div className="inline-error" role="alert">
-              {duplicateDescriptions
-                .map(
-                  (desc) =>
-                    `The description "${desc}" is used by more than one day event. trodes_to_nwb ` +
-                    `requires a unique description per event — rename one before export.`
-                )
-                .join(' ')}
-            </div>
-          )}
-
-          {GROUPS.map(renderGroup)}
-
-          {grouped.Other.length > 0 && (
-            <div className="dio-direction-group">
-              <header className="section-header">
-                <h4>Other</h4>
-                <p>
-                  Events whose channel isn&apos;t a standard Din/Dout line (e.g. an imported analog
-                  description). Re-point them to a Din/Dout line.
-                </p>
-              </header>
-              <table
-                className="dio-wiring-table"
-                role="table"
-                aria-label="Other"
-                aria-describedby="dio-direction-legend"
-              >
-                <thead>
-                  <tr>
-                    <th>DIO channel</th>
-                    <th>Event</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>{grouped.Other.map(renderRow)}</tbody>
-              </table>
-            </div>
-          )}
+          <table
+            className="dio-wiring-table"
+            role="table"
+            aria-label="Other"
+            aria-describedby="dio-direction-legend"
+          >
+            <thead>
+              <tr>
+                <th>DIO channel</th>
+                <th>Event</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>{grouped.Other.map(renderRow)}</tbody>
+          </table>
         </div>
       )}
 
@@ -542,19 +466,13 @@ export default function BehavioralEventsDisplay({
 }
 
 BehavioralEventsDisplay.propTypes = {
-  inheritedEvents: PropTypes.arrayOf(
-    PropTypes.shape({ name: PropTypes.string, description: PropTypes.string })
-  ),
   dayEvents: PropTypes.arrayOf(
     PropTypes.shape({ name: PropTypes.string, description: PropTypes.string })
   ),
   onDayEventsChange: PropTypes.func,
-  readOnly: PropTypes.bool,
 };
 
 BehavioralEventsDisplay.defaultProps = {
-  inheritedEvents: [],
   dayEvents: [],
   onDayEventsChange: null,
-  readOnly: false,
 };
