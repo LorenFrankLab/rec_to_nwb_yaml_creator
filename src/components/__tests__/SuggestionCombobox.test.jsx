@@ -136,6 +136,25 @@ describe('SuggestionCombobox', () => {
       await user.click(screen.getByRole('option', { name: 'Poke' }));
       expect(onChange).toHaveBeenLastCalledWith('Poke');
     });
+
+    it('routes TYPING through onChange (never onSelect), even when onSelect is provided', async () => {
+      const onChange = vi.fn();
+      const onSelect = vi.fn();
+      render(
+        <SuggestionCombobox
+          value=""
+          onChange={onChange}
+          onSelect={onSelect}
+          suggestions={SUGGESTIONS}
+          aria-label="Event name"
+        />
+      );
+      // Typing is NOT an explicit pick: keystrokes always go to onChange; onSelect is reserved
+      // for click/Enter picks (this negative case is the whole point of the routing split).
+      await user.type(screen.getByRole('combobox'), 'be');
+      expect(onChange).toHaveBeenCalled();
+      expect(onSelect).not.toHaveBeenCalled();
+    });
   });
 
   describe('Toggle button', () => {
@@ -169,6 +188,24 @@ describe('SuggestionCombobox', () => {
       input.focus();
       await user.keyboard('{ArrowDown}{ArrowDown}{Enter}'); // 2nd option = "Poke"
       expect(onChange).toHaveBeenLastCalledWith('Poke');
+    });
+
+    it('ArrowUp moves the active option up and clamps at the first option (no wrap/negative)', async () => {
+      renderControlled();
+      const input = screen.getByRole('combobox');
+      input.focus();
+      await user.keyboard('{ArrowDown}{ArrowDown}'); // active = 2nd option, "Poke"
+      expect(screen.getByRole('option', { name: 'Poke' })).toHaveAttribute('aria-selected', 'true');
+      await user.keyboard('{ArrowUp}'); // back to the 1st option
+      expect(screen.getByRole('option', { name: 'Home box camera' })).toHaveAttribute(
+        'aria-selected',
+        'true'
+      );
+      await user.keyboard('{ArrowUp}'); // clamps at index 0 — never negative, never wraps
+      expect(screen.getByRole('option', { name: 'Home box camera' })).toHaveAttribute(
+        'aria-selected',
+        'true'
+      );
     });
 
     it('Escape closes an open list and is NOT passed through to onKeyDown', async () => {
@@ -295,6 +332,73 @@ describe('SuggestionCombobox', () => {
       // Opening to browse hides the nudge.
       await user.click(screen.getByRole('combobox'));
       expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    });
+
+    it('surfaces the warning only after the user types a custom value and blurs away', async () => {
+      /**
+       * Controlled wrapper so typing updates the value; an outside button receives the blur.
+       * @returns {JSX.Element}
+       */
+      function Harness() {
+        const [value, setValue] = useState('');
+        return (
+          <div>
+            <SuggestionCombobox
+              value={value}
+              onChange={setValue}
+              suggestions={SUGGESTIONS}
+              aria-label="Region"
+              warnOffList
+            />
+            <button type="button">outside</button>
+          </div>
+        );
+      }
+      render(<Harness />);
+
+      // At rest with an empty value, no nudge.
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+      const input = screen.getByRole('combobox');
+      await user.click(input);
+      await user.type(input, 'MyCustomRegion'); // typing opens the list → nudge stays hidden
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+      // Leaving the field closes the list and surfaces the off-list nudge.
+      await user.click(screen.getByRole('button', { name: 'outside' }));
+      expect(screen.getByRole('status')).toHaveTextContent(/standard/i);
+    });
+
+    it('links the off-list warning to the input via aria-describedby', () => {
+      render(
+        <SuggestionCombobox
+          value="MyCustomRegion"
+          onChange={() => {}}
+          suggestions={SUGGESTIONS}
+          aria-label="Region"
+          warnOffList
+        />
+      );
+      const warningId = screen.getByRole('status').getAttribute('id');
+      expect(warningId).toBeTruthy();
+      expect(screen.getByRole('combobox').getAttribute('aria-describedby') || '').toContain(
+        warningId
+      );
+    });
+
+    it('merges the off-list warning id with a caller-provided aria-describedby', () => {
+      render(
+        <SuggestionCombobox
+          value="MyCustomRegion"
+          onChange={() => {}}
+          suggestions={SUGGESTIONS}
+          aria-label="Region"
+          warnOffList
+          aria-describedby="caller-hint"
+        />
+      );
+      const describedBy = screen.getByRole('combobox').getAttribute('aria-describedby') || '';
+      const warningId = screen.getByRole('status').getAttribute('id');
+      expect(describedBy).toContain('caller-hint');
+      expect(describedBy).toContain(warningId);
     });
   });
 });

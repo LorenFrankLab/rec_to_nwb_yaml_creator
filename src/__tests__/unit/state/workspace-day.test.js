@@ -194,6 +194,33 @@ describe('Day State Management', () => {
       ]);
     });
 
+    it('keeps the STORED index date-ascending when a carry-forward day is created at an EARLIER date (F2 + carry-forward)', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-23', {
+          session_id: 'remy_20230623',
+          session_description: 'Day 2',
+        });
+      });
+      // Carry forward into an EARLIER date than the source: the interaction of carry-forward
+      // and out-of-order insertion must still leave the persisted index ascending.
+      act(() => {
+        result.current.actions.createDay(
+          'remy',
+          '2023-06-22',
+          { session_id: 'remy_20230622', session_description: 'Day 1' },
+          { carryForwardFromDayId: 'remy-2023-06-23' }
+        );
+      });
+
+      expect(result.current.model.workspace.animals['remy'].days).toEqual([
+        'remy-2023-06-22',
+        'remy-2023-06-23',
+      ]);
+    });
+
     it('with carryForwardFromDayId: new day copies the prior day tasks', () => {
       const { result } = renderHook(() => useStore());
       createTestAnimal(result);
@@ -368,6 +395,40 @@ describe('Day State Management', () => {
           });
         });
       }).toThrow(/already exists/i);
+    });
+
+    it('throws on a non-ISO createDay date (guards the date-ordering invariant)', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+
+      // The stored index is sorted lexicographically, which equals chronological ONLY for
+      // strict ISO YYYY-MM-DD. A non-ISO date would sort wrong silently, so it is rejected at
+      // the write boundary (the date picker already enforces ISO; this guards programmatic use).
+      expect(() => {
+        act(() => {
+          result.current.actions.createDay('remy', '06/22/2023', {
+            session_id: 'x',
+            session_description: 'x',
+          });
+        });
+      }).toThrow(/ISO|YYYY-MM-DD/i);
+    });
+
+    it('throws on a non-ISO duplicateDay target date', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'a',
+          session_description: 'a',
+        });
+      });
+
+      expect(() => {
+        act(() => {
+          result.current.actions.duplicateDay('remy-2023-06-22', '2023-6-2');
+        });
+      }).toThrow(/ISO|YYYY-MM-DD/i);
     });
 
     it('uses latest configuration version from animal', () => {

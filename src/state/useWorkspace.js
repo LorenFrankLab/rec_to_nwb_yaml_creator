@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
   generateDayId,
+  assertIsoDate,
   getCurrentTimestamp,
   getCurrentDate,
   createDefaultWorkspace,
@@ -400,6 +401,9 @@ export function useWorkspace(initialState = null) {
             throw new Error(`Animal "${animalId}" not found`);
           }
 
+          // Reject a non-ISO date before it can corrupt the lexicographically-sorted index.
+          assertIsoDate(date);
+
           const dayId = generateDayId(animalId, date);
 
           if (prev.days[dayId]) {
@@ -470,6 +474,9 @@ export function useWorkspace(initialState = null) {
           if (!animal) {
             throw new Error(`Animal "${animalId}" not found`);
           }
+
+          // Reject a non-ISO date before it can corrupt the lexicographically-sorted index.
+          assertIsoDate(newDate);
 
           const dayId = generateDayId(animalId, newDate);
           if (prev.days[dayId]) {

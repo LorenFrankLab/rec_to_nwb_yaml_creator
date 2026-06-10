@@ -484,6 +484,22 @@ export function generateDayId(animalId, date) {
 }
 
 /**
+ * Asserts a day date is strict ISO `YYYY-MM-DD`. The stored `animal.days` index is sorted
+ * lexicographically, which equals chronological order ONLY for this exact format — a non-ISO
+ * date (e.g. `06/22/2023` or `2023-6-2`) would sort wrong silently. Callers that write days
+ * (`createDay`/`duplicateDay`) assert here so a malformed date surfaces instead of corrupting
+ * the order. (The import path does its own date validation and does not use this.)
+ *
+ * @param {string} date - The candidate day date.
+ * @throws {Error} If `date` is not strict ISO `YYYY-MM-DD`.
+ */
+export function assertIsoDate(date) {
+  if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    throw new Error(`Invalid day date "${date}": expected ISO YYYY-MM-DD`);
+  }
+}
+
+/**
  * Gets current ISO timestamp
  *
  * @returns {string} ISO 8601 timestamp

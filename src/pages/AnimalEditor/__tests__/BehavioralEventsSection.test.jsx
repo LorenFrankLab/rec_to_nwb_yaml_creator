@@ -2,10 +2,36 @@
  * @vitest-environment jsdom
  */
 
+import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import BehavioralEventsSection from '../BehavioralEventsSection';
+
+/**
+ * Controlled test harness: BehavioralEventsSection is a controlled component (the parent owns
+ * `behavioral_events` and updates it via onFieldUpdate). A bare vi.fn() never updates the
+ * `animal` prop, so the editing row would not render after an Add. This wrapper threads the
+ * update back into the prop — exactly as the real AnimalEditor does — and forwards every call
+ * to the provided spy so assertions still see them.
+ *
+ * @param {object} props
+ * @param {object} props.initialAnimal - Starting animal record.
+ * @param {Function} props.spy - Spy invoked with each (field, value) update.
+ * @returns {JSX.Element}
+ */
+function ControlledHarness({ initialAnimal, spy }) {
+  const [animal, setAnimal] = useState(initialAnimal);
+  return (
+    <BehavioralEventsSection
+      animal={animal}
+      onFieldUpdate={(field, value) => {
+        spy(field, value);
+        setAnimal((prev) => ({ ...prev, [field]: value }));
+      }}
+    />
+  );
+}
 
 /**
  * Tests for BehavioralEventsSection component (M8a Task 4)
@@ -100,7 +126,7 @@ describe('BehavioralEventsSection', () => {
   });
 
   describe('Add Behavioral Event', () => {
-    it('should create new event row when add button is clicked', async () => {
+    it('should create new event row when add button is clicked, seeded with the default DIO line', async () => {
       const emptyAnimal = { id: 'test', behavioral_events: [] };
 
       render(
@@ -113,14 +139,43 @@ describe('BehavioralEventsSection', () => {
       const addButton = screen.getByRole('button', { name: /Add First Behavioral Event/i });
       await user.click(addButton);
 
-      // Should call onFieldUpdate to add new event
+      // A new event's description is seeded to the default DIO line ('Din1') so the stored
+      // value matches what the guided Type/Index controls display — saving without touching
+      // them must NOT persist an empty description (which the editor would render as "Din 1").
       expect(mockOnFieldUpdate).toHaveBeenCalledWith(
         'behavioral_events',
         expect.arrayContaining([
           expect.objectContaining({
             name: '',
-            description: '',
+            description: 'Din1',
           }),
+        ])
+      );
+    });
+
+    it('saves the displayed default description (Din1) when a freshly-added event is saved untouched', async () => {
+      render(
+        <ControlledHarness
+          initialAnimal={{ id: 'test', behavioral_events: [] }}
+          spy={mockOnFieldUpdate}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: /Add First Behavioral Event/i }));
+      // The guided controls show Din / 1 for the new event.
+      expect(screen.getByLabelText(/DIO type/i)).toHaveValue('Din');
+      expect(screen.getByLabelText(/DIO line index/i)).toHaveValue(1);
+
+      // Type only a name, then Save without touching the DIO controls.
+      await user.type(screen.getByLabelText('Event name'), 'beam_break');
+      await user.click(screen.getByRole('button', { name: /^Save$/i }));
+
+      // The saved description must match the displayed Din1 — not a silent empty string
+      // (an empty description fails the ECU_digital lookup downstream).
+      expect(mockOnFieldUpdate).toHaveBeenLastCalledWith(
+        'behavioral_events',
+        expect.arrayContaining([
+          expect.objectContaining({ name: 'beam_break', description: 'Din1' }),
         ])
       );
     });
@@ -285,6 +340,44 @@ describe('BehavioralEventsSection', () => {
 
       expect(screen.getByLabelText(/DIO type/i)).toHaveValue('Din');
       expect(screen.getByLabelText(/DIO line index/i)).toHaveValue(5);
+    });
+
+    it('warns that editing will rewrite a non-standard (analog/prose) stored description', async () => {
+      // The controls fall back to Din for an unrecognized description; touching them would
+      // rewrite the stored value. Make that fallback visible rather than silent (review #4).
+      const animal = { id: 'remy', behavioral_events: [{ name: 'imu', description: 'Accel5' }] };
+      render(<BehavioralEventsSection animal={animal} onFieldUpdate={mockOnFieldUpdate} />);
+
+      await user.click(screen.getByRole('button', { name: /^Edit$/i }));
+      const note = screen.getByText(/isn't a standard Din\/Dout line/i);
+      expect(note).toBeInTheDocument();
+      expect(note).toHaveTextContent('Accel5');
+    });
+
+    it('does NOT warn about rewriting when the stored description is a clean Din/Dout line', async () => {
+      render(
+        <BehavioralEventsSection animal={dioAnimal} onFieldUpdate={mockOnFieldUpdate} />
+      );
+
+      await user.click(screen.getByRole('button', { name: /^Edit$/i }));
+      expect(screen.queryByText(/isn't a standard Din\/Dout line/i)).not.toBeInTheDocument();
+    });
+
+    it('clearing the DIO line index saves the bare type with no channel number (e.g. "Din")', async () => {
+      // Characterizes the empty-index path: the guided control joins type + '' → 'Din'. This
+      // documents current behavior (no channel number) so a future change is a deliberate one.
+      render(
+        <BehavioralEventsSection animal={dioAnimal} onFieldUpdate={mockOnFieldUpdate} />
+      );
+
+      await user.click(screen.getByRole('button', { name: /^Edit$/i }));
+      const indexInput = screen.getByLabelText(/DIO line index/i);
+      await user.clear(indexInput);
+      await user.click(screen.getByRole('button', { name: /^Save$/i }));
+
+      expect(mockOnFieldUpdate).toHaveBeenLastCalledWith('behavioral_events', [
+        { name: 'light1', description: 'Din' },
+      ]);
     });
   });
 

@@ -75,7 +75,10 @@ export default function BehavioralEventsSection({ animal, onFieldUpdate }) {
    * Handle add button click
    */
   const handleAddClick = () => {
-    const newEvent = { name: '', description: '' };
+    // Seed the description to the default DIO line so the stored value matches what the guided
+    // Type/Index controls display (Din / 1). Initializing it to '' would render as "Din 1" while
+    // silently persisting an empty description on a save-without-touch (review finding #1).
+    const newEvent = { name: '', description: joinDioDescription('Din', 1) };
     const updatedEvents = [...events, newEvent];
     onFieldUpdate('behavioral_events', updatedEvents);
 
@@ -240,13 +243,23 @@ export default function BehavioralEventsSection({ animal, onFieldUpdate }) {
               // Guided DIO entry: the stored `description` is a hardware DIO line name (e.g.
               // "Din1"). Seed a Type dropdown + a line-index control from it, and write the
               // joined string back on change (recognition over recall; the exported string is
-              // unchanged). `splitDioDescription` falls back to the first type when the stored
-              // value is unrecognized free text — touching either control then normalizes it.
+              // unchanged). `splitDioDescription` returns an empty `type` for unrecognized free
+              // text (e.g. an imported analog "Accel5" or prose); the next line falls back to the
+              // first valid type (Din) so the `<select>` always has a valid value. Touching
+              // either control then normalizes the stored string.
               const dioTypes = behavioralEventsDescription();
               const { type: splitType, index: dioIndex } = splitDioDescription(
                 editingEvent?.description ?? ''
               );
               const dioType = dioTypes.includes(splitType) ? splitType : dioTypes[0];
+
+              // When the stored description is non-empty but does NOT round-trip through the
+              // guided controls (an analog/prose value the controls fell back from), editing a
+              // control will rewrite it. Surface that rather than letting it happen silently.
+              const storedDescription = editingEvent?.description ?? '';
+              const descriptionWillBeRewritten =
+                storedDescription !== '' &&
+                joinDioDescription(dioType, dioIndex) !== storedDescription;
 
               return (
                 <tr key={index} className="editing-row">
@@ -323,6 +336,12 @@ export default function BehavioralEventsSection({ animal, onFieldUpdate }) {
                       </span>
                       <InfoIcon infoText="DIO line name, e.g. Din1" />
                     </div>
+                    {descriptionWillBeRewritten && (
+                      <div className="inline-warning" role="status">
+                        {`This event's description ("${storedDescription}") isn't a standard ` +
+                          'Din/Dout line; editing the controls will rewrite it.'}
+                      </div>
+                    )}
                   </td>
                   <td data-label="Actions">
                     <button

@@ -131,6 +131,14 @@ export default function SuggestionCombobox({
     !suggestions.some((s) => s.toLowerCase() === trimmedValue.toLowerCase());
   const showOffListWarning = warnOffList && !open && isOffList;
 
+  // Tie the off-list nudge to the input for screen readers, MERGING with any caller-provided
+  // `aria-describedby` (e.g. an error id) rather than clobbering it.
+  const offListWarningId = `${id}-offlist`;
+  const describedBy =
+    [inputProps['aria-describedby'], showOffListWarning ? offListWarningId : null]
+      .filter(Boolean)
+      .join(' ') || undefined;
+
   const closeList = useCallback(() => {
     setOpen(false);
     setFiltering(false);
@@ -214,6 +222,9 @@ export default function SuggestionCombobox({
           aria-activedescendant={
             listOpen && activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined
           }
+          // Placed after {...inputProps} so it overrides the spread's raw value with the merged
+          // describedBy (caller's id + the off-list warning id when shown).
+          aria-describedby={describedBy}
           autoComplete="off"
           name={name}
           required={required}
@@ -280,7 +291,7 @@ export default function SuggestionCombobox({
           document.body
         )}
       {showOffListWarning && (
-        <p className="suggestion-combobox__offlist-warning" role="status">
+        <p id={offListWarningId} className="suggestion-combobox__offlist-warning" role="status">
           {offListMessage ??
             'Not one of the standard options. You can pick a standard option from the ' +
               'suggestions — use a custom value only if you have a specific reason.'}
