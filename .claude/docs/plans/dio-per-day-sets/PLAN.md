@@ -1,6 +1,16 @@
 # DIO behavioral-events: per-day sets, real-world UX, and a naming correction
 
-**Status:** Not started. _(Revised three times: independent source-verification review (§11), design answers on UX, and an app-pattern consistency pass (§6).)_
+**Status:** Phase 1 complete (commits `057d04c` index-naming → reverted by `e88b407`; PR-review
+fixes in `b789928`). Phases 2a–4 expanded into executable phase files (see §7); not started.
+_(Design revised three times: independent source-verification review (§11), design answers on UX,
+and an app-pattern consistency pass (§6).)_
+
+**Phase files (executable):** [phase-2a](phase-2a-day-wiring-table.md) ·
+[phase-2b](phase-2b-retire-animal-library.md) · [phase-3](phase-3-templates-autonumber.md) ·
+[phase-4](phase-4-reconfiguration-comments.md). Each is self-contained and links back to the
+shared §2/§5/§6/§9 anchors below; a fresh session executes one phase at a time. This doc is the
+overview/router — design rationale and ground truth live here; per-phase tasks + verified
+file:line refs + validation slices live in the phase files.
 
 A mini plan. Reframe the app's behavioral-events (DIO) handling to match how DIOs actually work in
 Trodes / trodes_to_nwb / Spyglass and how the lab really records them: a **per-day set** mapping
@@ -171,23 +181,24 @@ patterns (mapped with evidence):
   (`badChannelMonotonicity.js`). **This is DIO's shape** — and `createDayRecord` _already_ carries
   `day.behavioral_events` forward (`:389`), so the core primitive exists.
 
-**Bootstrap precedent (§3.7):** `CopyFromAnimalDialog.jsx:54` already copies electrode groups (+ maps),
-cameras, and recording-system from an existing animal (re-IDs electrode groups `:221-251`; only seeds an
-EMPTY target section). **`behavioral_events` is NOT in its `ALL_SECTIONS` (`:26`) — add it.**
+**Bootstrap precedent (§3.7):** `CopyFromAnimalDialog.jsx` already copies electrode groups (+ maps),
+cameras, and recording-system from an existing animal (`handleCopy:306-344`; re-IDs electrode groups via
+`buildElectrodeCopy:221`; cameras/recording-system only seed an EMPTY target section).
+**`behavioral_events` is NOT in its `ALL_SECTIONS` (`:26`) — add it.**
 
 **UI/section conventions the wiring table must mirror** (representative: `CamerasSection.jsx`,
 `TasksTable.jsx`):
 
 - Shape: `div.{name}-section` → `header.section-header` (`<h2>` + explanatory `<p>`) → `div.table-actions`
   with a `button-primary` → `role="table"` (`CamerasSection.jsx:153-168`).
-- Empty state block (icon + `<h3>` + copy + hint + primary CTA) (`CamerasSection.jsx:133-148`).
+- Empty state block (icon + `<h3>` + copy + hint + primary CTA) (`CamerasSection.jsx:134-148`).
 - Status badges: glyph + `aria-label`/sr-only text, **never color/emoji alone** (WCAG 1.4.1)
-  (`TasksTable.jsx:216-223`).
+  (`TasksTable.jsx:216-224`).
 - Inline validation: `div.inline-error[role=alert]` / `div.inline-warning[role=status]`, with
-  `aria-invalid` and `aria-describedby` (`BehavioralEventsSection.jsx:341-350`).
+  `aria-invalid` and `aria-describedby` (`BehavioralEventsSection.jsx:283-292`, aria at `:278-279`).
 - Delete via shared `ConfirmDialog` (no `window.confirm`), naming affected dependencies
   (`TasksTable.jsx:124-144`).
-- Reuse the **existing guided Type/Index controls** (`BehavioralEventsSection.jsx:352-391`, already
+- Reuse the **existing guided Type/Index controls** (`BehavioralEventsSection.jsx:294-344`, already
   `aria-label`led + `SuggestionCombobox`) — **move them down** to the day table, don't rebuild.
 
 **Gates share one helper (keep it that way):** name uniqueness Rule 14 (`rulesValidation.js:712`) and
@@ -206,23 +217,33 @@ version bump — the SAME framework the planned task-catalog (C2) needs. **Coord
 leave `animal.behavioral_events` vestigial** (export already reads `day.behavioral_events`, so no export
 change is required to stop _showing_ the library — see §9).
 
-## 7. Phase outline (expand to phase files at execution)
+## 7. Phase outline → phase files
 
-- **Phase 1 — Naming correction + type fix (small, ships first; review-verified baseline-safe).** Revert
-  `057d04c` surgically (keep `onSelect`); restrict DIO types to `Din`/`Dout`; CHANGELOG. Baselines stay
-  byte-identical (touches AnimalEditor + valueList only).
-- **Phase 2 — Day-level wiring table; retire the animal library (net-new UI, not a relabel).** Build the
-  per-day `BehavioralEventsDisplay` as the Inputs/Outputs wiring table; **move** the Type/index controls
-  down (don't rebuild); relabel, add legend + per-field hints + a11y; carry-forward "review yesterday's
-  set" default. Remove the library authoring surface; handle its data per §9 (vestigial vs migrated).
-  Add `behavioral_events` to `CopyFromAnimalDialog`.
-- **Phase 3 — Standard-set templates + per-label auto-numbering.** Bulk-add canonical sets; correct
-  auto-number = per-label instance count via `onSelect`.
-- **Phase 4 (optional) — Reconfiguration as a named action (re-point / rename / add / remove) + passive
-  history; expose the existing `comments` field.**
+Each phase ships as one PR, dispatches `code-reviewer` against the diff, keeps golden baselines
+byte-identical, and writes its CHANGELOG entry in the same PR. **Original "Phase 2" was split into
+2a + 2b** at expansion time: it bundled building a net-new day surface _and_ removing the animal
+surface _and_ the copy bootstrap — too large for one clean review. 2a (build the day wiring table)
+and 2b (retire the animal library) are each independently shippable, with a clean boundary (2a adds
+the new surface; 2b removes the old one once the new one is proven).
 
-Each phase: ship as one PR, dispatch `code-reviewer` against the diff, keep golden baselines
-byte-identical, write its CHANGELOG entry in the same PR.
+- **✅ Phase 1 — Naming correction + type fix (DONE).** Reverted `057d04c` surgically (kept
+  `onSelect`); restricted DIO types to `Din`/`Dout`; graceful analog degradation; CHANGELOG.
+  Baselines byte-identical. Commits `e88b407` + `b789928` (PR-review fixes).
+- **⬜ [Phase 2a — Day-level DIO wiring table](phase-2a-day-wiring-table.md).** Rebuild the per-day
+  `BehavioralEventsDisplay` as the Inputs/Outputs wiring table; **move** the guided Type/index
+  controls down (don't rebuild); relabel (`description`→"DIO channel", `name`→"Event"); legend +
+  per-field hints + a11y; carry-forward "review yesterday's set" default. Library + "Use on this
+  day" stay (removed in 2b).
+- **⬜ [Phase 2b — Retire the animal library](phase-2b-retire-animal-library.md).** Remove the
+  animal-level library surface + DIO tab + "Use on this day"; `animal.behavioral_events` vestigial
+  by default (§9; migrate only if a framework exists); add `behavioral_events` to
+  `CopyFromAnimalDialog` (⚠ day-owned copy semantics — see the phase file's _Open question_).
+- **⬜ [Phase 3 — Templates + per-label auto-numbering](phase-3-templates-autonumber.md).** Bulk-add
+  canonical sets (`Poke1…Poke6`); per-label instance-count auto-numbering (`Label<n>`, no
+  separator) via the `onSelect` primitive kept since Phase 1.
+- **⬜ [Phase 4 (optional) — Reconfiguration history + `comments`](phase-4-reconfiguration-comments.md).**
+  Optional "Mark reconfiguration" passive history (app-internal, not exported) + expose the
+  existing `comments` field as a Notes column (already round-trips).
 
 ## 8. Open questions
 
