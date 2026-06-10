@@ -17,7 +17,11 @@ export default defineConfig({
   ],
   use: {
     baseURL: 'http://localhost:3000',
-    trace: 'on-first-retry',
+    // Retain a trace whenever a test fails (not only on a retry). Locally
+    // retries=0, so `on-first-retry` would never capture the first/only failure;
+    // `retain-on-failure` always leaves a trace for the failing attempt, which a
+    // QA/debugging pass needs. Passing runs keep no trace, so artifact size stays small.
+    trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     // Visual regression settings for deterministic screenshots
     viewport: { width: 1280, height: 720 },

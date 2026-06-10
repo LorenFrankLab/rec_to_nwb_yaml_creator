@@ -9,6 +9,14 @@
  *
  * IMPORTANT: This is a BASELINE test documenting current behavior.
  * Tests capture file operations as-is, including any quirks.
+ *
+ * ⚠️ FROZEN LEGACY-FORM COVERAGE — NOT A PATTERN REFERENCE. This spec targets the frozen
+ * single-page legacy form, and predates the workspace QA discipline. It uses anti-patterns the
+ * `e2e/workspace-*.spec.js` suite deliberately forbids: `if (isVisible)`-then-skip bodies, fixed
+ * `waitForTimeout` sleeps, and CSS-class/attribute selectors for app controls. Do NOT copy this
+ * style for new specs — see `docs/E2E_QA_RUNBOOK.md` and any `e2e/workspace-*.spec.js` for the
+ * required role/accessible-name selectors, fail-when-absent assertions, and event-based waits.
+ * Kept only as legacy regression coverage; a rewrite/quarantine is tracked in the runbook.
  */
 
 import { test, expect } from '@playwright/test';
@@ -28,22 +36,36 @@ const waitForDownload = async (page, action) => {
   return await downloadPromise;
 };
 
-// Helper to dismiss alert modal if present
+// Helper to dismiss alert modal if present.
+//
+// AlertModal now renders on the shared Modal primitive, so the live DOM is
+// `.modal-overlay` (the dismiss target) wrapping `.alert-modal-content` with an
+// explicit `.alert-modal-close` button — NOT the old `.alert-modal-overlay`
+// class this helper used to wait on. Clicking the Close button is the most
+// robust dismissal (overlay-corner clicks can be intercepted by the centered
+// content box). We wait for the overlay to disappear so its pointer-events
+// barrier is gone before the caller clicks anything underneath.
 const dismissAlertModal = async (page) => {
   try {
-    // Wait for modal to appear
-    await page.waitForSelector('.alert-modal-overlay', { state: 'visible', timeout: 2000 });
+    // Wait for the shared-Modal overlay to appear
+    await page.waitForSelector('.modal-overlay', { state: 'visible', timeout: 2000 });
 
-    // Click the overlay itself (outside the modal content) to dismiss
-    // This triggers the handleOverlayClick handler in AlertModal.jsx
-    const overlay = page.locator('.alert-modal-overlay').first();
-    await overlay.click({ position: { x: 10, y: 10 }, timeout: 3000 });
+    // Prefer the explicit Close button; fall back to an overlay-corner click.
+    const closeButton = page.locator('.alert-modal-close').first();
+    if (await closeButton.isVisible().catch(() => false)) {
+      await closeButton.click({ timeout: 3000 });
+    } else {
+      await page
+        .locator('.modal-overlay')
+        .first()
+        .click({ position: { x: 10, y: 10 }, timeout: 3000 });
+    }
 
-    // Wait for modal to completely disappear
-    await page.waitForSelector('.alert-modal-overlay', { state: 'hidden', timeout: 3000 });
+    // Wait for modal to completely disappear (pointer-events barrier removed)
+    await page.waitForSelector('.modal-overlay', { state: 'hidden', timeout: 3000 });
 
     // Extra wait for animations/transitions to complete and pointer events to be restored
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(500);
   } catch (e) {
     // Modal not present or already dismissed - this is acceptable
   }

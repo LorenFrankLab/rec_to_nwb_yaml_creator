@@ -13,6 +13,7 @@ import {
   getProbeElectrodeIds,
   isProbeCatalogConsistent,
 } from '../ntrode/probeCatalog';
+import { optoFieldsPresence } from '../domain/optoCompleteness';
 
 /**
  * Custom business logic validation rules
@@ -90,15 +91,17 @@ export const rulesValidation = (model) => {
   // if any is missing it logs "No available optogenetic metadata" and silently returns,
   // producing an NWB with no optogenetics at all. So a partial opto session must block
   // export rather than convert to an opto-less file.
-  const hasOptoSource = model.opto_excitation_source?.length > 0;
-  const hasOpticalFiber = model.optical_fiber?.length > 0;
-  const hasVirusInjection = model.virus_injection?.length > 0;
-  // The converter does len() > 0 on the software string, so a non-empty string counts.
-  const hasOptoSoftware =
-    typeof model.optogenetic_stimulation_software === 'string' &&
-    model.optogenetic_stimulation_software.trim() !== '';
-  const optoFieldsPresent = [hasOptoSource, hasOpticalFiber, hasVirusInjection, hasOptoSoftware]
-    .filter(Boolean).length;
+  // Field presence comes from the SINGLE shared predicate (domain/optoCompleteness) the
+  // section-nav classifier (getAnimalOptoCompleteness) also consumes, so the export gate and the
+  // nav count can never drift. The arrays use Array.isArray(...) && length > 0 (a corrupt non-array
+  // value is NOT present); the software is a non-empty trimmed string — matching the converter's
+  // len()>0 on the string.
+  const optoPresence = optoFieldsPresence(model);
+  const hasOptoSource = optoPresence.opto_excitation_source;
+  const hasOpticalFiber = optoPresence.optical_fiber;
+  const hasVirusInjection = optoPresence.virus_injection;
+  const hasOptoSoftware = optoPresence.optogenetic_stimulation_software;
+  const optoFieldsPresent = optoPresence.count;
 
   // Partial configuration detected (some but not all FOUR sections present).
   if (optoFieldsPresent > 0 && optoFieldsPresent < 4) {

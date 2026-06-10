@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { getAnimalSectionStatus, SECTION_STATUS } from '../sectionStatus';
+import {
+  getAnimalSectionStatus,
+  SECTION_STATUS,
+  getAnimalOptoCompleteness,
+  OPTO_COMPLETENESS,
+} from '../sectionStatus';
 
 /** A fully-bare animal: nothing configured. */
 const bareAnimal = {
@@ -63,5 +68,56 @@ describe('getAnimalSectionStatus', () => {
 
   it('returns NONE for an unknown section key', () => {
     expect(getAnimalSectionStatus(bareAnimal, 'banana')).toBe(SECTION_STATUS.NONE);
+  });
+});
+
+describe('getAnimalOptoCompleteness', () => {
+  /** All FOUR fields present — the export rule's complete-opto definition. */
+  const completeOpto = {
+    opto_excitation_source: [{ name: 'laser' }],
+    optical_fiber: [{ name: 'fiber' }],
+    virus_injection: [{ name: 'virus' }],
+    optogenetic_stimulation_software: 'fsgui',
+  };
+
+  it('returns COMPLETE when all four opto fields are present', () => {
+    expect(getAnimalOptoCompleteness({ optogenetics: completeOpto })).toBe(
+      OPTO_COMPLETENESS.COMPLETE
+    );
+  });
+
+  it('returns PARTIAL when some-but-not-all opto fields are present', () => {
+    // A source list with no fiber/virus/software is the canonical partial case.
+    expect(
+      getAnimalOptoCompleteness({ optogenetics: { opto_excitation_source: [{ name: 'laser' }] } })
+    ).toBe(OPTO_COMPLETENESS.PARTIAL);
+    // Three of four present (missing software string) is still partial.
+    expect(
+      getAnimalOptoCompleteness({
+        optogenetics: {
+          opto_excitation_source: [{ name: 'laser' }],
+          optical_fiber: [{ name: 'fiber' }],
+          virus_injection: [{ name: 'virus' }],
+          optogenetic_stimulation_software: '',
+        },
+      })
+    ).toBe(OPTO_COMPLETENESS.PARTIAL);
+    // A whitespace-only software string does not count (matches the export rule's trim()).
+    expect(
+      getAnimalOptoCompleteness({ optogenetics: { ...completeOpto, optogenetic_stimulation_software: '   ' } })
+    ).toBe(OPTO_COMPLETENESS.PARTIAL);
+  });
+
+  it('returns NONE when no opto fields are present', () => {
+    expect(getAnimalOptoCompleteness({ optogenetics: {} })).toBe(OPTO_COMPLETENESS.NONE);
+    expect(getAnimalOptoCompleteness({ optogenetics: undefined })).toBe(OPTO_COMPLETENESS.NONE);
+    expect(getAnimalOptoCompleteness({})).toBe(OPTO_COMPLETENESS.NONE);
+  });
+
+  it('is robust to corrupt opto shapes (treats them as NONE, never throws)', () => {
+    expect(() => getAnimalOptoCompleteness({ optogenetics: [] })).not.toThrow();
+    expect(getAnimalOptoCompleteness({ optogenetics: [] })).toBe(OPTO_COMPLETENESS.NONE);
+    expect(getAnimalOptoCompleteness({ optogenetics: 'nope' })).toBe(OPTO_COMPLETENESS.NONE);
+    expect(getAnimalOptoCompleteness(null)).toBe(OPTO_COMPLETENESS.NONE);
   });
 });

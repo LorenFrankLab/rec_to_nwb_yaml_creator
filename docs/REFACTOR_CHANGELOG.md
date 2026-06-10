@@ -4,6 +4,55 @@
 
 **Last Updated:** June 9, 2026
 
+## Workspace end-to-end QA pass (June 9, 2026)
+
+Added a browser-level regression suite for the tabbed **workspace** app and cleaned up the e2e
+hygiene around it. Runbook: [docs/E2E_QA_RUNBOOK.md](E2E_QA_RUNBOOK.md).
+
+- **Workspace e2e suite added.** 11 Playwright specs (`e2e/workspace-*.spec.js`, all GREEN on Chromium) plus a shared
+  harness (`e2e/helpers/workspace.js`) driving the shipped tabbed workspace — covering: export
+  happy-path (per-day Day Editor + per-animal Validation & Export) and the fail-closed export gate
+  with repair navigation; scenario workflows (same-day + catch-up batch export, unready days
+  excluded); mistake-prevention on the highest-risk edit surfaces; ownership/discoverability +
+  nav-focus-guard lifecycle; animal/day create-switch-delete lifecycle; persistence + recovery
+  (autosave/reload, save-failure guard, file-picker import); the two-layer optogenetics model
+  (animal implant + day FsGUI, all-or-nothing gating); and a responsive + a11y smoke at desktop and
+  narrow viewports (nav reachable, modal focus trap/restore, validation + export reachable).
+- **Production bug fixed.** Workspace YAML import via the file picker advanced to a zero-files
+  preview instead of the chosen files; fixed in `src/pages/AnimalWorkspace/ImportYamlDialog.jsx` and
+  pinned by `workspace-persistence-recovery.spec.js`.
+- **Stopped tracking generated Playwright artifacts.** `playwright-report/` and `test-results/` were
+  git-tracked, so stale failure artifacts churned the working tree on every run. Both are now
+  `.gitignore`d and untracked (`git rm -r --cached`); CI uploads them as build artifacts separately.
+- **Trace retention strengthened.** `playwright.config.js` `trace` changed from `on-first-retry` to
+  `retain-on-failure` so a failing run (locally `retries: 0`) always leaves a trace to debug;
+  passing runs keep none. No change to viewport, reporters, or screenshot policy.
+- **Pre-existing legacy-e2e status (triaged).** All e2e failures are pre-existing legacy rot,
+  independent of this branch — there were ZERO regressions in the new workspace specs.
+  `baselines/import-export.spec.js` had been failing on `modern` because `AlertModal` was
+  refactored onto the shared `Modal` primitive (overlay class `.alert-modal-overlay` →
+  `.modal-overlay`), which the spec's `dismissAlertModal` helper still waited on; the modal stayed
+  open and intercepted clicks. Fixed by updating only the helper's dismissal selectors (no
+  app-behavior change) — legacy coverage is green again. `baselines/visual-regression.spec.js`
+  is local-only (CI-ignored); its snapshots are intentionally stale from the workspace UI
+  overhaul and are left for a deliberate `--update-snapshots` review rather than blind regeneration.
+- **App-UX findings surfaced by the QA pass — triaged and resolved.** Beyond the browser coverage,
+  the pass surfaced several app-UX issues and dispositioned each (full table with file references in
+  the runbook's "Findings surfaced by the QA pass — dispositions" section):
+  - *Fixed:* optogenetics section-nav count now reads `used`/`incomplete`/(none) honestly via a new
+    `getAnimalOptoCompleteness` helper instead of a static `used` (the blocking ● already fired
+    correctly; only the decorative count was dishonest).
+  - *Fixed:* the YAML import preview now shows a plain-language remediation hint per un-importable file
+    (presentation-only; derived from the AJV message), and the import result phase names the created
+    animal ids + day dates instead of counts only.
+  - *Fixed / kept:* the `handleNavClick` discard-confirm guard is confirmed a latent safety net for a
+    future inline (non-modal) editor — retained with a clarifying comment and pinned by a new unit test
+    (`AnimalView.navDiscardGuard.test.jsx`) rather than removed.
+  - *Corrected:* the first-run setup card's "Needs fixing" state is NOT unreachable — it shows for an
+    animal with days but a missing subject (a recovery state); no code change.
+  - *Annotated:* the legacy `e2e/baselines/` specs now carry a header banner marking them frozen
+    legacy coverage, not a pattern reference for new specs.
+
 ## Tabbed Day Editor navigation (June 9, 2026)
 
 Replaced the Day Editor's LINEAR stepper navigation shell with a TABBED section-nav that mirrors

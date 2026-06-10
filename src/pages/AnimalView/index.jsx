@@ -21,6 +21,8 @@ import {
   getAnimalSectionStatus,
   getAnimalBlockingSections,
   getAnimalSetupCounts,
+  getAnimalOptoCompleteness,
+  OPTO_COMPLETENESS,
   SECTION_STATUS,
 } from '../../domain/sectionStatus';
 import { useReconfigContext } from '../../hooks/useReconfigContext';
@@ -117,6 +119,36 @@ const TAB_FIELD_ANCHOR = {
  * @returns {string} The path with `[i]` / `.i` index segments removed.
  */
 const normalizeFieldPath = (value) => String(value || '').replace(/\[\d+\]/g, '').replace(/\.\d+/g, '');
+
+/**
+ * Pure decision for the section-nav unsaved-edit guard (charter decision 2): should a nav click be
+ * INTERCEPTED (preventDefault → discard-confirm dialog) instead of navigating?
+ *
+ * Intercept ONLY when ALL hold: there are pending edits, the link targets a DIFFERENT tab, and it's
+ * a plain primary click (no modifier / non-primary button — those open a SEPARATE document and
+ * never discard the edit in THIS one, so they fall through). Otherwise fall through to the link's
+ * normal hash navigation.
+ *
+ * Extracted as a pure, exported function because the live browser path is currently UNREACHABLE —
+ * every shipped setup editor that sets `pendingEdits` is a focus-trapping modal whose overlay eats
+ * the nav click first (see the LATENT SAFETY NET note in AnimalView). Testing this decision directly
+ * is the honest way to pin the guard's behavior. See AnimalView.navDiscardGuard.test.jsx.
+ *
+ * @param {object} ctx - Decision inputs.
+ * @param {string} ctx.targetKey - The :tab the clicked link points at.
+ * @param {string} ctx.currentTab - The currently active :tab.
+ * @param {boolean} ctx.pendingEdits - Whether the active setup editor reports unsaved edits.
+ * @param {{ metaKey?: boolean, ctrlKey?: boolean, shiftKey?: boolean, altKey?: boolean, button?: number }} ctx.event
+ *   - The click event (modifier keys / mouse button).
+ * @returns {boolean} True if the click should be intercepted for a discard confirm.
+ */
+export function shouldInterceptNavDiscard({ targetKey, currentTab, pendingEdits, event }) {
+  if (!pendingEdits || targetKey === currentTab) return false;
+  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+    return false;
+  }
+  return true;
+}
 
 /**
  * Render the active tab's panel content. The `days` tab hosts the shared RecordingDaysTab; the
@@ -243,9 +275,13 @@ export function AnimalView({ animalId, tab }) {
       ...Object.fromEntries(
         Object.entries(getAnimalSetupCounts(animal)).map(([k, n]) => [k, String(n)])
       ),
-      // Opto is "used" when configured; the never-configured case shows the ○ todo ring instead (so
-      // an unused-opto row reads as a valid empty state, not a "0").
-      optogenetics: 'used',
+      // Opto count is HONEST about completeness (decision 10): COMPLETE (all four export-gated
+      // fields present) → "used"; PARTIAL (some-but-not-all) → "incomplete" so the count AGREES
+      // with the red ● "blocks export" dot the partial config already fires, instead of implying a
+      // usable setup; NONE (never configured) → the ○ todo ring owns the slot (the count isn't
+      // shown for a TODO section), so a valid unused-opto row reads as empty, not a bare "0".
+      optogenetics:
+        getAnimalOptoCompleteness(animal) === OPTO_COMPLETENESS.COMPLETE ? 'used' : 'incomplete',
     };
   }, [animal, animalId, model.workspace]);
 
@@ -257,6 +293,15 @@ export function AnimalView({ animalId, tab }) {
   // and asks the user to confirm discarding before allowing the route to change. `setPendingEdits`
   // is a stable useState setter, so passing it as the container's `onPendingEditsChange` doesn't
   // thrash the container's reporting effect.
+  //
+  // LATENT SAFETY NET: every CURRENT setup editor that reports `pendingEdits`
+  // (ElectrodeGroupsContainer, ChannelMapsContainer via ChannelMapEditor, CamerasContainer) is a
+  // focus-trapping shared `Modal` whose overlay intercepts the section-nav click before
+  // `handleNavClick` ever runs — so in today's shipped UI this discard-confirm is UNREACHABLE.
+  // It is correct, intentional code kept for a FUTURE inline (non-modal) setup editor that reports
+  // `pendingEdits`: that editor would leave the nav clickable, and only then does this guard fire.
+  // Pinned by AnimalView.navDiscardGuard.test.jsx (the browser path is unreachable, so it tests the
+  // guard's decision directly). DO NOT remove because "nothing triggers it" — it is the net.
   const [pendingEdits, setPendingEdits] = useState(false);
   const [pendingNavTab, setPendingNavTab] = useState(null);
 
@@ -342,17 +387,14 @@ export function AnimalView({ animalId, tab }) {
   /**
    * Intercept a section-nav activation when the active setup container has pending edits, so a
    * switch to ANOTHER tab is confirmed before the route changes (charter decision 2). Same-tab
-   * clicks and the no-pending-edits case fall through to the link's normal hash navigation.
+   * clicks and the no-pending-edits case fall through to the link's normal hash navigation. The
+   * intercept DECISION is the pure {@link shouldInterceptNavDiscard} (unit-pinned), since the real
+   * browser path is currently unreachable — see the LATENT SAFETY NET note on `pendingEdits`.
    * @param {React.MouseEvent} event - The anchor click.
    * @param {string} targetKey - The :tab the link points at.
    */
   const handleNavClick = (event, targetKey) => {
-    if (targetKey === tab || !pendingEdits) return;
-    // Let the browser handle a modifier / non-primary click (open-in-new-tab etc.) — that opens a
-    // SEPARATE document and never discards the edit in THIS one, so it must not be intercepted.
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-      return;
-    }
+    if (!shouldInterceptNavDiscard({ targetKey, currentTab: tab, pendingEdits, event })) return;
     event.preventDefault();
     setPendingNavTab(targetKey);
   };
