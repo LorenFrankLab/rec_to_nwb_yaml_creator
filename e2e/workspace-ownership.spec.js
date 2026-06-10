@@ -177,16 +177,31 @@ test.describe('Ownership & discoverability — AnimalView header + section-nav +
     // attributed to the section-nav.
     const blob = buildConfiguredWorkspaceBlob();
     blob.workspace.animals[ANIMAL_ID].cameras[0].meters_per_pixel = '';
+    // The "Existing data review" banner is shown only when there is something to REVIEW — recovered/
+    // corrupt/wrong-owner records — not merely because a day fails validation (F-07: a clean
+    // established animal must not show a standing review task). So seed a recovered-unlinked (orphan)
+    // day record — owned by this animal but absent from its day index — which is exactly the state the
+    // review banner exists to surface, and which renders the in-animal Validation & Export re-link.
+    const orphanId = `${ANIMAL_ID}-orphan`;
+    blob.workspace.days[orphanId] = {
+      ...blob.workspace.days[DAY_ID],
+      id: orphanId,
+      date: '2023-07-01',
+    };
+    // Intentionally NOT added to animals[ANIMAL_ID].days — that absence is what makes it an orphan.
     await seedAndOpen(page, blob, `/#/animal/${ANIMAL_ID}/days`);
 
     // The Cameras section-nav row advertises the block in its accessible name + carries the red ●.
     const camerasRow = sectionNav(page).getByRole('link', { name: 'Cameras — blocks export' });
     await expect(camerasRow).toBeVisible();
 
-    // The existing-data review link is THIS animal's export (not the cross-animal #/validation).
+    // The existing-data review link is THIS animal's export (not the cross-animal #/validation). The
+    // banner renders the same in-animal export link in the orphan note and the footer — assert the
+    // first; both must target this animal's export tab.
     const reviewLink = page
       .getByRole('region', { name: 'Existing data review' })
-      .getByRole('link', { name: /Validation & Export/ });
+      .getByRole('link', { name: /Validation & Export/ })
+      .first();
     await expect(reviewLink).toBeVisible();
     await expect(reviewLink).toHaveAttribute('href', `#/animal/${ANIMAL_ID}/export`);
   });
