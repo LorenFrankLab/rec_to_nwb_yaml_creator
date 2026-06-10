@@ -80,6 +80,7 @@ positives are noted at the end.
 | --- | --- | --- | --- |
 | **F11-A** | **Global CSS class collision** — the legacy form's `.validation-summary` error-pink styling leaked onto the **workspace** Validation & Export panel + `#/validation`, so a fully VALID animal rendered in alarming error-pink with a red border (and caused the one text-contrast failure). | Scoped the legacy rules under `.animal-creation-form .validation-summary` in `Home.css`; the workspace panel is now neutral (verified `background: transparent; border: 0`). | `492efbd` |
 | T5-1 | Cameras table: with long camera/lens names the **Edit/Remove actions were pushed off-screen and unreachable** at desktop. | `overflow-x:auto` wrapper + `table-layout:fixed` + ellipsis on free-text columns (title on hover); committed regression `e2e/workspace-responsive-cameras.spec.js`. | `492efbd` |
+| F-12 | Camera-calibration **repair path was a broken door**: filling a previously-blank `meters_per_pixel` on a camera fired the same-name identity guard, reporting the camera as conflicting **with itself** ("give this camera a new name") — breaking the exact repair the app directs users to. (Flagged top-priority by both the Phase-10 and Phase-11 UX reviews.) | For the SELF comparison only (same id+name), dependent fields whose **saved** value was empty are dropped before the divergence check — filling a blank completes the identity rather than diverging it. The cross-animal/cross-camera reuse guard is untouched (still fires on a populated→different change or a different camera reusing a name). TDD: blank→value RED-then-GREEN; populated→different still blocks; cross-camera still blocks. | `9347773` |
 | F-07 | "Review existing data" banner shown for every established animal regardless of corruption — competed with the primary action and read as a standing task. | `showReview = hasCorruption` (raw-shape corruption / corrupt index / orphan / wrong-owner only); a clean established animal no longer shows it. | `0855fff` |
 | F-08 | "Export Valid Only" was active when **0 days were valid**, silently exporting nothing. | disabled with an accessible reason ("No valid days to export — fix errors first") when `valid === 0 && error > 0`. | `0855fff` |
 | F-06b | AnimalView "Animal not found" return was a weak inline link (DayEditor's was already styled). | prominent `error-state-action` styled "← Back to Workspace". | `0855fff` |
@@ -112,7 +113,6 @@ timely and unambiguous; no validation flicker; long editors don't freeze.
 
 | id | Sev | Finding | Recommended fix |
 | --- | --- | --- | --- |
-| F-12 | `likely confusion` **(highest-priority follow-up)** | Camera-calibration repair fires the same-name identity guard when *filling a blank* `meters_per_pixel` (a fill, not a change) — prompts "Give this camera a new name" on the critical repair path. | In `CamerasContainer`/`identitySafety`, suppress the `selfConflict` divergence when the **existing** dependent value is empty/missing; keep the reference-decision only when a *populated* value changes. Identity-safety logic — do with dedicated divergence tests. (Carried from Phase 10; flagged for early scheduling by the Phase-10 UX review.) |
 | F-04 | `likely confusion` | Camera `meters_per_pixel` not visible in the **batch-triage scan** rows (`#/validation`, per-animal export) — a recalibration is invisible during catch-up. (The export **preflight** now shows it; this is the earlier triage view.) | Add a calibration summary to the Validation/per-animal-export setup-scan column. Known-deferred batch-scan enrichment. |
 | F-11 | `likely confusion` | Config-version label differs across surfaces (`config v1` on `#/validation` vs `config from <date>` per-animal) and lacks an explicit latest/historical marker. | Unify the label + add a latest/historical indicator. |
 | F-10 | `likely confusion` | Session description not surfaced in batch rows even when set (shows "—"). | Investigate the row binding (the value exists at `day.session.session_description`); surface or expand it. |
@@ -139,12 +139,12 @@ restored; status is conveyed beyond color.
 
 ## Cutover recommendation
 
-**No `blocks safe use` debt remains** — the single such finding (opto card/nav contradiction) is fixed
-and verified, and the high-visibility error-pink CSS collision is resolved. The remaining
-`likely confusion`/`polish` items are real but recoverable and are appropriate fast-follows for the
-v3-cutover window (F-12 first, per the Phase-10 review). **This plan's correctness/usability/polish
-arc (Phases 1–11) is complete; the workspace is coherent, consistent, accessible, and visually
-trustworthy enough to be the cutover target.** The separate v3-workspace-cutover Phase 11
+**No `blocks safe use` debt remains.** The opto card/nav contradiction, the high-visibility error-pink
+CSS collision, AND the camera-calibration repair-path "broken door" (F-12 — which the Phase-11 UX
+review argued should gate cutover) are all fixed and verified. The remaining `likely confusion`/`polish`
+items are real but recoverable and are appropriate fast-follows for the v3-cutover window. **This
+plan's correctness/usability/polish arc (Phases 1–11) is complete; the workspace is coherent,
+consistent, accessible, and visually trustworthy enough to be the cutover target.** The separate v3-workspace-cutover Phase 11
 (default-route flip) may proceed onto this audited IA, gated only by the **deferred downstream
 round-trip** (`trodes_to_nwb` → `nwbinspector --config dandi` → `dandi validate` → Spyglass ingest;
 see `docs/PIPELINE_REQUIREMENTS.md`) and a recommended **human lab-user dry run** — both outside this
@@ -152,6 +152,6 @@ Claude-executable phase.
 
 ## Gates at handoff
 
-`npx vitest run` → 4518 passed · `npx vitest run baselines` → 125 byte-identical · `npm run lint` →
+`npx vitest run` → 4519 passed · `npx vitest run baselines` → 125 byte-identical · `npm run lint` →
 0 errors · `npm run build` → OK · `npx playwright test e2e/workspace-*.spec.js …` → 87 passed
 (incl. the new cameras-overflow regression).
