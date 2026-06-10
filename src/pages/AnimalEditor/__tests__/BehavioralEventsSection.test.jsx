@@ -22,11 +22,11 @@ describe('BehavioralEventsSection', () => {
     behavioral_events: [
       {
         name: 'reward_left',
-        description: 'Left reward port',
+        description: 'Din1',
       },
       {
         name: 'reward_right',
-        description: 'Right reward port',
+        description: 'Dout2',
       },
     ],
   };
@@ -91,11 +91,11 @@ describe('BehavioralEventsSection', () => {
       expect(screen.getByText(/^Name$/i)).toBeInTheDocument();
       expect(screen.getByText(/Description/i)).toBeInTheDocument();
 
-      // Check event data is displayed
+      // Check event data is displayed (descriptions are DIO line names)
       expect(screen.getByText('reward_left')).toBeInTheDocument();
-      expect(screen.getByText('Left reward port')).toBeInTheDocument();
+      expect(screen.getByText('Din1')).toBeInTheDocument();
       expect(screen.getByText('reward_right')).toBeInTheDocument();
-      expect(screen.getByText('Right reward port')).toBeInTheDocument();
+      expect(screen.getByText('Dout2')).toBeInTheDocument();
     });
   });
 
@@ -127,7 +127,7 @@ describe('BehavioralEventsSection', () => {
   });
 
   describe('Inline Editing', () => {
-    it('should allow inline editing of name and description', async () => {
+    it('should allow inline editing of the name and the DIO Type + line index', async () => {
       render(
         <BehavioralEventsSection
           animal={mockAnimal}
@@ -139,33 +139,127 @@ describe('BehavioralEventsSection', () => {
       const editButtons = screen.getAllByRole('button', { name: /Edit/i });
       await user.click(editButtons[0]);
 
-      // Should switch to edit mode with input fields
+      // Name is a text input; the description is the guided Type + line-index controls,
+      // seeded from the stored 'Din1'.
       const nameInput = screen.getByDisplayValue('reward_left');
-      const descInput = screen.getByDisplayValue('Left reward port');
-
       expect(nameInput).toBeInTheDocument();
-      expect(descInput).toBeInTheDocument();
+      expect(screen.getByLabelText(/DIO type/i)).toHaveValue('Din');
+      expect(screen.getByLabelText(/DIO line index/i)).toHaveValue(1);
 
       // Type new values
       await user.clear(nameInput);
       await user.type(nameInput, 'reward_center');
-      await user.clear(descInput);
-      await user.type(descInput, 'Center reward port');
+      await user.selectOptions(screen.getByLabelText(/DIO type/i), 'Accel');
+      const indexInput = screen.getByLabelText(/DIO line index/i);
+      await user.clear(indexInput);
+      await user.type(indexInput, '5');
 
       // Find save button
       const saveButton = screen.getByRole('button', { name: /Save/i });
       await user.click(saveButton);
 
-      // Should call onFieldUpdate with updated event
+      // Should call onFieldUpdate with the updated name and the rejoined DIO description.
       expect(mockOnFieldUpdate).toHaveBeenCalledWith(
         'behavioral_events',
         expect.arrayContaining([
           expect.objectContaining({
             name: 'reward_center',
-            description: 'Center reward port',
+            description: 'Accel5',
           }),
         ])
       );
+    });
+  });
+
+  describe('DIO description: guided Type + line-index entry (F5)', () => {
+    const dioAnimal = {
+      id: 'remy',
+      behavioral_events: [{ name: 'light1', description: 'Din1' }],
+    };
+
+    it('seeds the Type and line-index controls from an existing description and writes back the identical string', async () => {
+      render(
+        <BehavioralEventsSection animal={dioAnimal} onFieldUpdate={mockOnFieldUpdate} />
+      );
+
+      await user.click(screen.getByRole('button', { name: /^Edit$/i }));
+
+      // Both controls seed from the stored 'Din1'.
+      expect(screen.getByLabelText(/DIO type/i)).toHaveValue('Din');
+      expect(screen.getByLabelText(/DIO line index/i)).toHaveValue(1);
+
+      // Saving without touching the controls writes back the identical description string (C1).
+      await user.click(screen.getByRole('button', { name: /^Save$/i }));
+      expect(mockOnFieldUpdate).toHaveBeenCalledWith('behavioral_events', [
+        { name: 'light1', description: 'Din1' },
+      ]);
+    });
+
+    it('rebuilds the description from the chosen Type and line index', async () => {
+      render(
+        <BehavioralEventsSection animal={dioAnimal} onFieldUpdate={mockOnFieldUpdate} />
+      );
+
+      await user.click(screen.getByRole('button', { name: /^Edit$/i }));
+
+      await user.selectOptions(screen.getByLabelText(/DIO type/i), 'Dout');
+      const indexInput = screen.getByLabelText(/DIO line index/i);
+      await user.clear(indexInput);
+      await user.type(indexInput, '3');
+
+      await user.click(screen.getByRole('button', { name: /^Save$/i }));
+      expect(mockOnFieldUpdate).toHaveBeenCalledWith('behavioral_events', [
+        { name: 'light1', description: 'Dout3' },
+      ]);
+    });
+
+    it('offers every recognized DIO type in the Type dropdown', async () => {
+      render(
+        <BehavioralEventsSection animal={dioAnimal} onFieldUpdate={mockOnFieldUpdate} />
+      );
+
+      await user.click(screen.getByRole('button', { name: /^Edit$/i }));
+
+      const typeSelect = screen.getByLabelText(/DIO type/i);
+      ['Din', 'Dout', 'Accel', 'Gyro', 'Mag'].forEach((type) => {
+        expect(within(typeSelect).getByRole('option', { name: type })).toBeInTheDocument();
+      });
+    });
+
+    it('offers behavioral-event name suggestions via a combobox on the Name input (free entry retained)', async () => {
+      render(
+        <BehavioralEventsSection animal={dioAnimal} onFieldUpdate={mockOnFieldUpdate} />
+      );
+
+      await user.click(screen.getByRole('button', { name: /^Edit$/i }));
+
+      // The Name field is an editable combobox; clicking it browses the full catalog
+      // (the legacy `behavioralEventsNames`) even though a value is already present.
+      const nameInput = screen.getByDisplayValue('light1');
+      await user.click(nameInput);
+
+      const listbox = await screen.findByRole('listbox');
+      const optionValues = within(listbox)
+        .getAllByRole('option')
+        .map((o) => o.textContent);
+      expect(optionValues).toEqual(
+        expect.arrayContaining(['Home box camera', 'Poke', 'Light', 'Pump', 'Run Camera Ticks', 'Sleep'])
+      );
+    });
+
+    it('picks a suggested name from the combobox and saves it', async () => {
+      render(
+        <BehavioralEventsSection animal={dioAnimal} onFieldUpdate={mockOnFieldUpdate} />
+      );
+
+      await user.click(screen.getByRole('button', { name: /^Edit$/i }));
+      await user.click(screen.getByDisplayValue('light1'));
+      await user.click(screen.getByRole('option', { name: 'Light' }));
+      await user.click(screen.getByRole('button', { name: /^Save$/i }));
+
+      expect(mockOnFieldUpdate).toHaveBeenCalledWith('behavioral_events', [
+        { name: 'Light', description: 'Din1' },
+      ]);
     });
   });
 

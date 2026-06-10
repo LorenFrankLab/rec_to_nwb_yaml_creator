@@ -1,8 +1,20 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { render } from '@testing-library/react';
 import BrainRegionAutocomplete from '../BrainRegionAutocomplete';
+
+/**
+ * Open the combobox listbox and return the visible option labels.
+ * @param user
+ */
+async function openOptionLabels(user) {
+  await user.click(screen.getByRole('combobox'));
+  const listbox = await screen.findByRole('listbox');
+  return within(listbox)
+    .getAllByRole('option')
+    .map((o) => o.textContent);
+}
 
 describe('BrainRegionAutocomplete', () => {
   let mockOnChange;
@@ -12,8 +24,8 @@ describe('BrainRegionAutocomplete', () => {
   });
 
   describe('Component Rendering', () => {
-    it('renders input element with datalist', () => {
-      const { container } = render(
+    it('renders an editable combobox input (no native datalist)', () => {
+      render(
         <BrainRegionAutocomplete
           value=""
           onChange={mockOnChange}
@@ -22,14 +34,11 @@ describe('BrainRegionAutocomplete', () => {
         />
       );
 
-      const input = container.querySelector('input');
+      const input = screen.getByRole('combobox');
       expect(input).toBeInTheDocument();
-      expect(input).toHaveAttribute('list');
-      const listAttr = input.getAttribute('list');
-      // Datalist ID should reference brain-region and be present in the document
-      const datalist = container.querySelector(`#${listAttr}`);
-      expect(datalist).toBeInTheDocument();
-      expect(datalist?.tagName).toBe('DATALIST');
+      // Replaced the native <datalist> with an ARIA listbox combobox.
+      expect(input).not.toHaveAttribute('list');
+      expect(input).toHaveAttribute('aria-autocomplete', 'list');
     });
 
     it('renders label with default text', () => {
@@ -74,109 +83,81 @@ describe('BrainRegionAutocomplete', () => {
     });
   });
 
-  describe('Datalist Suggestions', () => {
-    it('renders datalist with common brain regions', () => {
-      const { container } = render(
-        <BrainRegionAutocomplete
-          value=""
-          onChange={mockOnChange}
-        />
-      );
+  describe('Combobox Suggestions', () => {
+    it('lists common brain regions when opened', async () => {
+      const user = userEvent.setup();
+      render(<BrainRegionAutocomplete value="" onChange={mockOnChange} />);
 
-      const datalist = container.querySelector('datalist');
-      expect(datalist).toBeInTheDocument();
-
-      const options = container.querySelectorAll('datalist option');
-      expect(options.length).toBeGreaterThan(10);
-
-      const optionValues = Array.from(options).map(opt => opt.value);
+      const optionValues = await openOptionLabels(user);
+      expect(optionValues.length).toBeGreaterThan(10);
       expect(optionValues).toContain('CA1');
       expect(optionValues).toContain('CA3');
       expect(optionValues).toContain('PFC');
       expect(optionValues).toContain('M1');
     });
 
-    it('includes hippocampal regions', () => {
-      const { container } = render(
-        <BrainRegionAutocomplete
-          value=""
-          onChange={mockOnChange}
-        />
-      );
+    it('includes hippocampal regions', async () => {
+      const user = userEvent.setup();
+      render(<BrainRegionAutocomplete value="" onChange={mockOnChange} />);
 
-      const options = container.querySelectorAll('datalist option');
-      const optionValues = Array.from(options).map(opt => opt.value);
-
+      const optionValues = await openOptionLabels(user);
       expect(optionValues).toContain('CA1');
       expect(optionValues).toContain('CA2');
       expect(optionValues).toContain('CA3');
       expect(optionValues).toContain('DG');
     });
 
-    it('includes prefrontal cortex regions', () => {
-      const { container } = render(
-        <BrainRegionAutocomplete
-          value=""
-          onChange={mockOnChange}
-        />
-      );
+    it('includes prefrontal cortex regions', async () => {
+      const user = userEvent.setup();
+      render(<BrainRegionAutocomplete value="" onChange={mockOnChange} />);
 
-      const options = container.querySelectorAll('datalist option');
-      const optionValues = Array.from(options).map(opt => opt.value);
-
+      const optionValues = await openOptionLabels(user);
       expect(optionValues).toContain('PFC');
       expect(optionValues).toContain('mPFC');
       expect(optionValues).toContain('OFC');
     });
 
-    it('includes motor and somatosensory regions', () => {
-      const { container } = render(
-        <BrainRegionAutocomplete
-          value=""
-          onChange={mockOnChange}
-        />
-      );
+    it('includes motor and somatosensory regions', async () => {
+      const user = userEvent.setup();
+      render(<BrainRegionAutocomplete value="" onChange={mockOnChange} />);
 
-      const options = container.querySelectorAll('datalist option');
-      const optionValues = Array.from(options).map(opt => opt.value);
-
+      const optionValues = await openOptionLabels(user);
       expect(optionValues).toContain('M1');
       expect(optionValues).toContain('M2');
       expect(optionValues).toContain('S1');
       expect(optionValues).toContain('S2');
     });
 
-    it('includes visual and reward regions', () => {
-      const { container } = render(
-        <BrainRegionAutocomplete
-          value=""
-          onChange={mockOnChange}
-        />
-      );
+    it('includes visual and reward regions', async () => {
+      const user = userEvent.setup();
+      render(<BrainRegionAutocomplete value="" onChange={mockOnChange} />);
 
-      const options = container.querySelectorAll('datalist option');
-      const optionValues = Array.from(options).map(opt => opt.value);
-
+      const optionValues = await openOptionLabels(user);
       expect(optionValues).toContain('V1');
       expect(optionValues).toContain('V2');
       expect(optionValues).toContain('NAc');
       expect(optionValues).toContain('VTA');
     });
 
-    it('includes other common regions', () => {
-      const { container } = render(
-        <BrainRegionAutocomplete
-          value=""
-          onChange={mockOnChange}
-        />
-      );
+    it('includes other common regions', async () => {
+      const user = userEvent.setup();
+      render(<BrainRegionAutocomplete value="" onChange={mockOnChange} />);
 
-      const options = container.querySelectorAll('datalist option');
-      const optionValues = Array.from(options).map(opt => opt.value);
-
+      const optionValues = await openOptionLabels(user);
       expect(optionValues).toContain('Amy');
       expect(optionValues).toContain('Striatum');
       expect(optionValues).toContain('SNc');
+    });
+
+    it('merges workspace-derived suggestions with the canonical list', async () => {
+      const user = userEvent.setup();
+      render(
+        <BrainRegionAutocomplete value="" onChange={mockOnChange} suggestions={['CustomRegionX']} />
+      );
+
+      const optionValues = await openOptionLabels(user);
+      expect(optionValues).toContain('CA1'); // canonical
+      expect(optionValues).toContain('CustomRegionX'); // workspace-derived
     });
   });
 
@@ -407,7 +388,7 @@ describe('BrainRegionAutocomplete', () => {
       expect(input).toHaveAttribute('required');
     });
 
-    it('has autocomplete attribute set to off to allow datalist suggestions', () => {
+    it('disables native autofill so the suggestion list is the only autocomplete', () => {
       render(
         <BrainRegionAutocomplete
           value=""
@@ -416,8 +397,8 @@ describe('BrainRegionAutocomplete', () => {
       );
 
       const input = screen.getByRole('combobox');
-      // The input should have the list attribute to work with datalist
-      expect(input).toHaveAttribute('list');
+      expect(input).toHaveAttribute('autocomplete', 'off');
+      expect(input).toHaveAttribute('aria-autocomplete', 'list');
     });
 
     it('input has correct role for combobox pattern', () => {

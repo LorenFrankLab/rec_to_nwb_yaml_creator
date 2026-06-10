@@ -166,6 +166,34 @@ describe('Day State Management', () => {
       expect(animal.days).toEqual(['remy-2023-06-22', 'remy-2023-06-23']);
     });
 
+    it('keeps the STORED animal.days index date-ascending when days are created out of order (F2)', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-25', {
+          session_id: 'remy_20230625',
+          session_description: 'Day 3',
+        });
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+        result.current.actions.createDay('remy', '2023-06-24', {
+          session_id: 'remy_20230624',
+          session_description: 'Day 2',
+        });
+      });
+
+      // Assert on the STORED index array directly — NOT the sort-on-read getAnimalDays
+      // selector — so this proves the persisted order is canonical, not just the view.
+      expect(result.current.model.workspace.animals['remy'].days).toEqual([
+        'remy-2023-06-22',
+        'remy-2023-06-24',
+        'remy-2023-06-25',
+      ]);
+    });
+
     it('with carryForwardFromDayId: new day copies the prior day tasks', () => {
       const { result } = renderHook(() => useStore());
       createTestAnimal(result);
@@ -1261,6 +1289,29 @@ describe('Day State Management', () => {
       });
 
       expect(result.current.model.workspace.animals['remy'].days).toContain('remy-2023-06-23');
+    });
+
+    it('keeps the STORED animal.days index date-ascending when duplicating to an EARLIER date (F2)', () => {
+      const { result } = renderHook(() => useStore());
+      createTestAnimal(result);
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-22', {
+          session_id: 'remy_20230622',
+          session_description: 'Day 1',
+        });
+      });
+
+      // Duplicate to a date BEFORE the source. A plain append would leave the index
+      // out of order; the stored array must end ascending.
+      act(() => {
+        result.current.actions.duplicateDay('remy-2023-06-22', '2023-06-20');
+      });
+
+      // Assert on the STORED index array directly, not the sort-on-read selector.
+      expect(result.current.model.workspace.animals['remy'].days).toEqual([
+        'remy-2023-06-20',
+        'remy-2023-06-22',
+      ]);
     });
 
     it('throws if the source day does not exist', () => {

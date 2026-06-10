@@ -2,6 +2,10 @@ import { useState } from 'react';
 import PropTypes from 'prop-types';
 import { ConfirmDialog } from '../../components/Modal';
 import { getAnimalBehavioralEvents } from '../../state/workspaceSelectors';
+import { behavioralEventsDescription, behavioralEventsNames } from '../../valueList';
+import { splitDioDescription, joinDioDescription } from '../../utils/dioDescription';
+import SuggestionCombobox from '../../components/SuggestionCombobox';
+import InfoIcon from '../../element/InfoIcon';
 import './BehavioralEventsSection.scss';
 
 /**
@@ -233,19 +237,35 @@ export default function BehavioralEventsSection({ animal, onFieldUpdate }) {
             const isEditing = editingIndex === index;
 
             if (isEditing) {
+              // Guided DIO entry: the stored `description` is a hardware DIO line name (e.g.
+              // "Din1"). Seed a Type dropdown + a line-index control from it, and write the
+              // joined string back on change (recognition over recall; the exported string is
+              // unchanged). `splitDioDescription` falls back to the first type when the stored
+              // value is unrecognized free text — touching either control then normalizes it.
+              const dioTypes = behavioralEventsDescription();
+              const { type: splitType, index: dioIndex } = splitDioDescription(
+                editingEvent?.description ?? ''
+              );
+              const dioType = dioTypes.includes(splitType) ? splitType : dioTypes[0];
+
               return (
                 <tr key={index} className="editing-row">
                   <td data-label="Name">
-                    <input
-                      type="text"
+                    {/* Editable combobox: catalog suggestions (legacy `behavioralEventsNames`)
+                        that re-open after a pick, with free entry retained. */}
+                    <SuggestionCombobox
+                      aria-label="Event name"
                       className={validationError ? 'error' : validationWarning ? 'warning' : ''}
                       value={editingEvent?.name || ''}
-                      onChange={(e) => handleFieldChange('name', e.target.value)}
+                      onChange={(v) => handleFieldChange('name', v)}
+                      suggestions={behavioralEventsNames()}
                       onKeyDown={handleKeyDown}
                       placeholder="event_name"
                       autoFocus
                       aria-invalid={!!validationError}
                       aria-describedby={validationError ? 'name-error' : undefined}
+                      warnOffList
+                      offListMessage="Not a standard event name. Pick one of the suggestions for consistency, or keep a custom name if you have a reason (e.g. numbered variants like “light1”)."
                     />
                     {validationError && (
                       <div id="name-error" className="inline-error" role="alert">
@@ -259,13 +279,50 @@ export default function BehavioralEventsSection({ animal, onFieldUpdate }) {
                     )}
                   </td>
                   <td data-label="Description">
-                    <input
-                      type="text"
-                      value={editingEvent?.description || ''}
-                      onChange={(e) => handleFieldChange('description', e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder="Description of this event"
-                    />
+                    <div className="dio-description-fields">
+                      {/* Short visible labels keep the inline cluster compact; the full
+                          accessible name is on each control via aria-label. */}
+                      <span className="dio-description-fields__control">
+                        <label htmlFor={`dio-type-${index}`}>Type</label>
+                        <select
+                          id={`dio-type-${index}`}
+                          aria-label="DIO type"
+                          value={dioType}
+                          onChange={(e) =>
+                            handleFieldChange(
+                              'description',
+                              joinDioDescription(e.target.value, dioIndex)
+                            )
+                          }
+                          onKeyDown={handleKeyDown}
+                        >
+                          {dioTypes.map((typeOption) => (
+                            <option key={typeOption} value={typeOption}>
+                              {typeOption}
+                            </option>
+                          ))}
+                        </select>
+                      </span>
+                      <span className="dio-description-fields__control">
+                        <label htmlFor={`dio-index-${index}`}>Index</label>
+                        <input
+                          id={`dio-index-${index}`}
+                          aria-label="DIO line index"
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={dioIndex}
+                          onChange={(e) =>
+                            handleFieldChange(
+                              'description',
+                              joinDioDescription(dioType, e.target.value)
+                            )
+                          }
+                          onKeyDown={handleKeyDown}
+                        />
+                      </span>
+                      <InfoIcon infoText="DIO line name, e.g. Din1" />
+                    </div>
                   </td>
                   <td data-label="Actions">
                     <button

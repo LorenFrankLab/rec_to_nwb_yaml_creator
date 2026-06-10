@@ -1,0 +1,91 @@
+/**
+ * SuggestionCombobox — editable combobox (input + popup listbox) replacing native <datalist>.
+ * The listbox (`&__list` / `&__option`) is rendered in a PORTAL on document.body so no ancestor
+ * `overflow` (the rounded-corner table clip, a scrolling modal) can crop it; it is positioned
+ * inline (fixed, anchored to the input). Because it lives outside `.suggestion-combobox` in the
+ * DOM, its styles are written as flat BEM classes, not nested under the block.
+ * TODO(Phase 3): adopt the design tokens + CSS-Modules conventions (shared-contracts C4); the
+ * z-index here anticipates the planned z-index scale.
+ */
+
+.suggestion-combobox {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  &__label {
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  &__field {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+
+    input {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+  }
+
+  &__toggle {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    margin-left: -2rem; // overlay the chevron inside the input's right edge
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: #616161;
+    cursor: pointer;
+    font-size: 0.75rem;
+
+    &:hover {
+      color: #1565c0;
+    }
+  }
+
+  // Rendered in the container (NOT the portal), below the field.
+  &__offlist-warning {
+    margin: 0.25rem 0 0;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: #e65100; // Orange 900 — WCAG AA on white
+    background: #fff3e0;
+    border-left: 4px solid #ff9800;
+    border-radius: 4px;
+  }
+}
+
+// ── Portaled listbox (on document.body; positioned inline) ──────────────────────────
+.suggestion-combobox__list {
+  // Above modal overlays (Modal z-index ~1000): the portal sits on document.body and a region
+  // combobox lives inside the electrode-group modal. Reconciled to the token scale in Phase 3.
+  z-index: 1100;
+  margin: 2px 0 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  max-height: 14rem;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #bdbdbd;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.suggestion-combobox__option {
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+  white-space: nowrap;
+
+  &:hover,
+  &--active {
+    background: #e3f2fd;
+  }
+}

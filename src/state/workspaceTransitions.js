@@ -26,6 +26,25 @@ import {
 } from '../utils/deviceNormalization';
 
 /**
+ * Order a list of day ids by their record's `date`, ascending. Day dates are ISO `YYYY-MM-DD`,
+ * which sort lexicographically == chronologically, so a string compare is correct. Pure and
+ * total: returns a NEW array (never mutates `ids`), coerces a missing record / missing date to
+ * the empty string (which sorts first) so a corrupt index can't throw, and is stable for equal
+ * dates (preserves insertion order). The store calls this on write in `createDay`/`duplicateDay`
+ * so the stored `animal.days` index is canonically date-ordered (the sort-on-read selectors then
+ * become redundant defense-in-depth).
+ *
+ * @param {string[]} ids - Day ids to order.
+ * @param {object} daysById - The full days map (`{ [dayId]: dayRecord }`); read-only.
+ * @returns {string[]} A new array of the ids, ascending by `date`.
+ */
+export function sortDayIdsByDate(ids, daysById) {
+  return [...ids].sort((a, b) =>
+    String(daysById[a]?.date ?? '').localeCompare(String(daysById[b]?.date ?? ''))
+  );
+}
+
+/**
  * Apply partial updates to an animal and return the next animal record. A `devices` edit is
  * mirrored into the LATEST configuration snapshot (the authoritative source the export
  * resolves) so probes configured after creation actually reach `resolveDayConfig`;

@@ -15,6 +15,7 @@ import {
   applyDayUpdates,
   nextConfigurationVersion,
   createSnapshotAndApplyForward,
+  sortDayIdsByDate,
 } from '../workspaceTransitions';
 
 const NOW = '2026-06-05T00:00:00.000Z';
@@ -172,6 +173,41 @@ describe('nextConfigurationVersion', () => {
     expect(nextConfigurationVersion([{ version: 1 }, { version: 2 }])).toBe(3);
     expect(nextConfigurationVersion([])).toBe(1);
     expect(nextConfigurationVersion('corrupt')).toBe(1);
+  });
+});
+
+describe('sortDayIdsByDate', () => {
+  it('orders ids by their record date ascending (ISO dates sort lexicographically)', () => {
+    const daysById = {
+      a: { date: '2023-06-25' },
+      b: { date: '2023-06-22' },
+      c: { date: '2023-06-24' },
+    };
+    expect(sortDayIdsByDate(['a', 'b', 'c'], daysById)).toEqual(['b', 'c', 'a']);
+  });
+
+  it('does not mutate the input array (returns a new sorted array)', () => {
+    const ids = ['a', 'b'];
+    const daysById = { a: { date: '2023-06-25' }, b: { date: '2023-06-22' } };
+    const sorted = sortDayIdsByDate(ids, daysById);
+    expect(ids).toEqual(['a', 'b']);
+    expect(sorted).not.toBe(ids);
+  });
+
+  it('treats a missing record or a missing date as empty (sorts first, never throws)', () => {
+    const daysById = { a: { date: '2023-06-22' }, b: {} };
+    // 'b' has no date → '' sorts before '2023-06-22'.
+    expect(sortDayIdsByDate(['a', 'b'], daysById)).toEqual(['b', 'a']);
+    expect(() => sortDayIdsByDate(['a', 'missing'], daysById)).not.toThrow();
+  });
+
+  it('keeps the original order for equal dates (stable)', () => {
+    const daysById = {
+      x: { date: '2023-06-22' },
+      y: { date: '2023-06-22' },
+      z: { date: '2023-06-22' },
+    };
+    expect(sortDayIdsByDate(['x', 'y', 'z'], daysById)).toEqual(['x', 'y', 'z']);
   });
 });
 

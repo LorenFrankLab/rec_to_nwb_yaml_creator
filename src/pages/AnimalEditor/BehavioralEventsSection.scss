@@ -240,6 +240,60 @@
   }
 }
 
+/* ===== Guided DIO Type + line-index entry (F5) ===== */
+/* TODO(Phase 3): migrate to CSS Modules + shared form-field primitive (contract C4). */
+
+// Cap the Name field (combobox + its off-list nudge) so a long warning string does not
+// stretch the Name column and squeeze the Description controls onto a second line.
+.behavioral-events-table tbody tr.editing-row td .suggestion-combobox {
+  max-width: 20rem;
+}
+
+.behavioral-events-table tbody tr.editing-row td .dio-description-fields {
+  display: flex;
+  flex-wrap: nowrap; // keep Type + Index + hint as one tidy inline cluster
+  align-items: center; // controls sit on one line, aligned with the Name input across cells
+  gap: var(--spacing-sm);
+
+  // Label sits INLINE beside its control (not stacked above) so the controls align with the
+  // Name field's top edge in the adjacent cell.
+  .dio-description-fields__control {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+
+    label {
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      color: var(--color-grey-700);
+      white-space: nowrap;
+    }
+  }
+
+  select {
+    padding: var(--spacing-sm);
+    border: 1px solid var(--color-grey-300);
+    border-radius: 4px;
+    font-size: var(--font-size-base);
+    font-family: inherit;
+    background-color: var(--color-white);
+    min-height: 48px; // WCAG AA touch target
+
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+    }
+  }
+
+  // The line-index number input is narrow and must NOT stretch to the cell width like the
+  // default inline input rule; align its height with the select.
+  input[type='number'] {
+    width: 5rem;
+    min-height: 48px;
+  }
+}
+
 /* ===== Inline Error/Warning Messages ===== */
 
 .inline-error,
