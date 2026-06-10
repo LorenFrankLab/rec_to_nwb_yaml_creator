@@ -127,9 +127,17 @@ test.describe('Workspace export workflows', () => {
     // summary (config version + camera count + opto), a Valid status chip, and an Open-editor action.
     const row1 = page.getByTestId(`day-row-${DAY_ID}`);
     await expect(row1.getByRole('cell', { name: '2023-06-22', exact: true })).toBeVisible();
-    await expect(row1.getByRole('cell', { name: 'remy_20230622', exact: true })).toBeVisible();
+    // The Session cell now carries the session id AND the day's session description on its own line.
+    await expect(row1.getByRole('cell', { name: /remy_20230622/ })).toBeVisible();
     await expect(
-      row1.getByText('config from 2023-06-22 · 2 cameras · No optogenetics'),
+      row1.getByText('Day 45 of chronic recording, W-track alternation'),
+    ).toBeVisible();
+    // The setup summary now reads the unified config-version label (latest/historical) and the
+    // per-camera calibration alongside the camera count and the opto state.
+    await expect(
+      row1.getByText(
+        'config v1 (latest) · 2 cameras (overhead_camera 0.00085 m/px, side_camera 0.0009 m/px) · No optogenetics',
+      ),
     ).toBeVisible();
     await expect(row1.getByRole('cell', { name: 'Valid', exact: true })).toBeVisible();
     await expect(

@@ -837,6 +837,10 @@ export function ValidationSummary({ animalKey } = {}) {
             items={staleReport}
           />
 
+          {/* The table can be wider than a phone viewport (6 columns of dense scan/session text), so
+              it scrolls horizontally WITHIN this container instead of forcing the whole page to
+              overflow — the page stays at the viewport width at ~390px and no cell is clipped off. */}
+          <div className="validation-summary-table-scroll">
           <table className="validation-summary-table">
             <caption className="visually-hidden">
               Recording days across all animals with validation status
@@ -1011,6 +1015,7 @@ export function ValidationSummary({ animalKey } = {}) {
               ))}
             </tbody>
           </table>
+          </div>
         </>
       )}
     </Wrapper>

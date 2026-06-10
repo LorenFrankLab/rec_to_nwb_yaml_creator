@@ -97,7 +97,7 @@ test.describe('Browser export of a configured recording day', () => {
     // The preflight line names the config version, electrode groups + failed channels,
     // cameras, and opto state for the day about to export.
     await expect(
-      batch.getByText('config v1; 8 electrode groups, 2 failed channels; 2 cameras; No optogenetics'),
+      batch.getByText('config v1 (latest); 8 electrode groups, 2 failed channels; 2 cameras; No optogenetics'),
     ).toBeVisible();
 
     // Confirm and capture the downloaded file.
