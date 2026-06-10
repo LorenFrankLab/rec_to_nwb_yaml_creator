@@ -61,7 +61,7 @@ CI=1 npx playwright test --project=chromium --list
 
 ## What each workspace spec covers
 
-The workspace specs (11 files, 61 tests, all GREEN on Chromium) drive the **shipped tabbed
+The workspace specs (`e2e/workspace-*.spec.js`, all GREEN on Chromium) drive the **shipped tabbed
 workspace** (`#/animal/:id/:tab`, `#/day/:id`) — not the frozen legacy single-page form.
 
 | Spec | Covers |
@@ -124,7 +124,7 @@ The legacy specs in `e2e/baselines/` drive the **frozen legacy single-page form*
   app-behavior change) — keeping legacy coverage green.
 - **`baselines/visual-regression.spec.js`** — **local-only (CI-ignored via `testIgnore`).** Its
   pixel snapshots in `e2e/baselines/visual-regression.spec.js-snapshots/` are **stale** because the
-  workspace UI overhaul intentionally changed the rendered form; the 7 tests fail
+  workspace UI overhaul intentionally changed the rendered form; its snapshot tests fail
   `expect(page).toHaveScreenshot()` locally. **Do NOT regenerate the snapshots blindly** — snapshots
   are a reviewed artifact. When the UI change is intentional and reviewed, update them deliberately
   with:
@@ -135,7 +135,7 @@ The legacy specs in `e2e/baselines/` drive the **frozen legacy single-page form*
   ```
 
 **Triage rule:** the workspace suite (`e2e/workspace-*.spec.js`) must be 100% green. The only
-expected failures in a full local run are the 7 visual-regression snapshot mismatches above, which
+expected failures in a full local run are the visual-regression snapshot mismatches above, which
 CI does not run. Anything else is a real regression.
 
 ---
@@ -161,9 +161,10 @@ verified reality), or **annotated**. None blocked the workspace suite.
   `used`**, **partial → `incomplete`** (agrees with the ●), **none → the hollow-○ "not set up" path**.
   Pinned by `AnimalView.optoCount.test.jsx` + `sectionStatus.test.js`.
 - **FIXED — import preview remediation hints.** Each un-importable file now shows, alongside the raw
-  reason, a plain-language "what to fix" hint derived from the AJV-style message (e.g. missing
-  required property → "Add the missing field: `data_acq_device`."; a value failure with a path →
-  "Fix the value at `<path>`: …"; otherwise a generic instruction). Presentation-only (the parser is
+  reason, a plain-language "what to fix" hint derived from the validator's reason string: a missing
+  required property → "Add the missing field(s): `data_acq_device`[, …].", otherwise a generic "Open
+  this file and correct the reported problem before re-importing." (the plan's reason string carries
+  no instancePath, so the hint does not claim a field path). Presentation-only (the parser is
   untouched); pinned by `ImportYamlDialog.test.jsx`.
 - **FIXED — import result names created identities.** The result phase now lists, per created animal,
   its id and the day dates added (regrouped from `createdDays`) instead of counts only. Pinned by

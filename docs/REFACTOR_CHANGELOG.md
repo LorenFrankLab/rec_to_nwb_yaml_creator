@@ -9,7 +9,7 @@
 Added a browser-level regression suite for the tabbed **workspace** app and cleaned up the e2e
 hygiene around it. Runbook: [docs/E2E_QA_RUNBOOK.md](E2E_QA_RUNBOOK.md).
 
-- **Workspace e2e suite added.** 11 Playwright specs (61 tests, all GREEN on Chromium) plus a shared
+- **Workspace e2e suite added.** 11 Playwright specs (`e2e/workspace-*.spec.js`, all GREEN on Chromium) plus a shared
   harness (`e2e/helpers/workspace.js`) driving the shipped tabbed workspace — covering: export
   happy-path (per-day Day Editor + per-animal Validation & Export) and the fail-closed export gate
   with repair navigation; scenario workflows (same-day + catch-up batch export, unready days
@@ -29,12 +29,12 @@ hygiene around it. Runbook: [docs/E2E_QA_RUNBOOK.md](E2E_QA_RUNBOOK.md).
   passing runs keep none. No change to viewport, reporters, or screenshot policy.
 - **Pre-existing legacy-e2e status (triaged).** All e2e failures are pre-existing legacy rot,
   independent of this branch — there were ZERO regressions in the new workspace specs.
-  `baselines/import-export.spec.js` (5 tests) had been failing on `modern` because `AlertModal` was
+  `baselines/import-export.spec.js` had been failing on `modern` because `AlertModal` was
   refactored onto the shared `Modal` primitive (overlay class `.alert-modal-overlay` →
   `.modal-overlay`), which the spec's `dismissAlertModal` helper still waited on; the modal stayed
   open and intercepted clicks. Fixed by updating only the helper's dismissal selectors (no
-  app-behavior change) — legacy coverage is green again. `baselines/visual-regression.spec.js` (7
-  tests) is local-only (CI-ignored); its snapshots are intentionally stale from the workspace UI
+  app-behavior change) — legacy coverage is green again. `baselines/visual-regression.spec.js`
+  is local-only (CI-ignored); its snapshots are intentionally stale from the workspace UI
   overhaul and are left for a deliberate `--update-snapshots` review rather than blind regeneration.
 - **App-UX findings surfaced by the QA pass — triaged and resolved.** Beyond the browser coverage,
   the pass surfaced several app-UX issues and dispositioned each (full table with file references in
