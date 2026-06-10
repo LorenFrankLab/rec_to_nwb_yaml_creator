@@ -95,6 +95,15 @@ export default function CamerasContainer({ animal, onFieldUpdate, onPendingEdits
         : null;
     const registry = collectCameraIdentities(model.workspace, exclude);
     const candidate = Object.fromEntries(CAMERA_DEPENDENT_FIELDS.map((f) => [f, cameraData[f]]));
+
+    // SELF-conflict (F-12): the edited camera is the SAME existing identity (same id + name).
+    // Filling a dependent field that was EMPTY (null/undefined/'') on the saved camera COMPLETES
+    // the identity — it does not diverge it — so such a field must NOT count as a self-divergence
+    // (only a populated→different-populated change is a real self-divergence worth the "use a new
+    // name" decision). We narrow ONLY the self-comparison: drop the candidate keys whose SAVED
+    // value was empty, so they aren't compared here. The cross-camera `registry` comparison below
+    // is unchanged, keeping the cross-animal / different-camera guards fully intact.
+    const isEmpty = (v) => v === null || v === undefined || v === '';
     const currentIdentity =
       cameraModal.mode === 'edit' && cameraModal.camera
         ? [{
@@ -103,7 +112,13 @@ export default function CamerasContainer({ animal, onFieldUpdate, onPendingEdits
             fields: Object.fromEntries(CAMERA_DEPENDENT_FIELDS.map((f) => [f, cameraModal.camera[f]])),
           }]
         : [];
-    const selfConflict = findIdentityDivergence(cameraData.camera_name, candidate, currentIdentity);
+    const selfCandidate =
+      cameraModal.mode === 'edit' && cameraModal.camera
+        ? Object.fromEntries(
+            CAMERA_DEPENDENT_FIELDS.filter((f) => !isEmpty(cameraModal.camera[f])).map((f) => [f, cameraData[f]])
+          )
+        : candidate;
+    const selfConflict = findIdentityDivergence(cameraData.camera_name, selfCandidate, currentIdentity);
     const conflict = selfConflict || findIdentityDivergence(cameraData.camera_name, candidate, registry);
     if (conflict) {
       setCameraDivergence(conflict);
