@@ -398,7 +398,7 @@ export default function DayEditorStepper() {
           <a
             href={`#/workspace?animal=${ownerKey}`}
             className="back-button"
-            aria-label="Back to workspace"
+            aria-label="Back to Workspace"
           >
             ← Back to Workspace
           </a>

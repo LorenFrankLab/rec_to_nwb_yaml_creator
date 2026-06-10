@@ -197,7 +197,7 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
     <Modal
       isOpen={editing != null}
       onClose={closeEditor}
-      title={editing?.mode === 'add' ? 'Add recording system' : 'Edit recording system'}
+      title={editing?.mode === 'add' ? 'Add Recording System' : 'Edit Recording System'}
       titleId={titleId}
       className="recording-system-modal"
     >

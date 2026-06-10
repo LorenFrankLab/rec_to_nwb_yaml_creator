@@ -32,9 +32,9 @@ const EXCITATION_FIELDS = [
   { name: 'name', label: 'Setup name', type: 'text' },
   { name: 'model_name', label: 'Hardware model name', type: 'datalist', options: optoExcitationModelNames() },
   { name: 'description', label: 'Description', type: 'text' },
-  { name: 'wavelength_in_nm', label: 'Wavelength (nm)', type: 'number' },
-  { name: 'power_in_W', label: 'Source power (W)', type: 'number' },
-  { name: 'intensity_in_W_per_m2', label: 'Intensity (W/m²)', type: 'number' },
+  { name: 'wavelength_in_nm', label: 'Wavelength (nm)', type: 'number', placeholder: 'e.g. 473' },
+  { name: 'power_in_W', label: 'Source power (W)', type: 'number', placeholder: 'e.g. 10' },
+  { name: 'intensity_in_W_per_m2', label: 'Intensity (W/m²)', type: 'number', placeholder: 'e.g. 1.0' },
 ];
 
 const FIBER_FIELDS = [
@@ -50,7 +50,13 @@ const FIBER_FIELDS = [
   { name: 'pitch_in_deg', label: 'Pitch (deg)', type: 'number' },
   { name: 'yaw_in_deg', label: 'Yaw (deg)', type: 'number' },
   // Coordinate reference — required by trodes_to_nwb (read unconditionally).
-  { name: 'reference', label: 'Coordinate reference', type: 'text' },
+  {
+    name: 'reference',
+    label: 'Coordinate reference',
+    type: 'text',
+    placeholder: 'e.g. bregma',
+    help: 'Stereotaxic reference for the AP/ML/DV coordinates.',
+  },
 ];
 
 const VIRUS_FIELDS = [
@@ -69,7 +75,13 @@ const VIRUS_FIELDS = [
   { name: 'pitch_in_deg', label: 'Pitch (deg)', type: 'number' },
   { name: 'yaw_in_deg', label: 'Yaw (deg)', type: 'number' },
   // Coordinate reference — required by trodes_to_nwb (read unconditionally).
-  { name: 'reference', label: 'Coordinate reference', type: 'text' },
+  {
+    name: 'reference',
+    label: 'Coordinate reference',
+    type: 'text',
+    placeholder: 'e.g. bregma',
+    help: 'Stereotaxic reference for the AP/ML/DV coordinates.',
+  },
 ];
 
 /**
@@ -161,6 +173,12 @@ export default function OptogeneticsStep({ animal, onUpdate }) {
 
   const renderField = (field, value, onChange, idPrefix) => {
     const id = `${idPrefix}-${field.name}`;
+    const helpId = field.help ? `${id}-help` : undefined;
+    const helpNode = field.help ? (
+      <small id={helpId} className="opto-field-help help-text">
+        {field.help}
+      </small>
+    ) : null;
     if (field.type === 'datalist') {
       const listId = `${id}-list`;
       return (
@@ -170,14 +188,17 @@ export default function OptogeneticsStep({ animal, onUpdate }) {
             id={id}
             type="text"
             list={listId}
+            placeholder={field.placeholder}
             value={value ?? ''}
             onChange={(e) => onChange(field, e.target.value)}
+            aria-describedby={helpId}
           />
           <datalist id={listId}>
             {field.options.map((opt) => (
               <option key={opt} value={opt} />
             ))}
           </datalist>
+          {helpNode}
         </label>
       );
     }
@@ -185,12 +206,18 @@ export default function OptogeneticsStep({ animal, onUpdate }) {
       return (
         <label key={field.name} htmlFor={id} className="opto-field">
           <span>{field.label}</span>
-          <select id={id} value={value ?? ''} onChange={(e) => onChange(field, e.target.value)}>
+          <select
+            id={id}
+            value={value ?? ''}
+            onChange={(e) => onChange(field, e.target.value)}
+            aria-describedby={helpId}
+          >
             <option value="">— select —</option>
             {field.options.map((opt) => (
               <option key={opt} value={opt}>{opt}</option>
             ))}
           </select>
+          {helpNode}
         </label>
       );
     }
@@ -201,9 +228,12 @@ export default function OptogeneticsStep({ animal, onUpdate }) {
           id={id}
           type={field.type}
           step={field.type === 'number' ? 'any' : undefined}
+          placeholder={field.placeholder}
           value={value ?? ''}
           onChange={(e) => onChange(field, e.target.value)}
+          aria-describedby={helpId}
         />
+        {helpNode}
       </label>
     );
   };
@@ -260,16 +290,18 @@ export default function OptogeneticsStep({ animal, onUpdate }) {
         <>
           {!isComplete && (
             <p className="opto-incomplete" role="status">
-              Your exported file will contain <strong>no optogenetics data</strong> unless
-              every section below is complete (the conversion tool drops the whole
-              optogenetics block otherwise, with no error). Export stays blocked until you
-              add: {' '}
+              This app blocks export until every optogenetics section below is complete; still
+              missing: {' '}
               {[
                 !completeness.source && 'a complete excitation source',
                 !completeness.fiber && 'a complete optical fiber',
                 !completeness.virus && 'a complete virus injection',
                 !completeness.software && 'the stimulation software name',
               ].filter(Boolean).join(', ')}.
+              {' '}
+              Separately, if a partial file like this were fed straight to the conversion tool, it
+              would silently drop the <strong>entire</strong> optogenetics block with no error — which
+              is exactly what this export gate prevents.
             </p>
           )}
 

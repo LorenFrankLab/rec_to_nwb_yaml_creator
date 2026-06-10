@@ -142,7 +142,7 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
       .getByRole('row', { name: /SpikeGadgets/ })
       .getByRole('button', { name: /Edit recording system/ })
       .click();
-    const dialog = page.getByRole('dialog', { name: 'Edit recording system' });
+    const dialog = page.getByRole('dialog', { name: 'Edit Recording System' });
     await expect(dialog).toBeVisible();
 
     // Keep remy's existing hardware (which differs from `other`'s same-named device) and save.

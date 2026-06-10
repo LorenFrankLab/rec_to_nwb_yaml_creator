@@ -47,7 +47,7 @@ describe('OptogeneticsStep', () => {
     render(<Harness />);
 
     await user.click(screen.getByRole('checkbox', { name: /has optogenetics/i }));
-    expect(screen.getByText(/no optogenetics data/i)).toBeInTheDocument();
+    expect(screen.getByText(/blocks export until every optogenetics section/i)).toBeInTheDocument();
 
     // Naming the rows is NOT enough — the converter/schema-required fields are still blank,
     // so the checklist must NOT read complete (no false "done" signal).
@@ -57,7 +57,7 @@ describe('OptogeneticsStep', () => {
     await user.click(screen.getByRole('button', { name: /add virus injection/i }));
     await user.type(screen.getByLabelText(/injection name/i), 'Injection 1');
 
-    expect(screen.getByText(/no optogenetics data/i)).toBeInTheDocument();
+    expect(screen.getByText(/blocks export until every optogenetics section/i)).toBeInTheDocument();
   });
 
   it('clears the incomplete notice once every required field is filled', () => {
@@ -86,7 +86,7 @@ describe('OptogeneticsStep', () => {
       />
     );
 
-    expect(screen.queryByText(/no optogenetics data/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/blocks export until every optogenetics section/i)).not.toBeInTheDocument();
   });
 
   it('commits edits to the excitation source and software through onUpdate', async () => {
