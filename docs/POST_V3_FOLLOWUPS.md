@@ -1,35 +1,32 @@
 # Post-v3.0.0 follow-ups
 
-[← back to PLAN.md](PLAN.md) · [overview](overview.md)
-
-Items intentionally **not blocking the v3.0.0 cutover** ([Phase 11](phase-11-cutover-v3.md)): UX
-niceties, behavior-preserving tech-debt refactors with no correctness/a11y risk, and one release-gated
-data-migration item. The pre-cutover work that *does* need to land first lives in
-[Phase 10.5](phase-10.5-pre-cutover-cleanup.md); anything here can ship after v3.0.0.
-
-Track these so they aren't lost once the plan's numbered phases are done.
+Deferred work tracked out of the (since-removed) v3-workspace-cutover plan: UX niceties,
+behavior-preserving tech-debt refactors with no correctness/a11y risk, the a11y gaps surfaced by the
+dialog-on-`<Modal>` migration, and one release-gated data-migration item. None of these blocked the
+v3.0.0 cutover; they **outlive** it — kept here so they aren't lost now that the plan's numbered phases
+are done. File/line references below point at the live source.
 
 ## Tech-debt / UX niceties
 
 1. **Make `ConfigurationSnapshot.appliedToDays` a derived value.** Today it is a denormalized cache kept
-   in sync by `applyConfigurationForward` ([src/state/useWorkspace.js](../../../../src/state/useWorkspace.js));
-   the trustworthy view already exists as `reconcileAppliedToDays` ([src/state/configDiff.js](../../../../src/state/configDiff.js)),
+   in sync by `applyConfigurationForward` ([src/state/useWorkspace.js](../src/state/useWorkspace.js));
+   the trustworthy view already exists as `reconcileAppliedToDays` ([src/state/configDiff.js](../src/state/configDiff.js)),
    and `updateDay({ configurationVersion })` bypasses the stored lists. Dropping the stored field and
    always deriving it removes the partition-maintenance burden. A data-model change — behavior-preserving
    but touches persisted shape, so coordinate with the persistence-migration item (#6).
 
-2. **Reconfig wizard UX for long studies.** In [ReconfigWizard.jsx](../../../../src/pages/DayEditor/ReconfigWizard.jsx),
+2. **Reconfig wizard UX for long studies.** In [ReconfigWizard.jsx](../src/pages/DayEditor/ReconfigWizard.jsx),
    add select-all / deselect-all controls and relative or human-readable day labels for animals with
    60–200+ days, plus an explicit success confirmation after apply-forward.
 
 3. **`Alt+←` / `Alt+→` shortcut chord vs. browser Back/Forward** on Windows/Linux. The handler
-   `preventDefault`s ([src/hooks/useGlobalShortcuts.js](../../../../src/hooks/useGlobalShortcuts.js)), so
+   `preventDefault`s ([src/hooks/useGlobalShortcuts.js](../src/hooks/useGlobalShortcuts.js)), so
    in-app it drives the stepper instead of navigating history. Consider `Alt+PageUp/PageDown` or
    `Alt+Shift+Arrow`, or add a platform note in the shortcuts help. Revisit with user feedback rather
    than pre-emptively.
 
 4. **Persisted-"Validated" indicator** in the Validation Summary table
-   ([src/pages/ValidationSummary/index.jsx](../../../../src/pages/ValidationSummary/index.jsx)) — visually
+   ([src/pages/ValidationSummary/index.jsx](../src/pages/ValidationSummary/index.jsx)) — visually
    distinguish a day whose `state.validated` is persisted from one that is merely live-valid. Partly
    redundant once the AnimalWorkspace per-day chips consume the same flag.
 
@@ -44,7 +41,7 @@ focus-trapped modal raises the stakes of keyboard/AT gaps in the enclosed conten
 out of scope for the cleanup pass and are tracked here.
 
 7. **CalendarDay grid is keyboard-unreachable when viewing a non-current month.**
-   [CalendarDay.jsx](../../../../src/components/CalendarDayCreator/CalendarDay.jsx) uses
+   [CalendarDay.jsx](../src/components/CalendarDayCreator/CalendarDay.jsx) uses
    `tabIndex={isToday ? 0 : -1}`, so once the user navigates to a month that does not contain
    "today", every day cell has `tabIndex=-1` and Tab skips the whole grid — and now that the
    calendar is a focus-trapped modal, a keyboard-only user cannot select an off-month date at all
@@ -52,12 +49,12 @@ out of scope for the cleanup pass and are tracked here.
    the first selectable cell of the displayed month when today is absent.
 
 8. **CalendarGrid presents all 42 day cells as a single `role="row"`.**
-   [CalendarGrid.jsx](../../../../src/components/CalendarDayCreator/CalendarGrid.jsx) wraps the 42
+   [CalendarGrid.jsx](../src/components/CalendarDayCreator/CalendarGrid.jsx) wraps the 42
    cells in one row under `role="grid"`; AT grid-navigation announces one row of 42 columns instead
    of 6 weeks × 7 days. Split into one `role="row"` per week (chunks of 7).
 
 9. **ChannelMapEditor empty-state instruction is a dead end.**
-   [ChannelMapEditor.jsx](../../../../src/pages/AnimalEditor/ChannelMapEditor.jsx) says "Please
+   [ChannelMapEditor.jsx](../src/pages/AnimalEditor/ChannelMapEditor.jsx) says "Please
    auto-generate channel maps first," but there is no auto-generate affordance; maps are generated
    implicitly when an electrode group is saved with a device type. Reword to point the user at the
    real action (close the editor, re-save the electrode group). Pre-existing copy, now shown in a
@@ -69,13 +66,37 @@ out of scope for the cleanup pass and are tracked here.
     tick (the only caller, the reconfig wizard) they agree, but two adds in the same tick would both
     return the same number while assigning sequential ones. Not reachable today; revisit if another
     caller batches snapshot creation. See
-    [useWorkspace.js](../../../../src/state/useWorkspace.js) `addConfigurationSnapshot`.
+    [useWorkspace.js](../src/state/useWorkspace.js) `addConfigurationSnapshot`.
 
 ## Release-gated
 
-6. **Persistence-blob forward migration.** [Phase 1](phase-1-persistence.md) versions the localStorage
+6. **Persistence-blob forward migration.** The persistence layer versions the localStorage
    blob and *discards with a notice* on `schemaVersion` mismatch — no migration. Acceptable for v3.0.0
    (no real v1 blobs exist yet), but once users have v1 blobs a future shape change would silently
    discard their saved work. Schedule a forward-migration path (transform old blobs forward instead of
    discarding) **before the first post-v3.0.0 change that touches the persisted shape** — including
    tech-debt item #1 above, which changes that shape.
+
+## From the pre-cutover UX audits (audit docs since removed)
+
+The Phase 10/11 pre-cutover audits were removed after their findings shipped in the Phase 11 polish
+merge (`2677482` and its predecessors). Cross-checked against that merge, these items had **no matching
+fix commit** and may still be open — verify against current code before actioning (the audits' F-04 /
+F-10 / F-11 / T8-2 / mobile-overflow items were closed there and are NOT repeated here):
+
+- **Human-readable `device_type` summaries (polish).** The probe identifiers in the electrode
+  device-type selector are opaque (e.g. `128c-4s8mm6cm-20um-40um-sl`). Add a human summary to the
+  options in [valueList.deviceTypes](../src/valueList.js) — carefully: the option *values* must stay
+  selector-stable (they key into the trodes_to_nwb probe-metadata filenames).
+- **Empty-state heading levels (polish).** A few empty-state headings still vary across the AnimalView
+  setup tabs; normalize the levels for consistent document structure.
+
+Design/future questions captured by the (removed) Phase-8.7 ownership spec — still unbuilt:
+
+- **Versioned data-acq ("approach B").** If a mid-study amplifier swap must be representable per-day
+  rather than flagged unsupported, the recording system needs per-day versioned snapshots — its own
+  export-affecting phase. Related to the dataset-tier question in
+  [scope-tiers-ia](../.claude/docs/plans/scope-tiers-ia/design-note.md).
+- **Richer batch-triage diff view.** Whether `#/validation` batch triage needs a comparison/diff view
+  beyond the row-scan contract (date/session, config version, cameras/calibration, opto, validation,
+  export eligibility, next action). Revisit with user feedback.

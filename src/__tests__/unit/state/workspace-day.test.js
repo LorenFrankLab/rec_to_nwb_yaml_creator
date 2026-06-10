@@ -11,7 +11,7 @@
  * - Day State: Draft/validated/exported workflow
  * - Day Deletion: Cleanup and parent updates
  *
- * @see docs/ANIMAL_WORKSPACE_DESIGN.md for data model
+ * @see src/state/workspaceTypes.js for the workspace data model
  */
 
 import { describe, it, expect } from 'vitest';

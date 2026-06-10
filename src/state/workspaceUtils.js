@@ -5,7 +5,7 @@
  * particularly the critical mergeDayMetadata function that combines animal defaults
  * with day-specific data to produce complete NWB metadata for YAML export.
  *
- * @see docs/ANIMAL_WORKSPACE_DESIGN.md §5 YAML Export Flow
+ * @see src/state/workspaceTypes.js for the workspace data model
  */
 
 import {

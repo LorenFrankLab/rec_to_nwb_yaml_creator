@@ -3,8 +3,6 @@
  *
  * Provides interactive calendar UI for creating multiple recording days at once.
  * Click individual dates to toggle selection, use Shift+Click for range selection.
- *
- * @see docs/CALENDAR_DAY_CREATION_DESIGN.md for full design
  */
 
 import { useState, useCallback, useId } from 'react';

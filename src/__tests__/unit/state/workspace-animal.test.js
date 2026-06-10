@@ -11,7 +11,7 @@
  * - Configuration History: Track probe reconfigurations
  * - Animal Deletion: Cleanup and cascade rules
  *
- * @see docs/ANIMAL_WORKSPACE_DESIGN.md for data model
+ * @see src/state/workspaceTypes.js for the workspace data model
  */
 
 import { describe, it, expect } from 'vitest';

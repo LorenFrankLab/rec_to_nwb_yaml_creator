@@ -15,7 +15,7 @@
  * - Configuration Versions: Correct probe config selected
  * - YAML Parity: Output matches legacy exporter
  *
- * @see docs/ANIMAL_WORKSPACE_DESIGN.md §5 YAML Export Flow
+ * @see src/state/workspaceUtils.js (mergeDayMetadata) for the export-merge flow
  */
 
 import { describe, it, expect } from 'vitest';

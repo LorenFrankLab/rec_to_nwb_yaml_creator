@@ -7,8 +7,7 @@
  * AnimalView). Selecting an animal navigates to the route rather than rendering inline, so the
  * pane has exactly one home.
  *
- * @see docs/ANIMAL_WORKSPACE_DESIGN.md for UI mockups
- * @see docs/animal_hierarchy.md for data model
+ * @see src/state/workspaceTypes.js for the workspace data model (typedefs)
  */
 
 import React, { useEffect, useState } from 'react';

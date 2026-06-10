@@ -1,9 +1,12 @@
 # Scope-tiers IA — design note (captured, NOT scheduled)
 
-**Status:** Discussion captured for later. **No implementation.** Written 2026-06-08 after the
-recording-system catalog work, prompted by the user's observations about channel maps, tasks, and
-cameras/DIO/opto scope. Revisit before committing to any of this — especially the dataset-level tier,
-which is a large architectural change.
+**Status:** Partially superseded. The data-entry-efficiency thread (carry-forward, duplicate/import
+days, day-owned bad channels, channel-maps split, hybrid tabbed Day Editor) **shipped** via the
+workspace-enhancements roadmap (merged `c044e8c`, 2026-06-09). What remains live here is the
+**dataset-level tier** and the **task-type catalog** — both still decision-gated and unbuilt; that is
+why this note is kept. Written 2026-06-08 after the recording-system catalog work, prompted by the
+user's observations about channel maps, tasks, and cameras/DIO/opto scope. Revisit before committing
+to the dataset tier — it is a large architectural change.
 
 ## The core idea: one question, not four
 
@@ -142,7 +145,7 @@ keys — that preserves legacy parity + the baselines.
 | Dataset tier | new route + `workspace.sharedHardware` + merge resolution | useWorkspace + **merge** | 🟡 Yes |
 | Import from existing | new importer (inverse of merge) + workspace entry | new `decomposeYaml` + createAnimal/Day | 🟢 No (round-trip parity) |
 
-See **[workspace-roadmap](../workspace-roadmap/PLAN.md)** for the phased build (incl. the YAML importer).
+The phased build (incl. the YAML importer) was specified as the **workspace-enhancements roadmap** and has since **shipped** — all phases merged to `modern` in `c044e8c` (2026-06-09). The plan doc itself was removed once complete.
 
 ## Data-entry efficiency (2026-06-08)
 
@@ -188,6 +191,9 @@ the hybrid tabbed editor (decided) + the dataset tier.
   Mockups: `mockup-dataset-tier.html`, `mockup-tabbed-day-editor-interactive.html`, `mockup-efficiency-patterns.html`.
 - 2026-06-08: Verified legacy↔workspace relationship (two independent stores, shared I/O+validation
   contract, `mergeDayMetadata` parity bridge, import legacy-only). Captured the architecture + the
-  merge-seam integration map above. Wrote the phased **[workspace-roadmap](../workspace-roadmap/PLAN.md)**
-  including a YAML **importer** (Phase C — round-trip byte-identical as the correctness gate). Nothing
-  built yet from the plan; awaiting a go on the first phase.
+  merge-seam integration map above. Wrote the phased **workspace-enhancements roadmap**
+  including a YAML **importer** (round-trip byte-identical as the correctness gate).
+- 2026-06-09: The roadmap **shipped** in full (carry-forward, duplicate/import days, day-owned bad
+  channels, channel-maps split, hybrid tabbed Day Editor) — merged in `c044e8c`. Still **unbuilt**
+  from this note: the **dataset tier** and the **task-type catalog** (both decision-gated; the reason
+  this note stays around).

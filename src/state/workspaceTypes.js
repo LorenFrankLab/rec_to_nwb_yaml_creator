@@ -4,12 +4,11 @@
  * This module defines the data structures for multi-animal, multi-day workspace management.
  * Types are defined using JSDoc for gradual type adoption without build system changes.
  *
- * Based on ANIMAL_WORKSPACE_DESIGN.md - implements the inheritance model where:
+ * This file is the source of truth for the workspace data model. It implements the
+ * inheritance model where:
  * - Animals hold shared metadata (subject, devices, experimenters)
  * - Days hold session-specific data (tasks, epochs, files)
- * - YAML export merges Animal defaults + Day specifics
- *
- * @see docs/ANIMAL_WORKSPACE_DESIGN.md for complete architecture
+ * - YAML export merges Animal defaults + Day specifics (see {@link module:state/workspaceUtils})
  */
 
 /**
