@@ -159,8 +159,12 @@
   border-color: var(--color-grey-400);
 }
 
-/* Validation summary */
-.validation-summary {
+/* Validation summary (LEGACY animal-creation form only).
+   SCOPED under `.animal-creation-form` so this error-box styling no longer matches the
+   WORKSPACE component `src/pages/ValidationSummary/` (which also uses `.validation-summary`).
+   Leaving it unscoped painted every per-animal "Validation & Export" panel error-pink even
+   when the animal was fully valid. The workspace component keeps its own neutral stylesheet. */
+.animal-creation-form .validation-summary {
   background-color: var(--color-error-light);
   border: 1px solid var(--color-error);
   border-radius: 4px;
@@ -168,18 +172,18 @@
   margin-bottom: var(--spacing-lg);
 }
 
-.validation-summary strong {
+.animal-creation-form .validation-summary strong {
   color: var(--color-error);
   display: block;
   margin-bottom: var(--spacing-xs);
 }
 
-.validation-summary ul {
+.animal-creation-form .validation-summary ul {
   margin: 0;
   padding-left: var(--spacing-lg);
 }
 
-.validation-summary a {
+.animal-creation-form .validation-summary a {
   color: var(--color-error);
   text-decoration: underline;
 }

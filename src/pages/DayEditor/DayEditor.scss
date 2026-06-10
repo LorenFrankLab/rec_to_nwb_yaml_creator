@@ -190,7 +190,11 @@
 
 .day-editor-pager-prev:disabled,
 .day-editor-pager-next:disabled {
-  opacity: 0.5;
+  /* Use an explicit muted color (≥3:1 against the button face) instead of opacity:0.5, which
+     dropped the text to ~2:1 on the grey button. Still reads as disabled. */
+  color: var(--color-grey-600);
+  background-color: var(--color-grey-100);
+  border-color: var(--color-grey-300);
   cursor: not-allowed;
 }
 
@@ -228,6 +232,14 @@
 
 .save-indicator .spinner {
   animation: spin 1s linear infinite;
+}
+
+/* WCAG 2.3.3: honor reduced-motion — stop the continuous rotation. The "Saving…" text stays
+   visible so the saving state is still communicated. */
+@media (prefers-reduced-motion: reduce) {
+  .save-indicator .spinner {
+    animation: none;
+  }
 }
 
 @keyframes spin {
