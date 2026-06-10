@@ -80,9 +80,12 @@ camera pattern: `animal.cameras` (catalog) + `day.cameras_used` (per-day referen
 
 **Dedup key = `task_name`** (the Spyglass dataset-unique identity; one `TaskType` per name). This is the
 *reason* for the catalog: Spyglass `common_task.py` raises on a duplicate `task_name` with a different
-`task_description`, so the catalog makes that divergence structurally impossible. A new **`task_name`
-uniqueness** validation rule is added in Phase 8 (one does **not** exist today — only the epoch-ownership
-rule `duplicateTaskEpochs` in `rulesValidation.js:~752` exists).
+`task_description`, so the catalog makes that divergence structurally impossible. An **existing**
+`divergent_task_identity` rule (`rulesValidation.js:~982`, via `identityDivergences`) already flags
+same-`task_name`/different-`task_description` on the *exported* `tasks[]`; Phase 8 adds a **catalog-level
+`task_name` uniqueness** rule on `taskTypes[]` that must **reconcile with — not duplicate or contradict —**
+`divergent_task_identity`. (The per-day epoch-ownership rule `duplicateTaskEpochs`,
+`rulesValidation.js:~752`, is unchanged.)
 
 **Migration (C2) — the dedup/conflict algorithm (specify exactly; do not let an executor guess):**
 
@@ -101,8 +104,11 @@ rule `duplicateTaskEpochs` in `rulesValidation.js:~752` exists).
 
 **Merge resolution (the C1-preserving bridge):** `mergeDayMetadata` resolves each `taskInstance` → an inline
 `tasks[]` entry `{ task_name, task_description, task_environment, camera_id, task_epochs }` (exactly
-`TASK_ORDER`, `workspaceUtils.js:44`) by looking up its `TaskType`. For a day whose instances reproduce its
-old inline tasks, the emitted YAML is byte-identical.
+`TASK_ORDER`, `workspaceUtils.js:44`) by looking up its `TaskType`. **Build that entry with ONLY those five
+keys** before it reaches `reorderKeys(t, TASK_ORDER)` (`workspaceUtils.js:~390`) — `reorderKeys` is
+*lossless* (it preserves keys outside the template, as the FsGUI path relies on), so a leaked internal key
+(`taskTypeId`/`id`) would be emitted and break C1. For a day whose instances reproduce its old inline tasks,
+the emitted YAML is byte-identical.
 
 **Camera reconciliation (the catalog's one new divergence risk):** `TaskType.camera_id` is animal-level, but
 cameras are filtered per day via `day.cameras_used`. Rule (Phase 8): a `TaskType.camera_id` that includes a

@@ -16,7 +16,7 @@ catalog back to today's inline `tasks[]`.
 - `src/state/workspaceTypes.ts` — `Animal`/`Day` interfaces to extend (typed in Phase 2).
 - `src/pages/AnimalEditor/CamerasSection.jsx` + `wiring/CamerasContainer.jsx` — the catalog UI pattern to mirror for task types.
 - `src/pages/DayEditor/TasksEpochsStep.jsx` etc. — the Phase 6 screen that now consumes the catalog (pick + order), via `DayEditorContext`.
-- `src/validation/rulesValidation.js` — has `duplicateTaskEpochs` (~`:752`); **no `task_name` uniqueness rule exists** — add it.
+- `src/validation/rulesValidation.js` — has `duplicateTaskEpochs` (~`:752`) and `divergent_task_identity` (`identityDivergences`, ~`:982`, flags same-name/different-description on the exported `tasks[]`); Phase 8 adds a **catalog-level** `task_name` uniqueness rule on `taskTypes[]` that **reconciles with** it.
 - `src/state/workspaceMigrations.js` (Phase 7) — register the v2→v3 migrator here.
 - `docs/PIPELINE_REQUIREMENTS.md` — the `nwbinspector --config dandi` / `dandi validate` commands for the integration check.
 
@@ -30,11 +30,11 @@ catalog back to today's inline `tasks[]`.
 
 - **Parity capture (first):** confirm `npx vitest run baselines` is green at HEAD — the golden fixtures are the correctness oracle for the merge change.
 - **Model:** extend `Animal` with `taskTypes: TaskType[]` and `Day` with ordered `taskInstances` ([C3](shared-contracts.md#c3)) in `workspaceTypes.ts`; add workspace actions (create/update/delete task type; set/order a day's instances) mirroring the camera-catalog actions. Update `store-public-api.test` for the new actions.
-- **Merge resolution:** in `mergeDayMetadata`, resolve each `taskInstance` → an inline `tasks[]` entry via its `TaskType`, emitting exactly `TASK_ORDER` (`:44`). **No new exported keys.**
+- **Merge resolution:** in `mergeDayMetadata`, resolve each `taskInstance` → an inline `tasks[]` entry via its `TaskType`, building the object with **only** the five `TASK_ORDER` keys (`:44`) before it reaches `reorderKeys` (`:~390`) — `reorderKeys` is *lossless*, so a leaked `taskTypeId`/`id` would be emitted and break C1. **No new exported keys.**
 - **Animal catalog UI:** a "Task Types" section in the Animal editor (mirror `CamerasSection`/`CamerasContainer`).
 - **Day UI:** in `TasksEpochsStep` (Phase 6 shell, via `DayEditorContext`), pick task types the day ran + order their epochs, with inline quick-add of a new type (writes to the animal catalog).
 - **Migrator (C2/C3):** register the v2→v3 migrator in `workspaceMigrations.js`; bump `WORKSPACE_SCHEMA_VERSION` to 3. Implement the **exact** date-ordered dedup-by-`task_name` algorithm from C3 (first-occurrence canonical; matching → reuse; conflicting → reference canonical + flag `task_definition_reconciled`). Non-destructive.
-- **Validation rules:** ADD `task_name` uniqueness (catalog-level — new); ADD `task_camera_not_used` (a `TaskType.camera_id` not in a referencing day's `cameras_used` → repairable issue); surface `task_definition_reconciled`; preserve `duplicateTaskEpochs`. A day referencing a deleted task type surfaces a repairable dangling-ref issue.
+- **Validation rules:** ADD a **catalog-level `task_name` uniqueness** rule on `taskTypes[]`, **reconciled with** the existing `divergent_task_identity` rule (`rulesValidation.js:~982`) so they don't duplicate or contradict each other; ADD `task_camera_not_used` (a `TaskType.camera_id` not in a referencing day's `cameras_used` → repairable issue); surface `task_definition_reconciled`; preserve `duplicateTaskEpochs`. A day referencing a deleted task type surfaces a repairable dangling-ref issue.
 - **Integration check (new code path):** golden baselines only prove *migrated* days are unchanged; a *freshly-authored* catalog day is a new path. Add a slow/integration task: build a YAML from a catalog-authored day, run `nwbinspector --config dandi` (zero CRITICAL) then `dandi validate` (exit 0) per `docs/PIPELINE_REQUIREMENTS.md`.
 - **a11y:** jest-axe zero violations on the Task Types catalog UI and the day pick/order UI.
 - **Documentation:** CHANGELOG (model change, export unchanged, schema bump + migration); user docs for the "define once, use per day" workflow; mark scope-tiers Thread 2 (task catalog) done in the design note.

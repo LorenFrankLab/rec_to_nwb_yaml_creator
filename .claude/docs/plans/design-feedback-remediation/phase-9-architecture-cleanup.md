@@ -14,7 +14,7 @@ tests stay green. Ships as two sub-PRs: **9a** logic, **9b** UI + gate (9b depen
 - `src/domain/validation.js` (~1142 LOC) — composes schema + rules + override checks + step routing; the split target. (Phase 5 already extracted `deviceOverrideMerge`.)
 - `src/pages/ValidationSummary/index.jsx` (~1033 LOC; `deriveChip` ~`:52`) and `src/pages/AnimalWorkspace/RecordingDaysTab.jsx` (~822 LOC) — decomposition targets.
 - `src/domain/__tests__/dayValidation.contract.test.js`, `src/state/__tests__/store-public-api.test.js`, `src/__tests__/architectureBoundaries.guard.test.js` — the contracts that must stay green.
-- `.github/workflows/test.yml` (~`:201`, `CI=false npm run build`) and `package.json` `"lint"` — the gate to re-arm; the ~275 ESLint warnings to clear.
+- `.github/workflows/test.yml` (~`:201`, `CI=false npm run build`; ~`:194` documents ~79 build-surface warnings) and `package.json` `"lint"` — the gate to re-arm. **Two different ESLint surfaces:** the CRA *build* (`react-app` config, ~79 warnings) is what `CI=true` gates; `npm run lint` (repo `.eslintrc`) reports 275 — broader, and good hygiene to clear, but not what gates the build.
 
 **Contracts referenced:**
 
@@ -33,7 +33,7 @@ tests stay green. Ships as two sub-PRs: **9a** logic, **9b** UI + gate (9b depen
 **9b — UI + build gate (one PR, depends on 9a):**
 
 - Decompose `ValidationSummary/index.jsx` (extract a `ValidationIssueList` + a focus hook) and `RecordingDaysTab.jsx` (extract list/sort/filter state) into sub-components; migrate their styles to CSS Modules (C4). No UI/behavior change.
-- **Re-arm the build gate:** clear the ~275 ESLint warnings (the deferred lint debt), flip `CI=false`→`CI=true` in `test.yml` so the build fails on lint errors, and ratchet stylelint from warn to **error** level. This is the research's #3 ROI item ("build catches drift again").
+- **Re-arm the build gate:** clear the **CRA build-surface** ESLint warnings (~79, the set emitted during `npm run build`), flip `CI=false`→`CI=true` in `test.yml` so the build fails on them, and ratchet stylelint from warn to **error** level. (Clearing the broader `npm run lint` set of 275 is good hygiene but only the build-surface set gates `CI=true`.) This is the research's #3 ROI item ("build catches drift again").
 
 - Documentation (both): CHANGELOG (refactor + gate, no behavior change); update [../../research/architecture-assessment.md](../../research/architecture-assessment.md) to reflect what's now done.
 
@@ -51,7 +51,7 @@ tests stay green. Ships as two sub-PRs: **9a** logic, **9b** UI + gate (9b depen
 | `dayValidation.contract.test` | passes unchanged after the `validation.js` split. |
 | `architectureBoundaries.guard.test` + `store-public-api.test` | pass unchanged. |
 | `npm run typecheck` | clean over newly-typed modules. |
-| `CI=true npm run build` | passes — **zero ESLint warnings** (the gate is now armed). |
+| `CI=true npm run build` | passes — **zero build-surface ESLint warnings** (the gate is now armed). |
 | `npm run lint:css` (error-level) | passes. |
 | `npx vitest run` (full) + `npm run test:e2e` | green. |
 

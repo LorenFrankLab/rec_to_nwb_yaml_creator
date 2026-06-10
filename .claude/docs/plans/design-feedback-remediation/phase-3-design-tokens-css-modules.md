@@ -9,8 +9,8 @@ the lab logo and keyboard-shortcuts trigger are occluded by the nav because thei
 **Inputs to read first:**
 
 - [src/index.css:100-143](../../../src/index.css) — `:root` tokens (color/grey/spacing/font/transition); extended here.
-- [src/index.css:26-27](../../../src/index.css) — `.primary-nav { position: relative; z-index: 1 }` (the occluding element).
-- `src/App.scss:22` — `.home-region` (logo + shortcuts trigger; `position: relative`, **no z-index**); desktop `position: fixed` ~`:573`; `.skip-link { z-index: 999 }` ~`:635`.
+- [src/index.css:25-27](../../../src/index.css) — `.primary-nav { position: relative; z-index: 1 }` (the occluding element).
+- `src/App.scss:20` — `.home-region` (logo + shortcuts trigger; `position: relative`, **no z-index**); desktop `position: fixed` ~`:573`; `.skip-link { z-index: 999 }` ~`:635`.
 - `src/layouts/AppLayout.jsx:248` (`.home-region`) vs `:282` (`.primary-nav`) — confirm they are DOM siblings (the stacking premise) and locate the logo `<img>` + `.shortcuts-trigger` button.
 - `src/components/Modal/Modal.scss` (`.modal-overlay { z-index: 1000 }`) and `src/components/AlertModal.scss` — top of the current ad-hoc stack.
 
