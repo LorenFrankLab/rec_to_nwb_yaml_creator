@@ -97,6 +97,21 @@ describe('ValidationSummary', () => {
     expect(within(validRow).getByText(/no optogenetics/i)).toBeInTheDocument();
   });
 
+  it('shows each day-used camera calibration (name + meters_per_pixel) in the scan', () => {
+    const { workspace, ids } = makeSummaryWorkspace();
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+
+    // A re-calibrated camera (changed meters_per_pixel) must be visible during catch-up triage,
+    // not hidden behind a bare camera count. The realistic fixture's first camera is
+    // "overhead_camera" at 0.00085 m/px — its name AND value must appear in the scan cell.
+    const validRow = screen.getByTestId(`day-row-${ids.validDayId}`);
+    const scan = within(validRow).getByText(/config v\d/i);
+    expect(scan).toHaveTextContent(/overhead_camera/);
+    expect(scan).toHaveTextContent(/0\.00085/);
+  });
+
   it('counts reflect chip breakdown', () => {
     const { workspace } = makeSummaryWorkspace();
     provideStore(workspace);

@@ -58,6 +58,33 @@ function deriveChip(stepStatus) {
 
 const CHIP_LABEL = { valid: 'Valid', error: 'Error', incomplete: 'Incomplete' };
 
+// How many cameras to spell out by name + calibration before collapsing the rest into "+K more".
+// Keeps the scan cell readable on a many-camera day without hiding that recalibration happened.
+const CAMERA_CALIBRATION_LIMIT = 3;
+
+/**
+ * A concise "name meters_per_pixel m/px" summary of the day-used cameras, so a re-calibrated camera
+ * (changed `meters_per_pixel`) is visible during catch-up triage instead of being hidden behind a
+ * bare camera count. Truncates gracefully after a few cameras (`+K more`). Returns '' when the day
+ * uses no cameras (the count text already conveys "0 cameras").
+ *
+ * @param {Array<object>} cameras - The day-used cameras (the SAME set the scan count is derived
+ *   from — `merged.cameras`).
+ * @returns {string}
+ */
+function describeCameraCalibration(cameras) {
+  const list = Array.isArray(cameras) ? cameras : [];
+  if (list.length === 0) return '';
+  const shown = list.slice(0, CAMERA_CALIBRATION_LIMIT).map((cam) => {
+    const name = cam?.camera_name || `camera ${cam?.id ?? '?'}`;
+    const mpp = cam?.meters_per_pixel;
+    return mpp == null ? `${name} (no calibration)` : `${name} ${mpp} m/px`;
+  });
+  const remaining = list.length - shown.length;
+  if (remaining > 0) shown.push(`+${remaining} more`);
+  return shown.join(', ');
+}
+
 /**
  * True only for plain object records — not null, not an array, not a primitive.
  *
@@ -165,6 +192,9 @@ export function buildRows(workspace) {
         version: workflow.configurationVersion,
         historical: workflow.isHistoricalConfiguration,
         cameras: (merged.cameras || []).length,
+        // Day-used camera calibration (name + meters_per_pixel) from the SAME camera set the count
+        // is derived from, so a re-calibrated camera is visible without opening the editor.
+        cameraCalibration: describeCameraCalibration(merged.cameras),
         opto: describeDayOptoState(merged).label,
       };
       rows.push({ animal, animalKey, day: record, chip, status, orphaned, scan });
@@ -853,6 +883,13 @@ export function ValidationSummary({ animalKey } = {}) {
                             {datedConfigContext(animal, scan.version, scan.historical)}
                             {' · '}
                             {scan.cameras} {scan.cameras === 1 ? 'camera' : 'cameras'}
+                            {scan.cameraCalibration && (
+                              <span className="validation-summary-scan-cameras">
+                                {' ('}
+                                {scan.cameraCalibration}
+                                {')'}
+                              </span>
+                            )}
                             {' · '}
                             {scan.opto}
                           </summary>
@@ -864,6 +901,13 @@ export function ValidationSummary({ animalKey } = {}) {
                           {scan.historical ? ' (historical)' : ''}
                           {' · '}
                           {scan.cameras} {scan.cameras === 1 ? 'camera' : 'cameras'}
+                          {scan.cameraCalibration && (
+                            <span className="validation-summary-scan-cameras">
+                              {' ('}
+                              {scan.cameraCalibration}
+                              {')'}
+                            </span>
+                          )}
                           {' · '}
                           {scan.opto}
                         </span>

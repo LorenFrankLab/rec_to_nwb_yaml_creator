@@ -201,6 +201,12 @@
   color: #555;
 }
 
+/* Per-camera calibration (name + meters_per_pixel) — muted further so it reads as a detail
+   of the camera count, not a competing primary value. */
+.validation-summary-scan-cameras {
+  color: #777;
+}
+
 /* Phase 3-5: per-animal Validation & Export tab. The scoped header replaces the page h1; the
    Setup cell becomes an expander whose body is the read-only effective-setup-for-this-day review. */
 .validation-summary--scoped {
