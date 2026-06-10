@@ -21,7 +21,7 @@ import { useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
-import { getAnimalSubject, getConfigHistory } from '../../state/workspaceSelectors';
+import { getAnimalSubject } from '../../state/workspaceSelectors';
 import EffectiveDayReview from './EffectiveDayReview';
 import { computeStepStatus, validateDay } from '../../domain/validation';
 import { getDayWorkflowStatus } from '../../domain/workflowStatus';
@@ -232,21 +232,20 @@ const subjectLabel = (animal) => {
 };
 
 /**
- * Human-readable dated config context for a day's pinned configuration version (Task 3.4 — the
- * validation-slice legibility), e.g. "config from 2023-06-01 (historical — v1)" instead of a bare
- * "v1". Falls back to the bare version when the snapshot has no date (corrupt/old history).
+ * The single, unified config-version label used EVERYWHERE this surface names a day's pinned
+ * configuration version — the cross-animal batch table, the per-animal Validation & Export scan,
+ * and the batch-export preflight — so they can never drift (they previously read "config v1" vs
+ * "config from <date>", and neither said whether the version was the latest or a historical pin).
  *
- * @param {object} animal - The owning animal (its `configurationHistory` supplies the version date).
+ * Always states the version AND a latest/historical marker, e.g. `config v1 (latest)` /
+ * `config v2 (historical)`.
+ *
  * @param {number|null} version - The pinned configuration version.
- * @param {boolean} historical - Whether that version is not the animal's latest.
+ * @param {boolean} historical - Whether that version is NOT the animal's latest.
  * @returns {string}
  */
-function datedConfigContext(animal, version, historical) {
-  const snapshot = getConfigHistory(animal).find((s) => s.version === version);
-  if (snapshot?.date) {
-    return `config from ${snapshot.date}${historical ? ` (historical — v${version})` : ''}`;
-  }
-  return `config v${version ?? '—'}${historical ? ' (historical)' : ''}`;
+function describeConfigVersionLabel(version, historical) {
+  return `config v${version ?? '—'} (${historical ? 'historical' : 'latest'})`;
 }
 
 /**
@@ -734,8 +733,7 @@ export function ValidationSummary({ animalKey } = {}) {
                       </span>
                     ) : (
                       <span className="batch-export-preflight-detail">
-                        config v{entry.version ?? '—'}
-                        {entry.historical ? ' (historical)' : ''}; {entry.groups}{' '}
+                        {describeConfigVersionLabel(entry.version, entry.historical)}; {entry.groups}{' '}
                         electrode {entry.groups === 1 ? 'group' : 'groups'}, {entry.failedChannels}{' '}
                         failed {entry.failedChannels === 1 ? 'channel' : 'channels'}; {entry.cameras}{' '}
                         {entry.cameras === 1 ? 'camera' : 'cameras'}; {entry.opto}
@@ -880,7 +878,7 @@ export function ValidationSummary({ animalKey } = {}) {
                       scoped ? (
                         <details className="validation-summary-effective" data-testid={`effective-${day.id}`}>
                           <summary className="validation-summary-scan">
-                            {datedConfigContext(animal, scan.version, scan.historical)}
+                            {describeConfigVersionLabel(scan.version, scan.historical)}
                             {' · '}
                             {scan.cameras} {scan.cameras === 1 ? 'camera' : 'cameras'}
                             {scan.cameraCalibration && (
@@ -897,8 +895,7 @@ export function ValidationSummary({ animalKey } = {}) {
                         </details>
                       ) : (
                         <span className="validation-summary-scan">
-                          config v{scan.version ?? '—'}
-                          {scan.historical ? ' (historical)' : ''}
+                          {describeConfigVersionLabel(scan.version, scan.historical)}
                           {' · '}
                           {scan.cameras} {scan.cameras === 1 ? 'camera' : 'cameras'}
                           {scan.cameraCalibration && (

@@ -112,6 +112,46 @@ describe('ValidationSummary', () => {
     expect(scan).toHaveTextContent(/0\.00085/);
   });
 
+  it('labels the config version with a latest/historical marker on the cross-animal batch table', () => {
+    const { workspace, ids } = makeSummaryWorkspace();
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+
+    // The realistic fixture pins the day to its only (latest) configuration version.
+    const validRow = screen.getByTestId(`day-row-${ids.validDayId}`);
+    expect(within(validRow).getByText(/config v1 \(latest\)/i)).toBeInTheDocument();
+  });
+
+  it('uses the SAME version label (with latest/historical marker) on the per-animal scan', () => {
+    const { workspace, ids } = makeSummaryWorkspace();
+    provideStore(workspace);
+
+    render(<ValidationSummary animalKey="remy" />);
+
+    // The per-animal Validation & Export tab must read the same unified label, not "config from <date>".
+    const validRow = screen.getByTestId(`day-row-${ids.validDayId}`);
+    expect(within(validRow).getByText(/config v1 \(latest\)/i)).toBeInTheDocument();
+    expect(within(validRow).queryByText(/config from/i)).not.toBeInTheDocument();
+  });
+
+  it('marks a pinned historical configuration version as (historical) on both surfaces', () => {
+    const { workspace, ids } = makeSummaryWorkspace();
+    // Add a newer configuration version and pin the valid day to the older (historical) one.
+    const remy = workspace.animals.remy;
+    remy.configurationHistory = [
+      ...remy.configurationHistory,
+      { ...structuredClone(remy.configurationHistory[0]), version: 2, date: '2023-07-01' },
+    ];
+    workspace.days[ids.validDayId].configurationVersion = 1;
+    provideStore(workspace);
+
+    render(<ValidationSummary animalKey="remy" />);
+
+    const validRow = screen.getByTestId(`day-row-${ids.validDayId}`);
+    expect(within(validRow).getByText(/config v1 \(historical\)/i)).toBeInTheDocument();
+  });
+
   it('counts reflect chip breakdown', () => {
     const { workspace } = makeSummaryWorkspace();
     provideStore(workspace);
