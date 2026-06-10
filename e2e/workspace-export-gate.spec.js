@@ -152,7 +152,7 @@ test.describe('Fail-closed export gate + repair navigation', () => {
     await expect(noDownload).rejects.toThrow();
   });
 
-  test('per-animal "Export Valid Only" excludes the error day and downloads nothing', async ({
+  test('per-animal "Export Valid Only" is disabled (with a reason) when the only day is in error (F-08)', async ({
     page,
   }) => {
     await seedAndOpen(page, buildInvalidCameraBlob(), `/#/animal/${ANIMAL_ID}/export`);
@@ -164,20 +164,18 @@ test.describe('Fail-closed export gate + repair navigation', () => {
     await expect(page.getByText('0 valid')).toBeVisible();
     await expect(page.getByText('1 with errors')).toBeVisible();
 
-    // Attempt the batch export. With the only day in error, NOTHING is exportable: the batch
-    // path reports it skipped (no preflight, no Confirm export) and emits no download.
-    const noDownload = page.waitForEvent('download', { timeout: NO_DOWNLOAD_TIMEOUT_MS });
-    await page.getByRole('button', { name: 'Export Valid Only' }).click();
+    // With 0 valid days AND an error day, "Export Valid Only" is inert/misleading — so it is
+    // DISABLED with an accessible reason rather than reporting "Exported 0 files" on click.
+    const exportButton = page.getByRole('button', { name: 'Export Valid Only' });
+    await expect(exportButton).toBeDisabled();
+    await expect(page.getByText(/No valid days to export — fix errors first/)).toBeVisible();
 
-    // No batch-preflight confirm step is offered (there is nothing to confirm).
+    // No preflight, and a forced click still produces no download.
     await expect(
       page.getByRole('region', { name: 'Batch export preflight' }),
     ).toHaveCount(0);
-    // The user is told why nothing exported — the error day was excluded.
-    await expect(
-      page.getByText(/No days are ready to export\. Fix errors/),
-    ).toBeVisible();
-
+    const noDownload = page.waitForEvent('download', { timeout: NO_DOWNLOAD_TIMEOUT_MS });
+    await exportButton.click({ force: true });
     await expect(noDownload).rejects.toThrow();
   });
 

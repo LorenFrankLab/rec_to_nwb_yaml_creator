@@ -215,7 +215,12 @@ describe('AnimalView — not-found guard (Task 1.5)', () => {
   it('shows "Animal not found" when the id is absent but other animals exist', () => {
     renderView('days', { animalId: 'ghost', animals: { remy } });
     expect(screen.getByRole('heading', { name: /animal not found/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /back to workspace/i })).toHaveAttribute('href', '#/workspace');
+    const back = screen.getByRole('link', { name: /back to workspace/i });
+    expect(back).toHaveAttribute('href', '#/workspace');
+    // F-06b: the escape is a prominent styled action (matching the Day Editor's ErrorState), not a
+    // bare inline link buried in a sentence — and it stays keyboard-reachable.
+    expect(back).toHaveClass('error-state-action');
+    expect(back.closest('p')).toBeNull();
   });
 
   it('shows "Animal not found" (never a perpetual "Loading…") for an empty workspace', () => {

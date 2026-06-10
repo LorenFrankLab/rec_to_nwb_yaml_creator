@@ -591,6 +591,14 @@ export function ValidationSummary({ animalKey } = {}) {
 
   const hasDays = rows.length > 0;
 
+  // F-08: when nothing is exportable (no valid days) BUT there are days with errors, "Export Valid
+  // Only" would be inert — one click reports "Exported 0 files" with no fix path. Disable it with an
+  // accessible reason instead, so the affordance doesn't mislead. (With 0 valid and only INCOMPLETE
+  // days — no errors — the button stays enabled: clicking gives the "complete the required fields"
+  // guidance, which is the right next step there.)
+  const exportValidDisabled = counts.valid === 0 && counts.error > 0;
+  const exportValidDisabledReason = 'No valid days to export — fix errors first.';
+
   // Scoped (embedded in AnimalView) renders a section + a scoped header — NOT a second
   // `<main id="main-content">` (AnimalView owns the page landmark) and NOT the page-level h1.
   const Wrapper = scoped ? 'section' : 'main';
@@ -650,10 +658,26 @@ export function ValidationSummary({ animalKey } = {}) {
             <button
               type="button"
               onClick={handleExportValidOnly}
-              title="Download YAML for every valid day that is part of an animal's day list. Days with errors or incomplete fields are not exported; recovered days not in the list must be re-linked first."
+              disabled={exportValidDisabled}
+              aria-describedby={exportValidDisabled ? 'export-valid-disabled-reason' : undefined}
+              title={
+                exportValidDisabled
+                  ? exportValidDisabledReason
+                  : "Download YAML for every valid day that is part of an animal's day list. Days with errors or incomplete fields are not exported; recovered days not in the list must be re-linked first."
+              }
             >
               Export Valid Only
             </button>
+            {exportValidDisabled && (
+              // Accessible disabled reason: a disabled control is not announced on hover by SRs, so
+              // pair it with a visible, programmatically-associated explanation (aria-describedby).
+              <p
+                id="export-valid-disabled-reason"
+                className="validation-summary-hint validation-summary-disabled-reason"
+              >
+                {exportValidDisabledReason}
+              </p>
+            )}
           </div>
 
           <p className="validation-summary-hint">

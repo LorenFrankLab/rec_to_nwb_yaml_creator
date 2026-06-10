@@ -350,19 +350,54 @@ describe('ValidationSummary', () => {
 
   it('Export Valid Only: no valid days short-circuits with a helpful message and no downloads', async () => {
     const user = userEvent.setup();
-    // Keep only the error + incomplete days (drop the valid one).
+    // 0 valid with only INCOMPLETE days (no errors): the button STAYS enabled and a click yields the
+    // helpful guidance. Scope to remy and drop its valid day so only the incomplete day remains —
+    // keeping the global error day (totoro's) out would otherwise DISABLE the button (F-08).
     const { workspace, ids } = makeSummaryWorkspace();
     delete workspace.days[ids.validDayId];
     workspace.animals.remy.days = [ids.incompleteDayId];
     provideStore(workspace);
 
-    render(<ValidationSummary />);
+    render(<ValidationSummary animalKey="remy" />);
 
-    await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    const button = screen.getByRole('button', { name: /export valid only/i });
+    expect(button).toBeEnabled();
+    await user.click(button);
 
     expect(checkShadowExport).not.toHaveBeenCalled();
     expect(downloadYamlFile).not.toHaveBeenCalled();
     expect(screen.getByRole('status')).toHaveTextContent(/no days are ready to export/i);
+  });
+
+  it('Export Valid Only is DISABLED with an accessible reason when 0 days are valid and some have errors (F-08)', () => {
+    // Keep only the error day (drop valid + incomplete) → counts.valid === 0, counts.error > 0.
+    const { workspace, ids } = makeSummaryWorkspace();
+    delete workspace.days[ids.validDayId];
+    delete workspace.days[ids.incompleteDayId];
+    workspace.animals.remy.days = [ids.errorDayId];
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+
+    const button = screen.getByRole('button', { name: /export valid only/i });
+    expect(button).toBeDisabled();
+    // The disabled reason is programmatically associated (not just a hover title).
+    const reasonId = button.getAttribute('aria-describedby');
+    expect(reasonId).toBeTruthy();
+    expect(document.getElementById(reasonId)).toHaveTextContent(/no valid days to export — fix errors first/i);
+  });
+
+  it('Export Valid Only stays ENABLED when 0 valid but only INCOMPLETE days (no errors) (F-08)', () => {
+    // Scope to remy and keep only its incomplete day: 0 valid, 0 error → not the disable case.
+    const { workspace, ids } = makeSummaryWorkspace();
+    delete workspace.days[ids.validDayId];
+    workspace.animals.remy.days = [ids.incompleteDayId];
+    provideStore(workspace);
+
+    render(<ValidationSummary animalKey="remy" />);
+
+    // No errors block here — the button stays enabled (a click yields the "complete fields" guidance).
+    expect(screen.getByRole('button', { name: /export valid only/i })).toBeEnabled();
   });
 
   it('Export Valid Only shows a per-day preflight (config version + contents) before downloading', async () => {

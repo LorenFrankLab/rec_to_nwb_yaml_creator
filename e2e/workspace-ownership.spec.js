@@ -42,7 +42,8 @@ import {
  * @type {Record<string,string>}
  */
 const TAB_SCOPE = {
-  'electrode-groups': 'Versioned identity — a change here forks a configuration version.',
+  'electrode-groups':
+    'Shared across all recording days — a hardware change starts a new version (with an audit trail).',
   'recording-system': 'Animal-wide catalog — each recording day uses one.',
   cameras: 'Catalog — referenced per day.',
 };
@@ -72,15 +73,15 @@ test.describe('Ownership & discoverability — AnimalView header + section-nav +
     await resetWorkspace(page);
   });
 
-  test('header band shows the animal identity (name, subject_id badge, species · sex) and a ⋮ menu', async ({
+  test('header band shows the animal identity (name, animal ID badge, species · sex) and a ⋮ menu', async ({
     page,
   }) => {
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/animal/${ANIMAL_ID}/days`);
 
     // The animal name is the page h1.
     await expect(page.getByRole('heading', { level: 1, name: ANIMAL_ID })).toBeVisible();
-    // A subject_id badge + the species · sex facts identify whose data this is (ownership cue).
-    await expect(page.getByText('subject_id', { exact: true })).toBeVisible();
+    // An "animal ID" badge + the species · sex facts identify whose data this is (ownership cue).
+    await expect(page.getByText('animal ID', { exact: true })).toBeVisible();
     await expect(page.getByText('Rattus norvegicus · M')).toBeVisible();
     // The per-animal lifecycle ⋮ is present (its menu is exercised in the lifecycle spec).
     await expect(page.getByRole('button', { name: `Actions for ${ANIMAL_ID}` })).toBeVisible();
@@ -300,7 +301,7 @@ test.describe('Section-nav: navigation, focus, and route guards (the jsdom-can\'
     // Not a perpetual "Loading…" — a real, escapable not-found.
     await expect(page.getByRole('heading', { level: 1, name: 'Animal not found' })).toBeVisible();
     await expect(page.getByText(/No animal “ghost” in this workspace/)).toBeVisible();
-    const back = page.getByRole('link', { name: 'Back to Workspace' });
+    const back = page.getByRole('link', { name: /Back to Workspace/ });
     await expect(back).toHaveAttribute('href', '#/workspace');
   });
 });

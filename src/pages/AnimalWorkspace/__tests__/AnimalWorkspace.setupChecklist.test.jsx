@@ -57,13 +57,26 @@ const configuredAnimal = {
 // covers the SEPARATE "Review existing data" state, which is unchanged by that reframe.
 
 describe('AnimalWorkspace existing-data review state', () => {
-  it('shows a review state when the animal has recording days', async () => {
+  it('does NOT show a review state for a clean established animal with recording days (F-07)', async () => {
+    // A clean animal with a present, non-corrupt recording day has nothing to review — the banner
+    // must not linger and compete with "Add Recording Days" forever after the first day.
     const animal = { ...newAnimal, days: ['newbie-2024-01-02'] };
     const days = { 'newbie-2024-01-02': { id: 'newbie-2024-01-02', date: '2024-01-02', session: { session_id: 's' }, state: {} } };
     renderPane('newbie', { newbie: animal }, days);
-    const review = screen.getByRole('region', { name: /existing data review/i });
-    expect(within(review).getByText(/found 1 recording day/i)).toBeInTheDocument();
-    expect(within(review).getByText(/review electrodes and cameras before exporting/i)).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: /existing data review/i })).not.toBeInTheDocument();
+  });
+
+  it('shows the review state for an established animal that ALSO has an orphan day (F-07)', async () => {
+    // A clean OK day plus a recovered-unlinked (orphan) day: there IS something to review, so the
+    // banner shows even though the animal is established.
+    const animal = { ...newAnimal, days: ['newbie-2024-01-02'] };
+    const days = {
+      'newbie-2024-01-02': { id: 'newbie-2024-01-02', animalId: 'newbie', date: '2024-01-02', session: { session_id: 's' }, state: {} },
+      // Orphan: a real record owned by newbie but NOT listed in its day index.
+      'newbie-2024-02-02': { id: 'newbie-2024-02-02', animalId: 'newbie', date: '2024-02-02', session: { session_id: 's2' }, state: {} },
+    };
+    renderPane('newbie', { newbie: animal }, days);
+    expect(screen.getByRole('region', { name: /existing data review/i })).toBeInTheDocument();
   });
 
   it('surfaces corrupt recovered data via the shared RawCorruptionBanner (executable reset)', async () => {
