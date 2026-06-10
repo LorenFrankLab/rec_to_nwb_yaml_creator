@@ -185,7 +185,7 @@ describe('Keyboard Navigation Accessibility', () => {
 
       // Keyboard-advance the stepper from Overview to Devices (Alt+ArrowRight).
       fireEvent.keyDown(document.body, { key: 'ArrowRight', altKey: true });
-      await screen.findByRole('heading', { name: /devices configuration/i });
+      await screen.findByRole('heading', { name: /setup & failed channels/i });
 
       // Each electrode group is a native <details><summary> disclosure — nested,
       // keyboard-focusable, and operable. Focus the first and toggle it open.

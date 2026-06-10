@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 import { repairTargetForIssue, STEP_LABELS } from '../../domain/validation';
 import { groupIssuesByWorkflowCategory } from '../../domain/workflowCategories';
+import { humanizeValidationMessage } from '../../domain/humanizeValidationMessage';
 import IssueOwnershipHint from './IssueOwnershipHint';
 
 // Re-export STEP_LABELS so existing importers (ValidationStep) keep working while the
@@ -97,7 +98,9 @@ export default function RepairActions({ issues, onNavigate, animalId, onRepair, 
     }
     return (
       <li key={`${keyPrefix}${issue.path}-${issue.code}-${index}`} className="repair-action-item">
-        <span className="repair-action-message">{issue.message}</span>
+        {/* Humanize for display only — the underlying issue.message stays raw so message-parsing
+            consumers (e.g. ImportYamlDialog remediationHint) are unaffected. */}
+        <span className="repair-action-message">{humanizeValidationMessage(issue.message)}</span>
         <IssueOwnershipHint issue={issue} />
         {showButton && (
           <RepairActionButton issue={issue} onNavigate={onNavigate} animalId={animalId} onRepair={onRepair} />

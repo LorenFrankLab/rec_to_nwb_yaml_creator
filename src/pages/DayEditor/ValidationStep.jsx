@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { validateDay, computeStepStatus } from '../../domain/validation';
 import { isExportEnabled, exportBlockReason } from '../../domain/stepGate';
 import { groupIssuesByWorkflowCategory } from '../../domain/workflowCategories';
+import { humanizeValidationMessage } from '../../domain/humanizeValidationMessage';
 import { RepairActionButton, isRepairable, repairButtonKey } from './RepairActions';
 import IssueOwnershipHint from './IssueOwnershipHint';
 import './DayEditor.scss';
@@ -150,7 +151,8 @@ function SeveritySection({ title, severity, issues, onNavigate, animalId, onRepa
               }
               return (
                 <li key={`${issue.path}-${issue.code}-${index}`} className="validation-issue">
-                  <span className="validation-issue-message">{issue.message}</span>
+                  {/* Display-only humanization; issue.message stays raw for parsers. */}
+                  <span className="validation-issue-message">{humanizeValidationMessage(issue.message)}</span>
                   {issue.path && <code className="validation-issue-path">{issue.path}</code>}
                   {/* Ownership hint only on export-blocking errors — the same gate as the repair
                       button. A non-blocking warning/info already carries its own specific advice;

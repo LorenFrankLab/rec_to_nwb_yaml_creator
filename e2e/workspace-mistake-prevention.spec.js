@@ -176,7 +176,7 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     await page
       .getByRole('button', { name: 'Load saved electrode configuration' })
       .click();
-    await expect(page.getByRole('heading', { level: 2, name: 'Electrodes & Ephys' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Electrode Groups' })).toBeVisible();
 
     // Open electrode group 0 for editing.
     await page

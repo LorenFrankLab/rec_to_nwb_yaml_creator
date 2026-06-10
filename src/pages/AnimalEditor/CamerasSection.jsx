@@ -170,7 +170,7 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
             <th>Manufacturer</th>
             <th>Model</th>
             <th>Lens</th>
-            <th>Meters/Pixel</th>
+            <th>Meters per Pixel</th>
             <th>Status</th>
             <th>Actions</th>
           </tr>
@@ -183,7 +183,7 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
               <td data-label="Manufacturer">{camera.manufacturer || ''}</td>
               <td data-label="Model">{camera.model || ''}</td>
               <td data-label="Lens">{camera.lens || ''}</td>
-              <td data-label="Meters/Pixel">{camera.meters_per_pixel}</td>
+              <td data-label="Meters per Pixel">{camera.meters_per_pixel}</td>
               <td data-label="Status">
                 {(() => {
                   const status = getStatus(camera);
@@ -204,6 +204,7 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
                 <button
                   className="button-small"
                   onClick={() => handleEditClick(camera.id)}
+                  aria-label={`Edit camera ${camera.id}`}
                 >
                   Edit
                 </button>

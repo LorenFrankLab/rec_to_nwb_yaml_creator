@@ -83,7 +83,7 @@ describe('CamerasContainer — identity safety', () => {
     };
     renderSeeded({ animals: { remy }, days: {} }, remy, onFieldUpdate);
 
-    await user.click(screen.getByRole('button', { name: /^edit$/i }));
+    await user.click(screen.getByRole('button', { name: /^edit camera/i }));
     const metersPerPixel = screen.getByLabelText(/meters per pixel/i);
     await user.clear(metersPerPixel);
     await user.type(metersPerPixel, '0.002');
@@ -104,7 +104,7 @@ describe('CamerasContainer — identity safety', () => {
     };
     renderSeeded({ animals: { remy }, days: {} }, remy, onFieldUpdate);
 
-    await user.click(screen.getByRole('button', { name: /^edit$/i }));
+    await user.click(screen.getByRole('button', { name: /^edit camera/i }));
     const name = screen.getByLabelText(/^camera name$/i);
     await user.clear(name);
     await user.type(name, 'overhead_zoomed');
@@ -137,7 +137,7 @@ describe('CamerasContainer — immutable-once-referenced cameras', () => {
    * @param {object} user - userEvent session.
    */
   async function editReferencedCamera(user) {
-    await user.click(screen.getByRole('button', { name: /^edit$/i }));
+    await user.click(screen.getByRole('button', { name: /^edit camera/i }));
     const name = screen.getByLabelText(/^camera name$/i);
     await user.clear(name);
     await user.type(name, 'overhead_zoomed');

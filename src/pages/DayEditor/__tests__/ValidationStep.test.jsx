@@ -28,7 +28,9 @@ describe('ValidationStep', () => {
     expect(screen.getByRole('heading', { name: /warning/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /info/i })).toBeInTheDocument();
 
-    expect(screen.getByText('session_id is required')).toBeInTheDocument();
+    // Displayed message is humanized (leading snake_case field token sentence-cased);
+    // the underlying issue.message stays raw ('session_id is required').
+    expect(screen.getByText('Session id is required')).toBeInTheDocument();
     expect(screen.getByText('epochs overlap')).toBeInTheDocument();
     expect(screen.getByText('no cameras defined')).toBeInTheDocument();
 
@@ -170,9 +172,11 @@ describe('ValidationStep', () => {
 
     render(<ValidationStep animal={animal} day={day} mergedDay={mergedDay} />);
 
-    expect(
-      screen.getByText(/must have required property 'lab'/i)
-    ).toBeInTheDocument();
+    // The raw AJV "must have required property 'lab'" is humanized at the display layer
+    // (generic snake_case fallback) — "lab" → "Lab is required". The underlying validate()
+    // issue.message is still the raw AJV text.
+    expect(screen.getByText('Lab is required')).toBeInTheDocument();
+    expect(screen.queryByText(/must have required property/i)).not.toBeInTheDocument();
     expect(screen.getByText(/blocked/i)).toBeInTheDocument();
   });
 });

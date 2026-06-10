@@ -223,7 +223,7 @@ describe('DevicesStep', () => {
       />
     );
 
-    expect(screen.getByRole('heading', { name: /devices configuration/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /setup & failed channels/i })).toBeInTheDocument();
   });
 
   it('renders with integer IDs without PropType warnings', () => {
@@ -540,7 +540,7 @@ describe('DevicesStep', () => {
     );
 
     // Should render without errors
-    expect(screen.getByRole('heading', { name: /devices configuration/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /setup & failed channels/i })).toBeInTheDocument();
   });
 
   it('allows multiple groups to be expanded simultaneously', async () => {
@@ -610,7 +610,7 @@ describe('DevicesStep', () => {
     );
 
     // Should still render without crashing
-    expect(screen.getByRole('heading', { name: /devices configuration/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /setup & failed channels/i })).toBeInTheDocument();
     // Check that error message is present (multiple groups show this error)
     const errorMessages = screen.getAllByText(/no channel mapping found/i);
     expect(errorMessages.length).toBeGreaterThan(0);

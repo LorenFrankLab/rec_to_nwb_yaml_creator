@@ -144,6 +144,27 @@ describe('ExportStep', () => {
     expect(downloadSpy).not.toHaveBeenCalled();
   });
 
+  it('humanizes raw AJV required-property jargon in the export-blocked issue list (display only)', () => {
+    // S1 audit finding: the export-blocked state must not show raw "must have required
+    // property 'X'" jargon. Force a required-field error and assert the blocked list shows a
+    // friendly sentence — while validate() still emits the raw, parseable message.
+    vi.spyOn(validationModule, 'validate').mockReturnValue([
+      {
+        severity: 'error',
+        path: 'data_acq_device',
+        code: 'required',
+        message: "must have required property 'data_acq_device'",
+      },
+    ]);
+    const { animal, day } = buildRealisticWorkspace();
+
+    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+
+    const blocked = screen.getByRole('alert');
+    expect(within(blocked).getByText('A data acquisition device is required')).toBeInTheDocument();
+    expect(within(blocked).queryByText(/must have required property/i)).not.toBeInTheDocument();
+  });
+
   it('does not run the shadow-export check when validation already blocks the day', async () => {
     const user = userEvent.setup();
     const shadowSpy = vi.spyOn(shadow, 'checkShadowExport');
@@ -300,12 +321,15 @@ describe('ExportStep', () => {
     expect(within(preflight).getByText('Optogenetics')).toBeInTheDocument();
     expect(within(preflight).getByText('Non-blocking warnings')).toBeInTheDocument();
 
-    // Spot-check derived values: animal/day, 8 electrode groups, 2 cameras, opto state
-    // (no optogenetics — Task 10's day-protocol three-state, not a binary "Off"), current
-    // (not historical) configuration.
+    // Spot-check derived values: animal/day, 8 electrode groups, the camera-calibration row
+    // (each day-used camera's name + meters_per_pixel, so a recalibration is visible at the
+    // gate), opto state (no optogenetics — Task 10's day-protocol three-state, not a binary
+    // "Off"), current (not historical) configuration.
     expect(within(preflight).getByText(/remy — 2023-06-22/i)).toBeInTheDocument();
     expect(within(preflight).getByText(/8 electrode groups/i)).toBeInTheDocument();
-    expect(within(preflight).getByText(/2 cameras/i)).toBeInTheDocument();
+    expect(
+      within(preflight).getByText(/overhead_camera \(0\.00085 m\/px\), side_camera \(0\.0009 m\/px\)/i)
+    ).toBeInTheDocument();
     expect(within(preflight).getByText(/no optogenetics/i)).toBeInTheDocument();
     expect(within(preflight).getByText(/version 1 \(current\)/i)).toBeInTheDocument();
   });

@@ -892,7 +892,7 @@ export const species = () => {
         'Mus musculus',
         'Oryctolagus cuniculus',
         'Rattus norvegicus',
-        'sus scrofa',
+        'Sus scrofa',
     ],
   ];
 };

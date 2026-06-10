@@ -18,10 +18,10 @@ describe('ElectrodeGroupsStep', () => {
   const mockOnFieldUpdate = vi.fn();
 
   // Phase 0 (tabbed-workspace-ia quick wins): de-stepper the in-panel heading.
-  it('heads the panel "Electrodes & Ephys" without a "Step N:" wizard prefix', () => {
+  it('heads the panel "Electrode Groups" without a "Step N:" wizard prefix', () => {
     render(<ElectrodeGroupsStep animal={mockAnimal} onFieldUpdate={mockOnFieldUpdate} />);
 
-    expect(screen.getByRole('heading', { name: 'Electrodes & Ephys' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Electrode Groups' })).toBeInTheDocument();
     expect(screen.queryByText(/Step 1:/)).not.toBeInTheDocument();
   });
 

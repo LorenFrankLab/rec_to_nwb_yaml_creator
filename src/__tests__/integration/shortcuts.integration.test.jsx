@@ -61,7 +61,7 @@ describe('global shortcuts + help (integration)', () => {
 
     // Advance to Devices.
     fireEvent.keyDown(document.body, { key: 'ArrowRight', altKey: true });
-    expect(await screen.findByRole('heading', { name: /devices configuration/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /setup & failed channels/i })).toBeInTheDocument();
 
     // Retreat back to Overview.
     fireEvent.keyDown(document.body, { key: 'ArrowLeft', altKey: true });

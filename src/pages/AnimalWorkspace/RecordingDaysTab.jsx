@@ -32,6 +32,7 @@ import {
 } from '../../utils/deviceNormalization';
 import CopyFromAnimalDialog from '../AnimalEditor/CopyFromAnimalDialog';
 import { getDayRowStatus } from '../../domain/workflowStatus';
+import { humanizeValidationMessage } from '../../domain/humanizeValidationMessage';
 import { getAnimalSectionStatus, getAnimalBlockingSections, SECTION_STATUS } from '../../domain/sectionStatus';
 import {
   classifyAnimalDays,
@@ -63,6 +64,28 @@ const SETUP_CARD_SECTIONS = [
   { key: 'optogenetics', label: 'Optogenetics', hint: 'if opto' },
 ];
 
+
+// The day-row status separator between "Needs fixing" and its reason (em-dash, padded).
+const NEEDS_FIXING_SEPARATOR = ' — ';
+
+/**
+ * Display-only: humanize the reason half of a "Needs fixing — {reason}" row label. The reason is a
+ * raw validation message that can expose a schema key (e.g. `experiment_description cannot be empty`
+ * or `must have required property 'task_environment'`); we sentence-case/translate it for users.
+ * The "Needs fixing" prefix and the non-needs-fixing labels (Draft/Ready/Exported) pass through
+ * unchanged. Pure.
+ *
+ * @param {string} label - The row status label from getDayRowStatus.
+ * @returns {string} The display label.
+ */
+function humanizeNeedsFixingLabel(label) {
+  if (typeof label !== 'string') return label;
+  const sepIndex = label.indexOf(NEEDS_FIXING_SEPARATOR);
+  if (sepIndex === -1) return label;
+  const prefix = label.slice(0, sepIndex + NEEDS_FIXING_SEPARATOR.length);
+  const reason = label.slice(sepIndex + NEEDS_FIXING_SEPARATOR.length);
+  return `${prefix}${humanizeValidationMessage(reason)}`;
+}
 
 /**
  * RecordingDaysTab Component
@@ -644,6 +667,10 @@ export function RecordingDaysTab({ animalId }) {
                 console.debug(`[recording-days] could not merge day "${dayId}" for status:`, err);
               }
               const rowStatus = getDayRowStatus(selectedAnimal, record, mergedDay, selectedAnimalDays);
+              // The "Needs fixing — {reason}" reason is a raw validation message (a schema key can
+              // leak through, e.g. `experiment_description …`). Humanize ONLY for this display label
+              // — getDayRowStatus stays pure so its reason can still be parsed elsewhere if needed.
+              const rowStatusLabel = humanizeNeedsFixingLabel(rowStatus.label);
 
               return (
                 <li key={dayId} className={`day-item ${isOrphan ? 'day-item-orphan' : ''}`}>
@@ -663,7 +690,7 @@ export function RecordingDaysTab({ animalId }) {
                     </div>
                     <div className="day-status">
                       <span className={`day-row-status day-row-status-${rowStatus.variant}`}>
-                        {rowStatus.label}
+                        {rowStatusLabel}
                       </span>
                     </div>
                   </a>

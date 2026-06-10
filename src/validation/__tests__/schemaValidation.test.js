@@ -349,6 +349,32 @@ describe('schemaValidation()', () => {
       expect(typeIssue.message).toBeTruthy();
       expect(typeIssue.message).not.toContain('cannot be empty');
     });
+
+    it('preserves the raw AJV required-property message (humanization is a display concern)', () => {
+      // The validation core must emit the raw "must have required property 'X'" shape so
+      // downstream consumers (e.g. ImportYamlDialog's remediationHint) can parse the field name.
+      // Humanizing for users happens only at the display layer (humanizeValidationMessage).
+      const model = { ...createTestYaml(), data_acq_device: undefined };
+      const issues = schemaValidation(model);
+
+      const issue = issues.find(i => i.path === 'data_acq_device' && i.code === 'required');
+      expect(issue).toBeDefined();
+      expect(issue.message).toBe("must have required property 'data_acq_device'");
+    });
+
+    it('preserves pattern (empty-string) and date-of-birth humanization', () => {
+      const emptyLab = schemaValidation({ ...createTestYaml(), lab: '' });
+      const labIssue = emptyLab.find(i => i.path === 'lab' && i.code === 'pattern');
+      expect(labIssue).toBeDefined();
+      expect(labIssue.message).toContain('cannot be empty');
+
+      const badDob = schemaValidation(
+        createTestYaml({ subject: { date_of_birth: 'not-a-date' } })
+      );
+      const dobIssue = badDob.find(i => i.path === 'subject.date_of_birth');
+      expect(dobIssue).toBeDefined();
+      expect(dobIssue.message).toContain('ISO 8601');
+    });
   });
 
   describe('Multiple Errors', () => {

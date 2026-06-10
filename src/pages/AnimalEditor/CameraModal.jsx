@@ -192,7 +192,11 @@ function CameraForm({ mode, camera, existingCameras, onSave, onCancel, divergenc
           onChange={handleInputChange}
           required
         />
-        <span className="help-text">Typical range: 0.0005 - 0.002</span>
+        <span className="help-text">
+          Spatial calibration — meters per pixel (how many meters one pixel spans in the tracking
+          video). Typical overhead tracking: 0.0005–0.002 m/px. Changing this is a new camera
+          identity.
+        </span>
         {metersPerPixelWarning && (
           <span className="warning-text" role="alert">
             {metersPerPixelWarning}
