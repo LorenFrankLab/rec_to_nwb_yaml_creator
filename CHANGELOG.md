@@ -9,18 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Standard-set templates for behavioral events (DIO).** The Day Editor's wiring table
-  now has a **"+ add a standard set ▾"** menu (also surfaced as the empty-day call to
-  action) that bulk-adds a canonical set in one click — *6 pokes* → `Poke1…Poke6` on
-  `Din1…Din6`, *6 lights* → `Light1…Light6` on `Dout1…Dout6`, and *6 pumps* →
-  `Pump1…Pump6` on `Dout7…Dout12`. The output sets occupy **disjoint** `Dout` ranges so
-  applying lights and pumps composes without colliding, and pumps start at `Dout7` to
-  match real lab data (`Pump1` = `Dout7`); the event name's number is a per-label instance
-  count, **not** the channel. Applying a template **merges** its rows into the day's set,
-  skipping any row whose name or description already exists, so re-applying it (or applying
-  into a non-empty day) is idempotent and can never create a duplicate name (Rule 14) or
-  description (Rule 17); a short inline summary reports what was added vs skipped. The
-  channel ranges are a sensible default the user re-points per row.
+- **Standard-set template for behavioral events (DIO).** The Day Editor's wiring table now
+  has a **"+ add a standard set ▾"** menu (also the empty-day call to action) that adds the
+  lab's canonical behavioral-event set in one click: 6 pokes on `Din1–6`,
+  `Run_Camera_Ticks` on `Din13`, 6 lights on `Dout1–6`, and 6 pumps on `Dout7–12` — the
+  exact 19-event set every session in the recorded corpus uses (98 files, 4 subjects), in
+  order. The number in a name is a per-label instance count, **not** the channel (`Pump1`
+  is `Dout7`). The channels assume an ECU board (`Din1–32`/`Dout1–32`) and are a
+  re-pointable starting point; the digital lines are board-dependent, so for a different
+  board or wiring add rows directly and let auto-numbering name them. Applying the set
+  **merges** its rows into the day, skipping any row whose name or description already
+  exists, so re-applying it (or applying into a non-empty day) is idempotent and can never
+  create a duplicate name (Rule 14) or description (Rule 17); a short inline summary reports
+  what was added vs skipped.
 - **Per-label auto-numbering when picking a behavioral-event name.** Picking a known name
   from the **Event** field's suggestions now appends the next per-label instance number —
   picking *Poke* into a set with no pokes yields `Poke1`, the next `Poke2`, and *Light* is
@@ -74,6 +75,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Behavioral-event name suggestion `Run Camera Ticks` → `Run_Camera_Ticks`.** The
+  suggestion now matches the spelling used in 98/98 recorded corpus files (underscores), so
+  the suggested name is the one labs actually use and the standard-set template's
+  camera-ticks row is recognized as a standard name. Free text is unaffected; the exported
+  YAML shape is unchanged. (The non-validating `examples` array in `nwb_schema.json` still
+  lists the spaced form — it is co-owned with trodes_to_nwb and is left for a coordinated
+  cross-repo change.)
 - **Restored guided DIO Type + line-index entry (F5).** The Behavioral Events /
   DIO library editor now enters a DIO event's `description` through a **Type**
   dropdown (`Din`/`Dout`) plus a numeric **DIO line index** control, instead of a

@@ -911,7 +911,8 @@ export const behavioralEventsNames = () => {
       'Poke',
       'Light',
       'Pump',
-      'Run Camera Ticks',
+      // Underscored to match the real recorded data: 98/98 corpus files use "Run_Camera_Ticks".
+      'Run_Camera_Ticks',
       'Sleep',
     ],
   ];
@@ -943,20 +944,29 @@ const rangeRows = (label, type, channelStart, count) => {
 /**
  * Standard-set templates for bulk-adding a canonical day of behavioral (DIO) events.
  *
- * Each template is a named set of `{ name, description }` rows. Applying one MERGES its rows into a
+ * One template, grounded in the real recorded data: across the 98-file lab corpus (4 subjects)
+ * every session uses the SAME 19-event set, in this order — 6 pokes on `Din1–6`, `Run_Camera_Ticks`
+ * on `Din13`, 6 lights on `Dout1–6`, 6 pumps on `Dout7–12`. Applying it MERGES the rows into a
  * day's set, skipping any row whose name or description already exists, so it never creates a
- * duplicate. Keep the labels/counts editable here in one place.
+ * duplicate. The channels assume an ECU board (`Din1–32`/`Dout1–32`) and are a re-pointable
+ * starting point — for a different board/wiring (the digital lines are board-dependent), add rows
+ * directly and let per-label auto-numbering name them. Return an array so more named sets can be
+ * added later.
  *
  * @returns {Array<{id: string, label: string, rows: Array<{name: string, description: string}>}>}
  *   The available templates, in display order.
  */
 export const behavioralEventTemplates = () => [
-  { id: 'pokes-6', label: '6 pokes (Din1–6)', rows: rangeRows('Poke', 'Din', 1, 6) },
-  // Lights and pumps are both outputs (Dout); they occupy DISJOINT default ranges so applying both
-  // composes without a description collision. Pumps start at Dout7 to match real lab data (Pump1 =
-  // Dout7). All channels are a starting point the user re-points to their rig.
-  { id: 'lights-6', label: '6 lights (Dout1–6)', rows: rangeRows('Light', 'Dout', 1, 6) },
-  { id: 'pumps-6', label: '6 pumps (Dout7–12)', rows: rangeRows('Pump', 'Dout', 7, 6) },
+  {
+    id: 'standard-wtrack',
+    label: 'Standard W-track set (6 pokes, 6 lights, 6 pumps + camera ticks)',
+    rows: [
+      ...rangeRows('Poke', 'Din', 1, 6),
+      { name: 'Run_Camera_Ticks', description: 'Din13' },
+      ...rangeRows('Light', 'Dout', 1, 6),
+      ...rangeRows('Pump', 'Dout', 7, 6),
+    ],
+  },
 ];
 
 /**

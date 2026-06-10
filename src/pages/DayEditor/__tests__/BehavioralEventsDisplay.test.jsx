@@ -297,28 +297,31 @@ describe('BehavioralEventsDisplay — off-list nudge respects numbered variants'
 });
 
 describe('BehavioralEventsDisplay — standard-set templates', () => {
-  it('applies a standard set into an empty day (Poke1…Poke6 as Input rows)', async () => {
+  it('applies the standard set into an empty day (inputs + outputs in one click)', async () => {
     const user = userEvent.setup();
     const spy = vi.fn();
     render(<ControlledHarness initialDayEvents={[]} spy={spy} />);
 
     await user.click(screen.getByRole('button', { name: /add a standard set/i }));
-    await user.click(screen.getByRole('menuitem', { name: /6 pokes/i }));
+    await user.click(screen.getByRole('menuitem', { name: /standard w-track/i }));
 
-    expect(spy).toHaveBeenLastCalledWith([
-      { name: 'Poke1', description: 'Din1' },
-      { name: 'Poke2', description: 'Din2' },
-      { name: 'Poke3', description: 'Din3' },
-      { name: 'Poke4', description: 'Din4' },
-      { name: 'Poke5', description: 'Din5' },
-      { name: 'Poke6', description: 'Din6' },
-    ]);
+    // The full 19-event lab set is added in one action.
+    const merged = spy.mock.calls.at(-1)[0];
+    expect(merged).toHaveLength(19);
+    expect(merged).toContainEqual({ name: 'Poke1', description: 'Din1' });
+    expect(merged).toContainEqual({ name: 'Run_Camera_Ticks', description: 'Din13' });
+    expect(merged).toContainEqual({ name: 'Pump1', description: 'Dout7' });
+
+    // Inputs render the pokes + camera ticks; outputs render the lights + pumps.
     const inputs = screen.getByRole('table', { name: /inputs \(din\)/i });
     expect(within(inputs).getByText('Poke1')).toBeInTheDocument();
-    expect(within(inputs).getByText('Poke6')).toBeInTheDocument();
+    expect(within(inputs).getByText('Run_Camera_Ticks')).toBeInTheDocument();
+    const outputs = screen.getByRole('table', { name: /outputs \(dout\)/i });
+    expect(within(outputs).getByText('Light1')).toBeInTheDocument();
+    expect(within(outputs).getByText('Pump1')).toBeInTheDocument();
   });
 
-  it('re-applying a template is collision-safe: skips existing rows, never duplicates', async () => {
+  it('re-applying the standard set is collision-safe: skips existing rows, never duplicates', async () => {
     const user = userEvent.setup();
     const spy = vi.fn();
     render(
@@ -326,19 +329,12 @@ describe('BehavioralEventsDisplay — standard-set templates', () => {
     );
 
     await user.click(screen.getByRole('button', { name: /add a standard set/i }));
-    await user.click(screen.getByRole('menuitem', { name: /6 pokes/i }));
+    await user.click(screen.getByRole('menuitem', { name: /standard w-track/i }));
 
     const merged = spy.mock.calls.at(-1)[0];
-    // Poke1 appears exactly once (skipped, not duplicated); the rest are appended.
+    // Poke1 appears exactly once (skipped, not duplicated); the full set is still present.
     expect(merged.filter((e) => e.name === 'Poke1')).toHaveLength(1);
-    expect(merged.map((e) => e.name)).toEqual([
-      'Poke1',
-      'Poke2',
-      'Poke3',
-      'Poke4',
-      'Poke5',
-      'Poke6',
-    ]);
+    expect(merged).toHaveLength(19);
     // No duplicate name or description in the result (Rule 14 / Rule 17 safe).
     const names = merged.map((e) => e.name);
     expect(new Set(names).size).toBe(names.length);
