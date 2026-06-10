@@ -20,7 +20,10 @@ import { StoreProvider, useStoreContext } from '../../../state/StoreContext';
 import { encodeYaml } from '../../../io/yaml';
 import { mergeDayMetadata as merge } from '../../../state/workspaceUtils';
 import { buildRealisticWorkspace } from '../../../__tests__/fixtures/workspaceBuilders';
-import ImportYamlDialog from '../ImportYamlDialog';
+import ImportYamlDialog, {
+  groupCreatedDaysByAnimal,
+  remediationHint,
+} from '../ImportYamlDialog';
 
 const originalHash = window.location.hash;
 afterEach(() => {
@@ -310,5 +313,82 @@ describe('ImportYamlDialog — preview/confirm flow', () => {
     // Both day dates are shown.
     expect(within(resultRegion).getByText(/2023-06-22/)).toBeInTheDocument();
     expect(within(resultRegion).getByText(/2023-06-25/)).toBeInTheDocument();
+  });
+});
+
+describe('groupCreatedDaysByAnimal (unit)', () => {
+  it('attributes a HYPHENATED animal id day to that animal (longest-prefix wins)', () => {
+    // animal `remy-2`, day `remy-2-2023-06-22`: the trailing `-YYYY-MM-DD` is the date and the
+    // rest (`remy-2`) is the animal id — it must NOT be mis-split into `remy` + `2-2023-06-22`.
+    const result = groupCreatedDaysByAnimal(['remy-2'], ['remy-2-2023-06-22']);
+    expect(result).toEqual([{ animalId: 'remy-2', dates: ['2023-06-22'] }]);
+  });
+
+  it('prefers the longest created-animal prefix when ids share a prefix', () => {
+    // `remy` and `remy-2` both prefix `remy-2-2023-06-22`; the more specific `remy-2` must win.
+    const result = groupCreatedDaysByAnimal(
+      ['remy', 'remy-2'],
+      ['remy-2023-06-22', 'remy-2-2023-06-25']
+    );
+    const remy = result.find((e) => e.animalId === 'remy');
+    const remy2 = result.find((e) => e.animalId === 'remy-2');
+    expect(remy.dates).toEqual(['2023-06-22']);
+    expect(remy2.dates).toEqual(['2023-06-25']);
+    // No created day is double-counted onto the shorter-prefix animal.
+    expect(remy.dates).not.toContain('2023-06-25');
+  });
+
+  it('gives a created day its OWN entry when its animal id is not in createdAnimals (conflict→add)', () => {
+    // A conflict→'add' import writes days onto an EXISTING animal, so that animal id is not in
+    // `createdAnimals`. The created day must still be named — it gets its own entry, none dropped.
+    const result = groupCreatedDaysByAnimal([], ['totoro-2023-07-01']);
+    expect(result).toEqual([{ animalId: 'totoro', dates: ['2023-07-01'] }]);
+  });
+
+  it('mixes created animals and conflict→add days without dropping either', () => {
+    const result = groupCreatedDaysByAnimal(
+      ['remy'],
+      ['remy-2023-06-22', 'totoro-2023-07-01']
+    );
+    expect(result).toContainEqual({ animalId: 'remy', dates: ['2023-06-22'] });
+    expect(result).toContainEqual({ animalId: 'totoro', dates: ['2023-07-01'] });
+  });
+
+  it('falls back gracefully when a day id carries no ISO date (whole id is the animal, no date)', () => {
+    const result = groupCreatedDaysByAnimal([], ['weird_day_id_no_date']);
+    expect(result).toEqual([{ animalId: 'weird_day_id_no_date', dates: [] }]);
+  });
+
+  it('names a created animal even when it has zero matched days', () => {
+    const result = groupCreatedDaysByAnimal(['lonely'], []);
+    expect(result).toEqual([{ animalId: 'lonely', dates: [] }]);
+  });
+});
+
+describe('remediationHint (unit)', () => {
+  it('names a single missing required field (singular wording)', () => {
+    const hint = remediationHint(
+      "Validation failed: must have required property 'data_acq_device'"
+    );
+    expect(hint).toMatch(/add the missing field:/i);
+    expect(hint).not.toMatch(/fields/i);
+    expect(hint).toContain('`data_acq_device`');
+  });
+
+  it('lists BOTH fields, deduped, with plural wording for a multi-missing-field reason', () => {
+    const reason =
+      "Validation failed: must have required property 'subject', " +
+      "must have required property 'cameras', must have required property 'subject'";
+    const hint = remediationHint(reason);
+    expect(hint).toMatch(/add the missing fields:/i); // plural
+    expect(hint).toContain('`subject`');
+    expect(hint).toContain('`cameras`');
+    // `subject` is deduped — it appears exactly once.
+    expect(hint.match(/`subject`/g)).toHaveLength(1);
+  });
+
+  it('falls back to a generic hint for an unrecognized reason shape', () => {
+    expect(remediationHint('some other failure')).toMatch(/correct the reported problem/i);
+    expect(remediationHint(undefined)).toMatch(/correct the reported problem/i);
   });
 });

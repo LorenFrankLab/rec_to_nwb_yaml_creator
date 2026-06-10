@@ -452,7 +452,7 @@ AnimalCard.propTypes = {
  * @param {string[]} createdDays - Created day ids (`<animalId>-<ISO date>`).
  * @returns {Array<{ animalId: string, dates: string[] }>} Per-animal entries in stable order.
  */
-function groupCreatedDaysByAnimal(createdAnimals = [], createdDays = []) {
+export function groupCreatedDaysByAnimal(createdAnimals = [], createdDays = []) {
   const order = [];
   const byAnimal = new Map();
   const ensure = (animalId) => {

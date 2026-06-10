@@ -169,7 +169,9 @@ export function makeEmptyAnimal(id, overrides = {}) {
     experimenters: { experimenter_name: ['Doe, Jane'], lab: 'Frank', institution: 'UCSF' },
     technicalDefaults: { raw_data_to_volts: 0.195, times_period_multiplier: 1.5 },
     optogenetics: undefined,
-    behavioral_events: [],
+    // NOTE: no top-level `behavioral_events` here — production `createAnimal`
+    // (src/state/useWorkspace.js) does NOT put `behavioral_events` on the base record, so the
+    // harness mirrors that. A behavioral-events catalog is added later through the DIO tab.
     days: [],
     created: FIXED_TIMESTAMP,
     lastModified: FIXED_TIMESTAMP,
