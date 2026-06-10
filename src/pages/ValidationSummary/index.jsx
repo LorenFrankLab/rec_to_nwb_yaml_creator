@@ -890,12 +890,12 @@ export function ValidationSummary({ animalKey } = {}) {
                     )}
                   </td>
                   <td>
-                    {/* Scan fields (Task 10): pinned configuration version, camera count, and the
-                        day-protocol opto state — so days can be compared at a glance. Absent for
-                        unreadable/missing/wrong-owner rows (no trustworthy merge), shown as "—".
-                        In the SCOPED per-animal tab, the cell becomes an expander whose summary reads
-                        the dated config context (Task 3.4) and whose body is the read-only
-                        effective-setup-for-this-day review (Task 3.3a). */}
+                    {/* Scan fields: pinned configuration version (via describeConfigVersionLabel),
+                        camera count + calibration, and the day-protocol opto state — so days can be
+                        compared at a glance. Absent for unreadable/missing/wrong-owner rows (no
+                        trustworthy merge), shown as "—". In the SCOPED per-animal tab, the cell
+                        becomes an expander whose summary reads the same unified config-version label
+                        and whose body is the read-only effective-setup-for-this-day review. */}
                     {scan ? (
                       scoped ? (
                         <details className="validation-summary-effective" data-testid={`effective-${day.id}`}>
