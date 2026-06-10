@@ -194,9 +194,11 @@ test.describe('Optogenetics export gating and the two-layer opto model', () => {
     await expect(page.getByRole('group', { name: 'Stimulation software' })).toBeVisible();
     // The incomplete-state status names the all-or-nothing rule and the missing sections (the
     // converter silently drops ALL opto otherwise) — so the requirement is surfaced, not hidden.
-    const incomplete = page.getByRole('status').filter({ hasText: 'no optogenetics data' });
+    const incomplete = page
+      .getByRole('status')
+      .filter({ hasText: 'blocks export until every optogenetics section' });
     await expect(incomplete).toBeVisible();
-    await expect(incomplete).toContainText('Export stays blocked until you add');
+    await expect(incomplete).toContainText('silently drop');
     await expect(incomplete).toContainText('a complete optical fiber');
     await expect(incomplete).toContainText('a complete virus injection');
 

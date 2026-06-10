@@ -133,14 +133,46 @@
 
 /* ===== Table Styling ===== */
 
+/* Horizontal-scroll container: keeps the Actions column (Edit/Delete) reachable at every width.
+   A wide table (long camera/lens names) scrolls WITHIN this wrapper instead of pushing the
+   actions off the right edge of the viewport and out of reach. The wrapper itself stays at the
+   section's width so the document never gains a horizontal scrollbar. */
+.cameras-table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  /* keep the focus ring of a focused action button visible while scrolling */
+  -webkit-overflow-scrolling: touch;
+}
+
 .cameras-table {
   width: 100%;
+  /* Fixed layout so long camera/lens/model names can't widen the table past the viewport and
+     push the Actions column (Edit/Delete) off-screen. Long text in the name columns truncates
+     with an ellipsis (full value stays in `title`); the scroll wrapper above is the fallback
+     when even the fixed columns can't all fit. */
+  table-layout: fixed;
   border-collapse: collapse;
   background-color: var(--color-white);
   border: 1px solid var(--color-grey-200);
   border-radius: 4px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+
+  /* Column widths: keep Status + Actions at a fixed reachable size; let the text columns share
+     the rest and truncate. (ID / MPP / Status are narrow; Actions holds two buttons.) */
+  th:nth-child(1), td:nth-child(1) { width: 4rem; }   /* ID */
+  th:nth-child(6), td:nth-child(6) { width: 8rem; }   /* Meters per Pixel */
+  th:nth-child(7), td:nth-child(7) { width: 5rem; }   /* Status */
+  th:nth-child(8), td:nth-child(8) { width: 9.5rem; } /* Actions */
+
+  /* Truncate the free-text columns (Name / Manufacturer / Model / Lens). */
+  td:nth-child(2), td:nth-child(3), td:nth-child(4), td:nth-child(5) {
+    max-width: 0; /* with table-layout:fixed, lets the cell honor overflow + ellipsis */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 
   thead {
     background-color: var(--color-grey-100);
@@ -461,8 +493,28 @@
 
   /* Stack table vertically on very small screens (card layout) */
   .cameras-table {
+    /* The card layout lays each cell out as a flex row, so undo the desktop fixed-column
+       widths + ellipsis truncation — full values should wrap and show in the card. */
+    table-layout: auto;
+
     thead {
       display: none;
+    }
+
+    /* Reset the desktop column-width + truncation rules for the stacked card cells. */
+    td:nth-child(1),
+    td:nth-child(2),
+    td:nth-child(3),
+    td:nth-child(4),
+    td:nth-child(5),
+    td:nth-child(6),
+    td:nth-child(7),
+    td:nth-child(8) {
+      width: auto;
+      max-width: none;
+      overflow: visible;
+      text-overflow: clip;
+      white-space: normal;
     }
 
     tbody tr {

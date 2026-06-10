@@ -97,6 +97,90 @@ describe('ValidationSummary', () => {
     expect(within(validRow).getByText(/no optogenetics/i)).toBeInTheDocument();
   });
 
+  it('shows each day-used camera calibration (name + meters_per_pixel) in the scan', () => {
+    const { workspace, ids } = makeSummaryWorkspace();
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+
+    // A re-calibrated camera (changed meters_per_pixel) must be visible during catch-up triage,
+    // not hidden behind a bare camera count. The realistic fixture's first camera is
+    // "overhead_camera" at 0.00085 m/px — its name AND value must appear in the scan cell.
+    const validRow = screen.getByTestId(`day-row-${ids.validDayId}`);
+    const scan = within(validRow).getByText(/config v\d/i);
+    expect(scan).toHaveTextContent(/overhead_camera/);
+    expect(scan).toHaveTextContent(/0\.00085/);
+  });
+
+  it('labels the config version with a latest/historical marker on the cross-animal batch table', () => {
+    const { workspace, ids } = makeSummaryWorkspace();
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+
+    // The realistic fixture pins the day to its only (latest) configuration version.
+    const validRow = screen.getByTestId(`day-row-${ids.validDayId}`);
+    expect(within(validRow).getByText(/config v1 \(latest\)/i)).toBeInTheDocument();
+  });
+
+  it('uses the SAME version label (with latest/historical marker) on the per-animal scan', () => {
+    const { workspace, ids } = makeSummaryWorkspace();
+    provideStore(workspace);
+
+    render(<ValidationSummary animalKey="remy" />);
+
+    // The per-animal Validation & Export tab must read the same unified label, not "config from <date>".
+    const validRow = screen.getByTestId(`day-row-${ids.validDayId}`);
+    expect(within(validRow).getByText(/config v1 \(latest\)/i)).toBeInTheDocument();
+    expect(within(validRow).queryByText(/config from/i)).not.toBeInTheDocument();
+  });
+
+  it('marks a pinned historical configuration version as (historical) on both surfaces', () => {
+    const { workspace, ids } = makeSummaryWorkspace();
+    // Add a newer configuration version and pin the valid day to the older (historical) one.
+    const remy = workspace.animals.remy;
+    remy.configurationHistory = [
+      ...remy.configurationHistory,
+      { ...structuredClone(remy.configurationHistory[0]), version: 2, date: '2023-07-01' },
+    ];
+    workspace.days[ids.validDayId].configurationVersion = 1;
+    provideStore(workspace);
+
+    render(<ValidationSummary animalKey="remy" />);
+
+    const validRow = screen.getByTestId(`day-row-${ids.validDayId}`);
+    expect(within(validRow).getByText(/config v1 \(historical\)/i)).toBeInTheDocument();
+  });
+
+  it('surfaces the session description in a batch row when the day has one', () => {
+    const { workspace, ids } = makeSummaryWorkspace();
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+
+    // The realistic fixture's valid day carries a session_description; it must be visible in the
+    // row (previously the Session column bound session_id only and the description was hidden).
+    const validRow = screen.getByTestId(`day-row-${ids.validDayId}`);
+    expect(
+      within(validRow).getByText(/Day 45 of chronic recording, W-track alternation/i)
+    ).toBeInTheDocument();
+  });
+
+  it('does not render a whitespace-only session description (shows the session id, no stray blank)', () => {
+    const { workspace, ids } = makeSummaryWorkspace();
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+
+    // The error day has a whitespace-only session_description ('   '); it must NOT be surfaced as a
+    // description line. The session id still shows.
+    const errorRow = screen.getByTestId(`day-row-${ids.errorDayId}`);
+    expect(
+      within(errorRow).queryByTestId(`session-description-${ids.errorDayId}`)
+    ).not.toBeInTheDocument();
+    expect(within(errorRow).getByText('remy_20230622')).toBeInTheDocument();
+  });
+
   it('counts reflect chip breakdown', () => {
     const { workspace } = makeSummaryWorkspace();
     provideStore(workspace);
@@ -350,19 +434,54 @@ describe('ValidationSummary', () => {
 
   it('Export Valid Only: no valid days short-circuits with a helpful message and no downloads', async () => {
     const user = userEvent.setup();
-    // Keep only the error + incomplete days (drop the valid one).
+    // 0 valid with only INCOMPLETE days (no errors): the button STAYS enabled and a click yields the
+    // helpful guidance. Scope to remy and drop its valid day so only the incomplete day remains —
+    // keeping the global error day (totoro's) out would otherwise DISABLE the button.
     const { workspace, ids } = makeSummaryWorkspace();
     delete workspace.days[ids.validDayId];
     workspace.animals.remy.days = [ids.incompleteDayId];
     provideStore(workspace);
 
-    render(<ValidationSummary />);
+    render(<ValidationSummary animalKey="remy" />);
 
-    await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    const button = screen.getByRole('button', { name: /export valid only/i });
+    expect(button).toBeEnabled();
+    await user.click(button);
 
     expect(checkShadowExport).not.toHaveBeenCalled();
     expect(downloadYamlFile).not.toHaveBeenCalled();
     expect(screen.getByRole('status')).toHaveTextContent(/no days are ready to export/i);
+  });
+
+  it('Export Valid Only is DISABLED with an accessible reason when 0 days are valid and some have errors', () => {
+    // Keep only the error day (drop valid + incomplete) → counts.valid === 0, counts.error > 0.
+    const { workspace, ids } = makeSummaryWorkspace();
+    delete workspace.days[ids.validDayId];
+    delete workspace.days[ids.incompleteDayId];
+    workspace.animals.remy.days = [ids.errorDayId];
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+
+    const button = screen.getByRole('button', { name: /export valid only/i });
+    expect(button).toBeDisabled();
+    // The disabled reason is programmatically associated (not just a hover title).
+    const reasonId = button.getAttribute('aria-describedby');
+    expect(reasonId).toBeTruthy();
+    expect(document.getElementById(reasonId)).toHaveTextContent(/no valid days to export — fix errors first/i);
+  });
+
+  it('Export Valid Only stays ENABLED when 0 valid but only INCOMPLETE days (no errors)', () => {
+    // Scope to remy and keep only its incomplete day: 0 valid, 0 error → not the disable case.
+    const { workspace, ids } = makeSummaryWorkspace();
+    delete workspace.days[ids.validDayId];
+    workspace.animals.remy.days = [ids.incompleteDayId];
+    provideStore(workspace);
+
+    render(<ValidationSummary animalKey="remy" />);
+
+    // No errors block here — the button stays enabled (a click yields the "complete fields" guidance).
+    expect(screen.getByRole('button', { name: /export valid only/i })).toBeEnabled();
   });
 
   it('Export Valid Only shows a per-day preflight (config version + contents) before downloading', async () => {

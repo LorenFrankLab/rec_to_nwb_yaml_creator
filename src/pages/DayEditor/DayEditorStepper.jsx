@@ -398,18 +398,13 @@ export default function DayEditorStepper() {
           <a
             href={`#/workspace?animal=${ownerKey}`}
             className="back-button"
-            aria-label="Back to workspace"
+            aria-label="Back to Workspace"
           >
             ← Back to Workspace
           </a>
           <h1>Day Editor: {ownerKey} - {day.date}</h1>
         </div>
-        <SaveIndicator
-          enabled={persistence.enabled}
-          lastSaved={persistence.lastSaved}
-          error={persistence.saveError}
-          pending={persistence.hasPendingWrite}
-        />
+        <SaveIndicator persistence={persistence} />
       </div>
 
       <div className="day-editor-body">

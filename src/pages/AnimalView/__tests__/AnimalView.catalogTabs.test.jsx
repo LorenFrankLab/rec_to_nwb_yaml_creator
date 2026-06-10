@@ -158,7 +158,7 @@ describe('AnimalView — catalog tab scope descriptors (Phase 3-3)', () => {
 
   it('dio scope descriptor', () => {
     renderView('dio');
-    expect(screen.getByText(/library — opt in per day/i)).toBeInTheDocument();
+    expect(screen.getByText(/digital i\/o \(dio\) — behavioral-event channels/i)).toBeInTheDocument();
   });
 });
 
@@ -176,10 +176,11 @@ describe('AnimalView — optogenetics status chip (Phase 3-3)', () => {
     expect(screen.getByText(/not used — no stimulation/i)).toBeInTheDocument();
   });
 
-  it('does not show the chip for an opto-configured animal', () => {
+  it('does not show the "not used" chip once an animal has started configuring opto', () => {
     const animal = buildAnimal({
-      // A configured opto carries all three lists (the editor initializes them); a non-empty
-      // excitation source makes getAnimalSectionStatus report it as set up.
+      // A partially-configured opto (a non-empty excitation source, other sections still empty) IS
+      // using opto, so the "Not used — no stimulation" chip must NOT show — that empty-state chip is
+      // keyed to the NONE (never-configured) state only; the section-nav reads "incomplete" here.
       optogenetics: { opto_excitation_source: [{ name: 'laser', wavelength_in_nm: 473 }], optical_fiber: [], virus_injection: [] },
     });
     renderView('optogenetics', animal);

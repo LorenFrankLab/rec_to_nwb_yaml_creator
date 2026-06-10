@@ -83,7 +83,7 @@ export default function AnimalDeleteDialog({ isOpen, animalId, animal, days, onC
           type="text"
           value={typed}
           autoComplete="off"
-          placeholder={animalId}
+          placeholder="Type the animal ID to confirm"
           onChange={(e) => setTyped(e.target.value)}
           // Enter submits when the name matches, mirroring a normal confirm.
           onKeyDown={(e) => {

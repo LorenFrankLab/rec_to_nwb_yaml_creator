@@ -80,6 +80,13 @@
   color: #555;
 }
 
+/* The 6-column day table can be wider than a phone viewport; scroll it horizontally WITHIN this
+   container so the page itself never overflows at ~390px and no cell is clipped off-screen. */
+.validation-summary-table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
 .validation-summary-table {
   width: 100%;
   border-collapse: collapse;
@@ -137,6 +144,10 @@
   border: 1px solid #90caf9;
   border-radius: 6px;
   background-color: #e3f2fd;
+  /* Long unbroken values (session ids, camera names) must wrap inside the box at narrow widths
+     instead of pushing the page wider than the viewport. */
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .batch-export-preflight h2 {
@@ -159,14 +170,20 @@
   gap: 0.5rem;
   align-items: baseline;
   font-size: 0.85rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .batch-export-preflight-label {
   font-weight: 600;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .batch-export-preflight-detail {
   color: #444;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .batch-export-preflight-error {
@@ -194,11 +211,24 @@
   white-space: nowrap;
 }
 
+/* Session description under the session id — secondary context, so muted and on its own line. */
+.validation-summary-session-description {
+  display: block;
+  font-size: 0.8125rem;
+  color: #555;
+}
+
 /* Batch-row scan detail (config version · cameras · opto state) — muted so it reads as
    at-a-glance context, not a primary value. */
 .validation-summary-scan {
   font-size: 0.8125rem;
   color: #555;
+}
+
+/* Per-camera calibration (name + meters_per_pixel) — muted further so it reads as a detail
+   of the camera count, not a competing primary value. */
+.validation-summary-scan-cameras {
+  color: #777;
 }
 
 /* Phase 3-5: per-animal Validation & Export tab. The scoped header replaces the page h1; the
@@ -262,4 +292,7 @@
 .effective-day-review-list dd {
   margin: 0;
   color: #2b2a25;
+  /* Long values must wrap within the grid cell, not widen the page at narrow viewports. */
+  min-width: 0;
+  overflow-wrap: anywhere;
 }

@@ -168,6 +168,19 @@ describe('AnimalWorkspace lifecycle cleanup — Delete recording day', () => {
     expect(screen.getByText('2023-06-22')).toBeInTheDocument();
   });
 
+  it('previews the cascade — session metadata, tasks, and failed-channel marks', async () => {
+    const user = userEvent.setup();
+    renderView('remy', { remy }, remyDays);
+
+    await user.click(screen.getByRole('button', { name: /delete recording day 2023-06-23/i }));
+    const dialog = screen.getByRole('alertdialog');
+    // The confirm names WHAT is lost, not just the date — so the destructive scope is legible.
+    expect(within(dialog).getByText(/session metadata/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/tasks/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/failed-channel marks/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/cannot be undone/i)).toBeInTheDocument();
+  });
+
   it('warns downloaded files are not deleted when the day was exported', async () => {
     const user = userEvent.setup();
     renderView('remy', { remy }, remyDays);

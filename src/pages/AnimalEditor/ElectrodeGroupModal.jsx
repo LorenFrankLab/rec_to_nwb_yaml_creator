@@ -113,7 +113,9 @@ function ElectrodeGroupForm({ mode, group, knownRegions, onSave, onCancel }) {
     <form className="electrode-group-modal-form">
       {/* Device Type (single source: valueList deviceTypes()) */}
       <div className="form-group">
-        <label htmlFor="device_type">Device Type</label>
+        <label htmlFor="device_type">
+          Device Type <span className="required">*</span>
+        </label>
         <select
           id="device_type"
           name="device_type"
@@ -162,7 +164,8 @@ function ElectrodeGroupForm({ mode, group, knownRegions, onSave, onCancel }) {
           required
         />
         <span className="help-text">
-          Planned implant target region (e.g., CA1) — the region you know at recording time.
+          <span className="required" aria-hidden="true">*</span> Required. Planned implant target
+          region (e.g., CA1) — the region you know at recording time.
         </span>
       </div>
 
@@ -199,10 +202,12 @@ function ElectrodeGroupForm({ mode, group, knownRegions, onSave, onCancel }) {
         </span>
       </div>
 
-      {/* Coordinates */}
+      {/* Coordinates. Values are in the unit selected below (mm by default). */}
       <div className="form-group-coordinates">
         <div className="form-group">
-          <label htmlFor="targeted_x">AP (Anterior-Posterior)</label>
+          <label htmlFor="targeted_x">
+            AP (Anterior-Posterior) ({formData.units}) <span className="required">*</span>
+          </label>
           <input
             id="targeted_x"
             type="number"
@@ -216,7 +221,9 @@ function ElectrodeGroupForm({ mode, group, knownRegions, onSave, onCancel }) {
         </div>
 
         <div className="form-group">
-          <label htmlFor="targeted_y">ML (Medial-Lateral)</label>
+          <label htmlFor="targeted_y">
+            ML (Medial-Lateral) ({formData.units}) <span className="required">*</span>
+          </label>
           <input
             id="targeted_y"
             type="number"
@@ -230,7 +237,9 @@ function ElectrodeGroupForm({ mode, group, knownRegions, onSave, onCancel }) {
         </div>
 
         <div className="form-group">
-          <label htmlFor="targeted_z">DV (Dorsal-Ventral)</label>
+          <label htmlFor="targeted_z">
+            DV (Dorsal-Ventral) ({formData.units}) <span className="required">*</span>
+          </label>
           <input
             id="targeted_z"
             type="number"
@@ -243,6 +252,9 @@ function ElectrodeGroupForm({ mode, group, knownRegions, onSave, onCancel }) {
           />
         </div>
       </div>
+      <p className="help-text">
+        Stereotaxic coordinates in the unit selected below (millimeters by default).
+      </p>
 
       {/* Units */}
       <div className="form-group">

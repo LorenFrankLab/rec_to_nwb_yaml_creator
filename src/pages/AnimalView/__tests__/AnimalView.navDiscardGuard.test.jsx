@@ -1,5 +1,5 @@
 /**
- * Pins the section-nav unsaved-edit discard guard (charter decision 2).
+ * Pins the section-nav unsaved-edit discard guard.
  *
  * WHY A PURE-DECISION TEST (and not a full browser-path render): the guard's live path is currently
  * UNREACHABLE in the shipped UI. Every setup editor that reports `pendingEdits`

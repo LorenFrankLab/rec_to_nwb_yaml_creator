@@ -116,7 +116,7 @@ describe('AnimalView — electrode-groups tab (Phase 3-2)', () => {
 
   it('shows the electrode-groups scope descriptor', () => {
     renderView('electrode-groups');
-    expect(screen.getByText(/a change here forks a configuration version/i)).toBeInTheDocument();
+    expect(screen.getByText(/a hardware change starts a new version/i)).toBeInTheDocument();
   });
 
   it('regenerates channel maps to local ids when device_type changes via the tab', async () => {
@@ -214,7 +214,7 @@ describe('AnimalView — channel-maps tab (Phase 3-2)', () => {
 
   it('shows the channel-maps scope descriptor', () => {
     renderView('channel-maps');
-    expect(screen.getByText(/map channels, mark bad channels/i)).toBeInTheDocument();
+    expect(screen.getByText(/failed channels are marked per day in the day editor/i)).toBeInTheDocument();
   });
 
   it('opens the ChannelMapEditor for a group', async () => {

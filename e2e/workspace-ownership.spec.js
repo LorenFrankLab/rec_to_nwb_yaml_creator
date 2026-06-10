@@ -15,7 +15,7 @@
  *  - the `?field=` repair → Cameras-tab highlight (workspace-export-gate.spec.js);
  *  - same-day / catch-up batch export (workspace-workflows.spec.js).
  *
- * Recorded gaps (see the agent report): the charter "discard unsaved changes?" guard
+ * Behaviour notes: the "discard unsaved changes?" guard
  * (AnimalView.handleNavClick) is NOT reachable through the shipped UI — every setup editor that
  * reports pending edits is a focus-trapping Modal whose overlay intercepts pointer events on the
  * section-nav, so a user can't click another section while one is open. This spec asserts that
@@ -42,7 +42,8 @@ import {
  * @type {Record<string,string>}
  */
 const TAB_SCOPE = {
-  'electrode-groups': 'Versioned identity — a change here forks a configuration version.',
+  'electrode-groups':
+    'Shared across all recording days — a hardware change starts a new version (with an audit trail).',
   'recording-system': 'Animal-wide catalog — each recording day uses one.',
   cameras: 'Catalog — referenced per day.',
 };
@@ -72,15 +73,15 @@ test.describe('Ownership & discoverability — AnimalView header + section-nav +
     await resetWorkspace(page);
   });
 
-  test('header band shows the animal identity (name, subject_id badge, species · sex) and a ⋮ menu', async ({
+  test('header band shows the animal identity (name, animal ID badge, species · sex) and a ⋮ menu', async ({
     page,
   }) => {
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/animal/${ANIMAL_ID}/days`);
 
     // The animal name is the page h1.
     await expect(page.getByRole('heading', { level: 1, name: ANIMAL_ID })).toBeVisible();
-    // A subject_id badge + the species · sex facts identify whose data this is (ownership cue).
-    await expect(page.getByText('subject_id', { exact: true })).toBeVisible();
+    // An "animal ID" badge + the species · sex facts identify whose data this is (ownership cue).
+    await expect(page.getByText('animal ID', { exact: true })).toBeVisible();
     await expect(page.getByText('Rattus norvegicus · M')).toBeVisible();
     // The per-animal lifecycle ⋮ is present (its menu is exercised in the lifecycle spec).
     await expect(page.getByRole('button', { name: `Actions for ${ANIMAL_ID}` })).toBeVisible();
@@ -176,16 +177,31 @@ test.describe('Ownership & discoverability — AnimalView header + section-nav +
     // attributed to the section-nav.
     const blob = buildConfiguredWorkspaceBlob();
     blob.workspace.animals[ANIMAL_ID].cameras[0].meters_per_pixel = '';
+    // The "Existing data review" banner is shown only when there is something to REVIEW — recovered/
+    // corrupt/wrong-owner records — not merely because a day fails validation (a clean
+    // established animal must not show a standing review task). So seed a recovered-unlinked (orphan)
+    // day record — owned by this animal but absent from its day index — which is exactly the state the
+    // review banner exists to surface, and which renders the in-animal Validation & Export re-link.
+    const orphanId = `${ANIMAL_ID}-orphan`;
+    blob.workspace.days[orphanId] = {
+      ...blob.workspace.days[DAY_ID],
+      id: orphanId,
+      date: '2023-07-01',
+    };
+    // Intentionally NOT added to animals[ANIMAL_ID].days — that absence is what makes it an orphan.
     await seedAndOpen(page, blob, `/#/animal/${ANIMAL_ID}/days`);
 
     // The Cameras section-nav row advertises the block in its accessible name + carries the red ●.
     const camerasRow = sectionNav(page).getByRole('link', { name: 'Cameras — blocks export' });
     await expect(camerasRow).toBeVisible();
 
-    // The existing-data review link is THIS animal's export (not the cross-animal #/validation).
+    // The existing-data review link is THIS animal's export (not the cross-animal #/validation). The
+    // banner renders the same in-animal export link in the orphan note and the footer — assert the
+    // first; both must target this animal's export tab.
     const reviewLink = page
       .getByRole('region', { name: 'Existing data review' })
-      .getByRole('link', { name: /Validation & Export/ });
+      .getByRole('link', { name: /Validation & Export/ })
+      .first();
     await expect(reviewLink).toBeVisible();
     await expect(reviewLink).toHaveAttribute('href', `#/animal/${ANIMAL_ID}/export`);
   });
@@ -253,7 +269,7 @@ test.describe('Section-nav: navigation, focus, and route guards (the jsdom-can\'
   test('a setup editor (a focus-trapping Modal) blocks the section-nav — the overlay intercepts the click', async ({
     page,
   }) => {
-    // RECORDED GAP: the charter "discard unsaved changes?" guard (handleNavClick) is dead in the
+    // Note: the "discard unsaved changes?" guard (handleNavClick) is not reachable in the
     // shipped UI because every pending-edits editor is a focus-trapping Modal. Assert the ACTUAL
     // behavior: with the Electrode Group modal open, its overlay intercepts pointer events so a
     // section-nav link cannot be clicked (the user must close the modal first).
@@ -300,7 +316,7 @@ test.describe('Section-nav: navigation, focus, and route guards (the jsdom-can\'
     // Not a perpetual "Loading…" — a real, escapable not-found.
     await expect(page.getByRole('heading', { level: 1, name: 'Animal not found' })).toBeVisible();
     await expect(page.getByText(/No animal “ghost” in this workspace/)).toBeVisible();
-    const back = page.getByRole('link', { name: 'Back to Workspace' });
+    const back = page.getByRole('link', { name: /Back to Workspace/ });
     await expect(back).toHaveAttribute('href', '#/workspace');
   });
 });

@@ -190,8 +190,10 @@ export default function BehavioralEventsSection({ animal, onFieldUpdate }) {
         </p>
         <p className="empty-state-hint">
           This is a reusable <strong>library</strong> for the animal — these events are templates and
-          are NOT exported on their own. Add one to a recording day with &ldquo;Use on this day&rdquo;
-          in that day&apos;s Epochs step; only the day&apos;s own events are exported.
+          are NOT exported on their own. Every recording day inherits the library; to export an event
+          on a day, open that day in the Day Editor, go to its <strong>Tasks &amp; Epochs</strong>{' '}
+          step, and choose &ldquo;Use on this day&rdquo; for the event. Only the day&apos;s own events
+          are exported.
         </p>
         <button className="button-primary" onClick={handleAddClick}>
           Add First Behavioral Event
@@ -207,8 +209,8 @@ export default function BehavioralEventsSection({ animal, onFieldUpdate }) {
         <h2>Behavioral Events / DIO library</h2>
         <p>
           A reusable library of DIO events for this animal. These are templates — they are NOT
-          exported until a recording day selects one with &ldquo;Use on this day&rdquo;; only that
-          day&apos;s own events are exported.
+          exported until a recording day uses one (in the Day Editor&apos;s Tasks &amp; Epochs step,
+          via &ldquo;Use on this day&rdquo;); only that day&apos;s own events are exported.
         </p>
       </header>
 

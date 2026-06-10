@@ -56,7 +56,7 @@ describe('AnimalView export tab — dated config legibility + effective-day revi
     window.location = { hash: '' };
   });
 
-  it('shows dated config context (not a bare "v1") on a historical day row', () => {
+  it('marks a historical day row with its version + a historical indicator (not a bare "v1")', () => {
     const { workspace, dayId } = buildTwoVersionWorkspace();
     render(
       <StoreProvider initialState={{ workspace }}>
@@ -64,8 +64,10 @@ describe('AnimalView export tab — dated config legibility + effective-day revi
       </StoreProvider>
     );
     const expander = screen.getByTestId(`effective-${dayId}`);
-    // v1 is dated 2023-06-22 and is historical (latest is v2).
-    expect(within(expander).getByText(/config from 2023-06-22 \(historical — v1\)/i)).toBeInTheDocument();
+    // v1 is historical (latest is v2) — the unified label states the version AND the historical
+    // marker (consistent with the batch #/validation table + the export preflight), so a historical
+    // day is never mistaken for one on the latest config.
+    expect(within(expander).getByText(/config v1 \(historical\)/i)).toBeInTheDocument();
   });
 
   it('shows the read-only effective setup the day USED (v1\'s electrode groups), labelled distinct from current', () => {

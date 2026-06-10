@@ -21,7 +21,7 @@ import { useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useStoreContext } from '../../state/StoreContext';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
-import { getAnimalSubject, getConfigHistory } from '../../state/workspaceSelectors';
+import { getAnimalSubject } from '../../state/workspaceSelectors';
 import EffectiveDayReview from './EffectiveDayReview';
 import { computeStepStatus, validateDay } from '../../domain/validation';
 import { getDayWorkflowStatus } from '../../domain/workflowStatus';
@@ -57,6 +57,33 @@ function deriveChip(stepStatus) {
 }
 
 const CHIP_LABEL = { valid: 'Valid', error: 'Error', incomplete: 'Incomplete' };
+
+// How many cameras to spell out by name + calibration before collapsing the rest into "+K more".
+// Keeps the scan cell readable on a many-camera day without hiding that recalibration happened.
+const CAMERA_CALIBRATION_LIMIT = 3;
+
+/**
+ * A concise "name meters_per_pixel m/px" summary of the day-used cameras, so a re-calibrated camera
+ * (changed `meters_per_pixel`) is visible during catch-up triage instead of being hidden behind a
+ * bare camera count. Truncates gracefully after a few cameras (`+K more`). Returns '' when the day
+ * uses no cameras (the count text already conveys "0 cameras").
+ *
+ * @param {Array<object>} cameras - The day-used cameras (the SAME set the scan count is derived
+ *   from — `merged.cameras`).
+ * @returns {string}
+ */
+function describeCameraCalibration(cameras) {
+  const list = Array.isArray(cameras) ? cameras : [];
+  if (list.length === 0) return '';
+  const shown = list.slice(0, CAMERA_CALIBRATION_LIMIT).map((cam) => {
+    const name = cam?.camera_name || `camera ${cam?.id ?? '?'}`;
+    const mpp = cam?.meters_per_pixel;
+    return mpp == null ? `${name} (no calibration)` : `${name} ${mpp} m/px`;
+  });
+  const remaining = list.length - shown.length;
+  if (remaining > 0) shown.push(`+${remaining} more`);
+  return shown.join(', ');
+}
 
 /**
  * True only for plain object records — not null, not an array, not a primitive.
@@ -161,10 +188,21 @@ export function buildRows(workspace) {
       // the day-protocol opto state — so days can be compared before opening each editor. Computed
       // here (where the merge already succeeded) so the table reads, never re-derives.
       const workflow = getDayWorkflowStatus(animal, record, merged, animalDays);
+      const sessionDescriptionRaw = record.session?.session_description;
+      const sessionDescription =
+        typeof sessionDescriptionRaw === 'string' && sessionDescriptionRaw.trim()
+          ? sessionDescriptionRaw.trim()
+          : '';
       const scan = {
         version: workflow.configurationVersion,
         historical: workflow.isHistoricalConfiguration,
+        // The day's session description (trimmed, empty when blank/whitespace-only) — surfaced in the
+        // row so it isn't hidden behind the session id alone.
+        sessionDescription,
         cameras: (merged.cameras || []).length,
+        // Day-used camera calibration (name + meters_per_pixel) from the SAME camera set the count
+        // is derived from, so a re-calibrated camera is visible without opening the editor.
+        cameraCalibration: describeCameraCalibration(merged.cameras),
         opto: describeDayOptoState(merged).label,
       };
       rows.push({ animal, animalKey, day: record, chip, status, orphaned, scan });
@@ -202,21 +240,20 @@ const subjectLabel = (animal) => {
 };
 
 /**
- * Human-readable dated config context for a day's pinned configuration version (Task 3.4 — the
- * validation-slice legibility), e.g. "config from 2023-06-01 (historical — v1)" instead of a bare
- * "v1". Falls back to the bare version when the snapshot has no date (corrupt/old history).
+ * The single, unified config-version label used EVERYWHERE this surface names a day's pinned
+ * configuration version — the cross-animal batch table, the per-animal Validation & Export scan,
+ * and the batch-export preflight — so they can never drift (they previously read "config v1" vs
+ * "config from <date>", and neither said whether the version was the latest or a historical pin).
  *
- * @param {object} animal - The owning animal (its `configurationHistory` supplies the version date).
+ * Always states the version AND a latest/historical marker, e.g. `config v1 (latest)` /
+ * `config v2 (historical)`.
+ *
  * @param {number|null} version - The pinned configuration version.
- * @param {boolean} historical - Whether that version is not the animal's latest.
+ * @param {boolean} historical - Whether that version is NOT the animal's latest.
  * @returns {string}
  */
-function datedConfigContext(animal, version, historical) {
-  const snapshot = getConfigHistory(animal).find((s) => s.version === version);
-  if (snapshot?.date) {
-    return `config from ${snapshot.date}${historical ? ` (historical — v${version})` : ''}`;
-  }
-  return `config v${version ?? '—'}${historical ? ' (historical)' : ''}`;
+function describeConfigVersionLabel(version, historical) {
+  return `config v${version ?? '—'} (${historical ? 'historical' : 'latest'})`;
 }
 
 /**
@@ -591,6 +628,14 @@ export function ValidationSummary({ animalKey } = {}) {
 
   const hasDays = rows.length > 0;
 
+  // When nothing is exportable (no valid days) BUT there are days with errors, "Export Valid
+  // Only" would be inert — one click reports "Exported 0 files" with no fix path. Disable it with an
+  // accessible reason instead, so the affordance doesn't mislead. (With 0 valid and only INCOMPLETE
+  // days — no errors — the button stays enabled: clicking gives the "complete the required fields"
+  // guidance, which is the right next step there.)
+  const exportValidDisabled = counts.valid === 0 && counts.error > 0;
+  const exportValidDisabledReason = 'No valid days to export — fix errors first.';
+
   // Scoped (embedded in AnimalView) renders a section + a scoped header — NOT a second
   // `<main id="main-content">` (AnimalView owns the page landmark) and NOT the page-level h1.
   const Wrapper = scoped ? 'section' : 'main';
@@ -650,10 +695,26 @@ export function ValidationSummary({ animalKey } = {}) {
             <button
               type="button"
               onClick={handleExportValidOnly}
-              title="Download YAML for every valid day that is part of an animal's day list. Days with errors or incomplete fields are not exported; recovered days not in the list must be re-linked first."
+              disabled={exportValidDisabled}
+              aria-describedby={exportValidDisabled ? 'export-valid-disabled-reason' : undefined}
+              title={
+                exportValidDisabled
+                  ? exportValidDisabledReason
+                  : "Download YAML for every valid day that is part of an animal's day list. Days with errors or incomplete fields are not exported; recovered days not in the list must be re-linked first."
+              }
             >
               Export Valid Only
             </button>
+            {exportValidDisabled && (
+              // Accessible disabled reason: a disabled control is not announced on hover by SRs, so
+              // pair it with a visible, programmatically-associated explanation (aria-describedby).
+              <p
+                id="export-valid-disabled-reason"
+                className="validation-summary-hint validation-summary-disabled-reason"
+              >
+                {exportValidDisabledReason}
+              </p>
+            )}
           </div>
 
           <p className="validation-summary-hint">
@@ -680,8 +741,7 @@ export function ValidationSummary({ animalKey } = {}) {
                       </span>
                     ) : (
                       <span className="batch-export-preflight-detail">
-                        config v{entry.version ?? '—'}
-                        {entry.historical ? ' (historical)' : ''}; {entry.groups}{' '}
+                        {describeConfigVersionLabel(entry.version, entry.historical)}; {entry.groups}{' '}
                         electrode {entry.groups === 1 ? 'group' : 'groups'}, {entry.failedChannels}{' '}
                         failed {entry.failedChannels === 1 ? 'channel' : 'channels'}; {entry.cameras}{' '}
                         {entry.cameras === 1 ? 'camera' : 'cameras'}; {entry.opto}
@@ -777,6 +837,10 @@ export function ValidationSummary({ animalKey } = {}) {
             items={staleReport}
           />
 
+          {/* The table can be wider than a phone viewport (6 columns of dense scan/session text), so
+              it scrolls horizontally WITHIN this container instead of forcing the whole page to
+              overflow — the page stays at the viewport width at ~390px and no cell is clipped off. */}
+          <div className="validation-summary-table-scroll">
           <table className="validation-summary-table">
             <caption className="visually-hidden">
               Recording days across all animals with validation status
@@ -814,21 +878,38 @@ export function ValidationSummary({ animalKey } = {}) {
                     )}
                   </td>
                   <td>{day.date || '—'}</td>
-                  <td>{day.session?.session_id || '—'}</td>
                   <td>
-                    {/* Scan fields (Task 10): pinned configuration version, camera count, and the
-                        day-protocol opto state — so days can be compared at a glance. Absent for
-                        unreadable/missing/wrong-owner rows (no trustworthy merge), shown as "—".
-                        In the SCOPED per-animal tab, the cell becomes an expander whose summary reads
-                        the dated config context (Task 3.4) and whose body is the read-only
-                        effective-setup-for-this-day review (Task 3.3a). */}
+                    {day.session?.session_id || '—'}
+                    {scan?.sessionDescription && (
+                      <span
+                        className="validation-summary-session-description"
+                        data-testid={`session-description-${day.id}`}
+                      >
+                        {scan.sessionDescription}
+                      </span>
+                    )}
+                  </td>
+                  <td>
+                    {/* Scan fields: pinned configuration version (via describeConfigVersionLabel),
+                        camera count + calibration, and the day-protocol opto state — so days can be
+                        compared at a glance. Absent for unreadable/missing/wrong-owner rows (no
+                        trustworthy merge), shown as "—". In the SCOPED per-animal tab, the cell
+                        becomes an expander whose summary reads the same unified config-version label
+                        and whose body is the read-only effective-setup-for-this-day review. */}
                     {scan ? (
                       scoped ? (
                         <details className="validation-summary-effective" data-testid={`effective-${day.id}`}>
                           <summary className="validation-summary-scan">
-                            {datedConfigContext(animal, scan.version, scan.historical)}
+                            {describeConfigVersionLabel(scan.version, scan.historical)}
                             {' · '}
                             {scan.cameras} {scan.cameras === 1 ? 'camera' : 'cameras'}
+                            {scan.cameraCalibration && (
+                              <span className="validation-summary-scan-cameras">
+                                {' ('}
+                                {scan.cameraCalibration}
+                                {')'}
+                              </span>
+                            )}
                             {' · '}
                             {scan.opto}
                           </summary>
@@ -836,10 +917,16 @@ export function ValidationSummary({ animalKey } = {}) {
                         </details>
                       ) : (
                         <span className="validation-summary-scan">
-                          config v{scan.version ?? '—'}
-                          {scan.historical ? ' (historical)' : ''}
+                          {describeConfigVersionLabel(scan.version, scan.historical)}
                           {' · '}
                           {scan.cameras} {scan.cameras === 1 ? 'camera' : 'cameras'}
+                          {scan.cameraCalibration && (
+                            <span className="validation-summary-scan-cameras">
+                              {' ('}
+                              {scan.cameraCalibration}
+                              {')'}
+                            </span>
+                          )}
                           {' · '}
                           {scan.opto}
                         </span>
@@ -928,6 +1015,7 @@ export function ValidationSummary({ animalKey } = {}) {
               ))}
             </tbody>
           </table>
+          </div>
         </>
       )}
     </Wrapper>

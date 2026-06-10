@@ -38,3 +38,7 @@ playwright.config.js
 # eslint ignores hidden directories by default:
 # https://github.com/eslint/eslint/issues/8429
 !.erb
+
+# Generated Playwright artifacts (gitignored; never lint vendored report bundles)
+playwright-report
+test-results

@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import '../../components/ErrorState.css';
 
 /**
  * Error State - Displays error message for missing data

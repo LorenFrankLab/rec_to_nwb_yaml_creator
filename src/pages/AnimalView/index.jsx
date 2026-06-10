@@ -31,6 +31,7 @@ import OverflowMenu from '../../components/OverflowMenu';
 import AnimalDeleteDialog from '../../components/AnimalDeleteDialog';
 import AnimalProfileDialog from '../../components/AnimalProfileDialog';
 import { RecordingDaysTab } from '../AnimalWorkspace/RecordingDaysTab';
+import SaveIndicator from '../DayEditor/SaveIndicator';
 import RawCorruptionBanner from '../../components/RawCorruptionBanner';
 import ReconfigurationContextBanner from '../../components/ReconfigurationContextBanner';
 import ElectrodeGroupsContainer from '../AnimalEditor/wiring/ElectrodeGroupsContainer';
@@ -42,6 +43,7 @@ import OptogeneticsContainer from '../AnimalEditor/wiring/OptogeneticsContainer'
 import { useAnimalFieldUpdate } from '../AnimalEditor/wiring/useAnimalFieldUpdate';
 import ConfigVersionContext from './ConfigVersionContext';
 import { ValidationSummary, buildAnimalRows } from '../ValidationSummary';
+import '../../components/ErrorState.css';
 import './AnimalView.css';
 
 /**
@@ -50,13 +52,18 @@ import './AnimalView.css';
  * entry; later sub-phases add the rest.
  */
 const TAB_SCOPE = {
-  'electrode-groups': 'Versioned identity — a change here forks a configuration version.',
-  'channel-maps': 'Edit any time — map channels, mark bad channels.',
+  'electrode-groups':
+    'Shared across all recording days — a hardware change starts a new version (with an audit trail).',
+  // Channel maps are wiring/mapping only. Failed (bad) channels are NOT marked here; they are marked
+  // per recording day in the Day Editor — so this descriptor must not imply otherwise.
+  'channel-maps':
+    'Map probe channels to hardware. (Failed channels are marked per day in the Day Editor.)',
   // Recording system is an animal-wide CATALOG of acquisition systems; each recording day uses one
   // (chosen in the day's setup), defaulting to the first. Mirrors the cameras catalog framing.
   'recording-system': 'Animal-wide catalog — each recording day uses one.',
   cameras: 'Catalog — referenced per day.',
-  dio: 'Library — opt in per day.',
+  // Bridge the "DIO" nav label and the "behavioral events" content so the jargon label is legible.
+  dio: 'Digital I/O (DIO) — behavioral-event channels (rewards, choices, triggers), opt in per day.',
 };
 
 /**
@@ -197,9 +204,12 @@ function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdat
     case 'optogenetics':
       return (
         <>
-          {getAnimalSectionStatus(animal, 'optogenetics') === SECTION_STATUS.TODO && (
-            // An unconfigured opto tab is a VALID state, not an error — a neutral chip says so, so
-            // the empty section doesn't read as missing setup (charter tab→content map).
+          {getAnimalOptoCompleteness(animal) === OPTO_COMPLETENESS.NONE && (
+            // A NEVER-configured opto tab is a VALID state, not an error — a neutral chip says so, so
+            // the empty section doesn't read as missing setup (charter tab→content map). Keyed to the
+            // NONE state specifically (not the setup-status TODO, which also covers PARTIAL): a
+            // partially-configured animal IS using opto, so "Not used" would be wrong there — the
+            // section-nav shows "incomplete" for that case instead.
             <p className="animal-view-status-chip" data-testid="opto-status-chip">
               Not used — no stimulation
             </p>
@@ -229,7 +239,7 @@ function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdat
  * @returns {React.Element}
  */
 export function AnimalView({ animalId, tab }) {
-  const { model, actions } = useStoreContext();
+  const { model, actions, persistence } = useStoreContext();
   const { animals = {} } = model.workspace;
   const animal = animalId ? animals[animalId] : null;
 
@@ -381,12 +391,20 @@ export function AnimalView({ animalId, tab }) {
     // just deleted). Show a non-stranding "not found" with a way out for ALL of those — never a
     // perpetual "Loading…" (an emptied-after-delete workspace would otherwise hang there).
     return (
-      <main id="main-content" tabIndex="-1" role="main" aria-labelledby="animal-view-heading">
+      <main
+        id="main-content"
+        tabIndex="-1"
+        role="main"
+        aria-labelledby="animal-view-heading"
+        className="error-state"
+      >
         <h1 id="animal-view-heading">Animal not found</h1>
-        <p>
-          No animal “{animalId}” in this workspace.{' '}
-          <a href="#/workspace">Back to Workspace</a>.
-        </p>
+        <p>No animal “{animalId}” in this workspace.</p>
+        {/* Match the Day Editor's not-found escape: a prominent, keyboard-reachable return action
+            (the shared `error-state-action` styling) rather than a link buried in a sentence. */}
+        <a href="#/workspace" className="error-state-action">
+          ← Back to Workspace
+        </a>
       </main>
     );
   }
@@ -421,8 +439,16 @@ export function AnimalView({ animalId, tab }) {
     <main id="main-content" tabIndex="-1" role="main" aria-labelledby="animal-view-heading">
       <header className="animal-view-header">
         <h1 id="animal-view-heading">{animal.id}</h1>
-        <span className="animal-view-idbadge">subject_id</span>
+        <span className="animal-view-idbadge">animal ID</span>
         {facts && <span className="animal-view-facts">{facts}</span>}
+        {/* Save-confidence cue — the SAME shared SaveIndicator the Day Editor shows, reading the
+            SAME workspace persistence state (`useStoreContext().persistence`), so an animal-level
+            setup edit gets the same "Saving… / Saved" feedback day edits already get. It is NOT an
+            optimistic local timestamp; it reflects real autosave outcomes (display-only — no export
+            bytes, no validation rule). Lives in the header band so it shows on every tab. */}
+        <div className="animal-view-header-save">
+          <SaveIndicator persistence={persistence} />
+        </div>
         {/* Per-animal lifecycle ⋮ — the SAME reusable menu + type-to-confirm dialog as the picker
             card, so animal delete reads one truth from either surface (Task 4.1). */}
         <div className="animal-view-header-actions">

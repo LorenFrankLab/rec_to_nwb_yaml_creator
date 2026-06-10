@@ -17,6 +17,23 @@ function rowValue(rows, label) {
   return rows.find((r) => r.label === label)?.value;
 }
 
+describe('buildPreflightSummary — row order', () => {
+  it('orders rows to match the scientist export-readiness scan (config version near the top, subject near the end)', () => {
+    const rows = buildPreflightSummary({}, {});
+    expect(rows.map((r) => r.label)).toEqual([
+      'Animal & day',
+      'Configuration version',
+      'Probes & failed channels',
+      'Cameras / calibration',
+      'Data acquisition',
+      'Tasks & videos',
+      'Optogenetics',
+      'Subject & session',
+      'Non-blocking warnings',
+    ]);
+  });
+});
+
 describe('buildPreflightSummary — camera calibration row', () => {
   it('renders each day-used camera name with its meters_per_pixel', () => {
     const merged = {

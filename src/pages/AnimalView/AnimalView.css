@@ -28,15 +28,28 @@
   padding: 0.05rem 0.35rem;
 }
 
+/* The "Animal not found" escape screen (a missing-animal deep-link) renders
+   `<main class="error-state">` with a `.error-state-action` return link. Those shared rules now
+   live in one canonical home, `src/components/ErrorState.css` (imported by this view), rather than
+   a near-duplicate copy here. */
+
 .animal-view-facts {
   font-family: var(--mono-font, monospace);
   font-size: 0.78rem;
   color: #46443d;
 }
 
-/* Per-animal lifecycle ⋮ menu, pushed to the trailing edge of the header band (Phase 4). */
-.animal-view-header-actions {
+/* Save-confidence cue (the shared SaveIndicator), grouped with the ⋮ menu at the trailing edge of
+   the header band. `margin-left: auto` here absorbs the free space, pushing the save indicator AND
+   the actions block to the right together; `align-self: center` keeps it on the baseline-aligned
+   row. Scoped under the AnimalView header so the global SaveIndicator styles aren't altered. */
+.animal-view-header-save {
   margin-left: auto;
+  align-self: center;
+}
+
+/* Per-animal lifecycle ⋮ menu, sitting just after the save cue at the trailing edge (Phase 4). */
+.animal-view-header-actions {
   align-self: center;
 }
 

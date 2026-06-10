@@ -162,7 +162,10 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
         </button>
       </div>
 
-      <table className="cameras-table" role="table">
+      {/* Horizontal-scroll container so the Actions column (Edit/Delete) stays reachable when
+          long camera/lens names would otherwise push it off-screen at desktop widths. */}
+      <div className="cameras-table-scroll">
+        <table className="cameras-table" role="table">
         <thead>
           <tr>
             <th>ID</th>
@@ -179,10 +182,11 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
           {cameras.map((camera, index) => (
             <tr key={`${camera.id}-${index}`}>
               <td data-label="ID">{camera.id}</td>
-              <td data-label="Name">{camera.camera_name || ''}</td>
-              <td data-label="Manufacturer">{camera.manufacturer || ''}</td>
-              <td data-label="Model">{camera.model || ''}</td>
-              <td data-label="Lens">{camera.lens || ''}</td>
+              {/* title= surfaces the full value when the cell truncates with an ellipsis. */}
+              <td data-label="Name" title={camera.camera_name || ''}>{camera.camera_name || ''}</td>
+              <td data-label="Manufacturer" title={camera.manufacturer || ''}>{camera.manufacturer || ''}</td>
+              <td data-label="Model" title={camera.model || ''}>{camera.model || ''}</td>
+              <td data-label="Lens" title={camera.lens || ''}>{camera.lens || ''}</td>
               <td data-label="Meters per Pixel">{camera.meters_per_pixel}</td>
               <td data-label="Status">
                 {(() => {
@@ -219,7 +223,8 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
             </tr>
           ))}
         </tbody>
-      </table>
+        </table>
+      </div>
     </div>
   );
 }

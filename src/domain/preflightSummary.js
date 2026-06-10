@@ -94,9 +94,14 @@ export function buildPreflightSummary(
       })`
     : 'None';
 
+  // Row order follows how a scientist confirms export readiness: identify the day, then the
+  // highly-consequential configuration version (critical for historical-day exports — surfaced near
+  // the top, not buried after subject/session), then the hardware/recording facts (probes, cameras,
+  // data-acq), then the session content (tasks, opto), with the rarely-changing subject identity and
+  // the non-blocking warnings at the end. DISPLAY ORDER ONLY — row content/values are unchanged, and
+  // the preflight is not exported, so YAML bytes are unaffected.
   return [
     { label: 'Animal & day', value: `${animalId || '—'} — ${date || '—'}` },
-    { label: 'Subject & session', value: `${subjectId} — session ${sessionId}` },
     {
       label: 'Configuration version',
       value:
@@ -115,6 +120,7 @@ export function buildPreflightSummary(
       value: `${(merged.tasks || []).length} tasks, ${(merged.associated_video_files || []).length} videos`,
     },
     { label: 'Optogenetics', value: opto.label },
+    { label: 'Subject & session', value: `${subjectId} — session ${sessionId}` },
     {
       label: 'Non-blocking warnings',
       value:

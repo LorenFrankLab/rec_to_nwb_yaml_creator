@@ -422,15 +422,16 @@ export function RecordingDaysTab({ animalId }) {
           // Which setup sections hold an export-blocking error — the SAME source the section-nav red
           // ● reads (no second mapping), so the card's per-section state can't contradict the nav.
           const setupBlockingSections = getAnimalBlockingSections(selectedAnimal, days);
-          // Existing data needs an explicit review state: recovered/imported setup must
-          // not look silently trusted. Show it once there ARE recording days to export,
-          // or whenever raw-shape corruption OR a corrupt days reference is present.
+          // Existing data needs an explicit review state ONLY when there is something to review:
+          // raw-shape corruption, a corrupt days reference, or recovered/wrong-owner day records.
+          // A clean, established animal (days present, nothing corrupt) does NOT show this banner —
+          // it would otherwise compete with "Add Recording Days" forever after the first day.
           const hasCorruption =
             rawIssues.length > 0 ||
             selectedDaysCorrupt ||
             selectedOrphanDayIds.length > 0 ||
             selectedWrongOwnerDayIds.length > 0;
-          const showReview = dayCount > 0 || hasCorruption;
+          const showReview = hasCorruption;
           return (
             <>
               {showSetupCard && (
@@ -740,8 +741,9 @@ export function RecordingDaysTab({ animalId }) {
           pendingDeleteDay != null ? (
             <>
               Delete recording day <strong>{pendingDeleteDay.date || pendingDeleteDay.dayId}</strong>
-              {pendingDeleteDay.sessionId ? ` (${pendingDeleteDay.sessionId})` : ''}? This removes it
-              from this workspace and from export lists.
+              {pendingDeleteDay.sessionId ? ` (${pendingDeleteDay.sessionId})` : ''}? This removes the
+              day and its session metadata, tasks, and failed-channel marks from this workspace and
+              from export lists.
               {pendingDeleteDay.hasArtifacts && DOWNSTREAM_NOT_DELETED_NOTE} This cannot be undone.
             </>
           ) : (

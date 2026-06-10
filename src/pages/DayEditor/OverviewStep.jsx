@@ -196,6 +196,7 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, an
                 fieldErrors['session.session_description'] ? 'session-description-error' : null
               }
               required
+              aria-required="true"
             />
             {fieldErrors['session.session_description'] && (
               <span id="session-description-error" className="validation-error" role="alert">
@@ -219,6 +220,7 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, an
               className={fieldErrors['session.experiment_description'] ? 'invalid' : ''}
               aria-invalid={!!fieldErrors['session.experiment_description']}
               required
+              aria-required="true"
             />
             <span className="field-help-text">
               Describes the overall experiment. Required for export and written to the NWB file.
@@ -299,7 +301,7 @@ export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, an
             {showInherited ? '▼' : '▶'}
           </span>
           View / edit inherited subject metadata
-          <span className="inherited-metadata-badge">Inherited</span>
+          <span className="inherited-metadata-badge">Updates all days</span>
         </button>
 
         {showInherited && (

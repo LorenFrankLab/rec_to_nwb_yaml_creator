@@ -190,7 +190,11 @@
 
 .day-editor-pager-prev:disabled,
 .day-editor-pager-next:disabled {
-  opacity: 0.5;
+  /* Use an explicit muted color (≥3:1 against the button face) instead of opacity:0.5, which
+     dropped the text to ~2:1 on the grey button. Still reads as disabled. */
+  color: var(--color-grey-600);
+  background-color: var(--color-grey-100);
+  border-color: var(--color-grey-300);
   cursor: not-allowed;
 }
 
@@ -228,6 +232,14 @@
 
 .save-indicator .spinner {
   animation: spin 1s linear infinite;
+}
+
+/* WCAG 2.3.3: honor reduced-motion — stop the continuous rotation. The "Saving…" text stays
+   visible so the saving state is still communicated. */
+@media (prefers-reduced-motion: reduce) {
+  .save-indicator .spinner {
+    animation: none;
+  }
 }
 
 @keyframes spin {
@@ -402,43 +414,9 @@
 
 /* ===== Error State ===== */
 
-.error-state {
-  padding: var(--spacing-xl);
-  text-align: center;
-  color: var(--color-error);
-}
-
-.error-state h2 {
-  font-size: var(--font-size-lg);
-  margin-bottom: var(--spacing-md);
-}
-
-/* The return path is the primary action on the dead-end error screen, so it reads as a
-   prominent button rather than an inline link buried in a sentence. */
-.error-state .error-state-action {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  margin-top: var(--spacing-md);
-  padding: var(--spacing-sm) var(--spacing-lg);
-  background-color: var(--color-primary);
-  color: var(--color-white);
-  font-weight: 600;
-  text-decoration: none;
-  border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: all var(--transition-fast);
-}
-
-.error-state .error-state-action:hover {
-  background-color: var(--color-primary-hover);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-}
-
-.error-state .error-state-action:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-}
+/* The full-page error screen (`.error-state` / `.error-state-action`, rendered by ErrorState.jsx)
+   shares one canonical definition in `src/components/ErrorState.css`, imported by that component.
+   The `.error-state-inline` rules further down are a different, in-form variant and stay here. */
 
 /* ===== Responsive ===== */
 
