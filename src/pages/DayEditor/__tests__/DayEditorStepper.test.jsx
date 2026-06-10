@@ -330,7 +330,7 @@ describe('DayEditorStepper', () => {
     await user.click(devicesButton);
 
     // Should show devices stub
-    expect(screen.getByText(/Devices Configuration/i)).toBeInTheDocument();
+    expect(screen.getByText(/Setup & Failed Channels/i)).toBeInTheDocument();
     expect(errorSpy).not.toHaveBeenCalled();
     errorSpy.mockRestore();
   });
@@ -625,7 +625,7 @@ describe('DayEditorStepper', () => {
       renderEditor();
 
       await user.click(screen.getByRole('button', { name: /Devices & Failed Channels/i }));
-      expect(screen.getByText(/Devices Configuration/i)).toBeInTheDocument();
+      expect(screen.getByText(/Setup & Failed Channels/i)).toBeInTheDocument();
 
       await user.click(screen.getByRole('button', { name: /Tasks & Epochs/i }));
       // Epochs (TasksEpochsStep) renders the tasks table region.

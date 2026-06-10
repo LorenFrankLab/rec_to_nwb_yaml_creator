@@ -524,7 +524,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
   if (configError) {
     return (
       <div className="devices-step">
-        <h2>Devices Configuration</h2>
+        <h2>Setup &amp; Failed Channels</h2>
         <div className="error-state-inline" role="alert">
           <p>
             This animal&apos;s device configuration is missing or corrupt, so devices
@@ -543,7 +543,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
   if (electrodeGroups.length === 0) {
     return (
       <div className="devices-step">
-        <h2>Devices Configuration</h2>
+        <h2>Setup &amp; Failed Channels</h2>
         {recordingSystemPicker}
         {camerasUsedSection}
         {overrideCleanupSection}
@@ -563,7 +563,7 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
 
   return (
     <div className="devices-step">
-      <h2>Devices Configuration</h2>
+      <h2>Setup &amp; Failed Channels</h2>
 
       {recordingSystemPicker}
 

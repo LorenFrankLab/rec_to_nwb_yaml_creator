@@ -369,7 +369,8 @@ function AnimalCreationForm({
                 aria-invalid={!!fieldErrors.speciesCustom}
               />
               <span id="speciesCustom-hint" className="validation-hint">
-                Use scientific name (genus species) for NWB compatibility
+                Must be a Latin binomial (e.g. Rattus norvegicus) or an NCBI Taxon
+                URI — free text like &quot;Rat&quot; is rejected by public archives (DANDI).
               </span>
               {fieldErrors.speciesCustom && (
                 <span className="validation-error" role="alert">
@@ -526,7 +527,7 @@ function AnimalCreationForm({
                   onChange={(e) => updateExperimenterName(idx, e.target.value)}
                   onBlur={() => handleBlur('experimenter_names')}
                   required={idx === 0}
-                  placeholder="Firstname Lastname"
+                  placeholder="Last, First (e.g. Doe, Jane)"
                   aria-label={`Experimenter ${idx + 1}`}
                 />
                 {idx > 0 && (

@@ -14,9 +14,9 @@ export default function ErrorState({ message }) {
     <main id="main-content" role="main" tabIndex="-1" aria-label="Error" className="error-state">
       <h2>Error</h2>
       <p>{message}</p>
-      <p>
-        <a href="#/workspace">Return to Workspace</a>
-      </p>
+      <a href="#/workspace" className="error-state-action">
+        ← Back to Workspace
+      </a>
     </main>
   );
 }
