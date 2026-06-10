@@ -352,7 +352,7 @@ describe('ValidationSummary', () => {
     const user = userEvent.setup();
     // 0 valid with only INCOMPLETE days (no errors): the button STAYS enabled and a click yields the
     // helpful guidance. Scope to remy and drop its valid day so only the incomplete day remains —
-    // keeping the global error day (totoro's) out would otherwise DISABLE the button (F-08).
+    // keeping the global error day (totoro's) out would otherwise DISABLE the button.
     const { workspace, ids } = makeSummaryWorkspace();
     delete workspace.days[ids.validDayId];
     workspace.animals.remy.days = [ids.incompleteDayId];
@@ -369,7 +369,7 @@ describe('ValidationSummary', () => {
     expect(screen.getByRole('status')).toHaveTextContent(/no days are ready to export/i);
   });
 
-  it('Export Valid Only is DISABLED with an accessible reason when 0 days are valid and some have errors (F-08)', () => {
+  it('Export Valid Only is DISABLED with an accessible reason when 0 days are valid and some have errors', () => {
     // Keep only the error day (drop valid + incomplete) → counts.valid === 0, counts.error > 0.
     const { workspace, ids } = makeSummaryWorkspace();
     delete workspace.days[ids.validDayId];
@@ -387,7 +387,7 @@ describe('ValidationSummary', () => {
     expect(document.getElementById(reasonId)).toHaveTextContent(/no valid days to export — fix errors first/i);
   });
 
-  it('Export Valid Only stays ENABLED when 0 valid but only INCOMPLETE days (no errors) (F-08)', () => {
+  it('Export Valid Only stays ENABLED when 0 valid but only INCOMPLETE days (no errors)', () => {
     // Scope to remy and keep only its incomplete day: 0 valid, 0 error → not the disable case.
     const { workspace, ids } = makeSummaryWorkspace();
     delete workspace.days[ids.validDayId];

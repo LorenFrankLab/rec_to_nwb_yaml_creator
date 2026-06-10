@@ -168,7 +168,7 @@ describe('AnimalWorkspace lifecycle cleanup — Delete recording day', () => {
     expect(screen.getByText('2023-06-22')).toBeInTheDocument();
   });
 
-  it('previews the cascade — session metadata, tasks, and failed-channel marks (C-03)', async () => {
+  it('previews the cascade — session metadata, tasks, and failed-channel marks', async () => {
     const user = userEvent.setup();
     renderView('remy', { remy }, remyDays);
 

@@ -1,7 +1,7 @@
 /**
  * E2E regression: the cameras catalog table keeps its row actions reachable with long names.
  *
- * Bug class this guards (T5-1): the per-animal Cameras tab renders an 8-column table
+ * Bug class this guards: the per-animal Cameras tab renders an 8-column table
  * (ID / Name / Manufacturer / Model / Lens / Meters-per-Pixel / Status / Actions). With long
  * camera/lens/model strings the un-constrained table grew WIDER than the viewport, pushing the
  * Actions column (Edit / Delete) off the right edge — at desktop it became unreachable, and the

@@ -72,7 +72,7 @@ describe('CamerasContainer — identity safety', () => {
     expect(screen.getByRole('button', { name: /use a new camera name/i })).toBeInTheDocument();
   });
 
-  it('saves directly when filling a previously-BLANK meters_per_pixel on the same camera (F-12)', async () => {
+  it('saves directly when filling a previously-BLANK meters_per_pixel on the same camera', async () => {
     // The camera is the SAME existing identity (same id + same name); the saved meters_per_pixel
     // was blank. Supplying a value COMPLETES the identity, it does not diverge it — so the
     // "use a new name" self-divergence decision must NOT fire and the edit must save directly.

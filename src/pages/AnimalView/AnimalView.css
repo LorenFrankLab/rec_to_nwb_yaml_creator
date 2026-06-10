@@ -28,7 +28,7 @@
   padding: 0.05rem 0.35rem;
 }
 
-/* Not-found escape (F-06b): mirror the Day Editor's prominent return action so a missing-animal
+/* Not-found escape: mirror the Day Editor's prominent return action so a missing-animal
    deep-link doesn't dead-end on a bare inline link. The `.error-state` / `.error-state-action`
    class names match the Day Editor's ErrorState; these rules are self-contained here so the look
    holds regardless of whether the Day Editor's stylesheet chunk happens to be loaded. */

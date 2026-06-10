@@ -152,7 +152,7 @@ test.describe('Fail-closed export gate + repair navigation', () => {
     await expect(noDownload).rejects.toThrow();
   });
 
-  test('per-animal "Export Valid Only" is disabled (with a reason) when the only day is in error (F-08)', async ({
+  test('per-animal "Export Valid Only" is disabled (with a reason) when the only day is in error', async ({
     page,
   }) => {
     await seedAndOpen(page, buildInvalidCameraBlob(), `/#/animal/${ANIMAL_ID}/export`);

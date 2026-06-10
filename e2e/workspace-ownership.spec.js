@@ -15,7 +15,7 @@
  *  - the `?field=` repair → Cameras-tab highlight (workspace-export-gate.spec.js);
  *  - same-day / catch-up batch export (workspace-workflows.spec.js).
  *
- * Recorded gaps (see the agent report): the charter "discard unsaved changes?" guard
+ * Behaviour notes: the "discard unsaved changes?" guard
  * (AnimalView.handleNavClick) is NOT reachable through the shipped UI — every setup editor that
  * reports pending edits is a focus-trapping Modal whose overlay intercepts pointer events on the
  * section-nav, so a user can't click another section while one is open. This spec asserts that
@@ -178,7 +178,7 @@ test.describe('Ownership & discoverability — AnimalView header + section-nav +
     const blob = buildConfiguredWorkspaceBlob();
     blob.workspace.animals[ANIMAL_ID].cameras[0].meters_per_pixel = '';
     // The "Existing data review" banner is shown only when there is something to REVIEW — recovered/
-    // corrupt/wrong-owner records — not merely because a day fails validation (F-07: a clean
+    // corrupt/wrong-owner records — not merely because a day fails validation (a clean
     // established animal must not show a standing review task). So seed a recovered-unlinked (orphan)
     // day record — owned by this animal but absent from its day index — which is exactly the state the
     // review banner exists to surface, and which renders the in-animal Validation & Export re-link.
@@ -269,7 +269,7 @@ test.describe('Section-nav: navigation, focus, and route guards (the jsdom-can\'
   test('a setup editor (a focus-trapping Modal) blocks the section-nav — the overlay intercepts the click', async ({
     page,
   }) => {
-    // RECORDED GAP: the charter "discard unsaved changes?" guard (handleNavClick) is dead in the
+    // Note: the "discard unsaved changes?" guard (handleNavClick) is not reachable in the
     // shipped UI because every pending-edits editor is a focus-trapping Modal. Assert the ACTUAL
     // behavior: with the Electrode Group modal open, its overlay intercepts pointer events so a
     // section-nav link cannot be clicked (the user must close the modal first).

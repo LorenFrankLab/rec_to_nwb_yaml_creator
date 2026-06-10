@@ -96,7 +96,7 @@ export default function CamerasContainer({ animal, onFieldUpdate, onPendingEdits
     const registry = collectCameraIdentities(model.workspace, exclude);
     const candidate = Object.fromEntries(CAMERA_DEPENDENT_FIELDS.map((f) => [f, cameraData[f]]));
 
-    // SELF-conflict (F-12): the edited camera is the SAME existing identity (same id + name).
+    // SELF-conflict: the edited camera is the SAME existing identity (same id + name).
     // Filling a dependent field that was EMPTY (null/undefined/'') on the saved camera COMPLETES
     // the identity — it does not diverge it — so such a field must NOT count as a self-divergence
     // (only a populated→different-populated change is a real self-divergence worth the "use a new

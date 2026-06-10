@@ -591,7 +591,7 @@ export function ValidationSummary({ animalKey } = {}) {
 
   const hasDays = rows.length > 0;
 
-  // F-08: when nothing is exportable (no valid days) BUT there are days with errors, "Export Valid
+  // When nothing is exportable (no valid days) BUT there are days with errors, "Export Valid
   // Only" would be inert — one click reports "Exported 0 files" with no fix path. Disable it with an
   // accessible reason instead, so the affordance doesn't mislead. (With 0 valid and only INCOMPLETE
   // days — no errors — the button stays enabled: clicking gives the "complete the required fields"

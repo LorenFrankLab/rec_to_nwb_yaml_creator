@@ -217,7 +217,7 @@ describe('AnimalView — not-found guard (Task 1.5)', () => {
     expect(screen.getByRole('heading', { name: /animal not found/i })).toBeInTheDocument();
     const back = screen.getByRole('link', { name: /back to workspace/i });
     expect(back).toHaveAttribute('href', '#/workspace');
-    // F-06b: the escape is a prominent styled action (matching the Day Editor's ErrorState), not a
+    // The escape is a prominent styled action (matching the Day Editor's ErrorState), not a
     // bare inline link buried in a sentence — and it stays keyboard-reachable.
     expect(back).toHaveClass('error-state-action');
     expect(back.closest('p')).toBeNull();

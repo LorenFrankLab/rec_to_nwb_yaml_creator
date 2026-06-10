@@ -425,7 +425,7 @@ export function RecordingDaysTab({ animalId }) {
           // Existing data needs an explicit review state ONLY when there is something to review:
           // raw-shape corruption, a corrupt days reference, or recovered/wrong-owner day records.
           // A clean, established animal (days present, nothing corrupt) does NOT show this banner —
-          // it would otherwise compete with "Add Recording Days" forever after the first day (F-07).
+          // it would otherwise compete with "Add Recording Days" forever after the first day.
           const hasCorruption =
             rawIssues.length > 0 ||
             selectedDaysCorrupt ||
