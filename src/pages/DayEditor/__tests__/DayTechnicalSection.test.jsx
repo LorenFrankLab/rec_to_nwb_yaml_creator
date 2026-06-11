@@ -111,9 +111,9 @@ describe('DayTechnicalSection', () => {
         <DayTechnicalSection technical={DEFAULTS} recordingSystemDefaults={DEFAULTS} animalKey="remy" onFieldUpdate={vi.fn()} />
       );
       const link = screen.getByRole('link', { name: /edit in recording system/i });
-      // Pin the field target: ?field=data_acq_device deep-links to the Recording System step
-      // (animalEditorStepForFieldPath: path.includes('data_acq') → step 3). A wrong keyword would
-      // mis-route, so the component's field choice is load-bearing.
+      // Pin the field target: ?field=data_acq_device deep-links to the Recording System tab
+      // (animalSetupTabForFieldPath: path.includes('data_acq') → recording-system). A wrong keyword
+      // would mis-route, so the component's field choice is load-bearing.
       expect(link.getAttribute('href')).toBe('#/animal/remy/recording-system?field=data_acq_device');
     });
 

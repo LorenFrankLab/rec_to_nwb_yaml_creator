@@ -1022,60 +1022,8 @@ function deriveSurfaceFromPath(issue) {
 }
 
 /**
- * The Animal Editor's steps, in order, with the field-path keywords that route to each.
- * Used to (a) deep-link an animal-surface repair to the right step and (b) give the
- * repair button a step-aware label. The Day Editor's repair routing already decides the
- * SURFACE (`animal`); this only resolves WHICH animal-editor step owns the field.
- *
- * @type {Array<{ index: number, label: string }>}
- */
-export const ANIMAL_EDITOR_STEPS = [
-  // Phase 8.7 Task 2c: labels match the stepper's user-facing step labels (scientist language).
-  { index: 0, label: 'Electrodes & Ephys' },
-  { index: 1, label: 'Channel Maps' },
-  { index: 2, label: 'Optogenetics Setup' },
-  // Phase 8.7 Task 2: matches the stepper's user-facing label for this step (camera /
-  // data-acq / configurationHistory repairs deep-link here), replacing "Hardware Config".
-  { index: 3, label: 'Recording System, Cameras & DIO' },
-];
-
-/**
- * Resolve which Animal Editor step owns a field path (for deep-linking + labeling an
- * animal-surface repair). Channel-map paths → Channel Maps; camera / data-acq paths →
- * Hardware Config; electrode-group geometry/identity (and anything else) → Electrode
- * Groups (the default first step). AJV instancePath slashes are normalized first.
- *
- * Note channel-map is checked BEFORE electrode-group because the channel-map path
- * (`ntrode_electrode_group_channel_map`) contains the substring "electrode_group".
- *
- * @param {string} [fieldPath] - Issue path (dotted app path or AJV instancePath).
- * @returns {{ index: number, label: string }} The owning step (defaults to step 0).
- */
-export function animalEditorStepForFieldPath(fieldPath) {
-  const path = String(fieldPath || '').replace(/^\//, '').replace(/\//g, '.');
-
-  if (path.includes('ntrode')) return ANIMAL_EDITOR_STEPS[1];
-  // Cameras, data-acq, and the device configuration history all live on the Hardware Config
-  // step (the configurationHistory rebuild control is rendered in its corruption banner), so
-  // their repairs deep-link there rather than defaulting to Electrode Groups.
-  if (path.includes('camera') || path.includes('data_acq') || path.includes('configurationHistory')) {
-    return ANIMAL_EDITOR_STEPS[3];
-  }
-  // Animal-level optogenetics sections (excitation source, optical fiber, virus injection,
-  // software) live on the Optogenetics step. fs_gui paths are day-level and route to the
-  // Day Editor (a different surface), not here.
-  if (path.includes('opto') || path.includes('virus') || path.includes('fiber')) {
-    return ANIMAL_EDITOR_STEPS[2];
-  }
-  // electrode geometry/identity + bare keyword paths (device_type/location/targeted_*).
-  return ANIMAL_EDITOR_STEPS[0];
-}
-
-/**
  * The animal-setup TABS (tabbed-workspace-ia) a field path can own, keyed by route `:tab` segment,
- * with the user-facing label (matching {@link SECTION_GROUPS} in AnimalView's section-nav). This is
- * the finer-grained successor to {@link ANIMAL_EDITOR_STEPS}: the legacy editor's combined
- * "Recording System, Cameras & DIO" step is THREE tabs here, and its Electrodes step is TWO. It is
+ * with the user-facing label (matching {@link SECTION_GROUPS} in AnimalView's section-nav). It is
  * the single field→section attribution shared by repair routing AND the section-nav blocking dot.
  *
  * @type {Record<string, string>}
@@ -1089,8 +1037,8 @@ export const ANIMAL_SETUP_TABS = {
 
 /**
  * Resolve which animal-setup TAB owns a field path (for re-pointing a repair deep-link at the
- * tabbed Animal View and for the section-nav blocking dot). Finer than
- * {@link animalEditorStepForFieldPath}: camera fields → `cameras`, data-acq → `recording-system`,
+ * tabbed Animal View and for the section-nav blocking dot): camera fields → `cameras`, data-acq →
+ * `recording-system`,
  * optogenetics → `optogenetics`, and electrode geometry/identity + the channel maps + the
  * configuration history (the versioned electrode config) → `electrode-groups` (the default). AJV
  * instancePath slashes are normalized first; `fs_gui` is day-level so it never lands on an animal tab.

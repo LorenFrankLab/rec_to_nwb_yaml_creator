@@ -155,48 +155,6 @@ export function buildProbeWideBadChannelMap({
 }
 
 /**
- * Build the migrated channel-map rows (array-of-rows shape) for a multi-shank probe-wide
- * toggle. The first row becomes the UNION
- * of its toggled selection and every later row's TRANSLATED marks; later rows are cleared
- * to `[]` when they carry a non-empty array OR a preserved corrupt scalar (both are
- * converter-ignored corruption the hidden later-row grid can't otherwise repair).
- *
- * NOTE: this helper has no live caller (it operates on the array-of-rows channel-map shape that no
- * UI currently renders); it is retained, alongside its tests, as the row-shape counterpart to the
- * live {@link buildProbeWideBadChannelMap} for a future inline (array-of-rows) editor.
- *
- * Takes an options object (not positional args) to match its Day-Editor twin
- * {@link buildProbeWideBadChannelMap} and make the same-typed `electrodeId`/`isChecked`
- * non-transposable.
- *
- * @param {object} params
- * @param {Array} params.channelMaps - The group's local channel-map rows (each with `bad_channels`/`map`).
- * @param {number} params.electrodeId - The probe-local electrode id toggled.
- * @param {boolean} params.isChecked - Whether the box was checked.
- * @param {string} params.deviceType - The group's device type (for the probe id set).
- * @returns {Array} The next channel-map rows.
- */
-export function migrateProbeWideChannelMaps({ channelMaps, electrodeId, isChecked, deviceType }) {
-  const probeIdSet = probeElectrodeIdSet(deviceType);
-  const translatedLaterMarks = channelMaps
-    .slice(1)
-    .flatMap((map) => translateLaterRowMarks(map.bad_channels, map.map, probeIdSet));
-
-  return channelMaps.map((map, idx) => {
-    if (idx === 0) {
-      const firstSelection = toggleMark(map.bad_channels, electrodeId, isChecked);
-      return { ...map, bad_channels: unionSortedMarks(firstSelection, translatedLaterMarks) };
-    }
-    const isNonEmptyArray = Array.isArray(map.bad_channels) && map.bad_channels.length > 0;
-    const isScalar = !Array.isArray(map.bad_channels) && map.bad_channels != null;
-    if (isNonEmptyArray || isScalar) {
-      return { ...map, bad_channels: [] };
-    }
-    return map;
-  });
-}
-
-/**
  * The valid probe-local ids for ONE ntrode row's bad-channel control. For the first row of
  * a multi-shank group the valid range is the whole probe (`0..N-1`, what the converter
  * honors); otherwise it is the row's own map keys.

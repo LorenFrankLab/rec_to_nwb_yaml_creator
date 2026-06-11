@@ -14,7 +14,6 @@ import {
   toggleMark,
   invalidBadChannelMarks,
   buildProbeWideBadChannelMap,
-  migrateProbeWideChannelMaps,
   validBadChannelIds,
   probeElectrodeIdSet,
 } from '../badChannels';
@@ -114,19 +113,6 @@ describe('buildProbeWideBadChannelMap (Day Editor map shape)', () => {
       deviceType: MULTI,
     });
     expect(next).toEqual({ 1: [2, 19], 2: [] });
-  });
-});
-
-describe('migrateProbeWideChannelMaps (array-of-rows shape)', () => {
-  it('unions onto the first row and clears later rows (array marks)', () => {
-    const next = migrateProbeWideChannelMaps({ channelMaps: twoShankRows([2], [3]), electrodeId: 5, isChecked: true, deviceType: MULTI });
-    expect(next[0].bad_channels).toEqual([2, 5, 19]);
-    expect(next[1].bad_channels).toEqual([]);
-  });
-  it('clears a later-row corrupt scalar during migration', () => {
-    const next = migrateProbeWideChannelMaps({ channelMaps: twoShankRows([], 'corrupt'), electrodeId: 1, isChecked: true, deviceType: MULTI });
-    expect(next[0].bad_channels).toEqual([1]);
-    expect(next[1].bad_channels).toEqual([]);
   });
 });
 
