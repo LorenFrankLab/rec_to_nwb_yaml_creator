@@ -163,6 +163,60 @@ describe('applyImportPlan — conflict resolutions', () => {
     // Recreated from the plan's subject facts, not the old genotype.
     expect(remy.subject.genotype).not.toBe('OLD');
   });
+
+  it("replace onto an animal with EMPTY config history pins each day to the RIGHT version (no duplicate v1)", () => {
+    // Regression (config-version race): the snapshot action reserved the next version from the
+    // STALE pre-delete animal. When that old animal's history was empty/malformed,
+    // nextConfigurationVersion([]) returned 1 — colliding with the freshly-recreated animal's v1 —
+    // so the later day silently pinned to the INITIAL config instead of its own reconfiguration.
+    const ws0 = createDefaultWorkspace();
+    ws0.animals.remy = {
+      id: 'remy',
+      subject: { subject_id: 'remy' },
+      devices: {
+        electrode_groups: [],
+        ntrode_electrode_group_channel_map: [],
+        device: { name: [] },
+        data_acq_device: [],
+      },
+      cameras: [],
+      experimenters: { experimenter_name: [], lab: '', institution: '' },
+      days: [],
+      configurationHistory: [], // empty/malformed history — the trigger
+    };
+    const { result } = renderHook(() => useStore({ workspace: ws0 }));
+
+    const files = [
+      makeFile({ subjectId: 'remy', date: '2023-06-22' }), // 8 electrode groups
+      makeFile({
+        subjectId: 'remy',
+        date: '2023-06-23',
+        mutateConfig: (animal) => {
+          const cfg = animal.configurationHistory[0];
+          cfg.devices.electrode_groups = cfg.devices.electrode_groups.slice(0, 7);
+          cfg.devices.ntrode_electrode_group_channel_map =
+            cfg.devices.ntrode_electrode_group_channel_map.slice(0, 7);
+        },
+      }),
+    ];
+    const plan = planImport(files, result.current.model.workspace);
+
+    act(() => {
+      applyImportPlan(plan, result.current.actions, {
+        workspace: result.current.model.workspace,
+        resolutions: { remy: 'replace' },
+      });
+    });
+
+    const ws = result.current.model.workspace;
+    const remy = ws.animals.remy;
+    // Distinct, sequential versions — NOT a duplicated v1.
+    expect(remy.configurationHistory.map((c) => c.version)).toEqual([1, 2]);
+    // Day 2 pins its OWN reconfiguration, and resolves the 7-group config (not the initial 8).
+    expect(ws.days['remy-2023-06-23'].configurationVersion).toBe(2);
+    expect(mergeDayMetadata(remy, ws.days['remy-2023-06-23']).electrode_groups).toHaveLength(7);
+    expect(mergeDayMetadata(remy, ws.days['remy-2023-06-22']).electrode_groups).toHaveLength(8);
+  });
 });
 
 describe('applyImportPlan — resilience (real store)', () => {

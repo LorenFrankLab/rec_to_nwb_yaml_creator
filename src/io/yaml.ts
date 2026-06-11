@@ -101,7 +101,10 @@ interface FilenameModel {
  */
 export function formatDeterministicFilename(model: FilenameModel): string {
   const experimentDate = model.EXPERIMENT_DATE_in_format_mmddYYYY || '{EXPERIMENT_DATE_in_format_mmddYYYY}';
-  const subjectId = (model.subject?.subject_id || '').toLocaleLowerCase();
+  // `toLowerCase` (not `toLocaleLowerCase`): the download filename must be locale-INDEPENDENT, so
+  // the same metadata produces the same filename on every machine (e.g. a Turkish locale lowercases
+  // "I" to a dotless "ı"). ASCII subject ids — the norm — are unaffected.
+  const subjectId = (model.subject?.subject_id || '').toLowerCase();
   return `${experimentDate}_${subjectId}_metadata.yml`;
 }
 

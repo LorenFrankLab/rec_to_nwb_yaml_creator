@@ -7,7 +7,7 @@ each mapped to the [UX rubric](../../research/ux-principles.md): remove decorati
 framing, replace glyph status with text+color, apply progressive disclosure, surface the hidden coupling,
 and pull the read-only inherited events out of the edit modal. It rides on the `DayEditorContext` from
 [Phase 5](phase-5-dayeditor-structural-prep.md). The task-type catalog model change is
-[Phase 8](phase-8-task-type-catalog.md); build this UI so the catalog slots in cleanly.
+[Phase 8C](phase-8c-task-type-catalog-ui.md); build this UI so the catalog slots in cleanly.
 
 **Inputs to read first:**
 
@@ -23,7 +23,7 @@ and pull the read-only inherited events out of the edit modal. It rides on the `
 **Contracts referenced:**
 
 - [C1 — YAML byte-identity](shared-contracts.md#c1) — UI/copy only; `day.tasks` and the export are unchanged.
-- [C3 — Task-type catalog model](shared-contracts.md#c3) — do **not** implement it here, but structure the Tasks section so the Phase 8 catalog (pick + order) drops in without another rewrite.
+- [C3 — Task-type catalog model](shared-contracts.md#c3) — do **not** implement it here, but structure the Tasks section so the Phase 8C catalog (pick + order) drops in without another rewrite.
 - [C4 — tokens / status labels](shared-contracts.md#c4) — status text+color use tokens; one consistent style.
 
 ## Tasks
@@ -40,7 +40,7 @@ and pull the read-only inherited events out of the edit modal. It rides on the `
 
 ## Deliberately not in this phase
 
-- The **task-type catalog** / epochs-as-day-collection model change, and any `mergeDayMetadata` change — [Phase 8](phase-8-task-type-catalog.md).
+- The **task-type catalog** / epochs-as-day-collection model change, and any `mergeDayMetadata` change — [Phase 8C](phase-8c-task-type-catalog-ui.md).
 - The DIO Type+Index control — [Phase 1](phase-1-quick-wins-day-order-dio.md).
 - Broad component decomposition / `DayEditorContext` — done in [Phase 5](phase-5-dayeditor-structural-prep.md); keep any further splits local and behavior-preserving.
 
@@ -64,6 +64,6 @@ referencing epochs). No YAML fixture changes.
 
 Before opening the PR, dispatch `code-reviewer` against the diff. Confirm:
 - Every rubric-mapped task implemented; no emoji; status text+color and de-overloaded; **jest-axe clean**.
-- `day.tasks`/export untouched (baselines byte-identical); the screen is structured for the Phase 8 catalog without another rewrite; it consumes `DayEditorContext`.
+- `day.tasks`/export untouched (baselines byte-identical); the screen is structured for the Phase 8C catalog without another rewrite; it consumes `DayEditorContext`.
 - Inherited events no longer in the task edit modal; optional sections progressively disclosed.
 - Names don't reference this plan; CHANGELOG + user docs updated.

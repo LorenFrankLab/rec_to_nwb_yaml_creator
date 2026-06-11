@@ -298,3 +298,33 @@ describe('planImport — purity', () => {
     expect(ws).toEqual(wsSnapshot);
   });
 });
+
+describe('planImport — subject_id must be a route-safe animal id', () => {
+  // The animal store key + hash-route param IS the subject_id; a non-route-safe value would import
+  // as valid data yet make the animal unreachable. (`/` is excluded here because it is rejected
+  // UPSTREAM during decompose validation by the DANDI `subject_id_slash` error rule — a `/` id
+  // fails `decomposeYaml` and is flagged "Validation failed: …", never reaching this gate. Verified:
+  // adding `'rat/1'` here yields that upstream reason, not this gate's.)
+  it.each(['rat 1', 'rat?1', 'rat#1', 'rat%1'])(
+    'flags a subject_id with a route-unsafe character (%s) as unimportable, not a silent unreachable animal',
+    (badId) => {
+      const file = makeFile({ subjectId: 'remy', date: '2023-06-22' });
+      file.flatModel.subject = { ...file.flatModel.subject, subject_id: badId };
+
+      const plan = planImport([file], createDefaultWorkspace());
+
+      expect(plan.animals).toEqual([]);
+      expect(plan.unimportable).toHaveLength(1);
+      expect(plan.unimportable[0].reason).toMatch(/aren't allowed in an animal id|letters, numbers/i);
+    }
+  );
+
+  it('imports a route-safe subject_id normally', () => {
+    const plan = planImport(
+      [makeFile({ subjectId: 'remy', date: '2023-06-22' })],
+      createDefaultWorkspace()
+    );
+    expect(plan.unimportable).toEqual([]);
+    expect(plan.animals.map((a) => a.subjectId)).toEqual(['remy']);
+  });
+});

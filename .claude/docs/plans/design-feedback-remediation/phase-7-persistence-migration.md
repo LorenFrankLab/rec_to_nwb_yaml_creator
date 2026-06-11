@@ -3,9 +3,9 @@
 [← back to PLAN.md](PLAN.md) · [overview](overview.md)
 
 The persistence layer currently *discards* a blob whose `schemaVersion` it doesn't recognize, and its only
-"migration" is device normalization. Before any real persisted-shape change (the Phase 8 catalog; the
+"migration" is device normalization. Before any real persisted-shape change (the Phase 8C catalog; the
 Phase 10 `appliedToDays` derivation), build a versioned forward-migration framework so old blobs upgrade
-losslessly instead of being thrown away. This phase is **release-gating** for Phases 8 and 10.
+losslessly instead of being thrown away. This phase is **release-gating** for Phase 8C and Phase 10.
 
 **Inputs to read first:**
 
@@ -16,7 +16,7 @@ losslessly instead of being thrown away. This phase is **release-gating** for Ph
 
 **Contracts referenced:**
 
-- [C2 — Persisted-blob schema version + migration](shared-contracts.md#c2) — **this phase introduces the registry**; Phases 8 & 10 consume it.
+- [C2 — Persisted-blob schema version + migration](shared-contracts.md#c2) — **this phase introduces the registry**; Phase 8C and Phase 10 consume it.
 
 ## Tasks
 
@@ -29,7 +29,7 @@ losslessly instead of being thrown away. This phase is **release-gating** for Ph
 
 ## Deliberately not in this phase
 
-- The **v2→v3 migrator** (ships with the catalog shape change in [Phase 8](phase-8-task-type-catalog.md)) or the next bump (Phase 10) — no shape to migrate to yet.
+- The **v2→v3 migrator** (ships with the catalog shape change in [Phase 8C](phase-8c-task-type-catalog-ui.md)) or the v3→v4 bump (Phase 10) — no shape to migrate to yet.
 - Any new persisted field or version bump — this phase builds the mechanism only (so it stays merge-neutral and independently shippable).
 
 ## Validation slice

@@ -27,16 +27,33 @@
 import { validate } from '../validation';
 
 /**
- * Whether the flat model carries an optogenetics session. The merge emits the
- * compatibility key `opto_software` ONLY for an opto session (and deletes it
- * otherwise), so its mere presence is the authoritative opto-vs-not signal — more
- * robust than inspecting the (always-present-but-possibly-empty) opto arrays.
+ * Whether the flat model carries an optogenetics session.
+ *
+ * This app's OWN export emits the compatibility key `opto_software` only for an opto session
+ * (deleted otherwise), so its presence is authoritative for files this app wrote. But a LEGACY or
+ * externally-produced file may carry real opto data (`optogenetic_stimulation_software` + populated
+ * `opto_excitation_source` / `optical_fiber` / `virus_injection`) WITHOUT `opto_software` — relying
+ * on `opto_software` alone silently drops that animal-level opto metadata on import. So treat the
+ * model as opto when ANY authoritative signal is present.
+ *
+ * Uses NON-EMPTY array checks and a non-blank software string so the inverse holds: a non-opto
+ * export (the merge emits empty `[]` opto arrays and `optogenetic_stimulation_software: ''`, with
+ * `opto_software` absent) correctly reads as non-opto, preserving round-trip byte identity.
  *
  * @param {object} flatModel - Decoded flat YAML model.
  * @returns {boolean} True when the model represents an optogenetics session.
  */
 function hasOpto(flatModel) {
-  return Object.hasOwn(flatModel, 'opto_software');
+  if (flatModel === null || typeof flatModel !== 'object') return false;
+  const nonEmptyArray = (key) => Array.isArray(flatModel[key]) && flatModel[key].length > 0;
+  return (
+    Object.hasOwn(flatModel, 'opto_software') ||
+    (typeof flatModel.optogenetic_stimulation_software === 'string' &&
+      flatModel.optogenetic_stimulation_software.trim() !== '') ||
+    nonEmptyArray('opto_excitation_source') ||
+    nonEmptyArray('optical_fiber') ||
+    nonEmptyArray('virus_injection')
+  );
 }
 
 /**

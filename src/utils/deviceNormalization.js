@@ -590,7 +590,7 @@ export function migrateBadChannelsToDays(workspace) {
   return applyBadChannelMigration(structuredClone(workspace));
 }
 
-export function normalizeWorkspaceDevices(workspace) {
+export function normalizeWorkspaceDevices(workspace, { migrateBadChannels = true } = {}) {
   if (!isPlainObject(workspace)) return workspace;
 
   const normalized = structuredClone(workspace);
@@ -635,5 +635,11 @@ export function normalizeWorkspaceDevices(workspace) {
   // bad-channel marks DOWN into the owning day's overrides (a no-op for the
   // base-free majority). Runs last so the moved values come from already-
   // normalized snapshots and land in already-normalized override records.
-  return applyBadChannelMigration(normalized);
+  //
+  // This is a ONE-TIME, LOAD-time migration of legacy persisted shape; callers that only need
+  // device-shape normalization (the per-save path) pass `migrateBadChannels: false` so the
+  // migration's idempotency stops being a load-bearing invariant of every write. Skipping it on
+  // save is byte-identical for any in-memory workspace that was already loaded/hydrated (where the
+  // migration already ran and is a no-op), and the next load migrates anything that wasn't.
+  return migrateBadChannels ? applyBadChannelMigration(normalized) : normalized;
 }

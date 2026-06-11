@@ -38,13 +38,19 @@ export default function ValidationStep(props) {
   // The shared day bundle comes from DayEditorContext in the Day Editor (an isolated render
   // passes the same fields as props). `onNavigate`/`onRepair` are section-specific, so they stay
   // direct props.
-  const { day, mergedDay, animal, animalKey = undefined } = useDayEditorContext(props);
+  const { day, mergedDay, animal, animalDays = [], animalKey = undefined } = useDayEditorContext(props);
   const { onNavigate, onRepair } = props;
   // The store OWNER KEY (resolved by DayEditorStepper); a stale/missing `animal.id` record field
   // must not misroute an animal-surface repair deep-link. Falls back to `animal.id` for isolated
   // renders that don't pass it.
   const ownerKey = animalKey ?? animal?.id;
-  const issues = useMemo(() => validateDay(day || {}, mergedDay || {}, animal), [day, mergedDay, animal]);
+  // `animalDays` MUST be threaded so this summary reflects the SAME export gate the Export step
+  // and the nav badge enforce — without it the cross-day bad-channel monotonicity block is invisible
+  // here and the day can falsely read "ready to export" while Export blocks the download.
+  const issues = useMemo(
+    () => validateDay(day || {}, mergedDay || {}, animal, animalDays),
+    [day, mergedDay, animal, animalDays]
+  );
 
   const bySeverity = useMemo(() => groupBySeverity(issues), [issues]);
 
@@ -56,8 +62,8 @@ export default function ValidationStep(props) {
   // errors but an incomplete step is NOT ready — saying "Ready to export" there is exactly the
   // confusion this phase removes.
   const stepStatus = useMemo(
-    () => computeStepStatus(day || {}, mergedDay || {}, animal),
-    [day, mergedDay, animal]
+    () => computeStepStatus(day || {}, mergedDay || {}, animal, animalDays),
+    [day, mergedDay, animal, animalDays]
   );
   const ready = isExportEnabled(stepStatus);
   const blockReason = exportBlockReason(stepStatus);
@@ -102,6 +108,10 @@ ValidationStep.propTypes = {
   animal: PropTypes.object,
   onRepair: PropTypes.func,
   animalKey: PropTypes.string,
+  // The animal's days (sorted), threaded so the summary's gate matches Export's — drives the
+  // cross-day bad-channel monotonicity block. Comes from DayEditorContext in the real editor;
+  // defaults to [] for isolated single-day renders.
+  animalDays: PropTypes.arrayOf(PropTypes.object),
 };
 
 ValidationStep.defaultProps = {
@@ -109,6 +119,7 @@ ValidationStep.defaultProps = {
   onNavigate: () => {},
   animal: null,
   onRepair: undefined,
+  animalDays: [],
 };
 
 /**

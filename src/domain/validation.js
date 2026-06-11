@@ -367,6 +367,52 @@ export function danglingDataAcqRefIssue(day, animal) {
 }
 
 /**
+ * Export-blocking issue for an animal whose recording-system CATALOG defines the same device
+ * `name` twice with different `system`/`amplifier`/`adc_circuit`. In Spyglass the device name is an
+ * identity (one `DataAcquisitionDevice` per name), so a divergent duplicate silently reuses the
+ * wrong row. The merged export model carries only ONE device (`resolveDayDataAcqDevice` collapses
+ * the catalog to the day's referenced entry), so the merged-model `divergent_data_acq_identity`
+ * rule can never see this — it must be checked at the RAW catalog boundary, mirroring
+ * {@link danglingDataAcqRefIssue}. The edit-time identity guard prevents creating such a catalog,
+ * so this catches hand-edited / imported / legacy persisted state.
+ *
+ * @param {object} [animal] - The owning animal (its `devices.data_acq_device` catalog).
+ * @returns {Array} One issue per divergent name (animal-routed, Devices step, error).
+ */
+export function divergentDataAcqCatalogIssue(animal) {
+  const catalog = getDataAcqDevices(animal);
+  const seen = new Map(); // name -> first entry's hardware signature
+  const reported = new Set();
+  const issues = [];
+  catalog.forEach((device) => {
+    const name = device?.name;
+    if (typeof name !== 'string' || name === '') return;
+    const signature = JSON.stringify(
+      ['system', 'amplifier', 'adc_circuit'].map((key) => device?.[key] ?? null)
+    );
+    if (!seen.has(name)) {
+      seen.set(name, signature);
+    } else if (seen.get(name) !== signature && !reported.has(name)) {
+      reported.add(name);
+      issues.push({
+        path: 'data_acq_device',
+        field: 'name',
+        step: 'devices',
+        repairSurface: 'animal',
+        actionLabel: 'Use a new device name',
+        code: 'divergent_data_acq_identity',
+        severity: 'error',
+        message:
+          `Recording system "${name}" is defined more than once in this animal's catalog with ` +
+          `different system/amplifier/adc_circuit. In Spyglass the device name is an identity — ` +
+          `give each distinct system a unique name, or make the duplicates identical.`,
+      });
+    }
+  });
+  return issues;
+}
+
+/**
  * Export-blocking issues for a day that silently "un-fails" bad channels — drops a channel that
  * was bad on an EARLIER same-`configurationVersion` recording day without an off-export
  * acknowledgment. Bad channels are MONOTONIC across a study (hardware does not heal): a later
@@ -454,6 +500,7 @@ export function validateDay(day, mergedDay, animal, animalDays = []) {
     ...dayOverrideIssues(day, mergedDay, base),
     ...unpinnedConfigurationIssues(day, animal),
     ...danglingDataAcqRefIssue(day, animal),
+    ...divergentDataAcqCatalogIssue(animal),
     ...badChannelUnfailIssues(day, animal, animalDays),
   ].map(normalizeIssue);
 }

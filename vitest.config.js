@@ -32,18 +32,25 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
+      // Measure PRODUCTION source (covered or not), not just test-touched files — in Vitest 4 an
+      // explicit `include` is what makes uncovered source count toward the percentages (the removed
+      // `all: true` no longer does). Tests, fixtures, mocks, setup, type decls, and non-logic entry
+      // points are excluded from the denominator.
+      include: ['src/**/*.{js,jsx,ts,tsx}'],
       exclude: [
-        'node_modules/',
+        'src/**/*.{test,spec}.{js,jsx,ts,tsx}',
+        'src/**/__tests__/**',
+        'src/**/__mocks__/**',
         'src/setupTests.js',
-        '**/*.test.{js,jsx}',
-        '**/__tests__/fixtures/**',
-        'build/',
+        'src/**/*.d.ts',
+        'src/index.js',
+        'src/reportWebVitals.js',
       ],
-      all: true,
-      lines: 80,
-      functions: 80,
-      branches: 80,
-      statements: 80,
+      // Thresholds MUST be nested here in Vitest 4 (keys placed directly on `coverage` are silently
+      // ignored — which made this gate vacuous). Set a few points below the measured whole-repo level
+      // (statements ~94, branches ~87, functions ~92, lines ~95) so the gate catches REGRESSION
+      // without flaking on run-to-run v8 variance; ratchet up as coverage improves.
+      thresholds: { lines: 90, functions: 85, branches: 80, statements: 90 },
     },
     include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}'],
     exclude: ['node_modules/', 'build/', 'dist/'],

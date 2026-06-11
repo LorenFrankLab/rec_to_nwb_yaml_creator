@@ -177,4 +177,39 @@ describe('OptogeneticsStep', () => {
     await user.type(modelInput, 'Custom Laser X');
     expect(modelInput).toHaveValue('Custom Laser X');
   });
+
+  it('does not crash on a corrupt SCALAR optogenetics (reads as OFF, the safe default)', () => {
+    // A corrupt persisted/imported `optogenetics: "x"` (not a record) must not throw on render
+    // (which would trip the root ErrorBoundary and blank the app) — it reads as OFF.
+    render(<Harness initial="corrupt" />);
+    expect(screen.getByRole('checkbox', { name: /has optogenetics/i })).not.toBeChecked();
+    expect(screen.queryByRole('group', { name: /excitation source/i })).not.toBeInTheDocument();
+  });
+
+  it('does not crash on a record opto with non-array nested lists (degrades to an editable form)', () => {
+    // `optogenetics: { opto_excitation_source: "x" }` is a record → enabled, but its nested lists
+    // are corrupt; coercing them to [] lets the editor render an empty-but-editable form instead of
+    // throwing on `.map`/`.length`.
+    render(
+      <Harness initial={{ opto_excitation_source: 'x', optical_fiber: null, virus_injection: 7 }} />
+    );
+    expect(screen.getByRole('checkbox', { name: /has optogenetics/i })).toBeChecked();
+    // All three sections render (the string-valued excitation source is the likeliest .map/.length
+    // crash and must render too, degraded to empty).
+    expect(screen.getByRole('group', { name: /excitation source/i })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: /optical fibers/i })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: /virus injections/i })).toBeInTheDocument();
+  });
+
+  it('preserves a lone object written without its array wrapper (one item, not silently dropped)', () => {
+    // A hand-edited `opto_excitation_source: {…}` (a single item missing its array wrapper) is kept
+    // as a one-item list rather than dropped, so real data survives the corruption-tolerant render.
+    render(
+      <Harness
+        initial={{ opto_excitation_source: { name: 'preserved_laser' }, optical_fiber: [], virus_injection: [] }}
+      />
+    );
+    expect(screen.getByRole('checkbox', { name: /has optogenetics/i })).toBeChecked();
+    expect(screen.getByDisplayValue('preserved_laser')).toBeInTheDocument();
+  });
 });

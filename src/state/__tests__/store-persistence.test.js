@@ -153,6 +153,32 @@ describe('useStore persistence', () => {
     expect(result.current.persistence.hasPendingWrite).toBe(true);
   });
 
+  it('auto-retries once after a transient autosave failure, clearing the error on the retry', () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() => useStore());
+
+    // Fail the first debounced write, then let the bounded retry succeed (a transient blip).
+    const setItem = vi.spyOn(window.localStorage, 'setItem').mockImplementationOnce(() => {
+      throw new Error('QuotaExceededError');
+    });
+
+    act(() => {
+      result.current.actions.createAnimal('remy', { species: 'Rattus norvegicus' });
+    });
+    act(() => {
+      vi.advanceTimersByTime(600); // first attempt fails → saveError set, retry armed
+    });
+    expect(result.current.persistence.saveError).toMatch(/could not save/i);
+    expect(result.current.persistence.hasPendingWrite).toBe(true);
+
+    act(() => {
+      vi.advanceTimersByTime(2100); // bounded retry fires and now succeeds
+    });
+    expect(result.current.persistence.saveError).toBeNull();
+    expect(result.current.persistence.hasPendingWrite).toBe(false);
+    expect(setItem).toHaveBeenCalledTimes(2); // one failed attempt + one successful retry
+  });
+
   it('hydrates a structurally-empty blob and surfaces a recovery notice naming the missing sections', () => {
     // A valid-but-empty workspace blob (e.g. from an aborted/older write) must hydrate
     // cleanly rather than crash a consumer on Object.keys(undefined).

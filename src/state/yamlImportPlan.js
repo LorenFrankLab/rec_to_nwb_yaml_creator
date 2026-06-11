@@ -465,6 +465,21 @@ export function planImport(decodedFiles, existingWorkspace) {
       continue;
     }
 
+    // The animal store key + hash-route param IS the subject_id, so it must be route-safe — the
+    // SAME charset the create-animal forms enforce (`/^[a-zA-Z0-9_-]+$/`). A subject_id with a
+    // space, `?`, `#`, `/`, etc. would import as valid data yet make the animal unreachable (the
+    // hash router can't round-trip it) or resolve to the wrong/absent animal. Flag it with a clear,
+    // actionable reason rather than silently creating an unreachable animal.
+    if (!/^[a-zA-Z0-9_-]+$/.test(subjectId)) {
+      unimportable.push({
+        sourceName,
+        reason:
+          `Subject ID "${subjectId}" contains characters that aren't allowed in an animal id ` +
+          `(use only letters, numbers, hyphen, or underscore). Rename the subject in the file and re-import.`,
+      });
+      continue;
+    }
+
     // Intra-plan dedup: two ok+dated files resolving to the SAME (subject, date) would yield
     // two days with the same id. Keep the FIRST (input/source order); send the rest to
     // unimportable naming the collision.

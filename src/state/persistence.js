@@ -150,7 +150,11 @@ export function loadWorkspace() {
 export function saveWorkspace(workspace) {
   const blob = JSON.stringify({
     schemaVersion: WORKSPACE_SCHEMA_VERSION,
-    workspace: normalizeWorkspaceDevices(workspace),
+    // Device-SHAPE normalization only — the one-time bad-channel base→day migration is a LOAD
+    // concern (it ran on hydrate; the in-memory workspace is already migrated, so re-running it
+    // here is a redundant no-op). Skipping it keeps the migration's idempotency off the hot save
+    // path; `loadWorkspace` still migrates anything older on the way back in.
+    workspace: normalizeWorkspaceDevices(workspace, { migrateBadChannels: false }),
   });
   window.localStorage.setItem(WORKSPACE_STORAGE_KEY, blob);
 }

@@ -95,7 +95,16 @@ export function parseHashRoute(hash = typeof window !== 'undefined' ? window.loc
   const animalTabMatch = pathWithoutQuery.match(/^\/animal\/([^/]+)\/([^/]+)$/);
   const animalNoTabMatch = pathWithoutQuery.match(/^\/animal\/([^/]+)$/);
   if (animalTabMatch || animalNoTabMatch) {
-    const animalId = (animalTabMatch || animalNoTabMatch)[1];
+    // Decode the route param like the day route's useDayIdFromUrl, so a %-encoded id round-trips to
+    // its real store key — but ALSO guard a malformed percent-sequence (keep the raw segment), which
+    // the day route does not. (Imported animal ids are gated to a route-safe charset, so this decode
+    // is belt-and-suspenders.)
+    let animalId = (animalTabMatch || animalNoTabMatch)[1];
+    try {
+      animalId = decodeURIComponent(animalId);
+    } catch {
+      // Malformed percent-encoding — keep the raw segment.
+    }
 
     // Validate ID is not empty or whitespace
     if (!animalId || animalId.trim() === '') {

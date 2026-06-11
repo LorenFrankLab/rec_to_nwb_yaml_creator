@@ -17,8 +17,76 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useStore } from '../../../state/store';
+import { createDefaultWorkspace } from '../../../state/workspaceUtils';
 
 describe('Animal State Management', () => {
+  // Directly pin the commitWorkspace ref-lockstep contract (no import layer): a same-tick
+  // delete → create → reconfigure must keep workspaceRef current so the snapshot reserves the next
+  // version from the FRESHLY-CREATED animal, not the stale pre-delete one. Without the lockstep the
+  // version reservation reads the deleted animal's empty history and duplicates v1.
+  describe('commitWorkspace ref-lockstep across a same-tick replace', () => {
+    const twoGroups = {
+      electrode_groups: [
+        { id: 0, location: 'CA1', device_type: 'tetrode_12.5', description: 'g0', targeted_location: 'CA1', targeted_x: 0, targeted_y: 0, targeted_z: 0, units: 'mm' },
+        { id: 1, location: 'CA1', device_type: 'tetrode_12.5', description: 'g1', targeted_location: 'CA1', targeted_x: 0, targeted_y: 0, targeted_z: 0, units: 'mm' },
+      ],
+      ntrode_electrode_group_channel_map: [
+        { ntrode_id: 1, electrode_group_id: 0, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+        { ntrode_id: 2, electrode_group_id: 1, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+      ],
+    };
+    const oneGroup = {
+      electrode_groups: [twoGroups.electrode_groups[0]],
+      ntrode_electrode_group_channel_map: [twoGroups.ntrode_electrode_group_channel_map[0]],
+    };
+
+    it('reserves DISTINCT versions when replacing an animal whose history is empty', () => {
+      const ws0 = createDefaultWorkspace();
+      ws0.animals.remy = {
+        id: 'remy',
+        subject: { subject_id: 'remy' },
+        devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [], device: { name: [] }, data_acq_device: [] },
+        cameras: [],
+        experimenters: { experimenter_name: [], lab: '', institution: '' },
+        days: [],
+        configurationHistory: [], // empty/malformed — the trigger
+      };
+      const { result } = renderHook(() => useStore({ workspace: ws0 }));
+
+      act(() => {
+        const a = result.current.actions;
+        a.deleteAnimal('remy');
+        a.createAnimal('remy', { subject_id: 'remy' }, { devices: structuredClone(twoGroups) });
+        a.createDay('remy', '2023-06-23', { session_id: 'remy_20230623', session_description: 'd', experiment_description: 'e' });
+        a.createConfigurationSnapshotAndApplyForward(
+          'remy',
+          { date: '2023-06-23', description: 'reconfig', devices: structuredClone(oneGroup) },
+          ['remy-2023-06-23']
+        );
+      });
+
+      const remy = result.current.model.workspace.animals.remy;
+      expect(remy.configurationHistory.map((c) => c.version)).toEqual([1, 2]); // not [1, 1]
+      expect(result.current.model.workspace.days['remy-2023-06-23'].configurationVersion).toBe(2);
+    });
+
+    it('createAnimal on a duplicate id throws and leaves the workspace unchanged (throw-before-commit)', () => {
+      const { result } = renderHook(() => useStore());
+      act(() => {
+        result.current.actions.createAnimal('remy', { subject_id: 'remy' });
+      });
+      const before = JSON.parse(JSON.stringify(result.current.model.workspace));
+
+      expect(() => {
+        act(() => {
+          result.current.actions.createAnimal('remy', { subject_id: 'remy' });
+        });
+      }).toThrow(/already exists/i);
+
+      expect(result.current.model.workspace).toEqual(before);
+    });
+  });
+
   describe('createAnimal', () => {
     it('creates animal with minimal required fields', () => {
       const { result } = renderHook(() => useStore());

@@ -639,6 +639,16 @@ describe('tabbed animal-view route (Phase 1 — tabbed-workspace-ia)', () => {
     });
   });
 
+  it('decodes a percent-encoded animal id (parity with the day route)', () => {
+    // A %-encoded id round-trips to its real store key (matches useDayIdFromUrl). A malformed
+    // percent-sequence keeps the raw segment rather than throwing out of the router.
+    expect(parseHashRoute('#/animal/rat%20a/cameras')).toEqual({
+      view: 'animal-view',
+      params: { animalId: 'rat a', tab: 'cameras' },
+    });
+    expect(parseHashRoute('#/animal/bad%ZZ').params.animalId).toBe('bad%ZZ');
+  });
+
   it('normalizes an unknown tab to days (redirect-to-days)', () => {
     expect(parseHashRoute('#/animal/remy/banana')).toEqual({
       view: 'animal-view',

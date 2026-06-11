@@ -139,6 +139,9 @@ export function getAnimalBlockingSections(animal, days) {
       // Unreadable day config — its corruption is surfaced by the raw-shape banner, not the dot.
       continue;
     }
+    // `animalDays` is deliberately omitted: this only counts ANIMAL-surface blockers (the filter
+    // below), and the cross-day blocks `animalDays` adds (bad-channel monotonicity) are day-surface,
+    // so threading it here would change nothing. Not a missed call site.
     for (const issue of validateDay(day, merged, animal)) {
       if (issue.severity !== 'error') continue;
       if (repairTargetForIssue(issue).surface !== 'animal') continue;

@@ -2,10 +2,10 @@
 
 [← back to PLAN.md](PLAN.md) · [overview](overview.md)
 
-Pure-refactor phase that lands **before** the Tasks-screen rewrites (Phases 6, 8) so they ride on clean
+Pure-refactor phase that lands **before** the Tasks-screen rewrites (Phases 6, 8C) so they ride on clean
 structure instead of churning an 825-LOC monolith twice. Two targeted moves: kill the Day Editor's 7-prop
 drill with a context, and extract the `resolveDayConfig`↔`dayOverrideIssues` merge into one shared module so
-the catalog change (Phase 8) can't reintroduce the drift the assessment flagged. **Zero behavior change** —
+the catalog change (Phase 8C) can't reintroduce the drift the assessment flagged. **Zero behavior change** —
 golden baselines change by zero bytes and every contract/guard test stays green.
 
 **Inputs to read first:**
