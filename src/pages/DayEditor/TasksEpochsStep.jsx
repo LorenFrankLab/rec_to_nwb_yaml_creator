@@ -297,9 +297,26 @@ export default function TasksEpochsStep(props) {
         .join(', ')
     : '';
 
+  // The repair prompt's title must name the kinds actually orphaned — a files-only edit must not
+  // claim "videos". (The body message already lists the affected entries by name generically.)
+  const repairHasVideos = (pendingRepair?.videos?.length ?? 0) > 0;
+  const repairHasFiles = (pendingRepair?.files?.length ?? 0) > 0;
+  const repairTitle =
+    repairHasVideos && repairHasFiles
+      ? 'Repair affected videos and files?'
+      : repairHasFiles
+        ? 'Repair affected files?'
+        : 'Repair affected videos?';
+
   return (
     <div className="day-editor-section tasks-epochs-step">
       <h2>Tasks &amp; Epochs</h2>
+
+      <p className="tasks-epochs-intro">
+        Record what the animal did this day. A <strong>task</strong> describes one activity in one
+        environment, with its cameras. An <strong>epoch</strong> is a numbered time block within
+        that task — each epoch belongs to exactly one task.
+      </p>
 
       <MalformedCollectionNotice
         day={day}
@@ -314,7 +331,6 @@ export default function TasksEpochsStep(props) {
           aria-live="polite"
           aria-label="Cameras recommended"
         >
-          <span className="camera-info-icon" aria-hidden="true">📹</span>
           <div className="camera-info-text">
             This animal has no cameras configured. Cameras are shared animal-catalog entries that
             this day&apos;s tasks, videos, and opto/FsGUI protocols select from — set them up once
@@ -347,40 +363,70 @@ export default function TasksEpochsStep(props) {
         affectedFilesForDelete={affectedFilesForDelete}
       />
 
-      <AssociatedVideosEditor
-        videos={associatedVideos}
-        cameras={cameras}
-        tasks={tasks}
-        onChange={(next) => onFieldUpdate('associated_video_files', next)}
-      />
+      {/* Optional, epoch-linked extras. Each section is collapsed when EMPTY (progressive
+          disclosure: lead with the Tasks table, defer empty optional surfaces) but OPEN when it
+          already holds data, so a returning day's existing videos/files are never hidden. The
+          item count in the summary is the scent either way. */}
+      <div className="tasks-optional-sections">
+        {tasks.length > 0 && (
+          <p className="tasks-coupling-note">
+            Associated videos and files (and FsGUI protocols, when optogenetics is enabled) each
+            reference a task&apos;s epochs. Editing or deleting a task they use prompts you to
+            confirm before the link is cleared — that repair dialog is expected, not an error.
+          </p>
+        )}
 
-      <AssociatedFilesEditor
-        files={associatedFiles}
-        tasks={tasks}
-        onChange={(next) => onFieldUpdate('associated_files', next)}
-      />
+        <details className="tasks-optional-section" open={associatedVideos.length > 0}>
+          <summary>
+            Associated video files{associatedVideos.length > 0 ? ` (${associatedVideos.length})` : ''}
+          </summary>
+          <AssociatedVideosEditor
+            videos={associatedVideos}
+            cameras={cameras}
+            tasks={tasks}
+            onChange={(next) => onFieldUpdate('associated_video_files', next)}
+          />
+        </details>
 
-      {/* FsGUI optogenetics protocols are day-owned and only meaningful when the animal
-          has optogenetics enabled. They reference this day's epochs + the animal's
-          cameras as controlled choices. */}
-      {animal?.optogenetics != null && (
-        <FsGuiSection
-          fsGuiYamls={getDayFsGuiYamls(day)}
-          cameras={cameras}
-          epochOptions={[...validEpochSet(tasks)].sort((a, b) => a - b)}
-          // Behavioral events are day-owned and exported from the day (mergeDayMetadata reads
-          // day.behavioral_events), and the dangling_dio_output rule validates against those —
-          // so offer the day's behavioral events here.
-          dioOptions={[
-            ...new Set(
-              dayBehavioralEvents
-                .map((e) => e?.name)
-                .filter((n) => typeof n === 'string' && n !== '')
-            ),
-          ]}
-          onChange={(next) => onFieldUpdate('fs_gui_yamls', next)}
-        />
-      )}
+        <details className="tasks-optional-section" open={associatedFiles.length > 0}>
+          <summary>
+            Associated files{associatedFiles.length > 0 ? ` (${associatedFiles.length})` : ''}
+          </summary>
+          <AssociatedFilesEditor
+            files={associatedFiles}
+            tasks={tasks}
+            onChange={(next) => onFieldUpdate('associated_files', next)}
+          />
+        </details>
+
+        {/* FsGUI optogenetics protocols are day-owned and only meaningful when the animal
+            has optogenetics enabled. They reference this day's epochs + the animal's
+            cameras as controlled choices. */}
+        {animal?.optogenetics != null && (
+          <details className="tasks-optional-section" open={getDayFsGuiYamls(day).length > 0}>
+            <summary>
+              Optogenetics protocols (FsGUI)
+              {getDayFsGuiYamls(day).length > 0 ? ` (${getDayFsGuiYamls(day).length})` : ''}
+            </summary>
+            <FsGuiSection
+              fsGuiYamls={getDayFsGuiYamls(day)}
+              cameras={cameras}
+              epochOptions={[...validEpochSet(tasks)].sort((a, b) => a - b)}
+              // Behavioral events are day-owned and exported from the day (mergeDayMetadata reads
+              // day.behavioral_events), and the dangling_dio_output rule validates against those —
+              // so offer the day's behavioral events here.
+              dioOptions={[
+                ...new Set(
+                  dayBehavioralEvents
+                    .map((e) => e?.name)
+                    .filter((n) => typeof n === 'string' && n !== '')
+                ),
+              ]}
+              onChange={(next) => onFieldUpdate('fs_gui_yamls', next)}
+            />
+          </details>
+        )}
+      </div>
 
       <TaskModal
         isOpen={modalOpen}
@@ -396,7 +442,7 @@ export default function TasksEpochsStep(props) {
 
       <ConfirmDialog
         isOpen={pendingRepair != null}
-        title="Repair affected videos?"
+        title={repairTitle}
         message={
           pendingRepair
             ? `Saving this task removes a task epoch still referenced by: ${repairNames}. Confirm to save the task and clear the orphaned epoch reference(s) (their epoch will be unset) so no dangling reference is left. Cancel to discard this task change; the referenced file(s) stay unchanged.`

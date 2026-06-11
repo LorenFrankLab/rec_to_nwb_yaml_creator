@@ -116,6 +116,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Tasks & Epochs screen — clarity redesign (no data-model or export change).** The day editor's
+  most-complex screen now opens with a plain-language framing that defines a *task* (one activity
+  in one environment, with its cameras) and an *epoch* (a numbered time block of that task, each
+  belonging to exactly one task). Decorative emoji are gone, and the glyph status badges (✓/⚠/❌)
+  are replaced with token-colored **text labels** — the one badge that overloaded two problems is
+  split into distinct "Needs epochs" and "Missing camera" labels (an error like a reused epoch or a
+  missing required field reads as text, too). The optional, epoch-linked editors — associated
+  videos, associated files, and FsGUI protocols — are now collapsible sections (an empty one is
+  collapsed to reduce noise; a section that already holds data stays open so it is never hidden),
+  each showing an item count, preceded by a one-line note that they reference a task's epochs and
+  that editing or deleting a referenced task asks you to confirm before the link is cleared (so the
+  repair dialog is expected, not a surprise). Add-button labels and section heading levels are
+  normalized. `day.tasks` and the exported YAML are unchanged (golden baselines byte-identical), and
+  the redesigned step has zero automated-accessibility (axe) violations.
 - **Day Editor structural refactor (internal; no behavior or export change).** Extracted the day
   device-override merge — the override > snapshot resolution AND the matching "can this override
   be honored cleanly?" shape classification — into one pure module

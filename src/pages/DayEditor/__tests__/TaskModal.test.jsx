@@ -49,6 +49,15 @@ describe('TaskModal', () => {
     expect(detailsFor('Cameras')).not.toHaveAttribute('open');
   });
 
+  it('has no read-only inherited behavioral-events section (those live on the Behavioral Events tab)', () => {
+    // Inherited/behavioral events were pulled out of the task edit modal; the modal is just
+    // the three task accordions. Their absence here keeps the edit surface to one job.
+    renderModal();
+    expect(document.querySelectorAll('details')).toHaveLength(3);
+    expect(screen.queryByText(/behavioral events/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/inherited/i)).not.toBeInTheDocument();
+  });
+
   it('writes selected camera ids as integers and removes them on uncheck', async () => {
     const user = userEvent.setup();
     const { onSave } = renderModal();

@@ -238,6 +238,9 @@ test.describe('Optogenetics export gating and the two-layer opto model', () => {
     await page.getByRole('button', { name: /^Tasks & Epochs — / }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Tasks & Epochs' })).toBeVisible();
 
+    // The optional FsGUI section is collapsed by default (progressive disclosure) — expand it.
+    await page.locator('summary', { hasText: 'Optogenetics protocols' }).click();
+
     // The day-level opto protocol editor is present (the two-layer model's "what was actually run").
     const fsGui = page.getByRole('region', { name: 'Optogenetics run this day (FsGUI protocols)' });
     await expect(fsGui).toBeVisible();

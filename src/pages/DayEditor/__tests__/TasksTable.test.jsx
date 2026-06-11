@@ -37,10 +37,10 @@ describe('TasksTable', () => {
     expect(onAdd).toHaveBeenCalledTimes(1);
   });
 
-  it('shows a ✓ status for a complete task', () => {
+  it('shows a "Complete" text status for a complete task', () => {
     renderTable({ tasks: [completeTask] });
     const row = screen.getByRole('row', { name: /sleep/i });
-    expect(within(row).getByText('✓')).toBeInTheDocument();
+    expect(within(row).getByText('Complete')).toBeInTheDocument();
   });
 
   it('shows the Room (task_environment) column — the task → room/cameras/epochs mapping (Task 5c)', () => {
@@ -54,7 +54,7 @@ describe('TasksTable', () => {
     expect(within(row).getByText('1, 2')).toBeInTheDocument(); // epochs
   });
 
-  it('surfaces a duplicate task-epoch collision as a ❌ prevented error on BOTH tasks (Task 5c)', () => {
+  it('surfaces a duplicate task-epoch collision as an "Epoch reused" error on BOTH tasks (Task 5c)', () => {
     // Each epoch belongs to exactly one task (duplicate_task_epoch is export-blocking). Epoch 2
     // is claimed by both tasks → both rows must show the prevented error inline, not silently.
     const sleep = { ...completeTask, task_name: 'sleep', task_epochs: [1, 2] };
@@ -63,27 +63,38 @@ describe('TasksTable', () => {
 
     const sleepRow = screen.getByRole('row', { name: /sleep/i });
     const runRow = screen.getByRole('row', { name: /run/i });
-    expect(within(sleepRow).getByText('❌')).toBeInTheDocument();
-    expect(within(runRow).getByText('❌')).toBeInTheDocument();
-    expect(within(sleepRow).getByText(/epoch 2 .*another task|each epoch belongs to exactly one task/i)).toBeInTheDocument();
+    expect(within(sleepRow).getByText('Epoch 2 reused')).toBeInTheDocument();
+    expect(within(runRow).getByText('Epoch 2 reused')).toBeInTheDocument();
+    // The detail (which epoch, and why) is the label's tooltip.
+    expect(
+      within(sleepRow).getByTitle(/epoch 2 .*another task|each epoch belongs to exactly one task/i)
+    ).toBeInTheDocument();
   });
 
-  it('shows a ⚠ status for a task with no epochs', () => {
+  it('shows a distinct "Needs epochs" status for a task with no epochs', () => {
     renderTable({ tasks: [{ ...completeTask, task_epochs: [] }] });
     const row = screen.getByRole('row', { name: /sleep/i });
-    expect(within(row).getByText('⚠')).toBeInTheDocument();
+    expect(within(row).getByText('Needs epochs')).toBeInTheDocument();
   });
 
-  it('shows a ⚠ status for a task referencing a missing camera', () => {
+  it('shows a distinct "Missing camera" status for a task referencing a missing camera', () => {
     renderTable({ tasks: [{ ...completeTask, camera_id: [9] }] });
     const row = screen.getByRole('row', { name: /sleep/i });
-    expect(within(row).getByText('⚠')).toBeInTheDocument();
+    expect(within(row).getByText('Missing camera')).toBeInTheDocument();
   });
 
-  it('shows a ❌ status for a task with a blank required field', () => {
+  it('shows BOTH warnings as separate labels (the old single ⚠ overloaded them)', () => {
+    // A task with no epochs AND a missing camera surfaces two distinct labels, not one badge.
+    renderTable({ tasks: [{ ...completeTask, task_epochs: [], camera_id: [9] }] });
+    const row = screen.getByRole('row', { name: /sleep/i });
+    expect(within(row).getByText('Needs epochs')).toBeInTheDocument();
+    expect(within(row).getByText('Missing camera')).toBeInTheDocument();
+  });
+
+  it('shows a "Missing required fields" error for a task with a blank required field', () => {
     renderTable({ tasks: [{ ...completeTask, task_environment: '' }] });
     const row = screen.getByRole('row', { name: /sleep/i });
-    expect(within(row).getByText('❌')).toBeInTheDocument();
+    expect(within(row).getByText('Missing required fields')).toBeInTheDocument();
   });
 
   it('calls onEdit with the task index', async () => {

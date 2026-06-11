@@ -11,67 +11,81 @@ const REQUIRED_STRING_FIELDS = [
 ];
 
 /**
- * Per-task status, conveyed beyond color by the badge glyph AND an explanatory
- * label (used as the badge's accessible name and tooltip):
- *   ❌ a required string field is blank (schema would reject the task);
- *   ⚠ the task has no epochs, or references a camera the animal lacks;
- *   ✓ otherwise.
+ * Per-task statuses, each conveyed as a text label + token color (never a glyph alone):
+ *   - tone 'error'    — a required string field is blank, or an epoch is claimed by another
+ *     task (schema/Spyglass would reject the day);
+ *   - tone 'warning'  — the task has no epochs ("Needs epochs"), or references a camera the
+ *     animal no longer has ("Missing camera"). These are surfaced as DISTINCT labels, not one
+ *     overloaded badge, so the user sees exactly which problem applies.
+ *   - tone 'complete' — none of the above.
  *
- * Overlapping-epoch warnings are surfaced live in the epoch editor only — epoch
- * start/end times are not persisted, so they cannot be derived from a saved task.
+ * Returns an ARRAY so a task with both warnings shows each distinctly. Each entry carries a
+ * fuller `detail` sentence (the label's tooltip). Overlapping-epoch warnings are surfaced live
+ * in the epoch editor only — epoch start/end times are not persisted, so they cannot be derived
+ * from a saved task.
  *
  * @param {object} task Task record.
  * @param {Array} cameras Animal cameras.
  * @param {Set<number>} [duplicateEpochs] Epoch numbers claimed by more than one task (Task 5c):
  *   a collision is the export-blocking `duplicate_task_epoch` error, surfaced inline so the user
  *   sees it at the task — each epoch belongs to exactly one task — not only at export.
- * @returns {{glyph: '✓'|'⚠'|'❌', label: string}}
+ * @returns {Array<{tone: 'error'|'warning'|'complete', label: string, detail: string}>}
  */
-function getStatus(task, cameras, duplicateEpochs = new Set()) {
+function getStatuses(task, cameras, duplicateEpochs = new Set()) {
   const blankFields = REQUIRED_STRING_FIELDS.filter(({ key }) => {
     const value = task[key];
     return value === undefined || value === null || String(value).trim() === '';
   });
   if (blankFields.length > 0) {
-    return {
-      glyph: '❌',
-      label: `Missing required ${blankFields.map((f) => f.label).join(', ')}`,
-    };
+    return [{
+      tone: 'error',
+      label: 'Missing required fields',
+      detail: `Missing required ${blankFields.map((f) => f.label).join(', ')}`,
+    }];
   }
 
   const availableIds = new Set((cameras || []).map((c) => Number(c.id)));
   // A malformed child array inside a valid loaded task (e.g. camera_id as a number,
-  // task_epochs as a string) must not crash the status badge — treat it as empty.
+  // task_epochs as a string) must not crash the status — treat it as empty.
   const cameraIds = Array.isArray(task.camera_id) ? task.camera_id : [];
   const taskEpochs = Array.isArray(task.task_epochs) ? task.task_epochs : [];
 
   // Export-blocking: two tasks cannot share an epoch (Spyglass keys TaskEpoch by session+epoch).
   const collidingEpochs = taskEpochs.filter((e) => duplicateEpochs.has(Number(e)));
   if (collidingEpochs.length > 0) {
-    return {
-      glyph: '❌',
-      label:
+    return [{
+      tone: 'error',
+      // Name the epoch(s) in the visible label — this is an export blocker with no other inline
+      // surfacing, so it must be self-contained without relying on the tooltip.
+      label: `Epoch ${collidingEpochs.join(', ')} reused`,
+      detail:
         `Epoch ${collidingEpochs.join(', ')} also used by another task — ` +
         `each epoch belongs to exactly one task`,
-    };
-  }
-  const referencesMissingCamera = cameraIds.some(
-    (id) => !availableIds.has(Number(id))
-  );
-  const hasNoEpochs = taskEpochs.length === 0;
-  const warnings = [];
-  if (hasNoEpochs) warnings.push('no epochs assigned');
-  if (referencesMissingCamera) warnings.push('references a camera this animal no longer has');
-  if (warnings.length > 0) {
-    return { glyph: '⚠', label: `Warning: ${warnings.join('; ')}` };
+    }];
   }
 
-  return { glyph: '✓', label: 'Complete' };
+  // Two distinct, separately-surfaced warnings (the old single badge overloaded both).
+  const statuses = [];
+  if (taskEpochs.length === 0) {
+    statuses.push({ tone: 'warning', label: 'Needs epochs', detail: 'No epochs assigned to this task' });
+  }
+  if (cameraIds.some((id) => !availableIds.has(Number(id)))) {
+    statuses.push({
+      tone: 'warning',
+      label: 'Missing camera',
+      detail: 'References a camera this animal no longer has',
+    });
+  }
+  if (statuses.length === 0) {
+    return [{ tone: 'complete', label: 'Complete', detail: 'Complete' }];
+  }
+  return statuses;
 }
 
 /**
  * TasksTable - CRUD table for a day's tasks, mirroring CamerasSection's table /
- * empty-state / status-badge conventions. Delete is confirmed via the shared
+ * empty-state conventions (per-task status is shown as token-colored text labels, not a
+ * glyph badge). Delete is confirmed via the shared
  * ConfirmDialog (no raw window.confirm). Add/Edit/Delete are delegated to the
  * parent, which owns task persistence through onFieldUpdate.
  *
@@ -146,7 +160,6 @@ export default function TasksTable({
   if (tasks.length === 0) {
     return (
       <div className="tasks-table-section empty-state">
-        <div className="empty-state-icon">🧩</div>
         <h3>No Tasks Configured</h3>
         <p>
           Tasks describe what the animal did during the session — the environment,
@@ -171,7 +184,7 @@ export default function TasksTable({
   return (
     <div className="tasks-table-section">
       <header className="section-header">
-        <h2>Tasks</h2>
+        <h3>Tasks</h3>
         <p>
           Each task is one room with its cameras and the epochs it covers. Cameras are selected
           from this animal&apos;s shared camera catalog; every epoch belongs to exactly one task.
@@ -197,7 +210,7 @@ export default function TasksTable({
         </thead>
         <tbody>
           {tasks.map((task, index) => {
-            const status = getStatus(task, cameras, duplicateEpochs);
+            const statuses = getStatuses(task, cameras, duplicateEpochs);
             // A malformed child array (camera_id/task_epochs as a scalar) in loaded
             // state must render as empty here, not throw on `.join`/`.length`, so the
             // corrupt task stays visible and editable for repair.
@@ -214,12 +227,19 @@ export default function TasksTable({
                   {taskEpochs.length === 0 ? '—' : taskEpochs.join(', ')}
                 </td>
                 <td data-label="Status">
-                  <span
-                    className={`status-badge status-${status.glyph}`}
-                    title={status.label}
-                  >
-                    <span aria-hidden="true">{status.glyph}</span>
-                    <span className="sr-only">{status.label}</span>
+                  <span className="task-status-list">
+                    {statuses.map((s) => (
+                      <span
+                        key={s.label}
+                        className={`task-status task-status-${s.tone}`}
+                        title={s.detail}
+                      >
+                        <span className="task-status-label">{s.label}</span>
+                        {/* The fuller explanation (which fields/epochs) reaches screen readers,
+                            which don't reliably announce `title`. */}
+                        {s.detail !== s.label && <span className="sr-only"> — {s.detail}</span>}
+                      </span>
+                    ))}
                   </span>
                 </td>
                 <td data-label="Actions">

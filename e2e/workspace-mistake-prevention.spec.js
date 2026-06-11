@@ -212,6 +212,7 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     await expect(page.getByRole('heading', { level: 2, name: 'Tasks & Epochs' })).toBeVisible();
 
     // --- Associated video files: camera + epoch are <select> controls (combobox role). ---
+    // The seeded day has video rows, so this optional section renders expanded (open-when-populated).
     const videos = page.getByRole('region', { name: 'Associated video files' });
     await expect(videos).toBeVisible();
     // The seeded day has video rows; the FIRST row's camera select is a controlled combobox.
