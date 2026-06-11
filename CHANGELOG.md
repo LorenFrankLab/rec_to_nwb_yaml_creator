@@ -62,6 +62,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- **Removed the manual channel-maps editor (F1).** No one used it, and the exported
+  `ntrode_electrode_group_channel_map` is generated automatically when an electrode group is saved
+  with a device type — independently of any editor. The **Channel Maps** tab/route/nav entry and the
+  editor (ChannelMapEditor / ChannelMapsStep / its container + CSV import-export) are gone. The
+  electrode-groups surface now shows a read-only reassurance ("Channel maps are generated
+  automatically from each electrode group's device type"), and channel-map (ntrode) validation issues
+  route their "Fix" action to the **Electrode Groups** tab (the map's owner). Map auto-generation, the
+  exported YAML, bad-channel marking, and the frozen legacy `ntrode/ChannelMap.jsx` are unchanged.
 - **Retired the animal-level behavioral-events (DIO) library.** Behavioral events are
   now a single **day-owned** set (the only ones exported); the animal-level "library"
   authoring surface (the **DIO** tab in the Animal view) and the Day Editor's "Use on

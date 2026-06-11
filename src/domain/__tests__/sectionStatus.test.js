@@ -36,7 +36,7 @@ const configuredAnimal = {
   days: ['remy-2023-06-22'],
 };
 
-const SETUP_SECTIONS = ['electrode-groups', 'channel-maps', 'recording-system', 'cameras', 'optogenetics'];
+const SETUP_SECTIONS = ['electrode-groups', 'recording-system', 'cameras', 'optogenetics'];
 
 describe('getAnimalSectionStatus', () => {
   it('marks every setup section TODO for a bare (never-configured) animal', () => {

@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  *
  * Accessibility contract for the overlay surfaces migrated onto the shared `<Modal>`
- * primitive: ChannelMapEditor, CopyFromAnimalDialog, and CalendarDayCreator. Each
+ * primitive: CopyFromAnimalDialog and CalendarDayCreator. Each
  * must open as a real `role="dialog"` (aria-modal), trap Tab/Shift-Tab focus, return
  * focus to its opener on close, and close on Escape — the behaviors the primitive
  * owns. One parameterized case per dialog.
@@ -11,30 +11,10 @@ import { useState } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import ChannelMapEditor from '../../pages/AnimalEditor/ChannelMapEditor';
 import CopyFromAnimalDialog from '../../pages/AnimalEditor/CopyFromAnimalDialog';
 import { CalendarDayCreator } from '../../components/CalendarDayCreator/CalendarDayCreator';
 
 const DIALOGS = [
-  {
-    name: 'ChannelMapEditor',
-    accessibleName: /channel map editor/i,
-    render: (onClose) => (
-      <ChannelMapEditor
-        electrodeGroup={{ id: 0, device_type: 'tetrode_12.5', location: 'CA1' }}
-        channelMaps={[
-          {
-            electrode_group_id: 0,
-            ntrode_id: 0,
-            bad_channels: [],
-            map: { 0: 0, 1: 1, 2: 2, 3: 3 },
-          },
-        ]}
-        onSave={() => {}}
-        onCancel={onClose}
-      />
-    ),
-  },
   {
     name: 'CopyFromAnimalDialog',
     accessibleName: /copy from animal/i,

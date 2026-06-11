@@ -613,7 +613,6 @@ describe('tabbed animal-view route (Phase 1 — tabbed-workspace-ia)', () => {
     'days',
     'export',
     'electrode-groups',
-    'channel-maps',
     'recording-system',
     'cameras',
     'optogenetics',
@@ -621,6 +620,15 @@ describe('tabbed animal-view route (Phase 1 — tabbed-workspace-ia)', () => {
     expect(parseHashRoute(`#/animal/remy/${tab}`)).toEqual({
       view: 'animal-view',
       params: { animalId: 'remy', tab },
+    });
+  });
+
+  it('redirects the retired #/animal/:id/channel-maps tab to days (editor removed)', () => {
+    // The Channel Maps tab was removed (maps are auto-generated from each electrode group's
+    // device type); a stale `channel-maps` URL resolves to the default tab like any unknown tab.
+    expect(parseHashRoute('#/animal/remy/channel-maps')).toEqual({
+      view: 'animal-view',
+      params: { animalId: 'remy', tab: 'days' },
     });
   });
 
@@ -662,9 +670,9 @@ describe('tabbed animal-view route (Phase 1 — tabbed-workspace-ia)', () => {
   });
 
   it('preserves complex IDs and decodes nothing here (raw id passed through)', () => {
-    expect(parseHashRoute('#/animal/remy-2023_batch-1/channel-maps')).toEqual({
+    expect(parseHashRoute('#/animal/remy-2023_batch-1/electrode-groups')).toEqual({
       view: 'animal-view',
-      params: { animalId: 'remy-2023_batch-1', tab: 'channel-maps' },
+      params: { animalId: 'remy-2023_batch-1', tab: 'electrode-groups' },
     });
   });
 

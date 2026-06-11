@@ -700,7 +700,9 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
                   <div className="error-state-inline">
                     <p>⚠ No channel mapping found for this electrode group.</p>
                     <p>This usually indicates data corruption. Please review animal configuration.</p>
-                    <a href={`#/animal/${ownerKey}/channel-maps?field=ntrode_electrode_group_channel_map`}>Fix in Animal Setup</a>
+                    {/* Channel maps are auto-generated from each electrode group's device_type, so a
+                        missing map is fixed on the electrode-groups tab (its owner), not a channel-maps editor. */}
+                    <a href={`#/animal/${ownerKey}/electrode-groups?field=electrode_groups`}>Fix in Animal Setup</a>
                   </div>
                 </div>
               </details>

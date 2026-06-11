@@ -20,7 +20,6 @@ export const ANIMAL_VIEW_TABS = [
   'days',
   'export',
   'electrode-groups',
-  'channel-maps',
   'recording-system',
   'cameras',
   'optogenetics',

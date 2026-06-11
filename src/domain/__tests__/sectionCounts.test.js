@@ -10,7 +10,6 @@ describe('getAnimalSetupCounts', () => {
   it('returns 0 for every setup section on a bare animal', () => {
     expect(getAnimalSetupCounts({ id: 'remy' })).toEqual({
       'electrode-groups': 0,
-      'channel-maps': 0,
       'recording-system': 0,
       cameras: 0,
     });
@@ -28,7 +27,6 @@ describe('getAnimalSetupCounts', () => {
     };
     expect(getAnimalSetupCounts(animal)).toEqual({
       'electrode-groups': 3,
-      'channel-maps': 2,
       'recording-system': 1,
       cameras: 2,
     });
@@ -38,7 +36,6 @@ describe('getAnimalSetupCounts', () => {
     const animal = { devices: { electrode_groups: 'nope' }, cameras: null, behavioral_events: 42 };
     expect(getAnimalSetupCounts(animal)).toEqual({
       'electrode-groups': 0,
-      'channel-maps': 0,
       'recording-system': 0,
       cameras: 0,
     });

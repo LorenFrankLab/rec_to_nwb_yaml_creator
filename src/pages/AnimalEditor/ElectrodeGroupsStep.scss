@@ -61,6 +61,14 @@
     margin: 0;
     line-height: 1.5;
   }
+
+  // Read-only reassurance: channel maps are auto-generated from each group's device type
+  // (the manual channel-maps editor was removed). Muted, smaller — no editing affordance.
+  .auto-maps-note {
+    margin-top: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+    color: var(--color-grey-500);
+  }
 }
 
 /* ===== Table Actions (Add/Copy Buttons) ===== */

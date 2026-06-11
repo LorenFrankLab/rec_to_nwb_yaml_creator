@@ -62,11 +62,10 @@ const configuredAnimal = {
 };
 
 describe('Set up this animal card — first-run onboarding', () => {
-  it('leads a new animal with a "Set up this animal" card listing the six setup sections', () => {
+  it('leads a new animal with a "Set up this animal" card listing the five setup sections', () => {
     renderPane('newbie', { newbie: newAnimal });
     const card = screen.getByRole('region', { name: /set up this animal/i });
     expect(within(card).getByText('Electrode Groups')).toBeInTheDocument();
-    expect(within(card).getByText('Channel Maps')).toBeInTheDocument();
     expect(within(card).getByText('Recording System')).toBeInTheDocument();
     expect(within(card).getByText('Cameras')).toBeInTheDocument();
     expect(within(card).getByText('Optogenetics')).toBeInTheDocument();
@@ -127,7 +126,7 @@ describe('Set up this animal card — first-run onboarding', () => {
   it('frames optional sections honestly (if ephys / if video), never as a gate', () => {
     renderPane('newbie', { newbie: newAnimal });
     const card = screen.getByRole('region', { name: /set up this animal/i });
-    // "if ephys" applies to both Electrode Groups and Channel Maps.
+    // "if ephys" applies to Electrode Groups.
     expect(within(card).getAllByText(/if ephys/i).length).toBeGreaterThan(0);
     expect(within(card).getByText(/if video/i)).toBeInTheDocument();
     // No "set up electrodes first" mandatory-gate language (behavior-only days are valid).

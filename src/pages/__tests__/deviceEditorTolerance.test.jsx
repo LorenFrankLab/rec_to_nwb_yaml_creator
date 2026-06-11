@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/react';
-import ChannelMapEditor from '../AnimalEditor/ChannelMapEditor';
 import DevicesStep from '../DayEditor/DevicesStep';
 
 /**
@@ -16,28 +15,6 @@ import DevicesStep from '../DayEditor/DevicesStep';
 
 beforeEach(() => {
   vi.stubGlobal('alert', vi.fn());
-});
-
-describe('ChannelMapEditor tolerates corrupt loaded bad_channels', () => {
-  const group = { id: 1, device_type: 'tetrode_12.5', location: 'CA1', targeted_x: 1, targeted_y: 2, targeted_z: 3, units: 'mm' };
-  const rowWith = (bad) => [{ electrode_group_id: 1, ntrode_id: 0, bad_channels: bad, map: { 0: 0, 1: 1, 2: 2, 3: 3 } }];
-
-  it.each([
-    ['scalar string', '2.9'],
-    ['scalar number', 42],
-    ['null', null],
-    ['out-of-range array', [99]],
-    ['non-integer array', ['abc']],
-  ])('renders for %s bad_channels without throwing or warning', (_label, bad) => {
-    // Corrupt loaded state is first-class here (detected + repaired at runtime), so the
-    // editor must render it WITHOUT a React prop-type console warning either.
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    expect(() =>
-      render(<ChannelMapEditor electrodeGroup={group} channelMaps={rowWith(bad)} onSave={vi.fn()} onCancel={vi.fn()} />)
-    ).not.toThrow();
-    expect(errorSpy).not.toHaveBeenCalled();
-    errorSpy.mockRestore();
-  });
 });
 
 describe('DevicesStep tolerates corrupt deviceOverrides', () => {

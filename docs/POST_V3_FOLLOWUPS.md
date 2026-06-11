@@ -53,12 +53,12 @@ out of scope for the cleanup pass and are tracked here.
    cells in one row under `role="grid"`; AT grid-navigation announces one row of 42 columns instead
    of 6 weeks × 7 days. Split into one `role="row"` per week (chunks of 7).
 
-9. **ChannelMapEditor empty-state instruction is a dead end.**
-   [ChannelMapEditor.jsx](../src/pages/AnimalEditor/ChannelMapEditor.jsx) says "Please
-   auto-generate channel maps first," but there is no auto-generate affordance; maps are generated
-   implicitly when an electrode group is saved with a device type. Reword to point the user at the
-   real action (close the editor, re-save the electrode group). Pre-existing copy, now shown in a
-   more prominent focused dialog.
+9. ~~**ChannelMapEditor empty-state instruction is a dead end.**~~ **RESOLVED** — the manual
+   channel-maps editor (and its tab/route/nav entry) was removed entirely: no one used it and channel
+   maps are generated automatically when an electrode group is saved with a device type. The
+   electrode-groups surface now carries a read-only reassurance ("Channel maps are generated
+   automatically from each electrode group's device type"), and ntrode validation issues route to the
+   electrode-groups tab. The dead-end empty-state copy is gone with the component.
 
 10. **`addConfigurationSnapshot` return value diverges from the assigned version on multiple adds
     within one render tick.** The returned version derives from `workspaceRef.current` (authoritative
