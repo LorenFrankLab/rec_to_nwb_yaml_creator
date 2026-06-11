@@ -388,6 +388,9 @@ reports without failing the gate today; a later phase ratchets it to error-level
 > Note: `.npmrc` sets `legacy-peer-deps=true`. react-scripts@5 pins `typescript` as an optional peer
 > at `^3||^4` while this project uses `typescript@5`, so without it any new `npm install` fails
 > ERESOLVE on that optional-peer mismatch. It keeps install and `npm ci` tolerant and in sync.
+> **Trade-off:** `legacy-peer-deps` stops npm auto-installing *peer* dependencies tree-wide, so when a
+> dependency relies on a peer you need at runtime or in tests (e.g. `@testing-library/dom` for
+> `@testing-library/react`), **declare that peer explicitly** in `devDependencies`/`dependencies`.
 
 ## Using Playwright (for Claude)
 

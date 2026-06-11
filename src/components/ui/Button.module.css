@@ -13,6 +13,9 @@
   align-items: center;
   justify-content: center;
   gap: var(--spacing-xs);
+  /* The primitive owns its own minimum touch target (WCAG 2.5.5) rather than relying on a
+     wrapping context's `button` selector, so a <Button> is reachable anywhere. */
+  min-height: 44px;
   padding: 0.6rem 1.2rem;
   border: none;
   border-radius: var(--radius-sm);
