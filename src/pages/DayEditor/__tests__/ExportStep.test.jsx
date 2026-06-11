@@ -74,6 +74,21 @@ describe('ExportStep', () => {
     expect(downloadSpy).toHaveBeenCalledWith('06222023_remy_metadata.yml', expect.any(String));
   });
 
+  it('names the persisted lifecycle status (Validated) on an exportable, saved day', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    day.state = { draft: false, validated: true, exported: false };
+    render(<ExportStep animal={animal} day={day} />);
+    // The Export step uses the SAME shared vocabulary as Animal Days / Day Validation, so a saved
+    // day reads "Validated" here too (never a contradictory phrase).
+    expect(screen.getByTestId('export-lifecycle-status')).toHaveTextContent('Validated');
+  });
+
+  it('reads a not-yet-saved exportable day as "Ready to export"', () => {
+    const { animal, day } = buildRealisticWorkspace(); // realistic fixture day is state.draft
+    render(<ExportStep animal={animal} day={day} />);
+    expect(screen.getByTestId('export-lifecycle-status')).toHaveTextContent('Ready to export');
+  });
+
   it('hides the YAML preview until the toggle is clicked', async () => {
     const user = userEvent.setup();
     const { animal, day } = buildRealisticWorkspace();

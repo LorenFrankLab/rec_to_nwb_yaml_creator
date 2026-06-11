@@ -56,6 +56,12 @@ describe('RecordingDaysTab — day row contract (decision 12)', () => {
     expect(screen.getByRole('link', { name: /2023-06-22/i })).toBeInTheDocument();
   });
 
+  it('shows the shared lifecycle legend above the day list (vocabulary defined once)', () => {
+    renderRealistic();
+    // The same collapsible legend used on the Validation Summary explains the row status words.
+    expect(screen.getByText(/what do these statuses mean/i)).toBeInTheDocument();
+  });
+
   it('renders ONE plain-language status, not the old Draft/Validated/Exported chip cluster (Task 2.5a)', () => {
     const { container } = renderRealistic((day) => {
       day.state = { draft: true, validated: false, exported: false };
@@ -65,11 +71,18 @@ describe('RecordingDaysTab — day row contract (decision 12)', () => {
     expect(container.querySelector('.status-chip')).not.toBeInTheDocument();
   });
 
-  it('maps a validated (not exported) day to "Ready to export"', () => {
-    renderRealistic((day) => {
+  it('maps a persisted-validated (not exported) day to "Validated" (the saved fact, not live "Ready to export")', () => {
+    // Scope to the row's status element: the shared legend also lists every status word, so a
+    // global text query would match the legend too.
+    const { container } = renderRealistic((day) => {
       day.state = { draft: false, validated: true, exported: false };
     });
-    expect(screen.getByText('Ready to export')).toBeInTheDocument();
+    const status = container.querySelector('.day-row-status');
+    expect(status).toHaveTextContent('Validated');
+    // "Ready to export" is reserved for the Day Validation surface's LIVE readiness; the row
+    // shows the saved fact ("Validated") so the two surfaces don't say the same words for
+    // different things.
+    expect(status).not.toHaveTextContent('Ready to export');
   });
 
   it('renders a computed status alongside the orphan note on a recovered-unlinked row', () => {
@@ -87,13 +100,15 @@ describe('RecordingDaysTab — day row contract (decision 12)', () => {
   });
 
   it('shows "Needs fixing — {reason}" for a live error, overriding a stale exported flag', () => {
-    renderRealistic((day) => {
+    const { container } = renderRealistic((day) => {
       day.state = { draft: false, validated: true, exported: true };
       day.tasks = 'not-an-array'; // corrupt shape → a live blocking issue
     });
-    expect(screen.getByText(/^Needs fixing — /)).toBeInTheDocument();
-    // The stale "Exported" must NOT be shown.
-    expect(screen.queryByText('Exported')).not.toBeInTheDocument();
+    const status = container.querySelector('.day-row-status');
+    expect(status).toHaveTextContent(/^Needs fixing — /);
+    // The stale "Exported" must NOT be shown on the row (the legend lists it as a reference word,
+    // so scope this to the row status element).
+    expect(status).not.toHaveTextContent('Exported');
   });
 
   it('humanizes a raw schema key in the "Needs fixing" reason (display only)', () => {

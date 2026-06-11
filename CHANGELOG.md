@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Timeline-aware "Add Recording Days" calendar.** When an animal already has recording days, the
+  calendar now opens on the month of the next likely recording day (the latest existing day + 1 — the
+  same month for a mid-month latest day, the following month when the latest day ends a month) instead
+  of wall-clock today. A 2023 study opened in 2026 lands on June/July 2023, not June 2026.
+  **Today** remains an explicit jump in the calendar header. Pure helper `getInitialCalendarMonth`
+  ([src/components/CalendarDayCreator/CalendarDayCreator.jsx](src/components/CalendarDayCreator/CalendarDayCreator.jsx)).
+  No change to the exported YAML.
+- **One shared day-lifecycle vocabulary** ([src/domain/dayLifecycle.js](src/domain/dayLifecycle.js))
+  ends the contradictory recording-day status wording across surfaces. A day's status is now named
+  once — **Draft → Ready to export → Validated → Exported**, plus **Needs fixing** for a live blocking
+  issue — and the distinction between *live readiness* ("Ready to export": passes every check right
+  now) and *persisted history* ("Validated"/"Exported": saved) is consistent on **Animal Days**,
+  **Day Validation**, **Day Export**, and the **Validation Summary**. The Validation Summary per-day
+  chip now consumes `day.state.validated`/`exported`, so a saved validation is visually distinct from a
+  merely live-valid day (resolves the Post-v3 "persisted-Validated indicator" follow-up). A new shared,
+  collapsible **legend** ([src/components/DayLifecycleLegend](src/components/DayLifecycleLegend))
+  explains the status words once and is reused on Animal Days and the Validation Summary. Display-only:
+  the exported YAML and golden baselines are byte-identical.
+
+### Changed
+
+- **Recording-day status wording is unified (display-only).** The Animal Days row that previously read
+  **"Ready to export"** for a persisted-validated day now reads **"Validated"** (the saved fact);
+  "Ready to export" is reserved for live readiness. The Validation Summary per-day chip that read a
+  bare **"Valid"** now reads **"Ready to export" / "Validated" / "Exported"** by lifecycle. No export
+  or schema change.
+
 - **Design-token + CSS-Modules styling foundation.** Extended the `:root` token set in
   `src/index.css` with a grey-500, a radius scale (`--radius-sm/md`), a shadow scale
   (`--shadow-sm/--shadow-modal`), and a **z-index scale** (`--z-base` … `--z-skip-link`) that is now

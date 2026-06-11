@@ -116,15 +116,20 @@ describe('Carry-forward day creation toggle', () => {
   // Drive day creation through the component's REAL handleCreateDays (the calendar's onCreateDays
   // callback), NOT actions.createDay directly, so we cover the component's actual carry-forward
   // mapping `{ carryForwardFromDayId: carryForward && mostRecentDayId ? mostRecentDayId : undefined }`.
-  // The calendar's displayed month is clock-dependent, so we select the always-present "(today)"
-  // gridcell — today's ISO date (never 2023-06-22, so it can't collide with the prior day).
+  // The calendar now opens on the animal's recording-timeline month (the existing day is in
+  // 2023-06), so we use the "Today" jump (preserved as an explicit action) to bring the
+  // always-present "(today)" gridcell into view — today's ISO date never collides with 2023-06-22.
   /**
-   * Open the calendar, select today's date, and click "Create" — exercising the rendered
-   * RecordingDaysTab → CalendarDayCreator → handleCreateDays path. Returns today's day id.
+   * Open the calendar, jump to today, select today's date, and click "Create" — exercising the
+   * rendered RecordingDaysTab → CalendarDayCreator → handleCreateDays path. Returns today's day id.
    * @returns {Promise<string>} The id of the day that creation will produce (`remy-YYYY-MM-DD`).
    */
   async function createTodayViaCalendar() {
     fireEvent.click(screen.getByRole('button', { name: /show calendar/i }));
+    // The timeline-aware calendar opens on the existing day's month; jump to today first.
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /today/i }));
+    });
     const todayCell = screen
       .getAllByRole('gridcell')
       .find((btn) => /\(today\)/i.test(btn.getAttribute('aria-label') || '') && !btn.disabled);

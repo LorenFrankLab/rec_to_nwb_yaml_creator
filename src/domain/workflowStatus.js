@@ -20,6 +20,7 @@
 
 import { computeStepStatus, validateDay, STEP_STATUS } from './validation';
 import { isExportEnabled } from './stepGate';
+import { DAY_LIFECYCLE, DAY_LIFECYCLE_LABEL } from './dayLifecycle';
 import {
   getAnimalElectrodeGroups,
   getAnimalCameras,
@@ -289,12 +290,15 @@ function firstBlockingReason(animal, day, mergedDay, animalDays = []) {
 
 /**
  * The plain-language status for a recording-day LIST row (decision 12 — the row is triage, not
- * inspection). One of four mutually-exclusive states:
+ * inspection). One of four mutually-exclusive states, worded from the shared {@link DAY_LIFECYCLE}
+ * vocabulary so the row never contradicts the other surfaces:
  *   - `needs_fixing` — the day has a LIVE blocking issue (overrides every stored flag, so a day
  *     validated/exported before a referenced camera broke reads the honest current state, not a
  *     stale "Exported"). The reason is the blocking issue's own message.
- *   - `exported` / `ready` / `draft` — the stored-state mapping, used only when nothing blocks:
- *     `state.exported → Exported`, `state.validated → Ready to export`, else `Draft`.
+ *   - `exported` / `validated` / `draft` — the stored-state mapping, used only when nothing blocks:
+ *     `state.exported → Exported`, `state.validated → Validated`, else `Draft`. The persisted
+ *     `state.validated` reads as "Validated" (the saved fact), NOT "Ready to export" — the latter
+ *     is reserved for the Day Validation surface's LIVE readiness, so the two no longer collide.
  *
  * Read-only over the existing validation + stored state; computes no new validation and never
  * mutates. A malformed (non-object) `state` reads as a draft.
@@ -304,16 +308,18 @@ function firstBlockingReason(animal, day, mergedDay, animalDays = []) {
  * @param {object|null} mergedDay - `mergeDayMetadata(animal, day)`, or null if it threw.
  * @param {Array} [animalDays] - The animal's day records; forwarded to the export gate so the
  *   bad-channel monotonicity block surfaces as a "Needs fixing" row. Omitted → back-compat.
- * @returns {{ variant: 'needs_fixing'|'exported'|'ready'|'draft', label: string }}
+ * @returns {{ variant: 'needs_fixing'|'exported'|'validated'|'draft', label: string }}
  */
 export function getDayRowStatus(animal, day, mergedDay, animalDays = []) {
   const reason = firstBlockingReason(animal, day, mergedDay, animalDays);
-  if (reason) return { variant: 'needs_fixing', label: `Needs fixing — ${reason}` };
+  if (reason) {
+    return { variant: DAY_LIFECYCLE.NEEDS_FIXING, label: `${DAY_LIFECYCLE_LABEL.needs_fixing} — ${reason}` };
+  }
   const state =
     day?.state && typeof day.state === 'object' && !Array.isArray(day.state) ? day.state : {};
-  if (state.exported) return { variant: 'exported', label: 'Exported' };
-  if (state.validated) return { variant: 'ready', label: 'Ready to export' };
-  return { variant: 'draft', label: 'Draft — not yet validated' };
+  if (state.exported) return { variant: DAY_LIFECYCLE.EXPORTED, label: DAY_LIFECYCLE_LABEL.exported };
+  if (state.validated) return { variant: DAY_LIFECYCLE.VALIDATED, label: DAY_LIFECYCLE_LABEL.validated };
+  return { variant: DAY_LIFECYCLE.DRAFT, label: `${DAY_LIFECYCLE_LABEL.draft} — not yet validated` };
 }
 
 /**

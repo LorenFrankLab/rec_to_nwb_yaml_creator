@@ -105,8 +105,11 @@
   border-bottom: 2px solid #bdbdbd;
 }
 
-/* Per-day status chip. The text label is the primary (non-color) status cue;
-   color is a secondary reinforcement (WCAG 1.4.1 — do not rely on color alone). */
+/* Per-day status chip, worded from the shared DAY_LIFECYCLE vocabulary. The text label is the
+   primary (non-color) status cue; color is a secondary reinforcement (WCAG 1.4.1 — do not rely
+   on color alone). A live-valid day is one of ready / validated / exported; error & incomplete
+   keep the live tally colors that match the counts row. Colors are design tokens so the chips,
+   the Animal-Days dots, and the shared legend swatches stay in lockstep. */
 .validation-summary-table .status-chip {
   display: inline-block;
   padding: 0.2rem 0.55rem;
@@ -116,20 +119,34 @@
   text-transform: uppercase;
 }
 
+/* Live-valid but not yet saved as validated: "Ready to export". Outline-blue (light bg). */
+.validation-summary-table .status-chip--ready {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary); /* 5.03:1 on primary-light (AA) */
+}
+
+/* Persisted validation saved (and still live-valid): "Validated". Green, distinct from ready. */
+.validation-summary-table .status-chip--validated,
 .validation-summary-table .status-chip--valid {
-  background-color: #e8f5e9;
-  color: #2e7d32;
+  background-color: var(--color-success-light);
+  color: var(--color-success); /* 4.56:1 on success-light (AA) */
+}
+
+/* Exported (downloaded at least once, still live-valid): solid blue — the committed/terminal
+   form of the ready-blue, distinct from ready's outline treatment. White on primary = 5.75:1. */
+.validation-summary-table .status-chip--exported {
+  background-color: var(--color-primary);
+  color: var(--color-white);
 }
 
 .validation-summary-table .status-chip--error {
-  background-color: #fdecea;
-  color: #c62828;
+  background-color: var(--color-error-light);
+  color: var(--color-error); /* 4.92:1 on error-light (AA) */
 }
 
 .validation-summary-table .status-chip--incomplete {
-  background-color: #fff3e0;
-  /* #bf360c keeps AA contrast (≥4.5:1) on the #fff3e0 chip background. */
-  color: #bf360c;
+  background-color: var(--color-warning-light);
+  color: var(--color-warning); /* 5.11:1 on warning-light (AA) */
 }
 
 /* WCAG 2.5.8 target size: batch action buttons are at least 44px tall. */

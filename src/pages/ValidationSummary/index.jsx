@@ -25,6 +25,8 @@ import { getAnimalSubject } from '../../state/workspaceSelectors';
 import EffectiveDayReview from './EffectiveDayReview';
 import { computeStepStatus, validateDay } from '../../domain/validation';
 import { getDayWorkflowStatus } from '../../domain/workflowStatus';
+import { DAY_LIFECYCLE_LABEL, lifecycleForValidDay } from '../../domain/dayLifecycle';
+import DayLifecycleLegend from '../../components/DayLifecycleLegend/DayLifecycleLegend';
 import WarningAcknowledgement from '../../components/WarningAcknowledgement';
 import { describeDayOptoState } from '../../domain/optoStatus';
 import {
@@ -57,6 +59,33 @@ function deriveChip(stepStatus) {
 }
 
 const CHIP_LABEL = { valid: 'Valid', error: 'Error', incomplete: 'Incomplete' };
+
+/**
+ * The per-day status chip's variant + label, worded from the shared {@link DAY_LIFECYCLE}
+ * vocabulary so the table never contradicts Animal Days / Day Validation.
+ *
+ * A LIVE-valid day is refined by its persisted `state`: a saved validation reads "Validated"
+ * (and an exported day "Exported") — visually distinct from a merely live-valid, unsaved day,
+ * which reads "Ready to export". The error/incomplete buckets keep their live tally words
+ * ("Error"/"Incomplete") so they still match the counts row. Live state always wins: an
+ * error/incomplete day NEVER reads "Validated" even if a stale saved flag says so (the chip is
+ * derived from the live `chip`, and only the valid bucket consults `state`). The special
+ * unreadable / missing-record rows keep their explicit error labels.
+ *
+ * @param {'valid'|'error'|'incomplete'} chip - The live validation chip from {@link deriveChip}.
+ * @param {object|null|undefined} state - The day's persisted `state` (may be malformed).
+ * @param {{ unreadable?: boolean, missingRecord?: boolean }} [flags] - Special-row markers.
+ * @returns {{ variant: string, label: string }} The chip variant (CSS modifier) and its label.
+ */
+function dayChipDisplay(chip, state, { unreadable = false, missingRecord = false } = {}) {
+  if (unreadable) return { variant: 'error', label: 'Error — cannot read' };
+  if (missingRecord) return { variant: 'error', label: 'Error — missing day record' };
+  if (chip === 'valid') {
+    const variant = lifecycleForValidDay(state); // 'ready' | 'validated' | 'exported'
+    return { variant, label: DAY_LIFECYCLE_LABEL[variant] };
+  }
+  return { variant: chip, label: CHIP_LABEL[chip] };
+}
 
 // How many cameras to spell out by name + calibration before collapsing the rest into "+K more".
 // Keeps the scan cell readable on a many-camera day without hiding that recalibration happened.
@@ -837,6 +866,12 @@ export function ValidationSummary({ animalKey } = {}) {
             items={staleReport}
           />
 
+          {/* One shared legend defining the lifecycle status words (Ready to export / Validated /
+              Exported / …) — collapsed by default so it explains the chips on demand without
+              crowding the table. The same component sits on Animal Days, so the vocabulary is
+              defined once. */}
+          <DayLifecycleLegend />
+
           {/* The table can be wider than a phone viewport (6 columns of dense scan/session text), so
               it scrolls horizontally WITHIN this container instead of forcing the whole page to
               overflow — the page stays at the viewport width at ~390px and no cell is clipped off. */}
@@ -936,26 +971,33 @@ export function ValidationSummary({ animalKey } = {}) {
                     )}
                   </td>
                   <td>
-                    {/* An unreadable day (its config could not be resolved) OR a reference
-                        that resolves to no day record is shown as an error chip with an
-                        honest label, so it is flagged for repair and counted — never
-                        silently dropped or mistaken for a normal validation error. */}
-                    <span
-                      className={`status-chip status-chip--${chip}`}
-                      title={
-                        unreadable
-                          ? 'This day could not be read — its device configuration is missing or corrupt. Open the editor to repair it.'
-                          : missingRecord
-                            ? 'This day’s saved record is missing or corrupt. Open the editor to repair or recreate it.'
-                            : undefined
-                      }
-                    >
-                      {unreadable
-                        ? 'Error — cannot read'
-                        : missingRecord
-                          ? 'Error — missing day record'
-                          : CHIP_LABEL[chip]}
-                    </span>
+                    {/* The per-day chip uses the shared DAY_LIFECYCLE vocabulary: a live-valid day
+                        is refined by its persisted state ("Validated"/"Exported") so saved
+                        validation is distinct from a merely live-valid "Ready to export". An
+                        unreadable day (its config could not be resolved) OR a reference that
+                        resolves to no day record is shown as an error chip with an honest label,
+                        so it is flagged for repair and counted — never silently dropped or
+                        mistaken for a normal validation error. */}
+                    {(() => {
+                      const { variant, label } = dayChipDisplay(chip, day?.state, {
+                        unreadable,
+                        missingRecord,
+                      });
+                      return (
+                        <span
+                          className={`status-chip status-chip--${variant}`}
+                          title={
+                            unreadable
+                              ? 'This day could not be read — its device configuration is missing or corrupt. Open the editor to repair it.'
+                              : missingRecord
+                                ? 'This day’s saved record is missing or corrupt. Open the editor to repair or recreate it.'
+                                : undefined
+                          }
+                        >
+                          {label}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td>
                     {missingRecord ? (

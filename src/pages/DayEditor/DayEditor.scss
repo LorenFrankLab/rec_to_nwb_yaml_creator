@@ -1394,6 +1394,14 @@
     font-size: 0.9375rem;
   }
 
+  // Shared-vocabulary lifecycle status line (Ready to export / Validated / Exported) — quiet,
+  // since the primary task here is the download action.
+  .export-lifecycle-status {
+    margin: 0.25rem 0 0.75rem;
+    color: var(--color-grey-700);
+    font-size: 0.9375rem;
+  }
+
   .export-actions {
     display: flex;
     gap: 0.75rem;

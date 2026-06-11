@@ -5,6 +5,7 @@ import { mergeDayMetadata, resolveDayConfig } from '../../state/workspaceUtils';
 import { getAnimalDayIds } from '../../state/workspaceSelectors';
 import { computeStepStatus, validateDay, STEP_LABELS } from '../../domain/validation';
 import { getDayWorkflowStatus } from '../../domain/workflowStatus';
+import { DAY_LIFECYCLE_LABEL, lifecycleForValidDay } from '../../domain/dayLifecycle';
 import { buildPreflightSummary } from '../../domain/preflightSummary';
 import { isExportEnabled } from './stepGate';
 import { isFeatureEnabled } from '../../featureFlags';
@@ -216,6 +217,15 @@ export default function ExportStep(props) {
       <p className="export-filename-line">
         File name: <code className="export-filename">{fileName}</code>
       </p>
+
+      {/* When the day is exportable, name its lifecycle state from the SHARED vocabulary so the
+          Export step agrees with Animal Days / Day Validation / Validation Summary: a saved day
+          reads "Validated" (or "Exported"), an unsaved-but-passing day "Ready to export". */}
+      {!exportBlocked && (
+        <p className="export-lifecycle-status" data-testid="export-lifecycle-status">
+          Status: <strong>{DAY_LIFECYCLE_LABEL[lifecycleForValidDay(day?.state)]}</strong>
+        </p>
+      )}
 
       {exportBlocked && (
         <div className="export-validation-blocked" role="alert">

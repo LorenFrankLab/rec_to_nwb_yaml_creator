@@ -103,13 +103,13 @@ describe('ValidationSummary — bad-channel monotonicity gate', () => {
 
     render(<ValidationSummary />);
 
-    // Day 1 (the earlier marked-bad day) is fine.
+    // Day 1 (the earlier marked-bad day) is live-valid (unsaved) → "Ready to export".
     const day1Row = screen.getByTestId(`day-row-${ids.day1Id}`);
-    expect(within(day1Row).getByText('Valid')).toBeInTheDocument();
+    expect(within(day1Row).getByText('Ready to export')).toBeInTheDocument();
 
-    // Day 2 silently un-fails channel 2 → blocked, so its chip must NOT be 'Valid'.
+    // Day 2 silently un-fails channel 2 → blocked, so its chip must NOT read ready/valid.
     const day2Row = screen.getByTestId(`day-row-${ids.day2Id}`);
-    expect(within(day2Row).queryByText('Valid')).not.toBeInTheDocument();
+    expect(within(day2Row).queryByText('Ready to export')).not.toBeInTheDocument();
     expect(within(day2Row).getByText('Error')).toBeInTheDocument();
   });
 
@@ -151,7 +151,7 @@ describe('ValidationSummary — bad-channel monotonicity gate', () => {
     render(<ValidationSummary />);
 
     const day2Row = screen.getByTestId(`day-row-${ids.day2Id}`);
-    expect(within(day2Row).getByText('Valid')).toBeInTheDocument();
+    expect(within(day2Row).getByText('Ready to export')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /export valid only/i }));
     const confirm = await screen.findByRole('button', { name: /confirm export/i });

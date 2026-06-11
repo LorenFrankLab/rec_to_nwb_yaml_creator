@@ -47,6 +47,7 @@ import { validateRawAnimal } from '../../validation/rawShape';
 import { applyRepairCommand } from '../../state/repairCommands';
 import RawCorruptionBanner from '../../components/RawCorruptionBanner';
 import { CalendarDayCreator } from '../../components/CalendarDayCreator/CalendarDayCreator';
+import DayLifecycleLegend from '../../components/DayLifecycleLegend/DayLifecycleLegend';
 import { ConfirmDialog, Modal } from '../../components/Modal';
 
 /**
@@ -565,6 +566,11 @@ export function RecordingDaysTab({ animalId }) {
             />
           </div>
         )}
+
+        {/* One shared legend for the day-row status words, reused from the Validation Summary so
+            the lifecycle vocabulary is defined once. Shown only when there are day rows to triage;
+            collapsed by default so it never crowds the list. */}
+        {selectedDayClassification.length > 0 && <DayLifecycleLegend />}
 
         {(() => {
           // Render straight from the domain classification (ok / dangling_reference /

@@ -297,20 +297,23 @@
 }
 
 .day-row-status-draft {
-  color: #6a6557;
+  color: var(--color-grey-700);
   font-weight: 500;
 }
 
-.day-row-status-ready {
-  color: #1f7a43;
+/* `validated` (persisted) reads green like the former `ready` variant; the live "Ready to
+   export" phrase now lives on the Day Validation surface, so the row variant is renamed to
+   match the shared DAY_LIFECYCLE vocabulary. */
+.day-row-status-validated {
+  color: var(--color-success);
 }
 
 .day-row-status-exported {
-  color: #1976d2;
+  color: var(--color-primary-hover);
 }
 
 .day-row-status-needs_fixing {
-  color: #b3261e;
+  color: var(--color-error);
 }
 
 .status-chip {

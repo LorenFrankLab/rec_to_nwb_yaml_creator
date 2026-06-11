@@ -268,13 +268,13 @@ describe('getDayRowStatus', () => {
     });
   });
 
-  it('maps a validated (not yet exported) day to "Ready to export"', () => {
+  it('maps a persisted-validated (not yet exported) day to "Validated" (the saved state, distinct from live "Ready to export")', () => {
     const { animal, day } = buildRealisticWorkspace();
     day.state = { draft: false, validated: true, exported: false };
     const merged = mergeDayMetadata(animal, day);
     expect(getDayRowStatus(animal, day, merged)).toEqual({
-      variant: 'ready',
-      label: 'Ready to export',
+      variant: 'validated',
+      label: 'Validated',
     });
   });
 
