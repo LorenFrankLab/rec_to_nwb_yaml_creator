@@ -127,20 +127,26 @@ export const getMostRecentDayId = (animal, days) => {
 export const getCopyableDioSources = (workspace, currentAnimalId) => {
   const animals = asRecord(workspace?.animals);
   const days = asRecord(workspace?.days);
+  // Only NAMED events are real (a blank channel is unused and is excluded from export), so a source
+  // copies and counts named events only — matching what the day would actually export.
+  const namedEvents = (day) =>
+    getDayBehavioralEvents(day).filter((e) => typeof e?.name === 'string' && e.name.trim() !== '');
   const sources = [];
   Object.entries(animals).forEach(([animalId, animal]) => {
     if (animalId === currentAnimalId) return;
     const withDio = getAnimalDayIds(animal)
       .map((id) => days[id])
-      .filter((d) => d && typeof d.date === 'string' && getDayBehavioralEvents(d).length > 0);
+      .filter((d) => d && typeof d.date === 'string')
+      .map((day) => ({ day, events: namedEvents(day) }))
+      .filter((x) => x.events.length > 0);
     if (withDio.length === 0) return;
-    withDio.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
-    const sourceDay = withDio[0];
+    withDio.sort((a, b) => (a.day.date < b.day.date ? 1 : a.day.date > b.day.date ? -1 : 0));
+    const top = withDio[0];
     sources.push({
       id: animalId,
       name: getAnimalSubject(animal).subject_id || animalId,
-      date: sourceDay.date,
-      events: getDayBehavioralEvents(sourceDay),
+      date: top.day.date,
+      events: top.events,
     });
   });
   return sources;

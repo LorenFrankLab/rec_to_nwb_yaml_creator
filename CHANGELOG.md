@@ -13,8 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   crowded **Tasks & Epochs** step into a dedicated **Behavioral Events** section in the day-editor
   nav (under "Recording"). It is optional — a day with no behavioral events badges as complete, not
   incomplete — and a duplicate name (Rule 14) or channel (Rule 17) now badges and routes its
-  "Fix →" to this tab. Tasks & Epochs keeps the FsGUI DIO-output reference (which still reads the
-  day's events). The exported YAML is unchanged.
+  "Fix →" to this tab (as does the corrupt-shape reset control). Tasks & Epochs keeps the FsGUI
+  DIO-output reference (which still reads the day's events). The exported YAML is unchanged.
+- **Copy a behavioral-events (DIO) setup from another animal.** A blank first day (a new animal on
+  the same rig) can reuse another animal's DIO mapping instead of re-keying it: when the day has no
+  events and another animal has a set, the grid offers **"Copy from {animal} ({n} events)"**, which
+  seeds this day from that animal's most-recent day (carry-forward then propagates it to later
+  days). It reuses your own data — not a baked-in preset — and the CTA disappears once the day has
+  events. The exported YAML is unchanged.
 
 - **Behavioral-events (DIO) editor is now the ECU hardware channel grid.** The Day Editor
   presents every digital channel of the SpikeGadgets ECU — **Inputs `Din1–32`** and

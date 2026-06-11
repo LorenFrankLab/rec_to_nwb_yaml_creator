@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { validateField } from '../validation';
-import { computeStepStatus, computeDevicesStatus, computeEpochsStatus, groupErrorsByStep, stepIdForIssue, repairTargetForIssue, validateDay, dayOverrideIssues, SURFACE_BY_CODE } from '../../../domain/validation';
+import { computeStepStatus, computeDevicesStatus, computeEpochsStatus, computeBehavioralStatus, groupErrorsByStep, stepIdForIssue, repairTargetForIssue, validateDay, dayOverrideIssues, SURFACE_BY_CODE } from '../../../domain/validation';
 import { makeAnimalWithCamerasAndDay } from './taskFixtures';
 import { buildRealisticWorkspace } from '../../../__tests__/fixtures/workspaceBuilders';
 import { mergeDayMetadata } from '../../../state/workspaceUtils';
@@ -404,7 +404,7 @@ describe('repairTargetForIssue (Repair Routing Contract)', () => {
   // The single source of truth for "where is this issue fixed". Every app error code
   // must resolve to a surface in {day, animal, none} with a non-empty label, and every
   // day-surface issue must resolve to a valid routable step.
-  const ROUTABLE_STEPS = ['overview', 'devices', 'epochs', 'validation'];
+  const ROUTABLE_STEPS = ['overview', 'devices', 'epochs', 'behavioral', 'validation'];
 
   // EXACT surface mapping from the Repair Routing Contract. Each code is paired with a
   // representative issue (path + the metadata the rule actually sets) so the helper sees
@@ -434,8 +434,8 @@ describe('repairTargetForIssue (Repair Routing Contract)', () => {
 
   const DAY_CODES = [
     { code: 'dangling_camera_ref', step: 'epochs', issue: { code: 'dangling_camera_ref', path: 'tasks[0].camera_id', field: 'camera_id', step: 'epochs', repairSurface: 'day' } },
-    { code: 'duplicate_behavioral_event_name', step: 'epochs', issue: { code: 'duplicate_behavioral_event_name', path: 'behavioral_events', field: 'name', step: 'epochs', repairSurface: 'day' } },
-    { code: 'duplicate_behavioral_event_description', step: 'epochs', issue: { code: 'duplicate_behavioral_event_description', path: 'behavioral_events', field: 'description', step: 'epochs', repairSurface: 'day' } },
+    { code: 'duplicate_behavioral_event_name', step: 'behavioral', issue: { code: 'duplicate_behavioral_event_name', path: 'behavioral_events', field: 'name', step: 'behavioral', repairSurface: 'day' } },
+    { code: 'duplicate_behavioral_event_description', step: 'behavioral', issue: { code: 'duplicate_behavioral_event_description', path: 'behavioral_events', field: 'description', step: 'behavioral', repairSurface: 'day' } },
     { code: 'duplicate_task_epoch', step: 'epochs', issue: { code: 'duplicate_task_epoch', path: 'tasks', field: 'task_epochs', step: 'epochs', repairSurface: 'day' } },
     { code: 'orphaned_video', step: 'epochs', issue: { code: 'orphaned_video', path: 'associated_video_files[0].task_epochs', field: 'task_epochs', step: 'epochs', repairSurface: 'day' } },
     { code: 'orphaned_file', step: 'epochs', issue: { code: 'orphaned_file', path: 'associated_files[0].task_epochs', field: 'task_epochs', step: 'epochs', repairSurface: 'day' } },
@@ -665,12 +665,61 @@ describe('Boundary 1 — raw-shape gate folded into validateDay / step status', 
   });
 
   it('the OWNING step badges error for a corrupt collection (not a green badge beside the reset)', () => {
-    // A corrupt behavioral_events (epochs-owned) → Epochs step 'error', matching its reset
-    // notice — not a false 'incomplete'/'valid'.
-    expect(computeStepStatus({ tasks: [{ task_name: 't' }], behavioral_events: {} }, merged).epochs).toBe('error');
+    // A corrupt behavioral_events is BEHAVIORAL-owned → the Behavioral Events step badges 'error'
+    // (matching its reset notice, which renders there), and Epochs stays valid since its own
+    // tasks are fine — the badge is never a dead-end on the wrong tab.
+    const status = computeStepStatus({ tasks: [{ task_name: 't' }], behavioral_events: {} }, merged);
+    expect(status.behavioral).toBe('error');
+    expect(status.epochs).toBe('valid');
     // A corrupt keywords (overview-owned) on an INCOMPLETE-session day → Overview 'error',
     // not hidden behind 'incomplete'.
     expect(computeStepStatus({ keywords: 'oops' }, merged).overview).toBe('error');
+  });
+
+  it('routes a REAL duplicate behavioral-event rule to the Behavioral Events step (not a fabricated fixture)', () => {
+    // Drive the actual rule (it reads the MERGED model) rather than asserting a hand-built issue.
+    const dupMerged = {
+      ...merged,
+      behavioral_events: [
+        { name: 'Poke1', description: 'Din1' },
+        { name: 'Poke1', description: 'Din2' },
+      ],
+    };
+    const dup = validateDay({ tasks: [{ task_name: 't' }] }, dupMerged).find(
+      (i) => i.code === 'duplicate_behavioral_event_name'
+    );
+    expect(dup).toBeTruthy();
+    expect(dup.step).toBe('behavioral');
+    expect(repairTargetForIssue(dup)).toMatchObject({ surface: 'day', step: 'behavioral' });
+  });
+
+  describe('computeBehavioralStatus', () => {
+    it('treats an empty/optional set as valid (never incomplete)', () => {
+      expect(computeBehavioralStatus({ behavioral_events: [] }, [])).toBe('valid');
+      expect(computeBehavioralStatus({}, [])).toBe('valid');
+      // A non-error issue in the bucket does not badge the step.
+      expect(computeBehavioralStatus({ behavioral_events: [] }, [{ severity: 'warning' }])).toBe('valid');
+    });
+
+    it('badges error when its bucket holds an error-severity issue', () => {
+      expect(computeBehavioralStatus({ behavioral_events: [] }, [{ severity: 'error' }])).toBe('error');
+    });
+
+    it('badges error for a corrupt non-array behavioral_events', () => {
+      expect(computeBehavioralStatus({ behavioral_events: {} }, [])).toBe('error');
+    });
+
+    it('a real duplicate name blocks export AND badges the behavioral step together', () => {
+      const status = computeStepStatus({ tasks: [{ task_name: 't' }] }, {
+        ...merged,
+        behavioral_events: [
+          { name: 'Poke1', description: 'Din1' },
+          { name: 'Poke1', description: 'Din2' },
+        ],
+      });
+      expect(status.behavioral).toBe('error');
+      expect(status.export).toBe('error');
+    });
   });
 
   it('a clean day with array collections raises no malformed_day_collection', () => {

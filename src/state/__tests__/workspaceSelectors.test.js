@@ -205,3 +205,41 @@ describe('getCopyableDioSources', () => {
     expect(getCopyableDioSources({ animals: { a: { days: ['x'] } }, days: {} }, 'remy')).toEqual([]);
   });
 });
+
+describe('getCopyableDioSources — blank-name and corrupt-day handling', () => {
+  it('copies and counts only NAMED events (blank channels are unused, not exported)', () => {
+    const ws = {
+      animals: { a: { id: 'a', subject: { subject_id: 'a' }, days: ['a-d1'] } },
+      days: {
+        'a-d1': {
+          id: 'a-d1',
+          date: '2023-06-22',
+          behavioral_events: [
+            { description: 'Din1', name: 'Poke1' },
+            { description: 'Din5', name: '' }, // unused — excluded
+            { description: 'Dout7', name: 'Pump1' },
+          ],
+        },
+      },
+    };
+    const [src] = getCopyableDioSources(ws, 'other');
+    expect(src.events).toEqual([
+      { description: 'Din1', name: 'Poke1' },
+      { description: 'Dout7', name: 'Pump1' },
+    ]);
+  });
+
+  it('a day with only blank-named events is not a source; a corrupt non-array day is skipped', () => {
+    const ws = {
+      animals: {
+        blankonly: { id: 'blankonly', subject: { subject_id: 'blankonly' }, days: ['b-d1'] },
+        corrupt: { id: 'corrupt', subject: { subject_id: 'corrupt' }, days: ['c-d1'] },
+      },
+      days: {
+        'b-d1': { id: 'b-d1', date: '2023-06-22', behavioral_events: [{ description: 'Din1', name: '  ' }] },
+        'c-d1': { id: 'c-d1', date: '2023-06-22', behavioral_events: {} },
+      },
+    };
+    expect(getCopyableDioSources(ws, 'other')).toEqual([]);
+  });
+});

@@ -609,8 +609,9 @@ export function computeStepStatus(day, mergedDay, animal, animalDays = []) {
  */
 export function computeEpochsStatus(day, epochErrors) {
   // A raw-shape corruption (`malformed_day_collection`) on any epochs-owned collection
-  // (tasks / associated_files / associated_video_files / behavioral_events / fs_gui_yamls)
-  // is a blocking error whose reset control renders ON this step — so the step badge must
+  // (tasks / associated_files / associated_video_files / fs_gui_yamls — behavioral_events is now
+  // owned by the Behavioral Events step) is a blocking error whose reset control renders ON this
+  // step — so the step badge must
   // read 'error', not a false 'incomplete'/'valid'. This generalizes the non-array-`tasks`
   // guard to the whole raw-shape family so the badge can't disagree with the reset notice.
   // The direct `day.tasks` check also covers a standalone call whose bucket isn't populated.

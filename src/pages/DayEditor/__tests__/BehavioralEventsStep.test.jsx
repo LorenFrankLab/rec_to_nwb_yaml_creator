@@ -42,6 +42,16 @@ describe('BehavioralEventsStep', () => {
     ).not.toThrow();
   });
 
+  it('renders an in-tab reset control for a corrupt (non-array) behavioral_events (badge is not a dead-end)', async () => {
+    const user = userEvent.setup();
+    const onFieldUpdate = vi.fn();
+    render(<BehavioralEventsStep day={{ behavioral_events: {} }} onFieldUpdate={onFieldUpdate} />);
+    // The reset control for the corruption lives on THIS tab (where the error badge is shown).
+    const reset = screen.getByRole('button', { name: /reset corrupt behavioral events/i });
+    await user.click(reset);
+    expect(onFieldUpdate).toHaveBeenCalledWith('behavioral_events', []);
+  });
+
   it('forwards copyableDioSources so an empty day offers the copy-from-animal bootstrap', () => {
     render(
       <BehavioralEventsStep

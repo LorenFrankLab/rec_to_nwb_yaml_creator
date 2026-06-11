@@ -1,6 +1,13 @@
 import PropTypes from 'prop-types';
 import BehavioralEventsDisplay from './BehavioralEventsDisplay';
+import MalformedCollectionNotice from './MalformedCollectionNotice';
 import { getDayBehavioralEvents } from '../../state/workspaceSelectors';
+import { RAW_DAY_ARRAY_FIELDS } from '../../validation/rawShape';
+
+// The day-owned collections whose corrupt-shape reset control belongs on THIS tab (one source of
+// truth: the field's repairStep). So the corruption badges the Behavioral Events tab AND can be
+// reset here — the badge is never a dead-end on a different tab.
+const BEHAVIORAL_STEP_COLLECTIONS = RAW_DAY_ARRAY_FIELDS.filter((f) => f.repairStep === 'behavioral');
 
 /**
  * BehavioralEventsStep — the Day Editor's **Behavioral Events** tab.
@@ -21,6 +28,13 @@ export default function BehavioralEventsStep({ day, onFieldUpdate, copyableDioSo
   return (
     <div className="behavioral-events-step">
       <h2>Behavioral Events</h2>
+      {/* A corrupt (non-array) behavioral_events badges this tab; its reset control renders here so
+          the badge is actionable on the same tab. */}
+      <MalformedCollectionNotice
+        day={day}
+        fields={BEHAVIORAL_STEP_COLLECTIONS}
+        onReset={(key) => onFieldUpdate(key, [])}
+      />
       <BehavioralEventsDisplay
         dayEvents={getDayBehavioralEvents(day)}
         onDayEventsChange={(events) => onFieldUpdate('behavioral_events', events)}
