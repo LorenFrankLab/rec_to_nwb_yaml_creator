@@ -15,7 +15,11 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import YAML from 'yaml';
-import { encodeYaml as convertObjectToYAMLString } from '../../../io/yaml.js';
+// Explicit `.ts` extension: this maintenance script is run with plain `node`
+// (Node 26, per .nvmrc, strips TypeScript types natively), and Node's ESM loader
+// does not resolve extensionless relative imports. Vitest's baseline test imports
+// this same module extension-less because Vite resolves extensions.
+import { encodeYaml as convertObjectToYAMLString } from '../../../io/yaml.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
