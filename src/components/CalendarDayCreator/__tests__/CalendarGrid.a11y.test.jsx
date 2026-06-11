@@ -44,6 +44,16 @@ describe('CalendarGrid keyboard/a11y', () => {
     }
   });
 
+  it('owns its rows through rowgroups and announces the displayed month + multi-select', () => {
+    renderGrid();
+    const grid = screen.getByRole('grid');
+    // Valid WAI-ARIA ownership chain: grid → rowgroup(s) → row → gridcell.
+    expect(within(grid).getAllByRole('rowgroup').length).toBeGreaterThanOrEqual(2);
+    // Month-aware accessible name (not a static "Calendar dates"), and multi-select advertised.
+    expect(grid).toHaveAccessibleName(/June 2023 calendar/i);
+    expect(grid).toHaveAttribute('aria-multiselectable', 'true');
+  });
+
   it('exposes exactly ONE focusable cell (roving tabindex) when today is not in the displayed month', () => {
     renderGrid();
     const focusable = screen.getAllByRole('gridcell').filter((c) => c.tabIndex === 0);

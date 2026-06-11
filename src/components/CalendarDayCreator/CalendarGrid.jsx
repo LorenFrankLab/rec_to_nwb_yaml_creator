@@ -89,6 +89,13 @@ export function CalendarGrid({
 
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+  // Month-aware accessible name so the grid announces which month a screen-reader user is in (the
+  // static "Calendar dates" gave no context when navigating month-to-month).
+  const gridLabel = `${new Date(year, month, 1).toLocaleDateString('en-US', {
+    month: 'long',
+    year: 'numeric',
+  })} calendar`;
+
   // The full display order (42 cells) and the displayed month's own dates, used for roving focus.
   const allDates = days.map((d) => d.date);
   const monthDates = days.filter((d) => d.isCurrentMonth).map((d) => d.date);
@@ -184,19 +191,29 @@ export function CalendarGrid({
   }
 
   return (
+    // role="grid" is a composite widget; the keydown handler drives its roving tabindex.
     // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
-    <div className="calendar-grid" role="grid" aria-label="Calendar dates" onKeyDown={handleGridKeyDown}>
-      {/* Week day headers */}
-      <div className="calendar-weekdays" role="row">
-        {weekDays.map((day) => (
-          <div key={day} className="calendar-weekday" role="columnheader">
-            {day}
-          </div>
-        ))}
+    <div
+      className="calendar-grid"
+      role="grid"
+      aria-label={gridLabel}
+      aria-multiselectable="true"
+      onKeyDown={handleGridKeyDown}
+    >
+      {/* Week day headers — in their own rowgroup so the grid's direct children are all
+          row/rowgroup (a valid WAI-ARIA grid ownership chain). */}
+      <div role="rowgroup">
+        <div className="calendar-weekdays" role="row">
+          {weekDays.map((day) => (
+            <div key={day} className="calendar-weekday" role="columnheader">
+              {day}
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Date cells — one role="row" per week (chunks of seven). */}
-      <div className="calendar-days">
+      {/* Date cells — a rowgroup of one role="row" per week (chunks of seven). */}
+      <div className="calendar-days" role="rowgroup">
         {weeks.map((week) => (
           <div key={week[0].date} className="calendar-week" role="row">
             {week.map(({ date, isCurrentMonth }) => {

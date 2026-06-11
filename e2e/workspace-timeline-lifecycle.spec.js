@@ -49,6 +49,33 @@ test.describe('Timeline-aware Add Recording Days calendar', () => {
     await page.getByRole('button', { name: 'Today' }).click();
     await expect(page.getByText(currentMonthYear)).toBeVisible();
   });
+
+  test('lays out seven day cells per row (the weekly-row split keeps the 7-column grid)', async ({
+    page,
+  }) => {
+    // Geometry guard for the a11y weekly-row split: jsdom can't compute layout, so assert in a real
+    // browser that the day cells still flow 7-per-row (a regression here collapses the grid into
+    // vertical strips). Uses bounding boxes — the first seven cells share a row top; the eighth wraps.
+    await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/animal/${ANIMAL_ID}/days`);
+    await page.getByRole('button', { name: 'Add Recording Days' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Recording Days Calendar' });
+    await expect(dialog).toBeVisible();
+
+    const cells = dialog.getByRole('gridcell');
+    await expect(cells.first()).toBeVisible();
+    const boxes = [];
+    for (let i = 0; i < 8; i += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      boxes.push(await cells.nth(i).boundingBox());
+    }
+    // Column-wrap is the robust signal that the seven-per-row grid survived the weekly-row split
+    // (a collapsed grid would stack cells vertically — second cell BELOW the first, no wrap):
+    // the second cell sits to the RIGHT of the first, and the eighth wraps back to the first
+    // column on the next row.
+    expect(boxes[1].x).toBeGreaterThan(boxes[0].x + 10); // second cell is to the right, not stacked
+    expect(Math.abs(boxes[7].x - boxes[0].x)).toBeLessThan(3); // eighth wraps back to column one
+    expect(boxes[7].y).toBeGreaterThan(boxes[0].y + 40); // ...on the next row
+  });
 });
 
 test.describe('Shared day-lifecycle vocabulary', () => {
