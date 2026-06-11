@@ -8,6 +8,7 @@ Canonical home for semantics referenced by ≥2 phases. Each fact lives here onc
 - [C2 — Persisted-blob schema version + migration](#c2)
 - [C3 — Task-type catalog model + merge resolution](#c3)
 - [C4 — Design-token + z-index scale + CSS-Modules conventions](#c4)
+- [C5 — Pre-test UX hardening + default-entry gate](#c5)
 
 ---
 
@@ -19,8 +20,8 @@ golden fixture represents. The gate is `npx vitest run baselines`
 `src/__tests__/fixtures/golden/`; note the `baselines` filter also runs performance/state/validation
 baseline suites — all must pass). Round-trip (parse → re-encode) must also be byte-identical.
 
-Implications for any phase that touches export-adjacent code (Phases 1, 4, 8, and any Phase 5/9 refactor of
-`workspaceUtils.js`/`validation.js`):
+Implications for any phase that touches export-adjacent code (Phases 1, 4, 8B/8C, 10B if it adds export
+fixtures, and any Phase 5/9 refactor of `workspaceUtils.js`/`validation.js`):
 
 - The export path is `mergeDayMetadata(animal, day)` (`src/state/workspaceUtils.js:324`) → `resolveDayConfig`
   (`:192`) → `encodeYaml` (`src/io/yaml.js`). Key order is fixed by `*_ORDER` arrays in `workspaceUtils.js`
@@ -43,7 +44,7 @@ load branch (`:122-140`) accepts the current version *or* a "migratable" one, th
 `normalizeWorkspaceDevices` — i.e. **there is no real shape-transform today**, only device normalization.
 An unrecognized version is discarded with `LOAD_DISCARD_REASON.VERSION_MISMATCH`.
 
-**Contract (introduced in [Phase 7](phase-7-persistence-migration.md), consumed by Phases 8 & 10):**
+**Contract (introduced in [Phase 7](phase-7-persistence-migration.md), consumed by Phase 8C and Phase 10):**
 
 - Migrations are an **ordered registry of pure functions** `migrators[n]: (blobV_n) => blobV_{n+1}`, applied
   in sequence from the stored `schemaVersion` up to `WORKSPACE_SCHEMA_VERSION`. Each migrator is total and
@@ -56,14 +57,17 @@ An unrecognized version is discarded with `LOAD_DISCARD_REASON.VERSION_MISMATCH`
 - Non-destructive: a field a migrator can't map forward is preserved or surfaced via the existing
   `recovered`/`discarded` notice path, never silently dropped.
 
-Phase 8 (task catalog, v2→v3) and Phase 10 (`appliedToDays`→derived, the next bump) are the first real shape
-changes and **must** register a migrator under this contract.
+Phase 8C (task catalog, v2→v3) and Phase 10 (`appliedToDays`→derived, v3→v4) are the first real shape
+changes and **must** register a migrator under this contract. Phase 8B may implement and test pure
+migration/conversion utilities, but it must not bump `WORKSPACE_SCHEMA_VERSION` or activate the new shape.
 
 ---
 
 ## C3 — Task-type catalog model + merge resolution {#c3}
 
-**Introduced in [Phase 8](phase-8-task-type-catalog.md); the UI shell in [Phase 6](phase-6-tasks-epochs-redesign.md) is built to consume it.**
+**Introduced in two steps: [Phase 8B](phase-8b-task-type-catalog-model.md) builds and tests the pure model
+utilities without activation; [Phase 8C](phase-8c-task-type-catalog-ui.md) activates the persisted shape and
+UI. The shell in [Phase 6](phase-6-tasks-epochs-redesign.md) is built to consume it.**
 
 **Mental model (per [ux-principles.md](../../research/ux-principles.md) recognition-over-recall):** a *task
 type* (e.g. "sleep", "w-track") is defined **once on the animal**; each **day** *selects* the types it ran
@@ -82,7 +86,7 @@ camera pattern: `animal.cameras` (catalog) + `day.cameras_used` (per-day referen
 *reason* for the catalog: Spyglass `common_task.py` raises on a duplicate `task_name` with a different
 `task_description`, so the catalog makes that divergence structurally impossible. An **existing**
 `divergent_task_identity` rule (`rulesValidation.js:~982`, via `identityDivergences`) already flags
-same-`task_name`/different-`task_description` on the *exported* `tasks[]`; Phase 8 adds a **catalog-level
+same-`task_name`/different-`task_description` on the *exported* `tasks[]`; Phase 8C adds a **catalog-level
 `task_name` uniqueness** rule on `taskTypes[]` that must **reconcile with — not duplicate or contradict —**
 `divergent_task_identity`. (The per-day epoch-ownership rule `duplicateTaskEpochs`,
 `rulesValidation.js:~752`, is unchanged.)
@@ -111,7 +115,7 @@ keys** before it reaches `reorderKeys(t, TASK_ORDER)` (`workspaceUtils.js:~390`)
 the emitted YAML is byte-identical.
 
 **Camera reconciliation (the catalog's one new divergence risk):** `TaskType.camera_id` is animal-level, but
-cameras are filtered per day via `day.cameras_used`. Rule (Phase 8): a `TaskType.camera_id` that includes a
+cameras are filtered per day via `day.cameras_used`. Rule (Phase 8C): a `TaskType.camera_id` that includes a
 camera **not in the referencing day's `cameras_used`** surfaces a repairable issue (`task_camera_not_used`)
 — never silently emitted. The migrator sets `TaskType.camera_id` from the day's inline values, so a migrated
 unmodified day stays byte-identical; a per-day camera difference for the same `task_name` is a *conflict*
@@ -154,3 +158,44 @@ name / different camera_id", and "task type lists a camera the day didn't use".
   at **warn** level; Phase 9 ratchets it to error-level when the build gate is re-armed.
 - **Migration is incremental:** convert a component's styles to a module only when a phase touches it; never
   rename a global class still referenced by a non-migrated file in the same commit.
+
+---
+
+## C5 — Pre-test UX hardening + default-entry gate {#c5}
+
+**Owner:** [Phase 8A-1](phase-8a1-timeline-lifecycle-hardening.md),
+[Phase 8A-2](phase-8a2-recognition-accessibility-hardening.md),
+[Phase 8A-3](phase-8a3-responsive-copy-hardening.md), and the
+[Phase 10B handoff](phase-10b-user-testing-handoff.md), with the rollout decision intentionally deferred
+to the separate selective user-testing / cutover phases.
+
+**Default-entry gate:** the root route (`/`) remains the frozen legacy form until selective user testing
+recommends a cutover. Claude-Code implementation phases must not redirect `/`, make Workspace the default,
+rename the legacy form as deprecated, or otherwise force users into Workspace. The implementation work may
+make Workspace more coherent and testable, but the entry-point decision is evidence-gated.
+
+**UX hardening invariants before user testing:**
+
+- **Timeline-aware creation:** recording-day creation follows the animal's recording timeline. When an animal
+  has existing days, the calendar opens near the latest recording day / next likely recording date, not
+  wall-clock today. "Today" may remain as an explicit jump action.
+- **Visible label == accessible name for touched controls.** A button visibly named "Add Recording Days"
+  must be discoverable by that same name to screen readers and voice control. Extra implementation detail
+  such as "Show calendar" belongs in description/help, not the primary accessible name.
+- **One lifecycle vocabulary:** distinguish computed export readiness from persisted validation and export
+  history. Do not show "Ready to export" beside "Draft — not yet validated" without a clear hierarchy. Prefer
+  a small shared helper/legend over one-off strings in each component.
+- **Primary action first; details on demand.** Inline copy should help the next decision, not explain the
+  whole data model. Long safety/provenance text moves behind `<details>`, tooltips, or compact "Why?" copy
+  when it is not required to complete the immediate task.
+- **Animal vs day ownership is visual, not memorized.** Shared setup and per-day work should use consistent
+  labels, section grouping, and repair language so the user does not have to remember where a fact lives.
+- **Narrow-width layouts must be intentionally designed.** At ~390px width, recording-day cards and the day
+  editor must not collapse into one-word columns or overlap primary/destructive actions. Use stacked card
+  layouts and separate destructive actions from the main workflow.
+
+**Verification:** Phases 8A-1 through 8A-3 use targeted unit/component checks plus Playwright screenshots
+at desktop and ~390px widths for Workspace, Animal Days, Day Editor, and Validation/Export. Phase 10B
+packages the screenshot set, testing route map, participant fixture, facilitator script, known-risks note,
+and no-cutover verification for selective testing. Screenshots are an implementation check only; do not
+update the plan to claim cutover readiness until selective user testing has been completed.
