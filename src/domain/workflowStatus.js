@@ -131,8 +131,8 @@ function setupAreaForIssue(issue) {
 
 /**
  * Build the action `{ label, fieldHint }` for a setup item. `fieldHint` is a field-path
- * keyword the existing `animalEditorStepForFieldPath` understands, so the rendering surface can
- * deep-link to the owning Animal Editor step without the domain layer knowing route strings.
+ * keyword the existing `animalSetupTabForFieldPath` understands, so the rendering surface can
+ * deep-link to the owning animal-setup tab without the domain layer knowing route strings.
  *
  * @param {string} key - Setup item key.
  * @param {boolean} present - Whether the item has content.
