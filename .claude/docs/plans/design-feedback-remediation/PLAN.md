@@ -1,6 +1,6 @@
 # Design-Feedback Remediation Implementation Plan
 
-**Status:** Not started.
+**Status:** Phases 1–2 complete (merged into `modern`); Phases 3–10 not started.
 
 This plan turns six pieces of user design feedback plus a re-evaluated backlog into shippable work:
 it guarantees recording days stay date-ordered, restores guided DIO entry (a Type + Index control),
@@ -30,8 +30,8 @@ For agent invocation, **load only the slice you need**:
 - [overview.md](overview.md) — scope, integration points, risks, rollout, open questions.
 - [shared-contracts.md](shared-contracts.md) — YAML byte-identity, persisted-schema/migration, task-catalog model, design-token + CSS-Modules conventions.
 - Phases (each ships as a separable PR unless noted):
-  - [phase-1-quick-wins-day-order-dio.md](phase-1-quick-wins-day-order-dio.md) — day sort-on-write (F2) + restore DIO Type+Index control (F5).
-  - [phase-2-typescript-bootstrap.md](phase-2-typescript-bootstrap.md) — TS toolchain (Vitest transform fix first) + type the pure I/O core.
+  - [phase-1-quick-wins-day-order-dio.md](phase-1-quick-wins-day-order-dio.md) — day sort-on-write (F2) + restore DIO Type+Index control (F5). ✅ **Complete (merged)**.
+  - [phase-2-typescript-bootstrap.md](phase-2-typescript-bootstrap.md) — TS toolchain (Vitest transform fix first) + type the pure I/O core. ✅ **Complete (merged)**.
   - [phase-3-design-tokens-css-modules.md](phase-3-design-tokens-css-modules.md) — token scale (incl. z-index) + CSS-Modules scaffolding + fix hidden logo/shortcuts (F3).
   - [phase-4-remove-channel-maps-editor.md](phase-4-remove-channel-maps-editor.md) — delete the workspace channel-maps editor (F1), full reference sweep.
   - [phase-5-dayeditor-structural-prep.md](phase-5-dayeditor-structural-prep.md) — `DayEditorContext` (kill prop-drill) + shared `deviceOverrideMerge` module; behavior-preserving.
