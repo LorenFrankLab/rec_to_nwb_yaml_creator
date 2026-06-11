@@ -374,10 +374,13 @@ export function RecordingDaysTab({ animalId }) {
             Recording Days for {selectedAnimal.id}
           </h2>
           <div className="day-actions">
+            {/* No aria-label: the visible text IS the accessible name (label parity), so voice
+                control / screen readers find the control by what it says. `aria-expanded` conveys
+                the open/closed state; the visible text already flips Add Recording Days ↔ Hide
+                Calendar for sighted users. */}
             <button
               className="btn-primary"
               onClick={handleToggleCalendar}
-              aria-label={showCalendar ? 'Hide calendar' : 'Show calendar'}
               aria-expanded={showCalendar}
             >
               {showCalendar ? 'Hide Calendar' : 'Add Recording Days'}

@@ -96,6 +96,16 @@ describe('ElectrodeGroupModal', () => {
       expect(screen.getByLabelText(/units/i)).toBeInTheDocument();
     });
 
+    it('shows human device-type summaries while keeping the option VALUE the exact probe ID', () => {
+      render(<ElectrodeGroupModal isOpen mode="add" onSave={() => {}} onCancel={() => {}} />);
+      const select = screen.getByLabelText(/device type/i);
+      // The opaque probe ID is the option value (must stay stable for trodes_to_nwb)…
+      const option = within(select).getByRole('option', { name: '128-ch, 4-shank, 8 mm (20/40 µm)' });
+      expect(option).toHaveValue('128c-4s8mm6cm-20um-40um-sl');
+      // …and the raw opaque id is NOT shown as the visible option text.
+      expect(within(select).queryByRole('option', { name: '128c-4s8mm6cm-20um-40um-sl' })).not.toBeInTheDocument();
+    });
+
     it('does not render a group-level Bad Channels field (managed per ntrode)', () => {
       render(<ElectrodeGroupModal isOpen mode="add" onSave={() => {}} onCancel={() => {}} />);
       expect(screen.queryByLabelText(/bad channels/i)).not.toBeInTheDocument();
@@ -132,7 +142,9 @@ describe('ElectrodeGroupModal', () => {
       };
       render(<ElectrodeGroupModal isOpen mode="edit" group={group} onSave={() => {}} onCancel={() => {}} />);
 
-      expect(screen.getByDisplayValue('tetrode_12.5')).toBeInTheDocument();
+      // The select's VALUE is the probe ID (its visible text is now the human summary, so assert
+      // the value attribute rather than the displayed option text).
+      expect(screen.getByLabelText(/device type/i)).toHaveValue('tetrode_12.5');
       expect(screen.getByLabelText('Location (optional)')).toHaveValue('CA1');
       expect(screen.getByLabelText(/description/i)).toHaveValue('CA1 tetrode');
       expect(screen.getByLabelText('Targeted Location')).toHaveValue('CA3');

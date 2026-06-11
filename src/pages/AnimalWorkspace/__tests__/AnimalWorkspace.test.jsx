@@ -174,7 +174,7 @@ describe('Recording-days pane (hosted by AnimalView at the route)', () => {
     it('shows an "Add Recording Days" button that opens the calendar', async () => {
       const user = userEvent.setup();
       renderPane('testanimal', { testanimal });
-      const addButton = screen.getByRole('button', { name: /show calendar/i });
+      const addButton = screen.getByRole('button', { name: /add recording days/i });
       expect(addButton).toHaveTextContent(/add recording days/i);
       await user.click(addButton);
       expect(screen.getByRole('dialog', { name: /recording days calendar/i })).toBeInTheDocument();
@@ -183,7 +183,7 @@ describe('Recording-days pane (hosted by AnimalView at the route)', () => {
     it('hides the calendar when the close button is clicked', async () => {
       const user = userEvent.setup();
       renderPane('testanimal', { testanimal });
-      await user.click(screen.getByRole('button', { name: /show calendar/i }));
+      await user.click(screen.getByRole('button', { name: /add recording days/i }));
       await user.click(screen.getByRole('button', { name: /close calendar/i }));
       expect(screen.queryByRole('dialog', { name: /recording days calendar/i })).not.toBeInTheDocument();
     });
@@ -194,7 +194,7 @@ describe('Recording-days pane (hosted by AnimalView at the route)', () => {
       renderPane('testanimal', { testanimal });
       expect(screen.queryByRole('link', { name: /edit animal setup/i })).not.toBeInTheDocument();
       // The primary "Add Recording Days" action stays.
-      expect(screen.getByRole('button', { name: /show calendar/i })).toHaveTextContent(/add recording days/i);
+      expect(screen.getByRole('button', { name: /add recording days/i })).toHaveTextContent(/add recording days/i);
     });
   });
 });

@@ -832,6 +832,42 @@ export const locations = () => {
 };
 
 /**
+ * Explicit human summaries for the device-type IDs that do not follow the regular
+ * `{N}c-{S}s{L}mm…-{a}um-{b}um-{sl|dl}` SpikeGadgets encoding. Keyed by the exact probe ID.
+ * @type {Readonly<Record<string, string>>}
+ */
+const DEVICE_TYPE_LABEL_OVERRIDES = Object.freeze({
+  'tetrode_12.5': 'Tetrode (12.5 µm)',
+  'A1x32-6mm-50-177-H32_21mm': '32-ch, 1-shank, 6 mm (A1x32 H32)',
+  'NET-EBL-128ch-single-shank': '128-ch, 1-shank (NET-EBL)',
+});
+
+/**
+ * A recognition-friendly summary of an opaque probe/device-type ID (Phase 8A-2). The IDs encode
+ * channels / shanks / length / contact spacing but read as noise (`128c-4s8mm6cm-20um-40um-sl`);
+ * this renders e.g. "128-ch, 4-shank, 8 mm (20/40 µm)" for display while callers keep the raw ID
+ * as the option **value** (it keys into trodes_to_nwb probe-metadata filenames — never change it).
+ *
+ * Display-only and pure: it does not alter `deviceTypes()` or any exported value. An unrecognized
+ * ID falls back to itself (never hidden), so a newly-added probe still selects/exports correctly
+ * even before it gets a summary here.
+ *
+ * @param {string} id - The probe/device-type ID (an entry of {@link deviceTypes}).
+ * @returns {string} The human summary, or the raw ID when it is not recognized.
+ */
+export const deviceTypeLabel = (id) => {
+  if (typeof id !== 'string') return String(id ?? '');
+  if (id in DEVICE_TYPE_LABEL_OVERRIDES) return DEVICE_TYPE_LABEL_OVERRIDES[id];
+  // Regular SpikeGadgets-style id: {channels}c-{shanks}s{lengthMm}mm…-{spacingA}um-{spacingB}um-…
+  const m = id.match(/^(\d+)c-(\d+)s(\d+)mm\w*?-(\d+)um-(\d+)um/);
+  if (m) {
+    const [, channels, shanks, lengthMm, spacingA, spacingB] = m;
+    return `${channels}-ch, ${shanks}-shank, ${lengthMm} mm (${spacingA}/${spacingB} µm)`;
+  }
+  return id; // unknown shape → show the raw id rather than hide it
+};
+
+/**
  * List of device-types
  *
  * @returns Device types

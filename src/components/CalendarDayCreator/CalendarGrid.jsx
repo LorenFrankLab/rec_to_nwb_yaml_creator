@@ -1,12 +1,16 @@
 /**
  * @file CalendarGrid - Renders calendar grid with days
  *
- * Displays a month view calendar with days of the week and date cells.
- * Handles date selection via click/keyboard interactions.
+ * Displays a month view as six weekly rows of seven date cells, with a roving tabindex so the grid
+ * is keyboard-reachable on any displayed month (even one that does not contain today) and the
+ * arrow keys move focus cell-to-cell.
  */
 
+import { useState, useEffect, useRef, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { CalendarDay } from './CalendarDay';
+
+const WEEK_LENGTH = 7;
 
 /**
  * Get array of dates to display in calendar grid
@@ -85,8 +89,103 @@ export function CalendarGrid({
 
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+  // The full display order (42 cells) and the displayed month's own dates, used for roving focus.
+  const allDates = days.map((d) => d.date);
+  const monthDates = days.filter((d) => d.isCurrentMonth).map((d) => d.date);
+  // Default roving-focus target: today when it falls in the displayed month, else the first
+  // SELECTABLE (non-existing) day of the month — so Tab always reaches a usable cell even when
+  // today is in another month. Fall back to the first cell if every month day is an existing record.
+  const firstSelectable = monthDates.find((d) => !existingDays.includes(d));
+  const defaultActiveDate = monthDates.includes(today)
+    ? today
+    : firstSelectable ?? monthDates[0] ?? allDates[0];
+
+  const [activeDate, setActiveDate] = useState(defaultActiveDate);
+  // Set true only by an arrow-key move, so we move DOM focus to the new cell on navigation but NOT
+  // on initial mount / month change (the Modal owns the initial focus there).
+  const focusAfterNavRef = useRef(false);
+  const activeCellRef = useRef(null);
+
+  // Reset the roving target whenever the displayed month changes.
+  useEffect(() => {
+    setActiveDate(defaultActiveDate);
+    focusAfterNavRef.current = false;
+  }, [defaultActiveDate]);
+
+  // After an arrow-key navigation, move DOM focus to the newly-active cell.
+  useEffect(() => {
+    if (focusAfterNavRef.current && activeCellRef.current) {
+      activeCellRef.current.focus();
+      focusAfterNavRef.current = false;
+    }
+  }, [activeDate]);
+
+  const moveActiveBy = useCallback(
+    (delta) => {
+      const index = allDates.indexOf(activeDate);
+      if (index === -1) return;
+      const nextIndex = Math.min(allDates.length - 1, Math.max(0, index + delta));
+      if (nextIndex === index) return;
+      focusAfterNavRef.current = true;
+      setActiveDate(allDates[nextIndex]);
+    },
+    [activeDate, allDates]
+  );
+
+  const moveActiveTo = useCallback(
+    (nextIndex) => {
+      const clamped = Math.min(allDates.length - 1, Math.max(0, nextIndex));
+      focusAfterNavRef.current = true;
+      setActiveDate(allDates[clamped]);
+    },
+    [allDates]
+  );
+
+  const handleGridKeyDown = useCallback(
+    (event) => {
+      const index = allDates.indexOf(activeDate);
+      if (index === -1) return;
+      switch (event.key) {
+        case 'ArrowRight':
+          event.preventDefault();
+          moveActiveBy(1);
+          break;
+        case 'ArrowLeft':
+          event.preventDefault();
+          moveActiveBy(-1);
+          break;
+        case 'ArrowDown':
+          event.preventDefault();
+          moveActiveBy(WEEK_LENGTH);
+          break;
+        case 'ArrowUp':
+          event.preventDefault();
+          moveActiveBy(-WEEK_LENGTH);
+          break;
+        case 'Home': // first cell of the current week row
+          event.preventDefault();
+          moveActiveTo(index - (index % WEEK_LENGTH));
+          break;
+        case 'End': // last cell of the current week row
+          event.preventDefault();
+          moveActiveTo(index - (index % WEEK_LENGTH) + (WEEK_LENGTH - 1));
+          break;
+        default:
+          break;
+      }
+    },
+    [activeDate, allDates, moveActiveBy, moveActiveTo]
+  );
+
+  // Split the 42 cells into six weekly rows of seven, so AT grid navigation reads weeks × days.
+  const weeks = [];
+  for (let i = 0; i < days.length; i += WEEK_LENGTH) {
+    weeks.push(days.slice(i, i + WEEK_LENGTH));
+  }
+
   return (
-    <div className="calendar-grid" role="grid" aria-label="Calendar dates">
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
+    <div className="calendar-grid" role="grid" aria-label="Calendar dates" onKeyDown={handleGridKeyDown}>
       {/* Week day headers */}
       <div className="calendar-weekdays" role="row">
         {weekDays.map((day) => (
@@ -96,25 +195,28 @@ export function CalendarGrid({
         ))}
       </div>
 
-      {/* Date cells */}
-      <div className="calendar-days" role="row">
-        {days.map(({ date, isCurrentMonth }) => {
-          const isSelected = selectedDates.has(date);
-          const isExisting = existingDays.includes(date);
-          const isToday = date === today;
-
-          return (
-            <CalendarDay
-              key={date}
-              date={date}
-              isCurrentMonth={isCurrentMonth}
-              isSelected={isSelected}
-              isExisting={isExisting}
-              isToday={isToday}
-              onSelect={onDateSelect}
-            />
-          );
-        })}
+      {/* Date cells — one role="row" per week (chunks of seven). */}
+      <div className="calendar-days">
+        {weeks.map((week) => (
+          <div key={week[0].date} className="calendar-week" role="row">
+            {week.map(({ date, isCurrentMonth }) => {
+              const isActive = date === activeDate;
+              return (
+                <CalendarDay
+                  key={date}
+                  date={date}
+                  isCurrentMonth={isCurrentMonth}
+                  isSelected={selectedDates.has(date)}
+                  isExisting={existingDays.includes(date)}
+                  isToday={date === today}
+                  isActive={isActive}
+                  onSelect={onDateSelect}
+                  cellRef={isActive ? activeCellRef : undefined}
+                />
+              );
+            })}
+          </div>
+        ))}
       </div>
     </div>
   );

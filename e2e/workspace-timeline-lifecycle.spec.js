@@ -33,9 +33,8 @@ test.describe('Timeline-aware Add Recording Days calendar', () => {
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/animal/${ANIMAL_ID}/days`);
     await expect(page.getByRole('heading', { level: 1, name: ANIMAL_ID })).toBeVisible();
 
-    // Open the calendar (its accessible name is still "Show calendar" — the visible-label parity
-    // fix is Phase 8A-2's scope, so this spec uses the current name).
-    await page.getByRole('button', { name: 'Show calendar' }).click();
+    // Open the calendar — its accessible name now equals its visible text (label parity, 8A-2).
+    await page.getByRole('button', { name: 'Add Recording Days' }).click();
     await expect(page.getByRole('dialog', { name: 'Recording Days Calendar' })).toBeVisible();
 
     // It follows the recording timeline: the latest day (2023-06-22) → next likely day is the same
