@@ -1,10 +1,10 @@
 /**
- * Tests for the ephys setup tabs mounted into AnimalView (Phase 3-2 — tabbed-workspace-ia).
+ * Tests for the electrode-groups setup tab mounted into AnimalView (tabbed-workspace-ia).
  *
- * Phase 3-2 replaces the Phase-1 placeholder for the `electrode-groups` and `channel-maps` tabs
- * with their extracted containers (ElectrodeGroupsContainer / ChannelMapsContainer from 3-1), adds
- * the per-tab scope descriptors, and proves the channel-map auto-regen wiring still fires through
- * the tab path. Uses the REAL containers + modals (no mocks) so the integration is genuine.
+ * Mounts the real ElectrodeGroupsContainer for the `electrode-groups` tab, asserts its scope
+ * descriptor + config-version legibility, and proves the channel-map auto-regen wiring still fires
+ * through the tab path (a device_type change regenerates the per-group ntrode maps). Uses the REAL
+ * container + modals (no mocks) so the integration is genuine.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -119,6 +119,13 @@ describe('AnimalView — electrode-groups tab (Phase 3-2)', () => {
     expect(screen.getByText(/a hardware change starts a new version/i)).toBeInTheDocument();
   });
 
+  it('reassures that channel maps are generated automatically (the manual editor was removed)', () => {
+    renderView('electrode-groups');
+    expect(
+      screen.getByText(/channel maps are generated automatically from each electrode group's device type/i)
+    ).toBeInTheDocument();
+  });
+
   it('regenerates channel maps to local ids when device_type changes via the tab', async () => {
     const user = userEvent.setup();
     renderView('electrode-groups');
@@ -187,119 +194,4 @@ describe('AnimalView — electrode-groups config-version legibility (Task 3.4, e
     expect(screen.queryByRole('note', { name: /electrode configuration history/i })).not.toBeInTheDocument();
   });
 
-  it('does not show the config-version context on the channel-maps tab', () => {
-    delete window.location;
-    window.location = { hash: '#/animal/remy/channel-maps' };
-    renderView('channel-maps', buildMultiVersionAnimal());
-    expect(screen.queryByRole('note', { name: /electrode configuration history/i })).not.toBeInTheDocument();
-  });
-});
-
-describe('AnimalView — channel-maps tab (Phase 3-2)', () => {
-  beforeEach(() => {
-    delete window.location;
-    window.location = { hash: '#/animal/remy/channel-maps' };
-  });
-  afterEach(() => {
-    window.location = { hash: '' };
-  });
-
-  it('renders the channel-maps container, not the placeholder', () => {
-    renderView('channel-maps');
-    expect(screen.getByTestId('channel-maps-step')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /export channel maps to csv/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /import channel maps from csv/i })).toBeInTheDocument();
-    expect(screen.queryByText(/this section moves here in a later phase/i)).not.toBeInTheDocument();
-  });
-
-  it('shows the channel-maps scope descriptor', () => {
-    renderView('channel-maps');
-    expect(screen.getByText(/failed channels are marked per day in the day editor/i)).toBeInTheDocument();
-  });
-
-  it('opens the ChannelMapEditor for a group', async () => {
-    const user = userEvent.setup();
-    renderView('channel-maps');
-    await user.click(screen.getByRole('button', { name: /edit channel map for electrode group 0/i }));
-    expect(screen.getByRole('heading', { name: /channel map editor/i })).toBeInTheDocument();
-  });
-});
-
-describe('AnimalView — unsaved-edit guard (charter decision 2)', () => {
-  beforeEach(() => {
-    delete window.location;
-    window.location = { hash: '#/animal/remy/channel-maps' };
-  });
-  afterEach(() => {
-    window.location = { hash: '' };
-  });
-
-  /**
-   * Render the channel-maps tab and open the ChannelMapEditor so there are pending edits.
-   * @returns {object} The userEvent instance for driving subsequent interactions.
-   */
-  async function renderWithOpenEditor() {
-    const user = userEvent.setup();
-    renderView('channel-maps');
-    await user.click(screen.getByRole('button', { name: /edit channel map for electrode group 0/i }));
-    expect(screen.getByRole('heading', { name: /channel map editor/i })).toBeInTheDocument();
-    return user;
-  }
-
-  it('intercepts a section-nav switch with a discard confirm when an editor is open', async () => {
-    const user = await renderWithOpenEditor();
-    await user.click(screen.getByRole('link', { name: /^electrode groups/i }));
-    expect(screen.getByRole('alertdialog', { name: /discard unsaved changes/i })).toBeInTheDocument();
-  });
-
-  it('does NOT intercept when no editor is open (normal nav, no confirm)', async () => {
-    const user = userEvent.setup();
-    renderView('channel-maps');
-    await user.click(screen.getByRole('link', { name: /^electrode groups/i }));
-    expect(screen.queryByRole('alertdialog', { name: /discard unsaved changes/i })).not.toBeInTheDocument();
-  });
-
-  it('cancel keeps the tab and the open editor', async () => {
-    const user = await renderWithOpenEditor();
-    await user.click(screen.getByRole('link', { name: /^electrode groups/i }));
-    await user.click(screen.getByRole('button', { name: /keep editing/i }));
-    expect(screen.queryByRole('alertdialog', { name: /discard unsaved changes/i })).not.toBeInTheDocument();
-    // Editor still open; route unchanged.
-    expect(screen.getByRole('heading', { name: /channel map editor/i })).toBeInTheDocument();
-    expect(window.location.hash).toBe('#/animal/remy/channel-maps');
-  });
-
-  it('confirm navigates to the target tab and dismisses the guard', async () => {
-    const user = await renderWithOpenEditor();
-    await user.click(screen.getByRole('link', { name: /^electrode groups/i }));
-    await user.click(screen.getByRole('button', { name: /discard changes/i }));
-    expect(screen.queryByRole('alertdialog', { name: /discard unsaved changes/i })).not.toBeInTheDocument();
-    expect(window.location.hash).toBe('#/animal/remy/electrode-groups');
-  });
-
-  it('resets pending edits when the tab actually changes (container unmount), so the next nav is unguarded', async () => {
-    const user = userEvent.setup();
-    const animal = buildConfiguredAnimal();
-    const { rerender } = render(
-      <StoreProvider initialState={{ workspace: { animals: { remy: animal }, days, settings: {} } }}>
-        <AnimalView animalId="remy" tab="channel-maps" />
-      </StoreProvider>
-    );
-    // Open the editor → pending edits true.
-    await user.click(screen.getByRole('button', { name: /edit channel map for electrode group 0/i }));
-    expect(screen.getByRole('heading', { name: /channel map editor/i })).toBeInTheDocument();
-
-    // Simulate the router driving the tab change (as a guard-confirm or external nav would): the
-    // ChannelMapsContainer unmounts, and its cleanup must reset the shell's pending-edits flag.
-    rerender(
-      <StoreProvider initialState={{ workspace: { animals: { remy: animal }, days, settings: {} } }}>
-        <AnimalView animalId="remy" tab="electrode-groups" />
-      </StoreProvider>
-    );
-    expect(screen.queryByRole('heading', { name: /channel map editor/i })).not.toBeInTheDocument();
-
-    // From the new tab with no open editor, navigating away must NOT raise the discard guard.
-    await user.click(screen.getByRole('link', { name: /^channel maps/i }));
-    expect(screen.queryByRole('alertdialog', { name: /discard unsaved changes/i })).not.toBeInTheDocument();
-  });
 });

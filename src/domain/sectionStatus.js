@@ -14,7 +14,6 @@
 
 import {
   getAnimalElectrodeGroups,
-  getAnimalNtrodeMaps,
   getDataAcqDevices,
   getAnimalCameras,
   getAnimalDayIds,
@@ -76,7 +75,6 @@ export function getAnimalOptoCompleteness(animal) {
  */
 const SETUP_SECTION_IS_CONFIGURED = {
   'electrode-groups': (animal) => getAnimalElectrodeGroups(animal).length > 0,
-  'channel-maps': (animal) => getAnimalNtrodeMaps(animal).length > 0,
   'recording-system': (animal) => getDataAcqDevices(animal).length > 0,
   cameras: (animal) => getAnimalCameras(animal).length > 0,
   optogenetics: (animal) =>
@@ -104,12 +102,11 @@ export function getAnimalSectionStatus(animal, sectionKey) {
  * the shape-safe selectors, so a malformed/recovered animal yields 0 rather than crashing.
  *
  * @param {object} animal - The animal record.
- * @returns {{ 'electrode-groups': number, 'channel-maps': number, 'recording-system': number, cameras: number }}
+ * @returns {{ 'electrode-groups': number, 'recording-system': number, cameras: number }}
  */
 export function getAnimalSetupCounts(animal) {
   return {
     'electrode-groups': getAnimalElectrodeGroups(animal).length,
-    'channel-maps': getAnimalNtrodeMaps(animal).length,
     'recording-system': getDataAcqDevices(animal).length,
     cameras: getAnimalCameras(animal).length,
   };

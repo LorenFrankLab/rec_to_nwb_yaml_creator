@@ -257,10 +257,10 @@ describe('ExportStep', () => {
     expect(onNavigate).toHaveBeenCalledWith('animal', undefined);
   });
 
-  it('routes a devices-INCOMPLETE blocker (groups present, missing maps) to the Channel Maps step', async () => {
-    // Electrode groups exist but a group has no channel map → devices 'incomplete'. The
-    // repair must deep-link to Channel Maps (via the ntrode field hint), not drop the user
-    // on Electrode Groups (step 0), where the missing map cannot be fixed.
+  it('routes a devices-INCOMPLETE blocker (groups present, missing maps) to the Electrode Groups tab', async () => {
+    // Electrode groups exist but a group has no channel map → devices 'incomplete'. Channel maps
+    // are auto-generated from each group's device_type, so the repair deep-links to Electrode Groups
+    // (with the electrode_groups field hint) — the owner where the missing map is regenerated.
     const user = userEvent.setup();
     const onNavigate = vi.fn();
     const { animal, day } = buildRealisticWorkspace();
@@ -270,7 +270,7 @@ describe('ExportStep', () => {
     render(<ExportStep animal={animal} day={day} onNavigate={onNavigate} />);
 
     await user.click(screen.getByRole('button', { name: /fix in animal setup/i }));
-    expect(onNavigate).toHaveBeenCalledWith('animal', 'ntrode_electrode_group_channel_map');
+    expect(onNavigate).toHaveBeenCalledWith('animal', 'electrode_groups');
   });
 
   it('tolerates a malformed-animal merge throw (corrupt configurationHistory) without crashing', () => {

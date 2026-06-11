@@ -117,7 +117,7 @@ describe('buildProbeWideBadChannelMap (Day Editor map shape)', () => {
   });
 });
 
-describe('migrateProbeWideChannelMaps (Animal Editor row shape)', () => {
+describe('migrateProbeWideChannelMaps (array-of-rows shape)', () => {
   it('unions onto the first row and clears later rows (array marks)', () => {
     const next = migrateProbeWideChannelMaps({ channelMaps: twoShankRows([2], [3]), electrodeId: 5, isChecked: true, deviceType: MULTI });
     expect(next[0].bad_channels).toEqual([2, 5, 19]);

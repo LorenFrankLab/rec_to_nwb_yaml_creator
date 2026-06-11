@@ -35,7 +35,6 @@ import SaveIndicator from '../DayEditor/SaveIndicator';
 import RawCorruptionBanner from '../../components/RawCorruptionBanner';
 import ReconfigurationContextBanner from '../../components/ReconfigurationContextBanner';
 import ElectrodeGroupsContainer from '../AnimalEditor/wiring/ElectrodeGroupsContainer';
-import ChannelMapsContainer from '../AnimalEditor/wiring/ChannelMapsContainer';
 import RecordingSystemContainer from '../AnimalEditor/wiring/RecordingSystemContainer';
 import CamerasContainer from '../AnimalEditor/wiring/CamerasContainer';
 import OptogeneticsContainer from '../AnimalEditor/wiring/OptogeneticsContainer';
@@ -53,10 +52,6 @@ import './AnimalView.css';
 const TAB_SCOPE = {
   'electrode-groups':
     'Shared across all recording days — a hardware change starts a new version (with an audit trail).',
-  // Channel maps are wiring/mapping only. Failed (bad) channels are NOT marked here; they are marked
-  // per recording day in the Day Editor — so this descriptor must not imply otherwise.
-  'channel-maps':
-    'Map probe channels to hardware. (Failed channels are marked per day in the Day Editor.)',
   // Recording system is an animal-wide CATALOG of acquisition systems; each recording day uses one
   // (chosen in the day's setup), defaulting to the first. Mirrors the cameras catalog framing.
   'recording-system': 'Animal-wide catalog — each recording day uses one.',
@@ -79,7 +74,6 @@ const SECTION_GROUPS = [
     label: 'Animal setup',
     items: [
       { key: 'electrode-groups', label: 'Electrode Groups' },
-      { key: 'channel-maps', label: 'Channel Maps' },
       { key: 'recording-system', label: 'Recording System' },
       { key: 'cameras', label: 'Cameras' },
       { key: 'optogenetics', label: 'Optogenetics' },
@@ -109,7 +103,6 @@ const CORRUPTION_BANNER_FIELDS = ['cameras', 'data_acq_device', 'configurationHi
  */
 const TAB_FIELD_ANCHOR = {
   'electrode-groups': 'electrode_groups',
-  'channel-maps': 'ntrode_electrode_group_channel_map',
   'recording-system': 'data_acq_device',
   cameras: 'cameras',
   optogenetics: 'opto_excitation_source',
@@ -178,8 +171,6 @@ function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdat
           <ElectrodeGroupsContainer animalId={animalId} onPendingEditsChange={onPendingEditsChange} />
         </>
       );
-    case 'channel-maps':
-      return <ChannelMapsContainer animalId={animalId} onPendingEditsChange={onPendingEditsChange} />;
     case 'export':
       // The per-animal Validation & Export surface — a scoped slice of the workspace Validation
       // Summary (readiness + repairs + export for THIS animal). Renders without its own <main>.
@@ -298,7 +289,7 @@ export function AnimalView({ animalId, tab }) {
   // thrash the container's reporting effect.
   //
   // LATENT SAFETY NET: every CURRENT setup editor that reports `pendingEdits`
-  // (ElectrodeGroupsContainer, ChannelMapsContainer via ChannelMapEditor, CamerasContainer) is a
+  // (ElectrodeGroupsContainer, CamerasContainer) is a
   // focus-trapping shared `Modal` whose overlay intercepts the section-nav click before
   // `handleNavClick` ever runs — so in today's shipped UI this discard-confirm is UNREACHABLE.
   // It is correct, intentional code kept for a FUTURE inline (non-modal) setup editor that reports

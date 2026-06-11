@@ -177,6 +177,9 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
       <header className="step-header">
         <h2>Electrode Groups</h2>
         <p>Configure the electrode groups for this animal.</p>
+        <p className="auto-maps-note">
+          Channel maps are generated automatically from each electrode group&apos;s device type.
+        </p>
       </header>
 
       <div className="table-actions">

@@ -615,12 +615,12 @@ describe('DevicesStep', () => {
     const errorMessages = screen.getAllByText(/no channel mapping found/i);
     expect(errorMessages.length).toBeGreaterThan(0);
     expect(errorMessages[0]).toBeInTheDocument();
-    // The fix link deep-links to the Channel Maps step (the owner of the missing map),
+    // The fix link deep-links to the Electrode Groups tab (the owner of the auto-generated map),
     // not the bare Animal Editor (there are multiple links, one per group).
     const fixLinks = screen.getAllByRole('link', { name: /fix in animal setup/i });
     expect(fixLinks[0]).toHaveAttribute(
       'href',
-      '#/animal/test-animal/channel-maps?field=ntrode_electrode_group_channel_map'
+      '#/animal/test-animal/electrode-groups?field=electrode_groups'
     );
   });
 

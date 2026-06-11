@@ -134,11 +134,12 @@ export default function ExportStep({ animal, day, onNavigate, onRepair, animalKe
       .filter((s) => stepStatus[s] !== 'valid')
       .map((step) => {
         if (step === 'devices' && stepStatus.devices === 'incomplete') {
-          // Geometry is animal-owned. Route to the Animal-Editor step that owns the gap:
-          // no electrode groups → Electrode Groups (the default step 0, no field hint);
-          // groups present but a group has no channel map → Channel Maps (field hint so the
-          // deep-link lands there instead of dropping the user on step 0).
-          const field = groups.length === 0 ? undefined : 'ntrode_electrode_group_channel_map';
+          // Geometry is animal-owned. Both gaps route to the Electrode Groups tab — channel maps are
+          // auto-generated from each group's device_type, so a missing map is fixed by fixing the group:
+          // no electrode groups → Electrode Groups (no field hint);
+          // groups present but a group has no channel map → Electrode Groups with the electrode_groups
+          // field hint so the deep-link highlights the groups instead of dropping the user at the top.
+          const field = groups.length === 0 ? undefined : 'electrode_groups';
           return { step, owner: 'animal', field };
         }
         return { step, owner: 'day', field: undefined };

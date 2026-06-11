@@ -48,7 +48,7 @@ function renderView(tab, { animalId = 'remy', animals = { remy } } = {}) {
 }
 
 describe('AnimalView — section nav (Task 1.1)', () => {
-  it('renders a navigation landmark labelled "Animal sections" with all seven section links', () => {
+  it('renders a navigation landmark labelled "Animal sections" with all six section links', () => {
     renderView('days');
     const nav = screen.getByRole('navigation', { name: /animal sections/i });
     const links = within(nav).getAllByRole('link');
@@ -57,7 +57,6 @@ describe('AnimalView — section nav (Task 1.1)', () => {
       '#/animal/remy/days',
       '#/animal/remy/export',
       '#/animal/remy/electrode-groups',
-      '#/animal/remy/channel-maps',
       '#/animal/remy/recording-system',
       '#/animal/remy/cameras',
       '#/animal/remy/optogenetics',

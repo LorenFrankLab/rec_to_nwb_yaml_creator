@@ -3,7 +3,7 @@
  *
  * WHY A PURE-DECISION TEST (and not a full browser-path render): the guard's live path is currently
  * UNREACHABLE in the shipped UI. Every setup editor that reports `pendingEdits`
- * (ElectrodeGroupsContainer, ChannelMapsContainer via ChannelMapEditor, CamerasContainer) is a
+ * (ElectrodeGroupsContainer, CamerasContainer) is a
  * focus-trapping shared `Modal` whose overlay intercepts the section-nav click BEFORE
  * `handleNavClick` runs — so a jsdom render can never get `pendingEdits === true` AND a clickable
  * nav link at the same time. The guard is correct, intentional safety code kept for a FUTURE inline

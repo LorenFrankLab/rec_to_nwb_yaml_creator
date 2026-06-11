@@ -49,9 +49,9 @@ describe('animalEditorStepForFieldPath', () => {
 });
 
 describe('animalSetupTabForFieldPath — field → animal-setup TAB (tabbed IA)', () => {
-  it('maps channel-map paths to the channel-maps tab', () => {
-    expect(animalSetupTabForFieldPath('ntrode_electrode_group_channel_map[3]')).toEqual({ tab: 'channel-maps', label: 'Channel Maps' });
-    expect(animalSetupTabForFieldPath('/ntrode_electrode_group_channel_map/0/map')).toMatchObject({ tab: 'channel-maps' });
+  it('maps channel-map (ntrode) paths to the electrode-groups tab (maps auto-generated from groups)', () => {
+    expect(animalSetupTabForFieldPath('ntrode_electrode_group_channel_map[3]')).toEqual({ tab: 'electrode-groups', label: 'Electrode Groups' });
+    expect(animalSetupTabForFieldPath('/ntrode_electrode_group_channel_map/0/map')).toMatchObject({ tab: 'electrode-groups' });
   });
 
   it('maps camera paths to the cameras tab (split out of the old combined step)', () => {
@@ -81,14 +81,14 @@ describe('animalSetupTabForFieldPath — field → animal-setup TAB (tabbed IA)'
 });
 
 describe('repairTargetForIssue — tab-aware Animal Setup labels (tabbed IA)', () => {
-  it('labels a channel-map issue "Fix in Animal Setup → Channel Maps"', () => {
+  it('labels a channel-map (ntrode) issue "Fix in Animal Setup → Electrode Groups"', () => {
     const target = repairTargetForIssue({
       code: 'channel_value_out_of_range',
       path: 'ntrode_electrode_group_channel_map[3]',
       repairSurface: 'animal',
     });
     expect(target.surface).toBe('animal');
-    expect(target.label).toBe('Fix in Animal Setup → Channel Maps');
+    expect(target.label).toBe('Fix in Animal Setup → Electrode Groups');
   });
 
   it('labels an electrode-group issue "Fix in Animal Setup → Electrode Groups"', () => {

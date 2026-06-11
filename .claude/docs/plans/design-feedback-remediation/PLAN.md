@@ -1,6 +1,6 @@
 # Design-Feedback Remediation Implementation Plan
 
-**Status:** Phases 1–3 complete (merged into `modern`); Phases 4–10 not started.
+**Status:** Phases 1–4 complete (merged into `modern`); Phases 5–10 not started.
 
 This plan turns six pieces of user design feedback plus a re-evaluated backlog into shippable work:
 it guarantees recording days stay date-ordered, restores guided DIO entry (a Type + Index control),
@@ -33,7 +33,7 @@ For agent invocation, **load only the slice you need**:
   - [phase-1-quick-wins-day-order-dio.md](phase-1-quick-wins-day-order-dio.md) — day sort-on-write (F2) + restore DIO Type+Index control (F5). ✅ **Complete (merged)**.
   - [phase-2-typescript-bootstrap.md](phase-2-typescript-bootstrap.md) — TS toolchain (Vitest transform fix first) + type the pure I/O core. ✅ **Complete (merged)**.
   - [phase-3-design-tokens-css-modules.md](phase-3-design-tokens-css-modules.md) — token scale (incl. z-index) + CSS-Modules scaffolding + fix hidden logo/shortcuts (F3). ✅ **Complete (merged)**. F3 grew into a single-row app-bar redesign (logo · nav · shortcuts) per user feedback.
-  - [phase-4-remove-channel-maps-editor.md](phase-4-remove-channel-maps-editor.md) — delete the workspace channel-maps editor (F1), full reference sweep.
+  - [phase-4-remove-channel-maps-editor.md](phase-4-remove-channel-maps-editor.md) — delete the workspace channel-maps editor (F1), full reference sweep. ✅ **Complete (merged)**.
   - [phase-5-dayeditor-structural-prep.md](phase-5-dayeditor-structural-prep.md) — `DayEditorContext` (kill prop-drill) + shared `deviceOverrideMerge` module; behavior-preserving.
   - [phase-6-tasks-epochs-redesign.md](phase-6-tasks-epochs-redesign.md) — Tasks & Epochs in-place clarity redesign (F4 quick wins) + a11y.
   - [phase-7-persistence-migration.md](phase-7-persistence-migration.md) — versioned persisted-blob forward migration (Post-v3 #6).

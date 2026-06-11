@@ -101,9 +101,11 @@ test.describe('Ownership & discoverability — AnimalView header + section-nav +
     await expect(nav.getByRole('link', { name: /^Recording Days/ })).toBeVisible();
     await expect(nav.getByRole('link', { name: /^Validation & Export/ })).toBeVisible();
     // Setup rows.
-    for (const name of ['Electrode Groups', 'Channel Maps', 'Recording System', 'Cameras', 'Optogenetics']) {
+    for (const name of ['Electrode Groups', 'Recording System', 'Cameras', 'Optogenetics']) {
       await expect(nav.getByRole('link', { name: new RegExp(`^${name}`) })).toBeVisible();
     }
+    // The manual Channel Maps tab was removed (maps are auto-generated from each group's device type).
+    await expect(nav.getByRole('link', { name: /^Channel Maps/ })).toHaveCount(0);
     // Information scent: the Recording Days row carries its day count (1 for the single seeded day).
     const daysRow = nav.getByRole('link', { name: /^Recording Days/ });
     await expect(daysRow.getByText('1', { exact: true })).toBeVisible();
@@ -156,7 +158,6 @@ test.describe('Ownership & discoverability — AnimalView header + section-nav +
       );
     };
     await expectRow('Electrode Groups', 'if ephys');
-    await expectRow('Channel Maps', 'if ephys');
     await expectRow('Recording System', 'data acquisition');
     await expectRow('Cameras', 'if video');
     await expectRow('Optogenetics', 'if opto');

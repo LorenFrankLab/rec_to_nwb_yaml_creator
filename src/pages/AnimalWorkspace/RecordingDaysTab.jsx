@@ -57,7 +57,6 @@ import { ConfirmDialog, Modal } from '../../components/Modal';
  */
 const SETUP_CARD_SECTIONS = [
   { key: 'electrode-groups', label: 'Electrode Groups', hint: 'if ephys' },
-  { key: 'channel-maps', label: 'Channel Maps', hint: 'if ephys' },
   { key: 'recording-system', label: 'Recording System', hint: 'data acquisition' },
   { key: 'cameras', label: 'Cameras', hint: 'if video' },
   { key: 'optogenetics', label: 'Optogenetics', hint: 'if opto' },

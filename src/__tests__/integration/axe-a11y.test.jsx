@@ -13,7 +13,6 @@ import { axe } from 'jest-axe';
 import { App } from '../../App';
 import { StoreProvider } from '../../state/StoreContext';
 import { makeConfiguredWorkspace } from '../helpers/test-fixtures';
-import ChannelMapEditor from '../../pages/AnimalEditor/ChannelMapEditor';
 import CopyFromAnimalDialog from '../../pages/AnimalEditor/CopyFromAnimalDialog';
 import { CalendarDayCreator } from '../../components/CalendarDayCreator/CalendarDayCreator';
 
@@ -104,26 +103,6 @@ describe('axe-a11y (configured workspace, all routes)', () => {
   // The overlay surfaces migrated onto the shared Modal primitive: rendered open so
   // Axe sees the live dialog (role, labelling, focusables), one case per dialog.
   describe('migrated dialogs (open) have no violations', () => {
-    it('ChannelMapEditor', async () => {
-      const { container } = render(
-        <ChannelMapEditor
-          electrodeGroup={{ id: 0, device_type: 'tetrode_12.5', location: 'CA1' }}
-          channelMaps={[
-            {
-              electrode_group_id: 0,
-              ntrode_id: 0,
-              bad_channels: [],
-              map: { 0: 0, 1: 1, 2: 2, 3: 3 },
-            },
-          ]}
-          onSave={() => {}}
-          onCancel={() => {}}
-        />
-      );
-      await screen.findByRole('dialog', { name: /channel map editor/i });
-      await expectNoViolations(container);
-    });
-
     it('CopyFromAnimalDialog', async () => {
       const { animals } = workspace;
       const { container } = render(

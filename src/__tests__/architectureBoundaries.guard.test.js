@@ -46,7 +46,6 @@ const CROSS_PAGE_ALLOWLIST = new Set([
   'pages/DayEditor/SaveIndicator',
   'pages/AnimalWorkspace/RecordingDaysTab',
   'pages/AnimalEditor/wiring/ElectrodeGroupsContainer',
-  'pages/AnimalEditor/wiring/ChannelMapsContainer',
   'pages/AnimalEditor/wiring/RecordingSystemContainer',
   'pages/AnimalEditor/wiring/CamerasContainer',
   'pages/AnimalEditor/wiring/OptogeneticsContainer',

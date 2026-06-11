@@ -2,12 +2,12 @@
  * @fileoverview Bad-channel converter semantics (pure).
  *
  * The single owner of what `bad_channels` MEAN for the converter, extracted out of the
- * Day Editor (`BadChannelsEditor`, `DevicesStep`) and Animal Editor (`ChannelMapEditor`)
- * render bodies so components only render + dispatch. trodes_to_nwb reads `bad_channels`
+ * Day Editor (`BadChannelsEditor`, `DevicesStep`) render bodies so components only render
+ * + dispatch. trodes_to_nwb reads `bad_channels`
  * from an electrode group's FIRST ntrode row only, as PROBE-LOCAL electrode indices
  * `0..N-1` spanning all shanks. These helpers encode that rule, the later-row migration
  * (translate + consolidate onto the first row), and the invalid/out-of-range mark
- * interpretation, so the three editors decide identically and a UI refactor cannot change
+ * interpretation, so the editors decide identically and a UI refactor cannot change
  * converter meaning.
  */
 
@@ -155,11 +155,15 @@ export function buildProbeWideBadChannelMap({
 }
 
 /**
- * Build the migrated channel-map rows (array-of-rows shape, used by the Animal Editor's
- * `ChannelMapEditor`) for a multi-shank probe-wide toggle. The first row becomes the UNION
+ * Build the migrated channel-map rows (array-of-rows shape) for a multi-shank probe-wide
+ * toggle. The first row becomes the UNION
  * of its toggled selection and every later row's TRANSLATED marks; later rows are cleared
  * to `[]` when they carry a non-empty array OR a preserved corrupt scalar (both are
  * converter-ignored corruption the hidden later-row grid can't otherwise repair).
+ *
+ * NOTE: this helper has no live caller (it operates on the array-of-rows channel-map shape that no
+ * UI currently renders); it is retained, alongside its tests, as the row-shape counterpart to the
+ * live {@link buildProbeWideBadChannelMap} for a future inline (array-of-rows) editor.
  *
  * Takes an options object (not positional args) to match its Day-Editor twin
  * {@link buildProbeWideBadChannelMap} and make the same-typed `electrodeId`/`isChecked`
