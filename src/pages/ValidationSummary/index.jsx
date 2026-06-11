@@ -25,6 +25,8 @@ import { getAnimalSubject } from '../../state/workspaceSelectors';
 import EffectiveDayReview from './EffectiveDayReview';
 import { computeStepStatus, validateDay } from '../../domain/validation';
 import { getDayWorkflowStatus } from '../../domain/workflowStatus';
+import { DAY_LIFECYCLE_LABEL, lifecycleForValidDay } from '../../domain/dayLifecycle';
+import DayLifecycleLegend from '../../components/DayLifecycleLegend/DayLifecycleLegend';
 import WarningAcknowledgement from '../../components/WarningAcknowledgement';
 import { describeDayOptoState } from '../../domain/optoStatus';
 import {
@@ -57,6 +59,44 @@ function deriveChip(stepStatus) {
 }
 
 const CHIP_LABEL = { valid: 'Valid', error: 'Error', incomplete: 'Incomplete' };
+
+/**
+ * The per-day status chip's variant + label, worded from the shared {@link DAY_LIFECYCLE}
+ * vocabulary so the table never contradicts Animal Days / Day Validation.
+ *
+ * A LIVE-valid day is refined by its persisted `state`: a saved validation reads "Validated"
+ * (and an exported day "Exported") — visually distinct from a merely live-valid, unsaved day,
+ * which reads "Ready to export". The error/incomplete buckets keep their live tally words
+ * ("Error"/"Incomplete") so they still match the counts row. Live state always wins: an
+ * error/incomplete day NEVER reads "Validated" even if a stale saved flag says so (the chip is
+ * derived from the live `chip`, and only the valid bucket consults `state`). The special
+ * unreadable / missing-record rows keep their explicit error labels.
+ *
+ * A recovered-unlinked (`orphaned`) day is valid metadata but NOT exportable until it is re-linked
+ * into its animal's day list (the batch export filters it out), so a valid orphan must NOT claim
+ * "Ready to export"/"Validated"/"Exported" — it reads "Re-link to export" (the actionable blocker,
+ * complementing the row's "not in day list" note + "Add to day list" repair). An orphan with
+ * errors/incomplete still shows those (they're the more urgent truth and don't falsely claim
+ * exportability).
+ *
+ * @param {'valid'|'error'|'incomplete'} chip - The live validation chip from {@link deriveChip}.
+ * @param {object|null|undefined} state - The day's persisted `state` (may be malformed).
+ * @param {{ unreadable?: boolean, missingRecord?: boolean, orphaned?: boolean }} [flags] - Special-row markers.
+ * @returns {{ variant: string, label: string }} The chip variant (CSS modifier) and its label.
+ */
+function dayChipDisplay(chip, state, { unreadable = false, missingRecord = false, orphaned = false } = {}) {
+  if (unreadable) return { variant: 'error', label: 'Error — cannot read' };
+  if (missingRecord) return { variant: 'error', label: 'Error — missing day record' };
+  if (chip === 'valid') {
+    // Not exportable until re-linked — don't claim export-readiness (incomplete styling reads as
+    // "not ready", which is honest; the linkage is the blocker). "Re-link to export" is the action,
+    // distinct from the row's "not in day list" state note.
+    if (orphaned) return { variant: 'incomplete', label: 'Re-link to export' };
+    const variant = lifecycleForValidDay(state); // 'ready' | 'validated' | 'exported'
+    return { variant, label: DAY_LIFECYCLE_LABEL[variant] };
+  }
+  return { variant: chip, label: CHIP_LABEL[chip] };
+}
 
 // How many cameras to spell out by name + calibration before collapsing the rest into "+K more".
 // Keeps the scan cell readable on a many-camera day without hiding that recalibration happened.
@@ -600,6 +640,18 @@ export function ValidationSummary({ animalKey } = {}) {
         downloadYamlFile(fileName, yaml);
         exported += 1;
 
+        // Persist the export into the day's lifecycle state (display-only — `state` is never part
+        // of the exported YAML, so byte-identity holds) so each downloaded day reads "Exported"
+        // afterwards, mirroring the single-day Export step. Guarded so one failed write does not
+        // truncate the batch.
+        try {
+          const prevState = isRecord(day.state) ? day.state : {};
+          actions.updateDay(day.id, { state: { ...prevState, exported: true } });
+        } catch (persistErr) {
+          // eslint-disable-next-line no-console
+          console.error(`[validation-summary] could not mark day "${day.id}" exported:`, persistErr);
+        }
+
         if (!ok) {
           // strict === false: downloaded DESPITE a parity mismatch. Surface it loudly,
           // mirroring ExportStep's override warning, so the override is never silent.
@@ -718,10 +770,11 @@ export function ValidationSummary({ animalKey } = {}) {
           </div>
 
           <p className="validation-summary-hint">
-            <strong>Export Valid Only</strong> downloads one YAML file per day that is both{' '}
-            <em>Valid</em> and part of an animal&apos;s day list. Days with errors or incomplete
-            fields are not exported; a recovered day marked <em>not in day list</em> must be
-            re-linked (&quot;Add to day list&quot;) before it can be exported.
+            <strong>Export Valid Only</strong> downloads one YAML file per day that passes every
+            check (status <em>Ready to export</em>, <em>Validated</em>, or <em>Exported</em>) and is
+            part of an animal&apos;s day list. Days with errors or incomplete fields are not
+            exported; a recovered day marked <em>not in day list</em> must be re-linked
+            (&quot;Add to day list&quot;) before it can be exported.
           </p>
 
           {pendingExport && (
@@ -837,6 +890,12 @@ export function ValidationSummary({ animalKey } = {}) {
             items={staleReport}
           />
 
+          {/* One shared legend defining the lifecycle status words (Ready to export / Validated /
+              Exported / …) — collapsed by default so it explains the chips on demand without
+              crowding the table. The same component sits on Animal Days, so the vocabulary is
+              defined once. */}
+          <DayLifecycleLegend />
+
           {/* The table can be wider than a phone viewport (6 columns of dense scan/session text), so
               it scrolls horizontally WITHIN this container instead of forcing the whole page to
               overflow — the page stays at the viewport width at ~390px and no cell is clipped off. */}
@@ -936,26 +995,34 @@ export function ValidationSummary({ animalKey } = {}) {
                     )}
                   </td>
                   <td>
-                    {/* An unreadable day (its config could not be resolved) OR a reference
-                        that resolves to no day record is shown as an error chip with an
-                        honest label, so it is flagged for repair and counted — never
-                        silently dropped or mistaken for a normal validation error. */}
-                    <span
-                      className={`status-chip status-chip--${chip}`}
-                      title={
-                        unreadable
-                          ? 'This day could not be read — its device configuration is missing or corrupt. Open the editor to repair it.'
-                          : missingRecord
-                            ? 'This day’s saved record is missing or corrupt. Open the editor to repair or recreate it.'
-                            : undefined
-                      }
-                    >
-                      {unreadable
-                        ? 'Error — cannot read'
-                        : missingRecord
-                          ? 'Error — missing day record'
-                          : CHIP_LABEL[chip]}
-                    </span>
+                    {/* The per-day chip uses the shared DAY_LIFECYCLE vocabulary: a live-valid day
+                        is refined by its persisted state ("Validated"/"Exported") so saved
+                        validation is distinct from a merely live-valid "Ready to export". An
+                        unreadable day (its config could not be resolved) OR a reference that
+                        resolves to no day record is shown as an error chip with an honest label,
+                        so it is flagged for repair and counted — never silently dropped or
+                        mistaken for a normal validation error. */}
+                    {(() => {
+                      const { variant, label } = dayChipDisplay(chip, day?.state, {
+                        unreadable,
+                        missingRecord,
+                        orphaned,
+                      });
+                      return (
+                        <span
+                          className={`status-chip status-chip--${variant}`}
+                          title={
+                            unreadable
+                              ? 'This day could not be read — its device configuration is missing or corrupt. Open the editor to repair it.'
+                              : missingRecord
+                                ? 'This day’s saved record is missing or corrupt. Open the editor to repair or recreate it.'
+                                : undefined
+                          }
+                        >
+                          {label}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td>
                     {missingRecord ? (

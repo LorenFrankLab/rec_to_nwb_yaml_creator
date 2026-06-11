@@ -93,11 +93,36 @@ describe('ValidationStep', () => {
   });
 
   it('shows a ready indicator only when the REAL export gate is open (all steps valid)', () => {
-    // A fully-configured, fully-valid day (real validation) passes isExportEnabled.
+    // A fully-configured, fully-valid day (real validation) passes isExportEnabled. The realistic
+    // fixture day is live-valid but NOT persisted-validated (state.draft), so it reads "Ready to
+    // export" — the live readiness phrase.
     const { animal, day } = buildRealisticWorkspace();
     const merged = mergeDayMetadata(animal, day);
     render(<ValidationStep animal={animal} day={day} mergedDay={merged} />);
     expect(screen.getByText(/ready to export/i)).toBeInTheDocument();
+  });
+
+  it('reads a persisted-validated day as "Validated" (saved), distinct from live "Ready to export"', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    day.state = { draft: false, validated: true, exported: false };
+    const merged = mergeDayMetadata(animal, day);
+    render(<ValidationStep animal={animal} day={day} mergedDay={merged} />);
+    const status = screen.getByRole('status');
+    expect(status).toHaveTextContent(/Validated/);
+    expect(status).toHaveTextContent(/saved/i);
+    // The live "Ready to export" phrase is reserved for the unsaved case; a saved day says
+    // "Validated" so the persisted fact is distinct from live readiness.
+    expect(status).not.toHaveTextContent(/Ready to export/);
+  });
+
+  it('reads an exported day as "Exported" while all checks still pass', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    day.state = { draft: false, validated: true, exported: true };
+    const merged = mergeDayMetadata(animal, day);
+    render(<ValidationStep animal={animal} day={day} mergedDay={merged} />);
+    const status = screen.getByRole('status');
+    expect(status).toHaveTextContent(/Exported/);
+    expect(status).toHaveTextContent(/all checks (still )?pass/i);
   });
 
   it('does NOT say ready when there are zero errors but a prerequisite step is incomplete', () => {

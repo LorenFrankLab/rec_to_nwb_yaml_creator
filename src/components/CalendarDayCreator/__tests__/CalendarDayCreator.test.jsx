@@ -74,6 +74,36 @@ describe('CalendarDayCreator Component', () => {
     });
   });
 
+  describe('Timeline-aware initial month', () => {
+    it('opens on the latest existing recording-day month, not wall-clock today', () => {
+      // A 2023 animal opened while wall-clock today is much later (2026) must follow the
+      // recording timeline — the latest day's month — instead of jumping to today.
+      render(<CalendarDayCreator {...defaultProps} existingDays={['2023-06-10', '2023-06-22']} />);
+
+      expect(screen.getByText(/June 2023/i)).toBeInTheDocument();
+
+      // It must NOT have opened on the current wall-clock month/year.
+      const today = new Date();
+      const todayLabel = `${today.toLocaleDateString('en-US', { month: 'long' })} ${today.getFullYear()}`;
+      expect(screen.queryByText(new RegExp(todayLabel, 'i'))).not.toBeInTheDocument();
+    });
+
+    it('keeps "Today" as an explicit jump back to the current wall-clock month', async () => {
+      const user = userEvent.setup();
+      render(<CalendarDayCreator {...defaultProps} existingDays={['2023-06-22']} />);
+
+      // Opens on the timeline month...
+      expect(screen.getByText(/June 2023/i)).toBeInTheDocument();
+
+      // ...and Today jumps to the current month/year on demand.
+      await user.click(screen.getByRole('button', { name: /today/i }));
+
+      const today = new Date();
+      const monthName = today.toLocaleDateString('en-US', { month: 'long' });
+      expect(screen.getByText(new RegExp(`${monthName} ${today.getFullYear()}`, 'i'))).toBeInTheDocument();
+    });
+  });
+
   describe('Month Navigation', () => {
     it('navigates to previous month', async () => {
       const user = userEvent.setup();

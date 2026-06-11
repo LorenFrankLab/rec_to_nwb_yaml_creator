@@ -25,10 +25,14 @@ are done. File/line references below point at the live source.
    `Alt+Shift+Arrow`, or add a platform note in the shortcuts help. Revisit with user feedback rather
    than pre-emptively.
 
-4. **Persisted-"Validated" indicator** in the Validation Summary table
-   ([src/pages/ValidationSummary/index.jsx](../src/pages/ValidationSummary/index.jsx)) — visually
-   distinguish a day whose `state.validated` is persisted from one that is merely live-valid. Partly
-   redundant once the AnimalWorkspace per-day chips consume the same flag.
+4. **Persisted-"Validated" indicator** in the Validation Summary table — ✅ **Resolved in Phase 8A-1.**
+   The Validation Summary per-day chip ([src/pages/ValidationSummary/index.jsx](../src/pages/ValidationSummary/index.jsx))
+   now consumes `day.state.validated`/`exported` via the shared day-lifecycle vocabulary
+   ([src/domain/dayLifecycle.js](../src/domain/dayLifecycle.js)): a live-valid day reads
+   **Ready to export** (passing now, unsaved), **Validated** (saved), or **Exported** — visually
+   distinct words/colors, not a bare "Valid". The same vocabulary now drives the Animal Days rows,
+   Day Validation, and Day Export, with a shared collapsible legend, so the persisted vs live
+   distinction is consistent everywhere.
 
 5. **Structured error logging** for export skips/failures. The Validation Summary batch export currently
    logs via `console.error`; route these through a real logging path (error IDs / Sentry-style) once such

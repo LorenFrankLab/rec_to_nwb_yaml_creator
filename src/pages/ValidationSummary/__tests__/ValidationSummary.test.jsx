@@ -66,7 +66,7 @@ beforeEach(() => {
 });
 
 describe('ValidationSummary', () => {
-  it('lists all days across animals with correct chips', () => {
+  it('lists all days across animals with lifecycle status chips derived from the real computeStepStatus', () => {
     const { workspace, ids } = makeSummaryWorkspace();
     provideStore(workspace);
 
@@ -77,9 +77,52 @@ describe('ValidationSummary', () => {
     const errorRow = screen.getByTestId(`day-row-${ids.errorDayId}`);
     const incompleteRow = screen.getByTestId(`day-row-${ids.incompleteDayId}`);
 
-    expect(within(validRow).getByText('Valid')).toBeInTheDocument();
+    // The valid fixture day is live-valid but NOT persisted-validated (state.draft), so it reads
+    // "Ready to export" — the shared lifecycle word for "passes now, not yet saved" — matching the
+    // Day Validation surface instead of a bespoke "Valid".
+    expect(within(validRow).getByText('Ready to export')).toBeInTheDocument();
     expect(within(errorRow).getByText('Error')).toBeInTheDocument();
     expect(within(incompleteRow).getByText('Incomplete')).toBeInTheDocument();
+  });
+
+  it('shows a persisted-validated day as "Validated" (distinct from merely live-valid "Ready to export")', () => {
+    const { workspace, ids } = makeSummaryWorkspace();
+    // Persist the validation outcome onto the valid day (what "Validate All" writes).
+    workspace.days[ids.validDayId].state = { draft: false, validated: true, exported: false };
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+
+    const validRow = screen.getByTestId(`day-row-${ids.validDayId}`);
+    expect(within(validRow).getByText('Validated')).toBeInTheDocument();
+    // The persisted state is visually distinct from a merely live-valid (unsaved) day.
+    expect(within(validRow).queryByText('Ready to export')).not.toBeInTheDocument();
+  });
+
+  it('shows an exported day as "Exported" (export history outranks validated)', () => {
+    const { workspace, ids } = makeSummaryWorkspace();
+    workspace.days[ids.validDayId].state = { draft: false, validated: true, exported: true };
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+
+    const validRow = screen.getByTestId(`day-row-${ids.validDayId}`);
+    expect(within(validRow).getByText('Exported')).toBeInTheDocument();
+    expect(within(validRow).queryByText('Validated')).not.toBeInTheDocument();
+  });
+
+  it('reads the LIVE state, not a stale saved flag: a day saved validated but now live-error reads "Error"', () => {
+    const { workspace, ids } = makeSummaryWorkspace();
+    // The error day was previously saved as validated, but its session is now live-broken.
+    workspace.days[ids.errorDayId].state = { draft: false, validated: true, exported: false };
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+
+    const errorRow = screen.getByTestId(`day-row-${ids.errorDayId}`);
+    expect(within(errorRow).getByText('Error')).toBeInTheDocument();
+    // The stale "Validated" must NOT win over the live error.
+    expect(within(errorRow).queryByText('Validated')).not.toBeInTheDocument();
   });
 
   it('shows batch-row scan fields (config version + opto state) on a readable row (Task 10)', () => {
@@ -516,6 +559,37 @@ describe('ValidationSummary', () => {
     expect(within(row).getByRole('button', { name: /add .* back to .* day list/i })).toBeInTheDocument();
   });
 
+  it('marks each downloaded day as exported (state.exported) after a batch export', async () => {
+    const user = userEvent.setup();
+    const { workspace, ids } = makeSummaryWorkspace();
+    const updateDay = provideStore(workspace);
+
+    render(<ValidationSummary />);
+    await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    await user.click(screen.getByRole('button', { name: /confirm export/i }));
+
+    // Only the valid day downloads; it is then recorded as exported so it reads "Exported"
+    // afterwards. `state` is display-only (never in the YAML), so byte-identity is unaffected.
+    expect(updateDay).toHaveBeenCalledWith(ids.validDayId, {
+      state: expect.objectContaining({ exported: true }),
+    });
+  });
+
+  it('shows "Re-link to export" (not "Ready to export") on a valid recovered-unlinked row', () => {
+    const { workspace, ids } = makeSummaryWorkspace();
+    // Keep the (valid) record but drop it from its animal's index → recovered-unlinked.
+    workspace.animals.remy.days = workspace.animals.remy.days.filter((id) => id !== ids.validDayId);
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+
+    const row = screen.getByTestId(`day-row-${ids.validDayId}`);
+    // The day is valid metadata but not exportable until re-linked (batch export filters it out),
+    // so its chip must NOT claim export-readiness — it shows the actionable linkage blocker.
+    expect(within(row).getByText('Re-link to export')).toBeInTheDocument();
+    expect(within(row).queryByText('Ready to export')).not.toBeInTheDocument();
+  });
+
   it('Export Valid Only EXCLUDES a recovered-unlinked (orphan) day until it is re-linked', async () => {
     const user = userEvent.setup();
     const { workspace, ids } = makeSummaryWorkspace();
@@ -665,6 +739,12 @@ describe('ValidationSummary', () => {
     const updateDay = provideStore(workspace);
 
     render(<ValidationSummary />);
+
+    // The chip tolerates the malformed `state`: a live-valid day with a corrupt (non-record) state
+    // reads "Ready to export" (treated as not-persisted), never crashing or blanking the row.
+    const validRow = screen.getByTestId(`day-row-${ids.validDayId}`);
+    expect(within(validRow).getByText('Ready to export')).toBeInTheDocument();
+
     await user.click(screen.getByRole('button', { name: /validate all/i }));
 
     // The corrupt-state day's flag was NOT written (no laundering).

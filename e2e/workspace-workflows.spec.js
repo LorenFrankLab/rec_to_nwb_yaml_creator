@@ -139,14 +139,16 @@ test.describe('Workspace export workflows', () => {
         'config v1 (latest) · 2 cameras (overhead_camera 0.00085 m/px, side_camera 0.0009 m/px) · No optogenetics',
       ),
     ).toBeVisible();
-    await expect(row1.getByRole('cell', { name: 'Valid', exact: true })).toBeVisible();
+    // Both days are live-valid but not yet saved as validated, so the lifecycle chip reads
+    // "Ready to export" (the shared vocabulary's live-readiness word), not a bare "Valid".
+    await expect(row1.getByRole('cell', { name: 'Ready to export', exact: true })).toBeVisible();
     await expect(
       row1.getByRole('link', { name: 'Open editor for remy 2023-06-22' }),
     ).toBeVisible();
     // Day 2 row is present too — proving the scan covers every day at a glance.
     const row2 = page.getByTestId(`day-row-${day2Id}`);
     await expect(row2.getByRole('cell', { name: '2023-06-23', exact: true })).toBeVisible();
-    await expect(row2.getByRole('cell', { name: 'Valid', exact: true })).toBeVisible();
+    await expect(row2.getByRole('cell', { name: 'Ready to export', exact: true })).toBeVisible();
 
     // Batch export: only ready days export. Both are valid, so the preflight names 2 days.
     await page.getByRole('button', { name: 'Export Valid Only' }).click();

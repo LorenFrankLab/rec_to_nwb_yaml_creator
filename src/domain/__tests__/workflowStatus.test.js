@@ -6,7 +6,7 @@
  * MUST derive `readyForExportPreflight` from the SAME export gate the Export button uses —
  * `isExportEnabled(computeStepStatus(...))` (export status + all prerequisite steps valid).
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   SETUP_STATE,
   getAnimalSetupChecklist,
@@ -16,7 +16,12 @@ import {
 import { buildRealisticWorkspace } from '../../__tests__/fixtures/workspaceBuilders';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { computeStepStatus } from '../validation';
+// Namespace import so the step-only-blocker / throw tests can spy on computeStepStatus (the live
+// binding getDayRowStatus consults), without affecting firstBlockingReason's separate validateDay.
+import * as validationModule from '../validation';
 import { isExportEnabled } from '../stepGate';
+
+afterEach(() => vi.restoreAllMocks());
 
 /**
  * A minimal freshly-created animal: a subject, an empty initial config snapshot, no days.
@@ -258,23 +263,38 @@ describe('getDayWorkflowStatus', () => {
 });
 
 describe('getDayRowStatus', () => {
-  it('maps a draft (unvalidated) day to "Draft — not yet validated"', () => {
+  it('maps a live-ready, unsaved day to "Ready to export" (so the row agrees with the other surfaces)', () => {
+    // The realistic fixture day passes the export gate but is not persisted-validated (state.draft).
+    // It must read the live-readiness word, NOT "Draft", so Animal Days agrees with Day Validation /
+    // Day Export / the Validation Summary (no "Ready to export" vs "Draft" contradiction).
     const { animal, day } = buildRealisticWorkspace();
     day.state = { draft: true, validated: false, exported: false };
     const merged = mergeDayMetadata(animal, day);
     expect(getDayRowStatus(animal, day, merged)).toEqual({
-      variant: 'draft',
-      label: 'Draft — not yet validated',
+      variant: 'ready',
+      label: 'Ready to export',
     });
   });
 
-  it('maps a validated (not yet exported) day to "Ready to export"', () => {
+  it('maps an incomplete (no errors, not export-ready) day to "Draft — incomplete"', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    day.state = { draft: true, validated: false, exported: false };
+    // Drop a required Overview field → the Overview step is incomplete with NO error-severity issue,
+    // so the day is neither blocked nor export-ready → it reads as a draft.
+    day.session = { ...day.session, session_id: undefined };
+    const merged = mergeDayMetadata(animal, day);
+    const status = getDayRowStatus(animal, day, merged);
+    expect(status.variant).toBe('draft');
+    expect(status.label).toBe('Draft — incomplete');
+  });
+
+  it('maps a persisted-validated (not yet exported) day to "Validated" (the saved state, distinct from live "Ready to export")', () => {
     const { animal, day } = buildRealisticWorkspace();
     day.state = { draft: false, validated: true, exported: false };
     const merged = mergeDayMetadata(animal, day);
     expect(getDayRowStatus(animal, day, merged)).toEqual({
-      variant: 'ready',
-      label: 'Ready to export',
+      variant: 'validated',
+      label: 'Validated',
     });
   });
 
@@ -288,18 +308,52 @@ describe('getDayRowStatus', () => {
     });
   });
 
-  it('treats a day with no state flags as a draft', () => {
+  it('does NOT show "Validated"/"Exported" when a step-only blocker (no validation error) currently closes export', () => {
+    // A saved-validated day with a step-only blocker that validateDay does NOT flag as an error
+    // (e.g. all channels bad → Devices "error"): the live gate is closed, so the row must read the
+    // honest "Needs fixing", never the stale "Validated" — the live gate wins over persisted flags.
+    const { animal, day } = buildRealisticWorkspace();
+    day.state = { draft: false, validated: true, exported: true };
+    const merged = mergeDayMetadata(animal, day);
+    // firstBlockingReason (real validateDay) sees no error; the step gate is closed by a step error.
+    vi.spyOn(validationModule, 'computeStepStatus').mockReturnValue({
+      overview: 'valid',
+      devices: 'error',
+      epochs: 'valid',
+      validation: 'valid',
+      export: 'error',
+    });
+    const status = getDayRowStatus(animal, day, merged);
+    expect(status.variant).toBe('needs_fixing');
+    expect(status.label).toMatch(/^Needs fixing/);
+  });
+
+  it('falls back to "Needs fixing" (not "Draft") when readiness computation throws on a non-blocked day', () => {
     const { animal, day } = buildRealisticWorkspace();
     delete day.state;
     const merged = mergeDayMetadata(animal, day);
-    expect(getDayRowStatus(animal, day, merged).variant).toBe('draft');
+    // firstBlockingReason validates cleanly; the step-status computation then throws → the row must
+    // surface an honest "Needs fixing", never a misleading "Draft", and must not crash.
+    vi.spyOn(validationModule, 'computeStepStatus').mockImplementation(() => {
+      throw new Error('boom');
+    });
+    const status = getDayRowStatus(animal, day, merged);
+    expect(status.variant).toBe('needs_fixing');
+    expect(status.label).toMatch(/^Needs fixing — /);
   });
 
-  it('tolerates a malformed (non-object) state, reading it as a draft', () => {
+  it('treats a passing day with no state flags as ready (live readiness, unsaved)', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    delete day.state;
+    const merged = mergeDayMetadata(animal, day);
+    expect(getDayRowStatus(animal, day, merged).variant).toBe('ready');
+  });
+
+  it('tolerates a malformed (non-object) state, ignoring it (a passing day still reads ready)', () => {
     const { animal, day } = buildRealisticWorkspace();
     day.state = 'corrupt';
     const merged = mergeDayMetadata(animal, day);
-    expect(getDayRowStatus(animal, day, merged).variant).toBe('draft');
+    expect(getDayRowStatus(animal, day, merged).variant).toBe('ready');
   });
 
   it('flags a live validation error as "Needs fixing — {reason}", overriding a stale exported flag', () => {

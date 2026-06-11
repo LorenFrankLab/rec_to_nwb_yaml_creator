@@ -56,44 +56,90 @@ describe('RecordingDaysTab — day row contract (decision 12)', () => {
     expect(screen.getByRole('link', { name: /2023-06-22/i })).toBeInTheDocument();
   });
 
+  it('shows the shared lifecycle legend above the day list (vocabulary defined once)', () => {
+    renderRealistic();
+    // The same collapsible legend used on the Validation Summary explains the row status words.
+    expect(screen.getByText(/what do these statuses mean/i)).toBeInTheDocument();
+  });
+
+  it('does not show the lifecycle legend when the animal has no recording days', () => {
+    const { animal } = buildRealisticWorkspace();
+    animal.days = [];
+    render(
+      <StoreProvider
+        initialState={{ workspace: { animals: { [animal.id]: animal }, days: {}, settings: {} } }}
+      >
+        <RecordingDaysTab animalId={animal.id} />
+      </StoreProvider>
+    );
+    // No day rows to triage → the legend is suppressed (it only explains row statuses).
+    expect(screen.queryByText(/what do these statuses mean/i)).not.toBeInTheDocument();
+  });
+
   it('renders ONE plain-language status, not the old Draft/Validated/Exported chip cluster (Task 2.5a)', () => {
     const { container } = renderRealistic((day) => {
       day.state = { draft: true, validated: false, exported: false };
     });
-    expect(screen.getByText('Draft — not yet validated')).toBeInTheDocument();
+    // The realistic day passes the export gate but is unsaved → the live-readiness word
+    // "Ready to export" (scoped to the row; the shared legend lists the same word as reference).
+    const status = container.querySelector('.day-row-status');
+    expect(status).toHaveTextContent('Ready to export');
     // The old uppercase status-chip cluster is gone.
     expect(container.querySelector('.status-chip')).not.toBeInTheDocument();
   });
 
-  it('maps a validated (not exported) day to "Ready to export"', () => {
-    renderRealistic((day) => {
+  it('maps a persisted-validated (not exported) day to "Validated" (the saved fact, not live "Ready to export")', () => {
+    // Scope to the row's status element: the shared legend also lists every status word, so a
+    // global text query would match the legend too.
+    const { container } = renderRealistic((day) => {
       day.state = { draft: false, validated: true, exported: false };
     });
-    expect(screen.getByText('Ready to export')).toBeInTheDocument();
+    const status = container.querySelector('.day-row-status');
+    expect(status).toHaveTextContent('Validated');
+    // A persisted-validated day shows the SAVED fact ("Validated"), not the live-readiness word
+    // ("Ready to export") — both are live-valid, but the row distinguishes saved from unsaved.
+    // ("Ready to export" is the row's word for a passing-but-UNSAVED day; see the live-ready test.)
+    expect(status).not.toHaveTextContent('Ready to export');
   });
 
-  it('renders a computed status alongside the orphan note on a recovered-unlinked row', () => {
+  it('renders "Draft — incomplete" for an incomplete (not export-ready) day', () => {
+    // A day with no errors but a missing required Overview field is incomplete (not export-ready),
+    // so the row reads the draft state — proving the draft branch wires through to the rendered row.
+    const { container } = renderRealistic((day) => {
+      day.state = { draft: true, validated: false, exported: false };
+      day.session = { ...day.session, session_id: undefined };
+    });
+    const status = container.querySelector('.day-row-status');
+    expect(status).toHaveTextContent('Draft — incomplete');
+  });
+
+  it('shows "Re-link to export" (not an export-ready claim) on a recovered-unlinked row', () => {
     // A recovered day whose record points at this animal but is NOT in its index
-    // (RECOVERED_UNLINKED) flows through the same OK-row markup, so it now carries BOTH the
-    // "not in day list" note AND a plain-language status. The valid fixture (config history
-    // present) merges cleanly, so a draft orphan reads as a draft — not a crash, not blank.
-    renderRealistic((day, animal) => {
+    // (RECOVERED_UNLINKED) flows through the same OK-row markup, carrying the "not in day list"
+    // note. Its metadata is valid, but it is NOT exportable until re-linked (the batch export
+    // filters it out), so the row must NOT claim "Ready to export" — it shows the actionable
+    // linkage blocker instead.
+    const { container } = renderRealistic((day, animal) => {
       animal.days = []; // unlink: record exists in the days map but not in the index
       day.state = { draft: true, validated: false, exported: false };
     });
-    // "not in day list" appears both in the review note and on the row.
+    // "not in day list" appears in the review note and on the date.
     expect(screen.getAllByText(/not in day list/i).length).toBeGreaterThan(0);
-    expect(screen.getByText('Draft — not yet validated')).toBeInTheDocument();
+    const status = container.querySelector('.day-row-status');
+    expect(status).toHaveTextContent('Re-link to export');
+    expect(status).not.toHaveTextContent('Ready to export');
   });
 
   it('shows "Needs fixing — {reason}" for a live error, overriding a stale exported flag', () => {
-    renderRealistic((day) => {
+    const { container } = renderRealistic((day) => {
       day.state = { draft: false, validated: true, exported: true };
       day.tasks = 'not-an-array'; // corrupt shape → a live blocking issue
     });
-    expect(screen.getByText(/^Needs fixing — /)).toBeInTheDocument();
-    // The stale "Exported" must NOT be shown.
-    expect(screen.queryByText('Exported')).not.toBeInTheDocument();
+    const status = container.querySelector('.day-row-status');
+    expect(status).toHaveTextContent(/^Needs fixing — /);
+    // The stale "Exported" must NOT be shown on the row (the legend lists it as a reference word,
+    // so scope this to the row status element).
+    expect(status).not.toHaveTextContent('Exported');
   });
 
   it('humanizes a raw schema key in the "Needs fixing" reason (display only)', () => {

@@ -5,6 +5,7 @@ import { mergeDayMetadata, resolveDayConfig } from '../../state/workspaceUtils';
 import { getAnimalDayIds } from '../../state/workspaceSelectors';
 import { computeStepStatus, validateDay, STEP_LABELS } from '../../domain/validation';
 import { getDayWorkflowStatus } from '../../domain/workflowStatus';
+import { DAY_LIFECYCLE_LABEL, lifecycleForValidDay } from '../../domain/dayLifecycle';
 import { buildPreflightSummary } from '../../domain/preflightSummary';
 import { isExportEnabled } from './stepGate';
 import { isFeatureEnabled } from '../../featureFlags';
@@ -52,7 +53,7 @@ export default function ExportStep(props) {
   // The shared day bundle comes from DayEditorContext in the Day Editor (an isolated render
   // passes the same fields as props). `onNavigate`/`onRepair` are section-specific, so they stay
   // direct props.
-  const { animal, day, animalKey = undefined, animalDays = [] } = useDayEditorContext(props);
+  const { animal, day, animalKey = undefined, animalDays = [], actions = undefined } = useDayEditorContext(props);
   const { onNavigate, onRepair } = props;
   // The store OWNER KEY (resolved by DayEditorStepper); a stale/missing `animal.id` record field
   // must not misroute a recovered animal's re-link/repair links. Falls back to `animal.id` for
@@ -207,6 +208,15 @@ export default function ExportStep(props) {
     setBlockingError(null);
     downloadYamlFile(fileName, result.yaml);
     setDownloadedFile(fileName);
+    // Persist the export into the day's lifecycle state so this day now reads "Exported" on the
+    // Animal Days row / Validation Summary / this step — the persisted-history half of the
+    // vocabulary. `state` is NEVER part of the exported YAML (mergeDayMetadata does not read it),
+    // so byte-identity is unaffected. Guarded for isolated renders that pass no store actions.
+    if (actions?.updateDay && day?.id) {
+      const prevState =
+        day.state && typeof day.state === 'object' && !Array.isArray(day.state) ? day.state : {};
+      actions.updateDay(day.id, { state: { ...prevState, exported: true } });
+    }
   };
 
   return (
@@ -216,6 +226,15 @@ export default function ExportStep(props) {
       <p className="export-filename-line">
         File name: <code className="export-filename">{fileName}</code>
       </p>
+
+      {/* When the day is exportable, name its lifecycle state from the SHARED vocabulary so the
+          Export step agrees with Animal Days / Day Validation / Validation Summary: a saved day
+          reads "Validated" (or "Exported"), an unsaved-but-passing day "Ready to export". */}
+      {!exportBlocked && (
+        <p className="export-lifecycle-status" data-testid="export-lifecycle-status">
+          Status: <strong>{DAY_LIFECYCLE_LABEL[lifecycleForValidDay(day?.state)]}</strong>
+        </p>
+      )}
 
       {exportBlocked && (
         <div className="export-validation-blocked" role="alert">

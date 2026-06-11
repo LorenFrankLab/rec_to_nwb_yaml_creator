@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { validateDay, computeStepStatus } from '../../domain/validation';
 import { isExportEnabled, exportBlockReason } from '../../domain/stepGate';
+import { DAY_LIFECYCLE, DAY_LIFECYCLE_LABEL, lifecycleForValidDay } from '../../domain/dayLifecycle';
 import { groupIssuesByWorkflowCategory } from '../../domain/workflowCategories';
 import { humanizeValidationMessage } from '../../domain/humanizeValidationMessage';
 import { RepairActionButton, isRepairable, repairButtonKey } from './RepairActions';
@@ -67,6 +68,22 @@ export default function ValidationStep(props) {
   );
   const ready = isExportEnabled(stepStatus);
   const blockReason = exportBlockReason(stepStatus);
+  // When the day is live-ready, refine the readiness message by its persisted state (saved
+  // "Validated" / "Exported" vs merely live "Ready to export") from the SHARED vocabulary, so
+  // this surface agrees with Animal Days and the Validation Summary and the user can tell whether
+  // the validation is just-passing or actually saved. The phrase is built from the lifecycle
+  // label so it can never drift from the other surfaces.
+  const readyMessage = useMemo(() => {
+    if (!ready) return null;
+    switch (lifecycleForValidDay(day?.state)) {
+      case DAY_LIFECYCLE.EXPORTED:
+        return `${DAY_LIFECYCLE_LABEL.exported} — all checks still pass. This day’s YAML has been downloaded.`;
+      case DAY_LIFECYCLE.VALIDATED:
+        return `${DAY_LIFECYCLE_LABEL.validated} — all checks pass. This validation has been saved.`;
+      default:
+        return `${DAY_LIFECYCLE_LABEL.ready} — all checks pass.`;
+    }
+  }, [ready, day]);
 
   return (
     <div className="day-editor-section validation-step">
@@ -84,7 +101,7 @@ export default function ValidationStep(props) {
       >
         <span aria-hidden="true">{ready ? '✓' : '✗'}</span>{' '}
         {ready
-          ? 'Ready to export — all checks pass.'
+          ? readyMessage
           : blockReason === 'incomplete-steps' && errorCount === 0
             ? 'Export blocked — complete the required steps (shown in the step indicators) before exporting.'
             : 'Export blocked — resolve all errors below before exporting.'}

@@ -32,6 +32,7 @@ import {
 } from '../../utils/deviceNormalization';
 import CopyFromAnimalDialog from '../AnimalEditor/CopyFromAnimalDialog';
 import { getDayRowStatus } from '../../domain/workflowStatus';
+import { DAY_LIFECYCLE } from '../../domain/dayLifecycle';
 import { humanizeValidationMessage } from '../../domain/humanizeValidationMessage';
 import { getAnimalSectionStatus, getAnimalBlockingSections, SECTION_STATUS } from '../../domain/sectionStatus';
 import {
@@ -47,6 +48,7 @@ import { validateRawAnimal } from '../../validation/rawShape';
 import { applyRepairCommand } from '../../state/repairCommands';
 import RawCorruptionBanner from '../../components/RawCorruptionBanner';
 import { CalendarDayCreator } from '../../components/CalendarDayCreator/CalendarDayCreator';
+import DayLifecycleLegend from '../../components/DayLifecycleLegend/DayLifecycleLegend';
 import { ConfirmDialog, Modal } from '../../components/Modal';
 
 /**
@@ -566,6 +568,11 @@ export function RecordingDaysTab({ animalId }) {
           </div>
         )}
 
+        {/* One shared legend for the day-row status words, reused from the Validation Summary so
+            the lifecycle vocabulary is defined once. Shown only when there are day rows to triage;
+            collapsed by default so it never crowds the list. */}
+        {selectedDayClassification.length > 0 && <DayLifecycleLegend />}
+
         {(() => {
           // Render straight from the domain classification (ok / dangling_reference /
           // recovered_unlinked), so the list shows recovered records (never hidden behind
@@ -666,10 +673,25 @@ export function RecordingDaysTab({ animalId }) {
                 console.debug(`[recording-days] could not merge day "${dayId}" for status:`, err);
               }
               const rowStatus = getDayRowStatus(selectedAnimal, record, mergedDay, selectedAnimalDays);
+              // A recovered-unlinked day is valid metadata but NOT exportable until it is re-linked
+              // (the batch export filters it out), so its row must not claim export-readiness. When
+              // the validation lifecycle would read Ready/Validated/Exported, show the actionable
+              // linkage blocker instead ("Re-link to export" — complements the date's "not in day
+              // list" note); an orphan that Needs fixing / is Draft keeps that status (more urgent,
+              // and it doesn't falsely claim exportable). Re-link from this animal's Validation &
+              // Export tab (linked in the review section above).
+              const claimsExportReady =
+                rowStatus.variant === DAY_LIFECYCLE.READY ||
+                rowStatus.variant === DAY_LIFECYCLE.VALIDATED ||
+                rowStatus.variant === DAY_LIFECYCLE.EXPORTED;
+              const displayStatus =
+                isOrphan && claimsExportReady
+                  ? { variant: DAY_LIFECYCLE.DRAFT, label: 'Re-link to export' }
+                  : rowStatus;
               // The "Needs fixing — {reason}" reason is a raw validation message (a schema key can
               // leak through, e.g. `experiment_description …`). Humanize ONLY for this display label
               // — getDayRowStatus stays pure so its reason can still be parsed elsewhere if needed.
-              const rowStatusLabel = humanizeNeedsFixingLabel(rowStatus.label);
+              const rowStatusLabel = humanizeNeedsFixingLabel(displayStatus.label);
 
               return (
                 <li key={dayId} className={`day-item ${isOrphan ? 'day-item-orphan' : ''}`}>
@@ -688,7 +710,7 @@ export function RecordingDaysTab({ animalId }) {
                       )}
                     </div>
                     <div className="day-status">
-                      <span className={`day-row-status day-row-status-${rowStatus.variant}`}>
+                      <span className={`day-row-status day-row-status-${displayStatus.variant}`}>
                         {rowStatusLabel}
                       </span>
                     </div>
