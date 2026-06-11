@@ -36,6 +36,21 @@
     margin-bottom: var(--spacing-md, 1rem);
   }
 
+  // Inputs (Din) and Outputs (Dout) side by side — two columns of 32 channels rather than 64
+  // stacked rows. `min-width: 0` lets the flex children shrink (their tables are width:100%), and
+  // the columns stack on a narrow viewport.
+  .dio-grid-columns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-lg, 1.5rem);
+    align-items: flex-start;
+
+    .dio-direction-group {
+      flex: 1 1 18rem;
+      min-width: 0;
+    }
+  }
+
   .dio-wiring-table {
     width: 100%;
     border-collapse: collapse;

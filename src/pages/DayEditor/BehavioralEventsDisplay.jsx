@@ -213,7 +213,9 @@ export default function BehavioralEventsDisplay({ dayEvents, onDayEventsChange }
         </div>
       )}
 
-      {GROUPS.map(renderGroup)}
+      {/* Inputs and Outputs sit side by side: two columns of 32 channels rather than 64 stacked
+          rows. They stack on a narrow viewport (see SCSS). */}
+      <div className="dio-grid-columns">{GROUPS.map(renderGroup)}</div>
 
       {otherEvents.length > 0 && (
         <div className="dio-direction-group">
