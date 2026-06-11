@@ -175,8 +175,10 @@ function emitFsGuiYamls(items) {
  * baked into an override ntrode ROW (override rows are geometry-only). A row that does carry
  * non-empty `bad_channels` with no matching `deviceOverrides.bad_channels` entry is surfaced
  * as an export blocker by `dayOverrideIssues` (`bad_channels_on_override_row_ignored`) rather
- * than silently dropped here. Factoring this here keeps the merge and the reconfiguration
- * wizard from diverging.
+ * than silently dropped here. The override > snapshot precedence + bad-channel resolution
+ * described above is implemented by {@link resolveEffectiveDevices}
+ * (`domain/deviceOverrideMerge.ts`), shared with `dayOverrideIssues` so the merge and the
+ * validator cannot diverge.
  *
  * Returns normalized owned device objects; callers that persist the result can do so
  * without carrying legacy string IDs or non-schema electrode keys forward.

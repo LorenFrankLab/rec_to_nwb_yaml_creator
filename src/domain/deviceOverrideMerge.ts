@@ -11,9 +11,12 @@
  *     merge cannot honor cleanly as a day-routed, repairable, export-blocking issue.
  *
  * These were previously coupled "by comment only" — two inline copies of the same predicates
- * that had to be kept in lockstep by hand. Centralizing the predicates (`classifyGeometryOverride`,
- * `classifyBadChannelsContainer`) and the resolution (`resolveEffectiveDevices`) here makes that
- * lockstep structural: whatever the merge fails open on is exactly what the validator surfaces.
+ * that had to be kept in lockstep by hand. Making this module the single owner of the
+ * override-merge predicates (`classifyGeometryOverride`, `classifyBadChannelsContainer`) and the
+ * resolution (`resolveEffectiveDevices`) makes that lockstep structural: whatever the merge fails
+ * open on is exactly what the validator surfaces. (Unrelated `isPlainRecord` uses elsewhere — e.g.
+ * `workspaceUtils.js`'s fs_gui/technical paths — keep their own local copy; only the override-merge
+ * predicates are centralized here.)
  *
  * Pure and dependency-free (snapshot devices are passed in), so it carries no import-cycle or
  * layering risk and is exhaustively unit-testable.
@@ -44,8 +47,9 @@ export type GeometryOverrideKind = 'absent' | 'array' | 'malformed';
  * Classify a geometry override value:
  *   - `absent`    — null/undefined: the merge uses the snapshot; no issue.
  *   - `array`     — a well-formed array: the merge honors it (it SHADOWS the snapshot).
- *   - `malformed` — present but not an array: the merge falls back to the snapshot, which would
- *     hide the corruption — so the validator surfaces it.
+ *   - `malformed` — present but not an array: the merge falls back to the snapshot (fail-closed —
+ *     it uses the saved config rather than crash), which would otherwise HIDE the corruption — so
+ *     the validator (`dayOverrideIssues`) surfaces it instead.
  */
 export function classifyGeometryOverride(value: unknown): GeometryOverrideKind {
   if (value == null) return 'absent';

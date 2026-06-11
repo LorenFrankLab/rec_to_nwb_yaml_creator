@@ -170,9 +170,10 @@ export function dayOverrideIssues(day, mergedDay, baseIssues = []) {
     }
   }
 
-  // Whole-map ntrode override rows are GEOMETRY ONLY. `resolveDayConfig` resolves each
-  // ntrode's effective bad channels from `deviceOverrides.bad_channels` (keyed by ntrode_id)
-  // EXCLUSIVELY — it never reads a `bad_channels` array baked into an override ROW. So a
+  // Whole-map ntrode override rows are GEOMETRY ONLY. The merge (`resolveEffectiveDevices`,
+  // invoked by `resolveDayConfig`) resolves each ntrode's effective bad channels from
+  // `deviceOverrides.bad_channels` (keyed by ntrode_id) EXCLUSIVELY — it never reads a
+  // `bad_channels` array baked into an override ROW. So a
   // restored/hand-edited override row carrying a non-empty `bad_channels` with no matching
   // `deviceOverrides.bad_channels[ntrode_id]` entry would have those marks SILENTLY zeroed at
   // export. No in-app path writes such a row (import routes geometry to the snapshot and bad

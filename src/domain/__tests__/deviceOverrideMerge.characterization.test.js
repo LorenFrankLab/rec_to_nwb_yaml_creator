@@ -91,6 +91,25 @@ describe('resolveDayConfig — device-override resolution is pinned', () => {
     expect(resolveDayConfig(animal, day).electrode_groups.map((g) => g.id)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
   });
 
+  it('a well-formed array geometry override SHADOWS the snapshot (override ids win, not the snapshot)', () => {
+    // The consequential direction: a day-level array override must REPLACE the snapshot
+    // geometry at export. If it silently stopped shadowing, the day would export the wrong
+    // probe geometry. Pin the resolved ids/bad-channels through resolveDayConfig.
+    const { animal, day } = buildRealisticWorkspace();
+    day.deviceOverrides = {
+      electrode_groups: [{ id: 42, location: 'PFC', device_type: 'tetrode_12.5' }],
+      ntrode_electrode_group_channel_map: [
+        { ntrode_id: 9, electrode_group_id: 42, map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+      ],
+      bad_channels: { 9: [1] },
+    };
+    expect(projectResolved(resolveDayConfig(animal, day))).toEqual({
+      electrodeGroupIds: [42],
+      badChannelsByNtrode: { 9: [1] },
+      configurationVersion: 1,
+    });
+  });
+
   it('does not mutate the snapshot it resolved from', () => {
     const { animal, day } = buildRealisticWorkspace();
     day.deviceOverrides = { bad_channels: { 1: [0] } };
