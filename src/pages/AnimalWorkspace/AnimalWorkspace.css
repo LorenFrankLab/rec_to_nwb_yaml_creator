@@ -398,6 +398,49 @@
   outline-offset: 2px;
 }
 
+/* Narrow-width rescue (Phase 8A-3): at phone widths the day surface stacks into cards so dense
+   inline rows don't squeeze into one-word columns and the destructive action doesn't crowd the
+   primary navigation card. Geometry already avoids hard overflow; this is the touch/readability
+   layer for the ~390px testing path. */
+@media (max-width: 640px) {
+  /* Heading over its actions, full width. */
+  .day-list-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  /* Primary action over the carry-forward toggle (toggle gets the full row, not a squeezed
+     column beside the button). */
+  .day-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* Day row → stacked card: the navigation card on top, the row actions below it. */
+  .day-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* Card content stacks the date/description over the status (instead of squeezing them side by
+     side at a phone width). */
+  .day-link {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  /* Separate the destructive action from the primary: actions sit below the card on their own
+     row, with Duplicate at the left and Delete pushed to the right, divided from the card. */
+  .day-item-actions {
+    justify-content: space-between;
+    gap: 0.5rem;
+    border-top: 1px solid var(--color-grey-200);
+    padding-top: 0.5rem;
+  }
+}
+
 /* Empty States */
 .empty-state {
   text-align: center;

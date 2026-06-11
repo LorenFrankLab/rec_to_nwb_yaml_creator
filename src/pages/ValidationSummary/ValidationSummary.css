@@ -27,6 +27,15 @@
   margin: 0 0 0.75rem;
 }
 
+/* Details-on-demand export rules — the summary is the only always-visible bit. */
+.validation-summary-export-help > summary {
+  cursor: pointer;
+}
+
+.validation-summary-export-help > p {
+  margin: 0.5rem 0 0;
+}
+
 .validation-summary-actions {
   display: flex;
   gap: 0.75rem;
