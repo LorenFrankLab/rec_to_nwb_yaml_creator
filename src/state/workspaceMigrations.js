@@ -20,9 +20,12 @@
  *  - A migrator that THROWS is a developer error, never a user-data problem, and is deliberately
  *    allowed to propagate — it must NOT be caught and laundered into a discard (that would mislabel
  *    a code bug as a version mismatch and throw away recoverable data). Crash loudly instead.
- *  - This module is dependency-free: it is imported by `persistence.js`, so importing persistence
- *    here would create a cycle.
+ *  - This module imports only pure conversion utilities (no `persistence.js`), so it stays
+ *    cycle-free: `persistence.js` imports THIS module, and the catalog migrator below depends only
+ *    on `taskCatalog`/`workspaceTypes` (neither imports back here).
  */
+
+import { migrateTasksToCatalogV2ToV3 } from './taskCatalogMigration';
 
 /**
  * Whether `value` is a plain object record (not null, not an array).
@@ -46,10 +49,19 @@ function migrateV1ToV2(workspace) {
 
 /**
  * Ordered forward migrators. Key `n` upgrades a `schemaVersion`-`n` workspace to `n+1`.
+ *
+ * - `1`: identity (v1/v2 share the pre-catalog shape; only device-normalization differed, applied to
+ *   every blob regardless).
+ * - `2`: {@link migrateTasksToCatalogV2ToV3} — promotes inline `day.tasks` into the animal-level
+ *   `taskTypes[]` catalog + per-day `taskInstances[]` (Phase 8C activation, C3 dedup algorithm).
+ *   Non-destructive: a reused `task_name` with a divergent definition is normalized to the
+ *   first-occurrence canonical and recorded as a `task_definition_reconciled` issue on the day.
+ *
  * @type {Record<number, (workspace: object) => object>}
  */
 const MIGRATORS = {
   1: migrateV1ToV2,
+  2: migrateTasksToCatalogV2ToV3,
 };
 
 /**
@@ -58,7 +70,7 @@ const MIGRATORS = {
  * a registered migrator.
  * @type {number}
  */
-export const WORKSPACE_SCHEMA_VERSION = 2;
+export const WORKSPACE_SCHEMA_VERSION = 3;
 
 /**
  * The `schemaVersion`s a stored blob can be migrated FROM — the registry's source versions.

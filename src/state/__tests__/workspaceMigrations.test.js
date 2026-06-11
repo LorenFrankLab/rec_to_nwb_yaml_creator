@@ -2,8 +2,13 @@
  * Versioned forward-migration registry: applies ordered pure migrators to upgrade an older
  * persisted blob to the current schema instead of discarding it. These tests pin the registry's
  * contract (derived version sets, the version⇔migrator coupling, the discard boundary) and prove,
- * via checked-in v1/v2 blob fixtures, that an old blob hydrates losslessly through `loadWorkspace`.
+ * via checked-in v1/v2/v3 blob fixtures, that an old blob hydrates losslessly through `loadWorkspace`.
  * The fixtures are the regression guard every future migrator inherits.
+ *
+ * Phase 8C activates the task-type catalog: `WORKSPACE_SCHEMA_VERSION` is 3 and the registered v2→v3
+ * migrator promotes inline `day.tasks` into animal `taskTypes[]` + day `taskInstances[]`. The v1→v2
+ * step remains the identity (v1/v2 share the pre-catalog shape), so a v1 blob migrates v1→v2→v3 and
+ * lands on the same v3 catalog shape as a v2 blob.
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import {
@@ -14,6 +19,7 @@ import {
 import { loadWorkspace, WORKSPACE_STORAGE_KEY } from '../persistence';
 import v1Blob from './fixtures/persistence/v1-workspace.json';
 import v2Blob from './fixtures/persistence/v2-workspace.json';
+import v3Blob from './fixtures/persistence/v3-workspace.json';
 
 describe('workspace migration registry', () => {
   it('couples the current version to the registry: current === max(source) + 1', () => {
@@ -21,8 +27,8 @@ describe('workspace migration registry', () => {
     expect(WORKSPACE_SCHEMA_VERSION).toBe(Math.max(...MIGRATABLE_SCHEMA_VERSIONS) + 1);
   });
 
-  it('derives MIGRATABLE_SCHEMA_VERSIONS from the registry (currently the source set {1})', () => {
-    expect([...MIGRATABLE_SCHEMA_VERSIONS].sort((a, b) => a - b)).toEqual([1]);
+  it('derives MIGRATABLE_SCHEMA_VERSIONS from the registry (currently the source set {1, 2})', () => {
+    expect([...MIGRATABLE_SCHEMA_VERSIONS].sort((a, b) => a - b)).toEqual([1, 2]);
   });
 
   it('has a CONTIGUOUS source chain 1..(current-1) — a registry gap would silently discard old blobs', () => {
@@ -33,22 +39,35 @@ describe('workspace migration registry', () => {
     expect([...MIGRATABLE_SCHEMA_VERSIONS].sort((a, b) => a - b)).toEqual(expected);
   });
 
-  it('passes a current-version blob through untouched (no migrator runs)', () => {
-    const result = migrateWorkspace(v2Blob);
-    expect(result).toEqual({ workspace: v2Blob.workspace });
-    expect(result.workspace).toBe(v2Blob.workspace); // same reference — not transformed
+  it('passes a current-version (v3) blob through untouched (no migrator runs)', () => {
+    const result = migrateWorkspace(v3Blob);
+    expect(result).toEqual({ workspace: v3Blob.workspace });
+    expect(result.workspace).toBe(v3Blob.workspace); // same reference — not transformed
   });
 
-  it('upgrades a v1 blob to the current shape without discarding or losing data', () => {
+  it('upgrades a v2 blob to the v3 catalog shape (inline tasks → taskTypes + taskInstances)', () => {
+    const result = migrateWorkspace(v2Blob);
+    expect(result.discarded).toBeUndefined();
+    // The v2→v3 migrator promotes inline day.tasks into the animal catalog + per-day instances.
+    expect(result.workspace).toEqual(v3Blob.workspace);
+    // Non-destructive but TRANSFORMING — must be a fresh object, never the stored reference.
+    expect(result.workspace).not.toBe(v2Blob.workspace);
+    // Spot-check the catalog promotion explicitly.
+    expect(result.workspace.animals.remy.taskTypes).toEqual([
+      { id: 'tasktype-0', task_name: 'sleep', task_description: 'Rest in home cage', task_environment: 'home cage', camera_id: [0] },
+    ]);
+    expect(result.workspace.days['remy-2023-06-22'].taskInstances).toEqual([
+      { taskTypeId: 'tasktype-0', task_epochs: [1] },
+    ]);
+    expect(result.workspace.days['remy-2023-06-22']).not.toHaveProperty('tasks');
+  });
+
+  it('upgrades a v1 blob through the full chain (v1→v2→v3) onto the same catalog shape', () => {
     const result = migrateWorkspace(v1Blob);
     expect(result.discarded).toBeUndefined();
-    // v1 and v2 share the workspace shape (the only v1 handling was device normalization, which the
-    // loader still applies to every blob), so the v1→v2 migrator preserves the workspace intact.
-    expect(result.workspace).toEqual(v1Blob.workspace);
-    // The identity migrator must NOT clone/rebuild — non-destructiveness is the load-bearing
-    // property (the loader clones downstream). Pin the same reference so a future deep-clone in the
-    // chain fails here rather than passing toEqual silently.
-    expect(result.workspace).toBe(v1Blob.workspace);
+    // v1→v2 is the identity (shared pre-catalog shape); v2→v3 applies the catalog. End state equals
+    // the v2 blob's migration result and the hand-authored v3 fixture.
+    expect(result.workspace).toEqual(v3Blob.workspace);
   });
 
   it('discards an unknown / too-old / too-new / non-integer version (caller maps to mismatch)', () => {
@@ -63,8 +82,8 @@ describe('workspace migration registry', () => {
     // Defense-in-depth for direct callers: the function must not throw on null nor return an
     // undefined workspace a caller could hydrate as empty.
     expect(migrateWorkspace(null)).toEqual({ discarded: true });
-    expect(migrateWorkspace({ schemaVersion: 2 })).toEqual({ discarded: true }); // no workspace
-    expect(migrateWorkspace({ schemaVersion: 2, workspace: [] })).toEqual({ discarded: true });
+    expect(migrateWorkspace({ schemaVersion: 3 })).toEqual({ discarded: true }); // no workspace
+    expect(migrateWorkspace({ schemaVersion: 3, workspace: [] })).toEqual({ discarded: true });
     expect(migrateWorkspace({ schemaVersion: 1, workspace: 'corrupt' })).toEqual({ discarded: true });
   });
 });
@@ -74,16 +93,22 @@ describe('loadWorkspace upgrades old blobs losslessly (fixtures)', () => {
     window.localStorage.clear();
   });
 
-  it('a v1 fixture blob hydrates to the SAME workspace as the equivalent v2 blob (no discard)', () => {
+  it('v1, v2, and v3 fixture blobs all hydrate to the SAME workspace (no discard)', () => {
     window.localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(v1Blob));
     const fromV1 = loadWorkspace();
 
     window.localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(v2Blob));
     const fromV2 = loadWorkspace();
 
+    window.localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(v3Blob));
+    const fromV3 = loadWorkspace();
+
     expect(fromV1.discarded).toBeUndefined();
     expect(fromV1.recovered).toBeUndefined(); // a complete blob needs no recovery
     expect(fromV1).toEqual(fromV2); // identical hydration regardless of stored version
-    expect(fromV1.workspace.animals.remy).toBeTruthy();
+    expect(fromV2).toEqual(fromV3); // a current-shape blob hydrates the same as a migrated one
+    // The catalog is live after hydration.
+    expect(fromV1.workspace.animals.remy.taskTypes).toHaveLength(1);
+    expect(fromV1.workspace.days['remy-2023-06-22'].taskInstances).toHaveLength(1);
   });
 });

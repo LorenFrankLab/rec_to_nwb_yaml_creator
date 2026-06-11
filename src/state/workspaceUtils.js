@@ -15,6 +15,7 @@ import {
 } from '../utils/deviceNormalization';
 import { resolveEffectiveDevices } from '../domain/deviceOverrideMerge';
 import { resolveDayCameraUsage } from './cameraUsage';
+import { resolveTaskInstances } from './taskCatalog';
 import {
   getConfigHistory,
   getDataAcqDevices,
@@ -22,8 +23,10 @@ import {
   getAnimalDevices,
   getAnimalExperimenters,
   getAnimalSubject,
+  getAnimalTaskTypes,
   getDaySession,
   getDayTasks,
+  getDayTaskInstances,
   getDayAssociatedFiles,
   getDayAssociatedVideos,
   getDayBehavioralEvents,
@@ -270,6 +273,28 @@ export function resolveDayDataAcqDevice(animal, day) {
 }
 
 /**
+ * Resolve a day's tasks for export, preferring the animal-level task-type catalog.
+ *
+ * The catalog is the source of truth: when the day carries `taskInstances` (the v3 shape), each
+ * instance is resolved against the animal's `taskTypes` into an inline `{ task_name, task_description,
+ * task_environment, camera_id, task_epochs }` row — carrying ONLY those keys (no internal
+ * `id`/`taskTypeId`), so the downstream `reorderKeys(t, TASK_ORDER)` emits byte-identical YAML for a
+ * migrated day (proven in {@link module:state/taskCatalog}). An old/unmigrated day with no
+ * `taskInstances` falls back to inline `day.tasks` (compatibility for legacy and test fixtures). A
+ * catalog day with zero instances correctly exports `tasks: []`.
+ *
+ * @param {object} animal - The owning animal (its `taskTypes` catalog).
+ * @param {object} day - The recording day.
+ * @returns {Array<object>} Inline task rows for export, in instance/inline order.
+ */
+function resolveDayTasks(animal, day) {
+  const instances = getDayTaskInstances(day);
+  return instances === null
+    ? getDayTasks(day)
+    : resolveTaskInstances(getAnimalTaskTypes(animal), instances);
+}
+
+/**
  * Merges animal defaults with day-specific data to produce complete NWB metadata.
  *
  * This is the MOST CRITICAL function in the workspace architecture - it must produce
@@ -371,8 +396,9 @@ export function mergeDayMetadata(animal, day) {
     // === From Animal catalog, filtered to the day's used cameras (Task 5) ===
     cameras: dayCameras.map((c) => reorderKeys(c, CAMERA_ORDER)),
 
-    // === From Day: Behavioral Protocol ===
-    tasks: getDayTasks(day).map((t) => reorderKeys(t, TASK_ORDER)),
+    // === From Day: Behavioral Protocol (resolved from the animal task-type catalog when present,
+    // else legacy inline day.tasks) ===
+    tasks: resolveDayTasks(animal, day).map((t) => reorderKeys(t, TASK_ORDER)),
 
     // === From Day: Data Files ===
     associated_files: getDayAssociatedFiles(day).map((f) =>

@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Task-type catalog ACTIVATED — persisted shape + export resolution (Phase 8C, foundation).** The
+  Phase 8B model is now live in persistence and export. **The exported YAML is unchanged** — a
+  migrated day's `tasks[]` is byte-identical to the legacy inline export (golden baselines stay
+  byte-identical), so trodes_to_nwb / DANDI / Spyglass see exactly the same files.
+  - **Schema bump v2 → v3 with a registered, fixture-tested migrator.**
+    `WORKSPACE_SCHEMA_VERSION` is now `3` and `migrateTasksToCatalogV2ToV3` is registered as
+    `MIGRATORS[2]` ([workspaceMigrations.js](src/state/workspaceMigrations.js)). On load, a v1/v2
+    blob's inline `day.tasks` is promoted into the animal-level `taskTypes[]` catalog + per-day
+    `taskInstances[]` (C3 date-ordered dedup); a checked-in
+    [v3 blob fixture](src/state/__tests__/fixtures/persistence/v3-workspace.json) proves v1/v2/v3 all
+    hydrate to the same shape with no discard or data loss.
+  - **`mergeDayMetadata` resolves the catalog.** The export now prefers a day's `taskInstances`
+    (resolved against the animal `taskTypes`) and falls back to legacy inline `day.tasks` when a day
+    is not catalog-shaped ([workspaceUtils.js](src/state/workspaceUtils.js)). A migrated day exports
+    byte-identically to the equivalent inline day.
+  - *In progress (later 8C sub-work): Animal Task-Types catalog UI, per-day pick/order epochs UI,
+    catalog-validation activation, and the trodes_to_nwb fresh-catalog-day integration check. Until
+    those land, newly created days still author inline `day.tasks` and export via the compat
+    fallback.*
+
 ### Added
 
 - **Task-type catalog model rehearsal (Phase 8B).** Behavior-preserving, inert model/utility layer
