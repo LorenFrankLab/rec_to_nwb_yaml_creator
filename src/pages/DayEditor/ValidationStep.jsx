@@ -6,6 +6,7 @@ import { groupIssuesByWorkflowCategory } from '../../domain/workflowCategories';
 import { humanizeValidationMessage } from '../../domain/humanizeValidationMessage';
 import { RepairActionButton, isRepairable, repairButtonKey } from './RepairActions';
 import IssueOwnershipHint from './IssueOwnershipHint';
+import { useDayEditorContext } from './DayEditorContext';
 import './DayEditor.scss';
 
 /**
@@ -33,7 +34,12 @@ import './DayEditor.scss';
  *   deep-link by it instead of the possibly-stale `animal.id` record field.
  * @returns {JSX.Element}
  */
-export default function ValidationStep({ day, mergedDay, onNavigate, animal, onRepair, animalKey = undefined }) {
+export default function ValidationStep(props) {
+  // The shared day bundle comes from DayEditorContext in the Day Editor (an isolated render
+  // passes the same fields as props). `onNavigate`/`onRepair` are section-specific, so they stay
+  // direct props.
+  const { day, mergedDay, animal, animalKey = undefined } = useDayEditorContext(props);
+  const { onNavigate, onRepair } = props;
   // The store OWNER KEY (resolved by DayEditorStepper); a stale/missing `animal.id` record field
   // must not misroute an animal-surface repair deep-link. Falls back to `animal.id` for isolated
   // renders that don't pass it.

@@ -10,6 +10,7 @@ import { isExportEnabled } from './stepGate';
 import { isFeatureEnabled } from '../../featureFlags';
 import { checkShadowExport } from '../../domain/shadowExport';
 import RepairActions from './RepairActions';
+import { useDayEditorContext } from './DayEditorContext';
 import './DayEditor.scss';
 
 /**
@@ -47,7 +48,12 @@ import './DayEditor.scss';
  *   channel would download clean. Defaults to `[]` for isolated single-day renders (back-compat).
  * @returns {JSX.Element}
  */
-export default function ExportStep({ animal, day, onNavigate, onRepair, animalKey = undefined, animalDays = [] }) {
+export default function ExportStep(props) {
+  // The shared day bundle comes from DayEditorContext in the Day Editor (an isolated render
+  // passes the same fields as props). `onNavigate`/`onRepair` are section-specific, so they stay
+  // direct props.
+  const { animal, day, animalKey = undefined, animalDays = [] } = useDayEditorContext(props);
+  const { onNavigate, onRepair } = props;
   // The store OWNER KEY (resolved by DayEditorStepper); a stale/missing `animal.id` record field
   // must not misroute a recovered animal's re-link/repair links. Falls back to `animal.id` for
   // isolated renders that don't pass it.
@@ -333,9 +339,11 @@ export default function ExportStep({ animal, day, onNavigate, onRepair, animalKe
   );
 }
 
+// animal/day/animalKey/animalDays come from DayEditorContext in the Day Editor; these propTypes
+// describe the isolated-render fallback, so animal/day are not `.isRequired`.
 ExportStep.propTypes = {
-  animal: PropTypes.object.isRequired,
-  day: PropTypes.object.isRequired,
+  animal: PropTypes.object,
+  day: PropTypes.object,
   onNavigate: PropTypes.func,
   onRepair: PropTypes.func,
   animalKey: PropTypes.string,

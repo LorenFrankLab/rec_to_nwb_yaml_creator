@@ -18,6 +18,7 @@ import { rawRecord } from '../../components/rawPropTypes';
 import { isMultiShankGroup, validBadChannelIds } from '../../domain/badChannels';
 import { classifyDeviceOverrides } from '../../domain/deviceOverrides';
 import { priorBadChannels, getBadChannelRemovalAcks } from '../../domain/badChannelMonotonicity';
+import { useDayEditorContext } from './DayEditorContext';
 import './DayEditor.scss';
 
 /**
@@ -44,9 +45,21 @@ import './DayEditor.scss';
  *   when provided, the reconfiguration wizard is available.
  * @param {string} [props.animalKey] - The resolved store owner key; used for animal-editor links
  *   and the reconfiguration write instead of the possibly-stale `animal.id`.
+ *
+ * Reads its inputs from {@link DayEditorContext} inside the Day Editor; an isolated render may
+ * pass the same fields as props (the context hook falls back to them).
  * @returns {JSX.Element}
  */
-export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, animalKey = undefined, animalDays = undefined, actions = undefined }) {
+export default function DevicesStep(props) {
+  const {
+    animal,
+    day,
+    mergedDay,
+    onFieldUpdate,
+    animalKey = undefined,
+    animalDays = undefined,
+    actions = undefined,
+  } = useDayEditorContext(props);
   // The store OWNER KEY (resolved by DayEditorStepper). Used for animal-editor links and the
   // reconfiguration write so a stale/missing `animal.id` record field can't misroute them; falls
   // back to `animal.id` for isolated renders that don't pass it.
@@ -769,6 +782,10 @@ export default function DevicesStep({ animal, day, mergedDay, onFieldUpdate, ani
   );
 }
 
+// The seven shared fields (animal/day/mergedDay/onFieldUpdate/animalKey/animalDays/actions) come
+// from DayEditorContext in the Day Editor; these propTypes describe the isolated-render fallback,
+// so the context-provided fields are NOT marked `.isRequired` (the stepper passes them via context,
+// not as props).
 DevicesStep.propTypes = {
   animal: PropTypes.shape({
     id: PropTypes.string.isRequired,
@@ -797,7 +814,7 @@ DevicesStep.propTypes = {
         })
       ),
     }),
-  }).isRequired,
+  }),
   day: PropTypes.shape({
     id: PropTypes.string.isRequired,
     animalId: PropTypes.string.isRequired,
@@ -811,9 +828,9 @@ DevicesStep.propTypes = {
     // cameras the day used but that are NOT inferred from a task/video/fs-gui row. Ids preserve
     // their source type (numeric or string from a corrupt import).
     cameras_used: PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.number, PropTypes.string])),
-  }).isRequired,
-  mergedDay: PropTypes.object.isRequired,
-  onFieldUpdate: PropTypes.func.isRequired,
+  }),
+  mergedDay: PropTypes.object,
+  onFieldUpdate: PropTypes.func,
   // The resolved store owner key (from DayEditorStepper); animal-editor links + reconfiguration
   // use it instead of the possibly-stale `animal.id`. Omitted in isolated renders (falls back).
   animalKey: PropTypes.string,

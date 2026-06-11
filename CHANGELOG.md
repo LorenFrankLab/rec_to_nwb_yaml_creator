@@ -116,6 +116,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Day Editor structural refactor (internal; no behavior or export change).** Extracted the day
+  device-override merge — the override > snapshot resolution AND the matching "can this override
+  be honored cleanly?" shape classification — into one pure module
+  (`src/domain/deviceOverrideMerge.ts`) that both the export path (`resolveDayConfig`) and the
+  validator (`dayOverrideIssues`) build on, so the two can no longer drift in how they read a day's
+  `deviceOverrides`. Introduced a `DayEditorContext` so the day-editor sections read the shared
+  per-day bundle (animal, day, merged metadata, the field-update writer, …) from context instead of
+  having the same seven props drilled through every section. Golden baselines are byte-identical and
+  the day-validation contract is unchanged.
 - **Behavioral-event name suggestions are now direction-specific.** Verified against the
   98-file corpus, every recorded event splits cleanly by direction, so a **Din** (input)
   channel now suggests only `Poke` / `Run_Camera_Ticks` and a **Dout** (output) channel only

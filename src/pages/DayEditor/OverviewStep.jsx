@@ -18,6 +18,7 @@ import {
   getExperimenterNames,
   getAnimalDayIds,
 } from '../../state/workspaceSelectors';
+import { useDayEditorContext } from './DayEditorContext';
 
 // The day-owned collections this step owns (raw-shape reset surface).
 const OVERVIEW_STEP_COLLECTIONS = RAW_DAY_ARRAY_FIELDS.filter((f) => f.repairStep === 'overview');
@@ -45,7 +46,11 @@ const OVERVIEW_STEP_COLLECTIONS = RAW_DAY_ARRAY_FIELDS.filter((f) => f.repairSte
  * @param props.onRepair
  * @returns {JSX.Element}
  */
-export default function OverviewStep({ animal, day, mergedDay, onFieldUpdate, animalKey = undefined, onSubjectUpdate, focusRequest, onRepair }) {
+export default function OverviewStep(props) {
+  // The shared day bundle comes from DayEditorContext in the Day Editor (an isolated render
+  // passes the same fields as props). Section-specific props stay direct.
+  const { animal, day, mergedDay, onFieldUpdate, animalKey = undefined } = useDayEditorContext(props);
+  const { onSubjectUpdate, focusRequest, onRepair } = props;
   // The store OWNER KEY (resolved by DayEditorStepper). Animal-editor links and the derived
   // session_id help text use it so a stale/missing `animal.id` record field can't misroute a
   // recovered animal's repair; falls back to `animal.id` for isolated renders that don't pass it.
@@ -439,7 +444,7 @@ OverviewStep.propTypes = {
       lab: PropTypes.string,
       institution: PropTypes.string,
     }),
-  }).isRequired,
+  }),
   day: PropTypes.shape({
     date: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     keywords: PropTypes.arrayOf(PropTypes.string),
@@ -455,11 +460,13 @@ OverviewStep.propTypes = {
         behavioral_events: PropTypes.string,
       }),
     }),
-  }).isRequired,
+  }),
   // Nullable: the stepper passes null on the merge-failed fail-closed path (corrupt animal
   // config). Not required — a clean-state assumption must not leak into that path.
   mergedDay: PropTypes.object,
-  onFieldUpdate: PropTypes.func.isRequired,
+  // animal/day/mergedDay/onFieldUpdate/animalKey come from DayEditorContext in the Day Editor;
+  // these propTypes describe the isolated-render fallback, so they are not `.isRequired`.
+  onFieldUpdate: PropTypes.func,
   animalKey: PropTypes.string,
   onSubjectUpdate: PropTypes.func,
   focusRequest: PropTypes.shape({

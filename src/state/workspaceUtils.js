@@ -13,6 +13,7 @@ import {
   normalizeElectrodeGroup,
   normalizeNtrodeMap,
 } from '../utils/deviceNormalization';
+import { resolveEffectiveDevices } from '../domain/deviceOverrideMerge';
 import { resolveDayCameraUsage } from './cameraUsage';
 import {
   getConfigHistory,
@@ -216,40 +217,22 @@ export function resolveDayConfig(animal, day) {
     );
   }
 
-  // Prefer the day's deviceOverrides ONLY when they are well-formed arrays. A
-  // malformed (non-array) override is corrupt persisted state; using it would
-  // crash the `.map` below, so fall back to the snapshot (fail-closed) rather than
-  // crash before the repair UI can render.
-  const electrodeGroups = Array.isArray(day.deviceOverrides?.electrode_groups)
-    ? day.deviceOverrides.electrode_groups
-    : getProbeElectrodeGroups(config.devices);
-  const baseNtrodes = Array.isArray(day.deviceOverrides?.ntrode_electrode_group_channel_map)
-    ? day.deviceOverrides.ntrode_electrode_group_channel_map
-    : getProbeNtrodeMaps(config.devices);
-
-  // Resolve each ntrode's effective `bad_channels` from the DAY OVERRIDE ONLY —
-  // never from the snapshot base. The load-time migration
-  // (`migrateBadChannelsToDays`) has already moved any config-snapshot base marks
-  // DOWN into `day.deviceOverrides.bad_channels` (and emptied the snapshot bases)
-  // for all well-formed data, so reading the override exclusively yields the same
-  // effective set the old base-reading merge produced — byte-identical for that
-  // data. The override map is keyed by ntrode_id; per ntrode:
-  //  - a present, WELL-FORMED (array) value → use it (replaces the row's marks);
-  //  - anything else — an ABSENT key, a non-array value under a valid key, or a
-  //    corrupt/absent container — resolves to `[]`. The snapshot base is NOT
-  //    consulted as a fallback (the migration already emptied it; the only data
-  //    whose output changes is a corrupt-override day, whose base is deliberately
-  //    no longer applied — those days are export-gated / repair-surfaced).
-  //
-  // Corruption is NOT smeared onto the geometry row here (a non-array value
-  // becomes `[]`, never the raw scalar) — `dayOverrideIssues` reads the RAW
-  // override directly and surfaces the corruption as a day-routed blocker, so it
-  // is neither laundered into the export nor hidden, just routed to its owner.
-  const overrides = day.deviceOverrides?.bad_channels;
-  const baseArray = Array.isArray(baseNtrodes) ? baseNtrodes : [];
-  const ntrodes = baseArray.map((n) => {
-    const ov = isPlainRecord(overrides) ? overrides[String(n.ntrode_id)] : undefined;
-    return { ...n, bad_channels: Array.isArray(ov) ? [...ov] : [] };
+  // Layer the day's deviceOverrides over the pinned snapshot via the shared merge
+  // (`resolveEffectiveDevices`), the single source of the override > snapshot precedence
+  // — the SAME predicates `dayOverrideIssues` surfaces against, so the export merge and
+  // the validator cannot drift. Geometry: a well-formed array override shadows the
+  // snapshot; anything else falls back to the snapshot (fail-closed). Each ntrode's
+  // effective `bad_channels` come from `deviceOverrides.bad_channels` ONLY (never the
+  // snapshot base — the load-time `migrateBadChannelsToDays` has already moved any base
+  // marks DOWN onto the day, so reading the override exclusively is byte-identical for
+  // well-formed data); a corrupt value resolves to `[]`, never smeared onto the geometry
+  // row, and `dayOverrideIssues` surfaces it as a day-routed blocker. The snapshot probe
+  // selectors are total and pure, so computing them eagerly here (rather than lazily in
+  // the prior else-branch) is byte-identical.
+  const { electrodeGroups, ntrodes } = resolveEffectiveDevices({
+    deviceOverrides: day.deviceOverrides,
+    snapshotElectrodeGroups: getProbeElectrodeGroups(config.devices),
+    snapshotNtrodes: getProbeNtrodeMaps(config.devices),
   });
 
   return {
