@@ -74,20 +74,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Behavioral-event name suggestion `Run Camera Ticks` → `Run_Camera_Ticks`.** The
   suggestion now matches the spelling used in 98/98 recorded corpus files (underscores), so
-  the suggested name is the one labs actually use and the standard-set template's
-  camera-ticks row is recognized as a standard name. Free text is unaffected; the exported
-  YAML shape is unchanged. (The non-validating `examples` array in `nwb_schema.json` still
-  lists the spaced form — it is co-owned with trodes_to_nwb and is left for a coordinated
-  cross-repo change.)
-- **Restored guided DIO Type + line-index entry (F5).** The Behavioral Events /
-  DIO library editor now enters a DIO event's `description` through a **Type**
-  dropdown (`Din`/`Dout`) plus a numeric **DIO line index** control, instead of a
-  single free-text box — recognition over recall, and it prevents a silently
-  malformed DIO line name. The stored and exported `description` string is unchanged
-  (e.g. `"Din1"`). When the stored `description` is a non-standard value the controls
-  fall back from (an imported analog/prose string), an inline note now warns that
-  editing the controls will rewrite it — making the fallback visible rather than
-  silent.
+  the suggested name is the one labs actually use (and its auto-numbered variants stay
+  recognized as on-list). Free text is unaffected; the exported YAML shape is unchanged. (The
+  non-validating `examples` array in `nwb_schema.json` still lists the spaced form — it is
+  co-owned with trodes_to_nwb and is left for a coordinated cross-repo change.)
 - **Recording-day dates are validated as ISO `YYYY-MM-DD` on write.** `createDay`
   and `duplicateDay` now reject a non-ISO date, since the date-ordered index relies
   on `YYYY-MM-DD` sorting lexicographically as chronological (the date picker already
@@ -95,16 +85,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Per-day behavioral-events (DIO) wiring table.** The recording-day editor now
-  presents the day's behavioral events as a wiring table grouped into **Inputs
-  (Din)** and **Outputs (Dout)** (plus an **Other** group for any imported
-  non-standard channel), reading like the physical rig. Each row maps a hardware
-  **DIO channel** (the `description`) to an **Event** (the `name`, which "becomes the
-  DIO event's name in the NWB file"), edited via the guided Type/line-index controls.
-  A text legend (Din = inputs, Dout = outputs), per-field hints, and an explainer
-  ("edit only if you rewired the rig") accompany it; rows delete through the shared
-  confirmation dialog. The animal's inherited library is still shown above as
-  read-only reference. The exported YAML shape is unchanged.
 - **Off-list combobox warning is now linked to its input** via `aria-describedby`
   (merged with any caller-provided value), so screen readers associate the
   standard-options nudge with the field.
@@ -117,7 +97,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   nudge encourages standard values.
 - **Behavioral-event name suggestions.** The event **Name** field is now this
   combobox, offering the catalog of common names (`Home box camera`, `Poke`,
-  `Light`, `Pump`, `Run Camera Ticks`, `Sleep`) and warning when a non-standard
+  `Light`, `Pump`, `Run_Camera_Ticks`, `Sleep`) and warning when a non-standard
   name is entered. Free entry is retained; the stored value is unchanged.
 - **Off-list warning for brain regions.** The brain-region autocomplete
   (`BrainRegionAutocomplete`, used in the Electrode Group editor) now uses the same

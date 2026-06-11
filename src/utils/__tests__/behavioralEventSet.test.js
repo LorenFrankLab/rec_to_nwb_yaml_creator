@@ -88,6 +88,41 @@ describe('setChannelName', () => {
     expect(setChannelName(events, 'Din5', '')).toEqual(events);
   });
 
+  it('renaming a channel to a name another channel already holds preserves the collision (so the gate can flag it)', () => {
+    const events = [
+      { description: 'Din1', name: 'Poke1' },
+      { description: 'Din2', name: 'Light1' },
+    ];
+    expect(setChannelName(events, 'Din2', 'Poke1')).toEqual([
+      { description: 'Din1', name: 'Poke1' },
+      { description: 'Din2', name: 'Poke1' },
+    ]);
+  });
+
+  it('operates on a SINGLE event: blanking a corrupt duplicate-description channel removes only the first, not its hidden sibling', () => {
+    const events = [
+      { description: 'Din1', name: 'PokeA' },
+      { description: 'Din1', name: 'PokeB' },
+      { description: 'Dout7', name: 'Pump1' },
+    ];
+    // Only the first Din1 is removed; the hidden sibling survives (and now surfaces in the row).
+    expect(setChannelName(events, 'Din1', '')).toEqual([
+      { description: 'Din1', name: 'PokeB' },
+      { description: 'Dout7', name: 'Pump1' },
+    ]);
+  });
+
+  it('operates on a SINGLE event: updating a corrupt duplicate-description channel updates only the first', () => {
+    const events = [
+      { description: 'Din1', name: 'PokeA' },
+      { description: 'Din1', name: 'PokeB' },
+    ];
+    expect(setChannelName(events, 'Din1', 'Renamed')).toEqual([
+      { description: 'Din1', name: 'Renamed' },
+      { description: 'Din1', name: 'PokeB' },
+    ]);
+  });
+
   it('does not mutate the input array', () => {
     const events = [{ description: 'Din1', name: 'Poke1' }];
     const next = setChannelName(events, 'Din2', 'Light1');
@@ -104,7 +139,7 @@ describe('isStandardEventName', () => {
     expect(isStandardEventName('poke', SUGGESTIONS)).toBe(true);
   });
 
-  it('accepts a numbered variant of a suggestion (the auto-numbering/template output)', () => {
+  it('accepts a numbered variant of a suggestion (the auto-numbering output)', () => {
     // The app generates these, so they must not be flagged as "not a standard event name".
     expect(isStandardEventName('Poke1', SUGGESTIONS)).toBe(true);
     expect(isStandardEventName('Light12', SUGGESTIONS)).toBe(true);

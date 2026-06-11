@@ -1,15 +1,18 @@
 /**
  * Pure authoring helpers for a recording day's behavioral-event (DIO) set. The set is the flat
- * `day.behavioral_events` array of `{ name, description }`; these helpers support two authoring
- * conveniences without changing the exported shape:
+ * `day.behavioral_events` array of `{ name, description }`; these helpers drive the channel grid
+ * without changing the exported shape:
  *
- *  - per-label auto-numbering when a known event name is PICKED from the suggestions
- *    ({@link nextInstanceNumber}), and
- *  - bulk-applying a standard-set template into the day set ({@link mergeTemplateRows}).
+ *  - {@link nextInstanceNumber} — per-label auto-numbering when a known event name is PICKED from
+ *    the suggestions (`Poke` → `Poke1`/`Poke2`/…);
+ *  - {@link isStandardEventName} — whether a name is a standard label or a numbered variant (for the
+ *    off-list nudge), so the picker's own output isn't flagged; and
+ *  - {@link setChannelName} — name a channel (add / update-in-place / blank removes).
  *
- * Both honour the load-bearing naming convention (`Label<n>`, no separator; the number is a
- * per-label instance count, never the DIO channel index) and the two export gates: name uniqueness
- * and description uniqueness.
+ * Naming follows the load-bearing convention (`Label<n>`, no separator; the number is a per-label
+ * instance count, never the DIO channel index). The number is chosen to avoid tripping the export
+ * gates (unique name, unique description), which are enforced separately in
+ * `validation/behavioralEvents.js`.
  */
 
 /**
@@ -44,7 +47,7 @@ export function nextInstanceNumber(label, events) {
 /**
  * Whether `name` is a "standard" behavioral-event name for off-list nudging: an exact
  * (case-insensitive) match to a suggested label, OR a numbered instance of one — the no-separator
- * `Label<n>` convention the picker auto-generates and the templates emit (e.g. "Poke1" for "Poke").
+ * `Label<n>` convention the picker auto-generates (e.g. "Poke1" for "Poke").
  * Without this, the off-list nudge would fire on the app's OWN generated names. An empty/whitespace
  * name is treated as standard here (it is gated separately as "required", not nudged as off-list).
  *
@@ -79,12 +82,17 @@ export function isStandardEventName(name, suggestions) {
  */
 export function setChannelName(events, description, name) {
   const base = Array.isArray(events) ? events : [];
+  // Act on a SINGLE event (the first on this channel), never on "all rows with this description":
+  // a corrupt duplicate-description import must not lose its hidden sibling when the visible row is
+  // cleared. Each edit then surfaces the next event, so the user removes them one visible step at a
+  // time rather than both at once.
+  const index = base.findIndex((event) => event?.description === description);
   const isBlank = typeof name !== 'string' || name.trim() === '';
+  if (index === -1) {
+    return isBlank ? base : [...base, { description, name }];
+  }
   if (isBlank) {
-    return base.filter((event) => event?.description !== description);
+    return [...base.slice(0, index), ...base.slice(index + 1)];
   }
-  if (base.some((event) => event?.description === description)) {
-    return base.map((event) => (event?.description === description ? { ...event, name } : event));
-  }
-  return [...base, { description, name }];
+  return base.map((event, i) => (i === index ? { ...event, name } : event));
 }

@@ -394,6 +394,26 @@ describe('behavioral-event name uniqueness', () => {
       ],
     }))).not.toContain('duplicate_behavioral_event_name');
   });
+
+  it('reports a duplicate name exactly once (not once per offending row)', () => {
+    const codeList = codes(rulesValidation({
+      behavioral_events: [
+        { name: 'Poke1', description: 'Din1' },
+        { name: 'Poke1', description: 'Din2' },
+        { name: 'Poke1', description: 'Din3' },
+      ],
+    }));
+    expect(codeList.filter((c) => c === 'duplicate_behavioral_event_name')).toHaveLength(1);
+  });
+
+  it('does NOT flag two blank/whitespace-only names as a duplicate (blank channels are unused)', () => {
+    expect(codes(rulesValidation({
+      behavioral_events: [
+        { name: '', description: 'Din1' },
+        { name: '   ', description: 'Din2' },
+      ],
+    }))).not.toContain('duplicate_behavioral_event_name');
+  });
 });
 
 describe('task/video dependency + camera refs', () => {

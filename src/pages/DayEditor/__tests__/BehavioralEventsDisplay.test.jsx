@@ -111,6 +111,21 @@ describe('BehavioralEventsDisplay — channel grid', () => {
     );
   });
 
+  it('does NOT flag a duplicate channel when the colliding partner is a blank/unused channel (matches the export gate)', () => {
+    // A blank-named channel is excluded from export, so two events on Din1 where one is blank is NOT
+    // a real duplicate — the inline banner must agree with the export gate and stay silent.
+    render(
+      <BehavioralEventsDisplay
+        dayEvents={[
+          { description: 'Din1', name: 'Poke1' },
+          { description: 'Din1', name: '' },
+        ]}
+        onDayEventsChange={vi.fn()}
+      />
+    );
+    expect(screen.queryByText(/more than one event/i)).not.toBeInTheDocument();
+  });
+
   it('does NOT flag descriptions that differ only by trailing whitespace (matches the export gate)', () => {
     render(
       <BehavioralEventsDisplay
@@ -143,6 +158,23 @@ describe('BehavioralEventsDisplay — channel grid', () => {
     expect(() =>
       render(<BehavioralEventsDisplay dayEvents={{}} onDayEventsChange={vi.fn()} />)
     ).not.toThrow();
+  });
+
+  it('tolerates a corrupt non-string event name without crashing (renders it as unused)', () => {
+    // Persisted/carried-forward corruption could carry a numeric name; the editor must survive it
+    // (the export filter drops a non-string name, so the channel reads as unused here).
+    expect(() =>
+      render(
+        <BehavioralEventsDisplay
+          dayEvents={[
+            { description: 'Din1', name: 5 },
+            { description: 'Accel9', name: 7 },
+          ]}
+          onDayEventsChange={vi.fn()}
+        />
+      )
+    ).not.toThrow();
+    expect(screen.getByLabelText('Event for Din1')).toHaveValue('');
   });
 });
 
@@ -183,6 +215,19 @@ describe('BehavioralEventsDisplay — per-label auto-numbering (onSelect)', () =
     await user.type(screen.getByLabelText('Event for Din1'), 'Poke');
     // A free-typed "Poke" stays "Poke" — not promoted to "Poke1" (that only happens on a pick).
     expect(screen.getByLabelText('Event for Din1')).toHaveValue('Poke');
+  });
+
+  it('re-picking the same label on a channel excludes itself (Poke on a Poke1 channel stays Poke1)', async () => {
+    const user = userEvent.setup();
+    render(
+      <ControlledHarness initialDayEvents={[{ description: 'Din1', name: 'Poke1' }]} spy={vi.fn()} />
+    );
+
+    // Self-exclusion: the channel's own existing instance is not counted, so it re-stamps Poke1
+    // rather than jumping to Poke2.
+    await user.click(screen.getByLabelText('Event for Din1'));
+    await user.click(screen.getByRole('option', { name: 'Poke' }));
+    expect(screen.getByLabelText('Event for Din1')).toHaveValue('Poke1');
   });
 });
 

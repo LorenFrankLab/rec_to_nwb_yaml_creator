@@ -13,11 +13,12 @@ import SuggestionCombobox from '../../components/SuggestionCombobox';
 import './BehavioralEventsDisplay.scss';
 
 /**
- * The SpikeGadgets ECU exposes a fixed digital I/O space: Din1…Din32 (inputs) and Dout1…Dout32
- * (outputs), verified against Trodes `.trodesconf` configs. The board determines the space — a
- * no-ECU board has no Din/Dout — but trodes_to_nwb only consumes the ECU digital stream, so the
- * authoring grid presents the full ECU range. Which channel carries which event is a per-experiment
- * wiring choice, so the editor presents every channel and the user names only the ones they use.
+ * The standard SpikeGadgets ECU digital configuration this grid authors for is Din1…Din32 (inputs)
+ * and Dout1…Dout32 (outputs) — the documented maximum, per Trodes `.trodesconf` configs (the exact
+ * lines are configuration-dependent: a no-ECU board has none, and some configs omit a line). Since
+ * trodes_to_nwb only consumes the ECU digital stream and which channel carries which event is a
+ * per-experiment wiring choice, the editor presents the full standard range and the user names the
+ * channels they use. This constant is the single source of truth if the range ever needs to change.
  */
 const ECU_DIGITAL_CHANNELS = 32;
 
@@ -32,14 +33,16 @@ const GROUPS = [
 
 /**
  * The ordered channel ids for a direction, e.g. ["Din1", … "Din32"].
- * @param type
+ * @param {string} type - The DIO type, `"Din"` or `"Dout"`.
+ * @returns {string[]} The channel ids `${type}1`…`${type}${ECU_DIGITAL_CHANNELS}`.
  */
 const channelsFor = (type) =>
   Array.from({ length: ECU_DIGITAL_CHANNELS }, (_, i) => `${type}${i + 1}`);
 
 /**
  * Sanitize a channel id for use in an element id.
- * @param description
+ * @param {string} description - The channel id (e.g. `"Din1"`).
+ * @returns {string} The id with non-`[A-Za-z0-9_-]` characters replaced by `-`.
  */
 const channelId = (description) => String(description).replace(/[^a-zA-Z0-9_-]/g, '-');
 
@@ -73,10 +76,14 @@ export default function BehavioralEventsDisplay({ dayEvents, onDayEventsChange }
   });
 
   // A duplicate NAME collides on the Spyglass DIOEvents primary key; a duplicate DESCRIPTION is a
-  // trodes_to_nwb ValueError. Both are surfaced inline via the SAME helpers the export rules use, so
-  // the inline gate and the export gate can never disagree.
-  const duplicateNames = duplicateBehavioralEventNames(dayItems);
-  const duplicateDescriptions = [...duplicateBehavioralEventDescriptions(dayItems)];
+  // trodes_to_nwb ValueError. The inline gates run on exactly what export sees — the NAMED events
+  // (a blank channel is excluded from export, see workspaceUtils.js) — via the SAME helpers the
+  // export rules use, so the inline banner and the export gate can never disagree.
+  const exportedItems = dayItems.filter(
+    (event) => typeof event?.name === 'string' && event.name.trim() !== ''
+  );
+  const duplicateNames = duplicateBehavioralEventNames(exportedItems);
+  const duplicateDescriptions = [...duplicateBehavioralEventDescriptions(exportedItems)];
 
   // Events whose description is not a standard ECU channel (e.g. an imported analog/prose line, or a
   // channel outside 1–32) — shown in an "Other" group so they are never silently dropped.
@@ -108,10 +115,12 @@ export default function BehavioralEventsDisplay({ dayEvents, onDayEventsChange }
   /**
    * Render the editable Event-name cell for one channel.
    * @param {string} description - The channel id.
-   * @param {string} name - The current event name ('' when unused).
+   * @param {*} rawName - The current event name ('' when unused); coerced if persisted corruption
+   *   left a non-string here, so the editor survives it instead of crashing.
    * @returns {JSX.Element}
    */
-  function renderNameField(description, name) {
+  function renderNameField(description, rawName) {
+    const name = typeof rawName === 'string' ? rawName : '';
     const isDuplicate = name.trim() !== '' && duplicateNames.has(name);
     const errorId = `dio-dup-name-${channelId(description)}`;
     return (
@@ -165,14 +174,15 @@ export default function BehavioralEventsDisplay({ dayEvents, onDayEventsChange }
           </thead>
           <tbody>
             {channelsFor(group.type).map((description) => {
-              const name = byDescription.get(description)?.name ?? '';
+              const rawName = byDescription.get(description)?.name;
+              const name = typeof rawName === 'string' ? rawName : '';
               return (
                 <tr
                   key={description}
                   className={name.trim() !== '' ? 'dio-row-named' : 'dio-row-unused'}
                 >
                   <td data-label="DIO channel">{description}</td>
-                  <td data-label="Event name">{renderNameField(description, name)}</td>
+                  <td data-label="Event name">{renderNameField(description, rawName)}</td>
                 </tr>
               );
             })}

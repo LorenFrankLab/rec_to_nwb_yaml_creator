@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { mergeDayMetadata } from '../workspaceUtils';
+import { encodeYaml } from '../../io/yaml';
 import { buildRealisticWorkspace } from '../../__tests__/fixtures/workspaceBuilders';
 
 /**
@@ -24,5 +25,25 @@ describe('export excludes blank-named behavioral events', () => {
       { description: 'Din1', name: 'Poke1' },
       { description: 'Dout7', name: 'Pump1' },
     ]);
+  });
+
+  it('encodes byte-identically whether or not blank channels sit between the named ones', () => {
+    // Filtering a blank middle element must not perturb key order / indentation of the surviving
+    // events — the golden-baseline (data-corruption) safety net for the new filter path.
+    const a = buildRealisticWorkspace();
+    a.day.behavioral_events = [
+      { description: 'Din1', name: 'Poke1' },
+      { description: 'Din5', name: '' }, // blank in the middle
+      { description: 'Dout7', name: 'Pump1' },
+    ];
+    const b = buildRealisticWorkspace();
+    b.day.behavioral_events = [
+      { description: 'Din1', name: 'Poke1' },
+      { description: 'Dout7', name: 'Pump1' },
+    ];
+
+    expect(encodeYaml(mergeDayMetadata(a.animal, a.day))).toBe(
+      encodeYaml(mergeDayMetadata(b.animal, b.day))
+    );
   });
 });
