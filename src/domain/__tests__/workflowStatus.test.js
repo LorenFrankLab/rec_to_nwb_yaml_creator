@@ -6,7 +6,7 @@
  * MUST derive `readyForExportPreflight` from the SAME export gate the Export button uses —
  * `isExportEnabled(computeStepStatus(...))` (export status + all prerequisite steps valid).
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   SETUP_STATE,
   getAnimalSetupChecklist,
@@ -16,7 +16,12 @@ import {
 import { buildRealisticWorkspace } from '../../__tests__/fixtures/workspaceBuilders';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { computeStepStatus } from '../validation';
+// Namespace import so the step-only-blocker / throw tests can spy on computeStepStatus (the live
+// binding getDayRowStatus consults), without affecting firstBlockingReason's separate validateDay.
+import * as validationModule from '../validation';
 import { isExportEnabled } from '../stepGate';
+
+afterEach(() => vi.restoreAllMocks());
 
 /**
  * A minimal freshly-created animal: a subject, an empty initial config snapshot, no days.
@@ -301,6 +306,40 @@ describe('getDayRowStatus', () => {
       variant: 'exported',
       label: 'Exported',
     });
+  });
+
+  it('does NOT show "Validated"/"Exported" when a step-only blocker (no validation error) currently closes export', () => {
+    // A saved-validated day with a step-only blocker that validateDay does NOT flag as an error
+    // (e.g. all channels bad → Devices "error"): the live gate is closed, so the row must read the
+    // honest "Needs fixing", never the stale "Validated" — the live gate wins over persisted flags.
+    const { animal, day } = buildRealisticWorkspace();
+    day.state = { draft: false, validated: true, exported: true };
+    const merged = mergeDayMetadata(animal, day);
+    // firstBlockingReason (real validateDay) sees no error; the step gate is closed by a step error.
+    vi.spyOn(validationModule, 'computeStepStatus').mockReturnValue({
+      overview: 'valid',
+      devices: 'error',
+      epochs: 'valid',
+      validation: 'valid',
+      export: 'error',
+    });
+    const status = getDayRowStatus(animal, day, merged);
+    expect(status.variant).toBe('needs_fixing');
+    expect(status.label).toMatch(/^Needs fixing/);
+  });
+
+  it('falls back to "Needs fixing" (not "Draft") when readiness computation throws on a non-blocked day', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    delete day.state;
+    const merged = mergeDayMetadata(animal, day);
+    // firstBlockingReason validates cleanly; the step-status computation then throws → the row must
+    // surface an honest "Needs fixing", never a misleading "Draft", and must not crash.
+    vi.spyOn(validationModule, 'computeStepStatus').mockImplementation(() => {
+      throw new Error('boom');
+    });
+    const status = getDayRowStatus(animal, day, merged);
+    expect(status.variant).toBe('needs_fixing');
+    expect(status.label).toMatch(/^Needs fixing — /);
   });
 
   it('treats a passing day with no state flags as ready (live readiness, unsaved)', () => {

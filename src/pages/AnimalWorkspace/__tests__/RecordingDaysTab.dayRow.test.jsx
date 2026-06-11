@@ -96,26 +96,38 @@ describe('RecordingDaysTab — day row contract (decision 12)', () => {
     });
     const status = container.querySelector('.day-row-status');
     expect(status).toHaveTextContent('Validated');
-    // "Ready to export" is reserved for the Day Validation surface's LIVE readiness; the row
-    // shows the saved fact ("Validated") so the two surfaces don't say the same words for
-    // different things.
+    // A persisted-validated day shows the SAVED fact ("Validated"), not the live-readiness word
+    // ("Ready to export") — both are live-valid, but the row distinguishes saved from unsaved.
+    // ("Ready to export" is the row's word for a passing-but-UNSAVED day; see the live-ready test.)
     expect(status).not.toHaveTextContent('Ready to export');
   });
 
-  it('renders a computed status alongside the orphan note on a recovered-unlinked row', () => {
+  it('renders "Draft — incomplete" for an incomplete (not export-ready) day', () => {
+    // A day with no errors but a missing required Overview field is incomplete (not export-ready),
+    // so the row reads the draft state — proving the draft branch wires through to the rendered row.
+    const { container } = renderRealistic((day) => {
+      day.state = { draft: true, validated: false, exported: false };
+      day.session = { ...day.session, session_id: undefined };
+    });
+    const status = container.querySelector('.day-row-status');
+    expect(status).toHaveTextContent('Draft — incomplete');
+  });
+
+  it('shows "Re-link to export" (not an export-ready claim) on a recovered-unlinked row', () => {
     // A recovered day whose record points at this animal but is NOT in its index
-    // (RECOVERED_UNLINKED) flows through the same OK-row markup, so it now carries BOTH the
-    // "not in day list" note AND a plain-language status. The valid fixture (config history
-    // present) merges cleanly, so a draft orphan reads as a draft — not a crash, not blank.
+    // (RECOVERED_UNLINKED) flows through the same OK-row markup, carrying the "not in day list"
+    // note. Its metadata is valid, but it is NOT exportable until re-linked (the batch export
+    // filters it out), so the row must NOT claim "Ready to export" — it shows the actionable
+    // linkage blocker instead.
     const { container } = renderRealistic((day, animal) => {
       animal.days = []; // unlink: record exists in the days map but not in the index
       day.state = { draft: true, validated: false, exported: false };
     });
-    // "not in day list" appears both in the review note and on the row.
+    // "not in day list" appears in the review note and on the date.
     expect(screen.getAllByText(/not in day list/i).length).toBeGreaterThan(0);
-    // The recovered day still merges + passes the gate → live-readiness "Ready to export".
     const status = container.querySelector('.day-row-status');
-    expect(status).toHaveTextContent('Ready to export');
+    expect(status).toHaveTextContent('Re-link to export');
+    expect(status).not.toHaveTextContent('Ready to export');
   });
 
   it('shows "Needs fixing — {reason}" for a live error, overriding a stale exported flag', () => {

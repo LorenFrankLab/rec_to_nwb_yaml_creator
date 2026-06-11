@@ -89,6 +89,25 @@ describe('ExportStep', () => {
     expect(screen.getByTestId('export-lifecycle-status')).toHaveTextContent('Ready to export');
   });
 
+  it('persists state.exported after a successful download (so the day then reads "Exported")', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(yaml, 'downloadYamlFile').mockImplementation(() => {});
+    const updateDay = vi.fn();
+    const { animal, day } = buildRealisticWorkspace();
+
+    // Pass store actions (the DayEditor provides these via context; an isolated render passes them
+    // as props) so the export can record the lifecycle transition.
+    render(<ExportStep animal={animal} day={day} actions={{ updateDay }} />);
+
+    await user.click(screen.getByRole('button', { name: /download/i }));
+
+    // `state` is display-only (never in the YAML), so this does not affect byte-identity — it just
+    // moves the day to the "Exported" lifecycle state.
+    expect(updateDay).toHaveBeenCalledWith(day.id, {
+      state: expect.objectContaining({ exported: true }),
+    });
+  });
+
   it('hides the YAML preview until the toggle is clicked', async () => {
     const user = userEvent.setup();
     const { animal, day } = buildRealisticWorkspace();

@@ -57,7 +57,9 @@
   background-color: currentcolor;
 }
 
-/* Per-variant swatch colors — the single mapping the chips/dots on every surface reuse. */
+/* Per-variant swatch colors, aligned with the status chips/dots on the other surfaces (the
+   Exported *chip* on the Validation Summary uses solid primary as its committed/terminal form, so
+   its swatch reads as the same blue family). */
 .draft {
   color: var(--color-grey-600);
 }

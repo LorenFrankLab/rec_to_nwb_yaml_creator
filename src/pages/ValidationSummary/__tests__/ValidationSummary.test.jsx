@@ -559,6 +559,37 @@ describe('ValidationSummary', () => {
     expect(within(row).getByRole('button', { name: /add .* back to .* day list/i })).toBeInTheDocument();
   });
 
+  it('marks each downloaded day as exported (state.exported) after a batch export', async () => {
+    const user = userEvent.setup();
+    const { workspace, ids } = makeSummaryWorkspace();
+    const updateDay = provideStore(workspace);
+
+    render(<ValidationSummary />);
+    await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    await user.click(screen.getByRole('button', { name: /confirm export/i }));
+
+    // Only the valid day downloads; it is then recorded as exported so it reads "Exported"
+    // afterwards. `state` is display-only (never in the YAML), so byte-identity is unaffected.
+    expect(updateDay).toHaveBeenCalledWith(ids.validDayId, {
+      state: expect.objectContaining({ exported: true }),
+    });
+  });
+
+  it('shows "Re-link to export" (not "Ready to export") on a valid recovered-unlinked row', () => {
+    const { workspace, ids } = makeSummaryWorkspace();
+    // Keep the (valid) record but drop it from its animal's index → recovered-unlinked.
+    workspace.animals.remy.days = workspace.animals.remy.days.filter((id) => id !== ids.validDayId);
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+
+    const row = screen.getByTestId(`day-row-${ids.validDayId}`);
+    // The day is valid metadata but not exportable until re-linked (batch export filters it out),
+    // so its chip must NOT claim export-readiness — it shows the actionable linkage blocker.
+    expect(within(row).getByText('Re-link to export')).toBeInTheDocument();
+    expect(within(row).queryByText('Ready to export')).not.toBeInTheDocument();
+  });
+
   it('Export Valid Only EXCLUDES a recovered-unlinked (orphan) day until it is re-linked', async () => {
     const user = userEvent.setup();
     const { workspace, ids } = makeSummaryWorkspace();

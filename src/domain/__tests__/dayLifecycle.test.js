@@ -57,6 +57,17 @@ describe('DAY_LIFECYCLE vocabulary', () => {
     expect([...DAY_LIFECYCLE_ORDER].sort()).toEqual([...Object.values(DAY_LIFECYCLE)].sort());
     expect(DAY_LIFECYCLE_ORDER[0]).toBe(DAY_LIFECYCLE.DRAFT);
   });
+
+  it('keeps the parallel label/description/order tables complete for every variant (no silent desync)', () => {
+    // The lookup tables are hand-written parallel objects (not derived from the enum), so guard the
+    // completeness invariant explicitly: a future variant added to DAY_LIFECYCLE without a label,
+    // description, AND order entry must fail here rather than render a blank/styleless status.
+    for (const variant of Object.values(DAY_LIFECYCLE)) {
+      expect(DAY_LIFECYCLE_LABEL).toHaveProperty(variant);
+      expect(DAY_LIFECYCLE_DESCRIPTION).toHaveProperty(variant);
+      expect(DAY_LIFECYCLE_ORDER).toContain(variant);
+    }
+  });
 });
 
 describe('lifecycleForValidDay', () => {

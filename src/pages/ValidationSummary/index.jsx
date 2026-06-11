@@ -72,15 +72,26 @@ const CHIP_LABEL = { valid: 'Valid', error: 'Error', incomplete: 'Incomplete' };
  * derived from the live `chip`, and only the valid bucket consults `state`). The special
  * unreadable / missing-record rows keep their explicit error labels.
  *
+ * A recovered-unlinked (`orphaned`) day is valid metadata but NOT exportable until it is re-linked
+ * into its animal's day list (the batch export filters it out), so a valid orphan must NOT claim
+ * "Ready to export"/"Validated"/"Exported" — it reads "Re-link to export" (the actionable blocker,
+ * complementing the row's "not in day list" note + "Add to day list" repair). An orphan with
+ * errors/incomplete still shows those (they're the more urgent truth and don't falsely claim
+ * exportability).
+ *
  * @param {'valid'|'error'|'incomplete'} chip - The live validation chip from {@link deriveChip}.
  * @param {object|null|undefined} state - The day's persisted `state` (may be malformed).
- * @param {{ unreadable?: boolean, missingRecord?: boolean }} [flags] - Special-row markers.
+ * @param {{ unreadable?: boolean, missingRecord?: boolean, orphaned?: boolean }} [flags] - Special-row markers.
  * @returns {{ variant: string, label: string }} The chip variant (CSS modifier) and its label.
  */
-function dayChipDisplay(chip, state, { unreadable = false, missingRecord = false } = {}) {
+function dayChipDisplay(chip, state, { unreadable = false, missingRecord = false, orphaned = false } = {}) {
   if (unreadable) return { variant: 'error', label: 'Error — cannot read' };
   if (missingRecord) return { variant: 'error', label: 'Error — missing day record' };
   if (chip === 'valid') {
+    // Not exportable until re-linked — don't claim export-readiness (incomplete styling reads as
+    // "not ready", which is honest; the linkage is the blocker). "Re-link to export" is the action,
+    // distinct from the row's "not in day list" state note.
+    if (orphaned) return { variant: 'incomplete', label: 'Re-link to export' };
     const variant = lifecycleForValidDay(state); // 'ready' | 'validated' | 'exported'
     return { variant, label: DAY_LIFECYCLE_LABEL[variant] };
   }
@@ -629,6 +640,18 @@ export function ValidationSummary({ animalKey } = {}) {
         downloadYamlFile(fileName, yaml);
         exported += 1;
 
+        // Persist the export into the day's lifecycle state (display-only — `state` is never part
+        // of the exported YAML, so byte-identity holds) so each downloaded day reads "Exported"
+        // afterwards, mirroring the single-day Export step. Guarded so one failed write does not
+        // truncate the batch.
+        try {
+          const prevState = isRecord(day.state) ? day.state : {};
+          actions.updateDay(day.id, { state: { ...prevState, exported: true } });
+        } catch (persistErr) {
+          // eslint-disable-next-line no-console
+          console.error(`[validation-summary] could not mark day "${day.id}" exported:`, persistErr);
+        }
+
         if (!ok) {
           // strict === false: downloaded DESPITE a parity mismatch. Surface it loudly,
           // mirroring ExportStep's override warning, so the override is never silent.
@@ -747,10 +770,11 @@ export function ValidationSummary({ animalKey } = {}) {
           </div>
 
           <p className="validation-summary-hint">
-            <strong>Export Valid Only</strong> downloads one YAML file per day that is both{' '}
-            <em>Valid</em> and part of an animal&apos;s day list. Days with errors or incomplete
-            fields are not exported; a recovered day marked <em>not in day list</em> must be
-            re-linked (&quot;Add to day list&quot;) before it can be exported.
+            <strong>Export Valid Only</strong> downloads one YAML file per day that passes every
+            check (status <em>Ready to export</em>, <em>Validated</em>, or <em>Exported</em>) and is
+            part of an animal&apos;s day list. Days with errors or incomplete fields are not
+            exported; a recovered day marked <em>not in day list</em> must be re-linked
+            (&quot;Add to day list&quot;) before it can be exported.
           </p>
 
           {pendingExport && (
@@ -982,6 +1006,7 @@ export function ValidationSummary({ animalKey } = {}) {
                       const { variant, label } = dayChipDisplay(chip, day?.state, {
                         unreadable,
                         missingRecord,
+                        orphaned,
                       });
                       return (
                         <span

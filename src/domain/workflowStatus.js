@@ -20,7 +20,7 @@
 
 import { computeStepStatus, validateDay, STEP_STATUS } from './validation';
 import { isExportEnabled } from './stepGate';
-import { DAY_LIFECYCLE, DAY_LIFECYCLE_LABEL } from './dayLifecycle';
+import { DAY_LIFECYCLE, DAY_LIFECYCLE_LABEL, lifecycleForValidDay } from './dayLifecycle';
 import {
   getAnimalElectrodeGroups,
   getAnimalCameras,
@@ -291,24 +291,35 @@ function firstBlockingReason(animal, day, mergedDay, animalDays = []) {
 /**
  * The plain-language status for a recording-day LIST row (decision 12 — the row is triage, not
  * inspection). One of five mutually-exclusive states, worded from the shared {@link DAY_LIFECYCLE}
- * vocabulary so the row never contradicts the other surfaces:
- *   - `needs_fixing` — the day has a LIVE blocking issue (overrides every stored flag, so a day
- *     validated/exported before a referenced camera broke reads the honest current state, not a
- *     stale "Exported"). The reason is the blocking issue's own message.
- *   - `exported` / `validated` — the persisted history (checked before live readiness so a saved
- *     day shows the saved fact): `state.exported → Exported`, `state.validated → Validated`. The
- *     persisted `state.validated` reads as "Validated" (the saved fact), NOT "Ready to export".
- *   - `ready` — no persisted flag, but the day passes the SAME export gate right now
- *     (`isExportEnabled(computeStepStatus(...))`) → "Ready to export". This is the live-readiness
- *     state, and it MUST be surfaced here so the row agrees with Day Validation / Day Export / the
- *     Validation Summary instead of flatly reading "Draft" for an already-passing (but unsaved)
- *     day — the exact "Ready to export" vs "Draft" contradiction this phase removes.
- *   - `draft` — no persisted flag and not export-ready: the day is still incomplete → "Draft —
+ * vocabulary so the row never contradicts the other surfaces. The LIVE export gate is authoritative
+ * — a persisted Validated/Exported flag is only honoured while the day STILL passes it:
+ *   - `needs_fixing` — the day has a LIVE blocking issue: an error-severity validation issue
+ *     (overrides every stored flag, so a day validated/exported before a referenced camera broke
+ *     reads the honest current state, not a stale "Exported"), OR a step-only blocker that closes
+ *     export without a validation error (e.g. all channels bad — which `validateDay` does NOT flag),
+ *     OR a status that could not be computed. The reason is the blocking issue's own message when it
+ *     has one.
+ *   - `exported` / `validated` — the persisted history, but ONLY for a day that currently passes the
+ *     full export gate: `state.exported → Exported`, `state.validated → Validated`. A saved flag can
+ *     never claim ready while the live gate is closed. `state.validated` reads as "Validated" (the
+ *     saved fact), NOT "Ready to export".
+ *   - `ready` — passes the SAME export gate right now (`isExportEnabled(computeStepStatus(...))`) with
+ *     no persisted flag → "Ready to export". MUST be surfaced here so the row agrees with Day
+ *     Validation / Day Export / the Validation Summary instead of flatly reading "Draft" for an
+ *     already-passing (but unsaved) day — the "Ready to export" vs "Draft" contradiction this phase
+ *     removes.
+ *   - `draft` — not export-ready, no validation error, no step error: still incomplete → "Draft —
  *     incomplete".
  *
  * Read-only over the existing validation + step gate; it does not re-implement validation (it reuses
- * `validateDay`/`computeStepStatus`) and never mutates. A null `mergedDay` is already `needs_fixing`
- * via {@link firstBlockingReason}; a malformed (non-object) `state` reads as not-persisted.
+ * `validateDay`/`computeStepStatus` + the shared `lifecycleForValidDay` resolver) and never mutates.
+ * A null `mergedDay` is already `needs_fixing` via {@link firstBlockingReason}; a malformed
+ * (non-object) `state` reads as not-persisted.
+ *
+ * NOTE: this is recovery-agnostic — it reports the day's VALIDATION lifecycle, not whether the day
+ * is in its animal's export index. A caller showing a recovered-unlinked day must convey the
+ * "not in day list" state separately (see RecordingDaysTab / ValidationSummary), since such a day is
+ * not exportable until re-linked regardless of this status.
  *
  * @param {object} animal - The owning animal.
  * @param {object} day - The recording day record.
@@ -323,26 +334,47 @@ export function getDayRowStatus(animal, day, mergedDay, animalDays = []) {
   if (reason) {
     return { variant: DAY_LIFECYCLE.NEEDS_FIXING, label: `${DAY_LIFECYCLE_LABEL.needs_fixing} — ${reason}` };
   }
-  const state =
-    day?.state && typeof day.state === 'object' && !Array.isArray(day.state) ? day.state : {};
-  if (state.exported) return { variant: DAY_LIFECYCLE.EXPORTED, label: DAY_LIFECYCLE_LABEL.exported };
-  if (state.validated) return { variant: DAY_LIFECYCLE.VALIDATED, label: DAY_LIFECYCLE_LABEL.validated };
-  // No persisted flag and no blocking issue. Distinguish a day that passes the SAME export gate the
-  // Export button enforces ("Ready to export") from one still being filled in ("Draft — incomplete"),
-  // so the list row agrees with the other surfaces. `firstBlockingReason` already returned non-null
-  // for a null/unvalidatable merge, so reaching here means the merge is usable; guard the step-status
-  // computation anyway and fall back to draft (never crash the row).
-  let liveReady = false;
-  if (mergedDay) {
-    try {
-      liveReady = isExportEnabled(computeStepStatus(day, mergedDay, animal, animalDays));
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.debug(`[workflow-status] could not compute readiness for day "${day?.id}":`, err);
-    }
+  // The LIVE export gate is authoritative and is checked BEFORE the persisted flags: a saved
+  // Validated/Exported flag must not claim ready while a step-only blocker (all channels bad,
+  // incomplete prerequisites) — which `validateDay` does NOT surface as an error — currently closes
+  // export. `firstBlockingReason` already validated this day successfully (it returned null), so a
+  // throw HERE is genuine step-derivation corruption → report it honestly as "Needs fixing"
+  // (matching firstBlockingReason's throw handling), never a misleading "Draft". (computeStepStatus
+  // re-runs validateDay internally; that second pass is acceptable O(days) per row for realistic
+  // counts — see RecordingDaysTab's note.)
+  let stepStatus;
+  try {
+    stepStatus = computeStepStatus(day, mergedDay, animal, animalDays);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(`[workflow-status] could not compute readiness for day "${day?.id}":`, err);
+    return {
+      variant: DAY_LIFECYCLE.NEEDS_FIXING,
+      label: `${DAY_LIFECYCLE_LABEL.needs_fixing} — recording day status could not be computed`,
+    };
   }
-  if (liveReady) return { variant: DAY_LIFECYCLE.READY, label: DAY_LIFECYCLE_LABEL.ready };
-  return { variant: DAY_LIFECYCLE.DRAFT, label: `${DAY_LIFECYCLE_LABEL.draft} — incomplete` };
+
+  if (isExportEnabled(stepStatus)) {
+    // Currently passes the full gate → refine by persisted history. Reuse the shared resolver so the
+    // `exported > validated > ready` precedence lives in ONE place (the same one
+    // ValidationStep/ExportStep/ValidationSummary use), not a second inline copy that could drift.
+    const persisted = lifecycleForValidDay(day?.state);
+    if (persisted === DAY_LIFECYCLE.EXPORTED) {
+      return { variant: DAY_LIFECYCLE.EXPORTED, label: DAY_LIFECYCLE_LABEL.exported };
+    }
+    if (persisted === DAY_LIFECYCLE.VALIDATED) {
+      return { variant: DAY_LIFECYCLE.VALIDATED, label: DAY_LIFECYCLE_LABEL.validated };
+    }
+    return { variant: DAY_LIFECYCLE.READY, label: DAY_LIFECYCLE_LABEL.ready };
+  }
+
+  // Not currently exportable and no validation error. A step-level ERROR (e.g. all channels bad) is
+  // a blocker → "Needs fixing"; merely-incomplete prerequisites → "Draft — incomplete". A stale
+  // validated/exported flag does NOT show here — the live gate wins.
+  const hasStepError = Object.values(stepStatus).some((s) => s === STEP_STATUS.ERROR);
+  return hasStepError
+    ? { variant: DAY_LIFECYCLE.NEEDS_FIXING, label: `${DAY_LIFECYCLE_LABEL.needs_fixing} — see the validation summary` }
+    : { variant: DAY_LIFECYCLE.DRAFT, label: `${DAY_LIFECYCLE_LABEL.draft} — incomplete` };
 }
 
 /**
