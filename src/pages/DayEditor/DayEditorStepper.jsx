@@ -12,6 +12,7 @@ import SaveIndicator from './SaveIndicator';
 import OverviewStep from './OverviewStep';
 import DevicesStep from './DevicesStep';
 import TasksEpochsStep from './TasksEpochsStep';
+import BehavioralEventsStep from './BehavioralEventsStep';
 import ValidationStep from './ValidationStep';
 import ExportStep from './ExportStep';
 import ErrorState from './ErrorState';
@@ -29,6 +30,7 @@ const SECTION_GROUPS = [
     items: [
       { id: 'devices', label: 'Devices & Failed Channels' },
       { id: 'epochs', label: 'Tasks & Epochs' },
+      { id: 'behavioral', label: 'Behavioral Events' },
     ],
   },
   {
@@ -76,7 +78,7 @@ export default function DayEditorStepper() {
   // fixed, so a ref captures it once and the handler stays stable. Export is now a freely
   // reachable tab (its DOWNLOAD action self-gates in ExportStep), so there is NO keyboard
   // fail-close here — Alt+→ advances all the way into Export.
-  const stepOrderRef = useRef(['overview', 'devices', 'epochs', 'validation', 'export']);
+  const stepOrderRef = useRef(['overview', 'devices', 'epochs', 'behavioral', 'validation', 'export']);
   const goToStep = useCallback((direction) => {
     setCurrentStep((cur) => {
       const ids = stepOrderRef.current;
@@ -178,6 +180,7 @@ export default function DayEditorStepper() {
         overview: 'incomplete',
         devices: 'incomplete',
         epochs: 'incomplete',
+        behavioral: 'incomplete',
         validation: 'incomplete',
         export: 'error',
       };
@@ -366,6 +369,7 @@ export default function DayEditorStepper() {
     overview: OverviewStep,
     devices: DevicesStep,
     epochs: TasksEpochsStep,
+    behavioral: BehavioralEventsStep,
     validation: ValidationStep,
     export: ExportStep,
   };

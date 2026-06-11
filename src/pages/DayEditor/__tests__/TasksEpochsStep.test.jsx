@@ -176,19 +176,8 @@ describe('TasksEpochsStep', () => {
     expect(onFieldUpdate).toHaveBeenCalledWith('tasks', []);
   });
 
-  it('writes day behavioral events through onFieldUpdate (channel grid)', async () => {
-    const user = userEvent.setup();
-    const { onFieldUpdate } = renderStep();
-
-    // The day's behavioral events are edited as a channel grid; naming a Din channel writes through
-    // to onFieldUpdate('behavioral_events', …). Picking a suggestion is a single action (robust to
-    // the bare-spy harness that doesn't thread the value back); the full grid behavior is covered at
-    // the BehavioralEventsDisplay component level.
-    await user.click(screen.getByLabelText('Event for Din1'));
-    await user.click(screen.getByRole('option', { name: 'Poke' }));
-
-    expect(onFieldUpdate).toHaveBeenLastCalledWith('behavioral_events', [
-      { description: 'Din1', name: 'Poke1' },
-    ]);
+  it('no longer renders the behavioral-events grid (it moved to its own Behavioral Events tab)', () => {
+    renderStep();
+    expect(screen.queryByLabelText('Event for Din1')).not.toBeInTheDocument();
   });
 });

@@ -23,8 +23,16 @@ describe('stepIdForIssue', () => {
     expect(stepIdForIssue({ path: 'lens' })).toBe('devices');
   });
 
-  it('routes task/behavioral issues to the epochs step', () => {
+  it('routes task issues to the epochs step', () => {
     expect(stepIdForIssue({ path: 'tasks[0].task_name' })).toBe('epochs');
+  });
+
+  it('routes behavioral-event issues to the behavioral step (DIO has its own tab)', () => {
+    expect(stepIdForIssue({ path: 'behavioral_events[0].name' })).toBe('behavioral');
+    expect(stepIdForIssue({ instancePath: '/behavioral_events/0/name' })).toBe('behavioral');
+    expect(
+      stepIdForIssue({ path: 'behavioral_events', code: 'duplicate_behavioral_event_name', step: 'behavioral' })
+    ).toBe('behavioral');
   });
 
   it('routes fs_gui issues to the epochs step, even a camera_id path (before the camera rule)', () => {
@@ -367,7 +375,7 @@ describe('groupErrorsByStep', () => {
     expect(grouped.overview).toHaveLength(0);
   });
 
-  it('assigns task errors to epochs step', () => {
+  it('assigns task errors to the epochs step and behavioral errors to the behavioral step', () => {
     const errors = [
       { path: '/tasks/0/task_name', message: 'Required' },
       { instancePath: '/behavioral_events/0/name', message: 'Required' },
@@ -375,7 +383,8 @@ describe('groupErrorsByStep', () => {
 
     const grouped = groupErrorsByStep(errors);
 
-    expect(grouped.epochs).toHaveLength(2);
+    expect(grouped.epochs).toHaveLength(1);
+    expect(grouped.behavioral).toHaveLength(1);
     expect(grouped.overview).toHaveLength(0);
   });
 

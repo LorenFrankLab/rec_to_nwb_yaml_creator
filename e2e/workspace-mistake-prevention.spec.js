@@ -17,7 +17,7 @@
  *    from controlled selects/checkboxes of known cameras/epochs — a stale id cannot be typed in.
  *  - Task-name divergence (Day → Tasks & Epochs → Task modal): reusing a known `task_name` with a
  *    different `task_description` is blocked with old-vs-new context.
- *  - Behavioral events (Day → Tasks & Epochs): a day-owned DIO wiring table grouped into Inputs
+ *  - Behavioral events (Day → Behavioral Events tab): a day-owned DIO channel grid grouped into Inputs
  *    (Din) / Outputs (Dout); there is no animal-level library or "Use on this day" path.
  *  - Day technical read-only / route-to-Recording-System (Day → Overview → Technical parameters):
  *    `raw_data_to_volts` / `times_period_multiplier` are presented as effective recording-system
@@ -304,8 +304,9 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     ];
 
     await seedAndOpen(page, blob, `/#/day/${DAY_ID}`);
-    await page.getByRole('button', { name: /^Tasks & Epochs — / }).click();
-    await expect(page.getByRole('heading', { level: 2, name: 'Tasks & Epochs' })).toBeVisible();
+    // Behavioral events have their own day-editor tab (separate from Tasks & Epochs).
+    await page.getByRole('button', { name: /^Behavioral Events/ }).click();
+    await expect(page.getByRole('heading', { level: 2, name: 'Behavioral Events' })).toBeVisible();
 
     // Day events overlay onto their channels in the direction-grouped hardware grid: the name is
     // the VALUE of the channel's field (Din1 under Inputs, Dout7 under Outputs). `exact` so

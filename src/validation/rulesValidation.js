@@ -721,7 +721,7 @@ export const rulesValidation = (model) => {
       issues.push({
         path: 'behavioral_events',
         field: 'name',
-        step: 'epochs',
+        step: 'behavioral',
         actionLabel: 'Rename behavioral event',
         code: 'duplicate_behavioral_event_name',
         repairSurface: 'day',
@@ -1019,7 +1019,7 @@ export const rulesValidation = (model) => {
       issues.push({
         path: 'behavioral_events',
         field: 'description',
-        step: 'epochs',
+        step: 'behavioral',
         actionLabel: 'Rename behavioral event description',
         code: 'duplicate_behavioral_event_description',
         repairSurface: 'day',

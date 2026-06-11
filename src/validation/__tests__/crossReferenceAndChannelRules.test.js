@@ -563,7 +563,7 @@ describe('repair metadata on new error rules', () => {
   // A single model that trips every new error-severity rule at once, so we can
   // assert each emitted issue carries the repair metadata the Export/Validation
   // UI needs: step, an actionable path/field, and a short actionLabel.
-  const VALID_STEPS = ['overview', 'devices', 'epochs', 'validation'];
+  const VALID_STEPS = ['overview', 'devices', 'epochs', 'behavioral', 'validation'];
   const NEW_CODES = [
     'dangling_camera_ref',
     'dangling_electrode_group_ref',

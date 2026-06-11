@@ -3,7 +3,6 @@ import PropTypes from 'prop-types';
 import { ConfirmDialog } from '../../components/Modal';
 import TasksTable from './TasksTable';
 import TaskModal from './TaskModal';
-import BehavioralEventsDisplay from './BehavioralEventsDisplay';
 import AssociatedVideosEditor from './AssociatedVideosEditor';
 import AssociatedFilesEditor from './AssociatedFilesEditor';
 import FsGuiSection from './FsGuiSection';
@@ -354,13 +353,6 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
         tasks={tasks}
         onChange={(next) => onFieldUpdate('associated_files', next)}
       />
-
-      <section className="behavioral-events-block">
-        <BehavioralEventsDisplay
-          dayEvents={dayBehavioralEvents}
-          onDayEventsChange={(events) => onFieldUpdate('behavioral_events', events)}
-        />
-      </section>
 
       {/* FsGUI optogenetics protocols are day-owned and only meaningful when the animal
           has optogenetics enabled. They reference this day's epochs + the animal's

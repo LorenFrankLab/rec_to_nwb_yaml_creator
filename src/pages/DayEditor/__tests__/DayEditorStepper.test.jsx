@@ -609,11 +609,11 @@ describe('DayEditorStepper', () => {
       expect(navs.some((n) => /day editor sections/i.test(n.getAttribute('aria-label') || ''))).toBe(true);
     });
 
-    it('renders all five sections with their status glyph', () => {
+    it('renders all six sections with their status glyph', () => {
       const { container } = renderEditor();
       const nav = container.querySelector('.section-nav');
       const items = nav.querySelectorAll('.section-nav-item');
-      expect(items).toHaveLength(5);
+      expect(items).toHaveLength(6);
       // Every item carries a status glyph span (computeStepStatus-driven).
       items.forEach((item) => {
         expect(item.querySelector('.section-nav-status-icon')).not.toBeNull();
@@ -668,6 +668,7 @@ describe('DayEditorStepper', () => {
       await user.click(next); // overview → devices
       expect(screen.getByRole('button', { name: /Devices & Failed Channels/i })).toHaveAttribute('aria-current', 'page');
       await user.click(next); // → epochs
+      await user.click(next); // → behavioral
       await user.click(next); // → validation
       await user.click(next); // → export
       expect(screen.getByRole('button', { name: /^Export/i })).toHaveAttribute('aria-current', 'page');
@@ -678,8 +679,8 @@ describe('DayEditorStepper', () => {
 
     it('advances into Export via the Alt+→ keyboard shortcut (no export fail-close)', () => {
       renderEditor();
-      // overview → devices → epochs → validation → export (no gating on Export).
-      for (let i = 0; i < 4; i += 1) {
+      // overview → devices → epochs → behavioral → validation → export (no gating on Export).
+      for (let i = 0; i < 5; i += 1) {
         act(() => emitStepperShortcut('next'));
       }
       expect(screen.getByRole('button', { name: /^Export/i })).toHaveAttribute('aria-current', 'page');

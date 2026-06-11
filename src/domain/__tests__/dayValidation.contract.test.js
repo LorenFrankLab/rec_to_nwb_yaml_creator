@@ -44,6 +44,7 @@ describe('domain validation module preserves the issue list', () => {
       overview: 'valid',
       devices: 'valid',
       epochs: 'valid',
+      behavioral: 'valid',
       validation: 'valid',
       export: 'valid',
     });
@@ -122,6 +123,7 @@ describe('domain validation module preserves the issue list', () => {
       overview: 'valid',
       devices: 'error',
       epochs: 'error',
+      behavioral: 'valid',
       validation: 'valid',
       export: 'error',
     });
