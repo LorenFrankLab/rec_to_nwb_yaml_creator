@@ -1,18 +1,19 @@
 /**
- * E2E: the banner (lab logo + keyboard-shortcuts trigger) is not occluded by the primary nav.
+ * E2E: the banner (lab logo + keyboard-shortcuts trigger) does not collide with the primary nav.
  *
- * The banner (`role="banner"`) and the primary navigation (`role="navigation"`, "Primary") are
- * DOM siblings that overlap in the layout — the banner is `position: fixed` at >=750px and
- * `position: relative` below — so stacking order decides which one receives clicks. A regression in
- * that z-order (the F3 bug) let the nav's first link paint OVER the shortcuts trigger and the logo,
- * intercepting their clicks. jsdom cannot prove paint order, so this asserts it in a real viewport:
- * at the center of the logo and of the shortcuts trigger, the topmost painted element is INSIDE the
- * banner and NOT inside the nav, at a desktop and a narrow width; and the trigger still opens its
- * dialog. (Verified before the fix this failed: the topmost element at the trigger center was an
- * anchor inside the nav.)
+ * The banner (`role="banner"`) and the primary navigation (`role="navigation"`, "Primary") are DOM
+ * siblings. On the workspace routes the banner must sit in normal flow as its OWN row above the nav.
+ * The F3 bug was that the banner's desktop `position: fixed` pulled it out of flow, so the nav slid
+ * up underneath and the two overlapped — the logo + shortcuts trigger covered (or were covered by) the
+ * nav's first link. jsdom cannot prove layout, so this asserts in a real viewport that:
+ *   1. the banner box does NOT intersect the primary-nav box (no overlap), and
+ *   2. the logo and shortcuts trigger are the topmost painted elements at their centers (clickable),
+ *      and the trigger opens its dialog —
+ * at a desktop and a narrow width. (Verified before the fix this failed at desktop: the banner and
+ * nav overlapped and an anchor inside the nav was the topmost element at the trigger's center.)
  *
- * QA discipline: role/accessible-name selectors for controls; geometry probed via elementFromPoint;
- * wait on locators (never sleeps); viewport set BEFORE navigation, per test.
+ * QA discipline: role/accessible-name selectors; geometry via bounding boxes + elementFromPoint; wait
+ * on locators (never sleeps); viewport set BEFORE navigation, per test.
  */
 
 import { test, expect } from '@playwright/test';
@@ -24,15 +25,31 @@ const VIEWPORTS = [
 ];
 
 /**
+ * True iff two bounding boxes geometrically intersect.
+ *
+ * @param {{x:number,y:number,width:number,height:number}} a - First box.
+ * @param {{x:number,y:number,width:number,height:number}} b - Second box.
+ * @returns {boolean} Whether the boxes overlap.
+ */
+function boxesIntersect(a, b) {
+  return !(
+    a.x + a.width <= b.x ||
+    b.x + b.width <= a.x ||
+    a.y + a.height <= b.y ||
+    b.y + b.height <= a.y
+  );
+}
+
+/**
  * Assert that the topmost painted element at the CENTER of `locator` belongs to the banner and not
- * to the primary nav — i.e. the control is not occluded by the overlapping nav.
+ * to the primary nav — i.e. the control is reachable, not occluded.
  *
  * @param {import('@playwright/test').Page} page - The Playwright page.
  * @param {import('@playwright/test').Locator} locator - The banner control to probe.
  * @param {string} label - Human label for the assertion message.
  * @returns {Promise<void>}
  */
-async function expectBannerControlOnTop(page, locator, label) {
+async function expectBannerControlReachable(page, locator, label) {
   await expect(locator, `${label} should be visible`).toBeVisible();
   const box = await locator.boundingBox();
   expect(box, `${label} should have a layout box`).not.toBeNull();
@@ -55,19 +72,32 @@ async function expectBannerControlOnTop(page, locator, label) {
   expect(hit.inNav, `${label} should NOT be occluded by the primary nav`).toBe(false);
 }
 
-test.describe('Banner is not occluded by the primary nav (F3)', () => {
+test.describe('Banner does not collide with the primary nav (F3)', () => {
   for (const vp of VIEWPORTS) {
-    test(`logo + shortcuts trigger stay clickable at ${vp.name}`, async ({ page }) => {
+    test(`logo + shortcuts trigger stay clear of the nav at ${vp.name}`, async ({ page }) => {
       await page.setViewportSize({ width: vp.width, height: vp.height });
       await resetWorkspace(page);
 
+      const banner = page.getByRole('banner');
+      const nav = page.getByRole('navigation', { name: 'Primary' });
       const logo = page.getByRole('img', { name: 'Loren Frank Lab logo' });
       const trigger = page.getByRole('button', { name: 'Keyboard shortcuts' });
 
-      await expectBannerControlOnTop(page, logo, 'lab logo');
-      await expectBannerControlOnTop(page, trigger, 'keyboard-shortcuts trigger');
+      // 1. The banner and the nav must not overlap at all.
+      const bannerBox = await banner.boundingBox();
+      const navBox = await nav.boundingBox();
+      expect(bannerBox, 'banner should have a layout box').not.toBeNull();
+      expect(navBox, 'primary nav should have a layout box').not.toBeNull();
+      expect(
+        boxesIntersect(bannerBox, navBox),
+        'the banner must not overlap the primary nav',
+      ).toBe(false);
 
-      // The trigger is not just visible/on-top — clicking it opens the shortcuts dialog.
+      // 2. The logo and trigger are reachable (topmost at their centers).
+      await expectBannerControlReachable(page, logo, 'lab logo');
+      await expectBannerControlReachable(page, trigger, 'keyboard-shortcuts trigger');
+
+      // 3. Clicking the trigger opens the shortcuts dialog.
       await trigger.click();
       await expect(page.getByRole('dialog')).toBeVisible();
     });

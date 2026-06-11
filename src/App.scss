@@ -577,6 +577,16 @@ details {
   .home-region {
     position: fixed;
   }
+
+  // F3: on the workspace routes — the only ones that render `.primary-nav` — the banner
+  // must stay in normal flow. `position: fixed` (above) pulls it out of flow, so the nav
+  // slides up underneath it and the logo + shortcuts trigger overlap the nav's first link.
+  // In flow, the banner sits as its own row ABOVE the nav (no overlap). The frozen legacy
+  // route has no `.primary-nav`, so `:has()` leaves its fixed banner untouched. (z-index on
+  // `.home-region` remains as defense-in-depth per the z-index scale.)
+  body:has(.primary-nav) .home-region {
+    position: relative;
+  }
 }
 
 //-----------------------------

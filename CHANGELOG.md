@@ -74,11 +74,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **The lab logo and keyboard-shortcuts trigger are no longer covered by the navigation (F3).**
-  The banner (logo + shortcuts trigger) and the primary nav are overlapping siblings; the nav painted
-  over the banner and intercepted its clicks. The banner now sits above the nav via the new z-index
-  scale (`.home-region` → `var(--z-banner)`). Browser-verified at desktop and narrow widths and
-  guarded by an e2e spec.
+- **The lab logo and keyboard-shortcuts trigger no longer collide with the navigation (F3).** On the
+  workspace routes the banner's desktop `position: fixed` pulled it out of flow, so the primary nav
+  slid up underneath and the two overlapped — the logo + shortcuts trigger covered (or were covered
+  by) the nav's first link. The banner now stays in normal flow on those routes (its own row above the
+  nav); the frozen legacy route keeps its fixed banner. The banner also carries `var(--z-banner)` from
+  the new z-index scale as defense-in-depth. Browser-verified at desktop and narrow widths and guarded
+  by an e2e spec.
 - **Recording days now stay date-ordered (F2).** `createDay` and `duplicateDay`
   previously appended to the stored `animal.days` index without sorting, so a day
   added or duplicated out of chronological order left the index unordered. The
