@@ -51,5 +51,12 @@ test.describe('Day Editor — direct day-to-day navigation', () => {
       page.getByRole('heading', { level: 1, name: /Day Editor: remy - 2023-06-23/ })
     ).toBeVisible();
     await expect(sessionDescription()).toHaveValue('DAY B SESSION DESC');
+
+    // a11y: keyboard/SR users must not be stranded on the prior day. The remount alone moves no
+    // focus (DayEditorStepper skips focus on its first render), so AppLayout must focus the new main
+    // region and re-announce the route — with the day id, so the polite live region actually re-fires
+    // (identical text would be suppressed).
+    await expect(page.locator('#main-content')).toBeFocused();
+    await expect(page.locator('#route-announcer')).toContainText('remy-2023-06-23');
   });
 });

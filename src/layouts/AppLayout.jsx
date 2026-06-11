@@ -45,14 +45,19 @@ function getViewName(view) {
 }
 
 /**
- * Announce route change to screen readers
- * @param {string} view - Current view identifier
+ * Announce a route change to screen readers via the polite #route-announcer live region.
+ *
+ * Includes the routed day id for the Day Editor so consecutive day→day navigations produce DISTINCT
+ * text — a polite live region only re-announces when its content actually changes, so an identical
+ * "Navigated to Day Editor" on every day switch would be silently swallowed.
+ *
+ * @param {{ view: string, params: object }} route - The current route.
  */
-function announceRouteChange(view) {
+function announceRouteChange(route) {
   const liveRegion = document.getElementById('route-announcer');
-  if (liveRegion) {
-    liveRegion.textContent = `Navigated to ${getViewName(view)}`;
-  }
+  if (!liveRegion) return;
+  const detail = route.view === 'day' && route.params?.id ? `: ${route.params.id}` : '';
+  liveRegion.textContent = `Navigated to ${getViewName(route.view)}${detail}`;
 }
 
 /**
@@ -155,8 +160,19 @@ export function AppLayout() {
 
   // Focus management on route changes
   useEffect(() => {
-    // Only on route change (not initial render)
-    if (previousRoute.current.view !== currentRoute.view) {
+    const prev = previousRoute.current;
+    // Fire on a VIEW change, AND on a same-view change to a different routed DAY. The day route
+    // remounts a keyed editor (see renderView) but keeps view === 'day', so a plain view check would
+    // miss #/day/A → #/day/B — leaving keyboard/SR focus + the SR announcement stranded on the prior
+    // day (DayEditorStepper skips focus on its first render, so nothing else compensates). The
+    // animal-view :tab / :animalId changes are focus-managed inside AnimalView, so they are
+    // deliberately NOT handled here (doing so would fight AnimalView's panel-focus effect).
+    const viewChanged = prev.view !== currentRoute.view;
+    const dayChanged =
+      currentRoute.view === 'day' &&
+      prev.view === 'day' &&
+      prev.params.id !== currentRoute.params.id;
+    if (viewChanged || dayChanged) {
       requestAnimationFrame(() => {
         // Move focus to main content
         const main = document.getElementById('main-content');
@@ -164,7 +180,7 @@ export function AppLayout() {
           main.focus();
 
           // Announce to screen readers
-          announceRouteChange(currentRoute.view);
+          announceRouteChange(currentRoute);
         }
       });
     }

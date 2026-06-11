@@ -86,7 +86,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The Day Editor is now remounted per routed day id, so a direct `#/day/A` → `#/day/B` change (e.g.
   browser back/forward between days) shows the new day's data — previously the Overview
   Session/Experiment Description fields could keep the prior day's text, and a later edit could
-  write it into the wrong day.
+  write it into the wrong day. The same direct day→day change now also moves focus to the new day's
+  main region and announces it (with the day id) to screen readers, so keyboard/SR users aren't
+  stranded on the prior day's context.
 - **Replace-importing onto an animal with a missing/empty hardware-configuration history now pins
   each day to the correct probe configuration.** A version-reservation race could duplicate
   configuration "version 1" during a replace import, silently pinning a reconfigured day to the
