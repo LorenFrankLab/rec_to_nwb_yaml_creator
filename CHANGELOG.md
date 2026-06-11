@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Design-token + CSS-Modules styling foundation.** Extended the `:root` token set in
+  `src/index.css` with a grey-500, a radius scale (`--radius-sm/md`), a shadow scale
+  (`--shadow-sm/--shadow-modal`), and a **z-index scale** (`--z-base` … `--z-skip-link`) that is now
+  the single source of truth for stacking order. Stood up **CSS Modules** with one canonical,
+  token-driven button primitive (`src/components/ui/Button`) replacing the divergent global
+  `.button-*` color copies; migration of the rest is incremental. Added **stylelint**
+  (`npm run lint:css`) enforcing tokens on `z-index`/`color`/`background-color` at warn-level. No
+  change to the exported YAML.
 - **Incremental TypeScript support (toolchain only; no runtime or export change).** `.ts`/`.tsx`
   now coexist with `.js`/`.jsx` (`tsconfig.json` with `allowJs`, `checkJs: false`, `strict`). A new
   `npm run typecheck` (`tsc --noEmit`) runs as its own CI job and is the **only** type-check — the
@@ -66,6 +74,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The workspace header is now a single app bar; the logo and keyboard-shortcuts trigger no longer
+  collide with the navigation (F3).** The banner's desktop `position: fixed` pulled it out of flow, so
+  the primary nav slid up underneath and the logo + shortcuts overlapped it. The workspace routes now
+  render one app-bar row — logo (left), primary nav, keyboard-shortcuts trigger (right) — which at
+  narrow widths drops the nav to its own row beneath the logo + shortcuts. The frozen legacy route
+  keeps its original fixed banner with the logo + shortcuts grouped. The banner also carries
+  `var(--z-banner)` from the new z-index scale as defense-in-depth. Browser-verified at desktop and
+  narrow widths and guarded by an e2e spec.
 - **Recording days now stay date-ordered (F2).** `createDay` and `duplicateDay`
   previously appended to the stored `animal.days` index without sorting, so a day
   added or duplicated out of chronological order left the index unordered. The

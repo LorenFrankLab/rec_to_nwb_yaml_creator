@@ -1,0 +1,22 @@
+{
+  "extends": ["stylelint-config-standard-scss"],
+  "plugins": ["stylelint-declaration-strict-value"],
+  "defaultSeverity": "warning",
+  "rules": {
+    "scale-unlimited/declaration-strict-value": [
+      ["z-index", "color", "background-color"],
+      {
+        "ignoreValues": [
+          "transparent",
+          "currentColor",
+          "inherit",
+          "initial",
+          "unset",
+          "revert",
+          "none",
+          "auto"
+        ]
+      }
+    ]
+  }
+}

@@ -351,6 +351,47 @@ small, stable public surface (e.g. the YAML codec) is typed under `strict` with 
 change**; verify it against its existing tests and the golden baselines (`npx vitest run baselines`)
 before moving on. Components (`.jsx` → `.tsx`) and `checkJs: true` are intentionally deferred.
 
+## Styling
+
+**Design tokens** live in `src/index.css` `:root` and are available app-wide (index.css loads on
+every route). Use them instead of raw values: colors (`--color-primary`, `--color-error`,
+`--color-grey-*`, …), spacing (`--spacing-*`), typography (`--font-size-*`), radius
+(`--radius-sm/md`), shadow (`--shadow-sm/--shadow-modal`), transitions, and the **z-index scale**.
+
+**The z-index scale is the single source of truth for stacking** — never invent a new magic number:
+
+```css
+--z-base: 1;        /* in-flow positioned content (e.g. .primary-nav) */
+--z-banner: 5;      /* the .home-region banner (logo + shortcuts trigger) */
+--z-sticky: 10;     /* sticky toolbars / stepper headers */
+--z-popover: 40;    /* menus, autocompletes, switchers */
+--z-overlay: 100;   /* in-page overlays */
+--z-modal: 1000;    /* modal overlays */
+--z-skip-link: 1100;/* skip link must beat the modal */
+```
+
+Some legacy stylesheets still use raw z-indexes; migrate them to the scale **as you touch them**
+(don't sweep unrelated files in an unrelated change).
+
+**CSS Modules for component styles.** New/migrated component styles go in `*.module.css` (CRA-native,
+locally scoped — collisions are structurally impossible), imported as `import styles from
+'./X.module.css'` and referenced `className={styles.foo}`. The canonical example is the token-driven
+button primitive `src/components/ui/Button.jsx` (+ `Button.module.css`) — prefer it over the legacy
+global `.button-*` classes. Plain `.css`/`.scss` (non-module) files are **global**: scope their class
+names under a component-root to avoid collisions. Migration is incremental — convert a component's
+styles to a module only when a phase touches it.
+
+**stylelint** (`npm run lint:css`) enforces tokens on `z-index`/`color`/`background-color` and flags
+style debt. It runs at **warn-level** (`defaultSeverity: "warning"` in `.stylelintrc.json`) so it
+reports without failing the gate today; a later phase ratchets it to error-level.
+
+> Note: `.npmrc` sets `legacy-peer-deps=true`. react-scripts@5 pins `typescript` as an optional peer
+> at `^3||^4` while this project uses `typescript@5`, so without it any new `npm install` fails
+> ERESOLVE on that optional-peer mismatch. It keeps install and `npm ci` tolerant and in sync.
+> **Trade-off:** `legacy-peer-deps` stops npm auto-installing *peer* dependencies tree-wide, so when a
+> dependency relies on a peer you need at runtime or in tests (e.g. `@testing-library/dom` for
+> `@testing-library/react`), **declare that peer explicitly** in `devDependencies`/`dependencies`.
+
 ## Using Playwright (for Claude)
 
 This repo has **two** Playwright surfaces. Use the right one:

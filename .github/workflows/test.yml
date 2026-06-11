@@ -42,6 +42,12 @@ jobs:
       - name: Run linter
         run: npm run lint
 
+      - name: Run CSS linter (stylelint)
+        # Warn-level for now (defaultSeverity is "warning"): this runs and reports token /
+        # style debt without failing the gate. Phase 9 ratchets stylelint to error-level when
+        # the build gate is re-armed.
+        run: npm run lint:css
+
       - name: Run all tests (no coverage)
         run: npm test -- run
 

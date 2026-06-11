@@ -21,6 +21,11 @@
   margin: 5px 0 5px 10px;
   padding: 0;
   position: relative;
+  // F3: the banner (logo + keyboard-shortcuts trigger) must sit above .primary-nav
+  // (var(--z-base)), which is a later DOM sibling and would otherwise paint over and
+  // intercept clicks. position is already set (relative here, fixed at >=750px below),
+  // so this z-index takes effect in both layouts.
+  z-index: var(--z-banner);
 
   a {
     padding: 0;
@@ -572,6 +577,16 @@ details {
   .home-region {
     position: fixed;
   }
+
+  // F3: on the workspace routes — the only ones that render `.primary-nav` — the banner
+  // must stay in normal flow. `position: fixed` (above) pulls it out of flow, so the nav
+  // slides up underneath it and the logo + shortcuts trigger overlap the nav's first link.
+  // In flow, the banner sits as its own row ABOVE the nav (no overlap). The frozen legacy
+  // route has no `.primary-nav`, so `:has()` leaves its fixed banner untouched. (z-index on
+  // `.home-region` remains as defense-in-depth per the z-index scale.)
+  body:has(.primary-nav) .home-region {
+    position: relative;
+  }
 }
 
 //-----------------------------
@@ -632,7 +647,8 @@ details {
   position: absolute;
   left: -9999px;
   top: 0;
-  z-index: 999;
+  z-index: var(--z-skip-link); // must beat the modal overlay (var(--z-modal)); was 999, below it
+
   padding: 0.75rem 1.5rem;
   background-color: #1976d2;
   color: white;

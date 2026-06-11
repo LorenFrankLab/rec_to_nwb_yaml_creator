@@ -214,6 +214,37 @@ export function AppLayout() {
     }
   }
 
+  const isLegacyRoute = currentRoute.view === 'legacy';
+
+  // The lab logo doubles as the in-app "home": legacy returns to the form, the new routes
+  // go to the workspace. Shared between the legacy banner and the workspace app-bar.
+  const logoLink = isLegacyRoute ? (
+    <a href="#/" aria-label="Return to metadata form">
+      <img src={logo} alt="Loren Frank Lab logo" />
+    </a>
+  ) : (
+    <a href="#/workspace" aria-label="Go to workspace">
+      <img src={logo} alt="Loren Frank Lab logo" />
+    </a>
+  );
+
+  // Keyboard-shortcuts trigger — a right-aligned utility in the workspace app-bar; grouped
+  // with the logo in the legacy banner. Rendered once (here) so its ref/focus wiring is shared.
+  const shortcutsButton = (
+    <button
+      ref={shortcutsTriggerRef}
+      type="button"
+      className="shortcuts-trigger"
+      onClick={() => setShortcutsOpen(true)}
+      aria-label="Keyboard shortcuts"
+      aria-haspopup="dialog"
+      title="Keyboard shortcuts (press ?)"
+    >
+      <span aria-hidden="true">⌨</span>
+      <span className="visually-hidden">Keyboard shortcuts</span>
+    </button>
+  );
+
   return (
     <>
       {/* Skip links for keyboard accessibility (WCAG 2.1 Level A - 2.4.1) */}
@@ -245,80 +276,64 @@ export function AppLayout() {
           to the form, but on the new-model routes (workspace / animal / day / validation) it goes to
           the WORKSPACE — clicking it must not dump the user back into the legacy form. This does NOT
           change the default `#/` landing (a fresh visit still renders legacy); only the in-app target. */}
-      <div className="home-region" role="banner">
-        {currentRoute.view === 'legacy' ? (
-          <a href="#/" aria-label="Return to metadata form">
-            <img src={logo} alt="Loren Frank Lab logo" />
-          </a>
-        ) : (
-          <a href="#/workspace" aria-label="Go to workspace">
-            <img src={logo} alt="Loren Frank Lab logo" />
-          </a>
-        )}
-        <button
-          ref={shortcutsTriggerRef}
-          type="button"
-          className="shortcuts-trigger"
-          onClick={() => setShortcutsOpen(true)}
-          aria-label="Keyboard shortcuts"
-          aria-haspopup="dialog"
-          title="Keyboard shortcuts (press ?)"
-        >
-          <span aria-hidden="true">⌨</span>
-          <span className="visually-hidden">Keyboard shortcuts</span>
-        </button>
-      </div>
+      {isLegacyRoute ? (
+        // Frozen legacy route: the banner keeps its original logo + shortcuts grouping
+        // (there is no primary nav here).
+        <div className="home-region" role="banner">
+          {logoLink}
+          {shortcutsButton}
+        </div>
+      ) : (
+        // Workspace routes: a single app-bar row — logo (left), the primary nav, and the
+        // keyboard-shortcuts trigger pushed to the right. The primary nav is the workspace's
+        // single navigation landmark; the "Use Legacy Editor" toggle is hidden until the
+        // cutover enables `showLegacyToggle`.
+        <div className="app-bar">
+          <div className="home-region" role="banner">{logoLink}</div>
+          <nav className="primary-nav" role="navigation" aria-label="Primary">
+            <a
+              href="#/workspace"
+              aria-current={currentRoute.view === 'workspace' ? 'page' : undefined}
+            >
+              Workspace
+            </a>
+            {/* Task 4.5: on an animal route, the top object-selector switches the CURRENT animal
+                (`Workspace ▸ <animal> ▾`). Its lifecycle delegates up to AppLayout's shared delete
+                dialog + the workspace create handshake. Elsewhere there is no current animal, so the
+                selector is omitted and the plain nav stands. */}
+            {currentRoute.view === 'animal-view' && animals[currentRoute.params.animalId] && (
+              <>
+                <span className="primary-nav-sep" aria-hidden="true">▸</span>
+                <AnimalSwitcher
+                  currentAnimalId={currentRoute.params.animalId}
+                  animals={animals}
+                  days={days}
+                  onRequestDelete={setPendingDeleteAnimalId}
+                  onRequestCreate={requestCreateAnimal}
+                  onRequestEditProfile={setPendingProfileAnimalId}
+                />
+              </>
+            )}
+            {/* Batch / cross-animal Validation & Export is the chrome-level home for the preflight
+                (Task 4.3/4.4); the per-animal export tab links UP to it. The redundant standalone
+                "Home" entry is dropped — create-animal now lives in the workspace picker. */}
+            <a
+              href="#/validation"
+              aria-current={currentRoute.view === 'validation' ? 'page' : undefined}
+            >
+              Validation &amp; Export
+            </a>
+            {isFeatureEnabled('showLegacyToggle') && (
+              <a href="#/" className="legacy-toggle">
+                Use Legacy Editor
+              </a>
+            )}
+          </nav>
+          {shortcutsButton}
+        </div>
+      )}
 
       <ShortcutsHelp isOpen={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
-
-      {/*
-        Primary navigation makes the workspace discoverable. Rendered on the new
-        (non-legacy) routes only: the legacy view supplies its own in-page
-        "Form section navigation" landmark, so scoping this here keeps exactly one
-        navigation landmark per route. The "Use Legacy Editor" toggle is hidden until
-        the cutover enables `showLegacyToggle`.
-      */}
-      {currentRoute.view !== 'legacy' && (
-        <nav className="primary-nav" role="navigation" aria-label="Primary">
-          <a
-            href="#/workspace"
-            aria-current={currentRoute.view === 'workspace' ? 'page' : undefined}
-          >
-            Workspace
-          </a>
-          {/* Task 4.5: on an animal route, the top object-selector switches the CURRENT animal
-              (`Workspace ▸ <animal> ▾`). Its lifecycle delegates up to AppLayout's shared delete
-              dialog + the workspace create handshake. Elsewhere there is no current animal, so the
-              selector is omitted and the plain nav stands. */}
-          {currentRoute.view === 'animal-view' && animals[currentRoute.params.animalId] && (
-            <>
-              <span className="primary-nav-sep" aria-hidden="true">▸</span>
-              <AnimalSwitcher
-                currentAnimalId={currentRoute.params.animalId}
-                animals={animals}
-                days={days}
-                onRequestDelete={setPendingDeleteAnimalId}
-                onRequestCreate={requestCreateAnimal}
-                onRequestEditProfile={setPendingProfileAnimalId}
-              />
-            </>
-          )}
-          {/* Batch / cross-animal Validation & Export is the chrome-level home for the preflight
-              (Task 4.3/4.4); the per-animal export tab links UP to it. The redundant standalone
-              "Home" entry is dropped — create-animal now lives in the workspace picker. */}
-          <a
-            href="#/validation"
-            aria-current={currentRoute.view === 'validation' ? 'page' : undefined}
-          >
-            Validation &amp; Export
-          </a>
-          {isFeatureEnabled('showLegacyToggle') && (
-            <a href="#/" className="legacy-toggle">
-              Use Legacy Editor
-            </a>
-          )}
-        </nav>
-      )}
 
       {/* Notice when previously-saved workspace data could not be restored, so a
           discarded (corrupt / incompatible-version) workspace is never silent. */}
