@@ -123,9 +123,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   are replaced with token-colored **text labels** — the one badge that overloaded two problems is
   split into distinct "Needs epochs" and "Missing camera" labels (an error like a reused epoch or a
   missing required field reads as text, too). The optional, epoch-linked editors — associated
-  videos, associated files, and FsGUI protocols — are now collapsed-by-default sections (each
-  showing an item count), preceded by a one-line note that they reference a task's epochs and that
-  editing or deleting a referenced task asks you to confirm before the link is cleared (so the
+  videos, associated files, and FsGUI protocols — are now collapsible sections (an empty one is
+  collapsed to reduce noise; a section that already holds data stays open so it is never hidden),
+  each showing an item count, preceded by a one-line note that they reference a task's epochs and
+  that editing or deleting a referenced task asks you to confirm before the link is cleared (so the
   repair dialog is expected, not a surprise). Add-button labels and section heading levels are
   normalized. `day.tasks` and the exported YAML are unchanged (golden baselines byte-identical), and
   the redesigned step has zero automated-accessibility (axe) violations.

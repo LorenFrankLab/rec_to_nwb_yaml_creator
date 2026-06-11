@@ -55,7 +55,9 @@ function getStatuses(task, cameras, duplicateEpochs = new Set()) {
   if (collidingEpochs.length > 0) {
     return [{
       tone: 'error',
-      label: 'Epoch reused',
+      // Name the epoch(s) in the visible label — this is an export blocker with no other inline
+      // surfacing, so it must be self-contained without relying on the tooltip.
+      label: `Epoch ${collidingEpochs.join(', ')} reused`,
       detail:
         `Epoch ${collidingEpochs.join(', ')} also used by another task — ` +
         `each epoch belongs to exactly one task`,
@@ -82,7 +84,8 @@ function getStatuses(task, cameras, duplicateEpochs = new Set()) {
 
 /**
  * TasksTable - CRUD table for a day's tasks, mirroring CamerasSection's table /
- * empty-state / status-badge conventions. Delete is confirmed via the shared
+ * empty-state conventions (per-task status is shown as token-colored text labels, not a
+ * glyph badge). Delete is confirmed via the shared
  * ConfirmDialog (no raw window.confirm). Add/Edit/Delete are delegated to the
  * parent, which owns task persistence through onFieldUpdate.
  *
@@ -231,7 +234,10 @@ export default function TasksTable({
                         className={`task-status task-status-${s.tone}`}
                         title={s.detail}
                       >
-                        {s.label}
+                        <span className="task-status-label">{s.label}</span>
+                        {/* The fuller explanation (which fields/epochs) reaches screen readers,
+                            which don't reliably announce `title`. */}
+                        {s.detail !== s.label && <span className="sr-only"> — {s.detail}</span>}
                       </span>
                     ))}
                   </span>

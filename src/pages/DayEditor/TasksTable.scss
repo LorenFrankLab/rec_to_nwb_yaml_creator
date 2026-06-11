@@ -1,6 +1,7 @@
 /**
- * TasksTable styling — mirrors CamerasSection's table / empty-state / status-badge
- * conventions, scoped to the Day Editor page. Reuses the DayEditor CSS variables.
+ * TasksTable styling — mirrors CamerasSection's table / empty-state conventions, scoped to the
+ * Day Editor page. Per-task status renders as token-colored text labels (`.task-status-*`), not a
+ * glyph badge. Reuses the DayEditor CSS variables.
  */
 
 .tasks-table-section {
@@ -11,7 +12,7 @@
   .section-header {
     margin-bottom: var(--spacing-lg, 1.5rem);
 
-    h2 {
+    h3 {
       font-size: var(--font-size-xl, 1.5rem);
       font-weight: 500;
       margin: 0 0 var(--spacing-sm, 0.5rem) 0;

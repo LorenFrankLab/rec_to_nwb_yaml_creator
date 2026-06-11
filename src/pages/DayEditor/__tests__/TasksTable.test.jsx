@@ -63,8 +63,8 @@ describe('TasksTable', () => {
 
     const sleepRow = screen.getByRole('row', { name: /sleep/i });
     const runRow = screen.getByRole('row', { name: /run/i });
-    expect(within(sleepRow).getByText('Epoch reused')).toBeInTheDocument();
-    expect(within(runRow).getByText('Epoch reused')).toBeInTheDocument();
+    expect(within(sleepRow).getByText('Epoch 2 reused')).toBeInTheDocument();
+    expect(within(runRow).getByText('Epoch 2 reused')).toBeInTheDocument();
     // The detail (which epoch, and why) is the label's tooltip.
     expect(
       within(sleepRow).getByTitle(/epoch 2 .*another task|each epoch belongs to exactly one task/i)
