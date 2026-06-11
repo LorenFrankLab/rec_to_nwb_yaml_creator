@@ -74,6 +74,40 @@ describe('domain validation module preserves the issue list', () => {
     expect(validateDay(dayRef, merged, animal).some((i) => i.code === 'dangling_data_acq_ref')).toBe(false);
   });
 
+  it('a recording-system CATALOG with the same name but divergent hardware is BLOCKED (divergent_data_acq_identity, animal)', () => {
+    // The merge collapses the catalog to ONE exported device, so the merged-model identity rule
+    // can never see a divergent duplicate — it must be caught at the raw animal catalog.
+    const { animal, day } = buildRealisticWorkspace();
+    const first = getDataAcqDevices(animal)[0];
+    animal.devices.data_acq_device = [
+      { ...first, name: 'SpikeGadgets', system: 'MCU' },
+      { ...first, name: 'SpikeGadgets', system: 'ECU' }, // same name, different hardware
+    ];
+    const merged = mergeDayMetadata(animal, day);
+
+    const issue = validateDay(day, merged, animal).find((i) => i.code === 'divergent_data_acq_identity');
+    expect(issue).toBeTruthy();
+    expect(issue.ownerSurface).toBe('animal');
+    expect(issue.step).toBe('devices');
+    expect(issue.severity).toBe('error');
+  });
+
+  it('a catalog with identical same-named entries, or with unique names, raises no divergence', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    const first = getDataAcqDevices(animal)[0];
+    // Identical duplicates → same identity, allowed.
+    animal.devices.data_acq_device = [{ ...first }, { ...first }];
+    let merged = mergeDayMetadata(animal, day);
+    expect(validateDay(day, merged, animal).some((i) => i.code === 'divergent_data_acq_identity')).toBe(false);
+    // Distinct names → distinct identities, allowed.
+    animal.devices.data_acq_device = [
+      { ...first, name: 'Rig A', system: 'MCU' },
+      { ...first, name: 'Rig B', system: 'ECU' },
+    ];
+    merged = mergeDayMetadata(animal, day);
+    expect(validateDay(day, merged, animal).some((i) => i.code === 'divergent_data_acq_identity')).toBe(false);
+  });
+
   it('a day with a channel, camera, and stale-override fault yields the exact contract', () => {
     const { animal, day } = buildRealisticWorkspace();
     const merged = mergeDayMetadata(animal, day);

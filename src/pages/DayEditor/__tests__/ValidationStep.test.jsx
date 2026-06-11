@@ -179,4 +179,33 @@ describe('ValidationStep', () => {
     expect(screen.queryByText(/must have required property/i)).not.toBeInTheDocument();
     expect(screen.getByText(/blocked/i)).toBeInTheDocument();
   });
+
+  it('surfaces the cross-day bad-channel monotonicity block (and is NOT "ready") when animalDays is threaded', () => {
+    // The Validation summary must reflect the SAME export gate the Export step enforces. A day
+    // that silently un-fails an earlier same-config bad channel is export-blocked, but the block
+    // only exists relative to the animal's OTHER days — so the summary must receive `animalDays`.
+    // Without it (the pre-fix bug) this day reads "ready to export" while Export actually blocks it.
+    const { animal, day: day1 } = buildRealisticWorkspace();
+    day1.deviceOverrides = { bad_channels: { 1: [2] } }; // ntrode 1, channel 2 bad on the earlier day
+    const day2 = structuredClone(day1);
+    day2.id = 'remy-2023-06-23';
+    day2.date = '2023-06-23';
+    day2.experimentDate = '06232023';
+    day2.deviceOverrides = { bad_channels: { 1: [] } }; // later day silently un-fails it (no ack)
+    animal.days = [day1.id, day2.id];
+    const mergedDay = mergeDayMetadata(animal, day2);
+
+    render(
+      <ValidationStep
+        animal={animal}
+        day={day2}
+        mergedDay={mergedDay}
+        animalDays={[day1, day2]}
+        onNavigate={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText(/marked bad on an earlier recording day/i)).toBeInTheDocument();
+    expect(screen.queryByText(/ready to export/i)).not.toBeInTheDocument();
+  });
 });

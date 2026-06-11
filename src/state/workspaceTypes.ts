@@ -80,6 +80,12 @@ export interface Animal {
   cameras: Camera[];
   /** Lab and experimenter details. */
   experimenters: ExperimenterInfo;
+  /**
+   * Animal-level default experiment description. A day with no per-session
+   * `experiment_description` inherits this in the export merge (the OverviewStep
+   * "leave blank to use animal's default" hint). Optional; defaults to `''`.
+   */
+  experiment_description?: string;
   /** Defaults copied into new days. */
   technicalDefaults: TechnicalDefaults;
   /** Optional optogenetics setup. */

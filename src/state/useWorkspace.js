@@ -114,7 +114,12 @@ export function useWorkspace(initialState = null) {
     }
 
     setHasPendingWrite(true);
-    const timer = setTimeout(() => {
+    let retryTimer = null;
+    // One bounded automatic retry after a transient failure, so recovery doesn't depend solely on
+    // the user noticing the SaveIndicator (a later edit, or Ctrl/Cmd+S, also re-attempts). Bounded
+    // by `retriesLeft` so a persistent failure (e.g. quota) can't become a save storm; both timers
+    // are cleared on cleanup, and a workspace change re-runs the effect from scratch.
+    const attempt = (retriesLeft) => {
       try {
         saveWorkspace(workspace);
         setLastSaved(new Date().toISOString());
@@ -124,10 +129,17 @@ export function useWorkspace(initialState = null) {
         setHasPendingWrite(false);
       } catch (err) {
         setSaveError(`Could not save workspace: ${err.message}`);
+        if (retriesLeft > 0) {
+          retryTimer = setTimeout(() => attempt(retriesLeft - 1), 2000);
+        }
       }
-    }, 500);
+    };
+    const timer = setTimeout(() => attempt(1), 500);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      if (retryTimer) clearTimeout(retryTimer);
+    };
   }, [workspace]);
 
   /**

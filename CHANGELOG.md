@@ -82,6 +82,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Day Validation tab no longer reads "Ready to export" while Export is actually blocked.** The
+  per-day Validation summary computed its issue list and readiness without the animal's other days,
+  so a day that silently un-fails an earlier same-configuration bad channel (the bad-channel
+  *monotonicity* block) showed no error and read as ready, even though the Export step correctly
+  blocked the download and its acknowledge-repair was unreachable from the summary. The summary now
+  receives the same cross-day context the Export gate uses, so the two always agree.
+- **A recording-system catalog with the same device name but divergent hardware is now caught at
+  export.** The Spyglass device-identity rule only saw the single device the export merge resolves,
+  so two same-named `data_acq_device` catalog entries with different system/amplifier/adc_circuit
+  (from a hand-edited or imported workspace) slipped past the gate; it is now validated against the
+  raw animal catalog and surfaced as a repairable Animal-Setup error.
+- **The export download filename is now locale-independent** (`toLowerCase`, not
+  `toLocaleLowerCase`), so the same metadata yields the same `{date}_{subject_id}_metadata.yml` on
+  every machine regardless of OS locale. The YAML contents are unchanged.
+- **Persistence hardening (no behavior change for a healthy save).** The one-time bad-channel
+  base→day migration no longer re-runs on every autosave — it is a load-time concern, so its
+  idempotency is no longer a load-bearing invariant of the hot write path (the migration still runs
+  on load). A transient autosave failure now gets one bounded automatic retry before falling back to
+  the existing save-error indicator + unsaved-work guard.
 - **The workspace header is now a single app bar; the logo and keyboard-shortcuts trigger no longer
   collide with the navigation (F3).** The banner's desktop `position: fixed` pulled it out of flow, so
   the primary nav slid up underneath and the logo + shortcuts overlapped it. The workspace routes now

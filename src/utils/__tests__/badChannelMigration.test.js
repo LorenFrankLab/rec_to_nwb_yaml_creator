@@ -667,4 +667,22 @@ describe('normalizeWorkspaceDevices runs the migration at load', () => {
       expect(n.bad_channels).toEqual([]);
     });
   });
+
+  it('does NOT migrate when migrateBadChannels:false (the save path is shape-only)', () => {
+    // The save path runs device-shape normalization but skips the one-time base→day migration,
+    // so a snapshot's base marks are left in place rather than moved (the migration is a load
+    // concern; the in-memory workspace was already migrated on hydrate).
+    const { workspace, animalId } = realisticWorkspace();
+    const baseBefore = workspace.animals[animalId].configurationHistory[0]
+      .devices.ntrode_electrode_group_channel_map.map((n) => n.bad_channels);
+    // Sanity: the fixture has at least one non-empty base mark, else the assertion is vacuous.
+    expect(baseBefore.some((marks) => marks.length > 0)).toBe(true);
+
+    const saved = normalizeWorkspaceDevices(workspace, { migrateBadChannels: false });
+
+    const snap = saved.animals[animalId].configurationHistory[0];
+    snap.devices.ntrode_electrode_group_channel_map.forEach((n, i) => {
+      expect(n.bad_channels).toEqual(baseBefore[i]); // base untouched — migration skipped
+    });
+  });
 });
