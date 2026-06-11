@@ -18,10 +18,11 @@
 import YAML from 'yaml';
 
 /**
- * Encodes a JavaScript object to deterministic YAML string format
+ * Encodes a JavaScript value to deterministic YAML string format.
  *
- * @param {object} model - JavaScript object to convert to YAML
- * @returns {string} YAML representation with deterministic formatting
+ * The value is assigned directly to a fresh `Document`'s `contents` (rather than
+ * passed to the constructor) so it is serialized as-is — this exact behavior is
+ * what the golden baselines pin, so do not change it.
  *
  * @example
  * const data = { name: 'test', value: 123 };
@@ -34,21 +35,20 @@ import YAML from 'yaml';
  * const yaml2 = encodeYaml(data);
  * console.assert(yaml1 === yaml2, 'Deterministic output');
  */
-export function encodeYaml(model) {
+export function encodeYaml(model: unknown): string {
   const doc = new YAML.Document();
-  doc.contents = model || {};
+  // `yaml` accepts a plain JS value as `contents` and serializes it directly, but
+  // its published types narrow the setter to `Node | null`; assert through `unknown`
+  // (compile-time only — no runtime change).
+  doc.contents = (model || {}) as unknown as typeof doc.contents;
 
   return doc.toString();
 }
 
 /**
- * Decodes a YAML string to a JavaScript object
- *
- * @param {string} text - YAML string to parse
- * @returns {object|null} Parsed JavaScript object, or null for empty input
+ * Decodes a YAML string to a JavaScript value.
  *
  * @throws {YAMLParseError} If YAML string is malformed or has syntax errors
- * @throws {TypeError} If text is not a string
  *
  * @example
  * // Valid YAML parsing
@@ -69,32 +69,27 @@ export function encodeYaml(model) {
  *   console.error('Parse failed:', error.message);
  *   // Error message includes line/column info
  * }
- *
- * @example
- * // Non-string input throws TypeError
- * try {
- *   decodeYaml(null);
- * } catch (error) {
- *   console.error('Type error:', error.message);
- * }
  */
-export function decodeYaml(text) {
+export function decodeYaml(text: string): unknown {
   return YAML.parse(text);
 }
 
 /**
- * Generates deterministic filename for metadata YAML export
+ * The subset of a form-data model that {@link formatDeterministicFilename} reads.
+ * Callers pass the full model; only these fields are consulted.
+ */
+interface FilenameModel {
+  EXPERIMENT_DATE_in_format_mmddYYYY?: string;
+  subject?: { subject_id?: string };
+}
+
+/**
+ * Generates a deterministic filename for metadata YAML export.
  *
  * Format: {EXPERIMENT_DATE_in_format_mmddYYYY}_{subject_id}_metadata.yml
  *
- * This filename format is required by trodes_to_nwb Python package.
- * The file scanner expects this pattern to group files by recording session.
- *
- * @param {object} model - Form data model containing experiment date and subject ID
- * @param {string} model.EXPERIMENT_DATE_in_format_mmddYYYY - Experiment date (mmddYYYY format)
- * @param {object} model.subject - Subject information
- * @param {string} model.subject.subject_id - Subject identifier
- * @returns {string} Deterministic filename following trodes_to_nwb convention
+ * This filename format is required by trodes_to_nwb Python package. The file scanner
+ * expects this pattern to group files by recording session.
  *
  * @example
  * const model = {
@@ -104,27 +99,24 @@ export function decodeYaml(text) {
  * const filename = formatDeterministicFilename(model);
  * // Returns: "06222023_rat01_metadata.yml"
  */
-export function formatDeterministicFilename(model) {
+export function formatDeterministicFilename(model: FilenameModel): string {
   const experimentDate = model.EXPERIMENT_DATE_in_format_mmddYYYY || '{EXPERIMENT_DATE_in_format_mmddYYYY}';
   const subjectId = (model.subject?.subject_id || '').toLocaleLowerCase();
   return `${experimentDate}_${subjectId}_metadata.yml`;
 }
 
 /**
- * Creates and triggers download of a YAML file in the browser
+ * Creates and triggers download of a YAML file in the browser.
  *
  * Creates a blob URL for the YAML content and immediately revokes it after
  * triggering the download to prevent memory leaks.
- *
- * @param {string} fileName - Name for the downloaded file (e.g., "metadata.yml")
- * @param {string} content - YAML content as a string
  *
  * @example
  * const yamlContent = encodeYaml({ key: 'value' });
  * downloadYamlFile('config.yml', yamlContent);
  * // Triggers browser download of config.yml
  */
-export function downloadYamlFile(fileName, content) {
+export function downloadYamlFile(fileName: string, content: string): void {
   const blob = new Blob([content], { type: 'text/yaml;charset=utf-8;' });
   const downloadLink = document.createElement('a');
   const url = URL.createObjectURL(blob);

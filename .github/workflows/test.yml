@@ -45,6 +45,30 @@ jobs:
       - name: Run all tests (no coverage)
         run: npm test -- run
 
+  # Static TypeScript gate. Runs in parallel (no `needs:`) and is fast: the Babel
+  # build does NOT type-check, so `tsc --noEmit` is the only thing that does. It
+  # type-checks the migrated `.ts`/`.tsx` files (checkJs is off, so `.js` is parsed
+  # but not type-checked) and grows as more modules are converted.
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check (tsc --noEmit)
+        run: npm run typecheck
+
   # Coverage + threshold enforcement, isolated from the correctness gate. Runs in
   # parallel (no `needs:`) so coverage feedback is not delayed. The `test:coverage`
   # script raises testTimeout to 120s to size the per-test budget to coverage's cost

@@ -22,7 +22,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import YAML from 'yaml';
-import { encodeYaml as convertObjectToYAMLString } from '../../io/yaml.js';
+import { encodeYaml as convertObjectToYAMLString } from '../../io/yaml';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

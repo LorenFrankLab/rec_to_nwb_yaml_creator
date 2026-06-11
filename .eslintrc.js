@@ -33,10 +33,31 @@ module.exports = {
     parserOptions: {
       ecmaVersion: 2020,
     },
+    // TypeScript files are parsed with @typescript-eslint/parser so converted
+    // modules (.ts/.tsx) lint without "Parsing error" on type syntax. JSDoc rules
+    // (which expect JS doc-comments) are disabled for typed files, where the types
+    // live in the signatures rather than in @param/@returns annotations.
+    overrides: [
+      {
+        files: ["*.ts", "*.tsx"],
+        parser: "@typescript-eslint/parser",
+        parserOptions: {
+          ecmaVersion: 2020,
+          sourceType: "module",
+        },
+        rules: {
+          "jsdoc/require-jsdoc": "off",
+          "jsdoc/require-param": "off",
+          "jsdoc/require-param-type": "off",
+          "jsdoc/require-returns": "off",
+          "jsdoc/require-returns-type": "off",
+        }
+      }
+    ],
     settings: {
       "import/resolver": {
         "node": {
-          "extensions": [".js", ".jsx",]
+          "extensions": [".js", ".jsx", ".ts", ".tsx"]
         },
         "caseSensitive": false
       }

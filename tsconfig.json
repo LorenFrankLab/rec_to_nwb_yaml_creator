@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    // --- Options carried over from the former jsconfig.json ---
+    "checkJs": false,
+    "resolveJsonModule": true,
+    "moduleResolution": "node",
+    "target": "ES2020",
+    "module": "esnext",
+    "baseUrl": ".",
+    // NOTE: jsconfig's `paths` ("@/*" -> "src/*") is intentionally NOT carried here.
+    // Create React App (react-scripts) requires `compilerOptions.paths` to be
+    // undefined and silently rewrites tsconfig.json on every build otherwise. No
+    // build-included source imports via "@/"; that alias is resolved for the test
+    // runner by `resolve.alias` in vitest.config.js, which is independent of tsconfig.
+
+    // --- TypeScript bootstrap ---
+    "allowJs": true,
+    "strict": true,
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "lib": ["DOM", "DOM.Iterable", "ES2020"],
+
+    // --- Required/suggested by react-scripts' verifyTypeScriptSetup so the
+    //     production build never has to rewrite this file (keeps it stable) ---
+    "isolatedModules": true,
+    "allowSyntheticDefaultImports": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "build", "dist"]
+}
