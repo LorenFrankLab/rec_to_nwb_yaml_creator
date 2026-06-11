@@ -208,6 +208,24 @@ describe('BehavioralEventsDisplay — per-label auto-numbering (onSelect)', () =
     expect(screen.getByLabelText('Event for Dout7')).toHaveValue('Pump1');
   });
 
+  it('suggests only INPUT events on a Din channel and only OUTPUT events on a Dout channel', async () => {
+    const user = userEvent.setup();
+    render(<ControlledHarness initialDayEvents={[]} spy={vi.fn()} />);
+
+    // A Din (input) channel offers Poke / Run_Camera_Ticks, never Light / Pump.
+    await user.click(screen.getByLabelText('Event for Din1'));
+    expect(screen.getByRole('option', { name: 'Poke' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Run_Camera_Ticks' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Light' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Pump' })).not.toBeInTheDocument();
+
+    // A Dout (output) channel offers Light / Pump, never Poke.
+    await user.click(screen.getByLabelText('Event for Dout1'));
+    expect(screen.getByRole('option', { name: 'Light' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Pump' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Poke' })).not.toBeInTheDocument();
+  });
+
   it('keeps a typed name verbatim — typing never auto-numbers', async () => {
     const user = userEvent.setup();
     render(<ControlledHarness initialDayEvents={[]} spy={vi.fn()} />);

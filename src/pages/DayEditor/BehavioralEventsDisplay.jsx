@@ -120,9 +120,11 @@ export default function BehavioralEventsDisplay({ dayEvents, onDayEventsChange, 
    * @param {string} description - The channel id.
    * @param {*} rawName - The current event name ('' when unused); coerced if persisted corruption
    *   left a non-string here, so the editor survives it instead of crashing.
+   * @param {('Din'|'Dout')} [direction] - The channel's direction, so the field suggests only the
+   *   inputs (on Din) or outputs (on Dout) that actually wire that way. Omit for the "Other" group.
    * @returns {JSX.Element}
    */
-  function renderNameField(description, rawName) {
+  function renderNameField(description, rawName, direction) {
     const name = typeof rawName === 'string' ? rawName : '';
     const isDuplicate = name.trim() !== '' && duplicateNames.has(name);
     const errorId = `dio-dup-name-${channelId(description)}`;
@@ -133,7 +135,7 @@ export default function BehavioralEventsDisplay({ dayEvents, onDayEventsChange, 
           value={name}
           onChange={(value) => nameChannel(description, value)}
           onSelect={(label) => selectName(description, label)}
-          suggestions={behavioralEventsNames()}
+          suggestions={behavioralEventsNames(direction)}
           acceptsValue={isStandardEventName}
           placeholder="(unused)"
           className={isDuplicate ? 'error' : ''}
@@ -185,7 +187,7 @@ export default function BehavioralEventsDisplay({ dayEvents, onDayEventsChange, 
                   className={name.trim() !== '' ? 'dio-row-named' : 'dio-row-unused'}
                 >
                   <td data-label="DIO channel">{description}</td>
-                  <td data-label="Event name">{renderNameField(description, rawName)}</td>
+                  <td data-label="Event name">{renderNameField(description, rawName, group.type)}</td>
                 </tr>
               );
             })}

@@ -79,12 +79,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Behavioral-event name suggestion `Run Camera Ticks` → `Run_Camera_Ticks`.** The
-  suggestion now matches the spelling used in 98/98 recorded corpus files (underscores), so
-  the suggested name is the one labs actually use (and its auto-numbered variants stay
-  recognized as on-list). Free text is unaffected; the exported YAML shape is unchanged. (The
-  non-validating `examples` array in `nwb_schema.json` still lists the spaced form — it is
-  co-owned with trodes_to_nwb and is left for a coordinated cross-repo change.)
+- **Behavioral-event name suggestions are now direction-specific.** Verified against the
+  98-file corpus, every recorded event splits cleanly by direction, so a **Din** (input)
+  channel now suggests only `Poke` / `Run_Camera_Ticks` and a **Dout** (output) channel only
+  `Light` / `Pump` — offering an output name on an input channel (or vice versa) implied a
+  physically wrong wiring. The off-list nudge follows suit (a pump named on an input channel
+  is flagged). Names that never appear in real data (`Home box camera`, `Sleep`) are no longer
+  suggested; `Run Camera Ticks` → `Run_Camera_Ticks` matches the corpus spelling. Free text is
+  unaffected and the exported YAML shape is unchanged. (The non-validating `examples` array in
+  `nwb_schema.json` still lists the old forms — co-owned with trodes_to_nwb, left for a
+  coordinated cross-repo change.)
 - **Recording-day dates are validated as ISO `YYYY-MM-DD` on write.** `createDay`
   and `duplicateDay` now reject a non-ISO date, since the date-ordered index relies
   on `YYYY-MM-DD` sorting lexicographically as chronological (the date picker already
