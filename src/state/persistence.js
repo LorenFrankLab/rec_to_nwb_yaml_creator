@@ -13,6 +13,11 @@
 
 import { normalizeWorkspaceDevices } from '../utils/deviceNormalization';
 import { createDefaultWorkspace } from './workspaceUtils';
+import { migrateWorkspace, WORKSPACE_SCHEMA_VERSION } from './workspaceMigrations';
+
+// Re-exported so consumers keep importing the current schema version from the persistence layer
+// (its public home), while the migration registry owns its definition + the forward migrators.
+export { WORKSPACE_SCHEMA_VERSION };
 
 /** Top-level sections every consumer reads directly (and would crash on if missing). */
 const REQUIRED_WORKSPACE_KEYS = ['animals', 'days', 'settings'];
@@ -63,14 +68,6 @@ function ensureWorkspaceShape(workspace) {
 export const WORKSPACE_STORAGE_KEY = 'rec_to_nwb_workspace_v1';
 
 /**
- * Current persisted-blob schema version. Bump when the stored shape changes in a
- * way that older blobs cannot be safely hydrated into; a mismatch is discarded.
- * @type {number}
- */
-export const WORKSPACE_SCHEMA_VERSION = 2;
-const MIGRATABLE_SCHEMA_VERSIONS = new Set([1]);
-
-/**
  * Reason codes returned alongside a discarded load, for a user-visible notice.
  * @readonly
  * @enum {string}
@@ -119,28 +116,28 @@ export function loadWorkspace() {
     return { workspace: null, discarded: LOAD_DISCARD_REASON.MALFORMED };
   }
 
-  if (
-    parsed.schemaVersion === WORKSPACE_SCHEMA_VERSION ||
-    MIGRATABLE_SCHEMA_VERSIONS.has(parsed.schemaVersion)
-  ) {
-    // Device-normalize first, then guarantee the required top-level sections exist so a
-    // valid-but-empty/partial blob hydrates cleanly. A restored section is reported via
-    // `recovered` for a user-facing notice (never silently filled).
-    const { workspace, missingKeys, corruptKeys } = ensureWorkspaceShape(
-      normalizeWorkspaceDevices(parsed.workspace)
-    );
-    // A present-but-wrong-typed required section is corruption, not absence: discard
-    // loudly rather than silently overwrite real data and mislabel it as "restored".
-    if (corruptKeys.length > 0) {
-      return { workspace: null, discarded: LOAD_DISCARD_REASON.MALFORMED };
-    }
-    return missingKeys.length > 0
-      ? { workspace, recovered: { missingKeys } }
-      : { workspace };
+  // Forward-migrate the blob from its stored schemaVersion up to the current version BEFORE any
+  // device-normalize / shape-ensure, so downstream code only ever sees the current shape. A
+  // version the registry can't reach (too old, too new, or non-integer) is a version mismatch.
+  const migrated = migrateWorkspace(parsed);
+  if (migrated.discarded) {
+    return { workspace: null, discarded: LOAD_DISCARD_REASON.VERSION_MISMATCH };
   }
 
-  // Structurally sound but from an incompatible schema version → VERSION_MISMATCH.
-  return { workspace: null, discarded: LOAD_DISCARD_REASON.VERSION_MISMATCH };
+  // Device-normalize first, then guarantee the required top-level sections exist so a
+  // valid-but-empty/partial blob hydrates cleanly. A restored section is reported via
+  // `recovered` for a user-facing notice (never silently filled).
+  const { workspace, missingKeys, corruptKeys } = ensureWorkspaceShape(
+    normalizeWorkspaceDevices(migrated.workspace)
+  );
+  // A present-but-wrong-typed required section is corruption, not absence: discard
+  // loudly rather than silently overwrite real data and mislabel it as "restored".
+  if (corruptKeys.length > 0) {
+    return { workspace: null, discarded: LOAD_DISCARD_REASON.MALFORMED };
+  }
+  return missingKeys.length > 0
+    ? { workspace, recovered: { missingKeys } }
+    : { workspace };
 }
 
 /**

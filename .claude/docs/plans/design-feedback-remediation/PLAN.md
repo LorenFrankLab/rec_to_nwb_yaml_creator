@@ -1,6 +1,6 @@
 # Design-Feedback Remediation Implementation Plan
 
-**Status:** Phases 1–6 complete (merged into `modern`); Phases 7–10 not started.
+**Status:** Phases 1–7 complete (merged into `modern`); Phases 8–10 not started.
 
 This plan turns six pieces of user design feedback plus a re-evaluated backlog into shippable work:
 it guarantees recording days stay date-ordered, restores guided DIO entry (a Type + Index control),
@@ -36,7 +36,7 @@ For agent invocation, **load only the slice you need**:
   - [phase-4-remove-channel-maps-editor.md](phase-4-remove-channel-maps-editor.md) — delete the workspace channel-maps editor (F1), full reference sweep. ✅ **Complete (merged)**.
   - [phase-5-dayeditor-structural-prep.md](phase-5-dayeditor-structural-prep.md) — `DayEditorContext` (kill prop-drill) + shared `deviceOverrideMerge` module; behavior-preserving. ✅ **Complete (merged)**.
   - [phase-6-tasks-epochs-redesign.md](phase-6-tasks-epochs-redesign.md) — Tasks & Epochs in-place clarity redesign (F4 quick wins) + a11y. ✅ **Complete (merged)**.
-  - [phase-7-persistence-migration.md](phase-7-persistence-migration.md) — versioned persisted-blob forward migration (Post-v3 #6).
+  - [phase-7-persistence-migration.md](phase-7-persistence-migration.md) — versioned persisted-blob forward migration (Post-v3 #6). ✅ **Complete (merged)**.
   - [phase-8-task-type-catalog.md](phase-8-task-type-catalog.md) — animal-level task-type catalog; days pick/order epochs (F4 full) + trodes_to_nwb integration check.
   - [phase-9-architecture-cleanup.md](phase-9-architecture-cleanup.md) — split `validation.js`; decompose `ValidationSummary`/`RecordingDaysTab`; continue TS; **re-arm the build gate**.
   - [phase-10-post-v3-ux.md](phase-10-post-v3-ux.md) — device_type summaries, reconfig wizard, validated indicator, calendar a11y, appliedToDays→derived.

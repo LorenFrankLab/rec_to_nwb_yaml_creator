@@ -116,6 +116,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Versioned forward-migration for the persisted workspace (mechanism only; no behavior change
+  yet).** The persistence layer previously *discarded* a localStorage blob whose `schemaVersion` it
+  didn't recognize. It now upgrades old blobs **forward** through an ordered registry of pure
+  migrators (`src/state/workspaceMigrations.js`, `migrators[n]: vN → vN+1`), applied by
+  `migrateWorkspace` in `loadWorkspace` before device-normalization and shape-ensuring, so a future
+  persisted-shape change won't throw away saved work. Today's v1→v2 handling is encoded as the first
+  registered migrator (current blobs hydrate byte-for-byte as before), and `MIGRATABLE_SCHEMA_VERSIONS`
+  is now derived from the registry instead of hand-maintained. No persisted-shape change or version
+  bump ships in this entry — the mechanism lands ahead of the first real shape change, which will
+  register its own `vN→vN+1` migrator plus a checked-in `vN` blob fixture. (Resolves the release-gated
+  persistence-migration follow-up.)
 - **Tasks & Epochs screen — clarity redesign (no data-model or export change).** The day editor's
   most-complex screen now opens with a plain-language framing that defines a *task* (one activity
   in one environment, with its cameras) and an *epoch* (a numbered time block of that task, each
