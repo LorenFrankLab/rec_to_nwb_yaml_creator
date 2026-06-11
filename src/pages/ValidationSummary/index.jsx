@@ -769,13 +769,30 @@ export function ValidationSummary({ animalKey } = {}) {
             )}
           </div>
 
-          <p className="validation-summary-hint">
-            <strong>Export Valid Only</strong> downloads one YAML file per day that passes every
-            check (status <em>Ready to export</em>, <em>Validated</em>, or <em>Exported</em>) and is
-            part of an animal&apos;s day list. Days with errors or incomplete fields are not
-            exported; a recovered day marked <em>not in day list</em> must be re-linked
-            (&quot;Add to day list&quot;) before it can be exported.
-          </p>
+          {/* Details on demand (Phase 8A-3): the full export rules are reference material, not
+              needed to take the action, so they live behind a collapsed disclosure — the actions
+              and counts above stay visually dominant. The task-critical disabled reason stays
+              inline (shown only when Export is blocked). */}
+          <details className="validation-summary-hint validation-summary-export-help">
+            <summary>What gets exported?</summary>
+            <p>
+              <strong>Export Valid Only</strong> downloads one YAML file per day that passes every
+              check (status <em>Ready to export</em>, <em>Validated</em>, or <em>Exported</em>) and
+              is part of an animal&apos;s day list. Days with errors or incomplete fields are not
+              exported; a recovered day marked <em>not in day list</em> must be re-linked
+              (&quot;Add to day list&quot;) before it can be exported.
+            </p>
+          </details>
+
+          {/* The re-link rule is reference material in the disclosure above EXCEPT when a recovered
+              day is actually present — then it is task-critical (Export Valid Only silently skips
+              it), so surface it inline rather than behind the disclosure. */}
+          {rows.some((row) => row.orphaned) && (
+            <p className="validation-summary-hint validation-summary-relink-note" role="note">
+              Some recovered days are <em>not in a day list</em> — re-link them
+              (&quot;Add to day list&quot;) before they can be exported.
+            </p>
+          )}
 
           {pendingExport && (
             <section className="batch-export-preflight" aria-label="Batch export preflight">

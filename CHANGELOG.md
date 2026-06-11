@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Responsive + copy hardening (Phase 8A-3).** Merge-neutral, display-only polish for the
+  selective-testing path:
+  - **Narrow-width Animal Days.** At phone widths (≤640px) the recording-day surface stacks into
+    cards: the heading sits over its actions, the **Add Recording Days** primary action sits over
+    the carry-forward toggle (which now gets the full row instead of a squeezed column), each day
+    row becomes a stacked card with its date/description over its status, and the destructive
+    **Delete day** action drops to its own row, divided from and no longer crowding the row's
+    navigation card. (Browser-measured: desktop and 390px have no horizontal overflow and no
+    overlapping controls — guarded by a new Playwright geometry spec.)
+    ([AnimalWorkspace.css](src/pages/AnimalWorkspace/AnimalWorkspace.css)).
+  - **Details on demand.** The Validation Summary's full "what gets exported" rules moved behind a
+    collapsed *"What gets exported?"* disclosure so the Validate / Export actions and the counts
+    stay visually dominant; the task-critical disabled-export reason stays inline.
+    ([ValidationSummary/index.jsx](src/pages/ValidationSummary/index.jsx)). No export or schema
+    change.
+
 - **Recognition + accessibility hardening (Phase 8A-2).** Three merge-neutral, display-only fixes so
   users can recognize controls and operate the calendar by keyboard:
   - **Visible/accessible label parity.** The Animal Days "Add Recording Days" button no longer

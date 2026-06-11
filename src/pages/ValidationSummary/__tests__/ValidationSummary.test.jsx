@@ -575,6 +575,28 @@ describe('ValidationSummary', () => {
     });
   });
 
+  it('surfaces the re-link rule inline when a recovered-unlinked day is present', () => {
+    const { workspace, ids } = makeSummaryWorkspace();
+    workspace.animals.remy.days = workspace.animals.remy.days.filter((id) => id !== ids.validDayId);
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+
+    // Task-critical when it applies (Export Valid Only silently skips the unlinked day), so it is
+    // shown inline rather than only behind the "What gets exported?" disclosure.
+    expect(screen.getByRole('note')).toHaveTextContent(/re-link them/i);
+  });
+
+  it('keeps the export rules behind the disclosure (no inline note) when no recovered day is present', () => {
+    const { workspace } = makeSummaryWorkspace();
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+
+    expect(screen.queryByRole('note')).not.toBeInTheDocument();
+    expect(screen.getByText(/what gets exported/i)).toBeInTheDocument();
+  });
+
   it('shows "Re-link to export" (not "Ready to export") on a valid recovered-unlinked row', () => {
     const { workspace, ids } = makeSummaryWorkspace();
     // Keep the (valid) record but drop it from its animal's index → recovered-unlinked.
