@@ -211,6 +211,9 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     await page.getByRole('button', { name: /^Tasks & Epochs — / }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Tasks & Epochs' })).toBeVisible();
 
+    // Associated video files is an optional, collapsed-by-default section — expand it first.
+    await page.locator('summary', { hasText: 'Associated video files' }).click();
+
     // --- Associated video files: camera + epoch are <select> controls (combobox role). ---
     const videos = page.getByRole('region', { name: 'Associated video files' });
     await expect(videos).toBeVisible();

@@ -181,7 +181,7 @@ export default function FsGuiSection({ fsGuiYamls, cameras, epochOptions, dioOpt
       ))}
 
       <button type="button" className="btn-secondary" onClick={addItem}>
-        Add FsGUI protocol
+        + Add FsGUI protocol
       </button>
     </section>
   );
