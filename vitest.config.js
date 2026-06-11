@@ -8,8 +8,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   plugins: [react()],
   esbuild: {
-    loader: 'jsx',
-    include: /src\/.*\.jsx?$/,
+    // This codebase puts JSX in plain `.js` files (e.g. App.js, index.js), so the
+    // transform must parse JSX regardless of extension. The `tsx` loader is a strict
+    // superset of `jsx`: it strips TypeScript syntax AND parses JSX, so one loader
+    // covers JSX-in-`.js`, `.jsx` components, and `.ts`/`.tsx` modules. (`tsx` is a
+    // no-op for TypeScript stripping on files that contain no TypeScript, so existing
+    // `.js`/`.jsx` parsing is unchanged.)
+    loader: 'tsx',
+    include: /src\/.*\.(jsx?|tsx?)$/,
     exclude: [],
   },
   optimizeDeps: {
@@ -39,7 +45,7 @@ export default defineConfig({
       branches: 80,
       statements: 80,
     },
-    include: ['src/**/*.{test,spec}.{js,jsx}'],
+    include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}'],
     exclude: ['node_modules/', 'build/', 'dist/'],
     // Global per-test budget for the no-coverage run (the `npm test` correctness gate).
     // Heavy App-render integration tests are ~3s without coverage, so 30s is a wide
