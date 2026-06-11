@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Task-type catalog model rehearsal (Phase 8B).** Behavior-preserving, inert model/utility layer
+  for the upcoming "define-once, reuse-per-day" Tasks & Epochs redesign. **The live app is
+  unchanged: inline `day.tasks` remains the runtime and export source of truth until Phase 8C
+  activates the catalog (persisted shape bump + animal Task-Types UI + the registered v2→v3
+  migrator).** No schema-version bump, no registered migrator, no UI or root-route change, and
+  `npx vitest run baselines` stays byte-identical.
+  - **Pure catalog core** ([taskCatalog.ts](src/state/taskCatalog.ts)): `deriveAnimalTaskCatalog`
+    converts date-ordered inline `day.tasks[]` into an animal-level `taskTypes[]` catalog +
+    ordered per-day `taskInstances[]`, deduping by `task_name` with first-occurrence
+    canonicalization (the Spyglass dataset-unique identity); `resolveTaskInstances` is the
+    C1-preserving bridge back to inline `tasks[]` carrying exactly the five `TASK_ORDER` keys (no
+    internal `id`/`taskTypeId` leaks). For every non-conflicting fixture, inline → catalog → inline
+    round-trips object- and byte-identically; a reused `task_name` with a divergent definition is
+    deterministically normalized to the first occurrence with the original preserved for review.
+  - **v2→v3 conversion utility** ([taskCatalogMigration.ts](src/state/taskCatalogMigration.ts)):
+    `migrateTasksToCatalogV2ToV3`, a pure workspace→workspace transform named so Phase 8C can
+    register it directly as `MIGRATORS[2]`. **Not registered and `WORKSPACE_SCHEMA_VERSION` is not
+    bumped this phase.** Non-destructive: records same-name conflicts as
+    `task_definition_reconciled` entries on the day (originals preserved), never silently dropped.
+  - **Pure catalog validation helpers**
+    ([taskCatalogValidation.ts](src/validation/taskCatalogValidation.ts)): catalog-level
+    `duplicate_task_type_name`, `dangling_task_type_ref`, `task_camera_not_used`, and
+    `task_definition_reconciled` — reconciled with (not duplicating) the existing inline
+    `divergent_task_identity` rule. Exercised only by catalog-shaped fixtures; not yet wired into
+    the live validation pipeline.
+  - **Type surface** ([workspaceTypes.ts](src/state/workspaceTypes.ts)): optional `TaskType`,
+    `TaskInstance`, and `TaskDefinitionReconciliation` shapes added without forcing runtime
+    adoption; runtime readers stay tolerant of old inline `day.tasks`.
+
 - **Responsive + copy hardening (Phase 8A-3).** Merge-neutral, display-only polish for the
   selective-testing path:
   - **Narrow-width Animal Days.** At phone widths (≤640px) the recording-day surface stacks into
