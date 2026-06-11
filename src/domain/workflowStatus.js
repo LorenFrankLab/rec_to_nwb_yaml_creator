@@ -290,25 +290,33 @@ function firstBlockingReason(animal, day, mergedDay, animalDays = []) {
 
 /**
  * The plain-language status for a recording-day LIST row (decision 12 — the row is triage, not
- * inspection). One of four mutually-exclusive states, worded from the shared {@link DAY_LIFECYCLE}
+ * inspection). One of five mutually-exclusive states, worded from the shared {@link DAY_LIFECYCLE}
  * vocabulary so the row never contradicts the other surfaces:
  *   - `needs_fixing` — the day has a LIVE blocking issue (overrides every stored flag, so a day
  *     validated/exported before a referenced camera broke reads the honest current state, not a
  *     stale "Exported"). The reason is the blocking issue's own message.
- *   - `exported` / `validated` / `draft` — the stored-state mapping, used only when nothing blocks:
- *     `state.exported → Exported`, `state.validated → Validated`, else `Draft`. The persisted
- *     `state.validated` reads as "Validated" (the saved fact), NOT "Ready to export" — the latter
- *     is reserved for the Day Validation surface's LIVE readiness, so the two no longer collide.
+ *   - `exported` / `validated` — the persisted history (checked before live readiness so a saved
+ *     day shows the saved fact): `state.exported → Exported`, `state.validated → Validated`. The
+ *     persisted `state.validated` reads as "Validated" (the saved fact), NOT "Ready to export".
+ *   - `ready` — no persisted flag, but the day passes the SAME export gate right now
+ *     (`isExportEnabled(computeStepStatus(...))`) → "Ready to export". This is the live-readiness
+ *     state, and it MUST be surfaced here so the row agrees with Day Validation / Day Export / the
+ *     Validation Summary instead of flatly reading "Draft" for an already-passing (but unsaved)
+ *     day — the exact "Ready to export" vs "Draft" contradiction this phase removes.
+ *   - `draft` — no persisted flag and not export-ready: the day is still incomplete → "Draft —
+ *     incomplete".
  *
- * Read-only over the existing validation + stored state; computes no new validation and never
- * mutates. A malformed (non-object) `state` reads as a draft.
+ * Read-only over the existing validation + step gate; it does not re-implement validation (it reuses
+ * `validateDay`/`computeStepStatus`) and never mutates. A null `mergedDay` is already `needs_fixing`
+ * via {@link firstBlockingReason}; a malformed (non-object) `state` reads as not-persisted.
  *
  * @param {object} animal - The owning animal.
  * @param {object} day - The recording day record.
  * @param {object|null} mergedDay - `mergeDayMetadata(animal, day)`, or null if it threw.
  * @param {Array} [animalDays] - The animal's day records; forwarded to the export gate so the
- *   bad-channel monotonicity block surfaces as a "Needs fixing" row. Omitted → back-compat.
- * @returns {{ variant: 'needs_fixing'|'exported'|'validated'|'draft', label: string }}
+ *   bad-channel monotonicity block surfaces as a "Needs fixing" row (and folds into live readiness).
+ *   Omitted → back-compat.
+ * @returns {{ variant: 'needs_fixing'|'exported'|'validated'|'ready'|'draft', label: string }}
  */
 export function getDayRowStatus(animal, day, mergedDay, animalDays = []) {
   const reason = firstBlockingReason(animal, day, mergedDay, animalDays);
@@ -319,7 +327,22 @@ export function getDayRowStatus(animal, day, mergedDay, animalDays = []) {
     day?.state && typeof day.state === 'object' && !Array.isArray(day.state) ? day.state : {};
   if (state.exported) return { variant: DAY_LIFECYCLE.EXPORTED, label: DAY_LIFECYCLE_LABEL.exported };
   if (state.validated) return { variant: DAY_LIFECYCLE.VALIDATED, label: DAY_LIFECYCLE_LABEL.validated };
-  return { variant: DAY_LIFECYCLE.DRAFT, label: `${DAY_LIFECYCLE_LABEL.draft} — not yet validated` };
+  // No persisted flag and no blocking issue. Distinguish a day that passes the SAME export gate the
+  // Export button enforces ("Ready to export") from one still being filled in ("Draft — incomplete"),
+  // so the list row agrees with the other surfaces. `firstBlockingReason` already returned non-null
+  // for a null/unvalidatable merge, so reaching here means the merge is usable; guard the step-status
+  // computation anyway and fall back to draft (never crash the row).
+  let liveReady = false;
+  if (mergedDay) {
+    try {
+      liveReady = isExportEnabled(computeStepStatus(day, mergedDay, animal, animalDays));
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.debug(`[workflow-status] could not compute readiness for day "${day?.id}":`, err);
+    }
+  }
+  if (liveReady) return { variant: DAY_LIFECYCLE.READY, label: DAY_LIFECYCLE_LABEL.ready };
+  return { variant: DAY_LIFECYCLE.DRAFT, label: `${DAY_LIFECYCLE_LABEL.draft} — incomplete` };
 }
 
 /**

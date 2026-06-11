@@ -62,11 +62,28 @@ describe('RecordingDaysTab — day row contract (decision 12)', () => {
     expect(screen.getByText(/what do these statuses mean/i)).toBeInTheDocument();
   });
 
+  it('does not show the lifecycle legend when the animal has no recording days', () => {
+    const { animal } = buildRealisticWorkspace();
+    animal.days = [];
+    render(
+      <StoreProvider
+        initialState={{ workspace: { animals: { [animal.id]: animal }, days: {}, settings: {} } }}
+      >
+        <RecordingDaysTab animalId={animal.id} />
+      </StoreProvider>
+    );
+    // No day rows to triage → the legend is suppressed (it only explains row statuses).
+    expect(screen.queryByText(/what do these statuses mean/i)).not.toBeInTheDocument();
+  });
+
   it('renders ONE plain-language status, not the old Draft/Validated/Exported chip cluster (Task 2.5a)', () => {
     const { container } = renderRealistic((day) => {
       day.state = { draft: true, validated: false, exported: false };
     });
-    expect(screen.getByText('Draft — not yet validated')).toBeInTheDocument();
+    // The realistic day passes the export gate but is unsaved → the live-readiness word
+    // "Ready to export" (scoped to the row; the shared legend lists the same word as reference).
+    const status = container.querySelector('.day-row-status');
+    expect(status).toHaveTextContent('Ready to export');
     // The old uppercase status-chip cluster is gone.
     expect(container.querySelector('.status-chip')).not.toBeInTheDocument();
   });
@@ -90,13 +107,15 @@ describe('RecordingDaysTab — day row contract (decision 12)', () => {
     // (RECOVERED_UNLINKED) flows through the same OK-row markup, so it now carries BOTH the
     // "not in day list" note AND a plain-language status. The valid fixture (config history
     // present) merges cleanly, so a draft orphan reads as a draft — not a crash, not blank.
-    renderRealistic((day, animal) => {
+    const { container } = renderRealistic((day, animal) => {
       animal.days = []; // unlink: record exists in the days map but not in the index
       day.state = { draft: true, validated: false, exported: false };
     });
     // "not in day list" appears both in the review note and on the row.
     expect(screen.getAllByText(/not in day list/i).length).toBeGreaterThan(0);
-    expect(screen.getByText('Draft — not yet validated')).toBeInTheDocument();
+    // The recovered day still merges + passes the gate → live-readiness "Ready to export".
+    const status = container.querySelector('.day-row-status');
+    expect(status).toHaveTextContent('Ready to export');
   });
 
   it('shows "Needs fixing — {reason}" for a live error, overriding a stale exported flag', () => {

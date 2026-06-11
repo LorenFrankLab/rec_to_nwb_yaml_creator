@@ -708,6 +708,12 @@ describe('ValidationSummary', () => {
     const updateDay = provideStore(workspace);
 
     render(<ValidationSummary />);
+
+    // The chip tolerates the malformed `state`: a live-valid day with a corrupt (non-record) state
+    // reads "Ready to export" (treated as not-persisted), never crashing or blanking the row.
+    const validRow = screen.getByTestId(`day-row-${ids.validDayId}`);
+    expect(within(validRow).getByText('Ready to export')).toBeInTheDocument();
+
     await user.click(screen.getByRole('button', { name: /validate all/i }));
 
     // The corrupt-state day's flag was NOT written (no laundering).

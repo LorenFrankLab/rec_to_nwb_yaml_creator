@@ -301,9 +301,14 @@
   font-weight: 500;
 }
 
-/* `validated` (persisted) reads green like the former `ready` variant; the live "Ready to
-   export" phrase now lives on the Day Validation surface, so the row variant is renamed to
-   match the shared DAY_LIFECYCLE vocabulary. */
+/* `ready` (live export-ready, not yet saved) — blue, matching the shared DAY_LIFECYCLE legend
+   swatch; distinct from the green `validated` (saved) state. */
+.day-row-status-ready {
+  color: var(--color-primary);
+}
+
+/* `validated` (persisted) reads green; the live "Ready to export" phrase is the blue `ready`
+   variant above, so the saved state is visually distinct from live readiness. */
 .day-row-status-validated {
   color: var(--color-success);
 }

@@ -258,14 +258,29 @@ describe('getDayWorkflowStatus', () => {
 });
 
 describe('getDayRowStatus', () => {
-  it('maps a draft (unvalidated) day to "Draft — not yet validated"', () => {
+  it('maps a live-ready, unsaved day to "Ready to export" (so the row agrees with the other surfaces)', () => {
+    // The realistic fixture day passes the export gate but is not persisted-validated (state.draft).
+    // It must read the live-readiness word, NOT "Draft", so Animal Days agrees with Day Validation /
+    // Day Export / the Validation Summary (no "Ready to export" vs "Draft" contradiction).
     const { animal, day } = buildRealisticWorkspace();
     day.state = { draft: true, validated: false, exported: false };
     const merged = mergeDayMetadata(animal, day);
     expect(getDayRowStatus(animal, day, merged)).toEqual({
-      variant: 'draft',
-      label: 'Draft — not yet validated',
+      variant: 'ready',
+      label: 'Ready to export',
     });
+  });
+
+  it('maps an incomplete (no errors, not export-ready) day to "Draft — incomplete"', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    day.state = { draft: true, validated: false, exported: false };
+    // Drop a required Overview field → the Overview step is incomplete with NO error-severity issue,
+    // so the day is neither blocked nor export-ready → it reads as a draft.
+    day.session = { ...day.session, session_id: undefined };
+    const merged = mergeDayMetadata(animal, day);
+    const status = getDayRowStatus(animal, day, merged);
+    expect(status.variant).toBe('draft');
+    expect(status.label).toBe('Draft — incomplete');
   });
 
   it('maps a persisted-validated (not yet exported) day to "Validated" (the saved state, distinct from live "Ready to export")', () => {
@@ -288,18 +303,18 @@ describe('getDayRowStatus', () => {
     });
   });
 
-  it('treats a day with no state flags as a draft', () => {
+  it('treats a passing day with no state flags as ready (live readiness, unsaved)', () => {
     const { animal, day } = buildRealisticWorkspace();
     delete day.state;
     const merged = mergeDayMetadata(animal, day);
-    expect(getDayRowStatus(animal, day, merged).variant).toBe('draft');
+    expect(getDayRowStatus(animal, day, merged).variant).toBe('ready');
   });
 
-  it('tolerates a malformed (non-object) state, reading it as a draft', () => {
+  it('tolerates a malformed (non-object) state, ignoring it (a passing day still reads ready)', () => {
     const { animal, day } = buildRealisticWorkspace();
     day.state = 'corrupt';
     const merged = mergeDayMetadata(animal, day);
-    expect(getDayRowStatus(animal, day, merged).variant).toBe('draft');
+    expect(getDayRowStatus(animal, day, merged).variant).toBe('ready');
   });
 
   it('flags a live validation error as "Needs fixing — {reason}", overriding a stale exported flag', () => {
