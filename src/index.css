@@ -63,6 +63,46 @@ body {
   color: #9a9384;
 }
 
+/* Workspace app-bar: a single header row holding the logo (left), the primary nav, and the
+   keyboard-shortcuts trigger (pushed to the far right — the conventional utility spot). The bar
+   itself carries the background + bottom border; the nav inside is transparent so the whole row
+   reads as one header. Only the workspace routes render `.app-bar`; the legacy banner is untouched. */
+.app-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 10px;
+  background: var(--color-grey-100);
+  border-bottom: 1px solid var(--color-grey-200);
+}
+
+.app-bar .home-region {
+  margin: 0;
+}
+
+.app-bar .primary-nav {
+  flex: 0 1 auto;
+  padding: 0;
+  background: transparent;
+  border-bottom: none;
+}
+
+/* Push the shortcuts trigger to the far right of the bar. */
+.app-bar .shortcuts-trigger {
+  margin-left: auto;
+}
+
+/* Narrow: drop the nav to its own full-width row BELOW the logo + shortcuts (which share the
+   top row — logo left, shortcuts right). `order` only reorders the nav here; the desktop
+   single-row order (logo · nav · shortcuts) is unchanged. */
+@media (max-width: 749px) {
+  .app-bar .primary-nav {
+    order: 1;
+    flex-basis: 100%;
+  }
+}
+
 /* Notice shown when a previously-saved workspace could not be restored. */
 .load-notice {
   display: flex;
