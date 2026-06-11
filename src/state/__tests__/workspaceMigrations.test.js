@@ -25,6 +25,14 @@ describe('workspace migration registry', () => {
     expect([...MIGRATABLE_SCHEMA_VERSIONS].sort((a, b) => a - b)).toEqual([1]);
   });
 
+  it('has a CONTIGUOUS source chain 1..(current-1) — a registry gap would silently discard old blobs', () => {
+    // A non-contiguous registry (e.g. {1,3} with current 4) would pass the version⇔registry check
+    // above yet strand a v1 blob at the missing step. Require the source versions to be exactly
+    // 1..current-1 so a gap fails CI rather than discarding a real user's saved work.
+    const expected = Array.from({ length: WORKSPACE_SCHEMA_VERSION - 1 }, (_, i) => i + 1);
+    expect([...MIGRATABLE_SCHEMA_VERSIONS].sort((a, b) => a - b)).toEqual(expected);
+  });
+
   it('passes a current-version blob through untouched (no migrator runs)', () => {
     const result = migrateWorkspace(v2Blob);
     expect(result).toEqual({ workspace: v2Blob.workspace });
@@ -37,6 +45,10 @@ describe('workspace migration registry', () => {
     // v1 and v2 share the workspace shape (the only v1 handling was device normalization, which the
     // loader still applies to every blob), so the v1→v2 migrator preserves the workspace intact.
     expect(result.workspace).toEqual(v1Blob.workspace);
+    // The identity migrator must NOT clone/rebuild — non-destructiveness is the load-bearing
+    // property (the loader clones downstream). Pin the same reference so a future deep-clone in the
+    // chain fails here rather than passing toEqual silently.
+    expect(result.workspace).toBe(v1Blob.workspace);
   });
 
   it('discards an unknown / too-old / too-new / non-integer version (caller maps to mismatch)', () => {
@@ -45,6 +57,15 @@ describe('workspace migration registry', () => {
     expect(migrateWorkspace({ schemaVersion: '1', workspace: {} })).toEqual({ discarded: true });
     expect(migrateWorkspace({ schemaVersion: 1.5, workspace: {} })).toEqual({ discarded: true });
     expect(migrateWorkspace({ workspace: {} })).toEqual({ discarded: true });
+  });
+
+  it('discards (never throws / never yields an undefined workspace) on a non-record blob or workspace', () => {
+    // Defense-in-depth for direct callers: the function must not throw on null nor return an
+    // undefined workspace a caller could hydrate as empty.
+    expect(migrateWorkspace(null)).toEqual({ discarded: true });
+    expect(migrateWorkspace({ schemaVersion: 2 })).toEqual({ discarded: true }); // no workspace
+    expect(migrateWorkspace({ schemaVersion: 2, workspace: [] })).toEqual({ discarded: true });
+    expect(migrateWorkspace({ schemaVersion: 1, workspace: 'corrupt' })).toEqual({ discarded: true });
   });
 });
 

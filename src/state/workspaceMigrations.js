@@ -17,9 +17,19 @@
  *    persistence layer surfaces a recovered/discarded notice; nothing is silently dropped).
  *  - Migration runs BEFORE device-normalization / shape-ensure in the loader, so downstream code
  *    only ever sees the current shape.
+ *  - A migrator that THROWS is a developer error, never a user-data problem, and is deliberately
+ *    allowed to propagate — it must NOT be caught and laundered into a discard (that would mislabel
+ *    a code bug as a version mismatch and throw away recoverable data). Crash loudly instead.
  *  - This module is dependency-free: it is imported by `persistence.js`, so importing persistence
  *    here would create a cycle.
  */
+
+/**
+ * Whether `value` is a plain object record (not null, not an array).
+ * @param value
+ */
+const isPlainObject = (value) =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
 
 /**
  * v1 → v2. v1 and v2 share the same workspace shape — the only "v1 handling" the loader ever did
@@ -68,6 +78,15 @@ export const MIGRATABLE_SCHEMA_VERSIONS = new Set(Object.keys(MIGRATORS).map(Num
  *   caller does that AFTER, so downstream code only ever sees the current shape.
  */
 export function migrateWorkspace(parsed) {
+  // Defense-in-depth: this function is exported and unit-tested in isolation, so it does not trust
+  // the caller's shape guard. A non-record blob or workspace cannot be migrated — discard rather
+  // than throw on `null.schemaVersion` or hand back an `undefined` workspace a future caller might
+  // hydrate as empty (the silent-data-loss class this framework exists to prevent). `loadWorkspace`
+  // already rejects such blobs as MALFORMED before calling here, so this never alters its behavior.
+  if (!isPlainObject(parsed) || !isPlainObject(parsed.workspace)) {
+    return { discarded: true };
+  }
+
   const version = parsed.schemaVersion;
 
   // Already current → no migrator runs (behaves exactly as the pre-registry current-version path).
