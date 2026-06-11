@@ -231,6 +231,58 @@ describe('BehavioralEventsDisplay — per-label auto-numbering (onSelect)', () =
   });
 });
 
+describe('BehavioralEventsDisplay — copy from another animal (empty-day bootstrap)', () => {
+  const sources = [
+    {
+      id: 'remy',
+      name: 'remy',
+      date: '2023-06-22',
+      events: [
+        { description: 'Din1', name: 'Poke1' },
+        { description: 'Dout7', name: 'Pump1' },
+      ],
+    },
+  ];
+
+  it('offers a "Copy from <animal>" CTA when the day is empty and sources exist', () => {
+    render(
+      <BehavioralEventsDisplay dayEvents={[]} onDayEventsChange={vi.fn()} copyableSources={sources} />
+    );
+    expect(screen.getByRole('button', { name: /copy from remy/i })).toBeInTheDocument();
+  });
+
+  it('copying seeds the day with a DEEP CLONE of the source events (source stays untouched)', async () => {
+    const user = userEvent.setup();
+    const spy = vi.fn();
+    render(
+      <BehavioralEventsDisplay dayEvents={[]} onDayEventsChange={spy} copyableSources={sources} />
+    );
+    await user.click(screen.getByRole('button', { name: /copy from remy/i }));
+    expect(spy).toHaveBeenCalledWith(sources[0].events); // deep-equal
+    // A clone, not the same references — editing the new day can't mutate the source.
+    expect(spy.mock.calls[0][0]).not.toBe(sources[0].events);
+    expect(spy.mock.calls[0][0][0]).not.toBe(sources[0].events[0]);
+  });
+
+  it('does NOT offer the copy CTA once the day already has events', () => {
+    render(
+      <BehavioralEventsDisplay
+        dayEvents={[{ description: 'Din1', name: 'X' }]}
+        onDayEventsChange={vi.fn()}
+        copyableSources={sources}
+      />
+    );
+    expect(screen.queryByRole('button', { name: /copy from remy/i })).not.toBeInTheDocument();
+  });
+
+  it('shows no copy CTA when there are no sources', () => {
+    render(
+      <BehavioralEventsDisplay dayEvents={[]} onDayEventsChange={vi.fn()} copyableSources={[]} />
+    );
+    expect(screen.queryByText(/copy from/i)).not.toBeInTheDocument();
+  });
+});
+
 describe('BehavioralEventsDisplay — off-list nudge respects numbered variants', () => {
   it('does NOT nudge an auto-numbered name like "Poke1" as non-standard', () => {
     render(

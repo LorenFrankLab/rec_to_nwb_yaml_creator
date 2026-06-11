@@ -113,6 +113,39 @@ export const getMostRecentDayId = (animal, days) => {
   return present[0].id;
 };
 
+/**
+ * Other animals whose recording has a non-empty behavioral-event (DIO) set to copy from, for
+ * bootstrapping a new animal's first day. For each qualifying animal (≠ `currentAnimalId`), returns
+ * its MOST-RECENT day's set (the current rig wiring; sets are near-constant across an animal's days,
+ * so the latest is representative). Animals with no day or no named events are omitted. Tolerates a
+ * corrupt/missing workspace shape.
+ *
+ * @param {object} workspace - The workspace (`{ animals, days }`).
+ * @param {string} currentAnimalId - The animal being edited (excluded from the result).
+ * @returns {Array<{id: string, name: string, date: string, events: Array<{description: string, name: string}>}>}
+ */
+export const getCopyableDioSources = (workspace, currentAnimalId) => {
+  const animals = asRecord(workspace?.animals);
+  const days = asRecord(workspace?.days);
+  const sources = [];
+  Object.entries(animals).forEach(([animalId, animal]) => {
+    if (animalId === currentAnimalId) return;
+    const withDio = getAnimalDayIds(animal)
+      .map((id) => days[id])
+      .filter((d) => d && typeof d.date === 'string' && getDayBehavioralEvents(d).length > 0);
+    if (withDio.length === 0) return;
+    withDio.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+    const sourceDay = withDio[0];
+    sources.push({
+      id: animalId,
+      name: getAnimalSubject(animal).subject_id || animalId,
+      date: sourceDay.date,
+      events: getDayBehavioralEvents(sourceDay),
+    });
+  });
+  return sources;
+};
+
 // ── Day-owned collections / records ─────────────────────────────────────────────────
 
 /** @param {object} day @returns {object} The day's session record (always a record). */

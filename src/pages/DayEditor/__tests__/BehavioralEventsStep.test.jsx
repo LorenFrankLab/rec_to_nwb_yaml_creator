@@ -41,4 +41,17 @@ describe('BehavioralEventsStep', () => {
       render(<BehavioralEventsStep day={{ behavioral_events: {} }} onFieldUpdate={vi.fn()} />)
     ).not.toThrow();
   });
+
+  it('forwards copyableDioSources so an empty day offers the copy-from-animal bootstrap', () => {
+    render(
+      <BehavioralEventsStep
+        day={{ behavioral_events: [] }}
+        onFieldUpdate={vi.fn()}
+        copyableDioSources={[
+          { id: 'remy', name: 'remy', date: '2023-06-22', events: [{ description: 'Din1', name: 'Poke1' }] },
+        ]}
+      />
+    );
+    expect(screen.getByRole('button', { name: /copy from remy/i })).toBeInTheDocument();
+  });
 });

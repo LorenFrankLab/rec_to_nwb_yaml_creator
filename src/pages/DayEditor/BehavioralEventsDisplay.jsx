@@ -60,9 +60,12 @@ const channelId = (description) => String(description).replace(/[^a-zA-Z0-9_-]/g
  * @param {object} props
  * @param {Array<{name: string, description: string}>} props.dayEvents - The day's exported events.
  * @param {Function} props.onDayEventsChange - Called with the next day-events array.
+ * @param {Array<{id: string, name: string, events: Array}>} [props.copyableSources] - Other animals
+ *   whose DIO set can seed a blank first day (see `getCopyableDioSources`). When the day is empty and
+ *   this is non-empty, a "Copy from <animal>" bootstrap CTA is offered.
  * @returns {JSX.Element}
  */
-export default function BehavioralEventsDisplay({ dayEvents, onDayEventsChange }) {
+export default function BehavioralEventsDisplay({ dayEvents, onDayEventsChange, copyableSources }) {
   // Tolerate corrupt persisted state: a non-array events list (`{}`) must not crash.
   const dayItems = Array.isArray(dayEvents) ? dayEvents : [];
 
@@ -211,6 +214,31 @@ export default function BehavioralEventsDisplay({ dayEvents, onDayEventsChange }
         <strong>Dout</strong> = outputs (things you drive). Names must be unique.
       </p>
 
+      {/* Empty-day bootstrap: a blank first day can reuse another animal's existing DIO setup
+          (same rig, your own data) instead of re-keying it. Only shown while the day is empty. */}
+      {dayItems.length === 0 && copyableSources.length > 0 && (
+        <div className="dio-copy-cta">
+          <p>
+            This day has no behavioral events yet. Type the channels your rig uses below, or copy an
+            existing setup from another animal:
+          </p>
+          <div className="dio-copy-cta__actions">
+            {copyableSources.map((source) => (
+              <button
+                key={source.id}
+                type="button"
+                className="button-secondary"
+                onClick={() => onDayEventsChange(structuredClone(source.events))}
+              >
+                {`Copy from ${source.name} (${source.events.length} ${
+                  source.events.length === 1 ? 'event' : 'events'
+                })`}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {duplicateDescriptions.length > 0 && (
         <div className="inline-error" role="alert">
           {duplicateDescriptions
@@ -270,9 +298,13 @@ BehavioralEventsDisplay.propTypes = {
     PropTypes.shape({ name: PropTypes.string, description: PropTypes.string })
   ),
   onDayEventsChange: PropTypes.func,
+  copyableSources: PropTypes.arrayOf(
+    PropTypes.shape({ id: PropTypes.string, name: PropTypes.string, events: PropTypes.array })
+  ),
 };
 
 BehavioralEventsDisplay.defaultProps = {
   dayEvents: [],
   onDayEventsChange: null,
+  copyableSources: [],
 };

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  getCopyableDioSources,
   getAnimalBehavioralEvents,
   getAnimalCameras,
   getConfigHistory,
@@ -168,5 +169,39 @@ describe('getMostRecentDayId — latest-dated present day', () => {
       'remy-2023-06-22': { id: 'remy-2023-06-22' }, // no date, skipped
     };
     expect(getMostRecentDayId(animal, partial)).toBe('remy-2023-06-20');
+  });
+});
+
+describe('getCopyableDioSources', () => {
+  it('returns OTHER animals whose latest non-empty DIO day can seed a new animal', () => {
+    const workspace = {
+      animals: {
+        remy: { id: 'remy', subject: { subject_id: 'remy' }, days: ['remy-d1', 'remy-d2'] },
+        peanut: { id: 'peanut', subject: { subject_id: 'peanut' }, days: ['peanut-d1'] },
+        nodio: { id: 'nodio', subject: { subject_id: 'nodio' }, days: ['nodio-d1'] },
+        self: { id: 'self', subject: { subject_id: 'self' }, days: ['self-d1'] },
+      },
+      days: {
+        'remy-d1': { id: 'remy-d1', date: '2023-06-20', behavioral_events: [{ description: 'Din1', name: 'OldPoke' }] },
+        'remy-d2': { id: 'remy-d2', date: '2023-06-22', behavioral_events: [{ description: 'Din1', name: 'Poke1' }] },
+        'peanut-d1': { id: 'peanut-d1', date: '2023-07-01', behavioral_events: [{ description: 'Dout7', name: 'Pump1' }] },
+        'nodio-d1': { id: 'nodio-d1', date: '2023-06-01', behavioral_events: [] },
+        'self-d1': { id: 'self-d1', date: '2023-06-15', behavioral_events: [{ description: 'Din2', name: 'X' }] },
+      },
+    };
+
+    const sources = getCopyableDioSources(workspace, 'self');
+    // self is excluded; nodio has no DIO; remy + peanut qualify.
+    expect(sources.map((s) => s.id).sort()).toEqual(['peanut', 'remy']);
+    // remy's MOST-RECENT day (d2, 2023-06-22) is the one copied — not the older d1.
+    const remy = sources.find((s) => s.id === 'remy');
+    expect(remy.events).toEqual([{ description: 'Din1', name: 'Poke1' }]);
+    expect(remy.name).toBe('remy');
+  });
+
+  it('tolerates a corrupt/missing workspace', () => {
+    expect(getCopyableDioSources(null, 'remy')).toEqual([]);
+    expect(getCopyableDioSources({}, 'remy')).toEqual([]);
+    expect(getCopyableDioSources({ animals: { a: { days: ['x'] } }, days: {} }, 'remy')).toEqual([]);
   });
 });

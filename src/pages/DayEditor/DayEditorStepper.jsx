@@ -3,7 +3,12 @@ import { useStoreContext } from '../../state/StoreContext';
 import { useStepperShortcut } from '../../hooks/stepperShortcuts';
 import { useDayIdFromUrl } from '../../hooks/useDayIdFromUrl';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
-import { getAnimalSubject, getDayTasks, getAnimalDayIds } from '../../state/workspaceSelectors';
+import {
+  getAnimalSubject,
+  getDayTasks,
+  getAnimalDayIds,
+  getCopyableDioSources,
+} from '../../state/workspaceSelectors';
 import { applyRepairCommand } from '../../state/repairCommands';
 import { computeStepStatus, animalSetupTabForFieldPath, validateDay } from '../../domain/validation';
 import { describeOwner } from '../../domain/dayRecovery';
@@ -172,6 +177,13 @@ export default function DayEditorStepper() {
   // the step-status memo so the gate sees the cross-day context; `getAnimalDays` returns [] for
   // a missing/unresolved owner, so this is safe before the null-checks below.
   const animalDays = selectors.getAnimalDays(ownerKey);
+
+  // Other animals whose existing DIO set can seed a blank first day (the Behavioral Events tab's
+  // copy-from-animal bootstrap). Recomputed only when the workspace or owner changes.
+  const copyableDioSources = useMemo(
+    () => getCopyableDioSources(model.workspace, ownerKey),
+    [model.workspace, ownerKey]
+  );
 
   // Compute step validation status (must be before early returns to follow Rules of Hooks)
   const stepStatus = useMemo(() => {
@@ -440,6 +452,7 @@ export default function DayEditorStepper() {
             focusRequest={focusRequest}
             animalDays={animalDays}
             actions={actions}
+            copyableDioSources={copyableDioSources}
           />
 
           {/* Free-navigation affordance: advances/retreats through the fixed section order

@@ -32,6 +32,27 @@
     color: var(--color-grey-700, #616161);
   }
 
+  // Empty-day bootstrap: copy another animal's DIO setup.
+  .dio-copy-cta {
+    margin: 0 0 var(--spacing-md, 1rem) 0;
+    padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem);
+    background: #e8f0fe;
+    border-left: 3px solid #2563eb;
+    border-radius: 3px;
+
+    p {
+      margin: 0 0 var(--spacing-xs, 0.25rem) 0;
+      font-size: var(--font-size-sm, 0.875rem);
+      color: #1a3a7a;
+    }
+
+    .dio-copy-cta__actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--spacing-sm, 0.5rem);
+    }
+  }
+
   .dio-direction-group {
     margin-bottom: var(--spacing-md, 1rem);
   }

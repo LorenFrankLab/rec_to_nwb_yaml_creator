@@ -13,15 +13,18 @@ import { getDayBehavioralEvents } from '../../state/workspaceSelectors';
  * @param {object} props
  * @param {object} props.day - The recording-day record (reads `behavioral_events`).
  * @param {Function} props.onFieldUpdate - Day field updater; called as `('behavioral_events', next)`.
+ * @param {Array} [props.copyableDioSources] - Other animals' DIO sets that can seed a blank first
+ *   day (computed by the stepper via `getCopyableDioSources`); offered as a bootstrap CTA when empty.
  * @returns {JSX.Element}
  */
-export default function BehavioralEventsStep({ day, onFieldUpdate }) {
+export default function BehavioralEventsStep({ day, onFieldUpdate, copyableDioSources }) {
   return (
     <div className="behavioral-events-step">
       <h2>Behavioral Events</h2>
       <BehavioralEventsDisplay
         dayEvents={getDayBehavioralEvents(day)}
         onDayEventsChange={(events) => onFieldUpdate('behavioral_events', events)}
+        copyableSources={copyableDioSources}
       />
     </div>
   );
@@ -30,8 +33,10 @@ export default function BehavioralEventsStep({ day, onFieldUpdate }) {
 BehavioralEventsStep.propTypes = {
   day: PropTypes.object,
   onFieldUpdate: PropTypes.func.isRequired,
+  copyableDioSources: PropTypes.array,
 };
 
 BehavioralEventsStep.defaultProps = {
   day: null,
+  copyableDioSources: [],
 };
