@@ -318,6 +318,7 @@ npm run start          # Start development server (opens browser automatically)
 npm run build          # Build production bundle
 npm test               # Run tests in watch mode
 npm run lint           # Run ESLint with auto-fix
+npm run typecheck      # tsc --noEmit (the only thing that type-checks .ts/.tsx)
 ```
 
 ### Deployment
@@ -327,6 +328,28 @@ npm run deploy         # Deploy to GitHub Pages (builds and pushes to gh-pages b
 ```
 
 **Important:** The `gh-pages` branch should never be deleted - it serves the live application.
+
+## TypeScript
+
+The codebase is incrementally adopting TypeScript. `.ts`/`.tsx` and `.js`/`.jsx` files
+**coexist** — `tsconfig.json` sets `allowJs: true` (so JS imports TS and vice versa) and
+`checkJs: false` (so `.js` files are parsed but not type-checked).
+
+**The production build does NOT type-check.** `react-scripts build` compiles TypeScript with
+Babel, which strips types without checking them — so a type error never fails the build. The
+**only** thing that type-checks is `npm run typecheck` (`tsc --noEmit`), which runs as its own
+CI job. If you change a `.ts` file, run `npm run typecheck` before claiming it works; the build
+passing tells you nothing about types.
+
+`tsconfig.json` deliberately omits the `@/*` path alias (react-scripts forbids
+`compilerOptions.paths` and rewrites the file otherwise). No build-included source uses `@/`;
+the alias is resolved for tests by `resolve.alias` in `vitest.config.js`.
+
+**Conversion guidance:** type the lowest-churn, highest-leverage **pure** modules first
+(`io/`, then `state/`, then `domain/`/`validation/`) — not components. A pure module with a
+small, stable public surface (e.g. the YAML codec) is typed under `strict` with **no logic
+change**; verify it against its existing tests and the golden baselines (`npx vitest run baselines`)
+before moving on. Components (`.jsx` → `.tsx`) and `checkJs: true` are intentionally deferred.
 
 ## Using Playwright (for Claude)
 

@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Incremental TypeScript support (toolchain only; no runtime or export change).** `.ts`/`.tsx`
+  now coexist with `.js`/`.jsx` (`tsconfig.json` with `allowJs`, `checkJs: false`, `strict`). A new
+  `npm run typecheck` (`tsc --noEmit`) runs as its own CI job and is the **only** type-check — the
+  Babel production build does not type-check. The pure YAML codec (`io/yaml`) and the workspace data
+  model (`state/workspaceTypes`) are the first modules typed; the YAML codec's six exports are typed
+  under `strict` with no logic change, and the golden baselines stay byte-identical. Linting,
+  `lint-staged`, and the vitest transform were extended to handle `.ts`/`.tsx`.
 - **Behavioral Events is now its own Day Editor tab.** The DIO channel grid moved out of the
   crowded **Tasks & Epochs** step into a dedicated **Behavioral Events** section in the day-editor
   nav (under "Recording"). It is optional — a day with no behavioral events badges as complete, not
