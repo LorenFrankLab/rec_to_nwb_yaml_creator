@@ -3,7 +3,12 @@ import { useStoreContext } from '../../state/StoreContext';
 import { useStepperShortcut } from '../../hooks/stepperShortcuts';
 import { useDayIdFromUrl } from '../../hooks/useDayIdFromUrl';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
-import { getAnimalSubject, getDayTasks, getAnimalDayIds } from '../../state/workspaceSelectors';
+import {
+  getAnimalSubject,
+  getDayTasks,
+  getAnimalDayIds,
+  getCopyableDioSources,
+} from '../../state/workspaceSelectors';
 import { applyRepairCommand } from '../../state/repairCommands';
 import { computeStepStatus, animalSetupTabForFieldPath, validateDay } from '../../domain/validation';
 import { describeOwner } from '../../domain/dayRecovery';
@@ -12,6 +17,7 @@ import SaveIndicator from './SaveIndicator';
 import OverviewStep from './OverviewStep';
 import DevicesStep from './DevicesStep';
 import TasksEpochsStep from './TasksEpochsStep';
+import BehavioralEventsStep from './BehavioralEventsStep';
 import ValidationStep from './ValidationStep';
 import ExportStep from './ExportStep';
 import ErrorState from './ErrorState';
@@ -29,6 +35,7 @@ const SECTION_GROUPS = [
     items: [
       { id: 'devices', label: 'Devices & Failed Channels' },
       { id: 'epochs', label: 'Tasks & Epochs' },
+      { id: 'behavioral', label: 'Behavioral Events' },
     ],
   },
   {
@@ -76,7 +83,7 @@ export default function DayEditorStepper() {
   // fixed, so a ref captures it once and the handler stays stable. Export is now a freely
   // reachable tab (its DOWNLOAD action self-gates in ExportStep), so there is NO keyboard
   // fail-close here — Alt+→ advances all the way into Export.
-  const stepOrderRef = useRef(['overview', 'devices', 'epochs', 'validation', 'export']);
+  const stepOrderRef = useRef(['overview', 'devices', 'epochs', 'behavioral', 'validation', 'export']);
   const goToStep = useCallback((direction) => {
     setCurrentStep((cur) => {
       const ids = stepOrderRef.current;
@@ -171,6 +178,13 @@ export default function DayEditorStepper() {
   // a missing/unresolved owner, so this is safe before the null-checks below.
   const animalDays = selectors.getAnimalDays(ownerKey);
 
+  // Other animals whose existing DIO set can seed a blank first day (the Behavioral Events tab's
+  // copy-from-animal bootstrap). Recomputed only when the workspace or owner changes.
+  const copyableDioSources = useMemo(
+    () => getCopyableDioSources(model.workspace, ownerKey),
+    [model.workspace, ownerKey]
+  );
+
   // Compute step validation status (must be before early returns to follow Rules of Hooks)
   const stepStatus = useMemo(() => {
     if (!day || !mergedDay) {
@@ -178,6 +192,7 @@ export default function DayEditorStepper() {
         overview: 'incomplete',
         devices: 'incomplete',
         epochs: 'incomplete',
+        behavioral: 'incomplete',
         validation: 'incomplete',
         export: 'error',
       };
@@ -366,6 +381,7 @@ export default function DayEditorStepper() {
     overview: OverviewStep,
     devices: DevicesStep,
     epochs: TasksEpochsStep,
+    behavioral: BehavioralEventsStep,
     validation: ValidationStep,
     export: ExportStep,
   };
@@ -436,6 +452,7 @@ export default function DayEditorStepper() {
             focusRequest={focusRequest}
             animalDays={animalDays}
             actions={actions}
+            copyableDioSources={copyableDioSources}
           />
 
           {/* Free-navigation affordance: advances/retreats through the fixed section order

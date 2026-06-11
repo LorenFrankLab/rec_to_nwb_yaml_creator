@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
   generateDayId,
+  assertIsoDate,
   getCurrentTimestamp,
   getCurrentDate,
   createDefaultWorkspace,
@@ -22,6 +23,7 @@ import {
   createDayRecord,
   applyDayUpdates,
   nextConfigurationVersion,
+  sortDayIdsByDate,
 } from './workspaceTransitions';
 
 /**
@@ -399,6 +401,9 @@ export function useWorkspace(initialState = null) {
             throw new Error(`Animal "${animalId}" not found`);
           }
 
+          // Reject a non-ISO date before it can corrupt the lexicographically-sorted index.
+          assertIsoDate(date);
+
           const dayId = generateDayId(animalId, date);
 
           if (prev.days[dayId]) {
@@ -417,7 +422,15 @@ export function useWorkspace(initialState = null) {
           // technical seeded from the animal defaults (see workspaceTransitions.createDayRecord).
           const day = createDayRecord(animal, animalId, dayId, date, session, now, carryFrom);
 
-          const updatedAnimal = { ...animal, days: [...getAnimalDayIds(animal), dayId] };
+          // Build the next days map first, then sort the index by date so the STORED
+          // `animal.days` is canonically date-ordered (a day created out of chronological
+          // order must not leave the index unordered). Sort-on-read selectors are kept as
+          // redundant defense-in-depth.
+          const nextDays = { ...prev.days, [dayId]: day };
+          const updatedAnimal = {
+            ...animal,
+            days: sortDayIdsByDate([...getAnimalDayIds(animal), dayId], nextDays),
+          };
 
           return {
             ...prev,
@@ -425,10 +438,7 @@ export function useWorkspace(initialState = null) {
               ...prev.animals,
               [animalId]: updatedAnimal,
             },
-            days: {
-              ...prev.days,
-              [dayId]: day,
-            },
+            days: nextDays,
             lastModified: now,
           };
         });
@@ -465,6 +475,9 @@ export function useWorkspace(initialState = null) {
             throw new Error(`Animal "${animalId}" not found`);
           }
 
+          // Reject a non-ISO date before it can corrupt the lexicographically-sorted index.
+          assertIsoDate(newDate);
+
           const dayId = generateDayId(animalId, newDate);
           if (prev.days[dayId]) {
             throw new Error(`Day "${dayId}" already exists`);
@@ -497,7 +510,13 @@ export function useWorkspace(initialState = null) {
               : built.deviceOverrides,
           };
 
-          const updatedAnimal = { ...animal, days: [...getAnimalDayIds(animal), dayId] };
+          // Sort the index by date on write (see createDay): duplicating to an EARLIER date
+          // must not leave the STORED `animal.days` out of chronological order.
+          const nextDays = { ...prev.days, [dayId]: day };
+          const updatedAnimal = {
+            ...animal,
+            days: sortDayIdsByDate([...getAnimalDayIds(animal), dayId], nextDays),
+          };
 
           return {
             ...prev,
@@ -505,10 +524,7 @@ export function useWorkspace(initialState = null) {
               ...prev.animals,
               [animalId]: updatedAnimal,
             },
-            days: {
-              ...prev.days,
-              [dayId]: day,
-            },
+            days: nextDays,
             lastModified: now,
           };
         });

@@ -57,10 +57,10 @@ describe('AnimalView — 3-field corruption banner (charter decision 1)', () => 
     expect(within(banners[0]).getByRole('button', { name: /^reset cameras$/i })).toBeInTheDocument();
   });
 
-  it('also shows it from the dio tab (sibling-field visibility across tabs)', () => {
+  it('also shows it from the optogenetics tab (sibling-field visibility across tabs)', () => {
     delete window.location;
-    window.location = { hash: '#/animal/remy/dio' };
-    renderView('dio', corruptAnimal());
+    window.location = { hash: '#/animal/remy/optogenetics' };
+    renderView('optogenetics', corruptAnimal());
     expect(screen.getByRole('button', { name: /^reset cameras$/i })).toBeInTheDocument();
   });
 

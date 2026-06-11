@@ -11,7 +11,6 @@ import userEvent from '@testing-library/user-event';
 import TaskModal from '../TaskModal';
 
 const cameras = [{ id: 0, camera_name: 'overhead' }];
-const inheritedEvents = [];
 
 /**
  * Render TaskModal in add mode with a known-descriptions map.
@@ -27,7 +26,6 @@ function renderModal(props = {}) {
       task={null}
       existingTasks={[]}
       cameras={cameras}
-      inheritedEvents={inheritedEvents}
       onSave={onSave}
       onCancel={vi.fn()}
       {...props}

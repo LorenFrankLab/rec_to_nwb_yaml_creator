@@ -79,12 +79,6 @@ describe('AnimalView — catalog/library tabs render (Phase 3-3)', () => {
     expect(screen.getByText('overhead_camera')).toBeInTheDocument();
   });
 
-  it('renders the dio container, not the placeholder', () => {
-    renderView('dio');
-    expect(screen.queryByText(PLACEHOLDER)).not.toBeInTheDocument();
-    expect(screen.getByText('Din1')).toBeInTheDocument();
-  });
-
   it('renders the optogenetics container, not the placeholder', () => {
     renderView('optogenetics');
     expect(screen.queryByText(PLACEHOLDER)).not.toBeInTheDocument();
@@ -156,10 +150,6 @@ describe('AnimalView — catalog tab scope descriptors (Phase 3-3)', () => {
     expect(screen.getByText(/catalog — referenced per day/i)).toBeInTheDocument();
   });
 
-  it('dio scope descriptor', () => {
-    renderView('dio');
-    expect(screen.getByText(/digital i\/o \(dio\) — behavioral-event channels/i)).toBeInTheDocument();
-  });
 });
 
 describe('AnimalView — optogenetics status chip (Phase 3-3)', () => {

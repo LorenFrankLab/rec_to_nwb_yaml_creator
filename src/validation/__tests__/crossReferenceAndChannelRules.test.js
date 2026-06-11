@@ -394,6 +394,26 @@ describe('behavioral-event name uniqueness', () => {
       ],
     }))).not.toContain('duplicate_behavioral_event_name');
   });
+
+  it('reports a duplicate name exactly once (not once per offending row)', () => {
+    const codeList = codes(rulesValidation({
+      behavioral_events: [
+        { name: 'Poke1', description: 'Din1' },
+        { name: 'Poke1', description: 'Din2' },
+        { name: 'Poke1', description: 'Din3' },
+      ],
+    }));
+    expect(codeList.filter((c) => c === 'duplicate_behavioral_event_name')).toHaveLength(1);
+  });
+
+  it('does NOT flag two blank/whitespace-only names as a duplicate (blank channels are unused)', () => {
+    expect(codes(rulesValidation({
+      behavioral_events: [
+        { name: '', description: 'Din1' },
+        { name: '   ', description: 'Din2' },
+      ],
+    }))).not.toContain('duplicate_behavioral_event_name');
+  });
 });
 
 describe('task/video dependency + camera refs', () => {
@@ -543,7 +563,7 @@ describe('repair metadata on new error rules', () => {
   // A single model that trips every new error-severity rule at once, so we can
   // assert each emitted issue carries the repair metadata the Export/Validation
   // UI needs: step, an actionable path/field, and a short actionLabel.
-  const VALID_STEPS = ['overview', 'devices', 'epochs', 'validation'];
+  const VALID_STEPS = ['overview', 'devices', 'epochs', 'behavioral', 'validation'];
   const NEW_CODES = [
     'dangling_camera_ref',
     'dangling_electrode_group_ref',

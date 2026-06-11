@@ -723,7 +723,7 @@ describe('End-to-End Session Creation Workflow', () => {
     // behavioral_events-description is a SelectInputPairElement: select dropdown + number input
     // Component concatenates select value + input value (e.g., "Din" + "1" = "Din1")
 
-    // Select from dropdown (Din, Dout, Accel, Gyro, Mag)
+    // Select from dropdown (Din, Dout)
     const eventDescSelect = document.getElementById('behavioral_events-description-0-list');
     await selectAndWait(user, eventDescSelect, 'Dout');
 

@@ -36,7 +36,15 @@ const asRecord = (value) =>
 /** @param {object} animal @returns {Array} The animal's cameras (always an array). */
 export const getAnimalCameras = (animal) => asArray(animal?.cameras);
 
-/** @param {object} animal @returns {Array} The animal's behavioral events. */
+/**
+ * VESTIGIAL: the animal-level behavioral-events library was retired — behavioral events are now
+ * day-owned (`day.behavioral_events`, the only ones exported). `animal.behavioral_events` is left
+ * in the persisted blob for backward/forward compatibility but is no longer read by the app. This
+ * selector is retained (no consumer beyond its own test) so a future migration could relocate the
+ * field; see `.claude/docs/plans/dio-per-day-sets/phase-2b-retire-animal-library.md`.
+ *
+ * @param {object} animal @returns {Array} The animal's (vestigial) behavioral events.
+ */
 export const getAnimalBehavioralEvents = (animal) => asArray(animal?.behavioral_events);
 
 /** @param {object} animal @returns {Array} The animal's configuration history. */
@@ -103,6 +111,45 @@ export const getMostRecentDayId = (animal, days) => {
   if (present.length === 0) return null;
   present.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
   return present[0].id;
+};
+
+/**
+ * Other animals whose recording has a non-empty behavioral-event (DIO) set to copy from, for
+ * bootstrapping a new animal's first day. For each qualifying animal (≠ `currentAnimalId`), returns
+ * its MOST-RECENT day's set (the current rig wiring; sets are near-constant across an animal's days,
+ * so the latest is representative). Animals with no day or no named events are omitted. Tolerates a
+ * corrupt/missing workspace shape.
+ *
+ * @param {object} workspace - The workspace (`{ animals, days }`).
+ * @param {string} currentAnimalId - The animal being edited (excluded from the result).
+ * @returns {Array<{id: string, name: string, date: string, events: Array<{description: string, name: string}>}>}
+ */
+export const getCopyableDioSources = (workspace, currentAnimalId) => {
+  const animals = asRecord(workspace?.animals);
+  const days = asRecord(workspace?.days);
+  // Only NAMED events are real (a blank channel is unused and is excluded from export), so a source
+  // copies and counts named events only — matching what the day would actually export.
+  const namedEvents = (day) =>
+    getDayBehavioralEvents(day).filter((e) => typeof e?.name === 'string' && e.name.trim() !== '');
+  const sources = [];
+  Object.entries(animals).forEach(([animalId, animal]) => {
+    if (animalId === currentAnimalId) return;
+    const withDio = getAnimalDayIds(animal)
+      .map((id) => days[id])
+      .filter((d) => d && typeof d.date === 'string')
+      .map((day) => ({ day, events: namedEvents(day) }))
+      .filter((x) => x.events.length > 0);
+    if (withDio.length === 0) return;
+    withDio.sort((a, b) => (a.day.date < b.day.date ? 1 : a.day.date > b.day.date ? -1 : 0));
+    const top = withDio[0];
+    sources.push({
+      id: animalId,
+      name: getAnimalSubject(animal).subject_id || animalId,
+      date: top.day.date,
+      events: top.events,
+    });
+  });
+  return sources;
 };
 
 // ── Day-owned collections / records ─────────────────────────────────────────────────

@@ -36,7 +36,7 @@ const configuredAnimal = {
   days: ['remy-2023-06-22'],
 };
 
-const SETUP_SECTIONS = ['electrode-groups', 'channel-maps', 'recording-system', 'cameras', 'dio', 'optogenetics'];
+const SETUP_SECTIONS = ['electrode-groups', 'channel-maps', 'recording-system', 'cameras', 'optogenetics'];
 
 describe('getAnimalSectionStatus', () => {
   it('marks every setup section TODO for a bare (never-configured) animal', () => {
@@ -86,7 +86,6 @@ describe('getAnimalSectionStatus', () => {
     const corrupt = { ...bareAnimal, cameras: 'nope', behavioral_events: 42, optogenetics: [] };
     expect(() => getAnimalSectionStatus(corrupt, 'cameras')).not.toThrow();
     expect(getAnimalSectionStatus(corrupt, 'cameras')).toBe(SECTION_STATUS.TODO);
-    expect(getAnimalSectionStatus(corrupt, 'dio')).toBe(SECTION_STATUS.TODO);
     expect(getAnimalSectionStatus(corrupt, 'optogenetics')).toBe(SECTION_STATUS.TODO);
   });
 

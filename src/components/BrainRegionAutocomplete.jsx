@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import PropTypes from 'prop-types';
-import { useStableId } from '../hooks/useStableId';
+import SuggestionCombobox from './SuggestionCombobox';
 
 /**
  * Brain Region Autocomplete Component
@@ -12,7 +12,9 @@ import { useStableId } from '../hooks/useStableId';
  * Critical for Spyglass database compatibility - consistent brain region naming
  * prevents fragmentation of database queries and ensures proper spatial analysis.
  *
- * Uses native HTML5 datalist for accessibility and no external dependencies.
+ * Built on the shared {@link SuggestionCombobox} (an accessible editable combobox), so the
+ * full region list is browsable even after a value is chosen, and an off-list value is
+ * nudged toward a standard region. Case-only variants snap to the canonical spelling on blur.
  *
  * @component
  * @example
@@ -84,18 +86,9 @@ const BrainRegionAutocompleteComponent = ({
   required = false,
   suggestions = [],
 }) => {
-  const id = useStableId(undefined, 'brain-region');
-  const datalistId = `${id}-list`;
-
   // Merge the canonical regions with any workspace-derived suggestions, deduped
   // and order-stable (canonical first), so already-used regions are also offered.
   const regionOptions = [...new Set([...BRAIN_REGIONS, ...suggestions])];
-
-  const handleChange = (e) => {
-    if (onChange) {
-      onChange(e.target.value);
-    }
-  };
 
   // Snap to the canonical spelling on blur so a case-only variant (e.g. "ca1")
   // visibly becomes the known region ("CA1") while the user is still in the form,
@@ -109,24 +102,17 @@ const BrainRegionAutocompleteComponent = ({
   };
 
   return (
-    <label htmlFor={id}>
-      {label}
-      <input
-        id={id}
-        type="text"
-        list={datalistId}
-        value={value ?? ''}
-        onChange={handleChange}
-        onBlur={handleBlur}
-        name={name}
-        required={required}
-      />
-      <datalist id={datalistId}>
-        {regionOptions.map((region) => (
-          <option key={region} value={region} />
-        ))}
-      </datalist>
-    </label>
+    <SuggestionCombobox
+      value={value ?? ''}
+      onChange={(v) => onChange?.(v)}
+      suggestions={regionOptions}
+      label={label}
+      name={name}
+      required={required}
+      onBlur={handleBlur}
+      warnOffList
+      offListMessage="Not a standard brain region. Pick a listed region so database queries stay consistent (CA1 vs ca1 vs Ca1) — use a custom region only if it’s genuinely new."
+    />
   );
 };
 

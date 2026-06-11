@@ -69,7 +69,6 @@ describe('Set up this animal card — first-run onboarding', () => {
     expect(within(card).getByText('Channel Maps')).toBeInTheDocument();
     expect(within(card).getByText('Recording System')).toBeInTheDocument();
     expect(within(card).getByText('Cameras')).toBeInTheDocument();
-    expect(within(card).getByText('DIO')).toBeInTheDocument();
     expect(within(card).getByText('Optogenetics')).toBeInTheDocument();
   });
 
@@ -88,7 +87,7 @@ describe('Set up this animal card — first-run onboarding', () => {
   it('gives each section action a distinct accessible name including the section (not a bare "Set up →")', () => {
     renderPane('newbie', { newbie: newAnimal });
     const card = screen.getByRole('region', { name: /set up this animal/i });
-    // A screen-reader links list must distinguish the six actions, so the section is in the name.
+    // A screen-reader links list must distinguish the actions, so the section is in the name.
     expect(within(card).getByRole('link', { name: /set up electrode groups/i })).toBeInTheDocument();
     expect(within(card).getByRole('link', { name: /set up cameras/i })).toBeInTheDocument();
     expect(within(card).getByRole('link', { name: /set up optogenetics/i })).toBeInTheDocument();
@@ -97,11 +96,11 @@ describe('Set up this animal card — first-run onboarding', () => {
   it('marks never-configured sections "To do" and configured sections done', () => {
     renderPane('remy', { remy: configuredAnimal });
     const card = screen.getByRole('region', { name: /set up this animal/i });
-    // Cameras + electrodes are configured → not flagged todo; DIO + optogenetics are not.
+    // Cameras + electrodes are configured → not flagged todo; optogenetics is not configured.
     const cameras = within(card).getByText('Cameras').closest('.setup-card-item');
-    const dio = within(card).getByText('DIO').closest('.setup-card-item');
+    const optogenetics = within(card).getByText('Optogenetics').closest('.setup-card-item');
     expect(cameras.className).not.toMatch(/setup-card-item-todo/);
-    expect(dio.className).toMatch(/setup-card-item-todo/);
+    expect(optogenetics.className).toMatch(/setup-card-item-todo/);
   });
 
   it('marks a configured section "Needs fixing" (NOT "Done") when it holds an export-blocking error', () => {
@@ -125,13 +124,12 @@ describe('Set up this animal card — first-run onboarding', () => {
     expect(within(eg).queryByText(/^done$/i)).not.toBeInTheDocument();
   });
 
-  it('frames optional sections honestly (if ephys / if video / if behavioral events), never as a gate', () => {
+  it('frames optional sections honestly (if ephys / if video), never as a gate', () => {
     renderPane('newbie', { newbie: newAnimal });
     const card = screen.getByRole('region', { name: /set up this animal/i });
     // "if ephys" applies to both Electrode Groups and Channel Maps.
     expect(within(card).getAllByText(/if ephys/i).length).toBeGreaterThan(0);
     expect(within(card).getByText(/if video/i)).toBeInTheDocument();
-    expect(within(card).getByText(/if.*behavioral events/i)).toBeInTheDocument();
     // No "set up electrodes first" mandatory-gate language (behavior-only days are valid).
     expect(within(card).queryByText(/set up electrodes (first|before)/i)).not.toBeInTheDocument();
     expect(within(card).queryByText(/before (creating|exporting)/i)).not.toBeInTheDocument();

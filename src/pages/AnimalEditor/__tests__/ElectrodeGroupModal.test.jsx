@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ElectrodeGroupModal from '../ElectrodeGroupModal';
 import { deviceTypes } from '../../../valueList';
@@ -224,17 +224,22 @@ describe('ElectrodeGroupModal', () => {
       expect(screen.getByRole('button', { name: /save/i })).toBeDisabled();
     });
 
-    it('offers known brain regions as autocomplete suggestions for both region fields', () => {
-      const { container } = render(
+    it('offers known brain regions as autocomplete suggestions for both region fields', async () => {
+      render(
         <ElectrodeGroupModal isOpen mode="add" onSave={() => {}} onCancel={() => {}} />
       );
 
       for (const field of ['Location (optional)', 'Targeted Location']) {
-        const datalistId = screen.getByLabelText(field).getAttribute('list');
-        const datalist = container.querySelector(`#${datalistId}`);
-        const options = Array.from(datalist.querySelectorAll('option')).map((o) => o.value);
+        // Each region field is an editable combobox; opening it browses the canonical regions.
+        await user.click(screen.getByLabelText(field));
+        const listbox = await screen.findByRole('listbox');
+        const options = within(listbox)
+          .getAllByRole('option')
+          .map((o) => o.textContent);
         expect(options).toContain('CA1');
         expect(options).toContain('PFC');
+        // Close before opening the next field's listbox.
+        await user.keyboard('{Escape}');
       }
     });
 

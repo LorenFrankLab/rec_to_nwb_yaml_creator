@@ -404,9 +404,12 @@ export function mergeDayMetadata(animal, day) {
     default_header_file_path: technical.default_header_file_path,
 
     // === From Day: Behavioral Events ===
-    behavioral_events: getDayBehavioralEvents(day).map((e) =>
-      reorderKeys(e, BEHAVIORAL_EVENT_ORDER)
-    ),
+    // A blank (whitespace-only or empty) name marks an UNUSED hardware channel in the DIO editor —
+    // it is never a real event, so it is excluded from the exported YAML (the schema requires a
+    // non-empty name). Existing fixtures have no blank names, so this is byte-identical for them.
+    behavioral_events: getDayBehavioralEvents(day)
+      .filter((e) => typeof e?.name === 'string' && e.name.trim() !== '')
+      .map((e) => reorderKeys(e, BEHAVIORAL_EVENT_ORDER)),
 
     // === From Animal: Device ===
     device: reorderKeys(devices.device, DEVICE_ORDER),
@@ -481,6 +484,22 @@ export function formatExperimentDate(isoDate) {
  */
 export function generateDayId(animalId, date) {
   return `${animalId}-${date}`;
+}
+
+/**
+ * Asserts a day date is strict ISO `YYYY-MM-DD`. The stored `animal.days` index is sorted
+ * lexicographically, which equals chronological order ONLY for this exact format — a non-ISO
+ * date (e.g. `06/22/2023` or `2023-6-2`) would sort wrong silently. Callers that write days
+ * (`createDay`/`duplicateDay`) assert here so a malformed date surfaces instead of corrupting
+ * the order. (The import path does its own date validation and does not use this.)
+ *
+ * @param {string} date - The candidate day date.
+ * @throws {Error} If `date` is not strict ISO `YYYY-MM-DD`.
+ */
+export function assertIsoDate(date) {
+  if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    throw new Error(`Invalid day date "${date}": expected ISO YYYY-MM-DD`);
+  }
 }
 
 /**

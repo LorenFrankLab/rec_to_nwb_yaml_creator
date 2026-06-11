@@ -176,16 +176,8 @@ describe('TasksEpochsStep', () => {
     expect(onFieldUpdate).toHaveBeenCalledWith('tasks', []);
   });
 
-  it('writes day-specific behavioral events through onFieldUpdate', async () => {
-    const user = userEvent.setup();
-    const { onFieldUpdate } = renderStep();
-
-    await user.click(screen.getByRole('button', { name: /add day-specific event/i }));
-    await user.type(screen.getByRole('textbox', { name: /event name/i }), 'day_event');
-    await user.click(screen.getByRole('button', { name: /^save$/i }));
-
-    expect(onFieldUpdate).toHaveBeenCalledWith('behavioral_events', [
-      { name: 'day_event', description: '' },
-    ]);
+  it('no longer renders the behavioral-events grid (it moved to its own Behavioral Events tab)', () => {
+    renderStep();
+    expect(screen.queryByLabelText('Event for Din1')).not.toBeInTheDocument();
   });
 });

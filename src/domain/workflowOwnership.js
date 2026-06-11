@@ -111,8 +111,8 @@ export const OWNERSHIP_PATTERN_META = Object.freeze({
     label: 'Day exported list',
     cue: 'Exported with this day',
     dayBehavior:
-      'Exported from this day; any animal-level items are reusable templates that are not themselves exported.',
-    primaryAction: 'Use on this day',
+      'Owned by and exported from this recording day; a new day carries the previous day’s set forward.',
+    primaryAction: 'Fix this day’s behavioral events',
     reachesBeyondDay: false,
   },
   [OWNERSHIP_PATTERN.RECOVERED_DATA]: {

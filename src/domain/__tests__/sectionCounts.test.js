@@ -13,7 +13,6 @@ describe('getAnimalSetupCounts', () => {
       'channel-maps': 0,
       'recording-system': 0,
       cameras: 0,
-      dio: 0,
     });
   });
 
@@ -32,7 +31,6 @@ describe('getAnimalSetupCounts', () => {
       'channel-maps': 2,
       'recording-system': 1,
       cameras: 2,
-      dio: 1,
     });
   });
 
@@ -43,7 +41,6 @@ describe('getAnimalSetupCounts', () => {
       'channel-maps': 0,
       'recording-system': 0,
       cameras: 0,
-      dio: 0,
     });
   });
 });

@@ -41,7 +41,7 @@ export const RAW_DAY_ARRAY_FIELDS = [
   { key: 'tasks', repairStep: 'epochs', label: 'tasks' },
   { key: 'associated_files', repairStep: 'epochs', label: 'associated files' },
   { key: 'associated_video_files', repairStep: 'epochs', label: 'associated video files' },
-  { key: 'behavioral_events', repairStep: 'epochs', label: 'behavioral events' },
+  { key: 'behavioral_events', repairStep: 'behavioral', label: 'behavioral events' },
   { key: 'fs_gui_yamls', repairStep: 'epochs', label: 'FsGUI protocol files' },
   { key: 'keywords', repairStep: 'overview', label: 'keywords' },
 ];

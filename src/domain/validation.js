@@ -573,6 +573,7 @@ export function computeStepStatus(day, mergedDay, animal, animalDays = []) {
     overview: getStepStatus(errorsByStep.overview, day.session),
     devices: computeDevicesStatus(day, mergedDay, errorsByStep.devices),
     epochs: computeEpochsStatus(day, errorsByStep.epochs),
+    behavioral: computeBehavioralStatus(day, errorsByStep.behavioral),
     // (errorsByStep.epochs is scoped to task-path errors inside computeEpochsStatus)
     // The validation step owns the catch-all bucket (anything not routed to
     // overview/devices/epochs). It is in error only when that bucket has an
@@ -608,8 +609,9 @@ export function computeStepStatus(day, mergedDay, animal, animalDays = []) {
  */
 export function computeEpochsStatus(day, epochErrors) {
   // A raw-shape corruption (`malformed_day_collection`) on any epochs-owned collection
-  // (tasks / associated_files / associated_video_files / behavioral_events / fs_gui_yamls)
-  // is a blocking error whose reset control renders ON this step — so the step badge must
+  // (tasks / associated_files / associated_video_files / fs_gui_yamls — behavioral_events is now
+  // owned by the Behavioral Events step) is a blocking error whose reset control renders ON this
+  // step — so the step badge must
   // read 'error', not a false 'incomplete'/'valid'. This generalizes the non-array-`tasks`
   // guard to the whole raw-shape family so the badge can't disagree with the reset notice.
   // The direct `day.tasks` check also covers a standalone call whose bucket isn't populated.
@@ -624,6 +626,25 @@ export function computeEpochsStatus(day, epochErrors) {
     (issue) => issue.severity === 'error' && (issue.path || '').includes('task')
   );
   return hasTaskError ? 'error' : 'valid';
+}
+
+/**
+ * Compute the Behavioral Events (DIO) step badge.
+ *
+ * Behavioral events are OPTIONAL — a day with none is valid (not "incomplete"), so this step is
+ * never blocked for being empty. It badges `'error'` only when its own bucket holds an
+ * error-severity issue (a duplicate name (Rule 14) or duplicate channel (Rule 17)), or when
+ * `day.behavioral_events` is a corrupt non-array whose reset control renders here.
+ *
+ * @param {object} day - Day record (reads `behavioral_events`).
+ * @param {Array} behavioralErrors - Issues grouped into the `behavioral` step.
+ * @returns {'error'|'valid'}
+ */
+export function computeBehavioralStatus(day, behavioralErrors) {
+  if (day?.behavioral_events != null && !Array.isArray(day.behavioral_events)) return 'error';
+  return (behavioralErrors || []).some((issue) => issue.severity === 'error')
+    ? STEP_STATUS.ERROR
+    : STEP_STATUS.VALID;
 }
 
 /**
@@ -748,6 +769,7 @@ export function groupErrorsByStep(errors) {
     overview: [],
     devices: [],
     epochs: [],
+    behavioral: [],
     validation: [],
     export: [],
   };
@@ -770,14 +792,14 @@ export function groupErrorsByStep(errors) {
  * missing property name).
  *
  * @param {{path?: string, instancePath?: string}} issue - A validation issue.
- * @returns {'overview'|'devices'|'epochs'|'validation'} The owning step id.
+ * @returns {'overview'|'devices'|'epochs'|'behavioral'|'validation'} The owning step id.
  */
 export function stepIdForIssue(issue) {
   // Prefer an explicit, valid issue.step (set by validation rules) over path routing,
   // so a rule can land its repair action on the step that actually fixes it
   // (e.g. a camera-path issue routed to 'epochs'). Fall back to path routing when
   // step is absent or not a known data-entry step.
-  const ROUTABLE_STEPS = ['overview', 'devices', 'epochs', 'validation'];
+  const ROUTABLE_STEPS = ['overview', 'devices', 'epochs', 'behavioral', 'validation'];
   if (issue?.step && ROUTABLE_STEPS.includes(issue.step)) {
     return issue.step;
   }
@@ -806,8 +828,13 @@ export function stepIdForIssue(issue) {
   ) {
     return 'devices';
   }
-  // Task/behavioral fields → Epochs
-  if (path.includes('task') || path.includes('behavioral') || path.includes('epoch') || path.includes('associated')) {
+  // Behavioral-event (DIO) fields → the Behavioral Events tab (its own step). Checked before the
+  // task/epoch branch so a `behavioral_events[...]` path doesn't fall through to Epochs.
+  if (path.includes('behavioral')) {
+    return 'behavioral';
+  }
+  // Task fields → Epochs
+  if (path.includes('task') || path.includes('epoch') || path.includes('associated')) {
     return 'epochs';
   }
   // Everything else → Validation (catch-all)
@@ -826,6 +853,7 @@ export const STEP_LABELS = {
   overview: 'Overview',
   devices: 'Devices',
   epochs: 'Epochs',
+  behavioral: 'Behavioral Events',
   validation: 'Other required fields',
   export: 'Export',
 };
@@ -1057,7 +1085,6 @@ export const ANIMAL_SETUP_TABS = {
   'channel-maps': 'Channel Maps',
   'recording-system': 'Recording System',
   cameras: 'Cameras',
-  dio: 'DIO',
   optogenetics: 'Optogenetics',
 };
 
@@ -1065,8 +1092,8 @@ export const ANIMAL_SETUP_TABS = {
  * Resolve which animal-setup TAB owns a field path (for re-pointing a repair deep-link at the
  * tabbed Animal View and for the section-nav blocking dot). Finer than
  * {@link animalEditorStepForFieldPath}: camera fields → `cameras`, data-acq → `recording-system`,
- * channel maps → `channel-maps`, behavioral/DIO → `dio` (a NEW branch the step resolver lacked),
- * optogenetics → `optogenetics`, and electrode geometry/identity + the configuration history (the
+ * channel maps → `channel-maps`, optogenetics → `optogenetics`, and electrode geometry/identity +
+ * the configuration history (the
  * versioned electrode config) → `electrode-groups` (the default). AJV instancePath slashes are
  * normalized first; `ntrode` is checked before `electrode` (the ntrode path contains
  * "electrode_group"), and `fs_gui` is day-level so it never lands on an animal tab.
@@ -1086,7 +1113,8 @@ export function animalSetupTabForFieldPath(fieldPath) {
   if (path.includes('opto') || path.includes('virus') || path.includes('fiber')) {
     return result('optogenetics');
   }
-  if (path.includes('behavioral_event') || path.includes('dio')) return result('dio');
+  // (Behavioral-event / DIO issues are day-owned — they resolve to the `day` surface, so they
+  //  never reach this animal-tab resolver. There is no DIO animal tab.)
   // electrode geometry/identity, configurationHistory (the versioned electrode config), and bare
   // keyword paths (device_type / location / targeted_*) all live on the electrode-groups tab.
   return result('electrode-groups');

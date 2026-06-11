@@ -8,8 +8,6 @@ const cameras = [
   { id: 1, camera_name: 'sleepbox' },
 ];
 
-const inheritedEvents = [{ name: 'reward_well', description: 'Reward' }];
-
 /**
  * Render a TaskModal with sensible defaults, overridable per test.
  * @param {object} [props] Props to override the defaults.
@@ -25,7 +23,6 @@ function renderModal(props = {}) {
       task={null}
       existingTasks={[]}
       cameras={cameras}
-      inheritedEvents={inheritedEvents}
       onSave={onSave}
       onCancel={onCancel}
       {...props}
@@ -50,7 +47,6 @@ describe('TaskModal', () => {
     expect(detailsFor('Task details')).toHaveAttribute('open');
     expect(detailsFor('Task epochs')).toHaveAttribute('open');
     expect(detailsFor('Cameras')).not.toHaveAttribute('open');
-    expect(detailsFor('Behavioral events (inherited)')).not.toHaveAttribute('open');
   });
 
   it('writes selected camera ids as integers and removes them on uncheck', async () => {
@@ -80,7 +76,6 @@ describe('TaskModal', () => {
         task={{ task_name: 'sleep', task_description: 'd', task_environment: 'HomeBox', camera_id: [1], task_epochs: [] }}
         existingTasks={[]}
         cameras={cameras}
-        inheritedEvents={inheritedEvents}
         onSave={onSave}
         onCancel={vi.fn()}
       />
@@ -209,7 +204,6 @@ describe('TaskModal', () => {
         task={{ task_name: 'sleep', task_description: 'd', task_environment: 'HomeBox', camera_id: [9], task_epochs: [] }}
         existingTasks={[]}
         cameras={cameras}
-        inheritedEvents={inheritedEvents}
         onSave={onSave}
         onCancel={vi.fn()}
       />

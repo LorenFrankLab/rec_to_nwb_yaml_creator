@@ -14,7 +14,7 @@ import { getById, getMainForm } from '../../helpers/test-selectors';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { App } from '../../../App';
 import { StoreProvider } from '../../../state/StoreContext';
-import { defaultYMLValues } from '../../../valueList';
+import { defaultYMLValues, arrayDefaultValues } from '../../../valueList';
 import { useWindowConfirmMock } from '../../helpers/test-hooks';
 
 describe('App Array Item Management', () => {
@@ -137,32 +137,24 @@ describe('App Array Item Management', () => {
 
   describe('ID Auto-increment Logic', () => {
     it('should verify arrayDefaultValues structure for cameras', () => {
-      const { arrayDefaultValues } = require('../../../valueList');
-
       // Cameras should have id field
       expect(arrayDefaultValues.cameras).toHaveProperty('id');
       expect(arrayDefaultValues.cameras.id).toBe(0);
     });
 
     it('should verify arrayDefaultValues structure for tasks', () => {
-      const { arrayDefaultValues } = require('../../../valueList');
-
       expect(arrayDefaultValues.tasks).toHaveProperty('task_name');
       expect(arrayDefaultValues.tasks).toHaveProperty('task_description');
       expect(arrayDefaultValues.tasks).toHaveProperty('task_epochs');
     });
 
     it('should verify arrayDefaultValues structure for electrode_groups', () => {
-      const { arrayDefaultValues } = require('../../../valueList');
-
       expect(arrayDefaultValues.electrode_groups).toHaveProperty('id');
       expect(arrayDefaultValues.electrode_groups).toHaveProperty('location');
       expect(arrayDefaultValues.electrode_groups).toHaveProperty('device_type');
     });
 
     it('should verify arrayDefaultValues structure for data_acq_device', () => {
-      const { arrayDefaultValues } = require('../../../valueList');
-
       expect(arrayDefaultValues.data_acq_device).toHaveProperty('name');
       expect(arrayDefaultValues.data_acq_device).toHaveProperty('system');
     });
@@ -170,8 +162,6 @@ describe('App Array Item Management', () => {
 
   describe('Array Default Values Completeness', () => {
     it('should have default values for all major arrays', () => {
-      const { arrayDefaultValues } = require('../../../valueList');
-
       // Check all major arrays have defaults
       expect(arrayDefaultValues).toHaveProperty('cameras');
       expect(arrayDefaultValues).toHaveProperty('tasks');
@@ -187,8 +177,6 @@ describe('App Array Item Management', () => {
     });
 
     it('should have ntrode_electrode_group_channel_map defaults', () => {
-      const { arrayDefaultValues } = require('../../../valueList');
-
       expect(arrayDefaultValues).toHaveProperty('ntrode_electrode_group_channel_map');
       expect(arrayDefaultValues.ntrode_electrode_group_channel_map).toHaveProperty('electrode_group_id');
       expect(arrayDefaultValues.ntrode_electrode_group_channel_map).toHaveProperty('bad_channels');

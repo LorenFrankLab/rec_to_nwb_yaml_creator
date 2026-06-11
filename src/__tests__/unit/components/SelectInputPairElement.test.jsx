@@ -8,7 +8,7 @@ describe('SelectInputPairElement', () => {
     id: 'test-field',
     title: 'Test Field',
     name: 'test_field',
-    items: ['Din', 'Dout', 'Accel', 'Gyro', 'Mag'], // Valid behavioral events
+    items: ['Din', 'Dout'], // Valid DIO types
     type: 'number',
     placeholder: 'Test placeholder',
     defaultValue: 'Din1',
@@ -41,12 +41,9 @@ describe('SelectInputPairElement', () => {
       const select = screen.getByRole('combobox');
       const options = Array.from(select.querySelectorAll('option'));
 
-      expect(options).toHaveLength(5);
+      expect(options).toHaveLength(2);
       expect(options[0].textContent).toBe('Din');
       expect(options[1].textContent).toBe('Dout');
-      expect(options[2].textContent).toBe('Accel');
-      expect(options[3].textContent).toBe('Gyro');
-      expect(options[4].textContent).toBe('Mag');
     });
 
     it('renders InfoIcon with placeholder text', () => {
@@ -105,12 +102,12 @@ describe('SelectInputPairElement', () => {
     });
 
     it('handles defaultValue with only text (no number)', () => {
-      render(<SelectInputPairElement {...defaultProps} defaultValue="Accel" />);
+      render(<SelectInputPairElement {...defaultProps} defaultValue="Dout" />);
 
       const select = screen.getByRole('combobox');
       const input = screen.getByRole('spinbutton');
 
-      expect(select).toHaveValue('Accel');
+      expect(select).toHaveValue('Dout');
       // When no number found, splitTextNumber returns empty string for number
       expect(input).toHaveValue(null); // Empty number input shows null
     });
@@ -178,8 +175,8 @@ describe('SelectInputPairElement', () => {
       const select = screen.getByRole('combobox');
       const input = screen.getByRole('spinbutton');
 
-      // Change select to "Gyro"
-      await user.selectOptions(select, 'Gyro');
+      // Change select to "Dout"
+      await user.selectOptions(select, 'Dout');
 
       // Change input to 10
       await user.clear(input);
@@ -188,7 +185,7 @@ describe('SelectInputPairElement', () => {
 
       expect(handleBlur).toHaveBeenCalled();
       const eventData = handleBlur.mock.calls[handleBlur.mock.calls.length - 1][0];
-      expect(eventData.target.value).toBe('Gyro10'); // Gyro + 10
+      expect(eventData.target.value).toBe('Dout10'); // Dout + 10
     });
 
     it('passes metaData to onBlur handler', async () => {
@@ -333,9 +330,11 @@ describe('splitTextNumber utility function', () => {
       expect(result).toEqual({ text: 'Dout', number: 5 });
     });
 
-    it('splits "Accel10" into { text: "Accel", number: 10 }', () => {
+    it('does not recognize an analog channel as a DIO type ("Accel10" -> empty text)', () => {
+      // Accel/Gyro/Mag are analog, not valid DIO types; the text is unrecognized so
+      // only the numeric part is returned.
       const result = splitTextNumber('Accel10');
-      expect(result).toEqual({ text: 'Accel', number: 10 });
+      expect(result).toEqual({ text: '', number: 10 });
     });
 
     it('splits "Din99" into { text: "Din", number: 99 }', () => {
@@ -367,21 +366,21 @@ describe('splitTextNumber utility function', () => {
   });
 
   describe('Text-Only Input', () => {
-    it('handles valid text without number (Accel)', () => {
-      const result = splitTextNumber('Accel');
-      expect(result.text).toBe('Accel');
+    it('handles valid text without number (Dout)', () => {
+      const result = splitTextNumber('Dout');
+      expect(result.text).toBe('Dout');
       expect(result.number).toBe('');
     });
 
     it('handles invalid text without number (returns empty text)', () => {
       const result = splitTextNumber('InvalidText');
-      // Only Din, Dout, Accel, Gyro, Mag are valid behavioral events
+      // Only Din and Dout are valid DIO types
       expect(result.text).toBe('');
       expect(result.number).toBe('');
     });
 
     it('validates text against behavioralEventsDescription list', () => {
-      // Valid behavioral events: Din, Dout, Accel, Gyro, Mag
+      // Valid DIO types: Din, Dout
       const validResult = splitTextNumber('Din');
       expect(validResult.text).toBe('Din');
 

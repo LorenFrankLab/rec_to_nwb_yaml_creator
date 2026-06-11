@@ -85,8 +85,8 @@ describe('axe-a11y (configured workspace, all routes)', () => {
   });
 
   describe('DayEditor steps', () => {
-    // Section-nav display labels (richer than the bare step ids since the 5 components are unchanged).
-    const steps = ['Overview', 'Devices & Failed Channels', 'Tasks & Epochs', 'Validation', 'Export'];
+    // Section-nav display labels (richer than the bare step ids).
+    const steps = ['Overview', 'Devices & Failed Channels', 'Tasks & Epochs', 'Behavioral Events', 'Validation', 'Export'];
 
     it.each(steps)('step %s has no violations', async (stepLabel) => {
       const user = userEvent.setup();

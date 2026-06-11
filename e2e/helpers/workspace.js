@@ -171,7 +171,8 @@ export function makeEmptyAnimal(id, overrides = {}) {
     optogenetics: undefined,
     // NOTE: no top-level `behavioral_events` here — production `createAnimal`
     // (src/state/useWorkspace.js) does NOT put `behavioral_events` on the base record, so the
-    // harness mirrors that. A behavioral-events catalog is added later through the DIO tab.
+    // harness mirrors that. Behavioral events are day-owned (edited in the Day Editor's wiring
+    // table); the animal-level `behavioral_events` field is vestigial.
     days: [],
     created: FIXED_TIMESTAMP,
     lastModified: FIXED_TIMESTAMP,

@@ -1,112 +1,118 @@
 /**
  * BehavioralEventsDisplay styling.
  *
- * Reuses DayEditor CSS variables and the shared inline-warning / button-small /
- * button-secondary conventions. Inherited events are visually marked read-only.
+ * Behavioral events are day-owned and edited as the ECU hardware channel grid (Inputs = Din1–32,
+ * Outputs = Dout1–32); the user names the channels their rig uses and leaves the rest blank. All
+ * structural class names are scoped under `.behavioral-events-display` because imported stylesheets
+ * apply app-wide.
  */
 
 .behavioral-events-display {
-  .behavioral-events-display-heading {
-    font-size: var(--font-size-lg, 1.2rem);
-    font-weight: 500;
-    margin: 0 0 var(--spacing-sm, 0.5rem) 0;
-    color: var(--color-grey-900, #333);
-  }
+  .section-header {
+    margin-bottom: var(--spacing-sm, 0.5rem);
 
-  .behavioral-events-display-empty {
-    font-style: italic;
-    color: var(--color-grey-600, #666);
-    margin: 0 0 var(--spacing-md, 1rem) 0;
-  }
-
-  /* Clarifies that inherited animal-level events are reference-only and not part of
-     this day's export. grey-600 stays >= 4.5:1 on white (see contrast guard). */
-  .behavioral-events-display-note {
-    color: var(--color-grey-600, #666);
-    font-size: var(--font-size-sm, 0.875rem);
-    margin: 0 0 var(--spacing-sm, 0.5rem) 0;
-  }
-
-  .inherited-events-list,
-  .day-events-list {
-    list-style: none;
-    margin: 0 0 var(--spacing-md, 1rem) 0;
-    padding: 0;
-  }
-
-  .inherited-event,
-  .day-event {
-    display: flex;
-    align-items: baseline;
-    gap: var(--spacing-sm, 0.5rem);
-    padding: var(--spacing-xs, 0.25rem) 0;
-  }
-
-  .inherited-event {
-    color: var(--color-grey-700, #616161);
-  }
-
-  .lock-icon {
-    flex: none;
-  }
-
-  .inherited-event-name,
-  .day-event-name {
-    font-weight: 600;
-  }
-
-  .inherited-event-description,
-  .day-event-description {
-    color: var(--color-grey-600, #666);
-    font-size: var(--font-size-sm, 0.875rem);
-  }
-
-  .day-specific-events {
-    margin-top: var(--spacing-md, 1rem);
-  }
-
-  .day-specific-events-heading {
-    font-size: var(--font-size-base, 1rem);
-    font-weight: 500;
-    margin: 0 0 var(--spacing-sm, 0.5rem) 0;
-    color: var(--color-grey-900, #333);
-  }
-
-  .day-event-editor {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--spacing-sm, 0.5rem);
-    align-items: flex-end;
-  }
-
-  .day-event-field {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-xs, 0.25rem);
-    font-size: var(--font-size-sm, 0.875rem);
-
-    input {
-      padding: 0.5rem;
-      border: 1px solid var(--color-grey-300, #bdbdbd);
-      border-radius: 4px;
+    h3,
+    h4 {
       font-size: var(--font-size-base, 1rem);
-      font-family: inherit;
-      min-height: 44px;
+      font-weight: 600;
+      margin: 0;
+      color: var(--color-grey-900, #333);
+    }
 
-      &:focus {
-        outline: 2px solid var(--color-primary, var(--color-primary));
-        outline-offset: 1px;
-      }
+    p {
+      margin: var(--spacing-xs, 0.25rem) 0 0 0;
+      color: var(--color-grey-600, #666);
+      font-size: var(--font-size-sm, 0.875rem);
     }
   }
 
-  .day-event-actions {
+  .dio-direction-legend {
+    margin: 0 0 var(--spacing-sm, 0.5rem) 0;
+    font-size: var(--font-size-sm, 0.875rem);
+    color: var(--color-grey-700, #616161);
+  }
+
+  // Empty-day bootstrap: copy another animal's DIO setup.
+  .dio-copy-cta {
+    margin: 0 0 var(--spacing-md, 1rem) 0;
+    padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem);
+    background: #e8f0fe;
+    border-left: 3px solid #2563eb;
+    border-radius: 3px;
+
+    p {
+      margin: 0 0 var(--spacing-xs, 0.25rem) 0;
+      font-size: var(--font-size-sm, 0.875rem);
+      color: #1a3a7a;
+    }
+
+    .dio-copy-cta__actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--spacing-sm, 0.5rem);
+    }
+  }
+
+  .dio-direction-group {
+    margin-bottom: var(--spacing-md, 1rem);
+  }
+
+  // Inputs (Din) and Outputs (Dout) side by side — two columns of 32 channels rather than 64
+  // stacked rows. `min-width: 0` lets the flex children shrink (their tables are width:100%), and
+  // the columns stack on a narrow viewport.
+  .dio-grid-columns {
     display: flex;
-    gap: var(--spacing-sm, 0.5rem);
+    flex-wrap: wrap;
+    gap: var(--spacing-lg, 1.5rem);
+    align-items: flex-start;
+
+    .dio-direction-group {
+      flex: 1 1 18rem;
+      min-width: 0;
+    }
+  }
+
+  .dio-wiring-table {
+    width: 100%;
+    border-collapse: collapse;
+
+    th,
+    td {
+      text-align: left;
+      padding: var(--spacing-xs, 0.25rem) var(--spacing-sm, 0.5rem);
+      vertical-align: top;
+      border-bottom: 1px solid var(--color-grey-200, #eee);
+    }
+
+    th {
+      font-size: var(--font-size-sm, 0.875rem);
+      font-weight: 600;
+      color: var(--color-grey-700, #616161);
+    }
+
+    // The channel id column is narrow + monospace so the fixed Din1…Din32 column reads as a hardware
+    // address; the event-name column takes the remaining width.
+    td[data-label='DIO channel'] {
+      width: 6rem;
+      font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+      color: var(--color-grey-700, #616161);
+      padding-top: 0.6rem;
+    }
+
+    // The name combobox fills its cell.
+    .suggestion-combobox {
+      width: 100%;
+    }
+
+    // Dim the channel id of an unused (unnamed) row so the named rows stand out in the long grid.
+    .dio-row-unused td[data-label='DIO channel'] {
+      color: var(--color-grey-500, #9e9e9e);
+    }
   }
 }
 
-/* Phase 8.7 Task 6: duplicate-description error (export-blocking, distinct from the name warning). */
+/* Inline gates: duplicate-name / duplicate-channel error (export-blocking). Scoped to this component
+   so the cue is present without relying on another stylesheet. */
 .behavioral-events-display .inline-error {
   margin: 0.4rem 0;
   padding: 0.4rem 0.6rem;

@@ -24,3 +24,22 @@ export function duplicateBehavioralEventDescriptions(events) {
   });
   return new Set([...counts.entries()].filter(([, count]) => count > 1).map(([desc]) => desc));
 }
+
+/**
+ * The set of NAMES used by more than one behavioral event (the `dio_event_name` collision that
+ * violates Spyglass's `DIOEvents` primary key and trodes_to_nwb). Raw-string compare; skips a blank
+ * name (empty/whitespace-only) — a blank channel is unused and excluded from export, so it is not a
+ * collision. Shared by the inline grid gate and the export rule (Rule 14) so they can never diverge.
+ *
+ * @param {Array<{name?: *}>} events - Behavioral events (the exported day list).
+ * @returns {Set<string>} Names appearing on ≥2 events.
+ */
+export function duplicateBehavioralEventNames(events) {
+  const counts = new Map();
+  (Array.isArray(events) ? events : []).forEach((event) => {
+    const name = event?.name;
+    if (typeof name !== 'string' || name.trim() === '') return;
+    counts.set(name, (counts.get(name) || 0) + 1);
+  });
+  return new Set([...counts.entries()].filter(([, count]) => count > 1).map(([name]) => name));
+}

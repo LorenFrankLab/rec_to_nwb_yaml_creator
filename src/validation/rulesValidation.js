@@ -6,7 +6,10 @@
 
 import { isValidSpecies, idHasSlash } from './dandiSubject';
 import { duplicateTaskEpochs } from './taskEpochs';
-import { duplicateBehavioralEventDescriptions } from './behavioralEvents';
+import {
+  duplicateBehavioralEventDescriptions,
+  duplicateBehavioralEventNames,
+} from './behavioralEvents';
 import { getChannelCount, validateDeviceType } from '../utils/deviceTypeUtils';
 import {
   getProbeShanks,
@@ -711,29 +714,22 @@ export const rulesValidation = (model) => {
 
   // Rule 14: behavioral-event names unique within the day.
   // A duplicate dio_event name is a hard Spyglass DIOEvents primary-key violation
-  // and a trodes_to_nwb ValueError.
+  // and a trodes_to_nwb ValueError. Shares duplicateBehavioralEventNames with the inline
+  // grid gate so the two can never disagree on what "the same name" means.
   if (Array.isArray(model.behavioral_events) && model.behavioral_events.length > 0) {
-    const seenNames = new Set();
-    const reportedNames = new Set();
-    model.behavioral_events.forEach((event) => {
-      const name = event?.name;
-      if (name === undefined || name === null || name === '') return;
-      if (seenNames.has(name) && !reportedNames.has(name)) {
-        reportedNames.add(name);
-        issues.push({
-          path: 'behavioral_events',
-          field: 'name',
-          step: 'epochs',
-          actionLabel: 'Rename behavioral event',
-          code: 'duplicate_behavioral_event_name',
-          repairSurface: 'day',
-          severity: 'error',
-          message:
-            `Duplicate behavioral event name "${name}". Each behavioral (DIO) event name ` +
-            `must be unique — duplicates collide on the Spyglass DIOEvents primary key.`,
-        });
-      }
-      seenNames.add(name);
+    duplicateBehavioralEventNames(model.behavioral_events).forEach((name) => {
+      issues.push({
+        path: 'behavioral_events',
+        field: 'name',
+        step: 'behavioral',
+        actionLabel: 'Rename behavioral event',
+        code: 'duplicate_behavioral_event_name',
+        repairSurface: 'day',
+        severity: 'error',
+        message:
+          `Duplicate behavioral event name "${name}". Each behavioral (DIO) event name ` +
+          `must be unique — duplicates collide on the Spyglass DIOEvents primary key.`,
+      });
     });
   }
 
@@ -1023,7 +1019,7 @@ export const rulesValidation = (model) => {
       issues.push({
         path: 'behavioral_events',
         field: 'description',
-        step: 'epochs',
+        step: 'behavioral',
         actionLabel: 'Rename behavioral event description',
         code: 'duplicate_behavioral_event_description',
         repairSurface: 'day',

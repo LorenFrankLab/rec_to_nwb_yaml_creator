@@ -32,11 +32,12 @@ describe('tab order through the DayEditor stepper', () => {
     const labels = [...container.querySelectorAll('.section-nav-item .section-nav-item-name')].map(
       (el) => el.textContent.trim()
     );
-    // Tabbed section-nav: 5 sections in sequence (richer display labels, DOM order preserved).
+    // Tabbed section-nav: 6 sections in sequence (richer display labels, DOM order preserved).
     expect(labels).toEqual([
       'Overview',
       'Devices & Failed Channels',
       'Tasks & Epochs',
+      'Behavioral Events',
       'Validation',
       'Export',
     ]);

@@ -38,7 +38,6 @@ import ElectrodeGroupsContainer from '../AnimalEditor/wiring/ElectrodeGroupsCont
 import ChannelMapsContainer from '../AnimalEditor/wiring/ChannelMapsContainer';
 import RecordingSystemContainer from '../AnimalEditor/wiring/RecordingSystemContainer';
 import CamerasContainer from '../AnimalEditor/wiring/CamerasContainer';
-import DioContainer from '../AnimalEditor/wiring/DioContainer';
 import OptogeneticsContainer from '../AnimalEditor/wiring/OptogeneticsContainer';
 import { useAnimalFieldUpdate } from '../AnimalEditor/wiring/useAnimalFieldUpdate';
 import ConfigVersionContext from './ConfigVersionContext';
@@ -62,8 +61,6 @@ const TAB_SCOPE = {
   // (chosen in the day's setup), defaulting to the first. Mirrors the cameras catalog framing.
   'recording-system': 'Animal-wide catalog — each recording day uses one.',
   cameras: 'Catalog — referenced per day.',
-  // Bridge the "DIO" nav label and the "behavioral events" content so the jargon label is legible.
-  dio: 'Digital I/O (DIO) — behavioral-event channels (rewards, choices, triggers), opt in per day.',
 };
 
 /**
@@ -85,7 +82,6 @@ const SECTION_GROUPS = [
       { key: 'channel-maps', label: 'Channel Maps' },
       { key: 'recording-system', label: 'Recording System' },
       { key: 'cameras', label: 'Cameras' },
-      { key: 'dio', label: 'DIO' },
       { key: 'optogenetics', label: 'Optogenetics' },
     ],
   },
@@ -116,7 +112,6 @@ const TAB_FIELD_ANCHOR = {
   'channel-maps': 'ntrode_electrode_group_channel_map',
   'recording-system': 'data_acq_device',
   cameras: 'cameras',
-  dio: 'behavioral_events',
   optogenetics: 'opto_excitation_source',
 };
 
@@ -199,8 +194,6 @@ function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdat
           onPendingEditsChange={onPendingEditsChange}
         />
       );
-    case 'dio':
-      return <DioContainer animal={animal} onFieldUpdate={onFieldUpdate} />;
     case 'optogenetics':
       return (
         <>

@@ -1,218 +1,294 @@
-import { useState } from 'react';
 import PropTypes from 'prop-types';
-import { duplicateBehavioralEventDescriptions } from '../../validation/behavioralEvents';
+import {
+  duplicateBehavioralEventDescriptions,
+  duplicateBehavioralEventNames,
+} from '../../validation/behavioralEvents';
+import { behavioralEventsNames } from '../../valueList';
+import {
+  nextInstanceNumber,
+  isStandardEventName,
+  setChannelName,
+} from '../../utils/behavioralEventSet';
+import SuggestionCombobox from '../../components/SuggestionCombobox';
 import './BehavioralEventsDisplay.scss';
 
 /**
- * BehavioralEventsDisplay - shows the animal's inherited behavioral events as a
- * read-only, lock-marked list, and (unless `readOnly`) an optional collapsible
- * section for adding day-specific events.
+ * The standard SpikeGadgets ECU digital configuration this grid authors for is Din1…Din32 (inputs)
+ * and Dout1…Dout32 (outputs) — the documented maximum, per Trodes `.trodesconf` configs (the exact
+ * lines are configuration-dependent: a no-ECU board has none, and some configs omit a line). Since
+ * trodes_to_nwb only consumes the ECU digital stream and which channel carries which event is a
+ * per-experiment wiring choice, the editor presents the full standard range and the user names the
+ * channels they use. This constant is the single source of truth if the range ever needs to change.
+ */
+const ECU_DIGITAL_CHANNELS = 32;
+
+const GROUPS = [
+  { type: 'Din', heading: 'Inputs (Din)', blurb: 'Sensors the animal triggers — pokes, beam breaks.' },
+  {
+    type: 'Dout',
+    heading: 'Outputs (Dout)',
+    blurb: 'Things you drive — lights, pumps, optogenetics.',
+  },
+];
+
+/**
+ * The ordered channel ids for a direction, e.g. ["Din1", … "Din32"].
+ * @param {string} type - The DIO type, `"Din"` or `"Dout"`.
+ * @returns {string[]} The channel ids `${type}1`…`${type}${ECU_DIGITAL_CHANNELS}`.
+ */
+const channelsFor = (type) =>
+  Array.from({ length: ECU_DIGITAL_CHANNELS }, (_, i) => `${type}${i + 1}`);
+
+/**
+ * Sanitize a channel id for use in an element id.
+ * @param {string} description - The channel id (e.g. `"Din1"`).
+ * @returns {string} The id with non-`[A-Za-z0-9_-]` characters replaced by `-`.
+ */
+const channelId = (description) => String(description).replace(/[^a-zA-Z0-9_-]/g, '-');
+
+/**
+ * BehavioralEventsDisplay — the per-day behavioral-events (DIO) editor, presented as the ECU's
+ * hardware channel grid.
  *
- * Inherited events are never editable here — they belong to the animal and are
- * edited in the Animal Editor. Day-specific events write through `onDayEventsChange`
- * (wired by the parent to `onFieldUpdate('behavioral_events', …)`). A day-specific
- * event whose name duplicates an inherited event is flagged as a non-blocking
- * warning; it is still saved.
+ * Every digital channel (Din1–32 inputs, Dout1–32 outputs) is a row; the user types the event NAME
+ * for the channels their rig uses and leaves the rest blank. A named channel is a real event
+ * (`day.behavioral_events`); a blank channel is unused and is NOT written to the exported YAML.
+ * Event names must be unique (a duplicate collides on the Spyglass DIOEvents primary key). A new day
+ * carries the previous day's names forward; this editor edits them in place. An imported event whose
+ * channel isn't a standard Din/Dout line is preserved in an "Other" group rather than dropped.
  *
  * @param {object} props
- * @param {Array<{name: string, description: string}>} props.inheritedEvents - Animal events.
- * @param {Array<{name: string, description: string}>} props.dayEvents - Day-specific events.
+ * @param {Array<{name: string, description: string}>} props.dayEvents - The day's exported events.
  * @param {Function} props.onDayEventsChange - Called with the next day-events array.
- * @param {boolean} [props.readOnly] - When true, render only the inherited list.
+ * @param {Array<{id: string, name: string, events: Array}>} [props.copyableSources] - Other animals
+ *   whose DIO set can seed a blank first day (see `getCopyableDioSources`). When the day is empty and
+ *   this is non-empty, a "Copy from <animal>" bootstrap CTA is offered.
  * @returns {JSX.Element}
  */
-export default function BehavioralEventsDisplay({
-  inheritedEvents,
-  dayEvents,
-  onDayEventsChange,
-  readOnly,
-}) {
-  // Tolerate corrupt persisted state: a non-array events list (`{}`) must not crash
-  // `.map`. Surfaced + reset by the step's raw-shape notice; rendered empty here.
-  const events = Array.isArray(inheritedEvents) ? inheritedEvents : [];
+export default function BehavioralEventsDisplay({ dayEvents, onDayEventsChange, copyableSources }) {
+  // Tolerate corrupt persisted state: a non-array events list (`{}`) must not crash.
   const dayItems = Array.isArray(dayEvents) ? dayEvents : [];
 
-  const [adding, setAdding] = useState(false);
-  const [draft, setDraft] = useState({ name: '', description: '' });
+  // Channel → event lookup so each grid row can show its current name (first wins on a corrupt
+  // duplicate-description import; the duplicate is surfaced by the banner below).
+  const byDescription = new Map();
+  dayItems.forEach((event) => {
+    if (event && typeof event.description === 'string' && !byDescription.has(event.description)) {
+      byDescription.set(event.description, event);
+    }
+  });
 
-  const inheritedNames = new Set(events.map((e) => e.name));
-  const duplicateNames = dayItems
-    .map((e) => e.name)
-    .filter((name) => inheritedNames.has(name));
-  // The day events are what export (day.behavioral_events). Day names already used, so a library
-  // event isn't offered for "Use on this day" twice.
-  const dayNames = new Set(dayItems.map((e) => e.name));
-  // A duplicate DESCRIPTION among the exported day events is a downstream hard `raise ValueError`
-  // in trodes_to_nwb — surfaced inline via the SAME helper the export-blocking rule uses, so the
-  // inline gate and the export gate can never disagree (raw-string compare, no trim).
-  const duplicateDescriptions = [...duplicateBehavioralEventDescriptions(dayItems)];
+  // A duplicate NAME collides on the Spyglass DIOEvents primary key; a duplicate DESCRIPTION is a
+  // trodes_to_nwb ValueError. The inline gates run on exactly what export sees — the NAMED events
+  // (a blank channel is excluded from export, see workspaceUtils.js) — via the SAME helpers the
+  // export rules use, so the inline banner and the export gate can never disagree.
+  const exportedItems = dayItems.filter(
+    (event) => typeof event?.name === 'string' && event.name.trim() !== ''
+  );
+  const duplicateNames = duplicateBehavioralEventNames(exportedItems);
+  const duplicateDescriptions = [...duplicateBehavioralEventDescriptions(exportedItems)];
+
+  // Events whose description is not a standard ECU channel (e.g. an imported analog/prose line, or a
+  // channel outside 1–32) — shown in an "Other" group so they are never silently dropped.
+  const gridDescriptions = new Set(GROUPS.flatMap((g) => channelsFor(g.type)));
+  const otherEvents = dayItems.filter(
+    (e) => !(e && typeof e.description === 'string' && gridDescriptions.has(e.description))
+  );
 
   /**
-   * Copy an inherited (library) event into this day's exported event list.
-   * @param {{name: string, description: string}} event
+   * Set the event name for a channel (blank removes it from the set).
+   * @param {string} description - The channel id (e.g. "Din1").
+   * @param {string} name - The event name.
    */
-  function handleUseOnThisDay(event) {
-    if (!onDayEventsChange) return;
-    onDayEventsChange([...dayItems, { name: event.name, description: event.description || '' }]);
+  function nameChannel(description, name) {
+    onDayEventsChange(setChannelName(dayItems, description, name));
   }
 
   /**
-   * Begin adding a day-specific event.
+   * Auto-number a PICKED name for a channel: `Poke` → `Poke1`, the next pick `Poke2`, …. The number
+   * is the next per-label instance among the OTHER channels' events — never the channel index.
+   * @param {string} description - The channel being named.
+   * @param {string} label - The picked suggestion.
    */
-  function startAdd() {
-    setDraft({ name: '', description: '' });
-    setAdding(true);
+  function selectName(description, label) {
+    const others = dayItems.filter((e) => e?.description !== description);
+    nameChannel(description, `${label}${nextInstanceNumber(label, others)}`);
   }
 
   /**
-   * Commit the in-progress day-specific event.
+   * Render the editable Event-name cell for one channel.
+   * @param {string} description - The channel id.
+   * @param {*} rawName - The current event name ('' when unused); coerced if persisted corruption
+   *   left a non-string here, so the editor survives it instead of crashing.
+   * @param {('Din'|'Dout')} [direction] - The channel's direction, so the field suggests only the
+   *   inputs (on Din) or outputs (on Dout) that actually wire that way. Omit for the "Other" group.
+   * @returns {JSX.Element}
    */
-  function saveDraft() {
-    onDayEventsChange([...dayItems, { name: draft.name.trim(), description: draft.description.trim() }]);
-    setAdding(false);
-    setDraft({ name: '', description: '' });
+  function renderNameField(description, rawName, direction) {
+    const name = typeof rawName === 'string' ? rawName : '';
+    const isDuplicate = name.trim() !== '' && duplicateNames.has(name);
+    const errorId = `dio-dup-name-${channelId(description)}`;
+    return (
+      <>
+        <SuggestionCombobox
+          aria-label={`Event for ${description}`}
+          value={name}
+          onChange={(value) => nameChannel(description, value)}
+          onSelect={(label) => selectName(description, label)}
+          suggestions={behavioralEventsNames(direction)}
+          acceptsValue={isStandardEventName}
+          placeholder="(unused)"
+          className={isDuplicate ? 'error' : ''}
+          aria-invalid={isDuplicate || undefined}
+          aria-describedby={isDuplicate ? errorId : undefined}
+          warnOffList
+          offListMessage="Not a standard event name. Pick a suggestion for consistency, or keep a custom name."
+        />
+        {isDuplicate && (
+          <div id={errorId} className="inline-error" role="alert">
+            {`The name "${name}" is used by more than one channel — each behavioral event name must `}
+            be unique.
+          </div>
+        )}
+      </>
+    );
   }
 
   /**
-   * Remove a day-specific event by index.
-   * @param {number} index Index in the day events array.
+   * Render one direction's full channel table (all 32 rows).
+   * @param {{type: string, heading: string, blurb: string}} group
+   * @returns {JSX.Element}
    */
-  function removeDayEvent(index) {
-    onDayEventsChange(dayItems.filter((_, i) => i !== index));
+  function renderGroup(group) {
+    return (
+      <div className="dio-direction-group" key={group.type}>
+        <header className="section-header">
+          <h4 id={`dio-group-${group.type}`}>{group.heading}</h4>
+          <p>{group.blurb}</p>
+        </header>
+        <table
+          className="dio-wiring-table"
+          aria-label={group.heading}
+          aria-describedby="dio-direction-legend"
+        >
+          <thead>
+            <tr>
+              <th scope="col">DIO channel</th>
+              <th scope="col">Event name</th>
+            </tr>
+          </thead>
+          <tbody>
+            {channelsFor(group.type).map((description) => {
+              const rawName = byDescription.get(description)?.name;
+              const name = typeof rawName === 'string' ? rawName : '';
+              return (
+                <tr
+                  key={description}
+                  className={name.trim() !== '' ? 'dio-row-named' : 'dio-row-unused'}
+                >
+                  <td data-label="DIO channel">{description}</td>
+                  <td data-label="Event name">{renderNameField(description, rawName, group.type)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
   }
 
   return (
     <div className="behavioral-events-display">
-      <h3 className="behavioral-events-display-heading">Behavioral events (inherited)</h3>
-      {events.length === 0 ? (
-        <p className="behavioral-events-display-empty">
-          No behavioral events are defined for this animal.
+      <header className="section-header">
+        <h3>Behavioral events — how your hardware maps to the SpikeGadgets ECU</h3>
+        <p>
+          Every digital channel on the ECU is listed below. Type the event name for the channels
+          your rig uses on this day; leave the rest blank — blank channels aren&apos;t written to the
+          file. The name you enter becomes the DIO event&apos;s name in the NWB file. A new day
+          carries the previous day&apos;s names forward, so edit only if you rewired the rig.
         </p>
-      ) : (
-        <>
-          <p className="behavioral-events-display-note">
-            These behavioral events are defined on the animal for reference. They are
-            not written to this day&apos;s metadata.
-            {!readOnly && ' Only the day-specific events below are exported with this recording day.'}
+      </header>
+
+      {/* Programmatically-associated legend (referenced by each table's aria-describedby);
+          meaning is in text, not a color/emoji alone (WCAG 1.4.1). */}
+      <p id="dio-direction-legend" className="dio-direction-legend">
+        <strong>Din</strong> = inputs (sensors the animal triggers).{' '}
+        <strong>Dout</strong> = outputs (things you drive). Names must be unique.
+      </p>
+
+      {/* Empty-day bootstrap: a blank first day can reuse another animal's existing DIO setup
+          (same rig, your own data) instead of re-keying it. Only shown while the day is empty. */}
+      {dayItems.length === 0 && copyableSources.length > 0 && (
+        <div className="dio-copy-cta">
+          <p>
+            This day has no behavioral events yet. Type the channels your rig uses below, or copy an
+            existing setup from another animal:
           </p>
-          <ul className="inherited-events-list" aria-label="Inherited behavioral events">
-            {events.map((event) => (
-              <li key={event.name} className="inherited-event">
-                <span className="lock-icon" aria-hidden="true">🔒</span>
-                <span className="inherited-event-name">{event.name}</span>
-                {event.description && (
-                  <span className="inherited-event-description">{event.description}</span>
-                )}
-                <span className="sr-only"> (inherited, read-only)</span>
-                {/* Library → exported: copy this reference event into the day's exported list.
-                    Hidden once the day already uses it (by name). */}
-                {!readOnly && !dayNames.has(event.name) && (
-                  <button
-                    type="button"
-                    className="button-small"
-                    onClick={() => handleUseOnThisDay(event)}
-                    aria-label={`Use ${event.name} on this day`}
-                  >
-                    Use on this day
-                  </button>
-                )}
-              </li>
+          <div className="dio-copy-cta__actions">
+            {copyableSources.map((source) => (
+              <button
+                key={source.id}
+                type="button"
+                className="button-secondary"
+                onClick={() => onDayEventsChange(structuredClone(source.events))}
+              >
+                {`Copy from ${source.name} (${source.events.length} ${
+                  source.events.length === 1 ? 'event' : 'events'
+                })`}
+              </button>
             ))}
-          </ul>
-        </>
+          </div>
+        </div>
       )}
 
-      {!readOnly && (
-        <div className="day-specific-events">
-          <h4 className="day-specific-events-heading">Day-specific behavioral events</h4>
+      {duplicateDescriptions.length > 0 && (
+        <div className="inline-error" role="alert">
+          {duplicateDescriptions
+            .map(
+              (desc) =>
+                `The channel "${desc}" is used by more than one event. trodes_to_nwb requires a ` +
+                `unique channel per event — rename one before export.`
+            )
+            .join(' ')}
+        </div>
+      )}
 
-          {duplicateNames.length > 0 && (
-            <div className="inline-warning" role="status">
-              {duplicateNames.map((name) => (
-                `"${name}" matches an inherited animal-level event; only this day-specific entry is exported with this day.`
-              )).join(' ')}
-            </div>
-          )}
+      {/* Inputs and Outputs sit side by side: two columns of 32 channels rather than 64 stacked
+          rows. They stack on a narrow viewport (see SCSS). */}
+      <div className="dio-grid-columns">{GROUPS.map(renderGroup)}</div>
 
-          {duplicateDescriptions.length > 0 && (
-            <div className="inline-error" role="alert">
-              {duplicateDescriptions
-                .map(
-                  (desc) =>
-                    `The description "${desc}" is used by more than one day event. trodes_to_nwb ` +
-                    `requires a unique description per event — rename one before export.`
-                )
-                .join(' ')}
-            </div>
-          )}
-
-          {dayItems.length > 0 && (
-            <ul className="day-events-list" aria-label="Day-specific behavioral events">
-              {dayItems.map((event, index) => (
-                <li key={index} className="day-event">
-                  <span className="day-event-name">{event.name || <em>unnamed</em>}</span>
-                  {event.description && (
-                    <span className="day-event-description">{event.description}</span>
-                  )}
-                  <button
-                    type="button"
-                    className="button-small button-danger"
-                    onClick={() => removeDayEvent(index)}
-                    aria-label={`Remove day-specific event ${event.name}`}
-                  >
-                    Remove
-                  </button>
-                </li>
+      {otherEvents.length > 0 && (
+        <div className="dio-direction-group">
+          <header className="section-header">
+            <h4>Other</h4>
+            <p>
+              Imported events whose channel isn&apos;t a standard Din/Dout line. Re-point one by
+              naming the matching Din/Dout channel above and clearing the name here.
+            </p>
+          </header>
+          <table
+            className="dio-wiring-table"
+            aria-label="Other"
+            aria-describedby="dio-direction-legend"
+          >
+            <thead>
+              <tr>
+                <th scope="col">DIO channel</th>
+                <th scope="col">Event name</th>
+              </tr>
+            </thead>
+            <tbody>
+              {otherEvents.map((event, i) => (
+                // A corrupt import can repeat a description, so disambiguate the row key by index.
+                <tr key={`${event.description || '(no channel)'}-${i}`}>
+                  <td data-label="DIO channel">{event.description || <em>no channel</em>}</td>
+                  <td data-label="Event name">
+                    {renderNameField(event.description || '', event.name ?? '')}
+                  </td>
+                </tr>
               ))}
-            </ul>
-          )}
-
-          {adding ? (
-            <div className="day-event-editor">
-              <label className="day-event-field">
-                <span>Event name</span>
-                <input
-                  type="text"
-                  value={draft.name}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, name: e.target.value }))}
-                  autoFocus
-                />
-              </label>
-              <label className="day-event-field">
-                <span>Description</span>
-                <input
-                  type="text"
-                  value={draft.description}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, description: e.target.value }))}
-                />
-              </label>
-              <div className="day-event-actions">
-                <button
-                  type="button"
-                  className="button-small button-primary"
-                  onClick={saveDraft}
-                  disabled={draft.name.trim() === ''}
-                >
-                  Save
-                </button>
-                <button
-                  type="button"
-                  className="button-small"
-                  onClick={() => setAdding(false)}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              type="button"
-              className="button-secondary"
-              onClick={startAdd}
-            >
-              + Add day-specific event
-            </button>
-          )}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
@@ -220,19 +296,17 @@ export default function BehavioralEventsDisplay({
 }
 
 BehavioralEventsDisplay.propTypes = {
-  inheritedEvents: PropTypes.arrayOf(
-    PropTypes.shape({ name: PropTypes.string, description: PropTypes.string })
-  ),
   dayEvents: PropTypes.arrayOf(
     PropTypes.shape({ name: PropTypes.string, description: PropTypes.string })
   ),
   onDayEventsChange: PropTypes.func,
-  readOnly: PropTypes.bool,
+  copyableSources: PropTypes.arrayOf(
+    PropTypes.shape({ id: PropTypes.string, name: PropTypes.string, events: PropTypes.array })
+  ),
 };
 
 BehavioralEventsDisplay.defaultProps = {
-  inheritedEvents: [],
   dayEvents: [],
   onDayEventsChange: null,
-  readOnly: false,
+  copyableSources: [],
 };

@@ -49,7 +49,6 @@ const CROSS_PAGE_ALLOWLIST = new Set([
   'pages/AnimalEditor/wiring/ChannelMapsContainer',
   'pages/AnimalEditor/wiring/RecordingSystemContainer',
   'pages/AnimalEditor/wiring/CamerasContainer',
-  'pages/AnimalEditor/wiring/DioContainer',
   'pages/AnimalEditor/wiring/OptogeneticsContainer',
   'pages/AnimalEditor/wiring/useAnimalFieldUpdate',
   // Phase 3-5: the per-animal Validation & Export tab renders <ValidationSummary animalKey=…> — the

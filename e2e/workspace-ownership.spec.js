@@ -101,7 +101,7 @@ test.describe('Ownership & discoverability — AnimalView header + section-nav +
     await expect(nav.getByRole('link', { name: /^Recording Days/ })).toBeVisible();
     await expect(nav.getByRole('link', { name: /^Validation & Export/ })).toBeVisible();
     // Setup rows.
-    for (const name of ['Electrode Groups', 'Channel Maps', 'Recording System', 'Cameras', 'DIO', 'Optogenetics']) {
+    for (const name of ['Electrode Groups', 'Channel Maps', 'Recording System', 'Cameras', 'Optogenetics']) {
       await expect(nav.getByRole('link', { name: new RegExp(`^${name}`) })).toBeVisible();
     }
     // Information scent: the Recording Days row carries its day count (1 for the single seeded day).
@@ -159,7 +159,6 @@ test.describe('Ownership & discoverability — AnimalView header + section-nav +
     await expectRow('Channel Maps', 'if ephys');
     await expectRow('Recording System', 'data acquisition');
     await expectRow('Cameras', 'if video');
-    await expectRow('DIO', 'if behavioral events');
     await expectRow('Optogenetics', 'if opto');
 
     // NON-gating: a behavior-only animal can still reach its days surface — the empty-day state is

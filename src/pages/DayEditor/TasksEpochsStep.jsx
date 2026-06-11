@@ -3,7 +3,6 @@ import PropTypes from 'prop-types';
 import { ConfirmDialog } from '../../components/Modal';
 import TasksTable from './TasksTable';
 import TaskModal from './TaskModal';
-import BehavioralEventsDisplay from './BehavioralEventsDisplay';
 import AssociatedVideosEditor from './AssociatedVideosEditor';
 import AssociatedFilesEditor from './AssociatedFilesEditor';
 import FsGuiSection from './FsGuiSection';
@@ -11,7 +10,6 @@ import MalformedCollectionNotice from './MalformedCollectionNotice';
 import { useStepperShortcut } from '../../hooks/stepperShortcuts';
 import { RAW_DAY_ARRAY_FIELDS } from '../../validation/rawShape';
 import {
-  getAnimalBehavioralEvents,
   getAnimalCameras,
   getDayTasks,
   getDayAssociatedVideos,
@@ -121,7 +119,6 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
   const cameras = getAnimalCameras(animal);
   const associatedVideos = getDayAssociatedVideos(day);
   const associatedFiles = getDayAssociatedFiles(day);
-  const inheritedBehavioralEvents = getAnimalBehavioralEvents(animal);
   const dayBehavioralEvents = getDayBehavioralEvents(day);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -357,14 +354,6 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
         onChange={(next) => onFieldUpdate('associated_files', next)}
       />
 
-      <section className="behavioral-events-block">
-        <BehavioralEventsDisplay
-          inheritedEvents={inheritedBehavioralEvents}
-          dayEvents={dayBehavioralEvents}
-          onDayEventsChange={(events) => onFieldUpdate('behavioral_events', events)}
-        />
-      </section>
-
       {/* FsGUI optogenetics protocols are day-owned and only meaningful when the animal
           has optogenetics enabled. They reference this day's epochs + the animal's
           cameras as controlled choices. */}
@@ -373,10 +362,9 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
           fsGuiYamls={getDayFsGuiYamls(day)}
           cameras={cameras}
           epochOptions={[...validEpochSet(tasks)].sort((a, b) => a - b)}
-          // Only the DAY's behavioral events are exported (mergeDayMetadata reads
-          // day.behavioral_events), and the dangling_dio_output rule validates against
-          // those — so offer ONLY day events here. Inherited animal events are reference
-          // only; to use one, add it to this day in the Behavioral Events section above.
+          // Behavioral events are day-owned and exported from the day (mergeDayMetadata reads
+          // day.behavioral_events), and the dangling_dio_output rule validates against those —
+          // so offer the day's behavioral events here.
           dioOptions={[
             ...new Set(
               dayBehavioralEvents
@@ -394,7 +382,6 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
         task={editingTask}
         existingTasks={tasks}
         cameras={cameras}
-        inheritedEvents={inheritedBehavioralEvents}
         knownTaskDescriptions={dayKnownDescriptions}
         animalId={ownerKey}
         onSave={handleSaveTask}

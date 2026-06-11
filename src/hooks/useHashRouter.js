@@ -23,7 +23,6 @@ export const ANIMAL_VIEW_TABS = [
   'channel-maps',
   'recording-system',
   'cameras',
-  'dio',
   'optogenetics',
 ];
 
