@@ -3,6 +3,7 @@ import BehavioralEventsDisplay from './BehavioralEventsDisplay';
 import MalformedCollectionNotice from './MalformedCollectionNotice';
 import { getDayBehavioralEvents } from '../../state/workspaceSelectors';
 import { RAW_DAY_ARRAY_FIELDS } from '../../validation/rawShape';
+import { useDayEditorContext } from './DayEditorContext';
 
 // The day-owned collections whose corrupt-shape reset control belongs on THIS tab (one source of
 // truth: the field's repairStep). So the corruption badges the Behavioral Events tab AND can be
@@ -24,7 +25,11 @@ const BEHAVIORAL_STEP_COLLECTIONS = RAW_DAY_ARRAY_FIELDS.filter((f) => f.repairS
  *   day (computed by the stepper via `getCopyableDioSources`); offered as a bootstrap CTA when empty.
  * @returns {JSX.Element}
  */
-export default function BehavioralEventsStep({ day, onFieldUpdate, copyableDioSources }) {
+export default function BehavioralEventsStep(props) {
+  // `day` + `onFieldUpdate` come from DayEditorContext in the Day Editor (an isolated render
+  // passes them as props). `copyableDioSources` is section-specific, so it stays a direct prop.
+  const { day, onFieldUpdate } = useDayEditorContext(props);
+  const { copyableDioSources } = props;
   return (
     <div className="behavioral-events-step">
       <h2>Behavioral Events</h2>
@@ -44,9 +49,11 @@ export default function BehavioralEventsStep({ day, onFieldUpdate, copyableDioSo
   );
 }
 
+// `day` + `onFieldUpdate` come from DayEditorContext in the Day Editor; these propTypes describe
+// the isolated-render fallback, so `onFieldUpdate` is not `.isRequired`.
 BehavioralEventsStep.propTypes = {
   day: PropTypes.object,
-  onFieldUpdate: PropTypes.func.isRequired,
+  onFieldUpdate: PropTypes.func,
   copyableDioSources: PropTypes.array,
 };
 

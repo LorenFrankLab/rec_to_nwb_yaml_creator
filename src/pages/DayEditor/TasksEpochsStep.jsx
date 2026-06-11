@@ -17,6 +17,7 @@ import {
   getDayBehavioralEvents,
   getDayFsGuiYamls,
 } from '../../state/workspaceSelectors';
+import { useDayEditorContext } from './DayEditorContext';
 import './TasksEpochsStep.scss';
 
 // The day-owned collections this step owns (raw-shape reset surface). Derived from the
@@ -107,7 +108,12 @@ function clearOrphans(entries, valid) {
  *   instead of the possibly-stale `animal.id` record field.
  * @returns {JSX.Element}
  */
-export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, onFieldUpdate, animalKey = undefined }) {
+export default function TasksEpochsStep(props) {
+  // The shared day bundle comes from DayEditorContext in the Day Editor (an isolated render
+  // passes the same fields as props). `knownTaskDescriptions` is section-specific, so it stays
+  // a direct prop.
+  const { animal, day, onFieldUpdate, animalKey = undefined } = useDayEditorContext(props);
+  const { knownTaskDescriptions } = props;
   // The store OWNER KEY (resolved by DayEditorStepper). Animal-editor links use it so a
   // stale/missing `animal.id` record field can't misroute a recovered animal; falls back to
   // `animal.id` for isolated renders that don't pass it.
@@ -406,21 +412,23 @@ export default function TasksEpochsStep({ animal, day, knownTaskDescriptions, on
   );
 }
 
+// animal/day/onFieldUpdate/animalKey come from DayEditorContext in the Day Editor; these
+// propTypes describe the isolated-render fallback, so they are not `.isRequired`.
 TasksEpochsStep.propTypes = {
   animal: PropTypes.shape({
     id: PropTypes.string,
     cameras: PropTypes.array,
     behavioral_events: PropTypes.array,
-  }).isRequired,
+  }),
   day: PropTypes.shape({
     tasks: PropTypes.array,
     behavioral_events: PropTypes.array,
     associated_video_files: PropTypes.array,
     associated_files: PropTypes.array,
-  }).isRequired,
+  }),
   knownTaskDescriptions: PropTypes.object,
   mergedDay: PropTypes.object,
-  onFieldUpdate: PropTypes.func.isRequired,
+  onFieldUpdate: PropTypes.func,
   animalKey: PropTypes.string,
 };
 

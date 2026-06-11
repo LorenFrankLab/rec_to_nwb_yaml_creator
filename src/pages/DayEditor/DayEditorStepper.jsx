@@ -12,6 +12,7 @@ import {
 import { applyRepairCommand } from '../../state/repairCommands';
 import { computeStepStatus, animalSetupTabForFieldPath, validateDay } from '../../domain/validation';
 import { describeOwner } from '../../domain/dayRecovery';
+import { DayEditorProvider } from './DayEditorContext';
 import DayEditorSectionNav from './DayEditorSectionNav';
 import SaveIndicator from './SaveIndicator';
 import OverviewStep from './OverviewStep';
@@ -405,6 +406,20 @@ export default function DayEditorStepper() {
   const hasPrev = currentIndex > 0;
   const hasNext = currentIndex < stepOrder.length - 1;
 
+  // The per-day bundle every section needs, provided once via DayEditorContext instead of
+  // drilling the same seven props through each <CurrentStepComponent>. Built fresh per render
+  // (matching the prior per-render prop passing). Section-specific props (onNavigate, onRepair,
+  // knownTaskDescriptions, copyableDioSources, …) stay as ordinary props below.
+  const dayEditorContextValue = {
+    animal,
+    day,
+    mergedDay,
+    animalDays,
+    onFieldUpdate: handleFieldUpdate,
+    actions,
+    animalKey: ownerKey,
+  };
+
   return (
     <div className="day-editor-stepper">
       {/* Plain div, not <header>: a <header> here (not inside a sectioning element)
@@ -439,21 +454,16 @@ export default function DayEditorStepper() {
           aria-label="Day editor"
           tabIndex="-1"
         >
-          <CurrentStepComponent
-            animal={animal}
-            animalKey={ownerKey}
-            day={day}
-            mergedDay={mergedDay}
-            knownTaskDescriptions={knownTaskDescriptions}
-            onFieldUpdate={handleFieldUpdate}
-            onSubjectUpdate={handleSubjectUpdate}
-            onNavigate={handleStepNavigate}
-            onRepair={handleRepair}
-            focusRequest={focusRequest}
-            animalDays={animalDays}
-            actions={actions}
-            copyableDioSources={copyableDioSources}
-          />
+          <DayEditorProvider value={dayEditorContextValue}>
+            <CurrentStepComponent
+              knownTaskDescriptions={knownTaskDescriptions}
+              onSubjectUpdate={handleSubjectUpdate}
+              onNavigate={handleStepNavigate}
+              onRepair={handleRepair}
+              focusRequest={focusRequest}
+              copyableDioSources={copyableDioSources}
+            />
+          </DayEditorProvider>
 
           {/* Free-navigation affordance: advances/retreats through the fixed section order
               (Export included — its DOWNLOAD action self-gates in ExportStep, not here). */}
