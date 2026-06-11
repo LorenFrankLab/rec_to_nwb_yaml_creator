@@ -96,6 +96,14 @@
   gap: 0.25rem;
 }
 
+/* Each week is its own role="row" for AT grid navigation, but must NOT introduce a visual box —
+   `display: contents` lets the seven day cells participate directly in the parent 7-column grid
+   (otherwise the six week wrappers become the grid items and each stacks its cells vertically).
+   The role="row" semantics are retained in the accessibility tree. */
+.calendar-week {
+  display: contents;
+}
+
 /* Day Cell */
 .calendar-day {
   position: relative;

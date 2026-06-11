@@ -56,6 +56,15 @@ describe('RecordingDaysTab — day row contract (decision 12)', () => {
     expect(screen.getByRole('link', { name: /2023-06-22/i })).toBeInTheDocument();
   });
 
+  it('exposes the "Add Recording Days" button by its VISIBLE name (label parity, no hidden aria-label)', () => {
+    renderRealistic();
+    // The accessible name must equal the visible text so voice control / screen readers find the
+    // control by what it says — not a hidden "Show calendar" aria-label. (aria-expanded conveys state.)
+    const button = screen.getByRole('button', { name: 'Add Recording Days' });
+    expect(button).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('button', { name: /show calendar/i })).not.toBeInTheDocument();
+  });
+
   it('shows the shared lifecycle legend above the day list (vocabulary defined once)', () => {
     renderRealistic();
     // The same collapsible legend used on the Validation Summary explains the row status words.

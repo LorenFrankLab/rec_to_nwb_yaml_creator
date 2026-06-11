@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import Modal from '../../components/Modal/Modal';
 import BrainRegionAutocomplete, { canonicalizeRegion, BRAIN_REGIONS } from '../../components/BrainRegionAutocomplete';
-import { deviceTypes } from '../../valueList';
+import { deviceTypes, deviceTypeLabel } from '../../valueList';
 import './ElectrodeGroupModal.scss';
 
 /**
@@ -124,9 +124,11 @@ function ElectrodeGroupForm({ mode, group, knownRegions, onSave, onCancel }) {
           required
         >
           <option value="">Select device type...</option>
+          {/* Display a recognition-friendly summary; the option VALUE stays the exact probe ID
+              (it keys into trodes_to_nwb probe-metadata filenames, so it must not change). */}
           {deviceTypes().map((deviceType) => (
             <option key={deviceType} value={deviceType}>
-              {deviceType}
+              {deviceTypeLabel(deviceType)}
             </option>
           ))}
         </select>

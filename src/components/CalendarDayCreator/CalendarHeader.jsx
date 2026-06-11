@@ -44,7 +44,9 @@ export function CalendarHeader({ currentMonth, onPreviousMonth, onNextMonth, onT
           ◀
         </button>
 
-        <div className="calendar-month-year">
+        {/* aria-live so a screen-reader user hears the new month when navigating prev/next/today
+            (the displayed month otherwise changes silently). */}
+        <div className="calendar-month-year" aria-live="polite" aria-atomic="true">
           {monthName} {year}
         </div>
 

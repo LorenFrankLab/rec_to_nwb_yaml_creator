@@ -125,7 +125,7 @@ describe('Carry-forward day creation toggle', () => {
    * @returns {Promise<string>} The id of the day that creation will produce (`remy-YYYY-MM-DD`).
    */
   async function createTodayViaCalendar() {
-    fireEvent.click(screen.getByRole('button', { name: /show calendar/i }));
+    fireEvent.click(screen.getByRole('button', { name: /add recording days/i }));
     // The timeline-aware calendar opens on the existing day's month; jump to today first.
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /today/i }));

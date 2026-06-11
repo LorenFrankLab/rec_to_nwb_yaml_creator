@@ -206,10 +206,12 @@ describe('CalendarDayCreator Component', () => {
       });
 
       if (todayButton) {
-        // Should be disabled
-        expect(todayButton).toBeDisabled();
+        // Existing days are aria-disabled (focusable for grid navigation) rather than a real
+        // `disabled` button removed from the grid — but they remain non-selectable.
+        expect(todayButton).toHaveAttribute('aria-disabled', 'true');
+        expect(todayButton).not.toBeDisabled();
 
-        // Try to click (should not work)
+        // Try to click (should not select an already-existing recording day)
         await user.click(todayButton);
 
         // Verify no selection

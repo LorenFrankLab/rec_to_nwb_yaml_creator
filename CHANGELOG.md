@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Recognition + accessibility hardening (Phase 8A-2).** Three merge-neutral, display-only fixes so
+  users can recognize controls and operate the calendar by keyboard:
+  - **Visible/accessible label parity.** The Animal Days "Add Recording Days" button no longer
+    carries a hidden `aria-label` of "Show calendar" — its accessible name now equals its visible
+    text, so screen-reader and voice-control users address it by what it says (`aria-expanded` still
+    conveys open/closed). ([RecordingDaysTab.jsx](src/pages/AnimalWorkspace/RecordingDaysTab.jsx)).
+  - **Human device-type summaries.** The opaque probe IDs in the electrode-group Device Type selector
+    now display a recognition-friendly summary (e.g. `128c-4s8mm6cm-20um-40um-sl` →
+    "128-ch, 4-shank, 8 mm (20/40 µm)") via a new pure `deviceTypeLabel`
+    ([valueList.js](src/valueList.js)). The option **value** stays the exact probe ID (it keys into
+    trodes_to_nwb probe-metadata filenames), so the exported YAML is unchanged.
+  - **Calendar keyboard/a11y.** The month grid is now six weekly rows of seven cells (was one
+    42-cell row), and uses a **roving tabindex** so Tab always reaches a cell — even on a month that
+    does not contain today (it defaults to the first selectable day of the displayed month); the
+    arrow keys move focus cell-to-cell. Existing-recording cells are `aria-disabled` (still focusable
+    for continuous navigation) rather than removed from the grid.
+    ([CalendarGrid.jsx](src/components/CalendarDayCreator/CalendarGrid.jsx),
+    [CalendarDay.jsx](src/components/CalendarDayCreator/CalendarDay.jsx)). Resolves the Post-v3
+    calendar-a11y follow-ups. No export or schema change.
+
 - **Timeline-aware "Add Recording Days" calendar.** When an animal already has recording days, the
   calendar now opens on the month of the next likely recording day (the latest existing day + 1 — the
   same month for a mid-month latest day, the following month when the latest day ends a month) instead
