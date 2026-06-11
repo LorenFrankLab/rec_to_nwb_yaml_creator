@@ -1,8 +1,10 @@
 /**
  * Script to generate golden YAML fixtures
  *
- * This script reads existing valid YAML files, parses them, and re-exports them
- * using the encodeYaml function to establish deterministic output baselines.
+ * This script parses each source YAML and re-exports it via encodeYaml to establish
+ * deterministic byte baselines. Most fixtures are sourced from their hand-authored
+ * valid/ file; realistic-session.yml is re-encoded from its own frozen golden bytes
+ * (see the selfSourcedFixtures note below for why).
  *
  * YAML Library Version: 2.8.1 (as of 2025-10-26)
  * Note: Golden fixtures are tied to this YAML library version. If the library is
@@ -28,12 +30,34 @@ const __dirname = path.dirname(__filename);
 const validFixturesDir = path.join(__dirname, '../valid');
 const goldenFixturesDir = __dirname;
 
-// Source files to convert to golden fixtures
-const sourceFiles = [
+// Most golden fixtures are (re)generated from their hand-authored valid/ source.
+const validSourcedFixtures = [
   '20230622_sample_metadata.yml',
   '20230622_sample_metadataProbeReconfig.yml',
   'minimal-valid.yml',
-  'realistic-session.yml'
+];
+
+// realistic-session.yml is a deliberate exception (the Phase 6 "intentional semantic split"):
+// its golden is a FROZEN, never-validated byte-baseline that encodes KNOWN-INVALID legacy data
+// (a globally-incrementing tetrode channel map `0..31`, and epoch-specific sleep descriptions).
+// The validated valid/ source and the new-path builder are the CORRECTED source of truth and
+// intentionally diverge — so this golden must NOT be regenerated from valid/ (that would clobber
+// the split). It is instead re-encoded IN PLACE from its own current golden bytes, which keeps it
+// byte-stable across a yaml-library upgrade WITHOUT pulling in the corrected content. See the
+// header of src/pages/DayEditor/__tests__/exportParity.integration.test.js (and its "rejects the
+// legacy globally-incrementing channel map" test) and src/__tests__/fixtures/workspaceBuilders.js.
+const selfSourcedFixtures = ['realistic-session.yml'];
+
+// Pair each fixture with the file the regeneration READS. The write target is always the golden dir.
+const fixtures = [
+  ...validSourcedFixtures.map((filename) => ({
+    filename,
+    sourcePath: path.join(validFixturesDir, filename),
+  })),
+  ...selfSourcedFixtures.map((filename) => ({
+    filename,
+    sourcePath: path.join(goldenFixturesDir, filename),
+  })),
 ];
 
 console.log('🔄 Generating golden YAML fixtures...');
@@ -41,9 +65,8 @@ console.log(`📦 Using YAML library version: ${YAML.version || '2.8.1'}\n`);
 
 let hasErrors = false;
 
-sourceFiles.forEach(filename => {
+fixtures.forEach(({ filename, sourcePath }) => {
   try {
-    const sourcePath = path.join(validFixturesDir, filename);
     const goldenPath = path.join(goldenFixturesDir, filename);
 
     // Read and parse the source YAML
