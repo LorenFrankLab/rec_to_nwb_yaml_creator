@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 import { getAnimalCameras } from '../../state/workspaceSelectors';
 import { rawArray } from '../../components/rawPropTypes';
+import Button from '../../components/ui/Button';
 import './CamerasSection.scss';
 
 /**
@@ -141,9 +142,9 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
         <p className="empty-state-hint">
           Configure camera metadata including manufacturer, model, lens, and meters per pixel for spatial calibration.
         </p>
-        <button type="button" className="button-primary" onClick={handleAddClick}>
+        <Button variant="primary" onClick={handleAddClick}>
           Add First Camera
-        </button>
+        </Button>
       </div>
     );
   }
@@ -157,9 +158,9 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
       </header>
 
       <div className="table-actions">
-        <button type="button" className="button-primary" onClick={handleAddClick}>
+        <Button variant="primary" onClick={handleAddClick}>
           + Add Camera
-        </button>
+        </Button>
       </div>
 
       {/* Horizontal-scroll container so the Actions column (Edit/Delete) stays reachable when
