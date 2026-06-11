@@ -170,8 +170,8 @@ verified reality), or **annotated**. None blocked the workspace suite.
   its id and the day dates added (regrouped from `createdDays`) instead of counts only. Pinned by
   `ImportYamlDialog.test.jsx`.
 - **FIXED (kept as a latent safety net + pinned) — `handleNavClick` discard guard.** Confirmed
-  unreachable in the shipped UI: all three setup editors that report `pendingEdits`
-  (electrode-groups, channel-maps via `ChannelMapEditor`, cameras) are focus-trapping shared
+  unreachable in the shipped UI: the setup editors that report `pendingEdits`
+  (electrode-groups, cameras) are focus-trapping shared
   `Modal`s whose overlay intercepts the nav click. The guard is correct, intentional safety code for
   a **future inline (non-modal)** setup editor, so it was **not removed**; instead a clarifying
   comment was added and the decision was extracted to a pure `shouldInterceptNavDiscard` + pinned by

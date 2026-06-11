@@ -161,6 +161,10 @@ export function buildProbeWideBadChannelMap({
  * to `[]` when they carry a non-empty array OR a preserved corrupt scalar (both are
  * converter-ignored corruption the hidden later-row grid can't otherwise repair).
  *
+ * NOTE: this helper has no live caller (it operates on the array-of-rows channel-map shape that no
+ * UI currently renders); it is retained, alongside its tests, as the row-shape counterpart to the
+ * live {@link buildProbeWideBadChannelMap} for a future inline (array-of-rows) editor.
+ *
  * Takes an options object (not positional args) to match its Day-Editor twin
  * {@link buildProbeWideBadChannelMap} and make the same-typed `electrodeId`/`isChecked`
  * non-transposable.
