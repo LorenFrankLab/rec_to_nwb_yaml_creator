@@ -64,9 +64,16 @@ for (const viewport of [NARROW, DESKTOP]) {
       await expect(dayLink).toBeVisible();
       const del = page.getByRole('button', { name: /Delete recording day/i }).first();
       await expect(del).toBeVisible();
+      const dup = page.getByRole('button', { name: /Duplicate recording day/i }).first();
+      await expect(dup).toBeVisible();
 
       const linkBox = await dayLink.boundingBox();
       const delBox = await del.boundingBox();
+      const dupBox = await dup.boundingBox();
+      // The two row actions are a matched, non-overlapping pair, both within the viewport.
+      expect(overlaps(dupBox, delBox)).toBe(false);
+      expect(dupBox.x).toBeGreaterThanOrEqual(0);
+      expect(dupBox.x + dupBox.width).toBeLessThanOrEqual(viewport.width + 1);
       // Destructive action must not sit on top of the primary navigation card.
       expect(overlaps(linkBox, delBox)).toBe(false);
       // And it must be within the viewport.

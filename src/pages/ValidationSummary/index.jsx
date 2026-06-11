@@ -784,6 +784,16 @@ export function ValidationSummary({ animalKey } = {}) {
             </p>
           </details>
 
+          {/* The re-link rule is reference material in the disclosure above EXCEPT when a recovered
+              day is actually present — then it is task-critical (Export Valid Only silently skips
+              it), so surface it inline rather than behind the disclosure. */}
+          {rows.some((row) => row.orphaned) && (
+            <p className="validation-summary-hint validation-summary-relink-note" role="note">
+              Some recovered days are <em>not in a day list</em> — re-link them
+              (&quot;Add to day list&quot;) before they can be exported.
+            </p>
+          )}
+
           {pendingExport && (
             <section className="batch-export-preflight" aria-label="Batch export preflight">
               <h2>Confirm batch export</h2>

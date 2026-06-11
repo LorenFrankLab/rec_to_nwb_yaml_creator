@@ -398,6 +398,42 @@
   outline-offset: 2px;
 }
 
+/* The non-destructive "Duplicate day…" row action — same compact text-button shape as the danger
+   variant but neutral, so the two row actions read as a matched pair (the class was previously
+   undefined, leaving the button unstyled). */
+.btn-secondary-text {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--color-grey-700);
+  cursor: pointer;
+  font-size: 0.8125rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.btn-secondary-text:hover {
+  background-color: var(--color-grey-100);
+  text-decoration: underline;
+}
+
+.btn-secondary-text:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Carry-forward toggle: make the whole label a comfortable tap target (the class was previously
+   undefined, so the hit area was just the bare checkbox glyph). */
+.carry-forward-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--color-grey-800);
+  min-height: 44px;
+}
+
 /* Narrow-width rescue (Phase 8A-3): at phone widths the day surface stacks into cards so dense
    inline rows don't squeeze into one-word columns and the destructive action doesn't crowd the
    primary navigation card. Geometry already avoids hard overflow; this is the touch/readability
@@ -415,6 +451,23 @@
   .day-actions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  /* Comfortable touch target for the full-width primary action on the phone testing path. */
+  .day-actions .btn-primary {
+    min-height: 44px;
+  }
+
+  /* The first-run setup card's row is a 4-column grid on desktop; stack it so the action link and
+     state don't squeeze into one-word columns at phone width. */
+  .setup-card-item {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+    align-items: start;
+  }
+
+  .setup-card-item-action {
+    justify-self: start;
   }
 
   /* Day row → stacked card: the navigation card on top, the row actions below it. */
