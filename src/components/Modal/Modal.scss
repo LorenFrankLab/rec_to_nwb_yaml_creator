@@ -16,7 +16,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: var(--z-modal);
   animation: modalFadeIn 0.2s ease-in;
 }
 
@@ -37,7 +37,7 @@
   width: 90%;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-modal);
   animation: modalSlideUp 0.3s ease-out;
 }
 
