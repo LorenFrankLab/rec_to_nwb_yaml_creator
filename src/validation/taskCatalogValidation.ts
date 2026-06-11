@@ -21,7 +21,15 @@
  * pipeline and the repair-surface registry. Pure and dependency-free.
  */
 
-/** A validation issue in the shape `rulesValidation.js` emits (kept local — not yet wired live). */
+/**
+ * A validation issue in the shape `rulesValidation.js` emits (kept local — not yet wired live).
+ *
+ * Defined locally on purpose: the live issue objects in `rulesValidation.js` are untyped JS (its
+ * source of truth is the `issues.push({ … })` sites near `identityDivergences`), so there is no
+ * shared type to reference yet — a local interface adds coverage the live pipeline lacks. When Phase
+ * 8C wires these rules into the pipeline, converge this, the untyped `rulesValidation.js` issues,
+ * and `DayState.validationErrors`' narrower `ValidationIssue` into one shared issue-family type.
+ */
 export interface CatalogValidationIssue {
   /** Section path for the issue. */
   path: string;

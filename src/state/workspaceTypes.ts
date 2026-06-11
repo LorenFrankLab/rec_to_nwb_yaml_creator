@@ -432,7 +432,12 @@ export interface Task {
  * consumed by the catalog resolution/validation helpers; not yet persisted or exported.
  */
 export interface TaskType {
-  /** Stable internal id (e.g. "tasktype-0"); never exported. */
+  /**
+   * Stable internal id (e.g. "tasktype-0"); never exported. Uniqueness within an animal's
+   * `taskTypes` is a PRODUCER-maintained invariant (the type cannot express it) — the conversion
+   * mints sequential ids and the resolver/validator key Maps on it; Phase 8C should add an
+   * import-boundary uniqueness assertion (the persistence-migrator defense-in-depth discipline).
+   */
   id: string;
   /** Task name — the catalog dedup key (Spyglass identity). */
   task_name: string;
@@ -440,7 +445,14 @@ export interface TaskType {
   task_description: string;
   /** Environment description (preserved as present/absent for byte-identical resolution). */
   task_environment?: string;
-  /** Camera IDs used by this task type (animal-level). */
+  /**
+   * Camera IDs used by this task type (animal-level). Deliberately `Array<number | string>`: this
+   * is a tolerant-READ boundary type that must survive corrupt v2 imports (cameras can arrive as a
+   * stray string; cf. {@link module:state/cameraUsage}). The schema (`nwb_schema.json`) is an
+   * integer array — do NOT narrow this to `number[]` to "match" it; let validation reject bad data.
+   * Phase 8C should converge this, `Task.camera_id`, and {@link TaskDefinitionFields.camera_id} on
+   * one shared `CameraId = number | string` alias rather than tightening the storage type.
+   */
   camera_id?: Array<number | string>;
 }
 

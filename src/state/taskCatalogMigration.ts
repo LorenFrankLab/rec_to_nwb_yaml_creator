@@ -71,7 +71,9 @@ export function migrateTasksToCatalogV2ToV3(workspace: object): object {
     animal.taskTypes = taskTypes;
 
     // Group reconciliations by their source day (dropping the redundant `dayId` — the record's
-    // location on the day is the identifier the persisted shape carries).
+    // location on the day is the identifier the persisted shape carries). NB: this strips ONLY
+    // `dayId` by name; a future derive-only field on TaskReconciliationRecord must be stripped here
+    // too so it does not leak into the persisted `TaskDefinitionReconciliation` shape.
     const reconByDay = new Map<string, TaskDefinitionReconciliation[]>();
     for (const { dayId, ...record } of reconciliations) {
       const list = reconByDay.get(dayId) ?? [];

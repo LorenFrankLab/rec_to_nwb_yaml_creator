@@ -162,6 +162,9 @@ export function deriveAnimalTaskCatalog(days: unknown): DerivedTaskCatalog {
   const createType = (definition: Record<string, unknown>): TaskType => {
     const id = `tasktype-${nextTypeIndex}`;
     nextTypeIndex += 1;
+    // TODO(8C): replace this `as unknown as TaskType` (the de-facto constructor — `definition` is a
+    // `Record<string, unknown>` captured from arbitrary task shapes) with a validated smart
+    // constructor that guarantees `task_name` presence when the catalog becomes a live data source.
     const type = { id, ...structuredClone(definition) } as unknown as TaskType;
     taskTypes.push(type);
     return type;
@@ -195,7 +198,11 @@ export function deriveAnimalTaskCatalog(days: unknown): DerivedTaskCatalog {
         if (usableTaskName(name)) canonicalByName.set(name, { type, definition });
       }
 
-      instances.push({ taskTypeId: type.id, task_epochs: structuredClone(task[EPOCHS_KEY]) as number[] });
+      // Preserve `task_epochs` by PRESENCE: a (malformed) task with no epochs must not gain a
+      // spurious `task_epochs: undefined` on its instance — mirror how the definition copies keys.
+      const instance: Record<string, unknown> = { taskTypeId: type.id };
+      if (hasOwn(task, EPOCHS_KEY)) instance[EPOCHS_KEY] = structuredClone(task[EPOCHS_KEY]);
+      instances.push(instance as unknown as TaskInstance);
     }
 
     instancesByDayId[dayId] = instances;
@@ -232,10 +239,10 @@ export function resolveTaskInstances(taskTypes: unknown, taskInstances: unknown)
     const type = typeById.get(taskTypeId);
     if (!type) continue; // dangling reference — surfaced by validation, never crashes the merge
     const { id: _id, ...definition } = type;
-    resolved.push({
-      ...structuredClone(definition),
-      task_epochs: structuredClone(instance[EPOCHS_KEY]),
-    } as unknown as Task);
+    // Carry `task_epochs` by PRESENCE (mirrors derive): never emit a spurious `undefined` key.
+    const entry: Record<string, unknown> = { ...structuredClone(definition) };
+    if (hasOwn(instance, EPOCHS_KEY)) entry[EPOCHS_KEY] = structuredClone(instance[EPOCHS_KEY]);
+    resolved.push(entry as unknown as Task);
   }
   return resolved;
 }

@@ -174,4 +174,86 @@ describe('resolveTaskInstances (the C1-preserving inline bridge)', () => {
     expect(resolveTaskInstances([], null)).toEqual([]);
     expect(resolveTaskInstances(null, [{ taskTypeId: 'x', task_epochs: [1] }])).toEqual([]);
   });
+
+  it('does not emit a spurious task_epochs key when the instance has none (presence-preserving)', () => {
+    // A malformed instance lacking epochs must NOT resolve to `{ …, task_epochs: undefined }` — a
+    // spurious key would mislead any 8C consumer that inspects keys (AJV / JSON.stringify) rather
+    // than re-encoding (encodeYaml happens to drop `undefined`, which masks the bug today).
+    const { taskTypes } = deriveAnimalTaskCatalog(multipleTasks.days);
+    const resolved = resolveTaskInstances(taskTypes, [{ taskTypeId: 'tasktype-0' }]);
+    expect(resolved[0]).not.toHaveProperty('task_epochs');
+  });
+});
+
+describe('round-trip robustness (8C-activation regression guards)', () => {
+  it('preserves a non-template (legacy) task key through derive→resolve, losslessly', () => {
+    // `reorderKeys` is lossless — it appends keys outside TASK_ORDER — so the catalog must NOT drop
+    // a stray legacy key either, or activating it in 8C would change exported bytes for such data.
+    const original = {
+      task_name: 'sleep',
+      task_description: 'd',
+      task_environment: 'e',
+      camera_id: [0],
+      task_epochs: [1],
+      legacy_extra: 'KEEP',
+    };
+    const days = [{ id: 'd1', date: '2023-06-01', tasks: [original] }];
+    const { taskTypes, instancesByDayId } = deriveAnimalTaskCatalog(days);
+    const [resolved] = resolveTaskInstances(taskTypes, instancesByDayId.d1);
+    expect(resolved.legacy_extra).toBe('KEEP');
+    expect(resolved).toEqual(original); // exact key set, NOT pre-stripped through canon()
+  });
+
+  it('does not inject a spurious task_epochs key when the source task has none (derive)', () => {
+    const days = [
+      { id: 'd1', date: '2023-06-01', tasks: [{ task_name: 'sleep', task_description: 'd', task_environment: 'e', camera_id: [] }] },
+    ];
+    const { instancesByDayId } = deriveAnimalTaskCatalog(days);
+    expect(instancesByDayId.d1[0]).toEqual({ taskTypeId: 'tasktype-0' });
+    expect(instancesByDayId.d1[0]).not.toHaveProperty('task_epochs');
+  });
+
+  it('gives each blank-task_name task its OWN type (distinct nameless tasks never merge)', () => {
+    const days = [
+      {
+        id: 'd1',
+        date: '2023-06-01',
+        tasks: [
+          { task_name: '', task_description: 'a', task_environment: 'x', camera_id: [0], task_epochs: [1] },
+          { task_name: '   ', task_description: 'b', task_environment: 'y', camera_id: [1], task_epochs: [2] },
+        ],
+      },
+    ];
+    const { taskTypes, reconciliations } = deriveAnimalTaskCatalog(days);
+    expect(taskTypes).toHaveLength(2); // never merged on the empty/whitespace key
+    expect(reconciliations).toEqual([]);
+  });
+
+  it('excludes task_epochs from the dedup definition — mixed-type epochs are NOT a conflict', () => {
+    const days = [
+      { id: 'd1', date: '2023-06-01', tasks: [{ task_name: 'sleep', task_description: 'd', task_environment: 'e', camera_id: [0], task_epochs: [1] }] },
+      { id: 'd2', date: '2023-06-02', tasks: [{ task_name: 'sleep', task_description: 'd', task_environment: 'e', camera_id: [0], task_epochs: ['1'] }] },
+    ];
+    const { taskTypes, instancesByDayId, reconciliations } = deriveAnimalTaskCatalog(days);
+    expect(taskTypes).toHaveLength(1);
+    expect(reconciliations).toEqual([]); // epochs differ in TYPE but that is not an identity conflict
+    expect(instancesByDayId.d2[0].task_epochs).toEqual(['1']); // the string epoch is preserved verbatim
+  });
+
+  it('treats camera_id array ORDER as a conflict (different exported bytes)', () => {
+    const days = [
+      { id: 'd1', date: '2023-06-01', tasks: [{ task_name: 'sleep', task_description: 'd', task_environment: 'e', camera_id: [0, 1], task_epochs: [1] }] },
+      { id: 'd2', date: '2023-06-02', tasks: [{ task_name: 'sleep', task_description: 'd', task_environment: 'e', camera_id: [1, 0], task_epochs: [2] }] },
+    ];
+    const { reconciliations } = deriveAnimalTaskCatalog(days);
+    expect(reconciliations).toHaveLength(1);
+    expect(reconciliations[0]).toMatchObject({ original: { camera_id: [1, 0] }, canonical: { camera_id: [0, 1] } });
+  });
+
+  it('resolves a camera-conflicting day to the CANONICAL camera_id with its own epochs', () => {
+    const { taskTypes, instancesByDayId } = deriveAnimalTaskCatalog(sameNameDifferentCamera.days);
+    const resolved = resolveTaskInstances(taskTypes, instancesByDayId['remy-2023-06-02']);
+    expect(resolved[0].camera_id).toEqual([0]); // canonical (day 1) camera wins
+    expect(resolved[0].task_epochs).toEqual([3]); // its own epochs preserved
+  });
 });

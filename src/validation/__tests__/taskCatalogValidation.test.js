@@ -78,6 +78,14 @@ describe('taskTypeCamerasNotUsed (TaskType.camera_id ⊄ day.cameras_used)', () 
     expect(taskTypeCamerasNotUsed(tt, { taskInstances: inst })).toEqual([]); // absent
     expect(taskTypeCamerasNotUsed(tt, { taskInstances: inst, cameras_used: [] })).toEqual([]); // empty
   });
+
+  it('coerces id types — a numeric cameras_used covers a string camera_id (no false finding)', () => {
+    // Corrupt imports can carry a camera id as either number or string; comparing by string key
+    // (not raw value) prevents a spurious "camera not used" finding for `1` vs `"1"`.
+    const tt = [{ id: 'tasktype-0', task_name: 'w', camera_id: ['1'] }];
+    const day = { taskInstances: [{ taskTypeId: 'tasktype-0', task_epochs: [1] }], cameras_used: [1] };
+    expect(taskTypeCamerasNotUsed(tt, day)).toEqual([]);
+  });
 });
 
 describe('issue producers (standard issue shape; codes reconcile with divergent_task_identity)', () => {

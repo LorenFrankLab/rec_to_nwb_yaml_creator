@@ -114,6 +114,39 @@ describe('migrateTasksToCatalogV2ToV3 — non-destructive workspace→workspace 
     expect(() => migrateTasksToCatalogV2ToV3({})).not.toThrow();
     expect(() => migrateTasksToCatalogV2ToV3({ animals: 'nope', days: 5 })).not.toThrow();
   });
+
+  it('derives an INDEPENDENT catalog per animal (no cross-animal dedup or id bleed)', () => {
+    // Production workspaces are routinely multi-animal; the per-animal id counter + canonical-name
+    // map must reset each animal. A regression hoisting either to workspace scope would silently
+    // corrupt every multi-animal dataset and still pass the single-animal fixtures.
+    const ws = {
+      animals: { remy: { id: 'remy', days: ['r1'] }, jaq: { id: 'jaq', days: ['j1'] } },
+      days: {
+        r1: { animalId: 'remy', id: 'r1', date: '2023-06-01', tasks: [{ task_name: 'sleep', task_description: 'A', task_environment: 'e', camera_id: [0], task_epochs: [1] }] },
+        j1: { animalId: 'jaq', id: 'j1', date: '2023-06-01', tasks: [{ task_name: 'sleep', task_description: 'B', task_environment: 'e', camera_id: [0], task_epochs: [1] }] },
+      },
+    };
+    const out = migrateTasksToCatalogV2ToV3(ws);
+    expect(out.animals.remy.taskTypes[0]).toMatchObject({ id: 'tasktype-0', task_description: 'A' });
+    expect(out.animals.jaq.taskTypes[0]).toMatchObject({ id: 'tasktype-0', task_description: 'B' });
+    // The SAME task_name across DIFFERENT animals is never a conflict — catalogs are per-animal.
+    expect(out.days.j1.state?.taskDefinitionReconciliations).toBeUndefined();
+  });
+
+  it('records a reconciliation per conflicting day, all canonical to the first occurrence', () => {
+    const days = [
+      { id: 'remy-2023-06-01', date: '2023-06-01', tasks: [{ task_name: 'sleep', task_description: 'd', task_environment: 'A', camera_id: [0], task_epochs: [1] }] },
+      { id: 'remy-2023-06-02', date: '2023-06-02', tasks: [{ task_name: 'sleep', task_description: 'd', task_environment: 'B', camera_id: [0], task_epochs: [2] }] },
+      { id: 'remy-2023-06-03', date: '2023-06-03', tasks: [{ task_name: 'sleep', task_description: 'd', task_environment: 'C', camera_id: [0], task_epochs: [3] }] },
+    ];
+    const out = migrateTasksToCatalogV2ToV3(workspaceFromDays(days));
+    expect(out.animals.remy.taskTypes).toHaveLength(1);
+    expect(out.animals.remy.taskTypes[0].task_environment).toBe('A'); // first occurrence wins
+    const d2 = out.days['remy-2023-06-02'].state.taskDefinitionReconciliations;
+    const d3 = out.days['remy-2023-06-03'].state.taskDefinitionReconciliations;
+    expect(d2[0]).toMatchObject({ original: { task_environment: 'B' }, canonical: { task_environment: 'A' } });
+    expect(d3[0]).toMatchObject({ original: { task_environment: 'C' }, canonical: { task_environment: 'A' } });
+  });
 });
 
 describe('Phase 8B activates NOTHING in the persisted-migration registry', () => {
