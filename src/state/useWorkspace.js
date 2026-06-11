@@ -83,10 +83,10 @@ export function useWorkspace(initialState = null) {
    * days to the wrong hardware config.
    *
    * The updater is run once here against the ref and again inside `setWorkspace` (React may also
-   * re-invoke it under batching/StrictMode), so it MUST be pure for value fields — a captured
-   * timestamp differs by a tick between the two runs, but only the React-committed copy persists
-   * (the ref is overwritten on the next render) and the version reservation reads
-   * `configurationHistory`, not timestamps, so that difference is inert.
+   * re-invoke it under batching/StrictMode), so it should be pure for any value field a LATER
+   * same-tick step reads. A captured timestamp does differ by a tick between the two runs, but only
+   * the React-committed copy persists (the ref is overwritten on the next render) and the version
+   * reservation reads `configurationHistory`, not timestamps, so that difference is inert.
    *
    * @param {(prev: object) => object} updater - Workspace transform.
    */
@@ -179,8 +179,10 @@ export function useWorkspace(initialState = null) {
        * @throws {Error} If animal ID already exists
        */
       createAnimal: (animalId, subject, metadata = {}) => {
-        // commitWorkspace (not setWorkspace) so a composite import batch reserves the next config
-        // version from the freshly-created animal, not the stale pre-delete one.
+        // commitWorkspace (not setWorkspace) so that within a composite import batch (a) the
+        // duplicate-id check sees the preceding deleteAnimal, and (b) this animal's v1 history is
+        // visible in the ref for the LATER snapshot step's version reservation. (createAnimal itself
+        // hardcodes version 1; it reserves nothing.)
         commitWorkspace((prev) => {
           if (prev.animals[animalId]) {
             throw new Error(`Animal "${animalId}" already exists`);

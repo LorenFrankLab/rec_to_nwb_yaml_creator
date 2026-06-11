@@ -194,7 +194,22 @@ describe('OptogeneticsStep', () => {
       <Harness initial={{ opto_excitation_source: 'x', optical_fiber: null, virus_injection: 7 }} />
     );
     expect(screen.getByRole('checkbox', { name: /has optogenetics/i })).toBeChecked();
+    // All three sections render (the string-valued excitation source is the likeliest .map/.length
+    // crash and must render too, degraded to empty).
+    expect(screen.getByRole('group', { name: /excitation source/i })).toBeInTheDocument();
     expect(screen.getByRole('group', { name: /optical fibers/i })).toBeInTheDocument();
     expect(screen.getByRole('group', { name: /virus injections/i })).toBeInTheDocument();
+  });
+
+  it('preserves a lone object written without its array wrapper (one item, not silently dropped)', () => {
+    // A hand-edited `opto_excitation_source: {…}` (a single item missing its array wrapper) is kept
+    // as a one-item list rather than dropped, so real data survives the corruption-tolerant render.
+    render(
+      <Harness
+        initial={{ opto_excitation_source: { name: 'preserved_laser' }, optical_fiber: [], virus_injection: [] }}
+      />
+    );
+    expect(screen.getByRole('checkbox', { name: /has optogenetics/i })).toBeChecked();
+    expect(screen.getByDisplayValue('preserved_laser')).toBeInTheDocument();
   });
 });

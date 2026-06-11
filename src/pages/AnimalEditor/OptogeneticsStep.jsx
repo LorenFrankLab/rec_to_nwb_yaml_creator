@@ -144,18 +144,22 @@ export default function OptogeneticsStep({ animal, onUpdate }) {
   // Treat opto as ENABLED only when it is a real record. A corrupt persisted/imported scalar
   // (e.g. `optogenetics: "x"`) reads as OFF — the safe default — rather than crashing. When
   // enabled, coerce the three nested lists to arrays so a malformed shape (e.g.
-  // `{ opto_excitation_source: "x" }`) degrades to an empty-but-editable form instead of throwing
-  // on `.length`/`.map`/spread (which would trip the root ErrorBoundary and blank the whole app).
+  // `{ opto_excitation_source: "x" }`) degrades to an editable form instead of throwing on
+  // `.length`/`.map`/spread (which would trip the root ErrorBoundary and blank the whole app).
+  // A lone object (a single item written without its array wrapper, hand-edited) is PRESERVED as a
+  // one-item list rather than dropped, so real data isn't silently lost; a true scalar becomes `[]`.
   // Editing then commits the repaired array shape. Raw-shape validation does not cover nested opto,
   // so this render guard is the line of defense.
+  const asItemList = (value) =>
+    Array.isArray(value) ? value : value !== null && typeof value === 'object' ? [value] : [];
   const rawOpto = animal?.optogenetics;
   const enabled = rawOpto !== null && typeof rawOpto === 'object' && !Array.isArray(rawOpto);
   const opto = enabled
     ? {
         ...rawOpto,
-        opto_excitation_source: Array.isArray(rawOpto.opto_excitation_source) ? rawOpto.opto_excitation_source : [],
-        optical_fiber: Array.isArray(rawOpto.optical_fiber) ? rawOpto.optical_fiber : [],
-        virus_injection: Array.isArray(rawOpto.virus_injection) ? rawOpto.virus_injection : [],
+        opto_excitation_source: asItemList(rawOpto.opto_excitation_source),
+        optical_fiber: asItemList(rawOpto.optical_fiber),
+        virus_injection: asItemList(rawOpto.virus_injection),
       }
     : null;
 

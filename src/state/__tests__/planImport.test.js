@@ -301,8 +301,10 @@ describe('planImport — purity', () => {
 
 describe('planImport — subject_id must be a route-safe animal id', () => {
   // The animal store key + hash-route param IS the subject_id; a non-route-safe value would import
-  // as valid data yet make the animal unreachable. (`/` is already rejected by the slash rule
-  // upstream, so it is covered there, not here.)
+  // as valid data yet make the animal unreachable. (`/` is excluded here because it is rejected
+  // UPSTREAM during decompose validation by the DANDI `subject_id_slash` error rule — a `/` id
+  // fails `decomposeYaml` and is flagged "Validation failed: …", never reaching this gate. Verified:
+  // adding `'rat/1'` here yields that upstream reason, not this gate's.)
   it.each(['rat 1', 'rat?1', 'rat#1', 'rat%1'])(
     'flags a subject_id with a route-unsafe character (%s) as unimportable, not a silent unreachable animal',
     (badId) => {

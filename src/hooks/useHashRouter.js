@@ -95,10 +95,10 @@ export function parseHashRoute(hash = typeof window !== 'undefined' ? window.loc
   const animalTabMatch = pathWithoutQuery.match(/^\/animal\/([^/]+)\/([^/]+)$/);
   const animalNoTabMatch = pathWithoutQuery.match(/^\/animal\/([^/]+)$/);
   if (animalTabMatch || animalNoTabMatch) {
-    // Decode the route param (matches useDayIdFromUrl), so a %-encoded id round-trips to its real
-    // store key. Keep the raw segment if the percent-sequence is malformed rather than throwing out
-    // of the router. (Imported animal ids are gated to a route-safe charset, so this is defensive
-    // parity with the day route.)
+    // Decode the route param like the day route's useDayIdFromUrl, so a %-encoded id round-trips to
+    // its real store key — but ALSO guard a malformed percent-sequence (keep the raw segment), which
+    // the day route does not. (Imported animal ids are gated to a route-safe charset, so this decode
+    // is belt-and-suspenders.)
     let animalId = (animalTabMatch || animalNoTabMatch)[1];
     try {
       animalId = decodeURIComponent(animalId);
