@@ -195,7 +195,13 @@ export function AppLayout() {
         return <AnimalWorkspace />;
 
       case 'day':
-        return <DayEditor dayId={currentRoute.params.id} />;
+        // Key by the routed day id so a DIRECT day→day hash change (e.g. browser back/forward
+        // between two day URLs, with no intervening view change) REMOUNTS the editor. Without it,
+        // the subtree is reconciled in place and day-scoped local/uncontrolled state (the Overview
+        // Session/Experiment Description textareas, DayTechnicalSection's local state, the active
+        // step) would carry the prior day's values into the new day — and a later blur would write
+        // them into the wrong day.
+        return <DayEditor key={currentRoute.params.id} dayId={currentRoute.params.id} />;
 
       case 'animal-view':
         return (

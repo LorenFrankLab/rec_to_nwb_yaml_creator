@@ -128,6 +128,39 @@ describe('decomposeYaml attribution', () => {
     expect('fs_gui_yamls' in opto).toBe(false);
     expect(result.dayFacts.fs_gui_yamls).toEqual(flat.fs_gui_yamls);
   });
+
+  it('detects LEGACY opto with no opto_software key (software string + populated arrays) — no data loss', () => {
+    // A legacy/external file predating the dual-spelling `opto_software` shim carries real opto data
+    // (`optogenetic_stimulation_software` + populated arrays) but NO `opto_software`. Detecting opto
+    // only from `opto_software` silently dropped that animal-level metadata on import.
+    const { animal: base, day } = buildRealisticWorkspace();
+    const animal = {
+      ...base,
+      optogenetics: {
+        opto_excitation_source: [
+          { name: 'laser_473', model_name: 'OBIS 473', description: 'Blue laser', wavelength_in_nm: 473, power_in_W: 0.01, intensity_in_W_per_m2: 100 },
+        ],
+        optical_fiber: [
+          { name: 'fiber_CA1', hardware_name: 'Doric', implanted_fiber_description: '200um', location: 'CA1', hemisphere: 'right', ap_in_mm: 3, ml_in_mm: 2.5, dv_in_mm: 2, roll_in_deg: 0, pitch_in_deg: 0, yaw_in_deg: 0, reference: 'bregma', excitation_source: 'laser_473' },
+        ],
+        virus_injection: [
+          { name: 'virus_CA1', description: 'ChR2', hemisphere: 'right', location: 'CA1', ap_in_mm: 3, ml_in_mm: 2.5, dv_in_mm: 2, roll_in_deg: 0, pitch_in_deg: 0, yaw_in_deg: 0, reference: 'bregma', virus_name: 'AAV-ChR2', titer_in_vg_per_ml: 1000000000000, volume_in_uL: 0.5 },
+        ],
+        optogenetic_stimulation_software: 'FsGui',
+      },
+    };
+    const flat = decodeYaml(encodeYaml(mergeDayMetadata(animal, day)));
+    delete flat.opto_software; // simulate the legacy shape: the compatibility key didn't exist yet
+
+    const result = decomposeYaml(flat);
+    expect(result.ok).toBe(true);
+    const opto = result.animalFacts.optogenetics;
+    expect(opto).not.toBe(null); // was silently null before the fix
+    expect(opto.optogenetic_stimulation_software).toBe('FsGui');
+    expect(opto.opto_excitation_source).toHaveLength(1);
+    expect(opto.optical_fiber).toHaveLength(1);
+    expect(opto.virus_injection).toHaveLength(1);
+  });
 });
 
 describe('decomposeYaml ownership (deep-cloned, non-aliasing output)', () => {

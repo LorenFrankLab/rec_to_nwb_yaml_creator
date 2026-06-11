@@ -82,6 +82,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Switching directly between two recording days no longer carries the prior day's field values.**
+  The Day Editor is now remounted per routed day id, so a direct `#/day/A` → `#/day/B` change (e.g.
+  browser back/forward between days) shows the new day's data — previously the Overview
+  Session/Experiment Description fields could keep the prior day's text, and a later edit could
+  write it into the wrong day.
+- **Replace-importing onto an animal with a missing/empty hardware-configuration history now pins
+  each day to the correct probe configuration.** A version-reservation race could duplicate
+  configuration "version 1" during a replace import, silently pinning a reconfigured day to the
+  initial probe geometry; configuration versions are now reserved from the freshly-created animal.
+- **Importing a legacy/external YAML with optogenetics no longer silently drops the opto metadata.**
+  Import detected optogenetics only from the compatibility `opto_software` key; a file with
+  `optogenetic_stimulation_software` and populated opto sections (but no `opto_software`) imported as
+  non-opto. Import now detects opto from any populated opto section or the stimulation-software key
+  (a genuinely non-opto file still round-trips unchanged).
+- **Importing a YAML whose `subject_id` isn't a valid animal id is now rejected with a clear reason**
+  (the subject id is also the hash-route key, so a space / `?` / `#` would make the animal
+  unreachable). The import names the file and the allowed characters (letters, numbers, hyphen,
+  underscore) — matching what the create-animal form already requires — instead of creating an
+  unreachable animal.
+- **A corrupt persisted/imported `optogenetics` value no longer crashes the app.** The Optogenetics
+  editor now treats a non-record opto value as OFF and tolerates malformed nested lists (degrading to
+  an empty, editable form) instead of throwing and blanking the whole UI.
+- **(Internal) The test-coverage CI gate is now actually enforced.** The thresholds were nested one
+  level too shallow for the test runner (and so ignored); they are now armed against production
+  source, so a coverage regression fails CI.
 - **Day Validation tab no longer reads "Ready to export" while Export is actually blocked.** The
   per-day Validation summary computed its issue list and readiness without the animal's other days,
   so a day that silently un-fails an earlier same-configuration bad channel (the bad-channel

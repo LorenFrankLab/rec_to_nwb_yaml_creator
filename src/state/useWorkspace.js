@@ -72,6 +72,29 @@ export function useWorkspace(initialState = null) {
   const workspaceRef = useRef(workspace);
   workspaceRef.current = workspace;
 
+  /**
+   * Apply a workspace updater while keeping `workspaceRef.current` in LOCKSTEP with the change.
+   *
+   * A single action can read the ref straight from the last render, but a COMPOSITE batch of
+   * actions in one tick — e.g. a replace-import's `deleteAnimal` → `createAnimal` →
+   * `createConfigurationSnapshotAndApplyForward`, all before React commits — needs each step to see
+   * the prior step's result synchronously. Without this, a later step reserves state (like the next
+   * configuration version) from the STALE pre-batch animal, which can duplicate version 1 and pin
+   * days to the wrong hardware config.
+   *
+   * The updater is run once here against the ref and again inside `setWorkspace` (React may also
+   * re-invoke it under batching/StrictMode), so it MUST be pure for value fields — a captured
+   * timestamp differs by a tick between the two runs, but only the React-committed copy persists
+   * (the ref is overwritten on the next render) and the version reservation reads
+   * `configurationHistory`, not timestamps, so that difference is inert.
+   *
+   * @param {(prev: object) => object} updater - Workspace transform.
+   */
+  const commitWorkspace = (updater) => {
+    workspaceRef.current = updater(workspaceRef.current);
+    setWorkspace(updater);
+  };
+
   // Persistence status: drives the truthful SaveIndicator and the beforeunload guard.
   const [lastSaved, setLastSaved] = useState(null); // ISO string of last confirmed write, or null
   const [saveError, setSaveError] = useState(null); // user-facing save-failure message, or null
@@ -156,7 +179,9 @@ export function useWorkspace(initialState = null) {
        * @throws {Error} If animal ID already exists
        */
       createAnimal: (animalId, subject, metadata = {}) => {
-        setWorkspace((prev) => {
+        // commitWorkspace (not setWorkspace) so a composite import batch reserves the next config
+        // version from the freshly-created animal, not the stale pre-delete one.
+        commitWorkspace((prev) => {
           if (prev.animals[animalId]) {
             throw new Error(`Animal "${animalId}" already exists`);
           }
@@ -255,7 +280,10 @@ export function useWorkspace(initialState = null) {
        * @throws {Error} If animal does not exist
        */
       deleteAnimal: (animalId) => {
-        setWorkspace((prev) => {
+        // commitWorkspace (not setWorkspace) so a later step in the SAME tick (a replace-import's
+        // create + snapshot) sees the deletion synchronously and can't reserve a config version
+        // from the about-to-be-deleted animal.
+        commitWorkspace((prev) => {
           if (!prev.animals[animalId]) {
             throw new Error(`Animal "${animalId}" not found`);
           }
