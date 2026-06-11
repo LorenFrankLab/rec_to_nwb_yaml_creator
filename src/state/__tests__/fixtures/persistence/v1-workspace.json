@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "workspace": {
+    "version": "1.0.0",
+    "lastModified": "2023-06-22T12:00:00.000Z",
+    "animals": {
+      "remy": {
+        "id": "remy",
+        "subject": {
+          "description": "Long Evans Rat from Charles River",
+          "genotype": "Wild Type",
+          "species": "Rattus norvegicus",
+          "sex": "M",
+          "subject_id": "remy",
+          "weight": 485,
+          "date_of_birth": "2023-01-10T00:00:00"
+        },
+        "devices": {
+          "data_acq_device": [
+            { "name": "SpikeGadgets", "system": "SpikeGadgets", "amplifier": "Intan", "adc_circuit": "Intan" }
+          ],
+          "device": { "name": ["Trodes"] },
+          "electrode_groups": [
+            { "id": 0, "location": "CA1", "device_type": "tetrode_12.5", "description": "CA1 tetrode 1", "targeted_location": "CA1", "targeted_x": 3, "targeted_y": 2.5, "targeted_z": 2, "units": "mm" },
+            { "id": 1, "location": "CA1", "device_type": "tetrode_12.5", "description": "CA1 tetrode 2", "targeted_location": "CA1", "targeted_x": 3.1, "targeted_y": 2.5, "targeted_z": 2, "units": "mm" }
+          ],
+          "ntrode_electrode_group_channel_map": [
+            { "ntrode_id": 1, "electrode_group_id": 0, "bad_channels": [], "map": { "0": 0, "1": 1, "2": 2, "3": 3 } },
+            { "ntrode_id": 2, "electrode_group_id": 1, "bad_channels": [2], "map": { "0": 0, "1": 1, "2": 2, "3": 3 } }
+          ]
+        },
+        "cameras": [
+          { "id": 0, "meters_per_pixel": 0.00085, "manufacturer": "Allied Vision", "model": "Mako G-158", "lens": "Fujinon HF16HA-1B", "camera_name": "overhead_camera" }
+        ],
+        "experimenters": {
+          "experimenter_name": ["Guidera, Jennifer"],
+          "lab": "Frank",
+          "institution": "University of California, San Francisco"
+        },
+        "optogenetics": null,
+        "behavioral_events": [],
+        "days": ["remy-2023-06-22"],
+        "created": "2023-06-22T12:00:00.000Z",
+        "lastModified": "2023-06-22T12:00:00.000Z",
+        "configurationHistory": [
+          {
+            "version": 1,
+            "date": "2023-06-22",
+            "description": "Initial configuration",
+            "devices": {
+              "electrode_groups": [
+                { "id": 0, "location": "CA1", "device_type": "tetrode_12.5", "description": "CA1 tetrode 1", "targeted_location": "CA1", "targeted_x": 3, "targeted_y": 2.5, "targeted_z": 2, "units": "mm" },
+                { "id": 1, "location": "CA1", "device_type": "tetrode_12.5", "description": "CA1 tetrode 2", "targeted_location": "CA1", "targeted_x": 3.1, "targeted_y": 2.5, "targeted_z": 2, "units": "mm" }
+              ],
+              "ntrode_electrode_group_channel_map": [
+                { "ntrode_id": 1, "electrode_group_id": 0, "bad_channels": [], "map": { "0": 0, "1": 1, "2": 2, "3": 3 } },
+                { "ntrode_id": 2, "electrode_group_id": 1, "bad_channels": [2], "map": { "0": 0, "1": 1, "2": 2, "3": 3 } }
+              ]
+            },
+            "appliedToDays": []
+          }
+        ]
+      }
+    },
+    "days": {
+      "remy-2023-06-22": {
+        "id": "remy-2023-06-22",
+        "animalId": "remy",
+        "date": "2023-06-22",
+        "experimentDate": "06222023",
+        "session": {
+          "session_id": "remy_20230622",
+          "session_description": "Day 45 of chronic recording, W-track alternation",
+          "experiment_description": "Chronic tetrode recording during spatial navigation"
+        },
+        "tasks": [
+          { "task_name": "sleep", "task_description": "Rest in home cage", "task_environment": "home cage", "camera_id": [0], "task_epochs": [1] }
+        ],
+        "behavioral_events": [
+          { "description": "Reward delivery at left arm", "name": "reward_left" }
+        ],
+        "associated_files": [],
+        "associated_video_files": [],
+        "technical": {
+          "times_period_multiplier": 1.5,
+          "raw_data_to_volts": 0.195,
+          "default_header_file_path": ""
+        },
+        "state": { "draft": true, "validated": false, "exported": false },
+        "created": "2023-06-22T12:00:00.000Z",
+        "lastModified": "2023-06-22T12:00:00.000Z",
+        "configurationVersion": 1
+      }
+    },
+    "settings": {
+      "defaultLab": "Frank",
+      "defaultInstitution": "University of California, San Francisco",
+      "defaultExperimenters": ["Guidera, Jennifer"],
+      "autoSaveInterval": 30000,
+      "shadowExportEnabled": true
+    }
+  }
+}

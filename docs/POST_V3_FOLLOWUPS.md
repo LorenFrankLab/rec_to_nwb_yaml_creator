@@ -70,12 +70,14 @@ out of scope for the cleanup pass and are tracked here.
 
 ## Release-gated
 
-6. **Persistence-blob forward migration.** The persistence layer versions the localStorage
-   blob and *discards with a notice* on `schemaVersion` mismatch — no migration. Acceptable for v3.0.0
-   (no real v1 blobs exist yet), but once users have v1 blobs a future shape change would silently
-   discard their saved work. Schedule a forward-migration path (transform old blobs forward instead of
-   discarding) **before the first post-v3.0.0 change that touches the persisted shape** — including
-   tech-debt item #1 above, which changes that shape.
+6. **Persistence-blob forward migration.** ✅ **RESOLVED.** A versioned forward-migration
+   framework now lives in `src/state/workspaceMigrations.js`: an ordered registry of pure migrators
+   (`n: vN → vN+1`) and `migrateWorkspace`, which `loadWorkspace` runs (before device-normalize /
+   shape-ensure) to upgrade an old blob forward instead of discarding it. Today's v1→v2 behavior is
+   encoded as the first registered migrator; `MIGRATABLE_SCHEMA_VERSIONS` is derived from the
+   registry. The mechanism is in place with no shape change yet — the first real shape change (the
+   task catalog; the `appliedToDays` derivation) registers its `vN→vN+1` migrator + a `vN` fixture.
+   Rule: bump `WORKSPACE_SCHEMA_VERSION` only together with a registered migrator and a fixture test.
 
 ## From the pre-cutover UX audits (audit docs since removed)
 

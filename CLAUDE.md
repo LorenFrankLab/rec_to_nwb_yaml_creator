@@ -543,6 +543,21 @@ The application includes comprehensive optogenetics configuration:
 - All `<details>` elements are opened before form submission for validation visibility
 - Production detection via `isProduction()` adjusts navigation links for GitHub Pages deployment
 
+### Persistence & schema migration
+
+The workspace slice is persisted to localStorage as `{ schemaVersion, workspace }`
+([src/state/persistence.js](src/state/persistence.js)). Old blobs are upgraded **forward** by an
+ordered registry of pure migrators in [src/state/workspaceMigrations.js](src/state/workspaceMigrations.js)
+(`migrators[n]: vN → vN+1`, applied by `migrateWorkspace` before device-normalize / shape-ensure),
+not discarded. `MIGRATABLE_SCHEMA_VERSIONS` is **derived** from the registry — never hand-edited.
+
+**Rule — bump `WORKSPACE_SCHEMA_VERSION` ONLY together with:** (1) a registered migrator from the
+previous version, and (2) a checked-in `vN` blob fixture
+([src/state/__tests__/fixtures/persistence/](src/state/__tests__/fixtures/persistence/)) whose test
+proves `load(vN-blob)` hydrates to the current shape with no discard and no data loss. Migrators are
+total and non-destructive (a field one can't map forward is preserved or surfaced via the
+`recovered`/`discarded` notice path, never silently dropped).
+
 ## Key Patterns
 
 - **Immutable Updates:** All state updates use `structuredClone()` to avoid mutation
