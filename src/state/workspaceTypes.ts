@@ -90,6 +90,18 @@ export interface Animal {
   technicalDefaults: TechnicalDefaults;
   /** Optional optogenetics setup. */
   optogenetics?: OptogeneticsConfig;
+  /**
+   * Animal-level task-type catalog (define-once, pick/order per day). Each `TaskType`
+   * is defined once for the animal and referenced from days via `Day.taskInstances`.
+   *
+   * **Phase 8B (rehearsal): OPTIONAL and inert.** The catalog model utilities exist and
+   * are tested, but the running app and the export merge still read inline `Day.tasks`.
+   * Phase 8C activates this as the source of truth (persisted shape bump + migrator + UI).
+   * Runtime readers must remain tolerant of its absence.
+   *
+   * @see module:state/taskCatalog
+   */
+  taskTypes?: TaskType[];
   /** Ordered list of day IDs for this animal. */
   days: DayId[];
   /** ISO timestamp when animal was created. */
@@ -343,8 +355,18 @@ export interface Day {
   session: SessionMetadata;
   /** Optional searchable keyword tags (NWB keywords). */
   keywords?: string[];
-  /** Behavioral tasks. */
+  /** Behavioral tasks (inline model — the current runtime/export source of truth). */
   tasks: Task[];
+  /**
+   * Ordered references into the animal's `taskTypes` catalog, one per task this day ran,
+   * each carrying the day's own `task_epochs`. The catalog counterpart of inline `tasks`.
+   *
+   * **Phase 8B (rehearsal): OPTIONAL and inert.** Present only on data produced by the
+   * (un-registered) v2→v3 conversion utility; the export merge still resolves from inline
+   * `tasks`. Phase 8C makes this the source of truth. `mergeDayMetadata` will resolve each
+   * instance back to an inline `tasks[]` entry (see {@link module:state/taskCatalog}).
+   */
+  taskInstances?: TaskInstance[];
   /** DIO events. */
   behavioral_events: BehavioralEvent[];
   /** Data files. */
@@ -395,6 +417,75 @@ export interface Task {
   camera_id?: string[];
   /** Environment description. */
   task_environment?: string;
+}
+
+/**
+ * Animal-level task-type catalog entry (define-once, reuse-per-day).
+ *
+ * A `TaskType` carries the per-name task DEFINITION (everything that does not vary by day);
+ * a day references it by `id` via {@link TaskInstance} and supplies only that day's
+ * `task_epochs`. The dedup key is `task_name` — the Spyglass dataset-unique identity
+ * (`common_task.py` raises on a duplicate `task_name` with a different `task_description`),
+ * so one `TaskType` per name makes that divergence structurally impossible.
+ *
+ * **Phase 8B: model-only.** Produced by the (un-registered) v2→v3 conversion utility and
+ * consumed by the catalog resolution/validation helpers; not yet persisted or exported.
+ */
+export interface TaskType {
+  /** Stable internal id (e.g. "tasktype-0"); never exported. */
+  id: string;
+  /** Task name — the catalog dedup key (Spyglass identity). */
+  task_name: string;
+  /** Task description. */
+  task_description: string;
+  /** Environment description (preserved as present/absent for byte-identical resolution). */
+  task_environment?: string;
+  /** Camera IDs used by this task type (animal-level). */
+  camera_id?: Array<number | string>;
+}
+
+/**
+ * Ordered per-day reference into the animal's `taskTypes` catalog.
+ *
+ * Mirrors the camera pattern (`animal.cameras` catalog + per-day reference): the day picks
+ * which task types it ran and orders their epochs; it does not re-type definitions. The
+ * export bridge resolves `{ taskTypeId, task_epochs }` back to an inline `tasks[]` entry of
+ * exactly the five `TASK_ORDER` keys (see {@link module:state/taskCatalog}).
+ */
+export interface TaskInstance {
+  /** References {@link TaskType.id} on the owning animal. */
+  taskTypeId: string;
+  /** Epoch numbers for this task on this day. */
+  task_epochs: number[];
+}
+
+/**
+ * Record of a migration-time task-definition conflict, preserved for user review.
+ *
+ * When a later day reuses a `task_name` with a DIFFERENT definition, the canonical
+ * (first-occurrence) `TaskType` wins for determinism and this record captures the day's
+ * ORIGINAL definition vs the canonical one — the original values are never silently
+ * dropped. Surfaced as a repairable `task_definition_reconciled` issue.
+ */
+export interface TaskDefinitionReconciliation {
+  /** The conflicting task name. */
+  task_name: string;
+  /** The canonical TaskType this day was pointed at. */
+  taskTypeId: string;
+  /** The day's original (pre-normalization) definition fields, present-keys only. */
+  original: TaskDefinitionFields;
+  /** The canonical (first-occurrence) definition fields, present-keys only. */
+  canonical: TaskDefinitionFields;
+}
+
+/** The Spyglass-identity definition fields compared when reconciling a `task_name`. */
+export interface TaskDefinitionFields {
+  /** Task description. */
+  task_description?: string;
+  /** Environment description. */
+  task_environment?: string;
+  /** Camera IDs used by the task. */
+  camera_id?: Array<number | string>;
 }
 
 /** Behavioral event (DIO event) configuration. */
@@ -508,6 +599,14 @@ export interface DayState {
    * (string); lives ONLY in state, never read by the export merge.
    */
   badChannelRemovalAcks?: Record<string, number[]>;
+  /**
+   * Task-definition conflicts recorded when the v2→v3 task-catalog conversion normalized
+   * a day's reused `task_name` to the canonical definition. Preserves the original values
+   * for review (surfaced as `task_definition_reconciled`); never read by the export merge.
+   *
+   * **Phase 8B: written only by the un-registered conversion utility; inert at runtime.**
+   */
+  taskDefinitionReconciliations?: TaskDefinitionReconciliation[];
 }
 
 /** Validation issue. */
