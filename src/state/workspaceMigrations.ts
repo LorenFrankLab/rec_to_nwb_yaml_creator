@@ -31,7 +31,7 @@ import { migrateTasksToCatalogV2ToV3 } from './taskCatalogMigration';
  * Whether `value` is a plain object record (not null, not an array).
  * @param value
  */
-const isPlainObject = (value) =>
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 
 /**
@@ -40,10 +40,10 @@ const isPlainObject = (value) =>
  * migration. So this is the identity on the workspace, kept explicit so the v1 path is a real,
  * tested migrator in the registry rather than a hand-maintained special case.
  *
- * @param {object} workspace - The v1-shaped workspace.
- * @returns {object} The same workspace (v2 shape is identical).
+ * @param workspace - The v1-shaped workspace.
+ * @returns The same workspace (v2 shape is identical).
  */
-function migrateV1ToV2(workspace) {
+function migrateV1ToV2(workspace: object): object {
   return workspace;
 }
 
@@ -56,10 +56,8 @@ function migrateV1ToV2(workspace) {
  *   `taskTypes[]` catalog + per-day `taskInstances[]` (Phase 8C activation, C3 dedup algorithm).
  *   Non-destructive: a reused `task_name` with a divergent definition is normalized to the
  *   first-occurrence canonical and recorded as a `task_definition_reconciled` issue on the day.
- *
- * @type {Record<number, (workspace: object) => object>}
  */
-const MIGRATORS = {
+const MIGRATORS: Record<number, (workspace: object) => object> = {
   1: migrateV1ToV2,
   2: migrateTasksToCatalogV2ToV3,
 };
@@ -68,28 +66,28 @@ const MIGRATORS = {
  * Current persisted-blob schema version — every older blob migrates UP to this. Must equal
  * `max(registered source version) + 1` (enforced by a unit test), so it cannot advance without
  * a registered migrator.
- * @type {number}
  */
 export const WORKSPACE_SCHEMA_VERSION = 3;
 
 /**
  * The `schemaVersion`s a stored blob can be migrated FROM — the registry's source versions.
  * Derived from the registry, never hand-maintained.
- * @type {Set<number>}
  */
 export const MIGRATABLE_SCHEMA_VERSIONS = new Set(Object.keys(MIGRATORS).map(Number));
 
 /**
  * Apply forward migrators from a parsed blob's `schemaVersion` up to {@link WORKSPACE_SCHEMA_VERSION}.
  *
- * @param {{ schemaVersion?: number, workspace: object }} parsed - The parsed blob root.
- * @returns {{ workspace: object } | { discarded: true }} `{ workspace }` with the workspace upgraded
+ * @param parsed - The parsed blob root (`{ schemaVersion?, workspace }`).
+ * @returns `{ workspace }` with the workspace upgraded
  *   to the current shape; `{ discarded: true }` when the version is already-unknown, too old (below
  *   the lowest migrator), too new, non-integer, or unreachable through a registry gap — the caller
  *   maps that to a VERSION_MISMATCH discard. This does NOT device-normalize or shape-fill; the
  *   caller does that AFTER, so downstream code only ever sees the current shape.
  */
-export function migrateWorkspace(parsed) {
+export function migrateWorkspace(
+  parsed: unknown
+): { workspace: object } | { discarded: true } {
   // Defense-in-depth: this function is exported and unit-tested in isolation, so it does not trust
   // the caller's shape guard. A non-record blob or workspace cannot be migrated — discard rather
   // than throw on `null.schemaVersion` or hand back an `undefined` workspace a future caller might
@@ -99,7 +97,7 @@ export function migrateWorkspace(parsed) {
     return { discarded: true };
   }
 
-  const version = parsed.schemaVersion;
+  const version = parsed.schemaVersion as number;
 
   // Already current → no migrator runs (behaves exactly as the pre-registry current-version path).
   if (version === WORKSPACE_SCHEMA_VERSION) {
@@ -111,7 +109,7 @@ export function migrateWorkspace(parsed) {
     return { discarded: true };
   }
 
-  let workspace = parsed.workspace;
+  let workspace: object = parsed.workspace;
   for (let from = version; from < WORKSPACE_SCHEMA_VERSION; from += 1) {
     const migrate = MIGRATORS[from];
     // A gap in the chain (a source version with no migrator before reaching current) cannot be
