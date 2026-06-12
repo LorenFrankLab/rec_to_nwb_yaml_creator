@@ -7,6 +7,8 @@
  * Pure; moved verbatim.
  */
 
+import type { ValidationIssue, ValidationModel } from '../issueTypes';
+
 import {
   duplicateBehavioralEventDescriptions,
   duplicateBehavioralEventNames,
@@ -15,11 +17,11 @@ import {
 /**
  * Rule 14: behavioral-event names unique within the day.
  *
- * @param {object} model - The form data to validate.
- * @returns {object[]} Validation issues.
+ * @param model - The form data to validate.
+ * @returns Validation issues.
  */
-export function uniqueBehavioralEventNames(model) {
-  const issues = [];
+export function uniqueBehavioralEventNames(model: ValidationModel): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
   // A duplicate dio_event name is a hard Spyglass DIOEvents primary-key violation
   // and a trodes_to_nwb ValueError. Shares duplicateBehavioralEventNames with the inline
   // grid gate so the two can never disagree on what "the same name" means.
@@ -46,11 +48,11 @@ export function uniqueBehavioralEventNames(model) {
 /**
  * Rule 17: behavioral-event DESCRIPTION uniqueness.
  *
- * @param {object} model - The form data to validate.
- * @returns {object[]} Validation issues.
+ * @param model - The form data to validate.
+ * @returns Validation issues.
  */
-export function uniqueBehavioralEventDescriptions(model) {
-  const issues = [];
+export function uniqueBehavioralEventDescriptions(model: ValidationModel): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
   // trodes_to_nwb (convert_dios) keys DIO channels by behavioral_events[].description
   // and raises a ValueError on a duplicate description. (Rule 14 covers `name`.)
   if (Array.isArray(model.behavioral_events) && model.behavioral_events.length > 0) {
