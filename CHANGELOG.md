@@ -24,12 +24,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     (resolved against the animal `taskTypes`) and falls back to legacy inline `day.tasks` when a day
     is not catalog-shaped ([workspaceUtils.js](src/state/workspaceUtils.js)). A migrated day exports
     byte-identically to the equivalent inline day.
-  - *In progress (later 8C sub-work): Animal Task-Types catalog UI, per-day pick/order epochs UI,
-    catalog-validation activation, and the trodes_to_nwb fresh-catalog-day integration check. Until
-    those land, newly created days still author inline `day.tasks` and export via the compat
-    fallback.*
+  - **Live catalog validation.** `validateDay` now surfaces catalog-level issues with clear
+    ownership ([validation.js](src/domain/validation.js)): `duplicate_task_type_name` (animal —
+    routes to the new Task Types tab), and `dangling_task_type_ref` / `task_camera_not_used` /
+    `task_definition_reconciled` (day — the Epochs step). They reconcile with, and cannot
+    double-report alongside, the existing `divergent_task_identity` rule (the catalog dedups by name,
+    making that collision structurally impossible). Inline/unmigrated days produce zero catalog
+    issues (no false positives).
 
 ### Added
+
+- **Task-type catalog UI — define once, pick per day (Phase 8C).** Completes the F4 Tasks & Epochs
+  redesign. **The exported YAML is unchanged.**
+  - **Animal "Task Types" tab.** A new animal-setup tab
+    ([TaskTypesSection](src/pages/AnimalEditor/TaskTypesSection.jsx) +
+    [TaskTypeModal](src/pages/AnimalEditor/TaskTypeModal.jsx) +
+    [TaskTypesContainer](src/pages/AnimalEditor/wiring/TaskTypesContainer.jsx)) where each behavioral
+    task is defined ONCE — name, description, environment, and the cameras it uses — mirroring the
+    Camera catalog. A duplicate `task_name` is blocked in-modal (the Spyglass identity is unique per
+    name); deleting a referenced type warns that the days using it will need a re-pick.
+  - **Per-day pick/order epochs.** The Day Editor's Tasks & Epochs step
+    ([TasksEpochsStep](src/pages/DayEditor/TasksEpochsStep.jsx) +
+    [TaskInstancesTable](src/pages/DayEditor/TaskInstancesTable.jsx) +
+    [TaskInstanceModal](src/pages/DayEditor/TaskInstanceModal.jsx)) now SELECTS the task types a day
+    ran from the animal catalog and assigns/orders each one's epochs (`day.taskInstances`) — no more
+    retyping a task per day. An inline/imported/legacy day is converted to the catalog on first edit
+    ([dayTaskCatalog.ts](src/state/dayTaskCatalog.ts)); an inline "Define a new task type" quick-add
+    adds a missing type to the animal catalog without leaving day entry. Repair-before-orphaning of
+    associated videos/files/FsGUI references is preserved (re-keyed off the resolved epochs).
+  - **Fix (silent drop):** `applyDayUpdates` now persists `day.taskInstances`
+    ([workspaceTransitions.js](src/state/workspaceTransitions.js)) — without it the store's day
+    allow-list silently dropped every Tasks & Epochs edit.
+  - *Not run in-sandbox: the spec's `nwbinspector --config dandi` / `dandi validate` fresh-catalog-day
+    conversion check is provided as a manual runbook
+    ([docs/testing/task-catalog-integration-runbook.md](docs/testing/task-catalog-integration-runbook.md)),
+    since the `trodes_to_nwb` checkout and a Python env are unavailable to the agent.*
 
 - **Task-type catalog model rehearsal (Phase 8B).** Behavior-preserving, inert model/utility layer
   for the upcoming "define-once, reuse-per-day" Tasks & Epochs redesign. **The live app is
