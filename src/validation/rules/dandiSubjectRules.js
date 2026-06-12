@@ -1,0 +1,65 @@
+/**
+ * @fileoverview DANDI subject-conformance rules (extracted from rulesValidation.js, Phase split).
+ *
+ * The NWB files publish to DANDI, whose Inspector (dandi config) makes these Subject checks
+ * CRITICAL/blocking: a free-text species and slashes in subject_id / session_id are rejected.
+ * Pure; moved verbatim.
+ */
+
+import { isValidSpecies, idHasSlash } from '../dandiSubject';
+
+/**
+ * Rule 8: DANDI subject conformance (species is a Latin binomial / NCBI URI; ids carry no slash).
+ *
+ * @param {object} model - The form data to validate.
+ * @returns {object[]} Validation issues.
+ */
+export function dandiSubjectConformance(model) {
+  const issues = [];
+
+  const subject = model.subject;
+  if (subject && typeof subject === 'object') {
+    // species: a present-but-invalid value (free text like "Rat") is rejected.
+    // An empty/missing species is left to the schema's required + pattern check.
+    const sp = subject.species;
+    if (typeof sp === 'string' && sp.trim() !== '' && !isValidSpecies(sp)) {
+      issues.push({
+        path: 'subject.species',
+        code: 'invalid_species',
+        repairSurface: 'day',
+        severity: 'error',
+        message:
+          `Species "${sp}" is not DANDI-valid. Use a Latin binomial (e.g. ` +
+          `"Rattus norvegicus") or an NCBI Taxonomy URI — DANDI rejects free text.`,
+      });
+    }
+
+    if (idHasSlash(subject.subject_id)) {
+      issues.push({
+        path: 'subject.subject_id',
+        code: 'subject_id_slash',
+        repairSurface: 'none',
+        severity: 'error',
+        message:
+          `Subject ID "${subject.subject_id}" must not contain "/" (DANDI rejects slashes). ` +
+          `The Subject ID is the animal's identity and can't be edited here — recreate the ` +
+          `animal with a slash-free ID.`,
+      });
+    }
+  }
+
+  if (idHasSlash(model.session_id)) {
+    issues.push({
+      path: 'session_id',
+      code: 'session_id_slash',
+      repairSurface: 'none',
+      severity: 'error',
+      message:
+        `Session ID "${model.session_id}" must not contain "/" (DANDI rejects slashes). ` +
+        `The Session ID is derived from the Subject ID and date — fix the Subject ID (by ` +
+        `recreating the animal with a slash-free ID).`,
+    });
+  }
+
+  return issues;
+}
