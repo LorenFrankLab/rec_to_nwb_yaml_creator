@@ -1,6 +1,6 @@
 /**
- * @fileoverview Pure catalog-level task validation (Phase 8B rehearsal — NOT wired into the live
- * pipeline).
+ * @fileoverview Pure catalog-level task validation (LIVE since Phase 8C — composed into
+ * `validateDay`, `src/domain/validation.js`).
  *
  * Validates the task-type catalog shape (`animal.taskTypes` + `day.taskInstances` /
  * `day.cameras_used` / `day.state.taskDefinitionReconciliations`) rather than the inline `day.tasks`
@@ -17,8 +17,10 @@
  *  - `task_definition_reconciled` — a migration-time normalization recorded on the day, surfaced for
  *    review (the original values are preserved, not dropped).
  *
- * **Phase 8B: exercised only by catalog-shaped fixtures.** Phase 8C wires these into the validation
- * pipeline and the repair-surface registry. Pure and dependency-free.
+ * `validateDay` composes `animalTaskCatalogIssues(animal)` + `dayTaskCatalogIssues(animal, day)` and
+ * the four codes are registered in `SURFACE_BY_CODE`; for an inline (unmigrated) day with no
+ * `taskTypes`/`taskInstances` every helper returns `[]`, so the live pipeline is a no-op until a day
+ * is catalog-shaped. Pure and dependency-free.
  */
 
 /**
@@ -35,8 +37,8 @@ export interface CatalogValidationIssue {
   path: string;
   /** Offending field. */
   field: string;
-  /** Editor step the repair lives on. */
-  step: string;
+  /** Day-Editor step the repair lives on (day issues only; animal issues route by tab, not step). */
+  step?: string;
   /** Short repair call-to-action. */
   actionLabel: string;
   /** Stable issue code. */
@@ -170,7 +172,6 @@ export function animalTaskCatalogIssues(animal: unknown): CatalogValidationIssue
   return duplicateTaskTypeNames(taskTypes).map((name) => ({
     path: 'taskTypes',
     field: 'task_name',
-    step: 'tasks',
     actionLabel: 'Use a unique task name',
     code: 'duplicate_task_type_name',
     repairSurface: 'animal',
@@ -198,7 +199,7 @@ export function dayTaskCatalogIssues(animal: unknown, day: unknown): CatalogVali
     issues.push({
       path: 'taskInstances',
       field: 'taskTypeId',
-      step: 'tasks',
+      step: 'epochs',
       actionLabel: 'Fix task selection',
       code: 'dangling_task_type_ref',
       repairSurface: 'day',
@@ -213,7 +214,7 @@ export function dayTaskCatalogIssues(animal: unknown, day: unknown): CatalogVali
     issues.push({
       path: 'taskInstances',
       field: 'camera_id',
-      step: 'tasks',
+      step: 'epochs',
       actionLabel: 'Mark camera used',
       code: 'task_camera_not_used',
       repairSurface: 'day',
@@ -233,7 +234,7 @@ export function dayTaskCatalogIssues(animal: unknown, day: unknown): CatalogVali
     issues.push({
       path: 'taskInstances',
       field: 'task_name',
-      step: 'tasks',
+      step: 'epochs',
       actionLabel: 'Review task definition',
       code: 'task_definition_reconciled',
       repairSurface: 'day',

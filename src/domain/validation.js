@@ -12,6 +12,10 @@
 import { validate } from '../validation';
 import { validateRawDay, validateRawAnimal } from '../validation/rawShape';
 import { getConfigHistory, getDataAcqDevices } from '../state/workspaceSelectors';
+import {
+  animalTaskCatalogIssues,
+  dayTaskCatalogIssues,
+} from '../validation/taskCatalogValidation';
 import { badChannelRegressions } from './badChannelMonotonicity';
 import {
   isPlainRecord,
@@ -502,6 +506,13 @@ export function validateDay(day, mergedDay, animal, animalDays = []) {
     ...danglingDataAcqRefIssue(day, animal),
     ...divergentDataAcqCatalogIssue(animal),
     ...badChannelUnfailIssues(day, animal, animalDays),
+    // Task-type catalog (Phase 8C): catalog-level task_name uniqueness is animal-owned;
+    // dangling type refs / task_camera_not_used / migration reconciliations are day-owned. For an
+    // inline (unmigrated) day with no taskTypes/taskInstances these are all empty — no-op. The
+    // resolved-tasks rule `divergent_task_identity` (in `validate(mergedDay)`) cannot fire for
+    // catalog data (the catalog dedups by name), so the two do not double-report.
+    ...animalTaskCatalogIssues(animal),
+    ...dayTaskCatalogIssues(animal, day),
   ].map(normalizeIssue);
 }
 
@@ -943,6 +954,8 @@ export const SURFACE_BY_CODE = {
   duplicate_camera_id: 'animal',
   divergent_camera_identity: 'animal',
   divergent_data_acq_identity: 'animal',
+  // Task-type catalog (Phase 8C): a duplicate catalog task_name is an animal-catalog problem.
+  duplicate_task_type_name: 'animal',
   // Editable in the Day Editor (task/video/event re-picks, day bad-channel overrides,
   // session metadata incl. the inherited subject fields repairable in Overview,
   // optogenetics completeness).
@@ -961,6 +974,11 @@ export const SURFACE_BY_CODE = {
   dangling_dio_output: 'day',
   fs_gui_requires_optogenetics: 'day',
   divergent_task_identity: 'day',
+  // Task-type catalog (Phase 8C): epoch/order/reference + migration-reconciliation problems are
+  // day-owned (the Tasks & Epochs step); catalog DEFINITION uniqueness is animal-owned (above).
+  dangling_task_type_ref: 'day',
+  task_camera_not_used: 'day',
+  task_definition_reconciled: 'day',
   bad_channel_out_of_range: 'day',
   multishank_bad_channels_ignored: 'day',
   bad_channel_unfailed_without_ack: 'day',
@@ -1078,6 +1096,7 @@ export const ANIMAL_SETUP_TABS = {
   'electrode-groups': 'Electrode Groups',
   'recording-system': 'Recording System',
   cameras: 'Cameras',
+  'task-types': 'Task Types',
   optogenetics: 'Optogenetics',
 };
 
@@ -1096,6 +1115,10 @@ export function animalSetupTabForFieldPath(fieldPath) {
   const path = String(fieldPath || '').replace(/^\//, '').replace(/\//g, '.');
   const result = (tab) => ({ tab, label: ANIMAL_SETUP_TABS[tab] });
 
+  // Animal-level task-type catalog (camelCase `taskTypes` path) — match before the camera check so a
+  // task-type issue routes to its own tab, not Cameras. (Day-level task issues are day-owned and
+  // never reach this animal resolver.)
+  if (path.toLowerCase().includes('tasktype')) return result('task-types');
   if (path.includes('camera') || path.includes('meters_per_pixel') || path.includes('lens')) {
     return result('cameras');
   }

@@ -86,6 +86,8 @@ export const CATEGORY_BY_CODE = Object.freeze({
   duplicate_camera_id: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   divergent_camera_identity: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   divergent_data_acq_identity: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  // Task-type catalog DEFINITION uniqueness is shared animal setup (the Task Types tab).
+  duplicate_task_type_name: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   partial_configuration: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   multiple_excitation_sources: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   // Optical-fiber / virus-injection coordinate reference is part of the animal's opto setup.
@@ -104,6 +106,11 @@ export const CATEGORY_BY_CODE = Object.freeze({
   duplicate_behavioral_event_name: WORKFLOW_CATEGORY.DAY_METADATA,
   duplicate_behavioral_event_description: WORKFLOW_CATEGORY.DAY_METADATA,
   duplicate_task_epoch: WORKFLOW_CATEGORY.DAY_METADATA,
+  // Task-type catalog day-side issues: a day instance referencing a missing type, a task type using
+  // a camera the day did not mark used, and a migration-time definition reconciliation to review.
+  dangling_task_type_ref: WORKFLOW_CATEGORY.DAY_METADATA,
+  task_camera_not_used: WORKFLOW_CATEGORY.DAY_METADATA,
+  task_definition_reconciled: WORKFLOW_CATEGORY.DAY_METADATA,
   orphaned_video: WORKFLOW_CATEGORY.DAY_METADATA,
   orphaned_file: WORKFLOW_CATEGORY.DAY_METADATA,
   orphaned_fs_gui_epoch: WORKFLOW_CATEGORY.DAY_METADATA,
