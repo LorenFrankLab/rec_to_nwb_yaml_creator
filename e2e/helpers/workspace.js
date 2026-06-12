@@ -28,10 +28,12 @@ export const STORAGE_KEY = 'rec_to_nwb_workspace_v1';
 /**
  * Persisted-blob schema version the loader accepts (src/state/persistence.js
  * WORKSPACE_SCHEMA_VERSION). A blob written at this version hydrates without a
- * migration/discard.
+ * migration/discard. Mirrors production — the `e2eHarnessDrift` unit test fails CI if it drifts.
+ * (v3: the task-type catalog is live; harness blobs seeded at v3 with inline `day.tasks` hydrate via
+ * the export's inline-compat path until a builder seeds catalog `taskInstances`.)
  * @type {number}
  */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 /**
  * The animal id seeded by {@link buildConfiguredWorkspaceBlob} (via

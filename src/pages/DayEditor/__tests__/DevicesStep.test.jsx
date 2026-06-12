@@ -146,6 +146,25 @@ describe('DevicesStep', () => {
       expect(referenced).toBeDisabled();
     });
 
+    it('shows a CATALOG task-type camera (resolved via mergedDay) as checked and disabled', () => {
+      // A migrated catalog day has taskInstances and NO inline tasks; the task camera ref lives on the
+      // animal task type and surfaces in mergedDay.tasks. The checklist must infer from the resolved
+      // tasks, else the camera looks optional and could be written into cameras_used inconsistently.
+      const catalogDay = { ...mockDay, taskInstances: [{ taskTypeId: 'tasktype-0', task_epochs: [1] }] };
+      const catalogMerged = { ...mockMergedDay, tasks: [{ task_name: 'sleep', camera_id: [1] }] };
+      render(
+        <DevicesStep
+          animal={animalWithCameras}
+          day={catalogDay}
+          mergedDay={catalogMerged}
+          onFieldUpdate={mockOnFieldUpdate}
+        />
+      );
+      const referenced = screen.getByRole('checkbox', { name: /track/i });
+      expect(referenced).toBeChecked();
+      expect(referenced).toBeDisabled();
+    });
+
     it('checking a non-referenced camera writes cameras_used with that id', async () => {
       const user = userEvent.setup();
       render(

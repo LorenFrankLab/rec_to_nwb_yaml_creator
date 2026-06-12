@@ -39,6 +39,10 @@ function isRecord(value) {
  */
 export const RAW_DAY_ARRAY_FIELDS = [
   { key: 'tasks', repairStep: 'epochs', label: 'tasks' },
+  // Task-type catalog (Phase 8C): the day's ordered references into the animal catalog. A corrupt
+  // non-array would be laundered (getDayTaskInstances returns null → export falls back to inline
+  // tasks) instead of surfacing a repairable error — so it joins the raw-shape family.
+  { key: 'taskInstances', repairStep: 'epochs', label: 'task instances' },
   { key: 'associated_files', repairStep: 'epochs', label: 'associated files' },
   { key: 'associated_video_files', repairStep: 'epochs', label: 'associated video files' },
   { key: 'behavioral_events', repairStep: 'behavioral', label: 'behavioral events' },

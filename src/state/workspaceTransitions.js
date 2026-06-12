@@ -15,6 +15,7 @@ import {
   getAnimalDevices,
   getConfigHistory,
   getDayTasks,
+  getDayTaskInstances,
   getDayKeywords,
   getDayBehavioralEvents,
   getDayBadChannelOverrides,
@@ -103,6 +104,14 @@ export function applyAnimalUpdates(animal, updates, now) {
   // day's `behavioral_events`. Persist them so the editor and the model agree.
   if (updates.behavioral_events) {
     updated.behavioral_events = updates.behavioral_events;
+  }
+  // Task-type catalog (Phase 8C): the animal's define-once catalog that day `taskInstances` reference
+  // (read by `mergeDayMetadata`'s `resolveDayTasks`). The sibling of `applyDayUpdates`' taskInstances
+  // branch — without it every Task Types add/edit/delete AND the Day Editor's inline→catalog
+  // conversion / quick-add is silently dropped, leaving days pointing at task types the catalog never
+  // saved. `!== undefined` so a delete-last-type (`taskTypes: []`) persists, never a silent no-op.
+  if (updates.taskTypes !== undefined) {
+    updated.taskTypes = updates.taskTypes;
   }
   // `!== undefined` (not truthiness) so an explicit `null` CLEARS opto (editor disable).
   if (updates.optogenetics !== undefined) {
@@ -368,6 +377,16 @@ export function createDayRecord(animal, animalId, dayId, date, session, now, car
       ? { bad_channels: structuredClone(carriedBadChannels) }
       : undefined;
 
+  // Task carry-forward by SHAPE: a catalog source day carries its `taskInstances` (references into
+  // the shared animal task-type catalog), with NO inline `tasks`; a legacy inline source carries its
+  // `tasks`. A new (no-carry) day starts empty. Without this, carry-forward / Duplicate Day of a
+  // migrated v3 day (taskInstances, no tasks) silently produced a blank-task day.
+  const carriedInstances = carryFrom ? getDayTaskInstances(carryFrom) : null;
+  const taskCarry =
+    carriedInstances !== null
+      ? { tasks: [], taskInstances: structuredClone(carriedInstances) }
+      : { tasks: carryFrom ? structuredClone(getDayTasks(carryFrom)) : [] };
+
   return {
     id: dayId,
     animalId,
@@ -385,7 +404,7 @@ export function createDayRecord(animal, animalId, dayId, date, session, now, car
       weight: session.weight !== undefined ? session.weight : carryFrom?.session?.weight,
     },
     keywords: carryFrom ? structuredClone(getDayKeywords(carryFrom)) : [],
-    tasks: carryFrom ? structuredClone(getDayTasks(carryFrom)) : [],
+    ...taskCarry,
     behavioral_events: carryFrom ? structuredClone(getDayBehavioralEvents(carryFrom)) : [],
     // Session-specific — never carried.
     associated_files: [],
@@ -446,6 +465,12 @@ export function applyDayUpdates(day, updates, now) {
   }
   if (updates.tasks !== undefined) {
     updated.tasks = updates.tasks;
+  }
+  // Task-type catalog (Phase 8C): the day's ordered references into the animal `taskTypes` catalog,
+  // read by `mergeDayMetadata`'s `resolveDayTasks`. Without this branch a Tasks & Epochs edit (pick /
+  // order / assign epochs) would be silently dropped, exactly like the other day-owned collections.
+  if (updates.taskInstances !== undefined) {
+    updated.taskInstances = updates.taskInstances;
   }
   if (updates.behavioral_events !== undefined) {
     updated.behavioral_events = updates.behavioral_events;

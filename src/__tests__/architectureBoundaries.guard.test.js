@@ -48,6 +48,10 @@ const CROSS_PAGE_ALLOWLIST = new Set([
   'pages/AnimalEditor/wiring/ElectrodeGroupsContainer',
   'pages/AnimalEditor/wiring/RecordingSystemContainer',
   'pages/AnimalEditor/wiring/CamerasContainer',
+  'pages/AnimalEditor/wiring/TaskTypesContainer',
+  // The Day Editor's Tasks & Epochs step reuses the animal TaskTypeModal for inline "define a new
+  // task type" quick-add (presentational form; the animal write goes through actions.updateAnimal).
+  'pages/AnimalEditor/TaskTypeModal',
   'pages/AnimalEditor/wiring/OptogeneticsContainer',
   'pages/AnimalEditor/wiring/useAnimalFieldUpdate',
   // Phase 3-5: the per-animal Validation & Export tab renders <ValidationSummary animalKey=…> — the

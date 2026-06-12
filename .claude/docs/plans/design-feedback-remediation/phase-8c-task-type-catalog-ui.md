@@ -36,8 +36,15 @@ not decide cutover.
 - **Activate persisted shape:** register the v2→v3 migrator from Phase 8B and bump
   `WORKSPACE_SCHEMA_VERSION` to 3. The migrator promotes inline `day.tasks` into animal `taskTypes[]` plus
   day `taskInstances[]` using the exact C3 date-ordered dedup algorithm.
-- **Workspace actions/selectors:** add public store actions for create/update/delete task type and set/reorder
-  a day’s task instances. Update `store-public-api.test`.
+- **Workspace actions/selectors:** ~~add public store actions for create/update/delete task type and set/reorder
+  a day’s task instances. Update `store-public-api.test`.~~ **Superseded during implementation (logic half):**
+  the catalog is written through the EXISTING `updateAnimal({ taskTypes })` / `updateDay({ taskInstances })`
+  path — exactly mirroring the camera catalog (`CamerasContainer` writes `onFieldUpdate('cameras', …)`), which
+  has no dedicated store actions. This keeps the pinned `store-public-api` contract stable (no
+  `store-public-api.test` change). The catalog invariants live in pure, tested mutation helpers
+  ([`taskCatalogActions.ts`](../../../src/state/taskCatalogActions.ts): `nextTaskTypeId`,
+  `add/update/deleteTaskType`, `add/remove/setEpochs/reorderTaskInstance`) plus selectors
+  `getAnimalTaskTypes` / `getDayTaskInstances`. Do NOT add dedicated task-type store actions.
 - **Merge resolution:** update `mergeDayMetadata` to prefer catalog `taskInstances` when present, resolving
   each instance into exactly `{ task_name, task_description, task_environment, camera_id, task_epochs }`
   before reordering. Legacy inline `day.tasks` may remain a compatibility fallback for old/unmigrated test

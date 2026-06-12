@@ -22,6 +22,7 @@ export const ANIMAL_VIEW_TABS = [
   'electrode-groups',
   'recording-system',
   'cameras',
+  'task-types',
   'optogenetics',
 ];
 

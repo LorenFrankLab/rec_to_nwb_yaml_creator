@@ -16,6 +16,8 @@
  * @module __tests__/fixtures/workspaceBuilders
  */
 
+import { migrateTasksToCatalogV2ToV3 } from '../../state/taskCatalogMigration';
+
 const TS = '2023-06-22T12:00:00.000Z';
 
 /**
@@ -174,4 +176,22 @@ export function buildRealisticWorkspace() {
   };
 
   return { animal, day };
+}
+
+/**
+ * The MIGRATED v3 shape of {@link buildRealisticWorkspace}: the animal owns a `taskTypes` catalog and
+ * the day references it via `taskInstances` with NO inline `tasks` — exactly what a v2→v3 persisted
+ * blob hydrates to. Use this (not the inline builder) for tests that must exercise the real catalog
+ * day shape; the inline builder is silently *derived* by the Day Editor and so hides catalog-only
+ * regressions in step status, camera resolution, carry-forward, and raw-shape validation.
+ *
+ * @returns {{ animal: object, day: object }} A catalog-shaped animal + day.
+ */
+export function buildCatalogWorkspace() {
+  const { animal, day } = buildRealisticWorkspace();
+  const ws = migrateTasksToCatalogV2ToV3({
+    animals: { [animal.id]: { ...animal, days: [day.id] } },
+    days: { [day.id]: { ...day, animalId: animal.id } },
+  });
+  return { animal: ws.animals[animal.id], day: ws.days[day.id] };
 }

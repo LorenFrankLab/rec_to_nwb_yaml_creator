@@ -11,6 +11,7 @@ import userEvent from '@testing-library/user-event';
 import { StoreProvider, useStoreContext } from '../../../state/StoreContext';
 import DayEditorStepper from '../DayEditorStepper';
 import { useDayIdFromUrl } from '../../../hooks/useDayIdFromUrl';
+import { mergeDayMetadata } from '../../../state/workspaceUtils';
 import { makeAnimalWithCamerasAndDay } from './taskFixtures';
 
 vi.mock('../../../hooks/useDayIdFromUrl', () => ({
@@ -18,17 +19,21 @@ vi.mock('../../../hooks/useDayIdFromUrl', () => ({
 }));
 
 const DAY_ID = 'remy_20230622';
+const ANIMAL_ID = 'remy';
 
 /**
- * Surfaces tasks + videos as JSON for assertions.
+ * Surfaces the EXPORTED tasks (resolved from the task-type catalog or legacy inline tasks) + videos
+ * as JSON for assertions — the export truth, regardless of which internal shape the day carries.
  * @returns {JSX.Element}
  */
 function Inspector() {
   const { model } = useStoreContext();
+  const animal = model.workspace?.animals?.[ANIMAL_ID];
   const d = model.workspace?.days?.[DAY_ID] ?? {};
+  const exportedTasks = animal && d.id ? mergeDayMetadata(animal, d).tasks : [];
   return (
     <>
-      <div data-testid="tasks-json">{JSON.stringify(d.tasks ?? [])}</div>
+      <div data-testid="tasks-json">{JSON.stringify(exportedTasks)}</div>
       <div data-testid="videos-json">{JSON.stringify(d.associated_video_files ?? [])}</div>
     </>
   );
@@ -93,32 +98,31 @@ describe('Repair-before-orphaning destructive edits (Task 0c)', () => {
     Element.prototype.scrollIntoView = vi.fn();
   });
 
-  it('shows affected videos and requires confirmation before deleting a referenced task', async () => {
+  it('shows affected videos and requires confirmation before removing a referenced task', async () => {
     const user = userEvent.setup();
     renderStepper();
     await goToEpochs(user);
 
-    await user.click(screen.getByRole('button', { name: /delete task/i }));
+    // Removing the instance would orphan the video → the repair prompt surfaces it.
+    await user.click(screen.getByRole('button', { name: /remove sleep from this day/i }));
     const dialog = screen.getByRole('alertdialog');
-    // The affected video is named in the confirmation.
     expect(dialog).toHaveTextContent(/vid_epoch1/);
 
-    await user.click(within(dialog).getByRole('button', { name: /^delete$/i }));
+    await user.click(within(dialog).getByRole('button', { name: /clear references/i }));
 
-    // Task removed AND the orphaned video reference was deterministically cleaned
-    // up through the update path (no dangling epoch left without a visible action).
+    // Task removed from the EXPORT AND the orphaned video reference was deterministically cleaned up.
     expect(readTasks()).toHaveLength(0);
     const videos = readVideos();
     const orphan = videos.find((v) => v.name === 'vid_epoch1');
     expect(orphan.task_epochs).toBe('');
   });
 
-  it('cancelling the delete leaves the task and its video reference intact', async () => {
+  it('cancelling the removal leaves the task and its video reference intact', async () => {
     const user = userEvent.setup();
     renderStepper();
     await goToEpochs(user);
 
-    await user.click(screen.getByRole('button', { name: /delete task/i }));
+    await user.click(screen.getByRole('button', { name: /remove sleep from this day/i }));
     const dialog = screen.getByRole('alertdialog');
     await user.click(within(dialog).getByRole('button', { name: /cancel/i }));
 
@@ -126,30 +130,28 @@ describe('Repair-before-orphaning destructive edits (Task 0c)', () => {
     expect(readVideos()[0].task_epochs).toBe(1);
   });
 
-  it('shows affected videos and requires confirmation before deleting a referenced epoch', async () => {
+  it('shows affected videos and requires confirmation before removing a referenced epoch', async () => {
     const user = userEvent.setup();
     renderStepper();
     await goToEpochs(user);
 
-    // Open the task to edit its epochs.
-    await user.click(screen.getByRole('button', { name: /^edit$/i }));
+    // Open the instance to edit its epochs.
+    await user.click(screen.getByRole('button', { name: /edit sleep for this day/i }));
     const taskDialog = screen.getByRole('dialog');
 
     // Remove epoch row 1 (epoch number 1) — it is referenced by vid_epoch1.
     await user.click(
       within(taskDialog).getByRole('button', { name: /remove epoch row 1/i })
     );
-    // Save the task with the epoch removed.
-    await user.click(within(taskDialog).getByRole('button', { name: /save task/i }));
+    await user.click(within(taskDialog).getByRole('button', { name: /save task for this day/i }));
 
     // A repair prompt surfaces the affected video and requires action.
     const repair = await screen.findByRole('alertdialog');
     expect(repair).toHaveTextContent(/vid_epoch1/);
-    // The copy must be accurate about what Confirm and Cancel actually do:
-    // Confirm saves the task AND clears the orphaned video reference; Cancel
-    // discards THIS task change (not just "keeps the epoch") and leaves the
-    // video unchanged.
-    expect(repair).toHaveTextContent(/sav\w+ (this |the )?task/i);
+    // The copy must be accurate about what Confirm and Cancel actually do: Confirm saves the change
+    // AND clears the orphaned video reference; Cancel discards THIS change (not just "keeps the
+    // epoch") and leaves the video unchanged.
+    expect(repair).toHaveTextContent(/sav\w+/i);
     expect(repair).toHaveTextContent(/discard\w*/i);
     expect(repair).not.toHaveTextContent(/keep the epoch/i);
     await user.click(within(repair).getByRole('button', { name: /clear|confirm|repair/i }));

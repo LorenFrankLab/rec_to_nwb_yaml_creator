@@ -44,7 +44,7 @@ than avoidable label/copy/responsive friction.
 - `src/components/CalendarDayCreator/CalendarDay.jsx:93` (`tabIndex={isToday?0:-1}`), `CalendarGrid.jsx:100` (42 cells in one `role="row"`; built by `getCalendarDays`, defined `:19`, called `:80`) — **Phase 8A-2** calendar a11y (#7/#8).
 - `src/state/workspaceTransitions.js:190` `applyConfigurationForwardToAnimal` + `appliedToDays` writes (~`:139,:219`) and `src/state/configDiff.js` `reconcileAppliedToDays` — **Phase 10** makes `appliedToDays` derived (#1).
 - Selective-testing routes, seeded fixture, facilitator script, screenshot set, and known-risks note — **Phase 10B** packages these without changing the default entry point.
-- CI `.github/workflows/test.yml:~201` (`CI=false npm run build`) + `package.json` `"lint": "eslint --fix --ext .js,.jsx ."` — **Phase 9** re-arms the gate (`CI=true`, stylelint error-level, lint `.ts`).
+- CI `.github/workflows/test.yml:~201` (`CI=false npm run build`) + `package.json` `"lint"` — **Phase 9b** re-arms the gate (`CI=true`, stylelint error-level, non-mutating lint command, lint `.ts`).
 - **Untouched:** `src/io/yaml.js` export *semantics* (Phase 2 only *types* it); the entire frozen legacy path (`LegacyFormView.jsx`, `element/*`, `*Fields`, `OptogeneticsFields.jsx`, `ntrode/ChannelMap.jsx`); `nwb_schema.json`.
 
 ## Scope and dependency policy
@@ -56,7 +56,7 @@ than avoidable label/copy/responsive friction.
   into small prompts: timeline/lifecycle representation (8A-1), recognition/a11y (8A-2), and copy/responsive
   attention load (8A-3).
 - Incremental TypeScript on the pure core (`io/` → `state/` → `domain/`+`validation/`) with a `tsc --noEmit` CI gate.
-- Design-token system + CSS Modules (collision-proof scoping), enforced by stylelint; **re-arm the build gate** (`CI=true` + error-level lint) once debt is paid (Phase 9).
+- Design-token system + CSS Modules (collision-proof scoping), enforced by stylelint; **re-arm the build gate** (`CI=true` + error-level lint) once build-surface debt is paid (Phase 9b).
 - Versioned persisted-blob migration framework (migrate, never discard).
 - Task-type catalog (define once, pick/order per day) producing **byte-identical** YAML, verified end-to-end against trodes_to_nwb for a freshly-authored catalog day.
 - Decompose the oversized DayEditor surfaces (`DayEditorContext`) and the `resolveDayConfig`/`dayOverrideIssues` coupling **before** the catalog rewrite.
@@ -96,7 +96,7 @@ than avoidable label/copy/responsive friction.
   catalog day converts under `nwbinspector --config dandi` with zero CRITICAL (per
   `docs/PIPELINE_REQUIREMENTS.md`); empty/normal/conflict/repair/narrow screenshots make animal-vs-day
   ownership and repair locality visible.
-- Phase 9: `CI=true npm run build` passes (zero ESLint warnings); stylelint at error-level passes.
+- Phase 9: validation/domain split preserves contracts; `CI=true npm run build` passes (zero build-surface ESLint warnings); decomposed UI surfaces behave identically; stylelint at error-level passes.
 - Phase 10B: testing route map, participant fixture, facilitator script, screenshot set, known-risks note,
   and no-cutover verification are present; `/` still opens the legacy form.
 
@@ -111,7 +111,7 @@ than avoidable label/copy/responsive friction.
 | Catalog dedup/camera reconciliation ambiguity → plausible-but-wrong YAML | [C3](shared-contracts.md#c3) fixes the dedup key (`task_name`) and the `TaskType.camera_id`↔`cameras_used` rule, with explicit "same name / different env / different camera" fixtures. |
 | Persisted-shape change discards real blobs | Phase 7 migration framework lands before any shape change (Phases 8C, 10); bump version only with a registered migrator + a `vN` fixture. |
 | `resolveDayConfig`↔`dayOverrideIssues` drift during the catalog change | Phase 5 extracts the shared `deviceOverrideMerge` module **before** Phase 8B/8C touches the merge. |
-| Redesigning the Tasks monolith repeatedly | Phase 5 (`DayEditorContext` + targeted decomposition) precedes Phases 6 and 8C so the rewrites ride on clean structure. |
+| Redesigning large Day Editor surfaces repeatedly | Phase 5 (`DayEditorContext`) precedes Phases 6 and 8C; Phase 9c then decomposes remaining large post-8C surfaces (`DevicesStep`, Validation Summary, Animal Days) without behavior change. |
 | Testing handoff is too vague to enforce the no-default-entry gate | Phase 10B creates the route map, participant fixture, facilitator script, screenshot set, known-risks note, and explicit `/` legacy-route verification before Phases 11/12. |
 
 ## Rollout Strategy
@@ -121,9 +121,9 @@ day. The exported YAML and the frozen legacy path are unchanged throughout, and 
 legacy form until selective user testing recommends a cutover. The persisted-shape changes (task catalog,
 Phase 8C; `appliedToDays`, Phase 10) ship **after** the migration framework (Phase 7) and are gated on
 passing migration fixtures. Phase 10B packages the no-cutover testing handoff before Phases 11/12. The build
-gate is re-armed (`CI=true`) only in Phase 9 once the warning backlog is cleared. No user-facing feature flag
-is required for the implementation phases; each phase is independently shippable and reviewable (Phase 9 may
-ship as sub-PRs 9a logic / 9b UI with a stated internal dependency).
+gate is re-armed (`CI=true`) only in Phase 9b once the build-surface warning backlog is cleared. No user-facing feature flag
+is required for the implementation phases; each phase is independently shippable and reviewable (Phase 9 ships
+as sub-PRs 9a logic / 9b gate / 9c UI; Phase 10 ships as sub-PRs 10a shape migration / 10b reconfig UX / optional 10c polish).
 
 ## Open Questions
 
@@ -136,4 +136,4 @@ ship as sub-PRs 9a logic / 9b UI with a stated internal dependency).
 
 ## Estimated Effort
 
-Rough diff sizing (no time estimate): Phase 1 ~small. Phase 2 ~small-medium (config + 2–3 conversions + toolchain). Phase 3 ~medium. Phase 4 ~medium (sweep + deletions + test updates). Phase 5 ~medium (context + module extraction, behavior-preserving). Phase 6 ~medium. Phase 7 ~small-medium. Phase 8A-1 ~small-medium (timeline + lifecycle). Phase 8A-2 ~small-medium (recognition + a11y). Phase 8A-3 ~small-medium (copy + responsive screenshots). Phase 8B ~medium (pure model + migration rehearsal, behavior-preserving). Phase 8C ~large (activation + UI + baselines + integration + comprehension screenshots). Phase 9 ~large (refactors + gate). Phase 10 ~small-medium. Phase 10B ~small-medium (testing handoff package).
+Rough diff sizing (no time estimate): Phase 1 ~small. Phase 2 ~small-medium (config + 2–3 conversions + toolchain). Phase 3 ~medium. Phase 4 ~medium (sweep + deletions + test updates). Phase 5 ~medium (context + module extraction, behavior-preserving). Phase 6 ~medium. Phase 7 ~small-medium. Phase 8A-1 ~small-medium (timeline + lifecycle). Phase 8A-2 ~small-medium (recognition + a11y). Phase 8A-3 ~small-medium (copy + responsive screenshots). Phase 8B ~medium (pure model + migration rehearsal, behavior-preserving). Phase 8C ~large (activation + UI + baselines + integration + comprehension screenshots). Phase 9 ~large overall but split into smaller PRs (logic / gate / UI). Phase 10 ~small-medium overall but split into shape migration and focused UX polish. Phase 10B ~small-medium (testing handoff package).

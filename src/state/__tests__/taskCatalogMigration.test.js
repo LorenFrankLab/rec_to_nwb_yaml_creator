@@ -1,9 +1,10 @@
 /**
  * Phase 8B — v2→v3 task-catalog conversion REHEARSAL.
  *
- * `migrateTasksToCatalogV2ToV3` is the pure, workspace→workspace utility Phase 8C will register
- * directly as the persisted v2→v3 migrator (`MIGRATORS[2]`). This phase builds and tests it WITHOUT
- * registering it or bumping `WORKSPACE_SCHEMA_VERSION`, so the running app stays on inline tasks.
+ * `migrateTasksToCatalogV2ToV3` is the pure, workspace→workspace utility now registered (Phase 8C)
+ * as the persisted v2→v3 migrator (`MIGRATORS[2]`). These tests pin the PURE function's behavior;
+ * the registry-level hydration (a v2 blob → v3 catalog shape, no discard) is pinned in
+ * workspaceMigrations.test.js against the checked-in v3 fixture.
  *
  * The load-bearing guarantees pinned here:
  *  - the conversion is non-destructive (input untouched) and reproduces the v3 catalog shape;
@@ -149,10 +150,11 @@ describe('migrateTasksToCatalogV2ToV3 — non-destructive workspace→workspace 
   });
 });
 
-describe('Phase 8B activates NOTHING in the persisted-migration registry', () => {
-  it('does not bump WORKSPACE_SCHEMA_VERSION (still 2) or register a v2 migrator', () => {
-    // Guard the merge-neutral invariant: 8B is a rehearsal — the schema/migrator only move in 8C.
-    expect(WORKSPACE_SCHEMA_VERSION).toBe(2);
-    expect([...MIGRATABLE_SCHEMA_VERSIONS].sort((a, b) => a - b)).toEqual([1]);
+describe('Phase 8C registers the catalog migrator in the persisted-migration registry', () => {
+  it('bumps WORKSPACE_SCHEMA_VERSION to 3 and registers the v2→v3 migrator', () => {
+    // 8B built this utility inert; 8C activates it. The registry-level migration behavior (a v2 blob
+    // hydrating to the catalog shape) is pinned in workspaceMigrations.test.js with the v3 fixture.
+    expect(WORKSPACE_SCHEMA_VERSION).toBe(3);
+    expect([...MIGRATABLE_SCHEMA_VERSIONS].sort((a, b) => a - b)).toEqual([1, 2]);
   });
 });

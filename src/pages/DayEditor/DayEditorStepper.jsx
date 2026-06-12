@@ -5,7 +5,6 @@ import { useDayIdFromUrl } from '../../hooks/useDayIdFromUrl';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import {
   getAnimalSubject,
-  getDayTasks,
   getAnimalDayIds,
   getCopyableDioSources,
 } from '../../state/workspaceSelectors';
@@ -149,28 +148,6 @@ export default function DayEditorStepper() {
       return null;
     }
   }, [animal, day, dayId]);
-
-  // Dataset-wide task_name -> task_description map for the Spyglass task-name
-  // identity guard. task_name is an identity across the whole
-  // dataset, so the modal must check a reused name against EVERY other day's
-  // description, not just the current day's siblings. The CURRENT day's tasks are
-  // excluded here (the step folds them back in, giving live siblings precedence);
-  // a name appearing in multiple other days keeps the last-seen description, which
-  // is sufficient to detect a conflicting reuse. Must precede early returns.
-  const knownTaskDescriptions = useMemo(() => {
-    const map = {};
-    const days = model.workspace?.days || {};
-    for (const id of Object.keys(days)) {
-      if (id === dayId) continue;
-      const siblingTasks = getDayTasks(days[id]);
-      siblingTasks.forEach((task) => {
-        if (task.task_name) {
-          map[task.task_name] = task.task_description ?? '';
-        }
-      });
-    }
-    return map;
-  }, [model.workspace?.days, dayId]);
 
   // The animal's days (sorted by date), resolved by the STORE KEY the animal was indexed by.
   // Powers the Devices step's reconfiguration wizard AND the bad-channel monotonicity export
@@ -409,7 +386,7 @@ export default function DayEditorStepper() {
   // The per-day bundle every section needs, provided once via DayEditorContext instead of
   // drilling the same seven props through each <CurrentStepComponent>. Built fresh per render
   // (matching the prior per-render prop passing). Section-specific props (onNavigate, onRepair,
-  // knownTaskDescriptions, copyableDioSources, …) stay as ordinary props below.
+  // copyableDioSources, …) stay as ordinary props below.
   const dayEditorContextValue = {
     animal,
     day,
@@ -456,7 +433,6 @@ export default function DayEditorStepper() {
         >
           <DayEditorProvider value={dayEditorContextValue}>
             <CurrentStepComponent
-              knownTaskDescriptions={knownTaskDescriptions}
               onSubjectUpdate={handleSubjectUpdate}
               onNavigate={handleStepNavigate}
               onRepair={handleRepair}

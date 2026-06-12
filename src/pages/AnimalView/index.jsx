@@ -37,6 +37,7 @@ import ReconfigurationContextBanner from '../../components/ReconfigurationContex
 import ElectrodeGroupsContainer from '../AnimalEditor/wiring/ElectrodeGroupsContainer';
 import RecordingSystemContainer from '../AnimalEditor/wiring/RecordingSystemContainer';
 import CamerasContainer from '../AnimalEditor/wiring/CamerasContainer';
+import TaskTypesContainer from '../AnimalEditor/wiring/TaskTypesContainer';
 import OptogeneticsContainer from '../AnimalEditor/wiring/OptogeneticsContainer';
 import { useAnimalFieldUpdate } from '../AnimalEditor/wiring/useAnimalFieldUpdate';
 import ConfigVersionContext from './ConfigVersionContext';
@@ -56,6 +57,9 @@ const TAB_SCOPE = {
   // (chosen in the day's setup), defaulting to the first. Mirrors the cameras catalog framing.
   'recording-system': 'Animal-wide catalog — each recording day uses one.',
   cameras: 'Catalog — referenced per day.',
+  // Task types are defined once here; each recording day picks which ones it ran and orders their
+  // epochs (in the Day Editor). Mirrors the cameras catalog framing.
+  'task-types': 'Define once — each recording day picks and orders its epochs.',
 };
 
 /**
@@ -76,6 +80,7 @@ const SECTION_GROUPS = [
       { key: 'electrode-groups', label: 'Electrode Groups' },
       { key: 'recording-system', label: 'Recording System' },
       { key: 'cameras', label: 'Cameras' },
+      { key: 'task-types', label: 'Task Types' },
       { key: 'optogenetics', label: 'Optogenetics' },
     ],
   },
@@ -105,6 +110,7 @@ const TAB_FIELD_ANCHOR = {
   'electrode-groups': 'electrode_groups',
   'recording-system': 'data_acq_device',
   cameras: 'cameras',
+  'task-types': 'taskTypes',
   optogenetics: 'opto_excitation_source',
 };
 
@@ -180,6 +186,14 @@ function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdat
     case 'cameras':
       return (
         <CamerasContainer
+          animal={animal}
+          onFieldUpdate={onFieldUpdate}
+          onPendingEditsChange={onPendingEditsChange}
+        />
+      );
+    case 'task-types':
+      return (
+        <TaskTypesContainer
           animal={animal}
           onFieldUpdate={onFieldUpdate}
           onPendingEditsChange={onPendingEditsChange}

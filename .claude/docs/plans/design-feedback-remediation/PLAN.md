@@ -1,8 +1,8 @@
 # Design-Feedback Remediation Implementation Plan
 
-**Status:** Phases 1–7 complete (merged into `modern`); Phases 8A-1–10B not started. Phases 11–12
-are intentionally reserved for selective user testing + the default-entry cutover decision and are
-not Claude-Code implementation phases in this plan.
+**Status:** Phases 1–7, 8A-1–8A-3, 8B, and 8C complete (merged into `modern`); Phases 9, 10, 10B not
+started. Phases 11–12 are intentionally reserved for selective user testing + the default-entry
+cutover decision and are not Claude-Code implementation phases in this plan.
 
 This plan turns six pieces of user design feedback plus a re-evaluated backlog into shippable work:
 it guarantees recording days stay date-ordered, restores guided DIO entry (a Type + Index control),
@@ -46,12 +46,12 @@ For agent invocation, **load only the slice you need**:
   - [phase-6-tasks-epochs-redesign.md](phase-6-tasks-epochs-redesign.md) — Tasks & Epochs in-place clarity redesign (F4 quick wins) + a11y. ✅ **Complete (merged)**.
   - [phase-7-persistence-migration.md](phase-7-persistence-migration.md) — versioned persisted-blob forward migration (Post-v3 #6). ✅ **Complete (merged)**.
   - [phase-8a-pretest-ux-hardening.md](phase-8a-pretest-ux-hardening.md) — coordination index for 8A-1/8A-2/8A-3; do not use as a single execution prompt.
-  - [phase-8a1-timeline-lifecycle-hardening.md](phase-8a1-timeline-lifecycle-hardening.md) — timeline-aware Add Recording Days + lifecycle/validated-state vocabulary; no export or schema change.
-  - [phase-8a2-recognition-accessibility-hardening.md](phase-8a2-recognition-accessibility-hardening.md) — label parity, device-type summaries, and calendar keyboard/a11y; no export or schema change.
-  - [phase-8a3-responsive-copy-hardening.md](phase-8a3-responsive-copy-hardening.md) — copy diet and 390px responsive rescue for the testing path; no export or schema change.
-  - [phase-8b-task-type-catalog-model.md](phase-8b-task-type-catalog-model.md) — behavior-preserving task-catalog model utilities + migration rehearsal; no schema bump yet.
-  - [phase-8c-task-type-catalog-ui.md](phase-8c-task-type-catalog-ui.md) — activate the animal-level task-type catalog; days pick/order epochs (F4 full) + trodes_to_nwb integration check.
+  - [phase-8a1-timeline-lifecycle-hardening.md](phase-8a1-timeline-lifecycle-hardening.md) — timeline-aware Add Recording Days + lifecycle/validated-state vocabulary; no export or schema change. ✅ **Complete (merged)**.
+  - [phase-8a2-recognition-accessibility-hardening.md](phase-8a2-recognition-accessibility-hardening.md) — label parity, device-type summaries, and calendar keyboard/a11y; no export or schema change. ✅ **Complete (merged)**.
+  - [phase-8a3-responsive-copy-hardening.md](phase-8a3-responsive-copy-hardening.md) — copy diet and 390px responsive rescue for the testing path; no export or schema change. ✅ **Complete (merged)**.
+  - [phase-8b-task-type-catalog-model.md](phase-8b-task-type-catalog-model.md) — behavior-preserving task-catalog model utilities + migration rehearsal; no schema bump yet. ✅ **Complete (merged)**.
+  - [phase-8c-task-type-catalog-ui.md](phase-8c-task-type-catalog-ui.md) — activate the animal-level task-type catalog; days pick/order epochs (F4 full); schema v2→v3 migrator; trodes_to_nwb check delivered as a manual runbook. ✅ **Complete (merged)**.
   - [phase-8-task-type-catalog.md](phase-8-task-type-catalog.md) — superseded index pointing to 8A/8B/8C; do not use as an execution prompt.
-  - [phase-9-architecture-cleanup.md](phase-9-architecture-cleanup.md) — split `validation.js`; decompose `ValidationSummary`/`RecordingDaysTab`; continue TS; **re-arm the build gate**.
-  - [phase-10-post-v3-ux.md](phase-10-post-v3-ux.md) — remaining post-v3 UX/shape backlog after 8A-1/8A-2/8A-3 move the testing-critical items earlier: reconfig wizard, appliedToDays→derived, residual heading polish.
+  - [phase-9-architecture-cleanup.md](phase-9-architecture-cleanup.md) — behavior-preserving refactor/gate work split into smaller PRs: validation/domain split, build-gate re-arm, and UI decomposition for `ValidationSummary`/`RecordingDaysTab`/`DevicesStep`.
+  - [phase-10-post-v3-ux.md](phase-10-post-v3-ux.md) — remaining post-v3 shape/UX backlog split into focused PRs: `appliedToDays`→derived v3→v4 migration, reconfig wizard long-study UX, and residual setup empty-state/button polish.
   - [phase-10b-user-testing-handoff.md](phase-10b-user-testing-handoff.md) — assemble the no-cutover selective-testing handoff package: stable routes, fixture, script, screenshots, known risks.

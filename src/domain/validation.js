@@ -12,6 +12,10 @@
 import { validate } from '../validation';
 import { validateRawDay, validateRawAnimal } from '../validation/rawShape';
 import { getConfigHistory, getDataAcqDevices } from '../state/workspaceSelectors';
+import {
+  animalTaskCatalogIssues,
+  dayTaskCatalogIssues,
+} from '../validation/taskCatalogValidation';
 import { badChannelRegressions } from './badChannelMonotonicity';
 import {
   isPlainRecord,
@@ -502,6 +506,13 @@ export function validateDay(day, mergedDay, animal, animalDays = []) {
     ...danglingDataAcqRefIssue(day, animal),
     ...divergentDataAcqCatalogIssue(animal),
     ...badChannelUnfailIssues(day, animal, animalDays),
+    // Task-type catalog (Phase 8C): catalog-level task_name uniqueness is animal-owned;
+    // dangling type refs / task_camera_not_used / migration reconciliations are day-owned. For an
+    // inline (unmigrated) day with no taskTypes/taskInstances these are all empty — no-op. The
+    // resolved-tasks rule `divergent_task_identity` (in `validate(mergedDay)`) cannot fire for
+    // catalog data (the catalog dedups by name), so the two do not double-report.
+    ...animalTaskCatalogIssues(animal),
+    ...dayTaskCatalogIssues(animal, day),
   ].map(normalizeIssue);
 }
 
@@ -618,7 +629,7 @@ export function computeStepStatus(day, mergedDay, animal, animalDays = []) {
   return {
     overview: getStepStatus(errorsByStep.overview, day.session),
     devices: computeDevicesStatus(day, mergedDay, errorsByStep.devices),
-    epochs: computeEpochsStatus(day, errorsByStep.epochs),
+    epochs: computeEpochsStatus(day, errorsByStep.epochs, mergedDay),
     behavioral: computeBehavioralStatus(day, errorsByStep.behavioral),
     // (errorsByStep.epochs is scoped to task-path errors inside computeEpochsStatus)
     // The validation step owns the catch-all bucket (anything not routed to
@@ -646,14 +657,17 @@ export function computeStepStatus(day, mergedDay, animal, animalDays = []) {
  * cannot persist). Empty cameras, missing-camera references, no-epoch tasks, and
  * epoch overlaps are warnings/info and never mark the step in error.
  *
- * @param {object} day - Day record (reads `tasks`).
+ * @param {object} day - Day record (raw-shape guards read `tasks` / `taskInstances`).
  * @param {Array} epochErrors - Issues grouped into the `epochs` step.
+ * @param {object} [mergedDay] - The merged metadata; its resolved `tasks` are the EFFECTIVE task
+ *   count (a catalog day removes inline `day.tasks` and stores `taskInstances`, so reading the raw
+ *   day would wrongly report 'incomplete'). Falls back to raw `day.tasks` when absent.
  * @returns {'incomplete'|'error'|'valid'}
  *   - `'incomplete'`: no tasks yet.
  *   - `'error'`: a task has an error-severity issue (e.g., a blank required field).
  *   - `'valid'`: at least one task and no task-level error-severity issues.
  */
-export function computeEpochsStatus(day, epochErrors) {
+export function computeEpochsStatus(day, epochErrors, mergedDay) {
   // A raw-shape corruption (`malformed_day_collection`) on any epochs-owned collection
   // (tasks / associated_files / associated_video_files / fs_gui_yamls — behavioral_events is now
   // owned by the Behavioral Events step) is a blocking error whose reset control renders ON this
@@ -662,16 +676,29 @@ export function computeEpochsStatus(day, epochErrors) {
   // guard to the whole raw-shape family so the badge can't disagree with the reset notice.
   // The direct `day.tasks` check also covers a standalone call whose bucket isn't populated.
   if (day?.tasks != null && !Array.isArray(day.tasks)) return 'error';
+  // A corrupt non-array `taskInstances` is an epochs-owned raw-shape error too (its reset renders on
+  // this step) — guard it directly so a standalone badge can't disagree with the reset notice.
+  if (day?.taskInstances != null && !Array.isArray(day.taskInstances)) return 'error';
   if ((epochErrors || []).some((i) => i.severity === 'error' && i.code === 'malformed_day_collection')) {
     return 'error';
   }
-  const tasks = Array.isArray(day?.tasks) ? day.tasks : [];
-  if (tasks.length === 0) return 'incomplete';
-
+  // A task-level error BADGES the step 'error' even when the resolved tasks are empty: a day whose
+  // only instance is a dangling_task_type_ref resolves to NO tasks (the ref is dropped) but needs
+  // REPAIR, not "add a task" — so check errors BEFORE the empty-tasks 'incomplete' return.
   const hasTaskError = (epochErrors || []).some(
     (issue) => issue.severity === 'error' && (issue.path || '').includes('task')
   );
-  return hasTaskError ? 'error' : 'valid';
+  if (hasTaskError) return 'error';
+
+  // The EFFECTIVE tasks: a catalog day resolves `taskInstances` → inline tasks in the merge, and
+  // removes raw `day.tasks`, so reading the raw day would falsely report 'incomplete'. Prefer the
+  // merged (resolved) tasks; fall back to raw `day.tasks` for a standalone call without the merge.
+  const tasks = Array.isArray(mergedDay?.tasks)
+    ? mergedDay.tasks
+    : Array.isArray(day?.tasks)
+      ? day.tasks
+      : [];
+  return tasks.length === 0 ? 'incomplete' : 'valid';
 }
 
 /**
@@ -943,6 +970,8 @@ export const SURFACE_BY_CODE = {
   duplicate_camera_id: 'animal',
   divergent_camera_identity: 'animal',
   divergent_data_acq_identity: 'animal',
+  // Task-type catalog (Phase 8C): a duplicate catalog task_name is an animal-catalog problem.
+  duplicate_task_type_name: 'animal',
   // Editable in the Day Editor (task/video/event re-picks, day bad-channel overrides,
   // session metadata incl. the inherited subject fields repairable in Overview,
   // optogenetics completeness).
@@ -961,6 +990,11 @@ export const SURFACE_BY_CODE = {
   dangling_dio_output: 'day',
   fs_gui_requires_optogenetics: 'day',
   divergent_task_identity: 'day',
+  // Task-type catalog (Phase 8C): epoch/order/reference + migration-reconciliation problems are
+  // day-owned (the Tasks & Epochs step); catalog DEFINITION uniqueness is animal-owned (above).
+  dangling_task_type_ref: 'day',
+  task_camera_not_used: 'day',
+  task_definition_reconciled: 'day',
   bad_channel_out_of_range: 'day',
   multishank_bad_channels_ignored: 'day',
   bad_channel_unfailed_without_ack: 'day',
@@ -1078,6 +1112,7 @@ export const ANIMAL_SETUP_TABS = {
   'electrode-groups': 'Electrode Groups',
   'recording-system': 'Recording System',
   cameras: 'Cameras',
+  'task-types': 'Task Types',
   optogenetics: 'Optogenetics',
 };
 
@@ -1096,6 +1131,10 @@ export function animalSetupTabForFieldPath(fieldPath) {
   const path = String(fieldPath || '').replace(/^\//, '').replace(/\//g, '.');
   const result = (tab) => ({ tab, label: ANIMAL_SETUP_TABS[tab] });
 
+  // Animal-level task-type catalog (camelCase `taskTypes` path) — match before the camera check so a
+  // task-type issue routes to its own tab, not Cameras. (Day-level task issues are day-owned and
+  // never reach this animal resolver.)
+  if (path.toLowerCase().includes('tasktype')) return result('task-types');
   if (path.includes('camera') || path.includes('meters_per_pixel') || path.includes('lens')) {
     return result('cameras');
   }

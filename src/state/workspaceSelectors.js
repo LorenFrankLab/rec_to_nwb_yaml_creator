@@ -36,6 +36,9 @@ const asRecord = (value) =>
 /** @param {object} animal @returns {Array} The animal's cameras (always an array). */
 export const getAnimalCameras = (animal) => asArray(animal?.cameras);
 
+/** @param {object} animal @returns {Array} The animal's task-type catalog (always an array). */
+export const getAnimalTaskTypes = (animal) => asArray(animal?.taskTypes);
+
 /**
  * VESTIGIAL: the animal-level behavioral-events library was retired — behavioral events are now
  * day-owned (`day.behavioral_events`, the only ones exported). `animal.behavioral_events` is left
@@ -157,8 +160,18 @@ export const getCopyableDioSources = (workspace, currentAnimalId) => {
 /** @param {object} day @returns {object} The day's session record (always a record). */
 export const getDaySession = (day) => asRecord(day?.session);
 
-/** @param {object} day @returns {Array} The day's tasks (always an array). */
+/** @param {object} day @returns {Array} The day's inline tasks (legacy/compat shape; always an array). */
 export const getDayTasks = (day) => asArray(day?.tasks);
+
+/**
+ * The day's catalog task instances, or `null` when the day is not catalog-shaped. Distinguishes
+ * "catalog day with zero tasks" (`[]`) from "legacy inline day" (`null`) so the export merge knows
+ * whether to resolve the catalog or fall back to inline `day.tasks`.
+ *
+ * @param {object} day
+ * @returns {Array|null} The ordered task instances, or null if `taskInstances` is absent.
+ */
+export const getDayTaskInstances = (day) => (Array.isArray(day?.taskInstances) ? day.taskInstances : null);
 
 /** @param {object} day @returns {Array} The day's associated video files. */
 export const getDayAssociatedVideos = (day) => asArray(day?.associated_video_files);

@@ -78,6 +78,19 @@ describe('applyAnimalUpdates', () => {
     const updated = applyAnimalUpdates(animal, { data_acq_device: acq }, NOW);
     expect(updated.devices.data_acq_device).toEqual(acq);
   });
+
+  it('persists a taskTypes write (the define-once catalog; sibling of applyDayUpdates.taskInstances)', () => {
+    // Without this branch the Animal Task Types tab AND the Day Editor's inline→catalog conversion /
+    // quick-add silently drop their writes — days then point at task types the catalog never saved.
+    const animal = { id: 'remy', taskTypes: [], configurationHistory: [] };
+    const taskTypes = [{ id: 'tasktype-0', task_name: 'w-track', task_description: 'Alt', task_environment: 'W', camera_id: [0] }];
+    expect(applyAnimalUpdates(animal, { taskTypes }, NOW).taskTypes).toEqual(taskTypes);
+  });
+
+  it('clears taskTypes to [] (deleting the last task type must persist)', () => {
+    const animal = { id: 'remy', taskTypes: [{ id: 'tasktype-0', task_name: 'sleep' }], configurationHistory: [] };
+    expect(applyAnimalUpdates(animal, { taskTypes: [] }, NOW).taskTypes).toEqual([]);
+  });
 });
 
 describe('addConfigurationSnapshotToAnimal', () => {

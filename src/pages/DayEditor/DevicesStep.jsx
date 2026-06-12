@@ -108,7 +108,23 @@ export default function DevicesStep(props) {
   // explicit additions (inferred cameras are covered by the union and need not be stored), so
   // `cameras_used` stays absent/empty for all existing data and the export stays byte-identical.
   const animalCameras = getAnimalCameras(animal);
-  const inferredKeys = useMemo(() => inferredCameraKeys(day), [day]);
+  // Infer non-negotiable cameras from the day's EFFECTIVE tasks: a migrated catalog day has
+  // `taskInstances` and no inline `tasks`, so its task-type camera refs only appear in the RESOLVED
+  // `mergedDay.tasks`. Use those for tasks (fall back to raw `day.tasks` when no merge is provided);
+  // videos / FsGUI camera refs stay day-owned and are read from the raw `day`. The explicit
+  // `cameras_used` checklist is always read from the raw day below.
+  const inferredKeys = useMemo(
+    () =>
+      inferredCameraKeys({
+        ...day,
+        tasks: Array.isArray(mergedDay?.tasks)
+          ? mergedDay.tasks
+          : Array.isArray(day?.tasks)
+            ? day.tasks
+            : [],
+      }),
+    [day, mergedDay]
+  );
   const explicitCameraIds = useMemo(() => getDayCamerasUsed(day), [day]);
   const explicitKeySet = useMemo(
     () => new Set(explicitCameraIds.map((id) => String(id))),

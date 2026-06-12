@@ -10,6 +10,7 @@ import userEvent from '@testing-library/user-event';
 import { StoreProvider, useStoreContext } from '../../../state/StoreContext';
 import DayEditorStepper from '../DayEditorStepper';
 import { useDayIdFromUrl } from '../../../hooks/useDayIdFromUrl';
+import { mergeDayMetadata } from '../../../state/workspaceUtils';
 import { makeAnimalWithCamerasAndDay } from './taskFixtures';
 
 vi.mock('../../../hooks/useDayIdFromUrl', () => ({
@@ -17,14 +18,27 @@ vi.mock('../../../hooks/useDayIdFromUrl', () => ({
 }));
 
 const DAY_ID = 'remy_20230622';
+const ANIMAL_ID = 'remy';
+
+// The catalog shape: the day picks task types the animal defines (cameras live on the TYPE).
+const CATALOG = {
+  animal: {
+    taskTypes: [
+      { id: 'tasktype-0', task_name: 'sleep', task_description: 'Rest', task_environment: 'HomeBox', camera_id: [1] },
+    ],
+  },
+  day: { tasks: undefined, taskInstances: [{ taskTypeId: 'tasktype-0', task_epochs: [1, 3] }] },
+};
 
 /**
- * Renders the current day's tasks as JSON so tests can read store state.
- * @returns {JSX.Element} A hidden element carrying the serialized tasks.
+ * Renders the day's EXPORTED tasks (resolved from the catalog) as JSON so tests can read export truth.
+ * @returns {JSX.Element} A hidden element carrying the serialized exported tasks.
  */
 function TasksInspector() {
   const { model } = useStoreContext();
-  const tasks = model.workspace?.days?.[DAY_ID]?.tasks ?? [];
+  const animal = model.workspace?.animals?.[ANIMAL_ID];
+  const day = model.workspace?.days?.[DAY_ID];
+  const tasks = animal && day ? mergeDayMetadata(animal, day).tasks : [];
   return <div data-testid="tasks-json">{JSON.stringify(tasks)}</div>;
 }
 
@@ -46,9 +60,23 @@ function renderStepper(overrides = {}) {
     <StoreProvider initialState={initialState}>
       <DayEditorStepper />
       <TasksInspector />
+      <CatalogProbe />
     </StoreProvider>
   );
   return { animal, day };
+}
+
+/** Live-store probe: the animal's task-type catalog + the day's instances (the persisted catalog). */
+function CatalogProbe() {
+  const { model } = useStoreContext();
+  const animal = model.workspace?.animals?.[ANIMAL_ID];
+  const day = model.workspace?.days?.[DAY_ID];
+  return (
+    <>
+      <pre data-testid="animal-task-types">{JSON.stringify(animal?.taskTypes ?? 'NONE')}</pre>
+      <pre data-testid="day-task-instances">{JSON.stringify(day?.taskInstances ?? 'NONE')}</pre>
+    </>
+  );
 }
 
 /**
@@ -97,60 +125,76 @@ describe('Tasks & Epochs step (integration)', () => {
     expect(document.activeElement).toBe(addButton);
   });
 
-  it('inheritance: shows the animal cameras and saves camera ids that reference the animal', async () => {
+  it('inheritance: the exported task camera ids come from the task type and reference the animal', async () => {
     const user = userEvent.setup();
-    const { animal } = renderStepper();
+    const { animal } = renderStepper({ animal: CATALOG.animal, day: CATALOG.day });
     await goToEpochs(user);
 
-    await user.click(screen.getByRole('button', { name: /add.*task/i }));
-    const dialog = screen.getByRole('dialog');
-
-    // Inherited cameras appear as task options.
-    const cameraSummary = within(dialog).getByText('Cameras', { selector: 'summary' });
-    const cameraSection = cameraSummary.closest('details');
-    animal.cameras.forEach((camera) => {
-      expect(
-        within(cameraSection).getByRole('checkbox', {
-          name: new RegExp(`${camera.id}.*${camera.camera_name}`, 'i'),
-        })
-      ).toBeInTheDocument();
-    });
-
-    // Select the first animal camera and save.
-    await user.type(within(dialog).getByRole('textbox', { name: /task name/i }), 'newtask');
-    await user.type(within(dialog).getByRole('textbox', { name: /task environment/i }), 'Env');
-    const firstCamera = animal.cameras[0];
-    await user.click(
-      within(cameraSection).getByRole('checkbox', {
-        name: new RegExp(`${firstCamera.id}.*${firstCamera.camera_name}`, 'i'),
-      })
-    );
-    await user.click(within(dialog).getByRole('button', { name: /save task/i }));
-
-    const tasks = readTasks();
-    const saved = tasks.find((t) => t.task_name === 'newtask');
+    // The seeded instance resolves to its catalog type, whose camera_id (animal-level) flows to export.
+    const sleep = readTasks().find((t) => t.task_name === 'sleep');
     const animalCameraIds = animal.cameras.map((c) => c.id);
-    expect(saved.camera_id).toContain(firstCamera.id);
-    saved.camera_id.forEach((id) => expect(animalCameraIds).toContain(id));
+    expect(sleep.camera_id.length).toBeGreaterThan(0);
+    sleep.camera_id.forEach((id) => expect(animalCameraIds).toContain(id));
   });
 
-  it('persistence: a saved task is committed through updateDay and the animal data is untouched', async () => {
+  it('persistence: adding a task instance commits the day only; the animal catalog is untouched', async () => {
     const user = userEvent.setup();
-    const { animal, day } = renderStepper();
-    const originalTaskCount = day.tasks.length;
-    const animalCamerasBefore = JSON.stringify(animal.cameras);
+    const { animal } = renderStepper({ animal: CATALOG.animal, day: CATALOG.day });
+    const animalBefore = JSON.stringify(animal);
+    await goToEpochs(user);
+    const before = readTasks().length;
+
+    // Pick the existing 'sleep' type, add an epoch, save.
+    await user.click(screen.getByRole('button', { name: /add task/i }));
+    await user.click(screen.getByRole('button', { name: /add epoch/i }));
+    const epochInputs = screen.getAllByRole('spinbutton', { name: /epoch number/i });
+    await user.type(epochInputs[epochInputs.length - 1], '7');
+    await user.click(screen.getByRole('button', { name: /save task for this day/i }));
+
+    expect(readTasks()).toHaveLength(before + 1);
+    // Picking an EXISTING type writes only the day's taskInstances — the input animal isn't mutated.
+    expect(JSON.stringify(animal)).toBe(animalBefore);
+  });
+
+  it('conversion persists: editing an INLINE day commits the derived taskTypes to the animal AND taskInstances to the day', async () => {
+    const user = userEvent.setup();
+    // Default fixture: animal has NO taskTypes, day has one inline task 'sleep'. Editing derives the
+    // catalog and MUST persist both halves through the store — the path the applyAnimalUpdates
+    // silent-drop would have left as a dangling ref on reload.
+    renderStepper();
+    await goToEpochs(user);
+    expect(screen.getByTestId('animal-task-types').textContent).toContain('NONE');
+
+    // Remove the (derived) instance — the first edit commits the conversion.
+    await user.click(screen.getByRole('button', { name: /remove sleep from this day/i }));
+
+    const taskTypes = JSON.parse(screen.getByTestId('animal-task-types').textContent);
+    expect(taskTypes).toEqual([
+      expect.objectContaining({ id: 'tasktype-0', task_name: 'sleep' }),
+    ]);
+    // The day adopted the catalog: instances persisted ([] after the remove) and inline tasks retired.
+    expect(JSON.parse(screen.getByTestId('day-task-instances').textContent)).toEqual([]);
+  });
+
+  it('defining a new task type in the day adds the type to the animal AND a task instance to the day', async () => {
+    const user = userEvent.setup();
+    // Empty catalog + empty day, through the REAL store, so the full define→add→persist flow runs.
+    renderStepper({ animal: { taskTypes: [] }, day: { tasks: undefined, taskInstances: [] } });
     await goToEpochs(user);
 
-    await user.click(screen.getByRole('button', { name: /add.*task/i }));
-    const dialog = screen.getByRole('dialog');
-    await user.type(within(dialog).getByRole('textbox', { name: /task name/i }), 'persisted');
-    await user.type(within(dialog).getByRole('textbox', { name: /task environment/i }), 'Env');
-    await user.click(within(dialog).getByRole('button', { name: /save task/i }));
+    await user.click(screen.getByRole('button', { name: /define a new task type/i }));
+    await user.type(screen.getByLabelText(/task name/i), 'w-track');
+    await user.type(screen.getByLabelText('Description'), 'Alternation');
+    await user.type(screen.getByLabelText('Environment'), 'W-track');
+    await user.click(screen.getByRole('button', { name: /save task type/i }));
 
-    const tasks = readTasks();
-    expect(tasks).toHaveLength(originalTaskCount + 1);
-    expect(tasks.some((t) => t.task_name === 'persisted')).toBe(true);
-    // Animal-level inherited data is not mutated by saving a day task.
-    expect(JSON.stringify(animal.cameras)).toBe(animalCamerasBefore);
+    // The new type lands on the animal catalog AND a task instance lands on the day — in one action.
+    const taskTypes = JSON.parse(screen.getByTestId('animal-task-types').textContent);
+    expect(taskTypes).toEqual([expect.objectContaining({ id: 'tasktype-0', task_name: 'w-track' })]);
+    expect(JSON.parse(screen.getByTestId('day-task-instances').textContent)).toEqual([
+      { taskTypeId: 'tasktype-0', task_epochs: [] },
+    ]);
+    // The instance's epoch editor opened so the user assigns its epochs right away.
+    expect(screen.getByRole('button', { name: /save task for this day/i })).toBeInTheDocument();
   });
 });
