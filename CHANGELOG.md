@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Decomposed the Day Editor Devices step (Phase 9c-3 — refactor only, no behavior change).** The
+  ~860-LOC `pages/DayEditor/DevicesStep.jsx` is split into focused sibling components; the step is now
+  a 424-LOC module that owns the effective-config resolution + the bad-channel state/handlers and
+  composes the pieces. The Phase 8C cameras-used checklist behavior and the device-override repair
+  paths are preserved verbatim.
+  - **New components:** [CamerasUsedSection.jsx](src/pages/DayEditor/CamerasUsedSection.jsx) (the 8C
+    per-day cameras-used checklist + its inferred/explicit toggle logic, self-contained),
+    [OverrideCleanupSection.jsx](src/pages/DayEditor/OverrideCleanupSection.jsx) (the malformed/stale/
+    shadowing `deviceOverrides` removal controls + the `classifyDeviceOverrides` classification),
+    [ConfigVersionPanel.jsx](src/pages/DayEditor/ConfigVersionPanel.jsx) (the config-version indicator
+    + unpinned-day pin control + the reconfiguration wizard; owns the `wizardOpen`/`pinVersion` state),
+    and [ElectrodeGroupsAccordion.jsx](src/pages/DayEditor/ElectrodeGroupsAccordion.jsx) (the per-group
+    failed-channel editors; owns the per-group status-badge derivations).
+  - **No behavior change:** `DevicesStep` is still the only export (consumed by `DayEditorStepper` via
+    `DayEditorContext`). The DevicesStep suites (incl. stale-override-repair, workflow-copy, and the
+    schema-valid-devices integration test) pass unchanged; golden baselines byte-identical; `CI=true`
+    build clean.
+
 - **Decomposed the Recording Days pane (Phase 9c-2 — refactor only, no behavior change).** The
   ~848-LOC `pages/AnimalWorkspace/RecordingDaysTab.jsx` is split into focused view components;
   the tab is now a 496-LOC controller that owns the create/duplicate/delete/copy/repair state +
