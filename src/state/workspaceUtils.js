@@ -339,6 +339,13 @@ export function mergeDayMetadata(animal, day) {
     resolveDayConfig(animal, day);
 
   const devices = normalizeDevices(getAnimalDevices(animal));
+  // Resolve the day's tasks ONCE (catalog `taskInstances` → inline tasks, else legacy inline tasks)
+  // and reuse the result for BOTH the exported `tasks` and the camera inference below. A catalog
+  // day's task camera refs live on the animal task type, so the inference must see the RESOLVED
+  // tasks — reading raw `day.tasks` (empty for a catalog day) would drop a task-only camera while an
+  // exported task still references it (dangling_camera_ref). Byte-identical for an inline day, where
+  // the resolved tasks equal `day.tasks`.
+  const resolvedTasks = resolveDayTasks(animal, day);
   // Raw animal/day fields read through the canonical shape-safe selectors — the single
   // place these guards live, so the merge can't drift from the editors. A malformed
   // import still surfaces as a validation issue downstream (normalization never decides
@@ -348,8 +355,9 @@ export function mergeDayMetadata(animal, day) {
   // identical for any day that references all its cameras (the workspace-merge parity fixture and
   // every golden fixture do — so no baseline moves); a day that left a catalog camera unused now
   // correctly drops it. `cameras: []` is preserved for a zero-camera day. Resolves downstream by
-  // `id`, so dropping unreferenced cameras is safe.
-  const dayCameras = resolveDayCameraUsage(animal, day);
+  // `id`, so dropping unreferenced cameras is safe. Pass the resolved tasks (a catalog day has none
+  // inline) so a task-type camera is inferred from the export-shaped task, not the empty raw list.
+  const dayCameras = resolveDayCameraUsage(animal, { ...day, tasks: resolvedTasks });
   const opto = animal.optogenetics || null;
   const experimenters = getAnimalExperimenters(animal);
   const session = getDaySession(day);
@@ -397,8 +405,8 @@ export function mergeDayMetadata(animal, day) {
     cameras: dayCameras.map((c) => reorderKeys(c, CAMERA_ORDER)),
 
     // === From Day: Behavioral Protocol (resolved from the animal task-type catalog when present,
-    // else legacy inline day.tasks) ===
-    tasks: resolveDayTasks(animal, day).map((t) => reorderKeys(t, TASK_ORDER)),
+    // else legacy inline day.tasks — computed once above, shared with the camera inference) ===
+    tasks: resolvedTasks.map((t) => reorderKeys(t, TASK_ORDER)),
 
     // === From Day: Data Files ===
     associated_files: getDayAssociatedFiles(day).map((f) =>

@@ -15,6 +15,7 @@ import {
   getAnimalDevices,
   getConfigHistory,
   getDayTasks,
+  getDayTaskInstances,
   getDayKeywords,
   getDayBehavioralEvents,
   getDayBadChannelOverrides,
@@ -376,6 +377,16 @@ export function createDayRecord(animal, animalId, dayId, date, session, now, car
       ? { bad_channels: structuredClone(carriedBadChannels) }
       : undefined;
 
+  // Task carry-forward by SHAPE: a catalog source day carries its `taskInstances` (references into
+  // the shared animal task-type catalog), with NO inline `tasks`; a legacy inline source carries its
+  // `tasks`. A new (no-carry) day starts empty. Without this, carry-forward / Duplicate Day of a
+  // migrated v3 day (taskInstances, no tasks) silently produced a blank-task day.
+  const carriedInstances = carryFrom ? getDayTaskInstances(carryFrom) : null;
+  const taskCarry =
+    carriedInstances !== null
+      ? { tasks: [], taskInstances: structuredClone(carriedInstances) }
+      : { tasks: carryFrom ? structuredClone(getDayTasks(carryFrom)) : [] };
+
   return {
     id: dayId,
     animalId,
@@ -393,7 +404,7 @@ export function createDayRecord(animal, animalId, dayId, date, session, now, car
       weight: session.weight !== undefined ? session.weight : carryFrom?.session?.weight,
     },
     keywords: carryFrom ? structuredClone(getDayKeywords(carryFrom)) : [],
-    tasks: carryFrom ? structuredClone(getDayTasks(carryFrom)) : [],
+    ...taskCarry,
     behavioral_events: carryFrom ? structuredClone(getDayBehavioralEvents(carryFrom)) : [],
     // Session-specific — never carried.
     associated_files: [],
