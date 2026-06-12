@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Validation/domain logic split + incremental TypeScript (Phase 9a — refactor only, no behavior
+  change).** The ~1200-LOC `domain/validation.js` monolith is split into five focused, individually
+  testable modules; `domain/validation.js` becomes a thin public **barrel** re-exporting the identical
+  stable surface (17 exports), so every existing `import … from '.../domain/validation'` is unchanged.
+  - **New modules:** [repairRouting.ts](src/domain/repairRouting.ts) (issue → step/surface/animal-tab
+    routing), [geometryProvenance.ts](src/domain/geometryProvenance.ts) (geometry-override domain
+    classification + provenance re-tag), [dayOverrideValidation.ts](src/domain/dayOverrideValidation.ts)
+    (the override / data-acq / bad-channel / unpinned issue producers),
+    [dayValidationComposer.js](src/domain/dayValidationComposer.js) (`validateDay` +
+    `normalizeIssue`), and [stepStatus.ts](src/domain/stepStatus.ts) (`computeStepStatus`, the
+    per-step helpers, and the export gate). No import cycles; the composer + barrel stay `.js` (they
+    sit on the untyped `validate()` boundary).
+  - **TypeScript under `strict`:** the four pure leaf modules are now `.ts` (the composer/barrel stay
+    `.js`), introducing a shared permissive `RepairableIssue` issue-family type. Tolerant inputs keep
+    their defensive `?.`/`Array.isArray` guards (typed `unknown` / loose interfaces); the only body
+    changes are TS-required narrowing that is semantically identical. `tsc --noEmit` is clean.
+  - **No behavior change.** Golden baselines are **byte-identical**; the
+    `dayValidation.contract`, `architectureBoundaries.guard`, `store-public-api`, and
+    `workspaceSelectors.guard` tests pass **unchanged**. No validation rule, severity, ownership,
+    exported YAML key, or persisted-shape change. (The `workflowOwnership` source-scan was widened
+    from `.js` to `.js`/`.ts` so its "every emitted code is owned" invariant survives the TS
+    migration — a strengthening, not a weakening.)
 - **Task-type catalog ACTIVATED — persisted shape + export resolution (Phase 8C, foundation).** The
   Phase 8B model is now live in persistence and export. **The exported YAML is unchanged** — a
   migrated day's `tasks[]` is byte-identical to the legacy inline export (golden baselines stay
