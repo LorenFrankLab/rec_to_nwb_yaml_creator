@@ -1,0 +1,45 @@
+/**
+ * TaskTypeModal styling — reuses the GLOBAL form primitives (`.form-group`, `.help-text`,
+ * `.error-text`, `.form-actions`, `.btn-cancel`, `.btn-save`) defined alongside the camera modal;
+ * only the task-type camera multi-select is scoped here.
+ */
+
+.task-type-modal-form {
+  /* The camera multi-select is a fieldset (grouped checkboxes) rather than a single input. */
+  .task-type-cameras {
+    border: 1px solid var(--color-grey-200);
+    border-radius: 4px;
+    padding: var(--spacing-md);
+    margin: 0 0 var(--spacing-md) 0;
+
+    legend {
+      font-weight: 600;
+      font-size: var(--font-size-sm);
+      color: var(--color-grey-900);
+      padding: 0 var(--spacing-xs);
+    }
+  }
+
+  .task-type-camera-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .task-type-camera-option {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: var(--font-size-base);
+    color: var(--color-grey-900);
+    cursor: pointer;
+    min-height: 32px;
+
+    input[type='checkbox'] {
+      width: 1.1rem;
+      height: 1.1rem;
+      cursor: pointer;
+    }
+  }
+}

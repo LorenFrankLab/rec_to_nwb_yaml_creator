@@ -1,0 +1,232 @@
+/**
+ * TaskTypesSection styling — the animal task-type catalog table.
+ *
+ * Reuses the GLOBAL utility classes defined alongside the camera catalog (`.section-header`,
+ * `.table-actions`, `.button-small`, `.button-danger`, `.status-badge.*`) since CRA bundles all
+ * imported stylesheets globally; only the task-types-specific structure (container, scroll wrapper,
+ * 6-column table, empty state, responsive card layout) is scoped here under `.task-types-*` so it
+ * cannot collide with the camera table.
+ */
+
+.task-types-section {
+  padding: var(--spacing-lg);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Horizontal-scroll wrapper keeps the Actions column reachable at every width (long
+   descriptions scroll WITHIN the wrapper instead of pushing Edit/Delete off-screen). */
+.task-types-table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.task-types-table {
+  width: 100%;
+  table-layout: fixed; /* long names/descriptions truncate instead of widening past the viewport */
+  border-collapse: collapse;
+  background-color: var(--color-white);
+  border: 1px solid var(--color-grey-200);
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+
+  /* Columns: Name | Description | Environment | Cameras | Status | Actions. Keep Status + Actions
+     fixed and reachable; let the text columns share the rest and truncate. */
+  th:nth-child(5), td:nth-child(5) { width: 5rem; }   /* Status */
+  th:nth-child(6), td:nth-child(6) { width: 9.5rem; } /* Actions */
+
+  td:nth-child(1), td:nth-child(2), td:nth-child(3), td:nth-child(4) {
+    max-width: 0; /* with table-layout:fixed, lets the cell honor overflow + ellipsis */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  thead {
+    background-color: var(--color-grey-100);
+    border-bottom: 2px solid var(--color-grey-300);
+
+    th {
+      text-align: left;
+      padding: var(--spacing-md);
+      font-weight: 600;
+      font-size: var(--font-size-sm);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--color-grey-700);
+      white-space: nowrap;
+
+      &:first-child { padding-left: var(--spacing-lg); }
+      &:last-child { padding-right: var(--spacing-lg); }
+    }
+  }
+
+  tbody {
+    tr {
+      border-bottom: 1px solid var(--color-grey-200);
+      transition: background-color var(--transition-fast);
+
+      &:last-child { border-bottom: none; }
+      &:hover { background-color: #fafafa; }
+
+      td {
+        padding: var(--spacing-md);
+        font-size: var(--font-size-base);
+        color: var(--color-grey-900);
+        vertical-align: middle;
+
+        &:first-child {
+          padding-left: var(--spacing-lg);
+          font-weight: 500;
+        }
+        &:last-child { padding-right: var(--spacing-lg); }
+      }
+    }
+  }
+
+  /* Action buttons keep the WCAG AA touch target (the global .button-small only sets colors). */
+  tbody tr td button {
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-family: inherit;
+    margin-right: var(--spacing-xs);
+    min-height: 48px;
+    min-width: 48px;
+
+    &:focus {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+    &:last-child { margin-right: 0; }
+  }
+}
+
+/* ===== Empty state ===== */
+
+.task-types-section.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  text-align: center;
+  background-color: var(--color-white);
+  border: 2px dashed var(--color-grey-300);
+  border-radius: 8px;
+  margin: var(--spacing-xl) 0;
+  min-height: 400px;
+
+  .empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: var(--spacing-lg);
+    opacity: 0.7;
+  }
+
+  h3 {
+    font-size: var(--font-size-xl);
+    font-weight: 500;
+    margin: 0 0 var(--spacing-md) 0;
+    color: var(--color-grey-900);
+  }
+
+  p {
+    font-size: var(--font-size-base);
+    color: var(--color-grey-600);
+    margin: 0 0 var(--spacing-md) 0;
+    max-width: 600px;
+    line-height: 1.6;
+  }
+
+  .empty-state-hint {
+    font-size: var(--font-size-sm);
+    color: var(--color-grey-600);
+    font-style: italic;
+    margin-bottom: var(--spacing-xl);
+  }
+}
+
+/* ===== Responsive ===== */
+
+@media (max-width: 768px) {
+  .task-types-section { padding: var(--spacing-md); }
+
+  .table-actions {
+    flex-direction: column;
+
+    button {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  /* Stack each row as a card (label::before from data-label), mirroring the camera table. */
+  .task-types-table {
+    table-layout: auto;
+
+    thead { display: none; }
+
+    td:nth-child(1), td:nth-child(2), td:nth-child(3),
+    td:nth-child(4), td:nth-child(5), td:nth-child(6) {
+      width: auto;
+      max-width: none;
+      overflow: visible;
+      text-overflow: clip;
+      white-space: normal;
+    }
+
+    tbody tr {
+      display: block;
+      margin-bottom: var(--spacing-md);
+      border: 1px solid var(--color-grey-200);
+      border-radius: 4px;
+      padding: var(--spacing-md);
+
+      &:hover { background-color: var(--color-white); }
+
+      td {
+        display: flex;
+        justify-content: space-between;
+        padding: var(--spacing-sm) 0;
+        border-bottom: 1px solid var(--color-grey-200);
+
+        &:last-child {
+          border-bottom: none;
+          padding-top: var(--spacing-md);
+          justify-content: flex-start;
+          gap: var(--spacing-sm);
+        }
+
+        &::before {
+          content: attr(data-label);
+          font-weight: 600;
+          color: var(--color-grey-700);
+          text-transform: uppercase;
+          font-size: var(--font-size-sm);
+        }
+
+        &:last-child::before { content: none; }
+      }
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-types-table tbody tr { transition: none; }
+}
+
+@media print {
+  .task-types-section .table-actions,
+  .task-types-table .button-small,
+  .task-types-table .button-danger {
+    display: none;
+  }
+}

@@ -83,6 +83,13 @@ describe('AnimalView — catalog/library tabs render (Phase 3-3)', () => {
     renderView('optogenetics');
     expect(screen.queryByText(PLACEHOLDER)).not.toBeInTheDocument();
   });
+
+  it('renders the task-types container, not the placeholder', () => {
+    renderView('task-types');
+    expect(screen.queryByText(PLACEHOLDER)).not.toBeInTheDocument();
+    // The seeded animal has no task types yet → the catalog empty state with its CTA.
+    expect(screen.getByRole('button', { name: /Add First Task Type/i })).toBeInTheDocument();
+  });
 });
 
 describe('AnimalView — catalog containers persist edits to the store (GAP-A)', () => {
