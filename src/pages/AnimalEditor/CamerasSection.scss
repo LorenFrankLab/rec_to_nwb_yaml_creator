@@ -101,18 +101,18 @@
 .button-primary {
   background-color: var(--color-primary);
   color: var(--color-white);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 10%);
 
   &:hover:not(:disabled) {
     background-color: var(--color-primary-hover);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 8px rgb(0 0 0 / 15%);
     transform: translateY(-1px);
   }
 
   &:active:not(:disabled) {
     background-color: #0d47a1;
     transform: translateY(0);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgb(0 0 0 / 10%);
   }
 }
 
@@ -141,12 +141,14 @@
   width: 100%;
   max-width: 100%;
   overflow-x: auto;
+
   /* keep the focus ring of a focused action button visible while scrolling */
   -webkit-overflow-scrolling: touch;
 }
 
 .cameras-table {
   width: 100%;
+
   /* Fixed layout so long camera/lens/model names can't widen the table past the viewport and
      push the Actions column (Edit/Delete) off-screen. Long text in the name columns truncates
      with an ellipsis (full value stays in `title`); the scroll wrapper above is the fallback
@@ -157,7 +159,7 @@
   border: 1px solid var(--color-grey-200);
   border-radius: 4px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 5%);
 
   /* Column widths: keep Status + Actions at a fixed reachable size; let the text columns share
      the rest and truncate. (ID / MPP / Status are narrow; Actions holds two buttons.) */
@@ -284,7 +286,7 @@
 
   &:hover:not(:disabled) {
     background-color: #b71c1c;
-    box-shadow: 0 2px 4px rgba(211, 47, 47, 0.2);
+    box-shadow: 0 2px 4px rgb(211 47 47 / 20%);
   }
 
   &:active:not(:disabled) {
@@ -393,11 +395,11 @@
   .button-primary {
     background-color: var(--color-primary);
     color: var(--color-white);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgb(0 0 0 / 10%);
 
     &:hover {
       background-color: var(--color-primary-hover);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 4px 8px rgb(0 0 0 / 15%);
       transform: translateY(-1px);
     }
 
@@ -564,6 +566,7 @@
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);

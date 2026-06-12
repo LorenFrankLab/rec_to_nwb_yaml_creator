@@ -251,6 +251,10 @@ function AnimalCreationForm({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+    // handleSubmit is intentionally omitted: it is recreated each render, so listing it would
+    // re-subscribe the listener on every render. The effect re-subscribes on the handler's actual
+    // inputs (isValid / isSubmitting / onCancel) — behavior preserved from pre-9b.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isValid, isSubmitting, onCancel]);
 
   const fieldLabels = {

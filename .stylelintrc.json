@@ -3,6 +3,8 @@
   "plugins": ["stylelint-declaration-strict-value"],
   "defaultSeverity": "warning",
   "rules": {
+    "media-feature-range-notation": "prefix",
+    "selector-not-notation": "simple",
     "scale-unlimited/declaration-strict-value": [
       ["z-index", "color", "background-color"],
       {

@@ -103,6 +103,9 @@ export function AnimalWorkspace() {
       setShowCreate(true);
       window.history.replaceState(null, '', '#/workspace');
     }
+    // Mount-only handshake: intentionally runs once. Re-running when `animals` changes would
+    // re-process the transient ?animal / ?create params and re-fire the redirect / open the panel.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Run only on mount
 
   return (

@@ -57,7 +57,7 @@
   background: #fff;
   border: 1px solid #c8c1ae;
   border-radius: 11px;
-  box-shadow: 0 16px 40px -14px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 16px 40px -14px rgb(0 0 0 / 50%);
 }
 
 .animal-switcher-label {

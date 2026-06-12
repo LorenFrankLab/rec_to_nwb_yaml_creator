@@ -17,7 +17,7 @@
 .animal-creation-form {
   background-color: var(--color-white);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 10%);
   padding: var(--spacing-xl);
   max-width: 700px;
   width: 100%;

@@ -35,7 +35,7 @@
 .btn-nav {
   padding: 0.375rem 0.75rem;
   font-size: 1rem;
-  background-color: var(--color-white, #ffffff);
+  background-color: var(--color-white, #fff);
   border: 1px solid var(--color-border, #e0e0e0);
   border-radius: 4px;
   cursor: pointer;
@@ -48,7 +48,7 @@
 }
 
 .btn-nav:active {
-  background-color: var(--color-gray-200, #eeeeee);
+  background-color: var(--color-gray-200, #eee);
 }
 
 .btn-today {
@@ -56,7 +56,7 @@
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--color-primary, var(--color-primary));
-  background-color: var(--color-white, #ffffff);
+  background-color: var(--color-white, #fff);
   border: 1px solid var(--color-primary, var(--color-primary));
   border-radius: 4px;
   cursor: pointer;
@@ -65,7 +65,7 @@
 
 .btn-today:hover {
   background-color: var(--color-primary, var(--color-primary));
-  color: var(--color-white, #ffffff);
+  color: var(--color-white, #fff);
 }
 
 /* Grid */
@@ -87,7 +87,7 @@
   text-align: center;
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--color-grey-600, #666666);
+  color: var(--color-grey-600, #666);
 }
 
 .calendar-days {
@@ -114,7 +114,7 @@
   padding: 0.5rem;
   font-size: 0.875rem;
   font-weight: 500;
-  background-color: var(--color-white, #ffffff);
+  background-color: var(--color-white, #fff);
   border: 1px solid var(--color-border, #e0e0e0);
   border-radius: 4px;
   cursor: pointer;
@@ -133,11 +133,12 @@
 }
 
 /* Day States */
+
 /* Adjacent-month cells are still interactive (only existing days are disabled), so
    their day numbers must meet AA. grey-600 reads as dimmed yet stays >= 4.5:1 on the
    white and hover-grey cell backgrounds (was #bdbdbd at 1.88:1). */
 .calendar-day--other-month {
-  color: var(--color-grey-600, #666666);
+  color: var(--color-grey-600, #666);
 }
 
 .calendar-day--today {
@@ -147,7 +148,7 @@
 
 .calendar-day--selected {
   background-color: var(--color-primary, var(--color-primary));
-  color: var(--color-white, #ffffff);
+  color: var(--color-white, #fff);
   border-color: var(--color-primary, var(--color-primary));
 }
 
@@ -158,7 +159,7 @@
 
 .calendar-day--existing {
   background-color: var(--color-success, #4caf50);
-  color: var(--color-white, #ffffff);
+  color: var(--color-white, #fff);
   border-color: var(--color-success, #4caf50);
 }
 
@@ -191,7 +192,7 @@
 .legend-title {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--color-grey-600, #666666);
+  color: var(--color-grey-600, #666);
 }
 
 .legend-items {
@@ -218,7 +219,7 @@
 }
 
 .legend-indicator--available {
-  background-color: var(--color-white, #ffffff);
+  background-color: var(--color-white, #fff);
 }
 
 .legend-indicator--selected {
@@ -227,17 +228,17 @@
 
 .legend-indicator--existing {
   background-color: var(--color-success, #4caf50);
-  color: var(--color-white, #ffffff);
+  color: var(--color-white, #fff);
 }
 
 .legend-indicator--today {
   border: 2px solid var(--color-primary, var(--color-primary));
-  background-color: var(--color-white, #ffffff);
+  background-color: var(--color-white, #fff);
 }
 
 .legend-label {
   font-size: 0.875rem;
-  color: var(--color-grey-600, #666666);
+  color: var(--color-grey-600, #666);
 }
 
 /* Actions */
@@ -260,7 +261,7 @@
 }
 
 .btn-primary {
-  color: var(--color-white, #ffffff);
+  color: var(--color-white, #fff);
   background-color: var(--color-primary, var(--color-primary));
 }
 
@@ -280,7 +281,7 @@
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background-color: var(--color-gray-200, #eeeeee);
+  background-color: var(--color-gray-200, #eee);
 }
 
 .btn-secondary:disabled {
@@ -289,7 +290,7 @@
 }
 
 .btn-close {
-  color: var(--color-grey-600, #666666);
+  color: var(--color-grey-600, #666);
   background-color: transparent;
   border: 1px solid var(--color-border, #e0e0e0);
 }
