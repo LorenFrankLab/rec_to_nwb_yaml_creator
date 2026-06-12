@@ -36,8 +36,8 @@ or enforced tokens** (F6), and **deferred lint debt that weakens the build gate*
 
 | Gap | Evidence | Why it bites refactoring |
 | --- | --- | --- |
-| **No static types** | 100% JS; `jsconfig.json` `checkJs:false`; PropTypes on ~31% of components; JSDoc typedefs exist (`state/workspaceTypes.js`) but are *unenforced* | Rename a domain fn or change an `Animal`/`Day` shape → **silent until a test happens to exercise it.** No safe IDE rename, no null-safety. Tooling agent scored type-safety **2/10**. |
-| **Oversized files/components** | `domain/validation.js` 1142 · `validation/rulesValidation.js` 1108 · `valueList.js` 1073 · `ValidationSummary/index.jsx` 1033 · `DevicesStep.jsx` 825 · `OptogeneticsFields.jsx` 826 · `RecordingDaysTab.jsx` 822 · `useWorkspace.js` 793 | High intrinsic load to change; many concerns per file; merge-conflict magnets. |
+| **No static types** ⏳ PARTIAL | Incremental TS underway (`tsc --noEmit` CI gate live): `io/yaml.ts`, `state/workspaceTypes.ts` + the task-catalog modules, `domain/deviceOverrideMerge.ts`, and the Phase-9a validation leaf modules (`repairRouting`/`geometryProvenance`/`dayOverrideValidation`/`stepStatus`) are `.ts` under `strict`. Remaining: most components, `useWorkspace`, and the legacy form path stay JS (`checkJs:false`) | Rename a domain fn or change an `Animal`/`Day` shape → **silent until a test happens to exercise it.** No safe IDE rename, no null-safety. Tooling agent scored type-safety **2/10** (improving as the pure core converts). |
+| **Oversized files/components** ⏳ PARTIAL | ~~`domain/validation.js` 1142~~ ✅ split (Phase 9a) into routing/provenance/producers/composer/step-status modules · `validation/rulesValidation.js` 1108 · `valueList.js` 1073 · `ValidationSummary/index.jsx` 1033 · `DevicesStep.jsx` 825 · `OptogeneticsFields.jsx` 826 · `RecordingDaysTab.jsx` 822 · `useWorkspace.js` 793 | High intrinsic load to change; many concerns per file; merge-conflict magnets. |
 | **~2,000 LOC legacy dead-weight** | `OptogeneticsFields.jsx` (826, imported only by `LegacyFormView`), `element/*`, `*Fields`, `LegacyFormView.jsx` — parallel to the workspace path | Every workspace UX/styling change risks needing a legacy twin; or the legacy code rots unmaintained. |
 | **CSS: no scoping, partial tokens** (= F6) | Global CSS, `.button-primary` redefined in 6 files, two different error icons, ~60% token adoption, mixed `.css`/`.scss` | Visual inconsistency *and* fragile edits — changing a shared style can leak across components. |
 | **Build-gate weakened** | CI builds with `CI=false`; 275 ESLint warnings tolerated; no `tsc` step | Problems are warned, not enforced; drift accumulates. |
@@ -65,6 +65,13 @@ rewrite. The bar is "follows best practices for a web app of this kind" + "safe,
    step-routing; extract a **shared device-override merge module** so `resolveDayConfig` and
    `dayOverrideIssues` can't drift; break `OptogeneticsFields`, `ValidationSummary`, `DevicesStep`,
    `RecordingDaysTab` into sub-components. All behavior-preserving, guarded by the existing contract/golden tests.
+   - ✅ **`domain/validation.js` DONE (Phase 9a).** Split into `repairRouting.ts` (step/surface routing),
+     `geometryProvenance.ts`, `dayOverrideValidation.ts` (the issue producers), `dayValidationComposer.js`
+     (`validateDay`), and `stepStatus.ts` (the export gate); `domain/validation.js` is now a thin barrel
+     re-exporting the identical public surface. The shared `deviceOverrideMerge.ts` was already extracted in
+     Phase 5. The four pure leaf modules are typed under `strict` (composer/barrel stay `.js` on the untyped
+     `validate()` boundary). Baselines byte-identical; contract/guard tests unchanged. **Still pending:** the
+     `OptogeneticsFields` / `ValidationSummary` / `DevicesStep` / `RecordingDaysTab` component decomposition (Phase 9c).
 4. **Decide the legacy path's fate** (see decisions). Sunsetting deletes ~2,000 LOC and removes the
    "must I update the legacy twin?" tax; keeping it frozen is the conservative safety-net choice.
 5. **Spread the container/presentational pattern** from `AnimalEditor/wiring/` to the Day Editor (a
