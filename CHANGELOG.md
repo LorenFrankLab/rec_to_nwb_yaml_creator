@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Decomposed the Validation Summary (Phase 9c-1 — refactor only, no behavior change).** The
+  ~1117-LOC `pages/ValidationSummary/index.jsx` is split into focused, individually-testable modules;
+  `index.jsx` is now a 306-LOC page composition. No wording, count, status-chip, or export-eligibility
+  change — the same `buildRows` chips, the same batch validate/export gates.
+  - **New modules:** [validationSummaryRows.js](src/pages/ValidationSummary/validationSummaryRows.js)
+    (pure row-building + display helpers — `buildRows`/`buildAnimalRows`/`deriveChip`/`dayChipDisplay`/…),
+    [useValidationSummaryActions.js](src/pages/ValidationSummary/useValidationSummaryActions.js) (the
+    Validate-All / Export-Valid-Only handlers + their per-run feedback state),
+    [ExportReport.jsx](src/pages/ValidationSummary/ExportReport.jsx),
+    [BatchExportPreflight.jsx](src/pages/ValidationSummary/BatchExportPreflight.jsx), and
+    [DayStatusTable.jsx](src/pages/ValidationSummary/DayStatusTable.jsx) (the cross-day issue-list table).
+  - **Public surface unchanged:** `index.jsx` re-exports `buildRows`/`buildAnimalRows`, so the per-animal
+    AnimalView tab and the row tests import them from the same place. The full ValidationSummary test
+    suite (61) passes unchanged; golden baselines byte-identical; `CI=true` build clean.
+
 - **Re-armed the build gate (Phase 9b — `CI=true`, behavior-preserving).** The CI build now treats
   ESLint warnings as errors again, so the build **fails on new build-surface warnings** (the
   research's #3 ROI item — "build catches drift again"). `.github/workflows/test.yml` flips
