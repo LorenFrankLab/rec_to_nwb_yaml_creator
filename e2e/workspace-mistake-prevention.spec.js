@@ -236,60 +236,45 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     // It offers at least one real epoch option beyond the empty prompt (a controlled domain).
     expect(await epochSelect.getByRole('option').count()).toBeGreaterThan(1);
 
-    // --- Task modal: cameras are controlled checkboxes (the known animal cameras), not free text. ---
+    // --- Add Task: the day PICKS a known task type from a controlled combobox, never free-typing a
+    //     name or a camera id. Cameras live on the task type (defined once on the animal catalog),
+    //     so the day cannot invent a stale camera reference here. ---
     await page.getByRole('button', { name: '+ Add Task' }).click();
-    const taskDialog = page.getByRole('dialog', { name: 'Add Task' });
+    const taskDialog = page.getByRole('dialog', { name: 'Add task to this day' });
     await expect(taskDialog).toBeVisible();
-    // The Cameras section is a collapsible <details>; open it via its summary to reveal the
-    // controlled checkbox set.
-    const camerasSummary = taskDialog.getByText('Cameras', { exact: true });
-    const cameraChoices = taskDialog.getByRole('group', { name: 'Cameras used in this task' });
-    await openDetails(camerasSummary, cameraChoices);
-    await expect(cameraChoices.getByRole('checkbox', { name: /overhead_camera/ })).toBeVisible();
-    await expect(cameraChoices.getByRole('checkbox', { name: /side_camera/ })).toBeVisible();
+    // A controlled select of the animal's task types — and NO free-text task-name field.
+    await expect(taskDialog.getByRole('combobox', { name: 'Task type' })).toBeVisible();
+    await expect(taskDialog.getByRole('textbox', { name: /task name/i })).toHaveCount(0);
   });
 
-  test('task-name divergence: reusing a task name with a different description is blocked with old-vs-new context', async ({
+  test('task-name divergence is structurally prevented: the day picks a type, and a duplicate name is blocked at the catalog', async ({
     page,
   }) => {
-    // The seeded day has task_name "w_alternation" with a specific description. Adding a NEW task
-    // that reuses "w_alternation" with a DIFFERENT description violates the Spyglass task-name
-    // identity (one name → one description) and must be blocked with the existing-vs-yours context.
+    // In the catalog model a day SELECTS a task type (one name → one definition), so it cannot reuse a
+    // name with a different description the way the old inline form allowed. Defining a NEW type that
+    // reuses an existing name is blocked at its SOURCE — the animal catalog — the structural guarantee
+    // behind the Spyglass task-name identity. (The seeded day has task_name "w_alternation".)
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
     await page.getByRole('button', { name: /^Tasks & Epochs — / }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Tasks & Epochs' })).toBeVisible();
 
     await page.getByRole('button', { name: '+ Add Task' }).click();
-    const dialog = page.getByRole('dialog', { name: 'Add Task' });
-    await expect(dialog).toBeVisible();
+    const picker = page.getByRole('dialog', { name: 'Add task to this day' });
+    await expect(picker).toBeVisible();
+    // No free-text task-name entry in the day — the divergence the old inline form permitted is gone.
+    await expect(picker.getByRole('textbox', { name: /task name/i })).toHaveCount(0);
 
-    await dialog.getByRole('textbox', { name: 'Task name (required)' }).fill('w_alternation');
-    await dialog
-      .getByRole('textbox', { name: 'Task environment (required)' })
-      .fill('elevated W-track (180cm arms)');
-    await dialog
-      .getByRole('textbox', { name: 'Task description' })
-      .fill('A COMPLETELY DIFFERENT description');
+    // Defining a new type that reuses an existing name is blocked at the catalog.
+    await picker.getByRole('button', { name: /define a new task type/i }).click();
+    const typeDialog = page.getByRole('dialog', { name: 'Add Task Type' });
+    await expect(typeDialog).toBeVisible();
+    await typeDialog.getByRole('textbox', { name: /task name/i }).fill('w_alternation');
+    await typeDialog.getByRole('textbox', { name: 'Description' }).fill('A COMPLETELY DIFFERENT description');
+    await typeDialog.getByRole('textbox', { name: 'Environment' }).fill('elevated W-track');
+    await typeDialog.getByRole('button', { name: /save task type/i }).click();
 
-    // The conflict is surfaced inline (an alert), explaining the identity rule with old-vs-new context.
-    const conflict = dialog.getByRole('alert');
-    await expect(conflict).toBeVisible();
-    await expect(
-      conflict.getByText(/already used in this dataset with a different description/),
-    ).toBeVisible();
-    // Old-vs-new context: the existing description is shown next to what the user typed, in a
-    // definition list. Match the <dt>/<dd> text exactly (the lead paragraph is a different node).
-    await expect(conflict.getByText('Existing description', { exact: true })).toBeVisible();
-    await expect(conflict.getByText('Your description', { exact: true })).toBeVisible();
-    await expect(
-      conflict.getByText('W-track continuous alternation for reward', { exact: true }),
-    ).toBeVisible();
-    await expect(
-      conflict.getByText('A COMPLETELY DIFFERENT description', { exact: true }),
-    ).toBeVisible();
-
-    // Save is blocked while the divergent description stands.
-    await expect(dialog.getByRole('button', { name: 'Save task' })).toBeDisabled();
+    // The clash is surfaced and the type is not created (the catalog enforces one name → one definition).
+    await expect(typeDialog.getByRole('alert')).toContainText(/already exists/i);
   });
 
   test('behavioral events: the day owns a DIO wiring table grouped into Inputs/Outputs (no animal library)', async ({
