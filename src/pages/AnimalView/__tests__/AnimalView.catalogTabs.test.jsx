@@ -134,6 +134,37 @@ describe('AnimalView — catalog containers persist edits to the store (GAP-A)',
     expect(devices).toHaveLength(1);
     expect(devices[0].name).toBe('SpikeGadgets_MCU');
   });
+
+  /** Live-store probe: exposes remy's task-type catalog for assertions. */
+  function TaskTypesProbe() {
+    const { model } = useStoreContext();
+    return (
+      <pre data-testid="task-types">{JSON.stringify(model.workspace.animals.remy?.taskTypes || [])}</pre>
+    );
+  }
+
+  it('writes a Task Types catalog add through the container to the store (real seam, not a mock)', async () => {
+    // The Task Types container writes through updateAnimal({ taskTypes }); the presentational tests
+    // use a MOCKED callback, so this pins the actual container→store persistence — a dropped
+    // applyAnimalUpdates branch (the taskInstances-class silent failure) would otherwise render green.
+    const user = userEvent.setup();
+    render(
+      <StoreProvider initialState={{ workspace: { animals: { remy: buildAnimal() }, days: {}, settings: {} } }}>
+        <AnimalView animalId="remy" tab="task-types" />
+        <TaskTypesProbe />
+      </StoreProvider>
+    );
+
+    await user.click(screen.getByRole('button', { name: /Add First Task Type/i }));
+    await user.type(screen.getByLabelText(/Task name/i), 'w-track');
+    await user.type(screen.getByLabelText('Description'), 'Continuous alternation');
+    await user.type(screen.getByLabelText('Environment'), 'elevated W-track');
+    await user.click(screen.getByRole('button', { name: /Save task type/i }));
+
+    const taskTypes = JSON.parse(screen.getByTestId('task-types').textContent);
+    expect(taskTypes).toHaveLength(1);
+    expect(taskTypes[0]).toMatchObject({ id: 'tasktype-0', task_name: 'w-track', task_description: 'Continuous alternation' });
+  });
 });
 
 describe('AnimalView — catalog tab scope descriptors (Phase 3-3)', () => {

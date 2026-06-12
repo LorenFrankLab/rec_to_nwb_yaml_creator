@@ -247,6 +247,11 @@ export default function TasksEpochsStep(props) {
       }));
       return;
     }
+    // Mint against the ANIMAL catalog (not the possibly-richer derived `view.taskTypes`): the new
+    // type is appended to the animal's real catalog, and `addTaskType` reuses this same id. For a
+    // derived day, `view.taskTypes`' ids are throwaway-until-committed — the reopened picker's
+    // `preselectTypeId` lands correctly because `resolveDayCatalogView` re-derives consistent ids
+    // after the animal write re-renders. (Do not persist `view.taskInstances` alongside this write.)
     const newId = nextTaskTypeId(animalTaskTypes);
     if (actions?.updateAnimal) {
       actions.updateAnimal(ownerKey, { taskTypes: addTaskType(animalTaskTypes, definition) });
@@ -341,9 +346,10 @@ export default function TasksEpochsStep(props) {
       <div className="tasks-optional-sections">
         {instances.length > 0 && (
           <p className="tasks-coupling-note">
-            Associated videos and files (and FsGUI protocols, when optogenetics is enabled) each
-            reference a task&apos;s epochs. Editing or removing a task they use prompts you to confirm
-            before the link is cleared — that repair dialog is expected, not an error.
+            Associated videos and files reference a task&apos;s epochs. Editing or removing a task they
+            use prompts you to confirm before the link is cleared — that repair dialog is expected, not
+            an error. (FsGUI protocols also reference epochs; a stale FsGUI epoch is surfaced on the
+            Validation screen rather than cleared here.)
           </p>
         )}
 

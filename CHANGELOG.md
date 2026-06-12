@@ -51,7 +51,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     retyping a task per day. An inline/imported/legacy day is converted to the catalog on first edit
     ([dayTaskCatalog.ts](src/state/dayTaskCatalog.ts)); an inline "Define a new task type" quick-add
     adds a missing type to the animal catalog without leaving day entry. Repair-before-orphaning of
-    associated videos/files/FsGUI references is preserved (re-keyed off the resolved epochs).
+    associated **video/file** references is preserved (re-keyed off the resolved instance epochs); a
+    stale FsGUI epoch surfaces on the Validation screen (unchanged from Phase 6), not via the
+    confirm-and-clear dialog.
   - **Fix (silent drop):** `applyDayUpdates` now persists `day.taskInstances`
     ([workspaceTransitions.js](src/state/workspaceTransitions.js)) — without it the store's day
     allow-list silently dropped every Tasks & Epochs edit.

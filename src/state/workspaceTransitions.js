@@ -104,6 +104,14 @@ export function applyAnimalUpdates(animal, updates, now) {
   if (updates.behavioral_events) {
     updated.behavioral_events = updates.behavioral_events;
   }
+  // Task-type catalog (Phase 8C): the animal's define-once catalog that day `taskInstances` reference
+  // (read by `mergeDayMetadata`'s `resolveDayTasks`). The sibling of `applyDayUpdates`' taskInstances
+  // branch — without it every Task Types add/edit/delete AND the Day Editor's inline→catalog
+  // conversion / quick-add is silently dropped, leaving days pointing at task types the catalog never
+  // saved. `!== undefined` so a delete-last-type (`taskTypes: []`) persists, never a silent no-op.
+  if (updates.taskTypes !== undefined) {
+    updated.taskTypes = updates.taskTypes;
+  }
   // `!== undefined` (not truthiness) so an explicit `null` CLEARS opto (editor disable).
   if (updates.optogenetics !== undefined) {
     updated.optogenetics = updates.optogenetics;

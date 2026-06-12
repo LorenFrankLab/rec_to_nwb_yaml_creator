@@ -60,9 +60,23 @@ function renderStepper(overrides = {}) {
     <StoreProvider initialState={initialState}>
       <DayEditorStepper />
       <TasksInspector />
+      <CatalogProbe />
     </StoreProvider>
   );
   return { animal, day };
+}
+
+/** Live-store probe: the animal's task-type catalog + the day's instances (the persisted catalog). */
+function CatalogProbe() {
+  const { model } = useStoreContext();
+  const animal = model.workspace?.animals?.[ANIMAL_ID];
+  const day = model.workspace?.days?.[DAY_ID];
+  return (
+    <>
+      <pre data-testid="animal-task-types">{JSON.stringify(animal?.taskTypes ?? 'NONE')}</pre>
+      <pre data-testid="day-task-instances">{JSON.stringify(day?.taskInstances ?? 'NONE')}</pre>
+    </>
+  );
 }
 
 /**
@@ -140,5 +154,25 @@ describe('Tasks & Epochs step (integration)', () => {
     expect(readTasks()).toHaveLength(before + 1);
     // Picking an EXISTING type writes only the day's taskInstances — the input animal isn't mutated.
     expect(JSON.stringify(animal)).toBe(animalBefore);
+  });
+
+  it('conversion persists: editing an INLINE day commits the derived taskTypes to the animal AND taskInstances to the day', async () => {
+    const user = userEvent.setup();
+    // Default fixture: animal has NO taskTypes, day has one inline task 'sleep'. Editing derives the
+    // catalog and MUST persist both halves through the store — the path the applyAnimalUpdates
+    // silent-drop would have left as a dangling ref on reload.
+    renderStepper();
+    await goToEpochs(user);
+    expect(screen.getByTestId('animal-task-types').textContent).toContain('NONE');
+
+    // Remove the (derived) instance — the first edit commits the conversion.
+    await user.click(screen.getByRole('button', { name: /remove sleep from this day/i }));
+
+    const taskTypes = JSON.parse(screen.getByTestId('animal-task-types').textContent);
+    expect(taskTypes).toEqual([
+      expect.objectContaining({ id: 'tasktype-0', task_name: 'sleep' }),
+    ]);
+    // The day adopted the catalog: instances persisted ([] after the remove) and inline tasks retired.
+    expect(JSON.parse(screen.getByTestId('day-task-instances').textContent)).toEqual([]);
   });
 });
