@@ -12,11 +12,11 @@
  * The set of descriptions used by more than one behavioral event. Raw-string compare; skips only an
  * absent description (undefined/null/'' — a blank description is not a collision). Shape-tolerant.
  *
- * @param {Array<{description?: *}>} events - Behavioral events (the exported day list).
- * @returns {Set<string>} Descriptions appearing on ≥2 events.
+ * @param events - Behavioral events (the exported day list).
+ * @returns Descriptions appearing on ≥2 events.
  */
-export function duplicateBehavioralEventDescriptions(events) {
-  const counts = new Map();
+export function duplicateBehavioralEventDescriptions(events: unknown): Set<string> {
+  const counts = new Map<string, number>();
   (Array.isArray(events) ? events : []).forEach((event) => {
     const desc = event?.description;
     if (desc === undefined || desc === null || desc === '') return;
@@ -31,11 +31,11 @@ export function duplicateBehavioralEventDescriptions(events) {
  * name (empty/whitespace-only) — a blank channel is unused and excluded from export, so it is not a
  * collision. Shared by the inline grid gate and the export rule (Rule 14) so they can never diverge.
  *
- * @param {Array<{name?: *}>} events - Behavioral events (the exported day list).
- * @returns {Set<string>} Names appearing on ≥2 events.
+ * @param events - Behavioral events (the exported day list).
+ * @returns Names appearing on ≥2 events.
  */
-export function duplicateBehavioralEventNames(events) {
-  const counts = new Map();
+export function duplicateBehavioralEventNames(events: unknown): Set<string> {
+  const counts = new Map<string, number>();
   (Array.isArray(events) ? events : []).forEach((event) => {
     const name = event?.name;
     if (typeof name !== 'string' || name.trim() === '') return;

@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed the validation leaf helpers under strict TS (refactor only, no behavior change).** The four
+  pure, dependency-free predicate modules `validation/{paths,dandiSubject,behavioralEvents,taskEpochs}.js`
+  are now `.ts` under `strict`: `normalizeAjvPath`, `isValidSpecies` / `idHasSlash`,
+  `duplicateBehavioralEventNames` / `duplicateBehavioralEventDescriptions`, and `duplicateTaskEpochs`.
+  Signatures take `unknown` and guard internally (matching the `validation/taskCatalogValidation.ts`
+  precedent); bodies are verbatim. Every importer already used an extensionless path, so the rename is
+  transparent. Validation suites (473) + golden baselines byte-identical; `npm run typecheck` + `CI=true`
+  build clean. **Step 1 of typing the `validation/` core** — the `rules/*` families + the `rulesValidation`
+  composer follow next.
+
 - **Split the workspace store hook into focused collaborators (refactor only, no behavior change).**
   The ~851-LOC `state/useWorkspace.js` (which inlined hydration, persistence/autosave, all eight
   mutation actions, and the day selector) is now a 98-LOC orchestrator that owns only the wiring and

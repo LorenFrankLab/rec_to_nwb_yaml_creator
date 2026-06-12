@@ -13,13 +13,13 @@
  * task_epochs, null/undefined epochs skipped); non-numeric epochs (invalid per schema, blocked
  * elsewhere) are ignored here.
  *
- * @param {Array<object>} tasks - The day's tasks.
- * @returns {Set<number>} Epoch numbers used by ≥2 tasks.
+ * @param tasks - The day's tasks.
+ * @returns Epoch numbers used by ≥2 tasks.
  */
-export function duplicateTaskEpochs(tasks) {
-  const counts = new Map();
+export function duplicateTaskEpochs(tasks: unknown): Set<number> {
+  const counts = new Map<number, number>();
   (Array.isArray(tasks) ? tasks : []).forEach((task) => {
-    const epochs = Array.isArray(task?.task_epochs) ? task.task_epochs : [];
+    const epochs: unknown[] = Array.isArray(task?.task_epochs) ? task.task_epochs : [];
     epochs.forEach((epoch) => {
       if (epoch === undefined || epoch === null) return;
       const key = Number(epoch);
