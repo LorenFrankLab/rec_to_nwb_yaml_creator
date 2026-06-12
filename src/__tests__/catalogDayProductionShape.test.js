@@ -72,6 +72,17 @@ describe('catalog day (migrated v3: taskInstances, no tasks) — sibling consume
     expect(exportedIds).toContain(9); // …and the camera it references is exported (not dangling)
   });
 
+  // P3 — a dangling-only day resolves to EMPTY tasks (the dangling ref is dropped) but carries a
+  // dangling_task_type_ref ERROR; the step glyph must point at the error (repair), not "incomplete".
+  it('P3: a dangling-only catalog day badges epochs ERROR (repair), not incomplete (missing tasks)', () => {
+    const { animal, day } = buildCatalogWorkspace();
+    const danglingDay = { ...day, taskInstances: [{ taskTypeId: 'tasktype-deleted', task_epochs: [1] }] };
+    const merged = mergeDayMetadata(animal, danglingDay);
+    expect(merged.tasks).toEqual([]); // the dangling instance is dropped → empty resolved tasks
+    const status = computeStepStatus(danglingDay, merged, animal);
+    expect(status.epochs).toBe(STEP_STATUS.ERROR); // not STEP_STATUS.INCOMPLETE
+  });
+
   // P2 — carry-forward / duplicate must carry the catalog instances, not the (empty) inline tasks.
   it('P2: createDayRecord carries a catalog source day’s taskInstances (not a blank day)', () => {
     const { animal, day } = buildCatalogWorkspace();

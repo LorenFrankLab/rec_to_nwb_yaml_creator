@@ -682,6 +682,14 @@ export function computeEpochsStatus(day, epochErrors, mergedDay) {
   if ((epochErrors || []).some((i) => i.severity === 'error' && i.code === 'malformed_day_collection')) {
     return 'error';
   }
+  // A task-level error BADGES the step 'error' even when the resolved tasks are empty: a day whose
+  // only instance is a dangling_task_type_ref resolves to NO tasks (the ref is dropped) but needs
+  // REPAIR, not "add a task" — so check errors BEFORE the empty-tasks 'incomplete' return.
+  const hasTaskError = (epochErrors || []).some(
+    (issue) => issue.severity === 'error' && (issue.path || '').includes('task')
+  );
+  if (hasTaskError) return 'error';
+
   // The EFFECTIVE tasks: a catalog day resolves `taskInstances` → inline tasks in the merge, and
   // removes raw `day.tasks`, so reading the raw day would falsely report 'incomplete'. Prefer the
   // merged (resolved) tasks; fall back to raw `day.tasks` for a standalone call without the merge.
@@ -690,12 +698,7 @@ export function computeEpochsStatus(day, epochErrors, mergedDay) {
     : Array.isArray(day?.tasks)
       ? day.tasks
       : [];
-  if (tasks.length === 0) return 'incomplete';
-
-  const hasTaskError = (epochErrors || []).some(
-    (issue) => issue.severity === 'error' && (issue.path || '').includes('task')
-  );
-  return hasTaskError ? 'error' : 'valid';
+  return tasks.length === 0 ? 'incomplete' : 'valid';
 }
 
 /**
