@@ -7,16 +7,25 @@
  * exported file. Pure; moved verbatim.
  */
 
+import type { ValidationIssue, ValidationModel } from '../issueTypes';
+
 /**
  * Rule 16: workspace/dataset identity consistency (Spyglass) — cameras, data-acq devices, tasks.
  *
- * @param {object} model - The form data to validate.
- * @returns {object[]} Validation issues.
+ * @param model - The form data to validate.
+ * @returns Validation issues.
  */
-export function identityDivergences(model) {
-  const issues = [];
+export function identityDivergences(model: ValidationModel): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
 
-  const checkDivergences = (items, nameKey, depKeys, code, label, noun) => {
+  const checkDivergences = (
+    items: unknown,
+    nameKey: string,
+    depKeys: string[],
+    code: string,
+    label: string,
+    noun: string
+  ): void => {
     if (!Array.isArray(items)) return; // schema owns wrong-type (e.g. object) cases
     const seen = new Map(); // name -> first item's dependent signature
     const reported = new Set();

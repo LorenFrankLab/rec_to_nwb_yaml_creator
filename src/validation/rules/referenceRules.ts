@@ -9,16 +9,18 @@
  * moved verbatim.
  */
 
+import type { ValidationIssue, ValidationModel } from '../issueTypes';
+
 import { duplicateTaskEpochs } from '../taskEpochs';
 
 /**
  * Rules 1 / 2: tasks / associated video files reference cameras but the cameras table is absent.
  *
- * @param {object} model - The form data to validate.
- * @returns {object[]} Validation issues.
+ * @param model - The form data to validate.
+ * @returns Validation issues.
  */
-export function missingCameraRules(model) {
-  const issues = [];
+export function missingCameraRules(model: ValidationModel): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
 
   // Rule 1: Tasks with camera_ids require cameras to be defined
   // Only trigger if tasks have non-empty camera_id arrays
@@ -66,11 +68,11 @@ export function missingCameraRules(model) {
  * Rule 9: dangling camera references — every tasks[].camera_id and scalar
  * associated_video_files[].camera_id must reference an existing cameras[].id.
  *
- * @param {object} model - The form data to validate.
- * @returns {object[]} Validation issues.
+ * @param model - The form data to validate.
+ * @returns Validation issues.
  */
-export function danglingCameraReferences(model) {
-  const issues = [];
+export function danglingCameraReferences(model: ValidationModel): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
 
   // Every value in each tasks[].camera_id ARRAY and each scalar
   // associated_video_files[].camera_id must reference an existing cameras[].id.
@@ -84,7 +86,7 @@ export function danglingCameraReferences(model) {
     : null;
   if (validCameraIds) (Array.isArray(model.tasks) ? model.tasks : []).forEach((task, ti) => {
     if (!Array.isArray(task?.camera_id)) return;
-    task.camera_id.forEach((cid) => {
+    task.camera_id.forEach((cid: any) => {
       if (cid === undefined || cid === null) return;
       if (!validCameraIds.has(cid)) {
         issues.push({
@@ -133,11 +135,11 @@ export function danglingCameraReferences(model) {
  * Rule 15: task/video/file epoch dependencies — task epochs are unique across tasks, and each
  * non-empty associated_video_files / associated_files entry's task_epochs matches some task epoch.
  *
- * @param {object} model - The form data to validate.
- * @returns {object[]} Validation issues.
+ * @param model - The form data to validate.
+ * @returns Validation issues.
  */
-export function taskEpochReferences(model) {
-  const issues = [];
+export function taskEpochReferences(model: ValidationModel): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
 
   // (a) task epochs are unique across task rows — Spyglass TaskEpoch is keyed by
   //     session + epoch, so the same epoch number in two tasks collides.
@@ -169,7 +171,7 @@ export function taskEpochReferences(model) {
   if (Array.isArray(model.associated_video_files) && model.associated_video_files.length > 0) {
     const taskEpochSet = new Set();
     (Array.isArray(model.tasks) ? model.tasks : []).forEach((task) => {
-      (Array.isArray(task?.task_epochs) ? task.task_epochs : []).forEach((e) => {
+      (Array.isArray(task?.task_epochs) ? task.task_epochs : []).forEach((e: unknown) => {
         if (e !== undefined && e !== null) taskEpochSet.add(e);
       });
     });
@@ -202,7 +204,7 @@ export function taskEpochReferences(model) {
   if (Array.isArray(model.associated_files) && model.associated_files.length > 0) {
     const taskEpochSet = new Set();
     (Array.isArray(model.tasks) ? model.tasks : []).forEach((task) => {
-      (Array.isArray(task?.task_epochs) ? task.task_epochs : []).forEach((e) => {
+      (Array.isArray(task?.task_epochs) ? task.task_epochs : []).forEach((e: unknown) => {
         if (e !== undefined && e !== null) taskEpochSet.add(e);
       });
     });
@@ -234,11 +236,11 @@ export function taskEpochReferences(model) {
  * camera_id / epochs / dio_output_name must resolve, and FsGUI rows require a complete optogenetics
  * configuration (otherwise conversion crashes).
  *
- * @param {object} model - The form data to validate.
- * @returns {object[]} Validation issues.
+ * @param model - The form data to validate.
+ * @returns Validation issues.
  */
-export function fsGuiReferences(model) {
-  const issues = [];
+export function fsGuiReferences(model: ValidationModel): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
 
   // Each FsGUI protocol's `camera_id` must reference an existing camera and each of its `epochs`
   // must match a task epoch — otherwise conversion CRASHES or silently corrupts: an
@@ -253,7 +255,7 @@ export function fsGuiReferences(model) {
       : new Set();
     const taskEpochSet = new Set();
     (Array.isArray(model.tasks) ? model.tasks : []).forEach((task) => {
-      (Array.isArray(task?.task_epochs) ? task.task_epochs : []).forEach((e) => {
+      (Array.isArray(task?.task_epochs) ? task.task_epochs : []).forEach((e: unknown) => {
         if (e !== undefined && e !== null) taskEpochSet.add(e);
       });
     });
@@ -311,7 +313,7 @@ export function fsGuiReferences(model) {
         });
       }
 
-      (Array.isArray(fsGui?.epochs) ? fsGui.epochs : []).forEach((epoch) => {
+      (Array.isArray(fsGui?.epochs) ? fsGui.epochs : []).forEach((epoch: any) => {
         if (epoch === undefined || epoch === null || epoch === '') return;
         if (!taskEpochSet.has(epoch)) {
           issues.push({
@@ -357,11 +359,11 @@ export function fsGuiReferences(model) {
  * Rule 18: camera id uniqueness — the converter names NWB camera devices `camera_device {id}` and
  * videos dereference that exact name, so duplicate cameras[].id collide downstream.
  *
- * @param {object} model - The form data to validate.
- * @returns {object[]} Validation issues.
+ * @param model - The form data to validate.
+ * @returns Validation issues.
  */
-export function cameraIdUniqueness(model) {
-  const issues = [];
+export function cameraIdUniqueness(model: ValidationModel): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
 
   if (Array.isArray(model.cameras) && model.cameras.length > 0) {
     const seenCam = new Set();

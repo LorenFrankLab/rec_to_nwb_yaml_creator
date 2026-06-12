@@ -49,12 +49,13 @@ import {
   uniqueBehavioralEventNames,
   uniqueBehavioralEventDescriptions,
 } from './rules/behavioralEventRules';
+import type { ValidationIssue, ValidationModel } from './issueTypes';
 
 /**
  * Custom business logic validation rules.
  *
- * @param {object} model - The form data to validate
- * @returns {Issue[]} Array of validation issues with format:
+ * @param model - The form data to validate
+ * @returns Array of validation issues with format:
  *   {
  *     path: string,       // Normalized path: "tasks", "optogenetics", etc.
  *     code: string,       // Rule code: "missing_camera", "partial_configuration", etc.
@@ -62,7 +63,7 @@ import {
  *     message: string     // User-friendly message
  *   }
  */
-export const rulesValidation = (model) => {
+export const rulesValidation = (model: ValidationModel): ValidationIssue[] => {
   // Handle null/undefined model gracefully
   if (!model || typeof model !== 'object') {
     return [];

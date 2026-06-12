@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed the custom business-rules validation layer under strict TS (refactor only, no behavior change).**
+  The seven `validation/rules/*` families (reference / opto / channelMap / electrodeGroup / dandiSubject /
+  identity / behavioralEvent) and the `rulesValidation` composer are now `.ts` under `strict`, producing a
+  shared, strictly-typed `ValidationIssue` (new [issueTypes.ts](src/validation/issueTypes.ts)). Function
+  **bodies are byte-identical** (verified by diff) — only type tokens were added: `(model: ValidationModel):
+  ValidationIssue[]` signatures, a typed `issues` accumulator, and localized annotations on the corrupt-data
+  lambdas/`Set`s the strict checker required. The input is typed `ValidationModel = Record<string, any>` — a
+  deliberate, documented permissive-boundary choice: the rules defensively probe ARBITRARY external form
+  data at runtime, so the typed guarantee is the produced issue list, not the input. `ValidationIssue` is
+  structurally assignable to `domain/repairRouting`'s `RepairableIssue`, so `validate()`'s output flows into
+  the routing/status consumers unchanged. No guard-glob change was needed — `workflowOwnership` already
+  scans `.ts` for emitted codes. Validation suites + golden baselines (473) byte-identical; `npm run
+  typecheck` + `CI=true` build clean; full suite 4793; e2e 104. **Step 2 of typing the `validation/` core**
+  — the remaining `index` / `schemaValidation` / `rawShape` / `quickChecks` modules stay JS for now.
+
 - **Typed the validation leaf helpers under strict TS (refactor only, no behavior change).** The four
   pure, dependency-free predicate modules `validation/{paths,dandiSubject,behavioralEvents,taskEpochs}.js`
   are now `.ts` under `strict`: `normalizeAjvPath`, `isValidSpecies` / `idHasSlash`,

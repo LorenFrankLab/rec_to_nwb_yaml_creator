@@ -7,17 +7,19 @@
  * silent-drop. Each maps to a downstream trodes_to_nwb / Spyglass failure. Pure; moved verbatim.
  */
 
+import type { ValidationIssue, ValidationModel } from '../issueTypes';
+
 import { getChannelCount } from '../../utils/deviceTypeUtils';
 import { getProbeShanks, getProbeElectrodeIds } from '../../ntrode/probeCatalog';
 
 /**
  * Rule 4: no duplicate channel mappings — each ntrode's map values must be unique.
  *
- * @param {object} model - The form data to validate.
- * @returns {object[]} Validation issues.
+ * @param model - The form data to validate.
+ * @returns Validation issues.
  */
-export function duplicateChannelMappings(model) {
-  const issues = [];
+export function duplicateChannelMappings(model: ValidationModel): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
   // Each ntrode's map object must have unique values (no duplicate physical channels)
   // Hardware constraint: each logical channel must map to a unique physical channel
   if (Array.isArray(model.ntrode_electrode_group_channel_map) && model.ntrode_electrode_group_channel_map.length > 0) {
@@ -55,11 +57,11 @@ export function duplicateChannelMappings(model) {
 /**
  * Rule 5: sequential channel mappings — logical channels (keys) must be 0..max with no gaps.
  *
- * @param {object} model - The form data to validate.
- * @returns {object[]} Validation issues.
+ * @param model - The form data to validate.
+ * @returns Validation issues.
  */
-export function sequentialChannelMappings(model) {
-  const issues = [];
+export function sequentialChannelMappings(model: ValidationModel): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
   // Logical channels (keys) must be sequential starting from 0
   // e.g., {0: 0, 1: 1, 2: 2, 3: 3} is valid, but {0: 0, 2: 2} is not (missing channel 1)
   if (Array.isArray(model.ntrode_electrode_group_channel_map) && model.ntrode_electrode_group_channel_map.length > 0) {
@@ -97,11 +99,11 @@ export function sequentialChannelMappings(model) {
 /**
  * Rule 7: Ntrode ids must be unique across the animal's whole channel map.
  *
- * @param {object} model - The form data to validate.
- * @returns {object[]} Validation issues.
+ * @param model - The form data to validate.
+ * @returns Validation issues.
  */
-export function uniqueNtrodeIds(model) {
-  const issues = [];
+export function uniqueNtrodeIds(model: ValidationModel): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
   // `ntrode_id` keys the per-day bad-channel overrides and the NWB ntrode, so a
   // duplicate silently misroutes bad channels and collapses ntrodes downstream.
   if (Array.isArray(model.ntrode_electrode_group_channel_map) && model.ntrode_electrode_group_channel_map.length > 0) {
@@ -138,11 +140,11 @@ export function uniqueNtrodeIds(model) {
  * 0..(shank.electrodeIds.length-1); (d) bad_channels are probe-local indices; (b) the group's
  * ntrodes' values cover every probe electrode id exactly once; (e) the row count equals num_shanks.
  *
- * @param {object} model - The form data to validate.
- * @returns {object[]} Validation issues.
+ * @param model - The form data to validate.
+ * @returns Validation issues.
  */
-export function channelBounds(model) {
-  const issues = [];
+export function channelBounds(model: ValidationModel): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
   if (Array.isArray(model.ntrode_electrode_group_channel_map) && model.ntrode_electrode_group_channel_map.length > 0) {
     const groupById = new Map(
       (Array.isArray(model.electrode_groups) ? model.electrode_groups : [])
@@ -163,7 +165,7 @@ export function channelBounds(model) {
       if (!channelCount) return; // dangling group / unknown device handled elsewhere
 
       const shanks = getProbeShanks(deviceType);
-      const electrodeIdSet = new Set(getProbeElectrodeIds(deviceType));
+      const electrodeIdSet = new Set<unknown>(getProbeElectrodeIds(deviceType));
       const gid = ntrode.electrode_group_id;
       const rowIndex = rowIndexByGroup.get(gid) ?? 0;
       rowIndexByGroup.set(gid, rowIndex + 1);
@@ -216,7 +218,7 @@ export function channelBounds(model) {
       }
 
       // (d) bad_channels indices are probe-local, in [0, channelCount).
-      const badChannels = Array.isArray(ntrode.bad_channels) ? ntrode.bad_channels : [];
+      const badChannels: any[] = Array.isArray(ntrode.bad_channels) ? ntrode.bad_channels : [];
       const badOutOfRange = badChannels.filter(
         (b) => !Number.isInteger(b) || b < 0 || b >= channelCount
       );
@@ -273,8 +275,8 @@ export function channelBounds(model) {
         });
         return; // a row-count problem subsumes the coverage check
       }
-      const electrodeIdSet = new Set(getProbeElectrodeIds(deviceType));
-      const anyOutOfRange = values.some((v) => !electrodeIdSet.has(v));
+      const electrodeIdSet = new Set<unknown>(getProbeElectrodeIds(deviceType));
+      const anyOutOfRange = values.some((v: unknown) => !electrodeIdSet.has(v));
       if (anyOutOfRange) return; // (a) owns this group's error
       const unique = new Set(values);
       const covers = values.length === channelCount && unique.size === channelCount;
@@ -303,11 +305,11 @@ export function channelBounds(model) {
  * Rule 10: dangling electrode-group references — every ntrode's electrode_group_id must reference
  * an existing electrode_groups[].id.
  *
- * @param {object} model - The form data to validate.
- * @returns {object[]} Validation issues.
+ * @param model - The form data to validate.
+ * @returns Validation issues.
  */
-export function danglingElectrodeGroupRefs(model) {
-  const issues = [];
+export function danglingElectrodeGroupRefs(model: ValidationModel): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
   // Otherwise the ntrode maps onto nothing and trodes_to_nwb/Spyglass silently drop or misattach
   // the channels.
   if (Array.isArray(model.ntrode_electrode_group_channel_map) && model.ntrode_electrode_group_channel_map.length > 0) {
@@ -341,11 +343,11 @@ export function danglingElectrodeGroupRefs(model) {
  * Rule 19: multi-shank bad_channels are ignored downstream — convert_yaml.add_electrode_groups uses
  * ONLY the first ntrode row of a group for bad_channels, so marks on a later row are silently dropped.
  *
- * @param {object} model - The form data to validate.
- * @returns {object[]} Validation issues.
+ * @param model - The form data to validate.
+ * @returns Validation issues.
  */
-export function multishankBadChannels(model) {
-  const issues = [];
+export function multishankBadChannels(model: ValidationModel): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
   if (Array.isArray(model.ntrode_electrode_group_channel_map) &&
       model.ntrode_electrode_group_channel_map.length > 0) {
     const firstRowByGroup = new Map();

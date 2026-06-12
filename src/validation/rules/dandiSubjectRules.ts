@@ -6,16 +6,18 @@
  * Pure; moved verbatim.
  */
 
+import type { ValidationIssue, ValidationModel } from '../issueTypes';
+
 import { isValidSpecies, idHasSlash } from '../dandiSubject';
 
 /**
  * Rule 8: DANDI subject conformance (species is a Latin binomial / NCBI URI; ids carry no slash).
  *
- * @param {object} model - The form data to validate.
- * @returns {object[]} Validation issues.
+ * @param model - The form data to validate.
+ * @returns Validation issues.
  */
-export function dandiSubjectConformance(model) {
-  const issues = [];
+export function dandiSubjectConformance(model: ValidationModel): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
 
   const subject = model.subject;
   if (subject && typeof subject === 'object') {

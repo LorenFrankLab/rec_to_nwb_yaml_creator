@@ -7,16 +7,18 @@
  * states that would otherwise silently drop optogenetics or crash conversion. Pure; moved verbatim.
  */
 
+import type { ValidationIssue, ValidationModel } from '../issueTypes';
+
 import { optoFieldsPresence } from '../../domain/optoCompleteness';
 
 /**
  * Rules 3 / 3c / 3b: optogenetics completeness, coordinate references, and single excitation source.
  *
- * @param {object} model - The form data to validate.
- * @returns {object[]} Validation issues.
+ * @param model - The form data to validate.
+ * @returns Validation issues.
  */
-export function optogeneticsRules(model) {
-  const issues = [];
+export function optogeneticsRules(model: ValidationModel): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
 
   // Rule 3: Optogenetics all-or-nothing configuration. trodes_to_nwb gates ALL
   // optogenetics on FOUR keys each being present and non-empty (convert_optogenetics.py:
@@ -29,7 +31,7 @@ export function optogeneticsRules(model) {
   // nav count can never drift. The arrays use Array.isArray(...) && length > 0 (a corrupt non-array
   // value is NOT present); the software is a non-empty trimmed string — matching the converter's
   // len()>0 on the string.
-  const optoPresence = optoFieldsPresence(model);
+  const optoPresence = optoFieldsPresence(model as Parameters<typeof optoFieldsPresence>[0]);
   const hasOptoSource = optoPresence.opto_excitation_source;
   const hasOpticalFiber = optoPresence.optical_fiber;
   const hasVirusInjection = optoPresence.virus_injection;
@@ -58,7 +60,7 @@ export function optogeneticsRules(model) {
   // (`metadata["reference"]`, KeyError if missing) in make_optical_fiber/make_virus_injection.
   // The schema does NOT require it and the editor must collect it, so an item lacking a
   // non-empty reference would crash conversion — block it here.
-  const nonEmptyStr = (v) => typeof v === 'string' && v.trim() !== '';
+  const nonEmptyStr = (v: unknown) => typeof v === 'string' && v.trim() !== '';
   [
     ['optical_fiber', model.optical_fiber],
     ['virus_injection', model.virus_injection],

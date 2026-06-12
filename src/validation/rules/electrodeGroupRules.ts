@@ -8,17 +8,19 @@
  * map). Pure; moved verbatim.
  */
 
+import type { ValidationIssue, ValidationModel } from '../issueTypes';
+
 import { validateDeviceType } from '../../utils/deviceTypeUtils';
 import { getProbeShanks, isProbeCatalogConsistent } from '../../ntrode/probeCatalog';
 
 /**
  * Rule 6: Electrode-group ids must be unique within a session.
  *
- * @param {object} model - The form data to validate.
- * @returns {object[]} Validation issues.
+ * @param model - The form data to validate.
+ * @returns Validation issues.
  */
-export function uniqueElectrodeGroupIds(model) {
-  const issues = [];
+export function uniqueElectrodeGroupIds(model: ValidationModel): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
   // trodes_to_nwb names the NWB electrode group from this id and Spyglass keys
   // ElectrodeGroup by session + group name, so duplicate ids collapse groups
   // downstream (silent data loss).
@@ -52,11 +54,11 @@ export function uniqueElectrodeGroupIds(model) {
  * group must still have its own rows — a group with ZERO rows would otherwise be caught only by
  * step incompleteness.
  *
- * @param {object} model - The form data to validate.
- * @returns {object[]} Validation issues.
+ * @param model - The form data to validate.
+ * @returns Validation issues.
  */
-export function missingChannelMapRows(model) {
-  const issues = [];
+export function missingChannelMapRows(model: ValidationModel): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
   // A group with ZERO rows slips past the per-group bounds check (which only sees groups with ≥1
   // row) and would otherwise be caught only by step incompleteness. A FULLY-unconfigured day (no
   // rows at all) stays "incomplete" (step status owns it), not an error.
@@ -102,17 +104,17 @@ export function missingChannelMapRows(model) {
 /**
  * Rule 12: non-empty, consistent location / targeted_location.
  *
- * @param {object} model - The form data to validate.
- * @returns {object[]} Validation issues.
+ * @param model - The form data to validate.
+ * @returns Validation issues.
  */
-export function electrodeGroupLocations(model) {
-  const issues = [];
+export function electrodeGroupLocations(model: ValidationModel): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
   // Spyglass auto-creates BrainRegion rows from electrode_group.location by exact
   // string (no trim/case-fold); targeted_location is schema-required and used by
   // trodes_to_nwb as the per-electrode location. Both must be non-empty; a
   // mixed-case duplicate location fragments regions (warning).
   if (Array.isArray(model.electrode_groups) && model.electrode_groups.length > 0) {
-    const nonEmpty = (v) => typeof v === 'string' && v.trim() !== '';
+    const nonEmpty = (v: unknown) => typeof v === 'string' && v.trim() !== '';
     model.electrode_groups.forEach((group, gi) => {
       if (!nonEmpty(group?.location)) {
         issues.push({
@@ -179,11 +181,11 @@ export function electrodeGroupLocations(model) {
 /**
  * Rule 13: device_type is a known/registered probe.
  *
- * @param {object} model - The form data to validate.
- * @returns {object[]} Validation issues.
+ * @param model - The form data to validate.
+ * @returns Validation issues.
  */
-export function knownDeviceTypes(model) {
-  const issues = [];
+export function knownDeviceTypes(model: ValidationModel): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
   // An unknown device_type hard-fails downstream (trodes_to_nwb FileNotFoundError
   // loading the probe metadata). Guards copy/CSV-import-introduced values.
   if (Array.isArray(model.electrode_groups) && model.electrode_groups.length > 0) {
@@ -216,11 +218,11 @@ export function knownDeviceTypes(model) {
  * (contiguous electrode ids 0..n-1, no gaps/dupes, shank count matches). Entirely-unknown device
  * types are owned by Rule 13.
  *
- * @param {object} model - The form data to validate.
- * @returns {object[]} Validation issues.
+ * @param model - The form data to validate.
+ * @returns Validation issues.
  */
-export function consistentProbeCatalog(model) {
-  const issues = [];
+export function consistentProbeCatalog(model: ValidationModel): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
   // A known-but-inconsistent catalog entry would generate a converter-invalid channel map, so
   // export is BLOCKED and the probe is NAMED.
   if (Array.isArray(model.electrode_groups) && model.electrode_groups.length > 0) {
