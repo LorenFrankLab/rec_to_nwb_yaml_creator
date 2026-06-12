@@ -22,7 +22,7 @@ export { WORKSPACE_SCHEMA_VERSION };
 /** Top-level sections every consumer reads directly (and would crash on if missing). */
 const REQUIRED_WORKSPACE_KEYS = ['animals', 'days', 'settings'];
 
-const isPlainObject = (value) =>
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 
 /**
@@ -40,22 +40,25 @@ const isPlainObject = (value) =>
  *
  * Existing valid sections are preserved untouched.
  *
- * @param {object} workspace - The (device-normalized) workspace to shape-check.
- * @returns {{ workspace: object, missingKeys: string[], corruptKeys: string[] }}
- *   The (absent-filled) workspace, the restored-from-absent sections, and the
+ * @param workspace - The (device-normalized) workspace to shape-check.
+ * @returns The (absent-filled) workspace, the restored-from-absent sections, and the
  *   present-but-corrupt sections.
  */
-function ensureWorkspaceShape(workspace) {
+function ensureWorkspaceShape(workspace: Record<string, unknown>): {
+  workspace: Record<string, unknown>;
+  missingKeys: string[];
+  corruptKeys: string[];
+} {
   const defaults = createDefaultWorkspace();
-  const result = { ...workspace };
-  const missingKeys = [];
-  const corruptKeys = [];
+  const result: Record<string, unknown> = { ...workspace };
+  const missingKeys: string[] = [];
+  const corruptKeys: string[] = [];
 
   REQUIRED_WORKSPACE_KEYS.forEach((key) => {
     const value = workspace[key];
     if (value === undefined || value === null) {
       missingKeys.push(key);
-      result[key] = defaults[key];
+      result[key] = (defaults as Record<string, unknown>)[key];
     } else if (!isPlainObject(value)) {
       corruptKeys.push(key);
     }
@@ -70,18 +73,26 @@ export const WORKSPACE_STORAGE_KEY = 'rec_to_nwb_workspace_v1';
 /**
  * Reason codes returned alongside a discarded load, for a user-visible notice.
  * @readonly
- * @enum {string}
  */
 export const LOAD_DISCARD_REASON = {
   PARSE_ERROR: 'parse-error',
   VERSION_MISMATCH: 'version-mismatch',
   MALFORMED: 'malformed',
-};
+} as const;
+
+/** A discard reason code (a {@link LOAD_DISCARD_REASON} member). */
+export type LoadDiscardReason = (typeof LOAD_DISCARD_REASON)[keyof typeof LOAD_DISCARD_REASON];
+
+/** The result of {@link loadWorkspace}. */
+export type LoadWorkspaceResult =
+  | { workspace: Record<string, unknown>; recovered?: { missingKeys: string[] } }
+  | { workspace: null; discarded: LoadDiscardReason }
+  | null;
 
 /**
  * Loads the persisted workspace.
  *
- * @returns {{ workspace: object, recovered?: { missingKeys: string[] } } | { workspace: null, discarded: LOAD_DISCARD_REASON } | null}
+ * @returns
  *   - `{ workspace }` on a successful, version-matching load.
  *   - `{ workspace, recovered: { missingKeys } }` when the blob was structurally
  *     valid but missing required top-level sections; they were restored to the default
@@ -91,8 +102,8 @@ export const LOAD_DISCARD_REASON = {
  *     shows a notice. `discarded` is a `LOAD_DISCARD_REASON` member.
  *   - `null` when no blob exists, or storage is unavailable (clean first run; no notice).
  */
-export function loadWorkspace() {
-  let raw;
+export function loadWorkspace(): LoadWorkspaceResult {
+  let raw: string | null;
   try {
     raw = window.localStorage.getItem(WORKSPACE_STORAGE_KEY);
   } catch {
@@ -102,7 +113,7 @@ export function loadWorkspace() {
 
   if (raw == null) return null;
 
-  let parsed;
+  let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
@@ -144,10 +155,9 @@ export function loadWorkspace() {
  * Persists the workspace slice. Throws on failure (e.g. quota exceeded) so the
  * caller can surface an error and avoid claiming a successful save.
  *
- * @param {object} workspace - The workspace slice (animals + days + settings).
- * @returns {void}
+ * @param workspace - The workspace slice (animals + days + settings).
  */
-export function saveWorkspace(workspace) {
+export function saveWorkspace(workspace: object): void {
   const blob = JSON.stringify({
     schemaVersion: WORKSPACE_SCHEMA_VERSION,
     // Device-SHAPE normalization only — the one-time bad-channel base→day migration is a LOAD
@@ -161,9 +171,8 @@ export function saveWorkspace(workspace) {
 
 /**
  * Removes the persisted blob. Used when discarding an unusable load.
- * @returns {void}
  */
-export function clearWorkspace() {
+export function clearWorkspace(): void {
   try {
     window.localStorage.removeItem(WORKSPACE_STORAGE_KEY);
   } catch {

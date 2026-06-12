@@ -87,7 +87,7 @@ export const MIGRATABLE_SCHEMA_VERSIONS = new Set(Object.keys(MIGRATORS).map(Num
  */
 export function migrateWorkspace(
   parsed: unknown
-): { workspace: object } | { discarded: true } {
+): { workspace: object; discarded?: false } | { workspace?: undefined; discarded: true } {
   // Defense-in-depth: this function is exported and unit-tested in isolation, so it does not trust
   // the caller's shape guard. A non-record blob or workspace cannot be migrated — discard rather
   // than throw on `null.schemaVersion` or hand back an `undefined` workspace a future caller might
