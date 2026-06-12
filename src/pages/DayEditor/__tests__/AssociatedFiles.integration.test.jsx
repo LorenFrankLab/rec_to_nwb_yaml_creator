@@ -126,9 +126,10 @@ describe('Associated files editor (orphaned_file repair surface)', () => {
     });
     await goToEpochs(user);
 
-    await user.click(screen.getByRole('button', { name: /delete task/i }));
+    // Removing the instance orphans the file → the repair confirmation must NAME that file.
+    await user.click(screen.getByRole('button', { name: /remove sleep from this day/i }));
     const dialog = screen.getByRole('alertdialog');
-    expect(dialog).toHaveTextContent(/associated file/i);
+    expect(dialog).toHaveTextContent(/affected file/i);
     expect(dialog).toHaveTextContent(/stim_log/i);
   });
 });

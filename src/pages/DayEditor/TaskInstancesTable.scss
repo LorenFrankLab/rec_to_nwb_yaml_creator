@@ -1,0 +1,154 @@
+/**
+ * TaskInstancesTable styling — the day's picked task types + epochs. Reuses the global utility
+ * classes (`.table-actions`, `.button-small`, `.button-danger`, `.status-badge.*`, `.empty-state`
+ * bits); only the instances-table structure + order controls are scoped here.
+ */
+
+.task-instances {
+  margin: var(--spacing-md) 0;
+}
+
+.task-instances-table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.task-instances-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  background-color: var(--color-white);
+  border: 1px solid var(--color-grey-200);
+  border-radius: 4px;
+  overflow: hidden;
+
+  /* Order | Task | Environment | Cameras | Epochs | Actions */
+  th:nth-child(1), td:nth-child(1) { width: 5.5rem; } /* Order (↑/↓) */
+  th:nth-child(6), td:nth-child(6) { width: 10rem; }  /* Actions */
+
+  td:nth-child(2), td:nth-child(3), td:nth-child(4), td:nth-child(5) {
+    max-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  thead {
+    background-color: var(--color-grey-100);
+    border-bottom: 2px solid var(--color-grey-300);
+
+    th {
+      text-align: left;
+      padding: var(--spacing-sm) var(--spacing-md);
+      font-weight: 600;
+      font-size: var(--font-size-sm);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--color-grey-700);
+      white-space: nowrap;
+    }
+  }
+
+  tbody {
+    tr {
+      border-bottom: 1px solid var(--color-grey-200);
+
+      &:last-child { border-bottom: none; }
+      &.task-instance-dangling { background-color: var(--color-error-light); }
+
+      td {
+        padding: var(--spacing-sm) var(--spacing-md);
+        font-size: var(--font-size-base);
+        color: var(--color-grey-900);
+        vertical-align: middle;
+      }
+    }
+  }
+
+  tbody tr td button {
+    padding: 0.4rem 0.7rem;
+    border-radius: 4px;
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+    font-family: inherit;
+    margin-right: var(--spacing-xs);
+    min-height: 44px;
+    min-width: 44px;
+
+    &:focus { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+    &:disabled { opacity: 0.4; cursor: not-allowed; }
+    &:last-child { margin-right: 0; }
+  }
+
+  .task-instance-order {
+    display: inline-flex;
+    gap: var(--spacing-xs);
+
+    .order-button {
+      min-width: 2.2rem;
+      padding: 0.3rem 0.4rem;
+    }
+  }
+}
+
+.task-instances.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--spacing-xl);
+  background-color: var(--color-white);
+  border: 2px dashed var(--color-grey-300);
+  border-radius: 8px;
+
+  .empty-state-icon { font-size: 3rem; margin-bottom: var(--spacing-md); opacity: 0.7; }
+  h3 { margin: 0 0 var(--spacing-sm) 0; color: var(--color-grey-900); }
+  p { margin: 0 0 var(--spacing-md) 0; color: var(--color-grey-600); max-width: 540px; line-height: 1.5; }
+}
+
+.task-instances-empty-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+@media (max-width: 600px) {
+  .task-instances-table {
+    table-layout: auto;
+    thead { display: none; }
+
+    td:nth-child(1), td:nth-child(2), td:nth-child(3),
+    td:nth-child(4), td:nth-child(5), td:nth-child(6) {
+      width: auto; max-width: none; overflow: visible; white-space: normal;
+    }
+
+    tbody tr {
+      display: block;
+      margin-bottom: var(--spacing-md);
+      border: 1px solid var(--color-grey-200);
+      border-radius: 4px;
+      padding: var(--spacing-sm);
+
+      td {
+        display: flex;
+        justify-content: space-between;
+        gap: var(--spacing-md);
+        padding: var(--spacing-xs) 0;
+        border-bottom: 1px solid var(--color-grey-200);
+
+        &:last-child { border-bottom: none; justify-content: flex-start; }
+        &::before {
+          content: attr(data-label);
+          font-weight: 600;
+          color: var(--color-grey-700);
+          text-transform: uppercase;
+          font-size: var(--font-size-sm);
+        }
+      }
+    }
+  }
+}

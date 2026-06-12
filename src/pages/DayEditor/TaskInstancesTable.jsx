@@ -1,0 +1,172 @@
+import PropTypes from 'prop-types';
+import Button from '../../components/ui/Button';
+import './TaskInstancesTable.scss';
+
+/**
+ * TaskInstancesTable — the day's chosen task types and their epochs (the "use per day" view).
+ *
+ * Each row resolves a `taskInstance` against the animal's `taskTypes`: the task name, environment,
+ * and cameras come from the catalog (read-only here — they are edited once on the animal), and the
+ * EPOCHS come from the day's instance (edited per day). Rows are ordered (the order is the exported
+ * task order) with up/down controls. A dangling instance (its type was deleted on the animal) is
+ * flagged so the user re-picks rather than silently dropping the task.
+ *
+ * @param {object} props
+ * @param {Array} props.taskTypes - The animal's task-type catalog (the resolution source).
+ * @param {Array} props.taskInstances - The day's ordered instances.
+ * @param {Array} props.cameras - The animal's cameras (for camera labels).
+ * @param {Function} props.onAdd - Open the add-task picker.
+ * @param {Function} props.onDefineNewType - Open the inline "define a new task type" flow.
+ * @param {Function} props.onEdit - Edit the instance at an index.
+ * @param {Function} props.onRemove - Remove the instance at an index.
+ * @param {Function} props.onReorder - Move an instance from one index to another.
+ * @returns {JSX.Element}
+ */
+export default function TaskInstancesTable({
+  taskTypes,
+  taskInstances,
+  cameras,
+  onAdd,
+  onDefineNewType,
+  onEdit,
+  onRemove,
+  onReorder,
+}) {
+  const typeById = new Map((Array.isArray(taskTypes) ? taskTypes : []).map((t) => [t?.id, t]));
+  const instances = Array.isArray(taskInstances) ? taskInstances : [];
+
+  const cameraLabel = (id) => {
+    const camera = (Array.isArray(cameras) ? cameras : []).find((c) => String(c?.id) === String(id));
+    return camera?.camera_name ? `${id} · ${camera.camera_name}` : String(id);
+  };
+
+  if (instances.length === 0) {
+    return (
+      <div className="task-instances empty-state">
+        <div className="empty-state-icon">📋</div>
+        <h3>No tasks recorded for this day</h3>
+        <p>
+          Pick the task types this day ran from the animal&apos;s catalog and assign each one&apos;s
+          epochs. Defined the task once already? Just add it here.
+        </p>
+        <div className="task-instances-empty-actions">
+          <Button variant="primary" onClick={onAdd}>
+            Add Task
+          </Button>
+          <button type="button" className="button-small" onClick={onDefineNewType}>
+            Define a new task type
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="task-instances">
+      <div className="table-actions">
+        <Button variant="primary" onClick={onAdd}>
+          + Add Task
+        </Button>
+        <button type="button" className="button-small" onClick={onDefineNewType}>
+          Define a new task type
+        </button>
+      </div>
+
+      <div className="task-instances-table-scroll">
+        <table className="task-instances-table" role="table">
+          <thead>
+            <tr>
+              <th>Order</th>
+              <th>Task</th>
+              <th>Environment</th>
+              <th>Cameras</th>
+              <th>Epochs</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {instances.map((instance, index) => {
+              const type = typeById.get(instance?.taskTypeId);
+              const epochs = Array.isArray(instance?.task_epochs) ? instance.task_epochs : [];
+              const cameraIds = Array.isArray(type?.camera_id) ? type.camera_id : [];
+              const label = type?.task_name || 'Unknown task type';
+              return (
+                <tr key={`${instance?.taskTypeId ?? 'inst'}-${index}`} className={type ? '' : 'task-instance-dangling'}>
+                  <td data-label="Order">
+                    <div className="task-instance-order">
+                      <button
+                        type="button"
+                        className="button-small order-button"
+                        disabled={index === 0}
+                        onClick={() => onReorder(index, index - 1)}
+                        aria-label={`Move ${label} earlier`}
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        className="button-small order-button"
+                        disabled={index === instances.length - 1}
+                        onClick={() => onReorder(index, index + 1)}
+                        aria-label={`Move ${label} later`}
+                      >
+                        ↓
+                      </button>
+                    </div>
+                  </td>
+                  <td data-label="Task" title={label}>
+                    {type ? (
+                      label
+                    ) : (
+                      <span className="status-badge status-incomplete" role="img" aria-label="Unknown task type — re-pick">
+                        {label}
+                      </span>
+                    )}
+                  </td>
+                  <td data-label="Environment" title={type?.task_environment || ''}>{type?.task_environment || '—'}</td>
+                  <td data-label="Cameras">{cameraIds.length > 0 ? cameraIds.map(cameraLabel).join(', ') : '—'}</td>
+                  <td data-label="Epochs">{epochs.length > 0 ? epochs.join(', ') : '—'}</td>
+                  <td data-label="Actions">
+                    <button
+                      type="button"
+                      className="button-small"
+                      onClick={() => onEdit(index)}
+                      aria-label={`Edit ${label} for this day`}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="button-small button-danger"
+                      onClick={() => onRemove(index)}
+                      aria-label={`Remove ${label} from this day`}
+                    >
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+TaskInstancesTable.propTypes = {
+  taskTypes: PropTypes.array,
+  taskInstances: PropTypes.array,
+  cameras: PropTypes.array,
+  onAdd: PropTypes.func.isRequired,
+  onDefineNewType: PropTypes.func.isRequired,
+  onEdit: PropTypes.func.isRequired,
+  onRemove: PropTypes.func.isRequired,
+  onReorder: PropTypes.func.isRequired,
+};
+
+TaskInstancesTable.defaultProps = {
+  taskTypes: [],
+  taskInstances: [],
+  cameras: [],
+};

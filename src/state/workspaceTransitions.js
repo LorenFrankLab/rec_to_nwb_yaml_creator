@@ -447,6 +447,12 @@ export function applyDayUpdates(day, updates, now) {
   if (updates.tasks !== undefined) {
     updated.tasks = updates.tasks;
   }
+  // Task-type catalog (Phase 8C): the day's ordered references into the animal `taskTypes` catalog,
+  // read by `mergeDayMetadata`'s `resolveDayTasks`. Without this branch a Tasks & Epochs edit (pick /
+  // order / assign epochs) would be silently dropped, exactly like the other day-owned collections.
+  if (updates.taskInstances !== undefined) {
+    updated.taskInstances = updates.taskInstances;
+  }
   if (updates.behavioral_events !== undefined) {
     updated.behavioral_events = updates.behavioral_events;
   }

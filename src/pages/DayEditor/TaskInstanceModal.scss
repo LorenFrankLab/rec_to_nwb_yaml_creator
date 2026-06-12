@@ -1,0 +1,46 @@
+/**
+ * TaskInstanceModal styling — reuses the global form primitives (`.form-group`, `.form-actions`,
+ * `.btn-cancel`, `.btn-save`); only the type select + inline "define new type" affordance are scoped.
+ */
+
+.task-instance-form {
+  .form-group select {
+    width: 100%;
+    padding: 0.5rem;
+    font-size: var(--font-size-base);
+    border: 1px solid var(--color-grey-300);
+    border-radius: 4px;
+    font-family: inherit;
+    min-height: 44px;
+  }
+
+  .task-instance-define-new {
+    margin-top: var(--spacing-sm);
+    background: none;
+    border: none;
+    color: var(--color-primary);
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+    padding: var(--spacing-xs) 0;
+    font-family: inherit;
+
+    &:hover { text-decoration: underline; }
+    &:focus {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+  }
+
+  .task-instance-epochs-label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: var(--spacing-xs);
+    color: var(--color-grey-900);
+  }
+}
+
+.task-instance-empty p {
+  margin: 0 0 var(--spacing-md) 0;
+  color: var(--color-grey-700);
+  line-height: 1.5;
+}
