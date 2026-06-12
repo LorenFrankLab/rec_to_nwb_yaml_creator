@@ -1,24 +1,21 @@
-import { useMemo, useCallback, useState } from 'react';
+import { useMemo, useCallback } from 'react';
 import PropTypes from 'prop-types';
-import ReadOnlyDeviceInfo from './ReadOnlyDeviceInfo';
-import BadChannelsEditor from './BadChannelsEditor';
-import ReconfigWizard from './ReconfigWizard';
 import DayRecordingSystem from './DayRecordingSystem';
 import { reconcileAppliedToDays } from '../../state/configDiff';
 import { resolveDayConfig } from '../../state/workspaceUtils';
 import {
   getConfigHistory,
   getDataAcqDevices,
-  getAnimalCameras,
-  getDayCamerasUsed,
   getDayDataAcqDeviceName,
 } from '../../state/workspaceSelectors';
-import { inferredCameraKeys } from '../../state/cameraUsage';
 import { rawRecord } from '../../components/rawPropTypes';
 import { isMultiShankGroup, validBadChannelIds } from '../../domain/badChannels';
-import { classifyDeviceOverrides } from '../../domain/deviceOverrides';
 import { priorBadChannels, getBadChannelRemovalAcks } from '../../domain/badChannelMonotonicity';
 import { useDayEditorContext } from './DayEditorContext';
+import CamerasUsedSection from './CamerasUsedSection';
+import OverrideCleanupSection from './OverrideCleanupSection';
+import ConfigVersionPanel from './ConfigVersionPanel';
+import ElectrodeGroupsAccordion from './ElectrodeGroupsAccordion';
 import './DayEditor.scss';
 
 /**
@@ -28,11 +25,11 @@ import './DayEditor.scss';
  * editing of day-specific bad channels. This is the only device configuration
  * that changes day-to-day as hardware channels fail over time.
  *
- * Design: Accordion/collapsible sections (one per electrode group)
- * - All groups collapsed by default
- * - Status badges show health at-a-glance
- * - Failed channels editor prioritized (editable content first)
- * - Device config collapsible (secondary reference info)
+ * Phase 9c-3 split the step's view sections into focused siblings with no behavior change —
+ * `CamerasUsedSection` (the 8C cameras-used checklist), `OverrideCleanupSection` (the
+ * device-override repair controls), `ConfigVersionPanel` (the config-version indicator +
+ * reconfiguration wizard), and `ElectrodeGroupsAccordion` (the per-group failed-channel editors).
+ * This module owns the effective-config resolution, the bad-channel state/handlers, and composition.
  *
  * @param {object} props
  * @param {object} props.animal - Animal record (read-only context)
@@ -64,10 +61,6 @@ export default function DevicesStep(props) {
   // reconfiguration write so a stale/missing `animal.id` record field can't misroute them; falls
   // back to `animal.id` for isolated renders that don't pass it.
   const ownerKey = animalKey ?? animal?.id;
-  const [wizardOpen, setWizardOpen] = useState(false);
-  // Selected version for the unpinned-day repair control (a day with no pin in a multi-version
-  // animal). Empty string = nothing chosen yet; pinning writes day.configurationVersion.
-  const [pinVersion, setPinVersion] = useState('');
 
   // Render the day's EFFECTIVE (pinned) configuration, not live `animal.devices`.
   // On a historical day, `animal.devices` mirrors the *latest* version, so editing
@@ -99,96 +92,11 @@ export default function DevicesStep(props) {
     />
   );
 
-  // Per-day "cameras used" checklist. A camera INFERRED-referenced by a task/video/fs-gui row is
-  // used regardless (shown checked + disabled — it cannot be unchecked here). A non-inferred camera
-  // is a free checkbox whose checked state = its id is in the explicit `day.cameras_used` set, and
-  // it stays ENABLED so the user can toggle it. The disabled/hint decision MUST use the INFERRED
-  // set (not the export union, which folds in `cameras_used`) — otherwise checking a free camera
-  // would immediately disable it and the user could never uncheck it. Toggling writes ONLY the
-  // explicit additions (inferred cameras are covered by the union and need not be stored), so
-  // `cameras_used` stays absent/empty for all existing data and the export stays byte-identical.
-  const animalCameras = getAnimalCameras(animal);
-  // Infer non-negotiable cameras from the day's EFFECTIVE tasks: a migrated catalog day has
-  // `taskInstances` and no inline `tasks`, so its task-type camera refs only appear in the RESOLVED
-  // `mergedDay.tasks`. Use those for tasks (fall back to raw `day.tasks` when no merge is provided);
-  // videos / FsGUI camera refs stay day-owned and are read from the raw `day`. The explicit
-  // `cameras_used` checklist is always read from the raw day below.
-  const inferredKeys = useMemo(
-    () =>
-      inferredCameraKeys({
-        ...day,
-        tasks: Array.isArray(mergedDay?.tasks)
-          ? mergedDay.tasks
-          : Array.isArray(day?.tasks)
-            ? day.tasks
-            : [],
-      }),
-    [day, mergedDay]
+  // Per-day "cameras used" checklist (Phase 8C). Self-hides when the animal has no cameras.
+  // Rendered in both the empty-state and the main return.
+  const camerasUsedSection = (
+    <CamerasUsedSection animal={animal} day={day} mergedDay={mergedDay} onFieldUpdate={onFieldUpdate} />
   );
-  const explicitCameraIds = useMemo(() => getDayCamerasUsed(day), [day]);
-  const explicitKeySet = useMemo(
-    () => new Set(explicitCameraIds.map((id) => String(id))),
-    [explicitCameraIds]
-  );
-
-  /**
-   * Toggle a NON-referenced camera in the explicit cameras-used set. Rebuilds the set from the
-   * full catalog so it stores the ids (in catalog order) of every currently-checked non-referenced
-   * camera — referenced cameras are intentionally excluded (covered by the union).
-   * @param {*} cameraId - The catalog camera id being toggled.
-   * @param {boolean} checked - The next checked state.
-   */
-  const handleCameraUsedToggle = useCallback(
-    (cameraId, checked) => {
-      const next = new Set(explicitCameraIds.map((id) => String(id)));
-      if (checked) next.add(String(cameraId));
-      else next.delete(String(cameraId));
-      // Preserve original id types/order by filtering the catalog, never stringifying into the array.
-      const nextIds = animalCameras
-        .filter(
-          (camera) =>
-            !inferredKeys.has(String(camera?.id)) && next.has(String(camera?.id))
-        )
-        .map((camera) => camera.id);
-      onFieldUpdate('cameras_used', nextIds);
-    },
-    [animalCameras, explicitCameraIds, inferredKeys, onFieldUpdate]
-  );
-
-  const camerasUsedSection =
-    animalCameras.length > 0 ? (
-      <section className="cameras-used-section" aria-label="Cameras used this day">
-        <h3>Cameras used this day</h3>
-        <p className="field-help-text">
-          Check the cameras this recording day used. A camera already referenced by a task, video,
-          or FsGUI protocol is used regardless and shown checked.
-        </p>
-        <ul className="cameras-used-list">
-          {animalCameras.map((camera) => {
-            const key = String(camera?.id);
-            const referenced = inferredKeys.has(key);
-            const checked = referenced || explicitKeySet.has(key);
-            const label = `${camera?.camera_name ?? '(unnamed)'} (id ${camera?.id})`;
-            return (
-              <li key={key}>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    disabled={referenced}
-                    onChange={(e) => handleCameraUsedToggle(camera.id, e.target.checked)}
-                  />
-                  {label}
-                  {referenced && (
-                    <span className="cameras-used-hint"> — used by a task/video</span>
-                  )}
-                </label>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-    ) : null;
 
   // Configuration-version legibility (only when wired with store actions + the
   // animal's days, i.e. inside the real Day Editor — not in isolated unit renders).
@@ -226,75 +134,6 @@ export default function DevicesStep(props) {
       ])
     );
   }, [ntrodeChannelMap]);
-
-  /**
-   * Get ntrodes for a specific electrode group
-   * @param {number} groupId - Integer electrode group ID
-   * @returns {Array} Ntrodes belonging to this group
-   */
-  const getNtrodesForGroup = useCallback((groupId) => {
-    // electrode_group_id and group ids are integers end-to-end (schema contract).
-    return ntrodeChannelMap.filter(ntrode => ntrode.electrode_group_id === groupId);
-  }, [ntrodeChannelMap]);
-
-  /**
-   * Calculate status for an electrode group
-   * @param {number} groupId - Electrode group ID
-   * @returns {object} { status: 'clean'|'warning'|'error', badChannelCount: number, allBad: boolean }
-   */
-  const getGroupStatus = useCallback((groupId) => {
-    const ntrodes = getNtrodesForGroup(groupId);
-    let totalBadChannels = 0;
-    let totalChannels = 0;
-
-    ntrodes.forEach(ntrode => {
-      const ntrodeId = String(ntrode.ntrode_id);
-      const currentBadChannels = badChannels[ntrodeId] || [];
-      const channelCount = Object.keys(ntrode.map).length;
-
-      totalBadChannels += currentBadChannels.length;
-      totalChannels += channelCount;
-    });
-
-    const allBad = totalChannels > 0 && totalBadChannels === totalChannels;
-
-    return {
-      status: allBad ? 'error' : totalBadChannels > 0 ? 'warning' : 'clean',
-      badChannelCount: totalBadChannels,
-      allBad,
-    };
-  }, [badChannels, getNtrodesForGroup]);
-
-  /**
-   * Get status badge text and aria-label
-   * @param {number} groupId - Electrode group ID
-   * @returns {object} { text: string, ariaLabel: string, className: string }
-   */
-  const getStatusBadge = useCallback((groupId) => {
-    const { badChannelCount, allBad } = getGroupStatus(groupId);
-
-    if (allBad) {
-      return {
-        text: '⚠ All channels failed - Group inactive',
-        ariaLabel: 'Status: All channels failed - Group inactive',
-        className: 'status-error',
-      };
-    }
-
-    if (badChannelCount > 0) {
-      return {
-        text: `⚠ ${badChannelCount} failed ${badChannelCount === 1 ? 'channel' : 'channels'}`,
-        ariaLabel: `Status: ${badChannelCount} failed ${badChannelCount === 1 ? 'channel' : 'channels'}`,
-        className: 'status-warning',
-      };
-    }
-
-    return {
-      text: '✓ All channels OK',
-      ariaLabel: 'Status: All channels OK',
-      className: 'status-clean',
-    };
-  }, [getGroupStatus]);
 
   /**
    * Handle bad channels update
@@ -348,62 +187,19 @@ export default function DevicesStep(props) {
     onFieldUpdate(`state.badChannelRemovalAcks.${ntrodeId}`, next);
   }, [day, onFieldUpdate]);
 
-  // MALFORMED / STALE OVERRIDE REPAIR: the merge declines to apply
-  // any malformed `deviceOverrides` shape, so each blocks export (via `dayOverrideIssues`)
-  // but has NO editor row — a repair dead-end. We surface a focusable removal control for
-  // every such shape. The contract is: whatever `dayOverrideIssues` flags here is
-  // repairable here. The shapes (mirroring that function):
-  //   - a `bad_channels` KEY with no resolved ntrode_id (stale), OR a key whose VALUE is
-  //     not a list (corrupt) → remove just that key;
-  //   - the whole `bad_channels` CONTAINER is a scalar/array, not an ntrode→list map →
-  //     remove the whole override;
-  //   - a geometry override (`electrode_groups` / ntrode map) present but not an array →
-  //     remove that override key.
+  // The day's resolved ntrode-id set — the stale-key detection the override-cleanup classifier needs.
   const resolvedNtrodeIds = useMemo(
     () => new Set(ntrodeChannelMap.map((n) => String(n.ntrode_id))),
     [ntrodeChannelMap]
   );
-  // Malformed / stale / shadowing override classification. The converter-meaning decision
-  // (which shapes the merge can't honor, partitioned for distinct removal labels) lives in
-  // `classifyDeviceOverrides` — the editing-surface counterpart of the validator's
-  // `dayOverrideIssues`. Whatever it flags is rendered with a removal control below.
-  const {
-    overridesRecord,
-    wholeOverridesMalformed,
-    badChannelContainer,
-    badChannelContainerIsRecord,
-    badChannelContainerMalformed,
-    staleOverrideKeys,
-    corruptValueKeys,
-    presentGeometryKeys,
-    hasOverrideCleanup,
-  } = useMemo(() => classifyDeviceOverrides(day, resolvedNtrodeIds), [day, resolvedNtrodeIds]);
 
-  /**
-   * Remove a single bad-channel override key (stale or corrupt-value) via ONE atomic
-   * write of the whole map minus that key. The container is a record here (guarded by
-   * the callers), so spreading it is safe.
-   * @param {string} key - The ntrode_id key to drop.
-   */
-  const handleRemoveOverrideKey = useCallback((key) => {
-    const overrides = badChannelContainerIsRecord ? badChannelContainer : {};
-    const next = { ...overrides };
-    delete next[key];
-    onFieldUpdate('deviceOverrides.bad_channels', next);
-  }, [badChannelContainer, badChannelContainerIsRecord, onFieldUpdate]);
-
-  /**
-   * Remove an entire malformed override KEY off `deviceOverrides` (a scalar bad_channels
-   * container, or a non-array geometry override). Rewrites the whole `deviceOverrides`
-   * record without that key — `handleFieldUpdate` only SETS a path, so deleting a key
-   * means writing the parent object minus it.
-   * @param {string} overrideKey - 'bad_channels' | 'electrode_groups' | 'ntrode_electrode_group_channel_map'.
-   */
-  const handleRemoveOverride = useCallback((overrideKey) => {
-    const next = { ...(overridesRecord || {}) };
-    delete next[overrideKey];
-    onFieldUpdate('deviceOverrides', next);
-  }, [overridesRecord, onFieldUpdate]);
+  // MALFORMED / STALE OVERRIDE REPAIR (computed BEFORE the empty-state early return so a day with
+  // malformed overrides but no electrode groups still gets its removal buttons — otherwise a repair
+  // action lands on Devices with no control). The section self-hides when there is nothing to clean
+  // up. Rendered in both the empty-state and the main return.
+  const overrideCleanupSection = (
+    <OverrideCleanupSection day={day} resolvedNtrodeIds={resolvedNtrodeIds} onFieldUpdate={onFieldUpdate} />
+  );
 
   /**
    * Validate bad channels
@@ -470,83 +266,6 @@ export default function DevicesStep(props) {
     return { errors, warnings };
   }, [badChannels, validateBadChannels]);
 
-  // Override cleanup controls (computed BEFORE the empty-state early return so a day
-  // with malformed overrides but no electrode groups still gets its removal buttons —
-  // otherwise a repair action lands on Devices with no control). The merge declines (or
-  // mis-applies) each shape, so the export rule blocks it but there is no editor row.
-  // Whatever `dayOverrideIssues` flags is removable here; the per-key bad-channel buttons
-  // carry a KEY-SPECIFIC `data-field-path` so repair-focus lands on the clicked ntrode's
-  // control, not the first matching one. `hasOverrideCleanup` comes from the classifier above.
-  const overrideCleanupSection = hasOverrideCleanup ? (
-    <section className="stale-overrides-section" aria-label="Corrupt or stale device overrides">
-      <p className="field-help-text">
-        This day has device overrides that need review. Corrupt or stale overrides block
-        export; a shadowing override replaces the saved configuration for this day only.
-        Remove any you did not intend:
-      </p>
-
-      {wholeOverridesMalformed && (
-        <button
-          type="button"
-          className="stale-override-remove"
-          data-field-path="deviceOverrides"
-          onClick={() => onFieldUpdate('deviceOverrides', {})}
-        >
-          Remove corrupt device overrides
-        </button>
-      )}
-
-      {staleOverrideKeys.map((staleKey) => (
-        <button
-          key={`stale-${staleKey}`}
-          type="button"
-          className="stale-override-remove"
-          data-field-path={`deviceOverrides.bad_channels.${staleKey}`}
-          onClick={() => handleRemoveOverrideKey(staleKey)}
-        >
-          Remove stale failed-channel override for ntrode {staleKey}
-        </button>
-      ))}
-
-      {corruptValueKeys.map((key) => (
-        <button
-          key={`corrupt-${key}`}
-          type="button"
-          className="stale-override-remove"
-          data-field-path={`deviceOverrides.bad_channels.${key}`}
-          onClick={() => handleRemoveOverrideKey(key)}
-        >
-          Remove corrupt failed-channel override for ntrode {key}
-        </button>
-      ))}
-
-      {badChannelContainerMalformed && (
-        <button
-          type="button"
-          className="stale-override-remove"
-          data-field-path="deviceOverrides.bad_channels"
-          onClick={() => handleRemoveOverride('bad_channels')}
-        >
-          Remove corrupt failed-channel override
-        </button>
-      )}
-
-      {presentGeometryKeys.map((key) => (
-        <button
-          key={`geom-${key}`}
-          type="button"
-          className="stale-override-remove"
-          data-field-path={`deviceOverrides.${key}`}
-          onClick={() => handleRemoveOverride(key)}
-        >
-          {Array.isArray(overridesRecord[key])
-            ? `Remove ${key} override (revert to saved configuration)`
-            : `Remove corrupt ${key} override`}
-        </button>
-      ))}
-    </section>
-  ) : null;
-
   // Config-error state: resolveDayConfig threw (the animal's device configuration is
   // missing or corrupt). Fail closed with a single, truthful, Animal-Editor-pointing
   // repair instead of crashing the step.
@@ -605,94 +324,16 @@ export default function DevicesStep(props) {
         <a href={`#/animal/${ownerKey}/electrode-groups?field=electrode_groups`}>Edit shared animal electrode setup</a>
       </div>
 
-      {/* Configuration-version indicator + reconfiguration entry point. The wizard
-          is a sibling of the bar (not nested inside the flex layout div) so the
-          dialog is not a descendant of a layout container. */}
+      {/* Configuration-version indicator + reconfiguration entry point. */}
       {reconfig && (
-        <>
-          <div className="config-version-bar">
-            <div className="config-version-info">
-              <span className="config-version-label">
-                Configuration version {reconfig.version}
-                {reconfig.snapshot
-                  ? `: ${reconfig.snapshot.description || 'No description'} (${reconfig.snapshot.date || 'date unknown'})`
-                  : ''}
-                <span
-                  className={`config-version-tag config-version-tag-${reconfig.isLatest ? 'latest' : 'historical'}`}
-                >
-                  {reconfig.isLatest ? 'latest' : 'historical'}
-                </span>
-              </span>
-              <span className="config-version-applied">
-                {reconfig.isLatest
-                  ? 'Mark failed channels for this recording day. Probe geometry is shared animal setup — edit it in Animal Setup.'
-                  : 'This is a historical configuration. Mark failed channels for this recording day against this pinned snapshot; editing the latest animal setup will not change this day unless you reconfigure.'}
-              </span>
-              <span className="config-version-applied">
-                Applied to {reconfig.appliedCount} {reconfig.appliedCount === 1 ? 'day' : 'days'}
-              </span>
-              {day.configurationVersion == null && getConfigHistory(animal).length > 1 && (
-                <div className="config-version-warning" role="alert">
-                  <span className="config-version-warning-text">
-                    This day has no pinned configuration version. It is resolved to the latest
-                    (v{reconfig.version}); if it recorded an earlier configuration, pin the correct
-                    version before exporting.
-                  </span>
-                  {/* Repairable: assign an existing configuration version to this day. The
-                      data-field-path is on the focusable <select> (not the wrapper) so the export
-                      gate's "Fix in Devices" repair-focus actually moves keyboard/SR focus here. */}
-                  <div className="config-version-pin">
-                    <label htmlFor="pin-config-version">Pin this day to:</label>
-                    <select
-                      id="pin-config-version"
-                      data-field-path="configurationVersion"
-                      value={pinVersion}
-                      onChange={(e) => setPinVersion(e.target.value)}
-                    >
-                      <option value="">Choose a version…</option>
-                      {getConfigHistory(animal).map((snap) => (
-                        <option key={snap.version} value={snap.version}>
-                          v{snap.version}
-                          {snap.description ? ` — ${snap.description}` : ''}
-                          {snap.date ? ` (${snap.date})` : ''}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      className="config-version-pin-button"
-                      disabled={pinVersion === ''}
-                      onClick={() => onFieldUpdate('configurationVersion', Number(pinVersion))}
-                    >
-                      Pin version
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-            <button
-              type="button"
-              className="config-reconfig-button"
-              aria-haspopup="dialog"
-              aria-expanded={wizardOpen}
-              onClick={() => setWizardOpen(true)}
-            >
-              Hardware changed starting this day…
-            </button>
-          </div>
-          <ReconfigWizard
-            // Remount per day/version so reopening shows fresh form state.
-            key={`${day.id}-${reconfig.version}`}
-            isOpen={wizardOpen}
-            onClose={() => setWizardOpen(false)}
-            animal={animal}
-            animalKey={ownerKey}
-            day={day}
-            prevDay={reconfig.prevDay}
-            candidateDays={reconfig.candidateDays}
-            actions={actions}
-          />
-        </>
+        <ConfigVersionPanel
+          reconfig={reconfig}
+          day={day}
+          animal={animal}
+          ownerKey={ownerKey}
+          onFieldUpdate={onFieldUpdate}
+          actions={actions}
+        />
       )}
 
       {/* Malformed / stale / shadowing override repair controls (see overrideCleanupSection). */}
@@ -705,95 +346,18 @@ export default function DevicesStep(props) {
       </p>
 
       {/* Electrode groups (accordion) */}
-      <section className="electrode-groups-section" aria-label="Electrode Groups">
-        {electrodeGroups.map((group) => {
-          const ntrodes = getNtrodesForGroup(group.id);
-          const statusBadge = getStatusBadge(group.id);
-          const ntrodeCount = ntrodes.length;
-
-          // Check if this group has missing ntrode maps (data corruption)
-          if (ntrodes.length === 0) {
-            return (
-              <details key={group.id} className="electrode-group-details">
-                <summary className="electrode-group-summary">
-                  <span className="electrode-group-label">
-                    <span className="toggle-icon" aria-hidden="true">▶</span>
-                    Electrode Group {group.id}: {group.location}
-                  </span>
-                  <span className="status-badge status-error" role="status" aria-label="Status: Error">
-                    ⚠ No channel mapping
-                  </span>
-                </summary>
-
-                <div className="electrode-group-content">
-                  <div className="error-state-inline">
-                    <p>⚠ No channel mapping found for this electrode group.</p>
-                    <p>This usually indicates data corruption. Please review animal configuration.</p>
-                    {/* Channel maps are auto-generated from each electrode group's device_type, so a
-                        missing map is fixed on the electrode-groups tab (its owner), not a channel-maps editor. */}
-                    <a href={`#/animal/${ownerKey}/electrode-groups?field=electrode_groups`}>Fix in Animal Setup</a>
-                  </div>
-                </div>
-              </details>
-            );
-          }
-
-          return (
-            <details key={group.id} className="electrode-group-details">
-              <summary className="electrode-group-summary">
-                <span className="electrode-group-label">
-                  <span className="toggle-icon" aria-hidden="true">▶</span>
-                  Electrode Group {group.id}: {group.location}
-                </span>
-                <span
-                  className={`status-badge ${statusBadge.className}`}
-                  role="status"
-                  aria-label={statusBadge.ariaLabel}
-                >
-                  <span aria-hidden="true">
-                    {statusBadge.text.split(' ')[0]}
-                  </span>
-                  {' '}
-                  {statusBadge.text.split(' ').slice(1).join(' ')}
-                </span>
-              </summary>
-
-              <div className="electrode-group-content">
-                {/* Explanatory header */}
-                <div className="electrode-group-header">
-                  <h3>Electrode Group {group.id}: {group.location}</h3>
-                  <p className="field-help-text">
-                    This {group.device_type} has {ntrodeCount} {ntrodeCount === 1 ? 'shank' : 'shanks'}.
-                    Mark individual channels that have failed on each shank.
-                  </p>
-                </div>
-
-                {/* Failed Channels Editor (EDITABLE - prioritized at top) */}
-                <BadChannelsEditor
-                  ntrodes={ntrodes}
-                  deviceType={group.device_type}
-                  badChannels={badChannels}
-                  onUpdate={handleBadChannelsUpdate}
-                  onBatchUpdate={handleBadChannelsBatchUpdate}
-                  priorBadByNtrode={priorBadByNtrode}
-                  onAcknowledgeRemoval={handleAcknowledgeRemoval}
-                  errors={errors}
-                  warnings={warnings}
-                />
-
-                {/* Device Configuration (READ-ONLY - collapsible, secondary) */}
-                <details className="device-config-details">
-                  <summary className="device-config-toggle">
-                    <span className="toggle-icon" aria-hidden="true">▶</span>
-                    View Device Configuration
-                  </summary>
-                  <ReadOnlyDeviceInfo group={group} />
-                </details>
-              </div>
-            </details>
-          );
-        })}
-      </section>
+      <ElectrodeGroupsAccordion
+        electrodeGroups={electrodeGroups}
+        ntrodeChannelMap={ntrodeChannelMap}
+        badChannels={badChannels}
+        ownerKey={ownerKey}
+        onBadChannelsUpdate={handleBadChannelsUpdate}
+        onBadChannelsBatchUpdate={handleBadChannelsBatchUpdate}
+        priorBadByNtrode={priorBadByNtrode}
+        onAcknowledgeRemoval={handleAcknowledgeRemoval}
+        errors={errors}
+        warnings={warnings}
+      />
     </div>
   );
 }
