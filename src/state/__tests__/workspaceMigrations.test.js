@@ -17,6 +17,8 @@ import {
   MIGRATABLE_SCHEMA_VERSIONS,
 } from '../workspaceMigrations';
 import { loadWorkspace, WORKSPACE_STORAGE_KEY } from '../persistence';
+import { mergeDayMetadata } from '../workspaceUtils';
+import { validateDay } from '../../domain/validation';
 import v1Blob from './fixtures/persistence/v1-workspace.json';
 import v2Blob from './fixtures/persistence/v2-workspace.json';
 import v3Blob from './fixtures/persistence/v3-workspace.json';
@@ -110,5 +112,41 @@ describe('loadWorkspace upgrades old blobs losslessly (fixtures)', () => {
     // The catalog is live after hydration.
     expect(fromV1.workspace.animals.remy.taskTypes).toHaveLength(1);
     expect(fromV1.workspace.days['remy-2023-06-22'].taskInstances).toHaveLength(1);
+  });
+
+  it('migrates a v2 CONFLICT blob end-to-end: the reconciliation survives load and validateDay surfaces it', () => {
+    // Two days reuse task_name 'sleep' with a DIVERGENT task_environment — a previously
+    // Spyglass-invalid state the migrator normalizes to the first occurrence and records on the
+    // later day. This pins the migrator → normalizeWorkspaceDevices → ensureWorkspaceShape → validator
+    // linkage: a future day-object rebuild in normalization that dropped state.* would fail HERE.
+    const blob = structuredClone(v2Blob);
+    const day1 = blob.workspace.days['remy-2023-06-22'];
+    day1.tasks = [{ task_name: 'sleep', task_description: 'Rest', task_environment: 'home cage', camera_id: [0], task_epochs: [1] }];
+    const day2 = structuredClone(day1);
+    day2.id = 'remy-2023-06-23';
+    day2.date = '2023-06-23';
+    day2.experimentDate = '06232023';
+    day2.session = { ...day1.session, session_id: 'remy_20230623' };
+    day2.tasks = [{ task_name: 'sleep', task_description: 'Rest', task_environment: 'QUIET ROOM', camera_id: [0], task_epochs: [2] }];
+    blob.workspace.days['remy-2023-06-23'] = day2;
+    blob.workspace.animals.remy.days = ['remy-2023-06-22', 'remy-2023-06-23'];
+
+    window.localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(blob));
+    const loaded = loadWorkspace();
+    expect(loaded.discarded).toBeUndefined();
+
+    const animal = loaded.workspace.animals.remy;
+    expect(animal.taskTypes).toHaveLength(1); // 'sleep' deduped to one canonical type
+    const migratedDay2 = loaded.workspace.days['remy-2023-06-23'];
+    // The reconciliation record survived migration + device-normalize + shape-ensure.
+    expect(migratedDay2.state.taskDefinitionReconciliations).toHaveLength(1);
+    expect(migratedDay2.state.taskDefinitionReconciliations[0]).toMatchObject({
+      task_name: 'sleep',
+      original: { task_environment: 'QUIET ROOM' },
+      canonical: { task_environment: 'home cage' },
+    });
+    // And the LIVE validator surfaces it on the day.
+    const codes = validateDay(migratedDay2, mergeDayMetadata(animal, migratedDay2), animal).map((i) => i.code);
+    expect(codes).toContain('task_definition_reconciled');
   });
 });

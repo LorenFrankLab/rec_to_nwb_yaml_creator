@@ -121,7 +121,9 @@ export function addTaskInstance(
   taskTypeId: string,
   task_epochs: number[] = []
 ): TaskInstance[] {
-  return [...asArray<TaskInstance>(taskInstances), { taskTypeId, task_epochs }];
+  // Clone the epochs so a later mutation of the caller's array cannot leak into the stored
+  // instance (mirrors the by-value discipline in taskCatalog's resolve/derive).
+  return [...asArray<TaskInstance>(taskInstances), { taskTypeId, task_epochs: structuredClone(task_epochs) }];
 }
 
 /**

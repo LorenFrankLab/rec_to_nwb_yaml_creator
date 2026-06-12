@@ -115,4 +115,24 @@ describe('day task-instance helpers', () => {
     expect(reorderTaskInstances(inst, 5, 0)).toEqual(inst); // out-of-range → unchanged
     expect(setTaskInstanceEpochs(inst, 9, [1])).toEqual(inst); // out-of-range → unchanged
   });
+
+  it('reorderTaskInstances is a no-op for equal indices', () => {
+    expect(reorderTaskInstances(inst, 0, 0)).toEqual(inst);
+  });
+
+  it('addTaskInstance does not alias the caller epochs array (a later mutation cannot leak in)', () => {
+    const epochs = [1];
+    const next = addTaskInstance([], 'tasktype-0', epochs);
+    epochs.push(2); // mutate the caller's array AFTER adding
+    expect(next[0].task_epochs).toEqual([1]); // the stored instance is unaffected
+  });
+});
+
+describe('updateTaskType preserves the id across an identity (task_name) change', () => {
+  it('renaming a type keeps its id so day taskInstances stay resolvable', () => {
+    const types = [{ id: 'tasktype-0', ...DEF }];
+    const next = updateTaskType(types, 'tasktype-0', { task_name: 'RENAMED', task_description: 'd', task_environment: 'e', camera_id: [0] });
+    expect(next[0].id).toBe('tasktype-0');
+    expect(next[0].task_name).toBe('RENAMED');
+  });
 });

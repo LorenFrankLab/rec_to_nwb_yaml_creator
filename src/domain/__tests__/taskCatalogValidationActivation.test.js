@@ -77,6 +77,24 @@ describe('validateDay activates the task-catalog rules', () => {
     expect(issue.ownerSurface).toBe('day');
   });
 
+  it('SUPPRESSES a divergent_task_identity the inline form genuinely raises (real, not vacuous)', () => {
+    // Two same-name tasks with DIFFERENT descriptions in one day: the inline shape genuinely
+    // triggers divergent_task_identity (the catalog exists precisely to make this impossible).
+    const inline = buildRealisticWorkspace();
+    inline.day.tasks = [
+      { task_name: 'sleep', task_description: 'Rest A', task_environment: 'home cage', camera_id: [0], task_epochs: [1] },
+      { task_name: 'sleep', task_description: 'Rest B — different!', task_environment: 'home cage', camera_id: [0], task_epochs: [2] },
+    ];
+    expect(codesOf(validate(inline.animal, inline.day))).toContain('divergent_task_identity');
+
+    // The catalog form dedups to ONE canonical type (+ a reconciliation), so the resolved tasks are
+    // consistent: divergent CANNOT fire, and the conflict surfaces as task_definition_reconciled.
+    const catalog = toCatalog({ animal: inline.animal, day: inline.day });
+    const codes = codesOf(validate(catalog.animal, catalog.day));
+    expect(codes).not.toContain('divergent_task_identity');
+    expect(codes).toContain('task_definition_reconciled');
+  });
+
   it('surfaces task_definition_reconciled (day-owned, warning) from a recorded reconciliation', () => {
     const { animal, day } = toCatalog(buildRealisticWorkspace());
     day.state = {

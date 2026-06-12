@@ -78,4 +78,41 @@ describe('mergeDayMetadata resolves taskInstances when present (catalog is the s
     const merged = mergeDayMetadata({ ...animal, taskTypes: [] }, { ...day, tasks: undefined, taskInstances: [] });
     expect(merged.tasks).toEqual([]);
   });
+
+  it('exports a ZERO-task catalog day BYTE-identically to a zero-task inline day', () => {
+    const inline = buildRealisticWorkspace();
+    inline.day.tasks = [];
+    const catalogAnimal = { ...inline.animal, taskTypes: [] };
+    const catalogDay = { ...inline.day, tasks: undefined, taskInstances: [] };
+    expect(encodeYaml(mergeDayMetadata(catalogAnimal, catalogDay))).toBe(
+      encodeYaml(mergeDayMetadata(inline.animal, inline.day))
+    );
+  });
+
+  it('preserves a stray legacy task key through the catalog merge (byte-identical, lossless)', () => {
+    // reorderKeys is lossless (appends non-template keys), so the catalog must carry a stray key
+    // through derive→resolve too — exercised end-to-end through the real merge, not just resolve.
+    const inline = buildRealisticWorkspace();
+    inline.day.tasks = inline.day.tasks.map((t) => ({ ...t, legacy_extra: 'KEEP' }));
+    const catalog = toCatalog({ animal: inline.animal, day: inline.day });
+    const out = encodeYaml(mergeDayMetadata(catalog.animal, catalog.day));
+    expect(out).toBe(encodeYaml(mergeDayMetadata(inline.animal, inline.day)));
+    expect(out).toContain('legacy_extra: KEEP'); // the stray key really survived (not silently dropped)
+  });
+
+  it('exports an OPTO catalog day BYTE-identically to the equivalent inline opto day', () => {
+    // Opto populates the always-on opto key set; prove the tasks section resolves byte-identically
+    // when it sits among populated opto keys.
+    const inline = buildRealisticWorkspace();
+    inline.animal.optogenetics = {
+      opto_excitation_source: [],
+      optical_fiber: [],
+      virus_injection: [],
+      optogenetic_stimulation_software: 'FSGui',
+    };
+    const catalog = toCatalog({ animal: inline.animal, day: inline.day });
+    expect(encodeYaml(mergeDayMetadata(catalog.animal, catalog.day))).toBe(
+      encodeYaml(mergeDayMetadata(inline.animal, inline.day))
+    );
+  });
 });
