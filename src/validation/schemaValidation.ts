@@ -7,6 +7,7 @@
 import addFormats from 'ajv-formats';
 import JsonSchemaFile from '../nwb_schema.json';
 import { normalizeAjvPath } from './paths';
+import type { ValidationIssue, ValidationModel } from './issueTypes';
 const Ajv = require('ajv');
 
 // Compile AJV validator once at module load for performance
@@ -21,8 +22,8 @@ const compiledValidator = ajv.compile(JsonSchemaFile);
 /**
  * Validates model against NWB JSON schema using AJV
  *
- * @param {object} model - The form data to validate
- * @returns {Issue[]} Array of validation issues with format:
+ * @param model - The form data to validate
+ * @returns Array of validation issues with format:
  *   {
  *     path: string,           // Normalized path: "subject.weight"
  *     code: string,           // AJV keyword: "required", "pattern", "type", etc.
@@ -32,14 +33,14 @@ const compiledValidator = ajv.compile(JsonSchemaFile);
  *     schemaPath: string      // AJV schema path for debugging
  *   }
  */
-export const schemaValidation = (model) => {
+export const schemaValidation = (model: ValidationModel): ValidationIssue[] => {
   compiledValidator(model);
 
   if (!compiledValidator.errors) {
     return [];
   }
 
-  return compiledValidator.errors.map(error => {
+  return compiledValidator.errors.map((error: any) => {
     // For required field errors, AJV puts the field name in params.missingProperty
     // instead of instancePath (which is empty string for root object)
     let path = normalizeAjvPath(error.instancePath);
@@ -63,11 +64,11 @@ export const schemaValidation = (model) => {
 /**
  * Sanitizes AJV error messages to be more user-friendly
  *
- * @param {string} message - Original AJV error message
- * @param {string} instancePath - AJV instancePath for context
- * @returns {string} User-friendly error message
+ * @param message - Original AJV error message
+ * @param instancePath - AJV instancePath for context
+ * @returns User-friendly error message
  */
-function sanitizeMessage(message, instancePath) {
+function sanitizeMessage(message: string | undefined, instancePath: string): string {
   // Defensive null check - AJV should always provide message, but be safe
   if (!message) {
     return 'Validation error';
