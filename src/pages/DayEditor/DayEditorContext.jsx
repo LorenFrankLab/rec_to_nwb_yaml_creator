@@ -8,7 +8,7 @@ import PropTypes from 'prop-types';
  * `DayEditorStepper` resolves these once (owner key, merged metadata, the animal's days, the
  * field-update writer, store actions) and provides them here, so the section components don't
  * receive the same seven props drilled through identically on every render. Section-specific
- * props (e.g. `onNavigate`, `onRepair`, `knownTaskDescriptions`, `copyableDioSources`) are NOT
+ * props (e.g. `onNavigate`, `onRepair`, `copyableDioSources`) are NOT
  * part of this bundle and stay as ordinary props on the sections that use them.
  *
  * The default is `null` so a section rendered WITHOUT a provider (isolated unit tests, which pass
