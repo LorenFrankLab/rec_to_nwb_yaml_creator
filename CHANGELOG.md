@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Split the workspace store hook into focused collaborators (refactor only, no behavior change).**
+  The ~851-LOC `state/useWorkspace.js` (which inlined hydration, persistence/autosave, all eight
+  mutation actions, and the day selector) is now a 98-LOC orchestrator that owns only the wiring and
+  the same-tick `commitWorkspace`/`workspaceRef` semantics, composing three extracted modules:
+  - [workspaceActions.js](src/state/workspaceActions.js) — `createWorkspaceActions({ commitWorkspace,
+    setWorkspace, workspaceRef })`, the eight animal/day mutation actions moved **verbatim** (same
+    bodies, same `throw` timing, same `commitWorkspace`-vs-`setWorkspace` choice per action).
+  - [useWorkspacePersistence.js](src/state/useWorkspacePersistence.js) — the SaveIndicator/beforeunload
+    status, the post-mount load notice (discard/recovery), the 500ms-debounced + single-2s-retry
+    autosave, and the Ctrl/Cmd+S `saveNow` — timing unchanged.
+  - [workspaceHydration.js](src/state/workspaceHydration.js) — the pure `resolveInitialWorkspace`
+    (the `useState` initializer's load-precedence logic), returning `{ workspace, discarded, recovered }`.
+  - The bound `getAnimalDays` selector moved to a pure `getAnimalDays(workspace, animalId)` in its
+    canonical home [workspaceSelectors.js](src/state/workspaceSelectors.js) (next to `getCopyableDioSources`).
+  - **No public-API change:** `useStore` still exposes the exact same `{ model, selectors, actions,
+    persistence }` keys (pinned by `store-public-api.test.js`). `commitWorkspace` is now a stable
+    `useCallback` so the actions memo declares honest deps (no new lint suppression). The store suite
+    (418), full suite (4786), golden baselines (byte-identical), `npm run typecheck`, and `CI=true`
+    build all pass unchanged.
+
 - **Split the business-rules validator into rule families (refactor only, no behavior change).** The
   ~1104-LOC `validation/rulesValidation.js` (a single function inlining ~20 rules) is now a 96-LOC
   composer over focused, individually-testable family modules under `validation/rules/`:

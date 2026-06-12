@@ -155,6 +155,36 @@ export const getCopyableDioSources = (workspace, currentAnimalId) => {
   return sources;
 };
 
+/**
+ * All day RECORDS for an animal, sorted by date. Tolerates corrupt day RECORDS (a dangling id, a
+ * non-object record) AND enforces ownership: keeps only resolvable records that actually belong to
+ * this animal — a record whose `animalId` names a DIFFERENT animal (a wrong-owner index entry) is
+ * excluded, or reconfiguration could move another animal's day. A record with no `animalId` is kept
+ * (the index is the authority). Order by a string-coerced date so a numeric/missing `date` can't
+ * throw. Returns a fresh array; `[]` for an unknown animal. (Like the former hook selector, it
+ * assumes well-formed `workspace.animals` / `workspace.days` containers.)
+ *
+ * @param {object} workspace - The workspace (`{ animals, days }`).
+ * @param {string} animalId - Animal identifier.
+ * @returns {Array} Day objects sorted by date.
+ */
+export const getAnimalDays = (workspace, animalId) => {
+  const animal = workspace.animals[animalId];
+  if (!animal) return [];
+
+  const orderKey = (value) => (typeof value === 'string' ? value : String(value ?? ''));
+  return getAnimalDayIds(animal)
+    .map((dayId) => workspace.days[dayId])
+    .filter(
+      (day) =>
+        day !== null &&
+        typeof day === 'object' &&
+        !Array.isArray(day) &&
+        (day.animalId == null || day.animalId === animalId)
+    )
+    .sort((a, b) => orderKey(a.date).localeCompare(orderKey(b.date)));
+};
+
 // ── Day-owned collections / records ─────────────────────────────────────────────────
 
 /** @param {object} day @returns {object} The day's session record (always a record). */
