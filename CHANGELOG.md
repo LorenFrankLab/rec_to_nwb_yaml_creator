@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Started typing `state/` under strict TS: the persisted-blob migration registry (refactor only, no
+  behavior change).** [state/workspaceMigrations.js](src/state/workspaceMigrations.ts) → `.ts`:
+  `migrateWorkspace`, the `MIGRATORS` registry, `migrateV1ToV2`, and `isPlainObject` are typed (the input
+  is the naturally-`unknown` parsed blob, already guarded). Body is verbatim — only type tokens plus two
+  behavior-neutral casts (`parsed.schemaVersion as number` after the integer guard, `let workspace:
+  object`). A clean leaf: it imports only the already-`.ts` `migrateTasksToCatalogV2ToV3`, and its sole
+  consumer (`persistence.js`) is untyped JS, so the rename is transparent. The migration + persistence
+  suites and golden baselines (165) stay byte-identical; `npm run typecheck` + `CI=true` build clean; full suite 4793;
+  e2e 104. Next `state/` leaf: `persistence.js` (which consumes this), then the larger
+  `workspaceSelectors` / `workspaceUtils` / `workspaceTransitions`.
+
 - **Finished typing the `validation/` core under strict TS (refactor only, no behavior change).** The
   last five `.js` modules are now `.ts`: [index](src/validation/index.ts) (the unified `validate()` /
   `validateField()` sort boundary), [schemaValidation](src/validation/schemaValidation.ts) (AJV),
