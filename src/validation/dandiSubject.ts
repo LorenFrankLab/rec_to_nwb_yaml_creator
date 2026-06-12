@@ -26,10 +26,10 @@ const NCBI_TAXON_URI = /^http:\/\/purl\.obolibrary\.org\/obo\/NCBITaxon_\d+$/;
  * fail-open. Callers store a trimmed value, so the gate stays fail-closed for the
  * emitted string.
  *
- * @param {*} value - Candidate species string.
- * @returns {boolean} True when DANDI-valid.
+ * @param value - Candidate species string.
+ * @returns True when DANDI-valid.
  */
-export function isValidSpecies(value) {
+export function isValidSpecies(value: unknown): boolean {
   if (typeof value !== 'string') return false;
   return LATIN_BINOMIAL.test(value) || NCBI_TAXON_URI.test(value);
 }
@@ -39,9 +39,9 @@ export function isValidSpecies(value) {
  * `subject_id` / `session_id`). Non-string / empty values return false — their
  * presence/non-emptiness is enforced by the schema's required + pattern checks.
  *
- * @param {*} value - Candidate id string.
- * @returns {boolean} True when the id contains a slash.
+ * @param value - Candidate id string.
+ * @returns True when the id contains a slash.
  */
-export function idHasSlash(value) {
+export function idHasSlash(value: unknown): boolean {
   return typeof value === 'string' && value.includes('/');
 }

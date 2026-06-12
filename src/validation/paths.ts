@@ -14,10 +14,10 @@
  *   /cameras/0/id → cameras[0].id
  *   /electrode_groups/15/targeted_x → electrode_groups[15].targeted_x
  *
- * @param {string} ajvPath - AJV instancePath (slash-separated)
- * @returns {string} Normalized path (dot notation with array brackets)
+ * @param ajvPath - AJV instancePath (slash-separated)
+ * @returns Normalized path (dot notation with array brackets)
  */
-export function normalizeAjvPath(ajvPath) {
+export function normalizeAjvPath(ajvPath: string): string {
   if (!ajvPath || ajvPath === '/') return '';
 
   // Split on slashes and filter out empty strings
