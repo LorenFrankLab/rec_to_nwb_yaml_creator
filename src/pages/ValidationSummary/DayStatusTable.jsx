@@ -7,6 +7,8 @@ import {
   describeConfigVersionLabel,
 } from './validationSummaryRows';
 
+const noop = () => {};
+
 /**
  * The cross-day status table: one row per recording day across the workspace (or, when `scoped`,
  * one animal's days), with the per-day scan summary, the lifecycle status chip, and the editor /
@@ -14,20 +16,26 @@ import {
  * change — it renders the rows {@link buildRows} produced and dispatches the day-reference repairs
  * back to the parent's store actions.
  *
+ * The three repair callbacks are BRANCH-SPECIFIC: each is invoked only when a row of the matching
+ * recovery status is present (missing-record / wrong-owner / recovered-unlinked), so they are
+ * optional. The standalone page wires all three from the store (their actions are part of the
+ * pinned public API, so they are always present in production); a focused test that renders only
+ * one row type may pass only the callback it exercises, and the unused ones default to a no-op.
+ *
  * @param {object} props
  * @param {object[]} props.rows - The table-ordered rows from `buildRows` / `buildAnimalRows`.
  * @param {boolean} props.scoped - Per-animal mode: the scan cell becomes an effective-setup expander.
- * @param {Function} props.onRemoveDayReference - `(animalKey, dayId) => void` — drop a dangling reference.
- * @param {Function} props.onUnlinkDayReference - `(animalKey, dayId) => void` — unlink a wrong-owner day.
- * @param {Function} props.onRelinkDayReference - `(animalKey, dayId) => void` — re-link a recovered day.
+ * @param {Function} [props.onRemoveDayReference] - `(animalKey, dayId) => void` — drop a dangling reference.
+ * @param {Function} [props.onUnlinkDayReference] - `(animalKey, dayId) => void` — unlink a wrong-owner day.
+ * @param {Function} [props.onRelinkDayReference] - `(animalKey, dayId) => void` — re-link a recovered day.
  * @returns {JSX.Element}
  */
 export default function DayStatusTable({
   rows,
   scoped,
-  onRemoveDayReference,
-  onUnlinkDayReference,
-  onRelinkDayReference,
+  onRemoveDayReference = noop,
+  onUnlinkDayReference = noop,
+  onRelinkDayReference = noop,
 }) {
   return (
     // The table can be wider than a phone viewport (6 columns of dense scan/session text), so
@@ -223,7 +231,9 @@ export default function DayStatusTable({
 DayStatusTable.propTypes = {
   rows: PropTypes.arrayOf(PropTypes.object).isRequired,
   scoped: PropTypes.bool.isRequired,
-  onRemoveDayReference: PropTypes.func.isRequired,
-  onUnlinkDayReference: PropTypes.func.isRequired,
-  onRelinkDayReference: PropTypes.func.isRequired,
+  // Branch-specific (see the component doc): optional, default to a no-op so a focused render that
+  // omits the row types needing them doesn't warn. The standalone page always wires all three.
+  onRemoveDayReference: PropTypes.func,
+  onUnlinkDayReference: PropTypes.func,
+  onRelinkDayReference: PropTypes.func,
 };
