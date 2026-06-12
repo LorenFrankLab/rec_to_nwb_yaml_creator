@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Split the business-rules validator into rule families (refactor only, no behavior change).** The
+  ~1104-LOC `validation/rulesValidation.js` (a single function inlining ~20 rules) is now a 96-LOC
+  composer over focused, individually-testable family modules under `validation/rules/`:
+  [referenceRules.js](src/validation/rules/referenceRules.js) (camera/file/task-epoch/FsGUI refs),
+  [optoRules.js](src/validation/rules/optoRules.js), [channelMapRules.js](src/validation/rules/channelMapRules.js)
+  and [electrodeGroupRules.js](src/validation/rules/electrodeGroupRules.js) (probe/channel geometry),
+  [dandiSubjectRules.js](src/validation/rules/dandiSubjectRules.js),
+  [identityRules.js](src/validation/rules/identityRules.js) (Spyglass identity divergence), and
+  [behavioralEventRules.js](src/validation/rules/behavioralEventRules.js). Each rule is now a pure
+  `(model) => Issue[]` function; the composer runs them in the **exact same order** (so a direct
+  `rulesValidation` caller sees a byte-identical list, even though `validate()` re-sorts the combined
+  schema+rules issues). No rule code/severity/ownership/message change. The validation suites (473)
+  + golden baselines pass unchanged; `CI=true` build clean.
+
 - **Decomposed the Day Editor Devices step (Phase 9c-3 — refactor only, no behavior change).** The
   ~860-LOC `pages/DayEditor/DevicesStep.jsx` is split into focused sibling components; the step is now
   a 424-LOC module that owns the effective-config resolution + the bad-channel state/handlers and
