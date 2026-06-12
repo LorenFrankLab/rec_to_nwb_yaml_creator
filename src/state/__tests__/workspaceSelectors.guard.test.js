@@ -14,10 +14,8 @@ import path from 'node:path';
  * Allowed exceptions (NOT consumers — they DEFINE or DETECT canonical/corrupt state):
  *   - `workspaceSelectors.js` (the guards live here),
  *   - `deviceNormalization.js` (the normalizer that PRODUCES canonical state),
- *   - `validation/` and the `domain/` day-validation family (raw-shape DETECTION must inspect
- *     the corrupt shape on purpose — a selector would hide it). That family is the Phase 9a split
- *     of the formerly-single `domain/validation.js` (`DOMAIN_VALIDATION_MODULES` below); exempting
- *     the split modules preserves the SAME coverage the one exempt file had pre-split,
+ *   - `validation/` and `domain/validation.js` (raw-shape DETECTION must inspect
+ *     the corrupt shape on purpose — a selector would hide it),
  *   - `pages/DayEditor/validation.js` (page-only field-blur helper; no raw collection reads).
  */
 
@@ -64,24 +62,11 @@ const FORBIDDEN = SELECTOR_OWNED.flatMap((field) => [
   new RegExp(`${field}\\.(?:map|flatMap|filter|find|some|forEach|reduce|entries)\\s*\\(`),
 ]);
 
-// The `domain/` day-validation family — the Phase 9a split of the formerly-single
-// `domain/validation.js`. Like `validation/`, these modules perform raw-shape DETECTION and must
-// inspect corrupt day/animal collections on purpose (a selector would hide what they exist to
-// surface). Exempting the split set preserves the identical coverage the one file had pre-split.
-const DOMAIN_VALIDATION_MODULES = new Set([
-  'validation.js', // public barrel
-  'dayValidationComposer.js',
-  'dayOverrideValidation.js',
-  'stepStatus.js',
-  'geometryProvenance.js',
-  'repairRouting.js',
-]);
-
 const isExempt = (file) =>
   file.endsWith('workspaceSelectors.js') ||
   file.endsWith('deviceNormalization.js') ||
   file.includes(`${path.sep}validation${path.sep}`) ||
-  (file.includes(`${path.sep}domain${path.sep}`) && DOMAIN_VALIDATION_MODULES.has(path.basename(file))) ||
+  file.endsWith(`domain${path.sep}validation.js`) ||
   file.includes(`${path.sep}__tests__${path.sep}`);
 
 describe('canonical read layer — no ad-hoc `|| []` on raw collection fields', () => {

@@ -6,8 +6,18 @@
  * the override validator ({@link module:domain/dayOverrideValidation}'s shadowed-override check)
  * and the composer's provenance re-tag ({@link tagBaseOwnershipByProvenance}), so the subtle path
  * matching can't drift between them. Extracted from `domain/validation.js` (Phase 9a) with no
- * behavior change. Pure and dependency-free.
+ * behavior change. Pure and dependency-free (type-only import of the shared issue shape).
  */
+
+import type { RepairableIssue } from './repairRouting';
+
+/** Which day-level geometry collections a day overrides (with an array). */
+export interface GeometryProvenance {
+  /** True iff the day overrides electrode groups. */
+  electrode_groups: boolean;
+  /** True iff the day overrides the ntrode channel map. */
+  ntrode: boolean;
+}
 
 /**
  * Classify a validation issue into its GEOMETRY domain — the single source for both the
@@ -21,10 +31,9 @@
  * `'electrode_groups'` (with the trailing 's') appears only in electrode-group paths; the
  * ntrode path is `ntrode_electrode_group_channel_map` (singular `electrode_group`).
  *
- * @param {{path?: string, instancePath?: string, field?: string, code?: string}} issue
- * @returns {'electrode_groups'|'ntrode'|null}
+ * @param issue
  */
-export function geometryDomainOf(issue) {
+export function geometryDomainOf(issue: RepairableIssue): 'electrode_groups' | 'ntrode' | null {
   const path = issue?.path || issue?.instancePath || '';
   const isBadChannel =
     issue?.field === 'bad_channels' ||
@@ -43,12 +52,16 @@ export function geometryDomainOf(issue) {
  * array. `bad_channels` are always a day-editable overlay (their rule already routes to
  * day), so they are not part of geometry provenance.
  *
- * @param {object} day - The persisted day.
- * @returns {{ electrode_groups: boolean, ntrode: boolean }} Whether each is day-overridden.
+ * @param day - The persisted day.
+ * @returns Whether each is day-overridden.
  */
-export function dayGeometryProvenance(day) {
-  const ov = day && typeof day === 'object' && !Array.isArray(day) ? day.deviceOverrides : null;
-  const rec = ov && typeof ov === 'object' && !Array.isArray(ov) ? ov : {};
+export function dayGeometryProvenance(day: unknown): GeometryProvenance {
+  const ov: unknown =
+    day && typeof day === 'object' && !Array.isArray(day)
+      ? (day as Record<string, unknown>).deviceOverrides
+      : null;
+  const rec: Record<string, unknown> =
+    ov && typeof ov === 'object' && !Array.isArray(ov) ? (ov as Record<string, unknown>) : {};
   return {
     electrode_groups: Array.isArray(rec.electrode_groups),
     ntrode: Array.isArray(rec.ntrode_electrode_group_channel_map),
@@ -61,12 +74,15 @@ export function dayGeometryProvenance(day) {
  * the snapshot can't clear them. Bad-channel errors are left alone (already day-owned by
  * their rule). Non-overridden domains are untouched (snapshot-owned → animal).
  *
- * @param {Array} issues - Base validation issues.
- * @param {{ electrode_groups: boolean, ntrode: boolean }} prov - Geometry provenance.
- * @returns {Array} Issues with explicit day `ownerSurface`/`step`/`focusPath` on the
+ * @param issues - Base validation issues.
+ * @param prov - Geometry provenance.
+ * @returns Issues with explicit day `ownerSurface`/`step`/`focusPath` on the
  *   day-overridden geometry errors; the focus anchor points at the override-removal control.
  */
-export function tagBaseOwnershipByProvenance(issues, prov) {
+export function tagBaseOwnershipByProvenance(
+  issues: RepairableIssue[],
+  prov: GeometryProvenance
+): RepairableIssue[] {
   if (!prov.electrode_groups && !prov.ntrode) return issues;
   return issues.map((issue) => {
     if (issue?.severity !== 'error') return issue;

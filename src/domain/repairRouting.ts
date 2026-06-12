@@ -10,6 +10,46 @@
  * ({@link module:domain/stepStatus}) consume these helpers. Pure and dependency-free.
  */
 
+/** The editable owner of a validation issue. */
+export type RepairSurface = 'day' | 'animal' | 'none';
+
+/** The Day-Editor data-entry steps an issue can route to (the catch-all is `validation`). */
+export type RoutableStep = 'overview' | 'devices' | 'epochs' | 'behavioral' | 'validation';
+
+/**
+ * The permissive validation-issue shape the routing/status helpers READ. Issues reach these
+ * helpers from heterogeneous sources — AJV schema errors (`instancePath`), app rules, and the
+ * domain issue producers — so every field is optional; the helpers inspect whatever is present.
+ * This is the shared "issue family" type the Phase 9a domain validation modules agree on (the
+ * convergence the `validation/taskCatalogValidation.ts` note anticipated).
+ */
+export interface RepairableIssue {
+  /** Stable app-rule code (absent on AJV schema issues). */
+  code?: string;
+  /** Dotted app path (e.g. `cameras[0].lens`). */
+  path?: string;
+  /** AJV instance path (e.g. `/cameras/0/lens`). */
+  instancePath?: string;
+  /** Offending field name. */
+  field?: string;
+  /** Day-Editor step the rule routes its repair to. */
+  step?: string;
+  /** Issue severity. */
+  severity?: string;
+  /** Repair surface set by the producing rule. */
+  repairSurface?: string;
+  /** Explicit owner surface (set by a producer or the provenance pass). */
+  ownerSurface?: string;
+  /** Explicit focus anchor for repair deep-linking. */
+  focusPath?: string;
+  /** Human-readable message. */
+  message?: string;
+  /** Short repair call-to-action. */
+  actionLabel?: string;
+  /** Structured repair command the UI dispatches. */
+  repairCommand?: unknown;
+}
+
 /**
  * Determine which editor step "owns" a single validation issue, by inspecting its
  * path. This is the single source of truth for issue→step routing, used both to
@@ -20,17 +60,17 @@
  * the data-entry steps (e.g. a bare `required` artifact whose path is just the
  * missing property name).
  *
- * @param {{path?: string, instancePath?: string}} issue - A validation issue.
- * @returns {'overview'|'devices'|'epochs'|'behavioral'|'validation'} The owning step id.
+ * @param issue - A validation issue.
+ * @returns The owning step id.
  */
-export function stepIdForIssue(issue) {
+export function stepIdForIssue(issue: RepairableIssue): RoutableStep {
   // Prefer an explicit, valid issue.step (set by validation rules) over path routing,
   // so a rule can land its repair action on the step that actually fixes it
   // (e.g. a camera-path issue routed to 'epochs'). Fall back to path routing when
   // step is absent or not a known data-entry step.
   const ROUTABLE_STEPS = ['overview', 'devices', 'epochs', 'behavioral', 'validation'];
   if (issue?.step && ROUTABLE_STEPS.includes(issue.step)) {
-    return issue.step;
+    return issue.step as RoutableStep;
   }
 
   const path = issue?.path || issue?.instancePath || '';
@@ -76,9 +116,8 @@ export function stepIdForIssue(issue) {
  * from RepairActions for back-compat). The catch-all `validation` step reads as
  * "Other required fields".
  *
- * @type {Record<string, string>}
  */
-export const STEP_LABELS = {
+export const STEP_LABELS: Record<string, string> = {
   overview: 'Overview',
   devices: 'Devices',
   epochs: 'Epochs',
@@ -92,10 +131,8 @@ export const STEP_LABELS = {
  * `animal` issues are only editable in the Animal Editor (device geometry, channel
  * maps, cameras, data-acq devices, subject identity); `none` issues point at a
  * read-only identity (slash ids) with no in-app editable target.
- *
- * @type {Set<string>}
  */
-export const REPAIR_SURFACES = new Set(['day', 'animal', 'none']);
+export const REPAIR_SURFACES: Set<string> = new Set(['day', 'animal', 'none']);
 
 /**
  * Explicit surface for each app rule code (Repair Routing Contract). This is the
@@ -103,10 +140,8 @@ export const REPAIR_SURFACES = new Set(['day', 'animal', 'none']);
  * this table is the fallback for app-rule codes and the single place the contract is
  * enumerated. Codes absent here fall through to path/code derivation (notably AJV
  * schema issues, which carry no app metadata).
- *
- * @type {Record<string, 'day'|'animal'|'none'>}
  */
-export const SURFACE_BY_CODE = {
+export const SURFACE_BY_CODE: Record<string, RepairSurface> = {
   // Editable ONLY in the Animal Editor (device geometry, channel maps, probe catalog,
   // electrode-group identity/location, cameras, data-acq devices, subject identity).
   channel_value_out_of_range: 'animal',
@@ -183,10 +218,8 @@ export const SURFACE_BY_CODE = {
  * Codes whose affected field is a read-only identity with no editable in-app target.
  * Kept distinct so the path/code FALLBACK (for schema issues) can honor them even when
  * the path otherwise looks like a subject/session field.
- *
- * @type {Set<string>}
  */
-const NONE_CODES = new Set(['subject_id_slash', 'session_id_slash']);
+const NONE_CODES: Set<string> = new Set(['subject_id_slash', 'session_id_slash']);
 
 /**
  * Derive the repair surface for an issue that carries no explicit `repairSurface` and
@@ -195,11 +228,10 @@ const NONE_CODES = new Set(['subject_id_slash', 'session_id_slash']);
  * the Animal Editor; everything else (session/overview, tasks, catch-all) is edited in
  * the Day Editor. Slash-id codes have no editable target.
  *
- * @param {{code?: string, path?: string, instancePath?: string}} issue
- * @returns {'day'|'animal'|'none'}
+ * @param issue
  */
-function deriveSurfaceFromPath(issue) {
-  if (NONE_CODES.has(issue?.code)) return 'none';
+function deriveSurfaceFromPath(issue: RepairableIssue): RepairSurface {
+  if (issue?.code != null && NONE_CODES.has(issue.code)) return 'none';
 
   // Normalize an AJV instancePath ("/cameras/0/lens") so the same substring checks
   // work as for the app rules' dotted paths ("cameras[0].lens").
@@ -261,10 +293,8 @@ function deriveSurfaceFromPath(issue) {
  * The animal-setup TABS (tabbed-workspace-ia) a field path can own, keyed by route `:tab` segment,
  * with the user-facing label (matching {@link SECTION_GROUPS} in AnimalView's section-nav). It is
  * the single field→section attribution shared by repair routing AND the section-nav blocking dot.
- *
- * @type {Record<string, string>}
  */
-export const ANIMAL_SETUP_TABS = {
+export const ANIMAL_SETUP_TABS: Record<string, string> = {
   'electrode-groups': 'Electrode Groups',
   'recording-system': 'Recording System',
   cameras: 'Cameras',
@@ -280,12 +310,12 @@ export const ANIMAL_SETUP_TABS = {
  * configuration history (the versioned electrode config) → `electrode-groups` (the default). AJV
  * instancePath slashes are normalized first; `fs_gui` is day-level so it never lands on an animal tab.
  *
- * @param {string} [fieldPath] - Issue path (dotted app path or AJV instancePath).
- * @returns {{ tab: string, label: string }} The owning tab key + label (defaults to electrode-groups).
+ * @param fieldPath - Issue path (dotted app path or AJV instancePath).
+ * @returns The owning tab key + label (defaults to electrode-groups).
  */
-export function animalSetupTabForFieldPath(fieldPath) {
+export function animalSetupTabForFieldPath(fieldPath?: string): { tab: string; label: string } {
   const path = String(fieldPath || '').replace(/^\//, '').replace(/\//g, '.');
-  const result = (tab) => ({ tab, label: ANIMAL_SETUP_TABS[tab] });
+  const result = (tab: string) => ({ tab, label: ANIMAL_SETUP_TABS[tab] });
 
   // Animal-level task-type catalog (camelCase `taskTypes` path) — match before the camera check so a
   // task-type issue routes to its own tab, not Cameras. (Day-level task issues are day-owned and
@@ -322,20 +352,21 @@ export function animalSetupTabForFieldPath(fieldPath) {
  * `issue.step`); the label is "Fix in {StepLabel}". For `animal`, the label is
  * "Fix in Animal Setup". For `none`, no button is rendered (the label is informational).
  *
- * @param {{code?: string, path?: string, instancePath?: string, step?: string, repairSurface?: string}} issue
- * @returns {{surface: 'day'|'animal'|'none', step: string|null, label: string}}
+ * @param issue
  */
-export function repairTargetForIssue(issue) {
+export function repairTargetForIssue(
+  issue: RepairableIssue
+): { surface: RepairSurface; step: string | null; label: string } {
   // Boundary 2: an EXPLICIT ownerSurface (set by the producer or the provenance pass in
   // validateDay) wins — ownership is declared, not inferred from path. The legacy
   // repairSurface / SURFACE_BY_CODE / path-derivation chain is the fallback for issues
   // that don't yet carry explicit ownership (AJV schema issues in unambiguous domains).
-  let surface =
+  let surface: RepairSurface | undefined =
     issue?.ownerSurface && REPAIR_SURFACES.has(issue.ownerSurface)
-      ? issue.ownerSurface
+      ? (issue.ownerSurface as RepairSurface)
       : issue?.repairSurface && REPAIR_SURFACES.has(issue.repairSurface)
-        ? issue.repairSurface
-        : SURFACE_BY_CODE[issue?.code];
+        ? (issue.repairSurface as RepairSurface)
+        : SURFACE_BY_CODE[issue?.code as string];
   if (!surface) {
     surface = deriveSurfaceFromPath(issue);
   }

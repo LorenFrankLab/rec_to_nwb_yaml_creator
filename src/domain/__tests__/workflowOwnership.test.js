@@ -113,14 +113,17 @@ describe('completeness invariant — every EMITTED validator code is owned (sour
   const validationDir = path.resolve(domainDir, '../validation');
 
   /**
-   * Collect hardcoded app-rule code literals from a tree's non-test `.js` sources.
+   * Collect hardcoded app-rule code literals from a tree's non-test `.js`/`.ts` sources.
+   * Scans BOTH extensions so the invariant survives the incremental TypeScript migration —
+   * validator codes emit from `.ts` modules too (Phase 9a moved the override/data-acq producers
+   * to `domain/dayOverrideValidation.ts`; `validation/taskCatalogValidation.ts` was already `.ts`).
    * @param dir
    */
   function emittedCodesIn(dir) {
     const codes = new Set();
     const files = readdirSync(dir, { recursive: true })
       .map((rel) => String(rel).split(path.sep).join('/'))
-      .filter((rel) => /\.js$/.test(rel) && !rel.includes('__tests__/') && !rel.includes('__mocks__/'));
+      .filter((rel) => /\.[jt]s$/.test(rel) && !rel.includes('__tests__/') && !rel.includes('__mocks__/'));
     for (const rel of files) {
       const text = readFileSync(path.join(dir, rel), 'utf8');
       // Form 1: `code: 'snake_case'` object property.

@@ -14,11 +14,32 @@
 import { getConfigHistory, getDataAcqDevices } from '../state/workspaceSelectors';
 import { badChannelRegressions } from './badChannelMonotonicity';
 import { geometryDomainOf } from './geometryProvenance';
+import type { RepairableIssue } from './repairRouting';
 import {
   isPlainRecord,
   classifyGeometryOverride,
   classifyBadChannelsContainer,
 } from './deviceOverrideMerge';
+
+/**
+ * The day fields the override / data-acq issue producers READ. Every field is `unknown`: these
+ * producers exist to surface CORRUPT day shapes, so the day is a tolerant-read boundary (a
+ * selector would hide exactly what they validate). The real `Day` is structurally assignable.
+ */
+interface ProducerDayInput {
+  /** Day-owned device overrides (any shape — corruption is surfaced, not trusted). */
+  deviceOverrides?: unknown;
+  /** Pinned configuration version (absent on legacy/recovered days). */
+  configurationVersion?: unknown;
+  /** Day-owned reference into the animal's recording-system catalog. */
+  data_acq_device_name?: unknown;
+}
+
+/** The merged-model fields {@link dayOverrideIssues} reads (the resolved ntrode id set). */
+interface MergedDayOverrideInput {
+  /** The resolved ntrode rows (always an array post-merge). */
+  ntrode_electrode_group_channel_map?: Array<{ ntrode_id?: unknown }>;
+}
 
 /**
  * Surface EVERY malformed/stale/shadowing `day.deviceOverrides` shape that
@@ -58,14 +79,18 @@ import {
  * repair lists via {@link validateDay}, so a blocking override is always repairable on
  * the Devices step, never "gated but invisible" or routed to a dead-end.
  *
- * @param {object} day - The day record (reads `deviceOverrides`).
- * @param {object} mergedDay - Merged metadata (resolved ntrode id set).
- * @param {Array} [baseIssues] - The `validate(mergedDay)` issues, used to detect whether
+ * @param day - The day record (reads `deviceOverrides`).
+ * @param mergedDay - Merged metadata (resolved ntrode id set).
+ * @param baseIssues - The `validate(mergedDay)` issues, used to detect whether
  *   an active array geometry override's contents are actually erroring (so a CLEAN valid
  *   override is not flagged). Defaults to empty (skips the shadowed-override check).
- * @returns {Array} Error issues for malformed/stale/shadowing overrides.
+ * @returns Error issues for malformed/stale/shadowing overrides.
  */
-export function dayOverrideIssues(day, mergedDay, baseIssues = []) {
+export function dayOverrideIssues(
+  day: ProducerDayInput | null | undefined,
+  mergedDay: MergedDayOverrideInput | null | undefined,
+  baseIssues: RepairableIssue[] = []
+): RepairableIssue[] {
   const overrides = day?.deviceOverrides;
   if (overrides == null) return [];
 
@@ -89,7 +114,7 @@ export function dayOverrideIssues(day, mergedDay, baseIssues = []) {
     }];
   }
 
-  const issues = [];
+  const issues: RepairableIssue[] = [];
 
   // Geometry overrides. The app never PRODUCES day-level geometry overrides (probe
   // geometry lives in animal configuration snapshots), but `resolveDayConfig` honors a
@@ -102,7 +127,7 @@ export function dayOverrideIssues(day, mergedDay, baseIssues = []) {
   // A geometry override is "erroring" only when its STRUCTURAL contents err — a day-owned
   // bad-channel overlay error on an ntrode path must NOT blame a clean override.
   // {@link geometryDomainOf} encodes that classification (shared with the provenance re-tag).
-  const GEOMETRY_DOMAINS = {
+  const GEOMETRY_DOMAINS: Record<string, (i: RepairableIssue) => boolean> = {
     electrode_groups: (i) => geometryDomainOf(i) === 'electrode_groups',
     ntrode_electrode_group_channel_map: (i) => geometryDomainOf(i) === 'ntrode',
   };
@@ -154,13 +179,16 @@ export function dayOverrideIssues(day, mergedDay, baseIssues = []) {
   // it — surface it as an export blocker rather than drop the marks. The fix is to move those
   // marks into the day's bad-channel overrides (`deviceOverrides.bad_channels`).
   const ntrodeOverride = overrides.ntrode_electrode_group_channel_map;
-  const badChannelsMap = isPlainRecord(overrides.bad_channels) ? overrides.bad_channels : {};
+  const badChannelsMap: Record<string, unknown> = isPlainRecord(overrides.bad_channels)
+    ? overrides.bad_channels
+    : {};
   if (Array.isArray(ntrodeOverride)) {
     ntrodeOverride.forEach((row) => {
       const rowBad = row?.bad_channels;
       if (!Array.isArray(rowBad) || rowBad.length === 0) return;
       const id = String(row?.ntrode_id);
-      const covered = Array.isArray(badChannelsMap[id]) && badChannelsMap[id].length > 0;
+      const coveredEntry = badChannelsMap[id];
+      const covered = Array.isArray(coveredEntry) && coveredEntry.length > 0;
       if (covered) return;
       issues.push({
         path: `deviceOverrides.bad_channels.${id}`,
@@ -201,10 +229,13 @@ export function dayOverrideIssues(day, mergedDay, baseIssues = []) {
         `failed-channel list). It is being ignored — remove the override to clear this error.`,
     });
   } else if (badKind === 'record') {
+    // `badKind === 'record'` ⟺ `isPlainRecord(bad)` (classifyBadChannelsContainer's contract),
+    // so `bad` is a record here — narrow for the per-key inspection below.
+    const badRecord = bad as Record<string, unknown>;
     const validNtrodeIds = new Set(
       (mergedDay?.ntrode_electrode_group_channel_map || []).map((n) => String(n?.ntrode_id))
     );
-    Object.keys(bad).forEach((key) => {
+    Object.keys(badRecord).forEach((key) => {
       if (!validNtrodeIds.has(String(key))) {
         issues.push({
           path: `deviceOverrides.bad_channels.${key}`,
@@ -219,7 +250,7 @@ export function dayOverrideIssues(day, mergedDay, baseIssues = []) {
             `A day-level bad-channel override targets ntrode "${key}", which no longer exists ` +
             `in this day's channel map. Remove the stale override or restore the ntrode.`,
         });
-      } else if (!Array.isArray(bad[key])) {
+      } else if (!Array.isArray(badRecord[key])) {
         // Value under a VALID ntrode key is not a list. resolveDayConfig declines to
         // apply it (smearing a scalar onto the ntrode row would surface as an
         // Animal-Editor schema error on a field the user can't reach there), so the
@@ -253,11 +284,14 @@ export function dayOverrideIssues(day, mergedDay, baseIssues = []) {
  * to fail closed rather than merely warn. Routes to the Devices step (where the pin control
  * lives) so the disabled-export state links to a real repair.
  *
- * @param {object} day - The day record.
- * @param {object} [animal] - The owning animal (for the configuration history).
- * @returns {Array} A single error issue, or `[]` when pinned / single-version / no animal.
+ * @param day - The day record.
+ * @param animal - The owning animal (for the configuration history).
+ * @returns A single error issue, or `[]` when pinned / single-version / no animal.
  */
-export function unpinnedConfigurationIssues(day, animal) {
+export function unpinnedConfigurationIssues(
+  day: ProducerDayInput | null | undefined,
+  animal: unknown
+): RepairableIssue[] {
   if (!animal || day?.configurationVersion != null) return [];
   const history = getConfigHistory(animal);
   if (history.length <= 1) return [];
@@ -292,14 +326,19 @@ export function unpinnedConfigurationIssues(day, animal) {
  *
  * An UNSET reference is the documented "use the animal default (first)" path and is NOT flagged.
  *
- * @param {object} day - The day record (`data_acq_device_name`).
- * @param {object} [animal] - The owning animal (its `data_acq_device` catalog).
- * @returns {Array} Zero or one issue (day-routed, Devices step, error).
+ * @param day - The day record (`data_acq_device_name`).
+ * @param animal - The owning animal (its `data_acq_device` catalog).
+ * @returns Zero or one issue (day-routed, Devices step, error).
  */
-export function danglingDataAcqRefIssue(day, animal) {
+export function danglingDataAcqRefIssue(
+  day: ProducerDayInput | null | undefined,
+  animal: unknown
+): RepairableIssue[] {
   const name = day?.data_acq_device_name;
   if (typeof name !== 'string' || name.trim() === '') return []; // unset → animal default: fine
-  if (getDataAcqDevices(animal).some((d) => d?.name === name)) return []; // resolves: fine
+  // `as object` bridges the selector's imprecise `@param {object}` JSDoc; it is null-safe at
+  // runtime (`getAnimalDevices(animal)` reads `animal?.devices`), so the cast is behavior-neutral.
+  if (getDataAcqDevices(animal as object).some((d) => d?.name === name)) return []; // resolves: fine
   return [
     {
       path: 'data_acq_device',
@@ -328,14 +367,15 @@ export function danglingDataAcqRefIssue(day, animal) {
  * {@link danglingDataAcqRefIssue}. The edit-time identity guard prevents creating such a catalog,
  * so this catches hand-edited / imported / legacy persisted state.
  *
- * @param {object} [animal] - The owning animal (its `devices.data_acq_device` catalog).
- * @returns {Array} One issue per divergent name (animal-routed, Devices step, error).
+ * @param animal - The owning animal (its `devices.data_acq_device` catalog).
+ * @returns One issue per divergent name (animal-routed, Devices step, error).
  */
-export function divergentDataAcqCatalogIssue(animal) {
-  const catalog = getDataAcqDevices(animal);
-  const seen = new Map(); // name -> first entry's hardware signature
-  const reported = new Set();
-  const issues = [];
+export function divergentDataAcqCatalogIssue(animal: unknown): RepairableIssue[] {
+  // `as object` bridges the selector's imprecise `@param {object}` JSDoc (null-safe at runtime).
+  const catalog = getDataAcqDevices(animal as object);
+  const seen = new Map<string, string>(); // name -> first entry's hardware signature
+  const reported = new Set<string>();
+  const issues: RepairableIssue[] = [];
   catalog.forEach((device) => {
     const name = device?.name;
     if (typeof name !== 'string' || name === '') return;
@@ -380,13 +420,20 @@ export function divergentDataAcqCatalogIssue(animal) {
  * restoring the channel. With no cross-day context (`animalDays` empty) there is nothing to
  * compare, so this is a no-op — preserving every existing single-day call site.
  *
- * @param {object} day - The day being checked.
- * @param {object} [animal] - The owning animal.
- * @param {Array} [animalDays] - The animal's day records (for the earlier same-config union).
- * @returns {Array} Zero or more error issues (one per regressing ntrode).
+ * @param day - The day being checked.
+ * @param animal - The owning animal.
+ * @param animalDays - The animal's day records (for the earlier same-config union).
+ * @returns Zero or more error issues (one per regressing ntrode).
  */
-export function badChannelUnfailIssues(day, animal, animalDays = []) {
-  const regressions = badChannelRegressions(animal, day, animalDays);
+export function badChannelUnfailIssues(
+  day: unknown,
+  animal: unknown,
+  animalDays: unknown[] = []
+): RepairableIssue[] {
+  // `as object` bridges badChannelRegressions' imprecise `@param {object}` JSDoc; it guards its
+  // inputs internally (cross-day comparison is a no-op for missing/corrupt data), so this is
+  // behavior-neutral.
+  const regressions = badChannelRegressions(animal as object, day as object, animalDays);
   return Object.keys(regressions).map((ntrodeId) => {
     const channels = regressions[ntrodeId];
     return {
