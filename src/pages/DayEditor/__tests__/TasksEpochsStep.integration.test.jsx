@@ -175,4 +175,26 @@ describe('Tasks & Epochs step (integration)', () => {
     // The day adopted the catalog: instances persisted ([] after the remove) and inline tasks retired.
     expect(JSON.parse(screen.getByTestId('day-task-instances').textContent)).toEqual([]);
   });
+
+  it('defining a new task type in the day adds the type to the animal AND a task instance to the day', async () => {
+    const user = userEvent.setup();
+    // Empty catalog + empty day, through the REAL store, so the full define→add→persist flow runs.
+    renderStepper({ animal: { taskTypes: [] }, day: { tasks: undefined, taskInstances: [] } });
+    await goToEpochs(user);
+
+    await user.click(screen.getByRole('button', { name: /define a new task type/i }));
+    await user.type(screen.getByLabelText(/task name/i), 'w-track');
+    await user.type(screen.getByLabelText('Description'), 'Alternation');
+    await user.type(screen.getByLabelText('Environment'), 'W-track');
+    await user.click(screen.getByRole('button', { name: /save task type/i }));
+
+    // The new type lands on the animal catalog AND a task instance lands on the day — in one action.
+    const taskTypes = JSON.parse(screen.getByTestId('animal-task-types').textContent);
+    expect(taskTypes).toEqual([expect.objectContaining({ id: 'tasktype-0', task_name: 'w-track' })]);
+    expect(JSON.parse(screen.getByTestId('day-task-instances').textContent)).toEqual([
+      { taskTypeId: 'tasktype-0', task_epochs: [] },
+    ]);
+    // The instance's epoch editor opened so the user assigns its epochs right away.
+    expect(screen.getByRole('button', { name: /save task for this day/i })).toBeInTheDocument();
+  });
 });

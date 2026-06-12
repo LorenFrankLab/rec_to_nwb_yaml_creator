@@ -117,7 +117,7 @@ export default function TasksEpochsStep(props) {
   const resolvedTasks = resolveTaskInstances(view.taskTypes, instances);
 
   const [instanceModal, setInstanceModal] = useState({ open: false, mode: 'add', editingIndex: null, preselectTypeId: null });
-  const [quickAdd, setQuickAdd] = useState({ open: false, reopenAdd: false, nameError: null });
+  const [quickAdd, setQuickAdd] = useState({ open: false, nameError: null });
   const [pendingRepair, setPendingRepair] = useState(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
@@ -226,17 +226,20 @@ export default function TasksEpochsStep(props) {
 
   /**
    * Open the inline "define a new task type" flow. Closes the instance picker first (never two
-   * stacked dialogs); `reopenAdd` re-opens the add picker afterward with the new type pre-selected.
-   * @param {boolean} reopenAdd Whether to reopen the add picker after the type is saved.
+   * stacked dialogs). Defining a type in the day adds it TO the day (see {@link handleSaveNewType}).
    */
-  function openQuickAdd(reopenAdd) {
+  function openQuickAdd() {
     setInstanceModal((prev) => ({ ...prev, open: false }));
-    setQuickAdd({ open: true, reopenAdd, nameError: null });
+    setQuickAdd({ open: true, nameError: null });
   }
 
   /**
+   * Save a newly-defined task type AND add it to this day in one action — defining a task in the day
+   * view means "I ran this task", so it should appear on the day without a separate Add Task step.
+   * Appends the type to the catalog and a task instance referencing it, then opens that instance's
+   * epoch editor so the user assigns the epochs it ran. A clashing name keeps the type modal open.
    *
-   * @param definition
+   * @param {object} definition - The cleaned `{ task_name, task_description, task_environment, camera_id }`.
    */
   function handleSaveNewType(definition) {
     const clashes = view.taskTypes.some((t) => t?.task_name === definition.task_name);
@@ -247,20 +250,17 @@ export default function TasksEpochsStep(props) {
       }));
       return;
     }
-    // Mint against the ANIMAL catalog (not the possibly-richer derived `view.taskTypes`): the new
-    // type is appended to the animal's real catalog, and `addTaskType` reuses this same id. For a
-    // derived day, `view.taskTypes`' ids are throwaway-until-committed — the reopened picker's
-    // `preselectTypeId` lands correctly because `resolveDayCatalogView` re-derives consistent ids
-    // after the animal write re-renders. (Do not persist `view.taskInstances` alongside this write.)
-    const newId = nextTaskTypeId(animalTaskTypes);
-    if (actions?.updateAnimal) {
-      actions.updateAnimal(ownerKey, { taskTypes: addTaskType(animalTaskTypes, definition) });
-    }
-    const reopenAdd = quickAdd.reopenAdd;
-    setQuickAdd({ open: false, reopenAdd: false, nameError: null });
-    if (reopenAdd) {
-      setInstanceModal({ open: true, mode: 'add', editingIndex: null, preselectTypeId: newId });
-    }
+    // Append to the WORKING catalog (`view.taskTypes`, which includes any derived-but-uncommitted
+    // types) so a derived day's existing instances don't dangle once we commit; add a task instance
+    // referencing the new type (epochs empty, set next). `commit` persists the catalog + instances
+    // (and converts a derived day). Then open the new instance's epoch editor.
+    const newId = nextTaskTypeId(view.taskTypes);
+    const nextTaskTypes = addTaskType(view.taskTypes, definition);
+    const insertIndex = instances.length;
+    const nextInstances = addTaskInstance(instances, newId, []);
+    setQuickAdd({ open: false, nameError: null });
+    commit(nextInstances, nextTaskTypes);
+    setInstanceModal({ open: true, mode: 'edit', editingIndex: insertIndex, preselectTypeId: null });
   }
 
   /**
@@ -337,7 +337,7 @@ export default function TasksEpochsStep(props) {
         taskInstances={instances}
         cameras={cameras}
         onAdd={handleAddTask}
-        onDefineNewType={() => openQuickAdd(false)}
+        onDefineNewType={() => openQuickAdd()}
         onEdit={handleEditTask}
         onRemove={handleRemoveTask}
         onReorder={handleReorder}
@@ -405,7 +405,7 @@ export default function TasksEpochsStep(props) {
           taskTypes={view.taskTypes}
           onSave={handleSaveInstance}
           onCancel={() => setInstanceModal({ open: false, mode: 'add', editingIndex: null, preselectTypeId: null })}
-          onDefineNewType={() => openQuickAdd(instanceModal.mode === 'add')}
+          onDefineNewType={() => openQuickAdd()}
         />
       )}
 
@@ -416,7 +416,7 @@ export default function TasksEpochsStep(props) {
           animal={animal}
           nameError={quickAdd.nameError}
           onSave={handleSaveNewType}
-          onCancel={() => setQuickAdd({ open: false, reopenAdd: false, nameError: null })}
+          onCancel={() => setQuickAdd({ open: false, nameError: null })}
         />
       )}
 

@@ -135,6 +135,22 @@ describe('TasksEpochsStep — pick/order catalog model', () => {
     expect(onFieldUpdate).toHaveBeenCalledWith('taskInstances', []);
   });
 
+  it('defining a new task type ADDS it to the day (no separate Add Task step)', async () => {
+    const user = userEvent.setup();
+    // Empty catalog + empty day so the new type takes id tasktype-0 and is the only instance.
+    const { onFieldUpdate } = renderStep({ animal: { taskTypes: [] }, day: { taskInstances: [] } });
+
+    await user.click(screen.getByRole('button', { name: /define a new task type/i }));
+    await user.type(screen.getByLabelText(/task name/i), 'w-track');
+    await user.type(screen.getByLabelText('Description'), 'Alternation');
+    await user.type(screen.getByLabelText('Environment'), 'W-track');
+    await user.click(screen.getByRole('button', { name: /save task type/i }));
+
+    // The day gets a task instance for the new type immediately (epochs empty, set next) — defining
+    // it is the act of adding it, not a precursor to a separate "Add Task".
+    expect(onFieldUpdate).toHaveBeenCalledWith('taskInstances', [{ taskTypeId: 'tasktype-0', task_epochs: [] }]);
+  });
+
   it('reorders instances through onFieldUpdate', async () => {
     const user = userEvent.setup();
     const { onFieldUpdate } = renderStep({
