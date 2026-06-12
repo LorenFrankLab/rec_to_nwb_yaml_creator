@@ -37,9 +37,9 @@ export interface RepairableIssue {
   /** Issue severity. */
   severity?: string;
   /** Repair surface set by the producing rule. */
-  repairSurface?: string;
+  repairSurface?: RepairSurface;
   /** Explicit owner surface (set by a producer or the provenance pass). */
-  ownerSurface?: string;
+  ownerSurface?: RepairSurface;
   /** Explicit focus anchor for repair deep-linking. */
   focusPath?: string;
   /** Human-readable message. */
@@ -363,9 +363,9 @@ export function repairTargetForIssue(
   // that don't yet carry explicit ownership (AJV schema issues in unambiguous domains).
   let surface: RepairSurface | undefined =
     issue?.ownerSurface && REPAIR_SURFACES.has(issue.ownerSurface)
-      ? (issue.ownerSurface as RepairSurface)
+      ? issue.ownerSurface
       : issue?.repairSurface && REPAIR_SURFACES.has(issue.repairSurface)
-        ? (issue.repairSurface as RepairSurface)
+        ? issue.repairSurface
         : SURFACE_BY_CODE[issue?.code as string];
   if (!surface) {
     surface = deriveSurfaceFromPath(issue);
