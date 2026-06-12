@@ -193,6 +193,7 @@
   .animal-view-body {
     grid-template-columns: 1fr;
   }
+
   .section-nav {
     border-right: none;
     border-bottom: 1px solid var(--border-color, #ddd7c9);

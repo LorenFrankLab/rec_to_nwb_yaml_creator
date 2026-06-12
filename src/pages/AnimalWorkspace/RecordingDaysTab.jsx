@@ -596,7 +596,10 @@ export function RecordingDaysTab({ animalId }) {
             );
           }
           return (
-          /* Day List */
+          /* Day List. `role="list"` is NOT redundant here: `.day-list` sets `list-style: none`,
+             which makes Safari + VoiceOver drop the implicit list role — the explicit role restores
+             it. The jsx-a11y rule can't see the CSS, so it's suppressed deliberately. */
+          // eslint-disable-next-line jsx-a11y/no-redundant-roles
           <ul className="day-list" role="list">
             {selectedDayClassification.map(({ dayId, record, status }) => {
               // A dangling reference (no record) is surfaced, not dropped — otherwise a

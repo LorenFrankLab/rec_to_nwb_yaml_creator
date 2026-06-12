@@ -4,12 +4,11 @@
  */
  body {
   color: black;
-
   background: linear-gradient(
     200.96deg,
-    #ffffff -29.09%,
-    #ffffff 1.77%,
-    #ffffff 129.35%
+    #fff -29.09%,
+    #fff 1.77%,
+    #fff 129.35%
   );
   font-family: sans-serif;
   overflow-y: scroll;
@@ -21,6 +20,7 @@
   margin: 5px 0 5px 10px;
   padding: 0;
   position: relative;
+
   // F3: the banner (logo + keyboard-shortcuts trigger) must sit above .primary-nav
   // (var(--z-base)), which is a later DOM sibling and would otherwise paint over and
   // intercept clicks. position is already set (relative here, fixed at >=750px below),
@@ -47,7 +47,7 @@
 }
 
 .duplicate-item {
-  margin: 0 0 7px 0;
+  margin: 0 0 7px;
   text-align: right;
 
   button {
@@ -76,7 +76,7 @@
   }
 
   li {
-    margin: 0 0 3px 0;
+    margin: 0 0 3px;
     max-width: 100%;
   }
 }
@@ -227,8 +227,8 @@ a:hover {
     opacity: 500;
   }
 
-  .data-list:after {
-    content: url(https://i.stack.imgur.com/i9WFO.png);
+  .data-list::after {
+    content: url("https://i.stack.imgur.com/i9WFO.png");
     margin-left: -20px;
     padding: 0.1em;
     pointer-events: none;
@@ -245,6 +245,7 @@ a:hover {
     cursor: pointer;
     vertical-align: super;
   }
+
   //
 
   .file-box {
@@ -260,8 +261,8 @@ a:hover {
       border-radius: 5px;
       appearance: none;
       font-size: 1rem;
-      box-shadow: 0px 8px 28px -6px rgb(24 39 75 / 12%),
-        0px 18px 88px -4px rgb(24 39 75 / 14%);
+      box-shadow: 0 8px 28px -6px rgb(24 39 75 / 12%),
+        0 18px 88px -4px rgb(24 39 75 / 14%);
       transition: all ease-in 0.1s;
       cursor: pointer;
       opacity: 0.9;
@@ -342,14 +343,13 @@ a:hover {
   margin-top: 10px;
 
   button {
-    background-color: white;
     margin: 5px;
     padding: 5px;
     border-radius: 5px;
     appearance: none;
     font-size: 1rem;
-    box-shadow: 0px 8px 28px -6px rgb(24 39 75 / 12%),
-      0px 18px 88px -4px rgb(24 39 75 / 14%);
+    box-shadow: 0 8px 28px -6px rgb(24 39 75 / 12%),
+      0 18px 88px -4px rgb(24 39 75 / 14%);
     transition: all ease-in 0.1s;
     cursor: pointer;
     opacity: 0.9;
@@ -518,9 +518,10 @@ a.nav-link:hover {
     background: #eee;
   }
 }
+
 /***** List of items *****/
 
-//--- Details/Summary settings
+// --- Details/Summary settings
 details {
   border: 1px solid black;
   border-radius: 4px;
@@ -528,7 +529,7 @@ details {
 
   &:hover,
   &:focus {
-    background: #ffffff;
+    background: #fff;
   }
 
   &[open] {
@@ -565,7 +566,7 @@ details {
   }
 }
 
-//-----------------------------
+// -----------------------------
 
 @media (min-width: 750px) {
   .page-container__nav__content {
@@ -589,9 +590,9 @@ details {
   }
 }
 
-//-----------------------------
+// -----------------------------
 // Validation Hints & Errors
-//-----------------------------
+// -----------------------------
 
 // Styling for instant validation with smart escalation (useQuickChecks + HintDisplay)
 // - Gray hints while typing (debounced onChange)
@@ -628,6 +629,7 @@ details {
     opacity: 0;
     transform: translateY(-2px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -648,13 +650,12 @@ details {
   left: -9999px;
   top: 0;
   z-index: var(--z-skip-link); // must beat the modal overlay (var(--z-modal)); was 999, below it
-
   padding: 0.75rem 1.5rem;
   background-color: #1976d2;
   color: white;
   text-decoration: none;
   font-weight: 500;
-  border-radius: 0 0 4px 0;
+  border-radius: 0 0 4px;
   
   &:focus {
     left: 0;

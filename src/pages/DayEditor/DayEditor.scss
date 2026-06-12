@@ -62,10 +62,12 @@
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
+
   /* `width: 100%` + the padding must stay INSIDE the grid track, or the panel overflows its
      1fr column (≈48px of padding) and forces a horizontal scrollbar. border-box folds the
      padding into the 100%. (The page is otherwise content-box, so set it explicitly here.) */
   box-sizing: border-box;
+
   /* In the `.day-editor-body` grid (230px 1fr), the panel is the 1fr track. A grid track's
      `1fr` is `minmax(auto, 1fr)`, so WITHOUT this it cannot shrink below its content's
      min-content width — wide content (the Export YAML <pre>, the channel-map tables) then
@@ -112,6 +114,7 @@
   align-items: center;
   gap: 0.5rem;
   width: 100%;
+
   /* width:100% fills the 230px nav column; without border-box the padding would push the item
      past the column (the grid has no gap, so it would overlap the panel content). */
   box-sizing: border-box;
@@ -328,7 +331,7 @@
 .form-field select:focus,
 .form-field textarea:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.15);
+  box-shadow: 0 0 0 3px rgb(21 101 192 / 15%);
 }
 
 /* Keep a visible focus ring for keyboard users (WCAG 2.4.7); also survives Windows
@@ -348,7 +351,7 @@
 
 .form-field input.invalid:focus,
 .form-field textarea.invalid:focus {
-  box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.1);
+  box-shadow: 0 0 0 3px rgb(211 47 47 / 10%);
 }
 
 /* ===== Read-Only Fields ===== */
@@ -1061,7 +1064,7 @@
     margin-bottom: 1.5rem;
 
     h3 {
-      margin: 0 0 0.5rem 0;
+      margin: 0 0 0.5rem;
       font-size: 1.2rem;
       color: #333;
     }
@@ -1117,7 +1120,7 @@
   user-select: none;
 
   &:hover {
-    background: #eeeeee;
+    background: #eee;
   }
 
   &:focus {
@@ -1347,10 +1350,12 @@
       border-left-color: #c62828;
       h3 { color: #c62828; }
     }
+
     &.validation-group-warning {
       border-left-color: #f57c00;
       h3 { color: #f57c00; }
     }
+
     &.validation-group-info {
       border-left-color: var(--color-primary);
       h3 { color: #1976d2; }
@@ -1431,7 +1436,7 @@
     border-radius: 4px;
     cursor: pointer;
 
-    &:hover { background: #eeeeee; }
+    &:hover { background: #eee; }
     &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
   }
 
@@ -1626,7 +1631,7 @@
     border-radius: 4px;
     cursor: pointer;
 
-    &:hover { background: #eeeeee; }
+    &:hover { background: #eee; }
     &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
   }
 
@@ -1773,16 +1778,19 @@
   border-radius: 6px;
   background: #fbfcfd;
 }
+
 .day-recording-system h3 {
   margin: 0 0 0.4rem;
   font-size: 1rem;
 }
+
 .day-recording-system label {
   display: block;
   font-weight: 600;
   font-size: 0.85rem;
   margin-bottom: 0.2rem;
 }
+
 .day-recording-system select {
   min-width: 16rem;
   max-width: 100%;

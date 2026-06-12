@@ -187,8 +187,8 @@ body {
   --radius-md: 8px;
 
   /* Shadows */
-  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
-  --shadow-modal: 0 4px 20px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 2px 4px rgb(0 0 0 / 10%);
+  --shadow-modal: 0 4px 20px rgb(0 0 0 / 30%);
 
   /* Z-index scale — the single source of truth for stacking order. Reconciles the
      former ad-hoc magic numbers (1, 2, 10, 20, 40, 100, 999, 1000, 1100). Phases

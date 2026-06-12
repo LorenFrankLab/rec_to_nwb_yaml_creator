@@ -8,7 +8,7 @@
 }
 
 .confirm-dialog-message {
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 1.5rem;
   color: #333;
   line-height: 1.5;
 }
@@ -43,7 +43,7 @@
 }
 
 .confirm-dialog .btn-save {
-  background-color: #0066cc;
+  background-color: #06c;
   color: white;
 
   &:hover {
@@ -62,13 +62,13 @@
 
 .confirm-dialog .btn-cancel:focus,
 .confirm-dialog .btn-save:focus {
-  outline: 2px solid #0066cc;
+  outline: 2px solid #06c;
   outline-offset: 2px;
 }
 
 /* A blue ring is invisible on the red danger button; use white + larger offset. */
 .confirm-dialog .btn-danger:focus {
-  outline: 2px solid #ffffff;
+  outline: 2px solid #fff;
   outline-offset: 3px;
   box-shadow: 0 0 0 2px #b71c1c;
 }

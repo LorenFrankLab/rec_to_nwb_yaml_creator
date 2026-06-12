@@ -24,9 +24,9 @@ import styles from './DayLifecycleLegend.module.css';
  */
 export default function DayLifecycleLegend({ summaryText = 'What do these statuses mean?' }) {
   return (
-    // role="group" + aria-label give the disclosure a stable accessible name regardless of how a
-    // given engine maps a bare <details>.
-    <details className={styles.legend} role="group" aria-label={summaryText}>
+    // aria-label gives the disclosure a stable accessible name; <details> already exposes a
+    // group/disclosure role implicitly, so no explicit role is needed.
+    <details className={styles.legend} aria-label={summaryText}>
       <summary className={styles.summary}>{summaryText}</summary>
       <dl className={styles.list}>
         {DAY_LIFECYCLE_ORDER.map((variant) => (

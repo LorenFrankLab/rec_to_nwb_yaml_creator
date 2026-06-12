@@ -170,6 +170,7 @@
   border: 1px solid #90caf9;
   border-radius: 6px;
   background-color: #e3f2fd;
+
   /* Long unbroken values (session ids, camera names) must wrap inside the box at narrow widths
      instead of pushing the page wider than the viewport. */
   min-width: 0;
@@ -318,6 +319,7 @@
 .effective-day-review-list dd {
   margin: 0;
   color: #2b2a25;
+
   /* Long values must wrap within the grid cell, not widen the page at narrow viewports. */
   min-width: 0;
   overflow-wrap: anywhere;

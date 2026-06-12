@@ -9,6 +9,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Re-armed the build gate (Phase 9b — `CI=true`, behavior-preserving).** The CI build now treats
+  ESLint warnings as errors again, so the build **fails on new build-surface warnings** (the
+  research's #3 ROI item — "build catches drift again"). `.github/workflows/test.yml` flips
+  `CI=false` → `CI=true`; the former ~130 build-surface warnings were cleared by:
+  - **Fixing the 5 genuine correctness warnings** (behavior-preserving): a write-only `useState`
+    value left unbound (`OverviewStep`), a redundant `role="group"` removed from a `<details>`
+    (`DayLifecycleLegend`), a deliberately-kept `role="list"` documented + suppressed where
+    `list-style: none` makes it non-redundant for Safari/VoiceOver (`RecordingDaysTab`), and two
+    `react-hooks/exhaustive-deps` suppressed with intent notes where adding the dep would change
+    behavior (the mount-only handshake in `AnimalWorkspace`, the keyboard-shortcut effect in
+    `AnimalCreationForm`).
+  - **Turning off the @param/@returns JSDoc TYPE rules** (`require-param-type`, `require-returns`,
+    `require-returns-type`, `check-types`) in `.eslintrc.js` — redundant with the ongoing .js → .ts
+    migration (where they're already off), so requiring JSDoc type annotations on soon-to-be-typed
+    files is churn. The doc-presence rules (`require-jsdoc`, `require-param`) and correctness rules
+    (`check-param-names`, `valid-types`) are unchanged. (This also dropped the broader `npm run lint`
+    debt from ~275 to ~7.)
+  - **Lint scripts normalized:** added a non-mutating `lint:check` (CI-style, no `--fix`) alongside
+    the existing dev `lint` (`--fix`), plus a `lint:css:fix` helper.
+- **Corrected the production `browserslist` to a modern baseline (Phase 9b).** It was the unmodified
+  Create React App default (`>0.2%, not dead, not op_mini all`), which silently resolved to include
+  iOS Safari 11, UC Browser, and Opera Mobile — never a deliberate support decision. Added
+  `not ios_saf < 15.4`, `not safari < 15.4`, `not and_uc > 0`, `not op_mob > 0`: the floor is now
+  iOS/Safari 15.4 (29 → 26 targets). This trims unnecessary polyfills/prefixes from the build and lets
+  the CSS use modern `inset` + color syntax. No app-behavior change on any supported browser.
+- **CSS hygiene — safe auto-fixes (Phase 9b).** Ran the risk-free stylelint auto-fixes (hex shortening
+  `#ffffff`→`#fff`, redundant `margin` shorthand, font-family quoting, `0px`→`0`, blank-line
+  normalization, modern `rgb(r g b / a%)` color notation, and the `inset` shorthand) — all
+  rendering-identical and within the modern browserslist floor above (modern color is Safari 12.1+,
+  `inset` is 14.1+). `.stylelintrc.json` keeps the stylelint-config-standard modern defaults but pins
+  the two rules whose auto-fix would exceed that floor: `media-feature-range-notation: prefix` (range
+  queries need Safari 16.4) and `selector-not-notation: simple` (multi-arg `:not()` needs 16.4). The
+  **full error-level ratchet + token work is deferred** to a dedicated CSS phase (~468 remaining
+  warnings: `declaration-strict-value` token substitution, specificity ordering, class/keyframe
+  renames). No visual change on any supported browser.
 - **Validation/domain logic split + incremental TypeScript (Phase 9a — refactor only, no behavior
   change).** The ~1200-LOC `domain/validation.js` monolith is split into five focused, individually
   testable modules; `domain/validation.js` becomes a thin public **barrel** re-exporting the identical

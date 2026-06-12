@@ -25,6 +25,7 @@
     font-family: inherit;
 
     &:hover { text-decoration: underline; }
+
     &:focus {
       outline: 2px solid var(--color-primary);
       outline-offset: 2px;

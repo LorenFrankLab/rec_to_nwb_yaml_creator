@@ -73,14 +73,20 @@
     "typecheck": "tsc --noEmit",
     "eject": "react-scripts eject",
     "lint": "eslint --fix --ext .js,.jsx,.ts,.tsx .",
+    "lint:check": "eslint --ext .js,.jsx,.ts,.tsx .",
     "lint:css": "stylelint \"src/**/*.{css,scss}\"",
+    "lint:css:fix": "stylelint \"src/**/*.{css,scss}\" --fix",
     "prepare": "husky"
   },
   "browserslist": {
     "production": [
       ">0.2%",
       "not dead",
-      "not op_mini all"
+      "not op_mini all",
+      "not ios_saf < 15.4",
+      "not safari < 15.4",
+      "not and_uc > 0",
+      "not op_mob > 0"
     ],
     "development": [
       "last 1 chrome version",

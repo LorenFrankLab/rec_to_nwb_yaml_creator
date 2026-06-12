@@ -71,7 +71,9 @@ export default function OverviewStep(props) {
   const dayDateKey = String(day.date ?? '').replace(/-/g, '');
 
   const [fieldErrors, setFieldErrors] = useState({});
-  const [validatingField, setValidatingField] = useState(null);
+  // Write-only: the setter drives the species-repair validation flow (below); the value itself
+  // is never read, so it's left unbound to avoid an unused-var warning while preserving behavior.
+  const [, setValidatingField] = useState(null);
   const [showInherited, setShowInherited] = useState(false);
   // Inline error for the species repair field — without it the field could silently
   // write an invalid value through to the animal, recreating the "blocked at export

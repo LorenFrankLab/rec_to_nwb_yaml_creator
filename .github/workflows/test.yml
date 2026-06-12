@@ -230,15 +230,14 @@ jobs:
         run: npm ci
 
       - name: Build production bundle
-        # CI=false is intentional and required: Create React App treats ESLint
-        # warnings as build errors when CI=true. The build currently surfaces ~79
-        # warnings across ~36 files (mostly missing-JSDoc-type rules, a few
-        # unused-vars and react-hooks/exhaustive-deps). Clearing them is deferred
-        # to a dedicated lint-cleanup pass (some live in src/state/store.js, which
-        # is slated for a separate refactor). Do NOT drop CI=false until the
-        # warning count is zero; do NOT suppress the rules globally. Tracked as
-        # known build debt.
-        run: CI=false npm run build
+        # CI=true ARMS the build gate (Phase 9b): Create React App treats ESLint warnings as build
+        # errors, so the build now FAILS on any new build-surface warning — drift is caught again.
+        # The former ~79 build-surface warnings were resolved by (a) fixing the genuine correctness
+        # warnings (unused-var, react-hooks/exhaustive-deps, jsx-a11y) and (b) turning off the
+        # @param/@returns JSDoc TYPE rules in .eslintrc.js (redundant with the .js→.ts migration,
+        # where they're already off). Do NOT revert to CI=false; if a new build-surface warning
+        # appears, fix it (or, for a documentation rule, reconsider the rule level deliberately).
+        run: CI=true npm run build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

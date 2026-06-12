@@ -42,7 +42,7 @@
     h2 {
       font-size: 1.5rem;
       font-weight: 500;
-      margin: 0 0 8px 0;
+      margin: 0 0 8px;
       color: var(--color-on-surface, #1c1b1f);
     }
 
@@ -82,7 +82,7 @@
       border: 1px solid var(--color-outline, #79747e);
       border-radius: 4px;
       font-size: 1rem;
-      background-color: var(--color-surface, #ffffff);
+      background-color: var(--color-surface, #fff);
       color: var(--color-on-surface, #1c1b1f);
       min-height: 48px; // Touch target minimum
 
