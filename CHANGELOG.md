@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed the workspace persistence layer under strict TS (refactor only, no behavior change).**
+  [state/persistence.js](src/state/persistence.ts) → `.ts`: `loadWorkspace` / `saveWorkspace` /
+  `clearWorkspace` / `ensureWorkspaceShape` / `isPlainObject` are typed, with a precise
+  `LoadWorkspaceResult` union (success / recovered / discarded / `null`) and a `LoadDiscardReason`
+  derived from an `as const` `LOAD_DISCARD_REASON`. Body is verbatim — only type tokens plus two
+  behavior-neutral casts (`defaults as Record<string, unknown>` for the keyed default lookup, and
+  `as const` on the reason enum). Also refined the consumed `migrateWorkspace` return into a proper
+  discriminated union (type-only) so the loader reads `.discarded` / `.workspace` without a cast. The
+  persistence + store-persistence + migration suites and golden baselines (174) stay byte-identical;
+  `npm run typecheck` + `CI=true` build clean; full suite 4793; e2e 104.
+
 - **Started typing `state/` under strict TS: the persisted-blob migration registry (refactor only, no
   behavior change).** [state/workspaceMigrations.js](src/state/workspaceMigrations.ts) → `.ts`:
   `migrateWorkspace`, the `MIGRATORS` registry, `migrateV1ToV2`, and `isPlainObject` are typed (the input
