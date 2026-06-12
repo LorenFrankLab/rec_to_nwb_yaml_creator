@@ -18,22 +18,34 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { quickChecks } from './quickChecks';
+import type { QuickCheckResult } from './quickChecks';
+
+/** Optional configuration for {@link useQuickChecks}, by check type. */
+export interface UseQuickChecksOptions {
+  /** Debounce delay in milliseconds (default: 300). */
+  debounceMs?: number;
+  /** Valid values for the `enum` check. */
+  validValues?: unknown[];
+  /** Minimum value for the `numberRange` check. */
+  min?: number;
+  /** Maximum value for the `numberRange` check. */
+  max?: number;
+  /** Unit to display for `numberRange` (e.g. 'nm', 'mm', 'degrees'). */
+  unit?: string;
+  /** Regular expression for the `pattern` check. */
+  pattern?: RegExp;
+  /** Custom message for the `pattern` check. */
+  patternMessage?: string;
+}
 
 /**
  * React hook for debounced quick validation checks
  *
- * @param {string} checkType - Type of validation ('required', 'dateFormat', 'enum', 'numberRange', 'pattern')
- * @param {object} options - Optional configuration
- * @param {number} options.debounceMs - Debounce delay in milliseconds (default: 300)
- * @param {Array} options.validValues - Valid values for enum check
- * @param {number} options.min - Minimum value for numberRange check
- * @param {number} options.max - Maximum value for numberRange check
- * @param {string} options.unit - Unit to display for numberRange (e.g., 'nm', 'mm', 'degrees')
- * @param {RegExp} options.pattern - Regular expression for pattern check
- * @param {string} options.patternMessage - Custom message for pattern check
- * @returns {{hint: object | null, validate: Function, clear: Function}}
+ * @param checkType - Type of validation ('required', 'dateFormat', 'enum', 'numberRange', 'pattern')
+ * @param options - Optional configuration
+ * @returns The current hint plus the validate / validateOnBlur / clear controls.
  */
-export function useQuickChecks(checkType, options = {}) {
+export function useQuickChecks(checkType: string, options: UseQuickChecksOptions = {}) {
   const {
     debounceMs = 300,
     validValues,
@@ -44,8 +56,8 @@ export function useQuickChecks(checkType, options = {}) {
     patternMessage
   } = options;
 
-  const [hint, setHint] = useState(null);
-  const timeoutRef = useRef(null);
+  const [hint, setHint] = useState<QuickCheckResult | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
    * Clear any pending validation and reset hint
@@ -60,12 +72,12 @@ export function useQuickChecks(checkType, options = {}) {
 
   /**
    * Run validation check (shared logic for validate and validateOnBlur)
-   * @param {string} path - Field path
-   * @param {any} value - Field value
-   * @returns {object|null} Validation result
+   * @param path - Field path
+   * @param value - Field value
+   * @returns Validation result
    */
-  const runValidation = useCallback((path, value) => {
-    let result = null;
+  const runValidation = useCallback((path: string, value: unknown): QuickCheckResult | null => {
+    let result: QuickCheckResult | null = null;
 
     switch (checkType) {
       case 'required':
@@ -101,10 +113,10 @@ export function useQuickChecks(checkType, options = {}) {
 
   /**
    * Validate a field value (debounced, shows hints)
-   * @param {string} path - Field path
-   * @param {any} value - Field value
+   * @param path - Field path
+   * @param value - Field value
    */
-  const validate = useCallback((path, value) => {
+  const validate = useCallback((path: string, value: unknown) => {
     // Cancel any pending validation
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
@@ -126,10 +138,10 @@ export function useQuickChecks(checkType, options = {}) {
 
   /**
    * Validate a field value on blur (immediate, escalates to error)
-   * @param {string} path - Field path
-   * @param {any} value - Field value
+   * @param path - Field path
+   * @param value - Field value
    */
-  const validateOnBlur = useCallback((path, value) => {
+  const validateOnBlur = useCallback((path: string, value: unknown) => {
     // Clear any pending debounced validation
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);

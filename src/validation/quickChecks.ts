@@ -13,11 +13,21 @@
  */
 
 /**
- * Check if a value is considered "empty" for required field validation
- * @param {any} value - Value to check
- * @returns {boolean} True if value is empty/null/undefined/whitespace
+ * A quick-check outcome: a lightweight feedback hint, or `null` when the value is valid. The
+ * `severity` is `'hint'` from these checks; {@link module:validation/useQuickChecks} escalates it to
+ * `'error'` on blur, so the field is widened to `'hint' | 'error'`.
  */
-function isEmpty(value) {
+export interface QuickCheckResult {
+  severity: 'hint' | 'error';
+  message: string;
+}
+
+/**
+ * Check if a value is considered "empty" for required field validation
+ * @param value - Value to check
+ * @returns True if value is empty/null/undefined/whitespace
+ */
+function isEmpty(value: unknown): boolean {
   if (value === null || value === undefined) {
     return true;
   }
@@ -40,10 +50,10 @@ function isEmpty(value) {
 /**
  * Check if a value should be treated as "not provided" for optional field validation.
  * Standardized helper for consistent empty-value handling across all checks
- * @param {any} value - Value to check
- * @returns {boolean} True if value is null/undefined/empty string
+ * @param value - Value to check
+ * @returns True if value is null/undefined/empty string
  */
-function isEmptyForOptionalField(value) {
+function isEmptyForOptionalField(value: unknown): boolean {
   if (value === null || value === undefined) {
     return true;
   }
@@ -63,7 +73,7 @@ export const quickChecks = {
    * @param {any} value - Field value
    * @returns {null|{severity: 'hint', message: string}} Null if valid, hint if invalid
    */
-  required(path, value) {
+  required(path: string, value: unknown): QuickCheckResult | null {
     if (isEmpty(value)) {
       return {
         severity: 'hint',
@@ -79,7 +89,7 @@ export const quickChecks = {
    * @param {string} value - Date string to validate
    * @returns {null|{severity: 'hint', message: string}} Null if valid, hint if invalid
    */
-  dateFormat(path, value) {
+  dateFormat(path: string, value: unknown): QuickCheckResult | null {
     // Use standardized empty check
     if (isEmptyForOptionalField(value)) {
       return null;
@@ -88,7 +98,7 @@ export const quickChecks = {
     // ISO 8601 format: YYYY-MM-DDTHH:MM:SS[.sss][Z|±HH:MM]
     const iso8601Pattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
 
-    if (!iso8601Pattern.test(value)) {
+    if (!iso8601Pattern.test(value as string)) {
       return {
         severity: 'hint',
         message: 'Date must be in ISO 8601 format (YYYY-MM-DDTHH:MM:SS, e.g., 2023-06-22T14:30:00)'
@@ -105,7 +115,7 @@ export const quickChecks = {
    * @param {Array} validValues - Array of allowed values
    * @returns {null|{severity: 'hint', message: string}} Null if valid, hint if invalid
    */
-  enum(path, value, validValues) {
+  enum(path: string, value: unknown, validValues: unknown[]): QuickCheckResult | null {
     // Use standardized empty check
     if (isEmptyForOptionalField(value)) {
       return null;
@@ -130,13 +140,19 @@ export const quickChecks = {
    * @param {string} [unit] - Unit to display (e.g., 'nm', 'mm', 'degrees')
    * @returns {null|{severity: 'hint', message: string}} Null if valid, hint if invalid
    */
-  numberRange(path, value, min, max, unit) {
+  numberRange(
+    path: string,
+    value: unknown,
+    min?: number,
+    max?: number,
+    unit?: string
+  ): QuickCheckResult | null {
     // More explicit empty check that handles all cases correctly
     if (value === null || value === undefined || value === '') {
       return null;
     }
 
-    const num = parseFloat(value);
+    const num = parseFloat(value as string);
 
     // If not a valid number, show immediate feedback
     if (isNaN(num)) {
@@ -173,14 +189,19 @@ export const quickChecks = {
    * @param {string} [customMessage] - Custom error message (optional)
    * @returns {null|{severity: 'hint', message: string}} Null if valid, hint if invalid
    */
-  pattern(path, value, pattern, customMessage) {
+  pattern(
+    path: string,
+    value: unknown,
+    pattern: RegExp,
+    customMessage?: string
+  ): QuickCheckResult | null {
     // Use standardized empty check for null/undefined/empty string
     // But validate whitespace-only strings (user provided a value, just invalid)
     if (value === null || value === undefined || value === '') {
       return null;
     }
 
-    if (!pattern.test(value)) {
+    if (!pattern.test(value as string)) {
       return {
         severity: 'hint',
         message: customMessage || 'Value has invalid format'

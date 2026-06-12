@@ -20,12 +20,51 @@
  * ends up with a resolved `ownerSurface`/`focusPath`.)
  */
 
+/** A serializable executable repair command (run by `repairCommands.js` to perform the reset). */
+export interface RepairCommand {
+  type: string;
+  field?: string;
+}
+
+/**
+ * A raw-shape validation issue, in the explicit ownership contract (`ownerSurface`/`repairStep`/
+ * `focusPath` + the executable `repairCommand`) with the legacy `repairSurface`/`step`/`path`
+ * mirror. Distinct from the rules' {@link module:validation/issueTypes.ValidationIssue} (a wider
+ * shape that carries ownership + a repair command); kept local like `taskCatalogValidation`'s
+ * `CatalogValidationIssue`.
+ */
+export interface RawShapeIssue {
+  /** Stable issue code (`malformed_day_collection`, `missing_configuration_history`, …). */
+  code: string;
+  /** Always a blocking error. */
+  severity: 'error';
+  /** The corrupt field key (also the focus anchor). */
+  field: string;
+  /** Who can edit the fix. */
+  ownerSurface: 'day' | 'animal';
+  /** The owning step id (used for day-step grouping / focus). */
+  repairStep: string;
+  /** Explicit focus anchor for repair deep-linking. */
+  focusPath: string;
+  /** Repair call-to-action label. */
+  actionLabel: string;
+  /** The serializable executable repair (a button can run it to perform the reset). */
+  repairCommand?: RepairCommand;
+  /** Legacy mirror of `ownerSurface` (consumers read until Boundary 2 migration). */
+  repairSurface: 'day' | 'animal';
+  /** Legacy mirror of `repairStep`. */
+  step: string;
+  /** Legacy mirror of `focusPath`. */
+  path: string;
+  /** Human-readable explanation. */
+  message: string;
+}
+
 /**
  * Whether `value` is a plain object record (not null, not an array).
- * @param {*} value
- * @returns {boolean}
+ * @param value
  */
-function isRecord(value) {
+function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
@@ -34,10 +73,8 @@ function isRecord(value) {
  * The owning Day-Editor step (`repairStep`) and a human label are shared with the UI
  * reset controls (one source of truth), so a flagged collection is repairable on the
  * step that renders it.
- *
- * @type {Array<{ key: string, repairStep: string, label: string }>}
  */
-export const RAW_DAY_ARRAY_FIELDS = [
+export const RAW_DAY_ARRAY_FIELDS: Array<{ key: string; repairStep: string; label: string }> = [
   { key: 'tasks', repairStep: 'epochs', label: 'tasks' },
   // Task-type catalog (Phase 8C): the day's ordered references into the animal catalog. A corrupt
   // non-array would be laundered (getDayTaskInstances returns null → export falls back to inline
@@ -55,10 +92,13 @@ export const RAW_DAY_ARRAY_FIELDS = [
  * its executable repair command: cameras reset to none, and the device
  * configuration history REBUILT from the animal's current devices (not emptied — an empty
  * history would itself fail the merge), with a label that names that distinction.
- *
- * @type {Array<{ key: string, label: string, repairCommand: object, actionLabel?: string }>}
  */
-export const RAW_ANIMAL_ARRAY_FIELDS = [
+export const RAW_ANIMAL_ARRAY_FIELDS: Array<{
+  key: string;
+  label: string;
+  repairCommand: { type: string };
+  actionLabel?: string;
+}> = [
   { key: 'cameras', label: 'cameras', repairCommand: { type: 'resetAnimalCameras' } },
   {
     key: 'configurationHistory',
@@ -71,19 +111,35 @@ export const RAW_ANIMAL_ARRAY_FIELDS = [
 /**
  * Build a malformed-collection issue in the explicit ownership contract.
  *
- * @param {object} opts
- * @param {string} opts.code - Issue code.
- * @param {string} opts.field - The corrupt field key (also the focus anchor).
- * @param {'day'|'animal'} opts.ownerSurface - Who can edit the fix.
- * @param {string} opts.repairStep - The owning step id (day) — used for routing/focus.
- * @param {string} opts.label - Human label for the collection.
- * @param {object} [opts.repairCommand] - The serializable executable repair; executing it
+ * @param opts
+ * @param opts.code - Issue code.
+ * @param opts.field - The corrupt field key (also the focus anchor).
+ * @param opts.ownerSurface - Who can edit the fix.
+ * @param opts.repairStep - The owning step id (day) — used for routing/focus.
+ * @param opts.label - Human label for the collection.
+ * @param opts.repairCommand - The serializable executable repair; executing it
  *   performs the reset this issue describes (see `repairCommands.js`).
- * @param {string} [opts.actionLabel] - Override the default `Reset ${label}` button label
+ * @param opts.actionLabel - Override the default `Reset ${label}` button label
  *   (e.g. "Rebuild …" for a configurationHistory rebuild rather than an empty reset).
- * @returns {object} Issue.
+ * @returns Issue.
  */
-function malformedCollectionIssue({ code, field, ownerSurface, repairStep, label, repairCommand, actionLabel }) {
+function malformedCollectionIssue({
+  code,
+  field,
+  ownerSurface,
+  repairStep,
+  label,
+  repairCommand,
+  actionLabel,
+}: {
+  code: string;
+  field: string;
+  ownerSurface: 'day' | 'animal';
+  repairStep: string;
+  label: string;
+  repairCommand?: RepairCommand;
+  actionLabel?: string;
+}): RawShapeIssue {
   const where = ownerSurface === 'day'
     ? 'It is treated as empty on export, which would silently drop data'
     : 'It shadows valid data and blocks export';
@@ -112,12 +168,12 @@ function malformedCollectionIssue({ code, field, ownerSurface, repairStep, label
  * non-array value is corruption the merge would launder; surface it as a blocking,
  * day-routed, repairable issue.
  *
- * @param {object} day - The persisted day record.
- * @returns {Array} Raw-shape issues (empty for a clean or non-record day).
+ * @param day - The persisted day record.
+ * @returns Raw-shape issues (empty for a clean or non-record day).
  */
-export function validateRawDay(day) {
+export function validateRawDay(day: unknown): RawShapeIssue[] {
   if (!isRecord(day)) return [];
-  const issues = [];
+  const issues: RawShapeIssue[] = [];
   for (const { key, repairStep, label } of RAW_DAY_ARRAY_FIELDS) {
     const value = day[key];
     if (value != null && !Array.isArray(value)) {
@@ -167,12 +223,12 @@ export function validateRawDay(day) {
 /**
  * Validate a RAW (persisted) animal's owned array collections.
  *
- * @param {object} animal - The persisted animal record.
- * @returns {Array} Raw-shape issues (empty for a clean or non-record animal).
+ * @param animal - The persisted animal record.
+ * @returns Raw-shape issues (empty for a clean or non-record animal).
  */
-export function validateRawAnimal(animal) {
+export function validateRawAnimal(animal: unknown): RawShapeIssue[] {
   if (!isRecord(animal)) return [];
-  const issues = [];
+  const issues: RawShapeIssue[] = [];
   for (const { key, label, repairCommand, actionLabel } of RAW_ANIMAL_ARRAY_FIELDS) {
     const value = animal[key];
     if (value != null && !Array.isArray(value)) {

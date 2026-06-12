@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Finished typing the `validation/` core under strict TS (refactor only, no behavior change).** The
+  last five `.js` modules are now `.ts`: [index](src/validation/index.ts) (the unified `validate()` /
+  `validateField()` sort boundary), [schemaValidation](src/validation/schemaValidation.ts) (AJV),
+  [rawShape](src/validation/rawShape.ts) (the raw-shape export gate), [quickChecks](src/validation/quickChecks.ts),
+  and [useQuickChecks](src/validation/useQuickChecks.ts) (the debounced instant-feedback hook). **The
+  entire `validation/` directory is now TypeScript.** Bodies are verbatim — only type tokens plus
+  behavior-preserving casts (`value as string` where a `RegExp.test` / `parseFloat` already coerces at
+  runtime; `error: any` for the untyped `require('ajv')` chain). `ValidationIssue` gained optional
+  `instancePath?` / `schemaPath?` so it covers AJV schema issues too (the unified Issue shape `index`
+  documented); `rawShape` keeps its own `RawShapeIssue` (the ownership-contract shape, like
+  `taskCatalogValidation`'s `CatalogValidationIssue`); `quickChecks` exposes `QuickCheckResult`.
+  Validation suites + golden baselines (473) byte-identical; `npm run typecheck` + `CI=true` build
+  clean; full suite 4793. **Step 3 (final) of typing the `validation/` core.**
+
 - **Typed the custom business-rules validation layer under strict TS (refactor only, no behavior change).**
   The seven `validation/rules/*` families (reference / opto / channelMap / electrodeGroup / dandiSubject /
   identity / behavioralEvent) and the `rulesValidation` composer are now `.ts` under `strict`, producing a

@@ -38,6 +38,10 @@ export interface ValidationIssue {
   step?: string;
   /** Short repair call-to-action. */
   actionLabel?: string;
+  /** Original AJV instance path (schema issues only, e.g. `/subject/weight`). */
+  instancePath?: string;
+  /** Original AJV schema path (schema issues only, for debugging). */
+  schemaPath?: string;
 }
 
 /**

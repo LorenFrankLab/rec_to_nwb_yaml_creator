@@ -7,24 +7,19 @@
 
 import { schemaValidation } from './schemaValidation';
 import { rulesValidation } from './rulesValidation';
+import type { ValidationIssue, ValidationModel } from './issueTypes';
 
-/**
- * @typedef {object} Issue
- * @property {string} path - Normalized path: "subject.weight", "cameras[0].id"
- * @property {string} code - Error code: "required", "pattern", "missing_camera", "duplicate_channels", etc.
- * @property {"error"|"warning"} severity - Error severity level
- * @property {string} message - User-friendly error message
- * @property {string} [instancePath] - Original AJV path (for schema errors): "/subject/weight"
- * @property {string} [schemaPath] - Original AJV schema path (for schema errors)
- */
+// The unified issue shape (schema + rules) is `ValidationIssue` (validation/issueTypes.ts):
+// `path`/`code`/`message`/`severity` always present, with optional `instancePath`/`schemaPath`
+// carried by AJV schema errors.
 
 /**
  * Unified validation function combining schema and rules validation
  *
- * @param {object} model - The form data to validate
- * @returns {Issue[]} Sorted array of all validation issues
+ * @param model - The form data to validate
+ * @returns Sorted array of all validation issues
  */
-export function validate(model) {
+export function validate(model: ValidationModel): ValidationIssue[] {
   const schemaIssues = schemaValidation(model);
   const rulesIssues = rulesValidation(model);
 
@@ -43,11 +38,11 @@ export function validate(model) {
 /**
  * Validates a specific field path and returns only issues for that subtree
  *
- * @param {object} model - The form data to validate
- * @param {string} fieldPath - Dot notation path (e.g., "subject.weight", "cameras[0]")
- * @returns {Issue[]} Issues for that field and its children
+ * @param model - The form data to validate
+ * @param fieldPath - Dot notation path (e.g., "subject.weight", "cameras[0]")
+ * @returns Issues for that field and its children
  */
-export function validateField(model, fieldPath) {
+export function validateField(model: ValidationModel, fieldPath: string): ValidationIssue[] {
   const allIssues = validate(model);
 
   // Filter to issues that match the field path or are children of it
