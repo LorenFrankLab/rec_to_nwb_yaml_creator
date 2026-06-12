@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Decomposed the Recording Days pane (Phase 9c-2 — refactor only, no behavior change).** The
+  ~848-LOC `pages/AnimalWorkspace/RecordingDaysTab.jsx` is split into focused view components;
+  the tab is now a 496-LOC controller that owns the create/duplicate/delete/copy/repair state +
+  handlers and composes the pieces. No lifecycle/status semantics, copy, or mobile-layout change.
+  - **New components:** [AnimalSetupCard.jsx](src/pages/AnimalWorkspace/AnimalSetupCard.jsx) (the
+    first-run "Set up this animal" onboarding card), [ExistingDataReview.jsx](src/pages/AnimalWorkspace/ExistingDataReview.jsx)
+    (the recovered/imported "Review existing data" state), [DayList.jsx](src/pages/AnimalWorkspace/DayList.jsx)
+    (the empty-state + per-day rows with their statuses/actions; co-locates `humanizeNeedsFixingLabel`),
+    and [DuplicateDayModal.jsx](src/pages/AnimalWorkspace/DuplicateDayModal.jsx) (the single-date
+    duplicate picker).
+  - **Public surface unchanged:** `RecordingDaysTab` is still the only export (the legacy Workspace
+    and the tabbed AnimalView render the same implementation). The AnimalWorkspace + AnimalView test
+    suites pass unchanged; golden baselines byte-identical; `CI=true` build clean.
+
 - **Decomposed the Validation Summary (Phase 9c-1 — refactor only, no behavior change).** The
   ~1117-LOC `pages/ValidationSummary/index.jsx` is split into focused, individually-testable modules;
   `index.jsx` is now a 306-LOC page composition. No wording, count, status-chip, or export-eligibility

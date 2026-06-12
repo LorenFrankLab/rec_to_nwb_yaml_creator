@@ -8,6 +8,10 @@
  * banner, recovered/wrong-owner/dangling day rows, calendar create, per-row + animal delete
  * confirms with the downloaded-artifacts caveat) is preserved byte-for-byte.
  *
+ * Phase 9c-2 split the pane's view pieces into focused sibling components with no behavior change —
+ * `AnimalSetupCard`, `ExistingDataReview`, `DayList`, `DuplicateDayModal`; this module owns the
+ * pane's state + the create/duplicate/delete/copy/repair handlers and composes the pieces.
+ *
  * Landmark-neutral: it renders only the pane content + its confirm dialogs (NOT a `<main>`),
  * so each host owns its single `#main-content`.
  */
@@ -23,7 +27,6 @@ import {
   getAnimalSubject,
   getConfigHistory,
   getDataAcqDevices,
-  getDaySession,
   getMostRecentDayId,
 } from '../../state/workspaceSelectors';
 import {
@@ -31,61 +34,21 @@ import {
   normalizeNtrodeMapWithDefaults,
 } from '../../utils/deviceNormalization';
 import CopyFromAnimalDialog from '../AnimalEditor/CopyFromAnimalDialog';
-import { getDayRowStatus } from '../../domain/workflowStatus';
-import { DAY_LIFECYCLE } from '../../domain/dayLifecycle';
-import { humanizeValidationMessage } from '../../domain/humanizeValidationMessage';
-import { getAnimalSectionStatus, getAnimalBlockingSections, SECTION_STATUS } from '../../domain/sectionStatus';
 import {
   classifyAnimalDays,
   DAY_STATUS,
-  dayHasArtifacts,
-  describeOwner,
   isPresentRecordStatus,
 } from '../../domain/dayRecovery';
 import { DOWNSTREAM_NOT_DELETED_NOTE } from '../../domain/animalDeleteCascade';
-import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { validateRawAnimal } from '../../validation/rawShape';
 import { applyRepairCommand } from '../../state/repairCommands';
-import RawCorruptionBanner from '../../components/RawCorruptionBanner';
 import { CalendarDayCreator } from '../../components/CalendarDayCreator/CalendarDayCreator';
 import DayLifecycleLegend from '../../components/DayLifecycleLegend/DayLifecycleLegend';
-import { ConfirmDialog, Modal } from '../../components/Modal';
-
-/**
- * The first-run "Set up this animal" card sections, in the same order and with the same keys as
- * the section-nav "Animal setup" group (so the card and the nav rings read ONE truth via
- * {@link getAnimalSectionStatus}). The `hint` states honestly WHEN a section applies — none is
- * mandatory, because a behavior-only day needs no electrodes (overview decision 7).
- */
-const SETUP_CARD_SECTIONS = [
-  { key: 'electrode-groups', label: 'Electrode Groups', hint: 'if ephys' },
-  { key: 'recording-system', label: 'Recording System', hint: 'data acquisition' },
-  { key: 'cameras', label: 'Cameras', hint: 'if video' },
-  { key: 'optogenetics', label: 'Optogenetics', hint: 'if opto' },
-];
-
-
-// The day-row status separator between "Needs fixing" and its reason (em-dash, padded).
-const NEEDS_FIXING_SEPARATOR = ' — ';
-
-/**
- * Display-only: humanize the reason half of a "Needs fixing — {reason}" row label. The reason is a
- * raw validation message that can expose a schema key (e.g. `experiment_description cannot be empty`
- * or `must have required property 'task_environment'`); we sentence-case/translate it for users.
- * The "Needs fixing" prefix and the non-needs-fixing labels (Draft/Ready/Exported) pass through
- * unchanged. Pure.
- *
- * @param {string} label - The row status label from getDayRowStatus.
- * @returns {string} The display label.
- */
-function humanizeNeedsFixingLabel(label) {
-  if (typeof label !== 'string') return label;
-  const sepIndex = label.indexOf(NEEDS_FIXING_SEPARATOR);
-  if (sepIndex === -1) return label;
-  const prefix = label.slice(0, sepIndex + NEEDS_FIXING_SEPARATOR.length);
-  const reason = label.slice(sepIndex + NEEDS_FIXING_SEPARATOR.length);
-  return `${prefix}${humanizeValidationMessage(reason)}`;
-}
+import { ConfirmDialog } from '../../components/Modal';
+import AnimalSetupCard from './AnimalSetupCard';
+import ExistingDataReview from './ExistingDataReview';
+import DayList from './DayList';
+import DuplicateDayModal from './DuplicateDayModal';
 
 /**
  * RecordingDaysTab Component
@@ -365,6 +328,29 @@ export function RecordingDaysTab({ animalId }) {
   const hasOtherAnimals =
     Object.keys(animals).filter((id) => id !== selectedAnimalId).length > 0;
 
+  // Raw-shape corruption drives the existing-data review state below.
+  const rawIssues = validateRawAnimal(selectedAnimal);
+  // Count the recording-day RECORDS actually present (indexed + recovered), not just the index
+  // length — otherwise a missing/corrupt index would say "Found 0 recording days" while recovered
+  // records render below.
+  const dayCount = selectedDayClassification.filter((d) => isPresentRecordStatus(d.status)).length;
+  const configCount = getConfigHistory(selectedAnimal).length;
+  // The setup card is the first-run onboarding affordance: show it until the animal is ESTABLISHED
+  // — a subject is set AND it has at least one recording day. Behavior-only days are valid, so
+  // "established" does NOT require any particular hardware section.
+  const subjectPresent = Boolean(getAnimalSubject(selectedAnimal).subject_id);
+  const showSetupCard = !(subjectPresent && dayCount > 0);
+  // Existing data needs an explicit review state ONLY when there is something to review: raw-shape
+  // corruption, a corrupt days reference, or recovered/wrong-owner day records. A clean, established
+  // animal (days present, nothing corrupt) does NOT show this banner — it would otherwise compete
+  // with "Add Recording Days" forever after the first day.
+  const hasCorruption =
+    rawIssues.length > 0 ||
+    selectedDaysCorrupt ||
+    selectedOrphanDayIds.length > 0 ||
+    selectedWrongOwnerDayIds.length > 0;
+  const showReview = hasCorruption;
+
   return (
     <>
       {/* Selected Animal: Day List */}
@@ -400,164 +386,32 @@ export function RecordingDaysTab({ animalId }) {
         </header>
 
         {/* First-run "Set up this animal" card + the (separate) existing-data review state.
-            The card is the LOUD onboarding affordance for a new/under-configured animal; it
-            reads the SAME per-section todo state as the section-nav hollow-○ rings
-            (getAnimalSectionStatus), so "todo" is not signalled three ways. It is honest and
-            NON-gating (behavior-only days are valid) and disappears once the animal is
-            established. The "Review existing data" state is a different concern (recovered/
-            imported review) and is kept verbatim. */}
-        {(() => {
-          // Raw-shape corruption drives the existing-data review state below.
-          const rawIssues = validateRawAnimal(selectedAnimal);
-          // Count the recording-day RECORDS actually present (indexed + recovered), not
-          // just the index length — otherwise a missing/corrupt index would say "Found 0
-          // recording days" while recovered records render below.
-          const dayCount = selectedDayClassification.filter(
-            (d) => isPresentRecordStatus(d.status)
-          ).length;
-          const configCount = getConfigHistory(selectedAnimal).length;
-          // The card is the first-run onboarding affordance: show it until the animal is
-          // ESTABLISHED — a subject is set AND it has at least one recording day. Behavior-only
-          // days are valid, so "established" does NOT require any particular hardware section
-          // (the never-configured sections keep their neutral todo state in the card + nav).
-          const subjectPresent = Boolean(getAnimalSubject(selectedAnimal).subject_id);
-          const showSetupCard = !(subjectPresent && dayCount > 0);
-          // Which setup sections hold an export-blocking error — the SAME source the section-nav red
-          // ● reads (no second mapping), so the card's per-section state can't contradict the nav.
-          const setupBlockingSections = getAnimalBlockingSections(selectedAnimal, days);
-          // Existing data needs an explicit review state ONLY when there is something to review:
-          // raw-shape corruption, a corrupt days reference, or recovered/wrong-owner day records.
-          // A clean, established animal (days present, nothing corrupt) does NOT show this banner —
-          // it would otherwise compete with "Add Recording Days" forever after the first day.
-          const hasCorruption =
-            rawIssues.length > 0 ||
-            selectedDaysCorrupt ||
-            selectedOrphanDayIds.length > 0 ||
-            selectedWrongOwnerDayIds.length > 0;
-          const showReview = hasCorruption;
-          return (
-            <>
-              {showSetupCard && (
-                <section className="setup-card" aria-label="Set up this animal">
-                  <h3 className="setup-card-heading">Set up this animal</h3>
-                  <p className="setup-card-intro">
-                    Configure the shared hardware this animal&apos;s recording days will
-                    reference. Add only what your recordings use — a behavior-only day needs no
-                    electrodes, and each section is referenced per day.
-                  </p>
-                  {hasOtherAnimals && (
-                    <button
-                      type="button"
-                      className="setup-card-copy-button button-secondary"
-                      onClick={() => setCopyDialogOpen(true)}
-                      aria-label="Copy from another animal — electrode groups, cameras, recording system"
-                    >
-                      Copy from another animal…
-                    </button>
-                  )}
-                  <ul className="setup-card-list">
-                    {SETUP_CARD_SECTIONS.map((section) => {
-                      // Three honest states that AGREE with the section-nav (decision 11): a section
-                      // that holds an export-BLOCKING error reads "Needs fixing" (never "Done"), so
-                      // the onboarding card can't tell the user a section is fine while the nav shows
-                      // it red. Blocking outranks the neutral never-configured "To do".
-                      const blocking = setupBlockingSections.has(section.key);
-                      const todo =
-                        !blocking &&
-                        getAnimalSectionStatus(selectedAnimal, section.key) === SECTION_STATUS.TODO;
-                      const stateLabel = blocking ? 'Needs fixing' : todo ? 'To do' : 'Done';
-                      const actionVerb = blocking ? 'Fix' : todo ? 'Set up' : 'Review';
-                      const itemModifier = blocking
-                        ? 'setup-card-item-blocking'
-                        : todo
-                          ? 'setup-card-item-todo'
-                          : 'setup-card-item-done';
-                      return (
-                        <li key={section.key} className={`setup-card-item ${itemModifier}`}>
-                          <span className="setup-card-item-name">{section.label}</span>
-                          <span className="setup-card-item-hint">{section.hint}</span>
-                          <span className="setup-card-item-state">{stateLabel}</span>
-                          <a
-                            className="setup-card-item-action"
-                            href={`#/animal/${selectedAnimalId}/${section.key}`}
-                            // A links-list reader hears six actions; name each by its section
-                            // ("Set up Cameras", not a non-unique "Set up →"). The arrow is decorative.
-                            aria-label={`${actionVerb} ${section.label}`}
-                          >
-                            {actionVerb} <span aria-hidden="true">→</span>
-                          </a>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
-              )}
+            The card is the LOUD onboarding affordance for a new/under-configured animal; the
+            review state is a different concern (recovered/imported review). Both read the SAME
+            per-section / classification truth the component derives above. */}
+        {showSetupCard && (
+          <AnimalSetupCard
+            animalId={selectedAnimalId}
+            animal={selectedAnimal}
+            days={days}
+            hasOtherAnimals={hasOtherAnimals}
+            onCopyFromAnimal={() => setCopyDialogOpen(true)}
+          />
+        )}
 
-              {showReview && (
-                <section
-                  className={`existing-data-review ${hasCorruption ? 'existing-data-review-corrupt' : ''}`}
-                  aria-label="Existing data review"
-                >
-                  <h3 className="existing-data-review-heading">Review existing data</h3>
-                  <p className="existing-data-review-intro">
-                    Found {dayCount} recording {dayCount === 1 ? 'day' : 'days'} and{' '}
-                    {configCount} hardware {configCount === 1 ? 'configuration' : 'configurations'} for{' '}
-                    {selectedAnimal.id}.{' '}
-                    {hasCorruption
-                      ? 'Some saved data is corrupt — resolve it before exporting.'
-                      : 'Review electrodes and cameras before exporting to confirm they match this animal.'}
-                  </p>
-                  {/* Corrupt recording-day reference: the list isn't an array, so the days
-                      can't be shown. Not folded into the day export gate (the day RECORDS
-                      are fine; only the animal's index is corrupt) — surfaced here for
-                      re-import/recreation. */}
-                  {selectedDaysCorrupt && (
-                    <p className="existing-data-review-corrupt-note" role="alert">
-                      This animal&apos;s recording-day list is corrupt (expected a list), so
-                      its index can&apos;t be read.{' '}
-                      {selectedOrphanDayIds.length > 0
-                        ? 'The recovered day records below are shown from the day store directly.'
-                        : 'Re-import or recreate this animal’s data.'}
-                    </p>
-                  )}
-                  {selectedOrphanDayIds.length > 0 && (
-                    <p className="existing-data-review-corrupt-note" role="alert">
-                      {selectedOrphanDayIds.length} recovered recording{' '}
-                      {selectedOrphanDayIds.length === 1 ? 'day is' : 'days are'} not listed in
-                      this animal&apos;s day index (shown below as &quot;not in day list&quot;).{' '}
-                      <a href={`#/animal/${selectedAnimalId}/export`}>
-                        Open this animal&apos;s Validation &amp; Export
-                      </a>{' '}
-                      to re-link {selectedOrphanDayIds.length === 1 ? 'it' : 'them'}.
-                    </p>
-                  )}
-                  {selectedWrongOwnerDayIds.length > 0 && (
-                    <p className="existing-data-review-corrupt-note" role="alert">
-                      {selectedWrongOwnerDayIds.length} day{' '}
-                      {selectedWrongOwnerDayIds.length === 1 ? 'is' : 'are'} listed here but
-                      belong to a different animal (shown below as &quot;belongs to …&quot;).
-                      They are not exported with this animal — remove them from this
-                      animal&apos;s list.
-                    </p>
-                  )}
-                  {/* Reuse the shipped recovery surface: executable resets for corrupt
-                      animal-owned collections. Self-hides when there is no corruption. */}
-                  <RawCorruptionBanner
-                    animal={selectedAnimal}
-                    fields={['cameras', 'data_acq_device', 'configurationHistory']}
-                    onRepair={handleRepair}
-                  />
-                  <a
-                    className="existing-data-review-link"
-                    href={`#/animal/${selectedAnimalId}/export`}
-                  >
-                    Open this animal&apos;s Validation &amp; Export
-                  </a>
-                </section>
-              )}
-            </>
-          );
-        })()}
+        {showReview && (
+          <ExistingDataReview
+            animalId={selectedAnimalId}
+            animal={selectedAnimal}
+            dayCount={dayCount}
+            configCount={configCount}
+            hasCorruption={hasCorruption}
+            daysCorrupt={selectedDaysCorrupt}
+            orphanDayIds={selectedOrphanDayIds}
+            wrongOwnerDayIds={selectedWrongOwnerDayIds}
+            onRepair={handleRepair}
+          />
+        )}
 
         {/* Calendar for creating multiple days */}
         {showCalendar && (
@@ -576,188 +430,16 @@ export function RecordingDaysTab({ animalId }) {
             collapsed by default so it never crowds the list. */}
         {selectedDayClassification.length > 0 && <DayLifecycleLegend />}
 
-        {(() => {
-          // Render straight from the domain classification (ok / dangling_reference /
-          // recovered_unlinked), so the list shows recovered records (never hidden behind
-          // "No recording days yet") and every row's kind is the single domain truth.
-          if (selectedDayClassification.length === 0) {
-            return selectedDaysCorrupt ? (
-              /* Corrupt index AND no recoverable records — see the review state above. */
-              <div className="empty-state">
-                <p>This animal&apos;s recording-day list is corrupt and can&apos;t be shown.</p>
-                <p>See &quot;Review existing data&quot; above to resolve it.</p>
-              </div>
-            ) : (
-              /* Empty State: No Days */
-              <div className="empty-state">
-                <p>No recording days yet.</p>
-                <p>Add your first recording day to get started.</p>
-              </div>
-            );
-          }
-          return (
-          /* Day List. `role="list"` is NOT redundant here: `.day-list` sets `list-style: none`,
-             which makes Safari + VoiceOver drop the implicit list role — the explicit role restores
-             it. The jsx-a11y rule can't see the CSS, so it's suppressed deliberately. */
-          // eslint-disable-next-line jsx-a11y/no-redundant-roles
-          <ul className="day-list" role="list">
-            {selectedDayClassification.map(({ dayId, record, status }) => {
-              // A dangling reference (no record) is surfaced, not dropped — otherwise a
-              // recovered day disappears. Consistent with the cross-day Validation summary.
-              if (status === DAY_STATUS.DANGLING_REFERENCE) {
-                return (
-                  <li key={dayId} className="day-item day-item-missing">
-                    <div className="day-link day-link-missing" role="alert">
-                      <div className="day-info">
-                        <span className="day-date">{dayId}</span>
-                        <span className="day-session-id">
-                          Saved record missing or corrupt —{' '}
-                          <a href={`#/animal/${selectedAnimalId}/export`}>
-                            review in this animal&apos;s Validation &amp; Export
-                          </a>
-                          .
-                        </span>
-                      </div>
-                      <div className="day-status">
-                        <span className="status-chip error">Missing record</span>
-                      </div>
-                    </div>
-                  </li>
-                );
-              }
-
-              // Wrong owner: indexed here but the record belongs to another animal. Don't
-              // render it as an ordinary recording day (that implies it's this animal's and
-              // exportable). Surface a warning + an in-place unlink repair.
-              if (status === DAY_STATUS.WRONG_OWNER) {
-                return (
-                  <li key={dayId} className="day-item day-item-missing">
-                    <div className="day-link day-link-missing" role="alert">
-                      <div className="day-info">
-                        <span className="day-date">{record.date || dayId}</span>
-                        <span className="day-session-id">
-                          Belongs to {describeOwner(record.animalId)} — listed here by mistake; not
-                          exported with this animal.
-                        </span>
-                      </div>
-                      <div className="day-status">
-                        <button
-                          type="button"
-                          className="btn-secondary"
-                          onClick={() => actions.unlinkDayReference(selectedAnimalId, dayId)}
-                          aria-label={`Remove ${record.date || dayId} from ${selectedAnimalId} (belongs to ${describeOwner(record.animalId)})`}
-                        >
-                          Remove from this animal
-                        </button>
-                      </div>
-                    </div>
-                  </li>
-                );
-              }
-
-              const isOrphan = status === DAY_STATUS.RECOVERED_UNLINKED;
-              // Guard session: a recovered day can carry a malformed (scalar/array) session,
-              // which a raw `.session_description` read would crash on (getDaySession → {}).
-              const date = record.date;
-              const session = getDaySession(record);
-              // Decision 12: the row is triage. session description rides under the date ONLY
-              // when present (a recognition aid, never a hole when absent), truncated by CSS.
-              const sessionDescription =
-                typeof session.session_description === 'string'
-                  ? session.session_description.trim()
-                  : '';
-              // ONE plain-language status, read-only over the SAME export gate the day editor
-              // uses (per row), so a day that went stale (validated/exported before a referenced
-              // camera broke) reads the honest "Needs fixing", not a stale flag. mergeDayMetadata
-              // throws on a corrupt/missing configuration — caught here and surfaced as a
-              // needs-fixing row by getDayRowStatus(…, null), never a crash.
-              let mergedDay = null;
-              try {
-                mergedDay = mergeDayMetadata(selectedAnimal, record);
-              } catch (err) {
-                // eslint-disable-next-line no-console
-                console.debug(`[recording-days] could not merge day "${dayId}" for status:`, err);
-              }
-              const rowStatus = getDayRowStatus(selectedAnimal, record, mergedDay, selectedAnimalDays);
-              // A recovered-unlinked day is valid metadata but NOT exportable until it is re-linked
-              // (the batch export filters it out), so its row must not claim export-readiness. When
-              // the validation lifecycle would read Ready/Validated/Exported, show the actionable
-              // linkage blocker instead ("Re-link to export" — complements the date's "not in day
-              // list" note); an orphan that Needs fixing / is Draft keeps that status (more urgent,
-              // and it doesn't falsely claim exportable). Re-link from this animal's Validation &
-              // Export tab (linked in the review section above).
-              const claimsExportReady =
-                rowStatus.variant === DAY_LIFECYCLE.READY ||
-                rowStatus.variant === DAY_LIFECYCLE.VALIDATED ||
-                rowStatus.variant === DAY_LIFECYCLE.EXPORTED;
-              const displayStatus =
-                isOrphan && claimsExportReady
-                  ? { variant: DAY_LIFECYCLE.DRAFT, label: 'Re-link to export' }
-                  : rowStatus;
-              // The "Needs fixing — {reason}" reason is a raw validation message (a schema key can
-              // leak through, e.g. `experiment_description …`). Humanize ONLY for this display label
-              // — getDayRowStatus stays pure so its reason can still be parsed elsewhere if needed.
-              const rowStatusLabel = humanizeNeedsFixingLabel(displayStatus.label);
-
-              return (
-                <li key={dayId} className={`day-item ${isOrphan ? 'day-item-orphan' : ''}`}>
-                  <a href={`#/day/${dayId}`} className="day-link">
-                    <div className="day-info">
-                      <span className="day-date">
-                        {date}
-                        {isOrphan && (
-                          <span className="day-orphan-note"> ⚠ not in day list</span>
-                        )}
-                      </span>
-                      {sessionDescription && (
-                        <span className="day-session-desc" title={sessionDescription}>
-                          {sessionDescription}
-                        </span>
-                      )}
-                    </div>
-                    <div className="day-status">
-                      <span className={`day-row-status day-row-status-${displayStatus.variant}`}>
-                        {rowStatusLabel}
-                      </span>
-                    </div>
-                  </a>
-                  {/* Lifecycle cleanup (Task 8): a secondary/destructive delete, OUTSIDE
-                      the navigation link (not nested in the <a>) so it can't be hit while
-                      opening the day. Only on ordinary (OK) rows — recovered/wrong-owner
-                      rows have their own repair paths above. */}
-                  {status === DAY_STATUS.OK && (
-                    <div className="day-item-actions">
-                      <button
-                        type="button"
-                        className="btn-secondary-text"
-                        onClick={() => openDuplicateDay({ dayId, date })}
-                        aria-label={`Duplicate recording day ${date || dayId}…`}
-                      >
-                        Duplicate day…
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-danger-text"
-                        onClick={() =>
-                          setPendingDeleteDay({
-                            dayId,
-                            date,
-                            sessionId: session.session_id,
-                            hasArtifacts: dayHasArtifacts(record),
-                          })
-                        }
-                        aria-label={`Delete recording day ${date || dayId}…`}
-                      >
-                        Delete day…
-                      </button>
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-          );
-        })()}
+        <DayList
+          classification={selectedDayClassification}
+          daysCorrupt={selectedDaysCorrupt}
+          animalId={selectedAnimalId}
+          animal={selectedAnimal}
+          animalDays={selectedAnimalDays}
+          onUnlinkDayReference={actions.unlinkDayReference}
+          onDuplicateDay={openDuplicateDay}
+          onDeleteDay={setPendingDeleteDay}
+        />
       </div>
 
       <ConfirmDialog
@@ -783,52 +465,18 @@ export function RecordingDaysTab({ animalId }) {
         onCancel={() => setPendingDeleteDay(null)}
       />
 
-      <Modal
+      <DuplicateDayModal
         isOpen={pendingDuplicateDay != null}
+        source={pendingDuplicateDay}
+        date={duplicateDate}
+        error={duplicateError}
         onClose={cancelDuplicateDay}
-        title="Duplicate recording day"
-        titleId="duplicate-day-title"
-        describedById="duplicate-day-desc"
-      >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            confirmDuplicateDay();
-          }}
-        >
-          <p id="duplicate-day-desc">
-            Clone{' '}
-            <strong>{pendingDuplicateDay?.date || pendingDuplicateDay?.dayId}</strong> to a new
-            date. The new day reproduces this day&apos;s tasks, behavioral events, keywords,
-            technical settings, configuration version, and bad-channel overrides.
-          </p>
-          <label htmlFor="duplicate-day-date">
-            New date
-            <input
-              id="duplicate-day-date"
-              type="date"
-              value={duplicateDate}
-              onChange={(e) => {
-                setDuplicateDate(e.target.value);
-                setDuplicateError('');
-              }}
-            />
-          </label>
-          {duplicateError && (
-            <p role="alert" className="form-error">
-              {duplicateError}
-            </p>
-          )}
-          <div className="modal-actions">
-            <button type="button" className="btn-secondary" onClick={cancelDuplicateDay}>
-              Cancel
-            </button>
-            <button type="submit" className="btn-primary">
-              Duplicate day
-            </button>
-          </div>
-        </form>
-      </Modal>
+        onSubmit={confirmDuplicateDay}
+        onDateChange={(value) => {
+          setDuplicateDate(value);
+          setDuplicateError('');
+        }}
+      />
 
       <CopyFromAnimalDialog
         open={copyDialogOpen}
