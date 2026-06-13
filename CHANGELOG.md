@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed the React state-shell hooks under strict TS (refactor only, behavior-preserving).**
+  [state/useWorkspacePersistence.js](src/state/useWorkspacePersistence.ts),
+  [state/useWorkspace.js](src/state/useWorkspace.ts), [state/useEpochCleanup.js](src/state/useEpochCleanup.ts),
+  [state/store.js](src/state/store.ts) → `.ts`, and [state/StoreContext.js](src/state/StoreContext.tsx) → `.tsx`
+  (the workspace store's hook layer). React-hook typing: `useState<string|null>` / `useRef<…|null>` generics,
+  `ReturnType<typeof setTimeout>` for the retry timer, param interfaces (`UseWorkspacePersistenceParams` /
+  `UseEpochCleanupParams`), `WorkspacePersistence extends PersistenceStatus`, and `StoreProviderProps` /
+  `StoreContextValue = ReturnType<typeof useStore>`. **Hook bodies — effect timing, the 500ms debounce + single
+  2s retry, the `commitWorkspace` ref-lockstep, the memo deps — are unchanged.** One shape-trust cast
+  (`initialWorkspace as unknown as Workspace` at the `useState` initializer — the boundary where the loosely
+  typed hydration result becomes the canonical `Workspace`), `(err as Error).message` catch casts, `any` on the
+  still-untyped `useLegacyForm` destructure, and loose `(file: any)`/`(task: any)` over legacy form data. The one
+  runtime change: **`StoreContext` drops its runtime `PropTypes`** in favor of the typed `StoreProviderProps`
+  interface — redundant in `.tsx`, and React strips PropTypes in production, so prod behavior is unchanged
+  (only dev-time prop warnings for `.jsx` callers are superseded by compile-time types). Zero `.ts`/`.tsx`
+  consumers. **This completes the `state/` directory's TS migration except the legacy form (`useLegacyForm`).**
+  `npm run typecheck` + `CI=true` build clean; the full store-consuming suite (845 across 81 files) + 3
+  source-scanning guards pass; full suite 4793; e2e 104.
+
 - **Typed the YAML-import flow under strict TS (refactor only, round-trip byte-identity preserved).**
   [state/yamlImport.js](src/state/yamlImport.ts), [state/yamlImportPlan.js](src/state/yamlImportPlan.ts),
   and [state/yamlImportApply.js](src/state/yamlImportApply.ts) → `.ts` (the import is the inverse of the

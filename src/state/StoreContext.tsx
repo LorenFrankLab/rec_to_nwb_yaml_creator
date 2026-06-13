@@ -40,14 +40,26 @@
  */
 
 import { createContext, useContext, useMemo } from 'react';
-import PropTypes from 'prop-types';
+import type { ReactNode } from 'react';
 import { useStore } from './store';
+import type { InitialWorkspaceState } from './workspaceHydration';
+
+/** The shared store value exposed via context: the same object `useStore` returns. */
+export type StoreContextValue = ReturnType<typeof useStore>;
+
+/** Props for {@link StoreProvider}. */
+export interface StoreProviderProps {
+  /** Child components. */
+  children: ReactNode;
+  /** Optional initial state for the store (for testing). */
+  initialState?: InitialWorkspaceState | null;
+}
 
 /**
  * React Context for the store.
  * Provides access to shared form state, actions, and selectors.
  */
-const StoreContext = createContext(null);
+const StoreContext = createContext<StoreContextValue | null>(null);
 
 /**
  * StoreProvider Component
@@ -65,10 +77,10 @@ const StoreContext = createContext(null);
  * - model (formData) is only updated when data actually changes
  * - actions and selectors maintain stable references (they're already memoized in useStore)
  *
- * @param {object} props - Component props
- * @param {React.ReactNode} props.children - Child components
- * @param {object} [props.initialState] - Optional initial state for the store (for testing)
- * @returns {JSX.Element} Provider component
+ * @param props - Component props.
+ * @param props.children - Child components.
+ * @param props.initialState - Optional initial state for the store (for testing).
+ * @returns Provider component.
  *
  * @example
  * <StoreProvider>
@@ -81,7 +93,7 @@ const StoreContext = createContext(null);
  *   <SubjectFields />
  * </StoreProvider>
  */
-export function StoreProvider({ children, initialState }) {
+export function StoreProvider({ children, initialState }: StoreProviderProps) {
   const store = useStore(initialState);
 
   // Memoize context value to prevent unnecessary re-renders
@@ -106,24 +118,14 @@ export function StoreProvider({ children, initialState }) {
   );
 }
 
-StoreProvider.propTypes = {
-  children: PropTypes.node.isRequired,
-  initialState: PropTypes.object,
-};
-
 /**
  * useStoreContext Hook
  *
  * Provides access to the shared store from any component within StoreProvider.
  * Throws an error if used outside StoreProvider to prevent silent bugs.
  *
- * @returns {object} Store object
- * @returns {object} return.model - Current form state (read-only)
- * @returns {object} return.actions - State mutation functions
- * @returns {object} return.selectors - Computed/derived data functions
- * @returns {import('./workspaceTypes').PersistenceStatus} return.persistence - Workspace save/load status
- *
- * @throws {Error} If used outside StoreProvider
+ * @returns The shared store object (`{ model, actions, selectors, persistence }`).
+ * @throws If used outside StoreProvider.
  *
  * @example
  * function MyComponent() {
@@ -141,7 +143,7 @@ StoreProvider.propTypes = {
  *   return <div>Session: {sessionId}</div>;
  * }
  */
-export function useStoreContext() {
+export function useStoreContext(): StoreContextValue {
   const context = useContext(StoreContext);
 
   if (!context) {

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useLegacyForm } from './useLegacyForm';
 import { useWorkspace } from './useWorkspace';
 import { useEpochCleanup } from './useEpochCleanup';
+import type { InitialWorkspaceState } from './workspaceHydration';
 
 /**
  * Lightweight store facade that provides unified access to form state, actions, and selectors.
@@ -15,13 +16,8 @@ import { useEpochCleanup } from './useEpochCleanup';
  * The public shape returned here (`{ model, selectors, actions, persistence }`) is the same
  * object graph today's consumers (e.g. `StoreContext`) rely on.
  *
- * @param {object} initialState - Optional initial state (defaults to defaultYMLValues)
- * @returns {object} Store object
- * @returns {object} return.model - The current form state (WARNING: NOT deep-frozen, do not mutate directly)
- * @returns {object} return.model.workspace - Workspace state (animals, days, settings)
- * @returns {object} return.actions - All state mutation functions
- * @returns {object} return.selectors - Computed/derived data functions
- * @returns {object} return.persistence - Real persistence status (never part of `model`)
+ * @param initialState - Optional initial state (defaults to defaultYMLValues)
+ * @returns The store object (`{ model, selectors, actions, persistence }`).
  *
  * @example
  * // Legacy single-session mode (backward compatible)
@@ -36,8 +32,10 @@ import { useEpochCleanup } from './useEpochCleanup';
  * actions.createAnimal('remy', { species: 'Rattus norvegicus', ... });
  * const days = selectors.getAnimalDays('remy');
  */
-export function useStore(initialState = null) {
-  const { formData, setFormData, legacyActions, legacySelectors } = useLegacyForm(initialState);
+export function useStore(initialState: InitialWorkspaceState | null = null) {
+  // `useLegacyForm` is still untyped JS (the legacy form slice, converted in a later phase); treat
+  // its result loosely until then.
+  const { formData, setFormData, legacyActions, legacySelectors }: any = useLegacyForm(initialState);
   const { workspace, workspaceActions, workspaceSelectors, persistence } = useWorkspace(initialState);
 
   // Cross-slice data integrity: clear orphaned task epochs from associated files,

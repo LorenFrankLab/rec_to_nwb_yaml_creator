@@ -1,4 +1,17 @@
 import { useEffect, useRef } from 'react';
+import type { Workspace } from './workspaceTypes';
+
+/** Inputs to {@link useEpochCleanup}. */
+export interface UseEpochCleanupParams {
+  /** Legacy single-session form state (loose). */
+  formData: Record<string, any>;
+  /** Legacy form state setter (callback form). */
+  setFormData: (updater: (prev: any) => any) => void;
+  /** Workspace state (accepted for call-site stability; not auto-scrubbed). */
+  workspace: Workspace;
+  /** Workspace day updater (accepted for call-site stability; not used to auto-scrub). */
+  updateDay: (dayId: string, updates: any) => void;
+}
 
 /**
  * Legacy data-integrity effect: clear orphaned task-epoch references in the
@@ -17,14 +30,18 @@ import { useEffect, useRef } from 'react';
  * the Day Editor (TasksEpochsStep). `workspace` / `updateDay` are still accepted
  * for call-site compatibility but no longer drive an automatic scrub.
  *
- * @param {object} params
- * @param {object} params.formData - Legacy single-session form state.
- * @param {Function} params.setFormData - Legacy form state setter.
- * @param {object} params.workspace - Workspace state (animals, days, settings).
- * @param {Function} params.updateDay - Workspace day updater `(dayId, updates) => void`.
- * @returns {void}
+ * @param params - The legacy form slice + the workspace slice.
+ * @param params.formData - Legacy single-session form state.
+ * @param params.setFormData - Legacy form state setter.
+ * @param params.workspace - Workspace state (animals, days, settings).
+ * @param params.updateDay - Workspace day updater `(dayId, updates) => void`.
  */
-export function useEpochCleanup({ formData, setFormData, workspace, updateDay }) {
+export function useEpochCleanup({
+  formData,
+  setFormData,
+  workspace,
+  updateDay,
+}: UseEpochCleanupParams): void {
   // ----- Legacy formData cleanup (unchanged behavior) -----
   // Uses a ref to track the last set of valid epochs to avoid infinite loops; only
   // runs cleanup when the valid epochs actually change (when tasks change).
@@ -33,7 +50,7 @@ export function useEpochCleanup({ formData, setFormData, workspace, updateDay })
   useEffect(() => {
     // Get currently valid task epochs from all tasks
     const validTaskEpochs = (formData.tasks || [])
-      .flatMap((task) => task.task_epochs || [])
+      .flatMap((task: any) => task.task_epochs || [])
       .filter(Boolean); // Remove empty/null values
 
     // Serialize for comparison
@@ -52,10 +69,10 @@ export function useEpochCleanup({ formData, setFormData, workspace, updateDay })
     setFormData((currentFormData) => {
       // Check if any cleanup is needed
       const hasOrphanedEpochsInFiles = (currentFormData.associated_files || []).some(
-        (file) => file.task_epochs && !validTaskEpochs.includes(file.task_epochs)
+        (file: any) => file.task_epochs && !validTaskEpochs.includes(file.task_epochs)
       );
       const hasOrphanedEpochsInVideos = (currentFormData.associated_video_files || []).some(
-        (file) => file.task_epochs && !validTaskEpochs.includes(file.task_epochs)
+        (file: any) => file.task_epochs && !validTaskEpochs.includes(file.task_epochs)
       );
 
       if (!hasOrphanedEpochsInFiles && !hasOrphanedEpochsInVideos) {
@@ -67,7 +84,7 @@ export function useEpochCleanup({ formData, setFormData, workspace, updateDay })
 
       // Clean up associated_files
       if (updated.associated_files) {
-        updated.associated_files.forEach((file) => {
+        updated.associated_files.forEach((file: any) => {
           if (file.task_epochs && !validTaskEpochs.includes(file.task_epochs)) {
             file.task_epochs = '';
           }
@@ -76,7 +93,7 @@ export function useEpochCleanup({ formData, setFormData, workspace, updateDay })
 
       // Clean up associated_video_files
       if (updated.associated_video_files) {
-        updated.associated_video_files.forEach((file) => {
+        updated.associated_video_files.forEach((file: any) => {
           if (file.task_epochs && !validTaskEpochs.includes(file.task_epochs)) {
             file.task_epochs = '';
           }
