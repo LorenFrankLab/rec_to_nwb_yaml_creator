@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed the first 4 LIVE `pages/` React leaf components `.jsx`→`.tsx` (refactor only, behavior-preserving) — the first page cycle.**
+  [pages/DayEditor/Breadcrumb.jsx](src/pages/DayEditor/Breadcrumb.tsx) (`BreadcrumbItem`/`BreadcrumbProps`),
+  [pages/DayEditor/ReadOnlyField.jsx](src/pages/DayEditor/ReadOnlyField.tsx) (`value=''` default preserved from
+  the dropped `defaultProps`), [pages/DayEditor/SaveIndicator.jsx](src/pages/DayEditor/SaveIndicator.tsx)
+  (`persistence?: Partial<PersistenceStatus> | null` — type-only import of the canonical persistence type), and
+  [pages/DayEditor/ErrorState.jsx](src/pages/DayEditor/ErrorState.tsx) → `.tsx`. Two type-required changes, both
+  behavior-equivalent: `SaveIndicator`'s `Date.now() - new Date(iso)` became `…- new Date(iso).getTime()` (TS rejects a
+  `Date` as a `-` operand; `.getTime()` is value-identical to the implicit `valueOf()`, NaN-case included), and
+  `ErrorState`'s `tabIndex="-1"` became `tabIndex={-1}` (TS types `tabIndex` as `number`; React renders the identical
+  `tabindex="-1"`). Runtime PropTypes/defaultProps dropped for the typed interfaces; component JSDoc trimmed to a
+  description. `npm run typecheck` + `CI=true` build clean (bundle −8 B); golden baselines, the leaf suites +
+  `DayEditorStepper` consumer (229), and the 3 source-scanning guards pass; full suite 4793; e2e 104.
+
 - **Typed 3 LIVE animal-dialog components `.jsx`→`.tsx` (refactor only, behavior-preserving) — component cycle 4.**
   [components/AnimalDeleteDialog.jsx](src/components/AnimalDeleteDialog.tsx) (type-to-confirm delete; the one
   non-annotation change is erased boundary casts on the `getAnimalDeleteCascade(animalId as string, animal as Animal,

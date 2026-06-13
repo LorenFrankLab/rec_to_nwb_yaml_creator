@@ -1,4 +1,13 @@
-import PropTypes from 'prop-types';
+import type { PersistenceStatus } from '../../state/workspaceTypes';
+
+interface SaveIndicatorProps {
+  /**
+   * The workspace persistence slice (`useStoreContext().persistence`). Only the
+   * derivation-relevant fields are read (`enabled`, `lastSaved`, `saveError`,
+   * `hasPendingWrite`); a missing slice or missing field is tolerated via internal defaults.
+   */
+  persistence?: Partial<PersistenceStatus> | null;
+}
 
 /**
  * Save Indicator - Truthful visual feedback for workspace persistence status.
@@ -12,15 +21,8 @@ import PropTypes from 'prop-types';
  * - `saveError`: a write failed; shows the error.
  * - `hasPendingWrite`: a debounced write is in flight; shows "Saving…".
  * - `lastSaved`: a write succeeded; shows "Saved <time ago>".
- *
- * @param {object} props
- * @param {object} props.persistence - The workspace persistence slice, with fields
- *   `enabled` (boolean — localStorage persistence active), `lastSaved` (ISO string|null — last
- *   confirmed write), `saveError` (string|null — last write's failure message), and
- *   `hasPendingWrite` (boolean — a debounced write is in flight).
- * @returns {JSX.Element|null}
  */
-export default function SaveIndicator({ persistence }) {
+export default function SaveIndicator({ persistence }: SaveIndicatorProps) {
   const {
     enabled = true,
     lastSaved = null,
@@ -90,11 +92,9 @@ export default function SaveIndicator({ persistence }) {
  * Format timestamp as "just now", "2 min ago", etc.
  *
  * @private
- * @param {string} isoTimestamp - ISO timestamp
- * @returns {string} Human-readable time ago string
  */
-function formatTimeAgo(isoTimestamp) {
-  const seconds = Math.floor((Date.now() - new Date(isoTimestamp)) / 1000);
+function formatTimeAgo(isoTimestamp: string): string {
+  const seconds = Math.floor((Date.now() - new Date(isoTimestamp).getTime()) / 1000);
 
   if (seconds < 10) return 'just now';
   if (seconds < 60) return `${seconds}s ago`;
@@ -105,16 +105,3 @@ function formatTimeAgo(isoTimestamp) {
   const hours = Math.floor(minutes / 60);
   return `${hours}h ago`;
 }
-
-SaveIndicator.propTypes = {
-  persistence: PropTypes.shape({
-    enabled: PropTypes.bool,
-    lastSaved: PropTypes.string,
-    saveError: PropTypes.string,
-    hasPendingWrite: PropTypes.bool,
-  }),
-};
-
-SaveIndicator.defaultProps = {
-  persistence: null,
-};

@@ -1,15 +1,20 @@
-import PropTypes from 'prop-types';
 import './Breadcrumb.css';
+
+interface BreadcrumbItem {
+  label: string;
+  href?: string;
+}
+
+interface BreadcrumbProps {
+  /** Breadcrumb items, ordered from root to current page. */
+  items: BreadcrumbItem[];
+}
 
 /**
  * Breadcrumb Navigation Component
  *
  * Shows hierarchical navigation path with clickable links.
  * Follows WAI-ARIA breadcrumb pattern for accessibility.
- *
- * @param {object} props
- * @param {Array<{label: string, href?: string}>} props.items - Breadcrumb items
- * @returns {JSX.Element}
  *
  * @example
  * <Breadcrumb items={[
@@ -18,7 +23,7 @@ import './Breadcrumb.css';
  *   { label: 'Day: 2023-06-22' }
  * ]} />
  */
-export default function Breadcrumb({ items }) {
+export default function Breadcrumb({ items }: BreadcrumbProps) {
   if (!items || items.length === 0) return null;
 
   return (
@@ -50,12 +55,3 @@ export default function Breadcrumb({ items }) {
     </nav>
   );
 }
-
-Breadcrumb.propTypes = {
-  items: PropTypes.arrayOf(
-    PropTypes.shape({
-      label: PropTypes.string.isRequired,
-      href: PropTypes.string,
-    })
-  ).isRequired,
-};
