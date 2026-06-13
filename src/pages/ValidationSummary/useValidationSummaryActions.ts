@@ -13,7 +13,9 @@
 
 import { useState } from 'react';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
+import type { Animal, Day } from '../../state/workspaceTypes';
 import { computeStepStatus, validateDay } from '../../domain/validation';
+import type { RepairableIssue } from '../../domain/repairRouting';
 import { getDayWorkflowStatus } from '../../domain/workflowStatus';
 import { describeDayOptoState } from '../../domain/optoStatus';
 import { classifyWorkspaceDays, isExportableDayStatus } from '../../domain/dayRecovery';
@@ -26,29 +28,74 @@ import {
   buildAnimalDaysByKey,
   subjectLabel,
 } from './validationSummaryRows';
+import type { SummaryRow } from './validationSummaryRows';
+
+/** A per-day line in one of the assertive batch reports / the validate-errors list. */
+interface ReportItem {
+  dayId: string;
+  subjectId: string;
+  date: string;
+  detail?: string;
+}
+
+/** One day's entry in the pending-export preflight (success fields, or an `error`). */
+export interface PreflightEntry {
+  dayId: string;
+  label: string;
+  version?: number | null;
+  historical?: boolean;
+  groups?: number;
+  failedChannels?: number;
+  cameras?: number;
+  opto?: string;
+  warnings?: RepairableIssue[];
+  error?: string;
+}
+
+/** One day with outstanding warnings the user must acknowledge before export. */
+export interface WarningItem {
+  key: string;
+  label: string;
+  warnings: RepairableIssue[];
+}
+
+/** The pending batch export awaiting preflight confirmation. */
+export interface PendingExport {
+  rows: SummaryRow[];
+  preflight: PreflightEntry[];
+  warningItems: WarningItem[];
+}
+
+interface ValidationSummaryActionsParams {
+  /** The current table rows ({@link buildRows} / {@link buildAnimalRows}). */
+  rows: SummaryRow[];
+  /** `model.workspace` ({ animals, days }) — read live at action time. */
+  workspace: unknown;
+  /** The store actions (`updateDay`, …). */
+  actions: { updateDay: (dayId: string, patch: { state: Record<string, unknown> }) => void };
+}
 
 /**
- * @param {object} params
- * @param {object[]} params.rows - The current table rows ({@link buildRows} / {@link buildAnimalRows}).
- * @param {object} params.workspace - `model.workspace` ({ animals, days }) — read live at action time.
- * @param {object} params.actions - The store actions (`updateDay`, …).
- * @returns {object} The feedback state + the three batch handlers the component renders/wires.
+ * The Validation Summary's batch-action controller: the per-run feedback state + the three handlers.
+ * Takes the rows, the live workspace, and the store actions.
+ *
+ * @returns The feedback state + the three batch handlers the component renders/wires.
  */
-export function useValidationSummaryActions({ rows, workspace, actions }) {
+export function useValidationSummaryActions({ rows, workspace, actions }: ValidationSummaryActionsParams) {
   // Action feedback: a polite status message plus three assertive per-day reports —
   // parity skips (strict), debug-override downloads (strict off), and hard failures.
   const [actionMessage, setActionMessage] = useState('');
-  const [skippedReport, setSkippedReport] = useState([]);
-  const [overriddenReport, setOverriddenReport] = useState([]);
-  const [failedReport, setFailedReport] = useState([]);
+  const [skippedReport, setSkippedReport] = useState<ReportItem[]>([]);
+  const [overriddenReport, setOverriddenReport] = useState<ReportItem[]>([]);
+  const [failedReport, setFailedReport] = useState<ReportItem[]>([]);
   // Days dropped at confirm because they changed since the preflight (gone / no longer valid) —
   // reported separately from parity skips so they aren't mislabeled "parity check failed".
-  const [staleReport, setStaleReport] = useState([]);
+  const [staleReport, setStaleReport] = useState<ReportItem[]>([]);
   // Days Validate All could not persist (corrupt `day.state` shape, or a write that threw) — named
   // in the UI with their repair path so imported/recovered corruption isn't console-only.
-  const [validateErrorReport, setValidateErrorReport] = useState([]);
+  const [validateErrorReport, setValidateErrorReport] = useState<ReportItem[]>([]);
   // Pending batch export awaiting preflight confirmation: { rows, preflight, warningItems }.
-  const [pendingExport, setPendingExport] = useState(null);
+  const [pendingExport, setPendingExport] = useState<PendingExport | null>(null);
   // Phase 3-6: explicit acknowledgement of outstanding non-blocking warnings before the download
   // proceeds. Reset whenever a new preflight opens / closes so it can't carry across exports.
   const [warningsAcknowledged, setWarningsAcknowledged] = useState(false);
@@ -72,7 +119,7 @@ export function useValidationSummaryActions({ rows, workspace, actions }) {
     // loop and leave the rest unvalidated with no feedback.
     // Days that couldn't be persisted, each with the reason — surfaced in the UI (not just the
     // console) so the repair path for imported/recovered corruption is visible, not murky.
-    const validateErrors = [];
+    const validateErrors: ReportItem[] = [];
     validatable.forEach(({ animal, day, chip }) => {
       // A TRUTHY non-record `day.state` (a corrupt import persisting it as a scalar/array) is
       // itself corruption. Do NOT LAUNDER it by coercing to `{}` and stamping `validated` on top —
@@ -81,9 +128,9 @@ export function useValidationSummaryActions({ rows, workspace, actions }) {
       // is not corruption — it initializes cleanly to `{}`.
       if (day.state != null && !isRecord(day.state)) {
         validateErrors.push({
-          dayId: day.id,
-          subjectId: animal ? subjectLabel(animal) : day.id,
-          date: day.date || day.id,
+          dayId: day.id as string,
+          subjectId: animal ? subjectLabel(animal) : (day.id as string),
+          date: (day.date || day.id) as string,
           detail: 'Its saved state is corrupt. Open this day in the Day Editor and use the in-place reset to repair it.',
         });
         // eslint-disable-next-line no-console
@@ -94,15 +141,15 @@ export function useValidationSummaryActions({ rows, workspace, actions }) {
       }
       try {
         const currentState = isRecord(day.state) ? day.state : {};
-        actions.updateDay(day.id, {
+        actions.updateDay(day.id as string, {
           state: { ...currentState, validated: chip === 'valid' },
         });
       } catch (err) {
         validateErrors.push({
-          dayId: day.id,
-          subjectId: animal ? subjectLabel(animal) : day.id,
-          date: day.date || day.id,
-          detail: `Could not save: ${err.message}`,
+          dayId: day.id as string,
+          subjectId: animal ? subjectLabel(animal) : (day.id as string),
+          date: (day.date || day.id) as string,
+          detail: `Could not save: ${(err as Error).message}`,
         });
         // eslint-disable-next-line no-console
         console.error(`[validation-summary] could not validate day "${day.id}":`, err);
@@ -153,12 +200,12 @@ export function useValidationSummaryActions({ rows, workspace, actions }) {
     // Same per-animal cross-day context the chips use, so the preflight's workflow status and
     // warning set fold in the bad-channel monotonicity block consistently with the gate.
     const animalDaysByKey = buildAnimalDaysByKey(workspace);
-    const preflight = validRows.map(({ animal, animalKey: rowAnimalKey, day }) => {
+    const preflight: PreflightEntry[] = validRows.map(({ animal, animalKey: rowAnimalKey, day }) => {
       const animalDays = animalDaysByKey[rowAnimalKey] || [];
       try {
-        const merged = mergeDayMetadata(animal, day);
+        const merged = mergeDayMetadata(animal as unknown as Animal, day as unknown as Day);
         const status = getDayWorkflowStatus(animal, day, merged, animalDays);
-        const ntrodeMap = merged.ntrode_electrode_group_channel_map || [];
+        const ntrodeMap = (merged.ntrode_electrode_group_channel_map as Array<{ bad_channels?: unknown[] }>) || [];
         const failedChannels = ntrodeMap.reduce((t, n) => t + (n.bad_channels?.length || 0), 0);
         // Day-protocol opto state (Task 10), shared with the single-day Export preflight so the two
         // agree: an opto-implanted animal with an opto-free day reads "implanted, no stimulation",
@@ -168,25 +215,25 @@ export function useValidationSummaryActions({ rows, workspace, actions }) {
         // Export step uses). These don't block the gate; they require explicit acknowledgement.
         const warnings = validateDay(day, merged, animal, animalDays).filter((i) => i.severity === 'warning');
         return {
-          dayId: day.id,
-          label: `${subjectLabel(animal)} — ${day.session?.session_id || day.id}`,
+          dayId: day.id as string,
+          label: `${subjectLabel(animal)} — ${(day.session as Record<string, unknown> | undefined)?.session_id || day.id}`,
           version: status.configurationVersion,
           historical: status.isHistoricalConfiguration,
-          groups: (merged.electrode_groups || []).length,
+          groups: ((merged.electrode_groups as unknown[]) || []).length,
           failedChannels,
-          cameras: (merged.cameras || []).length,
+          cameras: ((merged.cameras as unknown[]) || []).length,
           opto,
           warnings,
         };
       } catch (err) {
-        return { dayId: day.id, label: `${subjectLabel(animal)} — ${day.id}`, error: err.message };
+        return { dayId: day.id as string, label: `${subjectLabel(animal)} — ${day.id}`, error: (err as Error).message };
       }
     });
 
     // The acknowledgement set: one entry per day that carries outstanding warnings.
     const warningItems = preflight
       .filter((entry) => entry.warnings && entry.warnings.length > 0)
-      .map((entry) => ({ key: entry.dayId, label: entry.label, warnings: entry.warnings }));
+      .map((entry) => ({ key: entry.dayId, label: entry.label, warnings: entry.warnings! }));
 
     clearReports();
     setActionMessage('');
@@ -210,10 +257,10 @@ export function useValidationSummaryActions({ rows, workspace, actions }) {
     setWarningsAcknowledged(false);
 
     const strict = isFeatureEnabled('shadowExportStrict');
-    const skipped = [];
-    const overridden = [];
-    const failed = [];
-    const stale = [];
+    const skipped: ReportItem[] = [];
+    const overridden: ReportItem[] = [];
+    const failed: ReportItem[] = [];
+    const stale: ReportItem[] = [];
     let exported = 0;
 
     // Re-derive the CURRENT recovery status of every day from the live workspace, so a day that
@@ -223,9 +270,9 @@ export function useValidationSummaryActions({ rows, workspace, actions }) {
     // dayId-only key could let one animal's status mask another's.
     // Tuple key (JSON) so arbitrary imported animal/day ids can't collide — a plain separator
     // can't distinguish ('a|b','c') from ('a','b|c').
-    const statusKey = (animalKeyArg, dayId) => JSON.stringify([animalKeyArg, dayId]);
+    const statusKey = (animalKeyArg: unknown, dayId: unknown): string => JSON.stringify([animalKeyArg, dayId]);
     const currentStatusByKey = new Map(
-      classifyWorkspaceDays(workspace).map((d) => [statusKey(d.animalKey, d.dayId), d.status])
+      classifyWorkspaceDays(workspace).map((d): [string, string] => [statusKey(d.animalKey, d.dayId), d.status])
     );
     // Re-derive the per-animal cross-day context from the LIVE workspace so the final
     // re-validation enforces the bad-channel monotonicity block (a regressing day must not slip
@@ -236,30 +283,30 @@ export function useValidationSummaryActions({ rows, workspace, actions }) {
       // Re-resolve the CURRENT records and RE-VALIDATE before downloading: state may have
       // changed while the preflight was open, so a day that was valid at preflight time must
       // not be exported now if it is no longer present or no longer valid.
-      const animal = workspace?.animals?.[rowAnimalKey];
-      const day = isRecord(workspace?.days) ? workspace.days[rowDay.id] : undefined;
-      const identity = {
-        dayId: rowDay.id,
-        subjectId: animal ? subjectLabel(animal) : rowDay.id,
-        date: isRecord(day) ? day.date : rowDay.date,
+      const animal = isRecord(workspace) && isRecord(workspace.animals) ? workspace.animals[rowAnimalKey] : undefined;
+      const day = isRecord(workspace) && isRecord(workspace.days) ? workspace.days[rowDay.id as string] : undefined;
+      const identity: ReportItem = {
+        dayId: rowDay.id as string,
+        subjectId: animal ? subjectLabel(animal) : (rowDay.id as string),
+        date: (isRecord(day) ? day.date : rowDay.date) as string,
       };
 
       if (!animal || !isRecord(day)) {
         stale.push({ ...identity, detail: 'No longer present since the preflight.' });
         return;
       }
-      if (!isExportableDayStatus(currentStatusByKey.get(statusKey(rowAnimalKey, rowDay.id)))) {
+      if (!isExportableDayStatus(currentStatusByKey.get(statusKey(rowAnimalKey, rowDay.id)) as string)) {
         // Became recovered-unlinked / wrong-owner / dangling since the preflight — not part of
         // the animal's recording days anymore, so it must not export from a stale preflight.
         stale.push({ ...identity, detail: "No longer part of the animal's day list since the preflight." });
         return;
       }
       let stillValid = false;
-      let revalidationError = null;
+      let revalidationError: unknown = null;
       try {
         const animalDays = animalDaysByKey[rowAnimalKey] || [];
         stillValid =
-          deriveChip(computeStepStatus(day, mergeDayMetadata(animal, day), animal, animalDays)) === 'valid';
+          deriveChip(computeStepStatus(day, mergeDayMetadata(animal as unknown as Animal, day as unknown as Day), animal, animalDays)) === 'valid';
       } catch (err) {
         // A throw here is NOT "no longer valid" — the day became UNREADABLE (corrupt config). Label
         // it honestly and log the reason, mirroring the download `failed` branch, rather than
@@ -273,18 +320,18 @@ export function useValidationSummaryActions({ rows, workspace, actions }) {
         stale.push({
           ...identity,
           detail: revalidationError
-            ? `Could not be re-validated since the preflight: ${revalidationError.message}`
+            ? `Could not be re-validated since the preflight: ${(revalidationError as Error).message}`
             : 'No longer valid since the preflight.',
         });
         return;
       }
 
       try {
-        const { ok, yaml, diff } = checkShadowExport(animal, day);
+        const { ok, yaml, diff } = checkShadowExport(animal as unknown as Animal, day as unknown as Day);
 
         // Parity mismatch in strict mode: skip and report, never download.
         if (!ok && strict) {
-          skipped.push({ ...identity, detail: diff });
+          skipped.push({ ...identity, detail: diff as string });
           // eslint-disable-next-line no-console
           console.error(
             `[validation-summary] export parity check failed for "${day.id}" — skipped (strict mode).`
@@ -295,8 +342,8 @@ export function useValidationSummaryActions({ rows, workspace, actions }) {
         // ok, or the debug override (strict off): mirror ExportStep — inject the
         // filename-only EXPERIMENT_DATE key the merge does not carry, then download.
         const fileName = formatDeterministicFilename({
-          ...mergeDayMetadata(animal, day),
-          EXPERIMENT_DATE_in_format_mmddYYYY: day.experimentDate,
+          ...mergeDayMetadata(animal as unknown as Animal, day as unknown as Day),
+          EXPERIMENT_DATE_in_format_mmddYYYY: day.experimentDate as string,
         });
         downloadYamlFile(fileName, yaml);
         exported += 1;
@@ -307,7 +354,7 @@ export function useValidationSummaryActions({ rows, workspace, actions }) {
         // truncate the batch.
         try {
           const prevState = isRecord(day.state) ? day.state : {};
-          actions.updateDay(day.id, { state: { ...prevState, exported: true } });
+          actions.updateDay(day.id as string, { state: { ...prevState, exported: true } });
         } catch (persistErr) {
           // eslint-disable-next-line no-console
           console.error(`[validation-summary] could not mark day "${day.id}" exported:`, persistErr);
@@ -316,11 +363,11 @@ export function useValidationSummaryActions({ rows, workspace, actions }) {
         if (!ok) {
           // strict === false: downloaded DESPITE a parity mismatch. Surface it loudly,
           // mirroring ExportStep's override warning, so the override is never silent.
-          overridden.push({ ...identity, detail: diff });
+          overridden.push({ ...identity, detail: diff as string });
         }
       } catch (err) {
         // A throw (e.g. encoder failure) must not silently truncate the batch.
-        failed.push({ ...identity, detail: err.message });
+        failed.push({ ...identity, detail: (err as Error).message });
         // eslint-disable-next-line no-console
         console.error(`[validation-summary] export failed for "${day.id}":`, err);
       }

@@ -3,7 +3,9 @@ import './WarningAcknowledgement.css';
 interface WarningAcknowledgementItem {
   key: string;
   label: string;
-  warnings: Array<{ message: string }>;
+  // `message` is optional: the validation issues that flow here (RepairableIssue) type it optional,
+  // and the render (`{warning.message}`) tolerates an absent message.
+  warnings: Array<{ message?: string }>;
 }
 
 interface WarningAcknowledgementProps {

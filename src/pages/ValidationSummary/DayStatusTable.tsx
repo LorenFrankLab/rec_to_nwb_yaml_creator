@@ -1,13 +1,27 @@
-import PropTypes from 'prop-types';
 import { describeOwner } from '../../domain/dayRecovery';
+import type { Animal, Day } from '../../state/workspaceTypes';
 import EffectiveDayReview from './EffectiveDayReview';
 import {
   subjectLabel,
   dayChipDisplay,
   describeConfigVersionLabel,
 } from './validationSummaryRows';
+import type { SummaryRow } from './validationSummaryRows';
 
 const noop = () => {};
+
+interface DayStatusTableProps {
+  /** The table-ordered rows from `buildRows` / `buildAnimalRows`. */
+  rows: SummaryRow[];
+  /** Per-animal mode: the scan cell becomes an effective-setup expander. */
+  scoped: boolean;
+  /** `(animalKey, dayId) => void` — drop a dangling reference. */
+  onRemoveDayReference?: (animalKey: string, dayId: string) => void;
+  /** `(animalKey, dayId) => void` — unlink a wrong-owner day. */
+  onUnlinkDayReference?: (animalKey: string, dayId: string) => void;
+  /** `(animalKey, dayId) => void` — re-link a recovered day. */
+  onRelinkDayReference?: (animalKey: string, dayId: string) => void;
+}
 
 /**
  * The cross-day status table: one row per recording day across the workspace (or, when `scoped`,
@@ -22,13 +36,6 @@ const noop = () => {};
  * pinned public API, so they are always present in production); a focused test that renders only
  * one row type may pass only the callback it exercises, and the unused ones default to a no-op.
  *
- * @param {object} props
- * @param {object[]} props.rows - The table-ordered rows from `buildRows` / `buildAnimalRows`.
- * @param {boolean} props.scoped - Per-animal mode: the scan cell becomes an effective-setup expander.
- * @param {Function} [props.onRemoveDayReference] - `(animalKey, dayId) => void` — drop a dangling reference.
- * @param {Function} [props.onUnlinkDayReference] - `(animalKey, dayId) => void` — unlink a wrong-owner day.
- * @param {Function} [props.onRelinkDayReference] - `(animalKey, dayId) => void` — re-link a recovered day.
- * @returns {JSX.Element}
  */
 export default function DayStatusTable({
   rows,
@@ -36,7 +43,7 @@ export default function DayStatusTable({
   onRemoveDayReference = noop,
   onUnlinkDayReference = noop,
   onRelinkDayReference = noop,
-}) {
+}: DayStatusTableProps) {
   return (
     // The table can be wider than a phone viewport (6 columns of dense scan/session text), so
     // it scrolls horizontally WITHIN this container instead of forcing the whole page to
@@ -57,7 +64,11 @@ export default function DayStatusTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map(({ animal, animalKey, day, chip, scan, unreadable, missingRecord, orphaned, ownerMissing, wrongOwner }, index) => (
+          {rows.map(({ animal, animalKey, day: dayRaw, chip, scan, unreadable, missingRecord, orphaned, ownerMissing, wrongOwner }, index) => {
+            // One narrowing view of the tolerant day record for the cell text/keys; the strict
+            // EffectiveDayReview below gets the raw record cast to the canonical Day.
+            const day = dayRaw as { id?: string; date?: string; session?: { session_id?: string }; animalId?: unknown; state?: unknown };
+            return (
             <tr key={`${day.id ?? 'unknown'}-${index}`} data-testid={`day-row-${day.id}`}>
               <td>
                 {subjectLabel(animal)}
@@ -114,7 +125,7 @@ export default function DayStatusTable({
                         {' · '}
                         {scan.opto}
                       </summary>
-                      <EffectiveDayReview animal={animal} day={day} />
+                      <EffectiveDayReview animal={animal as unknown as Animal} day={dayRaw as unknown as Day} />
                     </details>
                   ) : (
                     <span className="validation-summary-scan">
@@ -174,7 +185,7 @@ export default function DayStatusTable({
                   <button
                     type="button"
                     className="validation-summary-repair"
-                    onClick={() => onRemoveDayReference(animalKey, day.id)}
+                    onClick={() => onRemoveDayReference(animalKey, day.id as string)}
                     aria-label={`Remove dangling day reference ${day.id} from ${subjectLabel(animal)}`}
                   >
                     Remove day reference
@@ -185,7 +196,7 @@ export default function DayStatusTable({
                   <button
                     type="button"
                     className="validation-summary-repair"
-                    onClick={() => onUnlinkDayReference(animalKey, day.id)}
+                    onClick={() => onUnlinkDayReference(animalKey, day.id as string)}
                     aria-label={`Remove ${day.date || day.id} from ${subjectLabel(animal)} (it belongs to ${describeOwner(day.animalId)})`}
                   >
                     Remove from this animal
@@ -211,7 +222,7 @@ export default function DayStatusTable({
                       <button
                         type="button"
                         className="validation-summary-repair"
-                        onClick={() => onRelinkDayReference(animalKey, day.id)}
+                        onClick={() => onRelinkDayReference(animalKey, day.id as string)}
                         aria-label={`Add ${day.date || day.id} back to ${subjectLabel(animal)}'s day list`}
                       >
                         Add to day list
@@ -221,19 +232,10 @@ export default function DayStatusTable({
                 )}
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>
   );
 }
-
-DayStatusTable.propTypes = {
-  rows: PropTypes.arrayOf(PropTypes.object).isRequired,
-  scoped: PropTypes.bool.isRequired,
-  // Branch-specific (see the component doc): optional, default to a no-op so a focused render that
-  // omits the row types needing them doesn't warn. The standalone page always wires all three.
-  onRemoveDayReference: PropTypes.func,
-  onUnlinkDayReference: PropTypes.func,
-  onRelinkDayReference: PropTypes.func,
-};

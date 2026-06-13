@@ -11,11 +11,40 @@
 
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { getAnimalSubject } from '../../state/workspaceSelectors';
+import type { Animal, Day } from '../../state/workspaceTypes';
 import { computeStepStatus } from '../../domain/validation';
 import { getDayWorkflowStatus } from '../../domain/workflowStatus';
 import { DAY_LIFECYCLE_LABEL, lifecycleForValidDay } from '../../domain/dayLifecycle';
 import { describeDayOptoState } from '../../domain/optoStatus';
 import { classifyWorkspaceDays, DAY_STATUS, describeOwner } from '../../domain/dayRecovery';
+
+/** A per-day validation chip variant. */
+export type ChipType = 'valid' | 'error' | 'incomplete';
+
+/** Per-row scan summary surfaced for catch-up triage without opening each editor. */
+export interface DayScan {
+  version: number | null;
+  historical: boolean;
+  sessionDescription: string;
+  cameras: number;
+  cameraCalibration: string;
+  opto: string;
+}
+
+/** One flattened Validation Summary row (a classified day decorated with its chip + scan). */
+export interface SummaryRow {
+  animal: Record<string, unknown>;
+  animalKey: string;
+  day: Record<string, unknown>;
+  chip: ChipType;
+  status: string;
+  missingRecord?: boolean;
+  orphaned?: boolean;
+  ownerMissing?: boolean;
+  wrongOwner?: boolean;
+  unreadable?: boolean;
+  scan?: DayScan;
+}
 
 /**
  * Derive a single per-day chip from the Day Editor step statuses.
@@ -24,18 +53,15 @@ import { classifyWorkspaceDays, DAY_STATUS, describeOwner } from '../../domain/d
  * - every step `'valid'` → `'valid'`
  * - any step `'error'` → `'error'`
  * - otherwise (any `'incomplete'`/`'pending'`, no errors) → `'incomplete'`
- *
- * @param {object} stepStatus - Map from {@link computeStepStatus}.
- * @returns {'valid'|'error'|'incomplete'}
  */
-export function deriveChip(stepStatus) {
+export function deriveChip(stepStatus: Record<string, string>): ChipType {
   const statuses = Object.values(stepStatus);
   if (statuses.every((s) => s === 'valid')) return 'valid';
   if (statuses.some((s) => s === 'error')) return 'error';
   return 'incomplete';
 }
 
-export const CHIP_LABEL = { valid: 'Valid', error: 'Error', incomplete: 'Incomplete' };
+export const CHIP_LABEL: Record<ChipType, string> = { valid: 'Valid', error: 'Error', incomplete: 'Incomplete' };
 
 /**
  * The per-day status chip's variant + label, worded from the shared {@link DAY_LIFECYCLE}
@@ -56,12 +82,15 @@ export const CHIP_LABEL = { valid: 'Valid', error: 'Error', incomplete: 'Incompl
  * errors/incomplete still shows those (they're the more urgent truth and don't falsely claim
  * exportability).
  *
- * @param {'valid'|'error'|'incomplete'} chip - The live validation chip from {@link deriveChip}.
- * @param {object|null|undefined} state - The day's persisted `state` (may be malformed).
- * @param {{ unreadable?: boolean, missingRecord?: boolean, orphaned?: boolean }} [flags] - Special-row markers.
- * @returns {{ variant: string, label: string }} The chip variant (CSS modifier) and its label.
+ * @param chip - The live validation chip from {@link deriveChip}.
+ * @param state - The day's persisted `state` (may be malformed).
+ * @returns The chip variant (CSS modifier) and its label.
  */
-export function dayChipDisplay(chip, state, { unreadable = false, missingRecord = false, orphaned = false } = {}) {
+export function dayChipDisplay(
+  chip: ChipType,
+  state: unknown,
+  { unreadable = false, missingRecord = false, orphaned = false }: { unreadable?: boolean; missingRecord?: boolean; orphaned?: boolean } = {}
+): { variant: string; label: string } {
   if (unreadable) return { variant: 'error', label: 'Error — cannot read' };
   if (missingRecord) return { variant: 'error', label: 'Error — missing day record' };
   if (chip === 'valid') {
@@ -70,7 +99,7 @@ export function dayChipDisplay(chip, state, { unreadable = false, missingRecord 
     // distinct from the row's "not in day list" state note.
     if (orphaned) return { variant: 'incomplete', label: 'Re-link to export' };
     const variant = lifecycleForValidDay(state); // 'ready' | 'validated' | 'exported'
-    return { variant, label: DAY_LIFECYCLE_LABEL[variant] };
+    return { variant, label: DAY_LIFECYCLE_LABEL[variant as keyof typeof DAY_LIFECYCLE_LABEL] };
   }
   return { variant: chip, label: CHIP_LABEL[chip] };
 }
@@ -85,12 +114,11 @@ export const CAMERA_CALIBRATION_LIMIT = 3;
  * bare camera count. Truncates gracefully after a few cameras (`+K more`). Returns '' when the day
  * uses no cameras (the count text already conveys "0 cameras").
  *
- * @param {Array<object>} cameras - The day-used cameras (the SAME set the scan count is derived
- *   from — `merged.cameras`).
- * @returns {string}
+ * @param cameras - The day-used cameras (the SAME set the scan count is derived from — `merged.cameras`).
+ * @returns A concise camera-calibration summary, or '' for no cameras.
  */
-export function describeCameraCalibration(cameras) {
-  const list = Array.isArray(cameras) ? cameras : [];
+export function describeCameraCalibration(cameras: unknown): string {
+  const list: Array<Record<string, unknown>> = Array.isArray(cameras) ? cameras : [];
   if (list.length === 0) return '';
   const shown = list.slice(0, CAMERA_CALIBRATION_LIMIT).map((cam) => {
     const name = cam?.camera_name || `camera ${cam?.id ?? '?'}`;
@@ -110,10 +138,10 @@ export function describeCameraCalibration(cameras) {
  * string where a day record is expected), which would otherwise throw on indexing or
  * property access and blank the whole summary.
  *
- * @param {unknown} value
- * @returns {boolean}
+ * @param value - The candidate value.
+ * @returns True for a non-null, non-array object.
  */
-export const isRecord = (value) =>
+export const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 
 /**
@@ -123,14 +151,14 @@ export const isRecord = (value) =>
  * Without this context the monotonicity rule is a no-op, so a day that silently un-fails an
  * earlier same-config bad channel reads "valid" here while the row badge says "Needs fixing".
  *
- * @param {object} workspace - `model.workspace` ({ animals, days }).
- * @returns {Record<string, object[]>} `{ [animalKey]: dateSortedOkDayRecords }`.
+ * @param workspace - `model.workspace` ({ animals, days }).
+ * @returns `{ [animalKey]: dateSortedOkDayRecords }`.
  */
-export function buildAnimalDaysByKey(workspace) {
-  const byKey = {};
+export function buildAnimalDaysByKey(workspace: unknown): Record<string, Array<Record<string, unknown>>> {
+  const byKey: Record<string, Array<Record<string, unknown>>> = {};
   for (const { animalKey, record, status } of classifyWorkspaceDays(workspace)) {
     if (status !== DAY_STATUS.OK || !isRecord(record)) continue;
-    (byKey[animalKey] ||= []).push(record);
+    (byKey[animalKey as string] ||= []).push(record);
   }
   for (const key of Object.keys(byKey)) {
     byKey[key].sort((a, b) => String(a?.date ?? '').localeCompare(String(b?.date ?? '')));
@@ -144,17 +172,17 @@ export function buildAnimalDaysByKey(workspace) {
  * Order: animals by id, then each animal's days by date — the same order the table
  * renders and the batch export downloads in, so behavior is reproducible.
  *
- * @param {object} workspace - `model.workspace` ({ animals, days }).
- * @returns {Array<{ animal: object, day: object, chip: 'valid'|'error'|'incomplete' }>}
+ * @param workspace - `model.workspace` ({ animals, days }).
+ * @returns The flattened, table-ordered rows.
  */
-export function buildRows(workspace) {
+export function buildRows(workspace: unknown): SummaryRow[] {
   // The day RECOVERY STATUS of every reference/record is decided ONCE in the domain
   // ({@link classifyWorkspaceDays}) so this surface doesn't re-derive "what kind of day is
   // this?". buildRows only DECORATES each classified day with its validation chip and the
   // legacy row flags the table renders. Each row also carries its `status` so the export
   // policy ({@link isExportableDayStatus}) is read, not re-decided, downstream.
-  const animalsMap = isRecord(workspace?.animals) ? workspace.animals : {};
-  const rows = [];
+  const animalsMap: Record<string, unknown> = isRecord(workspace) && isRecord(workspace.animals) ? workspace.animals : {};
+  const rows: SummaryRow[] = [];
 
   // Cross-day context for the bad-channel monotonicity export-block, built ONCE per render (not
   // per row) so the chip, the workflow status, and the batch re-validation all feed the rule its
@@ -162,11 +190,12 @@ export function buildRows(workspace) {
   const animalDaysByKey = buildAnimalDaysByKey(workspace);
 
   for (const { animalKey, dayId, record, status } of classifyWorkspaceDays(workspace)) {
-    const animal = isRecord(animalsMap[animalKey]) ? animalsMap[animalKey] : { id: animalKey };
+    const key = animalKey as string;
+    const animal: Record<string, unknown> = isRecord(animalsMap[key]) ? animalsMap[key] : { id: animalKey };
 
     if (status === DAY_STATUS.DANGLING_REFERENCE) {
       // Indexed id with no resolvable record — visible, counted, repairable (remove reference).
-      rows.push({ animal, animalKey, day: { id: dayId }, chip: 'error', status, missingRecord: true });
+      rows.push({ animal, animalKey: key, day: { id: dayId }, chip: 'error', status, missingRecord: true });
       // eslint-disable-next-line no-console
       console.error(
         `[validation-summary] day reference "${dayId}" does not resolve to a record — flagged as error.`
@@ -175,7 +204,7 @@ export function buildRows(workspace) {
     }
     if (status === DAY_STATUS.ORPHAN_NO_OWNER) {
       // Real record whose owning animal is gone — visible but not auto-exportable; no relink target.
-      rows.push({ animal, animalKey, day: record, chip: 'error', status, orphaned: true, ownerMissing: true });
+      rows.push({ animal, animalKey: key, day: record as Record<string, unknown>, chip: 'error', status, orphaned: true, ownerMissing: true });
       // eslint-disable-next-line no-console
       console.error(`[validation-summary] day "${dayId}" is not listed by any animal — flagged as orphaned.`);
       continue;
@@ -184,10 +213,10 @@ export function buildRows(workspace) {
       // Indexed here but the record declares a DIFFERENT owner. Do NOT merge/validate it with
       // THIS animal (that would compute a chip — and could export — with the wrong subject). Flag
       // as an error and offer the unlink repair so it resurfaces under its real owner.
-      rows.push({ animal, animalKey, day: record, chip: 'error', status, wrongOwner: true });
+      rows.push({ animal, animalKey: key, day: record as Record<string, unknown>, chip: 'error', status, wrongOwner: true });
       // eslint-disable-next-line no-console
       console.error(
-        `[validation-summary] day "${dayId}" is indexed by "${animalKey}" but belongs to ${describeOwner(record.animalId)} — flagged as wrong owner.`
+        `[validation-summary] day "${dayId}" is indexed by "${animalKey}" but belongs to ${describeOwner((record as Record<string, unknown>).animalId)} — flagged as wrong owner.`
       );
       continue;
     }
@@ -195,38 +224,40 @@ export function buildRows(workspace) {
     // OK or RECOVERED_UNLINKED: a real record → show its validation chip. mergeDayMetadata
     // throws BY DESIGN on a corrupt animal; one unreadable day must not blank the summary.
     const orphaned = status === DAY_STATUS.RECOVERED_UNLINKED;
+    const dayRecord = record as Record<string, unknown>;
     // The animal's OK-status day records (date-sorted) — the cross-day context the bad-channel
     // monotonicity block needs so the chip agrees with the row badge.
-    const animalDays = animalDaysByKey[animalKey] || [];
+    const animalDays = animalDaysByKey[key] || [];
     try {
-      const merged = mergeDayMetadata(animal, record);
-      const chip = deriveChip(computeStepStatus(record, merged, animal, animalDays));
+      const merged = mergeDayMetadata(animal as unknown as Animal, dayRecord as unknown as Day);
+      const chip = deriveChip(computeStepStatus(dayRecord, merged, animal, animalDays));
       // Batch-row scan fields (Task 10): the configuration version pinned, the camera count, and
       // the day-protocol opto state — so days can be compared before opening each editor. Computed
       // here (where the merge already succeeded) so the table reads, never re-derives.
-      const workflow = getDayWorkflowStatus(animal, record, merged, animalDays);
-      const sessionDescriptionRaw = record.session?.session_description;
+      const workflow = getDayWorkflowStatus(animal, dayRecord, merged, animalDays);
+      const session = dayRecord.session as Record<string, unknown> | undefined;
+      const sessionDescriptionRaw = session?.session_description;
       const sessionDescription =
         typeof sessionDescriptionRaw === 'string' && sessionDescriptionRaw.trim()
           ? sessionDescriptionRaw.trim()
           : '';
-      const scan = {
+      const scan: DayScan = {
         version: workflow.configurationVersion,
         historical: workflow.isHistoricalConfiguration,
         // The day's session description (trimmed, empty when blank/whitespace-only) — surfaced in the
         // row so it isn't hidden behind the session id alone.
         sessionDescription,
-        cameras: (merged.cameras || []).length,
+        cameras: ((merged.cameras as unknown[]) || []).length,
         // Day-used camera calibration (name + meters_per_pixel) from the SAME camera set the count
         // is derived from, so a re-calibrated camera is visible without opening the editor.
         cameraCalibration: describeCameraCalibration(merged.cameras),
         opto: describeDayOptoState(merged).label,
       };
-      rows.push({ animal, animalKey, day: record, chip, status, orphaned, scan });
+      rows.push({ animal, animalKey: key, day: dayRecord, chip, status, orphaned, scan });
     } catch (err) {
-      rows.push({ animal, animalKey, day: record, chip: 'error', status, orphaned, unreadable: true });
+      rows.push({ animal, animalKey: key, day: dayRecord, chip: 'error', status, orphaned, unreadable: true });
       // eslint-disable-next-line no-console
-      console.error(`[validation-summary] could not read day "${record?.id}" — flagged as error:`, err);
+      console.error(`[validation-summary] could not read day "${dayRecord?.id}" — flagged as error:`, err);
     }
   }
 
@@ -241,18 +272,18 @@ export function buildRows(workspace) {
  * `animalKey` (the index key a day is listed under), so a wrong-owner / duplicate-index row scopes
  * to the animal it's LISTED under, matching how the global table groups it.
  *
- * @param {object} workspace - `model.workspace` ({ animals, days }).
- * @param {string} animalKey - The animal whose rows to keep.
- * @returns {Array<{ animal: object, animalKey: string, day: object, chip: 'valid'|'error'|'incomplete' }>}
+ * @param workspace - `model.workspace` ({ animals, days }).
+ * @param animalKey - The animal whose rows to keep.
+ * @returns The rows scoped to that animal.
  */
-export function buildAnimalRows(workspace, animalKey) {
+export function buildAnimalRows(workspace: unknown, animalKey: string): SummaryRow[] {
   return buildRows(workspace).filter((row) => row.animalKey === animalKey);
 }
 
 // Coerced to a string so a corrupt (object/number) subject_id or animal id can never be returned
 // as a React child (which throws "objects are not valid as a React child").
-export const subjectLabel = (animal) => {
-  const id = getAnimalSubject(animal).subject_id ?? animal?.id;
+export const subjectLabel = (animal: unknown): string => {
+  const id = getAnimalSubject(animal).subject_id ?? (animal as Record<string, unknown> | null | undefined)?.id;
   return typeof id === 'string' ? id : String(id ?? '');
 };
 
@@ -265,10 +296,10 @@ export const subjectLabel = (animal) => {
  * Always states the version AND a latest/historical marker, e.g. `config v1 (latest)` /
  * `config v2 (historical)`.
  *
- * @param {number|null} version - The pinned configuration version.
- * @param {boolean} historical - Whether that version is NOT the animal's latest.
- * @returns {string}
+ * @param version - The pinned configuration version.
+ * @param historical - Whether that version is NOT the animal's latest.
+ * @returns The unified config-version label.
  */
-export function describeConfigVersionLabel(version, historical) {
+export function describeConfigVersionLabel(version: number | null, historical: boolean): string {
   return `config v${version ?? '—'} (${historical ? 'historical' : 'latest'})`;
 }

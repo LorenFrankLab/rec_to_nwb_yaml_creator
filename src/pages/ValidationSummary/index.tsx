@@ -22,7 +22,7 @@
  */
 
 import { useMemo } from 'react';
-import PropTypes from 'prop-types';
+import type { ElementType } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
 import DayLifecycleLegend from '../../components/DayLifecycleLegend/DayLifecycleLegend';
 import { buildRows, buildAnimalRows } from './validationSummaryRows';
@@ -43,12 +43,10 @@ export { buildRows, buildAnimalRows };
  * validation path. When scoped it renders WITHOUT its own `<main id="main-content">` (the embedding
  * AnimalView already owns the page landmark) and swaps the page heading for a scoped header.
  *
- * @param {object} props
- * @param {string} [props.animalKey] - When set, show only this animal's rows in an embeddable
- *   section; when omitted, the standalone workspace-global page.
- * @returns {JSX.Element}
+ * When `animalKey` is set, shows only this animal's rows in an embeddable section; when omitted,
+ * the standalone workspace-global page.
  */
-export function ValidationSummary({ animalKey } = {}) {
+export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
   const { model, actions } = useStoreContext();
   const workspace = model.workspace;
   const scoped = animalKey != null;
@@ -56,7 +54,7 @@ export function ValidationSummary({ animalKey } = {}) {
   // Recomputed from the workspace on every render — chips/counts are always current. Scoped mode is
   // a pure filter (buildAnimalRows) so its chips are identical to the global summary's.
   const rows = useMemo(
-    () => (scoped ? buildAnimalRows(workspace, animalKey) : buildRows(workspace)),
+    () => (scoped ? buildAnimalRows(workspace, animalKey as string) : buildRows(workspace)),
     [workspace, scoped, animalKey]
   );
 
@@ -98,10 +96,10 @@ export function ValidationSummary({ animalKey } = {}) {
 
   // Scoped (embedded in AnimalView) renders a section + a scoped header — NOT a second
   // `<main id="main-content">` (AnimalView owns the page landmark) and NOT the page-level h1.
-  const Wrapper = scoped ? 'section' : 'main';
+  const Wrapper: ElementType = scoped ? 'section' : 'main';
   const wrapperProps = scoped
     ? { className: 'validation-summary validation-summary--scoped', 'aria-label': 'Validation and export for this animal' }
-    : { id: 'main-content', tabIndex: '-1', role: 'main', 'aria-labelledby': 'validation-heading' };
+    : { id: 'main-content', tabIndex: -1, role: 'main', 'aria-labelledby': 'validation-heading' };
 
   return (
     <Wrapper {...wrapperProps}>
@@ -294,13 +292,5 @@ export function ValidationSummary({ animalKey } = {}) {
     </Wrapper>
   );
 }
-
-ValidationSummary.propTypes = {
-  animalKey: PropTypes.string,
-};
-
-ValidationSummary.defaultProps = {
-  animalKey: undefined,
-};
 
 export default ValidationSummary;
