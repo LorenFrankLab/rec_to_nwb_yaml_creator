@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Split + typed the legacy `valueList.js` (~1122 LOC) into 6 focused TS modules + a compatibility barrel (refactor only, value-identical).**
+  The catalog/default values that feed the form, dropdowns, and the export moved out of one ~1122-LOC file into
+  [defaults.ts](src/defaults.ts) (`defaultYMLValues`/`emptyFormData`/`arrayDefaultValues`),
+  [deviceCatalog.ts](src/deviceCatalog.ts) (`device`/`dataAcqDevice*`/`cameraManufacturers`/`deviceTypeLabel`/`deviceTypes`/`units`),
+  [subjectCatalog.ts](src/subjectCatalog.ts) (`genderAcronym`/`genders`/`labs`/`genotypes`/`species`),
+  [locations.ts](src/locations.ts) (the brain-region list), [dioCatalog.ts](src/dioCatalog.ts)
+  (`behavioralEventsNames`/`behavioralEventsDescription`), and [optoCatalog.ts](src/optoCatalog.ts)
+  (`optoExcitationModelNames`/`opticalFiberModelNames`/`virusNames`). [valueList.js](src/valueList.ts) becomes a
+  thin compatibility **barrel** (`export *` from the 6) so all 36 existing `from '.../valueList'` importers keep
+  working unchanged. (A 6th module `subjectCatalog.ts` beyond the plan's 5 names holds the subject/lab catalogs
+  that fit none of device/dio/opto/locations/defaults.) The data blocks were extracted **byte-for-byte** (no
+  re-typing of the ~300-entry `labs`/`locations` arrays); only 3 type annotations were added —
+  `deviceTypeLabel(id: unknown): string`, `behavioralEventsNames(direction?: string): string[]`, and
+  `DEVICE_TYPE_LABEL_OVERRIDES: Readonly<Record<string, string>>` (so the runtime-narrowed `id` can index it);
+  the form-default object literals are left inferred (no `.ts` consumer imports valueList, so the inferred
+  `never[]` on empty arrays constrains nothing). A temporary runtime deep-compare proved every export — objects,
+  function results, `behavioralEventsNames` across all directions, and `deviceTypeLabel` across every device type
+  and edge input — `toEqual`s the pre-split module, with identical export key sets. `npm run typecheck` + `CI=true`
+  build clean; golden baselines + value-specific tests (deviceTypeLabel / behavioralEventNames / optoCatalogNames /
+  schema-device-type-sync / dioDescription) + 3 source-scanning guards (267) pass; full suite 4793; e2e 104.
+
 - **Typed the `domain/` workflow/readiness layer (5 modules) under strict TS (refactor only, behavior-preserving).**
   [domain/sectionStatus.js](src/domain/sectionStatus.ts) (per-section nav status + animal blocking-section
   attribution), [domain/dayRecovery.js](src/domain/dayRecovery.ts) (the `DAY_STATUS` recovery classifier —
