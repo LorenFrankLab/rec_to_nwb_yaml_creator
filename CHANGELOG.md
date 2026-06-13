@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed the DayEditor orchestrator `DayEditorStepper` + route entry `index` `.jsx`→`.tsx` — the entire `pages/DayEditor` directory is now TypeScript (refactor only, behavior-preserving) — page cycle 8.**
+  `DayEditorStepper` is the provider of the `DayEditorContext` bundle every step consumes; it resolves
+  the day/animal/owner-key from the store, builds the typed `DayEditorBundle` value, and owns the
+  field-update / repair / subject-update handlers and the dynamic section render. Drop runtime
+  PropTypes; trim JSDoc. Behavior-equivalent non-type changes only: the dynamic
+  `<CurrentStepComponent>` is cast to `ComponentType<StepSectionProps>` (the active step reads its
+  shared bundle from context, so the render passes only the section-specific props — the cast drops
+  each step's required-bundle-prop contract); the assembled repair context is cast
+  `as unknown as RepairCommandContext` (preserving the exact runtime values — store actions + possibly
+  -null ids — that `applyRepairCommand` tolerates by no-op'ing the absent surface); the bundle value
+  casts `mergedDay`/`actions`/`animalKey` to their bundle types (`mergedDay` keeps its null
+  fail-closed value, which every section guards with `|| {}`); `dayId`/`ownerKey` (`string | null`)
+  are cast `as string` at the index/selector/write sites that keep the null runtime value (selectors
+  return `[]`, indexes miss to `undefined`) or sit behind a resolved-owner invariant; the dynamic
+  path-write clones the day as `Record<string, unknown>`; `querySelectorAll<HTMLElement>` makes
+  `.focus()`/`.classList` callable; `tabIndex="-1"` → `tabIndex={-1}` (DOM-identical). `index`'s
+  unused `dayId` prop became `_props: DayEditorProps`. `npm run typecheck` + `CI=true` build clean
+  (+5 B); golden baselines, the DayEditor suites + the 3 source-scanning guards + the emoji guard
+  pass; full suite 4793; e2e 104.
 - **Typed the 2 HEAVY `pages/DayEditor` Tier-2 step components `DevicesStep` + `TasksEpochsStep` `.jsx`→`.tsx` (refactor only, behavior-preserving) — page cycle 7.**
   Both read all seven shared fields from `useDayEditorContext(props)` with no section-specific props, so each is typed
   `props: DayEditorBundle` directly. Runtime PropTypes/defaultProps dropped; JSDoc trimmed; the bad-channel / task-catalog
