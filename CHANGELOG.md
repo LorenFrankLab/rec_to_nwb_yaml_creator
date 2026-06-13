@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed 3 live glue modules under strict TS — `featureFlags`, `features/importYaml`, root `utils` (refactor only, behavior-preserving).**
+  [featureFlags.js](src/featureFlags.ts) (feature-flag registry + `isFeatureEnabled`/`overrideFlags`; the
+  `FLAGS` object body is byte-identical, so the `shadowExportStrict`/`shadowExportLog` export-integrity gate
+  is unchanged), [features/importYaml.js](src/features/importYaml.ts) (the live workspace YAML-import parse
+  helper `parseImportFiles`), and root [utils.js](src/utils.ts) (`useMount`/`titleCase`/`isNumeric`/
+  `showCustomValidityError`/`stringToInteger`/`isProduction` + the `stringFormatting` re-exports) → `.ts`.
+  Behavior-equivalent transforms, each an erased cast (runtime no-op): `(element as HTMLInputElement)` after
+  the `tagName === 'INPUT'` guard in `showCustomValidityError`; `FLAGS[featureName as keyof typeof FLAGS]`
+  after the `in`-guard; and `(error as Error)?.message ?? String(error)` in `importYaml`'s catch blocks —
+  kept (not `instanceof Error`) so the duck-typed `.message` read is byte-identical. Root `utils.js` had ZERO
+  `.ts` consumers, so nothing tightens. Deferred (legacy-only): `features/importExport.js` (consumed only by
+  `LegacyFormView.jsx`), `utils/errorDisplay.js`, `utils/labelFormatters.js`. `npm run typecheck` + `CI=true`
+  build clean (bundle unchanged); golden baselines, the targeted suites (featureFlags 41, importYaml,
+  utils.test), and the 3 source-scanning guards pass; full suite 4793; e2e 104.
+
 - **Typed 7 LIVE React hooks under strict TS (refactor only, behavior-preserving).**
   [hooks/useStableId.js](src/hooks/useStableId.ts) (stable form-element ids),
   [hooks/useDayIdFromUrl.js](src/hooks/useDayIdFromUrl.ts) (day id from hash),

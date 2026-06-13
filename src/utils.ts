@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, type EffectCallback } from 'react';
 import {
   sanitizeTitle as sanitizeTitleUtil,
   formatCommaSeparatedString as formatCommaSeparatedStringUtil,
@@ -9,11 +9,11 @@ import {
 /**
  * Makes a useEffect hook be called only once
  *
- * @param {object} fn function
+ * @param fn function
  * @returns function wrapped around useEffect
  */
 // eslint-disable-next-line react-hooks/exhaustive-deps
-export const useMount = (fn) => useEffect(fn, []);
+export const useMount = (fn: EffectCallback): void => useEffect(fn, []);
 
 // Re-exported from utils/stringFormatting.js
 export const isInteger = isIntegerUtil;
@@ -21,19 +21,20 @@ export const isInteger = isIntegerUtil;
 /**
  * Checks if value is a numeric
  *
- * @param {object} num Value to verify if numeric
+ * @param num Value to verify if numeric
  *
  * @returns true if numeric, false otherwise
  */
-export const isNumeric = (num) => /^-?[0-9]+(?:\.[0-9]+)?$/.test(`${num}`);
+export const isNumeric = (num: string | number): boolean =>
+  /^-?[0-9]+(?:\.[0-9]+)?$/.test(`${num}`);
 
 /**
  * Converts a string to title case
  *
- * @param {string} str Makes text title case
+ * @param str Makes text title case
  * @returns Text in title case
  */
-export const titleCase = (str) => {
+export const titleCase = (str: string): string => {
   // based on https://stackoverflow.com/a/196991/178550
   return str.replace(/\w\S*/g, (txt) => {
     return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
@@ -49,32 +50,36 @@ export const formatCommaSeparatedString = formatCommaSeparatedStringUtil;
 /**
  * Displays an error message in input tag. It does nothing if the tag in not input
  *
- * @param {element} element Javascript element
- * @param {*} message Message to show
+ * @param element Javascript element
+ * @param message Message to show
  *
  * @returns undefined
  */
-export const showCustomValidityError = (element, message) => {
+export const showCustomValidityError = (
+  element: HTMLElement | null,
+  message: string
+): void => {
   if (!element || element.tagName !== 'INPUT') {
     return;
   }
 
-  element.setCustomValidity(message);
-  element.reportValidity();
+  // tagName === 'INPUT' guarantees this is an <input> (setCustomValidity lives on it).
+  (element as HTMLInputElement).setCustomValidity(message);
+  (element as HTMLInputElement).reportValidity();
 
   setTimeout(() => {
-    element.setCustomValidity('');
+    (element as HTMLInputElement).setCustomValidity('');
   }, 2000);
 };
 
 /**
  * Converts a string to a number
  *
- * @param {string} stringValue string hold a number-like value
+ * @param stringValue string hold a number-like value
  *
  * @returns number-type
  */
-export const stringToInteger = (stringValue) => {
+export const stringToInteger = (stringValue: string): number => {
   return parseInt(stringValue, 10);
 };
 
@@ -87,7 +92,7 @@ export const sanitizeTitle = sanitizeTitleUtil;
  *
  * @returns True if running in Production, false otherwise
  */
-export const isProduction = () => {
+export const isProduction = (): boolean => {
   // Security: Check hostname directly to prevent substring injection attacks
   // BEFORE: window.location.href.includes('https://lorenfranklab.github.io')
   //   - Vulnerable: https://evil.com/https://lorenfranklab.github.io would match

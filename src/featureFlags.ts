@@ -319,32 +319,32 @@ export const FLAGS = {
 /**
  * Check if a feature is enabled
  *
- * @param {string} featureName - Name of feature flag
- * @returns {boolean} True if feature is enabled
+ * @param featureName - Name of feature flag
+ * @returns True if feature is enabled
  *
  * @example
  * if (isFeatureEnabled('newNavigation')) {
  *   return <NewNav />;
  * }
  */
-export function isFeatureEnabled(featureName) {
+export function isFeatureEnabled(featureName: string): boolean {
   if (!(featureName in FLAGS)) {
     console.warn(`Unknown feature flag: ${featureName}`);
     return false;
   }
-  return FLAGS[featureName];
+  return FLAGS[featureName as keyof typeof FLAGS];
 }
 
 /**
  * Get all enabled features
  *
- * @returns {string[]} Array of enabled feature names
+ * @returns Array of enabled feature names
  *
  * @example
  * const enabled = getEnabledFeatures();
  * console.log('Enabled features:', enabled.join(', '));
  */
-export function getEnabledFeatures() {
+export function getEnabledFeatures(): string[] {
   return Object.entries(FLAGS)
     .filter(([_, enabled]) => enabled)
     .map(([name, _]) => name);
@@ -353,9 +353,9 @@ export function getEnabledFeatures() {
 /**
  * Get all disabled features
  *
- * @returns {string[]} Array of disabled feature names
+ * @returns Array of disabled feature names
  */
-export function getDisabledFeatures() {
+export function getDisabledFeatures(): string[] {
   return Object.entries(FLAGS)
     .filter(([_, enabled]) => !enabled)
     .map(([name, _]) => name);
@@ -366,7 +366,7 @@ export function getDisabledFeatures() {
  *
  * WARNING: This mutates the FLAGS object. Only use in tests.
  *
- * @param {object} overrides - Object with flag overrides
+ * @param overrides - Object with flag overrides
  *
  * @example
  * // In test
@@ -374,13 +374,13 @@ export function getDisabledFeatures() {
  * // ... test code ...
  * restoreFlags();
  */
-let flagBackup = null;
+let flagBackup: typeof FLAGS | null = null;
 
 /**
  *
  * @param overrides
  */
-export function overrideFlags(overrides) {
+export function overrideFlags(overrides: Partial<typeof FLAGS>): void {
   if (!flagBackup) {
     flagBackup = { ...FLAGS };
   }
@@ -395,7 +395,7 @@ export function overrideFlags(overrides) {
  *   restoreFlags();
  * });
  */
-export function restoreFlags() {
+export function restoreFlags(): void {
   if (flagBackup) {
     Object.assign(FLAGS, flagBackup);
     flagBackup = null;
@@ -405,7 +405,7 @@ export function restoreFlags() {
 /**
  * Get feature flag status summary (for debugging/logging)
  *
- * @returns {object} Summary of flag status
+ * @returns Summary of flag status
  *
  * @example
  * console.log('Feature flags:', getFlagSummary());
