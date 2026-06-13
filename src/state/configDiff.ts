@@ -3,9 +3,8 @@
  * which days use each configuration snapshot.
  *
  * These functions never touch the store. They diff/derive from plain
- * {@link import('./workspaceTypes').ProbeConfiguration} and day data so the
- * reconfiguration wizard can render a deterministic, structured view of what
- * changed between two configurations.
+ * {@link ProbeConfiguration} and day data so the reconfiguration wizard can render a
+ * deterministic, structured view of what changed between two configurations.
  *
  * @module state/configDiff
  */
@@ -17,6 +16,7 @@ import {
   getProbeElectrodeGroups,
   getProbeNtrodeMaps,
 } from './workspaceSelectors';
+import type { ProbeConfigDiff, ElectrodeGroup, NtrodeMap, Day } from './workspaceTypes';
 
 // Re-export so wizard/UI code has a single import surface for config resolution.
 export { resolveDayConfig };
@@ -25,32 +25,30 @@ export { resolveDayConfig };
  * Order-independent structural stringify (object keys sorted; array order kept).
  * Used for deep equality of scalar/`map` fields without depending on key order.
  *
- * @param {*} value - Any JSON-serializable value.
- * @returns {string}
+ * @param value - Any JSON-serializable value.
  */
-function stableStringify(value) {
+function stableStringify(value: unknown): string {
   if (Array.isArray(value)) {
     return `[${value.map(stableStringify).join(',')}]`;
   }
   if (value && typeof value === 'object') {
     return `{${Object.keys(value)
       .sort()
-      .map((k) => `${JSON.stringify(k)}:${stableStringify(value[k])}`)
+      .map((k) => `${JSON.stringify(k)}:${stableStringify((value as Record<string, unknown>)[k])}`)
       .join(',')}}`;
   }
   return JSON.stringify(value) ?? 'null';
 }
 
-const deepEqual = (a, b) => stableStringify(a) === stableStringify(b);
+const deepEqual = (a: unknown, b: unknown): boolean => stableStringify(a) === stableStringify(b);
 
 /**
  * Set-wise equality (ignores order and duplicates). Used for `bad_channels`.
  *
- * @param {Array} [a] - First list.
- * @param {Array} [b] - Second list.
- * @returns {boolean}
+ * @param a - First list.
+ * @param b - Second list.
  */
-function setEqual(a = [], b = []) {
+function setEqual(a: readonly unknown[] = [], b: readonly unknown[] = []): boolean {
   const sa = new Set(a);
   const sb = new Set(b);
   if (sa.size !== sb.size) return false;
@@ -60,8 +58,11 @@ function setEqual(a = [], b = []) {
   return true;
 }
 
-const byId = (a, b) => a.id - b.id;
-const byNtrodeId = (a, b) => a.ntrode_id - b.ntrode_id;
+// Structural comparators — used to sort both the group/ntrode arrays AND the `changed`
+// entries (which carry the same `id` / `ntrode_id`).
+const byId = (a: { id: number }, b: { id: number }): number => a.id - b.id;
+const byNtrodeId = (a: { ntrode_id: number }, b: { ntrode_id: number }): number =>
+  a.ntrode_id - b.ntrode_id;
 
 /**
  * Diff two probe configurations into a structured, serializable, deterministic
@@ -71,27 +72,33 @@ const byNtrodeId = (a, b) => a.ntrode_id - b.ntrode_id;
  *
  * `hasChanges` is always derived: true iff any add/remove/changed array is non-empty.
  *
- * @param {import('./workspaceTypes').ProbeConfiguration} prevConfig - Earlier config.
- * @param {import('./workspaceTypes').ProbeConfiguration} nextConfig - Later config.
- * @returns {import('./workspaceTypes').ProbeConfigDiff} The structured, sorted diff.
+ * @param prevConfig - Earlier config (a ProbeConfiguration or snapshot's `.devices`).
+ * @param nextConfig - Later config.
+ * @returns The structured, sorted diff.
  */
-export function diffProbeConfigs(prevConfig, nextConfig) {
+export function diffProbeConfigs(prevConfig: unknown, nextConfig: unknown): ProbeConfigDiff {
   const prevGroups = getProbeElectrodeGroups(prevConfig);
   const nextGroups = getProbeElectrodeGroups(nextConfig);
   const prevNtrodes = getProbeNtrodeMaps(prevConfig);
   const nextNtrodes = getProbeNtrodeMaps(nextConfig);
 
-  const prevGroupById = new Map(prevGroups.map((g) => [g.id, g]));
-  const nextGroupById = new Map(nextGroups.map((g) => [g.id, g]));
+  const prevGroupById = new Map(prevGroups.map((g): [number, ElectrodeGroup] => [g.id, g]));
+  const nextGroupById = new Map(nextGroups.map((g): [number, ElectrodeGroup] => [g.id, g]));
 
   const groupsAdded = nextGroups.filter((g) => !prevGroupById.has(g.id)).sort(byId);
   const groupsRemoved = prevGroups.filter((g) => !nextGroupById.has(g.id)).sort(byId);
-  const groupsChanged = [];
+  const groupsChanged: ProbeConfigDiff['electrodeGroups']['changed'] = [];
   for (const before of prevGroups) {
     const after = nextGroupById.get(before.id);
     if (!after) continue;
     const fields = [...new Set([...Object.keys(before), ...Object.keys(after)])]
-      .filter((k) => !deepEqual(before[k], after[k]))
+      .filter(
+        (k) =>
+          !deepEqual(
+            (before as unknown as Record<string, unknown>)[k],
+            (after as unknown as Record<string, unknown>)[k]
+          )
+      )
       .sort();
     if (fields.length > 0) {
       groupsChanged.push({ id: before.id, fields, before, after });
@@ -99,12 +106,12 @@ export function diffProbeConfigs(prevConfig, nextConfig) {
   }
   groupsChanged.sort(byId);
 
-  const prevNtrodeById = new Map(prevNtrodes.map((n) => [n.ntrode_id, n]));
-  const nextNtrodeById = new Map(nextNtrodes.map((n) => [n.ntrode_id, n]));
+  const prevNtrodeById = new Map(prevNtrodes.map((n): [number, NtrodeMap] => [n.ntrode_id, n]));
+  const nextNtrodeById = new Map(nextNtrodes.map((n): [number, NtrodeMap] => [n.ntrode_id, n]));
 
   const ntrodesAdded = nextNtrodes.filter((n) => !prevNtrodeById.has(n.ntrode_id)).sort(byNtrodeId);
   const ntrodesRemoved = prevNtrodes.filter((n) => !nextNtrodeById.has(n.ntrode_id)).sort(byNtrodeId);
-  const ntrodesChanged = [];
+  const ntrodesChanged: ProbeConfigDiff['channelMaps']['changed'] = [];
   for (const before of prevNtrodes) {
     const after = nextNtrodeById.get(before.ntrode_id);
     if (!after) continue;
@@ -143,12 +150,15 @@ export function diffProbeConfigs(prevConfig, nextConfig) {
  * each configuration snapshot. This is the authoritative usage view for the UI —
  * it ignores any stale stored `appliedToDays` lists.
  *
- * @param {import('./workspaceTypes').Animal} animal - Animal with `configurationHistory` + `days`.
- * @param {Record<string, import('./workspaceTypes').Day>} daysById - Workspace day lookup.
- * @returns {Record<number, string[]>} Map of snapshot version → day ids using it.
+ * @param animal - Animal with `configurationHistory` + `days`.
+ * @param daysById - Workspace day lookup.
+ * @returns Map of snapshot version → day ids using it.
  */
-export function reconcileAppliedToDays(animal, daysById) {
-  const byVersion = {};
+export function reconcileAppliedToDays(
+  animal: unknown,
+  daysById: Record<string, Day> | null | undefined
+): Record<number, string[]> {
+  const byVersion: Record<number, string[]> = {};
   for (const snapshot of getConfigHistory(animal)) {
     byVersion[snapshot.version] = [];
   }
