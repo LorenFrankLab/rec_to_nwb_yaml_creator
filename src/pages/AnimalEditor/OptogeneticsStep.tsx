@@ -1,10 +1,30 @@
-import React from 'react';
-import PropTypes from 'prop-types';
 import {
   optoExcitationModelNames,
   opticalFiberModelNames,
   virusNames,
 } from '../../valueList';
+
+/** A single configurable optogenetics field (drives {@link renderField}). */
+interface OptoFieldDef {
+  name: string;
+  label: string;
+  type: string;
+  options?: string[];
+  placeholder?: string;
+  help?: string;
+}
+
+/**
+ * The (enabled) optogenetics block as this editor works with it: the three repeatable sections are
+ * coerced to arrays of records, plus a tolerant index signature for any other spread-through fields.
+ */
+interface OptoBlock {
+  opto_excitation_source: Array<Record<string, unknown>>;
+  optical_fiber: Array<Record<string, unknown>>;
+  virus_injection: Array<Record<string, unknown>>;
+  optogenetic_stimulation_software?: unknown;
+  [key: string]: unknown;
+}
 
 /**
  * Workspace optogenetics editor (Animal Editor step).
@@ -28,7 +48,7 @@ import {
 // These names are EXACT lookup keys into trodes_to_nwb's device metadata (a miss raises
 // a ValueError). The bundled catalogs are offered as suggestions (datalist) for
 // discoverability, but free entry is preserved because a lab may add a custom device file.
-const EXCITATION_FIELDS = [
+const EXCITATION_FIELDS: OptoFieldDef[] = [
   { name: 'name', label: 'Setup name', type: 'text' },
   { name: 'model_name', label: 'Hardware model name', type: 'datalist', options: optoExcitationModelNames() },
   { name: 'description', label: 'Description', type: 'text' },
@@ -37,7 +57,7 @@ const EXCITATION_FIELDS = [
   { name: 'intensity_in_W_per_m2', label: 'Intensity (W/m²)', type: 'number', placeholder: 'e.g. 1.0' },
 ];
 
-const FIBER_FIELDS = [
+const FIBER_FIELDS: OptoFieldDef[] = [
   { name: 'name', label: 'Fiber implant name', type: 'text' },
   { name: 'hardware_name', label: 'Fiber hardware model', type: 'datalist', options: opticalFiberModelNames() },
   { name: 'implanted_fiber_description', label: 'Implant description', type: 'text' },
@@ -59,7 +79,7 @@ const FIBER_FIELDS = [
   },
 ];
 
-const VIRUS_FIELDS = [
+const VIRUS_FIELDS: OptoFieldDef[] = [
   { name: 'name', label: 'Injection name', type: 'text' },
   { name: 'description', label: 'Description', type: 'text' },
   { name: 'virus_name', label: 'Virus name', type: 'datalist', options: virusNames() },
@@ -84,20 +104,14 @@ const VIRUS_FIELDS = [
   },
 ];
 
-/**
- * Empty item for a section, with every field defaulted to a controllable value.
- * @param fields
- */
-function emptyItem(fields) {
+/** Empty item for a section, with every field defaulted to a controllable value. */
+function emptyItem(fields: OptoFieldDef[]): Record<string, unknown> {
   // Every field starts as '' so the input is controlled and the required check fires.
-  return Object.fromEntries(fields.map((f) => [f.name, '']));
+  return Object.fromEntries(fields.map((f): [string, string] => [f.name, '']));
 }
 
-/**
- * True when a value is a non-empty scalar (0 counts as filled; '' / null / undefined do not).
- * @param value
- */
-function isFilled(value) {
+/** True when a value is a non-empty scalar (0 counts as filled; '' / null / undefined do not). */
+function isFilled(value: unknown): boolean {
   return value !== undefined && value !== null && String(value).trim() !== '';
 }
 
@@ -105,15 +119,13 @@ function isFilled(value) {
  * True when an array has at least one item with EVERY one of `fields` filled in. Used for
  * the completeness checklist so it reflects export-readiness (all converter/schema-required
  * fields present), not merely that a row was added.
- * @param items
- * @param fields
  */
-function hasCompleteItem(items, fields) {
+function hasCompleteItem(items: unknown, fields: OptoFieldDef[]): boolean {
   return Array.isArray(items) && items.some((it) => fields.every((f) => isFilled(it?.[f.name])));
 }
 
 /** A fresh, enabled-but-empty optogenetics block (one excitation source, no fibers/viruses). */
-function defaultOptogenetics() {
+function defaultOptogenetics(): Record<string, unknown> {
   return {
     opto_excitation_source: [emptyItem(EXCITATION_FIELDS)],
     optical_fiber: [],
@@ -122,25 +134,25 @@ function defaultOptogenetics() {
   };
 }
 
-/**
- * Parse a number-field input value: '' stays '' (so the required check fires), else Number.
- * @param type
- * @param raw
- */
-function parseFieldValue(type, raw) {
+/** Parse a number-field input value: '' stays '' (so the required check fires), else Number. */
+function parseFieldValue(type: string, raw: string): string | number {
   if (type !== 'number') return raw;
   if (raw === '') return '';
   const n = Number(raw);
   return Number.isNaN(n) ? raw : n;
 }
 
+interface OptogeneticsStepProps {
+  /** The owning animal; only `optogenetics` is read (tolerant of corrupt/absent shapes). */
+  animal?: { optogenetics?: unknown } | null;
+  /** Commit callback — receives `{ optogenetics }` (a block, or null when disabled). */
+  onUpdate: (update: { optogenetics: unknown }) => void;
+}
+
 /**
- *
- * @param root0
- * @param root0.animal
- * @param root0.onUpdate
+ * Workspace optogenetics editor — see the module header for the enabled/off contract.
  */
-export default function OptogeneticsStep({ animal, onUpdate }) {
+export default function OptogeneticsStep({ animal, onUpdate }: OptogeneticsStepProps) {
   // Treat opto as ENABLED only when it is a real record. A corrupt persisted/imported scalar
   // (e.g. `optogenetics: "x"`) reads as OFF — the safe default — rather than crashing. When
   // enabled, coerce the three nested lists to arrays so a malformed shape (e.g.
@@ -150,25 +162,28 @@ export default function OptogeneticsStep({ animal, onUpdate }) {
   // one-item list rather than dropped, so real data isn't silently lost; a true scalar becomes `[]`.
   // Editing then commits the repaired array shape. Raw-shape validation does not cover nested opto,
   // so this render guard is the line of defense.
-  const asItemList = (value) =>
-    Array.isArray(value) ? value : value !== null && typeof value === 'object' ? [value] : [];
+  const asItemList = (value: unknown): Array<Record<string, unknown>> =>
+    Array.isArray(value) ? value : value !== null && typeof value === 'object' ? [value as Record<string, unknown>] : [];
   const rawOpto = animal?.optogenetics;
   const enabled = rawOpto !== null && typeof rawOpto === 'object' && !Array.isArray(rawOpto);
-  const opto = enabled
+  // Narrow the tolerant raw value to a record for the (enabled) builder; null when disabled.
+  const optoRecord = enabled ? (rawOpto as Record<string, unknown>) : null;
+  const opto: OptoBlock | null = optoRecord
     ? {
-        ...rawOpto,
-        opto_excitation_source: asItemList(rawOpto.opto_excitation_source),
-        optical_fiber: asItemList(rawOpto.optical_fiber),
-        virus_injection: asItemList(rawOpto.virus_injection),
+        ...optoRecord,
+        opto_excitation_source: asItemList(optoRecord.opto_excitation_source),
+        optical_fiber: asItemList(optoRecord.optical_fiber),
+        virus_injection: asItemList(optoRecord.virus_injection),
       }
     : null;
 
-  const commit = (next) => onUpdate({ optogenetics: next });
+  const commit = (next: Record<string, unknown> | null) => onUpdate({ optogenetics: next });
 
-  const setEnabled = (on) => commit(on ? defaultOptogenetics() : null);
+  const setEnabled = (on: boolean) => commit(on ? defaultOptogenetics() : null);
 
   // Update a scalar field on the (single) excitation source.
-  const updateSource = (field, value) => {
+  const updateSource = (field: OptoFieldDef, value: string) => {
+    if (!opto) return;
     const sources = opto.opto_excitation_source.length > 0
       ? opto.opto_excitation_source
       : [emptyItem(EXCITATION_FIELDS)];
@@ -177,20 +192,25 @@ export default function OptogeneticsStep({ animal, onUpdate }) {
   };
 
   // Generic add/remove/update for the multi-item sections (optical_fiber, virus_injection).
-  const addItem = (key, fields) =>
+  const addItem = (key: 'optical_fiber' | 'virus_injection', fields: OptoFieldDef[]) => {
+    if (!opto) return;
     commit({ ...opto, [key]: [...opto[key], emptyItem(fields)] });
+  };
 
-  const removeItem = (key, index) =>
+  const removeItem = (key: 'optical_fiber' | 'virus_injection', index: number) => {
+    if (!opto) return;
     commit({ ...opto, [key]: opto[key].filter((_, i) => i !== index) });
+  };
 
-  const updateItem = (key, index, field, value) => {
+  const updateItem = (key: 'optical_fiber' | 'virus_injection', index: number, field: OptoFieldDef, value: string) => {
+    if (!opto) return;
     const next = opto[key].map((item, i) =>
       i === index ? { ...item, [field.name]: parseFieldValue(field.type, value) } : item
     );
     commit({ ...opto, [key]: next });
   };
 
-  const renderField = (field, value, onChange, idPrefix) => {
+  const renderField = (field: OptoFieldDef, value: unknown, onChange: (field: OptoFieldDef, value: string) => void, idPrefix: string) => {
     const id = `${idPrefix}-${field.name}`;
     const helpId = field.help ? `${id}-help` : undefined;
     const helpNode = field.help ? (
@@ -208,12 +228,12 @@ export default function OptogeneticsStep({ animal, onUpdate }) {
             type="text"
             list={listId}
             placeholder={field.placeholder}
-            value={value ?? ''}
+            value={(value as string | number | undefined) ?? ''}
             onChange={(e) => onChange(field, e.target.value)}
             aria-describedby={helpId}
           />
           <datalist id={listId}>
-            {field.options.map((opt) => (
+            {field.options!.map((opt) => (
               <option key={opt} value={opt} />
             ))}
           </datalist>
@@ -227,12 +247,12 @@ export default function OptogeneticsStep({ animal, onUpdate }) {
           <span>{field.label}</span>
           <select
             id={id}
-            value={value ?? ''}
+            value={(value as string | number | undefined) ?? ''}
             onChange={(e) => onChange(field, e.target.value)}
             aria-describedby={helpId}
           >
             <option value="">— select —</option>
-            {field.options.map((opt) => (
+            {field.options!.map((opt) => (
               <option key={opt} value={opt}>{opt}</option>
             ))}
           </select>
@@ -248,7 +268,7 @@ export default function OptogeneticsStep({ animal, onUpdate }) {
           type={field.type}
           step={field.type === 'number' ? 'any' : undefined}
           placeholder={field.placeholder}
-          value={value ?? ''}
+          value={(value as string | number | undefined) ?? ''}
           onChange={(e) => onChange(field, e.target.value)}
           aria-describedby={helpId}
         />
@@ -258,7 +278,7 @@ export default function OptogeneticsStep({ animal, onUpdate }) {
   };
 
   // Completeness mirrors the converter gate (and the partial_configuration export rule).
-  const completeness = enabled
+  const completeness = opto
     ? {
         // "Complete" means a fully-filled row (every required field), not just an added /
         // named one — so the checklist doesn't read done while required fields are blank.
@@ -305,9 +325,9 @@ export default function OptogeneticsStep({ animal, onUpdate }) {
         </p>
       )}
 
-      {enabled && (
+      {opto && (
         <>
-          {!isComplete && (
+          {completeness && !isComplete && (
             <p className="opto-incomplete" role="status">
               This app blocks export until every optogenetics section below is complete; still
               missing: {' '}
@@ -415,7 +435,7 @@ export default function OptogeneticsStep({ animal, onUpdate }) {
               <input
                 id="opto-software"
                 type="text"
-                value={opto.optogenetic_stimulation_software ?? ''}
+                value={(opto.optogenetic_stimulation_software as string | undefined) ?? ''}
                 onChange={(e) =>
                   commit({ ...opto, optogenetic_stimulation_software: e.target.value })
                 }
@@ -427,10 +447,3 @@ export default function OptogeneticsStep({ animal, onUpdate }) {
     </section>
   );
 }
-
-OptogeneticsStep.propTypes = {
-  animal: PropTypes.shape({
-    optogenetics: PropTypes.object,
-  }),
-  onUpdate: PropTypes.func.isRequired,
-};

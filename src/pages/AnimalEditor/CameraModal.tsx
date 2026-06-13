@@ -1,23 +1,35 @@
-import React, { useState, useRef } from 'react';
-import PropTypes from 'prop-types';
+import { useState, useRef } from 'react';
+import type { ChangeEvent } from 'react';
 import Modal from '../../components/Modal/Modal';
 import { IDENTITY_FIELD_LABELS } from './identitySafety';
+import type { IdentityDivergence } from './identitySafety';
+import type { Camera } from '../../state/workspaceTypes';
 import './CameraModal.scss';
 
 const TYPICAL_MIN = 0.0005;
 const TYPICAL_MAX = 0.002;
+
+/** Local form state for the camera editor (all fields are strings while editing). */
+interface CameraFormData {
+  id: string;
+  camera_name: string;
+  manufacturer: string;
+  model: string;
+  lens: string;
+  meters_per_pixel: string;
+}
 
 /**
  * Compute the initial form state once, from props, at mount. Because the parent
  * Modal only renders this form while open, the form remounts on each open and this
  * initializer runs fresh — no unstable-dependency init effect needed.
  *
- * @param {string} mode 'add' or 'edit'.
- * @param {object|null} camera Camera being edited (edit mode).
- * @param {Array} existingCameras Existing cameras (for next-id assignment).
- * @returns {object} Initial form values.
+ * @param mode - 'add' or 'edit'.
+ * @param camera - Camera being edited (edit mode).
+ * @param existingCameras - Existing cameras (for next-id assignment).
+ * @returns Initial form values.
  */
-function getInitialFormData(mode, camera, existingCameras) {
+function getInitialFormData(mode: string, camera: Camera | null, existingCameras: Camera[]): CameraFormData {
   if (mode === 'edit' && camera) {
     return {
       id: String(camera.id),
@@ -26,7 +38,7 @@ function getInitialFormData(mode, camera, existingCameras) {
       model: camera.model || '',
       lens: camera.lens || '',
       meters_per_pixel:
-        camera.meters_per_pixel !== undefined && camera.meters_per_pixel !== ''
+        camera.meters_per_pixel !== undefined && (camera.meters_per_pixel as number | string) !== ''
           ? String(camera.meters_per_pixel)
           : '',
     };
@@ -42,24 +54,31 @@ function getInitialFormData(mode, camera, existingCameras) {
   };
 }
 
+interface CameraFormProps {
+  /** 'add' or 'edit'. */
+  mode: 'add' | 'edit';
+  /** Camera data for edit mode. */
+  camera?: Camera | null;
+  /** Existing cameras (ID assignment). */
+  existingCameras: Camera[];
+  /** Save callback with the cleaned camera object. */
+  onSave: (camera: Camera) => void;
+  /** Cancel callback. */
+  onCancel: () => void;
+  /** Identity divergence (same name, different dependent fields), or null. */
+  divergence?: IdentityDivergence | null;
+  /** Steer the user to a new camera name (focuses the name input). */
+  onUseNewName?: (() => void) | null;
+}
+
 /**
  * Camera add/edit form. Rendered as Modal children (only while open), so its state
  * initializes once per open. Owns field/validation/save behavior unchanged.
- *
- * @param {object} props
- * @param {string} props.mode 'add' or 'edit'.
- * @param {object|null} props.camera Camera data for edit mode.
- * @param {Array} props.existingCameras Existing cameras (ID assignment).
- * @param {Function} props.onSave Save callback with the cleaned camera object.
- * @param {Function} props.onCancel Cancel callback.
- * @param props.divergence
- * @param props.onUseNewName
- * @returns {JSX.Element}
  */
-function CameraForm({ mode, camera, existingCameras, onSave, onCancel, divergence, onUseNewName }) {
-  const [formData, setFormData] = useState(() => getInitialFormData(mode, camera, existingCameras));
+function CameraForm({ mode, camera = null, existingCameras, onSave, onCancel, divergence = null, onUseNewName = null }: CameraFormProps) {
+  const [formData, setFormData] = useState<CameraFormData>(() => getInitialFormData(mode, camera, existingCameras));
   const [metersPerPixelWarning, setMetersPerPixelWarning] = useState('');
-  const nameInputRef = useRef(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   const isFormValid = () => {
     const { camera_name, manufacturer, model, lens, meters_per_pixel } = formData;
@@ -79,9 +98,9 @@ function CameraForm({ mode, camera, existingCameras, onSave, onCancel, divergenc
     if (nameInputRef.current) nameInputRef.current.focus();
   };
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }) as CameraFormData);
 
     if (name === 'meters_per_pixel') {
       const mppValue = parseFloat(value);
@@ -221,7 +240,7 @@ function CameraForm({ mode, camera, existingCameras, onSave, onCancel, divergenc
                 <tr key={field}>
                   <td>{IDENTITY_FIELD_LABELS[field] || field}</td>
                   <td>{String(divergence.existing.fields[field] ?? '')}</td>
-                  <td>{String(formData[field] ?? '')}</td>
+                  <td>{String(formData[field as keyof CameraFormData] ?? '')}</td>
                 </tr>
               ))}
             </tbody>
@@ -256,37 +275,30 @@ function CameraForm({ mode, camera, existingCameras, onSave, onCancel, divergenc
   );
 }
 
-CameraForm.propTypes = {
-  mode: PropTypes.oneOf(['add', 'edit']).isRequired,
-  camera: PropTypes.object,
-  existingCameras: PropTypes.array.isRequired,
-  onSave: PropTypes.func.isRequired,
-  onCancel: PropTypes.func.isRequired,
-  divergence: PropTypes.shape({
-    existing: PropTypes.object,
-    differingFields: PropTypes.arrayOf(PropTypes.string),
-  }),
-  onUseNewName: PropTypes.func,
-};
-
-CameraForm.defaultProps = { camera: null, divergence: null, onUseNewName: null };
+interface CameraModalProps {
+  /** Whether modal is currently open. */
+  isOpen: boolean;
+  /** 'add' or 'edit'. */
+  mode?: 'add' | 'edit';
+  /** Camera data (required for edit mode). */
+  camera?: Camera | null;
+  /** Existing cameras (for ID assignment). */
+  existingCameras?: Camera[];
+  /** Callback with form data when saved. */
+  onSave: (camera: Camera) => void;
+  /** Callback when modal is cancelled/closed. */
+  onCancel: () => void;
+  /** Identity divergence (same name, different dependent fields), or null. */
+  divergence?: IdentityDivergence | null;
+  /** Steer the user to a new camera name (focuses the name input). */
+  onUseNewName?: (() => void) | null;
+}
 
 /**
  * CameraModal - Add/edit a camera. Dialog accessibility (focus trap, focus return,
  * ESC/overlay close, scroll lock) is provided by the shared Modal primitive.
- *
- * @param {object} props Component properties
- * @param {boolean} props.isOpen Whether modal is currently open
- * @param {string} props.mode 'add' or 'edit'
- * @param {object} props.camera Camera data (required for edit mode)
- * @param {Array} props.existingCameras Existing cameras (for ID assignment)
- * @param {Function} props.onSave Callback with form data when saved
- * @param {Function} props.onCancel Callback when modal is cancelled/closed
- * @param props.divergence
- * @param props.onUseNewName
- * @returns {JSX.Element}
  */
-const CameraModal = ({ isOpen, mode = 'add', camera = null, existingCameras = [], onSave, onCancel, divergence = null, onUseNewName = null }) => (
+const CameraModal = ({ isOpen, mode = 'add', camera = null, existingCameras = [], onSave, onCancel, divergence = null, onUseNewName = null }: CameraModalProps) => (
   <Modal
     isOpen={isOpen}
     onClose={onCancel}
@@ -305,38 +317,5 @@ const CameraModal = ({ isOpen, mode = 'add', camera = null, existingCameras = []
     />
   </Modal>
 );
-
-CameraModal.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  mode: PropTypes.oneOf(['add', 'edit']),
-  camera: PropTypes.shape({
-    id: PropTypes.number,
-    camera_name: PropTypes.string,
-    manufacturer: PropTypes.string,
-    model: PropTypes.string,
-    lens: PropTypes.string,
-    meters_per_pixel: PropTypes.number,
-  }),
-  existingCameras: PropTypes.arrayOf(
-    PropTypes.shape({
-      id: PropTypes.number,
-    })
-  ),
-  onSave: PropTypes.func.isRequired,
-  onCancel: PropTypes.func.isRequired,
-  divergence: PropTypes.shape({
-    existing: PropTypes.object,
-    differingFields: PropTypes.arrayOf(PropTypes.string),
-  }),
-  onUseNewName: PropTypes.func,
-};
-
-CameraModal.defaultProps = {
-  mode: 'add',
-  camera: null,
-  existingCameras: [],
-  divergence: null,
-  onUseNewName: null,
-};
 
 export default CameraModal;

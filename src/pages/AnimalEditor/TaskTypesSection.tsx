@@ -1,9 +1,21 @@
-import PropTypes from 'prop-types';
 import { getAnimalTaskTypes, getAnimalCameras } from '../../state/workspaceSelectors';
 import { duplicateTaskTypeNames } from '../../validation/taskCatalogValidation';
-import { rawArray } from '../../components/rawPropTypes';
+import type { TaskType } from '../../state/workspaceTypes';
 import Button from '../../components/ui/Button';
 import './TaskTypesSection.scss';
+
+interface TaskTypesSectionProps {
+  /** Animal record with `taskTypes` (and `cameras` for camera labels). Read through tolerant selectors. */
+  animal: unknown;
+  /** Field-update callback (parent's responsibility to persist). */
+  onFieldUpdate: (field: string, value: unknown) => void;
+  /** Add button handler. */
+  onAdd?: (() => void) | null;
+  /** Edit handler (task type id). */
+  onEdit?: ((id: string) => void) | null;
+  /** Delete handler (task type object). */
+  onDelete?: ((type: TaskType) => void) | null;
+}
 
 /**
  * TaskTypesSection — the animal-level task-type catalog (define once, reuse per day).
@@ -14,26 +26,15 @@ import './TaskTypesSection.scss';
  * description, environment, cameras) and a status badge, and delegates add/edit/delete to the parent
  * container (mirrors {@link module:pages/AnimalEditor/CamerasSection}). The dedup key is `task_name`
  * — a duplicate name is the Spyglass identity collision, flagged here and by `duplicate_task_type_name`.
- *
- * @param {object} props
- * @param {object} props.animal - Animal record with `taskTypes` (and `cameras` for camera labels).
- * @param {Function} props.onFieldUpdate - Field-update callback (parent's responsibility to persist).
- * @param {Function} [props.onAdd] - Add button handler.
- * @param {Function} [props.onEdit] - Edit handler (task type id).
- * @param {Function} [props.onDelete] - Delete handler (task type object).
- * @returns {JSX.Element}
  */
-export default function TaskTypesSection({ animal, onFieldUpdate, onAdd, onEdit, onDelete }) {
+export default function TaskTypesSection({ animal, onFieldUpdate, onAdd, onEdit, onDelete }: TaskTypesSectionProps) {
   // Tolerant reads (this is a repair destination): a corrupt non-array degrades to the empty state.
   const taskTypes = getAnimalTaskTypes(animal);
   const cameras = getAnimalCameras(animal);
   const duplicateNames = new Set(duplicateTaskTypeNames(taskTypes));
 
-  /**
-   * Map a camera id to a short human label ("0 · box") for the Cameras column.
-   * @param id
-   */
-  const cameraLabel = (id) => {
+  /** Map a camera id to a short human label ("0 · box") for the Cameras column. */
+  const cameraLabel = (id: number | string) => {
     const camera = cameras.find((c) => String(c?.id) === String(id));
     const name = camera?.camera_name;
     return name ? `${id} · ${name}` : String(id);
@@ -42,13 +43,10 @@ export default function TaskTypesSection({ animal, onFieldUpdate, onAdd, onEdit,
   /**
    * Status for a task type: duplicate name (Spyglass identity collision) > incomplete (a required
    * identity field missing) > complete.
-   *
-   * @param {object} type
-   * @returns {'duplicate'|'incomplete'|'complete'}
    */
-  function getStatus(type) {
+  function getStatus(type: TaskType): 'duplicate' | 'incomplete' | 'complete' {
     if (typeof type?.task_name === 'string' && duplicateNames.has(type.task_name)) return 'duplicate';
-    const required = ['task_name', 'task_description', 'task_environment'];
+    const required: Array<keyof TaskType> = ['task_name', 'task_description', 'task_environment'];
     const complete = required.every((field) => {
       const value = type?.[field];
       return typeof value === 'string' && value.trim() !== '';
@@ -56,15 +54,15 @@ export default function TaskTypesSection({ animal, onFieldUpdate, onAdd, onEdit,
     return complete ? 'complete' : 'incomplete';
   }
 
-  /** @param {string} status @returns {string} Human-readable status (a11y + colorblind). */
-  function getStatusText(status) {
+  /** Human-readable status (a11y + colorblind). */
+  function getStatusText(status: string): string {
     if (status === 'duplicate') return 'Duplicate task name — must be unique';
     if (status === 'incomplete') return 'Incomplete: name, description, and environment are required';
     return 'Complete';
   }
 
-  /** @param {string} status @returns {string} Status glyph. */
-  function getStatusSymbol(status) {
+  /** Status glyph. */
+  function getStatusSymbol(status: string): string {
     if (status === 'complete') return '✓';
     if (status === 'duplicate') return '❌';
     return '⚠';
@@ -165,22 +163,3 @@ export default function TaskTypesSection({ animal, onFieldUpdate, onAdd, onEdit,
   );
 }
 
-TaskTypesSection.propTypes = {
-  animal: PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    // Tolerant: this is a repair destination — a corrupt non-array `taskTypes` is the very state it
-    // surfaces (read through getAnimalTaskTypes), so it must not warn on it.
-    taskTypes: rawArray(PropTypes.object),
-    cameras: rawArray(PropTypes.object),
-  }).isRequired,
-  onFieldUpdate: PropTypes.func.isRequired,
-  onAdd: PropTypes.func,
-  onEdit: PropTypes.func,
-  onDelete: PropTypes.func,
-};
-
-TaskTypesSection.defaultProps = {
-  onAdd: null,
-  onEdit: null,
-  onDelete: null,
-};

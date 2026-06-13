@@ -1,19 +1,23 @@
 import { useState, useId } from 'react';
-import PropTypes from 'prop-types';
 import { findIdentityDivergence, DATA_ACQ_DEPENDENT_FIELDS, IDENTITY_FIELD_LABELS } from './identitySafety';
+import type { IdentityDivergence, IdentityRegistryEntry } from './identitySafety';
 import { getDataAcqDevices } from '../../state/workspaceSelectors';
-import { rawArray } from '../../components/rawPropTypes';
+import type { Animal, TechnicalDefaults } from '../../state/workspaceTypes';
 import Modal from '../../components/Modal/Modal';
 import './DataAcqSection.scss';
 
-const DEVICE_FIELDS = ['name', 'system', 'amplifier', 'adc_circuit'];
+/** The four string fields that define a recording-system catalog entry. */
+interface DeviceFields {
+  name: string;
+  system: string;
+  amplifier: string;
+  adc_circuit: string;
+}
 
-/**
- * Normalize a device's four string fields (trimmed).
- * @param {object} fields - Raw device fields.
- * @returns {object} Normalized {name, system, amplifier, adc_circuit}.
- */
-function normalizeDeviceFields(fields) {
+const DEVICE_FIELDS: Array<keyof DeviceFields> = ['name', 'system', 'amplifier', 'adc_circuit'];
+
+/** Normalize a device's four string fields (trimmed). */
+function normalizeDeviceFields(fields: Partial<DeviceFields>): DeviceFields {
   return {
     name: String(fields.name ?? '').trim(),
     system: String(fields.system ?? '').trim(),
@@ -22,25 +26,41 @@ function normalizeDeviceFields(fields) {
   };
 }
 
-/**
- * Whether all four device fields are present.
- * @param {object} device - Normalized device.
- * @returns {boolean}
- */
-function isCompleteDevice(device) {
+/** Whether all four device fields are present. */
+function isCompleteDevice(device: DeviceFields): boolean {
   return DEVICE_FIELDS.every((field) => device[field]);
 }
 
-/**
- * The identity-dependent fields of a device (everything but the name).
- * @param {object} device - A device.
- * @returns {object} {system, amplifier, adc_circuit}.
- */
-function dependentFields(device) {
-  return Object.fromEntries(DATA_ACQ_DEPENDENT_FIELDS.map((field) => [field, device[field]]));
+/** The identity-dependent fields of a device (everything but the name). */
+function dependentFields(device: DeviceFields): Record<string, string> {
+  return Object.fromEntries(
+    DATA_ACQ_DEPENDENT_FIELDS.map((field): [string, string] => [field, device[field as keyof DeviceFields]])
+  );
 }
 
-const BLANK_DEVICE = { name: '', system: 'SpikeGadgets', amplifier: '', adc_circuit: '' };
+const BLANK_DEVICE: DeviceFields = { name: '', system: 'SpikeGadgets', amplifier: '', adc_circuit: '' };
+
+/** The open add/edit modal state (null when closed). `index` is the edited catalog position. */
+interface EditingState {
+  mode: 'add' | 'edit';
+  index: number | null;
+  fields: DeviceFields;
+}
+
+/** Local state for the technical-defaults editor (committed on blur). */
+interface TechState {
+  raw_data_to_volts: number;
+  times_period_multiplier: number;
+}
+
+interface DataAcqSectionProps {
+  /** Animal record (`devices.data_acq_device`, `technicalDefaults`). */
+  animal: Animal;
+  /** Field update callback (field, value). */
+  onFieldUpdate: (field: string, value: unknown) => void;
+  /** Data-acq identities elsewhere in the dataset, for divergent-reuse detection. */
+  dataAcqRegistry?: IdentityRegistryEntry[];
+}
 
 /**
  * DataAcqSection — the animal's Recording System CATALOG + technical defaults (Animal View tab).
@@ -53,30 +73,23 @@ const BLANK_DEVICE = { name: '', system: 'SpikeGadgets', amplifier: '', adc_circ
  *
  * The technical DEFAULTS (`raw_data_to_volts`, `times_period_multiplier`) are animal-level
  * (`animal.technicalDefaults`, seeded into each day's `technical`); never exported directly.
- *
- * @param {object} props
- * @param {object} props.animal - Animal record (`devices.data_acq_device`, `technicalDefaults`).
- * @param {Function} props.onFieldUpdate - Field update callback (field, value).
- * @param {Array<{name: string, fields: object, label: string}>} [props.dataAcqRegistry] - Data-acq
- *   identities elsewhere in the dataset, for divergent-reuse detection.
- * @returns {JSX.Element}
  */
-export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry = [] }) {
+export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry = [] }: DataAcqSectionProps) {
   const catalog = getDataAcqDevices(animal);
-  const defaults = animal.technicalDefaults || {};
+  const defaults: Partial<TechnicalDefaults> = animal.technicalDefaults || {};
   const titleId = useId();
 
   // The open add/edit modal (null when closed). `index` is the edited catalog position.
-  const [editing, setEditing] = useState(null);
+  const [editing, setEditing] = useState<EditingState | null>(null);
   const [error, setError] = useState('');
-  const [divergence, setDivergence] = useState(null);
+  const [divergence, setDivergence] = useState<IdentityDivergence | null>(null);
 
   // Technical defaults: local state committed on blur (independent of the device editor).
-  const [tech, setTech] = useState({
+  const [tech, setTech] = useState<TechState>({
     raw_data_to_volts: defaults.raw_data_to_volts ?? 0.195,
     times_period_multiplier: defaults.times_period_multiplier ?? 1.5,
   });
-  const commitTech = (next) =>
+  const commitTech = (next: TechState) =>
     onFieldUpdate('technicalDefaults', {
       raw_data_to_volts: next.raw_data_to_volts,
       times_period_multiplier: next.times_period_multiplier,
@@ -87,7 +100,7 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
     setDivergence(null);
     setEditing({ mode: 'add', index: null, fields: { ...BLANK_DEVICE } });
   };
-  const openEdit = (index) => {
+  const openEdit = (index: number) => {
     setError('');
     setDivergence(null);
     setEditing({ mode: 'edit', index, fields: { ...normalizeDeviceFields(catalog[index]) } });
@@ -97,11 +110,11 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
     setError('');
     setDivergence(null);
   };
-  const setEditorField = (field, value) =>
-    setEditing((prev) => ({ ...prev, fields: { ...prev.fields, [field]: value } }));
+  const setEditorField = (field: string, value: string) =>
+    setEditing((prev) => ({ ...prev!, fields: { ...prev!.fields, [field]: value } as DeviceFields }));
 
   const saveEditor = () => {
-    const candidate = normalizeDeviceFields(editing.fields);
+    const candidate = normalizeDeviceFields(editing!.fields);
     if (!isCompleteDevice(candidate)) {
       setDivergence(null);
       setError('Complete name, system, amplifier, and ADC circuit before saving.');
@@ -109,7 +122,7 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
     }
     // Name-uniqueness within the catalog (the name IS the Spyglass identity) — excluding the edited row.
     const clashesInCatalog = catalog.some(
-      (d, i) => i !== editing.index && normalizeDeviceFields(d).name === candidate.name
+      (d, i) => i !== editing!.index && normalizeDeviceFields(d).name === candidate.name
     );
     if (clashesInCatalog) {
       setDivergence(null);
@@ -124,20 +137,20 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
       return;
     }
     const next =
-      editing.mode === 'add'
+      editing!.mode === 'add'
         ? [...catalog, candidate]
-        : catalog.map((d, i) => (i === editing.index ? candidate : d));
+        : catalog.map((d, i) => (i === editing!.index ? candidate : d));
     onFieldUpdate('data_acq_device', next);
     closeEditor();
   };
 
-  const deleteAt = (index) => {
+  const deleteAt = (index: number) => {
     // Schema requires at least one device — never delete the last.
     if (catalog.length <= 1) return;
     onFieldUpdate('data_acq_device', catalog.filter((_, i) => i !== index));
   };
 
-  const isValidPositive = (value) => value > 0;
+  const isValidPositive = (value: number) => value > 0;
 
   const technicalDefaults = (
     <details className="advanced-settings">
@@ -286,7 +299,7 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
                   <tr key={field}>
                     <td>{IDENTITY_FIELD_LABELS[field] || field}</td>
                     <td>{String(divergence.existing.fields[field] ?? '')}</td>
-                    <td>{String(editing?.fields[field] ?? '')}</td>
+                    <td>{String(editing?.fields[field as keyof DeviceFields] ?? '')}</td>
                   </tr>
                 ))}
               </tbody>
@@ -402,16 +415,3 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
   );
 }
 
-DataAcqSection.propTypes = {
-  animal: PropTypes.shape({
-    id: PropTypes.string,
-    devices: PropTypes.shape({ data_acq_device: rawArray(PropTypes.object) }),
-    technicalDefaults: PropTypes.object,
-  }).isRequired,
-  onFieldUpdate: PropTypes.func.isRequired,
-  dataAcqRegistry: PropTypes.arrayOf(PropTypes.object),
-};
-
-DataAcqSection.defaultProps = {
-  dataAcqRegistry: [],
-};

@@ -1,18 +1,28 @@
 import { useState, useRef } from 'react';
-import PropTypes from 'prop-types';
+import type { ChangeEvent } from 'react';
 import Modal from '../../components/Modal/Modal';
 import { getAnimalCameras } from '../../state/workspaceSelectors';
+import type { Camera, TaskType } from '../../state/workspaceTypes';
+import type { TaskTypeDefinitionInput } from '../../state/taskCatalogActions';
 import './TaskTypeModal.scss';
+
+/** Local form state for the task-type editor (scalars as strings, cameras as string keys). */
+interface TaskTypeFormData {
+  task_name: string;
+  task_description: string;
+  task_environment: string;
+  camera_id: string[];
+}
 
 /**
  * Initial form state, computed once at mount (the Modal only renders this form while open, so it
  * remounts per open and this runs fresh).
  *
- * @param {string} mode - 'add' or 'edit'.
- * @param {object|null} taskType - The task type being edited (edit mode).
- * @returns {object} Initial form values.
+ * @param mode - 'add' or 'edit'.
+ * @param taskType - The task type being edited (edit mode).
+ * @returns Initial form values.
  */
-function getInitialFormData(mode, taskType) {
+function getInitialFormData(mode: string, taskType: TaskType | null): TaskTypeFormData {
   if (mode === 'edit' && taskType) {
     return {
       task_name: taskType.task_name || '',
@@ -24,33 +34,39 @@ function getInitialFormData(mode, taskType) {
   return { task_name: '', task_description: '', task_environment: '', camera_id: [] };
 }
 
+interface TaskTypeFormProps {
+  /** 'add' or 'edit'. */
+  mode: 'add' | 'edit';
+  /** Task type for edit mode. */
+  taskType?: TaskType | null;
+  /** The animal's cameras (for the camera multi-select). */
+  cameras: Camera[];
+  /** A name-collision message from the parent (kept open on clash). */
+  nameError?: string | null;
+  /** Save callback with the cleaned task-type definition. */
+  onSave: (definition: TaskTypeDefinitionInput) => void;
+  /** Cancel callback. */
+  onCancel: () => void;
+}
+
 /**
  * Task-type add/edit form. Owns field state + validation; the parent persists the cleaned object.
- *
- * @param {object} props
- * @param {string} props.mode - 'add' or 'edit'.
- * @param {object|null} props.taskType - Task type for edit mode.
- * @param {Array} props.cameras - The animal's cameras (for the camera multi-select).
- * @param {string|null} props.nameError - A name-collision message from the parent (kept open on clash).
- * @param {Function} props.onSave - Save callback with the cleaned task-type definition.
- * @param {Function} props.onCancel - Cancel callback.
- * @returns {JSX.Element}
  */
-function TaskTypeForm({ mode, taskType, cameras, nameError, onSave, onCancel }) {
-  const [formData, setFormData] = useState(() => getInitialFormData(mode, taskType));
-  const nameInputRef = useRef(null);
+function TaskTypeForm({ mode, taskType = null, cameras, nameError = null, onSave, onCancel }: TaskTypeFormProps) {
+  const [formData, setFormData] = useState<TaskTypeFormData>(() => getInitialFormData(mode, taskType));
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   const isFormValid = () =>
     formData.task_name.trim() !== '' &&
     formData.task_description.trim() !== '' &&
     formData.task_environment.trim() !== '';
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }) as TaskTypeFormData);
   };
 
-  const toggleCamera = (cameraId) => {
+  const toggleCamera = (cameraId: number | string) => {
     const key = String(cameraId);
     setFormData((prev) => ({
       ...prev,
@@ -171,32 +187,28 @@ function TaskTypeForm({ mode, taskType, cameras, nameError, onSave, onCancel }) 
   );
 }
 
-TaskTypeForm.propTypes = {
-  mode: PropTypes.oneOf(['add', 'edit']).isRequired,
-  taskType: PropTypes.object,
-  cameras: PropTypes.array.isRequired,
-  nameError: PropTypes.string,
-  onSave: PropTypes.func.isRequired,
-  onCancel: PropTypes.func.isRequired,
-};
-
-TaskTypeForm.defaultProps = { taskType: null, nameError: null };
+interface TaskTypeModalProps {
+  /** Whether the modal is open. */
+  isOpen: boolean;
+  /** 'add' or 'edit'. */
+  mode?: 'add' | 'edit';
+  /** Task type for edit mode. */
+  taskType?: TaskType | null;
+  /** The owning animal (for the camera multi-select); read through the tolerant selector. */
+  animal: unknown;
+  /** Name-collision message (keeps the modal open on a clash). */
+  nameError?: string | null;
+  /** Save callback with the cleaned definition. */
+  onSave: (definition: TaskTypeDefinitionInput) => void;
+  /** Cancel/close callback. */
+  onCancel: () => void;
+}
 
 /**
  * TaskTypeModal — add/edit an animal task type. Dialog a11y (focus trap/return, ESC/overlay close,
  * scroll lock) comes from the shared Modal primitive.
- *
- * @param {object} props
- * @param {boolean} props.isOpen - Whether the modal is open.
- * @param {string} props.mode - 'add' or 'edit'.
- * @param {object|null} props.taskType - Task type for edit mode.
- * @param {object} props.animal - The owning animal (for the camera multi-select).
- * @param {string|null} props.nameError - Name-collision message (keeps the modal open on a clash).
- * @param {Function} props.onSave - Save callback with the cleaned definition.
- * @param {Function} props.onCancel - Cancel/close callback.
- * @returns {JSX.Element}
  */
-const TaskTypeModal = ({ isOpen, mode = 'add', taskType = null, animal, nameError = null, onSave, onCancel }) => (
+const TaskTypeModal = ({ isOpen, mode = 'add', taskType = null, animal, nameError = null, onSave, onCancel }: TaskTypeModalProps) => (
   <Modal
     isOpen={isOpen}
     onClose={onCancel}
@@ -214,17 +226,5 @@ const TaskTypeModal = ({ isOpen, mode = 'add', taskType = null, animal, nameErro
     />
   </Modal>
 );
-
-TaskTypeModal.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  mode: PropTypes.oneOf(['add', 'edit']),
-  taskType: PropTypes.object,
-  animal: PropTypes.object.isRequired,
-  nameError: PropTypes.string,
-  onSave: PropTypes.func.isRequired,
-  onCancel: PropTypes.func.isRequired,
-};
-
-TaskTypeModal.defaultProps = { mode: 'add', taskType: null, nameError: null };
 
 export default TaskTypeModal;

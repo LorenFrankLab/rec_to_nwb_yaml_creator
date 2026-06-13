@@ -1,5 +1,4 @@
 import { useState, useMemo, useId } from 'react';
-import PropTypes from 'prop-types';
 import Modal from '../../components/Modal/Modal';
 import {
   getAnimalCameras,
@@ -7,6 +6,7 @@ import {
   getAnimalNtrodeMaps,
   getDataAcqDevices,
 } from '../../state/workspaceSelectors';
+import type { Animal, Camera, DataAcqDevice, ElectrodeGroup, NtrodeMap } from '../../state/workspaceTypes';
 import {
   normalizeElectrodeGroupWithDefaults,
   normalizeIdKey,
@@ -20,17 +20,61 @@ import {
   collectDataAcqIdentities,
   findIdentityDivergence,
 } from './identitySafety';
+import type { IdentityRegistryEntry } from './identitySafety';
 import './CopyFromAnimalDialog.scss';
 
 /** The sections this dialog can copy, in display order. */
 const ALL_SECTIONS = ['electrode_groups', 'cameras', 'data_acq_device'];
 
 /** Human labels for the section checklist. */
-const SECTION_LABELS = {
+const SECTION_LABELS: Record<string, string> = {
   electrode_groups: 'Electrode groups + channel maps',
   cameras: 'Cameras',
   data_acq_device: 'Recording system',
 };
+
+/** A selectable source animal with its catalogs pre-read for the radio list + checklist. */
+interface SourceAnimal {
+  id: string;
+  name: string;
+  electrodeGroups: ElectrodeGroup[];
+  channelMaps: NtrodeMap[];
+  cameras: Camera[];
+  dataAcqDevices: DataAcqDevice[];
+}
+
+/** A detected camera/data-acq identity divergence in the pending copy (blocks the copy). */
+interface CopyDivergence {
+  kind: 'camera' | 'data_acq';
+  name: string;
+  existing: IdentityRegistryEntry;
+  differingFields: string[];
+  candidateFields: Record<string, unknown>;
+}
+
+/** The copy payload emitted on confirm (sections present only when checked + non-empty). */
+interface CopyPayload {
+  sourceAnimalName: string;
+  electrode_groups?: ElectrodeGroup[];
+  ntrode_electrode_group_channel_map?: NtrodeMap[];
+  cameras?: Camera[];
+  data_acq_device?: DataAcqDevice[];
+}
+
+interface CopyFromAnimalDialogProps {
+  /** Whether dialog is open. */
+  open: boolean;
+  /** ID of current animal (excluded from list + divergence registry). */
+  currentAnimalId: string;
+  /** All animals from workspace. */
+  animals: Record<string, Animal>;
+  /** Which sections this host offers. */
+  availableSections?: string[];
+  /** Callback when copy confirmed. */
+  onCopy: (payload: CopyPayload) => void;
+  /** Callback when canceled. */
+  onCancel: () => void;
+}
 
 /**
  * Dialog for copying shared hardware catalogs from another animal.
@@ -41,15 +85,6 @@ const SECTION_LABELS = {
  * deep-cloned as-is. Before emitting, copied camera/data-acq names are checked against the rest of
  * the workspace: a name reused with different dependent fields (a Spyglass identity divergence) is
  * surfaced and blocks the whole copy.
- *
- * @param {object} props
- * @param {boolean} props.open - Whether dialog is open.
- * @param {string} props.currentAnimalId - ID of current animal (excluded from list + divergence registry).
- * @param {object} props.animals - All animals from workspace.
- * @param {string[]} [props.availableSections] - Which sections this host offers.
- * @param {Function} props.onCopy - Callback when copy confirmed.
- * @param {Function} props.onCancel - Callback when canceled.
- * @returns {JSX.Element}
  */
 export default function CopyFromAnimalDialog({
   open,
@@ -58,14 +93,14 @@ export default function CopyFromAnimalDialog({
   availableSections = ALL_SECTIONS,
   onCopy,
   onCancel,
-}) {
-  const [selectedAnimalId, setSelectedAnimalId] = useState(null);
+}: CopyFromAnimalDialogProps) {
+  const [selectedAnimalId, setSelectedAnimalId] = useState<string | null>(null);
   // Which sections are checked. Keyed by section name; defaults are applied per source (all
   // offerable sections start checked) the first time a source is selected.
-  const [checkedSections, setCheckedSections] = useState(null);
+  const [checkedSections, setCheckedSections] = useState<Record<string, boolean> | null>(null);
   // Set when a camera/data-acq name in the copy diverges from an existing workspace identity. When
   // set, the copy is blocked and the alert(s) render. Cleared whenever the selection/checks change.
-  const [divergences, setDivergences] = useState(null);
+  const [divergences, setDivergences] = useState<CopyDivergence[] | null>(null);
   const titleId = useId();
 
   // The sections this host offers, restricted to the allow-list and preserving display order.
@@ -78,8 +113,8 @@ export default function CopyFromAnimalDialog({
    * Get available source animals (exclude current). Each carries its catalogs so the radio list can
    * decide selectability and the per-section checklist can decide which sections have content.
    */
-  const availableAnimals = useMemo(() => {
-    return Object.entries(animals || {})
+  const availableAnimals = useMemo<SourceAnimal[]>(() => {
+    return Object.entries((animals || {}) as Record<string, Animal>)
       .filter(([animalId]) => animalId !== currentAnimalId)
       .map(([animalId, animalData]) => ({
         id: animalId,
@@ -113,12 +148,8 @@ export default function CopyFromAnimalDialog({
    * offer to SEED them into an EMPTY target catalog. Electrode groups are re-ID'd to the target's
    * next ids on copy, so appending is already collision-safe and is offered whenever the source has
    * them (matching the electrode-groups-tab copy host).
-   *
-   * @param {object} animal - A source-animal descriptor.
-   * @param {string} section - A section key.
-   * @returns {boolean}
    */
-  function sectionHasContent(animal, section) {
+  function sectionHasContent(animal: SourceAnimal | null, section: string): boolean {
     if (!animal) return false;
     if (section === 'electrode_groups') return animal.electrodeGroups.length > 0;
     if (section === 'cameras') {
@@ -130,12 +161,8 @@ export default function CopyFromAnimalDialog({
     return false;
   }
 
-  /**
-   * Whether a source animal has content for ANY offerable section (so it can be selected).
-   * @param {object} animal - A source-animal descriptor.
-   * @returns {boolean}
-   */
-  function animalHasAnyContent(animal) {
+  /** Whether a source animal has content for ANY offerable section (so it can be selected). */
+  function animalHasAnyContent(animal: SourceAnimal): boolean {
     return offerableSections.some((s) => sectionHasContent(animal, s));
   }
 
@@ -153,10 +180,8 @@ export default function CopyFromAnimalDialog({
   /**
    * Whether a section is checked. Until the user toggles, all offerable-with-content sections
    * default checked (checkedSections === null means "defaults").
-   * @param {string} section - A section key.
-   * @returns {boolean}
    */
-  function isChecked(section) {
+  function isChecked(section: string): boolean {
     if (checkedSections === null) return true;
     return !!checkedSections[section];
   }
@@ -170,7 +195,7 @@ export default function CopyFromAnimalDialog({
       currentGroups.length > 0
         ? Math.max(
             ...currentGroups.map((g) => {
-              const parsed = parseInt(g.id, 10);
+              const parsed = parseInt(String(g.id), 10);
               return Number.isNaN(parsed) ? -1 : parsed;
             })
           )
@@ -180,7 +205,7 @@ export default function CopyFromAnimalDialog({
       currentMaps.length > 0
         ? Math.max(
             ...currentMaps.map((m) => {
-              const parsed = parseInt(m.ntrode_id, 10);
+              const parsed = parseInt(String(m.ntrode_id), 10);
               return Number.isNaN(parsed) ? -1 : parsed;
             })
           )
@@ -192,24 +217,18 @@ export default function CopyFromAnimalDialog({
     };
   }, [currentAnimal]);
 
-  /**
-   * Select a source animal and reset the per-source checks + any divergence.
-   * @param animalId
-   */
-  function handleSelectAnimal(animalId) {
+  /** Select a source animal and reset the per-source checks + any divergence. */
+  function handleSelectAnimal(animalId: string) {
     setSelectedAnimalId(animalId);
     setCheckedSections(null);
     setDivergences(null);
   }
 
-  /**
-   * Toggle a section's checkbox, materializing defaults on first toggle. Clears divergence.
-   * @param section
-   */
-  function toggleSection(section) {
+  /** Toggle a section's checkbox, materializing defaults on first toggle. Clears divergence. */
+  function toggleSection(section: string) {
     setCheckedSections((prev) => {
       const base = prev === null
-        ? Object.fromEntries(sourceSections.map((s) => [s, true]))
+        ? Object.fromEntries(sourceSections.map((s): [string, boolean] => [s, true]))
         : { ...prev };
       base[section] = !base[section];
       return base;
@@ -219,9 +238,9 @@ export default function CopyFromAnimalDialog({
 
   /** Build the electrode groups + channel maps copy with new ids (unchanged from the original). */
   function buildElectrodeCopy() {
-    const groupIdMap = new Map();
+    const groupIdMap = new Map<string, number>();
 
-    const copiedGroups = selectedAnimal.electrodeGroups.map((group, index) => {
+    const copiedGroups = selectedAnimal!.electrodeGroups.map((group, index) => {
       const oldId = normalizeIdKey(group.id);
       const newId = nextIds.nextGroupId + index;
       groupIdMap.set(oldId, newId);
@@ -229,7 +248,7 @@ export default function CopyFromAnimalDialog({
     });
 
     let nextNtrodeId = nextIds.nextNtrodeId;
-    const copiedMaps = selectedAnimal.channelMaps.flatMap((map) => {
+    const copiedMaps = selectedAnimal!.channelMaps.flatMap((map) => {
       const oldGroupId = normalizeIdKey(map.electrode_group_id);
       if (!groupIdMap.has(oldGroupId)) {
         return [];
@@ -238,10 +257,10 @@ export default function CopyFromAnimalDialog({
         {
           ...map,
           ntrode_id: nextNtrodeId,
-          electrode_group_id: groupIdMap.get(oldGroupId),
+          electrode_group_id: groupIdMap.get(oldGroupId)!,
         },
         nextNtrodeId,
-        groupIdMap.get(oldGroupId)
+        groupIdMap.get(oldGroupId)!
       );
       nextNtrodeId += 1;
       return [copied];
@@ -252,27 +271,23 @@ export default function CopyFromAnimalDialog({
 
   /**
    * Check copied cameras / data-acq devices against the rest of the workspace for an identity
-   * divergence (same name, different dependent fields). Returns an array of divergence descriptors,
-   * each `{ kind, name, existing, differingFields }`; empty when the copy is safe.
-   *
-   * @param {Array} cameras - The cameras to be copied (or []).
-   * @param {Array} dataAcq - The data-acq devices to be copied (or []).
-   * @returns {Array<{kind: string, name: string, existing: object, differingFields: string[]}>}
+   * divergence (same name, different dependent fields). Returns an array of divergence descriptors;
+   * empty when the copy is safe.
    */
-  function detectDivergences(cameras, dataAcq) {
-    const found = [];
+  function detectDivergences(cameras: Camera[], dataAcq: DataAcqDevice[]): CopyDivergence[] {
+    const found: CopyDivergence[] = [];
 
     if (cameras.length > 0) {
       const registry = collectCameraIdentities({ animals }, { animalId: currentAnimalId });
       for (const camera of cameras) {
         const candidateFields = Object.fromEntries(
-          CAMERA_DEPENDENT_FIELDS.map((f) => [f, camera[f]])
+          CAMERA_DEPENDENT_FIELDS.map((f): [string, unknown] => [f, camera[f as keyof Camera]])
         );
-        const divergence = findIdentityDivergence(camera.camera_name, candidateFields, registry);
+        const divergence = findIdentityDivergence(camera.camera_name as string, candidateFields, registry);
         if (divergence) {
           found.push({
             kind: 'camera',
-            name: camera.camera_name,
+            name: camera.camera_name as string,
             existing: divergence.existing,
             differingFields: divergence.differingFields,
             candidateFields,
@@ -285,7 +300,7 @@ export default function CopyFromAnimalDialog({
       const registry = collectDataAcqIdentities({ animals }, currentAnimalId);
       for (const device of dataAcq) {
         const candidateFields = Object.fromEntries(
-          DATA_ACQ_DEPENDENT_FIELDS.map((f) => [f, device[f]])
+          DATA_ACQ_DEPENDENT_FIELDS.map((f): [string, unknown] => [f, device[f as keyof DataAcqDevice]])
         );
         const divergence = findIdentityDivergence(device.name, candidateFields, registry);
         if (divergence) {
@@ -310,7 +325,7 @@ export default function CopyFromAnimalDialog({
     const checked = sourceSections.filter((s) => isChecked(s));
     if (checked.length === 0) return;
 
-    const payload = { sourceAnimalName: selectedAnimal.name };
+    const payload: CopyPayload = { sourceAnimalName: selectedAnimal.name };
 
     if (checked.includes('electrode_groups')) {
       const { electrode_groups, ntrode_electrode_group_channel_map } = buildElectrodeCopy();
@@ -504,12 +519,3 @@ export default function CopyFromAnimalDialog({
     </Modal>
   );
 }
-
-CopyFromAnimalDialog.propTypes = {
-  open: PropTypes.bool.isRequired,
-  currentAnimalId: PropTypes.string.isRequired,
-  animals: PropTypes.object.isRequired,
-  availableSections: PropTypes.arrayOf(PropTypes.string),
-  onCopy: PropTypes.func.isRequired,
-  onCancel: PropTypes.func.isRequired,
-};
