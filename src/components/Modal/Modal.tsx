@@ -1,27 +1,36 @@
-import React, { useEffect, useRef } from 'react';
-import PropTypes from 'prop-types';
+import { useEffect, useRef } from 'react';
+import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import './Modal.scss';
 
 const FOCUSABLE =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), ' +
   'textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+interface ModalProps {
+  /** Whether the dialog is shown. */
+  isOpen: boolean;
+  /** Called for ESC / overlay / programmatic close. */
+  onClose: () => void;
+  /** Heading content rendered as the labelled title. */
+  title: ReactNode;
+  /** id wired to aria-labelledby and the heading. */
+  titleId: string;
+  /** Close when the backdrop is clicked (default true). */
+  closeOnOverlayClick?: boolean;
+  /** ARIA role (default 'dialog'). */
+  role?: 'dialog' | 'alertdialog';
+  /** Optional aria-describedby target id. */
+  describedById?: string;
+  /** Extra class on the content box. */
+  className?: string;
+  /** Dialog body. */
+  children: ReactNode;
+}
+
 /**
  * Accessible dialog container. Owns ESC close, overlay-click close (optional),
  * body-scroll lock, focus trap, and focus return to the element that opened it.
  * Callers render their own form/content as children and pass a stable titleId.
- *
- * @param {object} props
- * @param {boolean} props.isOpen Whether the dialog is shown.
- * @param {Function} props.onClose Called for ESC / overlay / programmatic close.
- * @param {string} props.title Heading text rendered as the labelled title.
- * @param {string} props.titleId id wired to aria-labelledby and the heading.
- * @param {boolean} [props.closeOnOverlayClick] Close when the backdrop is clicked.
- * @param {('dialog'|'alertdialog')} [props.role] ARIA role.
- * @param {string} [props.describedById] Optional aria-describedby target id.
- * @param {string} [props.className] Extra class on the content box.
- * @param {React.ReactNode} props.children Dialog body.
- * @returns {JSX.Element|null}
  */
 const Modal = ({
   isOpen,
@@ -33,14 +42,14 @@ const Modal = ({
   describedById,
   className = '',
   children,
-}) => {
-  const contentRef = useRef(null);
-  const openerRef = useRef(null);
+}: ModalProps) => {
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const openerRef = useRef<HTMLElement | null>(null);
 
   // Capture the opener and restore focus to it on close.
   useEffect(() => {
     if (!isOpen) return undefined;
-    openerRef.current = document.activeElement;
+    openerRef.current = document.activeElement as HTMLElement | null;
     return () => {
       if (openerRef.current && typeof openerRef.current.focus === 'function') {
         openerRef.current.focus();
@@ -51,13 +60,13 @@ const Modal = ({
   // ESC close + focus trap (ported from the working CameraModal implementation).
   useEffect(() => {
     if (!isOpen) return undefined;
-    const handleKeydown = (e) => {
+    const handleKeydown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
         return;
       }
       if (e.key === 'Tab' && contentRef.current) {
-        const focusable = contentRef.current.querySelectorAll(FOCUSABLE);
+        const focusable = contentRef.current.querySelectorAll<HTMLElement>(FOCUSABLE);
         if (focusable.length === 0) return;
         const first = focusable[0];
         const last = focusable[focusable.length - 1];
@@ -77,7 +86,7 @@ const Modal = ({
   // Auto-focus the first focusable element when opened.
   useEffect(() => {
     if (!isOpen || !contentRef.current) return;
-    const focusable = contentRef.current.querySelector(FOCUSABLE);
+    const focusable = contentRef.current.querySelector<HTMLElement>(FOCUSABLE);
     if (focusable) focusable.focus();
   }, [isOpen]);
 
@@ -92,8 +101,8 @@ const Modal = ({
 
   if (!isOpen) return null;
 
-  const handleOverlayClick = (e) => {
-    if (closeOnOverlayClick && e.target.classList.contains('modal-overlay')) {
+  const handleOverlayClick = (e: ReactMouseEvent<HTMLDivElement>) => {
+    if (closeOnOverlayClick && (e.target as HTMLElement).classList.contains('modal-overlay')) {
       onClose();
     }
   };
@@ -116,18 +125,6 @@ const Modal = ({
       </div>
     </div>
   );
-};
-
-Modal.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired,
-  title: PropTypes.node.isRequired,
-  titleId: PropTypes.string.isRequired,
-  closeOnOverlayClick: PropTypes.bool,
-  role: PropTypes.oneOf(['dialog', 'alertdialog']),
-  describedById: PropTypes.string,
-  className: PropTypes.string,
-  children: PropTypes.node.isRequired,
 };
 
 export default Modal;
