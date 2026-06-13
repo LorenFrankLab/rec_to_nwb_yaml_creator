@@ -10,6 +10,52 @@
  * @module domain/animalCreation
  */
 import { getAnimalExperimenters } from '../state/workspaceSelectors';
+import type { WorkspaceSettings } from '../state/workspaceTypes';
+
+/** The processed AnimalCreationForm payload (already trimmed/numbered) consumed by {@link buildAnimalFromForm}. */
+interface AnimalCreationFormData {
+  /** Subject id (lower-cased/trimmed to derive the store key + subject_id). */
+  subject_id: string;
+  /** Species (Latin binomial). */
+  species: string;
+  /** Biological sex. */
+  sex: string;
+  /** Genetic background. */
+  genotype: string;
+  /** ISO date of birth. */
+  date_of_birth: string;
+  /** Baseline weight in grams. */
+  weight?: number;
+  /** Free-text subject description (auto-generated when blank). */
+  description?: string;
+  /** Experimenter names (blank entries filtered out). */
+  experimenter_names: string[];
+  /** Lab name. */
+  lab: string;
+  /** Institution name. */
+  institution: string;
+}
+
+/**
+ * The workspace state slice {@link getDefaultExperimenters} reads. Both `settings` and `animals`
+ * are optional so an incomplete/partial workspace can't crash the picker.
+ */
+interface DefaultExperimentersWorkspace {
+  /** Workspace settings (lab/institution/experimenter defaults). */
+  settings?: WorkspaceSettings;
+  /** All animals keyed by id (read shape-safely). */
+  animals?: Record<string, unknown>;
+}
+
+/** The default experimenter seed values resolved by {@link getDefaultExperimenters}. */
+interface DefaultExperimenters {
+  /** Experimenter names (always at least one, `['']` when none). */
+  experimenter_names: string[];
+  /** Lab name. */
+  lab: string;
+  /** Institution name. */
+  institution: string;
+}
 
 /**
  * Build the `{ animalId, subject, metadata }` triple a creation form submits into `createAnimal`.
@@ -17,10 +63,10 @@ import { getAnimalExperimenters } from '../state/workspaceSelectors';
  * (non-empty), so it auto-generates a `genotype species` label when left blank. Devices are seeded
  * empty with the legacy `device.name: ['Trodes']` default (schema minItems: 1).
  *
- * @param {object} formData - The processed AnimalCreationForm payload (already trimmed/numbered).
- * @returns {{ animalId: string, subject: object, metadata: object }}
+ * @param formData - The processed AnimalCreationForm payload (already trimmed/numbered).
+ * @returns
  */
-export function buildAnimalFromForm(formData) {
+export function buildAnimalFromForm(formData: AnimalCreationFormData) {
   const animalId = formData.subject_id.toLowerCase().trim();
 
   const subject = {
@@ -68,10 +114,12 @@ export function buildAnimalFromForm(formData) {
  * (1) non-empty workspace settings, (2) the most-recent animal's experimenters, (3) hardcoded
  * Frank Lab defaults.
  *
- * @param {object} workspace - The workspace state slice (`settings`, `animals`).
- * @returns {{ experimenter_names: string[], lab: string, institution: string }}
+ * @param workspace - The workspace state slice (`settings`, `animals`).
+ * @returns
  */
-export function getDefaultExperimenters(workspace) {
+export function getDefaultExperimenters(
+  workspace: DefaultExperimentersWorkspace
+): DefaultExperimenters {
   // Default `animals` so an incomplete workspace can't crash the Object.keys() below.
   const { settings, animals = {} } = workspace;
 

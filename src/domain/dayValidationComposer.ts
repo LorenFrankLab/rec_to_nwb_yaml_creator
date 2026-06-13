@@ -27,22 +27,33 @@ import {
   badChannelUnfailIssues,
 } from './dayOverrideValidation';
 import { repairTargetForIssue, REPAIR_SURFACES } from './repairRouting';
+import type { RepairableIssue } from './repairRouting';
+import type { ValidationModel } from '../validation/issueTypes';
 
 /**
  * The authoritative validation issue list for a day (see the contract note above
  * {@link computeStepStatus}'s caller chain). The SINGLE source the export gate and the
  * rendered repair lists share, so a blocking issue is never gated-but-invisible.
  *
- * @param {object} day - The day record.
- * @param {object} mergedDay - Merged animal + day metadata.
- * @param {object} [animal] - The owning animal (optional); folds raw animal-shape issues
+ * `day`/`mergedDay` are the permissive merged-model boundary (`Record<string, any>`): every
+ * downstream producer reads them tolerantly (raw-shape guards, optional chaining) and the typed
+ * guarantee of this layer is the produced `RepairableIssue[]`, not the untyped persisted input.
+ *
+ * @param day - The day record.
+ * @param mergedDay - Merged animal + day metadata.
+ * @param animal - The owning animal (optional); folds raw animal-shape issues
  *   (e.g. a non-array `cameras`) into the export gate.
- * @param {Array} [animalDays] - The animal's day records (optional); enables the bad-channel
+ * @param animalDays - The animal's day records (optional); enables the bad-channel
  *   monotonicity export-block (cross-day comparison against earlier same-config days).
  *   Empty/omitted → no cross-day comparison (back-compat).
- * @returns {Array} All validation issues for the day (each ownership-normalized).
+ * @returns All validation issues for the day (each ownership-normalized).
  */
-export function validateDay(day, mergedDay, animal, animalDays = []) {
+export function validateDay(
+  day: ValidationModel,
+  mergedDay: ValidationModel,
+  animal?: unknown,
+  animalDays: unknown[] = []
+): RepairableIssue[] {
   // Boundary 1: validate the RAW persisted day AND animal shape FIRST — before the merge
   // launders a corrupt collection (`tasks: {}`, `animal.cameras: "nope"`) into an empty
   // export default that the merged-model validation below would see as clean. These block
@@ -92,10 +103,10 @@ export function validateDay(day, mergedDay, animal, animalDays = []) {
  * resolves to no valid surface throws (a contract violation must be loud, never a silent
  * default-to-Day).
  *
- * @param {object} issue - A raw validation issue.
- * @returns {object} The issue with canonical ownership/focus fields.
+ * @param issue - A raw validation issue.
+ * @returns The issue with canonical ownership/focus fields.
  */
-function normalizeIssue(issue) {
+function normalizeIssue(issue: RepairableIssue): RepairableIssue {
   if (!issue || typeof issue !== 'object') return issue;
   const { surface, step } = repairTargetForIssue(issue);
   if (!REPAIR_SURFACES.has(surface)) {
@@ -103,7 +114,9 @@ function normalizeIssue(issue) {
       `normalizeIssue: unresolved ownerSurface for code="${issue.code}" path="${issue.path || issue.instancePath || ''}"`
     );
   }
-  const next = {
+  // `next` is typed as an index-signature record so the legacy `repairStep` alias can be
+  // `delete`d (a declared-required key cannot be) before the result is returned as a RepairableIssue.
+  const next: Record<string, unknown> = {
     ...issue,
     ownerSurface: surface,
     repairSurface: surface,
@@ -113,5 +126,5 @@ function normalizeIssue(issue) {
   // resolved day step so grouping/focus read one field, and drop the dead alias.
   if (surface === 'day' && step != null) next.step = step;
   delete next.repairStep;
-  return next;
+  return next as RepairableIssue;
 }

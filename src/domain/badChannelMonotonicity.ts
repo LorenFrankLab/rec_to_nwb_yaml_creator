@@ -20,10 +20,10 @@ import { getDayBadChannelOverrides } from '../state/workspaceSelectors';
 /**
  * Whether `value` is a plain object record (not null, not an array).
  *
- * @param {*} value
- * @returns {boolean}
+ * @param value
+ * @returns
  */
-function isRecord(value) {
+function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
@@ -33,23 +33,28 @@ function isRecord(value) {
  * `day.state` (never read by the export merge), so an ack can clear the export block without
  * altering the exported YAML.
  *
- * @param {object} day - The day record.
- * @returns {Record<string, number[]>} The ack record (`{}` when absent/corrupt).
+ * @param day - The day record.
+ * @returns The ack record (`{}` when absent/corrupt).
  */
-export function getBadChannelRemovalAcks(day) {
-  const state = day?.state;
+export function getBadChannelRemovalAcks(day: unknown): Record<string, number[]> {
+  // `isRecord(day) ? day.state : undefined` is the typed equivalent of the prior `day?.state`
+  // (a non-record day yields `undefined` → `{}` either way): `day` is `unknown` here so it
+  // can't be optional-chained directly, and the guard narrows it for the `.state` read.
+  const state = isRecord(day) ? day.state : undefined;
   if (!isRecord(state)) return {};
   const acks = state.badChannelRemovalAcks;
-  return isRecord(acks) ? acks : {};
+  // Shape-trust: this is a tolerant reader — it guarantees the record CONTAINER, trusting the
+  // per-ntrode values to be number arrays (validation owns element correctness).
+  return isRecord(acks) ? (acks as Record<string, number[]>) : {};
 }
 
 /**
  * Coerce a per-ntrode value to a numeric array (shape-safe). A non-array reads as empty.
  *
- * @param {*} value
- * @returns {number[]}
+ * @param value
+ * @returns
  */
-function asArray(value) {
+function asArray(value: unknown): number[] {
   return Array.isArray(value) ? value : [];
 }
 
@@ -59,17 +64,21 @@ function asArray(value) {
  * {@link getDayBadChannelOverrides} — the same set the export merge reads. Days that are later
  * than `day`, on a different config version, or equal to `day` itself are excluded.
  *
- * @param {object} animal - The owning animal (reserved for parity with the rule's signature;
+ * @param animal - The owning animal (reserved for parity with the rule's signature;
  *   the prior set is derived from `animalDays`).
- * @param {object} day - The day whose prior set is computed (pins `configurationVersion`/`date`).
- * @param {Array} animalDays - The animal's day records.
- * @returns {Record<string, number[]>} `{ [ntrodeId]: sortedUniqueChannels }` — `{}` when none.
+ * @param day - The day whose prior set is computed (pins `configurationVersion`/`date`).
+ * @param animalDays - The animal's day records.
+ * @returns `{ [ntrodeId]: sortedUniqueChannels }` — `{}` when none.
  */
-export function priorBadChannels(animal, day, animalDays) {
+export function priorBadChannels(
+  animal: unknown,
+  day: unknown,
+  animalDays: unknown[]
+): Record<string, number[]> {
   if (!isRecord(day) || !Array.isArray(animalDays)) return {};
   const version = day.configurationVersion;
   const date = day.date;
-  const union = {};
+  const union: Record<string, Set<number>> = {};
   for (const other of animalDays) {
     if (!isRecord(other)) continue;
     if (other === day || other.id === day.id) continue;
@@ -80,14 +89,16 @@ export function priorBadChannels(animal, day, animalDays) {
     for (const ntrodeId of Object.keys(overrides)) {
       const channels = asArray(overrides[ntrodeId]);
       if (channels.length === 0) continue;
-      const set = union[ntrodeId] || new Set();
+      const set = union[ntrodeId] || new Set<number>();
       channels.forEach((ch) => set.add(ch));
       union[ntrodeId] = set;
     }
   }
   // Materialize each Set to a sorted, de-duplicated array.
   return Object.fromEntries(
-    Object.entries(union).map(([ntrodeId, set]) => [ntrodeId, Array.from(set).sort((a, b) => a - b)])
+    Object.entries(union).map(
+      ([ntrodeId, set]): [string, number[]] => [ntrodeId, Array.from(set).sort((a, b) => a - b)]
+    )
   );
 }
 
@@ -97,17 +108,21 @@ export function priorBadChannels(animal, day, animalDays) {
  * "un-failings" the export-block rule treats as monotonicity regressions. Empty record = the
  * day is monotonic (or every removal is acknowledged).
  *
- * @param {object} animal - The owning animal.
- * @param {object} day - The day being checked.
- * @param {Array} animalDays - The animal's day records.
- * @returns {Record<string, number[]>} `{ [ntrodeId]: sortedRemovedChannels }` — `{}` when none.
+ * @param animal - The owning animal.
+ * @param day - The day being checked.
+ * @param animalDays - The animal's day records.
+ * @returns `{ [ntrodeId]: sortedRemovedChannels }` — `{}` when none.
  */
-export function badChannelRegressions(animal, day, animalDays) {
+export function badChannelRegressions(
+  animal: unknown,
+  day: unknown,
+  animalDays: unknown[]
+): Record<string, number[]> {
   const prior = priorBadChannels(animal, day, animalDays);
   if (Object.keys(prior).length === 0) return {};
   const current = getDayBadChannelOverrides(day);
   const acks = getBadChannelRemovalAcks(day);
-  const regressions = {};
+  const regressions: Record<string, number[]> = {};
   for (const ntrodeId of Object.keys(prior)) {
     const priorSet = prior[ntrodeId];
     const currentSet = new Set(asArray(current[ntrodeId]));

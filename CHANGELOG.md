@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed 6 pure `domain/` utility modules (batch 2b) under strict TS (refactor only, behavior-preserving).**
+  [domain/badChannels.js](src/domain/badChannels.ts) (the bad-channel converter semantics: probe-wide
+  toggle / later-row migration / invalid-mark interpretation),
+  [domain/badChannelMonotonicity.js](src/domain/badChannelMonotonicity.ts) (`priorBadChannels` /
+  `badChannelRegressions` / `getBadChannelRemovalAcks` — the cross-day monotonic contract),
+  [domain/shadowExport.js](src/domain/shadowExport.ts) (`checkShadowExport` pre-download encoder-stability
+  check), [domain/animalCreation.js](src/domain/animalCreation.ts) (`buildAnimalFromForm` /
+  `getDefaultExperimenters`), [domain/preflightSummary.js](src/domain/preflightSummary.ts)
+  (`buildPreflightSummary` export-readiness rows), and
+  [domain/dayValidationComposer.js](src/domain/dayValidationComposer.ts) (`validateDay` — the authoritative
+  per-day issue list) → `.ts`. Boundary types follow the established precedent: `unknown`-in for the
+  tolerant shape-safe readers (`isRecord` is now a type-guard in `badChannelMonotonicity`),
+  `ValidationModel` (= `Record<string, any>`) for the merged-model inputs (`validateDay.day/mergedDay`,
+  `buildPreflightSummary.merged`), and canonical `Animal`/`Day`/`WorkspaceSettings` where load-bearing
+  (`checkShadowExport`, `animalCreation`). Four small **behavior-equivalent** transforms (each commented):
+  `getBadChannelRemovalAcks`'s `day?.state` → `isRecord(day) ? day.state : undefined` (param is now
+  `unknown`), `buildPreflightSummary`'s `warningCount` gains a `= 0` destructure default
+  (`0 > 0 === undefined > 0`), `normalizeIssue`'s `next: Record<string, unknown>` (so `delete next.repairStep`
+  is legal) + `return next as RepairableIssue`, and `translateLaterRowMarks`'s `map` local widened to
+  `Record<string, number | null | undefined>` (keeps the `=== undefined || === null` fallback live under
+  strict). `validateDay`'s only typed consumer (`stepStatus.ts`) stays green untouched — `groupErrorsByStep`
+  already wants `RepairableIssue[]`. No `code:` literals moved, so the `workflowOwnership` `emittedCodesIn`
+  floor is unaffected. `npm run typecheck` + `CI=true` build clean; golden baselines + targeted tests + 3
+  source-scanning guards (241) pass; full suite 4793; e2e 104. **`domain/` is now 19 .ts / 6 .js.**
+
 - **Typed `domain/dayLifecycle` + `domain/deviceOverrides` under strict TS (refactor only, behavior-preserving).**
   [domain/dayLifecycle.js](src/domain/dayLifecycle.ts) (the lifecycle vocabulary enums +
   `lifecycleForValidDay`) and [domain/deviceOverrides.js](src/domain/deviceOverrides.ts)

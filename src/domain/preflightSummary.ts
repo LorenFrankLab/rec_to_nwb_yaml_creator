@@ -10,18 +10,41 @@
  * @module domain/preflightSummary
  */
 import { describeDayOptoState } from './optoStatus';
+import type { ValidationModel } from '../validation/issueTypes';
 
 // How many cameras to spell out inline before collapsing the rest into "+K more".
 const MAX_CAMERAS_INLINE = 4;
 
+/** Workflow context for {@link buildPreflightSummary}. */
+interface PreflightContext {
+  /** The owning animal id. */
+  animalId?: string;
+  /** The recording day's date. */
+  date?: string;
+  /** The version of the snapshot resolved into `merged`. */
+  configurationVersion?: number;
+  /** Whether that version is historical (not the latest). */
+  isHistorical?: boolean;
+  /** Count of non-blocking warnings still to review. */
+  warningCount?: number;
+}
+
+/** A single labelled preflight row. */
+interface PreflightRow {
+  /** Row label. */
+  label: string;
+  /** Row value (human-readable). */
+  value: string;
+}
+
 /**
  * Pluralize a count noun (no inflection of the count itself).
  *
- * @param {number} count - The quantity.
- * @param {string} noun - The singular noun (e.g. "electrode group").
- * @returns {string} The noun, pluralized when count !== 1.
+ * @param count - The quantity.
+ * @param noun - The singular noun (e.g. "electrode group").
+ * @returns The noun, pluralized when count !== 1.
  */
-function pluralize(count, noun) {
+function pluralize(count: number, noun: string): string {
   return count === 1 ? noun : `${noun}s`;
 }
 
@@ -30,16 +53,18 @@ function pluralize(count, noun) {
  * recalibration is visible at the download gate. Falls back to a plain count when there are no
  * cameras, and truncates to the first few when there are many.
  *
- * @param {Array<object>} cameras - The day-used camera objects (already the export's subset).
- * @returns {string} The row value.
+ * @param cameras - The day-used camera objects (already the export's subset).
+ * @returns The row value.
  */
-function describeCameras(cameras) {
+function describeCameras(cameras: unknown): string {
   const list = Array.isArray(cameras) ? cameras : [];
   if (list.length === 0) {
     return '0 cameras';
   }
 
-  const describe = (camera) => {
+  const describe = (
+    camera: { camera_name?: string | number; id?: number | string; meters_per_pixel?: number } | null | undefined
+  ) => {
     const name = camera?.camera_name || `camera ${camera?.id ?? '?'}`;
     const mpp = camera?.meters_per_pixel;
     return mpp == null ? name : `${name} (${mpp} m/px)`;
@@ -53,25 +78,30 @@ function describeCameras(cameras) {
 /**
  * Build the labelled preflight rows for a merged day.
  *
- * @param {object} merged - The merged day metadata about to be encoded.
- * @param {object} ctx - Workflow context for the summary.
- * @param {string} [ctx.animalId] - The owning animal id.
- * @param {string} [ctx.date] - The recording day's date.
- * @param {number} [ctx.configurationVersion] - The version of the snapshot resolved into `merged`.
- * @param {boolean} [ctx.isHistorical] - Whether that version is historical (not the latest).
- * @param {number} [ctx.warningCount] - Count of non-blocking warnings still to review.
- * @returns {Array<{label: string, value: string}>}
+ * @param merged - The merged day metadata about to be encoded.
+ * @param ctx - Workflow context for the summary.
+ * @param ctx.animalId - The owning animal id.
+ * @param ctx.date - The recording day's date.
+ * @param ctx.configurationVersion - The version of the snapshot resolved into `merged`.
+ * @param ctx.isHistorical - Whether that version is historical (not the latest).
+ * @param ctx.warningCount - Count of non-blocking warnings still to review.
+ * @returns
  */
 export function buildPreflightSummary(
-  merged,
-  { animalId, date, configurationVersion, isHistorical, warningCount } = {}
-) {
+  merged: ValidationModel,
+  // `warningCount` defaults to 0 (was undefined when omitted): `0 > 0` is false exactly as
+  // `undefined > 0` was, and the only places it is read with a value are reachable solely when
+  // it is > 0 — so this is behavior-equivalent and lets the relational compare typecheck.
+  { animalId, date, configurationVersion, isHistorical, warningCount = 0 }: PreflightContext = {}
+): PreflightRow[] {
   const subjectId = merged.subject?.subject_id || '—';
   const sessionId = merged.session_id || '—';
 
   const ntrodeMap = merged.ntrode_electrode_group_channel_map || [];
   const failedChannelCount = ntrodeMap.reduce(
-    (total, ntrode) => total + (ntrode.bad_channels?.length || 0),
+    // `ntrodeMap` is the permissive `any` merged read, so the reduce callback has no contextual
+    // type — annotate the params (structurally) to satisfy noImplicitAny.
+    (total: number, ntrode: { bad_channels?: unknown[] }) => total + (ntrode.bad_channels?.length || 0),
     0
   );
 
@@ -90,7 +120,7 @@ export function buildPreflightSummary(
   const dataAcq = merged.data_acq_device || [];
   const dataAcqValue = dataAcq.length
     ? `${dataAcq.length} device${dataAcq.length === 1 ? '' : 's'} (${
-        dataAcq.map((d) => d?.name).filter(Boolean).join(', ') || 'unnamed'
+        dataAcq.map((d: { name?: string }) => d?.name).filter(Boolean).join(', ') || 'unnamed'
       })`
     : 'None';
 
