@@ -14,7 +14,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const dayEditor = path.resolve(here, '..');
 
 const GUARDED_FILES = [
-  'TasksEpochsStep.jsx',
+  'TasksEpochsStep.tsx',
   'TasksTable.tsx',
   'TaskModal.tsx',
   'BehavioralEventsDisplay.tsx',

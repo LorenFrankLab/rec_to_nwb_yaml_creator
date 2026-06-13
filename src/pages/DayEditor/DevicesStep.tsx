@@ -1,5 +1,4 @@
 import { useMemo, useCallback } from 'react';
-import PropTypes from 'prop-types';
 import DayRecordingSystem from './DayRecordingSystem';
 import { reconcileAppliedToDays } from '../../state/configDiff';
 import { resolveDayConfig } from '../../state/workspaceUtils';
@@ -8,14 +7,16 @@ import {
   getDataAcqDevices,
   getDayDataAcqDeviceName,
 } from '../../state/workspaceSelectors';
-import { rawRecord } from '../../components/rawPropTypes';
 import { isMultiShankGroup, validBadChannelIds } from '../../domain/badChannels';
 import { priorBadChannels, getBadChannelRemovalAcks } from '../../domain/badChannelMonotonicity';
 import { useDayEditorContext } from './DayEditorContext';
+import type { DayEditorBundle } from './DayEditorContext';
 import CamerasUsedSection from './CamerasUsedSection';
 import OverrideCleanupSection from './OverrideCleanupSection';
 import ConfigVersionPanel from './ConfigVersionPanel';
+import type { ReconfigActions } from './ConfigVersionPanel';
 import ElectrodeGroupsAccordion from './ElectrodeGroupsAccordion';
+import type { Day } from '../../state/workspaceTypes';
 import './DayEditor.scss';
 
 /**
@@ -31,23 +32,10 @@ import './DayEditor.scss';
  * reconfiguration wizard), and `ElectrodeGroupsAccordion` (the per-group failed-channel editors).
  * This module owns the effective-config resolution, the bad-channel state/handlers, and composition.
  *
- * @param {object} props
- * @param {object} props.animal - Animal record (read-only context)
- * @param {object} props.day - Day record (editable)
- * @param {object} props.mergedDay - Merged animal + day for validation
- * @param {Function} props.onFieldUpdate - Callback: (fieldPath, value) => void
- * @param {object[]} [props.animalDays] - The animal's days (sorted by date); enables the
- *   configuration-version indicator + reconfiguration wizard. Omitted in isolated tests.
- * @param {object} [props.actions] - Store actions (`createConfigurationSnapshotAndApplyForward`);
- *   when provided, the reconfiguration wizard is available.
- * @param {string} [props.animalKey] - The resolved store owner key; used for animal-editor links
- *   and the reconfiguration write instead of the possibly-stale `animal.id`.
- *
  * Reads its inputs from {@link DayEditorContext} inside the Day Editor; an isolated render may
  * pass the same fields as props (the context hook falls back to them).
- * @returns {JSX.Element}
  */
-export default function DevicesStep(props) {
+export default function DevicesStep(props: DayEditorBundle) {
   const {
     animal,
     day,
@@ -105,11 +93,15 @@ export default function DevicesStep(props) {
   const reconfig = useMemo(() => {
     if (!reconfigEnabled) return null;
     const version = effectiveConfig.configurationVersion;
+    // `version` is undefined ONLY on the configError path (the catch stub), which early-returns
+    // before this panel renders — so returning null here is behavior-equivalent and narrows
+    // `version` to `number` for the ConfigVersionPanel contract.
+    if (version == null) return null;
     // Read history through the canonical selector: a corrupt non-array configurationHistory
     // (`|| []` preserves a string and would throw on `.find`) is rendered as no history.
     const history = getConfigHistory(animal);
     const snapshot = history.find((s) => s.version === version) || null;
-    const daysById = Object.fromEntries(animalDays.map((d) => [d.id, d]));
+    const daysById = Object.fromEntries(animalDays.map((d): [string, Day] => [d.id, d]));
     const appliedCount = (reconcileAppliedToDays(animal, daysById)[version] || []).length;
     const idx = animalDays.findIndex((d) => d.id === day.id);
     const prevDay = idx > 0 ? animalDays[idx - 1] : null;
@@ -128,7 +120,7 @@ export default function DevicesStep(props) {
   // channel state export will encode.
   const badChannels = useMemo(() => {
     return Object.fromEntries(
-      ntrodeChannelMap.map((ntrode) => [
+      ntrodeChannelMap.map((ntrode): [string, number[]] => [
         String(ntrode.ntrode_id),
         Array.isArray(ntrode.bad_channels) ? ntrode.bad_channels : [],
       ])
@@ -137,10 +129,10 @@ export default function DevicesStep(props) {
 
   /**
    * Handle bad channels update
-   * @param {string} ntrodeId - Ntrode ID
-   * @param {number[]} badChannelArray - Array of bad channel numbers
+   * @param ntrodeId - Ntrode ID
+   * @param badChannelArray - Array of bad channel numbers
    */
-  const handleBadChannelsUpdate = useCallback((ntrodeId, badChannelArray) => {
+  const handleBadChannelsUpdate = useCallback((ntrodeId: string, badChannelArray: number[]) => {
     onFieldUpdate(`deviceOverrides.bad_channels.${ntrodeId}`, badChannelArray);
   }, [onFieldUpdate]);
 
@@ -149,9 +141,9 @@ export default function DevicesStep(props) {
    * `deviceOverrides` from a stale render closure and REPLACES it, so the multi-shank
    * probe-wide migration (which touches several ntrode rows at once) must write the
    * entire map in a single update — separate per-ntrode writes would race/clobber.
-   * @param {object} badChannelsObject - The complete `{ [ntrodeId]: number[] }` map.
+   * @param badChannelsObject - The complete `{ [ntrodeId]: number[] }` map.
    */
-  const handleBadChannelsBatchUpdate = useCallback((badChannelsObject) => {
+  const handleBadChannelsBatchUpdate = useCallback((badChannelsObject: Record<string, number[]>) => {
     onFieldUpdate('deviceOverrides.bad_channels', badChannelsObject);
   }, [onFieldUpdate]);
 
@@ -162,7 +154,7 @@ export default function DevicesStep(props) {
   const priorBadByNtrode = useMemo(() => {
     const prior = priorBadChannels(animal, day, Array.isArray(animalDays) ? animalDays : []);
     const acks = getBadChannelRemovalAcks(day);
-    const result = {};
+    const result: Record<string, number[]> = {};
     Object.keys(prior).forEach((ntrodeId) => {
       const acked = new Set(Array.isArray(acks[ntrodeId]) ? acks[ntrodeId] : []);
       const remaining = prior[ntrodeId].filter((ch) => !acked.has(ch));
@@ -177,10 +169,10 @@ export default function DevicesStep(props) {
    * `day.state.badChannelRemovalAcks.<ntrodeId>` (never read by the export merge), UNIONed with
    * any existing acks so a prior acknowledgment is preserved. This clears the
    * `bad_channel_unfailed_without_ack` export block without restoring the channel.
-   * @param {string} ntrodeId - The ntrode id (stringified).
-   * @param {number} channel - The probe-local channel/electrode id being un-marked.
+   * @param ntrodeId - The ntrode id (stringified).
+   * @param channel - The probe-local channel/electrode id being un-marked.
    */
-  const handleAcknowledgeRemoval = useCallback((ntrodeId, channel) => {
+  const handleAcknowledgeRemoval = useCallback((ntrodeId: string, channel: number) => {
     const existing = getBadChannelRemovalAcks(day)[ntrodeId];
     const prior = Array.isArray(existing) ? existing : [];
     const next = Array.from(new Set([...prior, channel])).sort((a, b) => a - b);
@@ -198,16 +190,19 @@ export default function DevicesStep(props) {
   // action lands on Devices with no control). The section self-hides when there is nothing to clean
   // up. Rendered in both the empty-state and the main return.
   const overrideCleanupSection = (
-    <OverrideCleanupSection day={day} resolvedNtrodeIds={resolvedNtrodeIds} onFieldUpdate={onFieldUpdate} />
+    // OverrideCleanupSection's `day` is the tolerant `Record<string, unknown>` (it inspects a
+    // possibly-corrupt `deviceOverrides`); a clean `Day` is a valid input — the interface lacks an
+    // index signature, hence the cast.
+    <OverrideCleanupSection day={day as unknown as Record<string, unknown>} resolvedNtrodeIds={resolvedNtrodeIds} onFieldUpdate={onFieldUpdate} />
   );
 
   /**
    * Validate bad channels
-   * @param {number|string} ntrodeId - Ntrode ID
-   * @param {number[]} badChannelArray - Array of bad channel numbers
-   * @returns {object|null} Error or warning message
+   * @param ntrodeId - Ntrode ID
+   * @param badChannelArray - Array of bad channel numbers
+   * @returns Error or warning message
    */
-  const validateBadChannels = useCallback((ntrodeId, badChannelArray) => {
+  const validateBadChannels = useCallback((ntrodeId: number | string, badChannelArray: number[]) => {
     const ntrode = ntrodeChannelMap.find(n => String(n.ntrode_id) === String(ntrodeId));
     if (!ntrode) return null;
 
@@ -219,11 +214,13 @@ export default function DevicesStep(props) {
       (n) => n.electrode_group_id === ntrode.electrode_group_id
     );
     const isMultiShankFirstRow =
-      isMultiShankGroup(group?.device_type, groupNtrodes.length) &&
+      isMultiShankGroup(group?.device_type as string, groupNtrodes.length) &&
       groupNtrodes[0]?.ntrode_id === ntrode.ntrode_id;
 
     const validChannels = validBadChannelIds({
-      deviceType: group?.device_type,
+      // The badChannels domain helpers declare `deviceType: string` but tolerate undefined at
+      // runtime (a missing device_type yields an empty valid set); the erased cast keeps the call typed.
+      deviceType: group?.device_type as string,
       isMultiShankFirstRow,
       rowMap: ntrode.map,
     });
@@ -249,8 +246,8 @@ export default function DevicesStep(props) {
 
   // Compute validation errors and warnings
   const { errors, warnings } = useMemo(() => {
-    const errors = {};
-    const warnings = {};
+    const errors: Record<string, string> = {};
+    const warnings: Record<string, string> = {};
 
     Object.keys(badChannels).forEach(ntrodeId => {
       const validation = validateBadChannels(ntrodeId, badChannels[ntrodeId]);
@@ -332,7 +329,9 @@ export default function DevicesStep(props) {
           animal={animal}
           ownerKey={ownerKey}
           onFieldUpdate={onFieldUpdate}
-          actions={actions}
+          // `actions` is the loose bundle store-action bag; the reconfig panel needs the
+          // `createConfigurationSnapshotAndApplyForward` action it always carries here.
+          actions={actions as unknown as ReconfigActions}
         />
       )}
 
@@ -361,64 +360,3 @@ export default function DevicesStep(props) {
     </div>
   );
 }
-
-// The seven shared fields (animal/day/mergedDay/onFieldUpdate/animalKey/animalDays/actions) come
-// from DayEditorContext in the Day Editor; these propTypes describe the isolated-render fallback,
-// so the context-provided fields are NOT marked `.isRequired` (the stepper passes them via context,
-// not as props).
-DevicesStep.propTypes = {
-  animal: PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    // Animal-level camera catalog (optional); rendered as the per-day cameras-used checklist.
-    cameras: PropTypes.arrayOf(PropTypes.object),
-    devices: PropTypes.shape({
-      electrode_groups: PropTypes.arrayOf(
-        PropTypes.shape({
-          id: PropTypes.number.isRequired,
-          location: PropTypes.string.isRequired,
-          device_type: PropTypes.string.isRequired,
-          description: PropTypes.string.isRequired,
-          targeted_location: PropTypes.string.isRequired,
-          targeted_x: PropTypes.number.isRequired,
-          targeted_y: PropTypes.number.isRequired,
-          targeted_z: PropTypes.number.isRequired,
-          units: PropTypes.string.isRequired,
-        })
-      ),
-      ntrode_electrode_group_channel_map: PropTypes.arrayOf(
-        PropTypes.shape({
-          ntrode_id: PropTypes.number.isRequired,
-          electrode_group_id: PropTypes.number.isRequired,
-          bad_channels: PropTypes.arrayOf(PropTypes.number),
-          map: PropTypes.objectOf(PropTypes.number).isRequired,
-        })
-      ),
-    }),
-  }),
-  day: PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    animalId: PropTypes.string.isRequired,
-    date: PropTypes.string.isRequired,
-    // deviceOverrides is intentionally lossless: a malformed import can carry a corrupt
-    // bad_channels container (scalar/array) or non-array geometry override. The component
-    // detects and offers removal for each. rawRecord tolerates a non-record (scalar/array)
-    // value too, so the PropType never warns on the corruption it exists to surface.
-    deviceOverrides: rawRecord({}),
-    // The explicit per-day "cameras used" checklist set (optional). Holds catalog camera ids of
-    // cameras the day used but that are NOT inferred from a task/video/fs-gui row. Ids preserve
-    // their source type (numeric or string from a corrupt import).
-    cameras_used: PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.number, PropTypes.string])),
-  }),
-  mergedDay: PropTypes.object,
-  onFieldUpdate: PropTypes.func,
-  // The resolved store owner key (from DayEditorStepper); animal-editor links + reconfiguration
-  // use it instead of the possibly-stale `animal.id`. Omitted in isolated renders (falls back).
-  animalKey: PropTypes.string,
-  // animalDays + actions are supplied together by DayEditorStepper to enable the
-  // configuration-version indicator and reconfiguration wizard; omitting both (e.g.
-  // in isolated unit renders) simply hides that section.
-  animalDays: PropTypes.arrayOf(PropTypes.object),
-  actions: PropTypes.shape({
-    createConfigurationSnapshotAndApplyForward: PropTypes.func,
-  }),
-};

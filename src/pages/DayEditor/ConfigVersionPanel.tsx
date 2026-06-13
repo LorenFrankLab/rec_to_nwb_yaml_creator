@@ -14,7 +14,7 @@ interface ReconfigContext {
 }
 
 /** Store actions the reconfiguration write needs (matches ReconfigWizard). */
-interface ReconfigActions {
+export interface ReconfigActions {
   createConfigurationSnapshotAndApplyForward: (
     animalKey: string,
     snapshot: { date: string; description: string; devices: unknown },
