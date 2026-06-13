@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed the `pages/ValidationSummary` directory — all 7 files `.jsx`/`.js`→`.tsx`/`.ts` (refactor only, behavior-preserving) — page cycle 11.**
+  The pure row-builder/display helpers (`validationSummaryRows`), the batch-action controller hook
+  (`useValidationSummaryActions`), and the presentational pieces (`ExportReport`, `EffectiveDayReview`,
+  `BatchExportPreflight`, `DayStatusTable`, `index`). Props→interfaces; PropTypes/defaultProps dropped;
+  JSDoc trimmed. This surface works with TOLERANT corrupt-shape-resistant data (`Record<string,unknown>`
+  / `unknown`) but calls STRICT domain functions (`mergeDayMetadata(animal: Animal, day: Day)`,
+  `checkShadowExport`), so the only non-type changes are behavior-equivalent tolerant-boundary casts:
+  `… as unknown as Animal/Day` at the strict calls; `day.id as string` (ids/dates are strings at runtime);
+  `isRecord(workspace) && isRecord(workspace.x)` replacing `isRecord(workspace?.x)` (identical for a
+  non-object workspace); `.filter((d): d is Day => Boolean(d))` type-guards (runtime-identical to
+  `.filter(Boolean)`); `configurationVersion ?? undefined` (buildPreflightSummary treats null/undefined
+  alike); `tabIndex: -1` (was `'-1'`, DOM-identical). `components/WarningAcknowledgement` widened its
+  item `warnings` `message` to optional (honest — the source `RepairableIssue.message` is optional; the
+  render tolerates it). `npm run typecheck` and `CI=true` build clean (+12 B); golden baselines,
+  ValidationSummary suites with the 3 source-scanning guards, full suite 4793, e2e 104 all pass.
+  code-reviewer found no behavior-changing defects.
 - **Typed the `pages/AnimalEditor/wiring` container tier — the 5 store-bound containers + 3 hooks `.jsx`/`.js`→`.tsx`/`.ts`; `pages/AnimalEditor` is now 100% TypeScript (refactor only, behavior-preserving) — page cycle 10.**
   `CamerasContainer`, `ElectrodeGroupsContainer`, `OptogeneticsContainer`, `RecordingSystemContainer`,
   `TaskTypesContainer` (the store→section wiring) plus `useAnimalAlert`, `useAnimalFieldUpdate`,

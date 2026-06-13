@@ -1,6 +1,6 @@
-import PropTypes from 'prop-types';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { getConfigHistory } from '../../state/workspaceSelectors';
+import type { Animal, Day } from '../../state/workspaceTypes';
 import { getDayWorkflowStatus } from '../../domain/workflowStatus';
 import { buildPreflightSummary } from '../../domain/preflightSummary';
 import { resolveRigConstant } from '../../domain/rigConstants';
@@ -16,21 +16,16 @@ import { resolveRigConstant } from '../../domain/rigConstants';
  * {@link buildPreflightSummary} + {@link resolveRigConstant}), never re-derived — and labels them
  * explicitly as "what this day used", distinct from the live setup tabs, so a scientist reviewing
  * readiness can't mistake a historical day for one using the latest config.
- *
- * @param {object} props
- * @param {object} props.animal - The owning animal record.
- * @param {object} props.day - The recording day record.
- * @returns {JSX.Element}
  */
-export default function EffectiveDayReview({ animal, day }) {
-  let merged;
+export default function EffectiveDayReview({ animal, day }: { animal: Animal; day: Day }) {
+  let merged: Record<string, unknown>;
   try {
     merged = mergeDayMetadata(animal, day);
   } catch (err) {
     return (
       <p className="effective-day-review-error" role="note">
         This day&apos;s configuration could not be read, so its effective setup can&apos;t be shown.
-        Open it in the Day Editor to repair it. ({err.message})
+        Open it in the Day Editor to repair it. ({(err as Error).message})
       </p>
     );
   }
@@ -41,7 +36,7 @@ export default function EffectiveDayReview({ animal, day }) {
   const summary = buildPreflightSummary(merged, {
     animalId: animal.id,
     date: day.date,
-    configurationVersion: workflow.configurationVersion,
+    configurationVersion: workflow.configurationVersion ?? undefined,
     isHistorical: workflow.isHistoricalConfiguration,
   });
 
@@ -76,8 +71,3 @@ export default function EffectiveDayReview({ animal, day }) {
     </div>
   );
 }
-
-EffectiveDayReview.propTypes = {
-  animal: PropTypes.object.isRequired,
-  day: PropTypes.object.isRequired,
-};

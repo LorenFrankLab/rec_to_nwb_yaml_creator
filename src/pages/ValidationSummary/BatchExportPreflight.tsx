@@ -1,6 +1,19 @@
-import PropTypes from 'prop-types';
 import WarningAcknowledgement from '../../components/WarningAcknowledgement';
 import { describeConfigVersionLabel } from './validationSummaryRows';
+import type { PendingExport } from './useValidationSummaryActions';
+
+interface BatchExportPreflightProps {
+  /** The pending batch: the valid rows, the per-day preflight entries, and the days carrying warnings. */
+  pendingExport: PendingExport;
+  /** Whether outstanding warnings have been acknowledged. */
+  warningsAcknowledged: boolean;
+  /** Called with the new checkbox state. */
+  onAcknowledgeChange: (acknowledged: boolean) => void;
+  /** Run the actual downloads. */
+  onConfirm: () => void;
+  /** Discard the pending export. */
+  onCancel: () => void;
+}
 
 /**
  * Step-2 confirmation for the batch "Export Valid Only" flow: lists what each file will contain
@@ -9,15 +22,6 @@ import { describeConfigVersionLabel } from './validationSummaryRows';
  * acknowledgement. Extracted from `pages/ValidationSummary/index.jsx` (Phase 9c) with no behavior
  * change — the confirm/cancel handlers and the warning-acknowledgement state stay owned by the
  * parent; this component only renders them.
- *
- * @param {object} props
- * @param {{ rows: object[], preflight: object[], warningItems: object[] }} props.pendingExport
- *   - The pending batch: the valid rows, the per-day preflight entries, and the days carrying warnings.
- * @param {boolean} props.warningsAcknowledged - Whether outstanding warnings have been acknowledged.
- * @param {Function} props.onAcknowledgeChange - `(acknowledged: boolean) => void` from the checkbox.
- * @param {Function} props.onConfirm - Run the actual downloads.
- * @param {Function} props.onCancel - Discard the pending export.
- * @returns {JSX.Element}
  */
 export default function BatchExportPreflight({
   pendingExport,
@@ -25,7 +29,7 @@ export default function BatchExportPreflight({
   onAcknowledgeChange,
   onConfirm,
   onCancel,
-}) {
+}: BatchExportPreflightProps) {
   const confirmDisabled = pendingExport.warningItems.length > 0 && !warningsAcknowledged;
   return (
     <section className="batch-export-preflight" aria-label="Batch export preflight">
@@ -44,7 +48,7 @@ export default function BatchExportPreflight({
               </span>
             ) : (
               <span className="batch-export-preflight-detail">
-                {describeConfigVersionLabel(entry.version, entry.historical)}; {entry.groups}{' '}
+                {describeConfigVersionLabel(entry.version as number | null, entry.historical as boolean)}; {entry.groups}{' '}
                 electrode {entry.groups === 1 ? 'group' : 'groups'}, {entry.failedChannels}{' '}
                 failed {entry.failedChannels === 1 ? 'channel' : 'channels'}; {entry.cameras}{' '}
                 {entry.cameras === 1 ? 'camera' : 'cameras'}; {entry.opto}
@@ -72,14 +76,3 @@ export default function BatchExportPreflight({
   );
 }
 
-BatchExportPreflight.propTypes = {
-  pendingExport: PropTypes.shape({
-    rows: PropTypes.array.isRequired,
-    preflight: PropTypes.array.isRequired,
-    warningItems: PropTypes.array.isRequired,
-  }).isRequired,
-  warningsAcknowledged: PropTypes.bool.isRequired,
-  onAcknowledgeChange: PropTypes.func.isRequired,
-  onConfirm: PropTypes.func.isRequired,
-  onCancel: PropTypes.func.isRequired,
-};
