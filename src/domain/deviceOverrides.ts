@@ -12,11 +12,24 @@
 /**
  * Whether `value` is a plain object record (not null, not an array).
  *
- * @param {*} value
- * @returns {boolean}
+ * @param value
+ * @returns True for a non-null, non-array object.
  */
-function isRecord(value) {
+function isRecord(value: unknown): boolean {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/** The classification of a day's `deviceOverrides` into the shapes the Devices step can clean up. */
+export interface DeviceOverrideClassification {
+  overridesRecord: Record<string, any> | null;
+  wholeOverridesMalformed: boolean;
+  badChannelContainer: any;
+  badChannelContainerIsRecord: boolean;
+  badChannelContainerMalformed: boolean;
+  staleOverrideKeys: string[];
+  corruptValueKeys: string[];
+  presentGeometryKeys: string[];
+  hasOverrideCleanup: boolean;
 }
 
 /**
@@ -35,21 +48,14 @@ function isRecord(value) {
  * The raw `overridesRecord` / `badChannelContainer` / `badChannelContainerIsRecord` are
  * returned too so the step's removal handlers can rewrite the override safely.
  *
- * @param {object} day - The day record (reads `deviceOverrides`).
- * @param {Set<string>} resolvedNtrodeIds - Ntrode ids present in the resolved channel map.
- * @returns {{
- *   overridesRecord: object|null,
- *   wholeOverridesMalformed: boolean,
- *   badChannelContainer: *,
- *   badChannelContainerIsRecord: boolean,
- *   badChannelContainerMalformed: boolean,
- *   staleOverrideKeys: string[],
- *   corruptValueKeys: string[],
- *   presentGeometryKeys: string[],
- *   hasOverrideCleanup: boolean,
- * }}
+ * @param day - The day record (reads `deviceOverrides`).
+ * @param resolvedNtrodeIds - Ntrode ids present in the resolved channel map.
+ * @returns The override-cleanup classification ({@link DeviceOverrideClassification}).
  */
-export function classifyDeviceOverrides(day, resolvedNtrodeIds) {
+export function classifyDeviceOverrides(
+  day: Record<string, any> | null | undefined,
+  resolvedNtrodeIds: Set<string>
+): DeviceOverrideClassification {
   const rawOverrides = day?.deviceOverrides;
   const overridesRecord = isRecord(rawOverrides) ? rawOverrides : null;
 

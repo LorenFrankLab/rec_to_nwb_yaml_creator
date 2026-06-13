@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed `domain/dayLifecycle` + `domain/deviceOverrides` under strict TS (refactor only, behavior-preserving).**
+  [domain/dayLifecycle.js](src/domain/dayLifecycle.ts) (the lifecycle vocabulary enums +
+  `lifecycleForValidDay`) and [domain/deviceOverrides.js](src/domain/deviceOverrides.ts)
+  (`classifyDeviceOverrides`, the day-override cleanup classifier) → `.ts`. **Bodies byte-identical.**
+  `lifecycleForValidDay(state: unknown): string` (with an `isRecord` type-predicate narrowing `s`);
+  `classifyDeviceOverrides(day: Record<string, any>, …): DeviceOverrideClassification` keeps `isRecord` a
+  plain `boolean` so the loose-data classification flows as `any` without per-access casts. Zero `.ts`/`.tsx`
+  consumers. `npm run typecheck` + `CI=true` build clean; targeted + 3 source-scanning guards (732) pass; full
+  suite 4793; e2e 104.
+
 - **Typed 5 pure `domain/` utility modules under strict TS (refactor only, behavior-preserving).**
   [domain/rigConstants.js](src/domain/rigConstants.ts) (`resolveRigConstant` + `RigField`/`RIG_FALLBACK`),
   [domain/animalDeleteCascade.js](src/domain/animalDeleteCascade.ts) (`getAnimalDeleteCascade`),
