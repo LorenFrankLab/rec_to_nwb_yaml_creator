@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed 7 LIVE React hooks under strict TS (refactor only, behavior-preserving).**
+  [hooks/useStableId.js](src/hooks/useStableId.ts) (stable form-element ids),
+  [hooks/useDayIdFromUrl.js](src/hooks/useDayIdFromUrl.ts) (day id from hash),
+  [hooks/useUnsavedWorkGuard.js](src/hooks/useUnsavedWorkGuard.ts) (`beforeunload` guard),
+  [hooks/useReconfigContext.js](src/hooks/useReconfigContext.ts) (reconfig route-context parser),
+  [hooks/useHashRouter.js](src/hooks/useHashRouter.ts) (hash routing — `parseHashRoute`/`RouteInfo`),
+  [hooks/useGlobalShortcuts.js](src/hooks/useGlobalShortcuts.ts) (app keyboard shortcuts), and
+  [hooks/stepperShortcuts.js](src/hooks/stepperShortcuts.ts) (the stepper-shortcut event bridge) → `.ts`.
+  Hook generics typed (`useRef<string | null>`, `useState<RouteInfo>`, `useState<string | null>`); DOM
+  event params typed (`KeyboardEvent`, `BeforeUnloadEvent`, `CustomEvent`); new local interfaces
+  `RouteInfo`/`ReconfigContext`/`ShortcutHandlers`. Five behavior-equivalent transforms, each a runtime
+  no-op or provably equal: a `movedDays !== null &&` relational-null guard (`null > 0` is already `false`),
+  three erased casts/non-null assertions (`(event as CustomEvent)`, `(animalTabMatch || animalNoTabMatch)!`,
+  `stableIdRef.current!`), and an `e.target as HTMLElement | null` call-site cast. Deferred (consumed ONLY by
+  `useLegacyForm.js`, so they die with the legacy form): `hooks/useArrayManagement.js`,
+  `hooks/useElectrodeGroups.js`, `hooks/useFormUpdates.js`. `npm run typecheck` + `CI=true` build clean;
+  golden baselines + the 4 targeted hook suites + 3 source-scanning guards (258) pass; full suite 4793; e2e 104.
+
 - **Typed 5 pure leaf `utils/` modules under strict TS (refactor only, behavior-preserving).**
   [utils/dioDescription.js](src/utils/dioDescription.ts) (DIO `description` split/join),
   [utils/stringFormatting.js](src/utils/stringFormatting.ts)

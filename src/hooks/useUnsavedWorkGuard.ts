@@ -7,14 +7,14 @@ import { useEffect } from 'react';
  * so the native "leave site?" prompt appears if the user navigates away before a
  * debounced save completes.
  *
- * @param {boolean} hasUnsavedWork - true when a debounced save is in flight.
- * @returns {void}
+ * @param hasUnsavedWork - true when a debounced save is in flight.
+ * @returns
  */
-export function useUnsavedWorkGuard(hasUnsavedWork) {
+export function useUnsavedWorkGuard(hasUnsavedWork: boolean): void {
   useEffect(() => {
     if (!hasUnsavedWork) return undefined;
 
-    const handler = (event) => {
+    const handler = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = ''; // required for the native prompt in Chrome
     };

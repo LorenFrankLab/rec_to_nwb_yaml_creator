@@ -1,12 +1,21 @@
 import { useEffect, useRef } from 'react';
 
+/** The latest keyboard-shortcut handlers; each binding is optional. */
+interface ShortcutHandlers {
+  onSave?: () => void;
+  onNextStep?: () => void;
+  onPrevStep?: () => void;
+  onAdd?: () => void;
+  onShowHelp?: () => void;
+}
+
 /**
  * Whether the event target is a text-entry surface where shortcuts must not fire.
  *
- * @param {EventTarget|null} el - The keydown target.
- * @returns {boolean}
+ * @param el - The keydown target (read defensively for the Element-only props).
+ * @returns Whether shortcuts must be suppressed.
  */
-function isEditableTarget(el) {
+function isEditableTarget(el: HTMLElement | null): boolean {
   if (!el || !el.tagName) return false;
   const tag = el.tagName.toUpperCase();
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable === true;
@@ -15,7 +24,7 @@ function isEditableTarget(el) {
 /**
  * Whether any shared `<Modal>` (which renders `.modal-overlay`) is open.
  *
- * @returns {boolean}
+ * @returns
  */
 function isModalOpen() {
   return typeof document !== 'undefined' && !!document.querySelector('.modal-overlay');
@@ -36,24 +45,24 @@ function isModalOpen() {
  * is open, the handlers do not fire (Ctrl/Cmd+S still suppresses the browser dialog
  * but does not save). The help dialog's own Esc-to-close is owned by `<Modal>`.
  *
- * @param {object} handlers
- * @param {() => void} [handlers.onSave]
- * @param {() => void} [handlers.onNextStep]
- * @param {() => void} [handlers.onPrevStep]
- * @param {() => void} [handlers.onAdd]
- * @param {() => void} [handlers.onShowHelp]
- * @returns {void}
+ * @param handlers
+ * @param [handlers.onSave]
+ * @param [handlers.onNextStep]
+ * @param [handlers.onPrevStep]
+ * @param [handlers.onAdd]
+ * @param [handlers.onShowHelp]
+ * @returns
  */
-export default function useGlobalShortcuts(handlers = {}) {
+export default function useGlobalShortcuts(handlers: ShortcutHandlers = {}): void {
   // Keep the latest handlers in a ref so the listener is attached once and never
   // goes stale, without re-binding on every render.
-  const handlersRef = useRef(handlers);
+  const handlersRef = useRef<ShortcutHandlers>(handlers);
   handlersRef.current = handlers;
 
   useEffect(() => {
-    const onKeyDown = (e) => {
+    const onKeyDown = (e: KeyboardEvent) => {
       const { onSave, onNextStep, onPrevStep, onAdd, onShowHelp } = handlersRef.current;
-      const guarded = isEditableTarget(e.target) || isModalOpen();
+      const guarded = isEditableTarget(e.target as HTMLElement | null) || isModalOpen();
 
       // Ctrl/Cmd+S: always prevent the browser save dialog; save only when unguarded.
       if ((e.metaKey || e.ctrlKey) && (e.key === 's' || e.key === 'S')) {
