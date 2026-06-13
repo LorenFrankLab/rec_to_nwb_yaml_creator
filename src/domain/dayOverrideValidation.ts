@@ -371,8 +371,7 @@ export function danglingDataAcqRefIssue(
  * @returns One issue per divergent name (animal-routed, Devices step, error).
  */
 export function divergentDataAcqCatalogIssue(animal: unknown): RepairableIssue[] {
-  // `as object` bridges the selector's imprecise `@param {object}` JSDoc (null-safe at runtime).
-  const catalog = getDataAcqDevices(animal as object);
+  const catalog = getDataAcqDevices(animal);
   const seen = new Map<string, string>(); // name -> first entry's hardware signature
   const reported = new Set<string>();
   const issues: RepairableIssue[] = [];
@@ -380,7 +379,7 @@ export function divergentDataAcqCatalogIssue(animal: unknown): RepairableIssue[]
     const name = device?.name;
     if (typeof name !== 'string' || name === '') return;
     const signature = JSON.stringify(
-      ['system', 'amplifier', 'adc_circuit'].map((key) => device?.[key] ?? null)
+      (['system', 'amplifier', 'adc_circuit'] as const).map((key) => device?.[key] ?? null)
     );
     if (!seen.has(name)) {
       seen.set(name, signature);
