@@ -15,6 +15,55 @@ import {
   nextConfigurationVersion,
   sortDayIdsByDate,
 } from './workspaceTransitions';
+import type { AnimalUpdates, ConfigSnapshotInput, DayUpdates } from './workspaceTransitions';
+import type {
+  Workspace,
+  SubjectMetadata,
+  ExperimenterInfo,
+  Camera,
+  TechnicalDefaults,
+  OptogeneticsConfig,
+  SessionMetadata,
+  WorkspaceSettings,
+} from './workspaceTypes';
+
+/**
+ * The store commit primitives injected into {@link createWorkspaceActions}. `commitWorkspace` and
+ * `setWorkspace` are both updater-takers; only their batching/ref-lockstep semantics differ (see
+ * the factory doc). `workspaceRef` is the live committed workspace, read/assigned synchronously.
+ */
+export interface WorkspaceActionPrimitives {
+  /** Ref-lockstep commit (keeps `workspaceRef.current` in step for same-tick composite batches). */
+  commitWorkspace: (updater: (prev: Workspace) => Workspace) => void;
+  /** Plain React state updater for the workspace slice (deferred under batching). */
+  setWorkspace: (updater: (prev: Workspace) => Workspace) => void;
+  /** Live ref to the always-current committed workspace. */
+  workspaceRef: { current: Workspace };
+}
+
+/** Optional extra metadata accepted by `createAnimal` (each field defaults when omitted). */
+export interface CreateAnimalMetadata {
+  /** Experimenter info; defaults to the workspace settings' defaults when omitted. */
+  experimenters?: ExperimenterInfo;
+  /** Raw device payload (normalized by `normalizeDevices`). */
+  devices?: Record<string, unknown>;
+  /** Camera catalog for the new animal. */
+  cameras?: Camera[];
+  /** Animal-level technical defaults seeded into each new day. */
+  technicalDefaults?: TechnicalDefaults;
+  /** Optogenetics setup (`null`/absent = none). */
+  optogenetics?: OptogeneticsConfig | null;
+}
+
+/** Options for `createDay`. */
+export interface CreateDayOptions {
+  /**
+   * If set, seed the new day's day-owned content (tasks, behavioral_events, keywords, technical,
+   * session.experiment_description / weight) from this prior day. An unknown id resolves to a
+   * blank day (no throw).
+   */
+  carryForwardFromDayId?: string;
+}
 
 /**
  * Builds the workspace mutation actions (animal/day management) as a pure factory over the
@@ -31,23 +80,31 @@ import {
  *   - `workspaceRef` is the always-current committed workspace, read synchronously where an
  *     action must reserve state (e.g. the next configuration version) from authoritative state.
  *
- * @param {object} primitives
- * @param {(updater: (prev: object) => object) => void} primitives.commitWorkspace - Ref-lockstep commit.
- * @param {Function} primitives.setWorkspace - React state updater for the workspace slice.
- * @param {{ current: object }} primitives.workspaceRef - Live ref to the committed workspace.
- * @returns {object} The workspace actions object (createAnimal, updateAnimal, … updateWorkspaceSettings).
+ * @param primitives - The store commit primitives ({@link WorkspaceActionPrimitives}).
+ * @param primitives.commitWorkspace - Ref-lockstep commit.
+ * @param primitives.setWorkspace - React state updater for the workspace slice.
+ * @param primitives.workspaceRef - Live ref to the committed workspace.
+ * @returns The workspace actions object (createAnimal, updateAnimal, … updateWorkspaceSettings).
  */
-export function createWorkspaceActions({ commitWorkspace, setWorkspace, workspaceRef }) {
+export function createWorkspaceActions({
+  commitWorkspace,
+  setWorkspace,
+  workspaceRef,
+}: WorkspaceActionPrimitives) {
   return {
     /**
      * Creates a new animal with shared metadata
      *
-     * @param {string} animalId - Unique animal identifier
-     * @param {object} subject - Subject metadata (species, sex, genotype, DOB, description)
-     * @param {object} [metadata] - Optional additional metadata (devices, cameras, experimenters, optogenetics)
-     * @throws {Error} If animal ID already exists
+     * @param animalId - Unique animal identifier
+     * @param subject - Subject metadata (species, sex, genotype, DOB, description)
+     * @param metadata - Optional additional metadata (devices, cameras, experimenters, optogenetics)
+     * @throws If animal ID already exists
      */
-    createAnimal: (animalId, subject, metadata = {}) => {
+    createAnimal: (
+      animalId: string,
+      subject: Partial<SubjectMetadata>,
+      metadata: CreateAnimalMetadata = {}
+    ) => {
       // commitWorkspace (not setWorkspace) so that within a composite import batch (a) the
       // duplicate-id check sees the preceding deleteAnimal, and (b) this animal's v1 history is
       // visible in the ref for the LATER snapshot step's version reservation. (createAnimal itself
@@ -77,7 +134,9 @@ export function createWorkspaceActions({ commitWorkspace, setWorkspace, workspac
             weight: 100,
             description: 'Subject',
             ...subject,
-          },
+            // The caller may pass a partial subject; the store seeds valid-enough defaults and
+            // validation gates true completeness, so trust the shape here.
+          } as SubjectMetadata,
           devices,
           cameras: metadata.cameras || [],
           experimenters,
@@ -119,11 +178,11 @@ export function createWorkspaceActions({ commitWorkspace, setWorkspace, workspac
     /**
      * Updates animal metadata
      *
-     * @param {string} animalId - Animal identifier
-     * @param {object} updates - Partial updates to apply
-     * @throws {Error} If animal does not exist
+     * @param animalId - Animal identifier
+     * @param updates - Partial updates to apply
+     * @throws If animal does not exist
      */
-    updateAnimal: (animalId, updates) => {
+    updateAnimal: (animalId: string, updates: AnimalUpdates) => {
       setWorkspace((prev) => {
         if (!prev.animals[animalId]) {
           throw new Error(`Animal "${animalId}" not found`);
@@ -147,10 +206,10 @@ export function createWorkspaceActions({ commitWorkspace, setWorkspace, workspac
     /**
      * Deletes animal and all associated days
      *
-     * @param {string} animalId - Animal identifier
-     * @throws {Error} If animal does not exist
+     * @param animalId - Animal identifier
+     * @throws If animal does not exist
      */
-    deleteAnimal: (animalId) => {
+    deleteAnimal: (animalId: string) => {
       // commitWorkspace (not setWorkspace) so a later step in the SAME tick (a replace-import's
       // create + snapshot) sees the deletion synchronously and can't reserve a config version
       // from the about-to-be-deleted animal.
@@ -195,13 +254,17 @@ export function createWorkspaceActions({ commitWorkspace, setWorkspace, workspac
      * both the snapshot and the day pins, so there is no version handed across two actions
      * to go stale. The returned version (for display/navigation) is the version created.
      *
-     * @param {string} animalId - Animal identifier.
-     * @param {object} config - `{ date, description, devices }` for the new snapshot.
-     * @param {string[]} dayIds - Day ids to move onto the new version.
-     * @returns {number} The version number created.
-     * @throws {Error} If animal does not exist.
+     * @param animalId - Animal identifier.
+     * @param config - `{ date, description, devices }` for the new snapshot.
+     * @param dayIds - Day ids to move onto the new version.
+     * @returns The version number created.
+     * @throws If animal does not exist.
      */
-    createConfigurationSnapshotAndApplyForward: (animalId, config, dayIds) => {
+    createConfigurationSnapshotAndApplyForward: (
+      animalId: string,
+      config: ConfigSnapshotInput,
+      dayIds: string[]
+    ) => {
       const now = getCurrentTimestamp();
       const current = workspaceRef.current.animals[animalId];
       // Reserve the version synchronously from the authoritative cached store.
@@ -271,9 +334,9 @@ export function createWorkspaceActions({ commitWorkspace, setWorkspace, workspac
      * > 1 — those still fail closed in `resolveDayConfig` until re-applied — so it is one
      * step toward export-readiness, not a guarantee of it.
      *
-     * @param {string} animalId - Animal identifier.
+     * @param animalId - Animal identifier.
      */
-    rebuildConfigurationHistory: (animalId) => {
+    rebuildConfigurationHistory: (animalId: string) => {
       setWorkspace((prev) => {
         if (!prev.animals[animalId]) return prev;
 
@@ -297,16 +360,21 @@ export function createWorkspaceActions({ commitWorkspace, setWorkspace, workspac
     /**
      * Creates a new recording day for an animal
      *
-     * @param {string} animalId - Parent animal identifier
-     * @param {string} date - Date in YYYY-MM-DD format
-     * @param {object} session - Session metadata (session_id, session_description, etc.)
-     * @param {object} [options] - Creation options.
-     * @param {string} [options.carryForwardFromDayId] - If set, seed the new day's day-owned
-     *   content (tasks, behavioral_events, keywords, technical, session.experiment_description /
-     *   weight) from this prior day. An unknown id resolves to a blank day (no throw).
-     * @throws {Error} If animal does not exist or day already exists
+     * @param animalId - Parent animal identifier
+     * @param date - Date in YYYY-MM-DD format
+     * @param session - Session metadata (session_id, session_description, etc.)
+     * @param options - Creation options. `carryForwardFromDayId`, if set, seeds the new day's
+     *   day-owned content (tasks, behavioral_events, keywords, technical,
+     *   session.experiment_description / weight) from this prior day. An unknown id resolves to a
+     *   blank day (no throw).
+     * @throws If animal does not exist or day already exists
      */
-    createDay: (animalId, date, session, options = {}) => {
+    createDay: (
+      animalId: string,
+      date: string,
+      session: SessionMetadata,
+      options: CreateDayOptions = {}
+    ) => {
       setWorkspace((prev) => {
         if (!prev.animals[animalId]) {
           throw new Error(`Animal "${animalId}" not found`);
@@ -369,11 +437,11 @@ export function createWorkspaceActions({ commitWorkspace, setWorkspace, workspac
      * `associated_video_files`, `fs_gui_yamls`, and `cameras_used` start empty/unset (they are
      * session-specific and must be re-entered for the new day).
      *
-     * @param {string} sourceDayId - The day to clone.
-     * @param {string} newDate - Date in YYYY-MM-DD for the new day.
-     * @throws {Error} If the source day or its animal does not exist, or the target day already exists.
+     * @param sourceDayId - The day to clone.
+     * @param newDate - Date in YYYY-MM-DD for the new day.
+     * @throws If the source day or its animal does not exist, or the target day already exists.
      */
-    duplicateDay: (sourceDayId, newDate) => {
+    duplicateDay: (sourceDayId: string, newDate: string) => {
       setWorkspace((prev) => {
         const source = prev.days[sourceDayId];
         if (!source) {
@@ -444,11 +512,11 @@ export function createWorkspaceActions({ commitWorkspace, setWorkspace, workspac
     /**
      * Updates day metadata
      *
-     * @param {string} dayId - Day identifier
-     * @param {object} updates - Partial updates to apply
-     * @throws {Error} If day does not exist
+     * @param dayId - Day identifier
+     * @param updates - Partial updates to apply
+     * @throws If day does not exist
      */
-    updateDay: (dayId, updates) => {
+    updateDay: (dayId: string, updates: DayUpdates) => {
       setWorkspace((prev) => {
         if (!prev.days[dayId]) {
           throw new Error(`Day "${dayId}" not found`);
@@ -478,12 +546,12 @@ export function createWorkspaceActions({ commitWorkspace, setWorkspace, workspac
      * a dangling reference in the real owner's index. Prefer the caller-supplied `ownerAnimalId`,
      * then the record's `animalId`, then a scan of which animal indexes this day.
      *
-     * @param {string} dayId - Day identifier.
-     * @param {string} [ownerAnimalId] - The owning animal id when the caller knows it (the UI
-     *   deletes from a selected animal). Used in preference to the record's `animalId`.
-     * @throws {Error} If day does not exist.
+     * @param dayId - Day identifier.
+     * @param ownerAnimalId - The owning animal id when the caller knows it (the UI deletes from a
+     *   selected animal). Used in preference to the record's `animalId`.
+     * @throws If day does not exist.
      */
-    deleteDay: (dayId, ownerAnimalId) => {
+    deleteDay: (dayId: string, ownerAnimalId?: string) => {
       setWorkspace((prev) => {
         if (!prev.days[dayId]) {
           throw new Error(`Day "${dayId}" not found`);
@@ -529,10 +597,10 @@ export function createWorkspaceActions({ commitWorkspace, setWorkspace, workspac
      * id is passed explicitly (a corrupt record has no `animalId` to read it from). No-op for
      * an unknown animal (the reference's owner is gone — nothing to repair).
      *
-     * @param {string} animalId - The animal whose `days` array holds the dangling reference.
-     * @param {string} dayId - The dangling day id to remove.
+     * @param animalId - The animal whose `days` array holds the dangling reference.
+     * @param dayId - The dangling day id to remove.
      */
-    removeDayReference: (animalId, dayId) => {
+    removeDayReference: (animalId: string, dayId: string) => {
       setWorkspace((prev) => {
         const animal = prev.animals[animalId];
         if (!animal) return prev;
@@ -565,10 +633,10 @@ export function createWorkspaceActions({ commitWorkspace, setWorkspace, workspac
      * index). Deduped; tolerates a corrupt (non-array) index via `getAnimalDayIds`. No-op for an
      * unknown animal, a missing day record, or an already-linked id.
      *
-     * @param {string} animalId - The owning animal's id.
-     * @param {string} dayId - The orphaned day record's id to re-link.
+     * @param animalId - The owning animal's id.
+     * @param dayId - The orphaned day record's id to re-link.
      */
-    relinkDayReference: (animalId, dayId) => {
+    relinkDayReference: (animalId: string, dayId: string) => {
       setWorkspace((prev) => {
         const animal = prev.animals[animalId];
         if (!animal) return prev;
@@ -602,10 +670,10 @@ export function createWorkspaceActions({ commitWorkspace, setWorkspace, workspac
      * valid and belongs to someone else, so it survives and resurfaces under its real owner as
      * `recovered_unlinked`, to be re-linked there. No-op for an unknown animal or absent ref.
      *
-     * @param {string} animalId - The animal to unlink the reference from.
-     * @param {string} dayId - The day id to unlink (the record is preserved).
+     * @param animalId - The animal to unlink the reference from.
+     * @param dayId - The day id to unlink (the record is preserved).
      */
-    unlinkDayReference: (animalId, dayId) => {
+    unlinkDayReference: (animalId: string, dayId: string) => {
       setWorkspace((prev) => {
         const animal = prev.animals[animalId];
         if (!animal) return prev;
@@ -635,9 +703,9 @@ export function createWorkspaceActions({ commitWorkspace, setWorkspace, workspac
     /**
      * Updates workspace settings
      *
-     * @param {object} settings - Partial settings updates
+     * @param settings - Partial settings updates
      */
-    updateWorkspaceSettings: (settings) => {
+    updateWorkspaceSettings: (settings: Partial<WorkspaceSettings>) => {
       setWorkspace((prev) => ({
         ...prev,
         settings: {

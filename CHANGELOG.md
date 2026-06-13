@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed the workspace mutation-action factory under strict TS (refactor only, no behavior change).**
+  [state/workspaceActions.js](src/state/workspaceActions.ts) → `.ts`: `createWorkspaceActions` and its 13
+  store-mutation methods (createAnimal / updateAnimal / deleteAnimal /
+  createConfigurationSnapshotAndApplyForward / rebuildConfigurationHistory / createDay / duplicateDay /
+  updateDay / deleteDay / removeDayReference / relinkDayReference / unlinkDayReference /
+  updateWorkspaceSettings). The injected primitives get a `WorkspaceActionPrimitives` interface
+  (`commitWorkspace` / `setWorkspace` as `(updater: (prev: Workspace) => Workspace) => void`,
+  `workspaceRef: { current: Workspace }`); each method's params are typed from the canonical types
+  (`AnimalUpdates` / `DayUpdates` / `ConfigSnapshotInput` from `workspaceTransitions`; `SessionMetadata` /
+  `WorkspaceSettings` / …). **No method body changed** — the action bodies, their exact `throw` timing, and
+  the defensive corrupt/wrong-owner-record guards are byte-identical (the guards are now type-redundant but
+  still run). The only executable-affecting change is one type-only cast: `createAnimal`'s `subject`
+  sub-literal `{ subject_id, weight, description, ...subject } as SubjectMetadata` (the body seeds
+  schema-required fallbacks because callers may pass a `Partial<SubjectMetadata>`; validation gates true
+  completeness). Two small input interfaces extracted (`CreateAnimalMetadata`, `CreateDayOptions`). No
+  `workspaceTypes.ts` / tsconfig change; the conversion is the **cast-removal payoff** of the now-typed
+  transitions. `npm run typecheck` + `CI=true` build clean; store/workspace + 3 source-scanning guards
+  (133) pass; full suite 4793; e2e 104.
+
 - **Typed the workspace export-merge utilities under strict TS (refactor only, byte-identical export).**
   [state/workspaceUtils.js](src/state/workspaceUtils.ts) → `.ts`: the last and most export-sensitive
   `state/` module — `mergeDayMetadata` (the legacy-parity YAML merge), `resolveDayConfig` (effective
