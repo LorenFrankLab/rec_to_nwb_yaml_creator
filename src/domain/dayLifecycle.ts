@@ -77,10 +77,11 @@ export const DAY_LIFECYCLE_ORDER = Object.freeze([
 /**
  * True only for a plain object — not null, not an array. A corrupt import can persist `day.state`
  * as a scalar/array; treat anything non-plain as "no saved flags" rather than throwing.
- * @param {unknown} value
- * @returns {boolean}
+ * @param value
+ * @returns True for a non-null, non-array object.
  */
-const isRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
 
 /**
  * Resolve the lifecycle variant of a day that is **already known to be live-valid** from its
@@ -89,11 +90,11 @@ const isRecord = (value) => value !== null && typeof value === 'object' && !Arra
  * here — it is `needs_fixing`/`draft`, never `validated`); this only refines the passing bucket so
  * persisted validation is visually distinct from live-valid readiness.
  *
- * @param {object|null|undefined} state - The day's persisted `state` (may be malformed).
- * @returns {'ready'|'validated'|'exported'} The lifecycle variant for a live-valid day.
+ * @param state - The day's persisted `state` (may be malformed).
+ * @returns The lifecycle variant (`'ready'` | `'validated'` | `'exported'`) for a live-valid day.
  */
-export function lifecycleForValidDay(state) {
-  const s = isRecord(state) ? state : {};
+export function lifecycleForValidDay(state: unknown): string {
+  const s: Record<string, unknown> = isRecord(state) ? state : {};
   if (s.exported) return DAY_LIFECYCLE.EXPORTED;
   if (s.validated) return DAY_LIFECYCLE.VALIDATED;
   return DAY_LIFECYCLE.READY;
