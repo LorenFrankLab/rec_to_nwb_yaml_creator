@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed two pure `state/` leaf modules under strict TS (refactor only, no behavior change).**
+  [state/identityDivergence.js](src/state/identityDivergence.ts) and
+  [state/repairCommands.js](src/state/repairCommands.ts) → `.ts`.
+  - `identityDivergence` (`valuesEqual` + `findIdentityDivergence`, the Spyglass-keyed identity-divergence
+    detector): function bodies are **byte-identical**; added `IdentityRegistryEntry` / `IdentityDivergence`
+    interfaces and typed signatures.
+  - `repairCommands` (`REPAIR_COMMAND_TYPES` + `applyRepairCommand`, which executes serializable repair
+    commands as store writes): typed `RepairCommand` / `RepairCommandActions` / `RepairCommandContext`
+    interfaces (the action update methods take `Record<string, unknown>` because the executor builds
+    dynamic-key updates like `{ [command.field]: [] }`; the id params are `string | undefined` because the
+    surface→id guard — not the type system — ensures presence). `isRecord` became a type predicate; `ctx.day`
+    / `ctx.animal` typed `Day` / `Animal` (the pre-existing defensive guards are now type-redundant but
+    unchanged at runtime). The ONLY behavior-touching body change is `COMMAND_SURFACE[command.type]` →
+    `command.type ? COMMAND_SURFACE[command.type] : undefined` — byte-equivalent (an empty/undefined type
+    yields `undefined` either way), preserving the "unknown/malformed/missing-id command → no-op, never a
+    throw, never a partial write" contract across all 10 cases.
+  Both have zero real `.ts` consumers. `npm run typecheck` + `CI=true` build clean; repairCommands +
+  repairabilityMatrix + 3 source-scanning guards (142) pass; full suite 4793; e2e 104.
+
 - **Typed the workspace hydration initializer under strict TS (refactor only, no behavior change).**
   [state/workspaceHydration.js](src/state/workspaceHydration.ts) → `.ts`: `resolveInitialWorkspace` (the
   pure `useState` initializer for the workspace slice). The function body is **byte-identical** — only a

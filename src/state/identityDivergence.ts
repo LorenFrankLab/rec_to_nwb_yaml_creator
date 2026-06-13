@@ -14,16 +14,34 @@
  * @module state/identityDivergence
  */
 
+/** An existing identity the candidate is checked against. */
+export interface IdentityRegistryEntry {
+  /** The identity name (Spyglass key, e.g. camera_name). */
+  name: string;
+  /** The entry's dependent fields, compared against the candidate's. */
+  fields: Record<string, unknown>;
+  /** Optional display label, carried for the UI and never compared. */
+  label?: string;
+}
+
+/** A detected divergent reuse: the conflicting entry plus the dependent fields that differ. */
+export interface IdentityDivergence {
+  /** The existing registry entry whose name the candidate reuses with different fields. */
+  existing: IdentityRegistryEntry;
+  /** The dependent field keys whose values differ. */
+  differingFields: string[];
+}
+
 /**
  * Compare two dependent-field values for identity purposes. Numbers compare numerically;
  * everything else compares as trimmed strings so `'8mm'` vs `'8mm'` matches and `0.001` vs
  * `0.001` matches, while absent vs present differ.
  *
- * @param {*} a - First value.
- * @param {*} b - Second value.
- * @returns {boolean} True when the two values are equivalent.
+ * @param a - First value.
+ * @param b - Second value.
+ * @returns True when the two values are equivalent.
  */
-export function valuesEqual(a, b) {
+export function valuesEqual(a: unknown, b: unknown): boolean {
   if (typeof a === 'number' && typeof b === 'number') return a === b;
   return String(a ?? '').trim() === String(b ?? '').trim();
 }
@@ -35,14 +53,17 @@ export function valuesEqual(a, b) {
  * are assumed to share a key set); a registry entry's `label` is carried for display,
  * not compared.
  *
- * @param {string} name - The candidate identity name (e.g. camera_name).
- * @param {Record<string, *>} candidateFields - The candidate's dependent fields.
- * @param {Array<{name: string, fields: Record<string, *>, label?: string}>} registry -
- *   Existing identities the candidate is checked against.
- * @returns {{existing: object, differingFields: string[]}|null} The conflicting entry and the
- *   dependent fields that differ, or null when the name is unused or its reuse is identical.
+ * @param name - The candidate identity name (e.g. camera_name).
+ * @param candidateFields - The candidate's dependent fields.
+ * @param registry - Existing identities the candidate is checked against.
+ * @returns The conflicting entry and the dependent fields that differ, or null when the name is
+ *   unused or its reuse is identical.
  */
-export function findIdentityDivergence(name, candidateFields, registry) {
+export function findIdentityDivergence(
+  name: string,
+  candidateFields: Record<string, unknown>,
+  registry: IdentityRegistryEntry[]
+): IdentityDivergence | null {
   const normalizedName = String(name ?? '').trim();
   if (!normalizedName) return null;
   for (const entry of registry) {
