@@ -1,23 +1,31 @@
-import React, { useId } from 'react';
-import PropTypes from 'prop-types';
+import { useId } from 'react';
+import type { ReactNode } from 'react';
 import Modal from './Modal';
 import './ConfirmDialog.scss';
+
+interface ConfirmDialogProps {
+  /** Whether the dialog is shown. */
+  isOpen: boolean;
+  /** Dialog heading. */
+  title: ReactNode;
+  /** Body / question. */
+  message: ReactNode;
+  /** Confirm button text (default 'Confirm'). */
+  confirmLabel?: string;
+  /** Cancel button text (default 'Cancel'). */
+  cancelLabel?: string;
+  /** Style the confirm action as destructive. */
+  destructive?: boolean;
+  /** Called when the user confirms. */
+  onConfirm: () => void;
+  /** Called for cancel / ESC / overlay close. */
+  onCancel: () => void;
+}
 
 /**
  * Accessible confirm/cancel dialog built on the shared Modal primitive. Replaces
  * blocking window.confirm() prompts. Cancel, ESC, and overlay click all invoke
  * onCancel; only the Confirm button invokes onConfirm.
- *
- * @param {object} props
- * @param {boolean} props.isOpen Whether the dialog is shown.
- * @param {string} props.title Dialog heading.
- * @param {React.ReactNode} props.message Body / question.
- * @param {string} [props.confirmLabel] Confirm button text.
- * @param {string} [props.cancelLabel] Cancel button text.
- * @param {boolean} [props.destructive] Style the confirm action as destructive.
- * @param {Function} props.onConfirm Called when the user confirms.
- * @param {Function} props.onCancel Called for cancel / ESC / overlay close.
- * @returns {JSX.Element|null}
  */
 const ConfirmDialog = ({
   isOpen,
@@ -28,7 +36,7 @@ const ConfirmDialog = ({
   destructive = false,
   onConfirm,
   onCancel,
-}) => {
+}: ConfirmDialogProps) => {
   // Unique per instance so multiple dialogs in the tree can't collide on ids.
   const baseId = useId();
   const titleId = `${baseId}-title`;
@@ -66,17 +74,6 @@ const ConfirmDialog = ({
       </div>
     </Modal>
   );
-};
-
-ConfirmDialog.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  title: PropTypes.node.isRequired,
-  message: PropTypes.node.isRequired,
-  confirmLabel: PropTypes.string,
-  cancelLabel: PropTypes.string,
-  destructive: PropTypes.bool,
-  onConfirm: PropTypes.func.isRequired,
-  onCancel: PropTypes.func.isRequired,
 };
 
 export default ConfirmDialog;
