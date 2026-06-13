@@ -17,7 +17,7 @@ const GUARDED_FILES = [
   'TasksEpochsStep.jsx',
   'TasksTable.tsx',
   'TaskModal.jsx',
-  'BehavioralEventsDisplay.jsx',
+  'BehavioralEventsDisplay.tsx',
 ];
 
 // Emoji + pictographs (U+1F000–1FAFF), misc symbols + dingbats (U+2600–27BF, incl. ⚠ ✓ ✗ ❌),

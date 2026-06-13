@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed the 4 COMPLEX `pages/DayEditor` React components `.jsx`→`.tsx` (refactor only, behavior-preserving) — page cycle 4; the DayEditor leaf tier is now complete.**
+  `DayEditorContext` (the React Context provider — `createContext<DayEditorBundle | null>(null)`, a new exported
+  `DayEditorBundle` interface, typed `DayEditorProvider` props, `useDayEditorContext(fallbackProps): DayEditorBundle`),
+  `TaskEpochsEditor` (`useRef<Array<HTMLInputElement | null>>` + `useRef<number | null>`, `useState<EpochRow[]>`, a
+  computed-key `as EpochRow` cast), `BehavioralEventsDisplay` (the DIO grid — `Map<string, BehavioralEvent>`, `GROUPS`/
+  `renderGroup`/`renderNameField` tightened to the `'Din' | 'Dout'` literals), and `BadChannelsEditor` (the 520-LOC
+  multi-shank editor — `NtrodeMap[]` / `Record<string, number[]>` props, a typed `PendingUnmark` state, `useState`
+  generics) → `.tsx`. Runtime PropTypes/defaultProps dropped (non-undefined defaults preserved as destructure defaults,
+  e.g. `errors = {}`, `initialEpochs = []`); JSDoc trimmed. Behavior-equivalent non-type changes only: `BadChannelsEditor`
+  guards its optional `onBatchUpdate?.()` (only reached in the multi-shank branch, where the parent always provides it)
+  and casts `deviceType as string` at three domain calls that declare `deviceType: string` (erased; the fns tolerate
+  undefined); `BehavioralEventsDisplay`'s `onDayEventsChange` becomes a required prop (the dead `null` default dropped —
+  the body always calls it). The `tasksEpochs.noEmoji.guard` test list was updated (`BehavioralEventsDisplay.jsx` → `.tsx`)
+  to track the rename. `npm run typecheck` + `CI=true` build clean; golden baselines, the DayEditor suites + the 3
+  source-scanning guards + the emoji guard pass; full suite 4793; e2e 104.
+
 - **Typed 12 more LIVE `pages/DayEditor` React leaf components `.jsx`→`.tsx` (refactor only, behavior-preserving) — page cycle 3.**
   `KeywordsEditor`, `DayRecordingSystem`, `TaskInstancesTable`, `AssociatedVideosEditor`, `AssociatedFilesEditor`,
   `FsGuiSection`, `TasksTable`, `DayTechnicalSection`, `CamerasUsedSection`, `OverrideCleanupSection`, `ReconfigWizard`,

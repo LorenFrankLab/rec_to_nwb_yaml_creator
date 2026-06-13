@@ -1,5 +1,21 @@
 import { createContext, useContext } from 'react';
-import PropTypes from 'prop-types';
+import type { ReactNode } from 'react';
+import type { Animal, Day } from '../../state/workspaceTypes';
+
+/**
+ * The per-day bundle every Day-Editor section needs to render and edit a day. `mergedDay` and
+ * `actions` are intentionally loose (the merged-metadata object and the store-action factory);
+ * canonical types are used where load-bearing.
+ */
+export interface DayEditorBundle {
+  animal: Animal;
+  day: Day;
+  mergedDay: Record<string, unknown>;
+  animalDays: Day[];
+  onFieldUpdate: (fieldPath: string, value: unknown) => void;
+  actions: Record<string, unknown>;
+  animalKey: string;
+}
 
 /**
  * Shared Day-Editor context: the per-day bundle every section needs to render and edit a day —
@@ -13,45 +29,28 @@ import PropTypes from 'prop-types';
  *
  * The default is `null` so a section rendered WITHOUT a provider (isolated unit tests, which pass
  * the bundle as props) falls back to its props — see {@link useDayEditorContext}.
- *
- * @type {import('react').Context<null | {
- *   animal: object,
- *   day: object,
- *   mergedDay: object,
- *   animalDays: object[],
- *   onFieldUpdate: Function,
- *   actions: object,
- *   animalKey: string,
- * }>}
  */
-export const DayEditorContext = createContext(null);
+export const DayEditorContext = createContext<DayEditorBundle | null>(null);
+
+interface DayEditorProviderProps {
+  /** The bundle (the seven shared fields). */
+  value: DayEditorBundle;
+  children?: ReactNode;
+}
 
 /**
  * Provide the shared Day-Editor bundle to the section subtree.
- *
- * @param {object} props
- * @param {object} props.value - The bundle (the seven shared fields).
- * @param {import('react').ReactNode} props.children
- * @returns {JSX.Element}
  */
-export function DayEditorProvider({ value, children }) {
+export function DayEditorProvider({ value, children }: DayEditorProviderProps) {
   return <DayEditorContext.Provider value={value}>{children}</DayEditorContext.Provider>;
 }
-
-DayEditorProvider.propTypes = {
-  value: PropTypes.object.isRequired,
-  children: PropTypes.node,
-};
 
 /**
  * Read the shared Day-Editor bundle, falling back to the section's own props when no provider is
  * present. Inside `DayEditorStepper` the provider supplies all seven fields; isolated renders
  * (unit tests) pass them as props instead — so a section never has to know which wiring it got,
  * and the seven shared props never have to be drilled through the stepper's JSX.
- *
- * @param {object} fallbackProps - The section's props (the isolated-render fallback source).
- * @returns {object} The shared bundle (from context) or `fallbackProps` (no provider).
  */
-export function useDayEditorContext(fallbackProps) {
+export function useDayEditorContext(fallbackProps: DayEditorBundle): DayEditorBundle {
   return useContext(DayEditorContext) ?? fallbackProps;
 }
