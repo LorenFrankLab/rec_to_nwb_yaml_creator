@@ -18,10 +18,10 @@
 /**
  * Escape a string for safe interpolation into a `RegExp` source (treat metacharacters literally).
  *
- * @param {string} text - The raw string.
- * @returns {string} The escaped string.
+ * @param text - The raw string.
+ * @returns The escaped string.
  */
-const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
  * The next per-label instance number for auto-numbering a picked event name.
@@ -32,11 +32,14 @@ const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
  * `Label<digits>` form. Using the max (not the count) keeps the result collision-free even when the
  * existing instances have a gap (`Poke1`, `Poke3` → 4, not 3).
  *
- * @param {string} label - The picked event label (e.g. `"Poke"`).
- * @param {Array<{name?: string}>} events - The current day events.
- * @returns {number} The next instance number (≥ 1).
+ * @param label - The picked event label (e.g. `"Poke"`).
+ * @param events - The current day events.
+ * @returns The next instance number (≥ 1).
  */
-export function nextInstanceNumber(label, events) {
+export function nextInstanceNumber(
+  label: string,
+  events: Array<{ name?: string }>
+): number {
   const re = new RegExp(`^${escapeRegExp(label)}(\\d+)$`);
   const used = (Array.isArray(events) ? events : [])
     .map((event) => Number(re.exec(event?.name ?? '')?.[1]))
@@ -51,11 +54,14 @@ export function nextInstanceNumber(label, events) {
  * Without this, the off-list nudge would fire on the app's OWN generated names. An empty/whitespace
  * name is treated as standard here (it is gated separately as "required", not nudged as off-list).
  *
- * @param {string} name - The event name to test.
- * @param {string[]} suggestions - The standard event-name labels.
- * @returns {boolean} True when the name is a standard label or a numbered variant of one.
+ * @param name - The event name to test.
+ * @param suggestions - The standard event-name labels.
+ * @returns True when the name is a standard label or a numbered variant of one.
  */
-export function isStandardEventName(name, suggestions) {
+export function isStandardEventName(
+  name: string | null | undefined,
+  suggestions: readonly string[]
+): boolean {
   const value = (name ?? '').trim().toLowerCase();
   if (value === '') return true;
   return (Array.isArray(suggestions) ? suggestions : []).some((suggestion) => {
@@ -75,12 +81,16 @@ export function isStandardEventName(name, suggestions) {
  *    `comments`) when the channel already has one;
  *  - appends a new `{ description, name }` when the channel is being named for the first time.
  *
- * @param {Array<{name: string, description: string}>} events - The current day events.
- * @param {string} description - The hardware channel (e.g. `"Din1"`).
- * @param {string} name - The event name; blank removes the channel.
- * @returns {Array<{name: string, description: string}>} The next day events (a new array).
+ * @param events - The current day events.
+ * @param description - The hardware channel (e.g. `"Din1"`).
+ * @param name - The event name; blank removes the channel.
+ * @returns The next day events (a new array).
  */
-export function setChannelName(events, description, name) {
+export function setChannelName(
+  events: Array<{ name: string; description: string }>,
+  description: string,
+  name: string
+): Array<{ name: string; description: string }> {
   const base = Array.isArray(events) ? events : [];
   // Act on a SINGLE event (the first on this channel), never on "all rows with this description":
   // a corrupt duplicate-description import must not lose its hidden sibling when the visible row is

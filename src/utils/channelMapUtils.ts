@@ -7,6 +7,17 @@
  */
 
 import { getProbeShanks } from '../ntrode/probeCatalog';
+import type { NtrodeMap } from '../state/workspaceTypes';
+
+/**
+ * Tolerant electrode-group input for channel-map generation. Only `id` and
+ * `device_type` are read; `id` is parsed (it may arrive as a numeric string from
+ * legacy/imported data), and a missing `device_type` yields no maps.
+ */
+interface ElectrodeGroupInput {
+  id: number | string;
+  device_type?: string;
+}
 
 /**
  * Generates default ntrode channel maps for a single electrode group
@@ -24,11 +35,11 @@ import { getProbeShanks } from '../ntrode/probeCatalog';
  *
  * `ntrode_id` and `electrode_group_id` are integers end-to-end.
  *
- * @param {object} electrodeGroup - Electrode group configuration object
- * @param {number} electrodeGroup.id - Integer identifier for the electrode group
- * @param {string} electrodeGroup.device_type - Device/probe type (e.g., 'tetrode_12.5')
- * @param {number} [startingNtrodeId=0] - Starting ID for ntrode numbering (default: 0)
- * @returns {Array<object>} Array of ntrode channel map objects, one per shank
+ * @param electrodeGroup - Electrode group configuration object
+ * @param electrodeGroup.id - Integer identifier for the electrode group
+ * @param electrodeGroup.device_type - Device/probe type (e.g., 'tetrode_12.5')
+ * @param [startingNtrodeId=0] - Starting ID for ntrode numbering (default: 0)
+ * @returns Array of ntrode channel map objects, one per shank
  *
  * @example
  * // Generate maps for a tetrode (4 channels, 1 shank)
@@ -48,9 +59,12 @@ import { getProbeShanks } from '../ntrode/probeCatalog';
  * generateChannelMapsForGroup(group, 10);
  * // Returns 4 ntrodes with IDs 10, 11, 12, 13 and per-shank electrode-id offsets
  */
-export function generateChannelMapsForGroup(electrodeGroup, startingNtrodeId = 0) {
+export function generateChannelMapsForGroup(
+  electrodeGroup: ElectrodeGroupInput,
+  startingNtrodeId: number = 0
+): NtrodeMap[] {
   const { device_type } = electrodeGroup;
-  const parsedGroupId = parseInt(electrodeGroup.id, 10);
+  const parsedGroupId = parseInt(String(electrodeGroup.id), 10);
   const electrode_group_id = Number.isNaN(parsedGroupId) ? 0 : parsedGroupId;
 
   // Return empty array if device type is missing or unknown
@@ -71,7 +85,7 @@ export function generateChannelMapsForGroup(electrodeGroup, startingNtrodeId = 0
     const map = shank.electrodeIds.reduce((acc, electrodeId, idx) => {
       acc[idx] = electrodeId;
       return acc;
-    }, {});
+    }, {} as Record<string, number>);
 
     return {
       electrode_group_id,
@@ -88,8 +102,8 @@ export function generateChannelMapsForGroup(electrodeGroup, startingNtrodeId = 0
  * Processes an array of electrode groups and generates ntrode channel maps for each,
  * maintaining sequential ntrode IDs across all groups.
  *
- * @param {Array<object>} electrodeGroups - Array of electrode group configuration objects
- * @returns {Array<object>} Complete array of channel maps for all groups
+ * @param electrodeGroups - Array of electrode group configuration objects
+ * @returns Complete array of channel maps for all groups
  *
  * @example
  * const groups = [
@@ -99,8 +113,8 @@ export function generateChannelMapsForGroup(electrodeGroup, startingNtrodeId = 0
  * generateAllChannelMaps(groups);
  * // Returns 5 ntrodes total with integer IDs 0, 1, 2, 3, 4
  */
-export function generateAllChannelMaps(electrodeGroups) {
-  const allMaps = [];
+export function generateAllChannelMaps(electrodeGroups: ElectrodeGroupInput[]): NtrodeMap[] {
+  const allMaps: NtrodeMap[] = [];
   let currentNtrodeId = 0;
 
   for (const group of electrodeGroups) {
@@ -123,8 +137,8 @@ export function generateAllChannelMaps(electrodeGroups) {
  * all-corrupt map still yields `0`. The corrupt entry itself is surfaced loudly by
  * schema validation (integer `ntrode_id`) and the duplicate-ntrode_id rule at export.
  *
- * @param {Array<object>} existingMaps - Array of existing channel map objects
- * @returns {number} Next available integer ntrode ID
+ * @param existingMaps - Array of existing channel map objects
+ * @returns Next available integer ntrode ID
  *
  * @example
  * const maps = [{ ntrode_id: 0 }, { ntrode_id: 5 }, { ntrode_id: 3 }];
@@ -133,14 +147,16 @@ export function generateAllChannelMaps(electrodeGroups) {
  * @example
  * nextNtrodeId([]); // Returns 0
  */
-export function nextNtrodeId(existingMaps) {
+export function nextNtrodeId(
+  existingMaps: ReadonlyArray<{ ntrode_id: number | string }> | null | undefined
+): number {
   if (!existingMaps || existingMaps.length === 0) {
     return 0;
   }
 
   const maxId = Math.max(
     ...existingMaps.map((m) => {
-      const parsed = parseInt(m.ntrode_id, 10);
+      const parsed = parseInt(String(m.ntrode_id), 10);
       return Number.isNaN(parsed) ? -1 : parsed;
     })
   );

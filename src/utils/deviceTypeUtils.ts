@@ -35,12 +35,12 @@ const DEVICE_TYPES = [
 /**
  * Returns an array of all available device/probe types
  *
- * @returns {string[]} Array of device type strings
+ * @returns Array of device type strings
  * @example
  * getDeviceTypes()
  * // ['tetrode_12.5', 'A1x32-6mm-50-177-H32_21mm', ...]
  */
-export function getDeviceTypes() {
+export function getDeviceTypes(): string[] {
   return [...DEVICE_TYPES];
 }
 
@@ -50,15 +50,15 @@ export function getDeviceTypes() {
  * Derived from the probe catalog: the total number of electrode ids across all
  * shanks. Returns 0 for an unknown device type.
  *
- * @param {string} deviceType - The device type identifier
- * @returns {number} Number of channels (0 if device type is invalid)
+ * @param deviceType - The device type identifier
+ * @returns Number of channels (0 if device type is invalid)
  * @example
  * getChannelCount('tetrode_12.5')     // 4
  * getChannelCount('128c-4s8mm6cm-20um-40um-sl')  // 128
  * getChannelCount('64c-3s6mm6cm-20um-40um-sl')   // 64
  * getChannelCount('unknown_device')    // 0
  */
-export function getChannelCount(deviceType) {
+export function getChannelCount(deviceType: unknown): number {
   return getProbeElectrodeIds(deviceType).length;
 }
 
@@ -67,15 +67,15 @@ export function getChannelCount(deviceType) {
  *
  * Derived from the probe catalog. Returns 0 for an unknown device type.
  *
- * @param {string} deviceType - The device type identifier
- * @returns {number} Number of shanks (0 if device type is invalid)
+ * @param deviceType - The device type identifier
+ * @returns Number of shanks (0 if device type is invalid)
  * @example
  * getShankCount('tetrode_12.5')  // 1
  * getShankCount('128c-4s8mm6cm-20um-40um-sl')  // 4
  * getShankCount('64c-3s6mm6cm-20um-40um-sl')   // 3
  * getShankCount('unknown_device')  // 0
  */
-export function getShankCount(deviceType) {
+export function getShankCount(deviceType: unknown): number {
   const meta = getProbeMetadata(deviceType);
   return meta ? meta.num_shanks : 0;
 }
@@ -83,13 +83,13 @@ export function getShankCount(deviceType) {
 /**
  * Validates whether a given string is a valid device type
  *
- * @param {*} deviceType - Value to validate
- * @returns {boolean} True if the device type is valid and known, false otherwise
+ * @param deviceType - Value to validate
+ * @returns True if the device type is valid and known, false otherwise
  * @example
  * validateDeviceType('tetrode_12.5')  // true
  * validateDeviceType('unknown')        // false
  * validateDeviceType(null)             // false
  */
-export function validateDeviceType(deviceType) {
+export function validateDeviceType(deviceType: unknown): boolean {
   return typeof deviceType === 'string' && getProbeMetadata(deviceType) !== undefined;
 }

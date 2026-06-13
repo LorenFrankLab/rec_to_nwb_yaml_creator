@@ -17,12 +17,14 @@ import { behavioralEventsDescription } from '../valueList';
 /**
  * Split a DIO `description` into its Type and line index.
  *
- * @param {string} description - The stored DIO line name, e.g. `"Din1"`.
- * @returns {{ type: string, index: number|string }} The recognized type (or `''` when the text
+ * @param description - The stored DIO line name, e.g. `"Din1"`.
+ * @returns The recognized type (or `''` when the text
  *   is not a known DIO type) and the numeric index (or `''` when there is no single number). An
  *   empty/whitespace description defaults to `{ type: 'Din', index: 1 }`.
  */
-export const splitDioDescription = (description) => {
+export const splitDioDescription = (
+  description: string
+): { type: string; index: number | string } => {
   if (!description || description.trim() === '') {
     return { type: 'Din', index: 1 };
   }
@@ -31,7 +33,7 @@ export const splitDioDescription = (description) => {
   const textPart = description.match(/[a-zA-Z]+/g);
   const knownTypes = behavioralEventsDescription();
 
-  let index = '';
+  let index: number | string = '';
   let type = '';
 
   if (textPart && textPart.length === 1 && knownTypes.includes(textPart[0])) {
@@ -49,8 +51,9 @@ export const splitDioDescription = (description) => {
 /**
  * Join a Type and line index back into the stored `description` string.
  *
- * @param {string} type - The DIO type (e.g. `"Din"`).
- * @param {number|string} index - The DIO line index (e.g. `1`).
- * @returns {string} The concatenated line name (e.g. `"Din1"`).
+ * @param type - The DIO type (e.g. `"Din"`).
+ * @param index - The DIO line index (e.g. `1`).
+ * @returns The concatenated line name (e.g. `"Din1"`).
  */
-export const joinDioDescription = (type, index) => `${type}${index}`;
+export const joinDioDescription = (type: string, index: number | string): string =>
+  `${type}${index}`;

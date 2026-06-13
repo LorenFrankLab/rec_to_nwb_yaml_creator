@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed 5 pure leaf `utils/` modules under strict TS (refactor only, behavior-preserving).**
+  [utils/dioDescription.js](src/utils/dioDescription.ts) (DIO `description` split/join),
+  [utils/stringFormatting.js](src/utils/stringFormatting.ts)
+  (`isInteger`/`sanitizeTitle`/`formatCommaSeparatedString`/`commaSeparatedStringToNumber`),
+  [utils/deviceTypeUtils.js](src/utils/deviceTypeUtils.ts)
+  (`getDeviceTypes`/`getChannelCount`/`getShankCount`/`validateDeviceType`),
+  [utils/channelMapUtils.js](src/utils/channelMapUtils.ts)
+  (`generateChannelMapsForGroup`/`generateAllChannelMaps`/`nextNtrodeId`), and
+  [utils/behavioralEventSet.js](src/utils/behavioralEventSet.ts)
+  (`nextInstanceNumber`/`isStandardEventName`/`setChannelName`) → `.ts`. All five are pure leaves (no DOM,
+  no React) — the first non-component glue cycle. `deviceTypeUtils` params are typed `unknown` (matching the
+  `probeCatalog` convention; the two `.ts` consumers `validation/rules/electrodeGroupRules` and `channelMapRules`
+  pass `group?.device_type` straight through). `channelMapUtils` returns the canonical `NtrodeMap[]` and gains a
+  tolerant local `ElectrodeGroupInput` (`id: number | string`); its ONLY runtime-token change is two
+  behavior-equivalent `parseInt(String(id), 10)` wraps (`parseInt` already string-coerces its first arg —
+  independently verified value-identical). `behavioralEventSet.setChannelName` keeps its now-dead
+  `typeof name !== 'string'` runtime guard so behavior is unchanged. Deferred: the legacy-only
+  `utils/labelFormatters.js` (slated for deletion with the legacy form) and the DOM/`utils.js`-coupled
+  `utils/errorDisplay.js`. `npm run typecheck` + `CI=true` build clean; golden baselines + the 4 targeted util
+  suites + `utils.test` + 3 source-scanning guards (354) pass; full suite 4793; e2e 104.
+
 - **Typed the pure `ntrode/` catalog + the `domain/validation` barrel under strict TS, and tightened the `dayRecovery` consumer (refactor only, behavior-preserving).**
   [ntrode/probeCatalog.js](src/ntrode/probeCatalog.ts) (the verified per-shank electrode-id catalog —
   `getProbeMetadata`/`getProbeShanks`/`getProbeElectrodeIds`/`isProbeCatalogConsistent`, now with `ProbeShank`/
