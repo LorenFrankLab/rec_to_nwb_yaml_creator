@@ -5,9 +5,9 @@
  * Integrates with store and handles navigation.
  */
 
-import React from 'react';
 import { useStoreContext } from '../../state/StoreContext';
 import { buildAnimalFromForm, getDefaultExperimenters } from '../../domain/animalCreation';
+import type { AnimalCreationFormData } from '../../domain/animalCreation';
 import AnimalCreationForm from './AnimalCreationForm';
 import './Home.css';
 
@@ -17,7 +17,7 @@ import './Home.css';
 export function Home() {
   const { model, actions } = useStoreContext();
 
-  const handleSubmit = (formData) => {
+  const handleSubmit = (formData: AnimalCreationFormData) => {
     // Build the subject + metadata shapes from the SAME glue the workspace's inline create panel
     // uses, so both entry points produce identical animals.
     const { animalId, subject, metadata } = buildAnimalFromForm(formData);
@@ -50,7 +50,7 @@ export function Home() {
   const showCancelAsSkip = Object.keys(animals).length === 0;
 
   return (
-    <main id="main-content" tabIndex="-1" role="main">
+    <main id="main-content" tabIndex={-1} role="main">
       <div className="animal-creation-container">
         {showCancelAsSkip && (
           <div className="first-time-user-notice" role="note">

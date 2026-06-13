@@ -1,23 +1,29 @@
-import PropTypes from 'prop-types';
 import { Modal } from '../../components/Modal';
+
+interface DuplicateDayModalProps {
+  /** Whether the picker is shown. */
+  isOpen: boolean;
+  /** The row being cloned (for the copy). */
+  source?: { dayId: string; date?: string } | null;
+  /** The chosen new date (controlled input value). */
+  date: string;
+  /** A collision / store-throw message to show inline, or ''. */
+  error: string;
+  /** Close without duplicating. */
+  onClose: () => void;
+  /** Commit the duplication. */
+  onSubmit: () => void;
+  /** `(date: string) => void` from the date input. */
+  onDateChange: (date: string) => void;
+}
 
 /**
  * The single-date "Duplicate recording day" picker. Extracted from
  * `pages/AnimalWorkspace/RecordingDaysTab.jsx` (Phase 9c-2) with no behavior change — the pending
  * source, chosen date, and error state stay owned by the parent; this renders the modal form and
  * dispatches submit / cancel / date-change back to it.
- *
- * @param {object} props
- * @param {boolean} props.isOpen - Whether the picker is shown.
- * @param {{ dayId: string, date?: string }|null} props.source - The row being cloned (for the copy).
- * @param {string} props.date - The chosen new date (controlled input value).
- * @param {string} props.error - A collision / store-throw message to show inline, or ''.
- * @param {Function} props.onClose - Close without duplicating.
- * @param {Function} props.onSubmit - Commit the duplication.
- * @param {Function} props.onDateChange - `(date: string) => void` from the date input.
- * @returns {JSX.Element}
  */
-export default function DuplicateDayModal({ isOpen, source, date, error, onClose, onSubmit, onDateChange }) {
+export default function DuplicateDayModal({ isOpen, source = null, date, error, onClose, onSubmit, onDateChange }: DuplicateDayModalProps) {
   return (
     <Modal
       isOpen={isOpen}
@@ -65,16 +71,3 @@ export default function DuplicateDayModal({ isOpen, source, date, error, onClose
   );
 }
 
-DuplicateDayModal.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  source: PropTypes.object,
-  date: PropTypes.string.isRequired,
-  error: PropTypes.string.isRequired,
-  onClose: PropTypes.func.isRequired,
-  onSubmit: PropTypes.func.isRequired,
-  onDateChange: PropTypes.func.isRequired,
-};
-
-DuplicateDayModal.defaultProps = {
-  source: null,
-};

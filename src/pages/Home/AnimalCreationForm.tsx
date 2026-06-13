@@ -1,16 +1,32 @@
-import React, { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
+import { useState, useEffect } from 'react';
 import { isValidSpecies } from '../../validation/dandiSubject';
+import type { AnimalCreationFormData } from '../../domain/animalCreation';
 import './Home.css';
 
+/** The local (all-string) form state for the animal-creation form. */
+interface AnimalFormState {
+  subject_id: string;
+  species: string;
+  speciesCustom: string;
+  sex: string;
+  genotype: string;
+  date_of_birth: string;
+  weight: string;
+  description: string;
+  experimenter_names: string[];
+  lab: string;
+  institution: string;
+}
+
 /**
- * Validate animal creation form data
- * @param {object} formData - Form data to validate
- * @param {object} existingAnimals - Existing animals for uniqueness check
- * @returns {{ valid: boolean, errors: object }}
+ * Validate animal creation form data.
+ *
+ * @param formData - Form data to validate.
+ * @param existingAnimals - Existing animals for uniqueness check.
+ * @returns The validity flag and per-field error messages.
  */
-function validateAnimalForm(formData, existingAnimals) {
-  const errors = {};
+function validateAnimalForm(formData: AnimalFormState, existingAnimals: Record<string, unknown>): { valid: boolean; errors: Record<string, string> } {
+  const errors: Record<string, string> = {};
 
   // Subject ID
   if (!formData.subject_id?.trim()) {
@@ -91,23 +107,30 @@ function validateAnimalForm(formData, existingAnimals) {
   };
 }
 
+interface AnimalCreationFormProps {
+  /** Callback when form is submitted with valid data. */
+  onSubmit: (formData: AnimalCreationFormData) => void;
+  /** Callback when user cancels. */
+  onCancel: () => void;
+  /** Default values for experimenters section. */
+  defaultExperimenters: { experimenter_names?: string[]; lab?: string; institution?: string };
+  /** Existing animals for uniqueness validation. */
+  existingAnimals: Record<string, unknown>;
+  /** Show "Skip for Now" instead of "Cancel". */
+  showCancelAsSkip?: boolean;
+}
+
 /**
- * AnimalCreationForm - Presentational component for creating new animals
- * @param {object} props
- * @param {Function} props.onSubmit - Callback when form is submitted with valid data
- * @param {Function} props.onCancel - Callback when user cancels
- * @param {object} props.defaultExperimenters - Default values for experimenters section
- * @param {object} props.existingAnimals - Existing animals for uniqueness validation
- * @param {boolean} props.showCancelAsSkip - Show "Skip for Now" instead of "Cancel"
+ * AnimalCreationForm - Presentational component for creating new animals.
  */
 function AnimalCreationForm({
   onSubmit,
   onCancel,
   defaultExperimenters,
   existingAnimals,
-  showCancelAsSkip,
-}) {
-  const [formData, setFormData] = useState({
+  showCancelAsSkip = false,
+}: AnimalCreationFormProps) {
+  const [formData, setFormData] = useState<AnimalFormState>({
     subject_id: '',
     species: 'Rattus norvegicus',
     speciesCustom: '',
@@ -121,7 +144,7 @@ function AnimalCreationForm({
     institution: defaultExperimenters.institution || '',
   });
 
-  const [fieldErrors, setFieldErrors] = useState({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [ageWarning, setAgeWarning] = useState('');
   const [showCustomSpecies, setShowCustomSpecies] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -137,8 +160,8 @@ function AnimalCreationForm({
     formData.institution.trim() &&
     Object.keys(fieldErrors).length === 0;
 
-  const handleChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  const handleChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }) as AnimalFormState);
 
     // Clear error when user starts typing
     if (fieldErrors[field]) {
@@ -150,7 +173,7 @@ function AnimalCreationForm({
     }
   };
 
-  const handleBlur = (fieldName) => {
+  const handleBlur = (fieldName: string) => {
     const { errors } = validateAnimalForm(formData, existingAnimals);
 
     if (errors[fieldName]) {
@@ -167,7 +190,7 @@ function AnimalCreationForm({
     if (fieldName === 'date_of_birth' && formData.date_of_birth && !errors.date_of_birth) {
       const dob = new Date(formData.date_of_birth);
       const today = new Date();
-      const ageYears = (today - dob) / (1000 * 60 * 60 * 24 * 365.25);
+      const ageYears = (today.getTime() - dob.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
 
       if (ageYears > 5) {
         setAgeWarning(`Subject would be ${Math.round(ageYears)} years old.`);
@@ -184,21 +207,21 @@ function AnimalCreationForm({
     }));
   };
 
-  const removeExperimenter = (idx) => {
+  const removeExperimenter = (idx: number) => {
     setFormData((prev) => ({
       ...prev,
       experimenter_names: prev.experimenter_names.filter((_, i) => i !== idx),
     }));
   };
 
-  const updateExperimenterName = (idx, value) => {
+  const updateExperimenterName = (idx: number, value: string) => {
     setFormData((prev) => ({
       ...prev,
       experimenter_names: prev.experimenter_names.map((name, i) => (i === idx ? value : name)),
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: { preventDefault: () => void }) => {
     e.preventDefault();
 
     if (isSubmitting) return; // Prevent double submission
@@ -238,7 +261,7 @@ function AnimalCreationForm({
 
   // Keyboard shortcuts
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       // Escape to cancel
       if (e.key === 'Escape') {
         onCancel();
@@ -257,7 +280,7 @@ function AnimalCreationForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isValid, isSubmitting, onCancel]);
 
-  const fieldLabels = {
+  const fieldLabels: Record<string, string> = {
     subject_id: 'Subject ID',
     species: 'Species',
     speciesCustom: 'Custom Species',
@@ -612,21 +635,5 @@ function AnimalCreationForm({
     </form>
   );
 }
-
-AnimalCreationForm.propTypes = {
-  onSubmit: PropTypes.func.isRequired,
-  onCancel: PropTypes.func.isRequired,
-  defaultExperimenters: PropTypes.shape({
-    experimenter_names: PropTypes.arrayOf(PropTypes.string),
-    lab: PropTypes.string,
-    institution: PropTypes.string,
-  }).isRequired,
-  existingAnimals: PropTypes.object.isRequired,
-  showCancelAsSkip: PropTypes.bool,
-};
-
-AnimalCreationForm.defaultProps = {
-  showCancelAsSkip: false,
-};
 
 export default AnimalCreationForm;

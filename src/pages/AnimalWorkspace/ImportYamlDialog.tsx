@@ -16,42 +16,47 @@
  * @module pages/AnimalWorkspace/ImportYamlDialog
  */
 
-import React, { useId, useRef, useState } from 'react';
-import PropTypes from 'prop-types';
+import { useId, useRef, useState } from 'react';
+import type { ChangeEvent, DragEvent as ReactDragEvent, RefObject } from 'react';
 import Modal from '../../components/Modal/Modal';
 import { useStoreContext } from '../../state/StoreContext';
 import { parseImportFiles } from '../../features/importYaml';
 import { planImport } from '../../state/yamlImportPlan';
+import type { ImportPlan, ImportPlanAnimal } from '../../state/yamlImportPlan';
 import { applyImportPlan } from '../../state/yamlImportApply';
 import './ImportYamlDialog.css';
 
+/** A file that could not be parsed/imported (parse-failure or plan-unimportable entry). */
+interface UnimportableEntry {
+  sourceName: string;
+  reason: string;
+}
+
+interface ImportYamlDialogProps {
+  /** Close the dialog (Cancel / done / ESC). Writes nothing itself. */
+  onClose: () => void;
+}
+
 /**
  * The import dialog.
- *
- * @param {object} props
- * @param {Function} props.onClose - Close the dialog (Cancel / done / ESC). Writes nothing itself.
- * @returns {JSX.Element}
  */
-export default function ImportYamlDialog({ onClose }) {
+export default function ImportYamlDialog({ onClose }: ImportYamlDialogProps) {
   const { model, actions } = useStoreContext();
   const baseId = useId();
   const titleId = `${baseId}-title`;
-  const inputRef = useRef(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // phase: 'pick' → 'preview' → 'result'. The plan + failures snapshot the pick decode.
-  const [phase, setPhase] = useState('pick');
-  const [plan, setPlan] = useState(null);
-  const [parseFailures, setParseFailures] = useState([]);
+  const [phase, setPhase] = useState<'pick' | 'preview' | 'result'>('pick');
+  const [plan, setPlan] = useState<ImportPlan | null>(null);
+  const [parseFailures, setParseFailures] = useState<UnimportableEntry[]>([]);
   // Per-subject resolution overrides for conflict animals (subjectId → 'add'|'skip'|'replace').
-  const [resolutions, setResolutions] = useState({});
-  const [result, setResult] = useState(null);
+  const [resolutions, setResolutions] = useState<Record<string, string>>({});
+  const [result, setResult] = useState<ReturnType<typeof applyImportPlan> | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  /**
-   * Read+decode the chosen files, reconcile against the live workspace, and advance to preview.
-   * @param {Array} files - File-like objects.
-   */
-  const handleFiles = async (files) => {
+  /** Read+decode the chosen files, reconcile against the live workspace, and advance to preview. */
+  const handleFiles = async (files: File[] | FileList | null | undefined) => {
     const list = Array.from(files ?? []);
     if (list.length === 0) return;
     const { decodedFiles, parseFailures: failures } = await parseImportFiles(list);
@@ -59,21 +64,18 @@ export default function ImportYamlDialog({ onClose }) {
     setParseFailures(failures);
     setPlan(nextPlan);
     // Seed resolutions with each conflict animal's default so the control reflects state.
-    const seeded = {};
+    const seeded: Record<string, string> = {};
     for (const animalPlan of nextPlan.animals) {
       if (animalPlan.conflict === 'exists') {
-        seeded[animalPlan.subjectId] = animalPlan.defaultResolution;
+        seeded[animalPlan.subjectId] = animalPlan.defaultResolution as string;
       }
     }
     setResolutions(seeded);
     setPhase('preview');
   };
 
-  /**
-   * File-input change handler; resets the input value so re-picking the same file re-fires.
-   * @param {object} e - The change event.
-   */
-  const onInputChange = async (e) => {
+  /** File-input change handler; resets the input value so re-picking the same file re-fires. */
+  const onInputChange = async (e: ChangeEvent<HTMLInputElement>) => {
     // `e.target.files` is a *live* FileList — clearing `e.target.value` (so re-picking the
     // SAME file re-fires onChange) empties it in real browsers. Snapshot into a stable
     // File[] BEFORE clearing, then hand that to handleFiles (which already Array.from()s).
@@ -82,11 +84,8 @@ export default function ImportYamlDialog({ onClose }) {
     await handleFiles(files);
   };
 
-  /**
-   * Drop handler for the drop zone.
-   * @param {object} e - The drop event.
-   */
-  const onDrop = async (e) => {
+  /** Drop handler for the drop zone. */
+  const onDrop = async (e: ReactDragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
     await handleFiles(e.dataTransfer?.files);
@@ -94,20 +93,16 @@ export default function ImportYamlDialog({ onClose }) {
 
   /** Apply the plan with the chosen resolutions, then show the result. */
   const handleConfirm = () => {
-    const summary = applyImportPlan(plan, actions, {
+    const summary = applyImportPlan(plan!, actions, {
       workspace: model.workspace,
-      resolutions,
+      resolutions: resolutions as Record<string, 'add' | 'skip' | 'replace'>,
     });
     setResult(summary);
     setPhase('result');
   };
 
-  /**
-   * Set a conflict animal's resolution.
-   * @param {string} subjectId - The conflict animal's subject id.
-   * @param {('add'|'skip'|'replace')} value - The chosen resolution.
-   */
-  const setResolution = (subjectId, value) => {
+  /** Set a conflict animal's resolution ('add'|'skip'|'replace'). */
+  const setResolution = (subjectId: string, value: string) => {
     setResolutions((prev) => ({ ...prev, [subjectId]: value }));
   };
 
@@ -152,10 +147,6 @@ export default function ImportYamlDialog({ onClose }) {
   );
 }
 
-ImportYamlDialog.propTypes = {
-  onClose: PropTypes.func.isRequired,
-};
-
 /**
  * Derive a short, human-readable remediation hint ("what to fix") from an un-importable file's
  * raw `reason` string. PRESENTATION-ONLY and data-driven: it reads ONLY the single reason string
@@ -172,16 +163,16 @@ ImportYamlDialog.propTypes = {
  *  - anything else → a generic "Open this file and correct the reported problem before
  *    re-importing." (the raw reason is still shown separately by the caller, so nothing is hidden).
  *
- * @param {string} [reason] - The un-importable entry's raw reason string.
- * @returns {string} A plain-language remediation hint (never empty).
+ * @param reason - The un-importable entry's raw reason string.
+ * @returns A plain-language remediation hint (never empty).
  */
-export function remediationHint(reason) {
+export function remediationHint(reason?: string): string {
   const raw = typeof reason === 'string' ? reason : '';
 
   // Collect every `must have required property 'X'` occurrence (a file may report several).
-  const requiredProps = [];
+  const requiredProps: string[] = [];
   const requiredRe = /must have required property '([^']+)'/g;
-  let match;
+  let match: RegExpExecArray | null;
   while ((match = requiredRe.exec(raw)) !== null) {
     if (!requiredProps.includes(match[1])) requiredProps.push(match[1]);
   }
@@ -193,19 +184,25 @@ export function remediationHint(reason) {
   return 'Open this file and correct the reported problem before re-importing.';
 }
 
+interface PickPhaseProps {
+  /** Ref to the hidden file input (clicked by the drop zone). */
+  inputRef: RefObject<HTMLInputElement>;
+  /** Whether a drag is currently over the drop zone. */
+  isDragging: boolean;
+  /** Set the dragging flag. */
+  setIsDragging: (next: boolean) => void;
+  /** File-input change handler. */
+  onInputChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  /** Drop handler. */
+  onDrop: (e: ReactDragEvent<HTMLDivElement>) => void;
+  /** Cancel / close handler. */
+  onCancel: () => void;
+}
+
 /**
  * PICK phase: the multi-file input + drop zone.
- *
- * @param {object} props - Component props.
- * @param {object} props.inputRef - Ref to the hidden file input (clicked by the drop zone).
- * @param {boolean} props.isDragging - Whether a drag is currently over the drop zone.
- * @param {Function} props.setIsDragging - Set the dragging flag.
- * @param {Function} props.onInputChange - File-input change handler.
- * @param {Function} props.onDrop - Drop handler.
- * @param {Function} props.onCancel - Cancel / close handler.
- * @returns {JSX.Element}
  */
-function PickPhase({ inputRef, isDragging, setIsDragging, onInputChange, onDrop, onCancel }) {
+function PickPhase({ inputRef, isDragging, setIsDragging, onInputChange, onDrop, onCancel }: PickPhaseProps) {
   return (
     <div className="import-pick">
       <p id="import-pick-help">
@@ -260,27 +257,25 @@ function PickPhase({ inputRef, isDragging, setIsDragging, onInputChange, onDrop,
   );
 }
 
-PickPhase.propTypes = {
-  inputRef: PropTypes.object.isRequired,
-  isDragging: PropTypes.bool.isRequired,
-  setIsDragging: PropTypes.func.isRequired,
-  onInputChange: PropTypes.func.isRequired,
-  onDrop: PropTypes.func.isRequired,
-  onCancel: PropTypes.func.isRequired,
-};
+interface PreviewPhaseProps {
+  /** The import plan from planImport. */
+  plan: ImportPlan;
+  /** parseFailures ++ plan.unimportable. */
+  unimportable: UnimportableEntry[];
+  /** Count of files that failed to parse (for the total). */
+  parseFailureCount: number;
+  /** subjectId → resolution override. */
+  resolutions: Record<string, string>;
+  /** Set a conflict animal's resolution. */
+  setResolution: (subjectId: string, value: string) => void;
+  /** Apply the plan. */
+  onConfirm: () => void;
+  /** Cancel / close. */
+  onCancel: () => void;
+}
 
 /**
  * PREVIEW phase: summary, per-animal cards, un-importable list, Confirm/Cancel.
- *
- * @param {object} props - Component props.
- * @param {object} props.plan - The import plan from planImport.
- * @param {Array} props.unimportable - parseFailures ++ plan.unimportable.
- * @param {number} props.parseFailureCount - Count of files that failed to parse (for the total).
- * @param {object} props.resolutions - subjectId → resolution override.
- * @param {Function} props.setResolution - Set a conflict animal's resolution.
- * @param {Function} props.onConfirm - Apply the plan.
- * @param {Function} props.onCancel - Cancel / close.
- * @returns {JSX.Element}
  */
 function PreviewPhase({
   plan,
@@ -290,7 +285,7 @@ function PreviewPhase({
   setResolution,
   onConfirm,
   onCancel,
-}) {
+}: PreviewPhaseProps) {
   const { summary } = plan;
   const unimportableCount = unimportable.length;
   // plan.summary.fileCount counts the files that decoded (including those that became
@@ -353,28 +348,20 @@ function PreviewPhase({
   );
 }
 
-PreviewPhase.propTypes = {
-  plan: PropTypes.object.isRequired,
-  unimportable: PropTypes.array.isRequired,
-  parseFailureCount: PropTypes.number.isRequired,
-  resolutions: PropTypes.object.isRequired,
-  setResolution: PropTypes.func.isRequired,
-  onConfirm: PropTypes.func.isRequired,
-  onCancel: PropTypes.func.isRequired,
-};
+interface AnimalCardProps {
+  /** The planned animal (an ImportPlanAnimal, NOT a workspace animal record). */
+  animalPlan: ImportPlanAnimal;
+  /** The chosen resolution for a conflict animal. */
+  resolution?: string;
+  /** Set this animal's resolution. */
+  setResolution: (subjectId: string, value: string) => void;
+}
 
 /**
  * One planned animal: id, day count, config-version summary, divergence flags, and (for a conflict)
  * the per-animal resolution control.
- *
- * @param {object} props - Component props.
- * @param {object} props.animalPlan - The planned animal (an ImportPlanAnimal, NOT a workspace
- *   animal record — its `days` is the plan's day list, not a workspace day-id array).
- * @param {string} [props.resolution] - The chosen resolution for a conflict animal.
- * @param {Function} props.setResolution - Set this animal's resolution.
- * @returns {JSX.Element}
  */
-function AnimalCard({ animalPlan, resolution, setResolution }) {
+function AnimalCard({ animalPlan, resolution, setResolution }: AnimalCardProps) {
   const dayCount = animalPlan.days.length;
   const versionCount = animalPlan.configVersions.length;
   return (
@@ -433,12 +420,6 @@ function AnimalCard({ animalPlan, resolution, setResolution }) {
   );
 }
 
-AnimalCard.propTypes = {
-  animalPlan: PropTypes.object.isRequired,
-  resolution: PropTypes.string,
-  setResolution: PropTypes.func.isRequired,
-};
-
 /**
  * Group the result's created day ids under their created animal, for naming WHICH animals/days
  * landed (not just counts). PRESENTATION-ONLY — reads only the result fields the executor already
@@ -448,19 +429,19 @@ AnimalCard.propTypes = {
  * prefixes it (handles ids that share a prefix). Days whose animal id isn't in `createdAnimals`
  * (e.g. a conflict→'add' onto an existing animal) get their own entry so no created day is unnamed.
  *
- * @param {string[]} createdAnimals - Created animal subject ids.
- * @param {string[]} createdDays - Created day ids (`<animalId>-<ISO date>`).
- * @returns {Array<{ animalId: string, dates: string[] }>} Per-animal entries in stable order.
+ * @param createdAnimals - Created animal subject ids.
+ * @param createdDays - Created day ids (`<animalId>-<ISO date>`).
+ * @returns Per-animal entries in stable order.
  */
-export function groupCreatedDaysByAnimal(createdAnimals = [], createdDays = []) {
-  const order = [];
-  const byAnimal = new Map();
-  const ensure = (animalId) => {
+export function groupCreatedDaysByAnimal(createdAnimals: string[] = [], createdDays: string[] = []): Array<{ animalId: string; dates: string[] }> {
+  const order: string[] = [];
+  const byAnimal = new Map<string, string[]>();
+  const ensure = (animalId: string): string[] => {
     if (!byAnimal.has(animalId)) {
       byAnimal.set(animalId, []);
       order.push(animalId);
     }
-    return byAnimal.get(animalId);
+    return byAnimal.get(animalId)!;
   };
 
   // Seed in created order so an animal with zero matched days (shouldn't happen, but be honest)
@@ -485,18 +466,20 @@ export function groupCreatedDaysByAnimal(createdAnimals = [], createdDays = []) 
     if (datePart && !dates.includes(datePart)) dates.push(datePart);
   }
 
-  return order.map((animalId) => ({ animalId, dates: byAnimal.get(animalId) }));
+  return order.map((animalId) => ({ animalId, dates: byAnimal.get(animalId)! }));
+}
+
+interface ResultPhaseProps {
+  /** The applyImportPlan summary. */
+  result: ReturnType<typeof applyImportPlan>;
+  /** Close the dialog. */
+  onClose: () => void;
 }
 
 /**
  * RESULT phase: a brief summary of what was written, plus any failures.
- *
- * @param {object} props - Component props.
- * @param {object} props.result - The applyImportPlan summary.
- * @param {Function} props.onClose - Close the dialog.
- * @returns {JSX.Element}
  */
-function ResultPhase({ result, onClose }) {
+function ResultPhase({ result, onClose }: ResultPhaseProps) {
   const { createdAnimals, createdDays, skipped, failed } = result;
   // What the result object EXPOSES: `createdAnimals` is the list of created animal subject ids,
   // and `createdDays` is the list of created day ids, each formatted by `generateDayId` as
@@ -551,7 +534,3 @@ function ResultPhase({ result, onClose }) {
   );
 }
 
-ResultPhase.propTypes = {
-  result: PropTypes.object.isRequired,
-  onClose: PropTypes.func.isRequired,
-};

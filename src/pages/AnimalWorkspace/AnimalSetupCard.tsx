@@ -1,9 +1,9 @@
-import PropTypes from 'prop-types';
 import {
   getAnimalSectionStatus,
   getAnimalBlockingSections,
   SECTION_STATUS,
 } from '../../domain/sectionStatus';
+import type { Animal, Day } from '../../state/workspaceTypes';
 
 /**
  * The first-run "Set up this animal" card sections, in the same order and with the same keys as
@@ -18,6 +18,19 @@ const SETUP_CARD_SECTIONS = [
   { key: 'optogenetics', label: 'Optogenetics', hint: 'if opto' },
 ];
 
+interface AnimalSetupCardProps {
+  /** The animal whose setup this card drives (for the section links). */
+  animalId: string;
+  /** The animal record (read for per-section status). */
+  animal: Animal;
+  /** The workspace days map (read for blocking-section derivation). */
+  days: Record<string, Day>;
+  /** Whether a "Copy from another animal…" affordance applies. */
+  hasOtherAnimals: boolean;
+  /** Opens the copy-from-animal dialog. */
+  onCopyFromAnimal: () => void;
+}
+
 /**
  * The first-run onboarding card for a new/under-configured animal. Extracted from
  * `pages/AnimalWorkspace/RecordingDaysTab.jsx` (Phase 9c-2) with no behavior change. Reads the SAME
@@ -25,16 +38,8 @@ const SETUP_CARD_SECTIONS = [
  * {@link getAnimalBlockingSections}), so "todo" isn't signalled three ways and the card can't tell
  * the user a section is fine while the nav shows it red. The parent decides WHETHER to render it
  * (it disappears once the animal is established).
- *
- * @param {object} props
- * @param {string} props.animalId - The animal whose setup this card drives (for the section links).
- * @param {object} props.animal - The animal record (read for per-section status).
- * @param {object} props.days - The workspace days map (read for blocking-section derivation).
- * @param {boolean} props.hasOtherAnimals - Whether a "Copy from another animal…" affordance applies.
- * @param {Function} props.onCopyFromAnimal - Opens the copy-from-animal dialog.
- * @returns {JSX.Element}
  */
-export default function AnimalSetupCard({ animalId, animal, days, hasOtherAnimals, onCopyFromAnimal }) {
+export default function AnimalSetupCard({ animalId, animal, days, hasOtherAnimals, onCopyFromAnimal }: AnimalSetupCardProps) {
   // Which setup sections hold an export-blocking error — the SAME source the section-nav red ●
   // reads (no second mapping), so the card's per-section state can't contradict the nav.
   const setupBlockingSections = getAnimalBlockingSections(animal, days);
@@ -95,10 +100,3 @@ export default function AnimalSetupCard({ animalId, animal, days, hasOtherAnimal
   );
 }
 
-AnimalSetupCard.propTypes = {
-  animalId: PropTypes.string.isRequired,
-  animal: PropTypes.object.isRequired,
-  days: PropTypes.object.isRequired,
-  hasOtherAnimals: PropTypes.bool.isRequired,
-  onCopyFromAnimal: PropTypes.func.isRequired,
-};

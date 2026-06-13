@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed `pages/Home` + `pages/AnimalWorkspace` — all 9 files `.jsx`→`.tsx` (refactor only, behavior-preserving) — page cycle 12.**
+  Home (`AnimalCreationForm`, `index`) and the workspace pane pieces (`AnimalSetupCard`,
+  `DuplicateDayModal`, `ExistingDataReview`, `DayList`, `ImportYamlDialog`, `RecordingDaysTab`, `index`).
+  Props→interfaces; PropTypes/defaultProps dropped; JSDoc trimmed; stray `import React` removed.
+  `domain/animalCreation` gained `export` on `AnimalCreationFormData` so Home/workspace type their
+  create handlers against it. Behavior-equivalent non-type changes only: tolerant-boundary casts
+  (`… as unknown as Animal/Day`, `record as Record<string, unknown>` in the non-dangling day branches,
+  `rec.date as string | undefined`); `(today.getTime() - dob.getTime())` (Date arithmetic, value-
+  identical); `tabIndex={-1}` (was `'-1'`, DOM-identical); `?? undefined` where a `null`-when-closed
+  prop meets a `?:`-typed dialog (`AnimalDeleteDialog`) and where a repair-ctx `animal` is read only
+  for its id; `.filter((x): x is string => Boolean(x))` type-guards. The copy-from-animal ntrode
+  normalize stays POINT-FREE via a function-signature cast — preserving the original `.map`'s 3-arg
+  call exactly (a 2-arg rewrite would have changed the corrupt-input `fallbackGroupId` from the array
+  to `0`; the latent point-free quirk is left untouched, not "fixed", to keep the migration runtime-
+  identical). `npm run typecheck` and `CI=true` build clean (net ≈0 B); golden baselines, Home +
+  AnimalWorkspace suites with the 3 source-scanning guards, full suite 4793, e2e 104 all pass.
+  code-reviewer surfaced the ntrode-map point-free subtlety (now preserved exactly); no other findings.
 - **Typed the `pages/ValidationSummary` directory — all 7 files `.jsx`/`.js`→`.tsx`/`.ts` (refactor only, behavior-preserving) — page cycle 11.**
   The pure row-builder/display helpers (`validationSummaryRows`), the batch-action controller hook
   (`useValidationSummaryActions`), and the presentational pieces (`ExportReport`, `EffectiveDayReview`,

@@ -13,7 +13,7 @@ import { getAnimalExperimenters } from '../state/workspaceSelectors';
 import type { WorkspaceSettings } from '../state/workspaceTypes';
 
 /** The processed AnimalCreationForm payload (already trimmed/numbered) consumed by {@link buildAnimalFromForm}. */
-interface AnimalCreationFormData {
+export interface AnimalCreationFormData {
   /** Subject id (lower-cased/trimmed to derive the store key + subject_id). */
   subject_id: string;
   /** Species (Latin binomial). */
