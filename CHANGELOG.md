@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed the workspace export-merge utilities under strict TS (refactor only, byte-identical export).**
+  [state/workspaceUtils.js](src/state/workspaceUtils.ts) → `.ts`: the last and most export-sensitive
+  `state/` module — `mergeDayMetadata` (the legacy-parity YAML merge), `resolveDayConfig` (effective
+  probe-config resolution), `resolveDayDataAcqDevice`, the `reorderKeys`/`reorderItems`/`emit*` ordering
+  primitives, and the date/id/default-workspace leaf helpers. Params are typed `Animal`/`Day`; corruption
+  tolerance is unchanged (it lives in the body's `unknown`-accepting selectors). The merge body's 28-key
+  insertion order, the four `delete merged.*` omissions, and `structuredClone(merged)` are **untouched**
+  — the golden baselines (125) and merge-parity suites (workspace-merge / exportParity / legacyParity, 67)
+  confirm byte-identity. The only executable-affecting change is in `reorderKeys`: `Object.hasOwn(obj,k)` →
+  `Object.prototype.hasOwnProperty.call(record,k)` (the ES2020-lib-safe pre-`Object.hasOwn` form;
+  `record` aliases `obj`, identical boolean for plain JSON records — no tsconfig `lib` bump needed). Type
+  tokens otherwise: `merged: Record<string, unknown>` (so the `delete`s are legal) + `Record<string,
+  unknown>` return; one `as TechnicalParameters` cast on the malformed-`technical` guard (the `as DayState`
+  pattern); `isPlainRecord` is now a type predicate; `resolveDayConfig` casts its JS-normalized maps `as
+  ElectrodeGroup[]`/`as NtrodeMap[]`; `createDefaultWorkspace` returns `Record<string, unknown>` (kept
+  loose so persistence's section-bag cast stays cast-free). No `workspaceTypes.ts` / tsconfig change; the
+  prior `.ts` consumers (`configDiff` re-export, `persistence`, `workspaceTransitions`) still compile.
+  `npm run typecheck` + `CI=true` build clean; full suite 4793; e2e 104.
+
 - **Typed the workspace state transitions under strict TS (refactor only, no behavior change).**
   [state/workspaceTransitions.js](src/state/workspaceTransitions.ts) → `.ts`: the pure-mutation heart of
   the workspace model — `applyAnimalUpdates`, `createDayRecord`, `applyDayUpdates`,
