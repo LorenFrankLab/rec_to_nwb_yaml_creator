@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed the pure `ntrode/` catalog + the `domain/validation` barrel under strict TS, and tightened the `dayRecovery` consumer (refactor only, behavior-preserving).**
+  [ntrode/probeCatalog.js](src/ntrode/probeCatalog.ts) (the verified per-shank electrode-id catalog —
+  `getProbeMetadata`/`getProbeShanks`/`getProbeElectrodeIds`/`isProbeCatalogConsistent`, now with `ProbeShank`/
+  `ProbeMetadata` interfaces and `Record<string, ProbeMetadata>` for the catalog; the PROBE_CATALOG data incl. the
+  UNEVEN 64c-3s 21/21/22 partition is byte-identical) and [ntrode/deviceTypes.js](src/ntrode/deviceTypes.ts)
+  (`deviceTypeMap`/`getShankCount`) → `.ts`; all `deviceType` params typed `unknown` (each routes through
+  `getProbeMetadata`'s `typeof !== 'string'` guard). [domain/validation.js](src/domain/validation.ts) (the
+  re-export barrel) → `.ts` — a pure rename (diff is empty; value re-exports are extension-agnostic), completing
+  the `domain/` migration (**`domain/` is now 25 .ts / 0 .js**). The 3 already-typed probeCatalog consumers
+  (`badChannels`, `validation/rules/electrodeGroupRules`, `validation/rules/channelMapRules`) now receive real
+  types instead of `any` and stay green. Also tightened [domain/animalDeleteCascade.ts](src/domain/animalDeleteCascade.ts):
+  dropped the 4 `(d: any)` casts (its `classifyAnimalDays` rows now infer `DayClassificationRow`). Typecheck and the
+  `CI=true` build are clean; golden baselines + ntrode/validation/cascade tests + 3 source-scanning guards (341) pass;
+  full suite 4793; e2e 104.
+
 - **Split + typed the legacy `valueList.js` (~1122 LOC) into 6 focused TS modules + a compatibility barrel (refactor only, value-identical).**
   The catalog/default values that feed the form, dropdowns, and the export moved out of one ~1122-LOC file into
   [defaults.ts](src/defaults.ts) (`defaultYMLValues`/`emptyFormData`/`arrayDefaultValues`),

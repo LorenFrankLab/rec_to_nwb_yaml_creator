@@ -1,7 +1,7 @@
 /**
  * Per-shank channel mapping helpers for a device type.
  *
- * These are now derived from the VERIFIED probe catalog (`probeCatalog.js`), which
+ * These are now derived from the VERIFIED probe catalog (`probeCatalog`), which
  * transcribes the trodes_to_nwb probe metadata (the converter truth). `deviceTypeMap`
  * returns the FIRST shank's local electrode-id list — a single ntrode/shank's channel
  * array — and is retained for its existing consumers (legacy ntrode editor, the
@@ -23,11 +23,11 @@ import { getProbeMetadata, getProbeShanks } from './probeCatalog';
  * full per-shank partition (multi-shank generation/validation/UI) must use
  * `getProbeShanks` from `probeCatalog`, not length-math on this array.
  *
- * @param {string} deviceType
- * @returns {number[]} Shank 0's electrode ids, or `[0, 1, 2, 3]` for an unknown type
+ * @param deviceType
+ * @returns Shank 0's electrode ids, or `[0, 1, 2, 3]` for an unknown type
  *   (preserving the legacy tetrode-shaped default).
  */
-export const deviceTypeMap = (deviceType) => {
+export const deviceTypeMap = (deviceType: unknown): number[] => {
   const meta = getProbeMetadata(deviceType);
   if (!meta || meta.shanks.length === 0) {
     return [0, 1, 2, 3];
@@ -40,10 +40,10 @@ export const deviceTypeMap = (deviceType) => {
  *
  * Derived from the probe catalog.
  *
- * @param {string} deviceType
- * @returns {number} shank count, or 0 for an unknown device type
+ * @param deviceType
+ * @returns shank count, or 0 for an unknown device type
  */
-export const getShankCount = (deviceType) => {
+export const getShankCount = (deviceType: unknown): number => {
   const shanks = getProbeShanks(deviceType);
   return shanks.length;
 };
