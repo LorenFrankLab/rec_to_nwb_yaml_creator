@@ -5,7 +5,7 @@
  * particularly the critical mergeDayMetadata function that combines animal defaults
  * with day-specific data to produce complete NWB metadata for YAML export.
  *
- * @see src/state/workspaceTypes.js for the workspace data model
+ * @see src/state/workspaceTypes.ts for the workspace data model
  */
 
 import {
@@ -35,6 +35,14 @@ import {
   getProbeElectrodeGroups,
   getProbeNtrodeMaps,
 } from './workspaceSelectors';
+import type {
+  Animal,
+  Day,
+  ElectrodeGroup,
+  NtrodeMap,
+  TechnicalParameters,
+  Task,
+} from './workspaceTypes';
 
 // Canonical key orders, mirroring the legacy `formData` shape in
 // `src/valueList.js` (`defaultYMLValues` / `arrayDefaultValues`). `encodeYaml`
@@ -66,10 +74,10 @@ const FS_GUI_NON_SCHEMA_KEYS = ['state_script_parameters'];
  * Whether `value` is a plain object record (not null, not an array). Used to guard
  * nested record dereferences in the merge so a malformed import can't crash it.
  *
- * @param {*} value - Candidate record.
- * @returns {boolean} True for a non-null, non-array object.
+ * @param value - Candidate record.
+ * @returns True for a non-null, non-array object.
  */
-function isPlainRecord(value) {
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
@@ -77,11 +85,11 @@ function isPlainRecord(value) {
  * Reorder each item of an array to match a key template (lossless). Non-array
  * inputs pass through unchanged.
  *
- * @param {Array} arr - Array of plain objects.
- * @param {string[]} order - Canonical key sequence for each item.
- * @returns {Array} New array with each item's keys reordered.
+ * @param arr - Array of plain objects.
+ * @param order - Canonical key sequence for each item.
+ * @returns New array with each item's keys reordered.
  */
-function reorderItems(arr, order) {
+function reorderItems(arr: unknown, order: string[]): unknown {
   return Array.isArray(arr) ? arr.map((item) => reorderKeys(item, order)) : arr;
 }
 
@@ -91,18 +99,24 @@ function reorderItems(arr, order) {
  * original order — so reordering is lossless (a field the template doesn't know
  * about is preserved, never dropped). Non-object inputs are returned unchanged.
  *
- * @param {object} obj - Object to reorder.
- * @param {string[]} order - Canonical key sequence.
- * @returns {object} Reordered shallow copy (or `obj` if not a plain object).
+ * @param obj - Object to reorder.
+ * @param order - Canonical key sequence.
+ * @returns Reordered shallow copy (or `obj` if not a plain object).
  */
-function reorderKeys(obj, order) {
+function reorderKeys(obj: unknown, order: string[]): unknown {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj;
-  const result = {};
+  // `record` aliases `obj` (same reference) — the cast only enables the dynamic-key
+  // reads/writes below; the reordering behavior is unchanged.
+  const record = obj as Record<string, unknown>;
+  const result: Record<string, unknown> = {};
+  // `Object.prototype.hasOwnProperty.call` (the pre-ES2022 form of `Object.hasOwn`) keeps this
+  // ES2020-lib-safe without a tsconfig change; identical boolean for the plain workspace records,
+  // so the key ordering — and the exported bytes — are unchanged (golden baselines verify).
   for (const key of order) {
-    if (Object.hasOwn(obj, key)) result[key] = obj[key];
+    if (Object.prototype.hasOwnProperty.call(record, key)) result[key] = record[key];
   }
-  for (const key of Object.keys(obj)) {
-    if (!Object.hasOwn(result, key)) result[key] = obj[key];
+  for (const key of Object.keys(record)) {
+    if (!Object.prototype.hasOwnProperty.call(result, key)) result[key] = record[key];
   }
   return result;
 }
@@ -121,10 +135,10 @@ function reorderKeys(obj, order) {
  * present but differ (only reachable from imported data — the editor stores only
  * `volume_in_uL`), `volume_in_uL` is treated as authoritative.
  *
- * @param {Array} items - Raw virus_injection items.
- * @returns {Array} Reordered items with both `volume_in_uL` and `volume_in_ul` set.
+ * @param items - Raw virus_injection items.
+ * @returns Reordered items with both `volume_in_uL` and `volume_in_ul` set.
  */
-function emitVirusInjections(items) {
+function emitVirusInjections(items: unknown): unknown {
   if (!Array.isArray(items)) return items;
   return items.map((item) => {
     const reordered = reorderKeys(item, VIRUS_INJECTION_ORDER);
@@ -147,10 +161,10 @@ function emitVirusInjections(items) {
  * Strip it explicitly here. `camera_id` (schema-required; the converter reads it only for
  * speed/spatial-filter protocols) stays.
  *
- * @param {Array} items - Raw fs_gui_yamls items.
- * @returns {Array} Reordered, sanitized items.
+ * @param items - Raw fs_gui_yamls items.
+ * @returns Reordered, sanitized items.
  */
-function emitFsGuiYamls(items) {
+function emitFsGuiYamls(items: unknown): unknown {
   if (!Array.isArray(items)) return items;
   return items.map((item) => {
     const reordered = reorderKeys(item, FS_GUI_YAML_ORDER);
@@ -186,16 +200,23 @@ function emitFsGuiYamls(items) {
  * Returns normalized owned device objects; callers that persist the result can do so
  * without carrying legacy string IDs or non-schema electrode keys forward.
  *
- * @param {import('./workspaceTypes').Animal} animal - Parent animal with snapshots.
- * @param {import('./workspaceTypes').Day} day - Recording day.
- * @returns {{ electrode_groups: object[], ntrode_electrode_group_channel_map: object[], configurationVersion: (number|undefined) }}
- *   `configurationVersion` is the version of the snapshot actually resolved (the
- *   latest, for an unpinned day) — callers that surface the version must use this,
- *   not the day's pin, to stay consistent with what is exported.
- * @throws {Error} If the animal has no configuration history, or the day pins a
- *   version with no matching snapshot.
+ * @param animal - Parent animal with snapshots.
+ * @param day - Recording day.
+ * @returns The effective `electrode_groups` / `ntrode_electrode_group_channel_map` plus the
+ *   `configurationVersion` of the snapshot actually resolved (the latest, for an unpinned day)
+ *   — callers that surface the version must use this, not the day's pin, to stay consistent
+ *   with what is exported.
+ * @throws If the animal has no configuration history, or the day pins a version with no
+ *   matching snapshot.
  */
-export function resolveDayConfig(animal, day) {
+export function resolveDayConfig(
+  animal: Animal,
+  day: Day
+): {
+  electrode_groups: ElectrodeGroup[];
+  ntrode_electrode_group_channel_map: NtrodeMap[];
+  configurationVersion: number;
+} {
   const history = getConfigHistory(animal);
   if (history.length === 0) {
     throw new Error(
@@ -241,12 +262,14 @@ export function resolveDayConfig(animal, day) {
   });
 
   return {
+    // `normalizeElectrodeGroup` / `normalizeNtrodeMap` are JS (inferred `{}` return); the casts
+    // name the schema-shaped objects they actually produce at runtime.
     electrode_groups: (Array.isArray(electrodeGroups) ? electrodeGroups : []).map((group, index) =>
       normalizeElectrodeGroup(group, index)
-    ),
+    ) as ElectrodeGroup[],
     ntrode_electrode_group_channel_map: ntrodes.map((ntrode, index) =>
       normalizeNtrodeMap(ntrode, index)
-    ),
+    ) as NtrodeMap[],
     configurationVersion: config.version,
   };
 }
@@ -259,11 +282,11 @@ export function resolveDayConfig(animal, day) {
  * acquisition system per session): the referenced catalog entry (resolved live, so editing that system
  * propagates), or the first catalog entry when the day is unreferenced / the reference is dangling.
  *
- * @param {object} animal - The animal record (its `devices.data_acq_device` catalog).
- * @param {object} day - The day record (its optional `data_acq_device_name` reference).
- * @returns {Array<object>} A one-element (or empty) `data_acq_device` array in canonical key order.
+ * @param animal - The animal record (its `devices.data_acq_device` catalog).
+ * @param day - The day record (its optional `data_acq_device_name` reference).
+ * @returns A one-element (or empty) `data_acq_device` array in canonical key order.
  */
-export function resolveDayDataAcqDevice(animal, day) {
+export function resolveDayDataAcqDevice(animal: Animal, day: Day): unknown[] {
   const catalog = getDataAcqDevices(animal);
   // Route the day's reference through the guarded selector (string or undefined); the `|| ''`
   // keeps the falsy/empty handling byte-identical to the prior inline read.
@@ -283,11 +306,11 @@ export function resolveDayDataAcqDevice(animal, day) {
  * `taskInstances` falls back to inline `day.tasks` (compatibility for legacy and test fixtures). A
  * catalog day with zero instances correctly exports `tasks: []`.
  *
- * @param {object} animal - The owning animal (its `taskTypes` catalog).
- * @param {object} day - The recording day.
- * @returns {Array<object>} Inline task rows for export, in instance/inline order.
+ * @param animal - The owning animal (its `taskTypes` catalog).
+ * @param day - The recording day.
+ * @returns Inline task rows for export, in instance/inline order.
  */
-function resolveDayTasks(animal, day) {
+function resolveDayTasks(animal: Animal, day: Day): Task[] {
   const instances = getDayTaskInstances(day);
   return instances === null
     ? getDayTasks(day)
@@ -321,9 +344,9 @@ function resolveDayTasks(animal, day) {
  *   exportable session they are filled, so the bytes still match legacy; only an
  *   incomplete (non-exportable) session differs, and neither path ships it.
  *
- * @param {import('./workspaceTypes').Animal} animal - Parent animal with shared metadata
- * @param {import('./workspaceTypes').Day} day - Recording day with session-specific data
- * @returns {object} Complete NWB metadata ready for YAML export
+ * @param animal - Parent animal with shared metadata
+ * @param day - Recording day with session-specific data
+ * @returns Complete NWB metadata ready for YAML export
  *
  * @example
  * const animal = workspace.animals['remy'];
@@ -331,7 +354,7 @@ function resolveDayTasks(animal, day) {
  * const metadata = mergeDayMetadata(animal, day);
  * const yaml = encodeYaml(metadata); // Ready for export
  */
-export function mergeDayMetadata(animal, day) {
+export function mergeDayMetadata(animal: Animal, day: Day): Record<string, unknown> {
   // Resolve the day's effective probe config (snapshot selection + deviceOverrides
   // precedence) via the shared helper, so the merge and the reconfig wizard's
   // notion of "effective config" cannot drift.
@@ -361,13 +384,13 @@ export function mergeDayMetadata(animal, day) {
   const opto = animal.optogenetics || null;
   const experimenters = getAnimalExperimenters(animal);
   const session = getDaySession(day);
-  const technical = isPlainRecord(day.technical) ? day.technical : {};
+  const technical = (isPlainRecord(day.technical) ? day.technical : {}) as TechnicalParameters;
   const subject = getAnimalSubject(animal);
 
   // Build the merged object in legacy `defaultYMLValues` key order. keywords /
   // units / default_header_file_path are placed at their canonical positions here
   // and deleted below when empty (delete preserves the order of surviving keys).
-  const merged = {
+  const merged: Record<string, unknown> = {
     // === From Animal: Experimenters ===
     experimenter_name: experimenters.experimenter_name,
     lab: experimenters.lab,
@@ -480,13 +503,13 @@ export function mergeDayMetadata(animal, day) {
 /**
  * Formats date in mmddYYYY format for YAML filename
  *
- * @param {string} isoDate - Date in YYYY-MM-DD format
- * @returns {string} Date in mmddYYYY format
+ * @param isoDate - Date in YYYY-MM-DD format
+ * @returns Date in mmddYYYY format
  *
  * @example
  * formatExperimentDate('2023-06-22') // => '06222023'
  */
-export function formatExperimentDate(isoDate) {
+export function formatExperimentDate(isoDate: string): string {
   const [year, month, day] = isoDate.split('-');
   return `${month}${day}${year}`;
 }
@@ -494,14 +517,14 @@ export function formatExperimentDate(isoDate) {
 /**
  * Generates day ID from animal ID and date
  *
- * @param {string} animalId - Animal identifier
- * @param {string} date - Date in YYYY-MM-DD format
- * @returns {string} Day ID in format "{animalId}-{date}"
+ * @param animalId - Animal identifier
+ * @param date - Date in YYYY-MM-DD format
+ * @returns Day ID in format "{animalId}-{date}"
  *
  * @example
  * generateDayId('remy', '2023-06-22') // => 'remy-2023-06-22'
  */
-export function generateDayId(animalId, date) {
+export function generateDayId(animalId: string, date: string): string {
   return `${animalId}-${date}`;
 }
 
@@ -512,10 +535,10 @@ export function generateDayId(animalId, date) {
  * (`createDay`/`duplicateDay`) assert here so a malformed date surfaces instead of corrupting
  * the order. (The import path does its own date validation and does not use this.)
  *
- * @param {string} date - The candidate day date.
- * @throws {Error} If `date` is not strict ISO `YYYY-MM-DD`.
+ * @param date - The candidate day date.
+ * @throws If `date` is not strict ISO `YYYY-MM-DD`.
  */
-export function assertIsoDate(date) {
+export function assertIsoDate(date: string): void {
   if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     throw new Error(`Invalid day date "${date}": expected ISO YYYY-MM-DD`);
   }
@@ -524,24 +547,24 @@ export function assertIsoDate(date) {
 /**
  * Gets current ISO timestamp
  *
- * @returns {string} ISO 8601 timestamp
+ * @returns ISO 8601 timestamp
  *
  * @example
  * getCurrentTimestamp() // => '2023-06-22T14:30:00.000Z'
  */
-export function getCurrentTimestamp() {
+export function getCurrentTimestamp(): string {
   return new Date().toISOString();
 }
 
 /**
  * Gets current date in YYYY-MM-DD format
  *
- * @returns {string} Date in YYYY-MM-DD format
+ * @returns Date in YYYY-MM-DD format
  *
  * @example
  * getCurrentDate() // => '2023-06-22'
  */
-export function getCurrentDate() {
+export function getCurrentDate(): string {
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -557,9 +580,10 @@ export function getCurrentDate() {
  * store's hydration fallback and the persistence layer's empty-blob repair, so the
  * default settings shape can never drift between those two paths.
  *
- * @returns {{ version: string, lastModified: string, animals: object, days: object, settings: object }}
+ * @returns The default empty workspace (the canonical Workspace shape, typed loosely as a
+ *   record so the persistence layer's section-bag reads stay cast-free).
  */
-export function createDefaultWorkspace() {
+export function createDefaultWorkspace(): Record<string, unknown> {
   return {
     version: '1.0.0',
     lastModified: getCurrentTimestamp(),
