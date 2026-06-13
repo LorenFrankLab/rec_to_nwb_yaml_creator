@@ -1,6 +1,26 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { FLAGS } from '../featureFlags';
 import { saveWorkspace, clearWorkspace } from './persistence';
+import type { LoadDiscardReason } from './persistence';
+import type { Workspace, PersistenceStatus } from './workspaceTypes';
+
+/** Inputs to {@link useWorkspacePersistence} (the workspace + the refs `useWorkspace` owns). */
+export interface UseWorkspacePersistenceParams {
+  /** The committed workspace slice (autosave dependency + payload). */
+  workspace: Workspace;
+  /** Live ref to the committed workspace (read by `saveNow`). */
+  workspaceRef: { current: Workspace };
+  /** Unusable-blob discard reason captured at hydration, or null (consumed once after mount). */
+  initialDiscardRef: { current: LoadDiscardReason | null };
+  /** Shape-recovery `{ missingKeys }` captured at hydration, or null (consumed once after mount). */
+  initialRecoverRef: { current: { missingKeys: string[] } | null };
+}
+
+/** The persistence status plus the force-save action (a superset of {@link PersistenceStatus}). */
+export interface WorkspacePersistence extends PersistenceStatus {
+  /** Force an immediate write (Ctrl/Cmd+S), bypassing the autosave debounce. */
+  saveNow: () => void;
+}
 
 /**
  * Owns the workspace persistence concern: the truthful SaveIndicator / beforeunload status, the
@@ -14,24 +34,24 @@ import { saveWorkspace, clearWorkspace } from './persistence';
  * render commits). The two initial-load refs are populated by `useWorkspace`'s `useState`
  * initializer and consumed once here after mount (we cannot call setState during render).
  *
- * @param {object} params
- * @param {object} params.workspace - The committed workspace slice (autosave dependency + payload).
- * @param {{ current: object }} params.workspaceRef - Live ref to the committed workspace (saveNow).
- * @param {{ current: (object|null) }} params.initialDiscardRef - Unusable-blob discard reason, or null.
- * @param {{ current: (object|null) }} params.initialRecoverRef - Shape-recovery `{ missingKeys }`, or null.
- * @returns {{ enabled: boolean, lastSaved: (string|null), saveError: (string|null), hasPendingWrite: boolean, loadNotice: (string|null), dismissLoadNotice: Function, saveNow: Function }}
+ * @param params - The workspace + the hydration refs `useWorkspace` owns.
+ * @param params.workspace - The committed workspace slice (autosave dependency + payload).
+ * @param params.workspaceRef - Live ref to the committed workspace (saveNow).
+ * @param params.initialDiscardRef - Unusable-blob discard reason, or null.
+ * @param params.initialRecoverRef - Shape-recovery `{ missingKeys }`, or null.
+ * @returns The persistence status plus `saveNow`.
  */
 export function useWorkspacePersistence({
   workspace,
   workspaceRef,
   initialDiscardRef,
   initialRecoverRef,
-}) {
+}: UseWorkspacePersistenceParams): WorkspacePersistence {
   // Persistence status: drives the truthful SaveIndicator and the beforeunload guard.
-  const [lastSaved, setLastSaved] = useState(null); // ISO string of last confirmed write, or null
-  const [saveError, setSaveError] = useState(null); // user-facing save-failure message, or null
+  const [lastSaved, setLastSaved] = useState<string | null>(null); // ISO string of last confirmed write, or null
+  const [saveError, setSaveError] = useState<string | null>(null); // user-facing save-failure message, or null
   const [hasPendingWrite, setHasPendingWrite] = useState(false); // debounce in flight
-  const [loadNotice, setLoadNotice] = useState(null); // discard notice for the UI, or null
+  const [loadNotice, setLoadNotice] = useState<string | null>(null); // discard notice for the UI, or null
 
   // Surface a discard notice after mount when a saved blob could not be restored,
   // and clear the unusable blob so it isn't re-read.
@@ -69,12 +89,12 @@ export function useWorkspacePersistence({
     }
 
     setHasPendingWrite(true);
-    let retryTimer = null;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
     // One bounded automatic retry after a transient failure, so recovery doesn't depend solely on
     // the user noticing the SaveIndicator (a later edit, or Ctrl/Cmd+S, also re-attempts). Bounded
     // by `retriesLeft` so a persistent failure (e.g. quota) can't become a save storm; both timers
     // are cleared on cleanup, and a workspace change re-runs the effect from scratch.
-    const attempt = (retriesLeft) => {
+    const attempt = (retriesLeft: number) => {
       try {
         saveWorkspace(workspace);
         setLastSaved(new Date().toISOString());
@@ -83,7 +103,7 @@ export function useWorkspacePersistence({
         // keeps the beforeunload guard armed so unsaved work isn't lost on navigation.
         setHasPendingWrite(false);
       } catch (err) {
-        setSaveError(`Could not save workspace: ${err.message}`);
+        setSaveError(`Could not save workspace: ${(err as Error).message}`);
         if (retriesLeft > 0) {
           retryTimer = setTimeout(() => attempt(retriesLeft - 1), 2000);
         }
@@ -109,7 +129,7 @@ export function useWorkspacePersistence({
       setSaveError(null);
       setHasPendingWrite(false);
     } catch (err) {
-      setSaveError(`Could not save workspace: ${err.message}`);
+      setSaveError(`Could not save workspace: ${(err as Error).message}`);
     }
   }, [workspaceRef]);
 

@@ -1,8 +1,11 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
 import { resolveInitialWorkspace } from './workspaceHydration';
+import type { InitialWorkspaceState } from './workspaceHydration';
 import { createWorkspaceActions } from './workspaceActions';
 import { getAnimalDays } from './workspaceSelectors';
 import { useWorkspacePersistence } from './useWorkspacePersistence';
+import type { LoadDiscardReason } from './persistence';
+import type { Workspace } from './workspaceTypes';
 
 /**
  * Owns the workspace slice of the store: multi-animal/day state plus the store primitives the
@@ -17,23 +20,26 @@ import { useWorkspacePersistence } from './useWorkspacePersistence';
  * The `setWorkspace` functional-update form (rather than a reducer) is kept deliberately so the
  * duplicate-id `throw`s surface with the same timing the existing tests assert.
  *
- * @param {object|null} initialState - Optional initial state; `initialState.workspace`
- *   (test-provided) wins over localStorage hydration.
- * @returns {{ workspace: object, setWorkspace: Function, workspaceActions: object, workspaceSelectors: object, persistence: object }}
+ * @param initialState - Optional initial state; `initialState.workspace` (test-provided) wins over
+ *   localStorage hydration.
+ * @returns The workspace slice (`workspace` / `setWorkspace` / `workspaceActions` /
+ *   `workspaceSelectors` / `persistence`).
  */
-export function useWorkspace(initialState = null) {
+export function useWorkspace(initialState: InitialWorkspaceState | null = null) {
   // Hydrate from localStorage when persistence is enabled and no test-provided workspace was
   // supplied. Any discard/recovery reason is captured for a post-mount notice (we cannot call
   // setState during render); the persistence hook consumes these refs once after mount.
-  const initialDiscardRef = useRef(null);
-  const initialRecoverRef = useRef(null);
+  const initialDiscardRef = useRef<LoadDiscardReason | null>(null);
+  const initialRecoverRef = useRef<{ missingKeys: string[] } | null>(null);
 
-  const [workspace, setWorkspace] = useState(() => {
+  const [workspace, setWorkspace] = useState<Workspace>(() => {
     const { workspace: initialWorkspace, discarded, recovered } =
       resolveInitialWorkspace(initialState);
     initialDiscardRef.current = discarded;
     initialRecoverRef.current = recovered;
-    return initialWorkspace;
+    // The hydration layer types the workspace loosely (`Record<string, unknown>`) because it
+    // tolerates corrupt blobs; from here it is the canonical typed `Workspace` the store drives.
+    return initialWorkspace as unknown as Workspace;
   });
 
   // Latest committed workspace, refreshed every render. Lets the memoized actions and
@@ -62,9 +68,9 @@ export function useWorkspace(initialState = null) {
    * Stable across renders (it closes over only the stable `workspaceRef` and `setWorkspace`), so
    * the actions memo can build once.
    *
-   * @param {(prev: object) => object} updater - Workspace transform.
+   * @param updater - Workspace transform.
    */
-  const commitWorkspace = useCallback((updater) => {
+  const commitWorkspace = useCallback((updater: (prev: Workspace) => Workspace) => {
     workspaceRef.current = updater(workspaceRef.current);
     setWorkspace(updater);
   }, []);
@@ -79,10 +85,10 @@ export function useWorkspace(initialState = null) {
       /**
        * Get all days for a specific animal, sorted by date.
        *
-       * @param {string} animalId - Animal identifier
-       * @returns {Array} Array of day objects sorted by date
+       * @param animalId - Animal identifier
+       * @returns Array of day objects sorted by date
        */
-      getAnimalDays: (animalId) => getAnimalDays(workspace, animalId),
+      getAnimalDays: (animalId: string) => getAnimalDays(workspace, animalId),
     }),
     [workspace]
   );
