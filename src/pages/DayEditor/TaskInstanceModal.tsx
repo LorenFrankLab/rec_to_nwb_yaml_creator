@@ -1,8 +1,29 @@
 import { useState } from 'react';
-import PropTypes from 'prop-types';
 import Modal from '../../components/Modal/Modal';
 import TaskEpochsEditor from './TaskEpochsEditor';
+import type { TaskInstance, TaskType } from '../../state/workspaceTypes';
 import './TaskInstanceModal.scss';
+
+/** The cleaned instance this modal produces. */
+interface TaskInstanceResult {
+  taskTypeId: string;
+  task_epochs: number[];
+}
+
+interface TaskInstanceFormProps {
+  /** 'add' or 'edit'. */
+  mode: 'add' | 'edit';
+  /** The instance being edited (edit mode). */
+  instance?: TaskInstance | null;
+  /** The animal's task types (the pick list). */
+  taskTypes: TaskType[];
+  /** Called with the cleaned `{ taskTypeId, task_epochs }`. */
+  onSave: (instance: TaskInstanceResult) => void;
+  /** Cancel/close callback. */
+  onCancel: () => void;
+  /** Open the inline "define a new task type" flow. */
+  onDefineNewType: () => void;
+}
 
 /**
  * TaskInstanceModal — pick which animal task type this day ran and assign its epochs.
@@ -12,30 +33,21 @@ import './TaskInstanceModal.scss';
  * retype the task's name/description/environment/cameras (those live on the animal). A "Define a new
  * task type" action lets the user add a missing type to the animal catalog inline (handled by the
  * parent) without leaving day entry. Produces a `{ taskTypeId, task_epochs }` instance.
- *
- * @param {object} props
- * @param {string} props.mode - 'add' or 'edit'.
- * @param {object|null} props.instance - The instance being edited (edit mode).
- * @param {Array} props.taskTypes - The animal's task types (the pick list).
- * @param {Function} props.onSave - Called with the cleaned `{ taskTypeId, task_epochs }`.
- * @param {Function} props.onCancel - Cancel/close callback.
- * @param {Function} props.onDefineNewType - Open the inline "define a new task type" flow.
- * @returns {JSX.Element}
  */
-function TaskInstanceForm({ mode, instance, taskTypes, onSave, onCancel, onDefineNewType }) {
+function TaskInstanceForm({ mode, instance, taskTypes, onSave, onCancel, onDefineNewType }: TaskInstanceFormProps) {
   // Default the selection to the edited instance's type, else the first available type.
   const [taskTypeId, setTaskTypeId] = useState(
     () => instance?.taskTypeId ?? (taskTypes[0]?.id ?? '')
   );
   const [epochs, setEpochs] = useState(() =>
-    Array.isArray(instance?.task_epochs) ? instance.task_epochs : []
+    Array.isArray(instance?.task_epochs) ? instance?.task_epochs : []
   );
   const [epochsHaveError, setEpochsHaveError] = useState(false);
 
   const selectedExists = taskTypes.some((t) => t.id === taskTypeId);
   const canSave = taskTypeId !== '' && selectedExists && !epochsHaveError;
 
-  const handleEpochsChange = ({ epochs: nextEpochs, hasError }) => {
+  const handleEpochsChange = ({ epochs: nextEpochs, hasError }: { epochs: number[]; hasError: boolean }) => {
     setEpochs(nextEpochs);
     setEpochsHaveError(hasError);
   };
@@ -110,31 +122,27 @@ function TaskInstanceForm({ mode, instance, taskTypes, onSave, onCancel, onDefin
   );
 }
 
-TaskInstanceForm.propTypes = {
-  mode: PropTypes.oneOf(['add', 'edit']).isRequired,
-  instance: PropTypes.object,
-  taskTypes: PropTypes.array.isRequired,
-  onSave: PropTypes.func.isRequired,
-  onCancel: PropTypes.func.isRequired,
-  onDefineNewType: PropTypes.func.isRequired,
-};
-
-TaskInstanceForm.defaultProps = { instance: null };
+interface TaskInstanceModalProps {
+  /** Whether the modal is open. */
+  isOpen: boolean;
+  /** 'add' or 'edit'. */
+  mode?: 'add' | 'edit';
+  /** The instance being edited (edit mode). */
+  instance?: TaskInstance | null;
+  /** The animal's task types (the pick list). */
+  taskTypes: TaskType[];
+  /** Save callback with `{ taskTypeId, task_epochs }`. */
+  onSave: (instance: TaskInstanceResult) => void;
+  /** Cancel/close callback. */
+  onCancel: () => void;
+  /** Open the inline "define a new task type" flow. */
+  onDefineNewType: () => void;
+}
 
 /**
  * TaskInstanceModal — modal wrapper around {@link TaskInstanceForm}. Dialog a11y comes from Modal.
- *
- * @param {object} props
- * @param {boolean} props.isOpen - Whether the modal is open.
- * @param {string} [props.mode] - 'add' or 'edit'.
- * @param {object|null} [props.instance] - The instance being edited (edit mode).
- * @param {Array} props.taskTypes - The animal's task types (the pick list).
- * @param {Function} props.onSave - Save callback with `{ taskTypeId, task_epochs }`.
- * @param {Function} props.onCancel - Cancel/close callback.
- * @param {Function} props.onDefineNewType - Open the inline "define a new task type" flow.
- * @returns {JSX.Element}
  */
-const TaskInstanceModal = ({ isOpen, mode = 'add', instance = null, taskTypes, onSave, onCancel, onDefineNewType }) => (
+const TaskInstanceModal = ({ isOpen, mode = 'add', instance = null, taskTypes, onSave, onCancel, onDefineNewType }: TaskInstanceModalProps) => (
   <Modal
     isOpen={isOpen}
     onClose={onCancel}
@@ -152,17 +160,5 @@ const TaskInstanceModal = ({ isOpen, mode = 'add', instance = null, taskTypes, o
     />
   </Modal>
 );
-
-TaskInstanceModal.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  mode: PropTypes.oneOf(['add', 'edit']),
-  instance: PropTypes.object,
-  taskTypes: PropTypes.array.isRequired,
-  onSave: PropTypes.func.isRequired,
-  onCancel: PropTypes.func.isRequired,
-  onDefineNewType: PropTypes.func.isRequired,
-};
-
-TaskInstanceModal.defaultProps = { mode: 'add', instance: null };
 
 export default TaskInstanceModal;

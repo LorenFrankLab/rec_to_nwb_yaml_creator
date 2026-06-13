@@ -1,7 +1,41 @@
 import { useState } from 'react';
-import PropTypes from 'prop-types';
 import ReconfigWizard from './ReconfigWizard';
 import { getConfigHistory } from '../../state/workspaceSelectors';
+import type { Animal, Day } from '../../state/workspaceTypes';
+
+/** The precomputed configuration-version context the Devices step passes in. */
+interface ReconfigContext {
+  version: number;
+  snapshot?: { description?: string; date?: string } | null;
+  appliedCount: number;
+  prevDay?: Day | null;
+  candidateDays: Day[];
+  isLatest: boolean;
+}
+
+/** Store actions the reconfiguration write needs (matches ReconfigWizard). */
+interface ReconfigActions {
+  createConfigurationSnapshotAndApplyForward: (
+    animalKey: string,
+    snapshot: { date: string; description: string; devices: unknown },
+    orderedIds: string[]
+  ) => number;
+}
+
+interface ConfigVersionPanelProps {
+  /** The precomputed configuration-version context. */
+  reconfig: ReconfigContext;
+  /** The day record (its `id` keys the wizard; `configurationVersion` gates the pin warning). */
+  day: Day;
+  /** The animal record (its configuration history + the wizard subject). */
+  animal: Animal;
+  /** The resolved store owner key (animal-editor links + the reconfig write). */
+  ownerKey?: string;
+  /** `(fieldPath, value) => void` store writer (the pin write). */
+  onFieldUpdate: (fieldPath: string, value: unknown) => void;
+  /** Store actions (the reconfiguration write). */
+  actions: ReconfigActions;
+}
 
 /**
  * Configuration-version indicator + reconfiguration entry point for the Devices step. Names the
@@ -10,18 +44,8 @@ import { getConfigHistory } from '../../state/workspaceSelectors';
  * Extracted verbatim from `pages/DayEditor/DevicesStep.jsx` (Phase 9c-3) with no behavior change — it
  * owns the local `wizardOpen` + `pinVersion` UI state; the parent computes `reconfig` and only renders
  * this when the step is wired with store actions + the animal's days.
- *
- * @param {object} props
- * @param {{version, snapshot, appliedCount, prevDay, candidateDays, isLatest}} props.reconfig - The
- *   precomputed configuration-version context.
- * @param {object} props.day - The day record (its `id` keys the wizard; `configurationVersion` gates the pin warning).
- * @param {object} props.animal - The animal record (its configuration history + the wizard subject).
- * @param {string} props.ownerKey - The resolved store owner key (animal-editor links + the reconfig write).
- * @param {Function} props.onFieldUpdate - `(fieldPath, value) => void` store writer (the pin write).
- * @param {object} [props.actions] - Store actions (the reconfiguration write).
- * @returns {JSX.Element}
  */
-export default function ConfigVersionPanel({ reconfig, day, animal, ownerKey, onFieldUpdate, actions }) {
+export default function ConfigVersionPanel({ reconfig, day, animal, ownerKey, onFieldUpdate, actions }: ConfigVersionPanelProps) {
   const [wizardOpen, setWizardOpen] = useState(false);
   // Selected version for the unpinned-day repair control (a day with no pin in a multi-version
   // animal). Empty string = nothing chosen yet; pinning writes day.configurationVersion.
@@ -115,23 +139,3 @@ export default function ConfigVersionPanel({ reconfig, day, animal, ownerKey, on
   );
 }
 
-ConfigVersionPanel.propTypes = {
-  reconfig: PropTypes.shape({
-    version: PropTypes.number,
-    snapshot: PropTypes.object,
-    appliedCount: PropTypes.number,
-    prevDay: PropTypes.object,
-    candidateDays: PropTypes.array,
-    isLatest: PropTypes.bool,
-  }).isRequired,
-  day: PropTypes.object.isRequired,
-  animal: PropTypes.object.isRequired,
-  ownerKey: PropTypes.string,
-  onFieldUpdate: PropTypes.func.isRequired,
-  actions: PropTypes.object,
-};
-
-ConfigVersionPanel.defaultProps = {
-  ownerKey: undefined,
-  actions: undefined,
-};

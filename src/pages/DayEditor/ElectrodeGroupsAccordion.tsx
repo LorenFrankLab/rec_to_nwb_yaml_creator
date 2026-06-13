@@ -1,7 +1,30 @@
 import { useCallback } from 'react';
-import PropTypes from 'prop-types';
 import ReadOnlyDeviceInfo from './ReadOnlyDeviceInfo';
 import BadChannelsEditor from './BadChannelsEditor';
+import type { ElectrodeGroup, NtrodeMap } from '../../state/workspaceTypes';
+
+interface ElectrodeGroupsAccordionProps {
+  /** The day's EFFECTIVE electrode groups (pinned snapshot). */
+  electrodeGroups: ElectrodeGroup[];
+  /** The day's EFFECTIVE ntrode channel map. */
+  ntrodeChannelMap: NtrodeMap[];
+  /** Effective bad channels by ntrode id. */
+  badChannels: Record<string, number[]>;
+  /** The resolved store owner key (animal-editor "Fix" links). */
+  ownerKey?: string;
+  /** `(ntrodeId, number[]) => void` per-ntrode write. */
+  onBadChannelsUpdate: (ntrodeId: string, badChannels: number[]) => void;
+  /** `(map) => void` whole-map atomic write. */
+  onBadChannelsBatchUpdate: (map: Record<string, number[]>) => void;
+  /** Earlier same-config bad channels (un-mark guard). */
+  priorBadByNtrode: Record<string, number[]>;
+  /** `(ntrodeId, channel) => void` off-export un-mark ack. */
+  onAcknowledgeRemoval: (ntrodeId: string, channel: number) => void;
+  /** Per-ntrode validation errors. */
+  errors: Record<string, string>;
+  /** Per-ntrode validation warnings. */
+  warnings: Record<string, string>;
+}
 
 /**
  * The per-electrode-group accordion of failed-channel editors. One collapsible `<details>` per
@@ -10,19 +33,6 @@ import BadChannelsEditor from './BadChannelsEditor';
  * corruption notice instead. Extracted verbatim from `pages/DayEditor/DevicesStep.jsx` (Phase 9c-3)
  * with no behavior change — it owns the per-group derivations (ntrodes-for-group / status badge)
  * over the effective channel map + bad-channel state the parent computes.
- *
- * @param {object} props
- * @param {object[]} props.electrodeGroups - The day's EFFECTIVE electrode groups (pinned snapshot).
- * @param {object[]} props.ntrodeChannelMap - The day's EFFECTIVE ntrode channel map.
- * @param {Object<string, number[]>} props.badChannels - Effective bad channels by ntrode id.
- * @param {string} props.ownerKey - The resolved store owner key (animal-editor "Fix" links).
- * @param {Function} props.onBadChannelsUpdate - `(ntrodeId, number[]) => void` per-ntrode write.
- * @param {Function} props.onBadChannelsBatchUpdate - `(map) => void` whole-map atomic write.
- * @param {Object<string, number[]>} props.priorBadByNtrode - Earlier same-config bad channels (un-mark guard).
- * @param {Function} props.onAcknowledgeRemoval - `(ntrodeId, channel) => void` off-export un-mark ack.
- * @param {Object<string, string>} props.errors - Per-ntrode validation errors.
- * @param {Object<string, string>} props.warnings - Per-ntrode validation warnings.
- * @returns {JSX.Element}
  */
 export default function ElectrodeGroupsAccordion({
   electrodeGroups,
@@ -35,23 +45,19 @@ export default function ElectrodeGroupsAccordion({
   onAcknowledgeRemoval,
   errors,
   warnings,
-}) {
+}: ElectrodeGroupsAccordionProps) {
   /**
-   * Get ntrodes for a specific electrode group
-   * @param {number} groupId - Integer electrode group ID
-   * @returns {Array} Ntrodes belonging to this group
+   * Get ntrodes for a specific electrode group.
    */
-  const getNtrodesForGroup = useCallback((groupId) => {
+  const getNtrodesForGroup = useCallback((groupId: number) => {
     // electrode_group_id and group ids are integers end-to-end (schema contract).
     return ntrodeChannelMap.filter(ntrode => ntrode.electrode_group_id === groupId);
   }, [ntrodeChannelMap]);
 
   /**
-   * Calculate status for an electrode group
-   * @param {number} groupId - Electrode group ID
-   * @returns {object} { status: 'clean'|'warning'|'error', badChannelCount: number, allBad: boolean }
+   * Calculate status for an electrode group.
    */
-  const getGroupStatus = useCallback((groupId) => {
+  const getGroupStatus = useCallback((groupId: number) => {
     const ntrodes = getNtrodesForGroup(groupId);
     let totalBadChannels = 0;
     let totalChannels = 0;
@@ -75,11 +81,9 @@ export default function ElectrodeGroupsAccordion({
   }, [badChannels, getNtrodesForGroup]);
 
   /**
-   * Get status badge text and aria-label
-   * @param {number} groupId - Electrode group ID
-   * @returns {object} { text: string, ariaLabel: string, className: string }
+   * Get status badge text and aria-label.
    */
-  const getStatusBadge = useCallback((groupId) => {
+  const getStatusBadge = useCallback((groupId: number) => {
     const { badChannelCount, allBad } = getGroupStatus(groupId);
 
     if (allBad) {
@@ -198,19 +202,3 @@ export default function ElectrodeGroupsAccordion({
   );
 }
 
-ElectrodeGroupsAccordion.propTypes = {
-  electrodeGroups: PropTypes.arrayOf(PropTypes.object).isRequired,
-  ntrodeChannelMap: PropTypes.arrayOf(PropTypes.object).isRequired,
-  badChannels: PropTypes.object.isRequired,
-  ownerKey: PropTypes.string,
-  onBadChannelsUpdate: PropTypes.func.isRequired,
-  onBadChannelsBatchUpdate: PropTypes.func.isRequired,
-  priorBadByNtrode: PropTypes.object.isRequired,
-  onAcknowledgeRemoval: PropTypes.func.isRequired,
-  errors: PropTypes.object.isRequired,
-  warnings: PropTypes.object.isRequired,
-};
-
-ElectrodeGroupsAccordion.defaultProps = {
-  ownerKey: undefined,
-};

@@ -1,12 +1,19 @@
-import PropTypes from 'prop-types';
 import { repairTargetForIssue, STEP_LABELS } from '../../domain/validation';
 import { groupIssuesByWorkflowCategory } from '../../domain/workflowCategories';
 import { humanizeValidationMessage } from '../../domain/humanizeValidationMessage';
+import type { RepairableIssue } from '../../domain/repairRouting';
 import IssueOwnershipHint from './IssueOwnershipHint';
 
 // Re-export STEP_LABELS so existing importers (ValidationStep) keep working while the
 // source of truth lives in domain/validation.js (alongside the routing it labels).
 export { STEP_LABELS };
+
+/** The serializable repair command an issue can carry (the UI dispatches it). */
+interface RepairCommand {
+  type: string;
+  key?: string;
+  field?: string;
+}
 
 /**
  * Whether an issue has an editable in-app target worth routing to. The
@@ -15,11 +22,8 @@ export { STEP_LABELS };
  * points at a disabled control, so a "Fix in …" button would dead-end. Both repair
  * surfaces (Export's blocked list and the Validation summary) gate their buttons on this
  * so they cannot drift.
- *
- * @param {{code?: string, path?: string, instancePath?: string, step?: string, repairSurface?: string}} issue
- * @returns {boolean} True when a repair button should be offered.
  */
-export function isRepairable(issue) {
+export function isRepairable(issue: RepairableIssue): boolean {
   return repairTargetForIssue(issue).surface !== 'none';
 }
 
@@ -32,16 +36,30 @@ export function isRepairable(issue) {
  * but carrying DIFFERENT repairCommands (a per-ntrode removal vs a whole-overrides reset) are
  * not collapsed. Shared by the Export step (via {@link RepairActions}) and the Validation
  * summary so both surfaces dedup identically.
- *
- * @param {object} issue - A validation issue.
- * @returns {string} The dedup key.
  */
-export function repairButtonKey(issue) {
+export function repairButtonKey(issue: RepairableIssue): string {
   const { surface, step } = repairTargetForIssue(issue);
-  const command = issue.repairCommand
-    ? `${issue.repairCommand.type}:${issue.repairCommand.key ?? issue.repairCommand.field ?? ''}`
+  const cmd = issue.repairCommand as RepairCommand | undefined;
+  const command = cmd
+    ? `${cmd.type}:${cmd.key ?? cmd.field ?? ''}`
     : '';
   return `${surface}:${step ?? ''}:${issue.focusPath || issue.path || ''}:${command}`;
+}
+
+interface RepairActionsProps {
+  /** Error-severity validation issues to offer repairs for. */
+  issues: RepairableIssue[];
+  /**
+   * Routes to the owning surface. `target` is a Day-Editor step id for `day`-surface issues,
+   * or the sentinel `'animal'`; the optional `fieldPath` is a focus target.
+   */
+  onNavigate: (target: string, fieldPath?: string) => void;
+  /** The owning animal's id (for Animal Editor deep-links). */
+  animalId?: string;
+  /** Executes an issue's `repairCommand` in place (the issue→fix half of the contract). */
+  onRepair?: (issue: RepairableIssue) => void;
+  /** When true, issues are grouped under user workflow-category headings. */
+  groupByCategory?: boolean;
 }
 
 /**
@@ -58,26 +76,8 @@ export function repairButtonKey(issue) {
  * (where they are editable); session, task/video, day bad-channel overrides, and
  * catch-all issues route to the owning Day-Editor step. The issue path is passed as the
  * field target so the destination can focus/highlight the control when an anchor exists.
- *
- * @param {object} props
- * @param {Array} props.issues - Error-severity validation issues to offer repairs for.
- * @param {(target: string, fieldPath?: string) => void} props.onNavigate - Routes to the
- *   owning surface. `target` is a Day-Editor step id for `day`-surface issues, or the
- *   sentinel `'animal'` for issues editable only in the Animal Editor; the optional
- *   `fieldPath` is a focus target.
- * @param {string} [props.animalId] - The owning animal's id, available so the
- *   destination can deep-link into the Animal Editor for animal-surface repairs.
- * @param {(issue: object) => void} [props.onRepair] - Executes an issue's `repairCommand`
- *   in place (the issue→fix half of the contract). When provided and an issue carries a
- *   `repairCommand`, its button PERFORMS the reset instead of navigating to a destination
- *   that may show a blank empty state. Threaded from DayEditorStepper, which owns the
- *   animal/day/actions the executor needs.
- * @param {boolean} [props.groupByCategory] - When true, issues are grouped under user
- *   workflow-category headings (Animal setup, Day metadata, …) — the same buckets as the
- *   Validation summary and the Animal Workspace setup checklist. Routing is unchanged.
- * @returns {JSX.Element|null}
  */
-export default function RepairActions({ issues, onNavigate, animalId, onRepair, groupByCategory }) {
+export default function RepairActions({ issues, onNavigate, animalId, onRepair, groupByCategory = false }: RepairActionsProps) {
   if (!issues || issues.length === 0) return null;
 
   // Several issues can share ONE underlying fix — e.g. a corrupt day geometry override
@@ -87,9 +87,9 @@ export default function RepairActions({ issues, onNavigate, animalId, onRepair, 
   // so the user isn't shown a stack of identical "Fix in …" buttons for a single repair.
   // The dedup set is shared across category groups so a fix shown in one group isn't
   // re-buttoned in another.
-  const seenTargets = new Set();
+  const seenTargets = new Set<string>();
 
-  const renderItem = (issue, index, keyPrefix) => {
+  const renderItem = (issue: RepairableIssue, index: number, keyPrefix: string) => {
     let showButton = isRepairable(issue);
     if (showButton) {
       const key = repairButtonKey(issue);
@@ -131,6 +131,17 @@ export default function RepairActions({ issues, onNavigate, animalId, onRepair, 
   );
 }
 
+interface RepairActionButtonProps {
+  /** The validation issue this button repairs. */
+  issue: RepairableIssue;
+  /** Routing callback. */
+  onNavigate: (target: string, fieldPath?: string) => void;
+  /** The owning animal's id (for Animal Editor deep-links). */
+  animalId?: string;
+  /** Executes the issue's `repairCommand`. */
+  onRepair?: (issue: RepairableIssue) => void;
+}
+
 /**
  * The single repair button for one validation issue, shared by the Export step's blocked
  * list and the Validation summary so both route identically. Routes to the editable owner
@@ -138,15 +149,8 @@ export default function RepairActions({ issues, onNavigate, animalId, onRepair, 
  * navigates to its owning Day-Editor step; an `animal`-surface issue hands off to the
  * Animal Editor (via the `'animal'` sentinel). The issue path is passed as the field
  * target so the destination can focus the control.
- *
- * @param {object} props
- * @param {{path?: string, code?: string, message?: string, repairSurface?: string, step?: string, repairCommand?: object, actionLabel?: string}} props.issue
- * @param {(target: string, fieldPath?: string) => void} props.onNavigate - Routing callback.
- * @param {string} [props.animalId] - The owning animal's id (for Animal Editor deep-links).
- * @param {(issue: object) => void} [props.onRepair] - Executes the issue's `repairCommand`.
- * @returns {JSX.Element|null}
  */
-export function RepairActionButton({ issue, onNavigate, animalId, onRepair }) {
+export function RepairActionButton({ issue, onNavigate, animalId, onRepair }: RepairActionButtonProps) {
   const target = repairTargetForIssue(issue);
   // `none`-surface issues have no editable target; render no button (the caller shows
   // the explanatory message). isRepairable already suppresses these upstream, but guard
@@ -163,7 +167,7 @@ export function RepairActionButton({ issue, onNavigate, animalId, onRepair }) {
         type="button"
         className="repair-action-button repair-action-button-execute"
         data-repair-surface={target.surface}
-        data-repair-command={issue.repairCommand.type}
+        data-repair-command={(issue.repairCommand as RepairCommand).type}
         onClick={() => onRepair(issue)}
       >
         {issue.actionLabel || target.label}
@@ -183,51 +187,10 @@ export function RepairActionButton({ issue, onNavigate, animalId, onRepair }) {
       className="repair-action-button"
       data-repair-surface={target.surface}
       data-animal-id={target.surface === 'animal' ? animalId : undefined}
-      onClick={() => onNavigate(navTarget, focusTarget)}
+      onClick={() => onNavigate(navTarget as string, focusTarget)}
     >
       {target.label}
     </button>
   );
 }
 
-RepairActionButton.propTypes = {
-  issue: PropTypes.shape({
-    path: PropTypes.string,
-    focusPath: PropTypes.string,
-    code: PropTypes.string,
-    message: PropTypes.string,
-    repairSurface: PropTypes.string,
-    ownerSurface: PropTypes.string,
-    step: PropTypes.string,
-    actionLabel: PropTypes.string,
-    repairCommand: PropTypes.object,
-  }).isRequired,
-  onNavigate: PropTypes.func.isRequired,
-  animalId: PropTypes.string,
-  onRepair: PropTypes.func,
-};
-
-RepairActionButton.defaultProps = {
-  animalId: undefined,
-  onRepair: undefined,
-};
-
-RepairActions.propTypes = {
-  issues: PropTypes.arrayOf(
-    PropTypes.shape({
-      path: PropTypes.string,
-      code: PropTypes.string,
-      message: PropTypes.string,
-    })
-  ).isRequired,
-  onNavigate: PropTypes.func.isRequired,
-  animalId: PropTypes.string,
-  onRepair: PropTypes.func,
-  groupByCategory: PropTypes.bool,
-};
-
-RepairActions.defaultProps = {
-  animalId: undefined,
-  onRepair: undefined,
-  groupByCategory: false,
-};

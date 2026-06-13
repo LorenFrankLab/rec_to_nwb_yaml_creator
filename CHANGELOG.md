@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed the 5 `pages/DayEditor` Tier-1 components `.jsx`→`.tsx` and widened two source-scanning guards to cover the TS source (refactor only, behavior-preserving) — page cycle 5.**
+  `ConfigVersionPanel` (`reconfig`/`actions` typed to match the now-`.tsx` `ReconfigWizard`), `ElectrodeGroupsAccordion`
+  (`ElectrodeGroup[]`/`NtrodeMap[]`/`Record<string, number[]>` props), `RepairActions` (`RepairableIssue` params; a local
+  `RepairCommand` cast for the `unknown` `repairCommand`; `navTarget as string`), `TaskInstanceModal`, and `TaskModal` (the
+  task form — guarded optional chains, a `meters_per_pixel as number | string` cast preserving a corrupt-empty-string
+  guard, `TaskResult` payload type) → `.tsx`. `ReadOnlyDeviceInfo`'s group prop was widened from its cycle-3 local guess to
+  the canonical `ElectrodeGroup & { units?: string }` (the real shape its consumer passes). Runtime PropTypes/defaultProps
+  dropped (non-undefined defaults preserved as destructure defaults); JSDoc trimmed.
+- **Two source-scanning guards now scan the TypeScript source.** The migration converted enough `.jsx`/`.js` that both
+  guards' vacuous-pass floors (`expect(files.length).toBeGreaterThan(100)`) tripped (98 / 97 scanned). The
+  `architectureBoundaries.guard` walk was widened `.jsx?` → `.jsx?|tsx?` (its classifier was already extension-agnostic),
+  restoring the count (98 → 236) and extending the import-boundary contract to `.ts`/`.tsx`. The `workspaceSelectors.guard`
+  walk was widened to `.ts`/`.tsx` with its definer/detector exemptions made extension-agnostic (`workspaceSelectors`/
+  `deviceNormalization`/`domain/validation` now match `.ts`), plus three born-`.ts` raw-shape detectors/producers added to
+  the exemption (`state/taskCatalog`, `state/taskCatalogMigration`, `domain/stepStatus` — they DETECT/PRODUCE canonical
+  shape, like the existing `deviceNormalization` exemption). Both are strengthenings: the converted `.tsx` consumers are
+  now actively guarded and pass. `npm run typecheck` + `CI=true` build clean; golden baselines, the DayEditor suites + the
+  3 source-scanning guards + the emoji guard pass; full suite 4793; e2e 104.
+
 - **Typed the 4 COMPLEX `pages/DayEditor` React components `.jsx`→`.tsx` (refactor only, behavior-preserving) — page cycle 4; the DayEditor leaf tier is now complete.**
   `DayEditorContext` (the React Context provider — `createContext<DayEditorBundle | null>(null)`, a new exported
   `DayEditorBundle` interface, typed `DayEditorProvider` props, `useDayEditorContext(fallbackProps): DayEditorBundle`),
