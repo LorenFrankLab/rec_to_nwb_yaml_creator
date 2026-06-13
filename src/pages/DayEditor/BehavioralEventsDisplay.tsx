@@ -13,7 +13,7 @@ import type { BehavioralEvent } from '../../state/workspaceTypes';
 import './BehavioralEventsDisplay.scss';
 
 /** Another animal's DIO set, offered to seed a blank first day. */
-interface CopyableDioSource {
+export interface CopyableDioSource {
   id: string;
   name: string;
   events: BehavioralEvent[];

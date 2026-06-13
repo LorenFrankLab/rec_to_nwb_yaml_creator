@@ -1,12 +1,10 @@
 import { useState, useCallback } from 'react';
-import PropTypes from 'prop-types';
 import Breadcrumb from './Breadcrumb';
 import ReadOnlyField from './ReadOnlyField';
 import KeywordsEditor from './KeywordsEditor';
 import DayTechnicalSection from './DayTechnicalSection';
 import MalformedCollectionNotice from './MalformedCollectionNotice';
 import RawCorruptionBanner from '../../components/RawCorruptionBanner';
-import { rawRecord } from '../../components/rawPropTypes';
 import { validateField } from './validation';
 import { isValidSpecies } from '../../validation/dandiSubject';
 import { RAW_DAY_ARRAY_FIELDS } from '../../validation/rawShape';
@@ -19,6 +17,16 @@ import {
   getAnimalDayIds,
 } from '../../state/workspaceSelectors';
 import { useDayEditorContext } from './DayEditorContext';
+import type { DayEditorBundle } from './DayEditorContext';
+
+interface OverviewStepProps extends DayEditorBundle {
+  /** Writes a subject field through to the animal record (e.g. `('species', value)`). */
+  onSubjectUpdate?: (field: string, value: string) => void;
+  /** A repair request focusing a subject field — expands the inherited section during render. */
+  focusRequest?: { fieldPath?: string; token?: number } | null;
+  /** Executes an issue's `repairCommand` in place (resets a malformed session record). */
+  onRepair?: (issue: unknown) => void;
+}
 
 // The day-owned collections this step owns (raw-shape reset surface).
 const OVERVIEW_STEP_COLLECTIONS = RAW_DAY_ARRAY_FIELDS.filter((f) => f.repairStep === 'overview');
@@ -33,24 +41,12 @@ const OVERVIEW_STEP_COLLECTIONS = RAW_DAY_ARRAY_FIELDS.filter((f) => f.repairSte
  * - Show what matters: animal ID + date for context
  * - Edit what's unique: session-specific metadata
  * - Hide what's inherited: subject/experimenters (available if needed)
- *
- * @param {object} props
- * @param {import('@/state/workspaceTypes').Animal} props.animal - Animal record (read-only context)
- * @param {import('@/state/workspaceTypes').Day} props.day - Day record (editable)
- * @param {object} props.mergedDay - Merged animal + day for validation
- * @param {Function} props.onFieldUpdate - Callback: (fieldPath, value) => void
- * @param {string} [props.animalKey] - The resolved store owner key; used for Animal Editor links
- *   and the derived session-id help text instead of the possibly-stale `animal.id` record field.
- * @param props.onSubjectUpdate
- * @param props.focusRequest
- * @param props.onRepair
- * @returns {JSX.Element}
  */
-export default function OverviewStep(props) {
+export default function OverviewStep(props: OverviewStepProps) {
   // The shared day bundle comes from DayEditorContext in the Day Editor (an isolated render
   // passes the same fields as props). Section-specific props stay direct.
   const { animal, day, mergedDay, onFieldUpdate, animalKey = undefined } = useDayEditorContext(props);
-  const { onSubjectUpdate, focusRequest, onRepair } = props;
+  const { onSubjectUpdate = () => {}, focusRequest = null, onRepair } = props;
   // The store OWNER KEY (resolved by DayEditorStepper). Animal-editor links and the derived
   // session_id help text use it so a stale/missing `animal.id` record field can't misroute a
   // recovered animal's repair; falls back to `animal.id` for isolated renders that don't pass it.
@@ -70,10 +66,10 @@ export default function OverviewStep(props) {
   const keywords = getDayKeywords(day);
   const dayDateKey = String(day.date ?? '').replace(/-/g, '');
 
-  const [fieldErrors, setFieldErrors] = useState({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, { message: string } | null>>({});
   // Write-only: the setter drives the species-repair validation flow (below); the value itself
   // is never read, so it's left unbound to avoid an unused-var warning while preserving behavior.
-  const [, setValidatingField] = useState(null);
+  const [, setValidatingField] = useState<string | null>(null);
   const [showInherited, setShowInherited] = useState(false);
   // Inline error for the species repair field — without it the field could silently
   // write an invalid value through to the animal, recreating the "blocked at export
@@ -89,7 +85,7 @@ export default function OverviewStep(props) {
   // miss the anchor, and fall back to the step with no retry.
   const focusFieldPath = focusRequest?.fieldPath;
   const focusToken = focusRequest?.token ?? null;
-  const [seenFocusToken, setSeenFocusToken] = useState(null);
+  const [seenFocusToken, setSeenFocusToken] = useState<number | null>(null);
   if (focusToken !== seenFocusToken) {
     setSeenFocusToken(focusToken);
     if (typeof focusFieldPath === 'string' && focusFieldPath.startsWith('subject.')) {
@@ -104,7 +100,7 @@ export default function OverviewStep(props) {
   // error even when the field was emptied. Instead, patch the just-typed value onto a
   // clone of the merged model at its exported (top-level) path and validate there, so
   // the inline error reflects the current value.
-  const handleBlur = useCallback(async (fieldPath, value) => {
+  const handleBlur = useCallback(async (fieldPath: string, value: string) => {
     setValidatingField(fieldPath);
 
     // 1. Update store (auto-save)
@@ -117,7 +113,7 @@ export default function OverviewStep(props) {
         : fieldPath;
       // mergedDay is null on the merge-failed fail-closed path (corrupt animal config);
       // clone a safe `{}` so a blur-time validation can't throw on a null dereference.
-      const patched = structuredClone(mergedDay || {});
+      const patched = structuredClone(mergedDay || {}) as Record<string, unknown>;
       patched[validatePath] = value;
 
       const { valid, errors } = await validateField(patched, validatePath);
@@ -154,7 +150,9 @@ export default function OverviewStep(props) {
       <Breadcrumb items={breadcrumbItems} />
 
       <MalformedCollectionNotice
-        day={day}
+        // A clean `Day` is a valid possibly-corrupt-record input to this tolerant reader (it
+        // detects non-array collections); the interface lacks an index signature, hence the cast.
+        day={day as unknown as Record<string, unknown>}
         fields={OVERVIEW_STEP_COLLECTIONS}
         onReset={(key) => onFieldUpdate(key, [])}
       />
@@ -194,13 +192,13 @@ export default function OverviewStep(props) {
               id="session-description"
               name="session.session_description"
               data-field-path="session_description"
-              rows="3"
+              rows={3}
               defaultValue={session.session_description}
               onBlur={(e) => handleBlur('session.session_description', e.target.value)}
               className={fieldErrors['session.session_description'] ? 'invalid' : ''}
               aria-invalid={!!fieldErrors['session.session_description']}
               aria-describedby={
-                fieldErrors['session.session_description'] ? 'session-description-error' : null
+                fieldErrors['session.session_description'] ? 'session-description-error' : undefined
               }
               required
               aria-required="true"
@@ -220,7 +218,7 @@ export default function OverviewStep(props) {
               id="experiment-description"
               name="session.experiment_description"
               data-field-path="experiment_description"
-              rows="3"
+              rows={3}
               defaultValue={session.experiment_description || animal.experiment_description || ''}
               onBlur={(e) => handleBlur('session.experiment_description', e.target.value)}
               placeholder="e.g., Chronic tetrode recording during spatial navigation"
@@ -427,60 +425,3 @@ export default function OverviewStep(props) {
   );
 }
 
-OverviewStep.propTypes = {
-  animal: PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    experiment_description: PropTypes.string,
-    // Tolerant: this step is a repair destination — malformed (scalar/null) subject /
-    // experimenters / session are first-class corrupt state it renders (through the
-    // shape-safe selectors) so the user can fix them; their PropTypes must not warn on it.
-    subject: rawRecord({
-      subject_id: PropTypes.string,
-      species: PropTypes.string,
-      sex: PropTypes.string,
-      genotype: PropTypes.string,
-      date_of_birth: PropTypes.string,
-    }),
-    experimenters: rawRecord({
-      experimenter_name: PropTypes.arrayOf(PropTypes.string),
-      lab: PropTypes.string,
-      institution: PropTypes.string,
-    }),
-  }),
-  day: PropTypes.shape({
-    date: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    keywords: PropTypes.arrayOf(PropTypes.string),
-    session: rawRecord({
-      session_id: PropTypes.string,
-      session_description: PropTypes.string,
-      experiment_description: PropTypes.string,
-    }),
-    technical: PropTypes.shape({
-      default_header_file_path: PropTypes.string,
-      units: PropTypes.shape({
-        analog: PropTypes.string,
-        behavioral_events: PropTypes.string,
-      }),
-    }),
-  }),
-  // Nullable: the stepper passes null on the merge-failed fail-closed path (corrupt animal
-  // config). Not required — a clean-state assumption must not leak into that path.
-  mergedDay: PropTypes.object,
-  // animal/day/mergedDay/onFieldUpdate/animalKey come from DayEditorContext in the Day Editor;
-  // these propTypes describe the isolated-render fallback, so they are not `.isRequired`.
-  onFieldUpdate: PropTypes.func,
-  animalKey: PropTypes.string,
-  onSubjectUpdate: PropTypes.func,
-  focusRequest: PropTypes.shape({
-    fieldPath: PropTypes.string,
-    token: PropTypes.number,
-  }),
-  onRepair: PropTypes.func,
-};
-
-OverviewStep.defaultProps = {
-  mergedDay: null,
-  onSubjectUpdate: () => {},
-  focusRequest: null,
-  onRepair: undefined,
-};

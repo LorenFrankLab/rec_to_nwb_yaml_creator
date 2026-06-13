@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed the 4 `pages/DayEditor` Tier-2 "display" step components `.jsx`→`.tsx` (refactor only, behavior-preserving) — page cycle 6.**
+  `BehavioralEventsStep`, `ValidationStep`, `OverviewStep`, and `ExportStep` → `.tsx`. Each step's props now `extends
+  DayEditorBundle` (so `useDayEditorContext(props)` — whose fallback param is the full bundle — typechecks) plus its
+  section-specific extras (`copyableDioSources?`; `onNavigate?`/`onRepair?`; `onSubjectUpdate?`/`focusRequest?`).
+  `BehavioralEventsDisplay`'s local `CopyableDioSource` interface was exported so `BehavioralEventsStep` can type its
+  forwarded prop. Runtime PropTypes/defaultProps dropped (non-undefined defaults preserved as destructure defaults:
+  `copyableDioSources = []`, `onNavigate = () => {}`, `onSubjectUpdate = () => {}`, `focusRequest = null`); JSDoc trimmed.
+  Behavior-equivalent non-type changes only: `day as unknown as Record<string, unknown>` at the two
+  `MalformedCollectionNotice` sites (a clean `Day` interface has no index signature, but is a valid input to that
+  tolerant corrupt-shape reader); `{mergeError && …}` → `{Boolean(mergeError) && …}` (an `unknown` truthiness gate →
+  `ReactNode`); `rows="3"` → `rows={3}` and `aria-describedby={… : null}` → `: undefined` (DOM-identical); a `keyof
+  typeof DAY_LIFECYCLE_LABEL` dynamic-index cast; `onNavigate!` where a `repairable` guard proves it. One `ValidationStep`
+  test that asserted the removed `defaultProps` was rewritten to assert the actual contract (a render with `animal`
+  omitted does not throw). `npm run typecheck` + `CI=true` build clean (−70 B); golden baselines, the DayEditor suites +
+  the 3 source-scanning guards + the emoji guard pass; full suite 4793; e2e 104.
 - **Typed the 5 `pages/DayEditor` Tier-1 components `.jsx`→`.tsx` and widened two source-scanning guards to cover the TS source (refactor only, behavior-preserving) — page cycle 5.**
   `ConfigVersionPanel` (`reconfig`/`actions` typed to match the now-`.tsx` `ReconfigWizard`), `ElectrodeGroupsAccordion`
   (`ElectrodeGroup[]`/`NtrodeMap[]`/`Record<string, number[]>` props), `RepairActions` (`RepairableIssue` params; a local
