@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed 4 LIVE leaf React components `.jsx`→`.tsx` and added the standard `react-app-env.d.ts` (refactor only, behavior-preserving) — the first component cycle.**
+  [components/ui/Button.jsx](src/components/ui/Button.tsx) (the token-driven button primitive —
+  `ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>`), [components/ErrorBoundary.jsx](src/components/ErrorBoundary.tsx)
+  (class component — `Component<ErrorBoundaryProps, ErrorBoundaryState>`, `getDerivedStateFromError`/`componentDidCatch`
+  typed with `Error`/`ErrorInfo`), [components/Modal/Modal.jsx](src/components/Modal/Modal.tsx) (the accessible dialog —
+  focus-trap / ESC / overlay-click / scroll-lock, `useRef<HTMLDivElement|null>`, `querySelectorAll<HTMLElement>`), and
+  [components/OverflowMenu.jsx](src/components/OverflowMenu.tsx) (the WAI-ARIA menu-button — `OverflowMenuItem`/`OverflowMenuProps`,
+  roving-focus refs, keyboard handlers) → `.tsx`. Runtime PropTypes dropped in favor of the typed prop interfaces
+  (prod-stripped; `react/prop-types` doesn't fire on a typed component); behavior-equivalent erased casts only
+  (`document.activeElement as HTMLElement|null`, `e.target as HTMLElement`/`Node|null`). Added
+  [src/react-app-env.d.ts](src/react-app-env.d.ts) (the CRA-standard file, previously missing) so `.tsx` components
+  type-check their CSS imports: it references `react-scripts` (which declares `*.module.css`/`*.module.scss`) and adds
+  bare `declare module '*.css'`/`'*.scss'` for side-effect stylesheet imports. All `element/*` and `*Fields.jsx`
+  components are legacy-only and remain `.jsx` (skipped). `npm run typecheck` + `CI=true` build clean (bundle +9 B);
+  golden baselines, the component suites (Button / ErrorBoundary / Modal + its consumers / OverflowMenu, 326), and the
+  3 source-scanning guards pass; full suite 4793; e2e 104.
+
 - **Typed `utils/deviceNormalization.js` (the corruption-preserving "Normalization Contract", 646 LOC) under strict TS (refactor only, value-identical).**
   [utils/deviceNormalization.js](src/utils/deviceNormalization.ts) is the device-shape normalizer plus the
   one-time bad-channel base→day migration; it is golden-baseline-relevant (its output flows into export).

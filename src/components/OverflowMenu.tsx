@@ -1,6 +1,22 @@
-import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
-import PropTypes from 'prop-types';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import './OverflowMenu.css';
+
+interface OverflowMenuItem {
+  key: string;
+  label: string;
+  onSelect: () => void;
+  disabled?: boolean;
+}
+
+interface OverflowMenuProps {
+  /** Accessible name for the trigger button (e.g. "Actions for remy"). */
+  label: string;
+  /** The menu items, in display order. */
+  items: OverflowMenuItem[];
+  /** Extra class on the trigger button. */
+  buttonClassName?: string;
+}
 
 /**
  * OverflowMenu — a reusable, accessible ⋮ overflow menu (Phase 4, Task 4.1).
@@ -15,22 +31,15 @@ import './OverflowMenu.css';
  *
  * Shared by every per-object lifecycle affordance (the animal-picker cards and the AnimalView
  * header band) so the menu semantics can't drift between them.
- *
- * @param {object} props
- * @param {string} props.label - Accessible name for the trigger button (e.g. "Actions for remy").
- * @param {Array<{key: string, label: string, onSelect: Function, disabled?: boolean}>} props.items -
- *   The menu items, in display order.
- * @param {string} [props.buttonClassName] - Extra class on the trigger button.
- * @returns {JSX.Element}
  */
-export default function OverflowMenu({ label, items, buttonClassName }) {
+export default function OverflowMenu({ label, items, buttonClassName }: OverflowMenuProps) {
   const menuId = useId();
   const [open, setOpen] = useState(false);
   // Index of the item that owns focus while the menu is open (a roving focus target).
   const [activeIndex, setActiveIndex] = useState(0);
-  const triggerRef = useRef(null);
-  const menuRef = useRef(null);
-  const itemRefs = useRef([]);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const menuRef = useRef<HTMLUListElement | null>(null);
+  const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const enabledIndexes = items
     .map((item, i) => (item.disabled ? -1 : i))
@@ -41,10 +50,10 @@ export default function OverflowMenu({ label, items, buttonClassName }) {
 
   /**
    * Open the menu, optionally aiming focus at the last item (e.g. ArrowUp on the trigger).
-   * @param {('first'|'last')} [edge] - Which enabled item to focus on open.
+   * @param [edge] - Which enabled item to focus on open.
    */
   const openMenu = useCallback(
-    (edge = 'first') => {
+    (edge: 'first' | 'last' = 'first') => {
       setActiveIndex(edge === 'last' ? lastEnabled : firstEnabled);
       setOpen(true);
     },
@@ -52,7 +61,7 @@ export default function OverflowMenu({ label, items, buttonClassName }) {
   );
 
   /** Close the menu and (optionally) return focus to the trigger. */
-  const closeMenu = useCallback((returnFocus = false) => {
+  const closeMenu = useCallback((returnFocus: boolean = false) => {
     setOpen(false);
     if (returnFocus) triggerRef.current?.focus();
   }, []);
@@ -66,8 +75,9 @@ export default function OverflowMenu({ label, items, buttonClassName }) {
   // only while open. A click on the trigger is handled by its own onClick, so ignore it here.
   useEffect(() => {
     if (!open) return undefined;
-    const onPointerDown = (e) => {
-      if (menuRef.current?.contains(e.target) || triggerRef.current?.contains(e.target)) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node | null;
+      if (menuRef.current?.contains(target) || triggerRef.current?.contains(target)) return;
       setOpen(false);
     };
     document.addEventListener('pointerdown', onPointerDown);
@@ -87,9 +97,9 @@ export default function OverflowMenu({ label, items, buttonClassName }) {
 
   /**
    * Step the active item to the next/previous ENABLED item, wrapping at the ends.
-   * @param {number} direction - +1 for next, -1 for previous.
+   * @param direction - +1 for next, -1 for previous.
    */
-  const moveActive = (direction) => {
+  const moveActive = (direction: number) => {
     if (enabledIndexes.length === 0) return;
     const pos = enabledIndexes.indexOf(activeIndex);
     // From an unknown/disabled current position, entering forward lands on the first enabled item
@@ -105,9 +115,9 @@ export default function OverflowMenu({ label, items, buttonClassName }) {
 
   /**
    * Activate an item by index: fire its onSelect (if enabled) and close.
-   * @param {number} index - The item's index in `items`.
+   * @param index - The item's index in `items`.
    */
-  const selectItem = (index) => {
+  const selectItem = (index: number) => {
     const item = items[index];
     if (!item || item.disabled) return;
     closeMenu(true);
@@ -116,9 +126,9 @@ export default function OverflowMenu({ label, items, buttonClassName }) {
 
   /**
    * Key handling on the trigger button: open + aim focus.
-   * @param {React.KeyboardEvent} e - The keydown event.
+   * @param e - The keydown event.
    */
-  const handleTriggerKeyDown = (e) => {
+  const handleTriggerKeyDown = (e: ReactKeyboardEvent) => {
     if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       // Don't let an ancestor keyboard widget (e.g. the animal-switcher popup) also act on the key.
@@ -133,9 +143,9 @@ export default function OverflowMenu({ label, items, buttonClassName }) {
 
   /**
    * Key handling inside the open menu: roving focus + activation + dismissal.
-   * @param {React.KeyboardEvent} e - The keydown event.
+   * @param e - The keydown event.
    */
-  const handleMenuKeyDown = (e) => {
+  const handleMenuKeyDown = (e: ReactKeyboardEvent) => {
     // Every key the menu acts on is also stopped from bubbling, so an ancestor keyboard widget
     // (e.g. the animal-switcher popup) doesn't double-handle the menu's Esc / arrows / activation.
     switch (e.key) {
@@ -230,19 +240,3 @@ export default function OverflowMenu({ label, items, buttonClassName }) {
   );
 }
 
-OverflowMenu.propTypes = {
-  label: PropTypes.string.isRequired,
-  items: PropTypes.arrayOf(
-    PropTypes.shape({
-      key: PropTypes.string.isRequired,
-      label: PropTypes.string.isRequired,
-      onSelect: PropTypes.func.isRequired,
-      disabled: PropTypes.bool,
-    })
-  ).isRequired,
-  buttonClassName: PropTypes.string,
-};
-
-OverflowMenu.defaultProps = {
-  buttonClassName: undefined,
-};

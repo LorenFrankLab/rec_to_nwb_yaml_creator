@@ -17,23 +17,28 @@
  * @see https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary
  */
 
-import React, { Component } from 'react';
-import PropTypes from 'prop-types';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
 import './ErrorBoundary.css';
 
-export class ErrorBoundary extends Component {
-  static propTypes = {
-    /** Child components to render */
-    children: PropTypes.node.isRequired,
-    /** Optional custom fallback UI to show when error occurs */
-    fallback: PropTypes.node,
-  };
+interface ErrorBoundaryProps {
+  /** Child components to render. */
+  children: ReactNode;
+  /** Optional custom fallback UI to show when an error occurs. */
+  fallback?: ReactNode;
+}
 
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+  errorInfo: ErrorInfo | null;
+}
+
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   static defaultProps = {
     fallback: null,
   };
 
-  constructor(props) {
+  constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = {
       hasError: false,
@@ -47,7 +52,7 @@ export class ErrorBoundary extends Component {
    * Called during the "render" phase, so side effects are not allowed
    * @param error
    */
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
     return {
       hasError: true,
       error,
@@ -60,7 +65,7 @@ export class ErrorBoundary extends Component {
    * @param error
    * @param errorInfo
    */
-  componentDidCatch(error, errorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Error Boundary caught an error:', error, errorInfo);
 
     // Store errorInfo in state for potential display in development mode
@@ -75,11 +80,11 @@ export class ErrorBoundary extends Component {
   /**
    * Handle reload button click
    */
-  handleReload = () => {
+  handleReload = (): void => {
     window.location.reload();
   };
 
-  render() {
+  render(): ReactNode {
     if (this.state.hasError) {
       // Custom fallback UI if provided
       if (this.props.fallback) {
