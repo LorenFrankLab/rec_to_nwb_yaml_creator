@@ -1,10 +1,16 @@
 import { useState } from 'react';
-import PropTypes from 'prop-types';
 import { ConfirmDialog } from '../../components/Modal';
 import { duplicateTaskEpochs } from '../../validation/taskEpochs';
+import type { Task, Camera } from '../../state/workspaceTypes';
 import './TasksTable.scss';
 
-const REQUIRED_STRING_FIELDS = [
+interface TaskStatus {
+  tone: 'error' | 'warning' | 'complete';
+  label: string;
+  detail: string;
+}
+
+const REQUIRED_STRING_FIELDS: ReadonlyArray<{ key: keyof Task; label: string }> = [
   { key: 'task_name', label: 'task name' },
   { key: 'task_description', label: 'task description' },
   { key: 'task_environment', label: 'task environment' },
@@ -23,15 +29,8 @@ const REQUIRED_STRING_FIELDS = [
  * fuller `detail` sentence (the label's tooltip). Overlapping-epoch warnings are surfaced live
  * in the epoch editor only — epoch start/end times are not persisted, so they cannot be derived
  * from a saved task.
- *
- * @param {object} task Task record.
- * @param {Array} cameras Animal cameras.
- * @param {Set<number>} [duplicateEpochs] Epoch numbers claimed by more than one task (Task 5c):
- *   a collision is the export-blocking `duplicate_task_epoch` error, surfaced inline so the user
- *   sees it at the task — each epoch belongs to exactly one task — not only at export.
- * @returns {Array<{tone: 'error'|'warning'|'complete', label: string, detail: string}>}
  */
-function getStatuses(task, cameras, duplicateEpochs = new Set()) {
+function getStatuses(task: Task, cameras: Camera[] | undefined, duplicateEpochs: Set<number> = new Set()): TaskStatus[] {
   const blankFields = REQUIRED_STRING_FIELDS.filter(({ key }) => {
     const value = task[key];
     return value === undefined || value === null || String(value).trim() === '';
@@ -65,7 +64,7 @@ function getStatuses(task, cameras, duplicateEpochs = new Set()) {
   }
 
   // Two distinct, separately-surfaced warnings (the old single badge overloaded both).
-  const statuses = [];
+  const statuses: TaskStatus[] = [];
   if (taskEpochs.length === 0) {
     statuses.push({ tone: 'warning', label: 'Needs epochs', detail: 'No epochs assigned to this task' });
   }
@@ -82,6 +81,23 @@ function getStatuses(task, cameras, duplicateEpochs = new Set()) {
   return statuses;
 }
 
+interface TasksTableProps {
+  /** Day tasks. */
+  tasks: Task[];
+  /** Animal cameras (for status + display). */
+  cameras?: Camera[];
+  /** Add-task handler. */
+  onAdd: () => void;
+  /** Edit handler, called with the task index. */
+  onEdit: (index: number) => void;
+  /** Delete handler, called with the task index. */
+  onDelete: (index: number) => void;
+  /** `(index) => Array` of videos that deleting task `index` would orphan, for the confirmation notice. */
+  affectedVideosForDelete?: (index: number) => Array<{ name?: string }>;
+  /** `(index) => Array` of associated_files that deleting task `index` would orphan, named alongside the videos. */
+  affectedFilesForDelete?: (index: number) => Array<{ name?: string }>;
+}
+
 /**
  * TasksTable - CRUD table for a day's tasks, mirroring CamerasSection's table /
  * empty-state conventions (per-task status is shown as token-colored text labels, not a
@@ -94,30 +110,17 @@ function getStatuses(task, cameras, duplicateEpochs = new Set()) {
  * the confirmation names BOTH the affected videos and the affected files so the
  * user is not blindsided. The parent's delete handler then clears those references
  * deterministically.
- *
- * @param {object} props
- * @param {Array} props.tasks Day tasks.
- * @param {Array} props.cameras Animal cameras (for status + display).
- * @param {Function} props.onAdd Add-task handler.
- * @param {Function} props.onEdit Edit handler, called with the task index.
- * @param {Function} props.onDelete Delete handler, called with the task index.
- * @param {Function} [props.affectedVideosForDelete] `(index) => Array` of videos
- *   that deleting task `index` would orphan, for the confirmation notice.
- * @param {Function} [props.affectedFilesForDelete] `(index) => Array` of
- *   associated_files that deleting task `index` would orphan, named alongside the
- *   videos in the confirmation notice.
- * @returns {JSX.Element}
  */
 export default function TasksTable({
   tasks,
-  cameras,
+  cameras = [],
   onAdd,
   onEdit,
   onDelete,
   affectedVideosForDelete,
   affectedFilesForDelete,
-}) {
-  const [pendingDeleteIndex, setPendingDeleteIndex] = useState(null);
+}: TasksTableProps) {
+  const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
 
   /**
    * Confirm and execute the pending delete.
@@ -132,10 +135,8 @@ export default function TasksTable({
   /**
    * Build the delete-confirmation message, appending an affected-video notice when
    * deleting this task would orphan associated videos.
-   * @param {number} index Task index slated for deletion.
-   * @returns {string}
    */
-  function deleteMessage(index) {
+  function deleteMessage(index: number | null): string {
     if (index == null || !tasks[index]) return '';
     const base = `Delete task "${tasks[index].task_name || '(unnamed task)'}"? This removes it from this day.`;
     const affectedVideos = affectedVideosForDelete ? affectedVideosForDelete(index) : [];
@@ -274,18 +275,3 @@ export default function TasksTable({
   );
 }
 
-TasksTable.propTypes = {
-  tasks: PropTypes.arrayOf(PropTypes.object).isRequired,
-  cameras: PropTypes.arrayOf(PropTypes.object),
-  onAdd: PropTypes.func.isRequired,
-  onEdit: PropTypes.func.isRequired,
-  onDelete: PropTypes.func.isRequired,
-  affectedVideosForDelete: PropTypes.func,
-  affectedFilesForDelete: PropTypes.func,
-};
-
-TasksTable.defaultProps = {
-  cameras: [],
-  affectedVideosForDelete: undefined,
-  affectedFilesForDelete: undefined,
-};

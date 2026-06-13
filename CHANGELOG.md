@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed 12 more LIVE `pages/DayEditor` React leaf components `.jsx`→`.tsx` (refactor only, behavior-preserving) — page cycle 3.**
+  `KeywordsEditor`, `DayRecordingSystem`, `TaskInstancesTable`, `AssociatedVideosEditor`, `AssociatedFilesEditor`,
+  `FsGuiSection`, `TasksTable`, `DayTechnicalSection`, `CamerasUsedSection`, `OverrideCleanupSection`, `ReconfigWizard`,
+  and `ReadOnlyDeviceInfo` → `.tsx`. Props become typed interfaces; runtime PropTypes/defaultProps dropped (non-undefined
+  defaults preserved as destructure defaults, e.g. `catalog = []`, `technical = {}`); component JSDoc trimmed to
+  descriptions; the unused default `import React` dropped from `DayRecordingSystem`/`FsGuiSection` (JSX-only, react-jsx).
+  Editor row shapes use local interfaces that deliberately diverge from the canonical types (the empty-string-sentinel
+  reality: `VideoRow`/`FileRow` `camera_id`/`task_epochs` are `number | string`; `FsGuiItem` is a distinct shape from
+  `FsGuiYaml`). The only non-type-token changes are behavior-equivalent: two guarded optional chains
+  (`mergedDay?.tasks`, `overridesRecord?.[key]` — both reached only when the value is provably defined) and erased casts
+  on computed-key spreads / a narrowing-resistant indexed-access ternary. `OverrideCleanupSection`'s `day` is typed
+  `Record<string, unknown>` (assignable to `classifyDeviceOverrides`); `DayTechnicalSection` reuses `Partial<TechnicalParameters>`/
+  `Partial<TechnicalDefaults>` (the exact `resolveRigConstant` param types). The `tasksEpochs.noEmoji.guard` test's
+  hardcoded file list was updated (`TasksTable.jsx` → `.tsx`) to track the rename and keep the emoji guard covering the
+  file. `npm run typecheck` + `CI=true` build clean; golden baselines, the DayEditor suites + the 3 source-scanning
+  guards + the emoji guard pass; full suite 4793; e2e 103 pass + 1 pre-existing hash-router timing flake (unrelated).
+
 - **Typed 3 more LIVE `pages/DayEditor` React leaf components `.jsx`→`.tsx` (refactor only, behavior-preserving) — page cycle 2.**
   [pages/DayEditor/IssueOwnershipHint.jsx](src/pages/DayEditor/IssueOwnershipHint.tsx) (`issue?: RepairableIssue | null`,
   the exact param type of the `ownershipForIssue` it forwards to — a type-only import from `domain/repairRouting`),

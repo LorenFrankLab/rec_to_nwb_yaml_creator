@@ -1,6 +1,25 @@
-import PropTypes from 'prop-types';
 import Button from '../../components/ui/Button';
+import type { TaskType, TaskInstance, Camera } from '../../state/workspaceTypes';
 import './TaskInstancesTable.scss';
+
+interface TaskInstancesTableProps {
+  /** The animal's task-type catalog (the resolution source). */
+  taskTypes?: TaskType[];
+  /** The day's ordered instances. */
+  taskInstances?: TaskInstance[];
+  /** The animal's cameras (for camera labels). */
+  cameras?: Camera[];
+  /** Open the add-task picker. */
+  onAdd: () => void;
+  /** Open the inline "define a new task type" flow. */
+  onDefineNewType: () => void;
+  /** Edit the instance at an index. */
+  onEdit: (index: number) => void;
+  /** Remove the instance at an index. */
+  onRemove: (index: number) => void;
+  /** Move an instance from one index to another. */
+  onReorder: (from: number, to: number) => void;
+}
 
 /**
  * TaskInstancesTable — the day's chosen task types and their epochs (the "use per day" view).
@@ -10,32 +29,21 @@ import './TaskInstancesTable.scss';
  * EPOCHS come from the day's instance (edited per day). Rows are ordered (the order is the exported
  * task order) with up/down controls. A dangling instance (its type was deleted on the animal) is
  * flagged so the user re-picks rather than silently dropping the task.
- *
- * @param {object} props
- * @param {Array} props.taskTypes - The animal's task-type catalog (the resolution source).
- * @param {Array} props.taskInstances - The day's ordered instances.
- * @param {Array} props.cameras - The animal's cameras (for camera labels).
- * @param {Function} props.onAdd - Open the add-task picker.
- * @param {Function} props.onDefineNewType - Open the inline "define a new task type" flow.
- * @param {Function} props.onEdit - Edit the instance at an index.
- * @param {Function} props.onRemove - Remove the instance at an index.
- * @param {Function} props.onReorder - Move an instance from one index to another.
- * @returns {JSX.Element}
  */
 export default function TaskInstancesTable({
-  taskTypes,
-  taskInstances,
-  cameras,
+  taskTypes = [],
+  taskInstances = [],
+  cameras = [],
   onAdd,
   onDefineNewType,
   onEdit,
   onRemove,
   onReorder,
-}) {
+}: TaskInstancesTableProps) {
   const typeById = new Map((Array.isArray(taskTypes) ? taskTypes : []).map((t) => [t?.id, t]));
   const instances = Array.isArray(taskInstances) ? taskInstances : [];
 
-  const cameraLabel = (id) => {
+  const cameraLabel = (id: number | string) => {
     const camera = (Array.isArray(cameras) ? cameras : []).find((c) => String(c?.id) === String(id));
     return camera?.camera_name ? `${id} · ${camera.camera_name}` : String(id);
   };
@@ -154,19 +162,3 @@ export default function TaskInstancesTable({
   );
 }
 
-TaskInstancesTable.propTypes = {
-  taskTypes: PropTypes.array,
-  taskInstances: PropTypes.array,
-  cameras: PropTypes.array,
-  onAdd: PropTypes.func.isRequired,
-  onDefineNewType: PropTypes.func.isRequired,
-  onEdit: PropTypes.func.isRequired,
-  onRemove: PropTypes.func.isRequired,
-  onReorder: PropTypes.func.isRequired,
-};
-
-TaskInstancesTable.defaultProps = {
-  taskTypes: [],
-  taskInstances: [],
-  cameras: [],
-};

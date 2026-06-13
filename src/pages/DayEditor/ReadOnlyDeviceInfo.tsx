@@ -1,16 +1,28 @@
-import PropTypes from 'prop-types';
+/** The effective electrode-group fields this read-only panel displays. */
+interface ReadOnlyDeviceInfoGroup {
+  id: number;
+  device_type: string;
+  location: string;
+  targeted_location?: string;
+  targeted_x?: number;
+  targeted_y?: number;
+  targeted_z?: number;
+  units?: string;
+  description: string;
+}
+
+interface ReadOnlyDeviceInfoProps {
+  /** Electrode group configuration. */
+  group: ReadOnlyDeviceInfoGroup;
+}
 
 /**
  * ReadOnlyDeviceInfo - Display inherited device configuration
  *
  * Shows read-only electrode group configuration inherited from animal level.
  * Used within DevicesStep to provide context for bad channel editing.
- *
- * @param {object} props
- * @param {object} props.group - Electrode group configuration
- * @returns {JSX.Element}
  */
-export default function ReadOnlyDeviceInfo({ group }) {
+export default function ReadOnlyDeviceInfo({ group }: ReadOnlyDeviceInfoProps) {
   return (
     <div className="device-info-readonly">
       <h4>Device Configuration</h4>
@@ -47,16 +59,3 @@ export default function ReadOnlyDeviceInfo({ group }) {
   );
 }
 
-ReadOnlyDeviceInfo.propTypes = {
-  group: PropTypes.shape({
-    id: PropTypes.number.isRequired,
-    device_type: PropTypes.string.isRequired,
-    location: PropTypes.string.isRequired,
-    targeted_location: PropTypes.string.isRequired,
-    targeted_x: PropTypes.number.isRequired,
-    targeted_y: PropTypes.number.isRequired,
-    targeted_z: PropTypes.number.isRequired,
-    units: PropTypes.string.isRequired,
-    description: PropTypes.string.isRequired,
-  }).isRequired,
-};

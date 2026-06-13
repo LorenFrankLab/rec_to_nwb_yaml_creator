@@ -1,6 +1,14 @@
 import { useId } from 'react';
-import PropTypes from 'prop-types';
+import type { Task } from '../../state/workspaceTypes';
 import './AssociatedFilesEditor.scss';
+
+/** Editor row shape: `task_epochs` carries an empty-string sentinel for "unselected". */
+interface FileRow {
+  name?: string;
+  description?: string;
+  path?: string;
+  task_epochs?: number | string;
+}
 
 /**
  * Collect the day's valid task-epoch numbers (sorted, de-duplicated).
@@ -9,22 +17,28 @@ import './AssociatedFilesEditor.scss';
  * never reference an epoch the day's tasks do not define — the controlled-ref
  * contract that keeps the export from carrying a dangling `task_epochs` (the
  * `orphaned_file` validation error). This mirrors AssociatedVideosEditor.
- *
- * @param {Array} tasks Day tasks.
- * @returns {number[]} Sorted unique valid epoch numbers.
  */
-function collectValidEpochs(tasks) {
-  const seen = new Set();
+function collectValidEpochs(tasks: unknown): number[] {
+  const seen = new Set<number>();
   (Array.isArray(tasks) ? tasks : []).forEach((task) => {
     // A malformed task_epochs inside an otherwise-valid task (a string, not an
     // array) must contribute no epochs rather than crash this repair UI on `.forEach`.
-    const epochs = Array.isArray(task?.task_epochs) ? task.task_epochs : [];
+    const epochs: unknown[] = Array.isArray(task?.task_epochs) ? task.task_epochs : [];
     epochs.forEach((epoch) => {
       const n = Number(epoch);
       if (Number.isInteger(n)) seen.add(n);
     });
   });
   return [...seen].sort((a, b) => a - b);
+}
+
+interface AssociatedFilesEditorProps {
+  /** The day's associated_files. */
+  files?: FileRow[];
+  /** The day's tasks (task_epochs options). */
+  tasks?: Task[];
+  /** Called with the next files array. */
+  onChange: (files: FileRow[]) => void;
 }
 
 /**
@@ -49,14 +63,8 @@ function collectValidEpochs(tasks) {
  *
  * Persisted through `onChange(nextArray)` (the step routes that to
  * `onFieldUpdate('associated_files', nextArray)`).
- *
- * @param {object} props
- * @param {Array} props.files The day's associated_files.
- * @param {Array} props.tasks The day's tasks (task_epochs options).
- * @param {Function} props.onChange Called with the next files array.
- * @returns {JSX.Element}
  */
-export default function AssociatedFilesEditor({ files, tasks, onChange }) {
+export default function AssociatedFilesEditor({ files = [], tasks = [], onChange }: AssociatedFilesEditorProps) {
   const baseId = useId();
   // Tolerate corrupt persisted state: a non-array `files` (`{}`) must not crash render.
   const fileList = Array.isArray(files) ? files : [];
@@ -65,12 +73,9 @@ export default function AssociatedFilesEditor({ files, tasks, onChange }) {
 
   /**
    * Replace one row's field and emit the updated array.
-   * @param {number} index Row index.
-   * @param {string} field 'name' | 'description' | 'path' | 'task_epochs'.
-   * @param {*} value New value (already coerced).
    */
-  function updateRow(index, field, value) {
-    onChange(fileList.map((file, i) => (i === index ? { ...file, [field]: value } : file)));
+  function updateRow(index: number, field: keyof FileRow, value: string | number) {
+    onChange(fileList.map((file, i) => (i === index ? { ...file, [field]: value } as FileRow : file)));
   }
 
   /**
@@ -82,9 +87,8 @@ export default function AssociatedFilesEditor({ files, tasks, onChange }) {
 
   /**
    * Remove the row at `index`.
-   * @param {number} index Row index.
    */
-  function removeRow(index) {
+  function removeRow(index: number) {
     onChange(fileList.filter((_, i) => i !== index));
   }
 
@@ -215,13 +219,3 @@ export default function AssociatedFilesEditor({ files, tasks, onChange }) {
   );
 }
 
-AssociatedFilesEditor.propTypes = {
-  files: PropTypes.arrayOf(PropTypes.object),
-  tasks: PropTypes.arrayOf(PropTypes.object),
-  onChange: PropTypes.func.isRequired,
-};
-
-AssociatedFilesEditor.defaultProps = {
-  files: [],
-  tasks: [],
-};

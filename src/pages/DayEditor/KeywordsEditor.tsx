@@ -1,5 +1,11 @@
 import { useState } from 'react';
-import PropTypes from 'prop-types';
+
+interface KeywordsEditorProps {
+  /** Current keywords (treated as [] when absent). */
+  value?: string[];
+  /** Called with the new keyword array on change. */
+  onChange: (keywords: string[]) => void;
+}
 
 /**
  * KeywordsEditor - add/remove searchable keyword tags for a recording day.
@@ -8,13 +14,8 @@ import PropTypes from 'prop-types';
  * non-empty list of unique, non-blank strings. This editor enforces those
  * constraints at entry (trimming, de-duplicating, ignoring blanks) so the
  * exported metadata stays schema-valid.
- *
- * @param {object} props
- * @param {string[]} [props.value] - Current keywords (treated as [] when absent).
- * @param {Function} props.onChange - Called with the new keyword array on change.
- * @returns {JSX.Element}
  */
-export default function KeywordsEditor({ value, onChange }) {
+export default function KeywordsEditor({ value, onChange }: KeywordsEditorProps) {
   // Tolerate corrupt persisted state: a non-array `value` (`{}`) must not crash render.
   const keywords = Array.isArray(value) ? value : [];
   const [draft, setDraft] = useState('');
@@ -36,7 +37,7 @@ export default function KeywordsEditor({ value, onChange }) {
     onChange([...keywords, trimmed]);
   };
 
-  const removeKeyword = (keyword) => {
+  const removeKeyword = (keyword: string) => {
     onChange(keywords.filter((k) => k !== keyword));
   };
 
@@ -96,8 +97,3 @@ export default function KeywordsEditor({ value, onChange }) {
     </div>
   );
 }
-
-KeywordsEditor.propTypes = {
-  value: PropTypes.arrayOf(PropTypes.string),
-  onChange: PropTypes.func.isRequired,
-};

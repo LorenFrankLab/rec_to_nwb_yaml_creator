@@ -1,7 +1,21 @@
 import { useMemo, useCallback } from 'react';
-import PropTypes from 'prop-types';
 import { getAnimalCameras, getDayCamerasUsed } from '../../state/workspaceSelectors';
 import { inferredCameraKeys } from '../../state/cameraUsage';
+import type { Animal, Day } from '../../state/workspaceTypes';
+
+interface CamerasUsedSectionProps {
+  /** Animal record (its camera catalog). */
+  animal: Animal;
+  /** Day record (raw videos / FsGUI camera refs + explicit `cameras_used`). */
+  day: Day;
+  /**
+   * Merged metadata; its resolved `tasks` are the EFFECTIVE task camera refs (a migrated
+   * catalog day's task-type cameras only appear here). Falls back to raw `day.tasks`.
+   */
+  mergedDay?: { tasks?: unknown };
+  /** `(fieldPath, value) => void` store writer. */
+  onFieldUpdate: (fieldPath: string, value: unknown) => void;
+}
 
 /**
  * Per-day "cameras used" checklist (Phase 8C). A camera INFERRED-referenced by a task / video /
@@ -15,16 +29,8 @@ import { inferredCameraKeys } from '../../state/cameraUsage';
  * never uncheck it. Toggling writes ONLY the explicit additions (inferred cameras are covered by the
  * union and need not be stored), so `cameras_used` stays absent/empty for all existing data and the
  * export stays byte-identical. Renders `null` when the animal has no cameras.
- *
- * @param {object} props
- * @param {object} props.animal - Animal record (its camera catalog).
- * @param {object} props.day - Day record (raw videos / FsGUI camera refs + explicit `cameras_used`).
- * @param {object} [props.mergedDay] - Merged metadata; its resolved `tasks` are the EFFECTIVE task
- *   camera refs (a migrated catalog day's task-type cameras only appear here). Falls back to raw `day.tasks`.
- * @param {Function} props.onFieldUpdate - `(fieldPath, value) => void` store writer.
- * @returns {JSX.Element|null}
  */
-export default function CamerasUsedSection({ animal, day, mergedDay, onFieldUpdate }) {
+export default function CamerasUsedSection({ animal, day, mergedDay, onFieldUpdate }: CamerasUsedSectionProps) {
   const animalCameras = getAnimalCameras(animal);
   // Infer non-negotiable cameras from the day's EFFECTIVE tasks: a migrated catalog day has
   // `taskInstances` and no inline `tasks`, so its task-type camera refs only appear in the RESOLVED
@@ -36,7 +42,7 @@ export default function CamerasUsedSection({ animal, day, mergedDay, onFieldUpda
       inferredCameraKeys({
         ...day,
         tasks: Array.isArray(mergedDay?.tasks)
-          ? mergedDay.tasks
+          ? mergedDay?.tasks
           : Array.isArray(day?.tasks)
             ? day.tasks
             : [],
@@ -53,11 +59,11 @@ export default function CamerasUsedSection({ animal, day, mergedDay, onFieldUpda
    * Toggle a NON-referenced camera in the explicit cameras-used set. Rebuilds the set from the
    * full catalog so it stores the ids (in catalog order) of every currently-checked non-referenced
    * camera — referenced cameras are intentionally excluded (covered by the union).
-   * @param {*} cameraId - The catalog camera id being toggled.
-   * @param {boolean} checked - The next checked state.
+   * @param cameraId - The catalog camera id being toggled.
+   * @param checked - The next checked state.
    */
   const handleCameraUsedToggle = useCallback(
-    (cameraId, checked) => {
+    (cameraId: number | string, checked: boolean) => {
       const next = new Set(explicitCameraIds.map((id) => String(id)));
       if (checked) next.add(String(cameraId));
       else next.delete(String(cameraId));
@@ -110,13 +116,3 @@ export default function CamerasUsedSection({ animal, day, mergedDay, onFieldUpda
   );
 }
 
-CamerasUsedSection.propTypes = {
-  animal: PropTypes.object.isRequired,
-  day: PropTypes.object.isRequired,
-  mergedDay: PropTypes.object,
-  onFieldUpdate: PropTypes.func.isRequired,
-};
-
-CamerasUsedSection.defaultProps = {
-  mergedDay: undefined,
-};
