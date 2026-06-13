@@ -31,6 +31,43 @@
  */
 
 import { generateDayId } from './workspaceUtils';
+import type { ImportPlan, ImportPlanAnimal, ImportPlanDay } from './yamlImportPlan';
+
+/** The current workspace snapshot read (read-only) during pre-flight. */
+interface ApplyWorkspace {
+  animals?: Record<string, any>;
+  days?: Record<string, any>;
+}
+
+/** The store workspace actions the executor drives (loosely typed — injected from the live store). */
+interface ImportActions {
+  createAnimal: (subjectId: string, subject: any, metadata: any) => void;
+  createDay: (animalId: string, date: string, session: any) => void;
+  createConfigurationSnapshotAndApplyForward: (
+    animalId: string,
+    config: any,
+    dayIds: string[]
+  ) => void;
+  updateDay: (dayId: string, updates: any) => void;
+  updateAnimal: (animalId: string, updates: any) => void;
+  deleteAnimal: (animalId: string) => void;
+}
+
+/** Options for {@link applyImportPlan}. */
+interface ApplyImportOptions {
+  /** The current workspace snapshot for pre-flight (defaults to empty — no pre-flight guarantees). */
+  workspace?: ApplyWorkspace;
+  /** Per-subject overrides of `defaultResolution` for conflict animals. */
+  resolutions?: Record<string, 'add' | 'skip' | 'replace'>;
+}
+
+/** The outcome of {@link applyImportPlan}: created/skipped ids and recorded (never thrown) failures. */
+interface ApplyImportResult {
+  createdAnimals: string[];
+  createdDays: string[];
+  skipped: string[];
+  failed: Array<{ subjectId: string; reason: string }>;
+}
 
 /**
  * Pre-flight a single planned animal against the CURRENT workspace snapshot (read-only),
@@ -48,14 +85,19 @@ import { generateDayId } from './workspaceUtils';
  * `planImport`'s dedup — still carries two days resolving to the same id) is failed-closed here,
  * so the executor never issues a `createDay` whose throw would escape the reducer.
  *
- * @param {import('./yamlImportPlan').ImportPlanAnimal} animalPlan
- * @param {'create'|'add'|'replace'} resolution
- * @param {object} workspace - The current workspace slice (`{ animals, days }`), read-only.
- * @param {Set<string>} reservedDayIds - Day ids already reserved by earlier-passed animals in
- *   this same call (read-only here; the caller commits the animal's ids on success).
- * @returns {(string|null)} A failure reason, or `null` when safe to apply.
+ * @param animalPlan - The planned animal.
+ * @param resolution - The per-subject resolution (`'create'` / `'add'` / `'replace'`).
+ * @param workspace - The current workspace slice (`{ animals, days }`), read-only.
+ * @param reservedDayIds - Day ids already reserved by earlier-passed animals in this same call
+ *   (read-only here; the caller commits the animal's ids on success).
+ * @returns A failure reason, or `null` when safe to apply.
  */
-function preflightAnimal(animalPlan, resolution, workspace, reservedDayIds) {
+function preflightAnimal(
+  animalPlan: ImportPlanAnimal,
+  resolution: string | null,
+  workspace: ApplyWorkspace | null | undefined,
+  reservedDayIds: Set<string>
+): string | null {
   const animals = workspace?.animals ?? {};
   const days = workspace?.days ?? {};
   const { subjectId } = animalPlan;
@@ -80,9 +122,11 @@ function preflightAnimal(animalPlan, resolution, workspace, reservedDayIds) {
     return `Animal "${subjectId}" already exists; cannot import it as a new animal.`;
   }
 
-  const seenInThisAnimal = new Set();
+  const seenInThisAnimal = new Set<string>();
   for (const day of animalPlan.days) {
-    const dayId = generateDayId(targetId, day.date);
+    // `targetId` is non-null here: `replace` already returned, `add` was guarded above, and
+    // `create` uses `subjectId` (a string) — so the preflight invariant guarantees it.
+    const dayId = generateDayId(targetId!, day.date);
     if (days[dayId] || reservedDayIds.has(dayId) || seenInThisAnimal.has(dayId)) {
       return resolution === 'add'
         ? `Day "${dayId}" already exists; cannot add it to animal "${targetId}".`
@@ -96,27 +140,28 @@ function preflightAnimal(animalPlan, resolution, workspace, reservedDayIds) {
 /**
  * Apply a planned import to the live store.
  *
- * @param {import('./yamlImportPlan').ImportPlan} plan - The plan from `planImport`.
- * @param {object} actions - The store's workspace actions (createAnimal, createDay,
+ * @param plan - The plan from `planImport`.
+ * @param actions - The store's workspace actions (createAnimal, createDay,
  *   createConfigurationSnapshotAndApplyForward, updateDay, updateAnimal, deleteAnimal).
- * @param {object} [options] - Apply options.
- * @param {object} [options.workspace] - The CURRENT workspace snapshot (`{ animals, days }`),
- *   read-only. Used to PRE-FLIGHT each animal's preconditions before issuing any write, so a
- *   collision is recorded in `failed` instead of throwing out of a store action's reducer and
- *   crashing the render. Defaults to an empty workspace (no pre-flight guarantees).
- * @param {Record<string, ('add'|'skip'|'replace')>} [options.resolutions] - Per-subject
- *   overrides of `defaultResolution` for conflict animals.
- * @returns {{ createdAnimals: string[], createdDays: string[], skipped: string[], failed: Array<{ subjectId: string, reason: string }> }}
- *   Failures are RECORDED, never thrown.
+ * @param options - Apply options ({@link ApplyImportOptions}).
+ * @param options.workspace - The CURRENT workspace snapshot used to PRE-FLIGHT each animal before
+ *   any write (a collision is recorded in `failed`, never thrown out of a reducer). Defaults to an
+ *   empty workspace (no pre-flight guarantees).
+ * @param options.resolutions - Per-subject overrides of `defaultResolution` for conflict animals.
+ * @returns The apply outcome; failures are RECORDED, never thrown.
  */
-export function applyImportPlan(plan, actions, { workspace = { animals: {}, days: {} }, resolutions = {} } = {}) {
-  const createdAnimals = [];
-  const createdDays = [];
-  const skipped = [];
-  const failed = [];
+export function applyImportPlan(
+  plan: ImportPlan,
+  actions: ImportActions,
+  { workspace = { animals: {}, days: {} }, resolutions = {} }: ApplyImportOptions = {}
+): ApplyImportResult {
+  const createdAnimals: string[] = [];
+  const createdDays: string[] = [];
+  const skipped: string[] = [];
+  const failed: Array<{ subjectId: string; reason: string }> = [];
   // Day ids reserved by earlier-passed animals in THIS call (defense in depth: lets pre-flight
   // reject an intra-plan duplicate day id even if a caller hands us a plan that wasn't deduped).
-  const reservedDayIds = new Set();
+  const reservedDayIds = new Set<string>();
 
   for (const animalPlan of plan.animals) {
     const { subjectId } = animalPlan;
@@ -139,15 +184,17 @@ export function applyImportPlan(plan, actions, { workspace = { animals: {}, days
       continue;
     }
     // Reserve this animal's day ids so a later animal in the same call can't collide with them.
+    // `targetId` is non-null: preflight passed, so an `add` target exists and `create` uses subjectId.
     const targetId = resolution === 'add' ? animalPlan.existingAnimalId : subjectId;
     for (const day of animalPlan.days) {
-      reservedDayIds.add(generateDayId(targetId, day.date));
+      reservedDayIds.add(generateDayId(targetId!, day.date));
     }
 
     try {
       if (resolution === 'replace') {
         // Replace: delete the existing animal (+ its days) then recreate from the plan.
-        actions.deleteAnimal(animalPlan.existingAnimalId);
+        // `existingAnimalId` is non-null here (preflight verified the animal exists to replace).
+        actions.deleteAnimal(animalPlan.existingAnimalId!);
         applyNewAnimal(animalPlan, actions, createdAnimals, createdDays);
       } else if (resolution === 'add') {
         // Conflict → add: layer the plan's days (+ any config versions) onto the existing
@@ -159,7 +206,7 @@ export function applyImportPlan(plan, actions, { workspace = { animals: {}, days
       }
     } catch (error) {
       // Backstop only: pre-flight should already have caught any throwing precondition.
-      failed.push({ subjectId, reason: error?.message ?? String(error) });
+      failed.push({ subjectId, reason: (error as Error)?.message ?? String(error) });
     }
   }
 
@@ -171,12 +218,17 @@ export function applyImportPlan(plan, actions, { workspace = { animals: {}, days
  * + the resolved animal facts, add every day, append the later config versions (re-pinning
  * their days), and write each day's day-owned content through `updateDay`.
  *
- * @param {import('./yamlImportPlan').ImportPlanAnimal} animalPlan
- * @param {object} actions
- * @param {string[]} createdAnimals - Accumulator (mutated).
- * @param {string[]} createdDays - Accumulator (mutated).
+ * @param animalPlan - The planned animal.
+ * @param actions - The store workspace actions.
+ * @param createdAnimals - Accumulator (mutated).
+ * @param createdDays - Accumulator (mutated).
  */
-function applyNewAnimal(animalPlan, actions, createdAnimals, createdDays) {
+function applyNewAnimal(
+  animalPlan: ImportPlanAnimal,
+  actions: ImportActions,
+  createdAnimals: string[],
+  createdDays: string[]
+): void {
   const { subjectId, configVersions } = animalPlan;
   const firstConfig = configVersions[0]?.devices ?? {
     electrode_groups: [],
@@ -239,12 +291,17 @@ function applyNewAnimal(animalPlan, actions, createdAnimals, createdDays) {
  * preview so the user can reconcile the catalogs first. This keeps 'add' safe (never destructive)
  * at the cost of not auto-merging catalogs.
  *
- * @param {import('./yamlImportPlan').ImportPlanAnimal} animalPlan
- * @param {object} actions
- * @param {string[]} createdDays - Accumulator (mutated).
+ * @param animalPlan - The planned animal.
+ * @param actions - The store workspace actions.
+ * @param createdDays - Accumulator (mutated).
  */
-function applyAddToExistingAnimal(animalPlan, actions, createdDays) {
-  const targetId = animalPlan.existingAnimalId;
+function applyAddToExistingAnimal(
+  animalPlan: ImportPlanAnimal,
+  actions: ImportActions,
+  createdDays: string[]
+): void {
+  // Non-null here: `add` only runs after preflight confirmed the existing animal is present.
+  const targetId = animalPlan.existingAnimalId!;
 
   // Add each day (pins to the existing animal's latest version initially), then append each
   // imported config version and re-pin its days onto it.
@@ -269,10 +326,10 @@ function applyAddToExistingAnimal(animalPlan, actions, createdDays) {
  * The `updateDay` payload that writes a plan day's day-owned content (everything `createDay`
  * does not accept). Exactly the keys `applyDayUpdates` allow-lists for these collections.
  *
- * @param {import('./yamlImportPlan').ImportPlanDay} day
- * @returns {object} The updateDay payload.
+ * @param day - The planned import day.
+ * @returns The updateDay payload.
  */
-function dayOwnedUpdates(day) {
+function dayOwnedUpdates(day: ImportPlanDay): Record<string, any> {
   return {
     session: day.session,
     keywords: day.keywords,

@@ -25,6 +25,34 @@
  */
 
 import { validate } from '../validation';
+import type { ValidationModel, ValidationIssue } from '../validation/issueTypes';
+
+/**
+ * A successful decompose: the layered facts the export merge reads. `animalFacts` / `dayFacts` /
+ * `configuration` are deep-cloned from the input and own their nested data. The fact shapes mirror
+ * the merge's read sources and are intentionally loose (a YAML-decode boundary).
+ */
+export interface DecomposeSuccess {
+  ok: true;
+  /** The subject id, or `undefined` when the model carries none (then un-attributable). */
+  subjectId: string | undefined;
+  /** Animal-owned facts (experimenters / subject / devices / cameras / optogenetics). */
+  animalFacts: Record<string, any>;
+  /** Day-owned facts (session / collections / technical / fs_gui / bad-channel overrides). */
+  dayFacts: Record<string, any>;
+  /** The probe configuration (electrode groups + ntrode map, bad channels emptied). */
+  configuration: Record<string, any>;
+}
+
+/** A rejected decompose: the blocking validation issues, with no partial result. */
+export interface DecomposeRejection {
+  ok: false;
+  /** The validation issues (at least one `severity: 'error'`). */
+  issues: ValidationIssue[];
+}
+
+/** The result of {@link decomposeYaml} — discriminated on `ok`. */
+export type DecomposeResult = DecomposeSuccess | DecomposeRejection;
 
 /**
  * Whether the flat model carries an optogenetics session.
@@ -40,14 +68,15 @@ import { validate } from '../validation';
  * export (the merge emits empty `[]` opto arrays and `optogenetic_stimulation_software: ''`, with
  * `opto_software` absent) correctly reads as non-opto, preserving round-trip byte identity.
  *
- * @param {object} flatModel - Decoded flat YAML model.
- * @returns {boolean} True when the model represents an optogenetics session.
+ * @param flatModel - Decoded flat YAML model.
+ * @returns True when the model represents an optogenetics session.
  */
-function hasOpto(flatModel) {
+function hasOpto(flatModel: ValidationModel): boolean {
   if (flatModel === null || typeof flatModel !== 'object') return false;
-  const nonEmptyArray = (key) => Array.isArray(flatModel[key]) && flatModel[key].length > 0;
+  const nonEmptyArray = (key: string) => Array.isArray(flatModel[key]) && flatModel[key].length > 0;
   return (
-    Object.hasOwn(flatModel, 'opto_software') ||
+    // `Object.prototype.hasOwnProperty.call` is the pre-ES2022 form of `Object.hasOwn` (ES2020 lib).
+    Object.prototype.hasOwnProperty.call(flatModel, 'opto_software') ||
     (typeof flatModel.optogenetic_stimulation_software === 'string' &&
       flatModel.optogenetic_stimulation_software.trim() !== '') ||
     nonEmptyArray('opto_excitation_source') ||
@@ -66,10 +95,10 @@ function hasOpto(flatModel) {
  * identity for a non-opto export. `fs_gui_yamls` is DAY-owned (landmine 2) and is
  * deliberately NOT placed here.
  *
- * @param {object} flatModel - Decoded flat YAML model.
- * @returns {(object|null)} Populated optogenetics facts, or `null` for a non-opto model.
+ * @param flatModel - Decoded flat YAML model.
+ * @returns Populated optogenetics facts, or `null` for a non-opto model.
  */
-function decomposeOptogenetics(flatModel) {
+function decomposeOptogenetics(flatModel: ValidationModel): Record<string, any> | null {
   if (!hasOpto(flatModel)) return null;
   return {
     opto_excitation_source: flatModel.opto_excitation_source ?? [],
@@ -112,12 +141,10 @@ function decomposeOptogenetics(flatModel) {
  * - configuration ← electrode_groups + ntrode_electrode_group_channel_map (with
  *   bad_channels emptied — they are day-owned, not snapshot-base).
  *
- * @param {object} flatModel - Decoded flat YAML metadata (a `mergeDayMetadata` output).
- * @returns {{ ok: true, subjectId: (string|undefined), animalFacts: object, dayFacts: object, configuration: object }
- *   | { ok: false, issues: import('../validation').Issue[] }}
- *   The typed decompose result, or a rejection carrying the blocking issues.
+ * @param flatModel - Decoded flat YAML metadata (a `mergeDayMetadata` output).
+ * @returns The typed decompose result, or a rejection carrying the blocking issues.
  */
-export function decomposeYaml(flatModel) {
+export function decomposeYaml(flatModel: ValidationModel): DecomposeResult {
   const issues = validate(flatModel);
   const errors = issues.filter((issue) => issue.severity === 'error');
   if (errors.length > 0) {
@@ -141,7 +168,7 @@ export function decomposeYaml(flatModel) {
   const importedNtrodes = Array.isArray(model.ntrode_electrode_group_channel_map)
     ? model.ntrode_electrode_group_channel_map
     : [];
-  const dayBadChannels = {};
+  const dayBadChannels: Record<string, number[]> = {};
   for (const ntrode of importedNtrodes) {
     if (ntrode === null || typeof ntrode !== 'object') continue;
     const marks = ntrode.bad_channels;
@@ -203,7 +230,7 @@ export function decomposeYaml(flatModel) {
     data_acq_device_name: dataAcqDevice?.[0]?.name,
     // cameras_used pins exactly the exported camera set in catalog order (landmine 3),
     // so `resolveDayCameraUsage` re-emits exactly these cameras.
-    cameras_used: (model.cameras ?? []).map((camera) => camera.id),
+    cameras_used: (model.cameras ?? []).map((camera: any) => camera.id),
     // Bad channels are DAY-OWNED (the merge reads only the day override). Carry the
     // per-ntrode marks extracted above; `undefined` when none so recompose can omit
     // an empty override entirely.
@@ -253,13 +280,13 @@ export function decomposeYaml(flatModel) {
  * failed result (`ok: false`) is rejected up front with a clear error rather than
  * throwing an opaque destructuring error deeper in the function.
  *
- * @param {{ ok?: boolean, subjectId: (string|undefined), animalFacts: object, dayFacts: object, configuration: object }} decomposed
- *   A successful decompose result.
- * @returns {{ animal: object, day: object }} The minimal animal + day re-mergeable to the
- *   original flat model.
- * @throws {Error} If handed a failed (`ok: false`) decompose result.
+ * @param decomposed - A successful decompose result.
+ * @returns The minimal animal + day re-mergeable to the original flat model.
+ * @throws If handed a failed (`ok: false`) decompose result.
  */
-export function recomposeDayModel(decomposed) {
+export function recomposeDayModel(
+  decomposed: DecomposeResult
+): { animal: Record<string, any>; day: Record<string, any> } {
   if (decomposed?.ok === false) {
     throw new Error('recomposeDayModel requires a successful decomposeYaml result');
   }
@@ -299,7 +326,7 @@ export function recomposeDayModel(decomposed) {
     ],
   };
 
-  const day = {
+  const day: Record<string, any> = {
     id: dayId,
     animalId,
     date,
